@@ -172,17 +172,18 @@ declare void @llvm.amdgcn.kill(i1)
 
 attributes #0 = { nounwind "target-cpu"="tahiti" }
 attributes #1 = { nounwind "target-cpu"="fiji" }
-attributes #2 = { nounwind "denormal-fp-math"="ieee,ieee" }
-attributes #3 = { nounwind "denormal-fp-math-f32"="ieee,ieee" }
-attributes #4 = { nounwind "denormal-fp-math"="ieee,ieee" }
-attributes #5 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #6 = { nounwind "denormal-fp-math"="ieee,ieee" }
-attributes #7 = { nounwind "denormal-fp-math-f32"="ieee,ieee" "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #8 = { nounwind "denormal-fp-math"="ieee,ieee" }
-attributes #9 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #10 = { nounwind "denormal-fp-math"="preserve-sign,ieee" }
-attributes #11 = { nounwind "denormal-fp-math"="ieee,preserve-sign" }
-attributes #12 = { nounwind "denormal-fp-math-f32"="ieee,preserve-sign" "denormal-fp-math"="ieee,ieee" }
-attributes #13 = { nounwind "denormal-fp-math-f32"="preserve-sign,ieee" "denormal-fp-math"="ieee,ieee" }
-attributes #14 = { nounwind "denormal-fp-math"="ieee,preserve-sign" "denormal-fp-math-f32"="ieee,ieee" }
-attributes #15 = { nounwind "denormal-fp-math"="preserve-sign,ieee" "denormal-fp-math-f32"="ieee,ieee" }
+
+attributes #2 = { nounwind denormal_fpenv(ieee) }
+attributes #3 = { nounwind denormal_fpenv(float:ieee|ieee) }
+attributes #4 = { nounwind denormal_fpenv(ieee) }
+attributes #5 = { nounwind denormal_fpenv(preservesign) }
+attributes #6 = { nounwind denormal_fpenv(ieee) }
+attributes #7 = { nounwind denormal_fpenv(preservesign, float:ieee) }
+attributes #8 = { nounwind denormal_fpenv(ieee) }
+attributes #9 = { nounwind denormal_fpenv(float:preservesign|preservesign) }
+attributes #10 = { nounwind denormal_fpenv(preservesign|ieee) }
+attributes #11 = { nounwind denormal_fpenv(ieee|preservesign) }
+attributes #12 = { nounwind denormal_fpenv(ieee, float:ieee|preservesign) }
+attributes #13 = { nounwind denormal_fpenv(ieee, float:preservesign|ieee) }
+attributes #14 = { nounwind denormal_fpenv(ieee|preservesign, float:ieee) }
+attributes #15 = { nounwind denormal_fpenv(preservesign|ieee, float:ieee) }

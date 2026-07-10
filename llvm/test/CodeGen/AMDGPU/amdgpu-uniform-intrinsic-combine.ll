@@ -6,7 +6,7 @@
 
 define amdgpu_kernel void @permlane64_constant(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @permlane64_constant(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CURRENT-CHECK-NEXT:    store i32 77, ptr addrspace(1) [[OUT]], align 4
 ; CURRENT-CHECK-NEXT:    ret void
 ;
@@ -27,7 +27,7 @@ define amdgpu_kernel void @permlane64_constant(ptr addrspace(1) %out) {
 
 define amdgpu_kernel void @permlane64_uniform(ptr addrspace(1) %out, i32 %src) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @permlane64_uniform(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]], i32 [[SRC:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]], i32 [[SRC:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CURRENT-CHECK-NEXT:    store i32 [[SRC]], ptr addrspace(1) [[OUT]], align 4
 ; CURRENT-CHECK-NEXT:    ret void
 ;
@@ -46,13 +46,13 @@ define amdgpu_kernel void @permlane64_uniform(ptr addrspace(1) %out, i32 %src) {
   ret void
 }
 
-define amdgpu_kernel void @permlane64_nonuniform(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @permlane64_nonuniform(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @permlane64_nonuniform(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CURRENT-CHECK-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CURRENT-CHECK-NEXT:    [[V:%.*]] = tail call i32 @llvm.amdgcn.permlane64.i32(i32 [[TID]])
 ; CURRENT-CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TID]] to i64
-; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 [[TMP1]]
+; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[OUT]], i64 [[TMP1]]
 ; CURRENT-CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_PTR]], align 4
 ; CURRENT-CHECK-NEXT:    ret void
 ;
@@ -74,19 +74,19 @@ define amdgpu_kernel void @permlane64_nonuniform(i32 addrspace(1)* %out) {
 ;
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.permlane64(i32 %tid)
-  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
-  store i32 %v, i32 addrspace(1)* %out_ptr
+  %out_ptr = getelementptr i32, ptr addrspace(1) %out, i32 %tid
+  store i32 %v, ptr addrspace(1) %out_ptr
   ret void
 }
 
-define amdgpu_kernel void @permlane64_nonuniform_expression(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @permlane64_nonuniform_expression(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @permlane64_nonuniform_expression(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; CURRENT-CHECK-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CURRENT-CHECK-NEXT:    [[TID2:%.*]] = add nuw nsw i32 [[TID]], 1
 ; CURRENT-CHECK-NEXT:    [[V:%.*]] = tail call i32 @llvm.amdgcn.permlane64.i32(i32 [[TID2]])
 ; CURRENT-CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TID]] to i64
-; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 [[TMP1]]
+; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[OUT]], i64 [[TMP1]]
 ; CURRENT-CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_PTR]], align 4
 ; CURRENT-CHECK-NEXT:    ret void
 ;
@@ -111,14 +111,14 @@ define amdgpu_kernel void @permlane64_nonuniform_expression(i32 addrspace(1)* %o
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid2 = add i32 %tid, 1
   %v = call i32 @llvm.amdgcn.permlane64(i32 %tid2)
-  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
-  store i32 %v, i32 addrspace(1)* %out_ptr
+  %out_ptr = getelementptr i32, ptr addrspace(1) %out, i32 %tid
+  store i32 %v, ptr addrspace(1) %out_ptr
   ret void
 }
 
 define amdgpu_kernel void @readlane_constant(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @readlane_constant(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CURRENT-CHECK-NEXT:    store i32 7, ptr addrspace(1) [[OUT]], align 4
 ; CURRENT-CHECK-NEXT:    ret void
 ;
@@ -139,7 +139,7 @@ define amdgpu_kernel void @readlane_constant(ptr addrspace(1) %out) {
 
 define amdgpu_kernel void @readlane_nonuniform_indices(ptr addrspace(1) %out, i32 %src0, i32 %src1) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @readlane_nonuniform_indices(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]], i32 [[SRC0:%.*]], i32 [[SRC1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]], i32 [[SRC0:%.*]], i32 [[SRC1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CURRENT-CHECK-NEXT:    store i32 [[SRC0]], ptr addrspace(1) [[OUT]], align 4
 ; CURRENT-CHECK-NEXT:    ret void
 ;
@@ -158,14 +158,14 @@ define amdgpu_kernel void @readlane_nonuniform_indices(ptr addrspace(1) %out, i3
   ret void
 }
 
-define amdgpu_kernel void @readlane_nonuniform_workitem(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @readlane_nonuniform_workitem(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @readlane_nonuniform_workitem(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 ; CURRENT-CHECK-NEXT:    [[TIDX:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CURRENT-CHECK-NEXT:    [[TIDY:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.y()
 ; CURRENT-CHECK-NEXT:    [[V:%.*]] = tail call i32 @llvm.amdgcn.readlane.i32(i32 [[TIDX]], i32 [[TIDY]])
 ; CURRENT-CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TIDX]] to i64
-; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 [[TMP1]]
+; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[OUT]], i64 [[TMP1]]
 ; CURRENT-CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_PTR]], align 4
 ; CURRENT-CHECK-NEXT:    ret void
 ;
@@ -190,21 +190,21 @@ define amdgpu_kernel void @readlane_nonuniform_workitem(i32 addrspace(1)* %out) 
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
   %v = call i32 @llvm.amdgcn.readlane(i32 %tidx, i32 %tidy)
-  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tidx
-  store i32 %v, i32 addrspace(1)* %out_ptr
+  %out_ptr = getelementptr i32, ptr addrspace(1) %out, i32 %tidx
+  store i32 %v, ptr addrspace(1) %out_ptr
   ret void
 }
 
-define amdgpu_kernel void @readlane_nonuniform_expression(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @readlane_nonuniform_expression(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @readlane_nonuniform_expression(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CURRENT-CHECK-NEXT:    [[TIDX:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CURRENT-CHECK-NEXT:    [[TIDY:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.y()
 ; CURRENT-CHECK-NEXT:    [[TIDX2:%.*]] = add nuw nsw i32 [[TIDX]], 1
 ; CURRENT-CHECK-NEXT:    [[TIDY2:%.*]] = add nuw nsw i32 [[TIDY]], 2
 ; CURRENT-CHECK-NEXT:    [[V:%.*]] = tail call i32 @llvm.amdgcn.readlane.i32(i32 [[TIDX2]], i32 [[TIDY2]])
 ; CURRENT-CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TIDX]] to i64
-; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 [[TMP1]]
+; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[OUT]], i64 [[TMP1]]
 ; CURRENT-CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_PTR]], align 4
 ; CURRENT-CHECK-NEXT:    ret void
 ;
@@ -235,14 +235,14 @@ define amdgpu_kernel void @readlane_nonuniform_expression(i32 addrspace(1)* %out
   %tidx2 = add i32 %tidx, 1
   %tidy2 = add i32 %tidy, 2
   %v = call i32 @llvm.amdgcn.readlane(i32 %tidx2, i32 %tidy2)
-  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tidx
-  store i32 %v, i32 addrspace(1)* %out_ptr
+  %out_ptr = getelementptr i32, ptr addrspace(1) %out, i32 %tidx
+  store i32 %v, ptr addrspace(1) %out_ptr
   ret void
 }
 
 define amdgpu_kernel void @readfirstlane_constant(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @readfirstlane_constant(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CURRENT-CHECK-NEXT:    store i32 7, ptr addrspace(1) [[OUT]], align 4
 ; CURRENT-CHECK-NEXT:    ret void
 ;
@@ -265,7 +265,7 @@ define amdgpu_kernel void @readfirstlane_constant(ptr addrspace(1) %out) {
 
 define amdgpu_kernel void @readfirstlane_with_argument(ptr addrspace(1) %out, i32 %src0) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @readfirstlane_with_argument(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]], i32 [[SRC0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]], i32 [[SRC0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CURRENT-CHECK-NEXT:    store i32 [[SRC0]], ptr addrspace(1) [[OUT]], align 4
 ; CURRENT-CHECK-NEXT:    ret void
 ;
@@ -286,13 +286,13 @@ define amdgpu_kernel void @readfirstlane_with_argument(ptr addrspace(1) %out, i3
   ret void
 }
 
-define amdgpu_kernel void @readfirstlane_with_workitem_id(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @readfirstlane_with_workitem_id(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @readfirstlane_with_workitem_id(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; CURRENT-CHECK-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CURRENT-CHECK-NEXT:    [[V:%.*]] = tail call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TID]])
 ; CURRENT-CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TID]] to i64
-; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 [[TMP1]]
+; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[OUT]], i64 [[TMP1]]
 ; CURRENT-CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_PTR]], align 4
 ; CURRENT-CHECK-NEXT:    ret void
 ;
@@ -314,19 +314,19 @@ define amdgpu_kernel void @readfirstlane_with_workitem_id(i32 addrspace(1)* %out
 ;
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.readfirstlane(i32 %tid)
-  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
-  store i32 %v, i32 addrspace(1)* %out_ptr
+  %out_ptr = getelementptr i32, ptr addrspace(1) %out, i32 %tid
+  store i32 %v, ptr addrspace(1) %out_ptr
   ret void
 }
 
-define amdgpu_kernel void @readfirstlane_expression(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @readfirstlane_expression(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @readfirstlane_expression(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; CURRENT-CHECK-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CURRENT-CHECK-NEXT:    [[TID2:%.*]] = add nuw nsw i32 [[TID]], 1
 ; CURRENT-CHECK-NEXT:    [[V:%.*]] = tail call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TID2]])
 ; CURRENT-CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TID2]] to i64
-; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i64 [[TMP1]]
+; CURRENT-CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[OUT]], i64 [[TMP1]]
 ; CURRENT-CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_PTR]], align 4
 ; CURRENT-CHECK-NEXT:    ret void
 ;
@@ -351,14 +351,14 @@ define amdgpu_kernel void @readfirstlane_expression(i32 addrspace(1)* %out) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid2 = add i32 %tid, 1
   %v = call i32 @llvm.amdgcn.readfirstlane(i32 %tid2)
-  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tid2
-  store i32 %v, i32 addrspace(1)* %out_ptr
+  %out_ptr = getelementptr i32, ptr addrspace(1) %out, i32 %tid2
+  store i32 %v, ptr addrspace(1) %out_ptr
   ret void
 }
 
 define amdgpu_kernel void @readfirstlane_with_readfirstlane(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @readfirstlane_with_readfirstlane(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CURRENT-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
 ; CURRENT-CHECK-NEXT:    ret void
 ;
@@ -384,7 +384,7 @@ define amdgpu_kernel void @readfirstlane_with_readfirstlane(ptr addrspace(1) %ou
 
 define amdgpu_kernel void @readfirstlane_with_readlane(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @readfirstlane_with_readlane(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CURRENT-CHECK-NEXT:    [[TIDX:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CURRENT-CHECK-NEXT:    [[TIDY:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.y()
 ; CURRENT-CHECK-NEXT:    [[V1:%.*]] = tail call i32 @llvm.amdgcn.readlane.i32(i32 [[TIDX]], i32 [[TIDY]])
@@ -419,7 +419,7 @@ define amdgpu_kernel void @readfirstlane_with_readlane(ptr addrspace(1) %out) {
 
 define amdgpu_kernel void @readlane_with_firstlane(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @readlane_with_firstlane(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; CURRENT-CHECK-NEXT:    [[TIDX:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CURRENT-CHECK-NEXT:    [[V1:%.*]] = tail call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TIDX]])
 ; CURRENT-CHECK-NEXT:    store i32 [[V1]], ptr addrspace(1) [[OUT]], align 4
@@ -448,7 +448,7 @@ define amdgpu_kernel void @readlane_with_firstlane(ptr addrspace(1) %out) {
 
 define amdgpu_kernel void @readlane_readlane(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @readlane_readlane(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CURRENT-CHECK-NEXT:    [[TIDX:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CURRENT-CHECK-NEXT:    [[TIDY:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.y()
 ; CURRENT-CHECK-NEXT:    [[V1:%.*]] = tail call i32 @llvm.amdgcn.readlane.i32(i32 [[TIDX]], i32 [[TIDY]])
@@ -482,7 +482,7 @@ define amdgpu_kernel void @readlane_readlane(ptr addrspace(1) %out) {
 
 define amdgpu_kernel void @permlane64_boundary(ptr addrspace(1) %out_min, ptr addrspace(1) %out_max) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @permlane64_boundary(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT_MIN:%.*]], ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT_MAX:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT_MIN:%.*]], ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT_MAX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CURRENT-CHECK-NEXT:    store i32 -2147483648, ptr addrspace(1) [[OUT_MIN]], align 4
 ; CURRENT-CHECK-NEXT:    store i32 2147483647, ptr addrspace(1) [[OUT_MAX]], align 4
 ; CURRENT-CHECK-NEXT:    ret void
@@ -508,7 +508,7 @@ define amdgpu_kernel void @permlane64_boundary(ptr addrspace(1) %out_min, ptr ad
 
 define amdgpu_kernel void @readlane_cross_lane(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @readlane_cross_lane(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; CURRENT-CHECK-NEXT:    [[TIDX:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CURRENT-CHECK-NEXT:    [[TIDY:%.*]] = add nuw nsw i32 [[TIDX]], 5
 ; CURRENT-CHECK-NEXT:    [[V:%.*]] = tail call i32 @llvm.amdgcn.readlane.i32(i32 [[TIDX]], i32 [[TIDY]])
@@ -540,7 +540,7 @@ define amdgpu_kernel void @readlane_cross_lane(ptr addrspace(1) %out) {
 
 define amdgpu_kernel void @readfirstlane_random(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @readfirstlane_random(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CURRENT-CHECK-NEXT:    store i32 435, ptr addrspace(1) [[OUT]], align 4
 ; CURRENT-CHECK-NEXT:    ret void
 ;
@@ -566,7 +566,7 @@ define amdgpu_kernel void @readfirstlane_random(ptr addrspace(1) %out) {
 
 define amdgpu_kernel void @readlane_expression(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @readlane_expression(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; CURRENT-CHECK-NEXT:    [[IDX1:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CURRENT-CHECK-NEXT:    [[IDX2:%.*]] = shl nuw nsw i32 [[IDX1]], 1
 ; CURRENT-CHECK-NEXT:    [[V:%.*]] = tail call i32 @llvm.amdgcn.readlane.i32(i32 [[IDX1]], i32 [[IDX2]])
@@ -598,7 +598,7 @@ define amdgpu_kernel void @readlane_expression(ptr addrspace(1) %out) {
 
 define amdgpu_kernel void @ballot_i32(i32 %v, ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @ballot_i32(
-; CURRENT-CHECK-SAME: i32 [[V:%.*]], ptr addrspace(1) writeonly captures(none) initializes((0, 1)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; CURRENT-CHECK-SAME: i32 [[V:%.*]], ptr addrspace(1) nofree writeonly captures(none) initializes((0, 1)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; CURRENT-CHECK-NEXT:    [[C:%.*]] = trunc i32 [[V]] to i1
 ; CURRENT-CHECK-NEXT:    [[BALLOT:%.*]] = tail call i32 @llvm.amdgcn.ballot.i32(i1 [[C]])
 ; CURRENT-CHECK-NEXT:    [[BALLOT_NE_ZERO:%.*]] = icmp ne i32 [[BALLOT]], 0
@@ -628,7 +628,7 @@ define amdgpu_kernel void @ballot_i32(i32 %v, ptr addrspace(1) %out) {
 
 define amdgpu_kernel void @ballot_i64(i32 %v, ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @ballot_i64(
-; CURRENT-CHECK-SAME: i32 [[V:%.*]], ptr addrspace(1) writeonly captures(none) initializes((0, 1)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; CURRENT-CHECK-SAME: i32 [[V:%.*]], ptr addrspace(1) nofree writeonly captures(none) initializes((0, 1)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; CURRENT-CHECK-NEXT:    [[C:%.*]] = trunc i32 [[V]] to i1
 ; CURRENT-CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.amdgcn.ballot.i32(i1 [[C]])
 ; CURRENT-CHECK-NEXT:    [[BALLOT_NE_ZERO:%.*]] = icmp ne i32 [[TMP1]], 0
@@ -784,7 +784,7 @@ define amdgpu_kernel void @test_readlane_f64(double %src0, i32 %src1) {
 ; All such cases can be optimised, given generic way to query getDeclarationIfExists()
 define void @test_readlane_v8i16(ptr addrspace(1) %out, <8 x i16> %src, i32 %src1) {
 ; CURRENT-CHECK-LABEL: define void @test_readlane_v8i16(
-; CURRENT-CHECK-SAME: ptr addrspace(1) readnone captures(none) [[OUT:%.*]], <8 x i16> [[SRC:%.*]], i32 [[SRC1:%.*]]) local_unnamed_addr #[[ATTR3]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree readnone captures(none) [[OUT:%.*]], <8 x i16> [[SRC:%.*]], i32 [[SRC1:%.*]]) local_unnamed_addr #[[ATTR3]] {
 ; CURRENT-CHECK-NEXT:    [[X:%.*]] = tail call <8 x i16> @llvm.amdgcn.readlane.v8i16(<8 x i16> [[SRC]], i32 [[SRC1]])
 ; CURRENT-CHECK-NEXT:    tail call void asm sideeffect "
 ; CURRENT-CHECK-NEXT:    ret void
@@ -805,3 +805,122 @@ define void @test_readlane_v8i16(ptr addrspace(1) %out, <8 x i16> %src, i32 %src
   call void asm sideeffect "; use $0", "s"(<8 x i16> %x)
   ret void
 }
+
+define amdgpu_kernel void @wave_shuffle_nonuniform_value_and_index(ptr addrspace(1) %out) {
+; CURRENT-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_nonuniform_value_and_index(
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CURRENT-CHECK-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; CURRENT-CHECK-NEXT:    [[IDX:%.*]] = add nuw nsw i32 [[TID]], 1
+; CURRENT-CHECK-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[TID]], i32 [[IDX]])
+; CURRENT-CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT]], align 4
+; CURRENT-CHECK-NEXT:    ret void
+;
+; PASS-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_nonuniform_value_and_index(
+; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; PASS-CHECK-NEXT:    [[IDX:%.*]] = add i32 [[TID]], 1
+; PASS-CHECK-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[TID]], i32 [[IDX]])
+; PASS-CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT]], align 4
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_nonuniform_value_and_index(
+; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; DCE-CHECK-NEXT:    [[IDX:%.*]] = add i32 [[TID]], 1
+; DCE-CHECK-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[TID]], i32 [[IDX]])
+; DCE-CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT]], align 4
+; DCE-CHECK-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid2 = add i32 %tid, 1
+  %res = tail call i32 @llvm.amdgcn.wave.shuffle(i32 %tid, i32 %tid2)
+  store i32 %res, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @wave_shuffle_nonuniform_value_uniform_index(ptr addrspace(1) %in, ptr addrspace(1) %out) {
+; CURRENT-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_nonuniform_value_uniform_index(
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree readnone captures(none) [[IN:%.*]], ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CURRENT-CHECK-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; CURRENT-CHECK-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[TID]], i32 5), !foo [[META0:![0-9]+]]
+; CURRENT-CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT]], align 4
+; CURRENT-CHECK-NEXT:    ret void
+;
+; PASS-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_nonuniform_value_uniform_index(
+; PASS-CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; PASS-CHECK-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.readlane.i32(i32 [[TID]], i32 5), !foo [[META0:![0-9]+]]
+; PASS-CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT]], align 4
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_nonuniform_value_uniform_index(
+; DCE-CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; DCE-CHECK-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.readlane.i32(i32 [[TID]], i32 5), !foo [[META0:![0-9]+]]
+; DCE-CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT]], align 4
+; DCE-CHECK-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %res = tail call i32 @llvm.amdgcn.wave.shuffle(i32 %tid, i32 5), !foo !0
+  store i32 %res, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @wave_shuffle_uniform_value_nonuniform_index(ptr addrspace(1) %out) {
+; CURRENT-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_uniform_value_nonuniform_index(
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CURRENT-CHECK-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; CURRENT-CHECK-NEXT:    [[IDX:%.*]] = add nuw nsw i32 [[TID]], 1
+; CURRENT-CHECK-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 42, i32 [[IDX]])
+; CURRENT-CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT]], align 4
+; CURRENT-CHECK-NEXT:    ret void
+;
+; PASS-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_uniform_value_nonuniform_index(
+; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; PASS-CHECK-NEXT:    [[TID2:%.*]] = add i32 [[TID]], 1
+; PASS-CHECK-NEXT:    store i32 42, ptr addrspace(1) [[OUT]], align 4
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_uniform_value_nonuniform_index(
+; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:    store i32 42, ptr addrspace(1) [[OUT]], align 4
+; DCE-CHECK-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid2 = add i32 %tid, 1
+  %res = tail call i32 @llvm.amdgcn.wave.shuffle(i32 42, i32 %tid2)
+  store i32 %res, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @wave_shuffle_uniform_value_and_index(ptr addrspace(1) %out) {
+; CURRENT-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_uniform_value_and_index(
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CURRENT-CHECK-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 42, i32 5)
+; CURRENT-CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT]], align 4
+; CURRENT-CHECK-NEXT:    ret void
+;
+; PASS-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_uniform_value_and_index(
+; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:    store i32 42, ptr addrspace(1) [[OUT]], align 4
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_uniform_value_and_index(
+; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:    store i32 42, ptr addrspace(1) [[OUT]], align 4
+; DCE-CHECK-NEXT:    ret void
+;
+  %res = tail call i32 @llvm.amdgcn.wave.shuffle(i32 42, i32 5)
+  store i32 %res, ptr addrspace(1) %out
+  ret void
+}
+
+!0 = !{i32 5489}
+;.
+; CURRENT-CHECK: [[META0]] = !{i32 5489}
+;.
+; PASS-CHECK: [[META0]] = !{i32 5489}
+;.
+; DCE-CHECK: [[META0]] = !{i32 5489}
+;.

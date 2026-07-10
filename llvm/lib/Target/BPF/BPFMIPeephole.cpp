@@ -96,9 +96,6 @@ bool BPFMIPeephole::isCopyFrom32Def(MachineInstr *CopyMI)
 {
   MachineOperand &opnd = CopyMI->getOperand(1);
 
-  if (!opnd.isReg())
-    return false;
-
   // Return false if getting value from a 32bit physical register.
   // Most likely, this physical register is aliased to
   // function call return value or current function parameters.
@@ -120,9 +117,6 @@ bool BPFMIPeephole::isPhiFrom32Def(MachineInstr *PhiMI)
 {
   for (unsigned i = 1, e = PhiMI->getNumOperands(); i < e; i += 2) {
     MachineOperand &opnd = PhiMI->getOperand(i);
-
-    if (!opnd.isReg())
-      return false;
 
     MachineInstr *PhiDef = MRI->getVRegDef(opnd.getReg());
     if (!PhiDef)
@@ -161,7 +155,11 @@ bool BPFMIPeephole::isInsnFrom32Def(MachineInstr *DefInsn)
 
 bool BPFMIPeephole::isMovFrom32Def(MachineInstr *MovMI)
 {
-  MachineInstr *DefInsn = MRI->getVRegDef(MovMI->getOperand(1).getReg());
+  const MachineOperand &Src = MovMI->getOperand(1);
+  if (Src.getSubReg())
+    return false;
+
+  MachineInstr *DefInsn = MRI->getVRegDef(Src.getReg());
 
   LLVM_DEBUG(dbgs() << "  Def of Mov Src:");
   LLVM_DEBUG(DefInsn->dump());
@@ -227,7 +225,8 @@ bool BPFMIPeephole::eliminateZExtSeq() {
         }
 
         BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(BPF::SUBREG_TO_REG), DstReg)
-          .addImm(0).addReg(SubReg).addImm(BPF::sub_32);
+            .addReg(SubReg)
+            .addImm(BPF::sub_32);
 
         SllMI->eraseFromParent();
         MovMI->eraseFromParent();
@@ -278,7 +277,8 @@ bool BPFMIPeephole::eliminateZExt() {
 
       // Build a SUBREG_TO_REG instruction.
       BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(BPF::SUBREG_TO_REG), dst)
-        .addImm(0).addReg(src).addImm(BPF::sub_32);
+          .addReg(src)
+          .addImm(BPF::sub_32);
 
       ToErase = &MI;
       Eliminated = true;
@@ -321,20 +321,21 @@ private:
   bool insertMissingCallerSavedSpills();
   bool removeMayGotoZero();
   bool addExitAfterUnreachable();
+  bool expandStackArgPseudos();
 
 public:
 
   // Main entry point for this pass.
   bool runOnMachineFunction(MachineFunction &MF) override {
-    if (skipFunction(MF.getFunction()))
-      return false;
-
     initialize(MF);
 
-    bool Changed;
-    Changed = eliminateRedundantMov();
+    bool Changed = expandStackArgPseudos();
+    if (skipFunction(MF.getFunction()))
+      return Changed;
+
+    Changed |= eliminateRedundantMov();
     if (SupportGotol)
-      Changed = adjustBranch() || Changed;
+      Changed |= adjustBranch();
     Changed |= insertMissingCallerSavedSpills();
     Changed |= removeMayGotoZero();
     Changed |= addExitAfterUnreachable();
@@ -748,6 +749,64 @@ bool BPFMIPreEmitPeephole::addExitAfterUnreachable() {
 
   BuildMI(&MBB, MI.getDebugLoc(), TII->get(BPF::RET));
   return true;
+}
+
+bool BPFMIPreEmitPeephole::expandStackArgPseudos() {
+  bool Changed = false;
+
+  for (MachineBasicBlock &MBB : *MF) {
+    for (auto It = MBB.begin(), End = MBB.end(); It != End;) {
+      MachineInstr &MI = *It++;
+      DebugLoc DL = MI.getDebugLoc();
+
+      switch (MI.getOpcode()) {
+      default:
+        break;
+
+      case BPF::LOAD_STACK_ARG_PSEUDO: {
+        Register DstReg = MI.getOperand(0).getReg();
+        int16_t Off = MI.getOperand(1).getImm();
+
+        BuildMI(MBB, MI, DL, TII->get(BPF::LDD), DstReg)
+            .addReg(BPF::R11)
+            .addImm(Off);
+        MI.eraseFromParent();
+        Changed = true;
+        break;
+      }
+
+      case BPF::STORE_STACK_ARG_PSEUDO: {
+        int16_t Off = MI.getOperand(0).getImm();
+        const MachineOperand &SrcMO = MI.getOperand(1);
+        Register SrcReg = SrcMO.getReg();
+        bool IsKill = SrcMO.isKill();
+
+        BuildMI(MBB, MI, DL, TII->get(BPF::STD))
+            .addReg(SrcReg, getKillRegState(IsKill))
+            .addReg(BPF::R11)
+            .addImm(Off);
+        MI.eraseFromParent();
+        Changed = true;
+        break;
+      }
+
+      case BPF::STORE_STACK_ARG_IMM_PSEUDO: {
+        int16_t Off = MI.getOperand(0).getImm();
+        int32_t Val = MI.getOperand(1).getImm();
+
+        BuildMI(MBB, MI, DL, TII->get(BPF::STD_imm))
+            .addImm(Val)
+            .addReg(BPF::R11)
+            .addImm(Off);
+        MI.eraseFromParent();
+        Changed = true;
+        break;
+      }
+      }
+    }
+  }
+
+  return Changed;
 }
 
 } // end default namespace

@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=wasm64-unknown-unknown -filetype=obj < %s | obj2yaml | FileCheck %s
+# RUN: llvm-mc -triple=wasm64-unknown-unknown -mcpu=mvp -filetype=obj < %s | obj2yaml | FileCheck %s
 # RUN: llvm-mc -triple=wasm64-unknown-unknown -mattr=+reference-types -filetype=obj < %s | obj2yaml | FileCheck --check-prefix=REF %s
 
 # Verify that @GOT relocation entries result in R_WASM_GLOBAL_INDEX_LEB against

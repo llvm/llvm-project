@@ -47,7 +47,7 @@ submodule (m2) mb_submodule
   end subroutine mb_create_sub
 
   !ERROR: 'mb_create_new_sub' was not declared a separate module procedure
-  module SUBROUTINE  mb_create_new_sub() 
+  module SUBROUTINE  mb_create_new_sub()
     integer :: this
     i = 2
     j = 1

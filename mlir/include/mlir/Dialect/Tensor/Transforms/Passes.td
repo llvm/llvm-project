@@ -26,4 +26,18 @@ def FoldTensorSubsetOpsPass : Pass<"fold-tensor-subset-ops"> {
   ];
 }
 
+def ScalarizeSingleElementTensorReturnPass
+    : Pass<"scalarize-single-element-tensor-return", "ModuleOp"> {
+  let summary = "Scalarize private functions that return single-element tensor";
+  let description = [{
+    Rewrites private functions returning exactly one statically shaped ranked
+    tensor of exactly one element into functions returning the tensor element
+    type, provided all transitive users can be updated safely.
+  }];
+  let dependentDialects = [
+      "arith::ArithDialect", "func::FuncDialect",
+      "tensor::TensorDialect"
+  ];
+}
+
 #endif // MLIR_DIALECT_TENSOR_TRANSFORMS_PASSES

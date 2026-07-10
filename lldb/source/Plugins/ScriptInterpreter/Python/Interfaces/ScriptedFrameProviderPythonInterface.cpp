@@ -6,16 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../lldb-python.h"
+
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Host/Config.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
-
-#if LLDB_ENABLE_PYTHON
-
-// LLDB Python header must be included first
-#include "../lldb-python.h"
 
 #include "../SWIGPythonBridge.h"
 #include "../ScriptInterpreterPythonImpl.h"
@@ -48,14 +44,13 @@ bool ScriptedFrameProviderPythonInterface::AppliesToThread(
 
 llvm::Expected<StructuredData::GenericSP>
 ScriptedFrameProviderPythonInterface::CreatePluginObject(
-    const llvm::StringRef class_name, lldb::StackFrameListSP input_frames,
-    StructuredData::DictionarySP args_sp) {
+    const ScriptedMetadata &scripted_metadata,
+    lldb::StackFrameListSP input_frames) {
   if (!input_frames)
     return llvm::createStringError("invalid frame list");
 
-  StructuredDataImpl sd_impl(args_sp);
-  return ScriptedPythonInterface::CreatePluginObject(class_name, nullptr,
-                                                     input_frames, sd_impl);
+  return ScriptedPythonInterface::CreatePluginObject(
+      scripted_metadata, nullptr, input_frames, scripted_metadata.GetArgsSP());
 }
 
 std::string ScriptedFrameProviderPythonInterface::GetDescription(
@@ -68,6 +63,24 @@ std::string ScriptedFrameProviderPythonInterface::GetDescription(
     return {};
 
   return obj->GetStringValue().str();
+}
+
+std::optional<uint32_t>
+ScriptedFrameProviderPythonInterface::GetPriority(llvm::StringRef class_name) {
+  Status error;
+  StructuredData::ObjectSP obj =
+      CallStaticMethod(class_name, "get_priority", error);
+
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error))
+    return std::nullopt;
+
+  // Try to extract as unsigned integer. Return nullopt if Python returned None
+  // or if extraction fails.
+  if (StructuredData::UnsignedInteger *int_obj = obj->GetAsUnsignedInteger())
+    return static_cast<uint32_t>(int_obj->GetValue());
+
+  return std::nullopt;
 }
 
 StructuredData::ObjectSP
@@ -109,5 +122,3 @@ void ScriptedFrameProviderPythonInterface::Initialize() {
 void ScriptedFrameProviderPythonInterface::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-#endif

@@ -453,10 +453,10 @@ func.func @reduce_scatter_static_dimensions(
     // CHECK-SAME: %[[ARG:.*]]: tensor<3x4xf32>
     %arg0 : tensor<3x4xf32>) -> tensor<3x1xf64> {
   // CHECK-NEXT: shard.reduce_scatter %[[ARG]]
-  // CHECK-SAME: on @grid0 grid_axes = [2] reduction = max scatter_axis = 1
+  // CHECK-SAME: on @grid0 grid_axes = [2] reduction = max scatter_dim = 1
   // CHECK-SAME: : tensor<3x4xf32> -> tensor<3x1xf64>
   %0 = shard.reduce_scatter %arg0 on @grid0 grid_axes = [2]
-    reduction = max scatter_axis = 1
+    reduction = max scatter_dim = 1
     : tensor<3x4xf32> -> tensor<3x1xf64>
   return %0 : tensor<3x1xf64>
 }
@@ -466,9 +466,9 @@ func.func @reduce_scatter_dynamic_dimensions(
     // CHECK-SAME: %[[ARG:.*]]: tensor<?xf32>
     %arg0 : tensor<?xf32>) -> tensor<?xf64> {
   // CHECK-NEXT: shard.reduce_scatter %[[ARG]]
-  // CHECK-SAME: on @grid3 grid_axes = [0, 1] scatter_axis = 0
+  // CHECK-SAME: on @grid3 grid_axes = [0, 1] scatter_dim = 0
   // CHECK-SAME: : tensor<?xf32> -> tensor<?xf64>
-  %0 = shard.reduce_scatter %arg0 on @grid3 grid_axes = [0, 1] scatter_axis = 0
+  %0 = shard.reduce_scatter %arg0 on @grid3 grid_axes = [0, 1] scatter_dim = 0
     : tensor<?xf32> -> tensor<?xf64>
   return %0 : tensor<?xf64>
 }
@@ -479,10 +479,10 @@ func.func @scatter_static_dimensions(
     %arg0 : tensor<3x4xf32>) -> tensor<3x1xf32> {
   // CHECK-NEXT: shard.scatter %[[ARG]]
   // CHECK-SAME: on @grid0 grid_axes = [2]
-  // CHECK-SAME: scatter_axis = 1 root = [1]
+  // CHECK-SAME: scatter_dim = 1 root = [1]
   // CHECK-SAME: : (tensor<3x4xf32>) -> tensor<3x1xf32>
   %0 = shard.scatter %arg0 on @grid0 grid_axes = [2]
-    scatter_axis = 1 root = [1]
+    scatter_dim = 1 root = [1]
     : (tensor<3x4xf32>) -> tensor<3x1xf32>
   return %0 : tensor<3x1xf32>
 }
@@ -493,10 +493,10 @@ func.func @scatter_dynamic_dimensions(
     %arg0 : tensor<?xf32>) -> tensor<?xf32> {
   // CHECK-NEXT: shard.scatter %[[ARG]]
   // CHECK-SAME: on @grid3 grid_axes = [0, 1]
-  // CHECK-SAME: scatter_axis = 0 root = [1, 2]
+  // CHECK-SAME: scatter_dim = 0 root = [1, 2]
   // CHECK-SAME: : (tensor<?xf32>) -> tensor<?xf32>
   %0 = shard.scatter %arg0 on @grid3 grid_axes = [0, 1]
-    scatter_axis = 0 root = [1, 2]
+    scatter_dim = 0 root = [1, 2]
     : (tensor<?xf32>) -> tensor<?xf32>
   return %0 : tensor<?xf32>
 }
@@ -510,11 +510,11 @@ func.func @scatter_dynamic_root(
     ) -> tensor<1xi8> {
   // CHECK-NEXT: shard.scatter %[[ARG0]]
   // CHECK-SAME: on @grid0 grid_axes = [0, 2]
-  // CHECK-SAME: scatter_axis = 0
+  // CHECK-SAME: scatter_dim = 0
   // CHECK-SAME: root = [1, %[[ARG1]]]
   // CHECK-SAME: : (tensor<8xi8>, index) -> tensor<1xi8>
   %0 = shard.scatter %arg0 on @grid0 grid_axes = [0, 2]
-    scatter_axis = 0
+    scatter_dim = 0
     root = [1, %arg1]
     : (tensor<8xi8>, index) -> tensor<1xi8>
   return %0 : tensor<1xi8>

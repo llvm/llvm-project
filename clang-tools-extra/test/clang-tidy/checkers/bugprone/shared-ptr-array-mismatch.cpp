@@ -1,16 +1,6 @@
 // RUN: %check_clang_tidy %s bugprone-shared-ptr-array-mismatch %t
 
-namespace std {
-
-template <typename T>
-struct shared_ptr {
-  template <class Y>
-  explicit shared_ptr(Y *) {}
-  template <class Y, class Deleter>
-  shared_ptr(Y *, Deleter) {}
-};
-
-} // namespace std
+#include <memory>
 
 struct A {};
 

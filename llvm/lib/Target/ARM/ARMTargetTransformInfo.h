@@ -40,13 +40,13 @@ class Type;
 class Value;
 
 namespace TailPredication {
-  enum Mode {
-    Disabled = 0,
-    EnabledNoReductions,
-    Enabled,
-    ForceEnabledNoReductions,
-    ForceEnabled
-  };
+enum Mode {
+  Disabled = 0,
+  EnabledNoReductions,
+  Enabled,
+  ForceEnabledNoReductions,
+  ForceEnabled
+};
 }
 
 // For controlling conversion of memcpy into Tail Predicated loop.
@@ -63,39 +63,6 @@ class ARMTTIImpl final : public BasicTTIImplBase<ARMTTIImpl> {
   const ARMSubtarget *ST;
   const ARMTargetLowering *TLI;
 
-  // Currently the following features are excluded from InlineFeaturesAllowed.
-  // ModeThumb, FeatureNoARM, ModeSoftFloat, FeatureFP64, FeatureD32
-  // Depending on whether they are set or unset, different
-  // instructions/registers are available. For example, inlining a callee with
-  // -thumb-mode in a caller with +thumb-mode, may cause the assembler to
-  // fail if the callee uses ARM only instructions, e.g. in inline asm.
-  const FeatureBitset InlineFeaturesAllowed = {
-      ARM::FeatureVFP2, ARM::FeatureVFP3, ARM::FeatureNEON, ARM::FeatureThumb2,
-      ARM::FeatureFP16, ARM::FeatureVFP4, ARM::FeatureFPARMv8,
-      ARM::FeatureFullFP16, ARM::FeatureFP16FML, ARM::FeatureHWDivThumb,
-      ARM::FeatureHWDivARM, ARM::FeatureDB, ARM::FeatureV7Clrex,
-      ARM::FeatureAcquireRelease, ARM::FeatureSlowFPBrcc,
-      ARM::FeaturePerfMon, ARM::FeatureTrustZone, ARM::Feature8MSecExt,
-      ARM::FeatureCrypto, ARM::FeatureCRC, ARM::FeatureRAS,
-      ARM::FeatureFPAO, ARM::FeatureFuseAES, ARM::FeatureZCZeroing,
-      ARM::FeatureProfUnpredicate, ARM::FeatureSlowVGETLNi32,
-      ARM::FeatureSlowVDUP32, ARM::FeaturePreferVMOVSR,
-      ARM::FeaturePrefISHSTBarrier, ARM::FeatureMuxedUnits,
-      ARM::FeatureSlowOddRegister, ARM::FeatureSlowLoadDSubreg,
-      ARM::FeatureDontWidenVMOVS, ARM::FeatureExpandMLx,
-      ARM::FeatureHasVMLxHazards, ARM::FeatureNEONForFPMovs,
-      ARM::FeatureNEONForFP, ARM::FeatureCheckVLDnAlign,
-      ARM::FeatureHasSlowFPVMLx, ARM::FeatureHasSlowFPVFMx,
-      ARM::FeatureVMLxForwarding, ARM::FeaturePref32BitThumb,
-      ARM::FeatureAvoidPartialCPSR, ARM::FeatureCheapPredicableCPSR,
-      ARM::FeatureAvoidMOVsShOp, ARM::FeatureHasRetAddrStack,
-      ARM::FeatureHasNoBranchPredictor, ARM::FeatureDSP, ARM::FeatureMP,
-      ARM::FeatureVirtualization, ARM::FeatureMClass, ARM::FeatureRClass,
-      ARM::FeatureAClass, ARM::FeatureStrictAlign, ARM::FeatureLongCalls,
-      ARM::FeatureExecuteOnly, ARM::FeatureReserveR9, ARM::FeatureNoMovt,
-      ARM::FeatureNoNegativeImmediates
-  };
-
   const ARMSubtarget *getST() const { return ST; }
   const ARMTargetLowering *getTLI() const { return TLI; }
 
@@ -103,9 +70,6 @@ public:
   explicit ARMTTIImpl(const ARMBaseTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
-
-  bool areInlineCompatible(const Function *Caller,
-                           const Function *Callee) const override;
 
   bool enableInterleavedAccessVectorization() const override { return true; }
 
@@ -180,7 +144,8 @@ public:
     llvm_unreachable("Unsupported register kind");
   }
 
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override {
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override {
     return ST->getMaxInterleaveFactor();
   }
 
@@ -256,10 +221,11 @@ public:
       const Instruction *I = nullptr) const override;
 
   using BaseT::getVectorInstrCost;
-  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index, const Value *Op0,
-                                     const Value *Op1) const override;
+  InstructionCost
+  getVectorInstrCost(unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+                     unsigned Index, const Value *Op0, const Value *Op1,
+                     TTI::VectorInstrContext VIC =
+                         TTI::VectorInstrContext::None) const override;
 
   InstructionCost
   getAddressComputationCost(Type *Val, ScalarEvolution *SE, const SCEV *Ptr,
@@ -314,6 +280,15 @@ public:
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                         TTI::TargetCostKind CostKind) const override;
 
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
+
   /// getScalingFactorCost - Return the cost of the scaling used in
   /// addressing mode represented by AM.
   /// If the AM is supported, the return value must be >= 0.
@@ -328,13 +303,12 @@ public:
   bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                 AssumptionCache &AC, TargetLibraryInfo *LibInfo,
                                 HardwareLoopInfo &HWLoopInfo) const override;
-  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const override;
+  bool preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const override;
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
                                OptimizationRemarkEmitter *ORE) const override;
 
-  TailFoldingStyle
-  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) const override;
+  TailFoldingStyle getPreferredTailFoldingStyle() const override;
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP) const override;
@@ -347,6 +321,8 @@ public:
 
     return true;
   }
+
+  bool shouldConsiderVectorizationRegPressure() const override;
 
   bool hasArmWideBranch(bool Thumb) const override;
 

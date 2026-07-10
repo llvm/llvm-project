@@ -254,8 +254,8 @@ define amdgpu_kernel void @nested_loop_conditions(ptr addrspace(1) captures(none
 ; IR-NEXT:    [[MY_TMP23:%.*]] = lshr i32 [[MY_TMP22]], 16
 ; IR-NEXT:    [[MY_TMP24:%.*]] = select i1 false, i32 0, i32 [[MY_TMP23]]
 ; IR-NEXT:    [[MY_TMP25:%.*]] = uitofp i32 [[MY_TMP24]] to float
-; IR-NEXT:    [[MY_TMP26:%.*]] = fmul float [[MY_TMP25]], 0x3EF0001000000000
-; IR-NEXT:    [[MY_TMP27:%.*]] = fsub float [[MY_TMP26]], 0x7FF8000000000000
+; IR-NEXT:    [[MY_TMP26:%.*]] = fmul float [[MY_TMP25]], f0x37800080
+; IR-NEXT:    [[MY_TMP27:%.*]] = fsub float [[MY_TMP26]], +qnan
 ; IR-NEXT:    [[MY_TMP28:%.*]] = fcmp olt float [[MY_TMP27]], 5.000000e-01
 ; IR-NEXT:    [[MY_TMP29:%.*]] = select i1 [[MY_TMP28]], i64 1, i64 2
 ; IR-NEXT:    [[MY_TMP30:%.*]] = extractelement <4 x i32> [[MY_TMP936]], i64 [[MY_TMP29]]

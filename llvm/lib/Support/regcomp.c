@@ -192,7 +192,7 @@ struct parse {
   sopno slen;       /* malloced strip length (used) */
   int ncsalloc;     /* number of csets allocated */
   struct re_guts *g;
-#define NPAREN 10       /* we need to remember () 1-9 for back refs */
+#define NPAREN 21       /* we need to remember () 1-20 for back refs */
   sopno pbegin[NPAREN]; /* -> ( ([0] unused) */
   sopno pend[NPAREN];   /* -> ) ([0] unused) */
 };
@@ -506,27 +506,47 @@ static void p_ere_exp(struct parse *p) {
        * least 4 matching groups specified in the pattern previously).
        */
       backrefnum = c - '0';
-      if (p->pend[backrefnum] == 0) {
-        SETERROR(REG_ESUBREG);
-        break;
-      }
-
-      /* Make sure everything checks out and emit the sequence
-       * that marks a back-reference to the parse structure.
+    } else if (c == 'g') {
+      /* Support back-references with index greater 9.
+       * These look like that: \g{n}
+       * Extract the number inside the brackets.
        */
-      assert(backrefnum <= p->g->nsub);
-      EMIT(OBACK_, backrefnum);
-      assert(p->pbegin[backrefnum] != 0);
-      assert(OP(p->strip[p->pbegin[backrefnum]]) == OLPAREN);
-      assert(OP(p->strip[p->pend[backrefnum]]) == ORPAREN);
-      (void)dupl(p, p->pbegin[backrefnum] + 1, p->pend[backrefnum]);
-      EMIT(O_BACK, backrefnum);
-      p->g->backrefs = 1;
+      MUSTEAT('{', REG_BADRPT);
+
+      backrefnum = 0;
+      while (MORE() && isdigit(PEEK())) {
+        c = GETNEXT();
+        backrefnum = backrefnum * 10 + c - '0';
+      }
+      MUSTEAT('}', REG_BADRPT);
     } else {
       /* Other chars are simply themselves when escaped with a backslash.
        */
       ordinary(p, c);
+      break;
     }
+
+    if (backrefnum >= NPAREN) {
+      SETERROR(REG_ESUBREG);
+      break;
+    }
+
+    if (p->pend[backrefnum] == 0) {
+      SETERROR(REG_ESUBREG);
+      break;
+    }
+
+    /* Make sure everything checks out and emit the sequence
+     * that marks a back-reference to the parse structure.
+     */
+    assert(backrefnum <= p->g->nsub);
+    EMIT(OBACK_, backrefnum);
+    assert(p->pbegin[backrefnum] != 0);
+    assert(OP(p->strip[p->pbegin[backrefnum]]) == OLPAREN);
+    assert(OP(p->strip[p->pend[backrefnum]]) == ORPAREN);
+    (void)dupl(p, p->pbegin[backrefnum] + 1, p->pend[backrefnum]);
+    EMIT(O_BACK, backrefnum);
+    p->g->backrefs = 1;
     break;
   case '{': /* okay as ordinary except if digit follows */
     REQUIRE(!MORE() || !isdigit((uch)PEEK()), REG_BADRPT);

@@ -20,7 +20,7 @@ def constructAndPrintInModule(f):
 # CHECK-LABEL: testSmoke
 @constructAndPrintInModule
 def testSmoke():
-    # CHECK: Value(%{{.*}} = ub.poison : f32
+    # CHECK: OpResult(%{{.*}} = ub.poison : f32
     f32 = F32Type.get()
     poison = ub.poison(f32)
     print(poison)

@@ -6,7 +6,7 @@ if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
   )
 endif()
 
-if (MLIR_ENABLE_ROCM_CONVERSIONS)
+if ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
   set(AMDGPU_LIBS
     AMDGPUCodeGen
     AMDGPUDesc
@@ -18,6 +18,7 @@ add_mlir_conversion_library(MLIRGPUToGPURuntimeTransforms
   AttrToSPIRVConverter.cpp
   GPUToLLVMConversion.cpp
   GPUOpsLowering.cpp
+  IndexIntrinsicsOpLowering.cpp
 
   DEPENDS
   MLIRConversionPassIncGen

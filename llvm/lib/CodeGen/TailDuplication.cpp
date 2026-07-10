@@ -24,7 +24,6 @@
 #include "llvm/IR/Analysis.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
 
 using namespace llvm;
 
@@ -53,17 +52,13 @@ public:
 class TailDuplicateLegacy : public TailDuplicateBaseLegacy {
 public:
   static char ID;
-  TailDuplicateLegacy() : TailDuplicateBaseLegacy(ID, false) {
-    initializeTailDuplicateLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  TailDuplicateLegacy() : TailDuplicateBaseLegacy(ID, false) {}
 };
 
 class EarlyTailDuplicateLegacy : public TailDuplicateBaseLegacy {
 public:
   static char ID;
-  EarlyTailDuplicateLegacy() : TailDuplicateBaseLegacy(ID, true) {
-    initializeEarlyTailDuplicateLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  EarlyTailDuplicateLegacy() : TailDuplicateBaseLegacy(ID, true) {}
 
   MachineFunctionProperties getClearedProperties() const override {
     return MachineFunctionProperties().setNoPHIs();

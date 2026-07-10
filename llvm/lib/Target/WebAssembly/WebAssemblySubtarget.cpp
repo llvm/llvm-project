@@ -13,8 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblySubtarget.h"
+#include "GISel/WebAssemblyCallLowering.h"
+#include "GISel/WebAssemblyLegalizerInfo.h"
+#include "GISel/WebAssemblyRegisterBankInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "WebAssembly.h"
 #include "WebAssemblyInstrInfo.h"
+#include "WebAssemblyTargetMachine.h"
 #include "llvm/MC/TargetRegistry.h"
 using namespace llvm;
 
@@ -35,27 +40,12 @@ WebAssemblySubtarget::initializeSubtargetDependencies(StringRef CPU,
 
   ParseSubtargetFeatures(CPU, /*TuneCPU*/ CPU, FS);
 
-  FeatureBitset Bits = getFeatureBits();
-
-  // bulk-memory implies bulk-memory-opt
-  if (HasBulkMemory) {
-    HasBulkMemoryOpt = true;
-    Bits.set(WebAssembly::FeatureBulkMemoryOpt);
+  // WASIP3 uses cooperative multithreading, which implies using libcall
+  // thread context.
+  if (TargetTriple.getOS() == Triple::WASIp3) {
+    HasCooperativeMultithreading = true;
+    HasLibcallThreadContext = true;
   }
-
-  // gc implies reference-types
-  if (HasGC) {
-    HasReferenceTypes = true;
-  }
-
-  // reference-types implies call-indirect-overlong
-  if (HasReferenceTypes) {
-    HasCallIndirectOverlong = true;
-    Bits.set(WebAssembly::FeatureCallIndirectOverlong);
-  }
-
-  // In case we changed any bits, update `MCSubtargetInfo`'s `FeatureBitset`.
-  setFeatureBits(Bits);
 
   return *this;
 }
@@ -66,7 +56,15 @@ WebAssemblySubtarget::WebAssemblySubtarget(const Triple &TT,
                                            const TargetMachine &TM)
     : WebAssemblyGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
       TargetTriple(TT), InstrInfo(initializeSubtargetDependencies(CPU, FS)),
-      TLInfo(TM, *this) {}
+      TLInfo(TM, *this) {
+  CallLoweringInfo.reset(new WebAssemblyCallLowering(*getTargetLowering()));
+  Legalizer.reset(new WebAssemblyLegalizerInfo(*this));
+  auto *RBI = new WebAssemblyRegisterBankInfo(*getRegisterInfo());
+  RegBankInfo.reset(RBI);
+
+  InstSelector.reset(createWebAssemblyInstructionSelector(
+      *static_cast<const WebAssemblyTargetMachine *>(&TM), *this, *RBI));
+}
 
 bool WebAssemblySubtarget::enableAtomicExpand() const {
   // If atomics are disabled, atomic ops are lowered instead of expanded
@@ -81,3 +79,19 @@ bool WebAssemblySubtarget::enableMachineScheduler() const {
 }
 
 bool WebAssemblySubtarget::useAA() const { return true; }
+
+const CallLowering *WebAssemblySubtarget::getCallLowering() const {
+  return CallLoweringInfo.get();
+}
+
+InstructionSelector *WebAssemblySubtarget::getInstructionSelector() const {
+  return InstSelector.get();
+}
+
+const LegalizerInfo *WebAssemblySubtarget::getLegalizerInfo() const {
+  return Legalizer.get();
+}
+
+const RegisterBankInfo *WebAssemblySubtarget::getRegBankInfo() const {
+  return RegBankInfo.get();
+}

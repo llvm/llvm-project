@@ -10,6 +10,7 @@ from lldbsuite.test.decorators import *
 
 
 class TestDumpOso(lldbtest.TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     def get_osos_from_json_output(self):

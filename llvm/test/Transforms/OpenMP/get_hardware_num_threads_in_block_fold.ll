@@ -78,7 +78,7 @@ define weak ptx_kernel void @kernel2(ptr %dyn) "kernel" #0 {
 ; CHECK-NEXT:    call void @helper0() #[[ATTR1]]
 ; CHECK-NEXT:    call void @helper1() #[[ATTR1]]
 ; CHECK-NEXT:    call void @helper2() #[[ATTR1]]
-; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr null, i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
+; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr null, i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0, i32 0)
 ; CHECK-NEXT:    call void @__kmpc_target_deinit()
 ; CHECK-NEXT:    ret void
 ;
@@ -96,7 +96,7 @@ user_code.entry:
   call void @helper0()
   call void @helper1()
   call void @helper2()
-  call void @__kmpc_parallel_51(ptr null, i32 %0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr %captured_vars_addrs, i64 0)
+  call void @__kmpc_parallel_60(ptr null, i32 %0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr %captured_vars_addrs, i64 0, i32 0)
   call void @__kmpc_target_deinit()
   ret void
 }
@@ -195,7 +195,7 @@ define internal i32 @__kmpc_get_hardware_num_threads_in_block() {
 declare i32 @__kmpc_get_hardware_num_threads_in_block_dummy()
 declare i32 @__kmpc_target_init(ptr, ptr) #1
 declare void @__kmpc_target_deinit() #1
-declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64)
+declare void @__kmpc_parallel_60(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64, i32)
 declare i32 @__kmpc_global_thread_num(ptr)
 
 

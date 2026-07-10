@@ -560,7 +560,7 @@ def Index_CmpOp : IndexOp<"cmp", [Pure]> {
 
   let arguments = (ins IndexCmpPredicateAttr:$pred, Index:$lhs, Index:$rhs);
   let results = (outs I1:$result);
-  let assemblyFormat = "`` $pred `(` $lhs `,` $rhs `)` attr-dict";
+  let assemblyFormat = "$pred `(` $lhs `,` $rhs `)` attr-dict";
   let hasFolder = 1;
   let hasCanonicalizeMethod = 1;
 }

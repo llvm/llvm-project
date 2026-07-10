@@ -429,7 +429,7 @@ at the LLVM IR for simple functions. For example:
 
     ready> 4+5;
     Read top-level expression:
-    define double @0() {
+    define double @__anon_expr() {
     entry:
       ret double 9.000000e+00
     }
@@ -484,7 +484,7 @@ control flow to actually make recursion useful :).
 
     ready> cos(1.234);
     Read top-level expression:
-    define double @1() {
+    define double @__anon_expr() {
     entry:
       %calltmp = call double @cos(double 1.234000e+00)
       ret double %calltmp

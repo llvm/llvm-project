@@ -26,7 +26,7 @@ define amdgpu_kernel void @k0() sanitize_address #1 {
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_K0_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i32 0, i32 2, i32 2), align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
-; CHECK-NEXT:    [[TMP10:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP10:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP10]] to i64
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @__asan_malloc_impl(i64 [[TMP9]], i64 [[TMP11]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to ptr addrspace(1)
@@ -129,7 +129,7 @@ define amdgpu_kernel void @k0() sanitize_address #1 {
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    br i1 [[XYZCOND]], label %[[FREE:.*]], label %[[END:.*]]
 ; CHECK:       [[FREE]]:
-; CHECK-NEXT:    [[TMP78:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP78:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP79:%.*]] = ptrtoint ptr [[TMP78]] to i64
 ; CHECK-NEXT:    [[TMP80:%.*]] = ptrtoint ptr addrspace(1) [[TMP21]] to i64
 ; CHECK-NEXT:    call void @__asan_free_impl(i64 [[TMP80]], i64 [[TMP79]])
@@ -150,7 +150,7 @@ attributes #1 = { "amdgpu-no-heap-ptr" }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { convergent nocallback nofree nounwind willreturn memory(none) }
+; CHECK: attributes #[[ATTR4:[0-9]+]] = { convergent nocallback nocreateundeforpoison nofree nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR5:[0-9]+]] = { convergent nocallback nofree nounwind }
 ; CHECK: attributes #[[ATTR6]] = { nomerge }
 ;.

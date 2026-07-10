@@ -1294,10 +1294,13 @@ Result::Ptr EmitterBase::getCodeForDag(const DagInit *D,
       return GenIRIntBase(Op);
     } else if (Op->isSubClassOf("strictFPAlt")) {
       auto StardardBuilder = Op->getValueAsDef("standard");
-      Result::Ptr Standard = StardardBuilder->isSubClassOf("IRBuilder")
+      Result::Ptr Standard = StardardBuilder->isSubClassOf("IRBuilderBase")
                                  ? GenIRBuilderBase(StardardBuilder)
                                  : GenIRIntBase(StardardBuilder);
-      Result::Ptr StrictFp = GenIRIntBase(Op->getValueAsDef("strictfp"));
+      auto StrictBuilder = Op->getValueAsDef("strictfp");
+      Result::Ptr StrictFp = StrictBuilder->isSubClassOf("IRBuilderBase")
+                                 ? GenIRBuilderBase(StrictBuilder)
+                                 : GenIRIntBase(StrictBuilder);
       return std::make_shared<StrictFpAltResult>(Standard, StrictFp);
     } else {
       PrintFatalError("Unsupported dag node " + Op->getName());

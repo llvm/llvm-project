@@ -2,6 +2,7 @@
 // RUN: mlir-runner %s -e entry -entry-point-result=void  \
 // RUN: -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
+// XFAIL: system-aix
 
 // Test that the `ctor` executes before `entry` and that `dtor` executes last.
 module {

@@ -1,0 +1,207 @@
+# This file defines a workflow that runs the libc++ benchmarks when a comment is added to the PR.
+#
+# The comment is of the form:
+#
+#   /libcxx-bot benchmark <path-to-benchmarks-to-run>
+#
+# That will cause the specified benchmarks to be run on the PR and on the pull-request target, and
+# their results to be compared.
+
+name: Benchmark libc++ PR
+
+permissions:
+  contents: read
+
+on:
+  issue_comment:
+    types:
+      - created
+      - edited
+
+jobs:
+  permission-check:
+    if: >-
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/libcxx-bot benchmark')
+    runs-on: ubuntu-24.04
+    environment:
+      name: main-branch-only
+      deployment: false
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/workflows/
+
+      - name: Check Permissions
+        uses: ./.github/workflows/require-team-membership
+        with:
+          team-slug: llvm-committers
+          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+
+  extract-info:
+    runs-on: ubuntu-24.04
+    needs:
+      - permission-check
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.14'
+
+      - name: Setup virtual environment
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          python -m pip install pygithub==2.8.1
+
+      - name: Extract information from the PR
+        id: vars
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          source .venv/bin/activate
+          cat <<EOF | python >> ${GITHUB_OUTPUT}
+          import github
+          repo = github.Github(auth=github.Auth.Token("${{ github.token }}")).get_repo("${{ github.repository }}")
+          pr = repo.get_pull(${{ github.event.issue.number }})
+          print(f"pr_base={pr.base.sha}")
+          print(f"pr_head={pr.head.sha}")
+          EOF
+          BENCHMARKS=$(echo "$COMMENT_BODY" | sed -nE 's/\/libcxx-bot benchmark (.+)/\1/p')
+          echo "benchmarks=${BENCHMARKS}" >> ${GITHUB_OUTPUT}
+
+      - name: Update comment with link to the run
+        run: |
+          source .venv/bin/activate
+          cat <<EOF | python
+          import github
+          repo = github.Github(auth=github.Auth.Token("${{ github.token }}")).get_repo("${{ github.repository }}")
+          pr = repo.get_pull(${{ github.event.issue.number }})
+          comment = pr.get_issue_comment(${{ github.event.comment.id }})
+          add_text = "> _Running benchmarks in ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}_"
+          comment.edit('\n\n'.join([comment.body, add_text]))
+          EOF
+    outputs:
+      pr_base: ${{ steps.vars.outputs.pr_base }}
+      pr_head: ${{ steps.vars.outputs.pr_head }}
+      benchmarks: ${{ steps.vars.outputs.benchmarks }}
+
+  run-benchmarks:
+    strategy:
+      matrix:
+        include:
+          - platform: macOS 26.5 arm64
+            runner: ["self-hosted", "macOS", "ARM64", "26", "26.5"]
+            cc: clang
+            cxx: clang++
+            install-python: false
+            install-macos-dependencies: true
+          - platform: Linux x86_64
+            runner: llvm-premerge-libcxx-next-runners
+            cc: clang-22
+            cxx: clang++-22
+            install-python: true
+            install-macos-dependencies: false
+      fail-fast: false
+    permissions:
+      pull-requests: write
+    runs-on: ${{ matrix.runner }}
+    needs:
+      - extract-info
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          ref: ${{ needs.extract-info.outputs.pr_head }}
+          fetch-depth: 0
+          fetch-tags: true # This job requires access to all the Git branches so it can diff against (usually) main
+
+      - name: Install Python
+        if: ${{ matrix.install-python }}
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.14'
+
+      - name: Install Ninja and CMake
+        if: ${{ matrix.install-macos-dependencies }}
+        run: |
+          brew install ninja cmake
+
+      - name: Setup virtual environment
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          python -m pip install -r libcxx/utils/requirements.txt
+          python -m pip install pygithub==2.8.1
+
+      - name: Build the baseline and the candidate
+        env:
+          PR_HEAD: ${{ needs.extract-info.outputs.pr_head }}
+          PR_BASE: ${{ needs.extract-info.outputs.pr_base }}
+        run: |
+          source .venv/bin/activate
+          baseline_commit=$(git merge-base $PR_BASE $PR_HEAD)
+          ./libcxx/utils/build-at-commit --commit ${baseline_commit} --install-dir install/baseline -- -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          ./libcxx/utils/build-at-commit --commit $PR_HEAD --install-dir install/candidate -- -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+      - name: Run baseline and candidate interleaved
+        env:
+          BENCHMARKS: ${{ needs.extract-info.outputs.benchmarks }}
+        run: |
+          source .venv/bin/activate
+          # Run 3 times so we can pick the median, and interleave to mitigate the impact of environmental noise
+          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/consolidate-benchmarks benchmarks/baseline | tee baseline.lnt
+          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/consolidate-benchmarks benchmarks/candidate | tee candidate.lnt
+
+          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/consolidate-benchmarks benchmarks/baseline | tee -a baseline.lnt
+          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/consolidate-benchmarks benchmarks/candidate | tee -a candidate.lnt
+
+          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/consolidate-benchmarks benchmarks/baseline | tee -a baseline.lnt
+          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/consolidate-benchmarks benchmarks/candidate | tee -a candidate.lnt
+
+      - name: Compare baseline and candidate runs
+        run: |
+          source .venv/bin/activate
+          ./libcxx/utils/compare-benchmarks baseline.lnt candidate.lnt | tee results.txt
+
+      - name: Update comment with results
+        run: |
+          source .venv/bin/activate
+          cat <<EOF | python
+          import github
+          repo = github.Github(auth=github.Auth.Token("${{ github.token }}")).get_repo("${{ github.repository }}")
+          pr = repo.get_pull(${{ github.event.issue.number }})
+          comment = pr.get_issue_comment(${{ github.event.comment.id }})
+          with open('results.txt', 'r') as f:
+            benchmark_results = f.read()
+
+          new_comment_text = f"""
+          {comment.body}
+
+          <details>
+          <summary>
+          Benchmark results for ${{ matrix.platform }}:
+          </summary>
+
+          \`\`\`
+          {benchmark_results}
+          \`\`\`
+
+          </details>
+          """
+
+          comment.edit(new_comment_text)
+          EOF

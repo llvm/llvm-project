@@ -541,7 +541,7 @@ namespace IncDec {
   /// current interpreter. But they are stil OK.
   template<typename T, bool Inc, bool Pre>
   constexpr int uninit() {
-    T a;
+    T a; // both-note 10{{declared here}}
     if constexpr (Inc) {
       if (Pre)
         ++a; // ref-note 3{{increment of uninitialized}} \
@@ -866,7 +866,62 @@ namespace IncDec {
                             // both-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
   }
 
-};
+  namespace Const {
+    constexpr int test1(const int a) {
+      ((int&)a)++; // both-note {{modification of object of const-qualified type 'const int'}}
+      return a;
+    }
+    static_assert(test1(12) == 10); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+
+    constexpr int test2(const int a) {
+      ++((int&)a); // both-note {{modification of object of const-qualified type 'const int'}}
+      return a;
+    }
+    static_assert(test2(12) == 10); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+    constexpr int test3(const int a) {
+      ((int&)a)--; // both-note {{modification of object of const-qualified type 'const int'}}
+      return a;
+    }
+    static_assert(test3(12) == 10); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+
+    constexpr int test4(const int a) {
+      --((int&)a); // both-note {{modification of object of const-qualified type 'const int'}}
+      return a;
+    }
+    static_assert(test4(12) == 10); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+
+    constexpr int test5(const int a) {
+      int b = ((int&)a)++; // both-note {{modification of object of const-qualified type 'const int'}}
+      return a;
+    }
+    static_assert(test5(12) == 10); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+
+    constexpr int test6(const int a) {
+      int b = ++((int&)a); // both-note {{modification of object of const-qualified type 'const int'}}
+      return a;
+    }
+    static_assert(test6(12) == 10); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+    constexpr int test7(const int a) {
+      int b = ((int&)a)--; // both-note {{modification of object of const-qualified type 'const int'}}
+      return a;
+    }
+    static_assert(test7(12) == 10); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+
+    constexpr int test8(const int a) {
+      int b = --((int&)a); // both-note {{modification of object of const-qualified type 'const int'}}
+      return a;
+    }
+    static_assert(test8(12) == 10); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+  }
+}
 #endif
 
 namespace CompoundLiterals {
@@ -1281,6 +1336,21 @@ namespace StmtExprs {
            i;
         }) == 300);
   }
+
+  constexpr int f(int k) {
+    switch (k) {
+    case 0:
+      return 0;
+
+      ({  // both-note {{jump enters a statement expression}}
+        case 1:// both-error {{cannot jump from switch statement to this case label}} \
+               // both-note  {{not supported}}
+          return 1;
+      });
+    }
+  }
+  static_assert(f(1) == 1, ""); // both-error {{constant expression}} both-note {{in call}}
+
 }
 #endif
 
@@ -1447,4 +1517,8 @@ namespace ExternRedecl {
   constexpr const int *p = &a;
   constexpr int a = 10;
   static_assert(*p == 10, "");
+}
+
+namespace GetElemDataSizeBool {
+  int foo[(intptr_t)(bool *)0]; // both-warning {{variable length array folded to constant array as an extension}}
 }

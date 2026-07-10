@@ -166,7 +166,7 @@ end subroutine
 ! CHECK-SAME:                             %[[VAL_0:.*]]: !fir.box<!fir.array<*:!fir.char<1,?>>> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} {uniq_name = "_QFtest_len_1Ex"} : (!fir.box<!fir.array<*:!fir.char<1,?>>>, !fir.dscope) -> (!fir.box<!fir.array<*:!fir.char<1,?>>>, !fir.box<!fir.array<*:!fir.char<1,?>>>)
-! CHECK:           %[[VAL_3:.*]] = fir.box_elesize %[[VAL_2]]#0 : (!fir.box<!fir.array<*:!fir.char<1,?>>>) -> index
+! CHECK:           %[[VAL_3:.*]] = fir.box_elesize %[[VAL_2]]#1 : (!fir.box<!fir.array<*:!fir.char<1,?>>>) -> index
 ! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (index) -> i32
 ! CHECK:           %[[VAL_5:.*]]:3 = hlfir.associate %[[VAL_4]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 ! CHECK:           fir.call @_QPtakes_integer(%[[VAL_5]]#0) fastmath<contract> : (!fir.ref<i32>) -> ()

@@ -3516,3 +3516,89 @@ entry:
   %cmp = icmp samesign ult i32 %v0, 10
   ret i1 %cmp
 }
+
+; icmp ult (add nuw X, (lshr X, S)), C --> icmp ult X, C when C <= (1 << S)
+define i1 @icmp_ult_add_nuw_lshr(i32 %arg0) {
+; CHECK-LABEL: @icmp_ult_add_nuw_lshr(
+; CHECK-NEXT:    [[V2:%.*]] = icmp ult i32 [[ARG0:%.*]], 256
+; CHECK-NEXT:    ret i1 [[V2]]
+;
+  %v0 = lshr i32 %arg0, 9
+  %v1 = add nuw i32 %v0, %arg0
+  %v2 = icmp ult i32 %v1, 256
+  ret i1 %v2
+}
+
+define i1 @icmp_ult_add_nuw_lshr_commuted(i32 %arg0) {
+; CHECK-LABEL: @icmp_ult_add_nuw_lshr_commuted(
+; CHECK-NEXT:    [[V2:%.*]] = icmp ult i32 [[ARG0:%.*]], 256
+; CHECK-NEXT:    ret i1 [[V2]]
+;
+  %v0 = lshr i32 %arg0, 9
+  %v1 = add nuw i32 %arg0, %v0
+  %v2 = icmp ult i32 %v1, 256
+  ret i1 %v2
+}
+
+; C = (1 << S) is the boundary case
+define i1 @icmp_ult_add_nuw_lshr_boundary(i32 %arg0) {
+; CHECK-LABEL: @icmp_ult_add_nuw_lshr_boundary(
+; CHECK-NEXT:    [[V2:%.*]] = icmp ult i32 [[ARG0:%.*]], 512
+; CHECK-NEXT:    ret i1 [[V2]]
+;
+  %v0 = lshr i32 %arg0, 9
+  %v1 = add nuw i32 %v0, %arg0
+  %v2 = icmp ult i32 %v1, 512
+  ret i1 %v2
+}
+
+; Negative test: C > (1 << S)
+define i1 @icmp_ult_add_nuw_lshr_neg_c_too_large(i32 %arg0) {
+; CHECK-LABEL: @icmp_ult_add_nuw_lshr_neg_c_too_large(
+; CHECK-NEXT:    [[V0:%.*]] = lshr i32 [[ARG0:%.*]], 9
+; CHECK-NEXT:    [[V1:%.*]] = add nuw i32 [[V0]], [[ARG0]]
+; CHECK-NEXT:    [[V2:%.*]] = icmp ult i32 [[V1]], 513
+; CHECK-NEXT:    ret i1 [[V2]]
+;
+  %v0 = lshr i32 %arg0, 9
+  %v1 = add nuw i32 %v0, %arg0
+  %v2 = icmp ult i32 %v1, 513
+  ret i1 %v2
+}
+
+; Negative test: no nuw flag
+define i1 @icmp_ult_add_lshr_neg_no_nuw(i32 %arg0) {
+; CHECK-LABEL: @icmp_ult_add_lshr_neg_no_nuw(
+; CHECK-NEXT:    [[V0:%.*]] = lshr i32 [[ARG0:%.*]], 9
+; CHECK-NEXT:    [[V1:%.*]] = add i32 [[V0]], [[ARG0]]
+; CHECK-NEXT:    [[V2:%.*]] = icmp ult i32 [[V1]], 256
+; CHECK-NEXT:    ret i1 [[V2]]
+;
+  %v0 = lshr i32 %arg0, 9
+  %v1 = add i32 %v0, %arg0
+  %v2 = icmp ult i32 %v1, 256
+  ret i1 %v2
+}
+
+define i1 @fold-icmp-sum-of-extended-i1(i16 %v0, i16 %v1, i16 %v2, i16 %v3) {
+; CHECK-LABEL: @fold-icmp-sum-of-extended-i1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i16 [[V0:%.*]], [[V2:%.*]]
+; CHECK-NEXT:    [[V1_LT_V3:%.*]] = icmp ult i16 [[V1:%.*]], [[V3:%.*]]
+; CHECK-NEXT:    [[LESS_THAN:%.*]] = icmp slt i16 [[V0]], [[V2]]
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[EQ]], i1 [[V1_LT_V3]], i1 [[LESS_THAN]]
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+entry:
+  ; Determines if (v0, v1) is lexicographically less than (v2, v3)
+  %is_gt = icmp sgt i16 %v0, %v2
+  %is_lt = icmp slt i16 %v0, %v2
+  %is_gt_i8 = zext i1 %is_gt to i8 ; 1 if v0 > v2, 0 otherwise
+  %is_lt_i8_neg = sext i1 %is_lt to i8 ; -1 if v0 < v2, 0 otherwise
+  %cmp3 = add nsw i8 %is_lt_i8_neg, %is_gt_i8 ; result of the three-way comparison of v0 and v2
+  %eq = icmp eq i8 %cmp3, 0
+  %v1_lt_v3 = icmp ult i16 %v1, %v3
+  %less_than = icmp slt i8 %cmp3, 0
+  %result = select i1 %eq, i1 %v1_lt_v3, i1 %less_than
+  ret i1 %result
+}

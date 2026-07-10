@@ -40,7 +40,6 @@ public:
   virtual std::optional<bool> isUnsafePtr(QualType,
                                           bool ignoreARC = false) const = 0;
   virtual const char *typeName() const = 0;
-  virtual const char *invariant() const = 0;
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
                     BugReporter &BRArg) const {
@@ -231,8 +230,11 @@ public:
     // "assign" property doesn't retain even under ARC so treat it as unsafe.
     bool ignoreARC =
         !PD->isReadOnly() && PD->getSetterKind() == ObjCPropertyDecl::Assign;
+    bool IsWeak =
+        PD->getPropertyAttributes() & ObjCPropertyAttribute::kind_weak;
+    bool HasSafeAttr = PD->isRetaining() || IsWeak;
     auto IsUnsafePtr = isUnsafePtr(QT, ignoreARC);
-    return {IsUnsafePtr && *IsUnsafePtr && !PD->isRetaining(), PropType};
+    return {IsUnsafePtr && *IsUnsafePtr && !HasSafeAttr, PropType};
   }
 
   bool shouldSkipDecl(const RecordDecl *RD) const {
@@ -288,8 +290,9 @@ public:
     } else
       Os << "Member variable ";
     printQuotedName(Os, Member);
-    Os << " in ";
+    Os << " (of ";
     printQuotedQualifiedName(Os, ClassCXXRD);
+    Os << ")";
     if (Member->getType().getTypePtrOrNull() == MemberType)
       Os << " is a ";
     else
@@ -300,7 +303,6 @@ public:
       printQuotedQualifiedName(Os, Typedef->getDecl());
     } else
       printQuotedQualifiedName(Os, Pointee);
-    Os << "; " << invariant() << ".";
 
     PathDiagnosticLocation BSLoc(Member->getSourceRange().getBegin(),
                                  BR->getSourceManager());
@@ -329,11 +331,7 @@ public:
     return isUncountedPtr(QT.getCanonicalType());
   }
 
-  const char *typeName() const final { return "ref-countable type"; }
-
-  const char *invariant() const final {
-    return "member variables must be Ref, RefPtr, WeakRef, or WeakPtr";
-  }
+  const char *typeName() const final { return "RefPtr-capable type"; }
 };
 
 class NoUncheckedPtrMemberChecker final : public RawPtrRefMemberChecker {
@@ -346,12 +344,7 @@ public:
     return isUncheckedPtr(QT.getCanonicalType());
   }
 
-  const char *typeName() const final { return "CheckedPtr capable type"; }
-
-  const char *invariant() const final {
-    return "member variables must be a CheckedPtr, CheckedRef, WeakRef, or "
-           "WeakPtr";
-  }
+  const char *typeName() const final { return "CheckedPtr-capable type"; }
 };
 
 class NoUnretainedMemberChecker final : public RawPtrRefMemberChecker {
@@ -363,14 +356,12 @@ public:
   }
 
   std::optional<bool> isUnsafePtr(QualType QT, bool ignoreARC) const final {
+    if (QT.hasStrongOrWeakObjCLifetime())
+      return false;
     return RTC->isUnretained(QT, ignoreARC);
   }
 
-  const char *typeName() const final { return "retainable type"; }
-
-  const char *invariant() const final {
-    return "member variables must be a RetainPtr or OSObjectPtr";
-  }
+  const char *typeName() const final { return "RetainPtr-capable type"; }
 
   PrintDeclKind printPointer(llvm::raw_svector_ostream &Os,
                              const Type *T) const final {

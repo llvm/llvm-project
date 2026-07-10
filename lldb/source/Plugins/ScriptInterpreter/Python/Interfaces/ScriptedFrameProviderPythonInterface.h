@@ -6,12 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDFRAMEPROVIDERPYTHONINTERFACE_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDFRAMEPROVIDERPYTHONINTERFACE_H
-
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDFRAMEPROVIDERPYTHONINTERFACE_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDFRAMEPROVIDERPYTHONINTERFACE_H
 
 #include "ScriptedPythonInterface.h"
 #include "lldb/Core/PluginInterface.h"
@@ -31,9 +27,8 @@ public:
                        lldb::ThreadSP thread_sp) override;
 
   llvm::Expected<StructuredData::GenericSP>
-  CreatePluginObject(llvm::StringRef class_name,
-                     lldb::StackFrameListSP input_frames,
-                     StructuredData::DictionarySP args_sp) override;
+  CreatePluginObject(const ScriptedMetadata &scripted_metadata,
+                     lldb::StackFrameListSP input_frames) override;
 
   llvm::SmallVector<AbstractMethodRequirement>
   GetAbstractMethodRequirements() const override {
@@ -42,6 +37,8 @@ public:
   }
 
   std::string GetDescription(llvm::StringRef class_name) override;
+
+  std::optional<uint32_t> GetPriority(llvm::StringRef class_name) override;
 
   StructuredData::ObjectSP GetFrameAtIndex(uint32_t index) override;
 
@@ -59,5 +56,4 @@ public:
 };
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDFRAMEPROVIDERPYTHONINTERFACE_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDFRAMEPROVIDERPYTHONINTERFACE_H

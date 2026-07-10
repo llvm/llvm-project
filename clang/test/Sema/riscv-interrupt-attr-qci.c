@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple riscv32-unknown-elf -target-feature +experimental-xqciint -emit-llvm -DCHECK_IR < %s | FileCheck %s
-// RUN: %clang_cc1 %s -triple riscv32-unknown-elf -target-feature +experimental-xqciint -verify=enabled,both -fsyntax-only
+// RUN: %clang_cc1 -triple riscv32-unknown-elf -target-feature +xqciint -emit-llvm -DCHECK_IR < %s | FileCheck %s
+// RUN: %clang_cc1 %s -triple riscv32-unknown-elf -target-feature +xqciint -verify=enabled,both -fsyntax-only
 // RUN: %clang_cc1 %s -triple riscv32-unknown-elf -verify=disabled,both -fsyntax-only
-// RUN: %clang_cc1 %s -triple riscv32-unknown-elf -target-feature -experimental-xqciint -verify=disabled,both -fsyntax-only
+// RUN: %clang_cc1 %s -triple riscv32-unknown-elf -target-feature -xqciint -verify=disabled,both -fsyntax-only
 // RUN: %clang_cc1 %s -triple riscv64-unknown-elf -verify=disabled,both -fsyntax-only -DRV64
 
 #if defined(CHECK_IR)

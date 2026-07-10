@@ -20,6 +20,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include <cassert>
 #include <utility>
 
@@ -287,13 +288,13 @@ rewriteInIm2Col(RewriterBase &rewriter,
     auto nloops = indices.size();
     ArrayRef<int64_t> inputShape = operandTensorType.getShape();
 
-    SmallVector<AffineExpr> exprs = llvm::to_vector<4>(
-        llvm::map_range(indices, [&](int64_t index) -> AffineExpr {
+    SmallVector<AffineExpr> exprs =
+        llvm::map_to_vector<4>(indices, [&](int64_t index) -> AffineExpr {
           return rewriter.getAffineDimExpr(index);
-        }));
+        });
 
-    SmallVector<int64_t> targetShape = llvm::to_vector<4>(llvm::map_range(
-        indices, [&](int64_t index) -> int64_t { return inputShape[index]; }));
+    SmallVector<int64_t> targetShape = llvm::map_to_vector<4>(
+        indices, [&](int64_t index) -> int64_t { return inputShape[index]; });
 
     Value outputTensor = tensor::EmptyOp::create(
         rewriter, loc, targetShape, operandTensorType.getElementType());

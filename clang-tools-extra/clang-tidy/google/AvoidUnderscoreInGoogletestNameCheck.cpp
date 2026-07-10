@@ -17,7 +17,7 @@
 
 namespace clang::tidy::google::readability {
 
-constexpr llvm::StringLiteral KDisabledTestPrefix = "DISABLED_";
+constexpr StringRef KDisabledTestPrefix = "DISABLED_";
 
 // Determines whether the macro is a Googletest test macro.
 static bool isGoogletestTestMacro(StringRef MacroName) {

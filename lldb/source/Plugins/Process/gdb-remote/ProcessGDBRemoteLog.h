@@ -27,13 +27,15 @@ enum class GDBRLog : Log::MaskType {
   Step = Log::ChannelFlag<8>,
   Thread = Log::ChannelFlag<9>,
   Watchpoints = Log::ChannelFlag<10>,
-  LLVM_MARK_AS_BITMASK_ENUM(Watchpoints)
+  Plugin = Log::ChannelFlag<11>, // Log debug server plugin activity
+  LLVM_MARK_AS_BITMASK_ENUM(Plugin)
 };
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 class ProcessGDBRemoteLog {
 public:
   static void Initialize();
+  static void Terminate();
 };
 
 } // namespace process_gdb_remote

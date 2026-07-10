@@ -47,11 +47,10 @@ static bool hasSameParameterTypes(const CXXMethodDecl &D,
                                   const CXXMethodDecl &O) {
   if (D.getNumParams() != O.getNumParams())
     return false;
-  for (int I = 0, E = D.getNumParams(); I < E; ++I) {
+  for (int I = 0, E = D.getNumParams(); I < E; ++I)
     if (!isSameTypeIgnoringConst(D.getParamDecl(I)->getType(),
                                  O.getParamDecl(I)->getType()))
       return false;
-  }
   return true;
 }
 
@@ -125,9 +124,8 @@ static bool isLikelyShallowConst(const CXXMethodDecl &M) {
 
   // (A)
   const CXXMethodDecl *ConstOverload = findConstOverload(M);
-  if (ConstOverload == nullptr) {
+  if (ConstOverload == nullptr)
     return false;
-  }
 
   // (B)
   const QualType CallTy = M.getReturnType().getCanonicalType();
@@ -183,7 +181,7 @@ AST_MATCHER_P(DeclRefExpr, doesNotMutateObject, int, Indirections) {
     int Indirections;
   };
 
-  llvm::SmallVector<StackEntry, 4> Stack;
+  SmallVector<StackEntry, 4> Stack;
   Stack.emplace_back(&Node, Indirections);
   ASTContext &Ctx = Finder->getASTContext();
 
@@ -291,9 +289,8 @@ AST_MATCHER_P(DeclRefExpr, doesNotMutateObject, int, Indirections) {
       if (const auto *const OpCall = dyn_cast<CXXOperatorCallExpr>(P)) {
         // Operator calls have function call syntax. The `*this` parameter
         // is the first parameter.
-        if (OpCall->getNumArgs() == 0 || OpCall->getArg(0) != Entry.E) {
+        if (OpCall->getNumArgs() == 0 || OpCall->getArg(0) != Entry.E)
           return false;
-        }
         const auto *const Method =
             dyn_cast_or_null<CXXMethodDecl>(OpCall->getDirectCallee());
 
@@ -303,9 +300,8 @@ AST_MATCHER_P(DeclRefExpr, doesNotMutateObject, int, Indirections) {
           return false;
         }
 
-        if (Method->isConst() || Method->isStatic()) {
+        if (Method->isConst() || Method->isStatic())
           continue;
-        }
         if (isLikelyShallowConst(*Method)) {
           // We still have to check that the object is not modified through
           // the operator's return value (C).
@@ -370,21 +366,24 @@ bool isOnlyUsedAsConst(const VarDecl &Var, const Stmt &Stmt,
   return isSetDifferenceEmpty(AllDeclRefs, ConstReferenceDeclRefs);
 }
 
-SmallPtrSet<const DeclRefExpr *, 16>
-allDeclRefExprs(const VarDecl &VarDecl, const Stmt &Stmt, ASTContext &Context) {
+SmallPtrSet<const DeclRefExpr *, 16> allDeclRefExprs(const ValueDecl &ValueDecl,
+                                                     const Stmt &Stmt,
+                                                     ASTContext &Context) {
   auto Matches = match(
-      findAll(declRefExpr(to(varDecl(equalsNode(&VarDecl)))).bind("declRef")),
+      findAll(
+          declRefExpr(to(valueDecl(equalsNode(&ValueDecl)))).bind("declRef")),
       Stmt, Context);
   SmallPtrSet<const DeclRefExpr *, 16> DeclRefs;
   extractNodesByIdTo(Matches, "declRef", DeclRefs);
   return DeclRefs;
 }
 
-SmallPtrSet<const DeclRefExpr *, 16>
-allDeclRefExprs(const VarDecl &VarDecl, const Decl &Decl, ASTContext &Context) {
+SmallPtrSet<const DeclRefExpr *, 16> allDeclRefExprs(const ValueDecl &ValueDecl,
+                                                     const Decl &Decl,
+                                                     ASTContext &Context) {
   auto Matches = match(
       decl(forEachDescendant(
-          declRefExpr(to(varDecl(equalsNode(&VarDecl)))).bind("declRef"))),
+          declRefExpr(to(valueDecl(equalsNode(&ValueDecl)))).bind("declRef"))),
       Decl, Context);
   SmallPtrSet<const DeclRefExpr *, 16> DeclRefs;
   extractNodesByIdTo(Matches, "declRef", DeclRefs);

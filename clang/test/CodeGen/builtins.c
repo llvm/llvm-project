@@ -135,6 +135,7 @@ int main(void) {
   P(object_size, (s0, 3));
 
   // Whatever
+  P(bswapg, ((_Bool)N));
   P(bswapg, ((char)N));
   P(bswapg, ((short)N));
   P(bswapg, ((int)N));
@@ -152,6 +153,17 @@ int main(void) {
   // CHECK: @llvm.bitreverse.i16
   // CHECK: @llvm.bitreverse.i32
   // CHECK: @llvm.bitreverse.i64
+  // CHECK: @llvm.bitreverse.i128
+  P(bitreverseg, ((char)N));
+  P(bitreverseg, ((short)N));
+  P(bitreverseg, ((int)N));
+  P(bitreverseg, ((unsigned long)N));
+  P(bitreverseg, ((_BitInt(8))N));
+  P(bitreverseg, ((_BitInt(16))N));
+  P(bitreverseg, ((_BitInt(32))N));
+  P(bitreverseg, ((_BitInt(64))N));
+  P(bitreverseg, ((_BitInt(128))N));
+  P(bitreverseg, (N));
   P(bitreverse8, (N));
   P(bitreverse16, (N));
   P(bitreverse32, (N));
@@ -180,43 +192,27 @@ void bar(void) {
   double d;
   long double ld;
 
-  // LLVM's hex representation of float constants is really unfortunate;
-  // basically it does a float-to-double "conversion" and then prints the
-  // hex form of that.  That gives us weird artifacts like exponents
-  // that aren't numerically similar to the original exponent and
-  // significand bit-patterns that are offset by three bits (because
-  // the exponent was expanded from 8 bits to 11).
-  //
-  // 0xAE98 == 1010111010011000
-  // 0x15D3 == 1010111010011
-
-  f = __builtin_huge_valf();     // CHECK: float    0x7FF0000000000000
-  d = __builtin_huge_val();      // CHECK: double   0x7FF0000000000000
+  f = __builtin_huge_valf();     // CHECK: float    +inf
+  d = __builtin_huge_val();      // CHECK: double   +inf
   ld = __builtin_huge_vall();
       // While we can't manage the constants we use this test to give us LDTYPE
       // for the rest of the tests
-      // LD80: [[LDTYPE:x86_fp80]] [[LDHUGE:0xK7FFF8000000000000000]]
-      // LD64: [[LDTYPE:double]] [[LDHUGE:0x7FF0000000000000]]
-  f = __builtin_nanf("");        // CHECK: float    0x7FF8000000000000
-  d = __builtin_nan("");         // CHECK: double   0x7FF8000000000000
-  ld = __builtin_nanl("");
-      // LD80: [[LDTYPE]] 0xK7FFFC000000000000000
-      // LD64: [[LDTYPE]] 0x7FF8000000000000
-  f = __builtin_nanf("0xAE98");  // CHECK: float    0x7FF815D300000000
-  d = __builtin_nan("0xAE98");   // CHECK: double   0x7FF800000000AE98
-  ld = __builtin_nanl("0xAE98");
-    // LD80: [[LDTYPE]] 0xK7FFFC00000000000AE98
-    // LD64: [[LDTYPE]] 0x7FF800000000AE98
-  f = __builtin_nansf("");       // CHECK: float    0x7FF4000000000000
-  d = __builtin_nans("");        // CHECK: double   0x7FF4000000000000
+      // LD80: [[LDTYPE:x86_fp80]] +inf
+      // LD64: [[LDTYPE:double]] +inf
+  f = __builtin_nanf("");        // CHECK: float    +qnan
+  d = __builtin_nan("");         // CHECK: double   +qnan
+  ld = __builtin_nanl("");       // CHECK: [[LDTYPE]] +qnan
+  f = __builtin_nanf("0xAE98");  // CHECK: float    +nan(0xAE98)
+  d = __builtin_nan("0xAE98");   // CHECK: double   +nan(0xAE98)
+  ld = __builtin_nanl("0xAE98"); // CHECK: [[LDTYPE]] +nan(0xAE98)
+  f = __builtin_nansf("");       // CHECK: float    +snan(0x200000)
+  d = __builtin_nans("");        // CHECK: double   +snan(0x4000000000000)
   ld = __builtin_nansl("");
-    // LD80: [[LDTYPE]] 0xK7FFFA000000000000000
-    // LD64: [[LDTYPE]] 0x7FF4000000000000
-  f = __builtin_nansf("0xAE98"); // CHECK: float    0x7FF015D300000000
-  d = __builtin_nans("0xAE98");  // CHECK: double   0x7FF000000000AE98
-  ld = __builtin_nansl("0xAE98");
-    // LD80: [[LDTYPE]] 0xK7FFF800000000000AE98
-    // LD64: [[LDTYPE]] 0x7FF000000000AE98
+    // LD80: [[LDTYPE]] +snan(0x2000000000000000)
+    // LD64: [[LDTYPE]] +snan(0x4000000000000)
+  f = __builtin_nansf("0xAE98"); // CHECK: float    +snan(0xAE98)
+  d = __builtin_nans("0xAE98");  // CHECK: double   +snan(0xAE98)
+  ld = __builtin_nansl("0xAE98");// CHECK: [[LDTYPE]] +snan(0xAE98)
 
 }
 // CHECK: }
@@ -272,7 +268,7 @@ void test_float_builtins(__fp16 *H, float F, double D, long double LD) {
 
   res = __builtin_isinf_sign(*H);
   // CHECK:  %[[ABS:.*]] = call half @llvm.fabs.f16(half %[[ARG:.*]])
-  // CHECK:  %[[ISINF:.*]] = fcmp oeq half %[[ABS]], 0xH7C00
+  // CHECK:  %[[ISINF:.*]] = fcmp oeq half %[[ABS]], +inf
   // CHECK:  %[[BITCAST:.*]] = bitcast half %[[ARG]] to i16
   // CHECK:  %[[ISNEG:.*]] = icmp slt i16 %[[BITCAST]], 0
   // CHECK:  %[[SIGN:.*]] = select i1 %[[ISNEG]], i32 -1, i32 1
@@ -280,7 +276,7 @@ void test_float_builtins(__fp16 *H, float F, double D, long double LD) {
 
   res = __builtin_isinf_sign(F);
   // CHECK:  %[[ABS:.*]] = call float @llvm.fabs.f32(float %[[ARG:.*]])
-  // CHECK:  %[[ISINF:.*]] = fcmp oeq float %[[ABS]], 0x7FF0000000000000
+  // CHECK:  %[[ISINF:.*]] = fcmp oeq float %[[ABS]], +inf
   // CHECK:  %[[BITCAST:.*]] = bitcast float %[[ARG]] to i32
   // CHECK:  %[[ISNEG:.*]] = icmp slt i32 %[[BITCAST]], 0
   // CHECK:  %[[SIGN:.*]] = select i1 %[[ISNEG]], i32 -1, i32 1
@@ -288,7 +284,7 @@ void test_float_builtins(__fp16 *H, float F, double D, long double LD) {
 
   res = __builtin_isinf_sign(D);
   // CHECK:  %[[ABS:.*]] = call double @llvm.fabs.f64(double %[[ARG:.*]])
-  // CHECK:  %[[ISINF:.*]] = fcmp oeq double %[[ABS]], 0x7FF0000000000000
+  // CHECK:  %[[ISINF:.*]] = fcmp oeq double %[[ABS]], +inf
   // CHECK:  %[[BITCAST:.*]] = bitcast double %[[ARG]] to i64
   // CHECK:  %[[ISNEG:.*]] = icmp slt i64 %[[BITCAST]], 0
   // CHECK:  %[[SIGN:.*]] = select i1 %[[ISNEG]], i32 -1, i32 1
@@ -296,7 +292,7 @@ void test_float_builtins(__fp16 *H, float F, double D, long double LD) {
 
   res = __builtin_isinf_sign(LD);
   // CHECK:  %[[ABS:.*]] = call [[LDTYPE]] @llvm.fabs.[[LDLLVMTY]]([[LDTYPE]] %[[ARG:.*]])
-  // CHECK:  %[[ISINF:.*]] = fcmp oeq [[LDTYPE]] %[[ABS]], [[LDHUGE]]
+  // CHECK:  %[[ISINF:.*]] = fcmp oeq [[LDTYPE]] %[[ABS]], +inf
   // LD80:   %[[BITCAST:.*]] = bitcast [[LDTYPE]] %[[ARG]] to [[LDINTTY:i80]]
   // LD64:   %[[BITCAST:.*]] = bitcast [[LDTYPE]] %[[ARG]] to [[LDINTTY:i64]]
   // CHECK:  %[[ISNEG:.*]] = icmp slt [[LDINTTY]] %[[BITCAST]], 0
@@ -371,22 +367,22 @@ void test_float_builtin_ops(float F, double D, long double LD, int I) {
   // CHECK: call [[LDTYPE]] @llvm.canonicalize.[[LDLLVMTY]]([[LDTYPE]]
 
   resf = __builtin_fminf(F, F);
-  // CHECK: call float @llvm.minnum.f32
+  // CHECK: call nsz float @llvm.minnum.f32
 
   resd = __builtin_fmin(D, D);
-  // CHECK: call double @llvm.minnum.f64
+  // CHECK: call nsz double @llvm.minnum.f64
 
   resld = __builtin_fminl(LD, LD);
-  // CHECK: call [[LDTYPE]] @llvm.minnum.[[LDLLVMTY]]
+  // CHECK: call nsz [[LDTYPE]] @llvm.minnum.[[LDLLVMTY]]
 
   resf = __builtin_fmaxf(F, F);
-  // CHECK: call float @llvm.maxnum.f32
+  // CHECK: call nsz float @llvm.maxnum.f32
 
   resd = __builtin_fmax(D, D);
-  // CHECK: call double @llvm.maxnum.f64
+  // CHECK: call nsz double @llvm.maxnum.f64
 
   resld = __builtin_fmaxl(LD, LD);
-  // CHECK: call [[LDTYPE]] @llvm.maxnum.[[LDLLVMTY]]
+  // CHECK: call nsz [[LDTYPE]] @llvm.maxnum.[[LDLLVMTY]]
 
   resf = __builtin_fminimum_numf(F, F);
   // CHECK: call float @llvm.minimumnum.f32
@@ -412,7 +408,7 @@ void test_float_builtin_ops(float F, double D, long double LD, int I) {
 
   //FIXME: __builtin_fminimum_numl is not supported well yet.
   resld = __builtin_fminimum_numl(1.0, 2.0);
-  // LD80: store volatile x86_fp80 0xK3FFF8000000000000000, ptr %resld, align 16
+  // LD80: store volatile x86_fp80 1.000000e+00, ptr %resld, align 16
   // LD64: store volatile double 1.000000e+00, ptr %resld
 
   resf = __builtin_fmaximum_numf(F, F);
@@ -439,7 +435,7 @@ void test_float_builtin_ops(float F, double D, long double LD, int I) {
 
   //FIXME: __builtin_fmaximum_numl is not supported well yet.
   resld = __builtin_fmaximum_numl(1.0, 2.0);
-  // LD80: store volatile x86_fp80 0xK40008000000000000000, ptr %resld, align 16
+  // LD80: store volatile x86_fp80 2.000000e+00, ptr %resld, align 16
   // LD64: store volatile double 2.000000e+00, ptr %resld
 
   resf = __builtin_fabsf(F);
@@ -932,7 +928,7 @@ void test_builtin_bswapg(unsigned char uc, unsigned short us, unsigned int ui,
 #endif
   b = __builtin_bswapg(b);
   // CHECK: %{{.*}} = load i8, ptr %b.addr
-  // CHECK: %{{.*}} = trunc i8 %{{.*}} to i1
+  // CHECK: %{{.*}} = icmp ne i8 %{{.*}}, 0
   // CHECK: %{{.*}} = zext i1 %{{.*}} to i8
   // CHECK: store i8 %{{.*}}, ptr %b.addr
   uc = __builtin_bswapg(uc);
@@ -961,4 +957,57 @@ void test_builtin_bswapg(unsigned char uc, unsigned short us, unsigned int ui,
   // CHECK: call i64 @llvm.bswap.i64
   bi128 = __builtin_bswapg(bi128);
   // CHECK: call i128 @llvm.bswap.i128
+}
+// CHECK-LABEL: define{{.*}} void @test_builtin_bitreverseg
+void test_builtin_bitreverseg(unsigned char uc, unsigned short us, unsigned int ui,
+                       unsigned long ul, unsigned long long ull, bool b,
+                       unsigned _BitInt(1) bi1,
+#ifdef __SIZEOF_INT128__
+                       unsigned __int128 ui128,
+#endif
+                       _BitInt(8) bi8,
+                       _BitInt(16) bi16, _BitInt(32) bi32, 
+                       _BitInt(64) bi64, _BitInt(128) bi128) {
+#if __aarch64__
+  int x = 0;
+  x = x * 2;
+#endif
+  b = __builtin_bitreverseg(b);
+  // CHECK: %{{.*}} = load i8, ptr %b.addr
+  // CHECK: %{{.*}} = icmp ne i8 %{{.*}}, 0
+  // CHECK: %{{.*}} = zext i1 %{{.*}} to i8
+  // CHECK: store i8 %{{.*}}, ptr %b.addr
+  bi1 = __builtin_bitreverseg(bi1);
+  // CHECK: %{{.*}} = load i8, ptr %bi1.addr
+  // CHECK: %{{.*}} = icmp ne i8 %{{.*}}, 0
+  // CHECK: %{{.*}} = zext i1 %{{.*}} to i8
+  // CHECK: store i8 %{{.*}}, ptr %bi1.addr
+  uc = __builtin_bitreverseg(uc);
+  // CHECK: %{{.*}} = load i8, ptr %uc.addr
+  // CHECK: %{{.*}} = call i8 @llvm.bitreverse.i8(i8 %{{.*}})
+  // CHECK: store i8 %{{.*}}, ptr %uc.addr
+  us = __builtin_bitreverseg(us);
+  // CHECK: call i16 @llvm.bitreverse.i16
+  ui = __builtin_bitreverseg(ui);
+  // CHECK: call i32 @llvm.bitreverse.i32
+  ul = __builtin_bitreverseg(ul);
+  // CHECK: call [[LONGINTTY]] @llvm.bitreverse.[[LONGINTTY]]
+  ull = __builtin_bitreverseg(ull);
+  // CHECK: call i64 @llvm.bitreverse.i64
+#ifdef __SIZEOF_INT128__
+  ui128 = __builtin_bitreverseg(ui128);
+  // I128: call i128 @llvm.bitreverse.i128
+#endif
+  bi8 = __builtin_bitreverseg(bi8);
+  // CHECK: %{{.*}} = load i8, ptr %bi8.addr, align 1
+  // CHECK: %{{.*}} = call i8 @llvm.bitreverse.i8(i8 %{{.*}})
+  // CHECK: store i8 %{{.*}}, ptr %bi8.addr
+  bi16 = __builtin_bitreverseg(bi16);
+  // CHECK: call i16 @llvm.bitreverse.i16
+  bi32 = __builtin_bitreverseg(bi32);
+  // CHECK: call i32 @llvm.bitreverse.i32
+  bi64 = __builtin_bitreverseg(bi64);
+  // CHECK: call i64 @llvm.bitreverse.i64
+  bi128 = __builtin_bitreverseg(bi128);
+  // CHECK: call i128 @llvm.bitreverse.i128
 }

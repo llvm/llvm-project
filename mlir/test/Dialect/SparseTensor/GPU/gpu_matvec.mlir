@@ -18,10 +18,10 @@
 // CHECK-SAME:    %[[VAL_4:.*4]]: memref<?xf64>,
 // CHECK-SAME:    %[[VAL_5:.*5]]: memref<?xf64>) kernel {
 // CHECK:         %[[VAL_6:.*]] = arith.constant 1 : index
-// CHECK:         %[[VAL_7:.*]] = gpu.block_id  x
-// CHECK:         %[[VAL_8:.*]] = gpu.block_dim  x
-// CHECK:         %[[VAL_9:.*]] = gpu.thread_id  x
-// CHECK:         %[[VAL_10:.*]] = gpu.grid_dim  x
+// CHECK:         %[[VAL_7:.*]] = gpu.block_id x
+// CHECK:         %[[VAL_8:.*]] = gpu.block_dim x
+// CHECK:         %[[VAL_9:.*]] = gpu.thread_id x
+// CHECK:         %[[VAL_10:.*]] = gpu.grid_dim x
 // CHECK:         %[[VAL_11:.*]] = arith.muli %[[VAL_7]], %[[VAL_8]] : index
 // CHECK:         %[[VAL_12:.*]] = arith.addi %[[VAL_11]], %[[VAL_9]] : index
 // CHECK:         %[[VAL_13:.*]] = arith.muli %[[VAL_8]], %[[VAL_10]] : index

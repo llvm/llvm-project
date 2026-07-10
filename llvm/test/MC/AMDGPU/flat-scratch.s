@@ -1,6 +1,6 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck -check-prefix=NOSI --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=hawaii %s 2>&1 | FileCheck -check-prefix=NOCI --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefix=NOVI --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s -filetype=null 2>&1 | FileCheck -check-prefix=NOSI --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=hawaii %s -filetype=null 2>&1 | FileCheck -check-prefix=NOCI --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s -filetype=null 2>&1 | FileCheck -check-prefix=NOVI --implicit-check-not=error: %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=hawaii -show-encoding %s | FileCheck -check-prefix=CI %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s  | FileCheck -check-prefix=VI %s
 

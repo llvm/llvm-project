@@ -12,7 +12,7 @@ void test_ballot_wave32(global uint* out, int a, int b) {
   *out = __builtin_amdgcn_ballot_w32(a == b);  // expected-error {{'__builtin_amdgcn_ballot_w32' needs target feature wavefrontsize32}}
 }
 
-__attribute__((target("wavefrontsize32"))) // gfx9-error@*:* {{option 'wavefrontsize32' cannot be specified on this target}}
+__attribute__((target("wavefrontsize32"))) // gfx9-error@*:* {{option '+wavefrontsize32' cannot be specified on this target}}
 void test_ballot_wave32_target_attr(global uint* out, int a, int b) {
-  *out = __builtin_amdgcn_ballot_w32(a == b); // wavefront64-error@*:* {{invalid feature combination: 'wavefrontsize32' and 'wavefrontsize64' are mutually exclusive}}
+  *out = __builtin_amdgcn_ballot_w32(a == b); // wavefront64-error@*:* {{invalid feature combination: '+wavefrontsize32' and '+wavefrontsize64' are mutually exclusive}}
 }

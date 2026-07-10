@@ -1,9 +1,9 @@
-<!--===- docs/Semantics.md 
-  
+<!--===- docs/Semantics.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # Semantic Analysis
@@ -15,7 +15,7 @@ local:
 ```
 
 The semantic analysis pass determines if a syntactically correct Fortran
-program is is legal by enforcing the constraints of the language.
+program is legal by enforcing the constraints of the language.
 
 The input is a parse tree with a `Program` node at the root;
 and a "cooked" character stream, a contiguous stream of characters

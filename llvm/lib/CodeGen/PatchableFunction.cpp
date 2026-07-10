@@ -30,9 +30,7 @@ struct PatchableFunction {
 
 struct PatchableFunctionLegacy : public MachineFunctionPass {
   static char ID;
-  PatchableFunctionLegacy() : MachineFunctionPass(ID) {
-    initializePatchableFunctionLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  PatchableFunctionLegacy() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &F) override {
     return PatchableFunction().run(F);
   }

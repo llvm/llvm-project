@@ -1947,7 +1947,7 @@ module attributes { transform.with_named_sequence } {
 module attributes { transform.with_named_sequence } {
   transform.named_sequence @match(%arg: !transform.any_op {transform.readonly}) {
     // expected-error @below {{expected operations in the match part to implement MatchOpInterface}}
-    "test.unknown_op"() : () -> ()
+    transform.test_transform_op
     transform.yield
   }
   transform.named_sequence @action() {

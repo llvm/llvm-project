@@ -35,6 +35,26 @@
  42 print*, 300, V
  end
 
+ subroutine allocated
+    integer, allocatable :: L
+    integer :: V
+ 13 V = 1
+    allocate(L)
+    ! CHECK: %[[N0:.+]] = fir.box_addr %{{.+}}
+    ! CHECK: fir.store %c31{{.*}} to %[[N0]]
+    assign 31 to L
+    ! CHECK: %[[N1:.+]] = fir.box_addr %{{.+}}
+    ! CHECK: %[[N2:.+]] = fir.load %[[N1]]
+    ! CHECK: fir.select %[[N2]] : i32 [31, ^bb{{.}}, unit, ^bb{{.}}]
+    ! CHECK: fir.call @_FortranAReportFatalUserError
+    goto L
+ 23 V = 2
+    goto 41
+ 31 V = 3
+ 41 print*, 3, V
+ end subroutine allocated
+
     call nolist
     call list
+    call allocated
  end

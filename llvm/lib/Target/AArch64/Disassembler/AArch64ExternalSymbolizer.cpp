@@ -104,14 +104,20 @@ bool AArch64ExternalSymbolizer::tryAddingSymbolicOperand(
         CommentStream << format("0x%llx", (0xfffffffffffff000LL & Address) +
                                               Value * 0x1000);
     } else if (MI.getOpcode() == AArch64::ADDXri ||
+               MI.getOpcode() == AArch64::ADDWri ||
                MI.getOpcode() == AArch64::LDRXui ||
+               MI.getOpcode() == AArch64::LDRWui ||
                MI.getOpcode() == AArch64::LDRXl ||
+               MI.getOpcode() == AArch64::LDRWl ||
                MI.getOpcode() == AArch64::ADR) {
-      if (MI.getOpcode() == AArch64::ADDXri)
+      if (MI.getOpcode() == AArch64::ADDXri ||
+          MI.getOpcode() == AArch64::ADDWri)
         ReferenceType = LLVMDisassembler_ReferenceType_In_ARM64_ADDXri;
-      else if (MI.getOpcode() == AArch64::LDRXui)
+      else if (MI.getOpcode() == AArch64::LDRXui ||
+               MI.getOpcode() == AArch64::LDRWui)
         ReferenceType = LLVMDisassembler_ReferenceType_In_ARM64_LDRXui;
-      if (MI.getOpcode() == AArch64::LDRXl) {
+      if (MI.getOpcode() == AArch64::LDRXl ||
+          MI.getOpcode() == AArch64::LDRWl) {
         ReferenceType = LLVMDisassembler_ReferenceType_In_ARM64_LDRXl;
         SymbolLookUp(DisInfo, Address + Value, &ReferenceType, Address,
                      &ReferenceName);
@@ -123,9 +129,22 @@ bool AArch64ExternalSymbolizer::tryAddingSymbolicOperand(
         const MCRegisterInfo &MCRI = *Ctx.getRegisterInfo();
         // otool expects the fully encoded ADD/LDR instruction to be passed in
         // as the value here, so reconstruct it:
-        unsigned EncodedInst =
-          MI.getOpcode() == AArch64::ADDXri ? 0x91000000: 0xF9400000;
-        EncodedInst |= Value << 10; // imm12 [+ shift:2 for ADD]
+        unsigned EncodedInst;
+        switch (MI.getOpcode()) {
+        case AArch64::ADDXri:
+          EncodedInst = 0x91000000;
+          break;
+        case AArch64::ADDWri:
+          EncodedInst = 0x11000000;
+          break;
+        case AArch64::LDRXui:
+          EncodedInst = 0xF9400000;
+          break;
+        default: // LDRWui
+          EncodedInst = 0xB9400000;
+          break;
+        }
+        EncodedInst |= Value << 10; // imm12 (ADD: imm+shift, LDR: offset)
         EncodedInst |=
           MCRI.getEncodingValue(MI.getOperand(1).getReg()) << 5; // Rn
         EncodedInst |= MCRI.getEncodingValue(MI.getOperand(0).getReg()); // Rd

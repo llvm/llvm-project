@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -35,40 +36,49 @@ static cl::opt<unsigned> DefaultMaxBBsToExplore(
 void llvm::FindFunctionBackedges(const Function &F,
      SmallVectorImpl<std::pair<const BasicBlock*,const BasicBlock*> > &Result) {
   const BasicBlock *BB = &F.getEntryBlock();
-  if (succ_empty(BB))
-    return;
 
-  SmallPtrSet<const BasicBlock*, 8> Visited;
-  SmallVector<std::pair<const BasicBlock *, const_succ_iterator>, 8> VisitStack;
-  SmallPtrSet<const BasicBlock*, 8> InStack;
+  // In the DFS traversal, we maintain three states: unvisited, visited in the
+  // past, and visited and currently in the DFS stack. If we have an edge to a
+  // block in the stack, we have found a backedge.
+  enum VisitState : uint8_t { Unvisited = 0, Visited = 1, InStack = 2 };
+  SmallVector<VisitState> BlockState(F.getMaxBlockNumber(), Unvisited);
+  struct StackEntry {
+    const BasicBlock *BB;
+    const_succ_iterator SuccIt;
+    const_succ_iterator SuccEnd;
 
-  Visited.insert(BB);
-  VisitStack.push_back(std::make_pair(BB, succ_begin(BB)));
-  InStack.insert(BB);
+    StackEntry(const BasicBlock *BB)
+        : BB(BB), SuccIt(nullptr), SuccEnd(nullptr) {
+      auto Succs = successors(BB);
+      SuccIt = Succs.begin();
+      SuccEnd = Succs.end();
+    }
+  };
+  SmallVector<StackEntry, 8> VisitStack;
+
+  BlockState[BB->getNumber()] = InStack;
+  VisitStack.emplace_back(BB);
   do {
-    std::pair<const BasicBlock *, const_succ_iterator> &Top = VisitStack.back();
-    const BasicBlock *ParentBB = Top.first;
-    const_succ_iterator &I = Top.second;
-
+    StackEntry &Top = VisitStack.back();
     bool FoundNew = false;
-    while (I != succ_end(ParentBB)) {
-      BB = *I++;
-      if (Visited.insert(BB).second) {
+    while (Top.SuccIt != Top.SuccEnd) {
+      BB = *Top.SuccIt++;
+      if (BlockState[BB->getNumber()] == Unvisited) {
+        // Unvisited successor => go down one level.
+        BlockState[BB->getNumber()] = InStack;
+        VisitStack.emplace_back(BB);
         FoundNew = true;
         break;
       }
-      // Successor is in VisitStack, it's a back edge.
-      if (InStack.count(BB))
-        Result.push_back(std::make_pair(ParentBB, BB));
+      // Successor in VisitStack => backedge.
+      if (BlockState[BB->getNumber()] == InStack)
+        Result.emplace_back(Top.BB, BB);
     }
 
-    if (FoundNew) {
-      // Go down one level if there is a unvisited successor.
-      InStack.insert(BB);
-      VisitStack.push_back(std::make_pair(BB, succ_begin(BB)));
-    } else {
-      // Go up one level.
-      InStack.erase(VisitStack.pop_back_val().first);
+    // Go up one level.
+    if (!FoundNew) {
+      BlockState[Top.BB->getNumber()] = Visited;
+      VisitStack.pop_back();
     }
   } while (!VisitStack.empty());
 }
@@ -135,7 +145,12 @@ template <class StopSetT>
 static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
                             const StopSetT &StopSet,
                             const SmallPtrSetImpl<BasicBlock *> *ExclusionSet,
-                            const DominatorTree *DT, const LoopInfo *LI) {
+                            const DominatorTree *DT, const LoopInfo *LI,
+                            const CycleInfo *CI) {
+  // If both LI and CI are passed, use CI, which gives us more information.
+  if (CI)
+    LI = nullptr;
+
   // When a stop block is unreachable, it's dominated from everywhere,
   // regardless of whether there's a path between the two blocks.
   if (DT) {
@@ -163,11 +178,27 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
     }
   }
 
+  SmallPtrSet<const Cycle *, 8> CyclesWithHoles;
+  if (CI && ExclusionSet) {
+    for (auto *BB : *ExclusionSet) {
+      if (const Cycle *C = CI->getTopLevelParentCycle(BB))
+        CyclesWithHoles.insert(C);
+    }
+  }
+
   SmallPtrSet<const Loop *, 2> StopLoops;
   if (LI) {
     for (auto *StopSetBB : StopSet) {
       if (const Loop *L = getOutermostLoop(LI, StopSetBB))
         StopLoops.insert(L);
+    }
+  }
+
+  SmallPtrSet<const Cycle *, 2> StopCycles;
+  if (CI) {
+    for (auto *StopSetBB : StopSet) {
+      if (const Cycle *C = CI->getTopLevelParentCycle(StopSetBB))
+        StopCycles.insert(C);
     }
   }
 
@@ -188,17 +219,37 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
         return true;
     }
 
-    const Loop *Outer = nullptr;
+    const Loop *OuterL = nullptr;
     if (LI) {
-      Outer = getOutermostLoop(LI, BB);
+      OuterL = getOutermostLoop(LI, BB);
       // If we're in a loop with a hole, not all blocks in the loop are
       // reachable from all other blocks. That implies we can't simply jump to
       // the loop's exit blocks, as that exit might need to pass through an
       // excluded block. Clear Outer so we process BB's successors.
-      if (LoopsWithHoles.count(Outer))
-        Outer = nullptr;
-      if (StopLoops.contains(Outer))
+      if (LoopsWithHoles.count(OuterL))
+        OuterL = nullptr;
+      else if (StopLoops.contains(OuterL))
         return true;
+    }
+
+    const Cycle *OuterC = nullptr;
+    if (CI) {
+      OuterC = CI->getTopLevelParentCycle(BB);
+      if (OuterC) {
+        if (CyclesWithHoles.count(OuterC))
+          OuterC = nullptr;
+        else if (StopCycles.contains(OuterC))
+          return true;
+      } else {
+        // If BB is not part of a cycle, then it can't reach any block that
+        // dominates it. An exception is if the block is unreachable, as all
+        // reachable blocks dominate an unreachable block.
+        if (DT && DT->isReachableFromEntry(BB) &&
+            llvm::all_of(StopSet, [&](const BasicBlock *StopBB) {
+              return DT->dominates(StopBB, BB);
+            }))
+          continue;
+      }
     }
 
     if (!--Limit) {
@@ -207,11 +258,13 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
       return true;
     }
 
-    if (Outer) {
+    if (OuterL) {
       // All blocks in a single loop are reachable from all other blocks. From
       // any of these blocks, we can skip directly to the exits of the loop,
       // ignoring any other blocks inside the loop body.
-      Outer->getExitBlocks(Worklist);
+      OuterL->getExitBlocks(Worklist);
+    } else if (OuterC) {
+      OuterC->getExitBlocks(Worklist);
     } else {
       Worklist.append(succ_begin(BB), succ_end(BB));
     }
@@ -240,25 +293,25 @@ private:
 bool llvm::isPotentiallyReachableFromMany(
     SmallVectorImpl<BasicBlock *> &Worklist, const BasicBlock *StopBB,
     const SmallPtrSetImpl<BasicBlock *> *ExclusionSet, const DominatorTree *DT,
-    const LoopInfo *LI) {
+    const LoopInfo *LI, const CycleInfo *CI) {
   return isReachableImpl<SingleEntrySet<const BasicBlock *>>(
       Worklist, SingleEntrySet<const BasicBlock *>(StopBB), ExclusionSet, DT,
-      LI);
+      LI, CI);
 }
 
 bool llvm::isManyPotentiallyReachableFromMany(
     SmallVectorImpl<BasicBlock *> &Worklist,
     const SmallPtrSetImpl<const BasicBlock *> &StopSet,
     const SmallPtrSetImpl<BasicBlock *> *ExclusionSet, const DominatorTree *DT,
-    const LoopInfo *LI) {
+    const LoopInfo *LI, const CycleInfo *CI) {
   return isReachableImpl<SmallPtrSetImpl<const BasicBlock *>>(
-      Worklist, StopSet, ExclusionSet, DT, LI);
+      Worklist, StopSet, ExclusionSet, DT, LI, CI);
 }
 
 bool llvm::isPotentiallyReachable(
     const BasicBlock *A, const BasicBlock *B,
     const SmallPtrSetImpl<BasicBlock *> *ExclusionSet, const DominatorTree *DT,
-    const LoopInfo *LI) {
+    const LoopInfo *LI, const CycleInfo *CI) {
   assert(A->getParent() == B->getParent() &&
          "This analysis is function-local!");
 
@@ -276,13 +329,13 @@ bool llvm::isPotentiallyReachable(
   SmallVector<BasicBlock*, 32> Worklist;
   Worklist.push_back(const_cast<BasicBlock*>(A));
 
-  return isPotentiallyReachableFromMany(Worklist, B, ExclusionSet, DT, LI);
+  return isPotentiallyReachableFromMany(Worklist, B, ExclusionSet, DT, LI, CI);
 }
 
 bool llvm::isPotentiallyReachable(
     const Instruction *A, const Instruction *B,
     const SmallPtrSetImpl<BasicBlock *> *ExclusionSet, const DominatorTree *DT,
-    const LoopInfo *LI) {
+    const LoopInfo *LI, const CycleInfo *CI) {
   assert(A->getParent()->getParent() == B->getParent()->getParent() &&
          "This analysis is function-local!");
 
@@ -294,14 +347,24 @@ bool llvm::isPotentiallyReachable(
     // blocks.
     BasicBlock *BB = const_cast<BasicBlock *>(A->getParent());
 
-    // If the block is in a loop then we can reach any instruction in the block
-    // from any other instruction in the block by going around a backedge.
-    if (LI && LI->getLoopFor(BB) != nullptr)
-      return true;
-
     // If A comes before B, then B is definitively reachable from A.
     if (A == B || A->comesBefore(B))
       return true;
+
+    // If the block is in a cycle (and there are no excluded blocks), then we
+    // can reach any instruction in the block from any other instruction in the
+    // block by going around a backedge.
+    if (!ExclusionSet || ExclusionSet->empty()) {
+      // If cycle info is available, we can know for sure whether or not a
+      // block is part of a cycle.
+      if (CI)
+        return CI->getCycle(BB) != nullptr;
+
+      // If only loop info is available, even if the block is not part of a
+      // natural loop, it may still be part of an irreducible cycle.
+      if (LI && LI->getLoopFor(BB) != nullptr)
+        return true;
+    }
 
     // Can't be in a loop if it's the entry block -- the entry block may not
     // have predecessors.
@@ -317,11 +380,11 @@ bool llvm::isPotentiallyReachable(
     }
 
     return isPotentiallyReachableFromMany(Worklist, B->getParent(),
-                                          ExclusionSet, DT, LI);
+                                          ExclusionSet, DT, LI, CI);
   }
 
-  return isPotentiallyReachable(
-      A->getParent(), B->getParent(), ExclusionSet, DT, LI);
+  return isPotentiallyReachable(A->getParent(), B->getParent(), ExclusionSet,
+                                DT, LI, CI);
 }
 
 static bool instructionDoesNotReturn(const Instruction &I) {

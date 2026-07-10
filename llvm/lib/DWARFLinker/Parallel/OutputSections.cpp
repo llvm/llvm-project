@@ -460,9 +460,21 @@ void OutputSections::applyPatches(
     uint64_t FinalValue = Patch.SectionPtr.getPointer()->StartOffset;
 
     // Check whether we need to read value from the original location.
-    if (Patch.SectionPtr.getInt())
-      FinalValue +=
+    if (Patch.SectionPtr.getInt()) {
+      uint64_t LocalValue =
           Section.getIntVal(Patch.PatchOffset, Format.getDwarfOffsetByteSize());
+      // DebugOffsetPatch treats the DWARF "invalid offset" sentinel
+      // (0xffffffff for DWARF32) as pass-through: callers that can't
+      // resolve the target write that value and expect it to survive
+      // section combination unchanged. Adding StartOffset would turn it
+      // into a plausible-looking but meaningless offset. Callers that
+      // genuinely want `StartOffset + MaxOffset` don't exist today and
+      // would need a different patch type.
+      if (LocalValue == Format.getDwarfMaxOffset())
+        FinalValue = LocalValue;
+      else
+        FinalValue += LocalValue;
+    }
 
     Section.apply(Patch.PatchOffset, dwarf::DW_FORM_sec_offset, FinalValue);
   });

@@ -52,7 +52,14 @@ SBModule::SBModule(lldb::SBProcess &process, lldb::addr_t header_addr) {
 
   ProcessSP process_sp(process.GetSP());
   if (process_sp) {
-    m_opaque_sp = process_sp->ReadModuleFromMemory(FileSpec(), header_addr);
+    llvm::Expected<ModuleSP> module_sp_or_err =
+        process_sp->ReadModuleFromMemory(FileSpec(), header_addr);
+    if (auto err = module_sp_or_err.takeError()) {
+      llvm::consumeError(std::move(err));
+      return;
+    }
+
+    m_opaque_sp = *module_sp_or_err;
     if (m_opaque_sp) {
       Target &target = process_sp->GetTarget();
       bool changed = false;
@@ -550,8 +557,7 @@ SBSection SBModule::FindSection(const char *sect_name) {
     module_sp->GetSymbolFile();
     SectionList *section_list = module_sp->GetSectionList();
     if (section_list) {
-      ConstString const_sect_name(sect_name);
-      SectionSP section_sp(section_list->FindSectionByName(const_sect_name));
+      SectionSP section_sp(section_list->FindSectionByName(sect_name));
       if (section_sp) {
         sb_section.SetSP(section_sp);
       }
@@ -580,7 +586,7 @@ const char *SBModule::GetTriple() {
   // Unique the string so we don't run into ownership issues since the const
   // strings put the string into the string pool once and the strings never
   // comes out
-  ConstString const_triple(triple.c_str());
+  ConstString const_triple(triple);
   return const_triple.GetCString();
 }
 
@@ -633,6 +639,15 @@ lldb::SBFileSpec SBModule::GetSymbolFileSpec() const {
   return sb_file_spec;
 }
 
+lldb::SBModuleSpecList SBModule::GetSeparateDebugInfoFiles() {
+  LLDB_INSTRUMENT_VA(this);
+  ModuleSP module_sp(GetSP());
+  if (module_sp)
+    return lldb::SBModuleSpecList(module_sp->GetSeparateDebugInfoFiles());
+
+  return lldb::SBModuleSpecList();
+}
+
 lldb::SBAddress SBModule::GetObjectFileHeaderAddress() const {
   LLDB_INSTRUMENT_VA(this);
 
@@ -677,5 +692,5 @@ const char *SBModule::GetObjectName() const {
 
   if (!m_opaque_sp)
     return nullptr;
-  return m_opaque_sp->GetObjectName().AsCString();
+  return m_opaque_sp->GetObjectName().AsCString(nullptr);
 }

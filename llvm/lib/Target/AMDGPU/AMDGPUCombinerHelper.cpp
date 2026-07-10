@@ -10,6 +10,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Target/TargetMachine.h"
@@ -143,8 +144,7 @@ static bool allUsesHaveSourceMods(MachineInstr &MI, MachineRegisterInfo &MRI,
 }
 
 static bool mayIgnoreSignedZero(MachineInstr &MI) {
-  const TargetOptions &Options = MI.getMF()->getTarget().Options;
-  return Options.NoSignedZerosFPMath || MI.getFlag(MachineInstr::MIFlag::FmNsz);
+  return MI.getFlag(MachineInstr::MIFlag::FmNsz);
 }
 
 static bool isInv2Pi(const APFloat &APF) {
@@ -402,6 +402,28 @@ void AMDGPUCombinerHelper::applyFoldableFneg(MachineInstr &MI,
   MI.eraseFromParent();
 }
 
+bool AMDGPUCombinerHelper::matchFoldFAbsFptrunc(MachineInstr &Fabs,
+                                                MachineInstr &Fptrunc) const {
+  Register Round = Fptrunc.getOperand(0).getReg();
+  if (!MRI.hasOneNonDBGUse(Round))
+    return false;
+
+  LLT SrcTy = MRI.getType(Fptrunc.getOperand(1).getReg());
+  return isLegalOrBeforeLegalizer({TargetOpcode::G_FABS, {SrcTy}});
+}
+
+void AMDGPUCombinerHelper::applyFoldFAbsFptrunc(MachineInstr &Fabs,
+                                                MachineInstr &Fptrunc) const {
+  // fabs (fptrunc x) -> fptrunc (fabs x)
+  Register Dst = Fabs.getOperand(0).getReg();
+  Register Src = Fptrunc.getOperand(1).getReg();
+  Builder.setInstrAndDebugLoc(Fabs);
+  Register Abs =
+      Builder.buildFAbs(MRI.getType(Src), Src, Fabs.getFlags()).getReg(0);
+  Builder.buildFPTrunc(Dst, Abs, Fptrunc.getFlags());
+  Fabs.eraseFromParent();
+}
+
 // TODO: Should return converted value / extension source and avoid introducing
 // intermediate fptruncs in the apply function.
 static bool isFPExtFromF16OrConst(const MachineRegisterInfo &MRI,
@@ -464,8 +486,9 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
   LLT DestTy = MRI.getType(Dst);
   LLT ScalarDestTy = DestTy.getScalarType();
 
-  if ((ScalarDestTy != LLT::float64() && ScalarDestTy != LLT::float32() &&
-       ScalarDestTy != LLT::float16()) ||
+  // TODO: Expected float type in ScalarDestTy
+  if ((ScalarDestTy != LLT::scalar(64) && ScalarDestTy != LLT::scalar(32) &&
+       ScalarDestTy != LLT::scalar(16)) ||
       !MRI.hasOneNonDBGUse(Sel.getOperand(0).getReg()))
     return false;
 
@@ -486,7 +509,8 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
     return false;
 
   // For f32, only non-inline constants should be transformed.
-  if (ScalarDestTy == LLT::float32() && TII.isInlineConstant(*SelectTrueVal) &&
+  // TODO: Expected float32
+  if (ScalarDestTy == LLT::scalar(32) && TII.isInlineConstant(*SelectTrueVal) &&
       TII.isInlineConstant(*SelectFalseVal))
     return false;
 

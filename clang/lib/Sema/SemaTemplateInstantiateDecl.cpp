@@ -788,6 +788,18 @@ static void instantiateDependentHLSLParamModifierAttr(
   ParmVarDecl *NewParm = cast<ParmVarDecl>(New);
   NewParm->addAttr(Attr->clone(S.getASTContext()));
 
+  // If this is groupshared don't change the type because it will assert
+  // below. In this case we might have already produced an error but we
+  // must produce one here again because of all the ways templates can
+  // be used.
+  if (const auto *RT = NewParm->getType()->getAs<LValueReferenceType>()) {
+    if (RT->getPointeeType().getAddressSpace() == LangAS::hlsl_groupshared) {
+      S.Diag(Attr->getLoc(), diag::err_hlsl_attr_incompatible)
+          << Attr << "'groupshared'";
+      return;
+    }
+  }
+
   const Type *OldParmTy = cast<ParmVarDecl>(Old)->getType().getTypePtr();
   if (OldParmTy->isDependentType() && Attr->isAnyOut())
     NewParm->setType(S.HLSL().getInoutParameterType(NewParm->getType()));
@@ -826,7 +838,8 @@ void Sema::InstantiateAttrsForDecl(
 
       Attr *NewAttr = sema::instantiateTemplateAttributeForDecl(
           TmplAttr, Context, *this, TemplateArgs);
-      if (NewAttr && isRelevantAttr(*this, New, NewAttr))
+      if (NewAttr && isRelevantAttr(*this, New, NewAttr) &&
+          checkInstantiatedThreadSafetyAttrs(New, NewAttr))
         New->addAttr(NewAttr);
     }
   }
@@ -1048,7 +1061,8 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
 
       Attr *NewAttr = sema::instantiateTemplateAttribute(TmplAttr, Context,
                                                          *this, TemplateArgs);
-      if (NewAttr && isRelevantAttr(*this, New, TmplAttr))
+      if (NewAttr && isRelevantAttr(*this, New, TmplAttr) &&
+          checkInstantiatedThreadSafetyAttrs(New, NewAttr))
         New->addAttr(NewAttr);
     }
   }
@@ -1061,22 +1075,6 @@ void Sema::updateAttrsForLateParsedTemplate(const Decl *Pattern, Decl *Inst) {
         Inst->addAttr(A->clone(getASTContext()));
       continue;
     }
-  }
-}
-
-void Sema::InstantiateDefaultCtorDefaultArgs(CXXConstructorDecl *Ctor) {
-  assert(Context.getTargetInfo().getCXXABI().isMicrosoft() &&
-         Ctor->isDefaultConstructor());
-  unsigned NumParams = Ctor->getNumParams();
-  if (NumParams == 0)
-    return;
-  DLLExportAttr *Attr = Ctor->getAttr<DLLExportAttr>();
-  if (!Attr)
-    return;
-  for (unsigned I = 0; I != NumParams; ++I) {
-    (void)CheckCXXDefaultArgExpr(Attr->getLocation(), Ctor,
-                                   Ctor->getParamDecl(I));
-    CleanupVarDeclMarking();
   }
 }
 
@@ -1746,13 +1744,19 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
   TypeSourceInfo *TSI = SemaRef.SubstType(
       D->getTypeSourceInfo(), TemplateArgs, D->getTypeSpecStartLoc(),
       D->getDeclName(), /*AllowDeducedTST*/ true);
-  if (!TSI)
-    return nullptr;
-
-  if (TSI->getType()->isFunctionType()) {
+  bool Invalid = false;
+  if (!TSI) {
+    if (!InstantiatingVarTemplate)
+      return nullptr;
+    TSI = SemaRef.Context.getTrivialTypeSourceInfo(SemaRef.Context.IntTy,
+                                                   D->getLocation());
+    Invalid = true;
+  } else if (TSI->getType()->isFunctionType()) {
     SemaRef.Diag(D->getLocation(), diag::err_variable_instantiates_to_function)
         << D->isStaticDataMember() << TSI->getType();
-    return nullptr;
+    if (!InstantiatingVarTemplate)
+      return nullptr;
+    Invalid = true;
   }
 
   DeclContext *DC = Owner;
@@ -1820,6 +1824,9 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
 
   if (SemaRef.getLangOpts().OpenACC)
     SemaRef.OpenACC().ActOnVariableDeclarator(Var);
+
+  if (Invalid)
+    Var->setInvalidDecl();
 
   return Var;
 }
@@ -2087,6 +2094,13 @@ Decl *TemplateDeclInstantiator::VisitStaticAssertDecl(StaticAssertDecl *D) {
   return SemaRef.BuildStaticAssertDeclaration(
       D->getLocation(), InstantiatedAssertExpr.get(),
       InstantiatedMessageExpr.get(), D->getRParenLoc(), D->isFailed());
+}
+
+Decl *TemplateDeclInstantiator::VisitExplicitInstantiationDecl(
+    ExplicitInstantiationDecl *D) {
+  // ExplicitInstantiationDecl is a source-info-only node and should not
+  // appear inside a template pattern. Nothing to instantiate.
+  llvm_unreachable("ExplicitInstantiationDecl should not be instantiated");
 }
 
 Decl *TemplateDeclInstantiator::VisitEnumDecl(EnumDecl *D) {
@@ -3123,12 +3137,11 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
 
   // Instantiate enclosing template arguments for friends.
   SmallVector<TemplateParameterList *, 4> TempParamLists;
-  unsigned NumTempParamLists = 0;
-  if (isFriend && (NumTempParamLists = D->getNumTemplateParameterLists())) {
-    TempParamLists.resize(NumTempParamLists);
-    for (unsigned I = 0; I != NumTempParamLists; ++I) {
-      TemplateParameterList *TempParams = D->getTemplateParameterList(I);
-      TemplateParameterList *InstParams = SubstTemplateParams(TempParams);
+  ArrayRef<TemplateParameterList *> TPLs = D->getTemplateParameterLists();
+  if (isFriend && !TPLs.empty()) {
+    TempParamLists.resize(TPLs.size());
+    for (unsigned I = 0; I != TPLs.size(); ++I) {
+      TemplateParameterList *InstParams = SubstTemplateParams(TPLs[I]);
       if (!InstParams)
         return nullptr;
       TempParamLists[I] = InstParams;
@@ -3307,10 +3320,8 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   // out-of-line, the instantiation will have the same lexical
   // context (which will be a namespace scope) as the template.
   if (isFriend) {
-    if (NumTempParamLists)
-      Method->setTemplateParameterListsInfo(
-          SemaRef.Context,
-          llvm::ArrayRef(TempParamLists.data(), NumTempParamLists));
+    if (!TempParamLists.empty())
+      Method->setTemplateParameterListsInfo(SemaRef.Context, TempParamLists);
 
     Method->setLexicalDeclContext(Owner);
     Method->setObjectOfFriendDecl();
@@ -5461,6 +5472,8 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
   SemaRef.InstantiateAttrs(TemplateArgs, Definition, New,
                            LateAttrs, StartingScope);
 
+  SemaRef.inferLifetimeBoundAttribute(New);
+
   return false;
 }
 
@@ -5502,11 +5515,10 @@ bool TemplateDeclInstantiator::SubstDefaultedFunction(FunctionDecl *New,
       Lookups.push_back(DeclAccessPair::make(D, DA.getAccess()));
     }
 
-    // It's unlikely that substitution will change any declarations. Don't
-    // store an unnecessary copy in that case.
     New->setDefaultedOrDeletedInfo(
         AnyChanged ? FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
-                         SemaRef.Context, Lookups)
+                         SemaRef.Context, Lookups, DFI->getFPFeatures(),
+                         DFI->getDeletedMessage())
                    : DFI);
   }
 
@@ -5941,7 +5953,8 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
         // default arguments.
         if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
             Ctor->isDefaultConstructor()) {
-          InstantiateDefaultCtorDefaultArgs(Ctor);
+          if (DLLExportAttr *Attr = Ctor->getAttr<DLLExportAttr>())
+            BuildCtorClosureDefaultArgs(Attr->getLocation(), Ctor);
         }
       }
 
@@ -5955,9 +5968,12 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     // context seems wrong. Investigate more.
     ActOnFinishFunctionBody(Function, Body.get(), /*IsInstantiation=*/true);
 
+    inferLifetimeBoundAttribute(Function);
+
     checkReferenceToTULocalFromOtherTU(Function, PointOfInstantiation);
 
-    PerformDependentDiagnostics(PatternDecl, TemplateArgs);
+    if (PatternDecl->isDependentContext())
+      PerformDependentDiagnostics(PatternDecl, TemplateArgs);
 
     if (auto *Listener = getASTMutationListener())
       Listener->FunctionDefinitionInstantiated(Function);
@@ -6000,7 +6016,6 @@ VarTemplateSpecializationDecl *Sema::BuildVarTemplateInstantiation(
   if (FromVar->isInvalidDecl())
     return nullptr;
 
-  NonSFINAEContext _(*this);
   InstantiatingTemplate Inst(*this, PointOfInstantiation, FromVar);
   if (Inst.isInvalid())
     return nullptr;
@@ -6236,8 +6251,7 @@ void Sema::InstantiateVariableInitializer(
       Expr *InitExpr = Init.get();
 
       if (Var->hasAttr<DLLImportAttr>() &&
-          (!InitExpr ||
-           !InitExpr->isConstantInitializer(getASTContext(), false))) {
+          (!InitExpr || !InitExpr->isConstantInitializer(getASTContext()))) {
         // Do not dynamically initialize dllimport variables.
       } else if (InitExpr) {
         bool DirectInit = OldVar->isDirectInit();

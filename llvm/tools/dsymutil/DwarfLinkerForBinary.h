@@ -21,6 +21,7 @@
 #include <optional>
 
 namespace llvm {
+class ThreadPoolInterface;
 using namespace dwarf_linker;
 
 namespace dsymutil {
@@ -73,9 +74,10 @@ struct ObjectWithRelocMap {
 class DwarfLinkerForBinary {
 public:
   DwarfLinkerForBinary(raw_fd_ostream &OutFile, BinaryHolder &BinHolder,
-                       LinkOptions Options, std::mutex &ErrorHandlerMutex)
+                       LinkOptions Options, std::mutex &ErrorHandlerMutex,
+                       ThreadPoolInterface *ThreadPool = nullptr)
       : OutFile(OutFile), BinHolder(BinHolder), Options(std::move(Options)),
-        ErrorHandlerMutex(ErrorHandlerMutex) {}
+        ErrorHandlerMutex(ErrorHandlerMutex), ThreadPool(ThreadPool) {}
 
   /// Link the contents of the DebugMap.
   bool link(const DebugMap &);
@@ -121,6 +123,9 @@ private:
 
     std::optional<std::string> LibInstallName;
 
+    /// Address ranges for symbols with sizes (used for assembly file support).
+    RangesTy AddressRanges;
+
     /// Returns list of valid relocations from \p Relocs,
     /// between \p StartOffset and \p NextOffset.
     ///
@@ -164,6 +169,15 @@ private:
         }
       } else {
         findValidRelocsInDebugSections(Obj, DMO);
+      }
+      // Populate address ranges from debug map symbols that have sizes.
+      // This is used for assembly files where labels may not have high_pc.
+      for (const auto &Entry : DMO.symbols()) {
+        const auto &Mapping = Entry.getValue();
+        if (Mapping.Size && Mapping.ObjectAddress)
+          AddressRanges.insert(
+              {*Mapping.ObjectAddress, *Mapping.ObjectAddress + Mapping.Size},
+              int64_t(Mapping.BinaryAddress) - *Mapping.ObjectAddress);
       }
     }
     ~AddressManager() override { clear(); }
@@ -224,6 +238,14 @@ private:
     void clear() override {
       ValidDebugInfoRelocs.clear();
       ValidDebugAddrRelocs.clear();
+      AddressRanges.clear();
+    }
+
+    std::optional<AssemblyRange>
+    getAssemblyRangeForAddress(uint64_t Addr) override {
+      if (auto Range = AddressRanges.getRangeThatContains(Addr))
+        return AssemblyRange(Range->Range.start(), Range->Range.end());
+      return std::nullopt;
     }
   };
 
@@ -255,6 +277,8 @@ private:
 
   Error copySwiftInterfaces(StringRef Architecture) const;
 
+  Error copyEmbeddedResources() const;
+
   void copySwiftReflectionMetadata(
       const llvm::dsymutil::DebugMapObject *Obj,
       classic::DwarfStreamer *Streamer,
@@ -273,6 +297,7 @@ private:
   BinaryHolder &BinHolder;
   LinkOptions Options;
   std::mutex &ErrorHandlerMutex;
+  ThreadPoolInterface *ThreadPool;
 
   std::vector<std::string> EmptyWarnings;
 

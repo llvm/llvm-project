@@ -55,17 +55,17 @@ template <> struct OptionEnumMapping<modernize::VariableNamer::NamingStyle> {
 
 namespace modernize {
 
-static const char LoopNameArray[] = "forLoopArray";
-static const char LoopNameIterator[] = "forLoopIterator";
-static const char LoopNameReverseIterator[] = "forLoopReverseIterator";
-static const char LoopNamePseudoArray[] = "forLoopPseudoArray";
-static const char ConditionBoundName[] = "conditionBound";
-static const char InitVarName[] = "initVar";
-static const char BeginCallName[] = "beginCall";
-static const char EndCallName[] = "endCall";
-static const char EndVarName[] = "endVar";
-static const char DerefByValueResultName[] = "derefByValueResult";
-static const char DerefByRefResultName[] = "derefByRefResult";
+static constexpr char LoopNameArray[] = "forLoopArray";
+static constexpr char LoopNameIterator[] = "forLoopIterator";
+static constexpr char LoopNameReverseIterator[] = "forLoopReverseIterator";
+static constexpr char LoopNamePseudoArray[] = "forLoopPseudoArray";
+static constexpr char ConditionBoundName[] = "conditionBound";
+static constexpr char InitVarName[] = "initVar";
+static constexpr char BeginCallName[] = "beginCall";
+static constexpr char EndCallName[] = "endCall";
+static constexpr char EndVarName[] = "endVar";
+static constexpr char DerefByValueResultName[] = "derefByValueResult";
+static constexpr char DerefByRefResultName[] = "derefByRefResult";
 static const llvm::StringSet<> MemberNames{"begin",   "cbegin", "rbegin",
                                            "crbegin", "end",    "cend",
                                            "rend",    "crend",  "size"};
@@ -330,6 +330,8 @@ static StatementMatcher makePseudoArrayLoopMatcher() {
       .bind(LoopNamePseudoArray);
 }
 
+namespace {
+
 enum class IteratorCallKind {
   ICK_Member,
   ICK_ADL,
@@ -342,6 +344,8 @@ struct ContainerCall {
   bool IsArrow;
   IteratorCallKind CallKind;
 };
+
+} // namespace
 
 // Find the Expr likely initializing an iterator.
 //
@@ -420,7 +424,7 @@ getContainerFromBeginEndCall(const Expr *Init, bool IsBegin, bool *IsArrow,
     return {};
   if (!Call->Name.empty() && Call->Name != "c")
     return {};
-  return std::make_pair(Call->Container, Call->CallKind);
+  return {Call->Container, Call->CallKind};
 }
 
 /// Determines the container whose begin() and end() functions are called
@@ -428,8 +432,8 @@ getContainerFromBeginEndCall(const Expr *Init, bool IsBegin, bool *IsArrow,
 ///
 /// BeginExpr must be a member call to a function named "begin()", and EndExpr
 /// must be a member.
-static const Expr *findContainer(ASTContext *Context, const Expr *BeginExpr,
-                                 const Expr *EndExpr,
+static const Expr *findContainer(const ASTContext *Context,
+                                 const Expr *BeginExpr, const Expr *EndExpr,
                                  bool *ContainerNeedsDereference,
                                  bool IsReverse) {
   // Now that we know the loop variable and test expression, make sure they are
@@ -457,7 +461,7 @@ static const Expr *findContainer(ASTContext *Context, const Expr *BeginExpr,
 }
 
 /// Obtain the original source code text from a SourceRange.
-static StringRef getStringFromRange(SourceManager &SourceMgr,
+static StringRef getStringFromRange(const SourceManager &SourceMgr,
                                     const LangOptions &LangOpts,
                                     SourceRange Range) {
   if (SourceMgr.getFileID(Range.getBegin()) !=
@@ -544,6 +548,39 @@ static bool containerIsConst(const Expr *ContainerExpr, bool Dereference) {
     // type.
     CType = CType.getNonReferenceType();
     return CType.isConstQualified();
+  }
+  return false;
+}
+
+// Returns true if the token at `BeginLocation` is immediately preceded by an
+// identifier or keyword token with no space between them.
+static bool
+isPrecededByAdjacentIdentifierOrKeyword(const SourceManager &SourceMgr,
+                                        const LangOptions &LangOpts,
+                                        SourceLocation BeginLocation) {
+  std::optional<Token> PrevToken =
+      Lexer::findPreviousToken(BeginLocation, SourceMgr, LangOpts, true);
+  if (!PrevToken)
+    return false;
+  // Check whether the token at `BeginLocation` is immediately adjacent to
+  // the previous token with no space between them.
+  const bool IsAdjacentToPrevToken = PrevToken->getEndLoc() == BeginLocation;
+  return PrevToken->isAnyIdentifier() && IsAdjacentToPrevToken;
+}
+
+// Returns true if the replacement text needs a leading space to avoid merging
+// with the preceding token. This occurs when `*it` is immediately adjacent to
+// a keyword, e.g. `delete*it`, where replacing `*it` with `it` would
+// incorrectly produce `deleteit`. So we insert a space b/w `delete` and `it`.
+static bool requiresLeadingSpace(const SourceManager &SourceMgr,
+                                 const LangOptions &LangOpts,
+                                 SourceLocation BeginLocation) {
+  Token StarToken;
+  if (!Lexer::getRawToken(BeginLocation, StarToken, SourceMgr, LangOpts,
+                          false) &&
+      StarToken.is(tok::star)) {
+    return isPrecededByAdjacentIdentifierOrKeyword(SourceMgr, LangOpts,
+                                                   BeginLocation);
   }
   return false;
 }
@@ -641,13 +678,12 @@ void LoopConvertCheck::doConversion(
       VarNameOrStructuredBinding = "[";
 
       assert(!AliasDecompositionDecl->bindings().empty() && "No bindings");
-      for (const BindingDecl *Binding : AliasDecompositionDecl->bindings()) {
+      for (const BindingDecl *Binding : AliasDecompositionDecl->bindings())
         VarNameOrStructuredBinding += Binding->getName().str() + ", ";
-      }
 
       VarNameOrStructuredBinding.erase(VarNameOrStructuredBinding.size() - 2,
                                        2);
-      VarNameOrStructuredBinding += "]";
+      VarNameOrStructuredBinding += ']';
     } else {
       VarNameOrStructuredBinding = AliasVar->getName().str();
 
@@ -695,11 +731,15 @@ void LoopConvertCheck::doConversion(
       std::string ReplaceText;
       SourceRange Range = Usage.Range;
       if (Usage.Expression) {
+        if (Usage.Kind == Usage::UK_Default &&
+            requiresLeadingSpace(Context->getSourceManager(), getLangOpts(),
+                                 Usage.Range.getBegin()))
+          ReplaceText = " ";
         // If this is an access to a member through the arrow operator, after
         // the replacement it must be accessed through the '.' operator.
-        ReplaceText = Usage.Kind == Usage::UK_MemberThroughArrow
-                          ? VarNameOrStructuredBinding + "."
-                          : VarNameOrStructuredBinding;
+        ReplaceText += Usage.Kind == Usage::UK_MemberThroughArrow
+                           ? VarNameOrStructuredBinding + "."
+                           : VarNameOrStructuredBinding;
         const DynTypedNodeList Parents = Context->getParents(*Usage.Expression);
         if (Parents.size() == 1) {
           if (const auto *Paren = Parents[0].get<ParenExpr>()) {
@@ -708,7 +748,10 @@ void LoopConvertCheck::doConversion(
             // removed except in case of a `sizeof` operator call.
             const DynTypedNodeList GrandParents = Context->getParents(*Paren);
             if (GrandParents.size() != 1 ||
-                GrandParents[0].get<UnaryExprOrTypeTraitExpr>() == nullptr) {
+                (GrandParents[0].get<UnaryExprOrTypeTraitExpr>() == nullptr &&
+                 !isPrecededByAdjacentIdentifierOrKeyword(
+                     Context->getSourceManager(), getLangOpts(),
+                     Parents[0].getSourceRange().getBegin()))) {
               Range = Paren->getSourceRange();
             }
           } else if (const auto *UOP = Parents[0].get<UnaryOperator>()) {
@@ -731,7 +774,7 @@ void LoopConvertCheck::doConversion(
                           ? "&" + VarNameOrStructuredBinding
                           : VarNameOrStructuredBinding;
       }
-      TUInfo->getReplacedVars().insert(std::make_pair(Loop, IndexVar));
+      TUInfo->getReplacedVars().try_emplace(Loop, IndexVar);
       FixIts.push_back(FixItHint::CreateReplacement(
           CharSourceRange::getTokenRange(Range), ReplaceText));
     }
@@ -793,8 +836,7 @@ void LoopConvertCheck::doConversion(
       FixIts.push_back(*Insertion);
   }
   diag(Loop->getForLoc(), "use range-based for loop instead") << FixIts;
-  TUInfo->getGeneratedDecls().insert(
-      make_pair(Loop, VarNameOrStructuredBinding));
+  TUInfo->getGeneratedDecls().try_emplace(Loop, VarNameOrStructuredBinding);
 }
 
 /// Returns a string which refers to the container iterated over.
@@ -845,9 +887,8 @@ void LoopConvertCheck::getArrayLoopQualifiers(ASTContext *Context,
       continue;
     QualType Type = U.Expression->getType().getCanonicalType();
     if (U.Kind == Usage::UK_MemberThroughArrow) {
-      if (!Type->isPointerType()) {
+      if (!Type->isPointerType())
         continue;
-      }
       Type = Type->getPointeeType();
     }
     Descriptor.ElemType = Type;
@@ -872,27 +913,25 @@ void LoopConvertCheck::getIteratorLoopQualifiers(ASTContext *Context,
     // canonical const qualification of the init variable type.
     Descriptor.DerefByConstRef = CanonicalInitVarType.isConstQualified();
     Descriptor.ElemType = *DerefByValueType;
+  } else if (const auto *DerefType =
+                 Nodes.getNodeAs<QualType>(DerefByRefResultName)) {
+    // A node will only be bound with DerefByRefResultName if we're dealing
+    // with a user-defined iterator type. Test the const qualification of
+    // the reference type.
+    auto ValueType = DerefType->getNonReferenceType();
+
+    Descriptor.DerefByConstRef = ValueType.isConstQualified();
+    Descriptor.ElemType = ValueType;
   } else {
-    if (const auto *DerefType =
-            Nodes.getNodeAs<QualType>(DerefByRefResultName)) {
-      // A node will only be bound with DerefByRefResultName if we're dealing
-      // with a user-defined iterator type. Test the const qualification of
-      // the reference type.
-      auto ValueType = DerefType->getNonReferenceType();
+    // By nature of the matcher this case is triggered only for built-in
+    // iterator types (i.e. pointers).
+    assert(isa<PointerType>(CanonicalInitVarType) &&
+           "Non-class iterator type is not a pointer type");
 
-      Descriptor.DerefByConstRef = ValueType.isConstQualified();
-      Descriptor.ElemType = ValueType;
-    } else {
-      // By nature of the matcher this case is triggered only for built-in
-      // iterator types (i.e. pointers).
-      assert(isa<PointerType>(CanonicalInitVarType) &&
-             "Non-class iterator type is not a pointer type");
-
-      // We test for const qualification of the pointed-at type.
-      Descriptor.DerefByConstRef =
-          CanonicalInitVarType->getPointeeType().isConstQualified();
-      Descriptor.ElemType = CanonicalInitVarType->getPointeeType();
-    }
+    // We test for const qualification of the pointed-at type.
+    Descriptor.DerefByConstRef =
+        CanonicalInitVarType->getPointeeType().isConstQualified();
+    Descriptor.ElemType = CanonicalInitVarType->getPointeeType();
   }
 }
 
@@ -1075,20 +1114,19 @@ void LoopConvertCheck::check(const MatchFinder::MatchResult &Result) {
                Finder.aliasFromForInit(), Loop, Descriptor);
 }
 
-llvm::StringRef LoopConvertCheck::getReverseFunction() const {
+StringRef LoopConvertCheck::getReverseFunction() const {
   if (!ReverseFunction.empty())
     return ReverseFunction;
   if (UseReverseRanges)
-    return "std::ranges::reverse_view";
+    return "std::views::reverse";
   return "";
 }
 
-llvm::StringRef LoopConvertCheck::getReverseHeader() const {
+StringRef LoopConvertCheck::getReverseHeader() const {
   if (!ReverseHeader.empty())
     return ReverseHeader;
-  if (UseReverseRanges && ReverseFunction.empty()) {
+  if (UseReverseRanges && ReverseFunction.empty())
     return "<ranges>";
-  }
   return "";
 }
 

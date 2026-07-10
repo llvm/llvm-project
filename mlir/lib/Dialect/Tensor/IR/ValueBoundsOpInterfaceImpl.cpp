@@ -31,6 +31,27 @@ struct CastOpInterface
   }
 };
 
+struct CollapseShapeOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<CollapseShapeOpInterface,
+                                                   CollapseShapeOp> {
+  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
+                                       ValueBoundsConstraintSet &cstr) const {
+    auto collapseOp = cast<CollapseShapeOp>(op);
+    assert(value == collapseOp.getResult() && "invalid value");
+
+    // Multiply the expressions for the dimensions in the reassociation group.
+    const ReassociationIndices reassocIndices =
+        collapseOp.getReassociationIndices()[dim];
+    AffineExpr productExpr =
+        cstr.getExpr(collapseOp.getSrc(), reassocIndices[0]);
+    for (size_t i = 1; i < reassocIndices.size(); ++i) {
+      productExpr =
+          productExpr * cstr.getExpr(collapseOp.getSrc(), reassocIndices[i]);
+    }
+    cstr.bound(value)[dim] == productExpr;
+  }
+};
+
 struct DimOpInterface
     : public ValueBoundsOpInterface::ExternalModel<DimOpInterface, DimOp> {
   void populateBoundsForIndexValue(Operation *op, Value value,
@@ -54,6 +75,17 @@ struct EmptyOpInterface
     assert(value == emptyOp.getResult() && "invalid value");
 
     cstr.bound(value)[dim] == emptyOp.getMixedSizes()[dim];
+  }
+};
+
+struct ExpandShapeOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<ExpandShapeOpInterface,
+                                                   ExpandShapeOp> {
+  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
+                                       ValueBoundsConstraintSet &cstr) const {
+    auto expandOp = cast<ExpandShapeOp>(op);
+    assert(value == expandOp.getResult() && "invalid value");
+    cstr.bound(value)[dim] == expandOp.getMixedOutputShape()[dim];
   }
 };
 
@@ -117,8 +149,12 @@ void mlir::tensor::registerValueBoundsOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, tensor::TensorDialect *dialect) {
     tensor::CastOp::attachInterface<tensor::CastOpInterface>(*ctx);
+    tensor::CollapseShapeOp::attachInterface<tensor::CollapseShapeOpInterface>(
+        *ctx);
     tensor::DimOp::attachInterface<tensor::DimOpInterface>(*ctx);
     tensor::EmptyOp::attachInterface<tensor::EmptyOpInterface>(*ctx);
+    tensor::ExpandShapeOp::attachInterface<tensor::ExpandShapeOpInterface>(
+        *ctx);
     tensor::ExtractSliceOp::attachInterface<tensor::ExtractSliceOpInterface>(
         *ctx);
     tensor::PadOp::attachInterface<tensor::PadOpInterface>(*ctx);

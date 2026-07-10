@@ -21,6 +21,7 @@
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
+#include "tsan_adaptive_delay.h"
 #include "tsan_defs.h"
 #include "tsan_interface.h"
 #include "tsan_mman.h"
@@ -774,6 +775,10 @@ void Initialize(ThreadState *thr) {
            (int)internal_getpid());
     while (__tsan_resumed == 0) {}
   }
+
+#if !SANITIZER_GO
+  AdaptiveDelay::Init();
+#endif
 
   OnInitialize();
 }

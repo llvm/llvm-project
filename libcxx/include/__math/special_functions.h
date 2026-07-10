@@ -21,9 +21,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Real>
 _LIBCPP_HIDE_FROM_ABI _Real __hermite(unsigned __n, _Real __x) {
@@ -49,7 +49,7 @@ _LIBCPP_HIDE_FROM_ABI _Real __hermite(unsigned __n, _Real __x) {
   }
 
   if (!__math::isfinite(__H_n)) {
-    // Overflow occured. Two possible cases:
+    // Overflow occurred. Two possible cases:
     //    n is odd:  return infinity of the same sign as x.
     //    n is even: return +Inf
     _Real __inf = std::numeric_limits<_Real>::infinity();
@@ -77,8 +77,8 @@ _LIBCPP_HIDE_FROM_ABI double hermite(unsigned __n, _Integer __x) {
   return std::hermite(__n, static_cast<double>(__x));
 }
 
-#endif // _LIBCPP_STD_VER >= 17
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___MATH_SPECIAL_FUNCTIONS_H

@@ -65,7 +65,7 @@ void InefficientAlgorithmCheck::check(const MatchFinder::MatchResult &Result) {
         Result.Nodes.getNodeAs<ClassTemplateSpecializationDecl>("IneffContPtr");
     PtrToContainer = true;
   }
-  const llvm::StringRef IneffContName = IneffCont->getName();
+  const StringRef IneffContName = IneffCont->getName();
   const bool Unordered = IneffContName.contains("unordered");
   const bool Maplike = IneffContName.contains("map");
 

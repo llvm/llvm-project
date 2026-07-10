@@ -10,8 +10,8 @@
 
 // Ensure that APIs which take a CharT* are diagnosing passing a nullptr to them
 
-// Clang 19 and AppleClang don't have diagnose_if with diagnostic flags
-// UNSUPPORTED: clang-19, apple-clang-17
+// AppleClang doesn't have diagnose_if with diagnostic flags
+// UNSUPPORTED: apple-clang-21
 
 // ADDITIONAL_COMPILE_FLAGS: -Wno-unused-result
 
@@ -25,8 +25,12 @@ void func() {
   std::string str2(np, std::allocator<char>{}); // expected-warning {{null passed}}
   str2 = np;                                    // expected-warning {{null passed}}
   str2 += np;                                   // expected-warning {{null passed}}
+  str2.assign(np, 1);                           // expected-warning {{null passed}}
   str2.assign(np);                              // expected-warning {{null passed}}
+  str2.assign(np, 0, 1);                        // expected-warning {{null passed}}
+  str2.append(np, 1);                           // expected-warning {{null passed}}
   str2.append(np);                              // expected-warning {{null passed}}
+  str2.append(np, 0, 1);                        // expected-warning {{null passed}}
   str2.insert(0, np);                           // expected-warning {{null passed}}
   str2.find(np);                                // expected-warning {{null passed}}
   str2.rfind(np);                               // expected-warning {{null passed}}

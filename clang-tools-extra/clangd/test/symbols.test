@@ -56,7 +56,10 @@
 # CHECK-NEXT:            "character": {{.*}},
 # CHECK-NEXT:            "line": {{.*}}
 # CHECK-NEXT:          }
-# CHECK-NEXT:        }
+# CHECK-NEXT:        },
+# CHECK-NEXT:      "tags": [
+# CHECK-NEXT:        18
+# CHECK-NEXT:      ]
 # CHECK-NEXT:      },
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "detail": "int ()",
@@ -81,7 +84,11 @@
 # CHECK-NEXT:            "character": {{.*}},
 # CHECK-NEXT:            "line": {{.*}}
 # CHECK-NEXT:          }
-# CHECK-NEXT:        }
+# CHECK-NEXT:        },
+# CHECK-NEXT:      "tags": [
+# CHECK-NEXT:        18,
+# CHECK-NEXT:        19
+# CHECK-NEXT:      ]
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ]
 # CHECK-NEXT:}

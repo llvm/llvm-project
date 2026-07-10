@@ -5,24 +5,36 @@
 
 module {
 
-cir.func @catch_param_inside_catch() {
+cir.func @begin_catch_inside_catch() {
   cir.scope {
     cir.try {
       cir.yield
-    } catch all {
-      %exception = cir.catch_param : !cir.ptr<!void>
+    } catch all (%eh_token : !cir.eh_token) {
+      %catch_token, %exception = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.cleanup.scope {
+        cir.yield
+      } cleanup eh {
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      }
       cir.yield
     }
   }
   cir.return
 }
 
-// CHECK: cir.func @catch_param_inside_catch() {
+// CHECK: cir.func @begin_catch_inside_catch() {
 // CHECK:   cir.scope {
 // CHECK:     cir.try {
 // CHECK:       cir.yield
-// CHECK:     } catch all {
-// CHECK:       %[[EXCEPTION:.*]] = cir.catch_param : !cir.ptr<!void> 
+// CHECK:     } catch all (%[[EH_TOKEN:.*]]: !cir.eh_token) {
+// CHECK:       %[[CATCH_TOKEN:.*]], %[[EXCEPTION:.*]] = cir.begin_catch %[[EH_TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CHECK:       cir.cleanup.scope {
+// CHECK:         cir.yield
+// CHECK:       } cleanup eh {
+// CHECK:         cir.end_catch %[[CATCH_TOKEN]] : !cir.catch_token
+// CHECK:         cir.yield
+// CHECK:       }
 // CHECK:       cir.yield
 // CHECK:     }
 // CHECK:   }

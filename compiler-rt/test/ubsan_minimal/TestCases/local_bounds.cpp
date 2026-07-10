@@ -3,8 +3,6 @@
 // RUN: %clangxx_min_runtime -fsanitize=local-bounds -fno-sanitize-trap=local-bounds %s -O3 -o %t && not --crash %run %t 3 2>&1 | FileCheck %s
 // RUN: %clangxx_min_runtime -fsanitize=local-bounds -fno-sanitize-trap=local-bounds -fsanitize-recover=local-bounds %s -O3 -o %t && %run %t 3 2>&1 | FileCheck %s
 
-#include <cstdlib>
-
 struct S {
   int k;
   int l;

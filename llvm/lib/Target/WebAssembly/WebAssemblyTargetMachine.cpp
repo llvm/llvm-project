@@ -20,6 +20,10 @@
 #include "WebAssemblyTargetObjectFile.h"
 #include "WebAssemblyTargetTransformInfo.h"
 #include "WebAssemblyUtilities.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
@@ -45,12 +49,6 @@ static cl::opt<bool> WasmDisableExplicitLocals(
     "wasm-disable-explicit-locals", cl::Hidden,
     cl::desc("WebAssembly: output implicit locals in"
              " instruction output for test purposes only."),
-    cl::init(false));
-
-static cl::opt<bool> WasmDisableFixIrreducibleControlFlowPass(
-    "wasm-disable-fix-irreducible-control-flow-pass", cl::Hidden,
-    cl::desc("webassembly: disables the fix "
-             " irreducible control flow optimization pass"),
     cl::init(false));
 
 // Exception handling & setjmp-longjmp handling related options.
@@ -92,6 +90,9 @@ LLVMInitializeWebAssemblyTarget() {
 
   // Register backend passes
   auto &PR = *PassRegistry::getPassRegistry();
+  initializeGlobalISel(PR);
+  initializeWebAssemblyPreLegalizerCombinerPass(PR);
+  initializeWebAssemblyPostLegalizerCombinerPass(PR);
   initializeWebAssemblyAddMissingPrototypesPass(PR);
   initializeWebAssemblyLowerEmscriptenEHSjLjPass(PR);
   initializeLowerGlobalDtorsLegacyPassPass(PR);
@@ -118,7 +119,6 @@ LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyDebugFixupPass(PR);
   initializeWebAssemblyPeepholePass(PR);
   initializeWebAssemblyMCLowerPrePassPass(PR);
-  initializeWebAssemblyLowerRefTypesIntPtrConvPass(PR);
   initializeWebAssemblyFixBrTableDefaultsPass(PR);
   initializeWebAssemblyDAGToDAGISelLegacyPass(PR);
 }
@@ -212,8 +212,11 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
   this->Options.DataSections = true;
   this->Options.UniqueSectionNames = true;
 
-  initAsmInfo();
   basicCheckForEHAndSjLj(this);
+  initAsmInfo();
+
+  LLT::setUseExtended(true);
+
   // Note that we don't use setRequiresStructuredCFG(true). It disables
   // optimizations than we're ok with, and want, such as critical edge
   // splitting and tail merging.
@@ -246,11 +249,6 @@ WebAssemblyTargetMachine::getSubtargetImpl(const Function &F) const {
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
 
-  // This needs to be done before we create a new subtarget since any
-  // creation will depend on the TM and the code generation flags on the
-  // function that reside in TargetOptions.
-  resetTargetOptions(F);
-
   return getSubtargetImpl(CPU, FS);
 }
 
@@ -269,9 +267,8 @@ public:
       : ModulePass(ID), WasmTM(WasmTM) {}
 
   bool runOnModule(Module &M) override {
-    FeatureBitset Features = coalesceFeatures(M);
+    auto [Features, FeatureStr] = coalesceFeatures(M);
 
-    std::string FeatureStr = getFeatureString(Features);
     WasmTM->setTargetFeatureString(FeatureStr);
     for (auto &F : M)
       replaceFeatures(F, FeatureStr);
@@ -279,61 +276,71 @@ public:
     bool StrippedAtomics = false;
     bool StrippedTLS = false;
 
+    // In cooperative threading mode, thread locals are meaningful even without
+    // atomics.
+    const WebAssemblySubtarget *ST = WasmTM->getSubtargetImpl();
+    bool CooperativeThreading = ST->hasCooperativeMultithreading();
+
     if (!Features[WebAssembly::FeatureAtomics]) {
       StrippedAtomics = stripAtomics(M);
+      if (!CooperativeThreading)
+        StrippedTLS = stripThreadLocals(M);
+    }
+    if (!Features[WebAssembly::FeatureBulkMemory] && !StrippedTLS) {
       StrippedTLS = stripThreadLocals(M);
-    } else if (!Features[WebAssembly::FeatureBulkMemory]) {
-      StrippedTLS |= stripThreadLocals(M);
     }
 
-    if (StrippedAtomics && !StrippedTLS)
+    if (StrippedAtomics && !StrippedTLS && !CooperativeThreading)
       stripThreadLocals(M);
     else if (StrippedTLS && !StrippedAtomics)
       stripAtomics(M);
 
-    recordFeatures(M, Features, StrippedAtomics || StrippedTLS);
+    recordFeatures(M, ST, Features, StrippedAtomics || StrippedTLS);
 
     // Conservatively assume we have made some change
     return true;
   }
 
 private:
-  FeatureBitset coalesceFeatures(const Module &M) {
+  std::pair<FeatureBitset, std::string> coalesceFeatures(const Module &M) {
     // Union the features of all defined functions. Start with an empty set, so
     // that if a feature is disabled in every function, we'll compute it as
     // disabled. If any function lacks a target-features attribute, it'll
     // default to the target CPU from the `TargetMachine`.
     FeatureBitset Features;
-    bool AnyDefinedFuncs = false;
+    // We need any MCSubtargetInfo to access WebAssemblyFeatureKV.
+    const WebAssemblySubtarget *AnyST = nullptr;
     for (auto &F : M) {
       if (F.isDeclaration())
         continue;
 
-      Features |= WasmTM->getSubtargetImpl(F)->getFeatureBits();
-      AnyDefinedFuncs = true;
+      AnyST = WasmTM->getSubtargetImpl(F);
+      Features |= AnyST->getFeatureBits();
     }
 
     // If we have no defined functions, use the target CPU from the
     // `TargetMachine`.
-    if (!AnyDefinedFuncs) {
-      Features =
-          WasmTM
-              ->getSubtargetImpl(std::string(WasmTM->getTargetCPU()),
-                                 std::string(WasmTM->getTargetFeatureString()))
-              ->getFeatureBits();
+    if (!AnyST) {
+      AnyST = WasmTM->getSubtargetImpl(
+          std::string(WasmTM->getTargetCPU()),
+          std::string(WasmTM->getTargetFeatureString()));
+      Features = AnyST->getFeatureBits();
     }
 
-    return Features;
+    return {Features, getFeatureString(AnyST, Features)};
   }
 
-  static std::string getFeatureString(const FeatureBitset &Features) {
+  static std::string getFeatureString(const WebAssemblySubtarget *ST,
+                                      const FeatureBitset &Features) {
     std::string Ret;
-    for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
+    for (const SubtargetFeatureKV &KV : ST->getAllProcessorFeatures()) {
       if (Features[KV.Value])
-        Ret += (StringRef("+") + KV.Key + ",").str();
+        Ret += (StringRef("+") + KV.key() + ",").str();
       else
-        Ret += (StringRef("-") + KV.Key + ",").str();
+        Ret += (StringRef("-") + KV.key() + ",").str();
     }
+    // remove trailing ','
+    Ret.pop_back();
     return Ret;
   }
 
@@ -392,11 +399,12 @@ private:
     return Stripped;
   }
 
-  void recordFeatures(Module &M, const FeatureBitset &Features, bool Stripped) {
-    for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
+  void recordFeatures(Module &M, const WebAssemblySubtarget *ST,
+                      const FeatureBitset &Features, bool Stripped) {
+    for (const SubtargetFeatureKV &KV : ST->getAllProcessorFeatures()) {
       if (Features[KV.Value]) {
         // Mark features as used
-        std::string MDKey = (StringRef("wasm-feature-") + KV.Key).str();
+        std::string MDKey = (StringRef("wasm-feature-") + KV.key()).str();
         M.addModuleFlag(Module::ModFlagBehavior::Error, MDKey,
                         wasm::WASM_FEATURE_PREFIX_USED);
       }
@@ -404,7 +412,7 @@ private:
     // Code compiled without atomics or bulk-memory may have had its atomics or
     // thread-local data lowered to nonatomic operations or non-thread-local
     // data. In that case, we mark the pseudo-feature "shared-mem" as disallowed
-    // to tell the linker that it would be unsafe to allow this code ot be used
+    // to tell the linker that it would be unsafe to allow this code to be used
     // in a module with shared memory.
     if (Stripped) {
       M.addModuleFlag(Module::ModFlagBehavior::Error, "wasm-feature-shared-mem",
@@ -440,6 +448,13 @@ public:
 
   // No reg alloc
   bool addRegAssignAndRewriteOptimized() override { return false; }
+
+  bool addIRTranslator() override;
+  void addPreLegalizeMachineIR() override;
+  bool addLegalizeMachineIR() override;
+  void addPreRegBankSelect() override;
+  bool addRegBankSelect() override;
+  bool addGlobalInstructionSelect() override;
 };
 } // end anonymous namespace
 
@@ -506,6 +521,9 @@ void WebAssemblyPassConfig::addIRPasses() {
 
   // Expand indirectbr instructions to switches.
   addPass(createIndirectBrExpandPass());
+
+  // Try to expand `vecreduce_{and, or}` into `{any, all}_true`.
+  addPass(createWebAssemblyReduceToAnyAllTrue(getWebAssemblyTargetMachine()));
 
   TargetPassConfig::addIRPasses();
 }
@@ -588,9 +606,12 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   // Nullify DBG_VALUE_LISTs that we cannot handle.
   addPass(createWebAssemblyNullifyDebugValueLists());
 
+  // Remove any unreachable blocks that may be left floating around.
+  // Rare, but possible. Needed for WebAssemblyFixIrreducibleControlFlow.
+  addPass(&UnreachableMachineBlockElimID);
+
   // Eliminate multiple-entry loops.
-  if (!WasmDisableFixIrreducibleControlFlowPass)
-    addPass(createWebAssemblyFixIrreducibleControlFlow());
+  addPass(createWebAssemblyFixIrreducibleControlFlow());
 
   // Do various transformations for exception handling.
   // Every CFG-changing optimizations should come before this.
@@ -656,7 +677,46 @@ void WebAssemblyPassConfig::addPreEmitPass() {
 
 bool WebAssemblyPassConfig::addPreISel() {
   TargetPassConfig::addPreISel();
-  addPass(createWebAssemblyLowerRefTypesIntPtrConv());
+  return false;
+}
+
+bool WebAssemblyPassConfig::addIRTranslator() {
+  addPass(new IRTranslator());
+  return false;
+}
+
+void WebAssemblyPassConfig::addPreLegalizeMachineIR() {
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addPass(createWebAssemblyPreLegalizerCombiner());
+  }
+}
+bool WebAssemblyPassConfig::addLegalizeMachineIR() {
+  addPass(new Legalizer());
+  return false;
+}
+
+void WebAssemblyPassConfig::addPreRegBankSelect() {
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addPass(createWebAssemblyPostLegalizerCombiner());
+  }
+}
+
+bool WebAssemblyPassConfig::addRegBankSelect() {
+  addPass(new RegBankSelect());
+  return false;
+}
+
+bool WebAssemblyPassConfig::addGlobalInstructionSelect() {
+  addPass(new InstructionSelect(getOptLevel()));
+
+  // We insert only if ISelDAG won't insert these at a later point.
+  if (isGlobalISelAbortEnabled()) {
+    addPass(createWebAssemblyArgumentMove());
+    addPass(createWebAssemblySetP2AlignOperands());
+    addPass(createWebAssemblyFixBrTableDefaults());
+    addPass(createWebAssemblyCleanCodeAfterTrap());
+  }
+
   return false;
 }
 

@@ -68,6 +68,7 @@ class MCInstrInfo;
 } // end namespace llvm
 
 extern cl::opt<bool> EmitJalrReloc;
+extern cl::opt<bool> NoZeroDivCheck;
 
 namespace {
 
@@ -522,10 +523,11 @@ public:
   };
 
   MipsAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
-                const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, sti, MII),
-        ABI(MipsABIInfo::computeTargetABI(sti.getTargetTriple(),
-                                          Options.getABIName())) {
+                const MCInstrInfo &MII)
+      : MCTargetAsmParser(sti, MII),
+        ABI(MipsABIInfo::computeTargetABI(
+            sti.getTargetTriple(),
+            parser.getContext().getTargetOptions().getABIName())) {
     MCAsmParserExtension::Initialize(parser);
 
     parser.addAliasForDirective(".asciiz", ".asciz");
@@ -692,6 +694,8 @@ public:
     return (getSTI().hasFeature(Mips::FeatureCnMipsP));
   }
 
+  bool isR5900() const { return (getSTI().hasFeature(Mips::FeatureR5900)); }
+
   bool inPicMode() {
     return IsPicEnabled;
   }
@@ -707,6 +711,11 @@ public:
   bool useSoftFloat() const {
     return getSTI().hasFeature(Mips::FeatureSoftFloat);
   }
+
+  bool isSingleFloat() const {
+    return getSTI().hasFeature(Mips::FeatureSingleFloat);
+  }
+
   bool hasMT() const {
     return getSTI().hasFeature(Mips::FeatureMT);
   }
@@ -2953,7 +2962,7 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
          static_cast<const MCSymbolELF *>(Res.getAddSym())->getBinding() ==
              ELF::STB_LOCAL);
     // For O32, "$"-prefixed symbols are recognized as temporary while
-    // .L-prefixed symbols are not (PrivateGlobalPrefix is "$"). Recognize ".L"
+    // .L-prefixed symbols are not (InternalSymbolPrefix is "$"). Recognize ".L"
     // manually.
     if (ABI.IsO32() && Res.getAddSym()->getName().starts_with(".L"))
       IsLocalSym = true;
@@ -3245,7 +3254,7 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
 // precision registers F0-F31. As an example, all of the following hold true:
 // D0 + 1 == F1, F1 + 1 == D1, F1 + 1 == F2, depending on the context.
 static MCRegister nextReg(MCRegister Reg) {
-  if (MipsMCRegisterClasses[Mips::FGR32RegClassID].contains(Reg))
+  if (getMipsMCRegisterClass(Mips::FGR32RegClassID).contains(Reg))
     return Reg == (unsigned)Mips::F31 ? (unsigned)Mips::F0 : Reg + 1;
   switch (Reg.id()) {
   default: llvm_unreachable("Unknown register in assembly macro expansion!");
@@ -4237,7 +4246,7 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     if (!ATReg)
       return true;
 
-    if (ImmValue == 0) {
+    if (!NoZeroDivCheck && ImmValue == 0) {
       if (UseTraps)
         TOut.emitRRI(Mips::TEQ, ZeroReg, ZeroReg, 0x7, IDLoc, STI);
       else
@@ -4269,7 +4278,7 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   // break, insert the trap/break and exit. This gives a different result to
   // GAS. GAS has an inconsistency/missed optimization in that not all cases
   // are handled equivalently. As the observed behaviour is the same, we're ok.
-  if (RtReg == Mips::ZERO || RtReg == Mips::ZERO_64) {
+  if (!NoZeroDivCheck && (RtReg == Mips::ZERO || RtReg == Mips::ZERO_64)) {
     if (UseTraps) {
       TOut.emitRRI(Mips::TEQ, ZeroReg, ZeroReg, 0x7, IDLoc, STI);
       return false;
@@ -4290,62 +4299,26 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   MCSymbol *BrTarget;
   MCOperand LabelOp;
 
-  if (UseTraps) {
-    TOut.emitRRI(Mips::TEQ, RtReg, ZeroReg, 0x7, IDLoc, STI);
-  } else {
-    // Branch to the li instruction.
-    BrTarget = Context.createTempSymbol();
-    LabelOp = MCOperand::createExpr(MCSymbolRefExpr::create(BrTarget, Context));
-    TOut.emitRRX(Mips::BNE, RtReg, ZeroReg, LabelOp, IDLoc, STI);
-  }
-
   TOut.emitRR(DivOp, RsReg, RtReg, IDLoc, STI);
+  if (!NoZeroDivCheck) {
+    if (UseTraps) {
+      TOut.emitRRI(Mips::TEQ, RtReg, ZeroReg, 0x7, IDLoc, STI);
+    } else {
+      // Branch to the li instruction.
+      BrTarget = Context.createTempSymbol();
+      LabelOp =
+          MCOperand::createExpr(MCSymbolRefExpr::create(BrTarget, Context));
+      TOut.emitRRX(Mips::BNE, RtReg, ZeroReg, LabelOp, IDLoc, STI);
+      TOut.emitNop(IDLoc, STI);
+    }
 
-  if (!UseTraps)
-    TOut.emitII(Mips::BREAK, 0x7, 0, IDLoc, STI);
+    if (!UseTraps)
+      TOut.emitII(Mips::BREAK, 0x7, 0, IDLoc, STI);
 
-  if (!Signed) {
     if (!UseTraps)
       TOut.getStreamer().emitLabel(BrTarget);
-
-    TOut.emitR(isDiv ? Mips::MFLO : Mips::MFHI, RdReg, IDLoc, STI);
-    return false;
   }
 
-  MCRegister ATReg = getATReg(IDLoc);
-  if (!ATReg)
-    return true;
-
-  if (!UseTraps)
-    TOut.getStreamer().emitLabel(BrTarget);
-
-  TOut.emitRRI(Mips::ADDiu, ATReg, ZeroReg, -1, IDLoc, STI);
-
-  // Temporary label for the second branch target.
-  MCSymbol *BrTargetEnd = Context.createTempSymbol();
-  MCOperand LabelOpEnd =
-      MCOperand::createExpr(MCSymbolRefExpr::create(BrTargetEnd, Context));
-
-  // Branch to the mflo instruction.
-  TOut.emitRRX(Mips::BNE, RtReg, ATReg, LabelOpEnd, IDLoc, STI);
-
-  if (IsMips64) {
-    TOut.emitRRI(Mips::ADDiu, ATReg, ZeroReg, 1, IDLoc, STI);
-    TOut.emitDSLL(ATReg, ATReg, 63, IDLoc, STI);
-  } else {
-    TOut.emitRI(Mips::LUi, ATReg, (uint16_t)0x8000, IDLoc, STI);
-  }
-
-  if (UseTraps)
-    TOut.emitRRI(Mips::TEQ, RsReg, ATReg, 0x6, IDLoc, STI);
-  else {
-    // Branch to the mflo instruction.
-    TOut.emitRRX(Mips::BNE, RsReg, ATReg, LabelOpEnd, IDLoc, STI);
-    TOut.emitNop(IDLoc, STI);
-    TOut.emitII(Mips::BREAK, 0x6, 0, IDLoc, STI);
-  }
-
-  TOut.getStreamer().emitLabel(BrTargetEnd);
   TOut.emitR(isDiv ? Mips::MFLO : Mips::MFHI, RdReg, IDLoc, STI);
   return false;
 }
@@ -6076,6 +6049,9 @@ bool MipsAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_SImm16_Relaxed:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 16-bit signed immediate");
+  case Match_SImm18_Lsl3:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected both 18-bit signed immediate and multiple of 8");
   case Match_SImm19_Lsl2:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected both 19-bit signed immediate and multiple of 4");

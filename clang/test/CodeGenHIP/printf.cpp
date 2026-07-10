@@ -12,9 +12,7 @@ extern "C" __device__ int printf(const char *format, ...);
 // AMDGCN-LABEL: define dso_local noundef i32 @_Z4foo1v(
 // AMDGCN-SAME: ) #[[ATTR0:[0-9]+]] {
 // AMDGCN-NEXT:  [[ENTRY:.*]]:
-// AMDGCN-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN-NEXT:    [[S:%.*]] = alloca ptr, align 8, addrspace(5)
-// AMDGCN-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN-NEXT:    [[S_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[S]] to ptr
 // AMDGCN-NEXT:    store ptr addrspacecast (ptr addrspace(4) @.str to ptr), ptr [[S_ASCAST]], align 8
 // AMDGCN-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ASCAST]], align 8
@@ -29,8 +27,8 @@ extern "C" __device__ int printf(const char *format, ...);
 // AMDGCN-NEXT:    [[TMP7:%.*]] = icmp eq i8 [[TMP6]], 0
 // AMDGCN-NEXT:    br i1 [[TMP7]], label %[[STRLEN_WHILE_DONE:.*]], label %[[STRLEN_WHILE]]
 // AMDGCN:       [[STRLEN_WHILE_DONE]]:
-// AMDGCN-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP4]] to i64
-// AMDGCN-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], ptrtoint (ptr addrspacecast (ptr addrspace(4) @.str.1 to ptr) to i64)
+// AMDGCN-NEXT:    [[TMP8:%.*]] = ptrtoaddr ptr [[TMP4]] to i64
+// AMDGCN-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], ptrtoaddr (ptr addrspacecast (ptr addrspace(4) @.str.1 to ptr) to i64)
 // AMDGCN-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 1
 // AMDGCN-NEXT:    br label %[[STRLEN_JOIN]]
 // AMDGCN:       [[STRLEN_JOIN]]:
@@ -49,9 +47,9 @@ extern "C" __device__ int printf(const char *format, ...);
 // AMDGCN-NEXT:    [[TMP21:%.*]] = icmp eq i8 [[TMP20]], 0
 // AMDGCN-NEXT:    br i1 [[TMP21]], label %[[STRLEN_WHILE_DONE3:.*]], label %[[STRLEN_WHILE2]]
 // AMDGCN:       [[STRLEN_WHILE_DONE3]]:
-// AMDGCN-NEXT:    [[TMP22:%.*]] = ptrtoint ptr [[TMP0]] to i64
-// AMDGCN-NEXT:    [[TMP23:%.*]] = ptrtoint ptr [[TMP18]] to i64
-// AMDGCN-NEXT:    [[TMP24:%.*]] = sub i64 [[TMP23]], [[TMP22]]
+// AMDGCN-NEXT:    [[TMP22:%.*]] = ptrtoaddr ptr [[TMP18]] to i64
+// AMDGCN-NEXT:    [[TMP23:%.*]] = ptrtoaddr ptr [[TMP0]] to i64
+// AMDGCN-NEXT:    [[TMP24:%.*]] = sub i64 [[TMP22]], [[TMP23]]
 // AMDGCN-NEXT:    [[TMP25:%.*]] = add i64 [[TMP24]], 1
 // AMDGCN-NEXT:    br label %[[STRLEN_JOIN1]]
 // AMDGCN:       [[STRLEN_JOIN1]]:
@@ -65,9 +63,7 @@ extern "C" __device__ int printf(const char *format, ...);
 // AMDGCNSPIRV-LABEL: define spir_func noundef i32 @_Z4foo1v(
 // AMDGCNSPIRV-SAME: ) addrspace(4) #[[ATTR0:[0-9]+]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*]]:
-// AMDGCNSPIRV-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // AMDGCNSPIRV-NEXT:    [[S:%.*]] = alloca ptr addrspace(4), align 8
-// AMDGCNSPIRV-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[S_ASCAST:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    store ptr addrspace(4) addrspacecast (ptr addrspace(1) @.str to ptr addrspace(4)), ptr addrspace(4) [[S_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[S_ASCAST]], align 8
@@ -82,8 +78,8 @@ extern "C" __device__ int printf(const char *format, ...);
 // AMDGCNSPIRV-NEXT:    [[TMP7:%.*]] = icmp eq i8 [[TMP6]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[TMP7]], label %[[STRLEN_WHILE_DONE:.*]], label %[[STRLEN_WHILE]]
 // AMDGCNSPIRV:       [[STRLEN_WHILE_DONE]]:
-// AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = ptrtoint ptr addrspace(4) [[TMP4]] to i64
-// AMDGCNSPIRV-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], ptrtoint (ptr addrspace(4) addrspacecast (ptr addrspace(1) @.str.1 to ptr addrspace(4)) to i64)
+// AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = ptrtoaddr ptr addrspace(4) [[TMP4]] to i64
+// AMDGCNSPIRV-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], ptrtoaddr (ptr addrspace(4) addrspacecast (ptr addrspace(1) @.str.1 to ptr addrspace(4)) to i64)
 // AMDGCNSPIRV-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 1
 // AMDGCNSPIRV-NEXT:    br label %[[STRLEN_JOIN]]
 // AMDGCNSPIRV:       [[STRLEN_JOIN]]:
@@ -102,9 +98,9 @@ extern "C" __device__ int printf(const char *format, ...);
 // AMDGCNSPIRV-NEXT:    [[TMP21:%.*]] = icmp eq i8 [[TMP20]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[TMP21]], label %[[STRLEN_WHILE_DONE3:.*]], label %[[STRLEN_WHILE2]]
 // AMDGCNSPIRV:       [[STRLEN_WHILE_DONE3]]:
-// AMDGCNSPIRV-NEXT:    [[TMP22:%.*]] = ptrtoint ptr addrspace(4) [[TMP0]] to i64
-// AMDGCNSPIRV-NEXT:    [[TMP23:%.*]] = ptrtoint ptr addrspace(4) [[TMP18]] to i64
-// AMDGCNSPIRV-NEXT:    [[TMP24:%.*]] = sub i64 [[TMP23]], [[TMP22]]
+// AMDGCNSPIRV-NEXT:    [[TMP22:%.*]] = ptrtoaddr ptr addrspace(4) [[TMP18]] to i64
+// AMDGCNSPIRV-NEXT:    [[TMP23:%.*]] = ptrtoaddr ptr addrspace(4) [[TMP0]] to i64
+// AMDGCNSPIRV-NEXT:    [[TMP24:%.*]] = sub i64 [[TMP22]], [[TMP23]]
 // AMDGCNSPIRV-NEXT:    [[TMP25:%.*]] = add i64 [[TMP24]], 1
 // AMDGCNSPIRV-NEXT:    br label %[[STRLEN_JOIN1]]
 // AMDGCNSPIRV:       [[STRLEN_JOIN1]]:
@@ -125,8 +121,6 @@ __device__ char *dstr;
 // AMDGCN-LABEL: define dso_local noundef i32 @_Z4foo2v(
 // AMDGCN-SAME: ) #[[ATTR0:[0-9]+]] {
 // AMDGCN-NEXT:  [[ENTRY:.*]]:
-// AMDGCN-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
-// AMDGCN-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspacecast (ptr addrspace(1) @dstr to ptr), align 8
 // AMDGCN-NEXT:    [[TMP1:%.*]] = load ptr, ptr addrspacecast (ptr addrspace(1) @dstr to ptr), align 8
 // AMDGCN-NEXT:    [[TMP2:%.*]] = call i64 @__ockl_printf_begin(i64 0)
@@ -139,8 +133,8 @@ __device__ char *dstr;
 // AMDGCN-NEXT:    [[TMP7:%.*]] = icmp eq i8 [[TMP6]], 0
 // AMDGCN-NEXT:    br i1 [[TMP7]], label %[[STRLEN_WHILE_DONE:.*]], label %[[STRLEN_WHILE]]
 // AMDGCN:       [[STRLEN_WHILE_DONE]]:
-// AMDGCN-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP4]] to i64
-// AMDGCN-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], ptrtoint (ptr addrspacecast (ptr addrspace(4) @.str.2 to ptr) to i64)
+// AMDGCN-NEXT:    [[TMP8:%.*]] = ptrtoaddr ptr [[TMP4]] to i64
+// AMDGCN-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], ptrtoaddr (ptr addrspacecast (ptr addrspace(4) @.str.2 to ptr) to i64)
 // AMDGCN-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 1
 // AMDGCN-NEXT:    br label %[[STRLEN_JOIN]]
 // AMDGCN:       [[STRLEN_JOIN]]:
@@ -155,9 +149,9 @@ __device__ char *dstr;
 // AMDGCN-NEXT:    [[TMP17:%.*]] = icmp eq i8 [[TMP16]], 0
 // AMDGCN-NEXT:    br i1 [[TMP17]], label %[[STRLEN_WHILE_DONE3:.*]], label %[[STRLEN_WHILE2]]
 // AMDGCN:       [[STRLEN_WHILE_DONE3]]:
-// AMDGCN-NEXT:    [[TMP18:%.*]] = ptrtoint ptr [[TMP0]] to i64
-// AMDGCN-NEXT:    [[TMP19:%.*]] = ptrtoint ptr [[TMP14]] to i64
-// AMDGCN-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP19]], [[TMP18]]
+// AMDGCN-NEXT:    [[TMP18:%.*]] = ptrtoaddr ptr [[TMP14]] to i64
+// AMDGCN-NEXT:    [[TMP19:%.*]] = ptrtoaddr ptr [[TMP0]] to i64
+// AMDGCN-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP18]], [[TMP19]]
 // AMDGCN-NEXT:    [[TMP21:%.*]] = add i64 [[TMP20]], 1
 // AMDGCN-NEXT:    br label %[[STRLEN_JOIN1]]
 // AMDGCN:       [[STRLEN_JOIN1]]:
@@ -171,8 +165,6 @@ __device__ char *dstr;
 // AMDGCNSPIRV-LABEL: define spir_func noundef i32 @_Z4foo2v(
 // AMDGCNSPIRV-SAME: ) addrspace(4) #[[ATTR0:[0-9]+]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*]]:
-// AMDGCNSPIRV-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// AMDGCNSPIRV-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) addrspacecast (ptr addrspace(1) @dstr to ptr addrspace(4)), align 8
 // AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = load ptr addrspace(4), ptr addrspace(4) addrspacecast (ptr addrspace(1) @dstr to ptr addrspace(4)), align 8
 // AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = call addrspace(4) i64 @__ockl_printf_begin(i64 0)
@@ -185,8 +177,8 @@ __device__ char *dstr;
 // AMDGCNSPIRV-NEXT:    [[TMP7:%.*]] = icmp eq i8 [[TMP6]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[TMP7]], label %[[STRLEN_WHILE_DONE:.*]], label %[[STRLEN_WHILE]]
 // AMDGCNSPIRV:       [[STRLEN_WHILE_DONE]]:
-// AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = ptrtoint ptr addrspace(4) [[TMP4]] to i64
-// AMDGCNSPIRV-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], ptrtoint (ptr addrspace(4) addrspacecast (ptr addrspace(1) @.str.2 to ptr addrspace(4)) to i64)
+// AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = ptrtoaddr ptr addrspace(4) [[TMP4]] to i64
+// AMDGCNSPIRV-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], ptrtoaddr (ptr addrspace(4) addrspacecast (ptr addrspace(1) @.str.2 to ptr addrspace(4)) to i64)
 // AMDGCNSPIRV-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 1
 // AMDGCNSPIRV-NEXT:    br label %[[STRLEN_JOIN]]
 // AMDGCNSPIRV:       [[STRLEN_JOIN]]:
@@ -201,9 +193,9 @@ __device__ char *dstr;
 // AMDGCNSPIRV-NEXT:    [[TMP17:%.*]] = icmp eq i8 [[TMP16]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[TMP17]], label %[[STRLEN_WHILE_DONE3:.*]], label %[[STRLEN_WHILE2]]
 // AMDGCNSPIRV:       [[STRLEN_WHILE_DONE3]]:
-// AMDGCNSPIRV-NEXT:    [[TMP18:%.*]] = ptrtoint ptr addrspace(4) [[TMP0]] to i64
-// AMDGCNSPIRV-NEXT:    [[TMP19:%.*]] = ptrtoint ptr addrspace(4) [[TMP14]] to i64
-// AMDGCNSPIRV-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP19]], [[TMP18]]
+// AMDGCNSPIRV-NEXT:    [[TMP18:%.*]] = ptrtoaddr ptr addrspace(4) [[TMP14]] to i64
+// AMDGCNSPIRV-NEXT:    [[TMP19:%.*]] = ptrtoaddr ptr addrspace(4) [[TMP0]] to i64
+// AMDGCNSPIRV-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP18]], [[TMP19]]
 // AMDGCNSPIRV-NEXT:    [[TMP21:%.*]] = add i64 [[TMP20]], 1
 // AMDGCNSPIRV-NEXT:    br label %[[STRLEN_JOIN1]]
 // AMDGCNSPIRV:       [[STRLEN_JOIN1]]:

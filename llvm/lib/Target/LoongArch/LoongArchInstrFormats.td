@@ -401,3 +401,16 @@ class FmtLDPTE<dag outs, dag ins, string opnstr, list<dag> pattern = []>
   let Inst{9-5} = rj;
   let Inst{4-0} = 0b00000;
 }
+
+// FmtUD
+// <0b0011100001100000000001 | I5 | I5>
+class FmtUD<dag outs, dag ins, string opnstr, list<dag> pattern = []>
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
+  bits<5> imm5;
+
+  let Inst{31-10} = 0b0011100001100000000001;
+  let Inst{9-5} = imm5;
+  let Inst{4-0} = imm5;
+
+  let DecoderMethod = "DecodeAMOrUDInstruction";
+}

@@ -42,7 +42,7 @@ Enum2 E2_2 = Enum2();
 // CHECK-NOTES: :14:6: note: enum is defined here
 
 void f1() {
-  static Enum1 S; // FIMXE: warn for this?
+  static Enum1 S; // FIXME: warn for this?
   Enum1 A;
   Enum1 B = Enum1();
   // CHECK-NOTES: :[[@LINE-1]]:13: warning: enum value of type 'Enum1' initialized with invalid value of 0, enum doesn't have a zero-value enumerator
@@ -62,7 +62,7 @@ void f2() {
   // CHECK-NOTES: :9:12: note: enum is defined here
   // CHECK-NOTES: :[[@LINE-3]]:17: warning: enum value of type 'Enum1' initialized with invalid value of 0, enum doesn't have a zero-value enumerator
   // CHECK-NOTES: :9:12: note: enum is defined here
-  Enum1 D[5] = {}; // FIMXE: warn for this?
+  Enum1 D[5] = {}; // FIXME: warn for this?
   // CHECK-NOTES: :[[@LINE-1]]:16: warning: enum value of type 'Enum1' initialized with invalid value of 0, enum doesn't have a zero-value enumerator
   // CHECK-NOTES: :9:12: note: enum is defined here
 }

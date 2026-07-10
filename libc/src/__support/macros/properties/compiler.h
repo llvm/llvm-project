@@ -38,7 +38,7 @@
 #define LIBC_COMPILER_IS_MSVC
 // https://learn.microsoft.com/en-us/cpp/preprocessor/predefined-macros
 #define LIBC_COMPILER_MSVC_VER (_MSC_VER)
-#ifdef(_M_X64)
+#ifdef _M_X64
 #define LIBC_COMPILER_IS_MSVC_X64
 #else
 #define LIBC_COMPILER_IS_MSVC_X86

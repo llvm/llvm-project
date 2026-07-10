@@ -1,4 +1,12 @@
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
+
 set(LLVM_SUBPROJECT_TITLE "Flang")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
@@ -241,9 +249,6 @@ if (FLANG_STANDALONE_BUILD)
   else()
     add_custom_target(check-all DEPENDS check-flang )
   endif()
-  if (LLVM_BUILD_DOCS)
-    add_custom_target(doxygen ALL)
-  endif()
 
 else()
   option(FLANG_INCLUDE_TESTS
@@ -273,7 +278,6 @@ set(FLANG_TOOLS_INSTALL_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
     "Path for binary subdirectory (defaults to '${CMAKE_INSTALL_BINDIR}')")
 mark_as_advanced(FLANG_TOOLS_INSTALL_DIR)
 
-set(FLANG_INTRINSIC_MODULES_DIR ${CMAKE_BINARY_DIR}/include/flang)
 set(FLANG_INCLUDE_DIR ${FLANG_BINARY_DIR}/include)
 
 # TODO: Remove when libclangDriver is lifted out of Clang
@@ -306,6 +310,7 @@ list(INSERT CMAKE_MODULE_PATH 0
   "${FLANG_SOURCE_DIR}/cmake/modules"
   "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
+
 include(AddFlang)
 
 if (NOT DEFAULT_SYSROOT)
@@ -441,11 +446,6 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
   if (BUILD_SHARED_LIBS AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-semantic-interposition")
   endif()
-
-  # GCC requires this flag in order for precompiled headers to work with ccache
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpch-preprocess")
-  endif()
 endif()
 
 # Clang on Darwin enables non-POSIX extensions by default, which allows the
@@ -454,11 +454,6 @@ endif()
 # Set _POSIX_C_SOURCE to avoid including these extensions.
 if (APPLE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_POSIX_C_SOURCE=200809")
-endif()
-
-# Clang requires this flag in order for precompiled headers to work with ccache
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -fno-pch-timestamp")
 endif()
 
 list(REMOVE_DUPLICATES CMAKE_CXX_FLAGS)
@@ -527,6 +522,9 @@ endif()
 
 option(FLANG_INCLUDE_DOCS "Generate build targets for the Flang docs."
        ${LLVM_INCLUDE_DOCS})
+if(FLANG_STANDALONE_BUILD)
+  include(HandleDoxygen)
+endif()
 if (FLANG_INCLUDE_DOCS)
   add_subdirectory(docs)
 endif()
@@ -594,5 +592,10 @@ install(
   FILES include/flang/ISO_Fortran_binding.h
   DESTINATION ${HEADER_INSTALL_DIR}
   COMPONENT flang-fortran-binding)
+install(
+  FILES include/flang/ISO_Fortran_binding.h
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/flang
+  COMPONENT flang-fortran-binding)
 add_llvm_install_targets(install-flang-fortran-binding
   COMPONENT flang-fortran-binding)
+

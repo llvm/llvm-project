@@ -3,6 +3,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNKSt16nested_exception14rethrow_nestedEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNKSt18bad_variant_access4whatEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNKSt19bad_optional_access4whatEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNKSt29__bad_variant_access_with_msg4whatEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNKSt3__110__time_put8__do_putEPcRS1_PK2tmcc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNKSt3__110__time_put8__do_putEPwRS1_PK2tmcc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNKSt3__110error_code7messageEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
@@ -425,6 +426,8 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__114__num_put_base12__format_intEPcPKcbj', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__114__num_put_base14__format_floatEPcPKcj', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__114__num_put_base18__identify_paddingEPcS1_RKNS_8ios_baseE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__114__shared_count12__add_sharedEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__114__shared_count16__release_sharedEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__114__shared_countD0Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__114__shared_countD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__114__shared_countD2Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
@@ -453,7 +456,6 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__115__thread_structD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__115__thread_structD2Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__115future_categoryEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__115numpunct_bynameIcE6__initEPKc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__115numpunct_bynameIcEC1EPKcm', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__115numpunct_bynameIcEC1ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEm', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__115numpunct_bynameIcEC2EPKcm', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
@@ -461,7 +463,6 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__115numpunct_bynameIcED0Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__115numpunct_bynameIcED1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__115numpunct_bynameIcED2Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__115numpunct_bynameIwE6__initEPKc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__115numpunct_bynameIwEC1EPKcm', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__115numpunct_bynameIwEC1ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEm', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__115numpunct_bynameIwEC2EPKcm', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
@@ -541,7 +542,10 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__119__shared_mutex_base8try_lockEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__119__shared_mutex_baseC1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__119__shared_mutex_baseC2Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__119__shared_weak_count10__add_weakEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__119__shared_weak_count12__add_sharedEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__119__shared_weak_count14__release_weakEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__119__shared_weak_count16__release_sharedEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__119__shared_weak_count4lockEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__119__shared_weak_countD0Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__119__shared_weak_countD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
@@ -551,6 +555,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__120__libcpp_atomic_waitEPVKNS_17__cxx_atomic_implIiNS_22__cxx_atomic_base_implIiEEEEi', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__120__libcpp_atomic_waitEPVKvi', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__120__throw_system_errorEiPKc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__121__get_locale_encodingEPKc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__121__throw_runtime_errorEPKc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__121recursive_timed_mutex4lockEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__121recursive_timed_mutex6unlockEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
@@ -573,6 +578,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__132__atomic_notify_one_global_tableEPKv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__132__destroy_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__134__construct_barrier_algorithm_baseERl', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__139__atomic_wait_global_table_with_timeoutEPKviy', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__13cinE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__13pmr15memory_resourceD0Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__13pmr15memory_resourceD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
@@ -822,7 +828,6 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__18ios_base7unitbufE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__18ios_base8internalE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__18ios_base8showbaseE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__18ios_base9__xindex_E', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__18ios_base9basefieldE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__18ios_base9boolalphaE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__18ios_base9showpointE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
@@ -934,6 +939,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTISt16nested_exception', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTISt18bad_variant_access', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTISt19bad_optional_access', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZTISt29__bad_variant_access_with_msg', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt12experimental15fundamentals_v112bad_any_castE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt12experimental19bad_optional_accessE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__110istrstreamE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
@@ -994,6 +1000,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSSt16nested_exception', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSSt18bad_variant_access', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSSt19bad_optional_access', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSSt29__bad_variant_access_with_msg', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTTNSt3__110istrstreamE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTTNSt3__110ostrstreamE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTTNSt3__19strstreamE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
@@ -1057,6 +1064,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVSt16nested_exception', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVSt18bad_variant_access', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVSt19bad_optional_access', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVSt29__bad_variant_access_with_msg', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZThn8_NSt3__19strstreamD0Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZThn8_NSt3__19strstreamD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTv0_n12_NSt3__110istrstreamD0Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
@@ -1715,6 +1723,7 @@
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__126__atomic_notify_one_nativeILm4EEEvPKv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__127__from_chars_floating_pointIdEENS_19__from_chars_resultIT_EEPKcS5_NS_12chars_formatE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__127__from_chars_floating_pointIfEENS_19__from_chars_resultIT_EEPKcS5_NS_12chars_formatE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__133__atomic_wait_native_with_timeoutILm4EEEvPKvS2_y', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__14__fs10filesystem16_FilesystemClock9is_steadyE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__14__fs10filesystem4path19preferred_separatorE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__16__sortIRNS_6__lessIaaEEPaEEvT0_S5_T_', 'storage_mapping_class': 'DS', 'type': 'FUNC'}

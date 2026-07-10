@@ -1,4 +1,4 @@
-// RUN: fir-opt --split-input-file --cuf-convert %s | FileCheck %s
+// RUN: fir-opt --split-input-file --cuf-convert --cuf-convert-late %s | FileCheck %s
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
 fir.global @_QMmod1Eadev {data_attr = #cuf.cuda<device>} : !fir.array<10xi32> {
@@ -95,6 +95,33 @@ func.func @_QQmain() attributes {fir.bindc_name = "test"} {
 // -----
 
 // Check that we do not introduce call to _FortranACUFGetDeviceAddress when the
+// address_of is inside an acc.parallel region (OffloadRegionOpInterface).
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
+fir.global @_QMmod1Eadev_acc {data_attr = #cuf.cuda<device>} : !fir.array<10xi32> {
+  %0 = fir.zero_bits !fir.array<10xi32>
+  fir.has_value %0 : !fir.array<10xi32>
+}
+func.func @_QQmain_acc() attributes {fir.bindc_name = "test_acc"} {
+  acc.parallel {
+    %c10 = arith.constant 10 : index
+    %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+    %3 = fir.address_of(@_QMmod1Eadev_acc) : !fir.ref<!fir.array<10xi32>>
+    %4 = fir.declare %3(%1) {data_attr = #cuf.cuda<device>, uniq_name = "_QMmod1Eadev_acc"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xi32>>
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @_QQmain_acc()
+// CHECK: acc.parallel
+// CHECK-NOT: fir.call {{.*}}GetDeviceAddress
+
+}
+
+// -----
+
+// Check that we do not introduce call to _FortranACUFGetDeviceAddress when the
 // value has no user.
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
@@ -110,3 +137,43 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
 // CHECK-LABEL:  func.func @_QQmain()
 // CHECK: fir.address_of(@_QMcon2Ezzz) : !fir.ref<i32>
 // CHECK-NOT: fir.call {{.*}}GetDeviceAddress
+
+// -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
+  func.func @_QQconstant_scalar_host_load() attributes {fir.bindc_name = "T"} {
+    %c32_i32 = arith.constant 32 : i32
+    %0 = fir.address_of(@_QMcon3Ezzz) : !fir.ref<i32>
+    %1 = fir.declare %0 {data_attr = #cuf.cuda<constant>, uniq_name = "_QMcon3Ezzz"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %2 = fir.load %1 : !fir.ref<i32>
+    %3 = fir.convert %2 : (i32) -> index
+    cuf.data_transfer %c32_i32 to %1 {transfer_kind = #cuf.cuda_transfer<host_device>} : i32, !fir.ref<i32>
+    fir.call @_QPuse_index(%3) : (index) -> ()
+    return
+  }
+  func.func @_QQconstant_scalar_device_to_host() attributes {fir.bindc_name = "T"} {
+    %0 = fir.address_of(@_QMcon3Ezzz) : !fir.ref<i32>
+    %1 = fir.declare %0 {data_attr = #cuf.cuda<constant>, uniq_name = "_QMcon3Ezzz"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %2 = fir.alloca i32
+    cuf.data_transfer %1 to %2 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<i32>, !fir.ref<i32>
+    return
+  }
+  func.func private @_QPuse_index(index)
+  fir.global @_QMcon3Ezzz {data_attr = #cuf.cuda<constant>} : i32
+}
+
+// CHECK-LABEL: func.func @_QQconstant_scalar_host_load()
+// CHECK: %[[ADDR:.*]] = fir.address_of(@_QMcon3Ezzz) : !fir.ref<i32>
+// CHECK: %[[DECL:.*]] = fir.declare %[[ADDR]] {data_attr = #cuf.cuda<constant>, uniq_name = "_QMcon3Ezzz"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK: fir.load %[[DECL]] : !fir.ref<i32>
+// CHECK: fir.store %{{.*}} to %[[ADDR]] : !fir.ref<i32>
+// CHECK: fir.call @_FortranACUFGetDeviceAddress
+// CHECK-NOT: fir.load %{{.*}} : !fir.ref<i32>
+// CHECK: fir.call @_QPuse_index
+// CHECK-LABEL: func.func @_QQconstant_scalar_device_to_host()
+// CHECK: %[[ADDR:.*]] = fir.address_of(@_QMcon3Ezzz) : !fir.ref<i32>
+// CHECK: %[[DECL:.*]] = fir.declare %[[ADDR]] {data_attr = #cuf.cuda<constant>, uniq_name = "_QMcon3Ezzz"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK: %[[DST:.*]] = fir.alloca i32
+// CHECK: %[[VALUE:.*]] = fir.load %[[DECL]] : !fir.ref<i32>
+// CHECK: fir.store %[[VALUE]] to %[[DST]] : !fir.ref<i32>
+// CHECK-NOT: fir.call @_FortranACUFDataTransferPtrPtr

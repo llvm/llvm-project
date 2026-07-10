@@ -357,9 +357,15 @@ func.func @regression(%arg0: memref<i64>, %arg1: index) {
 // -----
 
 // Regression test: Make sure that we do not crash.
-// The step is 0, the loop will be eliminated.
+
 // CHECK-LABEL: func @zero_step(
-//       CHECK-NOT:   scf.for
+//       CHECK:   %[[c0:.*]] = arith.constant 0
+//       CHECK:   %[[c1:.*]] = arith.constant 1
+//       CHECK:   %[[poison:.*]] = ub.poison
+//       CHECK:   scf.for %{{.*}} = %[[c0]] to %[[poison]] step %[[c0]]
+//       CHECK:     arith.index_cast
+//       CHECK:   scf.for %{{.*}} = %[[poison]] to %[[c1]] step %[[c0]]
+//       CHECK:     arith.index_cast
 func.func @zero_step(%arg0: memref<i64>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index

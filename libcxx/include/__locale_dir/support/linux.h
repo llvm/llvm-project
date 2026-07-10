@@ -17,6 +17,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctype.h>
+#include <langinfo.h>
 #include <stdarg.h>
 #include <string.h>
 #include <time.h>
@@ -148,8 +149,8 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __wcsxfrm(wchar_t* __dest, const wchar_t* __
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-inline _LIBCPP_HIDE_FROM_ABI size_t
-__strftime(char* __s, size_t __max, const char* __format, const struct tm* __tm, __locale_t __loc) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_ATTRIBUTE_FORMAT(__strftime__, 3, 0) size_t
+    __strftime(char* __s, size_t __max, const char* __format, const struct tm* __tm, __locale_t __loc) {
   return strftime_l(__s, __max, __format, __tm, __loc);
 }
 
@@ -211,7 +212,15 @@ __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, 
   return std::mbsrtowcs(__dest, __src, __len, __ps);
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
-#endif   // _LIBCPP_BUILDING_LIBRARY
+
+inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding([[maybe_unused]] __locale_t __loc) {
+#  if defined(__ANDROID__)
+  return "UTF-8";
+#  else
+  return ::nl_langinfo_l(CODESET, __loc);
+#  endif
+}
+#endif // _LIBCPP_BUILDING_LIBRARY
 
 #ifndef _LIBCPP_COMPILER_GCC // GCC complains that this can't be always_inline due to C-style varargs
 _LIBCPP_HIDE_FROM_ABI

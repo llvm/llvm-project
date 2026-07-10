@@ -15,11 +15,12 @@
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/RWMutex.h"
+#include <fstream>
 #include <queue>
 #include <stack>
-#include <unordered_set>
 
 #define DEBUG_TYPE "bolt-instrumentation"
 
@@ -51,6 +52,12 @@ cl::opt<bool> ConservativeInstrumentation(
              "accuracy (for debugging, default: false)"),
     cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
 
+cl::opt<uint32_t> InstrumentationMaxSize(
+    "instrumentation-max-size",
+    cl::desc("Set max memory size of the instrumentation bump allocator "
+             "default: 0x6400000)"),
+    cl::init(0x6400000), cl::Optional, cl::cat(BoltInstrCategory));
+
 cl::opt<uint32_t> InstrumentationSleepTime(
     "instrumentation-sleep-time",
     cl::desc("interval between profile writes (default: 0 = write only at "
@@ -71,6 +78,13 @@ cl::opt<bool> InstrumentationWaitForks(
              "(use with instrumentation-sleep-time option)"),
     cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
 
+cl::opt<std::string> InstrumentFuncsFile(
+    "instrument-funcs-file",
+    cl::desc("file with list of function names (one per line) to instrument; "
+             "only functions whose name exactly matches a line in this file "
+             "will be instrumented"),
+    cl::Optional, cl::cat(BoltInstrCategory));
+
 cl::opt<bool>
     InstrumentHotOnly("instrument-hot-only",
                       cl::desc("only insert instrumentation on hot functions "
@@ -88,16 +102,16 @@ cl::opt<bool> InstrumentCalls("instrument-calls",
 namespace llvm {
 namespace bolt {
 
-static bool hasAArch64ExclusiveMemop(
-    BinaryFunction &Function,
-    std::unordered_set<const BinaryBasicBlock *> &BBToSkip) {
+static bool
+hasAArch64ExclusiveMemop(BinaryFunction &Function,
+                         DenseSet<const BinaryBasicBlock *> &BBToSkip) {
   // FIXME ARMv8-a architecture reference manual says that software must avoid
   // having any explicit memory accesses between exclusive load and associated
   // store instruction. So for now skip instrumentation for basic blocks that
   // have these instructions, since it might lead to runtime deadlock.
   BinaryContext &BC = Function.getBinaryContext();
   std::queue<std::pair<BinaryBasicBlock *, bool>> BBQueue; // {BB, isLoad}
-  std::unordered_set<BinaryBasicBlock *> Visited;
+  DenseSet<BinaryBasicBlock *> Visited;
 
   if (Function.getLayout().block_begin() == Function.getLayout().block_end())
     return 0;
@@ -375,7 +389,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   if (BC.isMachO() && Function.hasName("___GLOBAL_init_65535/1"))
     return;
 
-  std::unordered_set<const BinaryBasicBlock *> BBToSkip;
+  DenseSet<const BinaryBasicBlock *> BBToSkip;
   if (BC.isAArch64() && hasAArch64ExclusiveMemop(Function, BBToSkip))
     return;
 
@@ -393,20 +407,19 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   Function.disambiguateJumpTables(AllocId);
   Function.deleteConservativeEdges();
 
-  std::unordered_map<const BinaryBasicBlock *, uint32_t> BBToID;
+  DenseMap<const BinaryBasicBlock *, uint32_t> BBToID;
   uint32_t Id = 0;
   for (auto BBI = Function.begin(); BBI != Function.end(); ++BBI) {
     BBToID[&*BBI] = Id++;
   }
-  std::unordered_set<const BinaryBasicBlock *> VisitedSet;
+  DenseSet<const BinaryBasicBlock *> VisitedSet;
   // DFS to establish edges we will use for a spanning tree. Edges in the
   // spanning tree can be instrumentation-free since their count can be
   // inferred by solving flow equations on a bottom-up traversal of the tree.
   // Exit basic blocks are always instrumented so we start the traversal with
   // a minimum number of defined variables to make the equation solvable.
   std::stack<std::pair<const BinaryBasicBlock *, BinaryBasicBlock *>> Stack;
-  std::unordered_map<const BinaryBasicBlock *,
-                     std::set<const BinaryBasicBlock *>>
+  DenseMap<const BinaryBasicBlock *, SmallVector<const BinaryBasicBlock *>>
       STOutSet;
   for (auto BBI = Function.getLayout().block_rbegin();
        BBI != Function.getLayout().block_rend(); ++BBI) {
@@ -434,7 +447,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
 
       VisitedSet.insert(BB);
       if (Pred)
-        STOutSet[Pred].insert(BB);
+        STOutSet[Pred].push_back(BB);
 
       for (BinaryBasicBlock *SuccBB : BB->successors())
         Stack.push(std::make_pair(BB, SuccBB));
@@ -501,7 +514,9 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       }
       if (TargetFunc) {
         // Do not instrument edges in the spanning tree
-        if (llvm::is_contained(STOutSet[&BB], TargetBB)) {
+        auto STIt = STOutSet.find(&BB);
+        if (STIt != STOutSet.end() &&
+            llvm::is_contained(STIt->second, TargetBB)) {
           auto L = BC.scopeLock();
           createEdgeDescription(*FuncDesc, Function, FromOffset, BBToID[&BB],
                                 Function, ToOffset, BBToID[TargetBB],
@@ -516,9 +531,11 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       }
 
       if (IsJumpTable) {
+        auto STIt = STOutSet.find(&BB);
+        bool Found = STIt != STOutSet.end();
         for (BinaryBasicBlock *&Succ : BB.successors()) {
           // Do not instrument edges in the spanning tree
-          if (llvm::is_contained(STOutSet[&BB], &*Succ)) {
+          if (Found && llvm::is_contained(STIt->second, &*Succ)) {
             auto L = BC.scopeLock();
             createEdgeDescription(*FuncDesc, Function, FromOffset, BBToID[&BB],
                                   Function, Succ->getInputOffset(),
@@ -561,7 +578,8 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       FromOffset = *BC.MIB->getOffset(*LastInstr);
 
       // Do not instrument edges in the spanning tree
-      if (llvm::is_contained(STOutSet[&BB], FTBB)) {
+      auto STIt = STOutSet.find(&BB);
+      if (STIt != STOutSet.end() && llvm::is_contained(STIt->second, FTBB)) {
         auto L = BC.scopeLock();
         createEdgeDescription(*FuncDesc, Function, FromOffset, BBToID[&BB],
                               Function, FTBB->getInputOffset(), BBToID[FTBB],
@@ -579,7 +597,8 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   if (!opts::ConservativeInstrumentation) {
     for (auto BBI = Function.begin(), BBE = Function.end(); BBI != BBE; ++BBI) {
       BinaryBasicBlock &BB = *BBI;
-      if (STOutSet[&BB].size() == 0)
+      auto STIt = STOutSet.find(&BB);
+      if (STIt == STOutSet.end() || STIt->second.empty())
         instrumentLeafNode(BB, BB.begin(), IsLeafFunction, *FuncDesc,
                            BBToID[&BB]);
     }
@@ -600,6 +619,22 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
 }
 
 Error Instrumentation::runOnFunctions(BinaryContext &BC) {
+  if (BC.usesBTI())
+    return createFatalBOLTError(
+        "BOLT-ERROR: instrumenting binaries using BTI is not supported.\n");
+  /* BTI TODO:
+   Instrumentation functions add indirect branches into the .text.injected
+   section, see:
+   - __bolt_instr_ind_call_handler
+   - __bolt_instr_ind_tail_call_handler
+   - __bolt_instr_ind_tailcall_handler_func
+   - __bolt_start_trampoline
+   - __bolt_fini_trampoline
+   We cannot add BTIs to their targets when they are created, because the
+   instrumentation snippets get added later to these targets, and the added BTI
+   instruction will not be the first (rendering it useless).
+   */
+
   const unsigned Flags = BinarySection::getFlags(/*IsReadOnly=*/false,
                                                  /*IsText=*/false,
                                                  /*IsAllocatable=*/true);
@@ -617,9 +652,37 @@ Error Instrumentation::runOnFunctions(BinaryContext &BC) {
 
   createAuxiliaryFunctions(BC);
 
+  const bool HasInstrumentFuncsFilter = !opts::InstrumentFuncsFile.empty();
+  StringSet<> InstrumentFuncsSet;
+  if (HasInstrumentFuncsFilter) {
+    std::ifstream FuncsFile(opts::InstrumentFuncsFile, std::ios::in);
+    if (!FuncsFile)
+      return createFatalBOLTError(Twine("instrument-funcs-file \"") +
+                                  Twine(opts::InstrumentFuncsFile) +
+                                  Twine("\" can't be opened."));
+    std::string FuncName;
+    while (std::getline(FuncsFile, FuncName))
+      if (!FuncName.empty())
+        InstrumentFuncsSet.insert(FuncName);
+  }
+
   ParallelUtilities::PredicateTy SkipPredicate = [&](const BinaryFunction &BF) {
-    return (!BF.isSimple() || BF.isIgnored() ||
-            (opts::InstrumentHotOnly && !BF.getKnownExecutionCount()));
+    if (!BF.isSimple() || BF.isIgnored())
+      return true;
+    if (opts::InstrumentHotOnly && !BF.getKnownExecutionCount())
+      return true;
+    if (HasInstrumentFuncsFilter) {
+      bool Found = false;
+      for (const StringRef Name : BF.getNames()) {
+        if (InstrumentFuncsSet.contains(Name)) {
+          Found = true;
+          break;
+        }
+      }
+      if (!Found)
+        return true;
+    }
+    return false;
   };
 
   ParallelUtilities::WorkFuncWithAllocTy WorkFun =

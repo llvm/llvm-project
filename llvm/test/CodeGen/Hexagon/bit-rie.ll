@@ -190,7 +190,7 @@ declare i64 @llvm.hexagon.M2.mpyd.ll.s1(i32, i32) #2
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
 
-attributes #0 = { norecurse nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,,+hvx-length64b" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { norecurse nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length64b" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind }
 attributes #2 = { nounwind readnone }
 

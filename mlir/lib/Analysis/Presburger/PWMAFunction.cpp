@@ -337,6 +337,9 @@ PWMAFunction PWMAFunction::unionFunction(
     PresburgerSet dom(pieceA.domain);
     for (const Piece &pieceB : func.pieces) {
       PresburgerSet better = tiebreak(pieceB, pieceA);
+      if (better.isIntegerEmpty())
+        continue;
+
       // Add the output of pieceB, where it is better than output of pieceA.
       // The disjuncts in "better" will be disjoint as tiebreak should gurantee
       // that.

@@ -66,7 +66,7 @@ public:
   bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                 AssumptionCache &AC, TargetLibraryInfo *LibInfo,
                                 HardwareLoopInfo &HWLoopInfo) const override;
-  bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE, LoopInfo *LI,
+  bool canSaveCmp(Loop *L, CondBrInst **BI, ScalarEvolution *SE, LoopInfo *LI,
                   DominatorTree *DT, AssumptionCache *AC,
                   TargetLibraryInfo *LibInfo) const override;
   bool getTgtMemIntrinsic(IntrinsicInst *Inst,
@@ -101,7 +101,8 @@ public:
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
   unsigned getCacheLineSize() const override;
   unsigned getPrefetchDistance() const override;
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override;
   InstructionCost vectorCostAdjustmentFactor(unsigned Opcode, Type *Ty1,
                                              Type *Ty2) const;
   InstructionCost getArithmeticInstrCost(
@@ -128,10 +129,11 @@ public:
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       const Instruction *I = nullptr) const override;
   using BaseT::getVectorInstrCost;
-  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index, const Value *Op0,
-                                     const Value *Op1) const override;
+  InstructionCost
+  getVectorInstrCost(unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+                     unsigned Index, const Value *Op0, const Value *Op1,
+                     TTI::VectorInstrContext VIC =
+                         TTI::VectorInstrContext::None) const override;
   InstructionCost getMemoryOpCost(
       unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind,
@@ -152,6 +154,30 @@ public:
 
   TargetTransformInfo::VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const override;
+
+  bool hasActiveVectorLength() const override;
+
+  bool
+  isLegalMaskedStore(Type *DataType, Align Alignment, unsigned AddressSpace,
+                     TTI::MaskKind MaskKind =
+                         TTI::MaskKind::VariableOrConstantMask) const override;
+  bool
+  isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned AddressSpace,
+                    TTI::MaskKind MaskKind =
+                        TTI::MaskKind::VariableOrConstantMask) const override;
+
+  InstructionCost
+  getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                           TTI::TargetCostKind CostKind) const override;
+
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
 
 private:
   // The following constant is used for estimating costs on power9.

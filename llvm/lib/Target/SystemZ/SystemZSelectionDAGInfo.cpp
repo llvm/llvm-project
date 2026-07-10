@@ -75,8 +75,9 @@ static SDValue emitMemMemReg(SelectionDAG &DAG, const SDLoc &DL, unsigned Op,
 
 SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, Align Alignment, bool IsVolatile, bool AlwaysInline,
-    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
+    SDValue Size, Align DstAlign, Align SrcAlign, bool IsVolatile,
+    bool AlwaysInline, MachinePointerInfo DstPtrInfo,
+    MachinePointerInfo SrcPtrInfo) const {
   if (IsVolatile)
     return SDValue();
 
@@ -229,7 +230,7 @@ std::pair<SDValue, SDValue> SystemZSelectionDAGInfo::EmitTargetCodeForMemchr(
 std::pair<SDValue, SDValue> SystemZSelectionDAGInfo::EmitTargetCodeForStrcpy(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dest,
     SDValue Src, MachinePointerInfo DestPtrInfo, MachinePointerInfo SrcPtrInfo,
-    bool isStpcpy) const {
+    bool isStpcpy, const CallInst *CI) const {
   SDVTList VTs = DAG.getVTList(Dest.getValueType(), MVT::Other);
   SDValue EndDest = DAG.getNode(SystemZISD::STPCPY, DL, VTs, Chain, Dest, Src,
                                 DAG.getConstant(0, DL, MVT::i32));
@@ -238,8 +239,8 @@ std::pair<SDValue, SDValue> SystemZSelectionDAGInfo::EmitTargetCodeForStrcpy(
 
 std::pair<SDValue, SDValue> SystemZSelectionDAGInfo::EmitTargetCodeForStrcmp(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Src1,
-    SDValue Src2, MachinePointerInfo Op1PtrInfo,
-    MachinePointerInfo Op2PtrInfo) const {
+    SDValue Src2, MachinePointerInfo Op1PtrInfo, MachinePointerInfo Op2PtrInfo,
+    const CallInst *CI) const {
   SDVTList VTs = DAG.getVTList(Src1.getValueType(), MVT::i32, MVT::Other);
   // Swap operands to invert CC == 1 vs. CC == 2 cases.
   SDValue Unused = DAG.getNode(SystemZISD::STRCMP, DL, VTs, Chain, Src2, Src1,

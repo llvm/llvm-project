@@ -71,7 +71,7 @@ define zeroext i1 @part_sequent_eq_with_metadata() !prof !2 {
 ; X86-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; X86-NEXT:    br label [[EXIT]]
 ; X86:       exit:
-; X86-NEXT:    [[RET:%.*]] = phi i1 [ [[TMP5]], %"bb1+bb2+bb3" ], [ false, [[BB01:%.*]] ]
+; X86-NEXT:    [[RET:%.*]] = phi i1 [ false, [[BB01:%.*]] ], [ [[TMP5]], %"bb1+bb2+bb3" ]
 ; X86-NEXT:    ret i1 [[RET]]
 ;
 bb0:
@@ -119,7 +119,7 @@ exit:
 !5 = !{!"branch_weights", i32 11, i32 13}
 ;.
 ; X86: attributes #[[ATTR0:[0-9]+]] = { nofree nosync }
-; X86: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: read) }
+; X86: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ;.
 ; X86: [[META0:![0-9]+]] = !{!"function_entry_count", i32 100}
 ; X86: [[RNG1]] = !{i32 0, i32 2}

@@ -1,4 +1,4 @@
-// RUN: clang-tidy %s -checks='-*,readability-braces-around-statements' -- -std=c++2b | count 0
+// RUN: clang-tidy %s -checks='-*,readability-braces-around-statements' -- -std=c++23 | count 0
 
 constexpr void handle(bool) {}
 

@@ -94,7 +94,6 @@ define half @v_uitofp_i16_to_f16_abs(i16 %arg0) nounwind {
 ; GFX7-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX7-NEXT:    v_cvt_f32_u32_e32 v0, v0
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_uitofp_i16_to_f16_abs:
@@ -131,7 +130,6 @@ define half @v_uitofp_i16_to_f16_neg(i16 %arg0) nounwind {
 ; GFX7-NEXT:    v_and_b32_e32 v0, 0x8000, v0
 ; GFX7-NEXT:    v_cvt_f32_u32_e32 v0, v0
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_uitofp_i16_to_f16_neg:
@@ -168,7 +166,6 @@ define half @s_uitofp_i16_to_f16_abs(i16 inreg %arg0) nounwind {
 ; GFX7-NEXT:    s_and_b32 s4, s16, 0x7fff
 ; GFX7-NEXT:    v_cvt_f32_u32_e32 v0, s4
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: s_uitofp_i16_to_f16_abs:
@@ -205,7 +202,6 @@ define half @s_uitofp_i16_to_f16_neg(i16 inreg %arg0) nounwind {
 ; GFX7-NEXT:    s_and_b32 s4, s16, 0x8000
 ; GFX7-NEXT:    v_cvt_f32_u32_e32 v0, s4
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: s_uitofp_i16_to_f16_neg:

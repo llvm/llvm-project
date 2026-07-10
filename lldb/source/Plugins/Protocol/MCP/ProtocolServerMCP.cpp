@@ -66,11 +66,11 @@ void ProtocolServerMCP::AcceptCallback(std::unique_ptr<Socket> socket) {
 
   lldb::IOObjectSP io_sp = std::move(socket);
   auto transport_up = std::make_unique<lldb_protocol::mcp::Transport>(
-      io_sp, io_sp, [client_name](llvm::StringRef message) {
+      m_loop, io_sp, io_sp, [client_name](llvm::StringRef message) {
         LLDB_LOG(GetLog(LLDBLog::Host), "{0}: {1}", client_name, message);
       });
 
-  if (auto error = m_server->Accept(m_loop, std::move(transport_up)))
+  if (auto error = m_server->Accept(std::move(transport_up)))
     LLDB_LOG_ERROR(log, std::move(error), "{0}:");
 }
 
@@ -98,8 +98,6 @@ llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
   auto listening_uris = m_listener->GetListeningConnectionURI();
   if (listening_uris.empty())
     return createStringError("failed to get listening connections");
-  std::string address =
-      llvm::join(m_listener->GetListeningConnectionURI(), ", ");
 
   ServerInfo info{listening_uris[0]};
   llvm::Expected<ServerInfoHandle> server_info_handle = ServerInfo::Write(info);

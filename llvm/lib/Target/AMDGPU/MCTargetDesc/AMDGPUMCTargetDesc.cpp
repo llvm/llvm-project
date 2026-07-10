@@ -79,8 +79,12 @@ createAMDGPUMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   if (TT.getArch() == Triple::r600)
     return createR600MCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 
-  MCSubtargetInfo *STI =
-      createAMDGPUMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
+  StringRef ResolvedCPU = CPU;
+  if (ResolvedCPU.empty())
+    ResolvedCPU = AMDGPU::getArchNameFromSubArch(TT.getSubArch());
+
+  MCSubtargetInfo *STI = createAMDGPUMCSubtargetInfoImpl(
+      TT, ResolvedCPU, /*TuneCPU*/ ResolvedCPU, FS);
 
   bool IsWave64 = STI->hasFeature(AMDGPU::FeatureWavefrontSize64);
   bool IsWave32 = STI->hasFeature(AMDGPU::FeatureWavefrontSize32);
@@ -166,10 +170,17 @@ bool AMDGPUMCInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
   return true;
 }
 
-void AMDGPUMCInstrAnalysis::updateState(const MCInst &Inst, uint64_t Addr) {
+void AMDGPUMCInstrAnalysis::updateState(const MCInst &Inst,
+                                        const MCSubtargetInfo *STI,
+                                        uint64_t Addr) {
   if (Inst.getOpcode() == AMDGPU::S_SET_VGPR_MSB_gfx12)
     VgprMSBs = Inst.getOperand(0).getImm() & 0xff;
-  else if (isTerminator(Inst))
+  else if (Inst.getOpcode() == AMDGPU::S_SETREG_IMM32_B32_gfx12 &&
+           STI->hasFeature(AMDGPU::Feature1024AddressableVGPRs)) {
+    VgprMSBs = AMDGPU::convertSetRegImmToVgprMSBs(
+                   Inst, STI->hasFeature(AMDGPU::FeatureSetregVGPRMSBFixup))
+                   .value_or(0);
+  } else if (isTerminator(Inst))
     VgprMSBs = 0;
 }
 
@@ -184,9 +195,12 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAMDGPUTargetMC() {
 
   TargetRegistry::RegisterMCInstrInfo(getTheGCNTarget(), createAMDGPUMCInstrInfo);
+  TargetRegistry::RegisterMCInstrInfo(getTheGCNLegacyTarget(),
+                                      createAMDGPUMCInstrInfo);
   TargetRegistry::RegisterMCInstrInfo(getTheR600Target(),
                                       createR600MCInstrInfo);
-  for (Target *T : {&getTheR600Target(), &getTheGCNTarget()}) {
+  for (Target *T :
+       {&getTheR600Target(), &getTheGCNTarget(), &getTheGCNLegacyTarget()}) {
     RegisterMCAsmInfo<AMDGPUMCAsmInfo> X(*T);
 
     TargetRegistry::RegisterMCRegInfo(*T, createAMDGPUMCRegisterInfo);
@@ -204,13 +218,14 @@ LLVMInitializeAMDGPUTargetMC() {
       getTheR600Target(), createAMDGPUObjectTargetStreamer);
 
   // GCN specific registration
-  TargetRegistry::RegisterMCCodeEmitter(getTheGCNTarget(),
-                                        createAMDGPUMCCodeEmitter);
+  for (Target *T : {&getTheGCNTarget(), &getTheGCNLegacyTarget()}) {
+    TargetRegistry::RegisterMCCodeEmitter(*T, createAMDGPUMCCodeEmitter);
 
-  TargetRegistry::RegisterAsmTargetStreamer(getTheGCNTarget(),
-                                            createAMDGPUAsmTargetStreamer);
-  TargetRegistry::RegisterObjectTargetStreamer(
-      getTheGCNTarget(), createAMDGPUObjectTargetStreamer);
-  TargetRegistry::RegisterNullTargetStreamer(getTheGCNTarget(),
-                                             createAMDGPUNullTargetStreamer);
+    TargetRegistry::RegisterAsmTargetStreamer(*T,
+                                              createAMDGPUAsmTargetStreamer);
+    TargetRegistry::RegisterObjectTargetStreamer(
+        *T, createAMDGPUObjectTargetStreamer);
+    TargetRegistry::RegisterNullTargetStreamer(*T,
+                                               createAMDGPUNullTargetStreamer);
+  }
 }

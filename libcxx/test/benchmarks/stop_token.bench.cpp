@@ -42,7 +42,7 @@ void BM_stop_token_single_thread_polling_stop_requested(benchmark::State& state)
   }
 }
 
-BENCHMARK(BM_stop_token_single_thread_polling_stop_requested)->RangeMultiplier(2)->Range(1 << 10, 1 << 24);
+BENCHMARK(BM_stop_token_single_thread_polling_stop_requested)->Arg(1024)->Arg(131072)->Arg(16777216);
 
 // We have multiple threads polling for stop_requested of the same stop_token.
 void BM_stop_token_multi_thread_polling_stop_requested(benchmark::State& state) {
@@ -91,7 +91,7 @@ void BM_stop_token_multi_thread_polling_stop_requested(benchmark::State& state) 
   ss.request_stop();
 }
 
-BENCHMARK(BM_stop_token_multi_thread_polling_stop_requested)->RangeMultiplier(2)->Range(1 << 10, 1 << 24);
+BENCHMARK(BM_stop_token_multi_thread_polling_stop_requested)->Arg(1024)->Arg(131072)->Arg(16777216);
 
 // We have a single thread created by std::jthread consuming the stop_token:
 // registering/deregistering callbacks, one at a time.
@@ -117,7 +117,7 @@ void BM_stop_token_single_thread_reg_unreg_callback(benchmark::State& state) {
     }
   }
 }
-BENCHMARK(BM_stop_token_single_thread_reg_unreg_callback)->RangeMultiplier(2)->Range(1 << 10, 1 << 24);
+BENCHMARK(BM_stop_token_single_thread_reg_unreg_callback)->Arg(1024)->Arg(131072)->Arg(16777216);
 
 // At startup, it creates a single stop_source which it will then pass an associated stop_token to every
 // request.
@@ -182,6 +182,6 @@ void BM_stop_token_async_reg_unreg_callback(benchmark::State& state) {
 
   ss.request_stop();
 }
-BENCHMARK(BM_stop_token_async_reg_unreg_callback)->RangeMultiplier(2)->Range(1 << 10, 1 << 24);
+BENCHMARK(BM_stop_token_async_reg_unreg_callback)->Arg(1024)->Arg(131072)->Arg(16777216);
 
 BENCHMARK_MAIN();

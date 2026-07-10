@@ -31,7 +31,7 @@ def NeoverseV1Model : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = !listconcat(SVE2Unsupported.F,
                                                     SMEUnsupported.F,
                                                     [HasMTE, HasCPA,
-                                                    HasCSSC]);
+                                                    HasCSSC, HasMOPS, HasMOPS_GO]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1481,7 +1481,7 @@ def : InstRW<[V1Write_2c_1M0], (instregex "^REV_PP_[BHSD]$",
 
 // Predicate set/initialize/find next
 // Predicate unpack and widen
-def : InstRW<[V1Write_2c_1M0], (instrs PTEST_PP,
+def : InstRW<[V1Write_2c_1M0], (instrs PTEST_PP, PTEST_PP_ANY, PTEST_PP_FIRST,
                                        PUNPKHI_PP, PUNPKLO_PP)>;
 
 // Predicate select
@@ -1504,9 +1504,9 @@ def : InstRW<[V1Write_2c_1V01],
                         "^ADR_LSL_ZZZ_[SD]_[0123]$",
                         "^[SU]ABD_ZP[mZ]Z_[BHSD]",
                         "^[SU](MAX|MIN)_Z(I|P[mZ]Z)_[BHSD]",
-                        "^[SU]Q(ADD|SUB)_Z(I|ZZ)_[BHSD]$",
+                        "^[SU]Q(ADD|SUB)_Z(I|ZZ)_[BHSD]",
                         "^SUBR_Z(I|P[mZ]Z)_[BHSD]",
-                        "^(AND|EOR|ORR)_ZI$",
+                        "^(AND|EOR|ORR)_ZI(_PSEUDO)?$",
                         "^(AND|BIC|EOR|EOR(BT|TB)?|ORR)_ZP?ZZ",
                         "^EOR(BT|TB)_ZZZ_[BHSD]$",
                         "^(AND|BIC|EOR|NOT|ORR)_ZPmZ_[BHSD]")>;

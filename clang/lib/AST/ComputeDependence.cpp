@@ -57,11 +57,9 @@ ExprDependence clang::computeDependence(UnaryOperator *E,
   if (Ctx.getLangOpts().CPlusPlus && E->getOpcode() == UO_AddrOf &&
       !(Dep & ExprDependence::Value)) {
     Expr::EvalResult Result;
-    SmallVector<PartialDiagnosticAt, 8> Diag;
-    Result.Diag = &Diag;
     // FIXME: This doesn't enforce the C++98 constant expression rules.
-    if (E->getSubExpr()->EvaluateAsConstantExpr(Result, Ctx) && Diag.empty() &&
-        Result.Val.isLValue()) {
+    if (E->getSubExpr()->EvaluateAsConstantExpr(Result, Ctx) &&
+        !Result.DiagEmitted && Result.Val.isLValue()) {
       auto *VD = Result.Val.getLValueBase().dyn_cast<const ValueDecl *>();
       if (VD && VD->isTemplated()) {
         auto *VarD = dyn_cast<VarDecl>(VD);
@@ -113,6 +111,10 @@ ExprDependence clang::computeDependence(UnaryExprOrTypeTraitExpr *E) {
 
 ExprDependence clang::computeDependence(ArraySubscriptExpr *E) {
   return E->getLHS()->getDependence() | E->getRHS()->getDependence();
+}
+
+ExprDependence clang::computeDependence(MatrixSingleSubscriptExpr *E) {
+  return E->getBase()->getDependence() | E->getRowIdx()->getDependence();
 }
 
 ExprDependence clang::computeDependence(MatrixSubscriptExpr *E) {
@@ -249,6 +251,10 @@ ExprDependence clang::computeDependence(ImplicitValueInitExpr *E) {
 }
 
 ExprDependence clang::computeDependence(ExtVectorElementExpr *E) {
+  return E->getBase()->getDependence();
+}
+
+ExprDependence clang::computeDependence(MatrixElementExpr *E) {
   return E->getBase()->getDependence();
 }
 

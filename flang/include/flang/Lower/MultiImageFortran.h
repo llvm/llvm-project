@@ -11,6 +11,7 @@
 
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 
 namespace Fortran {
 
@@ -51,12 +52,29 @@ void genSyncTeamStatement(AbstractConverter &, const parser::SyncTeamStmt &);
 
 void genChangeTeamConstruct(AbstractConverter &, pft::Evaluation &eval,
                             const parser::ChangeTeamConstruct &);
-void genChangeTeamStmt(AbstractConverter &, pft::Evaluation &eval,
-                       const parser::ChangeTeamStmt &);
+mif::ChangeTeamOp genChangeTeamStmt(AbstractConverter &, pft::Evaluation &eval,
+                                    const parser::ChangeTeamStmt &);
 void genEndChangeTeamStmt(AbstractConverter &, pft::Evaluation &eval,
                           const parser::EndChangeTeamStmt &);
 void genFormTeamStatement(AbstractConverter &, pft::Evaluation &eval,
                           const parser::FormTeamStmt &);
+
+//===----------------------------------------------------------------------===//
+// COARRAY utils
+//===----------------------------------------------------------------------===//
+
+mlir::Value genLowerCoBounds(AbstractConverter &converter, mlir::Location loc,
+                             const semantics::Symbol &sym);
+
+mlir::Value genUpperCoBounds(AbstractConverter &converter, mlir::Location loc,
+                             const semantics::Symbol &sym);
+
+mlir::Value genAllocateCoarray(
+    AbstractConverter &converter, mlir::Location loc,
+    const semantics::Symbol &sym, mlir::Value addr,
+    const std::optional<Fortran::parser::AllocateCoarraySpec> &allocSpec =
+        std::nullopt,
+    mlir::Value errMsg = {}, bool hasStat = false);
 
 //===----------------------------------------------------------------------===//
 // COARRAY expressions

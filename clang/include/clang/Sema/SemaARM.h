@@ -92,7 +92,8 @@ public:
   /// false otherwise.
   bool areLaxCompatibleSveTypes(QualType FirstType, QualType SecondType);
 
-  bool checkTargetVersionAttr(const StringRef Str, const SourceLocation Loc);
+  bool checkTargetVersionAttr(const StringRef Param, const SourceLocation Loc,
+                              SmallString<64> &NewParam);
   bool checkTargetClonesAttr(SmallVectorImpl<StringRef> &Params,
                              SmallVectorImpl<SourceLocation> &Locs,
                              SmallVectorImpl<SmallString<64>> &NewParams);

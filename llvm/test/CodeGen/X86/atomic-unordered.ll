@@ -272,16 +272,11 @@ define i256 @load_i256(ptr %ptr) {
 ; CHECK-O0-NEXT:    callq __atomic_load@PLT
 ; CHECK-O0-NEXT:    movq (%rsp), %rdi # 8-byte Reload
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
-; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
-; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
-; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %r8
-; CHECK-O0-NEXT:    movq %r8, 24(%rdi)
-; CHECK-O0-NEXT:    movq %rsi, 16(%rdi)
-; CHECK-O0-NEXT:    movq %rdx, 8(%rdi)
-; CHECK-O0-NEXT:    movq %rcx, (%rdi)
+; CHECK-O0-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0
+; CHECK-O0-NEXT:    vmovups %ymm0, (%rdi)
 ; CHECK-O0-NEXT:    addq $56, %rsp
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-O0-NEXT:    vzeroupper
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_i256:
@@ -353,18 +348,16 @@ define void @store_i256(ptr %ptr, i256 %v) {
 define void @vec_store(ptr %p0, <2 x i32> %vec) {
 ; CHECK-O0-LABEL: vec_store:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    vmovd %xmm0, %ecx
 ; CHECK-O0-NEXT:    vpextrd $1, %xmm0, %eax
-; CHECK-O0-NEXT:    movl %ecx, (%rdi)
+; CHECK-O0-NEXT:    vmovd %xmm0, (%rdi)
 ; CHECK-O0-NEXT:    movl %eax, 4(%rdi)
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: vec_store:
 ; CHECK-O3:       # %bb.0:
-; CHECK-O3-NEXT:    vmovd %xmm0, %eax
-; CHECK-O3-NEXT:    vpextrd $1, %xmm0, %ecx
-; CHECK-O3-NEXT:    movl %eax, (%rdi)
-; CHECK-O3-NEXT:    movl %ecx, 4(%rdi)
+; CHECK-O3-NEXT:    vextractps $1, %xmm0, %eax
+; CHECK-O3-NEXT:    vmovss %xmm0, (%rdi)
+; CHECK-O3-NEXT:    movl %eax, 4(%rdi)
 ; CHECK-O3-NEXT:    retq
   %v1 = extractelement <2 x i32> %vec, i32 0
   %v2 = extractelement <2 x i32> %vec, i32 1
@@ -378,18 +371,16 @@ define void @vec_store(ptr %p0, <2 x i32> %vec) {
 define void @vec_store_unaligned(ptr %p0, <2 x i32> %vec) {
 ; CHECK-O0-LABEL: vec_store_unaligned:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    vmovd %xmm0, %ecx
 ; CHECK-O0-NEXT:    vpextrd $1, %xmm0, %eax
-; CHECK-O0-NEXT:    movl %ecx, (%rdi)
+; CHECK-O0-NEXT:    vmovd %xmm0, (%rdi)
 ; CHECK-O0-NEXT:    movl %eax, 4(%rdi)
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: vec_store_unaligned:
 ; CHECK-O3:       # %bb.0:
-; CHECK-O3-NEXT:    vmovd %xmm0, %eax
-; CHECK-O3-NEXT:    vpextrd $1, %xmm0, %ecx
-; CHECK-O3-NEXT:    movl %eax, (%rdi)
-; CHECK-O3-NEXT:    movl %ecx, 4(%rdi)
+; CHECK-O3-NEXT:    vextractps $1, %xmm0, %eax
+; CHECK-O3-NEXT:    vmovss %xmm0, (%rdi)
+; CHECK-O3-NEXT:    movl %eax, 4(%rdi)
 ; CHECK-O3-NEXT:    retq
   %v1 = extractelement <2 x i32> %vec, i32 0
   %v2 = extractelement <2 x i32> %vec, i32 1
@@ -404,12 +395,17 @@ define void @vec_store_unaligned(ptr %p0, <2 x i32> %vec) {
 ; Legal if wider type is also atomic (TODO)
 ; Also, can avoid register move from xmm to eax (TODO)
 define void @widen_broadcast2(ptr %p0, <2 x i32> %vec) {
-; CHECK-LABEL: widen_broadcast2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovd %xmm0, %eax
-; CHECK-NEXT:    movl %eax, (%rdi)
-; CHECK-NEXT:    movl %eax, 4(%rdi)
-; CHECK-NEXT:    retq
+; CHECK-O0-LABEL: widen_broadcast2:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    vmovd %xmm0, (%rdi)
+; CHECK-O0-NEXT:    vmovd %xmm0, 4(%rdi)
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: widen_broadcast2:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    vmovss %xmm0, (%rdi)
+; CHECK-O3-NEXT:    vmovss %xmm0, 4(%rdi)
+; CHECK-O3-NEXT:    retq
   %v1 = extractelement <2 x i32> %vec, i32 0
   %p1 = getelementptr i32, ptr %p0, i64 1
   store atomic i32 %v1, ptr %p0 unordered, align 8
@@ -419,12 +415,17 @@ define void @widen_broadcast2(ptr %p0, <2 x i32> %vec) {
 
 ; Not legal to widen due to alignment restriction
 define void @widen_broadcast2_unaligned(ptr %p0, <2 x i32> %vec) {
-; CHECK-LABEL: widen_broadcast2_unaligned:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovd %xmm0, %eax
-; CHECK-NEXT:    movl %eax, (%rdi)
-; CHECK-NEXT:    movl %eax, 4(%rdi)
-; CHECK-NEXT:    retq
+; CHECK-O0-LABEL: widen_broadcast2_unaligned:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    vmovd %xmm0, (%rdi)
+; CHECK-O0-NEXT:    vmovd %xmm0, 4(%rdi)
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: widen_broadcast2_unaligned:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    vmovss %xmm0, (%rdi)
+; CHECK-O3-NEXT:    vmovss %xmm0, 4(%rdi)
+; CHECK-O3-NEXT:    retq
   %v1 = extractelement <2 x i32> %vec, i32 0
   %p1 = getelementptr i32, ptr %p0, i64 1
   store atomic i32 %v1, ptr %p0 unordered, align 4

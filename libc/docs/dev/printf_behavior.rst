@@ -71,9 +71,26 @@ conversions (%r, %k); any fixed point number conversion will be treated as
 invalid. This reduces code size. This has no effect if the current compiler does
 not support fixed point numbers.
 
+LIBC_COPT_PRINTF_DISABLE_WIDE
+-----------------------------
+When set, this flag disables support for wide characters (%lc and %ls). Any
+conversions will be ignored. This reduces code size. This will be set by default
+on windows platforms as current printf implementation does not support UTF-16 wide
+characters.
+
+LIBC_COPT_PRINTF_DISABLE_BITINT
+-------------------------------
+When set, this flag disables the bit int length modifiers wNUM and wfNUM. The
+length modifiers will be treated as if they don't exist, so conversions using
+them will be treated as invalid. This reduces code size.
+
+.. _printf_no_nullptr_checks:
+
 LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 ----------------------------------
-When set, this flag disables the nullptr checks in %n and %s.
+When set, this flag disables the nullptr checks in %n and %s; passing a null
+pointer is undefined behavior. See :ref:`printf_conversion` for the behavior
+when nullptr checks are enabled.
 
 LIBC_COPT_PRINTF_CONV_ATLAS
 ---------------------------
@@ -87,6 +104,13 @@ When set, this flag replaces all decimal long double conversions (%Lf, %Le, %Lg)
 with hexadecimal long double conversions (%La). This will improve performance
 significantly, but may cause some tests to fail. This has no effect when float
 conversions are disabled.
+
+LIBC_COPT_PRINTF_NO_CONVERT_FLOAT128
+------------------------------------
+When set, this flag disables support for __float128 conversions using the "Q"
+length modifier (%Qa, %Qf, %Qe, %Qg). This flag has no effect on conversions
+using the "L" length modifier when long double is the same type as __float128.
+This has little to no effect on performance or binary size.
 
 --------------------------------
 Float Conversion Internal Flags:
@@ -112,7 +136,7 @@ LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
 -------------------------------------------------
 When set, the float to string decimal conversion algorithm will use a larger
 table to accelerate long double conversions. This larger table is around 5MB of
-size when compiled.
+size when compiled. This flag also affects __float128 conversions.
 
 LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT
 ---------------------------------------
@@ -181,6 +205,8 @@ If a number passed as a bit width is less than or equal to zero, the conversion
 is considered invalid. If the provided bit width is larger than the width of
 uintmax_t, it will be clamped to the width of uintmax_t.
 
+.. _printf_conversion:
+
 ----------
 Conversion
 ----------
@@ -192,7 +218,7 @@ If a conversion specification ends in %, then it will be treated as if it is
 "%%", ignoring all options.
 
 If a null pointer is passed to a %s conversion specification and null pointer
-checks are enabled, it will be treated as if the provided string is "null".
+checks are enabled, it will be treated as if the provided string is "(null)".
 
 If a null pointer is passed to a %n conversion specification and null pointer
 checks are enabled, the conversion will fail and printf will return a negative
@@ -225,3 +251,10 @@ value of errno as an integer with the %d format, including all options. If
 errno = 0 and alt form is specified, the conversion will be a string conversion
 on "0" for simplicity of implementation. This matches what other libcs
 implementing this feature have done.
+
+If the compiler is detected as having support for __float128, "Q" is an accepted
+length modifier for floating point conversions (%Qa, %Qf, %Qe, %Qg), unless
+disabled by LIBC_COPT_PRINTF_NO_CONVERT_FLOAT128. A conversion using the
+"Q" length modifier will be treated as invalid in any of the following
+conditions: __float128 is not supported, the "Q" length modifier is disabled, or
+the conversion does not use a floating point format specifier.

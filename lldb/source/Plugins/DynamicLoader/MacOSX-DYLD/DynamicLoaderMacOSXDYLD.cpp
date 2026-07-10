@@ -283,9 +283,9 @@ bool DynamicLoaderMacOSXDYLD::ReadDYLDInfoFromMemoryAndSetNotificationCallback(
       }
 
       if (m_dyld_all_image_infos_addr == LLDB_INVALID_ADDRESS) {
-        ConstString g_sect_name("__all_image_info");
         SectionSP dyld_aii_section_sp =
-            dyld_module_sp->GetSectionList()->FindSectionByName(g_sect_name);
+            dyld_module_sp->GetSectionList()->FindSectionByName(
+                "__all_image_info");
         if (dyld_aii_section_sp) {
           Address dyld_aii_addr(dyld_aii_section_sp, 0);
           m_dyld_all_image_infos_addr = dyld_aii_addr.GetLoadAddress(&target);
@@ -1071,11 +1071,13 @@ Status DynamicLoaderMacOSXDYLD::CanLoadImage() {
 
 bool DynamicLoaderMacOSXDYLD::GetSharedCacheInformation(
     lldb::addr_t &base_address, UUID &uuid, LazyBool &using_shared_cache,
-    LazyBool &private_shared_cache) {
+    LazyBool &private_shared_cache, FileSpec &shared_cache_filepath,
+    std::optional<uint64_t> &size) {
   base_address = LLDB_INVALID_ADDRESS;
   uuid.Clear();
   using_shared_cache = eLazyBoolCalculate;
   private_shared_cache = eLazyBoolCalculate;
+  size.reset();
 
   if (m_process) {
     addr_t all_image_infos = m_process->GetImageInfoAddress();

@@ -159,6 +159,8 @@ void test_move_noexcept() {
 static int countdown = 0;
 
 struct EvilContainer : std::vector<int> {
+  using std::vector<int>::vector;
+
   EvilContainer() = default;
   EvilContainer(EvilContainer&& rhs) {
     // Throw on move-construction.
@@ -167,6 +169,11 @@ struct EvilContainer : std::vector<int> {
       rhs.insert(rhs.end(), 0);
       throw 42;
     }
+  }
+
+  EvilContainer& operator=(std::initializer_list<int> il) {
+    std::vector<int>::operator=(il);
+    return *this;
   }
 };
 

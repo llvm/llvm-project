@@ -541,18 +541,18 @@ define i1 @is_negsubnormal_f80(x86_fp80 %x) nounwind {
 ; X64-LABEL: is_negsubnormal_f80:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movswq %ax, %rcx
-; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
-; X64-NEXT:    andl $32767, %eax # imm = 0x7FFF
-; X64-NEXT:    addq $-1, %rdx
-; X64-NEXT:    adcq $-1, %rax
+; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; X64-NEXT:    movl %eax, %edx
+; X64-NEXT:    andl $32767, %edx # imm = 0x7FFF
+; X64-NEXT:    addq $-1, %rcx
+; X64-NEXT:    adcq $-1, %rdx
 ; X64-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; X64-NEXT:    cmpq %rsi, %rdx
-; X64-NEXT:    sbbq $0, %rax
-; X64-NEXT:    setb %dl
-; X64-NEXT:    testq %rcx, %rcx
-; X64-NEXT:    sets %al
-; X64-NEXT:    andb %dl, %al
+; X64-NEXT:    cmpq %rsi, %rcx
+; X64-NEXT:    sbbq $0, %rdx
+; X64-NEXT:    setb %cl
+; X64-NEXT:    testl $32768, %eax # imm = 0x8000
+; X64-NEXT:    setne %al
+; X64-NEXT:    andb %cl, %al
 ; X64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f80(x86_fp80 %x, i32 16)  ; 0x10 = "-subnormal"

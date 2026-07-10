@@ -425,11 +425,29 @@ s_ttracedata_imm 0xc1d1
 s_set_inst_prefetch_distance 0xc1d1
 // GFX11: s_set_inst_prefetch_distance 0xc1d1 ; encoding: [0xd1,0xc1,0x84,0xbf]
 
+s_wait_event 0
+// GFX11:  s_wait_event { dont_wait_export_ready: 0 } ; encoding: [0x00,0x00,0x8b,0xbf]
+
+s_wait_event { dont_wait_export_ready: 0 } ; encoding: [0x00,0x00,0x8b,0xbf]a
+// GFX11:  s_wait_event { dont_wait_export_ready: 0 } ; encoding: [0x00,0x00,0x8b,0xbf]
+
+s_wait_event 1
+// GFX11:  s_wait_event { dont_wait_export_ready: 1 } ; encoding: [0x01,0x00,0x8b,0xbf]
+
+s_wait_event { dont_wait_export_ready: 1 }
+// GFX11:  s_wait_event { dont_wait_export_ready: 1 } ; encoding: [0x01,0x00,0x8b,0xbf]
+
+s_wait_event 2
+// GFX11: s_wait_event 0x2                        ; encoding: [0x02,0x00,0x8b,0xbf]
+
 s_wait_event 0x3141
 // GFX11: s_wait_event 0x3141 ; encoding: [0x41,0x31,0x8b,0xbf]
 
 s_wait_event 0xc1d1
 // GFX11: s_wait_event 0xc1d1 ; encoding: [0xd1,0xc1,0x8b,0xbf]
+
+s_wait_event 0xffff
+// GFX11: s_wait_event 0xffff                      ; encoding: [0xff,0xff,0x8b,0xbf]
 
 s_endpgm_ordered_ps_done
 // GFX11: s_endpgm_ordered_ps_done ; encoding: [0x00,0x00,0xb2,0xbf]

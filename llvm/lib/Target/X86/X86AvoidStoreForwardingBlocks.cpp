@@ -51,7 +51,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "x86-avoid-SFB"
+#define DEBUG_TYPE "x86-avoid-sfb"
 
 static cl::opt<bool> DisableX86AvoidStoreForwardBlocks(
     "x86-disable-avoid-SFB", cl::Hidden,
@@ -67,21 +67,10 @@ namespace {
 
 using DisplacementSizeMap = std::map<int64_t, unsigned>;
 
-class X86AvoidSFBPass : public MachineFunctionPass {
+class X86AvoidSFBImpl {
 public:
-  static char ID;
-  X86AvoidSFBPass() : MachineFunctionPass(ID) { }
-
-  StringRef getPassName() const override {
-    return "X86 Avoid Store Forwarding Blocks";
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    MachineFunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<AAResultsWrapperPass>();
-  }
+  X86AvoidSFBImpl(AliasAnalysis *AA) : AA(AA) {};
+  bool runOnMachineFunction(MachineFunction &MF);
 
 private:
   MachineRegisterInfo *MRI = nullptr;
@@ -102,31 +91,46 @@ private:
                           const DisplacementSizeMap &BlockingStoresDispSizeMap);
   /// Break a copy of size Size to smaller copies.
   void buildCopies(int Size, MachineInstr *LoadInst, int64_t LdDispImm,
-                   MachineInstr *StoreInst, int64_t StDispImm,
-                   int64_t LMMOffset, int64_t SMMOffset);
+                   MachineInstr *StoreInst, int64_t StDispImm, int64_t Offset);
 
   void buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode, int64_t LoadDisp,
                  MachineInstr *StoreInst, unsigned NStoreOpcode,
-                 int64_t StoreDisp, unsigned Size, int64_t LMMOffset,
-                 int64_t SMMOffset);
+                 int64_t StoreDisp, unsigned Size, int64_t Offset);
 
   bool alias(const MachineMemOperand &Op1, const MachineMemOperand &Op2) const;
 
   unsigned getRegSizeInBytes(MachineInstr *Inst);
 };
 
+class X86AvoidSFBLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  X86AvoidSFBLegacy() : MachineFunctionPass(ID) {}
+
+  StringRef getPassName() const override {
+    return "X86 Avoid Store Forwarding Blocks";
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    MachineFunctionPass::getAnalysisUsage(AU);
+    AU.addRequired<AAResultsWrapperPass>();
+  }
+};
+
 } // end anonymous namespace
 
-char X86AvoidSFBPass::ID = 0;
+char X86AvoidSFBLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(X86AvoidSFBPass, DEBUG_TYPE, "Machine code sinking",
+INITIALIZE_PASS_BEGIN(X86AvoidSFBLegacy, DEBUG_TYPE, "Machine code sinking",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(X86AvoidSFBPass, DEBUG_TYPE, "Machine code sinking", false,
-                    false)
+INITIALIZE_PASS_END(X86AvoidSFBLegacy, DEBUG_TYPE, "Machine code sinking",
+                    false, false)
 
-FunctionPass *llvm::createX86AvoidStoreForwardingBlocks() {
-  return new X86AvoidSFBPass();
+FunctionPass *llvm::createX86AvoidStoreForwardingBlocksLegacyPass() {
+  return new X86AvoidSFBLegacy();
 }
 
 static bool isXMMLoadOpcode(unsigned Opcode) {
@@ -376,11 +380,10 @@ findPotentialBlockers(MachineInstr *LoadInst) {
   return PotentialBlockers;
 }
 
-void X86AvoidSFBPass::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
+void X86AvoidSFBImpl::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
                                 int64_t LoadDisp, MachineInstr *StoreInst,
                                 unsigned NStoreOpcode, int64_t StoreDisp,
-                                unsigned Size, int64_t LMMOffset,
-                                int64_t SMMOffset) {
+                                unsigned Size, int64_t Offset) {
   MachineOperand &LoadBase = getBaseOperand(LoadInst);
   MachineOperand &StoreBase = getBaseOperand(StoreInst);
   MachineBasicBlock *MBB = LoadInst->getParent();
@@ -398,7 +401,7 @@ void X86AvoidSFBPass::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
           .addImm(LoadDisp)
           .addReg(X86::NoRegister)
           .addMemOperand(
-              MBB->getParent()->getMachineMemOperand(LMMO, LMMOffset, Size));
+              MBB->getParent()->getMachineMemOperand(LMMO, Offset, Size));
   if (LoadBase.isReg())
     getBaseOperand(NewLoad).setIsKill(false);
   LLVM_DEBUG(NewLoad->dump());
@@ -418,7 +421,7 @@ void X86AvoidSFBPass::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
           .addReg(X86::NoRegister)
           .addReg(Reg1)
           .addMemOperand(
-              MBB->getParent()->getMachineMemOperand(SMMO, SMMOffset, Size));
+              MBB->getParent()->getMachineMemOperand(SMMO, Offset, Size));
   if (StoreBase.isReg())
     getBaseOperand(NewStore).setIsKill(false);
   MachineOperand &StoreSrcVReg = StoreInst->getOperand(X86::AddrNumOperands);
@@ -427,10 +430,9 @@ void X86AvoidSFBPass::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
   LLVM_DEBUG(NewStore->dump());
 }
 
-void X86AvoidSFBPass::buildCopies(int Size, MachineInstr *LoadInst,
+void X86AvoidSFBImpl::buildCopies(int Size, MachineInstr *LoadInst,
                                   int64_t LdDispImm, MachineInstr *StoreInst,
-                                  int64_t StDispImm, int64_t LMMOffset,
-                                  int64_t SMMOffset) {
+                                  int64_t StDispImm, int64_t Offset) {
   int LdDisp = LdDispImm;
   int StDisp = StDispImm;
   while (Size > 0) {
@@ -438,51 +440,46 @@ void X86AvoidSFBPass::buildCopies(int Size, MachineInstr *LoadInst,
       Size = Size - MOV128SZ;
       buildCopy(LoadInst, getYMMtoXMMLoadOpcode(LoadInst->getOpcode()), LdDisp,
                 StoreInst, getYMMtoXMMStoreOpcode(StoreInst->getOpcode()),
-                StDisp, MOV128SZ, LMMOffset, SMMOffset);
+                StDisp, MOV128SZ, Offset);
       LdDisp += MOV128SZ;
       StDisp += MOV128SZ;
-      LMMOffset += MOV128SZ;
-      SMMOffset += MOV128SZ;
+      Offset += MOV128SZ;
       continue;
     }
     if (Size - MOV64SZ >= 0) {
       Size = Size - MOV64SZ;
       buildCopy(LoadInst, X86::MOV64rm, LdDisp, StoreInst, X86::MOV64mr, StDisp,
-                MOV64SZ, LMMOffset, SMMOffset);
+                MOV64SZ, Offset);
       LdDisp += MOV64SZ;
       StDisp += MOV64SZ;
-      LMMOffset += MOV64SZ;
-      SMMOffset += MOV64SZ;
+      Offset += MOV64SZ;
       continue;
     }
     if (Size - MOV32SZ >= 0) {
       Size = Size - MOV32SZ;
       buildCopy(LoadInst, X86::MOV32rm, LdDisp, StoreInst, X86::MOV32mr, StDisp,
-                MOV32SZ, LMMOffset, SMMOffset);
+                MOV32SZ, Offset);
       LdDisp += MOV32SZ;
       StDisp += MOV32SZ;
-      LMMOffset += MOV32SZ;
-      SMMOffset += MOV32SZ;
+      Offset += MOV32SZ;
       continue;
     }
     if (Size - MOV16SZ >= 0) {
       Size = Size - MOV16SZ;
       buildCopy(LoadInst, X86::MOV16rm, LdDisp, StoreInst, X86::MOV16mr, StDisp,
-                MOV16SZ, LMMOffset, SMMOffset);
+                MOV16SZ, Offset);
       LdDisp += MOV16SZ;
       StDisp += MOV16SZ;
-      LMMOffset += MOV16SZ;
-      SMMOffset += MOV16SZ;
+      Offset += MOV16SZ;
       continue;
     }
     if (Size - MOV8SZ >= 0) {
       Size = Size - MOV8SZ;
       buildCopy(LoadInst, X86::MOV8rm, LdDisp, StoreInst, X86::MOV8mr, StDisp,
-                MOV8SZ, LMMOffset, SMMOffset);
+                MOV8SZ, Offset);
       LdDisp += MOV8SZ;
       StDisp += MOV8SZ;
-      LMMOffset += MOV8SZ;
-      SMMOffset += MOV8SZ;
+      Offset += MOV8SZ;
       continue;
     }
   }
@@ -514,7 +511,7 @@ static void updateKillStatus(MachineInstr *LoadInst, MachineInstr *StoreInst) {
   }
 }
 
-bool X86AvoidSFBPass::alias(const MachineMemOperand &Op1,
+bool X86AvoidSFBImpl::alias(const MachineMemOperand &Op1,
                             const MachineMemOperand &Op2) const {
   if (!Op1.getValue() || !Op2.getValue())
     return true;
@@ -528,7 +525,7 @@ bool X86AvoidSFBPass::alias(const MachineMemOperand &Op1,
       MemoryLocation(Op2.getValue(), Overlapb, Op2.getAAInfo()));
 }
 
-void X86AvoidSFBPass::findPotentiallylBlockedCopies(MachineFunction &MF) {
+void X86AvoidSFBImpl::findPotentiallylBlockedCopies(MachineFunction &MF) {
   for (auto &MBB : MF)
     for (auto &MI : MBB) {
       if (!isPotentialBlockedMemCpyLd(MI.getOpcode()))
@@ -545,25 +542,30 @@ void X86AvoidSFBPass::findPotentiallylBlockedCopies(MachineFunction &MF) {
             isRelevantAddressingMode(&MI) &&
             isRelevantAddressingMode(&StoreMI) &&
             MI.hasOneMemOperand() && StoreMI.hasOneMemOperand()) {
-          if (!alias(**MI.memoperands_begin(), **StoreMI.memoperands_begin()))
+          // Don't split volatile or atomic accesses.
+          const MachineMemOperand *LMMO = *MI.memoperands_begin();
+          const MachineMemOperand *SMMO = *StoreMI.memoperands_begin();
+          if (LMMO->isVolatile() || LMMO->isAtomic() || SMMO->isVolatile() ||
+              SMMO->isAtomic())
+            continue;
+          if (!alias(*LMMO, *SMMO))
             BlockedLoadsStoresPairs.push_back(std::make_pair(&MI, &StoreMI));
         }
       }
     }
 }
 
-unsigned X86AvoidSFBPass::getRegSizeInBytes(MachineInstr *LoadInst) {
+unsigned X86AvoidSFBImpl::getRegSizeInBytes(MachineInstr *LoadInst) {
   const auto *TRC = TII->getRegClass(TII->get(LoadInst->getOpcode()), 0);
   return TRI->getRegSizeInBits(*TRC) / 8;
 }
 
-void X86AvoidSFBPass::breakBlockedCopies(
+void X86AvoidSFBImpl::breakBlockedCopies(
     MachineInstr *LoadInst, MachineInstr *StoreInst,
     const DisplacementSizeMap &BlockingStoresDispSizeMap) {
   int64_t LdDispImm = getDispOperand(LoadInst).getImm();
   int64_t StDispImm = getDispOperand(StoreInst).getImm();
-  int64_t LMMOffset = 0;
-  int64_t SMMOffset = 0;
+  int64_t Offset = 0;
 
   int64_t LdDisp1 = LdDispImm;
   int64_t LdDisp2 = 0;
@@ -588,19 +590,15 @@ void X86AvoidSFBPass::breakBlockedCopies(
 
     // Build a copy for the point until the current blocking store's
     // displacement.
-    buildCopies(Size1, LoadInst, LdDisp1, StoreInst, StDisp1, LMMOffset,
-                SMMOffset);
+    buildCopies(Size1, LoadInst, LdDisp1, StoreInst, StDisp1, Offset);
     // Build a copy for the current blocking store.
-    buildCopies(Size2, LoadInst, LdDisp2, StoreInst, StDisp2, LMMOffset + Size1,
-                SMMOffset + Size1);
+    buildCopies(Size2, LoadInst, LdDisp2, StoreInst, StDisp2, Offset + Size1);
     LdDisp1 = LdDisp2 + Size2;
     StDisp1 = StDisp2 + Size2;
-    LMMOffset += Size1 + Size2;
-    SMMOffset += Size1 + Size2;
+    Offset += Size1 + Size2;
   }
   unsigned Size3 = (LdDispImm + getRegSizeInBytes(LoadInst)) - LdDisp1;
-  buildCopies(Size3, LoadInst, LdDisp1, StoreInst, StDisp1, LMMOffset,
-              LMMOffset);
+  buildCopies(Size3, LoadInst, LdDisp1, StoreInst, StDisp1, Offset);
 }
 
 static bool hasSameBaseOpValue(MachineInstr *LoadInst,
@@ -654,10 +652,10 @@ removeRedundantBlockingStores(DisplacementSizeMap &BlockingStoresDispSizeMap) {
     BlockingStoresDispSizeMap.insert(Disp);
 }
 
-bool X86AvoidSFBPass::runOnMachineFunction(MachineFunction &MF) {
+bool X86AvoidSFBImpl::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
-  if (DisableX86AvoidStoreForwardBlocks || skipFunction(MF.getFunction()) ||
+  if (DisableX86AvoidStoreForwardBlocks ||
       !MF.getSubtarget<X86Subtarget>().is64Bit())
     return false;
 
@@ -665,7 +663,6 @@ bool X86AvoidSFBPass::runOnMachineFunction(MachineFunction &MF) {
   assert(MRI->isSSA() && "Expected MIR to be in SSA form");
   TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
   TRI = MF.getSubtarget<X86Subtarget>().getRegisterInfo();
-  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   LLVM_DEBUG(dbgs() << "Start X86AvoidStoreForwardBlocks\n";);
   // Look for a load then a store to XMM/YMM which look like a memcpy
   findPotentiallylBlockedCopies(MF);
@@ -720,4 +717,25 @@ bool X86AvoidSFBPass::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "End X86AvoidStoreForwardBlocks\n";);
 
   return Changed;
+}
+
+bool X86AvoidSFBLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  AliasAnalysis *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  X86AvoidSFBImpl Impl(AA);
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+X86AvoidStoreForwardingBlocksPass::run(MachineFunction &MF,
+                                       MachineFunctionAnalysisManager &MFAM) {
+  AliasAnalysis *AA =
+      &MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+           .getManager()
+           .getResult<AAManager>(MF.getFunction());
+  X86AvoidSFBImpl Impl(AA);
+  bool Changed = Impl.runOnMachineFunction(MF);
+  return Changed ? getMachineFunctionPassPreservedAnalyses()
+                 : PreservedAnalyses::all();
 }

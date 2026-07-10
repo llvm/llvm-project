@@ -231,7 +231,7 @@ define void @local_nullptr(ptr addrspace(1) nocapture %results, ptr addrspace(3)
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %tobool = icmp ne ptr addrspace(3) %a, addrspacecast (ptr addrspace(5) null to ptr addrspace(3))
+  %tobool = icmp ne ptr addrspace(3) %a, addrspacecast (ptr addrspace(5) zeroinitializer to ptr addrspace(3))
   %conv = zext i1 %tobool to i32
   store i32 %conv, ptr addrspace(1) %results, align 4
   ret void

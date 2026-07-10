@@ -788,8 +788,7 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
           ? 0
           : DL.getTypeAllocSize(LLVMReductionsBufferTy).getFixedValue();
   CGBuilderTy &Bld = CGF.Builder;
-  OMPBuilder.createTargetDeinit(Bld, ReductionDataSize,
-                                C.getLangOpts().OpenMPCUDAReductionBufNum);
+  OMPBuilder.createTargetDeinit(Bld, ReductionDataSize);
   TeamsReductions.clear();
 }
 
@@ -1287,9 +1286,12 @@ void CGOpenMPRuntimeGPU::emitParallelCall(
       IfCondVal = llvm::ConstantInt::get(CGF.Int32Ty, 1);
 
     if (!NumThreadsVal)
-      NumThreadsVal = llvm::ConstantInt::get(CGF.Int32Ty, -1);
+      NumThreadsVal = llvm::ConstantInt::getAllOnesValue(CGF.Int32Ty);
     else
       NumThreadsVal = Bld.CreateZExtOrTrunc(NumThreadsVal, CGF.Int32Ty);
+
+    // No strict prescriptiveness for the number of threads.
+    llvm::Value *StrictNumThreadsVal = llvm::ConstantInt::get(CGF.Int32Ty, 0);
 
     assert(IfCondVal && "Expected a value");
     llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
@@ -1298,14 +1300,16 @@ void CGOpenMPRuntimeGPU::emitParallelCall(
         getThreadID(CGF, Loc),
         IfCondVal,
         NumThreadsVal,
-        llvm::ConstantInt::get(CGF.Int32Ty, -1),
+        llvm::ConstantInt::getAllOnesValue(CGF.Int32Ty),
         FnPtr,
         ID,
         Bld.CreateBitOrPointerCast(CapturedVarsAddrs.emitRawPointer(CGF),
                                    CGF.VoidPtrPtrTy),
-        llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size())};
+        llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size()),
+        StrictNumThreadsVal};
+
     CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                            CGM.getModule(), OMPRTL___kmpc_parallel_51),
+                            CGM.getModule(), OMPRTL___kmpc_parallel_60),
                         Args);
   };
 
@@ -1369,7 +1373,7 @@ void CGOpenMPRuntimeGPU::emitCriticalRegion(
   // Initialize the counter variable for the loop.
   QualType Int32Ty =
       CGF.getContext().getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/0);
-  Address Counter = CGF.CreateMemTemp(Int32Ty, "critical_counter");
+  Address Counter = CGF.CreateMemTempWithoutCast(Int32Ty, "critical_counter");
   LValue CounterLVal = CGF.MakeAddrLValue(Counter, Int32Ty);
   CGF.EmitStoreOfScalar(llvm::Constant::getNullValue(CGM.Int32Ty), CounterLVal,
                         /*isInit=*/true);
@@ -1431,7 +1435,7 @@ static llvm::Value *castValueToType(CodeGenFunction &CGF, llvm::Value *Val,
   if (CastTy->isIntegerType() && ValTy->isIntegerType())
     return CGF.Builder.CreateIntCast(Val, LLVMCastTy,
                                      CastTy->hasSignedIntegerRepresentation());
-  Address CastItem = CGF.CreateMemTemp(CastTy);
+  Address CastItem = CGF.CreateMemTempWithoutCast(CastTy);
   Address ValCastItem = CastItem.withElementType(Val->getType());
   CGF.EmitStoreOfScalar(Val, ValCastItem, /*Volatile=*/false, ValTy,
                         LValueBaseInfo(AlignmentSource::Type),
@@ -1693,8 +1697,6 @@ void CGOpenMPRuntimeGPU::emitReduction(
   bool ParallelReduction = isOpenMPParallelDirective(Options.ReductionKind);
   bool TeamsReduction = isOpenMPTeamsDirective(Options.ReductionKind);
 
-  ASTContext &C = CGM.getContext();
-
   if (Options.SimpleReduction) {
     assert(!TeamsReduction && !ParallelReduction &&
            "Invalid reduction selection in emitReduction.");
@@ -1785,12 +1787,13 @@ void CGOpenMPRuntimeGPU::emitReduction(
     Idx++;
   }
 
+  bool IsSPMD = getExecutionMode() == CGOpenMPRuntimeGPU::EM_SPMD;
   llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
       cantFail(OMPBuilder.createReductionsGPU(
           OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, /*IsByRef=*/{}, false,
-          TeamsReduction, llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
-          CGF.getTarget().getGridValue(),
-          C.getLangOpts().OpenMPCUDAReductionBufNum, RTLoc));
+          TeamsReduction, IsSPMD,
+          llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
+          CGF.getTarget().getGridValue(), RTLoc));
   CGF.Builder.restoreIP(AfterIP);
 }
 
@@ -1811,8 +1814,6 @@ CGOpenMPRuntimeGPU::translateParameter(const FieldDecl *FD,
   }
   ArgType = CGM.getContext().getPointerType(PointeeTy);
   QC.addRestrict();
-  enum { NVPTX_local_addr = 5 };
-  QC.addAddressSpace(getLangASFromTargetAS(NVPTX_local_addr));
   ArgType = QC.apply(CGM.getContext(), ArgType);
   if (isa<ImplicitParamDecl>(NativeParam))
     return ImplicitParamDecl::Create(
@@ -1891,14 +1892,14 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
       Ctx.getIntTypeForBitwidth(/*DestWidth=*/16, /*Signed=*/false);
   QualType Int32QTy =
       Ctx.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/false);
-  ImplicitParamDecl ParallelLevelArg(Ctx, /*DC=*/nullptr, D.getBeginLoc(),
-                                     /*Id=*/nullptr, Int16QTy,
-                                     ImplicitParamKind::Other);
-  ImplicitParamDecl WrapperArg(Ctx, /*DC=*/nullptr, D.getBeginLoc(),
-                               /*Id=*/nullptr, Int32QTy,
-                               ImplicitParamKind::Other);
-  WrapperArgs.emplace_back(&ParallelLevelArg);
-  WrapperArgs.emplace_back(&WrapperArg);
+  auto *ParallelLevelArg = ImplicitParamDecl::Create(
+      Ctx, /*DC=*/nullptr, D.getBeginLoc(),
+      /*Id=*/nullptr, Int16QTy, ImplicitParamKind::Other);
+  auto *WrapperArg = ImplicitParamDecl::Create(
+      Ctx, /*DC=*/nullptr, D.getBeginLoc(),
+      /*Id=*/nullptr, Int32QTy, ImplicitParamKind::Other);
+  WrapperArgs.emplace_back(ParallelLevelArg);
+  WrapperArgs.emplace_back(WrapperArg);
 
   const CGFunctionInfo &CGFI =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(Ctx.VoidTy, WrapperArgs);
@@ -1932,7 +1933,7 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
   // Get the array of arguments.
   SmallVector<llvm::Value *, 8> Args;
 
-  Args.emplace_back(CGF.GetAddrOfLocalVar(&WrapperArg).emitRawPointer(CGF));
+  Args.emplace_back(CGF.GetAddrOfLocalVar(WrapperArg).emitRawPointer(CGF));
   Args.emplace_back(ZeroAddr.emitRawPointer(CGF));
 
   CGBuilderTy &Bld = CGF.Builder;
@@ -2258,18 +2259,9 @@ bool CGOpenMPRuntimeGPU::hasAllocateAttributeForGlobalVar(const VarDecl *VD,
   return false;
 }
 
-// Get current OffloadArch and ignore any unknown values
-static OffloadArch getOffloadArch(CodeGenModule &CGM) {
-  if (!CGM.getTarget().hasFeature("ptx"))
-    return OffloadArch::UNKNOWN;
-  for (const auto &Feature : CGM.getTarget().getTargetOpts().FeatureMap) {
-    if (Feature.getValue()) {
-      OffloadArch Arch = StringToOffloadArch(Feature.getKey());
-      if (Arch != OffloadArch::UNKNOWN)
-        return Arch;
-    }
-  }
-  return OffloadArch::UNKNOWN;
+static OffloadArch getOffloadArch(const CodeGenModule &CGM) {
+  // FIXME: This should not require parsing
+  return StringToOffloadArch(CGM.getTarget().getTargetOpts().CPU);
 }
 
 /// Check to see if target architecture supports unified addressing which is
@@ -2304,19 +2296,28 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::SM_80:
       case OffloadArch::SM_86:
       case OffloadArch::SM_87:
+      case OffloadArch::SM_88:
       case OffloadArch::SM_89:
       case OffloadArch::SM_90:
       case OffloadArch::SM_90a:
       case OffloadArch::SM_100:
       case OffloadArch::SM_100a:
+      case OffloadArch::SM_100f:
       case OffloadArch::SM_101:
       case OffloadArch::SM_101a:
+      case OffloadArch::SM_101f:
       case OffloadArch::SM_103:
       case OffloadArch::SM_103a:
+      case OffloadArch::SM_103f:
+      case OffloadArch::SM_110:
+      case OffloadArch::SM_110a:
+      case OffloadArch::SM_110f:
       case OffloadArch::SM_120:
       case OffloadArch::SM_120a:
+      case OffloadArch::SM_120f:
       case OffloadArch::SM_121:
       case OffloadArch::SM_121a:
+      case OffloadArch::SM_121f:
       case OffloadArch::GFX600:
       case OffloadArch::GFX601:
       case OffloadArch::GFX602:
@@ -2365,20 +2366,26 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::GFX1151:
       case OffloadArch::GFX1152:
       case OffloadArch::GFX1153:
+      case OffloadArch::GFX1154:
+      case OffloadArch::GFX11_7_GENERIC:
+      case OffloadArch::GFX1170:
+      case OffloadArch::GFX1171:
+      case OffloadArch::GFX1172:
       case OffloadArch::GFX12_GENERIC:
       case OffloadArch::GFX1200:
       case OffloadArch::GFX1201:
+      case OffloadArch::GFX12_5_GENERIC:
       case OffloadArch::GFX1250:
       case OffloadArch::GFX1251:
+      case OffloadArch::GFX13_GENERIC:
+      case OffloadArch::GFX1310:
       case OffloadArch::AMDGCNSPIRV:
       case OffloadArch::Generic:
       case OffloadArch::GRANITERAPIDS:
       case OffloadArch::BMG_G21:
-      case OffloadArch::UNUSED:
-      case OffloadArch::UNKNOWN:
+      case OffloadArch::Unused:
+      case OffloadArch::Unknown:
         break;
-      case OffloadArch::LAST:
-        llvm_unreachable("Unexpected GPU arch.");
       }
     }
   }

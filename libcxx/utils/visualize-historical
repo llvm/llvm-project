@@ -23,7 +23,7 @@ class Commit:
     This class represents a commit inside a given Git repository.
     """
 
-    def __init__(self, git_repo, sha):
+    def __init__(self, git_repo: git.Repo, sha: str):
         self._git_repo = git_repo
         self._sha = sha
 
@@ -41,7 +41,7 @@ class Commit:
         Return whether a commit is an ancestor of another commit in the Git repository.
         """
         # Is self._sha an ancestor of other._sha?
-        res = subprocess.run(['git', '-C', self._git_repo, 'merge-base', '--is-ancestor', self._sha, other._sha])
+        res = subprocess.run(['git', '-C', self._git_repo.git_dir, 'merge-base', '--is-ancestor', self._sha, other._sha])
         if res.returncode not in (0, 1):
             raise RuntimeError(f'Error when trying to obtain the commit order for {self._sha} and {other._sha}')
         return res.returncode == 0
@@ -57,7 +57,7 @@ class Commit:
         """
         Return the commit information equivalent to `git show` associated to this commit.
         """
-        cmd = ['git', '-C', self._git_repo, 'show', self._sha]
+        cmd = ['git', '-C', self._git_repo.git_dir, 'show', self._sha]
         if not include_diff:
             cmd.append('--no-patch')
         return subprocess.check_output(cmd, text=True)
@@ -67,22 +67,21 @@ class Commit:
         """
         Return the shortened version of the given SHA.
         """
-        return subprocess.check_output(['git', '-C', self._git_repo, 'rev-parse', '--short', self._sha], text=True).strip()
+        return subprocess.check_output(['git', '-C', self._git_repo.git_dir, 'rev-parse', '--short', self._sha], text=True).strip()
 
     @functools.cached_property
     def fullrev(self):
         """
         Return the full SHA associated to this commit.
         """
-        return subprocess.check_output(['git', '-C', self._git_repo, 'rev-parse', self._sha], text=True).strip()
+        return subprocess.check_output(['git', '-C', self._git_repo.git_dir, 'rev-parse', self._sha], text=True).strip()
 
     @functools.cached_property
     def commit_date(self):
         """
         Return the date of the commit as a `datetime.datetime` object.
         """
-        repo = git.Repo(self._git_repo)
-        return datetime.datetime.fromtimestamp(repo.commit(self._sha).committed_date)
+        return datetime.datetime.fromtimestamp(self._git_repo.commit(self._sha).committed_date)
 
     def prefetch(self):
         """
@@ -226,6 +225,7 @@ def main(argv):
              'https://plotly.com/python-api-reference/generated/plotly.express.trendline_functions.html '
              'details on each option.')
     args = parser.parse_args(argv)
+    repo = git.Repo(args.git_repo)
 
     # Extract benchmark data from the directory.
     data = {}
@@ -233,7 +233,7 @@ def main(argv):
     for file in tqdm.tqdm(files, desc='Parsing LNT files'):
         rows = parse_lnt(file.read_text().splitlines())
         (commit, _) = os.path.splitext(os.path.basename(file))
-        commit = Commit(args.git_repo, commit)
+        commit = Commit(repo, commit)
         data[commit] = rows
 
     # Obtain commit information which is then cached throughout the program. Do this

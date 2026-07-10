@@ -2,10 +2,9 @@
 // RUN:   -config="{CheckOptions: \
 // RUN:     {modernize-make-shared.MakeSmartPtrFunction: 'my::MakeShared', \
 // RUN:      modernize-make-shared.MakeSmartPtrFunctionHeader: 'make_shared_util.h' \
-// RUN:     }}" \
-// RUN:   -- -I %S/Inputs/smart-ptr
+// RUN:     }}"
 
-#include "shared_ptr.h"
+#include <memory>
 // CHECK-FIXES: #include "make_shared_util.h"
 
 void f() {

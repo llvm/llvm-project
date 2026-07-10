@@ -9,6 +9,8 @@ from lldbsuite.test.lldbtest import *
 
 
 class UniqueTypesTestCase2(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def do_test(self, debug_flags):
         """Test that we only display the requested Foo instantiation, not all Foo instantiations."""
         self.build(dictionary=debug_flags)

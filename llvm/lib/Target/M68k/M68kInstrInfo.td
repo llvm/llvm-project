@@ -190,6 +190,19 @@ def MxSizeF32 : MxSize<32, "s", "f32">;
 def MxSizeF64 : MxSize<64, "d", "f64">;
 def MxSizeF80 : MxSize<80, "x", "f80">;
 
+// Special immediate values.
+let OperandType = "OPERAND_IMMEDIATE" in {
+def scaleimm : Operand<i8> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    // Can only be 1, 2, 4, or, 8
+    return Imm > 0 && Imm < 16 && isPowerOf2_64(Imm);
+  }];
+}
+}
+
 class MxOpClass<string name,
                 list<AsmOperandClass> superClasses = []> : AsmOperandClass {
   let Name = name;
@@ -375,8 +388,12 @@ def MxAL8      : MxMemOp<(ops OtherVT), MxSize8,  "b", "printAL8Mem",  MxAddr8>;
 def MxAL16     : MxMemOp<(ops OtherVT), MxSize16, "b", "printAL16Mem", MxAddr16>;
 def MxAL32     : MxMemOp<(ops OtherVT), MxSize32, "b", "printAL32Mem", MxAddr32>;
 
-def MxPCD : MxOpClass<"PCD">;
-def MxPCI : MxOpClass<"PCI">;
+def MxPCD   : MxOpClass<"PCD">;
+def MxPCI   : MxOpClass<"PCI">;
+let RenderMethod = "addPCIBDOperands" in {
+def MxPCIBD32Class : MxOpClass<"PCIBD32">;
+def MxPCIBD16Class : MxOpClass<"PCIBD16", [MxPCIBD32Class]>;
+}
 
 let OperandType = "OPERAND_PCREL" in {
 foreach size = ["8", "16", "32"] in {
@@ -396,6 +413,14 @@ def MxPCD # size : MxMemOp<(ops i16imm), ResSize,  "q", "printPCD"#size#"Mem", M
 // a program reference.
 def MxPCI # size : MxMemOp<(ops i8imm:$disp, XR32:$index), ResSize,  "k", "printPCI"#size#"Mem", MxPCI>;
 } // foreach size
+
+// PROGRAM COUNTER WITH INDEX (BASE DISPLACEMENT)
+let MCOperandPredicate = [{ return STI.hasFeature(M68k::FeatureISA20); }] in {
+  def MxPCIBD32 : MxMemOp<(ops i32imm:$disp, XR32:$index, scaleimm:$scale), ?,
+                          "l", "printPCIBD32Mem", MxPCIBD32Class>;
+  def MxPCIBD16 : MxMemOp<(ops i32imm:$disp, XR16:$index, scaleimm:$scale), ?,
+                          "L", "printPCIBD16Mem", MxPCIBD16Class>;
+} // let MCOperandPredicate
 } // OPERAND_PCREL
 
 def MxImm : AsmOperandClass {
@@ -525,6 +550,8 @@ let WantsParent = true in {
 
   def MxCP_PCI   : ComplexPattern<iPTR, 2, "SelectPCI",
                                   [add, sub, mul, or, shl]>;
+  def MxCP_PCIBD : ComplexPattern<iPTR, 3, "SelectPCIBD",
+                                  [add, sub, mul, or, shl]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -572,6 +599,18 @@ def Mxloadi32 : PatFrag<(ops node:$ptr), (i32 (unindexedload node:$ptr)), [{
     return LD->getAlign() >= 4 && !LD->isSimple();
   return false;
 }]>;
+
+def Mxstoreloadi8_safe : PatFrag<(ops node:$dst, node:$src),
+                                 (store (i8 (unindexedload node:$src)),
+                                        node:$dst), [{ return isSafeStoreLoad(N); }]>;
+
+def Mxstoreloadi16_safe : PatFrag<(ops node:$dst, node:$src),
+                                  (store (i16 (unindexedload node:$src)),
+                                         node:$dst), [{ return isSafeStoreLoad(N); }]>;
+
+def Mxstoreloadi32_safe : PatFrag<(ops node:$dst, node:$src),
+                                  (store (i32 (unindexedload node:$src)),
+                                         node:$dst),[{ return isSafeStoreLoad(N); }]>;
 
 def Mxloadi8         : PatFrag<(ops node:$ptr), (i8  (load node:$ptr))>;
 
@@ -727,6 +766,14 @@ foreach size = [8, 16, 32] in {
   // (i,PC,Xn)
   def MxOp#size#AddrMode_k
     : MxOpBundle<size, !cast<MxOperand>("MxPCI"#size), MxCP_PCI>;
+
+  // (i,PC,Xn.L*SCALE)
+  def MxOp#size#AddrMode_l
+    : MxOpBundle<size, MxPCIBD32, MxCP_PCIBD>;
+
+  // (i,PC,Xn.W*SCALE)
+  def MxOp#size#AddrMode_L
+    : MxOpBundle<size, MxPCIBD16, MxCP_PCIBD>;
 
   // #imm
   def MxOp#size#AddrMode_i

@@ -1,6 +1,6 @@
 // clang-format off
 // RUN: %libomptarget-compile-generic -DREQ=1 && %libomptarget-run-generic 2>&1 | %fcheck-generic -check-prefix=GOOD
-// RUN: %libomptarget-compile-generic -DREQ=2 && not %libomptarget-run-generic 2>&1 | %fcheck-generic -check-prefix=BAD
+// RUN: %libomptarget-compile-generic -DREQ=2 && %not --crash %libomptarget-run-generic 2>&1 | %fcheck-generic -check-prefix=BAD
 // clang-format on
 
 /*

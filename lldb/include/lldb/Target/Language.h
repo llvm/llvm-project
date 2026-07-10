@@ -24,6 +24,8 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FormatVariadic.h"
 
 namespace lldb_private {
 
@@ -180,8 +182,6 @@ public:
 
   virtual bool IsSourceFile(llvm::StringRef file_path) const = 0;
 
-  virtual const Highlighter *GetHighlighter() const { return nullptr; }
-
   virtual lldb::TypeCategoryImplSP GetFormatters();
 
   virtual HardcodedFormatters::HardcodedFormatFinder GetHardcodedFormats();
@@ -200,22 +200,22 @@ public:
   virtual const char *GetLanguageSpecificTypeLookupHelp();
 
   class MethodNameVariant {
-    ConstString m_name;
+    std::string m_name;
     lldb::FunctionNameType m_type;
 
   public:
-    MethodNameVariant(ConstString name, lldb::FunctionNameType type)
-        : m_name(name), m_type(type) {}
-    ConstString GetName() const { return m_name; }
+    MethodNameVariant(std::string name, lldb::FunctionNameType type)
+        : m_name(std::move(name)), m_type(type) {}
+    llvm::StringRef GetName() const { return m_name; }
     lldb::FunctionNameType GetType() const { return m_type; }
   };
   // If a language can have more than one possible name for a method, this
   // function can be used to enumerate them. This is useful when doing name
   // lookups.
   virtual std::vector<Language::MethodNameVariant>
-  GetMethodNameVariants(ConstString method_name) const {
+  GetMethodNameVariants(llvm::StringRef method_name) const {
     return std::vector<Language::MethodNameVariant>();
-  };
+  }
 
   class MethodName {
   public:
@@ -470,7 +470,7 @@ public:
     return ConstString();
   }
 
-  virtual llvm::StringRef GetInstanceVariableName() { return {}; }
+  virtual llvm::StringRef GetInstanceName() { return {}; }
 
   /// Given a symbol context list of matches which supposedly represent the
   /// same file and line number in a CU, erases those that should be ignored
@@ -520,5 +520,12 @@ private:
 };
 
 } // namespace lldb_private
+
+namespace llvm {
+template <> struct format_provider<lldb::LanguageType> {
+  static void format(const lldb::LanguageType &language, llvm::raw_ostream &OS,
+                     llvm::StringRef Options);
+};
+} // namespace llvm
 
 #endif // LLDB_TARGET_LANGUAGE_H

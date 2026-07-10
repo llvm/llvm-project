@@ -11,9 +11,7 @@
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/EnvironmentDefaults.h"
-#include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Runtime/CUDA/init.h"
 #include "flang/Runtime/main.h"
@@ -74,8 +72,8 @@ void fir::runtime::genMain(
     mif::InitOp::create(builder, loc);
 
   fir::CallOp::create(builder, loc, qqMainFn);
-  fir::CallOp::create(builder, loc, stopFn);
 
   mlir::Value ret = builder.createIntegerConstant(loc, argcTy, 0);
+  fir::CallOp::create(builder, loc, stopFn);
   mlir::func::ReturnOp::create(builder, loc, ret);
 }

@@ -10,7 +10,7 @@
 ## debug info.
 
 # RUN: llvm-mc -triple=x86_64-windows-gnu %t.dir/lib.s -filetype=obj -o %t.dir/lib.obj
-# RUN: lld-link -out:%t.dir/lib.dll -dll -entry:DllMainCRTStartup %t.dir/lib.obj -lldmingw -implib:%t.dir/lib.lib
+# RUN: lld-link -out:%t.dir/lib.dll -dll %t.dir/lib.obj -lldmingw -implib:%t.dir/lib.lib
 
 # RUN: llvm-mc -triple=x86_64-windows-gnu %t.dir/main.s -filetype=obj -o %t.dir/main.obj
 # RUN: lld-link -lldmingw -out:%t.dir/main.exe -entry:main %t.dir/main.obj %t.dir/lib.lib -opt:noref -debug:dwarf -runtime-pseudo-reloc:no

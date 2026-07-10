@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -fms-compatibility -fms-compatibility-version=19.33 -std=c++20 -verify %s
 // RUN: %clang_cc1 -fms-compatibility -fms-compatibility-version=19.33 -std=c++17 -verify %s
+//
+// RUN: %clang_cc1 -fms-compatibility -fms-compatibility-version=19.33 -std=c++20 -verify %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fms-compatibility -fms-compatibility-version=19.33 -std=c++17 -verify %s -fexperimental-new-constant-interpreter
 
 // Check explicitly invalid code
 

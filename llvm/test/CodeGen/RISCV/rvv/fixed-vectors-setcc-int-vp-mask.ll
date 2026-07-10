@@ -7,7 +7,7 @@
 define <2 x i1> @icmp_eq_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmxnor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <2 x i1> @llvm.vp.icmp.v2i1(<2 x i1> %va, <2 x i1> %vb, metadata !"eq", <2 x i1> %m, i32 %evl)
@@ -17,7 +17,7 @@ define <2 x i1> @icmp_eq_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 ze
 define <4 x i1> @icmp_eq_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmxnor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.icmp.v4i1(<4 x i1> %va, <4 x i1> %vb, metadata !"eq", <4 x i1> %m, i32 %evl)
@@ -27,7 +27,7 @@ define <4 x i1> @icmp_eq_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 ze
 define <8 x i1> @icmp_eq_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmxnor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <8 x i1> @llvm.vp.icmp.v8i1(<8 x i1> %va, <8 x i1> %vb, metadata !"eq", <8 x i1> %m, i32 %evl)
@@ -37,7 +37,7 @@ define <8 x i1> @icmp_eq_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 ze
 define <16 x i1> @icmp_eq_vv_v16i1(<16 x i1> %va, <16 x i1> %vb, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmxnor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <16 x i1> @llvm.vp.icmp.v16i1(<16 x i1> %va, <16 x i1> %vb, metadata !"eq", <16 x i1> %m, i32 %evl)
@@ -47,7 +47,7 @@ define <16 x i1> @icmp_eq_vv_v16i1(<16 x i1> %va, <16 x i1> %vb, <16 x i1> %m, i
 define <2 x i1> @icmp_ne_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_ne_vv_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmxor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <2 x i1> @llvm.vp.icmp.v2i1(<2 x i1> %va, <2 x i1> %vb, metadata !"ne", <2 x i1> %m, i32 %evl)
@@ -57,7 +57,7 @@ define <2 x i1> @icmp_ne_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 ze
 define <4 x i1> @icmp_ne_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_ne_vv_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmxor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.icmp.v4i1(<4 x i1> %va, <4 x i1> %vb, metadata !"ne", <4 x i1> %m, i32 %evl)
@@ -67,7 +67,7 @@ define <4 x i1> @icmp_ne_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 ze
 define <8 x i1> @icmp_ne_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_ne_vv_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmxor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <8 x i1> @llvm.vp.icmp.v8i1(<8 x i1> %va, <8 x i1> %vb, metadata !"ne", <8 x i1> %m, i32 %evl)
@@ -77,7 +77,7 @@ define <8 x i1> @icmp_ne_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 ze
 define <16 x i1> @icmp_ne_vv_v16i1(<16 x i1> %va, <16 x i1> %vb, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_ne_vv_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmxor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <16 x i1> @llvm.vp.icmp.v16i1(<16 x i1> %va, <16 x i1> %vb, metadata !"ne", <16 x i1> %m, i32 %evl)
@@ -87,7 +87,7 @@ define <16 x i1> @icmp_ne_vv_v16i1(<16 x i1> %va, <16 x i1> %vb, <16 x i1> %m, i
 define <2 x i1> @icmp_slt_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_slt_vv_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmandn.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <2 x i1> @llvm.vp.icmp.v2i1(<2 x i1> %va, <2 x i1> %vb, metadata !"slt", <2 x i1> %m, i32 %evl)
@@ -97,7 +97,7 @@ define <2 x i1> @icmp_slt_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 z
 define <4 x i1> @icmp_slt_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_slt_vv_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmandn.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.icmp.v4i1(<4 x i1> %va, <4 x i1> %vb, metadata !"slt", <4 x i1> %m, i32 %evl)
@@ -107,7 +107,7 @@ define <4 x i1> @icmp_slt_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 z
 define <8 x i1> @icmp_slt_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_slt_vv_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmandn.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <8 x i1> @llvm.vp.icmp.v8i1(<8 x i1> %va, <8 x i1> %vb, metadata !"slt", <8 x i1> %m, i32 %evl)
@@ -117,7 +117,7 @@ define <8 x i1> @icmp_slt_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 z
 define <16 x i1> @icmp_slt_vv_v16i1(<16 x i1> %va, <16 x i1> %vb, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_slt_vv_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmandn.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <16 x i1> @llvm.vp.icmp.v16i1(<16 x i1> %va, <16 x i1> %vb, metadata !"slt", <16 x i1> %m, i32 %evl)
@@ -127,7 +127,7 @@ define <16 x i1> @icmp_slt_vv_v16i1(<16 x i1> %va, <16 x i1> %vb, <16 x i1> %m, 
 define <2 x i1> @icmp_ult_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_ult_vv_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmandn.mm v0, v8, v0
 ; CHECK-NEXT:    ret
   %v = call <2 x i1> @llvm.vp.icmp.v2i1(<2 x i1> %va, <2 x i1> %vb, metadata !"ult", <2 x i1> %m, i32 %evl)
@@ -137,7 +137,7 @@ define <2 x i1> @icmp_ult_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 z
 define <4 x i1> @icmp_ult_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_ult_vv_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmandn.mm v0, v8, v0
 ; CHECK-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.icmp.v4i1(<4 x i1> %va, <4 x i1> %vb, metadata !"ult", <4 x i1> %m, i32 %evl)
@@ -147,7 +147,7 @@ define <4 x i1> @icmp_ult_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 z
 define <8 x i1> @icmp_ult_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_ult_vv_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmandn.mm v0, v8, v0
 ; CHECK-NEXT:    ret
   %v = call <8 x i1> @llvm.vp.icmp.v8i1(<8 x i1> %va, <8 x i1> %vb, metadata !"ult", <8 x i1> %m, i32 %evl)
@@ -157,7 +157,7 @@ define <8 x i1> @icmp_ult_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 z
 define <16 x i1> @icmp_ult_vv_v16i1(<16 x i1> %va, <16 x i1> %vb, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_ult_vv_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmandn.mm v0, v8, v0
 ; CHECK-NEXT:    ret
   %v = call <16 x i1> @llvm.vp.icmp.v16i1(<16 x i1> %va, <16 x i1> %vb, metadata !"ult", <16 x i1> %m, i32 %evl)
@@ -167,7 +167,7 @@ define <16 x i1> @icmp_ult_vv_v16i1(<16 x i1> %va, <16 x i1> %vb, <16 x i1> %m, 
 define <2 x i1> @icmp_sgt_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_sgt_vv_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmandn.mm v0, v8, v0
 ; CHECK-NEXT:    ret
   %v = call <2 x i1> @llvm.vp.icmp.v2i1(<2 x i1> %va, <2 x i1> %vb, metadata !"sgt", <2 x i1> %m, i32 %evl)
@@ -177,7 +177,7 @@ define <2 x i1> @icmp_sgt_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 z
 define <4 x i1> @icmp_sgt_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_sgt_vv_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmandn.mm v0, v8, v0
 ; CHECK-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.icmp.v4i1(<4 x i1> %va, <4 x i1> %vb, metadata !"sgt", <4 x i1> %m, i32 %evl)
@@ -187,7 +187,7 @@ define <4 x i1> @icmp_sgt_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 z
 define <8 x i1> @icmp_sgt_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_sgt_vv_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmandn.mm v0, v8, v0
 ; CHECK-NEXT:    ret
   %v = call <8 x i1> @llvm.vp.icmp.v8i1(<8 x i1> %va, <8 x i1> %vb, metadata !"sgt", <8 x i1> %m, i32 %evl)
@@ -197,7 +197,7 @@ define <8 x i1> @icmp_sgt_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 z
 define <16 x i1> @icmp_sgt_vv_v16i1(<16 x i1> %va, <16 x i1> %vb, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_sgt_vv_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmandn.mm v0, v8, v0
 ; CHECK-NEXT:    ret
   %v = call <16 x i1> @llvm.vp.icmp.v16i1(<16 x i1> %va, <16 x i1> %vb, metadata !"sgt", <16 x i1> %m, i32 %evl)
@@ -207,7 +207,7 @@ define <16 x i1> @icmp_sgt_vv_v16i1(<16 x i1> %va, <16 x i1> %vb, <16 x i1> %m, 
 define <2 x i1> @icmp_ugt_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_ugt_vv_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmandn.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <2 x i1> @llvm.vp.icmp.v2i1(<2 x i1> %va, <2 x i1> %vb, metadata !"ugt", <2 x i1> %m, i32 %evl)
@@ -217,7 +217,7 @@ define <2 x i1> @icmp_ugt_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 z
 define <4 x i1> @icmp_ugt_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_ugt_vv_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmandn.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.icmp.v4i1(<4 x i1> %va, <4 x i1> %vb, metadata !"ugt", <4 x i1> %m, i32 %evl)
@@ -227,7 +227,7 @@ define <4 x i1> @icmp_ugt_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 z
 define <8 x i1> @icmp_ugt_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_ugt_vv_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmandn.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <8 x i1> @llvm.vp.icmp.v8i1(<8 x i1> %va, <8 x i1> %vb, metadata !"ugt", <8 x i1> %m, i32 %evl)
@@ -237,7 +237,7 @@ define <8 x i1> @icmp_ugt_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 z
 define <16 x i1> @icmp_ugt_vv_v16i1(<16 x i1> %va, <16 x i1> %vb, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_ugt_vv_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmandn.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <16 x i1> @llvm.vp.icmp.v16i1(<16 x i1> %va, <16 x i1> %vb, metadata !"ugt", <16 x i1> %m, i32 %evl)
@@ -247,8 +247,8 @@ define <16 x i1> @icmp_ugt_vv_v16i1(<16 x i1> %va, <16 x i1> %vb, <16 x i1> %m, 
 define <2 x i1> @icmp_sle_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_sle_vv_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
-; CHECK-NEXT:    vmxnor.mm v0, v8, v0
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vmorn.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <2 x i1> @llvm.vp.icmp.v2i1(<2 x i1> %va, <2 x i1> %vb, metadata !"sle", <2 x i1> %m, i32 %evl)
   ret <2 x i1> %v
@@ -257,8 +257,8 @@ define <2 x i1> @icmp_sle_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 z
 define <4 x i1> @icmp_sle_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_sle_vv_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
-; CHECK-NEXT:    vmxnor.mm v0, v8, v0
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vmorn.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.icmp.v4i1(<4 x i1> %va, <4 x i1> %vb, metadata !"sle", <4 x i1> %m, i32 %evl)
   ret <4 x i1> %v
@@ -267,8 +267,8 @@ define <4 x i1> @icmp_sle_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 z
 define <8 x i1> @icmp_sle_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_sle_vv_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
-; CHECK-NEXT:    vmxnor.mm v0, v8, v0
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmorn.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <8 x i1> @llvm.vp.icmp.v8i1(<8 x i1> %va, <8 x i1> %vb, metadata !"sle", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
@@ -277,8 +277,8 @@ define <8 x i1> @icmp_sle_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 z
 define <16 x i1> @icmp_sle_vv_v16i1(<16 x i1> %va, <16 x i1> %vb, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_sle_vv_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
-; CHECK-NEXT:    vmxnor.mm v0, v8, v0
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vmorn.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <16 x i1> @llvm.vp.icmp.v16i1(<16 x i1> %va, <16 x i1> %vb, metadata !"sle", <16 x i1> %m, i32 %evl)
   ret <16 x i1> %v
@@ -287,8 +287,8 @@ define <16 x i1> @icmp_sle_vv_v16i1(<16 x i1> %va, <16 x i1> %vb, <16 x i1> %m, 
 define <2 x i1> @icmp_ule_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_ule_vv_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
-; CHECK-NEXT:    vmxnor.mm v0, v0, v8
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vmorn.mm v0, v8, v0
 ; CHECK-NEXT:    ret
   %v = call <2 x i1> @llvm.vp.icmp.v2i1(<2 x i1> %va, <2 x i1> %vb, metadata !"ule", <2 x i1> %m, i32 %evl)
   ret <2 x i1> %v
@@ -297,8 +297,8 @@ define <2 x i1> @icmp_ule_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 z
 define <4 x i1> @icmp_ule_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_ule_vv_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
-; CHECK-NEXT:    vmxnor.mm v0, v0, v8
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vmorn.mm v0, v8, v0
 ; CHECK-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.icmp.v4i1(<4 x i1> %va, <4 x i1> %vb, metadata !"ule", <4 x i1> %m, i32 %evl)
   ret <4 x i1> %v
@@ -307,8 +307,8 @@ define <4 x i1> @icmp_ule_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 z
 define <8 x i1> @icmp_ule_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_ule_vv_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
-; CHECK-NEXT:    vmxnor.mm v0, v0, v8
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmorn.mm v0, v8, v0
 ; CHECK-NEXT:    ret
   %v = call <8 x i1> @llvm.vp.icmp.v8i1(<8 x i1> %va, <8 x i1> %vb, metadata !"ule", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
@@ -317,8 +317,8 @@ define <8 x i1> @icmp_ule_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 z
 define <16 x i1> @icmp_ule_vv_v16i1(<16 x i1> %va, <16 x i1> %vb, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_ule_vv_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
-; CHECK-NEXT:    vmxnor.mm v0, v0, v8
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vmorn.mm v0, v8, v0
 ; CHECK-NEXT:    ret
   %v = call <16 x i1> @llvm.vp.icmp.v16i1(<16 x i1> %va, <16 x i1> %vb, metadata !"ule", <16 x i1> %m, i32 %evl)
   ret <16 x i1> %v
@@ -327,8 +327,8 @@ define <16 x i1> @icmp_ule_vv_v16i1(<16 x i1> %va, <16 x i1> %vb, <16 x i1> %m, 
 define <2 x i1> @icmp_sge_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_sge_vv_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
-; CHECK-NEXT:    vmxnor.mm v0, v0, v8
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vmorn.mm v0, v8, v0
 ; CHECK-NEXT:    ret
   %v = call <2 x i1> @llvm.vp.icmp.v2i1(<2 x i1> %va, <2 x i1> %vb, metadata !"sge", <2 x i1> %m, i32 %evl)
   ret <2 x i1> %v
@@ -337,8 +337,8 @@ define <2 x i1> @icmp_sge_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 z
 define <4 x i1> @icmp_sge_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_sge_vv_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
-; CHECK-NEXT:    vmxnor.mm v0, v0, v8
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vmorn.mm v0, v8, v0
 ; CHECK-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.icmp.v4i1(<4 x i1> %va, <4 x i1> %vb, metadata !"sge", <4 x i1> %m, i32 %evl)
   ret <4 x i1> %v
@@ -347,8 +347,8 @@ define <4 x i1> @icmp_sge_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 z
 define <8 x i1> @icmp_sge_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_sge_vv_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
-; CHECK-NEXT:    vmxnor.mm v0, v0, v8
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmorn.mm v0, v8, v0
 ; CHECK-NEXT:    ret
   %v = call <8 x i1> @llvm.vp.icmp.v8i1(<8 x i1> %va, <8 x i1> %vb, metadata !"sge", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
@@ -357,8 +357,8 @@ define <8 x i1> @icmp_sge_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 z
 define <16 x i1> @icmp_sge_vv_v16i1(<16 x i1> %va, <16 x i1> %vb, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_sge_vv_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
-; CHECK-NEXT:    vmxnor.mm v0, v0, v8
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vmorn.mm v0, v8, v0
 ; CHECK-NEXT:    ret
   %v = call <16 x i1> @llvm.vp.icmp.v16i1(<16 x i1> %va, <16 x i1> %vb, metadata !"sge", <16 x i1> %m, i32 %evl)
   ret <16 x i1> %v
@@ -367,8 +367,8 @@ define <16 x i1> @icmp_sge_vv_v16i1(<16 x i1> %va, <16 x i1> %vb, <16 x i1> %m, 
 define <2 x i1> @icmp_uge_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_uge_vv_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
-; CHECK-NEXT:    vmxnor.mm v0, v8, v0
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vmorn.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <2 x i1> @llvm.vp.icmp.v2i1(<2 x i1> %va, <2 x i1> %vb, metadata !"uge", <2 x i1> %m, i32 %evl)
   ret <2 x i1> %v
@@ -377,8 +377,8 @@ define <2 x i1> @icmp_uge_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 z
 define <4 x i1> @icmp_uge_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_uge_vv_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
-; CHECK-NEXT:    vmxnor.mm v0, v8, v0
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vmorn.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.icmp.v4i1(<4 x i1> %va, <4 x i1> %vb, metadata !"uge", <4 x i1> %m, i32 %evl)
   ret <4 x i1> %v
@@ -387,8 +387,8 @@ define <4 x i1> @icmp_uge_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 z
 define <8 x i1> @icmp_uge_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_uge_vv_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
-; CHECK-NEXT:    vmxnor.mm v0, v8, v0
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmorn.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <8 x i1> @llvm.vp.icmp.v8i1(<8 x i1> %va, <8 x i1> %vb, metadata !"uge", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
@@ -397,8 +397,8 @@ define <8 x i1> @icmp_uge_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 z
 define <16 x i1> @icmp_uge_vv_v16i1(<16 x i1> %va, <16 x i1> %vb, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_uge_vv_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
-; CHECK-NEXT:    vmxnor.mm v0, v8, v0
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vmorn.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <16 x i1> @llvm.vp.icmp.v16i1(<16 x i1> %va, <16 x i1> %vb, metadata !"uge", <16 x i1> %m, i32 %evl)
   ret <16 x i1> %v

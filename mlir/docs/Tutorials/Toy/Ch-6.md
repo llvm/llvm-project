@@ -34,7 +34,7 @@ static FlatSymbolRefAttr getOrInsertPrintf(PatternRewriter &rewriter,
                                            LLVM::LLVMDialect *llvmDialect) {
   auto *context = module.getContext();
   if (module.lookupSymbol<LLVM::LLVMFuncOp>("printf"))
-    return SymbolRefAttr::get("printf", context);
+    return SymbolRefAttr::get(context, "printf");
 
   // Create a function declaration for printf, the signature is:
   //   * `i32 (i8*, ...)`
@@ -48,7 +48,7 @@ static FlatSymbolRefAttr getOrInsertPrintf(PatternRewriter &rewriter,
   PatternRewriter::InsertionGuard insertGuard(rewriter);
   rewriter.setInsertionPointToStart(module.getBody());
   LLVM::LLVMFuncOp::create(rewriter, module.getLoc(), "printf", llvmFnType);
-  return SymbolRefAttr::get("printf", context);
+  return SymbolRefAttr::get(context, "printf");
 }
 ```
 

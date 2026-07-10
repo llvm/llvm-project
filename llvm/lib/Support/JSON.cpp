@@ -137,17 +137,16 @@ void Value::moveFrom(const Value &&M) {
     break;
   case T_String:
     create<std::string>(std::move(M.as<std::string>()));
-    M.Type = T_Null;
     break;
   case T_Object:
     create<json::Object>(std::move(M.as<json::Object>()));
-    M.Type = T_Null;
     break;
   case T_Array:
     create<json::Array>(std::move(M.as<json::Array>()));
-    M.Type = T_Null;
     break;
   }
+  const_cast<Value &>(M).destroy();
+  M.Type = T_Null;
 }
 
 void Value::destroy() {
@@ -174,6 +173,13 @@ void Value::destroy() {
 }
 
 void Value::print(llvm::raw_ostream &OS) const { OS << *this; }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void Value::dump() const {
+  print(llvm::dbgs());
+  llvm::dbgs() << '\n';
+}
+#endif
 
 bool operator==(const Value &L, const Value &R) {
   if (L.kind() != R.kind())
@@ -681,7 +687,13 @@ Expected<Value> parse(StringRef JSON) {
         return std::move(E);
   return P.takeError();
 }
+
 char ParseError::ID = 0;
+
+// Defined out-of-line to place vtable in this compilation unit.
+void ParseError::log(llvm::raw_ostream &OS) const {
+  OS << llvm::formatv("[{0}:{1}, byte={2}]: {3}", Line, Column, Offset, Msg);
+}
 
 bool isUTF8(llvm::StringRef S, size_t *ErrOffset) {
   // Fast-path for ASCII, which is valid UTF-8.

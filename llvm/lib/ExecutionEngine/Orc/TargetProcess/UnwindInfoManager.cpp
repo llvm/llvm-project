@@ -20,7 +20,7 @@ using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::orc::shared;
 
-static orc::shared::CWrapperFunctionResult
+static orc::shared::CWrapperFunctionBuffer
 llvm_orc_rt_alt_UnwindInfoManager_register(const char *ArgData,
                                            size_t ArgSize) {
   using SPSSig = SPSError(SPSSequence<SPSExecutorAddrRange>, SPSExecutorAddr,
@@ -37,7 +37,7 @@ llvm_orc_rt_alt_UnwindInfoManager_register(const char *ArgData,
       .release();
 }
 
-static orc::shared::CWrapperFunctionResult
+static orc::shared::CWrapperFunctionBuffer
 llvm_orc_rt_alt_UnwindInfoManager_deregister(const char *ArgData,
                                              size_t ArgSize) {
   using SPSSig = SPSError(SPSSequence<SPSExecutorAddrRange>);
@@ -110,6 +110,16 @@ void UnwindInfoManager::addBootstrapSymbols(StringMap<ExecutorAddr> &M) {
       ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_register);
   M[rt_alt::UnwindInfoManagerDeregisterActionName] =
       ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_deregister);
+
+  {
+    // Also provide symbols defined by StandaloneMachOUnwindInfoRegistrar
+    // in the new ORC runtime.
+    const auto &SNs = rt::orc_rt_MachOUnwindInfoRegistrarSPSSymbols;
+    M[SNs.RegisterSectionsName] =
+        ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_register);
+    M[SNs.DeregisterSectionsName] =
+        ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_deregister);
+  }
 }
 
 Error UnwindInfoManager::registerSections(

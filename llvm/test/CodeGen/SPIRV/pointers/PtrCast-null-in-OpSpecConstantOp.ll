@@ -1,10 +1,11 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-DAG: %[[Array:.*]] = OpTypeArray %[[#]] %[[#]]
+; CHECK-DAG: %[[Char:.*]] = OpTypeInt 8 0
+; CHECK-DAG: %[[GenPtr:.*]] = OpTypePointer Generic %[[Char]]
+; CHECK-DAG: %[[Array:.*]] = OpTypeArray %[[GenPtr]] %[[#]]
 ; CHECK-DAG: %[[Struct:.*]] = OpTypeStruct %[[Array]]
-; CHECK-DAG: %[[Zero:.*]] = OpTypeInt 64 0
-; CHECK-DAG: %[[Null:.*]] = OpConstantNull %[[Zero]]
+; CHECK-DAG: %[[Null:.*]] = OpConstantNull %[[GenPtr]]
 ; CHECK-DAG: %[[R:.*]] = OpConstantComposite %[[Array]] %[[Null]]
 ; CHECK-DAG: %[[#]] = OpConstantComposite %[[Struct]] %[[R]]
 

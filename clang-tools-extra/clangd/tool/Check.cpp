@@ -25,7 +25,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "../clang-tidy/ClangTidyModule.h"
-#include "../clang-tidy/ClangTidyModuleRegistry.h"
 #include "../clang-tidy/ClangTidyOptions.h"
 #include "../clang-tidy/GlobList.h"
 #include "ClangdLSPServer.h"
@@ -169,6 +168,8 @@ public:
   bool buildCommand(const ThreadsafeFS &TFS) {
     log("Loading compilation database...");
     DirectoryBasedGlobalCompilationDatabase::Options CDBOpts(TFS);
+    if (Opts.StrongWorkspaceMode)
+      CDBOpts.applyFallbackWorkingDirectory(Opts.WorkspaceRoot);
     CDBOpts.CompileCommandsDir =
         Config::current().CompileFlags.CDBSearch.FixedCDBPath;
     BaseCDB =
@@ -178,8 +179,10 @@ public:
         getSystemIncludeExtractor(llvm::ArrayRef(Opts.QueryDriverGlobs));
     if (Opts.ResourceDir)
       Mangler.ResourceDir = *Opts.ResourceDir;
+
     CDB = std::make_unique<OverlayCDB>(
-        BaseCDB.get(), std::vector<std::string>{}, std::move(Mangler));
+        BaseCDB.get(), std::vector<std::string>{}, std::move(Mangler),
+        CDBOpts.FallbackWorkingDirectory);
 
     if (auto TrueCmd = CDB->getCompileCommand(File)) {
       Cmd = std::move(*TrueCmd);
@@ -502,7 +505,7 @@ bool check(llvm::StringRef File, const ThreadsafeFS &TFS,
                  config::DiagnosticCallback Diag) const override {
       config::Fragment F;
       // If we're timing clang-tidy checks, implicitly disabling the slow ones
-      // is counterproductive! 
+      // is counterproductive!
       if (CheckTidyTime.getNumOccurrences())
         F.Diagnostics.ClangTidy.FastCheckFilter.emplace("None");
       return {std::move(F).compile(Diag)};

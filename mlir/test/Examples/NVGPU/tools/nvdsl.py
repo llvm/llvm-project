@@ -14,22 +14,20 @@ DUMP_ONLY = os.getenv("MLIR_NVDSL_PRINT_IR") == "1"
 
 def const(value: int, ty=None):
     ty = T.index() if ty is None else ty
-    if isinstance(value, ir.Value) and (
-        value.type.isinstance(value.type) or T.bool().isinstance(value.type)
-    ):
+    if isinstance(value, ir.Value):
         return value
     return arith.constant(ty, value)
 
 
 def get_type_size(ty):
-    if ir.MemRefType.isinstance(ty):
+    if isinstance(ty, ir.MemRefType):
         size = get_type_size(ty.element_type)
         for sz in ty.shape:
             size *= sz
         return size
-    if ir.FloatType.isinstance(ty):
+    if isinstance(ty, ir.FloatType):
         return ir.FloatType(ty).width // 8
-    if ir.IntegerType.isinstance(ty):
+    if isinstance(ty, ir.IntegerType):
         return ir.IntegerType(ty).width // 8
     raise NotImplementedError(ty)
 
@@ -341,15 +339,17 @@ class NVDSL:
             def _binary_op(lhs, rhs, op: str, predAtt="") -> "ArithValue":
                 """Generate MLIR's Arith dialects binary operations."""
                 rhs = const(rhs)
-                if arith._is_float_type(lhs.type) and arith._is_float_type(rhs.type):
+                if isinstance(lhs.type, ir.FloatType) and isinstance(
+                    rhs.type, ir.FloatType
+                ):
                     op += "F"
                     if op.startswith("Cmp"):
                         predicateAttr = getattr(arith, f"CmpFPredicate").__dict__[
                             predAtt
                         ]
-                elif arith._is_integer_like_type(
-                    lhs.type
-                ) and arith._is_integer_like_type(lhs.type):
+                elif isinstance(
+                    lhs.type, (ir.IntegerType, ir.IndexType)
+                ) and isinstance(lhs.type, (ir.IntegerType, ir.IndexType)):
                     if op == "Div" or op == "Rem":
                         op += "U"
                     op += "I"

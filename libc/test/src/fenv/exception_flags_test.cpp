@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#undef LIBC_MATH_USE_SYSTEM_FENV
+
 #include "hdr/types/fexcept_t.h"
 #include "src/fenv/fegetexceptflag.h"
 #include "src/fenv/fesetexceptflag.h"

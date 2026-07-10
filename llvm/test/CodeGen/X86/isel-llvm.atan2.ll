@@ -59,27 +59,23 @@ define double @use_atan2f64(double %a, double %b) nounwind {
 ;
 ; GISEL-X86-LABEL: use_atan2f64:
 ; GISEL-X86:       # %bb.0:
-; GISEL-X86-NEXT:    pushl %edi
 ; GISEL-X86-NEXT:    pushl %esi
-; GISEL-X86-NEXT:    subl $20, %esp
+; GISEL-X86-NEXT:    subl $24, %esp
 ; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; GISEL-X86-NEXT:    movl 4(%eax), %eax
 ; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %edx
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; GISEL-X86-NEXT:    movl 4(%edx), %edx
-; GISEL-X86-NEXT:    xorl %edi, %edi
-; GISEL-X86-NEXT:    addl %esp, %edi
 ; GISEL-X86-NEXT:    movl %ecx, (%esp)
-; GISEL-X86-NEXT:    movl %eax, 4(%edi)
+; GISEL-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    movl $8, %eax
 ; GISEL-X86-NEXT:    addl %esp, %eax
 ; GISEL-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    movl %edx, 4(%eax)
 ; GISEL-X86-NEXT:    calll atan2
-; GISEL-X86-NEXT:    addl $20, %esp
+; GISEL-X86-NEXT:    addl $24, %esp
 ; GISEL-X86-NEXT:    popl %esi
-; GISEL-X86-NEXT:    popl %edi
 ; GISEL-X86-NEXT:    retl
 ;
 ; GISEL-X64-LABEL: use_atan2f64:

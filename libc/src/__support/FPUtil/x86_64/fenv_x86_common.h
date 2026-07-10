@@ -75,7 +75,7 @@ struct RoundingControl {
                                                 << X87_BIT_POSITION;
   static constexpr uint16_t MXCSR_ROUNDING_MASK = ROUNDING_MASK
                                                   << MXCSR_BIT_POSITION;
-  static constexpr uint16_t ERROR = 0xFFFF;
+  static constexpr uint16_t RC_ERROR = 0xFFFF;
 };
 
 // Exception flags are individual bits in the corresponding registers.
@@ -127,7 +127,7 @@ LIBC_INLINE static uint16_t get_rounding_control_from_macro(int rounding) {
   case FE_TOWARDZERO:
     return RoundingControl::TOWARD_ZERO;
   default:
-    return RoundingControl::ERROR;
+    return RoundingControl::RC_ERROR;
   }
 }
 

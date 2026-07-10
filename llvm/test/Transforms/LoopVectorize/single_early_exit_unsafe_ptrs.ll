@@ -141,3 +141,41 @@ loop.end:
   %retval = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
   ret i64 %retval
 }
+
+define i64 @ptr_scev_with_offset(ptr %base, i64 %offset) {
+; CHECK-LABEL: define i64 @ptr_scev_with_offset(
+; CHECK-SAME: ptr [[BASE:%.*]], i64 [[OFFSET:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP_INC:%.*]] ]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr [[BASE]], i64 [[OFFSET]]
+; CHECK-NEXT:    [[LD:%.*]] = load i8, ptr [[PTR]], align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[LD]], 42
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_INC]], label [[LOOP_END:%.*]]
+; CHECK:       loop.inc:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 100
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOP_END]]
+; CHECK:       loop.end:
+; CHECK-NEXT:    [[INDEX_LCSSA:%.*]] = phi i64 [ [[INDEX]], [[LOOP_INC]] ], [ [[INDEX]], [[LOOP]] ]
+; CHECK-NEXT:    ret i64 [[INDEX_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop.inc ]
+  %ptr = getelementptr inbounds i8, ptr %base, i64 %offset
+  %ld = load i8, ptr %ptr, align 1
+  %cmp = icmp eq i8 %ld, 42
+  br i1 %cmp, label %loop.inc, label %loop.end
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 100
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end:
+  ret i64 %index
+}

@@ -214,7 +214,7 @@ public:
 
 class BlockInCriticalSectionChecker : public Checker<check::PostCall> {
 private:
-  const std::array<MutexDescriptor, 8> MutexDescriptors{
+  const std::array<MutexDescriptor, 9> MutexDescriptors{
       // NOTE: There are standard library implementations where some methods
       // of `std::mutex` are inherited from an implementation detail base
       // class, and those aren't matched by the name specification {"std",
@@ -238,7 +238,8 @@ private:
       FirstArgMutexDescriptor({CDM::CLibrary, {"mtx_timedlock"}, 1},
                               {CDM::CLibrary, {"mtx_unlock"}, 1}),
       RAIIMutexDescriptor("lock_guard"),
-      RAIIMutexDescriptor("unique_lock")};
+      RAIIMutexDescriptor("unique_lock"),
+      RAIIMutexDescriptor("scoped_lock")};
 
   const CallDescriptionSet BlockingFunctions{{CDM::CLibrary, {"sleep"}},
                                              {CDM::CLibrary, {"getc"}},
@@ -280,19 +281,6 @@ public:
 } // end anonymous namespace
 
 REGISTER_LIST_WITH_PROGRAMSTATE(ActiveCritSections, CritSectionMarker)
-
-// Iterator traits for ImmutableList data structure
-// that enable the use of STL algorithms.
-// TODO: Move these to llvm::ImmutableList when overhauling immutable data
-// structures for proper iterator concept support.
-template <>
-struct std::iterator_traits<llvm::ImmutableList<CritSectionMarker>::iterator> {
-  using iterator_category = std::forward_iterator_tag;
-  using value_type = CritSectionMarker;
-  using difference_type = std::ptrdiff_t;
-  using reference = CritSectionMarker &;
-  using pointer = CritSectionMarker *;
-};
 
 std::optional<MutexDescriptor>
 BlockInCriticalSectionChecker::checkDescriptorMatch(const CallEvent &Call,

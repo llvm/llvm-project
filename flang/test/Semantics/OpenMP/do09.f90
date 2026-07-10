@@ -5,16 +5,18 @@
 
 program omp_do
   integer ::  i = 0,k
+  !ERROR: This construct requires a canonical loop nest
   !$omp do
-  !ERROR: The associated loop of a loop-associated directive cannot be a DO WHILE.
+  !BECAUSE: DO WHILE loop is not a valid affected loop
   do while (i <= 10)
     print *, "it",i
     i = i+1
   end do
   !$omp end do
 
+  !ERROR: This construct requires a canonical loop nest
   !$omp do
-  !ERROR: The associated loop of a loop-associated directive cannot be a DO WHILE.
+  !BECAUSE: DO WHILE loop is not a valid affected loop
   do while (i <= 10)
     do while (j <= 10)
       print *, "it",k

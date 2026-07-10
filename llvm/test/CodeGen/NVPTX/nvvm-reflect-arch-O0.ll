@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_52 -mattr=+ptx64 -O0 | FileCheck %s --check-prefixes=SM_52,COMMON
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx64 -O0 | FileCheck %s --check-prefixes=SM_70,COMMON
-; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx72 -O0 | FileCheck %s --check-prefixes=SM_90,COMMON
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90 -O0 | FileCheck %s --check-prefixes=SM_90,COMMON
 
 @.str = private unnamed_addr constant [12 x i8] c"__CUDA_ARCH\00"
 @.str1 = constant [11 x i8] c"__CUDA_FTZ\00"

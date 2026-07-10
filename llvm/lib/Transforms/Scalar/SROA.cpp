@@ -44,7 +44,7 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/Config/llvm-config.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantFolder.h"
@@ -91,7 +91,6 @@
 #include <cstdint>
 #include <cstring>
 #include <iterator>
-#include <queue>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -178,6 +177,7 @@ class SROA {
   DomTreeUpdater *const DTU;
   AssumptionCache *const AC;
   const bool PreserveCFG;
+  const bool AggregateToVector;
 
   /// Worklist of alloca instructions to simplify.
   ///
@@ -240,9 +240,10 @@ class SROA {
 
 public:
   SROA(LLVMContext *C, DomTreeUpdater *DTU, AssumptionCache *AC,
-       SROAOptions PreserveCFG_)
+       SROAOptions Options)
       : C(C), DTU(DTU), AC(AC),
-        PreserveCFG(PreserveCFG_ == SROAOptions::PreserveCFG) {}
+        PreserveCFG(Options.CFG == SROAOptions::PreserveCFG),
+        AggregateToVector(Options.AggregateToVector) {}
 
   /// Main run method used by both the SROAPass and by the legacy pass.
   std::pair<bool /*Changed*/, bool /*CFGChanged*/> runSROA(Function &F);
@@ -251,7 +252,8 @@ private:
   friend class AllocaSliceRewriter;
 
   bool presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS);
-  AllocaInst *rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P);
+  std::pair<AllocaInst *, uint64_t>
+  rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P);
   bool splitAlloca(AllocaInst &AI, AllocaSlices &AS);
   bool propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS);
   std::pair<bool /*Changed*/, bool /*CFGChanged*/> runOnAlloca(AllocaInst &AI);
@@ -1032,8 +1034,7 @@ class AllocaSlices::SliceBuilder : public PtrUseVisitor<SliceBuilder> {
 public:
   SliceBuilder(const DataLayout &DL, AllocaInst &AI, AllocaSlices &AS)
       : PtrUseVisitor<SliceBuilder>(DL),
-        AllocSize(DL.getTypeAllocSize(AI.getAllocatedType()).getFixedValue()),
-        AS(AS) {}
+        AllocSize(AI.getAllocationSize(DL)->getFixedValue()), AS(AS) {}
 
 private:
   void markAsDead(Instruction &I) {
@@ -1207,8 +1208,7 @@ private:
     // FIXME: Yet another place we really should bypass this when
     // instrumenting for ASan.
     if (Offset.uge(AllocSize)) {
-      SmallDenseMap<Instruction *, unsigned>::iterator MTPI =
-          MemTransferSliceMap.find(&II);
+      auto MTPI = MemTransferSliceMap.find(&II);
       if (MTPI != MemTransferSliceMap.end())
         AS.Slices[MTPI->second].kill();
       return markAsDead(II);
@@ -1340,8 +1340,7 @@ private:
     // If this is a PHI node before a catchswitch, we cannot insert any non-PHI
     // instructions in this BB, which may be required during rewriting. Bail out
     // on these cases.
-    if (isa<PHINode>(I) &&
-        I.getParent()->getFirstInsertionPt() == I.getParent()->end())
+    if (isa<PHINode>(I) && !I.getParent()->hasInsertionPt())
       return PI.setAborted(&I);
 
     // TODO: We could use simplifyInstruction here to fold PHINodes and
@@ -1821,9 +1820,9 @@ static void rewriteMemOpOfSelect(SelectInst &SI, T &I,
                               SI.getMetadata(LLVMContext::MD_prof), &DTU,
                               /*LI=*/nullptr, /*ThenBlock=*/nullptr);
     if (Spec.isSpeculatable(/*isTrueVal=*/true))
-      cast<BranchInst>(Head->getTerminator())->swapSuccessors();
+      cast<CondBrInst>(Head->getTerminator())->swapSuccessors();
   }
-  auto *HeadBI = cast<BranchInst>(Head->getTerminator());
+  auto *HeadBI = cast<CondBrInst>(Head->getTerminator());
   Spec = {}; // Do not use `Spec` beyond this point.
   BasicBlock *Tail = I.getParent();
   Tail->setName(Head->getName() + ".cont");
@@ -2009,99 +2008,6 @@ static bool canConvertValue(const DataLayout &DL, Type *OldTy, Type *NewTy,
     return false;
 
   return true;
-}
-
-/// Generic routine to convert an SSA value to a value of a different
-/// type.
-///
-/// This will try various different casting techniques, such as bitcasts,
-/// inttoptr, and ptrtoint casts. Use the \c canConvertValue predicate to test
-/// two types for viability with this routine.
-static Value *convertValue(const DataLayout &DL, IRBuilderTy &IRB, Value *V,
-                           Type *NewTy) {
-  Type *OldTy = V->getType();
-
-#ifndef NDEBUG
-  BasicBlock *BB = IRB.GetInsertBlock();
-  assert(BB && BB->getParent() && "VScale unknown!");
-  unsigned VScale = BB->getParent()->getVScaleValue();
-  assert(canConvertValue(DL, OldTy, NewTy, VScale) &&
-         "Value not convertable to type");
-#endif
-
-  if (OldTy == NewTy)
-    return V;
-
-  assert(!(isa<IntegerType>(OldTy) && isa<IntegerType>(NewTy)) &&
-         "Integer types must be the exact same to convert.");
-
-  // A variant of bitcast that supports a mixture of fixed and scalable types
-  // that are know to have the same size.
-  auto CreateBitCastLike = [&IRB](Value *In, Type *Ty) -> Value * {
-    Type *InTy = In->getType();
-    if (InTy == Ty)
-      return In;
-
-    if (isa<FixedVectorType>(InTy) && isa<ScalableVectorType>(Ty)) {
-      // For vscale_range(2) expand <4 x i32> to <vscale x 4 x i16> -->
-      //   <4 x i32> to <vscale x 2 x i32> to <vscale x 4 x i16>
-      auto *VTy = VectorType::getWithSizeAndScalar(cast<VectorType>(Ty), InTy);
-      return IRB.CreateBitCast(IRB.CreateInsertVector(VTy,
-                                                      PoisonValue::get(VTy), In,
-                                                      IRB.getInt64(0)),
-                               Ty);
-    }
-
-    if (isa<ScalableVectorType>(InTy) && isa<FixedVectorType>(Ty)) {
-      // For vscale_range(2) expand <vscale x 4 x i16> to <4 x i32> -->
-      //   <vscale x 4 x i16> to <vscale x 2 x i32> to <4 x i32>
-      auto *VTy = VectorType::getWithSizeAndScalar(cast<VectorType>(InTy), Ty);
-      return IRB.CreateExtractVector(Ty, IRB.CreateBitCast(In, VTy),
-                                     IRB.getInt64(0));
-    }
-
-    return IRB.CreateBitCast(In, Ty);
-  };
-
-  // See if we need inttoptr for this type pair. May require additional bitcast.
-  if (OldTy->isIntOrIntVectorTy() && NewTy->isPtrOrPtrVectorTy()) {
-    // Expand <2 x i32> to i8* --> <2 x i32> to i64 to i8*
-    // Expand i128 to <2 x i8*> --> i128 to <2 x i64> to <2 x i8*>
-    // Expand <4 x i32> to <2 x i8*> --> <4 x i32> to <2 x i64> to <2 x i8*>
-    // Directly handle i64 to i8*
-    return IRB.CreateIntToPtr(CreateBitCastLike(V, DL.getIntPtrType(NewTy)),
-                              NewTy);
-  }
-
-  // See if we need ptrtoint for this type pair. May require additional bitcast.
-  if (OldTy->isPtrOrPtrVectorTy() && NewTy->isIntOrIntVectorTy()) {
-    // Expand <2 x i8*> to i128 --> <2 x i8*> to <2 x i64> to i128
-    // Expand i8* to <2 x i32> --> i8* to i64 to <2 x i32>
-    // Expand <2 x i8*> to <4 x i32> --> <2 x i8*> to <2 x i64> to <4 x i32>
-    // Expand i8* to i64 --> i8* to i64 to i64
-    return CreateBitCastLike(IRB.CreatePtrToInt(V, DL.getIntPtrType(OldTy)),
-                             NewTy);
-  }
-
-  if (OldTy->isPtrOrPtrVectorTy() && NewTy->isPtrOrPtrVectorTy()) {
-    unsigned OldAS = OldTy->getPointerAddressSpace();
-    unsigned NewAS = NewTy->getPointerAddressSpace();
-    // To convert pointers with different address spaces (they are already
-    // checked convertible, i.e. they have the same pointer size), so far we
-    // cannot use `bitcast` (which has restrict on the same address space) or
-    // `addrspacecast` (which is not always no-op casting). Instead, use a pair
-    // of no-op `ptrtoint`/`inttoptr` casts through an integer with the same bit
-    // size.
-    if (OldAS != NewAS) {
-      assert(DL.getPointerSize(OldAS) == DL.getPointerSize(NewAS));
-      return IRB.CreateIntToPtr(
-          CreateBitCastLike(IRB.CreatePtrToInt(V, DL.getIntPtrType(OldTy)),
-                            DL.getIntPtrType(NewTy)),
-          NewTy);
-    }
-  }
-
-  return CreateBitCastLike(V, NewTy);
 }
 
 /// Test whether the given slice use can be promoted to a vector.
@@ -2644,39 +2550,37 @@ static Value *insertVector(IRBuilderTy &IRB, Value *Old, Value *V,
     return V;
   }
 
-  assert(cast<FixedVectorType>(Ty)->getNumElements() <=
-             cast<FixedVectorType>(VecTy)->getNumElements() &&
-         "Too many elements!");
-  if (cast<FixedVectorType>(Ty)->getNumElements() ==
-      cast<FixedVectorType>(VecTy)->getNumElements()) {
+  unsigned NumSubElements = cast<FixedVectorType>(Ty)->getNumElements();
+  unsigned NumElements = cast<FixedVectorType>(VecTy)->getNumElements();
+
+  assert(NumSubElements <= NumElements && "Too many elements!");
+  if (NumSubElements == NumElements) {
     assert(V->getType() == VecTy && "Vector type mismatch");
     return V;
   }
-  unsigned EndIndex = BeginIndex + cast<FixedVectorType>(Ty)->getNumElements();
+  unsigned EndIndex = BeginIndex + NumSubElements;
 
   // When inserting a smaller vector into the larger to store, we first
   // use a shuffle vector to widen it with undef elements, and then
   // a second shuffle vector to select between the loaded vector and the
   // incoming vector.
   SmallVector<int, 8> Mask;
-  Mask.reserve(cast<FixedVectorType>(VecTy)->getNumElements());
-  for (unsigned i = 0; i != cast<FixedVectorType>(VecTy)->getNumElements(); ++i)
-    if (i >= BeginIndex && i < EndIndex)
-      Mask.push_back(i - BeginIndex);
+  Mask.reserve(NumElements);
+  for (unsigned Idx = 0; Idx != NumElements; ++Idx)
+    if (Idx >= BeginIndex && Idx < EndIndex)
+      Mask.push_back(Idx - BeginIndex);
     else
       Mask.push_back(-1);
   V = IRB.CreateShuffleVector(V, Mask, Name + ".expand");
   LLVM_DEBUG(dbgs() << "    shuffle: " << *V << "\n");
 
-  SmallVector<Constant *, 8> Mask2;
-  Mask2.reserve(cast<FixedVectorType>(VecTy)->getNumElements());
-  for (unsigned i = 0; i != cast<FixedVectorType>(VecTy)->getNumElements(); ++i)
-    Mask2.push_back(IRB.getInt1(i >= BeginIndex && i < EndIndex));
-
-  // No profiling support for vector selects.
-  V = IRB.CreateSelectWithUnknownProfile(ConstantVector::get(Mask2), V, Old,
-                                         DEBUG_TYPE, Name + "blend");
-
+  Mask.clear();
+  for (unsigned Idx = 0; Idx != NumElements; ++Idx)
+    if (Idx >= BeginIndex && Idx < EndIndex)
+      Mask.push_back(Idx);
+    else
+      Mask.push_back(Idx + NumElements);
+  V = IRB.CreateShuffleVector(V, Old, Mask, Name + "blend");
   LLVM_DEBUG(dbgs() << "    blend: " << *V << "\n");
   return V;
 }
@@ -2840,7 +2744,7 @@ class AllocaSliceRewriter : public InstVisitor<AllocaSliceRewriter, bool> {
 
 public:
   AllocaSliceRewriter(const DataLayout &DL, AllocaSlices &AS, SROA &Pass,
-                      AllocaInst &OldAI, AllocaInst &NewAI,
+                      AllocaInst &OldAI, AllocaInst &NewAI, Type *NewAllocaTy,
                       uint64_t NewAllocaBeginOffset,
                       uint64_t NewAllocaEndOffset, bool IsIntegerPromotable,
                       VectorType *PromotableVecTy,
@@ -2848,14 +2752,12 @@ public:
                       SmallSetVector<SelectInst *, 8> &SelectUsers)
       : DL(DL), AS(AS), Pass(Pass), OldAI(OldAI), NewAI(NewAI),
         NewAllocaBeginOffset(NewAllocaBeginOffset),
-        NewAllocaEndOffset(NewAllocaEndOffset),
-        NewAllocaTy(NewAI.getAllocatedType()),
-        IntTy(
-            IsIntegerPromotable
-                ? Type::getIntNTy(NewAI.getContext(),
-                                  DL.getTypeSizeInBits(NewAI.getAllocatedType())
-                                      .getFixedValue())
-                : nullptr),
+        NewAllocaEndOffset(NewAllocaEndOffset), NewAllocaTy(NewAllocaTy),
+        IntTy(IsIntegerPromotable
+                  ? Type::getIntNTy(
+                        NewAI.getContext(),
+                        DL.getTypeSizeInBits(NewAllocaTy).getFixedValue())
+                  : nullptr),
         VecTy(PromotableVecTy),
         ElementTy(VecTy ? VecTy->getElementType() : nullptr),
         ElementSize(VecTy ? DL.getTypeSizeInBits(ElementTy).getFixedValue() / 8
@@ -2900,8 +2802,10 @@ public:
     Instruction *OldUserI = cast<Instruction>(OldUse->getUser());
     IRB.SetInsertPoint(OldUserI);
     IRB.SetCurrentDebugLocation(OldUserI->getDebugLoc());
-    IRB.getInserter().SetNamePrefix(Twine(NewAI.getName()) + "." +
-                                    Twine(BeginOffset) + ".");
+    // Avoid materializing the name prefix when it is discarded anyway.
+    if (!IRB.getContext().shouldDiscardValueNames())
+      IRB.getInserter().SetNamePrefix(Twine(NewAI.getName()) + "." +
+                                      Twine(BeginOffset) + ".");
 
     CanSROA &= visit(cast<Instruction>(OldUse->getUser()));
     if (VecTy || IntTy)
@@ -2911,12 +2815,14 @@ public:
 
   /// Attempts to rewrite a partition using tree-structured merge optimization.
   ///
-  /// This function analyzes a partition to determine if it can be optimized
-  /// using a tree-structured merge pattern, where multiple non-overlapping
-  /// stores completely fill an alloca. And there is no load from the alloca in
-  /// the middle of the stores. Such patterns can be optimized by eliminating
-  /// the intermediate stores and directly constructing the final vector by
-  /// using shufflevectors.
+  /// This function handles two patterns. Both produce an O(log n) tree of
+  /// shufflevectors in place of the linear expand+blend chain that SROA would
+  /// otherwise emit for each partial store.
+  ///
+  /// Pattern 1 (stores-only):
+  ///   Multiple non-overlapping partial stores completely fill the alloca
+  ///   and there is exactly one full-width load coming after the stores.
+  ///   The stores are tree-merged into a single vector and stored once.
   ///
   /// Example transformation:
   /// Before: (stores do not have to be in order)
@@ -2925,36 +2831,47 @@ public:
   ///   store <2 x float> %val2, ptr %alloca+16          ; offset 4-5
   ///   store <2 x float> %val1, ptr %alloca+8           ; offset 2-3
   ///   store <2 x float> %val3, ptr %alloca+24          ; offset 6-7
+  ///   %r = load <8 x float>, ptr %alloca
   ///
-  /// After:
-  ///   %alloca = alloca <8 x float>
-  ///   %shuffle0 = shufflevector %val0, %val1, <4 x i32> <i32 0, i32 1, i32 2,
-  ///                 i32 3>
-  ///   %shuffle1 = shufflevector %val2, %val3, <4 x i32> <i32 0, i32 1, i32 2,
-  ///                 i32 3>
-  ///   %shuffle2 = shufflevector %shuffle0, %shuffle1, <8 x i32> <i32 0, i32 1,
-  ///                 i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  ///   store %shuffle2, ptr %alloca
+  ///   After: tree of shufflevectors producing <8 x float> directly.
   ///
-  /// The optimization looks for partitions that:
-  /// 1. Have no overlapping split slice tails
-  /// 2. Contain non-overlapping stores that cover the entire alloca
-  /// 3. Have exactly one load that reads the complete alloca structure and not
-  ///    in the middle of the stores (TODO: maybe we can relax the constraint
-  ///    about reading the entire alloca structure)
+  /// Pattern 2 (init + RMW, possibly multi-round):
+  ///   A single full-width init store, followed by partial loads and
+  ///   partial stores that read-modify-write the alloca one or more
+  ///   times, optionally followed by a full-width load. The only
+  ///   structural requirement is that the distinct [begin, end) ranges
+  ///   touched by the partial loads and stores, taken together, tile
+  ///   the alloca disjointly.
+  ///
+  ///   We keep a map from each slice range to the SSA value that
+  ///   currently lives there, `SliceValues[r] -> Value*`:
+  ///     - initialize each entry to the corresponding piece of the
+  ///       init store's value (via a shufflevector picking the
+  ///       range's elements out of the init value),
+  ///     - walk partial loads and stores in block order,
+  ///     - for a partial load at range r: RAUW with `SliceValues[r]`,
+  ///     - for a partial store at range r: update `SliceValues[r]` to
+  ///       the stored value and drop the store.
+  ///   At the end, the final `SliceValues[r]` entries are tree-merged
+  ///   (in range order) into a single store to the alloca, and the
+  ///   optional full-width load is replaced by a load of the alloca.
+  ///
+  ///   Because the ranges are disjoint by construction, a store at one
+  ///   range cannot affect another range's tracked value, so a single
+  ///   block-order walk correctly tracks the memory state at each
+  ///   range. The algorithm handles multi-round RMW, partial loads
+  ///   and stores interleaved in any order, read-only slices (the
+  ///   tracked value stays at the init extract), and write-only
+  ///   slices (the tracked value never flows into a load).
   ///
   /// \param P The partition to analyze and potentially rewrite
-  /// \return An optional vector of values that were deleted during the rewrite
-  ///         process, or std::nullopt if the partition cannot be optimized
-  ///         using tree-structured merge
+  /// \return An optional vector of values that were deleted during the
+  ///         rewrite, or std::nullopt if the partition cannot be optimized.
   std::optional<SmallVector<Value *, 4>>
   rewriteTreeStructuredMerge(Partition &P) {
     // No tail slices that overlap with the partition
     if (P.splitSliceTails().size() > 0)
       return std::nullopt;
-
-    SmallVector<Value *, 4> DeletedValues;
-    LoadInst *TheLoad = nullptr;
 
     // Structure to hold store information
     struct StoreInfo {
@@ -2965,14 +2882,22 @@ public:
       StoreInfo(StoreInst *SI, uint64_t Begin, uint64_t End, Value *Val)
           : Store(SI), BeginOffset(Begin), EndOffset(End), StoredValue(Val) {}
     };
+    struct LoadInfo {
+      LoadInst *Load;
+      uint64_t BeginOffset;
+      uint64_t EndOffset;
+    };
 
-    SmallVector<StoreInfo, 4> StoreInfos;
+    SmallVector<StoreInfo, 4> StoreInfos; // partial stores only
+    SmallVector<LoadInfo, 4> LoadInfos;   // partial loads only
+    LoadInst *FullLoad = nullptr;         // optional full-width load
+    StoreInst *InitStore = nullptr;       // optional full-width init store
 
     // If the new alloca is a fixed vector type, we use its element type as the
     // allocated element type, otherwise we use i8 as the allocated element
     Type *AllocatedEltTy =
-        isa<FixedVectorType>(NewAI.getAllocatedType())
-            ? cast<FixedVectorType>(NewAI.getAllocatedType())->getElementType()
+        isa<FixedVectorType>(NewAllocaTy)
+            ? cast<FixedVectorType>(NewAllocaTy)->getElementType()
             : Type::getInt8Ty(NewAI.getContext());
     unsigned AllocatedEltTySize = DL.getTypeSizeInBits(AllocatedEltTy);
 
@@ -2990,136 +2915,339 @@ public:
 
     for (Slice &S : P) {
       auto *User = cast<Instruction>(S.getUse()->getUser());
+      // A "full-width" slice spans the entire alloca; it's either the single
+      // init store (Pattern 2) or the single final load (both patterns).
+      bool IsFullWidth = (S.beginOffset() == NewAllocaBeginOffset &&
+                          S.endOffset() == NewAllocaEndOffset);
       if (auto *LI = dyn_cast<LoadInst>(User)) {
-        // Do not handle the case if
-        //   1. There is more than one load
-        //   2. The load is volatile
-        //   3. The load does not read the entire alloca structure
-        //   4. The load does not meet the conditions in the helper function
-        if (TheLoad || !IsTypeValidForTreeStructuredMerge(LI->getType()) ||
-            S.beginOffset() != NewAllocaBeginOffset ||
-            S.endOffset() != NewAllocaEndOffset || LI->isVolatile())
+        // Only handle simple (non-volatile, non-atomic) loads.
+        if (!LI->isSimple() ||
+            !IsTypeValidForTreeStructuredMerge(LI->getType()))
           return std::nullopt;
-        TheLoad = LI;
+        if (IsFullWidth) {
+          // We accept at most one full-width load (the "final" load, after
+          // all the partial stores).
+          if (FullLoad)
+            return std::nullopt;
+          FullLoad = LI;
+        } else {
+          // Partial load (RMW pattern only).
+          LoadInfos.push_back({LI, S.beginOffset(), S.endOffset()});
+        }
       } else if (auto *SI = dyn_cast<StoreInst>(User)) {
         // Do not handle the case if
         //   1. The store does not meet the conditions in the helper function
-        //   2. The store is volatile
-        //   3. The total store size is not a multiple of the allocated element
-        //   type size
-        if (!IsTypeValidForTreeStructuredMerge(
-                SI->getValueOperand()->getType()) ||
-            SI->isVolatile())
+        //   2. The store is not simple — we drop stores as part of the
+        //      rewrite, so volatile stores (which must be kept) and atomic
+        //      stores (which carry memory-ordering semantics) are unsound
+        //      to replace with SSA bookkeeping.
+        //   3. The total store size is not a multiple of the allocated
+        //      element type size (required so the tree merge can produce a
+        //      vector whose element type matches the alloca).
+        if (!SI->isSimple() || !IsTypeValidForTreeStructuredMerge(
+                                   SI->getValueOperand()->getType()))
           return std::nullopt;
-        auto *VecTy = cast<FixedVectorType>(SI->getValueOperand()->getType());
-        unsigned NumElts = VecTy->getNumElements();
-        unsigned EltSize = DL.getTypeSizeInBits(VecTy->getElementType());
+        auto *StVecTy = cast<FixedVectorType>(SI->getValueOperand()->getType());
+        unsigned NumElts = StVecTy->getNumElements();
+        unsigned EltSize = DL.getTypeSizeInBits(StVecTy->getElementType());
         if (NumElts * EltSize % AllocatedEltTySize != 0)
           return std::nullopt;
-        StoreInfos.emplace_back(SI, S.beginOffset(), S.endOffset(),
-                                SI->getValueOperand());
+        if (IsFullWidth) {
+          // At most one full-width store is allowed — it's the init store
+          // for the RMW pattern.
+          if (InitStore)
+            return std::nullopt;
+          InitStore = SI;
+        } else {
+          StoreInfos.emplace_back(SI, S.beginOffset(), S.endOffset(),
+                                  SI->getValueOperand());
+        }
       } else {
-        // If we have instructions other than load and store, we cannot do the
-        // tree structured merge
+        // If we have instructions other than load and store, we cannot do
+        // the tree structured merge.
         return std::nullopt;
       }
     }
-    // If we do not have any load, we cannot do the tree structured merge
-    if (!TheLoad)
-      return std::nullopt;
 
-    // If we do not have multiple stores, we cannot do the tree structured merge
+    // Need at least two partial stores to benefit from tree-merging; a
+    // single store is already optimal as-is. This applies to both patterns
+    // below, so check it before classifying.
     if (StoreInfos.size() < 2)
       return std::nullopt;
 
-    // Stores should not overlap and should cover the whole alloca
-    // Sort by begin offset
-    llvm::sort(StoreInfos, [](const StoreInfo &A, const StoreInfo &B) {
-      return A.BeginOffset < B.BeginOffset;
-    });
-
-    // Check for overlaps and coverage
-    uint64_t ExpectedStart = NewAllocaBeginOffset;
-    for (auto &StoreInfo : StoreInfos) {
-      uint64_t BeginOff = StoreInfo.BeginOffset;
-      uint64_t EndOff = StoreInfo.EndOffset;
-
-      // Check for gap or overlap
-      if (BeginOff != ExpectedStart)
-        return std::nullopt;
-
-      ExpectedStart = EndOff;
-    }
-    // Check that stores cover the entire alloca
-    if (ExpectedStart != NewAllocaEndOffset)
+    // Classify the pattern by looking at what we collected:
+    //   Pattern 1 (stores-only): only partial stores + exactly one full load.
+    //   Pattern 2 (RMW): one full init store + partial loads + partial stores
+    //     (+ optional full final load). RMW also needs VecTy to be set
+    //     because we use getIndex() to convert byte offsets to element
+    //     indices, which requires a promoted vector alloca.
+    bool IsRMWPattern = InitStore && VecTy && !LoadInfos.empty();
+    bool IsStoresOnlyPattern = !InitStore && FullLoad && LoadInfos.empty();
+    if (!IsRMWPattern && !IsStoresOnlyPattern)
       return std::nullopt;
 
-    // Stores should be in the same basic block
-    // The load should not be in the middle of the stores
-    // Note:
-    // If the load is in a different basic block with the stores, we can still
-    // do the tree structured merge. This is because we do not have the
-    // store->load forwarding here. The merged vector will be stored back to
-    // NewAI and the new load will load from NewAI. The forwarding will be
-    // handled later when we try to promote NewAI.
-    BasicBlock *LoadBB = TheLoad->getParent();
+    // All partial stores must live in the same basic block — the tree merge
+    // is built in a single BB using block-order ordering (comesBefore).
     BasicBlock *StoreBB = StoreInfos[0].Store->getParent();
+    for (auto &Info : StoreInfos)
+      if (Info.Store->getParent() != StoreBB)
+        return std::nullopt;
 
-    for (auto &StoreInfo : StoreInfos) {
-      if (StoreInfo.Store->getParent() != StoreBB)
+    SmallVector<Value *, 4> DeletedValues;
+
+    // Helper: pairwise tree-merge a list of vectors into a single vector.
+    // At each iteration we merge each adjacent pair via mergeTwoVectors,
+    // collect the merged values into Next, and (if Vals had odd length)
+    // carry the trailing element through unchanged. Loop until one value
+    // remains — the fully-merged vector.
+    auto TreeMerge = [&](SmallVectorImpl<Value *> &Vals,
+                         IRBuilder<> &B) -> Value * {
+      LLVM_DEBUG(dbgs() << "  Rewrite stores into shufflevectors:\n");
+      while (Vals.size() > 1) {
+        SmallVector<Value *, 8> Next;
+        for (unsigned I = 0, E = Vals.size(); I + 1 < E; I += 2) {
+          Value *M =
+              mergeTwoVectors(Vals[I], Vals[I + 1], DL, AllocatedEltTy, B);
+          LLVM_DEBUG(dbgs() << "    shufflevector: " << *M << "\n");
+          Next.push_back(M);
+        }
+        if (Vals.size() % 2 == 1)
+          Next.push_back(Vals.back());
+        Vals = std::move(Next);
+      }
+      return Vals[0];
+    };
+
+    // Replace a full-width load with a load of the freshly-merged alloca.
+    // The merge stored a value of type Merged->getType() into NewAI; we load
+    // that same type back so every access to NewAI stays consistently typed
+    // (otherwise the alloca is no longer promotable).
+    auto ReplaceFullLoad = [&](LoadInst *LoadToReplace, Value *Merged) {
+      IRBuilder<> LoadBuilder(LoadToReplace);
+      Value *NewLoad = LoadBuilder.CreateAlignedLoad(
+          Merged->getType(), &NewAI, getSliceAlign(),
+          LoadToReplace->isVolatile(),
+          LoadToReplace->getName() + ".sroa.new.load");
+      if (NewLoad->getType() != LoadToReplace->getType())
+        NewLoad = LoadBuilder.CreateBitCast(NewLoad, LoadToReplace->getType());
+      LoadToReplace->replaceAllUsesWith(NewLoad);
+      DeletedValues.push_back(LoadToReplace);
+    };
+
+    if (IsStoresOnlyPattern) {
+      // Stores should not overlap and should cover the whole alloca.
+      // Sort by begin offset to verify this with a single linear scan.
+      llvm::sort(StoreInfos, [](const StoreInfo &A, const StoreInfo &B) {
+        return A.BeginOffset < B.BeginOffset;
+      });
+      // Check for gap or overlap: each begin offset must equal the previous
+      // end offset, i.e. the store ranges must tile [NewAllocaBeginOffset,
+      // NewAllocaEndOffset) exactly.
+      uint64_t Expected = NewAllocaBeginOffset;
+      for (auto &Info : StoreInfos) {
+        if (Info.BeginOffset != Expected)
+          return std::nullopt;
+        Expected = Info.EndOffset;
+      }
+      // Stores cover the entire alloca (no trailing gap either).
+      if (Expected != NewAllocaEndOffset)
         return std::nullopt;
-      if (LoadBB == StoreBB && !StoreInfo.Store->comesBefore(TheLoad))
-        return std::nullopt;
+
+      // The load should not be in the middle of the stores.
+      // Note:
+      // If the load is in a different basic block from the stores, we can
+      // still do the tree-structured merge. We don't have store->load
+      // forwarding here — the merged vector is stored back to NewAI and
+      // the new load loads from NewAI. The forwarding will be handled
+      // later when NewAI is promoted.
+      BasicBlock *LoadBB = FullLoad->getParent();
+      if (LoadBB == StoreBB) {
+        for (auto &Info : StoreInfos)
+          if (!Info.Store->comesBefore(FullLoad))
+            return std::nullopt;
+      }
+
+      LLVM_DEBUG({
+        dbgs() << "Tree structured merge rewrite (stores-only):\n";
+        dbgs() << "  Load: " << *FullLoad << "\n Ordered stores:\n";
+        for (auto [I, Info] : enumerate(StoreInfos)) {
+          dbgs() << "    [" << I << "] Range[" << Info.BeginOffset << ", "
+                 << Info.EndOffset << ") \tStore: " << *Info.Store
+                 << "\tValue: " << *Info.StoredValue << "\n";
+        }
+      });
+
+      // StoreInfos is sorted by offset, not by block order. Anchoring to
+      // StoreInfos.back().Store (last by offset) can place shuffles before
+      // operands that appear later in the block (invalid SSA). Insert before
+      // FullLoad when it shares the store block (after all stores, before
+      // any later IR in that block). Otherwise insert before the store
+      // block's terminator so the merge runs after every store and any
+      // trailing instructions in that block.
+      IRBuilder<> Builder(LoadBB == StoreBB ? cast<Instruction>(FullLoad)
+                                            : StoreBB->getTerminator());
+      SmallVector<Value *, 8> Vals;
+      for (const auto &Info : StoreInfos) {
+        DeletedValues.push_back(Info.Store);
+        Vals.push_back(Info.StoredValue);
+      }
+      // Merge all stored values and store the merged value into the alloca.
+      Value *Merged = TreeMerge(Vals, Builder);
+      Builder.CreateAlignedStore(Merged, &NewAI, getSliceAlign());
+
+      // Replace the original load with a load of the newly-merged alloca.
+      ReplaceFullLoad(FullLoad, Merged);
+      return DeletedValues;
     }
 
-    // If we reach here, the partition can be merged with a tree structured
-    // merge
-    LLVM_DEBUG({
-      dbgs() << "Tree structured merge rewrite:\n  Load: " << *TheLoad
-             << "\n Ordered stores:\n";
-      for (auto [i, Info] : enumerate(StoreInfos))
-        dbgs() << "    [" << i << "] Range[" << Info.BeginOffset << ", "
-               << Info.EndOffset << ") \tStore: " << *Info.Store
-               << "\tValue: " << *Info.StoredValue << "\n";
+    // RMW pattern handling starts from here.
+    // Like StoreBB above: keep the init store, all partial loads and all
+    // partial stores in one basic block so we can reason about ordering
+    // with comesBefore and build SSA without PHIs.
+    if (InitStore->getParent() != StoreBB)
+      return std::nullopt;
+    if (any_of(LoadInfos, [&](const LoadInfo &I) {
+          return I.Load->getParent() != StoreBB;
+        }))
+      return std::nullopt;
+    // FullLoad (if any) is allowed to live in a different basic block. See
+    // the note on the stores-only path: we don't do store->load forwarding
+    // directly — the merged vector is stored to NewAI and the new load
+    // loads from NewAI, so cross-BB ordering is resolved later when NewAI
+    // is promoted.
+
+    // Collect the combined partial-load/partial-store accesses sorted
+    // by block order. Used both for ordering checks and for the rewrite
+    // walk below.
+    struct Access {
+      Instruction *Inst;
+      uint64_t BeginOffset, EndOffset;
+      bool IsStore;
+    };
+    SmallVector<Access, 16> Accesses;
+    Accesses.reserve(LoadInfos.size() + StoreInfos.size());
+    for (const auto &L : LoadInfos)
+      Accesses.push_back({L.Load, L.BeginOffset, L.EndOffset, false});
+    for (const auto &S : StoreInfos)
+      Accesses.push_back({S.Store, S.BeginOffset, S.EndOffset, true});
+    llvm::sort(Accesses, [](const Access &A, const Access &B) {
+      return A.Inst->comesBefore(B.Inst);
     });
 
-    // Instead of having these stores, we merge all the stored values into a
-    // vector and store the merged value into the alloca
-    std::queue<Value *> VecElements;
-    IRBuilder<> Builder(StoreInfos.back().Store);
-    for (const auto &Info : StoreInfos) {
-      DeletedValues.push_back(Info.Store);
-      VecElements.push(Info.StoredValue);
+    // Ordering constraint 1: InitStore must come before every partial
+    // access — they read/write the RMW state initialised by InitStore.
+    // Accesses is sorted by block order, so the first element is the
+    // earliest; checking it is enough.
+    if (!InitStore->comesBefore(Accesses.front().Inst))
+      return std::nullopt;
+    // Ordering constraint 2: when FullLoad shares the block with the
+    // partial accesses, it must come after every one of them — otherwise
+    // it could read a stale value. Accesses is sorted, so the last
+    // element is the latest; checking it is enough. If FullLoad is in
+    // another block, mem2reg forwards the merged store to it.
+    if (FullLoad && FullLoad->getParent() == StoreBB &&
+        !Accesses.back().Inst->comesBefore(FullLoad))
+      return std::nullopt;
+
+    // Coverage check: the distinct [begin, end) ranges touched by the
+    // partial loads and stores must tile the alloca disjointly. That is
+    // the only precondition the per-range SliceValues tracking below
+    // needs — a disjoint tile guarantees the entries don't alias each
+    // other. We don't check per-range load/store counts: a range with
+    // only loads ends with SliceValues[r] = the init extract
+    // (contributed to the final tree-merge), and a range with only
+    // stores ends with SliceValues[r] = its last stored value. Both are
+    // correct.
+    using SliceRange = std::pair<uint64_t, uint64_t>;
+    SmallVector<SliceRange, 8> SortedRanges;
+    SortedRanges.reserve(Accesses.size());
+    for (auto &Acc : Accesses)
+      SortedRanges.emplace_back(Acc.BeginOffset, Acc.EndOffset);
+    llvm::sort(SortedRanges);
+    SortedRanges.erase(llvm::unique(SortedRanges), SortedRanges.end());
+    // Disjoint + contiguous tile of the whole alloca.
+    uint64_t Expected = NewAllocaBeginOffset;
+    for (auto &Range : SortedRanges) {
+      if (Range.first != Expected)
+        return std::nullopt;
+      Expected = Range.second;
+    }
+    if (Expected != NewAllocaEndOffset)
+      return std::nullopt;
+
+    LLVM_DEBUG({
+      dbgs() << "Tree structured merge rewrite (RMW):\n";
+      dbgs() << "  Init store: " << *InitStore << "\n";
+      if (FullLoad)
+        dbgs() << "  Final load: " << *FullLoad << "\n";
+      dbgs() << "  Slice ranges (" << SortedRanges.size() << "):\n";
+      for (auto &Range : SortedRanges)
+        dbgs() << "    [" << Range.first << ", " << Range.second << ")\n";
+    });
+
+    // Initialize SliceValues: one SSA value per slice range, tracking
+    // the value the alloca currently holds at that range. Each entry
+    // starts at the corresponding piece of the init store, obtained by
+    // bitcasting the init value to the alloca's vector type (if needed)
+    // and extracting the slice's sub-range.
+    IRB.SetInsertPoint(InitStore->getNextNode());
+    Value *InitVec = InitStore->getValueOperand();
+    if (InitVec->getType() != NewAllocaTy)
+      InitVec = IRB.CreateBitCast(InitVec, NewAllocaTy, "init.cast");
+    DenseMap<SliceRange, Value *> SliceValues;
+    for (auto &Range : SortedRanges) {
+      unsigned BeginIdx = getIndex(Range.first);
+      unsigned EndIdx = getIndex(Range.second);
+      SliceValues[Range] = IRB.CreateShuffleVector(
+          InitVec, createSequentialMask(BeginIdx, EndIdx - BeginIdx, 0),
+          "init.extract");
+    }
+    // The init store itself becomes dead — its value is consumed via the
+    // extracts above.
+    DeletedValues.push_back(InitStore);
+
+    // Walk accesses in block order:
+    //   - partial load at range r: replace with SliceValues[r] (bitcast
+    //     if the load's type differs from the current tracked value's
+    //     type, e.g. because a previous store wrote a vector with a
+    //     different element type);
+    //   - partial store at range r: update SliceValues[r] to the stored
+    //     value and drop the store.
+    for (auto &Acc : Accesses) {
+      SliceRange Range{Acc.BeginOffset, Acc.EndOffset};
+      if (!Acc.IsStore) {
+        Value *V = SliceValues[Range];
+        if (V->getType() != Acc.Inst->getType()) {
+          IRB.SetInsertPoint(cast<LoadInst>(Acc.Inst));
+          V = IRB.CreateBitCast(V, Acc.Inst->getType());
+        }
+        Acc.Inst->replaceAllUsesWith(V);
+      } else {
+        SliceValues[Range] = cast<StoreInst>(Acc.Inst)->getValueOperand();
+      }
+      DeletedValues.push_back(Acc.Inst);
     }
 
-    LLVM_DEBUG(dbgs() << "  Rewrite stores into shufflevectors:\n");
-    while (VecElements.size() > 1) {
-      const auto NumElts = VecElements.size();
-      for ([[maybe_unused]] const auto _ : llvm::seq(NumElts / 2)) {
-        Value *V0 = VecElements.front();
-        VecElements.pop();
-        Value *V1 = VecElements.front();
-        VecElements.pop();
-        Value *Merged = mergeTwoVectors(V0, V1, DL, AllocatedEltTy, Builder);
-        LLVM_DEBUG(dbgs() << "    shufflevector: " << *Merged << "\n");
-        VecElements.push(Merged);
-      }
-      if (NumElts % 2 == 1) {
-        Value *V = VecElements.front();
-        VecElements.pop();
-        VecElements.push(V);
-      }
-    }
+    // Tree-merge the final per-range values (in range order) into the
+    // alloca's final vector value. Anchor the IRBuilder to FullLoad (when it
+    // shares the partial-access block) or otherwise to the block's
+    // terminator — never to a partial access, since those are queued for
+    // deletion. Both anchors are guaranteed to dominate every SliceValues
+    // entry: each one is either an init extract (before any access) or a
+    // stored value defined before its (now-deleted) store.
+    IRBuilder<> Builder(FullLoad && FullLoad->getParent() == StoreBB
+                            ? cast<Instruction>(FullLoad)
+                            : StoreBB->getTerminator());
+    SmallVector<Value *, 8> Vals;
+    for (auto &Range : SortedRanges)
+      Vals.push_back(SliceValues[Range]);
+    Value *Merged = TreeMerge(Vals, Builder);
+    Builder.CreateAlignedStore(Merged, &NewAI, getSliceAlign());
 
-    // Store the merged value into the alloca
-    Value *MergedValue = VecElements.front();
-    Builder.CreateAlignedStore(MergedValue, &NewAI, getSliceAlign());
-
-    IRBuilder<> LoadBuilder(TheLoad);
-    TheLoad->replaceAllUsesWith(LoadBuilder.CreateAlignedLoad(
-        TheLoad->getType(), &NewAI, getSliceAlign(), TheLoad->isVolatile(),
-        TheLoad->getName() + ".sroa.new.load"));
-    DeletedValues.push_back(TheLoad);
+    // Replace the optional final full-width load with a load of the newly
+    // merged alloca. Later promotion will forward the store above to it.
+    if (FullLoad)
+      ReplaceFullLoad(FullLoad, Merged);
 
     return DeletedValues;
   }
@@ -3194,8 +3322,8 @@ private:
     unsigned EndIndex = getIndex(NewEndOffset);
     assert(EndIndex > BeginIndex && "Empty vector!");
 
-    LoadInst *Load = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                           NewAI.getAlign(), "load");
+    LoadInst *Load =
+        IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(), "load");
 
     Load->copyMetadata(LI, {LLVMContext::MD_mem_parallel_loop_access,
                             LLVMContext::MD_access_group});
@@ -3205,9 +3333,9 @@ private:
   Value *rewriteIntegerLoad(LoadInst &LI) {
     assert(IntTy && "We cannot insert an integer to the alloca");
     assert(!LI.isVolatile());
-    Value *V = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                     NewAI.getAlign(), "load");
-    V = convertValue(DL, IRB, V, IntTy);
+    Value *V =
+        IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(), "load");
+    V = IRB.CreateBitPreservingCastChain(DL, V, IntTy);
     assert(NewBeginOffset >= NewAllocaBeginOffset && "Out of bounds offset");
     uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
     if (Offset > 0 || NewEndOffset < NewAllocaEndOffset) {
@@ -3251,9 +3379,8 @@ private:
                  !LI.isVolatile()))) {
       Value *NewPtr =
           getPtrToNewAI(LI.getPointerAddressSpace(), LI.isVolatile());
-      LoadInst *NewLI = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), NewPtr,
-                                              NewAI.getAlign(), LI.isVolatile(),
-                                              LI.getName());
+      LoadInst *NewLI = IRB.CreateAlignedLoad(
+          NewAllocaTy, NewPtr, NewAI.getAlign(), LI.isVolatile(), LI.getName());
       if (LI.isVolatile())
         NewLI->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
       if (NewLI->isAtomic())
@@ -3301,7 +3428,7 @@ private:
       V = NewLI;
       IsPtrAdjusted = true;
     }
-    V = convertValue(DL, IRB, V, TargetTy);
+    V = IRB.CreateBitPreservingCastChain(DL, V, TargetTy);
 
     if (IsSplit) {
       assert(!LI.isVolatile());
@@ -3356,11 +3483,11 @@ private:
                           ? ElementTy
                           : FixedVectorType::get(ElementTy, NumElements);
       if (V->getType() != SliceTy)
-        V = convertValue(DL, IRB, V, SliceTy);
+        V = IRB.CreateBitPreservingCastChain(DL, V, SliceTy);
 
       // Mix in the existing elements.
-      Value *Old = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                         NewAI.getAlign(), "load");
+      Value *Old =
+          IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(), "load");
       V = insertVector(IRB, Old, V, BeginIndex, "vec");
     }
     StoreInst *Store = IRB.CreateAlignedStore(V, &NewAI, NewAI.getAlign());
@@ -3383,14 +3510,14 @@ private:
     assert(!SI.isVolatile());
     if (DL.getTypeSizeInBits(V->getType()).getFixedValue() !=
         IntTy->getBitWidth()) {
-      Value *Old = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                         NewAI.getAlign(), "oldload");
-      Old = convertValue(DL, IRB, Old, IntTy);
+      Value *Old = IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(),
+                                         "oldload");
+      Old = IRB.CreateBitPreservingCastChain(DL, Old, IntTy);
       assert(BeginOffset >= NewAllocaBeginOffset && "Out of bounds offset");
       uint64_t Offset = BeginOffset - NewAllocaBeginOffset;
       V = insertInteger(DL, IRB, Old, SI.getValueOperand(), Offset, "insert");
     }
-    V = convertValue(DL, IRB, V, NewAllocaTy);
+    V = IRB.CreateBitPreservingCastChain(DL, V, NewAllocaTy);
     StoreInst *Store = IRB.CreateAlignedStore(V, &NewAI, NewAI.getAlign());
     Store->copyMetadata(SI, {LLVMContext::MD_mem_parallel_loop_access,
                              LLVMContext::MD_access_group});
@@ -3442,7 +3569,7 @@ private:
     if (NewBeginOffset == NewAllocaBeginOffset &&
         NewEndOffset == NewAllocaEndOffset &&
         canConvertValue(DL, V->getType(), NewAllocaTy)) {
-      V = convertValue(DL, IRB, V, NewAllocaTy);
+      V = IRB.CreateBitPreservingCastChain(DL, V, NewAllocaTy);
       Value *NewPtr =
           getPtrToNewAI(SI.getPointerAddressSpace(), SI.isVolatile());
 
@@ -3535,8 +3662,7 @@ private:
     // Record this instruction for deletion.
     Pass.DeadInsts.push_back(&II);
 
-    Type *AllocaTy = NewAI.getAllocatedType();
-    Type *ScalarTy = AllocaTy->getScalarType();
+    Type *ScalarTy = NewAllocaTy->getScalarType();
 
     const bool CanContinue = [&]() {
       if (VecTy || IntTy)
@@ -3550,7 +3676,7 @@ private:
         return false;
       auto *Int8Ty = IntegerType::getInt8Ty(NewAI.getContext());
       auto *SrcTy = FixedVectorType::get(Int8Ty, Len);
-      return canConvertValue(DL, SrcTy, AllocaTy) &&
+      return canConvertValue(DL, SrcTy, NewAllocaTy) &&
              DL.isLegalInteger(DL.getTypeSizeInBits(ScalarTy).getFixedValue());
     }();
 
@@ -3594,12 +3720,12 @@ private:
 
       Value *Splat = getIntegerSplat(
           II.getValue(), DL.getTypeSizeInBits(ElementTy).getFixedValue() / 8);
-      Splat = convertValue(DL, IRB, Splat, ElementTy);
+      Splat = IRB.CreateBitPreservingCastChain(DL, Splat, ElementTy);
       if (NumElements > 1)
         Splat = getVectorSplat(Splat, NumElements);
 
-      Value *Old = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                         NewAI.getAlign(), "oldload");
+      Value *Old = IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(),
+                                         "oldload");
       V = insertVector(IRB, Old, Splat, BeginIndex, "vec");
     } else if (IntTy) {
       // If this is a memset on an alloca where we can widen stores, insert the
@@ -3609,18 +3735,18 @@ private:
       uint64_t Size = NewEndOffset - NewBeginOffset;
       V = getIntegerSplat(II.getValue(), Size);
 
-      if (IntTy && (BeginOffset != NewAllocaBeginOffset ||
-                    EndOffset != NewAllocaBeginOffset)) {
-        Value *Old = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
+      if (IntTy && (NewBeginOffset != NewAllocaBeginOffset ||
+                    NewEndOffset != NewAllocaEndOffset)) {
+        Value *Old = IRB.CreateAlignedLoad(NewAllocaTy, &NewAI,
                                            NewAI.getAlign(), "oldload");
-        Old = convertValue(DL, IRB, Old, IntTy);
+        Old = IRB.CreateBitPreservingCastChain(DL, Old, IntTy);
         uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
         V = insertInteger(DL, IRB, Old, V, Offset, "insert");
       } else {
         assert(V->getType() == IntTy &&
                "Wrong type for an alloca wide integer!");
       }
-      V = convertValue(DL, IRB, V, AllocaTy);
+      V = IRB.CreateBitPreservingCastChain(DL, V, NewAllocaTy);
     } else {
       // Established these invariants above.
       assert(NewBeginOffset == NewAllocaBeginOffset);
@@ -3628,11 +3754,11 @@ private:
 
       V = getIntegerSplat(II.getValue(),
                           DL.getTypeSizeInBits(ScalarTy).getFixedValue() / 8);
-      if (VectorType *AllocaVecTy = dyn_cast<VectorType>(AllocaTy))
+      if (VectorType *AllocaVecTy = dyn_cast<VectorType>(NewAllocaTy))
         V = getVectorSplat(
             V, cast<FixedVectorType>(AllocaVecTy)->getNumElements());
 
-      V = convertValue(DL, IRB, V, AllocaTy);
+      V = IRB.CreateBitPreservingCastChain(DL, V, NewAllocaTy);
     }
 
     Value *NewPtr = getPtrToNewAI(II.getDestAddressSpace(), II.isVolatile());
@@ -3702,10 +3828,9 @@ private:
     bool EmitMemCpy =
         !VecTy && !IntTy &&
         (BeginOffset > NewAllocaBeginOffset || EndOffset < NewAllocaEndOffset ||
-         SliceSize !=
-             DL.getTypeStoreSize(NewAI.getAllocatedType()).getFixedValue() ||
-         !DL.typeSizeEqualsStoreSize(NewAI.getAllocatedType()) ||
-         !NewAI.getAllocatedType()->isSingleValueType());
+         SliceSize != DL.getTypeStoreSize(NewAllocaTy).getFixedValue() ||
+         !DL.typeSizeEqualsStoreSize(NewAllocaTy) ||
+         !NewAllocaTy->isSingleValueType());
 
     // If we're just going to emit a memcpy, the alloca hasn't changed, and the
     // size hasn't been shrunk based on analysis of the viable range, this is
@@ -3829,13 +3954,13 @@ private:
 
     Value *Src;
     if (VecTy && !IsWholeAlloca && !IsDest) {
-      Src = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                  NewAI.getAlign(), "load");
+      Src =
+          IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(), "load");
       Src = extractVector(IRB, Src, BeginIndex, EndIndex, "vec");
     } else if (IntTy && !IsWholeAlloca && !IsDest) {
-      Src = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                  NewAI.getAlign(), "load");
-      Src = convertValue(DL, IRB, Src, IntTy);
+      Src =
+          IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(), "load");
+      Src = IRB.CreateBitPreservingCastChain(DL, Src, IntTy);
       uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
       Src = extractInteger(DL, IRB, Src, SubIntTy, Offset, "extract");
     } else {
@@ -3850,16 +3975,16 @@ private:
     }
 
     if (VecTy && !IsWholeAlloca && IsDest) {
-      Value *Old = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                         NewAI.getAlign(), "oldload");
+      Value *Old = IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(),
+                                         "oldload");
       Src = insertVector(IRB, Old, Src, BeginIndex, "vec");
     } else if (IntTy && !IsWholeAlloca && IsDest) {
-      Value *Old = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                         NewAI.getAlign(), "oldload");
-      Old = convertValue(DL, IRB, Old, IntTy);
+      Value *Old = IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(),
+                                         "oldload");
+      Old = IRB.CreateBitPreservingCastChain(DL, Old, IntTy);
       uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
       Src = insertInteger(DL, IRB, Old, Src, Offset, "insert");
-      Src = convertValue(DL, IRB, Src, NewAllocaTy);
+      Src = IRB.CreateBitPreservingCastChain(DL, Src, NewAllocaTy);
     }
 
     StoreInst *Store = cast<StoreInst>(
@@ -5179,6 +5304,224 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   return true;
 }
 
+/// Try to canonicalize a homogeneous struct partition to a vector type.
+///
+/// We can do this if all the elements of the struct are the same and the
+/// corresponding vector has the same byte-level layout. This can sometimes
+/// eliminate allocas because structs cannot get promoted to LLVM values, but
+/// vectors can.
+///
+/// We only apply this transformation when all users of the partition are memory
+/// intrinsics. Otherwise, if there is a load or store of some other type to the
+/// partition, SROA would select that type.
+///
+/// Applying this transformation too early may hinder memcpyopt, which may
+/// generate better code when eliminating allocas. For example, see
+/// `struct-to-vector-fp-store-only-tail.ll`, which demonstrates that applying
+/// this before memcpyopt can initialize previously uninitialized memory when
+/// the alloca gets promoted to an SSA value. For another example, see
+/// `struct-to-vector-before-memcpyopt.ll`, which demonstrates that applying
+/// this before memcpyopt can result in promoting an alloca so that we load a
+/// temporary value instead of copying the temporary value into memory, whereas
+/// memcpyopt eliminates the temporary altogether.
+///
+/// As such, we only apply this transformation after memcpyopt has run. We gate
+/// this transformation by the "AggregateToVector" pass option.
+static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
+                                                      Partition &P,
+                                                      const DataLayout &DL) {
+  unsigned NumElts = STy->getNumElements();
+
+  Type *EltTy = STy->getElementType(0);
+  if (!llvm::all_equal(STy->elements()))
+    return nullptr;
+
+  bool IsIntegralPointerTy =
+      EltTy->isPointerTy() && !DL.isNonIntegralPointerType(EltTy);
+  if (!EltTy->isIntegerTy() && !EltTy->isFloatingPointTy() &&
+      !IsIntegralPointerTy)
+    return nullptr;
+
+  // Ensure the struct is tightly packed so that the bit-layout is the same as
+  // the corresponding vector. For example, this prevents a miscompile for
+  // { i5, i5 }, which has padding after each i5 field, whereas <i5, i5> has
+  // tightly packed elements and trailing padding.
+  if (DL.getTypeSizeInBits(EltTy) != DL.getTypeAllocSizeInBits(EltTy))
+    return nullptr;
+
+  auto *VTy = FixedVectorType::get(EltTy, NumElts);
+  TypeSize StructSize = DL.getStructLayout(STy)->getSizeInBytes();
+  TypeSize VectorSize = DL.getTypeStoreSize(VTy);
+  // After ruling out per-element padding, make sure a vector load/store
+  // covers the same number of bytes as the struct layout.
+  if (StructSize != VectorSize)
+    return nullptr;
+
+  auto IsIgnorableOrMemIntrinsicSlice = [](const Slice &S) {
+    if (S.isDead())
+      return true;
+    auto *U = S.getUse();
+    if (!U)
+      return true;
+
+    User *Usr = U->getUser();
+    if (isa<LifetimeIntrinsic>(Usr) || isa<DbgInfoIntrinsic>(Usr))
+      return true;
+
+    return isa<MemIntrinsic>(Usr);
+  };
+
+  for (const Slice &S : P)
+    if (!IsIgnorableOrMemIntrinsicSlice(S))
+      return nullptr;
+
+  for (const Slice *S : P.splitSliceTails())
+    if (!IsIgnorableOrMemIntrinsicSlice(*S))
+      return nullptr;
+
+  return VTy;
+}
+
+/// Select a partition type for an alloca partition.
+///
+/// Try to compute a friendly type for this partition of the alloca. This
+/// won't always succeed, in which case we fall back to a legal integer type
+/// or an i8 array of an appropriate size.
+///
+/// \returns A tuple with the following elements:
+///   - PartitionType: The computed type for this partition.
+///   - IsIntegerWideningViable: True if integer widening promotion is used.
+///   - VectorType: The vector type if vector promotion is used, otherwise
+///     nullptr.
+static std::tuple<Type *, bool, VectorType *>
+selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
+                    LLVMContext &C, bool AggregateToVector) {
+  auto LogSelection = [&](StringRef Path, Type *SelectedTy,
+                          VectorType *SelectedVecTy, bool SelectedIntWidening) {
+    LLVM_DEBUG({
+      dbgs() << "selectPartitionType path=" << Path
+             << " func=" << AI.getFunction()->getName() << " alloca=";
+      if (AI.hasName())
+        dbgs() << AI.getName();
+      else
+        dbgs() << "<unnamed>";
+      dbgs() << " partition=[" << P.beginOffset() << "," << P.endOffset()
+             << ") size=" << P.size();
+      if (std::optional<TypeSize> AllocSize = AI.getAllocationSize(DL))
+        dbgs() << " alloc-size=" << AllocSize->getKnownMinValue();
+      if (SelectedTy)
+        dbgs() << " chosen=" << *SelectedTy;
+      if (SelectedVecTy)
+        dbgs() << " vec=" << *SelectedVecTy;
+      dbgs() << " intwiden=" << SelectedIntWidening << "\n";
+    });
+  };
+  // First check if the partition is viable for vector promotion.
+  //
+  // We prefer vector promotion over integer widening promotion when:
+  // - The vector element type is a floating-point type.
+  // - All the loads/stores to the alloca are vector loads/stores to the
+  //   entire alloca or load/store a single element of the vector.
+  //
+  // Otherwise when there is an integer vector with mixed type loads/stores we
+  // prefer integer widening promotion because it's more likely the user is
+  // doing bitwise arithmetic and we generate better code.
+  VectorType *VecTy =
+      isVectorPromotionViable(P, DL, AI.getFunction()->getVScaleValue());
+  // If the vector element type is a floating-point type, we prefer vector
+  // promotion. If the vector has one element, let the below code select
+  // whether we promote with the vector or scalar.
+  if (VecTy && VecTy->getElementType()->isFloatingPointTy() &&
+      VecTy->getElementCount().getFixedValue() > 1) {
+    LogSelection("direct-fp-vecty", VecTy, VecTy, false);
+    return {VecTy, false, VecTy};
+  }
+
+  // Check if there is a common type that all slices of the partition use that
+  // spans the partition.
+  auto [CommonUseTy, LargestIntTy] =
+      findCommonType(P.begin(), P.end(), P.endOffset());
+  if (CommonUseTy) {
+    TypeSize CommonUseSize = DL.getTypeAllocSize(CommonUseTy);
+    if (CommonUseSize.isFixed() && CommonUseSize.getFixedValue() >= P.size()) {
+      // We prefer vector promotion here because if vector promotion is viable
+      // and there is a common type used, then it implies the second listed
+      // condition for preferring vector promotion is true.
+      if (VecTy) {
+        LogSelection("common-type-vecty", VecTy, VecTy, false);
+        return {VecTy, false, VecTy};
+      }
+      bool IntWiden = isIntegerWideningViable(P, CommonUseTy, DL);
+      LogSelection("common-type", CommonUseTy, nullptr, IntWiden);
+      return {CommonUseTy, IntWiden, nullptr};
+    }
+  }
+
+  // Can we find an appropriate subtype in the original allocated
+  // type?
+  if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
+                                               P.beginOffset(), P.size())) {
+    // If the partition is an integer array that can be spanned by a legal
+    // integer type, prefer to represent it as a legal integer type because
+    // it's more likely to be promotable.
+    if (TypePartitionTy->isArrayTy() &&
+        TypePartitionTy->getArrayElementType()->isIntegerTy() &&
+        DL.isLegalInteger(P.size() * 8))
+      TypePartitionTy = Type::getIntNTy(C, P.size() * 8);
+    // There was no common type used, so we prefer integer widening promotion.
+    if (isIntegerWideningViable(P, TypePartitionTy, DL)) {
+      LogSelection("type-partition-int-widen", TypePartitionTy, nullptr, true);
+      return {TypePartitionTy, true, nullptr};
+    }
+    if (VecTy) {
+      LogSelection("type-partition-vecty", VecTy, VecTy, false);
+      return {VecTy, false, VecTy};
+    }
+    // If we couldn't promote with TypePartitionTy, try with the largest
+    // integer type used.
+    if (LargestIntTy &&
+        DL.getTypeAllocSize(LargestIntTy).getFixedValue() >= P.size() &&
+        isIntegerWideningViable(P, LargestIntTy, DL)) {
+      LogSelection("largest-int-int-widen", LargestIntTy, nullptr, true);
+      return {LargestIntTy, true, nullptr};
+    }
+
+    // Try homogeneous struct to vector canonicalization when requested. Running
+    // this too early can hide memcpy chains from MemCpyOpt.
+    if (AggregateToVector) {
+      if (auto *STy = dyn_cast<StructType>(TypePartitionTy)) {
+        if (auto *VTy = tryCanonicalizeStructToVector(STy, P, DL)) {
+          LogSelection("struct-fallback-vecty", VTy, nullptr, false);
+          return {VTy, false, nullptr};
+        }
+      }
+    }
+
+    // Fallback to TypePartitionTy and we probably won't promote.
+    LogSelection("type-partition-fallback", TypePartitionTy, nullptr, false);
+    return {TypePartitionTy, false, nullptr};
+  }
+
+  // Select the largest integer type used if it spans the partition.
+  if (LargestIntTy &&
+      DL.getTypeAllocSize(LargestIntTy).getFixedValue() >= P.size()) {
+    LogSelection("largest-int-fallback", LargestIntTy, nullptr, false);
+    return {LargestIntTy, false, nullptr};
+  }
+
+  // Select a legal integer type if it spans the partition.
+  if (DL.isLegalInteger(P.size() * 8)) {
+    Type *IntTy = Type::getIntNTy(C, P.size() * 8);
+    LogSelection("legal-int-fallback", IntTy, nullptr, false);
+    return {IntTy, false, nullptr};
+  }
+
+  // Fallback to an i8 array.
+  Type *ArrayTy = ArrayType::get(Type::getInt8Ty(C), P.size());
+  LogSelection("byte-array-fallback", ArrayTy, nullptr, false);
+  return {ArrayTy, false, nullptr};
+}
+
 /// Rewrite an alloca partition's users.
 ///
 /// This routine drives both of the rewriting goals of the SROA pass. It tries
@@ -5189,49 +5532,12 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 /// appropriate new offsets. It also evaluates how successful the rewrite was
 /// at enabling promotion and if it was successful queues the alloca to be
 /// promoted.
-AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
-                                   Partition &P) {
-  // Try to compute a friendly type for this partition of the alloca. This
-  // won't always succeed, in which case we fall back to a legal integer type
-  // or an i8 array of an appropriate size.
-  Type *SliceTy = nullptr;
+std::pair<AllocaInst *, uint64_t>
+SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
   const DataLayout &DL = AI.getDataLayout();
-  unsigned VScale = AI.getFunction()->getVScaleValue();
-
-  std::pair<Type *, IntegerType *> CommonUseTy =
-      findCommonType(P.begin(), P.end(), P.endOffset());
-  // Do all uses operate on the same type?
-  if (CommonUseTy.first) {
-    TypeSize CommonUseSize = DL.getTypeAllocSize(CommonUseTy.first);
-    if (CommonUseSize.isFixed() && CommonUseSize.getFixedValue() >= P.size())
-      SliceTy = CommonUseTy.first;
-  }
-  // If not, can we find an appropriate subtype in the original allocated type?
-  if (!SliceTy)
-    if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
-                                                 P.beginOffset(), P.size()))
-      SliceTy = TypePartitionTy;
-
-  // If still not, can we use the largest bitwidth integer type used?
-  if (!SliceTy && CommonUseTy.second)
-    if (DL.getTypeAllocSize(CommonUseTy.second).getFixedValue() >= P.size())
-      SliceTy = CommonUseTy.second;
-  if ((!SliceTy || (SliceTy->isArrayTy() &&
-                    SliceTy->getArrayElementType()->isIntegerTy())) &&
-      DL.isLegalInteger(P.size() * 8)) {
-    SliceTy = Type::getIntNTy(*C, P.size() * 8);
-  }
-
-  if (!SliceTy)
-    SliceTy = ArrayType::get(Type::getInt8Ty(*C), P.size());
-  assert(DL.getTypeAllocSize(SliceTy).getFixedValue() >= P.size());
-
-  bool IsIntegerPromotable = isIntegerWideningViable(P, SliceTy, DL);
-
-  VectorType *VecTy =
-      IsIntegerPromotable ? nullptr : isVectorPromotionViable(P, DL, VScale);
-  if (VecTy)
-    SliceTy = VecTy;
+  // Select the type for the new alloca that spans the partition.
+  auto [PartitionTy, IsIntegerWideningViable, VecTy] =
+      selectPartitionType(P, DL, AI, *C, AggregateToVector);
 
   // Check for the case where we're going to rewrite to a new alloca of the
   // exact same type as the original, and with the same access offsets. In that
@@ -5240,7 +5546,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   // P.beginOffset() can be non-zero even with the same type in a case with
   // out-of-bounds access (e.g. @PR35657 function in SROA/basictest.ll).
   AllocaInst *NewAI;
-  if (SliceTy == AI.getAllocatedType() && P.beginOffset() == 0) {
+  if (PartitionTy == AI.getAllocatedType() && P.beginOffset() == 0) {
     NewAI = &AI;
     // FIXME: We should be able to bail at this point with "nothing changed".
     // FIXME: We might want to defer PHI speculation until after here.
@@ -5250,10 +5556,10 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     const Align Alignment = commonAlignment(AI.getAlign(), P.beginOffset());
     // If we will get at least this much alignment from the type alone, leave
     // the alloca's alignment unconstrained.
-    const bool IsUnconstrained = Alignment <= DL.getABITypeAlign(SliceTy);
+    const bool IsUnconstrained = Alignment <= DL.getABITypeAlign(PartitionTy);
     NewAI = new AllocaInst(
-        SliceTy, AI.getAddressSpace(), nullptr,
-        IsUnconstrained ? DL.getPrefTypeAlign(SliceTy) : Alignment,
+        PartitionTy, AI.getAddressSpace(), nullptr,
+        IsUnconstrained ? DL.getPrefTypeAlign(PartitionTy) : Alignment,
         AI.getName() + ".sroa." + Twine(P.begin() - AS.begin()),
         AI.getIterator());
     // Copy the old AI debug location over to the new one.
@@ -5272,9 +5578,9 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   SmallSetVector<PHINode *, 8> PHIUsers;
   SmallSetVector<SelectInst *, 8> SelectUsers;
 
-  AllocaSliceRewriter Rewriter(DL, AS, *this, AI, *NewAI, P.beginOffset(),
-                               P.endOffset(), IsIntegerPromotable, VecTy,
-                               PHIUsers, SelectUsers);
+  AllocaSliceRewriter Rewriter(
+      DL, AS, *this, AI, *NewAI, PartitionTy, P.beginOffset(), P.endOffset(),
+      IsIntegerWideningViable, VecTy, PHIUsers, SelectUsers);
   bool Promotable = true;
   // Check whether we can have tree-structured merge.
   if (auto DeletedValues = Rewriter.rewriteTreeStructuredMerge(P)) {
@@ -5353,7 +5659,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     // We couldn't promote and we didn't create a new partition, nothing
     // happened.
     if (NewAI == &AI)
-      return nullptr;
+      return {nullptr, 0};
 
     // If we can't promote the alloca, iterate on it to check for new
     // refinements exposed by splitting the current alloca. Don't iterate on an
@@ -5361,7 +5667,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     Worklist.insert(NewAI);
   }
 
-  return NewAI;
+  return {NewAI, DL.getTypeSizeInBits(PartitionTy).getFixedValue()};
 }
 
 // There isn't a shared interface to get the "address" parts out of a
@@ -5540,8 +5846,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
   // to be rewritten into a partition.
   bool IsSorted = true;
 
-  uint64_t AllocaSize =
-      DL.getTypeAllocSize(AI.getAllocatedType()).getFixedValue();
+  uint64_t AllocaSize = AI.getAllocationSize(DL)->getFixedValue();
   const uint64_t MaxBitVectorSize = 1024;
   if (AllocaSize <= MaxBitVectorSize) {
     // If a byte boundary is included in any load or store, a slice starting or
@@ -5600,14 +5905,13 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
   // Rewrite each partition.
   for (auto &P : AS.partitions()) {
-    if (AllocaInst *NewAI = rewritePartition(AI, AS, P)) {
+    auto [NewAI, ActiveBits] = rewritePartition(AI, AS, P);
+    if (NewAI) {
       Changed = true;
       if (NewAI != &AI) {
         uint64_t SizeOfByte = 8;
-        uint64_t AllocaSize =
-            DL.getTypeSizeInBits(NewAI->getAllocatedType()).getFixedValue();
         // Don't include any padding.
-        uint64_t Size = std::min(AllocaSize, P.size() * SizeOfByte);
+        uint64_t Size = std::min(ActiveBits, P.size() * SizeOfByte);
         Fragments.push_back(
             Fragment(NewAI, P.beginOffset() * SizeOfByte, Size));
       }
@@ -5852,10 +6156,8 @@ SROA::runOnAlloca(AllocaInst &AI) {
   const DataLayout &DL = AI.getDataLayout();
 
   // Skip alloca forms that this analysis can't handle.
-  auto *AT = AI.getAllocatedType();
-  TypeSize Size = DL.getTypeAllocSize(AT);
-  if (AI.isArrayAllocation() || !AT->isSized() || Size.isScalable() ||
-      Size.getFixedValue() == 0)
+  std::optional<TypeSize> Size = AI.getAllocationSize(DL);
+  if (AI.isArrayAllocation() || !Size || Size->isScalable() || Size->isZero())
     return {Changed, CFGChanged};
 
   // First, split any FCA loads and stores touching this alloca to promote
@@ -5987,8 +6289,8 @@ std::pair<bool /*Changed*/, bool /*CFGChanged*/> SROA::runSROA(Function &F) {
   for (BasicBlock::iterator I = EntryBB.begin(), E = std::prev(EntryBB.end());
        I != E; ++I) {
     if (AllocaInst *AI = dyn_cast<AllocaInst>(I)) {
-      if (DL.getTypeAllocSize(AI->getAllocatedType()).isScalable() &&
-          isAllocaPromotable(AI))
+      std::optional<TypeSize> Size = AI->getAllocationSize(DL);
+      if (Size && Size->isScalable() && isAllocaPromotable(AI))
         PromotableAllocas.insert(AI);
       else
         Worklist.insert(AI);
@@ -6044,7 +6346,7 @@ PreservedAnalyses SROAPass::run(Function &F, FunctionAnalysisManager &AM) {
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   auto [Changed, CFGChanged] =
-      SROA(&F.getContext(), &DTU, &AC, PreserveCFG).runSROA(F);
+      SROA(&F.getContext(), &DTU, &AC, Options).runSROA(F);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
@@ -6058,23 +6360,27 @@ void SROAPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<SROAPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
-  OS << (PreserveCFG == SROAOptions::PreserveCFG ? "<preserve-cfg>"
-                                                 : "<modify-cfg>");
+  OS << '<'
+     << (Options.CFG == SROAOptions::PreserveCFG ? "preserve-cfg"
+                                                 : "modify-cfg");
+  if (Options.AggregateToVector)
+    OS << ";aggregate-to-vector";
+  OS << '>';
 }
 
-SROAPass::SROAPass(SROAOptions PreserveCFG) : PreserveCFG(PreserveCFG) {}
+SROAPass::SROAPass(SROAOptions Options) : Options(Options) {}
 
 namespace {
 
 /// A legacy pass for the legacy pass manager that wraps the \c SROA pass.
 class SROALegacyPass : public FunctionPass {
-  SROAOptions PreserveCFG;
+  SROAOptions Options;
 
 public:
   static char ID;
 
-  SROALegacyPass(SROAOptions PreserveCFG = SROAOptions::PreserveCFG)
-      : FunctionPass(ID), PreserveCFG(PreserveCFG) {
+  SROALegacyPass(SROAOptions Options = SROAOptions::PreserveCFG)
+      : FunctionPass(ID), Options(Options) {
     initializeSROALegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -6086,8 +6392,7 @@ public:
     AssumptionCache &AC =
         getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
-    auto [Changed, _] =
-        SROA(&F.getContext(), &DTU, &AC, PreserveCFG).runSROA(F);
+    auto [Changed, _] = SROA(&F.getContext(), &DTU, &AC, Options).runSROA(F);
     return Changed;
   }
 
@@ -6105,9 +6410,10 @@ public:
 
 char SROALegacyPass::ID = 0;
 
-FunctionPass *llvm::createSROAPass(bool PreserveCFG) {
-  return new SROALegacyPass(PreserveCFG ? SROAOptions::PreserveCFG
-                                        : SROAOptions::ModifyCFG);
+FunctionPass *llvm::createSROAPass(bool PreserveCFG, bool AggregateToVector) {
+  return new SROALegacyPass(SROAOptions(PreserveCFG ? SROAOptions::PreserveCFG
+                                                    : SROAOptions::ModifyCFG,
+                                        AggregateToVector));
 }
 
 INITIALIZE_PASS_BEGIN(SROALegacyPass, "sroa",

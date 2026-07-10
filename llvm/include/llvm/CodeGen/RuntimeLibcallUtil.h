@@ -100,6 +100,10 @@ LLVM_ABI Libcall getPOWI(EVT RetVT);
 /// UNKNOWN_LIBCALL if there is none.
 LLVM_ABI Libcall getPOW(EVT RetVT);
 
+/// getCBRT - Return the CBRT_* value for the given types, or
+/// UNKNOWN_LIBCALL if there is none.
+LLVM_ABI Libcall getCBRT(EVT RetVT);
+
 /// getLDEXP - Return the LDEXP_* value for the given types, or
 /// UNKNOWN_LIBCALL if there is none.
 LLVM_ABI Libcall getLDEXP(EVT RetVT);
@@ -131,6 +135,10 @@ LLVM_ABI Libcall getSINCOS_STRET(EVT RetVT);
 /// getMODF - Return the MODF_* value for the given types, or
 /// UNKNOWN_LIBCALL if there is none.
 LLVM_ABI Libcall getMODF(EVT VT);
+
+/// \return the REM_* value for the given types, or UNKNOWN_LIBCALL if there is
+/// none.
+LLVM_ABI Libcall getREM(EVT VT);
 
 /// \return the LROUND_* value for the given types, or UNKNOWN_LIBCALL if there
 /// is none.

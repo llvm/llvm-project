@@ -27,7 +27,7 @@ AST_MATCHER(Stmt, isMacroExpansion) {
   return SM.isMacroBodyExpansion(Loc) || SM.isMacroArgExpansion(Loc);
 }
 
-AST_MATCHER(Stmt, isC23) { return Finder->getASTContext().getLangOpts().C23; }
+AST_MATCHER(Stmt, isC) { return Finder->getASTContext().getLangOpts().C99; }
 
 // Preserve same name as AST_MATCHER(isNULLMacroExpansion)
 // NOLINTNEXTLINE(llvm-prefer-static-over-anonymous-namespace)
@@ -47,7 +47,7 @@ AST_MATCHER(Stmt, isNULLMacroExpansion) {
 
 static StringRef getZeroLiteralToCompareWithForType(CastKind CastExprKind,
                                                     QualType Type,
-                                                    ASTContext &Context) {
+                                                    const ASTContext &Context) {
   switch (CastExprKind) {
   case CK_IntegralToBoolean:
     return Type->isUnsignedIntegerType() ? "0u" : "0";
@@ -71,7 +71,7 @@ static bool isUnaryLogicalNotOperator(const Stmt *Statement) {
   return UnaryOperatorExpr && UnaryOperatorExpr->getOpcode() == UO_LNot;
 }
 
-static void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
+static void fixGenericExprCastToBool(const DiagnosticBuilder &Diag,
                                      const ImplicitCastExpr *Cast,
                                      const Stmt *Parent, ASTContext &Context,
                                      bool UseUpperCaseLiteralSuffix) {
@@ -98,28 +98,23 @@ static void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
 
   std::string StartLocInsertion;
 
-  if (NeedOuterParens) {
-    StartLocInsertion += "(";
-  }
-  if (NeedInnerParens) {
-    StartLocInsertion += "(";
-  }
+  if (NeedOuterParens)
+    StartLocInsertion += '(';
+  if (NeedInnerParens)
+    StartLocInsertion += '(';
 
-  if (!StartLocInsertion.empty()) {
+  if (!StartLocInsertion.empty())
     Diag << FixItHint::CreateInsertion(Cast->getBeginLoc(), StartLocInsertion);
-  }
 
   std::string EndLocInsertion;
 
-  if (NeedInnerParens) {
-    EndLocInsertion += ")";
-  }
+  if (NeedInnerParens)
+    EndLocInsertion += ')';
 
-  if (InvertComparison) {
+  if (InvertComparison)
     EndLocInsertion += " == ";
-  } else {
+  else
     EndLocInsertion += " != ";
-  }
 
   const StringRef ZeroLiteral = getZeroLiteralToCompareWithForType(
       Cast->getCastKind(), SubExpr->getType(), Context);
@@ -129,9 +124,8 @@ static void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
   else
     EndLocInsertion += ZeroLiteral;
 
-  if (NeedOuterParens) {
-    EndLocInsertion += ")";
-  }
+  if (NeedOuterParens)
+    EndLocInsertion += ')';
 
   const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
       Cast->getEndLoc(), 0, Context.getSourceManager(), Context.getLangOpts());
@@ -140,14 +134,11 @@ static void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
 
 static StringRef getEquivalentBoolLiteralForExpr(const Expr *Expression,
                                                  ASTContext &Context) {
-  if (isNULLMacroExpansion(Expression, Context)) {
+  if (isNULLMacroExpansion(Expression, Context))
     return "false";
-  }
 
-  if (const auto *IntLit =
-          dyn_cast<IntegerLiteral>(Expression->IgnoreParens())) {
+  if (const auto *IntLit = dyn_cast<IntegerLiteral>(Expression->IgnoreParens()))
     return (IntLit->getValue() == 0) ? "false" : "true";
-  }
 
   if (const auto *FloatLit = dyn_cast<FloatingLiteral>(Expression)) {
     llvm::APFloat FloatLitAbsValue = FloatLit->getValue();
@@ -155,13 +146,11 @@ static StringRef getEquivalentBoolLiteralForExpr(const Expr *Expression,
     return (FloatLitAbsValue.bitcastToAPInt() == 0) ? "false" : "true";
   }
 
-  if (const auto *CharLit = dyn_cast<CharacterLiteral>(Expression)) {
+  if (const auto *CharLit = dyn_cast<CharacterLiteral>(Expression))
     return (CharLit->getValue() == 0) ? "false" : "true";
-  }
 
-  if (isa<StringLiteral>(Expression->IgnoreCasts())) {
+  if (isa<StringLiteral>(Expression->IgnoreCasts()))
     return "true";
-  }
 
   return {};
 }
@@ -178,7 +167,7 @@ static bool needsSpacePrefix(SourceLocation Loc, ASTContext &Context) {
   return !AllowedCharacters.contains(SpaceBeforeStmtStr.back());
 }
 
-static void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
+static void fixGenericExprCastFromBool(const DiagnosticBuilder &Diag,
                                        const ImplicitCastExpr *Cast,
                                        ASTContext &Context,
                                        StringRef OtherType) {
@@ -208,7 +197,7 @@ static void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
 
 static StringRef
 getEquivalentForBoolLiteral(const CXXBoolLiteralExpr *BoolLiteral,
-                            QualType DestType, ASTContext &Context) {
+                            QualType DestType, const ASTContext &Context) {
   // Prior to C++11, false literal could be implicitly converted to pointer.
   if (!Context.getLangOpts().CPlusPlus11 &&
       (DestType->isPointerType() || DestType->isMemberPointerType()) &&
@@ -217,15 +206,13 @@ getEquivalentForBoolLiteral(const CXXBoolLiteralExpr *BoolLiteral,
   }
 
   if (DestType->isFloatingType()) {
-    if (ASTContext::hasSameType(DestType, Context.FloatTy)) {
+    if (ASTContext::hasSameType(DestType, Context.FloatTy))
       return BoolLiteral->getValue() ? "1.0f" : "0.0f";
-    }
     return BoolLiteral->getValue() ? "1.0" : "0.0";
   }
 
-  if (DestType->isUnsignedIntegerType()) {
+  if (DestType->isUnsignedIntegerType())
     return BoolLiteral->getValue() ? "1u" : "0u";
-  }
   return BoolLiteral->getValue() ? "1" : "0";
 }
 
@@ -246,7 +233,7 @@ static bool isCastAllowedInCondition(const ImplicitCastExpr *Cast,
           isa<BinaryConditionalOperator>(S))
         return true;
       if (isa<ParenExpr>(S) || isa<ImplicitCastExpr>(S) ||
-          isUnaryLogicalNotOperator(S) ||
+          isa<ExprWithCleanups>(S) || isUnaryLogicalNotOperator(S) ||
           (isa<BinaryOperator>(S) && cast<BinaryOperator>(S)->isLogicalOp())) {
         Q.push(S);
       } else {
@@ -258,11 +245,22 @@ static bool isCastAllowedInCondition(const ImplicitCastExpr *Cast,
   return false;
 }
 
+static bool isLogicalOperatorResult(const ImplicitCastExpr *Cast) {
+  const Expr *SubExpr = Cast->getSubExpr()->IgnoreParenImpCasts();
+  if (const auto *BinOp = dyn_cast<BinaryOperator>(SubExpr))
+    return BinOp->isLogicalOp();
+  if (const auto *UnOp = dyn_cast<UnaryOperator>(SubExpr))
+    return UnOp->getOpcode() == UO_LNot;
+  return false;
+}
+
 ImplicitBoolConversionCheck::ImplicitBoolConversionCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       AllowIntegerConditions(Options.get("AllowIntegerConditions", false)),
       AllowPointerConditions(Options.get("AllowPointerConditions", false)),
+      AllowLogicalOperatorConversion(
+          Options.get("AllowLogicalOperatorConversion", false)),
       UseUpperCaseLiteralSuffix(
           Options.get("UseUpperCaseLiteralSuffix", false)) {}
 
@@ -270,6 +268,8 @@ void ImplicitBoolConversionCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AllowIntegerConditions", AllowIntegerConditions);
   Options.store(Opts, "AllowPointerConditions", AllowPointerConditions);
+  Options.store(Opts, "AllowLogicalOperatorConversion",
+                AllowLogicalOperatorConversion);
   Options.store(Opts, "UseUpperCaseLiteralSuffix", UseUpperCaseLiteralSuffix);
 }
 
@@ -306,8 +306,8 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                          hasCastKind(CK_FloatingToBoolean),
                          hasCastKind(CK_PointerToBoolean),
                          hasCastKind(CK_MemberPointerToBoolean)),
-                   // Exclude cases of C23 comparison result.
-                   unless(allOf(isC23(),
+                   // Exclude cases of C comparison result.
+                   unless(allOf(isC(),
                                 hasSourceExpression(ignoringParens(
                                     binaryOperator(hasAnyOperatorName(
                                         ">", ">=", "==", "!=", "<", "<=")))))),
@@ -338,11 +338,15 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
   auto BitfieldConstruct = cxxConstructorDecl(hasDescendant(cxxCtorInitializer(
       withInitializer(equalsBoundNode("implicitCastFromBool")),
       forField(hasBitWidth(1)))));
+  auto BoolTernaryCondition = conditionalOperator(
+      hasCondition(equalsBoundNode("implicitCastFromBool")));
   Finder->addMatcher(
       traverse(
           TK_AsIs,
           implicitCastExpr(
-              ImplicitCastFromBool, unless(ExceptionCases),
+              ImplicitCastFromBool,
+              implicitCastExpr().bind("implicitCastFromBool"),
+              unless(ExceptionCases),
               // Exclude comparisons of bools, as they are always cast to
               // integers in such context:
               //   bool_expr_a == bool_expr_b
@@ -350,7 +354,12 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
               unless(hasParent(
                   binaryOperator(anyOf(BoolComparison, BoolXor,
                                        BoolOpAssignment, BitfieldAssignment)))),
-              implicitCastExpr().bind("implicitCastFromBool"),
+              // Exclude logical operators in C
+              unless(allOf(isC(), hasParent(binaryOperator(
+                                      hasAnyOperatorName("&&", "||"))))),
+              // Exclude bools used as ternary operator conditions in C
+              unless(allOf(isC(), hasCastKind(CK_IntegralCast),
+                           hasParent(BoolTernaryCondition))),
               unless(hasParent(BitfieldConstruct)),
               // Check also for nested casts, for example: bool -> int -> float.
               optionally(
@@ -392,7 +401,14 @@ void ImplicitBoolConversionCheck::handleCastToBool(const ImplicitCastExpr *Cast,
     return;
   }
 
-  auto Diag = diag(Cast->getBeginLoc(), "implicit conversion %0 -> 'bool'")
+  if (AllowLogicalOperatorConversion &&
+      Cast->getCastKind() == CK_IntegralToBoolean &&
+      isLogicalOperatorResult(Cast)) {
+    return;
+  }
+
+  auto Diag = diag(Context.getSourceManager().getFileLoc(Cast->getBeginLoc()),
+                   "implicit conversion %0 -> 'bool'")
               << Cast->getSubExpr()->getType();
 
   const StringRef EquivalentLiteral =
@@ -410,7 +426,8 @@ void ImplicitBoolConversionCheck::handleCastFromBool(
     ASTContext &Context) {
   const QualType DestType =
       NextImplicitCast ? NextImplicitCast->getType() : Cast->getType();
-  auto Diag = diag(Cast->getBeginLoc(), "implicit conversion 'bool' -> %0")
+  auto Diag = diag(Context.getSourceManager().getFileLoc(Cast->getBeginLoc()),
+                   "implicit conversion 'bool' -> %0")
               << DestType;
 
   if (const auto *BoolLiteral =

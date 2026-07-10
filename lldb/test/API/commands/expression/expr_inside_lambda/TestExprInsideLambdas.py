@@ -6,10 +6,15 @@
 
 
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
+@skipIfWasm  # no expression evaluation
 class ExprInsideLambdaTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+    SHARED_BUILD_TESTCASE = False
+
     def expectExprError(self, expr: str, expected: str):
         frame = self.thread.GetFrameAtIndex(0)
         value = frame.EvaluateExpression(expr)
@@ -110,28 +115,48 @@ class ExprInsideLambdaTestCase(TestBase):
         # Check access to outer top-level structure's members
         self.expectExprError(
             "class_var",
-            ("use of non-static data member" " 'class_var' of 'Foo' from nested type"),
+            (
+                "use of undeclared identifier"
+                if self.getDebugInfo() == "pdb"
+                else (
+                    "use of non-static data member 'class_var' of 'Foo' from nested type"
+                )
+            ),
         )
 
         self.expectExprError(
-            "base_var", ("use of non-static data member" " 'base_var'")
+            "base_var",
+            (
+                "use of undeclared identifier"
+                if self.getDebugInfo() == "pdb"
+                else ("use of non-static data member 'base_var'")
+            ),
         )
 
         self.expectExprError(
             "local_var",
             (
-                "use of non-static data member 'local_var'"
-                " of '(unnamed class)' from nested type 'LocalLambdaClass'"
+                "use of undeclared identifier"
+                if self.getDebugInfo() == "pdb"
+                else (
+                    "use of non-static data member 'local_var' of '(unnamed class)' from nested type 'LocalLambdaClass'"
+                )
             ),
         )
 
         # Inside non_capturing_method
         lldbutil.continue_to_breakpoint(process, bkpt)
-        self.expect_expr("local", result_type="int", result_value="5")
-        self.expect_expr("local2", result_type="int", result_value="10")
+        self.expect_expr("local", result_type="const int", result_value="5")
+        self.expect_expr("local2", result_type="const int", result_value="10")
         self.expect_expr("local2 * local", result_type="int", result_value="50")
 
         self.expectExprError(
             "class_var",
-            ("use of non-static data member" " 'class_var' of 'Foo' from nested type"),
+            (
+                "use of undeclared identifier"
+                if self.getDebugInfo() == "pdb"
+                else (
+                    "use of non-static data member 'class_var' of 'Foo' from nested type"
+                )
+            ),
         )

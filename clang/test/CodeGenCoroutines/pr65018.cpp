@@ -45,6 +45,6 @@ MyTask FooBar() {
 
 // CHECK: %[[RET:.+]] = {{.*}}call{{.*}}@_ZN7Awaiter13await_suspendESt16coroutine_handleIvE
 // CHECK: %[[RESUME_ADDR:.+]] = load ptr, ptr %[[RET]],
-// CHECK: musttail call fastcc void %[[RESUME_ADDR]]({{.*}}%[[RET]]
+// CHECK: musttail call void %[[RESUME_ADDR]]({{.*}}%[[RET]]
 // CHECK: ret
 

@@ -23,6 +23,7 @@
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -63,6 +64,7 @@ public:
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<GISelCSEAnalysisWrapperPass>();
     AU.addRequired<MachineUniformityAnalysisPass>();
+    AU.addRequired<GISelValueTrackingAnalysisLegacy>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -80,6 +82,7 @@ INITIALIZE_PASS_BEGIN(AMDGPURegBankLegalize, DEBUG_TYPE,
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineUniformityAnalysisPass)
+INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_END(AMDGPURegBankLegalize, DEBUG_TYPE,
                     "AMDGPU Register Bank Legalize", false, false)
 
@@ -128,8 +131,9 @@ public:
 
   bool isLaneMask(Register Reg);
   std::pair<MachineInstr *, Register> tryMatch(Register Src, unsigned Opcode);
-  std::pair<GUnmerge *, int> tryMatchRALFromUnmerge(Register Src);
-  Register getReadAnyLaneSrc(Register Src);
+  Register tryMatchUnmergeDefs(SmallVectorImpl<Register> &DefRegs);
+  SmallVector<Register> tryMatchMergeReadAnyLane(GMergeLikeInstr *Merge);
+  SmallVector<Register> getReadAnyLaneSrcs(Register Src);
   void replaceRegWithOrBuildCopy(Register Dst, Register Src);
 
   bool tryEliminateReadAnyLane(MachineInstr &Copy);
@@ -154,31 +158,48 @@ AMDGPURegBankLegalizeCombiner::tryMatch(Register Src, unsigned Opcode) {
   return {MatchMI, MatchMI->getOperand(1).getReg()};
 }
 
-std::pair<GUnmerge *, int>
-AMDGPURegBankLegalizeCombiner::tryMatchRALFromUnmerge(Register Src) {
-  MachineInstr *ReadAnyLane = MRI.getVRegDef(Src);
-  if (ReadAnyLane->getOpcode() != AMDGPU::G_AMDGPU_READANYLANE)
-    return {nullptr, -1};
-
-  Register RALSrc = ReadAnyLane->getOperand(1).getReg();
-  if (auto *UnMerge = getOpcodeDef<GUnmerge>(RALSrc, MRI))
-    return {UnMerge, UnMerge->findRegisterDefOperandIdx(RALSrc, nullptr)};
-
-  return {nullptr, -1};
+// Check if all registers are from same unmerge and there is no shuffling.
+// Returns the unmerge source if both conditions are met.
+Register AMDGPURegBankLegalizeCombiner::tryMatchUnmergeDefs(
+    SmallVectorImpl<Register> &DefRegs) {
+  auto *UnMerge = getOpcodeDef<GUnmerge>(DefRegs[0], MRI);
+  if (!UnMerge || UnMerge->getNumDefs() != DefRegs.size())
+    return {};
+  for (unsigned I = 1; I < DefRegs.size(); ++I) {
+    if (UnMerge->getReg(I) != DefRegs[I])
+      return {};
+  }
+  return UnMerge->getSourceReg();
 }
 
-Register AMDGPURegBankLegalizeCombiner::getReadAnyLaneSrc(Register Src) {
+// Check if all merge sources are readanylanes and return the readanylane
+// sources if they are.
+SmallVector<Register> AMDGPURegBankLegalizeCombiner::tryMatchMergeReadAnyLane(
+    GMergeLikeInstr *Merge) {
+  SmallVector<Register> ReadAnyLaneSrcs;
+  for (unsigned i = 0; i < Merge->getNumSources(); ++i) {
+    Register Src;
+    if (!mi_match(Merge->getSourceReg(i), MRI,
+                  m_GAMDGPUReadAnyLane(m_Reg(Src))))
+      return {};
+    ReadAnyLaneSrcs.push_back(Src);
+  }
+  return ReadAnyLaneSrcs;
+}
+
+SmallVector<Register>
+AMDGPURegBankLegalizeCombiner::getReadAnyLaneSrcs(Register Src) {
   // Src = G_AMDGPU_READANYLANE RALSrc
   Register RALSrc;
   if (mi_match(Src, MRI, m_GAMDGPUReadAnyLane(m_Reg(RALSrc))))
-    return RALSrc;
+    return {RALSrc};
 
   // RALSrc = G_ANYEXT S16Src
   // TruncSrc = G_AMDGPU_READANYLANE RALSrc
   // Src = G_TRUNC TruncSrc
   if (mi_match(Src, MRI,
                m_GTrunc(m_GAMDGPUReadAnyLane(m_GAnyExt(m_Reg(RALSrc)))))) {
-    return RALSrc;
+    return {RALSrc};
   }
 
   // TruncSrc = G_AMDGPU_READANYLANE RALSrc
@@ -186,27 +207,25 @@ Register AMDGPURegBankLegalizeCombiner::getReadAnyLaneSrc(Register Src) {
   // Src = G_ANYEXT AextSrc
   if (mi_match(Src, MRI,
                m_GAnyExt(m_GTrunc(m_GAMDGPUReadAnyLane(m_Reg(RALSrc)))))) {
-    return RALSrc;
+    return {RALSrc};
   }
 
-  // LoVgpr, HiVgpr = G_UNMERGE_VALUES UnmergeSrc
-  // LoSgpr = G_AMDGPU_READANYLANE LoVgpr
-  // HiSgpr = G_AMDGPU_READANYLANE HiVgpr
-  // Src G_MERGE_VALUES LoSgpr, HiSgpr
-  auto *Merge = getOpcodeDef<GMergeLikeInstr>(Src, MRI);
-  if (Merge) {
-    unsigned NumElts = Merge->getNumSources();
-    auto [Unmerge, Idx] = tryMatchRALFromUnmerge(Merge->getSourceReg(0));
-    if (!Unmerge || Unmerge->getNumDefs() != NumElts || Idx != 0)
+  // Sgpr0 = G_AMDGPU_READANYLANE Vgpr0
+  // Sgpr1 = G_AMDGPU_READANYLANE Vgpr1
+  // ...
+  // Src = G_MERGE_LIKE Sgpr0, Sgpr1, ...
+  // Dst = COPY Src
+  if (auto *Merge = getOpcodeDef<GMergeLikeInstr>(Src, MRI)) {
+    SmallVector<Register> ReadAnyLaneSrcs = tryMatchMergeReadAnyLane(Merge);
+    if (ReadAnyLaneSrcs.empty())
       return {};
 
-    // Check if all elements are from same unmerge and there is no shuffling.
-    for (unsigned i = 1; i < NumElts; ++i) {
-      auto [UnmergeI, IdxI] = tryMatchRALFromUnmerge(Merge->getSourceReg(i));
-      if (UnmergeI != Unmerge || (unsigned)IdxI != i)
-        return {};
-    }
-    return Unmerge->getSourceReg();
+    // Vgpr0, Vgpr1, ... = G_UNMERGE_VALUES UnmergeSrc
+    if (Register UnmergeSrc = tryMatchUnmergeDefs(ReadAnyLaneSrcs))
+      return {UnmergeSrc};
+
+    // Multiple ReadAnyLane vgpr sources, need to merge Vgpr0, Vgpr1, ...
+    return ReadAnyLaneSrcs;
   }
 
   // SrcRegIdx = G_AMDGPU_READANYLANE RALElSrc
@@ -217,7 +236,7 @@ Register AMDGPURegBankLegalizeCombiner::getReadAnyLaneSrc(Register Src) {
     return {};
 
   int Idx = UnMerge->findRegisterDefOperandIdx(Src, nullptr);
-  Merge = getOpcodeDef<GMergeLikeInstr>(UnMerge->getSourceReg(), MRI);
+  auto *Merge = getOpcodeDef<GMergeLikeInstr>(UnMerge->getSourceReg(), MRI);
   if (!Merge || UnMerge->getNumDefs() != Merge->getNumSources())
     return {};
 
@@ -227,7 +246,7 @@ Register AMDGPURegBankLegalizeCombiner::getReadAnyLaneSrc(Register Src) {
 
   auto [RALEl, RALElSrc] = tryMatch(SrcRegIdx, AMDGPU::G_AMDGPU_READANYLANE);
   if (RALEl)
-    return RALElSrc;
+    return {RALElSrc};
 
   return {};
 }
@@ -259,17 +278,27 @@ bool AMDGPURegBankLegalizeCombiner::tryEliminateReadAnyLane(
   if (SrcMI.getOpcode() == AMDGPU::G_BITCAST)
     RALDst = SrcMI.getOperand(1).getReg();
 
-  Register RALSrc = getReadAnyLaneSrc(RALDst);
-  if (!RALSrc)
+  B.setInstrAndDebugLoc(Copy);
+  SmallVector<Register> ReadAnyLaneSrcRegs = getReadAnyLaneSrcs(RALDst);
+  if (ReadAnyLaneSrcRegs.empty())
     return false;
 
-  B.setInstr(Copy);
+  Register ReadAnyLaneSrc;
+  if (ReadAnyLaneSrcRegs.size() == 1) {
+    ReadAnyLaneSrc = ReadAnyLaneSrcRegs[0];
+  } else {
+    // Multiple readanylane sources without a common unmerge, merge them.
+    auto Merge = B.buildMergeLikeInstr({VgprRB, MRI.getType(RALDst)},
+                                       ReadAnyLaneSrcRegs);
+    ReadAnyLaneSrc = Merge.getReg(0);
+  }
+
   if (SrcMI.getOpcode() != AMDGPU::G_BITCAST) {
     // Src = READANYLANE RALSrc     Src = READANYLANE RALSrc
     // Dst = Copy Src               $Dst = Copy Src
     // ->                           ->
     // Dst = RALSrc                 $Dst = Copy RALSrc
-    replaceRegWithOrBuildCopy(Dst, RALSrc);
+    replaceRegWithOrBuildCopy(Dst, ReadAnyLaneSrc);
   } else {
     // RALDst = READANYLANE RALSrc  RALDst = READANYLANE RALSrc
     // Src = G_BITCAST RALDst       Src = G_BITCAST RALDst
@@ -277,7 +306,7 @@ bool AMDGPURegBankLegalizeCombiner::tryEliminateReadAnyLane(
     // ->                          ->
     // NewVgpr = G_BITCAST RALDst   NewVgpr = G_BITCAST RALDst
     // Dst = NewVgpr                $Dst = Copy NewVgpr
-    auto Bitcast = B.buildBitcast({VgprRB, MRI.getType(Src)}, RALSrc);
+    auto Bitcast = B.buildBitcast({VgprRB, MRI.getType(Src)}, ReadAnyLaneSrc);
     replaceRegWithOrBuildCopy(Dst, Bitcast.getReg(0));
   }
 
@@ -413,12 +442,14 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
   const RegisterBankInfo &RBI = *ST.getRegBankInfo();
   const MachineUniformityInfo &MUI =
       getAnalysis<MachineUniformityAnalysisPass>().getUniformityInfo();
+  GISelValueTracking &VT =
+      getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
 
   // RegBankLegalizeRules is initialized with assigning sets of IDs to opcodes.
   const RegBankLegalizeRules &RBLRules = getRules(ST, MRI);
 
   // Logic that does legalization based on IDs assigned to Opcode.
-  RegBankLegalizeHelper RBLHelper(B, MUI, RBI, RBLRules);
+  RegBankLegalizeHelper RBLHelper(B, MUI, &VT, RBI, RBLRules);
 
   SmallVector<MachineInstr *> AllInst;
 
@@ -431,41 +462,6 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
   for (MachineInstr *MI : AllInst) {
     if (!MI->isPreISelOpcode())
       continue;
-
-    unsigned Opc = MI->getOpcode();
-    // Insert point for use operands needs some calculation.
-    if (Opc == AMDGPU::G_PHI) {
-      if (!RBLHelper.applyMappingPHI(*MI))
-        return false;
-      continue;
-    }
-
-    // Opcodes that support pretty much all combinations of reg banks and LLTs
-    // (except S1). There is no point in writing rules for them.
-    if (Opc == AMDGPU::G_BUILD_VECTOR || Opc == AMDGPU::G_UNMERGE_VALUES ||
-        Opc == AMDGPU::G_MERGE_VALUES || Opc == AMDGPU::G_BITCAST) {
-      RBLHelper.applyMappingTrivial(*MI);
-      continue;
-    }
-
-    // Opcodes that also support S1.
-    if (Opc == G_FREEZE &&
-        MRI.getType(MI->getOperand(0).getReg()) != LLT::scalar(1)) {
-      RBLHelper.applyMappingTrivial(*MI);
-      continue;
-    }
-
-    if ((Opc == AMDGPU::G_CONSTANT || Opc == AMDGPU::G_FCONSTANT ||
-         Opc == AMDGPU::G_IMPLICIT_DEF)) {
-      Register Dst = MI->getOperand(0).getReg();
-      // Non S1 types are trivially accepted.
-      if (MRI.getType(Dst) != LLT::scalar(1)) {
-        assert(MRI.getRegBank(Dst)->getID() == AMDGPU::SGPRRegBankID);
-        continue;
-      }
-
-      // S1 rules are in RegBankLegalizeRules.
-    }
 
     if (!RBLHelper.findRuleAndApplyMapping(*MI))
       return false;

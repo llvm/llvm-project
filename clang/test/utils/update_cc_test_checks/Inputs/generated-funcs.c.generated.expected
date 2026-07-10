@@ -197,7 +197,7 @@ void foo(void) {
 // NOOMP-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I]], align 4
 // NOOMP-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP2]], 1
 // NOOMP-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// NOOMP-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP2:![0-9]+]]
+// NOOMP-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP1:![0-9]+]]
 // NOOMP:       for.end:
 // NOOMP-NEXT:    call void @foo()
 // NOOMP-NEXT:    ret i32 0
@@ -223,12 +223,12 @@ void foo(void) {
 // NOOMP-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I]], align 4
 // NOOMP-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP2]], 1
 // NOOMP-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// NOOMP-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP4:![0-9]+]]
+// NOOMP-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP3:![0-9]+]]
 // NOOMP:       for.end:
 // NOOMP-NEXT:    ret void
 //
 //.
-// NOOMP: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]]}
-// NOOMP: [[META3]] = !{!"llvm.loop.mustprogress"}
-// NOOMP: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]]}
+// NOOMP: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]]}
+// NOOMP: [[META2]] = !{!"llvm.loop.mustprogress"}
+// NOOMP: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]]}
 //.

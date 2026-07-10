@@ -14,6 +14,6 @@ declare void @plain()
 attributes #0 = { "wasm-import-module"="bar" "wasm-import-name"="qux" }
 
 ; CHECK-NOT: .import_module plain
-;     CHECK: .import_module foo, bar
-;     CHECK: .import_name foo, qux
+;     CHECK: .import_module foo, "bar"
+;     CHECK: .import_name foo, "qux"
 ; CHECK-NOT: .import_module plain

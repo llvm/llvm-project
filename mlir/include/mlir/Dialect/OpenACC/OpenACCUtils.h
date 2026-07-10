@@ -10,7 +10,13 @@
 #define MLIR_DIALECT_OPENACC_OPENACCUTILS_H_
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Remarks.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
+#include <optional>
+#include <string>
 
 namespace mlir {
 class DominanceInfo;
@@ -22,6 +28,15 @@ namespace acc {
 /// is found. The returned operation is one of types defined by
 /// `ACC_COMPUTE_CONSTRUCT_OPS`.
 mlir::Operation *getEnclosingComputeOp(mlir::Region &region);
+
+/// If `v` is not a block argument of an `acc.compute_region` body, returns
+/// nullptr. Otherwise maps the block argument to its operand and returns it.
+mlir::Value getACCOperandForBlockArg(mlir::Value v);
+
+/// If `v` is not a block argument of an `acc.compute_region` body, returns
+/// nullptr. Otherwise maps the block argument to its operand and returns the
+/// defining operation if it is one of `ACC_DATA_ENTRY_OPS`.
+mlir::Operation *getACCDataClauseOpForBlockArg(mlir::Value v);
 
 /// Returns true if this value is only used by `acc.private` operations in the
 /// `region`.
@@ -46,6 +61,16 @@ mlir::acc::VariableTypeCategory getTypeCategory(mlir::Value var);
 /// empty string if no name is found.
 std::string getVariableName(mlir::Value v);
 
+/// Returns a placeholder string for use as an acc.var_name attribute value when
+/// the actual variable name is not yet known at the point of IR construction.
+/// The placeholder is meant to be replaced with the real name at a later
+/// lowering stage.
+/// For example, recipe init regions may attach this to ops at recipe-generation
+/// time, and ACCRecipeMaterialization will subsequently replace the placeholder
+/// with the actual variable name on all marked ops after inlining the recipe
+/// into the compute construct.
+llvm::StringLiteral getVarNamePlaceholder();
+
 /// Get the recipe name for a given recipe kind and type.
 /// Returns an empty string if not possible to generate a recipe name.
 std::string getRecipeName(mlir::acc::RecipeKind kind, mlir::Type type);
@@ -65,6 +90,25 @@ mlir::Value getBaseEntity(mlir::Value val);
 bool isValidSymbolUse(mlir::Operation *user, mlir::SymbolRefAttr symbol,
                       mlir::Operation **definingOpPtr = nullptr);
 
+/// Check if a value represents device data.
+/// This checks if the value represents device data via the
+/// MappableType, PointerLikeType, and GlobalVariableOpInterface interfaces,
+/// and whether the defining operation carries `acc.declare` with the deviceptr
+/// clause.
+/// \param val The value to check
+/// \return true if the value is device data, false otherwise
+bool isDeviceValue(mlir::Value val);
+
+/// Check if a value use is valid in an OpenACC region.
+/// This is true if:
+/// - The value is produced by an ACC data entry operation
+/// - The value is device data
+/// - The value is only used by private clauses in the region
+/// \param val The value to check
+/// \param region The OpenACC region
+/// \return true if the value use is valid, false otherwise
+bool isValidValueUse(mlir::Value val, mlir::Region &region);
+
 /// Collects all data clauses that dominate the compute construct.
 /// This includes data clauses from:
 /// - The compute construct itself
@@ -80,6 +124,35 @@ llvm::SmallVector<mlir::Value>
 getDominatingDataClauses(mlir::Operation *computeConstructOp,
                          mlir::DominanceInfo &domInfo,
                          mlir::PostDominanceInfo &postDomInfo);
+
+/// Emit an OpenACC remark with lazy message generation.
+///
+/// The messageFn is only invoked if remarks are enabled, allowing callers
+/// to avoid constructing expensive messages when remarks are disabled.
+///
+/// \param op The operation to emit the remark for.
+/// \param messageFn A callable that returns the remark message.
+/// \param category Optional category for the remark. Defaults to "openacc".
+/// \return An in-flight remark object that can be used to append
+///         additional information to the remark.
+remark::detail::InFlightRemark
+emitRemark(mlir::Operation *op, const std::function<std::string()> &messageFn,
+           llvm::StringRef category = "openacc");
+
+/// Emit an OpenACC remark for the given operation with the given message.
+///
+/// \param op The operation to emit the remark for.
+/// \param message The remark message.
+/// \param category Optional category for the remark. Defaults to "openacc".
+/// \return An in-flight remark object that can be used to append
+///         additional information to the remark.
+inline remark::detail::InFlightRemark
+emitRemark(mlir::Operation *op, const llvm::Twine &message,
+           llvm::StringRef category = "openacc") {
+  return emitRemark(
+      op, std::function<std::string()>([msg = message.str()]() { return msg; }),
+      category);
+}
 
 } // namespace acc
 } // namespace mlir

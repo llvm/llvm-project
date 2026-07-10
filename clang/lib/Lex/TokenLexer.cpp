@@ -57,6 +57,7 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
   IsReinject = false;
   NumTokens = Macro->tokens_end()-Macro->tokens_begin();
   MacroExpansionStart = SourceLocation();
+  LexingCXXModuleDirective = false;
 
   SourceManager &SM = PP.getSourceManager();
   MacroStartSLocOffset = SM.getNextLocalOffset();
@@ -113,6 +114,7 @@ void TokenLexer::Init(const Token *TokArray, unsigned NumToks,
   HasLeadingSpace = false;
   NextTokGetsSpace = false;
   MacroExpansionStart = SourceLocation();
+  LexingCXXModuleDirective = false;
 
   // Set HasLeadingSpace/AtStartOfLine so that the first token will be
   // returned unmodified.
@@ -133,6 +135,10 @@ void TokenLexer::destroy() {
 
   // TokenLexer owns its formal arguments.
   if (ActualArgs) ActualArgs->destroy(PP);
+}
+
+static bool hasVaOptSupport(const LangOptions &LangOpts) {
+  return LangOpts.C23 || LangOpts.CPlusPlus20;
 }
 
 bool TokenLexer::MaybeRemoveCommaBeforeVaArgs(
@@ -162,8 +168,10 @@ bool TokenLexer::MaybeRemoveCommaBeforeVaArgs(
     return false;
 
   // Issue an extension diagnostic for the paste operator.
-  if (HasPasteOperator)
-    PP.Diag(ResultToks.back().getLocation(), diag::ext_paste_comma);
+  if (HasPasteOperator) {
+    PP.Diag(ResultToks.back().getLocation(), diag::ext_paste_comma)
+        << hasVaOptSupport(PP.getLangOpts());
+  }
 
   // Remove the comma.
   ResultToks.pop_back();
@@ -521,7 +529,16 @@ void TokenLexer::ExpandFunctionArguments() {
           Macro->isVariadic()) {
         VaArgsPseudoPaste = true;
         // Remove the paste operator, report use of the extension.
-        PP.Diag(ResultToks.pop_back_val().getLocation(), diag::ext_paste_comma);
+        bool VaOptSupport = hasVaOptSupport(PP.getLangOpts());
+        auto Diag = PP.Diag(ResultToks.pop_back_val().getLocation(),
+                            diag::ext_paste_comma)
+                    << VaOptSupport;
+        if (VaOptSupport) {
+          Diag << FixItHint::CreateReplacement(
+              SourceRange(ResultToks.back().getLocation(),
+                          CurTok.getLocation()),
+              " __VA_OPT__(,) __VA_ARGS__");
+        }
       }
 
       ResultToks.append(ArgToks, ArgToks+NumToks);
@@ -625,6 +642,18 @@ bool TokenLexer::Lex(Token &Tok) {
     // that it is no longer being expanded.
     if (Macro) Macro->EnableMacro();
 
+    // CWG2947: Allow the following code:
+    //
+    // export module m; int x;
+    // extern "C++" int *y = &x;
+    //
+    // The 'extern' token should has 'StartOfLine' flag when current TokenLexer
+    // exits and propagate line start/leading space info.
+    if (!Macro && isLexingCXXModuleDirective()) {
+      AtStartOfLine = true;
+      setLexingCXXModuleDirective(false);
+    }
+
     Tok.startToken();
     Tok.setFlagValue(Token::StartOfLine , AtStartOfLine);
     Tok.setFlagValue(Token::LeadingSpace, HasLeadingSpace || NextTokGetsSpace);
@@ -699,7 +728,9 @@ bool TokenLexer::Lex(Token &Tok) {
   HasLeadingSpace = false;
 
   // Handle recursive expansion!
-  if (!Tok.isAnnotation() && Tok.getIdentifierInfo() != nullptr) {
+  if (!Tok.isAnnotation() && Tok.getIdentifierInfo() != nullptr &&
+      (!PP.getLangOpts().CPlusPlusModules ||
+       !Tok.isModuleContextualKeyword())) {
     // Change the kind of this identifier to the appropriate token kind, e.g.
     // turning "for" into a keyword.
     IdentifierInfo *II = Tok.getIdentifierInfo();
@@ -945,6 +976,18 @@ std::optional<Token> TokenLexer::peekNextPPToken() const {
 /// preprocessor directive.
 bool TokenLexer::isParsingPreprocessorDirective() const {
   return Tokens[NumTokens-1].is(tok::eod) && !isAtEnd();
+}
+
+/// setLexingCXXModuleDirective - This is set to true if this TokenLexer is
+/// created when handling C++ module directive.
+void TokenLexer::setLexingCXXModuleDirective(bool Val) {
+  LexingCXXModuleDirective = Val;
+}
+
+/// isLexingCXXModuleDirective - Return true if we are lexing a C++ module or
+/// import directive.
+bool TokenLexer::isLexingCXXModuleDirective() const {
+  return LexingCXXModuleDirective;
 }
 
 /// HandleMicrosoftCommentPaste - In microsoft compatibility mode, /##/ pastes

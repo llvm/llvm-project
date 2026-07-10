@@ -49,6 +49,7 @@ class AssemblyAnnotationWriter;
 class Constant;
 class ConstantRange;
 class DataLayout;
+struct DenormalFPEnv;
 struct DenormalMode;
 class DISubprogram;
 enum LibFunc : unsigned;
@@ -85,7 +86,8 @@ private:
   unsigned BlockNumEpoch = 0;
 
   mutable Argument *Arguments = nullptr;  ///< The formal arguments
-  size_t NumArgs;
+  uint32_t NumArgs;
+  MaybeAlign PreferredAlign;
   std::unique_ptr<ValueSymbolTable>
       SymTab;                             ///< Symbol table of args/instructions
   AttributeList AttributeSets;            ///< Parameter attributes
@@ -289,51 +291,25 @@ public:
     }
   }
 
-  enum ProfileCountType { PCT_Real, PCT_Synthetic };
-
-  /// Class to represent profile counts.
-  ///
-  /// This class represents both real and synthetic profile counts.
-  class ProfileCount {
-  private:
-    uint64_t Count = 0;
-    ProfileCountType PCT = PCT_Real;
-
-  public:
-    ProfileCount(uint64_t Count, ProfileCountType PCT)
-        : Count(Count), PCT(PCT) {}
-    uint64_t getCount() const { return Count; }
-    ProfileCountType getType() const { return PCT; }
-    bool isSynthetic() const { return PCT == PCT_Synthetic; }
-  };
-
   /// Set the entry count for this function.
   ///
   /// Entry count is the number of times this function was executed based on
   /// pgo data. \p Imports points to a set of GUIDs that needs to
   /// be imported by the function for sample PGO, to enable the same inlines as
   /// the profiled optimized binary.
-  void setEntryCount(ProfileCount Count,
-                     const DenseSet<GlobalValue::GUID> *Imports = nullptr);
-
-  /// A convenience wrapper for setting entry count
-  void setEntryCount(uint64_t Count, ProfileCountType Type = PCT_Real,
+  void setEntryCount(uint64_t Count,
                      const DenseSet<GlobalValue::GUID> *Imports = nullptr);
 
   /// Get the entry count for this function.
   ///
   /// Entry count is the number of times the function was executed.
-  /// When AllowSynthetic is false, only pgo_data will be returned.
-  std::optional<ProfileCount> getEntryCount(bool AllowSynthetic = false) const;
+  std::optional<uint64_t> getEntryCount() const;
 
   /// Return true if the function is annotated with profile data.
   ///
   /// Presence of entry counts from a profile run implies the function has
-  /// profile annotations. If IncludeSynthetic is false, only return true
-  /// when the profile data is real.
-  bool hasProfileData(bool IncludeSynthetic = false) const {
-    return getEntryCount(IncludeSynthetic).has_value();
-  }
+  /// profile annotations.
+  bool hasProfileData() const { return getEntryCount().has_value(); }
 
   /// Returns the set of GUIDs that needs to be imported to the function for
   /// sample PGO, to enable the same inlines as the profiled optimized binary.
@@ -521,6 +497,12 @@ public:
   /// @param ArgNo Index of an argument, with 0 being the first function arg.
   uint64_t getParamDereferenceableBytes(unsigned ArgNo) const {
     return AttributeSets.getParamDereferenceableBytes(ArgNo);
+  }
+
+  /// Extract the number of dead_on_return bytes for a parameter.
+  /// @param ArgNo Index of an argument, with 0 being the first function arg.
+  DeadOnReturnInfo getDeadOnReturnInfo(unsigned ArgNo) const {
+    return AttributeSets.getDeadOnReturnInfo(ArgNo);
   }
 
   /// Extract the number of dereferenceable_or_null bytes for a
@@ -711,14 +693,8 @@ public:
   /// function.
   DenormalMode getDenormalMode(const fltSemantics &FPType) const;
 
-  /// Return the representational value of "denormal-fp-math". Code interested
-  /// in the semantics of the function should use getDenormalMode instead.
-  DenormalMode getDenormalModeRaw() const;
-
-  /// Return the representational value of "denormal-fp-math-f32". Code
-  /// interested in the semantics of the function should use getDenormalMode
-  /// instead.
-  DenormalMode getDenormalModeF32Raw() const;
+  /// Return the representational value of the denormal_fpenv attribute.
+  DenormalFPEnv getDenormalFPEnv() const;
 
   /// copyAttributesFrom - copy all additional attributes (those not needed to
   /// create a Function) from the Function Src to this one.
@@ -1042,6 +1018,12 @@ public:
   /// This method will be deprecated as the alignment property should always be
   /// defined.
   void setAlignment(MaybeAlign Align) { GlobalObject::setAlignment(Align); }
+
+  /// Returns the prefalign of the given function.
+  MaybeAlign getPreferredAlignment() const { return PreferredAlign; }
+
+  /// Sets the prefalign attribute of the Function.
+  void setPreferredAlignment(MaybeAlign Align) { PreferredAlign = Align; }
 
   /// Return the value for vscale based on the vscale_range attribute or 0 when
   /// unknown.

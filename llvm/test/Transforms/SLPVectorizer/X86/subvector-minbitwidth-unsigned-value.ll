@@ -5,14 +5,14 @@ define i1 @test(i64 %v1, ptr %v2, i32 %v3, i1 %v4) {
 ; CHECK-LABEL: define i1 @test(
 ; CHECK-SAME: i64 [[V1:%.*]], ptr [[V2:%.*]], i32 [[V3:%.*]], i1 [[V4:%.*]]) {
 ; CHECK-NEXT:  [[NEWFUNCROOT:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[V1]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i64> [[TMP1]], <i64 32, i64 40>
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc <2 x i64> [[TMP2]] to <2 x i8>
-; CHECK-NEXT:    [[TMP4:%.*]] = and <2 x i8> [[TMP3]], <i8 1, i8 -1>
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <2 x i8> [[TMP4]] to <2 x i32>
-; CHECK-NEXT:    [[TMP9:%.*]] = zext <2 x i8> [[TMP4]] to <2 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <2 x i32> [[TMP9]], zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[V1]], 40
+; CHECK-NEXT:    [[TT3:%.*]] = lshr i64 [[V1]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TT3]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = and <2 x i32> [[TMP4]], <i32 1, i32 255>
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <2 x i32> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> poison, i32 [[V3]], i32 0
 ; CHECK-NEXT:    [[TMP30:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 0>
 ; CHECK-NEXT:    [[TMP31:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>

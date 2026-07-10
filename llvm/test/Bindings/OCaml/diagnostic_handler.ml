@@ -6,7 +6,7 @@
  * XFAIL: vg_leak
  *)
 
-let context = Llvm.global_context ()
+let context = Llvm.create_context ()
 
 let diagnostic_handler d =
   Printf.printf
@@ -45,4 +45,6 @@ let _ =
       false
     with Llvm_bitreader.Error _ ->
       true
-  end
+  end;
+
+  Llvm.dispose_context context

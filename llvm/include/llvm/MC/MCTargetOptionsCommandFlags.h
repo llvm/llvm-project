@@ -21,6 +21,7 @@
 namespace llvm {
 
 class MCTargetOptions;
+enum class RelocSectionSymType;
 enum class EmitDwarfUnwindType;
 class StringRef;
 
@@ -62,6 +63,8 @@ LLVM_ABI bool getImplicitMapSyms();
 LLVM_ABI bool getX86RelaxRelocations();
 
 LLVM_ABI bool getX86Sse2Avx();
+
+LLVM_ABI RelocSectionSymType getRelocSectionSym();
 
 LLVM_ABI StringRef getABIName();
 

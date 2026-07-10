@@ -1114,8 +1114,8 @@ static __isl_give isl_basic_map *isl_basic_map_make_strides_explicit(
 	if (v_div < 0)
 		return isl_basic_map_free(bmap);
 	for (n = 0; n < bmap->n_eq; ++n)
-		if (isl_seq_first_non_zero(bmap->eq[n] + 1 + v_div + n_known,
-					    bmap->n_div - n_known) == -1)
+		if (!isl_seq_any_non_zero(bmap->eq[n] + 1 + v_div + n_known,
+					    bmap->n_div - n_known))
 			break;
 	if (n == 0)
 		return bmap;

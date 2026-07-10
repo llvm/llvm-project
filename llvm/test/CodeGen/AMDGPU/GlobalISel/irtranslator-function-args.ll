@@ -1737,8 +1737,8 @@ define void @void_func_byval_i8_align32_i16_align64(ptr addrspace(5) byval(i8) %
   ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX1]](p5)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p5) :: (dereferenceable load (s8) from %ir.arg0, addrspace 5)
-  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[COPY1]](p5) :: (dereferenceable load (s16) from %ir.arg1, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p5) :: (load (s8) from %ir.arg0, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[COPY1]](p5) :: (load (s16) from %ir.arg1, addrspace 5)
   ; CHECK-NEXT:   G_STORE [[LOAD]](s8), [[C]](p1) :: (store (s8) into `ptr addrspace(1) null`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[LOAD1]](s16), [[C]](p1) :: (store (s16) into `ptr addrspace(1) null`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
@@ -1758,14 +1758,14 @@ define void @byval_a3i32_align128_byval_i16_align64(ptr addrspace(5) byval([3 x 
   ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX1]](p5)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (dereferenceable load (s32) from %ir.arg0, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s32) from %ir.arg0, addrspace 5)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s32)
-  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (dereferenceable load (s32) from %ir.arg0 + 4, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (load (s32) from %ir.arg0 + 4, addrspace 5)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = nuw inbounds G_PTR_ADD [[COPY]], [[C2]](s32)
-  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p5) :: (dereferenceable load (s32) from %ir.arg0 + 8, addrspace 5)
-  ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(s16) = G_LOAD [[COPY1]](p5) :: (dereferenceable load (s16) from %ir.arg1, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p5) :: (load (s32) from %ir.arg0 + 8, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(s16) = G_LOAD [[COPY1]](p5) :: (load (s16) from %ir.arg1, addrspace 5)
   ; CHECK-NEXT:   G_STORE [[LOAD]](s32), [[C]](p1) :: (store (s32) into `ptr addrspace(1) null`, addrspace 1)
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(p1) = G_CONSTANT i64 4
@@ -1828,7 +1828,7 @@ define void @void_func_v32i32_i32_byval_i8(<32 x i32> %arg0, i32 %arg1, ptr addr
   ; CHECK-NEXT:   [[COPY31:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX2]](p5)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
   ; CHECK-NEXT:   G_STORE [[LOAD1]](s32), [[C]](p1) :: (store (s32) into `ptr addrspace(1) null`, addrspace 1)
-  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[COPY31]](p5) :: (dereferenceable load (s8) from %ir.arg2, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[COPY31]](p5) :: (load (s8) from %ir.arg2, addrspace 5)
   ; CHECK-NEXT:   G_STORE [[LOAD2]](s8), [[C]](p1) :: (store (s8) into `ptr addrspace(1) null`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i32 %arg1, ptr addrspace(1) null
@@ -1883,7 +1883,7 @@ define void @void_func_v32i32_byval_i8_i32(<32 x i32> %arg0, ptr addrspace(5) by
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.0, align 8, addrspace 5)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
   ; CHECK-NEXT:   G_STORE [[LOAD1]](s32), [[C]](p1) :: (store (s32) into `ptr addrspace(1) null`, addrspace 1)
-  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[COPY31]](p5) :: (dereferenceable load (s8) from %ir.arg1, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[COPY31]](p5) :: (load (s8) from %ir.arg1, addrspace 5)
   ; CHECK-NEXT:   G_STORE [[LOAD2]](s8), [[C]](p1) :: (store (s8) into `ptr addrspace(1) null`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i32 %arg2, ptr addrspace(1) null
@@ -3021,10 +3021,9 @@ define void @void_func_v2bf16_inreg(<2 x bfloat> inreg %arg0) #0 {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $sgpr16
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_STORE [[BITCAST]](<2 x s16>), [[DEF]](p1) :: (store (<2 x s16>) into `ptr addrspace(1) poison`, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[COPY]](<2 x s16>), [[DEF]](p1) :: (store (<2 x s16>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x bfloat> %arg0, ptr addrspace(1) poison
   ret void
@@ -3230,6 +3229,312 @@ define void @void_func_v2p3_inreg(<2 x ptr addrspace(3)> inreg %arg0) #0 {
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x p3>), [[DEF]](p1) :: (store (<2 x p3>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x ptr addrspace(3)> %arg0, ptr addrspace(1) poison
+  ret void
+}
+
+define void @void_readlane_i1_signext_inreg(<15 x i32> inreg %arg1, i1 inreg signext %arg0) #0 {
+  ; CHECK-LABEL: name: void_readlane_i1_signext_inreg
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $vgpr0, $vgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr18
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr19
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr20
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr21
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr22
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr23
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr24
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr25
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr26
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr27
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $sgpr28
+  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $sgpr29
+  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY14]](s32)
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<15 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[INTRINSIC_CONVERGENT]](s32)
+  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT1:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY15]](s32)
+  ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[INTRINSIC_CONVERGENT1]], 1
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ASSERT_SEXT]](s32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s1)
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[SEXT]], [[C]]
+  ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+  ; CHECK-NEXT:   SI_RETURN
+  %ext = sext i1 %arg0 to i32
+  %add = add i32 %ext, 12
+  store i32 %add, ptr addrspace(1) poison
+  ret void
+}
+
+define void @void_readlane_i1_zeroext_inreg(<15 x i32> inreg %arg1, i1 inreg zeroext %arg0) #0 {
+  ; CHECK-LABEL: name: void_readlane_i1_zeroext_inreg
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $vgpr0, $vgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr18
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr19
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr20
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr21
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr22
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr23
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr24
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr25
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr26
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr27
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $sgpr28
+  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $sgpr29
+  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY14]](s32)
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<15 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[INTRINSIC_CONVERGENT]](s32)
+  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT1:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY15]](s32)
+  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[INTRINSIC_CONVERGENT1]], 1
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ASSERT_ZEXT]](s32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s1)
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ZEXT]], [[C]]
+  ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+  ; CHECK-NEXT:   SI_RETURN
+  %ext = zext i1 %arg0 to i32
+  %add = add i32 %ext, 12
+  store i32 %add, ptr addrspace(1) poison
+  ret void
+}
+
+
+define void @void_readlane_i8_signext_inreg(<15 x i32> inreg %arg1, i8 inreg signext %arg0) #0 {
+  ; CHECK-LABEL: name: void_readlane_i8_signext_inreg
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $vgpr0, $vgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr18
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr19
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr20
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr21
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr22
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr23
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr24
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr25
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr26
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr27
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $sgpr28
+  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $sgpr29
+  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY14]](s32)
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<15 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[INTRINSIC_CONVERGENT]](s32)
+  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT1:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY15]](s32)
+  ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[INTRINSIC_CONVERGENT1]], 8
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT]](s32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s8)
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[SEXT]], [[C]]
+  ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+  ; CHECK-NEXT:   SI_RETURN
+  %ext = sext i8 %arg0 to i32
+  %add = add i32 %ext, 12
+  store i32 %add, ptr addrspace(1) poison
+  ret void
+}
+
+define void @void_readlane_i8_zeroext_inreg(<15 x i32> inreg %arg1, i8 inreg zeroext %arg0) #0 {
+  ; CHECK-LABEL: name: void_readlane_i8_zeroext_inreg
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $vgpr0, $vgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr18
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr19
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr20
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr21
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr22
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr23
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr24
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr25
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr26
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr27
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $sgpr28
+  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $sgpr29
+  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY14]](s32)
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<15 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[INTRINSIC_CONVERGENT]](s32)
+  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT1:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY15]](s32)
+  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[INTRINSIC_CONVERGENT1]], 8
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_ZEXT]](s32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s8)
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ZEXT]], [[C]]
+  ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+  ; CHECK-NEXT:   SI_RETURN
+  %ext = zext i8 %arg0 to i32
+  %add = add i32 %ext, 12
+  store i32 %add, ptr addrspace(1) poison
+  ret void
+}
+
+
+define void @void_readlane_i16_signext_inreg(<15 x i32> inreg %arg1, i16 inreg signext %arg0) #0 {
+  ; CHECK-LABEL: name: void_readlane_i16_signext_inreg
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $vgpr0, $vgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr18
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr19
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr20
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr21
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr22
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr23
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr24
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr25
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr26
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr27
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $sgpr28
+  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $sgpr29
+  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY14]](s32)
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<15 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[INTRINSIC_CONVERGENT]](s32)
+  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT1:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY15]](s32)
+  ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[INTRINSIC_CONVERGENT1]], 16
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_SEXT]](s32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s16)
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[SEXT]], [[C]]
+  ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+  ; CHECK-NEXT:   SI_RETURN
+  %ext = sext i16 %arg0 to i32
+  %add = add i32 %ext, 12
+  store i32 %add, ptr addrspace(1) poison
+  ret void
+}
+
+define void @void_readlane_i16_zeroext_inreg(<15 x i32> inreg %arg1, i16 inreg zeroext %arg0) #0 {
+  ; CHECK-LABEL: name: void_readlane_i16_zeroext_inreg
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $vgpr0, $vgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr18
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr19
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr20
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr21
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr22
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr23
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr24
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr25
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr26
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr27
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $sgpr28
+  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $sgpr29
+  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY14]](s32)
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<15 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[INTRINSIC_CONVERGENT]](s32)
+  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT1:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY15]](s32)
+  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[INTRINSIC_CONVERGENT1]], 16
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT]](s32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s16)
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ZEXT]], [[C]]
+  ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+  ; CHECK-NEXT:   SI_RETURN
+  %ext = zext i16 %arg0 to i32
+  %add = add i32 %ext, 12
+  store i32 %add, ptr addrspace(1) poison
+  ret void
+}
+
+define void @void_readlane_halfinreg_bitcast_inreg(<15 x i32> inreg %arg1, half inreg %arg0) #0 {
+  ; CHECK-LABEL: name: void_readlane_halfinreg_bitcast_inreg
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $vgpr0, $vgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr18
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr19
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr20
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr21
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr22
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr23
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr24
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr25
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr26
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr27
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $sgpr28
+  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $sgpr29
+  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY14]](s32)
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<15 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[INTRINSIC_CONVERGENT]](s32)
+  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT1:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY15]](s32)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[INTRINSIC_CONVERGENT1]](s32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s16)
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ZEXT]], [[C]]
+  ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+  ; CHECK-NEXT:   SI_RETURN
+  %cast = bitcast half %arg0 to i16
+  %ext = zext i16 %cast to i32
+  %add = add i32 %ext, 12
+  store i32 %add, ptr addrspace(1) poison
+  ret void
+}
+
+define void @void_readlane_bfloat_inreg_bitcast_zext(<15 x i32> inreg %arg1, bfloat inreg %arg0) #0 {
+  ; CHECK-LABEL: name: void_readlane_bfloat_inreg_bitcast_zext
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $vgpr0, $vgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr18
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr19
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr20
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr21
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr22
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr23
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr24
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr25
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr26
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr27
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $sgpr28
+  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $sgpr29
+  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY14]](s32)
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<15 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[INTRINSIC_CONVERGENT]](s32)
+  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT1:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY15]](s32)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[INTRINSIC_CONVERGENT1]](s32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s16)
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ZEXT]], [[C]]
+  ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+  ; CHECK-NEXT:   SI_RETURN
+  %cast = bitcast bfloat %arg0 to i16
+  %ext = zext i16 %cast to i32
+  %add = add i32 %ext, 12
+  store i32 %add, ptr addrspace(1) poison
   ret void
 }
 

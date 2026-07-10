@@ -144,7 +144,8 @@ public:
 
   /// Metadata IDs that may generate poison.
   constexpr static const unsigned PoisonGeneratingIDs[] = {
-      LLVMContext::MD_range, LLVMContext::MD_nonnull, LLVMContext::MD_align};
+      LLVMContext::MD_range, LLVMContext::MD_nonnull, LLVMContext::MD_align,
+      LLVMContext::MD_nofpclass};
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
@@ -734,6 +735,7 @@ public:
   static MDString *get(LLVMContext &Context, const char *Str) {
     return get(Context, Str ? StringRef(Str) : StringRef());
   }
+  LLVM_ABI static MDString *getIfExists(LLVMContext &Context, StringRef Str);
 
   LLVM_ABI StringRef getString() const;
 
@@ -865,18 +867,7 @@ struct AAMDNodes {
 };
 
 // Specialize DenseMapInfo for AAMDNodes.
-template<>
-struct DenseMapInfo<AAMDNodes> {
-  static inline AAMDNodes getEmptyKey() {
-    return AAMDNodes(DenseMapInfo<MDNode *>::getEmptyKey(), nullptr, nullptr,
-                     nullptr, nullptr);
-  }
-
-  static inline AAMDNodes getTombstoneKey() {
-    return AAMDNodes(DenseMapInfo<MDNode *>::getTombstoneKey(), nullptr,
-                     nullptr, nullptr, nullptr);
-  }
-
+template <> struct DenseMapInfo<AAMDNodes> {
   static unsigned getHashValue(const AAMDNodes &Val) {
     return DenseMapInfo<MDNode *>::getHashValue(Val.TBAA) ^
            DenseMapInfo<MDNode *>::getHashValue(Val.TBAAStruct) ^
@@ -1264,13 +1255,6 @@ public:
   bool isReplaceable() const { return isTemporary() || isAlwaysReplaceable(); }
   bool isAlwaysReplaceable() const { return getMetadataID() == DIAssignIDKind; }
 
-  /// Check if this is a valid generalized type metadata node.
-  bool hasGeneralizedMDString() {
-    if (getNumOperands() < 2 || !isa<MDString>(getOperand(1)))
-      return false;
-    return cast<MDString>(getOperand(1))->getString().ends_with(".generalized");
-  }
-
   unsigned getNumTemporaryUses() const {
     assert(isTemporary() && "Only for temporaries");
     return Context.getReplaceableUses()->getNumUses();
@@ -1472,6 +1456,7 @@ public:
   LLVM_ABI static MDNode *getMostGenericAliasScope(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMostGenericAlignmentOrDereferenceable(MDNode *A,
                                                                    MDNode *B);
+  LLVM_ABI static MDNode *getMostGenericNoFPClass(MDNode *A, MDNode *B);
   /// Merge !prof metadata from two instructions.
   /// Currently only implemented with direct callsites with branch weights.
   LLVM_ABI static MDNode *getMergedProfMetadata(MDNode *A, MDNode *B,
@@ -1622,7 +1607,7 @@ template <class T> class TypedMDOperandIterator {
   MDNode::op_iterator I = nullptr;
 
 public:
-  using iterator_category = std::input_iterator_tag;
+  using iterator_category = std::forward_iterator_tag;
   using value_type = T *;
   using difference_type = std::ptrdiff_t;
   using pointer = void;

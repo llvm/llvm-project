@@ -19,12 +19,13 @@ namespace optutils = clang::tidy::utils::options;
 
 namespace clang::tidy::readability {
 
-static const StringRef CompareMessage = "do not use 'compare' to test equality "
-                                        "of strings; use the string equality "
-                                        "operator instead";
+static constexpr StringRef CompareMessage =
+    "do not use 'compare' to test equality of strings; use the string "
+    "equality operator instead";
 
-static const StringRef DefaultStringLikeClasses = "::std::basic_string;"
-                                                  "::std::basic_string_view";
+static constexpr StringRef DefaultStringLikeClasses =
+    "::std::basic_string;"
+    "::std::basic_string_view";
 
 StringCompareCheck::StringCompareCheck(StringRef Name,
                                        ClangTidyContext *Context)
@@ -38,9 +39,8 @@ void StringCompareCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void StringCompareCheck::registerMatchers(MatchFinder *Finder) {
-  if (StringLikeClasses.empty()) {
+  if (StringLikeClasses.empty())
     return;
-  }
   const auto StrCompare = cxxMemberCallExpr(
       callee(cxxMethodDecl(hasName("compare"), ofClass(cxxRecordDecl(hasAnyName(
                                                    StringLikeClasses))))),

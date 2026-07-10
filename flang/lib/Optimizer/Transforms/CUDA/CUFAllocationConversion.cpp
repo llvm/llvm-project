@@ -15,7 +15,6 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Runtime/CUDA/allocatable.h"
 #include "flang/Runtime/CUDA/common.h"
@@ -23,8 +22,7 @@
 #include "flang/Runtime/CUDA/memory.h"
 #include "flang/Runtime/CUDA/pointer.h"
 #include "flang/Runtime/allocatable.h"
-#include "flang/Runtime/allocator-registry-consts.h"
-#include "flang/Support/Fortran.h"
+#include "flang/Runtime/pointer.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
@@ -99,7 +97,6 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
 
   mlir::Value hasStat = op.getHasStat() ? builder.createBool(loc, true)
                                         : builder.createBool(loc, false);
-
   mlir::Value errmsg;
   if (op.getErrmsg()) {
     errmsg = op.getErrmsg();
@@ -116,19 +113,27 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
                   loc, fir::ReferenceType::get(
                            mlir::IntegerType::get(op.getContext(), 1)));
     if (op.getSource()) {
+      mlir::Value isDeviceSource = op.getDeviceSource()
+                                       ? builder.createBool(loc, true)
+                                       : builder.createBool(loc, false);
       mlir::Value stream =
           op.getStream() ? op.getStream()
                          : builder.createNullConstant(loc, fTy.getInput(2));
       args = fir::runtime::createArguments(
           builder, loc, fTy, op.getBox(), op.getSource(), stream, pinned,
-          hasStat, errmsg, sourceFile, sourceLine);
+          hasStat, errmsg, sourceFile, sourceLine, isDeviceSource);
     } else {
       mlir::Value stream =
           op.getStream() ? op.getStream()
                          : builder.createNullConstant(loc, fTy.getInput(1));
+      mlir::Value deviceInit =
+          (op.getDataAttrAttr() &&
+           op.getDataAttrAttr().getValue() == cuf::DataAttribute::Device)
+              ? builder.createBool(loc, true)
+              : builder.createBool(loc, false);
       args = fir::runtime::createArguments(builder, loc, fTy, op.getBox(),
                                            stream, pinned, hasStat, errmsg,
-                                           sourceFile, sourceLine);
+                                           sourceFile, sourceLine, deviceInit);
     }
   } else {
     args =
@@ -198,6 +203,16 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
                 rewriter, loc, nbElem,
                 builder.loadIfRef(loc, op.getShape()[i]));
           }
+          fir::SequenceType::Extent constSize = 1;
+          for (auto extent : seqTy.getShape()) {
+            if (extent != fir::SequenceType::getUnknownExtent())
+              constSize *= extent;
+          }
+          if (constSize != 1)
+            nbElem = mlir::arith::MulIOp::create(
+                rewriter, loc, nbElem,
+                builder.createIntegerConstant(loc, builder.getIndexType(),
+                                              constSize));
         } else {
           nbElem = builder.createIntegerConstant(loc, builder.getIndexType(),
                                                  seqTy.getConstantArraySize());
@@ -376,12 +391,17 @@ struct CUFDeallocateOpConversion
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
+    bool isPointer = op.getPointer();
+
     if (op.getHasDoubleDescriptor()) {
       // Deallocation for module variable are done with custom runtime entry
       // point so the descriptors can be synchronized.
       mlir::func::FuncOp func =
-          fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableDeallocate)>(
-              loc, builder);
+          isPointer
+              ? fir::runtime::getRuntimeFunc<mkRTKey(CUFPointerDeallocate)>(
+                    loc, builder)
+              : fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableDeallocate)>(
+                    loc, builder);
       return convertOpToCall<cuf::DeallocateOp>(op, rewriter, func);
     }
 
@@ -389,8 +409,11 @@ struct CUFDeallocateOpConversion
     // AllocatableDeallocate as the dedicated deallocator is set in the
     // descriptor before the call.
     mlir::func::FuncOp func =
-        fir::runtime::getRuntimeFunc<mkRTKey(AllocatableDeallocate)>(loc,
-                                                                     builder);
+        isPointer
+            ? fir::runtime::getRuntimeFunc<mkRTKey(PointerDeallocate)>(loc,
+                                                                       builder)
+            : fir::runtime::getRuntimeFunc<mkRTKey(AllocatableDeallocate)>(
+                  loc, builder);
     return convertOpToCall<cuf::DeallocateOp>(op, rewriter, func);
   }
 };

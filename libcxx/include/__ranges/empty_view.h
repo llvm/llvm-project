@@ -29,11 +29,11 @@ template <class _Tp>
   requires is_object_v<_Tp>
 class empty_view : public view_interface<empty_view<_Tp>> {
 public:
-  _LIBCPP_HIDE_FROM_ABI static constexpr _Tp* begin() noexcept { return nullptr; }
-  _LIBCPP_HIDE_FROM_ABI static constexpr _Tp* end() noexcept { return nullptr; }
-  _LIBCPP_HIDE_FROM_ABI static constexpr _Tp* data() noexcept { return nullptr; }
-  _LIBCPP_HIDE_FROM_ABI static constexpr size_t size() noexcept { return 0; }
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool empty() noexcept { return true; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr _Tp* begin() noexcept { return nullptr; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr _Tp* end() noexcept { return nullptr; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr _Tp* data() noexcept { return nullptr; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr size_t size() noexcept { return 0; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr bool empty() noexcept { return true; }
 };
 
 template <class _Tp>

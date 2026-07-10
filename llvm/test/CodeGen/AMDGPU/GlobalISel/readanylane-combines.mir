@@ -345,3 +345,159 @@ body: |
     SI_RETURN_TO_EPILOG implicit $vgpr0
 ...
 
+---
+name: op_readanylanes_merge_to_virtual_vgpr
+legalized: true
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+
+    ; CHECK-LABEL: name: op_readanylanes_merge_to_virtual_vgpr
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:sgpr(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
+    ; CHECK-NEXT: [[MV1:%[0-9]+]]:sgpr(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s32>) = G_LOAD [[MV]](p1) :: (volatile "amdgpu-noclobber" load (<2 x s32>), addrspace 1)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
+    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:vgpr(s32) = G_FNEG [[UV]]
+    ; CHECK-NEXT: [[FNEG1:%[0-9]+]]:vgpr(s32) = G_FNEG [[UV1]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:vgpr(<2 x s32>) = G_BUILD_VECTOR [[FNEG]](s32), [[FNEG1]](s32)
+    ; CHECK-NEXT: G_STORE [[BUILD_VECTOR]](<2 x s32>), [[MV1]](p1) :: (store (<2 x s32>), addrspace 1)
+    ; CHECK-NEXT: S_ENDPGM 0
+    %0:sgpr(s32) = COPY $sgpr0
+    %1:sgpr(s32) = COPY $sgpr1
+    %2:sgpr(p1) = G_MERGE_VALUES %0(s32), %1(s32)
+    %3:sgpr(s32) = COPY $sgpr2
+    %4:sgpr(s32) = COPY $sgpr3
+    %5:sgpr(p1) = G_MERGE_VALUES %3(s32), %4(s32)
+    %6:sgpr(<2 x s32>) = G_LOAD %2(p1) :: (volatile "amdgpu-noclobber" load (<2 x s32>), addrspace 1)
+    %7:sgpr(s32), %8:sgpr(s32) = G_UNMERGE_VALUES %6(<2 x s32>)
+    %9:sgpr(s32) = G_FNEG %7
+    %10:sgpr(s32) = G_FNEG %8
+    %11:sgpr(<2 x s32>) = G_BUILD_VECTOR %9(s32), %10(s32)
+    G_STORE %11(<2 x s32>), %5(p1) :: (store (<2 x s32>), addrspace 1)
+    S_ENDPGM 0
+...
+
+---
+name: op_readanylanes_merge_to_physical_vgpr
+legalized: true
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+
+    ; CHECK-LABEL: name: op_readanylanes_merge_to_physical_vgpr
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:sgpr(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
+    ; CHECK-NEXT: [[MV1:%[0-9]+]]:sgpr(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s32>) = G_LOAD [[MV]](p1) :: (volatile "amdgpu-noclobber" load (<2 x s32>), addrspace 1)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
+    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:vgpr(s32) = G_FNEG [[UV]]
+    ; CHECK-NEXT: [[FNEG1:%[0-9]+]]:vgpr(s32) = G_FNEG [[UV1]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:vgpr(<2 x s32>) = G_BUILD_VECTOR [[FNEG]](s32), [[FNEG1]](s32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0_vgpr1
+    %0:sgpr(s32) = COPY $sgpr0
+    %1:sgpr(s32) = COPY $sgpr1
+    %2:sgpr(p1) = G_MERGE_VALUES %0(s32), %1(s32)
+    %3:sgpr(s32) = COPY $sgpr2
+    %4:sgpr(s32) = COPY $sgpr3
+    %5:sgpr(p1) = G_MERGE_VALUES %3(s32), %4(s32)
+    %6:sgpr(<2 x s32>) = G_LOAD %2(p1) :: (volatile "amdgpu-noclobber" load (<2 x s32>), addrspace 1)
+    %7:sgpr(s32), %8:sgpr(s32) = G_UNMERGE_VALUES %6(<2 x s32>)
+    %9:sgpr(s32) = G_FNEG %7
+    %10:sgpr(s32) = G_FNEG %8
+    %11:sgpr(<2 x s32>) = G_BUILD_VECTOR %9(s32), %10(s32)
+    $vgpr0_vgpr1 = COPY %11(<2 x s32>)
+    SI_RETURN_TO_EPILOG implicit $vgpr0_vgpr1
+...
+
+---
+name: op_readanylanes_merge_bitcast_to_virtual_vgpr
+legalized: true
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+
+    ; CHECK-LABEL: name: op_readanylanes_merge_bitcast_to_virtual_vgpr
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:sgpr(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
+    ; CHECK-NEXT: [[MV1:%[0-9]+]]:sgpr(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s32>) = G_LOAD [[MV]](p1) :: (volatile "amdgpu-noclobber" load (<2 x s32>), addrspace 1)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
+    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:vgpr(s32) = G_FNEG [[UV]]
+    ; CHECK-NEXT: [[FNEG1:%[0-9]+]]:vgpr(s32) = G_FNEG [[UV1]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:vgpr(<2 x s32>) = G_BUILD_VECTOR [[FNEG]](s32), [[FNEG1]](s32)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:vgpr(s64) = G_BITCAST [[BUILD_VECTOR]](<2 x s32>)
+    ; CHECK-NEXT: G_STORE [[BITCAST]](s64), [[MV1]](p1) :: (store (s64), addrspace 1)
+    ; CHECK-NEXT: S_ENDPGM 0
+    %0:sgpr(s32) = COPY $sgpr0
+    %1:sgpr(s32) = COPY $sgpr1
+    %2:sgpr(p1) = G_MERGE_VALUES %0(s32), %1(s32)
+    %3:sgpr(s32) = COPY $sgpr2
+    %4:sgpr(s32) = COPY $sgpr3
+    %5:sgpr(p1) = G_MERGE_VALUES %3(s32), %4(s32)
+    %6:sgpr(<2 x s32>) = G_LOAD %2(p1) :: (volatile "amdgpu-noclobber" load (<2 x s32>), addrspace 1)
+    %7:sgpr(s32), %8:sgpr(s32) = G_UNMERGE_VALUES %6(<2 x s32>)
+    %9:sgpr(s32) = G_FNEG %7
+    %10:sgpr(s32) = G_FNEG %8
+    %11:sgpr(<2 x s32>) = G_BUILD_VECTOR %9(s32), %10(s32)
+    %12:sgpr(s64) = G_BITCAST %11(<2 x s32>)
+    G_STORE %12(s64), %5(p1) :: (store (s64), addrspace 1)
+    S_ENDPGM 0
+...
+
+---
+name: op_readanylanes_merge_bitcast_to_physical_vgpr
+legalized: true
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+
+    ; CHECK-LABEL: name: op_readanylanes_merge_bitcast_to_physical_vgpr
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:sgpr(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
+    ; CHECK-NEXT: [[MV1:%[0-9]+]]:sgpr(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s32>) = G_LOAD [[MV]](p1) :: (volatile "amdgpu-noclobber" load (<2 x s32>), addrspace 1)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
+    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:vgpr(s32) = G_FNEG [[UV]]
+    ; CHECK-NEXT: [[FNEG1:%[0-9]+]]:vgpr(s32) = G_FNEG [[UV1]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:vgpr(<2 x s32>) = G_BUILD_VECTOR [[FNEG]](s32), [[FNEG1]](s32)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:vgpr(s64) = G_BITCAST [[BUILD_VECTOR]](<2 x s32>)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](s64)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0_vgpr1
+    %0:sgpr(s32) = COPY $sgpr0
+    %1:sgpr(s32) = COPY $sgpr1
+    %2:sgpr(p1) = G_MERGE_VALUES %0(s32), %1(s32)
+    %3:sgpr(s32) = COPY $sgpr2
+    %4:sgpr(s32) = COPY $sgpr3
+    %5:sgpr(p1) = G_MERGE_VALUES %3(s32), %4(s32)
+    %6:sgpr(<2 x s32>) = G_LOAD %2(p1) :: (volatile "amdgpu-noclobber" load (<2 x s32>), addrspace 1)
+    %7:sgpr(s32), %8:sgpr(s32) = G_UNMERGE_VALUES %6(<2 x s32>)
+    %9:sgpr(s32) = G_FNEG %7
+    %10:sgpr(s32) = G_FNEG %8
+    %11:sgpr(<2 x s32>) = G_BUILD_VECTOR %9(s32), %10(s32)
+    %12:sgpr(s64) = G_BITCAST %11(<2 x s32>)
+    $vgpr0_vgpr1 = COPY %12(s64)
+    SI_RETURN_TO_EPILOG implicit $vgpr0_vgpr1
+...
+

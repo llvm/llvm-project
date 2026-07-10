@@ -55,9 +55,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "packets"
 
-static cl::opt<bool>
-    DisablePacketizer("disable-packetizer", cl::Hidden,
-                      cl::desc("Disable Hexagon packetizer pass"));
+cl::opt<bool> DisablePacketizer("disable-packetizer", cl::Hidden,
+                                cl::desc("Disable Hexagon packetizer pass"));
 
 static cl::opt<bool> Slot1Store("slot1-store-slot0-load", cl::Hidden,
                                 cl::init(true),
@@ -1078,7 +1077,9 @@ bool HexagonPacketizerList::isSoloInstruction(const MachineInstr &MI) {
 
   if (MI.getOpcode() == Hexagon::PATCHABLE_FUNCTION_ENTER ||
       MI.getOpcode() == Hexagon::PATCHABLE_FUNCTION_EXIT ||
-      MI.getOpcode() == Hexagon::PATCHABLE_TAIL_CALL)
+      MI.getOpcode() == Hexagon::PATCHABLE_TAIL_CALL ||
+      MI.getOpcode() == Hexagon::PATCHABLE_EVENT_CALL ||
+      MI.getOpcode() == Hexagon::PATCHABLE_TYPED_EVENT_CALL)
     return true;
 
   if (MI.getOpcode() == Hexagon::A2_nop)

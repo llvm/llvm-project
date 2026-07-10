@@ -24,12 +24,35 @@ namespace printf_core {
 
 // These length modifiers match the length modifiers in the format string, which
 // is why they are formatted differently from the rest of the file.
-enum class LengthModifier { hh, h, l, ll, j, z, t, L, w, wf, none };
+enum class LengthModifier {
+  hh,
+  h,
+  l,
+  ll,
+  j,
+  z,
+  t,
+  L,
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+  Q,
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
+#ifndef LIBC_COPT_PRINTF_DISABLE_BITINT
+  w,
+  wf,
+#endif // LIBC_COPT_PRINTF_DISABLE_BITINT
+  none
+};
 
 struct LengthSpec {
   LengthModifier lm;
   size_t bit_width;
 };
+
+// Type large enough to store the raw bits of any floating point type.
+//
+// Does not use any specialization of FPBits, because it is unavailable on
+// PowerPC.
+using AnyFloatStorageType = UInt128;
 
 enum FormatFlags : uint8_t {
   LEFT_JUSTIFIED = 0x01, // -
@@ -55,13 +78,7 @@ struct FormatSection {
   int min_width = 0;
   int precision = -1;
 
-  // Needs to be large enough to hold a long double. Special case handling for
-  // the PowerPC double double type because it has no FPBits interface.
-#ifdef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
-  UInt128 conv_val_raw;
-#else
-  fputil::FPBits<long double>::StorageType conv_val_raw;
-#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  AnyFloatStorageType conv_val_raw;
   void *conv_val_ptr;
 
   char conv_name;
@@ -142,6 +159,8 @@ constexpr int INT_CONVERSION_ERROR = -1004;
 constexpr int FIXED_POINT_CONVERSION_ERROR = -1005;
 constexpr int ALLOCATION_ERROR = -1006;
 constexpr int OVERFLOW_ERROR = -1007;
+constexpr int ILLEGAL_WIDE_CHAR = -1008;
+constexpr int MB_CONVERSION_ERROR = -1009;
 
 } // namespace printf_core
 } // namespace LIBC_NAMESPACE_DECL

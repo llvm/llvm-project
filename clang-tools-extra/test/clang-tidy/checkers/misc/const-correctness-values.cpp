@@ -1,5 +1,6 @@
 // RUN: %check_clang_tidy %s misc-const-correctness %t -- \
 // RUN:   -config="{CheckOptions: {\
+// RUN:     misc-const-correctness.AnalyzeParameters: false, \
 // RUN:     misc-const-correctness.TransformValues: true, \
 // RUN:     misc-const-correctness.WarnPointersAsValues: false, \
 // RUN:     misc-const-correctness.WarnPointersAsPointers: false, \

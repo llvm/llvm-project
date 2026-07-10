@@ -35,7 +35,7 @@ namespace clang::tidy::modernize {
 /// the stack is the parent of the current statement (NULL for the topmost
 /// statement).
 bool StmtAncestorASTVisitor::TraverseStmt(Stmt *Statement) {
-  StmtAncestors.insert(std::make_pair(Statement, StmtStack.back()));
+  StmtAncestors.try_emplace(Statement, StmtStack.back());
   StmtStack.push_back(Statement);
   RecursiveASTVisitor<StmtAncestorASTVisitor>::TraverseStmt(Statement);
   StmtStack.pop_back();
@@ -48,10 +48,9 @@ bool StmtAncestorASTVisitor::TraverseStmt(Stmt *Statement) {
 /// Scope, as we can map a VarDecl to its DeclStmt, then walk up the parent tree
 /// using StmtAncestors.
 bool StmtAncestorASTVisitor::VisitDeclStmt(DeclStmt *Statement) {
-  for (const auto *Decl : Statement->decls()) {
+  for (const auto *Decl : Statement->decls())
     if (const auto *V = dyn_cast<VarDecl>(Decl))
-      DeclParents.insert(std::make_pair(V, Statement));
-  }
+      DeclParents.try_emplace(V, Statement);
   return true;
 }
 
@@ -187,7 +186,8 @@ const Expr *digThroughConstructorsConversions(const Expr *E) {
 }
 
 /// Returns true when two Exprs are equivalent.
-bool areSameExpr(ASTContext *Context, const Expr *First, const Expr *Second) {
+bool areSameExpr(const ASTContext *Context, const Expr *First,
+                 const Expr *Second) {
   return utils::areStatementsIdentical(First, Second, *Context, true);
 }
 
@@ -278,7 +278,8 @@ static bool isIndexInSubscriptExpr(const Expr *IndexExpr,
 ///   (*container)[index]
 ///   (*container).at(index)
 /// \endcode
-static bool isIndexInSubscriptExpr(ASTContext *Context, const Expr *IndexExpr,
+static bool isIndexInSubscriptExpr(const ASTContext *Context,
+                                   const Expr *IndexExpr,
                                    const VarDecl *IndexVar, const Expr *Obj,
                                    const Expr *SourceExpr, bool PermitDeref) {
   if (!SourceExpr || !Obj || !isIndexInSubscriptExpr(IndexExpr, IndexVar))
@@ -340,7 +341,7 @@ static bool isDereferenceOfUop(const UnaryOperator *Uop,
 ///     // use t, do not use i
 ///   }
 /// \endcode
-static bool isAliasDecl(ASTContext *Context, const Decl *TheDecl,
+static bool isAliasDecl(const ASTContext *Context, const Decl *TheDecl,
                         const VarDecl *IndexVar) {
   const auto *VDecl = dyn_cast<VarDecl>(TheDecl);
   if (!VDecl)
@@ -423,7 +424,7 @@ static bool isAliasDecl(ASTContext *Context, const Decl *TheDecl,
 ///   for (int i = 0; i < N; ++i) {  /* use arr[i] */ }
 ///   for (int i = 0; i < arraysize(arr); ++i) { /* use arr[i] */ }
 /// \endcode
-static bool arrayMatchesBoundExpr(ASTContext *Context,
+static bool arrayMatchesBoundExpr(const ASTContext *Context,
                                   const QualType &ArrayType,
                                   const Expr *ConditionExpr) {
   if (!ConditionExpr || ConditionExpr->isValueDependent())
@@ -470,7 +471,7 @@ void ForLoopIndexUseVisitor::addComponent(const Expr *E) {
   llvm::FoldingSetNodeID ID;
   const Expr *Node = E->IgnoreParenImpCasts();
   Node->Profile(ID, *Context, true);
-  DependentExprs.push_back(std::make_pair(Node, ID));
+  DependentExprs.emplace_back(Node, ID);
 }
 
 void ForLoopIndexUseVisitor::addUsage(const Usage &U) {
@@ -796,9 +797,9 @@ bool ForLoopIndexUseVisitor::VisitDeclStmt(DeclStmt *S) {
     AliasDecl = S;
     if (CurrStmtParent) {
       if (isa<IfStmt>(CurrStmtParent) || isa<WhileStmt>(CurrStmtParent) ||
-          isa<SwitchStmt>(CurrStmtParent))
+          isa<SwitchStmt>(CurrStmtParent)) {
         ReplaceWithAliasUse = true;
-      else if (isa<ForStmt>(CurrStmtParent)) {
+      } else if (isa<ForStmt>(CurrStmtParent)) {
         if (cast<ForStmt>(CurrStmtParent)->getConditionVariableDeclStmt() == S)
           ReplaceWithAliasUse = true;
         else
@@ -830,9 +831,8 @@ bool ForLoopIndexUseVisitor::TraverseStmt(Stmt *S) {
   if (const auto *LE = dyn_cast_or_null<LambdaExpr>(NextStmtParent)) {
     // Any child of a LambdaExpr that isn't the body is an initialization
     // expression.
-    if (S != LE->getBody()) {
+    if (S != LE->getBody())
       return true;
-    }
   }
   return traverseStmtImpl(S);
 }

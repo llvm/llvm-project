@@ -171,7 +171,7 @@ public:
 template<typename T>
 void dependentColonColonCompletion() {
   Template<T>::staticFn();
-// CHECK-CC7: function : [#void#]function()
+// CHECK-CC7: function : [#void#]function[#(#][#)#]
 // CHECK-CC7: Nested : Nested
 // CHECK-CC7: o1 : [#BaseTemplate<int>#]o1
 // CHECK-CC7: o2 : [#BaseTemplate<T>#]o2
@@ -352,7 +352,7 @@ namespace function_can_be_call {
     &S::f
   }
   // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:352:9 %s -o - | FileCheck -check-prefix=CHECK_FUNCTION_CAN_BE_CALL %s
-  // CHECK_FUNCTION_CAN_BE_CALL: COMPLETION: foo : [#T#]foo<<#typename T#>, <#typename U#>>(<#U#>, <#V#>)
+  // CHECK_FUNCTION_CAN_BE_CALL: COMPLETION: foo : [#T#]foo<<#typename T#>, <#typename U#>>[#(#][#U#][#, #][#V#][#)#]
 }
 
 namespace deref_dependent_this {

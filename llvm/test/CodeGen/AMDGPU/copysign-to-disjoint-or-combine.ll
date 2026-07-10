@@ -184,11 +184,9 @@ define float @copysign_known_signmask_f32_known_positive_mag__nnan_exp10(float %
 define float @copysign_known_signmask_f32_known_positive_mag_through_fence(float nofpclass(nan ninf nzero nsub nnorm) %sign.bit.known.zero, i32 %sign) {
 ; GFX9-LABEL: copysign_known_signmask_f32_known_positive_mag_through_fence:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
 ; GFX9-NEXT:    ;ARITH_FENCE
-; GFX9-NEXT:    s_brev_b32 s4, -2
-; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_lshl_or_b32 v0, v1, 31, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %signmask = shl i32 %sign, 31
   %signmask.bitcast = bitcast i32 %signmask to float

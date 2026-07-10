@@ -1,6 +1,6 @@
 ! The "thread_limit" clause was added to the "target" construct in OpenMP 5.1.
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s --check-prefixes=BOTH,HOST
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefixes=BOTH,DEVICE
+! RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s --check-prefixes=BOTH,HOST
+! RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-version=51 -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefixes=BOTH,DEVICE
 
 ! BOTH-LABEL: func.func @_QPteams
 subroutine teams()
@@ -148,6 +148,11 @@ subroutine distribute_parallel_do_simd()
   ! BOTH: omp.distribute
   ! BOTH-NEXT: omp.wsloop
   ! BOTH-NEXT: omp.simd
+
+  ! DEVICE-NOT: omp.parallel
+  ! DEVICE-NOT: omp.distribute
+  ! DEVICE-NOT: omp.wsloop
+  ! DEVICE-NOT: omp.simd
   !$omp distribute parallel do simd num_threads(1)
   do i=1,10
     call foo()
@@ -283,3 +288,50 @@ subroutine loop()
   end do
   !$omp end target teams
 end subroutine loop
+
+! BOTH-LABEL: func.func @_QPdistribute_parallel_do_with_modified_trip
+subroutine distribute_parallel_do_with_modified_trip()
+  integer :: i, x
+  integer :: m(1)
+  integer :: res(10)
+  m(1) = 10
+  x = 1000000
+
+  ! BOTH: omp.target
+  ! BOTH-NOT: host_eval({{.*}})
+  ! BOTH-SAME: {
+  ! BOTH: omp.teams
+  !$omp target teams map(res)
+  x = 1
+  ! BOTH: omp.parallel
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.wsloop
+  !$omp distribute parallel do
+  do i = 1, m(x)
+    res(i) = 5 + i
+  end do
+  !$omp end distribute parallel do
+  !$omp end target teams
+end subroutine distribute_parallel_do_with_modified_trip
+
+! BOTH-LABEL: func.func @_QPdistribute_parallel_do_with_assignment
+subroutine distribute_parallel_do_with_assignment()
+  integer :: i, m
+  integer :: res(10)
+
+  ! BOTH: omp.target
+  ! BOTH-NOT: host_eval({{.*}})
+  ! BOTH-SAME: {
+  ! BOTH: omp.teams
+  !$omp target teams map(from:m,res) private(m)
+  m = 5
+  ! BOTH: omp.parallel
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.wsloop
+  !$omp distribute parallel do
+  do i = 1, 10
+    res(i) = 5 + i
+  end do
+  !$omp end distribute parallel do
+  !$omp end target teams
+end subroutine distribute_parallel_do_with_assignment

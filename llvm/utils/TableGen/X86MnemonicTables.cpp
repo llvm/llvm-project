@@ -14,6 +14,7 @@
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenTarget.h"
 #include "X86RecognizableInstr.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
@@ -34,11 +35,10 @@ public:
 
 void X86MnemonicTablesEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("X86 Mnemonic tables", OS);
-  OS << "namespace llvm {\nnamespace X86 {\n\n";
   const Record *AsmWriter = Target.getAsmWriter();
   unsigned Variant = AsmWriter->getValueAsInt("Variant");
 
-  // Hold all instructions grouped by mnemonic
+  // Hold all instructions grouped by mnemonic.
   StringMap<SmallVector<const CodeGenInstruction *, 0>> MnemonicToCGInstrMap;
 
   for (const CodeGenInstruction *I : Target.getInstructions()) {
@@ -49,39 +49,39 @@ void X86MnemonicTablesEmitter::run(raw_ostream &OS) {
     X86Disassembler::RecognizableInstrBase RI(*I);
     if (!RI.shouldBeEmitted())
       continue;
-    if ( // Non-parsable instruction defs contain prefix as part of AsmString
+    if ( // Non-parsable instruction defs contain prefix as part of AsmString.
         Def->getValueAsString("AsmVariantName") == "NonParsable" ||
-        // Skip prefix byte
+        // Skip prefix byte.
         RI.Form == X86Local::PrefixByte)
       continue;
     std::string Mnemonic = X86Disassembler::getMnemonic(I, Variant);
     MnemonicToCGInstrMap[Mnemonic].push_back(I);
   }
 
-  OS << "#ifdef GET_X86_MNEMONIC_TABLES_H\n";
-  OS << "#undef GET_X86_MNEMONIC_TABLES_H\n\n";
-  for (StringRef Mnemonic : MnemonicToCGInstrMap.keys())
-    OS << "bool is" << Mnemonic << "(unsigned Opcode);\n";
-  OS << "#endif // GET_X86_MNEMONIC_TABLES_H\n\n";
+  {
+    IfDefEmitter IfDef(OS, "GET_X86_MNEMONIC_TABLES_H");
+    NamespaceEmitter NS(OS, "llvm::X86");
+    for (StringRef Mnemonic : MnemonicToCGInstrMap.keys())
+      OS << "bool is" << Mnemonic << "(unsigned Opcode);\n";
+  }
 
-  OS << "#ifdef GET_X86_MNEMONIC_TABLES_CPP\n";
-  OS << "#undef GET_X86_MNEMONIC_TABLES_CPP\n\n";
-  for (StringRef Mnemonic : MnemonicToCGInstrMap.keys()) {
-    OS << "bool is" << Mnemonic << "(unsigned Opcode) {\n";
-    auto Mnemonics = MnemonicToCGInstrMap[Mnemonic];
-    if (Mnemonics.size() == 1) {
-      const CodeGenInstruction *CGI = *Mnemonics.begin();
-      OS << "\treturn Opcode == " << CGI->getName() << ";\n}\n\n";
-    } else {
-      OS << "\tswitch (Opcode) {\n";
-      for (const CodeGenInstruction *CGI : Mnemonics) {
-        OS << "\tcase " << CGI->getName() << ":\n";
+  {
+    IfDefEmitter IfDef(OS, "GET_X86_MNEMONIC_TABLES_CPP");
+    NamespaceEmitter NS(OS, "llvm::X86");
+    for (StringRef Mnemonic : MnemonicToCGInstrMap.keys()) {
+      OS << "bool is" << Mnemonic << "(unsigned Opcode) {\n";
+      const auto &Mnemonics = MnemonicToCGInstrMap[Mnemonic];
+      if (Mnemonics.size() == 1) {
+        const CodeGenInstruction *CGI = Mnemonics.front();
+        OS << "  return Opcode == " << CGI->getName() << ";\n}\n\n";
+      } else {
+        OS << "  switch (Opcode) {\n";
+        for (const CodeGenInstruction *CGI : Mnemonics)
+          OS << "  case " << CGI->getName() << ":\n";
+        OS << "    return true;\n  }\n  return false;\n}\n\n";
       }
-      OS << "\t\treturn true;\n\t}\n\treturn false;\n}\n\n";
     }
   }
-  OS << "#endif // GET_X86_MNEMONIC_TABLES_CPP\n\n";
-  OS << "} // end namespace X86\n} // end namespace llvm";
 }
 
 static TableGen::Emitter::OptClass<X86MnemonicTablesEmitter>

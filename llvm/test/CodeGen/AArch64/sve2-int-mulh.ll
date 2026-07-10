@@ -119,9 +119,10 @@ define <vscale x 2 x i64> @umulh_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %
 define <16 x i8> @smulh_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: smulh_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull2 v2.8h, v0.16b, v1.16b
-; CHECK-NEXT:    smull v0.8h, v0.8b, v1.8b
-; CHECK-NEXT:    uzp2 v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    smulh z0.b, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = sext <16 x i8> %a to <16 x i16>
   %2 = sext <16 x i8> %b to <16 x i16>
@@ -134,9 +135,10 @@ define <16 x i8> @smulh_v16i8(<16 x i8> %a, <16 x i8> %b) {
 define <8 x i16> @smulh_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: smulh_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull2 v2.4s, v0.8h, v1.8h
-; CHECK-NEXT:    smull v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    uzp2 v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    smulh z0.h, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = sext <8 x i16> %a to <8 x i32>
   %2 = sext <8 x i16> %b to <8 x i32>
@@ -149,9 +151,10 @@ define <8 x i16> @smulh_v8i16(<8 x i16> %a, <8 x i16> %b) {
 define <4 x i32> @smulh_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: smulh_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull2 v2.2d, v0.4s, v1.4s
-; CHECK-NEXT:    smull v0.2d, v0.2s, v1.2s
-; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    smulh z0.s, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = sext <4 x i32> %a to <4 x i64>
   %2 = sext <4 x i32> %b to <4 x i64>
@@ -164,15 +167,10 @@ define <4 x i32> @smulh_v4i32(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i64> @smulh_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: smulh_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, v0.d[1]
-; CHECK-NEXT:    mov x9, v1.d[1]
-; CHECK-NEXT:    fmov x10, d0
-; CHECK-NEXT:    fmov x11, d1
-; CHECK-NEXT:    smulh x10, x10, x11
-; CHECK-NEXT:    smulh x8, x8, x9
-; CHECK-NEXT:    fmov d0, x10
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    smulh z0.d, z0.d, z1.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = sext <2 x i64> %a to <2 x i128>
   %2 = sext <2 x i64> %b to <2 x i128>
@@ -185,9 +183,10 @@ define <2 x i64> @smulh_v2i64(<2 x i64> %a, <2 x i64> %b) {
 define <16 x i8> @umulh_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: umulh_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umull2 v2.8h, v0.16b, v1.16b
-; CHECK-NEXT:    umull v0.8h, v0.8b, v1.8b
-; CHECK-NEXT:    uzp2 v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    umulh z0.b, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <16 x i8> %a to <16 x i16>
   %2 = zext <16 x i8> %b to <16 x i16>
@@ -200,9 +199,10 @@ define <16 x i8> @umulh_v16i8(<16 x i8> %a, <16 x i8> %b) {
 define <8 x i16> @umulh_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: umulh_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umull2 v2.4s, v0.8h, v1.8h
-; CHECK-NEXT:    umull v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    uzp2 v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    umulh z0.h, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <8 x i16> %a to <8 x i32>
   %2 = zext <8 x i16> %b to <8 x i32>
@@ -215,9 +215,10 @@ define <8 x i16> @umulh_v8i16(<8 x i16> %a, <8 x i16> %b) {
 define <4 x i32> @umulh_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: umulh_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umull2 v2.2d, v0.4s, v1.4s
-; CHECK-NEXT:    umull v0.2d, v0.2s, v1.2s
-; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    umulh z0.s, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <4 x i32> %a to <4 x i64>
   %2 = zext <4 x i32> %b to <4 x i64>
@@ -230,15 +231,10 @@ define <4 x i32> @umulh_v4i32(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i64> @umulh_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: umulh_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, v0.d[1]
-; CHECK-NEXT:    mov x9, v1.d[1]
-; CHECK-NEXT:    fmov x10, d0
-; CHECK-NEXT:    fmov x11, d1
-; CHECK-NEXT:    umulh x10, x10, x11
-; CHECK-NEXT:    umulh x8, x8, x9
-; CHECK-NEXT:    fmov d0, x10
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    umulh z0.d, z0.d, z1.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <2 x i64> %a to <2 x i128>
   %2 = zext <2 x i64> %b to <2 x i128>
@@ -255,8 +251,10 @@ define <2 x i64> @umulh_v2i64(<2 x i64> %a, <2 x i64> %b) {
 define <8 x i8> @smulh_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: smulh_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull v0.8h, v0.8b, v1.8b
-; CHECK-NEXT:    shrn v0.8b, v0.8h, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    smulh z0.b, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = sext <8 x i8> %a to <8 x i16>
   %2 = sext <8 x i8> %b to <8 x i16>
@@ -269,8 +267,10 @@ define <8 x i8> @smulh_v8i8(<8 x i8> %a, <8 x i8> %b) {
 define <4 x i16> @smulh_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: smulh_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    smulh z0.h, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = sext <4 x i16> %a to <4 x i32>
   %2 = sext <4 x i16> %b to <4 x i32>
@@ -283,8 +283,10 @@ define <4 x i16> @smulh_v4i16(<4 x i16> %a, <4 x i16> %b) {
 define <2 x i32> @smulh_v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: smulh_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull v0.2d, v0.2s, v1.2s
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #32
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    smulh z0.s, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = sext <2 x i32> %a to <2 x i64>
   %2 = sext <2 x i32> %b to <2 x i64>
@@ -297,12 +299,10 @@ define <2 x i32> @smulh_v2i32(<2 x i32> %a, <2 x i32> %b) {
 define <1 x i64> @smulh_v1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-LABEL: smulh_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    smulh x8, x8, x9
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    smulh z0.d, z0.d, z1.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = sext <1 x i64> %a to <1 x i128>
   %2 = sext <1 x i64> %b to <1 x i128>
@@ -315,8 +315,10 @@ define <1 x i64> @smulh_v1i64(<1 x i64> %a, <1 x i64> %b) {
 define <8 x i8> @umulh_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: umulh_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umull v0.8h, v0.8b, v1.8b
-; CHECK-NEXT:    shrn v0.8b, v0.8h, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    umulh z0.b, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <8 x i8> %a to <8 x i16>
   %2 = zext <8 x i8> %b to <8 x i16>
@@ -329,8 +331,10 @@ define <8 x i8> @umulh_v8i8(<8 x i8> %a, <8 x i8> %b) {
 define <4 x i16> @umulh_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: umulh_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umull v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    umulh z0.h, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <4 x i16> %a to <4 x i32>
   %2 = zext <4 x i16> %b to <4 x i32>
@@ -343,8 +347,10 @@ define <4 x i16> @umulh_v4i16(<4 x i16> %a, <4 x i16> %b) {
 define <2 x i32> @umulh_v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: umulh_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umull v0.2d, v0.2s, v1.2s
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #32
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    umulh z0.s, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <2 x i32> %a to <2 x i64>
   %2 = zext <2 x i32> %b to <2 x i64>
@@ -357,12 +363,10 @@ define <2 x i32> @umulh_v2i32(<2 x i32> %a, <2 x i32> %b) {
 define <1 x i64> @umulh_v1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-LABEL: umulh_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    umulh x8, x8, x9
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    umulh z0.d, z0.d, z1.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <1 x i64> %a to <1 x i128>
   %2 = zext <1 x i64> %b to <1 x i128>

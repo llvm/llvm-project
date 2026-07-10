@@ -28,4 +28,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_SYMBOL_SYMBOLFILELOCATOR_H
+#endif // LLDB_SYMBOL_SYMBOLLOCATOR_H

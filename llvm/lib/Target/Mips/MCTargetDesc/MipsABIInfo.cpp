@@ -20,6 +20,10 @@ cl::opt<bool>
 EmitJalrReloc("mips-jalr-reloc", cl::Hidden,
               cl::desc("MIPS: Emit R_{MICRO}MIPS_JALR relocation with jalr"),
               cl::init(true));
+cl::opt<bool>
+    NoZeroDivCheck("mno-check-zero-division", cl::Hidden,
+                   cl::desc("MIPS: Don't trap on integer division by zero."),
+                   cl::init(false));
 
 namespace {
 static const MCPhysReg O32IntRegs[4] = {Mips::A0, Mips::A1, Mips::A2, Mips::A3};

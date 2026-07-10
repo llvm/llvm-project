@@ -6,18 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../lldb-python.h"
+
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Host/Config.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
-
-#if LLDB_ENABLE_PYTHON
-
-// clang-format off
-// LLDB Python header must be included first
-#include "../lldb-python.h"
-//clang-format on
 
 #include "../SWIGPythonBridge.h"
 #include "../ScriptInterpreterPythonImpl.h"
@@ -32,10 +27,10 @@ ScriptedStopHookPythonInterface::ScriptedStopHookPythonInterface(
     : ScriptedStopHookInterface(), ScriptedPythonInterface(interpreter) {}
 
 llvm::Expected<StructuredData::GenericSP>
-ScriptedStopHookPythonInterface::CreatePluginObject(llvm::StringRef class_name,
-                                                    lldb::TargetSP target_sp,
-                                                    const StructuredDataImpl &args_sp) {
-  return ScriptedPythonInterface::CreatePluginObject(class_name, nullptr,
+ScriptedStopHookPythonInterface::CreatePluginObject(
+    const ScriptedMetadata &scripted_metadata, lldb::TargetSP target_sp) {
+  StructuredDataImpl args_sp(scripted_metadata.GetArgsSP());
+  return ScriptedPythonInterface::CreatePluginObject(scripted_metadata, nullptr,
                                                      target_sp, args_sp);
 }
 
@@ -71,5 +66,3 @@ void ScriptedStopHookPythonInterface::Initialize() {
 void ScriptedStopHookPythonInterface::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-#endif

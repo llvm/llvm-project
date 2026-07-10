@@ -209,8 +209,8 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
       std::optional<llvm::StringRef> maybe_set_name =
           sets->GetItemAtIndexAsString(i);
       if (maybe_set_name && !maybe_set_name->empty()) {
-        m_sets.push_back(
-            {ConstString(*maybe_set_name).AsCString(), nullptr, 0, nullptr});
+        m_sets.push_back({ConstString(*maybe_set_name).AsCString(nullptr),
+                          nullptr, 0, nullptr});
       } else {
         Clear();
         printf("error: register sets must have valid names\n");
@@ -412,14 +412,19 @@ size_t DynamicRegisterInfo::SetRegisterInfo(
       m_value_reg_offset_map[local_regnum] = reg.value_reg_offset;
     }
 
-    struct RegisterInfo reg_info {
-      reg.name.AsCString(), reg.alt_name.AsCString(), reg.byte_size,
-          reg.byte_offset, reg.encoding, reg.format,
-          {reg.regnum_ehframe, reg.regnum_dwarf, reg.regnum_generic,
-           reg.regnum_remote, local_regnum},
-          // value_regs and invalidate_regs are filled by Finalize()
-          nullptr, nullptr, reg.flags_type
-    };
+    struct RegisterInfo reg_info{
+        reg.name.AsCString(nullptr),
+        reg.alt_name.AsCString(nullptr),
+        reg.byte_size,
+        reg.byte_offset,
+        reg.encoding,
+        reg.format,
+        {reg.regnum_ehframe, reg.regnum_dwarf, reg.regnum_generic,
+         reg.regnum_remote, local_regnum},
+        // value_regs and invalidate_regs are filled by Finalize()
+        nullptr,
+        nullptr,
+        reg.flags_type};
 
     m_regs.push_back(reg_info);
 
@@ -716,7 +721,7 @@ DynamicRegisterInfo::GetRegisterSetIndexByName(const ConstString &set_name,
 
   m_set_names.push_back(set_name);
   m_set_reg_nums.resize(m_set_reg_nums.size() + 1);
-  RegisterSet new_set = {set_name.AsCString(), nullptr, 0, nullptr};
+  RegisterSet new_set = {set_name.AsCString(nullptr), nullptr, 0, nullptr};
   m_sets.push_back(new_set);
   return m_sets.size() - 1;
 }
@@ -744,8 +749,7 @@ void DynamicRegisterInfo::Clear() {
   m_finalized = false;
 }
 
-void DynamicRegisterInfo::Dump() const {
-  StreamFile s(stdout, false);
+void DynamicRegisterInfo::Dump(Stream &s) const {
   const size_t num_regs = m_regs.size();
   s.Printf("%p: DynamicRegisterInfo contains %" PRIu64 " registers:\n",
            static_cast<const void *>(this), static_cast<uint64_t>(num_regs));

@@ -12,7 +12,7 @@ body:             |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
-    ; CHECK-NEXT: S_WAITCNT_DEPCTR 61850
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VaSdst_0_VmVsrc_6_SaSdst_0
     ; CHECK-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc_lo
     renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc
     S_WAITCNT_DEPCTR 65530
@@ -27,12 +27,12 @@ body:             |
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
-  ; CHECK-NEXT:   S_WAITCNT_DEPCTR 65530
+  ; CHECK-NEXT:   S_WAITCNT_DEPCTR .VmVsrc_6_SaSdst_0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_WAITCNT_DEPCTR 61855
+  ; CHECK-NEXT:   S_WAITCNT_DEPCTR .VaSdst_0
   ; CHECK-NEXT:   renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc_lo
   bb.0:
     liveins: $vgpr0
@@ -52,9 +52,9 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: meta_instructions
     ; CHECK: renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
-    ; CHECK-NEXT: S_WAITCNT_DEPCTR 65530
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VmVsrc_6_SaSdst_0
     ; CHECK-NEXT: SCHED_BARRIER 0
-    ; CHECK-NEXT: S_WAITCNT_DEPCTR 61855
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VaSdst_0
     ; CHECK-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc_lo
     renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc
     S_WAITCNT_DEPCTR 65530
@@ -68,7 +68,7 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: debug_instruction
     ; CHECK: renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
-    ; CHECK-NEXT: S_WAITCNT_DEPCTR 61850
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VaSdst_0_VmVsrc_6_SaSdst_0
     ; CHECK-NEXT: DBG_VALUE $sgpr0
     ; CHECK-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc_lo
     renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc

@@ -52,10 +52,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mips-isel"
 
-static cl::opt<bool>
-UseMipsTailCalls("mips-tail-calls", cl::Hidden,
-                    cl::desc("MIPS: permit tail calls."), cl::init(false));
-
 static cl::opt<bool> NoDPLoadStore("mno-ldc1-sdc1", cl::init(false),
                                    cl::desc("Expand double precision loads and "
                                             "stores to their single precision "
@@ -159,45 +155,16 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     addMSAFloatType(MVT::v4f32, &Mips::MSA128WRegClass);
     addMSAFloatType(MVT::v2f64, &Mips::MSA128DRegClass);
 
-    // f16 is a storage-only type, always promote it to f32.
-    addRegisterClass(MVT::f16, &Mips::MSA128HRegClass);
-    setOperationAction(ISD::SETCC, MVT::f16, Promote);
-    setOperationAction(ISD::BR_CC, MVT::f16, Promote);
-    setOperationAction(ISD::SELECT_CC, MVT::f16, Promote);
-    setOperationAction(ISD::SELECT, MVT::f16, Promote);
-    setOperationAction(ISD::FADD, MVT::f16, Promote);
-    setOperationAction(ISD::FSUB, MVT::f16, Promote);
-    setOperationAction(ISD::FMUL, MVT::f16, Promote);
-    setOperationAction(ISD::FDIV, MVT::f16, Promote);
-    setOperationAction(ISD::FREM, MVT::f16, Promote);
-    setOperationAction(ISD::FMA, MVT::f16, Promote);
-    setOperationAction(ISD::FNEG, MVT::f16, Promote);
-    setOperationAction(ISD::FABS, MVT::f16, Promote);
-    setOperationAction(ISD::FCEIL, MVT::f16, Promote);
-    setOperationAction(ISD::FCOPYSIGN, MVT::f16, Promote);
-    setOperationAction(ISD::FCOS, MVT::f16, Promote);
-    setOperationAction(ISD::FP_EXTEND, MVT::f16, Promote);
-    setOperationAction(ISD::FFLOOR, MVT::f16, Promote);
-    setOperationAction(ISD::FNEARBYINT, MVT::f16, Promote);
-    setOperationAction(ISD::FPOW, MVT::f16, Promote);
-    setOperationAction(ISD::FPOWI, MVT::f16, Promote);
-    setOperationAction(ISD::FRINT, MVT::f16, Promote);
-    setOperationAction(ISD::FSIN, MVT::f16, Promote);
-    setOperationAction(ISD::FSINCOS, MVT::f16, Promote);
-    setOperationAction(ISD::FSQRT, MVT::f16, Promote);
-    setOperationAction(ISD::FEXP, MVT::f16, Promote);
-    setOperationAction(ISD::FEXP2, MVT::f16, Promote);
-    setOperationAction(ISD::FLOG, MVT::f16, Promote);
-    setOperationAction(ISD::FLOG2, MVT::f16, Promote);
-    setOperationAction(ISD::FLOG10, MVT::f16, Promote);
-    setOperationAction(ISD::FROUND, MVT::f16, Promote);
-    setOperationAction(ISD::FTRUNC, MVT::f16, Promote);
-    setOperationAction(ISD::FMINNUM, MVT::f16, Promote);
-    setOperationAction(ISD::FMAXNUM, MVT::f16, Promote);
-    setOperationAction(ISD::FMINIMUM, MVT::f16, Promote);
-    setOperationAction(ISD::FMAXIMUM, MVT::f16, Promote);
+    // We're using soft promotion for f16, but msa has some instructions for
+    // conversion to/from f16. Mark those conversions as custom so we can take
+    // advantage of these instructions.
+    for (MVT VT : {MVT::f32, MVT::f64}) {
+      setOperationAction(ISD::FP16_TO_FP, VT, Custom);
+      setOperationAction(ISD::FP_TO_FP16, VT, Custom);
+    }
 
-    setTargetDAGCombine({ISD::AND, ISD::OR, ISD::SRA, ISD::VSELECT, ISD::XOR});
+    setTargetDAGCombine(
+        {ISD::AND, ISD::OR, ISD::SRA, ISD::VSELECT, ISD::XOR, ISD::FP_TO_UINT});
   }
 
   if (!Subtarget.useSoftFloat()) {
@@ -235,10 +202,19 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
 
   if (Subtarget.hasCnMips())
     setOperationAction(ISD::MUL,              MVT::i64, Legal);
-  else if (Subtarget.isGP64bit())
+  else if (Subtarget.isR5900()) {
+    // R5900 doesn't have DMULT/DMULTU/DDIV/DDIVU - expand to 32-bit ops
+    setOperationAction(ISD::MUL, MVT::i64, Expand);
+    setOperationAction(ISD::SMUL_LOHI, MVT::i64, Expand);
+    setOperationAction(ISD::UMUL_LOHI, MVT::i64, Expand);
+    setOperationAction(ISD::MULHS, MVT::i64, Expand);
+    setOperationAction(ISD::MULHU, MVT::i64, Expand);
+    setOperationAction(ISD::SDIVREM, MVT::i64, Expand);
+    setOperationAction(ISD::UDIVREM, MVT::i64, Expand);
+  } else if (Subtarget.isGP64bit())
     setOperationAction(ISD::MUL,              MVT::i64, Custom);
 
-  if (Subtarget.isGP64bit()) {
+  if (Subtarget.isGP64bit() && !Subtarget.isR5900()) {
     setOperationAction(ISD::SMUL_LOHI,        MVT::i64, Custom);
     setOperationAction(ISD::UMUL_LOHI,        MVT::i64, Custom);
     setOperationAction(ISD::MULHS,            MVT::i64, Custom);
@@ -307,7 +283,7 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
 
     assert(Subtarget.isFP64bit() && "FR=1 is required for MIPS32r6");
     setOperationAction(ISD::SETCC, MVT::f64, Legal);
-    setOperationAction(ISD::SELECT, MVT::f64, Custom);
+    setOperationAction(ISD::SELECT, MVT::f64, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
 
     setOperationAction(ISD::BRCOND, MVT::Other, Legal);
@@ -317,11 +293,19 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setCondCodeAction(ISD::SETOGT, MVT::f32, Expand);
     setCondCodeAction(ISD::SETUGE, MVT::f32, Expand);
     setCondCodeAction(ISD::SETUGT, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETONE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETO, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETUNE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETNE, MVT::f32, Expand);
 
     setCondCodeAction(ISD::SETOGE, MVT::f64, Expand);
     setCondCodeAction(ISD::SETOGT, MVT::f64, Expand);
     setCondCodeAction(ISD::SETUGE, MVT::f64, Expand);
     setCondCodeAction(ISD::SETUGT, MVT::f64, Expand);
+    setCondCodeAction(ISD::SETONE, MVT::f64, Expand);
+    setCondCodeAction(ISD::SETO, MVT::f64, Expand);
+    setCondCodeAction(ISD::SETUNE, MVT::f64, Expand);
+    setCondCodeAction(ISD::SETNE, MVT::f64, Expand);
   }
 
   if (Subtarget.hasMips64r6()) {
@@ -347,6 +331,34 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::SETCC, MVT::i64, Legal);
     setOperationAction(ISD::SELECT, MVT::i64, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::i64, Expand);
+  }
+
+  if (Subtarget.isR5900()) {
+    // R5900 FPU only supports 4 compare conditions: C.F, C.EQ, C.OLT, C.OLE
+    // (and their inversions via bc1t/bc1f). Expand all conditions that would
+    // require C.UN, C.UEQ, C.ULT, or C.ULE instructions (not available on
+    // R5900). The legalizer resolves these via operand swapping, condition
+    // inversion, and decomposition into supported conditions.
+    setCondCodeAction(ISD::SETOGT, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETOGE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETGT, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETGE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETULT, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETULE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETUO, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETO, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETONE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETUEQ, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETNE, MVT::f32, Expand);
+
+    // R5900 FPU does not support IEEE 754 special values (NaN, infinity). Use
+    // custom lowering to decide per-instruction: hardware when nnan+ninf flags
+    // guarantee no NaN or infinity, software libcall otherwise.
+    setOperationAction(ISD::FADD, MVT::f32, Custom);
+    setOperationAction(ISD::FSUB, MVT::f32, Custom);
+    setOperationAction(ISD::FMUL, MVT::f32, Custom);
+    setOperationAction(ISD::FDIV, MVT::f32, Custom);
+    setOperationAction(ISD::FSQRT, MVT::f32, Custom);
   }
 
   computeRegisterProperties(Subtarget.getRegisterInfo());
@@ -474,6 +486,81 @@ SDValue MipsSETargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
                      Op->getOperand(2));
 }
 
+// Lower FP16_TO_FP (the soft-promote-half representation of an f16 -> f32/f64
+// conversion).
+SDValue MipsSETargetLowering::lowerFP16_TO_FP(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT ResTy = Op.getValueType();
+  assert((ResTy == MVT::f32 || ResTy == MVT::f64) && "Unexpected FP16_TO_FP");
+
+  // The operand type is i32 because i16 isn't actually legal on MIPS.
+  SDValue In = Op.getOperand(0);
+  assert(In.getValueType() == MVT::i32 && "Unexpected FP16_TO_FP operand type");
+
+  // Splat into a v8i16 (the 32-bit In value is truncated to the lower 16 bits).
+  SDValue Splatted = DAG.getSplatBuildVector(MVT::v8i16, DL, In);
+
+  // Bitcast from v8i16 to v8f16.
+  SDValue HVec = DAG.getNode(ISD::BITCAST, DL, MVT::v8f16, Splatted);
+
+  // Convert from v8f16 to v4f32.
+  SDValue F32Vec = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::v4f32,
+      DAG.getConstant(Intrinsic::mips_fexupr_w, DL, MVT::i32), HVec);
+  SDValue Res;
+  if (ResTy == MVT::f32) {
+    // Every lane has the converted value, just read it from lane 0.
+    Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, F32Vec,
+                      DAG.getVectorIdxConstant(0, DL));
+  } else {
+    // Convert from v4f32 to v2f64.
+    SDValue F64Vec = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, MVT::v2f64,
+        DAG.getConstant(Intrinsic::mips_fexupr_d, DL, MVT::i32), F32Vec);
+    // Every lane has the converted value, just read it from lane 0.
+    Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f64, F64Vec,
+                      DAG.getVectorIdxConstant(0, DL));
+  }
+
+  return Res;
+}
+
+// Lower FP_TO_FP16 (the soft-promote-half representation of an f32/f64 -> f16
+// conversion)
+SDValue MipsSETargetLowering::lowerFP_TO_FP16(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT ResTy = Op.getValueType();
+  SDValue In = Op.getOperand(0);
+  assert((In.getValueType() == MVT::f32 || In.getValueType() == MVT::f64) &&
+         "Unexpected FP_TO_FP16");
+
+  SDValue F32Vec;
+  if (In.getValueType() == MVT::f64) {
+    // Splat f64 to v2f64, then convert to v4f32.
+    SDValue F64Vec = DAG.getSplatBuildVector(MVT::v2f64, DL, In);
+    F32Vec = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::v4f32,
+                         DAG.getConstant(Intrinsic::mips_fexdo_w, DL, MVT::i32),
+                         F64Vec, F64Vec);
+  } else {
+    // Splat f32 to v4f32.
+    F32Vec = DAG.getSplatBuildVector(MVT::v4f32, DL, In);
+  }
+
+  // Then convert from v4f32 to v8f16.
+  SDValue HVec = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::v8f16,
+      DAG.getConstant(Intrinsic::mips_fexdo_h, DL, MVT::i32), F32Vec, F32Vec);
+
+  // Finally cast to v8i16 (f16 is soft-promoted).
+  SDValue IVec = DAG.getNode(ISD::BITCAST, DL, MVT::v8i16, HVec);
+  SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ResTy, IVec,
+                            DAG.getVectorIdxConstant(0, DL));
+
+  return Res;
+}
+
 bool MipsSETargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned, Align, MachineMemOperand::Flags, unsigned *Fast) const {
   MVT::SimpleValueType SVT = VT.getSimpleVT().SimpleTy;
@@ -520,11 +607,48 @@ SDValue MipsSETargetLowering::LowerOperation(SDValue Op,
   case ISD::EXTRACT_VECTOR_ELT: return lowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::BUILD_VECTOR:       return lowerBUILD_VECTOR(Op, DAG);
   case ISD::VECTOR_SHUFFLE:     return lowerVECTOR_SHUFFLE(Op, DAG);
-  case ISD::SELECT:             return lowerSELECT(Op, DAG);
+  case ISD::SELECT:
+    return lowerSELECT(Op, DAG);
+  case ISD::FP16_TO_FP:
+  case ISD::STRICT_FP16_TO_FP:
+    return lowerFP16_TO_FP(Op, DAG);
+  case ISD::FP_TO_FP16:
+  case ISD::STRICT_FP_TO_FP16:
+    return lowerFP_TO_FP16(Op, DAG);
   case ISD::BITCAST:            return lowerBITCAST(Op, DAG);
+  case ISD::FADD:
+    return lowerR5900FPOp(Op, DAG, RTLIB::ADD_F32);
+  case ISD::FSUB:
+    return lowerR5900FPOp(Op, DAG, RTLIB::SUB_F32);
+  case ISD::FMUL:
+    return lowerR5900FPOp(Op, DAG, RTLIB::MUL_F32);
+  case ISD::FDIV:
+    return lowerR5900FPOp(Op, DAG, RTLIB::DIV_F32);
+  case ISD::FSQRT:
+    return lowerR5900FPOp(Op, DAG, RTLIB::SQRT_F32);
   }
 
   return MipsTargetLowering::LowerOperation(Op, DAG);
+}
+
+SDValue MipsSETargetLowering::lowerR5900FPOp(SDValue Op, SelectionDAG &DAG,
+                                             RTLIB::Libcall LC) const {
+  assert(Subtarget.isR5900());
+  SDNodeFlags Flags = Op->getFlags();
+
+  if (Flags.hasNoNaNs() && Flags.hasNoInfs()) {
+    // Use the hardware FPU instruction if the operation is guaranteed to have
+    // no NaN or infinity inputs/outputs (nnan+ninf flags).
+    return Op;
+  }
+
+  // Fall back to a software libcall for IEEE correctness.
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  SmallVector<SDValue, 2> Ops(Op->op_begin(), Op->op_end());
+  TargetLowering::MakeLibCallOptions CallOptions;
+  auto [Result, Chain] = makeLibCall(DAG, LC, VT, Ops, CallOptions, DL);
+  return Result;
 }
 
 // Fold zero extensions into MipsISD::VEXTRACT_[SZ]EXT_ELT
@@ -1077,6 +1201,23 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Convert (fp_to_uint (fp16_to_fp x)) into (fp_to_sint (fp16_to_fp x)).
+static SDValue performFP_TO_UINTCombine(SDNode *N, SelectionDAG &DAG) {
+  SDValue Src = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  // Use a trick from TargetLowering::expandFP_TO_UINT: we know that every
+  // integer value that can be represented by f16 is <= 65504, i.e. a signed
+  // integer of 17 bits or more can represent all values and fptoui and fptosi
+  // are equivalent.
+  //
+  // NOTE: the result of fptoui is poison when the value does not fit in the
+  // destination type (e.g. because it is negative).
+  if (Src.getOpcode() != ISD::FP16_TO_FP || VT.getScalarSizeInBits() < 17)
+    return SDValue();
+  return DAG.getNode(ISD::FP_TO_SINT, SDLoc(N), VT, Src);
+}
+
 SDValue
 MipsSETargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -1105,6 +1246,9 @@ MipsSETargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const {
     break;
   case ISD::SETCC:
     Val = performSETCCCombine(N, DAG);
+    break;
+  case ISD::FP_TO_UINT:
+    Val = performFP_TO_UINTCombine(N, DAG);
     break;
   }
 
@@ -1180,27 +1324,12 @@ MipsSETargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitFEXP2_W_1(MI, BB);
   case Mips::FEXP2_D_1_PSEUDO:
     return emitFEXP2_D_1(MI, BB);
-  case Mips::ST_F16:
-    return emitST_F16_PSEUDO(MI, BB);
-  case Mips::LD_F16:
-    return emitLD_F16_PSEUDO(MI, BB);
-  case Mips::MSA_FP_EXTEND_W_PSEUDO:
-    return emitFPEXTEND_PSEUDO(MI, BB, false);
-  case Mips::MSA_FP_ROUND_W_PSEUDO:
-    return emitFPROUND_PSEUDO(MI, BB, false);
-  case Mips::MSA_FP_EXTEND_D_PSEUDO:
-    return emitFPEXTEND_PSEUDO(MI, BB, true);
-  case Mips::MSA_FP_ROUND_D_PSEUDO:
-    return emitFPROUND_PSEUDO(MI, BB, true);
   }
 }
 
 bool MipsSETargetLowering::isEligibleForTailCallOptimization(
     const CCState &CCInfo, unsigned NextStackOffset,
     const MipsFunctionInfo &FI) const {
-  if (!UseMipsTailCalls)
-    return false;
-
   // Exception has to be cleared with eret.
   if (FI.isISR())
     return false;
@@ -1209,8 +1338,7 @@ bool MipsSETargetLowering::isEligibleForTailCallOptimization(
   if (CCInfo.getInRegsParamsCount() > 0 || FI.hasByvalArg())
     return false;
 
-  // Return true if the callee's argument area is no larger than the
-  // caller's.
+  // Return true if the callee's argument area is no larger than the caller's.
   return NextStackOffset <= FI.getIncomingArgSize();
 }
 
@@ -3005,11 +3133,8 @@ static SDValue lowerVECTOR_SHUFFLE_VSHF(SDValue Op, EVT ResTy,
   SDLoc DL(Op);
   int ResTyNumElts = ResTy.getVectorNumElements();
 
-  assert(Indices[0] >= 0 &&
-         "shuffle mask starts with an UNDEF, which is not expected");
-
   for (int i = 0; i < ResTyNumElts; ++i) {
-    // Idx == -1 means UNDEF
+    // Idx == -1 means UNDEF/poison
     int Idx = Indices[i];
 
     if (0 <= Idx && Idx < ResTyNumElts)
@@ -3017,12 +3142,22 @@ static SDValue lowerVECTOR_SHUFFLE_VSHF(SDValue Op, EVT ResTy,
     if (ResTyNumElts <= Idx && Idx < ResTyNumElts * 2)
       Using2ndVec = true;
   }
-  int LastValidIndex = 0;
+
+  // Find the first non-undef index. This index is used as a default when there
+  // is a leading UNDEF/poison.
+  int SplatIndex = 0;
+  for (int Idx : Indices)
+    if (Idx >= 0) {
+      SplatIndex = Idx;
+      break;
+    }
+
+  int LastValidIndex = SplatIndex;
   for (size_t i = 0; i < Indices.size(); i++) {
     int Idx = Indices[i];
     if (Idx < 0) {
       // Continue using splati index or use the last valid index.
-      Idx = isSPLATI ? Indices[0] : LastValidIndex;
+      Idx = isSPLATI ? SplatIndex : LastValidIndex;
     } else {
       LastValidIndex = Idx;
     }
@@ -3257,14 +3392,14 @@ MipsSETargetLowering::emitCOPY_FW(MachineInstr &MI,
       BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Wt).addReg(Ws);
     }
 
-    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, 0, Mips::sub_lo);
+    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, {}, Mips::sub_lo);
   } else {
     Register Wt = RegInfo.createVirtualRegister(
         Subtarget.useOddSPReg() ? &Mips::MSA128WRegClass
                                 : &Mips::MSA128WEvensRegClass);
 
     BuildMI(*BB, MI, DL, TII->get(Mips::SPLATI_W), Wt).addReg(Ws).addImm(Lane);
-    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, 0, Mips::sub_lo);
+    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, {}, Mips::sub_lo);
   }
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
@@ -3294,12 +3429,12 @@ MipsSETargetLowering::emitCOPY_FD(MachineInstr &MI,
   DebugLoc DL = MI.getDebugLoc();
 
   if (Lane == 0)
-    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Ws, 0, Mips::sub_64);
+    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Ws, {}, Mips::sub_64);
   else {
     Register Wt = RegInfo.createVirtualRegister(&Mips::MSA128DRegClass);
 
     BuildMI(*BB, MI, DL, TII->get(Mips::SPLATI_D), Wt).addReg(Ws).addImm(1);
-    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, 0, Mips::sub_64);
+    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, {}, Mips::sub_64);
   }
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
@@ -3327,7 +3462,6 @@ MipsSETargetLowering::emitINSERT_FW(MachineInstr &MI,
                               : &Mips::MSA128WEvensRegClass);
 
   BuildMI(*BB, MI, DL, TII->get(Mips::SUBREG_TO_REG), Wt)
-      .addImm(0)
       .addReg(Fs)
       .addImm(Mips::sub_lo);
   BuildMI(*BB, MI, DL, TII->get(Mips::INSVE_W), Wd)
@@ -3361,7 +3495,6 @@ MipsSETargetLowering::emitINSERT_FD(MachineInstr &MI,
   Register Wt = RegInfo.createVirtualRegister(&Mips::MSA128DRegClass);
 
   BuildMI(*BB, MI, DL, TII->get(Mips::SUBREG_TO_REG), Wt)
-      .addImm(0)
       .addReg(Fs)
       .addImm(Mips::sub_64);
   BuildMI(*BB, MI, DL, TII->get(Mips::INSVE_D), Wd)
@@ -3446,7 +3579,6 @@ MachineBasicBlock *MipsSETargetLowering::emitINSERT_DF_VIDX(
   if (IsFP) {
     Register Wt = RegInfo.createVirtualRegister(VecRC);
     BuildMI(*BB, MI, DL, TII->get(Mips::SUBREG_TO_REG), Wt)
-        .addImm(0)
         .addReg(SrcValReg)
         .addImm(EltSizeInBytes == 8 ? Mips::sub_64 : Mips::sub_lo);
     SrcValReg = Wt;
@@ -3466,7 +3598,7 @@ MachineBasicBlock *MipsSETargetLowering::emitINSERT_DF_VIDX(
   BuildMI(*BB, MI, DL, TII->get(Mips::SLD_B), WdTmp1)
       .addReg(SrcVecReg)
       .addReg(SrcVecReg)
-      .addReg(LaneReg, 0, SubRegIdx);
+      .addReg(LaneReg, {}, SubRegIdx);
 
   Register WdTmp2 = RegInfo.createVirtualRegister(VecRC);
   if (IsFP) {
@@ -3495,7 +3627,7 @@ MachineBasicBlock *MipsSETargetLowering::emitINSERT_DF_VIDX(
   BuildMI(*BB, MI, DL, TII->get(Mips::SLD_B), Wd)
       .addReg(WdTmp2)
       .addReg(WdTmp2)
-      .addReg(LaneTmp2, 0, SubRegIdx);
+      .addReg(LaneTmp2, {}, SubRegIdx);
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
@@ -3562,320 +3694,6 @@ MipsSETargetLowering::emitFILL_FD(MachineInstr &MI,
   BuildMI(*BB, MI, DL, TII->get(Mips::SPLATI_D), Wd).addReg(Wt2).addImm(0);
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
-  return BB;
-}
-
-// Emit the ST_F16_PSEDUO instruction to store a f16 value from an MSA
-// register.
-//
-// STF16 MSA128F16:$wd, mem_simm10:$addr
-// =>
-//  copy_u.h $rtemp,$wd[0]
-//  sh $rtemp, $addr
-//
-// Safety: We can't use st.h & co as they would over write the memory after
-// the destination. It would require half floats be allocated 16 bytes(!) of
-// space.
-MachineBasicBlock *
-MipsSETargetLowering::emitST_F16_PSEUDO(MachineInstr &MI,
-                                       MachineBasicBlock *BB) const {
-
-  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
-  DebugLoc DL = MI.getDebugLoc();
-  Register Ws = MI.getOperand(0).getReg();
-  Register Rt = MI.getOperand(1).getReg();
-  const MachineMemOperand &MMO = **MI.memoperands_begin();
-  unsigned Imm = MMO.getOffset();
-
-  // Caution: A load via the GOT can expand to a GPR32 operand, a load via
-  //          spill and reload can expand as a GPR64 operand. Examine the
-  //          operand in detail and default to ABI.
-  const TargetRegisterClass *RC =
-      MI.getOperand(1).isReg() ? RegInfo.getRegClass(MI.getOperand(1).getReg())
-                               : (Subtarget.isABI_O32() ? &Mips::GPR32RegClass
-                                                        : &Mips::GPR64RegClass);
-  const bool UsingMips32 = RC == &Mips::GPR32RegClass;
-  Register Rs = RegInfo.createVirtualRegister(&Mips::GPR32RegClass);
-
-  BuildMI(*BB, MI, DL, TII->get(Mips::COPY_U_H), Rs).addReg(Ws).addImm(0);
-  if(!UsingMips32) {
-    Register Tmp = RegInfo.createVirtualRegister(&Mips::GPR64RegClass);
-    BuildMI(*BB, MI, DL, TII->get(Mips::SUBREG_TO_REG), Tmp)
-        .addImm(0)
-        .addReg(Rs)
-        .addImm(Mips::sub_32);
-    Rs = Tmp;
-  }
-  BuildMI(*BB, MI, DL, TII->get(UsingMips32 ? Mips::SH : Mips::SH64))
-      .addReg(Rs)
-      .addReg(Rt)
-      .addImm(Imm)
-      .addMemOperand(BB->getParent()->getMachineMemOperand(
-          &MMO, MMO.getOffset(), MMO.getSize()));
-
-  MI.eraseFromParent();
-  return BB;
-}
-
-// Emit the LD_F16_PSEDUO instruction to load a f16 value into an MSA register.
-//
-// LD_F16 MSA128F16:$wd, mem_simm10:$addr
-// =>
-//  lh $rtemp, $addr
-//  fill.h $wd, $rtemp
-//
-// Safety: We can't use ld.h & co as they over-read from the source.
-// Additionally, if the address is not modulo 16, 2 cases can occur:
-//  a) Segmentation fault as the load instruction reads from a memory page
-//     memory it's not supposed to.
-//  b) The load crosses an implementation specific boundary, requiring OS
-//     intervention.
-MachineBasicBlock *
-MipsSETargetLowering::emitLD_F16_PSEUDO(MachineInstr &MI,
-                                       MachineBasicBlock *BB) const {
-
-  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
-  DebugLoc DL = MI.getDebugLoc();
-  Register Wd = MI.getOperand(0).getReg();
-
-  // Caution: A load via the GOT can expand to a GPR32 operand, a load via
-  //          spill and reload can expand as a GPR64 operand. Examine the
-  //          operand in detail and default to ABI.
-  const TargetRegisterClass *RC =
-      MI.getOperand(1).isReg() ? RegInfo.getRegClass(MI.getOperand(1).getReg())
-                               : (Subtarget.isABI_O32() ? &Mips::GPR32RegClass
-                                                        : &Mips::GPR64RegClass);
-
-  const bool UsingMips32 = RC == &Mips::GPR32RegClass;
-  Register Rt = RegInfo.createVirtualRegister(RC);
-
-  MachineInstrBuilder MIB =
-      BuildMI(*BB, MI, DL, TII->get(UsingMips32 ? Mips::LH : Mips::LH64), Rt);
-  for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
-    MIB.add(MO);
-
-  if(!UsingMips32) {
-    Register Tmp = RegInfo.createVirtualRegister(&Mips::GPR32RegClass);
-    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Tmp).addReg(Rt, 0, Mips::sub_32);
-    Rt = Tmp;
-  }
-
-  BuildMI(*BB, MI, DL, TII->get(Mips::FILL_H), Wd).addReg(Rt);
-
-  MI.eraseFromParent();
-  return BB;
-}
-
-// Emit the FPROUND_PSEUDO instruction.
-//
-// Round an FGR64Opnd, FGR32Opnd to an f16.
-//
-// Safety: Cycle the operand through the GPRs so the result always ends up
-//         the correct MSA register.
-//
-// FIXME: This copying is strictly unnecessary. If we could tie FGR32Opnd:$Fs
-//        / FGR64Opnd:$Fs and MSA128F16:$Wd to the same physical register
-//        (which they can be, as the MSA registers are defined to alias the
-//        FPU's 64 bit and 32 bit registers) the result can be accessed using
-//        the correct register class. That requires operands be tie-able across
-//        register classes which have a sub/super register class relationship.
-//
-// For FPG32Opnd:
-//
-// FPROUND MSA128F16:$wd, FGR32Opnd:$fs
-// =>
-//  mfc1 $rtemp, $fs
-//  fill.w $rtemp, $wtemp
-//  fexdo.w $wd, $wtemp, $wtemp
-//
-// For FPG64Opnd on mips32r2+:
-//
-// FPROUND MSA128F16:$wd, FGR64Opnd:$fs
-// =>
-//  mfc1 $rtemp, $fs
-//  fill.w $rtemp, $wtemp
-//  mfhc1 $rtemp2, $fs
-//  insert.w $wtemp[1], $rtemp2
-//  insert.w $wtemp[3], $rtemp2
-//  fexdo.w $wtemp2, $wtemp, $wtemp
-//  fexdo.h $wd, $temp2, $temp2
-//
-// For FGR64Opnd on mips64r2+:
-//
-// FPROUND MSA128F16:$wd, FGR64Opnd:$fs
-// =>
-//  dmfc1 $rtemp, $fs
-//  fill.d $rtemp, $wtemp
-//  fexdo.w $wtemp2, $wtemp, $wtemp
-//  fexdo.h $wd, $wtemp2, $wtemp2
-//
-// Safety note: As $wtemp is UNDEF, we may provoke a spurious exception if the
-//              undef bits are "just right" and the exception enable bits are
-//              set. By using fill.w to replicate $fs into all elements over
-//              insert.w for one element, we avoid that potiential case. If
-//              fexdo.[hw] causes an exception in, the exception is valid and it
-//              occurs for all elements.
-MachineBasicBlock *
-MipsSETargetLowering::emitFPROUND_PSEUDO(MachineInstr &MI,
-                                         MachineBasicBlock *BB,
-                                         bool IsFGR64) const {
-
-  // Strictly speaking, we need MIPS32R5 to support MSA. We'll be generous
-  // here. It's technically doable to support MIPS32 here, but the ISA forbids
-  // it.
-  assert(Subtarget.hasMSA() && Subtarget.hasMips32r2());
-
-  bool IsFGR64onMips64 = Subtarget.hasMips64() && IsFGR64;
-  bool IsFGR64onMips32 = !Subtarget.hasMips64() && IsFGR64;
-
-  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  DebugLoc DL = MI.getDebugLoc();
-  Register Wd = MI.getOperand(0).getReg();
-  Register Fs = MI.getOperand(1).getReg();
-
-  MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
-  Register Wtemp = RegInfo.createVirtualRegister(&Mips::MSA128WRegClass);
-  const TargetRegisterClass *GPRRC =
-      IsFGR64onMips64 ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
-  unsigned MFC1Opc = IsFGR64onMips64
-                         ? Mips::DMFC1
-                         : (IsFGR64onMips32 ? Mips::MFC1_D64 : Mips::MFC1);
-  unsigned FILLOpc = IsFGR64onMips64 ? Mips::FILL_D : Mips::FILL_W;
-
-  // Perform the register class copy as mentioned above.
-  Register Rtemp = RegInfo.createVirtualRegister(GPRRC);
-  BuildMI(*BB, MI, DL, TII->get(MFC1Opc), Rtemp).addReg(Fs);
-  BuildMI(*BB, MI, DL, TII->get(FILLOpc), Wtemp).addReg(Rtemp);
-  unsigned WPHI = Wtemp;
-
-  if (IsFGR64onMips32) {
-    Register Rtemp2 = RegInfo.createVirtualRegister(GPRRC);
-    BuildMI(*BB, MI, DL, TII->get(Mips::MFHC1_D64), Rtemp2).addReg(Fs);
-    Register Wtemp2 = RegInfo.createVirtualRegister(&Mips::MSA128WRegClass);
-    Register Wtemp3 = RegInfo.createVirtualRegister(&Mips::MSA128WRegClass);
-    BuildMI(*BB, MI, DL, TII->get(Mips::INSERT_W), Wtemp2)
-        .addReg(Wtemp)
-        .addReg(Rtemp2)
-        .addImm(1);
-    BuildMI(*BB, MI, DL, TII->get(Mips::INSERT_W), Wtemp3)
-        .addReg(Wtemp2)
-        .addReg(Rtemp2)
-        .addImm(3);
-    WPHI = Wtemp3;
-  }
-
-  if (IsFGR64) {
-    Register Wtemp2 = RegInfo.createVirtualRegister(&Mips::MSA128WRegClass);
-    BuildMI(*BB, MI, DL, TII->get(Mips::FEXDO_W), Wtemp2)
-        .addReg(WPHI)
-        .addReg(WPHI);
-    WPHI = Wtemp2;
-  }
-
-  BuildMI(*BB, MI, DL, TII->get(Mips::FEXDO_H), Wd).addReg(WPHI).addReg(WPHI);
-
-  MI.eraseFromParent();
-  return BB;
-}
-
-// Emit the FPEXTEND_PSEUDO instruction.
-//
-// Expand an f16 to either a FGR32Opnd or FGR64Opnd.
-//
-// Safety: Cycle the result through the GPRs so the result always ends up
-//         the correct floating point register.
-//
-// FIXME: This copying is strictly unnecessary. If we could tie FGR32Opnd:$Fd
-//        / FGR64Opnd:$Fd and MSA128F16:$Ws to the same physical register
-//        (which they can be, as the MSA registers are defined to alias the
-//        FPU's 64 bit and 32 bit registers) the result can be accessed using
-//        the correct register class. That requires operands be tie-able across
-//        register classes which have a sub/super register class relationship. I
-//        haven't checked.
-//
-// For FGR32Opnd:
-//
-// FPEXTEND FGR32Opnd:$fd, MSA128F16:$ws
-// =>
-//  fexupr.w $wtemp, $ws
-//  copy_s.w $rtemp, $ws[0]
-//  mtc1 $rtemp, $fd
-//
-// For FGR64Opnd on Mips64:
-//
-// FPEXTEND FGR64Opnd:$fd, MSA128F16:$ws
-// =>
-//  fexupr.w $wtemp, $ws
-//  fexupr.d $wtemp2, $wtemp
-//  copy_s.d $rtemp, $wtemp2s[0]
-//  dmtc1 $rtemp, $fd
-//
-// For FGR64Opnd on Mips32:
-//
-// FPEXTEND FGR64Opnd:$fd, MSA128F16:$ws
-// =>
-//  fexupr.w $wtemp, $ws
-//  fexupr.d $wtemp2, $wtemp
-//  copy_s.w $rtemp, $wtemp2[0]
-//  mtc1 $rtemp, $ftemp
-//  copy_s.w $rtemp2, $wtemp2[1]
-//  $fd = mthc1 $rtemp2, $ftemp
-MachineBasicBlock *
-MipsSETargetLowering::emitFPEXTEND_PSEUDO(MachineInstr &MI,
-                                          MachineBasicBlock *BB,
-                                          bool IsFGR64) const {
-
-  // Strictly speaking, we need MIPS32R5 to support MSA. We'll be generous
-  // here. It's technically doable to support MIPS32 here, but the ISA forbids
-  // it.
-  assert(Subtarget.hasMSA() && Subtarget.hasMips32r2());
-
-  bool IsFGR64onMips64 = Subtarget.hasMips64() && IsFGR64;
-  bool IsFGR64onMips32 = !Subtarget.hasMips64() && IsFGR64;
-
-  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  DebugLoc DL = MI.getDebugLoc();
-  Register Fd = MI.getOperand(0).getReg();
-  Register Ws = MI.getOperand(1).getReg();
-
-  MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
-  const TargetRegisterClass *GPRRC =
-      IsFGR64onMips64 ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
-  unsigned MTC1Opc = IsFGR64onMips64
-                         ? Mips::DMTC1
-                         : (IsFGR64onMips32 ? Mips::MTC1_D64 : Mips::MTC1);
-  Register COPYOpc = IsFGR64onMips64 ? Mips::COPY_S_D : Mips::COPY_S_W;
-
-  Register Wtemp = RegInfo.createVirtualRegister(&Mips::MSA128WRegClass);
-  Register WPHI = Wtemp;
-
-  BuildMI(*BB, MI, DL, TII->get(Mips::FEXUPR_W), Wtemp).addReg(Ws);
-  if (IsFGR64) {
-    WPHI = RegInfo.createVirtualRegister(&Mips::MSA128DRegClass);
-    BuildMI(*BB, MI, DL, TII->get(Mips::FEXUPR_D), WPHI).addReg(Wtemp);
-  }
-
-  // Perform the safety regclass copy mentioned above.
-  Register Rtemp = RegInfo.createVirtualRegister(GPRRC);
-  Register FPRPHI = IsFGR64onMips32
-                        ? RegInfo.createVirtualRegister(&Mips::FGR64RegClass)
-                        : Fd;
-  BuildMI(*BB, MI, DL, TII->get(COPYOpc), Rtemp).addReg(WPHI).addImm(0);
-  BuildMI(*BB, MI, DL, TII->get(MTC1Opc), FPRPHI).addReg(Rtemp);
-
-  if (IsFGR64onMips32) {
-    Register Rtemp2 = RegInfo.createVirtualRegister(GPRRC);
-    BuildMI(*BB, MI, DL, TII->get(Mips::COPY_S_W), Rtemp2)
-        .addReg(WPHI)
-        .addImm(1);
-    BuildMI(*BB, MI, DL, TII->get(Mips::MTHC1_D64), Fd)
-        .addReg(FPRPHI)
-        .addReg(Rtemp2);
-  }
-
-  MI.eraseFromParent();
   return BB;
 }
 

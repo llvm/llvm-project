@@ -34,7 +34,11 @@ FOREACH_OMPT_NOEMI_EVENT(defineOmptCallback)
 FOREACH_OMPT_EMI_EVENT(defineOmptCallback)
 #undef defineOmptCallback
 
+// See definition in OpenMP (omp.h.var/omp_lib.(F90|h).var)
+#define omp_initial_device -1
+
 using namespace llvm::omp::target::ompt;
+using namespace llvm::omp::target::debug;
 
 /// Forward declaration
 class LibomptargetRtlFinalizer;
@@ -83,7 +87,7 @@ void Interface::beginTargetDataAlloc(int64_t DeviceId, void *HstPtrBegin,
     ompt_callback_target_data_op_emi_fn(
         ompt_scope_begin, TargetTaskData, &TargetData, &HostOpId,
         ompt_target_data_alloc, HstPtrBegin,
-        /*SrcDeviceNum=*/omp_get_initial_device(), *TgtPtrBegin,
+        /*SrcDeviceNum=*/omp_initial_device, *TgtPtrBegin,
         /*TgtDeviceNum=*/DeviceId, Size, Code);
   } else if (ompt_callback_target_data_op_fn) {
     // HostOpId is set by the runtime
@@ -91,7 +95,7 @@ void Interface::beginTargetDataAlloc(int64_t DeviceId, void *HstPtrBegin,
     // Invoke the tool supplied data op callback
     ompt_callback_target_data_op_fn(
         TargetData.value, HostOpId, ompt_target_data_alloc, HstPtrBegin,
-        /*SrcDeviceNum=*/omp_get_initial_device(), *TgtPtrBegin,
+        /*SrcDeviceNum=*/omp_initial_device, *TgtPtrBegin,
         /*TgtDeviceNum=*/DeviceId, Size, Code);
   }
 }
@@ -106,7 +110,7 @@ void Interface::endTargetDataAlloc(int64_t DeviceId, void *HstPtrBegin,
     ompt_callback_target_data_op_emi_fn(
         ompt_scope_end, TargetTaskData, &TargetData, &HostOpId,
         ompt_target_data_alloc, HstPtrBegin,
-        /*SrcDeviceNum=*/omp_get_initial_device(), *TgtPtrBegin,
+        /*SrcDeviceNum=*/omp_initial_device, *TgtPtrBegin,
         /*TgtDeviceNum=*/DeviceId, Size, Code);
   }
   endTargetDataOperation();
@@ -162,10 +166,10 @@ void Interface::beginTargetDataDelete(int64_t DeviceId, void *TgtPtrBegin,
     // HostOpId is set by the runtime
     HostOpId = createOpId();
     // Invoke the tool supplied data op callback
-    ompt_callback_target_data_op_fn(TargetData.value, HostOpId,
-                                    ompt_target_data_delete, TgtPtrBegin,
-                                    DeviceId, /*TgtPtrBegin=*/nullptr,
-                                    /*TgtDeviceNum=*/-1, /*Bytes=*/0, Code);
+    ompt_callback_target_data_op_fn(
+        TargetData.value, HostOpId, ompt_target_data_delete, TgtPtrBegin,
+        DeviceId, /*TgtPtrBegin=*/nullptr,
+        /*TgtDeviceNum=*/omp_initial_device, /*Bytes=*/0, Code);
   }
 }
 
@@ -178,7 +182,8 @@ void Interface::endTargetDataDelete(int64_t DeviceId, void *TgtPtrBegin,
     ompt_callback_target_data_op_emi_fn(
         ompt_scope_end, TargetTaskData, &TargetData, &HostOpId,
         ompt_target_data_delete, TgtPtrBegin, DeviceId,
-        /*TgtPtrBegin=*/nullptr, /*TgtDeviceNum=*/-1, /*Bytes=*/0, Code);
+        /*TgtPtrBegin=*/nullptr, /*TgtDeviceNum=*/omp_initial_device,
+        /*Bytes=*/0, Code);
   }
   endTargetDataOperation();
 }
@@ -332,13 +337,13 @@ void Interface::beginTargetAssociatePointer(int64_t DeviceId, void *HstPtrBegin,
   if (ompt_callback_target_data_op_emi_fn) {
     ompt_callback_target_data_op_emi_fn(
         ompt_scope_begin, TargetTaskData, &TargetData, &HostOpId,
-        ompt_target_data_associate, HstPtrBegin, omp_get_initial_device(),
+        ompt_target_data_associate, HstPtrBegin, omp_initial_device,
         TgtPtrBegin, DeviceId, Size, Code);
   } else if (ompt_callback_target_data_op_fn) {
     HostOpId = createOpId();
     ompt_callback_target_data_op_fn(
         TargetData.value, HostOpId, ompt_target_data_associate, HstPtrBegin,
-        omp_get_initial_device(), TgtPtrBegin, DeviceId, Size, Code);
+        omp_initial_device, TgtPtrBegin, DeviceId, Size, Code);
   }
 }
 
@@ -348,7 +353,7 @@ void Interface::endTargetAssociatePointer(int64_t DeviceId, void *HstPtrBegin,
   if (ompt_callback_target_data_op_emi_fn) {
     ompt_callback_target_data_op_emi_fn(
         ompt_scope_end, TargetTaskData, &TargetData, &HostOpId,
-        ompt_target_data_associate, HstPtrBegin, omp_get_initial_device(),
+        ompt_target_data_associate, HstPtrBegin, omp_initial_device,
         TgtPtrBegin, DeviceId, Size, Code);
   }
 }
@@ -361,13 +366,13 @@ void Interface::beginTargetDisassociatePointer(int64_t DeviceId,
   if (ompt_callback_target_data_op_emi_fn) {
     ompt_callback_target_data_op_emi_fn(
         ompt_scope_begin, TargetTaskData, &TargetData, &HostOpId,
-        ompt_target_data_disassociate, HstPtrBegin, omp_get_initial_device(),
+        ompt_target_data_disassociate, HstPtrBegin, omp_initial_device,
         TgtPtrBegin, DeviceId, Size, Code);
   } else if (ompt_callback_target_data_op_fn) {
     HostOpId = createOpId();
     ompt_callback_target_data_op_fn(
         TargetData.value, HostOpId, ompt_target_data_disassociate, HstPtrBegin,
-        omp_get_initial_device(), TgtPtrBegin, DeviceId, Size, Code);
+        omp_initial_device, TgtPtrBegin, DeviceId, Size, Code);
   }
 }
 void Interface::endTargetDisassociatePointer(int64_t DeviceId,
@@ -377,9 +382,36 @@ void Interface::endTargetDisassociatePointer(int64_t DeviceId,
   if (ompt_callback_target_data_op_emi_fn) {
     ompt_callback_target_data_op_emi_fn(
         ompt_scope_end, TargetTaskData, &TargetData, &HostOpId,
-        ompt_target_data_disassociate, HstPtrBegin, omp_get_initial_device(),
+        ompt_target_data_disassociate, HstPtrBegin, omp_initial_device,
         TgtPtrBegin, DeviceId, Size, Code);
   }
+}
+
+void Interface::beginTargetMemset(int64_t DeviceId, void *HostPtrBegin,
+                                  void *TgtPtrBegin, size_t Size, void *Code) {
+  beginTargetDataOperation();
+  if (ompt_callback_target_data_op_emi_fn) {
+    ompt_callback_target_data_op_emi_fn(
+        ompt_scope_begin, TargetTaskData, &TargetData, &HostOpId,
+        ompt_target_data_memset, HostPtrBegin, omp_initial_device, TgtPtrBegin,
+        DeviceId, Size, Code);
+  } else if (ompt_callback_target_data_op_fn) {
+    HostOpId = createOpId();
+    ompt_callback_target_data_op_fn(
+        TargetData.value, HostOpId, ompt_target_data_memset, HostPtrBegin,
+        omp_initial_device, TgtPtrBegin, DeviceId, Size, Code);
+  }
+}
+
+void Interface::endTargetMemset(int64_t DeviceId, void *HostPtrBegin,
+                                void *TgtPtrBegin, size_t Size, void *Code) {
+  if (ompt_callback_target_data_op_emi_fn) {
+    ompt_callback_target_data_op_emi_fn(
+        ompt_scope_end, TargetTaskData, &TargetData, &HostOpId,
+        ompt_target_data_memset, HostPtrBegin, omp_initial_device, TgtPtrBegin,
+        DeviceId, Size, Code);
+  }
+  endTargetDataOperation();
 }
 
 void Interface::beginTarget(int64_t DeviceId, void *Code) {
@@ -410,11 +442,13 @@ void Interface::endTarget(int64_t DeviceId, void *Code) {
 }
 
 void Interface::beginTargetDataOperation() {
-  DP("in ompt_target_region_begin (TargetRegionId = %lu)\n", TargetData.value);
+  ODBG(ODT_Tool) << "in ompt_target_region_begin (TargetRegionId = "
+                 << TargetData.value << ")";
 }
 
 void Interface::endTargetDataOperation() {
-  DP("in ompt_target_region_end (TargetRegionId = %lu)\n", TargetData.value);
+  ODBG(ODT_Tool) << "in ompt_target_region_end (TargetRegionId = "
+                 << TargetData.value << ")";
 }
 
 void Interface::beginTargetRegion() {
@@ -462,12 +496,12 @@ private:
 int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
                                                int initial_device_num,
                                                ompt_data_t *tool_data) {
-  DP("Executing initializeLibrary\n");
+  ODBG(ODT_Tool) << "Executing initializeLibrary";
 #define bindOmptFunctionName(OmptFunction, DestinationFunction)                \
   if (lookup)                                                                  \
     DestinationFunction = (OmptFunction##_t)lookup(#OmptFunction);             \
-  DP("initializeLibrary bound %s=%p\n", #DestinationFunction,                  \
-     ((void *)(uint64_t)DestinationFunction));
+  ODBG(ODT_Tool) << "initializeLibrary bound " << #DestinationFunction << "="  \
+                 << ((void *)(uint64_t)DestinationFunction);
 
   bindOmptFunctionName(ompt_get_callback, lookupCallbackByCode);
   bindOmptFunctionName(ompt_get_task_data, ompt_get_task_data_fn);
@@ -493,7 +527,7 @@ int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
 }
 
 void llvm::omp::target::ompt::finalizeLibrary(ompt_data_t *data) {
-  DP("Executing finalizeLibrary\n");
+  ODBG(ODT_Tool) << "Executing finalizeLibrary";
   // Before disabling OMPT, call the (plugin) finalizations that were registered
   // with this library
   LibraryFinalizer->finalize();
@@ -502,7 +536,7 @@ void llvm::omp::target::ompt::finalizeLibrary(ompt_data_t *data) {
 }
 
 void llvm::omp::target::ompt::connectLibrary() {
-  DP("Entering connectLibrary\n");
+  ODBG(ODT_Tool) << "Entering connectLibrary";
   // Connect with libomp
   static OmptLibraryConnectorTy LibompConnector("libomp");
   static ompt_start_tool_result_t OmptResult;
@@ -525,7 +559,7 @@ void llvm::omp::target::ompt::connectLibrary() {
   FOREACH_OMPT_EMI_EVENT(bindOmptCallback)
 #undef bindOmptCallback
 
-  DP("Exiting connectLibrary\n");
+  ODBG(ODT_Tool) << "Exiting connectLibrary";
 }
 
 #endif // OMPT_SUPPORT

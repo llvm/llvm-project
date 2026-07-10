@@ -33,7 +33,7 @@ bool llvm::isWidenableBranch(const User *U) {
 bool llvm::isGuardAsWidenableBranch(const User *U) {
   if (!isWidenableBranch(U))
     return false;
-  BasicBlock *DeoptBB = cast<BranchInst>(U)->getSuccessor(1);
+  BasicBlock *DeoptBB = cast<CondBrInst>(U)->getSuccessor(1);
   SmallPtrSet<const BasicBlock *, 2> Visited;
   Visited.insert(DeoptBB);
   do {
@@ -69,8 +69,8 @@ bool llvm::parseWidenableBranch(const User *U, Value *&Condition,
 bool llvm::parseWidenableBranch(User *U, Use *&C,Use *&WC,
                                 BasicBlock *&IfTrueBB, BasicBlock *&IfFalseBB) {
 
-  auto *BI = dyn_cast<BranchInst>(U);
-  if (!BI || !BI->isConditional())
+  auto *BI = dyn_cast<CondBrInst>(U);
+  if (!BI)
     return false;
   auto *Cond = BI->getCondition();
   if (!Cond->hasOneUse())
@@ -139,7 +139,7 @@ void llvm::parseWidenableGuard(const User *U,
                                llvm::SmallVectorImpl<Value *> &Checks) {
   assert((isGuard(U) || isWidenableBranch(U)) && "Should be");
   Value *Condition = isGuard(U) ? cast<IntrinsicInst>(U)->getArgOperand(0)
-                                : cast<BranchInst>(U)->getCondition();
+                                : cast<CondBrInst>(U)->getCondition();
 
   parseCondition(Condition, [&](Value *Check) {
     if (!isWidenableCondition(Check))
@@ -149,8 +149,8 @@ void llvm::parseWidenableGuard(const User *U,
 }
 
 Value *llvm::extractWidenableCondition(const User *U) {
-  auto *BI = dyn_cast<BranchInst>(U);
-  if (!BI || !BI->isConditional())
+  auto *BI = dyn_cast<CondBrInst>(U);
+  if (!BI)
     return nullptr;
 
   auto Condition = BI->getCondition();

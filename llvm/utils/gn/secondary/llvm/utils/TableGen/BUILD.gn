@@ -25,6 +25,7 @@ executable("llvm-tblgen") {
     "CodeGenMapTable.cpp",
     "CompressInstEmitter.cpp",
     "DAGISelEmitter.cpp",
+    "DAGISelMatcher.cpp",
     "DAGISelMatcherEmitter.cpp",
     "DAGISelMatcherGen.cpp",
     "DAGISelMatcherOpt.cpp",

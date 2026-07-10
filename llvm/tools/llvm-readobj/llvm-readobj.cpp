@@ -99,6 +99,7 @@ static bool ArchSpecificInfo;
 static bool BBAddrMap;
 static bool PrettyPGOAnalysisMap;
 bool ExpandRelocs;
+static bool CallGraphInfo;
 static bool CGProfile;
 static bool Decompress;
 bool Demangle;
@@ -122,6 +123,7 @@ static std::vector<std::string> StringDump;
 static bool StringTable;
 static bool Symbols;
 static bool UnwindInfo;
+bool UnwindShowWODPool;
 static cl::boolOrDefault SectionMapping;
 static SmallVector<SortSymbolKeyTy> SortKeys;
 
@@ -222,6 +224,7 @@ static void parseOptions(const opt::InputArgList &Args) {
     WithColor::warning(errs(), ToolName)
         << "--bb-addr-map must be enabled for --pretty-pgo-analysis-map to "
            "have an effect\n";
+  opts::CallGraphInfo = Args.hasArg(OPT_call_graph_info);
   opts::CGProfile = Args.hasArg(OPT_cg_profile);
   opts::Decompress = Args.hasArg(OPT_decompress);
   opts::Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, false);
@@ -240,17 +243,18 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::SectionRelocations = Args.hasArg(OPT_section_relocations);
   opts::SectionSymbols = Args.hasArg(OPT_section_symbols);
   if (Args.hasArg(OPT_section_mapping))
-    opts::SectionMapping = cl::BOU_TRUE;
+    opts::SectionMapping = cl::boolOrDefault::BOU_TRUE;
   else if (Args.hasArg(OPT_section_mapping_EQ_false))
-    opts::SectionMapping = cl::BOU_FALSE;
+    opts::SectionMapping = cl::boolOrDefault::BOU_FALSE;
   else
-    opts::SectionMapping = cl::BOU_UNSET;
+    opts::SectionMapping = cl::boolOrDefault::BOU_UNSET;
   opts::PrintStackSizes = Args.hasArg(OPT_stack_sizes);
   opts::PrintStackMap = Args.hasArg(OPT_stackmap);
   opts::StringDump = Args.getAllArgValues(OPT_string_dump_EQ);
   opts::StringTable = Args.hasArg(OPT_string_table);
   opts::Symbols = Args.hasArg(OPT_symbols);
   opts::UnwindInfo = Args.hasArg(OPT_unwind);
+  opts::UnwindShowWODPool = Args.hasArg(OPT_unwind_show_wod_pool);
 
   // ELF specific options.
   opts::DynamicTable = Args.hasArg(OPT_dynamic_table);
@@ -436,7 +440,8 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
 
   if (opts::HashSymbols)
     Dumper->printHashSymbols();
-  if (opts::ProgramHeaders || opts::SectionMapping == cl::BOU_TRUE)
+  if (opts::ProgramHeaders ||
+      opts::SectionMapping == cl::boolOrDefault::BOU_TRUE)
     Dumper->printProgramHeaders(opts::ProgramHeaders, opts::SectionMapping);
   if (opts::DynamicTable)
     Dumper->printDynamicTable();
@@ -478,6 +483,8 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
       Dumper->printHashHistograms();
     if (opts::CGProfile)
       Dumper->printCGProfile();
+    if (opts::CallGraphInfo)
+      Dumper->printCallGraphInfo();
     if (opts::BBAddrMap)
       Dumper->printBBAddrMaps(opts::PrettyPGOAnalysisMap);
     if (opts::Addrsig)
@@ -598,11 +605,16 @@ static void dumpCOFFObject(COFFObjectFile *Obj, ScopedPrinter &Writer) {
   dumpObject(*Obj, Writer);
 
   // Dump a hybrid object when available.
-  std::unique_ptr<MemoryBuffer> HybridView = Obj->getHybridObjectView();
-  if (!HybridView)
+  MemoryBufferRef HybridView;
+  std::unique_ptr<MemoryBuffer> HybridViewBuf;
+  if (std::optional<MemoryBufferRef> HybridSec = Obj->findHybridObjectSection())
+    HybridView = *HybridSec;
+  else if ((HybridViewBuf = Obj->getHybridObjectView()))
+    HybridView = HybridViewBuf->getMemBufferRef();
+  else
     return;
   Expected<std::unique_ptr<COFFObjectFile>> HybridObjOrErr =
-      COFFObjectFile::create(*HybridView);
+      COFFObjectFile::create(HybridView);
   if (!HybridObjOrErr)
     reportError(HybridObjOrErr.takeError(), Obj->getFileName().str());
   DictScope D(Writer, "HybridObject");

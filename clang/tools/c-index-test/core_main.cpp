@@ -16,10 +16,10 @@
 #include "clang/Frontend/Utils.h"
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexingAction.h"
-#include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -206,12 +206,17 @@ public:
 static void dumpModuleFileInputs(serialization::ModuleFile &Mod,
                                  ASTReader &Reader,
                                  raw_ostream &OS) {
+  SmallString<0> PathBuf;
+  PathBuf.reserve(256);
   OS << "---- Module Inputs ----\n";
-  Reader.visitInputFiles(Mod, /*IncludeSystem=*/true, /*Complain=*/false,
-                        [&](const serialization::InputFile &IF, bool isSystem) {
-    OS << (isSystem ? "system" : "user") << " | ";
-    OS << IF.getFile()->getName() << '\n';
-  });
+  Reader.visitInputFileInfos(
+      Mod, /*IncludeSystem=*/true,
+      [&](const serialization::InputFileInfo &IFI, bool isSystem) {
+        OS << (isSystem ? "system" : "user") << " | ";
+        auto Filename = ASTReader::ResolveImportedPath(
+            PathBuf, IFI.UnresolvedImportedFilenameAsRequested, Mod);
+        OS << *Filename << '\n';
+      });
 }
 
 static bool printSourceSymbols(const char *Executable,

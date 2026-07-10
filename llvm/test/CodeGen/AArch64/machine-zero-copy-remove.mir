@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=aarch64--linux-gnu -run-pass=aarch64-copyelim %s -verify-machineinstrs -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64--linux-gnu -passes=aarch64-copyelim %s -o - | FileCheck %s
 ---
 # CHECK-LABEL: name: test1
 # CHECK: ANDSWri $w0, 1, implicit-def $nzcv

@@ -36,14 +36,20 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
   if (!opts::ForcePatch) {
     // Mark the binary for patching if we did not create external references
     // for original code in any of functions we are not going to emit.
-    bool NeedsPatching = llvm::any_of(
-        llvm::make_second_range(BC.getBinaryFunctions()),
-        [&](BinaryFunction &BF) {
-          return (!BC.shouldEmit(BF) && !BF.hasExternalRefRelocations()) ||
-                 BF.needsPatch();
-        });
+    auto needsPatching = [&](const BinaryFunction &BF) {
+      // FIXME: keep compatibility for NFC testing.
+      if (BF.isFolded())
+        return false;
 
-    if (!NeedsPatching)
+      // Patching is always needed if explicitly requested.
+      if (BF.needsPatch())
+        return true;
+
+      return !BC.shouldEmit(BF) && !BF.hasExternalRefRelocations();
+    };
+
+    if (!llvm::any_of(llvm::make_second_range(BC.getBinaryFunctions()),
+                      needsPatching))
       return Error::success();
   }
 
@@ -56,6 +62,12 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
     InstructionListType Seq;
     BC.MIB->createLongTailCall(Seq, BC.Ctx->createTempSymbol(), BC.Ctx.get());
     PatchSize = BC.computeCodeSize(Seq.begin(), Seq.end());
+  }
+  static size_t FillerSize = 0;
+  if (BC.isX86() && FillerSize == 0) {
+    std::array<MCInst, 1> Seq;
+    BC.MIB->createBreakpoint(Seq[0]);
+    FillerSize = BC.computeCodeSize(Seq.begin(), Seq.end());
   }
 
   for (auto &BFI : BC.getBinaryFunctions()) {
@@ -85,8 +97,6 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
         return false;
       }
 
-      PendingPatches.emplace_back(
-          Patch{Symbol, Function.getAddress() + Offset});
       NextValidByte = Offset + PatchSize;
       if (NextValidByte > Function.getMaxSize()) {
         if (opts::Verbosity >= 1)
@@ -95,6 +105,22 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
         return false;
       }
 
+      const uint64_t PatchAddress = Function.getAddress() + Offset;
+      Patch P{Symbol, PatchAddress};
+
+      if (BC.isX86()) {
+        uint64_t OverwriteLength =
+            Function.getInstructionSequenceLength(Offset, PatchSize);
+        P.PaddingAfter = OverwriteLength - PatchSize;
+        assert(PendingPatches.empty() ||
+               (PendingPatches.back().Address + PatchSize +
+                    PendingPatches.back().PaddingAfter <=
+                PatchAddress) &&
+                   "Entry point cannot overlap with instruction stream of "
+                   "previous entrypoint.");
+      }
+
+      PendingPatches.emplace_back(P);
       return true;
     });
 
@@ -111,15 +137,29 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
       // Add instruction patch to the binary.
       InstructionListType Instructions;
       BC.MIB->createLongTailCall(Instructions, Patch.Symbol, BC.Ctx.get());
+
+      if (BC.isX86()) {
+        assert(Patch.PaddingAfter % FillerSize == 0 &&
+               "Padding must be multiple of filler size.");
+        llvm::MCInst Inst;
+        BC.MIB->createBreakpoint(Inst);
+        Instructions.resize(
+            Instructions.size() + Patch.PaddingAfter / FillerSize, Inst);
+      }
+
       BinaryFunction *PatchFunction = BC.createInstructionPatch(
           Patch.Address, Instructions,
           NameResolver::append(Patch.Symbol->getName(), ".org.0"));
+      if (BC.usesBTI())
+        BC.MIB->applyBTIFixupToSymbol(BC, Patch.Symbol,
+                                      *(Instructions.end() - 1));
 
       // Verify the size requirements.
       uint64_t HotSize, ColdSize;
       std::tie(HotSize, ColdSize) = BC.calculateEmittedSize(*PatchFunction);
       assert(!ColdSize && "unexpected cold code");
-      assert(HotSize <= PatchSize && "max patch size exceeded");
+      assert(HotSize <= PatchSize + Patch.PaddingAfter &&
+             "max patch size exceeded");
     }
   }
   return Error::success();

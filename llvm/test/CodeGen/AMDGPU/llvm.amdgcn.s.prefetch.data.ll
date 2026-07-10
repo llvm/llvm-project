@@ -123,6 +123,41 @@ entry:
   ret void
 }
 
+define amdgpu_ps void @prefetch_data_vgpr_base_vgpr_len(ptr addrspace(4) %ptr, i32 %len) {
+; SDAG-LABEL: prefetch_data_vgpr_base_vgpr_len:
+; SDAG:       ; %bb.0: ; %entry
+; SDAG-NEXT:    v_readfirstlane_b32 s2, v2
+; SDAG-NEXT:    v_readfirstlane_b32 s0, v0
+; SDAG-NEXT:    v_readfirstlane_b32 s1, v1
+; SDAG-NEXT:    s_prefetch_data s[0:1], 0x0, s2, 0
+; SDAG-NEXT:    s_endpgm
+;
+; GISEL-LABEL: prefetch_data_vgpr_base_vgpr_len:
+; GISEL:       ; %bb.0: ; %entry
+; GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GISEL-NEXT:    s_prefetch_data s[0:1], 0x0, s2, 0
+; GISEL-NEXT:    s_endpgm
+entry:
+  tail call void @llvm.amdgcn.s.prefetch.data.p4(ptr addrspace(4) %ptr, i32 %len)
+  ret void
+}
+
+define amdgpu_ps float @prefetch_and_load_b32(ptr addrspace(4) align 4 inreg %p) {
+; GCN-LABEL: prefetch_and_load_b32:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
+; GCN-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    ; return to shader part epilog
+entry:
+  tail call void @llvm.amdgcn.s.prefetch.data.p4(ptr addrspace(4) %p, i32 0)
+  %ret = load float, ptr addrspace(4) %p, align 4
+  ret float %ret
+}
+
 declare void @llvm.amdgcn.s.prefetch.data.p4(ptr addrspace(4) %ptr, i32 %len)
 declare void @llvm.amdgcn.s.prefetch.data.p1(ptr addrspace(1) %ptr, i32 %len)
 declare void @llvm.amdgcn.s.prefetch.data.p0(ptr %ptr, i32 %len)

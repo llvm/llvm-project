@@ -80,7 +80,7 @@ Expr<SomeDerived> FoldOperation(
       } else if (IsProcedure(symbol)) {
         isConstant &= IsInitialProcedureTarget(expr);
       } else {
-        isConstant &= IsInitialDataTarget(expr);
+        isConstant &= IsInitialDataTarget(expr, /*messages=*/nullptr, &context);
       }
     } else if (IsAllocatable(symbol)) {
       // F2023: 10.1.12 (3)(a)
@@ -278,7 +278,7 @@ std::optional<Expr<SomeType>> FoldTransfer(
         (elements == 0 || totalBytes / elements == *sourceBytes)) {
       InitialImage image{*sourceBytes};
       auto status{image.Add(0, *sourceBytes, *source, context)};
-      if (status == InitialImage::Ok) {
+      if (status == InitialImage::Ok || status == InitialImage::OkNoChange) {
         return image.AsConstant(
             context, *moldType, moldLength, *extents, true /*pad with 0*/);
       } else {

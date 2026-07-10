@@ -47,11 +47,11 @@ entry:
   %and.pre = and i1 %pre.0, %pre.1
   br i1 %and.pre, label %ph, label %exit
 
-ph:                               ; preds = %entry
+ph:
   %n.ext = zext i32 %n to i64
   br label %loop
 
-loop:                                         ; preds = %loop, %ph
+loop:
   %iv = phi i64 [ 0, %ph ], [ %iv.next, %loop ]
   %gep = getelementptr inbounds i32, ptr %dst, i64 %iv
   store i32 1, ptr %gep
@@ -59,7 +59,7 @@ loop:                                         ; preds = %loop, %ph
   %ec = icmp eq i64 %iv, %n.ext
   br i1 %ec, label %exit, label %loop
 
-exit:                                       ; preds = %loop, %entry
+exit:
   ret i32 0
 }
 

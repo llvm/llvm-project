@@ -31,7 +31,8 @@ bool NameRegexCoverageFilter::matches(
 }
 
 bool NameRegexCoverageFilter::matchesFilename(StringRef Filename) const {
-  return llvm::Regex(Regex).match(Filename);
+  bool regex_match = llvm::Regex(Regex).match(Filename);
+  return Type == FilterType::Exclude ? regex_match : !regex_match;
 }
 
 bool NameAllowlistCoverageFilter::matches(

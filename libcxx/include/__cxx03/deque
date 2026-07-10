@@ -918,7 +918,7 @@ public:
     // This function tests deque object annotations.
     if (empty()) {
       for (__map_const_iterator __it = __map_.begin(); __it != __map_.end(); ++__it) {
-        if (!__sanitizer_verify_double_ended_contiguous_container(
+        if (!::__sanitizer_verify_double_ended_contiguous_container(
                 std::__to_address(*__it),
                 std::__to_address(*__it),
                 std::__to_address(*__it),
@@ -950,7 +950,7 @@ public:
 
       // Is the block before or after deque blocks that contain elements?
       if (__it < __first_mp || __it > __last_mp) {
-        if (!__sanitizer_verify_double_ended_contiguous_container(
+        if (!::__sanitizer_verify_double_ended_contiguous_container(
                 std::__to_address(*__it),
                 std::__to_address(*__it),
                 std::__to_address(*__it),
@@ -960,7 +960,7 @@ public:
         const void* __containers_buffer_beg = (__it == __first_mp) ? __p_beg : (const void*)std::__to_address(*__it);
         const void* __containers_buffer_end =
             (__it == __last_mp) ? __p_end : (const void*)std::__to_address(*__it + __block_size);
-        if (!__sanitizer_verify_double_ended_contiguous_container(
+        if (!::__sanitizer_verify_double_ended_contiguous_container(
                 std::__to_address(*__it),
                 __containers_buffer_beg,
                 __containers_buffer_end,

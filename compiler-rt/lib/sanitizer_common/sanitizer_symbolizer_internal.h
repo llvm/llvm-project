@@ -83,7 +83,7 @@ class SymbolizerProcess {
   const char *SendCommand(const char *command);
 
  protected:
-  ~SymbolizerProcess() {}
+  ~SymbolizerProcess();
 
   /// The maximum number of arguments required to invoke a tool process.
   static const unsigned kArgVMax = 16;
@@ -113,6 +113,10 @@ class SymbolizerProcess {
   const char *path_;
   fd_t input_fd_;
   fd_t output_fd_;
+
+  // We hold on to the child's stdin fd (the read end of the pipe)
+  // so that when we write to it, we don't get a SIGPIPE
+  fd_t child_stdin_fd_;
 
   InternalMmapVector<char> buffer_;
 

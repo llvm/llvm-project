@@ -62,10 +62,10 @@ getForwardSliceImpl(Operation *op, DenseSet<Operation *> &visited,
       // 'visited' set across regions/blocks as long as we remove operations
       // from the set again when the DFS traverses back from the leaf to the
       // root.
-      if (forwardSlice->count(userOp) == 0 && visited.insert(userOp).second)
+      if (forwardSlice->count(userOp) == 0 && visited.insert(userOp).second) {
         getForwardSliceImpl(userOp, visited, forwardSlice, filter);
-
-      visited.erase(userOp);
+        visited.erase(userOp);
+      }
     }
 
   forwardSlice->insert(op);
@@ -81,6 +81,7 @@ void mlir::getForwardSlice(Operation *op, SetVector<Operation *> *forwardSlice,
     // want it in the results.
     forwardSlice->remove(op);
   }
+  assert(visited.size() == 1 && "visited set should only contain op");
 
   // Reverse to get back the actual topological order.
   // std::reverse does not work out of the box on SetVector and I want an
@@ -97,6 +98,7 @@ void mlir::getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
     getForwardSliceImpl(user, visited, forwardSlice, options.filter);
     visited.erase(user);
   }
+  assert(visited.empty() && "visited set should be empty");
 
   // Reverse to get back the actual topological order.
   // std::reverse does not work out of the box on SetVector and I want an
@@ -121,11 +123,12 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
   auto processValue = [&](Value value) {
     if (auto *definingOp = value.getDefiningOp()) {
       if (backwardSlice->count(definingOp) == 0 &&
-          visited.insert(definingOp).second)
-        return getBackwardSliceImpl(definingOp, visited, backwardSlice,
-                                    options);
-
-      visited.erase(definingOp);
+          visited.insert(definingOp).second) {
+        LogicalResult result =
+            getBackwardSliceImpl(definingOp, visited, backwardSlice, options);
+        visited.erase(definingOp);
+        return result;
+      }
     } else if (auto blockArg = dyn_cast<BlockArgument>(value)) {
       if (options.omitBlockArguments)
         return success();
@@ -183,6 +186,7 @@ LogicalResult mlir::getBackwardSlice(Operation *op,
   visited.insert(op);
   LogicalResult result =
       getBackwardSliceImpl(op, visited, backwardSlice, options);
+  assert(visited.size() == 1 && "visited set should only contain op");
 
   if (!options.inclusive) {
     // Don't insert the top level operation, we just queried on it and don't
@@ -329,7 +333,8 @@ Value mlir::matchReduction(ArrayRef<BlockArgument> iterCarriedArgs,
   // Check that the yielded value is in the same position as in
   // `iterCarriedArgs`.
   Operation *terminatorOp = combinerOp;
-  if (terminatorOp->getOperand(redPos) != combinerOps.back()->getResults()[0])
+  if (redPos >= terminatorOp->getNumOperands() ||
+      terminatorOp->getOperand(redPos) != combinerOps.back()->getResults()[0])
     return nullptr;
 
   return reducedVal;

@@ -6,14 +6,14 @@
 
 ; CHECK:     .debug_info contents:
 ; CHECK-NEXT: 0x00000000:     Compile Unit: {{.+}}, format = DWARF64,
-; CHECK:      [[VARDIE:.+]]:  DW_TAG_variable
-; CHECK-NEXT:                   DW_AT_name ("foo")
-; CHECK:      [[TYPEDIE:.+]]: DW_TAG_base_type
-; CHECK-NEXT:                   DW_AT_name ("int")
 ; CHECK:      [[SPDIE:.+]]:   DW_TAG_subprogram
 ; CHECK:                        DW_AT_name ("func")
 ; CHECK:      [[LABELDIE:.+]]: DW_TAG_label
 ; CHECK-NEXT:                   DW_AT_name ("MyLabel")
+; CHECK:      [[VARDIE:.+]]:  DW_TAG_variable
+; CHECK-NEXT:                   DW_AT_name ("foo")
+; CHECK:      [[TYPEDIE:.+]]: DW_TAG_base_type
+; CHECK-NEXT:                   DW_AT_name ("int")
 
 ; CHECK:      .debug_names contents:
 ; CHECK-NEXT: Name Index @ 0x0 {

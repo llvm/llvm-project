@@ -38,11 +38,11 @@ define spir_func void @test() {
 entry:
   %arr = alloca [3 x i32], align 4
   %arr2 = alloca [3 x i32], align 4
-  %0 = bitcast [3 x i32]* %arr to i8*
-  call void @llvm.memcpy.p0i8.p2i8.i32(i8* align 4 %0, i8 addrspace(2)* align 4 bitcast ([3 x i32] addrspace(2)* @__const.test.arr to i8 addrspace(2)*), i32 12, i1 false)
-  %1 = bitcast [3 x i32]* %arr2 to i8*
-  call void @llvm.memcpy.p0i8.p2i8.i32(i8* align 4 %1, i8 addrspace(2)* align 4 bitcast ([3 x i32] addrspace(2)* @__const.test.arr2 to i8 addrspace(2)*), i32 12, i1 false)
+  %0 = bitcast ptr %arr to ptr
+  call void @llvm.memcpy.p0.p2.i32(ptr align 4 %0, ptr addrspace(2) align 4 @__const.test.arr, i32 12, i1 false)
+  %1 = bitcast ptr %arr2 to ptr
+  call void @llvm.memcpy.p0.p2.i32(ptr align 4 %1, ptr addrspace(2) align 4 @__const.test.arr2, i32 12, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p2i8.i32(i8* nocapture writeonly, i8 addrspace(2)* nocapture readonly, i32, i1)
+declare void @llvm.memcpy.p0.p2.i32(ptr nocapture writeonly, ptr addrspace(2) nocapture readonly, i32, i1)

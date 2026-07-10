@@ -123,8 +123,7 @@ define void @test_f2(ptr %P, ptr %S) nounwind {
 ;
 ; LA64D-LABEL: test_f2:
 ; LA64D:       # %bb.0:
-; LA64D-NEXT:    ld.d $a0, $a0, 0
-; LA64D-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64D-NEXT:    fld.d $fa0, $a0, 0
 ; LA64D-NEXT:    lu12i.w $a0, 260096
 ; LA64D-NEXT:    lu52i.d $a0, $a0, 1024
 ; LA64D-NEXT:    vreplgr2vr.d $vr1, $a0
@@ -532,8 +531,9 @@ define void @test_d4(ptr %P, ptr %S) nounwind {
 ; LA32D-NEXT:    fmov.d $fa5, $fa4
 ; LA32D-NEXT:    movgr2frh.w $fa5, $a0
 ; LA32D-NEXT:    fadd.d $fa2, $fa2, $fa5
-; LA32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
-; LA32D-NEXT:    fld.d $fa5, $a0, %pc_lo12(.LCPI5_0)
+; LA32D-NEXT:  .Lpcadd_hi0:
+; LA32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_0)
+; LA32D-NEXT:    fld.d $fa5, $a0, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32D-NEXT:    lu12i.w $a0, 262400
 ; LA32D-NEXT:    movgr2frh.w $fa4, $a0
 ; LA32D-NEXT:    fadd.d $fa1, $fa1, $fa4
@@ -760,8 +760,9 @@ define void @test_d8(ptr %P, ptr %S) nounwind {
 ; LA32D-NEXT:    lu12i.w $a0, 262400
 ; LA32D-NEXT:    movgr2frh.w $ft0, $a0
 ; LA32D-NEXT:    fadd.d $fa4, $fa4, $ft1
-; LA32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI6_0)
-; LA32D-NEXT:    fld.d $ft1, $a0, %pc_lo12(.LCPI6_0)
+; LA32D-NEXT:  .Lpcadd_hi1:
+; LA32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI6_0)
+; LA32D-NEXT:    fld.d $ft1, $a0, %pcadd_lo12(.Lpcadd_hi1)
 ; LA32D-NEXT:    fadd.d $fa5, $fa5, $ft0
 ; LA32D-NEXT:    fadd.d $fa3, $fa3, $ft2
 ; LA32D-NEXT:    fadd.d $fa2, $fa2, $ft0

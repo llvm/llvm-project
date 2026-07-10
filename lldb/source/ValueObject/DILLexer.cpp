@@ -24,12 +24,18 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "amp";
   case Kind::arrow:
     return "arrow";
+  case Kind::colon:
+    return "colon";
   case Kind::coloncolon:
     return "coloncolon";
+  case Kind::equal:
+    return "equal";
   case Kind::eof:
     return "eof";
   case Kind::float_constant:
     return "float_constant";
+  case Kind::greatergreater:
+    return "greatergreater";
   case Kind::identifier:
     return "identifier";
   case Kind::integer_constant:
@@ -42,16 +48,26 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "l_paren";
   case Kind::l_square:
     return "l_square";
+  case Kind::lessless:
+    return "lessless";
   case Kind::minus:
     return "minus";
+  case Kind::minusequal:
+    return "minusequal";
+  case Token::percent:
+    return "percent";
   case Kind::period:
     return "period";
   case Kind::plus:
     return "plus";
+  case Kind::plusequal:
+    return "plusequal";
   case Kind::r_paren:
     return "r_paren";
   case Kind::r_square:
     return "r_square";
+  case Token::slash:
+    return "slash";
   case Token::star:
     return "star";
   }
@@ -109,12 +125,41 @@ static std::optional<llvm::StringRef> IsNumber(llvm::StringRef &remainder,
   return std::nullopt;
 }
 
-llvm::Expected<DILLexer> DILLexer::Create(llvm::StringRef expr) {
+static llvm::Error IsNotAllowedByMode(llvm::StringRef expr, Token token,
+                                      lldb::DILMode mode) {
+  switch (mode) {
+  case lldb::eDILModeSimple:
+    if (!token.IsOneOf({Token::identifier, Token::period, Token::eof})) {
+      return llvm::make_error<DILDiagnosticError>(
+          expr, llvm::formatv("{0} is not allowed in DIL simple mode", token),
+          token.GetLocation());
+    }
+    break;
+  case lldb::eDILModeLegacy:
+    if (!token.IsOneOf({Token::identifier, Token::integer_constant,
+                        Token::period, Token::arrow, Token::star, Token::amp,
+                        Token::l_square, Token::r_square, Token::eof})) {
+      return llvm::make_error<DILDiagnosticError>(
+          expr, llvm::formatv("{0} is not allowed in DIL legacy mode", token),
+          token.GetLocation());
+    }
+    break;
+  case lldb::eDILModeFull:
+    break;
+  }
+  return llvm::Error::success();
+}
+
+llvm::Expected<DILLexer> DILLexer::Create(llvm::StringRef expr,
+                                          lldb::DILMode mode) {
   std::vector<Token> tokens;
   llvm::StringRef remainder = expr;
   do {
     if (llvm::Expected<Token> t = Lex(expr, remainder)) {
-      tokens.push_back(std::move(*t));
+      Token token = *t;
+      if (llvm::Error error = IsNotAllowedByMode(expr, token, mode))
+        return error;
+      tokens.push_back(std::move(token));
     } else {
       return t.takeError();
     }
@@ -149,11 +194,29 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
     return Token(kind, word.str(), position);
   }
 
+  // IMPORTANT: If two or more tokens share the same prefix, the tokens need to
+  // be ordered longest-to-shortest in the list below. E.g. '::' must come
+  // before ':', and '+=' must come before '+'.
   constexpr std::pair<Token::Kind, const char *> operators[] = {
-      {Token::amp, "&"},      {Token::arrow, "->"},   {Token::coloncolon, "::"},
-      {Token::l_paren, "("},  {Token::l_square, "["}, {Token::minus, "-"},
-      {Token::period, "."},   {Token::plus, "+"},     {Token::r_paren, ")"},
-      {Token::r_square, "]"}, {Token::star, "*"},
+      {Token::arrow, "->"},
+      {Token::coloncolon, "::"},
+      {Token::greatergreater, ">>"},
+      {Token::lessless, "<<"},
+      {Token::minusequal, "-="},
+      {Token::plusequal, "+="},
+      {Token::amp, "&"},
+      {Token::colon, ":"},
+      {Token::equal, "="},
+      {Token::l_paren, "("},
+      {Token::l_square, "["},
+      {Token::minus, "-"},
+      {Token::percent, "%"},
+      {Token::period, "."},
+      {Token::plus, "+"},
+      {Token::r_paren, ")"},
+      {Token::r_square, "]"},
+      {Token::slash, "/"},
+      {Token::star, "*"},
   };
   for (auto [kind, str] : operators) {
     if (remainder.consume_front(str))

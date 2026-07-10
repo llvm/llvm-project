@@ -41,6 +41,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 
 #include "test_macros.h"
 
@@ -172,6 +173,19 @@ template <typename T> class UncompressibleAllocator : public std::allocator<T> {
   };
 };
 
+// Helper function to check pretty printing of short strings returned by
+// debugger-called functions.
+std::string return_short_string() {
+  return "abc";
+}
+
+// Helper function to check pretty printing of long strings returned by
+// debugger-called functions.
+std::basic_string<char, std::char_traits<char>, UncompressibleAllocator<char>>
+return_long_string() {
+  return "this is a string that is too long to fit in the string object";
+}
+
 void string_test() {
   std::string short_string("kdjflskdjf");
   // The display_hint "string" adds quotes the printed result.
@@ -181,7 +195,14 @@ void string_test() {
       long_string("mehmet bizim dostumuz agzi kirik testimiz");
   ComparePrettyPrintToChars(long_string,
                             "\"mehmet bizim dostumuz agzi kirik testimiz\"");
-}
+
+  // GDB handles strings that are returned from a debugger called function or
+  // when stepping out of a function differently from string variables. These
+  // two tests check that pretty printing works also for this case.
+  CompareExpressionPrettyPrintToChars("return_short_string()", "\"abc\"");
+  CompareExpressionPrettyPrintToChars("return_long_string()",
+      "\"this is a string that is too long to fit in the string object\"");
+  }
 
 namespace a_namespace {
 // To test name-lookup in the presence of using inside a namespace. Inside this
@@ -211,6 +232,14 @@ void string_view_test() {
 }
 }
 
+std::u16string return_short_u16string() {
+  return u"a";
+}
+
+std::u16string return_long_u16string() {
+  return u"this is a string that is too long to fit in the string object";
+}
+
 void u16string_test() {
   std::u16string test0 = u"Hello World";
   ComparePrettyPrintToChars(test0, "u\"Hello World\"");
@@ -221,6 +250,20 @@ void u16string_test() {
   std::u16string test3 = u"mehmet bizim dostumuz agzi kirik testimiz";
   ComparePrettyPrintToChars(test3,
                             ("u\"mehmet bizim dostumuz agzi kirik testimiz\""));
+  // GDB handles strings that are returned from a debugger called function or
+  // when stepping out of a function differently from string variables. These
+  // two tests check that pretty printing works also for this case.
+  CompareExpressionPrettyPrintToChars("return_short_u16string()", "u\"a\"");
+  CompareExpressionPrettyPrintToChars("return_long_u16string()",
+      "u\"this is a string that is too long to fit in the string object\"");
+}
+
+std::u32string return_short_u32string() {
+  return U"a";
+}
+
+std::u32string return_long_u32string() {
+  return U"this is a string that is too long to fit in the string object";
 }
 
 void u32string_test() {
@@ -235,6 +278,12 @@ void u32string_test() {
   ComparePrettyPrintToChars(test2, ("U\"\U00004f60\U0000597d\""));
   std::u32string test3 = U"mehmet bizim dostumuz agzi kirik testimiz";
   ComparePrettyPrintToChars(test3, ("U\"mehmet bizim dostumuz agzi kirik testimiz\""));
+  // GDB handles strings that are returned from a debugger called function or
+  // when stepping out of a function differently from string variables. These
+  // two tests check that pretty printing works also for this case.
+  CompareExpressionPrettyPrintToChars("return_short_u32string()", "U\"a\"");
+  CompareExpressionPrettyPrintToChars("return_long_u32string()",
+      "U\"this is a string that is too long to fit in the string object\"");
 }
 
 void tuple_test() {
@@ -245,6 +294,17 @@ void tuple_test() {
   ComparePrettyPrintToChars(
       test1,
       "empty std::tuple");
+}
+
+void pair_test() {
+  std::pair<int, int> ints(1, 2);
+  ComparePrettyPrintToChars(ints, "{first = 1, second = 2}");
+
+  std::pair<std::string, int> mixed("hello", 42);
+  ComparePrettyPrintToChars(mixed, "{first = \"hello\", second = 42}");
+
+  std::pair<int, std::pair<int, int>> nested(1, {2, 3});
+  ComparePrettyPrintToChars(nested, "{first = 1, second = {first = 2, second = 3}}");
 }
 
 void unique_ptr_test() {
@@ -684,7 +744,7 @@ void mi_mode_test() {
   one_two_three_umap.insert({2, "two"});
   one_two_three_umap.insert({1, "one"});
   CompareListChildrenToChars(
-      one_two_three_umap, R"([{"key": 3, "value": "three"}, {"key": 2, "value": "two"}, {"key": 1, "value": "one"}])");
+      one_two_three_umap, R"([{"key": 1, "value": "one"}, {"key": 2, "value": "two"}, {"key": 3, "value": "three"}])");
 
   std::deque<int> one_two_three_deque{1, 2, 3};
   CompareListChildrenToChars(one_two_three_deque, "[1, 2, 3]");
@@ -699,6 +759,7 @@ int main(int, char**) {
   //u16string_test();
   u32string_test();
   tuple_test();
+  pair_test();
   unique_ptr_test();
   shared_ptr_test();
   bitset_test();

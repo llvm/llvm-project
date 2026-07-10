@@ -286,6 +286,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::PackExpansion:
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
+    case Type::OverflowBehavior:
     case Type::CountAttributed:
       CanPrefixQualifiers = false;
       break;
@@ -637,27 +638,29 @@ void TypePrinter::printDependentAddressSpaceAfter(
 }
 
 void TypePrinter::printDependentSizedExtVectorBefore(
-                                          const DependentSizedExtVectorType *T,
-                                          raw_ostream &OS) {
-  if (Policy.UseHLSLTypes)
-    OS << "vector<";
-  printBefore(T->getElementType(), OS);
-}
-
-void TypePrinter::printDependentSizedExtVectorAfter(
-                                          const DependentSizedExtVectorType *T,
-                                          raw_ostream &OS) {
+    const DependentSizedExtVectorType *T, raw_ostream &OS) {
   if (Policy.UseHLSLTypes) {
+    OS << "vector<";
+    print(T->getElementType(), OS, StringRef());
     OS << ", ";
     if (T->getSizeExpr())
       T->getSizeExpr()->printPretty(OS, nullptr, Policy);
     OS << ">";
+    spaceBeforePlaceHolder(OS);
   } else {
-    OS << " __attribute__((ext_vector_type(";
-    if (T->getSizeExpr())
-      T->getSizeExpr()->printPretty(OS, nullptr, Policy);
-    OS << ")))";
+    printBefore(T->getElementType(), OS);
   }
+}
+
+void TypePrinter::printDependentSizedExtVectorAfter(
+    const DependentSizedExtVectorType *T, raw_ostream &OS) {
+  if (Policy.UseHLSLTypes)
+    return;
+
+  OS << " __attribute__((ext_vector_type(";
+  if (T->getSizeExpr())
+    T->getSizeExpr()->printPretty(OS, nullptr, Policy);
+  OS << ")))";
   printAfter(T->getElementType(), OS);
 }
 
@@ -722,13 +725,25 @@ void TypePrinter::printVectorBefore(const VectorType *T, raw_ostream &OS) {
     // FIXME: We prefer to print the size directly here, but have no way
     // to get the size of the type.
     OS << "__attribute__((__riscv_rvv_vector_bits__(";
-
-    OS << T->getNumElements();
-
-    OS << " * sizeof(";
-    print(T->getElementType(), OS, StringRef());
-    // Multiply by 8 for the number of bits.
-    OS << ") * 8))) ";
+    switch (T->getVectorKind()) {
+    case VectorKind::RVVFixedLengthMask_1:
+      OS << '1';
+      break;
+    case VectorKind::RVVFixedLengthMask_2:
+      OS << '2';
+      break;
+    case VectorKind::RVVFixedLengthMask_4:
+      OS << '4';
+      break;
+    default:
+      OS << T->getNumElements();
+      OS << " * sizeof(";
+      print(T->getElementType(), OS, StringRef());
+      // Multiply by 8 for the number of bits.
+      OS << ") * 8";
+      break;
+    }
+    OS << "))) ";
     printBefore(T->getElementType(), OS);
     break;
   }
@@ -805,12 +820,25 @@ void TypePrinter::printDependentVectorBefore(
     // FIXME: We prefer to print the size directly here, but have no way
     // to get the size of the type.
     OS << "__attribute__((__riscv_rvv_vector_bits__(";
-    if (T->getSizeExpr()) {
-      T->getSizeExpr()->printPretty(OS, nullptr, Policy);
-      OS << " * sizeof(";
-      print(T->getElementType(), OS, StringRef());
-      // Multiply by 8 for the number of bits.
-      OS << ") * 8";
+    switch (T->getVectorKind()) {
+    case VectorKind::RVVFixedLengthMask_1:
+      OS << '1';
+      break;
+    case VectorKind::RVVFixedLengthMask_2:
+      OS << '2';
+      break;
+    case VectorKind::RVVFixedLengthMask_4:
+      OS << '4';
+      break;
+    default:
+      if (T->getSizeExpr()) {
+        T->getSizeExpr()->printPretty(OS, nullptr, Policy);
+        OS << " * sizeof(";
+        print(T->getElementType(), OS, StringRef());
+        // Multiply by 8 for the number of bits.
+        OS << ") * 8";
+      }
+      break;
     }
     OS << "))) ";
     printBefore(T->getElementType(), OS);
@@ -825,23 +853,24 @@ void TypePrinter::printDependentVectorAfter(
 
 void TypePrinter::printExtVectorBefore(const ExtVectorType *T,
                                        raw_ostream &OS) {
-  if (Policy.UseHLSLTypes)
+  if (Policy.UseHLSLTypes) {
     OS << "vector<";
-  printBefore(T->getElementType(), OS);
+    print(T->getElementType(), OS, StringRef());
+    OS << ", " << T->getNumElements() << ">";
+    spaceBeforePlaceHolder(OS);
+  } else {
+    printBefore(T->getElementType(), OS);
+  }
 }
 
 void TypePrinter::printExtVectorAfter(const ExtVectorType *T, raw_ostream &OS) {
-  printAfter(T->getElementType(), OS);
+  if (Policy.UseHLSLTypes)
+    return;
 
-  if (Policy.UseHLSLTypes) {
-    OS << ", ";
-    OS << T->getNumElements();
-    OS << ">";
-  } else {
-    OS << " __attribute__((ext_vector_type(";
-    OS << T->getNumElements();
-    OS << ")))";
-  }
+  printAfter(T->getElementType(), OS);
+  OS << " __attribute__((ext_vector_type(";
+  OS << T->getNumElements();
+  OS << ")))";
 }
 
 static void printDims(const ConstantMatrixType *T, raw_ostream &OS) {
@@ -851,13 +880,14 @@ static void printDims(const ConstantMatrixType *T, raw_ostream &OS) {
 static void printHLSLMatrixBefore(TypePrinter &TP, const ConstantMatrixType *T,
                                   raw_ostream &OS) {
   OS << "matrix<";
-  TP.printBefore(T->getElementType(), OS);
-}
-
-static void printHLSLMatrixAfter(const ConstantMatrixType *T, raw_ostream &OS) {
+  TP.print(T->getElementType(), OS, StringRef());
   OS << ", ";
   printDims(T, OS);
   OS << ">";
+  TP.spaceBeforePlaceHolder(OS);
+}
+
+static void printHLSLMatrixAfter(const ConstantMatrixType *T, raw_ostream &OS) {
 }
 
 static void printClangMatrixBefore(TypePrinter &TP, const ConstantMatrixType *T,
@@ -888,21 +918,33 @@ void TypePrinter::printConstantMatrixAfter(const ConstantMatrixType *T,
 
 void TypePrinter::printDependentSizedMatrixBefore(
     const DependentSizedMatrixType *T, raw_ostream &OS) {
-  printBefore(T->getElementType(), OS);
-  OS << " __attribute__((matrix_type(";
-  if (T->getRowExpr()) {
-    T->getRowExpr()->printPretty(OS, nullptr, Policy);
+  if (Policy.UseHLSLTypes) {
+    OS << "matrix<";
+    print(T->getElementType(), OS, StringRef());
+    OS << ", ";
+    if (T->getRowExpr())
+      T->getRowExpr()->printPretty(OS, nullptr, Policy);
+    OS << ", ";
+    if (T->getColumnExpr())
+      T->getColumnExpr()->printPretty(OS, nullptr, Policy);
+    OS << ">";
+    spaceBeforePlaceHolder(OS);
+  } else {
+    printBefore(T->getElementType(), OS);
+    OS << " __attribute__((matrix_type(";
+    if (T->getRowExpr())
+      T->getRowExpr()->printPretty(OS, nullptr, Policy);
+    OS << ", ";
+    if (T->getColumnExpr())
+      T->getColumnExpr()->printPretty(OS, nullptr, Policy);
+    OS << ")))";
   }
-  OS << ", ";
-  if (T->getColumnExpr()) {
-    T->getColumnExpr()->printPretty(OS, nullptr, Policy);
-  }
-  OS << ")))";
 }
 
 void TypePrinter::printDependentSizedMatrixAfter(
     const DependentSizedMatrixType *T, raw_ostream &OS) {
-  printAfter(T->getElementType(), OS);
+  if (!Policy.UseHLSLTypes)
+    printAfter(T->getElementType(), OS);
 }
 
 void
@@ -1350,12 +1392,12 @@ void TypePrinter::printUnaryTransformBefore(const UnaryTransformType *T,
                                             raw_ostream &OS) {
   IncludeStrongLifetimeRAII Strong(Policy);
 
-  static llvm::DenseMap<int, const char *> Transformation = {{
+  static const llvm::DenseMap<int, const char *> Transformation = {{
 #define TRANSFORM_TYPE_TRAIT_DEF(Enum, Trait)                                  \
   {UnaryTransformType::Enum, "__" #Trait},
 #include "clang/Basic/TransformTypeTraits.def"
   }};
-  OS << Transformation[T->getUTTKind()] << '(';
+  OS << Transformation.lookup(T->getUTTKind()) << '(';
   print(T->getBaseType(), OS, StringRef());
   OS << ')';
   spaceBeforePlaceHolder(OS);
@@ -1518,18 +1560,19 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
     return;
   }
 
-  bool HasKindDecoration = false;
-
+  bool PrintedKindDecoration = false;
   if (T->isCanonicalUnqualified()) {
     if (!Policy.SuppressTagKeyword && !D->getTypedefNameForAnonDecl()) {
-      HasKindDecoration = true;
+      PrintedKindDecoration = true;
       OS << D->getKindName();
       OS << ' ';
     }
   } else {
     OS << TypeWithKeyword::getKeywordName(T->getKeyword());
-    if (T->getKeyword() != ElaboratedTypeKeyword::None)
+    if (T->getKeyword() != ElaboratedTypeKeyword::None) {
+      PrintedKindDecoration = true;
       OS << ' ';
+    }
   }
 
   if (!Policy.FullyQualifiedName && !T->isCanonicalUnqualified()) {
@@ -1543,53 +1586,16 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
 
   if (const IdentifierInfo *II = D->getIdentifier())
     OS << II->getName();
-  else if (TypedefNameDecl *Typedef = D->getTypedefNameForAnonDecl()) {
-    assert(Typedef->getIdentifier() && "Typedef without identifier?");
-    OS << Typedef->getIdentifier()->getName();
-  } else {
-    // Make an unambiguous representation for anonymous types, e.g.
-    //   (anonymous enum at /usr/include/string.h:120:9)
-    OS << (Policy.MSVCFormatting ? '`' : '(');
+  else {
+    clang::PrintingPolicy Copy(Policy);
 
-    if (isa<CXXRecordDecl>(D) && cast<CXXRecordDecl>(D)->isLambda()) {
-      OS << "lambda";
-      HasKindDecoration = true;
-    } else if ((isa<RecordDecl>(D) && cast<RecordDecl>(D)->isAnonymousStructOrUnion())) {
-      OS << "anonymous";
-    } else {
-      OS << "unnamed";
+    // Suppress the redundant tag keyword if we just printed one.
+    if (PrintedKindDecoration) {
+      Copy.SuppressTagKeywordInAnonNames = true;
+      Copy.SuppressTagKeyword = true;
     }
 
-    if (Policy.AnonymousTagLocations) {
-      // Suppress the redundant tag keyword if we just printed one.
-      // We don't have to worry about ElaboratedTypes here because you can't
-      // refer to an anonymous type with one.
-      if (!HasKindDecoration)
-        OS << " " << D->getKindName();
-
-      PresumedLoc PLoc = D->getASTContext().getSourceManager().getPresumedLoc(
-          D->getLocation());
-      if (PLoc.isValid()) {
-        OS << " at ";
-        StringRef File = PLoc.getFilename();
-        llvm::SmallString<1024> WrittenFile(File);
-        if (auto *Callbacks = Policy.Callbacks)
-          WrittenFile = Callbacks->remapPath(File);
-        // Fix inconsistent path separator created by
-        // clang::DirectoryLookup::LookupFile when the file path is relative
-        // path.
-        llvm::sys::path::Style Style =
-            llvm::sys::path::is_absolute(WrittenFile)
-                ? llvm::sys::path::Style::native
-                : (Policy.MSVCFormatting
-                       ? llvm::sys::path::Style::windows_backslash
-                       : llvm::sys::path::Style::posix);
-        llvm::sys::path::native(WrittenFile, Style);
-        OS << WrittenFile << ':' << PLoc.getLine() << ':' << PLoc.getColumn();
-      }
-    }
-
-    OS << (Policy.MSVCFormatting ? '\'' : ')');
+    D->printName(OS, Copy);
   }
 
   // If this is a class template specialization, print the template
@@ -2008,6 +2014,8 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::HLSLRawBuffer:
   case attr::HLSLContainedType:
   case attr::HLSLIsCounter:
+  case attr::HLSLResourceDimension:
+  case attr::HLSLIsArray:
     llvm_unreachable("HLSL resource type attributes handled separately");
 
   case attr::OpenCLPrivateAddressSpace:
@@ -2060,10 +2068,18 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::PreserveAll:
   case attr::PreserveMost:
   case attr::PreserveNone:
+  case attr::OverflowBehavior:
     llvm_unreachable("This attribute should have been handled already");
 
   case attr::NSReturnsRetained:
     OS << "ns_returns_retained";
+    break;
+
+  case attr::HLSLRowMajor:
+    OS << "row_major";
+    break;
+  case attr::HLSLColumnMajor:
+    OS << "column_major";
     break;
 
   // FIXME: When Sema learns to form this AttributedType, avoid printing the
@@ -2122,6 +2138,12 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::CFISalt:
     OS << "cfi_salt(\"" << cast<CFISaltAttr>(T->getAttr())->getSalt() << "\")";
     break;
+  case attr::NoFieldProtection:
+    OS << "no_field_protection";
+    break;
+  case attr::PointerFieldProtection:
+    OS << "pointer_field_protection";
+    break;
   }
   OS << "))";
 }
@@ -2135,6 +2157,24 @@ void TypePrinter::printBTFTagAttributedBefore(const BTFTagAttributedType *T,
 void TypePrinter::printBTFTagAttributedAfter(const BTFTagAttributedType *T,
                                              raw_ostream &OS) {
   printAfter(T->getWrappedType(), OS);
+}
+
+void TypePrinter::printOverflowBehaviorBefore(const OverflowBehaviorType *T,
+                                              raw_ostream &OS) {
+  switch (T->getBehaviorKind()) {
+  case clang::OverflowBehaviorType::OverflowBehaviorKind::Wrap:
+    OS << "__ob_wrap ";
+    break;
+  case clang::OverflowBehaviorType::OverflowBehaviorKind::Trap:
+    OS << "__ob_trap ";
+    break;
+  }
+  printBefore(T->getUnderlyingType(), OS);
+}
+
+void TypePrinter::printOverflowBehaviorAfter(const OverflowBehaviorType *T,
+                                             raw_ostream &OS) {
+  printAfter(T->getUnderlyingType(), OS);
 }
 
 void TypePrinter::printHLSLAttributedResourceBefore(
@@ -2155,6 +2195,8 @@ void TypePrinter::printHLSLAttributedResourceAfter(
     OS << " [[hlsl::raw_buffer]]";
   if (Attrs.IsCounter)
     OS << " [[hlsl::is_counter]]";
+  if (Attrs.IsArray)
+    OS << " [[hlsl::is_array]]";
 
   QualType ContainedTy = T->getContainedType();
   if (!ContainedTy.isNull()) {
@@ -2163,6 +2205,12 @@ void TypePrinter::printHLSLAttributedResourceAfter(
     printAfter(ContainedTy, OS);
     OS << ")]]";
   }
+
+  if (Attrs.ResourceDimension != llvm::dxil::ResourceDimension::Unknown)
+    OS << " [[hlsl::resource_dimension("
+       << HLSLResourceDimensionAttr::ConvertResourceDimensionToStr(
+              Attrs.ResourceDimension)
+       << ")]]";
 }
 
 void TypePrinter::printHLSLInlineSpirvBefore(const HLSLInlineSpirvType *T,
@@ -2694,6 +2742,10 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "hlsl_device";
   case LangAS::hlsl_input:
     return "hlsl_input";
+  case LangAS::hlsl_output:
+    return "hlsl_output";
+  case LangAS::hlsl_push_constant:
+    return "hlsl_push_constant";
   case LangAS::wasm_funcref:
     return "__funcref";
   default:

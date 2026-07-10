@@ -8,6 +8,7 @@
 
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
@@ -22,17 +23,11 @@
 
 using namespace llvm;
 
-void llvm::dumpBytes(ArrayRef<uint8_t> bytes, raw_ostream &OS) {
-  static const char hex_rep[] = "0123456789abcdef";
-  bool First = true;
-  for (char i: bytes) {
-    if (First)
-      First = false;
-    else
-      OS << ' ';
-    OS << hex_rep[(i & 0xF0) >> 4];
-    OS << hex_rep[i & 0xF];
-  }
+void llvm::dumpBytes(ArrayRef<uint8_t> Bytes, raw_ostream &OS) {
+  static const char HexRep[] = "0123456789abcdef";
+  ListSeparator LS(" ");
+  for (char Byte : Bytes)
+    OS << LS << HexRep[(Byte & 0xF0) >> 4] << HexRep[Byte & 0xF];
 }
 
 MCInstPrinter::~MCInstPrinter() = default;
@@ -61,6 +56,7 @@ void MCInstPrinter::printAnnotation(raw_ostream &OS, StringRef Annot) {
 }
 
 static bool matchAliasCondition(const MCInst &MI, const MCSubtargetInfo *STI,
+                                const MCInstrInfo &MII,
                                 const MCRegisterInfo &MRI, unsigned &OpIdx,
                                 const AliasMatchingData &M,
                                 const AliasPatternCond &C,
@@ -102,6 +98,12 @@ static bool matchAliasCondition(const MCInst &MI, const MCSubtargetInfo *STI,
   case AliasPatternCond::K_TiedReg:
     // Operand must match the register of another operand.
     return Opnd.isReg() && Opnd.getReg() == MI.getOperand(C.Value).getReg();
+  case AliasPatternCond::K_RegClassByHwMode: {
+    // Operand must be RegisterByHwMode. Value is RegClassByHwMode index.
+    unsigned HwModeId = STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo);
+    int16_t RCID = MII.getRegClassByHwModeTable(HwModeId)[C.Value];
+    return Opnd.isReg() && MRI.getRegClass(RCID).contains(Opnd.getReg());
+  }
   case AliasPatternCond::K_RegClass:
     // Operand must be a register in this class. Value is a register class id.
     return Opnd.isReg() && MRI.getRegClass(C.Value).contains(Opnd.getReg());
@@ -148,7 +150,7 @@ const char *MCInstPrinter::matchAliasPatterns(const MCInst *MI,
     unsigned OpIdx = 0;
     bool OrPredicateResult = false;
     if (llvm::all_of(Conds, [&](const AliasPatternCond &C) {
-          return matchAliasCondition(*MI, STI, MRI, OpIdx, M, C,
+          return matchAliasCondition(*MI, STI, MII, MRI, OpIdx, M, C,
                                      OrPredicateResult);
         })) {
       // If all conditions matched, use this asm string.

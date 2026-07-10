@@ -714,6 +714,12 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// as they do not refer to a file.
   std::vector<SrcMgr::ContentCache*> MemBufferInfos;
 
+  /// Per-FileID content caches for aliased file references.
+  ///
+  /// These caches preserve the spelling used for a particular include while
+  /// sharing file contents with the canonical cache in \c FileInfos.
+  std::vector<SrcMgr::ContentCache *> FileIDContentCaches;
+
   /// The table of SLocEntries that are local to this module.
   ///
   /// Positive FileIDs are indexes into this table. Entry 0 indicates an invalid
@@ -1524,6 +1530,15 @@ public:
       return false;
     StringRef Filename(Presumed.getFilename());
     return Filename == "<scratch space>";
+  }
+
+  /// Returns whether \p Loc is located in a <module-includes> file.
+  bool isWrittenInModuleIncludes(SourceLocation Loc) const {
+    PresumedLoc Presumed = getPresumedLoc(Loc);
+    if (Presumed.isInvalid())
+      return false;
+    StringRef Filename(Presumed.getFilename());
+    return Filename == "<module-includes>";
   }
 
   /// Returns whether \p Loc is located in a built-in or command line source.

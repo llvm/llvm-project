@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck %s
 
 ; FIXME: Shouldn't emit and
-; ERR: error: couldn't allocate input reg for constraint 'VA'
+; ERR: error: could not allocate input reg for constraint 'VA'
 define void @use_A_i16(i16 %x) {
 ; CHECK-LABEL: use_A_i16:
 ; CHECK:       ; %bb.0:
@@ -17,7 +17,7 @@ define void @use_A_i16(i16 %x) {
   ret void
 }
 
-; ERR: error: couldn't allocate input reg for constraint 'VA'
+; ERR: error: could not allocate input reg for constraint 'VA'
 define void @use_A_f16(half %x) {
 ; CHECK-LABEL: use_A_f16:
 ; CHECK:       ; %bb.0:
@@ -30,7 +30,7 @@ define void @use_A_f16(half %x) {
   ret void
 }
 
-; ERR: error: couldn't allocate input reg for constraint 'VA'
+; ERR: error: could not allocate input reg for constraint 'VA'
 define void @use_A_bf16(bfloat %x) {
 ; CHECK-LABEL: use_A_bf16:
 ; CHECK:       ; %bb.0:
@@ -43,7 +43,7 @@ define void @use_A_bf16(bfloat %x) {
   ret void
 }
 
-; ERR: error: couldn't allocate input reg for constraint 'VA'
+; ERR: error: could not allocate input reg for constraint 'VA'
 define void @use_A_v2i16(<2 x i16> %x) {
 ; CHECK-LABEL: use_A_v2i16:
 ; CHECK:       ; %bb.0:
@@ -56,7 +56,7 @@ define void @use_A_v2i16(<2 x i16> %x) {
   ret void
 }
 
-; ERR: error: couldn't allocate input reg for constraint 'VA'
+; ERR: error: could not allocate input reg for constraint 'VA'
 define void @use_A_v2f16(<2 x half> %x) {
 ; CHECK-LABEL: use_A_v2f16:
 ; CHECK:       ; %bb.0:
@@ -69,7 +69,7 @@ define void @use_A_v2f16(<2 x half> %x) {
   ret void
 }
 
-; ERR: error: couldn't allocate input reg for constraint 'VA'
+; ERR: error: could not allocate input reg for constraint 'VA'
 define void @use_A_v2bf16(<2 x bfloat> %x) {
 ; CHECK-LABEL: use_A_v2bf16:
 ; CHECK:       ; %bb.0:
@@ -82,7 +82,7 @@ define void @use_A_v2bf16(<2 x bfloat> %x) {
   ret void
 }
 
-; ERR: error: couldn't allocate input reg for constraint 'VA'
+; ERR: error: could not allocate input reg for constraint 'VA'
 define void @use_A_i32(i32 %x) {
 ; CHECK-LABEL: use_A_i32:
 ; CHECK:       ; %bb.0:
@@ -95,7 +95,7 @@ define void @use_A_i32(i32 %x) {
   ret void
 }
 
-; ERR: error: couldn't allocate input reg for constraint 'VA'
+; ERR: error: could not allocate input reg for constraint 'VA'
 define void @use_A_f32(float %x) {
 ; CHECK-LABEL: use_A_f32:
 ; CHECK:       ; %bb.0:
@@ -108,7 +108,7 @@ define void @use_A_f32(float %x) {
   ret void
 }
 
-; ERR: error: couldn't allocate input reg for constraint 'VA'
+; ERR: error: could not allocate input reg for constraint 'VA'
 define void @use_A_i64(i64 %x) {
 ; CHECK-LABEL: use_A_i64:
 ; CHECK:       ; %bb.0:
@@ -121,7 +121,7 @@ define void @use_A_i64(i64 %x) {
   ret void
 }
 
-; ERR: error: couldn't allocate input reg for constraint 'VA'
+; ERR: error: could not allocate input reg for constraint 'VA'
 define void @use_A_f64(double %x) {
 ; CHECK-LABEL: use_A_f64:
 ; CHECK:       ; %bb.0:
@@ -134,7 +134,7 @@ define void @use_A_f64(double %x) {
   ret void
 }
 
-; ERR: error: couldn't allocate input reg for constraint 'VA'
+; ERR: error: could not allocate input reg for constraint 'VA'
 define void @use_A_p1(ptr addrspace(1) %x) {
 ; CHECK-LABEL: use_A_p1:
 ; CHECK:       ; %bb.0:
@@ -147,7 +147,7 @@ define void @use_A_p1(ptr addrspace(1) %x) {
   ret void
 }
 
-; ERR: error: couldn't allocate input reg for constraint 'VA'
+; ERR: error: could not allocate input reg for constraint 'VA'
 define void @use_A_v32i32(<32 x i32> %x) {
 ; CHECK-LABEL: use_A_v32i32:
 ; CHECK:       ; %bb.0:
@@ -162,7 +162,7 @@ define void @use_A_v32i32(<32 x i32> %x) {
   ret void
 }
 
-; ERR: error: couldn't allocate input reg for constraint 'VA'
+; ERR: error: could not allocate input reg for constraint 'VA'
 define void @use_A_v32f32(<32 x float> %x) {
 ; CHECK-LABEL: use_A_v32f32:
 ; CHECK:       ; %bb.0:
@@ -177,7 +177,7 @@ define void @use_A_v32f32(<32 x float> %x) {
   ret void
 }
 
-; ERR: error: couldn't allocate output register for constraint 'VA'
+; ERR: error: could not allocate output register for constraint 'VA'
 define i16 @def_A_i16() {
 ; CHECK-LABEL: def_A_i16:
 ; CHECK:       ; %bb.0:
@@ -190,7 +190,7 @@ define i16 @def_A_i16() {
   ret i16 %ret
 }
 
-; ERR: error: couldn't allocate output register for constraint 'VA'
+; ERR: error: could not allocate output register for constraint 'VA'
 define i32 @def_A_i32() {
 ; CHECK-LABEL: def_A_i32:
 ; CHECK:       ; %bb.0:
@@ -203,7 +203,7 @@ define i32 @def_A_i32() {
   ret i32 %ret
 }
 
-; ERR: error: couldn't allocate output register for constraint 'VA'
+; ERR: error: could not allocate output register for constraint 'VA'
 define ptr addrspace(1) @def_A_p1() {
 ; CHECK-LABEL: def_A_p1:
 ; CHECK:       ; %bb.0:

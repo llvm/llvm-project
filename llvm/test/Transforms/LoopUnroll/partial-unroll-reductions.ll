@@ -8,9 +8,9 @@ define i32 @test_add(ptr %src, i64 %n, i32 %start) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT_3:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RDX_1:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_NEXT_3:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RDX_NEXT_1:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_NEXT_2:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RDX_3:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_NEXT_24:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX_1:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_NEXT_1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX_2:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_NEXT_2:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX_3:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_NEXT_3:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ [[START]], %[[ENTRY]] ], [ [[RDX_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV]]
@@ -19,23 +19,23 @@ define i32 @test_add(ptr %src, i64 %n, i32 %start) {
 ; CHECK-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT]]
 ; CHECK-NEXT:    [[L_1:%.*]] = load i32, ptr [[GEP_SRC_1]], align 1
-; CHECK-NEXT:    [[RDX_NEXT_3]] = add i32 [[RDX_1]], [[L_1]]
+; CHECK-NEXT:    [[RDX_NEXT_1]] = add i32 [[RDX_1]], [[L_1]]
 ; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV]], 3
 ; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT_1]]
 ; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[GEP_SRC_2]], align 1
-; CHECK-NEXT:    [[RDX_NEXT_2]] = add i32 [[RDX_NEXT_1]], [[L_2]]
+; CHECK-NEXT:    [[RDX_NEXT_2]] = add i32 [[RDX_2]], [[L_2]]
 ; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
-; CHECK-NEXT:    [[GEP_SRC_24:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT_2]]
-; CHECK-NEXT:    [[L_24:%.*]] = load i32, ptr [[GEP_SRC_24]], align 1
-; CHECK-NEXT:    [[RDX_NEXT_24]] = add i32 [[RDX_3]], [[L_24]]
+; CHECK-NEXT:    [[GEP_SRC_3:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT_2]]
+; CHECK-NEXT:    [[L_3:%.*]] = load i32, ptr [[GEP_SRC_3]], align 1
+; CHECK-NEXT:    [[RDX_NEXT_3]] = add i32 [[RDX_3]], [[L_3]]
 ; CHECK-NEXT:    [[EC_3:%.*]] = icmp ne i64 [[IV_NEXT_3]], 1000
 ; CHECK-NEXT:    br i1 [[EC_3]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RDX_NEXT_LCSSA1:%.*]] = phi i32 [ [[RDX_NEXT_24]], %[[LOOP]] ]
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i32 [[RDX_NEXT_3]], [[RDX_NEXT]]
+; CHECK-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT_3]], %[[LOOP]] ]
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i32 [[RDX_NEXT_1]], [[RDX_NEXT]]
 ; CHECK-NEXT:    [[BIN_RDX1:%.*]] = add i32 [[RDX_NEXT_2]], [[BIN_RDX]]
-; CHECK-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = add i32 [[RDX_NEXT_24]], [[BIN_RDX1]]
-; CHECK-NEXT:    ret i32 [[RDX_NEXT_LCSSA]]
+; CHECK-NEXT:    [[BIN_RDX2:%.*]] = add i32 [[RDX_NEXT_3]], [[BIN_RDX1]]
+; CHECK-NEXT:    ret i32 [[BIN_RDX2]]
 ;
 entry:
   br label %loop
@@ -78,9 +78,9 @@ define i32 @test_add_tc_not_multiple_of_4(ptr %src, i64 %n, i32 %start) {
 ; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[GEP_SRC_2]], align 1
 ; CHECK-NEXT:    [[RDX_NEXT_2:%.*]] = add i32 [[RDX_NEXT_1]], [[L_2]]
 ; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
-; CHECK-NEXT:    [[GEP_SRC_12:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT_2]]
-; CHECK-NEXT:    [[L_12:%.*]] = load i32, ptr [[GEP_SRC_12]], align 1
-; CHECK-NEXT:    [[RDX_NEXT_3]] = add i32 [[RDX_NEXT_2]], [[L_12]]
+; CHECK-NEXT:    [[GEP_SRC_3:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT_2]]
+; CHECK-NEXT:    [[L_3:%.*]] = load i32, ptr [[GEP_SRC_3]], align 1
+; CHECK-NEXT:    [[RDX_NEXT_3]] = add i32 [[RDX_NEXT_2]], [[L_3]]
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP]] ]
@@ -110,7 +110,7 @@ define i32 @test_add_rdx_used_in_loop(ptr %src, i64 %n, i32 %start) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT_3:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ [[START]], %[[ENTRY]] ], [ [[RDX_NEXT_24:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ [[START]], %[[ENTRY]] ], [ [[RDX_NEXT_3:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 1
@@ -127,14 +127,14 @@ define i32 @test_add_rdx_used_in_loop(ptr %src, i64 %n, i32 %start) {
 ; CHECK-NEXT:    [[RDX_NEXT_2:%.*]] = add i32 [[RDX_NEXT_1]], [[L_2]]
 ; CHECK-NEXT:    store i32 [[RDX_NEXT_2]], ptr [[GEP_SRC_2]], align 4
 ; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
-; CHECK-NEXT:    [[GEP_SRC_24:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT_2]]
-; CHECK-NEXT:    [[L_24:%.*]] = load i32, ptr [[GEP_SRC_24]], align 1
-; CHECK-NEXT:    [[RDX_NEXT_24]] = add i32 [[RDX_NEXT_2]], [[L_24]]
-; CHECK-NEXT:    store i32 [[RDX_NEXT_24]], ptr [[GEP_SRC_24]], align 4
+; CHECK-NEXT:    [[GEP_SRC_3:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT_2]]
+; CHECK-NEXT:    [[L_3:%.*]] = load i32, ptr [[GEP_SRC_3]], align 1
+; CHECK-NEXT:    [[RDX_NEXT_3]] = add i32 [[RDX_NEXT_2]], [[L_3]]
+; CHECK-NEXT:    store i32 [[RDX_NEXT_3]], ptr [[GEP_SRC_3]], align 4
 ; CHECK-NEXT:    [[EC_3:%.*]] = icmp ne i64 [[IV_NEXT_3]], 1000
 ; CHECK-NEXT:    br i1 [[EC_3]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT_24]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT_3]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i32 [[RDX_NEXT_LCSSA]]
 ;
 entry:
@@ -176,9 +176,9 @@ define i32 @test_add_phi_used_outside_loop(ptr %src, i64 %n, i32 %start) {
 ; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[GEP_SRC_2]], align 1
 ; CHECK-NEXT:    [[RDX_NEXT_2:%.*]] = add i32 [[RDX_NEXT_1]], [[L_2]]
 ; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
-; CHECK-NEXT:    [[GEP_SRC_24:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT_2]]
-; CHECK-NEXT:    [[L_24:%.*]] = load i32, ptr [[GEP_SRC_24]], align 1
-; CHECK-NEXT:    [[RDX_NEXT_3]] = add i32 [[RDX_NEXT_2]], [[L_24]]
+; CHECK-NEXT:    [[GEP_SRC_3:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT_2]]
+; CHECK-NEXT:    [[L_3:%.*]] = load i32, ptr [[GEP_SRC_3]], align 1
+; CHECK-NEXT:    [[RDX_NEXT_3]] = add i32 [[RDX_NEXT_2]], [[L_3]]
 ; CHECK-NEXT:    [[EC_3:%.*]] = icmp ne i64 [[IV_NEXT_3]], 1000
 ; CHECK-NEXT:    br i1 [[EC_3]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -211,7 +211,7 @@ define i32 @test_add_and_mul_reduction(ptr %src, i64 %n, i32 %start) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT_3:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[RDX_1_1:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_1_NEXT_1:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[RDX_1_2:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_1_NEXT_2:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RDX_1_3:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_1_NEXT_24:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX_1_3:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_1_NEXT_3:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[RDX_1:%.*]] = phi i32 [ [[START]], %[[ENTRY]] ], [ [[RDX_1_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[RDX_2:%.*]] = phi i32 [ [[START]], %[[ENTRY]] ], [ [[RDX_2_NEXT_3:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
@@ -223,26 +223,26 @@ define i32 @test_add_and_mul_reduction(ptr %src, i64 %n, i32 %start) {
 ; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT]]
 ; CHECK-NEXT:    [[L_1:%.*]] = load i32, ptr [[GEP_SRC_1]], align 1
 ; CHECK-NEXT:    [[RDX_1_NEXT_1]] = add i32 [[RDX_1_1]], [[L_1]]
-; CHECK-NEXT:    [[RDX_2_2:%.*]] = mul i32 [[RDX_2_NEXT]], [[L_1]]
+; CHECK-NEXT:    [[RDX_2_NEXT_1:%.*]] = mul i32 [[RDX_2_NEXT]], [[L_1]]
 ; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV]], 3
 ; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT_1]]
 ; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[GEP_SRC_2]], align 1
 ; CHECK-NEXT:    [[RDX_1_NEXT_2]] = add i32 [[RDX_1_2]], [[L_2]]
-; CHECK-NEXT:    [[RDX_2_NEXT_2:%.*]] = mul i32 [[RDX_2_2]], [[L_2]]
+; CHECK-NEXT:    [[RDX_2_NEXT_2:%.*]] = mul i32 [[RDX_2_NEXT_1]], [[L_2]]
 ; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
-; CHECK-NEXT:    [[GEP_SRC_24:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT_2]]
-; CHECK-NEXT:    [[L_24:%.*]] = load i32, ptr [[GEP_SRC_24]], align 1
-; CHECK-NEXT:    [[RDX_1_NEXT_24]] = add i32 [[RDX_1_3]], [[L_24]]
-; CHECK-NEXT:    [[RDX_2_NEXT_3]] = mul i32 [[RDX_2_NEXT_2]], [[L_24]]
+; CHECK-NEXT:    [[GEP_SRC_3:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT_2]]
+; CHECK-NEXT:    [[L_3:%.*]] = load i32, ptr [[GEP_SRC_3]], align 1
+; CHECK-NEXT:    [[RDX_1_NEXT_3]] = add i32 [[RDX_1_3]], [[L_3]]
+; CHECK-NEXT:    [[RDX_2_NEXT_3]] = mul i32 [[RDX_2_NEXT_2]], [[L_3]]
 ; CHECK-NEXT:    [[EC_3:%.*]] = icmp ne i64 [[IV_NEXT_3]], 1000
 ; CHECK-NEXT:    br i1 [[EC_3]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RDX_1_NEXT_LCSSA1:%.*]] = phi i32 [ [[RDX_1_NEXT_24]], %[[LOOP]] ]
-; CHECK-NEXT:    [[BIN_RDX5:%.*]] = phi i32 [ [[RDX_2_NEXT_3]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX_1_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_1_NEXT_3]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX_2_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_2_NEXT_3]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i32 [[RDX_1_NEXT_1]], [[RDX_1_NEXT]]
 ; CHECK-NEXT:    [[BIN_RDX1:%.*]] = add i32 [[RDX_1_NEXT_2]], [[BIN_RDX]]
-; CHECK-NEXT:    [[RDX_1_NEXT_LCSSA:%.*]] = add i32 [[RDX_1_NEXT_24]], [[BIN_RDX1]]
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[RDX_1_NEXT_LCSSA]], [[BIN_RDX5]]
+; CHECK-NEXT:    [[BIN_RDX2:%.*]] = add i32 [[RDX_1_NEXT_3]], [[BIN_RDX1]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[BIN_RDX2]], [[RDX_2_NEXT_LCSSA]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
@@ -286,9 +286,9 @@ define float @test_fadd_no_fmfs(ptr %src, i64 %n, float %start) {
 ; CHECK-NEXT:    [[L_2:%.*]] = load float, ptr [[GEP_SRC_2]], align 1
 ; CHECK-NEXT:    [[RDX_NEXT_2:%.*]] = fadd float [[RDX_NEXT_1]], [[L_2]]
 ; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
-; CHECK-NEXT:    [[GEP_SRC_24:%.*]] = getelementptr float, ptr [[SRC]], i64 [[IV_NEXT_2]]
-; CHECK-NEXT:    [[L_24:%.*]] = load float, ptr [[GEP_SRC_24]], align 1
-; CHECK-NEXT:    [[RDX_NEXT_3]] = fadd float [[RDX_NEXT_2]], [[L_24]]
+; CHECK-NEXT:    [[GEP_SRC_3:%.*]] = getelementptr float, ptr [[SRC]], i64 [[IV_NEXT_2]]
+; CHECK-NEXT:    [[L_3:%.*]] = load float, ptr [[GEP_SRC_3]], align 1
+; CHECK-NEXT:    [[RDX_NEXT_3]] = fadd float [[RDX_NEXT_2]], [[L_3]]
 ; CHECK-NEXT:    [[EC_3:%.*]] = icmp ne i64 [[IV_NEXT_3]], 1000
 ; CHECK-NEXT:    br i1 [[EC_3]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -336,17 +336,17 @@ define float @test_fadd_with_ressaoc(ptr %src, i64 %n, float %start) {
 ; CHECK-NEXT:    [[L_2:%.*]] = load float, ptr [[GEP_SRC_2]], align 1
 ; CHECK-NEXT:    [[RDX_NEXT_2]] = fadd reassoc float [[RDX_2]], [[L_2]]
 ; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
-; CHECK-NEXT:    [[GEP_SRC_24:%.*]] = getelementptr float, ptr [[SRC]], i64 [[IV_NEXT_2]]
-; CHECK-NEXT:    [[L_24:%.*]] = load float, ptr [[GEP_SRC_24]], align 1
-; CHECK-NEXT:    [[RDX_NEXT_3]] = fadd reassoc float [[RDX_3]], [[L_24]]
+; CHECK-NEXT:    [[GEP_SRC_3:%.*]] = getelementptr float, ptr [[SRC]], i64 [[IV_NEXT_2]]
+; CHECK-NEXT:    [[L_3:%.*]] = load float, ptr [[GEP_SRC_3]], align 1
+; CHECK-NEXT:    [[RDX_NEXT_3]] = fadd reassoc float [[RDX_3]], [[L_3]]
 ; CHECK-NEXT:    [[EC_3:%.*]] = icmp ne i64 [[IV_NEXT_3]], 1000
 ; CHECK-NEXT:    br i1 [[EC_3]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RDX_NEXT_LCSSA1:%.*]] = phi float [ [[RDX_NEXT_3]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi float [ [[RDX_NEXT_3]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc float [[RDX_NEXT_1]], [[RDX_NEXT]]
 ; CHECK-NEXT:    [[BIN_RDX1:%.*]] = fadd reassoc float [[RDX_NEXT_2]], [[BIN_RDX]]
-; CHECK-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = fadd reassoc float [[RDX_NEXT_3]], [[BIN_RDX1]]
-; CHECK-NEXT:    ret float [[RDX_NEXT_LCSSA]]
+; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd reassoc float [[RDX_NEXT_3]], [[BIN_RDX1]]
+; CHECK-NEXT:    ret float [[BIN_RDX2]]
 ;
 entry:
   br label %loop
@@ -372,28 +372,34 @@ define i32 @test_smin(ptr %src, i64 %n) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT_3:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MIN:%.*]] = phi i32 [ 1000, %[[ENTRY]] ], [ [[RDX_NEXT_3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_1:%.*]] = phi i32 [ 2147483647, %[[ENTRY]] ], [ [[RDX_NEXT_1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_2:%.*]] = phi i32 [ 2147483647, %[[ENTRY]] ], [ [[RDX_NEXT_2:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_3:%.*]] = phi i32 [ 2147483647, %[[ENTRY]] ], [ [[RDX_NEXT_3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN:%.*]] = phi i32 [ 1000, %[[ENTRY]] ], [ [[RDX_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 1
-; CHECK-NEXT:    [[RDX_NEXT:%.*]] = call i32 @llvm.smin.i32(i32 [[MIN]], i32 [[L]])
+; CHECK-NEXT:    [[RDX_NEXT]] = call i32 @llvm.smin.i32(i32 [[MIN]], i32 [[L]])
 ; CHECK-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT]]
 ; CHECK-NEXT:    [[L_1:%.*]] = load i32, ptr [[GEP_SRC_1]], align 1
-; CHECK-NEXT:    [[RDX_NEXT_1:%.*]] = call i32 @llvm.smin.i32(i32 [[RDX_NEXT]], i32 [[L_1]])
+; CHECK-NEXT:    [[RDX_NEXT_1]] = call i32 @llvm.smin.i32(i32 [[MIN_1]], i32 [[L_1]])
 ; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV]], 3
 ; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT_1]]
 ; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[GEP_SRC_2]], align 1
-; CHECK-NEXT:    [[RDX_NEXT_2:%.*]] = call i32 @llvm.smin.i32(i32 [[RDX_NEXT_1]], i32 [[L_2]])
+; CHECK-NEXT:    [[RDX_NEXT_2]] = call i32 @llvm.smin.i32(i32 [[MIN_2]], i32 [[L_2]])
 ; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
-; CHECK-NEXT:    [[GEP_SRC_24:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT_2]]
-; CHECK-NEXT:    [[L_24:%.*]] = load i32, ptr [[GEP_SRC_24]], align 1
-; CHECK-NEXT:    [[RDX_NEXT_3]] = call i32 @llvm.smin.i32(i32 [[RDX_NEXT_2]], i32 [[L_24]])
+; CHECK-NEXT:    [[GEP_SRC_3:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT_2]]
+; CHECK-NEXT:    [[L_3:%.*]] = load i32, ptr [[GEP_SRC_3]], align 1
+; CHECK-NEXT:    [[RDX_NEXT_3]] = call i32 @llvm.smin.i32(i32 [[MIN_3]], i32 [[L_3]])
 ; CHECK-NEXT:    [[EC_3:%.*]] = icmp ne i64 [[IV_NEXT_3]], 1000
 ; CHECK-NEXT:    br i1 [[EC_3]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT_3]], %[[LOOP]] ]
-; CHECK-NEXT:    ret i32 [[RDX_NEXT_LCSSA]]
+; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call i32 @llvm.smin.i32(i32 [[RDX_NEXT]], i32 [[RDX_NEXT_1]])
+; CHECK-NEXT:    [[RDX_MINMAX1:%.*]] = call i32 @llvm.smin.i32(i32 [[RDX_MINMAX]], i32 [[RDX_NEXT_2]])
+; CHECK-NEXT:    [[RDX_MINMAX2:%.*]] = call i32 @llvm.smin.i32(i32 [[RDX_MINMAX1]], i32 [[RDX_NEXT_3]])
+; CHECK-NEXT:    ret i32 [[RDX_MINMAX2]]
 ;
 entry:
   br label %loop
@@ -436,10 +442,10 @@ define i64 @test_any_of_reduction(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i8 [[L_2]], 0
 ; CHECK-NEXT:    [[RDX_NEXT_2:%.*]] = select i1 [[C_2]], i64 [[RDX_NEXT_1]], i64 0
 ; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
-; CHECK-NEXT:    [[GEP_SRC_24:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[IV_NEXT_2]]
-; CHECK-NEXT:    [[L_24:%.*]] = load i8, ptr [[GEP_SRC_24]], align 1
-; CHECK-NEXT:    [[C_24:%.*]] = icmp eq i8 [[L_24]], 0
-; CHECK-NEXT:    [[RDX_NEXT_3]] = select i1 [[C_24]], i64 [[RDX_NEXT_2]], i64 0
+; CHECK-NEXT:    [[GEP_SRC_3:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[IV_NEXT_2]]
+; CHECK-NEXT:    [[L_3:%.*]] = load i8, ptr [[GEP_SRC_3]], align 1
+; CHECK-NEXT:    [[C_3:%.*]] = icmp eq i8 [[L_3]], 0
+; CHECK-NEXT:    [[RDX_NEXT_3]] = select i1 [[C_3]], i64 [[RDX_NEXT_2]], i64 0
 ; CHECK-NEXT:    [[EC_3:%.*]] = icmp ne i64 [[IV_NEXT_3]], 1000
 ; CHECK-NEXT:    br i1 [[EC_3]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -682,4 +688,56 @@ loop:
 
 exit:
   ret <4 x i32> %rdx.next
+}
+
+define i32 @test_findlast_reduction(ptr %data, i32 %a) {
+; CHECK-LABEL: define i32 @test_findlast_reduction(
+; CHECK-SAME: ptr [[DATA:%.*]], i32 [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT_3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[DATA_PHI:%.*]] = phi i32 [ -1, %[[ENTRY]] ], [ [[SELECT_DATA_3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[LD_ADDR:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV]]
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[LD_ADDR]], align 4
+; CHECK-NEXT:    [[SELECT_CMP:%.*]] = icmp slt i32 [[A]], [[LD]]
+; CHECK-NEXT:    [[SELECT_DATA:%.*]] = select i1 [[SELECT_CMP]], i32 [[LD]], i32 [[DATA_PHI]]
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[LD_ADDR_1:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[LD_1:%.*]] = load i32, ptr [[LD_ADDR_1]], align 4
+; CHECK-NEXT:    [[SELECT_CMP_1:%.*]] = icmp slt i32 [[A]], [[LD_1]]
+; CHECK-NEXT:    [[SELECT_DATA_1:%.*]] = select i1 [[SELECT_CMP_1]], i32 [[LD_1]], i32 [[SELECT_DATA]]
+; CHECK-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[LD_ADDR_2:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV_NEXT_1]]
+; CHECK-NEXT:    [[LD_2:%.*]] = load i32, ptr [[LD_ADDR_2]], align 4
+; CHECK-NEXT:    [[SELECT_CMP_2:%.*]] = icmp slt i32 [[A]], [[LD_2]]
+; CHECK-NEXT:    [[SELECT_DATA_2:%.*]] = select i1 [[SELECT_CMP_2]], i32 [[LD_2]], i32 [[SELECT_DATA_1]]
+; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV]], 3
+; CHECK-NEXT:    [[LD_ADDR_3:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV_NEXT_2]]
+; CHECK-NEXT:    [[LD_3:%.*]] = load i32, ptr [[LD_ADDR_3]], align 4
+; CHECK-NEXT:    [[SELECT_CMP_3:%.*]] = icmp slt i32 [[A]], [[LD_3]]
+; CHECK-NEXT:    [[SELECT_DATA_3]] = select i1 [[SELECT_CMP_3]], i32 [[LD_3]], i32 [[SELECT_DATA_2]]
+; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
+; CHECK-NEXT:    [[EXIT_CMP_3:%.*]] = icmp eq i64 [[IV_NEXT_3]], 200
+; CHECK-NEXT:    br i1 [[EXIT_CMP_3]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA_3]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[SELECT_DATA_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %data.phi = phi i32 [ -1, %entry ], [ %select.data, %loop ]
+  %ld.addr = getelementptr inbounds i32, ptr %data, i64 %iv
+  %ld = load i32, ptr %ld.addr, align 4
+  %select.cmp = icmp slt i32 %a, %ld
+  %select.data = select i1 %select.cmp, i32 %ld, i32 %data.phi
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exit.cmp = icmp eq i64 %iv.next, 200
+  br i1 %exit.cmp, label %exit, label %loop
+
+exit:
+  ret i32 %select.data
 }

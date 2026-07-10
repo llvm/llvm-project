@@ -44,7 +44,7 @@ static void replaceFrameIndex(MachineBasicBlock::iterator II,
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
   unsigned BaseReg = FrameReg;
-  unsigned KillState = 0;
+  RegState KillState = {};
   if (MI.getOpcode() == ARC::LD_rs9 && (Offset >= 256 || Offset < -256)) {
     // Loads can always be reached with LD_rlimm.
     BuildMI(MBB, II, DL, TII.get(ARC::LD_rlimm), Reg)

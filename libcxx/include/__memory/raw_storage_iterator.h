@@ -21,12 +21,12 @@
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR)
+
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR)
 
 template <class _OutputIterator, class _Tp>
 class _LIBCPP_DEPRECATED_IN_CXX17 raw_storage_iterator
@@ -46,7 +46,7 @@ public:
   typedef void reference;
 
   _LIBCPP_HIDE_FROM_ABI explicit raw_storage_iterator(_OutputIterator __x) : __x_(__x) {}
-  _LIBCPP_HIDE_FROM_ABI raw_storage_iterator& operator*() { return *this; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI raw_storage_iterator& operator*() { return *this; }
   _LIBCPP_HIDE_FROM_ABI raw_storage_iterator& operator=(const _Tp& __element) {
     ::new ((void*)std::addressof(*__x_)) _Tp(__element);
     return *this;
@@ -67,14 +67,14 @@ public:
     return __t;
   }
 #  if _LIBCPP_STD_VER >= 14
-  _LIBCPP_HIDE_FROM_ABI _OutputIterator base() const { return __x_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _OutputIterator base() const { return __x_; }
 #  endif
 };
-
-#endif // _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR)
 
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#endif // _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR)
 
 #endif // _LIBCPP___MEMORY_RAW_STORAGE_ITERATOR_H

@@ -40,11 +40,14 @@ struct FoldEmptyTensorWithReshapeOp : public OpRewritePattern<ReshapeOp> {
         !llvm::hasSingleElement(resultShapes))
       return failure();
 
+    Attribute encoding;
+    if (auto tensorTy = dyn_cast<RankedTensorType>(reshapeOp.getResultType()))
+      encoding = tensorTy.getEncoding();
+
     // Create new tensor.empty op.
-    // TODO: Do not drop tensor type encoding.
     Value emptyTensor =
         EmptyOp::create(rewriter, loc, resultShapes[0],
-                        reshapeOp.getResultType().getElementType());
+                        reshapeOp.getResultType().getElementType(), encoding);
     if (emptyTensor.getType() != reshapeOp.getResultType()) {
       rewriter.replaceOpWithNewOp<tensor::CastOp>(
           reshapeOp, reshapeOp.getResultType(), emptyTensor);
@@ -119,8 +122,10 @@ struct FoldConcatsOfEmpty : public OpRewritePattern<ConcatOp> {
       return rewriter.notifyMatchFailure(concatOp,
                                          "failed to get result shape");
     }
-    rewriter.replaceOpWithNewOp<tensor::EmptyOp>(
-        concatOp, resultShape[0], concatOp.getResultType().getElementType());
+    auto resultType = concatOp.getResultType();
+    rewriter.replaceOpWithNewOp<tensor::EmptyOp>(concatOp, resultShape[0],
+                                                 resultType.getElementType(),
+                                                 resultType.getEncoding());
     return success();
   }
 };

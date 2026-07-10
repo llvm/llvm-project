@@ -12,6 +12,7 @@ unittest("InterpTests") {
   sources = [
     "BitcastBuffer.cpp",
     "Descriptor.cpp",
+    "Pointer.cpp",
     "toAPValue.cpp",
   ]
 }

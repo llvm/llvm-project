@@ -24,10 +24,6 @@ namespace mlir {
 /// vectorization.
 std::unique_ptr<Pass> createForLoopSpecializationPass();
 
-/// Creates a pass that peels for loops at their upper bounds for
-/// better vectorization.
-std::unique_ptr<Pass> createForLoopPeelingPass();
-
 /// Creates a pass that canonicalizes affine.min and affine.max operations
 /// inside of scf.for loops with known lower and upper bounds.
 std::unique_ptr<Pass> createSCFForLoopCanonicalizationPass();

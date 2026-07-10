@@ -128,6 +128,37 @@ template <typename T, typename _ = std::enable_if_t<std::is_unsigned_v<T>>>
   return std::numeric_limits<T>::digits - countl_zero(x);
 }
 
+template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
+[[nodiscard]] constexpr inline bool has_single_bit(T Value) noexcept {
+  return (Value != 0) && ((Value & (Value - 1)) == 0);
+}
+
+template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
+[[nodiscard]] constexpr T rotl(T V, int R) {
+  constexpr unsigned N = std::numeric_limits<T>::digits;
+
+  static_assert(has_single_bit(N), "& (N - 1) is only valid for powers of two");
+  R = R & (N - 1);
+
+  if (R == 0)
+    return V;
+
+  return (V << R) | (V >> (N - R));
+}
+
+template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
+[[nodiscard]] constexpr T rotr(T V, int R) {
+  constexpr unsigned N = std::numeric_limits<T>::digits;
+
+  static_assert(has_single_bit(N), "& (N - 1) is only valid for powers of two");
+  R = R & (N - 1);
+
+  if (R == 0)
+    return V;
+
+  return (V >> R) | (V << (N - R));
+}
+
 } // namespace orc_rt
 
 #endif // ORC_RT_BIT_H

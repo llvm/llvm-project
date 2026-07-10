@@ -33,6 +33,8 @@ namespace opts {
 
 extern cl::OptionCategory BoltOptCategory;
 
+extern bool isHotTextMover(const BinaryFunction &Function);
+
 static cl::opt<bool>
     ICFUseDFS("icf-dfs", cl::desc("use DFS ordering when using -icf option"),
               cl::ReallyHidden, cl::cat(BoltOptCategory));
@@ -185,6 +187,11 @@ static bool isInstrEquivalentWith(const MCInst &InstA,
 static bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
                             bool CongruentSymbols) {
   assert(A.hasCFG() && B.hasCFG() && "both functions should have CFG");
+
+  // Hot text mover functions should not be folded. They need to stay in their
+  // original section to avoid being placed on hot/huge pages.
+  if (opts::isHotTextMover(A) || opts::isHotTextMover(B))
+    return false;
 
   // Compare the two functions, one basic block at a time.
   // Currently we require two identical basic blocks to have identical
@@ -368,8 +375,8 @@ typedef std::unordered_map<BinaryFunction *, std::set<BinaryFunction *>,
                            KeyHash, KeyCongruent>
     CongruentBucketsMap;
 
-typedef std::unordered_map<BinaryFunction *, std::vector<BinaryFunction *>,
-                           KeyHash, KeyEqual>
+typedef std::unordered_map<BinaryFunction *, BinaryFunctionListType, KeyHash,
+                           KeyEqual>
     IdenticalBucketsMap;
 
 namespace llvm {
@@ -522,7 +529,7 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
 
       for (auto &IBI : IdenticalBuckets) {
         // Functions identified as identical.
-        std::vector<BinaryFunction *> &Twins = IBI.second;
+        BinaryFunctionListType &Twins = IBI.second;
         if (Twins.size() < 2)
           continue;
 
@@ -563,20 +570,30 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
       LLVM_DEBUG(T.stopTimer());
     };
 
-    // Create a task for each congruent bucket
-    for (auto &Entry : CongruentBuckets) {
-      std::set<BinaryFunction *> &Bucket = Entry.second;
-      if (Bucket.size() < 2)
-        continue;
+    if (opts::NoThreads) {
+      // Sort buckets by address for deterministic folding order when running
+      // single-threaded.
+      SmallVector<std::pair<uint64_t, std::set<BinaryFunction *> *>>
+          SortedBuckets;
+      for (auto &Entry : CongruentBuckets) {
+        if (Entry.second.size() >= 2)
+          SortedBuckets.push_back({Entry.first->getAddress(), &Entry.second});
+      }
+      llvm::sort(SortedBuckets, [](const auto &A, const auto &B) {
+        return A.first < B.first;
+      });
+      for (auto &[Addr, Bucket] : SortedBuckets)
+        processSingleBucket(*Bucket);
+    } else {
+      for (auto &Entry : CongruentBuckets) {
+        std::set<BinaryFunction *> &Bucket = Entry.second;
+        if (Bucket.size() < 2)
+          continue;
 
-      if (opts::NoThreads)
-        processSingleBucket(Bucket);
-      else
-        ThPool->async(processSingleBucket, std::ref(Bucket));
-    }
-
-    if (!opts::NoThreads)
+        ThPool->async(processSingleBucket, std::ref(Entry.second));
+      }
       ThPool->wait();
+    }
 
     LLVM_DEBUG(SinglePass.stopTimer());
   };
@@ -597,6 +614,19 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
     ++Iteration;
 
   } while (NumFoldedLastIteration > 0);
+
+  // Flatten folded function chains so FoldedIntoFunction always points
+  // to the root parent.
+  for (auto &BFI : BC.getBinaryFunctions()) {
+    BinaryFunction &BF = BFI.second;
+    if (!BF.isFolded())
+      continue;
+    BinaryFunction *Parent = BF.getFoldedIntoFunction();
+    while (Parent->isFolded())
+      Parent = Parent->getFoldedIntoFunction();
+    if (Parent != BF.getFoldedIntoFunction())
+      BF.setFolded(Parent);
+  }
 
   LLVM_DEBUG({
     // Print functions that are congruent but not identical.

@@ -2,7 +2,6 @@ import os
 from pathlib import Path
 
 from clang.cindex import (
-    Config,
     Cursor,
     File,
     SourceLocation,
@@ -10,8 +9,6 @@ from clang.cindex import (
     TranslationUnit,
 )
 
-if "CLANG_LIBRARY_PATH" in os.environ:
-    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
 import unittest
 
@@ -171,4 +168,4 @@ int one;
         self.assertEqual(location1, location1_2)
         self.assertNotEqual(location1, location2)
         self.assertNotEqual(location1, file2_location1)
-        self.assertNotEqual(location1, "foo")
+        self.assertFalse(location1 == "foo")

@@ -98,7 +98,7 @@ body:             |
     %0:_(s32) = COPY $a0
     %2:_(s32) = G_CONSTANT i32 1
     %4:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = G_CTTZ_ZERO_UNDEF %0(s32)
+    %1:_(s32) = G_CTTZ_ZERO_POISON %0(s32)
     %3:_(s32) = nuw nsw G_ADD %1, %2
     %5:_(s1) = G_ICMP intpred(eq), %0(s32), %4
     %6:_(s32) = G_SELECT %5(s1), %4, %3
@@ -158,7 +158,7 @@ body:             |
     %0:_(s64) = G_MERGE_VALUES %1(s32), %2(s32)
     %4:_(s64) = G_CONSTANT i64 1
     %6:_(s64) = G_CONSTANT i64 0
-    %3:_(s64) = G_CTTZ_ZERO_UNDEF %0(s64)
+    %3:_(s64) = G_CTTZ_ZERO_POISON %0(s64)
     %5:_(s64) = nuw nsw G_ADD %3, %4
     %7:_(s1) = G_ICMP intpred(eq), %0(s64), %6
     %8:_(s64) = G_SELECT %7(s1), %6, %5
