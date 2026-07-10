@@ -265,9 +265,7 @@ define i1 @test_all_v7i1(<7 x i1> %x) {
 ; CHECK-NEXT:    i32.and $push3=, $pop2, $4
 ; CHECK-NEXT:    i32.and $push4=, $pop3, $5
 ; CHECK-NEXT:    i32.and $push5=, $pop4, $6
-; CHECK-NEXT:    i32.const $push6=, 1
-; CHECK-NEXT:    i32.and $push7=, $pop5, $pop6
-; CHECK-NEXT:    return $pop7
+; CHECK-NEXT:    return $pop5
   %ret = call i1 @llvm.vector.reduce.and.v7i1(<7 x i1> %x)
   ret i1 %ret
 }

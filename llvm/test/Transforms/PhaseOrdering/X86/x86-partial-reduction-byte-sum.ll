@@ -602,7 +602,53 @@ define i32 @byte_sum_v24_i32() nounwind {
 ; SSE2-NEXT:    [[CMP:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; SSE2-NEXT:    br i1 [[CMP]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; SSE2:       [[MIDDLE_BLOCK]]:
-; SSE2-NEXT:    [[EXT:%.*]] = call i32 @llvm.vector.reduce.add.v24i32(<24 x i32> [[ADD]])
+; SSE2-NEXT:    [[TMP0:%.*]] = extractelement <24 x i32> [[ADD]], i64 0
+; SSE2-NEXT:    [[TMP1:%.*]] = extractelement <24 x i32> [[ADD]], i64 1
+; SSE2-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP0]], [[TMP1]]
+; SSE2-NEXT:    [[TMP2:%.*]] = extractelement <24 x i32> [[ADD]], i64 2
+; SSE2-NEXT:    [[BIN_RDX1:%.*]] = add i32 [[BIN_RDX]], [[TMP2]]
+; SSE2-NEXT:    [[TMP3:%.*]] = extractelement <24 x i32> [[ADD]], i64 3
+; SSE2-NEXT:    [[BIN_RDX2:%.*]] = add i32 [[BIN_RDX1]], [[TMP3]]
+; SSE2-NEXT:    [[TMP4:%.*]] = extractelement <24 x i32> [[ADD]], i64 4
+; SSE2-NEXT:    [[BIN_RDX3:%.*]] = add i32 [[BIN_RDX2]], [[TMP4]]
+; SSE2-NEXT:    [[TMP5:%.*]] = extractelement <24 x i32> [[ADD]], i64 5
+; SSE2-NEXT:    [[BIN_RDX4:%.*]] = add i32 [[BIN_RDX3]], [[TMP5]]
+; SSE2-NEXT:    [[TMP6:%.*]] = extractelement <24 x i32> [[ADD]], i64 6
+; SSE2-NEXT:    [[BIN_RDX5:%.*]] = add i32 [[BIN_RDX4]], [[TMP6]]
+; SSE2-NEXT:    [[TMP7:%.*]] = extractelement <24 x i32> [[ADD]], i64 7
+; SSE2-NEXT:    [[BIN_RDX6:%.*]] = add i32 [[BIN_RDX5]], [[TMP7]]
+; SSE2-NEXT:    [[TMP8:%.*]] = extractelement <24 x i32> [[ADD]], i64 8
+; SSE2-NEXT:    [[BIN_RDX7:%.*]] = add i32 [[BIN_RDX6]], [[TMP8]]
+; SSE2-NEXT:    [[TMP9:%.*]] = extractelement <24 x i32> [[ADD]], i64 9
+; SSE2-NEXT:    [[BIN_RDX8:%.*]] = add i32 [[BIN_RDX7]], [[TMP9]]
+; SSE2-NEXT:    [[TMP10:%.*]] = extractelement <24 x i32> [[ADD]], i64 10
+; SSE2-NEXT:    [[BIN_RDX9:%.*]] = add i32 [[BIN_RDX8]], [[TMP10]]
+; SSE2-NEXT:    [[TMP11:%.*]] = extractelement <24 x i32> [[ADD]], i64 11
+; SSE2-NEXT:    [[BIN_RDX10:%.*]] = add i32 [[BIN_RDX9]], [[TMP11]]
+; SSE2-NEXT:    [[TMP12:%.*]] = extractelement <24 x i32> [[ADD]], i64 12
+; SSE2-NEXT:    [[BIN_RDX11:%.*]] = add i32 [[BIN_RDX10]], [[TMP12]]
+; SSE2-NEXT:    [[TMP13:%.*]] = extractelement <24 x i32> [[ADD]], i64 13
+; SSE2-NEXT:    [[BIN_RDX12:%.*]] = add i32 [[BIN_RDX11]], [[TMP13]]
+; SSE2-NEXT:    [[TMP14:%.*]] = extractelement <24 x i32> [[ADD]], i64 14
+; SSE2-NEXT:    [[BIN_RDX13:%.*]] = add i32 [[BIN_RDX12]], [[TMP14]]
+; SSE2-NEXT:    [[TMP15:%.*]] = extractelement <24 x i32> [[ADD]], i64 15
+; SSE2-NEXT:    [[BIN_RDX14:%.*]] = add i32 [[BIN_RDX13]], [[TMP15]]
+; SSE2-NEXT:    [[TMP16:%.*]] = extractelement <24 x i32> [[ADD]], i64 16
+; SSE2-NEXT:    [[BIN_RDX15:%.*]] = add i32 [[BIN_RDX14]], [[TMP16]]
+; SSE2-NEXT:    [[TMP17:%.*]] = extractelement <24 x i32> [[ADD]], i64 17
+; SSE2-NEXT:    [[BIN_RDX16:%.*]] = add i32 [[BIN_RDX15]], [[TMP17]]
+; SSE2-NEXT:    [[TMP18:%.*]] = extractelement <24 x i32> [[ADD]], i64 18
+; SSE2-NEXT:    [[BIN_RDX17:%.*]] = add i32 [[BIN_RDX16]], [[TMP18]]
+; SSE2-NEXT:    [[TMP19:%.*]] = extractelement <24 x i32> [[ADD]], i64 19
+; SSE2-NEXT:    [[BIN_RDX18:%.*]] = add i32 [[BIN_RDX17]], [[TMP19]]
+; SSE2-NEXT:    [[TMP20:%.*]] = extractelement <24 x i32> [[ADD]], i64 20
+; SSE2-NEXT:    [[BIN_RDX19:%.*]] = add i32 [[BIN_RDX18]], [[TMP20]]
+; SSE2-NEXT:    [[TMP21:%.*]] = extractelement <24 x i32> [[ADD]], i64 21
+; SSE2-NEXT:    [[BIN_RDX20:%.*]] = add i32 [[BIN_RDX19]], [[TMP21]]
+; SSE2-NEXT:    [[TMP22:%.*]] = extractelement <24 x i32> [[ADD]], i64 22
+; SSE2-NEXT:    [[BIN_RDX21:%.*]] = add i32 [[BIN_RDX20]], [[TMP22]]
+; SSE2-NEXT:    [[TMP23:%.*]] = extractelement <24 x i32> [[ADD]], i64 23
+; SSE2-NEXT:    [[EXT:%.*]] = add i32 [[BIN_RDX21]], [[TMP23]]
 ; SSE2-NEXT:    ret i32 [[EXT]]
 ;
 ; SSE42-LABEL: define i32 @byte_sum_v24_i32(
@@ -620,7 +666,53 @@ define i32 @byte_sum_v24_i32() nounwind {
 ; SSE42-NEXT:    [[CMP:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; SSE42-NEXT:    br i1 [[CMP]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; SSE42:       [[MIDDLE_BLOCK]]:
-; SSE42-NEXT:    [[EXT:%.*]] = call i32 @llvm.vector.reduce.add.v24i32(<24 x i32> [[ADD]])
+; SSE42-NEXT:    [[TMP0:%.*]] = extractelement <24 x i32> [[ADD]], i64 0
+; SSE42-NEXT:    [[TMP1:%.*]] = extractelement <24 x i32> [[ADD]], i64 1
+; SSE42-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP0]], [[TMP1]]
+; SSE42-NEXT:    [[TMP2:%.*]] = extractelement <24 x i32> [[ADD]], i64 2
+; SSE42-NEXT:    [[BIN_RDX1:%.*]] = add i32 [[BIN_RDX]], [[TMP2]]
+; SSE42-NEXT:    [[TMP3:%.*]] = extractelement <24 x i32> [[ADD]], i64 3
+; SSE42-NEXT:    [[BIN_RDX2:%.*]] = add i32 [[BIN_RDX1]], [[TMP3]]
+; SSE42-NEXT:    [[TMP4:%.*]] = extractelement <24 x i32> [[ADD]], i64 4
+; SSE42-NEXT:    [[BIN_RDX3:%.*]] = add i32 [[BIN_RDX2]], [[TMP4]]
+; SSE42-NEXT:    [[TMP5:%.*]] = extractelement <24 x i32> [[ADD]], i64 5
+; SSE42-NEXT:    [[BIN_RDX4:%.*]] = add i32 [[BIN_RDX3]], [[TMP5]]
+; SSE42-NEXT:    [[TMP6:%.*]] = extractelement <24 x i32> [[ADD]], i64 6
+; SSE42-NEXT:    [[BIN_RDX5:%.*]] = add i32 [[BIN_RDX4]], [[TMP6]]
+; SSE42-NEXT:    [[TMP7:%.*]] = extractelement <24 x i32> [[ADD]], i64 7
+; SSE42-NEXT:    [[BIN_RDX6:%.*]] = add i32 [[BIN_RDX5]], [[TMP7]]
+; SSE42-NEXT:    [[TMP8:%.*]] = extractelement <24 x i32> [[ADD]], i64 8
+; SSE42-NEXT:    [[BIN_RDX7:%.*]] = add i32 [[BIN_RDX6]], [[TMP8]]
+; SSE42-NEXT:    [[TMP9:%.*]] = extractelement <24 x i32> [[ADD]], i64 9
+; SSE42-NEXT:    [[BIN_RDX8:%.*]] = add i32 [[BIN_RDX7]], [[TMP9]]
+; SSE42-NEXT:    [[TMP10:%.*]] = extractelement <24 x i32> [[ADD]], i64 10
+; SSE42-NEXT:    [[BIN_RDX9:%.*]] = add i32 [[BIN_RDX8]], [[TMP10]]
+; SSE42-NEXT:    [[TMP11:%.*]] = extractelement <24 x i32> [[ADD]], i64 11
+; SSE42-NEXT:    [[BIN_RDX10:%.*]] = add i32 [[BIN_RDX9]], [[TMP11]]
+; SSE42-NEXT:    [[TMP12:%.*]] = extractelement <24 x i32> [[ADD]], i64 12
+; SSE42-NEXT:    [[BIN_RDX11:%.*]] = add i32 [[BIN_RDX10]], [[TMP12]]
+; SSE42-NEXT:    [[TMP13:%.*]] = extractelement <24 x i32> [[ADD]], i64 13
+; SSE42-NEXT:    [[BIN_RDX12:%.*]] = add i32 [[BIN_RDX11]], [[TMP13]]
+; SSE42-NEXT:    [[TMP14:%.*]] = extractelement <24 x i32> [[ADD]], i64 14
+; SSE42-NEXT:    [[BIN_RDX13:%.*]] = add i32 [[BIN_RDX12]], [[TMP14]]
+; SSE42-NEXT:    [[TMP15:%.*]] = extractelement <24 x i32> [[ADD]], i64 15
+; SSE42-NEXT:    [[BIN_RDX14:%.*]] = add i32 [[BIN_RDX13]], [[TMP15]]
+; SSE42-NEXT:    [[TMP16:%.*]] = extractelement <24 x i32> [[ADD]], i64 16
+; SSE42-NEXT:    [[BIN_RDX15:%.*]] = add i32 [[BIN_RDX14]], [[TMP16]]
+; SSE42-NEXT:    [[TMP17:%.*]] = extractelement <24 x i32> [[ADD]], i64 17
+; SSE42-NEXT:    [[BIN_RDX16:%.*]] = add i32 [[BIN_RDX15]], [[TMP17]]
+; SSE42-NEXT:    [[TMP18:%.*]] = extractelement <24 x i32> [[ADD]], i64 18
+; SSE42-NEXT:    [[BIN_RDX17:%.*]] = add i32 [[BIN_RDX16]], [[TMP18]]
+; SSE42-NEXT:    [[TMP19:%.*]] = extractelement <24 x i32> [[ADD]], i64 19
+; SSE42-NEXT:    [[BIN_RDX18:%.*]] = add i32 [[BIN_RDX17]], [[TMP19]]
+; SSE42-NEXT:    [[TMP20:%.*]] = extractelement <24 x i32> [[ADD]], i64 20
+; SSE42-NEXT:    [[BIN_RDX19:%.*]] = add i32 [[BIN_RDX18]], [[TMP20]]
+; SSE42-NEXT:    [[TMP21:%.*]] = extractelement <24 x i32> [[ADD]], i64 21
+; SSE42-NEXT:    [[BIN_RDX20:%.*]] = add i32 [[BIN_RDX19]], [[TMP21]]
+; SSE42-NEXT:    [[TMP22:%.*]] = extractelement <24 x i32> [[ADD]], i64 22
+; SSE42-NEXT:    [[BIN_RDX21:%.*]] = add i32 [[BIN_RDX20]], [[TMP22]]
+; SSE42-NEXT:    [[TMP23:%.*]] = extractelement <24 x i32> [[ADD]], i64 23
+; SSE42-NEXT:    [[EXT:%.*]] = add i32 [[BIN_RDX21]], [[TMP23]]
 ; SSE42-NEXT:    ret i32 [[EXT]]
 ;
 ; AVX2-LABEL: define i32 @byte_sum_v24_i32(
@@ -638,7 +730,53 @@ define i32 @byte_sum_v24_i32() nounwind {
 ; AVX2-NEXT:    [[CMP:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; AVX2-NEXT:    br i1 [[CMP]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; AVX2:       [[MIDDLE_BLOCK]]:
-; AVX2-NEXT:    [[EXT:%.*]] = call i32 @llvm.vector.reduce.add.v24i32(<24 x i32> [[ADD]])
+; AVX2-NEXT:    [[TMP0:%.*]] = extractelement <24 x i32> [[ADD]], i64 0
+; AVX2-NEXT:    [[TMP1:%.*]] = extractelement <24 x i32> [[ADD]], i64 1
+; AVX2-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP0]], [[TMP1]]
+; AVX2-NEXT:    [[TMP2:%.*]] = extractelement <24 x i32> [[ADD]], i64 2
+; AVX2-NEXT:    [[BIN_RDX1:%.*]] = add i32 [[BIN_RDX]], [[TMP2]]
+; AVX2-NEXT:    [[TMP3:%.*]] = extractelement <24 x i32> [[ADD]], i64 3
+; AVX2-NEXT:    [[BIN_RDX2:%.*]] = add i32 [[BIN_RDX1]], [[TMP3]]
+; AVX2-NEXT:    [[TMP4:%.*]] = extractelement <24 x i32> [[ADD]], i64 4
+; AVX2-NEXT:    [[BIN_RDX3:%.*]] = add i32 [[BIN_RDX2]], [[TMP4]]
+; AVX2-NEXT:    [[TMP5:%.*]] = extractelement <24 x i32> [[ADD]], i64 5
+; AVX2-NEXT:    [[BIN_RDX4:%.*]] = add i32 [[BIN_RDX3]], [[TMP5]]
+; AVX2-NEXT:    [[TMP6:%.*]] = extractelement <24 x i32> [[ADD]], i64 6
+; AVX2-NEXT:    [[BIN_RDX5:%.*]] = add i32 [[BIN_RDX4]], [[TMP6]]
+; AVX2-NEXT:    [[TMP7:%.*]] = extractelement <24 x i32> [[ADD]], i64 7
+; AVX2-NEXT:    [[BIN_RDX6:%.*]] = add i32 [[BIN_RDX5]], [[TMP7]]
+; AVX2-NEXT:    [[TMP8:%.*]] = extractelement <24 x i32> [[ADD]], i64 8
+; AVX2-NEXT:    [[BIN_RDX7:%.*]] = add i32 [[BIN_RDX6]], [[TMP8]]
+; AVX2-NEXT:    [[TMP9:%.*]] = extractelement <24 x i32> [[ADD]], i64 9
+; AVX2-NEXT:    [[BIN_RDX8:%.*]] = add i32 [[BIN_RDX7]], [[TMP9]]
+; AVX2-NEXT:    [[TMP10:%.*]] = extractelement <24 x i32> [[ADD]], i64 10
+; AVX2-NEXT:    [[BIN_RDX9:%.*]] = add i32 [[BIN_RDX8]], [[TMP10]]
+; AVX2-NEXT:    [[TMP11:%.*]] = extractelement <24 x i32> [[ADD]], i64 11
+; AVX2-NEXT:    [[BIN_RDX10:%.*]] = add i32 [[BIN_RDX9]], [[TMP11]]
+; AVX2-NEXT:    [[TMP12:%.*]] = extractelement <24 x i32> [[ADD]], i64 12
+; AVX2-NEXT:    [[BIN_RDX11:%.*]] = add i32 [[BIN_RDX10]], [[TMP12]]
+; AVX2-NEXT:    [[TMP13:%.*]] = extractelement <24 x i32> [[ADD]], i64 13
+; AVX2-NEXT:    [[BIN_RDX12:%.*]] = add i32 [[BIN_RDX11]], [[TMP13]]
+; AVX2-NEXT:    [[TMP14:%.*]] = extractelement <24 x i32> [[ADD]], i64 14
+; AVX2-NEXT:    [[BIN_RDX13:%.*]] = add i32 [[BIN_RDX12]], [[TMP14]]
+; AVX2-NEXT:    [[TMP15:%.*]] = extractelement <24 x i32> [[ADD]], i64 15
+; AVX2-NEXT:    [[BIN_RDX14:%.*]] = add i32 [[BIN_RDX13]], [[TMP15]]
+; AVX2-NEXT:    [[TMP16:%.*]] = extractelement <24 x i32> [[ADD]], i64 16
+; AVX2-NEXT:    [[BIN_RDX15:%.*]] = add i32 [[BIN_RDX14]], [[TMP16]]
+; AVX2-NEXT:    [[TMP17:%.*]] = extractelement <24 x i32> [[ADD]], i64 17
+; AVX2-NEXT:    [[BIN_RDX16:%.*]] = add i32 [[BIN_RDX15]], [[TMP17]]
+; AVX2-NEXT:    [[TMP18:%.*]] = extractelement <24 x i32> [[ADD]], i64 18
+; AVX2-NEXT:    [[BIN_RDX17:%.*]] = add i32 [[BIN_RDX16]], [[TMP18]]
+; AVX2-NEXT:    [[TMP19:%.*]] = extractelement <24 x i32> [[ADD]], i64 19
+; AVX2-NEXT:    [[BIN_RDX18:%.*]] = add i32 [[BIN_RDX17]], [[TMP19]]
+; AVX2-NEXT:    [[TMP20:%.*]] = extractelement <24 x i32> [[ADD]], i64 20
+; AVX2-NEXT:    [[BIN_RDX19:%.*]] = add i32 [[BIN_RDX18]], [[TMP20]]
+; AVX2-NEXT:    [[TMP21:%.*]] = extractelement <24 x i32> [[ADD]], i64 21
+; AVX2-NEXT:    [[BIN_RDX20:%.*]] = add i32 [[BIN_RDX19]], [[TMP21]]
+; AVX2-NEXT:    [[TMP22:%.*]] = extractelement <24 x i32> [[ADD]], i64 22
+; AVX2-NEXT:    [[BIN_RDX21:%.*]] = add i32 [[BIN_RDX20]], [[TMP22]]
+; AVX2-NEXT:    [[TMP23:%.*]] = extractelement <24 x i32> [[ADD]], i64 23
+; AVX2-NEXT:    [[EXT:%.*]] = add i32 [[BIN_RDX21]], [[TMP23]]
 ; AVX2-NEXT:    ret i32 [[EXT]]
 ;
 ; AVX512-LABEL: define i32 @byte_sum_v24_i32(
@@ -656,7 +794,53 @@ define i32 @byte_sum_v24_i32() nounwind {
 ; AVX512-NEXT:    [[CMP:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; AVX512-NEXT:    br i1 [[CMP]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; AVX512:       [[MIDDLE_BLOCK]]:
-; AVX512-NEXT:    [[EXT:%.*]] = call i32 @llvm.vector.reduce.add.v24i32(<24 x i32> [[ADD]])
+; AVX512-NEXT:    [[TMP0:%.*]] = extractelement <24 x i32> [[ADD]], i64 0
+; AVX512-NEXT:    [[TMP1:%.*]] = extractelement <24 x i32> [[ADD]], i64 1
+; AVX512-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP0]], [[TMP1]]
+; AVX512-NEXT:    [[TMP2:%.*]] = extractelement <24 x i32> [[ADD]], i64 2
+; AVX512-NEXT:    [[BIN_RDX1:%.*]] = add i32 [[BIN_RDX]], [[TMP2]]
+; AVX512-NEXT:    [[TMP3:%.*]] = extractelement <24 x i32> [[ADD]], i64 3
+; AVX512-NEXT:    [[BIN_RDX2:%.*]] = add i32 [[BIN_RDX1]], [[TMP3]]
+; AVX512-NEXT:    [[TMP4:%.*]] = extractelement <24 x i32> [[ADD]], i64 4
+; AVX512-NEXT:    [[BIN_RDX3:%.*]] = add i32 [[BIN_RDX2]], [[TMP4]]
+; AVX512-NEXT:    [[TMP5:%.*]] = extractelement <24 x i32> [[ADD]], i64 5
+; AVX512-NEXT:    [[BIN_RDX4:%.*]] = add i32 [[BIN_RDX3]], [[TMP5]]
+; AVX512-NEXT:    [[TMP6:%.*]] = extractelement <24 x i32> [[ADD]], i64 6
+; AVX512-NEXT:    [[BIN_RDX5:%.*]] = add i32 [[BIN_RDX4]], [[TMP6]]
+; AVX512-NEXT:    [[TMP7:%.*]] = extractelement <24 x i32> [[ADD]], i64 7
+; AVX512-NEXT:    [[BIN_RDX6:%.*]] = add i32 [[BIN_RDX5]], [[TMP7]]
+; AVX512-NEXT:    [[TMP8:%.*]] = extractelement <24 x i32> [[ADD]], i64 8
+; AVX512-NEXT:    [[BIN_RDX7:%.*]] = add i32 [[BIN_RDX6]], [[TMP8]]
+; AVX512-NEXT:    [[TMP9:%.*]] = extractelement <24 x i32> [[ADD]], i64 9
+; AVX512-NEXT:    [[BIN_RDX8:%.*]] = add i32 [[BIN_RDX7]], [[TMP9]]
+; AVX512-NEXT:    [[TMP10:%.*]] = extractelement <24 x i32> [[ADD]], i64 10
+; AVX512-NEXT:    [[BIN_RDX9:%.*]] = add i32 [[BIN_RDX8]], [[TMP10]]
+; AVX512-NEXT:    [[TMP11:%.*]] = extractelement <24 x i32> [[ADD]], i64 11
+; AVX512-NEXT:    [[BIN_RDX10:%.*]] = add i32 [[BIN_RDX9]], [[TMP11]]
+; AVX512-NEXT:    [[TMP12:%.*]] = extractelement <24 x i32> [[ADD]], i64 12
+; AVX512-NEXT:    [[BIN_RDX11:%.*]] = add i32 [[BIN_RDX10]], [[TMP12]]
+; AVX512-NEXT:    [[TMP13:%.*]] = extractelement <24 x i32> [[ADD]], i64 13
+; AVX512-NEXT:    [[BIN_RDX12:%.*]] = add i32 [[BIN_RDX11]], [[TMP13]]
+; AVX512-NEXT:    [[TMP14:%.*]] = extractelement <24 x i32> [[ADD]], i64 14
+; AVX512-NEXT:    [[BIN_RDX13:%.*]] = add i32 [[BIN_RDX12]], [[TMP14]]
+; AVX512-NEXT:    [[TMP15:%.*]] = extractelement <24 x i32> [[ADD]], i64 15
+; AVX512-NEXT:    [[BIN_RDX14:%.*]] = add i32 [[BIN_RDX13]], [[TMP15]]
+; AVX512-NEXT:    [[TMP16:%.*]] = extractelement <24 x i32> [[ADD]], i64 16
+; AVX512-NEXT:    [[BIN_RDX15:%.*]] = add i32 [[BIN_RDX14]], [[TMP16]]
+; AVX512-NEXT:    [[TMP17:%.*]] = extractelement <24 x i32> [[ADD]], i64 17
+; AVX512-NEXT:    [[BIN_RDX16:%.*]] = add i32 [[BIN_RDX15]], [[TMP17]]
+; AVX512-NEXT:    [[TMP18:%.*]] = extractelement <24 x i32> [[ADD]], i64 18
+; AVX512-NEXT:    [[BIN_RDX17:%.*]] = add i32 [[BIN_RDX16]], [[TMP18]]
+; AVX512-NEXT:    [[TMP19:%.*]] = extractelement <24 x i32> [[ADD]], i64 19
+; AVX512-NEXT:    [[BIN_RDX18:%.*]] = add i32 [[BIN_RDX17]], [[TMP19]]
+; AVX512-NEXT:    [[TMP20:%.*]] = extractelement <24 x i32> [[ADD]], i64 20
+; AVX512-NEXT:    [[BIN_RDX19:%.*]] = add i32 [[BIN_RDX18]], [[TMP20]]
+; AVX512-NEXT:    [[TMP21:%.*]] = extractelement <24 x i32> [[ADD]], i64 21
+; AVX512-NEXT:    [[BIN_RDX20:%.*]] = add i32 [[BIN_RDX19]], [[TMP21]]
+; AVX512-NEXT:    [[TMP22:%.*]] = extractelement <24 x i32> [[ADD]], i64 22
+; AVX512-NEXT:    [[BIN_RDX21:%.*]] = add i32 [[BIN_RDX20]], [[TMP22]]
+; AVX512-NEXT:    [[TMP23:%.*]] = extractelement <24 x i32> [[ADD]], i64 23
+; AVX512-NEXT:    [[EXT:%.*]] = add i32 [[BIN_RDX21]], [[TMP23]]
 ; AVX512-NEXT:    ret i32 [[EXT]]
 ;
 entry:

@@ -5379,20 +5379,15 @@ define i8 @vreduce_mul_v2i8(ptr %x) {
 define i8 @vreduce_mul_v3i8(ptr %x) {
 ; CHECK-LABEL: vreduce_mul_v3i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 1
 ; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
-; CHECK-NEXT:    vle8.v v9, (a0)
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vslideup.vi v9, v8, 3
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v9, 2
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vmul.vv v8, v9, v8
-; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmul.vv v8, v8, v9
+; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vslidedown.vi v9, v8, 1
+; CHECK-NEXT:    vmv.x.s a1, v9
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    vmv.x.s a1, v8
+; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    ret
   %v = load <3 x i8>, ptr %x
   %red = call i8 @llvm.vector.reduce.mul.v3i8(<3 x i8> %v)
