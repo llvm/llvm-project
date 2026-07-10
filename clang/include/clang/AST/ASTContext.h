@@ -246,6 +246,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<DependentVectorType, ASTContext &>
       DependentVectorTypes;
   mutable llvm::FoldingSet<ConstantMatrixType> MatrixTypes;
+  mutable llvm::FoldingSet<CooperativeMatrixType> CooperativeMatrixTypes;
   mutable llvm::ContextualFoldingSet<DependentSizedMatrixType, ASTContext &>
       DependentSizedMatrixTypes;
   mutable llvm::FoldingSet<FunctionNoProtoType> FunctionNoProtoTypes;
@@ -1874,6 +1875,15 @@ public:
   /// MatrixType::isValidElementType).
   QualType getConstantMatrixType(QualType ElementType, unsigned NumRows,
                                  unsigned NumColumns) const;
+
+  /// Return the unique reference to the cooperative matrix type of the
+  /// specified element type and size.
+  ///
+  /// \pre \p ElementType must be a valid matrix element type (see
+  /// MatrixType::isValidElementType).
+  QualType getCooperativeMatrixType(QualType ElementType, unsigned Scope,
+                                    unsigned NumRows, unsigned NumColumns,
+                                    unsigned Use) const;
 
   /// Return the unique reference to the matrix type of the specified element
   /// type and size

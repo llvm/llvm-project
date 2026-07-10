@@ -260,6 +260,19 @@ let Class = ConstantMatrixType in {
   }]>;
 }
 
+let Class = CooperativeMatrixType in {
+  def : Property<"Scope", UInt32> { let Read = [{ node->getScope() }]; }
+  def : Property<"numRows", UInt32> { let Read = [{ node->getNumRows() }]; }
+  def : Property<"numColumns", UInt32> {
+    let Read = [{ node->getNumColumns() }];
+  }
+  def : Property<"Use", UInt32> { let Read = [{ node->getUse() }]; }
+
+  def : Creator<[{
+    return ctx.getCooperativeMatrixType(elementType, Scope, numRows, numColumns, Use);
+  }]>;
+}
+
 let Class = DependentSizedMatrixType in {
   def : Property<"rows", ExprRef> {
     let Read = [{ node->getRowExpr() }];

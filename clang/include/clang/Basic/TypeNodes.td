@@ -64,6 +64,7 @@ def DependentVectorType : TypeNode<Type>, AlwaysDependent;
 def ExtVectorType : TypeNode<VectorType>;
 def MatrixType : TypeNode<Type, 1>;
 def ConstantMatrixType : TypeNode<MatrixType>;
+def CooperativeMatrixType : TypeNode<MatrixType>;
 def DependentSizedMatrixType : TypeNode<MatrixType>, AlwaysDependent;
 def FunctionType : TypeNode<Type, 1>;
 def FunctionProtoType : TypeNode<FunctionType>;
