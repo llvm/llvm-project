@@ -1401,11 +1401,29 @@ struct AAAMDGPUMinAGPRAlloc
 
       return true;
     };
+    auto CheckCallSite = [&](AbstractCallSite CS) {
+      Function *Caller = CS.getInstruction()->getFunction();
+      LLVM_DEBUG(dbgs() << "[AAAMDGPUMinAGPRAlloc] " << '[' << getName() << "] Call " << Caller->getName()
+                        << "->" << getAssociatedFunction()->getName() << '\n');
+      const auto *CallerInfo = A.getAAFor<AAAMDGPUMinAGPRAlloc>(*this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
+      if (!CallerInfo || !CallerInfo->isValidState())
+        return false;
 
+      Maximum.takeAssumedMaximum(CallerInfo->getAssumed());
+      return true;
+    };
     bool UsedAssumedInformation = false;
     if (!A.checkForAllCallLikeInstructions(CheckForMinAGPRAllocs, *this,
                                            UsedAssumedInformation))
       return indicatePessimisticFixpoint();
+
+    if (!AMDGPU::isEntryFunctionCC(getAssociatedFunction()->getCallingConv())) {
+      bool AllCallSitesKnown = true;
+      if (!A.checkForAllCallSites(CheckCallSite, *this,
+                                  /*RequireAllCallSites=*/true,
+                                  AllCallSitesKnown))
+        return indicatePessimisticFixpoint();
+    }
 
     return clampStateAndIndicateChange(getState(), Maximum);
   }
