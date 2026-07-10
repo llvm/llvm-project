@@ -1082,6 +1082,15 @@ inline specific_bbval m_SpecificBB(BasicBlock *BB) {
   return specific_bbval(BB);
 }
 
+/// A commutative-friendly version of m_Specific().
+inline match_deferred<BasicBlock> m_Deferred(BasicBlock *const &BB) {
+  return BB;
+}
+inline match_deferred<const BasicBlock>
+m_Deferred(const BasicBlock *const &BB) {
+  return BB;
+}
+
 template <typename Pattern> struct SpecificType_match {
   Type *RefTy;
   Pattern P;
@@ -1105,15 +1114,6 @@ inline auto m_SpecificType(Type *RefTy, const Pattern &P) {
 }
 inline auto m_SpecificType(Type *RefTy) {
   return m_SpecificType(RefTy, m_Value());
-}
-
-/// A commutative-friendly version of m_Specific().
-inline match_deferred<BasicBlock> m_Deferred(BasicBlock *const &BB) {
-  return BB;
-}
-inline match_deferred<const BasicBlock>
-m_Deferred(const BasicBlock *const &BB) {
-  return BB;
 }
 
 //===----------------------------------------------------------------------===//
