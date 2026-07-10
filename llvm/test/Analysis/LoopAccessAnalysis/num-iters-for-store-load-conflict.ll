@@ -309,14 +309,13 @@ exit:
   ret void
 }
 
-; FIXME: "maximum safe store-load forward width of 32 bits" for i32 access means
-; there is no safe VF, need to be reported properly.
 define void @stride2_store_load_preventing_forwarding(ptr %A) {
 ; CHECK-LABEL: 'stride2_store_load_preventing_forwarding'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 96 bits, with a maximum safe store-load forward width of 32 bits
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Backward loop carried data dependence that prevents store-to-load forwarding.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        BackwardVectorizable:
+; CHECK-NEXT:        BackwardVectorizableButPreventsForwarding:
 ; CHECK-NEXT:            %ld = load i32, ptr %gep.ld, align 4 ->
 ; CHECK-NEXT:            store i32 %ld, ptr %gep.st, align 4
 ; CHECK-EMPTY:
@@ -349,8 +348,6 @@ exit:
   ret void
 }
 
-; FIXME: "maximum safe store-load forward width of 0 bits" while "Memory
-; dependences are safe" is meaningless.
 ; FIXME: VF 2 is safe for store-load forwarding:
 ;                 idx |  0 |  1 |  2 |  3 |  4 |  5 |  6 |  7 |  8 |  9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 |
 ; v/iter 0 load  lane |  0 |    |    |  1 |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
@@ -364,9 +361,10 @@ exit:
 define void @stride3_store_load_forwarding_safe_dist(ptr %A) {
 ; CHECK-LABEL: 'stride3_store_load_forwarding_safe_dist'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 64 bits, with a maximum safe store-load forward width of 0 bits
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Backward loop carried data dependence that prevents store-to-load forwarding.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        BackwardVectorizable:
+; CHECK-NEXT:        BackwardVectorizableButPreventsForwarding:
 ; CHECK-NEXT:            %ld = load i32, ptr %gep.ld, align 4 ->
 ; CHECK-NEXT:            store i32 %ld, ptr %gep.st, align 4
 ; CHECK-EMPTY:

@@ -1958,6 +1958,13 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
     uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
     MaxStoreLoadForwardSafeDistanceInBits =
         std::min(MaxStoreLoadForwardSafeDistanceInBits, MaxVFInBits);
+
+    if (MaxVF < 2) {
+      LLVM_DEBUG(
+          dbgs() << "LAA: strided access with Distance " << Distance
+                 << " that could cause a store-load forwarding conflict\n");
+      return true;
+    }
   }
   return false;
 }
