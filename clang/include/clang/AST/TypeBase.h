@@ -4632,14 +4632,14 @@ public:
 
   /// Return true if \p Scope is valid
   static constexpr bool isScopeValid(size_t Scope) {
-    return Scope == 3 /* CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP_QCOM */;
+    return Scope == 3 /* CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP */;
   }
 
   /// Return true if \p Use is valid
   static constexpr bool isUseValid(size_t Use) {
-    return Use == 0 /* CLK_COOPERATIVE_MATRIX_A_QCOM */ ||
-           Use == 1 /* CLK_COOPERATIVE_MATRIX_B_QCOM */ ||
-           Use == 2 /* CLK_COOPERATIVE_MATRIX_ACCUMULATOR_QCOM */;
+    return Use == 0 /* CLK_COOPERATIVE_MATRIX_A */ ||
+           Use == 1 /* CLK_COOPERATIVE_MATRIX_B */ ||
+           Use == 2 /* CLK_COOPERATIVE_MATRIX_ACCUMULATOR */;
   }
 
   /// Returns the maximum number of elements per dimension.
