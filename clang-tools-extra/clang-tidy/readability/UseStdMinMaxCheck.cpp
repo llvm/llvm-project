@@ -63,9 +63,13 @@ static QualType getNonTemplateAlias(QualType QT) {
   while (true) {
     // cast to a TypedefType
     if (const auto *TT = dyn_cast<TypedefType>(QT)) {
-      // check if the typedef is a template and if it is dependent
-      if (!TT->getDecl()->getDescribedTemplate() &&
-          !TT->getDecl()->getDeclContext()->isDependentContext())
+      const TypedefNameDecl *TD = TT->getDecl();
+      // Check if the typedef is a template and if it is dependent. A class
+      // member typedef (e.g. std::string::size_type) is not usable by its
+      // bare name at the location of the fix, so keep desugaring in that case.
+      if (!TD->getDescribedTemplate() &&
+          !TD->getDeclContext()->isDependentContext() &&
+          !TD->getDeclContext()->isRecord())
         return QT;
       QT = TT->desugar();
     } else {

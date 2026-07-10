@@ -265,6 +265,23 @@ void f(int &n) {
 }
 } // namespace gh208708
 
+namespace gh208693 {
+struct B {
+protected:
+  typedef unsigned long bsize;
+};
+struct S : B {
+  typedef B::bsize size_type;
+  size_type size() const;
+};
+void f(const S &s, unsigned &n) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: n = std::max<unsigned long>(s.size(), n);
+  if (s.size() > n)
+    n = s.size();
+}
+} // namespace gh208693
+
 namespace gh121676 {
 
 void useLeft() {

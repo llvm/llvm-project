@@ -123,7 +123,10 @@ Changes in existing checks
 
 - Improved :doc:`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check by fixing spurious
-  trailing semicolons and lost comments when the ``if`` body has no braces.
+  trailing semicolons and lost comments when the ``if`` body has no braces, and
+  by fixing invalid code generation when the explicit template argument resolved
+  to a class member typedef (for example ``std::string::size_type``); the
+  underlying type is now used instead.
 
 Removed checks
 ^^^^^^^^^^^^^^
