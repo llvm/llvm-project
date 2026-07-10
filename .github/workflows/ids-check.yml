@@ -16,7 +16,7 @@ jobs:
     name: Check LLVM_ABI annotations with ids
     runs-on: ubuntu-24.04
     container:
-      image: 'ghcr.io/llvm/ci-ubuntu-24.04-ids-checks'
+      image: 'ghcr.io/llvm/ci-ubuntu-24.04-ids-checks:latest@sha256:c80bc0f562592a850f4460bcec6cba339fe21b29bb80763cc621fb01ed0e3883'
     timeout-minutes: 20
 
     steps:
