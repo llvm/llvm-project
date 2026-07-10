@@ -118,7 +118,7 @@ func.func @parentheses_for_low_precedence(%arg0: i32, %arg1: i32, %arg2: i32) ->
 // CPP-DECLTOP-NEXT: }
 
 func.func @inline_cast_pure(%arg0: i32) -> f32 {
-  %0 = emitc.expression : f32 {
+  %0 = emitc.expression %arg0 : (i32) -> f32 {
     %1 = cast %arg0 {pure} : i32 to f32
     yield %1 : f32
   }
@@ -126,7 +126,7 @@ func.func @inline_cast_pure(%arg0: i32) -> f32 {
 }
 
 // CPP-DEFAULT:      float do_not_inline_cast_without_pure(int32_t [[VAL_1:v[0-9]+]]) {
-// CPP-DEFAULT-NEXT:   float [[VAL_2:v[0-9]+]] = (float) [[VAL_1]]
+// CPP-DEFAULT-NEXT:   float [[VAL_2:v[0-9]+]] = (float) [[VAL_1]];
 // CPP-DEFAULT-NEXT:   return [[VAL_2]];
 // CPP-DEFAULT-NEXT: }
 
@@ -137,7 +137,7 @@ func.func @inline_cast_pure(%arg0: i32) -> f32 {
 // CPP-DECLTOP-NEXT: }
 
 func.func @do_not_inline_cast_without_pure(%arg0: i32) -> f32 {
-  %0 = emitc.expression : f32 {
+  %0 = emitc.expression %arg0 : (i32) -> f32 {
     %1 = cast %arg0 : i32 to f32
     yield %1 : f32
   }
