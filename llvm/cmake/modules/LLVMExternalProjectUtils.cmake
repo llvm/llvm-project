@@ -84,6 +84,12 @@ function(llvm_ExternalProject_Add name source_dir)
     endif()
   endforeach()
 
+  # If CMAKE_SYSTEM_NAME is not set explicitly in the arguments passed to us,
+  # reflect CMake's own default.
+  if (NOT _cmake_system_name)
+    set(_cmake_system_name "${CMAKE_HOST_SYSTEM_NAME}")
+  endif()
+
   if(NOT ARG_TARGET_TRIPLE)
     set(target_triple ${LLVM_DEFAULT_TARGET_TRIPLE})
   else()
@@ -91,36 +97,6 @@ function(llvm_ExternalProject_Add name source_dir)
   endif()
 
   is_msvc_triple(is_msvc_target "${target_triple}")
-
-  if(ARG_USE_TOOLCHAIN AND NOT CMAKE_CROSSCOMPILING)
-    set(_cmake_c_compiler "${LLVM_RUNTIME_OUTPUT_INTDIR}/clang${CMAKE_EXECUTABLE_SUFFIX}")
-    set(_cmake_cxx_compiler "${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++${CMAKE_EXECUTABLE_SUFFIX}")
-    set(_cmake_asm_compiler "${_cmake_c_compiler}")
-    if(is_msvc_target)
-      set(_cmake_c_compiler "${LLVM_RUNTIME_OUTPUT_INTDIR}/clang-cl${CMAKE_EXECUTABLE_SUFFIX}")
-      set(_cmake_cxx_compiler "${_cmake_c_compiler}")
-      set(_cmake_asm_compiler "${_cmake_c_compiler}")
-    endif()
-  else()
-    set(_cmake_c_compiler "${CMAKE_C_COMPILER}")
-    set(_cmake_cxx_compiler "${CMAKE_CXX_COMPILER}")
-    set(_cmake_asm_compiler "${CMAKE_C_COMPILER}")
-  endif()
-
-  # If CMAKE_SYSTEM_NAME is not set explicitly in the arguments passed to us,
-  # derive it from the target triple if available, otherwise reflect CMake's
-  # own default. This ensures that cross-compilation targets get the correct
-  # platform files (e.g. AMDGPU targets on a Darwin host won't get macOS flags).
-  if (NOT _cmake_system_name)
-    if(ARG_TARGET_TRIPLE)
-      include(NormalizeTriple)
-      normalize_triple("${_cmake_c_compiler}" "${ARG_TARGET_TRIPLE}" _normalized_triple)
-      include(GetTripleCMakeSystemName)
-      get_triple_cmake_system_name("${_normalized_triple}" _cmake_system_name)
-    else()
-      set(_cmake_system_name "${CMAKE_HOST_SYSTEM_NAME}")
-    endif()
-  endif()
 
   if(NOT ARG_TOOLCHAIN_TOOLS)
     set(ARG_TOOLCHAIN_TOOLS clang)
@@ -255,9 +231,15 @@ function(llvm_ExternalProject_Add name source_dir)
 
   if(ARG_USE_TOOLCHAIN AND NOT CMAKE_CROSSCOMPILING)
     if(CLANG_IN_TOOLCHAIN)
-      set(compiler_args -DCMAKE_C_COMPILER=${_cmake_c_compiler}
-                        -DCMAKE_CXX_COMPILER=${_cmake_cxx_compiler}
-                        -DCMAKE_ASM_COMPILER=${_cmake_asm_compiler})
+      if(is_msvc_target)
+        set(compiler_args -DCMAKE_C_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang-cl${CMAKE_EXECUTABLE_SUFFIX}
+                          -DCMAKE_CXX_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang-cl${CMAKE_EXECUTABLE_SUFFIX}
+                          -DCMAKE_ASM_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang-cl${CMAKE_EXECUTABLE_SUFFIX})
+      else()
+        set(compiler_args -DCMAKE_C_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang${CMAKE_EXECUTABLE_SUFFIX}
+                          -DCMAKE_CXX_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++${CMAKE_EXECUTABLE_SUFFIX}
+                          -DCMAKE_ASM_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang${CMAKE_EXECUTABLE_SUFFIX})
+      endif()
     endif()
     if(FLANG_IN_TOOLCHAIN)
       list(APPEND compiler_args -DCMAKE_Fortran_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/flang${CMAKE_EXECUTABLE_SUFFIX})
@@ -397,22 +379,6 @@ function(llvm_ExternalProject_Add name source_dir)
     list(APPEND compiler_args -DCMAKE_CXX_COMPILER_TARGET=${ARG_TARGET_TRIPLE})
     list(APPEND compiler_args -DCMAKE_Fortran_COMPILER_TARGET=${ARG_TARGET_TRIPLE})
     list(APPEND compiler_args -DCMAKE_ASM_COMPILER_TARGET=${ARG_TARGET_TRIPLE})
-
-    # Pass CMAKE_SYSTEM_NAME derived from the target triple so the sub-build
-    # loads the correct platform files instead of the host's.
-    if(NOT "${_cmake_system_name}" STREQUAL "${CMAKE_HOST_SYSTEM_NAME}")
-      list(APPEND compiler_args -DCMAKE_SYSTEM_NAME=${_cmake_system_name})
-    endif()
-
-    # Forward Darwin-specific variables only when targeting Darwin.
-    if("${_cmake_system_name}" STREQUAL "Darwin")
-      if(CMAKE_OSX_SYSROOT)
-        list(APPEND compiler_args -DCMAKE_OSX_SYSROOT=${CMAKE_OSX_SYSROOT})
-      endif()
-      if(CMAKE_OSX_DEPLOYMENT_TARGET)
-        list(APPEND compiler_args -DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET})
-      endif()
-    endif()
   endif()
 
   if(CMAKE_VERBOSE_MAKEFILE)
