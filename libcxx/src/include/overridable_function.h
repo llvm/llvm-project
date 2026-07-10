@@ -60,6 +60,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace {
 
+// This is used to prevent TBAA from optimizing away the function pointer comparison.
 template <typename T>
 [[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI T* __libcpp_launder(T* __ptr) noexcept {
   __asm__ volatile("" : "+r"(__ptr));
