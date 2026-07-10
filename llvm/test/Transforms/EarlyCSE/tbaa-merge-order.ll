@@ -9,7 +9,7 @@
 define i32 @typed_first(ptr %p) {
 ; CHECK-LABEL: define i32 @typed_first(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4, !tbaa [[INT_TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[S:%.*]] = add i32 [[A]], [[A]]
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
@@ -23,7 +23,7 @@ define i32 @typed_first(ptr %p) {
 define i32 @untyped_first(ptr %p) {
 ; CHECK-LABEL: define i32 @untyped_first(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[P]], align 4, !tbaa [[INT_TBAA0]]
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[P]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[S:%.*]] = add i32 [[B]], [[B]]
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
@@ -33,7 +33,38 @@ define i32 @untyped_first(ptr %p) {
   ret i32 %s
 }
 
+; A conditionally-executed typed load is CSE'd into an unconditional untyped
+; load. The survivor executes on paths where the typed load never did, so its
+; !tbaa tag must NOT be propagated onto the survivor.
+define i32 @conditional_typed_not_propagated(ptr %p, i1 %c) {
+; CHECK-LABEL: define i32 @conditional_typed_not_propagated(
+; CHECK-SAME: ptr [[P:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[K:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[EXIT:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[K]]
+;
+entry:
+  %k = load i32, ptr %p, align 4
+  br i1 %c, label %then, label %exit
+then:
+  %j = load i32, ptr %p, align 4, !tbaa !0
+  br label %exit
+exit:
+  %r = phi i32 [ %j, %then ], [ %k, %entry ]
+  ret i32 %r
+}
+
 !0 = !{!1, !1, i64 0}
 !1 = !{!"int", !2, i64 0}
 !2 = !{!"omnipotent char", !3, i64 0}
 !3 = !{!"Simple C/C++ TBAA"}
+;.
+; CHECK: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
+; CHECK: [[META1]] = !{!"int", [[META2:![0-9]+]], i64 0}
+; CHECK: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
+; CHECK: [[META3]] = !{!"Simple C/C++ TBAA"}
+;.

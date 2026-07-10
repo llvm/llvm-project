@@ -3111,20 +3111,25 @@ static void combineMetadata(Instruction *K, const Instruction *J,
                    MDNode::getMergedProfMetadata(KProf, JProf, K, J));
   }
 
-  // Merge TBAA metadata.
-  // Handle separately to support cases where only one instruction has the
-  // metadata.
+  // Merge TBAA metadata. Handled separately to also cover the case where only
+  // one instruction has a tag. A one-sided tag is copied onto K only when K is
+  // guaranteed to execute exactly where J did, so we never assert a type on a
+  // path that never had it.
   MDNode *JTBAA = J->getMetadata(LLVMContext::MD_tbaa);
   MDNode *KTBAA = K->getMetadata(LLVMContext::MD_tbaa);
   if (KTBAA) {
     if (DoesKMove)
       K->setMetadata(LLVMContext::MD_tbaa,
                      MDNode::getMostGenericTBAA(JTBAA, KTBAA));
-  } else if (!AAOnly && JTBAA &&
+  } else if (!AAOnly && !DoesKMove && JTBAA &&
              isa<LoadInst, StoreInst, CallInst, VAArgInst, AtomicRMWInst,
-                 AtomicCmpXchgInst>(K)) {
-    // Only J has a tag: copy it so the result is independent of CSE order.
-    K->setMetadata(LLVMContext::MD_tbaa, JTBAA);
+                 AtomicCmpXchgInst>(K) &&
+             K->getParent() == J->getParent()) {
+    const Instruction *First = K->comesBefore(J) ? K : J;
+    const Instruction *Second = First == K ? J : K;
+    if (isGuaranteedToTransferExecutionToSuccessor(
+            std::next(First->getIterator()), Second->getIterator()))
+      K->setMetadata(LLVMContext::MD_tbaa, JTBAA);
   }
 }
 
