@@ -28,5 +28,21 @@ define i1 @test_fmf_nnan(i8 %bits) {
   ret i1 %is.nan
 }
 
+; Test 3: Vector support. The underlying scalar format "Float4E2M1FN" lacks NaN/Inf.
+; The vector check should optimize completely down to a zeroinitializer (all false).
+define <4 x i1> @test_vector_no_nan_no_inf(<4 x i8> %bits) {
+; CHECK-LABEL: @test_vector_no_nan_no_inf(
+; CHECK-NEXT:    ret <4 x i1> zeroinitializer
+;
+  ; Convert a vector of bits into a vector of floats
+  %fp = call <4 x float> @llvm.convert.from.arbitrary.fp.v4f32(<4 x i8> %bits, metadata !"Float4E2M1FN")
+  
+  ; Query if any lane is NaN or Infinity (3 | 512 = 515)
+  %is.nan.or.inf = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %fp, i32 515)
+  ret <4 x i1> %is.nan.or.inf
+}
+
 declare float @llvm.convert.from.arbitrary.fp(i8, metadata)
 declare i1 @llvm.is.fpclass.f32(float, i32)
+declare <4 x float> @llvm.convert.from.arbitrary.fp.v4f32(<4 x i8>, metadata)
+declare <4 x i1> @llvm.is.fpclass.v4f32(<4 x float>, i32)
