@@ -38,6 +38,8 @@ public:
 
 class SPIRVTargetCIRGenInfo : public TargetCIRGenInfo {
 public:
+  // TODO(CIR): Select an AMDGPU-specific ABIInfo for AMD-vendor SPIR-V once
+  // CIR supports that target.
   SPIRVTargetCIRGenInfo(CIRGenTypes &cgt)
       : TargetCIRGenInfo(std::make_unique<SPIRVABIInfo>(cgt)) {}
 
