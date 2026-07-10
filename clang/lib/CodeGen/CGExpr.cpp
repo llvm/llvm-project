@@ -3669,6 +3669,12 @@ LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
   auto It = LocalDeclMap.find(DD);
   bool WasMapped = It != LocalDeclMap.end();
   Address SavedAddr = WasMapped ? It->second : Address::invalid();
+  Address MapAddr = BaseAddr;
+  if (DD->getType()->isReferenceType()) {
+    RawAddress RefSlot = CreateMemTemp(DD->getType(), "omp.binding.ref");
+    Builder.CreateStore(BaseAddr.emitRawPointer(*this), RefSlot);
+    MapAddr = RefSlot;
+  }
   if (WasMapped)
     It->second = BaseAddr;
   else

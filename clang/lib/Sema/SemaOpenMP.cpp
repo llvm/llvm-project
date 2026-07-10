@@ -4228,11 +4228,11 @@ public:
         if (!Stack->isImplicitDefaultFirstprivateFD(VD))
           return;
       VD = VD->getCanonicalDecl();
-      // Skip BindingDecls and DecompositionDecls - they should be handled
+      // Skip DecompositionDecls - they should be handled
       // through explicit mapping of the original variable or as member
       // expressions. When bindings are captured, the original variable
       // is what needs to be mapped, not the decomposition itself.
-      if (isa<BindingDecl>(VD) || isa<DecompositionDecl>(VD))
+      if (isa<DecompositionDecl>(VD))
         return;
       // Skip internally declared variables.
       if (VD->hasLocalStorage() && CS && !CS->capturesVariable(VD) &&
@@ -23350,7 +23350,7 @@ public:
         }
         return false;
       }
-      if (dyn_cast_or_null<ArraySubscriptExpr>(BindingExpr)) {
+      if (isa_and_present<ArraySubscriptExpr>(BindingExpr)) {
         if (getOriginalVarOrDiagnose(SemaRef, DD, DRE->getExprLoc())) {
           DeclarationNameInfo NameInfo(D->getDeclName(), DRE->getLocation());
           E = DeclRefExpr::Create(SemaRef.Context, DRE->getQualifierLoc(),
@@ -23390,7 +23390,7 @@ public:
       return false;
     }
     assert(!RelevantExpr && "RelevantExpr is expected to be nullptr");
-    RelevantExpr = DRE;
+    RelevantExpr = E;
     // Record the component.
     Components.emplace_back(E, D, IsNonContiguous);
     return true;
