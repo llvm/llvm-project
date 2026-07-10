@@ -517,10 +517,11 @@ LogicalResult OpenACCDialectLLVMIRTranslationInterface::convertOperation(
         return success();
       })
       .Case<acc::CreateOp, acc::CopyinOp, acc::CopyoutOp, acc::DeleteOp,
-            acc::UpdateDeviceOp, acc::GetDevicePtrOp, acc::PresentOp>([](auto op) {
-        // NOP
-        return success();
-      })
+            acc::UpdateDeviceOp, acc::GetDevicePtrOp, acc::PresentOp>(
+          [](auto op) {
+            // NOP
+            return success();
+          })
       .Default([&](Operation *op) {
         return op->emitError("unsupported OpenACC operation: ")
                << op->getName();
