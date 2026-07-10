@@ -8855,6 +8855,7 @@ bool AArch64TargetLowering::useSVEForFixedLengthVectorVT(
   case MVT::f16:
   case MVT::f32:
   case MVT::f64:
+  case MVT::bf16:
     break;
   }
 
