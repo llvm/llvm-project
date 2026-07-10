@@ -16583,6 +16583,7 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
 
   case Type::BlockPointer:
   case Type::ConstantMatrix:
+  case Type::CooperativeMatrix:
   case Type::ObjCObject:
   case Type::ObjCInterface:
   case Type::ObjCObjectPointer:

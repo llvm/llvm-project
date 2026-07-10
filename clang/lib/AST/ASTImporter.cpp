@@ -2116,6 +2116,17 @@ ExpectedType clang::ASTNodeImporter::VisitConstantMatrixType(
       *ToElementTypeOrErr, T->getNumRows(), T->getNumColumns(), T->getLayout());
 }
 
+ExpectedType clang::ASTNodeImporter::VisitCooperativeMatrixType(
+    const clang::CooperativeMatrixType *T) {
+  ExpectedType ToElementTypeOrErr = import(T->getElementType());
+  if (!ToElementTypeOrErr)
+    return ToElementTypeOrErr.takeError();
+
+  return Importer.getToContext().getCooperativeMatrixType(
+      *ToElementTypeOrErr, T->getScope(), T->getNumRows(), T->getNumColumns(),
+      T->getUse());
+}
+
 ExpectedType clang::ASTNodeImporter::VisitDependentAddressSpaceType(
     const clang::DependentAddressSpaceType *T) {
   Error Err = Error::success();
