@@ -38,8 +38,8 @@ jobs:
 
       - name: Configure and build minimal LLVM for use by ids
         run: |
-          cmake -B ${{ github.workspace }}/llvm-project/build/ \
-                -S ${{ github.workspace }}/llvm-project/llvm/ \
+          cmake -B ./llvm-project/build/ \
+                -S ./llvm-project/llvm/ \
                 -D CMAKE_BUILD_TYPE=Release \
                 -D CMAKE_C_COMPILER=clang-22 \
                 -D CMAKE_CXX_COMPILER=clang++-22 \
