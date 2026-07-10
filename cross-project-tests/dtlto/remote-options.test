@@ -15,19 +15,14 @@ DEFINE:   -dtlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py \
 DEFINE:   -dtlto-compiler=%clang \
 DEFINE:   -o test.out
 
-DEFINE: %{command} = %{base} \
-DEFINE:   test.o \
-DEFINE:   -r=test.o,foo,px
-
-DEFINE: %{command-coff} = %{base} \
-DEFINE:   coff.o \
-DEFINE:   -r=coff.o,foo,px
-
 DEFINE: %{lld} = not ld.lld test.o \
-DEFINE:   -o test.elf \
 DEFINE:   --thinlto-distributor=%python \
 DEFINE:   --thinlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py \
-DEFINE:   --thinlto-remote-compiler=%clang
+DEFINE:   --thinlto-remote-compiler=%clang \
+DEFINE:   -o test.elf
+
+DEFINE: %{command} = %{base} test.o -r=test.o,foo,px
+DEFINE: %{command-coff} = %{base} coff.o -r=coff.o,foo,px
 
 ARGS: "args": [
 
@@ -59,7 +54,7 @@ RUN: %{command} -relocation-model=static 2>&1 | \
 RUN:   FileCheck %s --check-prefixes=ARGS,NO-PIC,ERR
 NO-PIC-NOT: "-fpic"
 
-RUN: %{command-coff} -relocation-model=pic -O3 2>&1 | \
+RUN: %{command-coff} -relocation-model=pic 2>&1 | \
 RUN:   FileCheck %s --check-prefixes=COFF-PIC,ERR
 COFF-PIC-NOT: "-fpic"
 
