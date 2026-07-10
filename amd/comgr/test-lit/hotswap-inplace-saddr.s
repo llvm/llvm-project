@@ -1,10 +1,11 @@
-// COM: Test HotSwap in-place patch selectivity for cluster_load addressing
-// COM: forms. The B0->A0 replacement templates target the saddr=off (64-bit
-// COM: vaddr) encoding. The SGPR-relative (_SADDR) variant shares the display
+// COM: Test HotSwap cluster_load addressing-form selectivity. The in-place
+// COM: B0->A0 replacement templates target the saddr=off (64-bit vaddr)
+// COM: encoding. The SGPR-relative (_SADDR) variant shares the display
 // COM: mnemonic but is a distinct MC opcode with a different operand layout,
-// COM: so reusing the off-form opcode would mis-encode its operands and corrupt
-// COM: the address at runtime. The patcher must skip the _SADDR form and only
-// COM: rewrite the off form.
+// COM: so reusing the off-form opcode would mis-encode its operands and
+// COM: corrupt the address at runtime. The in-place pass must skip _SADDR,
+// COM: then the trampoline pass must wrap that remaining cluster_load with
+// COM: the A0 M0 wg_mask save/clear/restore sequence.
 
 // RUN: %clang -target amdgcn-amd-amdhsa -mcpu=gfx1250 -nostdlib %s -o %t.elf
 
@@ -16,17 +17,20 @@
 
 // RUN: %llvm-objdump -d %t.out.elf | %FileCheck --check-prefix=DISASM %s
 
-// COM: The two loads appear in program order. The SGPR-relative (_SADDR) site
-// COM: comes first and must be preserved verbatim as a cluster_load with an
-// COM: s[...] base; if the patcher wrongly swapped it, this line would instead
-// COM: disassemble as a global_load and the match would fail.
-// DISASM: cluster_load_b32 v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9:]+}}]
-// COM: Between the preserved _SADDR site and the rewritten off-form site, no
-// COM: off-form cluster_load may survive (the off form must have been swapped).
+// COM: The original _SADDR site is redirected to a sled/trampoline. The
+// COM: remaining cluster_load body is bracketed by M0 save, M0 wg_mask
+// COM: clear, and M0 restore.
+// DISASM-LABEL: <test_saddr_kernel>:
+// DISASM: s_branch
 // DISASM-NOT: cluster_load_b32 {{.*}}, off
 // COM: The saddr=off site that followed is rewritten to global_load_b32,
 // COM: proving the skip is specific to the _SADDR form, not a blanket opt-out.
 // DISASM: global_load_b32 v{{[0-9]+}}, v[{{[0-9:]+}}], off
+// DISASM: s_endpgm
+// DISASM: s_mov_b32 [[SCRATCH:s[0-9]+]], m0
+// DISASM-NEXT: s_pack_hh_b32_b16 m0, 0, m0
+// DISASM-NEXT: cluster_load_b32 v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9:]+}}]
+// DISASM-NEXT: s_mov_b32 m0, [[SCRATCH]]
 
 // COM: Idempotency: output should be identical on second rewrite.
 // RUN: hotswap-rewrite %t.out.elf \

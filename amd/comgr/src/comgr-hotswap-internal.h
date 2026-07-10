@@ -120,12 +120,24 @@ struct KernelDescriptorInfo {
   int64_t EntryOffset = 0;
 };
 
+struct KernelClusterDims {
+  unsigned X = 0;
+  unsigned Y = 0;
+  unsigned Z = 0;
+};
+
 struct NopSled {
   uint64_t Start = 0;
   uint64_t End = 0;
   uint64_t WritePos = 0;
   uint64_t FunctionStart = 0;
   uint64_t FunctionEnd = 0;
+};
+
+enum class MaskWorkaroundPolicy {
+  None,
+  A0,
+  B0,
 };
 
 // -- Rewrite rule -------------------------------------------------------------
@@ -319,6 +331,12 @@ public:
   /// missing from present metadata, or the descriptor fallback is unavailable.
   std::optional<unsigned> getKernelSgprCount(llvm::StringRef KernelName) const;
 
+  /// Read fixed \c .cluster_dims metadata for \p KernelName when present.
+  /// Returns std::nullopt when the metadata note or key is absent, or when the
+  /// matching metadata is malformed.
+  std::optional<KernelClusterDims>
+  getKernelClusterDims(llvm::StringRef KernelName) const;
+
   /// Update the RSRC1 VGPR granule count in the kernel descriptor for
   /// \p KernelName by adding \p ExtraVgprs. The SGPR granule field is
   /// not updated because it is reserved on GFX10+.
@@ -394,6 +412,8 @@ struct RewriteConfig {
   unsigned MaxVgprs = 0;
   unsigned MaxSgprs = 0;
   unsigned VgprGranuleSize = 0;
+  bool RunB0A0Patches = true;
+  MaskWorkaroundPolicy MaskPolicy = MaskWorkaroundPolicy::None;
 };
 
 // -- LLVM MC context ----------------------------------------------------------
@@ -826,8 +846,7 @@ bool rewriteKernelEntryDescriptorOffsets(
 struct Gfx1250RewriteOptions {
   bool RunB0A0Patches = true;
   bool RunEntryTrampolines = false;
-  // Carried for opt-in rewrite policies that need fail-closed behaviour.
-  bool StrictMode = false;
+  MaskWorkaroundPolicy MaskPolicy = MaskWorkaroundPolicy::None;
 };
 
 /// Run the selected GFX1250 hotswap rewrite passes on \p ElfData / \p ElfSize.

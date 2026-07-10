@@ -73,32 +73,38 @@ static std::optional<uint64_t> checkedSectionFileOffset(const ELFT::Shdr &Sec,
 }
 
 static std::optional<unsigned>
-readSgprCountMetadataNode(const msgpack::DocNode &SgprNode,
-                          StringRef KernelName, StringRef Context) {
-  if (SgprNode.getKind() == msgpack::Type::UInt) {
-    uint64_t SgprCount = SgprNode.getUInt();
-    if (SgprCount > std::numeric_limits<unsigned>::max()) {
-      log() << "hotswap: error: " << Context << ": .sgpr_count for '"
+readUnsignedMetadataNode(const msgpack::DocNode &Node, StringRef KernelName,
+                         StringRef Key, StringRef Context) {
+  if (Node.getKind() == msgpack::Type::UInt) {
+    uint64_t Value = Node.getUInt();
+    if (Value > std::numeric_limits<unsigned>::max()) {
+      log() << "hotswap: error: " << Context << ": " << Key << " for '"
             << KernelName << "' exceeds unsigned.\n";
       return std::nullopt;
     }
-    return static_cast<unsigned>(SgprCount);
+    return static_cast<unsigned>(Value);
   }
 
-  if (SgprNode.getKind() == msgpack::Type::Int) {
-    int64_t SgprCount = SgprNode.getInt();
-    if (SgprCount < 0 || static_cast<uint64_t>(SgprCount) >
-                             std::numeric_limits<unsigned>::max()) {
-      log() << "hotswap: error: " << Context << ": .sgpr_count for '"
+  if (Node.getKind() == msgpack::Type::Int) {
+    int64_t Value = Node.getInt();
+    if (Value < 0 ||
+        static_cast<uint64_t>(Value) > std::numeric_limits<unsigned>::max()) {
+      log() << "hotswap: error: " << Context << ": " << Key << " for '"
             << KernelName << "' is outside unsigned range.\n";
       return std::nullopt;
     }
-    return static_cast<unsigned>(SgprCount);
+    return static_cast<unsigned>(Value);
   }
 
-  log() << "hotswap: error: " << Context << ": .sgpr_count for '" << KernelName
-        << "' is not an integer.\n";
+  log() << "hotswap: error: " << Context << ": " << Key << " for '"
+        << KernelName << "' is not an integer.\n";
   return std::nullopt;
+}
+
+static std::optional<unsigned>
+readSgprCountMetadataNode(const msgpack::DocNode &SgprNode,
+                          StringRef KernelName, StringRef Context) {
+  return readUnsignedMetadataNode(SgprNode, KernelName, ".sgpr_count", Context);
 }
 
 static MetadataSgprUpdateStatus
@@ -916,6 +922,109 @@ ElfView::getKernelSgprCount(StringRef KernelName) const {
     return std::nullopt;
   }
   return static_cast<unsigned>(SgprCount);
+}
+
+// -- ElfView::getKernelClusterDims --------------------------------------------
+//
+// Reads optional fixed .cluster_dims metadata from the amdhsa.kernels msgpack
+// note. Absence is expected for kernels with variable dispatch-time cluster
+// dimensions, so callers use std::nullopt as the dynamic fallback signal.
+
+std::optional<KernelClusterDims>
+ElfView::getKernelClusterDims(StringRef KernelName) const {
+  Expected<ELFT::PhdrRange> PhdrsOrErr = File.program_headers();
+  if (!PhdrsOrErr) {
+    log() << "hotswap: error: getKernelClusterDims: failed to read program "
+          << "headers: " << toString(PhdrsOrErr.takeError()) << "\n";
+    return std::nullopt;
+  }
+
+  for (const ELFT::Phdr &Phdr : *PhdrsOrErr) {
+    if (Phdr.p_type != ELF::PT_NOTE)
+      continue;
+
+    Error Err = Error::success();
+    for (ELFT::Note Note : File.notes(Phdr, Err)) {
+      if (Note.getName() != "AMDGPU" ||
+          Note.getType() != ELF::NT_AMDGPU_METADATA)
+        continue;
+
+      ArrayRef<uint8_t> Desc = Note.getDesc(4);
+      if (Desc.empty()) {
+        log() << "hotswap: error: getKernelClusterDims: AMDGPU metadata note "
+              << "has an empty descriptor.\n";
+        return std::nullopt;
+      }
+
+      StringRef Blob(reinterpret_cast<const char *>(Desc.data()), Desc.size());
+      msgpack::Document Doc;
+      if (!Doc.readFromBlob(Blob, false)) {
+        log() << "hotswap: error: getKernelClusterDims: failed to parse "
+              << "AMDGPU metadata note.\n";
+        return std::nullopt;
+      }
+
+      msgpack::DocNode Root = Doc.getRoot();
+      if (!Root.isMap()) {
+        log() << "hotswap: error: getKernelClusterDims: AMDGPU metadata root "
+              << "is not a map.\n";
+        return std::nullopt;
+      }
+
+      msgpack::MapDocNode &RootMap = Root.getMap();
+      msgpack::DocNode::MapTy::iterator KernelsIt =
+          RootMap.find("amdhsa.kernels");
+      if (KernelsIt == RootMap.end() || !KernelsIt->second.isArray())
+        continue;
+
+      msgpack::ArrayDocNode &KernelArray = KernelsIt->second.getArray();
+      for (msgpack::DocNode &KNode : KernelArray) {
+        if (!KNode.isMap())
+          continue;
+
+        msgpack::MapDocNode &KMap = KNode.getMap();
+        msgpack::DocNode::MapTy::iterator NameIt = KMap.find(".name");
+        if (NameIt == KMap.end() || !NameIt->second.isString() ||
+            NameIt->second.getString() != KernelName)
+          continue;
+
+        msgpack::DocNode::MapTy::iterator DimsIt = KMap.find(".cluster_dims");
+        if (DimsIt == KMap.end())
+          return std::nullopt;
+        if (!DimsIt->second.isArray()) {
+          log() << "hotswap: error: getKernelClusterDims: .cluster_dims for '"
+                << KernelName << "' is not an array.\n";
+          return std::nullopt;
+        }
+
+        msgpack::ArrayDocNode &Dims = DimsIt->second.getArray();
+        if (Dims.size() != 3) {
+          log() << "hotswap: error: getKernelClusterDims: .cluster_dims for '"
+                << KernelName << "' has " << Dims.size()
+                << " entries, expected 3.\n";
+          return std::nullopt;
+        }
+
+        std::optional<unsigned> X = readUnsignedMetadataNode(
+            Dims[0], KernelName, ".cluster_dims[0]", "getKernelClusterDims");
+        std::optional<unsigned> Y = readUnsignedMetadataNode(
+            Dims[1], KernelName, ".cluster_dims[1]", "getKernelClusterDims");
+        std::optional<unsigned> Z = readUnsignedMetadataNode(
+            Dims[2], KernelName, ".cluster_dims[2]", "getKernelClusterDims");
+        if (!X || !Y || !Z)
+          return std::nullopt;
+        return KernelClusterDims{*X, *Y, *Z};
+      }
+    }
+
+    if (Err) {
+      log() << "hotswap: error: getKernelClusterDims: failed to iterate "
+            << "AMDGPU notes: " << toString(std::move(Err)) << "\n";
+      return std::nullopt;
+    }
+  }
+
+  return std::nullopt;
 }
 
 // -- ElfView::updateKernelDescriptor ------------------------------------------

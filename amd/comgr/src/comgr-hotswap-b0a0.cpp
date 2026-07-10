@@ -129,9 +129,8 @@ appendDeferredTrampolinePrefetchGuard(const ElfView &Elf, const LLVMState &LS,
   if (!MaxOriginalInstPrefLines)
     return false;
 
-  uint64_t GuardBytes =
-      static_cast<uint64_t>(*MaxOriginalInstPrefLines) *
-      KernelEntryInstPrefUnitBytes;
+  uint64_t GuardBytes = static_cast<uint64_t>(*MaxOriginalInstPrefLines) *
+                        KernelEntryInstPrefUnitBytes;
   if (!appendCodeEndGuard(Growth, GuardBytes, LS))
     return false;
 
@@ -544,11 +543,16 @@ static std::optional<uint32_t> applyGfx1250B0toA0Rules(
   // against on these and we must not invoke the patch passes for them.
   constexpr StringLiteral UnknownMnemonic = "<unknown>";
   using PerInstPatchFn = uint32_t (*)(PatchContext &, size_t);
-  PerInstPatchFn PerInstPasses[] = {
-      VT.applyInPlacePatches,     VT.applyTrampolinePatches,
-      VT.applyWmmaSplitPatches,   VT.applyScratchPatches,
-      VT.applyWmmaScale16Patches,
-  };
+  SmallVector<PerInstPatchFn, 5> PerInstPasses;
+  if (Config.RunB0A0Patches) {
+    PerInstPasses.push_back(VT.applyInPlacePatches);
+    PerInstPasses.push_back(VT.applyTrampolinePatches);
+    PerInstPasses.push_back(VT.applyWmmaSplitPatches);
+    PerInstPasses.push_back(VT.applyScratchPatches);
+    PerInstPasses.push_back(VT.applyWmmaScale16Patches);
+  } else {
+    PerInstPasses.push_back(VT.applyTrampolinePatches);
+  }
 
   for (size_t Idx = 0, E = Decoded.size(); Idx < E; ++Idx) {
     const InternalDecodedInst &DI = Decoded[Idx];
@@ -577,9 +581,9 @@ static std::optional<uint32_t> applyGfx1250B0toA0Rules(
   //    treat a branch as WMMA/VALU/VOP3PX2.
   // If a future patch family changes instruction boundaries, the Decoded
   // stream must be rebuilt before these passes run.
-  if (VT.applyWmmaHazardPatch)
+  if (Config.RunB0A0Patches && VT.applyWmmaHazardPatch)
     Patched += VT.applyWmmaHazardPatch(Ctx);
-  if (VT.applyVop3px2Src2Fix)
+  if (Config.RunB0A0Patches && VT.applyVop3px2Src2Fix)
     Patched += VT.applyVop3px2Src2Fix(Ctx);
 
   for (const llvm::StringMapEntry<KernelPatchStats> &KV : KernelStats) {
@@ -768,7 +772,10 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
   // initializer binds every register*Patch slot on first access, so no
   // explicit install step is needed here.
 
-  if (!Options.RunB0A0Patches && !Options.RunEntryTrampolines) {
+  const bool RunInstructionPatches =
+      Options.RunB0A0Patches ||
+      Options.MaskPolicy != MaskWorkaroundPolicy::None;
+  if (!RunInstructionPatches && !Options.RunEntryTrampolines) {
     std::unique_ptr<WritableMemoryBuffer> Result =
         copyOutputBuffer(ElfData, ElfSize, "no-op");
     if (!Result)
@@ -803,13 +810,15 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
   }
 
   RewriteConfig Config = makeGfx1250B0A0Config();
+  Config.RunB0A0Patches = Options.RunB0A0Patches;
+  Config.MaskPolicy = Options.MaskPolicy;
 
   uint8_t *Text = Elf.textData();
   uint64_t Count = 0;
   std::vector<Trampoline> Deferred;
   std::vector<ScratchPatchInfo> ScratchPatches;
   bool RequiredPatchApplied = false;
-  if (Options.RunB0A0Patches) {
+  if (RunInstructionPatches) {
     std::vector<InternalDecodedInst> Decoded;
     if (!decodeTextSection(Text, Elf.textSize(), LS, Decoded)) {
       log() << "hotswap: error: retargetCodeObject: decodeTextSection "
@@ -823,9 +832,9 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
     if (!Patched)
       return AMD_COMGR_STATUS_ERROR;
     Count = *Patched;
-    log() << "hotswap: applied " << Count << " B0-to-A0 patches\n";
+    log() << "hotswap: applied " << Count << " instruction patches\n";
   } else {
-    log() << "hotswap: B0-to-A0 patches disabled for this rewrite\n";
+    log() << "hotswap: instruction patches disabled for this rewrite\n";
   }
 
   std::unique_ptr<WritableMemoryBuffer> Result;

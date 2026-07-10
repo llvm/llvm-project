@@ -2,37 +2,22 @@
 // COM: s_add_pc_i64 branch-back corrupts wave state (a GPU memory fault at
 // COM: runtime). Until a scratch-register-based long branch-back lands, a patch
 // COM: site beyond s_branch's +-128 KB reach of the appended pool is DECLINED
-// COM: (left unpatched) instead of redirected through the long branch: the
-// COM: original tensor_load_to_lds stays at the site and no s_add_pc_i64 (nor a
-// COM: relocated trampoline body) is emitted. Near sites and in-place patches
-// COM: are unaffected. A large .rept filler (~160 KB, non-NOP so it forms no
-// COM: usable sled) pushes the pool past s_branch's reach to force the far case.
+// COM: instead of redirected through the long branch.
+// COM:
+// COM: The A0 tensor_load_to_lds mask workaround is required for correctness, so
+// COM: hotswap must report ERROR if the trampoline patch cannot be emitted.
+// COM: Optional far trampoline rewrites are still allowed to decline and return
+// COM: success; hotswap-trampoline-ds-long-branch.s covers that behavior.
+// COM: A large .rept filler (~160 KB, non-NOP so it forms no usable sled)
+// COM: pushes the pool past s_branch's reach to force the far case.
 
 // RUN: %clang -target amdgcn-amd-amdhsa -mcpu=gfx1250 -nostdlib %s -o %t.elf
 
 // RUN: hotswap-rewrite %t.elf \
 // RUN:   amdgcn-amd-amdhsa--gfx1250 amdgcn-amd-amdhsa--gfx1250 \
-// RUN:   --output %t.out.elf \
+// RUN:   --expect-status ERROR \
 // RUN:   | %FileCheck --check-prefix=API %s
-// API: RESULT: SUCCESS
-
-// RUN: %llvm-objdump -d %t.out.elf | %FileCheck --check-prefix=DISASM %s
-
-// COM: Declined: the site keeps its original tensor_load_to_lds (it is NOT
-// COM: overwritten with an s_add_pc_i64 forward branch), and no long-branch
-// COM: redirect or relocated trampoline body (s_pack_hh_b32_b16 mask-clear) is
-// COM: emitted anywhere.
-// DISASM-LABEL: <test_far>:
-// DISASM-NEXT: tensor_load_to_lds
-// DISASM-NOT: s_add_pc_i64
-// DISASM-NOT: s_pack_hh_b32_b16
-
-// COM: Idempotency: rewriting the output again must be a no-op.
-// RUN: hotswap-rewrite %t.out.elf \
-// RUN:   amdgcn-amd-amdhsa--gfx1250 amdgcn-amd-amdhsa--gfx1250 \
-// RUN:   --check-idempotent \
-// RUN:   | %FileCheck --check-prefix=IDEM %s
-// IDEM: IDEMPOTENT: YES
+// API: RESULT: ERROR
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx1250"
 .text

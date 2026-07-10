@@ -2979,9 +2979,9 @@ typedef enum amd_comgr_hotswap_rewrite_flag_s {
    */
   AMD_COMGR_HOTSWAP_REWRITE_FLAG_ENTRY_TRAMPOLINES = 0x1,
   /**
-   * Enable opt-in strict rewrite behavior. Selected strict rewrites fail
-   * instead of returning the original unpatched code object when a required
-   * patch cannot be emitted safely.
+   * Enable opt-in B0 mask workarounds. If a required B0 mask workaround is
+   * detected but cannot be emitted safely, the rewrite fails instead of
+   * returning the original unpatched code object.
    */
   AMD_COMGR_HOTSWAP_REWRITE_FLAG_STRICT_MODE = 0x2,
 } amd_comgr_hotswap_rewrite_flag_t;
@@ -3017,6 +3017,8 @@ typedef struct amd_comgr_hotswap_rewrite_options_s {
  * Currently supported transformations:
  *   - GFX1250 B0 to A0
  *   - GFX125x entry trampolines when requested by @p rewrite_options
+ *   - GFX1250 B0 strict-mode mask workarounds when requested by
+ *     @p rewrite_options
  *
  * Additional source/target ISA pairs may be added in future releases.
  * Unsupported @p source_isa_name / @p target_isa_name combinations return

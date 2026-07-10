@@ -15,8 +15,12 @@
 ///     2-address DS instruction with unaligned offsets that silently
 ///     corrupts LDS on A0. The expansion uses two single-address ops with
 ///     byte offsets scaled appropriately for each encoding.
-///   - tensor_load_to_lds     : prepend s_pack_hh_b32_b16 to clear multicast
-///     routing bits in the group descriptor's base SGPR
+///   - tensor_load_to_lds     : clear multicast routing bits in the group
+///     descriptor's base SGPR. A0 clears unconditionally; B0 clears only when
+///     runtime cluster state reports a non-cluster wave.
+///   - cluster_load*          : for cluster-load forms that remain cluster
+///     loads after in-place demotion on A0, save M0, clear wg_mask bits
+///     [15:0], issue the original load, then restore M0
 ///   - ds_*_addtid_b32        : compute the LDS address through the ALU and
 ///     issue a regular ds_*_b32, bypassing the gfx1250 A0 16-bit M0
 ///     truncation. On B0 the DS unit reads 20 bits of M0; on A0 it reads only
@@ -26,12 +30,15 @@
 
 #include "comgr-hotswap-internal.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <algorithm>
+#include <limits>
 #include <optional>
 #include <string>
 #include <vector>
@@ -41,6 +48,11 @@ using namespace llvm;
 namespace COMGR {
 namespace hotswap {
 namespace {
+
+bool failRequiredPatch(PatchContext &Ctx) {
+  Ctx.RequiredPatchFailed = true;
+  return false;
+}
 
 // -- DS 2-address swap table (StringSwitch) ---------------------------------
 //
@@ -85,6 +97,11 @@ std::string toAsmRegName(const MCRegisterInfo &MRI, MCRegister Reg) {
   if (Name.starts_with("SGPR") && !Name.contains('_'))
     return ("s" + Name.drop_front(4)).str();
   return Name.str();
+}
+
+bool isM0Reg(MCRegister Reg, const MCRegisterInfo &MRI) {
+  const char *N = MRI.getName(Reg);
+  return N && StringRef(N).starts_with("M0");
 }
 
 SmallVector<MCRegister, 4> getDirectSubRegs(MCRegister Reg,
@@ -379,6 +396,121 @@ MCRegister getDescriptorBaseSgpr(const MCInst &Inst,
   return Subs.empty() ? MCRegister() : Subs[0];
 }
 
+std::optional<unsigned> getSgprIndex(MCRegister Reg,
+                                     const MCRegisterInfo &MRI) {
+  const char *N = MRI.getName(Reg);
+  if (!N)
+    return std::nullopt;
+  StringRef Name(N);
+  if (!Name.starts_with("SGPR") || Name.contains('_'))
+    return std::nullopt;
+  unsigned Index = 0;
+  if (Name.drop_front(4).getAsInteger(10, Index))
+    return std::nullopt;
+  return Index;
+}
+
+SmallVector<unsigned, 8> getDescriptorSgprIndices(const MCInst &Inst,
+                                                  const MCRegisterInfo &MRI) {
+  SmallVector<unsigned, 8> Result;
+  if (Inst.getNumOperands() < 2 || !Inst.getOperand(1).isReg())
+    return Result;
+
+  MCRegister Tuple = MCRegister(Inst.getOperand(1).getReg());
+  for (MCRegister Sub : getDirectSubRegs(Tuple, MRI)) {
+    if (std::optional<unsigned> Index = getSgprIndex(Sub, MRI))
+      Result.push_back(*Index);
+  }
+  return Result;
+}
+
+SmallVector<unsigned, 8> getSgprOperandIndices(const MCInst &Inst,
+                                               const MCRegisterInfo &MRI) {
+  SmallVector<unsigned, 8> Result;
+  for (unsigned I = 0, E = Inst.getNumOperands(); I < E; ++I) {
+    const MCOperand &Op = Inst.getOperand(I);
+    if (!Op.isReg() || !Op.getReg())
+      continue;
+
+    MCRegister Reg = MCRegister(Op.getReg());
+    if (std::optional<unsigned> Index = getSgprIndex(Reg, MRI)) {
+      Result.push_back(*Index);
+      continue;
+    }
+
+    for (MCRegister Sub : getDirectSubRegs(Reg, MRI)) {
+      if (std::optional<unsigned> Index = getSgprIndex(Sub, MRI))
+        Result.push_back(*Index);
+    }
+  }
+  return Result;
+}
+
+bool isAlreadyTensorMaskPatched(const PatchContext &Ctx, size_t Idx,
+                                MCRegister BaseMCReg) {
+  if (Idx == 0)
+    return false;
+
+  const MCRegisterInfo &MRI = *Ctx.LS.MRI;
+  const InternalDecodedInst &Prev = Ctx.Decoded[Idx - 1];
+  const MCInst &PI = Prev.Inst;
+  if (Prev.Mnemonic != "s_pack_hh_b32_b16" || PI.getNumOperands() < 3)
+    return false;
+  if (!PI.getOperand(0).isReg() ||
+      !MRI.regsOverlap(PI.getOperand(0).getReg(), BaseMCReg.id()))
+    return false;
+  return PI.getOperand(1).isImm() && PI.getOperand(1).getImm() == 0;
+}
+
+bool isSccReg(MCRegister Reg, const MCRegisterInfo &MRI) {
+  const char *N = MRI.getName(Reg);
+  return N && StringRef(N) == "SCC";
+}
+
+bool hasSccReg(ArrayRef<MCPhysReg> Regs, const MCRegisterInfo &MRI) {
+  for (MCPhysReg Reg : Regs) {
+    if (isSccReg(MCRegister(Reg), MRI))
+      return true;
+  }
+  return false;
+}
+
+bool explicitDefsScc(const MCInst &Inst, const MCInstrDesc &Desc,
+                     const MCRegisterInfo &MRI) {
+  unsigned NumDefs =
+      std::min<unsigned>(Desc.getNumDefs(), Inst.getNumOperands());
+  for (unsigned I = 0; I < NumDefs; ++I) {
+    const MCOperand &Op = Inst.getOperand(I);
+    if (Op.isReg() && Op.getReg() && isSccReg(MCRegister(Op.getReg()), MRI))
+      return true;
+  }
+  return false;
+}
+
+bool explicitUsesScc(const MCInst &Inst, const MCInstrDesc &Desc,
+                     const MCRegisterInfo &MRI) {
+  unsigned NumDefs =
+      std::min<unsigned>(Desc.getNumDefs(), Inst.getNumOperands());
+  for (unsigned I = NumDefs, E = Inst.getNumOperands(); I < E; ++I) {
+    const MCOperand &Op = Inst.getOperand(I);
+    if (Op.isReg() && Op.getReg() && isSccReg(MCRegister(Op.getReg()), MRI))
+      return true;
+  }
+  return false;
+}
+
+bool instReadsScc(const MCInst &Inst, const MCInstrDesc &Desc,
+                  const MCRegisterInfo &MRI) {
+  return explicitUsesScc(Inst, Desc, MRI) ||
+         hasSccReg(Desc.implicit_uses(), MRI);
+}
+
+bool instWritesScc(const MCInst &Inst, const MCInstrDesc &Desc,
+                   const MCRegisterInfo &MRI) {
+  return explicitDefsScc(Inst, Desc, MRI) ||
+         hasSccReg(Desc.implicit_defs(), MRI);
+}
+
 // -- isSgprLiveAfter --------------------------------------------------------
 //
 // Conservative forward-scan heuristic. Returns true if the given SGPR
@@ -425,6 +557,39 @@ bool isSgprLiveAfter(const PatchContext &Ctx, size_t Idx,
       return true;
     if (RegInRange(Defs))
       return false;
+  }
+
+  return true;
+}
+
+// -- isSccLiveAfter ---------------------------------------------------------
+//
+// Conservative forward-scan heuristic for the scalar condition code. Returns
+// true if SCC is read before the next instruction that defines SCC. Returns
+// true at control-flow boundaries because the linear stream alone cannot prove
+// the branch target does not consume the incoming SCC value.
+
+bool isSccLiveAfter(const PatchContext &Ctx, size_t Idx) {
+  const MCRegisterInfo &MRI = *Ctx.LS.MRI;
+  const MCInstrInfo &MCII = *Ctx.LS.MCII;
+
+  for (size_t I = Idx + 1; I < Ctx.Decoded.size(); ++I) {
+    const InternalDecodedInst &DI = Ctx.Decoded[I];
+    if (DI.Mnemonic == "<unknown>" || DI.Mnemonic == "<replaced>")
+      continue;
+
+    const MCInst &Inst = DI.Inst;
+    const MCInstrDesc &Desc = MCII.get(Inst.getOpcode());
+
+    if (DI.Mnemonic == "s_endpgm")
+      return false;
+
+    if (instReadsScc(Inst, Desc, MRI))
+      return true;
+    if (instWritesScc(Inst, Desc, MRI))
+      return false;
+    if (Desc.mayAffectControlFlow(Inst, MRI))
+      return true;
   }
 
   return true;
@@ -498,8 +663,9 @@ struct SgprScratchAlloc {
   unsigned ExtraSgprsNeeded = 0;
 };
 
-std::optional<SgprScratchAlloc> tryAllocScratchSgpr(PatchContext &Ctx,
-                                                    size_t Idx) {
+std::optional<SgprScratchAlloc>
+tryAllocScratchSgpr(PatchContext &Ctx, size_t Idx,
+                    ArrayRef<unsigned> ExcludedSgprs = {}) {
   InternalDecodedInst &DI = Ctx.Decoded[Idx];
   std::string KernelName =
       Ctx.Elf.findKernelAtAddress(DI.Offset + Ctx.Elf.textAddr());
@@ -507,15 +673,18 @@ std::optional<SgprScratchAlloc> tryAllocScratchSgpr(PatchContext &Ctx,
   unsigned SgprKdCount = KdSgprs.value_or(Ctx.Config.MaxSgprs);
 
   SgprAllocator Alloc(SgprKdCount, Ctx.Config.MaxSgprs);
-  std::optional<unsigned> S = Alloc.alloc();
-  if (!S)
-    return std::nullopt;
+  while (std::optional<unsigned> S = Alloc.alloc()) {
+    if (llvm::is_contained(ExcludedSgprs, *S))
+      continue;
 
-  SgprScratchAlloc Out;
-  Out.Sgpr = *S;
-  Out.KernelName = std::move(KernelName);
-  Out.ExtraSgprsNeeded = Alloc.extraSgprsNeeded();
-  return Out;
+    SgprScratchAlloc Out;
+    Out.Sgpr = *S;
+    Out.KernelName = std::move(KernelName);
+    Out.ExtraSgprsNeeded = Alloc.extraSgprsNeeded();
+    return Out;
+  }
+
+  return std::nullopt;
 }
 
 void commitScratchSgpr(PatchContext &Ctx, const SgprScratchAlloc &Alloc) {
@@ -525,7 +694,7 @@ void commitScratchSgpr(PatchContext &Ctx, const SgprScratchAlloc &Alloc) {
   Stats.ExtraSgprs = std::max(Stats.ExtraSgprs, Alloc.ExtraSgprsNeeded);
 }
 
-// -- patchTensorLoadToLds ---------------------------------------------------
+// -- patchTensorLoadToLdsA0 -------------------------------------------------
 //
 // Prepend s_pack_hh_b32_b16 to clear multicast routing bits in the group
 // descriptor's base SGPR. If the SGPR is live after the tensor_load, bracket
@@ -533,7 +702,7 @@ void commitScratchSgpr(PatchContext &Ctx, const SgprScratchAlloc &Alloc) {
 // earlier version used a VGPR lane, but occupancy-1 kernels have no free VGPR
 // so the patch declined; a scratch SGPR is always available.)
 
-bool patchTensorLoadToLds(PatchContext &Ctx, size_t Idx) {
+bool patchTensorLoadToLdsA0(PatchContext &Ctx, size_t Idx) {
   InternalDecodedInst &DI = Ctx.Decoded[Idx];
   const MCRegisterInfo &MRI = *Ctx.LS.MRI;
 
@@ -541,22 +710,14 @@ bool patchTensorLoadToLds(PatchContext &Ctx, size_t Idx) {
   if (!BaseMCReg.isValid()) {
     log() << "hotswap: error: tensor_load_to_lds: could not extract descriptor "
              "base register\n";
+    return failRequiredPatch(Ctx);
+  }
+
+  if (isAlreadyTensorMaskPatched(Ctx, Idx, BaseMCReg))
     return false;
-  }
 
-  // Idempotency guard: both paths emit `s_pack_hh_b32_b16 sN, 0, sN`
-  // (dst == BaseMCReg) right before the relocated instruction, so one check
-  // covers re-rewrites.
-  if (Idx > 0) {
-    const InternalDecodedInst &Prev = Ctx.Decoded[Idx - 1];
-    const MCInst &PI = Prev.Inst;
-    if (Prev.Mnemonic == "s_pack_hh_b32_b16" && PI.getNumOperands() >= 3 &&
-        PI.getOperand(0).isReg() &&
-        MRI.regsOverlap(PI.getOperand(0).getReg(), BaseMCReg.id()) &&
-        PI.getOperand(1).isImm() && PI.getOperand(1).getImm() == 0)
-      return false;
-  }
-
+  SmallVector<unsigned, 8> DescriptorSgprs =
+      getDescriptorSgprIndices(DI.Inst, MRI);
   std::string BaseSreg = toAsmRegName(MRI, BaseMCReg);
 
   std::string PackAsm = "s_pack_hh_b32_b16 " + BaseSreg + ", 0, " + BaseSreg;
@@ -564,7 +725,7 @@ bool patchTensorLoadToLds(PatchContext &Ctx, size_t Idx) {
   if (PackBytes.empty()) {
     log() << "hotswap: tensor_load_to_lds pack: assembly failed: " << PackAsm
           << "\n";
-    return false;
+    return failRequiredPatch(Ctx);
   }
 
   bool SgprLive = isSgprLiveAfter(Ctx, Idx, BaseMCReg);
@@ -572,11 +733,12 @@ bool patchTensorLoadToLds(PatchContext &Ctx, size_t Idx) {
   const uint8_t *OrigInst = Ctx.Text + DI.Offset;
 
   if (SgprLive) {
-    std::optional<SgprScratchAlloc> ScratchSgpr = tryAllocScratchSgpr(Ctx, Idx);
+    std::optional<SgprScratchAlloc> ScratchSgpr =
+        tryAllocScratchSgpr(Ctx, Idx, DescriptorSgprs);
     if (!ScratchSgpr) {
       log() << "hotswap: error: tensor_load_to_lds: no scratch SGPR "
                "available\n";
-      return false;
+      return failRequiredPatch(Ctx);
     }
 
     std::string S = "s" + std::to_string(ScratchSgpr->Sgpr);
@@ -586,7 +748,7 @@ bool patchTensorLoadToLds(PatchContext &Ctx, size_t Idx) {
     SmallVector<uint8_t> Restore = assembleSingleInst(RestoreAsm, Ctx.LS);
     if (Save.empty() || Restore.empty()) {
       log() << "hotswap: tensor_load_to_lds: save/restore assembly failed\n";
-      return false;
+      return failRequiredPatch(Ctx);
     }
 
     SmallVector<uint8_t> Replacement;
@@ -596,7 +758,7 @@ bool patchTensorLoadToLds(PatchContext &Ctx, size_t Idx) {
     Replacement.append(Restore.begin(), Restore.end());
 
     if (!emitReplacementCode(Ctx, DI.Offset, DI.Size, Replacement))
-      return false;
+      return failRequiredPatch(Ctx);
 
     // SGPRs above .sgpr_count need no KD bump on GFX10+; commit only after
     // the patch is emitted, to keep per-kernel stats accurate.
@@ -610,12 +772,311 @@ bool patchTensorLoadToLds(PatchContext &Ctx, size_t Idx) {
     Replacement.append(OrigInst, OrigInst + DI.Size);
 
     if (!emitReplacementCode(Ctx, DI.Offset, DI.Size, Replacement))
-      return false;
+      return failRequiredPatch(Ctx);
 
     log() << "hotswap: tensor_load_to_lds: " << BaseSreg
           << " dead, no save/restore needed\n";
   }
 
+  Ctx.RequiredPatchApplied = true;
+  DI.Mnemonic = "<replaced>";
+  return true;
+}
+
+// -- Cluster/TDM mask helpers ------------------------------------------------
+//
+// In-place patching demotes off-form cluster_load* instructions to
+// global_load* first. Any cluster_load* that reaches this trampoline pass is
+// still a real cluster load on A0 and must see M0.wg_mask[15:0] cleared. B0
+// does not need the cluster-load M0 workaround; its hotswap mask rule applies
+// only to tensor_load_to_lds when the wave is effectively non-cluster.
+
+// MI400 SPG section 3.4: SQ_WAVE_IB_STS2.CLUSTER_ID is bits [9:6].
+constexpr unsigned IbSts2ClusterIdOffset = 6;
+constexpr unsigned IbSts2ClusterIdWidth = 4;
+
+bool isClusterLoad(StringRef Mnemonic) {
+  return StringSwitch<bool>(Mnemonic)
+      .Case("cluster_load_b32", true)
+      .Case("cluster_load_b64", true)
+      .Case("cluster_load_b128", true)
+      .Case("cluster_load_async_to_lds_b8", true)
+      .Case("cluster_load_async_to_lds_b32", true)
+      .Case("cluster_load_async_to_lds_b64", true)
+      .Case("cluster_load_async_to_lds_b128", true)
+      .Default(false);
+}
+
+bool operandIsM0(const MCInst &Inst, const MCRegisterInfo &MRI,
+                 unsigned OperandIdx) {
+  if (OperandIdx >= Inst.getNumOperands())
+    return false;
+  const MCOperand &Op = Inst.getOperand(OperandIdx);
+  return Op.isReg() && isM0Reg(MCRegister(Op.getReg()), MRI);
+}
+
+bool isAlreadyClusterMaskPatched(const PatchContext &Ctx, size_t Idx) {
+  if (Idx == 0)
+    return false;
+
+  const MCRegisterInfo &MRI = *Ctx.LS.MRI;
+  const InternalDecodedInst &Prev = Ctx.Decoded[Idx - 1];
+  const MCInst &PI = Prev.Inst;
+
+  if (Prev.Mnemonic == "s_pack_hh_b32_b16") {
+    if (PI.getNumOperands() < 3 || !operandIsM0(PI, MRI, 0))
+      return false;
+    if (!PI.getOperand(1).isImm() || PI.getOperand(1).getImm() != 0)
+      return false;
+    return operandIsM0(PI, MRI, 2);
+  }
+
+  if (Prev.Mnemonic != "s_and_b32" || PI.getNumOperands() < 3 ||
+      !operandIsM0(PI, MRI, 0))
+    return false;
+
+  for (unsigned OpIdx = 1; OpIdx < PI.getNumOperands(); ++OpIdx) {
+    if (operandIsM0(PI, MRI, OpIdx))
+      return true;
+  }
+  return false;
+}
+
+std::optional<uint64_t> getFlatClusterSize(const KernelClusterDims &Dims,
+                                           StringRef KernelName) {
+  if (Dims.X == 0 && Dims.Y == 0 && Dims.Z == 0)
+    return 0;
+
+  if (Dims.X == 0 || Dims.Y == 0 || Dims.Z == 0) {
+    log() << "hotswap: error: .cluster_dims for '" << KernelName
+          << "' contains a zero dimension in a nonzero fixed cluster ("
+          << Dims.X << ", " << Dims.Y << ", " << Dims.Z
+          << "); falling back to dynamic cluster-id check\n";
+    return std::nullopt;
+  }
+
+  uint64_t Flat = Dims.X;
+  if (Dims.Y > std::numeric_limits<uint64_t>::max() / Flat) {
+    log() << "hotswap: error: .cluster_dims for '" << KernelName
+          << "' overflows uint64_t; falling back to dynamic cluster-id check\n";
+    return std::nullopt;
+  }
+  Flat *= Dims.Y;
+  if (Dims.Z > std::numeric_limits<uint64_t>::max() / Flat) {
+    log() << "hotswap: error: .cluster_dims for '" << KernelName
+          << "' overflows uint64_t; falling back to dynamic cluster-id check\n";
+    return std::nullopt;
+  }
+  Flat *= Dims.Z;
+  return Flat;
+}
+
+bool appendAsmBytes(SmallVectorImpl<uint8_t> &Out, StringRef Asm,
+                    const LLVMState &LS, StringRef Context) {
+  SmallVector<uint8_t> Bytes = assembleSingleInst(Asm, LS);
+  if (Bytes.empty()) {
+    log() << "hotswap: error: " << Context << ": assembly failed: " << Asm
+          << "\n";
+    return false;
+  }
+  Out.append(Bytes.begin(), Bytes.end());
+  return true;
+}
+
+bool appendRequiredAsm(PatchContext &Ctx, SmallVectorImpl<uint8_t> &Out,
+                       StringRef Asm, StringRef Context) {
+  if (appendAsmBytes(Out, Asm, Ctx.LS, Context))
+    return true;
+  return failRequiredPatch(Ctx);
+}
+
+bool hasKnownNonClusterDispatch(PatchContext &Ctx, size_t Idx) {
+  const InternalDecodedInst &DI = Ctx.Decoded[Idx];
+  std::string KernelName =
+      Ctx.Elf.findKernelAtAddress(DI.Offset + Ctx.Elf.textAddr());
+  std::optional<KernelClusterDims> ClusterDims =
+      Ctx.Elf.getKernelClusterDims(KernelName);
+  if (!ClusterDims)
+    return false;
+
+  std::optional<uint64_t> Flat = getFlatClusterSize(*ClusterDims, KernelName);
+  return Flat && *Flat <= 1;
+}
+
+bool patchTensorLoadToLdsB0(PatchContext &Ctx, size_t Idx) {
+  InternalDecodedInst &DI = Ctx.Decoded[Idx];
+  const MCRegisterInfo &MRI = *Ctx.LS.MRI;
+
+  MCRegister BaseMCReg = getDescriptorBaseSgpr(DI.Inst, MRI);
+  if (!BaseMCReg.isValid()) {
+    log() << "hotswap: error: tensor_load_to_lds: could not extract descriptor "
+             "base register\n";
+    return failRequiredPatch(Ctx);
+  }
+
+  if (isAlreadyTensorMaskPatched(Ctx, Idx, BaseMCReg))
+    return false;
+
+  if (hasKnownNonClusterDispatch(Ctx, Idx))
+    return patchTensorLoadToLdsA0(Ctx, Idx);
+
+  SmallVector<unsigned, 8> DescriptorSgprs =
+      getDescriptorSgprIndices(DI.Inst, MRI);
+  std::optional<SgprScratchAlloc> ScratchSgpr =
+      tryAllocScratchSgpr(Ctx, Idx, DescriptorSgprs);
+  if (!ScratchSgpr) {
+    log() << "hotswap: error: tensor_load_to_lds: no scratch SGPR available "
+             "for B0 cluster-id check\n";
+    return failRequiredPatch(Ctx);
+  }
+
+  bool SccLive = isSccLiveAfter(Ctx, Idx);
+  std::optional<SgprScratchAlloc> SccScratchSgpr;
+  SmallVector<unsigned, 9> SccExcludedSgprs;
+  SccExcludedSgprs.append(DescriptorSgprs.begin(), DescriptorSgprs.end());
+  SccExcludedSgprs.push_back(ScratchSgpr->Sgpr);
+  if (SccLive) {
+    SccScratchSgpr = tryAllocScratchSgpr(Ctx, Idx, SccExcludedSgprs);
+    if (!SccScratchSgpr) {
+      log() << "hotswap: error: tensor_load_to_lds: no scratch SGPR available "
+               "to preserve SCC for B0 cluster-id check\n";
+      return failRequiredPatch(Ctx);
+    }
+  }
+
+  std::string BaseSreg = toAsmRegName(MRI, BaseMCReg);
+  std::string S = "s" + std::to_string(ScratchSgpr->Sgpr);
+  std::string SccS =
+      SccScratchSgpr ? "s" + std::to_string(SccScratchSgpr->Sgpr) : "";
+  std::string Context =
+      "tensor_load_to_lds B0 mask at 0x" + utohexstr(DI.Offset);
+
+  SmallVector<uint8_t> Prefix;
+  std::string ReadClusterIdAsm = "s_getreg_b32 " + BaseSreg +
+                                 ", hwreg(HW_REG_IB_STS2, " +
+                                 std::to_string(IbSts2ClusterIdOffset) + ", " +
+                                 std::to_string(IbSts2ClusterIdWidth) + ")";
+  if (!appendRequiredAsm(Ctx, Prefix, "s_mov_b32 " + S + ", " + BaseSreg,
+                         Context))
+    return false;
+
+  if (SccLive) {
+    if (!appendRequiredAsm(Ctx, Prefix, "s_cselect_b32 " + SccS + ", 1, 0",
+                           Context))
+      return false;
+  }
+
+  if (!appendRequiredAsm(Ctx, Prefix, ReadClusterIdAsm, Context))
+    return false;
+  if (!appendRequiredAsm(Ctx, Prefix, "s_cmp_eq_u32 " + BaseSreg + ", 0",
+                         Context))
+    return false;
+  if (!appendRequiredAsm(
+          Ctx, Prefix, "s_pack_hh_b32_b16 " + BaseSreg + ", 0, " + S, Context))
+    return false;
+  if (!appendRequiredAsm(
+          Ctx, Prefix, "s_cselect_b32 " + BaseSreg + ", " + BaseSreg + ", " + S,
+          Context))
+    return false;
+
+  if (SccLive) {
+    if (!appendRequiredAsm(Ctx, Prefix, "s_cmp_lg_u32 " + SccS + ", 0",
+                           Context))
+      return false;
+  }
+
+  const uint8_t *OrigInst = Ctx.Text + DI.Offset;
+  SmallVector<uint8_t> Replacement;
+  Replacement.append(Prefix.begin(), Prefix.end());
+  Replacement.append(OrigInst, OrigInst + DI.Size);
+
+  bool SgprLive = isSgprLiveAfter(Ctx, Idx, BaseMCReg);
+  if (SgprLive) {
+    SmallVector<uint8_t> Restore =
+        assembleSingleInst("s_mov_b32 " + BaseSreg + ", " + S, Ctx.LS);
+    if (Restore.empty()) {
+      log() << "hotswap: error: tensor_load_to_lds: B0 restore assembly "
+               "failed\n";
+      return failRequiredPatch(Ctx);
+    }
+    Replacement.append(Restore.begin(), Restore.end());
+  }
+
+  if (!emitReplacementCode(Ctx, DI.Offset, DI.Size, Replacement))
+    return failRequiredPatch(Ctx);
+
+  commitScratchSgpr(Ctx, *ScratchSgpr);
+  if (SccScratchSgpr)
+    commitScratchSgpr(Ctx, *SccScratchSgpr);
+  Ctx.RequiredPatchApplied = true;
+
+  log() << "hotswap: tensor_load_to_lds: B0 cluster-id conditional mask for "
+        << BaseSreg << ", save/restore via " << S << " at 0x"
+        << utohexstr(DI.Offset) << "\n";
+  DI.Mnemonic = "<replaced>";
+  return true;
+}
+
+std::optional<SmallVector<uint8_t>>
+buildClusterLoadA0MaskPrefix(PatchContext &Ctx, StringRef ScratchSgpr,
+                             StringRef Context) {
+  SmallVector<uint8_t> Prefix;
+  std::string SaveAsm = "s_mov_b32 ";
+  SaveAsm += ScratchSgpr;
+  SaveAsm += ", m0";
+  std::string MaskAsm = "s_pack_hh_b32_b16 m0, 0, m0";
+  if (!appendAsmBytes(Prefix, SaveAsm, Ctx.LS, Context))
+    return std::nullopt;
+  if (!appendAsmBytes(Prefix, MaskAsm, Ctx.LS, Context))
+    return std::nullopt;
+  return Prefix;
+}
+
+bool patchClusterLoadMaskA0(PatchContext &Ctx, size_t Idx) {
+  InternalDecodedInst &DI = Ctx.Decoded[Idx];
+  const MCRegisterInfo &MRI = *Ctx.LS.MRI;
+  if (isAlreadyClusterMaskPatched(Ctx, Idx))
+    return false;
+
+  SmallVector<unsigned, 8> ClusterLoadSgprs =
+      getSgprOperandIndices(DI.Inst, MRI);
+  std::optional<SgprScratchAlloc> ScratchSgpr =
+      tryAllocScratchSgpr(Ctx, Idx, ClusterLoadSgprs);
+  if (!ScratchSgpr) {
+    log() << "hotswap: error: " << DI.Mnemonic
+          << ": no scratch SGPR available for M0 mask save/restore at 0x"
+          << utohexstr(DI.Offset) << "\n";
+    return failRequiredPatch(Ctx);
+  }
+
+  std::string S = "s" + std::to_string(ScratchSgpr->Sgpr);
+  std::string Context = DI.Mnemonic + " M0 mask at 0x" + utohexstr(DI.Offset);
+  std::optional<SmallVector<uint8_t>> Prefix =
+      buildClusterLoadA0MaskPrefix(Ctx, S, Context);
+  std::string RestoreAsm = "s_mov_b32 m0, " + S;
+  SmallVector<uint8_t> Restore = assembleSingleInst(RestoreAsm, Ctx.LS);
+  if (!Prefix || Restore.empty()) {
+    log() << "hotswap: error: " << DI.Mnemonic
+          << ": M0 mask save/restore assembly failed at 0x"
+          << utohexstr(DI.Offset) << "\n";
+    return failRequiredPatch(Ctx);
+  }
+
+  const uint8_t *OrigInst = Ctx.Text + DI.Offset;
+  SmallVector<uint8_t> Replacement;
+  Replacement.append(Prefix->begin(), Prefix->end());
+  Replacement.append(OrigInst, OrigInst + DI.Size);
+  Replacement.append(Restore.begin(), Restore.end());
+
+  if (!emitReplacementCode(Ctx, DI.Offset, DI.Size, Replacement))
+    return failRequiredPatch(Ctx);
+
+  commitScratchSgpr(Ctx, *ScratchSgpr);
+  Ctx.RequiredPatchApplied = true;
+
+  log() << "hotswap: cluster_load M0 mask: " << DI.Mnemonic
+        << " clears A0 wg_mask bits, save/restore via " << S << " at 0x"
+        << utohexstr(DI.Offset) << "\n";
   DI.Mnemonic = "<replaced>";
   return true;
 }
@@ -875,19 +1336,29 @@ bool patchDsAddtid(PatchContext &Ctx, size_t Idx) {
 //
 //   ds_*_2addr_*           -> split into two single-address DS ops
 //     (covers both the stride64 and non-stride64 encodings)
-//   tensor_load_to_lds     -> prepend s_pack_hh_b32_b16 (+ save/restore)
+//   tensor_load_to_lds     -> apply the selected target stepping's multicast
+//                             mask rule
+//   cluster_load*          -> in A0 mask mode, save/clear/restore M0 for
+//                             remaining cluster ops
 //   ds_*_addtid_b32        -> materialise lane-id math in ALU, then ds_*_b32
 
 static uint32_t applyTrampolinePatchesImpl(PatchContext &Ctx, size_t Idx) {
   StringRef Mnem(Ctx.Decoded[Idx].Mnemonic);
 
-  if (!getDs2AddrReplacement(Mnem).empty())
+  if (Ctx.Config.RunB0A0Patches && !getDs2AddrReplacement(Mnem).empty())
     return patchDs2Addr(Ctx, Idx) ? 1 : 0;
 
-  if (Mnem == "tensor_load_to_lds")
-    return patchTensorLoadToLds(Ctx, Idx) ? 1 : 0;
+  if (Mnem == "tensor_load_to_lds") {
+    if (Ctx.Config.MaskPolicy == MaskWorkaroundPolicy::A0)
+      return patchTensorLoadToLdsA0(Ctx, Idx) ? 1 : 0;
+    if (Ctx.Config.MaskPolicy == MaskWorkaroundPolicy::B0)
+      return patchTensorLoadToLdsB0(Ctx, Idx) ? 1 : 0;
+  }
 
-  if (!getAddtidReplacement(Mnem).empty())
+  if (Ctx.Config.MaskPolicy == MaskWorkaroundPolicy::A0 && isClusterLoad(Mnem))
+    return patchClusterLoadMaskA0(Ctx, Idx) ? 1 : 0;
+
+  if (Ctx.Config.RunB0A0Patches && !getAddtidReplacement(Mnem).empty())
     return patchDsAddtid(Ctx, Idx) ? 1 : 0;
 
   return 0;

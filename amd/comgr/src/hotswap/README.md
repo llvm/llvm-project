@@ -25,10 +25,10 @@ Callers request optional gfx125x kernel descriptor entry redirection through
 `amd_comgr_hotswap_rewrite_with_options` with
 `AMD_COMGR_HOTSWAP_REWRITE_FLAG_ENTRY_TRAMPOLINES`.
 
-Callers request strict rewrite behavior through
-`AMD_COMGR_HOTSWAP_REWRITE_FLAG_STRICT_MODE`. Selected strict rewrites fail
-instead of returning the original unpatched code object when a required patch
-cannot be emitted safely.
+Callers request opt-in B0 strict-mode mask workarounds through
+`AMD_COMGR_HOTSWAP_REWRITE_FLAG_STRICT_MODE`. If a required selected mask
+workaround is detected but cannot be emitted safely, the rewrite fails instead
+of returning the original unpatched code object.
 
 `AMD_COMGR_STATUS_SUCCESS` means COMGR produced a valid output code object, not
 necessarily that the output bytes changed. If the source/target ISA pair and

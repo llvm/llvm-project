@@ -8,7 +8,7 @@
 
 // RUN: hotswap-rewrite %t.elf \
 // RUN:   amdgcn-amd-amdhsa--gfx1250 amdgcn-amd-amdhsa--gfx1250 \
-// RUN:   --output %t.out.elf \
+// RUN:   --strict-mode --output %t.out.elf \
 // RUN:   | %FileCheck --check-prefix=API %s
 // API: RESULT: SUCCESS
 
@@ -58,7 +58,7 @@
 // COM: Idempotency
 // RUN: hotswap-rewrite %t.out.elf \
 // RUN:   amdgcn-amd-amdhsa--gfx1250 amdgcn-amd-amdhsa--gfx1250 \
-// RUN:   --check-idempotent \
+// RUN:   --strict-mode --check-idempotent \
 // RUN:   | %FileCheck --check-prefix=IDEM %s
 // IDEM: IDEMPOTENT: YES
 

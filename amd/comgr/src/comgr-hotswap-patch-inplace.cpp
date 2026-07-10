@@ -126,10 +126,9 @@ static uint32_t applyInPlacePatchesImpl(PatchContext &Ctx, size_t Idx) {
     // cluster_load shares the mnemonic but has a different operand layout, so
     // reusing the off-form opcode would re-encode its scalar saddr and 32-bit
     // vaddr as a 64-bit vaddr plus an inline offset -- a corrupt address that
-    // faults the GPU at runtime. Leave the _SADDR form unchanged; cluster_load
-    // with an SGPR base runs natively on A0, so pass-through is correct. A
-    // dedicated _SADDR -> global_load_*_SADDR mapping can be added later if a
-    // B0 erratum ever requires downgrading the SGPR-relative form.
+    // faults the GPU at runtime. Leave the _SADDR form unchanged here so the
+    // later trampoline pass can preserve the cluster-load opcode and wrap it
+    // with the A0-required M0 wg_mask clear/restore sequence.
     if (usesSgprBaseAddress(DI.Inst, *Ctx.LS.MRI)) {
       log() << "hotswap: inplace: " << Mnemonic
             << " (SGPR-relative saddr form) left unchanged at 0x"
