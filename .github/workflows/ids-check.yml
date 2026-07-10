@@ -84,7 +84,7 @@ jobs:
           python llvm/utils/git/ids-check-helper.py \
             --token ${{ secrets.GITHUB_TOKEN }} \
             --issue-number $GITHUB_PR_NUMBER \
-            --idt-path ${{ github.workspace }}/ids/build/bin/idt \
+            --idt-path idt \
             --compile-commands ${{ github.workspace }}/llvm-project/build/compile_commands.json \
             --start-rev HEAD~1 \
             --end-rev HEAD \
