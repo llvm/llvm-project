@@ -351,11 +351,18 @@ void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleT *Cycle) {
   unsigned Pos = Cycle->IdxEnd;
   BlockLayout.insert(BlockLayout.begin() + Pos, Block);
   for (CycleT *TLC : toplevel_cycles())
-    for (CycleT *C : depth_first(TLC))
+    for (auto It = df_begin(TLC), E = df_end(TLC); It != E;) {
+      CycleT *C = *It;
+      if (C->IdxEnd <= Pos) {
+        It.skipChildren();
+        continue;
+      }
       if (C->IdxBegin >= Pos) {
         ++C->IdxBegin;
         ++C->IdxEnd;
       }
+      ++It;
+    }
   addToBlockMap(Block, Cycle);
   // Cycle and its ancestors gain the new block: extend each one's slice and
   // invalidate its exit-block cache in a single walk up the tree.
