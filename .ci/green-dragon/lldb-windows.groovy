@@ -48,7 +48,7 @@ pipeline {
             }
         }
 
-        stage('Build and Test (No LLDB Server)') {
+        stage('Build and Test') {
             steps {
                 timeout(60) {
                     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
@@ -81,28 +81,6 @@ cmake -G Ninja ^
     -DLLVM_LIT_ARGS="-v --time-tests --xunit-xml-output=C:\\workspace\\llvm-build\\test\\results-no-lldb-server.xml" ^
     -DPython3_EXECUTABLE="C:\\Program Files\\Python313\\python.exe" || exit /b 1
 ninja check-lldb -C ..\\llvm-build || exit /b 1
-'''
-                        bat '''
-                            docker run --rm ^
-                                -e BUILD_TYPE=%BUILD_TYPE% ^
-                                -v "%CD%:C:\\workspace" ^
-                                -w "C:\\workspace\\llvm-project" ^
-                                swiftlang/swift-ci:lldb-windowsservercore-1809 ^
-                                cmd /C C:\\workspace\\build.bat
-                        '''
-                    }
-                }
-            }
-        }
-
-        stage('Test (LLDB Server)') {
-            steps {
-                timeout(30) {
-                    catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                        writeFile file: 'test-lldb-server.bat', text: '''@echo off
-call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat" || exit /b 1
-
-set "PATH=%PATH%;C:\\Program Files\\Git\\usr\\bin"
 
 cmake -G Ninja ^
     -S llvm ^
@@ -117,12 +95,13 @@ ninja check-lldb -C ..\\llvm-build || exit /b 1
                                 -v "%CD%:C:\\workspace" ^
                                 -w "C:\\workspace\\llvm-project" ^
                                 swiftlang/swift-ci:lldb-windowsservercore-1809 ^
-                                cmd /C C:\\workspace\\test-lldb-server.bat
+                                cmd /C C:\\workspace\\build.bat
                         '''
                     }
                 }
             }
         }
+    }
 
     post {
         always {

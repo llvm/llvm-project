@@ -13835,6 +13835,8 @@ def note_hlsl_resource_range_here: Note<"overlapping resource range here">;
 
 def err_hlsl_incomplete_resource_array_in_function_param: Error<
   "incomplete resource array in a function parameter">;
+def err_hlsl_resource_param_in_noinline_function: Error<
+  "resource type %0 cannot be used as a parameter of a noinline function">;
 def err_hlsl_assign_to_global_resource: Error<
   "assignment to global resource variable %0 is not allowed">;
 def warn_hlsl_assigning_local_resource_is_not_unique
