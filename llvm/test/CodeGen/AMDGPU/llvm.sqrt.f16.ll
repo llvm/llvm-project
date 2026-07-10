@@ -52,41 +52,71 @@ define amdgpu_kernel void @sqrt_f16(
 ; VI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
 ;
-; GFX11-TRUE16-LABEL: sqrt_f16:
-; GFX11-TRUE16:       ; %bb.0: ; %entry
-; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-TRUE16-NEXT:    s_mov_b32 s6, -1
-; GFX11-TRUE16-NEXT:    s_mov_b32 s7, 0x31016000
-; GFX11-TRUE16-NEXT:    s_mov_b32 s10, s6
-; GFX11-TRUE16-NEXT:    s_mov_b32 s11, s7
-; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s2
-; GFX11-TRUE16-NEXT:    s_mov_b32 s9, s3
-; GFX11-TRUE16-NEXT:    s_mov_b32 s4, s0
-; GFX11-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[8:11], 0
-; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s1
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
-; GFX11-TRUE16-NEXT:    buffer_store_b16 v0, off, s[4:7], 0
-; GFX11-TRUE16-NEXT:    s_endpgm
+; GFX11-TRUE16-SDAG-LABEL: sqrt_f16:
+; GFX11-TRUE16-SDAG:       ; %bb.0: ; %entry
+; GFX11-TRUE16-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-TRUE16-SDAG-NEXT:    s_mov_b32 s6, -1
+; GFX11-TRUE16-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
+; GFX11-TRUE16-SDAG-NEXT:    s_mov_b32 s10, s6
+; GFX11-TRUE16-SDAG-NEXT:    s_mov_b32 s11, s7
+; GFX11-TRUE16-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-SDAG-NEXT:    s_mov_b32 s8, s2
+; GFX11-TRUE16-SDAG-NEXT:    s_mov_b32 s9, s3
+; GFX11-TRUE16-SDAG-NEXT:    s_mov_b32 s4, s0
+; GFX11-TRUE16-SDAG-NEXT:    buffer_load_d16_b16 v0, off, s[8:11], 0
+; GFX11-TRUE16-SDAG-NEXT:    s_mov_b32 s5, s1
+; GFX11-TRUE16-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-SDAG-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
+; GFX11-TRUE16-SDAG-NEXT:    buffer_store_b16 v0, off, s[4:7], 0
+; GFX11-TRUE16-SDAG-NEXT:    s_endpgm
 ;
-; GFX11-FAKE16-LABEL: sqrt_f16:
-; GFX11-FAKE16:       ; %bb.0: ; %entry
-; GFX11-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-FAKE16-NEXT:    s_mov_b32 s6, -1
-; GFX11-FAKE16-NEXT:    s_mov_b32 s7, 0x31016000
-; GFX11-FAKE16-NEXT:    s_mov_b32 s10, s6
-; GFX11-FAKE16-NEXT:    s_mov_b32 s11, s7
-; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    s_mov_b32 s8, s2
-; GFX11-FAKE16-NEXT:    s_mov_b32 s9, s3
-; GFX11-FAKE16-NEXT:    s_mov_b32 s4, s0
-; GFX11-FAKE16-NEXT:    buffer_load_u16 v0, off, s[8:11], 0
-; GFX11-FAKE16-NEXT:    s_mov_b32 s5, s1
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-FAKE16-NEXT:    buffer_store_b16 v0, off, s[4:7], 0
-; GFX11-FAKE16-NEXT:    s_endpgm
+; GFX11-TRUE16-GISEL-LABEL: sqrt_f16:
+; GFX11-TRUE16-GISEL:       ; %bb.0: ; %entry
+; GFX11-TRUE16-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-TRUE16-GISEL-NEXT:    s_mov_b32 s6, -1
+; GFX11-TRUE16-GISEL-NEXT:    s_mov_b32 s7, 0x31016000
+; GFX11-TRUE16-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX11-TRUE16-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
+; GFX11-TRUE16-GISEL-NEXT:    buffer_load_d16_b16 v0, off, s[4:7], 0
+; GFX11-TRUE16-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-GISEL-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
+; GFX11-TRUE16-GISEL-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
+; GFX11-TRUE16-GISEL-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-SDAG-LABEL: sqrt_f16:
+; GFX11-FAKE16-SDAG:       ; %bb.0: ; %entry
+; GFX11-FAKE16-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s6, -1
+; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
+; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s10, s6
+; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s11, s7
+; GFX11-FAKE16-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s8, s2
+; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s9, s3
+; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s4, s0
+; GFX11-FAKE16-SDAG-NEXT:    buffer_load_u16 v0, off, s[8:11], 0
+; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s5, s1
+; GFX11-FAKE16-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-SDAG-NEXT:    v_sqrt_f16_e32 v0, v0
+; GFX11-FAKE16-SDAG-NEXT:    buffer_store_b16 v0, off, s[4:7], 0
+; GFX11-FAKE16-SDAG-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-GISEL-LABEL: sqrt_f16:
+; GFX11-FAKE16-GISEL:       ; %bb.0: ; %entry
+; GFX11-FAKE16-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-FAKE16-GISEL-NEXT:    s_mov_b32 s6, -1
+; GFX11-FAKE16-GISEL-NEXT:    s_mov_b32 s7, 0x31016000
+; GFX11-FAKE16-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX11-FAKE16-GISEL-NEXT:    buffer_load_u16 v0, off, s[4:7], 0
+; GFX11-FAKE16-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX11-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-GISEL-NEXT:    v_sqrt_f16_e32 v0, s2
+; GFX11-FAKE16-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
+; GFX11-FAKE16-GISEL-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
+; GFX11-FAKE16-GISEL-NEXT:    s_endpgm
 ;
 ; GFX12-TRUE16-SDAG-LABEL: sqrt_f16:
 ; GFX12-TRUE16-SDAG:       ; %bb.0: ; %entry
@@ -216,26 +246,45 @@ define amdgpu_kernel void @sqrt_v2f16(
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
 ;
-; GFX11-TRUE16-LABEL: sqrt_v2f16:
-; GFX11-TRUE16:       ; %bb.0: ; %entry
-; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-TRUE16-NEXT:    s_mov_b32 s6, -1
-; GFX11-TRUE16-NEXT:    s_mov_b32 s7, 0x31016000
-; GFX11-TRUE16-NEXT:    s_mov_b32 s10, s6
-; GFX11-TRUE16-NEXT:    s_mov_b32 s11, s7
-; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s2
-; GFX11-TRUE16-NEXT:    s_mov_b32 s9, s3
-; GFX11-TRUE16-NEXT:    s_mov_b32 s4, s0
-; GFX11-TRUE16-NEXT:    buffer_load_b32 v0, off, s[8:11], 0
-; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s1
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_sqrt_f16_e32 v0.h, v1.l
-; GFX11-TRUE16-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
-; GFX11-TRUE16-NEXT:    s_endpgm
+; GFX11-TRUE16-SDAG-LABEL: sqrt_v2f16:
+; GFX11-TRUE16-SDAG:       ; %bb.0: ; %entry
+; GFX11-TRUE16-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-TRUE16-SDAG-NEXT:    s_mov_b32 s6, -1
+; GFX11-TRUE16-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
+; GFX11-TRUE16-SDAG-NEXT:    s_mov_b32 s10, s6
+; GFX11-TRUE16-SDAG-NEXT:    s_mov_b32 s11, s7
+; GFX11-TRUE16-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-SDAG-NEXT:    s_mov_b32 s8, s2
+; GFX11-TRUE16-SDAG-NEXT:    s_mov_b32 s9, s3
+; GFX11-TRUE16-SDAG-NEXT:    s_mov_b32 s4, s0
+; GFX11-TRUE16-SDAG-NEXT:    buffer_load_b32 v0, off, s[8:11], 0
+; GFX11-TRUE16-SDAG-NEXT:    s_mov_b32 s5, s1
+; GFX11-TRUE16-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-SDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX11-TRUE16-SDAG-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
+; GFX11-TRUE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-SDAG-NEXT:    v_sqrt_f16_e32 v0.h, v1.l
+; GFX11-TRUE16-SDAG-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
+; GFX11-TRUE16-SDAG-NEXT:    s_endpgm
+;
+; GFX11-TRUE16-GISEL-LABEL: sqrt_v2f16:
+; GFX11-TRUE16-GISEL:       ; %bb.0: ; %entry
+; GFX11-TRUE16-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-TRUE16-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-GISEL-NEXT:    s_load_b32 s2, s[2:3], 0x0
+; GFX11-TRUE16-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-GISEL-NEXT:    s_lshr_b32 s3, s2, 16
+; GFX11-TRUE16-GISEL-NEXT:    v_sqrt_f16_e32 v0.l, s2
+; GFX11-TRUE16-GISEL-NEXT:    v_sqrt_f16_e32 v1.l, s3
+; GFX11-TRUE16-GISEL-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
+; GFX11-TRUE16-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX11-TRUE16-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
+; GFX11-TRUE16-GISEL-NEXT:    s_pack_ll_b32_b16 s2, s2, s3
+; GFX11-TRUE16-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-TRUE16-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX11-TRUE16-GISEL-NEXT:    s_mov_b32 s2, -1
+; GFX11-TRUE16-GISEL-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
+; GFX11-TRUE16-GISEL-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: sqrt_v2f16:
 ; GFX11-FAKE16:       ; %bb.0: ; %entry
@@ -260,26 +309,44 @@ define amdgpu_kernel void @sqrt_v2f16(
 ; GFX11-FAKE16-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
 ; GFX11-FAKE16-NEXT:    s_endpgm
 ;
-; GFX12-TRUE16-LABEL: sqrt_v2f16:
-; GFX12-TRUE16:       ; %bb.0: ; %entry
-; GFX12-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX12-TRUE16-NEXT:    s_mov_b32 s6, -1
-; GFX12-TRUE16-NEXT:    s_mov_b32 s7, 0x31016000
-; GFX12-TRUE16-NEXT:    s_mov_b32 s10, s6
-; GFX12-TRUE16-NEXT:    s_mov_b32 s11, s7
-; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s2
-; GFX12-TRUE16-NEXT:    s_mov_b32 s9, s3
-; GFX12-TRUE16-NEXT:    s_mov_b32 s4, s0
-; GFX12-TRUE16-NEXT:    buffer_load_b32 v0, off, s[8:11], null
-; GFX12-TRUE16-NEXT:    s_mov_b32 s5, s1
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_sqrt_f16_e32 v0.h, v1.l
-; GFX12-TRUE16-NEXT:    buffer_store_b32 v0, off, s[4:7], null
-; GFX12-TRUE16-NEXT:    s_endpgm
+; GFX12-TRUE16-SDAG-LABEL: sqrt_v2f16:
+; GFX12-TRUE16-SDAG:       ; %bb.0: ; %entry
+; GFX12-TRUE16-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-TRUE16-SDAG-NEXT:    s_mov_b32 s6, -1
+; GFX12-TRUE16-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
+; GFX12-TRUE16-SDAG-NEXT:    s_mov_b32 s10, s6
+; GFX12-TRUE16-SDAG-NEXT:    s_mov_b32 s11, s7
+; GFX12-TRUE16-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-SDAG-NEXT:    s_mov_b32 s8, s2
+; GFX12-TRUE16-SDAG-NEXT:    s_mov_b32 s9, s3
+; GFX12-TRUE16-SDAG-NEXT:    s_mov_b32 s4, s0
+; GFX12-TRUE16-SDAG-NEXT:    buffer_load_b32 v0, off, s[8:11], null
+; GFX12-TRUE16-SDAG-NEXT:    s_mov_b32 s5, s1
+; GFX12-TRUE16-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-TRUE16-SDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX12-TRUE16-SDAG-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
+; GFX12-TRUE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-TRUE16-SDAG-NEXT:    v_sqrt_f16_e32 v0.h, v1.l
+; GFX12-TRUE16-SDAG-NEXT:    buffer_store_b32 v0, off, s[4:7], null
+; GFX12-TRUE16-SDAG-NEXT:    s_endpgm
+;
+; GFX12-TRUE16-GISEL-LABEL: sqrt_v2f16:
+; GFX12-TRUE16-GISEL:       ; %bb.0: ; %entry
+; GFX12-TRUE16-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-TRUE16-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-GISEL-NEXT:    s_load_b32 s2, s[2:3], 0x0
+; GFX12-TRUE16-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-GISEL-NEXT:    s_lshr_b32 s3, s2, 16
+; GFX12-TRUE16-GISEL-NEXT:    v_s_sqrt_f16 s2, s2
+; GFX12-TRUE16-GISEL-NEXT:    v_s_sqrt_f16 s3, s3
+; GFX12-TRUE16-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-TRUE16-GISEL-NEXT:    s_pack_ll_b32_b16 s2, s2, s3
+; GFX12-TRUE16-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX12-TRUE16-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-TRUE16-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX12-TRUE16-GISEL-NEXT:    s_mov_b32 s2, -1
+; GFX12-TRUE16-GISEL-NEXT:    buffer_store_b32 v0, off, s[0:3], null
+; GFX12-TRUE16-GISEL-NEXT:    s_endpgm
 ;
 ; GFX12-FAKE16-LABEL: sqrt_v2f16:
 ; GFX12-FAKE16:       ; %bb.0: ; %entry
@@ -388,8 +455,3 @@ define amdgpu_ps half @sqrt_f16_v(half %x) {
   %result = call half @llvm.sqrt.f16(half %x)
   ret half %result
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GFX11-FAKE16-GISEL: {{.*}}
-; GFX11-FAKE16-SDAG: {{.*}}
-; GFX11-TRUE16-GISEL: {{.*}}
-; GFX11-TRUE16-SDAG: {{.*}}

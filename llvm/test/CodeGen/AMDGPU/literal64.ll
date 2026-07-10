@@ -295,20 +295,35 @@ define amdgpu_ps i64 @s_and_b64(i64 inreg %a) {
 ; No V_AND_B64 instruction, it has to be split
 
 define amdgpu_ps void @v_and_b64(i64 %a, ptr addrspace(1) %out) {
-; GFX1250-LABEL: v_and_b64:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_and_b32_e32 v1, 15, v1
-; GFX1250-NEXT:    v_and_b32_e32 v0, 0x12345678, v0
-; GFX1250-NEXT:    global_store_b64 v[2:3], v[0:1], off
-; GFX1250-NEXT:    s_endpgm
+; GFX1250-SDAG-LABEL: v_and_b64:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-NEXT:    v_and_b32_e32 v1, 15, v1
+; GFX1250-SDAG-NEXT:    v_and_b32_e32 v0, 0x12345678, v0
+; GFX1250-SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX1250-SDAG-NEXT:    s_endpgm
 ;
-; GFX13-LABEL: v_and_b64:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    v_and_b32_e32 v1, 15, v1
-; GFX13-NEXT:    v_and_b32_e32 v0, 0x12345678, v0
-; GFX13-NEXT:    global_store_b64 v[2:3], v[0:1], off
-; GFX13-NEXT:    s_endpgm
+; GFX1250-GISEL-LABEL: v_and_b64:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-NEXT:    v_and_b32_e32 v0, 0x12345678, v0
+; GFX1250-GISEL-NEXT:    v_and_b32_e32 v1, 15, v1
+; GFX1250-GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX13-SDAG-LABEL: v_and_b64:
+; GFX13-SDAG:       ; %bb.0:
+; GFX13-SDAG-NEXT:    v_and_b32_e32 v1, 15, v1
+; GFX13-SDAG-NEXT:    v_and_b32_e32 v0, 0x12345678, v0
+; GFX13-SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX13-SDAG-NEXT:    s_endpgm
+;
+; GFX13-GISEL-LABEL: v_and_b64:
+; GFX13-GISEL:       ; %bb.0:
+; GFX13-GISEL-NEXT:    v_and_b32_e32 v0, 0x12345678, v0
+; GFX13-GISEL-NEXT:    v_and_b32_e32 v1, 15, v1
+; GFX13-GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX13-GISEL-NEXT:    s_endpgm
   %result = and i64 %a, 64729929336
   store i64 %result, ptr addrspace(1) %out, align 8
   ret void

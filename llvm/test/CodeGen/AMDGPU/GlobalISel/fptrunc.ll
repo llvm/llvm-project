@@ -597,16 +597,26 @@ define amdgpu_ps half @fptrunc_f64_to_f16_div(double %a) {
 define amdgpu_ps <2 x half> @fptrunc_v2f32_to_v2f16_uniform(<2 x float> inreg %a) {
 ; GFX11-FAKE16-LABEL: fptrunc_v2f32_to_v2f16_uniform:
 ; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, s1
-; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e32 v1, s0
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-FAKE16-NEXT:    v_pack_b32_f16 v0, v1, v0
+; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, s0
+; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e32 v1, s1
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-FAKE16-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-TRUE16-LABEL: fptrunc_v2f32_to_v2f16_uniform:
 ; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, s1
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, s0
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, s1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: fptrunc_v2f32_to_v2f16_uniform:

@@ -167,9 +167,17 @@ define void @v_constained_fma_v2f16_fpexcept_strict_uni(<2 x half> inreg %x, <2 
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v2, s2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_pk_fma_f16 v2, s0, s1, v2
+; GFX12-NEXT:    s_lshr_b32 s3, s0, 16
+; GFX12-NEXT:    s_lshr_b32 s4, s1, 16
+; GFX12-NEXT:    s_lshr_b32 s5, s2, 16
+; GFX12-NEXT:    s_fmac_f16 s2, s0, s1
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_fmac_f16 s5, s3, s4
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
+; GFX12-NEXT:    s_pack_ll_b32_b16 s0, s2, s5
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %val = call <2 x half> @llvm.experimental.constrained.fma.v2f16(<2 x half> %x, <2 x half> %y, <2 x half> %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
@@ -371,20 +379,21 @@ define void @v_constained_fma_v4f16_fpexcept_strict_uni(<4 x half> inreg %x, <4 
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_lshr_b32 s4, s17, 16
-; GFX12-NEXT:    s_lshr_b32 s5, s3, 16
-; GFX12-NEXT:    s_lshr_b32 s6, s1, 16
-; GFX12-NEXT:    s_lshr_b32 s7, s16, 16
-; GFX12-NEXT:    s_lshr_b32 s8, s2, 16
-; GFX12-NEXT:    s_lshr_b32 s9, s0, 16
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_fmac_f16 s4, s6, s5
-; GFX12-NEXT:    s_fmac_f16 s7, s9, s8
+; GFX12-NEXT:    s_lshr_b32 s4, s0, 16
+; GFX12-NEXT:    s_lshr_b32 s5, s2, 16
+; GFX12-NEXT:    s_lshr_b32 s6, s16, 16
 ; GFX12-NEXT:    s_fmac_f16 s16, s0, s2
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_fmac_f16 s6, s4, s5
+; GFX12-NEXT:    s_lshr_b32 s0, s1, 16
+; GFX12-NEXT:    s_lshr_b32 s2, s3, 16
+; GFX12-NEXT:    s_lshr_b32 s4, s17, 16
 ; GFX12-NEXT:    s_fmac_f16 s17, s1, s3
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_pack_ll_b32_b16 s0, s16, s7
+; GFX12-NEXT:    s_fmac_f16 s4, s0, s2
+; GFX12-NEXT:    s_pack_ll_b32_b16 s0, s16, s6
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_pack_ll_b32_b16 s1, s17, s4
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_mov_b32 v3, s1
@@ -844,9 +853,22 @@ define void @v_constained_fma_v2f16_fpexcept_strict_fneg_fneg_uni(<2 x half> inr
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v2, s2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_pk_fma_f16 v2, s0, s1, v2 neg_lo:[1,1,0] neg_hi:[1,1,0]
+; GFX12-NEXT:    s_lshr_b32 s3, s0, 16
+; GFX12-NEXT:    s_lshr_b32 s4, s1, 16
+; GFX12-NEXT:    s_xor_b32 s0, s0, 0x8000
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_xor_b32 s3, s3, 0x8000
+; GFX12-NEXT:    s_xor_b32 s1, s1, 0x8000
+; GFX12-NEXT:    s_xor_b32 s4, s4, 0x8000
+; GFX12-NEXT:    s_lshr_b32 s5, s2, 16
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_fmac_f16 s2, s0, s1
+; GFX12-NEXT:    s_fmac_f16 s5, s3, s4
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
+; GFX12-NEXT:    s_pack_ll_b32_b16 s0, s2, s5
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %neg.x = fneg <2 x half> %x

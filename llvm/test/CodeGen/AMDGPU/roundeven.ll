@@ -1107,15 +1107,14 @@ define double @v_roundeven_f64(double %x) {
 ; GFX6-LABEL: v_roundeven_f64:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    s_brev_b32 s6, -2
-; GFX6-NEXT:    v_mov_b32_e32 v2, 0x43300000
-; GFX6-NEXT:    v_bfi_b32 v3, s6, v2, v1
+; GFX6-NEXT:    v_and_b32_e32 v3, 0x80000000, v1
 ; GFX6-NEXT:    v_mov_b32_e32 v2, 0
+; GFX6-NEXT:    v_or_b32_e32 v3, 0x43300000, v3
 ; GFX6-NEXT:    v_add_f64 v[4:5], v[0:1], v[2:3]
-; GFX6-NEXT:    s_mov_b32 s4, -1
-; GFX6-NEXT:    s_mov_b32 s5, 0x432fffff
+; GFX6-NEXT:    v_mov_b32_e32 v6, -1
+; GFX6-NEXT:    v_mov_b32_e32 v7, 0x432fffff
 ; GFX6-NEXT:    v_add_f64 v[2:3], v[4:5], -v[2:3]
-; GFX6-NEXT:    v_cmp_gt_f64_e64 vcc, |v[0:1]|, s[4:5]
+; GFX6-NEXT:    v_cmp_gt_f64_e64 vcc, |v[0:1]|, v[6:7]
 ; GFX6-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GFX6-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
@@ -1191,18 +1190,17 @@ define double @v_roundeven_f64_fneg(double %x) {
 ; GFX6-LABEL: v_roundeven_f64_fneg:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_xor_b32_e32 v6, 0x80000000, v1
-; GFX6-NEXT:    s_brev_b32 s4, -2
-; GFX6-NEXT:    v_mov_b32_e32 v2, 0x43300000
-; GFX6-NEXT:    v_bfi_b32 v3, s4, v2, v6
+; GFX6-NEXT:    v_xor_b32_e32 v8, 0x80000000, v1
+; GFX6-NEXT:    v_and_b32_e32 v3, 0x80000000, v8
 ; GFX6-NEXT:    v_mov_b32_e32 v2, 0
+; GFX6-NEXT:    v_or_b32_e32 v3, 0x43300000, v3
 ; GFX6-NEXT:    v_add_f64 v[4:5], -v[0:1], v[2:3]
-; GFX6-NEXT:    s_mov_b32 s4, -1
-; GFX6-NEXT:    s_mov_b32 s5, 0x432fffff
+; GFX6-NEXT:    v_mov_b32_e32 v6, -1
+; GFX6-NEXT:    v_mov_b32_e32 v7, 0x432fffff
 ; GFX6-NEXT:    v_add_f64 v[2:3], v[4:5], -v[2:3]
-; GFX6-NEXT:    v_cmp_gt_f64_e64 vcc, |v[0:1]|, s[4:5]
+; GFX6-NEXT:    v_cmp_gt_f64_e64 vcc, |v[0:1]|, v[6:7]
 ; GFX6-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; GFX6-NEXT:    v_cndmask_b32_e32 v1, v3, v6, vcc
+; GFX6-NEXT:    v_cndmask_b32_e32 v1, v3, v8, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-LABEL: v_roundeven_f64_fneg:
@@ -1278,21 +1276,21 @@ define <2 x double> @v_roundeven_v2f64(<2 x double> %x) {
 ; GFX6-LABEL: v_roundeven_v2f64:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    s_brev_b32 s6, -2
-; GFX6-NEXT:    v_mov_b32_e32 v8, 0x43300000
-; GFX6-NEXT:    v_bfi_b32 v5, s6, v8, v1
+; GFX6-NEXT:    v_and_b32_e32 v5, 0x80000000, v1
 ; GFX6-NEXT:    v_mov_b32_e32 v4, 0
+; GFX6-NEXT:    v_or_b32_e32 v5, 0x43300000, v5
 ; GFX6-NEXT:    v_add_f64 v[6:7], v[0:1], v[4:5]
-; GFX6-NEXT:    s_mov_b32 s4, -1
-; GFX6-NEXT:    s_mov_b32 s5, 0x432fffff
+; GFX6-NEXT:    v_mov_b32_e32 v8, -1
+; GFX6-NEXT:    v_mov_b32_e32 v9, 0x432fffff
 ; GFX6-NEXT:    v_add_f64 v[5:6], v[6:7], -v[4:5]
-; GFX6-NEXT:    v_cmp_gt_f64_e64 vcc, |v[0:1]|, s[4:5]
+; GFX6-NEXT:    v_cmp_gt_f64_e64 vcc, |v[0:1]|, v[8:9]
 ; GFX6-NEXT:    v_cndmask_b32_e32 v0, v5, v0, vcc
-; GFX6-NEXT:    v_bfi_b32 v5, s6, v8, v3
-; GFX6-NEXT:    v_add_f64 v[7:8], v[2:3], v[4:5]
+; GFX6-NEXT:    v_and_b32_e32 v5, 0x80000000, v3
+; GFX6-NEXT:    v_or_b32_e32 v5, 0x43300000, v5
+; GFX6-NEXT:    v_add_f64 v[10:11], v[2:3], v[4:5]
 ; GFX6-NEXT:    v_cndmask_b32_e32 v1, v6, v1, vcc
-; GFX6-NEXT:    v_add_f64 v[4:5], v[7:8], -v[4:5]
-; GFX6-NEXT:    v_cmp_gt_f64_e64 vcc, |v[2:3]|, s[4:5]
+; GFX6-NEXT:    v_add_f64 v[4:5], v[10:11], -v[4:5]
+; GFX6-NEXT:    v_cmp_gt_f64_e64 vcc, |v[2:3]|, v[8:9]
 ; GFX6-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; GFX6-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]

@@ -2331,32 +2331,30 @@ define amdgpu_kernel void @ctpop_i16_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    s_lshr_b32 s4, s6, 16
+; VI-GISEL-NEXT:    s_mov_b32 s4, 1
 ; VI-GISEL-NEXT:    s_cbranch_scc0 .LBB14_2
 ; VI-GISEL-NEXT:  ; %bb.1: ; %else
-; VI-GISEL-NEXT:    s_mov_b32 s11, 0xf000
 ; VI-GISEL-NEXT:    s_mov_b32 s10, -1
-; VI-GISEL-NEXT:    s_mov_b32 s8, s2
-; VI-GISEL-NEXT:    s_mov_b32 s9, s3
+; VI-GISEL-NEXT:    s_mov_b32 s11, 0xf000
+; VI-GISEL-NEXT:    s_mov_b64 s[8:9], s[2:3]
 ; VI-GISEL-NEXT:    buffer_load_ushort v0, off, s[8:11], 0 offset:2
-; VI-GISEL-NEXT:    s_mov_b64 s[2:3], 0
+; VI-GISEL-NEXT:    s_mov_b32 s4, 0
+; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; VI-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
 ; VI-GISEL-NEXT:    s_branch .LBB14_3
 ; VI-GISEL-NEXT:  .LBB14_2:
-; VI-GISEL-NEXT:    s_mov_b64 s[2:3], -1
-; VI-GISEL-NEXT:    ; implicit-def: $vgpr0
+; VI-GISEL-NEXT:    ; implicit-def: $sgpr2
 ; VI-GISEL-NEXT:  .LBB14_3: ; %Flow
-; VI-GISEL-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; VI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; VI-GISEL-NEXT:    s_cmp_lg_u32 s2, 1
+; VI-GISEL-NEXT:    s_xor_b32 s3, s4, 1
+; VI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; VI-GISEL-NEXT:    s_cbranch_scc1 .LBB14_5
 ; VI-GISEL-NEXT:  ; %bb.4: ; %if
 ; VI-GISEL-NEXT:    s_and_b32 s2, s6, 0xffff
 ; VI-GISEL-NEXT:    s_bcnt1_i32_b32 s2, s2
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-GISEL-NEXT:  .LBB14_5: ; %endif
-; VI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-GISEL-NEXT:    s_mov_b32 s2, -1
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; VI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-GISEL-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; VI-GISEL-NEXT:    s_endpgm
 entry:

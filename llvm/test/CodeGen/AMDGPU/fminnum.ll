@@ -1838,47 +1838,102 @@ define amdgpu_ps half @test_fmin_f16_v_ieee_off(half %a, half %b) #0 {
 }
 
 define amdgpu_kernel void @test_fmin_f16_s_ieee_on(ptr addrspace(1) %out, half inreg %a, half inreg %b) #0 {
-; GFX8-LABEL: test_fmin_f16_s_ieee_on:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dword s6, s[4:5], 0x2c
-; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX8-NEXT:    s_mov_b32 s3, 0xf000
-; GFX8-NEXT:    s_mov_b32 s2, -1
-; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    s_lshr_b32 s4, s6, 16
-; GFX8-NEXT:    v_max_f16_e64 v0, s4, s4
-; GFX8-NEXT:    v_max_f16_e64 v1, s6, s6
-; GFX8-NEXT:    v_min_f16_e32 v0, v1, v0
-; GFX8-NEXT:    buffer_store_short v0, off, s[0:3], 0
-; GFX8-NEXT:    s_endpgm
+; GFX8-SDAG-LABEL: test_fmin_f16_s_ieee_on:
+; GFX8-SDAG:       ; %bb.0:
+; GFX8-SDAG-NEXT:    s_load_dword s6, s[4:5], 0x2c
+; GFX8-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX8-SDAG-NEXT:    s_mov_b32 s3, 0xf000
+; GFX8-SDAG-NEXT:    s_mov_b32 s2, -1
+; GFX8-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-SDAG-NEXT:    s_lshr_b32 s4, s6, 16
+; GFX8-SDAG-NEXT:    v_max_f16_e64 v0, s4, s4
+; GFX8-SDAG-NEXT:    v_max_f16_e64 v1, s6, s6
+; GFX8-SDAG-NEXT:    v_min_f16_e32 v0, v1, v0
+; GFX8-SDAG-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; GFX8-SDAG-NEXT:    s_endpgm
 ;
-; GFX9-LABEL: test_fmin_f16_s_ieee_on:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s6, s[4:5], 0x2c
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX9-NEXT:    s_mov_b32 s3, 0xf000
-; GFX9-NEXT:    s_mov_b32 s2, -1
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_lshr_b32 s4, s6, 16
-; GFX9-NEXT:    v_max_f16_e64 v0, s4, s4
-; GFX9-NEXT:    v_max_f16_e64 v1, s6, s6
-; GFX9-NEXT:    v_min_f16_e32 v0, v1, v0
-; GFX9-NEXT:    buffer_store_short v0, off, s[0:3], 0
-; GFX9-NEXT:    s_endpgm
+; GFX8-GISEL-LABEL: test_fmin_f16_s_ieee_on:
+; GFX8-GISEL:       ; %bb.0:
+; GFX8-GISEL-NEXT:    s_mov_b32 s6, -1
+; GFX8-GISEL-NEXT:    s_mov_b32 s7, 0xf000
+; GFX8-GISEL-NEXT:    buffer_load_ushort v0, off, s[4:7], 0 offset:46
+; GFX8-GISEL-NEXT:    s_load_dword s0, s[4:5], 0x2c
+; GFX8-GISEL-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
+; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX8-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-GISEL-NEXT:    v_max_f16_e64 v0, s0, s0
+; GFX8-GISEL-NEXT:    v_max_f16_e64 v1, s1, s1
+; GFX8-GISEL-NEXT:    v_min_f16_e32 v0, v0, v1
+; GFX8-GISEL-NEXT:    buffer_store_short v0, off, s[4:7], 0
+; GFX8-GISEL-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: test_fmin_f16_s_ieee_on:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_lshr_b32 s3, s2, 16
-; GFX12-NEXT:    v_max_num_f16_e64 v0.h, s2, s2
-; GFX12-NEXT:    v_max_num_f16_e64 v0.l, s3, s3
-; GFX12-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX12-NEXT:    s_mov_b32 s2, -1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_min_num_f16_e32 v0.l, v0.h, v0.l
-; GFX12-NEXT:    buffer_store_b16 v0, off, s[0:3], null
-; GFX12-NEXT:    s_endpgm
+; GFX9-SDAG-LABEL: test_fmin_f16_s_ieee_on:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_load_dword s6, s[4:5], 0x2c
+; GFX9-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-SDAG-NEXT:    s_mov_b32 s3, 0xf000
+; GFX9-SDAG-NEXT:    s_mov_b32 s2, -1
+; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-SDAG-NEXT:    s_lshr_b32 s4, s6, 16
+; GFX9-SDAG-NEXT:    v_max_f16_e64 v0, s4, s4
+; GFX9-SDAG-NEXT:    v_max_f16_e64 v1, s6, s6
+; GFX9-SDAG-NEXT:    v_min_f16_e32 v0, v1, v0
+; GFX9-SDAG-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; GFX9-SDAG-NEXT:    s_endpgm
+;
+; GFX9-GISEL-LABEL: test_fmin_f16_s_ieee_on:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_mov_b32 s6, -1
+; GFX9-GISEL-NEXT:    s_mov_b32 s7, 0xf000
+; GFX9-GISEL-NEXT:    buffer_load_ushort v0, off, s[4:7], 0 offset:46
+; GFX9-GISEL-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX9-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_max_f16_e64 v1, s2, s2
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX9-GISEL-NEXT:    v_max_f16_e64 v0, s2, s2
+; GFX9-GISEL-NEXT:    v_min_f16_e32 v0, v1, v0
+; GFX9-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
+; GFX9-GISEL-NEXT:    s_nop 1
+; GFX9-GISEL-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; GFX9-GISEL-NEXT:    s_endpgm
+;
+; GFX12-SDAG-LABEL: test_fmin_f16_s_ieee_on:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    s_lshr_b32 s3, s2, 16
+; GFX12-SDAG-NEXT:    v_max_num_f16_e64 v0.h, s2, s2
+; GFX12-SDAG-NEXT:    v_max_num_f16_e64 v0.l, s3, s3
+; GFX12-SDAG-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX12-SDAG-NEXT:    s_mov_b32 s2, -1
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_min_num_f16_e32 v0.l, v0.h, v0.l
+; GFX12-SDAG-NEXT:    buffer_store_b16 v0, off, s[0:3], null
+; GFX12-SDAG-NEXT:    s_endpgm
+;
+; GFX12-GISEL-LABEL: test_fmin_f16_s_ieee_on:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_clause 0x2
+; GFX12-GISEL-NEXT:    s_load_u16 s2, s[4:5], 0x2c
+; GFX12-GISEL-NEXT:    s_load_u16 s3, s[4:5], 0x2e
+; GFX12-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    v_max_num_f16_e64 v0.l, s2, s2
+; GFX12-GISEL-NEXT:    v_max_num_f16_e64 v1.l, s3, s3
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
+; GFX12-GISEL-NEXT:    s_min_num_f16 s2, s2, s3
+; GFX12-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-GISEL-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX12-GISEL-NEXT:    s_mov_b32 s2, -1
+; GFX12-GISEL-NEXT:    buffer_store_b16 v0, off, s[0:3], null
+; GFX12-GISEL-NEXT:    s_endpgm
   %val = call half @llvm.minnum.f16(half %a, half %b)
   store half %val, ptr addrspace(1) %out, align 2
   ret void
