@@ -21,7 +21,9 @@ Any resource that is not specified is treated as unconstrained. When the
 workgroup size is left unspecified (or given as a range), the occupancy is
 reported as a range as well.
 
-The tool only supports the ``amdgcn`` target.
+The tool only supports the AMDGPU target. New callers should use the
+``amdgpu`` triple (for example ``amdgpu-amd-amdhsa``); the legacy ``amdgcn``
+spelling is still accepted.
 
 EXAMPLE
 -------
@@ -32,7 +34,7 @@ EXAMPLE
   llvm-calc-occupancy - AMDGPU occupancy calculator
 
   Target
-    Triple:              amdgcn-amd-amdhsa
+    Triple:              amdgpu-amd-amdhsa
     GPU (-mcpu):         gfx90a
     Wavefront size:      64
     Max waves/EU:        8 (waves per SIMD, hardware limit)
@@ -58,8 +60,8 @@ OPTIONS
 
 .. option:: -mtriple=<triple>
 
-  Target triple. Defaults to ``amdgcn-amd-amdhsa``. Must be an ``amdgcn``
-  triple.
+  Target triple. Defaults to ``amdgpu-amd-amdhsa``. Must be an AMDGPU triple
+  (the ``amdgpu`` or legacy ``amdgcn`` arch).
 
 .. option:: -mattr=<features>
 
@@ -104,4 +106,4 @@ EXIT STATUS
 -----------
 
 :program:`llvm-calc-occupancy` returns 0 on success and a non-zero exit code if
-the arguments are invalid (for example a missing or non-``amdgcn`` target).
+the arguments are invalid (for example a missing or non-AMDGPU target).

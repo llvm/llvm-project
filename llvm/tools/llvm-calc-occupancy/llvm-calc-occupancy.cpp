@@ -14,6 +14,11 @@
 // It reuses the compiler's own occupancy math (GCNSubtarget) so the numbers
 // match what the backend would compute for the same inputs.
 //
+// TODO: This links the AMDGPU codegen libraries only because the occupancy
+// math currently lives in GCNSubtarget. Once that subtarget information is
+// exposed through TargetParser, this tool should depend on TargetParser alone
+// and drop the codegen dependency.
+//
 // Example:
 //   llvm-calc-occupancy -mcpu=gfx90a --wg-size=512 --vgprs=50 --sgprs=30 \
 //                       --lds=103kb
@@ -43,7 +48,7 @@ namespace {
 cl::OptionCategory OccCategory("llvm-calc-occupancy options");
 
 cl::opt<std::string> TripleName("mtriple", cl::desc("Target triple"),
-                                cl::init("amdgcn-amd-amdhsa"),
+                                cl::init("amdgpu-amd-amdhsa"),
                                 cl::cat(OccCategory));
 
 cl::opt<std::string> MCPU("mcpu", cl::desc("Target GPU (e.g. gfx90a)"),
@@ -137,6 +142,7 @@ static std::string formatBytes(uint64_t Bytes) {
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
+  const char *ToolName = argv[0];
 
   cl::HideUnrelatedOptions(OccCategory);
   cl::ParseCommandLineOptions(
@@ -153,15 +159,15 @@ int main(int argc, char **argv) {
   LLVMInitializeAMDGPUTargetMC();
 
   if (MCPU.empty()) {
-    WithColor::error(errs(), "llvm-calc-occupancy")
+    WithColor::error(errs(), ToolName)
         << "no GPU specified; pass -mcpu=<gfxNNN> (e.g. -mcpu=gfx90a)\n";
     return 1;
   }
 
   Triple TT(Triple::normalize(TripleName));
   if (!TT.isAMDGCN()) {
-    WithColor::error(errs(), "llvm-calc-occupancy")
-        << "this tool only supports the amdgcn target; got triple '" << TT.str()
+    WithColor::error(errs(), ToolName)
+        << "this tool only supports the AMDGPU target; got triple '" << TT.str()
         << "'\n";
     return 1;
   }
@@ -169,7 +175,7 @@ int main(int argc, char **argv) {
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
-    WithColor::error(errs(), "llvm-calc-occupancy") << Error << "\n";
+    WithColor::error(errs(), ToolName) << Error << "\n";
     return 1;
   }
 
@@ -177,7 +183,7 @@ int main(int argc, char **argv) {
   std::unique_ptr<TargetMachine> TM(T->createTargetMachine(
       TT, MCPU, MAttr, Options, std::nullopt, std::nullopt));
   if (!TM) {
-    WithColor::error(errs(), "llvm-calc-occupancy")
+    WithColor::error(errs(), ToolName)
         << "failed to create target machine for '" << MCPU << "'\n";
     return 1;
   }
@@ -188,11 +194,17 @@ int main(int argc, char **argv) {
 
   const MCSubtargetInfo &STI = ST;
 
+  // Mirror GCNSubtarget::computeOccupancy: when the block size is not given
+  // explicitly, fall back to the subtarget's default if dynamic VGPRs are on.
+  unsigned DynVGPRBlockSizeEff = DynVGPRBlockSize;
+  if (DynVGPRBlockSizeEff == 0 && ST.isDynamicVGPREnabled())
+    DynVGPRBlockSizeEff = ST.getDynamicVGPRBlockSize();
+
   // Parse inputs.
   unsigned WGMin = 1, WGMax = AMDGPU::IsaInfo::getMaxFlatWorkGroupSize();
   bool WGSpecified = !WGSizeStr.empty();
   if (WGSpecified && !parseWGRange(WGSizeStr, WGMin, WGMax)) {
-    WithColor::error(errs(), "llvm-calc-occupancy")
+    WithColor::error(errs(), ToolName)
         << "invalid --wg-size '" << WGSizeStr << "'\n";
     return 1;
   }
@@ -200,8 +212,7 @@ int main(int argc, char **argv) {
   uint64_t LDSBytes = 0;
   bool LDSSpecified = !LDSStr.empty();
   if (LDSSpecified && !parseSize(LDSStr, LDSBytes)) {
-    WithColor::error(errs(), "llvm-calc-occupancy")
-        << "invalid --lds '" << LDSStr << "'\n";
+    WithColor::error(errs(), ToolName) << "invalid --lds '" << LDSStr << "'\n";
     return 1;
   }
 
@@ -215,15 +226,15 @@ int main(int argc, char **argv) {
   unsigned LocalMemSize = AMDGPU::IsaInfo::getLocalMemorySize(STI);
   unsigned AddrLocalMem = AMDGPU::IsaInfo::getAddressableLocalMemorySize(STI);
   unsigned AddrVGPRs =
-      AMDGPU::IsaInfo::getAddressableNumVGPRs(STI, DynVGPRBlockSize);
+      AMDGPU::IsaInfo::getAddressableNumVGPRs(STI, DynVGPRBlockSizeEff);
   unsigned AddrSGPRs = AMDGPU::IsaInfo::getAddressableNumSGPRs(STI);
   unsigned MaxWGSize = AMDGPU::IsaInfo::getMaxFlatWorkGroupSize();
 
   // Warn about inputs that exceed the hardware's physical capacity: such a
   // kernel could not actually launch, so the reported occupancy is only the
   // math extrapolated past the limit.
-  auto Warn = [](const Twine &Msg) {
-    WithColor::warning(errs(), "llvm-calc-occupancy") << Msg << "\n";
+  auto Warn = [ToolName](const Twine &Msg) {
+    WithColor::warning(errs(), ToolName) << Msg << "\n";
   };
   if (LDSSpecified && LDSBytes > AddrLocalMem)
     Warn("LDS request (" + Twine(LDSBytes) +
@@ -271,11 +282,13 @@ int main(int argc, char **argv) {
                      "Workgroup size:", WGMin, WGMax);
   }
   if (VGPRSpecified)
-    outs() << format("  %-20s %d\n", "VGPRs per lane:", (int)NumVGPRs);
+    outs() << format("  %-20s %d\n",
+                     "VGPRs per lane:", static_cast<int>(NumVGPRs));
   else
     outs() << format("  %-20s %s\n", "VGPRs per lane:", "unspecified");
   if (SGPRSpecified)
-    outs() << format("  %-20s %d\n", "SGPRs per wave:", (int)NumSGPRs);
+    outs() << format("  %-20s %d\n",
+                     "SGPRs per wave:", static_cast<int>(NumSGPRs));
   else
     outs() << format("  %-20s %s\n", "SGPRs per wave:", "unspecified");
   if (LDSSpecified)
@@ -285,32 +298,32 @@ int main(int argc, char **argv) {
     outs() << format("  %-20s %s\n", "LDS per workgroup:", "unspecified (0)");
 
   // Per-constraint occupancy (all in waves/EU).
-  std::pair<unsigned, unsigned> WGOcc = ST.getOccupancyWithWorkGroupSizes(
+  auto [WGMinOcc, WGMaxOcc] = ST.getOccupancyWithWorkGroupSizes(
       static_cast<uint32_t>(LDSBytes), {WGMin, WGMax});
   unsigned VGPROcc =
-      VGPRSpecified ? ST.getOccupancyWithNumVGPRs(NumVGPRs, DynVGPRBlockSize)
+      VGPRSpecified ? ST.getOccupancyWithNumVGPRs(NumVGPRs, DynVGPRBlockSizeEff)
                     : MaxWaves;
   unsigned SGPROcc =
       SGPRSpecified ? ST.getOccupancyWithNumSGPRs(NumSGPRs) : MaxWaves;
 
   outs() << "\nPer-constraint occupancy (waves/EU)\n";
-  if (WGOcc.first == WGOcc.second)
-    outs() << format("  %-20s %u\n", "Workgroup + LDS:", WGOcc.second);
+  if (WGMinOcc == WGMaxOcc)
+    outs() << format("  %-20s %u\n", "Workgroup + LDS:", WGMaxOcc);
   else
-    outs() << format("  %-20s %u .. %u\n", "Workgroup + LDS:", WGOcc.first,
-                     WGOcc.second);
+    outs() << format("  %-20s %u .. %u\n", "Workgroup + LDS:", WGMinOcc,
+                     WGMaxOcc);
   if (VGPRSpecified)
     outs() << format("  %-20s %u\n", "VGPRs:", VGPROcc);
   if (SGPRSpecified)
     outs() << format("  %-20s %u\n", "SGPRs:", SGPROcc);
 
   // Combine like GCNSubtarget::computeOccupancy.
-  unsigned MaxOcc = std::min({WGOcc.second, VGPROcc, SGPROcc});
-  unsigned MinOcc = std::min(WGOcc.first, MaxOcc);
+  unsigned MaxOcc = std::min({WGMaxOcc, VGPROcc, SGPROcc});
+  unsigned MinOcc = std::min(WGMinOcc, MaxOcc);
 
   // Identify what pins the maximum occupancy.
   SmallVector<StringRef, 3> LimitedBy;
-  if (WGOcc.second == MaxOcc)
+  if (WGMaxOcc == MaxOcc)
     LimitedBy.push_back("workgroup size / LDS");
   if (VGPRSpecified && VGPROcc == MaxOcc)
     LimitedBy.push_back("VGPRs");
@@ -339,7 +352,7 @@ int main(int argc, char **argv) {
 
     if (VGPRSpecified && VGPROcc == MaxOcc) {
       unsigned MaxV =
-          AMDGPU::IsaInfo::getMaxNumVGPRs(STI, TargetOcc, DynVGPRBlockSize);
+          AMDGPU::IsaInfo::getMaxNumVGPRs(STI, TargetOcc, DynVGPRBlockSizeEff);
       outs() << format("      VGPRs <= %u (currently %d)\n", MaxV,
                        static_cast<int>(NumVGPRs));
     }
@@ -349,7 +362,7 @@ int main(int argc, char **argv) {
       outs() << format("      SGPRs <= %u (currently %d)\n", MaxS,
                        static_cast<int>(NumSGPRs));
     }
-    if (WGOcc.second == MaxOcc) {
+    if (WGMaxOcc == MaxOcc) {
       auto WGLDSOcc = [&](uint32_t LDS, unsigned Lo, unsigned Hi) {
         return ST.getOccupancyWithWorkGroupSizes(LDS, {Lo, Hi}).second;
       };
@@ -399,7 +412,7 @@ int main(int argc, char **argv) {
                      "Max SGPRs");
     for (unsigned Occ = MaxWaves; Occ >= 1; --Occ) {
       unsigned MaxV =
-          AMDGPU::IsaInfo::getMaxNumVGPRs(STI, Occ, DynVGPRBlockSize);
+          AMDGPU::IsaInfo::getMaxNumVGPRs(STI, Occ, DynVGPRBlockSizeEff);
       unsigned MaxS =
           AMDGPU::IsaInfo::getMaxNumSGPRs(STI, Occ, /*Addressable=*/true);
       outs() << format("  %-14u %-14u %-14u\n", Occ, MaxV, MaxS);

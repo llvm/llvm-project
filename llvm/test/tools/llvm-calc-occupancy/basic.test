@@ -55,4 +55,4 @@ NOCPU: error:{{.*}}no GPU specified
 
 ## A non-AMDGPU triple is rejected.
 RUN: not llvm-calc-occupancy -mtriple=x86_64-- -mcpu=gfx90a 2>&1 | FileCheck %s --check-prefix=BADTRIPLE
-BADTRIPLE: error:{{.*}}only supports the amdgcn target
+BADTRIPLE: error:{{.*}}only supports the AMDGPU target
