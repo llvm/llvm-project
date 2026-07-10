@@ -2,44 +2,6 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+bmi,+lzcnt | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+bmi,+lzcnt | FileCheck %s --check-prefix=X86
 
-define i64 @remove_redundant_cmp_lzcnt_i64(i64 %0) {
-; X64-LABEL: remove_redundant_cmp_lzcnt_i64:
-; X64:       # %bb.0:
-; X64-NEXT:    lzcntq %rdi, %rax
-; X64-NEXT:    adcq $0, %rax
-; X64-NEXT:    retq
-;
-; X86-LABEL: remove_redundant_cmp_lzcnt_i64:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    testl %edx, %edx
-; X86-NEXT:    jne .LBB0_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    lzcntl %ecx, %esi
-; X86-NEXT:    addl $32, %esi
-; X86-NEXT:    jmp .LBB0_3
-; X86-NEXT:  .LBB0_1:
-; X86-NEXT:    lzcntl %edx, %esi
-; X86-NEXT:  .LBB0_3:
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    orl %edx, %ecx
-; X86-NEXT:    sete %al
-; X86-NEXT:    addl %esi, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
-; X86-NEXT:    retl
-  %2 = tail call i64 @llvm.ctlz.i64(i64 %0, i1 false)
-  %3 = icmp eq i64 %0, 0
-  %4 = zext i1 %3 to i64
-  %5 = add nuw nsw i64 %2, %4
-  ret i64 %5
-}
-
 define i32 @remove_redundant_cmp_lzcnt_i32(i32 %0) {
 ; X64-LABEL: remove_redundant_cmp_lzcnt_i32:
 ; X64:       # %bb.0:
@@ -78,127 +40,56 @@ define i16 @remove_redundant_cmp_lzcnt_i16(i16 %0) {
   ret i16 %5
 }
 
-define i64 @remove_redundant_cmp_lzcnt_no_constant(i64 %0, i64 %1) {
+define i32 @remove_redundant_cmp_lzcnt_no_constant(i32 %0, i32 %1) {
 ; X64-LABEL: remove_redundant_cmp_lzcnt_no_constant:
 ; X64:       # %bb.0:
-; X64-NEXT:    lzcntq %rdi, %rcx
+; X64-NEXT:    lzcntl %edi, %ecx
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpq %rsi, %rdi
+; X64-NEXT:    cmpl %esi, %edi
 ; X64-NEXT:    sete %al
-; X64-NEXT:    addq %rcx, %rax
+; X64-NEXT:    addl %ecx, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: remove_redundant_cmp_lzcnt_no_constant:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    testl %edx, %edx
-; X86-NEXT:    jne .LBB3_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    lzcntl %ecx, %esi
-; X86-NEXT:    addl $32, %esi
-; X86-NEXT:    jmp .LBB3_3
-; X86-NEXT:  .LBB3_1:
-; X86-NEXT:    lzcntl %edx, %esi
-; X86-NEXT:  .LBB3_3:
-; X86-NEXT:    xorl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    lzcntl %ecx, %edx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    orl %edx, %ecx
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    sete %al
-; X86-NEXT:    addl %esi, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    addl %edx, %eax
 ; X86-NEXT:    retl
-  %3 = tail call i64 @llvm.ctlz.i64(i64 %0, i1 false)
-  %4 = icmp eq i64 %0, %1
-  %5 = zext i1 %4 to i64
-  %6 = add nuw nsw i64 %3, %5
-  ret i64 %6
+  %3 = tail call i32 @llvm.ctlz.i32(i32 %0, i1 false)
+  %4 = icmp eq i32 %0, %1
+  %5 = zext i1 %4 to i32
+  %6 = add nuw nsw i32 %3, %5
+  ret i32 %6
 }
 
-define i64 @remove_redundant_cmp_lzcnt_wrong_const(i64 %0) {
+define i32 @remove_redundant_cmp_lzcnt_wrong_const(i32 %0) {
 ; X64-LABEL: remove_redundant_cmp_lzcnt_wrong_const:
 ; X64:       # %bb.0:
-; X64-NEXT:    lzcntq %rdi, %rcx
+; X64-NEXT:    lzcntl %edi, %ecx
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpq $2, %rdi
+; X64-NEXT:    cmpl $2, %edi
 ; X64-NEXT:    sete %al
-; X64-NEXT:    addq %rcx, %rax
+; X64-NEXT:    addl %ecx, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: remove_redundant_cmp_lzcnt_wrong_const:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    testl %edx, %edx
-; X86-NEXT:    jne .LBB4_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    lzcntl %ecx, %esi
-; X86-NEXT:    addl $32, %esi
-; X86-NEXT:    jmp .LBB4_3
-; X86-NEXT:  .LBB4_1:
-; X86-NEXT:    lzcntl %edx, %esi
-; X86-NEXT:  .LBB4_3:
-; X86-NEXT:    xorl $2, %ecx
+; X86-NEXT:    lzcntl %ecx, %edx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    orl %edx, %ecx
+; X86-NEXT:    cmpl $2, %ecx
 ; X86-NEXT:    sete %al
-; X86-NEXT:    addl %esi, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    addl %edx, %eax
 ; X86-NEXT:    retl
-  %2 = tail call i64 @llvm.ctlz.i64(i64 %0, i1 false)
-  %3 = icmp eq i64 %0, 2
-  %4 = zext i1 %3 to i64
-  %5 = add nuw nsw i64 %2, %4
-  ret i64 %5
-}
-
-define i64 @remove_redundant_cmp_tzcnt_i64(i64 %0) {
-; X64-LABEL: remove_redundant_cmp_tzcnt_i64:
-; X64:       # %bb.0:
-; X64-NEXT:    tzcntq %rdi, %rax
-; X64-NEXT:    adcq $0, %rax
-; X64-NEXT:    retq
-;
-; X86-LABEL: remove_redundant_cmp_tzcnt_i64:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    testl %ecx, %ecx
-; X86-NEXT:    jne .LBB5_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    tzcntl %edx, %esi
-; X86-NEXT:    addl $32, %esi
-; X86-NEXT:    jmp .LBB5_3
-; X86-NEXT:  .LBB5_1:
-; X86-NEXT:    tzcntl %ecx, %esi
-; X86-NEXT:  .LBB5_3:
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    orl %edx, %ecx
-; X86-NEXT:    sete %al
-; X86-NEXT:    addl %esi, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
-; X86-NEXT:    retl
-  %2 = tail call i64 @llvm.cttz.i64(i64 %0, i1 false)
-  %3 = icmp eq i64 %0, 0
-  %4 = zext i1 %3 to i64
-  %5 = add nuw nsw i64 %2, %4
-  ret i64 %5
+  %2 = tail call i32 @llvm.ctlz.i32(i32 %0, i1 false)
+  %3 = icmp eq i32 %0, 2
+  %4 = zext i1 %3 to i32
+  %5 = add nuw nsw i32 %2, %4
+  ret i32 %5
 }
 
 define i32 @remove_redundant_cmp_tzcnt_i32(i32 %0) {
@@ -248,87 +139,54 @@ define i16 @remove_redundant_cmp_tzcnt_i16(i16 %0) {
   ret i16 %5
 }
 
-define i64 @remove_redundant_cmp_tzcnt_no_constant(i64 %0, i64 %1) {
+define i32 @remove_redundant_cmp_tzcnt_no_constant(i32 %0, i32 %1) {
 ; X64-LABEL: remove_redundant_cmp_tzcnt_no_constant:
 ; X64:       # %bb.0:
-; X64-NEXT:    tzcntq %rdi, %rcx
+; X64-NEXT:    tzcntl %edi, %ecx
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpq %rsi, %rdi
+; X64-NEXT:    cmpl %esi, %edi
 ; X64-NEXT:    sete %al
-; X64-NEXT:    addq %rcx, %rax
+; X64-NEXT:    addl %ecx, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: remove_redundant_cmp_tzcnt_no_constant:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    testl %ecx, %ecx
-; X86-NEXT:    jne .LBB8_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    tzcntl %edx, %esi
-; X86-NEXT:    addl $32, %esi
-; X86-NEXT:    jmp .LBB8_3
-; X86-NEXT:  .LBB8_1:
-; X86-NEXT:    tzcntl %ecx, %esi
-; X86-NEXT:  .LBB8_3:
-; X86-NEXT:    xorl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    tzcntl %ecx, %edx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    orl %edx, %ecx
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    sete %al
-; X86-NEXT:    addl %esi, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    addl %edx, %eax
 ; X86-NEXT:    retl
-  %3 = tail call i64 @llvm.cttz.i64(i64 %0, i1 false)
-  %4 = icmp eq i64 %0, %1
-  %5 = zext i1 %4 to i64
-  %6 = add nuw nsw i64 %3, %5
-  ret i64 %6
+  %3 = tail call i32 @llvm.cttz.i32(i32 %0, i1 false)
+  %4 = icmp eq i32 %0, %1
+  %5 = zext i1 %4 to i32
+  %6 = add nuw nsw i32 %3, %5
+  ret i32 %6
 }
 
-define i64 @remove_redundant_cmp_tzcnt_wrong_const(i64 %0) {
+define i32 @remove_redundant_cmp_tzcnt_wrong_const(i32 %0) {
 ; X64-LABEL: remove_redundant_cmp_tzcnt_wrong_const:
 ; X64:       # %bb.0:
-; X64-NEXT:    tzcntq %rdi, %rcx
+; X64-NEXT:    tzcntl %edi, %ecx
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpq $2, %rdi
+; X64-NEXT:    cmpl $2, %edi
 ; X64-NEXT:    sete %al
-; X64-NEXT:    addq %rcx, %rax
+; X64-NEXT:    addl %ecx, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: remove_redundant_cmp_tzcnt_wrong_const:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    testl %ecx, %ecx
-; X86-NEXT:    jne .LBB9_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    tzcntl %edx, %esi
-; X86-NEXT:    addl $32, %esi
-; X86-NEXT:    jmp .LBB9_3
-; X86-NEXT:  .LBB9_1:
-; X86-NEXT:    tzcntl %ecx, %esi
-; X86-NEXT:  .LBB9_3:
-; X86-NEXT:    xorl $2, %ecx
+; X86-NEXT:    tzcntl %ecx, %edx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    orl %edx, %ecx
+; X86-NEXT:    cmpl $2, %ecx
 ; X86-NEXT:    sete %al
-; X86-NEXT:    addl %esi, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    addl %edx, %eax
 ; X86-NEXT:    retl
-  %2 = tail call i64 @llvm.cttz.i64(i64 %0, i1 false)
-  %3 = icmp eq i64 %0, 2
-  %4 = zext i1 %3 to i64
-  %5 = add nuw nsw i64 %2, %4
-  ret i64 %5
+  %2 = tail call i32 @llvm.cttz.i32(i32 %0, i1 false)
+  %3 = icmp eq i32 %0, 2
+  %4 = zext i1 %3 to i32
+  %5 = add nuw nsw i32 %2, %4
+  ret i32 %5
 }
