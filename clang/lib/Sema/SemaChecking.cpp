@@ -1586,7 +1586,8 @@ enum PointerAuthOpKind {
   PAO_SignGeneric,
   PAO_Discriminator,
   PAO_BlendPointer,
-  PAO_BlendInteger
+  PAO_BlendInteger,
+  PAO_BlendPC
 };
 }
 
@@ -1712,7 +1713,7 @@ static bool checkPointerAuthValue(Sema &S, Expr *&Arg, PointerAuthOpKind OpKind,
   };
   auto AllowsInteger = [](PointerAuthOpKind OpKind) {
     return OpKind == PAO_Discriminator || OpKind == PAO_BlendInteger ||
-           OpKind == PAO_SignGeneric;
+           OpKind == PAO_SignGeneric || OpKind == PAO_BlendPC;
   };
 
   // Require the value to have the right range of type.
@@ -1731,6 +1732,7 @@ static bool checkPointerAuthValue(Sema &S, Expr *&Arg, PointerAuthOpKind OpKind,
         << unsigned(OpKind == PAO_Discriminator  ? 1
                     : OpKind == PAO_BlendPointer ? 2
                     : OpKind == PAO_BlendInteger ? 3
+                    : OpKind == PAO_BlendPC      ? 4
                                                  : 0)
         << unsigned(AllowsInteger(OpKind) ? (AllowsPointer(OpKind) ? 2 : 1) : 0)
         << Arg->getType() << Arg->getSourceRange();
@@ -1892,6 +1894,39 @@ static ExprResult PointerAuthAuthAndResign(Sema &S, CallExpr *Call) {
       checkPointerAuthKey(S, Call->getArgs()[3]) ||
       checkPointerAuthValue(S, Call->getArgs()[4], PAO_Discriminator))
     return ExprError();
+
+  Call->setType(Call->getArgs()[0]->getType());
+  return Call;
+}
+
+static ExprResult PointerAuthAuthWithPCAndResign(Sema &S, CallExpr *Call) {
+  if (S.checkArgCount(Call, 6))
+    return ExprError();
+  if (checkPointerAuthEnabled(S, Call))
+    return ExprError();
+  if (checkPointerAuthValue(S, Call->getArgs()[0], PAO_Auth) ||
+      checkPointerAuthKey(S, Call->getArgs()[1]) ||
+      checkPointerAuthValue(S, Call->getArgs()[2], PAO_Discriminator) ||
+      checkPointerAuthValue(S, Call->getArgs()[3], PAO_BlendPC) ||
+      checkPointerAuthKey(S, Call->getArgs()[4]) ||
+      checkPointerAuthValue(S, Call->getArgs()[5], PAO_Discriminator))
+    return ExprError();
+
+  // Validate that the oldKey is IA or IB, not DA or DB.
+  // This enforces the constraint that auth_with_pc_and_resign only supports
+  // IA/IB keys for authentication, as only those keys support the PC-based
+  // signing instructions (paciasppc/pacibsppc).
+  unsigned OldKey = 0;
+  if (!S.checkConstantPointerAuthKey(Call->getArgs()[1], OldKey)) {
+    using AK = PointerAuthSchema::ARM8_3Key;
+    if (OldKey != static_cast<unsigned>(AK::ASIA) &&
+        OldKey != static_cast<unsigned>(AK::ASIB)) {
+      S.Diag(Call->getArgs()[1]->getExprLoc(),
+             diag::err_ptrauth_auth_with_pc_and_resign_invalid_key)
+          << OldKey << Call->getArgs()[1]->getSourceRange();
+      return ExprError();
+    }
+  }
 
   Call->setType(Call->getArgs()[0]->getType());
   return Call;
@@ -2197,7 +2232,7 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
     return PPC().CheckPPCBuiltinFunctionCall(TI, BuiltinID, TheCall);
-  case llvm::Triple::amdgcn:
+  case llvm::Triple::amdgpu:
     return AMDGPU().CheckAMDGCNBuiltinFunctionCall(BuiltinID, TheCall);
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
@@ -2998,6 +3033,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
   case Builtin::BI__builtin_ms_va_start:
+  case Builtin::BI__builtin_zos_va_start:
   case Builtin::BI__builtin_stdarg_start:
   case Builtin::BI__builtin_va_start:
   case Builtin::BI__builtin_c23_va_start:
@@ -3043,7 +3079,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (CheckBuiltinTargetInSupported(
             *this, TheCall,
             {llvm::Triple::x86_64, llvm::Triple::arm, llvm::Triple::thumb,
-             llvm::Triple::aarch64, llvm::Triple::amdgcn}))
+             llvm::Triple::aarch64, llvm::Triple::amdgpu}))
       return ExprError();
     break;
 
@@ -3062,7 +3098,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (CheckBuiltinTargetInSupported(
             *this, TheCall,
             {llvm::Triple::x86, llvm::Triple::x86_64, llvm::Triple::arm,
-             llvm::Triple::thumb, llvm::Triple::aarch64, llvm::Triple::amdgcn,
+             llvm::Triple::thumb, llvm::Triple::aarch64, llvm::Triple::amdgpu,
              llvm::Triple::ppc, llvm::Triple::ppc64, llvm::Triple::ppcle,
              llvm::Triple::ppc64le}))
       return ExprError();
@@ -3534,6 +3570,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     return PointerAuthSignGenericData(*this, TheCall);
   case Builtin::BI__builtin_ptrauth_auth_and_resign:
     return PointerAuthAuthAndResign(*this, TheCall);
+  case Builtin::BI__builtin_ptrauth_auth_with_pc_and_resign:
+    return PointerAuthAuthWithPCAndResign(*this, TheCall);
   case Builtin::BI__builtin_ptrauth_auth_load_relative_and_sign:
     return PointerAuthAuthLoadRelativeAndSign(*this, TheCall);
   case Builtin::BI__builtin_ptrauth_string_discriminator:
@@ -4367,8 +4405,9 @@ void Sema::checkLifetimeCaptureBy(FunctionDecl *FD, bool IsMemberFunction,
     }
   };
   for (unsigned I = 0; I < FD->getNumParams(); ++I)
-    HandleCaptureByAttr(FD->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>(),
-                        I + IsMemberFunction);
+    for (const auto *A :
+         FD->getParamDecl(I)->specific_attrs<LifetimeCaptureByAttr>())
+      HandleCaptureByAttr(A, I + IsMemberFunction);
   // Check when the implicit object param is captured.
   if (IsMemberFunction) {
     TypeSourceInfo *TSI = FD->getTypeSourceInfo();

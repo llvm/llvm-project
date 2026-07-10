@@ -619,7 +619,7 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
   switch (Triple.getArch()) {
   case Triple::nvptx:
   case Triple::nvptx64:
-  case Triple::amdgcn:
+  case Triple::amdgpu:
   case Triple::x86:
   case Triple::x86_64:
   case Triple::aarch64:

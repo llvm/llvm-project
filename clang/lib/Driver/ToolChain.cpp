@@ -1482,7 +1482,7 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args, BoundArch BA,
   }
   case llvm::Triple::aarch64_32:
     return getTripleString().str();
-  case llvm::Triple::amdgcn: {
+  case llvm::Triple::amdgpu: {
     llvm::Triple Triple = getTriple();
     tools::AMDGPU::setArchNameInTriple(getDriver(), Args, InputType, Triple);
     return Triple.getTriple();

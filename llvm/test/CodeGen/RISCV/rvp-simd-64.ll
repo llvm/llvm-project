@@ -5817,3 +5817,32 @@ define i64 @test_pabdsumau_u8x8_u64(i64 %rd, <8 x i8> %a, <8 x i8> %b) {
   %res = call i64 @llvm.riscv.pabdsumau.i64.v8i8(i64 %rd, <8 x i8> %a, <8 x i8> %b)
   ret i64 %res
 }
+
+; Packed Saturating Absolute Value
+define <8 x i8> @test_psabs_v8i8(<8 x i8> %a) {
+; RV32-LABEL: test_psabs_v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    psabs.db a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_psabs_v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psabs.b a0, a0
+; RV64-NEXT:    ret
+  %res = call <8 x i8> @llvm.riscv.psabs.v8i8(<8 x i8> %a)
+  ret <8 x i8> %res
+}
+
+define <4 x i16> @test_psabs_v4i16(<4 x i16> %a) {
+; RV32-LABEL: test_psabs_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    psabs.dh a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_psabs_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psabs.h a0, a0
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.psabs.v4i16(<4 x i16> %a)
+  ret <4 x i16> %res
+}

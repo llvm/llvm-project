@@ -2865,9 +2865,9 @@ MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
       SectionKind::getMetadata(), GOFF::CLASS_WSA,
       GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
                    GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
-                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0,
-                   GOFF::ESD_ALIGN_Fullword, 0},
+                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0, 0},
       static_cast<MCSectionGOFF *>(TextSection)->getParent());
+  WSA->setAlignment(Align(4)); // Fullword
   return getContext().getGOFFSection(SectionKind::getData(), Name,
                                      GOFF::PRAttr{true, GOFF::ESD_EXE_DATA,
                                                   GOFF::ESD_LT_XPLink,
@@ -2893,9 +2893,6 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
       Alignment = F->getAlign();
     else if (auto *V = dyn_cast<GlobalVariable>(GO))
       Alignment = V->getAlign();
-    GOFF::ESDAlignment Align =
-        Alignment ? static_cast<GOFF::ESDAlignment>(Log2(*Alignment))
-                  : GOFF::ESD_ALIGN_Doubleword;
     MCSectionGOFF *SD = getContext().getGOFFSection(
         SectionKind::getMetadata(), Symbol->getName(),
         GOFF::SDAttr{GOFF::ESD_TA_Unspecified, SDBindingScope});
@@ -2903,8 +2900,9 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
         SectionKind::getMetadata(), GOFF::CLASS_WSA,
         GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
                      GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
-                     GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_0, Align, 0},
+                     GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_0, 0},
         SD);
+    ED->setAlignment(Alignment.value_or(llvm::Align(8)));
     return getContext().getGOFFSection(Kind, Symbol->getName(),
                                        GOFF::PRAttr{false, GOFF::ESD_EXE_DATA,
                                                     GOFF::ESD_LT_XPLink,

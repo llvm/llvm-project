@@ -24,6 +24,19 @@ namespace clang {
 namespace driver {
 namespace tools {
 
+struct OffloadJobsOpt {
+  enum class Kind { Missing, Invalid, Jobserver, Fixed };
+
+  Kind K = Kind::Missing;
+  llvm::opt::Arg *A = nullptr;
+  StringRef Value;
+  unsigned NumThreads = 0;
+
+  bool isValid() const { return K == Kind::Jobserver || K == Kind::Fixed; }
+};
+
+OffloadJobsOpt parseOffloadJobs(const llvm::opt::ArgList &Args);
+
 void addPathIfExists(const Driver &D, const Twine &Path,
                      ToolChain::path_list &Paths);
 

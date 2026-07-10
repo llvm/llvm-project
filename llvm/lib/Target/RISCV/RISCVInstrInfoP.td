@@ -1754,6 +1754,11 @@ class PatGprPairGprPair<SDPatternOperator OpNode, RVInst Inst, ValueType vt>
     : Pat<(vt (OpNode (vt GPRPair:$rs1), (vt GPRPair:$rs2))),
           (Inst GPRPair:$rs1, GPRPair:$rs2)>;
 
+// Unary GPRPair operation, one source register pair.
+class PatGprPair<SDPatternOperator OpNode, RVInst Inst, ValueType vt>
+    : Pat<(vt (OpNode (vt GPRPair:$rs1))),
+          (Inst GPRPair:$rs1)>;
+
 // Reduction sum. PatRedSum is the single-GPR source (predsum.bs/hs/ws), result
 // XLenVT; PatRedSumPair is the RV32 paired source (predsum.dbs/dhs), result i32.
 // Target-illegal results (i32 accumulator on RV64, i64 on RV32) don't reach
@@ -1897,6 +1902,17 @@ def SDT_RISCVPPairE_DB : SDTypeProfile<2, 4, [SDTCisVT<0, v4i8>,
                                               SDTCisSameAs<0, 4>,
                                               SDTCisSameAs<0, 5>]>;
 def riscv_ppaire_db : RVSDNode<"PPAIRE_DB", SDT_RISCVPPairE_DB>;
+
+// signed-saturating abs of each lane; an INT_MIN lane maps to INT_MAX.
+def SDT_RISCVPackedUnary : SDTypeProfile<1, 1, [SDTCisVec<0>,
+                                                SDTCisSameAs<0, 1>]>;
+def riscv_psabs : RVSDNode<"PSABS", SDT_RISCVPackedUnary>;
+
+// Interleave two packed vectors.
+def SDT_RISCVPZip : SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                          SDTCisSameAs<0, 1>,
+                                          SDTCisSameAs<0, 2>]>;
+def riscv_pzip : RVSDNode<"PZIP", SDT_RISCVPZip>;
 
 // Add one to the immediate. Used by RISCVISD::SATI.
 def IncImm : SDNodeXForm<imm, [{
@@ -2118,6 +2134,10 @@ let Predicates = [HasStdExtP] in {
   def : PatGprGpr<smax, PMAX_H, XLenVecI16VT>;
   def : PatGprGpr<umax, PMAXU_H, XLenVecI16VT>;
 
+  // 8/16-bit saturating absolute value patterns
+  def : PatGpr<riscv_psabs, PSABS_B, XLenVecI8VT>;
+  def : PatGpr<riscv_psabs, PSABS_H, XLenVecI16VT>;
+
   // 8/16-bit vselect patterns
   def : Pat<(XLenVecI8VT (vselect (XLenVecI8VT GPR:$mask), GPR:$true_v, GPR:$false_v)),
             (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
@@ -2249,6 +2269,16 @@ let append Predicates = [IsRV32] in {
   // Zero-extend patterns using wzip*p with zero
   def : Pat<(v4i16 (zext (v4i8 GPR:$rs))), (WZIP8P GPR:$rs, (v4i8 X0))>;
   def : Pat<(v2i32 (zext (v2i16 GPR:$rs))), (WZIP16P GPR:$rs, (v2i16 X0))>;
+
+  // Packed zip.
+  def : Pat<(v8i8 (riscv_pzip (v8i8 GPRPair:$rs1),
+                               (v8i8 GPRPair:$rs2))),
+            (WZIP8P (i32 (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even)),
+                    (i32 (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even)))>;
+  def : Pat<(v4i16 (riscv_pzip (v4i16 GPRPair:$rs1),
+                                (v4i16 GPRPair:$rs2))),
+            (WZIP16P (i32 (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even)),
+                     (i32 (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even)))>;
 
   // Sign-extend patterns using pwadd with zero
   def : Pat<(v4i16 (sext (v4i8 GPR:$rs))), (PWADD_B GPR:$rs, (v4i8 X0))>;
@@ -2448,6 +2478,10 @@ let append Predicates = [IsRV32] in {
   def : PatGprPairGprPair<umax, PMAXU_DH, v4i16>;
   def : PatGprPairGprPair<smax, PMAX_DW, v2i32>;
   def : PatGprPairGprPair<umax, PMAXU_DW, v2i32>;
+
+  // 8/16-bit saturating absolute value patterns
+  def : PatGprPair<riscv_psabs, PSABS_DB, v8i8>;
+  def : PatGprPair<riscv_psabs, PSABS_DH, v4i16>;
 
   // 16-bit bswap patterns
   def : Pat<(v4i16 (bswap GPRPair:$rs)),
@@ -2731,6 +2765,11 @@ let append Predicates = [IsRV64] in {
   def : Pat<(v4i16 (zext_invec (v8i8 GPR:$rs))), (ZIP8P GPR:$rs, (v8i8 X0))>;
   def : Pat<(v2i32 (zext_invec (v4i16 GPR:$rs))), (ZIP16P GPR:$rs, (v4i16 X0))>;
 
+  // Packed zip.
+  def : Pat<(v8i8 (riscv_pzip (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
+            (ZIP8P GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (riscv_pzip (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (ZIP16P GPR:$rs1, GPR:$rs2)>;
   // Sign extend inreg patterns using psext. sext_invec is lowered to
   // zext_invec+sext_inreg.
   def : Pat<(v4i16 (sext_inreg GPR:$rs1, v4i8)), (PSEXT_H_B GPR:$rs1)>;

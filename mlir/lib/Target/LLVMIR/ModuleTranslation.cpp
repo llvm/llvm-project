@@ -1198,7 +1198,9 @@ convertMLIRAttributesToLLVM(Location loc, llvm::LLVMContext &ctx,
 
 LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
   // Mapping from compile unit to its respective set of global variables.
-  DenseMap<llvm::DICompileUnit *, SmallVector<llvm::Metadata *>> allGVars;
+  DenseMap<llvm::DICompileUnit *, SmallVector<llvm::Metadata *>> globalGVars;
+  // Mapping from subprogram to its respective set of static local variables.
+  DenseMap<llvm::DISubprogram *, SmallVector<llvm::Metadata *>> staticLocals;
 
   // First, create all global variables and global aliases in LLVM IR. A global
   // or alias body may refer to another global/alias or itself, so all the
@@ -1291,7 +1293,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
         //
         // 3. For entities like static local variables in C or variable with
         // SAVE attribute in Fortran, the scope hierarchy can be
-        // variable -> DISubprogram -> DICompileUnit
+        // variable (-> DILocalScope)* -> DISubprogram
         llvm::DIScope *scope = diGlobalVar->getScope();
         if (auto *mod = dyn_cast_if_present<llvm::DIModule>(scope))
           scope = mod->getScope();
@@ -1299,15 +1301,23 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
           if (auto *sp =
                   dyn_cast_if_present<llvm::DISubprogram>(cb->getScope()))
             scope = sp->getUnit();
-        } else if (auto *sp = dyn_cast_if_present<llvm::DISubprogram>(scope))
-          scope = sp->getUnit();
+        } else if (auto *lbb =
+                       dyn_cast_if_present<llvm::DILexicalBlockBase>(scope)) {
+          scope = lbb->getSubprogram();
+        }
 
-        // Get the compile unit (scope) of the the global variable.
+        // Get the compile unit (scope) of the the global variable, or the
+        // subprogram of the static local variable.
         if (llvm::DICompileUnit *compileUnit =
                 dyn_cast_if_present<llvm::DICompileUnit>(scope)) {
           // Update the compile unit with this incoming global variable
           // expression during the finalizing step later.
-          allGVars[compileUnit].push_back(diGlobalExpr);
+          globalGVars[compileUnit].push_back(diGlobalExpr);
+        } else if (llvm::DISubprogram *sp =
+                       dyn_cast_if_present<llvm::DISubprogram>(scope)) {
+          // Update the subprogram with this incoming static local variable
+          // expression during the finalizing step later.
+          staticLocals[sp].push_back(diGlobalExpr);
         }
       }
     }
@@ -1499,10 +1509,14 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
 
   // Finally, update the compile units their respective sets of global variables
   // created earlier.
-  for (const auto &[compileUnit, globals] : allGVars) {
+  for (const auto &[compileUnit, globals] : globalGVars)
     compileUnit->replaceGlobalVariables(
         llvm::MDTuple::get(getLLVMContext(), globals));
-  }
+
+  // And update the subprograms with their respective sets of static local
+  // variables.
+  for (const auto &[sp, globals] : staticLocals)
+    sp->retainNodes(globals.begin(), globals.end());
 
   // Convert global alias bodies.
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::AliasOp>()) {

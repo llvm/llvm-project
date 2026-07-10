@@ -39,7 +39,7 @@ CODEGENOPT(ImplicitMapSyms, 1, 0, Benign) ///< -Wa,-mmapsyms=implicit
 CODEGENOPT(AsmVerbose        , 1, 0, Benign) ///< -dA, -fverbose-asm.
 CODEGENOPT(PreserveAsmComments, 1, 1, Benign) ///< -dA, -fno-preserve-as-comments.
 CODEGENOPT(AssumeSaneOperatorNew , 1, 1, Benign) ///< implicit __attribute__((malloc)) operator new
-CODEGENOPT(AssumeUniqueVTables , 1, 1, Benign) ///< Assume a class has only one vtable.
+CODEGENOPT(DisableExactDynamicCast , 1, 0, Benign) ///< -fno-assume-unique-vtables: disable the exact dynamic_cast optimization.
 CODEGENOPT(Autolink          , 1, 1, Benign) ///< -fno-autolink
 CODEGENOPT(AutoImport        , 1, 1, Benign) ///< -fno-auto-import
 CODEGENOPT(ObjCAutoRefCountExceptions , 1, 0, Benign) ///< Whether ARC should be EH-safe.

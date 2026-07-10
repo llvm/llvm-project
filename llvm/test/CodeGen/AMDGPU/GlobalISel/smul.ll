@@ -31,6 +31,8 @@ define amdgpu_ps i64 @s_mul_u64_u32(i32 inreg %a, i32 inreg %b) {
 ;
 ; GFX1250-LABEL: s_mul_u64_u32:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_mov_b32 s2, s1
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -83,6 +85,8 @@ define amdgpu_ps i64 @s_mul_i64_i32(i32 inreg %a, i32 inreg %b) {
 ;
 ; GFX1250-LABEL: s_mul_i64_i32:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_mov_b32 s2, s1
 ; GFX1250-NEXT:    s_ashr_i32 s1, s0, 31

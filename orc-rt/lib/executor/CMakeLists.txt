@@ -5,6 +5,7 @@ set(files
   Error.cpp
   ExecutorProcessInfo.cpp
   InProcessControllerAccess.cpp
+  Logging.cpp
   NativeDylibManager.cpp
   RTTI.cpp
   Service.cpp

@@ -97,10 +97,20 @@ createInnerLoop(mlir::acc::LoopOp inputLoop, mlir::RewriterBase &rewriter,
     elementLoop.removeGangOperandsArgTypeAttr();
     elementLoop.removeGangOperandsSegmentsAttr();
     elementLoop.removeGangOperandsDeviceTypeAttr();
+    // Also drop the operand values themselves so that elementLoop does not
+    // end up with a non-empty gang operand list but no corresponding
+    // device-type/segment/arg-type attributes. Leaving stale operands behind
+    // makes elementLoop look like it still has gang operands to later
+    // queries (e.g. LoopOp::getGangValue), which then dereference the
+    // now-missing device-type attribute.
+    elementLoop.getGangOperandsMutable().clear();
   }
   if (inputLoop.hasVector() || inputLoop.getVectorValue()) {
     elementLoop.removeWorkerAttr();
     elementLoop.removeWorkerNumOperandsDeviceTypeAttr();
+    // As above for gang, also drop the worker operand values so elementLoop
+    // does not keep a dangling worker operand with no device-type attribute.
+    elementLoop.getWorkerNumOperandsMutable().clear();
   }
   rewriter.finalizeOpModification(elementLoop);
 

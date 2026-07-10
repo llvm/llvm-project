@@ -28,7 +28,7 @@ acc.reduction.recipe @reduction_add_memref_f64 : memref<f64> reduction_operator 
 // CHECK-NEXT:  [[ALLOCA:%.*]] = memref.alloca() : memref<f64>
 // CHECK-NEXT:  memref.store [[ZERO]], [[ALLOCA]][]
 // CHECK-NEXT:  acc.yield {{.*}}
-// CHECK:       } {{.*}}acc.var_name = #acc.var_name<"tmp">
+// CHECK:       } {{.*}}acc.par_dims = #acc<par_dims[block_x]>, acc.var_name = #acc.var_name<"tmp">
 // CHECK:       memref.load [[PRIVATE]][]
 // CHECK:       memref.store {{.*}}, [[PRIVATE]][]
 // CHECK:       acc.reduction_combine_region [[PRIVATE]] into [[REDUCVAR:%.*]] : memref<f64> {
@@ -36,7 +36,7 @@ acc.reduction.recipe @reduction_add_memref_f64 : memref<f64> reduction_operator 
 // CHECK-NEXT:  [[LOADPRIV:%.*]] = memref.load [[PRIVATE]][]
 // CHECK-NEXT:  [[COMBINE:%.*]] = arith.addf [[LOADVAR]], [[LOADPRIV]]
 // CHECK-NEXT:  memref.store [[COMBINE]], [[REDUCVAR]][]
-// CHECK-NEXT:  }
+// CHECK-NEXT:  } {acc.par_dims = #acc<par_dims[block_x]>}
 // CHECK-NEXT:  memref.dealloc [[PRIVATE]] : memref<f64>
 // CHECK:       acc.yield
 

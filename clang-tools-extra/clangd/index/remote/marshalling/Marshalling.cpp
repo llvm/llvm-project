@@ -59,14 +59,16 @@ Marshaller::Marshaller(llvm::StringRef RemoteIndexRoot,
     : Strings(Arena) {
   llvm::StringRef PosixSeparator = get_separator(Style::posix);
   if (!RemoteIndexRoot.empty()) {
-    assert(is_absolute(RemoteIndexRoot));
+    assert(is_absolute(RemoteIndexRoot, Style::posix) ||
+           is_absolute(RemoteIndexRoot, Style::windows));
     this->RemoteIndexRoot = convert_to_slash(RemoteIndexRoot, Style::windows);
     llvm::StringRef Path(this->RemoteIndexRoot);
     if (!is_separator(this->RemoteIndexRoot.back(), Style::posix))
       this->RemoteIndexRoot += PosixSeparator;
   }
   if (!LocalIndexRoot.empty()) {
-    assert(is_absolute(LocalIndexRoot));
+    assert(is_absolute(LocalIndexRoot, Style::posix) ||
+           is_absolute(LocalIndexRoot, Style::windows));
     this->LocalIndexRoot = convert_to_slash(LocalIndexRoot, Style::windows);
     llvm::StringRef Path(this->LocalIndexRoot);
     if (!is_separator(this->LocalIndexRoot.back(), Style::posix))

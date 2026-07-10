@@ -120,16 +120,6 @@ public:
   lldb::SyntheticChildrenSP
   GetSyntheticChildren(ValueObject &valobj, lldb::DynamicValueType use_dynamic);
 
-  bool
-  AnyMatches(const FormattersMatchCandidate &candidate_type,
-             TypeCategoryImpl::FormatCategoryItems items =
-                 TypeCategoryImpl::ALL_ITEM_TYPES,
-             bool only_enabled = true, const char **matching_category = nullptr,
-             TypeCategoryImpl::FormatCategoryItems *matching_type = nullptr) {
-    return m_categories_map.AnyMatches(candidate_type, items, only_enabled,
-                                       matching_category, matching_type);
-  }
-
   static bool GetFormatFromCString(const char *format_cstr,
                                    lldb::Format &format);
 

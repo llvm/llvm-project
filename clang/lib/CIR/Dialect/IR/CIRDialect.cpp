@@ -2386,7 +2386,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   mlir::StringAttr comdatNameAttr = getComdatAttrName(state.name);
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
   mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
-  mlir::StringAttr specialMemberAttr = getCxxSpecialMemberAttrName(state.name);
+  mlir::StringAttr funcInfoNameAttr = getFuncInfoAttrName(state.name);
 
   if (::mlir::succeeded(parser.parseOptionalKeyword(builtinNameAttr.strref())))
     state.addAttribute(builtinNameAttr, parser.getBuilder().getUnitAttr());
@@ -2541,19 +2541,21 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     return success();
   };
 
-  // Parse CXXSpecialMember attribute
-  if (parser.parseOptionalKeyword("special_member").succeeded()) {
+  // Parse the func_info attribute
+  if (parser.parseOptionalKeyword("func_info").succeeded()) {
     if (parser.parseLess().failed())
       return failure();
 
+    llvm::SMLoc attrLoc = parser.getCurrentLocation();
     mlir::Attribute attr;
     if (parser.parseAttribute(attr).failed())
       return failure();
     if (!mlir::isa<cir::CXXCtorAttr, cir::CXXDtorAttr, cir::CXXAssignAttr>(
             attr))
-      return parser.emitError(parser.getCurrentLocation(),
-                              "expected a C++ special member attribute");
-    state.addAttribute(specialMemberAttr, attr);
+      return parser.emitError(attrLoc,
+                              "expected a function info attribute, got ")
+             << attr;
+    state.addAttribute(funcInfoNameAttr, attr);
 
     if (parser.parseGreater().failed())
       return failure();
@@ -2640,26 +2642,29 @@ bool cir::FuncOp::isDeclaration() {
 }
 
 bool cir::FuncOp::isCXXSpecialMemberFunction() {
-  return getCxxSpecialMemberAttr() != nullptr;
+  // The func_info union can grow forms that are not special members, so the
+  // check names the concrete forms rather than testing for presence.
+  mlir::Attribute attr = getFuncInfoAttr();
+  return attr && mlir::isa<CXXCtorAttr, CXXDtorAttr, CXXAssignAttr>(attr);
 }
 
 bool cir::FuncOp::isCxxConstructor() {
-  auto attr = getCxxSpecialMemberAttr();
+  auto attr = getFuncInfoAttr();
   return attr && dyn_cast<CXXCtorAttr>(attr);
 }
 
 bool cir::FuncOp::isCxxDestructor() {
-  auto attr = getCxxSpecialMemberAttr();
+  auto attr = getFuncInfoAttr();
   return attr && dyn_cast<CXXDtorAttr>(attr);
 }
 
 bool cir::FuncOp::isCxxSpecialAssignment() {
-  auto attr = getCxxSpecialMemberAttr();
+  auto attr = getFuncInfoAttr();
   return attr && dyn_cast<CXXAssignAttr>(attr);
 }
 
 std::optional<CtorKind> cir::FuncOp::getCxxConstructorKind() {
-  mlir::Attribute attr = getCxxSpecialMemberAttr();
+  mlir::Attribute attr = getFuncInfoAttr();
   if (attr) {
     if (auto ctor = dyn_cast<CXXCtorAttr>(attr))
       return ctor.getCtorKind();
@@ -2668,7 +2673,7 @@ std::optional<CtorKind> cir::FuncOp::getCxxConstructorKind() {
 }
 
 std::optional<AssignKind> cir::FuncOp::getCxxSpecialAssignKind() {
-  mlir::Attribute attr = getCxxSpecialMemberAttr();
+  mlir::Attribute attr = getFuncInfoAttr();
   if (attr) {
     if (auto assign = dyn_cast<CXXAssignAttr>(attr))
       return assign.getAssignKind();
@@ -2677,7 +2682,7 @@ std::optional<AssignKind> cir::FuncOp::getCxxSpecialAssignKind() {
 }
 
 bool cir::FuncOp::isCxxTrivialMemberFunction() {
-  mlir::Attribute attr = getCxxSpecialMemberAttr();
+  mlir::Attribute attr = getFuncInfoAttr();
   if (attr) {
     if (auto ctor = dyn_cast<CXXCtorAttr>(attr))
       return ctor.getIsTrivial();
@@ -2750,9 +2755,9 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p << ")";
   }
 
-  if (auto specialMemberAttr = getCxxSpecialMember()) {
-    p << " special_member<";
-    p.printAttribute(*specialMemberAttr);
+  if (mlir::Attribute funcInfo = getFuncInfoAttr()) {
+    p << " func_info<";
+    p.printAttribute(funcInfo);
     p << '>';
   }
 

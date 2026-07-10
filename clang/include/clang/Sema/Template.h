@@ -715,7 +715,7 @@ enum class TemplateSubstitutionKind : char {
 
     // Helper functions for instantiating methods.
     TypeSourceInfo *SubstFunctionType(FunctionDecl *D,
-                                      SmallVectorImpl<ParmVarDecl *> &Params);
+                             SmallVectorImpl<ParmVarDecl *> &Params);
     bool InitFunctionInstantiation(FunctionDecl *New, FunctionDecl *Tmpl);
     bool InitMethodInstantiation(CXXMethodDecl *New, CXXMethodDecl *Tmpl);
 
@@ -723,10 +723,6 @@ enum class TemplateSubstitutionKind : char {
 
     TemplateParameterList *
       SubstTemplateParams(TemplateParameterList *List);
-
-    bool SubstTemplateParameterLists(
-        ArrayRef<TemplateParameterList *> TPL,
-        SmallVectorImpl<TemplateParameterList *> &InstTPL);
 
     bool SubstQualifier(const DeclaratorDecl *OldDecl,
                         DeclaratorDecl *NewDecl);
@@ -737,11 +733,6 @@ enum class TemplateSubstitutionKind : char {
         VarTemplateDecl *VarTemplate, VarDecl *FromVar,
         ArrayRef<TemplateArgument> Converted,
         VarTemplateSpecializationDecl *PrevDecl = nullptr);
-
-    template <typename FriendTy>
-    bool
-    InstantiateFriendPackExpansion(FriendTy *D, TypeSourceInfo *TSI,
-                                   ArrayRef<TemplateParameterList *> TPL = {});
 
     Decl *InstantiateTypedefNameDecl(TypedefNameDecl *D, bool IsTypeAlias);
     Decl *InstantiateTypeAliasTemplateDecl(TypeAliasTemplateDecl *D);

@@ -164,6 +164,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   SSERegParmMax = 0;
   HasAlignMac68kSupport = false;
   HasBuiltinMSVaList = false;
+  HasBuiltinZOSVaList = false;
   HasAArch64ACLETypes = false;
   HasRISCVVTypes = false;
   AllowAMDGPUUnsafeFPAtomics = false;
@@ -630,6 +631,10 @@ TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
       (ClangABICompat4 || getTriple().isPS4()))
     return CCK_ClangABI4OrPS4;
   return CCK_Default;
+}
+
+VTableUniquenessKind TargetInfo::getVTableUniqueness() const {
+  return VTableUniquenessKind::AlwaysUnique;
 }
 
 bool TargetInfo::callGlobalDeleteInDeletingDtor(

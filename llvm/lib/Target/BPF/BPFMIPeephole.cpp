@@ -96,9 +96,6 @@ bool BPFMIPeephole::isCopyFrom32Def(MachineInstr *CopyMI)
 {
   MachineOperand &opnd = CopyMI->getOperand(1);
 
-  if (!opnd.isReg())
-    return false;
-
   // Return false if getting value from a 32bit physical register.
   // Most likely, this physical register is aliased to
   // function call return value or current function parameters.
@@ -158,7 +155,11 @@ bool BPFMIPeephole::isInsnFrom32Def(MachineInstr *DefInsn)
 
 bool BPFMIPeephole::isMovFrom32Def(MachineInstr *MovMI)
 {
-  MachineInstr *DefInsn = MRI->getVRegDef(MovMI->getOperand(1).getReg());
+  const MachineOperand &Src = MovMI->getOperand(1);
+  if (Src.getSubReg())
+    return false;
+
+  MachineInstr *DefInsn = MRI->getVRegDef(Src.getReg());
 
   LLVM_DEBUG(dbgs() << "  Def of Mov Src:");
   LLVM_DEBUG(DefInsn->dump());

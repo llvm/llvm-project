@@ -12,7 +12,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
-#include <set>
+#include "llvm/ADT/SetVector.h"
 
 using namespace clang;
 
@@ -32,7 +32,7 @@ namespace {
 // Traverses the AST and finds contributors.
 class ContributorFinder : public DynamicRecursiveASTVisitor {
 public:
-  std::set<const NamedDecl *> Contributors;
+  llvm::SetVector<const NamedDecl *> Contributors;
 
   ContributorFinder() {
     ShouldVisitTemplateInstantiations = true;

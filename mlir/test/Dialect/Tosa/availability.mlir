@@ -660,7 +660,7 @@ func.func @test_rescale(%arg0: tensor<13x21x3x!quant.uniform<u8:f32, 0.015655439
 // CHECK-LABEL: test_const
 func.func @test_const(%arg0 : index) -> tensor<4xi32> {
   // CHECK: profiles: [ [pro_int, pro_fp] ]
-  // CHECK: extensions: [ [int4, int16, fp8e4m3, fp8e5m2, bf16, mxfp, int64] ]
+  // CHECK: extensions: [ [int4, int16, fp8e4m3, fp8e5m2, bf16, mxfp, int64, mx_common, mx_fp4e2m1, mx_fp6e2m3, mx_fp6e3m2, mx_fp8e4m3, mx_fp8e5m2, mx_int8] ]
     %0 = "tosa.const"() {values = dense<[3, 0, 1, 2]> : tensor<4xi32>} : () -> tensor<4xi32>
     return %0 : tensor<4xi32>
 }

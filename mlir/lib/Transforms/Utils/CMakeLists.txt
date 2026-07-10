@@ -24,4 +24,5 @@ add_mlir_library(MLIRTransformUtils
   MLIRSideEffectInterfaces
   MLIRSubsetOpInterface
   MLIRRewrite
+  MLIRPass
   )

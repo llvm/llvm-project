@@ -231,6 +231,15 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.sys_ptrace_macros
 )
 
+add_proxy_header_library(
+  sys_time_macros
+  HDRS
+    sys_time_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.sys_time
+    libc.include.llvm-libc-macros.sys_time_macros
+)
+
 add_header_library(unistd_overlay HDRS unistd_overlay.h)
 add_proxy_header_library(
   unistd_macros

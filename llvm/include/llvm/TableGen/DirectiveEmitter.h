@@ -48,6 +48,10 @@ public:
     return Def->getValueAsString("clausePrefix");
   }
 
+  StringRef getLoopModifierPrefix() const {
+    return Def->getValueAsString("loopModifierPrefix");
+  }
+
   StringRef getClauseEnumSetClass() const {
     return Def->getValueAsString("clauseEnumSetClass");
   }
@@ -82,6 +86,10 @@ public:
 
   ArrayRef<const Record *> getClauses() const {
     return Records.getAllDerivedDefinitions("Clause");
+  }
+
+  ArrayRef<const Record *> getLoopModifiers() const {
+    return Records.getAllDerivedDefinitions("LoopModifier");
   }
 
   bool HasValidityErrors() const;
@@ -260,6 +268,10 @@ public:
 
   std::vector<const Record *> getSourceLanguages() const {
     return Def->getValueAsListOfDefs("languages");
+  }
+
+  std::vector<const Record *> getAllowedLoopModifiers() const {
+    return Def->getValueAsListOfDefs("allowedLoopModifiers");
   }
 
   // Clang uses a different format for names of its directives enum.

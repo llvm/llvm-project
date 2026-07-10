@@ -267,8 +267,8 @@ body:             |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.sqrt), [[COPY1]](s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY [[COPY]](s64)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.sqrt), [[COPY1]](i64)
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[INT]](s64)
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.sqrt), %0(s64)

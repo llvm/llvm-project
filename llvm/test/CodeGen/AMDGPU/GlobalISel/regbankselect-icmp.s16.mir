@@ -15,9 +15,9 @@ body: |
     ; GFX8-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
     ; GFX8-NEXT: [[TRUNC1:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY1]](s32)
-    ; GFX8-NEXT: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s16)
-    ; GFX8-NEXT: [[ZEXT1:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC1]](s16)
-    ; GFX8-NEXT: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[ZEXT]](s32), [[ZEXT1]]
+    ; GFX8-NEXT: [[ZEXT:%[0-9]+]]:sgpr(i32) = G_ZEXT [[TRUNC]](s16)
+    ; GFX8-NEXT: [[ZEXT1:%[0-9]+]]:sgpr(i32) = G_ZEXT [[TRUNC1]](s16)
+    ; GFX8-NEXT: [[ICMP:%[0-9]+]]:sgpr(i32) = G_ICMP intpred(eq), [[ZEXT]](i32), [[ZEXT1]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s16) = G_TRUNC %0

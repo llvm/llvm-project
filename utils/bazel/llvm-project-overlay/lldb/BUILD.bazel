@@ -98,11 +98,15 @@ cc_library(
     srcs = [
         "source/Version/Version.cpp",
         ":vcs_version_gen",
-        ":version_inc_gen",
     ],
-    hdrs = ["include/lldb/Version/Version.h"],
+    hdrs = [
+        "include/lldb/Version/Version.h",
+    ],
     features = ["-layering_check"],  # Version.inc breaks this unintentionally
     includes = ["include"],
+    textual_hdrs = [
+        ":version_inc_gen",
+    ],
     deps = ["//clang:basic"],
 )
 
@@ -839,6 +843,7 @@ cc_library(
         ":Host",
         ":ProtocolHeaders",
         ":Utility",
+        ":Version",
         "//llvm:Support",
     ],
 )

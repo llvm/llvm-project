@@ -1292,11 +1292,16 @@ def CIR_CXXAssignAttr : CIR_Attr<"CXXAssign", "cxx_assign"> {
   }];
 }
 
-def CIR_CXXSpecialMemberAttr : AnyAttrOf<[
+//===----------------------------------------------------------------------===//
+// FuncInfoAttr
+//===----------------------------------------------------------------------===//
+
+// The attributes accepted in the optional func_info slot on cir.func.
+def CIR_FuncInfoAttr : AnyAttrOf<[
   CIR_CXXCtorAttr,
   CIR_CXXDtorAttr,
   CIR_CXXAssignAttr
-]>;
+], "function information attribute">;
 
 //===----------------------------------------------------------------------===//
 // BitfieldInfoAttr

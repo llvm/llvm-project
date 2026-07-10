@@ -34,15 +34,210 @@ StringRef llvm::AMDGPU::getArchFamilyNameAMDGCN(GPUKind AK) {
   return ArchName.empty() ? "" : ArchName.drop_back(2);
 }
 
+Triple::SubArchType llvm::AMDGPU::getSubArch(GPUKind AK) {
+  switch (AK) {
+#define AMDGCN_GPU(NAME, ENUM, SUBARCH, ISAVERSION, FEATURES)                  \
+  case ENUM:                                                                   \
+    return SUBARCH;
+#include "llvm/TargetParser/AMDGPUTargetParser.def"
+  default:
+    return Triple::SubArchType::NoSubArch;
+  }
+}
+
+AMDGPU::GPUKind
+llvm::AMDGPU::getGPUKindFromSubArch(Triple::SubArchType SubArch) {
+  switch (SubArch) {
+#define AMDGCN_GPU(NAME, ENUM, SUBARCH, ISAVERSION, FEATURES)                  \
+  case SUBARCH:                                                                \
+    return ENUM;
+#include "llvm/TargetParser/AMDGPUTargetParser.def"
+  default:
+    return GK_NONE;
+  }
+}
+
+static const Triple::SubArchType
+    AMDGPUMajorFamilies[Triple::LastAMDGPUSubArch - Triple::FirstAMDGPUSubArch +
+                        1] = {
+        Triple::AMDGPUSubArch6,    Triple::AMDGPUSubArch6,
+        Triple::AMDGPUSubArch6,    Triple::AMDGPUSubArch6,
+
+        Triple::AMDGPUSubArch7,    Triple::AMDGPUSubArch7,
+        Triple::AMDGPUSubArch7,    Triple::AMDGPUSubArch7,
+        Triple::AMDGPUSubArch7,    Triple::AMDGPUSubArch7,
+        Triple::AMDGPUSubArch7,
+
+        Triple::AMDGPUSubArch8,    Triple::AMDGPUSubArch8,
+        Triple::AMDGPUSubArch8,    Triple::AMDGPUSubArch8,
+        Triple::AMDGPUSubArch8,
+
+        Triple::AMDGPUSubArch810,
+
+        Triple::AMDGPUSubArch9,    Triple::AMDGPUSubArch9,
+        Triple::AMDGPUSubArch9,    Triple::AMDGPUSubArch9,
+        Triple::AMDGPUSubArch9,    Triple::AMDGPUSubArch9,
+        Triple::AMDGPUSubArch9,
+
+        Triple::AMDGPUSubArch908,  Triple::AMDGPUSubArch90A,
+
+        Triple::AMDGPUSubArch9_4,  Triple::AMDGPUSubArch9_4,
+        Triple::AMDGPUSubArch9_4,
+
+        Triple::AMDGPUSubArch10_1, Triple::AMDGPUSubArch10_1,
+        Triple::AMDGPUSubArch10_1, Triple::AMDGPUSubArch10_1,
+        Triple::AMDGPUSubArch10_1,
+
+        Triple::AMDGPUSubArch10_3, Triple::AMDGPUSubArch10_3,
+        Triple::AMDGPUSubArch10_3, Triple::AMDGPUSubArch10_3,
+        Triple::AMDGPUSubArch10_3, Triple::AMDGPUSubArch10_3,
+        Triple::AMDGPUSubArch10_3, Triple::AMDGPUSubArch10_3,
+
+        Triple::AMDGPUSubArch11,   Triple::AMDGPUSubArch11,
+        Triple::AMDGPUSubArch11,   Triple::AMDGPUSubArch11,
+        Triple::AMDGPUSubArch11,   Triple::AMDGPUSubArch11,
+        Triple::AMDGPUSubArch11,   Triple::AMDGPUSubArch11,
+        Triple::AMDGPUSubArch11,   Triple::AMDGPUSubArch11,
+
+        Triple::AMDGPUSubArch11_7, Triple::AMDGPUSubArch11_7,
+        Triple::AMDGPUSubArch11_7, Triple::AMDGPUSubArch11_7,
+
+        Triple::AMDGPUSubArch12,   Triple::AMDGPUSubArch12,
+        Triple::AMDGPUSubArch12,
+
+        Triple::AMDGPUSubArch12_5, Triple::AMDGPUSubArch12_5,
+        Triple::AMDGPUSubArch12_5,
+
+        Triple::AMDGPUSubArch13,   Triple::AMDGPUSubArch13};
+
+Triple::SubArchType AMDGPU::getMajorSubArch(Triple::SubArchType X) {
+  if (X < Triple::FirstAMDGPUSubArch || X > Triple::LastAMDGPUSubArch)
+    return Triple::NoSubArch;
+  return AMDGPUMajorFamilies[X - Triple::FirstAMDGPUSubArch];
+}
+
+bool AMDGPU::isSubArchCompatible(Triple::SubArchType A, Triple::SubArchType B) {
+  if (A == B || A == Triple::NoSubArch || B == Triple::NoSubArch)
+    return true;
+
+  Triple::SubArchType MajorA = AMDGPU::getMajorSubArch(A);
+  Triple::SubArchType MajorB = AMDGPU::getMajorSubArch(B);
+
+  // One side is the major-family subarch covering the other's family.
+  if (A == MajorA)
+    return MajorA == MajorB;
+  if (B == MajorB)
+    return MajorA == MajorB;
+
+  return false;
+}
+
+bool AMDGPU::isCPUValidForSubArch(Triple::SubArchType SubArch, GPUKind AK) {
+  // An unrecognized GPU is never valid.
+  if (AK == GK_NONE)
+    return false;
+  // A legacy triple without a subarch accepts any known GPU.
+  if (SubArch == Triple::NoSubArch)
+    return true;
+  return isSubArchCompatible(getSubArch(AK), SubArch);
+}
+
+bool AMDGPU::isCPUValidForSubArch(Triple::SubArchType SubArch, StringRef CPU) {
+  return isCPUValidForSubArch(SubArch, parseArchAMDGCN(CPU));
+}
+
+bool AMDGPU::isSubArchCompatible(const Triple &A, const Triple &B) {
+  // Tolerate subarch mismatch if one entry is none. This is a hack for bitcode
+  // libraries.
+  // There's a missing enum entry for an unknown subarch. Make sure the
+  // subarch is really empty.
+  if (A.getSubArch() == Triple::NoSubArch)
+    return A.getArchName().size() == 6;
+
+  if (B.getSubArch() == Triple::NoSubArch)
+    return B.getArchName().size() == 6;
+
+  return isSubArchCompatible(A.getSubArch(), B.getSubArch());
+}
+
+std::string AMDGPU::mergeSubArch(const Triple &A, const Triple &B) {
+  if (A.getSubArch() == Triple::NoSubArch)
+    return B.str();
+  if (B.getSubArch() == Triple::NoSubArch)
+    return A.str();
+
+  Triple::SubArchType MajorA = AMDGPU::getMajorSubArch(A.getSubArch());
+  Triple::SubArchType MajorB = AMDGPU::getMajorSubArch(B.getSubArch());
+
+  // With a compatible major arch, return the specific subarch.
+  if (A.getSubArch() == MajorA) {
+    if (MajorA == MajorB)
+      return B.str();
+  }
+
+  if (B.getSubArch() == MajorB) {
+    if (MajorA == MajorB)
+      return A.str();
+  }
+
+  // Invalid case.
+  return B.str();
+}
+
 StringRef llvm::AMDGPU::getArchNameAMDGCN(GPUKind AK) {
   switch (AK) {
-#define AMDGCN_GPU(NAME, ENUM, ISAVERSION, FEATURES)                           \
+#define AMDGCN_GPU(NAME, ENUM, SUBARCH, ISAVERSION, FEATURES)                  \
   case ENUM:                                                                   \
     return NAME;
 #include "llvm/TargetParser/AMDGPUTargetParser.def"
   default:
     return "";
   }
+}
+
+// Canonical GPU name for each AMDGPU subarch, indexed by SubArch -
+// Triple::FirstAMDGPUSubArch.
+static const StringLiteral AMDGPUSubArchNames[Triple::LastAMDGPUSubArch -
+                                              Triple::FirstAMDGPUSubArch + 1] =
+    {"gfx600", // AMDGPUSubArch6 (no generic target)
+     "gfx600",          "gfx601",  "gfx602",
+
+     "gfx700", // AMDGPUSubArch7 (no generic target)
+     "gfx700",          "gfx701",  "gfx702",  "gfx703",          "gfx704",
+     "gfx705",
+
+     "gfx801", // AMDGPUSubArch8 (no generic target)
+     "gfx801",          "gfx802",  "gfx803",  "gfx805",
+
+     "gfx810",
+
+     "gfx9-generic",    "gfx900",  "gfx902",  "gfx904",          "gfx906",
+     "gfx909",          "gfx90c",
+
+     "gfx908",          "gfx90a",
+
+     "gfx9-4-generic",  "gfx942",  "gfx950",
+
+     "gfx10-1-generic", "gfx1010", "gfx1011", "gfx1012",         "gfx1013",
+
+     "gfx10-3-generic", "gfx1030", "gfx1031", "gfx1032",         "gfx1033",
+     "gfx1034",         "gfx1035", "gfx1036",
+
+     "gfx11-generic",   "gfx1100", "gfx1101", "gfx1102",         "gfx1103",
+     "gfx1150",         "gfx1151", "gfx1152", "gfx1153",         "gfx1154",
+
+     "gfx11-7-generic", "gfx1170", "gfx1171", "gfx1172",
+
+     "gfx12-generic",   "gfx1200", "gfx1201", "gfx12-5-generic", "gfx1250",
+     "gfx1251",
+
+     "gfx13-generic",   "gfx1310"};
+
+StringRef llvm::AMDGPU::getArchNameFromSubArch(Triple::SubArchType SubArch) {
+  if (SubArch < Triple::FirstAMDGPUSubArch ||
+      SubArch > Triple::LastAMDGPUSubArch)
+    return "";
+  return AMDGPUSubArchNames[SubArch - Triple::FirstAMDGPUSubArch];
 }
 
 StringRef llvm::AMDGPU::getArchNameR600(GPUKind AK) {
@@ -58,7 +253,7 @@ StringRef llvm::AMDGPU::getArchNameR600(GPUKind AK) {
 
 AMDGPU::GPUKind llvm::AMDGPU::parseArchAMDGCN(StringRef CPU) {
   return StringSwitch<AMDGPU::GPUKind>(CPU)
-#define AMDGCN_GPU(NAME, ENUM, ISAVERSION, FEATURES) .Case(NAME, ENUM)
+#define AMDGCN_GPU(NAME, ENUM, SUBARCH, ISAVERSION, FEATURES) .Case(NAME, ENUM)
 #define AMDGCN_GPU_ALIAS(NAME, ENUM) .Case(NAME, ENUM)
 #include "llvm/TargetParser/AMDGPUTargetParser.def"
       .Case("generic", AMDGPU::GPUKind::GK_GFX600)
@@ -76,8 +271,19 @@ AMDGPU::GPUKind llvm::AMDGPU::parseArchR600(StringRef CPU) {
 
 unsigned AMDGPU::getArchAttrAMDGCN(GPUKind AK) {
   switch (AK) {
-#define AMDGCN_GPU(NAME, ENUM, ISAVERSION, FEATURES)                           \
+#define AMDGCN_GPU(NAME, ENUM, SUBARCH, ISAVERSION, FEATURES)                  \
   case ENUM:                                                                   \
+    return FEATURES;
+#include "llvm/TargetParser/AMDGPUTargetParser.def"
+  default:
+    return FEATURE_NONE;
+  }
+}
+
+unsigned AMDGPU::getArchAttrAMDGCN(Triple::SubArchType SubArch) {
+  switch (SubArch) {
+#define AMDGCN_GPU(NAME, ENUM, SUBARCH, ISAVERSION, FEATURES)                  \
+  case SUBARCH:                                                                \
     return FEATURES;
 #include "llvm/TargetParser/AMDGPUTargetParser.def"
   default:
@@ -96,13 +302,17 @@ unsigned AMDGPU::getArchAttrR600(GPUKind AK) {
   }
 }
 
-void AMDGPU::fillValidArchListAMDGCN(SmallVectorImpl<StringRef> &Values) {
+void AMDGPU::fillValidArchListAMDGCN(SmallVectorImpl<StringRef> &Values,
+                                     Triple::SubArchType SubArch) {
   // XXX: Should this only report unique canonical names?
-  Values.append({
-#define AMDGCN_GPU(NAME, ENUM, ISAVERSION, FEATURES) NAME,
-#define AMDGCN_GPU_ALIAS(NAME, ENUM) NAME,
+  // An alias shares its GPU's GPUKind, so it is filtered alongside it.
+#define AMDGCN_GPU(NAME, ENUM, SUBARCH, ISAVERSION, FEATURES)                  \
+  if (isCPUValidForSubArch(SubArch, ENUM))                                     \
+    Values.push_back(NAME);
+#define AMDGCN_GPU_ALIAS(NAME, ENUM)                                           \
+  if (isCPUValidForSubArch(SubArch, ENUM))                                     \
+    Values.push_back(NAME);
 #include "llvm/TargetParser/AMDGPUTargetParser.def"
-  });
 }
 
 void AMDGPU::fillValidArchListR600(SmallVectorImpl<StringRef> &Values) {
@@ -125,8 +335,21 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
 
   switch (AK) {
 #define MAKE_ISAVERSION(A, B, C) {A, B, C}
-#define AMDGCN_GPU(NAME, ENUM, ISAVERSION, FEATURES)                           \
+#define AMDGCN_GPU(NAME, ENUM, SUBARCH, ISAVERSION, FEATURES)                  \
   case ENUM:                                                                   \
+    return MAKE_ISAVERSION ISAVERSION;
+#include "llvm/TargetParser/AMDGPUTargetParser.def"
+#undef MAKE_ISAVERSION
+  default:
+    return {0, 0, 0};
+  }
+}
+
+AMDGPU::IsaVersion AMDGPU::getIsaVersion(Triple::SubArchType SubArch) {
+  switch (SubArch) {
+#define MAKE_ISAVERSION(A, B, C) {A, B, C}
+#define AMDGCN_GPU(NAME, ENUM, SUBARCH, ISAVERSION, FEATURES)                  \
+  case SUBARCH:                                                                \
     return MAKE_ISAVERSION ISAVERSION;
 #include "llvm/TargetParser/AMDGPUTargetParser.def"
 #undef MAKE_ISAVERSION
@@ -726,10 +949,17 @@ TargetID::parseTargetIDString(StringRef TargetIDDirective) {
 
   StringRef CPUName = FeatureSplit[0];
 
-  // Determine xnack/sramecc support based on the architecture attributes
-  GPUKind Arch = parseArchAMDGCN(CPUName);
+  // Prefer the explicitly named processor so the parsed target id reflects it
+  // (e.g. for validation against the triple subarch). The processor field may
+  // be empty when the ISA is already encoded in the triple's subarch
+  // (e.g. "amdgpu12.50-amd-amdhsa-unknown-"), in which case derive the arch
+  // from the subarch.
+  GPUKind Arch = CPUName.empty() ? getGPUKindFromSubArch(TT.getSubArch())
+                                 : parseArchAMDGCN(CPUName);
+
   unsigned ArchAttr = getArchAttrAMDGCN(Arch);
 
+  // Determine xnack/sramecc support based on the architecture attributes.
   TargetIDSetting XnackSetting = (ArchAttr & FEATURE_XNACK)
                                      ? TargetIDSetting::Any
                                      : TargetIDSetting::Unsupported;

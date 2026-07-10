@@ -9,35 +9,12 @@
 define <8 x i8> @test_pzip_v8i8(<4 x i8> %a, <4 x i8> %b) {
 ; RV32-LABEL: test_pzip_v8i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srli a2, a1, 24
-; RV32-NEXT:    srli a3, a0, 24
-; RV32-NEXT:    srli a4, a1, 16
-; RV32-NEXT:    srli a5, a0, 16
-; RV32-NEXT:    ppaire.b a2, a3, a2
-; RV32-NEXT:    ppaire.b a3, a5, a4
-; RV32-NEXT:    srli a4, a1, 8
-; RV32-NEXT:    srli a5, a0, 8
-; RV32-NEXT:    ppaire.b a0, a0, a1
-; RV32-NEXT:    ppaire.b a4, a5, a4
-; RV32-NEXT:    pack a1, a3, a2
-; RV32-NEXT:    pack a0, a0, a4
+; RV32-NEXT:    wzip8p a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pzip_v8i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srli a2, a1, 24
-; RV64-NEXT:    srli a3, a0, 24
-; RV64-NEXT:    srli a4, a1, 16
-; RV64-NEXT:    srli a5, a0, 16
-; RV64-NEXT:    ppaire.b a2, a3, a2
-; RV64-NEXT:    ppaire.b a3, a5, a4
-; RV64-NEXT:    srli a4, a1, 8
-; RV64-NEXT:    srli a5, a0, 8
-; RV64-NEXT:    ppaire.b a0, a0, a1
-; RV64-NEXT:    ppaire.b a1, a5, a4
-; RV64-NEXT:    ppaire.h a2, a3, a2
-; RV64-NEXT:    ppaire.h a0, a0, a1
-; RV64-NEXT:    pack a0, a0, a2
+; RV64-NEXT:    zip8p a0, a0, a1
 ; RV64-NEXT:    ret
   %r = shufflevector <4 x i8> %a, <4 x i8> %b, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
   ret <8 x i8> %r
@@ -46,19 +23,12 @@ define <8 x i8> @test_pzip_v8i8(<4 x i8> %a, <4 x i8> %b) {
 define <4 x i16> @test_pzip_v4i16(<2 x i16> %a, <2 x i16> %b) {
 ; RV32-LABEL: test_pzip_v4i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srli a2, a1, 16
-; RV32-NEXT:    srli a3, a0, 16
-; RV32-NEXT:    pack a0, a0, a1
-; RV32-NEXT:    pack a1, a3, a2
+; RV32-NEXT:    wzip16p a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pzip_v4i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srli a2, a1, 16
-; RV64-NEXT:    srli a3, a0, 16
-; RV64-NEXT:    ppaire.h a0, a0, a1
-; RV64-NEXT:    ppaire.h a1, a3, a2
-; RV64-NEXT:    pack a0, a0, a1
+; RV64-NEXT:    zip16p a0, a0, a1
 ; RV64-NEXT:    ret
   %r = shufflevector <2 x i16> %a, <2 x i16> %b, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
   ret <4 x i16> %r

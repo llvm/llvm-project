@@ -104,6 +104,8 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_cluster(ptr 
 ;
 ; COEXEC-LABEL: test_sched_group_barrier_pipeline_SWMMAC_cluster:
 ; COEXEC:       ; %bb.0: ; %entry
+; COEXEC-NEXT:    global_wb
+; COEXEC-NEXT:    v_nop
 ; COEXEC-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; COEXEC-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; COEXEC-NEXT:    v_dual_mov_b32 v48, 0 :: v_dual_lshlrev_b32 v0, 4, v0
@@ -321,6 +323,8 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_interleaved(
 ;
 ; COEXEC-LABEL: test_sched_group_barrier_pipeline_SWMMAC_interleaved:
 ; COEXEC:       ; %bb.0: ; %entry
+; COEXEC-NEXT:    global_wb
+; COEXEC-NEXT:    v_nop
 ; COEXEC-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; COEXEC-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; COEXEC-NEXT:    v_mov_b32_e32 v16, 0

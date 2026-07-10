@@ -5,8 +5,8 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -mattr=-real-true16 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16 %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 -mattr=+real-true16 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX12,GFX12-SDAG,GFX12-SDAG-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 -mattr=-real-true16 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX12,GFX12-SDAG,GFX12-SDAG-FAKE16 %s
-; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 -mattr=+real-true16 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL,GFX12-GISEL-TRUE16 %s
-; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 -mattr=-real-true16 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL,GFX12-GISEL-FAKE16 %s
+; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 -mattr=+real-true16 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL,GFX12-GISEL-TRUE16 %s
+; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 -mattr=-real-true16 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL,GFX12-GISEL-FAKE16 %s
 
 ; Test using saddr addressing mode of global_*load_* flat instructions.
 
@@ -2310,11 +2310,17 @@ define amdgpu_ps half @global_load_saddr_i16(ptr addrspace(1) inreg %sbase, i32 
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
-; GFX12-GISEL-LABEL: global_load_saddr_i16:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    global_load_u16 v0, v0, s[2:3]
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-GISEL-TRUE16-LABEL: global_load_saddr_i16:
+; GFX12-GISEL-TRUE16:       ; %bb.0:
+; GFX12-GISEL-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3]
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-FAKE16-LABEL: global_load_saddr_i16:
+; GFX12-GISEL-FAKE16:       ; %bb.0:
+; GFX12-GISEL-FAKE16-NEXT:    global_load_u16 v0, v0, s[2:3]
+; GFX12-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-FAKE16-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %load = load i16, ptr addrspace(1) %gep0
@@ -2353,11 +2359,17 @@ define amdgpu_ps half @global_load_saddr_i16_immneg128(ptr addrspace(1) inreg %s
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
-; GFX12-GISEL-LABEL: global_load_saddr_i16_immneg128:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    global_load_u16 v0, v0, s[2:3] offset:-128
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-GISEL-TRUE16-LABEL: global_load_saddr_i16_immneg128:
+; GFX12-GISEL-TRUE16:       ; %bb.0:
+; GFX12-GISEL-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3] offset:-128
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-FAKE16-LABEL: global_load_saddr_i16_immneg128:
+; GFX12-GISEL-FAKE16:       ; %bb.0:
+; GFX12-GISEL-FAKE16-NEXT:    global_load_u16 v0, v0, s[2:3] offset:-128
+; GFX12-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-FAKE16-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128

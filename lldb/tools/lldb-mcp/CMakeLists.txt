@@ -1,5 +1,6 @@
 add_lldb_tool(lldb-mcp
   lldb-mcp.cpp
+  Multiplexer.cpp
 
   LINK_COMPONENTS
     Option

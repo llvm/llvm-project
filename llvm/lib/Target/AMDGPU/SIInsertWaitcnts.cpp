@@ -3629,5 +3629,16 @@ bool SIInsertWaitcnts::run() {
     }
   }
 
+  if (MFI->isEntryFunction() && ST.hasRequiresInitialUnclausedVmem()) {
+    // Hardware entrypoints must begin with a specific sequence:
+    //   GLOBAL_WB SCOPE:SCOPE_CU
+    //   V_NOP
+    MachineBasicBlock::iterator I = EntryBB.begin();
+    BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::GLOBAL_WB))
+        .addImm(AMDGPU::CPol::SCOPE_CU);
+    BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::V_NOP_e32));
+    Modified = true;
+  }
+
   return Modified;
 }

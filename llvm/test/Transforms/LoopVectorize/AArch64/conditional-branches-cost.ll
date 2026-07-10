@@ -477,7 +477,6 @@ define i32 @header_mask_and_invariant_compare(ptr %A, ptr %B, ptr %C, ptr %D, pt
 ; PRED:       [[VECTOR_PH]]:
 ; PRED-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP8]], 2
-; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[TMP0]])
 ; PRED-NEXT:    [[L_A:%.*]] = load i32, ptr [[A]], align 4, !alias.scope [[META3:![0-9]+]]
 ; PRED-NEXT:    [[L_B:%.*]] = load i32, ptr [[B]], align 4, !alias.scope [[META6:![0-9]+]]
 ; PRED-NEXT:    [[OR:%.*]] = or i32 [[L_B]], [[L_A]]
@@ -487,6 +486,7 @@ define i32 @header_mask_and_invariant_compare(ptr %A, ptr %B, ptr %C, ptr %D, pt
 ; PRED-NEXT:    [[C_0:%.*]] = icmp ugt i32 [[L_C]], [[OR]]
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT28:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C_0]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT29:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT28]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
+; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[TMP0]])
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[E]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
 ; PRED-NEXT:    br label %[[VECTOR_BODY:.*]]

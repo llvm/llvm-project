@@ -50,11 +50,7 @@ int main(int argc, char** argv) {
             ValueType init = c.back();
             c.pop_back();
 
-            auto f = [](auto x, auto y) {
-              benchmark::DoNotOptimize(x);
-              benchmark::DoNotOptimize(y);
-              return x + y;
-            };
+            auto f = [](auto x, auto y) { return x + y; };
 
             for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(c);

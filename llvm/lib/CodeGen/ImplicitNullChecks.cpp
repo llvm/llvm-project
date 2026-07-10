@@ -703,7 +703,6 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
 /// faults.  The FAULTING instruction is inserted at the end of MBB.
 MachineInstr *ImplicitNullChecks::insertFaultingInstr(
     MachineInstr *MI, MachineBasicBlock *MBB, MachineBasicBlock *HandlerMBB) {
-  DebugLoc DL;
   unsigned NumDefs = MI->getDesc().getNumDefs();
   assert(NumDefs <= 1 && "other cases unhandled!");
 
@@ -720,7 +719,8 @@ MachineInstr *ImplicitNullChecks::insertFaultingInstr(
   else
     FK = FaultMaps::FaultingStore;
 
-  auto MIB = BuildMI(MBB, DL, TII->get(TargetOpcode::FAULTING_OP), DefReg)
+  auto MIB = BuildMI(MBB, MI->getDebugLoc(),
+                     TII->get(TargetOpcode::FAULTING_OP), DefReg)
                  .addImm(FK)
                  .addMBB(HandlerMBB)
                  .addImm(MI->getOpcode());

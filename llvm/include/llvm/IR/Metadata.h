@@ -1546,6 +1546,17 @@ public:
   /// Shrink the operands by 1.
   void pop_back() { resize(getNumOperands() - 1); }
 
+  /// Filter out tuple elements that do not satisfy predicate.
+  /// Return this if no elements should be filtered out (without re-uniquing).
+  template <typename T> MDTuple *filter(T &&Pred) {
+    ArrayRef<MDOperand> Ops = operands();
+    // Exit if no nodes should be removed.
+    if (llvm::all_of(Ops, Pred))
+      return this;
+    return get(getContext(),
+               to_vector_of<Metadata *>(llvm::make_filter_range(Ops, Pred)));
+  }
+
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == MDTupleKind;
   }

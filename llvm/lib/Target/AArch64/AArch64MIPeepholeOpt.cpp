@@ -298,6 +298,9 @@ bool AArch64MIPeepholeOptImpl::visitORR(MachineInstr &MI) {
   if (MI.getOperand(1).getReg() != AArch64::WZR)
     return false;
 
+  if (MI.getOperand(2).getSubReg())
+    return false;
+
   MachineInstr *SrcMI = MRI->getUniqueVRegDef(MI.getOperand(2).getReg());
   if (!SrcMI)
     return false;

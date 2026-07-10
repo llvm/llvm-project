@@ -2999,8 +2999,7 @@ static Value *optimizeSymmetricCall(CallInst *CI, bool IsEven,
   Value *Src = CI->getArgOperand(0);
 
   if (match(Src, m_OneUse(m_FNeg(m_Value(X))))) {
-    auto *Call = B.CreateCall(CI->getCalledFunction(), {X});
-    Call->copyFastMathFlags(CI);
+    auto *Call = B.CreateCall(CI->getCalledFunction(), {X}, /*FMFSource=*/CI);
     auto *CallInst = copyFlags(*CI, Call);
     if (IsEven) {
       // Even function: f(-x) = f(x)
@@ -3013,8 +3012,7 @@ static Value *optimizeSymmetricCall(CallInst *CI, bool IsEven,
   // Even function: f(abs(x)) = f(x), f(copysign(x, y)) = f(x)
   if (IsEven && (match(Src, m_FAbs(m_Value(X))) ||
                  match(Src, m_CopySign(m_Value(X), m_Value())))) {
-    auto *Call = B.CreateCall(CI->getCalledFunction(), {X});
-    Call->copyFastMathFlags(CI);
+    auto *Call = B.CreateCall(CI->getCalledFunction(), {X}, /*FMFSource=*/CI);
     return copyFlags(*CI, Call);
   }
 

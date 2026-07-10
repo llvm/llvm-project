@@ -11,6 +11,30 @@
 
 include "mlir/Pass/PassBase.td"
 
+def HostOpFilteringPass : Pass<"omp-host-op-filter"> {
+  let summary = "Removes all non target-related ops from host functions.";
+  let description = [{
+    When compiling for an OpenMP offloading target, host functions holding
+    target regions must be maintained in order for the `omp.target` ops to be
+    translated to LLVM IR as functions.
+    
+    However, these host functions might contain more host code than just what's
+    necessary for generating code for their contained target regions on the
+    target device, potentially causing problematic artifacts to be generated
+    into the target device's module.
+
+    This pass strips out all non-essential operations from host functions when
+    compiling for an OpenMP target device, leaving just `omp.target` operations,
+    related `omp.map.info` and placeholders in the form of function arguments to
+    keep the MLIR representation legal.
+
+    It must run on a module at a low level of abstraction (i.e. directly
+    translatable to LLVM IR), after any passes that might produce new OpenMP
+    operations have already completed.
+  }];
+  let dependentDialects = ["LLVM::LLVMDialect"];
+}
+
 def MarkDeclareTargetPass : Pass<"omp-mark-declare-target", "ModuleOp"> {
   let summary = "Marks all functions called by an OpenMP declare target "
                 "function as declare target";

@@ -2259,8 +2259,7 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
     // name-based lookup here to try to prevent conflicts.
     FormattersMatchCandidate candidate_type(type_name, nullptr, TypeImpl(),
                                             FormattersMatchCandidate::Flags());
-    if (category->AnyMatches(candidate_type, eFormatCategoryItemFilter,
-                             false)) {
+    if (category->AnyMatches(candidate_type, eFormatCategoryItemFilter)) {
       if (error)
         *error = Status::FromErrorStringWithFormatv(
             "cannot add synthetic for type {0} when "
@@ -2401,8 +2400,7 @@ private:
       FormattersMatchCandidate candidate_type(
           type_name, nullptr, TypeImpl(), FormattersMatchCandidate::Flags());
       lldb::SyntheticChildrenSP entry;
-      if (category->AnyMatches(candidate_type, eFormatCategoryItemSynth,
-                               false)) {
+      if (category->AnyMatches(candidate_type, eFormatCategoryItemSynth)) {
         if (error)
           *error = Status::FromErrorStringWithFormatv(
               "cannot add filter for type {0} when "

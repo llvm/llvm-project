@@ -258,7 +258,7 @@ define amdgpu_cs void @call(<8 x i32> %x, ptr %p) {
   ; GISEL-NEXT:   $sgpr30_sgpr31 = SI_CALL [[REG_SEQUENCE1]], @callee, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit-def $vgpr0
   ; GISEL-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GISEL-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
-  ; GISEL-NEXT:   FLAT_STORE_DWORD [[REG_SEQUENCE]], [[COPY10]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.p)
+  ; GISEL-NEXT:   FLAT_STORE_DWORD [[REG_SEQUENCE]], [[COPY10]], 0, 0, implicit $exec, implicit $flat_scr :: (store (i32) into %ir.p)
   ; GISEL-NEXT:   S_ENDPGM 0
   %ret = call i32(ptr, ...) @llvm.amdgcn.call.whole.wave(ptr @callee, <8 x i32> %x) convergent
   store i32 %ret, ptr %p

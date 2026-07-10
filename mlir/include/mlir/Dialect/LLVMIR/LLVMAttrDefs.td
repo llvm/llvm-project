@@ -710,36 +710,34 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
                                       [LLVM_DIRecursiveTypeAttrInterface],
                                       "DILocalScopeAttr"> {
   let parameters = (ins
-    // DIRecursiveTypeAttrInterface specific parameters.
-    OptionalParameter<"DistinctAttr">:$recId,
-    OptionalParameter<"bool">:$isRecSelf,
-    // DISubprogramAttr specific parameters.
-    OptionalParameter<"DistinctAttr">:$id,
-    OptionalParameter<"DICompileUnitAttr">:$compileUnit,
-    OptionalParameter<"DIScopeAttr">:$scope,
-    OptionalParameter<"StringAttr">:$name,
-    OptionalParameter<"StringAttr">:$linkageName,
-    OptionalParameter<"DIFileAttr">:$file,
-    OptionalParameter<"unsigned">:$line,
-    OptionalParameter<"unsigned">:$scopeLine,
-    OptionalParameter<"DISubprogramFlags">:$subprogramFlags,
-    OptionalParameter<"DISubroutineTypeAttr">:$type,
-    OptionalArrayRefParameter<"DINodeAttr">:$retainedNodes,
-    OptionalArrayRefParameter<"DINodeAttr">:$annotations
-  );
-  let builders = [
-    AttrBuilder<(ins
-      "DistinctAttr":$id, "DICompileUnitAttr":$compileUnit,
-      "DIScopeAttr":$scope, "StringAttr":$name, "StringAttr":$linkageName,
-      "DIFileAttr":$file, "unsigned":$line, "unsigned":$scopeLine,
-      "DISubprogramFlags":$subprogramFlags, "DISubroutineTypeAttr":$type,
-      "ArrayRef<DINodeAttr>":$retainedNodes, "ArrayRef<DINodeAttr>":$annotations
-    ), [{
+      // DIRecursiveTypeAttrInterface specific parameters.
+      OptionalParameter<"DistinctAttr">:$recId,
+      OptionalParameter<"bool">:$isRecSelf,
+      // DISubprogramAttr specific parameters.
+      OptionalParameter<"DistinctAttr">:$id,
+      OptionalParameter<"DICompileUnitAttr">:$compileUnit,
+      OptionalParameter<"DIScopeAttr">:$scope,
+      OptionalParameter<"StringAttr">:$name,
+      OptionalParameter<"StringAttr">:$linkageName,
+      OptionalParameter<"DIFileAttr">:$file,
+      OptionalParameter<"unsigned">:$line,
+      OptionalParameter<"unsigned">:$scopeLine,
+      OptionalParameter<"DISubprogramFlags">:$subprogramFlags,
+      OptionalParameter<"DISubroutineTypeAttr">:$type,
+      OptionalArrayRefParameter<"Attribute">:$retainedNodes,
+      OptionalArrayRefParameter<"DINodeAttr">:$annotations);
+  let builders = [AttrBuilder<
+      (ins "DistinctAttr":$id, "DICompileUnitAttr":$compileUnit,
+          "DIScopeAttr":$scope, "StringAttr":$name, "StringAttr":$linkageName,
+          "DIFileAttr":$file, "unsigned":$line, "unsigned":$scopeLine,
+          "DISubprogramFlags":$subprogramFlags, "DISubroutineTypeAttr":$type,
+          "ArrayRef<Attribute>":$retainedNodes,
+          "ArrayRef<DINodeAttr>":$annotations),
+      [{
       return $_get($_ctxt, /*recId=*/nullptr, /*isRecSelf=*/false, id, compileUnit,
                    scope, name, linkageName, file, line, scopeLine,
                    subprogramFlags, type, retainedNodes, annotations);
-    }]>
-  ];
+    }]>];
   let assemblyFormat = "`<` struct(params) `>`";
   let extraClassDeclaration = [{
     /// Requirements of DIRecursiveTypeAttrInterface.

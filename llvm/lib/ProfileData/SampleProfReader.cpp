@@ -1635,8 +1635,9 @@ std::error_code SampleProfileReaderBinary::readMagicIdent() {
   auto Version = readNumber<uint64_t>();
   if (std::error_code EC = Version.getError())
     return EC;
-  else if (*Version != SPVersion())
+  else if (!formatVersionIsSupported(*Version))
     return sampleprof_error::unsupported_version;
+  FormatVersion = *Version;
 
   return sampleprof_error::success;
 }

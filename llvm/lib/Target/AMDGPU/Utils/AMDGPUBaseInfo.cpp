@@ -3674,10 +3674,11 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
 }
 
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
-  uint64_t TSFlags = MII.get(Opcode).TSFlags;
+  const MCInstrDesc &Desc = MII.get(Opcode);
+  uint64_t TSFlags = Desc.TSFlags;
 
   if (TSFlags & SIInstrFlags::SMRD)
-    return !getSMEMIsBuffer(Opcode);
+    return Desc.mayLoad() && !Desc.mayStore() && !getSMEMIsBuffer(Opcode);
   if (!(TSFlags & SIInstrFlags::FLAT))
     return false;
 

@@ -692,7 +692,7 @@ deterministic manner. This enables features such as implicitly discovered,
 explicitly built modules.
 
 ..
-  TODO: Create and link corresponding section in Modules.rst.
+  TODO: Create and link corresponding section in Modules.md.
 
 Adding new Command Line Option
 ------------------------------

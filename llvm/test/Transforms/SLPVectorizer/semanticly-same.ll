@@ -442,9 +442,7 @@ define void @fadd_fsub(ptr %p, ptr %s) {
 ; CHECK-LABEL: @fadd_fsub(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub <4 x float> [[TMP0]], <float -3.000000e+00, float 5.000000e+00, float 2.000000e+00, float 3.000000e+00>
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[TMP0]], <float -3.000000e+00, float 5.000000e+00, float 2.000000e+00, float 3.000000e+00>
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[TMP0]], <float 3.000000e+00, float 5.000000e+00, float 2.000000e+00, float 3.000000e+00>
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[S:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;

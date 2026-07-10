@@ -67,7 +67,7 @@ int __attribute__((target("branch-protection=none"))) birch_tree(void) { return 
 
 #elifdef __powerpc__
 
-int __attribute__((target("float128,arch=pwr9"))) foo(void) { return 4; }
+int __attribute__((target("float128,cpu=pwr9"))) foo(void) { return 4; }
 //expected-error@+1 {{'target' attribute takes one argument}}
 int __attribute__((target())) bar(void) { return 4; }
 // no warning, tune is supported for PPC
@@ -84,7 +84,7 @@ int __attribute__((target("cpu=hiss,cpu=woof"))) pine_tree(void) { return 4; }
 int __attribute__((target("cpu=pwr9,cpu=pwr10"))) oak_tree(void) { return 4; }
 //expected-warning@+1 {{unknown tune CPU 'hiss' in the 'target' attribute string; 'target' attribute ignored}}
 int __attribute__((target("tune=hiss,tune=woof"))) apple_tree(void) { return 4; }
-// no warning for invalid target features
+//expected-warning@+1 {{unsupported 'woof' in the 'target' attribute string; 'target' attribute ignored}}
 int __attribute__((target("woof"))) cherry_tree(void) { return 4; }
 
 #else

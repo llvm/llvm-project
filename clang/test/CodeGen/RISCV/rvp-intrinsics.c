@@ -6947,3 +6947,87 @@ uint32_t test_pabdsumau_u8x8_u32(uint32_t rd, uint8x8_t rs1, uint8x8_t rs2) {
 uint64_t test_pabdsumau_u8x8_u64(uint64_t rd, uint8x8_t rs1, uint8x8_t rs2) {
   return __riscv_pabdsumau_u8x8_u64(rd, rs1, rs2);
 }
+
+/* Packed Saturating Absolute Value (32-bit) */
+
+// RV32-LABEL: define dso_local i32 @test_psabs_i8x4(
+// RV32-SAME: i32 noundef [[RS1_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <4 x i8>
+// RV32-NEXT:    [[TMP1:%.*]] = call <4 x i8> @llvm.riscv.psabs.v4i8(<4 x i8> [[TMP0]])
+// RV32-NEXT:    [[TMP2:%.*]] = bitcast <4 x i8> [[TMP1]] to i32
+// RV32-NEXT:    ret i32 [[TMP2]]
+//
+// RV64-LABEL: define dso_local i32 @test_psabs_i8x4(
+// RV64-SAME: i32 noundef [[RS1_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <4 x i8>
+// RV64-NEXT:    [[TMP1:%.*]] = call <4 x i8> @llvm.riscv.psabs.v4i8(<4 x i8> [[TMP0]])
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <4 x i8> [[TMP1]] to i32
+// RV64-NEXT:    ret i32 [[TMP2]]
+//
+int8x4_t test_psabs_i8x4(int8x4_t rs1) {
+  return __riscv_psabs_i8x4(rs1);
+}
+
+// RV32-LABEL: define dso_local i32 @test_psabs_i16x2(
+// RV32-SAME: i32 noundef [[RS1_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
+// RV32-NEXT:    [[TMP1:%.*]] = call <2 x i16> @llvm.riscv.psabs.v2i16(<2 x i16> [[TMP0]])
+// RV32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i16> [[TMP1]] to i32
+// RV32-NEXT:    ret i32 [[TMP2]]
+//
+// RV64-LABEL: define dso_local i32 @test_psabs_i16x2(
+// RV64-SAME: i32 noundef [[RS1_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = call <2 x i16> @llvm.riscv.psabs.v2i16(<2 x i16> [[TMP0]])
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <2 x i16> [[TMP1]] to i32
+// RV64-NEXT:    ret i32 [[TMP2]]
+//
+int16x2_t test_psabs_i16x2(int16x2_t rs1) {
+  return __riscv_psabs_i16x2(rs1);
+}
+
+/* Packed Saturating Absolute Value (64-bit) */
+
+// RV32-LABEL: define dso_local i64 @test_psabs_i8x8(
+// RV32-SAME: i64 noundef [[RS1_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <8 x i8>
+// RV32-NEXT:    [[TMP1:%.*]] = call <8 x i8> @llvm.riscv.psabs.v8i8(<8 x i8> [[TMP0]])
+// RV32-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to i64
+// RV32-NEXT:    ret i64 [[TMP2]]
+//
+// RV64-LABEL: define dso_local i64 @test_psabs_i8x8(
+// RV64-SAME: i64 noundef [[RS1_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <8 x i8>
+// RV64-NEXT:    [[TMP1:%.*]] = call <8 x i8> @llvm.riscv.psabs.v8i8(<8 x i8> [[TMP0]])
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+int8x8_t test_psabs_i8x8(int8x8_t rs1) {
+  return __riscv_psabs_i8x8(rs1);
+}
+
+// RV32-LABEL: define dso_local i64 @test_psabs_i16x4(
+// RV32-SAME: i64 noundef [[RS1_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <4 x i16>
+// RV32-NEXT:    [[TMP1:%.*]] = call <4 x i16> @llvm.riscv.psabs.v4i16(<4 x i16> [[TMP0]])
+// RV32-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to i64
+// RV32-NEXT:    ret i64 [[TMP2]]
+//
+// RV64-LABEL: define dso_local i64 @test_psabs_i16x4(
+// RV64-SAME: i64 noundef [[RS1_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <4 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = call <4 x i16> @llvm.riscv.psabs.v4i16(<4 x i16> [[TMP0]])
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+int16x4_t test_psabs_i16x4(int16x4_t rs1) {
+  return __riscv_psabs_i16x4(rs1);
+}

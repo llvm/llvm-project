@@ -156,6 +156,7 @@ class DebugAdapter:
             self._process.wait(timeout=2.0)
         except subprocess.TimeoutExpired:
             self._process.kill()
+            self._process.wait()
 
     def _read_listening_uri(self) -> str:
         # lldb-dap will print the listening address once the listener is

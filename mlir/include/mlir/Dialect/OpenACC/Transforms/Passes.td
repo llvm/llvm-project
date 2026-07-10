@@ -268,8 +268,13 @@ def ACCSpecializeForDevice : Pass<"acc-specialize-for-device", "mlir::func::Func
       acc.declare_enter, acc.declare_exit
     - Compute constructs (inline region): acc.parallel, acc.serial, acc.kernels
     - Runtime ops (erased): acc.init, acc.shutdown, acc.set, acc.wait
+                  (folded if known): acc.on_device
   }];
   let dependentDialects = ["mlir::acc::OpenACCDialect"];
+  let options = [
+    ListOption<"theDeviceTypes", "the-device-types", "int64_t",
+               "List of integers which represent the device we are specializing for">
+  ];
 }
 
 def ACCSpecializeForHost : Pass<"acc-specialize-for-host", "mlir::func::FuncOp"> {

@@ -43,6 +43,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // CHECK-DAG: %[[BOX:.*]] = fir.address_of(@_QMmtestsEndev) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 // CHECK-DAG: %[[BOXREF:.*]] = fir.convert %[[BOX]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<i8>
 // CHECK-DAG: fir.call @_FortranACUFRegisterVariable(%[[MODULE:.*]], %[[BOXREF]], %{{.*}}, %{{.*}})
+// Under -gpu=mem:unified, device/constant globals are also registered as
+// device-resident so a matching host symbol is not treated as host memory.
+// UNIFIED-DAG: cuf.register_variable_static @_QMmtestsEn("_QMmtestsEn", 20)
+// UNIFIED-DAG: cuf.register_variable_static @_QMmtestsEndev("_QMmtestsEndev",
 // CHECK-NOT: fir.call @_FortranACUFInitModule
 
 // -----

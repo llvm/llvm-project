@@ -4897,11 +4897,20 @@ static void computeKnownFPClassFromCond(const Value *V, Value *Cond,
 }
 
 /// Compute the minimum and maximum values (inclusive) for the exponent of \p V,
-/// assuming it is not nan.
-static std::pair<int, int>
+/// assuming it is not nan. Returns {min, max, max-assuming-nonzero}. A value
+/// frexp(0) = 0, so the tighter max-assuming-nonzero bound is only usable when
+/// \p V is known not to be a logical zero (e.g., for fabs(x) < 0.25, the non-0
+/// exponent range is [-149, -2], but the 0 edge case is above this range).
+static std::tuple<int, int, int>
 computeKnownExponentRangeFromContext(const Value *V, const SimplifyQuery &Q) {
   if (!Q.CxtI || !Q.DC || !Q.DT)
-    return {APFloat::IEK_NaN, APFloat::IEK_Inf};
+    return {APFloat::IEK_NaN, APFloat::IEK_Inf, APFloat::IEK_Inf};
+
+  // Intersect the bounds implied by every dominating condition, keeping the
+  // tightest maximum. A value may participate in multiple compares
+  // (e.g. fabs(x) < 2.0 and fabs(x) < 1.0), and the tighter one wins.
+  int MaxExp = APFloat::IEK_Inf;
+  int MaxExpNonZero = APFloat::IEK_Inf;
 
   for (CondBrInst *BI : Q.DC->conditionsFor(V)) {
     CmpPredicate Pred;
@@ -4914,29 +4923,38 @@ computeKnownExponentRangeFromContext(const Value *V, const SimplifyQuery &Q) {
         Pred == FCmpInst::FCMP_TRUE || Pred == FCmpInst::FCMP_FALSE)
       continue;
 
-    APFloat::cmpResult CmpOne =
-        LimitC->compare(APFloat::getOne(LimitC->getSemantics()));
-    if (CmpOne > APFloat::cmpEqual)
-      continue;
-
-    // If fabs(x) <= K, K <= 1.0 => exponent min exp range
-    // if fabs(x) >= K, K <= 1.0 swap the successor
+    // If fabs(x) <= K, implies the exponent min exp range.
+    // if fabs(x) >= K, swap the successor
     bool IsLessEqual =
         Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_OLE ||
         Pred == FCmpInst::FCMP_ULT || Pred == FCmpInst::FCMP_ULE ||
         Pred == FCmpInst::FCMP_OEQ || Pred == FCmpInst::FCMP_UEQ;
 
+    bool KnownStrictlyLess =
+        Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_ULT ||
+        Pred == FCmpInst::FCMP_OGE || Pred == FCmpInst::FCMP_UGE;
+
     BasicBlockEdge Edge1(BI->getParent(),
                          BI->getSuccessor(IsLessEqual ? 0 : 1));
     if (Q.DT->dominates(Edge1, Q.CxtI->getParent())) {
-      int Exp = ilogb(*LimitC);
+      // frexp returns an exponent one greater than ilogb.
+      int Exp = ilogb(*LimitC) + 1;
+
+      // A strict bound fabs(V) < 2^n forces ilogb(V) <= n - 1, so the max frexp
+      // exponent drops by one when K is exact power of two.
+      if (KnownStrictlyLess && LimitC->getExactLog2Abs() != INT_MIN)
+        --Exp;
+
+      // frexp(0) = 0, which the bound above (assuming a normal nonzero value)
+      // may exclude.
 
       // TODO: Figure out lower bound to detect no-underflow.
-      return {APFloat::IEK_NaN, Exp};
+      MaxExpNonZero = std::min(MaxExpNonZero, Exp);
+      MaxExp = std::min(MaxExp, std::max(Exp, 0));
     }
   }
 
-  return {APFloat::IEK_NaN, APFloat::IEK_Inf};
+  return {APFloat::IEK_NaN, MaxExp, MaxExpNonZero};
 }
 
 static KnownFPClass computeKnownFPClassFromContext(const Value *V,
@@ -10540,7 +10558,7 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
       // only computes the range assuming standard subnormal handling.
       if (APFloat::isIEEELikeFP(FltSem)) {
         KnownFPClass KnownSrc = computeKnownFPClass(
-            FrexpSrc, fcSubnormal | fcNan | fcInf, SQ, Depth + 1);
+            FrexpSrc, fcSubnormal | fcZero | fcNan | fcInf, SQ, Depth + 1);
 
         // The exponent of frexp(NaN) and frexp(Inf) is unspecified. Only
         // constrain its range when the source can be neither.
@@ -10553,11 +10571,15 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
 
           int MaxExp = APFloat::semanticsMaxExponent(FltSem) + 1;
 
-          auto [AdjustedMin, AdjustedMax] =
+          auto [AdjustedMin, AdjustedMax, AdjustedMaxNonZero] =
               computeKnownExponentRangeFromContext(FrexpSrc, SQ);
 
+          DenormalMode Mode = I->getFunction()->getDenormalMode(FltSem);
+          bool NeverLogicalZero = KnownSrc.isKnownNeverLogicalZero(Mode);
+
           MinExp = std::max(AdjustedMin, MinExp);
-          MaxExp = std::min(AdjustedMax, MaxExp);
+          MaxExp = std::min(NeverLogicalZero ? AdjustedMaxNonZero : AdjustedMax,
+                            MaxExp);
 
           CR = ConstantRange::getNonEmpty(
               APInt(BitWidth, static_cast<int64_t>(MinExp), /*isSigned=*/true),

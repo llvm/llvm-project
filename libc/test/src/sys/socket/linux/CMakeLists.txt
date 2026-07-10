@@ -129,10 +129,10 @@ add_libc_unittest(
     libc.src.sys.socket.socket
     libc.src.sys.socket.socketpair
     libc.src.sys.socket.recv
-    libc.src.time.clock_gettime
     libc.src.unistd.close
     libc.src.unistd.pipe
     libc.src.__support.CPP.scope
+    libc.src.__support.time.clock_gettime
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

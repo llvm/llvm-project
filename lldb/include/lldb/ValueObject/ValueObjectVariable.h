@@ -64,6 +64,8 @@ public:
 
   bool SetData(DataExtractor &data, Status &error) override;
 
+  bool CanSetValue() override;
+
   lldb::VariableSP GetVariable() override { return m_variable_sp; }
 
 protected:
@@ -79,6 +81,11 @@ protected:
   /// The value that DWARFExpression resolves this variable to before we patch
   /// it up.
   Value m_resolved_value;
+
+  /// True when the resolved value has no writable storage in the inferior (an
+  /// implicit location, a constant, or an unresolved location) and so cannot be
+  /// the target of SetValueFromCString() or SetData(). Set by UpdateValue().
+  bool m_resolved_value_is_implicit = false;
 
 private:
   ValueObjectVariable(ExecutionContextScope *exe_scope,

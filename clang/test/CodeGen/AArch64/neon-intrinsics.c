@@ -487,66 +487,6 @@ float64x2_t test_vmlsq_f64(float64x2_t v1, float64x2_t v2, float64x2_t v3) {
   return vmlsq_f64(v1, v2, v3);
 }
 
-// CHECK-LABEL: define dso_local <2 x float> @test_vfms_f32(
-// CHECK-SAME: <2 x float> noundef [[V1:%.*]], <2 x float> noundef [[V2:%.*]], <2 x float> noundef [[V3:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[FNEG_I:%.*]] = fneg <2 x float> [[V2]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[V1]] to <2 x i32>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x float> [[FNEG_I]] to <2 x i32>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x float> [[V3]] to <2 x i32>
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP0]] to <8 x i8>
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP1]] to <8 x i8>
-// CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i32> [[TMP2]] to <8 x i8>
-// CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP3]] to <2 x float>
-// CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP4]] to <2 x float>
-// CHECK-NEXT:    [[TMP8:%.*]] = bitcast <8 x i8> [[TMP5]] to <2 x float>
-// CHECK-NEXT:    [[TMP9:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[TMP7]], <2 x float> [[TMP8]], <2 x float> [[TMP6]])
-// CHECK-NEXT:    ret <2 x float> [[TMP9]]
-//
-float32x2_t test_vfms_f32(float32x2_t v1, float32x2_t v2, float32x2_t v3) {
-  return vfms_f32(v1, v2, v3);
-}
-
-// CHECK-LABEL: define dso_local <4 x float> @test_vfmsq_f32(
-// CHECK-SAME: <4 x float> noundef [[V1:%.*]], <4 x float> noundef [[V2:%.*]], <4 x float> noundef [[V3:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[FNEG_I:%.*]] = fneg <4 x float> [[V2]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[V1]] to <4 x i32>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[FNEG_I]] to <4 x i32>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x float> [[V3]] to <4 x i32>
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP1]] to <16 x i8>
-// CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP2]] to <16 x i8>
-// CHECK-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP3]] to <4 x float>
-// CHECK-NEXT:    [[TMP7:%.*]] = bitcast <16 x i8> [[TMP4]] to <4 x float>
-// CHECK-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <4 x float>
-// CHECK-NEXT:    [[TMP9:%.*]] = call <4 x float> @llvm.fma.v4f32(<4 x float> [[TMP7]], <4 x float> [[TMP8]], <4 x float> [[TMP6]])
-// CHECK-NEXT:    ret <4 x float> [[TMP9]]
-//
-float32x4_t test_vfmsq_f32(float32x4_t v1, float32x4_t v2, float32x4_t v3) {
-  return vfmsq_f32(v1, v2, v3);
-}
-
-// CHECK-LABEL: define dso_local <2 x double> @test_vfmsq_f64(
-// CHECK-SAME: <2 x double> noundef [[V1:%.*]], <2 x double> noundef [[V2:%.*]], <2 x double> noundef [[V3:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[FNEG_I:%.*]] = fneg <2 x double> [[V2]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x double> [[V1]] to <2 x i64>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x double> [[FNEG_I]] to <2 x i64>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x double> [[V3]] to <2 x i64>
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i64> [[TMP1]] to <16 x i8>
-// CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP2]] to <16 x i8>
-// CHECK-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP3]] to <2 x double>
-// CHECK-NEXT:    [[TMP7:%.*]] = bitcast <16 x i8> [[TMP4]] to <2 x double>
-// CHECK-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <2 x double>
-// CHECK-NEXT:    [[TMP9:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP7]], <2 x double> [[TMP8]], <2 x double> [[TMP6]])
-// CHECK-NEXT:    ret <2 x double> [[TMP9]]
-//
-float64x2_t test_vfmsq_f64(float64x2_t v1, float64x2_t v2, float64x2_t v3) {
-  return vfmsq_f64(v1, v2, v3);
-}
-
 // CHECK-LABEL: define dso_local <2 x double> @test_vdivq_f64(
 // CHECK-SAME: <2 x double> noundef [[V1:%.*]], <2 x double> noundef [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -15912,29 +15852,6 @@ float64x1_t test_vmla_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
 //
 float64x1_t test_vmls_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
   return vmls_f64(a, b, c);
-}
-
-// CHECK-LABEL: define dso_local <1 x double> @test_vfms_f64(
-// CHECK-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]], <1 x double> noundef [[C:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[FNEG_I:%.*]] = fneg <1 x double> [[B]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// CHECK-NEXT:    [[__P0_ADDR_I_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x double> [[FNEG_I]] to i64
-// CHECK-NEXT:    [[__P1_ADDR_I_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i32 0
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x double> [[C]] to i64
-// CHECK-NEXT:    [[__P2_ADDR_I_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[__P1_ADDR_I_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
-// CHECK-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[__P2_ADDR_I_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
-// CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x double>
-// CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP4]] to <1 x double>
-// CHECK-NEXT:    [[TMP8:%.*]] = bitcast <8 x i8> [[TMP5]] to <1 x double>
-// CHECK-NEXT:    [[TMP9:%.*]] = call <1 x double> @llvm.fma.v1f64(<1 x double> [[TMP7]], <1 x double> [[TMP8]], <1 x double> [[TMP6]])
-// CHECK-NEXT:    ret <1 x double> [[TMP9]]
-//
-float64x1_t test_vfms_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
-  return vfms_f64(a, b, c);
 }
 
 // CHECK-LABEL: define dso_local <1 x double> @test_vabd_f64(

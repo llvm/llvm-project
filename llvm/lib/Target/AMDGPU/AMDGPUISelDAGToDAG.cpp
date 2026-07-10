@@ -1722,7 +1722,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffen(SDNode *Parent,
         AMDGPU::getNullPointerValue(AMDGPUAS::PRIVATE_ADDRESS);
     // Don't fold null pointer.
     if (Imm != NullPtr) {
-      const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(*Subtarget);
+      const int64_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(*Subtarget);
       SDValue HighBits =
           CurDAG->getTargetConstant(Imm & ~MaxOffset, DL, MVT::i32);
       MachineSDNode *MovHighBits = CurDAG->getMachineNode(

@@ -346,6 +346,8 @@ public:
   bool shouldOptimizeMulOverflowWithZeroHighBits(LLVMContext &Context,
                                                  EVT VT) const override;
 
+  Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                AtomicOrdering Ord) const override;
   Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy, Value *Addr,
                         AtomicOrdering Ord) const override;
   Value *emitStoreConditional(IRBuilderBase &Builder, Value *Val, Value *Addr,

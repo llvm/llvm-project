@@ -2095,6 +2095,13 @@ class RVPBinaryIntrinsic
                               [LLVMMatchType<0>, llvm_anyvector_ty,
                                LLVMMatchType<1>],
                               [IntrNoMem, IntrSpeculatable]>;
+
+  // Packed Saturating Absolute Value
+  class RVPUnaryIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_psabs : RVPUnaryIntrinsic;
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//

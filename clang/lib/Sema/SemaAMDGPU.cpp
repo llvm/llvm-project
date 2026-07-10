@@ -1034,7 +1034,7 @@ bool DiagnoseUnguardedBuiltins::VisitCallExpr(CallExpr *CE) {
       for (auto &&F : llvm::split(BInfo.getRequiredFeatures(GID), ','))
         FeatureMap[F] = true;
   } else {
-    static const llvm::Triple AMDGCN(llvm::Triple::amdgcn,
+    static const llvm::Triple AMDGCN(llvm::Triple::amdgpu,
                                      llvm::Triple::NoSubArch, llvm::Triple::AMD,
                                      llvm::Triple::AMDHSA);
     llvm::AMDGPU::fillAMDGPUFeatureMap(CurrentGFXIP.back().second, AMDGCN,

@@ -114,19 +114,16 @@ define void @addsub_and_external_users(ptr %A, ptr %ptr) {
 ; CHECK-NEXT:    [[LD:%.*]] = load double, ptr undef, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[LD]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> [[TMP1]], <double 1.100000e+00, double 1.200000e+00>
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP1]], <double 1.100000e+00, double 1.200000e+00>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP6]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = fdiv <2 x double> [[TMP3]], <double 2.100000e+00, double 2.200000e+00>
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP4]], <double 3.100000e+00, double 3.200000e+00>
-; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], <double 1.200000e+00, double -1.100000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = fdiv <2 x double> [[TMP2]], <double 2.200000e+00, double 2.100000e+00>
+; CHECK-NEXT:    [[SHUFFLE1:%.*]] = fmul <2 x double> [[TMP3]], <double 3.200000e+00, double 3.100000e+00>
 ; CHECK-NEXT:    store <2 x double> [[SHUFFLE1]], ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP5]], <double 4.100000e+00, double 4.200000e+00>
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[SHUFFLE1]], <double 4.200000e+00, double 4.100000e+00>
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP7]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP7]], i32 1
-; CHECK-NEXT:    [[SEED:%.*]] = fcmp ogt double [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[SEED:%.*]] = fcmp ogt double [[TMP9]], [[TMP8]]
 ; CHECK-NEXT:    ret void
 ;
 bb1:
@@ -161,9 +158,7 @@ define void @subadd_and_external_users(ptr %A, ptr %ptr) {
 ; CHECK-NEXT:    [[LD:%.*]] = load double, ptr undef, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[LD]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP1]], <double 1.200000e+00, double 1.100000e+00>
-; CHECK-NEXT:    [[TMP10:%.*]] = fsub <2 x double> [[TMP1]], <double 1.200000e+00, double 1.100000e+00>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> [[TMP10]], <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub <2 x double> [[TMP1]], <double 1.200000e+00, double -1.100000e+00>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fdiv <2 x double> [[TMP3]], <double 2.200000e+00, double 2.100000e+00>
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP4]], <double 3.200000e+00, double 3.100000e+00>
 ; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[A:%.*]], align 8
@@ -206,9 +201,7 @@ define void @alt_but_not_addsub_and_external_users(ptr %A, ptr %ptr) {
 ; CHECK-NEXT:    [[LD:%.*]] = load double, ptr undef, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> poison, double [[LD]], i32 0
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x double> [[TMP0]], <4 x double> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub <4 x double> [[SHUFFLE]], <double 1.400000e+00, double 1.300000e+00, double 1.200000e+00, double 1.100000e+00>
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x double> [[SHUFFLE]], <double 1.400000e+00, double 1.300000e+00, double 1.200000e+00, double 1.100000e+00>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x double> [[SHUFFLE]], <double -1.400000e+00, double 1.300000e+00, double 1.200000e+00, double -1.100000e+00>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fdiv <4 x double> [[TMP3]], <double 2.400000e+00, double 2.300000e+00, double 2.200000e+00, double 2.100000e+00>
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <4 x double> [[TMP4]], <double 3.400000e+00, double 3.300000e+00, double 3.200000e+00, double 3.100000e+00>
 ; CHECK-NEXT:    store <4 x double> [[TMP5]], ptr [[A:%.*]], align 8

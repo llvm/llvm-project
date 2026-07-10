@@ -4,7 +4,6 @@
 ; RUN: llc -mtriple=aarch64-windows-msvc -mattr=+sve < %s -o - | FileCheck -check-prefixes=SVE,SVEWINDOWS %s
 ; RUN: llc -mtriple=aarch64-windows-msvc < %s -o - | FileCheck -check-prefixes=WINDOWS %s
 
-
 define double @testExp(double %val, i32 %a) {
 ; SVE-LABEL: testExp:
 ; SVE:       // %bb.0: // %entry

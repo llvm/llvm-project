@@ -86,6 +86,7 @@ add_subdirectory(unistd)
 add_subdirectory(inttypes)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
+  add_subdirectory(err)
   add_subdirectory(fcntl)
   add_subdirectory(poll)
   add_subdirectory(sched)

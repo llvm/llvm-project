@@ -445,10 +445,9 @@ define void @reuse_shuffle_indices_cost_crash_3(ptr %m, double %conv, double %co
 ; CHECK-LABEL: define void @reuse_shuffle_indices_cost_crash_3(
 ; CHECK-SAME: ptr [[M:%.*]], double [[CONV:%.*]], double [[CONV2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB19:%.*]] = fsub double 0.000000e+00, [[CONV2]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[CONV]], 0.000000e+00
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[SUB19]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[ADD]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[CONV]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> <double poison, double -0.000000e+00>, double [[CONV2]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x double> [[TMP0]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fptrunc <2 x double> [[TMP1]] to <2 x float>
 ; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[M]], align 4
 ; CHECK-NEXT:    [[ADD26:%.*]] = fsub double [[CONV]], [[CONV]]
@@ -520,10 +519,10 @@ define void @common_mask(ptr %m, double %conv, double %conv2) {
 ; CHECK-LABEL: define void @common_mask(
 ; CHECK-SAME: ptr [[M:%.*]], double [[CONV:%.*]], double [[CONV2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB19:%.*]] = fsub double [[CONV]], [[CONV]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[CONV2]], 0.000000e+00
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[SUB19]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[ADD]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[CONV]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP0]], double [[CONV2]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> <double poison, double -0.000000e+00>, <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x double> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fptrunc <2 x double> [[TMP1]] to <2 x float>
 ; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[M]], align 4
 ; CHECK-NEXT:    [[ADD26:%.*]] = fsub double 0.000000e+00, [[CONV]]

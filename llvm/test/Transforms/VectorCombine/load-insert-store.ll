@@ -713,6 +713,26 @@ entry:
   ret void
 }
 
+; Non-constant index makes the access "safe with freeze", but memory is
+; modified between the load and store, so the fold must bail out without
+; leaving the pending ToFreeze value set.
+define void @insert_store_mem_modify_nonconst_index(ptr %p, i8 %s) {
+; CHECK-LABEL: @insert_store_mem_modify_nonconst_index(
+; CHECK-NEXT:    [[LD:%.*]] = load <2 x i8>, ptr [[P:%.*]], align 2
+; CHECK-NEXT:    [[A:%.*]] = and i8 [[S:%.*]], 1
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i8> [[LD]], i8 0, i8 [[A]]
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    store <2 x i8> [[INS]], ptr [[P]], align 2
+; CHECK-NEXT:    ret void
+;
+  %ld = load <2 x i8>, ptr %p
+  %a = and i8 %s, 1
+  %ins = insertelement <2 x i8> %ld, i8 0, i8 %a
+  store i32 0, ptr %p
+  store <2 x i8> %ins, ptr %p
+  ret void
+}
+
 ; Check cases when calls may modify memory
 define void @insert_store_with_call(ptr %p, ptr %q, i8 %s) {
 ; CHECK-LABEL: @insert_store_with_call(

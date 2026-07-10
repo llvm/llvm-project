@@ -50,23 +50,23 @@ body: |
     ; GFX11-NEXT: GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], [[V_ADD_F64_e64_1]], [[COPY5]], 0, 0, implicit $exec :: (store (s64), addrspace 1)
     ; GFX11-NEXT: S_ENDPGM 0
     %2:sgpr(p4) = COPY $sgpr0_sgpr1
-    %7:sgpr(s64) = G_CONSTANT i64 36
-    %8:sgpr(p4) = G_PTR_ADD %2, %7(s64)
-    %9:sgpr(<2 x s64>) = G_LOAD %8(p4) :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
-    %10:sgpr(s64), %13:sgpr(s64) = G_UNMERGE_VALUES %9(<2 x s64>)
-    %15:sgpr(p1) = G_INTTOPTR %13(s64)
-    %18:sgpr(s64) = G_LOAD %15(p1) :: (load (s64), addrspace 1)
-    %19:sgpr(s64) = G_FCONSTANT double -0.000000e+00
-    %24:sgpr(s64) = G_FNEG %18
-    %25:vgpr(s64) = COPY %19(s64)
-    %26:vgpr(s64) = COPY %24(s64)
-    %20:vgpr(s64) = G_FADD %25, %26
-    %21:vgpr(s64) = G_FFLOOR %20
-    %23:vgpr(s64) = G_FNEG %21
-    %22:vgpr(s64) = G_FADD %20, %23
-    %12:sgpr(p1) = G_INTTOPTR %10(s64)
+    %7:sgpr(i64) = G_CONSTANT i64 36
+    %8:sgpr(p4) = G_PTR_ADD %2, %7(i64)
+    %9:sgpr(<2 x i64>) = G_LOAD %8(p4) :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
+    %10:sgpr(i64), %13:sgpr(i64) = G_UNMERGE_VALUES %9(<2 x i64>)
+    %15:sgpr(p1) = G_INTTOPTR %13(i64)
+    %18:sgpr(f64) = G_LOAD %15(p1) :: (load (s64), addrspace 1)
+    %19:sgpr(f64) = G_FCONSTANT double -0.000000e+00
+    %24:sgpr(f64) = G_FNEG %18
+    %25:vgpr(f64) = COPY %19(f64)
+    %26:vgpr(f64) = COPY %24(f64)
+    %20:vgpr(f64) = G_FADD %25, %26
+    %21:vgpr(f64) = G_FFLOOR %20
+    %23:vgpr(f64) = G_FNEG %21
+    %22:vgpr(f64) = G_FADD %20, %23
+    %12:sgpr(p1) = G_INTTOPTR %10(i64)
     %27:vgpr(p1) = COPY %12(p1)
-    G_STORE %22(s64), %27(p1) :: (store (s64), addrspace 1)
+    G_STORE %22(f64), %27(p1) :: (store (s64), addrspace 1)
     S_ENDPGM 0
 ...
 
@@ -118,23 +118,23 @@ body: |
     ; GFX11-NEXT: GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], [[V_ADD_F64_e64_1]], [[COPY5]], 0, 0, implicit $exec :: (store (s64), addrspace 1)
     ; GFX11-NEXT: S_ENDPGM 0
     %2:sgpr(p4) = COPY $sgpr0_sgpr1
-    %7:sgpr(s64) = G_CONSTANT i64 36
-    %8:sgpr(p4) = G_PTR_ADD %2, %7(s64)
-    %9:sgpr(<2 x s64>) = G_LOAD %8(p4) :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
-    %10:sgpr(s64), %13:sgpr(s64) = G_UNMERGE_VALUES %9(<2 x s64>)
-    %15:sgpr(p1) = G_INTTOPTR %13(s64)
-    %18:sgpr(s64) = G_LOAD %15(p1) :: (load (s64), addrspace 1)
-    %19:sgpr(s64) = G_FABS %18
-    %20:sgpr(s64) = G_FCONSTANT double -0.000000e+00
-    %25:sgpr(s64) = G_FNEG %19
-    %26:vgpr(s64) = COPY %20(s64)
-    %27:vgpr(s64) = COPY %25(s64)
-    %21:vgpr(s64) = G_FADD %26, %27
-    %22:vgpr(s64) = G_FFLOOR %21
-    %24:vgpr(s64) = G_FNEG %22
-    %23:vgpr(s64) = G_FADD %21, %24
-    %12:sgpr(p1) = G_INTTOPTR %10(s64)
+    %7:sgpr(i64) = G_CONSTANT i64 36
+    %8:sgpr(p4) = G_PTR_ADD %2, %7(i64)
+    %9:sgpr(<2 x i64>) = G_LOAD %8(p4) :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
+    %10:sgpr(i64), %13:sgpr(i64) = G_UNMERGE_VALUES %9(<2 x i64>)
+    %15:sgpr(p1) = G_INTTOPTR %13(i64)
+    %18:sgpr(f64) = G_LOAD %15(p1) :: (load (s64), addrspace 1)
+    %19:sgpr(f64) = G_FABS %18
+    %20:sgpr(f64) = G_FCONSTANT double -0.000000e+00
+    %25:sgpr(f64) = G_FNEG %19
+    %26:vgpr(f64) = COPY %20(f64)
+    %27:vgpr(f64) = COPY %25(f64)
+    %21:vgpr(f64) = G_FADD %26, %27
+    %22:vgpr(f64) = G_FFLOOR %21
+    %24:vgpr(f64) = G_FNEG %22
+    %23:vgpr(f64) = G_FADD %21, %24
+    %12:sgpr(p1) = G_INTTOPTR %10(i64)
     %28:vgpr(p1) = COPY %12(p1)
-    G_STORE %23(s64), %28(p1) :: (store (s64), addrspace 1)
+    G_STORE %23(f64), %28(p1) :: (store (s64), addrspace 1)
     S_ENDPGM 0
 ...

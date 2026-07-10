@@ -291,7 +291,7 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
     return createLanaiTargetCodeGenInfo(CGM);
   case llvm::Triple::r600:
     return createAMDGPUTargetCodeGenInfo(CGM);
-  case llvm::Triple::amdgcn:
+  case llvm::Triple::amdgpu:
     return createAMDGPUTargetCodeGenInfo(CGM);
   case llvm::Triple::sparc:
     return createSparcV8TargetCodeGenInfo(CGM);
@@ -343,12 +343,36 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   return *TheTargetCodeGenInfo;
 }
 
-bool CodeGenModule::shouldUseLLVMABILowering() const {
+bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   if (!CodeGenOpts.ExperimentalABILowering)
     return false;
-  // Only opt in for targets that have an LLVMABI implementation; others
-  // continue through the legacy ABIInfo path.
-  return getTriple().isBPF();
+
+  const llvm::Triple &T = getTriple();
+  if (T.isBPF())
+    return true;
+
+  if (T.getArch() == llvm::Triple::x86_64 && !T.isOSWindows() && !T.isUEFI() &&
+      !T.isOSDarwin() && !T.isOSCygMing()) {
+    switch (CallingConv) {
+    case llvm::CallingConv::Win64:
+    case llvm::CallingConv::X86_RegCall:
+    case llvm::CallingConv::X86_FastCall:
+    case llvm::CallingConv::X86_VectorCall:
+    case llvm::CallingConv::X86_StdCall:
+    case llvm::CallingConv::X86_ThisCall:
+    // These conventions are not yet handled by X86_64TargetInfo::computeInfo,
+    // so they must fall back to Clang's classic ABIInfo rather than hit its
+    // unreachable.
+    case llvm::CallingConv::Intel_OCL_BI:
+    case llvm::CallingConv::PreserveMost:
+    case llvm::CallingConv::PreserveAll:
+    case llvm::CallingConv::PreserveNone:
+      return false;
+    default:
+      return true;
+    }
+  }
+  return false;
 }
 
 const llvm::abi::TargetInfo &
@@ -356,10 +380,41 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
   if (TheLLVMABITargetInfo)
     return *TheLLVMABITargetInfo;
 
-  assert(getTriple().isBPF() &&
-         "LLVMABI lowering requested for an unsupported target");
-  TheLLVMABITargetInfo = llvm::abi::createBPFTargetInfo(TB);
-  return *TheLLVMABITargetInfo;
+  const llvm::Triple &T = getTriple();
+  if (T.isBPF()) {
+    TheLLVMABITargetInfo = llvm::abi::createBPFTargetInfo(TB);
+    return *TheLLVMABITargetInfo;
+  }
+
+  if (T.getArch() == llvm::Triple::x86_64) {
+    StringRef ABI = getTarget().getABI();
+    llvm::abi::X86AVXABILevel AVXLevel =
+        ABI == "avx512" ? llvm::abi::X86AVXABILevel::AVX512
+        : ABI == "avx"  ? llvm::abi::X86AVXABILevel::AVX
+                        : llvm::abi::X86AVXABILevel::None;
+
+    llvm::abi::ABICompatInfo CompatInfo;
+    LangOptions::ClangABI Compat = getLangOpts().getClangABICompat();
+    CompatInfo.ClassifyIntegerMMXAsSSE =
+        Compat > LangOptions::ClangABI::Ver3_8 && !T.isOSDarwin() &&
+        !T.isPS() && !T.isOSFreeBSD();
+    CompatInfo.HonorsRevision98 = !T.isOSDarwin();
+    CompatInfo.PassInt128VectorsInMem = Compat > LangOptions::ClangABI::Ver9 &&
+                                        (T.isOSLinux() || T.isOSNetBSD());
+    // Clang <= 20.0 did not do this, and PlayStation does not do this.
+    CompatInfo.ReturnCXXRecordGreaterThan128InMem =
+        Compat > LangOptions::ClangABI::Ver20 && !T.isPS();
+    CompatInfo.Clang11Compat =
+        Compat <= LangOptions::ClangABI::Ver11 || T.isPS();
+
+    bool Has64BitPointers = getTarget().getPointerWidth(LangAS::Default) == 64;
+
+    TheLLVMABITargetInfo = llvm::abi::createX86_64TargetInfo(
+        TB, AVXLevel, Has64BitPointers, CompatInfo);
+    return *TheLLVMABITargetInfo;
+  }
+
+  llvm_unreachable("LLVMABI lowering requested for an unsupported target");
 }
 
 static void checkDataLayoutConsistency(const TargetInfo &Target,
@@ -629,7 +684,7 @@ void CodeGenModule::createOpenMPRuntime() {
   switch (getTriple().getArch()) {
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
-  case llvm::Triple::amdgcn:
+  case llvm::Triple::amdgpu:
   case llvm::Triple::spirv64:
     assert(
         getLangOpts().OpenMPIsTargetDevice &&
@@ -5109,7 +5164,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
 }
 
 // Symbols with this prefix are used as deactivation symbols for PFP fields.
-// See clang/docs/StructureProtection.rst for more information.
+// See clang/docs/StructureProtection.md for more information.
 static const char PFPDeactivationSymbolPrefix[] = "__pfp_ds_";
 
 llvm::GlobalValue *
@@ -6211,7 +6266,7 @@ LangAS CodeGenModule::GetGlobalConstantAddressSpace() const {
 }
 
 // In address space agnostic languages, string literals are in default address
-// space in AST. However, certain targets (e.g. amdgcn) request them to be
+// space in AST. However, certain targets (e.g. amdgpu) request them to be
 // emitted in constant address space in LLVM IR. To be consistent with other
 // parts of AST, string literal global variables in constant address space
 // need to be casted to default address space before being put into address

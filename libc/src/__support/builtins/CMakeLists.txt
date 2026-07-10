@@ -100,3 +100,12 @@ add_header_library(
     libc.src.__support.FPUtil.generic.mul
     libc.src.__support.macros.config
 )
+
+add_header_library(
+  divsf3
+  HDRS
+    divsf3.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.macros.config
+)

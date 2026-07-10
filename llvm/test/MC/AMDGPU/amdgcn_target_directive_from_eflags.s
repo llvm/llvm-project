@@ -43,30 +43,30 @@
 // RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx908 -mattr=-sramecc -filetype=obj %s -o %t-sramecc-off-only.o
 // RUN: llvm-objdump --disassemble-all %t-sramecc-off-only.o | FileCheck --check-prefix=CHECK-SRAMECC-OFF-ONLY %s
 
-// CHECK-GFX900: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx900"
+// CHECK-GFX900: .amdgcn_target "amdgpu-amd-amdhsa-unknown-gfx900"
 
-// CHECK-GFX908: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx908"
+// CHECK-GFX908: .amdgcn_target "amdgpu-amd-amdhsa-unknown-gfx908"
 
-// CHECK-GFX1010: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx1010"
+// CHECK-GFX1010: .amdgcn_target "amdgpu-amd-amdhsa-unknown-gfx1010"
 
-// CHECK-GFX1100: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx1100"
+// CHECK-GFX1100: .amdgcn_target "amdgpu-amd-amdhsa-unknown-gfx1100"
 
-// CHECK-GFX1200: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx1200"
+// CHECK-GFX1200: .amdgcn_target "amdgpu-amd-amdhsa-unknown-gfx1200"
 
-// CHECK-DEFAULT: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx908"
+// CHECK-DEFAULT: .amdgcn_target "amdgpu-amd-amdhsa-unknown-gfx908"
 
-// CHECK-BOTH-ON: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx908:sramecc+:xnack+"
+// CHECK-BOTH-ON: .amdgcn_target "amdgpu-amd-amdhsa-unknown-gfx908:sramecc+:xnack+"
 
-// CHECK-BOTH-OFF: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx908:sramecc-:xnack-"
+// CHECK-BOTH-OFF: .amdgcn_target "amdgpu-amd-amdhsa-unknown-gfx908:sramecc-:xnack-"
 
-// CHECK-XNACK-ON: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx908:sramecc-:xnack+"
+// CHECK-XNACK-ON: .amdgcn_target "amdgpu-amd-amdhsa-unknown-gfx908:sramecc-:xnack+"
 
-// CHECK-SRAMECC-ON: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx908:sramecc+:xnack-"
+// CHECK-SRAMECC-ON: .amdgcn_target "amdgpu-amd-amdhsa-unknown-gfx908:sramecc+:xnack-"
 
-// CHECK-XNACK-ONLY: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx908:xnack+"
+// CHECK-XNACK-ONLY: .amdgcn_target "amdgpu-amd-amdhsa-unknown-gfx908:xnack+"
 
-// CHECK-XNACK-OFF-ONLY: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx908:xnack-"
+// CHECK-XNACK-OFF-ONLY: .amdgcn_target "amdgpu-amd-amdhsa-unknown-gfx908:xnack-"
 
-// CHECK-SRAMECC-ONLY: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx908:sramecc+"
+// CHECK-SRAMECC-ONLY: .amdgcn_target "amdgpu-amd-amdhsa-unknown-gfx908:sramecc+"
 
-// CHECK-SRAMECC-OFF-ONLY: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx908:sramecc-"
+// CHECK-SRAMECC-OFF-ONLY: .amdgcn_target "amdgpu-amd-amdhsa-unknown-gfx908:sramecc-"

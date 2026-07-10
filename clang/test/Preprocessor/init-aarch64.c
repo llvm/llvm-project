@@ -263,6 +263,7 @@
 // AARCH64-NEXT: #define __SHRT_MAX__ 32767
 // AARCH64-NEXT: #define __SHRT_WIDTH__ 16
 // AARCH64-NEXT: #define __SIG_ATOMIC_MAX__ 2147483647
+// AARCH64-NEXT: #define __SIG_ATOMIC_MIN__ (-__SIG_ATOMIC_MAX__ - 1)
 // AARCH64-NEXT: #define __SIG_ATOMIC_WIDTH__ 32
 // AARCH64-NEXT: #define __SIZEOF_DOUBLE__ 8
 // AARCH64-NEXT: #define __SIZEOF_FLOAT__ 4
@@ -393,10 +394,12 @@
 // AARCH64-NEXT: #define __USER_LABEL_PREFIX__
 // AARCH64-NEXT: #define __VERSION__ "{{.*}}"
 // AARCH64-NEXT: #define __WCHAR_MAX__ 4294967295U
+// AARCH64-NEXT: #define __WCHAR_MIN__ 0U
 // AARCH64-NEXT: #define __WCHAR_TYPE__ unsigned int
 // AARCH64-NEXT: #define __WCHAR_UNSIGNED__ 1
 // AARCH64-NEXT: #define __WCHAR_WIDTH__ 32
 // AARCH64-NEXT: #define __WINT_MAX__ 2147483647
+// AARCH64-NEXT: #define __WINT_MIN__ (-__WINT_MAX__ - 1)
 // AARCH64-NEXT: #define __WINT_TYPE__ int
 // AARCH64-NEXT: #define __WINT_WIDTH__ 32
 // AARCH64-NEXT: #define __aarch64__ 1

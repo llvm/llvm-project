@@ -1273,8 +1273,19 @@ void LayoutInfoPropagation::visitStoreScatterOp(
       storeScatter.emitWarning("Not propagating, non-vector payload supplied.");
       return;
     }
+    auto numSgOrErr = getNumSg(storeScatter, uArch->getSubgroupSize());
+    if (layoutKind == xegpu::LayoutKind::Subgroup && failed(numSgOrErr)) {
+      storeScatter.emitWarning(
+          "Unable to determine the number of subgroups for the operation.");
+      return;
+    }
     requiredAnchorLayoutAttr = xegpu::setupStoreScatterAnchorLayout(
-        layoutKind, srcVecTy, chunkSize, uArch);
+        layoutKind, srcVecTy, chunkSize, numSgOrErr.value_or(0), uArch);
+    if (!requiredAnchorLayoutAttr) {
+      storeScatter.emitWarning(
+          "Failed to determine required layout for store scatter.");
+      return;
+    }
     storeScatter.setLayoutAttr(requiredAnchorLayoutAttr);
   }
 
@@ -1357,8 +1368,19 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
   } else {
     int chunkSize =
         1; // placeHolder for future use when StoreMatrix supports coalescing
+    auto numSgOrErr = getNumSg(storeMatrix, uArch->getSubgroupSize());
+    if (layoutKind == xegpu::LayoutKind::Subgroup && failed(numSgOrErr)) {
+      storeMatrix.emitWarning(
+          "Unable to determine the number of subgroups for the operation.");
+      return;
+    }
     requiredAnchorLayoutAttr = xegpu::setupStoreMatrixAnchorLayout(
-        layoutKind, srcVecTy, chunkSize, uArch);
+        layoutKind, srcVecTy, chunkSize, numSgOrErr.value_or(0), uArch);
+    if (!requiredAnchorLayoutAttr) {
+      storeMatrix.emitWarning(
+          "Failed to determine required layout for store matrix.");
+      return;
+    }
     storeMatrix.setLayoutAttr(requiredAnchorLayoutAttr);
   }
   layout = LayoutInfo(requiredAnchorLayoutAttr);

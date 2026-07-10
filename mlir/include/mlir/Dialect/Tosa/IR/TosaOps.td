@@ -2485,6 +2485,7 @@ def Tosa_TileOp : Tosa_InferShapedTypeOp<"tile", [Pure]> {
     LogicalResult getConstantMultiples(llvm::SmallVector<int64_t> &multiples);
   }];
 
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
 
@@ -2970,9 +2971,13 @@ def Tosa_ConstOp : Tosa_Op<"const", [ConstantLike, Pure,
     Tosa_Tensor:$output
   );
 
-  list<Availability> availability = [
-    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_INT4, Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_MXFP, Tosa_EXT_INT64]>,
+  list<Availability> availability =
+      [Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+       Extension<[Tosa_EXT_INT4, Tosa_EXT_INT16, Tosa_EXT_FP8E4M3,
+                  Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_MXFP,
+                  Tosa_EXT_INT64, Tosa_EXT_MX_COMMON, Tosa_EXT_MX_FP4E2M1,
+                  Tosa_EXT_MX_FP6E2M3, Tosa_EXT_MX_FP6E3M2, Tosa_EXT_MX_FP8E4M3,
+                  Tosa_EXT_MX_FP8E5M2, Tosa_EXT_MX_INT8]>,
   ];
 
   let hasFolder = 1;

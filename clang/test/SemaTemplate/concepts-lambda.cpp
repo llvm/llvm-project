@@ -361,6 +361,43 @@ struct foo {
 constexpr auto bar = foo(seq<0>());
 }
 
+namespace GH200682 {
+
+template <typename... Args> struct A {
+  template <auto F> constexpr static bool B = F(42);
+};
+
+template <typename T>
+concept c = true;
+
+template <typename T>
+concept d = false;
+
+void f(auto &&...args)
+  requires(
+      A<decltype(args)...>::template B<[](auto x) { return c<decltype(x)>; }>);
+
+template <class>
+void g(auto &&...args)
+  requires(
+      A<decltype(args)...>::template B<[](auto x) { return c<decltype(x)>; }>);
+
+void h(auto &&...args) // expected-note {{constraints not satisfied}}
+  requires(
+      A<decltype(args)...>::template B<[](auto x) { // expected-note {{evaluated to false}}
+        return d<decltype(x)>;
+      }>);
+
+void main() {
+  f();
+  g<int>();
+
+  h(42);
+  // expected-error@-1 {{no matching}}
+}
+
+}
+
 namespace GH147650 {
 template <int> int b;
 template <int b>

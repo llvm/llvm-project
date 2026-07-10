@@ -3416,9 +3416,7 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
       // If our destination is not a vector, then make this a straight
       // scalar-scalar cast.
       if (!DestTy->isVectorTy()) {
-        Value *Elem =
-          Builder.CreateExtractElement(Src,
-                     Constant::getNullValue(Type::getInt32Ty(CI.getContext())));
+        Value *Elem = Builder.CreateExtractElement(Src, uint64_t{0});
         return CastInst::Create(Instruction::BitCast, Elem, DestTy);
       }
 

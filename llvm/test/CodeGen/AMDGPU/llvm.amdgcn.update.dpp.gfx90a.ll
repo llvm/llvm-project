@@ -1,5 +1,5 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck --check-prefixes=GCN,GFX90A %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck --check-prefixes=GCN,GFX90A %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck --check-prefixes=GCN,GFX90A,GFX90A-SDAG %s
+; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck --check-prefixes=GCN,GFX90A,GFX90A-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck --check-prefixes=GCN,GFX942 %s
 ; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck --check-prefixes=GCN,GFX942 %s
 ; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx9-4-generic --amdhsa-code-object-version=6 < %s | FileCheck --check-prefixes=GCN,GFX942 %s
@@ -166,15 +166,22 @@ define amdgpu_ps void @update_dpp_v2f16_poison(<2 x half> %in, ptr addrspace(1) 
 
 ; GCN-LABEL: update_dpp_v8f16_poison:
 ;
-; GFX90A-DAG:    v_mov_b32_dpp v0, v0 row_newbcast:1 row_mask:0x1 bank_mask:0x1
-; GFX90A-DAG:    v_mov_b32_dpp v1, v1 row_newbcast:1 row_mask:0x1 bank_mask:0x1
-; GFX90A-DAG:    v_mov_b32_dpp v2, v2 row_newbcast:1 row_mask:0x1 bank_mask:0x1
-; GFX90A-DAG:    v_mov_b32_dpp v3, v3 row_newbcast:1 row_mask:0x1 bank_mask:0x1
+; GFX90A-SDAG-DAG:    v_mov_b32_dpp v0, v0 row_newbcast:1 row_mask:0x1 bank_mask:0x1
+; GFX90A-SDAG-DAG:    v_mov_b32_dpp v1, v1 row_newbcast:1 row_mask:0x1 bank_mask:0x1
+; GFX90A-SDAG-DAG:    v_mov_b32_dpp v2, v2 row_newbcast:1 row_mask:0x1 bank_mask:0x1
+; GFX90A-SDAG-DAG:    v_mov_b32_dpp v3, v3 row_newbcast:1 row_mask:0x1 bank_mask:0x1
+;
+; GFX90A-GISEL-DAG:   v_mov_b32_dpp v6, v0 row_newbcast:1 row_mask:0x1 bank_mask:0x1
+; GFX90A-GISEL-DAG:   v_mov_b32_dpp v7, v1 row_newbcast:1 row_mask:0x1 bank_mask:0x1
+; GFX90A-GISEL-DAG:   v_mov_b32_dpp v8, v0 row_newbcast:1 row_mask:0x1 bank_mask:0x1
+; GFX90A-GISEL-DAG:   v_mov_b32_dpp v9, v1 row_newbcast:1 row_mask:0x1 bank_mask:0x1
 ;
 ; GFX942-DAG:    v_mov_b64_dpp v[2:3], v[2:3] row_newbcast:1 row_mask:0x1 bank_mask:0x1
 ; GFX942-DAG:    v_mov_b64_dpp v[0:1], v[0:1] row_newbcast:1 row_mask:0x1 bank_mask:0x1
 ;
-; GCN:           global_store_dwordx4 v[4:5], v[0:3], off
+; GFX90A-SDAG:   global_store_dwordx4 v[4:5], v[0:3], off
+; GFX90A-GISEL:  global_store_dwordx4 v[4:5], v[6:9], off
+; GFX942:        global_store_dwordx4 v[4:5], v[0:3], off
 
 define amdgpu_ps void @update_dpp_v8f16_poison(<8 x half> %in, ptr addrspace(1) %out) {
   %tmp0 = call <8 x half> @llvm.amdgcn.update.dpp.v8f16(<8 x half> poison, <8 x half> %in, i32 337, i32 1, i32 1, i1 0)

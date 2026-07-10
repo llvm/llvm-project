@@ -2489,8 +2489,11 @@ public:
   /// AtomicRMW, if at all. Default is to never expand.
   virtual AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
-    return RMW->isFloatingPointOperation() ?
-      AtomicExpansionKind::CmpXChg : AtomicExpansionKind::None;
+    if (RMW->isFloatingPointOperation())
+      return AtomicExpansionKind::CmpXChg;
+    if (RMW->getType()->isVectorTy())
+      return AtomicExpansionKind::CmpXChg;
+    return AtomicExpansionKind::None;
   }
 
   /// Returns how the given atomic atomicrmw should be cast by the IR-level

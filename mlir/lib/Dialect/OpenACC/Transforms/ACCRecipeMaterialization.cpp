@@ -43,7 +43,9 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACCParMapping.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtilsCG.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsLoop.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "mlir/IR/Block.h"
@@ -181,10 +183,11 @@ private:
   void removeRecipe(OpTy op, ModuleOp moduleOp) const;
   template <typename OpTy, typename RecipeOpTy, typename AccOpTy>
   LogicalResult materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
-                            acc::OpenACCSupport &accSupport) const;
+                            acc::OpenACCSupport &accSupport,
+                            acc::ACCToGPUMappingPolicy &policy) const;
   template <typename OpTy>
-  LogicalResult materializeForACCOp(OpTy accOp,
-                                    acc::OpenACCSupport &accSupport) const;
+  LogicalResult materializeForACCOp(OpTy accOp, acc::OpenACCSupport &accSupport,
+                                    acc::ACCToGPUMappingPolicy &policy) const;
 };
 
 void ACCRecipeMaterialization::handleFirstprivateMapping(
@@ -220,9 +223,9 @@ void ACCRecipeMaterialization::removeRecipe(OpTy op, ModuleOp moduleOp) const {
 }
 
 template <typename OpTy, typename RecipeOpTy, typename AccOpTy>
-LogicalResult
-ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
-                                      acc::OpenACCSupport &accSupport) const {
+LogicalResult ACCRecipeMaterialization::materialize(
+    OpTy op, RecipeOpTy recipe, AccOpTy accOp, acc::OpenACCSupport &accSupport,
+    acc::ACCToGPUMappingPolicy &policy) const {
   Region &region = accOp.getRegion();
   Value origPtr = op.getVar();
   Value accPtr = op.getAccVar();
@@ -380,11 +383,25 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
     cloneRegionIntoAccRegion(&combinerRegion, &combineRegionOp.getRegion(),
                              /*hasResult=*/false);
 
-    auto setSeqParDimsForRecipeLoops = [](Region *r) {
-      r->walk([](LoopLikeOpInterface loopLike) {
-        loopLike->setAttr(
-            acc::GPUParallelDimsAttr::name,
-            acc::GPUParallelDimsAttr::seq(loopLike->getContext()));
+    auto ctx = b.getContext();
+
+    // For reductions that come from parallel constructs, explicitly set the
+    // GPU parallel dimensions attribute to blockXDim since they will always be
+    // gang private. GPU parallel dimensions cannot be determined for acc.loop
+    // at this point.
+    if constexpr (std::is_same_v<AccOpTy, acc::ParallelOp>) {
+      auto parDimsAttr = acc::GPUParallelDimsAttr::get(
+          ctx, {policy.gangDim(ctx, acc::ParLevel::gang_dim1)});
+      acc::setParDimsAttr(reductionOp, parDimsAttr);
+      acc::setParDimsAttr(combineRegionOp, parDimsAttr);
+    }
+
+    // Set sequential parallel dimensions attribute for loops in the recipe.
+    auto seqParDimsAttr =
+        acc::GPUParallelDimsAttr::get(ctx, {policy.seqDim(ctx)});
+    auto setSeqParDimsForRecipeLoops = [&](Region *r) {
+      r->walk([&](LoopLikeOpInterface loopLike) {
+        acc::setParDimsAttr(loopLike, seqParDimsAttr);
       });
     };
     setSeqParDimsForRecipeLoops(&reductionOp.getRegion());
@@ -406,7 +423,8 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
 
 template <typename OpTy>
 LogicalResult ACCRecipeMaterialization::materializeForACCOp(
-    OpTy accOp, acc::OpenACCSupport &accSupport) const {
+    OpTy accOp, acc::OpenACCSupport &accSupport,
+    acc::ACCToGPUMappingPolicy &policy) const {
   assert(isa<ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS>(accOp));
 
   if (!accOp.getFirstprivateOperands().empty()) {
@@ -422,7 +440,8 @@ LogicalResult ACCRecipeMaterialization::materializeForACCOp(
       LLVM_DEBUG(llvm::dbgs() << "materializing: " << firstprivateOp << "\n"
                               << symbolRef << "\n");
       handleFirstprivateMapping(firstprivateOp);
-      if (failed(materialize(firstprivateOp, recipeOp, accOp, accSupport)))
+      if (failed(
+              materialize(firstprivateOp, recipeOp, accOp, accSupport, policy)))
         return failure();
     }
   }
@@ -439,7 +458,7 @@ LogicalResult ACCRecipeMaterialization::materializeForACCOp(
       auto recipeOp = cast<acc::PrivateRecipeOp>(decl);
       LLVM_DEBUG(llvm::dbgs() << "materializing: " << privateOp << "\n"
                               << symbolRef << "\n");
-      if (failed(materialize(privateOp, recipeOp, accOp, accSupport)))
+      if (failed(materialize(privateOp, recipeOp, accOp, accSupport, policy)))
         return failure();
     }
   }
@@ -456,7 +475,7 @@ LogicalResult ACCRecipeMaterialization::materializeForACCOp(
       auto recipeOp = cast<acc::ReductionRecipeOp>(decl);
       LLVM_DEBUG(llvm::dbgs() << "materializing: " << reductionOp << "\n"
                               << symbolRef << "\n");
-      if (failed(materialize(reductionOp, recipeOp, accOp, accSupport)))
+      if (failed(materialize(reductionOp, recipeOp, accOp, accSupport, policy)))
         return failure();
     }
   }
@@ -467,6 +486,8 @@ void ACCRecipeMaterialization::runOnOperation() {
   ModuleOp moduleOp = getOperation();
   acc::OpenACCSupport &accSupport = getAnalysis<acc::OpenACCSupport>();
 
+  acc::DefaultACCToGPUMappingPolicy policy;
+
   // Materialize all recipes for all compute constructs and loop constructs.
   bool anyFailed = false;
   moduleOp.walk([&](Operation *op) {
@@ -474,7 +495,7 @@ void ACCRecipeMaterialization::runOnOperation() {
       return;
     TypeSwitch<Operation *>(op).Case<ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS>(
         [&](auto constructOp) {
-          if (failed(materializeForACCOp(constructOp, accSupport)))
+          if (failed(materializeForACCOp(constructOp, accSupport, policy)))
             anyFailed = true;
         });
   });

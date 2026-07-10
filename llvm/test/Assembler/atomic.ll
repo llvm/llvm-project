@@ -159,3 +159,49 @@ define void @fp_vector_atomicrmw(ptr %x, <2 x half> %val) {
 
   ret void
 }
+
+define void @int_vector_atomicrmw(ptr %x, <2 x i16> %val) {
+  ; CHECK: %atomic.add = atomicrmw add ptr %x, <2 x i16> %val seq_cst
+  %atomic.add = atomicrmw add ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.sub = atomicrmw sub ptr %x, <2 x i16> %val seq_cst
+  %atomic.sub = atomicrmw sub ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.and = atomicrmw and ptr %x, <2 x i16> %val seq_cst
+  %atomic.and = atomicrmw and ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.nand = atomicrmw nand ptr %x, <2 x i16> %val seq_cst
+  %atomic.nand = atomicrmw nand ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.or = atomicrmw or ptr %x, <2 x i16> %val seq_cst
+  %atomic.or = atomicrmw or ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.xor = atomicrmw xor ptr %x, <2 x i16> %val seq_cst
+  %atomic.xor = atomicrmw xor ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.max = atomicrmw max ptr %x, <2 x i16> %val seq_cst
+  %atomic.max = atomicrmw max ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.min = atomicrmw min ptr %x, <2 x i16> %val seq_cst
+  %atomic.min = atomicrmw min ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.umax = atomicrmw umax ptr %x, <2 x i16> %val seq_cst
+  %atomic.umax = atomicrmw umax ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.umin = atomicrmw umin ptr %x, <2 x i16> %val seq_cst
+  %atomic.umin = atomicrmw umin ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.uinc_wrap = atomicrmw uinc_wrap ptr %x, <2 x i16> %val seq_cst
+  %atomic.uinc_wrap = atomicrmw uinc_wrap ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.udec_wrap = atomicrmw udec_wrap ptr %x, <2 x i16> %val seq_cst
+  %atomic.udec_wrap = atomicrmw udec_wrap ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.usub_cond = atomicrmw usub_cond ptr %x, <2 x i16> %val seq_cst
+  %atomic.usub_cond = atomicrmw usub_cond ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.usub_sat = atomicrmw usub_sat ptr %x, <2 x i16> %val seq_cst
+  %atomic.usub_sat = atomicrmw usub_sat ptr %x, <2 x i16> %val seq_cst
+
+  ret void
+}

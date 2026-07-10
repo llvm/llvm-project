@@ -27,6 +27,7 @@ add_libc_unittest(
   SRCS
     setitimer_test.cpp
   DEPENDS
+    libc.hdr.sys_time_macros
     libc.include.signal
     libc.src.sys.time.setitimer
     libc.src.signal.sigaction
@@ -44,6 +45,7 @@ add_libc_unittest(
   SRCS
     getitimer_test.cpp
   DEPENDS
+    libc.hdr.sys_time_macros
     libc.src.sys.time.getitimer
     libc.src.__support.common
     libc.src.errno.errno

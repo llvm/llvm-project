@@ -63,6 +63,17 @@ struct WithNestedTypedef {
 };
 WithNestedTypedef::TheTypedef typedefed_value;
 
+struct PolymorphicBase {
+  using Nested = int;
+  Nested get() { return {}; }
+  virtual void foo() {}
+};
+
+struct PolymorphicDerived : PolymorphicBase {
+  using Nested = float;
+  Nested get() { return {}; }
+};
+
 int main (int argc, char const *argv[])
 {
     Task *task_head = new Task(-1, NULL);
@@ -99,6 +110,8 @@ int main (int argc, char const *argv[])
     Pointer<3> pointer;
     PointerInfo<3>::Masks1 mask1 = PointerInfo<3>::Masks1::pointer_mask;
     PointerInfo<3>::Masks2 mask2 = PointerInfo<3>::Masks2::pointer_mask;
+
+    PolymorphicBase *polymorphic = new PolymorphicDerived();
 
     return 0; // Break at this line
 }

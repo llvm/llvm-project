@@ -414,45 +414,41 @@ static constexpr size_t __contention_table_size = (1 << 8); /* < there's no magi
 
 static constexpr hash<void const*> __contention_hasher;
 
-// Waiter count table for all atomics with the correct size that use itself as the wait/notify address.
-
-struct alignas(
-    std::hardware_constructive_interference_size) /*  aim to avoid false sharing */ __contention_state_native {
-  __cxx_atomic_contention_t __waiter_count;
-  constexpr __contention_state_native() : __waiter_count(0) {}
-};
-
-static constinit __contention_state_native __contention_table_native[__contention_table_size];
-
-static __cxx_atomic_contention_t* __get_native_waiter_count(void const* p) {
-  return &__contention_table_native[__contention_hasher(p) & (__contention_table_size - 1)].__waiter_count;
-}
-
-// Global contention table for all atomics with the wrong size that use the global table's atomic as wait/notify
-// address.
-
-struct alignas(
-    std::hardware_constructive_interference_size) /*  aim to avoid false sharing */ __contention_state_global {
-  __cxx_atomic_contention_t __waiter_count;
+// Unified contention table shared by both the native path (atomics whose size matches the platform
+// wait size and are waited on directly) and the global path (atomics with the wrong size, which use
+// the global table's atomic as the wait/notify address). The native path only reads/writes the native
+// waiter count, and the global path uses the global waiter count and the platform state.
+//
+// We use a single table for both the native and non-native states to minimize the size impact, since
+// we would have plenty of unused padding otherwise. This technically means that if both a native and
+// a non-native atomic fall into the same bucket and are reading/writing waiter counts on the same
+// cache line, we would end up in a "false-sharing" situation. However, in practice, it would require
+// both native and non-native atomics to be used concurrently, and to fall in the same bucket, which
+// is expected to be unlikely.
+struct alignas(std::hardware_constructive_interference_size) /*  aim to avoid false sharing */ __contention_state {
+  __cxx_atomic_contention_t __waiter_count_native;
+  __cxx_atomic_contention_t __waiter_count_global;
   __cxx_atomic_contention_t __platform_state;
-  constexpr __contention_state_global() : __waiter_count(0), __platform_state(0) {}
+  constexpr __contention_state() : __waiter_count_native(0), __waiter_count_global(0), __platform_state(0) {}
 };
 
-static constinit __contention_state_global __contention_table_global[__contention_table_size];
+static constinit __contention_state __contention_table[__contention_table_size];
 
-static __contention_state_global* __get_global_contention_state(void const* p) {
-  return &__contention_table_global[__contention_hasher(p) & (__contention_table_size - 1)];
+static __contention_state* __get_contention_state(void const* p) {
+  return &__contention_table[__contention_hasher(p) & (__contention_table_size - 1)];
 }
 
 /* When the incoming atomic is the wrong size for the platform wait size, need to
    launder the value sequence through an atomic from our table. */
 
 static void __atomic_notify_global_table(void const* __location) {
-  auto const __entry = __get_global_contention_state(__location);
+  auto const __entry = __get_contention_state(__location);
   // The value sequence laundering happens on the next line below.
   __cxx_atomic_fetch_add(&__entry->__platform_state, __cxx_contention_t(1), memory_order_seq_cst);
   __contention_notify<sizeof(__cxx_atomic_contention_t)>(
-      &__entry->__waiter_count, &__entry->__platform_state, false /* when laundering, we can't handle notify_one */);
+      &__entry->__waiter_count_global,
+      &__entry->__platform_state,
+      false /* when laundering, we can't handle notify_one */);
 }
 
 // =============================
@@ -461,22 +457,22 @@ static void __atomic_notify_global_table(void const* __location) {
 
 // global
 _LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __atomic_monitor_global(void const* __location) noexcept {
-  auto const __entry = __get_global_contention_state(__location);
+  auto const __entry = __get_contention_state(__location);
   return __cxx_atomic_load(&__entry->__platform_state, memory_order_acquire);
 }
 
 _LIBCPP_EXPORTED_FROM_ABI void
 __atomic_wait_global_table(void const* __location, __cxx_contention_t __old_value) noexcept {
-  auto const __entry = __get_global_contention_state(__location);
+  auto const __entry = __get_contention_state(__location);
   __contention_wait<sizeof(__cxx_atomic_contention_t)>(
-      &__entry->__waiter_count, &__entry->__platform_state, &__old_value, NoTimeout{});
+      &__entry->__waiter_count_global, &__entry->__platform_state, &__old_value, NoTimeout{});
 }
 
 _LIBCPP_EXPORTED_FROM_ABI void __atomic_wait_global_table_with_timeout(
     void const* __location, __cxx_contention_t __old_value, uint64_t __timeout_ns) _NOEXCEPT {
-  auto const __entry = __get_global_contention_state(__location);
+  auto const __entry = __get_contention_state(__location);
   __contention_wait<sizeof(__cxx_atomic_contention_t)>(
-      &__entry->__waiter_count, &__entry->__platform_state, &__old_value, __timeout_ns);
+      &__entry->__waiter_count_global, &__entry->__platform_state, &__old_value, __timeout_ns);
 }
 
 _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_one_global_table(void const* __location) noexcept {
@@ -491,23 +487,25 @@ _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_all_global_table(void const* __lo
 
 template <std::size_t _Size>
 _LIBCPP_EXPORTED_FROM_ABI void __atomic_wait_native(void const* __address, void const* __old_value) noexcept {
-  __contention_wait<_Size>(__get_native_waiter_count(__address), __address, __old_value, NoTimeout{});
+  __contention_wait<_Size>(
+      &__get_contention_state(__address)->__waiter_count_native, __address, __old_value, NoTimeout{});
 }
 
 template <std::size_t _Size>
 _LIBCPP_EXPORTED_FROM_ABI void
 __atomic_wait_native_with_timeout(void const* __address, void const* __old_value, uint64_t __timeout_ns) noexcept {
-  __contention_wait<_Size>(__get_native_waiter_count(__address), __address, __old_value, __timeout_ns);
+  __contention_wait<_Size>(
+      &__get_contention_state(__address)->__waiter_count_native, __address, __old_value, __timeout_ns);
 }
 
 template <std::size_t _Size>
 _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_one_native(void const* __location) noexcept {
-  __contention_notify<_Size>(__get_native_waiter_count(__location), __location, true);
+  __contention_notify<_Size>(&__get_contention_state(__location)->__waiter_count_native, __location, true);
 }
 
 template <std::size_t _Size>
 _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_all_native(void const* __location) noexcept {
-  __contention_notify<_Size>(__get_native_waiter_count(__location), __location, false);
+  __contention_notify<_Size>(&__get_contention_state(__location)->__waiter_count_native, __location, false);
 }
 
 // ==================================================
@@ -558,34 +556,34 @@ _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(void const volatile* __lo
 }
 
 _LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __libcpp_atomic_monitor(void const volatile* __location) noexcept {
-  auto const __entry = __get_global_contention_state(const_cast<void const*>(__location));
+  auto const __entry = __get_contention_state(const_cast<void const*>(__location));
   return __cxx_atomic_load(&__entry->__platform_state, memory_order_acquire);
 }
 
 _LIBCPP_EXPORTED_FROM_ABI void
 __libcpp_atomic_wait(void const volatile* __location, __cxx_contention_t __old_value) noexcept {
-  auto const __entry = __get_global_contention_state(const_cast<void const*>(__location));
+  auto const __entry = __get_contention_state(const_cast<void const*>(__location));
   __contention_wait<sizeof(__cxx_atomic_contention_t)>(
-      &__entry->__waiter_count, &__entry->__platform_state, &__old_value, NoTimeout{});
+      &__entry->__waiter_count_global, &__entry->__platform_state, &__old_value, NoTimeout{});
 }
 
 _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(__cxx_atomic_contention_t const volatile* __location) noexcept {
   auto __location_cast = const_cast<const void*>(static_cast<const volatile void*>(__location));
   __contention_notify<sizeof(__cxx_atomic_contention_t)>(
-      __get_native_waiter_count(__location_cast), __location_cast, true);
+      &__get_contention_state(__location_cast)->__waiter_count_native, __location_cast, true);
 }
 
 _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(__cxx_atomic_contention_t const volatile* __location) noexcept {
   auto __location_cast = const_cast<const void*>(static_cast<const volatile void*>(__location));
   __contention_notify<sizeof(__cxx_atomic_contention_t)>(
-      __get_native_waiter_count(__location_cast), __location_cast, false);
+      &__get_contention_state(__location_cast)->__waiter_count_native, __location_cast, false);
 }
 
 _LIBCPP_EXPORTED_FROM_ABI void
 __libcpp_atomic_wait(__cxx_atomic_contention_t const volatile* __location, __cxx_contention_t __old_value) noexcept {
   auto __location_cast = const_cast<const void*>(static_cast<const volatile void*>(__location));
   __contention_wait<sizeof(__cxx_atomic_contention_t)>(
-      __get_native_waiter_count(__location_cast), __location_cast, &__old_value, NoTimeout{});
+      &__get_contention_state(__location_cast)->__waiter_count_native, __location_cast, &__old_value, NoTimeout{});
 }
 
 // this function is even unused in the old ABI

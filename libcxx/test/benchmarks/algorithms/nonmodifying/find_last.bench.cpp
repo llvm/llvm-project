@@ -21,16 +21,10 @@
 
 int main(int argc, char** argv) {
   auto ranges_find_last_if = [](auto first, auto last, auto const& value) {
-    return std::ranges::find_last_if(first, last, [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element == value;
-    });
+    return std::ranges::find_last_if(first, last, [&](auto element) { return element == value; });
   };
   auto ranges_find_last_if_not = [](auto first, auto last, auto const& value) {
-    return std::ranges::find_last_if_not(first, last, [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element != value;
-    });
+    return std::ranges::find_last_if_not(first, last, [&](auto element) { return element != value; });
   };
 
   // Benchmark ranges::{find_last,find_last_if,find_last_if_not} where the last element

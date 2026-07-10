@@ -136,6 +136,8 @@ entry:
 define amdgpu_kernel void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrspace(3) %lds, ptr addrspace(1) %bar, ptr addrspace(1) %out, i32 %n) {
 ; SDAG-LABEL: test_pipelined_loop:
 ; SDAG:       ; %bb.0: ; %prolog
+; SDAG-NEXT:    global_wb
+; SDAG-NEXT:    v_nop
 ; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-NEXT:    s_clause 0x1
 ; SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
@@ -190,6 +192,8 @@ define amdgpu_kernel void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrsp
 ;
 ; GISEL-LABEL: test_pipelined_loop:
 ; GISEL:       ; %bb.0: ; %prolog
+; GISEL-NEXT:    global_wb
+; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
@@ -307,6 +311,8 @@ epilog:
 define amdgpu_kernel void @test_pipelined_loop_with_global(ptr addrspace(1) %foo, ptr addrspace(3) %lds, ptr addrspace(1) %bar, ptr addrspace(1) %out, i32 %n) {
 ; SDAG-LABEL: test_pipelined_loop_with_global:
 ; SDAG:       ; %bb.0: ; %prolog
+; SDAG-NEXT:    global_wb
+; SDAG-NEXT:    v_nop
 ; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-NEXT:    s_clause 0x1
 ; SDAG-NEXT:    s_load_b96 s[8:10], s[4:5], 0x24 nv
@@ -393,6 +399,8 @@ define amdgpu_kernel void @test_pipelined_loop_with_global(ptr addrspace(1) %foo
 ;
 ; GISEL-LABEL: test_pipelined_loop_with_global:
 ; GISEL:       ; %bb.0: ; %prolog
+; GISEL-NEXT:    global_wb
+; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    s_load_b96 s[8:10], s[4:5], 0x24 nv

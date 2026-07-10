@@ -8,8 +8,8 @@ define amdgpu_ps void @test_sendmsg(i32 inreg %m0) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.sendmsg), 12, [[COPY]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.sendmsg), 12, [[COPY]](i32)
   ; CHECK-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.s.sendmsg(i32 12, i32 %m0)
   ret void

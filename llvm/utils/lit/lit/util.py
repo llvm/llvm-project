@@ -459,7 +459,7 @@ def memoize(f):
 def runCommandCached(lit_config, cmd, allow_failure, **kwargs):
     """
     Run a command with subprocess.run, with a cache global to this llvm-lit invocation
-    If allow_failure is True, lit_config.fatal will be invoked if the command fails.
+    If allow_failure is False, lit_config.fatal will be invoked if the command fails.
     All additional kwargs are passed to subprocess.run
     """
     try:
@@ -467,7 +467,7 @@ def runCommandCached(lit_config, cmd, allow_failure, **kwargs):
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, **kwargs
         )
         return result.stdout
-    except FileNotFoundError as e:
+    except (FileNotFoundError, PermissionError) as e:
         msg = f"Failed to run {cmd}: {e}"
     except subprocess.CalledProcessError as e:
         msg = f"Failed to run {cmd}\nrc:{e.returncode}\nstdout:{e.stdout}\ne.stderr{e.stderr}"

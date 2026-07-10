@@ -153,6 +153,13 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
         def cleanup_adapter():
             if adapter.is_alive:
                 adapter.kill()
+            # The debug adapter may have a reason the test failed.
+            if stderr := adapter.process.stderr:
+                if err_str := stderr.read().decode():
+                    self.logger.debug("The adapter stderr: \n%s", err_str)
+            if stdout := adapter.process.stdout:
+                if err_str := stdout.read().decode():
+                    self.logger.debug("The adapter stdout: \n%s", err_str)
 
         self.addTearDownHook(cleanup_adapter)
         return adapter

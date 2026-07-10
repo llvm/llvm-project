@@ -38,6 +38,7 @@ typedef struct CUuuid_st {
 } CUuuid;
 
 #define CU_DEVICE_INVALID ((CUdevice)(-2))
+#define CU_DEVICE_CPU ((CUdevice)(-1))
 
 typedef unsigned long long CUmemGenericAllocationHandle_v1;
 typedef CUmemGenericAllocationHandle_v1 CUmemGenericAllocationHandle;
@@ -380,6 +381,14 @@ CUresult cuMemsetD2D32Async(CUdeviceptr, size_t, unsigned int, size_t, size_t,
 CUresult cuMemFree(CUdeviceptr);
 CUresult cuMemFreeHost(void *);
 CUresult cuMemFreeAsync(CUdeviceptr, CUstream);
+
+CUresult cuMemPrefetchAsync(CUdeviceptr, size_t, CUdevice, CUstream);
+
+typedef enum CUpointer_attribute_enum {
+  CU_POINTER_ATTRIBUTE_IS_MANAGED = 8
+} CUpointer_attribute;
+
+CUresult cuPointerGetAttribute(void *, CUpointer_attribute, CUdeviceptr);
 
 CUresult cuModuleGetFunction(CUfunction *, CUmodule, const char *);
 CUresult cuModuleGetGlobal(CUdeviceptr *, size_t *, CUmodule, const char *);

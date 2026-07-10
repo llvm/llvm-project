@@ -562,8 +562,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   verify(*ST.getInstrInfo());
 }
 
-static bool legalizeExtractVectorElt(LegalizerHelper &Helper, MachineInstr &MI,
-                                     SPIRVGlobalRegistry *GR) {
+static bool legalizeExtractVectorElt(LegalizerHelper &Helper,
+                                     MachineInstr &MI) {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
@@ -577,8 +577,7 @@ static bool legalizeExtractVectorElt(LegalizerHelper &Helper, MachineInstr &MI,
   return true;
 }
 
-static bool legalizeInsertVectorElt(LegalizerHelper &Helper, MachineInstr &MI,
-                                    SPIRVGlobalRegistry *GR) {
+static bool legalizeInsertVectorElt(LegalizerHelper &Helper, MachineInstr &MI) {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
@@ -726,9 +725,9 @@ bool SPIRVLegalizerInfo::legalizeCustom(
   case TargetOpcode::G_BITCAST:
     return legalizeBitcast(Helper, MI);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
-    return legalizeExtractVectorElt(Helper, MI, GR);
+    return legalizeExtractVectorElt(Helper, MI);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
-    return legalizeInsertVectorElt(Helper, MI, GR);
+    return legalizeInsertVectorElt(Helper, MI);
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
     return legalizeIntrinsic(Helper, MI);

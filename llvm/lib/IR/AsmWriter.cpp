@@ -4372,9 +4372,15 @@ void AssemblyWriter::printInstructionLine(const Instruction &I) {
 /// intrinsic indicating base and derived pointer names.
 void AssemblyWriter::printGCRelocateComment(const GCRelocateInst &Relocate) {
   Out << " ; (";
-  writeOperand(Relocate.getBasePtr(), false);
+  if (Value *BasePtr = Relocate.getBasePtr())
+    writeOperand(BasePtr, false);
+  else
+    Out << "invalid";
   Out << ", ";
-  writeOperand(Relocate.getDerivedPtr(), false);
+  if (Value *DerivedPtr = Relocate.getDerivedPtr())
+    writeOperand(DerivedPtr, false);
+  else
+    Out << "invalid";
   Out << ")";
 }
 

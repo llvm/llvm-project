@@ -116,6 +116,14 @@ public:
 
   bool SetValueFromCString(const char *value_str, lldb::SBError &error);
 
+  /// Returns false if this value cannot be modified through
+  /// SetValueFromCString() or SetData(), for instance because it
+  /// exists in the target, but has no writable storage (for example a
+  /// constant or variable value that was reconstructed from debug
+  /// info as the result of a computation). A true result does not
+  /// guarantee a write will succeed.
+  bool CanSetValue();
+
   lldb::SBTypeFormat GetTypeFormat();
 
   lldb::SBTypeSummary GetTypeSummary();

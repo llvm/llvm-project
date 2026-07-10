@@ -142,9 +142,13 @@ public:
       }
       IRMapping mapping;
       mapping.map(atomicUpdateOp.getRegion().front().getArgument(0), loadOp);
-      Operation *expr = rewriter.clone(*atomicUpdateOp.getFirstOp(), mapping);
-      if (!ptrLikeType.genStore(rewriter, atomicUpdateOp.getLoc(),
-                                expr->getResult(0), xTyped)) {
+      Block &block = atomicUpdateOp.getRegion().front();
+      for (Operation &op : block.without_terminator())
+        rewriter.clone(op, mapping);
+      auto yieldOp = cast<acc::YieldOp>(block.getTerminator());
+      Value result = mapping.lookup(yieldOp.getOperand(0));
+      if (!ptrLikeType.genStore(rewriter, atomicUpdateOp.getLoc(), result,
+                                xTyped)) {
         accSupport.emitNYI(atomicUpdateOp.getLoc(),
                            "failed to generate store for atomic update");
         return failure();

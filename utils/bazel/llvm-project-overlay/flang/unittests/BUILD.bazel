@@ -264,6 +264,7 @@ cc_test(
     deps = [
         "//flang:CommonHeaders",
         "//flang:RuntimeHeaders",
+        "//flang/include/flang/Optimizer/Analysis:AnalysisHeaders",
         "//flang/include/flang/Optimizer/Builder:BuilderHeaders",
         "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
         "//flang/include/flang/Optimizer/Dialect:FIRDialectSupportHeaders",

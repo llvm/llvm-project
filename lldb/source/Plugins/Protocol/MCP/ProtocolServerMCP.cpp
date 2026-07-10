@@ -26,7 +26,6 @@ using namespace llvm;
 LLDB_PLUGIN_DEFINE(ProtocolServerMCP)
 
 static constexpr llvm::StringLiteral kName = "lldb-mcp";
-static constexpr llvm::StringLiteral kVersion = "0.1.0";
 
 ProtocolServerMCP::ProtocolServerMCP() : ProtocolServer() {}
 
@@ -106,7 +105,8 @@ llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
 
   m_client_count = 0;
   m_server = std::make_unique<lldb_protocol::mcp::Server>(
-      std::string(kName), std::string(kVersion), [](StringRef message) {
+      std::string(kName), std::string(lldb_protocol::mcp::GetServerVersion()),
+      [](StringRef message) {
         LLDB_LOG(GetLog(LLDBLog::Host), "MCP Server: {0}", message);
       });
   Extend(*m_server);

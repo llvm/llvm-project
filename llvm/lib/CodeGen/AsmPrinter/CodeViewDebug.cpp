@@ -1451,6 +1451,10 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
   // Grab the variable info that was squirreled away in the MMI side-table.
   collectVariableInfoFromMFTable(Processed);
 
+  for (const MDNode *N : SP->getRetainedNodes())
+    if (const auto *GVE = dyn_cast<DIGlobalVariableExpression>(N))
+      collectGlobalOrStaticLocalVariableInfo(GVE);
+
   for (const auto &I : DbgValues) {
     InlinedEntity IV = I.first;
     if (Processed.count(IV))
@@ -3236,9 +3240,54 @@ void CodeViewDebug::emitDebugInfoForUDTs(
   }
 }
 
+void CodeViewDebug::collectGlobalOrStaticLocalVariableInfo(
+    const DIGlobalVariableExpression *GVE) {
+  const DIGlobalVariable *DIGV = GVE->getVariable();
+  const DIExpression *DIE = GVE->getExpression();
+  // Don't emit string literals in CodeView, as the only useful parts are
+  // generally the filename and line number, which isn't possible to output
+  // in CodeView. String literals should be the only unnamed GlobalVariable
+  // with debug info.
+  if (DIGV->getName().empty())
+    return;
+
+  if ((DIE->getNumElements() == 2) &&
+      (DIE->getElement(0) == dwarf::DW_OP_plus_uconst))
+    // Record the constant offset for the variable.
+    //
+    // A Fortran common block uses this idiom to encode the offset
+    // of a variable from the common block's starting address.
+    CVGlobalVariableOffsets.insert(std::make_pair(DIGV, DIE->getElement(1)));
+
+  // Emit constant global variables in a global symbol section.
+  if (!GlobalMap.count(GVE) && DIE->isConstant())
+    GlobalVariables.emplace_back(CVGlobalVariable{DIGV, DIE});
+
+  const auto *GV = GlobalMap.lookup(GVE);
+  if (!GV || GV->isDeclarationForLinker())
+    return;
+
+  DIScope *Scope = DIGV->getScope();
+  SmallVector<CVGlobalVariable, 1> *VariableList;
+  if (Scope && isa<DILocalScope>(Scope)) {
+    // Locate a global variable list for this scope, creating one if
+    // necessary.
+    auto Insertion =
+        ScopeGlobals.insert({Scope, std::unique_ptr<GlobalVariableList>()});
+    if (Insertion.second)
+      Insertion.first->second = std::make_unique<GlobalVariableList>();
+    VariableList = Insertion.first->second.get();
+  } else if (GV->hasComdat()) {
+    // Emit this global variable into a COMDAT section.
+    VariableList = &ComdatVariables;
+  } else {
+    // Emit this global variable in a single global symbol section.
+    VariableList = &GlobalVariables;
+  }
+  VariableList->emplace_back(CVGlobalVariable{DIGV, GV});
+}
+
 void CodeViewDebug::collectGlobalVariableInfo() {
-  DenseMap<const DIGlobalVariableExpression *, const GlobalVariable *>
-      GlobalMap;
   for (const GlobalVariable &GV : MMI->getModule()->globals()) {
     SmallVector<DIGlobalVariableExpression *, 1> GVEs;
     GV.getDebugInfo(GVEs);
@@ -3250,51 +3299,7 @@ void CodeViewDebug::collectGlobalVariableInfo() {
   for (const MDNode *Node : CUs->operands()) {
     const auto *CU = cast<DICompileUnit>(Node);
     for (const auto *GVE : CU->getGlobalVariables()) {
-      const DIGlobalVariable *DIGV = GVE->getVariable();
-      const DIExpression *DIE = GVE->getExpression();
-      // Don't emit string literals in CodeView, as the only useful parts are
-      // generally the filename and line number, which isn't possible to output
-      // in CodeView. String literals should be the only unnamed GlobalVariable
-      // with debug info.
-      if (DIGV->getName().empty()) continue;
-
-      if ((DIE->getNumElements() == 2) &&
-          (DIE->getElement(0) == dwarf::DW_OP_plus_uconst))
-        // Record the constant offset for the variable.
-        //
-        // A Fortran common block uses this idiom to encode the offset
-        // of a variable from the common block's starting address.
-        CVGlobalVariableOffsets.insert(
-            std::make_pair(DIGV, DIE->getElement(1)));
-
-      // Emit constant global variables in a global symbol section.
-      if (GlobalMap.count(GVE) == 0 && DIE->isConstant()) {
-        CVGlobalVariable CVGV = {DIGV, DIE};
-        GlobalVariables.emplace_back(std::move(CVGV));
-      }
-
-      const auto *GV = GlobalMap.lookup(GVE);
-      if (!GV || GV->isDeclarationForLinker())
-        continue;
-
-      DIScope *Scope = DIGV->getScope();
-      SmallVector<CVGlobalVariable, 1> *VariableList;
-      if (Scope && isa<DILocalScope>(Scope)) {
-        // Locate a global variable list for this scope, creating one if
-        // necessary.
-        auto Insertion = ScopeGlobals.insert(
-            {Scope, std::unique_ptr<GlobalVariableList>()});
-        if (Insertion.second)
-          Insertion.first->second = std::make_unique<GlobalVariableList>();
-        VariableList = Insertion.first->second.get();
-      } else if (GV->hasComdat())
-        // Emit this global variable into a COMDAT section.
-        VariableList = &ComdatVariables;
-      else
-        // Emit this global variable in a single global symbol section.
-        VariableList = &GlobalVariables;
-      CVGlobalVariable CVGV = {DIGV, GV};
-      VariableList->emplace_back(std::move(CVGV));
+      collectGlobalOrStaticLocalVariableInfo(GVE);
     }
   }
 }

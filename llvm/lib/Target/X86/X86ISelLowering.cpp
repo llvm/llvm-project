@@ -645,6 +645,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FROUNDEVEN, VT, Action);
     setOperationAction(ISD::FTRUNC, VT, Action);
     setOperationAction(ISD::FLDEXP, VT, Action);
+    setOperationAction(ISD::FFREXP, VT, Action);
     setOperationAction(ISD::FSINCOSPI, VT, Action);
   };
 
@@ -1899,6 +1900,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FMA, VT, Legal);
       setOperationAction(ISD::FCOPYSIGN, VT, Custom);
       setOperationAction(ISD::FCANONICALIZE, VT, Expand);
+      setOperationAction(ISD::FLDEXP, VT, Custom);
     }
     setOperationAction(ISD::LRINT, MVT::v16f32,
                        Subtarget.hasDQI() ? Legal : Custom);
@@ -2196,6 +2198,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FNEG, MVT::v32f16, Custom);
     setOperationAction(ISD::FABS, MVT::v32f16, Custom);
     setOperationAction(ISD::FCOPYSIGN, MVT::v32f16, Custom);
+    setOperationAction(ISD::FLDEXP, MVT::v32f16, Custom);
 
     if (Subtarget.hasGFNI()) {
       setOperationAction(ISD::CTLZ, MVT::v64i8, Custom);
@@ -2221,8 +2224,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // narrower widths.
   if (!Subtarget.useSoftFloat() && Subtarget.hasAVX512()) {
     for (MVT VT : {MVT::f16, MVT::f32, MVT::f64, MVT::v8f16, MVT::v4f32,
-                   MVT::v2f64, MVT::v16f16, MVT::v8f32, MVT::v4f64, MVT::v32f16,
-                   MVT::v16f32, MVT::v8f64})
+                   MVT::v2f64, MVT::v16f16, MVT::v8f32, MVT::v4f64})
       setOperationAction(ISD::FLDEXP, VT, Custom);
 
     // These operations are handled on non-VLX by artificially widening in
@@ -8063,6 +8065,102 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
     }
   }
 
+  // STRIDED - element loads at a uniform byte stride larger than the element
+  // size are folded into wide load(s) + vector truncation.
+  // Depth 1 lets the REVERSE block below recurse into us to catch reverse
+  // strides.
+  if (Depth <= 1 && Subtarget.hasAVX2() && !IsConsecutiveLoad &&
+      LoadMask.isAllOnes() && isPowerOf2_32(NumElems) && BaseSizeInBits <= 32 &&
+      VT.getSizeInBits() >= 128) {
+    unsigned WideEltBits = 0;
+    for (unsigned Trial : {16u, 32u, 64u}) {
+      if (Trial <= BaseSizeInBits || Trial % BaseSizeInBits != 0)
+        continue;
+      unsigned LaneStride = Trial / BaseSizeInBits;
+      bool AllMatch = true;
+      for (unsigned K = 1; K < NumElems && AllMatch; ++K) {
+        AllMatch = AllMatch && ByteOffsets[K] == 0 &&
+                   DAG.areNonVolatileConsecutiveLoads(
+                       Loads[K], LDBase, BaseSizeInBytes, K * LaneStride);
+      }
+      if (AllMatch) {
+        WideEltBits = Trial;
+        break;
+      }
+    }
+    if (WideEltBits != 0) {
+      MVT WideEltVT = MVT::getIntegerVT(WideEltBits);
+      MVT SrcEltVT = MVT::getIntegerVT(BaseSizeInBits);
+      // VTRUNC writes the truncated values to the low lanes of an xmm with
+      // zero padding above.
+      MVT TruncDstVT = MVT::getVectorVT(SrcEltVT, 128 / BaseSizeInBits);
+      unsigned TruncDstLanes = TruncDstVT.getVectorNumElements();
+      MVT ConcatVT = MVT::getVectorVT(SrcEltVT, NumElems);
+      if (NumElems > TruncDstLanes && !TLI.isTypeLegal(ConcatVT))
+        return SDValue();
+      // Try wider register sizes first.
+      for (unsigned WideRegBits : {512u, 256u, 128u}) {
+        unsigned LanesPerWideLoad = WideRegBits / WideEltBits;
+        if (LanesPerWideLoad < 2 || NumElems % LanesPerWideLoad != 0)
+          continue;
+        if (LanesPerWideLoad > TruncDstLanes)
+          continue; // VTRUNC dest must hold all good lanes of one piece.
+        MVT WideVT = MVT::getVectorVT(WideEltVT, LanesPerWideLoad);
+        if (!TLI.isTypeLegal(WideVT) || !TLI.isTypeLegal(TruncDstVT))
+          continue;
+        unsigned NumWideLoads = NumElems / LanesPerWideLoad;
+        // VTRUNC has no non-AVX-512 lowering so the i16 to i8 form needs BWI.
+        bool Partial = LanesPerWideLoad != TruncDstLanes;
+        if (Partial && (!Subtarget.hasAVX512() ||
+                        (WideEltBits == 16 && !Subtarget.hasBWI())))
+          continue;
+        unsigned BytesPerWideLoad = WideRegBits / 8;
+        auto MMOFlags = LDBase->getMemOperand()->getFlags();
+        SDValue BasePtr = LDBase->getBasePtr();
+        SmallVector<SDValue, 8> Pieces;
+        for (unsigned K = 0; K != NumWideLoads; ++K) {
+          unsigned Offset = K * BytesPerWideLoad;
+          SDValue Ptr = K == 0 ? BasePtr
+                               : DAG.getMemBasePlusOffset(
+                                     BasePtr, TypeSize::getFixed(Offset), DL);
+          SDValue Ld =
+              DAG.getLoad(WideVT, DL, LDBase->getChain(), Ptr,
+                          LDBase->getPointerInfo().getWithOffset(Offset),
+                          K == 0 ? LDBase->getBaseAlign() : Align(1), MMOFlags);
+          for (auto *LD : Loads)
+            if (LD)
+              DAG.makeEquivalentMemoryOrdering(LD, Ld);
+          unsigned TruncOp = Partial ? X86ISD::VTRUNC : ISD::TRUNCATE;
+          Pieces.push_back(DAG.getNode(TruncOp, DL, TruncDstVT, Ld));
+        }
+        // Pairwise shuffle the low halves until each piece is full.
+        if (Partial) {
+          unsigned GoodLanes = LanesPerWideLoad;
+          while (Pieces.size() > 1 && GoodLanes < TruncDstLanes) {
+            assert((TruncDstLanes % GoodLanes) == 0 &&
+                   "Illegal VTRUNC packing");
+            SmallVector<SDValue, 8> Next;
+            SmallVector<int, 16> Mask(TruncDstLanes, -1);
+            for (unsigned I = 0; I != GoodLanes; ++I) {
+              Mask[I] = I;
+              Mask[GoodLanes + I] = TruncDstLanes + I;
+            }
+            for (unsigned J = 0, E = Pieces.size() - 1; J < E; J += 2)
+              Next.push_back(DAG.getVectorShuffle(TruncDstVT, DL, Pieces[J],
+                                                  Pieces[J + 1], Mask));
+            Pieces = std::move(Next);
+            GoodLanes *= 2;
+          }
+        }
+        if (Pieces.size() == 1)
+          return DAG.getBitcast(VT, Pieces[0]);
+
+        SDValue Result = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Pieces);
+        return DAG.getBitcast(VT, Result);
+      }
+    }
+  }
+
   // REVERSE - attempt to match the loads in reverse and then shuffle back.
   // TODO: Do this for any permute or mismatching element counts.
   if (Depth == 0 && ZeroMask.isZero() && UndefMask.isZero() &&
@@ -11914,6 +12012,7 @@ static SDValue lowerShuffleAsDecomposedShuffleMerge(
   int NumElts = Mask.size();
   int NumLanes = VT.getSizeInBits() / 128;
   int NumEltsPerLane = NumElts / NumLanes;
+  int EltSizeInBits = VT.getScalarSizeInBits();
 
   // Shuffle the input elements into the desired positions in V1 and V2 and
   // unpack/blend them together.
@@ -11974,7 +12073,9 @@ static SDValue lowerShuffleAsDecomposedShuffleMerge(
   // the shuffle may be able to fold with a load or other benefit. However, when
   // we'll have to do 2x as many shuffles in order to achieve this, a 2-input
   // pre-shuffle first is a better strategy.
-  if (!isNoopShuffleMask(V1Mask) && !isNoopShuffleMask(V2Mask)) {
+  bool V1Noop = isNoopShuffleMask(V1Mask);
+  bool V2Noop = isNoopShuffleMask(V2Mask);
+  if (!V1Noop && !V2Noop) {
     // If we don't have blends, see if we can create a cheap unpack.
     if (!Subtarget.hasSSE41() && VT.is128BitVector() &&
         (is128BitUnpackShuffleMask(V1Mask, DAG) ||
@@ -12009,17 +12110,20 @@ static SDValue lowerShuffleAsDecomposedShuffleMerge(
                                                           DAG))
       return BlendPerm;
 
-    if (VT.getScalarSizeInBits() >= 32)
+    if (EltSizeInBits >= 32)
       if (SDValue PermUnpack = lowerShuffleAsPermuteAndUnpack(
               DL, VT, V1, V2, Mask, Subtarget, DAG))
         return PermUnpack;
   }
 
   // If the final mask is an alternating blend of vXi8/vXi16, convert to an
-  // UNPCKL(SHUFFLE, SHUFFLE) pattern.
+  // UNPCKL(SHUFFLE, SHUFFLE) pattern unless BLENDI is cheap.
   // TODO: It doesn't have to be alternating - but each lane mustn't have more
   // than half the elements coming from each source.
-  if (IsAlternating && VT.getScalarSizeInBits() < 32) {
+  bool PreferBlend = EltSizeInBits == 16 && (V1Noop || V2Noop) &&
+                     Subtarget.hasSSE41() &&
+                     is128BitLaneRepeatedShuffleMask(VT, FinalMask);
+  if (!PreferBlend && IsAlternating && EltSizeInBits < 32) {
     V1Mask.assign(NumElts, -1);
     V2Mask.assign(NumElts, -1);
     FinalMask.assign(NumElts, -1);
@@ -12947,6 +13051,13 @@ static SDValue lowerShuffleAsZeroOrAnyExtend(
     return lowerShuffleAsSpecificExtension(DL, VT, Scale, Offset, ExtOpc,
                                            InputV, Mask, Subtarget, DAG);
   };
+
+  // Match against a foldable v4i32 VZEXT_MOVL zero-extending instruction.
+  // TODO: Add v8i16 (with FP16) support when we have test coverage.
+  if (VT == MVT::v4i32 &&
+      (V1.getOpcode() == ISD::SCALAR_TO_VECTOR || isa<MemSDNode>(V1)) &&
+      Mask[0] == 0 && (NumElements - 1) == (int)Zeroable.countLeadingOnes())
+    return DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT, V1);
 
   // The widest scale possible for extending is to a 64-bit integer.
   assert(Bits % 64 == 0 &&
@@ -44365,6 +44476,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     break;
   }
   case X86ISD::PSADBW: {
+    APInt LHSUndef, LHSZero;
+    APInt RHSUndef, RHSZero;
     SDValue LHS = Op.getOperand(0);
     SDValue RHS = Op.getOperand(1);
     assert(VT.getScalarType() == MVT::i64 &&
@@ -44372,10 +44485,16 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
            LHS.getValueType().getScalarType() == MVT::i8 &&
            "Unexpected PSADBW types");
 
+    APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumElts * 8);
+    if (SimplifyDemandedVectorElts(LHS, DemandedSrcElts, LHSUndef, LHSZero, TLO,
+                                   Depth + 1))
+      return true;
+    if (SimplifyDemandedVectorElts(RHS, DemandedSrcElts, RHSUndef, RHSZero, TLO,
+                                   Depth + 1))
+      return true;
+
     // Aggressively peek through ops to get at the demanded elts.
     if (!DemandedElts.isAllOnes()) {
-      unsigned NumSrcElts = LHS.getValueType().getVectorNumElements();
-      APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
       SDValue NewLHS = SimplifyMultipleUseDemandedVectorElts(
           LHS, DemandedSrcElts, TLO.DAG, Depth + 1);
       SDValue NewRHS = SimplifyMultipleUseDemandedVectorElts(
@@ -47829,6 +47948,11 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
     if (Rdx.getValueType() == MVT::v8i16) {
       Rdx = DAG.getNode(X86ISD::PACKUS, DL, MVT::v16i8, Rdx,
                         DAG.getUNDEF(MVT::v8i16));
+    } else if (NumElts == 4) {
+      // v4i16 fits into the bottom v8i8 64-bits and is cheaper to truncate.
+      Rdx = DAG.getNode(ISD::TRUNCATE, DL, MVT::v4i16, Rdx);
+      Rdx = DAG.getBitcast(MVT::v8i8, Rdx);
+      Rdx = WidenToV16I8(Rdx);
     } else {
       EVT ByteVT = VecVT.changeVectorElementType(*DAG.getContext(), MVT::i8);
       Rdx = DAG.getNode(ISD::TRUNCATE, DL, ByteVT, Rdx);

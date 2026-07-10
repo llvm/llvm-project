@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=amdgcn -mcpu=hawaii -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck %s
 
 ---
-name: ffloor_s64_vv
+name: ffloor_f64_vv
 legalized: true
 regBankSelected: true
 tracksRegLiveness: true
@@ -11,14 +11,14 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
 
-    ; CHECK-LABEL: name: ffloor_s64_vv
+    ; CHECK-LABEL: name: ffloor_f64_vv
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: %1:vreg_64 = nofpexcept V_FLOOR_F64_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %1
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = G_FFLOOR %0
+    %0:vgpr(f64) = COPY $vgpr0_vgpr1
+    %1:vgpr(f64) = G_FFLOOR %0
     $vgpr0_vgpr1 = COPY %1
 ...
 
@@ -39,7 +39,7 @@ body: |
 # ...
 
 ---
-name: ffloor_fneg_s64_vv
+name: ffloor_fneg_f64_vv
 legalized: true
 regBankSelected: true
 tracksRegLiveness: true
@@ -48,14 +48,14 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
 
-    ; CHECK-LABEL: name: ffloor_fneg_s64_vv
+    ; CHECK-LABEL: name: ffloor_fneg_f64_vv
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: %2:vreg_64 = nofpexcept V_FLOOR_F64_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %2
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = G_FNEG %0
-    %2:vgpr(s64) = G_FFLOOR %1
+    %0:vgpr(f64) = COPY $vgpr0_vgpr1
+    %1:vgpr(f64) = G_FNEG %0
+    %2:vgpr(f64) = G_FFLOOR %1
     $vgpr0_vgpr1 = COPY %2
 ...

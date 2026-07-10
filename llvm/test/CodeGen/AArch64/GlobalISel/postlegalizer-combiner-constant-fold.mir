@@ -14,13 +14,13 @@ body:             |
     ; CHECK-LABEL: name: add
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %res:_(s64) = G_CONSTANT i64 42
-    ; CHECK-NEXT: $x0 = COPY %res(s64)
+    ; CHECK-NEXT: %res:_(i64) = G_CONSTANT i64 42
+    ; CHECK-NEXT: $x0 = COPY %res(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %a:_(s64) = G_CONSTANT i64 40
-    %b:_(s64) = G_CONSTANT i64 2
-    %res:_(s64) = G_ADD %a, %b
-    $x0 = COPY %res(s64)
+    %a:_(i64) = G_CONSTANT i64 40
+    %b:_(i64) = G_CONSTANT i64 2
+    %res:_(i64) = G_ADD %a, %b
+    $x0 = COPY %res(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -37,13 +37,13 @@ body:             |
     ; CHECK-LABEL: name: sub
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %res:_(s64) = G_CONSTANT i64 38
-    ; CHECK-NEXT: $x0 = COPY %res(s64)
+    ; CHECK-NEXT: %res:_(i64) = G_CONSTANT i64 38
+    ; CHECK-NEXT: $x0 = COPY %res(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %a:_(s64) = G_CONSTANT i64 40
-    %b:_(s64) = G_CONSTANT i64 2
-    %res:_(s64) = G_SUB %a, %b
-    $x0 = COPY %res(s64)
+    %a:_(i64) = G_CONSTANT i64 40
+    %b:_(i64) = G_CONSTANT i64 2
+    %res:_(i64) = G_SUB %a, %b
+    $x0 = COPY %res(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -60,13 +60,13 @@ body:             |
     ; CHECK-LABEL: name: mul
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %res:_(s64) = G_CONSTANT i64 80
-    ; CHECK-NEXT: $x0 = COPY %res(s64)
+    ; CHECK-NEXT: %res:_(i64) = G_CONSTANT i64 80
+    ; CHECK-NEXT: $x0 = COPY %res(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %a:_(s64) = G_CONSTANT i64 40
-    %b:_(s64) = G_CONSTANT i64 2
-    %res:_(s64) = G_MUL %a, %b
-    $x0 = COPY %res(s64)
+    %a:_(i64) = G_CONSTANT i64 40
+    %b:_(i64) = G_CONSTANT i64 2
+    %res:_(i64) = G_MUL %a, %b
+    $x0 = COPY %res(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -83,13 +83,13 @@ body:             |
     ; CHECK-LABEL: name: and
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %res:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: $x0 = COPY %res(s64)
+    ; CHECK-NEXT: %res:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: $x0 = COPY %res(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %a:_(s64) = G_CONSTANT i64 40
-    %b:_(s64) = G_CONSTANT i64 2
-    %res:_(s64) = G_AND %a, %b
-    $x0 = COPY %res(s64)
+    %a:_(i64) = G_CONSTANT i64 40
+    %b:_(i64) = G_CONSTANT i64 2
+    %res:_(i64) = G_AND %a, %b
+    $x0 = COPY %res(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -106,13 +106,13 @@ body:             |
     ; CHECK-LABEL: name: or
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %res:_(s64) = G_CONSTANT i64 62
-    ; CHECK-NEXT: $x0 = COPY %res(s64)
+    ; CHECK-NEXT: %res:_(i64) = G_CONSTANT i64 62
+    ; CHECK-NEXT: $x0 = COPY %res(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %a:_(s64) = G_CONSTANT i64 42
-    %b:_(s64) = G_CONSTANT i64 22
-    %res:_(s64) = G_OR %a, %b
-    $x0 = COPY %res(s64)
+    %a:_(i64) = G_CONSTANT i64 42
+    %b:_(i64) = G_CONSTANT i64 22
+    %res:_(i64) = G_OR %a, %b
+    $x0 = COPY %res(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -129,13 +129,13 @@ body:             |
     ; CHECK-LABEL: name: xor
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %res:_(s64) = G_CONSTANT i64 12
-    ; CHECK-NEXT: $x0 = COPY %res(s64)
+    ; CHECK-NEXT: %res:_(i64) = G_CONSTANT i64 12
+    ; CHECK-NEXT: $x0 = COPY %res(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %a:_(s64) = G_CONSTANT i64 8
-    %b:_(s64) = G_CONSTANT i64 4
-    %res:_(s64) = G_XOR %a, %b
-    $x0 = COPY %res(s64)
+    %a:_(i64) = G_CONSTANT i64 8
+    %b:_(i64) = G_CONSTANT i64 4
+    %res:_(i64) = G_XOR %a, %b
+    $x0 = COPY %res(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -151,13 +151,13 @@ body:             |
     ; CHECK-LABEL: name: fadd
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %res:_(s64) = G_FCONSTANT double 4.200000e+01
-    ; CHECK-NEXT: $d0 = COPY %res(s64)
+    ; CHECK-NEXT: %res:_(f64) = G_FCONSTANT double 4.200000e+01
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double 40.0
-    %b:_(s64) = G_FCONSTANT double 2.0
-    %res:_(s64) = G_FADD %a, %b
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double 40.0
+    %b:_(f64) = G_FCONSTANT double 2.0
+    %res:_(f64) = G_FADD %a, %b
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -173,13 +173,13 @@ body:             |
     ; CHECK-LABEL: name: fsub
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %res:_(s64) = G_FCONSTANT double 3.800000e+01
-    ; CHECK-NEXT: $d0 = COPY %res(s64)
+    ; CHECK-NEXT: %res:_(f64) = G_FCONSTANT double 3.800000e+01
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double 40.0
-    %b:_(s64) = G_FCONSTANT double 2.0
-    %res:_(s64) = G_FSUB %a, %b
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double 40.0
+    %b:_(f64) = G_FCONSTANT double 2.0
+    %res:_(f64) = G_FSUB %a, %b
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -195,13 +195,13 @@ body:             |
     ; CHECK-LABEL: name: fmul
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %res:_(s64) = G_FCONSTANT double 8.000000e+01
-    ; CHECK-NEXT: $d0 = COPY %res(s64)
+    ; CHECK-NEXT: %res:_(f64) = G_FCONSTANT double 8.000000e+01
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double 40.0
-    %b:_(s64) = G_FCONSTANT double 2.0
-    %res:_(s64) = G_FMUL %a, %b
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double 40.0
+    %b:_(f64) = G_FCONSTANT double 2.0
+    %res:_(f64) = G_FMUL %a, %b
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -217,13 +217,13 @@ body:             |
     ; CHECK-LABEL: name: fdiv
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %res:_(s64) = G_FCONSTANT double 2.000000e+01
-    ; CHECK-NEXT: $d0 = COPY %res(s64)
+    ; CHECK-NEXT: %res:_(f64) = G_FCONSTANT double 2.000000e+01
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double 40.0
-    %b:_(s64) = G_FCONSTANT double 2.0
-    %res:_(s64) = G_FDIV %a, %b
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double 40.0
+    %b:_(f64) = G_FCONSTANT double 2.0
+    %res:_(f64) = G_FDIV %a, %b
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -239,13 +239,13 @@ body:             |
     ; CHECK-LABEL: name: fminimumnum
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %a:_(s64) = G_FCONSTANT double 2.000000e+00
-    ; CHECK-NEXT: $d0 = COPY %a(s64)
+    ; CHECK-NEXT: %a:_(f64) = G_FCONSTANT double 2.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %a(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double 2.0
-    %b:_(s64) = G_FCONSTANT double 5.0
-    %res:_(s64) = G_FMINIMUMNUM %a, %b
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double 2.0
+    %b:_(f64) = G_FCONSTANT double 5.0
+    %res:_(f64) = G_FMINIMUMNUM %a, %b
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -261,13 +261,13 @@ body:             |
     ; CHECK-LABEL: name: fmaximumnum
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %b:_(s64) = G_FCONSTANT double 5.000000e+00
-    ; CHECK-NEXT: $d0 = COPY %b(s64)
+    ; CHECK-NEXT: %b:_(f64) = G_FCONSTANT double 5.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %b(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double 2.0
-    %b:_(s64) = G_FCONSTANT double 5.0
-    %res:_(s64) = G_FMAXIMUMNUM %a, %b
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double 2.0
+    %b:_(f64) = G_FCONSTANT double 5.0
+    %res:_(f64) = G_FMAXIMUMNUM %a, %b
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -284,13 +284,13 @@ body:             |
     ; CHECK-LABEL: name: fcopysign
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %res:_(s64) = G_FCONSTANT double -3.000000e+00
-    ; CHECK-NEXT: $d0 = COPY %res(s64)
+    ; CHECK-NEXT: %res:_(f64) = G_FCONSTANT double -3.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double 3.0
-    %b:_(s64) = G_FCONSTANT double -1.0
-    %res:_(s64) = G_FCOPYSIGN %a, %b
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double 3.0
+    %b:_(f64) = G_FCONSTANT double -1.0
+    %res:_(f64) = G_FCOPYSIGN %a, %b
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -307,13 +307,13 @@ body:             |
     ; CHECK-LABEL: name: fminnum
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %a:_(s64) = G_FCONSTANT double 2.000000e+00
-    ; CHECK-NEXT: $d0 = COPY %a(s64)
+    ; CHECK-NEXT: %a:_(f64) = G_FCONSTANT double 2.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %a(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double 2.0
-    %b:_(s64) = G_FCONSTANT double 5.0
-    %res:_(s64) = G_FMINNUM %a, %b
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double 2.0
+    %b:_(f64) = G_FCONSTANT double 5.0
+    %res:_(f64) = G_FMINNUM %a, %b
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -330,13 +330,13 @@ body:             |
     ; CHECK-LABEL: name: fmaxnum
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %b:_(s64) = G_FCONSTANT double 5.000000e+00
-    ; CHECK-NEXT: $d0 = COPY %b(s64)
+    ; CHECK-NEXT: %b:_(f64) = G_FCONSTANT double 5.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %b(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double 2.0
-    %b:_(s64) = G_FCONSTANT double 5.0
-    %res:_(s64) = G_FMAXNUM %a, %b
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double 2.0
+    %b:_(f64) = G_FCONSTANT double 5.0
+    %res:_(f64) = G_FMAXNUM %a, %b
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -353,13 +353,13 @@ body:             |
     ; CHECK-LABEL: name: fminimum
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %a:_(s64) = G_FCONSTANT double 2.000000e+00
-    ; CHECK-NEXT: $d0 = COPY %a(s64)
+    ; CHECK-NEXT: %a:_(f64) = G_FCONSTANT double 2.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %a(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double 2.0
-    %b:_(s64) = G_FCONSTANT double 5.0
-    %res:_(s64) = G_FMINIMUM %a, %b
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double 2.0
+    %b:_(f64) = G_FCONSTANT double 5.0
+    %res:_(f64) = G_FMINIMUM %a, %b
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -376,13 +376,13 @@ body:             |
     ; CHECK-LABEL: name: fmaximum
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %b:_(s64) = G_FCONSTANT double 5.000000e+00
-    ; CHECK-NEXT: $d0 = COPY %b(s64)
+    ; CHECK-NEXT: %b:_(f64) = G_FCONSTANT double 5.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %b(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double 2.0
-    %b:_(s64) = G_FCONSTANT double 5.0
-    %res:_(s64) = G_FMAXIMUM %a, %b
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double 2.0
+    %b:_(f64) = G_FCONSTANT double 5.0
+    %res:_(f64) = G_FMAXIMUM %a, %b
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -398,13 +398,13 @@ body:             |
     ; CHECK-LABEL: name: fadd32
     ; CHECK: liveins: $s0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %res:_(s32) = G_FCONSTANT float 4.200000e+01
-    ; CHECK-NEXT: $s0 = COPY %res(s32)
+    ; CHECK-NEXT: %res:_(i32) = G_FCONSTANT float 4.200000e+01
+    ; CHECK-NEXT: $s0 = COPY %res(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
-    %a:_(s32) = G_FCONSTANT float 40.0
-    %b:_(s32) = G_FCONSTANT float 2.0
-    %res:_(s32) = G_FADD %a, %b
-    $s0 = COPY %res(s32)
+    %a:_(i32) = G_FCONSTANT float 40.0
+    %b:_(i32) = G_FCONSTANT float 2.0
+    %res:_(i32) = G_FADD %a, %b
+    $s0 = COPY %res(i32)
     RET_ReallyLR implicit $s0
 
 ...

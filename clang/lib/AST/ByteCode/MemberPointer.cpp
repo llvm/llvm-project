@@ -89,8 +89,20 @@ APValue MemberPointer::toAPValue(const ASTContext &ASTCtx) const {
 
 ComparisonCategoryResult
 MemberPointer::compare(const MemberPointer &RHS) const {
-  if (this->getDecl() == RHS.getDecl()) {
+  assert(!isZero());
+  assert(!RHS.isZero());
 
+  const auto getCmpDecl = [](const MemberPointer &P) -> const Decl * {
+    const Decl *D = P.getDecl()->getMostRecentDecl();
+    if (const auto *FD = dyn_cast<FieldDecl>(D))
+      D = FD->getFirstDecl();
+    return D;
+  };
+
+  const Decl *LHSCmpDecl = getCmpDecl(*this);
+  const Decl *RHSCmpDecl = getCmpDecl(RHS);
+
+  if (LHSCmpDecl == RHSCmpDecl) {
     if (this->PathLength != RHS.PathLength)
       return ComparisonCategoryResult::Unordered;
 

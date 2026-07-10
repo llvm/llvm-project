@@ -471,8 +471,8 @@ bool AMDGPULowerVGPREncoding::updateSetregModeImm(MachineInstr &MI,
   MachineOperand *ImmOp = TII->getNamedOperand(MI, AMDGPU::OpName::imm);
   int64_t OldImm = ImmOp->getImm();
   // Note that Offset is ignored for mode bits here.
-  int64_t NewImm =
-      (OldImm & ~AMDGPU::Hwreg::VGPR_MSB_MASK) | (SetregMode << VGPRMSBShift);
+  int64_t NewImm = (OldImm & ~int64_t(AMDGPU::Hwreg::VGPR_MSB_MASK)) |
+                   (SetregMode << VGPRMSBShift);
   ImmOp->setImm(NewImm);
   return NewImm != OldImm;
 }

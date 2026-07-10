@@ -1,4 +1,5 @@
-! RUN: %flang_fc1 -emit-hlfir -mllvm -enable-split-sum-expression-tree-lowering -o - %s | FileCheck %s --check-prefixes=SPLIT,NO-REWRITE
+! RUN: %flang_fc1 -emit-hlfir -freal-sum-reassociation -o - %s | FileCheck %s --check-prefixes=SPLIT,NO-REWRITE
+! RUN: %flang_fc1 -emit-hlfir -fno-real-sum-reassociation -o - %s | FileCheck %s --check-prefixes=DEFAULT,NO-REWRITE
 ! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s --check-prefixes=DEFAULT,NO-REWRITE
 
 ! Default:   (((x + a*b) + c*d) + e*f)

@@ -2488,7 +2488,7 @@ bool ObjCARCOpt::run(Function &F, AAResults &AA) {
 
 /// Interprocedurally determine if calls made by the given call site can
 /// possibly produce autoreleases.
-bool MayAutorelease(const CallBase &CB, unsigned Depth = 0) {
+static bool MayAutorelease(const CallBase &CB, unsigned Depth = 0) {
   if (CB.onlyReadsMemory())
     return false;
 
@@ -2500,10 +2500,11 @@ bool MayAutorelease(const CallBase &CB, unsigned Depth = 0) {
   if (const Function *Callee = CB.getCalledFunction()) {
     if (!Callee->hasExactDefinition())
       return true;
+
     for (const BasicBlock &BB : *Callee) {
-      // Track nested autorelease pools in a single pass. Autoreleases inside a
-      // pool are drained before the pool ends; only effects at function scope
-      // (empty stack) or in a pool not closed in this block matter.
+      // Track nested autorelease pools within a basic block. Autoreleases
+      // inside a pool are drained before the pool ends; only effects at block
+      // scope (empty stack) or in a pool not closed in the block matter.
       SmallVector<bool, 4> PoolStack;
       for (const Instruction &I : BB) {
         ARCInstKind InstKind = GetBasicARCInstKind(&I);
@@ -2561,6 +2562,8 @@ bool MayAutorelease(const CallBase &CB, unsigned Depth = 0) {
           break;
         }
       }
+      // If the block ended with an un-popped pool containing an autorelease,
+      // that autorelease escapes the block.
       if (!PoolStack.empty() && llvm::is_contained(PoolStack, true))
         return true;
     }
@@ -2580,9 +2583,9 @@ void ObjCARCOpt::OptimizeAutoreleasePools(Function &F) {
   // TODO: Can we optimize inter-block autorelease pool pairs?
   // This would involve tracking autorelease pool state across blocks.
   for (BasicBlock &BB : F) {
-    // Use a stack to track nested autorelease pools
-    SmallVector<std::pair<CallInst *, bool>, 4>
-        PoolStack; // {push_inst, has_autorelease_in_scope}
+    // Stack tracks nested autorelease pools: {push_inst,
+    // has_autorelease_in_scope}
+    SmallVector<std::pair<CallInst *, bool>, 4> PoolStack;
 
     for (Instruction &Inst : llvm::make_early_inc_range(BB)) {
       ARCInstKind Class = GetBasicARCInstKind(&Inst);
@@ -2591,8 +2594,7 @@ void ObjCARCOpt::OptimizeAutoreleasePools(Function &F) {
       case ARCInstKind::AutoreleasepoolPush: {
         // Start tracking a new autorelease pool scope
         auto *Push = cast<CallInst>(&Inst);
-        PoolStack.push_back(
-            {Push, false}); // {push_inst, has_autorelease_in_scope}
+        PoolStack.push_back({Push, false});
         LLVM_DEBUG(dbgs() << "Found autorelease pool push: " << *Push << "\n");
         break;
       }
@@ -2600,37 +2602,49 @@ void ObjCARCOpt::OptimizeAutoreleasePools(Function &F) {
       case ARCInstKind::AutoreleasepoolPop: {
         auto *Pop = cast<CallInst>(&Inst);
 
+        // Skip if no matching push found
         if (PoolStack.empty())
           break;
 
-        auto &TopPool = PoolStack.back();
-        CallInst *PendingPush = TopPool.first;
-        bool HasAutoreleaseInScope = TopPool.second;
+        // Get the matching push and whether autoreleases were present
+        CallInst *MatchingPush = PoolStack.back().first;
+        bool HadAutoreleaseInScope = PoolStack.back().second;
+
+        // Verify this pop matches the push (handle pointer casts).
+        // The pop's argument should be the push result, possibly cast.
+        if (Pop->getArgOperand(0)->stripPointerCasts() != MatchingPush) {
+          // Mismatched pop.
+          // We can't trust the stack anymore, invalidating optimization for
+          // this block.
+          PoolStack.clear();
+          LLVM_DEBUG(dbgs() << "Autorelease pool mismatch: pop argument "
+                            << *Pop->getArgOperand(0)
+                            << " does not match most recent push "
+                            << *MatchingPush << "\n");
+          break;
+        }
 
         // Pop the stack - remove this pool scope
         PoolStack.pop_back();
 
-        // Bail if this pop doesn't match the pending push
-        if (Pop->getArgOperand(0)->stripPointerCasts() != PendingPush)
+        // Only eliminate pools that had no autoreleases in their scope.
+        if (HadAutoreleaseInScope)
           break;
 
-        // Bail if there were autoreleases in this scope
-        if (HasAutoreleaseInScope)
-          break;
-
-        // Optimize: eliminate this empty autorelease pool pair
+        // Emit the remark before erasing the instructions
         ORE.emit([&]() {
           return OptimizationRemark(DEBUG_TYPE, "AutoreleasePoolElimination",
-                                    PendingPush)
+                                    MatchingPush)
                  << "eliminated empty autorelease pool pair";
         });
 
-        // Replace all uses of push with poison before deletion
-        PendingPush->replaceAllUsesWith(
-            PoisonValue::get(PendingPush->getType()));
+        // Replace all uses of push with poison before deletion, as Pop still
+        // holds a Use of it.
+        MatchingPush->replaceAllUsesWith(
+            PoisonValue::get(MatchingPush->getType()));
 
+        MatchingPush->eraseFromParent();
         Pop->eraseFromParent();
-        PendingPush->eraseFromParent();
 
         Changed = true;
         ++NumNoops;
@@ -2638,6 +2652,7 @@ void ObjCARCOpt::OptimizeAutoreleasePools(Function &F) {
       }
       case ARCInstKind::CallOrUser:
       case ARCInstKind::Call:
+        // Check if this call might produce autoreleases
         if (!MayAutorelease(cast<CallBase>(Inst)))
           break;
         [[fallthrough]];
@@ -2646,9 +2661,9 @@ void ObjCARCOpt::OptimizeAutoreleasePools(Function &F) {
       case ARCInstKind::FusedRetainAutorelease:
       case ARCInstKind::FusedRetainAutoreleaseRV:
       case ARCInstKind::LoadWeak: {
-        // Track that we have autorelease calls in the current pool scope
+        // Mark that we have autorelease operations in the current pool scope
         if (!PoolStack.empty()) {
-          PoolStack.back().second = true; // Set has_autorelease_in_scope = true
+          PoolStack.back().second = true;
           LLVM_DEBUG(
               dbgs()
               << "Found autorelease or potential autorelease in pool scope: "

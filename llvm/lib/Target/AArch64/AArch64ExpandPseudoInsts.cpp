@@ -59,10 +59,8 @@ private:
                             const TargetRegisterClass &ContiguousClass,
                             const TargetRegisterClass &StridedClass,
                             unsigned ContiguousOpc, unsigned StridedOpc);
-  bool expandFormTuplePseudo(MachineBasicBlock &MBB,
-                             MachineBasicBlock::iterator MBBI,
-                             MachineBasicBlock::iterator &NextMBBI,
-                             unsigned Size);
+  bool expandCopyIntoTuplePseudo(MachineInstr &MI, MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator MBBI);
   bool expandMOVImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                     unsigned BitSize);
 
@@ -1290,27 +1288,17 @@ bool AArch64ExpandPseudoImpl::expandMultiVecPseudo(
   return true;
 }
 
-bool AArch64ExpandPseudoImpl::expandFormTuplePseudo(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI, unsigned Size) {
-  assert((Size == 2 || Size == 4) && "Invalid Tuple Size");
-  MachineInstr &MI = *MBBI;
-  Register ReturnTuple = MI.getOperand(0).getReg();
+bool AArch64ExpandPseudoImpl::expandCopyIntoTuplePseudo(
+    MachineInstr &MI, MachineBasicBlock &MBB,
+    MachineBasicBlock::iterator MBBI) {
+  Register Src = MI.getOperand(1).getReg();
+  Register Dest = MI.getOperand(0).getReg();
 
-  const TargetRegisterInfo *TRI =
-      MBB.getParent()->getSubtarget().getRegisterInfo();
-  for (unsigned I = 0; I < Size; ++I) {
-    Register FormTupleOpReg = MI.getOperand(I + 1).getReg();
-    Register ReturnTupleSubReg =
-        TRI->getSubReg(ReturnTuple, AArch64::zsub0 + I);
-    // Add copies to ensure the subregisters remain in the correct order
-    // for any contigious operation they are used by.
-    if (FormTupleOpReg != ReturnTupleSubReg)
-      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORR_ZZZ))
-          .addReg(ReturnTupleSubReg, RegState::Define)
-          .addReg(FormTupleOpReg)
-          .addReg(FormTupleOpReg);
-  }
+  if (Src != Dest)
+    BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORR_ZZZ))
+        .addReg(Dest, RegState::Define)
+        .addReg(Src)
+        .addReg(Src);
 
   MI.eraseFromParent();
   return true;
@@ -1948,10 +1936,8 @@ bool AArch64ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR4RegClass,
                                 AArch64::ZPR4StridedRegClass,
                                 AArch64::LDNT1D_4Z, AArch64::LDNT1D_4Z_STRIDED);
-  case AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO:
-    return expandFormTuplePseudo(MBB, MBBI, NextMBBI, 2);
-  case AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO:
-    return expandFormTuplePseudo(MBB, MBBI, NextMBBI, 4);
+  case AArch64::COPY_INTO_TRANSPOSED_TUPLE:
+    return expandCopyIntoTuplePseudo(MI, MBB, MBBI);
   case AArch64::EON_ZZZ:
   case AArch64::NAND_ZZZ:
   case AArch64::NOR_ZZZ:

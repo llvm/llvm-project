@@ -149,9 +149,8 @@ body: |
     ; GFX11-TRUE16-NEXT: {{  $}}
     ; GFX11-TRUE16-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX11-TRUE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_16 = COPY [[COPY]].lo16
-    ; GFX11-TRUE16-NEXT: [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
-    ; GFX11-TRUE16-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[COPY1]], %subreg.lo16, [[DEF]], %subreg.hi16
-    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[REG_SEQUENCE]]
+    ; GFX11-TRUE16-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
+    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[COPY2]]
     ;
     ; GFX11-FAKE16-LABEL: name: test_freeze_s16_vgpr_to_vgpr
     ; GFX11-FAKE16: liveins: $vgpr0
