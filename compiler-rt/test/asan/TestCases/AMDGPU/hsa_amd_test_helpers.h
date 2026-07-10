@@ -11,15 +11,21 @@
 #include <hsa/hsa.h>
 #include <hsa/hsa_ext_amd.h>
 
+#include <cstdlib>
 #include <stdio.h>
 
-inline int hsa_amd_test_require_init() {
-  if (hsa_init() != HSA_STATUS_SUCCESS) {
-    fprintf(stderr, "hsa_init failed\n");
-    return 1;
-  }
-  return 0;
-}
+/// Abort with a decoded HSA error string if `expr` is not HSA_STATUS_SUCCESS.
+#define HSA_CHECK(expr)                                                        \
+  do {                                                                         \
+    hsa_status_t hsa_check_st = (expr);                                        \
+    if (hsa_check_st != HSA_STATUS_SUCCESS) {                                  \
+      const char *hsa_check_msg = nullptr;                                     \
+      hsa_status_string(hsa_check_st, &hsa_check_msg);                         \
+      fprintf(stderr, "HSA error at %s:%d: %s (%d)\n", __FILE__, __LINE__,     \
+              hsa_check_msg ? hsa_check_msg : "unknown", hsa_check_st);        \
+      abort();                                                                 \
+    }                                                                          \
+  } while (0)
 
 /// Return 1 if `st` indicates a hard failure from hsa_iterate_agents.
 inline int hsa_amd_test_iterate_agents_ok(hsa_status_t st) {

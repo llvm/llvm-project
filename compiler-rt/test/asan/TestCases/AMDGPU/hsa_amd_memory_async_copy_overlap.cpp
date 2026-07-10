@@ -17,8 +17,7 @@
 #include <stdlib.h>
 
 int main() {
-  if (hsa_amd_test_require_init())
-    return 1;
+  HSA_CHECK(hsa_init());
 
   HsaAmdAgentPick pick;
   hsa_amd_test_agent_pick_init(&pick);
@@ -31,12 +30,8 @@ int main() {
   }
 
   hsa_signal_t completion = {};
-  if (hsa_signal_create(/*initial_value=*/0, /*num_consumers=*/0,
-                        /*consumers=*/nullptr,
-                        &completion) != HSA_STATUS_SUCCESS) {
-    fprintf(stderr, "hsa_signal_create failed\n");
-    return 1;
-  }
+  HSA_CHECK(hsa_signal_create(/*initial_value=*/0, /*num_consumers=*/0,
+                              /*consumers=*/nullptr, &completion));
 
   char buf[128];
   char *dst = buf;
