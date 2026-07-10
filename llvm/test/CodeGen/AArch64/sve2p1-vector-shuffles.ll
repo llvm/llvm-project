@@ -82,32 +82,10 @@ define void @dupq_bf16_256b(ptr %addr) #0 {
 ;
 ; SME-LABEL: dupq_bf16_256b:
 ; SME:       // %bb.0:
-; SME-NEXT:    ldp q1, q0, [x0]
-; SME-NEXT:    str q0, [sp, #-64]!
-; SME-NEXT:    .cfi_def_cfa_offset 64
-; SME-NEXT:    ldr h0, [sp, #4]
-; SME-NEXT:    str q1, [sp, #32]
-; SME-NEXT:    str h0, [sp, #30]
-; SME-NEXT:    str h0, [sp, #28]
-; SME-NEXT:    str h0, [sp, #26]
-; SME-NEXT:    str h0, [sp, #24]
-; SME-NEXT:    str h0, [sp, #22]
-; SME-NEXT:    str h0, [sp, #20]
-; SME-NEXT:    str h0, [sp, #18]
-; SME-NEXT:    str h0, [sp, #16]
-; SME-NEXT:    ldr h0, [sp, #36]
-; SME-NEXT:    ldr q1, [sp, #16]
-; SME-NEXT:    str h0, [sp, #62]
-; SME-NEXT:    str h0, [sp, #60]
-; SME-NEXT:    str h0, [sp, #58]
-; SME-NEXT:    str h0, [sp, #56]
-; SME-NEXT:    str h0, [sp, #54]
-; SME-NEXT:    str h0, [sp, #52]
-; SME-NEXT:    str h0, [sp, #50]
-; SME-NEXT:    str h0, [sp, #48]
-; SME-NEXT:    ldr q0, [sp, #48]
+; SME-NEXT:    ldp q0, q1, [x0]
+; SME-NEXT:    mov z0.h, z0.h[2]
+; SME-NEXT:    mov z1.h, z1.h[2]
 ; SME-NEXT:    stp q0, q1, [x0]
-; SME-NEXT:    add sp, sp, #64
 ; SME-NEXT:    ret
   %load = load <16 x bfloat>, ptr %addr
   %splat.lanes = shufflevector <16 x bfloat> %load, <16 x bfloat> poison, <16 x i32> <i32  2, i32  2, i32  2, i32  2, i32  2, i32  2, i32  2, i32  2,
