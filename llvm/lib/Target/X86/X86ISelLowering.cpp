@@ -11915,6 +11915,7 @@ static SDValue lowerShuffleAsDecomposedShuffleMerge(
   int NumElts = Mask.size();
   int NumLanes = VT.getSizeInBits() / 128;
   int NumEltsPerLane = NumElts / NumLanes;
+  int EltSizeInBits = VT.getScalarSizeInBits();
 
   // Shuffle the input elements into the desired positions in V1 and V2 and
   // unpack/blend them together.
@@ -11975,7 +11976,9 @@ static SDValue lowerShuffleAsDecomposedShuffleMerge(
   // the shuffle may be able to fold with a load or other benefit. However, when
   // we'll have to do 2x as many shuffles in order to achieve this, a 2-input
   // pre-shuffle first is a better strategy.
-  if (!isNoopShuffleMask(V1Mask) && !isNoopShuffleMask(V2Mask)) {
+  bool V1Noop = isNoopShuffleMask(V1Mask);
+  bool V2Noop = isNoopShuffleMask(V2Mask);
+  if (!V1Noop && !V2Noop) {
     // If we don't have blends, see if we can create a cheap unpack.
     if (!Subtarget.hasSSE41() && VT.is128BitVector() &&
         (is128BitUnpackShuffleMask(V1Mask, DAG) ||
@@ -12010,17 +12013,20 @@ static SDValue lowerShuffleAsDecomposedShuffleMerge(
                                                           DAG))
       return BlendPerm;
 
-    if (VT.getScalarSizeInBits() >= 32)
+    if (EltSizeInBits >= 32)
       if (SDValue PermUnpack = lowerShuffleAsPermuteAndUnpack(
               DL, VT, V1, V2, Mask, Subtarget, DAG))
         return PermUnpack;
   }
 
   // If the final mask is an alternating blend of vXi8/vXi16, convert to an
-  // UNPCKL(SHUFFLE, SHUFFLE) pattern.
+  // UNPCKL(SHUFFLE, SHUFFLE) pattern unless BLENDI is cheap.
   // TODO: It doesn't have to be alternating - but each lane mustn't have more
   // than half the elements coming from each source.
-  if (IsAlternating && VT.getScalarSizeInBits() < 32) {
+  bool PreferBlend = EltSizeInBits == 16 && (V1Noop || V2Noop) &&
+                     Subtarget.hasSSE41() &&
+                     is128BitLaneRepeatedShuffleMask(VT, FinalMask);
+  if (!PreferBlend && IsAlternating && EltSizeInBits < 32) {
     V1Mask.assign(NumElts, -1);
     V2Mask.assign(NumElts, -1);
     FinalMask.assign(NumElts, -1);
