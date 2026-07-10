@@ -1555,9 +1555,8 @@ static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
 
 static void emitPPA1Name(std::unique_ptr<MCStreamer> &OutStreamer,
                          StringRef OutName) {
+  assert(OutName.size() > 0 && "PPA1 name is empty");
   size_t NameSize = OutName.size();
-  if (NameSize == 0)
-    return;
   uint16_t OutSize;
   if (NameSize < UINT16_MAX) {
     OutSize = static_cast<uint16_t>(NameSize);
