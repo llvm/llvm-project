@@ -23351,10 +23351,7 @@ public:
         return false;
       }
       if (auto *ASE = dyn_cast_or_null<ArraySubscriptExpr>(BindingExpr)) {
-        if (const VarDecl *OrigVar =
-                getOriginalVarOrDiagnose(SemaRef, DD, DRE->getExprLoc())) {
-          // Build OrigVar[idx] analoguous to the MemberExpr rewrite, then
-          // Visit(E).
+        if (getOriginalVarOrDiagnose(SemaRef, DD, DRE->getExprLoc())) {
           DeclarationNameInfo NameInfo(D->getDeclName(), DRE->getLocation());
           E = DeclRefExpr::Create(SemaRef.Context, DRE->getQualifierLoc(),
                                   DRE->getTemplateKeywordLoc(), DD,
