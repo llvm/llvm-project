@@ -653,7 +653,7 @@ func.func @complete_dpas_mx_inst_data(%arg0: vector<16x1024xf8E5M2>, %arg1: vect
 gpu.module @test {
   // CHECK-LABEL: truncf_prefers_nearer_user
   // CHECK: %[[TRUNC:.*]] = arith.truncf
-  // CHECK-SAME: {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [4, 8, 4], lane_layout = [4, 1, 4], lane_data = [1, 1, 1], order = [0, 2, 1]>, dims = [0]>}
+  // CHECK-SAME: {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [16, 8, 1], lane_layout = [16, 1, 1], lane_data = [1, 1, 1], order = [0, 2, 1]>, dims = [0]>}
   // CHECK-SAME: : vector<32x4xbf16> to vector<32x4xf8E8M0FNU>
   gpu.func @truncf_prefers_nearer_user(%src: memref<32x128xbf16>, %dst_red: memref<32x128xf8E8M0FNU>,
       %dst_plain: memref<32x4xf8E8M0FNU>) kernel {
