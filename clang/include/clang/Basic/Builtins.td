@@ -1931,6 +1931,73 @@ def MatrixColumnMajorStore : Builtin {
   let Prototype = "void(...)";
 }
 
+// Cooperative Matrix builtins for cl_ext_kernel_cooperative_matrix
+def CoopMatLoad : Builtin {
+  let Spellings = ["coop_mat_load"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def CoopMatStore : Builtin {
+  let Spellings = ["coop_mat_store"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def CoopMatMulAdd : Builtin {
+  let Spellings = ["coop_mat_mulAdd"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def CoopMatBinaryAdd : Builtin {
+  let Spellings = ["coop_mat_binary_add"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def CoopMatBinarySub : Builtin {
+  let Spellings = ["coop_mat_binary_sub"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def CoopMatBinaryMul : Builtin {
+  let Spellings = ["coop_mat_binary_mul"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def CoopMatBinaryDiv : Builtin {
+  let Spellings = ["coop_mat_binary_div"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def CoopMatScalarMul : Builtin {
+  let Spellings = ["coop_mat_scalar_mul"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def CoopMatScalarNeg : Builtin {
+  let Spellings = ["coop_mat_scalar_neg"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def CoopMatInit : Builtin {
+  let Spellings = ["coop_mat_init"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def CoopMatLength : Builtin {
+  let Spellings = ["coop_mat_length"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "unsigned int(...)";
+}
+
 // "Overloaded" Atomic operator builtins.  These are overloaded to support data
 // types of i8, i16, i32, i64, and i128.  The front-end sees calls to the
 // non-suffixed version of these (which has a bogus type) and transforms them to

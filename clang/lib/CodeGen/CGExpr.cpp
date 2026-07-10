@@ -7523,3 +7523,64 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
     }
   }
 }
+
+llvm::Value *CodeGenFunction::EmitCoopMatFromScalar(
+    llvm::Value *ScalarVal,
+    QualType CoopMatQTy)
+{
+    llvm::Type *CoopMatLLVMTy = ConvertType(CoopMatQTy);
+    auto *VecTy = cast<llvm::FixedVectorType>(CoopMatLLVMTy);
+
+    // Fast path for compile-time constants
+    if (auto *C = dyn_cast<llvm::Constant>(ScalarVal))
+        return llvm::ConstantVector::getSplat(
+                   VecTy->getElementCount(), C);
+
+    // Runtime path: splat scalar across all vector lanes
+    return Builder.CreateVectorSplat(
+               VecTy->getElementCount(),
+               ScalarVal,
+               "coopmat.broadcast");
+}
+
+llvm::Value *CodeGenFunction::EmitCoopMatBinaryOp(
+    BinaryOperatorKind Opcode,
+    llvm::Value *LHS,
+    llvm::Value *RHS,
+    QualType ResultTy)
+{
+  auto *CoopMatTy = ResultTy->getAs<CooperativeMatrixType>();
+  QualType CompTy  = CoopMatTy->getElementType();
+  bool IsFloat     = CompTy->isFloatingType();
+  bool IsSigned    = CompTy->isSignedIntegerType();
+
+  switch (Opcode) {
+  case BO_Add:
+    return IsFloat ? Builder.CreateFAdd(LHS, RHS, "coopmat.fadd")
+                   : Builder.CreateAdd (LHS, RHS, "coopmat.iadd");
+
+  case BO_Sub:
+    return IsFloat ? Builder.CreateFSub(LHS, RHS, "coopmat.fsub")
+                   : Builder.CreateSub (LHS, RHS, "coopmat.isub");
+
+  case BO_Mul:
+    // mat * mat  → element-wise FMul/IMul
+    // mat * scalar → handled separately (see scalar path below)
+    if (!RHS->getType()->isVectorTy()) {
+      // mat * scalar: broadcast scalar then element-wise mul
+      llvm::Value *Broadcast = EmitCoopMatFromScalar(RHS, ResultTy);
+      return IsFloat ? Builder.CreateFMul(LHS, Broadcast, "coopmat.scalarfmul")
+                     : Builder.CreateMul (LHS, Broadcast, "coopmat.scalarimul");
+    }
+    return IsFloat ? Builder.CreateFMul(LHS, RHS, "coopmat.fmul")
+                   : Builder.CreateMul (LHS, RHS, "coopmat.imul");
+
+  case BO_Div:
+    if (IsFloat)  return Builder.CreateFDiv(LHS, RHS, "coopmat.fdiv");
+    if (IsSigned) return Builder.CreateSDiv(LHS, RHS, "coopmat.sdiv");
+    return Builder.CreateUDiv(LHS, RHS, "coopmat.udiv");
+
+  default:
+    llvm_unreachable("Unsupported cooperative matrix binary op");
+  }
+}

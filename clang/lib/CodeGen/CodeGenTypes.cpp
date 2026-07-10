@@ -120,7 +120,21 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
     }
     return llvm::ArrayType::get(IRElemTy, MT->getNumElementsFlattened());
   }
-
+  if (T->isCooperativeMatrixType()) {
+    const CooperativeMatrixType *DMT =
+        cast<CooperativeMatrixType>(T->getUnqualifiedDesugaredType());
+    llvm::Type *ElTy = ConvertType(DMT->getElementType());
+    // Type argument for TargetExtType
+    llvm::Type *ArgTys[] = {ElTy};
+    // Unsigned arguments for TargetExtType
+    unsigned Ints[] = {DMT->getScope(), DMT->getNumRows(), DMT->getNumColumns(),
+                       DMT->getUse()};
+    // Create a TargetExtType to represent a Coop matrix type
+    llvm::TargetExtType *CoopMatType = llvm::TargetExtType::get(
+        getLLVMContext(), "spirv.CooperativeMatrixKHR",
+        llvm::ArrayRef<llvm::Type *>(ArgTys), llvm::ArrayRef<unsigned>(Ints));
+    return CoopMatType;
+  }
   llvm::Type *R = ConvertType(T);
 
   // Check for the boolean vector case.
@@ -686,6 +700,23 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     ResultType =
         llvm::FixedVectorType::get(ConvertType(MT->getElementType()),
                                    MT->getNumRows() * MT->getNumColumns());
+    break;
+  }
+  case Type::CooperativeMatrix: {
+    const CooperativeMatrixType *DMT =
+        cast<CooperativeMatrixType>(T->getUnqualifiedDesugaredType());
+    llvm::Type *ElTy = ConvertType(DMT->getElementType());
+    // Type argument for TargetExtType
+    llvm::Type *ArgTys[] = {ElTy};
+    // Unsigned arguments for TargetExtType
+    unsigned Ints[] = {DMT->getScope(), DMT->getNumRows(), DMT->getNumColumns(),
+                       DMT->getUse()};
+    // Create a TargetExtType to represent the coop matrix type
+    llvm::TargetExtType *CoopMatType = llvm::TargetExtType::get(
+        getLLVMContext(), "spirv.CooperativeMatrixKHR",
+        llvm::ArrayRef<llvm::Type *>(ArgTys), llvm::ArrayRef<unsigned>(Ints));
+
+    ResultType = CoopMatType;
     break;
   }
   case Type::FunctionNoProto:

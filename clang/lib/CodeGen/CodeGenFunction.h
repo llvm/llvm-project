@@ -5133,6 +5133,15 @@ public:
   /// scalar type, returning the result.
   llvm::Value *EmitScalarExpr(const Expr *E, bool IgnoreResultAssign = false);
 
+  /// Helper function for EmitCoopMatBinaryOp
+  llvm::Value *EmitCoopMatFromScalar(llvm::Value *ScalarVal,
+                                     QualType CoopMatQTy);
+
+  /// EmitCoopMatBinaryOp - Emit the computation of the specified binary op,
+  /// returning the result.
+  llvm::Value *EmitCoopMatBinaryOp(BinaryOperatorKind Opcode, llvm::Value *LHS,
+                                   llvm::Value *RHS, QualType ResultTy);
+
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are LLVM scalar types.
   llvm::Value *EmitScalarConversion(llvm::Value *Src, QualType SrcTy,
