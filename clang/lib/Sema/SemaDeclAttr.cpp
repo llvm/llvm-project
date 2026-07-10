@@ -3983,6 +3983,13 @@ static void handleCleanupAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
+  // If a declaration contains multiple cleanup attributes, GCC only uses
+  // the last one.
+  if (const auto *A = D->getAttr<CleanupAttr>()) {
+    S.Diag(A->getLoc(), diag::warn_duplicate_cleanup_attr) << A->getRange();
+    D->dropAttr<CleanupAttr>();
+  }
+
   auto *attr = ::new (S.Context) CleanupAttr(S.Context, AL, FD);
   attr->setArgLoc(E->getExprLoc());
   D->addAttr(attr);
@@ -11091,7 +11098,7 @@ void Sema::redelayDiagnostics(DelayedDiagnosticPool &pool) {
 
 void Sema::ActOnCleanupAttr(Decl *D, const Attr *A) {
   VarDecl *VD = cast<VarDecl>(D);
-  if (VD->getType()->isDependentType())
+  if (VD->isInvalidDecl() || VD->getType()->isDependentType())
     return;
 
   // Obtains the FunctionDecl that was found when handling the attribute

@@ -799,6 +799,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed an assertion where we improperly handled implicit conversions to integral types from an atomic-type with a conversion function. (#GH201770)
 - Fixed assertion failures involving code completion with delayed default arguments and exception specifications. (#GH200879)
 - Fixed a regression where calling a function that takes a class-type parameter by value inside `decltype` of a concept could be incorrectly rejected when used as a non-type template argument. (#GH175831)
+- Clang no longer crashes if `__attribute__((cleanup))` is applied to an invalid declaration. Furthermore, in declarations that
+  contain multiple `cleanup` attributes, Clang now only uses the last one, matching GCC's behaviour (previously, Clang
+  would only use the first one). A new warning that diagnoses such declarations has been added to `-Wignored-attributes`.
+  (#GH191829)
 - Fixed a crash in the constant evaluator when an ill-formed array new-expression whose bound could not be determined (e.g. `new int[]()`) was used in a constant expression. (#GH200139)
 - Clang now defines the GCC-compatible predefined macros `__WCHAR_MIN__`, `__WINT_MIN__`, and `__SIG_ATOMIC_MIN__`. (#GH199678)
 
