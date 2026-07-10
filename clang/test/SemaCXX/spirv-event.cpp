@@ -24,3 +24,13 @@ template <class T> void bar(T);
 void use(__spirv_event_t r) { bar(r); }
 struct S { __spirv_event_t r; int a; };
 
+// __spirv_event_t is copyable and moveable.
+__spirv_event_t get();
+void copy_and_move(__spirv_event_t a) {
+  __spirv_event_t copyConstructed = a;
+  __spirv_event_t moveConstructed = get();
+  __spirv_event_t assigned;
+  assigned = a;
+  assigned = get();
+}
+
