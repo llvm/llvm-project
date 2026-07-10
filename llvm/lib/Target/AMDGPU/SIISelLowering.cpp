@@ -1023,7 +1023,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::MUL, MVT::i1, Promote);
 
   if (Subtarget->hasBF16ConversionInsts()) {
-    setOperationAction(ISD::FP_ROUND, {MVT::bf16, MVT::v2bf16}, Custom);
+    setOperationAction({ISD::FP_ROUND, ISD::STRICT_FP_ROUND},
+                       {MVT::bf16, MVT::v2bf16}, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
   }
 
@@ -2682,7 +2683,7 @@ SDValue SITargetLowering::getPreloadedValue(
     SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
     AMDGPUFunctionArgInfo::PreloadedValue PVID) const {
   const ArgDescriptor *Reg = nullptr;
-  const TargetRegisterClass *RC;
+  const TargetRegisterClass *RC = nullptr;
   LLT Ty;
 
   CallingConv::ID CC = DAG.getMachineFunction().getFunction().getCallingConv();
@@ -3730,15 +3731,8 @@ SDValue SITargetLowering::LowerFormalArguments(
 
     if (Arg.Flags.isSRet()) {
       // The return object should be reasonably addressable.
-
-      // FIXME: This helps when the return is a real sret. If it is a
-      // automatically inserted sret (i.e. CanLowerReturn returns false), an
-      // extra copy is inserted in SelectionDAGBuilder which obscures this.
-      unsigned NumBits =
-          32 - getSubtarget()->getKnownHighZeroBitsForFrameIndex();
-      Val = DAG.getNode(
-          ISD::AssertZext, DL, VT, Val,
-          DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), NumBits)));
+      Val = annotateStackObjectPointer(Val, DAG, DL,
+                                       Arg.Flags.getNonZeroMemAlign());
     }
 
     Val = convertABITypeToValueType(DAG, Val, VA, DL);
@@ -8651,7 +8645,8 @@ SDValue SITargetLowering::splitFP_ROUNDVectorOp(SDValue Op,
 }
 
 SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
-  SDValue Src = Op.getOperand(0);
+  bool IsStrict = Op->isStrictFPOpcode();
+  SDValue Src = Op.getOperand(IsStrict ? 1 : 0);
   EVT SrcVT = Src.getValueType();
   EVT DstVT = Op.getValueType();
 
@@ -8694,6 +8689,11 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   // hardware f32 -> bf16 instruction.
   EVT F32VT = SrcVT.changeElementType(*DAG.getContext(), MVT::f32);
   SDValue Rod = expandRoundInexactToOdd(F32VT, Src, DL, DAG);
+  if (IsStrict) {
+    return DAG.getNode(
+        ISD::STRICT_FP_ROUND, DL, {DstVT, MVT::Other},
+        {Op.getOperand(0), Rod, DAG.getTargetConstant(0, DL, MVT::i32)});
+  }
   return DAG.getNode(ISD::FP_ROUND, DL, DstVT, Rod,
                      DAG.getTargetConstant(0, DL, MVT::i32));
 }
@@ -19727,9 +19727,9 @@ void SITargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       Op, Known, DemandedElts, DAG, Depth);
 }
 
-void SITargetLowering::computeKnownBitsForFrameIndex(
-    const int FI, KnownBits &Known, const MachineFunction &MF) const {
-  TargetLowering::computeKnownBitsForFrameIndex(FI, Known, MF);
+void SITargetLowering::computeKnownBitsForStackObjectPointer(
+    KnownBits &Known, const MachineFunction &MF, Align Alignment) const {
+  TargetLowering::computeKnownBitsForStackObjectPointer(Known, MF, Alignment);
 
   // Set the high bits to zero based on the maximum allowed scratch size per
   // wave. We can't use vaddr in MUBUF instructions if we don't know the address

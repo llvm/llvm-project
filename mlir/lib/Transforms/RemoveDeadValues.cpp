@@ -259,7 +259,7 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
 }
 
 /// Process a function-like operation `funcOp` using the liveness analysis `la`
-/// and the IR in `module`. If it is not public or external:
+/// and `symbolUserMap`. If it is not public or external:
 ///   (1) Adding its non-live arguments to a list for future removal.
 ///   (2) Marking their corresponding operands in its callers for removal.
 ///   (3) Identifying and enqueueing unnecessary terminator operands
@@ -268,7 +268,8 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
 ///   (5) Collecting the uses of these return values in its callers for future
 ///       removal.
 ///   (6) Marking all its results as non-live values.
-static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
+static void processFuncOp(FunctionOpInterface funcOp,
+                          const SymbolUserMap &symbolUserMap,
                           RunLivenessAnalysis &la, DenseSet<Value> &nonLiveSet,
                           RDVFinalCleanupList &cl) {
   LDBG() << "Processing function op: "
@@ -279,10 +280,8 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
            << funcOp.getOperation()->getName();
     return;
   }
-  SymbolTable::UseRange uses = *funcOp.getSymbolUses(module);
-  if (llvm::any_of(uses, [](SymbolTable::SymbolUse use) {
-        return !isa<CallOpInterface>(use.getUser());
-      })) {
+  ArrayRef<Operation *> users = symbolUserMap.getUsers(funcOp);
+  if (!llvm::all_of(users, llvm::IsaPred<CallOpInterface>)) {
     // If a non-call operation references the function (e.g. spirv.EntryPoint),
     // we cannot safely remove arguments or return values since we don't know
     // what the user expects. Skip this function entirely.
@@ -301,8 +300,7 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // Do (2). (Skip creating generic operand cleanup entries for call ops.
   // Call arguments will be removed in the call-site specific segment-aware
   // cleanup, avoiding generic eraseOperands bitvector mechanics.)
-  for (SymbolTable::SymbolUse use : uses) {
-    Operation *callOp = use.getUser();
+  for (Operation *callOp : users) {
     // Push an empty operand cleanup entry so that call-site specific logic in
     // cleanUpDeadVals runs (it keys off CallOpInterface). The BitVector is
     // intentionally all false to avoid generic erasure.
@@ -336,8 +334,7 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // since it forwards only to non-live value(s) (%1#1).
   size_t numReturns = funcOp.getNumResults();
   BitVector nonLiveRets(numReturns, true);
-  for (SymbolTable::SymbolUse use : uses) {
-    Operation *callOp = use.getUser();
+  for (Operation *callOp : users) {
     assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
     BitVector liveCallRets = markLives(callOp->getResults(), nonLiveSet, la);
     nonLiveRets &= liveCallRets.flip();
@@ -360,8 +357,7 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // Do (5) and (6).
   if (numReturns == 0)
     return;
-  for (SymbolTable::SymbolUse use : uses) {
-    Operation *callOp = use.getUser();
+  for (Operation *callOp : users) {
     assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
     cl.results.push_back({callOp, nonLiveRets});
     collectNonLiveValues(nonLiveSet, callOp->getResults(), nonLiveRets);
@@ -770,6 +766,13 @@ void RemoveDeadValues::runOnOperation() {
   auto &la = getAnalysis<RunLivenessAnalysis>();
   Operation *module = getOperation();
 
+  // Build a symbol user map once up front so that processFuncOp can look up the
+  // callers of each function in O(1). Otherwise, each call would walk the
+  // entire module to find the callers, making the pass O(numFunctions *
+  // numOperations).
+  SymbolTableCollection symbolTableCollection;
+  SymbolUserMap symbolUserMap(symbolTableCollection, module);
+
   // Tracks values eligible for erasure - complements liveness analysis to
   // identify "droppable" values.
   DenseSet<Value> deadVals;
@@ -780,7 +783,7 @@ void RemoveDeadValues::runOnOperation() {
 
   module->walk([&](Operation *op) {
     if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
-      processFuncOp(funcOp, module, la, deadVals, finalCleanupList);
+      processFuncOp(funcOp, symbolUserMap, la, deadVals, finalCleanupList);
     } else if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
       processRegionBranchOp(regionBranchOp, la, deadVals, finalCleanupList);
     } else if (auto branchOp = dyn_cast<BranchOpInterface>(op)) {
