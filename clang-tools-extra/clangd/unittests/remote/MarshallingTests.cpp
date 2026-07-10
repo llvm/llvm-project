@@ -453,8 +453,9 @@ TEST(RemoteMarshallingTest, CrossPlatformPathsRoundTrip) {
   llvm::BumpPtrAllocator Arena;
   llvm::UniqueStringSaver Strings(Arena);
 
-  // Simulate a Windows-built index
-  Marshaller ProtobufMarshaller("C:/remote/project/",
+  // Simulate a Windows-built index.
+  std::string RemoteIndexRoot = "C:\\remote\\project\\";
+  Marshaller ProtobufMarshaller(RemoteIndexRoot,
                                 testPath("local/project/"));
 
   clangd::Ref Ref;
@@ -466,8 +467,13 @@ TEST(RemoteMarshallingTest, CrossPlatformPathsRoundTrip) {
   Location.End.setColumn(4);
   // Construct the URI as a Windows machine would have serialized it into the
   // index: file:///C:/remote/project/lib/File.cpp.
-  Location.FileURI = 
-      Strings.save("file:///C:/remote/project/lib/File.cpp").begin();
+  Location.FileURI =
+      Strings
+          .save("file:///" +
+                convert_to_slash(RemoteIndexRoot,
+                                 llvm::sys::path::Style::windows) +
+                "lib/File.cpp")
+          .begin();
   Ref.Location = Location;
 
   auto Serialized = ProtobufMarshaller.toProtobuf(Ref);
