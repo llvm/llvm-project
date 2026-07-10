@@ -50,6 +50,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "greaterequal";
   case Kind::greatergreater:
     return "greatergreater";
+  case Kind::greatergreaterequal:
+    return "greatergreaterequal";
   case Kind::identifier:
     return "identifier";
   case Kind::integer_constant:
@@ -68,6 +70,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "lessequal";
   case Kind::lessless:
     return "lessless";
+  case Kind::lesslessequal:
+    return "lesslessequal";
   case Kind::minus:
     return "minus";
   case Kind::minusequal:
@@ -76,6 +80,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "minusminus";
   case Token::percent:
     return "percent";
+  case Token::percentequal:
+    return "percentequal";
   case Kind::period:
     return "period";
   case Kind::pipe:
@@ -96,8 +102,12 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "r_square";
   case Token::slash:
     return "slash";
+  case Token::slashequal:
+    return "slashequal";
   case Token::star:
     return "star";
+  case Token::starequal:
+    return "starequal";
   case Token::tilde:
     return "tilde";
   }
@@ -228,6 +238,8 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
   // be ordered longest-to-shortest in the list below. E.g. '::' must come
   // before ':', and '+=' must come before '+'.
   constexpr std::pair<Token::Kind, const char *> operators[] = {
+      {Token::greatergreaterequal, ">>="},
+      {Token::lesslessequal, "<<="},
       {Token::ampamp, "&&"},
       {Token::arrow, "->"},
       {Token::coloncolon, "::"},
@@ -239,9 +251,12 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
       {Token::lessless, "<<"},
       {Token::minusequal, "-="},
       {Token::minusminus, "--"},
+      {Token::percentequal, "%="},
       {Token::pipepipe, "||"},
       {Token::plusequal, "+="},
       {Token::plusplus, "++"},
+      {Token::slashequal, "/="},
+      {Token::starequal, "*="},
       {Token::amp, "&"},
       {Token::caret, "^"},
       {Token::colon, ":"},

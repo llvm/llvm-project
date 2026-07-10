@@ -10,7 +10,12 @@ assignment_expression = conditional_expression
 
 assignment_operator = "="
                     | "+="
-                    | "-=" ;
+                    | "-="
+                    | "*="
+                    | "/="
+                    | "%="
+                    | "<<="
+                    | ">>=" ;
 
 pure_expression = conditional_expression ;
 
