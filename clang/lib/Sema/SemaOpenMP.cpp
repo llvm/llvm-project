@@ -4629,6 +4629,7 @@ void SemaOpenMP::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind,
   case OMPD_reverse:
   case OMPD_split:
   case OMPD_interchange:
+  case OMPD_flatten:
   case OMPD_fuse:
   case OMPD_assume:
     break;
@@ -6474,6 +6475,10 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
   case OMPD_interchange:
     Res = ActOnOpenMPInterchangeDirective(ClausesWithImplicit, AStmt, StartLoc,
                                           EndLoc);
+    break;
+  case OMPD_flatten:
+    Res = ActOnOpenMPFlattenDirective(ClausesWithImplicit, AStmt, StartLoc,
+                                      EndLoc);
     break;
   case OMPD_fuse:
     Res =
@@ -16390,6 +16395,277 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
                                          buildPreInits(Context, PreInits));
 }
 
+/// Counts the perfectly nested canonical loop depth at \p AStmt. Returns
+/// std::nullopt if a loop-generating transformation prevents a static count.
+static std::optional<unsigned> getCanonicalLoopNestDepth(Stmt *AStmt) {
+  unsigned Depth = 0;
+  Stmt *CurStmt = AStmt ? AStmt->IgnoreContainers() : nullptr;
+  while (CurStmt) {
+    if (isa<OMPLoopTransformationDirective>(CurStmt))
+      return std::nullopt;
+    if (auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(CurStmt))
+      CurStmt = CanonLoop->getLoopStmt();
+    Stmt *Body = nullptr;
+    if (auto *For = dyn_cast<ForStmt>(CurStmt))
+      Body = For->getBody();
+    else if (auto *RangeFor = dyn_cast<CXXForRangeStmt>(CurStmt))
+      Body = RangeFor->getBody();
+    else
+      break;
+    ++Depth;
+    CurStmt = Body ? Body->IgnoreContainers() : nullptr;
+  }
+  return Depth;
+}
+
+StmtResult
+SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
+                                        Stmt *AStmt, SourceLocation StartLoc,
+                                        SourceLocation EndLoc) {
+  ASTContext &Context = getASTContext();
+  DeclContext *CurContext = SemaRef.CurContext;
+  Scope *CurScope = SemaRef.getCurScope();
+
+  // Empty statement should only be possible if there already was an error.
+  if (!AStmt)
+    return StmtError();
+
+  // flatten without 'depth' clause combines two loops; 'depth(k)' selects k.
+  unsigned NumLoops = 2;
+  bool DepthIsValueDependent = false;
+  const auto *DepthClause =
+      OMPExecutableDirective::getSingleClause<OMPDepthClause>(Clauses);
+  if (DepthClause) {
+    Expr *DepthExpr = DepthClause->getDepth();
+    if (DepthExpr && DepthExpr->isValueDependent()) {
+      DepthIsValueDependent = true;
+    } else if (DepthExpr) {
+      Expr::EvalResult EvalResult;
+      if (DepthExpr->EvaluateAsInt(EvalResult, Context))
+        NumLoops = EvalResult.Val.getInt().getZExtValue();
+    }
+  }
+
+  // Report "expected k for loops, but found only n" when depth exceeds the
+  // perfect nest (same form as 'collapse'); skip if depth or nest is unknown.
+  if (DepthClause && !DepthIsValueDependent) {
+    if (std::optional<unsigned> NestDepth = getCanonicalLoopNestDepth(AStmt);
+        NestDepth && NumLoops > *NestDepth) {
+      Diag(AStmt->getBeginLoc(), diag::err_omp_not_for)
+          << /*expected N for loops form=*/1
+          << getOpenMPDirectiveName(OMPD_flatten) << NumLoops
+          << (*NestDepth > 0) << *NestDepth;
+      return StmtError();
+    }
+  }
+
+  // Defer when 'depth' is value-dependent (concrete k unknown until
+  // instantiation).
+  if (DepthIsValueDependent)
+    return OMPFlattenDirective::Create(Context, StartLoc, EndLoc, Clauses,
+                                       NumLoops, AStmt, nullptr, nullptr);
+
+  // Verify and diagnose loop nest.
+  SmallVector<OMPLoopBasedDirective::HelperExprs, 4> LoopHelpers(NumLoops);
+  Stmt *Body = nullptr;
+  SmallVector<SmallVector<Stmt *>, 4> OriginalInits;
+  if (!checkTransformableLoopNest(OMPD_flatten, AStmt, NumLoops, LoopHelpers,
+                                  Body, OriginalInits))
+    return StmtError();
+
+  // Delay flattening to when template is completely instantiated.
+  if (CurContext->isDependentContext())
+    return OMPFlattenDirective::Create(Context, StartLoc, EndLoc, Clauses,
+                                       NumLoops, AStmt, nullptr, nullptr);
+
+  assert(LoopHelpers.size() == NumLoops &&
+         "Expecting loop iteration space dimensionality to match number of "
+         "affected loops");
+  assert(OriginalInits.size() == NumLoops &&
+         "Expecting loop iteration space dimensionality to match number of "
+         "affected loops");
+
+  // Find the affected loops.
+  SmallVector<Stmt *> LoopStmts(NumLoops, nullptr);
+  collectLoopStmts(AStmt, LoopStmts);
+
+  // Collect pre-init statements in outer-to-inner order.
+  SmallVector<Stmt *> PreInits;
+  for (auto I : llvm::seq<int>(NumLoops)) {
+    OMPLoopBasedDirective::HelperExprs &LoopHelper = LoopHelpers[I];
+    assert(LoopHelper.Counters.size() == 1 &&
+           "Single-dimensional loop iteration space expected");
+    addLoopPreInits(Context, LoopHelper, LoopStmts[I], OriginalInits[I],
+                    PreInits);
+  }
+
+  CaptureVars CopyTransformer(SemaRef);
+  auto MakeNumIterations = [&CopyTransformer,
+                            &LoopHelpers](unsigned I) -> Expr * {
+    return AssertSuccess(
+        CopyTransformer.TransformExpr(LoopHelpers[I].NumIterations));
+  };
+
+  OMPLoopBasedDirective::HelperExprs &OutermostHelper = LoopHelpers[0];
+  auto *OutermostCntVar = cast<DeclRefExpr>(OutermostHelper.Counters.front());
+  SourceLocation OrigVarLoc = OutermostCntVar->getExprLoc();
+  SourceLocation OrigVarLocBegin = OutermostCntVar->getBeginLoc();
+  SourceLocation OrigVarLocEnd = OutermostCntVar->getEndLoc();
+  SourceLocation CondLoc = OutermostHelper.Cond->getExprLoc();
+
+  // Product of trip counts; mirror 'collapse' IV-width selection to avoid
+  // overflow when several counts are multiplied.
+  auto BuildTripCount = [&](unsigned Bits) -> ExprResult {
+    ExprResult Product;
+    for (unsigned I = 0; I < NumLoops; ++I) {
+      ExprResult N = widenIterationCount(Bits, MakeNumIterations(I), SemaRef);
+      if (!N.isUsable())
+        return ExprError();
+      if (I == 0)
+        Product = N;
+      else
+        Product = SemaRef.BuildBinOp(CurScope, CondLoc, BO_Mul, Product.get(),
+                                     N.get());
+      if (!Product.isUsable())
+        return ExprError();
+    }
+    return Product;
+  };
+
+  bool AllCountsLessThan32Bits = true;
+  for (unsigned I = 0; I < NumLoops; ++I)
+    AllCountsLessThan32Bits &=
+        Context.getTypeSize(LoopHelpers[I].NumIterations->getType()) < 32;
+
+  ExprResult TripCount32 = BuildTripCount(/*Bits=*/32);
+  ExprResult TripCount64 = BuildTripCount(/*Bits=*/64);
+  if (!TripCount32.isUsable() || !TripCount64.isUsable())
+    return StmtError();
+
+  ExprResult TripCount = TripCount64;
+  if (Context.getTypeSize(TripCount32.get()->getType()) == 32 &&
+      (AllCountsLessThan32Bits || NumLoops == 1 ||
+       fitsInto(
+           /*Bits=*/32,
+           TripCount32.get()->getType()->hasSignedIntegerRepresentation(),
+           TripCount64.get(), SemaRef)))
+    TripCount = TripCount32;
+
+  QualType IVTy = TripCount.get()->getType();
+  uint64_t IVWidth = Context.getTypeSize(IVTy);
+
+  auto MakeNumIterationsInIVTy = [&](unsigned I) -> Expr * {
+    return AssertSuccess(SemaRef.PerformImplicitConversion(
+        MakeNumIterations(I), IVTy, AssignmentAction::Converting,
+        /*AllowExplicit=*/true));
+  };
+
+  // \code{.cpp}
+  //   for (auto .flatten.iv = 0; .flatten.iv < n0 * n1 * ...; ++.flatten.iv) {
+  //     .flatten.iv.0 = .flatten.iv / (n1 * ...);
+  //     i0 = ...;                                        // Updates[0]
+  //     .flatten.iv.1 = (.flatten.iv / ...) % n1;
+  //     i1 = ...;                                        // Updates[1]
+  //     ...
+  //     body(i0, i1, ...);
+  //   }
+  // \endcode
+  SmallString<64> FlattenedIVName(".flatten.iv");
+  VarDecl *FlattenedIVDecl = buildVarDecl(SemaRef, {}, IVTy, FlattenedIVName,
+                                          nullptr, OutermostCntVar);
+  auto MakeFlattenedRef = [&SemaRef = this->SemaRef, FlattenedIVDecl, IVTy,
+                           OrigVarLoc]() {
+    return buildDeclRefExpr(SemaRef, FlattenedIVDecl, IVTy, OrigVarLoc);
+  };
+
+  // For init-statement:
+  // \code{.cpp}
+  //   auto .flatten.iv = 0;
+  // \endcode
+  auto *Zero = IntegerLiteral::Create(Context, llvm::APInt::getZero(IVWidth),
+                                      IVTy, OrigVarLoc);
+  SemaRef.AddInitializerToDecl(FlattenedIVDecl, Zero, /*DirectInit=*/false);
+  StmtResult Init = new (Context)
+      DeclStmt(DeclGroupRef(FlattenedIVDecl), OrigVarLocBegin, OrigVarLocEnd);
+  if (!Init.isUsable())
+    return StmtError();
+
+  // For cond-expression:
+  // \code{.cpp}
+  //   .flatten.iv < n0 * n1 * ... * n(k-1)
+  // \endcode
+  ExprResult Cond = SemaRef.BuildBinOp(CurScope, CondLoc, BO_LT,
+                                       MakeFlattenedRef(), TripCount.get());
+  if (!Cond.isUsable())
+    return StmtError();
+
+  // For incr-statement:
+  // \code{.cpp}
+  //   ++.flatten.iv
+  // \endcode
+  ExprResult Incr =
+      SemaRef.BuildUnaryOp(CurScope, OutermostHelper.Inc->getExprLoc(),
+                           UO_PreInc, MakeFlattenedRef());
+  if (!Incr.isUsable())
+    return StmtError();
+
+  // Recover each logical iteration counter via mixed-radix div/mod; reuse the
+  // iteration variables from checkOpenMPLoop so Updates compute user counters.
+  SmallVector<Stmt *, 8> BodyStmts;
+  for (unsigned I = 0; I < NumLoops; ++I) {
+    OMPLoopBasedDirective::HelperExprs &LoopHelper = LoopHelpers[I];
+    auto *IVRef = cast<DeclRefExpr>(LoopHelper.IterationVarRef);
+    auto *IVDecl = cast<VarDecl>(IVRef->getDecl());
+    std::string IVName = (".flatten.iv." + llvm::Twine(I)).str();
+    IVDecl->setDeclName(&SemaRef.PP.getIdentifierTable().get(IVName));
+
+    ExprResult Value = MakeFlattenedRef();
+    if (I + 1 < NumLoops) {
+      ExprResult Divisor = MakeNumIterationsInIVTy(I + 1);
+      for (unsigned J = I + 2; J < NumLoops; ++J) {
+        Divisor = SemaRef.BuildBinOp(CurScope, OrigVarLoc, BO_Mul,
+                                     Divisor.get(), MakeNumIterationsInIVTy(J));
+        if (!Divisor.isUsable())
+          return StmtError();
+      }
+      Value = SemaRef.BuildBinOp(CurScope, OrigVarLoc, BO_Div, Value.get(),
+                                 Divisor.get());
+      if (!Value.isUsable())
+        return StmtError();
+    }
+    if (I > 0) {
+      Value = SemaRef.BuildBinOp(CurScope, OrigVarLoc, BO_Rem, Value.get(),
+                                 MakeNumIterationsInIVTy(I));
+      if (!Value.isUsable())
+        return StmtError();
+    }
+
+    SemaRef.AddInitializerToDecl(IVDecl, Value.get(), /*DirectInit=*/false);
+    StmtResult IVStmt = new (Context)
+        DeclStmt(DeclGroupRef(IVDecl), OrigVarLocBegin, OrigVarLocEnd);
+    if (!IVStmt.isUsable())
+      return StmtError();
+
+    BodyStmts.push_back(IVStmt.get());
+    llvm::append_range(BodyStmts, LoopHelper.Updates);
+    if (auto *CXXFor = dyn_cast<CXXForRangeStmt>(LoopStmts[I]))
+      BodyStmts.push_back(CXXFor->getLoopVarStmt());
+  }
+  BodyStmts.push_back(Body);
+  auto *FlattenedBody =
+      CompoundStmt::Create(Context, BodyStmts, FPOptionsOverride(),
+                           Body->getBeginLoc(), Body->getEndLoc());
+
+  auto *FlattenedFor = new (Context) ForStmt(
+      Context, Init.get(), Cond.get(), nullptr, Incr.get(), FlattenedBody,
+      OutermostHelper.Init->getBeginLoc(), OutermostHelper.Init->getBeginLoc(),
+      OutermostHelper.Inc->getEndLoc());
+
+  return OMPFlattenDirective::Create(Context, StartLoc, EndLoc, Clauses,
+                                     NumLoops, AStmt, FlattenedFor,
+                                     buildPreInits(Context, PreInits));
+}
+
 StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
                                                 Stmt *AStmt,
                                                 SourceLocation StartLoc,
@@ -16919,6 +17195,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
     break;
   case OMPC_partial:
     Res = ActOnOpenMPPartialClause(Expr, StartLoc, LParenLoc, EndLoc);
+    break;
+  case OMPC_depth:
+    Res = ActOnOpenMPDepthClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_message:
     Res = ActOnOpenMPMessageClause(Expr, StartLoc, LParenLoc, EndLoc);
@@ -18239,6 +18518,22 @@ OMPClause *SemaOpenMP::ActOnOpenMPPartialClause(Expr *FactorExpr,
 
   return OMPPartialClause::Create(getASTContext(), StartLoc, LParenLoc, EndLoc,
                                   FactorExpr);
+}
+
+OMPClause *SemaOpenMP::ActOnOpenMPDepthClause(Expr *DepthExpr,
+                                              SourceLocation StartLoc,
+                                              SourceLocation LParenLoc,
+                                              SourceLocation EndLoc) {
+  // The depth-expr must be a positive integer constant expression and
+  // not greater than the number of loops in the associated loop nest.
+  ExprResult DepthResult = VerifyPositiveIntegerConstantInClause(
+      DepthExpr, OMPC_depth, /*StrictlyPositive=*/true);
+  if (DepthResult.isInvalid())
+    return nullptr;
+  DepthExpr = DepthResult.get();
+
+  return OMPDepthClause::Create(getASTContext(), StartLoc, LParenLoc, EndLoc,
+                                DepthExpr);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPLoopRangeClause(
