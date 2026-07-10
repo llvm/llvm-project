@@ -454,7 +454,7 @@ TEST(RemoteMarshallingTest, CrossPlatformPathsRoundTrip) {
   llvm::UniqueStringSaver Strings(Arena);
 
   // Simulate a Windows-built index.
-  std::string RemoteIndexRoot = "C:\\remote\\project\\";
+  llvm::StringRef RemoteIndexRoot = "C:\\remote\\project\\";
   Marshaller ProtobufMarshaller(RemoteIndexRoot, testPath("local/project/"));
 
   clangd::Ref Ref;
