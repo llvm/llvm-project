@@ -15,16 +15,11 @@ jobs:
     if: github.repository_owner == 'llvm'
     name: Check LLVM_ABI annotations with ids
     runs-on: ubuntu-24.04
+    container:
+      image: 'ghcr.io/llvm/ci-ubuntu-24.04-ids-checks'
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-          repository: compnerd/ids
-          path: ${{ github.workspace }}/ids
-          ref: 6d9b77c89107743159fccaea109e8feb81959844 # main, pinned at the --main-file landing
-
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
@@ -40,20 +35,6 @@ jobs:
           skip_initial_fetch: true
           base_sha: 'HEAD~1'
           sha: 'HEAD'
-
-      - name: Install dependencies
-        run: |
-          # Pull a recent clang from LLVM's apt repo so idt's parser stays in
-          # sync with the C++ language features used by current LLVM source.
-          sudo install -d -m 0755 /etc/apt/keyrings
-          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
-            | sudo gpg --dearmor -o /etc/apt/keyrings/llvm.gpg
-          echo "deb [signed-by=/etc/apt/keyrings/llvm.gpg] http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" \
-            | sudo tee /etc/apt/sources.list.d/llvm.list
-          sudo apt update
-          # oprofile provides opagent.h, used by llvm/ExecutionEngine/OProfileWrapper.h
-          sudo apt install -y clang-22 lld-22 ninja-build libclang-22-dev oprofile
-          pip install --require-hashes -r ${{ github.workspace }}/llvm-project/llvm/utils/git/requirements.txt
 
       - name: Configure and build minimal LLVM for use by ids
         run: |
@@ -92,21 +73,6 @@ jobs:
                   print $1
                 }')
           ninja -C "$BUILD_DIR" $TABLEGEN_TARGETS
-
-      - name: Configure and build ids
-        run: |
-          cmake -B ${{ github.workspace }}/ids/build/ \
-                -S ${{ github.workspace }}/ids/ \
-                -D CMAKE_BUILD_TYPE=Release \
-                -D CMAKE_C_COMPILER=clang-22 \
-                -D CMAKE_CXX_COMPILER=clang++-22 \
-                -D CMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld \
-                -D LLVM_DIR=/usr/lib/llvm-22/lib/cmake/llvm/ \
-                -D Clang_DIR=/usr/lib/llvm-22/lib/cmake/clang/ \
-                -D FILECHECK_EXECUTABLE=$(which FileCheck-22) \
-                -D LIT_EXECUTABLE=$(which lit) \
-                -G Ninja
-          ninja -C ${{ github.workspace }}/ids/build/
 
       - name: Run ids check
         env:
