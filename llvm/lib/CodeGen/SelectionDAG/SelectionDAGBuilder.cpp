@@ -4203,10 +4203,21 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
   SDValue Src1 = getValue(I.getOperand(0));
   SDValue Src2 = getValue(I.getOperand(1));
   ArrayRef<int> Mask;
-  if (auto *SVI = dyn_cast<ShuffleVectorInst>(&I))
+  if (auto *SVI = dyn_cast<ShuffleVectorInst>(&I)) {
+    if (!SVI->isConstantMask()) {
+      // Run-time (or non-canonical constant) mask: emit VECTOR_SHUFFLE_VAR.
+      // DAGCombine folds constant masks back into VECTOR_SHUFFLE.
+      SDValue MaskV = getValue(SVI->getMaskOperand());
+      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+      EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+      setValue(&I, DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, getCurSDLoc(), VT,
+                                Src1, Src2, MaskV));
+      return;
+    }
     Mask = SVI->getShuffleMask();
-  else
+  } else {
     Mask = cast<ConstantExpr>(I).getShuffleMask();
+  }
   SDLoc DL = getCurSDLoc();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());

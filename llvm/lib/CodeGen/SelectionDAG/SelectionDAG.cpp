@@ -9097,6 +9097,21 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
     break;
   }
+  case ISD::VECTOR_SHUFFLE_VAR: {
+    [[maybe_unused]] EVT Vec1VT = N1.getValueType();
+    [[maybe_unused]] EVT Vec2VT = N2.getValueType();
+    [[maybe_unused]] EVT MaskVT = N3.getValueType();
+    assert(Vec1VT.isVector() && Vec2VT.isVector() && MaskVT.isVector() &&
+           "All inputs must be vectors.");
+    assert(Vec1VT == Vec2VT && "Input vector types don't match.");
+    assert(VT.getVectorElementType() == Vec1VT.getVectorElementType() &&
+           "Result and input element types don't match.");
+    assert(VT.getVectorElementCount() == MaskVT.getVectorElementCount() &&
+           "Result and mask must have the same number of elements.");
+    assert(MaskVT.getVectorElementType().isInteger() &&
+           "Mask must be a vector of integers.");
+    break;
+  }
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
   case ISD::PARTIAL_REDUCE_SUMLA:

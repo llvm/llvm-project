@@ -1427,6 +1427,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VECTOR_COMPRESS:
     SplitVecRes_VECTOR_COMPRESS(N, Lo, Hi);
     break;
+  case ISD::VECTOR_SHUFFLE_VAR:
+    SplitVecRes_VECTOR_SHUFFLE_VAR(N, Lo, Hi);
+    break;
   case ISD::SETCC:
   case ISD::VP_SETCC:
     SplitVecRes_SETCC(N, Lo, Hi);
@@ -2932,6 +2935,24 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_COMPRESS(SDNode *N, SDValue &Lo,
   std::tie(Lo, Hi) = DAG.SplitVector(Compressed, DL);
 }
 
+void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE_VAR(SDNode *N, SDValue &Lo,
+                                                      SDValue &Hi) {
+  // Each mask element indexes the concatenation of the two whole input
+  // vectors, so the result can be split by splitting only the mask.
+  SDLoc DL(N);
+  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(N->getValueType(0));
+  SDValue Mask = N->getOperand(2);
+  SDValue MaskLo, MaskHi;
+  if (getTypeAction(Mask.getValueType()) == TargetLowering::TypeSplitVector)
+    GetSplitVector(Mask, MaskLo, MaskHi);
+  else
+    std::tie(MaskLo, MaskHi) = DAG.SplitVector(Mask, DL);
+  Lo = DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, DL, LoVT, N->getOperand(0),
+                   N->getOperand(1), MaskLo);
+  Hi = DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, DL, HiVT, N->getOperand(0),
+                   N->getOperand(1), MaskHi);
+}
+
 void DAGTypeLegalizer::SplitVecRes_SETCC(SDNode *N, SDValue &Lo, SDValue &Hi) {
   assert(N->getValueType(0).isVector() &&
          N->getOperand(0).getValueType().isVector() &&
@@ -3883,6 +3904,9 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VECTOR_COMPRESS:
     Res = SplitVecOp_VECTOR_COMPRESS(N, OpNo);
     break;
+  case ISD::VECTOR_SHUFFLE_VAR:
+    Res = SplitVecOp_VECTOR_SHUFFLE_VAR(N, OpNo);
+    break;
   case ISD::STRICT_SINT_TO_FP:
   case ISD::STRICT_UINT_TO_FP:
   case ISD::SINT_TO_FP:
@@ -4087,6 +4111,26 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_COMPRESS(SDNode *N, unsigned OpNo) {
 
   EVT VecVT = N->getValueType(0);
   return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VecVT, Lo, Hi);
+}
+
+SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_SHUFFLE_VAR(SDNode *N,
+                                                        unsigned OpNo) {
+  SDLoc DL(N);
+  EVT ResVT = N->getValueType(0);
+
+  if (OpNo == 2) {
+    // Split the mask (and thus the result) and concatenate the halves back
+    // together; the input vectors are used whole by both halves.
+    SDValue Lo, Hi;
+    SplitVecRes_VECTOR_SHUFFLE_VAR(N, Lo, Hi);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResVT, Lo, Hi);
+  }
+
+  // The input vectors need splitting. The mask indexes the concatenation of
+  // both whole inputs, so the halves cannot be shuffled independently; go
+  // through the stack expansion, whose stores of the illegal-typed inputs are
+  // legalized later.
+  return TLI.expandVECTOR_SHUFFLE_VAR(N, DAG);
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VECREDUCE(SDNode *N, unsigned OpNo) {
@@ -5312,6 +5356,9 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::VECTOR_COMPRESS:
     Res = WidenVecRes_VECTOR_COMPRESS(N);
+    break;
+  case ISD::VECTOR_SHUFFLE_VAR:
+    Res = WidenVecRes_VECTOR_SHUFFLE_VAR(N);
     break;
   case ISD::MLOAD:
     Res = WidenVecRes_MLOAD(cast<MaskedLoadSDNode>(N));
@@ -6999,6 +7046,27 @@ SDValue DAGTypeLegalizer::WidenVecRes_VECTOR_COMPRESS(SDNode *N) {
                      WideMask, WidePassthru);
 }
 
+SDValue DAGTypeLegalizer::WidenVecRes_VECTOR_SHUFFLE_VAR(SDNode *N) {
+  // Widen the mask with undef lanes; the corresponding extra result lanes are
+  // poison. The input vectors are unaffected.
+  SDValue Mask = N->getOperand(2);
+  EVT WideResVT =
+      TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  EVT WideMaskVT = Mask.getValueType().changeVectorElementCount(
+      *DAG.getContext(), WideResVT.getVectorElementCount());
+  if (TLI.isTypeLegal(WideMaskVT)) {
+    SDValue WideMask = ModifyToType(Mask, WideMaskVT);
+    return DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, SDLoc(N), WideResVT,
+                       N->getOperand(0), N->getOperand(1), WideMask);
+  }
+
+  // An illegal widened mask type would be split straight back, endlessly
+  // ping-ponging between widening and splitting. Expand instead and widen the
+  // scalarized result.
+  SDValue Expanded = TLI.expandVECTOR_SHUFFLE_VAR(N, DAG);
+  return ModifyToType(Expanded, WideResVT);
+}
+
 SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
   EVT VT = N->getValueType(0);
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
@@ -7662,6 +7730,9 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:     Res = WidenVecOp_STRICT_FSETCC(N); break;
   case ISD::VSELECT:            Res = WidenVecOp_VSELECT(N); break;
+  case ISD::VECTOR_SHUFFLE_VAR:
+    Res = WidenVecOp_VECTOR_SHUFFLE_VAR(N, OpNo);
+    break;
   case ISD::FLDEXP:
   case ISD::FCOPYSIGN:
   case ISD::LROUND:
@@ -8730,6 +8801,17 @@ SDValue DAGTypeLegalizer::WidenVecOp_VSELECT(SDNode *N) {
   SDValue Select = DAG.getNode(N->getOpcode(), DL, LeftIn.getValueType(), Cond,
                                LeftIn, RightIn);
   return DAG.getExtractSubvector(DL, VT, Select, 0);
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_VECTOR_SHUFFLE_VAR(SDNode *N,
+                                                        unsigned OpNo) {
+  // Neither operand can be widened in place: widening the input vectors would
+  // change the element count and thereby renumber the second vector's half of
+  // the index space, and shuffling with a widened mask would grow the result,
+  // whose legalization can widen the mask again (an endless loop). Go through
+  // the stack expansion instead; its scalar mask extracts and stores of the
+  // illegal-typed inputs are legalized later.
+  return TLI.expandVECTOR_SHUFFLE_VAR(N, DAG);
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_CttzElements(SDNode *N) {

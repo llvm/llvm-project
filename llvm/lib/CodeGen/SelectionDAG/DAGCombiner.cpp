@@ -549,6 +549,7 @@ namespace {
     SDValue visitVECTOR_INTERLEAVE(SDNode *N);
     SDValue visitEXTRACT_SUBVECTOR(SDNode *N);
     SDValue visitVECTOR_SHUFFLE(SDNode *N);
+    SDValue visitVECTOR_SHUFFLE_VAR(SDNode *N);
     SDValue visitSCALAR_TO_VECTOR(SDNode *N);
     SDValue visitINSERT_SUBVECTOR(SDNode *N);
     SDValue visitVECTOR_COMPRESS(SDNode *N);
@@ -2104,6 +2105,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::VECTOR_INTERLEAVE:  return visitVECTOR_INTERLEAVE(N);
   case ISD::EXTRACT_SUBVECTOR:  return visitEXTRACT_SUBVECTOR(N);
   case ISD::VECTOR_SHUFFLE:     return visitVECTOR_SHUFFLE(N);
+  case ISD::VECTOR_SHUFFLE_VAR: return visitVECTOR_SHUFFLE_VAR(N);
   case ISD::SCALAR_TO_VECTOR:   return visitSCALAR_TO_VECTOR(N);
   case ISD::INSERT_SUBVECTOR:   return visitINSERT_SUBVECTOR(N);
   case ISD::MGATHER:            return visitMGATHER(N);
@@ -28826,6 +28828,42 @@ static SDValue simplifyShuffleOfShuffle(ShuffleVectorSDNode *Shuf) {
   // Every element of this shuffle is identical to the result of the previous
   // shuffle, so we can replace this value.
   return Shuf->getOperand(0);
+}
+
+SDValue DAGCombiner::visitVECTOR_SHUFFLE_VAR(SDNode *N) {
+  SDValue V1 = N->getOperand(0);
+  SDValue V2 = N->getOperand(1);
+  SDValue Mask = N->getOperand(2);
+  EVT VT = N->getValueType(0);
+
+  if (Mask.isUndef())
+    return DAG.getUNDEF(VT);
+
+  // A constant mask makes this a regular VECTOR_SHUFFLE, provided the result
+  // and input types match (VECTOR_SHUFFLE cannot change the element count).
+  if (VT != V1.getValueType())
+    return SDValue();
+
+  auto *BV = dyn_cast<BuildVectorSDNode>(Mask.getNode());
+  if (!BV)
+    return SDValue();
+
+  unsigned NumElts = VT.getVectorNumElements();
+  SmallVector<int, 16> Indices;
+  Indices.reserve(NumElts);
+  for (SDValue Op : BV->ops()) {
+    if (Op.isUndef()) {
+      Indices.push_back(-1);
+      continue;
+    }
+    auto *C = dyn_cast<ConstantSDNode>(Op);
+    if (!C)
+      return SDValue();
+    // Out-of-range indices produce poison.
+    const APInt &Idx = C->getAPIntValue();
+    Indices.push_back(Idx.ult(2 * NumElts) ? (int)Idx.getZExtValue() : -1);
+  }
+  return DAG.getVectorShuffle(VT, SDLoc(N), V1, V2, Indices);
 }
 
 SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {

@@ -97,6 +97,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VECTOR_COMPRESS:
     Res = PromoteIntRes_VECTOR_COMPRESS(N);
     break;
+  case ISD::VECTOR_SHUFFLE_VAR:
+    Res = PromoteIntRes_VECTOR_SHUFFLE_VAR(N);
+    break;
   case ISD::SELECT:
   case ISD::VSELECT:
   case ISD::VP_SELECT:
@@ -1118,6 +1121,20 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_COMPRESS(SDNode *N) {
   SDValue Passthru = GetPromotedInteger(N->getOperand(2));
   return DAG.getNode(ISD::VECTOR_COMPRESS, SDLoc(N), Vec.getValueType(), Vec,
                      N->getOperand(1), Passthru);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_SHUFFLE_VAR(SDNode *N) {
+  SDLoc DL(N);
+  EVT PromResVT =
+      TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  // The input vectors may have a different element count than the result, so
+  // their promoted type is not necessarily PromResVT; extend them directly.
+  EVT PromVecVT = N->getOperand(0).getValueType().changeVectorElementType(
+      *DAG.getContext(), PromResVT.getVectorElementType());
+  SDValue V1 = DAG.getNode(ISD::ANY_EXTEND, DL, PromVecVT, N->getOperand(0));
+  SDValue V2 = DAG.getNode(ISD::ANY_EXTEND, DL, PromVecVT, N->getOperand(1));
+  return DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, DL, PromResVT, V1, V2,
+                     N->getOperand(2));
 }
 
 /// Promote the overflow flag of an overflowing arithmetic node.
@@ -2153,6 +2170,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::VECTOR_COMPRESS:
     Res = PromoteIntOp_VECTOR_COMPRESS(N, OpNo);
     break;
+  case ISD::VECTOR_SHUFFLE_VAR:
+    Res = PromoteIntOp_VECTOR_SHUFFLE_VAR(N, OpNo);
+    break;
   case ISD::VP_TRUNCATE:
   case ISD::TRUNCATE:     Res = PromoteIntOp_TRUNCATE(N); break;
   case ISD::BF16_TO_FP:
@@ -2763,6 +2783,28 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_COMPRESS(SDNode *N,
   SDValue Passthru = N->getOperand(2);
   SDValue Mask = PromoteTargetBoolean(N->getOperand(1), VT);
   return DAG.getNode(ISD::VECTOR_COMPRESS, SDLoc(N), VT, Vec, Mask, Passthru);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_SHUFFLE_VAR(SDNode *N,
+                                                          unsigned OpNo) {
+  SDLoc DL(N);
+  if (OpNo == 2) {
+    // Mask elements are unsigned indices, so they must be zero-extended.
+    SDValue Mask = ZExtPromotedInteger(N->getOperand(2));
+    return SDValue(
+        DAG.UpdateNodeOperands(N, N->getOperand(0), N->getOperand(1), Mask), 0);
+  }
+
+  // The input vectors share one type, so both get promoted together. Perform
+  // the shuffle in the promoted element type and truncate the result.
+  SDValue V1 = GetPromotedInteger(N->getOperand(0));
+  SDValue V2 = GetPromotedInteger(N->getOperand(1));
+  EVT ResVT = N->getValueType(0);
+  EVT PromResVT = ResVT.changeVectorElementType(
+      *DAG.getContext(), V1.getValueType().getVectorElementType());
+  SDValue Res = DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, DL, PromResVT, V1, V2,
+                            N->getOperand(2));
+  return DAG.getNode(ISD::TRUNCATE, DL, ResVT, Res);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_TRUNCATE(SDNode *N) {
