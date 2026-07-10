@@ -3775,6 +3775,27 @@ void MicrosoftCXXNameMangler::mangleType(const ConstantMatrixType *T,
   mangleArtificialTagType(TagTypeKind::Struct, TemplateMangling, {"__clang"});
 }
 
+void MicrosoftCXXNameMangler::mangleType(const CooperativeMatrixType *T,
+                                         Qualifiers quals, SourceRange Range) {
+  QualType EltTy = T->getElementType();
+
+  llvm::SmallString<64> TemplateMangling;
+  llvm::raw_svector_ostream Stream(TemplateMangling);
+  MicrosoftCXXNameMangler Extra(Context, Stream);
+
+  Stream << "?$";
+
+  Extra.mangleSourceName("__coop_mat");
+  Extra.mangleType(EltTy, Range, QMM_Escape);
+
+  Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(T->getScope()));
+  Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(T->getNumRows()));
+  Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(T->getNumColumns()));
+  Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(T->getUse()));
+
+  mangleArtificialTagType(TagTypeKind::Struct, TemplateMangling, {"__clang"});
+}
+
 void MicrosoftCXXNameMangler::mangleType(const DependentSizedMatrixType *T,
                                          Qualifiers quals, SourceRange Range) {
   Error(Range.getBegin(), "dependent-sized matrix type") << Range;

@@ -454,6 +454,18 @@ void TypeLocWriter::VisitConstantMatrixTypeLoc(ConstantMatrixTypeLoc TL) {
   Record.AddStmt(TL.getAttrColumnOperand());
 }
 
+void TypeLocWriter::VisitCooperativeMatrixTypeLoc(
+    CooperativeMatrixTypeLoc TL) {
+  addSourceLocation(TL.getAttrNameLoc());
+  SourceRange range = TL.getAttrOperandParensRange();
+  addSourceLocation(range.getBegin());
+  addSourceLocation(range.getEnd());
+  Record.AddStmt(TL.getAttrScopeOperand());
+  Record.AddStmt(TL.getAttrRowOperand());
+  Record.AddStmt(TL.getAttrColumnOperand());
+  Record.AddStmt(TL.getAttrUseOperand());
+}
+
 void TypeLocWriter::VisitDependentSizedMatrixTypeLoc(
     DependentSizedMatrixTypeLoc TL) {
   addSourceLocation(TL.getAttrNameLoc());
