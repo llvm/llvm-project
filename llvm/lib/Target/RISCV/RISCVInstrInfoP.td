@@ -1866,6 +1866,11 @@ def shiftMask16 : ComplexPattern<XLenVT, 1, "selectShiftMask<16>", [], [], 0>;
 def BuildGPRPair : OutPatFrag<(ops node:$lo, node:$hi),
   (REG_SEQUENCE GPRPair, $lo, sub_gpr_even, $hi, sub_gpr_odd)>;
 
+def SDT_RISCVPack : SDTypeProfile<1, 2, [SDTCisVT<0, XLenVT>,
+                                          SDTCisSameAs<0, 1>,
+                                          SDTCisSameAs<0, 2>]>;
+def riscv_pack : RVSDNode<"PACK", SDT_RISCVPack>;
+
 // Averaging subtraction, (a - b) >> 2
 def riscv_asub : RVSDNode<"ASUB", SDTIntBinOp>;
 def riscv_asubu : RVSDNode<"ASUBU", SDTIntBinOp>;
@@ -2232,6 +2237,8 @@ let append Predicates = [IsRV32] in {
   def : Pat<(riscv_nsra GPR:$lo, GPR:$hi, shiftMask64:$shamt),
             (NSRA (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
 
+  def : Pat<(riscv_pack GPR:$lo, GPR:$hi), (PACK GPR:$lo, GPR:$hi)>;
+
   // Match a pattern of 2 bytes being inserted into bits [31:16], with bits
   // bits [15:0] coming from a zero extended value. We can use pack with
   // ppaire.b for bits [31:16]. If bits [15:0] can also be a ppaire.b, it can be
@@ -2296,10 +2303,6 @@ let append Predicates = [IsRV32] in {
   // Sign-extend patterns using pwadd with zero
   def : Pat<(v4i16 (sext (v4i8 GPR:$rs))), (PWADD_B GPR:$rs, (v4i8 X0))>;
   def : Pat<(v2i32 (sext (v2i16 GPR:$rs))), (PWADD_H GPR:$rs, (v2i16 X0))>;
-
-  // Build vector patterns
-  def : Pat<(v2i16 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b))),
-            (PACK GPR:$a, GPR:$b)>;
 
   // Truncate patterns using pnsrli.
   // FIXME: Support general shift+trunc
@@ -2784,14 +2787,6 @@ let append Predicates = [IsRV64] in {
   def : Pat<(v2i32 (zext_invec (v4i16 GPR:$rs))), (ZIP16P GPR:$rs, (v4i16 X0))>;
 
   // Packed unzip.
-  def : Pat<(v8i8 (riscv_punzipe (v8i8 GPR:$rs), (v8i8 undef))),
-            (UNZIP8P GPR:$rs, (v8i8 X0))>;
-  def : Pat<(v8i8 (riscv_punzipo (v8i8 GPR:$rs), (v8i8 undef))),
-            (UNZIP8HP GPR:$rs, (v8i8 X0))>;
-  def : Pat<(v4i16 (riscv_punzipe (v4i16 GPR:$rs), (v4i16 undef))),
-            (UNZIP16P GPR:$rs, (v4i16 X0))>;
-  def : Pat<(v4i16 (riscv_punzipo (v4i16 GPR:$rs), (v4i16 undef))),
-            (UNZIP16HP GPR:$rs, (v4i16 X0))>;
   def : Pat<(v8i8 (riscv_punzipe (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
             (UNZIP8P GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v8i8 (riscv_punzipo (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
