@@ -2,8 +2,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -enable-var-scope -check-prefix=GFX7 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -enable-var-scope -check-prefix=GFX8 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1031 < %s | FileCheck -enable-var-scope -check-prefix=GFX10 %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -enable-var-scope -check-prefix=GFX8-GISEL %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1031 < %s | FileCheck -enable-var-scope -check-prefix=GFX10-GISEL %s
+; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -enable-var-scope -check-prefix=GFX8-GISEL %s
+; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1031 < %s | FileCheck -enable-var-scope -check-prefix=GFX10-GISEL %s
 
 ; BFI_INT Definition pattern from ISA docs
 ; (y & x) | (z & ~x)
@@ -644,25 +644,15 @@ define i64 @v_bitselect_i64_pat_0(i64 %a, i64 %b, i64 %mask) {
 ; GFX8-GISEL-LABEL: v_bitselect_i64_pat_0:
 ; GFX8-GISEL:       ; %bb.0:
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v2, v0, v2
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v3, v1, v3
-; GFX8-GISEL-NEXT:    v_xor_b32_e32 v0, -1, v0
-; GFX8-GISEL-NEXT:    v_xor_b32_e32 v1, -1, v1
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v0, v0, v4
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v1, v1, v5
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v2, v0
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v1, v3, v1
+; GFX8-GISEL-NEXT:    v_bfi_b32 v1, v1, v3, v5
+; GFX8-GISEL-NEXT:    v_bfi_b32 v0, v0, v2, v4
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-GISEL-LABEL: v_bitselect_i64_pat_0:
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-GISEL-NEXT:    v_xor_b32_e32 v6, -1, v0
-; GFX10-GISEL-NEXT:    v_xor_b32_e32 v7, -1, v1
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v4, v6, v4
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v5, v7, v5
-; GFX10-GISEL-NEXT:    v_and_or_b32 v0, v0, v2, v4
-; GFX10-GISEL-NEXT:    v_and_or_b32 v1, v1, v3, v5
+; GFX10-GISEL-NEXT:    v_bfi_b32 v0, v0, v2, v4
+; GFX10-GISEL-NEXT:    v_bfi_b32 v1, v1, v3, v5
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %and0 = and i64 %a, %b
   %not.a = xor i64 %a, -1
@@ -696,24 +686,16 @@ define amdgpu_ps <2 x float> @v_s_s_bitselect_i64_pat_0(i64 %a, i64 inreg %b, i6
 ;
 ; GFX8-GISEL-LABEL: v_s_s_bitselect_i64_pat_0:
 ; GFX8-GISEL:       ; %bb.0:
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v2, s0, v0
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v3, s1, v1
-; GFX8-GISEL-NEXT:    v_xor_b32_e32 v0, -1, v0
-; GFX8-GISEL-NEXT:    v_xor_b32_e32 v1, -1, v1
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v0, s2, v0
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v1, s3, v1
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v2, v0
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v1, v3, v1
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX8-GISEL-NEXT:    v_bfi_b32 v1, v1, s1, v2
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX8-GISEL-NEXT:    v_bfi_b32 v0, v0, s0, v2
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: v_s_s_bitselect_i64_pat_0:
 ; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    v_xor_b32_e32 v2, -1, v0
-; GFX10-GISEL-NEXT:    v_xor_b32_e32 v3, -1, v1
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v2, s2, v2
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v3, s3, v3
-; GFX10-GISEL-NEXT:    v_and_or_b32 v0, v0, s0, v2
-; GFX10-GISEL-NEXT:    v_and_or_b32 v1, v1, s1, v3
+; GFX10-GISEL-NEXT:    v_bfi_b32 v0, v0, s0, s2
+; GFX10-GISEL-NEXT:    v_bfi_b32 v1, v1, s1, s3
 ; GFX10-GISEL-NEXT:    ; return to shader part epilog
   %and0 = and i64 %a, %b
   %not.a = xor i64 %a, -1
@@ -748,22 +730,16 @@ define amdgpu_ps <2 x float> @s_v_s_bitselect_i64_pat_0(i64 inreg %a, i64 %b, i6
 ;
 ; GFX8-GISEL-LABEL: s_v_s_bitselect_i64_pat_0:
 ; GFX8-GISEL:       ; %bb.0:
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v2, s0, v0
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v3, s1, v1
-; GFX8-GISEL-NEXT:    s_andn2_b64 s[0:1], s[2:3], s[0:1]
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v2, v0
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v1, v3, v1
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX8-GISEL-NEXT:    v_bfi_b32 v1, s1, v1, v2
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX8-GISEL-NEXT:    v_bfi_b32 v0, s0, v0, v2
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: s_v_s_bitselect_i64_pat_0:
 ; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[0:1]
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v3, s3
-; GFX10-GISEL-NEXT:    v_and_or_b32 v0, s0, v0, v2
-; GFX10-GISEL-NEXT:    v_and_or_b32 v1, s1, v1, v3
+; GFX10-GISEL-NEXT:    v_bfi_b32 v0, s0, v0, s2
+; GFX10-GISEL-NEXT:    v_bfi_b32 v1, s1, v1, s3
 ; GFX10-GISEL-NEXT:    ; return to shader part epilog
   %and0 = and i64 %a, %b
   %not.a = xor i64 %a, -1
@@ -798,28 +774,16 @@ define amdgpu_ps <2 x float> @s_s_v_bitselect_i64_pat_0(i64 inreg %a, i64 inreg 
 ;
 ; GFX8-GISEL-LABEL: s_s_v_bitselect_i64_pat_0:
 ; GFX8-GISEL:       ; %bb.0:
-; GFX8-GISEL-NEXT:    s_and_b64 s[2:3], s[0:1], s[2:3]
-; GFX8-GISEL-NEXT:    s_not_b64 s[0:1], s[0:1]
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v3, s1
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v2, v2, v0
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v3, v3, v1
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v0, v2
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v1, v1, v3
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX8-GISEL-NEXT:    v_bfi_b32 v1, s1, v2, v1
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX8-GISEL-NEXT:    v_bfi_b32 v0, s0, v2, v0
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: s_s_v_bitselect_i64_pat_0:
 ; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    s_not_b64 s[4:5], s[0:1]
-; GFX10-GISEL-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v2, s4
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v3, s5
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v5, s1
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v4, s0
-; GFX10-GISEL-NEXT:    v_and_or_b32 v1, v3, v1, v5
-; GFX10-GISEL-NEXT:    v_and_or_b32 v0, v2, v0, v4
+; GFX10-GISEL-NEXT:    v_bfi_b32 v0, s0, s2, v0
+; GFX10-GISEL-NEXT:    v_bfi_b32 v1, s1, s3, v1
 ; GFX10-GISEL-NEXT:    ; return to shader part epilog
   %and0 = and i64 %a, %b
   %not.a = xor i64 %a, -1
@@ -850,24 +814,14 @@ define amdgpu_ps <2 x float> @v_v_s_bitselect_i64_pat_0(i64 %a, i64 %b, i64 inre
 ;
 ; GFX8-GISEL-LABEL: v_v_s_bitselect_i64_pat_0:
 ; GFX8-GISEL:       ; %bb.0:
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v2, v0, v2
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v3, v1, v3
-; GFX8-GISEL-NEXT:    v_xor_b32_e32 v0, -1, v0
-; GFX8-GISEL-NEXT:    v_xor_b32_e32 v1, -1, v1
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v0, s0, v0
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v1, s1, v1
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v2, v0
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v1, v3, v1
+; GFX8-GISEL-NEXT:    v_bfi_b32 v1, v1, v3, s1
+; GFX8-GISEL-NEXT:    v_bfi_b32 v0, v0, v2, s0
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: v_v_s_bitselect_i64_pat_0:
 ; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    v_xor_b32_e32 v4, -1, v0
-; GFX10-GISEL-NEXT:    v_xor_b32_e32 v5, -1, v1
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v4, s0, v4
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v5, s1, v5
-; GFX10-GISEL-NEXT:    v_and_or_b32 v0, v0, v2, v4
-; GFX10-GISEL-NEXT:    v_and_or_b32 v1, v1, v3, v5
+; GFX10-GISEL-NEXT:    v_bfi_b32 v0, v0, v2, s0
+; GFX10-GISEL-NEXT:    v_bfi_b32 v1, v1, v3, s1
 ; GFX10-GISEL-NEXT:    ; return to shader part epilog
   %and0 = and i64 %a, %b
   %not.a = xor i64 %a, -1
@@ -898,24 +852,14 @@ define amdgpu_ps <2 x float> @v_s_v_bitselect_i64_pat_0(i64 %a, i64 inreg %b, i6
 ;
 ; GFX8-GISEL-LABEL: v_s_v_bitselect_i64_pat_0:
 ; GFX8-GISEL:       ; %bb.0:
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v4, s0, v0
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v5, s1, v1
-; GFX8-GISEL-NEXT:    v_xor_b32_e32 v0, -1, v0
-; GFX8-GISEL-NEXT:    v_xor_b32_e32 v1, -1, v1
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v0, v0, v2
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v1, v1, v3
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v4, v0
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v1, v5, v1
+; GFX8-GISEL-NEXT:    v_bfi_b32 v1, v1, s1, v3
+; GFX8-GISEL-NEXT:    v_bfi_b32 v0, v0, s0, v2
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: v_s_v_bitselect_i64_pat_0:
 ; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    v_xor_b32_e32 v4, -1, v0
-; GFX10-GISEL-NEXT:    v_xor_b32_e32 v5, -1, v1
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v2, v4, v2
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v3, v5, v3
-; GFX10-GISEL-NEXT:    v_and_or_b32 v0, v0, s0, v2
-; GFX10-GISEL-NEXT:    v_and_or_b32 v1, v1, s1, v3
+; GFX10-GISEL-NEXT:    v_bfi_b32 v0, v0, s0, v2
+; GFX10-GISEL-NEXT:    v_bfi_b32 v1, v1, s1, v3
 ; GFX10-GISEL-NEXT:    ; return to shader part epilog
   %and0 = and i64 %a, %b
   %not.a = xor i64 %a, -1
@@ -946,26 +890,14 @@ define amdgpu_ps <2 x float> @s_v_v_bitselect_i64_pat_0(i64 inreg %a, i64 %b, i6
 ;
 ; GFX8-GISEL-LABEL: s_v_v_bitselect_i64_pat_0:
 ; GFX8-GISEL:       ; %bb.0:
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v4, s0, v0
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v5, s1, v1
-; GFX8-GISEL-NEXT:    s_not_b64 s[0:1], s[0:1]
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v0, v0, v2
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v1, v1, v3
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v4, v0
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v1, v5, v1
+; GFX8-GISEL-NEXT:    v_bfi_b32 v1, s1, v1, v3
+; GFX8-GISEL-NEXT:    v_bfi_b32 v0, s0, v0, v2
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: s_v_v_bitselect_i64_pat_0:
 ; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    s_not_b64 s[2:3], s[0:1]
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v5, s3
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v4, s2
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v3, v5, v3
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v2, v4, v2
-; GFX10-GISEL-NEXT:    v_and_or_b32 v1, s1, v1, v3
-; GFX10-GISEL-NEXT:    v_and_or_b32 v0, s0, v0, v2
+; GFX10-GISEL-NEXT:    v_bfi_b32 v0, s0, v0, v2
+; GFX10-GISEL-NEXT:    v_bfi_b32 v1, s1, v1, v3
 ; GFX10-GISEL-NEXT:    ; return to shader part epilog
   %and0 = and i64 %a, %b
   %not.a = xor i64 %a, -1
@@ -1041,10 +973,10 @@ define amdgpu_ps <2 x float> @v_s_s_bitselect_i64_pat_1(i64 %a, i64 inreg %b, i6
 ;
 ; GFX8-GISEL-LABEL: v_s_s_bitselect_i64_pat_1:
 ; GFX8-GISEL:       ; %bb.0:
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v3, s1
-; GFX8-GISEL-NEXT:    v_bfi_b32 v0, v2, v0, s2
-; GFX8-GISEL-NEXT:    v_bfi_b32 v1, v3, v1, s3
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX8-GISEL-NEXT:    v_bfi_b32 v1, s1, v1, v2
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX8-GISEL-NEXT:    v_bfi_b32 v0, s0, v0, v2
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: v_s_s_bitselect_i64_pat_1:
@@ -1084,10 +1016,10 @@ define amdgpu_ps <2 x float> @s_s_v_bitselect_i64_pat_1(i64 inreg %a, i64 inreg 
 ;
 ; GFX8-GISEL-LABEL: s_s_v_bitselect_i64_pat_1:
 ; GFX8-GISEL:       ; %bb.0:
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v3, s3
-; GFX8-GISEL-NEXT:    v_bfi_b32 v0, v2, s0, v0
-; GFX8-GISEL-NEXT:    v_bfi_b32 v1, v3, s1, v1
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s1
+; GFX8-GISEL-NEXT:    v_bfi_b32 v1, s3, v2, v1
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; GFX8-GISEL-NEXT:    v_bfi_b32 v0, s2, v2, v0
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: s_s_v_bitselect_i64_pat_1:
@@ -1127,24 +1059,16 @@ define amdgpu_ps <2 x float> @s_v_s_bitselect_i64_pat_1(i64 inreg %a, i64 %b, i6
 ;
 ; GFX8-GISEL-LABEL: s_v_s_bitselect_i64_pat_1:
 ; GFX8-GISEL:       ; %bb.0:
-; GFX8-GISEL-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v3, s1
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v0, v2, v0
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v1, v3, v1
-; GFX8-GISEL-NEXT:    v_xor_b32_e32 v0, s2, v0
-; GFX8-GISEL-NEXT:    v_xor_b32_e32 v1, s3, v1
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX8-GISEL-NEXT:    v_bfi_b32 v1, v1, s1, v2
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX8-GISEL-NEXT:    v_bfi_b32 v0, v0, s0, v2
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: s_v_s_bitselect_i64_pat_1:
 ; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v3, s1
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v1, v3, v1
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, v2, v0
-; GFX10-GISEL-NEXT:    v_xor_b32_e32 v1, s3, v1
-; GFX10-GISEL-NEXT:    v_xor_b32_e32 v0, s2, v0
+; GFX10-GISEL-NEXT:    v_bfi_b32 v0, v0, s0, s2
+; GFX10-GISEL-NEXT:    v_bfi_b32 v1, v1, s1, s3
 ; GFX10-GISEL-NEXT:    ; return to shader part epilog
   %xor.0 = xor i64 %a, %mask
   %and = and i64 %xor.0, %b
@@ -1278,12 +1202,12 @@ define amdgpu_ps <2 x float> @v_s_s_bfi_sha256_ma_i64(i64 %x, i64 inreg %y, i64 
 ;
 ; GFX8-GISEL-LABEL: v_s_s_bfi_sha256_ma_i64:
 ; GFX8-GISEL:       ; %bb.0: ; %entry
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v3, s1
-; GFX8-GISEL-NEXT:    v_xor_b32_e32 v0, s0, v0
 ; GFX8-GISEL-NEXT:    v_xor_b32_e32 v1, s1, v1
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s1
+; GFX8-GISEL-NEXT:    v_bfi_b32 v1, v1, s3, v2
+; GFX8-GISEL-NEXT:    v_xor_b32_e32 v0, s0, v0
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-GISEL-NEXT:    v_bfi_b32 v0, v0, s2, v2
-; GFX8-GISEL-NEXT:    v_bfi_b32 v1, v1, s3, v3
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: v_s_s_bfi_sha256_ma_i64:
@@ -1329,28 +1253,18 @@ define amdgpu_ps <2 x float> @s_v_s_bfi_sha256_ma_i64(i64 inreg %x, i64 %y, i64 
 ;
 ; GFX8-GISEL-LABEL: s_v_s_bfi_sha256_ma_i64:
 ; GFX8-GISEL:       ; %bb.0: ; %entry
-; GFX8-GISEL-NEXT:    s_and_b64 s[4:5], s[0:1], s[2:3]
-; GFX8-GISEL-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v3, s1
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v2, v0, v2
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v3, v1, v3
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, s5
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v0, v2
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v1, v1, v3
+; GFX8-GISEL-NEXT:    v_xor_b32_e32 v2, s1, v1
+; GFX8-GISEL-NEXT:    v_bfi_b32 v1, v2, s3, v1
+; GFX8-GISEL-NEXT:    v_xor_b32_e32 v2, s0, v0
+; GFX8-GISEL-NEXT:    v_bfi_b32 v0, v2, s2, v0
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: s_v_s_bfi_sha256_ma_i64:
 ; GFX10-GISEL:       ; %bb.0: ; %entry
-; GFX10-GISEL-NEXT:    s_or_b64 s[4:5], s[0:1], s[2:3]
-; GFX10-GISEL-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v2, s4
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v3, s5
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v5, s1
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v4, s0
-; GFX10-GISEL-NEXT:    v_and_or_b32 v1, v1, v3, v5
-; GFX10-GISEL-NEXT:    v_and_or_b32 v0, v0, v2, v4
+; GFX10-GISEL-NEXT:    v_xor_b32_e32 v2, s0, v0
+; GFX10-GISEL-NEXT:    v_xor_b32_e32 v3, s1, v1
+; GFX10-GISEL-NEXT:    v_bfi_b32 v0, v2, s2, v0
+; GFX10-GISEL-NEXT:    v_bfi_b32 v1, v3, s3, v1
 ; GFX10-GISEL-NEXT:    ; return to shader part epilog
 entry:
   %and0 = and i64 %x, %z
@@ -1392,12 +1306,12 @@ define amdgpu_ps <2 x float> @s_s_v_bfi_sha256_ma_i64(i64 inreg %x, i64 inreg %y
 ;
 ; GFX8-GISEL-LABEL: s_s_v_bfi_sha256_ma_i64:
 ; GFX8-GISEL:       ; %bb.0: ; %entry
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX8-GISEL-NEXT:    v_xor_b32_e32 v2, s1, v2
+; GFX8-GISEL-NEXT:    v_bfi_b32 v1, v2, v1, s3
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX8-GISEL-NEXT:    v_xor_b32_e32 v2, s0, v2
 ; GFX8-GISEL-NEXT:    v_bfi_b32 v0, v2, v0, s2
-; GFX8-GISEL-NEXT:    v_xor_b32_e32 v2, s1, v3
-; GFX8-GISEL-NEXT:    v_bfi_b32 v1, v2, v1, s3
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: s_s_v_bfi_sha256_ma_i64:
@@ -1443,10 +1357,10 @@ define amdgpu_ps <2 x float> @v_s_v_bfi_sha256_ma_i64(i64 %x, i64 inreg %y, i64 
 ;
 ; GFX8-GISEL-LABEL: v_s_v_bfi_sha256_ma_i64:
 ; GFX8-GISEL:       ; %bb.0: ; %entry
-; GFX8-GISEL-NEXT:    v_xor_b32_e32 v0, s0, v0
 ; GFX8-GISEL-NEXT:    v_xor_b32_e32 v1, s1, v1
-; GFX8-GISEL-NEXT:    v_bfi_b32 v0, v0, v2, s0
+; GFX8-GISEL-NEXT:    v_xor_b32_e32 v0, s0, v0
 ; GFX8-GISEL-NEXT:    v_bfi_b32 v1, v1, v3, s1
+; GFX8-GISEL-NEXT:    v_bfi_b32 v0, v0, v2, s0
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: v_s_v_bfi_sha256_ma_i64:

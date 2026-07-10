@@ -622,10 +622,10 @@ body: |
     ; GFX6-NEXT: [[UMULH:%[0-9]+]]:_(s32) = G_UMULH [[UV]], [[UV3]]
     ; GFX6-NEXT: [[MUL1:%[0-9]+]]:_(s32) = G_MUL [[UV]], [[UV4]]
     ; GFX6-NEXT: [[MUL2:%[0-9]+]]:_(s32) = G_MUL [[UV1]], [[UV3]]
-    ; GFX6-NEXT: [[UADDO:%[0-9]+]]:_(s32), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[UMULH]], [[MUL1]]
-    ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[UADDO1]](s1)
-    ; GFX6-NEXT: [[UADDO2:%[0-9]+]]:_(s32), [[UADDO3:%[0-9]+]]:_(s1) = G_UADDO [[UADDO]], [[MUL2]]
-    ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[UADDO3]](s1)
+    ; GFX6-NEXT: [[UADDO:%[0-9]+]]:_(s32), [[UADDO1:%[0-9]+]]:_(i1) = G_UADDO [[UMULH]], [[MUL1]]
+    ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[UADDO1]](i1)
+    ; GFX6-NEXT: [[UADDO2:%[0-9]+]]:_(s32), [[UADDO3:%[0-9]+]]:_(i1) = G_UADDO [[UADDO]], [[MUL2]]
+    ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[UADDO3]](i1)
     ; GFX6-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ZEXT]], [[ZEXT1]]
     ; GFX6-NEXT: [[UMULH1:%[0-9]+]]:_(s32) = G_UMULH [[UV1]], [[UV3]]
     ; GFX6-NEXT: [[UMULH2:%[0-9]+]]:_(s32) = G_UMULH [[UV]], [[UV4]]
