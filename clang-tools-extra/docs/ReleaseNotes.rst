@@ -910,6 +910,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/suspicious-call-argument>` check by avoiding a
   crash from invalid ``Abbreviations`` option.
 
+- Improved :doc:`readability-trivial-switch
+  <clang-tidy/checks/readability/trivial-switch>` check by adding an
+  `IgnoreMacros` option. When enabled, the check will ignore switch
+  statements originating from macros.
+
 - Improved :doc:`readability-use-anyofallof
   <clang-tidy/checks/readability/use-anyofallof>` check by emitting a diagnostic
   note to suggest materializing the temporary range when iterating over temporary

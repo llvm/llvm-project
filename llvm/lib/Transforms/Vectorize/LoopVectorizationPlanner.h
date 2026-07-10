@@ -527,8 +527,7 @@ public:
   /// with element type \p SourceElementTy.
   VPSingleDefRecipe *createConsecutiveVectorPointer(VPValue *Ptr,
                                                     Type *SourceElementTy,
-                                                    bool Reverse, bool FoldTail,
-                                                    DebugLoc DL);
+                                                    bool Reverse, DebugLoc DL);
 
   VPWidenMemIntrinsicRecipe *createWidenMemIntrinsic(
       Intrinsic::ID VectorIntrinsicID, ArrayRef<VPValue *> CallArguments,
