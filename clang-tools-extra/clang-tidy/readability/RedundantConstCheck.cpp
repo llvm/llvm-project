@@ -16,10 +16,9 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
-static std::optional<Token>
-findConstToRemove(const VarDecl *VD, const MatchFinder::MatchResult &Result) {
-  const SourceManager &SM = *Result.SourceManager;
-
+static std::optional<Token> findConstToRemove(const VarDecl *VD,
+                                              const SourceManager &SM,
+                                              const ASTContext &Context) {
   const SourceLocation NameBeginLoc = VD->getQualifier()
                                           ? VD->getQualifierLoc().getBeginLoc()
                                           : VD->getLocation();
@@ -34,16 +33,15 @@ findConstToRemove(const VarDecl *VD, const MatchFinder::MatchResult &Result) {
   // In cases like this, Clang already warns about the use of const
   // as duplicate, so we can safely ignore these cases.
   const SourceLocation ConstSearchStartLoc =
-      IsPointer
-          ? utils::lexer::findPreviousTokenKind(
-                NameBeginLoc, SM, Result.Context->getLangOpts(), tok::star)
-          : VD->getBeginLoc();
+      !IsPointer ? VD->getBeginLoc()
+                 : utils::lexer::findPreviousTokenKind(
+                       NameBeginLoc, SM, Context.getLangOpts(), tok::star);
 
   if (ConstSearchStartLoc.isInvalid())
     return std::nullopt;
 
   const SourceLocation PrevSemi = utils::lexer::findPreviousAnyTokenKind(
-      NameBeginLoc, SM, Result.Context->getLangOpts(), tok::semi);
+      NameBeginLoc, SM, Context.getLangOpts(), tok::semi);
 
   // Verify that there is no semicolon between ConstSearchStartLoc and
   // NameBeginLoc. This is to limit search area for our variable decl only
@@ -53,13 +51,13 @@ findConstToRemove(const VarDecl *VD, const MatchFinder::MatchResult &Result) {
 
   const CharSourceRange FileRange = Lexer::makeFileCharRange(
       CharSourceRange::getCharRange(ConstSearchStartLoc, NameBeginLoc), SM,
-      Result.Context->getLangOpts());
+      Context.getLangOpts());
 
   if (FileRange.isInvalid())
     return std::nullopt;
 
-  return utils::lexer::getQualifyingToken(tok::kw_const, FileRange,
-                                          *Result.Context, SM);
+  return utils::lexer::getQualifyingToken(tok::kw_const, FileRange, Context,
+                                          SM);
 }
 
 RedundantConstCheck::RedundantConstCheck(StringRef Name,
@@ -78,23 +76,14 @@ void RedundantConstCheck::check(const MatchFinder::MatchResult &Result) {
   // Since we cannot tell the difference between `constexpr const` and
   // `constexpr` from the AST only, if we cannot find the actual `const` token,
   // we cannot do anything
-  const std::optional<Token> Tok = findConstToRemove(VD, Result);
+  const std::optional<Token> Tok =
+      findConstToRemove(VD, *Result.SourceManager, *Result.Context);
   if (!Tok)
     return;
 
   diag(Tok->getLocation(),
        "redundant use of 'const'; 'constexpr' already implies 'const'")
       << FixItHint::CreateRemoval(Tok->getLocation());
-}
-
-bool RedundantConstCheck::isLanguageVersionSupported(
-    const LangOptions &LangOpts) const {
-  return LangOpts.CPlusPlus11 || LangOpts.C23;
-}
-
-std::optional<TraversalKind>
-RedundantConstCheck::getCheckTraversalKind() const {
-  return TK_IgnoreUnlessSpelledInSource;
 }
 
 } // namespace clang::tidy::readability
