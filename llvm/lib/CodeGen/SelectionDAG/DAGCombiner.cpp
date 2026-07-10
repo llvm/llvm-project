@@ -27054,13 +27054,6 @@ static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
       !Fast)
     return SDValue();
 
-  // Check if this is big endian target. If yes, we need to reverse the wide
-  // load order using bswap, which requires a scalar size that is a multiple
-  // of 16 bits.
-  bool NeedBSwap = DAG.getDataLayout().isBigEndian();
-  if (NeedBSwap && LoadA->getMemoryVT().getScalarSizeInBits() % 16 != 0)
-    return SDValue();
-
   // Create a wide load of twice the size of the original load.
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *WideMMO = MF.getMachineMemOperand(
@@ -27070,8 +27063,6 @@ static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
   // Redirect old chain users to the new chain.
   DAG.makeEquivalentMemoryOrdering(LoadA, WideLoad);
   DAG.makeEquivalentMemoryOrdering(LoadB, WideLoad);
-  if (NeedBSwap)
-    WideLoad = DAG.getNode(ISD::BSWAP, SDLoc(N), WideVT, WideLoad);
 
   // Create a shuffle of the wide load.
   SmallVector<int, 32> Mask;
