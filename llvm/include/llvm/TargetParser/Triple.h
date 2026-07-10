@@ -347,7 +347,8 @@ public:
     Firmware,
     QURT,
     H2,
-    LastOSType = H2
+    Motor, // Motor OS
+    LastOSType = Motor
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -745,6 +746,8 @@ public:
   bool isOSFreeBSD() const { return getOS() == Triple::FreeBSD; }
 
   bool isOSFuchsia() const { return getOS() == Triple::Fuchsia; }
+
+  bool isOSMotor() const { return getOS() == Triple::Motor; }
 
   bool isOSDragonFly() const { return getOS() == Triple::DragonFly; }
 
@@ -1268,7 +1271,7 @@ public:
   /// Note: Android API level 29 (10) introduced ELF TLS.
   bool hasDefaultEmulatedTLS() const {
     return (isAndroid() && isAndroidVersionLT(29)) || isOSOpenBSD() ||
-           isWindowsCygwinEnvironment() || isOHOSFamily();
+           isWindowsCygwinEnvironment() || isOHOSFamily() || isOSMotor();
   }
 
   /// True if the target uses TLSDESC by default.
