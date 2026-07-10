@@ -4701,13 +4701,10 @@ have their lifetimes extended.
 
 def LifetimeCaptureByDocs : Documentation {
   let Category = DocCatFunction;
-  let Heading = "lifetime_capture_by, lifetime_capture_by_this, lifetime_capture_by_global, lifetime_capture_by_unknown";
   let Content = [{
-Similar to `lifetimebound`_, the ``lifetime_capture_by`` attribute family on a
-function parameter or implicit object parameter indicates that a capturing
-entity may refer to the object referred to by that parameter. The capturing
-entity can be named in ``lifetime_capture_by(X)`` or selected by one of the
-standalone special forms listed below.
+Similar to `lifetimebound`_, the ``lifetime_capture_by(X)`` attribute on a
+function parameter or implicit object parameter indicates that the capturing
+entity ``X`` may refer to the object referred by that parameter.
 
 Below is a list of types of the parameters and what they're considered to refer to:
 
@@ -4739,7 +4736,7 @@ temporary object.
     addToSet(local, s); // Ok.
   }
 
-The capturing entity can be one of the following:
+The capturing entity ``X`` can be one of the following:
 
 - Another (named) function parameter.
 
@@ -4749,30 +4746,28 @@ The capturing entity can be one of the following:
       s.insert(a);
     }
 
-- ``this`` (in case of member functions), written as
-  ``lifetime_capture_by_this``.
+- ``this`` (in case of member functions).
 
   .. code-block:: c++
 
     class S {
-      void addToSet(std::string_view a [[clang::lifetime_capture_by_this]]) {
+      void addToSet(std::string_view a [[clang::lifetime_capture_by(this)]]) {
         s.insert(a);
       }
       std::set<std::string_view> s;
     };
 
-  Note: When applied to a constructor parameter, `[[clang::lifetime_capture_by_this]]` is just an alias of `[[clang::lifetimebound]]`.
+  Note: When applied to a constructor parameter, `[[clang::lifetime_capture_by(this)]]` is just an alias of `[[clang::lifetimebound]]`.
 
-- ``global`` and ``unknown``, written as ``lifetime_capture_by_global`` and
-  ``lifetime_capture_by_unknown`` respectively.
+- `global`, `unknown`.
 
   .. code-block:: c++
 
     std::set<std::string_view> s;
-    void addToSet(std::string_view a [[clang::lifetime_capture_by_global]]) {
+    void addToSet(std::string_view a [[clang::lifetime_capture_by(global)]]) {
       s.insert(a);
     }
-    void addSomewhere(std::string_view a [[clang::lifetime_capture_by_unknown]]);
+    void addSomewhere(std::string_view a [[clang::lifetime_capture_by(unknown)]]);
 
 The attribute can be applied to the implicit ``this`` parameter of a member
 function by writing the attribute after the function type:
@@ -4785,7 +4780,7 @@ function by writing the attribute after the function type:
     }
   };
 
-The parameter-list form supports specifying more than one capturing entity:
+The attribute supports specifying more than one capturing entities:
 
 .. code-block:: c++
 
@@ -4795,13 +4790,6 @@ The parameter-list form supports specifying more than one capturing entity:
     s1.insert(a);
     s2.insert(a);
   }
-
-Distinct ``lifetime_capture_by`` forms can also be combined on the same
-declaration, but each form can appear at most once. For example,
-``[[clang::lifetime_capture_by(s), clang::lifetime_capture_by_this]]`` is
-allowed, but two ``[[clang::lifetime_capture_by(...)]]`` attributes or two
-``[[clang::lifetime_capture_by_this]]`` attributes on the same declaration are
-rejected.
 
 Limitation: The capturing entity ``X`` is not used by the analysis and is
 used for documentation purposes only. This is because the analysis is
