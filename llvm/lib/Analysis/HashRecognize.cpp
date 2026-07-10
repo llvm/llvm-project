@@ -388,7 +388,7 @@ static APInt floorDivideGF2(APInt Dividend, APInt Divisor) {
   // Extend the divisor bit width to match the dividend.
   Divisor = Divisor.zext(Dividend.getBitWidth());
 
-  // Note that getActiveBits(_) returns deg(_)+1, but the computation below
+  // Note that getActiveBits returns deg+1, but the computation below
   // still holds.
   unsigned DivisorActiveBits = Divisor.getActiveBits();
 

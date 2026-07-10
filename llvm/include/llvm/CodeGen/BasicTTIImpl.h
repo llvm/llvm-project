@@ -693,7 +693,7 @@ public:
 
     const TargetLoweringBase *TLI = getTLI();
     EVT VT = TLI->getValueType(DL, IndexTy);
-    return TLI->isOperationLegalOrCustomOrPromote(ISD::CLMUL, VT);
+    return TLI->isOperationLegalOrCustom(ISD::CLMUL, VT);
   }
 
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) const override { return true; }

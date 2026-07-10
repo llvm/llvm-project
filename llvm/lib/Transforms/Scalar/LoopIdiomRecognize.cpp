@@ -266,7 +266,8 @@ private:
   bool avoidLIRForMultiBlockLoop(bool IsMemset = false,
                                  bool IsLoopMemset = false);
   bool optimizeCRCLoop(const PolynomialInfo &Info);
-  bool optimizeCRCLoopUsingClmul(const PolynomialInfo &Info);
+  bool optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
+                                 IntegerType *ClmulTy);
   bool optimizeCRCLoopUsingTableLookup(const PolynomialInfo &Info);
 
   /// @}
@@ -1580,24 +1581,43 @@ bool LoopIdiomRecognize::avoidLIRForMultiBlockLoop(bool IsMemset,
 }
 
 bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
+  // In the clmul optimization, the first clmul uses 2*TC bits, and the second
+  // clmul uses CRCBW+TC bits. For simplicity, have both clmuls operate on the
+  // same bit width.
+  unsigned CRCBW = Info.LHS->getType()->getIntegerBitWidth();
+  unsigned ClmulBW = std::max(2 * Info.TripCount, CRCBW + Info.TripCount);
+  auto *ClmulTy = IntegerType::get(Info.LHS->getContext(), ClmulBW);
+
+  // The force-crc-clmul flag should cause the clmul optimization to run
+  // unconditionally.
   if (ForceCRCClmul)
-    return optimizeCRCLoopUsingClmul(Info) ||
+    return optimizeCRCLoopUsingClmul(Info, ClmulTy) ||
            (!ApplyCodeSizeHeuristics && optimizeCRCLoopUsingTableLookup(Info));
 
   // FIXME: Once intrinsic cost modeling is more reliable for clmul, that should
   // be used to determine which optimization to use. Until then, only apply the
   // clmul optimization when optimizing for size, since a lookup table is not
-  // viable in that case. On some platforms, TC=8 for clmul seems to be slower
-  // than even the unoptimized loop, so bail on that case as well.
-  return ApplyCodeSizeHeuristics
-             ? Info.TripCount > 8 && optimizeCRCLoopUsingClmul(Info)
-             : optimizeCRCLoopUsingTableLookup(Info);
+  // viable in that case.
+  if (!ApplyCodeSizeHeuristics)
+    return optimizeCRCLoopUsingTableLookup(Info);
+
+  // The clmul optimization should only be applied if clmul with the required
+  // bit width is a fast operation on the target.
+  // On some platforms, TC=8 for clmul seems to be slower than even the
+  // unoptimized loop, so bail on that case as well.
+  // TODO: If clmul exists on the target but not for the required width, it
+  // might be possible to split into multiple iterations of reduction.
+  if (Info.TripCount <= 8 || !TTI->haveFastClmul(ClmulTy))
+    return false;
+
+  return optimizeCRCLoopUsingClmul(Info, ClmulTy);
 }
 
 // The algorithm used in this optimization is a Polynomial (GF(2)) Barrett
 // Reduction based on Intel's "Fast CRC Computation for Generic Polynomials
 // Using PCLMULQDQ Instruction" white paper (December 2009).
-bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
+bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
+                                                   IntegerType *ClmulTy) {
   Type *CRCTy = Info.LHS->getType();
   LLVMContext &Ctx = CRCTy->getContext();
   unsigned CRCBW = CRCTy->getIntegerBitWidth();
@@ -1605,18 +1625,7 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
   // regardless of whether the actual data bit width matches (if auxiliary data
   // is even used at all).
   unsigned TC = Info.TripCount;
-
-  // The first clmul uses 2*TC bits, and the second clmul uses CRCBW+TC bits.
-  // For simplicity, have both operate on the same bit width.
-  unsigned ClmulBW = std::max(2 * TC, CRCBW + TC);
-  auto *ClmulTy = IntegerType::get(Ctx, ClmulBW);
-
-  // This optimization should only be applied if clmul for the required width is
-  // a fast operation on the target.
-  // TODO: If clmul exists on the target but not for the required width, it
-  // might be possible to split into multiple iterations of this reduction.
-  if (!TTI->haveFastClmul(ClmulTy))
-    return false;
+  unsigned ClmulBW = ClmulTy->getBitWidth();
 
   // First, generate the constants required for GF(2) Barrett reduction.
   auto [Mu, FullGenPoly] =
