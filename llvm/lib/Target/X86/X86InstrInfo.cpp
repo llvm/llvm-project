@@ -3298,9 +3298,7 @@ unsigned X86::getNFVariantIfClobberRemovable(const MachineInstr &MI,
   // optimization for replacing non-NF with NF. This is to keep backward
   // compatiblity with old version of linkers without APX relocation type
   // support on Linux OS.
-  bool IsWithReloc =
-      X86EnableAPXForRelocation ? false : isAddMemInstrWithRelocation(MI);
-  if (IsWithReloc)
+  if (!X86EnableAPXForRelocation && isAddMemInstrWithRelocation(MI))
     return 0;
   return X86::getNFVariant(MI.getOpcode());
 }
@@ -5320,9 +5318,10 @@ MachineInstr *X86InstrInfo::findDominatingRedundantFlagInstr(
   // clobber shadows the producer, so its flags cannot reach CmpInstr.
   MachineDominatorTree MDT(MF);
   MachineDomTreeNode *Node = MDT.getNode(MultiPredMBB);
+  if (!Node)
+    return nullptr;
   MachineInstr *Sub = nullptr;
-  for (Node = Node ? Node->getIDom() : nullptr; Node && !Sub;
-       Node = Node->getIDom()) {
+  for (Node = Node->getIDom(); Node && !Sub; Node = Node->getIDom()) {
     MachineBasicBlock *DomMBB = Node->getBlock();
     for (MachineInstr &Inst : reverse(*DomMBB)) {
       if (!Inst.modifiesRegister(X86::EFLAGS, TRI))
@@ -5594,7 +5593,14 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       //   bb2:    ...
       //   bb3:    cmp %x, C    ; <-- redundant, reuse EFLAGS from entry
       //           cmovcc ...
-      if (HasNF)
+      //
+      // Only attempt this when no NF conversion has been collected yet. An NF
+      // conversion grows code size, and any already collected lies on the
+      // single-predecessor chain to CmpInstr, i.e. the unconditional path the
+      // compare removal saves, so converting it is pure added cost. Conversions
+      // the dominating walk collects instead lie on the mutually exclusive
+      // diamond arms and are only conditionally executed.
+      if (HasNF && InstsToUpdate.empty())
         Sub = findDominatingRedundantFlagInstr(
             CmpInstr, SrcReg, SrcReg2, CmpMask, CmpValue, MBB, IsSwapped,
             ImmDelta, InstsToUpdate);
