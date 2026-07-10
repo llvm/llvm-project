@@ -162,3 +162,18 @@ int a\N{LATIN CAPITAL LETTER A WITH GRAVE??>;
 
 // GH64161
 int A\N{LEFT-TO-RIGHT OVERRIDE}; // expected-error {{character <U+202D> not allowed in an identifier}}
+
+
+// GH101342
+// We should not form identifiers by concatenating invalid UCNs.
+
+#define DOT •
+#define CONCAT_IMPL(Left, Separator, Right) Left##Separator##Right
+#define CONCAT2(Left, Separator, Right) CONCAT_IMPL(Left, Separator, Right)
+#define MAKE_CLASS_NAME(A, B) CONCAT2(A, DOT, B)
+
+// struct foo•bar {} x;
+struct MAKE_CLASS_NAME(foo, bar);
+// expected-error@-1 {{pasting formed 'foo•', an invalid preprocessing token}} \
+// expected-error@-1 {{pasting formed '•bar', an invalid preprocessing token}} \
+// expected-error@-1 {{expected unqualified-id}}
