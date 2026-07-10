@@ -675,21 +675,37 @@ static llvm::Triple computeTargetTriple(const Driver &D, StringRef TargetTriple,
       StringRef ObjectMode = *ObjectModeValue;
       llvm::Triple::ArchType AT = llvm::Triple::UnknownArch;
 
-      // Silently accept '32_64' and 'any'
-      const bool OtherAllowedMode =
-          ObjectMode == "32_64" || ObjectMode == "any";
-      if (ObjectMode == "64") {
-        AT = Target.get64BitArchVariant().getArch();
-      } else if (ObjectMode == "32") {
-        AT = Target.get32BitArchVariant().getArch();
-      } else if (!OtherAllowedMode) {
-        D.Diag(diag::err_drv_invalid_object_mode) << ObjectMode;
+      if (D.IsFlangMode()) {
+        bool HasMaix = Args.hasArg(options::OPT_maix32, options::OPT_maix64,
+                                   options::OPT_m32, options::OPT_m64);
+        if (!HasMaix) {
+          if (ObjectMode == "64") {
+            AT = Target.get64BitArchVariant().getArch();
+          } else {
+            D.Diag(diag::err_drv_compile_mode_unsupported);
+            AT = Target.get32BitArchVariant().getArch();
+          }
+        }
+      } else {
+        // Silently accept '32_64' and 'any'
+        const bool OtherAllowedMode =
+            ObjectMode == "32_64" || ObjectMode == "any";
+        if (ObjectMode == "64") {
+          AT = Target.get64BitArchVariant().getArch();
+        } else if (ObjectMode == "32") {
+          AT = Target.get32BitArchVariant().getArch();
+        } else if (!OtherAllowedMode) {
+          D.Diag(diag::err_drv_invalid_object_mode) << ObjectMode;
+        }
       }
 
       if (AT != llvm::Triple::UnknownArch && AT != Target.getArch()) {
         Target.setArch(AT);
         Target = llvm::Triple(Target.normalize());
       }
+    } else if (D.IsFlangMode() &&
+               !Args.hasArg(options::OPT_maix64, options::OPT_m64)) {
+      D.Diag(diag::err_drv_compile_mode_unsupported);
     }
   }
 #endif
@@ -728,9 +744,14 @@ static llvm::Triple computeTargetTriple(const Driver &D, StringRef TargetTriple,
         Target.setEnvironment(llvm::Triple::GNUX32);
     } else if (A->getOption().matches(options::OPT_m32) ||
                A->getOption().matches(options::OPT_maix32)) {
-      if (D.IsFlangMode() && !Target.isOSAIX()) {
-        D.Diag(diag::err_drv_unsupported_opt_for_target)
-            << A->getAsString(Args) << Target.str();
+      if (D.IsFlangMode()) {
+        // On AIX, flang assumes 32-bit mode compile by default
+        if (!Target.isOSAIX()) {
+          D.Diag(diag::err_drv_unsupported_opt_for_target)
+              << A->getAsString(Args) << Target.str();
+        } else if (llvm::sys::Process::GetEnv("OBJECT_MODE")) {
+          D.Diag(diag::err_drv_compile_mode_unsupported);
+        }
       } else {
         AT = Target.get32BitArchVariant().getArch();
         if (Target.getEnvironment() == llvm::Triple::GNUX32)

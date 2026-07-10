@@ -111,4 +111,4 @@ if config.flang_rt_fortran_modules:
 # Tools that support OBJECT_MODE default to 32-bit on AIX. Set
 # OBJECT_MODE=any to handle both 32-bit and 64-bit objects.
 if "system-aix" in config.available_features:
-    config.environment["OBJECT_MODE"] = "any"
+    config.environment["OBJECT_MODE"] = "64"
