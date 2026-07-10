@@ -1051,59 +1051,89 @@ bool TargetLoweringObjectFileELF::shouldPutJumpTableInFunctionSection(
 
 /// Given a mergeable constant with the specified size and relocation
 /// information, return a section that it should be placed in.
+bool TargetLoweringObjectFileELF::isLargeConstant(const DataLayout &DL,
+                                                  SectionKind Kind,
+                                                  const Constant *C) const {
+  if (!TM)
+    return false;
+  if (TM->getCodeModel() == CodeModel::Large)
+    return TM->getTargetTriple().getArch() == Triple::x86_64;
+  if (Kind.isMergeableCString() && C) {
+    assert(C->getType()->isSized());
+    return TM->isLargeDataSize(DL.getTypeAllocSize(C->getType()));
+  }
+  return false;
+}
+
 MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
     const Function *F) const {
-  if (Kind.isMergeableConst4() && MergeableConst4Section)
-    return MergeableConst4Section;
-  if (Kind.isMergeableConst8() && MergeableConst8Section)
-    return MergeableConst8Section;
-  if (Kind.isMergeableConst16() && MergeableConst16Section)
-    return MergeableConst16Section;
-  if (Kind.isMergeableConst32() && MergeableConst32Section)
-    return MergeableConst32Section;
+  auto &Context = getContext();
+  StringRef CstPrefix = ".rodata";
+  unsigned MergeableCstFlags = ELF::SHF_ALLOC;
+  if (Kind.isMergeableConst() || Kind.isMergeableCString())
+    MergeableCstFlags |= ELF::SHF_MERGE;
+  if (isLargeConstant(DL, Kind, C)) {
+    MergeableCstFlags |= ELF::SHF_X86_64_LARGE;
+    CstPrefix = ".lrodata";
+  }
+
+  if (Kind.isMergeableConst4())
+    return Context.getELFSection(CstPrefix + ".cst4", ELF::SHT_PROGBITS,
+                                 MergeableCstFlags, 4);
+  if (Kind.isMergeableConst8())
+    return Context.getELFSection(CstPrefix + ".cst8", ELF::SHT_PROGBITS,
+                                 MergeableCstFlags, 8);
+  if (Kind.isMergeableConst16())
+    return Context.getELFSection(CstPrefix + ".cst16", ELF::SHT_PROGBITS,
+                                 MergeableCstFlags, 16);
+  if (Kind.isMergeableConst32())
+    return Context.getELFSection(CstPrefix + ".cst32", ELF::SHT_PROGBITS,
+                                 MergeableCstFlags, 32);
   if (Kind.isReadOnly())
-    return ReadOnlySection;
+    return Context.getELFSection(".rodata", ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
 
   assert(Kind.isReadOnlyWithRel() && "Unknown section kind");
-  return DataRelROSection;
+  return Context.getELFSection(".data.rel.ro", ELF::SHT_PROGBITS,
+                               ELF::SHF_ALLOC | ELF::SHF_WRITE);
 }
 
 MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
     const Function *F, StringRef SectionSuffix) const {
-  // TODO: Share code between this function and
-  // MCObjectInfo::initELFMCObjectFileInfo.
   if (SectionSuffix.empty())
     return getSectionForConstant(DL, Kind, C, Alignment, F);
 
   auto &Context = getContext();
   StringRef CstPrefix = ".rodata";
-  unsigned MergeableCstFlags = ELF::SHF_ALLOC | ELF::SHF_MERGE;
-  if (TM->getCodeModel() == CodeModel::Large &&
-      TM->getTargetTriple().getArch() == Triple::x86_64) {
+  unsigned MergeableCstFlags = ELF::SHF_ALLOC;
+  if (Kind.isMergeableConst() || Kind.isMergeableCString())
+    MergeableCstFlags |= ELF::SHF_MERGE;
+  if (isLargeConstant(DL, Kind, C)) {
     MergeableCstFlags |= ELF::SHF_X86_64_LARGE;
     CstPrefix = ".lrodata";
   }
 
-  if (Kind.isMergeableConst4() && MergeableConst4Section)
-    return Context.getELFSection(CstPrefix + ".cst4." + SectionSuffix + ".",
+  std::string SectionSuffixStr = "." + SectionSuffix.str() + ".";
+
+  if (Kind.isMergeableConst4())
+    return Context.getELFSection(CstPrefix + ".cst4" + SectionSuffixStr,
                                  ELF::SHT_PROGBITS, MergeableCstFlags, 4);
-  if (Kind.isMergeableConst8() && MergeableConst8Section)
-    return Context.getELFSection(CstPrefix + ".cst8." + SectionSuffix + ".",
+  if (Kind.isMergeableConst8())
+    return Context.getELFSection(CstPrefix + ".cst8" + SectionSuffixStr,
                                  ELF::SHT_PROGBITS, MergeableCstFlags, 8);
-  if (Kind.isMergeableConst16() && MergeableConst16Section)
-    return Context.getELFSection(CstPrefix + ".cst16." + SectionSuffix + ".",
+  if (Kind.isMergeableConst16())
+    return Context.getELFSection(CstPrefix + ".cst16" + SectionSuffixStr,
                                  ELF::SHT_PROGBITS, MergeableCstFlags, 16);
-  if (Kind.isMergeableConst32() && MergeableConst32Section)
-    return Context.getELFSection(CstPrefix + ".cst32." + SectionSuffix + ".",
+  if (Kind.isMergeableConst32())
+    return Context.getELFSection(CstPrefix + ".cst32" + SectionSuffixStr,
                                  ELF::SHT_PROGBITS, MergeableCstFlags, 32);
   if (Kind.isReadOnly())
-    return Context.getELFSection(".rodata." + SectionSuffix + ".",
+    return Context.getELFSection(".rodata" + SectionSuffixStr,
                                  ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
 
   assert(Kind.isReadOnlyWithRel() && "Unknown section kind");
-  return Context.getELFSection(".data.rel.ro." + SectionSuffix + ".",
+  return Context.getELFSection(".data.rel.ro" + SectionSuffixStr,
                                ELF::SHT_PROGBITS,
                                ELF::SHF_ALLOC | ELF::SHF_WRITE);
 }

@@ -38,6 +38,8 @@ class LLVM_ABI TargetLoweringObjectFileELF : public TargetLoweringObjectFile {
 
 protected:
   uint16_t PLTRelativeSpecifier = 0;
+  bool isLargeConstant(const DataLayout &DL, SectionKind Kind,
+                       const Constant *C) const;
 
 public:
   ~TargetLoweringObjectFileELF() override = default;
