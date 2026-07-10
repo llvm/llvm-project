@@ -13,8 +13,7 @@ define i32 @f(i64 %a3, i64 %numElements) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[A1]], [[A3]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_END_I:%.*]], label [[ABORT:%.*]]
 ; CHECK:       if.end.i:
-; CHECK-NEXT:    [[CMP2_NOT_I:%.*]] = icmp ult i64 [[A1]], [[A3]]
-; CHECK-NEXT:    br i1 [[CMP2_NOT_I]], label [[ABORT]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 false, label [[ABORT]], label [[EXIT:%.*]]
 ; CHECK:       abort:
 ; CHECK-NEXT:    ret i32 -1
 ; CHECK:       exit:
@@ -90,8 +89,7 @@ define i1 @fm_overflow_recovery(i64 %n, i64 %i, i64 %lim) {
 ; CHECK-NEXT:    [[F2:%.*]] = icmp ult i64 [[N4M4]], [[LIM]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[F2]])
 ; CHECK-NEXT:    [[I4:%.*]] = shl nuw i64 [[I]], 2
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[I4]], [[LIM]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %big = icmp ule i64 %n, 2305843009213693952

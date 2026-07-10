@@ -104,25 +104,6 @@ namespace WTF {
     unsigned m_size { 0 };
   };
 
-  template <typename T, typename S>
-  class HashMap {
-  public:
-    struct Item {
-      T key;
-      S value;
-    };
-
-    template <typename U> Item* find(U&) const;
-    template <typename U> bool contains(U&) const;
-    template <typename U> S* get(U&) const;
-    template <typename U> S* inlineGet(U&) const;
-    template <typename U> void add(U&) const;
-    template <typename U> void remove(U&) const;
-
-  private:
-    Item* m_table { nullptr };
-  };
-
   template <typename T>
   class WeakHashSet {
   public:
