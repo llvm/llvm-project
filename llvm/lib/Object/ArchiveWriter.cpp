@@ -653,12 +653,15 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
   uint32_t Pad;
   uint64_t Size = computeSymbolTableSize(Kind, NumSyms, OffsetSize,
                                          StringTable.size(), &Pad);
-  writeSymbolTableHeader(Out, Kind, Deterministic, Size, PrevMemberOffset,
-                         NextMemberOffset);
+
   // Padding size is not included in the Size field of the z/OS symbol table
   // header.
+  int64_t HeaderSize = Size;
   if (isZOSArchive(Kind))
-    Size -= Pad;
+    HeaderSize -= Pad;
+
+  writeSymbolTableHeader(Out, Kind, Deterministic, HeaderSize, PrevMemberOffset,
+                         NextMemberOffset);
 
   if (isBSDLike(Kind))
     printNBits(Out, Kind, NumSyms * 2 * OffsetSize);
@@ -679,8 +682,9 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
       if (isBSDLike(Kind))
         printNBits(Out, Kind, StringOffset);
       printNBits(Out, Kind, Pos); // member offset
+      // FIXME: Properly handle symbol attributes for z/OS archives.
       if (isZOSArchive(Kind))
-        printNBits(Out, Kind, Pos); // symbol flags
+        printNBits(Out, Kind, 0); // symbol flags
     }
     Pos += M.Header.size() + M.Data.size() + M.Padding.size();
   }
