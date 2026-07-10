@@ -1,9 +1,5 @@
 # LLVM Alias Analysis Infrastructure
 
-```{contents}
-:local:
-```
-
 ## Introduction
 
 Alias Analysis (aka Pointer Analysis) is a class of techniques which attempt to
