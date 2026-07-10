@@ -1276,11 +1276,10 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
       }
       llvm::sort(WriteIDs);
       for (const auto &[W, T] : WriteIDs) {
-        MCReadAdvanceEntry RAEntry;
+        MCReadAdvanceEntry &RAEntry = ReadAdvanceEntries.emplace_back();
         RAEntry.UseIdx = UseIdx;
         RAEntry.WriteResourceID = W;
         RAEntry.Cycles = ReadAdvance->getValueAsInt("Cycles") + T;
-        ReadAdvanceEntries.push_back(RAEntry);
       }
     }
     if (SCDesc.NumMicroOps == MCSchedClassDesc::InvalidNumMicroOps) {
