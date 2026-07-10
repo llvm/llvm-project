@@ -1,0 +1,39 @@
+Test that the DLL name is inferred from the def file name when the def file
+contains no LIBRARY statement, like lib.exe does.
+
+RUN: rm -rf %t
+RUN: split-file %s %t
+RUN: cd %t
+
+RUN: llvm-lib -machine:amd64 -def:sub/mylib-1.def -out:test.lib
+RUN: llvm-lib -list test.lib | FileCheck %s --check-prefix=LIST --match-full-lines
+RUN: llvm-nm --print-armap test.lib | FileCheck %s --check-prefix=ARMAP
+
+The directory is stripped and the extension is replaced, so the members are
+named after mylib-1.dll.
+
+LIST: mylib-1.dll
+LIST-NEXT: mylib-1.dll
+LIST-NEXT: mylib-1.dll
+LIST-NEXT: mylib-1.dll
+
+ARMAP:      Archive map
+ARMAP-NEXT: __IMPORT_DESCRIPTOR_mylib-1 in mylib-1.dll
+ARMAP-NEXT: __NULL_IMPORT_DESCRIPTOR in mylib-1.dll
+ARMAP-NEXT: __imp_func in mylib-1.dll
+ARMAP-NEXT: func in mylib-1.dll
+ARMAP-NEXT: mylib-1_NULL_THUNK_DATA in mylib-1.dll
+
+A LIBRARY statement still takes precedence over the def file name.
+
+RUN: llvm-lib -machine:amd64 -def:sub/other.def -out:test2.lib
+RUN: llvm-lib -list test2.lib | FileCheck %s --check-prefix=LIST --match-full-lines
+
+#--- sub/mylib-1.def
+EXPORTS
+        func
+
+#--- sub/other.def
+LIBRARY mylib-1.dll
+EXPORTS
+        func
