@@ -260,10 +260,7 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_sqrtf:
   case AMDGPU::BI__builtin_amdgcn_sqrth:
   case AMDGPU::BI__builtin_amdgcn_sqrt_bf16: {
-    mlir::Value src = emitScalarExpr(expr->getArg(0));
-    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
-                                       "amdgcn.sqrt", src.getType(),
-                                       mlir::ValueRange{src});
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.sqrt").getValue();
   }
   case AMDGPU::BI__builtin_amdgcn_rsq:
   case AMDGPU::BI__builtin_amdgcn_rsqf:
