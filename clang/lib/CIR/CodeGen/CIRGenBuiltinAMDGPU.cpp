@@ -292,9 +292,7 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_cosf:
   case AMDGPU::BI__builtin_amdgcn_cosh:
   case AMDGPU::BI__builtin_amdgcn_cos_bf16: {
-    mlir::Value src = emitScalarExpr(expr->getArg(0));
-    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()), "amdgcn.cos",
-                                       src.getType(), mlir::ValueRange{src});
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.cos").getValue();
   }
   case AMDGPU::BI__builtin_amdgcn_dispatch_ptr:
     return emitAMDGPUDispatchPtr(*this, expr);
