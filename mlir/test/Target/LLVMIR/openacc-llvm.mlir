@@ -189,3 +189,19 @@ llvm.func @testdataop(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
 
 // CHECK: declare void @__tgt_target_data_begin_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
 // CHECK: declare void @__tgt_target_data_end_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
+
+// -----
+
+// Test acc.present in acc.data
+llvm.func @test_present_in_data(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
+  %0 = acc.copyin varPtr(%arg0 : !llvm.ptr) varType(f32) -> !llvm.ptr
+  %1 = acc.present varPtr(%arg1 : !llvm.ptr) varType(f32) -> !llvm.ptr
+  acc.data dataOperands(%0, %1 : !llvm.ptr, !llvm.ptr) {
+    acc.terminator
+  }
+  llvm.return
+}
+
+// Verify present flag: 12288 = 0x3000 = kHoldFlag + kPresentFlag
+// CHECK: constant [{{[0-9]*}} x i64] [i64 8193, i64 12288]
+// CHECK: call void @__tgt_target_data_begin_mapper
