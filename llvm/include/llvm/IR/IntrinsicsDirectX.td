@@ -288,6 +288,10 @@ def int_dx_sign : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32
 def int_dx_step : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty, LLVMMatchType<0>], [IntrNoMem]>;
 def int_dx_splitdouble : DefaultAttrsIntrinsic<[llvm_anyint_ty, LLVMMatchType<0>],
     [LLVMScalarOrSameVectorWidth<0, llvm_double_ty>], [IntrNoMem, IntrTriviallyScalarizable]>;
+def int_dx_imul : DefaultAttrsIntrinsic<[llvm_anyint_ty, LLVMMatchType<0>],
+    [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem, IntrTriviallyScalarizable]>;
+def int_dx_umul : DefaultAttrsIntrinsic<[llvm_anyint_ty, LLVMMatchType<0>],
+    [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_radians : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 def int_dx_discard : DefaultAttrsIntrinsic<[], [llvm_i1_ty], []>;
 def int_dx_ddx_coarse : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrTriviallyScalarizable]>;

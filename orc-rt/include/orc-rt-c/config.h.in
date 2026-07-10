@@ -16,4 +16,24 @@
 /* Define to 1 if exceptions are enabled */
 #cmakedefine01 ORC_RT_ENABLE_EXCEPTIONS
 
+/* Logging: available levels, and the minimum level compiled in. */
+#define ORC_RT_LOG_LEVEL_DEBUG   0
+#define ORC_RT_LOG_LEVEL_INFO    1
+#define ORC_RT_LOG_LEVEL_WARNING 2
+#define ORC_RT_LOG_LEVEL_ERROR   3
+/* Fail loudly if CMake derived a symbol that isn't defined above. */
+#ifndef @ORC_RT_LOG_LEVEL_VALUE@
+#error "Invalid ORC_RT_LOG_LEVEL"
+#endif
+#define ORC_RT_LOG_LEVEL @ORC_RT_LOG_LEVEL_VALUE@
+
+/* Logging: available backends, and the backend compiled in. */
+#define ORC_RT_LOG_BACKEND_NONE   0
+#define ORC_RT_LOG_BACKEND_PRINTF 1
+#define ORC_RT_LOG_BACKEND_OS_LOG 2
+#ifndef @ORC_RT_LOG_BACKEND_VALUE@
+#error "Invalid ORC_RT_LOG_BACKEND"
+#endif
+#define ORC_RT_LOG_BACKEND @ORC_RT_LOG_BACKEND_VALUE@
+
 #endif /* ORC_RT_C_CONFIG_H */

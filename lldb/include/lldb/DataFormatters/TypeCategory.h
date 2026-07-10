@@ -347,10 +347,7 @@ public:
   std::string GetDescription();
 
   bool AnyMatches(const FormattersMatchCandidate &candidate_type,
-                  FormatCategoryItems items = ALL_ITEM_TYPES,
-                  bool only_enabled = true,
-                  const char **matching_category = nullptr,
-                  FormatCategoryItems *matching_type = nullptr);
+                  FormatCategoryItems items = ALL_ITEM_TYPES);
 
   void AutoComplete(CompletionRequest &request, FormatCategoryItems items);
 

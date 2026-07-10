@@ -569,6 +569,9 @@ namespace llvm {
 
     bool convertSelectOfConstantsToMath(EVT VT) const override;
 
+    bool shouldNormalizeToSelectSequence(LLVMContext &Context, EVT VT,
+                                         EVT CCVT) const override;
+
     bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
                                 SDValue C) const override;
 

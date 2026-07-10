@@ -60,7 +60,7 @@ body:             |
   bb.0:
       liveins: $x0
     %0:gpr(p0) = COPY $x0
-    %const:gpr(s64) = G_CONSTANT i64 -8
+    %const:gpr(i64) = G_CONSTANT i64 -8
     %1:gpr(p0) = G_PTRMASK %0, %const
     $x0 = COPY %1(p0)
 ...
@@ -139,16 +139,16 @@ body:             |
   bb.0:
     liveins: $w0, $x0
 
-    %0(s32) = COPY $w0
-    %1(s32) = G_ICMP intpred(eq), %0, %0
+    %0(i32) = COPY $w0
+    %1(i32) = G_ICMP intpred(eq), %0, %0
     $w0 = COPY %1
 
-    %2(s64) = COPY $x0
-    %3(s32) = G_ICMP intpred(uge), %2, %2
+    %2(i64) = COPY $x0
+    %3(i32) = G_ICMP intpred(uge), %2, %2
     $w0 = COPY %3
 
     %4(p0) = COPY $x0
-    %5(s32) = G_ICMP intpred(ne), %4, %4
+    %5(i32) = G_ICMP intpred(ne), %4, %4
     $w0 = COPY %5
 ...
 
@@ -184,12 +184,12 @@ body:             |
   bb.0:
     liveins: $w0, $x0
 
-    %0(s32) = COPY $s0
-    %1(s32) = G_FCMP floatpred(one), %0, %0
+    %0(f32) = COPY $s0
+    %1(i32) = G_FCMP floatpred(one), %0, %0
     $w0 = COPY %1
 
-    %2(s64) = COPY $d0
-    %3(s32) = G_FCMP floatpred(uge), %2, %2
+    %2(f64) = COPY $d0
+    %3(i32) = G_FCMP floatpred(uge), %2, %2
     $w0 = COPY %3
 
 ...
@@ -219,12 +219,12 @@ body:             |
   bb.0:
     liveins: $s0, $w0
     successors: %bb.1
-    %0(s32) = COPY $s0
-    %3:gpr(s32) = COPY $w0
+    %0(i32) = COPY $s0
+    %3:gpr(i32) = COPY $w0
 
   bb.1:
     successors: %bb.1, %bb.2
-    %2(s32) = PHI %0, %bb.0, %2, %bb.1
+    %2(i32) = PHI %0, %bb.0, %2, %bb.1
     G_BRCOND %3, %bb.1
 
   bb.2:
@@ -272,17 +272,17 @@ registers:
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
-    %0:gpr(s32) = COPY $w0
+    %0:gpr(i32) = COPY $w0
 
-    %1(s32) = COPY $w1
-    %2(s32) = COPY $w2
-    %3(s32) = G_SELECT %0, %1, %2
-    $w0 = COPY %3(s32)
+    %1(i32) = COPY $w1
+    %2(i32) = COPY $w2
+    %3(i32) = G_SELECT %0, %1, %2
+    $w0 = COPY %3(i32)
 
-    %4(s64) = COPY $x0
-    %5(s64) = COPY $x1
-    %6(s64) = G_SELECT %0, %4, %5
-    $x0 = COPY %6(s64)
+    %4(i64) = COPY $x0
+    %5(i64) = COPY $x1
+    %6(i64) = G_SELECT %0, %4, %5
+    $x0 = COPY %6(i64)
 
     %7(p0) = COPY $x0
     %8(p0) = COPY $x1
