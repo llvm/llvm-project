@@ -78,7 +78,6 @@ jobs:
         env:
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
-        working-directory: ${{ github.workspace }}/llvm-project
         run: |
           echo "[]" > comments &&
           python llvm/utils/git/ids-check-helper.py \
