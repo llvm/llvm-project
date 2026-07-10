@@ -508,6 +508,20 @@ ConstantMatrixType::ConstantMatrixType(TypeClass tc, QualType matrixType,
     : MatrixType(tc, matrixType, canonType), NumRows(nRows),
       NumColumns(nColumns), Layout(Layout) {}
 
+CooperativeMatrixType::CooperativeMatrixType(QualType matrixType,
+                                             unsigned scope, unsigned nRows,
+                                             unsigned nColumns, unsigned use,
+                                             QualType canonType)
+    : CooperativeMatrixType(CooperativeMatrix, matrixType, scope, nRows,
+                            nColumns, use, canonType) {}
+
+CooperativeMatrixType::CooperativeMatrixType(TypeClass tc, QualType matrixType,
+                                             unsigned scope, unsigned nRows,
+                                             unsigned nColumns, unsigned use,
+                                             QualType canonType)
+    : MatrixType(tc, matrixType, canonType), NumRows(nRows),
+      NumColumns(nColumns), Scope(scope), Use(use) {}
+
 DependentSizedMatrixType::DependentSizedMatrixType(QualType ElementType,
                                                    QualType CanonicalType,
                                                    Expr *RowExpr,
@@ -1282,6 +1296,18 @@ public:
 
     return Ctx.getConstantMatrixType(elementType, T->getNumRows(),
                                      T->getNumColumns(), T->getLayout());
+  }
+
+  QualType VisitCooperativeMatrixType(const CooperativeMatrixType *T) {
+    QualType elementType = recurse(T->getElementType());
+    if (elementType.isNull())
+      return {};
+    if (elementType.getAsOpaquePtr() == T->getElementType().getAsOpaquePtr())
+      return QualType(T, 0);
+
+    return Ctx.getCooperativeMatrixType(elementType, T->getScope(),
+                                        T->getNumRows(), T->getNumColumns(),
+                                        T->getUse());
   }
 
   QualType VisitOverflowBehaviorType(const OverflowBehaviorType *T) {
@@ -2188,6 +2214,10 @@ public:
   }
 
   Type *VisitConstantMatrixType(const ConstantMatrixType *T) {
+    return Visit(T->getElementType());
+  }
+
+  Type *VisitCooperativeMatrixType(const CooperativeMatrixType *T) {
     return Visit(T->getElementType());
   }
 
@@ -3271,6 +3301,8 @@ bool Type::isLiteralType(const ASTContext &Ctx) const {
   // Matrices with constant numbers of rows and columns are also literal types
   // in HLSL.
   if (Ctx.getLangOpts().HLSL && BaseTy->isConstantMatrixType())
+    return true;
+  if (Ctx.getLangOpts().HLSL && BaseTy->isCooperativeMatrixType())
     return true;
   //    -- a reference type; or
   if (BaseTy->isReferenceType())
@@ -5151,6 +5183,8 @@ static CachedProperties computeCachedProperties(const Type *T) {
     return Cache::get(cast<VectorType>(T)->getElementType());
   case Type::ConstantMatrix:
     return Cache::get(cast<ConstantMatrixType>(T)->getElementType());
+  case Type::CooperativeMatrix:
+    return Cache::get(cast<CooperativeMatrixType>(T)->getElementType());
   case Type::FunctionNoProto:
     return Cache::get(cast<FunctionType>(T)->getReturnType());
   case Type::FunctionProto: {
@@ -5253,6 +5287,9 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
   case Type::ConstantMatrix:
     return computeTypeLinkageInfo(
         cast<ConstantMatrixType>(T)->getElementType());
+  case Type::CooperativeMatrix:
+    return computeTypeLinkageInfo(
+        cast<CooperativeMatrixType>(T)->getElementType());
   case Type::FunctionNoProto:
     return computeTypeLinkageInfo(cast<FunctionType>(T)->getReturnType());
   case Type::FunctionProto: {
@@ -5454,6 +5491,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::Vector:
   case Type::ExtVector:
   case Type::ConstantMatrix:
+  case Type::CooperativeMatrix:
   case Type::DependentSizedMatrix:
   case Type::DependentAddressSpace:
   case Type::FunctionProto:
