@@ -6,7 +6,7 @@ define void @addrspacecast(ptr addrspace(9) %a) {
 ; CHECK: %[[#Int8FnPtr:]] = OpTypePointer CodeSectionINTEL %[[#Int8]]
 ; CHECK: %[[#Int8GenericPtr:]] = OpTypePointer Generic %[[#Int8]]
 ; CHECK: %[[#FnParam:]] = OpFunctionParameter %[[#Int8FnPtr]]
-; CHECK: OpBitcast %[[#Int8GenericPtr]] %[[#FnParam]]
+; CHECK: OpPtrCastToGeneric %[[#Int8GenericPtr]] %[[#FnParam]]
 
   %res1 = addrspacecast ptr addrspace(9) %a to ptr addrspace(4)
   store i8 0, ptr addrspace(4) %res1
@@ -15,7 +15,7 @@ define void @addrspacecast(ptr addrspace(9) %a) {
 
 define void @addrspacecast_two(ptr addrspace(4) %b) {
 ; CHECK: %[[#FnParam2:]] = OpFunctionParameter %[[#Int8GenericPtr]]
-; CHECK: OpBitcast %[[#Int8FnPtr]] %[[#FnParam2]]
+; CHECK: OpGenericCastToPtr %[[#Int8FnPtr]] %[[#FnParam2]]
 
   %res2 = addrspacecast ptr addrspace(4) %b to ptr addrspace(9)
   %cmp = icmp eq ptr addrspace(9) %res2, null

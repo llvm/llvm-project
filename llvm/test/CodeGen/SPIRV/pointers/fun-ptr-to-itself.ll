@@ -13,7 +13,7 @@
 ; CHECK-DAG: %[[#Null:]] = OpConstantNull %[[#Int8PtrTy]]
 ; CHECK-DAG: %[[#FnPtr:]] = OpConstantFunctionPointerINTEL %[[#CodePtrTy]] %[[#FnDef:]]
 ; CHECK:     %[[#FnDef]] = OpFunction %[[#Void]] None %[[#FnTy]]
-; CHECK:     %[[#Cast:]] = OpBitcast %[[#GenPtrTy]] %[[#FnPtr]]
+; CHECK:     %[[#Cast:]] = OpPtrCastToGeneric %[[#GenPtrTy]] %[[#FnPtr]]
 ; CHECK:     %[[#BC:]] = OpBitcast %[[#GenPtrPtrTy]] %[[#Null]]
 ; CHECK:     OpStore %[[#BC]] %[[#Cast]] Aligned 8
 ; CHECK:     OpReturn

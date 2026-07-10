@@ -2867,11 +2867,6 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
        SrcSC == SPIRV::StorageClass::Private))
     return BuildCOPY(ResVReg, SrcPtr, I);
 
-  // CodeSectionINTEL is not valid for PtrCastToGeneric/GenericCastToPtr
-  if (SrcSC == SPIRV::StorageClass::CodeSectionINTEL ||
-      DstSC == SPIRV::StorageClass::CodeSectionINTEL)
-    return selectUnOp(ResVReg, ResType, I, SPIRV::OpBitcast);
-
   // Casting from an eligible pointer to Generic.
   if (DstSC == SPIRV::StorageClass::Generic && isGenericCastablePtr(SrcSC))
     return selectUnOp(ResVReg, ResType, I, SPIRV::OpPtrCastToGeneric);
