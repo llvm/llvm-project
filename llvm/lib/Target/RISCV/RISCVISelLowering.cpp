@@ -1191,6 +1191,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       }
 
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
       setOperationAction({ISD::MASKED_UDIV, ISD::MASKED_SDIV, ISD::MASKED_UREM,
                           ISD::MASKED_SREM},
                          VT, Legal);
@@ -1353,6 +1354,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          VT, Custom);
 
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
     };
 
     // Sets common extload/truncstore actions on RVV floating-point vector
@@ -1683,6 +1685,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         }
 
         setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+        setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
         setOperationAction({ISD::MASKED_UDIV, ISD::MASKED_SDIV,
                             ISD::MASKED_UREM, ISD::MASKED_SREM},
                            VT, Custom);
@@ -1709,7 +1712,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
                             ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
                             ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_REVERSE,
-                            ISD::VECTOR_SHUFFLE, ISD::VECTOR_COMPRESS},
+                            ISD::VECTOR_SHUFFLE, ISD::VECTOR_COMPRESS,
+                            ISD::VECTOR_SHUFFLE_VAR},
                            VT, Custom);
         setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
         setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
@@ -8912,6 +8916,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerMaskedStore(Op, DAG);
   case ISD::VECTOR_COMPRESS:
     return lowerVectorCompress(Op, DAG);
+  case ISD::VECTOR_SHUFFLE_VAR:
+    return lowerVECTOR_SHUFFLE_VAR(Op, DAG);
   case ISD::SELECT_CC: {
     // This occurs because we custom legalize SETGT and SETUGT for setcc. That
     // causes LegalizeDAG to think we need to custom legalize select_cc. Expand
@@ -14151,6 +14157,80 @@ SDValue RISCVTargetLowering::lowerVectorCompress(SDValue Op,
   if (VT.isFixedLengthVector())
     Res = convertFromScalableVector(VT, Res, DAG, Subtarget);
 
+  return Res;
+}
+
+SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE_VAR(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue V1 = Op.getOperand(0);
+  SDValue V2 = Op.getOperand(1);
+  SDValue Mask = Op.getOperand(2);
+  MVT VT = Op.getSimpleValueType();
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  // Only handle shuffles that preserve the input type; anything else takes
+  // the generic expansion.
+  if (V1.getSimpleValueType() != VT)
+    return SDValue();
+
+  // Gather with indices of the data SEW, or i16 (vrgatherei16.vv) when SEW
+  // can't represent the whole two-source index space (i8) or is wider than
+  // XLEN (i64 on RV32).
+  unsigned GatherOpc = RISCVISD::VRGATHER_VV_VL;
+  MVT IndexVT = VT.changeTypeToInteger();
+  if (IndexVT.getScalarType().bitsGT(XLenVT) ||
+      (VT.getScalarSizeInBits() == 8 &&
+       (VT.isScalableVector() || 2 * VT.getVectorNumElements() > 256))) {
+    GatherOpc = RISCVISD::VRGATHEREI16_VV_VL;
+    IndexVT = IndexVT.changeVectorElementType(MVT::i16);
+  }
+
+  MVT ContainerVT = VT;
+  MVT IndexContainerVT = IndexVT;
+  if (VT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(VT);
+    IndexContainerVT =
+        ContainerVT.changeVectorElementType(IndexVT.getScalarType());
+  }
+  // vrgatherei16 at SEW=8 needs an index vector of twice the data LMUL; bail
+  // if that (or an RV64 index for RV32 i64 data) isn't a legal type.
+  if (!isTypeLegal(IndexContainerVT))
+    return SDValue();
+
+  // Indices are unsigned; truncation can only wrap out-of-range (poison)
+  // lanes back into range, which poison permits.
+  SDValue Idx = DAG.getZExtOrTrunc(Mask, DL, IndexVT);
+  SDValue TrueMask, VL;
+  std::tie(TrueMask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+
+  auto Gather = [&](SDValue Src, SDValue Indices) {
+    if (VT.isFixedLengthVector()) {
+      Src = convertToScalableVector(ContainerVT, Src, DAG, Subtarget);
+      Indices =
+          convertToScalableVector(IndexContainerVT, Indices, DAG, Subtarget);
+    }
+    SDValue G = DAG.getNode(GatherOpc, DL, ContainerVT, Src, Indices,
+                            DAG.getUNDEF(ContainerVT), TrueMask, VL);
+    if (VT.isFixedLengthVector())
+      G = convertFromScalableVector(VT, G, DAG, Subtarget);
+    return G;
+  };
+
+  // vrgather zeroes out-of-range lanes; those are poison here, so a single
+  // gather covers the one-source case and two gathers plus a select on
+  // Idx < NumElts cover the two-source case with no other range checks.
+  SDValue Res = Gather(V1, Idx);
+  if (!V2.isUndef()) {
+    SDValue NumElts = DAG.getSplat(
+        IndexVT, DL,
+        DAG.getElementCount(DL, XLenVT, VT.getVectorElementCount()));
+    SDValue Res2 = Gather(V2, DAG.getNode(ISD::SUB, DL, IndexVT, Idx, NumElts));
+    EVT CCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), IndexVT);
+    SDValue FromV1 = DAG.getSetCC(DL, CCVT, Idx, NumElts, ISD::SETULT);
+    Res = DAG.getSelect(DL, VT, FromV1, Res, Res2);
+  }
   return Res;
 }
 
