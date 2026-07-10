@@ -800,13 +800,13 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
   return true;
 }
 
-static constexpr std::array<Register, 5> OrderedLowRegs = {
-    {ARM::R4, ARM::R5, ARM::R6, ARM::R7, ARM::LR}};
-static constexpr std::array<Register, 5> OrderedHighRegs = {
-    {ARM::R8, ARM::R9, ARM::R10, ARM::R11}};
-static constexpr std::array<Register, 9> OrderedCopyRegs = {
-    {ARM::R0, ARM::R1, ARM::R2, ARM::R3, ARM::R4, ARM::R5, ARM::R6, ARM::R7,
-     ARM::LR}};
+static const SmallVector<Register> OrderedLowRegs = {ARM::R4, ARM::R5, ARM::R6,
+                                                     ARM::R7, ARM::LR};
+static const SmallVector<Register> OrderedHighRegs = {ARM::R8, ARM::R9,
+                                                      ARM::R10, ARM::R11};
+static const SmallVector<Register> OrderedCopyRegs = {
+    ARM::R0, ARM::R1, ARM::R2, ARM::R3, ARM::R4,
+    ARM::R5, ARM::R6, ARM::R7, ARM::LR};
 
 static void splitLowAndHighRegs(const std::set<Register> &Regs,
                                 std::set<Register> &LowRegs,

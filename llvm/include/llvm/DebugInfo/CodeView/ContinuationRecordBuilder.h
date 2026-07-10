@@ -30,7 +30,7 @@ class ContinuationRecordBuilder {
   AppendingBinaryByteStream Buffer;
   BinaryStreamWriter SegmentWriter;
   TypeRecordMapping Mapping;
-  SmallVector<uint8_t, 12> InjectedSegmentBytes;
+  ArrayRef<uint8_t> InjectedSegmentBytes;
 
   uint32_t getCurrentSegmentLength() const;
 

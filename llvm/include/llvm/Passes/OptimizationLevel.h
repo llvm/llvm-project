@@ -22,7 +22,7 @@ namespace llvm {
 
 class OptimizationLevel final {
   unsigned SpeedLevel = 2;
-  constexpr OptimizationLevel(unsigned SpeedLevel) : SpeedLevel(SpeedLevel) {
+  OptimizationLevel(unsigned SpeedLevel) : SpeedLevel(SpeedLevel) {
     // Check that only valid values are passed.
     assert(SpeedLevel <= 3 &&
            "Optimization level for speed should be 0, 1, 2, or 3");

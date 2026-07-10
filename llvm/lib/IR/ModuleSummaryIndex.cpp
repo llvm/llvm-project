@@ -41,6 +41,10 @@ static cl::opt<bool> ImportConstantsWithRefs(
     "import-constants-with-refs", cl::init(true), cl::Hidden,
     cl::desc("Import constant global variables with references"));
 
+FunctionSummary FunctionSummary::ExternalNode =
+    FunctionSummary::makeDummyFunctionSummary(
+        SmallVector<FunctionSummary::EdgeTy, 0>());
+
 GlobalValue::VisibilityTypes ValueInfo::getELFVisibility() const {
   bool HasProtected = false;
   for (const auto &S : make_pointee_range(getSummaryList())) {
