@@ -195,6 +195,7 @@
 #endif
 
 // Macros that define away in non-Debug builds
+#if 0
 #ifdef NDEBUG
   #define _LIBUNWIND_DEBUG_LOG(msg, ...)
   #define _LIBUNWIND_TRACE_API(msg, ...)
@@ -231,6 +232,14 @@
         fprintf(stderr, __VA_ARGS__);                                          \
     } while (0)
 #endif
+#else // TODO: revert -- force-enabled tracing
+  #define _LIBUNWIND_DEBUG_LOG(msg, ...)  _LIBUNWIND_LOG(msg, __VA_ARGS__)
+  #define _LIBUNWIND_TRACE_API(msg, ...)  _LIBUNWIND_LOG(msg, __VA_ARGS__)
+  #define _LIBUNWIND_TRACING_UNWINDING (1)
+  #define _LIBUNWIND_TRACING_DWARF (1)
+  #define _LIBUNWIND_TRACE_UNWINDING(msg, ...)  _LIBUNWIND_LOG(msg, __VA_ARGS__)
+  #define _LIBUNWIND_TRACE_DWARF(...)  fprintf(stderr, __VA_ARGS__)
+#endif // TODO: revert
 
 #ifdef __cplusplus
 // Used to fit UnwindCursor and Registers_xxx types against unw_context_t /

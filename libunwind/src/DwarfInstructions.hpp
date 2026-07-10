@@ -200,6 +200,12 @@ DwarfInstructions<A, R>::getReturnAddressSignStatus(A &addressSpace,
   else
     raSignState = getSavedRegister(addressSpace, registers, cfa, regloc);
 
+  _LIBUNWIND_TRACE_DWARF(
+      "getReturnAddressSignStatus: regloc.location=%d, regloc.value=0x%" PRIx64
+      ", raSignState=0x%" PRIx64 "\n",
+      static_cast<int>(regloc.location), static_cast<uint64_t>(regloc.value),
+      static_cast<uint64_t>(raSignState));
+
   // bits[1:0] describe how RA is signed.
   assert((raSignState & 0x3) != 3 && "unexpected RA sign state");
   return static_cast<RASignStatus>(raSignState & 0x3);
@@ -219,6 +225,12 @@ int DwarfInstructions<A, R>::stepWithDwarf(
             addressSpace, fdeInfo, cieInfo, pc, R::getArch(), &prolog)) {
       // get pointer to cfa (architecture specific)
       pint_t cfa = getCFA(addressSpace, prolog, registers);
+
+      _LIBUNWIND_TRACE_DWARF(
+          "stepWithDwarf: pc=0x%" PRIx64 ", fdeStart=0x%" PRIx64
+          ", cfa=0x%" PRIx64 ", returnAddressRegister=%d\n",
+          static_cast<uint64_t>(pc), static_cast<uint64_t>(fdeStart),
+          static_cast<uint64_t>(cfa), cieInfo.returnAddressRegister);
 
       (void)stage2;
       // __unw_step_stage2 is not used for cross unwinding, so we use
@@ -317,6 +329,12 @@ int DwarfInstructions<A, R>::stepWithDwarf(
       // to a NOP on pre-v8.3a architectures.
       RASignStatus RAState =
           getReturnAddressSignStatus(addressSpace, registers, cfa, prolog);
+      _LIBUNWIND_TRACE_DWARF(
+          "stepWithDwarf: RAState=%d, returnAddress=0x%" PRIx64
+          ", addressesSignedWithBKey=%d, ptrAuthDiversifier=0x%" PRIx64 "\n",
+          static_cast<int>(RAState), static_cast<uint64_t>(returnAddress),
+          cieInfo.addressesSignedWithBKey,
+          static_cast<uint64_t>(prolog.ptrAuthDiversifier));
       if ((R::getArch() == REGISTERS_ARM64) && RAState != RANotSigned &&
           returnAddress != 0) {
 #if !defined(_LIBUNWIND_IS_NATIVE_ONLY)
@@ -349,6 +367,9 @@ int DwarfInstructions<A, R>::stepWithDwarf(
             asm("hint 0xc" : "+r"(x17) : "r"(x16)); // autia1716
         }
         returnAddress = x17;
+        _LIBUNWIND_TRACE_DWARF(
+            "stepWithDwarf: authenticated returnAddress=0x%" PRIx64 "\n",
+            static_cast<uint64_t>(returnAddress));
 #endif
       }
 #endif

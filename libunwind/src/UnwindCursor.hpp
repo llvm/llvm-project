@@ -1765,17 +1765,38 @@ bool UnwindCursor<A, R>::getInfoFromDwarfSection(
   typename CFI_Parser<A>::CIE_Info cieInfo;
   bool foundFDE = false;
   bool foundInCache = false;
+  _LIBUNWIND_TRACE_DWARF(
+      "getInfoFromDwarfSection: pc=0x%" PRIx64 ", dwarf_section=0x%" PRIx64
+      ", dwarf_section_length=0x%" PRIx64
+      ", fdeSectionOffsetHint=0x%" PRIx32 "\n",
+      static_cast<uint64_t>(pc), static_cast<uint64_t>(sects.dwarf_section),
+      static_cast<uint64_t>(sects.dwarf_section_length),
+      fdeSectionOffsetHint);
+#if defined(_LIBUNWIND_SUPPORT_DWARF_INDEX)
+  _LIBUNWIND_TRACE_DWARF(
+      "getInfoFromDwarfSection: dwarf_index_section=0x%" PRIx64
+      ", dwarf_index_section_length=0x%" PRIx64 "\n",
+      static_cast<uint64_t>(sects.dwarf_index_section),
+      static_cast<uint64_t>(sects.dwarf_index_section_length));
+#endif
   // If compact encoding table gave offset into dwarf section, go directly there
   if (fdeSectionOffsetHint != 0) {
     foundFDE = CFI_Parser<A>::template findFDE<R>(
         _addressSpace, pc, sects.dwarf_section, sects.dwarf_section_length,
         sects.dwarf_section + fdeSectionOffsetHint, &fdeInfo, &cieInfo);
+    _LIBUNWIND_TRACE_DWARF(
+        "getInfoFromDwarfSection: findFDE via offset hint -> foundFDE=%d\n",
+        foundFDE);
   }
 #if defined(_LIBUNWIND_SUPPORT_DWARF_INDEX)
   if (!foundFDE && (sects.dwarf_index_section != 0)) {
     foundFDE = EHHeaderParser<A>::template findFDE<R>(
         _addressSpace, pc, sects.dwarf_index_section,
         (uint32_t)sects.dwarf_index_section_length, &fdeInfo, &cieInfo);
+    _LIBUNWIND_TRACE_DWARF(
+        "getInfoFromDwarfSection: EHHeaderParser::findFDE via "
+        ".eh_frame_hdr -> foundFDE=%d\n",
+        foundFDE);
   }
 #endif
   if (!foundFDE) {
@@ -1787,6 +1808,9 @@ bool UnwindCursor<A, R>::getInfoFromDwarfSection(
           _addressSpace, pc, sects.dwarf_section, sects.dwarf_section_length,
           cachedFDE, &fdeInfo, &cieInfo);
       foundInCache = foundFDE;
+      _LIBUNWIND_TRACE_DWARF(
+          "getInfoFromDwarfSection: findFDE via FDE cache -> foundFDE=%d\n",
+          foundFDE);
     }
   }
   if (!foundFDE) {
@@ -1794,8 +1818,17 @@ bool UnwindCursor<A, R>::getInfoFromDwarfSection(
     foundFDE = CFI_Parser<A>::template findFDE<R>(
         _addressSpace, pc, sects.dwarf_section, sects.dwarf_section_length, 0,
         &fdeInfo, &cieInfo);
+    _LIBUNWIND_TRACE_DWARF(
+        "getInfoFromDwarfSection: findFDE via full scan -> foundFDE=%d\n",
+        foundFDE);
   }
   if (foundFDE) {
+    _LIBUNWIND_TRACE_DWARF(
+        "getInfoFromDwarfSection: fdeStart=0x%" PRIx64 ", pcStart=0x%" PRIx64
+        ", pcEnd=0x%" PRIx64 "\n",
+        static_cast<uint64_t>(fdeInfo.fdeStart),
+        static_cast<uint64_t>(fdeInfo.pcStart),
+        static_cast<uint64_t>(fdeInfo.pcEnd));
     if (getInfoFromFdeCie(fdeInfo, cieInfo, pc, sects.dso_base)) {
       // Add to cache (to make next lookup faster) if we had no hint
       // and there was no index.
@@ -1809,7 +1842,9 @@ bool UnwindCursor<A, R>::getInfoFromDwarfSection(
       return true;
     }
   }
-  //_LIBUNWIND_DEBUG_LOG("can't find/use FDE for pc=0x%llX", (uint64_t)pc);
+  _LIBUNWIND_TRACE_DWARF(
+      "getInfoFromDwarfSection: can't find/use FDE for pc=0x%" PRIx64 "\n",
+      static_cast<uint64_t>(pc));
   return false;
 }
 #endif // defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
