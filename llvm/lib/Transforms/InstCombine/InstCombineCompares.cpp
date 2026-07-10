@@ -819,7 +819,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       // ((gep Ptr, OFFSET1) cmp (gep Ptr, OFFSET2)  --->  (OFFSET1 cmp OFFSET2)
       bool DoFold = CanFold(Base.LHSNW & Base.RHSNW);
 
-      if (!DoFold) {
+      if (!DoFold && Base.Ptr->getType()->isPointerTy()) {
         // Without the flags, we can still fold if the offsets are constant and
         // they cross the base's alignment boundary the same number of times, so
         // either both arguments will wrap, or none of them will.

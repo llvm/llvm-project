@@ -1249,3 +1249,18 @@ define i1 @gep_global_offsets() {
   %cmp = icmp ule ptr getelementptr (i8, ptr @g16, i64 20), getelementptr inbounds nuw (i8, ptr @g16, i64 16)
   ret i1 %cmp
 }
+
+; Regression test: when checking for folding opportunities check for pointer
+; base before using trying to get the pointer alignment.
+define <2 x i1> @vec_gep_cmp(<2 x ptr> %base, <2 x i64> %i, <2 x i64> %j) {
+; CHECK-LABEL: @vec_gep_cmp(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, <2 x ptr> [[BASE:%.*]], <2 x i64> [[I:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, <2 x ptr> [[BASE]], <2 x i64> [[J:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x ptr> [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %gep1 = getelementptr i8, <2 x ptr> %base, <2 x i64> %i
+  %gep2 = getelementptr i8, <2 x ptr> %base, <2 x i64> %j
+  %cmp = icmp ult <2 x ptr> %gep1, %gep2
+  ret <2 x i1> %cmp
+}
