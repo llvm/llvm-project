@@ -17,29 +17,19 @@
 #include <stdio.h>
 
 int main() {
-  if (hsa_amd_test_require_init())
-    return 1;
+  HSA_CHECK(hsa_init());
 
   HsaAmdPoolSearch ps;
   if (hsa_amd_test_find_first_runtime_alloc_pool(&ps))
     return 1;
 
   void *mem = nullptr;
-  if (hsa_amd_memory_pool_allocate(ps.pool, 64, 0, &mem) !=
-          HSA_STATUS_SUCCESS ||
-      !mem) {
-    fprintf(stderr, "hsa_amd_memory_pool_allocate failed\n");
-    return 1;
-  }
+  HSA_CHECK(hsa_amd_memory_pool_allocate(ps.pool, 64, 0, &mem));
 
   hsa_amd_pointer_info_t info = {};
   info.size = sizeof(hsa_amd_pointer_info_t);
 
-  if (hsa_amd_pointer_info(mem, &info, nullptr, nullptr, nullptr) !=
-      HSA_STATUS_SUCCESS) {
-    fprintf(stderr, "hsa_amd_pointer_info failed\n");
-    return 1;
-  }
+  HSA_CHECK(hsa_amd_pointer_info(mem, &info, nullptr, nullptr, nullptr));
 
   printf("pointer_info_pool type: %d\n", info.type);
   printf("pointer_info_pool sizeInBytes: %zu\n", info.sizeInBytes);
@@ -47,10 +37,7 @@ int main() {
   printf("pointer_info_pool end: %p\n",
          (void *)((uintptr_t)info.agentBaseAddress + info.sizeInBytes));
 
-  if (hsa_amd_memory_pool_free(mem) != HSA_STATUS_SUCCESS) {
-    fprintf(stderr, "hsa_amd_memory_pool_free failed\n");
-    return 1;
-  }
+  HSA_CHECK(hsa_amd_memory_pool_free(mem));
   return 0;
 }
 

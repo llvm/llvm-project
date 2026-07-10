@@ -16,8 +16,7 @@
 #include <stdio.h>
 
 int main() {
-  if (hsa_amd_test_require_init())
-    return 1;
+  HSA_CHECK(hsa_init());
 
   // Size must be a non-zero multiple of the page size; address must be 0 so
   // the interceptor records the reservation for double-free diagnosis (see
@@ -27,13 +26,9 @@ int main() {
 
   // NOTE: To use `hipMallocManaged` way of reserving memory,
   // use `HSA_AMD_VMEM_ADDRESS_NO_REGISTER` in `flags`.
-  if (hsa_amd_vmem_address_reserve_align(&mem, kSize, /*address=*/0,
-                                         /*alignment=*/4096,
-                                         /*flags=*/0) != HSA_STATUS_SUCCESS ||
-      !mem) {
-    fprintf(stderr, "hsa_amd_vmem_address_reserve_align failed\n");
-    return 1;
-  }
+  HSA_CHECK(hsa_amd_vmem_address_reserve_align(&mem, kSize, /*address=*/0,
+                                               /*alignment=*/4096,
+                                               /*flags=*/0));
 
   (void)hsa_amd_vmem_address_free(mem, kSize);
   (void)hsa_amd_vmem_address_free(mem, kSize);

@@ -22,8 +22,7 @@
 #include <stdio.h>
 
 int main() {
-  if (hsa_amd_test_require_init())
-    return 1;
+  HSA_CHECK(hsa_init());
 
   HsaAmdPoolSearch ps;
   if (hsa_amd_test_find_first_coarse_gpu_ipc_pool(&ps))
@@ -31,50 +30,22 @@ int main() {
 
   constexpr size_t kBytes = 64;
   void *mem = nullptr;
-  if (hsa_amd_memory_pool_allocate(ps.pool, kBytes, 0, &mem) !=
-          HSA_STATUS_SUCCESS ||
-      !mem) {
-    fprintf(stderr, "hsa_amd_memory_pool_allocate failed\n");
-    return 1;
-  }
+  HSA_CHECK(hsa_amd_memory_pool_allocate(ps.pool, kBytes, 0, &mem));
 
   hsa_amd_ipc_memory_t ipc = {};
-  if (hsa_amd_ipc_memory_create(mem, kBytes, &ipc) != HSA_STATUS_SUCCESS) {
-    fprintf(stderr, "hsa_amd_ipc_memory_create failed\n");
-    (void)hsa_amd_memory_pool_free(mem);
-    return 1;
-  }
+  HSA_CHECK(hsa_amd_ipc_memory_create(mem, kBytes, &ipc));
 
   void *mapped = nullptr;
-  if (hsa_amd_ipc_memory_attach(&ipc, kBytes, /*num_agents=*/0,
-                                /*mapping_agents=*/nullptr,
-                                &mapped) != HSA_STATUS_SUCCESS ||
-      !mapped) {
-    fprintf(stderr, "hsa_amd_ipc_memory_attach failed\n");
-    (void)hsa_amd_memory_pool_free(mem);
-    return 1;
-  }
+  HSA_CHECK(hsa_amd_ipc_memory_attach(&ipc, kBytes, /*num_agents=*/0,
+                                      /*mapping_agents=*/nullptr, &mapped));
 
   hsa_amd_pointer_info_t info = {};
   info.size = sizeof(hsa_amd_pointer_info_t);
-  if (hsa_amd_pointer_info(mapped, &info, nullptr, nullptr, nullptr) !=
-      HSA_STATUS_SUCCESS) {
-    fprintf(stderr, "hsa_amd_pointer_info on imported mapping failed\n");
-    (void)hsa_amd_ipc_memory_detach(mapped);
-    (void)hsa_amd_memory_pool_free(mem);
-    return 1;
-  }
+  HSA_CHECK(hsa_amd_pointer_info(mapped, &info, nullptr, nullptr, nullptr));
 
-  if (hsa_amd_ipc_memory_detach(mapped) != HSA_STATUS_SUCCESS) {
-    fprintf(stderr, "hsa_amd_ipc_memory_detach failed\n");
-    (void)hsa_amd_memory_pool_free(mem);
-    return 1;
-  }
+  HSA_CHECK(hsa_amd_ipc_memory_detach(mapped));
 
-  if (hsa_amd_memory_pool_free(mem) != HSA_STATUS_SUCCESS) {
-    fprintf(stderr, "hsa_amd_memory_pool_free failed\n");
-    return 1;
-  }
+  HSA_CHECK(hsa_amd_memory_pool_free(mem));
 
   printf("ipc roundtrip ok\n");
   return 0;

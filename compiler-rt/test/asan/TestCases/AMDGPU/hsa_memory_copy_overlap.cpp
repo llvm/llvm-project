@@ -8,16 +8,15 @@
 // REQUIRES: sanitizer-amdgpu, linux, stable-runtime, rocm
 // UNSUPPORTED: android
 
+#include "hsa_amd_test_helpers.h"
+
 #include <hsa/hsa.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 
 int main() {
-  if (hsa_init() != HSA_STATUS_SUCCESS) {
-    fprintf(stderr, "hsa_init failed\n");
-    return 1;
-  }
+  HSA_CHECK(hsa_init());
 
   char buf[128];
   char *dst = buf;

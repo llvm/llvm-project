@@ -17,20 +17,14 @@
 #include <stdio.h>
 
 int main() {
-  if (hsa_amd_test_require_init())
-    return 1;
+  HSA_CHECK(hsa_init());
 
   HsaAmdPoolSearch ps;
   if (hsa_amd_test_find_first_runtime_alloc_pool(&ps))
     return 1;
 
   void *mem = nullptr;
-  if (hsa_amd_memory_pool_allocate(ps.pool, 64, 0, &mem) !=
-          HSA_STATUS_SUCCESS ||
-      !mem) {
-    fprintf(stderr, "hsa_amd_memory_pool_allocate failed\n");
-    return 1;
-  }
+  HSA_CHECK(hsa_amd_memory_pool_allocate(ps.pool, 64, 0, &mem));
 
   (void)hsa_amd_memory_pool_free(mem);
   (void)hsa_amd_memory_pool_free(mem);
@@ -40,4 +34,4 @@ int main() {
 }
 
 // CHECK: ERROR: AddressSanitizer: attempting double-free
-// CHECK: SUMMARY: AddressSanitizer: double-free {{.*}}hsa_amd_memory_pool_allocate_double_free.cpp:36:{{[0-9]+}} in main
+// CHECK: SUMMARY: AddressSanitizer: double-free {{.*}}hsa_amd_memory_pool_allocate_double_free.cpp:30:{{[0-9]+}} in main
