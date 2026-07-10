@@ -55,48 +55,65 @@ set(LLVM_ENABLE_ASSERTIONS @LLVM_ENABLE_ASSERTIONS@)
 
 set(LLVM_ENABLE_EH @LLVM_ENABLE_EH@)
 
-set(LLVM_ENABLE_FFI @LLVM_ENABLE_FFI@)
-set(LLVM_ENABLE_RTTI @LLVM_ENABLE_RTTI@)
-set(LLVM_ENABLE_THREADS @LLVM_ENABLE_THREADS@)
-set(LLVM_ENABLE_UNWIND_TABLES @LLVM_ENABLE_UNWIND_TABLES@)
-set(LLVM_ENABLE_ZLIB @LLVM_ENABLE_ZLIB@)
-set(LLVM_ENABLE_ZSTD @LLVM_ENABLE_ZSTD@)
-set(LLVM_ENABLE_LIBXML2 @LLVM_ENABLE_LIBXML2@)
-set(LLVM_ENABLE_CURL @LLVM_ENABLE_CURL@)
-set(LLVM_ENABLE_HTTPLIB @LLVM_ENABLE_HTTPLIB@)
-set(LLVM_WITH_Z3 @LLVM_WITH_Z3@)
-set(LLVM_ENABLE_DIA_SDK @LLVM_ENABLE_DIA_SDK@)
-set(LLVM_ENABLE_LIBEDIT @HAVE_LIBEDIT@)
+# The exported library targets and used host libraries are only usable
+# on platforms that support shared libraries.
+get_property(_llvm_target_supports_shared_libs
+  GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
+if(NOT DEFINED _llvm_target_supports_shared_libs OR
+   _llvm_target_supports_shared_libs)
+  set(LLVM_USE_HOST_LIBRARY_TARGETS ON)
+else()
+  set(LLVM_USE_HOST_LIBRARY_TARGETS OFF)
+endif()
+unset(_llvm_target_supports_shared_libs)
 
-# These are host libraries that LLVM was built with. Only find them when the
-# consumer can actually use them (i.e. not when cross-compiling for an
-# incompatible target).
-if(NOT CMAKE_CROSSCOMPILING)
-  if(LLVM_ENABLE_FFI)
-    find_package(FFI)
-  endif()
-  if(LLVM_ENABLE_LIBEDIT)
-    find_package(LibEdit)
-  endif()
-  if(LLVM_ENABLE_ZLIB)
-    set(ZLIB_ROOT @ZLIB_ROOT@)
-    find_package(ZLIB)
-  endif()
-  if(LLVM_ENABLE_ZSTD)
-    find_package(zstd)
-  endif()
-  if(LLVM_ENABLE_LIBXML2)
-    find_package(LibXml2)
-  endif()
-  if(LLVM_ENABLE_CURL)
-    find_package(CURL)
-  endif()
-  if(LLVM_ENABLE_HTTPLIB)
-    find_package(httplib)
-  endif()
-  if(LLVM_ENABLE_DIA_SDK)
-    find_package(DIASDK)
-  endif()
+set(LLVM_ENABLE_FFI @LLVM_ENABLE_FFI@)
+if(LLVM_ENABLE_FFI AND LLVM_USE_HOST_LIBRARY_TARGETS)
+  find_package(FFI)
+endif()
+
+set(LLVM_ENABLE_RTTI @LLVM_ENABLE_RTTI@)
+
+set(LLVM_ENABLE_LIBEDIT @HAVE_LIBEDIT@)
+if(LLVM_ENABLE_LIBEDIT AND LLVM_USE_HOST_LIBRARY_TARGETS)
+  find_package(LibEdit)
+endif()
+
+set(LLVM_ENABLE_THREADS @LLVM_ENABLE_THREADS@)
+
+set(LLVM_ENABLE_UNWIND_TABLES @LLVM_ENABLE_UNWIND_TABLES@)
+
+set(LLVM_ENABLE_ZLIB @LLVM_ENABLE_ZLIB@)
+if(LLVM_ENABLE_ZLIB AND LLVM_USE_HOST_LIBRARY_TARGETS)
+  set(ZLIB_ROOT @ZLIB_ROOT@)
+  find_package(ZLIB)
+endif()
+
+set(LLVM_ENABLE_ZSTD @LLVM_ENABLE_ZSTD@)
+if(LLVM_ENABLE_ZSTD AND LLVM_USE_HOST_LIBRARY_TARGETS)
+  find_package(zstd)
+endif()
+
+set(LLVM_ENABLE_LIBXML2 @LLVM_ENABLE_LIBXML2@)
+if(LLVM_ENABLE_LIBXML2 AND LLVM_USE_HOST_LIBRARY_TARGETS)
+  find_package(LibXml2)
+endif()
+
+set(LLVM_ENABLE_CURL @LLVM_ENABLE_CURL@)
+if(LLVM_ENABLE_CURL AND LLVM_USE_HOST_LIBRARY_TARGETS)
+  find_package(CURL)
+endif()
+
+set(LLVM_ENABLE_HTTPLIB @LLVM_ENABLE_HTTPLIB@)
+if(LLVM_ENABLE_HTTPLIB AND LLVM_USE_HOST_LIBRARY_TARGETS)
+  find_package(httplib)
+endif()
+
+set(LLVM_WITH_Z3 @LLVM_WITH_Z3@)
+
+set(LLVM_ENABLE_DIA_SDK @LLVM_ENABLE_DIA_SDK@)
+if(LLVM_ENABLE_DIA_SDK AND LLVM_USE_HOST_LIBRARY_TARGETS)
+  find_package(DIASDK)
 endif()
 
 set(LLVM_NATIVE_ARCH @LLVM_NATIVE_ARCH@)
@@ -147,7 +164,7 @@ set(LLVM_ENABLE_SHARED_LIBS @BUILD_SHARED_LIBS@)
 set(LLVM_DEFAULT_EXTERNAL_LIT "@LLVM_CONFIG_DEFAULT_EXTERNAL_LIT@")
 set(LLVM_LIT_ARGS "@LLVM_LIT_ARGS@")
 
-if(NOT TARGET LLVMSupport)
+if(NOT TARGET LLVMSupport AND LLVM_USE_HOST_LIBRARY_TARGETS)
   @LLVM_CONFIG_INCLUDE_EXPORTS@
   @llvm_config_include_buildtree_only_exports@
 endif()
