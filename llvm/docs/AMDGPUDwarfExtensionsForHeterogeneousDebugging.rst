@@ -4,9 +4,6 @@
 DWARF Extensions For Heterogeneous Debugging
 ********************************************
 
-.. contents::
-   :local:
-
 .. warning::
 
    This document describes **provisional extensions** to DWARF Version 5

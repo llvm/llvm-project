@@ -1,10 +1,6 @@
 (loop-terminology)=
 # LLVM Loop Terminology (and Canonical Forms)
 
-```{contents}
-:local:
-```
-
 ## Loop Definition
 
 Loops are an important concept for a code optimizer. In LLVM, detection
