@@ -10014,6 +10014,15 @@ static TypedefDecl *CreateMSVaListDecl(const ASTContext *Context) {
   return CreateCharPtrNamedVaListDecl(Context, "__builtin_ms_va_list");
 }
 
+static TypedefDecl *CreateZOSVaListDecl(const ASTContext *Context) {
+  // typedef char *__builtin_zos_va_list[2];
+  llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 2);
+  QualType T = Context->getPointerType(Context->CharTy);
+  QualType ArrayType = Context->getConstantArrayType(
+      T, Size, nullptr, ArraySizeModifier::Normal, 0);
+  return Context->buildImplicitTypedef(ArrayType, "__builtin_zos_va_list");
+}
+
 static TypedefDecl *CreateCharPtrBuiltinVaListDecl(const ASTContext *Context) {
   return CreateCharPtrNamedVaListDecl(Context, "__builtin_va_list");
 }
@@ -10439,6 +10448,13 @@ TypedefDecl *ASTContext::getBuiltinMSVaListDecl() const {
     BuiltinMSVaListDecl = CreateMSVaListDecl(this);
 
   return BuiltinMSVaListDecl;
+}
+
+TypedefDecl *ASTContext::getBuiltinZOSVaListDecl() const {
+  if (!BuiltinZOSVaListDecl)
+    BuiltinZOSVaListDecl = CreateZOSVaListDecl(this);
+
+  return BuiltinZOSVaListDecl;
 }
 
 bool ASTContext::canBuiltinBeRedeclared(const FunctionDecl *FD) const {

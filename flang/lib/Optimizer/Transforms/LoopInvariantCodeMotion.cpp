@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
-#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROperationMoveOpInterface.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
@@ -25,6 +24,7 @@
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/DebugLog.h"
+#include <utility>
 
 namespace fir {
 #define GEN_PASS_DEF_LOOPINVARIANTCODEMOTION
@@ -266,7 +266,15 @@ void LoopInvariantCodeMotion::runOnOperation() {
   LDBG() << "Enter [HL]FIR LoopInvariantCodeMotion()";
 
   auto &aliasAnalysis = getAnalysis<AliasAnalysis>();
-  aliasAnalysis.addAnalysisImplementation(fir::AliasAnalysis{});
+  // Enable getSource() memoization on the FIR AliasAnalysis for the duration
+  // of this pass. This is a frozen-snapshot cache with no automatic
+  // invalidation, but it is sound here because LICM only moves operations, so
+  // getSource()'s inputs are unchanged across the hoists. The cache lives no
+  // longer than this analysis instance, which the pass manager drops when the
+  // analysis is invalidated after the pass.
+  fir::AliasAnalysis firAliasAnalysis;
+  firAliasAnalysis.enableSourceCache();
+  aliasAnalysis.addAnalysisImplementation(std::move(firAliasAnalysis));
 
   std::function<bool(Operation *, LoopLikeOpInterface, bool)>
       shouldMoveOutOfLoop = [&](Operation *op, LoopLikeOpInterface loopLike,

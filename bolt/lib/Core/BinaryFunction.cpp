@@ -2569,7 +2569,10 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
     setSimple(false);
   }
 
-  clearList(ExternallyReferencedOffsets);
+  // Clear externally referenced offsets only if there are no relocations
+  // targeting internal references (from indirect goto).
+  if (InternalRefDataRelocations.empty())
+    clearList(ExternallyReferencedOffsets);
   clearList(UnknownIndirectBranchOffsets);
 
   return Error::success();
@@ -3270,6 +3273,7 @@ bool BinaryFunction::requiresAddressMap() const {
     return false;
 
   return opts::UpdateDebugSections || isMultiEntry() ||
+         !getInternalRefDataRelocations().empty() ||
          requiresAddressTranslation();
 }
 
@@ -4120,6 +4124,7 @@ BinaryFunction::iterator BinaryFunction::insertBasicBlocks(
 void BinaryFunction::updateBBIndices(const unsigned StartIndex) {
   for (unsigned I = StartIndex; I < BasicBlocks.size(); ++I)
     BasicBlocks[I]->Index = I;
+  ++BlockNumberEpoch;
 }
 
 void BinaryFunction::updateCFIState(BinaryBasicBlock *Start,

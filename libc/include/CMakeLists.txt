@@ -83,6 +83,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  err
+  ../libc/include/err.yaml
+  err.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   features
   ../libc/include/features.yaml
   features.h
