@@ -230,9 +230,8 @@ int main(void) {
   if (test(-0.0, 5.0, 0.0, POS_ZERO_REP))
     return 1; // -0 in nearest -> +0
 
-  return 0;
 #else
   printf("skipped\n");
-  return 0;
 #endif
+  return 0;
 }
