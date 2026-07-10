@@ -9,9 +9,9 @@
 #ifndef LLVM_CLANG_ANALYZER_WEBKIT_DIAGPRINTUTILS_H
 #define LLVM_CLANG_ANALYZER_WEBKIT_DIAGPRINTUTILS_H
 
+#include "ASTUtils.h"
 #include "clang/AST/Decl.h"
 #include "llvm/Support/raw_ostream.h"
-#include "ASTUtils.h"
 
 namespace clang {
 
