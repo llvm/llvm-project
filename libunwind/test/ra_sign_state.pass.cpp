@@ -77,8 +77,8 @@ static _Unwind_Reason_Code frame_handler(struct _Unwind_Context *ctx,
 
   uintptr_t ip = _Unwind_GetIP(ctx);
 
-  printf("UNW_AARCH64_RA_SIGN_STATE @ 0x%" PRIxPTR " = %" PRIu64 "\n", ip,
-         ra_sign_state);
+  fprintf(stderr, "UNW_AARCH64_RA_SIGN_STATE @ 0x%" PRIxPTR " = %" PRIu64 "\n",
+          ip, ra_sign_state);
 
   if (ip >= (uintptr_t)FUNC_START(main_func) &&
       ip < (uintptr_t)FUNC_END(main_func)) {
@@ -101,6 +101,8 @@ static _Unwind_Reason_Code frame_handler(struct _Unwind_Context *ctx,
 __attribute__((noinline)) extern "C" uintptr_t get_main_ra_sign_state() {
   uint64_t sign_state = -1;
   _Unwind_Backtrace(frame_handler, &sign_state);
+  fprintf(stderr, "get_main_ra_sign_state: sign_state = 0x%" PRIx64 "\n",
+          sign_state);
   assert((sign_state & 0x3) == sign_state);
   return sign_state;
 }
@@ -135,18 +137,20 @@ FUNC_ATTR(main_func) int main(int, char **) {
   uint64_t ret;
 
   ret = check_vanilla();
+  fprintf(stderr, "check_vanilla: ret = 0x%" PRIx64 "\n", ret);
 #if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
   assert(ret == 1 || ret == 2);
 #endif
 
   if (!checkHasPAuth()) {
-    printf("target does not have FEAT_PAuth\n");
+    fprintf(stderr, "target does not have FEAT_PAuth\n");
     return 0;
   }
 
   ret = check_negate();
+  fprintf(stderr, "check_negate: ret = 0x%" PRIx64 "\n", ret);
   assert(ret == 1);
 
-  printf("success\n");
+  fprintf(stderr, "success\n");
   return 0;
 }
