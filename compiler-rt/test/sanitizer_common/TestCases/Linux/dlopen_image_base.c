@@ -30,6 +30,11 @@ int main(int argc, char *argv[]) {
   dlinfo(handle, RTLD_DI_LINKMAP, &map);
   if (map) {
     printf("DSO link_map name: %s\n", map->l_name);
+    printf("DSO link_map l_addr: %p\n", (void *)map->l_addr);
+    int pipefd[2];
+    bool readable = false;
+    if (pipe(pipefd) == 0) {
+      if (write(pipefd[1], (void *)map->l_addr, 1) == 1) {
         readable = true;
       }
       close(pipefd[0]);
@@ -46,5 +51,6 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 #else // BUILD_SO
+#  include <stdio.h>
 void fn() { printf("DSO function called successfully\n"); }
 #endif
