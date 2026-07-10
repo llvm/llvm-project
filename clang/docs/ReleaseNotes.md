@@ -790,6 +790,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed `clang::Preprocessor::recomputeCurLexerKind` to avoid default fallback to `CurLexerCallback = CLK_CachingLexer;`. This prevents code-completion
   EOF handling from accidentally restoring CLK_CachingLexer while a tentative parse is still active, which could trigger a caching lexer re-entry assertion
   in clangd signature help. (#GH200677)
+- Fixed incorrect expansion source ranges for synthesized tokens produced by
+  feature-like builtin macros such as `__has_builtin`, which could trigger
+  assertions in syntax token collection. (#GH196067)
 - Fixed a crash when `#embed` is used with C++ modules (#GH195350)
 - Fixed an assertion in constant evaluation when using a defaulted comparison operator in a `union`. (#GH147127)
 - Fixed a bug where `-x cuda` caused clang to immediately resolve templates that should not be. (#GH200545)
