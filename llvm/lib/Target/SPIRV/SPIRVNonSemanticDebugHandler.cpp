@@ -211,6 +211,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   NonSemanticOpStringsSectionEmitted = false;
 #endif
   CachedDebugInfoNoneReg = MCRegister();
+  CachedEmptyStringReg = MCRegister();
   CachedOpTypeVoidReg = MCRegister();
   CachedOpTypeInt32Reg = MCRegister();
 
@@ -336,6 +337,23 @@ MCRegister SPIRVNonSemanticDebugHandler::getCachedOpStringReg(StringRef S) {
          "NSDI OpString missing from cache; emitNonSemanticDebugStrings must "
          "cache every string used in section 10");
   return It->second;
+}
+
+MCRegister SPIRVNonSemanticDebugHandler::getCachedScopePathOpStringReg(
+    const DIScope *Scope, bool UseEmptyPathIfNullScope) {
+  if (!Scope) {
+    assert(UseEmptyPathIfNullScope &&
+           "null scope path lookup requires UseEmptyPathIfNullScope");
+    assert(CachedEmptyStringReg.isValid() &&
+           "empty path OpString must be cached in emitNonSemanticDebugStrings");
+    return CachedEmptyStringReg;
+  }
+  auto It = ScopeToPathOpStringReg.find(Scope);
+  assert(It != ScopeToPathOpStringReg.end() &&
+         "path OpString must be cached in emitNonSemanticDebugStrings");
+  MCRegister FileStrReg = It->second;
+  assert(FileStrReg.isValid() && "path OpString id must be valid once cached");
+  return FileStrReg;
 }
 
 MCRegister SPIRVNonSemanticDebugHandler::emitOpConstantI32(
@@ -544,13 +562,7 @@ SPIRVNonSemanticDebugHandler::emitDebugFunctionDeclaration(
 
   MCRegister ParentReg = *ParentRegOpt;
 
-  auto PathStrIt = ScopeToPathOpStringReg.find(SP);
-  assert(PathStrIt != ScopeToPathOpStringReg.end() &&
-         "declaration path OpString must be cached in "
-         "emitNonSemanticDebugStrings");
-  MCRegister FileStrReg = PathStrIt->second;
-  assert(FileStrReg.isValid() &&
-         "declaration path OpString id must be valid once cached");
+  MCRegister FileStrReg = getCachedScopePathOpStringReg(SP);
 
   MCRegister NameReg = getCachedOpStringReg(SP->getName());
   MCRegister LinkageReg = getCachedOpStringReg(SP->getLinkageName());
@@ -634,7 +646,8 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugGlobalVariable(
 
   MCRegister NameReg = getCachedOpStringReg(GV->getName());
   MCRegister LinkageReg = getCachedOpStringReg(GV->getLinkageName());
-  MCRegister FileStrReg = getCachedOpStringReg(getDebugFullPath(GV->getFile()));
+  MCRegister FileStrReg = getCachedScopePathOpStringReg(
+      GV->getFile(), /*UseEmptyPathIfNullScope=*/true);
   MCRegister SrcReg = getOrEmitDebugSourceForFileStrReg(FileStrReg, VoidTypeReg,
                                                         ExtInstSetReg, MAI);
 
@@ -736,6 +749,8 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
     if (const DIFile *F = GV->getFile())
       ScopeToPathOpStringReg[F] = PathReg;
   }
+
+  CachedEmptyStringReg = emitOpStringIfNew("", MAI);
 
 #ifndef NDEBUG
   NonSemanticOpStringsSectionEmitted = true;

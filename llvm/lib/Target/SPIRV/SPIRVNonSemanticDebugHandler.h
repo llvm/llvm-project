@@ -120,6 +120,8 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   bool NonSemanticOpStringsSectionEmitted = false;
 #endif
 
+  MCRegister CachedEmptyStringReg;
+
   MCRegister CachedDebugInfoNoneReg;
 
   MCRegister CachedOpTypeVoidReg;
@@ -209,6 +211,14 @@ private:
   /// Section 10 only: lookup OpString id from cache; asserts if missing or if
   /// section 7 did not complete.
   MCRegister getCachedOpStringReg(StringRef S);
+
+  /// Section 10 only: lookup path \c OpString id for \p Scope from
+  /// \c ScopeToPathOpStringReg; asserts if missing or invalid. When
+  /// \p UseEmptyPathIfNullScope is true and \p Scope is null, returns
+  /// \c CachedEmptyStringReg instead.
+  MCRegister
+  getCachedScopePathOpStringReg(const DIScope *Scope,
+                                bool UseEmptyPathIfNullScope = false);
   MCRegister emitOpConstantI32(uint32_t Value, MCRegister I32TypeReg,
                                SPIRV::ModuleAnalysisInfo &MAI);
   MCRegister emitExtInst(SPIRV::NonSemanticExtInst::NonSemanticExtInst Opcode,
