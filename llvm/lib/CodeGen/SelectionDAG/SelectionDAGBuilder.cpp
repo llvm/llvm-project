@@ -1814,6 +1814,19 @@ SDValue SelectionDAGBuilder::getValue(const Value *V) {
   return Val;
 }
 
+void SelectionDAGBuilder::setValueToPoison(const Value *V, const SDLoc &dl) {
+  if (V->getType()->isVoidTy())
+    return;
+
+  SmallVector<EVT, 4> ValueVTs;
+  ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
+                  V->getType(), ValueVTs);
+  SmallVector<SDValue, 4> Results;
+  for (EVT VT : ValueVTs)
+    Results.push_back(DAG.getPOISON(VT));
+  setValue(V, DAG.getMergeValues(Results, dl));
+}
+
 /// getNonRegisterValue - Return an SDValue for the given Value, but
 /// don't look in FuncInfo.ValueMap for a virtual register.
 SDValue SelectionDAGBuilder::getNonRegisterValue(const Value *V) {
@@ -5564,15 +5577,7 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
     if (HasChain && !OnlyLoad)
       DAG.setRoot(getRoot());
 
-    if (!I.getType()->isVoidTy()) {
-      SmallVector<EVT, 4> ValueVTs;
-      ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
-                      I.getType(), ValueVTs);
-      SmallVector<SDValue, 4> Results;
-      for (EVT VT : ValueVTs)
-        Results.push_back(DAG.getPOISON(VT));
-      setValue(&I, DAG.getMergeValues(Results, DL));
-    }
+    setValueToPoison(&I, DL);
     return;
   }
 
@@ -7742,15 +7747,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 
     // Lower the result to poison so that compilation can continue and collect
     // any further diagnostics.
-    if (!I.getType()->isVoidTy()) {
-      SmallVector<EVT, 4> ValueVTs;
-      ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
-                      I.getType(), ValueVTs);
-      SmallVector<SDValue, 4> Results;
-      for (EVT VT : ValueVTs)
-        Results.push_back(DAG.getPOISON(VT));
-      setValue(&I, DAG.getMergeValues(Results, sdl));
-    }
+    setValueToPoison(&I, sdl);
     return;
   }
 
