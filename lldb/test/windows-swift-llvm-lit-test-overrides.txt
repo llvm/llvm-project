@@ -30,35 +30,13 @@ xfail lldb-shell :: SymbolFile/DWARF/x86/dead-code-filtering.yaml
 ### Tests that pass locally, but fail in CI reliably ###
 
 # https://github.com/swiftlang/llvm-project/issues/9539
-xfail lldb-shell :: SwiftREPL/Basic.test
-xfail lldb-shell :: SwiftREPL/Class.test
-xfail lldb-shell :: SwiftREPL/ComputedProperties.test
-xfail lldb-shell :: SwiftREPL/Deadlock.test
-xfail lldb-shell :: SwiftREPL/DiagnosticOptions.test
-xfail lldb-shell :: SwiftREPL/Dict.test
 xfail lldb-shell :: SwiftREPL/ErrorReturn.test
-xfail lldb-shell :: SwiftREPL/ExclusivityREPL.test
 xfail lldb-shell :: SwiftREPL/GenericTypealias.test
-xfail lldb-shell :: SwiftREPL/Generics.test
-xfail lldb-shell :: SwiftREPL/ImportError.test
-xfail lldb-shell :: SwiftREPL/MetatypeRepl.test
 xfail lldb-shell :: SwiftREPL/Optional.test
-xfail lldb-shell :: SwiftREPL/PropertyWrapperTopLevel.test
 xfail lldb-shell :: SwiftREPL/RecursiveClass.test
-xfail lldb-shell :: SwiftREPL/Redefinition.test
-xfail lldb-shell :: SwiftREPL/RedirectInput.test
-xfail lldb-shell :: SwiftREPL/RedirectInputNoSuchFile.test
 xfail lldb-shell :: SwiftREPL/Regex.test
 xfail lldb-shell :: SwiftREPL/SimpleExpressions.test
-xfail lldb-shell :: SwiftREPL/Struct.test
-xfail lldb-shell :: SwiftREPL/Subclassing.test
-xfail lldb-shell :: SwiftREPL/SwiftInterfaceForceModuleLoadMode.test
-xfail lldb-shell :: SwiftREPL/SwiftTypeLookup.test
-xfail lldb-shell :: SwiftREPL/SyntaxError.test
-xfail lldb-shell :: SwiftREPL/UninitVariables.test
-xfail lldb-shell :: SwiftREPL/ZeroSizeStruct.test
 xfail lldb-shell :: SwiftREPL/enum-singlecase.test
-xfail lldb-shell :: SwiftREPL/one-char-string.test
 
 xfail lldb-api :: commands/apropos/with-process/TestAproposWithProcess.py
 xfail lldb-api :: commands/command/nested_alias/TestNestedAlias.py
