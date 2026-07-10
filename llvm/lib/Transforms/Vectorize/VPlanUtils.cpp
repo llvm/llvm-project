@@ -866,18 +866,17 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
     }
     // Chain operands in reverse order matching SCEVExpander's expansion of
     // min/max expressions.
-    VPValue *Result =
-        tryToExpand(MinMax->getOperand(MinMax->getNumOperands() - 1));
-    if (!Result)
-      return nullptr;
-    Type *Ty = MinMax->getType();
-    for (const SCEVUse &Op : drop_begin(reverse(MinMax->operands()))) {
-      VPValue *RHS = tryToExpand(Op);
-      if (!RHS)
+    SmallVector<VPValue *, 2> Ops;
+    for (const SCEVUse &Op : reverse(MinMax->operands())) {
+      VPValue *OpV = tryToExpand(Op);
+      if (!OpV)
         return nullptr;
-      Result =
-          Builder.createScalarIntrinsic(IntrinsicID, {Result, RHS}, Ty, DL);
+      Ops.push_back(OpV);
     }
+    Type *Ty = MinMax->getType();
+    VPValue *Result = Ops.front();
+    for (VPValue *Op : drop_begin(Ops))
+      Result = Builder.createScalarIntrinsic(IntrinsicID, {Result, Op}, Ty, DL);
     return Result;
   }
   default:
