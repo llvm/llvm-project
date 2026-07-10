@@ -1485,6 +1485,46 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
       opts.FastRealMod = false;
   }
 
+  // Only the last -ffpe-trap= on the command line is effective. The list is a
+  // comma-separated set of exception mnemonics. The mnemonics "invalid",
+  // "zero", "overflow", "underflow", and "inexact" correspond to the Fortran
+  // 2023 IEEE_FLAG_TYPE values IEEE_INVALID, IEEE_DIVIDE_BY_ZERO,
+  // IEEE_OVERFLOW, IEEE_UNDERFLOW, and IEEE_INEXACT (F2023 17.2). The mnemonic
+  // "denormal" is a non-standard, gfortran-compatible extension (subnormal is
+  // an IEEE_FEATURES feature, not an exception flag). The mnemonic "none", as
+  // well as an empty list, requests no halting, allowing a later -ffpe-trap= to
+  // override an earlier one.
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::options::OPT_ffpe_trap_EQ)) {
+    using LangOptions = Fortran::common::LangOptions;
+    llvm::StringRef val = a->getValue();
+    unsigned traps = 0;
+    llvm::SmallVector<llvm::StringRef> trapList;
+    val.split(trapList, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+    for (llvm::StringRef trap : trapList) {
+      if (trap == "none") {
+        // Reset to no halting; a later mnemonic can re-enable.
+        traps = 0;
+        continue;
+      }
+      unsigned bit = llvm::StringSwitch<unsigned>(trap)
+                         .Case("invalid", LangOptions::FPE_Invalid)
+                         .Case("denormal", LangOptions::FPE_Denormal)
+                         .Case("zero", LangOptions::FPE_DivByZero)
+                         .Case("overflow", LangOptions::FPE_Overflow)
+                         .Case("underflow", LangOptions::FPE_Underflow)
+                         .Case("inexact", LangOptions::FPE_Inexact)
+                         .Default(0);
+      if (bit == 0) {
+        diags.Report(clang::diag::err_drv_unsupported_option_argument)
+            << a->getSpelling() << trap;
+        return false;
+      }
+      traps |= bit;
+    }
+    opts.FPExceptionTraps = traps;
+  }
+
   return true;
 }
 
@@ -2026,4 +2066,6 @@ void CompilerInvocation::setLoweringOptions() {
       codegenOpts.getComplexRange() ==
           CodeGenOptions::ComplexRangeKind::CX_Basic)
     loweringOpts.setComplexDivisionToRuntime(false);
+
+  loweringOpts.setFPExceptionTraps(langOptions.FPExceptionTraps);
 }

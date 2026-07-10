@@ -21,7 +21,6 @@ def static_libgfortran : Flag<["-"], "static-libgfortran">, Group<gfortran_Group
 // "f" options with values for gfortran.
 def fblas_matmul_limit_EQ : Joined<["-"], "fblas-matmul-limit=">, Group<gfortran_Group>;
 def fcheck_EQ : Joined<["-"], "fcheck=">, Group<gfortran_Group>;
-def ffpe_trap_EQ : Joined<["-"], "ffpe-trap=">, Group<gfortran_Group>;
 def ffree_line_length_VALUE : Joined<["-"], "ffree-line-length-">, Group<gfortran_Group>;
 def finit_character_EQ : Joined<["-"], "finit-character=">, Group<gfortran_Group>;
 def finit_integer_EQ : Joined<["-"], "finit-integer=">, Group<gfortran_Group>;
@@ -326,6 +325,31 @@ defm real_sum_reassociation
         and may change exact floating-point results while preserving
         standard-conforming Fortran semantics.
       }]>;
+
+def ffpe_trap_EQ : Joined<["-"], "ffpe-trap=">, Group<f_Group>,
+  HelpText<"Set the initial floating-point exception halting mode for the main program">,
+  DocBrief<[{The ``-ffpe-trap=[list]`` option sets the initial floating-point
+exception halting mode for the main program unit. ``[list]`` is a comma-separated
+list of the exceptions to halt on: ``invalid``, ``zero``, ``overflow``,
+``underflow``, and ``inexact``, corresponding to the Fortran 2023 (17.6)
+``IEEE_FLAG_TYPE`` values ``IEEE_INVALID``, ``IEEE_DIVIDE_BY_ZERO``,
+``IEEE_OVERFLOW``, ``IEEE_UNDERFLOW``, and ``IEEE_INEXACT``. As a non-standard
+GFortran-compatible extension, ``denormal`` halts on the hardware denormal
+(subnormal) operand exception. An empty list, or the value ``none``, disables
+halting. Multiple occurrences are allowed; the last ``-ffpe-trap=`` wins.
+
+Halting is enabled only for exceptions the target's floating-point environment
+can trap on. Halting control is implemented for x86 targets and for glibc-based
+(Linux) targets; for other targets the compiler emits a warning that the option
+is ignored. The ``denormal`` exception is an x86-only extension, so requesting
+it for a non-x86 target likewise produces a warning and is ignored.
+
+The warning is based on the target triple and is intentionally conservative: it
+is emitted only when the target is known not to support halting. On a non-x86
+target whose C library does not provide the required support (for example, a
+non-glibc Linux such as musl), the option may still be silently ignored at run
+time without a compile-time warning. The runtime is the definitive authority on
+which exceptions can be trapped.}]>;
 
 defm init_global_zero : BoolOptionWithoutMarshalling<"f", "init-global-zero",
   PosFlag<SetTrue, [], [], "Zero initialize globals without default initialization (default)">,

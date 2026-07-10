@@ -161,6 +161,25 @@ bool RTNAME(SupportHalting)([[maybe_unused]] uint32_t except) {
 #endif
 }
 
+void RTNAME(EnableFPETraps)(uint32_t excepts) {
+  // Enable halting only for those exceptions whose halting control is supported
+  // by the processor. The Fortran standard restricts IEEE_SET_HALTING_MODE to
+  // flags for which IEEE_SUPPORT_HALTING is true (F2023 17.11.40); on targets
+  // without halting control (e.g. non-glibc), this is a no-op.
+  uint32_t supported = 0;
+  for (uint32_t flag = 1; flag <= excepts; flag <<= 1) {
+    if ((excepts & flag) && RTNAME(SupportHalting)(flag)) {
+      supported |= flag;
+    }
+  }
+  if (supported == 0) {
+    return;
+  }
+  uint32_t mapped = RTNAME(MapException)(supported);
+  RTNAME(feclearexcept)(mapped);
+  RTNAME(feenableexcept)(mapped);
+}
+
 // A hardware FZ (flush to zero) bit is the negation of the
 // ieee_[get|set]_underflow_mode GRADUAL argument.
 #if defined(_MM_FLUSH_ZERO_MASK)

@@ -34,6 +34,16 @@ page](https://llvm.org/releases/).
 ## Non-comprehensive list of changes in this release
 
 ## New Compiler Flags
+- The `-ffpe-trap=` flag is now supported. It sets the initial floating-point
+  exception halting mode for the main program to a comma-separated list of
+  `invalid`, `zero`, `overflow`, `underflow`, and `inexact` (plus the
+  non-standard, gfortran-compatible extension `denormal`). Use `none` or an
+  empty list to disable halting. The last `-ffpe-trap=` on the command line is
+  effective. The Fortran standard permits the initial halting mode to be
+  processor defined (Fortran 2023, 17.6). Halting control is implemented for x86
+  and glibc-based (Linux) targets; on other targets a warning is emitted and the
+  option is ignored. The `denormal` exception is an x86-only extension, so
+  requesting it for a non-x86 target also warns and is ignored.
 
 ## Windows Support
 
