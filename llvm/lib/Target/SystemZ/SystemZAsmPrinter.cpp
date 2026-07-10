@@ -1867,8 +1867,8 @@ void SystemZAsmPrinter::calculatePPA1() {
 
   // Save the calculated values.
   if (MF->getFunction().hasName() &&
-      MF->getFunction().getFnAttribute("zos-ppa1-name").getValueAsString()
-          != "none")
+      MF->getFunction().getFnAttribute("zos-ppa1-name").getValueAsString() !=
+          "none")
     Info.Name = MF->getFunction().getName();
   Info.PPA1 = OutContext.createTempSymbol(Twine("PPA1_").concat(N), true);
   Info.EPMarker = OutContext.createTempSymbol(Twine("EPM_").concat(N), true);
