@@ -16104,12 +16104,6 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       return E;
     TRC.ConstraintExpr = E.get();
   }
-  // If the concept refers to any outer parameter packs, we track the
-  // SubstIndex for evaluation.
-  // FIXME: This seems unnecessary after transforming lambda constraints.
-  if (TRC && TRC.ConstraintExpr->containsUnexpandedParameterPack() &&
-      !TRC.ArgPackSubstIndex)
-    TRC.ArgPackSubstIndex = SemaRef.ArgPackSubstIndex;
 
   getSema().CompleteLambdaCallOperator(
       NewCallOperator, E->getCallOperator()->getLocation(),

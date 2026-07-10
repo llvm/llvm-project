@@ -13567,7 +13567,7 @@ public:
   bool SubstTemplateArgumentsInParameterMapping(
       ArrayRef<TemplateArgumentLoc> Args, SourceLocation BaseLoc,
       const MultiLevelTemplateArgumentList &TemplateArgs,
-      bool TransformLambdaConstraint, TemplateArgumentListInfo &Out);
+      TemplateArgumentListInfo &Out);
 
   /// Retrieve the template argument list(s) that should be used to
   /// instantiate the definition of the given declaration.
@@ -13871,21 +13871,6 @@ public:
   /// act like a CXXIdExpression rather than an attempt to call.
   ExprResult SubstCXXIdExpr(Expr *E,
                             const MultiLevelTemplateArgumentList &TemplateArgs);
-
-  // A RAII type used by the TemplateDeclInstantiator and TemplateInstantiator
-  // to disable constraint evaluation, then restore the state.
-  template <typename InstTy> struct ConstraintEvalRAII {
-    InstTy &TI;
-    bool OldValue;
-
-    ConstraintEvalRAII(InstTy &TI)
-        : TI(TI), OldValue(TI.getEvaluateConstraints()) {
-      TI.setEvaluateConstraints(false);
-    }
-    ~ConstraintEvalRAII() { TI.setEvaluateConstraints(OldValue); }
-    ConstraintEvalRAII(const ConstraintEvalRAII &) = delete;
-    ConstraintEvalRAII &operator=(const ConstraintEvalRAII &) = delete;
-  };
 
   // Must be used instead of SubstExpr at 'constraint checking' time.
   ExprResult

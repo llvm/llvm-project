@@ -467,4 +467,29 @@ static_assert(count_if_v_bad<L2, double> == 1);
 // expected-note@#pass_a_concept_inside_a_lambda {{evaluated to false}}
 // expected-note@#requires_pass_a_concept_inside_a_lambda {{no matching member function}}
 
+template <typename ...Ts>
+concept test = ((sizeof(Ts) < 2) && ...);
+
+template<auto L, typename... Ts>
+concept pass_a_concept_inside_a_lambda_2 = requires {
+  L.template operator()<Ts...>(Ts()...);  // #requires_pass_a_concept_inside_a_lambda_2
+};
+
+template<auto Pred, typename... Ts>
+concept PredicateFor_bad_2 = pass_a_concept_inside_a_lambda_2<[]<typename... Xs> // #pass_a_concept_inside_a_lambda_2
+                                          requires(__is_same(decltype(Pred.template operator()<Xs>()), bool) and ...)
+                                      (test auto...){},
+                                      Ts...>;
+
+template<auto Pred, typename... Ts>
+    requires PredicateFor_bad_2<Pred, Ts...> // #PredicateFor_bad_2
+constexpr const unsigned count_if_v_bad_2 = 111;
+
+static_assert(count_if_v_bad_2<L, double> == 111);
+// expected-error@-1 {{constraints not satisfied}}
+// expected-note@#PredicateFor_bad_2 {{false}}
+// expected-note@#pass_a_concept_inside_a_lambda_2 {{false}}
+// expected-note@#requires_pass_a_concept_inside_a_lambda_2 {{no matching member function}}
+static_assert(count_if_v_bad_2<L, char> == 111);
+
 }

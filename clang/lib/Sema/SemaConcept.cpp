@@ -688,7 +688,7 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
   // mappings to preserve the outer depths.
   if (S.SubstTemplateArgumentsInParameterMapping(
           Constraint.getParameterMapping(), Constraint.getBeginLoc(), MLTAL,
-          /*TransformLambdaConstraint=*/true, SubstArgs)) {
+          SubstArgs)) {
     Satisfaction.IsSatisfied = false;
     return std::nullopt;
   }
@@ -2210,8 +2210,7 @@ bool SubstituteParameterMappings::substitute(
   llvm::SaveAndRestore<decltype(SemaRef.CurrentCachedTemplateArgs)>
       DoNotCacheDependentArgs(SemaRef.CurrentCachedTemplateArgs, nullptr);
   if (SemaRef.SubstTemplateArgumentsInParameterMapping(
-          N.getParameterMapping(), N.getBeginLoc(), *MLTAL,
-          /*TransformLambdaConstraint=*/false, SubstArgs))
+          N.getParameterMapping(), N.getBeginLoc(), *MLTAL, SubstArgs))
     return true;
   Sema::CheckTemplateArgumentInfo CTAI;
   auto *TD =
@@ -2283,8 +2282,7 @@ bool SubstituteParameterMappings::substitute(ConceptIdConstraint &CC) {
   const ASTTemplateArgumentListInfo *ArgsAsWritten =
       CSE->getTemplateArgsAsWritten();
   if (SemaRef.SubstTemplateArgumentsInParameterMapping(
-          ArgsAsWritten->arguments(), CC.getBeginLoc(), *MLTAL,
-          /*TransformLambdaConstraint=*/false, Out))
+          ArgsAsWritten->arguments(), CC.getBeginLoc(), *MLTAL, Out))
     return true;
   Sema::CheckTemplateArgumentInfo CTAI;
   if (SemaRef.CheckTemplateArgumentList(CSE->getNamedConcept(),
@@ -2366,6 +2364,7 @@ bool SubstituteParameterMappings::substitute(NormalizedConstraint &N) {
         /*RelativeToPrimary=*/true,
         /*Pattern=*/nullptr,
         /*ForConstraintInstantiation=*/true);
+    MLTAL.setRetainInnerDepths();
 
     return SubstituteParameterMappings(SemaRef, &MLTAL,
                                        CSE->getTemplateArgsAsWritten(),

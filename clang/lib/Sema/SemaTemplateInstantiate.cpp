@@ -1351,11 +1351,10 @@ namespace {
     } ForConstraintSubstitution;
 
     TemplateInstantiator(ForParameterMappingSubstitution_t, Sema &SemaRef,
-                         SourceLocation Loc, bool TransformLambdaConstraint,
+                         SourceLocation Loc,
                          const MultiLevelTemplateArgumentList &TemplateArgs)
         : inherited(SemaRef), TemplateArgs(TemplateArgs), Loc(Loc),
-          EvaluateLambdaConstraint(TransformLambdaConstraint),
-          BailOutOnIncomplete(false) {
+          EvaluateLambdaConstraint(true), BailOutOnIncomplete(false) {
       if (!SemaRef.CurrentCachedTemplateArgs)
         return;
       auto &V = TemplateArgsHashValue.emplace();
@@ -1788,7 +1787,7 @@ namespace {
         return E;
       LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true,
                                     /*InstantiatingLambdaOrBlock=*/true);
-      Sema::ConstraintEvalRAII<TemplateInstantiator> RAII(*this);
+      llvm::SaveAndRestore RAII(EvaluateConstraints, EvaluateLambdaConstraint);
 
       return inherited::TransformLambdaExpr(E);
     }
@@ -1891,23 +1890,10 @@ namespace {
                               TemplateParameterList *OrigTPL)  {
       if (!OrigTPL || !OrigTPL->size()) return OrigTPL;
 
-      std::optional<MultiLevelTemplateArgumentList> OldMLTAL;
-      // We need to preserve the lambda depth in parameter mapping.
-      // Otherwise the template argument deduction would fail, if we reduced the
-      // depth too early.
-      if (SemaRef.inParameterMappingSubstitution())
-        OldMLTAL = ForgetSubstitution();
-
       DeclContext *Owner = OrigTPL->getParam(0)->getDeclContext();
       TemplateDeclInstantiator DeclInstantiator(getSema(), Owner, TemplateArgs);
-      // We don't want the template argument substitution into parameter
-      // mappings to preserve the outer depths.
-      DeclInstantiator.setEvaluateConstraints(
-          SemaRef.inConstraintSubstitution() || EvaluateConstraints);
-      auto *Transformed = DeclInstantiator.SubstTemplateParams(OrigTPL);
-      if (OldMLTAL)
-        RememberSubstitution(std::move(*OldMLTAL));
-      return Transformed;
+      DeclInstantiator.setEvaluateConstraints(EvaluateConstraints);
+      return DeclInstantiator.SubstTemplateParams(OrigTPL);
     }
 
     concepts::TypeRequirement *
@@ -2202,6 +2188,9 @@ TemplateInstantiator::TransformPredefinedExpr(PredefinedExpr *E) {
 ExprResult
 TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
                                                NonTypeTemplateParmDecl *NTTP) {
+  if (TemplateArgs.retainInnerDepths() &&
+      NTTP->getDepth() >= TemplateArgs.getNumLevels())
+    return E;
   // If the corresponding template argument is NULL or non-existent, it's
   // because we are performing instantiation from explicitly-specified
   // template arguments in a function template, but there were some
@@ -2610,8 +2599,10 @@ TemplateInstantiator::TransformTemplateTypeParmType(TypeLocBuilder &TLB,
     NewTTPDecl = cast_or_null<TemplateTypeParmDecl>(
         TransformDecl(TL.getNameLoc(), OldTTPDecl));
   QualType Result = getSema().Context.getTemplateTypeParmType(
-      T->getDepth() - TemplateArgs.getNumSubstitutedLevels(), T->getIndex(),
-      T->isParameterPack(), NewTTPDecl);
+      T->getDepth() - (TemplateArgs.retainInnerDepths()
+                           ? 0
+                           : TemplateArgs.getNumSubstitutedLevels()),
+      T->getIndex(), T->isParameterPack(), NewTTPDecl);
   TemplateTypeParmTypeLoc NewTL = TLB.push<TemplateTypeParmTypeLoc>(Result);
   NewTL.setNameLoc(TL.getNameLoc());
   return Result;
@@ -4451,10 +4442,10 @@ bool Sema::SubstTemplateArguments(
 bool Sema::SubstTemplateArgumentsInParameterMapping(
     ArrayRef<TemplateArgumentLoc> Args, SourceLocation BaseLoc,
     const MultiLevelTemplateArgumentList &TemplateArgs,
-    bool TransformLambdaConstraint, TemplateArgumentListInfo &Out) {
+    TemplateArgumentListInfo &Out) {
   TemplateInstantiator Instantiator(
       TemplateInstantiator::ForParameterMappingSubstitution, *this, BaseLoc,
-      TransformLambdaConstraint, TemplateArgs);
+      TemplateArgs);
   return Instantiator.TransformTemplateArguments(Args.begin(), Args.end(), Out);
 }
 
