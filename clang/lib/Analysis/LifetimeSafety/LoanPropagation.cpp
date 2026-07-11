@@ -18,6 +18,7 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/ImmutableList.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -136,9 +137,11 @@ class AnalysisImpl
 public:
   AnalysisImpl(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
                OriginLoanMap::Factory &OriginLoanMapFactory,
-               LoanSet::Factory &LoanSetFactory)
+               LoanSet::Factory &LoanSetFactory,
+               llvm::ImmutableList<OriginID>::Factory &OriginFlowChainFactory)
       : DataflowAnalysis(C, AC, F), OriginLoanMapFactory(OriginLoanMapFactory),
         LoanSetFactory(LoanSetFactory),
+        OriginFlowChainFactory(OriginFlowChainFactory),
         PersistentOrigins(computePersistentOrigins(F, C)) {}
 
   using Base::transfer;
@@ -203,10 +206,10 @@ public:
     return getLoans(getState(P), OID);
   }
 
-  llvm::SmallVector<OriginID> buildOriginFlowChain(ProgramPoint StartPoint,
-                                                   const OriginID StartOID,
-                                                   const LoanID TargetLoan,
-                                                   const CFG *Cfg) const {
+  llvm::ImmutableList<OriginID> buildOriginFlowChain(ProgramPoint StartPoint,
+                                                     const OriginID StartOID,
+                                                     const LoanID TargetLoan,
+                                                     const CFG *Cfg) const {
     assert(getLoans(StartOID, StartPoint).contains(TargetLoan) &&
            "TargetLoan must be present in the StartOID at the StartPoint");
 
@@ -225,12 +228,13 @@ public:
     using SearchState = std::pair<const CFGBlock *, OriginID>;
     struct DFSNode {
       SearchState CurrState;
-      llvm::SmallVector<OriginID> OriginFlowChain;
+      llvm::ImmutableList<OriginID> OriginFlowChain;
     };
 
     llvm::SmallVector<DFSNode> PendingStates;
     llvm::SmallSet<SearchState, 16> VistedStates;
-    PendingStates.push_back({{EndBlock, StartOID}, {}});
+    PendingStates.push_back(
+        {{EndBlock, StartOID}, OriginFlowChainFactory.getEmptyList()});
 
     // DFS loop to trace loan backwards through CFG
     while (!PendingStates.empty()) {
@@ -241,7 +245,9 @@ public:
       const auto [BuildResult, Complete] =
           buildOriginFlowChain(CurrBlock, CurrOID, TargetLoan);
       if (!BuildResult.empty()) {
-        CurrNode.OriginFlowChain.append(BuildResult);
+        for (OriginID OID : BuildResult)
+          CurrNode.OriginFlowChain =
+              OriginFlowChainFactory.add(OID, CurrNode.OriginFlowChain);
         CurrOID = BuildResult.back();
       }
 
@@ -259,13 +265,13 @@ public:
       }
     }
 
-    llvm_unreachable(
-        "buildOriginFlowChain did not reach IssueFact for TargetLoan");
+    llvm_unreachable("Could not reconstruct origin flow. Search finished "
+                     "without reaching IssueFact");
   }
 
-  llvm::SmallVector<OriginID> buildOriginFlowChain(const UseFact *UF,
-                                                   const LoanID TargetLoan,
-                                                   const CFG *Cfg) const {
+  llvm::ImmutableList<OriginID> buildOriginFlowChain(const UseFact *UF,
+                                                     const LoanID TargetLoan,
+                                                     const CFG *Cfg) const {
     for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
          Cur = Cur->peelOuterOrigin())
       if (getLoans(Cur->getOuterOriginID(), UF).contains(TargetLoan))
@@ -333,6 +339,7 @@ private:
 
   OriginLoanMap::Factory &OriginLoanMapFactory;
   LoanSet::Factory &LoanSetFactory;
+  llvm::ImmutableList<OriginID>::Factory &OriginFlowChainFactory;
   /// Boolean vector indexed by origin ID. If true, the origin appears in
   /// multiple basic blocks and must participate in join operations. If false,
   /// the origin is block-local and can be discarded at block boundaries.
@@ -347,9 +354,10 @@ class LoanPropagationAnalysis::Impl final : public AnalysisImpl {
 LoanPropagationAnalysis::LoanPropagationAnalysis(
     const CFG &C, AnalysisDeclContext &AC, FactManager &F,
     OriginLoanMap::Factory &OriginLoanMapFactory,
-    LoanSet::Factory &LoanSetFactory)
+    LoanSet::Factory &LoanSetFactory,
+    llvm::ImmutableList<OriginID>::Factory &OriginFlowChainFactory)
     : PImpl(std::make_unique<Impl>(C, AC, F, OriginLoanMapFactory,
-                                   LoanSetFactory)) {
+                                   LoanSetFactory, OriginFlowChainFactory)) {
   PImpl->run();
 }
 
@@ -359,13 +367,13 @@ LoanSet LoanPropagationAnalysis::getLoans(OriginID OID, ProgramPoint P) const {
   return PImpl->getLoans(OID, P);
 }
 
-llvm::SmallVector<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
+llvm::ImmutableList<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
     ProgramPoint StartPoint, const OriginID StartOID, const LoanID TargetLoan,
     const CFG *Cfg) const {
   return PImpl->buildOriginFlowChain(StartPoint, StartOID, TargetLoan, Cfg);
 }
 
-llvm::SmallVector<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
+llvm::ImmutableList<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
     const UseFact *UF, const LoanID TargetLoan, const CFG *Cfg) const {
   return PImpl->buildOriginFlowChain(UF, TargetLoan, Cfg);
 }

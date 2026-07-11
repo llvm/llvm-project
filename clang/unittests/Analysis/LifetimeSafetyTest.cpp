@@ -205,18 +205,18 @@ public:
     return Runner.getAnalysis().getFactManager().getBlockContaining(P);
   }
 
-  llvm::SmallVector<OriginID>
+  llvm::ImmutableList<OriginID>
   buildOriginFlowChain(llvm::StringRef StartOriginVar,
                        llvm::StringRef EndLoanVar, llvm::StringRef Annotation) {
     std::optional<OriginID> StartOriginID = getOriginForDecl(StartOriginVar);
     std::vector<LoanID> EndLoanIDs = getLoansForVar(EndLoanVar);
 
     for (LoanID LID : EndLoanIDs) {
-      llvm::SmallVector<OriginID> OriginFlowChain =
+      llvm::ImmutableList<OriginID> OriginFlowChain =
           Runner.getAnalysis().getLoanPropagation().buildOriginFlowChain(
               getProgramPoint(Annotation), *StartOriginID, LID,
               Runner.getAnalysisContext().getCFG());
-      if (!OriginFlowChain.empty())
+      if (!OriginFlowChain.isEmpty())
         return OriginFlowChain;
     }
 
@@ -2001,11 +2001,11 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChain) {
     }
   )");
 
-  llvm::SmallVector<OriginID> ChainForTgtA =
+  llvm::ImmutableList<OriginID> ChainForTgtA =
       Helper->buildOriginFlowChain("s", "tgta", "after_nested_merge");
-  llvm::SmallVector<OriginID> ChainForTgtB =
+  llvm::ImmutableList<OriginID> ChainForTgtB =
       Helper->buildOriginFlowChain("s", "tgtb", "after_nested_merge");
-  llvm::SmallVector<OriginID> ChainForTgtC =
+  llvm::ImmutableList<OriginID> ChainForTgtC =
       Helper->buildOriginFlowChain("s", "tgtc", "after_nested_merge");
 
   EXPECT_THAT(ChainForTgtA, Contains(*Helper->getOriginForDecl("a")));
@@ -2050,7 +2050,7 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithSelfAssignment) {
     }
   )");
 
-  const llvm::SmallVector<OriginID> OriginFlowChain =
+  const llvm::ImmutableList<OriginID> OriginFlowChain =
       Helper->buildOriginFlowChain("s", "tgt", "after_use");
 
   EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("a")));
@@ -2067,7 +2067,7 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithMultiAssignInSameStmt) {
     }
   )");
 
-  const llvm::SmallVector<OriginID> OriginFlowChain =
+  const llvm::ImmutableList<OriginID> OriginFlowChain =
       Helper->buildOriginFlowChain("s", "tgt", "after_use");
 
   EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("a")));
@@ -2088,7 +2088,7 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithOverwritingAssignments) {
     }
   )");
 
-  const llvm::SmallVector<OriginID> OriginFlowChain =
+  const llvm::ImmutableList<OriginID> OriginFlowChain =
       Helper->buildOriginFlowChain("s", "tgt1", "after_use");
 
   EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("a")));
@@ -2110,9 +2110,9 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithLifetimeBound) {
     }
   )");
 
-  llvm::SmallVector<OriginID> ChainForTgtA =
+  llvm::ImmutableList<OriginID> ChainForTgtA =
       Helper->buildOriginFlowChain("s", "tgta", "after_use");
-  llvm::SmallVector<OriginID> ChainForTgtB =
+  llvm::ImmutableList<OriginID> ChainForTgtB =
       Helper->buildOriginFlowChain("s", "tgtb", "after_use");
 
   EXPECT_THAT(ChainForTgtA, Contains(*Helper->getOriginForDecl("a")));

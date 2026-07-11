@@ -86,8 +86,11 @@ void LifetimeSafetyAnalysis::run() {
   ///    the analysis.
   /// 3. Collapse ExpireFacts belonging to same source location into a single
   ///    Fact.
+
+  llvm::ImmutableList<OriginID>::Factory OriginFlowChainFactory;
   LoanPropagation = std::make_unique<LoanPropagationAnalysis>(
-      Cfg, AC, *FactMgr, Factory.OriginMapFactory, Factory.LoanSetFactory);
+      Cfg, AC, *FactMgr, Factory.OriginMapFactory, Factory.LoanSetFactory,
+      OriginFlowChainFactory);
 
   LiveOrigins = std::make_unique<LiveOriginsAnalysis>(
       Cfg, AC, *FactMgr, Factory.LivenessMapFactory);

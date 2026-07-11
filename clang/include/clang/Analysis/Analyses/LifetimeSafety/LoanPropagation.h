@@ -18,6 +18,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "llvm/ADT/ImmutableList.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/ImmutableSet.h"
 
@@ -31,9 +32,11 @@ using OriginLoanMap = llvm::ImmutableMap<OriginID, LoanSet>;
 
 class LoanPropagationAnalysis {
 public:
-  LoanPropagationAnalysis(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
-                          OriginLoanMap::Factory &OriginLoanMapFactory,
-                          LoanSet::Factory &LoanSetFactory);
+  LoanPropagationAnalysis(
+      const CFG &C, AnalysisDeclContext &AC, FactManager &F,
+      OriginLoanMap::Factory &OriginLoanMapFactory,
+      LoanSet::Factory &LoanSetFactory,
+      llvm::ImmutableList<OriginID>::Factory &OriginFlowChainFactory);
   ~LoanPropagationAnalysis();
 
   LoanSet getLoans(OriginID OID, ProgramPoint P) const;
@@ -47,14 +50,14 @@ public:
   /// The traversal follows OriginFlowFacts backwards to reconstruct the
   /// sequence of origins through which the loan flowed, ending at the origin
   /// where the loan was originally issued.
-  llvm::SmallVector<OriginID> buildOriginFlowChain(ProgramPoint StartPoint,
-                                                   const OriginID StartOID,
-                                                   const LoanID TargetLoan,
-                                                   const CFG *Cfg) const;
+  llvm::ImmutableList<OriginID> buildOriginFlowChain(ProgramPoint StartPoint,
+                                                     const OriginID StartOID,
+                                                     const LoanID TargetLoan,
+                                                     const CFG *Cfg) const;
 
-  llvm::SmallVector<OriginID> buildOriginFlowChain(const UseFact *UF,
-                                                   const LoanID TargetLoan,
-                                                   const CFG *Cfg) const;
+  llvm::ImmutableList<OriginID> buildOriginFlowChain(const UseFact *UF,
+                                                     const LoanID TargetLoan,
+                                                     const CFG *Cfg) const;
 
 private:
   class Impl;
