@@ -374,39 +374,10 @@ define <80 x i32> @test_maskz_load_v80i32(ptr %p, <80 x i1> %mask) nounwind {
 ; CHECK64-LABEL: test_maskz_load_v80i32:
 ; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movq %rdi, %rax
-; CHECK64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm0
-; CHECK64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm1
-; CHECK64-NEXT:    vpmovqb %zmm1, %xmm1
-; CHECK64-NEXT:    vpmovqb %zmm0, %xmm0
-; CHECK64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; CHECK64-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
-; CHECK64-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; CHECK64-NEXT:    vptestmd %zmm1, %zmm0, %k1
-; CHECK64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm0
-; CHECK64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; CHECK64-NEXT:    vpmovqb %zmm2, %xmm2
-; CHECK64-NEXT:    vpmovqb %zmm0, %xmm0
-; CHECK64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; CHECK64-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
-; CHECK64-NEXT:    vptestmd %zmm1, %zmm0, %k2
-; CHECK64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm0
-; CHECK64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; CHECK64-NEXT:    vpmovqb %zmm2, %xmm2
-; CHECK64-NEXT:    vpmovqb %zmm0, %xmm0
-; CHECK64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; CHECK64-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
-; CHECK64-NEXT:    vptestmd %zmm1, %zmm0, %k3
-; CHECK64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm0
-; CHECK64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; CHECK64-NEXT:    vpmovqb %zmm2, %xmm2
-; CHECK64-NEXT:    vpmovqb %zmm0, %xmm0
-; CHECK64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; CHECK64-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
-; CHECK64-NEXT:    vptestmd %zmm1, %zmm0, %k4
-; CHECK64-NEXT:    vmovd %edx, %xmm0
-; CHECK64-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
-; CHECK64-NEXT:    vpinsrb $2, %r8d, %xmm0, %xmm0
-; CHECK64-NEXT:    vpinsrb $3, %r9d, %xmm0, %xmm0
+; CHECK64-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK64-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK64-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK64-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm0, %xmm0
 ; CHECK64-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm0, %xmm0
 ; CHECK64-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm0, %xmm0
 ; CHECK64-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm0, %xmm0
@@ -419,8 +390,81 @@ define <80 x i32> @test_maskz_load_v80i32(ptr %p, <80 x i1> %mask) nounwind {
 ; CHECK64-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm0, %xmm0
 ; CHECK64-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm0, %xmm0
 ; CHECK64-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm0, %xmm0
-; CHECK64-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
-; CHECK64-NEXT:    vptestmd %zmm1, %zmm0, %k5
+; CHECK64-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; CHECK64-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; CHECK64-NEXT:    vptestmd %zmm0, %zmm1, %k1
+; CHECK64-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK64-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero,xmm1[8],zero,zero,zero,xmm1[9],zero,zero,zero,xmm1[10],zero,zero,zero,xmm1[11],zero,zero,zero,xmm1[12],zero,zero,zero,xmm1[13],zero,zero,zero,xmm1[14],zero,zero,zero,xmm1[15],zero,zero,zero
+; CHECK64-NEXT:    vptestmd %zmm0, %zmm1, %k2
+; CHECK64-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK64-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero,xmm1[8],zero,zero,zero,xmm1[9],zero,zero,zero,xmm1[10],zero,zero,zero,xmm1[11],zero,zero,zero,xmm1[12],zero,zero,zero,xmm1[13],zero,zero,zero,xmm1[14],zero,zero,zero,xmm1[15],zero,zero,zero
+; CHECK64-NEXT:    vptestmd %zmm0, %zmm1, %k3
+; CHECK64-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK64-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero,xmm1[8],zero,zero,zero,xmm1[9],zero,zero,zero,xmm1[10],zero,zero,zero,xmm1[11],zero,zero,zero,xmm1[12],zero,zero,zero,xmm1[13],zero,zero,zero,xmm1[14],zero,zero,zero,xmm1[15],zero,zero,zero
+; CHECK64-NEXT:    vptestmd %zmm0, %zmm1, %k4
+; CHECK64-NEXT:    vmovd %edx, %xmm1
+; CHECK64-NEXT:    vpinsrb $1, %ecx, %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $2, %r8d, %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $3, %r9d, %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK64-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero,xmm1[8],zero,zero,zero,xmm1[9],zero,zero,zero,xmm1[10],zero,zero,zero,xmm1[11],zero,zero,zero,xmm1[12],zero,zero,zero,xmm1[13],zero,zero,zero,xmm1[14],zero,zero,zero,xmm1[15],zero,zero,zero
+; CHECK64-NEXT:    vptestmd %zmm0, %zmm1, %k5
 ; CHECK64-NEXT:    vmovdqu32 (%rsi), %zmm0 {%k5} {z}
 ; CHECK64-NEXT:    vmovdqu32 64(%rsi), %zmm1 {%k4} {z}
 ; CHECK64-NEXT:    vmovdqu32 128(%rsi), %zmm2 {%k3} {z}
@@ -436,12 +480,97 @@ define <80 x i32> @test_maskz_load_v80i32(ptr %p, <80 x i1> %mask) nounwind {
 ;
 ; CHECK32-LABEL: test_maskz_load_v80i32:
 ; CHECK32:       # %bb.0:
+; CHECK32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK32-NEXT:    vpinsrb $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; CHECK32-NEXT:    vpinsrb $2, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; CHECK32-NEXT:    vpinsrb $3, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; CHECK32-NEXT:    vpinsrb $4, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; CHECK32-NEXT:    vpinsrb $5, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; CHECK32-NEXT:    vpinsrb $6, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; CHECK32-NEXT:    vpinsrb $7, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; CHECK32-NEXT:    vpinsrb $8, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; CHECK32-NEXT:    vpinsrb $9, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; CHECK32-NEXT:    vpinsrb $10, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; CHECK32-NEXT:    vpinsrb $11, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; CHECK32-NEXT:    vpinsrb $12, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; CHECK32-NEXT:    vpinsrb $13, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; CHECK32-NEXT:    vpinsrb $14, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; CHECK32-NEXT:    vpinsrb $15, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; CHECK32-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; CHECK32-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; CHECK32-NEXT:    vptestmd {{[0-9]+}}(%esp), %zmm0, %k1
-; CHECK32-NEXT:    vptestmd {{[0-9]+}}(%esp), %zmm0, %k2
-; CHECK32-NEXT:    vptestmd {{[0-9]+}}(%esp), %zmm0, %k3
-; CHECK32-NEXT:    vptestmd {{[0-9]+}}(%esp), %zmm0, %k4
-; CHECK32-NEXT:    vptestmd {{[0-9]+}}(%esp), %zmm0, %k5
+; CHECK32-NEXT:    vptestmd %zmm0, %zmm1, %k1
+; CHECK32-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK32-NEXT:    vpinsrb $1, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $2, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $3, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $4, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $5, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $6, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $7, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $8, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $9, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $10, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $11, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $12, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $13, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $14, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $15, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero,xmm1[8],zero,zero,zero,xmm1[9],zero,zero,zero,xmm1[10],zero,zero,zero,xmm1[11],zero,zero,zero,xmm1[12],zero,zero,zero,xmm1[13],zero,zero,zero,xmm1[14],zero,zero,zero,xmm1[15],zero,zero,zero
+; CHECK32-NEXT:    vptestmd %zmm0, %zmm1, %k2
+; CHECK32-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK32-NEXT:    vpinsrb $1, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $2, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $3, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $4, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $5, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $6, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $7, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $8, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $9, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $10, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $11, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $12, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $13, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $14, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $15, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero,xmm1[8],zero,zero,zero,xmm1[9],zero,zero,zero,xmm1[10],zero,zero,zero,xmm1[11],zero,zero,zero,xmm1[12],zero,zero,zero,xmm1[13],zero,zero,zero,xmm1[14],zero,zero,zero,xmm1[15],zero,zero,zero
+; CHECK32-NEXT:    vptestmd %zmm0, %zmm1, %k3
+; CHECK32-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK32-NEXT:    vpinsrb $1, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $2, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $3, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $4, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $5, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $6, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $7, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $8, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $9, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $10, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $11, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $12, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $13, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $14, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $15, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero,xmm1[8],zero,zero,zero,xmm1[9],zero,zero,zero,xmm1[10],zero,zero,zero,xmm1[11],zero,zero,zero,xmm1[12],zero,zero,zero,xmm1[13],zero,zero,zero,xmm1[14],zero,zero,zero,xmm1[15],zero,zero,zero
+; CHECK32-NEXT:    vptestmd %zmm0, %zmm1, %k4
+; CHECK32-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK32-NEXT:    vpinsrb $1, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $2, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $3, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $4, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $5, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $6, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $7, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $8, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $9, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $10, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $11, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $12, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $13, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $14, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpinsrb $15, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; CHECK32-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero,xmm1[8],zero,zero,zero,xmm1[9],zero,zero,zero,xmm1[10],zero,zero,zero,xmm1[11],zero,zero,zero,xmm1[12],zero,zero,zero,xmm1[13],zero,zero,zero,xmm1[14],zero,zero,zero,xmm1[15],zero,zero,zero
+; CHECK32-NEXT:    vptestmd %zmm0, %zmm1, %k5
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK32-NEXT:    vmovdqu32 (%ecx), %zmm0 {%k5} {z}
