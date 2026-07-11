@@ -31,8 +31,8 @@ define void @_ZN1C10SwitchModeEv(ptr %p, i64 %c) {
 ; AVX-NEXT:    store i64 [[OR_1]], ptr [[P:%.*]], align 8
 ; AVX-NEXT:    [[BAR5:%.*]] = load i64, ptr [[P]], align 8
 ; AVX-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[P]], align 8
-; AVX-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> poison, i64 [[OR_1]], i32 0
-; AVX-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> [[TMP1]], i64 [[BAR5]], i32 1
+; AVX-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> poison, i64 [[OR_1]], i64 0
+; AVX-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> [[TMP1]], i64 [[BAR5]], i64 1
 ; AVX-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], [[TMP0]]
 ; AVX-NEXT:    store <2 x i64> [[TMP3]], ptr [[P]], align 8
 ; AVX-NEXT:    ret void

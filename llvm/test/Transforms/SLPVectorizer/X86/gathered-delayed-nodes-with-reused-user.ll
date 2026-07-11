@@ -13,11 +13,11 @@ define i64 @foo() {
 ; CHECK-NEXT:    [[PHI4:%.*]] = phi i64 [ 0, [[BB:%.*]] ], [ 0, [[BB3]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i64> [ zeroinitializer, [[BB]] ], [ [[TMP3:%.*]], [[BB3]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> <i64 poison, i64 0>, <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[PHI4]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[PHI4]], i64 0
 ; CHECK-NEXT:    [[TMP3]] = add <2 x i64> [[TMP4]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5]] = add <2 x i64> [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i64, ptr addrspace(1) null, i64 [[ADD7]]
-; CHECK-NEXT:    [[OR:%.*]] = extractelement <2 x i64> [[TMP5]], i32 1
+; CHECK-NEXT:    [[OR:%.*]] = extractelement <2 x i64> [[TMP5]], i64 1
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[OR]], 0
 ; CHECK-NEXT:    br i1 false, label [[BB3]], label [[BB1:%.*]]
 ;

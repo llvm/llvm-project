@@ -12,7 +12,7 @@ define double @test() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i32> [[TMP0]], <i32 0, i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> <i32 0, i32 poison, i32 0, i32 0>, <4 x i32> <i32 4, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP3]] = or <4 x i32> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[TMP6]], 0
 ; CHECK-NEXT:    br i1 false, label %[[BB7:.*]], label %[[BB1]]
 ; CHECK:       [[BB7]]:
