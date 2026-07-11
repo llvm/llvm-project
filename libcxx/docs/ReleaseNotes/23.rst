@@ -131,6 +131,5 @@ ABI Affecting Changes
 - ``std::exception_ptr`` now uses the same layout in MSVC mode as on other platforms, changing the size from two to one
   pointer.
 
-
 Build System Changes
 --------------------
