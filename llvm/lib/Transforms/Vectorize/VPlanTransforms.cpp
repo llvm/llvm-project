@@ -3698,7 +3698,12 @@ void VPlanTransforms::replaceSymbolicStrides(
     auto *NewSCEV =
         SCEVParameterRewriter::rewrite(ScevExpr, *PSE.getSE(), RewriteMap);
     if (NewSCEV != ScevExpr) {
-      VPValue *NewExp = vputils::getOrCreateVPValueForSCEVExpr(Plan, NewSCEV);
+      VPBuilder Builder(Plan.getEntry());
+      VPValue *NewExp =
+          VPSCEVExpander(Builder, *PSE.getSE(), ExpSCEV->getDebugLoc())
+              .tryToExpand(NewSCEV);
+      if (!NewExp)
+        NewExp = VPBuilder(Plan.getEntry()).createExpandSCEV(NewSCEV);
       ExpSCEV->replaceAllUsesWith(NewExp);
       if (Plan.getTripCount() == ExpSCEV)
         Plan.resetTripCount(NewExp);
