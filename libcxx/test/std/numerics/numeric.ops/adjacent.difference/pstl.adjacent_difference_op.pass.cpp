@@ -31,26 +31,12 @@
 #include "test_iterators.h"
 #include "test_macros.h"
 #include "type_algorithms.h"
+#include "runway_sample.h"
 
 EXECUTION_POLICY_SFINAE_TEST(adjacent_difference);
 
 static_assert(sfinae_test_adjacent_difference<int, int*, int*, int*, int (*)(int, int)>);
 static_assert(!sfinae_test_adjacent_difference<std::execution::parallel_policy, int*, int*, int*, int (*)(int, int)>);
-
-template <class Callable>
-void runway_sample(size_t size, Callable callable) {
-  constexpr size_t affix = 16;
-  // 0, 1, 2, ..., 15, 16, 50, 157, 493, 1548, ...
-  for (size_t i = 0; i < size; i = i < affix ? i + 1 : size_t(3.1415 * i)) {
-    callable(i);
-  }
-  if (size <= affix)
-    return;
-  // size - 16, size - 15, ..., size - 1
-  for (size_t i = size - affix; i < size; ++i) {
-    callable(i);
-  }
-}
 
 class X {
   int i_;
