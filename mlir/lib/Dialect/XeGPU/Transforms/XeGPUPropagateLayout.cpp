@@ -1695,6 +1695,57 @@ ResolveLayoutConflicts::resolveTensorDescConsumer(OpOperand &operand) {
 }
 
 using GetLayoutFnTy = function_ref<xegpu::DistributeLayoutAttr(Value)>;
+
+/// Local forward layout propagation, run after the backward propagation
+/// analysis has materialized its layouts. Backward propagation only assigns
+/// layouts to values that are (transitively) consumed by an anchor op; a value
+/// whose only consumer is, e.g., the next iteration of a loop (its producing op
+/// is not on any anchor's backward slice) is left without a layout. This walk
+/// visits ops in producer-first (forward) order and, for any vector result that
+/// still lacks a layout, infers it from the already-known layouts of the op's
+/// operands via inferResultLayoutFromSourceForNonAnchorOp, then stamps it with
+/// setDistributeLayoutAttr.
+///
+/// A single forward pass suffices: forward-only values form producer ->
+/// consumer chains that the pre-order walk visits in dependency order, so an
+/// operand's layout is already assigned by the time its consumer is visited.
+static void forwardFillLayouts(Operation *root) {
+  root->walk([&](Operation *op) {
+    // Anchor ops carry authoritative layouts; region ops and their terminators
+    // are handled by the control-flow propagation; function ops carry no result
+    // layouts here.
+    if (isa<xegpu::AnchorLayoutInterface, RegionBranchOpInterface,
+            RegionBranchTerminatorOpInterface, FunctionOpInterface>(op))
+      return;
+    if (op->getNumResults() != 1)
+      return;
+    OpResult result = op->getResult(0);
+    if (!isa<VectorType>(result.getType()))
+      return;
+    // Skip results that already have a layout (from backward propagation or an
+    // earlier forward-fill step).
+    if (xegpu::getDistributeLayoutAttr(result))
+      return;
+
+    // Gather operand layouts, indexed by operand number.
+    SmallVector<xegpu::DistributeLayoutAttr> operandLayouts;
+    operandLayouts.reserve(op->getNumOperands());
+    bool anyAssigned = false;
+    for (Value operand : op->getOperands()) {
+      auto layout = xegpu::getDistributeLayoutAttr(operand);
+      operandLayouts.push_back(layout);
+      anyAssigned |= (layout != nullptr);
+    }
+    if (!anyAssigned)
+      return;
+
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::inferResultLayoutFromSourceForNonAnchorOp(op, operandLayouts);
+    if (layout)
+      xegpu::setDistributeLayoutAttr(result, layout);
+  });
+}
+
 /// Update an operation with the layout of its results. If the result type is
 /// a vector type, a temporary layout attribute is added to the operation. If
 /// the result type is a tensor descriptor type, the type is updated with the
@@ -1917,6 +1968,11 @@ LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
   });
   if (walkResult.wasInterrupted())
     return failure();
+
+  // Backward propagation only reaches values consumed by anchor ops. Run a
+  // local forward pass to fill in layouts for values it could not reach (e.g.
+  // loop-carried values whose only consumer is the next iteration).
+  forwardFillLayouts(op);
 
   return success();
 }
