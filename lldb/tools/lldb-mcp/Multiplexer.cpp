@@ -259,6 +259,8 @@ void Multiplexer::HandleSessionsList(Reply<CallToolResult> reply) {
   if (m_backends.empty())
     return reply(makeTextResult(""));
 
+  // All backends share the multiplexer's MainLoop, so these reply callbacks run
+  // serially on one thread and the aggregation state below needs no locking.
   struct State {
     size_t remaining;
     // Keyed by pid so the aggregated output is deterministic.
@@ -303,6 +305,8 @@ void Multiplexer::HandleResourcesList(Reply<ListResourcesResult> reply) {
   if (m_backends.empty())
     return reply(ListResourcesResult{});
 
+  // These reply callbacks run serially on the shared MainLoop thread, so this
+  // state needs no locking.
   struct State {
     size_t remaining;
     std::map<lldb::pid_t, std::vector<Resource>> resources;

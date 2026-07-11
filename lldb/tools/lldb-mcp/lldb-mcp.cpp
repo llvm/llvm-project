@@ -219,11 +219,16 @@ int main(int argc, char *argv[]) {
 
   // A stale registry entry left by a crashed instance fails to connect; skip it
   // rather than aborting.
+  LogCallback log = makeLogCallback();
   size_t connected = 0;
   for (const ServerInfo &info : *servers) {
     Expected<IOObjectSP> backend_io = connectToServer(info);
     if (!backend_io) {
-      consumeError(backend_io.takeError());
+      std::string reason = toString(backend_io.takeError());
+      if (log)
+        log(formatv("skipping unreachable MCP server (pid {0}): {1}", info.pid,
+                    reason)
+                .str());
       continue;
     }
 
@@ -232,7 +237,10 @@ int main(int argc, char *argv[]) {
     auto backend = std::make_unique<lldb_protocol::mcp::Client>(
         std::move(backend_transport), makeLogCallback());
     if (llvm::Error error = backend->Run()) {
-      consumeError(std::move(error));
+      std::string reason = toString(std::move(error));
+      if (log)
+        log(formatv("skipping MCP server (pid {0}): {1}", info.pid, reason)
+                .str());
       continue;
     }
 
