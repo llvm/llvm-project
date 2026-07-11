@@ -45,14 +45,16 @@
 # STAR-NEXT: [[#]] foo3@v1
 # STAR-NOT:  {{.}}
 
-## In foo4@@v2's node, global: foo4* beats local: foo4: no exact-over-wildcard
-## precedence.
-# RUN: echo 'v1 { global: *; local: foo*; }; v2 { global: foo4*; local: foo4; };' > %t3.script
+## In a versioned symbol's own node, global: beats local: with no
+## exact-over-wildcard precedence: global: * keeps foo3@v1 exported and
+## global: foo4* keeps foo4@@v2 exported.
+# RUN: echo 'v1 { global: *; local: foo*; foo3; }; v2 { global: foo4*; local: foo4; };' > %t3.script
 # RUN: ld.lld --version-script %t3.script -shared %t.o -o %t3.so
 # RUN: llvm-readelf --dyn-syms %t3.so | FileCheck --check-prefix=MIX1 %s
 # MIX1:      UND
 # MIX1-NEXT: [[#]] foo4@@v2
 # MIX1-NEXT: [[#]] _start@@v1
+# MIX1-NEXT: [[#]] foo3@v1
 # MIX1-NOT:  {{.}}
 
 # RUN: echo 'v1 { global: foo*; local: *; }; v2 { global: foo4; local: *; };' > %t4.script

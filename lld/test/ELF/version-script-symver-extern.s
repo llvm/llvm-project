@@ -9,12 +9,14 @@
 # EXACT-NEXT: [[#]] _start{{$}}
 # EXACT-NOT:  {{.}}
 
+## v1's global: * keeps _Z4foo3i@v1 exported despite local: foo*.
 # RUN: echo 'v1 { global: *; local: extern "C++" {foo*;}; }; v2 { global: extern "C++" {"foo2()";}; };' > %t2.script
 # RUN: ld.lld --version-script %t2.script -shared %t.o -o %t2.so
 # RUN: llvm-readelf --dyn-syms %t2.so | FileCheck --check-prefix=MIX1 %s
 # MIX1:      UND
 # MIX1-NEXT: [[#]] _Z4foo2v@@v2
 # MIX1-NEXT: [[#]] _start@@v1
+# MIX1-NEXT: [[#]] _Z4foo3i@v1
 # MIX1-NEXT: [[#]] _Z4foo4i@@v2
 # MIX1-NOT:  {{.}}
 

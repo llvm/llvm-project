@@ -243,12 +243,9 @@ void Symbol::parseSymbolVersion(Ctx &ctx) {
     if (ver.name != verstr)
       continue;
 
-    if (!isDefault) {
-      versionId = ver.id | VERSYM_HIDDEN;
-      return;
-    }
-    // Like GNU ld, localize a default version foo@@v1 if a local: pattern in
-    // its own node v1 matches foo and no global: pattern does.
+    // Like GNU ld, localize a versioned symbol (foo@v1 or foo@@v1) if a
+    // local: pattern in its own node v1 matches foo and no global: pattern
+    // does.
     StringRef base = s.take_front(pos);
     std::string demangled = demangle(base);
     auto matches = [&](ArrayRef<SymbolVersion> pats) {
@@ -260,9 +257,10 @@ void Symbol::parseSymbolVersion(Ctx &ctx) {
       }
       return false;
     };
-    versionId = !matches(ver.nonLocalPatterns) && matches(ver.localPatterns)
-                    ? VER_NDX_LOCAL
-                    : ver.id;
+    if (!matches(ver.nonLocalPatterns) && matches(ver.localPatterns))
+      versionId = VER_NDX_LOCAL;
+    else
+      versionId = isDefault ? ver.id : ver.id | VERSYM_HIDDEN;
     return;
   }
 
