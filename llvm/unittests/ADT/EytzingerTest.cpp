@@ -20,12 +20,14 @@ TEST(EytzingerTest, EmptyTable) {
   EXPECT_TRUE(Empty.empty());
   EXPECT_EQ(Empty.size(), 0u);
   EXPECT_EQ(Empty.data(), nullptr);
+  EXPECT_TRUE(Empty.isSorted());
   EXPECT_EQ(Empty.findIndex(42), std::nullopt);
 
   // Span initialized with nullptr and zero size should behave identically.
   EytzingerTableSpan<int> NullSpan(nullptr, 0);
   EXPECT_TRUE(NullSpan.empty());
   EXPECT_EQ(NullSpan.size(), 0u);
+  EXPECT_TRUE(NullSpan.isSorted());
   EXPECT_EQ(NullSpan.findIndex(42), std::nullopt);
 }
 
@@ -36,6 +38,7 @@ TEST(EytzingerTest, SingleElementTable) {
 
   EXPECT_FALSE(Span.empty());
   EXPECT_EQ(Span.size(), 1u);
+  EXPECT_TRUE(Span.isSorted());
   EXPECT_EQ(Span[0], 100);
 
   // Successful lookup for the single element.
@@ -59,6 +62,7 @@ TEST(EytzingerTest, BinaryTreeWithSevenElements) {
   EytzingerTableSpan<int> Span(Data, 7);
 
   EXPECT_EQ(Span.size(), 7u);
+  EXPECT_TRUE(Span.isSorted());
 
   // Verify successful lookups for every node in the tree.
   EXPECT_EQ(Span.findIndex(40), 0u);
@@ -93,6 +97,7 @@ TEST(EytzingerTest, BinaryTreeWithFiveElements) {
   EytzingerTableSpan<int> Span(Data, 5);
 
   EXPECT_EQ(Span.size(), 5u);
+  EXPECT_TRUE(Span.isSorted());
 
   // Verify lookups on existing elements.
   EXPECT_EQ(Span.findIndex(40), 0u);
@@ -119,6 +124,7 @@ TEST(EytzingerTest, EndianSpecificIntegerType) {
       support::ulittle64_t(300), support::ulittle64_t(500),
       support::ulittle64_t(700)};
   EytzingerTableSpan<support::ulittle64_t> Span(Data, 7);
+  EXPECT_TRUE(Span.isSorted());
 
   EXPECT_EQ(Span.findIndex(uint64_t(400)), 0u);
   EXPECT_EQ(Span.findIndex(uint64_t(200)), 1u);
@@ -129,6 +135,24 @@ TEST(EytzingerTest, EndianSpecificIntegerType) {
   EXPECT_EQ(Span.findIndex(uint64_t(700)), 6u);
 
   EXPECT_EQ(Span.findIndex(uint64_t(999)), std::nullopt);
+}
+
+TEST(EytzingerTest, IsSortedVerification) {
+  // Verify detection of local parent-child violations.
+  // Root (40), left child (60 > 40), right child (20 < 40).
+  const int InvalidChildOrder[] = {40, 60, 20};
+  EXPECT_FALSE(EytzingerTableSpan<int>(InvalidChildOrder, 3).isSorted());
+
+  // Verify detection of across-level ancestor bounds violations.
+  // Root (40), left (20), right (60). Left of 20 is 10, right of 20 is 50.
+  // Although 50 > 20 (local parent check passes), 50 > 40 violates the root bound.
+  const int AncestorViolation[] = {40, 20, 60, 10, 50, 55, 70};
+  EXPECT_FALSE(EytzingerTableSpan<int>(AncestorViolation, 7).isSorted());
+
+  // Verify that tables with duplicate values are flagged as unsorted because
+  // EytzingerTableSpan requires strictly ascending in-order keys.
+  const int Duplicates[] = {30, 30, 30};
+  EXPECT_FALSE(EytzingerTableSpan<int>(Duplicates, 3).isSorted());
 }
 
 } // namespace
