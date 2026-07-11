@@ -1839,10 +1839,11 @@ CompileUnit::getDirAndFilenameFromLineTable(
 
 std::optional<std::pair<StringRef, StringRef>>
 CompileUnit::getDirAndFilenameFromLineTable(uint64_t FileIdx) {
+  std::lock_guard<std::mutex> Guard(FileNamesMutex);
   FileNamesCache::iterator FileData = FileNames.find(FileIdx);
   if (FileData != FileNames.end())
-    return std::make_pair(StringRef(FileData->second.first),
-                          StringRef(FileData->second.second));
+    return std::make_pair(StringRef(FileData->second->first),
+                          StringRef(FileData->second->second));
 
   if (const DWARFDebugLine::LineTable *LineTable =
           getOrigUnit().getContext().getLineTableForUnit(&getOrigUnit())) {
@@ -1863,10 +1864,11 @@ CompileUnit::getDirAndFilenameFromLineTable(uint64_t FileIdx) {
             FileNames
                 .insert(std::make_pair(
                     FileIdx,
-                    std::make_pair(std::string(""), std::move(FileName))))
+                    std::make_unique<std::pair<std::string, std::string>>(
+                        std::string(""), std::move(FileName))))
                 .first;
-        return std::make_pair(StringRef(FileData->second.first),
-                              StringRef(FileData->second.second));
+        return std::make_pair(StringRef(FileData->second->first),
+                              StringRef(FileData->second->second));
       }
 
       SmallString<256> FilePath;
@@ -1912,12 +1914,13 @@ CompileUnit::getDirAndFilenameFromLineTable(uint64_t FileIdx) {
 
       FileNamesCache::iterator FileData =
           FileNames
-              .insert(
-                  std::make_pair(FileIdx, std::make_pair(std::string(FilePath),
-                                                         std::move(FileName))))
+              .insert(std::make_pair(
+                  FileIdx,
+                  std::make_unique<std::pair<std::string, std::string>>(
+                      std::string(FilePath), std::move(FileName))))
               .first;
-      return std::make_pair(StringRef(FileData->second.first),
-                            StringRef(FileData->second.second));
+      return std::make_pair(StringRef(FileData->second->first),
+                            StringRef(FileData->second->second));
     }
   }
 
