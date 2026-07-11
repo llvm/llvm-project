@@ -516,6 +516,20 @@ bool LLParser::validateEndOfIndex() {
                  "use of undefined type id summary '^" +
                      Twine(ForwardRefTypeIds.begin()->first) + "'");
 
+  // Verify that we have ValueInfo for all function definitions, which are
+  // assumed to be available by downstream consumers.
+  if (M) {
+    for (const Function &F : *M) {
+      if (F.isDeclaration())
+        continue;
+      GlobalValue::GUID GUID = F.getGUIDOrFallback();
+      ValueInfo VI = Index->getValueInfo(GUID);
+      if (!VI || VI.getSummaryList().empty())
+        return error(SMLoc(), "expected function definition " + F.getName() +
+                                  " to have an associated value info.");
+    }
+  }
+
   return false;
 }
 
