@@ -583,23 +583,23 @@ struct __adjacent_difference<__default_backend_tag, _ExecutionPolicy> {
   operator()(_Policy&& __policy,
              _ForwardIterator1 __first1,
              _ForwardIterator1 __last1,
-             _ForwardIterator2 __first2,
+             _ForwardIterator2 __result,
              _BinaryOperation&& __op) const noexcept {
     using _TransformBinary = __dispatch<__transform_binary, __current_configuration, _ExecutionPolicy>;
     if (__first1 == __last1)
-      return __first2; // edge case: empty input range, just return the output iterator
-    *__first2 = *__first1;
-    ++__first2;
-    _ForwardIterator1 __first_left = std::next(__first1);
-    if (__first_left == __last1)
-      return __first2; // edge case: not enough elements to perform adjacent difference, just return the output iterator
+      return __result; // edge case: empty input range, just return the output iterator
+    *__result = *__first1;
+    ++__result;
+    _ForwardIterator1 __first2 = std::next(__first1);
+    if (__first2 == __last1)
+      return __result; // edge case: not enough elements to perform adjacent difference, just return the output iterator
     // Process as a binary transform of two iterator ranges: [__first1 + 1, __last1) and [__first1, __last1 - 1)
     return _TransformBinary()(
         __policy,
-        std::move(__first_left),
+        std::move(__first2),
         std::move(__last1),
         std::move(__first1),
-        std::move(__first2),
+        std::move(__result),
         std::forward<_BinaryOperation>(__op));
   }
 };
