@@ -29,14 +29,7 @@ runtime_targets="${4}"
 runtime_targets_needs_reconfig="${5}"
 enable_cir="${6}"
 
-# TODO: temporary hack to cause premerge ci to only do check-unwind, to save me some round trip time.
-projects=""
-targets=""
-runtimes="libunwind"
-runtime_targets="check-unwind"
-runtime_targets_needs_reconfig=""
-
-lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests --succinct -D output_limit=1000000"
+lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests --succinct"
 
 runtime_cmake_args=()
 if [[ " ${runtime_targets} " == *" check-libclc "* ]]; then
