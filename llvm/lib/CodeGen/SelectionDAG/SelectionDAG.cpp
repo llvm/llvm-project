@@ -3363,7 +3363,23 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
   if (auto OptAPInt = Op->bitcastToAPInt()) {
     // We know all of the bits for a constant!
-    return KnownBits::makeConstant(*std::move(OptAPInt));
+    APInt V = *std::move(OptAPInt);
+
+    // Swap the low-order and high-order double of a ppc_fp128 when casting to
+    // i128, see #44482.
+    //
+    // A ppc_fp128 is two doubles, with the high-order double stored at the
+    // lower address. Reading that as an integer therefore puts the high-order
+    // double in the high 64 bits on big-endian targets and in the low 64 bits
+    // on little-endian targets.
+    //
+    // But APFloat::bitcastToAPInt is endianness-agnostic and always places the
+    // high-order double in the low 64 bits. Hence the two doubles must be
+    // flipped on big-endian targets.
+    if (getDataLayout().isBigEndian() && Op.getValueType() == MVT::ppcf128)
+      V = V.rotl(64);
+
+    return KnownBits::makeConstant(V);
   }
 
   if (Depth >= MaxRecursionDepth)
