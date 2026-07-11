@@ -128,6 +128,31 @@ TEST_F(AArch64SelectionDAGTest, computeKnownBits_EXTRACT_SUBVECTOR) {
   EXPECT_TRUE(Known.isZero());
 }
 
+TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_GET_ACTIVE_LANE_MASK) {
+  // GET_ACTIVE_LANE_MASK promoted/widened to a vector integer type wider
+  // than i1 (e.g. v8i8) should report that all bits of each lane are sign
+  // bits.
+  SDLoc Loc;
+  auto Int64VT = EVT::getIntegerVT(Context, 64);
+  auto MaskVT = MVT::v8i8;
+  auto Base = DAG->getConstant(0, Loc, Int64VT);
+  auto TripCount = DAG->getConstant(8, Loc, Int64VT);
+  auto Op =
+      DAG->getNode(ISD::GET_ACTIVE_LANE_MASK, Loc, MaskVT, Base, TripCount);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Op), 1u);
+}
+
+TEST_F(AArch64SelectionDAGTest, ComputeNumSignBitsSVE_GET_ACTIVE_LANE_MASK) {
+  SDLoc Loc;
+  auto Int64VT = EVT::getIntegerVT(Context, 64);
+  auto MaskVT = MVT::nxv8i16;
+  auto Base = DAG->getConstant(0, Loc, Int64VT);
+  auto TripCount = DAG->getConstant(8, Loc, Int64VT);
+  auto Op =
+      DAG->getNode(ISD::GET_ACTIVE_LANE_MASK, Loc, MaskVT, Base, TripCount);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Op), 1u);
+}
+
 TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_SIGN_EXTEND_VECTOR_INREG) {
   SDLoc Loc;
   auto Int8VT = EVT::getIntegerVT(Context, 8);
