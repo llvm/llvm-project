@@ -38,6 +38,8 @@ template <typename Tag> struct ID {
 template <typename T>
 llvm::ImmutableSet<T> join(llvm::ImmutableSet<T> A, llvm::ImmutableSet<T> B,
                            typename llvm::ImmutableSet<T>::Factory &F) {
+  if (A.getRootWithoutRetain() == B.getRootWithoutRetain())
+    return A;
   if (A.getHeight() < B.getHeight())
     std::swap(A, B);
   for (const T &E : B)
@@ -70,6 +72,8 @@ llvm::ImmutableMap<K, V> join(const llvm::ImmutableMap<K, V> &A,
                               const llvm::ImmutableMap<K, V> &B,
                               typename llvm::ImmutableMap<K, V>::Factory &F,
                               Joiner JoinValues, JoinKind Kind) {
+  if (A.getRootWithoutRetain() == B.getRootWithoutRetain())
+    return A;
   if (A.getHeight() < B.getHeight())
     return join(B, A, F, JoinValues, Kind);
 
