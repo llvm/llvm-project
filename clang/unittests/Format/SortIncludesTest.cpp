@@ -1537,6 +1537,164 @@ TEST_F(SortIncludesTest, IgnoreExtension) {
                     "input.h"));
 }
 
+TEST_F(SortIncludesTest, FilesBeforeFolders) {
+  // When false (default), sorting is purely alphabetical: "bar/" starts with
+  // 'b', which sorts before 'f' (foo/) and 'x'/'y'/'z', so subdirectories
+  // interleave with files based on the directory name alone.
+  //
+  //   false (default):           true:
+  //   #include "bar/alpha/e.h"   #include "x.h"
+  //   #include "bar/alpha/f.h"   #include "y.h"
+  //   #include "bar/beta/d.h"    #include "z.h"
+  //   #include "bar/g.h"         #include "bar/g.h"
+  //   #include "bar/h.h"         #include "bar/h.h"
+  //   #include "bar/i.h"         #include "bar/i.h"
+  //   #include "foo/a.h"         #include "bar/alpha/e.h"
+  //   #include "x.h"             #include "bar/alpha/f.h"
+  //   #include "y.h"             #include "bar/beta/d.h"
+  //   #include "z.h"             #include "foo/a.h"
+  FmtStyle.SortIncludes.FilesBeforeFolders = false;
+  verifyFormat("#include \"bar/alpha/e.h\"\n"
+               "#include \"bar/alpha/f.h\"\n"
+               "#include \"bar/beta/d.h\"\n"
+               "#include \"bar/g.h\"\n"
+               "#include \"bar/h.h\"\n"
+               "#include \"bar/i.h\"\n"
+               "#include \"foo/a.h\"\n"
+               "#include \"x.h\"\n"
+               "#include \"y.h\"\n"
+               "#include \"z.h\"",
+               sort("#include \"z.h\"\n"
+                    "#include \"bar/alpha/f.h\"\n"
+                    "#include \"foo/a.h\"\n"
+                    "#include \"bar/g.h\"\n"
+                    "#include \"x.h\"\n"
+                    "#include \"bar/beta/d.h\"\n"
+                    "#include \"bar/i.h\"\n"
+                    "#include \"y.h\"\n"
+                    "#include \"bar/h.h\"\n"
+                    "#include \"bar/alpha/e.h\"",
+                    "input.h"));
+
+  // When true, all files at the current directory level sort before any
+  // subdirectory. Within a level, files and folders are each sorted
+  // alphabetically. This applies recursively: inside "bar/", the direct
+  // files (g.h, h.h, i.h) sort before the subdirectories (alpha/, beta/).
+  FmtStyle.SortIncludes.FilesBeforeFolders = true;
+  verifyFormat("#include \"x.h\"\n"
+               "#include \"y.h\"\n"
+               "#include \"z.h\"\n"
+               "#include \"bar/g.h\"\n"
+               "#include \"bar/h.h\"\n"
+               "#include \"bar/i.h\"\n"
+               "#include \"bar/alpha/e.h\"\n"
+               "#include \"bar/alpha/f.h\"\n"
+               "#include \"bar/beta/d.h\"\n"
+               "#include \"foo/a.h\"",
+               sort("#include \"z.h\"\n"
+                    "#include \"bar/alpha/f.h\"\n"
+                    "#include \"foo/a.h\"\n"
+                    "#include \"bar/g.h\"\n"
+                    "#include \"x.h\"\n"
+                    "#include \"bar/beta/d.h\"\n"
+                    "#include \"bar/i.h\"\n"
+                    "#include \"y.h\"\n"
+                    "#include \"bar/h.h\"\n"
+                    "#include \"bar/alpha/e.h\"",
+                    "input.h"));
+
+  // Recursion: files in a subdir sort before nested subdirs.
+  verifyFormat("#include \"dir/a.h\"\n"
+               "#include \"dir/b.h\"\n"
+               "#include \"dir/sub/a.h\"\n"
+               "#include \"dir/sub/b.h\"",
+               sort("#include \"dir/sub/b.h\"\n"
+                    "#include \"dir/a.h\"\n"
+                    "#include \"dir/sub/a.h\"\n"
+                    "#include \"dir/b.h\"",
+                    "input.h"));
+
+  // FilesBeforeFolders combined with IgnoreCase.
+  FmtStyle.SortIncludes.IgnoreCase = true;
+  verifyFormat("#include \"A.h\"\n"
+               "#include \"b.h\"\n"
+               "#include \"Bar/a.h\"\n"
+               "#include \"foo/B.h\"",
+               sort("#include \"foo/B.h\"\n"
+                    "#include \"Bar/a.h\"\n"
+                    "#include \"b.h\"\n"
+                    "#include \"A.h\"",
+                    "input.h"));
+  // Case-sensitive comparison is the tiebreaker when directory components are
+  // case-insensitively equal: "Bar" (0x42) < "bar" (0x62).
+  verifyFormat("#include \"Bar/a.h\"\n"
+               "#include \"bar/a.h\"",
+               sort("#include \"bar/a.h\"\n"
+                    "#include \"Bar/a.h\"",
+                    "input.h"));
+  FmtStyle.SortIncludes.IgnoreCase = false;
+
+  // FilesBeforeFolders combined with IgnoreExtension.
+  FmtStyle.SortIncludes.IgnoreExtension = true;
+  verifyFormat("#include \"a.h\"\n"
+               "#include \"a.inc\"\n"
+               "#include \"a-util.h\"\n"
+               "#include \"bar/a.h\"\n"
+               "#include \"bar/b.h\"",
+               sort("#include \"bar/b.h\"\n"
+                    "#include \"a-util.h\"\n"
+                    "#include \"bar/a.h\"\n"
+                    "#include \"a.inc\"\n"
+                    "#include \"a.h\"",
+                    "input.h"));
+  FmtStyle.SortIncludes.IgnoreExtension = false;
+
+  // Mixing "" and <> includes in the same block: FilesBeforeFolders applies
+  // equally to both quote and angle-bracket includes, but the delimiter itself
+  // participates in the plain alphabetical comparison when the flag is false:
+  // '"' (0x22) < '<' (0x3C), so quote-delimited includes sort before
+  // angle-bracket ones regardless of path content.
+  //
+  // This example uses a quote include that is a folder path ("beta/x.hpp") and
+  // an angle-bracket include that is a root-level file (<alpha.hpp>).
+  //
+  //   false (alphabetical, delimiter wins):
+  //     "beta/x.hpp" sorts first because '"' < '<'
+  //   true (files-before-folders, structural comparison):
+  //     <alpha.hpp> sorts first because it is a root-level file while
+  //     "beta/x.hpp" lives inside a subdirectory
+  FmtStyle.IncludeStyle.IncludeCategories.clear();
+  FmtStyle.SortIncludes.FilesBeforeFolders = false;
+  verifyFormat("#include \"beta/x.hpp\"\n"
+               "#include <alpha.hpp>",
+               sort("#include <alpha.hpp>\n"
+                    "#include \"beta/x.hpp\"",
+                    "input.h"));
+  FmtStyle.SortIncludes.FilesBeforeFolders = true;
+  verifyFormat("#include <alpha.hpp>\n"
+               "#include \"beta/x.hpp\"",
+               sort("#include \"beta/x.hpp\"\n"
+                    "#include <alpha.hpp>",
+                    "input.h"));
+}
+
+TEST_F(SortIncludesTest, FilesBeforeFoldersWithPriority) {
+  // FilesBeforeFolders is a secondary sort key: Priority groups stay separate
+  // and FilesBeforeFolders only reorders includes within the same group.
+  Style.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
+  Style.IncludeCategories = {{"^<", 1, 0, false}, {"^\"", 2, 0, false}};
+  FmtStyle.SortIncludes.FilesBeforeFolders = true;
+  verifyFormat("#include <stdio.h>\n"
+               "#include <sys/stat.h>\n"
+               "\n"
+               "#include \"utils.h\"\n"
+               "#include \"foo/bar.h\"",
+               sort("#include <sys/stat.h>\n"
+                    "#include \"foo/bar.h\"\n"
+                    "#include <stdio.h>\n"
+                    "#include \"utils.h\""));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang
