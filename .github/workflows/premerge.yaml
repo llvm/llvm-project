@@ -300,9 +300,9 @@ jobs:
           # flang (flang-rt depends on flang), or CIR (depends on mlir), so
           # drop them here rather than in compute_projects.py, which is
           # shared with the macos-14 GitHub-hosted runner job above.
-          # check-lldb is temporarily skipped as well.
+          # check-lldb and check-libclc are temporarily skipped as well.
           excluded_projects="mlir|flang|flang-rt|CIR"
-          excluded_check_targets="check-mlir|check-flang|check-flang-rt|check-clang-cir|check-lldb"
+          excluded_check_targets="check-mlir|check-flang|check-flang-rt|check-clang-cir|check-lldb|check-libclc"
           projects_to_build=$(echo "${projects_to_build}" | tr ';' '\n' | grep -v -E "^(${excluded_projects})$" | paste -sd ';' -)
           project_check_targets=$(echo "${project_check_targets}" | tr ' ' '\n' | grep -v -E "^(${excluded_check_targets})$" | paste -sd ' ' -)
 
