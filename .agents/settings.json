@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /data/nvme0/can/Projects/llvm-project log --oneline -1)",
+      "Bash(git-clang-format --diff origin/main HEAD --extensions c,h,cpp -- clang/test/CodeGen/btf-module-flag.c clang/test/Driver/gbtf.c llvm/lib/Target/BPF/BPFBTFDebug.cpp llvm/lib/Target/BPF/BPFBTFDebug.h clang/lib/CodeGen/CodeGenModule.cpp clang/lib/Driver/ToolChains/Clang.cpp llvm/include/llvm/IR/Module.h llvm/lib/CodeGen/AsmPrinter/AsmPrinter.cpp llvm/lib/IR/Module.cpp llvm/lib/Target/BPF/BPFAsmPrinter.cpp llvm/lib/Target/BPF/BPFAsmPrinter.h llvm/include/llvm/CodeGen/BTFDebug.h llvm/lib/CodeGen/AsmPrinter/BTFDebug.cpp --diff_from_common_commit)"
+    ]
+  }
+}
