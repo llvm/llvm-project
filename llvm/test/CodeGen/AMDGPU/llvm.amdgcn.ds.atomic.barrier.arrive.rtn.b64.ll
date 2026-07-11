@@ -66,6 +66,8 @@ entry:
 define amdgpu_ps void @test_ds_atomic_barrier_arrive_rtn_b64_ss(ptr addrspace(3) inreg %bar, i64 inreg %data, ptr inreg %out) {
 ; SDAG-LABEL: test_ds_atomic_barrier_arrive_rtn_b64_ss:
 ; SDAG:       ; %bb.0: ; %entry
+; SDAG-NEXT:    global_wb
+; SDAG-NEXT:    v_nop
 ; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s2
 ; SDAG-NEXT:    v_mov_b32_e32 v2, s0
@@ -79,6 +81,8 @@ define amdgpu_ps void @test_ds_atomic_barrier_arrive_rtn_b64_ss(ptr addrspace(3)
 ;
 ; GISEL-LABEL: test_ds_atomic_barrier_arrive_rtn_b64_ss:
 ; GISEL:       ; %bb.0: ; %entry
+; GISEL-NEXT:    global_wb
+; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    s_mov_b32 s6, s1
 ; GISEL-NEXT:    s_mov_b32 s7, s2

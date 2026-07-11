@@ -27,6 +27,7 @@ def SDT_LoongArchV2RUimm
     : SDTypeProfile<1, 3,
                     [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
                      SDTCisVT<3, GRLenVT>]>;
+def SDT_LoongArchVEW : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 def SDT_LoongArchVHW : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisSameAs<1, 2>]>;
 def SDT_LoongArchVSW : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisVT<2, GRLenVT>]>;
 def SDT_LoongArchVreplgr2vr : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<0>, SDTCisInt<1>]>;
@@ -102,6 +103,10 @@ def loongarch_vhaddw_u : SDNode<"LoongArchISD::VHADDW_U", SDT_LoongArchVHW>;
 // Vector Horizontal Subtration with Widening
 def loongarch_vhsubw : SDNode<"LoongArchISD::VHSUBW", SDT_LoongArchVHW>;
 def loongarch_vhsubw_u : SDNode<"LoongArchISD::VHSUBW_U", SDT_LoongArchVHW>;
+
+// Vector Extend with Widening
+def loongarch_vexth : SDNode<"LoongArchISD::VEXTH", SDT_LoongArchVEW>;
+def loongarch_vexth_u : SDNode<"LoongArchISD::VEXTH_U", SDT_LoongArchVEW>;
 
 // Scalar load broadcast to vector
 def loongarch_vldrepl
@@ -1386,6 +1391,24 @@ multiclass PatVrF<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_D") LSX128:$vj)>;
 }
 
+multiclass PatVrW<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(v8i16 (OpNode(v16i8 LSX128:$vj))),
+            (!cast<LAInst>(Inst#"_H_B") LSX128:$vj)>;
+  def : Pat<(v4i32 (OpNode(v8i16 LSX128:$vj))),
+            (!cast<LAInst>(Inst#"_W_H") LSX128:$vj)>;
+  def : Pat<(v2i64 (OpNode(v4i32 LSX128:$vj))),
+            (!cast<LAInst>(Inst#"_D_W") LSX128:$vj)>;
+}
+
+multiclass PatVrWU<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(v8i16 (OpNode(v16i8 LSX128:$vj))),
+            (!cast<LAInst>(Inst#"_HU_BU") LSX128:$vj)>;
+  def : Pat<(v4i32 (OpNode(v8i16 LSX128:$vj))),
+            (!cast<LAInst>(Inst#"_WU_HU") LSX128:$vj)>;
+  def : Pat<(v2i64 (OpNode(v4i32 LSX128:$vj))),
+            (!cast<LAInst>(Inst#"_DU_WU") LSX128:$vj)>;
+}
+
 multiclass PatVrVr<SDPatternOperator OpNode, string Inst> {
   def : Pat<(OpNode (v16i8 LSX128:$vj), (v16i8 LSX128:$vk)),
             (!cast<LAInst>(Inst#"_B") LSX128:$vj, LSX128:$vk)>;
@@ -1786,6 +1809,12 @@ defm : PatVrUimmW<loongarch_vsllwil, "VSLLWIL">;
 
 // VSLLWIL_{HU_BU/WU_HU/DU_WU}
 defm : PatVrUimmWU<loongarch_vsllwil_u, "VSLLWIL">;
+
+// VEXTH_{H_B/W_H/D_W}
+defm : PatVrW<loongarch_vexth, "VEXTH">;
+
+// VEXTH_{HU_BU/WU_HU/DU_WU}
+defm : PatVrWU<loongarch_vexth_u, "VEXTH">;
 
 // VCLO_{B/H/W/D}
 def : Pat<(ctlz (vnot v16i8:$vj)), (VCLO_B v16i8:$vj)>;

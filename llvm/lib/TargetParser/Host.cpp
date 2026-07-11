@@ -292,6 +292,8 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
         .Case("0x004", "carmel")
         .Case("0x10", "olympus")
         .Case("0x010", "olympus")
+        .Case("0x11", "rigel")
+        .Case("0x011", "rigel")
         .Default("generic");
   }
 
@@ -567,6 +569,9 @@ StringRef sys::detail::getHostCPUNameForRISCV(StringRef ProcCpuinfoContent) {
       .Case("eswin,eic770x", "sifive-p550")
       .Case("sifive,u74-mc", "sifive-u74")
       .Case("sifive,bullet0", "sifive-u74")
+      .Case("spacemit,x60", "spacemit-x60")
+      .Case("spacemit,x100", "spacemit-x100")
+      .Case("spacemit,a100", "spacemit-a100")
       .Default("");
 }
 

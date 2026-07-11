@@ -1077,13 +1077,8 @@ set(LLVM_PROFDATA_FILE "" CACHE FILEPATH
 set(LLVM_SPROFDATA_FILE "" CACHE FILEPATH
   "Sampling profiling data file to use when compiling in order to improve runtime performance.")
 
-if(LLVM_INCLUDE_TESTS OR LLVM_ENABLE_SPHINX)
-  # All LLVM Python files should be compatible down to this minimum version.
-  set(LLVM_MINIMUM_PYTHON_VERSION 3.8)
-else()
-  # FIXME: it is unknown if this is the actual minimum bound
-  set(LLVM_MINIMUM_PYTHON_VERSION 3.0)
-endif()
+# All LLVM Python files should be compatible down to this minimum version.
+set(LLVM_MINIMUM_PYTHON_VERSION 3.8)
 
 # Find python before including config-ix, since it needs to be able to search
 # for python modules.

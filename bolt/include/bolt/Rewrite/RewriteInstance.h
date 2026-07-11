@@ -136,6 +136,11 @@ private:
   /// Read relocations from a given RELR section.
   void readDynamicRelrRelocations(BinarySection &Section);
 
+  /// Process relative dynamic relocations targeting code. This happens in code
+  /// using indirect goto.
+  void handleRelativeDynamicRelocation(uint64_t RelOffset,
+                                       uint64_t ReferencedAddress);
+
   /// Print relocation information.
   void printRelocationInfo(const RelocationRef &Rel, StringRef SymbolName,
                            uint64_t SymbolAddress, uint64_t Addend,

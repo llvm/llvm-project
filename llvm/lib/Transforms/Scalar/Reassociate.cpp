@@ -203,33 +203,59 @@ void ReassociatePass::BuildRankMap(Function &F,
 }
 
 unsigned ReassociatePass::getRank(Value *V) {
-  Instruction *I = dyn_cast<Instruction>(V);
-  if (!I) {
-    if (isa<Argument>(V)) return ValueRankMap[V];   // Function argument.
-    return 0;  // Otherwise it's a global or constant, rank 0.
+  // Return 1+MAX(rank(LHS), rank(RHS)) for expressions so we can reassociate
+  // expressions for code motion. Use an explicit worklist rather than native
+  // recursion so long acyclic use-def chains do not overflow the stack.
+  struct RankWorkItem {
+    Value *V;
+    unsigned OpNo;
+    unsigned Rank;
+  };
+
+  // Each item is one suspended recursive getRank() call.
+  // Completed ranks are folded back into the parent.
+  SmallVector<RankWorkItem, 16> Worklist;
+  Worklist.push_back(RankWorkItem{V, 0, 0});
+
+  while (true) {
+    RankWorkItem &Item = Worklist.back();
+    Instruction *I = dyn_cast<Instruction>(Item.V);
+    unsigned Rank = 0;
+    if (!I) {
+      // Function argument, global or constant
+      Rank = isa<Argument>(Item.V) ? ValueRankMap[Item.V] : 0;
+    } else if (ValueRankMap[I]) {
+      // Instruction that is not movable.
+      Rank = ValueRankMap[I];
+    } else if (Item.OpNo == I->getNumOperands() ||
+               Item.Rank == RankMap[I->getParent()]) {
+      // All operands were visited or the max block rank was reached.
+      Rank = Item.Rank;
+      // If this is a 'not' or 'neg' instruction, do not count it for rank.
+      // This assures us that X and ~X will have the same rank.
+      if (!match(I, m_Not(m_Value())) && !match(I, m_Neg(m_Value())) &&
+          !match(I, m_FNeg(m_Value())))
+        ++Rank;
+
+      LLVM_DEBUG(dbgs() << "Calculated Rank[" << I->getName() << "] = " << Rank
+                        << "\n");
+
+      ValueRankMap[I] = Rank;
+    } else {
+      Worklist.push_back(RankWorkItem{I->getOperand(Item.OpNo), 0, 0});
+      continue;
+    }
+
+    // Once the current use-def node has a known rank, carry that rank back to
+    // the parent expression and advance past the operand that led here.
+    Worklist.pop_back();
+    if (Worklist.empty())
+      return Rank;
+
+    RankWorkItem &Parent = Worklist.back();
+    Parent.Rank = std::max(Parent.Rank, Rank);
+    ++Parent.OpNo;
   }
-
-  if (unsigned Rank = ValueRankMap[I])
-    return Rank;    // Rank already known?
-
-  // If this is an expression, return the 1+MAX(rank(LHS), rank(RHS)) so that
-  // we can reassociate expressions for code motion!  Since we do not recurse
-  // for PHI nodes, we cannot have infinite recursion here, because there
-  // cannot be loops in the value graph that do not go through PHI nodes.
-  unsigned Rank = 0, MaxRank = RankMap[I->getParent()];
-  for (unsigned i = 0, e = I->getNumOperands(); i != e && Rank != MaxRank; ++i)
-    Rank = std::max(Rank, getRank(I->getOperand(i)));
-
-  // If this is a 'not' or 'neg' instruction, do not count it for rank. This
-  // assures us that X and ~X will have the same rank.
-  if (!match(I, m_Not(m_Value())) && !match(I, m_Neg(m_Value())) &&
-      !match(I, m_FNeg(m_Value())))
-    ++Rank;
-
-  LLVM_DEBUG(dbgs() << "Calculated Rank[" << V->getName() << "] = " << Rank
-                    << "\n");
-
-  return ValueRankMap[I] = Rank;
 }
 
 // Canonicalize constants to RHS.  Otherwise, sort the operands by rank.
