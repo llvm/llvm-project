@@ -6364,13 +6364,6 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
     // This places each source element in the high half of the widened element.
     // Lower it to PZIP with a zero first operand and let tablegen select
     // pwcvth.* via zip*p/wzip*p.
-    auto IsBuildVectorAllZeros = [](SDValue V) {
-      if (V.getOpcode() == ISD::BUILD_VECTOR)
-        return ISD::isBuildVectorAllZeros(V.getNode());
-      return V.getOpcode() == ISD::SPLAT_VECTOR &&
-             isNullConstant(V.getOperand(0));
-    };
-
     auto IsWidenHighMask = [&](unsigned SrcNumElts) {
       for (unsigned I = 0; I != SrcNumElts; ++I)
         if (Mask[2 * I] != (int)I || Mask[2 * I + 1] != (int)(NumElts + I))
@@ -6382,8 +6375,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
     if (V2.getOpcode() == ISD::CONCAT_VECTORS && V2.getOperand(1).isUndef())
       Src = V2.getOperand(0);
     MVT SrcVT = Src.getSimpleValueType();
-    if (Subtarget.isRV32() && IsBuildVectorAllZeros(V1) &&
-        SrcVT.isFixedLengthVector() &&
+    if (Subtarget.isRV32() &&
+        ISD::isConstantSplatVectorAllZeros(V1.getNode()) &&
         SrcVT.getVectorNumElements() * 2 == NumElts &&
         V2.getSimpleValueType().getVectorNumElements() == NumElts) {
       unsigned SrcNumElts = SrcVT.getVectorNumElements();
@@ -6396,7 +6389,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
       }
     }
 
-    if (IsBuildVectorAllZeros(V1) && V2.getSimpleValueType() == VT &&
+    if (ISD::isConstantSplatVectorAllZeros(V1.getNode()) &&
+        V2.getSimpleValueType() == VT &&
         (VT == MVT::v8i8 || VT == MVT::v4i16)) {
       unsigned SrcNumElts = NumElts / 2;
       if (IsWidenHighMask(SrcNumElts)) {
