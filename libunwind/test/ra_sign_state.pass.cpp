@@ -113,7 +113,11 @@ __attribute__((noinline)) static uint64_t check_vanilla() {
 
 __attribute__((naked, target("pauth"))) static uint64_t check_negate() {
   // clang-format off
-  asm(".cfi_negate_ra_state\n"
+  asm(
+#if !defined(__APPLE__)
+      ".cfi_b_key_frame\n"
+#endif
+      ".cfi_negate_ra_state\n"
       "pacibsp\n"
 
       "stp x29, x30, [sp, #-16]!\n"
