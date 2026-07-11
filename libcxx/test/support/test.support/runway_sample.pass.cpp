@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++11
+// REQUIRES: std-at-least-c++17
 
 // "support/runway_sample.h"
 
@@ -18,7 +18,7 @@
 #include "test_macros.h"
 #include "runway_sample.h"
 
-TEST_CONSTEXPR_CXX14 bool test() {
+constexpr bool test() {
   {
     bool fail = false;
     runway_sample(0, [&](size_t /*i*/) { fail = true; });
@@ -94,8 +94,6 @@ TEST_CONSTEXPR_CXX14 bool test() {
 
 int main() {
   assert(test());
-#if TEST_STD_VER >= 14
   static_assert(test());
-#endif
   return 0;
 }
