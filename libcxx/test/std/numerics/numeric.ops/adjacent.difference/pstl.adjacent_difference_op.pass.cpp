@@ -38,6 +38,10 @@ EXECUTION_POLICY_SFINAE_TEST(adjacent_difference);
 static_assert(sfinae_test_adjacent_difference<int, int*, int*, int*, int (*)(int, int)>);
 static_assert(!sfinae_test_adjacent_difference<std::execution::parallel_policy, int*, int*, int*, int (*)(int, int)>);
 
+// Types X and Y are provided to test adjacent_difference() against custom types.
+// X is a source type that supports subtraction.
+// Y is a destination type that can be assigned from X and compared for equality.
+
 class X {
   int i_;
   X& operator=(const X&);
