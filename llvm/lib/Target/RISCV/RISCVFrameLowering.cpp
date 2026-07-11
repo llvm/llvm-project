@@ -1542,7 +1542,7 @@ void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
             ->getFunction()
             .getFnAttribute("zero-call-used-regs")
             .getValueAsString() == "used")
-      FinalRegsToZero.set(TemporaryReg);
+      FinalRegsToZero.set(TemporaryReg.id());
 
     BuildMI(MBB, MBBI, DL, TII.get(RISCV::VSETVLI), TemporaryReg)
         .addReg(RISCV::X0)
