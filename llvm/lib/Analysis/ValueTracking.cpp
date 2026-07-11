@@ -5712,13 +5712,26 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::convert_from_arbitrary_fp: {
       auto *MD = cast<MetadataAsValue>(II->getArgOperand(1))->getMetadata();
       StringRef FormatStr = cast<MDString>(MD)->getString();
+
       const fltSemantics SrcSemantics =
-          *(APFloat::getArbitraryFPSemantics(FormatStr));
+          *APFloat::getArbitraryFPSemantics(FormatStr);
+      const fltSemantics DstSemantics =
+          II->getType()->getScalarType()->getFltSemantics();
 
       if (!APFloat::semanticsHasNaN(SrcSemantics))
         Known.knownNot(fcNan);
-      if (!APFloat::semanticsHasInf(SrcSemantics))
+      if (!APFloat::semanticsHasInf(SrcSemantics) &&
+          APFloat::isRepresentableBy(SrcSemantics, DstSemantics))
         Known.knownNot(fcInf);
+
+      if (!APFloat::semanticsHasZero(SrcSemantics)) {
+        Known.knownNot(fcZero);
+      } else {
+        KnownBits IntKnown =
+            computeKnownBits(Op->getOperand(0), DemandedElts, Q, Depth + 1);
+        if (IntKnown.isNonZero())
+          Known.knownNot(fcPosZero);
+      }
 
       break;
     }
