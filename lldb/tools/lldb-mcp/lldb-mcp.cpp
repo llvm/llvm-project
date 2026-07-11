@@ -6,17 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Multiplexer.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Host/Socket.h"
-#include "lldb/Initialization/SystemInitializerCommon.h"
-#include "lldb/Initialization/SystemLifetimeManager.h"
+#include "lldb/Protocol/MCP/Client.h"
 #include "lldb/Protocol/MCP/Server.h"
+#include "lldb/Protocol/MCP/Transport.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UriParser.h"
@@ -25,7 +27,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/WithColor.h"
 #include <chrono>
@@ -57,8 +58,6 @@ constexpr StringLiteral kDriverName = "lldb.exe";
 #else
 constexpr StringLiteral kDriverName = "lldb";
 #endif
-
-constexpr size_t kForwardIOBufferSize = 1024;
 
 inline void exitWithError(llvm::Error Err, StringRef Prefix = "") {
   handleAllErrors(std::move(Err), [&](ErrorInfoBase &Info) {
@@ -129,37 +128,21 @@ Expected<ServerInfo> loadOrStart(
   return createStringError("timed out waiting for MCP server to start");
 }
 
-void forwardIO(MainLoopBase &loop, IOObjectSP &from, IOObjectSP &to) {
-  char buf[kForwardIOBufferSize];
-  size_t num_bytes = sizeof(buf);
-
-  if (llvm::Error err = from->Read(buf, num_bytes).takeError())
-    exitWithError(std::move(err));
-
-  // EOF reached.
-  if (num_bytes == 0)
-    return loop.RequestTermination();
-
-  if (llvm::Error err = to->Write(buf, num_bytes).takeError())
-    exitWithError(std::move(err));
-}
-
-llvm::Error connectAndForwardIO(lldb_private::MainLoop &loop, ServerInfo &info,
-                                IOObjectSP &input_sp, IOObjectSP &output_sp) {
+/// Connects to the MCP server described by \p info and returns the connected
+/// socket.
+Expected<IOObjectSP> connectToServer(const ServerInfo &info) {
   auto uri = lldb_private::URI::Parse(info.connection_uri);
   if (!uri)
     return createStringError("invalid connection_uri");
 
   std::optional<lldb_private::Socket::ProtocolModePair> protocol_and_mode =
       lldb_private::Socket::GetProtocolAndMode(uri->scheme);
-
   if (!protocol_and_mode)
     return createStringError("unknown protocol scheme");
 
   lldb_private::Status status;
   std::unique_ptr<lldb_private::Socket> sock =
       lldb_private::Socket::Create(protocol_and_mode->first, status);
-
   if (status.Fail())
     return status.takeError();
 
@@ -171,23 +154,16 @@ llvm::Error connectAndForwardIO(lldb_private::MainLoop &loop, ServerInfo &info,
   if (status.Fail())
     return status.takeError();
 
-  IOObjectSP sock_sp = std::move(sock);
-  auto input_handle = loop.RegisterReadObject(
-      input_sp, std::bind(forwardIO, std::placeholders::_1, input_sp, sock_sp),
-      status);
-  if (status.Fail())
-    return status.takeError();
-
-  auto socket_handle = loop.RegisterReadObject(
-      sock_sp, std::bind(forwardIO, std::placeholders::_1, sock_sp, output_sp),
-      status);
-  if (status.Fail())
-    return status.takeError();
-
-  return loop.Run().takeError();
+  return IOObjectSP(std::move(sock));
 }
 
-llvm::ManagedStatic<lldb_private::SystemLifetimeManager> g_debugger_lifetime;
+/// Returns a log callback that traces to stderr when LLDB_MCP_LOG is set in the
+/// environment, since stdout is reserved for the MCP protocol.
+lldb_protocol::mcp::LogCallback makeLogCallback() {
+  if (!std::getenv("LLDB_MCP_LOG"))
+    return {};
+  return [](StringRef message) { errs() << message << '\n'; };
+}
 
 } // namespace
 
@@ -213,11 +189,16 @@ int main(int argc, char *argv[]) {
   assert(result);
 #endif
 
-  if (llvm::Error err = g_debugger_lifetime->Initialize(
-          std::make_unique<lldb_private::SystemInitializerCommon>()))
-    exitWithError(std::move(err));
+  lldb_private::FileSystem::Initialize();
+  lldb_private::HostInfo::Initialize();
+  if (llvm::Error error = lldb_private::Socket::Initialize())
+    exitWithError(std::move(error));
 
-  llvm::scope_exit cleanup([] { g_debugger_lifetime->Terminate(); });
+  llvm::scope_exit cleanup([] {
+    lldb_private::Socket::Terminate();
+    lldb_private::HostInfo::Terminate();
+    lldb_private::FileSystem::Terminate();
+  });
 
   IOObjectSP input_sp = std::make_shared<NativeFile>(
       fileno(stdin), File::eOpenOptionReadOnly, NativeFile::Unowned);
@@ -235,8 +216,29 @@ int main(int argc, char *argv[]) {
         [](MainLoopBase &loop) { loop.RequestTermination(); });
   });
 
-  if (llvm::Error error =
-          connectAndForwardIO(loop, *server_info, input_sp, output_sp))
+  // Connect to the backend LLDB MCP server and drive it as an MCP client.
+  Expected<IOObjectSP> backend_io = connectToServer(*server_info);
+  if (!backend_io)
+    exitWithError(backend_io.takeError());
+
+  auto backend_transport = std::make_unique<lldb_protocol::mcp::Transport>(
+      loop, *backend_io, *backend_io, makeLogCallback());
+  auto backend = std::make_unique<lldb_protocol::mcp::Client>(
+      std::move(backend_transport), makeLogCallback());
+  if (llvm::Error error = backend->Run())
+    exitWithError(std::move(error));
+
+  // Present a unified MCP server to the client over stdio.
+  auto client_transport = std::make_unique<lldb_protocol::mcp::Transport>(
+      loop, input_sp, output_sp, makeLogCallback());
+  lldb_mcp::Multiplexer multiplexer(std::move(client_transport),
+                                    makeLogCallback());
+  multiplexer.AddBackend(std::move(backend));
+  multiplexer.SetDisconnectHandler([]() { loop.RequestTermination(); });
+  if (llvm::Error error = multiplexer.Run())
+    exitWithError(std::move(error));
+
+  if (llvm::Error error = loop.Run().takeError())
     exitWithError(std::move(error));
 
   return EXIT_SUCCESS;

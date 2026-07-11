@@ -121,6 +121,11 @@
 // BITALG: "-target-feature" "+avx512bitalg"
 // NO-BITALG: "-target-feature" "-avx512bitalg"
 
+// RUN: %clang --target=i386 -march=i386 -mavx512bmm %s -### 2>&1 | FileCheck -check-prefix=BMM %s
+// RUN: %clang --target=i386 -march=i386 -mno-avx512bmm %s -### 2>&1 | FileCheck -check-prefix=NO-BMM %s
+// BMM: "-target-feature" "+avx512bmm"
+// NO-BMM: "-target-feature" "-avx512bmm"
+
 // RUN: %clang --target=i386 -march=i386 -mavx512vnni %s -### 2>&1 | FileCheck -check-prefix=VNNI %s
 // RUN: %clang --target=i386 -march=i386 -mno-avx512vnni %s -### 2>&1 | FileCheck -check-prefix=NO-VNNI %s
 // VNNI: "-target-feature" "+avx512vnni"
@@ -310,13 +315,6 @@
 // RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AMX-AVX512 %s
 // AMX-AVX512: "-target-feature" "+amx-avx512"
 // NO-AMX-AVX512: "-target-feature" "-amx-avx512"
-
-// RUN: %clang --target=x86_64-unknown-linux-gnu -mamx-tf32 %s \
-// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=AMX-TF32 %s
-// RUN: %clang --target=x86_64-unknown-linux-gnu -mno-amx-tf32 %s \
-// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AMX-TF32 %s
-// AMX-TF32: "-target-feature" "+amx-tf32"
-// NO-AMX-TF32: "-target-feature" "-amx-tf32"
 
 // RUN: %clang --target=i386 -march=i386 -mhreset %s -### 2>&1 | FileCheck -check-prefix=HRESET %s
 // RUN: %clang --target=i386 -march=i386 -mno-hreset %s -### 2>&1 | FileCheck -check-prefix=NO-HRESET %s

@@ -21,6 +21,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/Support/MathExtras.h"
 
 #define DEBUG_TYPE "spirv-prelegalizer"
 
@@ -257,7 +258,9 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       Register Source = MI.getOperand(2).getReg();
       Type *ElemTy = getMDOperandAsType(MI.getOperand(3).getMetadata(), 0);
       auto SC =
-          isa<FunctionType>(ElemTy)
+          isa<FunctionType>(ElemTy) &&
+                  ST->canUseExtension(
+                      SPIRV::Extension::SPV_INTEL_function_pointers)
               ? SPIRV::StorageClass::CodeSectionINTEL
               : addressSpaceToStorageClass(MI.getOperand(4).getImm(), *ST);
       SPIRVTypeInst AssignedPtrType =
@@ -391,7 +394,7 @@ static SPIRVTypeInst propagateSPIRVType(MachineInstr *MI,
 static unsigned widenBitWidthToNextPow2(unsigned BitWidth) {
   if (BitWidth == 1)
     return 1; // No need to widen 1-bit values
-  return std::min(std::max(1u << Log2_32_Ceil(BitWidth), 8u), 128u);
+  return std::min(std::max<unsigned>(PowerOf2Ceil(BitWidth), 8u), 128u);
 }
 
 static void widenScalarType(Register Reg, MachineRegisterInfo &MRI) {

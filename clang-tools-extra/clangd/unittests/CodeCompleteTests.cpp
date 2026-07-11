@@ -698,6 +698,27 @@ TEST(CompletionTest, PrivateMemberDefinition) {
                              snippetSuffix("(int a, int b)"))));
 }
 
+TEST(CompletionTest, DeclParamName) {
+  // This is 1/3 regression tests to make sure signatures
+  // 1) have consistent variable names between header and source file
+  // 2) find variable names in other declarations
+  // See SignatureHelpTest.DeclParamName and IndexActionTest.DeclParamName for
+  // the other tests.
+  clangd::CodeCompleteOptions Opts;
+  Opts.EnableSnippets = true;
+  auto FuncFromSource = completions(R"cpp(
+      void sun(int);
+      void sun(int night);
+      void sun(int day);
+      void sun(int);
+      void position() {
+        sun^;
+      }
+      )cpp",
+                                    {}, Opts);
+  EXPECT_THAT(FuncFromSource.Completions, Contains(signature("(int day)")));
+}
+
 TEST(CompletionTest, DefaultArgsWithValues) {
   clangd::CodeCompleteOptions Opts;
   Opts.EnableSnippets = true;
@@ -1676,6 +1697,25 @@ TEST(SignatureHelpTest, Overloads) {
   EXPECT_EQ(0, Results.activeParameter);
 }
 
+TEST(SignatureHelpTest, DeclParamName) {
+  // This is 2/3 regression tests to make sure signatures
+  // 1) have consistent variable names between header and source file
+  // 2) find variable names in other declarations
+  // See CompletionTest.DeclParamName and IndexActionTest.DeclParamName for the
+  // other tests.
+  auto FuncFromSource = signatures(R"cpp(
+      void sun(int);
+      void sun(int night);
+      void sun(int day);
+      void sun(int);
+      void position() {
+        sun(^);
+      }
+      )cpp");
+  EXPECT_THAT(FuncFromSource.signatures,
+              UnorderedElementsAre(sig("sun([[int day]]) -> void")));
+}
+
 TEST(SignatureHelpTest, FunctionPointers) {
   llvm::StringLiteral Tests[] = {
       // Variable of function pointer type
@@ -1916,6 +1956,23 @@ TEST(SignatureHelpTest, StalePreamble) {
   EXPECT_THAT(Results.signatures, ElementsAre(sig("foo([[int x]]) -> int")));
   EXPECT_EQ(0, Results.activeSignature);
   EXPECT_EQ(0, Results.activeParameter);
+}
+
+TEST(SignatureHelpTest, EOFInSkippedFunctionBody) {
+  Annotations Test(R"cpp(
+#ifdef IS_HEADER
+void frameSizeBlocksWarning() {
+  auto fn = []() {
+  };
+  fn();
+}
+#else
+#define IS_HEADER
+#include __FILE__
+#^endif
+)cpp");
+  auto Results = signatures(Test.code(), Test.point());
+  EXPECT_THAT(Results.signatures, IsEmpty());
 }
 
 class IndexRequestCollector : public SymbolIndex {

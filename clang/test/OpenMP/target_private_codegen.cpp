@@ -210,8 +210,9 @@ struct S1 {
   // TCHECK:  [[DYN_PTR:%.+]] = alloca ptr
   // TCHECK: [[B:%.+]] = alloca i{{[0-9]+}},
   // TCHECK: [[SSTACK:%.+]] = alloca ptr,
-  // TCHECK: getelementptr inbounds i{{[0-9]+}}, ptr {{%.+}}, i32 0
-  // TCHECK: [[TH_ADDR_REF:%.+]] = load ptr, ptr {{%.+}},
+  // TCHECK: [[TH_SLOT:%.+]] = getelementptr inbounds ptr, ptr {{%.+}}, i32 0
+  // TCHECK: [[TH_PTR:%.+]] = load ptr, ptr [[TH_SLOT]],
+  // TCHECK: [[TH_ADDR_REF:%.+]] = load ptr, ptr [[TH_PTR]],
   // TCHECK: [[VLA_ADDR_REF:%.+]] = load i{{[0-9]+}}, ptr {{%.+}},
   // TCHECK: [[VLA_ADDR_REF2:%.+]] = load i{{[0-9]+}}, ptr {{%.+}},
   // TCHECK: [[RET_STACK:%.+]] = call ptr @llvm.stacksave.p0()

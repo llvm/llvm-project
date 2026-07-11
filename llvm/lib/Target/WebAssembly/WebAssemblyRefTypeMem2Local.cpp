@@ -64,6 +64,8 @@ void WebAssemblyRefTypeMem2Local::visitAllocaInst(AllocaInst &AI) {
     auto *NewAI = IRB.CreateAlloca(AI.getAllocatedType(),
                                    WebAssembly::WASM_ADDRESS_SPACE_VAR, nullptr,
                                    AI.getName() + ".var");
+    // Preserve the original alloca's alignment.
+    NewAI->setAlignment(AI.getAlign());
 
     // The below is basically equivalent to AI.replaceAllUsesWith(NewAI), but we
     // cannot use it because it requires the old and new types be the same,

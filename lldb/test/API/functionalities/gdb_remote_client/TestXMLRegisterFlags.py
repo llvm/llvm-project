@@ -194,10 +194,10 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         self.expect(
             "register read cpsr x0",
             substrs=[
-                "    cpsr = 0xeeee7777\n"
-                "         = (msb = 1, lsb = 1)\n"
-                "      x0 = 0xeeeeeeee77777777\n"
-                "         = (msb = 1, lsb = 1)"
+                "  cpsr = 0xeeee7777\n"
+                "     = (msb = 1, lsb = 1)\n"
+                "    x0 = 0xeeeeeeee77777777\n"
+                "     = (msb = 1, lsb = 1)"
             ],
         )
 
@@ -266,10 +266,10 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         self.expect(
             "register read cpsr x0",
             substrs=[
-                "    cpsr = 0xeeee7777\n"
-                "         = (correct = 1)\n"
-                "      x0 = 0xeeeeeeee77777777\n"
-                "         = (foo = 1)"
+                "  cpsr = 0xeeee7777\n"
+                "     = (correct = 1)\n"
+                "    x0 = 0xeeeeeeee77777777\n"
+                "     = (foo = 1)"
             ],
         )
 
@@ -450,13 +450,13 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         self.expect(
             "register read cpsr",
             substrs=[
-                "    cpsr = 0xeeee7777\n"
-                "         = {\n"
-                "             this_is_a_long_field_3 = 0\n"
-                "             this_is_a_long_field_2 = 1\n"
-                "             this_is_a_long_field_1 = 1\n"
-                "             this_is_a_long_field_0 = 1\n"
-                "           }"
+                "cpsr = 0xeeee7777\n"
+                "     = {\n"
+                "         this_is_a_long_field_3 = 0\n"
+                "         this_is_a_long_field_2 = 1\n"
+                "         this_is_a_long_field_1 = 1\n"
+                "         this_is_a_long_field_0 = 1\n"
+                "       }"
             ],
         )
 
@@ -1005,9 +1005,7 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         expected_info = [
             dedent(
                 """\
-             f2: 1 = valid
-
-             f1: 1 = valid$"""
+             f2, f1: 1 = valid$"""
             )
         ]
         self.expect("register info x0", patterns=expected_info)

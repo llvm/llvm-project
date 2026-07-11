@@ -53,12 +53,14 @@ multiclass AMDGPUSubtargetFeature<string FeatureString,
                                   string Description,
                                   bit GenPredicate = 1,
                                   bit GenAssemblerPredicate = 1,
-                                  list<SubtargetFeature> Deps = []> {
+                                  list<SubtargetFeature> Deps = [],
+                                  InlineBehavior IB = InlineDefault> {
   def Feature#NAME : SubtargetFeature<FeatureString,
     "Has"#NAME,
     "true",
     Description,
-    Deps
+    Deps,
+    IB
   >;
 
   if GenPredicate then
@@ -72,7 +74,7 @@ multiclass AMDGPUSubtargetFeature<string FeatureString,
 
 defm FastFMAF32 : AMDGPUSubtargetFeature<"fast-fmaf",
   "Assuming f32 fma is at least as fast as mul + add",
-  /*GenPredicate=*/0
+  /*GenPredicate=*/0, /*GenAssemblerPredicate=*/1, [], InlineIgnore
 >;
 
 defm FastDenormalF32 : AMDGPUSubtargetFeature<"fast-denormal-f32",
@@ -87,7 +89,7 @@ defm MIMG_R128 : AMDGPUSubtargetFeature<"mimg-r128",
 
 defm HalfRate64Ops : AMDGPUSubtargetFeature<"half-rate-64-ops",
   "Most fp64 instructions are half rate instead of quarter",
-  /*GenPredicate=*/0
+  /*GenPredicate=*/0, /*GenAssemblerPredicate=*/1, [], InlineIgnore
 >;
 
 defm FullRate64Ops : AMDGPUSubtargetFeature<"full-rate-64-ops",
@@ -144,11 +146,12 @@ defm UnalignedBufferAccess : AMDGPUSubtargetFeature<"unaligned-buffer-access",
 
 defm TrapHandler: AMDGPUSubtargetFeature<"trap-handler",
   "Trap handler support",
-  /*GenPredicate=*/0
+  /*GenPredicate=*/0, /*GenAssemblerPredicate=*/1, [], InlineIgnore
 >;
 
 defm UnalignedScratchAccess : AMDGPUSubtargetFeature<"unaligned-scratch-access",
-  "Support unaligned scratch loads and stores"
+  "Support unaligned scratch loads and stores",
+  /*GenPredicate=*/1, /*GenAssemblerPredicate=*/1, [], InlineIgnore
 >;
 
 defm UnalignedDSAccess : AMDGPUSubtargetFeature<"unaligned-ds-access",
@@ -204,14 +207,16 @@ defm Minimum3Maximum3PKF16 : AMDGPUSubtargetFeature<"minimum3-maximum3-pkf16",
 def FeatureSupportsXNACK : SubtargetFeature<"xnack-support",
   "SupportsXNACK",
   "true",
-  "Hardware supports XNACK"
+  "Hardware supports XNACK",
+  [], InlineIgnore
 >;
 
 defm XNACKOnOffModes : AMDGPUSubtargetFeature<"xnack-on-off-modes",
   "Target supports XNACK on/off modes",
   /*GenPredicate=*/1,
   /*GenAssemblerPredicate=*/0,
-  [FeatureSupportsXNACK]
+  [FeatureSupportsXNACK],
+  InlineIgnore
 >;
 
 // XNACK is disabled if SH_MEM_CONFIG.ADDRESS_MODE = GPUVM on chips that support
@@ -225,13 +230,8 @@ def FeatureXNACK : SubtargetFeature<"xnack",
   "EnableXNACK",
   "true",
   "Enable XNACK support",
-  [FeatureSupportsXNACK]
->;
-
-def FeatureTgSplit : SubtargetFeature<"tgsplit",
-  "EnableTgSplit",
-  "true",
-  "Enable threadgroup split execution"
+  [FeatureSupportsXNACK],
+  InlineIgnore
 >;
 
 def FeatureCuMode : SubtargetFeature<"cumode",
@@ -245,7 +245,8 @@ def FeaturePreciseMemory
                        "true", "Enable precise memory mode">;
 
 defm SGPRInitBug : AMDGPUSubtargetFeature<"sgpr-init-bug",
-  "VI SGPR initialization bug requiring a fixed SGPR allocation size"
+  "VI SGPR initialization bug requiring a fixed SGPR allocation size",
+  /*GenPredicate=*/1, /*GenAssemblerPredicate=*/1, [], InlineIgnore
 >;
 
 defm UserSGPRInit16Bug : AMDGPUSubtargetFeature<"user-sgpr-init16-bug",
@@ -431,6 +432,10 @@ def FeatureRequiresAlignedVGPRs : SubtargetFeature<"vgpr-align2",
 defm GFX90AInsts : AMDGPUSubtargetFeature<"gfx90a-insts",
   "Additional instructions for GFX90A+",
   /*GenPredicate=*/0
+>;
+
+defm TgSplitSupport : AMDGPUSubtargetFeature<"tgsplit-support",
+  "Hardware support for threadgroup split execution mode"
 >;
 
 defm GFX940Insts : AMDGPUSubtargetFeature<"gfx940-insts",
@@ -1033,10 +1038,13 @@ defm DefaultComponentBroadcast : AMDGPUSubtargetFeature<"default-component-broad
   "BUFFER/IMAGE store instructions set unspecified components to x component (GFX12)"
 >;
 
+// The default assumption needs to be ecc is enabled, but no directly
+// exposed operations depend on it, so it can be safely inlined.
 def FeatureSupportsSRAMECC : SubtargetFeature<"sramecc-support",
   "SupportsSRAMECC",
   "true",
-  "Hardware supports SRAMECC"
+  "Hardware supports SRAMECC",
+  [], InlineIgnore
 >;
 
 def FeatureSRAMECC : SubtargetFeature<"sramecc",
@@ -1207,6 +1215,11 @@ defm FlatSignedOffset : AMDGPUSubtargetFeature<"flat-signed-offset",
   "Immediate offset of FLAT instructions are always signed"
 >;
 
+defm RequiresInitialUnclausedVmem : AMDGPUSubtargetFeature<"requires-initial-unclause-vmem",
+  "Hardware entrypoints require first VMEM instruction to be unclaused",
+  GenPredicate=false
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1243,7 +1256,8 @@ def FeatureDumpCodeLower : SubtargetFeature <"dumpcode",
 def FeatureEnableLoadStoreOpt : SubtargetFeature <"load-store-opt",
   "EnableLoadStoreOpt",
   "true",
-  "Enable SI load/store optimizer pass"
+  "Enable SI load/store optimizer pass",
+  [], InlineIgnore
 >;
 
 // Performance debugging feature. Allow using DS instruction immediate
@@ -1255,13 +1269,15 @@ def FeatureEnableUnsafeDSOffsetFolding : SubtargetFeature <
   "unsafe-ds-offset-folding",
   "EnableUnsafeDSOffsetFolding",
   "true",
-  "Force using DS instruction immediate offsets on SI"
+  "Force using DS instruction immediate offsets on SI",
+  [], InlineIgnore
 >;
 
 def FeatureEnableSIScheduler : SubtargetFeature<"si-scheduler",
   "EnableSIScheduler",
   "true",
-  "Enable SI Machine Scheduler"
+  "Enable SI Machine Scheduler",
+  [], InlineIgnore
 >;
 
 def FeatureEnableDS128 : SubtargetFeature<"enable-ds128",
@@ -1289,12 +1305,13 @@ def FeatureEnablePRTStrictNull : SubtargetFeature<"enable-prt-strict-null",
 def FeatureUseFlatForGlobal : SubtargetFeature<"flat-for-global",
   "UseFlatForGlobal",
   "true",
-  "Force to generate flat instruction for global"
+  "Force to generate flat instruction for global",
+  [], InlineIgnore
 >;
 
 defm AutoWaitcntBeforeBarrier : AMDGPUSubtargetFeature <"auto-waitcnt-before-barrier",
   "Hardware automatically inserts waitcnt before barrier",
-  /*GenPredicate=*/0
+  /*GenPredicate=*/0, /*GenAssemblerPredicate=*/1, [], InlineIgnore
 >;
 
 defm BackOffBarrier : AMDGPUSubtargetFeature <"back-off-barrier",
@@ -1316,7 +1333,8 @@ defm KernargPreload : AMDGPUSubtargetFeature <"kernarg-preload",
 // SH_MEM_CONFIG.alignment_mode
 defm UnalignedAccessMode : AMDGPUSubtargetFeature<"unaligned-access-mode",
   "Enable unaligned global, local and region loads and stores if the hardware"
-  " supports it"
+  " supports it",
+  /*GenPredicate=*/1, /*GenAssemblerPredicate=*/1, [], InlineIgnore
 >;
 
 defm PackedTID : AMDGPUSubtargetFeature<"packed-tid",
@@ -1787,6 +1805,7 @@ def FeatureISAVersion9_0_9 : FeatureSet<
 def FeatureISAVersion9_0_A : FeatureSet<
   !listconcat(FeatureISAVersion9_0_MI_Common.Features,
     [FeatureGFX90AInsts,
+     FeatureTgSplitSupport,
      FeatureRequiresAlignedVGPRs,
      FeatureFmacF64Inst,
      FeatureDPALU_DPP,
@@ -1809,6 +1828,7 @@ def FeatureISAVersion9_0_C : FeatureSet<
 def FeatureISAVersion9_4_Common : FeatureSet<
   [FeatureGFX9,
    FeatureGFX90AInsts,
+   FeatureTgSplitSupport,
    FeatureGFX940Insts,
    FeatureRequiresAlignedVGPRs,
    FeatureFmaMixInsts,
@@ -2057,10 +2077,6 @@ def FeatureISAVersion11_5_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_5_Common.Features,
     [FeaturePointSampleAccel])>;
 
-def FeatureISAVersion11_5_3 : FeatureSet<
-  !listconcat(FeatureISAVersion11_5_Common.Features,
-    [])>;
-
 def FeatureISAVersion11_7_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureGFX11_7Insts,
@@ -2074,6 +2090,10 @@ def FeatureISAVersion11_7_Common : FeatureSet<
      FeatureMinimum3Maximum3F32,
      FeatureMinimum3Maximum3F16,
      FeatureNoF16PseudoScalarTransInlineConstants])>;
+
+def FeatureISAVersion11_7_Generic: FeatureSet<
+  !listconcat(FeatureISAVersion11_7_Common.Features,
+    [FeatureRequiresCOV6])>;
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
@@ -2218,6 +2238,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureRealTrue16Insts,
    FeatureVMovB64Inst,
    FeatureVMulU64Inst,
+   FeatureRequiresInitialUnclausedVmem,
 ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2344,6 +2365,10 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtPkNormVOP3Insts,
    FeatureSmemPrefetchInsts
 ]>;
+
+def FeatureISAVersion13_Generic: FeatureSet<
+  !listconcat(FeatureISAVersion13.Features,
+    [FeatureRequiresCOV6])>;
 
 //===----------------------------------------------------------------------===//
 

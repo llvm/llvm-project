@@ -594,6 +594,8 @@ if config.target_os == "Darwin":
         config.available_features.add("osx-ld64-live_support")
     if darwin_os_version >= (13, 1):
         config.available_features.add("jit-compatible-osx-swift-runtime")
+    if darwin_os_version >= (26, 4) and darwin_os_version < (27, 0):
+        config.available_features.add("osx-broken-scalbn-rounding")
 
     config.darwin_os_version = darwin_os_version
 

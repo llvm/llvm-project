@@ -18,7 +18,9 @@ ANALYSIS_CONSTRAINTS(RangeConstraints, "range",
                      "Use constraint tracking of concrete value ranges",
                      CreateRangeConstraintManager)
 
-ANALYSIS_CONSTRAINTS(Z3Constraints, "z3", "Use Z3 contraint solver",
+ANALYSIS_CONSTRAINTS(Z3Constraints, "unsupported-z3",
+                     "[UNSUPPORTED] Z3 SMT solver. Known to crash; patches "
+                     "welcome, crash reports are not.",
                      CreateZ3ConstraintManager)
 
 #ifndef ANALYSIS_DIAGNOSTICS

@@ -289,6 +289,44 @@ def CIR_CastOp : CIR_Op<"cast", [
 }
 
 //===----------------------------------------------------------------------===//
+// BuiltinIntCastOp
+//===----------------------------------------------------------------------===//
+
+def CIR_IntOrBuiltinIntType : AnyTypeOf<[CIR_IntType, AnyInteger, Index]>;
+
+def CIR_BuiltinIntCastOp : CIR_Op<"builtin_int_cast", [Pure]> {
+  let summary = "Cast between a CIR integer and a builtin integer";
+  let description = [{
+    Convert between a CIR integer type (`!cir.int`) and a builtin MLIR integer
+    type (`AnyInteger`, e.g. `i32`, `si32`, `ui32`) or `index`, and vice versa.
+
+    This allows using operations from e.g. OpenMP or OpenACC dialects
+    that expect the builtin types with CIR operations. Casting can be done
+    in either direction.
+
+    Example:
+
+    ```mlir
+    // CIR integer cast to a builtin integer.
+    %0 = cir.builtin_int_cast %ciri : !cir.int<s, 32> -> i32
+
+    // Builtin induction variable / bound cast to CIR type.
+    %1 = cir.builtin_int_cast %iv : index -> !cir.int<u, 64>
+    ```
+  }];
+
+  let arguments = (ins CIR_IntOrBuiltinIntType:$src);
+  let results = (outs CIR_IntOrBuiltinIntType:$result);
+
+  let assemblyFormat = [{
+    $src `:` type($src) `->` type($result) attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // DynamicCastOp
 //===----------------------------------------------------------------------===//
 
@@ -671,6 +709,9 @@ def CIR_LoadOp : CIR_Op<"load", [
     `alignment` can be used to specify an alignment that's different from the
     default, which is computed from `result`'s type ABI data layout.
 
+    A unit attribute `invariant` can be used to indicate that the loaded memory
+    never changes, mapping to LLVM IR's `!invariant.load` metadata.
+
     Example:
 
     ```
@@ -685,6 +726,9 @@ def CIR_LoadOp : CIR_Op<"load", [
     // Perform a volatile load from address in %0.
     %4 = cir.load volatile %0 : !cir.ptr<i32>, i32
 
+    // Perform an invariant load from address in %0.
+    %5 = cir.load invariant %0 : !cir.ptr<i32>, i32
+
     // Others
     %x = cir.load align(16) atomic(seq_cst) %0 : !cir.ptr<i32>, i32
     ```
@@ -694,14 +738,18 @@ def CIR_LoadOp : CIR_Op<"load", [
                            [MemRead]>:$addr,
                        UnitAttr:$isDeref,
                        UnitAttr:$is_volatile,
+                       UnitAttr:$is_nontemporal,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<CIR_SyncScopeKind>:$sync_scope,
-                       OptionalAttr<CIR_MemOrder>:$mem_order);
+                       OptionalAttr<CIR_MemOrder>:$mem_order,
+                       UnitAttr:$invariant);
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
     (`deref` $isDeref^)?
     (`volatile` $is_volatile^)?
+    (`nontemporal` $is_nontemporal^)?
+    (`invariant` $invariant^)?
     (`align` `(` $alignment^ `)`)?
     (`syncscope` `(` $sync_scope^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?
@@ -793,12 +841,14 @@ def CIR_StoreOp : CIR_Op<"store", [
                        Arg<CIR_PointerType, "the address to store the value",
                            [MemWrite]>:$addr,
                        UnitAttr:$is_volatile,
+                       UnitAttr:$is_nontemporal,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<CIR_SyncScopeKind>:$sync_scope,
                        OptionalAttr<CIR_MemOrder>:$mem_order);
 
   let assemblyFormat = [{
     (`volatile` $is_volatile^)?
+    (`nontemporal` $is_nontemporal^)?
     (`align` `(` $alignment^ `)`)?
     (`syncscope` `(` $sync_scope^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?
@@ -809,6 +859,7 @@ def CIR_StoreOp : CIR_Op<"store", [
     // Non-volatile, non-atomic store with default alignment.
     OpBuilder<(ins "mlir::Value":$value, "mlir::Value":$addr), [{
       build($_builder, $_state, value, addr, /*is_volatile=*/mlir::UnitAttr(),
+            /*is_nontemporal=*/mlir::UnitAttr(),
             /*alignment=*/mlir::IntegerAttr(),
             /*sync_scope=*/cir::SyncScopeKindAttr(),
             /*mem_order=*/cir::MemOrderAttr());
@@ -1976,6 +2027,35 @@ def CIR_FNegOp : CIR_UnaryOp<"fneg", CIR_AnyFloatOrVecOfFloatType> {
 }
 
 //===----------------------------------------------------------------------===//
+// FreezeOp
+//===----------------------------------------------------------------------===//
+
+def CIR_FreezeOp : CIR_Op<"freeze", [Pure, SameOperandsAndResultType]> {
+  let summary = "Stop propagation of undef and poison values";
+  let description = [{
+    The `cir.freeze` operation takes a single operand and returns a value of the
+    same type. If the operand is a poison or undef value, `cir.freeze` returns
+    an arbitrary, but fixed, value of the operand type. Otherwise it returns
+    the operand unchanged.
+
+    Example:
+
+    ```mlir
+    %1 = cir.freeze %0 : !s32i
+    ```
+  }];
+
+  let arguments = (ins CIR_AnyType:$input);
+  let results = (outs CIR_AnyType:$result);
+
+  let assemblyFormat = [{
+    $input `:` type($input) attr-dict
+  }];
+
+  let llvmOp = "FreezeOp";
+}
+
+//===----------------------------------------------------------------------===//
 // BrCondOp
 //===----------------------------------------------------------------------===//
 
@@ -2332,7 +2412,7 @@ class CIR_BinOpOverflow<string mnemonic, list<Trait> traits = []>
     CIR_IntType:$rhs
   );
 
-  let results = (outs CIR_IntType:$result, CIR_BoolType:$overflow);
+  let results = (outs CIR_AnyIntOrBoolType:$result, CIR_BoolType:$overflow);
 
   let assemblyFormat = [{
     $lhs `,` $rhs `:` qualified(type($lhs)) `->` qualified(type($result))
@@ -2340,7 +2420,7 @@ class CIR_BinOpOverflow<string mnemonic, list<Trait> traits = []>
   }];
 
   let builders = [
-    OpBuilder<(ins "cir::IntType":$resultTy,
+    OpBuilder<(ins "mlir::Type":$resultTy,
                    "mlir::Value":$lhs,
                    "mlir::Value":$rhs), [{
       auto overflowTy = cir::BoolType::get($_builder.getContext());
@@ -2361,6 +2441,7 @@ def CIR_AddOverflowOp : CIR_BinOpOverflow<"add.overflow", [Commutative]> {
     ```
     %result, %overflow = cir.add.overflow %a, %b : !u32i -> !u32i
     %result, %overflow = cir.add.overflow %a, %b : !cir.int<s, 33> -> !s32i
+    %result, %overflow = cir.add.overflow %a, %b : !s32i -> !cir.bool
     ```
   }];
 }
@@ -3134,6 +3215,9 @@ def CIR_GlobalOp : CIR_Op<"global", [
     mlir::SymbolRefAttr getComdatAttr(cir::GlobalOp &op,
                                       mlir::OpBuilder &builder) const;
   }];
+
+  let customLLVMLoweringConstructorDecl =
+    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3940,7 +4024,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     OptionalAttr<FlatSymbolRefAttr>:$personality,
     CIR_OptionalPriorityAttr:$global_ctor_priority,
     CIR_OptionalPriorityAttr:$global_dtor_priority,
-    OptionalAttr<CIR_CXXSpecialMemberAttr>:$cxx_special_member,
+    OptionalAttr<CIR_FuncInfoAttr>:$func_info,
     OptionalAttr<CIR_AnnotationArrayAttr>:$annotations
   );
 
@@ -4203,6 +4287,10 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
     bool isIndirect() { return !getCallee(); }
     mlir::Value getIndirectCall();
 
+    /// Returns the `cir.func` being called or null if the call is indirect or
+    /// cannot be resolved.
+    cir::FuncOp resolveCalleeInTable(mlir::SymbolTableCollection &symbolTable);
+
     void setArg(unsigned index, mlir::Value value) {
       if (!isIndirect()) {
         setOperand(index, value);
@@ -4211,6 +4299,16 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
 
       // For indirect call, the operand list is shifted by one.
       setOperand(index + 1, value);
+    }
+  }];
+
+  let extraClassDefinition = [{
+    cir::FuncOp $cppClass::resolveCalleeInTable(
+        mlir::SymbolTableCollection &symbolTable) {
+      mlir::FlatSymbolRefAttr callee = getCalleeAttr();
+      if (!callee)
+        return {};
+      return symbolTable.lookupNearestSymbolFrom<cir::FuncOp>(*this, callee);
     }
   }];
 
@@ -4561,13 +4659,19 @@ def CIR_CopyOp : CIR_Op<"copy",[
   let arguments = (ins
       Arg<CIR_PointerType, "", [MemWrite]>:$dst,
       Arg<CIR_PointerType, "", [MemRead]>:$src,
+      OptionalAttr<I64Attr>:$dst_alignment,
+      OptionalAttr<I64Attr>:$src_alignment,
       UnitAttr:$is_volatile,
       UnitAttr:$skip_tail_padding
   );
 
-  let assemblyFormat = [{$src `to` $dst (`volatile` $is_volatile^)?
-                        (`skip_tail_padding` $skip_tail_padding^)?
-                        attr-dict `:` qualified(type($dst))
+  let assemblyFormat = [{
+    $src (`align` `(` $src_alignment^ `)`)?
+    `to`
+    $dst (`align` `(` $dst_alignment^ `)`)?
+    (`volatile` $is_volatile^)?
+    (`skip_tail_padding` $skip_tail_padding^)?
+    attr-dict `:` qualified(type($dst))
   }];
   let hasVerifier = 1;
 
@@ -6376,33 +6480,55 @@ def CIR_RotateOp : CIR_Op<"rotate", [Pure, SameOperandsAndResultType]> {
 // FPClass Test Flags
 //===----------------------------------------------------------------------===//
 
-def FPClassTestEnum : CIR_I32EnumAttr<"FPClassTest", "floating-point class test flags", [
-  // Basic flags
-  I32EnumAttrCase<"SignalingNaN", 1, "fcSNan">,
-  I32EnumAttrCase<"QuietNaN", 2, "fcQNan">,
-  I32EnumAttrCase<"NegativeInfinity", 4, "fcNegInf">,
-  I32EnumAttrCase<"NegativeNormal", 8, "fcNegNormal">,
-  I32EnumAttrCase<"NegativeSubnormal", 16, "fcNegSubnormal">,
-  I32EnumAttrCase<"NegativeZero", 32, "fcNegZero">,
-  I32EnumAttrCase<"PositiveZero", 64, "fcPosZero">,
-  I32EnumAttrCase<"PositiveSubnormal", 128, "fcPosSubnormal">,
-  I32EnumAttrCase<"PositiveNormal", 256, "fcPosNormal">,
-  I32EnumAttrCase<"PositiveInfinity", 512, "fcPosInf">,
+// Individual floating-point classes, one per bit (positions 0-9), matching
+// LLVM's `FPClassTest` bit layout (`llvm/ADT/FloatingPointMode.h`).  Modeled
+// as a bit-enum so `__builtin_isfpclass` can pass any combination of bits.
+def FPClass_None     : I32BitEnumAttrCaseNone<"None", "fcNone">;
+def FPClass_SNan     : I32BitEnumAttrCaseBit<"SignalingNaN", 0, "fcSNan">;
+def FPClass_QNan     : I32BitEnumAttrCaseBit<"QuietNaN", 1, "fcQNan">;
+def FPClass_NegInf   : I32BitEnumAttrCaseBit<"NegativeInfinity", 2, "fcNegInf">;
+def FPClass_NegNorm  : I32BitEnumAttrCaseBit<"NegativeNormal", 3, "fcNegNormal">;
+def FPClass_NegSub   : I32BitEnumAttrCaseBit<"NegativeSubnormal", 4,
+                                             "fcNegSubnormal">;
+def FPClass_NegZero  : I32BitEnumAttrCaseBit<"NegativeZero", 5, "fcNegZero">;
+def FPClass_PosZero  : I32BitEnumAttrCaseBit<"PositiveZero", 6, "fcPosZero">;
+def FPClass_PosSub   : I32BitEnumAttrCaseBit<"PositiveSubnormal", 7,
+                                             "fcPosSubnormal">;
+def FPClass_PosNorm  : I32BitEnumAttrCaseBit<"PositiveNormal", 8, "fcPosNormal">;
+def FPClass_PosInf   : I32BitEnumAttrCaseBit<"PositiveInfinity", 9, "fcPosInf">;
 
-  // Composite flags
-  I32EnumAttrCase<"Nan", 3, "fcNan">,                   // fcSNan | fcQNan
-  I32EnumAttrCase<"Infinity", 516, "fcInf">,            // fcPosInf | fcNegInf
-  I32EnumAttrCase<"Normal", 264, "fcNormal">,           // fcPosNormal | fcNegNormal
-  I32EnumAttrCase<"Subnormal", 144, "fcSubnormal">,     // fcPosSubnormal | fcNegSubnormal
-  I32EnumAttrCase<"Zero", 96, "fcZero">,                // fcPosZero | fcNegZero
-  I32EnumAttrCase<"PositiveFinite", 448, "fcPosFinite">,// fcPosNormal | fcPosSubnormal | fcPosZero
-  I32EnumAttrCase<"NegativeFinite", 56, "fcNegFinite">, // fcNegNormal | fcNegSubnormal | fcNegZero
-  I32EnumAttrCase<"Finite", 504, "fcFinite">,           // fcPosFinite | fcNegFinite
-  I32EnumAttrCase<"Positive", 960, "fcPositive">,       // fcPosFinite | fcPosInf
-  I32EnumAttrCase<"Negative", 60, "fcNegative">,        // fcNegFinite | fcNegInf
-  I32EnumAttrCase<"All", 1023, "fcAllFlags">,           // fcNan | fcInf | fcFinite
-]> {
-  let cppNamespace = "::cir";
+// Composite groups (aliases for combinations of the individual classes).
+def FPClass_Nan      : I32BitEnumAttrCaseGroup<"Nan",
+    [FPClass_SNan, FPClass_QNan], "fcNan">;
+def FPClass_Inf      : I32BitEnumAttrCaseGroup<"Infinity",
+    [FPClass_NegInf, FPClass_PosInf], "fcInf">;
+def FPClass_Norm     : I32BitEnumAttrCaseGroup<"Normal",
+    [FPClass_NegNorm, FPClass_PosNorm], "fcNormal">;
+def FPClass_Sub      : I32BitEnumAttrCaseGroup<"Subnormal",
+    [FPClass_NegSub, FPClass_PosSub], "fcSubnormal">;
+def FPClass_Zero     : I32BitEnumAttrCaseGroup<"Zero",
+    [FPClass_NegZero, FPClass_PosZero], "fcZero">;
+def FPClass_PosFin   : I32BitEnumAttrCaseGroup<"PositiveFinite",
+    [FPClass_PosNorm, FPClass_PosSub, FPClass_PosZero], "fcPosFinite">;
+def FPClass_NegFin   : I32BitEnumAttrCaseGroup<"NegativeFinite",
+    [FPClass_NegNorm, FPClass_NegSub, FPClass_NegZero], "fcNegFinite">;
+def FPClass_Fin      : I32BitEnumAttrCaseGroup<"Finite",
+    [FPClass_PosFin, FPClass_NegFin], "fcFinite">;
+def FPClass_Pos      : I32BitEnumAttrCaseGroup<"Positive",
+    [FPClass_PosFin, FPClass_PosInf], "fcPositive">;
+def FPClass_Neg      : I32BitEnumAttrCaseGroup<"Negative",
+    [FPClass_NegFin, FPClass_NegInf], "fcNegative">;
+def FPClass_All      : I32BitEnumAttrCaseGroup<"All",
+    [FPClass_Nan, FPClass_Inf, FPClass_Fin], "fcAllFlags">;
+
+def FPClassTestEnum
+    : CIR_I32BitEnumAttr<"FPClassTest", "floating-point class test flags", [
+  FPClass_None, FPClass_SNan, FPClass_QNan, FPClass_NegInf, FPClass_NegNorm,
+  FPClass_NegSub, FPClass_NegZero, FPClass_PosZero, FPClass_PosSub,
+  FPClass_PosNorm, FPClass_PosInf, FPClass_Nan, FPClass_Inf, FPClass_Norm,
+  FPClass_Sub, FPClass_Zero, FPClass_PosFin, FPClass_NegFin, FPClass_Fin,
+  FPClass_Pos, FPClass_Neg, FPClass_All]> {
+  let printBitEnumPrimaryGroups = 1;
 }
 
 def CIR_IsFPClassOp : CIR_Op<"is_fp_class", [Pure]> {

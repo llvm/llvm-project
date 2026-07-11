@@ -12,7 +12,7 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_filegroup", "td_library")
 load(":binary_alias.bzl", "binary_alias")
 load(":config.bzl", "llvm_config_defines")
-load(":driver.bzl", "generate_driver_selects", "generate_driver_tools_def", "llvm_driver_cc_binary", "select_driver_tools")
+load(":driver.bzl", "generate_driver_selects", "generate_driver_tools_def", "llvm_driver_cc_binary")
 load(":enum_targets_gen.bzl", "enum_targets_gen")
 load(":targets.bzl", "llvm_targets")
 
@@ -655,16 +655,20 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
+        ":CodeGen",
+        ":Core",
         ":DebugInfo",
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
         ":DebugInfoDWARFLowLevel",
         ":DebugInfoPDB",
         ":Demangle",
+        ":IRReader",
         ":MC",
         ":MCDisassembler",
         ":Object",
         ":Support",
+        ":TransformUtils",
     ],
 )
 
@@ -821,13 +825,13 @@ cc_library(
 )
 
 # Command line flag to control which tools get included in the llvm driver binary.
-# The macro also generates config_setting targets used by select_driver_tools().
-generate_driver_selects(name = "driver-tools")
+# The macro also returns the selected tool dependencies.
+driver_tool_deps = generate_driver_selects(name = "driver-tools")
 
 generate_driver_tools_def(
     name = "gen_llvm_driver_tools_def",
     out = "LLVMDriverTools.def",
-    driver_tools = select_driver_tools(":driver-tools"),
+    driver_tools = ":driver-tools",
 )
 
 # Workaround inability to put `.def` files into `srcs` with a library
@@ -843,7 +847,7 @@ cc_binary(
     deps = [
         ":Support",
         ":llvm_driver_tools_def_lib",
-    ] + select_driver_tools(":driver-tools"),
+    ] + driver_tool_deps,
 )
 
 cc_binary(
@@ -3702,18 +3706,24 @@ gentbl_cc_library(
     name = "amdgpu_isel_target_gen",
     strip_include_prefix = "lib/Target/AMDGPU",
     tbl_outs = {
-        "lib/Target/AMDGPU/AMDGPUGenGlobalISel.inc": ["-gen-global-isel"],
+        "lib/Target/AMDGPU/AMDGPUGenGlobalISel.inc": [
+            "-gen-global-isel",
+            "-gisel-extended-llt",
+        ],
         "lib/Target/AMDGPU/AMDGPUGenPreLegalizeGICombiner.inc": [
             "-gen-global-isel-combiner",
             "-combiners=AMDGPUPreLegalizerCombiner",
+            "-gisel-extended-llt",
         ],
         "lib/Target/AMDGPU/AMDGPUGenPostLegalizeGICombiner.inc": [
             "-gen-global-isel-combiner",
             "-combiners=AMDGPUPostLegalizerCombiner",
+            "-gisel-extended-llt",
         ],
         "lib/Target/AMDGPU/AMDGPUGenRegBankGICombiner.inc": [
             "-gen-global-isel-combiner",
             "-combiners=AMDGPURegBankCombiner",
+            "-gisel-extended-llt",
         ],
     },
     tblgen = ":llvm-tblgen",

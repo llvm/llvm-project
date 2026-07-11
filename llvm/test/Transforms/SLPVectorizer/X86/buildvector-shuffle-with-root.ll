@@ -8,12 +8,10 @@ define void @test(i16 %arg) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i16> <i16 0, i16 poison>, i16 [[ARG]], i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sitofp <2 x i16> [[TMP0]] to <2 x float>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> <float 0.000000e+00, float poison, float poison, float poison>, <4 x i32> <i32 4, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> <float -0.000000e+00, float poison, float poison, float poison>, <4 x i32> <i32 4, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x float> zeroinitializer, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fsub <4 x float> zeroinitializer, [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP8:%.*]] = fsub <4 x float> [[TMP7]], [[TMP2]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fsub <4 x float> [[TMP6]], [[TMP2]]
 ; CHECK-NEXT:    store <4 x float> [[TMP8]], ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 20), align 4
 ; CHECK-NEXT:    ret void
 ;

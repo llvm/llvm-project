@@ -16,6 +16,7 @@
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
@@ -446,6 +447,105 @@ struct TestXeGPULayoutInterface
   }
 };
 
+struct TestXeGPUCoalesceGatherScatter
+    : public PassWrapper<TestXeGPUCoalesceGatherScatter, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUCoalesceGatherScatter)
+
+  StringRef getArgument() const final {
+    return "test-xegpu-coalesce-gather-scatter";
+  }
+
+  StringRef getDescription() const final {
+    return "Test driver that turns the contiguity attribute into a lane_data "
+           "layout on gather/scatter ops.";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<arith::ArithDialect>();
+    registry.insert<vector::VectorDialect>();
+    registry.insert<xegpu::XeGPUDialect>();
+  }
+
+  TestXeGPUCoalesceGatherScatter() = default;
+  TestXeGPUCoalesceGatherScatter(const TestXeGPUCoalesceGatherScatter &pass)
+      : PassWrapper(pass) {}
+
+  Option<unsigned> maxChunkSize{
+      *this, "max-chunk-size",
+      llvm::cl::desc("Upper bound on the produced lane_data FCD."),
+      llvm::cl::init(8)};
+
+  Option<bool> analyzeOnly{
+      *this, "analyze-only",
+      llvm::cl::desc("Only run the analysis (stamp the contiguity attribute); "
+                     "do not apply."),
+      llvm::cl::init(false)};
+
+  void runOnOperation() override {
+    xegpu::runContiguityAnalysis(getOperation());
+    if (analyzeOnly)
+      return;
+    getOperation()->walk([&](Operation *op) {
+      if (auto load = dyn_cast<xegpu::LoadGatherOp>(op))
+        applyContiguity(load, maxChunkSize);
+      else if (auto store = dyn_cast<xegpu::StoreScatterOp>(op))
+        applyContiguity(store, maxChunkSize);
+    });
+  }
+
+private:
+  /// Build a `lane_layout`/`lane_data`/`inst_data` layout of rank `rank`, with
+  /// the given lane_layout / lane_data on the innermost dim (1 elsewhere).
+  /// `inst_data` is `lane_layout * lane_data` per dim.
+  static xegpu::LayoutAttr buildLaneDataLayout(MLIRContext *ctx, unsigned rank,
+                                               int64_t innerLaneLayout,
+                                               int64_t innerLaneData) {
+    SmallVector<int32_t> laneLayout(rank, 1);
+    SmallVector<int32_t> laneData(rank, 1);
+    SmallVector<int32_t> instData(rank, 1);
+    laneLayout.back() = static_cast<int32_t>(innerLaneLayout);
+    laneData.back() = static_cast<int32_t>(innerLaneData);
+    instData.back() = static_cast<int32_t>(innerLaneLayout * innerLaneData);
+    return xegpu::LayoutAttr::get(ctx, instData, laneLayout, laneData);
+  }
+
+  /// Minimal driver: read the `contiguity` attribute the analysis stamped and
+  /// turn it into a `lane_data` layout. This is only a stand-in for the real
+  /// consumer (layout propagation) so the analysis output can be checked
+  /// end-to-end; it handles just the simple power-of-two case.
+  template <typename OpTy>
+  static void applyContiguity(OpTy op, unsigned maxChunkSize) {
+    std::optional<uint64_t> contiguity = op.getContiguity();
+    if (!contiguity)
+      return;
+    op.removeContiguityAttr();
+
+    auto offsetsTy = dyn_cast<VectorType>(op.getOffsets().getType());
+    auto valueTy = op.getValueType();
+    if (!offsetsTy || !valueTy)
+      return;
+    const auto *uArch =
+        xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
+    if (!uArch)
+      return;
+    int64_t subgroupSize = uArch->getSubgroupSize();
+
+    // Tile size and subgroup size are powers of two, so the smaller is already
+    // the largest power-of-two divisor; min() suffices throughout.
+    int64_t inner = offsetsTy.getShape().back();
+    int64_t laneLayout = std::min<int64_t>(subgroupSize, inner);
+    int64_t perLane = inner / laneLayout;
+    int64_t laneData =
+        std::min<int64_t>({static_cast<int64_t>(*contiguity),
+                           static_cast<int64_t>(maxChunkSize), perLane});
+    if (laneData < 2)
+      return;
+
+    op.setLayoutAttr(buildLaneDataLayout(op.getContext(), valueTy.getRank(),
+                                         laneLayout, laneData));
+  }
+};
+
 } // namespace
 
 namespace mlir {
@@ -458,6 +558,7 @@ void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPUPropagateLayouts>();
   PassRegistration<TestXeGPUResolveLayoutConflicts>();
   PassRegistration<TestXeGPUArrayLengthOptimization>();
+  PassRegistration<TestXeGPUCoalesceGatherScatter>();
 }
 } // namespace test
 } // namespace mlir
