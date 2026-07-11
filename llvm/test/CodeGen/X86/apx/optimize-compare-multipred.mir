@@ -8,8 +8,6 @@
 
 # A non-NF-convertible EFLAGS clobber in the dominating block that defines the
 # flags shadows the producer, so the redundant compare in bb.3 must be kept.
-# (The clobber is rejected by both the idom-chain scan and the subsequent
-# path walk; either alone is sufficient to bail.)
 ---
 name: dom_shadow_clobber
 tracksRegLiveness: true
@@ -180,10 +178,10 @@ body: |
 
 # Loop: the producer in bb.0 dominates the multi-predecessor block bb.1 (preds
 # bb.0 and the bb.3 back-edge). The redundant compare in bb.1 is removed and the
-# NF-convertible IMUL on the bb.2 path is rewritten. This exercises the
-# verification and live-in walks over a cyclic CFG with a back-edge (the Visited
-# sets keep both walks terminating), which the acyclic diamonds in
-# optimize-compare-multipred.ll do not cover.
+# NF-convertible IMUL on the bb.2 path is rewritten. This exercises the backward
+# walk over a cyclic CFG with a back-edge (the Visited set keeps it
+# terminating), which the acyclic diamonds in optimize-compare-multipred.ll do
+# not cover.
 ---
 name: loop_backedge
 tracksRegLiveness: true
@@ -242,6 +240,114 @@ body: |
 
   bb.4:
     liveins: $eflags
+    $al = SETCCr 15, implicit $eflags
+    RET 0, $al
+...
+
+# The producer lives in bb.2, an immediate predecessor of the multi-predecessor
+# block bb.3, but bb.3's other predecessor bb.1 reaches it without passing
+# through bb.2, so bb.2 does not dominate bb.3. The backward walk reaches the
+# entry block bb.0 (predecessor-less) without finding the producer on that path
+# and bails, so the redundant compare in bb.3 is kept.
+---
+name: producer_in_nondominating_pred
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: producer_in_nondominating_pred
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $edi, $esi
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
+  ; CHECK-NEXT:   JCC_1 %bb.2, 4, implicit undef $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   JMP_1 %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   CMP32ri [[COPY]], 2, implicit-def $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   CMP32ri [[COPY]], 2, implicit-def $eflags
+  ; CHECK-NEXT:   $al = SETCCr 15, implicit $eflags
+  ; CHECK-NEXT:   RET 0, $al
+  bb.0:
+    liveins: $edi, $esi
+    %0:gr32 = COPY $edi
+    %1:gr32 = COPY $esi
+    JCC_1 %bb.2, 4, implicit undef $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    JMP_1 %bb.3
+
+  bb.2:
+    CMP32ri %0, 2, implicit-def $eflags
+    JMP_1 %bb.3
+
+  bb.3:
+    CMP32ri %0, 2, implicit-def $eflags
+    $al = SETCCr 15, implicit $eflags
+    RET 0, $al
+...
+
+# The producer is duplicated on both diamond arms bb.1 and bb.2, so neither
+# block alone dominates the multi-predecessor block bb.3. The backward walk
+# finds a producer in two distinct blocks and bails, keeping the compare.
+---
+name: producer_in_two_blocks
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: producer_in_two_blocks
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $edi, $esi
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
+  ; CHECK-NEXT:   JCC_1 %bb.2, 4, implicit undef $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   CMP32ri [[COPY]], 2, implicit-def $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   CMP32ri [[COPY]], 2, implicit-def $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   CMP32ri [[COPY]], 2, implicit-def $eflags
+  ; CHECK-NEXT:   $al = SETCCr 15, implicit $eflags
+  ; CHECK-NEXT:   RET 0, $al
+  bb.0:
+    liveins: $edi, $esi
+    %0:gr32 = COPY $edi
+    %1:gr32 = COPY $esi
+    JCC_1 %bb.2, 4, implicit undef $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    CMP32ri %0, 2, implicit-def $eflags
+    JMP_1 %bb.3
+
+  bb.2:
+    CMP32ri %0, 2, implicit-def $eflags
+    JMP_1 %bb.3
+
+  bb.3:
+    CMP32ri %0, 2, implicit-def $eflags
     $al = SETCCr 15, implicit $eflags
     RET 0, $al
 ...

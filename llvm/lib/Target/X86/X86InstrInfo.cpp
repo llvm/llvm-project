@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
-#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -5304,40 +5303,65 @@ MachineInstr *X86InstrInfo::findDominatingRedundantFlagInstr(
     int64_t &ImmDelta,
     SmallVectorImpl<std::pair<MachineInstr *, unsigned>> &InstsToUpdate) const {
   assert(Subtarget.hasNF() && "NF feature required");
-  MachineBasicBlock &CmpMBB = *CmpInstr.getParent();
-  MachineFunction &MF = *CmpMBB.getParent();
   const TargetRegisterInfo *TRI = &getRegisterInfo();
 
-  // The caller already scanned MultiPredMBB (and any single-predecessor blocks
-  // between it and CmpMBB) without finding the producer, so the producer must
-  // live in a block that strictly dominates MultiPredMBB. Walk up the
-  // immediate-dominator chain. In each dominating block scan backward: the
-  // redundant producer ends the search; an NF-convertible clobber is stepped
-  // over (it will be collected by the path walk below) so the producer can
-  // still be found earlier in the same block or further up; any other EFLAGS
-  // clobber shadows the producer, so its flags cannot reach CmpInstr.
-  MachineDominatorTree MDT(MF);
-  MachineDomTreeNode *Node = MDT.getNode(MultiPredMBB);
-  if (!Node)
-    return nullptr;
+  // The caller already scanned MultiPredMBB without finding the producer, so it
+  // must live in a block that strictly dominates MultiPredMBB. Walk
+  // predecessors backward to find it and prove dominance, avoiding a
+  // whole-function MachineDominatorTree that would be rebuilt in O(function
+  // size) per compare.
+  //
+  // The producer's block dominates MultiPredMBB iff every backward path funnels
+  // through it before a function-entry block, so expand predecessors but stop
+  // at a block holding the producer. Bail if a predecessor-less block is
+  // reached without the producer (a path bypasses it) or the producer is found
+  // in two blocks (neither dominates alone). Within a block, scan backward,
+  // collecting the NF-convertible EFLAGS clobbers above the producer and
+  // bailing on any other clobber (it would shadow the producer's flags from
+  // CmpInstr).
+  //
+  // Clobbers are staged in Pending and committed only on success. Visited
+  // (seeded with MultiPredMBB) stops the walk from revisiting a block or
+  // re-entering the single-predecessor chain, so none is collected twice.
   MachineInstr *Sub = nullptr;
-  for (Node = Node->getIDom(); Node && !Sub; Node = Node->getIDom()) {
-    MachineBasicBlock *DomMBB = Node->getBlock();
-    for (MachineInstr &Inst : reverse(*DomMBB)) {
+  MachineBasicBlock *SubMBB = nullptr;
+  SmallVector<std::pair<MachineInstr *, unsigned>, 4> Pending;
+  SmallPtrSet<MachineBasicBlock *, 8> Visited;
+  SmallVector<MachineBasicBlock *, 8> Worklist;
+  Visited.insert(MultiPredMBB);
+  for (MachineBasicBlock *Pred : MultiPredMBB->predecessors())
+    if (Visited.insert(Pred).second)
+      Worklist.push_back(Pred);
+  while (!Worklist.empty()) {
+    MachineBasicBlock *MBB = Worklist.pop_back_val();
+    MachineInstr *Producer = nullptr;
+    for (MachineInstr &Inst : reverse(*MBB)) {
       if (!Inst.modifiesRegister(X86::EFLAGS, TRI))
         continue;
       if (isRedundantFlagInstr(CmpInstr, SrcReg, SrcReg2, CmpMask, CmpValue,
                                Inst, &IsSwapped, &ImmDelta)) {
-        // Found the producer.
-        Sub = &Inst;
+        Producer = &Inst;
         break;
       }
-      if (!X86::getNFVariantIfClobberRemovable(Inst, TRI))
-        // A non-convertible clobber shadows any producer further up.
+      unsigned NewOpc = X86::getNFVariantIfClobberRemovable(Inst, TRI);
+      if (!NewOpc)
         return nullptr;
-      // NF-convertible clobber: keep scanning earlier in this block.
+      Pending.push_back(std::make_pair(&Inst, NewOpc));
     }
-    // No producer in this block: keep walking up the dominator chain.
+    if (Producer) {
+      // A producer in a second block means neither dominates alone.
+      if (Sub && SubMBB != MBB)
+        return nullptr;
+      Sub = Producer;
+      SubMBB = MBB;
+      continue;
+    }
+    // Entry reached without the producer: some path bypasses it.
+    if (MBB->pred_empty())
+      return nullptr;
+    for (MachineBasicBlock *Pred : MBB->predecessors())
+      if (Visited.insert(Pred).second)
+        Worklist.push_back(Pred);
   }
   if (!Sub)
     return nullptr;
@@ -5350,51 +5374,8 @@ MachineInstr *X86InstrInfo::findDominatingRedundantFlagInstr(
   // to producers that yield identical flags.
   if (IsSwapped || ImmDelta != 0)
     return nullptr;
-  MachineBasicBlock *SubMBB = Sub->getParent();
 
-  // Verify that on every path from the producer to CmpInstr all EFLAGS clobbers
-  // are NF-convertible, collecting them. The caller already handled CmpMBB, the
-  // single-predecessor chain, and MultiPredMBB itself, so start from
-  // MultiPredMBB's predecessors and walk the CFG backward up to (and including
-  // the post-producer range of) SubMBB. Because SubMBB dominates MultiPredMBB,
-  // every block that can reach MultiPredMBB is dominated by SubMBB, so the walk
-  // reaches SubMBB on every path and never escapes above it.
-  //
-  // The walk never revisits a block (Visited) and never reaches a block the
-  // caller already scanned: MultiPredMBB is seeded into Visited, the
-  // single-predecessor chain blocks (CmpMBB..MultiPredMBB) each have exactly
-  // one predecessor by construction (the caller only advanced through such
-  // blocks), so none can be re-entered from the dominated region, and CmpMBB
-  // lies in the successor direction. No instruction is therefore collected
-  // twice.
-  SmallPtrSet<MachineBasicBlock *, 8> Visited;
-  SmallVector<MachineBasicBlock *, 8> Worklist;
-  Visited.insert(MultiPredMBB);
-  for (MachineBasicBlock *Pred : MultiPredMBB->predecessors())
-    if (Visited.insert(Pred).second)
-      Worklist.push_back(Pred);
-  while (!Worklist.empty()) {
-    MachineBasicBlock *MBB = Worklist.pop_back_val();
-    // For SubMBB only the range after the producer is relevant.
-    MachineBasicBlock::iterator I =
-        (MBB == SubMBB) ? std::next(MachineBasicBlock::iterator(Sub))
-                        : MBB->begin();
-    for (MachineBasicBlock::iterator E = MBB->end(); I != E; ++I) {
-      MachineInstr &MI = *I;
-      if (!MI.modifiesRegister(X86::EFLAGS, TRI))
-        continue;
-      unsigned NewOpc = X86::getNFVariantIfClobberRemovable(MI, TRI);
-      if (!NewOpc)
-        return nullptr;
-      InstsToUpdate.push_back(std::make_pair(&MI, NewOpc));
-    }
-    if (MBB == SubMBB)
-      continue;
-    for (MachineBasicBlock *Pred : MBB->predecessors())
-      if (Visited.insert(Pred).second)
-        Worklist.push_back(Pred);
-  }
-
+  InstsToUpdate.append(Pending.begin(), Pending.end());
   return Sub;
 }
 
