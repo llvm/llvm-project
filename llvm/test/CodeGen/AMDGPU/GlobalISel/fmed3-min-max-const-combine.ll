@@ -84,13 +84,14 @@ define half @test_min_K1max_ValK0_f16(half %a) #0 {
 ; GFX10-LABEL: test_min_K1max_ValK0_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_med3_f16 v0, v0, 2.0, 4.0
+; GFX10-NEXT:    v_max_f16_e32 v0, 2.0, v0
+; GFX10-NEXT:    v_min_f16_e32 v0, 4.0, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-LABEL: test_min_K1max_ValK0_f16:
 ; GFX1170:       ; %bb.0:
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-NEXT:    v_med3_num_f16 v0, v0, 2.0, 4.0
+; GFX1170-NEXT:    v_maxmin_num_f16 v0, v0, 2.0, 4.0
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-TRUE16-LABEL: test_min_K1max_ValK0_f16:
@@ -110,7 +111,7 @@ define half @test_min_K1max_ValK0_f16(half %a) #0 {
 ; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-FAKE16-NEXT:    v_med3_num_f16 v0, v0, 2.0, 4.0
+; GFX12-FAKE16-NEXT:    v_maxmin_num_f16 v0, v0, 2.0, 4.0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %maxnum = call half @llvm.maxnum.f16(half %a, half 2.0)
   %fmed = call half @llvm.minnum.f16(half 4.0, half %maxnum)
@@ -543,13 +544,13 @@ define <2 x half> @test_min_max_v2f16(<2 x half> %a) #0 {
 ; GFX8-LABEL: test_min_max_v2f16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v1, 0x4000
-; GFX8-NEXT:    v_max_f16_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX8-NEXT:    v_max_f16_e32 v0, 2.0, v0
+; GFX8-NEXT:    v_mov_b32_e32 v2, 0x4000
+; GFX8-NEXT:    v_max_f16_e32 v1, 2.0, v0
+; GFX8-NEXT:    v_max_f16_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX8-NEXT:    v_mov_b32_e32 v2, 0x4400
-; GFX8-NEXT:    v_min_f16_e32 v0, 4.0, v0
-; GFX8-NEXT:    v_min_f16_sdwa v1, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX8-NEXT:    v_min_f16_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-NEXT:    v_min_f16_e32 v1, 4.0, v1
+; GFX8-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: test_min_max_v2f16:
