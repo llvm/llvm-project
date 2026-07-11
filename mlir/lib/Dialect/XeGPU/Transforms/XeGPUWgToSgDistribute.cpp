@@ -36,6 +36,12 @@ using namespace mlir;
 
 namespace {
 
+// Marker attribute carrying the common workgroup layout onto create_mem_desc so
+// the conversion pattern can shrink the private buffer to the per-subgroup size.
+// Set by the SLM privatization pre-phase and consumed by WgToSgCreateMemDescOp.
+static constexpr StringLiteral kPrivatizeLayoutAttrName =
+    "__xegpu_privatize_layout__";
+
 // Retrieve the RangeAttr if it is specified.
 static xegpu::RangeAttr getRangeSpecAttr(Operation *op) {
   Operation *parent = op->getParentOfType<scf::IfOp>();
@@ -887,15 +893,49 @@ struct WgToSgStoreScatterOp
   }
 };
 
+// Returns true if `memDesc` was produced by a create_mem_desc whose source
+// memref lives in private memory (i.e. it was privatized by the pre-phase).
+static bool isPrivateMemDesc(Value memDesc) {
+  auto createOp = memDesc.getDefiningOp<xegpu::CreateMemDescOp>();
+  if (!createOp)
+    return false;
+  auto srcTy = dyn_cast<MemRefType>(createOp.getSource().getType());
+  return srcTy && xegpu::XeGPUDialect::isPrivateMemory(srcTy);
+}
+
+// Computes the per-subgroup local offset lists into a privatized (shrunk)
+// mem_desc. Because every subgroup owns a private copy sized to the distributed
+// shape, offsets are subgroup-id independent: round `r` maps to `r * sg_data`.
+static SmallVector<SmallVector<OpFoldResult>>
+genPrivateOffsetsList(ConversionPatternRewriter &rewriter, Location loc,
+                      ArrayRef<int64_t> wgShape,
+                      xegpu::DistributeLayoutAttr layout) {
+  SmallVector<int64_t> sgData = layout.getEffectiveSgDataAsInt();
+  SmallVector<int64_t> sgLayout = layout.getEffectiveSgLayoutAsInt();
+
+  // The private buffer holds the per-subgroup distributed shape, which spans all
+  // distribution rounds stacked along each dim (roundShape[d] = wgShape[d] /
+  // sg_layout[d] = sg_data[d] * rounds). This matches the shape allocated by
+  // WgToSgCreateMemDescOp, so stepping by sg_data yields in-bounds local offsets.
+  SmallVector<int64_t> roundShape(wgShape.size());
+  for (auto [i, dim] : llvm::enumerate(wgShape))
+    roundShape[i] = dim / sgLayout[i];
+
+  SmallVector<SmallVector<OpFoldResult>> offsetsList;
+  for (SmallVector<int64_t> off : StaticTileOffsetRange(roundShape, sgData)) {
+    SmallVector<OpFoldResult> offsets;
+    for (int64_t o : off)
+      offsets.push_back(rewriter.getIndexAttr(o));
+    offsetsList.push_back(std::move(offsets));
+  }
+  return offsetsList;
+}
+
 struct WgToSgLoadMatrixOp : public OpConversionPattern<xegpu::LoadMatrixOp> {
   using OpConversionPattern<xegpu::LoadMatrixOp>::OpConversionPattern;
   LogicalResult
   matchAndRewrite(xegpu::LoadMatrixOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-
-    SmallVector<SmallVector<OpFoldResult>> offsetsList;
-    if (failed(genOffsetsList(rewriter, op, offsetsList)))
-      return failure();
 
     ArrayRef<int64_t> wgShape = op.getDataShape();
     VectorType valueTy = llvm::dyn_cast<VectorType>(op.getRes().getType());
@@ -903,12 +943,26 @@ struct WgToSgLoadMatrixOp : public OpConversionPattern<xegpu::LoadMatrixOp> {
     Type elemTy = valueTy.getElementType();
 
     xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
+
+    // Privatized buffers are shrunk to the per-subgroup size and indexed with
+    // local, subgroup-id-free offsets; SLM buffers keep the sg-relative offsets.
+    bool isPrivate = isPrivateMemDesc(op.getMemDesc());
+    auto memDesc = cast<TypedValue<xegpu::MemDescType>>(
+        isPrivate ? adaptor.getMemDesc()[0] : op.getMemDesc());
+    SmallVector<SmallVector<OpFoldResult>> offsetsList;
+    if (isPrivate) {
+      offsetsList = genPrivateOffsetsList(rewriter, op.getLoc(), wgShape,
+                                          layout);
+    } else if (failed(genOffsetsList(rewriter, op, offsetsList))) {
+      return failure();
+    }
+
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
     VectorType newResTy = VectorType::get(sgShape, elemTy);
     SmallVector<Value> newOps;
     for (auto offsets : offsetsList) {
       auto newOp = xegpu::LoadMatrixOp::create(rewriter, op.getLoc(), newResTy,
-                                               op.getMemDesc(), offsets,
+                                               memDesc, offsets,
                                                layout.dropSgLayoutAndData());
       newOps.push_back(newOp);
     }
@@ -924,15 +978,65 @@ struct WgToSgStoreMatrixOp : public OpConversionPattern<xegpu::StoreMatrixOp> {
   matchAndRewrite(xegpu::StoreMatrixOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
+
+    bool isPrivate = isPrivateMemDesc(op.getMemDesc());
+    auto memDesc = cast<TypedValue<xegpu::MemDescType>>(
+        isPrivate ? adaptor.getMemDesc()[0] : op.getMemDesc());
     SmallVector<SmallVector<OpFoldResult>> offsetsList;
-    if (failed(genOffsetsList(rewriter, op, offsetsList)))
+    if (isPrivate) {
+      offsetsList = genPrivateOffsetsList(rewriter, op.getLoc(),
+                                          op.getDataShape(), layout);
+    } else if (failed(genOffsetsList(rewriter, op, offsetsList))) {
+      return failure();
+    }
+
+    for (auto [v, offsets] : llvm::zip(adaptor.getData(), offsetsList))
+      xegpu::StoreMatrixOp::create(rewriter, op.getLoc(), v, memDesc, offsets,
+                                   layout.dropSgLayoutAndData());
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+// Shrinks a privatized create_mem_desc (marked by the pre-phase) to the
+// per-subgroup size: it allocates a smaller private buffer and builds a
+// mem_desc of the distributed shape, so each subgroup owns a private copy.
+struct WgToSgCreateMemDescOp
+    : public OpConversionPattern<xegpu::CreateMemDescOp> {
+  using OpConversionPattern<xegpu::CreateMemDescOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(xegpu::CreateMemDescOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto layout = op->getAttrOfType<xegpu::DistributeLayoutAttr>(
+        kPrivatizeLayoutAttrName);
+    if (!layout)
       return failure();
 
-    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
-    for (auto [v, offsets] : llvm::zip(adaptor.getData(), offsetsList))
-      xegpu::StoreMatrixOp::create(rewriter, op.getLoc(), v, op.getMemDesc(),
-                                   offsets, layout.dropSgLayoutAndData());
-    rewriter.eraseOp(op);
+    Location loc = op.getLoc();
+    xegpu::MemDescType mdescTy = op.getMemDesc().getType();
+    Type elemTy = mdescTy.getElementType();
+
+    // Per-subgroup distributed shape: the workgroup shape divided by sg_layout,
+    // holding every distribution round this subgroup owns (sg_data * rounds).
+    auto distShape =
+        layout.computeDistributedShape(llvm::to_vector(mdescTy.getShape()));
+    if (failed(distShape))
+      return failure();
+    SmallVector<int64_t> sgShape = *distShape;
+
+    // Allocate a private buffer just large enough for one subgroup's copy.
+    auto bytesPerElement = elemTy.getIntOrFloatBitWidth() / 8;
+    auto slmSize = computeProduct(sgShape) * bytesPerElement;
+    auto memrefTy =
+        MemRefType::get({slmSize}, rewriter.getI8Type(), {}, /*space=*/4);
+    auto buffer = memref::AllocaOp::create(rewriter, loc, memrefTy);
+
+    auto newMdescTy = xegpu::MemDescType::get(rewriter.getContext(), sgShape,
+                                              elemTy, mdescTy.getMemLayout());
+    auto newOp =
+        xegpu::CreateMemDescOp::create(rewriter, loc, newMdescTy, buffer);
+    rewriter.replaceOp(op, newOp.getResult());
     return success();
   }
 };
@@ -1529,7 +1633,8 @@ void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
                WgToSgDpasMxOp, WgToSgPrefetchNdOp, WgToSgElementwiseOp,
                WgToSgVectorBroadcastOp, WgToSgConvertLayoutOp,
                WgToSgArithConstantOp, WgToSgLoadGatherOp, WgToSgStoreScatterOp,
-               WgToSgLoadMatrixOp, WgToSgStoreMatrixOp, WgToSgVectorStepOp,
+               WgToSgLoadMatrixOp, WgToSgStoreMatrixOp, WgToSgCreateMemDescOp,
+               WgToSgVectorStepOp,
                WgToSgVectorShapeCastOp, WgToSgMultiDimReductionOp,
                WgToSgVectorTransposeOp, WgToSgVectorConstantMaskOp,
                WgToSgVectorCreateMaskOp, WgToSgVectorBitCastOp,
@@ -1540,6 +1645,166 @@ void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
 } // namespace mlir
 
 namespace {
+
+//===----------------------------------------------------------------------===//
+// SLM privatization
+//===----------------------------------------------------------------------===//
+// An SLM buffer whose every matrix access (load_matrix/store_matrix) uses the
+// same subgroup layout, the same data (vector) shape, and the same offsets is
+// accessed identically by every subgroup. Because the same mem_desc implies the
+// same physical layout, an identical (sg_layout, sg_data, offset) means every
+// subgroup reads and writes the exact same SLM region, so the region is
+// effectively private to each subgroup and can be demoted to private memory
+// (space 4, backed by registers).
+//
+// This runs as a pre-phase of WG-to-SG distribution. For a qualifying buffer it
+// (a) flips the source memref's memory space from 3 (SLM) to 4 (private), and
+// (b) stashes the common workgroup layout on the create_mem_desc op as a
+// discardable marker attribute so the WgToSgCreateMemDescOp pattern can later
+// shrink the memref/mem_desc to the per-subgroup size. The matrix ops are left
+// intact for the regular distribution patterns that follow.
+
+// Compares two offset lists for structural equality. Static offsets compare by
+// value; dynamic offsets compare by SSA value identity.
+static bool sameOffsets(ArrayRef<OpFoldResult> a, ArrayRef<OpFoldResult> b) {
+  if (a.size() != b.size())
+    return false;
+  for (auto [lhs, rhs] : llvm::zip(a, b)) {
+    auto lhsAttr = dyn_cast<Attribute>(lhs);
+    auto rhsAttr = dyn_cast<Attribute>(rhs);
+    if (static_cast<bool>(lhsAttr) != static_cast<bool>(rhsAttr))
+      return false;
+    if (lhsAttr) {
+      if (lhsAttr != rhsAttr)
+        return false;
+    } else if (cast<Value>(lhs) != cast<Value>(rhs)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Returns the single create_mem_desc op that views `source` if `source` is a
+// privatizable local buffer. The buffer must be a local alloca/alloc in SLM
+// whose only user is exactly one create_mem_desc op; any other user (or a
+// second view) means the buffer might escape or be aliased, so it is rejected.
+static xegpu::CreateMemDescOp getPrivatizableView(Value source) {
+  Operation *defOp = source.getDefiningOp();
+  if (!defOp || !isa<memref::AllocaOp, memref::AllocOp>(defOp))
+    return nullptr;
+
+  auto memrefTy = dyn_cast<MemRefType>(source.getType());
+  if (!memrefTy || !xegpu::XeGPUDialect::isSharedMemory(memrefTy))
+    return nullptr;
+
+  // The buffer must be viewed by exactly one create_mem_desc and nothing else,
+  // so it neither escapes nor aliases another mem_desc.
+  if (!source.hasOneUse())
+    return nullptr;
+  return dyn_cast<xegpu::CreateMemDescOp>(*source.getUsers().begin());
+}
+
+// If every load_matrix/store_matrix on `createOp`'s mem_desc is a workgroup
+// access sharing the same sg_layout, sg_data, data shape, and offsets, and the
+// workgroup tile is evenly distributed to the subgroups (no broadcast/overlap),
+// returns that common layout. Otherwise returns nullptr.
+static xegpu::DistributeLayoutAttr
+getSubgroupPrivateLayout(xegpu::CreateMemDescOp createOp) {
+  xegpu::DistributeLayoutAttr commonLayout;
+  SmallVector<OpFoldResult> commonOffsets;
+  ArrayRef<int64_t> commonDataShape;
+  bool seen = false;
+
+  auto checkAccess = [&](xegpu::DistributeLayoutAttr layout,
+                         SmallVector<OpFoldResult> offsets,
+                         ArrayRef<int64_t> dataShape) -> bool {
+    // Every access must be a distributed workgroup-level access.
+    if (!layout || !layout.isForWorkgroup())
+      return false;
+
+    // The workgroup tile must be evenly distributed across the subgroups with
+    // no broadcast: sg_layout[d] * sg_data[d] must not exceed the tile in any
+    // dim. A larger product means a dimension wraps around and is broadcast to
+    // multiple subgroups, so their regions overlap and are not private.
+    SmallVector<int64_t> sgLayout = layout.getEffectiveSgLayoutAsInt();
+    SmallVector<int64_t> sgData = layout.getEffectiveSgDataAsInt();
+    if (sgLayout.size() != dataShape.size() ||
+        sgData.size() != dataShape.size())
+      return false;
+    for (auto [l, d, tile] : llvm::zip_equal(sgLayout, sgData, dataShape))
+      if (l * d > tile)
+        return false;
+
+    if (!seen) {
+      commonLayout = layout;
+      commonOffsets = std::move(offsets);
+      commonDataShape = dataShape;
+      seen = true;
+      return true;
+    }
+    return commonLayout.getEffectiveSgLayoutAsInt() == sgLayout &&
+           commonLayout.getEffectiveSgDataAsInt() == sgData &&
+           commonDataShape == dataShape && sameOffsets(commonOffsets, offsets);
+  };
+
+  for (Operation *memUser : createOp.getMemDesc().getUsers()) {
+    if (auto loadOp = dyn_cast<xegpu::LoadMatrixOp>(memUser)) {
+      if (!checkAccess(loadOp.getLayoutAttr(), loadOp.getMixedOffsets(),
+                       loadOp.getDataShape()))
+        return nullptr;
+    } else if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(memUser)) {
+      if (!checkAccess(storeOp.getLayoutAttr(), storeOp.getMixedOffsets(),
+                       storeOp.getDataShape()))
+        return nullptr;
+    } else {
+      // Any other use of the mem_desc is unexpected; be conservative.
+      return nullptr;
+    }
+  }
+
+  // Require at least one access to have been observed.
+  return seen ? commonLayout : nullptr;
+}
+
+// Rewrites the buffer defined by `defOp` (an alloca/alloc) so that its memory
+// space is private (4) instead of shared (3), updates the source type of the
+// create_mem_desc that consumes it, and marks that op with the common workgroup
+// layout so the conversion pattern can shrink it to the per-subgroup size.
+static void privatizeSlmBuffer(Operation *defOp, xegpu::CreateMemDescOp view,
+                               xegpu::DistributeLayoutAttr layout) {
+  OpBuilder builder(defOp);
+  Value oldBuffer = defOp->getResult(0);
+  auto oldTy = cast<MemRefType>(oldBuffer.getType());
+  auto privateSpace = builder.getI64IntegerAttr(4);
+  auto newTy = MemRefType::get(oldTy.getShape(), oldTy.getElementType(),
+                               oldTy.getLayout(), privateSpace);
+
+  Operation *newDefOp = builder.clone(*defOp);
+  newDefOp->getResult(0).setType(newTy);
+  oldBuffer.replaceAllUsesWith(newDefOp->getResult(0));
+  defOp->erase();
+
+  view->setAttr(kPrivatizeLayoutAttrName, layout);
+}
+
+// Entry point for the SLM privatization pre-phase.
+static void privatizeSharedLocalMemory(Operation *root) {
+  SmallVector<std::tuple<Operation *, xegpu::CreateMemDescOp,
+                         xegpu::DistributeLayoutAttr>>
+      toPrivatize;
+
+  root->walk([&](xegpu::CreateMemDescOp createOp) {
+    Value source = createOp.getSource();
+    if (getPrivatizableView(source) != createOp)
+      return;
+    if (auto layout = getSubgroupPrivateLayout(createOp))
+      toPrivatize.push_back({source.getDefiningOp(), createOp, layout});
+  });
+
+  for (auto [defOp, view, layout] : toPrivatize)
+    privatizeSlmBuffer(defOp, view, layout);
+}
+
 struct XeGPUWgToSgDistributePass
     : public xegpu::impl::XeGPUWgToSgDistributeBase<XeGPUWgToSgDistributePass> {
   void runOnOperation() override;
@@ -1549,10 +1814,18 @@ struct XeGPUWgToSgDistributePass
 void XeGPUWgToSgDistributePass::runOnOperation() {
 
   Operation *op = getOperation();
+
   if (!xegpu::recoverTemporaryLayouts(op)) {
     signalPassFailure();
     return;
   }
+
+  // Pre-phase: demote SLM buffers that are accessed identically by every
+  // subgroup (same sg_layout, sg_data, data shape and offsets) to subgroup-
+  // private memory. Run after recoverTemporaryLayouts, which strips discardable
+  // DistributeLayoutAttr-valued attrs (and would otherwise remove the marker
+  // attribute this phase sets on create_mem_desc).
+  privatizeSharedLocalMemory(op);
 
   // Collect existing UnrealizedConversionCastOps. These must be preserved.
   llvm::SmallSetVector<UnrealizedConversionCastOp, 8> existingCasts;
@@ -1623,6 +1896,13 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   target.addDynamicallyLegalOp<xegpu::StoreMatrixOp>(
       [=](xegpu::StoreMatrixOp op) -> bool {
         return isLegal(op.getLayoutAttr());
+      });
+
+  // A create_mem_desc marked by the privatization pre-phase must be shrunk to
+  // the per-subgroup size; all others are already legal.
+  target.addDynamicallyLegalOp<xegpu::CreateMemDescOp>(
+      [=](xegpu::CreateMemDescOp op) -> bool {
+        return !op->hasAttr(kPrivatizeLayoutAttrName);
       });
 
   target.addDynamicallyLegalOp<arith::ConstantOp>(
@@ -1703,4 +1983,12 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   // Fold cancelling cast chains and erase dead casts.
   xegpu::cleanupUnrealizedConversionCasts(getOperation(), existingCasts);
   xegpu::removeTemporaryLayoutAttrs(getOperation());
+
+  // Erase the original full-size buffers left dead by privatization: the
+  // WgToSgCreateMemDescOp pattern allocates fresh per-subgroup buffers, so the
+  // pre-phase's space-4 allocas no longer have any users.
+  getOperation()->walk([](Operation *op) {
+    if (isa<memref::AllocaOp, memref::AllocOp>(op) && op->use_empty())
+      op->erase();
+  });
 }

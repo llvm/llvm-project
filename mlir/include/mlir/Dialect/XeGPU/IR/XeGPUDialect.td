@@ -43,6 +43,11 @@ def XeGPU_Dialect : Dialect {
       /// xevm::AddrSpace::SHARED, or a GPU workgroup memory address space.
       static bool isSharedMemory(const MemRefType &memrefTy);
 
+      /// Checks if the given memref type represents subgroup-private memory.
+      /// Returns true if the memory space is address space 4, or a GPU private
+      /// memory address space.
+      static bool isPrivateMemory(const MemRefType &memrefTy);
+
       /// drops/slices the shape in the specified dims, and return the rest. e.g.,
       /// for shape = [32, 64, 8], dims = [0, 2], it will return [64]
       template<typename T, typename U>

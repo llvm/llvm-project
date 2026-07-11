@@ -194,6 +194,17 @@ bool XeGPUDialect::isSharedMemory(const MemRefType &memrefTy) {
   return gpu::GPUDialect::isWorkgroupMemoryAddressSpace(attr);
 }
 
+bool XeGPUDialect::isPrivateMemory(const MemRefType &memrefTy) {
+  Attribute attr = memrefTy.getMemorySpace();
+  if (!attr)
+    return false; // Default memory space is not private memory
+  if (auto intAttr = llvm::dyn_cast_if_present<IntegerAttr>(attr))
+    return intAttr.getInt() == 4;
+  if (auto gpuAttr = llvm::dyn_cast_if_present<gpu::AddressSpaceAttr>(attr))
+    return gpuAttr.getValue() == gpu::GPUDialect::getPrivateAddressSpace();
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // XeGPU_BlockTensorDescAttr
 //===----------------------------------------------------------------------===//
