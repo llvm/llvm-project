@@ -371,6 +371,7 @@ public:
         IsRetSmallStructInRegABI(RetSmallStructInRegABI) {}
 
   ABIArgInfo classifyReturnType(QualType RetTy) const;
+  ABIArgInfo classifyArgumentType(QualType Ty) const;
 
   void computeInfo(CGFunctionInfo &FI) const override {
     if (!getCXXABI().classifyReturnType(FI))
@@ -425,6 +426,36 @@ CharUnits PPC32_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
   if (AlignTy)
     return CharUnits::fromQuantity(AlignTy->isVectorType() ? 16 : 4);
   return CharUnits::fromQuantity(4);
+}
+
+ABIArgInfo PPC32_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
+  Ty = useFirstFieldIfTransparentUnion(Ty);
+
+  if (isAggregateTypeForABI(Ty)) {
+    // Records with non-trivial destructors/copy-constructors should not be
+    // passed by value.
+    if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     RAA == CGCXXABI::RAA_DirectInMemory);
+
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+  }
+
+  // Treat an enum type as its underlying type.
+  if (const auto *ED = Ty->getAsEnumDecl())
+    Ty = ED->getIntegerType();
+
+  ASTContext &Context = getContext();
+  if (const auto *EIT = Ty->getAs<BitIntType>())
+    if (EIT->getNumBits() >
+        Context.getTypeSize(Context.getTargetInfo().hasInt128Type()
+                                ? Context.Int128Ty
+                                : Context.LongLongTy))
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+
+  return (isPromotableIntegerTypeForABI(Ty)
+              ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
+              : ABIArgInfo::getDirect());
 }
 
 ABIArgInfo PPC32_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
