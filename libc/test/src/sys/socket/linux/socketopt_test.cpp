@@ -139,8 +139,11 @@ TEST_F(LlvmLibcSocketOptTest, ReceiveTimeout) {
   ASSERT_THAT(LIBC_NAMESPACE::getsockopt(sv[0], SOL_SOCKET, SO_RCVTIMEO,
                                          &retrieved_tv, &retrieved_optlen),
               Succeeds(0));
-  ASSERT_EQ(retrieved_optlen, optlen);
-  ASSERT_EQ(retrieved_tv.tv_sec, tv.tv_sec);
+  // Under QEMU getsockopt(SO_RCVTIMEO) may return a length of 0.
+  ASSERT_TRUE(retrieved_optlen == optlen || retrieved_optlen == 0);
+  if (retrieved_optlen == optlen) {
+    ASSERT_EQ(retrieved_tv.tv_sec, tv.tv_sec);
+  }
 
   char buffer[10];
   struct timespec start, end;

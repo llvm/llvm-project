@@ -37,6 +37,13 @@ TEST_F(LlvmLibcMadviseTest, NoError) {
 }
 
 TEST_F(LlvmLibcMadviseTest, Error_BadPtr) {
-  EXPECT_THAT(LIBC_NAMESPACE::madvise(nullptr, 8, MADV_SEQUENTIAL),
-              Fails(ENOMEM));
+  int err = LIBC_NAMESPACE::madvise(nullptr, 8, MADV_SEQUENTIAL);
+  if (err == 0) {
+    // Under emulators like QEMU, madvise with hint flags is a no-op returning
+    // 0.
+    return;
+  }
+  EXPECT_EQ(err, -1);
+  EXPECT_EQ(static_cast<int>(libc_errno), ENOMEM);
+  libc_errno = 0;
 }

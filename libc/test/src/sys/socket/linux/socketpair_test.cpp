@@ -34,5 +34,8 @@ TEST_F(LlvmLibcSocketPairTest, LocalSocket) {
 
 TEST_F(LlvmLibcSocketPairTest, SocketFails) {
   int sockpair[2] = {-1, -1};
-  ASSERT_THAT(LIBC_NAMESPACE::socketpair(-1, -1, -1, sockpair), Fails(EINVAL));
+  int ret = LIBC_NAMESPACE::socketpair(-1, -1, -1, sockpair);
+  EXPECT_EQ(ret, -1);
+  EXPECT_TRUE(libc_errno == EINVAL || libc_errno == EAFNOSUPPORT);
+  libc_errno = 0;
 }

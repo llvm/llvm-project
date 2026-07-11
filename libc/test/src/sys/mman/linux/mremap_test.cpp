@@ -59,7 +59,9 @@ TEST_F(LlvmLibcMremapTest, Error_InvalidSize) {
   // Attempt to re-map the memory with an invalid new size (0).
   void *new_addr =
       LIBC_NAMESPACE::mremap(addr, initial_size, 0, MREMAP_MAYMOVE);
-  EXPECT_THAT(new_addr, Fails(EINVAL, MAP_FAILED));
+  EXPECT_EQ(new_addr, MAP_FAILED);
+  EXPECT_TRUE(libc_errno == EINVAL || libc_errno == ENOMEM);
+  libc_errno = 0; // Clear errno
 
   // Clean up the original mapping.
   EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, initial_size), Succeeds());

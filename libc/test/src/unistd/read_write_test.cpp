@@ -58,7 +58,8 @@ TEST_F(LlvmLibcUniStd, WriteFails) {
 TEST_F(LlvmLibcUniStd, ReadFails) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 
-  EXPECT_THAT(LIBC_NAMESPACE::read(-1, nullptr, 1), Fails<ssize_t>(EBADF));
+  char buf[1];
+  EXPECT_THAT(LIBC_NAMESPACE::read(-1, buf, 1), Fails<ssize_t>(EBADF));
   EXPECT_THAT(LIBC_NAMESPACE::read(0, reinterpret_cast<void *>(-1), 1),
               Fails<ssize_t>(EFAULT));
 }
