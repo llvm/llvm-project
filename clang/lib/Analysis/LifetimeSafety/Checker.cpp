@@ -263,12 +263,16 @@ public:
         if (Warning.InvalidatedByExpr) {
           if (IssueExpr)
             // Use-after-invalidation of an object on stack.
-            SemaHelper->reportUseAfterInvalidation(IssueExpr, UF->getUseExpr(),
-                                                   Warning.InvalidatedByExpr);
+            SemaHelper->reportUseAfterInvalidation(
+                IssueExpr, UF->getUseExpr(), Warning.InvalidatedByExpr,
+                getExprChain(
+                    LoanPropagation.buildOriginFlowChain(UF, LID, Cfg)));
           else if (InvalidatedPVD)
             // Use-after-invalidation of a parameter.
             SemaHelper->reportUseAfterInvalidation(
-                InvalidatedPVD, UF->getUseExpr(), Warning.InvalidatedByExpr);
+                InvalidatedPVD, UF->getUseExpr(), Warning.InvalidatedByExpr,
+                getExprChain(
+                    LoanPropagation.buildOriginFlowChain(UF, LID, Cfg)));
 
         } else
           // Scope-based expiry (use-after-scope).
