@@ -449,6 +449,8 @@ public:
     const auto stt = getSparseTensorType(op);
     if (!stt.hasEncoding())
       return failure();
+    if (!isValidPrimaryType(stt.getElementType()))
+      return rewriter.notifyMatchFailure(op, "unsupported element type");
     // Gather all dimension sizes as SSA values.
     const Dimension dimRank = stt.getDimRank();
     SmallVector<Value> dimSizesValues;
