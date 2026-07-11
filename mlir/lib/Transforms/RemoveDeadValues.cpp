@@ -640,9 +640,20 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
       llvm::interleaveComma(f.nonLiveRets.set_bits(), os);
       os << "]";
     });
-    // Drop all uses of the dead arguments.
-    for (auto deadIdx : f.nonLiveArgs.set_bits())
-      f.funcOp.getArgument(deadIdx).dropAllUses();
+    // Replace remaining uses of the dead arguments with poison values. Simply
+    // dropping the uses would leave null operands behind in ops that survive
+    // the pass (e.g. a side-effecting op in an unreachable function, whose
+    // values are initialized as dead by the liveness analysis).
+    for (auto deadIdx : f.nonLiveArgs.set_bits()) {
+      BlockArgument arg = f.funcOp.getArgument(deadIdx);
+      // Avoid creating an unused poison value if there are no uses to replace.
+      if (arg.use_empty())
+        continue;
+      rewriter.setInsertionPointToStart(arg.getOwner());
+      Value poison =
+          ub::PoisonOp::create(rewriter, arg.getLoc(), arg.getType());
+      rewriter.replaceAllUsesWith(arg, poison);
+    }
     // Some functions may not allow erasing arguments or results. These calls
     // return failure in such cases without modifying the function, so it's okay
     // to proceed.

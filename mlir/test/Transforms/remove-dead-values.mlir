@@ -895,3 +895,52 @@ module @func_with_non_call_users {
   }
   spirv.EntryPoint "GLCompute" @callee
 }
+
+// -----
+
+// Verify that the upper bound of a for loop inside an unreachable
+// function is correctly replaced with a poison value.
+// CHECK-LABEL: module @unreachable_func_with_for_loops
+// CHECK-NEXT:    func.func private @main_func() {
+// CHECK-NEXT:      %[[ARG3:.*]] = ub.poison : index
+// CHECK-NEXT:      %[[C0:.*]] = ub.poison : index
+// CHECK-NEXT:      %[[C1:.*]] = ub.poison : index
+// CHECK-NEXT:      %[[C10:.*]] = ub.poison : index
+// CHECK-NEXT:      scf.for %{{.*}} = %[[C0]] to %[[C10]] step %[[C1]] {
+// CHECK-NEXT:        gpu.barrier
+// CHECK-NEXT:      }
+// CHECK-NEXT:      scf.for %{{.*}} = %[[C0]] to %[[ARG3]] step %[[C1]] {
+// CHECK-NEXT:        gpu.barrier
+// CHECK-NEXT:      }
+// CHECK-NEXT:      return
+
+// CHECK-CANONICALIZE-LABEL: module @unreachable_func_with_for_loops
+// CHECK-CANONICALIZE-NEXT:    func.func private @main_func() {
+// CHECK-CANONICALIZE-NEXT:      %[[ARG3:.*]] = ub.poison : index
+// CHECK-CANONICALIZE-NEXT:      %[[C0:.*]] = ub.poison : index
+// CHECK-CANONICALIZE-NEXT:      %[[C1:.*]] = ub.poison : index
+// CHECK-CANONICALIZE-NEXT:      %[[C10:.*]] = ub.poison : index
+// CHECK-CANONICALIZE-NEXT:      scf.for %{{.*}} = %[[C0]] to %[[C10]] step %[[C1]] {
+// CHECK-CANONICALIZE-NEXT:        gpu.barrier
+// CHECK-CANONICALIZE-NEXT:      }
+// CHECK-CANONICALIZE-NEXT:      scf.for %{{.*}} = %[[C0]] to %[[ARG3]] step %[[C1]] {
+// CHECK-CANONICALIZE-NEXT:        gpu.barrier
+// CHECK-CANONICALIZE-NEXT:      }
+// CHECK-CANONICALIZE-NEXT:      return
+module @unreachable_func_with_for_loops {
+  func.func private @main_func(%arg0: index, %arg1: memref<?xf32>, %arg2: index, %arg3: index) {
+    %cst = arith.constant 0.000000e+00 : f32
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c10 = arith.constant 10 : index
+    scf.for %arg4 = %c0 to %c10 step %c1 {
+      %0 = memref.load %arg1[%arg4] : memref<?xf32>
+      gpu.barrier
+    }
+    scf.for %arg4 = %c0 to %arg3 step %c1 {
+      %0 = memref.load %arg1[%arg4] : memref<?xf32>
+      gpu.barrier
+    }
+    return
+  }
+}
