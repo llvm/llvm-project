@@ -49,7 +49,6 @@
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] simplifyBlends
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] legalizeAndOptimizeInductions
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] narrowToSingleScalarRecipes
-; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] removeRedundantExpandSCEVRecipes
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] reassociateHeaderMask
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] simplifyRecipes
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] removeBranchOnConst

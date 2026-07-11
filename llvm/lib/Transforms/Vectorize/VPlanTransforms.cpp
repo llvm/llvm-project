@@ -1097,29 +1097,6 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
   }
 }
 
-/// Remove redundant ExpandSCEVRecipes in \p Plan's entry block by replacing
-/// them with already existing recipes expanding the same SCEV expression.
-static void removeRedundantExpandSCEVRecipes(VPlan &Plan) {
-  DenseMap<const SCEV *, VPValue *> SCEV2VPV;
-
-  for (VPRecipeBase &R :
-       make_early_inc_range(*Plan.getEntry()->getEntryBasicBlock())) {
-    auto *ExpR = dyn_cast<VPExpandSCEVRecipe>(&R);
-    if (!ExpR)
-      continue;
-
-    const auto &[V, Inserted] = SCEV2VPV.try_emplace(ExpR->getSCEV(), ExpR);
-    if (Inserted)
-      continue;
-
-    ExpR->replaceAllUsesWith(V->second);
-    if (ExpR == Plan.getTripCount())
-      Plan.resetTripCount(V->second);
-
-    ExpR->eraseFromParent();
-  }
-}
-
 /// Try to simplify logical and bitwise recipes in \p Def.
 static bool simplifyLogicalRecipe(VPSingleDefRecipe *Def, VPBuilder &Builder,
                                   bool CanCreateNewRecipe) {
@@ -2273,6 +2250,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
         return hash_combine(Result, RFlags->getPredicate());
     if (auto *SIVSteps = dyn_cast<VPScalarIVStepsRecipe>(Def))
       return hash_combine(Result, SIVSteps->getInductionOpcode());
+    if (auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(Def))
+      return hash_combine(Result, ExpSCEV->getSCEV());
     return Result;
   }
 
@@ -2296,6 +2275,9 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     if (auto *LSIV = dyn_cast<VPScalarIVStepsRecipe>(L))
       if (LSIV->getInductionOpcode() !=
           cast<VPScalarIVStepsRecipe>(R)->getInductionOpcode())
+        return false;
+    if (auto *LExp = dyn_cast<VPExpandSCEVRecipe>(L))
+      if (LExp->getSCEV() != cast<VPExpandSCEVRecipe>(R)->getSCEV())
         return false;
     // Phi recipes can only be equal if they are in the same VPBB, as they
     // implicitly depend on their predecessors.
@@ -2649,7 +2631,6 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   RUN_VPLAN_PASS(simplifyBlends, Plan);
   RUN_VPLAN_PASS(legalizeAndOptimizeInductions, Plan);
   RUN_VPLAN_PASS(narrowToSingleScalarRecipes, Plan);
-  RUN_VPLAN_PASS(removeRedundantExpandSCEVRecipes, Plan);
   RUN_VPLAN_PASS(reassociateHeaderMask, Plan);
   RUN_VPLAN_PASS(simplifyRecipes, Plan);
   RUN_VPLAN_PASS(removeBranchOnConst, Plan, /*OnlyLatches=*/false);
