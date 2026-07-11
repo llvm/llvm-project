@@ -923,6 +923,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   TYPEKEYWORD("label",     Type::getLabelTy(Context));
   TYPEKEYWORD("metadata",  Type::getMetadataTy(Context));
   TYPEKEYWORD("x86_amx",   Type::getX86_AMXTy(Context));
+  TYPEKEYWORD("x86_bsr", Type::getX86_BSRTy(Context));
   TYPEKEYWORD("token",     Type::getTokenTy(Context));
   TYPEKEYWORD("ptr",       PointerType::getUnqual(Context));
 

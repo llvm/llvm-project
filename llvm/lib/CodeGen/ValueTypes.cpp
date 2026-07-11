@@ -186,6 +186,8 @@ std::string EVT::getEVTString() const {
   case MVT::Glue:      return "glue";
   case MVT::x86mmx:    return "x86mmx";
   case MVT::x86amx:    return "x86amx";
+  case MVT::x86bsr:
+    return "x86bsr";
   case MVT::i64x8:     return "i64x8";
   case MVT::Metadata:  return "Metadata";
   case MVT::Untyped:   return "Untyped";
@@ -228,6 +230,7 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   case MVT::aarch64mfp8:
     return FixedVectorType::get(IntegerType::get(Context, 8), 1);
   case MVT::x86amx:  return Type::getX86_AMXTy(Context);
+  case MVT::x86bsr:  return Type::getX86_BSRTy(Context);
   case MVT::i64x8:   return IntegerType::get(Context, 512);
   case MVT::amdgpuBufferFatPointer:  return IntegerType::get(Context, 160);
   case MVT::amdgpuBufferStridedPointer:  return IntegerType::get(Context, 192);
@@ -287,6 +290,8 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
     llvm_unreachable("Unknown target ext type!");
   }
   case Type::X86_AMXTyID:   return MVT(MVT::x86amx);
+  case Type::X86_BSRTyID:
+    return MVT(MVT::x86bsr);
   case Type::FP128TyID:     return MVT(MVT::f128);
   case Type::PPC_FP128TyID: return MVT(MVT::ppcf128);
   case Type::FixedVectorTyID:

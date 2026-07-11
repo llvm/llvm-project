@@ -9,10 +9,10 @@ define <128 x i1> @test_ivec_128(<128 x i32> %0, <128 x i32> %1) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = alloca <128 x i32>, align 512
 ; CHECK-NEXT:    store <128 x i32> [[TMP0]], ptr [[TMP5]], align 512
 ; CHECK-NEXT:    store <128 x i32> [[TMP1]], ptr [[TMP4]], align 512
-; CHECK-NEXT:    call void @__instrumentor_pre_compare_ind(i32 18, i32 512, i32 55, ptr [[TMP5]], ptr [[TMP4]], i64 0, i32 1) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    call void @__instrumentor_pre_compare_ind(i32 19, i32 512, i32 55, ptr [[TMP5]], ptr [[TMP4]], i64 0, i32 1) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <128 x i32> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    store <128 x i1> [[TMP6]], ptr [[TMP3]], align 16
-; CHECK-NEXT:    call void @__instrumentor_post_compare_ind(i32 18, i32 512, i32 55, ptr [[TMP5]], ptr [[TMP4]], i32 18, i32 16, ptr [[TMP3]], i64 0, i32 -1) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_compare_ind(i32 19, i32 512, i32 55, ptr [[TMP5]], ptr [[TMP4]], i32 19, i32 16, ptr [[TMP3]], i64 0, i32 -1) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <128 x i1>, ptr [[TMP3]], align 16
 ; CHECK-NEXT:    ret <128 x i1> [[TMP7]]
 ;
@@ -28,10 +28,10 @@ define <32 x i1> @test_ivec_32(<32 x i32> %0, <32 x i32> %1) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = alloca <32 x i32>, align 128
 ; CHECK-NEXT:    store <32 x i32> [[TMP0]], ptr [[TMP5]], align 128
 ; CHECK-NEXT:    store <32 x i32> [[TMP1]], ptr [[TMP4]], align 128
-; CHECK-NEXT:    call void @__instrumentor_pre_compare_ind(i32 18, i32 128, i32 55, ptr [[TMP5]], ptr [[TMP4]], i64 0, i32 2) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_compare_ind(i32 19, i32 128, i32 55, ptr [[TMP5]], ptr [[TMP4]], i64 0, i32 2) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <32 x i32> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    store <32 x i1> [[TMP6]], ptr [[TMP3]], align 4
-; CHECK-NEXT:    call void @__instrumentor_post_compare_ind(i32 18, i32 128, i32 55, ptr [[TMP5]], ptr [[TMP4]], i32 18, i32 4, ptr [[TMP3]], i64 0, i32 -2) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_compare_ind(i32 19, i32 128, i32 55, ptr [[TMP5]], ptr [[TMP4]], i32 19, i32 4, ptr [[TMP3]], i64 0, i32 -2) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <32 x i1>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    ret <32 x i1> [[TMP7]]
 ;
@@ -44,10 +44,10 @@ define i1 @test_int_i1(i32 %0, i32 %1) {
 ; CHECK-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP1]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_compare(i32 12, i32 4, i32 55, i64 [[TMP3]], i64 [[TMP4]], i64 0, i32 3) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_compare(i32 13, i32 4, i32 55, i64 [[TMP3]], i64 [[TMP4]], i64 0, i32 3) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i1 [[TMP5]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @__instrumentor_post_compare(i32 12, i32 4, i32 55, i64 [[TMP3]], i64 [[TMP4]], i32 12, i32 1, i64 [[TMP6]], i64 0, i32 -3) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @__instrumentor_post_compare(i32 13, i32 4, i32 55, i64 [[TMP3]], i64 [[TMP4]], i32 13, i32 1, i64 [[TMP6]], i64 0, i32 -3) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP7]] to i1
 ; CHECK-NEXT:    ret i1 [[TMP8]]
 ;
@@ -63,10 +63,10 @@ define <128 x i1> @test_fvec_128(<128 x float> %0, <128 x float> %1) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = alloca <128 x float>, align 512
 ; CHECK-NEXT:    store <128 x float> [[TMP0]], ptr [[TMP5]], align 512
 ; CHECK-NEXT:    store <128 x float> [[TMP1]], ptr [[TMP4]], align 512
-; CHECK-NEXT:    call void @__instrumentor_pre_compare_ind(i32 18, i32 512, i32 56, ptr [[TMP5]], ptr [[TMP4]], i64 0, i32 4) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_compare_ind(i32 19, i32 512, i32 56, ptr [[TMP5]], ptr [[TMP4]], i64 0, i32 4) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp olt <128 x float> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    store <128 x i1> [[TMP6]], ptr [[TMP3]], align 16
-; CHECK-NEXT:    call void @__instrumentor_post_compare_ind(i32 18, i32 512, i32 56, ptr [[TMP5]], ptr [[TMP4]], i32 18, i32 16, ptr [[TMP3]], i64 0, i32 -4) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_compare_ind(i32 19, i32 512, i32 56, ptr [[TMP5]], ptr [[TMP4]], i32 19, i32 16, ptr [[TMP3]], i64 0, i32 -4) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <128 x i1>, ptr [[TMP3]], align 16
 ; CHECK-NEXT:    ret <128 x i1> [[TMP7]]
 ;
@@ -82,10 +82,10 @@ define <32 x i1> @test_fvec_32(<32 x float> %0, <32 x float> %1) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = alloca <32 x float>, align 128
 ; CHECK-NEXT:    store <32 x float> [[TMP0]], ptr [[TMP5]], align 128
 ; CHECK-NEXT:    store <32 x float> [[TMP1]], ptr [[TMP4]], align 128
-; CHECK-NEXT:    call void @__instrumentor_pre_compare_ind(i32 18, i32 128, i32 56, ptr [[TMP5]], ptr [[TMP4]], i64 2, i32 5) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_compare_ind(i32 19, i32 128, i32 56, ptr [[TMP5]], ptr [[TMP4]], i64 2, i32 5) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp nnan oeq <32 x float> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    store <32 x i1> [[TMP6]], ptr [[TMP3]], align 4
-; CHECK-NEXT:    call void @__instrumentor_post_compare_ind(i32 18, i32 128, i32 56, ptr [[TMP5]], ptr [[TMP4]], i32 18, i32 4, ptr [[TMP3]], i64 2, i32 -5) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_compare_ind(i32 19, i32 128, i32 56, ptr [[TMP5]], ptr [[TMP4]], i32 19, i32 4, ptr [[TMP3]], i64 2, i32 -5) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <32 x i1>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    ret <32 x i1> [[TMP7]]
 ;
@@ -103,7 +103,7 @@ define i1 @test_float_i1(float %0, float %1) {
 ; CHECK-NEXT:    call void @__instrumentor_pre_compare(i32 2, i32 4, i32 56, i64 [[TMP4]], i64 [[TMP6]], i64 14, i32 6) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp fast ueq float [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i1 [[TMP7]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @__instrumentor_post_compare(i32 2, i32 4, i32 56, i64 [[TMP4]], i64 [[TMP6]], i32 12, i32 1, i64 [[TMP8]], i64 14, i32 -6) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @__instrumentor_post_compare(i32 2, i32 4, i32 56, i64 [[TMP4]], i64 [[TMP6]], i32 13, i32 1, i64 [[TMP8]], i64 14, i32 -6) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP9]] to i1
 ; CHECK-NEXT:    ret i1 [[TMP10]]
 ;

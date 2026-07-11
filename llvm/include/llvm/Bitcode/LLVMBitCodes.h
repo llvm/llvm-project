@@ -184,6 +184,8 @@ enum TypeCodes {
   TYPE_CODE_TARGET_TYPE = 26, // TARGET_TYPE
 
   TYPE_CODE_BYTE = 27, // BYTE: [width]
+
+  TYPE_CODE_X86_BSR = 28, // X86 BSR
 };
 
 enum OperandBundleTagCode {

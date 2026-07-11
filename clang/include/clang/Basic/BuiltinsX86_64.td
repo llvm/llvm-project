@@ -446,11 +446,18 @@ let Features = "acev1", Attributes = [NoThrow] in {
   def top4bsud_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Vector<256, int>, _Vector<64, signed char>, _Vector<64, signed char>)">;
 }
 
-// Mixed precision internal
+// Mixed precision internal (last arg is BSR as v32i32, converted to x86_bsr by CGBuiltin)
 let Features = "acev1", Attributes = [NoThrow] in {
-  def top4mxhf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<16, int>, _Vector<16, int>)">;
-  def top4mxbhf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<16, int>, _Vector<16, int>)">;
-  def top4mxhbf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<16, int>, _Vector<16, int>)">;
-  def top4mxbf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<16, int>, _Vector<16, int>)">;
-  def top4mxbssps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<16, int>, _Vector<16, int>)">;
+  // BSR versions (8 args, with BSR) - arg 3 is immediate (i8)
+  def top4mxhf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<16, int>, _Vector<16, int>, _Vector<32, int>)">;
+  def top4mxbhf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<16, int>, _Vector<16, int>, _Vector<32, int>)">;
+  def top4mxhbf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<16, int>, _Vector<16, int>, _Vector<32, int>)">;
+  def top4mxbf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<16, int>, _Vector<16, int>, _Vector<32, int>)">;
+  def top4mxbssps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<16, int>, _Vector<16, int>, _Vector<32, int>)">;
+  // Non-BSR versions (7 args, no BSR) - used by __tile_ace_* macros in acev1intrin.h
+  def top4mxhf8ps_nobsr_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Constant unsigned char, _Vector<256, int>, _Vector<16, int>, _Vector<16, int>)">;
+  def top4mxbhf8ps_nobsr_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Constant unsigned char, _Vector<256, int>, _Vector<16, int>, _Vector<16, int>)">;
+  def top4mxhbf8ps_nobsr_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Constant unsigned char, _Vector<256, int>, _Vector<16, int>, _Vector<16, int>)">;
+  def top4mxbf8ps_nobsr_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Constant unsigned char, _Vector<256, int>, _Vector<16, int>, _Vector<16, int>)">;
+  def top4mxbssps_nobsr_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Constant unsigned char, _Vector<256, int>, _Vector<16, int>, _Vector<16, int>)">;
 }

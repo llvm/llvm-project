@@ -172,6 +172,7 @@ typedef enum {
   LLVMX86_AMXTypeKind = 19,        /**< X86 AMX */
   LLVMTargetExtTypeKind = 20,      /**< Target extension type */
   LLVMByteTypeKind = 21,           /**< Arbitrary bit width bytes */
+  LLVMX86_BSRTypeKind = 22,        /**< X86 BSR */
 } LLVMTypeKind;
 
 typedef enum {
@@ -1924,6 +1925,11 @@ LLVM_C_ABI LLVMTypeRef LLVMLabelTypeInContext(LLVMContextRef C);
 LLVM_C_ABI LLVMTypeRef LLVMX86AMXTypeInContext(LLVMContextRef C);
 
 /**
+ * Create a X86 BSR type in a context.
+ */
+LLVM_C_ABI LLVMTypeRef LLVMX86BSRTypeInContext(LLVMContextRef C);
+
+/**
  * Create a token type in a context.
  */
 LLVM_C_ABI LLVMTypeRef LLVMTokenTypeInContext(LLVMContextRef C);
@@ -1949,6 +1955,10 @@ LLVM_C_ABI
 LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMX86AMXType(void),
                             "Use of the global context is deprecated, use "
                             "LLVMX86AMXTypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMX86BSRType(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMX86BSRTypeInContext instead");
 
 /**
  * Create a target extension type in LLVM context.

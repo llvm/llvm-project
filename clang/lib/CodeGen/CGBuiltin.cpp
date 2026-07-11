@@ -7047,11 +7047,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           }
         }
 
-        // Cast vector type (e.g., v256i32) to x86_amx, this only happen
-        // in amx intrinsics.
+        // Cast vector type to x86_amx (v256i32) or x86_bsr (v32i32).
+        // Use CreateIntrinsicWithoutFolding to avoid constant folding issues
+        // with these special types that cannot have constant values.
         if (PTy->isX86_AMXTy())
-          ArgValue = Builder.CreateIntrinsic(Intrinsic::x86_cast_vector_to_tile,
-                                             {ArgValue->getType()}, {ArgValue});
+          ArgValue = Builder.CreateIntrinsicWithoutFolding(
+              Intrinsic::x86_cast_vector_to_tile, {ArgValue->getType()},
+              {ArgValue});
+        else if (PTy->isX86_BSRTy())
+          ArgValue = Builder.CreateIntrinsicWithoutFolding(
+              Intrinsic::x86_cast_vector_to_bsr, {ArgValue->getType()},
+              {ArgValue});
         else
           ArgValue = Builder.CreateBitCast(ArgValue, PTy);
       }
@@ -7076,11 +7082,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         }
       }
 
-      // Cast x86_amx to vector type (e.g., v256i32), this only happen
-      // in amx intrinsics.
+      // Cast x86_amx (v256i32) or x86_bsr (v32i32) to vector type.
+      // Use CreateIntrinsicWithoutFolding to avoid constant folding issues
+      // with these special types that cannot have constant values.
       if (V->getType()->isX86_AMXTy())
-        V = Builder.CreateIntrinsic(Intrinsic::x86_cast_tile_to_vector, {RetTy},
-                                    {V});
+        V = Builder.CreateIntrinsicWithoutFolding(
+            Intrinsic::x86_cast_tile_to_vector, {RetTy}, {V});
+      else if (V->getType()->isX86_BSRTy())
+        V = Builder.CreateIntrinsicWithoutFolding(
+            Intrinsic::x86_cast_bsr_to_vector, {RetTy}, {V});
       else
         V = Builder.CreateBitCast(V, RetTy);
     }

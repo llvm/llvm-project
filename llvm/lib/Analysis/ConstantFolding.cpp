@@ -707,14 +707,16 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
                                   DL.getTypeSizeInBits(LoadTy).getFixedValue());
     if (Constant *Res =
             FoldReinterpretLoadFromConst(C, MapTy, OrigLoadTy, Offset, DL)) {
-      if (Res->isNullValue() && !LoadTy->isX86_AMXTy())
+      if (Res->isNullValue() && !LoadTy->isX86_AMXTy() &&
+          !LoadTy->isX86_BSRTy())
         // Materializing a zero can be done trivially without a bitcast
         return Constant::getNullValue(LoadTy);
       Type *CastTy = LoadTy->isPtrOrPtrVectorTy() ? DL.getIntPtrType(LoadTy) : LoadTy;
       Res = FoldBitCast(Res, CastTy, DL);
       if (LoadTy->isPtrOrPtrVectorTy()) {
         // For vector of pointer, we needed to first convert to a vector of integer, then do vector inttoptr
-        if (Res->isNullValue() && !LoadTy->isX86_AMXTy())
+        if (Res->isNullValue() && !LoadTy->isX86_AMXTy() &&
+            !LoadTy->isX86_BSRTy())
           return Constant::getNullValue(LoadTy);
         if (DL.isNonIntegralPointerType(LoadTy->getScalarType()))
           // Be careful not to replace a load of an addrspace value with an inttoptr here
@@ -912,7 +914,7 @@ Constant *llvm::ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty,
   // uniform.
   if (!DL.typeSizeEqualsStoreSize(C->getType()))
     return nullptr;
-  if (C->isNullValue() && !Ty->isX86_AMXTy())
+  if (C->isNullValue() && !Ty->isX86_AMXTy() && !Ty->isX86_BSRTy())
     return Constant::getNullValue(Ty);
   if (C->isAllOnesValue() &&
       (Ty->isIntOrIntVectorTy() || Ty->isByteOrByteVectorTy() ||

@@ -13,6 +13,15 @@
 #ifndef NOFOLD
 #define NOFOLD(INSN)
 #endif
+// BSR instructions: SDE does not correctly handle the memory-operand forms
+// of bsrmovl (F3 prefix). Memory-destination bsrmovl_get writes zeros instead
+// of BSR.lo contents, and memory-source bsrmovl_set reads the wrong BSR half.
+// Prevent all BSR memory folding to avoid silent miscompilation under SDE.
+NOFOLD(BSRMOVFrr)
+NOFOLD(BSRMOVHrr_get)
+NOFOLD(BSRMOVHrr_set)
+NOFOLD(BSRMOVLrr_get)
+NOFOLD(BSRMOVLrr_set)
 NOFOLD(BTC16rr)
 NOFOLD(BTC32rr)
 NOFOLD(BTC64rr)

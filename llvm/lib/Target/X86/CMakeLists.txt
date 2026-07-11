@@ -40,6 +40,7 @@ set(sources
   X86LowerTileCopy.cpp
   X86LowerAMXType.cpp
   X86LowerAMXIntrinsics.cpp
+  X86LowerBSRType.cpp
   X86TileConfig.cpp
   X86FastPreTileConfig.cpp
   X86FastTileConfig.cpp

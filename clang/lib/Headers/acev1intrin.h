@@ -19,6 +19,144 @@
 #define __DEFAULT_FN_ATTRS_ACE                                                 \
   __attribute__((__always_inline__, __nodebug__, __target__("acev1")))
 
+/// Vector type for combining two 512-bit halves into 1024-bit BSR value.
+typedef int __v32si __attribute__((__vector_size__(128)));
+
+/// Combine two 512-bit vector halves into a single 1024-bit vector.
+/// This is an internal helper for BSR intrinsics.
+///
+/// \param __lo
+///    The low 512-bit half (B-scales, BSR bits [511:0]).
+/// \param __hi
+///    The high 512-bit half (A-scales, BSR bits [1023:512]).
+/// \returns A 1024-bit vector with __lo in elements [0:15] and __hi in [16:31].
+static __inline__ __v32si __DEFAULT_FN_ATTRS_ACE
+__bsr_combine_v32(__v16si __lo, __v16si __hi) {
+  return __builtin_shufflevector(__lo, __hi, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                                 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+                                 23, 24, 25, 26, 27, 28, 29, 30, 31);
+}
+
+/// \struct __bsr
+/// \brief BSR (Block Scale Register) struct type.
+///
+/// The __bsr struct bundles the low and high 512-bit halves of the 1024-bit
+/// Block Scale Register into a single value type. This mirrors the __tile1024i
+/// pattern from AMX, but without shape metadata (BSR has fixed 1024-bit size).
+///
+/// BSR layout per ACE spec:
+///   - BSR[511:0]    = B-scales (lo) - column/B-input scales
+///   - BSR[1023:512] = A-scales (hi) - row/A-input scales
+///
+/// Usage:
+/// \code
+///   __bsr scales = __bsr_make(lo_zmm, hi_zmm);
+///   __bsr_store(scales);  // write to hardware BSR before compute
+/// \endcode
+typedef struct __bsr_str {
+  __m512i lo; ///< Low 512-bit half (B-scales, BSR bits [511:0])
+  __m512i hi; ///< High 512-bit half (A-scales, BSR bits [1023:512])
+} __bsr;
+
+/// Construct a BSR value from low and high 512-bit halves.
+///
+/// \headerfile <immintrin.h>
+///
+/// \param __lo
+///    The low 512-bit half (B-scales, BSR bits [511:0]).
+/// \param __hi
+///    The high 512-bit half (A-scales, BSR bits [1023:512]).
+/// \returns A __bsr struct containing both halves.
+static __inline__ __bsr __DEFAULT_FN_ATTRS_ACE __bsr_make(__m512i __lo,
+                                                          __m512i __hi) {
+  __bsr __b;
+  __b.lo = __lo;
+  __b.hi = __hi;
+  return __b;
+}
+
+/// Extract the low 512-bit half (B-scales) from a BSR value.
+///
+/// \headerfile <immintrin.h>
+///
+/// \param __b
+///    The BSR value to extract from.
+/// \returns The low 512-bit half (B-scales, BSR bits [511:0]).
+static __inline__ __m512i __DEFAULT_FN_ATTRS_ACE __bsr_get_lo(__bsr __b) {
+  return __b.lo;
+}
+
+/// Extract the high 512-bit half (A-scales) from a BSR value.
+///
+/// \headerfile <immintrin.h>
+///
+/// \param __b
+///    The BSR value to extract from.
+/// \returns The high 512-bit half (A-scales, BSR bits [1023:512]).
+static __inline__ __m512i __DEFAULT_FN_ATTRS_ACE __bsr_get_hi(__bsr __b) {
+  return __b.hi;
+}
+
+/// Return a new BSR value with the low half (B-scales) replaced.
+///
+/// \headerfile <immintrin.h>
+///
+/// \param __b
+///    The original BSR value.
+/// \param __lo
+///    The new low 512-bit half (B-scales).
+/// \returns A new __bsr with the low half replaced.
+static __inline__ __bsr __DEFAULT_FN_ATTRS_ACE __bsr_set_lo(__bsr __b,
+                                                            __m512i __lo) {
+  __b.lo = __lo;
+  return __b;
+}
+
+/// Return a new BSR value with the high half (A-scales) replaced.
+///
+/// \headerfile <immintrin.h>
+///
+/// \param __b
+///    The original BSR value.
+/// \param __hi
+///    The new high 512-bit half (A-scales).
+/// \returns A new __bsr with the high half replaced.
+static __inline__ __bsr __DEFAULT_FN_ATTRS_ACE __bsr_set_hi(__bsr __b,
+                                                            __m512i __hi) {
+  __b.hi = __hi;
+  return __b;
+}
+
+/// Store a BSR value to the hardware Block Scale Register.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the <c> BSRMOVF </c> instruction.
+///
+/// Per ACE spec: BSRMOVF writes A-scales (hi) to BSR[1023:512] and
+/// B-scales (lo) to BSR[511:0].
+///
+/// \param __b
+///    The BSR value to store to the hardware register.
+static __inline__ void __DEFAULT_FN_ATTRS_ACE __bsr_store(__bsr __b) {
+  __builtin_ia32_bsrmovf((__v16si)__b.hi, (__v16si)__b.lo);
+}
+
+/// Load the current hardware BSR state into a __bsr struct.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the <c> BSRMOVH </c> and <c> BSRMOVL </c>
+/// instructions (read forms).
+///
+/// \returns A __bsr struct containing the current hardware BSR state.
+static __inline__ __bsr __DEFAULT_FN_ATTRS_ACE __bsr_load(void) {
+  __bsr __b;
+  __b.lo = (__m512i)__builtin_ia32_bsrmovl_get();
+  __b.hi = (__m512i)__builtin_ia32_bsrmovh_get();
+  return __b;
+}
+
 /// Load tile configuration from a 64-byte memory location. For ACE
 /// (Palette 2), the palette_id byte must be 2. Unlike AMX (Palette 1),
 /// ACE tiles have fixed dimensions of 16 rows × 64 bytes, so per-tile
@@ -521,7 +659,7 @@ static __inline__ void __tile_ace_top2bf16ps(__acetile *dst, __m512bh src1,
 /// \param imm
 ///    8-bit immediate selecting BSR scale factors to apply.
 #define __tile_ace_top4mxhf8ps(dst, src1, src2, imm)                           \
-  (*(dst) = __builtin_ia32_top4mxhf8ps_internal(                               \
+  (*(dst) = __builtin_ia32_top4mxhf8ps_nobsr_internal(                         \
        16, 64, 64, (imm), *(dst), (__v16si)(src1), (__v16si)(src2)))
 
 /// Compute 4-way mixed precision outer product with BF8/HF8 format.
@@ -541,7 +679,7 @@ static __inline__ void __tile_ace_top2bf16ps(__acetile *dst, __m512bh src1,
 /// \param imm
 ///    8-bit immediate selecting BSR scale factors to apply.
 #define __tile_ace_top4mxbhf8ps(dst, src1, src2, imm)                          \
-  (*(dst) = __builtin_ia32_top4mxbhf8ps_internal(                              \
+  (*(dst) = __builtin_ia32_top4mxbhf8ps_nobsr_internal(                        \
        16, 64, 64, (imm), *(dst), (__v16si)(src1), (__v16si)(src2)))
 
 /// Compute 4-way mixed precision outer product with HF8/BF8 format.
@@ -561,7 +699,7 @@ static __inline__ void __tile_ace_top2bf16ps(__acetile *dst, __m512bh src1,
 /// \param imm
 ///    8-bit immediate selecting BSR scale factors to apply.
 #define __tile_ace_top4mxhbf8ps(dst, src1, src2, imm)                          \
-  (*(dst) = __builtin_ia32_top4mxhbf8ps_internal(                              \
+  (*(dst) = __builtin_ia32_top4mxhbf8ps_nobsr_internal(                        \
        16, 64, 64, (imm), *(dst), (__v16si)(src1), (__v16si)(src2)))
 
 /// Compute 4-way mixed precision outer product with BF8 (E5M2) format.
@@ -581,7 +719,7 @@ static __inline__ void __tile_ace_top2bf16ps(__acetile *dst, __m512bh src1,
 /// \param imm
 ///    8-bit immediate selecting BSR scale factors to apply.
 #define __tile_ace_top4mxbf8ps(dst, src1, src2, imm)                           \
-  (*(dst) = __builtin_ia32_top4mxbf8ps_internal(                               \
+  (*(dst) = __builtin_ia32_top4mxbf8ps_nobsr_internal(                         \
        16, 64, 64, (imm), *(dst), (__v16si)(src1), (__v16si)(src2)))
 
 /// Compute 4-way mixed precision outer product of MX INT8 with BSR scaling.
@@ -601,7 +739,7 @@ static __inline__ void __tile_ace_top2bf16ps(__acetile *dst, __m512bh src1,
 /// \param imm
 ///    8-bit immediate selecting BSR scale factors to apply.
 #define __tile_ace_top4mxbssps(dst, src1, src2, imm)                           \
-  (*(dst) = __builtin_ia32_top4mxbssps_internal(                               \
+  (*(dst) = __builtin_ia32_top4mxbssps_nobsr_internal(                         \
        16, 64, 64, (imm), *(dst), (__v16si)(src1), (__v16si)(src2)))
 
 /// Write a ZMM vector as a column in an ACE tile.
@@ -759,6 +897,102 @@ static __inline__ __m512h __tile_ace_cvtrowps2phl(__acetile *src,
                                                   unsigned int idx) {
   return __builtin_ia32_tcvtrowps2phl_internal(16, 64, *src, idx);
 }
+
+/// Compute 4-way mixed precision outer product with HF8 (E4M3) format
+/// using explicit BSR scales. Multiplies HF8 values from src1 with HF8
+/// values from src2, applies scales from the __bsr struct, converts to
+/// FP32 and accumulates into the ACE tile.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the <c> TOP4MXHF8PS </c> instruction.
+///
+/// \param dst
+///    Pointer to destination/accumulator __acetile.
+/// \param src1
+///    First source ZMM vector containing HF8 (E4M3) values.
+/// \param src2
+///    Second source ZMM vector containing HF8 (E4M3) values.
+/// \param scales
+///    __bsr struct containing A-scales (hi) and B-scales (lo).
+/// \param imm
+///    8-bit immediate selecting BSR scale factors to apply.
+#define __tile_ace_top4mxhf8ps_bsr(dst, src1, src2, scales, imm)               \
+  (*(dst) = __builtin_ia32_top4mxhf8ps_internal(                               \
+       16, 64, 64, (imm), *(dst), (__v16si)(src1), (__v16si)(src2),            \
+       __bsr_combine_v32((__v16si)((scales).lo), (__v16si)((scales).hi))))
+
+/// Compute 4-way mixed precision outer product with BF8/HF8 format
+/// using explicit BSR scales. Multiplies BF8 (E5M2) values from src1
+/// with HF8 (E4M3) values from src2, applies scales from the __bsr struct,
+/// converts to FP32 and accumulates into the ACE tile.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the <c> TOP4MXBHF8PS </c> instruction.
+///
+/// \param dst
+///    Pointer to destination/accumulator __acetile.
+/// \param src1
+///    First source ZMM vector containing BF8 (E5M2) values.
+/// \param src2
+///    Second source ZMM vector containing HF8 (E4M3) values.
+/// \param scales
+///    __bsr struct containing A-scales (hi) and B-scales (lo).
+/// \param imm
+///    8-bit immediate selecting BSR scale factors to apply.
+#define __tile_ace_top4mxbhf8ps_bsr(dst, src1, src2, scales, imm)              \
+  (*(dst) = __builtin_ia32_top4mxbhf8ps_internal(                              \
+       16, 64, 64, (imm), *(dst), (__v16si)(src1), (__v16si)(src2),            \
+       __bsr_combine_v32((__v16si)((scales).lo), (__v16si)((scales).hi))))
+
+/// Compute 4-way mixed precision outer product with HF8/BF8 format
+/// using explicit BSR scales. Multiplies HF8 (E4M3) values from src1
+/// with BF8 (E5M2) values from src2, applies scales from the __bsr struct,
+/// converts to FP32 and accumulates into the ACE tile.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the <c> TOP4MXHBF8PS </c> instruction.
+///
+/// \param dst
+///    Pointer to destination/accumulator __acetile.
+/// \param src1
+///    First source ZMM vector containing HF8 (E4M3) values.
+/// \param src2
+///    Second source ZMM vector containing BF8 (E5M2) values.
+/// \param scales
+///    __bsr struct containing A-scales (hi) and B-scales (lo).
+/// \param imm
+///    8-bit immediate selecting BSR scale factors to apply.
+#define __tile_ace_top4mxhbf8ps_bsr(dst, src1, src2, scales, imm)              \
+  (*(dst) = __builtin_ia32_top4mxhbf8ps_internal(                              \
+       16, 64, 64, (imm), *(dst), (__v16si)(src1), (__v16si)(src2),            \
+       __bsr_combine_v32((__v16si)((scales).lo), (__v16si)((scales).hi))))
+
+/// Compute 4-way mixed precision outer product with BF8 (E5M2) format
+/// using explicit BSR scales. Multiplies BF8 values from both sources,
+/// applies scales from the __bsr struct, converts to FP32 and accumulates
+/// into the ACE tile.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the <c> TOP4MXBF8PS </c> instruction.
+///
+/// \param dst
+///    Pointer to destination/accumulator __acetile.
+/// \param src1
+///    First source ZMM vector containing BF8 (E5M2) values.
+/// \param src2
+///    Second source ZMM vector containing BF8 (E5M2) values.
+/// \param scales
+///    __bsr struct containing A-scales (hi) and B-scales (lo).
+/// \param imm
+///    8-bit immediate selecting BSR scale factors to apply.
+#define __tile_ace_top4mxbf8ps_bsr(dst, src1, src2, scales, imm)               \
+  (*(dst) = __builtin_ia32_top4mxbf8ps_internal(                               \
+       16, 64, 64, (imm), *(dst), (__v16si)(src1), (__v16si)(src2),            \
+       __bsr_combine_v32((__v16si)((scales).lo), (__v16si)((scales).hi))))
 
 #undef __DEFAULT_FN_ATTRS_ACE
 

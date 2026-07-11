@@ -148,6 +148,9 @@ public:
   /// Return true if this is X86 AMX.
   bool isX86_AMXTy() const { return LLVMTy->isX86_AMXTy(); }
 
+  /// Return true if this is X86 BSR.
+  bool isX86_BSRTy() const { return LLVMTy->isX86_BSRTy(); }
+
   /// Return true if this is a target extension type.
   bool isTargetExtTy() const { return LLVMTy->isTargetExtTy(); }
 

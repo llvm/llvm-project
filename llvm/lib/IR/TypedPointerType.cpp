@@ -38,5 +38,5 @@ TypedPointerType::TypedPointerType(Type *E, unsigned AddrSpace)
 bool TypedPointerType::isValidElementType(Type *ElemTy) {
   return !ElemTy->isVoidTy() && !ElemTy->isLabelTy() &&
          !ElemTy->isMetadataTy() && !ElemTy->isTokenTy() &&
-         !ElemTy->isX86_AMXTy();
+         !ElemTy->isX86_AMXTy() && !ElemTy->isX86_BSRTy();
 }

@@ -493,6 +493,7 @@ private:
       CanonicalTypeID::LabelTy,    // LabelTyID
       CanonicalTypeID::MetadataTy, // MetadataTyID
       CanonicalTypeID::VectorTy,   // X86_AMXTyID
+      CanonicalTypeID::VectorTy,   // X86_BSRTyID
       CanonicalTypeID::TokenTy,    // TokenTyID
       CanonicalTypeID::IntegerTy,  // IntegerTyID
       CanonicalTypeID::ByteTy,     // ByteTyID

@@ -71,6 +71,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeX86LowerAMXIntrinsicsLegacyPassPass(PR);
   initializeX86LowerAMXTypeLegacyPassPass(PR);
+  initializeX86LowerBSRTypeLegacyPassPass(PR);
   initializeX86PreTileConfigLegacyPass(PR);
   initializeGlobalISel(PR);
   initializeWinEHStateLegacyPass(PR);
@@ -423,7 +424,8 @@ void X86PassConfig::addIRPasses() {
   // We add both pass anyway and when these two passes run, we skip the pass
   // based on the option level and option attribute.
   addPass(createX86LowerAMXIntrinsicsLegacyPass());
-  addPass(createX86LowerAMXTypeLegacyPass());
+  addPass(createX86LowerBSRTypeLegacyPass()); // BSR lowering FIRST
+  addPass(createX86LowerAMXTypeLegacyPass()); // Then AMX type lowering
 
   TargetPassConfig::addIRPasses();
 

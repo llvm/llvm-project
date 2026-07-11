@@ -700,7 +700,8 @@ static Instruction *combineLoadToOperationType(InstCombinerImpl &IC,
     Type *LoadTy = Load.getType();
     if (auto *BC = dyn_cast<BitCastInst>(Load.user_back())) {
       assert(!LoadTy->isX86_AMXTy() && "Load from x86_amx* should not happen!");
-      if (BC->getType()->isX86_AMXTy())
+      assert(!LoadTy->isX86_BSRTy() && "Load from x86_bsr* should not happen!");
+      if (BC->getType()->isX86_AMXTy() || BC->getType()->isX86_BSRTy())
         return nullptr;
     }
 
@@ -1301,10 +1302,12 @@ static bool combineStoreToValueType(InstCombinerImpl &IC, StoreInst &SI) {
   if (auto *BC = dyn_cast<BitCastInst>(V)) {
     assert(!BC->getType()->isX86_AMXTy() &&
            "store to x86_amx* should not happen!");
+    assert(!BC->getType()->isX86_BSRTy() &&
+           "store to x86_bsr* should not happen!");
     V = BC->getOperand(0);
-    // Don't transform when the type is x86_amx, it makes the pass that lower
-    // x86_amx type happy.
-    if (V->getType()->isX86_AMXTy())
+    // Don't transform when the type is x86_amx/x86_bsr, it makes the pass
+    // that lowers these types happy.
+    if (V->getType()->isX86_AMXTy() || V->getType()->isX86_BSRTy())
       return false;
     if (!SI.isAtomic() || isSupportedAtomicType(V->getType())) {
       combineStoreToNewValue(IC, SI, V);

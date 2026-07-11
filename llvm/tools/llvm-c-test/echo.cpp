@@ -147,6 +147,8 @@ struct TypeCloner {
         return LLVMMetadataTypeInContext(Ctx);
       case LLVMX86_AMXTypeKind:
         return LLVMX86AMXTypeInContext(Ctx);
+      case LLVMX86_BSRTypeKind:
+        return LLVMX86BSRTypeInContext(Ctx);
       case LLVMTokenTypeKind:
         return LLVMTokenTypeInContext(Ctx);
       case LLVMTargetExtTypeKind: {

@@ -276,12 +276,17 @@ std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
     break;
   }
   // ACE TOP4MX intrinsics - mixed precision with BSR index
-  // Pattern: (m, n, k, bsr_idx, acc_tile, zmm1, zmm2)
+  // Pattern: (m, n, k, bsr_idx, acc_tile, zmm1, zmm2[, bsr])
   case Intrinsic::x86_top4mxhf8ps_internal:
   case Intrinsic::x86_top4mxbhf8ps_internal:
   case Intrinsic::x86_top4mxhbf8ps_internal:
   case Intrinsic::x86_top4mxbf8ps_internal:
-  case Intrinsic::x86_top4mxbssps_internal: {
+  case Intrinsic::x86_top4mxbssps_internal:
+  case Intrinsic::x86_top4mxhf8ps_bsr_internal:
+  case Intrinsic::x86_top4mxbhf8ps_bsr_internal:
+  case Intrinsic::x86_top4mxhbf8ps_bsr_internal:
+  case Intrinsic::x86_top4mxbf8ps_bsr_internal:
+  case Intrinsic::x86_top4mxbssps_bsr_internal: {
     switch (OpNo) {
     case 4: // Accumulator tile
       Row = II->getArgOperand(0);

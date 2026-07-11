@@ -381,6 +381,17 @@ public:
 
 FunctionPass *createX86LowerAMXTypeLegacyPass();
 
+/// The pass lowers x86_bsr type operations to the legacy implicit-BSR
+/// intrinsics (bsrmovf, bsrmovh, bsrmovl) and handles cast_vector_to_bsr /
+/// cast_bsr_to_vector bridging.
+class X86LowerBSRTypePass : public PassInfoMixin<X86LowerBSRTypePass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  static bool isRequired() { return true; }
+};
+
+FunctionPass *createX86LowerBSRTypeLegacyPass();
+
 // Suppresses APX features for relocations for supporting older linkers.
 class X86SuppressAPXForRelocationPass
     : public OptionalPassInfoMixin<X86SuppressAPXForRelocationPass> {
@@ -503,6 +514,7 @@ void initializeX86LoadValueInjectionLoadHardeningLegacyPass(PassRegistry &);
 void initializeX86LoadValueInjectionRetHardeningLegacyPass(PassRegistry &);
 void initializeX86LowerAMXIntrinsicsLegacyPassPass(PassRegistry &);
 void initializeX86LowerAMXTypeLegacyPassPass(PassRegistry &);
+void initializeX86LowerBSRTypeLegacyPassPass(PassRegistry &);
 void initializeX86LowerTileCopyLegacyPass(PassRegistry &);
 void initializeX86OptimizeLEAsLegacyPass(PassRegistry &);
 void initializeX86PartialReductionLegacyPass(PassRegistry &);

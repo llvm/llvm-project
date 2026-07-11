@@ -188,6 +188,7 @@ struct IITDescriptor {
     Pointer, // Address space of the pointer in PointerAddressSpace.
     Struct,  // Number of elements in StructNumElements.
     AMX,
+    BSR,
     PPCQuad,
     AArch64Svcount,
     WasmExternref,

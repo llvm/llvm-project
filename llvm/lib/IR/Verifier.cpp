@@ -3112,6 +3112,8 @@ void Verifier::visitFunction(const Function &F) {
             "Function takes token but isn't an intrinsic", &Arg, &F);
       Check(!Arg.getType()->isX86_AMXTy(),
             "Function takes x86_amx but isn't an intrinsic", &Arg, &F);
+      Check(!Arg.getType()->isX86_BSRTy(),
+            "Function takes x86_bsr but isn't an intrinsic", &Arg, &F);
     }
 
     // Check that swifterror argument is only used by loads and stores.
@@ -3126,6 +3128,8 @@ void Verifier::visitFunction(const Function &F) {
           "Function returns a token but isn't an intrinsic", &F);
     Check(!F.getReturnType()->isX86_AMXTy(),
           "Function returns a x86_amx but isn't an intrinsic", &F);
+    Check(!F.getReturnType()->isX86_BSRTy(),
+          "Function returns a x86_bsr but isn't an intrinsic", &F);
   }
 
   // Get the function metadata attachments.
@@ -3980,6 +3984,8 @@ void Verifier::visitCallBase(CallBase &Call) {
           "Return type cannot be token for indirect call!");
     Check(!FTy->getReturnType()->isX86_AMXTy(),
           "Return type cannot be x86_amx for indirect call!");
+    Check(!FTy->getReturnType()->isX86_BSRTy(),
+          "Return type cannot be x86_bsr for indirect call!");
   }
 
   if (Intrinsic::ID ID = Call.getIntrinsicID())
@@ -5901,9 +5907,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   for (Value *V : Call.args()) {
     if (auto *MD = dyn_cast<MetadataAsValue>(V))
       visitMetadataAsValue(*MD, Call.getCaller());
-    if (auto *Const = dyn_cast<Constant>(V))
+    if (auto *Const = dyn_cast<Constant>(V)) {
       Check(!Const->getType()->isX86_AMXTy(),
             "const x86_amx is not allowed in argument!");
+      Check(!Const->getType()->isX86_BSRTy(),
+            "const x86_bsr is not allowed in argument!");
+    }
   }
 
   switch (ID) {

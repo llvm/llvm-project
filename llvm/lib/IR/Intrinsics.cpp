@@ -161,6 +161,9 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
     case Type::X86_AMXTyID:
       Result += "x86amx";
       break;
+    case Type::X86_BSRTyID:
+      Result += "x86bsr";
+      break;
     case Type::IntegerTyID:
       Result += "i" + utostr(cast<IntegerType>(Ty)->getBitWidth());
       break;
@@ -250,6 +253,9 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     return;
   case IIT_AMX:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::AMX, 0));
+    return;
+  case IIT_BSR:
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::BSR, 0));
     return;
   case IIT_TOKEN:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Token, 0));
@@ -549,6 +555,8 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return llvm::FixedVectorType::get(llvm::IntegerType::get(Context, 64), 1);
   case IITDescriptor::AMX:
     return Type::getX86_AMXTy(Context);
+  case IITDescriptor::BSR:
+    return Type::getX86_BSRTy(Context);
   case IITDescriptor::Token:
     return Type::getTokenTy(Context);
   case IITDescriptor::Metadata:
@@ -1020,6 +1028,8 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
   }
   case IITDescriptor::AMX:
     return PrintMsg(Ty->isX86_AMXTy(), "x86_amx");
+  case IITDescriptor::BSR:
+    return PrintMsg(Ty->isX86_BSRTy(), "x86_bsr");
   case IITDescriptor::Token:
     return PrintMsg(Ty->isTokenTy(), "token");
   case IITDescriptor::Metadata:

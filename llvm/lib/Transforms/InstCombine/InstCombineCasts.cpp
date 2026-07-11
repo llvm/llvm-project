@@ -3225,7 +3225,7 @@ Instruction *InstCombinerImpl::optimizeBitCastFromPhi(CastInst &CI,
         // "load x86_amx, x86_amx*", because x86_amx* is invalid.
         // TODO: Remove this check when bitcast between vector and x86_amx
         // is replaced with a specific intrinsic.
-        if (DestTy->isX86_AMXTy())
+        if (DestTy->isX86_AMXTy() || DestTy->isX86_BSRTy())
           return nullptr;
         if (LI->hasOneUse() && LI->isSimple())
           continue;

@@ -65,6 +65,7 @@ public:
     LabelTyID,     ///< Labels
     MetadataTyID,  ///< Metadata
     X86_AMXTyID,   ///< AMX vectors (8192 bits, X86 specific)
+    X86_BSRTyID,   ///< BSR register (1024 bits, X86 specific)
     TokenTyID,     ///< Tokens
 
     // Derived types... see DerivedTypes.h file.
@@ -201,6 +202,9 @@ public:
   /// Return true if this is X86 AMX.
   bool isX86_AMXTy() const { return getTypeID() == X86_AMXTyID; }
 
+  /// Return true if this is X86 BSR.
+  bool isX86_BSRTy() const { return getTypeID() == X86_BSRTyID; }
+
   /// Return true if this is a target extension type.
   bool isTargetExtTy() const { return getTypeID() == TargetExtTyID; }
 
@@ -310,7 +314,8 @@ public:
   /// includes all first-class types except struct and array types.
   bool isSingleValueType() const {
     return isFloatingPointTy() || isIntegerTy() || isPointerTy() ||
-           isVectorTy() || isX86_AMXTy() || isTargetExtTy() || isByteTy();
+           isVectorTy() || isX86_AMXTy() || isX86_BSRTy() || isTargetExtTy() ||
+           isByteTy();
   }
 
   /// Return true if the type is an aggregate type. This means it is valid as
@@ -327,7 +332,7 @@ public:
     // If it's a primitive, it is always sized.
     if (getTypeID() == IntegerTyID || isFloatingPointTy() ||
         getTypeID() == PointerTyID || getTypeID() == X86_AMXTyID ||
-        getTypeID() == ByteTyID)
+        getTypeID() == X86_BSRTyID || getTypeID() == ByteTyID)
       return true;
     // If it is not something that can have a size (e.g. a function or label),
     // it doesn't have a size.
@@ -471,6 +476,7 @@ public:
   LLVM_ABI static Type *getFP128Ty(LLVMContext &C);
   LLVM_ABI static Type *getPPC_FP128Ty(LLVMContext &C);
   LLVM_ABI static Type *getX86_AMXTy(LLVMContext &C);
+  LLVM_ABI static Type *getX86_BSRTy(LLVMContext &C);
   LLVM_ABI static Type *getTokenTy(LLVMContext &C);
   LLVM_ABI static ByteType *getByteNTy(LLVMContext &C, unsigned N);
   LLVM_ABI static ByteType *getByte1Ty(LLVMContext &C);

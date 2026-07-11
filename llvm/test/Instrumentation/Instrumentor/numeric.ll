@@ -158,28 +158,28 @@ define i32 @test_i32(i32 %p1, i32 %p2) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[P1]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[P2]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 4, i32 14, i64 [[TMP0]], i64 [[TMP1]], i64 0, i32 16) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 13, i32 4, i32 14, i64 [[TMP0]], i64 [[TMP1]], i64 0, i32 16) #[[ATTR0]]
 ; CHECK-NEXT:    [[A1:%.*]] = add i32 [[P1]], [[P2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[A1]] to i64
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 4, i32 14, i64 [[TMP0]], i64 [[TMP1]], i64 [[TMP2]], i64 0, i32 -16) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 13, i32 4, i32 14, i64 [[TMP0]], i64 [[TMP1]], i64 [[TMP2]], i64 0, i32 -16) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[P1]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[A1]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 4, i32 18, i64 [[TMP3]], i64 [[TMP4]], i64 2, i32 17) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 13, i32 4, i32 18, i64 [[TMP3]], i64 [[TMP4]], i64 2, i32 17) #[[ATTR0]]
 ; CHECK-NEXT:    [[A2:%.*]] = mul nuw i32 [[P1]], [[A1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[A2]] to i64
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 4, i32 18, i64 [[TMP3]], i64 [[TMP4]], i64 [[TMP5]], i64 2, i32 -17) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 13, i32 4, i32 18, i64 [[TMP3]], i64 [[TMP4]], i64 [[TMP5]], i64 2, i32 -17) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[A2]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[P2]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 4, i32 21, i64 [[TMP6]], i64 [[TMP7]], i64 64, i32 18) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 13, i32 4, i32 21, i64 [[TMP6]], i64 [[TMP7]], i64 64, i32 18) #[[ATTR0]]
 ; CHECK-NEXT:    [[A3:%.*]] = sdiv exact i32 [[A2]], [[P2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[A3]] to i64
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 4, i32 21, i64 [[TMP6]], i64 [[TMP7]], i64 [[TMP8]], i64 64, i32 -18) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 13, i32 4, i32 21, i64 [[TMP6]], i64 [[TMP7]], i64 [[TMP8]], i64 64, i32 -18) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[A3]] to i64
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[A1]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 4, i32 16, i64 [[TMP9]], i64 [[TMP10]], i64 0, i32 19) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 13, i32 4, i32 16, i64 [[TMP9]], i64 [[TMP10]], i64 0, i32 19) #[[ATTR0]]
 ; CHECK-NEXT:    [[A4:%.*]] = sub i32 [[A3]], [[A1]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[A4]] to i64
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 4, i32 16, i64 [[TMP9]], i64 [[TMP10]], i64 [[TMP11]], i64 0, i32 -19) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 13, i32 4, i32 16, i64 [[TMP9]], i64 [[TMP10]], i64 [[TMP11]], i64 0, i32 -19) #[[ATTR0]]
 ; CHECK-NEXT:    ret i32 [[A4]]
 ;
 entry:
@@ -194,24 +194,24 @@ define i64 @test_i64(i64 %p1, i64 %p2) {
 ; CHECK-LABEL: define i64 @test_i64(
 ; CHECK-SAME: i64 [[P1:%.*]], i64 [[P2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 8, i32 14, i64 [[P1]], i64 [[P2]], i64 0, i32 20) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 13, i32 8, i32 14, i64 [[P1]], i64 [[P2]], i64 0, i32 20) #[[ATTR0]]
 ; CHECK-NEXT:    [[A1:%.*]] = add i64 [[P1]], [[P2]]
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 8, i32 14, i64 [[P1]], i64 [[P2]], i64 [[A1]], i64 0, i32 -20) #[[ATTR0]]
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 8, i32 18, i64 [[P1]], i64 [[A1]], i64 0, i32 21) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 13, i32 8, i32 14, i64 [[P1]], i64 [[P2]], i64 [[A1]], i64 0, i32 -20) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 13, i32 8, i32 18, i64 [[P1]], i64 [[A1]], i64 0, i32 21) #[[ATTR0]]
 ; CHECK-NEXT:    [[A2:%.*]] = mul i64 [[P1]], [[A1]]
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 8, i32 18, i64 [[P1]], i64 [[A1]], i64 [[A2]], i64 0, i32 -21) #[[ATTR0]]
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 8, i32 20, i64 [[A2]], i64 [[P2]], i64 0, i32 22) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 13, i32 8, i32 18, i64 [[P1]], i64 [[A1]], i64 [[A2]], i64 0, i32 -21) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 13, i32 8, i32 20, i64 [[A2]], i64 [[P2]], i64 0, i32 22) #[[ATTR0]]
 ; CHECK-NEXT:    [[A3:%.*]] = udiv i64 [[A2]], [[P2]]
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 8, i32 20, i64 [[A2]], i64 [[P2]], i64 [[A3]], i64 0, i32 -22) #[[ATTR0]]
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 8, i32 16, i64 [[A3]], i64 [[A1]], i64 0, i32 23) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 13, i32 8, i32 20, i64 [[A2]], i64 [[P2]], i64 [[A3]], i64 0, i32 -22) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 13, i32 8, i32 16, i64 [[A3]], i64 [[A1]], i64 0, i32 23) #[[ATTR0]]
 ; CHECK-NEXT:    [[A4:%.*]] = sub i64 [[A3]], [[A1]]
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 8, i32 16, i64 [[A3]], i64 [[A1]], i64 [[A4]], i64 0, i32 -23) #[[ATTR0]]
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 8, i32 29, i64 [[A4]], i64 [[A2]], i64 0, i32 24) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 13, i32 8, i32 16, i64 [[A3]], i64 [[A1]], i64 [[A4]], i64 0, i32 -23) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 13, i32 8, i32 29, i64 [[A4]], i64 [[A2]], i64 0, i32 24) #[[ATTR0]]
 ; CHECK-NEXT:    [[A5:%.*]] = and i64 [[A4]], [[A2]]
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 8, i32 29, i64 [[A4]], i64 [[A2]], i64 [[A5]], i64 0, i32 -24) #[[ATTR0]]
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 8, i32 31, i64 [[A5]], i64 [[A3]], i64 0, i32 25) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 13, i32 8, i32 29, i64 [[A4]], i64 [[A2]], i64 [[A5]], i64 0, i32 -24) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 13, i32 8, i32 31, i64 [[A5]], i64 [[A3]], i64 0, i32 25) #[[ATTR0]]
 ; CHECK-NEXT:    [[A6:%.*]] = xor i64 [[A5]], [[A3]]
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 8, i32 31, i64 [[A5]], i64 [[A3]], i64 [[A6]], i64 0, i32 -25) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 13, i32 8, i32 31, i64 [[A5]], i64 [[A3]], i64 [[A6]], i64 0, i32 -25) #[[ATTR0]]
 ; CHECK-NEXT:    ret i64 [[A6]]
 ;
 entry:
@@ -233,40 +233,40 @@ define i128 @test_i128(i128 %p1, i128 %p2) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i128, align 8
 ; CHECK-NEXT:    store i128 [[P1]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store i128 [[P2]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 14, ptr [[TMP2]], ptr [[TMP1]], i64 0, i32 26) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 13, i32 16, i32 14, ptr [[TMP2]], ptr [[TMP1]], i64 0, i32 26) #[[ATTR0]]
 ; CHECK-NEXT:    [[A1:%.*]] = add i128 [[P1]], [[P2]]
 ; CHECK-NEXT:    store i128 [[A1]], ptr [[TMP0]], align 4
-; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 14, ptr [[TMP2]], ptr [[TMP1]], ptr [[TMP0]], i64 0, i32 -26) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 13, i32 16, i32 14, ptr [[TMP2]], ptr [[TMP1]], ptr [[TMP0]], i64 0, i32 -26) #[[ATTR0]]
 ; CHECK-NEXT:    store i128 [[P1]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store i128 [[A1]], ptr [[TMP0]], align 4
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 18, ptr [[TMP2]], ptr [[TMP0]], i64 0, i32 27) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 13, i32 16, i32 18, ptr [[TMP2]], ptr [[TMP0]], i64 0, i32 27) #[[ATTR0]]
 ; CHECK-NEXT:    [[A2:%.*]] = mul i128 [[P1]], [[A1]]
 ; CHECK-NEXT:    store i128 [[A2]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 18, ptr [[TMP2]], ptr [[TMP0]], ptr [[TMP1]], i64 0, i32 -27) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 13, i32 16, i32 18, ptr [[TMP2]], ptr [[TMP0]], ptr [[TMP1]], i64 0, i32 -27) #[[ATTR0]]
 ; CHECK-NEXT:    store i128 [[A2]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store i128 [[P2]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 24, ptr [[TMP2]], ptr [[TMP1]], i64 0, i32 28) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 13, i32 16, i32 24, ptr [[TMP2]], ptr [[TMP1]], i64 0, i32 28) #[[ATTR0]]
 ; CHECK-NEXT:    [[A3:%.*]] = srem i128 [[A2]], [[P2]]
 ; CHECK-NEXT:    store i128 [[A3]], ptr [[TMP0]], align 4
-; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 24, ptr [[TMP2]], ptr [[TMP1]], ptr [[TMP0]], i64 0, i32 -28) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 13, i32 16, i32 24, ptr [[TMP2]], ptr [[TMP1]], ptr [[TMP0]], i64 0, i32 -28) #[[ATTR0]]
 ; CHECK-NEXT:    store i128 [[A3]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store i128 [[A1]], ptr [[TMP0]], align 4
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 16, ptr [[TMP2]], ptr [[TMP0]], i64 1, i32 29) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 13, i32 16, i32 16, ptr [[TMP2]], ptr [[TMP0]], i64 1, i32 29) #[[ATTR0]]
 ; CHECK-NEXT:    [[A4:%.*]] = sub nsw i128 [[A3]], [[A1]]
 ; CHECK-NEXT:    store i128 [[A4]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 16, ptr [[TMP2]], ptr [[TMP0]], ptr [[TMP1]], i64 1, i32 -29) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 13, i32 16, i32 16, ptr [[TMP2]], ptr [[TMP0]], ptr [[TMP1]], i64 1, i32 -29) #[[ATTR0]]
 ; CHECK-NEXT:    store i128 [[A4]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store i128 [[A2]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 30, ptr [[TMP2]], ptr [[TMP1]], i64 32, i32 30) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 13, i32 16, i32 30, ptr [[TMP2]], ptr [[TMP1]], i64 32, i32 30) #[[ATTR0]]
 ; CHECK-NEXT:    [[A5:%.*]] = or disjoint i128 [[A4]], [[A2]]
 ; CHECK-NEXT:    store i128 [[A5]], ptr [[TMP0]], align 4
-; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 30, ptr [[TMP2]], ptr [[TMP1]], ptr [[TMP0]], i64 32, i32 -30) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 13, i32 16, i32 30, ptr [[TMP2]], ptr [[TMP1]], ptr [[TMP0]], i64 32, i32 -30) #[[ATTR0]]
 ; CHECK-NEXT:    store i128 [[A5]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store i128 [[A3]], ptr [[TMP0]], align 4
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 26, ptr [[TMP2]], ptr [[TMP0]], i64 0, i32 31) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 13, i32 16, i32 26, ptr [[TMP2]], ptr [[TMP0]], i64 0, i32 31) #[[ATTR0]]
 ; CHECK-NEXT:    [[A6:%.*]] = shl i128 [[A5]], [[A3]]
 ; CHECK-NEXT:    store i128 [[A6]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 26, ptr [[TMP2]], ptr [[TMP0]], ptr [[TMP1]], i64 0, i32 -31) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 13, i32 16, i32 26, ptr [[TMP2]], ptr [[TMP0]], ptr [[TMP1]], i64 0, i32 -31) #[[ATTR0]]
 ; CHECK-NEXT:    ret i128 [[A6]]
 ;
 entry:

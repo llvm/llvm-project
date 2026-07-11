@@ -820,6 +820,8 @@ inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
     return TypeSize::getFixed(128);
   case Type::X86_AMXTyID:
     return TypeSize::getFixed(8192);
+  case Type::X86_BSRTyID:
+    return TypeSize::getFixed(1024);
   // In memory objects this is always aligned to a higher boundary, but
   // only 80 bits contain information.
   case Type::X86_FP80TyID:

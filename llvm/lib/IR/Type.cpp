@@ -48,6 +48,8 @@ Type *Type::getPrimitiveType(LLVMContext &C, TypeID IDNumber) {
   case LabelTyID     : return getLabelTy(C);
   case MetadataTyID  : return getMetadataTy(C);
   case X86_AMXTyID   : return getX86_AMXTy(C);
+  case X86_BSRTyID:
+    return getX86_BSRTy(C);
   case TokenTyID     : return getTokenTy(C);
   default:
     return nullptr;
@@ -172,6 +174,14 @@ bool Type::canLosslesslyBitCastTo(Type *Ty) const {
       Ty->getPrimitiveSizeInBits().getFixedValue() == 8192)
     return true;
 
+  //  1024-bit fixed width vector types can be losslessly converted to x86bsr.
+  if (((isa<FixedVectorType>(this)) && Ty->isX86_BSRTy()) &&
+      getPrimitiveSizeInBits().getFixedValue() == 1024)
+    return true;
+  if ((isX86_BSRTy() && isa<FixedVectorType>(Ty)) &&
+      Ty->getPrimitiveSizeInBits().getFixedValue() == 1024)
+    return true;
+
   // Conservatively assume we can't losslessly convert between pointers with
   // different address spaces.
   return false;
@@ -212,6 +222,8 @@ TypeSize Type::getPrimitiveSizeInBits() const {
     return TypeSize::getFixed(128);
   case Type::X86_AMXTyID:
     return TypeSize::getFixed(8192);
+  case Type::X86_BSRTyID:
+    return TypeSize::getFixed(1024);
   case Type::ByteTyID:
     return TypeSize::getFixed(cast<ByteType>(this)->getBitWidth());
   case Type::IntegerTyID:
@@ -291,6 +303,7 @@ Type *Type::getX86_FP80Ty(LLVMContext &C) { return &C.pImpl->X86_FP80Ty; }
 Type *Type::getFP128Ty(LLVMContext &C) { return &C.pImpl->FP128Ty; }
 Type *Type::getPPC_FP128Ty(LLVMContext &C) { return &C.pImpl->PPC_FP128Ty; }
 Type *Type::getX86_AMXTy(LLVMContext &C) { return &C.pImpl->X86_AMXTy; }
+Type *Type::getX86_BSRTy(LLVMContext &C) { return &C.pImpl->X86_BSRTy; }
 
 ByteType *Type::getByte1Ty(LLVMContext &C) { return &C.pImpl->Byte1Ty; }
 ByteType *Type::getByte8Ty(LLVMContext &C) { return &C.pImpl->Byte8Ty; }
@@ -829,7 +842,8 @@ ArrayType *ArrayType::get(Type *ElementType, uint64_t NumElements) {
 bool ArrayType::isValidElementType(Type *ElemTy) {
   return !ElemTy->isVoidTy() && !ElemTy->isLabelTy() &&
          !ElemTy->isMetadataTy() && !ElemTy->isFunctionTy() &&
-         !ElemTy->isTokenTy() && !ElemTy->isX86_AMXTy();
+         !ElemTy->isTokenTy() && !ElemTy->isX86_AMXTy() &&
+         !ElemTy->isX86_BSRTy();
 }
 
 //===----------------------------------------------------------------------===//
@@ -940,7 +954,7 @@ PointerType *Type::getPointerTo(unsigned AddrSpace) const {
 bool PointerType::isValidElementType(Type *ElemTy) {
   return !ElemTy->isVoidTy() && !ElemTy->isLabelTy() &&
          !ElemTy->isMetadataTy() && !ElemTy->isTokenTy() &&
-         !ElemTy->isX86_AMXTy();
+         !ElemTy->isX86_AMXTy() && !ElemTy->isX86_BSRTy();
 }
 
 bool PointerType::isLoadableOrStorableType(Type *ElemTy) {

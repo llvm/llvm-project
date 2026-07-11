@@ -861,7 +861,7 @@ def TILE : RegisterClass<"X86", [x86amx], 8192,
 
 // Block Scale Registers (ACE)
 let CopyCost = -1 in // Don't allow copying of BSR register
-def BSR : RegisterClass<"X86", [untyped], 0, (add BSR0)> {
+def BSR : RegisterClass<"X86", [x86bsr], 1024, (add BSR0)> {
   let Size = 1024;
   let isAllocatable = 0;
 }

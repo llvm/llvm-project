@@ -5684,28 +5684,60 @@ let TargetPrefix = "x86" in {
 let TargetPrefix = "x86" in {
   // BSRINIT - Initialize Block Scale Register
   def int_x86_bsrinit : ClangBuiltin<"__builtin_ia32_bsrinit">,
-              Intrinsic<[], [], []>;
+              Intrinsic<[], [], [IntrHasSideEffects]>;
 
-  // BSRMOVF - Move Full to BSR
+  // BSRMOVF - Move Full to BSR (legacy, implicit BSR)
   // Takes two ZMM registers as input (doubleword integers), writes to BSR (implicit)
   def int_x86_bsrmovf : ClangBuiltin<"__builtin_ia32_bsrmovf">,
-              Intrinsic<[], [llvm_v16i32_ty, llvm_v16i32_ty], []>;
+              Intrinsic<[], [llvm_v16i32_ty, llvm_v16i32_ty], [IntrHasSideEffects]>;
 
-  // BSRMOVH - Move Half to/from BSR
+  // BSRMOVH - Move Half to/from BSR (legacy, implicit BSR)
   // Load variant: read from ZMM (doubleword integers), update BSR
   def int_x86_bsrmovh_set : ClangBuiltin<"__builtin_ia32_bsrmovh_set">,
-              Intrinsic<[], [llvm_v16i32_ty], []>;
+              Intrinsic<[], [llvm_v16i32_ty], [IntrHasSideEffects]>;
   // Store variant: read from BSR, return ZMM (doubleword integers)
   def int_x86_bsrmovh_get : ClangBuiltin<"__builtin_ia32_bsrmovh_get">,
-              Intrinsic<[llvm_v16i32_ty], [], []>;
+              Intrinsic<[llvm_v16i32_ty], [], [IntrHasSideEffects]>;
 
-  // BSRMOVL - Move Low to/from BSR
+  // BSRMOVL - Move Low to/from BSR (legacy, implicit BSR)
   // Load variant: read from ZMM (doubleword integers), write to BSR
   def int_x86_bsrmovl_set : ClangBuiltin<"__builtin_ia32_bsrmovl_set">,
-              Intrinsic<[], [llvm_v16i32_ty], []>;
+              Intrinsic<[], [llvm_v16i32_ty], [IntrHasSideEffects]>;
   // Store variant: read from BSR, return ZMM (doubleword integers)
   def int_x86_bsrmovl_get : ClangBuiltin<"__builtin_ia32_bsrmovl_get">,
-              Intrinsic<[llvm_v16i32_ty], [], []>;
+              Intrinsic<[llvm_v16i32_ty], [], [IntrHasSideEffects]>;
+
+  // --- New x86_bsr-typed BSR intrinsics ---
+
+  // BSR create: construct a full x86_bsr value from two ZMM halves
+  def int_x86_bsr_create :
+              Intrinsic<[llvm_x86bsr_ty], [llvm_v16i32_ty, llvm_v16i32_ty],
+                        [IntrNoMem]>;
+
+  // BSR get high half: extract high 512-bit half from x86_bsr
+  def int_x86_bsr_get_hi :
+              Intrinsic<[llvm_v16i32_ty], [llvm_x86bsr_ty], [IntrNoMem]>;
+
+  // BSR get low half: extract low 512-bit half from x86_bsr
+  def int_x86_bsr_get_lo :
+              Intrinsic<[llvm_v16i32_ty], [llvm_x86bsr_ty], [IntrNoMem]>;
+
+  // BSR set high half: update high 512-bit half of x86_bsr
+  def int_x86_bsr_set_hi :
+              Intrinsic<[llvm_x86bsr_ty], [llvm_x86bsr_ty, llvm_v16i32_ty],
+                        [IntrNoMem]>;
+
+  // BSR set low half: update low 512-bit half of x86_bsr
+  def int_x86_bsr_set_lo :
+              Intrinsic<[llvm_x86bsr_ty], [llvm_x86bsr_ty, llvm_v16i32_ty],
+                        [IntrNoMem]>;
+
+  // Bridging intrinsics: cast between vector and x86_bsr
+  // (parallel to cast_vector_to_tile / cast_tile_to_vector)
+  def int_x86_cast_vector_to_bsr :
+      DefaultAttrsIntrinsic<[llvm_x86bsr_ty], [llvm_anyvector_ty], [IntrNoMem]>;
+  def int_x86_cast_bsr_to_vector :
+      DefaultAttrsIntrinsic<[llvm_anyvector_ty], [llvm_x86bsr_ty], [IntrNoMem]>;
 
   // TILEMOVCOL - Move Column from Vector to Tile
   // Single intrinsic handles both immediate and register index forms.
@@ -5839,41 +5871,83 @@ let TargetPrefix = "x86" in {
                         [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
                          llvm_x86amx_ty, llvm_v64i8_ty, llvm_v64i8_ty], []>;
 
-  // TOP4MXHFBPS internal - 4th arg is BSR index (i8 immediate)
-  // FP8 data packed in dwords (16 dwords per ZMM)
+  // TOP4MX internal intrinsics: LOWERED form (no BSR arg, matches DAG patterns)
+  // X86LowerBSRType rewrites *_bsr_internal -> these + preceding bsrmovf.
+
+  // TOP4MXHFBPS internal (lowered, no BSR) - used by __tile_ace_* macros
   def int_x86_top4mxhf8ps_internal :
+              ClangBuiltin<"__builtin_ia32_top4mxhf8ps_nobsr_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i8_ty,
+                         llvm_x86amx_ty, llvm_v16i32_ty, llvm_v16i32_ty], [ImmArg<ArgIndex<3>>]>;
+
+  // TOP4MXBHFBPS internal (lowered, no BSR) - used by __tile_ace_* macros
+  def int_x86_top4mxbhf8ps_internal :
+              ClangBuiltin<"__builtin_ia32_top4mxbhf8ps_nobsr_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i8_ty,
+                         llvm_x86amx_ty, llvm_v16i32_ty, llvm_v16i32_ty], [ImmArg<ArgIndex<3>>]>;
+
+  // TOP4MXHBFBPS internal (lowered, no BSR) - used by __tile_ace_* macros
+  def int_x86_top4mxhbf8ps_internal :
+              ClangBuiltin<"__builtin_ia32_top4mxhbf8ps_nobsr_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i8_ty,
+                         llvm_x86amx_ty, llvm_v16i32_ty, llvm_v16i32_ty], [ImmArg<ArgIndex<3>>]>;
+
+  // TOP4MXBF8PS internal (lowered, no BSR) - used by __tile_ace_* macros
+  def int_x86_top4mxbf8ps_internal :
+              ClangBuiltin<"__builtin_ia32_top4mxbf8ps_nobsr_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i8_ty,
+                         llvm_x86amx_ty, llvm_v16i32_ty, llvm_v16i32_ty], [ImmArg<ArgIndex<3>>]>;
+
+  // TOP4MXBSSPS internal (lowered, no BSR) - used by __tile_ace_* macros
+  def int_x86_top4mxbssps_internal :
+              ClangBuiltin<"__builtin_ia32_top4mxbssps_nobsr_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i8_ty,
+                         llvm_x86amx_ty, llvm_v16i32_ty, llvm_v16i32_ty], [ImmArg<ArgIndex<3>>]>;
+
+  // TOP4MX internal intrinsics: BSR form (with explicit x86_bsr SSA arg)
+  // Emitted by Clang via ClangBuiltin annotation. X86LowerBSRType lowers these
+  // to the non-BSR form above + bsrmovf, before ISel.
+
+  def int_x86_top4mxhf8ps_bsr_internal :
               ClangBuiltin<"__builtin_ia32_top4mxhf8ps_internal">,
               Intrinsic<[llvm_x86amx_ty],
                         [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i8_ty,
-                         llvm_x86amx_ty, llvm_v16i32_ty, llvm_v16i32_ty], [ImmArg<ArgIndex<3>>]>;
+                         llvm_x86amx_ty, llvm_v16i32_ty, llvm_v16i32_ty,
+                         llvm_x86bsr_ty], [ImmArg<ArgIndex<3>>]>;
 
-  // TOP4MXBHFBPS internal - FP8 data packed in dwords
-  def int_x86_top4mxbhf8ps_internal :
+  def int_x86_top4mxbhf8ps_bsr_internal :
               ClangBuiltin<"__builtin_ia32_top4mxbhf8ps_internal">,
               Intrinsic<[llvm_x86amx_ty],
                         [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i8_ty,
-                         llvm_x86amx_ty, llvm_v16i32_ty, llvm_v16i32_ty], [ImmArg<ArgIndex<3>>]>;
+                         llvm_x86amx_ty, llvm_v16i32_ty, llvm_v16i32_ty,
+                         llvm_x86bsr_ty], [ImmArg<ArgIndex<3>>]>;
 
-  // TOP4MXHBFBPS internal - FP8 data packed in dwords
-  def int_x86_top4mxhbf8ps_internal :
+  def int_x86_top4mxhbf8ps_bsr_internal :
               ClangBuiltin<"__builtin_ia32_top4mxhbf8ps_internal">,
               Intrinsic<[llvm_x86amx_ty],
                         [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i8_ty,
-                         llvm_x86amx_ty, llvm_v16i32_ty, llvm_v16i32_ty], [ImmArg<ArgIndex<3>>]>;
+                         llvm_x86amx_ty, llvm_v16i32_ty, llvm_v16i32_ty,
+                         llvm_x86bsr_ty], [ImmArg<ArgIndex<3>>]>;
 
-  // TOP4MXBF8PS internal - MX FP8 BF8xBF8 data packed in dwords
-  def int_x86_top4mxbf8ps_internal :
+  def int_x86_top4mxbf8ps_bsr_internal :
               ClangBuiltin<"__builtin_ia32_top4mxbf8ps_internal">,
               Intrinsic<[llvm_x86amx_ty],
                         [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i8_ty,
-                         llvm_x86amx_ty, llvm_v16i32_ty, llvm_v16i32_ty], [ImmArg<ArgIndex<3>>]>;
+                         llvm_x86amx_ty, llvm_v16i32_ty, llvm_v16i32_ty,
+                         llvm_x86bsr_ty], [ImmArg<ArgIndex<3>>]>;
 
   // TOP4MXBSSPS internal - MX INT8 SxS to FP32 (BSR scaled)
-  def int_x86_top4mxbssps_internal :
+  def int_x86_top4mxbssps_bsr_internal :
               ClangBuiltin<"__builtin_ia32_top4mxbssps_internal">,
               Intrinsic<[llvm_x86amx_ty],
                         [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i8_ty,
-                         llvm_x86amx_ty, llvm_v16i32_ty, llvm_v16i32_ty], [ImmArg<ArgIndex<3>>]>;
+                         llvm_x86amx_ty, llvm_v16i32_ty, llvm_v16i32_ty,
+                         llvm_x86bsr_ty], [ImmArg<ArgIndex<3>>]>;
 }
 
 //===----------------------------------------------------------------------===//

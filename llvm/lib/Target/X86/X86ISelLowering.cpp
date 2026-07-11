@@ -2666,6 +2666,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::x86amx, &X86::TILERegClass);
   }
 
+  if (!Subtarget.useSoftFloat() && Subtarget.hasACEV1()) {
+    addRegisterClass(MVT::x86bsr, &X86::BSRRegClass);
+  }
+
   // We want to custom lower some of our intrinsics.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);

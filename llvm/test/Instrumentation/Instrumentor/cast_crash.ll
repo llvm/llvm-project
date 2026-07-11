@@ -14,11 +14,11 @@ define i128 @test_ext(i32 %p1) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 12
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP5]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP6]], i32 12, i32 -1, i32 4, i32 12, i32 -1, i32 16, i32 40, i32 3) #[[ATTR1]]
+; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP6]], i32 13, i32 -1, i32 4, i32 13, i32 -1, i32 16, i32 40, i32 3) #[[ATTR1]]
 ; CHECK-NEXT:    [[I1:%.*]] = zext i32 [[TMP5]] to i128
 ; CHECK-NEXT:    store i64 [[TMP6]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store i128 [[I1]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @__instrumentor_post_cast_ind(ptr [[TMP2]], i32 12, i32 -1, i32 4, ptr [[TMP1]], i32 12, i32 -1, i32 16, i32 40, i32 -3) #[[ATTR1]]
+; CHECK-NEXT:    call void @__instrumentor_post_cast_ind(ptr [[TMP2]], i32 13, i32 -1, i32 4, ptr [[TMP1]], i32 13, i32 -1, i32 16, i32 40, i32 -3) #[[ATTR1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i128, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP1]], ptr @__instrumentor_value_pack, i64 16, i1 false)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw <{ i32, i32, [4 x i8], i32 }>, ptr [[TMP1]], i32 0, i32 3

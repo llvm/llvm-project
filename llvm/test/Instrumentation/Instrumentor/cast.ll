@@ -13,9 +13,9 @@ define noundef i64 @test_ptrtoint_basic(ptr noundef %ptr) {
 ; CHECK-SAME: ptr noundef [[PTR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[PTR]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP0]], i32 15, i32 8, i32 12, i32 8, i32 48) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP0]], i32 16, i32 8, i32 13, i32 8, i32 48) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[ADDR:%.*]] = ptrtoint ptr [[PTR]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP0]], i32 15, i32 8, i64 [[ADDR]], i32 12, i32 8, i32 48) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP0]], i32 16, i32 8, i64 [[ADDR]], i32 13, i32 8, i32 48) #[[ATTR0]]
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
 entry:
@@ -28,10 +28,10 @@ define noundef ptr @test_inttoptr_basic(i64 noundef %addr) {
 ; CHECK-LABEL: define noundef ptr @test_inttoptr_basic(
 ; CHECK-SAME: i64 noundef [[ADDR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[ADDR]], i32 12, i32 8, i32 15, i32 8, i32 50) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[ADDR]], i32 13, i32 8, i32 16, i32 8, i32 50) #[[ATTR0]]
 ; CHECK-NEXT:    [[PTR:%.*]] = inttoptr i64 [[ADDR]] to ptr
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[PTR]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @__instrumentor_post_cast(i64 [[ADDR]], i32 12, i32 8, i64 [[TMP0]], i32 15, i32 8, i32 50) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @__instrumentor_post_cast(i64 [[ADDR]], i32 13, i32 8, i64 [[TMP0]], i32 16, i32 8, i32 50) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr
 ; CHECK-NEXT:    ret ptr [[TMP2]]
 ;
@@ -45,10 +45,10 @@ define noundef i32 @test_trunc(i64 noundef %val) {
 ; CHECK-LABEL: define noundef i32 @test_trunc(
 ; CHECK-SAME: i64 noundef [[VAL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[VAL]], i32 12, i32 8, i32 12, i32 4, i32 39) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[VAL]], i32 13, i32 8, i32 13, i32 4, i32 39) #[[ATTR0]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = trunc i64 [[VAL]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[RESULT]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @__instrumentor_post_cast(i64 [[VAL]], i32 12, i32 8, i64 [[TMP0]], i32 12, i32 4, i32 39) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @__instrumentor_post_cast(i64 [[VAL]], i32 13, i32 8, i64 [[TMP0]], i32 13, i32 4, i32 39) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
@@ -63,9 +63,9 @@ define noundef i64 @test_zext(i32 noundef %val) {
 ; CHECK-SAME: i32 noundef [[VAL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[VAL]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP0]], i32 12, i32 4, i32 12, i32 8, i32 40) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP0]], i32 13, i32 4, i32 13, i32 8, i32 40) #[[ATTR0]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = zext i32 [[VAL]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP0]], i32 12, i32 4, i64 [[RESULT]], i32 12, i32 8, i32 40) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP0]], i32 13, i32 4, i64 [[RESULT]], i32 13, i32 8, i32 40) #[[ATTR0]]
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
 entry:
@@ -79,9 +79,9 @@ define noundef i64 @test_sext(i32 noundef %val) {
 ; CHECK-SAME: i32 noundef [[VAL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[VAL]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP0]], i32 12, i32 4, i32 12, i32 8, i32 41) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP0]], i32 13, i32 4, i32 13, i32 8, i32 41) #[[ATTR0]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = sext i32 [[VAL]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP0]], i32 12, i32 4, i64 [[RESULT]], i32 12, i32 8, i32 41) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP0]], i32 13, i32 4, i64 [[RESULT]], i32 13, i32 8, i32 41) #[[ATTR0]]
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
 entry:
@@ -96,10 +96,10 @@ define noundef i32 @test_fptoui(float noundef %val) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[VAL]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP1]], i32 2, i32 4, i32 12, i32 4, i32 42) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP1]], i32 2, i32 4, i32 13, i32 4, i32 42) #[[ATTR0]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptoui float [[VAL]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[RESULT]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP1]], i32 2, i32 4, i64 [[TMP2]], i32 12, i32 4, i32 42) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP1]], i32 2, i32 4, i64 [[TMP2]], i32 13, i32 4, i32 42) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
@@ -115,10 +115,10 @@ define noundef i32 @test_fptosi(float noundef %val) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[VAL]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP1]], i32 2, i32 4, i32 12, i32 4, i32 43) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP1]], i32 2, i32 4, i32 13, i32 4, i32 43) #[[ATTR0]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fptosi float [[VAL]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[RESULT]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP1]], i32 2, i32 4, i64 [[TMP2]], i32 12, i32 4, i32 43) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP1]], i32 2, i32 4, i64 [[TMP2]], i32 13, i32 4, i32 43) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
@@ -133,11 +133,11 @@ define noundef float @test_uitofp(i32 noundef %val) {
 ; CHECK-SAME: i32 noundef [[VAL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[VAL]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP0]], i32 12, i32 4, i32 2, i32 4, i32 44) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP0]], i32 13, i32 4, i32 2, i32 4, i32 44) #[[ATTR0]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = uitofp i32 [[VAL]] to float
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float [[RESULT]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP0]], i32 12, i32 4, i64 [[TMP2]], i32 2, i32 4, i32 44) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP0]], i32 13, i32 4, i64 [[TMP2]], i32 2, i32 4, i32 44) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP4]] to float
 ; CHECK-NEXT:    ret float [[TMP5]]
@@ -153,11 +153,11 @@ define noundef float @test_sitofp(i32 noundef %val) {
 ; CHECK-SAME: i32 noundef [[VAL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[VAL]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP0]], i32 12, i32 4, i32 2, i32 4, i32 45) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP0]], i32 13, i32 4, i32 2, i32 4, i32 45) #[[ATTR0]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = sitofp i32 [[VAL]] to float
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float [[RESULT]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP0]], i32 12, i32 4, i64 [[TMP2]], i32 2, i32 4, i32 45) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP0]], i32 13, i32 4, i64 [[TMP2]], i32 2, i32 4, i32 45) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP4]] to float
 ; CHECK-NEXT:    ret float [[TMP5]]
@@ -212,10 +212,10 @@ define noundef ptr addrspace(1) @test_addrspacecast(ptr noundef %ptr) {
 ; CHECK-SAME: ptr noundef [[PTR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[PTR]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP0]], i32 15, i32 8, i32 15, i32 8, i32 52) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP0]], i32 16, i32 8, i32 16, i32 8, i32 52) #[[ATTR0]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[RESULT]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP0]], i32 15, i32 8, i64 [[TMP1]], i32 15, i32 8, i32 52) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP0]], i32 16, i32 8, i64 [[TMP1]], i32 16, i32 8, i32 52) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr addrspace(1)
 ; CHECK-NEXT:    ret ptr addrspace(1) [[TMP3]]
 ;
@@ -230,9 +230,9 @@ define noundef i64 @test_bitcast(double noundef %val) {
 ; CHECK-SAME: double noundef [[VAL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double [[VAL]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP0]], i32 3, i32 8, i32 12, i32 8, i32 51) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP0]], i32 3, i32 8, i32 13, i32 8, i32 51) #[[ATTR0]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = bitcast double [[VAL]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP0]], i32 3, i32 8, i64 [[RESULT]], i32 12, i32 8, i32 51) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP0]], i32 3, i32 8, i64 [[RESULT]], i32 13, i32 8, i32 51) #[[ATTR0]]
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
 entry:
@@ -246,20 +246,20 @@ define void @test_multiple_conversions(ptr noundef %p1, i64 noundef %i1, float n
 ; CHECK-SAME: ptr noundef [[P1:%.*]], i64 noundef [[I1:%.*]], float noundef [[F1:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[P1]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP0]], i32 15, i32 8, i32 12, i32 8, i32 48) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP0]], i32 16, i32 8, i32 13, i32 8, i32 48) #[[ATTR0]]
 ; CHECK-NEXT:    [[A1:%.*]] = ptrtoint ptr [[P1]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP0]], i32 15, i32 8, i64 [[A1]], i32 12, i32 8, i32 48) #[[ATTR0]]
-; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[I1]], i32 12, i32 8, i32 15, i32 8, i32 50) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP0]], i32 16, i32 8, i64 [[A1]], i32 13, i32 8, i32 48) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[I1]], i32 13, i32 8, i32 16, i32 8, i32 50) #[[ATTR0]]
 ; CHECK-NEXT:    [[P2:%.*]] = inttoptr i64 [[I1]] to ptr
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P2]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @__instrumentor_post_cast(i64 [[I1]], i32 12, i32 8, i64 [[TMP2]], i32 15, i32 8, i32 50) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @__instrumentor_post_cast(i64 [[I1]], i32 13, i32 8, i64 [[TMP2]], i32 16, i32 8, i32 50) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast float [[F1]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP5]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP6]], i32 2, i32 4, i32 12, i32 4, i32 42) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP6]], i32 2, i32 4, i32 13, i32 4, i32 42) #[[ATTR0]]
 ; CHECK-NEXT:    [[I2:%.*]] = fptoui float [[F1]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[I2]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP6]], i32 2, i32 4, i64 [[TMP7]], i32 12, i32 4, i32 42) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @__instrumentor_post_cast(i64 [[TMP6]], i32 2, i32 4, i64 [[TMP7]], i32 13, i32 4, i32 42) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i32
 ; CHECK-NEXT:    call void @use_values(i64 [[TMP1]], ptr [[TMP4]], i32 [[TMP9]])
 ; CHECK-NEXT:    ret void
@@ -278,11 +278,11 @@ define i128 @test_ext(i32 %p1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i128, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[P1]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP3]], i32 12, i32 4, i32 12, i32 16, i32 40) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_cast(i64 [[TMP3]], i32 13, i32 4, i32 13, i32 16, i32 40) #[[ATTR0]]
 ; CHECK-NEXT:    [[I1:%.*]] = zext i32 [[P1]] to i128
 ; CHECK-NEXT:    store i64 [[TMP3]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store i128 [[I1]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @__instrumentor_post_cast_ind(ptr [[TMP2]], i32 12, i32 4, ptr [[TMP1]], i32 12, i32 16, i32 40) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_cast_ind(ptr [[TMP2]], i32 13, i32 4, ptr [[TMP1]], i32 13, i32 16, i32 40) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i128, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret i128 [[TMP4]]
 ;

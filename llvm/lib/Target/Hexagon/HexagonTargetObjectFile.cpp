@@ -331,6 +331,7 @@ unsigned HexagonTargetObjectFile::getSmallestAddressableSize(const Type *Ty,
   case Type::LabelTyID:
   case Type::MetadataTyID:
   case Type::X86_AMXTyID:
+  case Type::X86_BSRTyID:
   case Type::TokenTyID:
   case Type::TypedPointerTyID:
   case Type::TargetExtTyID:

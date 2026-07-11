@@ -37,6 +37,7 @@
 ; CHECK-NEXT:       Expand IR instructions
 ; CHECK-NEXT:       Expand Atomic instructions
 ; CHECK-NEXT:       Lower AMX intrinsics
+; CHECK-NEXT:       X86 Lower BSR Type
 ; CHECK-NEXT:       Lower AMX type for load/store
 ; CHECK-NEXT:       Module Verifier
 ; CHECK-NEXT:       Dominator Tree Construction
