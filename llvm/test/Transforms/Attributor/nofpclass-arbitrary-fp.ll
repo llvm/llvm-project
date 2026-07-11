@@ -2,9 +2,9 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal -S < %s | FileCheck %s --check-prefixes=CHECK
 
 define float @ret_arbitrary_fp_nan_inf(i8 %bits) {
-; CHECK-LABEL: define nofpclass(nan inf) float @ret_arbitrary_fp_nan_inf
+; CHECK-LABEL: define nofpclass(nan inf sub) float @ret_arbitrary_fp_nan_inf
 ; CHECK-SAME: (i8 [[BITS:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    %fp = call nofpclass(nan inf) float @llvm.convert.from.arbitrary.fp.f32.i8(i8 [[BITS]], metadata !"Float4E2M1FN") #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    %fp = call nofpclass(nan inf sub) float @llvm.convert.from.arbitrary.fp.f32.i8(i8 [[BITS]], metadata !"Float4E2M1FN") #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret float %fp
 ;
   %fp = call float @llvm.convert.from.arbitrary.fp(i8 %bits, metadata !"Float4E2M1FN")
@@ -12,9 +12,9 @@ define float @ret_arbitrary_fp_nan_inf(i8 %bits) {
 }
 
 define float @ret_arbitrary_fp_inf_only(i8 %bits) {
-; CHECK-LABEL: define nofpclass(inf) float @ret_arbitrary_fp_inf_only
+; CHECK-LABEL: define nofpclass(inf sub) float @ret_arbitrary_fp_inf_only
 ; CHECK-SAME: (i8 [[BITS:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    %fp = call nofpclass(inf) float @llvm.convert.from.arbitrary.fp.f32.i8(i8 [[BITS]], metadata !"Float8E4M3FN") #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    %fp = call nofpclass(inf sub) float @llvm.convert.from.arbitrary.fp.f32.i8(i8 [[BITS]], metadata !"Float8E4M3FN") #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret float %fp
 ;
   %fp = call float @llvm.convert.from.arbitrary.fp(i8 %bits, metadata !"Float8E4M3FN")
@@ -22,9 +22,9 @@ define float @ret_arbitrary_fp_inf_only(i8 %bits) {
 }
 
 define <4 x float> @ret_arbitrary_fp_vector_nan_inf(<4 x i8> %bits) {
-; CHECK-LABEL: define nofpclass(nan inf) <4 x float> @ret_arbitrary_fp_vector_nan_inf
+; CHECK-LABEL: define nofpclass(nan inf sub) <4 x float> @ret_arbitrary_fp_vector_nan_inf
 ; CHECK-SAME: (<4 x i8> [[BITS:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    %fp = call nofpclass(nan inf) <4 x float> @llvm.convert.from.arbitrary.fp.v4f32.v4i8(<4 x i8> [[BITS]], metadata !"Float4E2M1FN") #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    %fp = call nofpclass(nan inf sub) <4 x float> @llvm.convert.from.arbitrary.fp.v4f32.v4i8(<4 x i8> [[BITS]], metadata !"Float4E2M1FN") #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret <4 x float> %fp
 ;
   %fp = call <4 x float> @llvm.convert.from.arbitrary.fp.v4f32(<4 x i8> %bits, metadata !"Float4E2M1FN")
