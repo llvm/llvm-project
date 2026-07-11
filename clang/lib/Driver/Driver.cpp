@@ -6378,8 +6378,7 @@ InputInfoList Driver::BuildJobsForActionNoCache(
       // Get the unique string identifier for this dependence and cache the
       // result.
       BoundArch Arch;
-      if (TargetDeviceOffloadKind == Action::OFK_HIP ||
-          TargetDeviceOffloadKind == Action::OFK_OpenMP) {
+      if (TargetDeviceOffloadKind == Action::OFK_HIP) {
         if (UI.DependentOffloadKind == Action::OFK_Host)
           Arch = BoundArch();
         else
