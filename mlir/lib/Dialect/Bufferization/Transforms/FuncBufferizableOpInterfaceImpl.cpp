@@ -60,15 +60,31 @@ getDefaultMemorySpace(const BufferizationOptions &options,
   return nullptr;
 }
 
+static LogicalResult verifyMemRefElementType(FuncOp funcOp,
+                                             TensorLikeType type) {
+  auto tensorType = dyn_cast<TensorType>(type);
+  if (!tensorType)
+    return success();
+  Type elementType = tensorType.getElementType();
+  if (BaseMemRefType::isValidElementType(elementType))
+    return success();
+  return funcOp.emitError() << "cannot bufferize function boundary type "
+                            << tensorType << ": element type " << elementType
+                            << " is not a valid memref element type";
+}
+
 /// Return the index-th bufferized function argument type. This assumes that the
 /// specified argument is a tensor. If the tensor is ranked, a layout map may be
 /// specified by the user (as per `options.functionArgTypeConverterFn`).
-static BufferLikeType
+static FailureOr<BufferLikeType>
 getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
                              const BufferizationOptions &options) {
   auto type =
       dyn_cast<TensorLikeType>(funcOp.getFunctionType().getInput(index));
   assert(type && "expected TensorLikeType");
+
+  if (failed(verifyMemRefElementType(funcOp, type)))
+    return failure();
 
   // Note: For builtin tensors there is additional logic related to layout.
   if (auto tensorType = dyn_cast<TensorType>(type)) {
@@ -245,6 +261,8 @@ struct CallOpInterface
 
     // Otherwise, call the type converter to compute the bufferized type.
     auto tensorType = cast<TensorLikeType>(resultType);
+    if (failed(verifyMemRefElementType(funcOp, tensorType)))
+      return failure();
     return cast<BufferLikeType>(options.functionArgTypeConverterFn(
         tensorType, getDefaultMemorySpace(options, tensorType), funcOp,
         options));
@@ -444,8 +462,11 @@ struct FuncOpInterface
     for (const auto &it : llvm::enumerate(funcType.getInputs())) {
       Type argType = it.value();
       if (isa<TensorLikeType>(argType)) {
-        argTypes.push_back(
-            getBufferizedFunctionArgType(funcOp, it.index(), options));
+        FailureOr<BufferLikeType> bufferType =
+            getBufferizedFunctionArgType(funcOp, it.index(), options);
+        if (failed(bufferType))
+          return failure();
+        argTypes.push_back(*bufferType);
         continue;
       }
       argTypes.push_back(argType);
@@ -455,6 +476,8 @@ struct FuncOpInterface
     SmallVector<Type> retTypes;
     for (Type resultType : funcType.getResults()) {
       if (auto tensorType = dyn_cast<TensorLikeType>(resultType)) {
+        if (failed(verifyMemRefElementType(funcOp, tensorType)))
+          return failure();
         BufferLikeType resultType = options.functionArgTypeConverterFn(
             tensorType, getDefaultMemorySpace(options, tensorType), funcOp,
             options);
