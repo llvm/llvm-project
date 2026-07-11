@@ -445,6 +445,8 @@ ABIArgInfo PPC32_SVR4_ABIInfo::classifyComplexType(QualType Ty) const {
   uint64_t Size = getContext().getTypeSize(Ty);
   llvm::LLVMContext &VMC = getVMContext();
   llvm::Type *I32 = llvm::Type::getInt32Ty(VMC);
+
+  assert(Ty->isAnyComplexType() && "not a complex type");
   QualType ElemTy = Ty->castAs<ComplexType>()->getElementType();
 
   // Work around https://github.com/llvm/llvm-project/issues/44482.
@@ -459,11 +461,12 @@ ABIArgInfo PPC32_SVR4_ABIInfo::classifyComplexType(QualType Ty) const {
     return ABIArgInfo::getDirect(llvm::IntegerType::get(VMC, Size));
 
   // Coerce to a vector <N x i32> for _Complex float and _Complex int.
+  // A vector gives this the correct 8-byte register alignment.
   if (Size == 2 * GPRBits)
     return ABIArgInfo::getDirect(llvm::FixedVectorType::get(I32, 2));
 
   // Coerce to an array [N x i32] for _Complex double and similar.
-  // Using i32 gives the correct 4-byte register alignment.
+  // An array of i32 gives the correct 4-byte register alignment.
   return ABIArgInfo::getDirect(llvm::ArrayType::get(I32, Size / GPRBits));
 }
 
@@ -497,7 +500,28 @@ ABIArgInfo PPC32_SVR4_ABIInfo::classifyArgumentType(QualType Ty,
       ArgGPRsLeft -= 1;
 
     if (RegsNeeded <= (uint64_t)ArgGPRsLeft) {
+      // All fits.
       ArgGPRsLeft -= RegsNeeded;
+
+      // _Complex needs a type coercion to be passed correctly.
+      if (IsComplex)
+        return classifyComplexType(Ty);
+    } else if (IsComplex) {
+      // Never split a Complex value across GPRs and the stack. When a Complex
+      // value does not fit in the remaining GPRs, it is passed via the stack
+      // and the remaining GPRs are considered consumed, so any further
+      // arguments will be passed via the stack as well.
+
+      // _Complex needs a type coercion to be passed correctly.
+      llvm::Type *CoerceTy = classifyComplexType(Ty).getCoerceToType();
+
+      // Soak up the remaining GPRs with a padding argument.
+      llvm::Type *I32 = llvm::Type::getInt32Ty(getVMContext());
+      llvm::Type *Padding =
+          ArgGPRsLeft > 0 ? llvm::ArrayType::get(I32, ArgGPRsLeft) : nullptr;
+
+      ArgGPRsLeft = 0;
+      return ABIArgInfo::getDirect(CoerceTy, /*Offset=*/0, Padding);
     }
   } else {
     // Other aggregates are passed indirectly, and consume one GPR.
@@ -509,6 +533,9 @@ ABIArgInfo PPC32_SVR4_ABIInfo::classifyArgumentType(QualType Ty,
 
 ABIArgInfo PPC32_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
   uint64_t Size;
+
+  if (RetTy->isAnyComplexType() && isComplexGnuABI())
+    return classifyComplexType(RetTy);
 
   // -msvr4-struct-return puts small aggregates in GPR3 and GPR4.
   if (isAggregateTypeForABI(RetTy) && IsRetSmallStructInRegABI &&
