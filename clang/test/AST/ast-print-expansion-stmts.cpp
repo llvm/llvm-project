@@ -5,14 +5,12 @@
 // RUN: %clang_cc1 -std=c++26 -emit-pch -o %t %s
 // RUN: %clang_cc1 -x c++ -std=c++26 -include-pch %t -ast-print  /dev/null | FileCheck %s
 
-#if 0 // Disabled until we support iterating expansion statements.
 template <typename T, __SIZE_TYPE__ size>
 struct Array {
   T data[size]{};
   constexpr const T* begin() const { return data; }
   constexpr const T* end() const { return data + size; }
 };
-#endif // 0
 
 // CHECK: void foo(int);
 void foo(int);
@@ -29,19 +27,16 @@ void test(T t) {
     foo(x);
   }
 
-#if 0 // Disabled until we support iterating expansion statements.
   // Iterating expansion statement.
   //
-  // NOTE: Remove 'DISABLED-' when the '#if 0' is removed.
-  // DISABLED-CHECK:      static constexpr Array<int, 3> a;
-  // DISABLED-CHECK-NEXT: template for (auto x : (a)) {
-  // DISABLED-CHECK-NEXT:   foo(x);
-  // DISABLED-CHECK-NEXT: }
+  // CHECK:      static constexpr Array<int, 3> a;
+  // CHECK-NEXT: template for (auto x : (a)) {
+  // CHECK-NEXT:   foo(x);
+  // CHECK-NEXT: }
   static constexpr Array<int, 3> a;
   template for (auto x : a) {
     foo(x);
   }
-#endif // 0
 
   // Destructuring expansion statement.
   //
@@ -76,20 +71,16 @@ void test2(T t) {
     foo(x);
   }
 
-#if 0 // Disabled until we support iterating expansion statements.
   // Iterating expansion statement.
   //
-  // NOTE: Remove 'DISABLED-' when the '#if 0' is removed.
-  // DISABLED-CHECK:      static constexpr Array<int, 3> a;
-  // DISABLED-CHECK-NEXT: template for (int x : (a)) {
-  // DISABLED-CHECK-NEXT:   foo(x);
-  // DISABLED-CHECK-NEXT: }
-
+  // CHECK:      static constexpr Array<int, 3> a;
+  // CHECK-NEXT: template for (int x : (a)) {
+  // CHECK-NEXT:   foo(x);
+  // CHECK-NEXT: }
   static constexpr Array<int, 3> a;
   template for (int x : a) {
     foo(x);
   }
-#endif // 0
 
   // Destructuring expansion statement.
   //

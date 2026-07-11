@@ -52,6 +52,10 @@ protected:
   /// True after \#include; turns \<xx> or "xxx" into a tok::header_name token.
   bool ParsingFilename = false;
 
+  /// True if the preprocessor should produce an EOF token when this lexer
+  /// is done.
+  bool ProduceEOFWhenDone = false;
+
   /// True if in raw mode.
   ///
   /// Raw mode disables interpretation of tokens and is a far faster mode to

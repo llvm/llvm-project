@@ -488,8 +488,16 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
             SourceMgr.getFileEntryForID(CurPPLexer->getFileID())))
       FoundPCHThroughHeader = true;
 
+    bool ShouldProduceEOF = CurLexer && CurLexer->ProduceEOFWhenDone;
+
     // We're done with the #included file.
     RemoveTopOfLexerStack();
+
+    if (ShouldProduceEOF) {
+      Result.startToken();
+      Result.setKind(tok::eof);
+      return true;
+    }
 
     // Propagate info about start-of-line/leading white-space/etc.
     PropagateLineStartLeadingSpaceInfo(Result);

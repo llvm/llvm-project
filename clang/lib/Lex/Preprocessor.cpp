@@ -573,6 +573,22 @@ Module *Preprocessor::getCurrentModuleImplementation() {
   return getHeaderSearchInfo().lookupModule(getLangOpts().ModuleName);
 }
 
+bool Preprocessor::LexTokensInString(SmallVectorImpl<Token> &Tokens,
+                                     StringRef Code, SourceLocation Loc) {
+  std::unique_ptr<Lexer> L = Lexer::CreateScratchLexer(Code, Loc, Loc, *this);
+  L->ProduceEOFWhenDone = true; // Stop lexing once 'L' is done.
+  EnterSourceFileWithLexer(std::move(L), nullptr);
+  for (;;) {
+    Token Tok;
+    Lex(Tok);
+    if (Tok.is(tok::unknown))
+      return true;
+    if (Tok.is(tok::eof))
+      return false;
+    Tokens.push_back(Tok);
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Preprocessor Initialization Methods
 //===----------------------------------------------------------------------===//
