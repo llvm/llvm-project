@@ -32,6 +32,51 @@ define spir_kernel void @icmp_slt_i4_zero(i4 %x, ptr addrspace(1) %out) {
 }
 
 ; ----------------------------------------------------------------------------
+; icmp sle i4: same widening as slt, different SPIR-V opcode.
+; CHECK: OpFunction
+; CHECK: %[[#X_SLE:]] = OpFunctionParameter
+; CHECK: OpFunctionParameter
+; CHECK: %[[#SHL_SLE:]] = OpShiftLeftLogical %[[#I8]] %[[#X_SLE]] %[[#K4]]
+; CHECK: %[[#SX_SLE:]] = OpShiftRightArithmetic %[[#I8]] %[[#SHL_SLE]] %[[#K4]]
+; CHECK: OpSLessThanEqual {{%[0-9]+}} %[[#SX_SLE]] {{%[0-9]+}}
+define spir_kernel void @icmp_sle_i4_zero(i4 %x, ptr addrspace(1) %out) {
+  %c = icmp sle i4 %x, 0
+  %r = sext i1 %c to i8
+  store i8 %r, ptr addrspace(1) %out
+  ret void
+}
+
+; ----------------------------------------------------------------------------
+; icmp sgt i4.
+; CHECK: OpFunction
+; CHECK: %[[#X_SGT:]] = OpFunctionParameter
+; CHECK: OpFunctionParameter
+; CHECK: %[[#SHL_SGT:]] = OpShiftLeftLogical %[[#I8]] %[[#X_SGT]] %[[#K4]]
+; CHECK: %[[#SX_SGT:]] = OpShiftRightArithmetic %[[#I8]] %[[#SHL_SGT]] %[[#K4]]
+; CHECK: OpSGreaterThan {{%[0-9]+}} %[[#SX_SGT]] {{%[0-9]+}}
+define spir_kernel void @icmp_sgt_i4_zero(i4 %x, ptr addrspace(1) %out) {
+  %c = icmp sgt i4 %x, 0
+  %r = sext i1 %c to i8
+  store i8 %r, ptr addrspace(1) %out
+  ret void
+}
+
+; ----------------------------------------------------------------------------
+; icmp sge i4.
+; CHECK: OpFunction
+; CHECK: %[[#X_SGE:]] = OpFunctionParameter
+; CHECK: OpFunctionParameter
+; CHECK: %[[#SHL_SGE:]] = OpShiftLeftLogical %[[#I8]] %[[#X_SGE]] %[[#K4]]
+; CHECK: %[[#SX_SGE:]] = OpShiftRightArithmetic %[[#I8]] %[[#SHL_SGE]] %[[#K4]]
+; CHECK: OpSGreaterThanEqual {{%[0-9]+}} %[[#SX_SGE]] {{%[0-9]+}}
+define spir_kernel void @icmp_sge_i4_zero(i4 %x, ptr addrspace(1) %out) {
+  %c = icmp sge i4 %x, 0
+  %r = sext i1 %c to i8
+  store i8 %r, ptr addrspace(1) %out
+  ret void
+}
+
+; ----------------------------------------------------------------------------
 ; icmp slt i4 between two registers: both operands must be sign-extended.
 ; CHECK: OpFunction
 ; CHECK: %[[#X2:]] = OpFunctionParameter
@@ -116,6 +161,49 @@ define spir_kernel void @icmp_slt_i24_zero(i24 %x, ptr addrspace(1) %out) {
   %c = icmp slt i24 %x, 0
   %r = sext i1 %c to i8
   store i8 %r, ptr addrspace(1) %out
+  ret void
+}
+
+; ----------------------------------------------------------------------------
+; Same vreg on both operands of one instruction: only one sign-extension pair
+; is emitted and both operand slots reference it.
+; CHECK: OpFunction
+; CHECK: %[[#X_SAME:]] = OpFunctionParameter
+; CHECK: OpFunctionParameter
+; CHECK: %[[#SHL_SAME:]] = OpShiftLeftLogical %[[#I8]] %[[#X_SAME]] %[[#K4]]
+; CHECK: %[[#SX_SAME:]] = OpShiftRightArithmetic %[[#I8]] %[[#SHL_SAME]] %[[#K4]]
+; CHECK-NOT: OpShiftRightArithmetic
+; CHECK: OpSDiv %[[#I8]] %[[#SX_SAME]] %[[#SX_SAME]]
+define spir_kernel void @sdiv_i4_same_operand(i4 %x, ptr addrspace(1) %out) {
+  %r = sdiv i4 %x, %x
+  %z = sext i4 %r to i32
+  store i32 %z, ptr addrspace(1) %out
+  ret void
+}
+
+; ----------------------------------------------------------------------------
+; Same vreg feeding two separate sign-sensitive instructions: each instruction
+; needs its own sign-extension since G_SEXT_INREG is not hoisted.
+; CHECK: OpFunction
+; CHECK: %[[#X_SHARED:]] = OpFunctionParameter
+; CHECK: %[[#Y_SHARED:]] = OpFunctionParameter
+; CHECK: OpFunctionParameter
+; CHECK: %[[#SHL_A:]] = OpShiftLeftLogical %[[#I8]] %[[#X_SHARED]] %[[#K4]]
+; CHECK: %[[#SXA:]] = OpShiftRightArithmetic %[[#I8]] %[[#SHL_A]] %[[#K4]]
+; CHECK: %[[#SHL_B:]] = OpShiftLeftLogical %[[#I8]] %[[#Y_SHARED]] %[[#K4]]
+; CHECK: %[[#SXB:]] = OpShiftRightArithmetic %[[#I8]] %[[#SHL_B]] %[[#K4]]
+; CHECK: OpSDiv %[[#I8]] %[[#SXA]] %[[#SXB]]
+; CHECK: %[[#SHL_A2:]] = OpShiftLeftLogical %[[#I8]] %[[#X_SHARED]] %[[#K4]]
+; CHECK: %[[#SXA2:]] = OpShiftRightArithmetic %[[#I8]] %[[#SHL_A2]] %[[#K4]]
+; CHECK: %[[#SHL_B2:]] = OpShiftLeftLogical %[[#I8]] %[[#Y_SHARED]] %[[#K4]]
+; CHECK: %[[#SXB2:]] = OpShiftRightArithmetic %[[#I8]] %[[#SHL_B2]] %[[#K4]]
+; CHECK: OpSRem %[[#I8]] %[[#SXA2]] %[[#SXB2]]
+define spir_kernel void @sdiv_and_srem_i4_shared(i4 %x, i4 %y, ptr addrspace(1) %out) {
+  %q = sdiv i4 %x, %y
+  %r = srem i4 %x, %y
+  %s = add i4 %q, %r
+  %z = sext i4 %s to i32
+  store i32 %z, ptr addrspace(1) %out
   ret void
 }
 
