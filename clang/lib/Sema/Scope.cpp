@@ -18,6 +18,7 @@
 using namespace clang;
 
 void Scope::setFlags(Scope *parent, unsigned flags) {
+  IsExpansionStmtScope = false;
   AnyParent = parent;
   Flags = flags;
 

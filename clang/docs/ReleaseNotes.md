@@ -729,6 +729,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   against or converted to a null pointer, the same as a bare function name.
   (#GH46362)
 
+- Added a clearer diagnostic for uninitialized decomposition declarations. (#GH90107)
 
 ### Improvements to Clang's time-trace
 
@@ -794,6 +795,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed an issue where `__typeof_unqual` and `__typeof_unqual__` were rejected as a declaration specifier in block scope in C++.
 - Fixed crash when checking for overflow for unary operator that can't overflow (#GH170072)
 - Clang no longer handles a `" q-char-sequence "` header name as a string literal (#GH132643).
+- Under `-fdollars-in-identifiers`, the `$` can now appear in user-defined-literals. (#GH173985)
 - Fixed an assertion where we improperly handled implicit conversions to integral types from an atomic-type with a conversion function. (#GH201770)
 - Fixed assertion failures involving code completion with delayed default arguments and exception specifications. (#GH200879)
 - Fixed a regression where calling a function that takes a class-type parameter by value inside `decltype` of a concept could be incorrectly rejected when used as a non-type template argument. (#GH175831)
@@ -803,6 +805,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   (#GH191829)
 - Fixed a crash in the constant evaluator when an ill-formed array new-expression whose bound could not be determined (e.g. `new int[]()`) was used in a constant expression. (#GH200139)
 - Clang now defines the GCC-compatible predefined macros `__WCHAR_MIN__`, `__WINT_MIN__`, and `__SIG_ATOMIC_MIN__`. (#GH199678)
+- Fix a crash in addUnsizedArray due assert not verifying we have a Base before doing checks on it. (#GH44212)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -837,6 +840,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed a preprocessor assertion failure triggered when parsing an invalid template-id starting with `::template operator`. (#GH186582)
 - Fixed a crash when a function template is defined as a non-template friend with a global scope qualifier. (#GH185341)
 - Fixed a bug of incorrect template depth for abbreviated templates. (#GH200682)
+- Fixed valid C++ code that uses an address-of-function-template expression,
+  such as `decltype(&T::func<Args...>)`, in SFINAE checks when substituting the
+  function template's trailing return type fails, such as when the return type
+  contains a `decltype` probe that calls a deleted function.
 - Clang now rejects constant template parameters with block pointer types, since these are not implemented anyway and would lead to crashes. (#GH189247)
 - Fixed some concept bugs introduced in Clang 22 (#GH197597)
 - Clang no longer reject call expressions whose type is a not-yet-deduced auto type. (#GH207565)
@@ -883,6 +890,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Correctly diagnose invalid non-dependent calls in dependent contexts. (#GH135694)
 - Fix initialization of GRO when GRO-return type mismatches, as part of CWG2563. (#GH98744)
 - Fix an error using an initializer list with array new for a type that is not default-constructible. (#GH81157)
+- Fixed a crash in invalid ``#module`` preprocessing directive. (#GH179220)
 - We no longer consider conversion operators when copy-initializing from the same type. This was non
   conforming and could lead to recursive constraint satisfaction checking. (#GH149443)
 - Fixed a crash in Itanium C++ name mangling for a lambda in a local class field initializer inside a constructor/destructor. (#GH176395)
@@ -990,6 +998,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Removed support for `AMX-TF32` (`-mamx-tf32`) and `TMMULTF32PS` instruction.
 
 #### Arm and AArch64 Support
+
+- On Apple AArch64 targets, `__GCC_DESTRUCTIVE_SIZE` is now `128` (down from `256`)
+  to match the 128-byte cache line used by Apple cores, avoiding needless
+  over-alignment. This value is implementation-defined and should not be relied upon
+  in an ABI-sensitive way.
 
 - Support has been added for the following processors (-mcpu identifiers in parenthesis):
 
@@ -1137,7 +1150,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - Fixed a crash in code completion when using a C-Style cast with a parenthesized
   operand in Objective-C++ mode. (#GH180125)
-- Fixed a crash when code completion is triggered inside an ill-formed lambda's trailing requires-clause. (#GH201632)  
+- Fixed a crash when code completion is triggered inside an ill-formed lambda's trailing requires-clause. (#GH201632)
 
 ### Static Analyzer
 

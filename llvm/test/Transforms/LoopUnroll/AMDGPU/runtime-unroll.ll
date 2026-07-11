@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-- -passes=loop-unroll -S %s | FileCheck %s
+; RUN: opt -mtriple=amdgpu-- -passes=loop-unroll -S %s | FileCheck %s
 
 ; Verify that AMDGPU enables runtime loop unrolling for loops whose trip
 ; count is not known at compile time.
