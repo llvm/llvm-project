@@ -59,13 +59,14 @@ define ptr @get_weak_dsolocal_var() nounwind {
 ; PIC:       @ %bb.0:
 ; PIC-NEXT:    ldr r0, .LCPI2_0
 ; PIC-NEXT:  .LPC2_0:
-; PIC-NEXT:    ldr r0, [pc, r0]
+; PIC-NEXT:    add r0, pc, r0
 ; PIC-NEXT:    bx lr
 ; PIC-NEXT:    .p2align 2
 ; PIC-NEXT:  @ %bb.1:
 ; PIC-NEXT:  .LCPI2_0:
 ; PIC-NEXT:  .Ltmp1:
-; PIC-NEXT:    .long weak_dsolocal_var(GOT_PREL)-(.LPC2_0+8-.Ltmp1)
+; PIC-NEXT:    .long .Ltmp1-(.LPC2_0+8)
+; PIC-NEXT:    .reloc .Ltmp1, R_ARM_REL32, weak_dsolocal_var
   ret ptr @weak_dsolocal_var
 }
 
@@ -163,13 +164,14 @@ define weak dso_local ptr @weak_dsolocal_func() nounwind {
 ; PIC:       @ %bb.0:
 ; PIC-NEXT:    ldr r0, .LCPI7_0
 ; PIC-NEXT:  .LPC7_0:
-; PIC-NEXT:    ldr r0, [pc, r0]
+; PIC-NEXT:    add r0, pc, r0
 ; PIC-NEXT:    bx lr
 ; PIC-NEXT:    .p2align 2
 ; PIC-NEXT:  @ %bb.1:
 ; PIC-NEXT:  .LCPI7_0:
 ; PIC-NEXT:  .Ltmp3:
-; PIC-NEXT:    .long weak_dsolocal_func(GOT_PREL)-(.LPC7_0+8-.Ltmp3)
+; PIC-NEXT:    .long .Ltmp3-(.LPC7_0+8)
+; PIC-NEXT:    .reloc .Ltmp3, R_ARM_REL32, weak_dsolocal_func
   ret ptr @weak_dsolocal_func
 }
 

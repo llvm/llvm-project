@@ -1182,7 +1182,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       if (!S.getOpenCLOptions().isSupported("cl_khr_fp64", S.getLangOpts()))
         S.Diag(DS.getTypeSpecTypeLoc(), diag::err_opencl_requires_extension)
             << 0 << Result
-            << (S.getLangOpts().getOpenCLCompatibleVersion() == 300
+            << (S.getLangOpts().getOpenCLCompatibleVersion() >= 300
                     ? "cl_khr_fp64 and __opencl_c_fp64"
                     : "cl_khr_fp64");
       else if (!S.getOpenCLOptions().isAvailableOption("cl_khr_fp64", S.getLangOpts()))
@@ -1407,7 +1407,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   if (S.getLangOpts().OpenCL) {
     const auto &OpenCLOptions = S.getOpenCLOptions();
     bool IsOpenCLC30Compatible =
-        S.getLangOpts().getOpenCLCompatibleVersion() == 300;
+        S.getLangOpts().getOpenCLCompatibleVersion() >= 300;
     // OpenCL C v3.0 s6.3.3 - OpenCL image types require __opencl_c_images
     // support.
     // OpenCL C v3.0 s6.2.1 - OpenCL 3d image write types requires support

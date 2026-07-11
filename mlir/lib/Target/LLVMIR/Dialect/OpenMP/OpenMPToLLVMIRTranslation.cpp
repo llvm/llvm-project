@@ -6221,6 +6221,27 @@ static uint64_t getArrayElementSizeInBits(LLVM::LLVMArrayType arrTy,
   return dl.getTypeSizeInBits(arrTy.getElementType());
 }
 
+// The intent is to verify if the mapped data being passed is a
+// pointer -> pointee that requires special handling in certain cases,
+// e.g. applying the OMP_MAP_PTR_AND_OBJ map type.
+//
+// There may be a better way to verify this, but unfortunately with
+// opaque pointers we lose the ability to easily check if something is
+// a pointer whilst maintaining access to the underlying type.
+static bool checkIfPointerMap(omp::MapInfoOp mapOp) {
+  // If we have a varPtrPtr field assigned then the underlying type is a pointer
+  if (mapOp.getVarPtrPtr())
+    return true;
+
+  // If the map data is declare target with a link clause, then it's represented
+  // as a pointer when we lower it to LLVM-IR even if at the MLIR level it has
+  // no relation to pointers.
+  if (isDeclareTargetLink(mapOp.getVarPtr()))
+    return true;
+
+  return false;
+}
+
 // This function calculates the size to be offloaded for a specified type, given
 // its associated map clause (which can contain bounds information which affects
 // the total size), this size is calculated based on the underlying element type
@@ -6273,8 +6294,51 @@ static llvm::Value *getSizeInBytes(DataLayout &dl, const mlir::Type &type,
       // size, so we do some on the fly runtime math to get the size in
       // bytes from the extent (ub - lb) * sizeInBytes. NOTE: This may need
       // some adjustment for members with more complex types.
-      return builder.CreateMul(elementCount,
-                               builder.getInt64(underlyingTypeSzInBits / 8));
+      llvm::Value *sizeCalc = builder.CreateMul(
+          elementCount, builder.getInt64(underlyingTypeSzInBits / 8),
+          "element_count");
+
+      // This is a part of a "complicated" bit of size calculation logic that is
+      // in place to handle a couple of scenarios, one specific to Fortran and
+      // the other a more general OpenMP issue. The other piece of the
+      // calculation can be found as the final size calculation within the
+      // processIndividualMap function. Ideally we would move it here, but due
+      // to the complexity of calculating the final base address of some
+      // constructs (required for a nullary check), it's left as the final step.
+      // So, in the below 2 cases, the nullary check is in processIndividualMap
+      // and the size equality check is here. The cases this modifications help
+      // cover are:
+      //
+      // 1) If an argument has a null base pointer, then the size must be set to
+      //    0 to avoid the runtime exploding/complaining about an illegal
+      //    pointer map. The size returning non-zero is feasible in certain
+      //    cases if for example someone has specified there own bounds/range.
+      // 2) We wish to support a very specific OpenMP Fortran edge-case where a
+      //    size zero array can be legally presence checked and found to be on
+      //    device when it has been mapped. In these rare occasions the
+      //    allocatable/pointer will have a size of 1 allocated for the
+      //    underlying data, but this wall not be represented within the size of
+      //    the descriptor, so we get a non-nullary pointer and a size of 0,
+      //    allowing us to specify a size of 1 in these cases registering it on
+      //    the device mapping table as present.
+      //
+      // The default fall through case is just returning the size calculation
+      // above, if we are not nullary and the size we calculate is non-zero,
+      // which is basically any pointer type that is allocated in someway
+      // (providing you are not running on a rare system that allows malloc's of
+      // size 0 with whatever caveats that may come with).
+      //
+      // Later in the nullary check in processIndividualMap it just devolves to
+      // selecting a size of 0 if we are nullary, if we are not, we will return
+      // either 1 or the calculated size, depending on the outcome of this
+      // select.
+      if (checkIfPointerMap(memberClause)) {
+        return builder.CreateSelect(
+            builder.CreateICmpEQ(sizeCalc, builder.getInt64(0)),
+            builder.getInt64(1), sizeCalc);
+      }
+
+      return sizeCalc;
     }
   }
 
@@ -6747,27 +6811,6 @@ getOverlappedMembers(llvm::SmallVectorImpl<size_t> &overlapMapDataIdxs,
   for (size_t i = 0; i < numMembers; ++i)
     if (!skipIndices.contains(i))
       overlapMapDataIdxs.push_back(i);
-}
-
-// The intent is to verify if the mapped data being passed is a
-// pointer -> pointee that requires special handling in certain cases,
-// e.g. applying the OMP_MAP_PTR_AND_OBJ map type.
-//
-// There may be a better way to verify this, but unfortunately with
-// opaque pointers we lose the ability to easily check if something is
-// a pointer whilst maintaining access to the underlying type.
-static bool checkIfPointerMap(omp::MapInfoOp mapOp) {
-  // If we have a varPtrPtr field assigned then the underlying type is a pointer
-  if (mapOp.getVarPtrPtr())
-    return true;
-
-  // If the map data is declare target with a link clause, then it's represented
-  // as a pointer when we lower it to LLVM-IR even if at the MLIR level it has
-  // no relation to pointers.
-  if (isDeclareTargetLink(mapOp.getVarPtr()))
-    return true;
-
-  return false;
 }
 
 /// This function handles the insertion of a single item of map data from

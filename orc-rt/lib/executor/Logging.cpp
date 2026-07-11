@@ -19,7 +19,7 @@
 static const char *CategoryNames[orc_rt_log_Category_Count] = {"General"};
 
 static const char *LevelNames[ORC_RT_LOG_LEVEL_COUNT] = {
-    "debug", "info", "warning", "error", "off",
+    "DEBUG", "INFO", "WARNING", "ERROR", "OFF",
 };
 
 const char *orc_rt_log_Category_getName(orc_rt_log_Category Cat) noexcept {
@@ -42,8 +42,8 @@ orc_rt_log_Level orc_rt_log_Level_parse(const char *Str) noexcept {
     for (size_t I = 0; I != Size; ++I) {
       unsigned char P = LevelName[I];
       unsigned char Q = Str[I];
-      assert((!P || std::islower(P)) && "Level name is not all lowercase");
-      if (std::tolower(Q) != P)
+      assert((!P || std::isupper(P)) && "Level name is not all uppercase");
+      if (std::toupper(Q) != P)
         return false;
     }
     return true;

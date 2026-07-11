@@ -27,11 +27,11 @@ TEST(LoggingTest, CompilesAtEveryLevel) {
 }
 
 TEST(LoggingTest, LevelGetName) {
-  EXPECT_STREQ("debug", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_DEBUG));
-  EXPECT_STREQ("info", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_INFO));
-  EXPECT_STREQ("warning", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_WARNING));
-  EXPECT_STREQ("error", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_ERROR));
-  EXPECT_STREQ("off", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_OFF));
+  EXPECT_STREQ("DEBUG", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_DEBUG));
+  EXPECT_STREQ("INFO", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_INFO));
+  EXPECT_STREQ("WARNING", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_WARNING));
+  EXPECT_STREQ("ERROR", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_ERROR));
+  EXPECT_STREQ("OFF", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_OFF));
 
   // Out-of-range levels have no name.
   EXPECT_EQ(nullptr, orc_rt_log_Level_getName(-1));

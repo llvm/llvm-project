@@ -1,0 +1,12 @@
+{
+  "id_table": [],
+  "results": [
+    {
+      "analysis_name": "OperatorNewDeletePointersAnalysisResult",
+      "result": {
+        "WrongKey": []
+      }
+    }
+  ],
+  "type": "WPASuite"
+}

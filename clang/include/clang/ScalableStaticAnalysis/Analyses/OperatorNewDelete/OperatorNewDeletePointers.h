@@ -17,6 +17,8 @@
 #include "clang/ScalableStaticAnalysis/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/SummaryName.h"
 #include "clang/ScalableStaticAnalysis/Core/TUSummary/EntitySummary.h"
+#include "clang/ScalableStaticAnalysis/Core/WholeProgramAnalysis/AnalysisName.h"
+#include "clang/ScalableStaticAnalysis/Core/WholeProgramAnalysis/AnalysisResult.h"
 #include "llvm/ADT/StringRef.h"
 #include <set>
 
@@ -55,6 +57,21 @@ struct OperatorNewDeletePointersEntitySummary final : public EntitySummary {
   bool empty() const { return Entities.empty(); }
 
   std::set<EntityId> Entities;
+};
+
+/// \brief Whole-program result of the operator new/delete pointer
+/// analysis.
+struct OperatorNewDeletePointersAnalysisResult final : AnalysisResult {
+  static constexpr llvm::StringLiteral Name =
+      "OperatorNewDeletePointersAnalysisResult";
+
+  static AnalysisName analysisName() { return AnalysisName(Name.str()); }
+
+  std::set<EntityId> Entities;
+
+  bool contains(const EntityId &Id) const {
+    return Entities.find(Id) != Entities.end();
+  }
 };
 
 } // namespace clang::ssaf

@@ -250,20 +250,20 @@ void test_conditional_bcopy(void) {
 void test_float_builtins(__fp16 *H, float F, double D, long double LD) {
   volatile int res;
   res = __builtin_isinf(*H);
-  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f16(half {{.*}}, i32 516)
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f16(half {{.*}}, /* (inf) */ i32 516)
   // CHECK: zext i1 [[TMP]] to i32
 
   res = __builtin_isinf(F);
-  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 516)
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f32(float {{.*}}, /* (inf) */ i32 516)
   // CHECK: zext i1 [[TMP]] to i32
 
   res = __builtin_isinf(D);
-  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f64(double {{.*}}, i32 516)
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f64(double {{.*}}, /* (inf) */ i32 516)
   // CHECK: zext i1 [[TMP]] to i32
 
   res = __builtin_isinf(LD);
-  // LD80: [[TMP:%.*]] = call i1 @llvm.is.fpclass.[[LDLLVMTY:f80]]([[LDTYPE]] {{.*}}, i32 516)
-  // LD64: [[TMP:%.*]] = call i1 @llvm.is.fpclass.[[LDLLVMTY:f64]]([[LDTYPE]] {{.*}}, i32 516)
+  // LD80: [[TMP:%.*]] = call i1 @llvm.is.fpclass.[[LDLLVMTY:f80]]([[LDTYPE]] {{.*}}, /* (inf) */ i32 516)
+  // LD64: [[TMP:%.*]] = call i1 @llvm.is.fpclass.[[LDLLVMTY:f64]]([[LDTYPE]] {{.*}}, /* (inf) */ i32 516)
   // CHECK: zext i1 [[TMP]] to i32
 
   res = __builtin_isinf_sign(*H);
@@ -300,35 +300,35 @@ void test_float_builtins(__fp16 *H, float F, double D, long double LD) {
   // CHECK:  select i1 %[[ISINF]], i32 %[[SIGN]], i32 0
 
   res = __builtin_isfinite(*H);
-  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f16(half {{.*}}, i32 504)
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f16(half {{.*}}, /* (zero sub norm) */ i32 504)
   // CHECK: zext i1 [[TMP]] to i32
 
   res = __builtin_isfinite(F);
-  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 504)
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f32(float {{.*}}, /* (zero sub norm) */ i32 504)
   // CHECK: zext i1 [[TMP]] to i32
 
   res = finite(D);
-  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f64(double {{.*}}, i32 504)
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f64(double {{.*}}, /* (zero sub norm) */ i32 504)
   // CHECK: zext i1 [[TMP]] to i32
 
   res = __builtin_isnormal(*H);
-  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f16(half {{.*}}, i32 264)
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f16(half {{.*}}, /* (norm) */ i32 264)
   // CHECK: zext i1 [[TMP]] to i32
 
   res = __builtin_isnormal(F);
-  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 264)
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f32(float {{.*}}, /* (norm) */ i32 264)
   // CHECK: zext i1 [[TMP]] to i32
 
   res = __builtin_issubnormal(F);
-  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 144)
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f32(float {{.*}}, /* (sub) */ i32 144)
   // CHECK: zext i1 [[TMP]] to i32
 
   res = __builtin_iszero(F);
-  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 96)
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f32(float {{.*}}, /* (zero) */ i32 96)
   // CHECK: zext i1 [[TMP]] to i32
 
   res = __builtin_issignaling(F);
-  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 1)
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f32(float {{.*}}, /* (snan) */ i32 1)
   // CHECK: zext i1 [[TMP]] to i32
 
   res = __builtin_flt_rounds();

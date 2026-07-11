@@ -2,11 +2,11 @@
 
 ; FIXME: Currently block machineinstr verifier due to SI BUNDLE pass break physical register liveness. Should remove when the issue is fixed up
 
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs=0 < %s | FileCheck -check-prefix=SI %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs=0 < %s | FileCheck -check-prefix=VI %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs=0 < %s | FileCheck -check-prefix=GFX9 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -verify-machineinstrs=0 < %s | FileCheck -check-prefixes=GFX11,GFX11-TRUE16 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -verify-machineinstrs=0 < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16 %s
+; RUN: llc -mtriple=amdgpu6.00 -verify-machineinstrs=0 < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgpu8.02 -verify-machineinstrs=0 < %s | FileCheck -check-prefix=VI %s
+; RUN: llc -mtriple=amdgpu9.00 -verify-machineinstrs=0 < %s | FileCheck -check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 -verify-machineinstrs=0 < %s | FileCheck -check-prefixes=GFX11,GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgpu11.00 -mattr=-real-true16 -verify-machineinstrs=0 < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16 %s
 
 define <32 x float> @bitcast_v32i32_to_v32f32(<32 x i32> %a, i32 %b) #0 {
 ; SI-LABEL: bitcast_v32i32_to_v32f32:

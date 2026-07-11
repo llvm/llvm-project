@@ -1141,6 +1141,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setMinCmpXchgSizeInBits(STI.getMinCmpXchgSizeInBits());
   setMaxAtomicSizeInBitsSupported(STI.hasAtomSwap128() ? 128 : 64);
   setMaxDivRemBitWidthSupported(64);
+  setMaxLargeFPConvertBitWidthSupported(64);
 
   // Custom lowering for tcgen05.ld vector operands
   setOperationAction(ISD::INTRINSIC_W_CHAIN,

@@ -1363,7 +1363,9 @@ def int_is_fpclass
     : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                             [llvm_anyfloat_ty, llvm_i32_ty],
                             [IntrNoMem, IntrSpeculatable,
-                             IntrNoCreateUndefOrPoison, ImmArg<ArgIndex<1>>]>;
+                             IntrNoCreateUndefOrPoison, ImmArg<ArgIndex<1>>,
+                             ArgInfo<ArgIndex<1>,
+                                     [ImmArgPrinter<"printFPClassMask">]>]>;
 
 //===--------------- Constrained Floating Point Intrinsics ----------------===//
 //

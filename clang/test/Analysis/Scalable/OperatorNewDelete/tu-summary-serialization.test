@@ -1,0 +1,15 @@
+// RUN: rm -rf %t.json
+// RUN: clang-ssaf-format -type=tu %S/Inputs/tu-summary.json -o %t.json
+// RUN: diff %S/Inputs/tu-summary.json %t.json
+
+// Negative tests:
+
+// Missing the OperatorNewDeletePointersAnalysisResult key in the entity summary.
+// RUN: not clang-ssaf-format -type=tu %S/Inputs/tu-summary-no-key.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-MISSING-KEY
+// CHECK-MISSING-KEY: saw an object of 1 key(s) but expected An object with a key OperatorNewDeletePointersAnalysisResult
+
+// Array element is not an object.
+// RUN: not clang-ssaf-format -type=tu %S/Inputs/tu-summary-bad-id.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-BAD-ID
+// CHECK-BAD-ID: saw "not-an-object" but expected an object representing EntityId

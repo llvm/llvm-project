@@ -1,12 +1,13 @@
 // REQUIRES: x86-registered-target, amdgpu-registered-target
 // REQUIRES: nvptx-registered-target, lld
 
+// RUN: rm -rf %t && mkdir -p %t
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu \
 // RUN:   -nostdinc -nogpuinc -nohipwrapperinc -nogpulib \
 // RUN:   --offload-arch=gfx900 --offload-arch=gfx906 --offload-jobs=2 \
 // RUN:   -O3 -c %s -o %t.o
 
-// RUN: %clang -x cuda --target=x86_64-unknown-linux-gnu \
+// RUN: cd %t && %clang -x cuda --target=x86_64-unknown-linux-gnu \
 // RUN:   -nocudainc -nocudalib \
 // RUN:   --cuda-gpu-arch=sm_70 --cuda-gpu-arch=sm_80 --offload-jobs=2 \
 // RUN:   --cuda-device-only -S -Werror %s

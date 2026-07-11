@@ -53,9 +53,8 @@ define <8 x i16> @shuffle3(<8 x i16> %v) {
 ; CHECK-GI-LABEL: shuffle3:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    adrp x8, .LCPI2_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI2_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI2_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %res = shufflevector <8 x i16> %v, <8 x i16> undef, <8 x i32> <i32 undef, i32 undef, i32 2, i32 3,
@@ -72,9 +71,8 @@ define <4 x i32> @shuffle4(<4 x i32> %v) {
 ; CHECK-GI-LABEL: shuffle4:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    adrp x8, .LCPI3_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI3_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %res = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
@@ -90,9 +88,8 @@ define <16 x i8> @shuffle5(<16 x i8> %v) {
 ; CHECK-GI-LABEL: shuffle5:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    adrp x8, .LCPI4_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI4_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI4_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %res = shufflevector <16 x i8> %v, <16 x i8> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11,
@@ -111,9 +108,8 @@ define <16 x i8> @shuffle6(<16 x i8> %v) {
 ; CHECK-GI-LABEL: shuffle6:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    adrp x8, .LCPI5_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI5_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI5_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %res = shufflevector <16 x i8> %v, <16 x i8> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11,
@@ -189,9 +185,8 @@ define <4 x i32> @shuffle_not2(<4 x i32> %v) {
 ; CHECK-GI-LABEL: shuffle_not2:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    adrp x8, .LCPI9_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI9_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI9_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %res = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 1, i32 2, i32 1, i32 2>

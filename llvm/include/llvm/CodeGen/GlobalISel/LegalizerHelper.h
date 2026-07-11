@@ -149,6 +149,13 @@ public:
                                unsigned ExtOpcode);
 
   /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
+  /// Use by extending the operand's type to \p WideTy using the G_FPEXT for the
+  /// extension instruction, and replacing the vreg of the operand in place.
+  /// Flags are copied from MI to the new extend.
+  LLVM_ABI void widenScalarSrcUsingFPExt(MachineInstr &MI, LLT WideTy,
+                                         unsigned OpIdx);
+
+  /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
   /// Use by truncating the operand's type to \p NarrowTy using G_TRUNC, and
   /// replacing the vreg of the operand in place.
   LLVM_ABI void narrowScalarSrc(MachineInstr &MI, LLT NarrowTy, unsigned OpIdx);
@@ -158,6 +165,13 @@ public:
   /// with the \p TruncOpcode, and replacing the vreg of the operand in place.
   LLVM_ABI void widenScalarDst(MachineInstr &MI, LLT WideTy, unsigned OpIdx = 0,
                                unsigned TruncOpcode = TargetOpcode::G_TRUNC);
+
+  /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
+  /// Def by extending the operand's type to \p WideTy and truncating it back
+  /// with G_FPTRUNC, and replacing the vreg of the operand in place. Flags are
+  /// copied from MI to the new trunc.
+  LLVM_ABI void widenScalarDstUsingFPTrunc(MachineInstr &MI, LLT WideTy,
+                                           unsigned OpIdx = 0);
 
   // Legalize a single operand \p OpIdx of the machine instruction \p MI as a
   // Def by truncating the operand's type to \p NarrowTy, replacing in place and

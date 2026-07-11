@@ -478,6 +478,8 @@ private:
       return "SYCLKernelLaunchLookup";
     case CodeSynthesisContext::SYCLKernelLaunchOverloadResolution:
       return "SYCLKernelLaunchOverloadResolution";
+    case CodeSynthesisContext::ExpansionStmtInstantiation:
+      return "ExpansionStmtInstantiation";
     }
     return "";
   }

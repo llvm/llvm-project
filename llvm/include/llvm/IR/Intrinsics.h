@@ -325,6 +325,8 @@ LLVM_ABI Intrinsic::ID getDeinterleaveIntrinsicID(unsigned Factor);
 LLVM_ABI void printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS,
                           const Constant *ImmArgVal);
 
+LLVM_ABI void printFPClassMask(raw_ostream &OS, const Constant *ImmArgVal);
+
 } // namespace Intrinsic
 
 } // namespace llvm

@@ -406,6 +406,7 @@ public:
   void VisitFriendTemplateDecl(FriendTemplateDecl *D);
   void VisitStaticAssertDecl(StaticAssertDecl *D);
   void VisitExplicitInstantiationDecl(ExplicitInstantiationDecl *D);
+  void VisitCXXExpansionStmtDecl(CXXExpansionStmtDecl *D);
   void VisitBlockDecl(BlockDecl *BD);
   void VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D);
   void VisitCapturedDecl(CapturedDecl *CD);
@@ -2821,6 +2822,14 @@ void ASTDeclReader::VisitExplicitInstantiationDecl(
     Reader.getContext().addExplicitInstantiationDecl(Spec, D);
 }
 
+void ASTDeclReader::VisitCXXExpansionStmtDecl(CXXExpansionStmtDecl *D) {
+  VisitDecl(D);
+  D->Pattern = cast<CXXExpansionStmtPattern>(Record.readStmt());
+  D->Instantiations =
+      cast_or_null<CXXExpansionStmtInstantiation>(Record.readStmt());
+  D->IndexNTTP = cast<NonTypeTemplateParmDecl>(Record.readDeclRef());
+}
+
 void ASTDeclReader::VisitEmptyDecl(EmptyDecl *D) {
   VisitDecl(D);
 }
@@ -4161,6 +4170,9 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   case DECL_EXPLICIT_INSTANTIATION:
     D = ExplicitInstantiationDecl::CreateDeserialized(Context, ID,
                                                       Record.readInt());
+    break;
+  case DECL_EXPANSION_STMT:
+    D = CXXExpansionStmtDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_OBJC_METHOD:
     D = ObjCMethodDecl::CreateDeserialized(Context, ID);
