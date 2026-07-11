@@ -1810,7 +1810,7 @@ amd_comgr_status_t AMD_COMGR_API
     *(size_t *)Value = strlen(Sym->Name);
     return AMD_COMGR_STATUS_SUCCESS;
   case AMD_COMGR_SYMBOL_INFO_NAME:
-    strcpy((char *)Value, Sym->Name);
+    memcpy((char *)Value, Sym->Name, strlen(Sym->Name) + 1);
     return AMD_COMGR_STATUS_SUCCESS;
   case AMD_COMGR_SYMBOL_INFO_TYPE:
     *(amd_comgr_symbol_type_t *)Value = Sym->Type;
