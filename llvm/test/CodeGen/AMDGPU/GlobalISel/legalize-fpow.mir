@@ -542,8 +542,8 @@ body: |
     ; GFX6-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
     ; GFX6-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
     ; GFX6-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
-    ; GFX6-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
-    ; GFX6-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC2]](s16)
+    ; GFX6-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = nnan nsz G_FPEXT [[TRUNC]](s16)
+    ; GFX6-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = nnan nsz G_FPEXT [[TRUNC2]](s16)
     ; GFX6-NEXT: [[INT:%[0-9]+]]:_(f32) = nnan nsz G_INTRINSIC intrinsic(@llvm.amdgcn.log), [[FPEXT]](s32)
     ; GFX6-NEXT: [[INT1:%[0-9]+]]:_(f32) = nnan nsz G_INTRINSIC intrinsic(@llvm.amdgcn.fmul.legacy), [[INT]](f32), [[FPEXT1]](s32)
     ; GFX6-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float -1.260000e+02
@@ -557,9 +557,9 @@ body: |
     ; GFX6-NEXT: [[C5:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
     ; GFX6-NEXT: [[SELECT1:%[0-9]+]]:_(f32) = nnan nsz G_SELECT [[FCMP]](s1), [[C4]], [[C5]]
     ; GFX6-NEXT: [[FMUL:%[0-9]+]]:_(s32) = nnan nsz G_FMUL [[INT2]], [[SELECT1]]
-    ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL]](s32)
-    ; GFX6-NEXT: [[FPEXT2:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
-    ; GFX6-NEXT: [[FPEXT3:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC3]](s16)
+    ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = nnan nsz G_FPTRUNC [[FMUL]](s32)
+    ; GFX6-NEXT: [[FPEXT2:%[0-9]+]]:_(s32) = nnan nsz G_FPEXT [[TRUNC1]](s16)
+    ; GFX6-NEXT: [[FPEXT3:%[0-9]+]]:_(s32) = nnan nsz G_FPEXT [[TRUNC3]](s16)
     ; GFX6-NEXT: [[INT3:%[0-9]+]]:_(f32) = nnan nsz G_INTRINSIC intrinsic(@llvm.amdgcn.log), [[FPEXT2]](s32)
     ; GFX6-NEXT: [[INT4:%[0-9]+]]:_(f32) = nnan nsz G_INTRINSIC intrinsic(@llvm.amdgcn.fmul.legacy), [[INT3]](f32), [[FPEXT3]](s32)
     ; GFX6-NEXT: [[FCMP1:%[0-9]+]]:_(s1) = nnan nsz G_FCMP floatpred(olt), [[INT4]](f32), [[C1]]
@@ -568,7 +568,7 @@ body: |
     ; GFX6-NEXT: [[INT5:%[0-9]+]]:_(s32) = nnan nsz G_INTRINSIC intrinsic(@llvm.amdgcn.exp2), [[FADD1]](f32)
     ; GFX6-NEXT: [[SELECT3:%[0-9]+]]:_(f32) = nnan nsz G_SELECT [[FCMP1]](s1), [[C4]], [[C5]]
     ; GFX6-NEXT: [[FMUL1:%[0-9]+]]:_(s32) = nnan nsz G_FMUL [[INT5]], [[SELECT3]]
-    ; GFX6-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL1]](s32)
+    ; GFX6-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = nnan nsz G_FPTRUNC [[FMUL1]](s32)
     ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC]](s16)
     ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
