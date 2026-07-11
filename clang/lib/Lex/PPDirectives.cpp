@@ -401,8 +401,7 @@ bool Preprocessor::CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
   MacroDiag D = MD_NoWarn;
   if (isDefineUndef == MU_Define) {
     D = shouldWarnOnMacroDef(*this, II);
-  }
-  else if (isDefineUndef == MU_Undef)
+  } else if (isDefineUndef == MU_Undef)
     D = shouldWarnOnMacroUndef(*this, II);
   if (D != MD_NoWarn && !SourceMgr.isInSystemHeader(MacroNameLoc) &&
       !SourceMgr.isInPredefinedFile(MacroNameLoc)) {
