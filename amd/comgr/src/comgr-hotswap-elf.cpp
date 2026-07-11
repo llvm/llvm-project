@@ -33,6 +33,17 @@ using Phdr = ELF::Elf64_Phdr;
 using ELFT = ElfView::ELFT;
 using ELFFileT = ElfView::ELFFileT;
 
+// This file depends on the COMPUTE_PGM_RSRC1_GRANULATED_* field layout below.
+// Assert it so the dependency is caught at compile time if it ever shifts.
+static_assert(
+    amdhsa::COMPUTE_PGM_RSRC1_GRANULATED_WORKITEM_VGPR_COUNT_SHIFT == 0 &&
+        amdhsa::COMPUTE_PGM_RSRC1_GRANULATED_WORKITEM_VGPR_COUNT_WIDTH == 6,
+    "GRANULATED_WORKITEM_VGPR_COUNT layout changed unexpectedly.");
+static_assert(
+    amdhsa::COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT_SHIFT == 6 &&
+        amdhsa::COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT_WIDTH == 4,
+    "GRANULATED_WAVEFRONT_SGPR_COUNT layout changed unexpectedly.");
+
 static constexpr unsigned SgprEncodingGranule = 8;
 
 // Page alignment for the appended trampoline pool's virtual address and file
