@@ -258,8 +258,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - Clang now propagates `constinit` and `constexpr` in structured bindings with tuple-like initializers.
 
-- Clang now has partial support for [P1306R5](https://wg21.link/P1306R5) Expansion Statements. Iterating expansion
-  statements currently cannot be expanded and will result in a diagnostic, but other types of expansion statements work.
+- Clang now supports most of [P1306R5](https://wg21.link/P1306R5) Expansion Statements: CWG3043 (lifetime
+  extension in enumerating expansion statements) is not yet implemented, and the feature test macro
+  `__cpp_expansion_statements` is not set yet.
 
 #### C++23 Feature Support
 
