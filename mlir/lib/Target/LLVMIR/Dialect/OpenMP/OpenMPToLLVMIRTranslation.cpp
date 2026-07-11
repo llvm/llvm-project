@@ -6379,7 +6379,6 @@ static llvm::Value *getSizeInBytes(DataLayout &dl, const mlir::Type &type,
       // cover are:
       //
       // 1) If an argument has a null base pointer, then the size must be set to
-<<<<<<< HEAD
       // 0
       //    to avoid the runtime exploding/complaining about an illegal pointer
       //    map. The size returning non-zero is feasible in certain cases if for
@@ -6388,14 +6387,6 @@ static llvm::Value *getSizeInBytes(DataLayout &dl, const mlir::Type &type,
       // size
       //    zero array can be legally presence checked and found to be on device
       //    when it has been mapped. In these rare occasions the
-=======
-      //    0 to avoid the runtime exploding/complaining about an illegal
-      //    pointer map. The size returning non-zero is feasible in certain
-      //    cases if for example someone has specified there own bounds/range.
-      // 2) We wish to support a very specific OpenMP Fortran edge-case where a
-      //    size zero array can be legally presence checked and found to be on
-      //    device when it has been mapped. In these rare occasions the
->>>>>>> 7e89dcfba2dc
       //    allocatable/pointer will have a size of 1 allocated for the
       //    underlying data, but this wall not be represented within the size of
       //    the descriptor, so we get a non-nullary pointer and a size of 0,
@@ -6908,7 +6899,6 @@ static void getOverlappedMembers(llvm::SmallVector<size_t> &overlapMapDataIdxs,
       overlapMapDataIdxs.push_back(i);
 }
 
-<<<<<<< HEAD
 static bool isUseDevicePtrItem(omp::MapInfoOp mapInfoOp) {
   assert(mapInfoOp->hasOneUse() &&
          "Expected only one use of omp.map_info item");
@@ -6923,8 +6913,6 @@ static bool isUseDevicePtrItem(omp::MapInfoOp mapInfoOp) {
   return false;
 }
 
-=======
->>>>>>> 7e89dcfba2dc
 /// This function handles the insertion of a single item of map data from
 /// MapInfoData into the OMPIRBuilder's MapInfo list. Utilising this function
 /// means the map being inserted can be treated as a non-parent map entity,
