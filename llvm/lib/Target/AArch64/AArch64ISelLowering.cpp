@@ -1649,6 +1649,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Legal);
     }
 
+    setOperationAction(ISD::GET_ACTIVE_LANE_MASK, MVT::nxv1i1, Custom);
+
     if (Subtarget->isSVEorStreamingSVEAvailable() &&
         (Subtarget->hasSVE2p1() || Subtarget->hasSME2()))
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, MVT::nxv32i1, Custom);
@@ -2447,10 +2449,9 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
       ResVT.getVectorElementType() != MVT::i1)
     return true;
 
-  // Only support illegal types if the result is scalable and min elements > 1.
-  if (ResVT.getVectorMinNumElements() == 1 ||
-      (ResVT.isFixedLengthVector() && (ResVT.getVectorNumElements() > 16 ||
-                                       (OpVT != MVT::i32 && OpVT != MVT::i64))))
+  // Only support illegal types if the result is scalable.
+  if ((ResVT.isFixedLengthVector() && (ResVT.getVectorNumElements() > 16 ||
+                                       ResVT.getVectorNumElements() == 1)))
     return true;
 
   // 32 & 64 bit operands are supported. We can promote anything < 64 bits,
@@ -34374,15 +34375,23 @@ SDValue
 AArch64TargetLowering::LowerGET_ACTIVE_LANE_MASK(SDValue Op,
                                                  SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
-  assert(VT.isFixedLengthVector() && "Expected fixed length vector type!");
+  assert((VT.isFixedLengthVector() || VT == MVT::nxv1i1) &&
+         "Expected fixed length vector type or nxv1i1!");
 
   assert(Subtarget->isSVEorStreamingSVEAvailable() &&
          "Lowering fixed length get_active_lane_mask requires SVE!");
 
+  SDLoc DL(Op);
+  if (VT == MVT::nxv1i1) {
+    EVT NewMaskTy = MVT::nxv2i1;
+    SDValue Mask = DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, NewMaskTy,
+                               Op.getOperand(0), Op.getOperand(1));
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Mask,
+                       DAG.getVectorIdxConstant(0, DL));
+  }
+
   // There are no dedicated fixed-length instructions for GET_ACTIVE_LANE_MASK,
   // but we can use SVE when available.
-
-  SDLoc DL(Op);
   EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
   EVT WhileVT = ContainerVT.changeElementType(*DAG.getContext(), MVT::i1);
 
