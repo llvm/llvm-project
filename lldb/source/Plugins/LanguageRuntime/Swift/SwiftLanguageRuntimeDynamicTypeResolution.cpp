@@ -3563,7 +3563,9 @@ static CompilerType HoistToScratchTypeSystem(CompilerType type,
 std::optional<CompilerType>
 SwiftLanguageRuntime::GetRuntimeType(CompilerType base_type,
                                      ExecutionContextRef exe_ctx) {
-  // Hoist the type into a scratch typesystem.
+  // Hoist the type into a scratch typesystem. The resulting type is
+  // bound to exe_ctx, so subsequent queries resolve frame-dependent
+  // properties such as generic parameters.
   if (!base_type.GetTypeSystem().isa_and_nonnull<TypeSystemSwiftTypeRef>())
     return {};
   if (CompilerType run_type = HoistToScratchTypeSystem(base_type, exe_ctx))

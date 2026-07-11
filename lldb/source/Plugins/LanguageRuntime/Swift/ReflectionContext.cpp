@@ -570,11 +570,8 @@ ReflectionContextInterface::GetCanonicalTypeRef(CompilerType type) {
   ExecutionContext exe_ctx;
   if (auto *expr_ts =
           llvm::dyn_cast<TypeSystemSwiftTypeRefForExpressions>(tr_ts.get()))
-    exe_ctx = expr_ts
-                  ->GetExecutionContextForType(
-                      expr_ts->GetTypeFromMangledTypename(mangled_name)
-                          .GetOpaqueQualType())
-                  .Lock(false);
+    exe_ctx =
+        expr_ts->GetExecutionContextForType(type.GetOpaqueQualType()).Lock(false);
   auto node_or_err = tr_ts->RemoveMarkerProtocols(dem, node, flavor, exe_ctx);
   if (!node_or_err)
     return node_or_err.takeError();

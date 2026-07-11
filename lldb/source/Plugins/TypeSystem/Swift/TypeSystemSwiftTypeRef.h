@@ -55,6 +55,19 @@ class SwiftDWARFImporterForClangTypes;
 class SwiftLanguageRuntime;
 class SwiftPersistentExpressionState;
 
+/// A type that is bound to a stack frame.
+///
+/// Generic types can only be resolved relative to a stack
+/// frame. FrameBoundTypes are produced by
+/// SwiftLanguageRuntime::GetRuntimeType(). Instances are owned by a
+/// TypeSystemSwiftTypeRefForExpressions and referred to by an index
+/// encoded into the lldb::opaque_compiler_type_t; see
+/// TypeSystemSwiftTypeRefForExpressions for the encoding.
+struct FrameBoundType {
+  lldb::StackFrameWP frame;
+  ConstString mangled_name;
+};
+
 /// A Swift TypeSystem that does not own a swift::ASTContext.
 class TypeSystemSwiftTypeRef : public TypeSystemSwift {
   /// LLVM RTTI support.
@@ -339,7 +352,7 @@ public:
                       CompilerType *original_type) override;
   /// Determine whether this is a builtin SIMD type.
   static bool IsSIMDType(CompilerType type);
-  static bool IsOptionalType(lldb::opaque_compiler_type_t type);
+  bool IsOptionalType(lldb::opaque_compiler_type_t type);
   /// Determine whether the mangled name refers to a protocol composition
   /// (i.e., a ProtocolList with more than one Type child in its TypeList).
   static bool IsProtocolComposition(llvm::StringRef mangled_name);
@@ -468,7 +481,7 @@ public:
                            llvm::StringRef mangled_name);
   /// Return the base name of the topmost nominal type.
   static llvm::StringRef GetBaseName(swift::Demangle::NodePointer node);
-  static std::string GetBaseName(lldb::opaque_compiler_type_t type);
+  std::string GetBaseName(lldb::opaque_compiler_type_t type);
 
   /// Given a mangled name that mangles a "type metadata for Type", return a
   /// CompilerType with that Type.
@@ -559,8 +572,8 @@ protected:
                         const ExecutionContext *exe_ctx = nullptr);
   void *ReconstructType(lldb::opaque_compiler_type_t type,
                         ExecutionContextScope *exe_scope);
-  /// Cast \p opaque_type as a mangled name.
-  static const char *AsMangledName(lldb::opaque_compiler_type_t type);
+  /// Return the mangled name of \p opaque_type.
+  const char *AsMangledName(lldb::opaque_compiler_type_t type) const;
 
   /// Demangle the mangled name of the canonical type of \p type and
   /// drill into the Global(TypeMangling(Type())).
@@ -787,13 +800,31 @@ protected:
   /// Map ConstString Clang type identifiers and the concatenation of the
   /// compiler context used to find them to Clang types.
   ThreadSafeStringMap<lldb::TypeSP> m_clang_type_cache;
-  /// In order to do a SwiftASTContext fallback, we need to have a
-  /// precise ExecutionContext to initialize the matching
-  /// SwiftASTContext. This information isn't part of CompilerType, so
-  /// this table keeps track of all types we imported into this
-  /// typesystem.
-  /// This can be removed when the fallback is removed.
-  ThreadSafeDenseMap<const char *, ExecutionContextRef> m_exectx_sidetable;
+
+  /// Backing store for frame-bound types produced by hoisting into this type
+  /// system (see SwiftLanguageRuntime::GetRuntimeType() / ImportType()).
+  ///
+  /// Encoding: the opaque type is (index << 1) | 1 for a frame-bound type. An
+  /// ordinary Swift opaque type is a pointer to a ConstString's mangled name,
+  /// which is always at least 8-byte aligned (see AsMangledName), so its low
+  /// bit is 0 and never collides with the frame-bound tag.
+  std::vector<FrameBoundType> m_frame_bound_types;
+  mutable std::mutex m_frame_bound_types_mutex;
+
+  /// Create a frame-bound type for \p mangled_name observed in \p frame and
+  /// return its (tagged) CompilerType. Frame-bound types are produced by
+  /// hoisting via SwiftLanguageRuntime::GetRuntimeType(), which calls
+  /// ImportType(); see m_frame_bound_types.
+  CompilerType MakeFrameBoundType(ConstString mangled_name,
+                                  lldb::StackFrameSP frame);
+
+public:
+  /// Return the mangled name of the frame-bound type at \p index, or nullptr.
+  const char *GetFrameBoundMangledName(uintptr_t index) const;
+
+  /// Return the execution context of the frame-bound type at \p index. The
+  /// context is empty if the index is stale or the frame has gone away.
+  ExecutionContextRef GetFrameBoundExecutionContext(uintptr_t index);
 };
 
 } // namespace lldb_private
