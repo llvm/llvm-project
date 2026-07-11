@@ -223,11 +223,10 @@ bool SymbolTable::assignExactVersion(SymbolVersion ver, uint16_t versionId,
 
   // Assign the version.
   for (Symbol *sym : syms) {
-    // For a non-local versionId, skip symbols containing version info because
-    // symbol versions specified by symbol names take precedence over version
-    // scripts. See parseSymbolVersion(ctx).
-    if (!includeNonDefault && versionId != VER_NDX_LOCAL &&
-        sym->getName().contains('@'))
+    // Skip symbols containing version info because symbol versions specified
+    // by symbol names take precedence over version scripts. See
+    // parseSymbolVersion(ctx).
+    if (!includeNonDefault && sym->hasVersionSuffix)
       continue;
 
     // If the version has not been assigned, assign versionId to the symbol.

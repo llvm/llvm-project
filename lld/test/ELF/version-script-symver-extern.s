@@ -18,7 +18,8 @@
 # MIX1-NEXT: [[#]] _Z4foo4i@@v2
 # MIX1-NOT:  {{.}}
 
-# RUN: echo 'v1 { local: extern "C++" {foo*;}; }; v2 { global: extern "C++" {"foo2()";}; };' > %t3.script
+## v1's foo* and "foo4(int)" do not localize _Z4foo4i@@v2, whose node is v2.
+# RUN: echo 'v1 { local: extern "C++" {foo*; "foo4(int)";}; }; v2 { global: extern "C++" {"foo2()";}; };' > %t3.script
 # RUN: ld.lld --version-script %t3.script -shared %t.o -o %t3.so
 # RUN: llvm-readelf --dyn-syms %t3.so | FileCheck --check-prefix=MIX2 %s
 # MIX2:      UND
