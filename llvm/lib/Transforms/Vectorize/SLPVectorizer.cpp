@@ -151,6 +151,11 @@ static cl::opt<bool> SLPInstCountCheck(
     cl::desc("Reject vectorization if vector instruction count exceeds "
              "scalar instruction count"));
 
+static cl::opt<bool> SLPMergeInputOps(
+    "slp-merge-inputops", cl::init(true), cl::Hidden,
+    cl::desc("Attempt to vectorize by merging input operands of a binary "
+             "operator node into a single wider node"));
+
 static cl::opt<int>
 MaxVectorRegSizeOption("slp-max-reg-size", cl::init(128), cl::Hidden,
     cl::desc("Attempt to vectorize for this register size in bits"));
@@ -2670,6 +2675,15 @@ public:
   };
   friend struct DenseMapInfo<EdgeInfo>;
 
+  /// When building a merged operand node (see handleMergedOperands()), the
+  /// reuse shuffle mask must be recomputed against the merged input list so
+  /// that the lanes line up with the user node. Helper used by
+  /// tryToFindDuplicates().
+  void updateReuseShuffleForMergedOps(
+      const EdgeInfo &UserTreeIdx, SmallVectorImpl<int> &ReuseShuffleIndices,
+      SmallDenseMap<Value *, unsigned, 16> &UniquePositions,
+      ArrayRef<Value *> UniqueValues, bool MergedOp) const;
+
   /// A helper class used for scoring candidates for two consecutive lanes.
   class LookAheadHeuristics {
     const TargetLibraryInfo &TLI;
@@ -4111,7 +4125,37 @@ private:
 
   /// This is the recursive part of buildTree.
   void buildTreeRec(ArrayRef<Value *> Roots, unsigned Depth, const EdgeInfo &EI,
-                    unsigned InterleaveFactor = 0);
+                    unsigned InterleaveFactor = 0, bool MergedOp = false);
+
+  /// \returns the tree entry built for the \p UserEdge.EdgeIdx'th operand of
+  /// \p UserEdge.UserTE, or nullptr if no such entry exists.
+  TreeEntry *getTreeEntry(const EdgeInfo &UserEdge) {
+    for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree)
+      if (TE->UserTreeIndex.UserTE == UserEdge.UserTE &&
+          TE->UserTreeIndex.EdgeIdx == UserEdge.EdgeIdx)
+        return TE.get();
+    return nullptr;
+  }
+
+  /// \returns true if the operand list \p InVL of a binary operator bundle can
+  /// be vectorized on its own. On success, the (deduplicated) scalars are
+  /// appended to \p MergedVL.
+  bool isInputVectorizable(ArrayRef<Value *> ParentVL, ArrayRef<Value *> InVL,
+                           SmallVectorImpl<Value *> &MergedVL);
+
+  /// \returns true if both input operands (\p InLeft and \p InRight) of a
+  /// binary operator bundle \p InVL can be merged into a single wider operand
+  /// node. On success, \p MergedVL holds the merged scalars.
+  bool canMergeInputOperands(ArrayRef<Value *> InVL, ArrayRef<Value *> InLeft,
+                             ArrayRef<Value *> InRight,
+                             SmallVectorImpl<Value *> &MergedVL);
+
+  /// Tries to merge the input operands \p Left and \p Right of the binary
+  /// operator node \p TE (built from \p VL) into a single wider operand node.
+  /// \returns true on success, in which case the operand nodes have been built.
+  bool handleMergedOperands(TreeEntry *TE, ArrayRef<Value *> VL,
+                            ArrayRef<Value *> Left, ArrayRef<Value *> Right,
+                            unsigned Depth);
 
   /// \returns true if the ExtractElement/ExtractValue instructions in \p VL can
   /// be vectorized to use the original vector (or aggregate "bitcast" to a
@@ -4343,6 +4387,8 @@ private:
         }
         return false;
       }
+      if (isMergedVL(VL))
+        return true;
       return IsSame(Scalars, ReuseShuffleIndices);
     }
 
@@ -4449,6 +4495,38 @@ private:
     /// other entry kinds.
     SmallVector<unsigned, 1> StructEVIndices;
 
+    /// Set to true when the input operands of this (binary operator) node were
+    /// merged into a single wider operand node. See handleMergedOperands().
+    bool OperandsMerged = false;
+
+    /// Set to true for an operand node that was produced by merging the input
+    /// operands of its user node (see handleMergedOperands()).
+    bool MergedOp = false;
+
+    /// The merged list of scalars used to build the merged operand nodes of
+    /// this node. Only valid when \a OperandsMerged is true.
+    ValueList MergedVL;
+
+    /// Records the merged list of scalars used to build the merged operand
+    /// nodes of this node.
+    void setOperandsMerged(ArrayRef<Value *> VL) {
+      OperandsMerged = true;
+      MergedVL.assign(VL.begin(), VL.end());
+    }
+
+    /// Marks this operand node as one that was built by merging the input
+    /// operands of its user node.
+    void setMergedOp() { MergedOp = true; }
+
+    /// \returns true if this is a merged operand node and all values in \p VL
+    /// are part of its scalars.
+    bool isMergedVL(ArrayRef<Value *> VL) const {
+      if (!MergedOp)
+        return false;
+      SmallPtrSet<Value *, 4> Values(Scalars.begin(), Scalars.end());
+      return all_of(VL, [&](Value *V) { return Values.contains(V); });
+    }
+
   private:
     /// The operands of each instruction in each lane Operands[op_index][lane].
     /// Note: This helps avoid the replication of the code that performs the
@@ -4468,6 +4546,7 @@ private:
     /// True if the node does not require scheduling.
     bool DoesNotNeedToSchedule = false;
 
+  public:
     /// Set this bundle's \p OpIdx'th operand to \p OpVL.
     void setOperand(unsigned OpIdx, ArrayRef<Value *> OpVL) {
       if (Operands.size() < OpIdx + 1)
@@ -4614,7 +4693,7 @@ private:
         if (!ReorderIndices.empty())
           FoundLane = ReorderIndices[FoundLane];
         assert(FoundLane < Scalars.size() && "Couldn't find extract lane");
-        if (ReuseShuffleIndices.empty())
+        if (ReuseShuffleIndices.empty() || MergedOp)
           break;
         if (auto *RIt = find(ReuseShuffleIndices, FoundLane);
             RIt != ReuseShuffleIndices.end()) {
@@ -8451,6 +8530,14 @@ static bool isAlternateInstruction(Instruction *I, Instruction *MainOp,
 std::optional<BoUpSLP::OrdersType>
 BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
                            bool IgnoreReorder) {
+  // An entry whose input operands were merged (handleMergedOperands), and the
+  // merged operand entries themselves, share a single operand subtree and
+  // carry ReuseShuffleIndices computed against the build-time (operand-driven)
+  // lane order. Reordering such an entry permutes its Scalars/reuse mask but
+  // not the shared operands' production order, desyncing them and producing a
+  // wrong shuffle. Keep merged entries in their build order.
+  if (TE.OperandsMerged || TE.MergedOp)
+    return std::nullopt;
   // No need to reorder if need to shuffle reuses, still need to shuffle the
   // node.
   if (!TE.ReuseShuffleIndices.empty()) {
@@ -9878,6 +9965,10 @@ void BoUpSLP::buildExternalUses(
               })) {
             LLVM_DEBUG(dbgs() << "SLP: \tInternal user will be removed:" << *U
                               << ".\n");
+            // A merged operand node shares its scalars with its user node; the
+            // shared scalar is consumed by the merged vector, not extracted.
+            if (UseEntries[0]->MergedOp)
+              continue;
             assert(none_of(UseEntries,
                            [](TreeEntry *UseEntry) {
                              return UseEntry->isGather();
@@ -11682,6 +11773,18 @@ getMainAltOpsNoStateVL(ArrayRef<Value *> VL) {
   return std::make_pair(MainOp, AltOp);
 }
 
+/// For a merged operand node (see handleMergedOperands()) the vectorized value
+/// is normally a shufflevector wrapping the real source operand; this returns
+/// the source so it can be fed into the shuffle builder. When the operand node
+/// had an empty reuse mask (or was constant-folded) the value may not be a
+/// shufflevector, so it is only unwrapped when it actually is one.
+static Value *getShuffleInput(bool MergedOp, Value *Vec) {
+  if (MergedOp && Vec)
+    if (auto *SVI = dyn_cast<ShuffleVectorInst>(Vec))
+      Vec = SVI->getOperand(0);
+  return Vec;
+}
+
 /// Checks that every instruction appears once in the list and if not, packs
 /// them, building \p ReuseShuffleIndices mask and mutating \p VL. The list of
 /// unique scalars is extended by poison values to the whole register size.
@@ -11694,7 +11797,8 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
                                 const TargetLibraryInfo &TLI,
                                 const InstructionsState &S,
                                 const BoUpSLP::EdgeInfo &UserTreeIdx,
-                                const BoUpSLP &R, bool BuildGatherOnly = true) {
+                                const BoUpSLP &R, bool BuildGatherOnly = true,
+                                bool MergedOp = false) {
   // TODO: Reordering of struct types is not supported.
   if (isa<StructType>(getValueType(VL.front()))) {
     LLVM_DEBUG(dbgs() << "SLP: struct type in bundle.\n");
@@ -11740,6 +11844,8 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
   unsigned NumUniqueScalarValues = UniqueValues.size();
   if (NumUniqueScalarValues == VL.size()) {
     ReuseShuffleIndices.clear();
+    R.updateReuseShuffleForMergedOps(UserTreeIdx, ReuseShuffleIndices,
+                                     UniquePositions, UniqueValues, MergedOp);
     return true;
   }
 
@@ -11909,8 +12015,13 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
     } else {
       // Better to use uniques + reshuffle.
       LLVM_DEBUG(dbgs() << "SLP: Shuffle for reused scalars.\n");
-      VL = std::move(UniqueValues);
+      // For a merged operand node keep the full merged list of scalars; the
+      // reuse shuffle mask is recomputed against the user node below.
+      if (!MergedOp)
+        VL = std::move(UniqueValues);
     }
+    R.updateReuseShuffleForMergedOps(UserTreeIdx, ReuseShuffleIndices,
+                                     UniquePositions, UniqueValues, MergedOp);
     return true;
   }
 
@@ -13145,9 +13256,163 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
   return ScalarsVectorizationLegality(S, /*IsLegal=*/true);
 }
 
+void BoUpSLP::updateReuseShuffleForMergedOps(
+    const EdgeInfo &UserTreeIdx, SmallVectorImpl<int> &ReuseShuffleIndices,
+    SmallDenseMap<Value *, unsigned, 16> &UniquePositions,
+    ArrayRef<Value *> UniqueValues, bool MergedOp) const {
+  if (!MergedOp)
+    return;
+  // The operand node is built from the merged scalar list, but the reuse
+  // shuffle mask must map the user node's operand lanes onto the (unique)
+  // merged scalars so that codegen reads the correct lane.
+  ArrayRef<Value *> InVL = UserTreeIdx.UserTE->getOperand(UserTreeIdx.EdgeIdx);
+  ReuseShuffleIndices.clear();
+  for (Value *V : InVL) {
+    auto Res = UniquePositions.try_emplace(V, UniqueValues.size());
+    ReuseShuffleIndices.emplace_back(Res.first->second);
+    assert(!Res.second && "Merged operand value not found in unique values.");
+  }
+}
+
+bool BoUpSLP::isInputVectorizable(ArrayRef<Value *> ParentVL,
+                                  ArrayRef<Value *> InVL,
+                                  SmallVectorImpl<Value *> &MergedVL) {
+  SmallVector<Value *> VL(InVL.begin(), InVL.end());
+  assert((allConstant(VL) || allSameType(VL)) && "Invalid types!");
+
+  SmallVector<int> ReuseShuffleIndices;
+  SmallVector<Value *> UniqueValues;
+  auto TryToFindDuplicates = [&]() {
+    SmallDenseMap<Value *, unsigned, 16> UniquePositions(VL.size());
+    for (Value *V : VL) {
+      if (isConstant(V)) {
+        ReuseShuffleIndices.emplace_back(
+            isa<UndefValue>(V) ? PoisonMaskElem : UniqueValues.size());
+        UniqueValues.emplace_back(V);
+        continue;
+      }
+      auto Res = UniquePositions.try_emplace(V, UniqueValues.size());
+      ReuseShuffleIndices.emplace_back(Res.first->second);
+      if (Res.second)
+        UniqueValues.emplace_back(V);
+    }
+    size_t NumUniqueScalarValues = UniqueValues.size();
+    if (NumUniqueScalarValues == VL.size()) {
+      ReuseShuffleIndices.clear();
+    } else {
+      if (NumUniqueScalarValues <= 1 ||
+          (UniquePositions.size() == 1 &&
+           all_of(UniqueValues,
+                  [](Value *V) {
+                    return isa<UndefValue>(V) || !isConstant(V);
+                  })) ||
+          !has_single_bit(NumUniqueScalarValues))
+        return false;
+      VL = UniqueValues;
+    }
+    return true;
+  };
+  InstructionsState S = getSameOpcode(VL, *TLI);
+  if (!S)
+    return false;
+  if (!isa<BinaryOperator>(S.getMainOp()))
+    return false;
+  // Check that every instruction appears once in this bundle.
+  if (!TryToFindDuplicates())
+    return false;
+
+  // Bail out if the unique operations in the input operand vector are not
+  // (at least) half of the parent VL - otherwise merging is not profitable.
+  if (PowerOf2Ceil(ParentVL.size()) / 2 < PowerOf2Ceil(VL.size()))
+    return false;
+  // The merged operands must be vectorizable on their own.
+  OrdersType CurrentOrder;
+  SmallVector<Value *> PointerOps;
+  StridedPtrInfo SPtrInfo;
+  SmallVector<int> ExpandShuffleMask;
+  TreeEntry::EntryState State = getScalarsVectorizationState(
+      S, VL, /*IsScatterVectorizeUserTE=*/false, CurrentOrder, PointerOps,
+      SPtrInfo, ExpandShuffleMask);
+  if (State != TreeEntry::Vectorize)
+    return false;
+
+  MergedVL.append(VL.begin(), VL.end());
+  return true;
+}
+
+bool BoUpSLP::canMergeInputOperands(ArrayRef<Value *> InVL,
+                                    ArrayRef<Value *> InLeft,
+                                    ArrayRef<Value *> InRight,
+                                    SmallVectorImpl<Value *> &MergedVL) {
+  // We expect the minimum size of the merged VL to be at least 4; smaller
+  // sizes are better vectorized with splats if not merged.
+  if (PowerOf2Ceil(InVL.size()) < 4)
+    return false;
+  if (!isInputVectorizable(InVL, InLeft, MergedVL) ||
+      !isInputVectorizable(InVL, InRight, MergedVL))
+    return false;
+  if (MergedVL.size() != InLeft.size() || MergedVL.size() != InRight.size())
+    return false;
+  // Both operand nodes are built from the single MergedVL bundle and are
+  // distinguished only by their reuse-shuffle masks selecting lanes out of one
+  // merged vector. For codegen to reconstruct each operand correctly:
+  //  - every merged scalar must occupy a distinct lane (otherwise the two
+  //    operand nodes can no longer be told apart by their reuse masks and they
+  //    collapse to the same vector), and
+  //  - the merged bundle must vectorize as a single uniform node. A
+  //    mixed-opcode bundle would become an alt-shuffle node whose vectorized
+  //    value is a shuffle of two different source vectors; the merged-operand
+  //    codegen only unwraps a single source operand (getShuffleInput) and
+  //    would silently drop the other half.
+  SmallPtrSet<Value *, 8> SeenVals;
+  for (Value *V : MergedVL)
+    if (!SeenVals.insert(V).second)
+      return false;
+  InstructionsState MergedS = getSameOpcode(MergedVL, *TLI);
+  if (!MergedS || MergedS.isAltShuffle())
+    return false;
+  OrdersType MergedOrder;
+  SmallVector<Value *> MergedPointerOps;
+  StridedPtrInfo MergedSPtrInfo;
+  SmallVector<int> MergedExpandShuffleMask;
+  if (getScalarsVectorizationState(MergedS, MergedVL,
+                                   /*IsScatterVectorizeUserTE=*/false,
+                                   MergedOrder, MergedPointerOps,
+                                   MergedSPtrInfo,
+                                   MergedExpandShuffleMask) != TreeEntry::Vectorize)
+    return false;
+  return true;
+}
+
+bool BoUpSLP::handleMergedOperands(TreeEntry *TE, ArrayRef<Value *> VL,
+                                   ArrayRef<Value *> Left,
+                                   ArrayRef<Value *> Right, unsigned Depth) {
+  if (!SLPMergeInputOps)
+    return false;
+  SmallVector<Value *> MergedVL;
+  if (!canMergeInputOperands(VL, Left, Right, MergedVL))
+    return false;
+  LLVM_DEBUG(dbgs() << "SLP: Merging input operands in " << F->getName()
+                    << "\n");
+
+  TE->setOperand(0, Left);
+  TE->setOperand(1, Right);
+  buildTreeRec(MergedVL, Depth + 1, {TE, 0}, /*InterleaveFactor=*/0,
+               /*MergedOp=*/true);
+  buildTreeRec(MergedVL, Depth + 1, {TE, 1}, /*InterleaveFactor=*/0,
+               /*MergedOp=*/true);
+  TE->setOperandsMerged(MergedVL);
+  TreeEntry *Op1 = getTreeEntry({TE, 0});
+  TreeEntry *Op2 = getTreeEntry({TE, 1});
+  assert(Op1 && Op2 && "Expected operand entries for merged operands.");
+  Op1->setMergedOp();
+  Op2->setMergedOp();
+  return true;
+}
+
 void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
                            const EdgeInfo &UserTreeIdx,
-                           unsigned InterleaveFactor) {
+                           unsigned InterleaveFactor, bool MergedOp) {
   assert((allConstant(VLRef) || allSameType(VLRef)) && "Invalid types!");
 
   SmallVector<int> ReuseShuffleIndices;
@@ -13215,7 +13480,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     }
     if (Legality.tryToFindDuplicates())
       (void)tryToFindDuplicates(VL, ReuseShuffleIndices, *TTI, *TLI, S,
-                                UserTreeIdx, *this);
+                                UserTreeIdx, *this, /*BuildGatherOnly=*/true,
+                                MergedOp);
 
     newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
     return;
@@ -13227,7 +13493,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
 
   // Check that every instruction appears once in this bundle.
   if (!tryToFindDuplicates(VL, ReuseShuffleIndices, *TTI, *TLI, S, UserTreeIdx,
-                           *this, /*BuildGatherOnly=*/false)) {
+                           *this, /*BuildGatherOnly=*/false, MergedOp)) {
     newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
     return;
   }
@@ -13684,6 +13950,11 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         Operands[0] = Ops.getVL(0);
         Operands[1] = Ops.getVL(1);
       }
+      // Try to merge both input operands of a binary operator node into a
+      // single wider operand node when profitable.
+      if (isa<BinaryOperator>(VL0) && Operands.size() == 2 &&
+          handleMergedOperands(TE, VL, Operands[0], Operands[1], Depth))
+        return;
       TE->setOperands(Operands);
       for (unsigned I : seq<unsigned>(VL0->getNumOperands()))
         buildTreeRec(TE->getOperand(I), Depth + 1, {TE, I});
@@ -16846,6 +17117,20 @@ public:
 const BoUpSLP::TreeEntry *BoUpSLP::getOperandEntry(const TreeEntry *E,
                                                    unsigned Idx) const {
   TreeEntry *Op = OperandsToTreeEntry.at({E, Idx});
+  // When E's input operands were merged (handleMergedOperands), the operand
+  // entry was built from E's merged VL and may then be reordered/deduplicated
+  // by the reorder machinery, so its scalar order no longer matches
+  // E->getOperand(Idx) (or even the stored MergedVL). getOperandEntry only
+  // needs to return the entry recorded for {E,Idx}; the lane permutation is
+  // tracked by ReorderIndices for codegen. Relax the order-sensitive sanity
+  // check to a value-set membership test for the merged case.
+  if (E->OperandsMerged) {
+    SmallPtrSet<Value *, 8> MergedVals(E->MergedVL.begin(), E->MergedVL.end());
+    assert(all_of(Op->Scalars,
+                  [&](Value *V) { return MergedVals.contains(V); }) &&
+           "Operands mismatch!");
+    return Op;
+  }
   assert(Op->isSame(E->getOperand(Idx)) && "Operands mismatch!");
   return Op;
 }
@@ -23011,6 +23296,27 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         // node. Cost is 0.
         LLVM_DEBUG(dbgs() << "SLP: perfect diamond match for gather bundle "
                           << shortBundleName(E->Scalars, E->Idx) << ".\n");
+        // If the matched front entry's vectorized value is still a postponed
+        // gather placeholder (a load from a poison pointer), a merged-operand
+        // entry that diamond-matches it must also be postponed - otherwise it
+        // would consume the placeholder. Emit an equivalent placeholder and
+        // postpone E. Codegen path only (ResTy == Value *).
+        if constexpr (std::is_same_v<ResTy, Value *>) {
+          const TreeEntry *MergedFrontTE = Entries.front().front();
+          if (auto *LI =
+                  dyn_cast_or_null<LoadInst>(MergedFrontTE->VectorizedValue)) {
+            if (isa<PoisonValue>(LI->getPointerOperand()) &&
+                PostponedGathers.contains(MergedFrontTE) && E->MergedOp) {
+              PostponedGathers.insert(E);
+              auto *ResVecTy = getWidenedType(ScalarTy, E->getVectorFactor());
+              return Builder.CreateAlignedLoad(
+                  ResVecTy,
+                  PoisonValue::get(
+                      PointerType::getUnqual(ScalarTy->getContext())),
+                  MaybeAlign());
+            }
+          }
+        }
         // Restore the mask for previous partially matched values.
         Mask.resize(E->Scalars.size());
         const TreeEntry *FrontTE = Entries.front().front();
@@ -23043,6 +23349,15 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
           std::iota(Mask.begin(), Mask.end(), 0);
           ShuffleBuilder.add(*FrontTE, Mask);
           Res = ShuffleBuilder.finalize({}, {}, {});
+        } else if (E->MergedOp) {
+          // For merged-operand entries the vectorized value is a
+          // shufflevector; feed its source operand into the builder.
+          Value *Vec = FrontTE->VectorizedValue;
+          if (!Vec)
+            Vec = Constant::getNullValue(
+                getWidenedType(ScalarTy, FrontTE->getVectorFactor()));
+          ShuffleBuilder.add(getShuffleInput(E->MergedOp, Vec), Mask);
+          Res = ShuffleBuilder.finalize(E->getCommonMask(), {}, {});
         } else {
           ShuffleBuilder.add(*FrontTE, Mask);
           Res = ShuffleBuilder.finalize(E->getCommonMask(), {}, {});
@@ -25001,6 +25316,16 @@ Value *BoUpSLP::vectorizeTree(
 
     Value *Vec = E->VectorizedValue;
     assert(Vec && "Can't find vectorizable value");
+
+    // For a merged-operand entry the vectorized value is a shufflevector
+    // wrapping the real source operand; extract from the source operand.
+    if (E->MergedOp) {
+      assert((isa<ShuffleVectorInst>(Vec) || E->ReuseShuffleIndices.empty() ||
+              isa<Constant>(Vec)) &&
+             "Unexpected vectorized value for merged operand.");
+      if (auto *SVI = dyn_cast<ShuffleVectorInst>(Vec))
+        Vec = SVI->getOperand(0);
+    }
 
     Value *Lane = Builder.getInt32(ExternalUse.Lane);
     auto ExtractAndExtendIfNeeded = [&](Value *Vec) {
