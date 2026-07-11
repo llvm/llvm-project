@@ -137,11 +137,9 @@ class AnalysisImpl
 public:
   AnalysisImpl(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
                OriginLoanMap::Factory &OriginLoanMapFactory,
-               LoanSet::Factory &LoanSetFactory,
-               llvm::ImmutableList<OriginID>::Factory &OriginFlowChainFactory)
+               LoanSet::Factory &LoanSetFactory)
       : DataflowAnalysis(C, AC, F), OriginLoanMapFactory(OriginLoanMapFactory),
         LoanSetFactory(LoanSetFactory),
-        OriginFlowChainFactory(OriginFlowChainFactory),
         PersistentOrigins(computePersistentOrigins(F, C)) {}
 
   using Base::transfer;
@@ -206,10 +204,10 @@ public:
     return getLoans(getState(P), OID);
   }
 
-  llvm::ImmutableList<OriginID> buildOriginFlowChain(ProgramPoint StartPoint,
-                                                     const OriginID StartOID,
-                                                     const LoanID TargetLoan,
-                                                     const CFG *Cfg) const {
+  llvm::ImmutableList<OriginID> buildOriginFlowChain(
+      ProgramPoint StartPoint, const OriginID StartOID, const LoanID TargetLoan,
+      const CFG *Cfg,
+      llvm::ImmutableList<OriginID>::Factory &OriginFlowChainFactory) const {
     assert(getLoans(StartOID, StartPoint).contains(TargetLoan) &&
            "TargetLoan must be present in the StartOID at the StartPoint");
 
@@ -269,14 +267,14 @@ public:
                      "without reaching IssueFact");
   }
 
-  llvm::ImmutableList<OriginID> buildOriginFlowChain(const UseFact *UF,
-                                                     const LoanID TargetLoan,
-                                                     const CFG *Cfg) const {
+  llvm::ImmutableList<OriginID> buildOriginFlowChain(
+      const UseFact *UF, const LoanID TargetLoan, const CFG *Cfg,
+      llvm::ImmutableList<OriginID>::Factory &OriginFlowChainFactory) const {
     for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
          Cur = Cur->peelOuterOrigin())
       if (getLoans(Cur->getOuterOriginID(), UF).contains(TargetLoan))
         return buildOriginFlowChain(UF, Cur->getOuterOriginID(), TargetLoan,
-                                    Cfg);
+                                    Cfg, OriginFlowChainFactory);
 
     return {};
   }
@@ -339,7 +337,6 @@ private:
 
   OriginLoanMap::Factory &OriginLoanMapFactory;
   LoanSet::Factory &LoanSetFactory;
-  llvm::ImmutableList<OriginID>::Factory &OriginFlowChainFactory;
   /// Boolean vector indexed by origin ID. If true, the origin appears in
   /// multiple basic blocks and must participate in join operations. If false,
   /// the origin is block-local and can be discarded at block boundaries.
@@ -354,10 +351,9 @@ class LoanPropagationAnalysis::Impl final : public AnalysisImpl {
 LoanPropagationAnalysis::LoanPropagationAnalysis(
     const CFG &C, AnalysisDeclContext &AC, FactManager &F,
     OriginLoanMap::Factory &OriginLoanMapFactory,
-    LoanSet::Factory &LoanSetFactory,
-    llvm::ImmutableList<OriginID>::Factory &OriginFlowChainFactory)
+    LoanSet::Factory &LoanSetFactory)
     : PImpl(std::make_unique<Impl>(C, AC, F, OriginLoanMapFactory,
-                                   LoanSetFactory, OriginFlowChainFactory)) {
+                                   LoanSetFactory)) {
   PImpl->run();
 }
 
@@ -369,12 +365,16 @@ LoanSet LoanPropagationAnalysis::getLoans(OriginID OID, ProgramPoint P) const {
 
 llvm::ImmutableList<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
     ProgramPoint StartPoint, const OriginID StartOID, const LoanID TargetLoan,
-    const CFG *Cfg) const {
-  return PImpl->buildOriginFlowChain(StartPoint, StartOID, TargetLoan, Cfg);
+    const CFG *Cfg,
+    llvm::ImmutableList<OriginID>::Factory &OriginFlowChainFactory) const {
+  return PImpl->buildOriginFlowChain(StartPoint, StartOID, TargetLoan, Cfg,
+                                     OriginFlowChainFactory);
 }
 
 llvm::ImmutableList<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
-    const UseFact *UF, const LoanID TargetLoan, const CFG *Cfg) const {
-  return PImpl->buildOriginFlowChain(UF, TargetLoan, Cfg);
+    const UseFact *UF, const LoanID TargetLoan, const CFG *Cfg,
+    llvm::ImmutableList<OriginID>::Factory &OriginFlowChainFactory) const {
+  return PImpl->buildOriginFlowChain(UF, TargetLoan, Cfg,
+                                     OriginFlowChainFactory);
 }
 } // namespace clang::lifetimes::internal

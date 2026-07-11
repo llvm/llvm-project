@@ -205,9 +205,10 @@ public:
     return Runner.getAnalysis().getFactManager().getBlockContaining(P);
   }
 
-  llvm::ImmutableList<OriginID>
-  buildOriginFlowChain(llvm::StringRef StartOriginVar,
-                       llvm::StringRef EndLoanVar, llvm::StringRef Annotation) {
+  llvm::ImmutableList<OriginID> buildOriginFlowChain(
+      llvm::StringRef StartOriginVar, llvm::StringRef EndLoanVar,
+      llvm::StringRef Annotation,
+      llvm::ImmutableList<OriginID>::Factory &OriginFlowChainFactory) {
     std::optional<OriginID> StartOriginID = getOriginForDecl(StartOriginVar);
     std::vector<LoanID> EndLoanIDs = getLoansForVar(EndLoanVar);
 
@@ -215,7 +216,7 @@ public:
       llvm::ImmutableList<OriginID> OriginFlowChain =
           Runner.getAnalysis().getLoanPropagation().buildOriginFlowChain(
               getProgramPoint(Annotation), *StartOriginID, LID,
-              Runner.getAnalysisContext().getCFG());
+              Runner.getAnalysisContext().getCFG(), OriginFlowChainFactory);
       if (!OriginFlowChain.isEmpty())
         return OriginFlowChain;
     }
@@ -2001,12 +2002,15 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChain) {
     }
   )");
 
-  llvm::ImmutableList<OriginID> ChainForTgtA =
-      Helper->buildOriginFlowChain("s", "tgta", "after_nested_merge");
-  llvm::ImmutableList<OriginID> ChainForTgtB =
-      Helper->buildOriginFlowChain("s", "tgtb", "after_nested_merge");
-  llvm::ImmutableList<OriginID> ChainForTgtC =
-      Helper->buildOriginFlowChain("s", "tgtc", "after_nested_merge");
+  llvm::ImmutableList<OriginID>::Factory ChainFactoryForTgtA;
+  llvm::ImmutableList<OriginID>::Factory ChainFactoryForTgtB;
+  llvm::ImmutableList<OriginID>::Factory ChainFactoryForTgtC;
+  llvm::ImmutableList<OriginID> ChainForTgtA = Helper->buildOriginFlowChain(
+      "s", "tgta", "after_nested_merge", ChainFactoryForTgtA);
+  llvm::ImmutableList<OriginID> ChainForTgtB = Helper->buildOriginFlowChain(
+      "s", "tgtb", "after_nested_merge", ChainFactoryForTgtB);
+  llvm::ImmutableList<OriginID> ChainForTgtC = Helper->buildOriginFlowChain(
+      "s", "tgtc", "after_nested_merge", ChainFactoryForTgtC);
 
   EXPECT_THAT(ChainForTgtA, Contains(*Helper->getOriginForDecl("a")));
   EXPECT_THAT(ChainForTgtA, Not(Contains(*Helper->getOriginForDecl("b"))));
@@ -2032,7 +2036,9 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithErrorTargetLoan) {
   )");
 
 #if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
-  EXPECT_DEATH(Helper->buildOriginFlowChain("s", "a", "after_use"),
+  llvm::ImmutableList<OriginID>::Factory OriginFlowChainFactory;
+  EXPECT_DEATH(Helper->buildOriginFlowChain("s", "a", "after_use",
+                                            OriginFlowChainFactory),
                "TargetLoan must be present in the StartOID at the StartPoint");
 #endif
 }
@@ -2050,8 +2056,10 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithSelfAssignment) {
     }
   )");
 
+  llvm::ImmutableList<OriginID>::Factory OriginFlowChainFactory;
   const llvm::ImmutableList<OriginID> OriginFlowChain =
-      Helper->buildOriginFlowChain("s", "tgt", "after_use");
+      Helper->buildOriginFlowChain("s", "tgt", "after_use",
+                                   OriginFlowChainFactory);
 
   EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("a")));
 }
@@ -2067,8 +2075,10 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithMultiAssignInSameStmt) {
     }
   )");
 
+  llvm::ImmutableList<OriginID>::Factory OriginFlowChainFactory;
   const llvm::ImmutableList<OriginID> OriginFlowChain =
-      Helper->buildOriginFlowChain("s", "tgt", "after_use");
+      Helper->buildOriginFlowChain("s", "tgt", "after_use",
+                                   OriginFlowChainFactory);
 
   EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("a")));
   EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("b")));
@@ -2088,8 +2098,10 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithOverwritingAssignments) {
     }
   )");
 
+  llvm::ImmutableList<OriginID>::Factory OriginFlowChainFactory;
   const llvm::ImmutableList<OriginID> OriginFlowChain =
-      Helper->buildOriginFlowChain("s", "tgt1", "after_use");
+      Helper->buildOriginFlowChain("s", "tgt1", "after_use",
+                                   OriginFlowChainFactory);
 
   EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("a")));
   EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("b")));
@@ -2110,10 +2122,12 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithLifetimeBound) {
     }
   )");
 
-  llvm::ImmutableList<OriginID> ChainForTgtA =
-      Helper->buildOriginFlowChain("s", "tgta", "after_use");
-  llvm::ImmutableList<OriginID> ChainForTgtB =
-      Helper->buildOriginFlowChain("s", "tgtb", "after_use");
+  llvm::ImmutableList<OriginID>::Factory ChainFactoryForTgtA;
+  llvm::ImmutableList<OriginID>::Factory ChainFactoryForTgtB;
+  llvm::ImmutableList<OriginID> ChainForTgtA = Helper->buildOriginFlowChain(
+      "s", "tgta", "after_use", ChainFactoryForTgtB);
+  llvm::ImmutableList<OriginID> ChainForTgtB = Helper->buildOriginFlowChain(
+      "s", "tgtb", "after_use", ChainFactoryForTgtB);
 
   EXPECT_THAT(ChainForTgtA, Contains(*Helper->getOriginForDecl("a")));
   EXPECT_THAT(ChainForTgtA, Contains(*Helper->getOriginForDecl("result")));
