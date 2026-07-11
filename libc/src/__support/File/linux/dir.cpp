@@ -71,4 +71,6 @@ int platform_check_dir(int fd) {
   return 0;
 }
 
+size_t platform_dir_reclen(struct dirent *d) { return d->d_reclen; }
+
 } // namespace LIBC_NAMESPACE_DECL

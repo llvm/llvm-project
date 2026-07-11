@@ -732,7 +732,6 @@ bool CursorVisitor::VisitClassTemplateSpecializationDecl(
   switch (D->getSpecializationKind()) {
   case TSK_Undeclared:
   case TSK_ImplicitInstantiation:
-  case TSK_FriendDeclaration:
     // Nothing to visit
     return false;
 
@@ -7289,6 +7288,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::UnresolvedUsingIfExists:
   case Decl::OpenACCDeclare:
   case Decl::OpenACCRoutine:
+  case Decl::CXXExpansionStmt:
     return C;
 
   // Declaration kinds that don't make any sense here, but are

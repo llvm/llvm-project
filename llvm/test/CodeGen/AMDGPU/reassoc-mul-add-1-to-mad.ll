@@ -1158,7 +1158,8 @@ define i32 @v_mul_add_1_i16_zext_result(i16 %x, i16 %y) {
 ; GFX1250-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-REAL16-NEXT:    v_mad_u16 v0.l, v0.l, v1.l, v0.l
-; GFX1250-REAL16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-REAL16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX1250-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-FAKE16-LABEL: v_mul_add_1_i16_zext_result:
@@ -1181,7 +1182,8 @@ define i32 @v_mul_add_1_i16_zext_result(i16 %x, i16 %y) {
 ; GFX13-REAL16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-REAL16-NEXT:    v_mad_u16 v0.l, v0.l, v1.l, v0.l
-; GFX13-REAL16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX13-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-REAL16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX13-REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %add = add i16 %y, 1
   %mul = mul i16 %x, %add
@@ -5287,6 +5289,8 @@ define amdgpu_kernel void @compute_mad(ptr addrspace(4) %i18, ptr addrspace(4) %
 ;
 ; GFX1250-LABEL: compute_mad:
 ; GFX1250:       ; %bb.0: ; %bb
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x10 nv
 ; GFX1250-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
@@ -5440,6 +5444,8 @@ define amdgpu_ps i32 @s_mul_add_1_i32(i32 inreg %x, i32 inreg %y) {
 ;
 ; GFX1250-LABEL: s_mul_add_1_i32:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_add_co_i32 s1, s1, 1
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -5484,6 +5490,8 @@ define amdgpu_ps i32 @s_mul_add_1_i32_commute(i32 inreg %x, i32 inreg %y) {
 ;
 ; GFX1250-LABEL: s_mul_add_1_i32_commute:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_add_co_i32 s1, s1, 1
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)

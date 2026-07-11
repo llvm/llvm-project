@@ -31,6 +31,7 @@
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <optional>
@@ -2185,8 +2186,14 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     while (MaybeParseHLSLAnnotations(D))
       ;
 
-  if (Tok.is(tok::kw_requires))
+  if (Tok.is(tok::kw_requires)) {
+    TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
+    // With abbreviated function templates - we need to explicitly add depth to
+    // account for the implicit template parameter list induced by the template.
+    if (!TemplateInfo.TemplateParams && D.getInventedTemplateParameterList())
+      ++CurTemplateDepthTracker;
     ParseTrailingRequiresClauseWithScope(D);
+  }
 
   // Save late-parsed attributes for now; they need to be parsed in the
   // appropriate function scope after the function Decl has been constructed.
@@ -2329,43 +2336,39 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   // Handle the Objective-C for-in loop variable similarly, although we
   // don't need to parse the container in advance.
   if (FRI && (Tok.is(tok::colon) || isTokIdentifier_in())) {
-    bool IsForRangeLoop = false;
+    // If we're parsing an expansion statement, enter its context to ensure
+    // the declaration ends up in a dependent context. We previously left the
+    // context of the expansion statement because init-statements should *not*
+    // be in a dependent context, and only once we get here do we know that this
+    // is not an init-statement but rather a for-range-declaration.
+    //
+    // Note that this is *not* the case if we get here via ParseCXXCondition()
+    // since if that is called when we parse an expansion statement, we know for
+    // sure that it has to be the for-range-declaration.
+    //
+    // We can't use ContextRAII here since that pushes a new delayed diagnostics
+    // pool, which causes issues during declaration parsing.
+    bool EnterContext = FRI->ExpansionStmt &&
+                        Actions.CurContext == FRI->ExpansionStmt->getParent();
+    if (EnterContext)
+      Actions.PushDeclContext(nullptr, FRI->ExpansionStmt);
+    llvm::scope_exit RestoreDeclContext{[&] {
+      if (EnterContext)
+        Actions.PopDeclContext();
+    }};
+
+    bool IsForRangeLoopOrExpansionStmt = false;
     if (TryConsumeToken(tok::colon, FRI->ColonLoc)) {
-      IsForRangeLoop = true;
-      EnterExpressionEvaluationContext ForRangeInitContext(
-          Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
-          /*LambdaContextDecl=*/nullptr,
-          Sema::ExpressionEvaluationContextRecord::EK_Other,
-          getLangOpts().CPlusPlus23);
-
-      // P2718R0 - Lifetime extension in range-based for loops.
-      if (getLangOpts().CPlusPlus23) {
-        auto &LastRecord = Actions.currentEvaluationContext();
-        LastRecord.InLifetimeExtendingContext = true;
-        LastRecord.RebuildDefaultArgOrDefaultInit = true;
-      }
-
-      if (getLangOpts().OpenMP)
+      IsForRangeLoopOrExpansionStmt = true;
+      if (getLangOpts().OpenMP && !FRI->ExpansionStmt)
         Actions.OpenMP().startOpenMPCXXRangeFor();
-      if (Tok.is(tok::l_brace))
-        FRI->RangeExpr = ParseBraceInitializer();
-      else
-        FRI->RangeExpr = ParseExpression();
 
-      // Before c++23, ForRangeLifetimeExtendTemps should be empty.
-      assert(
-          getLangOpts().CPlusPlus23 ||
-          Actions.ExprEvalContexts.back().ForRangeLifetimeExtendTemps.empty());
-
-      // Move the collected materialized temporaries into ForRangeInit before
-      // ForRangeInitContext exit.
-      FRI->LifetimeExtendTemps = std::move(
-          Actions.ExprEvalContexts.back().ForRangeLifetimeExtendTemps);
+      ParseForRangeInitializerAfterColon(*FRI, &DS);
     }
 
     Decl *ThisDecl = Actions.ActOnDeclarator(getCurScope(), D);
-    if (IsForRangeLoop) {
-      Actions.ActOnCXXForRangeDecl(ThisDecl);
+    if (IsForRangeLoopOrExpansionStmt) {
+      Actions.ActOnCXXForRangeDecl(ThisDecl, FRI->ExpansionStmt);
     } else {
       // Obj-C for loop
       if (auto *VD = dyn_cast_or_null<VarDecl>(ThisDecl))
@@ -3282,8 +3285,8 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
                           DSContext == DeclSpecContext::DSC_top_level);
 
   if (getLangOpts().CPlusPlus &&
-      Tok.isOneOf(tok::identifier, tok::coloncolon, tok::kw_decltype,
-                  tok::annot_template_id) &&
+      (Tok.isOneOf(tok::identifier, tok::coloncolon, tok::kw_decltype) ||
+       (Tok.is(tok::annot_template_id) && NextToken().is(tok::coloncolon))) &&
       TryAnnotateCXXScopeToken(EnteringContext)) {
     SkipMalformedDecl();
     return true;

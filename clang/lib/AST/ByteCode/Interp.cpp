@@ -329,8 +329,8 @@ bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   assert(Ptr.inUnion());
 
   // Find the outermost union.
-  Pointer U = Ptr.getBase();
-  Pointer C = Ptr;
+  PtrView U = Ptr.view().getBase();
+  PtrView C = Ptr.view();
   while (!U.isRoot() && !U.isActive()) {
     // A little arbitrary, but this is what the current interpreter does.
     // See the AnonymousUnion test in test/AST/ByteCode/unions.cpp.
@@ -364,7 +364,7 @@ bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   // non-trivial default constructor.
   if (WillActivate) {
     bool Fails = false;
-    Pointer It = Ptr;
+    PtrView It = Ptr.view();
     while (!It.isRoot() && !It.isActive()) {
       if (const Record *R = It.getRecord(); R && R->isUnion()) {
         if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(R->getDecl());
@@ -390,15 +390,15 @@ bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   const FieldDecl *ActiveField = nullptr;
   for (const Record::Field &F : R->fields()) {
-    const Pointer &Field = U.atField(F.Offset);
+    PtrView Field = U.atField(F.Offset);
     if (Field.isActive()) {
       ActiveField = Field.getField();
       break;
     }
   }
 
-  const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_access_inactive_union_member)
+  S.FFDiag(S.Current->getSource(OpPC),
+           diag::note_constexpr_access_inactive_union_member)
       << AK << InactiveField << !ActiveField << ActiveField;
   return false;
 }
@@ -1110,8 +1110,10 @@ static bool diagnoseCallableDecl(InterpState &S, CodePtr OpPC,
              diag::note_constexpr_invalid_function, 1)
         << DiagDecl->isConstexpr() << (bool)CD << DiagDecl;
 
-    if (DiagDecl->getDefinition())
-      S.Note(DiagDecl->getDefinition()->getLocation(), diag::note_declared_at);
+    const FunctionDecl *Definition;
+    const Stmt *Body = DiagDecl->getBody(Definition);
+    if (Body && Definition)
+      S.Note(Definition->getLocation(), diag::note_declared_at);
     else
       S.Note(DiagDecl->getLocation(), diag::note_declared_at);
   }
@@ -1719,7 +1721,7 @@ static bool diagnoseOutOfLifetimeDestroy(InterpState &S, CodePtr OpPC,
   return false;
 }
 
-bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+bool checkDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_Destroy))
     return false;
   if (!CheckTemporary(S, OpPC, Ptr.block(), AK_Destroy))
@@ -1920,7 +1922,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
 
     if (Func->isConstructor() && !checkConstructor(S, OpPC, Func, ThisPtr))
       return false;
-    if (Func->isDestructor() && !CheckDestructor(S, OpPC, ThisPtr))
+    if (Func->isDestructor() && !checkDestructor(S, OpPC, ThisPtr))
       return false;
 
     InstancePtrTracked = (Func->isConstructor() || Func->isDestructor());
@@ -1966,19 +1968,46 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   return true;
 }
 
-static bool getDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
+static bool getDynamicDecl(InterpState &S, CodePtr OpPC, PtrView TypePtr,
                            const CXXRecordDecl *&DynamicDecl) {
-  TypePtr = TypePtr.stripBaseCasts();
+
+  if (S.InitializingPtrs.empty()) {
+    TypePtr = TypePtr.stripBaseCasts();
+  } else {
+    auto depth = [](PtrView V) -> unsigned {
+      unsigned C = 1;
+      while (!V.isRoot()) {
+        ++C;
+        V = V.getBase();
+      }
+      return C;
+    };
+    // Consider a 'normal' diamond hierarchy:
+    //   A     A   3
+    //   |     |
+    //   B     C   2
+    //    \   /
+    //     \ /
+    //      D      1
+    // When we use a pointer of D*, cast it to B's A* and
+    // use it during the construction of C*, the expected
+    // dynamic type is B.
+    PtrView InitPtr = S.InitializingPtrs.back();
+    assert(depth(TypePtr) >= depth(InitPtr));
+    unsigned D = depth(TypePtr) - depth(InitPtr);
+    for (unsigned I = 0; I != D; ++I)
+      TypePtr = TypePtr.getBase();
+  }
 
   QualType DynamicType = TypePtr.getType();
-  if (TypePtr.isStatic() || TypePtr.isConst()) {
-    if (const VarDecl *VD = TypePtr.getRootVarDecl();
+  if (TypePtr.Pointee->isStatic() || TypePtr.isConst()) {
+    if (const VarDecl *VD = Pointer(TypePtr).getRootVarDecl();
         VD && !VD->isConstexpr()) {
       const Expr *E = S.Current->getExpr(OpPC);
-      APValue V = TypePtr.toAPValue(S.getASTContext());
+      APValue V = Pointer(TypePtr).toAPValue(S.getASTContext());
       QualType TT = S.getASTContext().getLValueReferenceType(DynamicType);
       S.FFDiag(E, diag::note_constexpr_polymorphic_unknown_dynamic_type)
-          << AccessKinds::AK_MemberCall << V.getAsString(S.getASTContext(), TT);
+          << AK_MemberCall << V.getAsString(S.getASTContext(), TT);
       return false;
     }
   }
@@ -2213,7 +2242,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   const FunctionDecl *Callee = Func->getDecl();
 
   const CXXRecordDecl *DynamicDecl = nullptr;
-  if (!getDynamicDecl(S, OpPC, ThisPtr, DynamicDecl))
+  if (!getDynamicDecl(S, OpPC, ThisPtr.view(), DynamicDecl))
     return false;
   assert(DynamicDecl);
 
@@ -2221,7 +2250,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   const auto *InitialFunction = cast<CXXMethodDecl>(Callee);
   const CXXMethodDecl *Overrider;
 
-  if (StaticDecl != DynamicDecl && !S.initializingBlock(ThisPtr.block())) {
+  if (StaticDecl != DynamicDecl) {
     if (!DynamicDecl->isDerivedFrom(StaticDecl))
       return false;
     Overrider = S.getContext().getOverridingFunction(DynamicDecl, StaticDecl,
@@ -2448,11 +2477,10 @@ bool EndLifetime(InterpState &S, CodePtr OpPC) {
 }
 
 /// Ends the lifetime of the pop'd pointer.
-bool EndLifetimePop(InterpState &S, CodePtr OpPC) {
+bool PseudoDtor(InterpState &S, CodePtr OpPC) {
   const auto &Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.isBlockPointer() && !CheckDummy(S, OpPC, Ptr.block(), AK_Destroy))
+  if (!checkDestructor(S, OpPC, Ptr))
     return false;
-
   setLifeStateRecurse(Ptr.view().narrow(), Lifetime::Ended);
   return true;
 }
@@ -2468,7 +2496,8 @@ bool MarkDestroyed(InterpState &S, CodePtr OpPC) {
 
 bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
                           std::optional<uint64_t> ArraySize) {
-  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  Pointer &Orig = S.Stk.peek<Pointer>();
+  Pointer Ptr = Orig;
 
   auto directBaseIsUnion = [](const Pointer &Ptr) -> bool {
     if (Ptr.isArrayElement())
@@ -2529,8 +2558,8 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
     return false;
 
   const auto *NewExpr = cast<CXXNewExpr>(E);
-  QualType StorageType = Ptr.getFieldDesc()->getDataType(S.getASTContext());
   const ASTContext &ASTCtx = S.getASTContext();
+  QualType StorageType = Ptr.getType();
   QualType AllocType;
   if (ArraySize) {
     AllocType = ASTCtx.getConstantArrayType(
@@ -2541,16 +2570,21 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
     AllocType = NewExpr->getAllocatedType();
   }
 
-  unsigned StorageSize = 1;
-  unsigned AllocSize = 1;
-  if (const auto *CAT = dyn_cast<ConstantArrayType>(AllocType))
-    AllocSize = CAT->getZExtSize();
-  if (const auto *CAT = dyn_cast<ConstantArrayType>(StorageType))
-    StorageSize = CAT->getZExtSize();
+  if (AllocType->isArrayType() && Ptr.isArrayElement() &&
+      Ptr.expand().getIndex() == 0) {
+    // The destination of placement new is pointing to the first element
+    // of an array.  There's a special case in [expr.const]: "[...] if T is an
+    // array type, to the first element of such an object [...]".  Handle
+    // that case here by using the base of the Pointer.
+    QualType AllocElementType =
+        ASTCtx.getAsArrayType(AllocType)->getElementType();
+    if (ASTCtx.hasSimilarType(AllocElementType, StorageType)) {
+      StorageType = Ptr.expand().getArray().getType();
+      Orig = Orig.expand();
+    }
+  }
 
-  if (AllocSize > StorageSize ||
-      !ASTCtx.hasSimilarType(ASTCtx.getBaseElementType(AllocType),
-                             ASTCtx.getBaseElementType(StorageType))) {
+  if (!ASTCtx.hasSimilarType(AllocType, StorageType)) {
     S.FFDiag(S.Current->getLocation(OpPC),
              diag::note_constexpr_placement_new_wrong_type)
         << StorageType << AllocType;
@@ -2744,7 +2778,7 @@ bool GetTypeidPtr(InterpState &S, CodePtr OpPC, const Type *TypeInfoType) {
   }
 
   // Pick the most-derived type.
-  CanQualType T = P.getDeclPtr().getType()->getCanonicalTypeUnqualified();
+  CanQualType T = P.stripBaseCasts().getType()->getCanonicalTypeUnqualified();
   // ... unless we're currently constructing this object.
   // FIXME: We have a similar check to this in more places.
   if (S.Current->getFunction()) {

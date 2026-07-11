@@ -310,7 +310,7 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
   case llvm::Triple::nvptx64:
     theTargetCIRGenInfo = createNVPTXTargetCIRGenInfo(genTypes);
     return *theTargetCIRGenInfo;
-  case llvm::Triple::amdgcn: {
+  case llvm::Triple::amdgpu: {
     theTargetCIRGenInfo = createAMDGPUTargetCIRGenInfo(genTypes);
     return *theTargetCIRGenInfo;
   }
@@ -2305,6 +2305,14 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
   const auto *fieldDecl = cast<FieldDecl>(decl);
   const auto *mpt = e->getType()->castAs<MemberPointerType>();
   const auto *destClass = mpt->getMostRecentCXXRecordDecl();
+
+  if (fieldDecl->hasAttr<NoUniqueAddressAttr>()) {
+    assert(!cir::MissingFeatures::noUniqueAddressLayout());
+    errorNYI(e->getExprLoc(),
+             "emitMemberPointerConstant: no_unique_address field");
+    return {};
+  }
+
   std::optional<llvm::SmallVector<int32_t>> path =
       buildMemberPath(destClass, fieldDecl);
   if (!path)
@@ -2316,6 +2324,8 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
 std::optional<llvm::SmallVector<int32_t>>
 CIRGenModule::buildMemberPath(const CXXRecordDecl *destClass,
                               const FieldDecl *field) {
+  assert(!field->hasAttr<NoUniqueAddressAttr>());
+
   llvm::SmallVector<int32_t> path;
   if (!findFieldMemberPath(destClass, field, path))
     return std::nullopt;
@@ -2369,6 +2379,11 @@ bool CIRGenModule::findFieldMemberPath(const CXXRecordDecl *currentClass,
       }
       continue;
     }
+
+    // If a base class doesn't participate in layout, the field cannot be in it,
+    // skip it.
+    if (!layout.hasNonVirtualBaseCIRField(baseDecl))
+      continue;
 
     auto baseFieldIdx =
         static_cast<int32_t>(layout.getNonVirtualBaseCIRFieldNo(baseDecl));
@@ -3497,7 +3512,7 @@ void CIRGenModule::setCXXSpecialMemberAttr(
     auto cxxDtor = cir::CXXDtorAttr::get(
         convertType(getASTContext().getCanonicalTagType(dtor->getParent())),
         dtor->isTrivial());
-    funcOp.setCxxSpecialMemberAttr(cxxDtor);
+    funcOp.setFuncInfoAttr(cxxDtor);
     return;
   }
 
@@ -3506,7 +3521,7 @@ void CIRGenModule::setCXXSpecialMemberAttr(
     auto cxxCtor = cir::CXXCtorAttr::get(
         convertType(getASTContext().getCanonicalTagType(ctor->getParent())),
         kind, ctor->isTrivial());
-    funcOp.setCxxSpecialMemberAttr(cxxCtor);
+    funcOp.setFuncInfoAttr(cxxCtor);
     return;
   }
 
@@ -3517,7 +3532,7 @@ void CIRGenModule::setCXXSpecialMemberAttr(
     auto cxxAssign = cir::CXXAssignAttr::get(
         convertType(getASTContext().getCanonicalTagType(method->getParent())),
         assignKind, method->isTrivial());
-    funcOp.setCxxSpecialMemberAttr(cxxAssign);
+    funcOp.setFuncInfoAttr(cxxAssign);
     return;
   }
 }
