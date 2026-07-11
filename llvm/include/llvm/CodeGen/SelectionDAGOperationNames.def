@@ -435,3 +435,7 @@ DAG_NODE_NAME(MASKED_UDIV, "masked_udiv")
 DAG_NODE_NAME(MASKED_SDIV, "masked_sdiv")
 DAG_NODE_NAME(MASKED_UREM, "masked_urem")
 DAG_NODE_NAME(MASKED_SREM, "masked_srem")
+
+#define BEGIN_REGISTER_VP_SDNODE(SDID, LEGALARG, NAME, ...)                    \
+  DAG_NODE_NAME(SDID, #NAME)
+#include "llvm/IR/VPIntrinsics.def"

@@ -50,7 +50,6 @@
 #include <cstdint>
 #include <iterator>
 #include <limits>
-#include <type_traits>
 
 using namespace llvm;
 
@@ -65,63 +64,51 @@ static cl::opt<bool>
 
 namespace {
 
-// Keep the names in one byte blob so the constant table has no pointers or
-// relocations. Dense integer tables map built-in opcodes to the blob.
-struct FixedOperationNameData {
-#define DAG_NODE_NAME(OPCODE, NAME) char OPCODE[sizeof(NAME)];
+constexpr size_t FixedOperationNamesSize = 0
+#define DAG_NODE_NAME(OPCODE, NAME) +sizeof(NAME)
 #include "llvm/CodeGen/SelectionDAGOperationNames.def"
 #undef DAG_NODE_NAME
-};
+    ;
 
-constexpr FixedOperationNameData FixedOperationNames = {
-#define DAG_NODE_NAME(OPCODE, NAME) NAME,
-#include "llvm/CodeGen/SelectionDAGOperationNames.def"
-#undef DAG_NODE_NAME
-};
+static_assert(FixedOperationNamesSize <= std::numeric_limits<uint16_t>::max());
 
-static_assert(sizeof(FixedOperationNames) <=
-              std::numeric_limits<uint16_t>::max());
-static_assert(alignof(FixedOperationNameData) == alignof(char));
-static_assert(std::is_standard_layout_v<FixedOperationNameData>);
-
+constexpr auto makeFixedOperationNameOffsets() {
+  std::array<uint16_t, ISD::BUILTIN_OP_END + 1> Result{};
+  std::array<uint16_t, ISD::BUILTIN_OP_END> Lengths{};
 #define DAG_NODE_NAME(OPCODE, NAME)                                            \
   static_assert(ISD::OPCODE < ISD::BUILTIN_OP_END);                            \
-  static_assert(sizeof(NAME) - 1 <= std::numeric_limits<uint8_t>::max());
+  Lengths[ISD::OPCODE] = sizeof(NAME);
 #include "llvm/CodeGen/SelectionDAGOperationNames.def"
 #undef DAG_NODE_NAME
 
-template <typename ValueType, bool StoreLengths>
-constexpr std::array<ValueType, ISD::BUILTIN_OP_END>
-makeFixedOperationNameTable() {
-  std::array<ValueType, ISD::BUILTIN_OP_END> Result{};
+  for (size_t Opcode = 0; Opcode < Lengths.size(); ++Opcode)
+    Result[Opcode + 1] = Result[Opcode] + Lengths[Opcode];
+  return Result;
+}
+
+constexpr auto FixedOperationNameOffsets = makeFixedOperationNameOffsets();
+
+constexpr auto makeFixedOperationNames() {
+  std::array<char, FixedOperationNamesSize> Result{};
 #define DAG_NODE_NAME(OPCODE, NAME)                                            \
-  Result[ISD::OPCODE] = static_cast<ValueType>(                                \
-      StoreLengths ? sizeof(NAME) - 1                                          \
-                   : offsetof(FixedOperationNameData, OPCODE));
+  for (size_t I = 0; I < sizeof(NAME); ++I)                                    \
+    Result[FixedOperationNameOffsets[ISD::OPCODE] + I] = NAME[I];
 #include "llvm/CodeGen/SelectionDAGOperationNames.def"
 #undef DAG_NODE_NAME
   return Result;
 }
 
-constexpr auto FixedOperationNameOffsets =
-    makeFixedOperationNameTable<uint16_t, false>();
-constexpr auto FixedOperationNameLengths =
-    makeFixedOperationNameTable<uint8_t, true>();
-static_assert(sizeof(FixedOperationNameOffsets) ==
-              ISD::BUILTIN_OP_END * sizeof(uint16_t));
-static_assert(sizeof(FixedOperationNameLengths) ==
-              ISD::BUILTIN_OP_END * sizeof(uint8_t));
+constexpr auto FixedOperationNames = makeFixedOperationNames();
 
 } // namespace
 
 std::string SDNode::getOperationName(const SelectionDAG *G) const {
   const unsigned Opcode = getOpcode();
-  if (Opcode < FixedOperationNameLengths.size()) {
-    const uint8_t Length = FixedOperationNameLengths[Opcode];
-    if (Length != 0) {
-      const char *Names = reinterpret_cast<const char *>(&FixedOperationNames);
-      return std::string(Names + FixedOperationNameOffsets[Opcode], Length);
-    }
+  if (Opcode < ISD::BUILTIN_OP_END) {
+    const uint16_t Begin = FixedOperationNameOffsets[Opcode];
+    const uint16_t End = FixedOperationNameOffsets[Opcode + 1];
+    if (Begin != End)
+      return std::string(FixedOperationNames.data() + Begin, End - Begin - 1);
   }
 
   switch (Opcode) {
@@ -229,12 +216,6 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     case ISD::SETFALSE2:
       return "setfalse2";
     }
-
-    // Vector Predication
-#define BEGIN_REGISTER_VP_SDNODE(SDID, LEGALARG, NAME, ...)                    \
-  case ISD::SDID:                                                              \
-    return #NAME;
-#include "llvm/IR/VPIntrinsics.def"
   }
 }
 
