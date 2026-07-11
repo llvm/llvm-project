@@ -1355,6 +1355,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("Cpp11BracedListStyle", Style.Cpp11BracedListStyle);
     IO.mapOptional("DerivePointerAlignment", Style.DerivePointerAlignment);
     IO.mapOptional("DisableFormat", Style.DisableFormat);
+    if (Style.DisableFormat)
+      Style.SortIncludes.Enabled = false;
     IO.mapOptional("EmptyLineAfterAccessModifier",
                    Style.EmptyLineAfterAccessModifier);
     IO.mapOptional("EmptyLineBeforeAccessModifier",
@@ -4034,7 +4036,7 @@ tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
                                    ArrayRef<tooling::Range> Ranges,
                                    StringRef FileName, unsigned *Cursor) {
   tooling::Replacements Replaces;
-  if (!Style.SortIncludes.Enabled || Style.DisableFormat)
+  if (!Style.SortIncludes.Enabled)
     return Replaces;
   if (isLikelyXml(Code))
     return Replaces;
