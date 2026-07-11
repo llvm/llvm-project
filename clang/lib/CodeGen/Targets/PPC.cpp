@@ -373,6 +373,7 @@ class PPC32_SVR4_ABIInfo : public DefaultABIInfo {
   }
 
   CharUnits getParamTypeAlignment(QualType Ty) const;
+  ABIArgInfo classifyComplexType(QualType Ty) const;
 
 public:
   PPC32_SVR4_ABIInfo(CodeGen::CodeGenTypes &CGT, bool SoftFloatABI,
@@ -438,6 +439,32 @@ CharUnits PPC32_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
   if (AlignTy)
     return CharUnits::fromQuantity(AlignTy->isVectorType() ? 16 : 4);
   return CharUnits::fromQuantity(4);
+}
+
+ABIArgInfo PPC32_SVR4_ABIInfo::classifyComplexType(QualType Ty) const {
+  uint64_t Size = getContext().getTypeSize(Ty);
+  llvm::LLVMContext &VMC = getVMContext();
+  llvm::Type *I32 = llvm::Type::getInt32Ty(VMC);
+  QualType ElemTy = Ty->castAs<ComplexType>()->getElementType();
+
+  // Work around https://github.com/llvm/llvm-project/issues/44482.
+  // This is a bug where the two halves of a ppc_fp128 are swapped.
+  // Using i128 for the ABI instead circumvents this issue.
+  if (CGT.ConvertType(ElemTy)->isPPC_FP128Ty())
+    return ABIArgInfo::getDirect(
+        llvm::ArrayType::get(llvm::Type::getInt128Ty(VMC), 2));
+
+  // Coerce to an integer for _Complex char and _Complex short.
+  if (Size <= GPRBits)
+    return ABIArgInfo::getDirect(llvm::IntegerType::get(VMC, Size));
+
+  // Coerce to a vector <N x i32> for _Complex float and _Complex int.
+  if (Size == 2 * GPRBits)
+    return ABIArgInfo::getDirect(llvm::FixedVectorType::get(I32, 2));
+
+  // Coerce to an array [N x i32] for _Complex double and similar.
+  // Using i32 gives the correct 4-byte register alignment.
+  return ABIArgInfo::getDirect(llvm::ArrayType::get(I32, Size / GPRBits));
 }
 
 ABIArgInfo PPC32_SVR4_ABIInfo::classifyArgumentType(QualType Ty,
