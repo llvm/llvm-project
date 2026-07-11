@@ -213,12 +213,12 @@ extern bool logDWARF(void);
   #define _LIBUNWIND_TRACE_UNWINDING(msg, ...)
   #define _LIBUNWIND_TRACE_DWARF(...)
 #else
-  #define _LIBUNWIND_DEBUG_LOG(msg, ...)  _LIBUNWIND_LOG(msg, __VA_ARGS__)
-  #define _LIBUNWIND_TRACE_API(msg, ...)                                       \
-    do {                                                                       \
-      if (logAPIs())                                                           \
-        _LIBUNWIND_LOG(msg, __VA_ARGS__);                                      \
-    } while (0)
+#define _LIBUNWIND_DEBUG_LOG(msg, ...) _LIBUNWIND_LOG(msg, __VA_ARGS__)
+#define _LIBUNWIND_TRACE_API(msg, ...)                                         \
+  do {                                                                         \
+    if (logAPIs())                                                             \
+      _LIBUNWIND_LOG(msg, __VA_ARGS__);                                        \
+  } while (0)
   #define _LIBUNWIND_TRACING_UNWINDING logUnwinding()
   #define _LIBUNWIND_TRACING_DWARF logDWARF()
   #define _LIBUNWIND_TRACE_UNWINDING(msg, ...)                                 \
@@ -233,12 +233,12 @@ extern bool logDWARF(void);
     } while (0)
 #endif
 #else // TODO: revert -- force-enabled tracing
-  #define _LIBUNWIND_DEBUG_LOG(msg, ...)  _LIBUNWIND_LOG(msg, __VA_ARGS__)
-  #define _LIBUNWIND_TRACE_API(msg, ...)  _LIBUNWIND_LOG(msg, __VA_ARGS__)
-  #define _LIBUNWIND_TRACING_UNWINDING (1)
-  #define _LIBUNWIND_TRACING_DWARF (1)
-  #define _LIBUNWIND_TRACE_UNWINDING(msg, ...)  _LIBUNWIND_LOG(msg, __VA_ARGS__)
-  #define _LIBUNWIND_TRACE_DWARF(...)  fprintf(stderr, __VA_ARGS__)
+#define _LIBUNWIND_DEBUG_LOG(msg, ...) _LIBUNWIND_LOG(msg, __VA_ARGS__)
+#define _LIBUNWIND_TRACE_API(msg, ...) _LIBUNWIND_LOG(msg, __VA_ARGS__)
+#define _LIBUNWIND_TRACING_UNWINDING (1)
+#define _LIBUNWIND_TRACING_DWARF (1)
+#define _LIBUNWIND_TRACE_UNWINDING(msg, ...) _LIBUNWIND_LOG(msg, __VA_ARGS__)
+#define _LIBUNWIND_TRACE_DWARF(...) fprintf(stderr, __VA_ARGS__)
 #endif // TODO: revert
 
 #ifdef __cplusplus

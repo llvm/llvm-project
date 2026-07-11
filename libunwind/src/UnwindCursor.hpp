@@ -1767,11 +1767,10 @@ bool UnwindCursor<A, R>::getInfoFromDwarfSection(
   bool foundInCache = false;
   _LIBUNWIND_TRACE_DWARF(
       "getInfoFromDwarfSection: pc=0x%" PRIx64 ", dwarf_section=0x%" PRIx64
-      ", dwarf_section_length=0x%" PRIx64
-      ", fdeSectionOffsetHint=0x%" PRIx32 "\n",
+      ", dwarf_section_length=0x%" PRIx64 ", fdeSectionOffsetHint=0x%" PRIx32
+      "\n",
       static_cast<uint64_t>(pc), static_cast<uint64_t>(sects.dwarf_section),
-      static_cast<uint64_t>(sects.dwarf_section_length),
-      fdeSectionOffsetHint);
+      static_cast<uint64_t>(sects.dwarf_section_length), fdeSectionOffsetHint);
 #if defined(_LIBUNWIND_SUPPORT_DWARF_INDEX)
   _LIBUNWIND_TRACE_DWARF(
       "getInfoFromDwarfSection: dwarf_index_section=0x%" PRIx64
@@ -1823,12 +1822,11 @@ bool UnwindCursor<A, R>::getInfoFromDwarfSection(
         foundFDE);
   }
   if (foundFDE) {
-    _LIBUNWIND_TRACE_DWARF(
-        "getInfoFromDwarfSection: fdeStart=0x%" PRIx64 ", pcStart=0x%" PRIx64
-        ", pcEnd=0x%" PRIx64 "\n",
-        static_cast<uint64_t>(fdeInfo.fdeStart),
-        static_cast<uint64_t>(fdeInfo.pcStart),
-        static_cast<uint64_t>(fdeInfo.pcEnd));
+    _LIBUNWIND_TRACE_DWARF("getInfoFromDwarfSection: fdeStart=0x%" PRIx64
+                           ", pcStart=0x%" PRIx64 ", pcEnd=0x%" PRIx64 "\n",
+                           static_cast<uint64_t>(fdeInfo.fdeStart),
+                           static_cast<uint64_t>(fdeInfo.pcStart),
+                           static_cast<uint64_t>(fdeInfo.pcEnd));
     if (getInfoFromFdeCie(fdeInfo, cieInfo, pc, sects.dso_base)) {
       // Add to cache (to make next lookup faster) if we had no hint
       // and there was no index.
