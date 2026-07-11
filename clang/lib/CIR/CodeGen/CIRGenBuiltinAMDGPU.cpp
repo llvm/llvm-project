@@ -321,7 +321,11 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   }
   case AMDGPU::BI__builtin_amdgcn_ldexp:
   case AMDGPU::BI__builtin_amdgcn_ldexpf: {
-    return emitBuiltinWithOneOverloadedType<2>(expr, "amdgcn.ldexp").getValue();
+    mlir::Value src0 = emitScalarExpr(expr->getArg(0));
+    mlir::Value src1 = emitScalarExpr(expr->getArg(1));
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()), "ldexp",
+                                       src0.getType(),
+                                       mlir::ValueRange{src0, src1});
   }
   case AMDGPU::BI__builtin_amdgcn_ldexph: {
     // The raw instruction has a different behavior for out of bounds exponent
