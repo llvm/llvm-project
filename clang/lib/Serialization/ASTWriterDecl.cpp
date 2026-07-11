@@ -145,6 +145,7 @@ namespace clang {
     void VisitFriendTemplateDecl(FriendTemplateDecl *D);
     void VisitStaticAssertDecl(StaticAssertDecl *D);
     void VisitExplicitInstantiationDecl(ExplicitInstantiationDecl *D);
+    void VisitCXXExpansionStmtDecl(CXXExpansionStmtDecl *D);
     void VisitBlockDecl(BlockDecl *D);
     void VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D);
     void VisitCapturedDecl(CapturedDecl *D);
@@ -897,6 +898,8 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
       Record.push_back(1 | (DeletedMessage ? 2 : 0));
       if (DeletedMessage)
         Record.AddStmt(DeletedMessage);
+
+      Record.push_back(FDI->getFPFeatures().getAsOpaqueInt());
 
       Record.push_back(FDI->getUnqualifiedLookups().size());
       for (DeclAccessPair P : FDI->getUnqualifiedLookups()) {
@@ -1828,6 +1831,9 @@ void ASTDeclWriter::VisitAccessSpecDecl(AccessSpecDecl *D) {
 }
 
 void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
+  // Record the number of friend type template parameter lists here
+  // so as to simplify memory allocation during deserialization.
+  Record.push_back(D->NumTPLists);
   VisitDecl(D);
   bool hasFriendDecl = isa<NamedDecl *>(D->Friend);
   Record.push_back(hasFriendDecl);
@@ -1835,34 +1841,26 @@ void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
     Record.AddDeclRef(D->getFriendDecl());
   else
     Record.AddTypeSourceInfo(D->getFriendType());
+  for (unsigned i = 0; i < D->NumTPLists; ++i)
+    Record.AddTemplateParameterList(D->getFriendTypeTemplateParameterList(i));
   Record.AddDeclRef(D->getNextFriend());
+  Record.push_back(D->UnsupportedFriend);
   Record.AddSourceLocation(D->FriendLoc);
   Record.AddSourceLocation(D->EllipsisLoc);
   Code = serialization::DECL_FRIEND;
 }
 
 void ASTDeclWriter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
-  // Record the number of friend type template parameter lists here
-  // so as to simplify memory allocation during deserialization.
-  Record.push_back(D->NumTPLists);
   VisitDecl(D);
-  for (TemplateParameterList *TPL : D->getFriendTypeTemplateParameterLists())
-    Record.AddTemplateParameterList(TPL);
-  if (D->Template.isNull()) {
-    if (D->getFriendDecl()) {
-      Record.push_back(FTDK_Decl);
-      Record.AddDeclRef(D->getFriendDecl());
-    } else {
-      Record.push_back(FTDK_Type);
-      Record.AddTypeSourceInfo(D->getFriendType());
-    }
-  } else {
-    Record.push_back(FTDK_Template);
-    Record.AddTemplateName(D->Template);
-  }
-  Record.AddDeclRef(D->getNextFriend());
-  Record.AddSourceLocation(D->FriendLoc);
-  Record.AddSourceLocation(D->EllipsisLoc);
+  Record.push_back(D->getNumTemplateParameters());
+  for (unsigned i = 0, e = D->getNumTemplateParameters(); i != e; ++i)
+    Record.AddTemplateParameterList(D->getTemplateParameterList(i));
+  Record.push_back(D->getFriendDecl() != nullptr);
+  if (D->getFriendDecl())
+    Record.AddDeclRef(D->getFriendDecl());
+  else
+    Record.AddTypeSourceInfo(D->getFriendType());
+  Record.AddSourceLocation(D->getFriendLoc());
   Code = serialization::DECL_FRIEND_TEMPLATE;
 }
 
@@ -2223,6 +2221,14 @@ void ASTDeclWriter::VisitExplicitInstantiationDecl(
   if (const auto *Args = D->getTrailingArgsInfo())
     Record.AddASTTemplateArgumentListInfo(Args);
   Code = serialization::DECL_EXPLICIT_INSTANTIATION;
+}
+
+void ASTDeclWriter::VisitCXXExpansionStmtDecl(CXXExpansionStmtDecl *D) {
+  VisitDecl(D);
+  Record.AddStmt(D->getExpansionPattern());
+  Record.AddStmt(D->getInstantiations());
+  Record.AddDeclRef(D->getIndexTemplateParm());
+  Code = serialization::DECL_EXPANSION_STMT;
 }
 
 /// Emit the DeclContext part of a declaration context decl.

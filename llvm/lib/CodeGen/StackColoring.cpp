@@ -1224,7 +1224,7 @@ bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
 
   unsigned NumMarkers = collectMarkers(NumSlots);
 
-  unsigned TotalSize = 0;
+  int64_t TotalSize = 0;
   LLVM_DEBUG(dbgs() << "Found " << NumMarkers << " markers and " << NumSlots
                     << " slots\n");
   LLVM_DEBUG(dbgs() << "Slot structure:\n");
@@ -1270,7 +1270,7 @@ bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
   // Maps old slots to new slots.
   DenseMap<int, int> SlotRemap;
   unsigned RemovedSlots = 0;
-  unsigned ReducedSize = 0;
+  int64_t ReducedSize = 0;
 
   // Do not bother looking at empty intervals.
   for (unsigned I = 0; I < NumSlots; ++I) {

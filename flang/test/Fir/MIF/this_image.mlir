@@ -61,7 +61,61 @@
     return
   }
 
+  // Test that MIFThisImageOpConversion emits an element-wise i64→i32
+  // conversion loop when the declared element type differs from the i64
+  // written by prif_this_image_with_coarray. Models `integer :: a[2,*]`
+  // (corank:2, default kind = i32).
+  func.func @test_this_image_i32() {
+    %c1_i64 = arith.constant 1 : i64
+    %c2_i64 = arith.constant 2 : i64
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %lc = fir.alloca !fir.array<2xi64>
+    %uc = fir.alloca !fir.array<1xi64>
+    %lc0 = fir.coordinate_of %lc, %c0 : (!fir.ref<!fir.array<2xi64>>, index) -> !fir.ref<i64>
+    fir.store %c1_i64 to %lc0 : !fir.ref<i64>
+    %lc1 = fir.coordinate_of %lc, %c1 : (!fir.ref<!fir.array<2xi64>>, index) -> !fir.ref<i64>
+    fir.store %c1_i64 to %lc1 : !fir.ref<i64>
+    %uc0 = fir.coordinate_of %uc, %c0 : (!fir.ref<!fir.array<1xi64>>, index) -> !fir.ref<i64>
+    fir.store %c2_i64 to %uc0 : !fir.ref<i64>
+    %lb = fir.embox %lc : (!fir.ref<!fir.array<2xi64>>) -> !fir.box<!fir.array<2xi64>>
+    %ub = fir.embox %uc : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
+    %a_ref = fir.address_of(@_QFEa2) : !fir.ref<i32>
+    mif.alloc_coarray %a_ref lcobounds %lb ucobounds %ub {uniq_name = "_QFEa2"} : (!fir.ref<i32>, !fir.box<!fir.array<2xi64>>, !fir.box<!fir.array<1xi64>>) -> ()
+    %a_decl:2 = hlfir.declare %a_ref {uniq_name = "_QFEa2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %cobox = fir.embox %a_decl#0 : (!fir.ref<i32>) -> !fir.box<i32, corank:2>
+    %res = mif.this_image coarray %cobox : (!fir.box<i32, corank:2>) -> !fir.box<!fir.array<?xi32>>
+    return
+  }
+
 // CHECK-LABEL: func.func @_QQmain
 // CHECK: fir.call @_QMprifPprif_this_image_no_coarray
 // CHECK: fir.call @_QMprifPprif_this_image_with_coarray
 // CHECK: fir.call @_QMprifPprif_this_image_with_dim
+
+// CHECK-LABEL: func.func @test_this_image_i32
+// i32 and i64 scratch buffers are hoisted to the function entry block.
+// CHECK-DAG:     %[[I32BUF:.*]] = fir.alloca !fir.array<2xi32>
+// CHECK-DAG:     %[[I64BUF:.*]] = fir.alloca !fir.array<2xi64>
+// prif_this_image_with_coarray writes i64 values into the i64 buffer.
+// CHECK:         fir.call @_QMprifPprif_this_image_with_coarray
+// After the call the i64 box is widened and its base pointer extracted.
+// CHECK:         %[[I64BOX:.*]] = fir.convert {{.*}} : (!fir.box<!fir.array<2xi64>>) -> !fir.box<!fir.array<?xi64>>
+// CHECK:         %[[I64BUFREF:.*]] = fir.box_addr %[[I64BOX]] : (!fir.box<!fir.array<?xi64>>) -> !fir.ref<!fir.array<?xi64>>
+// Loop iteration 0: load i64, truncate to i32, store into i32 buffer.
+// CHECK:         %[[C0:.*]] = arith.constant 0 : index
+// CHECK:         %[[SRC0:.*]] = fir.coordinate_of %[[I64BUFREF]], %[[C0]] : (!fir.ref<!fir.array<?xi64>>, index) -> !fir.ref<i64>
+// CHECK:         %[[VAL0:.*]] = fir.load %[[SRC0]] : !fir.ref<i64>
+// CHECK:         %[[CONV0:.*]] = fir.convert %[[VAL0]] : (i64) -> i32
+// CHECK:         %[[DST0:.*]] = fir.coordinate_of %[[I32BUF]], %[[C0]] : (!fir.ref<!fir.array<2xi32>>, index) -> !fir.ref<i32>
+// CHECK:         fir.store %[[CONV0]] to %[[DST0]] : !fir.ref<i32>
+// Loop iteration 1: same pattern for the second codimension.
+// CHECK:         %[[C1:.*]] = arith.constant 1 : index
+// CHECK:         %[[SRC1:.*]] = fir.coordinate_of %[[I64BUFREF]], %[[C1]] : (!fir.ref<!fir.array<?xi64>>, index) -> !fir.ref<i64>
+// CHECK:         %[[VAL1:.*]] = fir.load %[[SRC1]] : !fir.ref<i64>
+// CHECK:         %[[CONV1:.*]] = fir.convert %[[VAL1]] : (i64) -> i32
+// CHECK:         %[[DST1:.*]] = fir.coordinate_of %[[I32BUF]], %[[C1]] : (!fir.ref<!fir.array<2xi32>>, index) -> !fir.ref<i32>
+// CHECK:         fir.store %[[CONV1]] to %[[DST1]] : !fir.ref<i32>
+// The i32 buffer is boxed and widened to a dynamic-extent result.
+// CHECK:         %[[BOX_I32:.*]] = fir.embox %[[I32BUF]] : (!fir.ref<!fir.array<2xi32>>) -> !fir.box<!fir.array<2xi32>>
+// CHECK:         fir.convert %[[BOX_I32]] : (!fir.box<!fir.array<2xi32>>) -> !fir.box<!fir.array<?xi32>>

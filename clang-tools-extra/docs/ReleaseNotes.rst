@@ -537,9 +537,13 @@ Changes in existing checks
   detail.
 
 - Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
-  <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
-  by fixing a false positive on implicitly generated functions such as
-  inherited constructors.
+  <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check:
+
+  - Fixed a false positive on implicitly generated functions such as
+    inherited constructors.
+
+  - Added `AllowImplicitMove` option to not warn when an rvalue reference
+    parameter is returned without an explicit ``std::move``.
 
 - Improved :doc:`cppcoreguidelines-special-member-functions
   <clang-tidy/checks/cppcoreguidelines/special-member-functions>` check by
@@ -572,6 +576,10 @@ Changes in existing checks
 
   - Fixed false positive where a pointer used with placement new was
     incorrectly diagnosed as allowing the pointee to be made ``const``.
+
+  - Enabled the check for variables declared with ``auto`` (configurable
+    via the `AnalyzeAutoVariables` option) and lambdas (configurable
+    via `AnalyzeLambdas` option).
 
   - Fixed false positive where calling a non-const member function on a
     pointer was incorrectly treated as mutating the pointer, when it only
@@ -887,6 +895,8 @@ Changes in existing checks
   - Fixed a bug where clients that apply fix-its without :program:`clang-tidy`'s
     cleanup could produce invalid code by joining adjacent tokens.
 
+  - Added support for parentheses around subscript operators (``(E1[E2])`` -> ``E1[E2]``).
+
 - Improved :doc:`readability-redundant-preprocessor
   <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a
   false positive for nested ``#if`` directives using different builtin
@@ -905,6 +915,11 @@ Changes in existing checks
 - Improved :doc:`readability-suspicious-call-argument
   <clang-tidy/checks/readability/suspicious-call-argument>` check by avoiding a
   crash from invalid ``Abbreviations`` option.
+
+- Improved :doc:`readability-trivial-switch
+  <clang-tidy/checks/readability/trivial-switch>` check by adding an
+  `IgnoreMacros` option. When enabled, the check will ignore switch
+  statements originating from macros.
 
 - Improved :doc:`readability-use-anyofallof
   <clang-tidy/checks/readability/use-anyofallof>` check by emitting a diagnostic

@@ -70,7 +70,6 @@ namespace {
     void VisitEmptyDecl(EmptyDecl *D);
     void VisitFunctionDecl(FunctionDecl *D);
     void VisitFriendDecl(FriendDecl *D);
-    void VisitFriendTemplateDecl(FriendTemplateDecl *D);
     void VisitFieldDecl(FieldDecl *D);
     void VisitVarDecl(VarDecl *D);
     void VisitLabelDecl(LabelDecl *D);
@@ -116,6 +115,7 @@ namespace {
     void VisitNonTypeTemplateParmDecl(const NonTypeTemplateParmDecl *NTTP);
     void VisitTemplateTemplateParmDecl(const TemplateTemplateParmDecl *);
     void VisitHLSLBufferDecl(HLSLBufferDecl *D);
+    void VisitCXXExpansionStmtDecl(const CXXExpansionStmtDecl *D);
 
     void VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D);
     void VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D);
@@ -889,41 +889,30 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
 
 void DeclPrinter::VisitFriendDecl(FriendDecl *D) {
   if (TypeSourceInfo *TSI = D->getFriendType()) {
+    unsigned NumTPLists = D->getFriendTypeNumTemplateParameterLists();
+    for (unsigned i = 0; i < NumTPLists; ++i)
+      printTemplateParameters(D->getFriendTypeTemplateParameterList(i));
     Out << "friend ";
     Out << TSI->getType().getAsString(Policy);
-  } else if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D->getFriendDecl())) {
+  }
+  else if (FunctionDecl *FD =
+      dyn_cast<FunctionDecl>(D->getFriendDecl())) {
     Out << "friend ";
     VisitFunctionDecl(FD);
-  } else if (FunctionTemplateDecl *FTD =
-                 dyn_cast<FunctionTemplateDecl>(D->getFriendDecl())) {
+  }
+  else if (FunctionTemplateDecl *FTD =
+           dyn_cast<FunctionTemplateDecl>(D->getFriendDecl())) {
     Out << "friend ";
     VisitFunctionTemplateDecl(FTD);
-  } else if (ClassTemplateDecl *CTD =
-                 dyn_cast<ClassTemplateDecl>(D->getFriendDecl())) {
+  }
+  else if (ClassTemplateDecl *CTD =
+           dyn_cast<ClassTemplateDecl>(D->getFriendDecl())) {
     Out << "friend ";
     VisitRedeclarableTemplateDecl(CTD);
   }
 
   if (D->isPackExpansion())
     Out << "...";
-}
-
-void DeclPrinter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
-  for (TemplateParameterList *TPL : D->getFriendTypeTemplateParameterLists())
-    printTemplateParameters(TPL);
-
-  TemplateName TN = D->getFriendTemplateName();
-  if (TN.isNull()) {
-    VisitFriendDecl(D);
-  } else {
-    Out << "friend ";
-    TN.print(Out, Policy,
-             Policy.SuppressScope ? TemplateName::Qualified::None
-                                  : TemplateName::Qualified::AsWritten);
-
-    if (D->isPackExpansion())
-      Out << "...";
-  }
 }
 
 void DeclPrinter::VisitFieldDecl(FieldDecl *D) {
@@ -1397,6 +1386,11 @@ void DeclPrinter::VisitClassTemplatePartialSpecializationDecl(
                                     ClassTemplatePartialSpecializationDecl *D) {
   printTemplateParameters(D->getTemplateParameters());
   VisitCXXRecordDecl(D);
+}
+
+void DeclPrinter::VisitCXXExpansionStmtDecl(const CXXExpansionStmtDecl *D) {
+  D->getExpansionPattern()->printPretty(Out, /*PrinterHelper=*/nullptr, Policy,
+                                        Indentation, "\n", &Context);
 }
 
 //----------------------------------------------------------------------------

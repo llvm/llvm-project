@@ -275,7 +275,7 @@ static const char *printSubReg(const TargetRegisterInfo &TRI, unsigned SubReg) {
 }
 
 TEST_F(AMDGPUTestBase, TestReverseComposeSubRegIndices) {
-  auto TM = createAMDGPUTargetMachine("amdgcn-amd-", "gfx900", "");
+  auto TM = createAMDGPUTargetMachine("amdgpu9.00-amd-", "", "");
   if (!TM)
     return;
   GCNSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
@@ -352,7 +352,7 @@ TEST_F(AMDGPUTestBase, TestReverseComposeSubRegIndices) {
 
 TEST_F(AMDGPUTestBase, TestGetNamedOperandIdx) {
   std::unique_ptr<const GCNTargetMachine> TM =
-      createAMDGPUTargetMachine("amdgcn-amd-", "gfx900", "");
+      createAMDGPUTargetMachine("amdgpu9.00-amd-", "", "");
   if (!TM)
     return;
   const MCInstrInfo *MCII = TM->getMCInstrInfo();

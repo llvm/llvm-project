@@ -31,9 +31,9 @@ body:             |
     ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 42
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32all = COPY [[MOVi32imm]]
     ; CHECK-NEXT: $w0 = COPY [[COPY]]
-    %0:gpr(s8) = G_CONSTANT i8 42
-    %1:gpr(s32) = G_ANYEXT %0(s8)
-    $w0 = COPY %1(s32)
+    %0:gpr(i8) = G_CONSTANT i8 42
+    %1:gpr(i32) = G_ANYEXT %0(i8)
+    $w0 = COPY %1(i32)
 ...
 
 ---
@@ -46,9 +46,9 @@ body:             |
     ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 42
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32all = COPY [[MOVi32imm]]
     ; CHECK-NEXT: $w0 = COPY [[COPY]]
-    %0:gpr(s16) = G_CONSTANT i16 42
-    %1:gpr(s32) = G_ANYEXT %0(s16)
-    $w0 = COPY %1(s32)
+    %0:gpr(i16) = G_CONSTANT i16 42
+    %1:gpr(i32) = G_ANYEXT %0(i16)
+    $w0 = COPY %1(i32)
 ...
 
 ---
@@ -63,8 +63,8 @@ body:             |
     ; CHECK-LABEL: name: const_s32
     ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 42
     ; CHECK-NEXT: $w0 = COPY [[MOVi32imm]]
-    %0(s32) = G_CONSTANT i32 42
-    $w0 = COPY %0(s32)
+    %0(i32) = G_CONSTANT i32 42
+    $w0 = COPY %0(i32)
 ...
 
 ---
@@ -79,8 +79,8 @@ body:             |
     ; CHECK-LABEL: name: const_s64
     ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 1234567890123
     ; CHECK-NEXT: $x0 = COPY [[MOVi64imm]]
-    %0(s64) = G_CONSTANT i64 1234567890123
-    $x0 = COPY %0(s64)
+    %0(i64) = G_CONSTANT i64 1234567890123
+    $x0 = COPY %0(i64)
 ...
 
 ---
@@ -95,8 +95,8 @@ body:             |
     ; CHECK-LABEL: name: const_s32_zero
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK-NEXT: $w0 = COPY [[COPY]]
-    %0(s32) = G_CONSTANT i32 0
-    $w0 = COPY %0(s32)
+    %0(i32) = G_CONSTANT i32 0
+    $w0 = COPY %0(i32)
 ...
 
 ---
@@ -111,8 +111,8 @@ body:             |
     ; CHECK-LABEL: name: const_s64_zero
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $xzr
     ; CHECK-NEXT: $x0 = COPY [[COPY]]
-    %0(s64) = G_CONSTANT i64 0
-    $x0 = COPY %0(s64)
+    %0(i64) = G_CONSTANT i64 0
+    $x0 = COPY %0(i64)
 ...
 
 ---
@@ -201,8 +201,8 @@ body: |
     ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 42
     ; CHECK-NEXT: $x0 = COPY [[MOVi64imm]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:gpr(s64) = G_CONSTANT i64 42
-    $x0 = COPY %0(s64)
+    %0:gpr(i64) = G_CONSTANT i64 42
+    $x0 = COPY %0(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -216,7 +216,7 @@ body: |
     ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG [[MOVi32imm]], %subreg.sub_32
     ; CHECK-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:gpr(s64) = G_CONSTANT i64 42
-    $x0 = COPY %0(s64)
+    %0:gpr(i64) = G_CONSTANT i64 42
+    $x0 = COPY %0(i64)
     RET_ReallyLR implicit $x0
 ...

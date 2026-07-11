@@ -174,6 +174,10 @@ def err_ice_too_large : Error<
 def err_expr_not_string_literal : Error<"expression is not a string literal">;
 def note_constexpr_assert_failed : Note<
   "assertion failed during evaluation of constant expression">;
+def err_expansion_size_expr_not_ice : Error<
+  "expansion statement size is not a constant expression">;
+def err_iterating_expansion_stmt_unsupported : Error<
+  "iterating expansion statements are not yet supported">;
 
 // Semantic analysis of constant literals.
 def ext_predef_outside_function : Warning<
@@ -619,8 +623,9 @@ def err_decomp_decl_template : Error<
 def err_decomp_decl_not_alone : Error<
   "structured binding declaration must be the only declaration in its group">;
 def err_decomp_decl_requires_init : Error<
-  "structured binding declaration %0 requires an initializer">;
+  "structured binding declaration %0 requires an initializer; expected '=' or braced initializer list">;
 def err_decomp_decl_wrong_number_bindings : Error<
+
   "type %0 binds to %3 %plural{1:element|:elements}2, but "
   "%select{%plural{0:no|:only %1}1|%1}4 "
   "%plural{1:name was|:names were}1 provided">;
@@ -1018,7 +1023,7 @@ def err_ptrauth_invalid_key :
         "the current target">;
 def err_ptrauth_value_bad_type :
   Error<"%select{signed value|extra discriminator|blended pointer|blended "
-        "integer}0 must have %select{pointer|integer|pointer or integer}1 "
+        "integer|blended pc}0 must have %select{pointer|integer|pointer or integer}1 "
         "type; type here is %2">;
 def err_ptrauth_bad_constant_pointer :
   Error<"argument to ptrauth_sign_constant must refer to a global variable "
@@ -1033,6 +1038,8 @@ def warn_ptrauth_sign_null_pointer :
 def warn_ptrauth_auth_null_pointer :
   Warning<"authenticating a null pointer will almost certainly trap">,
   InGroup<PtrAuthNullPointers>;
+def err_ptrauth_auth_with_pc_and_resign_invalid_key :
+  Error<"ptrauth_auth_with_pc_and_resign only supports auth with IA and IB keys, not %0">;
 def err_ptrauth_string_not_literal : Error<
   "argument must be a string literal%select{| of char type}0">;
 def err_ptrauth_type_disc_undiscriminated : Error<
@@ -1916,6 +1923,16 @@ def err_friend_not_first_in_declaration : Error<
   "'friend' must appear first in a non-function declaration">;
 def err_using_decl_friend : Error<
   "cannot befriend target of using declaration">;
+def warn_template_qualified_friend_unsupported
+    : Warning<
+          "dependent nested name specifier %0 for friend class declaration is "
+          "not supported; turning off access control for %1">,
+      InGroup<UnsupportedFriend>;
+def warn_template_qualified_friend_ignored
+    : Warning<"dependent nested name specifier %0 for friend template "
+              "declaration is "
+              "not supported; ignoring this friend declaration">,
+      InGroup<UnsupportedFriend>;
 def ext_friend_tag_redecl_outside_namespace : ExtWarn<
   "unqualified friend declaration referring to type outside of the nearest "
   "enclosing namespace is a Microsoft extension; add a nested name specifier">,
@@ -1925,8 +1942,6 @@ def err_friend_template_decl_multiple_specifiers: Error<
   "a friend declaration that befriends a template must contain exactly one type-specifier">;
 def friend_template_decl_malformed_pack_expansion : Error<
   "friend declaration expands pack %0 that is declared it its own template parameter list">;
-def err_dependent_friend_not_member : Error<
-  "friend declaration does not name a member of a class template specialization">;
 
 def err_invalid_base_in_interface : Error<
   "interface type cannot inherit from "
@@ -2749,6 +2764,8 @@ def err_decltype_auto_invalid : Error<
   "'decltype(auto)' not allowed here">;
 def err_decltype_auto_cannot_be_combined : Error<
   "'decltype(auto)' cannot be combined with other type specifiers">;
+def err_auto_type_specifier : Error<
+  "'auto' cannot be combined with a type specifier">;
 def err_decltype_auto_function_declarator_not_declaration : Error<
   "'decltype(auto)' can only be used as a return type "
   "in a function declaration">;
@@ -2932,10 +2949,10 @@ def note_which_delegates_to : Note<"which delegates to">;
 
 // C++11 range-based for loop
 def err_for_range_decl_must_be_var : Error<
-  "for range declaration must declare a variable">;
+  "%select{for range|expansion statement}0 declaration must declare a variable">;
 def err_for_range_storage_class : Error<
-  "loop variable %0 may not be declared %select{'extern'|'static'|"
-  "'__private_extern__'|'auto'|'register'|'constexpr'|'thread_local'}1">;
+  "%select{loop|expansion}0 variable %1 may not be declared %select{'extern'|'static'|"
+  "'__private_extern__'|'auto'|'register'|'constexpr'|'thread_local'}2">;
 def err_type_defined_in_for_range : Error<
   "types may not be defined in a for range declaration">;
 def err_for_range_deduction_failure : Error<
@@ -3556,18 +3573,23 @@ def err_callback_callee_is_variadic : Error<
 def err_callback_implicit_this_not_available : Error<
   "'callback' argument at position %0 references unavailable implicit 'this'">;
 
-def err_capture_by_attribute_multiple : Error<
-  "multiple 'lifetime_capture' attributes specified">;
 def err_capture_by_attribute_no_entity : Error<
   "'lifetime_capture_by' attribute specifies no capturing entity">;
 def err_capture_by_implicit_this_not_available : Error<
   "'lifetime_capture_by' argument references unavailable implicit 'this'">;
+def err_capture_by_this_attr_without_implicit_this : Error<
+  "'lifetime_capture_by_this' attribute requires an implicit object parameter">;
 def err_capture_by_attribute_argument_unknown : Error<
   "'lifetime_capture_by' attribute argument %0 is not a known function parameter"
   "; must be a function parameter, 'this', 'global' or 'unknown'">;
 def err_capture_by_references_itself : Error<"'lifetime_capture_by' argument references itself">;
 def err_capture_by_param_uses_reserved_name : Error<
-  "parameter cannot be named '%select{global|unknown}0' while using 'lifetime_capture_by(%select{global|unknown}0)'">;
+  "parameter cannot be named '%0' while using 'lifetime_capture_by(%0)'">;
+def err_capture_by_attribute_multiple : Error<
+  "multiple '%0' attributes specified">;
+def warn_deprecated_capture_by_special_entity : Warning<
+  "'lifetime_capture_by(%0)' is deprecated; use '%1' instead">,
+  InGroup<DeprecatedAttributes>;
 
 def err_init_method_bad_return_type : Error<
   "init methods must return an object pointer type, not %0">;
@@ -3751,6 +3773,21 @@ def err_conflicting_codeseg_attribute : Error<
   "conflicting code segment specifiers">;
 def warn_duplicate_codeseg_attribute : Warning<
   "duplicate code segment specifiers">, InGroup<Section>;
+
+def err_expansion_stmt_invalid_init : Error<
+  "cannot expand expression of type %0">;
+def err_expansion_stmt_vla : Error<
+  "cannot expand variable length array type %0">;
+def err_expansion_stmt_incomplete : Error<
+  "cannot expand expression of incomplete type %0">;
+def err_expansion_stmt_lambda : Error<
+  "cannot expand lambda closure type">;
+def err_expansion_stmt_case : Error<
+  "%select{'case'|'default'}0 belongs to 'switch' outside enclosing expansion statement">;
+def note_enclosing_switch_statement_here : Note<
+  "switch statement is here">;
+def err_expansion_stmt_label : Error<
+  "labels are not allowed in expansion statements">;
 
 def err_attribute_patchable_function_entry_invalid_section
     : Error<"section argument to 'patchable_function_entry' attribute is not "
@@ -4851,6 +4888,9 @@ def err_attribute_cleanup_func_must_take_one_arg : Error<
 def err_attribute_cleanup_func_arg_incompatible_type : Error<
   "'cleanup' function %0 parameter has "
   "%diff{type $ which is incompatible with type $|incompatible type}1,2">;
+def warn_duplicate_cleanup_attr : Warning<
+  "declaration has multiple 'cleanup' attributes; all but the last one will be ignored">,
+  InGroup<IgnoredAttributes>;
 def err_attribute_malloc_arg_not_function : Error<
   "'malloc' argument %select{for deallocator |%1 |%1 }0is not a %select{||single }0function">;
 def err_attribute_malloc_arg_not_function_with_pointer_arg : Error<
@@ -5282,16 +5322,11 @@ def note_ovl_candidate_deduced_mismatch : Note<
     "adjusted type of %select{|element of }4argument}1,2%3">;
 def note_ovl_candidate_non_deduced_mismatch : Note<
     "candidate template ignored: could not match %diff{$ against $|types}0,1">;
-def note_friend_template_non_deduced_mismatch : Note<
-    "candidate friend template ignored: could not match "
-    "%diff{$ against $|types}0,1">;
 // This note is needed because the above note would sometimes print two
 // different types with the same name.  Remove this note when the above note
 // can handle that case properly.
 def note_ovl_candidate_non_deduced_mismatch_qualified : Note<
     "candidate template ignored: could not match %q0 against %q1">;
-def note_friend_template_non_deduced_mismatch_qualified : Note<
-    "candidate friend template ignored: could not match %q0 against %q1">;
 
 // Note that we don't treat templates differently for this diagnostic.
 def note_ovl_candidate_arity : Note<"candidate "
@@ -5982,6 +6017,8 @@ def note_template_nsdmi_here : Note<
   "in instantiation of default member initializer %q0 requested here">;
 def note_template_type_alias_instantiation_here : Note<
   "in instantiation of template type alias %0 requested here">;
+def note_expansion_stmt_instantiation_here : Note<
+  "in instantiation of expansion statement requested here">;
 def note_template_exception_spec_instantiation_here : Note<
   "in instantiation of exception specification for %0 requested here">;
 def note_template_requirement_instantiation_here : Note<
@@ -13822,6 +13859,8 @@ def note_hlsl_resource_range_here: Note<"overlapping resource range here">;
 
 def err_hlsl_incomplete_resource_array_in_function_param: Error<
   "incomplete resource array in a function parameter">;
+def err_hlsl_resource_param_in_noinline_function: Error<
+  "resource type %0 cannot be used as a parameter of a noinline function">;
 def err_hlsl_assign_to_global_resource: Error<
   "assignment to global resource variable %0 is not allowed">;
 def warn_hlsl_assigning_local_resource_is_not_unique

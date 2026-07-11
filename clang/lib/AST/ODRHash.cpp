@@ -164,9 +164,7 @@ void ODRHash::AddTemplateName(TemplateName Name) {
   case TemplateName::AssumedTemplate:
   case TemplateName::SubstTemplateTemplateParm:
   case TemplateName::SubstTemplateTemplateParmPack:
-    break;
   case TemplateName::UsingTemplate:
-    AddDecl(Name.getAsUsingShadowDecl()->getTargetDecl());
     break;
   case TemplateName::DeducedTemplate:
     llvm_unreachable("Unexpected DeducedTemplate");
@@ -473,19 +471,6 @@ public:
       AddDecl(D->getFriendDecl());
     }
     Hash.AddBoolean(D->isPackExpansion());
-  }
-
-  void VisitFriendTemplateDecl(const FriendTemplateDecl *D) {
-    for (TemplateParameterList *TPL : D->getFriendTypeTemplateParameterLists())
-      Hash.AddTemplateParameterList(TPL);
-
-    TemplateName TN = D->getFriendTemplateName();
-    Hash.AddBoolean(TN.isNull());
-    if (TN.isNull()) {
-      VisitFriendDecl(D);
-    } else {
-      Hash.AddTemplateName(TN);
-    }
   }
 
   void VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {

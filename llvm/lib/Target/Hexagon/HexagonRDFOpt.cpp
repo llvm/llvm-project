@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -402,7 +403,36 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
     Liveness LV(*MRI, G);
     LV.trace(RDFDump);
     LV.computeLiveIns();
-    LV.resetLiveIns();
+
+    // Set entry-block live-ins from the RDF LiveMap: calling-convention
+    // registers may not have direct uses and cannot be recovered by a
+    // backward walk.
+    MachineBasicBlock &EntryMBB = MF.front();
+    {
+      std::vector<MCRegister> Old;
+      for (const MachineBasicBlock::RegisterMaskPair &LI : EntryMBB.liveins())
+        Old.push_back(LI.PhysReg);
+      for (MCRegister R : Old)
+        EntryMBB.removeLiveIn(R);
+      for (RegisterRef R : LV.getLiveMap()[&EntryMBB].refs())
+        EntryMBB.addLiveIn({R.asMCReg(), R.Mask});
+      EntryMBB.sortUniqueLiveIns();
+    }
+
+    // The RDF-based live-in recomputation can leave stale (over-approximate)
+    // physical register live-ins on some blocks, which later confuses passes
+    // like IfConversion into inserting incorrect implicit-use operands. Run a
+    // conventional backward liveness recomputation to correct the live-in
+    // lists. Skip:
+    //   - the entry block: handled above from the RDF LiveMap;
+    //   - EH pads: exception pointer/selector are runtime-established.
+    SmallVector<MachineBasicBlock *, 16> Blocks;
+    for (MachineBasicBlock &B : MF)
+      if (!B.isEntryBlock() && !B.isEHPad())
+        Blocks.push_back(&B);
+    fullyRecomputeLiveIns(Blocks);
+
+    // Recompute kill flags against the updated live-in lists.
     LV.resetKills();
   }
 

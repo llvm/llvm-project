@@ -99,6 +99,7 @@
 // CHECK-SAME: {{^}}, neoverse-v3ae
 // CHECK-SAME: {{^}}, olympus
 // CHECK-SAME: {{^}}, oryon-1
+// CHECK-SAME: {{^}}, rigel
 // CHECK-SAME: {{^}}, saphira
 // CHECK-SAME: {{^}}, thunderx
 // CHECK-SAME: {{^}}, thunderx2t99
