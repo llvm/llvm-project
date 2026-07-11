@@ -7,16 +7,32 @@
 //===----------------------------------------------------------------------===//
 
 #include "AvoidReferenceCoroutineParametersCheck.h"
+#include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
+AvoidReferenceCoroutineParametersCheck::AvoidReferenceCoroutineParametersCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      AllowedReturnTypes(utils::options::parseStringList(
+          Options.get("AllowedReturnTypes", ""))) {}
+
+void AvoidReferenceCoroutineParametersCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "AllowedReturnTypes",
+                utils::options::serializeStringList(AllowedReturnTypes));
+}
+
 void AvoidReferenceCoroutineParametersCheck::registerMatchers(
     MatchFinder *Finder) {
   Finder->addMatcher(
-      functionDecl(unless(parameterCountIs(0)), hasBody(coroutineBodyStmt()))
+      functionDecl(unless(parameterCountIs(0)), hasBody(coroutineBodyStmt()),
+                   unless(returns(
+                       matchers::matchesAnyListedTypeName(AllowedReturnTypes))))
           .bind("fnt"),
       this);
 }

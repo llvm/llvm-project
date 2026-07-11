@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy -std=c++20-or-later %s cppcoreguidelines-avoid-reference-coroutine-parameters %t
+// RUN: %check_clang_tidy -check-suffixes=DEFAULT -std=c++20-or-later %s cppcoreguidelines-avoid-reference-coroutine-parameters %t
+// RUN: %check_clang_tidy -check-suffixes=ALLOWED -std=c++20-or-later %s cppcoreguidelines-avoid-reference-coroutine-parameters %t -- -config="{CheckOptions: {cppcoreguidelines-avoid-reference-coroutine-parameters.AllowedReturnTypes: 'RefSafeCoro'}}"
 
 // NOLINTBEGIN
 namespace std {
@@ -38,6 +39,18 @@ struct Coro {
     void unhandled_exception();
   };
 };
+
+// A coroutine task type whose reference parameters are safe by construction,
+// used to exercise the 'AllowedReturnTypes' option.
+struct RefSafeCoro {
+  struct promise_type {
+    Awaiter initial_suspend();
+    Awaiter final_suspend() noexcept;
+    void return_void();
+    RefSafeCoro get_return_object();
+    void unhandled_exception();
+  };
+};
 // NOLINTEND
 
 struct Obj {};
@@ -51,18 +64,22 @@ Coro no_references(int x, int* y, Obj z, const Obj w) {
 }
 
 Coro accepts_references(int& x, const int &y) {
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
-  // CHECK-MESSAGES: :[[@LINE-2]]:33: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:25: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
+  // CHECK-MESSAGES-ALLOWED: :[[@LINE-2]]:25: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-3]]:33: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
+  // CHECK-MESSAGES-ALLOWED: :[[@LINE-4]]:33: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
   co_return;
 }
 
 Coro accepts_references_and_non_references(int& x, int y) {
-  // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:44: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
+  // CHECK-MESSAGES-ALLOWED: :[[@LINE-2]]:44: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
   co_return;
 }
 
 Coro accepts_references_to_objects(Obj& x) {
-  // CHECK-MESSAGES: :[[@LINE-1]]:36: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:36: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
+  // CHECK-MESSAGES-ALLOWED: :[[@LINE-2]]:36: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
   co_return;
 }
 
@@ -77,10 +94,12 @@ void defines_a_lambda() {
   auto NoReferences = [](int x) -> Coro { co_return; };
 
   auto WithReferences = [](int& x) -> Coro { co_return; };
-  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:28: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
+  // CHECK-MESSAGES-ALLOWED: :[[@LINE-2]]:28: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
 
   auto WithReferences2 = [](int&) -> Coro { co_return; };
-  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:29: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
+  // CHECK-MESSAGES-ALLOWED: :[[@LINE-2]]:29: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
 }
 
 void coroInFunctionWithReference(int&) {
@@ -94,6 +113,24 @@ Coro lambdaWithReferenceInCoro() {
 
 using MyIntegerRef = int&;
 Coro coroWithReferenceBehindTypedef(MyIntegerRef ref) {
-// CHECK-MESSAGES: :[[@LINE-1]]:37: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
+// CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:37: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
+// CHECK-MESSAGES-ALLOWED: :[[@LINE-2]]:37: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
+  co_return;
+}
+
+// The return type matches 'AllowedReturnTypes' in the second run, so the
+// reference parameter is exempt there, but is still flagged by default. This
+// confirms the option is type-specific and does not blanket-allow references:
+// the 'Coro' coroutines above are still flagged in the same run.
+RefSafeCoro allowedReturnType(int& x) {
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:31: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
+  co_return;
+}
+
+// The return type is matched canonically, so a type alias to an allowed type is
+// also exempt in the second run.
+using MyTask = RefSafeCoro;
+MyTask allowedReturnTypeAlias(int& x) {
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:31: warning: coroutine parameters should not be references [cppcoreguidelines-avoid-reference-coroutine-parameters]
   co_return;
 }
