@@ -39,15 +39,16 @@ add_fp_unittest(
     libc.src.__support.FPUtil.rounding_mode
 )
 
-add_libc_test(
+add_fp_unittest(
   float128_test
   SUITE
     libc-fputil-tests
   SRCS
     float128_test.cpp
   DEPENDS
-    libc.src.__support.FPUtil.float128
     libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.float128
 )
 
 # TODO: Temporally disable bfloat16 test until MPCommon target is updated

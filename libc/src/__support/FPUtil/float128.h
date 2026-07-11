@@ -68,6 +68,10 @@ struct Float128 {
   template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
   LIBC_INLINE constexpr explicit operator T() const {
     FPBits<Float128> x_bits(*this);
+    // Raise FE_INVALID for inf and NaN
+    if (x_bits.is_inf_or_nan()) {
+      raise_except_if_required(FE_INVALID);
+    }
     int x_bits_exp =
         x_bits.get_explicit_exponent() - FPBits<Float128>::FRACTION_LEN;
     // sign * 2^(exp-bias) * mantissa

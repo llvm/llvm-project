@@ -8,10 +8,12 @@
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/FPUtil/float128.h"
+#include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::Sign;
 using LIBC_NAMESPACE::fputil::Float128;
+using FPBits = LIBC_NAMESPACE::fputil::FPBits<Float128>;
 
 TEST(LlvmLibcFloat128Test, Operators) {
   Float128 a(1.0f), b(1.0f), c(2.0f), d(3.0f), pa(1.0f), na(-1.0f);
@@ -48,8 +50,6 @@ TEST(LlvmLibcFloat128Test, Operators) {
 }
 
 TEST(LlvmLibcFloat128Test, SpecialValues) {
-  using FPBits = LIBC_NAMESPACE::fputil::FPBits<Float128>;
-
   Float128 zero = FPBits::zero(Sign::POS).get_val();
   Float128 neg_zero = FPBits::zero(Sign::NEG).get_val();
   Float128 inf = FPBits::inf(Sign::POS).get_val();
@@ -87,6 +87,15 @@ TEST(LlvmLibcFloat128Test, IntegerConversion) {
   ASSERT_EQ(static_cast<long long>(Float128(LLONG_MIN)), LLONG_MIN);
   ASSERT_EQ(static_cast<unsigned>(Float128(UINT_MAX)), UINT_MAX);
   ASSERT_EQ(static_cast<unsigned>(Float128(0U)), 0U);
+
+  // FP exceptions
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  ASSERT_EQ(static_cast<int>(FPBits::quiet_nan().get_val()), 0);
+  EXPECT_FP_EXCEPTION(FE_INVALID);
+
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  ASSERT_EQ(static_cast<int>(FPBits::inf().get_val()), 0);
+  EXPECT_FP_EXCEPTION(FE_INVALID);
 }
 
 TEST(LlvmLibcFloat128Test, FromIntegralTypes) {
