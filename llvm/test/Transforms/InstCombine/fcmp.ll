@@ -3110,7 +3110,7 @@ define i1 @fcmp_oeq_fmul_half_const(half %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq half [[MUL]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %mul = fmul half %x, 0xH4200
-  %cmp = fcmp oeq half %mul, 0xH3C00
+  %mul = fmul half %x, 3.0
+  %cmp = fcmp oeq half %mul, 1.0
   ret i1 %cmp
 }

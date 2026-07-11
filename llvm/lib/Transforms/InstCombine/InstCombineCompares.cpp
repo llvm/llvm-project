@@ -8853,24 +8853,23 @@ static Instruction *foldFCmpFmulIntoFCmp(FCmpInst &I, Instruction *LHSI,
       (Pred != FCmpInst::FCMP_UNE) && (Pred != FCmpInst::FCMP_UEQ))
     return nullptr;
 
-  ConstantFP *C;
-  if (!match(LHSI->getOperand(1), m_ConstantFP(C)) || C->isZero())
+  const APFloat *C1, *C2;
+  if (!match(LHSI->getOperand(1), m_APFloat(C1)) || !match(RHSC, m_APFloat(C2)))
     return nullptr;
 
   Type *FPTy = LHSI->getType()->getScalarType();
-  if (FPTy->isHalfTy() ||
-      I.getFunction()->getDenormalMode(FPTy->getFltSemantics()) !=
-          DenormalMode::getIEEE())
+  if (I.getFunction()->getDenormalMode(FPTy->getFltSemantics()) !=
+      DenormalMode::getIEEE())
     return nullptr;
 
-  if (C->isNegative())
+  if (C1->isNegative())
     Pred = I.getSwappedPredicate();
 
-  Constant *NewRHSC = ConstantFoldBinaryOpOperands(Instruction::FDiv, RHSC, C,
-                                                   I.getDataLayout());
-  if (!NewRHSC)
+  APFloat C = *C2;
+  if (C.divide(*C1, RoundingMode::NearestTiesToEven) != APFloat::opOK)
     return nullptr;
 
+  Constant *NewRHSC = ConstantFP::get(RHSC->getType(), C);
   return new FCmpInst(Pred, LHSI->getOperand(0), NewRHSC, "", &I);
 }
 
