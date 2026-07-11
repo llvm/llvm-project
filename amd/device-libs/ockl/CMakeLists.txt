@@ -18,4 +18,10 @@ set_source_files_properties(
   ${CMAKE_CURRENT_SOURCE_DIR}/src/gaaf.cl
   PROPERTIES COMPILE_FLAGS "-munsafe-fp-atomics")
 
+if (USE_NEW_HOSTCALL_IMPL)
+  set_source_files_properties(
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/hostcall_impl.cl
+    PROPERTIES COMPILE_FLAGS "-DUSE_NEW_HOSTCALL_IMPL")
+endif()
+
 opencl_bc_lib(NAME ockl SOURCES ${sources})

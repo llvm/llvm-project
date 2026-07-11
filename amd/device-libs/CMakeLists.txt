@@ -25,6 +25,9 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 add_custom_target(rocm-device-libs)
 
+option(USE_NEW_HOSTCALL_IMPL
+  "Use the new phase/occupancy-based ockl hostcall implementation" OFF)
+
 # Optionally, build Device Libs with ccache.
 set(ROCM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
 if (ROCM_CCACHE_BUILD)

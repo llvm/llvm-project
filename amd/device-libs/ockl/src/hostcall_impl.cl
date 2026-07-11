@@ -10,10 +10,20 @@
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
 
-#define AC(P, E, V, O, R, S)                                                   \
-    __opencl_atomic_compare_exchange_strong(P, E, V, O, R, S)
 #define AL(P, O, S) __opencl_atomic_load(P, O, S)
 #define AF(K, P, V, O, S) __opencl_atomic_fetch_##K(P, V, O, S)
+
+#ifdef USE_NEW_HOSTCALL_IMPL
+#define AS(P, V, O, S) __opencl_atomic_store(P, V, O, S)
+#define AX(P, V, O, S) __opencl_atomic_exchange(P, V, O, S)
+
+typedef struct {
+    ulong activemask;
+    uint service;
+} header_t;
+#else // !USE_NEW_HOSTCALL_IMPL
+#define AC(P, E, V, O, R, S)                                                   \
+    __opencl_atomic_compare_exchange_strong(P, E, V, O, R, S)
 
 typedef enum { STATUS_SUCCESS, STATUS_BUSY } status_t;
 
@@ -33,12 +43,27 @@ typedef struct {
     uint service;
     uint control;
 } header_t;
+#endif // USE_NEW_HOSTCALL_IMPL
 
 typedef struct {
     // 64 slots of 8 ulongs each
     ulong slots[64][8];
 } payload_t;
 
+#ifdef USE_NEW_HOSTCALL_IMPL
+// The prefix of this struct must match the host-side HostcallBuffer layout.
+typedef struct {
+    __global uint *device_phase;
+    __global uint *host_phase;
+    __global uint *occupied;
+    __global header_t *headers;
+    __global payload_t *payloads;
+    hsa_signal_t doorbell;
+    uint num_packets;
+} buffer_t;
+
+static __global atomic_ulong last_signal_time;
+#else // !USE_NEW_HOSTCALL_IMPL
 // Note: Hostcall buffer struct defined here is not an exact
 // match of runtime buffer layout but matches its prefix that
 // this code tries to access.
@@ -50,6 +75,7 @@ typedef struct {
     ulong ready_stack;
     ulong index_mask;
 } buffer_t;
+#endif // USE_NEW_HOSTCALL_IMPL
 
 static void
 send_signal(hsa_signal_t signal)
@@ -57,6 +83,66 @@ send_signal(hsa_signal_t signal)
     __ockl_hsa_signal_add(signal, 1, __ockl_memory_order_release);
 }
 
+#ifdef USE_NEW_HOSTCALL_IMPL
+static bool
+try_claim(__global uint *occupied, uint i)
+{
+    uint slot = i / 32;
+    uint bit = i % 32;
+    uint prev = AF(or, (__global atomic_uint *)&occupied[slot],
+                   1u << bit,
+                   memory_order_relaxed, memory_scope_device);
+    return !(prev & (1u << bit));
+}
+
+static void
+unclaim(__global uint *occupied, uint i, uint me, uint low)
+{
+    if (me == low) {
+        uint slot = i / 32;
+        uint bit = i % 32;
+        AF(and, (__global atomic_uint *)&occupied[slot],
+           ~(1u << bit),
+           memory_order_relaxed, memory_scope_device);
+    }
+}
+
+static uint
+open_packet(__global buffer_t *buffer, uint me, uint low)
+{
+    uint i = 0;
+
+    if (me == low) {
+        for (i = 0; ; ++i) {
+            if (i >= buffer->num_packets)
+                i = 0;
+
+            if (!try_claim(buffer->occupied, i)) {
+                __builtin_amdgcn_s_sleep(1);
+                continue;
+            }
+
+            uint dp = AL((__global atomic_uint *)&buffer->device_phase[i],
+                         memory_order_relaxed, memory_scope_all_svm_devices);
+            uint hp = AL((__global atomic_uint *)&buffer->host_phase[i],
+                         memory_order_relaxed, memory_scope_all_svm_devices);
+
+            if (dp != hp) {
+                uint slot = i / 32;
+                uint bit = i % 32;
+                AF(and, (__global atomic_uint *)&buffer->occupied[slot],
+                   ~(1u << bit),
+                   memory_order_relaxed, memory_scope_device);
+                continue;
+            }
+
+            break;
+        }
+    }
+
+    return __builtin_amdgcn_readfirstlane(i);
+}
+#else // !USE_NEW_HOSTCALL_IMPL
 static __global header_t *
 get_header(__global buffer_t *buffer, ulong ptr)
 {
@@ -185,6 +271,7 @@ return_free_packet(__global buffer_t *buffer, ulong ptr, uint me, uint low)
         push(&buffer->free_stack, ptr, buffer);
     }
 }
+#endif // USE_NEW_HOSTCALL_IMPL
 
 static void
 fill_packet(__global header_t *header, __global payload_t *payload,
@@ -195,8 +282,10 @@ fill_packet(__global header_t *header, __global payload_t *payload,
     if (me == low) {
         header->service = service_id;
         header->activemask = active;
+#ifndef USE_NEW_HOSTCALL_IMPL
         uint control = set_ready_flag(0);
         header->control = control;
+#endif // !USE_NEW_HOSTCALL_IMPL
     }
 
     __global ulong *ptr = payload->slots[me];
@@ -210,6 +299,52 @@ fill_packet(__global header_t *header, __global payload_t *payload,
     ptr[7] = arg7;
 }
 
+#ifdef USE_NEW_HOSTCALL_IMPL
+// Minimum ticks between doorbell signals (~10us at 100 MHz steady counter).
+#define SIGNAL_THROTTLE_TICKS 1000
+
+static void
+send_to_host(__global buffer_t *buffer, uint i, uint me, uint low)
+{
+    if (me == low) {
+        uint dp = AL((__global atomic_uint *)&buffer->device_phase[i],
+                     memory_order_relaxed, memory_scope_all_svm_devices);
+        AS((__global atomic_uint *)&buffer->device_phase[i], dp ^ 1,
+            memory_order_release, memory_scope_all_svm_devices);
+
+        ulong now = __builtin_readsteadycounter();
+        ulong prev = AL(&last_signal_time,
+                        memory_order_relaxed, memory_scope_device);
+        if (now - prev > SIGNAL_THROTTLE_TICKS) {
+            prev = AX(&last_signal_time, now,
+                memory_order_relaxed, memory_scope_device);
+            if (now - prev > SIGNAL_THROTTLE_TICKS)
+                send_signal(buffer->doorbell);
+        }
+    }
+}
+
+static long2
+receive_from_host(__global buffer_t *buffer, uint i,
+                  __global payload_t *payload, uint me, uint low)
+{
+    if (me == low) {
+        while (true) {
+            uint dp = AL((__global atomic_uint *)&buffer->device_phase[i],
+                         memory_order_acquire, memory_scope_all_svm_devices);
+            uint hp = AL((__global atomic_uint *)&buffer->host_phase[i],
+                         memory_order_acquire, memory_scope_all_svm_devices);
+            if (dp == hp)
+                break;
+            __builtin_amdgcn_s_sleep(1);
+        }
+    }
+
+    __global ulong *ptr = (__global ulong *)(payload->slots + me);
+    long2 retval = { ptr[0], ptr[1] };
+    return retval;
+}
+#else // !USE_NEW_HOSTCALL_IMPL
 /** \brief Wait for the host response and return the first two ulong
  *         entries per workitem.
  *
@@ -256,6 +391,7 @@ get_return_value(__global header_t *header, __global payload_t *payload,
     long2 retval = {value0, value1};
     return retval;
 }
+#endif // USE_NEW_HOSTCALL_IMPL
 
 /** \brief The implementation that should be hidden behind an ABI
  *
@@ -263,18 +399,12 @@ get_return_value(__global header_t *header, __global payload_t *payload,
  *  must be uniform, but the parameters are different for each
  *  workitem. Parameters from all active lanes are written into a
  *  hostcall packet. The hostcall blocks until the host processes the
- *  request, and returns the response it receiveds.
- *
- *  TODO: This function and everything above it should eventually move
- *  to a separate library that is loaded by the language runtime. The
- *  function itself will be exposed as an orindary function symbol to
- *  be linked into kernel objects that are loaded after this library.
+ *  request, and returns the response it receives.
  *
  *  *** INTERNAL USE ONLY ***
  *  Internal function, not safe for direct use in user
  *  code. Application kernels must only use __ockl_hostcall_preview()
  *  defined elsewhere.
- *
  */
 long2
 __ockl_hostcall_internal(void *_buffer, uint service_id, ulong arg0, ulong arg1,
@@ -285,15 +415,33 @@ __ockl_hostcall_internal(void *_buffer, uint service_id, ulong arg0, ulong arg1,
     uint low = __builtin_amdgcn_readfirstlane(me);
 
     __global buffer_t *buffer = (__global buffer_t *)_buffer;
+
+#ifdef USE_NEW_HOSTCALL_IMPL
+    uint i = open_packet(buffer, me, low);
+
+    __global header_t *header = &buffer->headers[i];
+    __global payload_t *payload = &buffer->payloads[i];
+#else // !USE_NEW_HOSTCALL_IMPL
     ulong packet_ptr = pop_free_stack(buffer, me, low);
     __global header_t *header = get_header(buffer, packet_ptr);
     __global payload_t *payload = get_payload(buffer, packet_ptr);
+#endif // USE_NEW_HOSTCALL_IMPL
 
     fill_packet(header, payload, service_id, arg0, arg1, arg2, arg3, arg4, arg5,
                 arg6, arg7, me, low);
+
+#ifdef USE_NEW_HOSTCALL_IMPL
+    send_to_host(buffer, i, me, low);
+
+    long2 retval = receive_from_host(buffer, i, payload, me, low);
+
+    unclaim(buffer->occupied, i, me, low);
+#else // !USE_NEW_HOSTCALL_IMPL
     push_ready_stack(buffer, packet_ptr, me, low);
 
     long2 retval = get_return_value(header, payload, me, low);
     return_free_packet(buffer, packet_ptr, me, low);
+#endif // USE_NEW_HOSTCALL_IMPL
+
     return retval;
 }
