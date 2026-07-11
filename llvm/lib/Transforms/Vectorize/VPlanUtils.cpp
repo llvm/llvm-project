@@ -384,11 +384,11 @@ static bool preservesUniformity(unsigned Opcode) {
 
 bool vputils::isElementwise(const VPValue *V) {
   unsigned Opcode = TypeSwitch<const VPValue *, unsigned>(V)
-                        .Case<VPInstruction, VPWidenRecipe>(
+                        .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe>(
                             [](auto *R) { return R->getOpcode(); })
                         .Default([](auto *) { return 0; });
   // TODO: Handle more opcodes and recipes.
-  return Instruction::isBinaryOp(Opcode);
+  return Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode);
 }
 
 bool vputils::isSingleScalar(const VPValue *VPV) {

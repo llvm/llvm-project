@@ -194,3 +194,68 @@ loop:
 exit:
   ret void
 }
+
+define void @reverse_zext(ptr noalias %src, ptr noalias %dst, i32 %n) {
+; CHECK-LABEL: define void @reverse_zext(
+; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[N]], -1
+; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP0]], i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[N]], [[SMIN]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[N]], [[INDEX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i32 [[TMP3]], -1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[SRC]], i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[TMP5]], i64 -3
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[REVERSE1:%.*]] = zext <4 x i32> [[WIDE_LOAD]] to <4 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[DST]], i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[TMP8]], i64 -3
+; CHECK-NEXT:    store <4 x i64> [[REVERSE1]], ptr [[TMP9]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ [[N]], %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], -1
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i32, ptr [[SRC]], i32 [[IV_NEXT]]
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[GEP_SRC]], align 4
+; CHECK-NEXT:    [[Y:%.*]] = zext i32 [[X]] to i64
+; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr i64, ptr [[DST]], i32 [[IV_NEXT]]
+; CHECK-NEXT:    store i64 [[Y]], ptr [[GEP_DST]], align 4
+; CHECK-NEXT:    [[EC:%.*]] = icmp sgt i32 [[IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%n, %entry], [%iv.next, %loop]
+  %iv.next = add nsw i32 %iv, -1
+  %gep.src = getelementptr i32, ptr %src, i32 %iv.next
+  %x = load i32, ptr %gep.src
+  %y = zext i32 %x to i64
+  %gep.dst = getelementptr i64, ptr %dst, i32 %iv.next
+  store i64 %y, ptr %gep.dst
+  %ec = icmp sgt i32 %iv.next, 0
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
