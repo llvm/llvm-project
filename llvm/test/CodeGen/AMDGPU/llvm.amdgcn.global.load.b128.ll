@@ -17069,6 +17069,14 @@ define <4 x float> @global_load_saddr_i8_offset_0(ptr addrspace(1) inreg %sbase)
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17]
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_0:
@@ -17077,6 +17085,14 @@ define <4 x float> @global_load_saddr_i8_offset_0(ptr addrspace(1) inreg %sbase)
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17]
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_0:
@@ -17085,6 +17101,14 @@ define <4 x float> @global_load_saddr_i8_offset_0(ptr addrspace(1) inreg %sbase)
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17]
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_0:
@@ -17093,6 +17117,14 @@ define <4 x float> @global_load_saddr_i8_offset_0(ptr addrspace(1) inreg %sbase)
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17]
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0:
@@ -17101,6 +17133,14 @@ define <4 x float> @global_load_saddr_i8_offset_0(ptr addrspace(1) inreg %sbase)
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_0:
@@ -17109,6 +17149,14 @@ define <4 x float> @global_load_saddr_i8_offset_0(ptr addrspace(1) inreg %sbase)
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_0:
@@ -17117,6 +17165,14 @@ define <4 x float> @global_load_saddr_i8_offset_0(ptr addrspace(1) inreg %sbase)
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0:
@@ -17125,6 +17181,14 @@ define <4 x float> @global_load_saddr_i8_offset_0(ptr addrspace(1) inreg %sbase)
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17]
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_0:
@@ -17133,6 +17197,14 @@ define <4 x float> @global_load_saddr_i8_offset_0(ptr addrspace(1) inreg %sbase)
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17]
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0:
@@ -17141,6 +17213,14 @@ define <4 x float> @global_load_saddr_i8_offset_0(ptr addrspace(1) inreg %sbase)
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17]
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0:
@@ -17149,6 +17229,13 @@ define <4 x float> @global_load_saddr_i8_offset_0(ptr addrspace(1) inreg %sbase)
 ; GFX11-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1]
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_0:
@@ -17158,6 +17245,14 @@ define <4 x float> @global_load_saddr_i8_offset_0(ptr addrspace(1) inreg %sbase)
 ; GFX1250-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1]
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0:
@@ -17170,6 +17265,14 @@ define <4 x float> @global_load_saddr_i8_offset_0(ptr addrspace(1) inreg %sbase)
 ; GFX12-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1]
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %sbase, metadata !0)
   %cast.load = bitcast <4 x i32> %load to <4 x float>
@@ -17293,6 +17396,14 @@ define <4 x float> @global_load_saddr_i8_offset_4095(ptr addrspace(1) inreg %sba
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:4095
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_4095:
@@ -17301,6 +17412,14 @@ define <4 x float> @global_load_saddr_i8_offset_4095(ptr addrspace(1) inreg %sba
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:4095
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_4095:
@@ -17309,6 +17428,14 @@ define <4 x float> @global_load_saddr_i8_offset_4095(ptr addrspace(1) inreg %sba
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:4095
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_4095:
@@ -17317,6 +17444,14 @@ define <4 x float> @global_load_saddr_i8_offset_4095(ptr addrspace(1) inreg %sba
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:4095
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_4095:
@@ -17325,6 +17460,14 @@ define <4 x float> @global_load_saddr_i8_offset_4095(ptr addrspace(1) inreg %sba
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:4095 sc0
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_4095:
@@ -17333,6 +17476,14 @@ define <4 x float> @global_load_saddr_i8_offset_4095(ptr addrspace(1) inreg %sba
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:4095 sc0
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_4095:
@@ -17341,6 +17492,14 @@ define <4 x float> @global_load_saddr_i8_offset_4095(ptr addrspace(1) inreg %sba
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:4095 sc0
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_4095:
@@ -17349,6 +17508,14 @@ define <4 x float> @global_load_saddr_i8_offset_4095(ptr addrspace(1) inreg %sba
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x800
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2047 glc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_4095:
@@ -17357,6 +17524,14 @@ define <4 x float> @global_load_saddr_i8_offset_4095(ptr addrspace(1) inreg %sba
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, 0x800
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2047 glc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_4095:
@@ -17365,6 +17540,14 @@ define <4 x float> @global_load_saddr_i8_offset_4095(ptr addrspace(1) inreg %sba
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x800
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2047 glc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_4095:
@@ -17373,6 +17556,13 @@ define <4 x float> @global_load_saddr_i8_offset_4095(ptr addrspace(1) inreg %sba
 ; GFX11-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:4095 glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_4095:
@@ -17382,6 +17572,14 @@ define <4 x float> @global_load_saddr_i8_offset_4095(ptr addrspace(1) inreg %sba
 ; GFX1250-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:4095
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_4095:
@@ -17394,6 +17592,14 @@ define <4 x float> @global_load_saddr_i8_offset_4095(ptr addrspace(1) inreg %sba
 ; GFX12-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:4095 scope:SCOPE_SE
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 4095
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !1)
@@ -17518,6 +17724,14 @@ define <4 x float> @global_load_saddr_i8_offset_4096(ptr addrspace(1) inreg %sba
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] glc
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_4096:
@@ -17526,6 +17740,14 @@ define <4 x float> @global_load_saddr_i8_offset_4096(ptr addrspace(1) inreg %sba
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] glc
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_4096:
@@ -17534,6 +17756,14 @@ define <4 x float> @global_load_saddr_i8_offset_4096(ptr addrspace(1) inreg %sba
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] glc
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_4096:
@@ -17542,6 +17772,14 @@ define <4 x float> @global_load_saddr_i8_offset_4096(ptr addrspace(1) inreg %sba
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] glc
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_4096:
@@ -17550,6 +17788,14 @@ define <4 x float> @global_load_saddr_i8_offset_4096(ptr addrspace(1) inreg %sba
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc1
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_4096:
@@ -17558,6 +17804,14 @@ define <4 x float> @global_load_saddr_i8_offset_4096(ptr addrspace(1) inreg %sba
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc1
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_4096:
@@ -17566,6 +17820,14 @@ define <4 x float> @global_load_saddr_i8_offset_4096(ptr addrspace(1) inreg %sba
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc1
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_4096:
@@ -17574,6 +17836,14 @@ define <4 x float> @global_load_saddr_i8_offset_4096(ptr addrspace(1) inreg %sba
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] glc dlc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_4096:
@@ -17582,6 +17852,14 @@ define <4 x float> @global_load_saddr_i8_offset_4096(ptr addrspace(1) inreg %sba
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] glc dlc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_4096:
@@ -17590,6 +17868,14 @@ define <4 x float> @global_load_saddr_i8_offset_4096(ptr addrspace(1) inreg %sba
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] glc dlc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_4096:
@@ -17598,6 +17884,13 @@ define <4 x float> @global_load_saddr_i8_offset_4096(ptr addrspace(1) inreg %sba
 ; GFX11-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_4096:
@@ -17607,6 +17900,14 @@ define <4 x float> @global_load_saddr_i8_offset_4096(ptr addrspace(1) inreg %sba
 ; GFX1250-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:4096 scope:SCOPE_SE
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_4096:
@@ -17619,6 +17920,14 @@ define <4 x float> @global_load_saddr_i8_offset_4096(ptr addrspace(1) inreg %sba
 ; GFX12-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:4096 scope:SCOPE_DEV
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 4096
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !2)
@@ -17743,6 +18052,14 @@ define <4 x float> @global_load_saddr_i8_offset_4097(ptr addrspace(1) inreg %sba
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:1 glc
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_4097:
@@ -17751,6 +18068,14 @@ define <4 x float> @global_load_saddr_i8_offset_4097(ptr addrspace(1) inreg %sba
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:1 glc
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_4097:
@@ -17759,6 +18084,14 @@ define <4 x float> @global_load_saddr_i8_offset_4097(ptr addrspace(1) inreg %sba
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:1 glc
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_4097:
@@ -17767,6 +18100,14 @@ define <4 x float> @global_load_saddr_i8_offset_4097(ptr addrspace(1) inreg %sba
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:1 glc
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_4097:
@@ -17775,6 +18116,14 @@ define <4 x float> @global_load_saddr_i8_offset_4097(ptr addrspace(1) inreg %sba
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:1 sc1
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_4097:
@@ -17783,6 +18132,14 @@ define <4 x float> @global_load_saddr_i8_offset_4097(ptr addrspace(1) inreg %sba
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:1 sc1
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_4097:
@@ -17791,6 +18148,14 @@ define <4 x float> @global_load_saddr_i8_offset_4097(ptr addrspace(1) inreg %sba
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:1 sc1
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_4097:
@@ -17799,6 +18164,14 @@ define <4 x float> @global_load_saddr_i8_offset_4097(ptr addrspace(1) inreg %sba
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:1 glc dlc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_4097:
@@ -17807,6 +18180,14 @@ define <4 x float> @global_load_saddr_i8_offset_4097(ptr addrspace(1) inreg %sba
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:1 glc dlc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_4097:
@@ -17815,6 +18196,14 @@ define <4 x float> @global_load_saddr_i8_offset_4097(ptr addrspace(1) inreg %sba
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:1 glc dlc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_4097:
@@ -17823,6 +18212,13 @@ define <4 x float> @global_load_saddr_i8_offset_4097(ptr addrspace(1) inreg %sba
 ; GFX11-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x1000
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:1 glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_4097:
@@ -17832,6 +18228,14 @@ define <4 x float> @global_load_saddr_i8_offset_4097(ptr addrspace(1) inreg %sba
 ; GFX1250-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:4097 scope:SCOPE_DEV
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_4097:
@@ -17844,6 +18248,14 @@ define <4 x float> @global_load_saddr_i8_offset_4097(ptr addrspace(1) inreg %sba
 ; GFX12-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:4097 scope:SCOPE_DEV
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 4097
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !3)
@@ -17971,6 +18383,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4096(ptr addrspace(1) inreg %
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-4096 glc
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_neg4096:
@@ -17979,6 +18399,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4096(ptr addrspace(1) inreg %
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-4096 glc
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_neg4096:
@@ -17987,6 +18415,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4096(ptr addrspace(1) inreg %
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-4096 glc
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_neg4096:
@@ -17995,6 +18431,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4096(ptr addrspace(1) inreg %
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-4096 glc
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg4096:
@@ -18003,6 +18447,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4096(ptr addrspace(1) inreg %
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:-4096 sc0 sc1
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_neg4096:
@@ -18011,6 +18463,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4096(ptr addrspace(1) inreg %
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:-4096 sc0 sc1
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_neg4096:
@@ -18019,6 +18479,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4096(ptr addrspace(1) inreg %
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:-4096 sc0 sc1
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg4096:
@@ -18030,6 +18498,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4096(ptr addrspace(1) inreg %
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_neg4096:
@@ -18041,6 +18517,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4096(ptr addrspace(1) inreg %
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg4096:
@@ -18052,6 +18536,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4096(ptr addrspace(1) inreg %
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg4096:
@@ -18060,6 +18552,13 @@ define <4 x float> @global_load_saddr_i8_offset_neg4096(ptr addrspace(1) inreg %
 ; GFX11-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:-4096 glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_neg4096:
@@ -18069,6 +18568,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4096(ptr addrspace(1) inreg %
 ; GFX1250-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:-4096 scope:SCOPE_SYS
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg4096:
@@ -18081,6 +18588,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4096(ptr addrspace(1) inreg %
 ; GFX12-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:-4096 scope:SCOPE_SYS
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 -4096
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !4)
@@ -18226,6 +18741,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4097(ptr addrspace(1) inreg %
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5]
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_neg4097:
@@ -18236,6 +18759,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4097(ptr addrspace(1) inreg %
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5]
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_neg4097:
@@ -18246,6 +18777,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4097(ptr addrspace(1) inreg %
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5]
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_neg4097:
@@ -18256,6 +18795,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4097(ptr addrspace(1) inreg %
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5]
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg4097:
@@ -18266,6 +18813,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4097(ptr addrspace(1) inreg %
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_neg4097:
@@ -18276,6 +18831,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4097(ptr addrspace(1) inreg %
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_neg4097:
@@ -18286,6 +18849,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4097(ptr addrspace(1) inreg %
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg4097:
@@ -18297,6 +18868,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4097(ptr addrspace(1) inreg %
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_neg4097:
@@ -18308,6 +18887,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4097(ptr addrspace(1) inreg %
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg4097:
@@ -18319,6 +18906,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4097(ptr addrspace(1) inreg %
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg4097:
@@ -18330,6 +18925,13 @@ define <4 x float> @global_load_saddr_i8_offset_neg4097(ptr addrspace(1) inreg %
 ; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_neg4097:
@@ -18339,6 +18941,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4097(ptr addrspace(1) inreg %
 ; GFX1250-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:-4097
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg4097:
@@ -18351,6 +18961,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4097(ptr addrspace(1) inreg %
 ; GFX12-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:-4097
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 -4097
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !0)
@@ -18496,6 +19114,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4098(ptr addrspace(1) inreg %
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5]
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_neg4098:
@@ -18506,6 +19132,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4098(ptr addrspace(1) inreg %
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5]
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_neg4098:
@@ -18516,6 +19150,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4098(ptr addrspace(1) inreg %
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5]
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_neg4098:
@@ -18526,6 +19168,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4098(ptr addrspace(1) inreg %
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5]
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg4098:
@@ -18536,6 +19186,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4098(ptr addrspace(1) inreg %
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc0
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_neg4098:
@@ -18546,6 +19204,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4098(ptr addrspace(1) inreg %
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc0
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_neg4098:
@@ -18556,6 +19222,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4098(ptr addrspace(1) inreg %
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc0
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg4098:
@@ -18567,6 +19241,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4098(ptr addrspace(1) inreg %
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_neg4098:
@@ -18578,6 +19260,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4098(ptr addrspace(1) inreg %
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg4098:
@@ -18589,6 +19279,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4098(ptr addrspace(1) inreg %
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg4098:
@@ -18600,6 +19298,13 @@ define <4 x float> @global_load_saddr_i8_offset_neg4098(ptr addrspace(1) inreg %
 ; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_neg4098:
@@ -18609,6 +19314,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4098(ptr addrspace(1) inreg %
 ; GFX1250-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:-4098
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg4098:
@@ -18621,6 +19334,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg4098(ptr addrspace(1) inreg %
 ; GFX12-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:-4098 scope:SCOPE_SE
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 -4098
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !1)
@@ -18745,6 +19466,14 @@ define <4 x float> @global_load_saddr_i8_offset_2048(ptr addrspace(1) inreg %sba
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2048 glc
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_2048:
@@ -18753,6 +19482,14 @@ define <4 x float> @global_load_saddr_i8_offset_2048(ptr addrspace(1) inreg %sba
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2048 glc
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_2048:
@@ -18761,6 +19498,14 @@ define <4 x float> @global_load_saddr_i8_offset_2048(ptr addrspace(1) inreg %sba
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2048 glc
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_2048:
@@ -18769,6 +19514,14 @@ define <4 x float> @global_load_saddr_i8_offset_2048(ptr addrspace(1) inreg %sba
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2048 glc
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_2048:
@@ -18777,6 +19530,14 @@ define <4 x float> @global_load_saddr_i8_offset_2048(ptr addrspace(1) inreg %sba
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:2048 sc1
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_2048:
@@ -18785,6 +19546,14 @@ define <4 x float> @global_load_saddr_i8_offset_2048(ptr addrspace(1) inreg %sba
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:2048 sc1
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_2048:
@@ -18793,6 +19562,14 @@ define <4 x float> @global_load_saddr_i8_offset_2048(ptr addrspace(1) inreg %sba
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:2048 sc1
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_2048:
@@ -18801,6 +19578,14 @@ define <4 x float> @global_load_saddr_i8_offset_2048(ptr addrspace(1) inreg %sba
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x800
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] glc dlc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_2048:
@@ -18809,6 +19594,14 @@ define <4 x float> @global_load_saddr_i8_offset_2048(ptr addrspace(1) inreg %sba
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, 0x800
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] glc dlc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_2048:
@@ -18817,6 +19610,14 @@ define <4 x float> @global_load_saddr_i8_offset_2048(ptr addrspace(1) inreg %sba
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x800
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] glc dlc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_2048:
@@ -18825,6 +19626,13 @@ define <4 x float> @global_load_saddr_i8_offset_2048(ptr addrspace(1) inreg %sba
 ; GFX11-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:2048 glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_2048:
@@ -18834,6 +19642,14 @@ define <4 x float> @global_load_saddr_i8_offset_2048(ptr addrspace(1) inreg %sba
 ; GFX1250-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:2048 scope:SCOPE_SE
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_2048:
@@ -18846,6 +19662,14 @@ define <4 x float> @global_load_saddr_i8_offset_2048(ptr addrspace(1) inreg %sba
 ; GFX12-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:2048 scope:SCOPE_DEV
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 2048
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !2)
@@ -18970,6 +19794,14 @@ define <4 x float> @global_load_saddr_i8_offset_2049(ptr addrspace(1) inreg %sba
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2049 glc
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_2049:
@@ -18978,6 +19810,14 @@ define <4 x float> @global_load_saddr_i8_offset_2049(ptr addrspace(1) inreg %sba
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2049 glc
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_2049:
@@ -18986,6 +19826,14 @@ define <4 x float> @global_load_saddr_i8_offset_2049(ptr addrspace(1) inreg %sba
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2049 glc
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_2049:
@@ -18994,6 +19842,14 @@ define <4 x float> @global_load_saddr_i8_offset_2049(ptr addrspace(1) inreg %sba
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2049 glc
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_2049:
@@ -19002,6 +19858,14 @@ define <4 x float> @global_load_saddr_i8_offset_2049(ptr addrspace(1) inreg %sba
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:2049 sc1
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_2049:
@@ -19010,6 +19874,14 @@ define <4 x float> @global_load_saddr_i8_offset_2049(ptr addrspace(1) inreg %sba
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:2049 sc1
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_2049:
@@ -19018,6 +19890,14 @@ define <4 x float> @global_load_saddr_i8_offset_2049(ptr addrspace(1) inreg %sba
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:2049 sc1
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_2049:
@@ -19026,6 +19906,14 @@ define <4 x float> @global_load_saddr_i8_offset_2049(ptr addrspace(1) inreg %sba
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x800
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:1 glc dlc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_2049:
@@ -19034,6 +19922,14 @@ define <4 x float> @global_load_saddr_i8_offset_2049(ptr addrspace(1) inreg %sba
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, 0x800
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:1 glc dlc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_2049:
@@ -19042,6 +19938,14 @@ define <4 x float> @global_load_saddr_i8_offset_2049(ptr addrspace(1) inreg %sba
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x800
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:1 glc dlc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_2049:
@@ -19050,6 +19954,13 @@ define <4 x float> @global_load_saddr_i8_offset_2049(ptr addrspace(1) inreg %sba
 ; GFX11-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:2049 glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_2049:
@@ -19059,6 +19970,14 @@ define <4 x float> @global_load_saddr_i8_offset_2049(ptr addrspace(1) inreg %sba
 ; GFX1250-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:2049 scope:SCOPE_DEV
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_2049:
@@ -19071,6 +19990,14 @@ define <4 x float> @global_load_saddr_i8_offset_2049(ptr addrspace(1) inreg %sba
 ; GFX12-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:2049 scope:SCOPE_DEV
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 2049
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !3)
@@ -19195,6 +20122,14 @@ define <4 x float> @global_load_saddr_i8_offset_2050(ptr addrspace(1) inreg %sba
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2050 glc
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_2050:
@@ -19203,6 +20138,14 @@ define <4 x float> @global_load_saddr_i8_offset_2050(ptr addrspace(1) inreg %sba
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2050 glc
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_2050:
@@ -19211,6 +20154,14 @@ define <4 x float> @global_load_saddr_i8_offset_2050(ptr addrspace(1) inreg %sba
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2050 glc
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_2050:
@@ -19219,6 +20170,14 @@ define <4 x float> @global_load_saddr_i8_offset_2050(ptr addrspace(1) inreg %sba
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2050 glc
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_2050:
@@ -19227,6 +20186,14 @@ define <4 x float> @global_load_saddr_i8_offset_2050(ptr addrspace(1) inreg %sba
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:2050 sc0 sc1
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_2050:
@@ -19235,6 +20202,14 @@ define <4 x float> @global_load_saddr_i8_offset_2050(ptr addrspace(1) inreg %sba
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:2050 sc0 sc1
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_2050:
@@ -19243,6 +20218,14 @@ define <4 x float> @global_load_saddr_i8_offset_2050(ptr addrspace(1) inreg %sba
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:2050 sc0 sc1
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_2050:
@@ -19251,6 +20234,14 @@ define <4 x float> @global_load_saddr_i8_offset_2050(ptr addrspace(1) inreg %sba
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x800
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2 glc dlc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_2050:
@@ -19259,6 +20250,14 @@ define <4 x float> @global_load_saddr_i8_offset_2050(ptr addrspace(1) inreg %sba
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, 0x800
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2 glc dlc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_2050:
@@ -19267,6 +20266,14 @@ define <4 x float> @global_load_saddr_i8_offset_2050(ptr addrspace(1) inreg %sba
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x800
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2 glc dlc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_2050:
@@ -19275,6 +20282,13 @@ define <4 x float> @global_load_saddr_i8_offset_2050(ptr addrspace(1) inreg %sba
 ; GFX11-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:2050 glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_2050:
@@ -19284,6 +20298,14 @@ define <4 x float> @global_load_saddr_i8_offset_2050(ptr addrspace(1) inreg %sba
 ; GFX1250-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:2050 scope:SCOPE_SYS
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_2050:
@@ -19296,6 +20318,14 @@ define <4 x float> @global_load_saddr_i8_offset_2050(ptr addrspace(1) inreg %sba
 ; GFX12-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:2050 scope:SCOPE_SYS
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 2050
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !4)
@@ -19420,6 +20450,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2048(ptr addrspace(1) inreg %
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-2048
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_neg2048:
@@ -19428,6 +20466,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2048(ptr addrspace(1) inreg %
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-2048
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_neg2048:
@@ -19436,6 +20482,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2048(ptr addrspace(1) inreg %
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-2048
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_neg2048:
@@ -19444,6 +20498,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2048(ptr addrspace(1) inreg %
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-2048
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg2048:
@@ -19452,6 +20514,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2048(ptr addrspace(1) inreg %
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:-2048
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_neg2048:
@@ -19460,6 +20530,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2048(ptr addrspace(1) inreg %
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:-2048
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_neg2048:
@@ -19468,6 +20546,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2048(ptr addrspace(1) inreg %
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:-2048
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg2048:
@@ -19476,6 +20562,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2048(ptr addrspace(1) inreg %
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-2048
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_neg2048:
@@ -19484,6 +20578,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2048(ptr addrspace(1) inreg %
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-2048
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg2048:
@@ -19492,6 +20594,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2048(ptr addrspace(1) inreg %
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-2048
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg2048:
@@ -19500,6 +20610,13 @@ define <4 x float> @global_load_saddr_i8_offset_neg2048(ptr addrspace(1) inreg %
 ; GFX11-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:-2048
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_neg2048:
@@ -19509,6 +20626,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2048(ptr addrspace(1) inreg %
 ; GFX1250-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:-2048
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg2048:
@@ -19521,6 +20646,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2048(ptr addrspace(1) inreg %
 ; GFX12-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:-2048
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 -2048
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !0)
@@ -19648,6 +20781,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2049(ptr addrspace(1) inreg %
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-2049
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_neg2049:
@@ -19656,6 +20797,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2049(ptr addrspace(1) inreg %
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-2049
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_neg2049:
@@ -19664,6 +20813,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2049(ptr addrspace(1) inreg %
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-2049
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_neg2049:
@@ -19672,6 +20829,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2049(ptr addrspace(1) inreg %
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-2049
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg2049:
@@ -19680,6 +20845,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2049(ptr addrspace(1) inreg %
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:-2049 sc0
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_neg2049:
@@ -19688,6 +20861,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2049(ptr addrspace(1) inreg %
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:-2049 sc0
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_neg2049:
@@ -19696,6 +20877,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2049(ptr addrspace(1) inreg %
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:-2049 sc0
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg2049:
@@ -19707,6 +20896,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2049(ptr addrspace(1) inreg %
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_neg2049:
@@ -19718,6 +20915,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2049(ptr addrspace(1) inreg %
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg2049:
@@ -19729,6 +20934,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2049(ptr addrspace(1) inreg %
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg2049:
@@ -19737,6 +20950,13 @@ define <4 x float> @global_load_saddr_i8_offset_neg2049(ptr addrspace(1) inreg %
 ; GFX11-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:-2049 glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_neg2049:
@@ -19746,6 +20966,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2049(ptr addrspace(1) inreg %
 ; GFX1250-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:-2049
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg2049:
@@ -19758,6 +20986,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2049(ptr addrspace(1) inreg %
 ; GFX12-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:-2049 scope:SCOPE_SE
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 -2049
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !1)
@@ -19885,6 +21121,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2050(ptr addrspace(1) inreg %
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-2050 glc
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_neg2050:
@@ -19893,6 +21137,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2050(ptr addrspace(1) inreg %
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-2050 glc
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_neg2050:
@@ -19901,6 +21153,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2050(ptr addrspace(1) inreg %
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-2050 glc
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_neg2050:
@@ -19909,6 +21169,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2050(ptr addrspace(1) inreg %
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-2050 glc
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg2050:
@@ -19917,6 +21185,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2050(ptr addrspace(1) inreg %
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:-2050 sc1
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_neg2050:
@@ -19925,6 +21201,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2050(ptr addrspace(1) inreg %
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:-2050 sc1
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_neg2050:
@@ -19933,6 +21217,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2050(ptr addrspace(1) inreg %
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:-2050 sc1
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg2050:
@@ -19944,6 +21236,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2050(ptr addrspace(1) inreg %
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_neg2050:
@@ -19955,6 +21255,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2050(ptr addrspace(1) inreg %
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg2050:
@@ -19966,6 +21274,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2050(ptr addrspace(1) inreg %
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg2050:
@@ -19974,6 +21290,13 @@ define <4 x float> @global_load_saddr_i8_offset_neg2050(ptr addrspace(1) inreg %
 ; GFX11-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:-2050 glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_neg2050:
@@ -19983,6 +21306,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2050(ptr addrspace(1) inreg %
 ; GFX1250-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:-2050 scope:SCOPE_SE
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg2050:
@@ -19995,6 +21326,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg2050(ptr addrspace(1) inreg %
 ; GFX12-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:-2050 scope:SCOPE_DEV
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 -2050
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !2)
@@ -20118,6 +21457,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x7FFFFF(ptr addrspace(1) inreg 
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x7ff000
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:4095 glc
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_0x7FFFFF:
@@ -20126,6 +21473,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x7FFFFF(ptr addrspace(1) inreg 
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, 0x7ff000
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:4095 glc
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_0x7FFFFF:
@@ -20134,6 +21489,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x7FFFFF(ptr addrspace(1) inreg 
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, 0x7ff000
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:4095 glc
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_0x7FFFFF:
@@ -20142,6 +21505,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x7FFFFF(ptr addrspace(1) inreg 
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, 0x7ff000
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:4095 glc
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x7FFFFF:
@@ -20150,6 +21521,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x7FFFFF(ptr addrspace(1) inreg 
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x7ff000
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:4095 sc1
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_0x7FFFFF:
@@ -20158,6 +21537,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x7FFFFF(ptr addrspace(1) inreg 
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, 0x7ff000
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:4095 sc1
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_0x7FFFFF:
@@ -20166,6 +21553,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x7FFFFF(ptr addrspace(1) inreg 
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, 0x7ff000
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:4095 sc1
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x7FFFFF:
@@ -20174,6 +21569,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x7FFFFF(ptr addrspace(1) inreg 
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x7ff800
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2047 glc dlc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_0x7FFFFF:
@@ -20182,6 +21585,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x7FFFFF(ptr addrspace(1) inreg 
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, 0x7ff800
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2047 glc dlc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x7FFFFF:
@@ -20190,6 +21601,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x7FFFFF(ptr addrspace(1) inreg 
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x7ff800
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2047 glc dlc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x7FFFFF:
@@ -20198,6 +21617,13 @@ define <4 x float> @global_load_saddr_i8_offset_0x7FFFFF(ptr addrspace(1) inreg 
 ; GFX11-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0x7ff000
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:4095 glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_0x7FFFFF:
@@ -20207,6 +21633,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x7FFFFF(ptr addrspace(1) inreg 
 ; GFX1250-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:8388607 scope:SCOPE_DEV
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x7FFFFF:
@@ -20219,6 +21653,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x7FFFFF(ptr addrspace(1) inreg 
 ; GFX12-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:8388607 scope:SCOPE_DEV
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 8388607
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !3)
@@ -20363,6 +21805,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFF(ptr addrspace(1) inreg 
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFF:
@@ -20373,6 +21823,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFF(ptr addrspace(1) inreg 
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFF:
@@ -20383,6 +21841,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFF(ptr addrspace(1) inreg 
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFF:
@@ -20393,6 +21859,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFF(ptr addrspace(1) inreg 
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFF:
@@ -20403,6 +21877,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFF(ptr addrspace(1) inreg 
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc0 sc1
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFF:
@@ -20413,6 +21895,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFF(ptr addrspace(1) inreg 
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc0 sc1
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFF:
@@ -20423,6 +21913,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFF(ptr addrspace(1) inreg 
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc0 sc1
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFF:
@@ -20434,6 +21932,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFF(ptr addrspace(1) inreg 
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFF:
@@ -20445,6 +21951,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFF(ptr addrspace(1) inreg 
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFF:
@@ -20456,6 +21970,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFF(ptr addrspace(1) inreg 
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFF:
@@ -20467,6 +21989,13 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFF(ptr addrspace(1) inreg 
 ; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFF:
@@ -20476,6 +22005,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFF(ptr addrspace(1) inreg 
 ; GFX1250-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:-8388608 scope:SCOPE_SYS
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFF:
@@ -20488,6 +22025,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFF(ptr addrspace(1) inreg 
 ; GFX12-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:-8388608 scope:SCOPE_SYS
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 -8388608
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !4)
@@ -20613,6 +22158,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFFFF(ptr addrspace(1) inre
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0xfffff000
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:4095
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFFFF:
@@ -20621,6 +22174,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFFFF(ptr addrspace(1) inre
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, 0xfffff000
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:4095
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFFFF:
@@ -20629,6 +22190,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFFFF(ptr addrspace(1) inre
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, 0xfffff000
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:4095
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFFFF:
@@ -20637,6 +22206,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFFFF(ptr addrspace(1) inre
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, 0xfffff000
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:4095
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFFFF:
@@ -20645,6 +22222,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFFFF(ptr addrspace(1) inre
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0xfffff000
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:4095
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFFFF:
@@ -20653,6 +22238,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFFFF(ptr addrspace(1) inre
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, 0xfffff000
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:4095
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFFFF:
@@ -20661,6 +22254,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFFFF(ptr addrspace(1) inre
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, 0xfffff000
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:4095
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFFFF:
@@ -20669,6 +22270,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFFFF(ptr addrspace(1) inre
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0xfffff800
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2047
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFFFF:
@@ -20677,6 +22286,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFFFF(ptr addrspace(1) inre
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, 0xfffff800
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2047
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFFFF:
@@ -20685,6 +22302,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFFFF(ptr addrspace(1) inre
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0xfffff800
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:2047
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFFFF:
@@ -20693,6 +22318,13 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFFFF(ptr addrspace(1) inre
 ; GFX11-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0xfffff000
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:4095
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFFFF:
@@ -20705,6 +22337,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFFFF(ptr addrspace(1) inre
 ; GFX1250-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0xFFFFFFFF:
@@ -20717,6 +22357,14 @@ define <4 x float> @global_load_saddr_i8_offset_0xFFFFFFFF(ptr addrspace(1) inre
 ; GFX12-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0xff800000
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:8388607
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 4294967295
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !0)
@@ -20857,6 +22505,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000000(ptr addrspace(1) inr
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_0x100000000:
@@ -20868,6 +22524,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000000(ptr addrspace(1) inr
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_0x100000000:
@@ -20879,6 +22543,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000000(ptr addrspace(1) inr
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_0x100000000:
@@ -20889,6 +22561,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000000(ptr addrspace(1) inr
 ; GFX90A-ISEL-NEXT:    v_pk_mov_b32 v[0:1], s[4:5], s[4:5] op_sel:[0,1]
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x100000000:
@@ -20899,6 +22579,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000000(ptr addrspace(1) inr
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc0
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_0x100000000:
@@ -20909,6 +22597,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000000(ptr addrspace(1) inr
 ; GFX942-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc0
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_0x100000000:
@@ -20919,6 +22615,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000000(ptr addrspace(1) inr
 ; GFX950-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc0
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x100000000:
@@ -20930,6 +22634,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000000(ptr addrspace(1) inr
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_0x100000000:
@@ -20941,6 +22653,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000000(ptr addrspace(1) inr
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x100000000:
@@ -20952,6 +22672,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000000(ptr addrspace(1) inr
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x100000000:
@@ -20963,6 +22691,13 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000000(ptr addrspace(1) inr
 ; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_0x100000000:
@@ -20975,6 +22710,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000000(ptr addrspace(1) inr
 ; GFX1250-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x100000000:
@@ -20990,6 +22733,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000000(ptr addrspace(1) inr
 ; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off scope:SCOPE_SE
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 4294967296
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !1)
@@ -21142,6 +22893,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000001(ptr addrspace(1) inr
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_0x100000001:
@@ -21153,6 +22912,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000001(ptr addrspace(1) inr
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_0x100000001:
@@ -21164,6 +22931,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000001(ptr addrspace(1) inr
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_0x100000001:
@@ -21174,6 +22949,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000001(ptr addrspace(1) inr
 ; GFX90A-ISEL-NEXT:    v_pk_mov_b32 v[0:1], s[4:5], s[4:5] op_sel:[0,1]
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x100000001:
@@ -21184,6 +22967,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000001(ptr addrspace(1) inr
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc1
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_0x100000001:
@@ -21194,6 +22985,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000001(ptr addrspace(1) inr
 ; GFX942-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc1
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_0x100000001:
@@ -21204,6 +23003,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000001(ptr addrspace(1) inr
 ; GFX950-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc1
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x100000001:
@@ -21215,6 +23022,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000001(ptr addrspace(1) inr
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_0x100000001:
@@ -21226,6 +23041,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000001(ptr addrspace(1) inr
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x100000001:
@@ -21237,6 +23060,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000001(ptr addrspace(1) inr
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x100000001:
@@ -21248,6 +23079,13 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000001(ptr addrspace(1) inr
 ; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_0x100000001:
@@ -21260,6 +23098,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000001(ptr addrspace(1) inr
 ; GFX1250-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off scope:SCOPE_SE
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x100000001:
@@ -21275,6 +23121,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000001(ptr addrspace(1) inr
 ; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off scope:SCOPE_DEV
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 4294967297
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !2)
@@ -21423,6 +23277,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000FFF(ptr addrspace(1) inr
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_0x100000FFF:
@@ -21433,6 +23295,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000FFF(ptr addrspace(1) inr
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_0x100000FFF:
@@ -21443,6 +23313,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000FFF(ptr addrspace(1) inr
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_0x100000FFF:
@@ -21453,6 +23331,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000FFF(ptr addrspace(1) inr
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x100000FFF:
@@ -21463,6 +23349,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000FFF(ptr addrspace(1) inr
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc1
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_0x100000FFF:
@@ -21473,6 +23367,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000FFF(ptr addrspace(1) inr
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc1
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_0x100000FFF:
@@ -21483,6 +23385,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000FFF(ptr addrspace(1) inr
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc1
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x100000FFF:
@@ -21494,6 +23404,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000FFF(ptr addrspace(1) inr
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_0x100000FFF:
@@ -21505,6 +23423,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000FFF(ptr addrspace(1) inr
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x100000FFF:
@@ -21516,6 +23442,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000FFF(ptr addrspace(1) inr
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x100000FFF:
@@ -21527,6 +23461,13 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000FFF(ptr addrspace(1) inr
 ; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_0x100000FFF:
@@ -21539,6 +23480,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000FFF(ptr addrspace(1) inr
 ; GFX1250-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off scope:SCOPE_DEV
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x100000FFF:
@@ -21554,6 +23503,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100000FFF(ptr addrspace(1) inr
 ; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off scope:SCOPE_DEV
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 4294971391
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !3)
@@ -21702,6 +23659,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100001000(ptr addrspace(1) inr
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_0x100001000:
@@ -21712,6 +23677,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100001000(ptr addrspace(1) inr
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_0x100001000:
@@ -21722,6 +23695,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100001000(ptr addrspace(1) inr
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_0x100001000:
@@ -21732,6 +23713,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100001000(ptr addrspace(1) inr
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x100001000:
@@ -21742,6 +23731,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100001000(ptr addrspace(1) inr
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc0 sc1
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_0x100001000:
@@ -21752,6 +23749,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100001000(ptr addrspace(1) inr
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc0 sc1
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_0x100001000:
@@ -21762,6 +23767,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100001000(ptr addrspace(1) inr
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc0 sc1
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x100001000:
@@ -21773,6 +23786,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100001000(ptr addrspace(1) inr
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_0x100001000:
@@ -21784,6 +23805,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100001000(ptr addrspace(1) inr
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x100001000:
@@ -21795,6 +23824,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100001000(ptr addrspace(1) inr
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x100001000:
@@ -21806,6 +23843,13 @@ define <4 x float> @global_load_saddr_i8_offset_0x100001000(ptr addrspace(1) inr
 ; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_0x100001000:
@@ -21818,6 +23862,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100001000(ptr addrspace(1) inr
 ; GFX1250-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off scope:SCOPE_SYS
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_0x100001000:
@@ -21833,6 +23885,14 @@ define <4 x float> @global_load_saddr_i8_offset_0x100001000(ptr addrspace(1) inr
 ; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off scope:SCOPE_SYS
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 4294971392
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !4)
@@ -21992,6 +24052,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0xFFFFFFFF(ptr addrspace(1) i
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_neg0xFFFFFFFF:
@@ -22003,6 +24071,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0xFFFFFFFF(ptr addrspace(1) i
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_neg0xFFFFFFFF:
@@ -22014,6 +24090,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0xFFFFFFFF(ptr addrspace(1) i
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_neg0xFFFFFFFF:
@@ -22024,6 +24108,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0xFFFFFFFF(ptr addrspace(1) i
 ; GFX90A-ISEL-NEXT:    v_pk_mov_b32 v[0:1], s[4:5], s[4:5] op_sel:[0,1]
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg0xFFFFFFFF:
@@ -22034,6 +24126,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0xFFFFFFFF(ptr addrspace(1) i
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_neg0xFFFFFFFF:
@@ -22044,6 +24144,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0xFFFFFFFF(ptr addrspace(1) i
 ; GFX942-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_neg0xFFFFFFFF:
@@ -22054,6 +24162,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0xFFFFFFFF(ptr addrspace(1) i
 ; GFX950-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg0xFFFFFFFF:
@@ -22065,6 +24181,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0xFFFFFFFF(ptr addrspace(1) i
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_neg0xFFFFFFFF:
@@ -22076,6 +24200,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0xFFFFFFFF(ptr addrspace(1) i
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg0xFFFFFFFF:
@@ -22087,6 +24219,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0xFFFFFFFF(ptr addrspace(1) i
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg0xFFFFFFFF:
@@ -22098,6 +24238,13 @@ define <4 x float> @global_load_saddr_i8_offset_neg0xFFFFFFFF(ptr addrspace(1) i
 ; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_neg0xFFFFFFFF:
@@ -22110,6 +24257,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0xFFFFFFFF(ptr addrspace(1) i
 ; GFX1250-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg0xFFFFFFFF:
@@ -22125,6 +24280,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0xFFFFFFFF(ptr addrspace(1) i
 ; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 -4294967295
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !0)
@@ -22265,6 +24428,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000000(ptr addrspace(1) 
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000000:
@@ -22276,6 +24447,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000000(ptr addrspace(1) 
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000000:
@@ -22287,6 +24466,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000000(ptr addrspace(1) 
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000000:
@@ -22297,6 +24484,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000000(ptr addrspace(1) 
 ; GFX90A-ISEL-NEXT:    v_pk_mov_b32 v[0:1], s[4:5], s[4:5] op_sel:[0,1]
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000000:
@@ -22307,6 +24502,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000000(ptr addrspace(1) 
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc0
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000000:
@@ -22317,6 +24520,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000000(ptr addrspace(1) 
 ; GFX942-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc0
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000000:
@@ -22327,6 +24538,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000000(ptr addrspace(1) 
 ; GFX950-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc0
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000000:
@@ -22338,6 +24557,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000000(ptr addrspace(1) 
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000000:
@@ -22349,6 +24576,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000000(ptr addrspace(1) 
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000000:
@@ -22360,6 +24595,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000000(ptr addrspace(1) 
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000000:
@@ -22371,6 +24614,13 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000000(ptr addrspace(1) 
 ; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000000:
@@ -22383,6 +24633,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000000(ptr addrspace(1) 
 ; GFX1250-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000000:
@@ -22398,6 +24656,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000000(ptr addrspace(1) 
 ; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off scope:SCOPE_SE
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 -4294967296
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !1)
@@ -22550,6 +24816,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000001(ptr addrspace(1) 
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000001:
@@ -22561,6 +24835,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000001(ptr addrspace(1) 
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000001:
@@ -22572,6 +24854,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000001(ptr addrspace(1) 
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000001:
@@ -22582,6 +24872,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000001(ptr addrspace(1) 
 ; GFX90A-ISEL-NEXT:    v_pk_mov_b32 v[0:1], s[4:5], s[4:5] op_sel:[0,1]
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000001:
@@ -22592,6 +24890,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000001(ptr addrspace(1) 
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc1
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000001:
@@ -22602,6 +24908,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000001(ptr addrspace(1) 
 ; GFX942-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc1
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000001:
@@ -22612,6 +24926,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000001(ptr addrspace(1) 
 ; GFX950-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc1
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000001:
@@ -22623,6 +24945,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000001(ptr addrspace(1) 
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000001:
@@ -22634,6 +24964,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000001(ptr addrspace(1) 
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000001:
@@ -22645,6 +24983,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000001(ptr addrspace(1) 
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc dlc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000001:
@@ -22656,6 +25002,13 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000001(ptr addrspace(1) 
 ; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000001:
@@ -22668,6 +25021,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000001(ptr addrspace(1) 
 ; GFX1250-ISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off scope:SCOPE_SE
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_offset_neg0x100000001:
@@ -22683,6 +25044,14 @@ define <4 x float> @global_load_saddr_i8_offset_neg0x100000001(ptr addrspace(1) 
 ; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off scope:SCOPE_DEV
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 -4294967297
   %load = call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) %gep0, metadata !2)
@@ -26673,6 +29042,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset(ptr addrspace(1) in
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] glc
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset:
@@ -26681,6 +29058,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset(ptr addrspace(1) in
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] glc
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset:
@@ -26689,6 +29074,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset(ptr addrspace(1) in
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] glc
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset:
@@ -26697,6 +29090,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset(ptr addrspace(1) in
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] glc
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset:
@@ -26705,6 +29106,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset(ptr addrspace(1) in
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc0 sc1
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset:
@@ -26713,6 +29122,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset(ptr addrspace(1) in
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc0 sc1
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset:
@@ -26721,6 +29138,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset(ptr addrspace(1) in
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc0 sc1
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset:
@@ -26729,6 +29154,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset(ptr addrspace(1) in
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] glc dlc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset:
@@ -26737,6 +29170,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset(ptr addrspace(1) in
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] glc dlc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset:
@@ -26745,6 +29186,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset(ptr addrspace(1) in
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] glc dlc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset:
@@ -26753,6 +29202,13 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset(ptr addrspace(1) in
 ; GFX11-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset:
@@ -26762,6 +29218,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset(ptr addrspace(1) in
 ; GFX1250-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] scope:SCOPE_SYS
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset:
@@ -26774,6 +29238,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset(ptr addrspace(1) in
 ; GFX12-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] scope:SCOPE_SYS
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %zext.offset = zext i32 %soffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -26899,6 +29371,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset_immoffset(ptr addrs
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-24
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset_immoffset:
@@ -26907,6 +29387,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset_immoffset(ptr addrs
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-24
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset_immoffset:
@@ -26915,6 +29403,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset_immoffset(ptr addrs
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-24
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset_immoffset:
@@ -26923,6 +29419,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset_immoffset(ptr addrs
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-24
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset_immoffset:
@@ -26931,6 +29435,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset_immoffset(ptr addrs
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:-24
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset_immoffset:
@@ -26939,6 +29451,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset_immoffset(ptr addrs
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:-24
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset_immoffset:
@@ -26947,6 +29467,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset_immoffset(ptr addrs
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:-24
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset_immoffset:
@@ -26955,6 +29483,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset_immoffset(ptr addrs
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-24
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset_immoffset:
@@ -26963,6 +29499,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset_immoffset(ptr addrs
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-24
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset_immoffset:
@@ -26971,6 +29515,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset_immoffset(ptr addrs
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:-24
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset_immoffset:
@@ -26979,6 +29531,13 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset_immoffset(ptr addrs
 ; GFX11-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:-24
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset_immoffset:
@@ -26988,6 +29547,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset_immoffset(ptr addrs
 ; GFX1250-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:-24
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_zext_uniform_offset_immoffset:
@@ -27000,6 +29567,14 @@ define <4 x float> @global_load_saddr_i8_zext_uniform_offset_immoffset(ptr addrs
 ; GFX12-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:-24
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %zext.offset = zext i32 %soffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -27126,6 +29701,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add(ptr addr
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17]
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add:
@@ -27134,6 +29717,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add(ptr addr
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17]
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add:
@@ -27142,6 +29733,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add(ptr addr
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17]
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add:
@@ -27150,6 +29749,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add(ptr addr
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17]
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add:
@@ -27158,6 +29765,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add(ptr addr
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc0
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add:
@@ -27166,6 +29781,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add(ptr addr
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc0
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add:
@@ -27174,6 +29797,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add(ptr addr
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc0
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add:
@@ -27182,6 +29813,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add(ptr addr
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] glc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add:
@@ -27190,6 +29829,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add(ptr addr
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] glc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add:
@@ -27198,6 +29845,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add(ptr addr
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] glc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add:
@@ -27206,6 +29861,13 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add(ptr addr
 ; GFX11-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add:
@@ -27215,6 +29877,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add(ptr addr
 ; GFX1250-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1]
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add:
@@ -27227,6 +29897,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add(ptr addr
 ; GFX12-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] scope:SCOPE_SE
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %zext.offset = zext i32 %soffset to i64
   %sbase.as.int = ptrtoint ptr addrspace(1) %sbase to i64
@@ -27354,6 +30032,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offs
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:128 glc
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offset0:
@@ -27362,6 +30048,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offs
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:128 glc
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offset0:
@@ -27370,6 +30064,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offs
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:128 glc
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offset0:
@@ -27378,6 +30080,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offs
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:128 glc
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offset0:
@@ -27386,6 +30096,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offs
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:128 sc1
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offset0:
@@ -27394,6 +30112,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offs
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:128 sc1
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offset0:
@@ -27402,6 +30128,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offs
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] offset:128 sc1
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offset0:
@@ -27410,6 +30144,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offs
 ; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:128 glc dlc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offset0:
@@ -27418,6 +30160,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offs
 ; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:128 glc dlc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offset0:
@@ -27426,6 +30176,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offs
 ; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[16:17] offset:128 glc dlc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offset0:
@@ -27434,6 +30192,13 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offs
 ; GFX11-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:128 glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offset0:
@@ -27443,6 +30208,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offs
 ; GFX1250-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:128 scope:SCOPE_SE
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offset0:
@@ -27455,6 +30228,14 @@ define <4 x float> @global_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offs
 ; GFX12-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] offset:128 scope:SCOPE_DEV
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %zext.offset = zext i32 %soffset to i64
   %sbase.as.int = ptrtoint ptr addrspace(1) %sbase to i64
@@ -30441,6 +33222,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_saddr_64bit_lsr_iv:
@@ -30460,6 +33249,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_saddr_64bit_lsr_iv:
@@ -30479,6 +33276,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_saddr_64bit_lsr_iv:
@@ -30498,6 +33303,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_saddr_64bit_lsr_iv:
@@ -30517,6 +33330,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc1
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_saddr_64bit_lsr_iv:
@@ -30536,6 +33357,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc1
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_saddr_64bit_lsr_iv:
@@ -30555,6 +33384,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc1
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_saddr_64bit_lsr_iv:
@@ -30574,6 +33411,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_addc_u32 s5, s17, s5
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc dlc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_saddr_64bit_lsr_iv:
@@ -30593,6 +33438,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX1012-ISEL-NEXT:    s_addc_u32 s5, s17, s5
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc dlc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_saddr_64bit_lsr_iv:
@@ -30612,6 +33465,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_addc_u32 s5, s17, s5
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc dlc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_saddr_64bit_lsr_iv:
@@ -30633,6 +33494,13 @@ define <4 x float> @global_saddr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX11-GENERIC-ISEL-NEXT:    s_addc_u32 s1, s1, s3
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_saddr_64bit_lsr_iv:
@@ -30655,6 +33523,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX1250-ISEL-NEXT:    s_add_co_ci_u32 s1, s1, s3
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_saddr_64bit_lsr_iv:
@@ -30682,7 +33558,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX12-GENERIC-ISEL-NEXT:    s_add_co_ci_u32 s1, s1, s3
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] scope:SCOPE_DEV
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_sa_sdst(0) depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 bb:
   br label %bb3
@@ -30980,6 +33863,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg %
 ; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc
 ; GFX9-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX9-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-ISEL-LABEL: global_saddr_64bit_lsr_iv_multiload:
@@ -30999,6 +33890,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg %
 ; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc
 ; GFX906-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX906-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX906-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-ISEL-LABEL: global_saddr_64bit_lsr_iv_multiload:
@@ -31018,6 +33917,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg %
 ; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc
 ; GFX908-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX908-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX908-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX908-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-ISEL-LABEL: global_saddr_64bit_lsr_iv_multiload:
@@ -31037,6 +33944,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg %
 ; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc
 ; GFX90A-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX90A-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX90A-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX90A-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-4-GENERIC-ISEL-LABEL: global_saddr_64bit_lsr_iv_multiload:
@@ -31056,6 +33971,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg %
 ; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-4-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc1
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-4-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-4-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-ISEL-LABEL: global_saddr_64bit_lsr_iv_multiload:
@@ -31075,6 +33998,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg %
 ; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc1
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX942-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-ISEL-LABEL: global_saddr_64bit_lsr_iv_multiload:
@@ -31094,6 +34025,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg %
 ; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1] sc1
 ; GFX950-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-ISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX950-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-1-GENERIC-ISEL-LABEL: global_saddr_64bit_lsr_iv_multiload:
@@ -31113,6 +34052,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg %
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_addc_u32 s5, s17, s5
 ; GFX10-1-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc dlc
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-1-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-1-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-1-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1012-ISEL-LABEL: global_saddr_64bit_lsr_iv_multiload:
@@ -31132,6 +34079,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg %
 ; GFX1012-ISEL-NEXT:    s_addc_u32 s5, s17, s5
 ; GFX1012-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc dlc
 ; GFX1012-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX1012-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1012-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX1012-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-3-GENERIC-ISEL-LABEL: global_saddr_64bit_lsr_iv_multiload:
@@ -31151,6 +34106,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg %
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_addc_u32 s5, s17, s5
 ; GFX10-3-GENERIC-ISEL-NEXT:    global_load_dwordx4 v[0:3], v0, s[4:5] glc dlc
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX10-3-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-3-GENERIC-ISEL-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX10-3-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GENERIC-ISEL-LABEL: global_saddr_64bit_lsr_iv_multiload:
@@ -31172,6 +34135,13 @@ define <4 x float> @global_saddr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg %
 ; GFX11-GENERIC-ISEL-NEXT:    s_addc_u32 s1, s1, s3
 ; GFX11-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] glc
 ; GFX11-GENERIC-ISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-ISEL-LABEL: global_saddr_64bit_lsr_iv_multiload:
@@ -31194,6 +34164,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg %
 ; GFX1250-ISEL-NEXT:    s_add_co_ci_u32 s1, s1, s3
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] scope:SCOPE_DEV
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-ISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX12-GENERIC-ISEL-LABEL: global_saddr_64bit_lsr_iv_multiload:
@@ -31221,7 +34199,14 @@ define <4 x float> @global_saddr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg %
 ; GFX12-GENERIC-ISEL-NEXT:    s_add_co_ci_u32 s1, s1, s3
 ; GFX12-GENERIC-ISEL-NEXT:    global_load_b128 v[0:3], v0, s[0:1] scope:SCOPE_DEV
 ; GFX12-GENERIC-ISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GENERIC-ISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GENERIC-ISEL-NEXT:    s_wait_alu depctr_sa_sdst(0) depctr_va_sdst(0)
+; GFX12-GENERIC-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GENERIC-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-GENERIC-ISEL-NEXT:    s_setpc_b64 s[30:31]
 bb:
   br label %bb5

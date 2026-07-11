@@ -20,9 +20,9 @@ __device__ __constant__ int FileVarDeviceConstant;
 // CHECK-NEXT:    [[ARG_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ARG_ADDR]] to ptr
 // CHECK-NEXT:    [[FUNCVAR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[FUNCVAR]] to ptr
 // CHECK-NEXT:    store i32 [[ARG]], ptr [[ARG_ADDR_ASCAST]], align 4
-// CHECK-NEXT:      #dbg_declare(ptr addrspace(5) [[ARG_ADDR]], [[META17:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(i32)), [[META24:![0-9]+]])
-// CHECK-NEXT:      #dbg_declare(ptr addrspace(5) [[FUNCVAR]], [[META18:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(i32)), [[META25:![0-9]+]])
-// CHECK-NEXT:    ret void, !dbg [[DBG26:![0-9]+]]
+// CHECK-NEXT:      #dbg_declare(ptr addrspace(5) [[ARG_ADDR]], [[META17:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(i32)), [[META23:![0-9]+]])
+// CHECK-NEXT:      #dbg_declare(ptr addrspace(5) [[FUNCVAR]], [[META18:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(i32)), [[META24:![0-9]+]])
+// CHECK-NEXT:    ret void, !dbg [[DBG25:![0-9]+]]
 //
 __device__ void kernel1(int Arg) {
 
@@ -35,11 +35,11 @@ __device__ void kernel1(int Arg) {
 // CHECK: [[META0:![0-9]+]] = !DIGlobalVariableExpression(var: [[META1:![0-9]+]], expr: !DIExpression(DIOpArg(0, ptr addrspace(1)), DIOpDeref(i32)))
 // CHECK: [[META1]] = distinct !DIGlobalVariable(name: "FileVarDevice", scope: [[META2:![0-9]+]], file: [[META7:![0-9]+]], line: 9, type: [[META8:![0-9]+]], isLocal: false, isDefinition: true, memorySpace: DW_MSPACE_LLVM_global)
 // CHECK: [[META2]] = distinct !DICompileUnit(language: DW_LANG_HIP, file: [[META3:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: [[META4:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
-// CHECK: [[META3]] = !DIFile(filename: "{{.*}}/clang/test/CodeGenHIP/<stdin>", directory: "")
+// CHECK: [[META3]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
 // CHECK: [[META4]] = !{[[META0]], [[META5:![0-9]+]], [[META9:![0-9]+]], [[META11:![0-9]+]]}
 // CHECK: [[META5]] = !DIGlobalVariableExpression(var: [[META6:![0-9]+]], expr: !DIExpression(DIOpArg(0, ptr addrspace(3)), DIOpDeref(i32)))
 // CHECK: [[META6]] = distinct !DIGlobalVariable(name: "FileVarDeviceShared", scope: [[META2]], file: [[META7]], line: 11, type: [[META8]], isLocal: false, isDefinition: true, memorySpace: DW_MSPACE_LLVM_group)
-// CHECK: [[META7]] = !DIFile(filename: "{{.*}}/clang/test/CodeGenHIP/debug-info-address-class-heterogeneous-dwarf.hip", directory: "")
+// CHECK: [[META7]] = !DIFile(filename: "{{.*}}debug-info-address-class-heterogeneous-dwarf.hip", directory: {{.*}})
 // CHECK: [[META8]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 // CHECK: [[META9]] = !DIGlobalVariableExpression(var: [[META10:![0-9]+]], expr: !DIExpression(DIOpArg(0, ptr addrspace(4)), DIOpDeref(i32)))
 // CHECK: [[META10]] = distinct !DIGlobalVariable(name: "FileVarDeviceConstant", scope: [[META2]], file: [[META7]], line: 13, type: [[META8]], isLocal: false, isDefinition: true, memorySpace: DW_MSPACE_LLVM_constant)
@@ -51,7 +51,7 @@ __device__ void kernel1(int Arg) {
 // CHECK: [[META16]] = !{[[META17]], [[META18]]}
 // CHECK: [[META17]] = !DILocalVariable(name: "Arg", arg: 1, scope: [[DBG13]], file: [[META7]], line: 27, type: [[META8]])
 // CHECK: [[META18]] = !DILocalVariable(name: "FuncVar", scope: [[DBG13]], file: [[META7]], line: 31, type: [[META8]])
-// CHECK: [[META24]] = !DILocation(line: 27, column: 29, scope: [[DBG13]])
-// CHECK: [[META25]] = !DILocation(line: 31, column: 7, scope: [[DBG13]])
-// CHECK: [[DBG26]] = !DILocation(line: 32, column: 1, scope: [[DBG13]])
+// CHECK: [[META23]] = !DILocation(line: 27, column: 29, scope: [[DBG13]])
+// CHECK: [[META24]] = !DILocation(line: 31, column: 7, scope: [[DBG13]])
+// CHECK: [[DBG25]] = !DILocation(line: 32, column: 1, scope: [[DBG13]])
 //.
