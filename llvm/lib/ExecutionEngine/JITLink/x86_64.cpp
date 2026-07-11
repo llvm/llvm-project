@@ -159,7 +159,7 @@ Error optimizeGOTAndStubAccesses(LinkGraph &G) {
         }
 
         // Transform call/jmp instructions
-        if (Op == 0xff && TargetInRangeForImmU32) {
+        if (Op == 0xff && DisplacementInRangeForImmS32) {
           if (ModRM == 0x15) {
             // ABI says we can convert "call *foo@GOTPCREL(%rip)" to "nop; call
             // foo" But lld convert it to "addr32 call foo, because that makes
@@ -185,7 +185,7 @@ Error optimizeGOTAndStubAccesses(LinkGraph &G) {
               dbgs() << "\n";
             });
           }
-          E.setKind(x86_64::Pointer32);
+          E.setKind(x86_64::BranchPCRel32);
           E.setTarget(GOTTarget);
           continue;
         }

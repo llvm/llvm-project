@@ -1,0 +1,90 @@
+//===------------------------------------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLDB_UTILITY_REGISTERINFO_H
+#define LLDB_UTILITY_REGISTERINFO_H
+
+#include "lldb/Utility/RegisterFlags.h"
+#include "lldb/lldb-enumerations.h"
+
+#include "llvm/ADT/ArrayRef.h"
+
+#include <cstdint>
+
+namespace lldb_private {
+
+/// Every register is described in detail including its name, alternate name
+/// (optional), encoding, size in bytes and the default display format.
+struct RegisterInfo {
+  /// Name of this register, can't be NULL.
+  const char *name;
+  /// Alternate name of this register, can be NULL.
+  const char *alt_name;
+  /// Size in bytes of the register.
+  uint32_t byte_size;
+  /// The byte offset in the register context data where this register's value
+  /// is found.
+  /// This is optional, and can be 0 if a particular RegisterContext does not
+  /// need to address its registers by byte offset.
+  uint32_t byte_offset;
+  /// Encoding of the register bits.
+  lldb::Encoding encoding;
+  /// Default display format.
+  lldb::Format format;
+  /// Holds all of the various register numbers for all register kinds.
+  uint32_t kinds[lldb::kNumRegisterKinds];
+  /// List of registers (terminated with LLDB_INVALID_REGNUM). If this value is
+  /// not null, all registers in this list will be read first, at which point
+  /// the value for this register will be valid. FOr example, the value list for
+  /// ah would be eax (x86) or rax (x64). Register numbers are of
+  /// eRegisterKindLLDB. If multiple registers are listed, the final value will
+  /// be the concatenation of them.
+  uint32_t *value_regs;
+  /// List of registers (terminated with LLDB_INVALID_REGNUM). If this value is
+  /// not null, all registers in this list will be invalidated when the value of
+  /// this register changes. For example, the invalidate list for eax would be
+  /// rax ax, ah, and al
+  uint32_t *invalidate_regs;
+  /// If not nullptr, a type defined by XML descriptions.
+  /// Register info tables are constructed as const, but this field may need to
+  /// be updated if a specific target OS has a different layout. To enable that,
+  /// this is mutable. The data pointed to is still const, so you must swap a
+  /// whole set of flags for another.
+  mutable const RegisterFlags *flags_type;
+
+  llvm::ArrayRef<uint8_t> data(const uint8_t *context_base) const {
+    return llvm::ArrayRef<uint8_t>(context_base + byte_offset, byte_size);
+  }
+
+  llvm::MutableArrayRef<uint8_t> mutable_data(uint8_t *context_base) const {
+    return llvm::MutableArrayRef<uint8_t>(context_base + byte_offset,
+                                          byte_size);
+  }
+};
+static_assert(std::is_trivial<RegisterInfo>::value,
+              "RegisterInfo must be trivial.");
+
+/// Registers are grouped into register sets
+struct RegisterSet {
+  /// Name of this register set.
+  const char *name;
+  /// A short name for this register set.
+  const char *short_name;
+  /// The number of registers in REGISTERS array below.
+  size_t num_registers;
+  /// An array of register indicies in this set. The values in this array are
+  /// *indices* (not register numbers) into a particular RegisterContext's
+  /// register array. For example, if eax is defined at index 4 for a particular
+  /// RegisterContext, eax would be included in this RegisterSet by adding the
+  /// value 4. Not by adding the value lldb_eax_i386.
+  const uint32_t *registers;
+};
+
+} // namespace lldb_private
+
+#endif // LLDB_UTILITY_REGISTERINFO_H

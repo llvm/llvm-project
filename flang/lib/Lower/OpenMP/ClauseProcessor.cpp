@@ -19,7 +19,6 @@
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/ReductionProcessor.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Utils/OpenMP.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
@@ -657,6 +656,16 @@ bool ClauseProcessor::processInitializer(
                         exprResult.getType()))
                   if (ompPrivVar.getType() == refType)
                     exprResult = fir::LoadOp::create(builder, loc, exprResult);
+                // The initializer expression may have a different but
+                // convertible scalar type than the reduction. For example a
+                // LOGICAL initializer (e.g. omp_priv = .false.) lowers to an
+                // i1 while the reduction type is !fir.logical<4>. Convert so
+                // the init region yields the reduction type, as the
+                // omp.declare_reduction verifier requires.
+                if (exprResult.getType() != type &&
+                    fir::isa_trivial(exprResult.getType()) &&
+                    fir::isa_trivial(type))
+                  exprResult = builder.createConvert(loc, type, exprResult);
                 return exprResult;
               }},
           initExpr.u);
@@ -1662,7 +1671,7 @@ bool ClauseProcessor::processInReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 inReductionVars, inReduceVarByRef, inReductionDeclSymbols,
-                inReductionSyms))
+                inReductionSyms, inReductionObjects, converter.getSymbolMap()))
           TODO(currentLocation, "Lowering unrecognised reduction type");
 
         // Copy local lists into the output.
@@ -2080,7 +2089,8 @@ bool ClauseProcessor::processReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 reductionVars, reduceVarByRef, reductionDeclSymbols,
-                reductionSyms, reductionVarCache))
+                reductionSyms, reductionObjects, converter.getSymbolMap(),
+                reductionVarCache))
           TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
@@ -2109,7 +2119,8 @@ bool ClauseProcessor::processTaskReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 taskReductionVars, taskReduceVarByRef, taskReductionDeclSymbols,
-                taskReductionSyms))
+                taskReductionSyms, taskReductionObjects,
+                converter.getSymbolMap()))
           TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(taskReductionVars,

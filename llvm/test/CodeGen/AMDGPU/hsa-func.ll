@@ -1,9 +1,9 @@
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | FileCheck --check-prefix=HSA %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | FileCheck --check-prefix=HSA-CI %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo  | FileCheck --check-prefix=HSA %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo | FileCheck --check-prefix=HSA-VI %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -filetype=obj | llvm-readobj --symbols -S --sd - | FileCheck --check-prefix=ELF %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | llvm-mc -filetype=obj -triple amdgcn--amdhsa --amdhsa-code-object-version=4 -mcpu=kaveri | llvm-readobj --symbols -S --sd - | FileCheck %s --check-prefix=ELF
+; RUN: llc < %s -mtriple=amdgpu7.00--amdhsa | FileCheck --check-prefix=HSA %s
+; RUN: llc < %s -mtriple=amdgpu7.00--amdhsa | FileCheck --check-prefix=HSA-CI %s
+; RUN: llc < %s -mtriple=amdgpu8.01--amdhsa  | FileCheck --check-prefix=HSA %s
+; RUN: llc < %s -mtriple=amdgpu8.01--amdhsa | FileCheck --check-prefix=HSA-VI %s
+; RUN: llc < %s -mtriple=amdgpu7.00--amdhsa -filetype=obj | llvm-readobj --symbols -S --sd - | FileCheck --check-prefix=ELF %s
+; RUN: llc < %s -mtriple=amdgpu7.00--amdhsa | llvm-mc -filetype=obj -triple amdgpu7.00--amdhsa -mcpu=gfx700 --amdhsa-code-object-version=4 | llvm-readobj --symbols -S --sd - | FileCheck %s --check-prefix=ELF
 
 ; The SHT_NOTE section contains the output from the .hsa_code_object_*
 ; directives.
@@ -18,13 +18,13 @@
 ; ELF: }
 
 ; ELF: SHT_NOTE
-; ELF: 0000: 07000000 57000000 20000000 414D4447
+; ELF: 0000: 07000000 5B000000 20000000 414D4447
 ; ELF: 0010: 50550000 83AE616D 64687361 2E6B6572
 ; ELF: 0020: 6E656C73 90AD616D 64687361 2E746172
-; ELF: 0030: 676574D9 24616D64 67636E2D 756E6B6E
-; ELF: 0040: 6F776E2D 616D6468 73612D75 6E6B6E6F
-; ELF: 0050: 776E2D67 66783730 30AE616D 64687361
-; ELF: 0060: 2E766572 73696F6E 92010100
+; ELF: 0030: 676574D9 28616D64 67707537 2E30302D
+; ELF: 0040: 756E6B6E 6F776E2D 616D6468 73612D75
+; ELF: 0050: 6E6B6E6F 776E2D67 66783730 30AE616D
+; ELF: 0060: 64687361 2E766572 73696F6E 92010100
 
 ; ELF: Symbol {
 ; ELF: Name: simple
@@ -33,8 +33,8 @@
 ; ELF: }
 
 ; HSA: .text
-; HSA-CI: .amdgcn_target "amdgcn-unknown-amdhsa-unknown-gfx700"
-; HSA-VI: .amdgcn_target "amdgcn-unknown-amdhsa-unknown-gfx801"
+; HSA-CI: .amdgcn_target "amdgpu7.00-unknown-amdhsa-unknown-gfx700"
+; HSA-VI: .amdgcn_target "amdgpu8.01-unknown-amdhsa-unknown-gfx801"
 
 ; HSA-NOT: .amdgpu_hsa_kernel simple
 ; HSA: .globl simple

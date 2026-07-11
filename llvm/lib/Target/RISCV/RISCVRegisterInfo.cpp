@@ -830,7 +830,7 @@ bool RISCVRegisterInfo::isArgumentRegister(const MachineFunction &MF,
   const RISCVRegisterInfo *TRI = STI.getRegisterInfo();
 
   if (TRI->isGeneralPurposeRegister(MF, Reg))
-    return llvm::is_contained(RISCV::getArgGPRs(STI.getTargetABI()), Reg);
+    return llvm::is_contained(RISCV::getArgGPRs(STI), Reg);
 
   if (TRI->isFPRegister(Reg))
     return llvm::is_contained(RISCV::getArgFPRs(STI), Reg);

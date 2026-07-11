@@ -420,9 +420,9 @@ struct VOPTrue16Info {
 };
 
 struct VOPDXYInfo {
-  uint16_t VOPDOp;
-  uint16_t Subtarget;
-  bool VOPD3;
+  uint16_t VOPDXYKey;
+  bool IsX;
+  bool IsY;
 };
 
 #define GET_FP4FP8DstByteSelTable_DECL
@@ -465,10 +465,8 @@ struct FP4FP8DstByteSelInfo {
 #define GET_VOPDComponentTable_IMPL
 #define GET_VOPDPairs_DECL
 #define GET_VOPDPairs_IMPL
-#define GET_VOPDXTable_DECL
-#define GET_VOPDXTable_IMPL
-#define GET_VOPDYTable_DECL
-#define GET_VOPDYTable_IMPL
+#define GET_VOPDXYTable_DECL
+#define GET_VOPDXYTable_IMPL
 #define GET_VOPTrue16Table_DECL
 #define GET_VOPTrue16Table_IMPL
 #define GET_True16D16Table_IMPL
@@ -693,28 +691,6 @@ unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
   llvm_unreachable("Subtarget generation does not support VOPD!");
 }
 
-static constexpr unsigned getVOPDXYKey(unsigned VOPDOp, unsigned Subtarget,
-                                       bool VOPD3) {
-  return (VOPDOp << 5) | (Subtarget << 1) | (VOPD3 ? 1u : 0u);
-}
-
-// TODO: Ideally, the table should be emitted by the TableGen backend, however
-// this is currently not supported, so the direct lookup table is generated
-// manually here.
-constexpr unsigned VOPDXYKeyBits = 11;
-static constexpr std::array<CanBeVOPD, 1 << VOPDXYKeyBits> buildVOPDXYLookup() {
-  std::array<CanBeVOPD, 1 << VOPDXYKeyBits> Table{};
-  for (auto &E : Table)
-    E = {false, false};
-  for (const auto &E : VOPDXTable)
-    Table[getVOPDXYKey(E.VOPDOp, E.Subtarget, E.VOPD3)].X = true;
-  for (const auto &E : VOPDYTable)
-    Table[getVOPDXYKey(E.VOPDOp, E.Subtarget, E.VOPD3)].Y = true;
-  return Table;
-}
-
-constexpr auto VOPDXYLookup = buildVOPDXYLookup();
-
 CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(Opc) : 0;
   Opc = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : Opc;
@@ -723,7 +699,12 @@ CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   if (!Info)
     return {false, false};
-  return VOPDXYLookup[getVOPDXYKey(Info->VOPDOp, EncodingFamily, VOPD3)];
+  unsigned Key =
+      (Info->VOPDOp << 5) | (EncodingFamily << 1) | (VOPD3 ? 1u : 0u);
+  const VOPDXYInfo *XYInfo = getVOPDXYInfo(Key);
+  if (!XYInfo)
+    return {false, false};
+  return {XYInfo->IsX, XYInfo->IsY};
 }
 
 unsigned getVOPDOpcode(unsigned Opc, bool VOPD3) {
@@ -1756,6 +1737,11 @@ getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size) {
   return Vals;
 }
 
+SmallVector<unsigned> getMaxNumWorkGroups(const Function &F) {
+  return getIntegerVecAttribute(F, "amdgpu-max-num-workgroups", 3,
+                                std::numeric_limits<uint32_t>::max());
+}
+
 bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val) {
   assert((MD.getNumOperands() % 2 == 0) && "invalid number of operands!");
   for (unsigned I = 0, E = MD.getNumOperands() / 2; I != E; ++I) {
@@ -2706,7 +2692,8 @@ int32_t getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR,
 }
 
 bool isSGPR(MCRegister Reg, const MCRegisterInfo *TRI) {
-  const MCRegisterClass SGPRClass = TRI->getRegClass(AMDGPU::SReg_32RegClassID);
+  const MCRegisterClass &SGPRClass =
+      TRI->getRegClass(AMDGPU::SReg_32RegClassID);
   const MCRegister FirstSubReg = TRI->getSubReg(Reg, AMDGPU::sub0);
   return SGPRClass.contains(FirstSubReg != 0 ? FirstSubReg : Reg) ||
          Reg == AMDGPU::SCC;
@@ -3687,10 +3674,11 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
 }
 
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
-  uint64_t TSFlags = MII.get(Opcode).TSFlags;
+  const MCInstrDesc &Desc = MII.get(Opcode);
+  uint64_t TSFlags = Desc.TSFlags;
 
   if (TSFlags & SIInstrFlags::SMRD)
-    return !getSMEMIsBuffer(Opcode);
+    return Desc.mayLoad() && !Desc.mayStore() && !getSMEMIsBuffer(Opcode);
   if (!(TSFlags & SIInstrFlags::FLAT))
     return false;
 

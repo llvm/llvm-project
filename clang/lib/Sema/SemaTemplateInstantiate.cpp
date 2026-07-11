@@ -572,6 +572,7 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
   case PriorTemplateArgumentSubstitution:
   case ConstraintsCheck:
   case NestedRequirementConstraintsCheck:
+  case ExpansionStmtInstantiation:
     return true;
 
   case RequirementInstantiation:
@@ -758,6 +759,15 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
           SemaRef, CodeSynthesisContext::RequirementInstantiation,
           PointOfInstantiation, InstantiationRange, /*Entity=*/nullptr,
           /*Template=*/nullptr, /*TemplateArgs=*/{}) {}
+
+Sema::InstantiatingTemplate::InstantiatingTemplate(
+    Sema &SemaRef, SourceLocation PointOfInstantiation,
+    CXXExpansionStmtPattern *ExpansionStmt, ArrayRef<TemplateArgument> TArgs,
+    SourceRange InstantiationRange)
+    : InstantiatingTemplate(
+          SemaRef, CodeSynthesisContext::ExpansionStmtInstantiation,
+          PointOfInstantiation, InstantiationRange, /*Entity=*/nullptr,
+          /*Template=*/nullptr, /*TemplateArgs=*/TArgs) {}
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
@@ -1293,6 +1303,9 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
                                                 Active->NumCallArgs)));
       break;
     }
+    case CodeSynthesisContext::ExpansionStmtInstantiation:
+      Diags.Report(Active->PointOfInstantiation,
+                   diag::note_expansion_stmt_instantiation_here);
     }
   }
 }
@@ -1891,7 +1904,10 @@ namespace {
       ExprResult Ret = inherited::TransformCXXDynamicCastExpr(E);
       if (Ret.isInvalid())
         return Ret;
-      auto *DestDecl = Ret.get()->getType()->getPointeeCXXRecordDecl();
+      QualType T = Ret.get()->getType();
+      if (const auto *PT = T->getAsCanonical<PointerType>())
+        T = PT->getPointeeType();
+      auto *DestDecl = T->getAsCXXRecordDecl();
       if (DestDecl && DestDecl->isEffectivelyFinal())
         getSema().MarkVTableUsed(Ret.get()->getExprLoc(), DestDecl);
       return Ret;
@@ -1951,6 +1967,12 @@ Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
        SemaRef.inParameterMappingSubstitution()) &&
       maybeInstantiateFunctionParameterToScope(PVD))
     return nullptr;
+
+  if (isa<CXXExpansionStmtDecl>(D)) {
+    assert(SemaRef.CurrentInstantiationScope);
+    return cast<Decl *>(
+        *SemaRef.CurrentInstantiationScope->findInstantiationOf(D));
+  }
 
   return SemaRef.FindInstantiatedDecl(Loc, cast<NamedDecl>(D), TemplateArgs);
 }
@@ -2360,9 +2382,13 @@ ExprResult
 TemplateInstantiator::TransformFunctionParmPackRefExpr(DeclRefExpr *E,
                                                        ValueDecl *PD) {
   typedef LocalInstantiationScope::DeclArgumentPack DeclArgumentPack;
-  llvm::PointerUnion<Decl *, DeclArgumentPack *> *Found
-    = getSema().CurrentInstantiationScope->findInstantiationOf(PD);
-  assert(Found && "no instantiation for parameter pack");
+  llvm::PointerUnion<Decl *, DeclArgumentPack *> *Found =
+      getSema().CurrentInstantiationScope->getInstantiationOfIfExists(PD);
+
+  // This can happen when instantiating an expansion statement that contains
+  // a pack (e.g. `template for (auto x : {{ts...}})`).
+  if (!Found)
+    return E;
 
   Decl *TransformedDecl;
   if (DeclArgumentPack *Pack = dyn_cast<DeclArgumentPack *>(*Found)) {
@@ -3075,7 +3101,7 @@ bool Sema::SubstTypeConstraint(
   const ASTTemplateArgumentListInfo *TemplArgInfo =
       TC->getTemplateArgsAsWritten();
 
-  if (!EvaluateConstraints && !inParameterMappingSubstitution()) {
+  if (!EvaluateConstraints) {
     UnsignedOrNone Index = TC->getArgPackSubstIndex();
     bool ContainsUnexpandedPack =
         TemplArgInfo &&

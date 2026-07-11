@@ -20,7 +20,6 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/Utils.h"
-#include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
@@ -5736,7 +5735,11 @@ struct FoldPresentAbsentIfOp : public mlir::OpRewritePattern<fir::IfOp> {
     auto elseResult = mlir::dyn_cast<fir::ResultOp>(elseBlock.getTerminator());
     if (!elseResult || elseResult.getNumOperands() != 1)
       return mlir::failure();
-    if (!elseResult.getOperand(0).getDefiningOp<fir::AbsentOp>())
+    auto absentOp = elseResult.getOperand(0).getDefiningOp<fir::AbsentOp>();
+    if (!absentOp)
+      return mlir::failure();
+    if (elseBlock.getOperations().size() == 2 &&
+        absentOp.getOperation() != &elseBlock.front())
       return mlir::failure();
 
     rewriter.replaceOp(ifOp, optionalVal);

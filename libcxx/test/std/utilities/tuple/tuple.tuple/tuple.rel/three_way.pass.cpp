@@ -18,11 +18,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-#include "test_macros.h"
-
-TEST_CLANG_DIAGNOSTIC_IGNORED("-Wsign-compare")
-TEST_GCC_DIAGNOSTIC_IGNORED("-Wsign-compare")
-TEST_MSVC_DIAGNOSTIC_IGNORED(4242 4244)
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-sign-compare
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4242 /wd4244
 
 #include <array>
 #include <cassert>
@@ -33,6 +30,8 @@ TEST_MSVC_DIAGNOSTIC_IGNORED(4242 4244)
 #include <tuple>
 #include <type_traits> // std::is_constant_evaluated
 #include <utility>
+
+#include "test_macros.h"
 
 // A custom three-way result type
 struct CustomEquality {

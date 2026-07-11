@@ -14,12 +14,10 @@
 #include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Support/Utils.h"
-#include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MIFCommon.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/parse-tree.h"
-#include "flang/Semantics/expression.h"
 
 //===----------------------------------------------------------------------===//
 // Synchronization statements
@@ -330,7 +328,7 @@ Fortran::lower::genUpperCoBounds(Fortran::lower::AbstractConverter &converter,
     ucobounds = builder.createTemporary(loc, arrayType);
     mlir::Value ucovalue;
     for (size_t i = 0; i < corank - 1; i++) {
-      if (auto ub = object->coshape()[i].lbound().GetExplicit()) {
+      if (auto ub = object->coshape()[i].ubound().GetExplicit()) {
         auto ubExpr = ignoreEvConvert(*ub);
         ucovalue = fir::getBase(converter.genExprValue(loc, ubExpr, stmtCtx));
       } else {

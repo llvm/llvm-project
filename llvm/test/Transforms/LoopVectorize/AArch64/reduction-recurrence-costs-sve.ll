@@ -10,12 +10,165 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; DEFAULT-LABEL: define i32 @chained_recurrences(
 ; DEFAULT-SAME: i32 [[X:%.*]], i64 [[Y:%.*]], ptr [[SRC_1:%.*]], i32 [[Z:%.*]], ptr [[SRC_2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; DEFAULT-NEXT:  [[ENTRY:.*]]:
+; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[Y]], 1
+; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
+; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; DEFAULT:       [[VECTOR_PH]]:
+; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 16
+; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
+; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; DEFAULT-NEXT:    [[TMP1:%.*]] = add i64 [[Y]], 1
+; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[SRC_1]], i64 [[TMP1]]
+; DEFAULT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x i32> poison, i32 [[TMP3]], i64 0
+; DEFAULT-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT7]], <4 x i32> poison, <4 x i32> zeroinitializer
+; DEFAULT-NEXT:    [[TMP4:%.*]] = lshr <4 x i32> [[BROADCAST_SPLAT]], splat (i32 1)
+; DEFAULT-NEXT:    [[TMP5:%.*]] = shl <4 x i32> [[BROADCAST_SPLAT]], splat (i32 1)
+; DEFAULT-NEXT:    [[TMP6:%.*]] = or <4 x i32> [[TMP4]], [[TMP5]]
+; DEFAULT-NEXT:    [[TMP7:%.*]] = or i32 [[Z]], [[X]]
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i32> poison, i32 [[TMP7]], i64 0
+; DEFAULT-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT1]], <4 x i32> poison, <4 x i32> zeroinitializer
+; DEFAULT-NEXT:    [[TMP8:%.*]] = and <4 x i32> [[BROADCAST_SPLAT2]], splat (i32 1)
+; DEFAULT-NEXT:    [[TMP9:%.*]] = xor <4 x i32> [[TMP8]], splat (i32 1)
+; DEFAULT-NEXT:    [[TMP10:%.*]] = zext <4 x i32> [[TMP9]] to <4 x i64>
+; DEFAULT-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP10]], i64 0
+; DEFAULT-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP11]]
+; DEFAULT-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP10]], i64 1
+; DEFAULT-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP13]]
+; DEFAULT-NEXT:    [[TMP15:%.*]] = extractelement <4 x i64> [[TMP10]], i64 2
+; DEFAULT-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP15]]
+; DEFAULT-NEXT:    [[TMP17:%.*]] = extractelement <4 x i64> [[TMP10]], i64 3
+; DEFAULT-NEXT:    [[TMP18:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP17]]
+; DEFAULT-NEXT:    [[TMP19:%.*]] = load i32, ptr [[TMP12]], align 4
+; DEFAULT-NEXT:    [[TMP20:%.*]] = load i32, ptr [[TMP14]], align 4
+; DEFAULT-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP16]], align 4
+; DEFAULT-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP18]], align 4
+; DEFAULT-NEXT:    [[TMP23:%.*]] = insertelement <4 x i32> poison, i32 [[TMP19]], i32 0
+; DEFAULT-NEXT:    [[TMP24:%.*]] = insertelement <4 x i32> [[TMP23]], i32 [[TMP20]], i32 1
+; DEFAULT-NEXT:    [[TMP25:%.*]] = insertelement <4 x i32> [[TMP24]], i32 [[TMP21]], i32 2
+; DEFAULT-NEXT:    [[TMP26:%.*]] = insertelement <4 x i32> [[TMP25]], i32 [[TMP22]], i32 3
 ; DEFAULT-NEXT:    br label %[[LOOP:.*]]
 ; DEFAULT:       [[LOOP]]:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[TMP68:%.*]], %[[LOOP]] ]
-; DEFAULT-NEXT:    [[SCALAR_RECUR15:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[TMP0]], %[[LOOP]] ]
-; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; DEFAULT-NEXT:    [[SUM_RED:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RED_2:%.*]], %[[LOOP]] ]
+; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
+; DEFAULT-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 0>, %[[VECTOR_PH]] ], [ [[BROADCAST_SPLAT8]], %[[LOOP]] ]
+; DEFAULT-NEXT:    [[VECTOR_RECUR3:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 0>, %[[VECTOR_PH]] ], [ [[TMP28:%.*]], %[[LOOP]] ]
+; DEFAULT-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP113:%.*]], %[[LOOP]] ]
+; DEFAULT-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP114:%.*]], %[[LOOP]] ]
+; DEFAULT-NEXT:    [[VEC_PHI5:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP115:%.*]], %[[LOOP]] ]
+; DEFAULT-NEXT:    [[VEC_PHI6:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP116:%.*]], %[[LOOP]] ]
+; DEFAULT-NEXT:    [[TMP27:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[BROADCAST_SPLAT8]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; DEFAULT-NEXT:    [[TMP28]] = shufflevector <4 x i32> [[BROADCAST_SPLAT8]], <4 x i32> [[BROADCAST_SPLAT8]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; DEFAULT-NEXT:    [[TMP29:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR3]], <4 x i32> [[TMP27]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; DEFAULT-NEXT:    [[TMP30:%.*]] = shufflevector <4 x i32> [[TMP27]], <4 x i32> [[TMP28]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; DEFAULT-NEXT:    [[TMP31:%.*]] = shufflevector <4 x i32> [[TMP28]], <4 x i32> [[TMP28]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; DEFAULT-NEXT:    [[TMP32:%.*]] = or <4 x i32> [[TMP29]], [[BROADCAST_SPLAT]]
+; DEFAULT-NEXT:    [[TMP33:%.*]] = or <4 x i32> [[TMP30]], [[BROADCAST_SPLAT]]
+; DEFAULT-NEXT:    [[TMP34:%.*]] = or <4 x i32> [[TMP31]], [[BROADCAST_SPLAT]]
+; DEFAULT-NEXT:    [[TMP35:%.*]] = shl <4 x i32> [[TMP32]], splat (i32 1)
+; DEFAULT-NEXT:    [[TMP36:%.*]] = shl <4 x i32> [[TMP33]], splat (i32 1)
+; DEFAULT-NEXT:    [[TMP37:%.*]] = shl <4 x i32> [[TMP34]], splat (i32 1)
+; DEFAULT-NEXT:    [[TMP38:%.*]] = or <4 x i32> [[TMP35]], splat (i32 2)
+; DEFAULT-NEXT:    [[TMP39:%.*]] = or <4 x i32> [[TMP36]], splat (i32 2)
+; DEFAULT-NEXT:    [[TMP40:%.*]] = or <4 x i32> [[TMP37]], splat (i32 2)
+; DEFAULT-NEXT:    [[TMP41:%.*]] = or <4 x i32> [[TMP6]], [[TMP38]]
+; DEFAULT-NEXT:    [[TMP42:%.*]] = or <4 x i32> [[TMP6]], [[TMP39]]
+; DEFAULT-NEXT:    [[TMP43:%.*]] = or <4 x i32> [[TMP6]], [[TMP40]]
+; DEFAULT-NEXT:    [[TMP44:%.*]] = or <4 x i32> [[TMP41]], [[BROADCAST_SPLAT]]
+; DEFAULT-NEXT:    [[TMP45:%.*]] = or <4 x i32> [[TMP42]], [[BROADCAST_SPLAT]]
+; DEFAULT-NEXT:    [[TMP46:%.*]] = or <4 x i32> [[TMP43]], [[BROADCAST_SPLAT]]
+; DEFAULT-NEXT:    [[TMP47:%.*]] = lshr <4 x i32> [[TMP44]], splat (i32 1)
+; DEFAULT-NEXT:    [[TMP48:%.*]] = lshr <4 x i32> [[TMP45]], splat (i32 1)
+; DEFAULT-NEXT:    [[TMP49:%.*]] = lshr <4 x i32> [[TMP46]], splat (i32 1)
+; DEFAULT-NEXT:    [[TMP50:%.*]] = zext <4 x i32> [[TMP47]] to <4 x i64>
+; DEFAULT-NEXT:    [[TMP51:%.*]] = zext <4 x i32> [[TMP48]] to <4 x i64>
+; DEFAULT-NEXT:    [[TMP52:%.*]] = zext <4 x i32> [[TMP49]] to <4 x i64>
+; DEFAULT-NEXT:    [[TMP53:%.*]] = extractelement <4 x i64> [[TMP50]], i64 0
+; DEFAULT-NEXT:    [[TMP54:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP53]]
+; DEFAULT-NEXT:    [[TMP55:%.*]] = extractelement <4 x i64> [[TMP50]], i64 1
+; DEFAULT-NEXT:    [[TMP56:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP55]]
+; DEFAULT-NEXT:    [[TMP57:%.*]] = extractelement <4 x i64> [[TMP50]], i64 2
+; DEFAULT-NEXT:    [[TMP58:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP57]]
+; DEFAULT-NEXT:    [[TMP59:%.*]] = extractelement <4 x i64> [[TMP50]], i64 3
+; DEFAULT-NEXT:    [[TMP60:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP59]]
+; DEFAULT-NEXT:    [[TMP61:%.*]] = extractelement <4 x i64> [[TMP51]], i64 0
+; DEFAULT-NEXT:    [[TMP62:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP61]]
+; DEFAULT-NEXT:    [[TMP63:%.*]] = extractelement <4 x i64> [[TMP51]], i64 1
+; DEFAULT-NEXT:    [[TMP64:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP63]]
+; DEFAULT-NEXT:    [[TMP65:%.*]] = extractelement <4 x i64> [[TMP51]], i64 2
+; DEFAULT-NEXT:    [[TMP66:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP65]]
+; DEFAULT-NEXT:    [[TMP120:%.*]] = extractelement <4 x i64> [[TMP51]], i64 3
+; DEFAULT-NEXT:    [[TMP121:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP120]]
+; DEFAULT-NEXT:    [[TMP122:%.*]] = extractelement <4 x i64> [[TMP52]], i64 0
+; DEFAULT-NEXT:    [[TMP123:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP122]]
+; DEFAULT-NEXT:    [[TMP124:%.*]] = extractelement <4 x i64> [[TMP52]], i64 1
+; DEFAULT-NEXT:    [[TMP125:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP124]]
+; DEFAULT-NEXT:    [[TMP126:%.*]] = extractelement <4 x i64> [[TMP52]], i64 2
+; DEFAULT-NEXT:    [[TMP127:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP126]]
+; DEFAULT-NEXT:    [[TMP128:%.*]] = extractelement <4 x i64> [[TMP52]], i64 3
+; DEFAULT-NEXT:    [[TMP76:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP128]]
+; DEFAULT-NEXT:    [[TMP77:%.*]] = load i32, ptr [[TMP54]], align 4
+; DEFAULT-NEXT:    [[TMP78:%.*]] = load i32, ptr [[TMP56]], align 4
+; DEFAULT-NEXT:    [[TMP79:%.*]] = load i32, ptr [[TMP58]], align 4
+; DEFAULT-NEXT:    [[TMP80:%.*]] = load i32, ptr [[TMP60]], align 4
+; DEFAULT-NEXT:    [[TMP81:%.*]] = insertelement <4 x i32> poison, i32 [[TMP77]], i32 0
+; DEFAULT-NEXT:    [[TMP82:%.*]] = insertelement <4 x i32> [[TMP81]], i32 [[TMP78]], i32 1
+; DEFAULT-NEXT:    [[TMP83:%.*]] = insertelement <4 x i32> [[TMP82]], i32 [[TMP79]], i32 2
+; DEFAULT-NEXT:    [[TMP84:%.*]] = insertelement <4 x i32> [[TMP83]], i32 [[TMP80]], i32 3
+; DEFAULT-NEXT:    [[TMP85:%.*]] = load i32, ptr [[TMP62]], align 4
+; DEFAULT-NEXT:    [[TMP86:%.*]] = load i32, ptr [[TMP64]], align 4
+; DEFAULT-NEXT:    [[TMP87:%.*]] = load i32, ptr [[TMP66]], align 4
+; DEFAULT-NEXT:    [[TMP88:%.*]] = load i32, ptr [[TMP121]], align 4
+; DEFAULT-NEXT:    [[TMP89:%.*]] = insertelement <4 x i32> poison, i32 [[TMP85]], i32 0
+; DEFAULT-NEXT:    [[TMP90:%.*]] = insertelement <4 x i32> [[TMP89]], i32 [[TMP86]], i32 1
+; DEFAULT-NEXT:    [[TMP91:%.*]] = insertelement <4 x i32> [[TMP90]], i32 [[TMP87]], i32 2
+; DEFAULT-NEXT:    [[TMP92:%.*]] = insertelement <4 x i32> [[TMP91]], i32 [[TMP88]], i32 3
+; DEFAULT-NEXT:    [[TMP93:%.*]] = load i32, ptr [[TMP123]], align 4
+; DEFAULT-NEXT:    [[TMP94:%.*]] = load i32, ptr [[TMP125]], align 4
+; DEFAULT-NEXT:    [[TMP95:%.*]] = load i32, ptr [[TMP127]], align 4
+; DEFAULT-NEXT:    [[TMP96:%.*]] = load i32, ptr [[TMP76]], align 4
+; DEFAULT-NEXT:    [[TMP97:%.*]] = insertelement <4 x i32> poison, i32 [[TMP93]], i32 0
+; DEFAULT-NEXT:    [[TMP98:%.*]] = insertelement <4 x i32> [[TMP97]], i32 [[TMP94]], i32 1
+; DEFAULT-NEXT:    [[TMP99:%.*]] = insertelement <4 x i32> [[TMP98]], i32 [[TMP95]], i32 2
+; DEFAULT-NEXT:    [[TMP100:%.*]] = insertelement <4 x i32> [[TMP99]], i32 [[TMP96]], i32 3
+; DEFAULT-NEXT:    [[TMP101:%.*]] = load i32, ptr [[TMP123]], align 4
+; DEFAULT-NEXT:    [[TMP102:%.*]] = load i32, ptr [[TMP125]], align 4
+; DEFAULT-NEXT:    [[TMP103:%.*]] = load i32, ptr [[TMP127]], align 4
+; DEFAULT-NEXT:    [[TMP104:%.*]] = load i32, ptr [[TMP76]], align 4
+; DEFAULT-NEXT:    [[TMP105:%.*]] = insertelement <4 x i32> poison, i32 [[TMP101]], i32 0
+; DEFAULT-NEXT:    [[TMP106:%.*]] = insertelement <4 x i32> [[TMP105]], i32 [[TMP102]], i32 1
+; DEFAULT-NEXT:    [[TMP107:%.*]] = insertelement <4 x i32> [[TMP106]], i32 [[TMP103]], i32 2
+; DEFAULT-NEXT:    [[TMP108:%.*]] = insertelement <4 x i32> [[TMP107]], i32 [[TMP104]], i32 3
+; DEFAULT-NEXT:    [[TMP109:%.*]] = or <4 x i32> [[TMP26]], [[VEC_PHI]]
+; DEFAULT-NEXT:    [[TMP110:%.*]] = or <4 x i32> [[TMP26]], [[VEC_PHI4]]
+; DEFAULT-NEXT:    [[TMP111:%.*]] = or <4 x i32> [[TMP26]], [[VEC_PHI5]]
+; DEFAULT-NEXT:    [[TMP112:%.*]] = or <4 x i32> [[TMP26]], [[VEC_PHI6]]
+; DEFAULT-NEXT:    [[TMP113]] = or <4 x i32> [[TMP109]], [[TMP84]]
+; DEFAULT-NEXT:    [[TMP114]] = or <4 x i32> [[TMP110]], [[TMP92]]
+; DEFAULT-NEXT:    [[TMP115]] = or <4 x i32> [[TMP111]], [[TMP100]]
+; DEFAULT-NEXT:    [[TMP116]] = or <4 x i32> [[TMP112]], [[TMP108]]
+; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; DEFAULT-NEXT:    [[TMP117:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; DEFAULT-NEXT:    br i1 [[TMP117]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
+; DEFAULT:       [[MIDDLE_BLOCK]]:
+; DEFAULT-NEXT:    [[BIN_RDX:%.*]] = or <4 x i32> [[TMP114]], [[TMP113]]
+; DEFAULT-NEXT:    [[BIN_RDX9:%.*]] = or <4 x i32> [[TMP115]], [[BIN_RDX]]
+; DEFAULT-NEXT:    [[BIN_RDX10:%.*]] = or <4 x i32> [[TMP116]], [[BIN_RDX9]]
+; DEFAULT-NEXT:    [[TMP118:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[BIN_RDX10]])
+; DEFAULT-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP28]], i64 3
+; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; DEFAULT-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; DEFAULT:       [[SCALAR_PH]]:
+; DEFAULT-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; DEFAULT-NEXT:    [[SCALAR_RECUR_INIT11:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; DEFAULT-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP118]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; DEFAULT-NEXT:    br label %[[LOOP1:.*]]
+; DEFAULT:       [[LOOP1]]:
+; DEFAULT-NEXT:    [[TMP119:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[TMP68:%.*]], %[[LOOP1]] ]
+; DEFAULT-NEXT:    [[SCALAR_RECUR15:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT11]], %[[SCALAR_PH]] ], [ [[TMP119]], %[[LOOP1]] ]
+; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; DEFAULT-NEXT:    [[SUM_RED:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[RED_2:%.*]], %[[LOOP1]] ]
 ; DEFAULT-NEXT:    [[TMP67:%.*]] = add i64 [[Y]], 1
 ; DEFAULT-NEXT:    [[GEP_1:%.*]] = getelementptr i32, ptr [[SRC_1]], i64 [[TMP67]]
 ; DEFAULT-NEXT:    [[TMP68]] = load i32, ptr [[GEP_1]], align 4
@@ -41,125 +194,171 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; DEFAULT-NEXT:    [[RED_1:%.*]] = or i32 [[TMP74]], [[SUM_RED]]
 ; DEFAULT-NEXT:    [[RED_2]] = or i32 [[RED_1]], [[TMP75]]
 ; DEFAULT-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], [[Y]]
-; DEFAULT-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; DEFAULT-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP3:![0-9]+]]
 ; DEFAULT:       [[EXIT]]:
-; DEFAULT-NEXT:    [[RED_2_LCSSA:%.*]] = phi i32 [ [[RED_2]], %[[LOOP]] ]
+; DEFAULT-NEXT:    [[RED_2_LCSSA:%.*]] = phi i32 [ [[RED_2]], %[[LOOP1]] ], [ [[TMP118]], %[[MIDDLE_BLOCK]] ]
 ; DEFAULT-NEXT:    ret i32 [[RED_2_LCSSA]]
 ;
 ; VSCALEFORTUNING2-LABEL: define i32 @chained_recurrences(
 ; VSCALEFORTUNING2-SAME: i32 [[X:%.*]], i64 [[Y:%.*]], ptr [[SRC_1:%.*]], i32 [[Z:%.*]], ptr [[SRC_2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; VSCALEFORTUNING2-NEXT:  [[ENTRY:.*]]:
 ; VSCALEFORTUNING2-NEXT:    [[TMP0:%.*]] = add i64 [[Y]], 1
-; VSCALEFORTUNING2-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; VSCALEFORTUNING2-NEXT:    [[UMAX:%.*]] = shl nuw i64 [[TMP1]], 4
-; VSCALEFORTUNING2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[UMAX]]
+; VSCALEFORTUNING2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
 ; VSCALEFORTUNING2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VSCALEFORTUNING2:       [[VECTOR_PH]]:
-; VSCALEFORTUNING2-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP1]], 4
-; VSCALEFORTUNING2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP4]]
+; VSCALEFORTUNING2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 16
 ; VSCALEFORTUNING2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; VSCALEFORTUNING2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[X]], i64 0
-; VSCALEFORTUNING2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; VSCALEFORTUNING2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
+; VSCALEFORTUNING2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; VSCALEFORTUNING2-NEXT:    [[TMP7:%.*]] = add i64 [[Y]], 1
 ; VSCALEFORTUNING2-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[SRC_1]], i64 [[TMP7]]
-; VSCALEFORTUNING2-NEXT:    [[TMP9:%.*]] = lshr <vscale x 4 x i32> [[BROADCAST_SPLAT]], splat (i32 1)
-; VSCALEFORTUNING2-NEXT:    [[TMP10:%.*]] = shl <vscale x 4 x i32> [[BROADCAST_SPLAT]], splat (i32 1)
-; VSCALEFORTUNING2-NEXT:    [[TMP11:%.*]] = or <vscale x 4 x i32> [[TMP9]], [[TMP10]]
+; VSCALEFORTUNING2-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP8]], align 4
+; VSCALEFORTUNING2-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x i32> poison, i32 [[TMP3]], i64 0
+; VSCALEFORTUNING2-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT7]], <4 x i32> poison, <4 x i32> zeroinitializer
+; VSCALEFORTUNING2-NEXT:    [[TMP4:%.*]] = lshr <4 x i32> [[BROADCAST_SPLAT]], splat (i32 1)
+; VSCALEFORTUNING2-NEXT:    [[TMP5:%.*]] = shl <4 x i32> [[BROADCAST_SPLAT]], splat (i32 1)
+; VSCALEFORTUNING2-NEXT:    [[TMP6:%.*]] = or <4 x i32> [[TMP4]], [[TMP5]]
 ; VSCALEFORTUNING2-NEXT:    [[TMP16:%.*]] = or i32 [[Z]], [[X]]
-; VSCALEFORTUNING2-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP16]], i64 0
-; VSCALEFORTUNING2-NEXT:    [[TMP12:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; VSCALEFORTUNING2-NEXT:    [[TMP13:%.*]] = and <vscale x 4 x i32> [[TMP12]], splat (i32 1)
-; VSCALEFORTUNING2-NEXT:    [[TMP14:%.*]] = xor <vscale x 4 x i32> [[TMP13]], splat (i32 1)
-; VSCALEFORTUNING2-NEXT:    [[TMP15:%.*]] = zext <vscale x 4 x i32> [[TMP14]] to <vscale x 4 x i64>
-; VSCALEFORTUNING2-NEXT:    [[DOTSPLAT:%.*]] = getelementptr i32, ptr [[SRC_2]], <vscale x 4 x i64> [[TMP15]]
-; VSCALEFORTUNING2-NEXT:    [[TMP18:%.*]] = call i32 @llvm.vscale.i32()
-; VSCALEFORTUNING2-NEXT:    [[TMP19:%.*]] = mul nuw i32 [[TMP18]], 4
-; VSCALEFORTUNING2-NEXT:    [[TMP20:%.*]] = sub i32 [[TMP19]], 1
-; VSCALEFORTUNING2-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 0, i32 [[TMP20]]
-; VSCALEFORTUNING2-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vscale.i32()
-; VSCALEFORTUNING2-NEXT:    [[TMP22:%.*]] = mul nuw i32 [[TMP21]], 4
-; VSCALEFORTUNING2-NEXT:    [[TMP23:%.*]] = sub i32 [[TMP22]], 1
-; VSCALEFORTUNING2-NEXT:    [[VECTOR_RECUR_INIT3:%.*]] = insertelement <vscale x 4 x i32> poison, i32 0, i32 [[TMP23]]
+; VSCALEFORTUNING2-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i32> poison, i32 [[TMP16]], i64 0
+; VSCALEFORTUNING2-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT1]], <4 x i32> poison, <4 x i32> zeroinitializer
+; VSCALEFORTUNING2-NEXT:    [[TMP117:%.*]] = and <4 x i32> [[BROADCAST_SPLAT2]], splat (i32 1)
+; VSCALEFORTUNING2-NEXT:    [[TMP9:%.*]] = xor <4 x i32> [[TMP117]], splat (i32 1)
+; VSCALEFORTUNING2-NEXT:    [[TMP10:%.*]] = zext <4 x i32> [[TMP9]] to <4 x i64>
+; VSCALEFORTUNING2-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP10]], i64 0
+; VSCALEFORTUNING2-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP11]]
+; VSCALEFORTUNING2-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP10]], i64 1
+; VSCALEFORTUNING2-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP13]]
+; VSCALEFORTUNING2-NEXT:    [[TMP15:%.*]] = extractelement <4 x i64> [[TMP10]], i64 2
+; VSCALEFORTUNING2-NEXT:    [[TMP120:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP15]]
+; VSCALEFORTUNING2-NEXT:    [[TMP17:%.*]] = extractelement <4 x i64> [[TMP10]], i64 3
+; VSCALEFORTUNING2-NEXT:    [[TMP18:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP17]]
+; VSCALEFORTUNING2-NEXT:    [[TMP19:%.*]] = load i32, ptr [[TMP12]], align 4
+; VSCALEFORTUNING2-NEXT:    [[TMP20:%.*]] = load i32, ptr [[TMP14]], align 4
+; VSCALEFORTUNING2-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP120]], align 4
+; VSCALEFORTUNING2-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP18]], align 4
+; VSCALEFORTUNING2-NEXT:    [[TMP23:%.*]] = insertelement <4 x i32> poison, i32 [[TMP19]], i32 0
+; VSCALEFORTUNING2-NEXT:    [[TMP24:%.*]] = insertelement <4 x i32> [[TMP23]], i32 [[TMP20]], i32 1
+; VSCALEFORTUNING2-NEXT:    [[TMP25:%.*]] = insertelement <4 x i32> [[TMP24]], i32 [[TMP21]], i32 2
+; VSCALEFORTUNING2-NEXT:    [[TMP26:%.*]] = insertelement <4 x i32> [[TMP25]], i32 [[TMP22]], i32 3
 ; VSCALEFORTUNING2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VSCALEFORTUNING2:       [[VECTOR_BODY]]:
 ; VSCALEFORTUNING2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VSCALEFORTUNING2-NEXT:    [[VECTOR_RECUR:%.*]] = phi <vscale x 4 x i32> [ [[VECTOR_RECUR_INIT]], %[[VECTOR_PH]] ], [ [[BROADCAST_SPLAT7:%.*]], %[[VECTOR_BODY]] ]
-; VSCALEFORTUNING2-NEXT:    [[VECTOR_RECUR4:%.*]] = phi <vscale x 4 x i32> [ [[VECTOR_RECUR_INIT3]], %[[VECTOR_PH]] ], [ [[TMP26:%.*]], %[[VECTOR_BODY]] ]
-; VSCALEFORTUNING2-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP47:%.*]], %[[VECTOR_BODY]] ]
-; VSCALEFORTUNING2-NEXT:    [[VEC_PHI5:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP48:%.*]], %[[VECTOR_BODY]] ]
-; VSCALEFORTUNING2-NEXT:    [[VEC_PHI6:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP65:%.*]], %[[VECTOR_BODY]] ]
-; VSCALEFORTUNING2-NEXT:    [[VEC_PHI7:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP66:%.*]], %[[VECTOR_BODY]] ]
-; VSCALEFORTUNING2-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP8]], align 4
-; VSCALEFORTUNING2-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP24]], i64 0
-; VSCALEFORTUNING2-NEXT:    [[BROADCAST_SPLAT7]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT6]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; VSCALEFORTUNING2-NEXT:    [[TMP25:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR]], <vscale x 4 x i32> [[BROADCAST_SPLAT7]], i32 1)
-; VSCALEFORTUNING2-NEXT:    [[TMP26]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[BROADCAST_SPLAT7]], <vscale x 4 x i32> [[BROADCAST_SPLAT7]], i32 1)
-; VSCALEFORTUNING2-NEXT:    [[TMP27:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR4]], <vscale x 4 x i32> [[TMP25]], i32 1)
-; VSCALEFORTUNING2-NEXT:    [[TMP28:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[TMP25]], <vscale x 4 x i32> [[TMP26]], i32 1)
-; VSCALEFORTUNING2-NEXT:    [[TMP50:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[TMP26]], <vscale x 4 x i32> [[TMP26]], i32 1)
-; VSCALEFORTUNING2-NEXT:    [[TMP29:%.*]] = or <vscale x 4 x i32> [[TMP27]], [[BROADCAST_SPLAT]]
-; VSCALEFORTUNING2-NEXT:    [[TMP30:%.*]] = or <vscale x 4 x i32> [[TMP28]], [[BROADCAST_SPLAT]]
-; VSCALEFORTUNING2-NEXT:    [[TMP51:%.*]] = or <vscale x 4 x i32> [[TMP50]], [[BROADCAST_SPLAT]]
-; VSCALEFORTUNING2-NEXT:    [[TMP31:%.*]] = shl <vscale x 4 x i32> [[TMP29]], splat (i32 1)
-; VSCALEFORTUNING2-NEXT:    [[TMP32:%.*]] = shl <vscale x 4 x i32> [[TMP30]], splat (i32 1)
-; VSCALEFORTUNING2-NEXT:    [[TMP67:%.*]] = shl <vscale x 4 x i32> [[TMP51]], splat (i32 1)
-; VSCALEFORTUNING2-NEXT:    [[TMP33:%.*]] = or <vscale x 4 x i32> [[TMP31]], splat (i32 2)
-; VSCALEFORTUNING2-NEXT:    [[TMP34:%.*]] = or <vscale x 4 x i32> [[TMP32]], splat (i32 2)
-; VSCALEFORTUNING2-NEXT:    [[TMP68:%.*]] = or <vscale x 4 x i32> [[TMP67]], splat (i32 2)
-; VSCALEFORTUNING2-NEXT:    [[TMP35:%.*]] = or <vscale x 4 x i32> [[TMP11]], [[TMP33]]
-; VSCALEFORTUNING2-NEXT:    [[TMP36:%.*]] = or <vscale x 4 x i32> [[TMP11]], [[TMP34]]
-; VSCALEFORTUNING2-NEXT:    [[TMP69:%.*]] = or <vscale x 4 x i32> [[TMP11]], [[TMP68]]
-; VSCALEFORTUNING2-NEXT:    [[TMP37:%.*]] = or <vscale x 4 x i32> [[TMP35]], [[BROADCAST_SPLAT]]
-; VSCALEFORTUNING2-NEXT:    [[TMP38:%.*]] = or <vscale x 4 x i32> [[TMP36]], [[BROADCAST_SPLAT]]
-; VSCALEFORTUNING2-NEXT:    [[TMP70:%.*]] = or <vscale x 4 x i32> [[TMP69]], [[BROADCAST_SPLAT]]
-; VSCALEFORTUNING2-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 [[DOTSPLAT]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> poison)
-; VSCALEFORTUNING2-NEXT:    [[WIDE_MASKED_GATHER8:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 [[DOTSPLAT]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> poison)
-; VSCALEFORTUNING2-NEXT:    [[WIDE_MASKED_GATHER11:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 [[DOTSPLAT]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> poison)
-; VSCALEFORTUNING2-NEXT:    [[WIDE_MASKED_GATHER12:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 [[DOTSPLAT]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> poison)
-; VSCALEFORTUNING2-NEXT:    [[TMP39:%.*]] = lshr <vscale x 4 x i32> [[TMP37]], splat (i32 1)
-; VSCALEFORTUNING2-NEXT:    [[TMP40:%.*]] = lshr <vscale x 4 x i32> [[TMP38]], splat (i32 1)
-; VSCALEFORTUNING2-NEXT:    [[TMP71:%.*]] = lshr <vscale x 4 x i32> [[TMP70]], splat (i32 1)
-; VSCALEFORTUNING2-NEXT:    [[TMP41:%.*]] = zext <vscale x 4 x i32> [[TMP39]] to <vscale x 4 x i64>
-; VSCALEFORTUNING2-NEXT:    [[TMP42:%.*]] = zext <vscale x 4 x i32> [[TMP40]] to <vscale x 4 x i64>
-; VSCALEFORTUNING2-NEXT:    [[TMP72:%.*]] = zext <vscale x 4 x i32> [[TMP71]] to <vscale x 4 x i64>
-; VSCALEFORTUNING2-NEXT:    [[TMP43:%.*]] = getelementptr i32, ptr [[SRC_2]], <vscale x 4 x i64> [[TMP41]]
-; VSCALEFORTUNING2-NEXT:    [[TMP44:%.*]] = getelementptr i32, ptr [[SRC_2]], <vscale x 4 x i64> [[TMP42]]
-; VSCALEFORTUNING2-NEXT:    [[WIDE_GEP15:%.*]] = getelementptr i32, ptr [[SRC_2]], <vscale x 4 x i64> [[TMP72]]
-; VSCALEFORTUNING2-NEXT:    [[WIDE_MASKED_GATHER9:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 [[TMP43]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> poison)
-; VSCALEFORTUNING2-NEXT:    [[WIDE_MASKED_GATHER10:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 [[TMP44]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> poison)
-; VSCALEFORTUNING2-NEXT:    [[WIDE_MASKED_GATHER18:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 [[WIDE_GEP15]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> poison)
-; VSCALEFORTUNING2-NEXT:    [[WIDE_MASKED_GATHER19:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 [[WIDE_GEP15]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> poison)
-; VSCALEFORTUNING2-NEXT:    [[TMP45:%.*]] = or <vscale x 4 x i32> [[WIDE_MASKED_GATHER]], [[VEC_PHI]]
-; VSCALEFORTUNING2-NEXT:    [[TMP46:%.*]] = or <vscale x 4 x i32> [[WIDE_MASKED_GATHER8]], [[VEC_PHI5]]
-; VSCALEFORTUNING2-NEXT:    [[TMP73:%.*]] = or <vscale x 4 x i32> [[WIDE_MASKED_GATHER11]], [[VEC_PHI6]]
-; VSCALEFORTUNING2-NEXT:    [[TMP74:%.*]] = or <vscale x 4 x i32> [[WIDE_MASKED_GATHER12]], [[VEC_PHI7]]
-; VSCALEFORTUNING2-NEXT:    [[TMP47]] = or <vscale x 4 x i32> [[TMP45]], [[WIDE_MASKED_GATHER9]]
-; VSCALEFORTUNING2-NEXT:    [[TMP48]] = or <vscale x 4 x i32> [[TMP46]], [[WIDE_MASKED_GATHER10]]
-; VSCALEFORTUNING2-NEXT:    [[TMP65]] = or <vscale x 4 x i32> [[TMP73]], [[WIDE_MASKED_GATHER18]]
-; VSCALEFORTUNING2-NEXT:    [[TMP66]] = or <vscale x 4 x i32> [[TMP74]], [[WIDE_MASKED_GATHER19]]
-; VSCALEFORTUNING2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
+; VSCALEFORTUNING2-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 0>, %[[VECTOR_PH]] ], [ [[BROADCAST_SPLAT8]], %[[VECTOR_BODY]] ]
+; VSCALEFORTUNING2-NEXT:    [[VECTOR_RECUR3:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 0>, %[[VECTOR_PH]] ], [ [[TMP28:%.*]], %[[VECTOR_BODY]] ]
+; VSCALEFORTUNING2-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP113:%.*]], %[[VECTOR_BODY]] ]
+; VSCALEFORTUNING2-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP114:%.*]], %[[VECTOR_BODY]] ]
+; VSCALEFORTUNING2-NEXT:    [[VEC_PHI5:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP115:%.*]], %[[VECTOR_BODY]] ]
+; VSCALEFORTUNING2-NEXT:    [[VEC_PHI6:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP116:%.*]], %[[VECTOR_BODY]] ]
+; VSCALEFORTUNING2-NEXT:    [[TMP27:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[BROADCAST_SPLAT8]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; VSCALEFORTUNING2-NEXT:    [[TMP28]] = shufflevector <4 x i32> [[BROADCAST_SPLAT8]], <4 x i32> [[BROADCAST_SPLAT8]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; VSCALEFORTUNING2-NEXT:    [[TMP29:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR3]], <4 x i32> [[TMP27]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; VSCALEFORTUNING2-NEXT:    [[TMP30:%.*]] = shufflevector <4 x i32> [[TMP27]], <4 x i32> [[TMP28]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; VSCALEFORTUNING2-NEXT:    [[TMP31:%.*]] = shufflevector <4 x i32> [[TMP28]], <4 x i32> [[TMP28]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; VSCALEFORTUNING2-NEXT:    [[TMP32:%.*]] = or <4 x i32> [[TMP29]], [[BROADCAST_SPLAT]]
+; VSCALEFORTUNING2-NEXT:    [[TMP33:%.*]] = or <4 x i32> [[TMP30]], [[BROADCAST_SPLAT]]
+; VSCALEFORTUNING2-NEXT:    [[TMP34:%.*]] = or <4 x i32> [[TMP31]], [[BROADCAST_SPLAT]]
+; VSCALEFORTUNING2-NEXT:    [[TMP35:%.*]] = shl <4 x i32> [[TMP32]], splat (i32 1)
+; VSCALEFORTUNING2-NEXT:    [[TMP36:%.*]] = shl <4 x i32> [[TMP33]], splat (i32 1)
+; VSCALEFORTUNING2-NEXT:    [[TMP37:%.*]] = shl <4 x i32> [[TMP34]], splat (i32 1)
+; VSCALEFORTUNING2-NEXT:    [[TMP38:%.*]] = or <4 x i32> [[TMP35]], splat (i32 2)
+; VSCALEFORTUNING2-NEXT:    [[TMP39:%.*]] = or <4 x i32> [[TMP36]], splat (i32 2)
+; VSCALEFORTUNING2-NEXT:    [[TMP40:%.*]] = or <4 x i32> [[TMP37]], splat (i32 2)
+; VSCALEFORTUNING2-NEXT:    [[TMP41:%.*]] = or <4 x i32> [[TMP6]], [[TMP38]]
+; VSCALEFORTUNING2-NEXT:    [[TMP42:%.*]] = or <4 x i32> [[TMP6]], [[TMP39]]
+; VSCALEFORTUNING2-NEXT:    [[TMP43:%.*]] = or <4 x i32> [[TMP6]], [[TMP40]]
+; VSCALEFORTUNING2-NEXT:    [[TMP44:%.*]] = or <4 x i32> [[TMP41]], [[BROADCAST_SPLAT]]
+; VSCALEFORTUNING2-NEXT:    [[TMP45:%.*]] = or <4 x i32> [[TMP42]], [[BROADCAST_SPLAT]]
+; VSCALEFORTUNING2-NEXT:    [[TMP46:%.*]] = or <4 x i32> [[TMP43]], [[BROADCAST_SPLAT]]
+; VSCALEFORTUNING2-NEXT:    [[TMP47:%.*]] = lshr <4 x i32> [[TMP44]], splat (i32 1)
+; VSCALEFORTUNING2-NEXT:    [[TMP48:%.*]] = lshr <4 x i32> [[TMP45]], splat (i32 1)
+; VSCALEFORTUNING2-NEXT:    [[TMP121:%.*]] = lshr <4 x i32> [[TMP46]], splat (i32 1)
+; VSCALEFORTUNING2-NEXT:    [[TMP50:%.*]] = zext <4 x i32> [[TMP47]] to <4 x i64>
+; VSCALEFORTUNING2-NEXT:    [[TMP51:%.*]] = zext <4 x i32> [[TMP48]] to <4 x i64>
+; VSCALEFORTUNING2-NEXT:    [[TMP52:%.*]] = zext <4 x i32> [[TMP121]] to <4 x i64>
+; VSCALEFORTUNING2-NEXT:    [[TMP53:%.*]] = extractelement <4 x i64> [[TMP50]], i64 0
+; VSCALEFORTUNING2-NEXT:    [[TMP54:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP53]]
+; VSCALEFORTUNING2-NEXT:    [[TMP122:%.*]] = extractelement <4 x i64> [[TMP50]], i64 1
+; VSCALEFORTUNING2-NEXT:    [[TMP123:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP122]]
+; VSCALEFORTUNING2-NEXT:    [[TMP124:%.*]] = extractelement <4 x i64> [[TMP50]], i64 2
+; VSCALEFORTUNING2-NEXT:    [[TMP125:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP124]]
+; VSCALEFORTUNING2-NEXT:    [[TMP126:%.*]] = extractelement <4 x i64> [[TMP50]], i64 3
+; VSCALEFORTUNING2-NEXT:    [[TMP127:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP126]]
+; VSCALEFORTUNING2-NEXT:    [[TMP128:%.*]] = extractelement <4 x i64> [[TMP51]], i64 0
+; VSCALEFORTUNING2-NEXT:    [[TMP129:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP128]]
+; VSCALEFORTUNING2-NEXT:    [[TMP130:%.*]] = extractelement <4 x i64> [[TMP51]], i64 1
+; VSCALEFORTUNING2-NEXT:    [[TMP131:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP130]]
+; VSCALEFORTUNING2-NEXT:    [[TMP65:%.*]] = extractelement <4 x i64> [[TMP51]], i64 2
+; VSCALEFORTUNING2-NEXT:    [[TMP66:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP65]]
+; VSCALEFORTUNING2-NEXT:    [[TMP67:%.*]] = extractelement <4 x i64> [[TMP51]], i64 3
+; VSCALEFORTUNING2-NEXT:    [[TMP68:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP67]]
+; VSCALEFORTUNING2-NEXT:    [[TMP69:%.*]] = extractelement <4 x i64> [[TMP52]], i64 0
+; VSCALEFORTUNING2-NEXT:    [[TMP70:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP69]]
+; VSCALEFORTUNING2-NEXT:    [[TMP71:%.*]] = extractelement <4 x i64> [[TMP52]], i64 1
+; VSCALEFORTUNING2-NEXT:    [[TMP72:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP71]]
+; VSCALEFORTUNING2-NEXT:    [[TMP73:%.*]] = extractelement <4 x i64> [[TMP52]], i64 2
+; VSCALEFORTUNING2-NEXT:    [[TMP74:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP73]]
+; VSCALEFORTUNING2-NEXT:    [[TMP75:%.*]] = extractelement <4 x i64> [[TMP52]], i64 3
+; VSCALEFORTUNING2-NEXT:    [[TMP76:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP75]]
+; VSCALEFORTUNING2-NEXT:    [[TMP77:%.*]] = load i32, ptr [[TMP54]], align 4
+; VSCALEFORTUNING2-NEXT:    [[TMP78:%.*]] = load i32, ptr [[TMP123]], align 4
+; VSCALEFORTUNING2-NEXT:    [[TMP79:%.*]] = load i32, ptr [[TMP125]], align 4
+; VSCALEFORTUNING2-NEXT:    [[TMP80:%.*]] = load i32, ptr [[TMP127]], align 4
+; VSCALEFORTUNING2-NEXT:    [[TMP81:%.*]] = insertelement <4 x i32> poison, i32 [[TMP77]], i32 0
+; VSCALEFORTUNING2-NEXT:    [[TMP82:%.*]] = insertelement <4 x i32> [[TMP81]], i32 [[TMP78]], i32 1
+; VSCALEFORTUNING2-NEXT:    [[TMP83:%.*]] = insertelement <4 x i32> [[TMP82]], i32 [[TMP79]], i32 2
+; VSCALEFORTUNING2-NEXT:    [[TMP84:%.*]] = insertelement <4 x i32> [[TMP83]], i32 [[TMP80]], i32 3
+; VSCALEFORTUNING2-NEXT:    [[TMP85:%.*]] = load i32, ptr [[TMP129]], align 4
+; VSCALEFORTUNING2-NEXT:    [[TMP86:%.*]] = load i32, ptr [[TMP131]], align 4
+; VSCALEFORTUNING2-NEXT:    [[TMP87:%.*]] = load i32, ptr [[TMP66]], align 4
+; VSCALEFORTUNING2-NEXT:    [[TMP88:%.*]] = load i32, ptr [[TMP68]], align 4
+; VSCALEFORTUNING2-NEXT:    [[TMP89:%.*]] = insertelement <4 x i32> poison, i32 [[TMP85]], i32 0
+; VSCALEFORTUNING2-NEXT:    [[TMP90:%.*]] = insertelement <4 x i32> [[TMP89]], i32 [[TMP86]], i32 1
+; VSCALEFORTUNING2-NEXT:    [[TMP91:%.*]] = insertelement <4 x i32> [[TMP90]], i32 [[TMP87]], i32 2
+; VSCALEFORTUNING2-NEXT:    [[TMP92:%.*]] = insertelement <4 x i32> [[TMP91]], i32 [[TMP88]], i32 3
+; VSCALEFORTUNING2-NEXT:    [[TMP93:%.*]] = load i32, ptr [[TMP70]], align 4
+; VSCALEFORTUNING2-NEXT:    [[TMP94:%.*]] = load i32, ptr [[TMP72]], align 4
+; VSCALEFORTUNING2-NEXT:    [[TMP95:%.*]] = load i32, ptr [[TMP74]], align 4
+; VSCALEFORTUNING2-NEXT:    [[TMP96:%.*]] = load i32, ptr [[TMP76]], align 4
+; VSCALEFORTUNING2-NEXT:    [[TMP97:%.*]] = insertelement <4 x i32> poison, i32 [[TMP93]], i32 0
+; VSCALEFORTUNING2-NEXT:    [[TMP98:%.*]] = insertelement <4 x i32> [[TMP97]], i32 [[TMP94]], i32 1
+; VSCALEFORTUNING2-NEXT:    [[TMP99:%.*]] = insertelement <4 x i32> [[TMP98]], i32 [[TMP95]], i32 2
+; VSCALEFORTUNING2-NEXT:    [[TMP100:%.*]] = insertelement <4 x i32> [[TMP99]], i32 [[TMP96]], i32 3
+; VSCALEFORTUNING2-NEXT:    [[TMP101:%.*]] = load i32, ptr [[TMP70]], align 4
+; VSCALEFORTUNING2-NEXT:    [[TMP102:%.*]] = load i32, ptr [[TMP72]], align 4
+; VSCALEFORTUNING2-NEXT:    [[TMP103:%.*]] = load i32, ptr [[TMP74]], align 4
+; VSCALEFORTUNING2-NEXT:    [[TMP104:%.*]] = load i32, ptr [[TMP76]], align 4
+; VSCALEFORTUNING2-NEXT:    [[TMP105:%.*]] = insertelement <4 x i32> poison, i32 [[TMP101]], i32 0
+; VSCALEFORTUNING2-NEXT:    [[TMP106:%.*]] = insertelement <4 x i32> [[TMP105]], i32 [[TMP102]], i32 1
+; VSCALEFORTUNING2-NEXT:    [[TMP107:%.*]] = insertelement <4 x i32> [[TMP106]], i32 [[TMP103]], i32 2
+; VSCALEFORTUNING2-NEXT:    [[TMP108:%.*]] = insertelement <4 x i32> [[TMP107]], i32 [[TMP104]], i32 3
+; VSCALEFORTUNING2-NEXT:    [[TMP109:%.*]] = or <4 x i32> [[TMP26]], [[VEC_PHI]]
+; VSCALEFORTUNING2-NEXT:    [[TMP110:%.*]] = or <4 x i32> [[TMP26]], [[VEC_PHI4]]
+; VSCALEFORTUNING2-NEXT:    [[TMP111:%.*]] = or <4 x i32> [[TMP26]], [[VEC_PHI5]]
+; VSCALEFORTUNING2-NEXT:    [[TMP112:%.*]] = or <4 x i32> [[TMP26]], [[VEC_PHI6]]
+; VSCALEFORTUNING2-NEXT:    [[TMP113]] = or <4 x i32> [[TMP109]], [[TMP84]]
+; VSCALEFORTUNING2-NEXT:    [[TMP114]] = or <4 x i32> [[TMP110]], [[TMP92]]
+; VSCALEFORTUNING2-NEXT:    [[TMP115]] = or <4 x i32> [[TMP111]], [[TMP100]]
+; VSCALEFORTUNING2-NEXT:    [[TMP116]] = or <4 x i32> [[TMP112]], [[TMP108]]
+; VSCALEFORTUNING2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VSCALEFORTUNING2-NEXT:    [[TMP49:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VSCALEFORTUNING2-NEXT:    br i1 [[TMP49]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VSCALEFORTUNING2:       [[MIDDLE_BLOCK]]:
-; VSCALEFORTUNING2-NEXT:    [[BIN_RDX:%.*]] = or <vscale x 4 x i32> [[TMP48]], [[TMP47]]
-; VSCALEFORTUNING2-NEXT:    [[BIN_RDX20:%.*]] = or <vscale x 4 x i32> [[TMP65]], [[BIN_RDX]]
-; VSCALEFORTUNING2-NEXT:    [[BIN_RDX21:%.*]] = or <vscale x 4 x i32> [[TMP66]], [[BIN_RDX20]]
-; VSCALEFORTUNING2-NEXT:    [[TMP75:%.*]] = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> [[BIN_RDX21]])
-; VSCALEFORTUNING2-NEXT:    [[TMP52:%.*]] = call i32 @llvm.vscale.i32()
-; VSCALEFORTUNING2-NEXT:    [[TMP53:%.*]] = mul nuw i32 [[TMP52]], 4
-; VSCALEFORTUNING2-NEXT:    [[TMP54:%.*]] = sub i32 [[TMP53]], 1
-; VSCALEFORTUNING2-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 4 x i32> [[TMP26]], i32 [[TMP54]]
+; VSCALEFORTUNING2-NEXT:    [[BIN_RDX:%.*]] = or <4 x i32> [[TMP114]], [[TMP113]]
+; VSCALEFORTUNING2-NEXT:    [[BIN_RDX9:%.*]] = or <4 x i32> [[TMP115]], [[BIN_RDX]]
+; VSCALEFORTUNING2-NEXT:    [[BIN_RDX10:%.*]] = or <4 x i32> [[TMP116]], [[BIN_RDX9]]
+; VSCALEFORTUNING2-NEXT:    [[TMP118:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[BIN_RDX10]])
+; VSCALEFORTUNING2-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP28]], i64 3
 ; VSCALEFORTUNING2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; VSCALEFORTUNING2-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; VSCALEFORTUNING2:       [[SCALAR_PH]]:
-; VSCALEFORTUNING2-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP24]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; VSCALEFORTUNING2-NEXT:    [[SCALAR_RECUR_INIT22:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; VSCALEFORTUNING2-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; VSCALEFORTUNING2-NEXT:    [[SCALAR_RECUR_INIT11:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; VSCALEFORTUNING2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; VSCALEFORTUNING2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP75]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; VSCALEFORTUNING2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP118]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; VSCALEFORTUNING2-NEXT:    br label %[[LOOP:.*]]
 ; VSCALEFORTUNING2:       [[LOOP]]:
-; VSCALEFORTUNING2-NEXT:    [[TMP76:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[TMP57:%.*]], %[[LOOP]] ]
-; VSCALEFORTUNING2-NEXT:    [[TMP55:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT22]], %[[SCALAR_PH]] ], [ [[TMP76]], %[[LOOP]] ]
+; VSCALEFORTUNING2-NEXT:    [[TMP119:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[TMP57:%.*]], %[[LOOP]] ]
+; VSCALEFORTUNING2-NEXT:    [[TMP55:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT11]], %[[SCALAR_PH]] ], [ [[TMP119]], %[[LOOP]] ]
 ; VSCALEFORTUNING2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; VSCALEFORTUNING2-NEXT:    [[SUM_RED:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[RED_2:%.*]], %[[LOOP]] ]
 ; VSCALEFORTUNING2-NEXT:    [[TMP56:%.*]] = add i64 [[Y]], 1
@@ -189,7 +388,7 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; VSCALEFORTUNING2-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], [[Y]]
 ; VSCALEFORTUNING2-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VSCALEFORTUNING2:       [[EXIT]]:
-; VSCALEFORTUNING2-NEXT:    [[RED_2_LCSSA:%.*]] = phi i32 [ [[RED_2]], %[[LOOP]] ], [ [[TMP75]], %[[MIDDLE_BLOCK]] ]
+; VSCALEFORTUNING2-NEXT:    [[RED_2_LCSSA:%.*]] = phi i32 [ [[RED_2]], %[[LOOP]] ], [ [[TMP118]], %[[MIDDLE_BLOCK]] ]
 ; VSCALEFORTUNING2-NEXT:    ret i32 [[RED_2_LCSSA]]
 ;
 ; PRED-LABEL: define i32 @chained_recurrences(
@@ -202,9 +401,11 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; PRED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[X]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[TMP0]])
 ; PRED-NEXT:    [[TMP11:%.*]] = add i64 [[Y]], 1
 ; PRED-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[SRC_1]], i64 [[TMP11]]
+; PRED-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP12]], align 4
+; PRED-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP5]], i64 0
+; PRED-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT5]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; PRED-NEXT:    [[TMP13:%.*]] = lshr <vscale x 4 x i32> [[BROADCAST_SPLAT]], splat (i32 1)
 ; PRED-NEXT:    [[TMP14:%.*]] = shl <vscale x 4 x i32> [[BROADCAST_SPLAT]], splat (i32 1)
 ; PRED-NEXT:    [[TMP15:%.*]] = or <vscale x 4 x i32> [[TMP13]], [[TMP14]]
@@ -215,6 +416,7 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; PRED-NEXT:    [[TMP18:%.*]] = xor <vscale x 4 x i32> [[TMP17]], splat (i32 1)
 ; PRED-NEXT:    [[TMP19:%.*]] = zext <vscale x 4 x i32> [[TMP18]] to <vscale x 4 x i64>
 ; PRED-NEXT:    [[DOTSPLAT:%.*]] = getelementptr i32, ptr [[SRC_2]], <vscale x 4 x i64> [[TMP19]]
+; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[TMP0]])
 ; PRED-NEXT:    [[TMP22:%.*]] = call i32 @llvm.vscale.i32()
 ; PRED-NEXT:    [[TMP23:%.*]] = mul nuw i32 [[TMP22]], 4
 ; PRED-NEXT:    [[TMP24:%.*]] = sub i32 [[TMP23]], 1
@@ -227,12 +429,9 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; PRED:       [[VECTOR_BODY]]:
 ; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; PRED-NEXT:    [[VECTOR_RECUR:%.*]] = phi <vscale x 4 x i32> [ [[VECTOR_RECUR_INIT]], %[[VECTOR_PH]] ], [ [[BROADCAST_SPLAT6:%.*]], %[[VECTOR_BODY]] ]
+; PRED-NEXT:    [[VECTOR_RECUR:%.*]] = phi <vscale x 4 x i32> [ [[VECTOR_RECUR_INIT]], %[[VECTOR_PH]] ], [ [[BROADCAST_SPLAT6]], %[[VECTOR_BODY]] ]
 ; PRED-NEXT:    [[VECTOR_RECUR4:%.*]] = phi <vscale x 4 x i32> [ [[VECTOR_RECUR_INIT3]], %[[VECTOR_PH]] ], [ [[TMP29:%.*]], %[[VECTOR_BODY]] ]
 ; PRED-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP41:%.*]], %[[VECTOR_BODY]] ]
-; PRED-NEXT:    [[TMP28:%.*]] = load i32, ptr [[TMP12]], align 4
-; PRED-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP28]], i64 0
-; PRED-NEXT:    [[BROADCAST_SPLAT6]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT5]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; PRED-NEXT:    [[TMP29]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR]], <vscale x 4 x i32> [[BROADCAST_SPLAT6]], i32 1)
 ; PRED-NEXT:    [[TMP30:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR4]], <vscale x 4 x i32> [[TMP29]], i32 1)
 ; PRED-NEXT:    [[TMP31:%.*]] = or <vscale x 4 x i32> [[TMP30]], [[BROADCAST_SPLAT]]
@@ -347,7 +546,7 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[TMP32]] = or <vscale x 4 x i16> [[TMP17]], [[VEC_PHI4]]
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
 ; DEFAULT-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; DEFAULT-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    [[BIN_RDX:%.*]] = or <vscale x 4 x i16> [[TMP22]], [[TMP21]]
 ; DEFAULT-NEXT:    [[BIN_RDX8:%.*]] = or <vscale x 4 x i16> [[TMP27]], [[BIN_RDX]]
@@ -357,7 +556,7 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; DEFAULT:       [[VEC_EPILOG_ITER_CHECK]]:
 ; DEFAULT-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], [[TMP6]]
-; DEFAULT-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF5:![0-9]+]]
 ; DEFAULT:       [[VEC_EPILOG_PH]]:
 ; DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_PH]] ]
 ; DEFAULT-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ [[TMP33]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_PH]] ]
@@ -378,7 +577,7 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[TMP29]] = or <vscale x 2 x i16> [[TMP28]], [[VEC_PHI15]]
 ; DEFAULT-NEXT:    [[INDEX_NEXT17]] = add nuw i64 [[IV]], [[TMP25]]
 ; DEFAULT-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT17]], [[N_VEC11]]
-; DEFAULT-NEXT:    br i1 [[TMP30]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP30]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
 ; DEFAULT:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    [[TMP31:%.*]] = call i16 @llvm.vector.reduce.or.nxv2i16(<vscale x 2 x i16> [[TMP29]])
 ; DEFAULT-NEXT:    [[CMP_N18:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC11]]
@@ -396,7 +595,7 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[RED_NEXT]] = or i16 [[DIV]], [[RED]]
 ; DEFAULT-NEXT:    [[IV_NEXT]] = add i64 [[IV1]], 1
 ; DEFAULT-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV1]], [[N]]
-; DEFAULT-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP5:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP7:![0-9]+]]
 ; DEFAULT:       [[EXIT]]:
 ; DEFAULT-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi i16 [ [[RED_NEXT]], %[[LOOP1]] ], [ [[TMP33]], %[[MIDDLE_BLOCK]] ], [ [[TMP31]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; DEFAULT-NEXT:    ret i16 [[RED_NEXT_LCSSA]]

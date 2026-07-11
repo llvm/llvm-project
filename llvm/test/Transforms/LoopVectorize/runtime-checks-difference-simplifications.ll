@@ -20,36 +20,47 @@ define void @test_large_number_of_group(ptr %dst, i64 %off, i64 %N) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[OFF_MUL_8]], 32
+; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[OFF_MUL_8]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], 31
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[OFF]], 4
-; CHECK-NEXT:    [[DIFF_CHECK1:%.*]] = icmp ult i64 [[TMP0]], 32
+; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-NEXT:    [[DIFF_CHECK1:%.*]] = icmp ult i64 [[TMP13]], 31
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[OFF]], 24
-; CHECK-NEXT:    [[DIFF_CHECK2:%.*]] = icmp ult i64 [[TMP1]], 32
+; CHECK-NEXT:    [[TMP16:%.*]] = sub i64 [[TMP1]], 1
+; CHECK-NEXT:    [[DIFF_CHECK2:%.*]] = icmp ult i64 [[TMP16]], 31
 ; CHECK-NEXT:    [[CONFLICT_RDX3:%.*]] = or i1 [[CONFLICT_RDX]], [[DIFF_CHECK2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[OFF]], 5
-; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP2]], 32
+; CHECK-NEXT:    [[TMP19:%.*]] = sub i64 [[TMP2]], 1
+; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP19]], 31
 ; CHECK-NEXT:    [[CONFLICT_RDX5:%.*]] = or i1 [[CONFLICT_RDX3]], [[DIFF_CHECK4]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[OFF]], 40
-; CHECK-NEXT:    [[DIFF_CHECK6:%.*]] = icmp ult i64 [[TMP3]], 32
+; CHECK-NEXT:    [[TMP22:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[DIFF_CHECK6:%.*]] = icmp ult i64 [[TMP22]], 31
 ; CHECK-NEXT:    [[CONFLICT_RDX7:%.*]] = or i1 [[CONFLICT_RDX5]], [[DIFF_CHECK6]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[OFF]], 48
-; CHECK-NEXT:    [[DIFF_CHECK8:%.*]] = icmp ult i64 [[TMP4]], 32
+; CHECK-NEXT:    [[TMP25:%.*]] = sub i64 [[TMP4]], 1
+; CHECK-NEXT:    [[DIFF_CHECK8:%.*]] = icmp ult i64 [[TMP25]], 31
 ; CHECK-NEXT:    [[CONFLICT_RDX9:%.*]] = or i1 [[CONFLICT_RDX7]], [[DIFF_CHECK8]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[OFF]], 56
-; CHECK-NEXT:    [[DIFF_CHECK10:%.*]] = icmp ult i64 [[TMP5]], 32
+; CHECK-NEXT:    [[TMP28:%.*]] = sub i64 [[TMP5]], 1
+; CHECK-NEXT:    [[DIFF_CHECK10:%.*]] = icmp ult i64 [[TMP28]], 31
 ; CHECK-NEXT:    [[CONFLICT_RDX11:%.*]] = or i1 [[CONFLICT_RDX9]], [[DIFF_CHECK10]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[OFF]], 6
-; CHECK-NEXT:    [[DIFF_CHECK12:%.*]] = icmp ult i64 [[TMP6]], 32
+; CHECK-NEXT:    [[TMP31:%.*]] = sub i64 [[TMP6]], 1
+; CHECK-NEXT:    [[DIFF_CHECK12:%.*]] = icmp ult i64 [[TMP31]], 31
 ; CHECK-NEXT:    [[CONFLICT_RDX13:%.*]] = or i1 [[CONFLICT_RDX11]], [[DIFF_CHECK12]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[OFF]], 72
-; CHECK-NEXT:    [[DIFF_CHECK14:%.*]] = icmp ult i64 [[TMP7]], 32
+; CHECK-NEXT:    [[TMP34:%.*]] = sub i64 [[TMP7]], 1
+; CHECK-NEXT:    [[DIFF_CHECK14:%.*]] = icmp ult i64 [[TMP34]], 31
 ; CHECK-NEXT:    [[CONFLICT_RDX15:%.*]] = or i1 [[CONFLICT_RDX13]], [[DIFF_CHECK14]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[OFF]], 80
-; CHECK-NEXT:    [[DIFF_CHECK16:%.*]] = icmp ult i64 [[TMP8]], 32
+; CHECK-NEXT:    [[TMP37:%.*]] = sub i64 [[TMP8]], 1
+; CHECK-NEXT:    [[DIFF_CHECK16:%.*]] = icmp ult i64 [[TMP37]], 31
 ; CHECK-NEXT:    [[CONFLICT_RDX17:%.*]] = or i1 [[CONFLICT_RDX15]], [[DIFF_CHECK16]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[OFF]], 88
-; CHECK-NEXT:    [[DIFF_CHECK18:%.*]] = icmp ult i64 [[TMP9]], 32
+; CHECK-NEXT:    [[TMP40:%.*]] = sub i64 [[TMP9]], 1
+; CHECK-NEXT:    [[DIFF_CHECK18:%.*]] = icmp ult i64 [[TMP40]], 31
 ; CHECK-NEXT:    [[CONFLICT_RDX19:%.*]] = or i1 [[CONFLICT_RDX17]], [[DIFF_CHECK18]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX19]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -220,9 +231,11 @@ define void @check_creation_order(ptr %a, ptr %b, i32 %m) {
 ; CHECK-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul nsw i64 [[M_EXT]], -8
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP2]], 31
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[A1]], [[B2]]
-; CHECK-NEXT:    [[DIFF_CHECK3:%.*]] = icmp ult i64 [[TMP1]], 32
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
+; CHECK-NEXT:    [[DIFF_CHECK3:%.*]] = icmp ult i64 [[TMP4]], 31
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK3]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
