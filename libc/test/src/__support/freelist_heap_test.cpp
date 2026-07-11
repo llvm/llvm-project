@@ -346,3 +346,64 @@ TEST_FOR_EACH_ALLOCATOR(InvalidAlignedAllocAlignment, 2048) {
   ptr = allocator.aligned_allocate(0, 8);
   EXPECT_EQ(ptr, static_cast<void *>(nullptr));
 }
+
+TEST_FOR_EACH_ALLOCATOR(AllocationSize, 2048) {
+  constexpr size_t ALLOC_SIZE = 256;
+
+  // 1. Null pointer returns 0.
+  EXPECT_EQ(allocator.allocation_size(nullptr), size_t(0));
+
+  // 2. Invalid pointer (outside heap) returns 0.
+  int dummy = 0;
+  EXPECT_EQ(allocator.allocation_size(&dummy), size_t(0));
+
+  // 3. Valid pointer returns >= allocation size.
+  void *ptr = allocator.allocate(ALLOC_SIZE);
+  ASSERT_NE(ptr, static_cast<void *>(nullptr));
+  EXPECT_GE(allocator.allocation_size(ptr), ALLOC_SIZE);
+
+  // 4. Freed pointer returns 0.
+  allocator.free(ptr);
+  EXPECT_EQ(allocator.allocation_size(ptr), size_t(0));
+}
+
+#if defined(LIBC_COPT_FREELISTHEAP_PRECISE_ALLOC_SIZE)
+TEST_FOR_EACH_ALLOCATOR(PreciseAllocSize, 2048) {
+  // Test 1-byte allocation
+  void *ptr1 = allocator.allocate(1);
+  ASSERT_NE(ptr1, static_cast<void *>(nullptr));
+  EXPECT_EQ(allocator.allocation_size(ptr1), size_t(1));
+
+  // Test odd size allocation
+  constexpr size_t ODD_SIZE = 13;
+  void *ptr2 = allocator.allocate(ODD_SIZE);
+  ASSERT_NE(ptr2, static_cast<void *>(nullptr));
+  EXPECT_EQ(allocator.allocation_size(ptr2), ODD_SIZE);
+
+  // Test aligned allocation with odd size
+  void *ptr3 = allocator.aligned_allocate(1, 17);
+  ASSERT_NE(ptr3, static_cast<void *>(nullptr));
+  EXPECT_EQ(allocator.allocation_size(ptr3), size_t(17));
+
+  // Test realloc to another odd size
+  void *ptr4 = allocator.realloc(ptr2, 29);
+  ASSERT_NE(ptr4, static_cast<void *>(nullptr));
+  EXPECT_EQ(allocator.allocation_size(ptr4), size_t(29));
+
+  // Test overaligned allocation (64-byte alignment, 192-byte size)
+  void *ptr5 = allocator.aligned_allocate(64, 192);
+  ASSERT_NE(ptr5, static_cast<void *>(nullptr));
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(ptr5) % 64, size_t(0));
+  EXPECT_EQ(allocator.allocation_size(ptr5), size_t(192));
+
+  // Free all allocations and verify allocation_size returns 0
+  allocator.free(ptr1);
+  allocator.free(ptr3);
+  allocator.free(ptr4);
+  allocator.free(ptr5);
+  EXPECT_EQ(allocator.allocation_size(ptr1), size_t(0));
+  EXPECT_EQ(allocator.allocation_size(ptr3), size_t(0));
+  EXPECT_EQ(allocator.allocation_size(ptr4), size_t(0));
+  EXPECT_EQ(allocator.allocation_size(ptr5), size_t(0));
+}
+#endif

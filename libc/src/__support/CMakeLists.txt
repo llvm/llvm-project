@@ -60,6 +60,10 @@ add_header_library(
 )
 
 libc_set_definition(libc_freelist_malloc_size "LIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}")
+set(libc_freelist_compile_options ${libc_freelist_malloc_size})
+if(LIBC_CONF_FREELISTHEAP_PRECISE_ALLOC_SIZE)
+  list(APPEND libc_freelist_compile_options "-DLIBC_COPT_FREELISTHEAP_PRECISE_ALLOC_SIZE")
+endif()
 add_object_library(
   freelist_heap
   SRCS
@@ -67,7 +71,7 @@ add_object_library(
   HDRS
     freelist_heap.h
   COMPILE_OPTIONS
-    ${libc_freelist_malloc_size}
+    ${libc_freelist_compile_options}
   DEPENDS
     .block
     .freelist

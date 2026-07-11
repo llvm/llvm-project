@@ -190,5 +190,11 @@
       "value": false,
       "doc": "Use the system assert macro for LIBC_ASSERT."
     }
+  },
+  "freelist_heap": {
+    "LIBC_CONF_FREELISTHEAP_PRECISE_ALLOC_SIZE": {
+      "value": false,
+      "doc": "When enabled, FreeListHeap returns the exact requested allocation size in usable_size / allocation_size rather than the rounded block inner size."
+    }
   }
 }
