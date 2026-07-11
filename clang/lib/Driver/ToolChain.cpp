@@ -852,8 +852,6 @@ static StringRef getArchNameForCompilerRTLib(const ToolChain &TC,
 StringRef ToolChain::getOSLibName() const {
   if (Triple.isOSDarwin())
     return "darwin";
-  if (Triple.isWindowsCygwinEnvironment())
-    return "cygwin";
 
   switch (Triple.getOS()) {
   case llvm::Triple::FreeBSD:
