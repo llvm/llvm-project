@@ -38,6 +38,15 @@ w2 = (s16)w4
 r1 s/= r3
 r2 s%= r4
 
+// CHECK: 2f 21 01 00 00 00 00 00     r1 uh*= r2
+// CHECK: 2f 43 02 00 00 00 00 00     r3 sh*= r4
+// CHECK: 27 05 01 00 fe ff ff ff     r5 uh*= -0x2
+// CHECK: 27 06 02 00 fd ff ff ff     r6 sh*= -0x3
+r1 uh*= r2
+r3 sh*= r4
+r5 uh*= -2
+r6 sh*= -3
+
 // CHECK: 3c 31 01 00 00 00 00 00     w1 s/= w3
 // CHECK: 9c 42 01 00 00 00 00 00     w2 s%= w4
 w1 s/= w3

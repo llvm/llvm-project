@@ -82,6 +82,9 @@ int y;
 #ifdef __BPF_FEATURE_UNWIND
 int z;
 #endif
+#ifdef __BPF_FEATURE_HMUL
+int aa;
+#endif
 
 // CHECK: int b;
 // CHECK: int c;
@@ -138,6 +141,8 @@ int z;
 // CPU_V2: int z;
 // CPU_V3: int z;
 // CPU_V4: int z;
+
+// CPU_V4: int aa;
 
 // CPU_GENERIC: int g;
 

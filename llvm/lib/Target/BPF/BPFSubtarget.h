@@ -68,7 +68,7 @@ protected:
 
   // whether cpu v4 insns are enabled.
   bool HasLdsx, HasMovsx, HasBswap, HasSdivSmod, HasGotol, HasStoreImm,
-      HasLoadAcqStoreRel, HasGotox;
+      HasLoadAcqStoreRel, HasGotox, HasHmul;
 
   std::unique_ptr<CallLowering> CallLoweringInfo;
   std::unique_ptr<InstructionSelector> InstSelector;
@@ -101,6 +101,7 @@ public:
   bool hasStoreImm() const { return HasStoreImm; }
   bool hasLoadAcqStoreRel() const { return HasLoadAcqStoreRel; }
   bool hasGotox() const { return HasGotox; }
+  bool hasHmul() const { return HasHmul; }
 
   bool isLittleEndian() const { return IsLittleEndian; }
 
