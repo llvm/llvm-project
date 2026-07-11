@@ -380,36 +380,6 @@ vputils::getOpcodeOrIntrinsicID(const VPValue *V) {
   return {};
 }
 
-/// A class keeping track of widening information of various recipes.
-/// A recipe necessarily produces a single scalar value if only the SingleScalar
-/// bit is set, a wide value if only the Wide bit is set, and scalar values for
-/// all VF lanes only the GenPerAllLanes bit is set. The SingleScalar bit can be
-/// set on Wide or GenPerAllLanes recipes, which indicates that the recipe could
-/// be narrowed to single-scalar if legal and profitable. For instructions not
-/// producing values, like an assume or store, the bits talk about the
-/// appropriate operands. Finally, there is a class of instructions that
-/// necessarily take vector operands and produce a scalar result termed
-/// VectorToScalar, or necessarily take a scalar values and produce a vector,
-/// termed ScalarToVector. These are marked with the Agnostic bit.
-class VPWideningInfo {
-  unsigned char Info : 4;
-
-public:
-  using VPWideningTy = enum {
-    SingleScalar = 1 << 0,
-    Wide = 1 << 1,
-    GenPerAllLanes = 1 << 2,
-    Agnostic = 1 << 3
-  };
-
-  VPWideningInfo(unsigned char Info) : Info(Info) {}
-  operator unsigned char() const { return Info; }
-  bool producesSingleScalarResult() const {
-    return Info == SingleScalar || Info == (SingleScalar | Agnostic);
-  }
-  bool couldProduceSingleScalarResult() const { return Info & SingleScalar; }
-};
-
 static VPWideningInfo getNarrowableWideningInfo(unsigned Opcode,
                                                 VPWideningInfo WideOrRep) {
   if (Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode))
@@ -429,7 +399,7 @@ static VPWideningInfo getNarrowableWideningInfo(unsigned Opcode,
   }
 }
 
-static VPWideningInfo getWideningInfo(const VPRecipeBase &R) {
+VPWideningInfo vputils::getWideningInfo(const VPRecipeBase &R) {
   switch (R.getVPRecipeID()) {
   case VPRecipeBase::VPVectorPointerSC:
   case VPRecipeBase::VPVectorEndPointerSC:
@@ -521,7 +491,7 @@ static VPWideningInfo getWideningInfo(const VPValue *VPV) {
                ? VPWideningInfo::SingleScalar
                : VPWideningInfo::SingleScalar | VPWideningInfo::Agnostic;
   }
-  return getWideningInfo(*VPV->getDefiningRecipe());
+  return vputils::getWideningInfo(*VPV->getDefiningRecipe());
 }
 
 bool vputils::isElementwise(const VPValue *V) {
@@ -542,7 +512,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
       return false;
   }
   // FIXME: Marking WidenCast as a single-scalar leads to regressions.
-  VPWideningInfo Info = getWideningInfo(VPV);
+  VPWideningInfo Info = ::getWideningInfo(VPV);
   return Info.producesSingleScalarResult() ||
          (!isa<VPWidenCastRecipe>(VPV) &&
           Info.couldProduceSingleScalarResult() &&
@@ -587,7 +557,7 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
           V))
     return false;
 
-  VPWideningInfo Info = getWideningInfo(V);
+  VPWideningInfo Info = ::getWideningInfo(V);
   return Info.couldProduceSingleScalarResult() &&
          all_of(V->getDefiningRecipe()->operands(), isUniformAcrossVFsAndUFs);
 }
