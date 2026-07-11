@@ -8,12 +8,12 @@ breaks build of hipblaslt
 breaks rocgdb UT
 [Clang][CodeGen] Restore isEmptyFieldForLayout for empty class handling
 ---
-breaks windows build
-[cmake] Refactor DIA SDK detection into FindDIASDK module (#160354)
----
 breaks windows build: [amd-llvm] terminate called after throwing an instance of 'std::bad_alloc'
 Make][CodeGen] Add PCH for Clang CodeGen (#206018)
 ---
-breaks accel2023 456
-[Flang][OpenMP][MLIR] Improve SPMD-No-Loop handling (#3168)
+hipDMM build warns as errors
+Revert "Reland "[Clang] Enable -Wunused-template under -Wall" (#208001)
+---
+needs SPIRv changes
+[DebugMetadata][DwarfDebug][CodeView] Support function-local static variables in lexical block scopes 
 ---
