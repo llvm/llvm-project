@@ -58,6 +58,12 @@ struct KernelData {
   double DoubleArr[8];
 };
 
+struct TestKernel;
+struct KernelInfo {
+  using kernel_name = TestKernel;
+  static constexpr char kernel_entry_point_name[] = "TestKernel";
+};
+
 TEST(Queue, KernelLaunch) {
   mock::MockWrapper Mock;
   ScopedKernelRegistration Registration{"TestKernel"};
@@ -91,7 +97,7 @@ TEST(Queue, KernelLaunch) {
         EXPECT_EQ(std::memcmp(PayloadPtr, &Data, sizeof(KernelData)), 0);
         return OL_SUCCESS;
       });
-  Q.sycl_kernel_launch<class TestKernel>("TestKernel", Data);
+  Q.sycl_kernel_launch<KernelInfo>(Data);
 
   EXPECT_CALL(Mock.get(), olSyncQueue(_)).Times(1);
   Q.wait();
