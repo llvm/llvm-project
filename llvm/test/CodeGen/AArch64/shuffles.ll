@@ -534,20 +534,12 @@ define <8 x i16> @test_shuf9(<8 x i16> %a, <8 x i16> %b)
 }
 
 define <16 x i8> @test_shuf10(<16 x i8> %a, <16 x i8> %b)
-; CHECK-SD-LABEL: test_shuf10:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    adrp x8, .LCPI14_0
-; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI14_0]
-; CHECK-SD-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_shuf10:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI14_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI14_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_shuf10:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI14_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI14_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-NEXT:    ret
 ;
 ; CHECKBE-LABEL: test_shuf10:
 ; CHECKBE:       // %bb.0:
@@ -787,11 +779,9 @@ define <16 x i8> @test_shuf_zero_ext_start_lhs(<16 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: test_shuf_zero_ext_start_lhs:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
 ; CHECK-GI-NEXT:    adrp x8, .LCPI21_0
-; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI21_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI21_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECKBE-LABEL: test_shuf_zero_ext_start_lhs:
@@ -816,11 +806,9 @@ define <16 x i8> @test_shuf_zero_ext_start_lhs2(<16 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: test_shuf_zero_ext_start_lhs2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
 ; CHECK-GI-NEXT:    adrp x8, .LCPI22_0
-; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI22_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI22_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECKBE-LABEL: test_shuf_zero_ext_start_lhs2:
@@ -845,11 +833,9 @@ define <16 x i8> @test_shuf_zero_ext_start_rhs(<16 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: test_shuf_zero_ext_start_rhs:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q31_q0
 ; CHECK-GI-NEXT:    adrp x8, .LCPI23_0
-; CHECK-GI-NEXT:    movi v31.2d, #0000000000000000
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI23_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v31.16b, v0.16b }, v1.16b
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECKBE-LABEL: test_shuf_zero_ext_start_rhs:
@@ -874,11 +860,9 @@ define <16 x i8> @test_shuf_zero_ext_start_rhs2(<16 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: test_shuf_zero_ext_start_rhs2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q31_q0
 ; CHECK-GI-NEXT:    adrp x8, .LCPI24_0
-; CHECK-GI-NEXT:    movi v31.2d, #0000000000000000
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI24_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v31.16b, v0.16b }, v1.16b
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECKBE-LABEL: test_shuf_zero_ext_start_rhs2:
@@ -924,11 +908,9 @@ define <16 x i8> @test_shuf_zero_ext_end_lhs2(<16 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: test_shuf_zero_ext_end_lhs2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
 ; CHECK-GI-NEXT:    adrp x8, .LCPI26_0
-; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI26_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI26_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECKBE-LABEL: test_shuf_zero_ext_end_lhs2:
@@ -973,11 +955,9 @@ define <16 x i8> @test_shuf_zero_ext_end_rhs2(<16 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: test_shuf_zero_ext_end_rhs2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q31_q0
 ; CHECK-GI-NEXT:    adrp x8, .LCPI28_0
-; CHECK-GI-NEXT:    movi v31.2d, #0000000000000000
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI28_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v31.16b, v0.16b }, v1.16b
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECKBE-LABEL: test_shuf_zero_ext_end_rhs2:

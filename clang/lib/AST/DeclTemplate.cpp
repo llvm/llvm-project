@@ -1721,6 +1721,9 @@ clang::getReplacedTemplateParameter(Decl *D, unsigned Index) {
     return {Info->getTemplate()->getTemplateParameters()->getParam(Index),
             Info->TemplateArguments->asArray()[Index]};
   }
+  case Decl::Kind::CXXExpansionStmt:
+    assert(Index == 0 && "expansion stmts only have a single template param");
+    return {cast<CXXExpansionStmtDecl>(D)->getIndexTemplateParm(), {}};
   default:
     llvm_unreachable("Unhandled templated declaration kind");
   }
@@ -1921,4 +1924,24 @@ SourceLocation ExplicitInstantiationDecl::getEndLoc() const {
 SourceRange ExplicitInstantiationDecl::getSourceRange() const {
   SourceLocation Begin = ExternLoc.isValid() ? ExternLoc : getLocation();
   return SourceRange(Begin, getEndLoc());
+}
+
+CXXExpansionStmtDecl::CXXExpansionStmtDecl(DeclContext *DC, SourceLocation Loc,
+                                           NonTypeTemplateParmDecl *NTTP)
+    : Decl(CXXExpansionStmt, DC, Loc), DeclContext(CXXExpansionStmt),
+      IndexNTTP(NTTP) {}
+
+CXXExpansionStmtDecl *
+CXXExpansionStmtDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation Loc,
+                             NonTypeTemplateParmDecl *NTTP) {
+  return new (C, DC) CXXExpansionStmtDecl(DC, Loc, NTTP);
+}
+CXXExpansionStmtDecl *
+CXXExpansionStmtDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
+  return new (C, ID)
+      CXXExpansionStmtDecl(/*DC=*/nullptr, SourceLocation(), /*NTTP=*/nullptr);
+}
+
+SourceRange CXXExpansionStmtDecl::getSourceRange() const {
+  return Pattern ? Pattern->getSourceRange() : SourceRange();
 }
