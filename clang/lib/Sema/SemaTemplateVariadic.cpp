@@ -912,10 +912,14 @@ bool Sema::CheckParameterPacksForExpansion(
     unsigned NewPackSize, PendingPackExpansionSize = 0;
     if (IsVarDeclPack) {
       // Figure out whether we're instantiating to an argument pack or not.
+      //
+      // The instantiation may not exist; this can happen when instantiating an
+      // expansion statement that contains a pack (e.g.
+      // `template for (auto x : {{ts...}})`).
       llvm::PointerUnion<Decl *, DeclArgumentPack *> *Instantiation =
-          CurrentInstantiationScope->findInstantiationOf(
+          CurrentInstantiationScope->getInstantiationOfIfExists(
               cast<NamedDecl *>(ParmPack.first));
-      if (isa<DeclArgumentPack *>(*Instantiation)) {
+      if (Instantiation && isa<DeclArgumentPack *>(*Instantiation)) {
         // We could expand this function parameter pack.
         NewPackSize = cast<DeclArgumentPack *>(*Instantiation)->size();
       } else {
@@ -1368,7 +1372,7 @@ ExprResult Sema::BuildPackIndexingExpr(Expr *PackExpression,
   }
 
   if (Index && FullySubstituted) {
-    if (*Index < 0 || *Index >= ExpandedExprs.size()) {
+    if (*Index >= ExpandedExprs.size()) {
       Diag(PackExpression->getBeginLoc(), diag::err_pack_index_out_of_bound)
           << *Index << PackExpression << ExpandedExprs.size();
       return ExprError();

@@ -660,6 +660,30 @@ def AArch64smulh : PatFrag<(ops node:$op1, node:$op2),
 def AArch64umulh : PatFrag<(ops node:$op1, node:$op2),
                            (AArch64umulh_p (SVEAnyPredicate), node:$op1, node:$op2)>;
 
+class AArch64MullAccumPatFrags<SDPatternOperator intrinsic,
+                               SDPatternOperator mull,
+                               SDPatternOperator binop>
+    : PatFrags<(ops node:$acc, node:$op1, node:$op2),
+               [(intrinsic node:$acc, node:$op1, node:$op2),
+                (binop node:$acc, (mull node:$op1, node:$op2))]>;
+
+def AArch64smlalb : AArch64MullAccumPatFrags<int_aarch64_sve_smlalb,
+                                             int_aarch64_sve_smullb, add>;
+def AArch64smlalt : AArch64MullAccumPatFrags<int_aarch64_sve_smlalt,
+                                             int_aarch64_sve_smullt, add>;
+def AArch64umlalb : AArch64MullAccumPatFrags<int_aarch64_sve_umlalb,
+                                             int_aarch64_sve_umullb, add>;
+def AArch64umlalt : AArch64MullAccumPatFrags<int_aarch64_sve_umlalt,
+                                             int_aarch64_sve_umullt, add>;
+def AArch64smlslb : AArch64MullAccumPatFrags<int_aarch64_sve_smlslb,
+                                             int_aarch64_sve_smullb, sub>;
+def AArch64smlslt : AArch64MullAccumPatFrags<int_aarch64_sve_smlslt,
+                                             int_aarch64_sve_smullt, sub>;
+def AArch64umlslb : AArch64MullAccumPatFrags<int_aarch64_sve_umlslb,
+                                             int_aarch64_sve_umullb, sub>;
+def AArch64umlslt : AArch64MullAccumPatFrags<int_aarch64_sve_umlslt,
+                                             int_aarch64_sve_umullt, sub>;
+
 def AArch64bsl  : PatFrags<(ops node:$Op1, node:$Op2, node:$Op3),
                            [(AArch64bsp node:$Op3, node:$Op1, node:$Op2),
                             (or (and node:$Op1, node:$Op3), (and node:$Op2, (vnot node:$Op3)))]>;
@@ -3315,26 +3339,6 @@ let Predicates = [HasSVE_or_SME] in {
                 (STR_ZXI ZPR:$val, GPR64sp:$base, (i64 0))>;
     }
 
-  multiclass unpred_store_predicate<ValueType Ty, Instruction Store> {
-    def _fi : Pat<(store (Ty PPR:$val), (am_sve_fi GPR64sp:$base, simm9:$offset)),
-                  (Store PPR:$val, GPR64sp:$base, simm9:$offset)>;
-
-    def _default : Pat<(store (Ty PPR:$Val), GPR64:$base),
-                  (Store PPR:$Val, GPR64:$base, (i64 0))>;
-  }
-
-  defm Pat_Store_P16 : unpred_store_predicate<nxv16i1, STR_PXI>;
-
-  multiclass unpred_load_predicate<ValueType Ty, Instruction Load> {
-    def _fi : Pat<(Ty (load (am_sve_fi GPR64sp:$base, simm9:$offset))),
-                  (Load GPR64sp:$base, simm9:$offset)>;
-
-    def _default : Pat<(Ty (load GPR64:$base)),
-                  (Load GPR64:$base, (i64 0))>;
-  }
-
-  defm Pat_Load_P16 : unpred_load_predicate<nxv16i1, LDR_PXI>;
-
   multiclass ld1<Instruction RegRegInst, Instruction RegImmInst, ValueType Ty,
                  SDPatternOperator Load, ValueType PredTy, ValueType MemVT, ComplexPattern AddrCP> {
     // reg + reg
@@ -3964,14 +3968,14 @@ let Predicates = [HasSVE2_or_SME] in {
   defm UMLSLT_ZZZI : sve2_int_mla_long_by_indexed_elem<0b1111, "umlslt", int_aarch64_sve_umlslt_lane>;
 
   // SVE2 integer multiply-add long (vectors, unpredicated)
-  defm SMLALB_ZZZ : sve2_int_mla_long<0b10000, "smlalb", int_aarch64_sve_smlalb>;
-  defm SMLALT_ZZZ : sve2_int_mla_long<0b10001, "smlalt", int_aarch64_sve_smlalt>;
-  defm UMLALB_ZZZ : sve2_int_mla_long<0b10010, "umlalb", int_aarch64_sve_umlalb>;
-  defm UMLALT_ZZZ : sve2_int_mla_long<0b10011, "umlalt", int_aarch64_sve_umlalt>;
-  defm SMLSLB_ZZZ : sve2_int_mla_long<0b10100, "smlslb", int_aarch64_sve_smlslb>;
-  defm SMLSLT_ZZZ : sve2_int_mla_long<0b10101, "smlslt", int_aarch64_sve_smlslt>;
-  defm UMLSLB_ZZZ : sve2_int_mla_long<0b10110, "umlslb", int_aarch64_sve_umlslb>;
-  defm UMLSLT_ZZZ : sve2_int_mla_long<0b10111, "umlslt", int_aarch64_sve_umlslt>;
+  defm SMLALB_ZZZ : sve2_int_mla_long<0b10000, "smlalb", AArch64smlalb>;
+  defm SMLALT_ZZZ : sve2_int_mla_long<0b10001, "smlalt", AArch64smlalt>;
+  defm UMLALB_ZZZ : sve2_int_mla_long<0b10010, "umlalb", AArch64umlalb>;
+  defm UMLALT_ZZZ : sve2_int_mla_long<0b10011, "umlalt", AArch64umlalt>;
+  defm SMLSLB_ZZZ : sve2_int_mla_long<0b10100, "smlslb", AArch64smlslb>;
+  defm SMLSLT_ZZZ : sve2_int_mla_long<0b10101, "smlslt", AArch64smlslt>;
+  defm UMLSLB_ZZZ : sve2_int_mla_long<0b10110, "umlslb", AArch64umlslb>;
+  defm UMLSLT_ZZZ : sve2_int_mla_long<0b10111, "umlslt", AArch64umlslt>;
 
   def : Pat<(nxv2i64 (partial_reduce_umls nxv2i64:$Acc, nxv4i32:$LHS, nxv4i32:$RHS)),
             (UMLSLT_ZZZ_D (UMLSLB_ZZZ_D $Acc, $LHS, $RHS), $LHS, $RHS)>;

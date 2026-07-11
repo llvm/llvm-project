@@ -61,6 +61,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
@@ -869,7 +870,7 @@ void Target::AddNameToBreakpoint(BreakpointSP &bp_sp, llvm::StringRef name,
   if (!bp_sp)
     return;
 
-  BreakpointName *bp_name = FindBreakpointName(ConstString(name), true, error);
+  BreakpointName *bp_name = FindBreakpointName(name, true, error);
   if (!bp_name)
     return;
 
@@ -882,9 +883,9 @@ void Target::AddBreakpointName(std::unique_ptr<BreakpointName> bp_name) {
       std::make_pair(bp_name->GetName(), std::move(bp_name)));
 }
 
-BreakpointName *Target::FindBreakpointName(ConstString name, bool can_create,
-                                           Status &error) {
-  BreakpointID::StringIsBreakpointName(name.GetStringRef(), error);
+BreakpointName *Target::FindBreakpointName(llvm::StringRef name,
+                                           bool can_create, Status &error) {
+  BreakpointID::StringIsBreakpointName(name, error);
   if (!error.Success())
     return nullptr;
 
@@ -900,19 +901,18 @@ BreakpointName *Target::FindBreakpointName(ConstString name, bool can_create,
   }
 
   return m_breakpoint_names
-      .insert(std::make_pair(
-          name, std::make_unique<BreakpointName>(name.GetStringRef().str())))
+      .insert(
+          std::make_pair(name, std::make_unique<BreakpointName>(name.str())))
       .first->second.get();
 }
 
-void Target::DeleteBreakpointName(ConstString name) {
+void Target::DeleteBreakpointName(llvm::StringRef name) {
   BreakpointNameMap::iterator iter = m_breakpoint_names.find(name);
 
   if (iter != m_breakpoint_names.end()) {
-    const char *name_cstr = name.AsCString(nullptr);
     m_breakpoint_names.erase(iter);
     for (auto bp_sp : m_breakpoint_list.Breakpoints())
-      bp_sp->RemoveName(name_cstr);
+      bp_sp->RemoveName(name);
   }
 }
 
@@ -951,19 +951,27 @@ void Target::GetBreakpointNames(std::vector<std::string> &names) {
   llvm::sort(names);
 }
 
-llvm::Expected<lldb::user_id_t>
-Target::AddBreakpointResolverOverride(llvm::StringRef class_name,
-                                      StructuredData::DictionarySP args_data_sp,
-                                      llvm::StringRef description) {
+llvm::Expected<lldb::user_id_t> Target::AddBreakpointResolverOverride(
+    llvm::StringRef class_name, uint64_t type_mask,
+    StructuredData::DictionarySP args_data_sp, llvm::StringRef description) {
   if (class_name.empty())
-    return LLDB_INVALID_INDEX64;
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "empty class name");
+
+  if (!BreakpointResolver::TypeMaskIsValid(type_mask))
+    return llvm::createStringErrorV(
+        llvm::inconvertibleErrorCode(),
+        "invalid breakpoint type mask: {0}, should be composed of the "
+        "elements of the BreakpointResolverType enum.",
+        type_mask);
 
   StructuredDataImpl impl;
   impl.SetObjectSP(args_data_sp);
 
   BreakpointResolverOverrideUP new_override_up(
       new ScriptedBreakpointResolverOverride(*this, std::string(description),
-                                             std::string(class_name), impl));
+                                             type_mask, std::string(class_name),
+                                             impl));
   llvm::Error error = new_override_up->Validate();
   if (error)
     return error;
@@ -971,8 +979,14 @@ Target::AddBreakpointResolverOverride(llvm::StringRef class_name,
   return AddBreakpointResolverOverride(std::move(new_override_up));
 }
 
+std::string Target::BreakpointResolverOverride::DescribeTypeMask() {
+  return BreakpointResolver::DescribeMask(m_type_mask);
+}
+
 void Target::DescribeBreakpointOverrides(Stream &stream,
-                                         std::vector<lldb::user_id_t> &idxs) {
+                                         std::vector<lldb::user_id_t> &idxs,
+                                         uint32_t output_width,
+                                         bool use_color) {
   if (m_breakpoint_overrides.size() == 0) {
     stream << "No overrides.\n";
     return;
@@ -984,12 +998,18 @@ void Target::DescribeBreakpointOverrides(Stream &stream,
     auto idx_pos = llvm::find(idxs, elem.first);
     if (empty || idx_pos != idxs.end()) {
       if (print_first) {
-        // FIXME: Is there some good way to flow the description?
-        stream << "ID    Description\n";
-        stream << "----  -----------\n";
+
+        ansi::OutputWordWrappedLines(stream, "ID    Mask    Description\n",
+                                     output_width, use_color);
+        ansi::OutputWordWrappedLines(stream, "----  ------  -----------\n",
+                                     output_width, use_color);
         print_first = false;
       }
-      stream.Format("{0,4}  {1}\n", elem.first, elem.second->GetDescription());
+      auto content = llvm::formatv("{0,4}  {1,6}  {2}\n", elem.first,
+                                   elem.second->DescribeTypeMask(),
+                                   elem.second->GetDescription())
+                         .str();
+      ansi::OutputWordWrappedLines(stream, content, output_width, use_color);
       if (!empty)
         idxs.erase(idx_pos);
     }
@@ -998,6 +1018,18 @@ void Target::DescribeBreakpointOverrides(Stream &stream,
 
 bool Target::ProcessIsValid() {
   return (m_process_sp && m_process_sp->IsAlive());
+}
+
+lldb::BreakpointResolverSP
+Target::CheckBreakpointOverrides(lldb::BreakpointResolverSP original_sp) {
+  for (auto const &elem : m_breakpoint_overrides) {
+    if (!original_sp->ResolverTyInMask(elem.second->GetTypeMask()))
+      continue;
+    if (lldb::BreakpointResolverSP overriden_sp =
+            elem.second->CheckForOverride(*this, original_sp))
+      return overriden_sp;
+  }
+  return {};
 }
 
 static bool CheckIfWatchpointsSupported(Target *target, Status &error) {
@@ -2627,8 +2659,10 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
           }
         }
 
-        if (replaced_modules.empty())
-          m_images.Append(module_sp, notify);
+        if (replaced_modules.empty()) {
+          if (!m_images.AppendIfNeeded(module_sp, notify) && notify)
+            NotifyModuleAdded(m_images, module_sp);
+        }
 
         for (ModuleSP &old_module_sp : replaced_modules) {
           auto old_module_wp = old_module_sp->weak_from_this();
@@ -5961,9 +5995,6 @@ Target::TargetEventData::GetModuleListFromEvent(const Event *event_ptr) {
 std::recursive_mutex &Target::GetAPIMutex() {
   Policy policy = PolicyStack::Get().Current();
   if (policy.view == Policy::View::Private)
-    return m_private_mutex;
-
-  if (GetProcessSP() && GetProcessSP()->CurrentThreadIsPrivateStateThread())
     return m_private_mutex;
 
   return m_mutex;

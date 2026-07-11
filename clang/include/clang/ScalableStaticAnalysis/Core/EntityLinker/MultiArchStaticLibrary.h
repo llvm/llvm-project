@@ -8,8 +8,7 @@
 //
 // This file defines the MultiArchStaticLibrary class, which represents a
 // multi-architecture wrapper around per-architecture StaticLibrary
-// instances (the SSAF analogue of a Mach-O fat static library, e.g. one
-// produced by `lipo -create` over per-arch `.a` files).
+// instances.
 //
 //===----------------------------------------------------------------------===//
 
@@ -26,21 +25,15 @@ namespace clang::ssaf {
 
 /// Represents a multi-architecture static library.
 ///
-/// A MultiArchStaticLibrary bundles per-architecture StaticLibrary
-/// members, mirroring the role of a Mach-O fat static library (the result
-/// of `lipo -create` over per-architecture `.a` files). All members
-/// represent the same logical library built for different architectures;
-/// the wrapper's \c Namespace identifies that shared library and every
-/// member's namespace must agree on its name.
+/// A MultiArchStaticLibrary bundles per-architecture StaticLibrary members. All
+/// members represent the same logical library built for different
+/// architectures; the wrapper's \c Namespace identifies that shared library and
+/// every member's namespace must agree on its name.
 class MultiArchStaticLibrary {
   friend class SerializationFormat;
   friend class TestFixture;
 
   /// Orders members by their TargetTriple's canonical enum components.
-  /// llvm::Triple's parser maps alias spellings to the same enum values
-  /// (e.g. "aarch64" and "arm64" both become Triple::aarch64), so a
-  /// tuple-of-enums compare is equivalent to comparing normalized triples
-  /// for identity, but without the per-call string allocation.
   struct MemberByTargetTriple {
     static auto key(const llvm::Triple &T) {
       return std::make_tuple(T.getArch(), T.getSubArch(), T.getVendor(),

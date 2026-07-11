@@ -329,3 +329,14 @@ func.func @nested_loop(%arg0: !fir.ref<!fir.array<100x100xi32>>) {
   }
   return
 }
+
+// CHECK-LABEL: func.func @propagate_par_dims
+// CHECK:         scf.for {{.*}} {
+// CHECK:         } {acc.par_dims = #acc<par_dims[sequential]>}
+func.func @propagate_par_dims() {
+  %c1 = arith.constant 1 : index
+  %c100 = arith.constant 100 : index
+  fir.do_loop %arg1 = %c1 to %c100 step %c1 attributes {acc.par_dims = #acc<par_dims[sequential]>} {
+  }
+  return
+}

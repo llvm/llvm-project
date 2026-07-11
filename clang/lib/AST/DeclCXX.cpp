@@ -2625,7 +2625,7 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
     if (!PrimaryTemplate)
       return true;
 
-    // A template instance is is only a usual deallocation function if it has a
+    // A template instance is only a usual deallocation function if it has a
     // type-identity parameter, the type-identity parameter is a dependent type
     // (i.e. the type-identity parameter is of type std::type_identity<U> where
     // U shall be a dependent type), and the type-identity parameter is the only
@@ -2645,7 +2645,7 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
   //   A template instance is never a usual deallocation function,
   //   regardless of its signature.
   // Post-P2719 adoption:
-  //   A template instance is is only a usual deallocation function if it has a
+  //   A template instance is only a usual deallocation function if it has a
   //   type-identity parameter
   if (getPrimaryTemplate())
     return false;
@@ -3737,24 +3737,22 @@ ArrayRef<BindingDecl *> BindingDecl::getBindingPackDecls() const {
 
 void DecompositionDecl::anchor() {}
 
-DecompositionDecl *DecompositionDecl::Create(ASTContext &C, DeclContext *DC,
-                                             SourceLocation StartLoc,
-                                             SourceLocation LSquareLoc,
-                                             QualType T, TypeSourceInfo *TInfo,
-                                             StorageClass SC,
-                                             ArrayRef<BindingDecl *> Bindings) {
+DecompositionDecl *DecompositionDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
+    SourceLocation LSquareLoc, SourceLocation RSquareLoc, QualType T,
+    TypeSourceInfo *TInfo, StorageClass SC, ArrayRef<BindingDecl *> Bindings) {
   size_t Extra = additionalSizeToAlloc<BindingDecl *>(Bindings.size());
-  return new (C, DC, Extra)
-      DecompositionDecl(C, DC, StartLoc, LSquareLoc, T, TInfo, SC, Bindings);
+  return new (C, DC, Extra) DecompositionDecl(
+      C, DC, StartLoc, LSquareLoc, RSquareLoc, T, TInfo, SC, Bindings);
 }
 
 DecompositionDecl *DecompositionDecl::CreateDeserialized(ASTContext &C,
                                                          GlobalDeclID ID,
                                                          unsigned NumBindings) {
   size_t Extra = additionalSizeToAlloc<BindingDecl *>(NumBindings);
-  auto *Result = new (C, ID, Extra)
-      DecompositionDecl(C, nullptr, SourceLocation(), SourceLocation(),
-                        QualType(), nullptr, StorageClass(), {});
+  auto *Result = new (C, ID, Extra) DecompositionDecl(
+      C, nullptr, SourceLocation(), SourceLocation(), SourceLocation(),
+      QualType(), nullptr, StorageClass(), {});
   // Set up and clean out the bindings array.
   Result->NumBindings = NumBindings;
   auto *Trail = Result->getTrailingObjects();
