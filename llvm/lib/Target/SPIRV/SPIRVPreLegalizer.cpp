@@ -497,7 +497,7 @@ static bool isSignSensitiveOp(const MachineInstr &MI) {
 // many low bits to sign-extend.
 static DenseMap<Register, unsigned>
 recordSignSensitiveOperandWidths(MachineFunction &MF,
-                                   MachineRegisterInfo &MRI) {
+                                 MachineRegisterInfo &MRI) {
   DenseMap<Register, unsigned> OrigWidth;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {

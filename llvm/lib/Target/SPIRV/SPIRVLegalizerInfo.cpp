@@ -356,8 +356,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalForCartesianProduct(allScalarsAndVectors)
       .legalIf(extendedScalarsAndVectorsProduct);
 
-  // SPIR-V has no native sign-extend-in-register opcode; lower it to the
-  // canonical (x << k) ashr k pair, which the SPIR-V dialect supports.
+  // Lower G_SEXT_INREG to the canonical shl/ashr pair, which map to
+  // OpShiftLeftLogical + OpShiftRightArithmetic.
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
 
   getActionDefinitionsBuilder(G_PHI)
