@@ -1798,23 +1798,27 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
     if (unsigned(i + RegInc) < Count && !HasCSHazardPadding) {
       MCRegister NextReg = CSI[i + RegInc].getReg();
       unsigned SpillCount = NeedsWinCFI ? FirstReg - i : i;
+      int Aligned = AlignOffset(ByteOffset, Scale);
+      int PairOffset = IsWindows ? Aligned : Aligned + StackFillDir * 2 * Scale;
+      bool PairFitsImmRange =
+          PairOffset / Scale >= -64 && PairOffset / Scale <= 63;
       switch (RPI.Type) {
       case RegPairInfo::GPR:
-        if (AArch64::GPR64RegClass.contains(NextReg) &&
+        if (AArch64::GPR64RegClass.contains(NextReg) && PairFitsImmRange &&
             !invalidateRegisterPairing(SpillExtendedVolatile, SpillCount,
                                        RPI.Reg1, NextReg, IsWindows,
                                        NeedsWinCFI, NeedsFrameRecord, TRI))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR64:
-        if (AArch64::FPR64RegClass.contains(NextReg) &&
+        if (AArch64::FPR64RegClass.contains(NextReg) && PairFitsImmRange &&
             !invalidateRegisterPairing(SpillExtendedVolatile, SpillCount,
                                        RPI.Reg1, NextReg, IsWindows,
                                        NeedsWinCFI, NeedsFrameRecord, TRI))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR128:
-        if (AArch64::FPR128RegClass.contains(NextReg))
+        if (AArch64::FPR128RegClass.contains(NextReg) && PairFitsImmRange)
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::PPR:

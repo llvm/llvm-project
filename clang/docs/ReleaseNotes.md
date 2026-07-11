@@ -116,6 +116,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   as being of type `std::size_t` instead of `int`,
   matching the deduction of array sizes from `int(&)[N]`.
   This is a breaking change for code that depended on the previously deduced type. (#GH195033)
+- Clang now rejects C++ declarations that combine the `auto` type specifier
+  with another type specifier, such as `auto int`.
 - Clang now rejects nested local classes defined in a different
   block scope than their parent class. (#GH193472)
 
@@ -257,6 +259,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 #### C++2c Feature Support
 
 - Clang now propagates `constinit` and `constexpr` in structured bindings with tuple-like initializers.
+
+- Clang now has partial support for [P1306R5](https://wg21.link/P1306R5) Expansion Statements. Iterating expansion
+  statements currently cannot be expanded and will result in a diagnostic, but other types of expansion statements work.
 
 #### C++23 Feature Support
 
@@ -1042,6 +1047,17 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - When targeting Windows x64 with EGPR (`-mapx-features=egpr`), Clang now
   automatically enables V3 unwind info (`-fwinx64-eh-unwind=v3`) if no
   explicit unwind version was specified.
+
+- In MSVC compatibility mode, scalar and vector deleting destructors now call
+  ``__global_delete`` (or ``__global_array_delete`` for the array ``delete[]``
+  path) instead of directly referencing ``::operator delete``.
+  This matches MSVC's behavior and fixes ``LNK2001`` linker errors in
+  environments where no global ``::operator delete`` exists. When the
+  translation unit contains a ``::delete`` expression, a ``__global_delete``
+  forwarding body that calls ``::operator delete`` is emitted automatically.
+  Otherwise, if no body is emitted, an `/ALTERNATENAME` linker directive will
+  cause the linker to use the generated `__empty_global_delete` trap function
+  instead.
 
 - Clang now supports `-std:c++26preview` for compatibility with MSVC. This enables C++26 features.
 

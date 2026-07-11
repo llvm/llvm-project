@@ -3923,6 +3923,17 @@ void ModuleVisitor::AddImplicitUseModules() {
   if (InModuleFile() || currScope().kind() != Scope::Kind::Subprogram) {
     return;
   }
+  if (const Symbol *symbol{currScope().symbol()}) {
+    if (const auto *details{symbol->detailsIf<SubprogramDetails>()}) {
+      if (auto attrs{details->cudaSubprogramAttrs()}) {
+        if (*attrs == common::CUDASubprogramAttrs::Device ||
+            *attrs == common::CUDASubprogramAttrs::Global ||
+            *attrs == common::CUDASubprogramAttrs::Grid_Global) {
+          return;
+        }
+      }
+    }
+  }
   for (const std::string &module : context().implicitUseModules()) {
     if (module.empty()) {
       continue;
