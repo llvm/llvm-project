@@ -440,22 +440,19 @@ bool llvm::collectDebugInfoMetadata(Module &M,
     DebugInfoBeforePass.DIFunctions.insert({&F, SP});
     if (SP) {
       LLVM_DEBUG(dbgs() << "  Collecting subprogram: " << *SP << '\n');
-      for (const DINode *DN : SP->getRetainedNodes()) {
+      for (const MDNode *DN : SP->getRetainedNodes()) {
         if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
           DebugInfoBeforePass.DIVariables[DV] = 0;
         }
       }
     }
-
-    for (BasicBlock &BB : F) {
-      // Collect debug locations (!dbg) and debug variable intrinsics.
-      for (Instruction &I : BB) {
-        // Skip PHIs.
-        if (isa<PHINode>(I))
-          continue;
-
-        // Cllect dbg.values and dbg.declare.
-        if (DebugifyLevel > Level::Locations) {
+    if (DebugifyLevel > Level::Locations) {
+      for (BasicBlock &BB : F) {
+        // Collect debug variable records.
+        for (Instruction &I : BB) {
+          // PHIs have no variable records.
+          if (isa<PHINode>(I))
+            continue;
           auto HandleDbgVariable = [&](DbgVariableRecord *DbgVar) {
             if (!SP)
               return;
@@ -472,13 +469,6 @@ bool llvm::collectDebugInfoMetadata(Module &M,
           for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
             HandleDbgVariable(&DVR);
         }
-
-        LLVM_DEBUG(dbgs() << "  Collecting info for inst: " << I << '\n');
-        DebugInfoBeforePass.InstToDelete.insert({&I, &I});
-
-        // Track the addresses to symbolize, if the feature is enabled.
-        collectStackAddresses(I);
-        DebugInfoBeforePass.DILocations.insert({&I, hasLoc(I)});
       }
     }
   }
@@ -527,73 +517,43 @@ static bool checkFunctions(const DebugFnMap &DIFunctionsBefore,
   return Preserved;
 }
 
-// This checks the preservation of the original debug info attached to
-// instructions.
-static bool checkInstructions(const DebugInstMap &DILocsBefore,
-                              const DebugInstMap &DILocsAfter,
-                              const WeakInstValueMap &InstToDelete,
-                              StringRef NameOfWrappedPass,
-                              StringRef FileNameFromCU,
-                              bool ShouldWriteIntoJSON,
-                              llvm::json::Array &Bugs) {
-  bool Preserved = true;
-  for (const auto &L : DILocsAfter) {
-    if (L.second)
-      continue;
-    auto Instr = L.first;
+static bool checkInstructionCoverage(Instruction &I,
+                                     StringRef NameOfWrappedPass,
+                                     StringRef FileNameFromCU,
+                                     bool ShouldWriteIntoJSON,
+                                     llvm::json::Array &Bugs) {
+  if (hasLoc(I))
+    return true;
 
-    // In order to avoid pointer reuse/recycling, skip the values that might
-    // have been deleted during a pass.
-    auto WeakInstrPtr = InstToDelete.find(Instr);
-    if (WeakInstrPtr != InstToDelete.end() && !WeakInstrPtr->second)
-      continue;
+  Instruction *Instr = &I;
+  collectStackAddresses(I);
+  auto FnName = Instr->getFunction()->getName();
+  auto BB = Instr->getParent();
+  auto BBName = BB->hasName() ? BB->getName() : "no-name";
+  auto InstName = Instruction::getOpcodeName(Instr->getOpcode());
 
-    auto FnName = Instr->getFunction()->getName();
-    auto BB = Instr->getParent();
-    auto BBName = BB->hasName() ? BB->getName() : "no-name";
-    auto InstName = Instruction::getOpcodeName(Instr->getOpcode());
-
-    auto CreateJSONBugEntry = [&](const char *Action) {
-      auto BugEntry = llvm::json::Object({
-          {"metadata", "DILocation"},
-          {"fn-name", FnName.str()},
-          {"bb-name", BBName.str()},
-          {"instr", InstName},
-          {"action", Action},
-      });
+  auto CreateJSONBugEntry = [&](const char *Action) {
+    auto BugEntry = llvm::json::Object({
+        {"metadata", "DILocation"},
+        {"fn-name", FnName.str()},
+        {"bb-name", BBName.str()},
+        {"instr", InstName},
+        {"action", Action},
+    });
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
-      if (!Instr->getDebugLoc().getOriginStackTraces().empty())
-        BugEntry.insert({"origin", symbolizeStackTrace(Instr)});
+    if (!Instr->getDebugLoc().getOriginStackTraces().empty())
+      BugEntry.insert({"origin", symbolizeStackTrace(Instr)});
 #endif
-      Bugs.push_back(std::move(BugEntry));
-    };
+    Bugs.push_back(std::move(BugEntry));
+  };
 
-    auto InstrIt = DILocsBefore.find(Instr);
-    if (InstrIt == DILocsBefore.end()) {
-      if (ShouldWriteIntoJSON)
-        CreateJSONBugEntry("not-generate");
-      else
-        dbg() << "WARNING: " << NameOfWrappedPass
-              << " did not generate DILocation for " << *Instr
-              << " (BB: " << BBName << ", Fn: " << FnName
-              << ", File: " << FileNameFromCU << ")\n";
-      Preserved = false;
-    } else {
-      if (!InstrIt->second)
-        continue;
-      // If the instr had the !dbg attached before the pass, consider it as
-      // a debug info issue.
-      if (ShouldWriteIntoJSON)
-        CreateJSONBugEntry("drop");
-      else
-        dbg() << "WARNING: " << NameOfWrappedPass << " dropped DILocation of "
-              << *Instr << " (BB: " << BBName << ", Fn: " << FnName
-              << ", File: " << FileNameFromCU << ")\n";
-      Preserved = false;
-    }
-  }
-
-  return Preserved;
+  if (ShouldWriteIntoJSON)
+    CreateJSONBugEntry("not-generate");
+  else
+    dbg() << "WARNING: " << NameOfWrappedPass
+          << " did not generate DILocation for " << *Instr << " (BB: " << BBName
+          << ", Fn: " << FnName << ", File: " << FileNameFromCU << ")\n";
+  return false;
 }
 
 // This checks the preservation of original debug variable intrinsics.
@@ -673,6 +633,16 @@ bool llvm::checkDebugInfoMetadata(Module &M,
   // Map the debug info holding DIs after a pass.
   DebugInfoPerPass DebugInfoAfterPass;
 
+  bool ShouldWriteIntoJSON = !OrigDIVerifyBugsReportFilePath.empty();
+
+  // TODO: The name of the module could be read better?
+  StringRef FileNameFromCU =
+      (cast<DICompileUnit>(M.getNamedMetadata("llvm.dbg.cu")->getOperand(0)))
+          ->getFilename();
+  llvm::json::Array Bugs;
+
+  bool ResultForInsts = true;
+
   // Visit each instruction.
   for (Function &F : Functions) {
     if (isFunctionSkipped(F))
@@ -688,7 +658,7 @@ bool llvm::checkDebugInfoMetadata(Module &M,
 
     if (SP) {
       LLVM_DEBUG(dbgs() << "  Collecting subprogram: " << *SP << '\n');
-      for (const DINode *DN : SP->getRetainedNodes()) {
+      for (const MDNode *DN : SP->getRetainedNodes()) {
         if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
           DebugInfoAfterPass.DIVariables[DV] = 0;
         }
@@ -724,46 +694,26 @@ bool llvm::checkDebugInfoMetadata(Module &M,
         LLVM_DEBUG(dbgs() << "  Collecting info for inst: " << I << '\n');
 
         // Track the addresses to symbolize, if the feature is enabled.
-        collectStackAddresses(I);
-        DebugInfoAfterPass.DILocations.insert({&I, hasLoc(I)});
+        bool InstResult = checkInstructionCoverage(
+            I, NameOfWrappedPass, FileNameFromCU, ShouldWriteIntoJSON, Bugs);
+        if (!InstResult)
+          I.setDebugLoc(DebugLoc::getUnknown());
+        ResultForInsts &= InstResult;
       }
     }
   }
 
-  // TODO: The name of the module could be read better?
-  StringRef FileNameFromCU =
-      (cast<DICompileUnit>(M.getNamedMetadata("llvm.dbg.cu")->getOperand(0)))
-          ->getFilename();
-
   auto DIFunctionsBefore = DebugInfoBeforePass.DIFunctions;
   auto DIFunctionsAfter = DebugInfoAfterPass.DIFunctions;
-
-  auto DILocsBefore = DebugInfoBeforePass.DILocations;
-  auto DILocsAfter = DebugInfoAfterPass.DILocations;
 
   auto InstToDelete = DebugInfoBeforePass.InstToDelete;
 
   auto DIVarsBefore = DebugInfoBeforePass.DIVariables;
   auto DIVarsAfter = DebugInfoAfterPass.DIVariables;
 
-  bool ShouldWriteIntoJSON = !OrigDIVerifyBugsReportFilePath.empty();
-  llvm::json::Array Bugs;
-
   bool ResultForFunc =
       checkFunctions(DIFunctionsBefore, DIFunctionsAfter, NameOfWrappedPass,
                      FileNameFromCU, ShouldWriteIntoJSON, Bugs);
-  bool ResultForInsts = checkInstructions(
-      DILocsBefore, DILocsAfter, InstToDelete, NameOfWrappedPass,
-      FileNameFromCU, ShouldWriteIntoJSON, Bugs);
-
-#if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
-  // If we are tracking DebugLoc coverage, replace each empty DebugLoc with an
-  // annotated location now so that it does not show up in future passes even if
-  // it is propagated to other instructions.
-  for (auto &L : DILocsAfter)
-    if (!L.second)
-      const_cast<Instruction *>(L.first)->setDebugLoc(DebugLoc::getUnknown());
-#endif
 
   bool ResultForVars = checkVars(DIVarsBefore, DIVarsAfter, NameOfWrappedPass,
                                  FileNameFromCU, ShouldWriteIntoJSON, Bugs);

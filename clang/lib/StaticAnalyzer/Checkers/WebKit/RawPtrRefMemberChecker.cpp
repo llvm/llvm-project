@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ASTUtils.h"
 #include "DiagOutputUtils.h"
 #include "PtrTypesSemantics.h"
 #include "clang/AST/Decl.h"
@@ -40,7 +41,6 @@ public:
   virtual std::optional<bool> isUnsafePtr(QualType,
                                           bool ignoreARC = false) const = 0;
   virtual const char *typeName() const = 0;
-  virtual const char *invariant() const = 0;
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
                     BugReporter &BRArg) const {
@@ -108,22 +108,8 @@ public:
 
     if (auto *MemberCXXRD = MemberType->getPointeeCXXRecordDecl())
       reportBug(Member, MemberType, MemberCXXRD, RD);
-    else if (auto *ObjCDecl = getObjCDecl(MemberType))
+    else if (auto *ObjCDecl = getObjCDeclFromObjCPtr(MemberType))
       reportBug(Member, MemberType, ObjCDecl, RD);
-  }
-
-  ObjCInterfaceDecl *getObjCDecl(const Type *TypePtr) const {
-    auto *PointeeType = TypePtr->getPointeeType().getTypePtrOrNull();
-    if (!PointeeType)
-      return nullptr;
-    auto *Desugared = PointeeType->getUnqualifiedDesugaredType();
-    if (!Desugared)
-      return nullptr;
-    if (auto *ObjCType = dyn_cast<ObjCInterfaceType>(Desugared))
-      return ObjCType->getDecl();
-    if (auto *ObjCType = dyn_cast<ObjCObjectType>(Desugared))
-      return ObjCType->getInterface();
-    return nullptr;
   }
 
   void visitObjCDecl(const ObjCContainerDecl *CD) const {
@@ -169,7 +155,7 @@ public:
 
     if (auto *MemberCXXRD = IvarType->getPointeeCXXRecordDecl())
       reportBug(Ivar, IvarType, MemberCXXRD, CD);
-    else if (auto *ObjCDecl = getObjCDecl(IvarType))
+    else if (auto *ObjCDecl = getObjCDeclFromObjCPtr(IvarType))
       reportBug(Ivar, IvarType, ObjCDecl, CD);
   }
 
@@ -190,7 +176,7 @@ public:
 
     if (auto *MemberCXXRD = PropType->getPointeeCXXRecordDecl())
       reportBug(PD, PropType, MemberCXXRD, CD);
-    else if (auto *ObjCDecl = getObjCDecl(PropType))
+    else if (auto *ObjCDecl = getObjCDeclFromObjCPtr(PropType))
       reportBug(PD, PropType, ObjCDecl, CD);
   }
 
@@ -214,7 +200,7 @@ public:
 
     if (auto *MemberCXXRD = PropType->getPointeeCXXRecordDecl())
       reportBug(PropDecl, PropType, MemberCXXRD, CD);
-    else if (auto *ObjCDecl = getObjCDecl(PropType))
+    else if (auto *ObjCDecl = getObjCDeclFromObjCPtr(PropType))
       reportBug(PropDecl, PropType, ObjCDecl, CD);
   }
 
@@ -291,8 +277,9 @@ public:
     } else
       Os << "Member variable ";
     printQuotedName(Os, Member);
-    Os << " in ";
+    Os << " (of ";
     printQuotedQualifiedName(Os, ClassCXXRD);
+    Os << ")";
     if (Member->getType().getTypePtrOrNull() == MemberType)
       Os << " is a ";
     else
@@ -303,7 +290,6 @@ public:
       printQuotedQualifiedName(Os, Typedef->getDecl());
     } else
       printQuotedQualifiedName(Os, Pointee);
-    Os << "; " << invariant() << ".";
 
     PathDiagnosticLocation BSLoc(Member->getSourceRange().getBegin(),
                                  BR->getSourceManager());
@@ -332,11 +318,7 @@ public:
     return isUncountedPtr(QT.getCanonicalType());
   }
 
-  const char *typeName() const final { return "ref-countable type"; }
-
-  const char *invariant() const final {
-    return "member variables must be Ref, RefPtr, WeakRef, or WeakPtr";
-  }
+  const char *typeName() const final { return "RefPtr-capable type"; }
 };
 
 class NoUncheckedPtrMemberChecker final : public RawPtrRefMemberChecker {
@@ -349,12 +331,7 @@ public:
     return isUncheckedPtr(QT.getCanonicalType());
   }
 
-  const char *typeName() const final { return "CheckedPtr capable type"; }
-
-  const char *invariant() const final {
-    return "member variables must be a CheckedPtr, CheckedRef, WeakRef, or "
-           "WeakPtr";
-  }
+  const char *typeName() const final { return "CheckedPtr-capable type"; }
 };
 
 class NoUnretainedMemberChecker final : public RawPtrRefMemberChecker {
@@ -371,11 +348,7 @@ public:
     return RTC->isUnretained(QT, ignoreARC);
   }
 
-  const char *typeName() const final { return "retainable type"; }
-
-  const char *invariant() const final {
-    return "member variables must be a RetainPtr or OSObjectPtr";
-  }
+  const char *typeName() const final { return "RetainPtr-capable type"; }
 
   PrintDeclKind printPointer(llvm::raw_svector_ostream &Os,
                              const Type *T) const final {

@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa --mcpu=hawaii -passes=load-store-vectorizer -S -o - %s | FileCheck %s
+; RUN: opt -mtriple=amdgpu7.01-amd-amdhsa --passes=load-store-vectorizer -S -o - %s | FileCheck %s
 ; Copy of test/CodeGen/AMDGPU/merge-stores.ll with some additions
 
 ; TODO: Vector element tests

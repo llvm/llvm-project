@@ -1,4 +1,4 @@
-# RUN: llc -O0 -mtriple=m68k -start-after=prologepilog -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -O0 -mtriple=m68k -start-after=prolog-epilog -verify-machineinstrs %s -o - | FileCheck %s
 
 name: is-pcrel-register-operand-legal
 body:             |

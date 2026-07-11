@@ -11,13 +11,12 @@
 #include "hdr/types/struct_linger.h"
 #include "hdr/types/struct_timespec.h"
 #include "hdr/types/struct_timeval.h"
+#include "src/__support/time/clock_gettime.h"
 #include "src/sys/socket/getsockopt.h"
 #include "src/sys/socket/recv.h"
 #include "src/sys/socket/setsockopt.h"
 #include "src/sys/socket/socket.h"
 #include "src/sys/socket/socketpair.h"
-#include "src/time/clock_gettime.h"
-
 #include "src/unistd/close.h"
 #include "src/unistd/pipe.h"
 
@@ -145,11 +144,13 @@ TEST_F(LlvmLibcSocketOptTest, ReceiveTimeout) {
 
   char buffer[10];
   struct timespec start, end;
-  ASSERT_EQ(LIBC_NAMESPACE::clock_gettime(CLOCK_MONOTONIC, &start), 0);
+  ASSERT_TRUE(LIBC_NAMESPACE::internal::clock_gettime(CLOCK_MONOTONIC, &start)
+                  .has_value());
   // Read/recv on empty socket should block for ~1s and fail with EAGAIN.
   ASSERT_THAT(LIBC_NAMESPACE::recv(sv[0], buffer, sizeof(buffer), 0),
               Fails<ssize_t>(EAGAIN));
-  ASSERT_EQ(LIBC_NAMESPACE::clock_gettime(CLOCK_MONOTONIC, &end), 0);
+  ASSERT_TRUE(LIBC_NAMESPACE::internal::clock_gettime(CLOCK_MONOTONIC, &end)
+                  .has_value());
 
   int64_t elapsed_seconds = end.tv_sec - start.tv_sec;
   int64_t elapsed_nseconds = end.tv_nsec - start.tv_nsec;

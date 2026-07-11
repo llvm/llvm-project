@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=load-store-vectorizer,dce -S -o - %s | FileCheck %s
+; RUN: opt -mtriple=amdgpu-amd-amdhsa -passes=load-store-vectorizer,dce -S -o - %s | FileCheck %s
 
 define void @base_case(i1 %cnd, ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %out) {
 ; CHECK-LABEL: @base_case
