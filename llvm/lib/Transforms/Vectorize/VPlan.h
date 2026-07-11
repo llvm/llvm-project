@@ -1578,13 +1578,6 @@ public:
 
   Type *getResultType() const { return getScalarType(); }
 
-  /// Cast recipes always use scalars of their operand.
-  bool usesScalars(const VPValue *Op) const override {
-    if (Instruction::isCast(getOpcode()))
-      return true;
-    return VPInstruction::usesScalars(Op);
-  }
-
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -1741,12 +1734,6 @@ public:
   computeCost(ElementCount VF, VPCostContext &Ctx) const override;
 
   Instruction &getInstruction() const { return I; }
-
-  bool usesScalars(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return true;
-  }
 
   bool usesFirstPartOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
@@ -3439,13 +3426,6 @@ public:
     return isSingleScalar();
   }
 
-  /// Returns true if the recipe uses scalars of operand \p Op.
-  bool usesScalars(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return true;
-  }
-
   /// Return the mask of a predicated VPReplicateRecipe.
   VPValue *getMask() {
     assert(isPredicated() && "Trying to get the mask of a unpredicated recipe");
@@ -3501,13 +3481,6 @@ public:
     printOperands(O, SlotTracker);
   }
 #endif
-
-  /// Returns true if the recipe uses scalars of operand \p Op.
-  bool usesScalars(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return true;
-  }
 };
 
 /// A recipe to combine multiple recipes into a single 'expression' recipe,
