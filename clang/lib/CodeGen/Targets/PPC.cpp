@@ -445,31 +445,39 @@ ABIArgInfo PPC32_SVR4_ABIInfo::classifyArgumentType(QualType Ty,
   assert(ArgGPRsLeft <= NumArgGPRs && "Arg GPR tracking underflow");
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
-  if (isAggregateTypeForABI(Ty)) {
-    // Records with non-trivial destructors/copy-constructors should not be
-    // passed by value.
-    if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
-                                     RAA == CGCXXABI::RAA_DirectInMemory);
+  bool IsComplex = Ty->isAnyComplexType() && isComplexGnuABI();
 
-    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+  // Use the default implementation when this argument is not relevant for GPR
+  // budget:
+  //
+  // - floating-point types are passed in FPRs
+  // - when GPRs are already exhausted
+  //
+  // Complex types (when GNU compatible) always need custom handling.
+  if (!IsComplex && (!ArgGPRsLeft || (Ty->isFloatingType() && !IsSoftFloatABI)))
+    return DefaultABIInfo::classifyArgumentType(Ty);
+
+  uint64_t TypeSize = getContext().getTypeSize(Ty);
+  uint64_t RegsNeeded = (TypeSize + GPRBits - 1) / GPRBits;
+
+  if (IsComplex || !isAggregateTypeForABI(Ty)) {
+    // Complex values and scalars are passed in GPRs.
+
+    // An 8-byte value (e.g. _Complex float, _Complex int, i64, soft-float
+    // double) must start in an even-numbered GPR, so skip an odd register to
+    // keep the pair aligned.
+    if (TypeSize == 2 * GPRBits && ArgGPRsLeft % 2 == 1)
+      ArgGPRsLeft -= 1;
+
+    if (RegsNeeded <= (uint64_t)ArgGPRsLeft) {
+      ArgGPRsLeft -= RegsNeeded;
+    }
+  } else {
+    // Other aggregates are passed indirectly, and consume one GPR.
+    ArgGPRsLeft -= 1;
   }
 
-  // Treat an enum type as its underlying type.
-  if (const auto *ED = Ty->getAsEnumDecl())
-    Ty = ED->getIntegerType();
-
-  ASTContext &Context = getContext();
-  if (const auto *EIT = Ty->getAs<BitIntType>())
-    if (EIT->getNumBits() >
-        Context.getTypeSize(Context.getTargetInfo().hasInt128Type()
-                                ? Context.Int128Ty
-                                : Context.LongLongTy))
-      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
-
-  return (isPromotableIntegerTypeForABI(Ty)
-              ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
-              : ABIArgInfo::getDirect());
+  return DefaultABIInfo::classifyArgumentType(Ty);
 }
 
 ABIArgInfo PPC32_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
