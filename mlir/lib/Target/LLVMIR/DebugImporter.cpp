@@ -259,15 +259,9 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
     return nullptr;
 
   // Convert the retained nodes but drop all of them if one of them is invalid.
-  SmallVector<Attribute> retainedNodes;
-  auto add = [this, &retainedNodes](llvm::DINode *retainedNode) {
+  SmallVector<DINodeAttr> retainedNodes;
+  for (llvm::DINode *retainedNode : node->getRetainedNodes())
     retainedNodes.push_back(translate(retainedNode));
-  };
-  auto addGVE = [](llvm::DIGlobalVariableExpression *GVE) {
-    // FIXME Import DIGlobalVariableExpressions from retainedNodes without
-    // duplicating them.
-  };
-  node->forEachRetainedNode(add, add, add, add, addGVE);
   if (llvm::is_contained(retainedNodes, nullptr))
     retainedNodes.clear();
 

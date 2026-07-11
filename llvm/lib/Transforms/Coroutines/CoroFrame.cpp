@@ -743,7 +743,11 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   // If we don't add __coro_frame to the RetainedNodes, user may get
   // `no symbol __coro_frame in context` rather than `__coro_frame`
   // is optimized out, which is more precise.
-  DIS->retainNodes(&FrameDIVar, &FrameDIVar + 1);
+  auto RetainedNodes = DIS->getRetainedNodes();
+  SmallVector<Metadata *, 32> RetainedNodesVec(RetainedNodes.begin(),
+                                               RetainedNodes.end());
+  RetainedNodesVec.push_back(FrameDIVar);
+  DIS->replaceOperandWith(7, (MDTuple::get(F.getContext(), RetainedNodesVec)));
 
   // Construct the location for the frame debug variable. The column number
   // is fake but it should be fine.

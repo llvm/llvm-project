@@ -467,7 +467,7 @@ MlirAttribute mlirLLVMDISubprogramAttrGet(
       cast<DISubroutineTypeAttr>(unwrap(type)),
       llvm::map_to_vector(
           unwrapList(nRetainedNodes, retainedNodes, nodesStorage),
-          llvm::CastTo<Attribute>),
+          llvm::CastTo<DINodeAttr>),
       llvm::map_to_vector(
           unwrapList(nAnnotations, annotations, annotationsStorage),
           llvm::CastTo<DINodeAttr>)));

@@ -124,7 +124,6 @@ public:
 
 private:
   void processCompileUnit(DICompileUnit *CU);
-  void processGlobalVariableExpression(DIGlobalVariableExpression *GVE);
   void processScope(DIScope *Scope);
   void processType(DIType *DT);
   void processVariable(DIVariable *DV);

@@ -197,8 +197,13 @@ void DebugInfoFinder::processModule(const Module &M) {
 void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
   if (!addCompileUnit(CU))
     return;
-  for (auto *GVE : CU->getGlobalVariables())
-    processGlobalVariableExpression(GVE);
+  for (auto *DIG : CU->getGlobalVariables()) {
+    if (!addGlobalVariable(DIG))
+      continue;
+    auto *GV = DIG->getVariable();
+    processScope(GV->getScope());
+    processType(GV->getType());
+  }
   for (auto *ET : CU->getEnumTypes())
     processType(ET);
   for (auto *RT : CU->getRetainedTypes())
@@ -210,15 +215,6 @@ void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
     processImportedEntity(Import);
   for (auto *Macro : CU->getMacros())
     processMacroNode(Macro, nullptr);
-}
-
-void DebugInfoFinder::processGlobalVariableExpression(
-    DIGlobalVariableExpression *GVE) {
-  if (!addGlobalVariable(GVE))
-    return;
-  auto *GV = GVE->getVariable();
-  processScope(GV->getScope());
-  processType(GV->getType());
 }
 
 void DebugInfoFinder::processInstruction(const Module &M,
@@ -411,8 +407,7 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
   SP->forEachRetainedNode(
       [this](DILocalVariable *LV) { processVariable(LV); }, [](DILabel *L) {},
       [this](DIImportedEntity *IE) { processImportedEntity(IE); },
-      [this](DIType *T) { processType(T); },
-      [this](auto *GVE) { return processGlobalVariableExpression(GVE); });
+      [this](DIType *T) { processType(T); });
 }
 
 void DebugInfoFinder::processVariable(const DILocalVariable *DV) {

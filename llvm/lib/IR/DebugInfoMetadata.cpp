@@ -1451,10 +1451,11 @@ bool DISubprogram::describes(const Function *F) const {
 
 template <typename ScopeT, typename NodeT>
 static ScopeT getRawRetainedNodeScopeInternal(NodeT *N) {
-  auto getScopeLambda = [](auto *N) { return getScope(N); };
+  auto getScope = [](auto *N) { return N->getScope(); };
+
   return DISubprogram::visitRetainedNode<ScopeT>(
-      N, getScopeLambda, getScopeLambda, getScopeLambda, getScopeLambda,
-      getScopeLambda, [](auto *N) { return nullptr; });
+      N, getScope, getScope, getScope, getScope,
+      [](auto *N) { return nullptr; });
 }
 
 const DIScope *DISubprogram::getRawRetainedNodeScope(const MDNode *N) {
@@ -1474,22 +1475,41 @@ DILocalScope *DISubprogram::getRetainedNodeScope(MDNode *N) {
 }
 
 void DISubprogram::cleanupRetainedNodes() {
-  // Checks if a metadata node from retainedTypes is a type belonging to
+  // Checks if a metadata node from retainedTypes is a type not belonging to
   // this subprogram.
-  auto IsTypeInSP = [this](Metadata *N) {
+  auto IsAlienType = [this](DINode *N) {
     auto *T = dyn_cast_or_null<DIType>(N);
     if (!T)
-      return true;
+      return false;
 
     DISubprogram *TypeSP = nullptr;
     // The type might have been global in the previously loaded IR modules.
     if (auto *LS = dyn_cast_or_null<DILocalScope>(T->getScope()))
       TypeSP = LS->getSubprogram();
 
-    return this == TypeSP;
+    return this != TypeSP;
   };
 
-  cleanupRetainedNodesIf(IsTypeInSP);
+  // As this is expected to be called during module loading, before
+  // stripping old or incorrect debug info, perform minimal sanity check.
+  if (!isa_and_present<MDTuple>(getRawRetainedNodes()))
+    return;
+
+  MDTuple *RetainedNodes = cast<MDTuple>(getRawRetainedNodes());
+  SmallVector<Metadata *> MDs;
+  MDs.reserve(RetainedNodes->getNumOperands());
+  for (const MDOperand &Node : RetainedNodes->operands()) {
+    // Ignore malformed retainedNodes.
+    if (Node && !isa<DINode>(Node))
+      return;
+
+    auto *N = cast_or_null<DINode>(Node);
+    if (!IsAlienType(N))
+      MDs.push_back(N);
+  }
+
+  if (MDs.size() != RetainedNodes->getNumOperands())
+    replaceRetainedNodes(MDNode::get(getContext(), MDs));
 }
 
 DILexicalBlockBase::DILexicalBlockBase(LLVMContext &C, unsigned ID,

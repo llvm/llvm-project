@@ -33,7 +33,7 @@ DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
     if (const auto &RTs = CUNode->getRetainedTypes())
       AllRetainTypes.assign(RTs.begin(), RTs.end());
     if (const auto &GVs = CUNode->getGlobalVariables())
-      Globals.assign(GVs.begin(), GVs.end());
+      AllGVs.assign(GVs.begin(), GVs.end());
     if (const auto &IMs = CUNode->getImportedEntities())
       ImportedModules.assign(IMs.begin(), IMs.end());
     if (const auto &MNs = CUNode->getMacros())
@@ -56,19 +56,20 @@ void DIBuilder::finalizeSubprogram(DISubprogram *SP) {
   if (PN == SubprogramTrackedNodes.end())
     return;
 
-  SetVector<Metadata *> RetainedNodes;
-  for (MDNode *N : llvm::concat<MDNode *>(SP->getRetainedNodes(), PN->second)) {
+  SmallVector<Metadata *, 16> RetainedNodes;
+  for (MDNode *N : PN->second) {
     // If the tracked node N was temporary, and the DIBuilder user replaced it
     // with a node that does not belong to SP or is non-local, do not add N to
     // SP's retainedNodes list.
     DILocalScope *Scope = dyn_cast_or_null<DILocalScope>(
         DISubprogram::getRawRetainedNodeScope(N));
-    if (Scope && Scope->getSubprogram() == SP)
-      RetainedNodes.insert(N);
+    if (!Scope || Scope->getSubprogram() != SP)
+      continue;
+
+    RetainedNodes.push_back(N);
   }
 
-  SP->replaceRetainedNodes(
-      MDTuple::get(VMContext, RetainedNodes.getArrayRef()));
+  SP->replaceRetainedNodes(MDTuple::get(VMContext, RetainedNodes));
 }
 
 void DIBuilder::finalize() {
@@ -102,8 +103,8 @@ void DIBuilder::finalize() {
     if (auto *SP = dyn_cast<DISubprogram>(N))
       finalizeSubprogram(SP);
 
-  if (!Globals.empty())
-    CUNode->replaceGlobalVariables(MDTuple::get(VMContext, Globals));
+  if (!AllGVs.empty())
+    CUNode->replaceGlobalVariables(MDTuple::get(VMContext, AllGVs));
 
   if (!ImportedModules.empty())
     CUNode->replaceImportedEntities(MDTuple::get(
@@ -980,10 +981,7 @@ DIGlobalVariableExpression *DIBuilder::createGlobalVariableExpression(
   if (!Expr)
     Expr = createExpression();
   auto *N = DIGlobalVariableExpression::get(VMContext, GV, Expr);
-  if (isa_and_nonnull<DILocalScope>(Context))
-    getSubprogramNodesTrackingVector(Context).emplace_back(N);
-  else
-    Globals.push_back(N);
+  AllGVs.push_back(N);
   return N;
 }
 
