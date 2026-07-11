@@ -1,0 +1,134 @@
+//===- EytzingerTest.cpp - EytzingerTableSpan unit tests ------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "llvm/ADT/Eytzinger.h"
+#include "llvm/Support/Endian.h"
+#include "gtest/gtest.h"
+
+using namespace llvm;
+
+namespace {
+
+TEST(EytzingerTest, EmptyTable) {
+  // Default constructed table span should be empty and return nullopt.
+  EytzingerTableSpan<int> Empty;
+  EXPECT_TRUE(Empty.empty());
+  EXPECT_EQ(Empty.size(), 0u);
+  EXPECT_EQ(Empty.data(), nullptr);
+  EXPECT_EQ(Empty.findIndex(42), std::nullopt);
+
+  // Span initialized with nullptr and zero size should behave identically.
+  EytzingerTableSpan<int> NullSpan(nullptr, 0);
+  EXPECT_TRUE(NullSpan.empty());
+  EXPECT_EQ(NullSpan.size(), 0u);
+  EXPECT_EQ(NullSpan.findIndex(42), std::nullopt);
+}
+
+TEST(EytzingerTest, SingleElementTable) {
+  // Table with a single element at index 0.
+  const int Data[] = {100};
+  EytzingerTableSpan<int> Span(Data, 1);
+
+  EXPECT_FALSE(Span.empty());
+  EXPECT_EQ(Span.size(), 1u);
+  EXPECT_EQ(Span[0], 100);
+
+  // Successful lookup for the single element.
+  EXPECT_EQ(Span.findIndex(100), 0u);
+
+  // Unsuccessful lookups for keys smaller and larger than the element.
+  EXPECT_EQ(Span.findIndex(99), std::nullopt);
+  EXPECT_EQ(Span.findIndex(101), std::nullopt);
+}
+
+TEST(EytzingerTest, BinaryTreeWithSevenElements) {
+  // Binary tree of 7 elements (3 full levels).
+  // In Eytzinger layout (breadth-first order of complete BST):
+  //
+  //         40
+  //       /    \
+  //     20      60
+  //    /  \    /  \
+  //  10   30  50   70
+  const int Data[] = {40, 20, 60, 10, 30, 50, 70};
+  EytzingerTableSpan<int> Span(Data, 7);
+
+  EXPECT_EQ(Span.size(), 7u);
+
+  // Verify successful lookups for every node in the tree.
+  EXPECT_EQ(Span.findIndex(40), 0u);
+  EXPECT_EQ(Span.findIndex(20), 1u);
+  EXPECT_EQ(Span.findIndex(60), 2u);
+  EXPECT_EQ(Span.findIndex(10), 3u);
+  EXPECT_EQ(Span.findIndex(30), 4u);
+  EXPECT_EQ(Span.findIndex(50), 5u);
+  EXPECT_EQ(Span.findIndex(70), 6u);
+
+  // Verify unsuccessful lookups for values not in the tree.
+  EXPECT_EQ(Span.findIndex(0), std::nullopt);
+  EXPECT_EQ(Span.findIndex(15), std::nullopt);
+  EXPECT_EQ(Span.findIndex(25), std::nullopt);
+  EXPECT_EQ(Span.findIndex(35), std::nullopt);
+  EXPECT_EQ(Span.findIndex(45), std::nullopt);
+  EXPECT_EQ(Span.findIndex(55), std::nullopt);
+  EXPECT_EQ(Span.findIndex(65), std::nullopt);
+  EXPECT_EQ(Span.findIndex(80), std::nullopt);
+}
+
+TEST(EytzingerTest, BinaryTreeWithFiveElements) {
+  // Binary tree of 5 elements (non-power-of-two minus one).
+  // In Eytzinger layout:
+  //
+  //       40
+  //      /  \
+  //    20    50
+  //   /  \
+  // 10    30
+  const int Data[] = {40, 20, 50, 10, 30};
+  EytzingerTableSpan<int> Span(Data, 5);
+
+  EXPECT_EQ(Span.size(), 5u);
+
+  // Verify lookups on existing elements.
+  EXPECT_EQ(Span.findIndex(40), 0u);
+  EXPECT_EQ(Span.findIndex(20), 1u);
+  EXPECT_EQ(Span.findIndex(50), 2u);
+  EXPECT_EQ(Span.findIndex(10), 3u);
+  EXPECT_EQ(Span.findIndex(30), 4u);
+
+  // Verify lookups on missing values across various boundary conditions.
+  EXPECT_EQ(Span.findIndex(5), std::nullopt);
+  EXPECT_EQ(Span.findIndex(15), std::nullopt);
+  EXPECT_EQ(Span.findIndex(25), std::nullopt);
+  EXPECT_EQ(Span.findIndex(35), std::nullopt);
+  EXPECT_EQ(Span.findIndex(45), std::nullopt);
+  EXPECT_EQ(Span.findIndex(60), std::nullopt);
+}
+
+TEST(EytzingerTest, EndianSpecificIntegerType) {
+  // Verify compatibility with LLVM endian-specific wrapper types such as
+  // support::ulittle64_t which are commonly used in binary profile formats.
+  const support::ulittle64_t Data[] = {
+      support::ulittle64_t(400), support::ulittle64_t(200),
+      support::ulittle64_t(600), support::ulittle64_t(100),
+      support::ulittle64_t(300), support::ulittle64_t(500),
+      support::ulittle64_t(700)};
+  EytzingerTableSpan<support::ulittle64_t> Span(Data, 7);
+
+  EXPECT_EQ(Span.findIndex(uint64_t(400)), 0u);
+  EXPECT_EQ(Span.findIndex(uint64_t(200)), 1u);
+  EXPECT_EQ(Span.findIndex(uint64_t(600)), 2u);
+  EXPECT_EQ(Span.findIndex(uint64_t(100)), 3u);
+  EXPECT_EQ(Span.findIndex(uint64_t(300)), 4u);
+  EXPECT_EQ(Span.findIndex(uint64_t(500)), 5u);
+  EXPECT_EQ(Span.findIndex(uint64_t(700)), 6u);
+
+  EXPECT_EQ(Span.findIndex(uint64_t(999)), std::nullopt);
+}
+
+} // namespace
