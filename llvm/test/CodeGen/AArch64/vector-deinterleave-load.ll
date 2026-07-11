@@ -3,31 +3,17 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -lower-interleaved-accesses=false < %s | FileCheck %s --check-prefixes=CHECK,IA-DISABLE
 
 define void @aarch64_vector_deinterleave_idx_ld2(ptr %ptr, i64 %idx) {
-; IA-ENABLE-LABEL: aarch64_vector_deinterleave_idx_ld2:
-; IA-ENABLE:       // %bb.0: // %entry
-; IA-ENABLE-NEXT:    lsl x8, x1, #2
-; IA-ENABLE-NEXT:    and x9, x8, #0xfffffffffffffff0
-; IA-ENABLE-NEXT:    add x8, x8, #16
-; IA-ENABLE-NEXT:    add x10, x0, x9
-; IA-ENABLE-NEXT:    and x8, x8, #0xfffffffffffffff0
-; IA-ENABLE-NEXT:    ld2 { v0.4s, v1.4s }, [x10]
-; IA-ENABLE-NEXT:    str q0, [x0, x9]
-; IA-ENABLE-NEXT:    str q1, [x0, x8]
-; IA-ENABLE-NEXT:    ret
-;
-; IA-DISABLE-LABEL: aarch64_vector_deinterleave_idx_ld2:
-; IA-DISABLE:       // %bb.0: // %entry
-; IA-DISABLE-NEXT:    lsl x8, x1, #2
-; IA-DISABLE-NEXT:    and x9, x8, #0xfffffffffffffff0
-; IA-DISABLE-NEXT:    add x8, x8, #16
-; IA-DISABLE-NEXT:    add x9, x0, x9
-; IA-DISABLE-NEXT:    and x8, x8, #0xfffffffffffffff0
-; IA-DISABLE-NEXT:    ldp q1, q0, [x9]
-; IA-DISABLE-NEXT:    uzp1 v2.4s, v1.4s, v0.4s
-; IA-DISABLE-NEXT:    uzp2 v0.4s, v1.4s, v0.4s
-; IA-DISABLE-NEXT:    str q2, [x9]
-; IA-DISABLE-NEXT:    str q0, [x0, x8]
-; IA-DISABLE-NEXT:    ret
+; CHECK-LABEL: aarch64_vector_deinterleave_idx_ld2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    lsl x8, x1, #2
+; CHECK-NEXT:    and x9, x8, #0xfffffffffffffff0
+; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    add x10, x0, x9
+; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff0
+; CHECK-NEXT:    ld2 { v0.4s, v1.4s }, [x10]
+; CHECK-NEXT:    str q0, [x0, x9]
+; CHECK-NEXT:    str q1, [x0, x8]
+; CHECK-NEXT:    ret
 entry:
   %idx1 = lshr i64 %idx, 2
   %a1 = add i64 %idx, 4
@@ -47,43 +33,20 @@ entry:
 }
 
 define void @aarch64_vector_deinterleave_idx_ld3(ptr %ptr, i64 %idx) {
-; IA-ENABLE-LABEL: aarch64_vector_deinterleave_idx_ld3:
-; IA-ENABLE:       // %bb.0: // %entry
-; IA-ENABLE-NEXT:    lsl x8, x1, #2
-; IA-ENABLE-NEXT:    and x9, x8, #0xfffffffffffffff0
-; IA-ENABLE-NEXT:    add x10, x0, x9
-; IA-ENABLE-NEXT:    ld3 { v0.4s, v1.4s, v2.4s }, [x10]
-; IA-ENABLE-NEXT:    add x10, x8, #16
-; IA-ENABLE-NEXT:    add x8, x8, #32
-; IA-ENABLE-NEXT:    and x10, x10, #0xfffffffffffffff0
-; IA-ENABLE-NEXT:    and x8, x8, #0xfffffffffffffff0
-; IA-ENABLE-NEXT:    str q0, [x0, x9]
-; IA-ENABLE-NEXT:    str q1, [x0, x10]
-; IA-ENABLE-NEXT:    str q2, [x0, x8]
-; IA-ENABLE-NEXT:    ret
-;
-; IA-DISABLE-LABEL: aarch64_vector_deinterleave_idx_ld3:
-; IA-DISABLE:       // %bb.0: // %entry
-; IA-DISABLE-NEXT:    sub sp, sp, #48
-; IA-DISABLE-NEXT:    .cfi_def_cfa_offset 48
-; IA-DISABLE-NEXT:    lsl x9, x1, #2
-; IA-DISABLE-NEXT:    mov x8, sp
-; IA-DISABLE-NEXT:    and x10, x9, #0xfffffffffffffff0
-; IA-DISABLE-NEXT:    add x10, x0, x10
-; IA-DISABLE-NEXT:    ldp q1, q0, [x10, #16]
-; IA-DISABLE-NEXT:    ldr q2, [x10]
-; IA-DISABLE-NEXT:    str q2, [sp]
-; IA-DISABLE-NEXT:    stp q1, q0, [sp, #16]
-; IA-DISABLE-NEXT:    ld3 { v0.4s, v1.4s, v2.4s }, [x8]
-; IA-DISABLE-NEXT:    add x8, x9, #16
-; IA-DISABLE-NEXT:    add x9, x9, #32
-; IA-DISABLE-NEXT:    and x8, x8, #0xfffffffffffffff0
-; IA-DISABLE-NEXT:    and x9, x9, #0xfffffffffffffff0
-; IA-DISABLE-NEXT:    str q0, [x10]
-; IA-DISABLE-NEXT:    str q1, [x0, x8]
-; IA-DISABLE-NEXT:    str q2, [x0, x9]
-; IA-DISABLE-NEXT:    add sp, sp, #48
-; IA-DISABLE-NEXT:    ret
+; CHECK-LABEL: aarch64_vector_deinterleave_idx_ld3:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    lsl x8, x1, #2
+; CHECK-NEXT:    and x9, x8, #0xfffffffffffffff0
+; CHECK-NEXT:    add x10, x0, x9
+; CHECK-NEXT:    ld3 { v0.4s, v1.4s, v2.4s }, [x10]
+; CHECK-NEXT:    add x10, x8, #16
+; CHECK-NEXT:    add x8, x8, #32
+; CHECK-NEXT:    and x10, x10, #0xfffffffffffffff0
+; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff0
+; CHECK-NEXT:    str q0, [x0, x9]
+; CHECK-NEXT:    str q1, [x0, x10]
+; CHECK-NEXT:    str q2, [x0, x8]
+; CHECK-NEXT:    ret
 entry:
   %idx1 = lshr i64 %idx, 2
   %a1 = add i64 %idx, 4
@@ -108,52 +71,24 @@ entry:
 }
 
 define void @aarch64_vector_deinterleave_idx_ld4(ptr %ptr, i64 %idx) {
-; IA-ENABLE-LABEL: aarch64_vector_deinterleave_idx_ld4:
-; IA-ENABLE:       // %bb.0: // %entry
-; IA-ENABLE-NEXT:    lsl x8, x1, #2
-; IA-ENABLE-NEXT:    add x9, x8, #64
-; IA-ENABLE-NEXT:    add x11, x8, #96
-; IA-ENABLE-NEXT:    and x9, x9, #0xfffffffffffffff0
-; IA-ENABLE-NEXT:    add x10, x0, x9
-; IA-ENABLE-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x10]
-; IA-ENABLE-NEXT:    add x10, x8, #80
-; IA-ENABLE-NEXT:    add x8, x8, #112
-; IA-ENABLE-NEXT:    and x10, x10, #0xfffffffffffffff0
-; IA-ENABLE-NEXT:    and x8, x8, #0xfffffffffffffff0
-; IA-ENABLE-NEXT:    str q0, [x0, x9]
-; IA-ENABLE-NEXT:    and x9, x11, #0xfffffffffffffff0
-; IA-ENABLE-NEXT:    str q1, [x0, x10]
-; IA-ENABLE-NEXT:    str q2, [x0, x9]
-; IA-ENABLE-NEXT:    str q3, [x0, x8]
-; IA-ENABLE-NEXT:    ret
-;
-; IA-DISABLE-LABEL: aarch64_vector_deinterleave_idx_ld4:
-; IA-DISABLE:       // %bb.0: // %entry
-; IA-DISABLE-NEXT:    lsl x8, x1, #2
-; IA-DISABLE-NEXT:    add x9, x8, #64
-; IA-DISABLE-NEXT:    add x10, x8, #80
-; IA-DISABLE-NEXT:    add x11, x8, #96
-; IA-DISABLE-NEXT:    and x9, x9, #0xfffffffffffffff0
-; IA-DISABLE-NEXT:    add x8, x8, #112
-; IA-DISABLE-NEXT:    and x10, x10, #0xfffffffffffffff0
-; IA-DISABLE-NEXT:    add x9, x0, x9
-; IA-DISABLE-NEXT:    and x8, x8, #0xfffffffffffffff0
-; IA-DISABLE-NEXT:    ldp q1, q0, [x9]
-; IA-DISABLE-NEXT:    ldp q3, q2, [x9, #32]
-; IA-DISABLE-NEXT:    uzp1 v5.4s, v1.4s, v0.4s
-; IA-DISABLE-NEXT:    uzp2 v0.4s, v1.4s, v0.4s
-; IA-DISABLE-NEXT:    uzp1 v4.4s, v3.4s, v2.4s
-; IA-DISABLE-NEXT:    uzp2 v2.4s, v3.4s, v2.4s
-; IA-DISABLE-NEXT:    uzp1 v1.4s, v5.4s, v4.4s
-; IA-DISABLE-NEXT:    uzp1 v3.4s, v0.4s, v2.4s
-; IA-DISABLE-NEXT:    uzp2 v4.4s, v5.4s, v4.4s
-; IA-DISABLE-NEXT:    uzp2 v0.4s, v0.4s, v2.4s
-; IA-DISABLE-NEXT:    str q1, [x9]
-; IA-DISABLE-NEXT:    and x9, x11, #0xfffffffffffffff0
-; IA-DISABLE-NEXT:    str q3, [x0, x10]
-; IA-DISABLE-NEXT:    str q4, [x0, x9]
-; IA-DISABLE-NEXT:    str q0, [x0, x8]
-; IA-DISABLE-NEXT:    ret
+; CHECK-LABEL: aarch64_vector_deinterleave_idx_ld4:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    lsl x8, x1, #2
+; CHECK-NEXT:    add x9, x8, #64
+; CHECK-NEXT:    add x11, x8, #96
+; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
+; CHECK-NEXT:    add x10, x0, x9
+; CHECK-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x10]
+; CHECK-NEXT:    add x10, x8, #80
+; CHECK-NEXT:    add x8, x8, #112
+; CHECK-NEXT:    and x10, x10, #0xfffffffffffffff0
+; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff0
+; CHECK-NEXT:    str q0, [x0, x9]
+; CHECK-NEXT:    and x9, x11, #0xfffffffffffffff0
+; CHECK-NEXT:    str q1, [x0, x10]
+; CHECK-NEXT:    str q2, [x0, x9]
+; CHECK-NEXT:    str q3, [x0, x8]
+; CHECK-NEXT:    ret
 entry:
   %a1 = add i64 %idx, 16
   %idx1 = lshr i64 %a1, 2
@@ -183,4 +118,5 @@ entry:
   ret void
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK: {{.*}}
+; IA-DISABLE: {{.*}}
+; IA-ENABLE: {{.*}}

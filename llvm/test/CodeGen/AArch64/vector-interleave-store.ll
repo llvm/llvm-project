@@ -2,23 +2,14 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,IA-ENABLE
 ; RUN: llc -mtriple=aarch64-linux-gnu -lower-interleaved-accesses=false < %s | FileCheck %s --check-prefixes=CHECK,IA-DISABLE
 define void @aarch64_vector_interleave_idx_st2(ptr %ptr, i64 %idx, <4 x float> %v0, <4 x float> %v1) {
-; IA-ENABLE-LABEL: aarch64_vector_interleave_idx_st2:
-; IA-ENABLE:       // %bb.0: // %entry
-; IA-ENABLE-NEXT:    lsr x8, x1, #2
-; IA-ENABLE-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; IA-ENABLE-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; IA-ENABLE-NEXT:    add x8, x0, x8, lsl #4
-; IA-ENABLE-NEXT:    st2 { v0.4s, v1.4s }, [x8]
-; IA-ENABLE-NEXT:    ret
-;
-; IA-DISABLE-LABEL: aarch64_vector_interleave_idx_st2:
-; IA-DISABLE:       // %bb.0: // %entry
-; IA-DISABLE-NEXT:    lsr x8, x1, #2
-; IA-DISABLE-NEXT:    zip2 v2.4s, v0.4s, v1.4s
-; IA-DISABLE-NEXT:    zip1 v0.4s, v0.4s, v1.4s
-; IA-DISABLE-NEXT:    add x8, x0, x8, lsl #4
-; IA-DISABLE-NEXT:    stp q0, q2, [x8]
-; IA-DISABLE-NEXT:    ret
+; CHECK-LABEL: aarch64_vector_interleave_idx_st2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    lsr x8, x1, #2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    add x8, x0, x8, lsl #4
+; CHECK-NEXT:    st2 { v0.4s, v1.4s }, [x8]
+; CHECK-NEXT:    ret
 entry:
   %idx1 = lshr i64 %idx, 2
   %gep1 = getelementptr inbounds <4 x float>, ptr %ptr, i64 %idx1
@@ -29,33 +20,15 @@ entry:
 }
 
 define void @aarch64_vector_interleave_idx_st3(ptr %ptr, i64 %idx, <4 x float> %v0, <4 x float> %v1, <4 x float> %v2) {
-; IA-ENABLE-LABEL: aarch64_vector_interleave_idx_st3:
-; IA-ENABLE:       // %bb.0: // %entry
-; IA-ENABLE-NEXT:    lsr x8, x1, #2
-; IA-ENABLE-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
-; IA-ENABLE-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
-; IA-ENABLE-NEXT:    add x8, x0, x8, lsl #4
-; IA-ENABLE-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
-; IA-ENABLE-NEXT:    st3 { v0.4s, v1.4s, v2.4s }, [x8]
-; IA-ENABLE-NEXT:    ret
-;
-; IA-DISABLE-LABEL: aarch64_vector_interleave_idx_st3:
-; IA-DISABLE:       // %bb.0: // %entry
-; IA-DISABLE-NEXT:    sub sp, sp, #48
-; IA-DISABLE-NEXT:    .cfi_def_cfa_offset 48
-; IA-DISABLE-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
-; IA-DISABLE-NEXT:    mov x8, sp
-; IA-DISABLE-NEXT:    lsr x9, x1, #2
-; IA-DISABLE-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
-; IA-DISABLE-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
-; IA-DISABLE-NEXT:    st3 { v0.4s, v1.4s, v2.4s }, [x8]
-; IA-DISABLE-NEXT:    add x8, x0, x9, lsl #4
-; IA-DISABLE-NEXT:    ldp q1, q0, [sp, #16]
-; IA-DISABLE-NEXT:    ldr q2, [sp]
-; IA-DISABLE-NEXT:    stp q1, q0, [x8, #16]
-; IA-DISABLE-NEXT:    str q2, [x8]
-; IA-DISABLE-NEXT:    add sp, sp, #48
-; IA-DISABLE-NEXT:    ret
+; CHECK-LABEL: aarch64_vector_interleave_idx_st3:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    lsr x8, x1, #2
+; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    add x8, x0, x8, lsl #4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    st3 { v0.4s, v1.4s, v2.4s }, [x8]
+; CHECK-NEXT:    ret
 entry:
   %idx1 = lshr i64 %idx, 2
   %gep1 = getelementptr inbounds <4 x float>, ptr %ptr, i64 %idx1
@@ -66,32 +39,16 @@ entry:
 }
 
 define void @aarch64_vector_interleave_idx_st4(ptr %ptr, i64 %idx, <4 x float> %v0, <4 x float> %v1, <4 x float> %v2, <4 x float> %v3) {
-; IA-ENABLE-LABEL: aarch64_vector_interleave_idx_st4:
-; IA-ENABLE:       // %bb.0: // %entry
-; IA-ENABLE-NEXT:    lsr x8, x1, #2
-; IA-ENABLE-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; IA-ENABLE-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; IA-ENABLE-NEXT:    add x8, x0, x8, lsl #4
-; IA-ENABLE-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; IA-ENABLE-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; IA-ENABLE-NEXT:    st4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x8]
-; IA-ENABLE-NEXT:    ret
-;
-; IA-DISABLE-LABEL: aarch64_vector_interleave_idx_st4:
-; IA-DISABLE:       // %bb.0: // %entry
-; IA-DISABLE-NEXT:    zip2 v4.4s, v1.4s, v3.4s
-; IA-DISABLE-NEXT:    zip2 v5.4s, v0.4s, v2.4s
-; IA-DISABLE-NEXT:    lsr x8, x1, #2
-; IA-DISABLE-NEXT:    zip1 v1.4s, v1.4s, v3.4s
-; IA-DISABLE-NEXT:    zip1 v0.4s, v0.4s, v2.4s
-; IA-DISABLE-NEXT:    add x8, x0, x8, lsl #4
-; IA-DISABLE-NEXT:    zip2 v2.4s, v5.4s, v4.4s
-; IA-DISABLE-NEXT:    zip1 v3.4s, v5.4s, v4.4s
-; IA-DISABLE-NEXT:    zip2 v4.4s, v0.4s, v1.4s
-; IA-DISABLE-NEXT:    zip1 v0.4s, v0.4s, v1.4s
-; IA-DISABLE-NEXT:    stp q3, q2, [x8, #32]
-; IA-DISABLE-NEXT:    stp q0, q4, [x8]
-; IA-DISABLE-NEXT:    ret
+; CHECK-LABEL: aarch64_vector_interleave_idx_st4:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    lsr x8, x1, #2
+; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-NEXT:    add x8, x0, x8, lsl #4
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-NEXT:    st4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x8]
+; CHECK-NEXT:    ret
 entry:
   %idx1 = lshr i64 %idx, 2
   %gep1 = getelementptr inbounds <4 x float>, ptr %ptr, i64 %idx1
@@ -101,4 +58,5 @@ entry:
   ret void
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK: {{.*}}
+; IA-DISABLE: {{.*}}
+; IA-ENABLE: {{.*}}
