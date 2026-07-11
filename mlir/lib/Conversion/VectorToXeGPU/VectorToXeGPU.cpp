@@ -562,10 +562,10 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     bool isSharedMemory = xegpu::XeGPUDialect::isSharedMemory(readMemTy);
     // Handle the SLM case.
     if (isSharedMemory) {
-      // If the memref is SLM only support 2D case for now.
-      if (loadedVecTy.getRank() != 2)
+      // load_matrix supports 1D and 2D loads from SLM.
+      if (loadedVecTy.getRank() != 1 && loadedVecTy.getRank() != 2)
         return rewriter.notifyMatchFailure(
-            readOp, "Only 2D vector loads are supported for SLM");
+            readOp, "Only 1D and 2D vector loads are supported for SLM");
       AffineMap readMap = readOp.getPermutationMap();
       if (!readMap.isMinorIdentity())
         return rewriter.notifyMatchFailure(
@@ -702,10 +702,10 @@ struct TransferWriteLowering
     // For shared local memory (address space 3), use create_mem_desc +
     // store_matrix
     if (isSharedMemory) {
-      // Only support 2D case for now.
-      if (vecTy.getRank() != 2)
+      // store_matrix supports 1D and 2D stores to SLM.
+      if (vecTy.getRank() != 1 && vecTy.getRank() != 2)
         return rewriter.notifyMatchFailure(
-            writeOp, "Only 2D vector stores are supported for SLM");
+            writeOp, "Only 1D and 2D vector stores are supported for SLM");
       // Create mem_desc for SLM
       auto memDescType =
           xegpu::MemDescType::get(rewriter.getContext(), writeMemTy.getShape(),

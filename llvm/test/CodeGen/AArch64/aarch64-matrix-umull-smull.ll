@@ -208,7 +208,7 @@ define void @matrix_mul_double_shuffle(i32 %N, ptr nocapture %C, ptr nocapture r
 ; CHECK-GI-NEXT:    mov w9, w0
 ; CHECK-GI-NEXT:    add w0, w0, #8
 ; CHECK-GI-NEXT:    lsl x9, x9, #2
-; CHECK-GI-NEXT:    tbl v2.16b, { v2.16b, v3.16b }, v1.16b
+; CHECK-GI-NEXT:    tbl v2.16b, { v2.16b }, v1.16b
 ; CHECK-GI-NEXT:    mul v2.4s, v0.4s, v2.4s
 ; CHECK-GI-NEXT:    str q2, [x1, x9]
 ; CHECK-GI-NEXT:    b.ne .LBB2_1
