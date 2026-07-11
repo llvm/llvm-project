@@ -271,29 +271,16 @@ void cygwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");
 
+  // Default. could be override by `last-wins`.
+  if (ToolChain.getTriple().isArch64Bit())
+    CmdArgs.push_back("--disable-high-entropy-va");
+  CmdArgs.push_back("--disable-nxcompat");
+
   bool NeedsSanitizerDeps =
       tools::addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   bool NeedsXRayDeps = tools::addXRayRuntime(ToolChain, Args, CmdArgs);
   tools::addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   tools::AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
-
-  bool saw_high_entropy_va = false;
-  bool saw_nxcompat = false;
-  for (const char *Arg : CmdArgs) {
-    if (StringRef(Arg) == "-high-entropy-va" ||
-        StringRef(Arg) == "--high-entropy-va" ||
-        StringRef(Arg) == "-disable-high-entropy-va" ||
-        StringRef(Arg) == "--disable-high-entropy-va")
-      saw_high_entropy_va = true;
-    if (StringRef(Arg) == "-nxcompat" || StringRef(Arg) == "--nxcompat" ||
-        StringRef(Arg) == "-disable-nxcompat" ||
-        StringRef(Arg) == "--disable-nxcompat")
-      saw_nxcompat = true;
-  }
-  if (!saw_high_entropy_va && ToolChain.getTriple().isArch64Bit())
-    CmdArgs.push_back("--disable-high-entropy-va");
-  if (!saw_nxcompat)
-    CmdArgs.push_back("--disable-nxcompat");
 
   tools::addHIPRuntimeLibArgs(ToolChain, C, Args, CmdArgs);
 
