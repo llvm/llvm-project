@@ -195,6 +195,15 @@
 #endif
 
 // Macros that define away in non-Debug builds
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern bool logAPIs(void);
+extern bool logUnwinding(void);
+extern bool logDWARF(void);
+#ifdef __cplusplus
+}
+#endif
 #if 0
 #ifdef NDEBUG
   #define _LIBUNWIND_DEBUG_LOG(msg, ...)
@@ -204,15 +213,6 @@
   #define _LIBUNWIND_TRACE_UNWINDING(msg, ...)
   #define _LIBUNWIND_TRACE_DWARF(...)
 #else
-  #ifdef __cplusplus
-    extern "C" {
-  #endif
-    extern  bool logAPIs(void);
-    extern  bool logUnwinding(void);
-    extern  bool logDWARF(void);
-  #ifdef __cplusplus
-    }
-  #endif
   #define _LIBUNWIND_DEBUG_LOG(msg, ...)  _LIBUNWIND_LOG(msg, __VA_ARGS__)
   #define _LIBUNWIND_TRACE_API(msg, ...)                                       \
     do {                                                                       \
