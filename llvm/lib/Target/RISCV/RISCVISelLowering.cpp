@@ -4738,10 +4738,13 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
       return V;
 
     if (VT == MVT::v2i16) {
-      SDValue Lo = DAG.getAnyExtOrTrunc(Op->getOperand(0), DL, MVT::i32);
-      SDValue Hi = DAG.getAnyExtOrTrunc(Op->getOperand(1), DL, MVT::i32);
-      return DAG.getBitcast(
-          MVT::v2i16, DAG.getNode(RISCVISD::PAIRE, DL, MVT::i32, Lo, Hi));
+      SDValue Lo = DAG.getBitcast(
+          MVT::v2i16,
+          DAG.getAnyExtOrTrunc(Op->getOperand(0), DL, MVT::i32));
+      SDValue Hi = DAG.getBitcast(
+          MVT::v2i16,
+          DAG.getAnyExtOrTrunc(Op->getOperand(1), DL, MVT::i32));
+      return DAG.getNode(RISCVISD::PAIRE, DL, MVT::v2i16, Lo, Hi);
     }
 
     if (VT == MVT::v4i8) {
@@ -4759,13 +4762,11 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
           DAG.getNode(RISCVISD::PPAIRE_DB, DL, {MVT::v4i8, MVT::v4i8},
                       {Val0, Val2, Val1, Val3});
 
-      return DAG.getNode(
-          ISD::BITCAST, DL, MVT::v4i8,
-          DAG.getNode(RISCVISD::PAIRE, DL, MVT::i32,
-                      DAG.getNode(ISD::BITCAST, DL, MVT::i32,
-                                  PPairDB.getValue(0)),
-                      DAG.getNode(ISD::BITCAST, DL, MVT::i32,
-                                  PPairDB.getValue(1))));
+      return DAG.getBitcast(
+          MVT::v4i8,
+          DAG.getNode(RISCVISD::PAIRE, DL, MVT::v2i16,
+                      DAG.getBitcast(MVT::v2i16, PPairDB.getValue(0)),
+                      DAG.getBitcast(MVT::v2i16, PPairDB.getValue(1))));
     }
 
     llvm_unreachable("Unexpected RV32 P BUILD_VECTOR type");
