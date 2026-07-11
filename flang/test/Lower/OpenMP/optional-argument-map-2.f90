@@ -54,7 +54,7 @@ end module mod
 ! CHECK:           }
 
 ! CHECK-LABEL:   func.func @_QMmodProutine_boxchar(
-! CHECK-SAME:      %[[ARG0:.*]]: !fir.boxchar<1> {fir.bindc_name = "a", fir.optional, fir.read_only}) {
+! CHECK-SAME:      %[[ARG0:.*]]: !fir.boxchar<1> {fir.bindc_name = "a", fir.optional}) {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.boxchar<1>
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)

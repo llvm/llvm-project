@@ -43,7 +43,7 @@ subroutine sub4(a,b,c)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QMm1Psub4(
-! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_name = "a", fir.read_only}, %[[ARG1:.*]]: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_name = "b", fir.read_only}, %[[ARG2:.*]]: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_name = "c"}) {
+! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_name = "b"}, %[[ARG2:.*]]: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_name = "c"}) {
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{.*}} {{.*}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMm1Fsub4Ea"} : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.box<!fir.array<?x!fir.char<1,?>>>)
 ! CHECK: %[[B:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{.*}} {{.*}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMm1Fsub4Eb"} : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.box<!fir.array<?x!fir.char<1,?>>>)
 ! CHECK: %[[C:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %{{.*}} {{.*}} {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QMm1Fsub4Ec"} : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.box<!fir.array<?x!fir.char<1,?>>>)

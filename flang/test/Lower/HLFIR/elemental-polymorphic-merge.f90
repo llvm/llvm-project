@@ -10,8 +10,8 @@ subroutine test_polymorphic_merge(x, y, r, m)
   r = merge(x, y, m)
 end subroutine test_polymorphic_merge
 ! CHECK-LABEL:   func.func @_QPtest_polymorphic_merge(
-! CHECK-SAME:        %[[VAL_0:.*]]: !fir.class<!fir.type<_QFtest_polymorphic_mergeTt>> {fir.bindc_name = "x", fir.read_only},
-! CHECK-SAME:        %[[VAL_1:.*]]: !fir.class<!fir.array<?x!fir.type<_QFtest_polymorphic_mergeTt>>> {fir.bindc_name = "y", fir.read_only},
+! CHECK-SAME:        %[[VAL_0:.*]]: !fir.class<!fir.type<_QFtest_polymorphic_mergeTt>> {fir.bindc_name = "x"},
+! CHECK-SAME:        %[[VAL_1:.*]]: !fir.class<!fir.array<?x!fir.type<_QFtest_polymorphic_mergeTt>>> {fir.bindc_name = "y"},
 ! CHECK-SAME:        %[[VAL_2:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFtest_polymorphic_mergeTt>>>>> {fir.bindc_name = "r"},
 ! CHECK-SAME:        %[[VAL_3:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "m"}) {
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest_polymorphic_mergeEm"} : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)

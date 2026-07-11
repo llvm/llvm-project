@@ -33,11 +33,27 @@ func.func private @test_target(%arg0: !fir.ref<i32> {fir.read_only, fir.target})
   return
 }
 
-// A derived-type reference is handled like any other reference. Pointer or
-// allocatable components do not affect the shallow LLVM readonly contract.
+// FunctionAttr mechanically translates an explicit marker on any reference.
+// This is independent of which source-level dummies CallInterface marks.
 // CHECK-LABEL: func.func private @test_derived(
 // CHECK-SAME:    %{{.*}}: !fir.ref<!fir.type<_QFtest_derivedTt{p:!fir.box<!fir.ptr<i32>>}>> {fir.read_only, llvm.readonly}) {
 func.func private @test_derived(%arg0: !fir.ref<!fir.type<_QFtest_derivedTt{p:!fir.box<!fir.ptr<i32>>}>> {fir.read_only}) {
+  return
+}
+
+// On a reference to a descriptor, readonly protects the descriptor storage,
+// not the data address stored in the descriptor.
+// CHECK-LABEL: func.func private @test_pointer_descriptor(
+// CHECK-SAME:    %{{.*}}: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.read_only, llvm.readonly}) {
+// ALL-LABEL:   func.func private @test_pointer_descriptor(
+// ALL-SAME:      %{{.*}}: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.read_only, llvm.nocapture, llvm.readonly}) {
+func.func private @test_pointer_descriptor(%arg0: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.read_only}) {
+  return
+}
+
+// CHECK-LABEL: func.func private @test_allocatable_descriptor(
+// CHECK-SAME:    %{{.*}}: !fir.ref<!fir.box<!fir.heap<i32>>> {fir.read_only, llvm.readonly}) {
+func.func private @test_allocatable_descriptor(%arg0: !fir.ref<!fir.box<!fir.heap<i32>>> {fir.read_only}) {
   return
 }
 
@@ -64,8 +80,9 @@ func.func private @_QMreadonly_modPbindc_declaration(!fir.ref<i32> {fir.read_onl
 // CHECK-SAME:    !fir.ref<i32> {fir.read_only, llvm.readonly})
 func.func private @_QMreadonly_modPfortran_declaration(!fir.ref<i32> {fir.read_only})
 
-// fir.box is not a ReferenceType. The marker is intentionally inert until
-// descriptor-level readonly is implemented.
+// A fir.box passed by value is not a ReferenceType, so FunctionAttr does not
+// translate its marker. This is distinct from POINTER and ALLOCATABLE dummies,
+// whose descriptors are passed by reference and are covered above.
 // CHECK-LABEL: func.func private @test_box(
 // CHECK-SAME:    %{{.*}}: !fir.box<!fir.array<?xi32>> {fir.read_only}) {
 func.func private @test_box(%arg0: !fir.box<!fir.array<?xi32>> {fir.read_only}) {

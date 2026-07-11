@@ -82,7 +82,7 @@ subroutine test4(x)
 end subroutine test4
 
 ! ALL-LABEL:   func.func @_QPtest5(
-! ALL-SAME:                        %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fir.read_only}) {
+! ALL-SAME:                        %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
 subroutine test5(x)
   real, intent(in) :: x(:)
 ! ALL:           %[[VAL_2:.*]] = fir.pack_array %[[VAL_0]]

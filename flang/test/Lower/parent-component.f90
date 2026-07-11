@@ -29,13 +29,13 @@ contains
     type(p), intent(in) :: a
     print*, a
   end subroutine
-  ! CHECK-LABEL: func.func private @_QFPprint_scalar(%{{.*}}: !fir.ref<!fir.type<_QFTp{a:i32}>> {fir.bindc_name = "a", fir.read_only})
+  ! CHECK-LABEL: func.func private @_QFPprint_scalar(%{{.*}}: !fir.ref<!fir.type<_QFTp{a:i32}>> {fir.bindc_name = "a"})
 
   subroutine print_p(a)
     type(p), intent(in) :: a(2)
     print*, a
   end subroutine
-  ! CHECK-LABEL: func.func private @_QFPprint_p(%{{.*}}: !fir.ref<!fir.array<2x!fir.type<_QFTp{a:i32}>>> {fir.bindc_name = "a", fir.read_only})
+  ! CHECK-LABEL: func.func private @_QFPprint_p(%{{.*}}: !fir.ref<!fir.array<2x!fir.type<_QFTp{a:i32}>>> {fir.bindc_name = "a"})
 
   subroutine init_with_slice()
     type(c) :: y(2) = [ c(11, 21), c(12, 22) ]

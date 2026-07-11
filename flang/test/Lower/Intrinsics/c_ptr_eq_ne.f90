@@ -9,7 +9,7 @@ function test_c_ptr_eq(ptr1, ptr2)
 end
 
 ! CHECK-LABEL: func.func @_QPtest_c_ptr_eq(
-! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>> {fir.bindc_name = "ptr1", fir.read_only}, %[[ARG1:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>> {fir.bindc_name = "ptr2", fir.read_only}) -> !fir.logical<4> {
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>> {fir.bindc_name = "ptr1"}, %[[ARG1:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>> {fir.bindc_name = "ptr2"}) -> !fir.logical<4> {
 ! CHECK: %[[DECL_ARG0:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest_c_ptr_eqEptr1"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>)
 ! CHECK: %[[DECL_ARG1:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest_c_ptr_eqEptr2"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>)
 ! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.logical<4> {bindc_name = "test_c_ptr_eq", uniq_name = "_QFtest_c_ptr_eqEtest_c_ptr_eq"}
@@ -34,7 +34,7 @@ function test_c_ptr_ne(ptr1, ptr2)
 end
 
 ! CHECK-LABEL: func.func @_QPtest_c_ptr_ne(
-! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>> {fir.bindc_name = "ptr1", fir.read_only}, %[[ARG1:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>> {fir.bindc_name = "ptr2", fir.read_only}) -> !fir.logical<4> {
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>> {fir.bindc_name = "ptr1"}, %[[ARG1:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>> {fir.bindc_name = "ptr2"}) -> !fir.logical<4> {
 ! CHECK: %[[DECL_ARG0:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest_c_ptr_neEptr1"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>)
 ! CHECK: %[[DECL_ARG1:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest_c_ptr_neEptr2"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>)
 ! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.logical<4> {bindc_name = "test_c_ptr_ne", uniq_name = "_QFtest_c_ptr_neEtest_c_ptr_ne"}

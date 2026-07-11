@@ -23,6 +23,11 @@ contains
     integer, intent(inout) :: y
     y = x
   end subroutine
+
+  subroutine pointer_descriptor_readonly(p)
+    integer, intent(in), pointer :: p
+    p = 42
+  end subroutine
 end module
 
 ! O0-LABEL: func.func @_QMreadonly_pipeline_modPreadonly_pipeline(
@@ -35,3 +40,9 @@ end module
 
 ! LLVM-LABEL: define void @_QMreadonly_pipeline_modPreadonly_pipeline(
 ! LLVM-SAME:    ptr {{.*}}readonly{{.*}} %0,
+
+! O1-LABEL: func.func @_QMreadonly_pipeline_modPpointer_descriptor_readonly(%{{.*}}: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = "p", fir.read_only, llvm.nocapture, llvm.readonly}) {
+
+! LLVM-LABEL: define void @_QMreadonly_pipeline_modPpointer_descriptor_readonly(
+! LLVM-SAME:    ptr {{.*}}readonly{{.*}} %0
+! LLVM:         store i32 42

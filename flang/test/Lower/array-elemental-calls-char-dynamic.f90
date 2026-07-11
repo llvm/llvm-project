@@ -186,8 +186,8 @@ subroutine test_polymorphic(res, p1, p2)
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_polymorphic(
 ! CHECK-SAME:      %[[ARG0:.*]]: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_name = "res"},
-! CHECK-SAME:      %[[ARG1:.*]]: !fir.class<!fir.array<?x!fir.type<_QFtest_polymorphicTt>>> {fir.bindc_name = "p1", fir.read_only},
-! CHECK-SAME:      %[[ARG2:.*]]: !fir.class<!fir.array<?x!fir.type<_QFtest_polymorphicTt>>> {fir.bindc_name = "p2", fir.read_only}) {
+! CHECK-SAME:      %[[ARG1:.*]]: !fir.class<!fir.array<?x!fir.type<_QFtest_polymorphicTt>>> {fir.bindc_name = "p1"},
+! CHECK-SAME:      %[[ARG2:.*]]: !fir.class<!fir.array<?x!fir.type<_QFtest_polymorphicTt>>> {fir.bindc_name = "p2"}) {
 ! CHECK:           %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest_polymorphicEp1"} : (!fir.class<!fir.array<?x!fir.type<_QFtest_polymorphicTt>>>, !fir.dscope) -> (!fir.class<!fir.array<?x!fir.type<_QFtest_polymorphicTt>>>, !fir.class<!fir.array<?x!fir.type<_QFtest_polymorphicTt>>>)
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest_polymorphicEp2"} : (!fir.class<!fir.array<?x!fir.type<_QFtest_polymorphicTt>>>, !fir.dscope) -> (!fir.class<!fir.array<?x!fir.type<_QFtest_polymorphicTt>>>, !fir.class<!fir.array<?x!fir.type<_QFtest_polymorphicTt>>>)

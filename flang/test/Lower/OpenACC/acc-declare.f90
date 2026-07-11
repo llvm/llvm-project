@@ -74,8 +74,8 @@ module acc_declare
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMacc_declarePacc_declare_present_host_and_comp(
-! CHECK-SAME: %[[ARGHOST:.*]]: !fir.ref<!fir.type<_QMacc_declare{{.*}}Tdt_box{{.*}}>> {fir.bindc_name = "host", fir.read_only},
-! CHECK-SAME: %[[ARGCOEFF:.*]]: !fir.ref<!fir.array<10xf32>> {fir.bindc_name = "coeffs", fir.read_only})
+! CHECK-SAME: %[[ARGHOST:.*]]: !fir.ref<!fir.type<_QMacc_declare{{.*}}Tdt_box{{.*}}>> {fir.bindc_name = "host"},
+! CHECK-SAME: %[[ARGCOEFF:.*]]: !fir.ref<!fir.array<10xf32>> {fir.bindc_name = "coeffs"})
 ! CHECK-DAG: acc.present{{.*}}name = "host"
 ! CHECK-DAG: acc.present{{.*}}name = "host%buf"
 ! CHECK-DAG: acc.present{{.*}}name = "coeffs"

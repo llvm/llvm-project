@@ -187,26 +187,32 @@ asImplicitArg(Fortran::evaluate::characteristics::DummyDataObject &&dummy) {
                                                        std::move(shape)));
 }
 
-/// An INTENT(IN) data object passed by reference is not modified by the callee,
-/// so the LLVM `readonly` argument attribute can be set. Notes on the
-/// exclusions:
-///   - VALUE, POINTER, and ALLOCATABLE dummies require ABI- or
-///     descriptor-specific handling before `readonly` can be applied and are
-///     left out of scope;
-///   - ASYNCHRONOUS memory may change underneath the callee;
-///   - VOLATILE+INTENT(IN) is prohibited by the standard (C870); kept here
-///     defensively.
-/// TARGET and derived types are intentionally allowed: any write that
-/// INTENT(IN) still permits (e.g. writing the target of a POINTER component)
-/// goes through a pointer loaded from the object, not through the argument
-/// pointer, and hence does not violate LLVM `readonly` (which only constrains
-/// the argument and pointers based on it).
-static bool dummyArgIsReadOnly(
+/// Return true when this dummy is in the subset for which CallInterface may
+/// safely emit the FIR marker that is later translated to LLVM `readonly`.
+///
+/// For non-descriptor arguments, limit this to non-character intrinsic
+/// scalars. Array and derived-type arguments are excluded because
+/// compiler-generated copy-out may write back through a forwarded dummy
+/// argument without an INTENT contract. INTENT(IN) POINTER and ALLOCATABLE
+/// dummies are also supported: in their case, `readonly` only protects the
+/// descriptor storage, not data addressed by the descriptor. ASYNCHRONOUS
+/// memory may change underneath the callee; VOLATILE+INTENT(IN) is prohibited
+/// by the standard (C870) but is excluded defensively. TARGET does not
+/// invalidate `readonly`, which only constrains writes through the argument.
+static bool dummyArgCanUseLLVMReadonly(
     const Fortran::evaluate::characteristics::DummyDataObject &obj) {
   using Attrs = Fortran::evaluate::characteristics::DummyDataObject::Attr;
+  using TypeAttrs = Fortran::evaluate::characteristics::TypeAndShape::Attr;
+  const Fortran::common::TypeCategory category = obj.type.type().category();
+  const bool isSupportedIntrinsicScalar =
+      obj.type.Rank() == 0 && !obj.type.attrs().test(TypeAttrs::AssumedRank) &&
+      category != Fortran::common::TypeCategory::Character &&
+      category != Fortran::common::TypeCategory::Derived;
+  const bool isDescriptorDummy =
+      obj.attrs.test(Attrs::Pointer) || obj.attrs.test(Attrs::Allocatable);
   return obj.intent == Fortran::common::Intent::In &&
-         !obj.attrs.test(Attrs::Value) && !obj.attrs.test(Attrs::Pointer) &&
-         !obj.attrs.test(Attrs::Allocatable) &&
+         (isSupportedIntrinsicScalar || isDescriptorDummy) &&
+         !obj.attrs.test(Attrs::Value) &&
          !obj.attrs.test(Attrs::Asynchronous) &&
          !obj.attrs.test(Attrs::Volatile);
 }
@@ -1111,7 +1117,7 @@ private:
       llvm::SmallVector<mlir::NamedAttribute> attrs = dummyNameAttr(entity);
       // Propagate the INTENT(IN) contract for by-reference dummies handled by
       // the implicit-interface path.
-      if (dummyArgIsReadOnly(obj))
+      if (dummyArgCanUseLLVMReadonly(obj))
         attrs.emplace_back(
             mlir::StringAttr::get(&mlirContext, fir::getReadOnlyAttrName()),
             mlir::UnitAttr::get(&mlirContext));
@@ -1175,10 +1181,9 @@ private:
           mlir::StringAttr::get(&mlirContext, cuf::getDataAttrName()),
           cuf::getDataAttribute(&mlirContext, obj.cudaDataAttr));
 
-    // INTENT(IN) by-reference dummies can be marked readonly (see
-    // dummyArgIsReadOnly). On non-reference (e.g. box) arguments the marker is
-    // a no-op: the FunctionAttr pass only translates it for fir::ReferenceType.
-    if (dummyArgIsReadOnly(obj))
+    // Mark the supported subset of INTENT(IN) by-reference dummies readonly
+    // (see dummyArgCanUseLLVMReadonly).
+    if (dummyArgCanUseLLVMReadonly(obj))
       addMLIRAttr(fir::getReadOnlyAttrName());
 
     // TODO: intents that require special care (e.g finalization)

@@ -80,7 +80,7 @@ module polymorphic_test
     elemental_fct = this%a
   end function
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPelemental_fct(
-! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "this", fir.read_only})
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "this"})
 ! CHECK-SAME:    -> i32 attributes {fir.proc_attrs = #fir.proc_attrs<elemental, pure>}
 ! CHECK:         %[[THIS:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}{fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMpolymorphic_testFelemental_fctEthis"}
 ! CHECK:         %[[A:.*]] = hlfir.designate %[[THIS]]#0{"a"}
@@ -111,7 +111,7 @@ module polymorphic_test
     lt = i < poly%a
   End Function
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPlt(
-! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "i", fir.read_only}, %[[ARG1:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "poly", fir.read_only})
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "i", fir.read_only}, %[[ARG1:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "poly"})
 ! CHECK-SAME:    -> !fir.logical<4> attributes {fir.proc_attrs = #fir.proc_attrs<elemental, pure>}
 ! CHECK:         %[[I:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}{fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMpolymorphic_testFltEi"}
 ! CHECK:         %[[POLY:.*]]:2 = hlfir.declare %[[ARG1]]{{.*}}{fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMpolymorphic_testFltEpoly"}
@@ -310,7 +310,7 @@ module polymorphic_test
     class(p1), intent(in) :: p
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPtakes_p1(
-! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "p", fir.read_only}
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "p"}
 
 ! TODO: implement polymorphic temporary in lowering
 !  subroutine no_reassoc_poly_value(a, i)
@@ -363,7 +363,7 @@ module polymorphic_test
     class(*), intent(in) :: a
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPup_input(
-! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<none> {fir.bindc_name = "a", fir.read_only}
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<none> {fir.bindc_name = "a"}
 
   subroutine pass_trivial_to_up()
     call up_input('hello')
@@ -389,7 +389,7 @@ module polymorphic_test
     class(*), intent(in) :: a(2)
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPup_arr_input(
-! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<!fir.array<2xnone>> {fir.bindc_name = "a", fir.read_only}
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<!fir.array<2xnone>> {fir.bindc_name = "a"}
 
   subroutine pass_trivial_arr_to_up()
     character :: c(2)
@@ -550,7 +550,7 @@ module polymorphic_test
     ! dummy subroutine for testing purpose
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPwrite_p1(
-! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "dtv", fir.read_only}
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "dtv"}
 
   subroutine read_p1(dtv, unit, iotype, v_list, iostat, iomsg)
     class(p1), intent(inout) :: dtv
@@ -686,7 +686,7 @@ module polymorphic_test
     class(*), optional, intent(in) :: up
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPopt_up(
-! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<none> {fir.bindc_name = "up", fir.optional, fir.read_only}
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<none> {fir.bindc_name = "up", fir.optional}
 
   function rhs()
     class(p1), pointer :: rhs
@@ -714,7 +714,7 @@ module polymorphic_test
     class(*), pointer, intent(in) :: p
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPup_pointer(
-! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.ptr<none>>> {fir.bindc_name = "p"}
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.ptr<none>>> {fir.bindc_name = "p", fir.read_only}
 
   subroutine test_char_to_up_pointer(c)
     character(*), target :: c
@@ -865,7 +865,7 @@ module polymorphic_test
     class(*), intent(in) :: up
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPpass_up(
-! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<none> {fir.bindc_name = "up", fir.read_only}
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<none> {fir.bindc_name = "up"}
 
 ! TODO: unlimited polymorphic temporary in lowering
 !  subroutine parenthesized_up(a)
