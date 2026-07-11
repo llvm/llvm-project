@@ -3,7 +3,7 @@
 
 ; RUN: not llvm-as %s 2>&1 | FileCheck %s
 
-; CHECK: error: expected function definition foo to have an associated value info.
+; CHECK: LLVM ERROR: expected function definition foo to have an associated value info.
 
 define void @foo() {
   ret void
