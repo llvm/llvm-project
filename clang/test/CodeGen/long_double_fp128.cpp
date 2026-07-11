@@ -8,8 +8,10 @@
 // RUN:    | FileCheck %s --check-prefix=A32
 // RUN: %clang_cc1 -triple i686-linux-gnu -emit-llvm -o - %s \
 // RUN:    | FileCheck %s --check-prefix=G32
-// RUN: %clang_cc1 -triple powerpc-linux-gnu -emit-llvm -o - %s \
-// RUN:    | FileCheck %s --check-prefix=P32
+// RUN: %clang_cc1 -triple powerpc-linux-gnu -fclang-abi-compat=22 -emit-llvm -o - %s \
+// RUN:    | FileCheck %s --check-prefix=P32-CLANG22
+// RUN: %clang_cc1 -triple powerpc-linux-gnu -fclang-abi-compat=23 -emit-llvm -o - %s \
+// RUN:    | FileCheck %s --check-prefix=P32-CLANG23
 
 // Check mangled name of long double.
 // Android's gcc and llvm use fp128 for long double.
@@ -19,4 +21,5 @@ void test(long, float, double, long double, long double _Complex) { }
 // P64:  define{{.*}} void @_Z4testlfdgCg(i64 noundef %0, float noundef %1, double noundef %2, ppc_fp128 noundef %3, ppc_fp128 {{.*}}, ppc_fp128
 // A32:  define{{.*}} void @_Z4testlfdeCe(i32 noundef %0, float noundef %1, double noundef %2, double noundef %3, ptr
 // G32:  define{{.*}} void @_Z4testlfdeCe(i32 noundef %0, float noundef %1, double noundef %2, x86_fp80 noundef %3, ptr
-// P32:  define{{.*}} void @_Z4testlfdgCg(i32 noundef %0, float noundef %1, double noundef %2, ppc_fp128 noundef %3, ptr
+// P32-CLANG22:  define{{.*}} void @_Z4testlfdgCg(i32 noundef %0, float noundef %1, double noundef %2, ppc_fp128 noundef %3, ptr
+// P32-CLANG23:  define{{.*}} void @_Z4testlfdgCg(i32 noundef %0, float noundef %1, double noundef %2, ppc_fp128 noundef %3, [7 x i32] {{.*}}, [2 x i128]

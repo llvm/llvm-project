@@ -6,10 +6,14 @@
 // RUN:   -emit-llvm %s -o -  -target-cpu pwr8 | FileCheck %s --check-prefix=64BITLE
 // RUN: %clang_cc1 -triple powerpc64-unknown-aix \
 // RUN:    -emit-llvm %s -o -  -target-cpu pwr7 | FileCheck %s --check-prefix=64BITAIX
-// RUN: %clang_cc1 -triple powerpc-unknown-linux-gnu \
-// RUN:    -emit-llvm %s -o -  -target-cpu pwr7 | FileCheck %s --check-prefix=32BIT
-// RUN: %clang_cc1 -triple powerpcle-unknown-linux-gnu \
-// RUN:   -emit-llvm %s -o -  -target-cpu pwr8 | FileCheck %s --check-prefix=32BITLE
+// RUN: %clang_cc1 -triple powerpc-unknown-linux-gnu -fclang-abi-compat=22 \
+// RUN:    -emit-llvm %s -o -  -target-cpu pwr7 | FileCheck %s --check-prefix=32BIT-CLANG22
+// RUN: %clang_cc1 -triple powerpc-unknown-linux-gnu -fclang-abi-compat=23 \
+// RUN:    -emit-llvm %s -o -  -target-cpu pwr7 | FileCheck %s --check-prefix=32BIT-CLANG23
+// RUN: %clang_cc1 -triple powerpcle-unknown-linux-gnu -fclang-abi-compat=22 \
+// RUN:   -emit-llvm %s -o -  -target-cpu pwr8 | FileCheck %s --check-prefix=32BITLE-CLANG22
+// RUN: %clang_cc1 -triple powerpcle-unknown-linux-gnu -fclang-abi-compat=23 \
+// RUN:   -emit-llvm %s -o -  -target-cpu pwr8 | FileCheck %s --check-prefix=32BITLE-CLANG23
 // RUN: %clang_cc1 -triple powerpc-unknown-aix \
 // RUN:    -emit-llvm %s -o -  -target-cpu pwr7 | FileCheck %s --check-prefix=32BITAIX
 
@@ -61,49 +65,81 @@
 // 64BITAIX-NEXT:    [[TMP2:%.*]] = load { double, double }, ptr [[RETVAL]], align 4
 // 64BITAIX-NEXT:    ret { double, double } [[TMP2]]
 //
-// 32BIT-LABEL: @testcmplx(
-// 32BIT-NEXT:  entry:
-// 32BIT-NEXT:    [[REAL_ADDR:%.*]] = alloca double, align 8
-// 32BIT-NEXT:    [[IMAG_ADDR:%.*]] = alloca double, align 8
-// 32BIT-NEXT:    store double [[REAL:%.*]], ptr [[REAL_ADDR]], align 8
-// 32BIT-NEXT:    store double [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 8
-// 32BIT-NEXT:    [[TMP0:%.*]] = load double, ptr [[REAL_ADDR]], align 8
-// 32BIT-NEXT:    [[TMP1:%.*]] = load double, ptr [[IMAG_ADDR]], align 8
-// 32BIT-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
-// 32BIT-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
-// 32BIT-NEXT:    store double [[TMP0]], ptr [[AGG_RESULT_REALP]], align 8
-// 32BIT-NEXT:    store double [[TMP1]], ptr [[AGG_RESULT_IMAGP]], align 8
-// 32BIT-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 0
-// 32BIT-NEXT:    [[AGG_RESULT_REAL:%.*]] = load double, ptr [[AGG_RESULT_REALP1]], align 8
-// 32BIT-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
-// 32BIT-NEXT:    [[AGG_RESULT_IMAG:%.*]] = load double, ptr [[AGG_RESULT_IMAGP2]], align 8
-// 32BIT-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 0
-// 32BIT-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
-// 32BIT-NEXT:    store double [[AGG_RESULT_REAL]], ptr [[AGG_RESULT_REALP3]], align 8
-// 32BIT-NEXT:    store double [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 8
-// 32BIT-NEXT:    ret void
+// 32BIT-CLANG22-LABEL: @testcmplx(
+// 32BIT-CLANG22-NEXT:  entry:
+// 32BIT-CLANG22-NEXT:    [[REAL_ADDR:%.*]] = alloca double, align 8
+// 32BIT-CLANG22-NEXT:    [[IMAG_ADDR:%.*]] = alloca double, align 8
+// 32BIT-CLANG22-NEXT:    store double [[REAL:%.*]], ptr [[REAL_ADDR]], align 8
+// 32BIT-CLANG22-NEXT:    store double [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 8
+// 32BIT-CLANG22-NEXT:    [[TMP0:%.*]] = load double, ptr [[REAL_ADDR]], align 8
+// 32BIT-CLANG22-NEXT:    [[TMP1:%.*]] = load double, ptr [[IMAG_ADDR]], align 8
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BIT-CLANG22-NEXT:    store double [[TMP0]], ptr [[AGG_RESULT_REALP]], align 8
+// 32BIT-CLANG22-NEXT:    store double [[TMP1]], ptr [[AGG_RESULT_IMAGP]], align 8
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_REAL:%.*]] = load double, ptr [[AGG_RESULT_REALP1]], align 8
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_IMAG:%.*]] = load double, ptr [[AGG_RESULT_IMAGP2]], align 8
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BIT-CLANG22-NEXT:    store double [[AGG_RESULT_REAL]], ptr [[AGG_RESULT_REALP3]], align 8
+// 32BIT-CLANG22-NEXT:    store double [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 8
+// 32BIT-CLANG22-NEXT:    ret void
 //
-// 32BITLE-LABEL: @testcmplx(
-// 32BITLE-NEXT:  entry:
-// 32BITLE-NEXT:    [[REAL_ADDR:%.*]] = alloca double, align 8
-// 32BITLE-NEXT:    [[IMAG_ADDR:%.*]] = alloca double, align 8
-// 32BITLE-NEXT:    store double [[REAL:%.*]], ptr [[REAL_ADDR]], align 8
-// 32BITLE-NEXT:    store double [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 8
-// 32BITLE-NEXT:    [[TMP0:%.*]] = load double, ptr [[REAL_ADDR]], align 8
-// 32BITLE-NEXT:    [[TMP1:%.*]] = load double, ptr [[IMAG_ADDR]], align 8
-// 32BITLE-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
-// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
-// 32BITLE-NEXT:    store double [[TMP0]], ptr [[AGG_RESULT_REALP]], align 8
-// 32BITLE-NEXT:    store double [[TMP1]], ptr [[AGG_RESULT_IMAGP]], align 8
-// 32BITLE-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 0
-// 32BITLE-NEXT:    [[AGG_RESULT_REAL:%.*]] = load double, ptr [[AGG_RESULT_REALP1]], align 8
-// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
-// 32BITLE-NEXT:    [[AGG_RESULT_IMAG:%.*]] = load double, ptr [[AGG_RESULT_IMAGP2]], align 8
-// 32BITLE-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 0
-// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
-// 32BITLE-NEXT:    store double [[AGG_RESULT_REAL]], ptr [[AGG_RESULT_REALP3]], align 8
-// 32BITLE-NEXT:    store double [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 8
-// 32BITLE-NEXT:    ret void
+// 32BIT-CLANG23-LABEL: @testcmplx(
+// 32BIT-CLANG23-NEXT:  entry:
+// 32BIT-CLANG23-NEXT:    [[RETVAL:%.*]] = alloca { double, double }, align 8
+// 32BIT-CLANG23-NEXT:    [[REAL_ADDR:%.*]] = alloca double, align 8
+// 32BIT-CLANG23-NEXT:    [[IMAG_ADDR:%.*]] = alloca double, align 8
+// 32BIT-CLANG23-NEXT:    store double [[REAL:%.*]], ptr [[REAL_ADDR]], align 8
+// 32BIT-CLANG23-NEXT:    store double [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 8
+// 32BIT-CLANG23-NEXT:    [[TMP0:%.*]] = load double, ptr [[REAL_ADDR]], align 8
+// 32BIT-CLANG23-NEXT:    [[TMP1:%.*]] = load double, ptr [[IMAG_ADDR]], align 8
+// 32BIT-CLANG23-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 0
+// 32BIT-CLANG23-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 1
+// 32BIT-CLANG23-NEXT:    store double [[TMP0]], ptr [[RETVAL_REALP]], align 8
+// 32BIT-CLANG23-NEXT:    store double [[TMP1]], ptr [[RETVAL_IMAGP]], align 8
+// 32BIT-CLANG23-NEXT:    [[TMP2:%.*]] = load [4 x i32], ptr [[RETVAL]], align 8
+// 32BIT-CLANG23-NEXT:    ret [4 x i32] [[TMP2]]
+//
+// 32BITLE-CLANG22-LABEL: @testcmplx(
+// 32BITLE-CLANG22-NEXT:  entry:
+// 32BITLE-CLANG22-NEXT:    [[REAL_ADDR:%.*]] = alloca double, align 8
+// 32BITLE-CLANG22-NEXT:    [[IMAG_ADDR:%.*]] = alloca double, align 8
+// 32BITLE-CLANG22-NEXT:    store double [[REAL:%.*]], ptr [[REAL_ADDR]], align 8
+// 32BITLE-CLANG22-NEXT:    store double [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 8
+// 32BITLE-CLANG22-NEXT:    [[TMP0:%.*]] = load double, ptr [[REAL_ADDR]], align 8
+// 32BITLE-CLANG22-NEXT:    [[TMP1:%.*]] = load double, ptr [[IMAG_ADDR]], align 8
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BITLE-CLANG22-NEXT:    store double [[TMP0]], ptr [[AGG_RESULT_REALP]], align 8
+// 32BITLE-CLANG22-NEXT:    store double [[TMP1]], ptr [[AGG_RESULT_IMAGP]], align 8
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_REAL:%.*]] = load double, ptr [[AGG_RESULT_REALP1]], align 8
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_IMAG:%.*]] = load double, ptr [[AGG_RESULT_IMAGP2]], align 8
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BITLE-CLANG22-NEXT:    store double [[AGG_RESULT_REAL]], ptr [[AGG_RESULT_REALP3]], align 8
+// 32BITLE-CLANG22-NEXT:    store double [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 8
+// 32BITLE-CLANG22-NEXT:    ret void
+//
+// 32BITLE-CLANG23-LABEL: @testcmplx(
+// 32BITLE-CLANG23-NEXT:  entry:
+// 32BITLE-CLANG23-NEXT:    [[RETVAL:%.*]] = alloca { double, double }, align 8
+// 32BITLE-CLANG23-NEXT:    [[REAL_ADDR:%.*]] = alloca double, align 8
+// 32BITLE-CLANG23-NEXT:    [[IMAG_ADDR:%.*]] = alloca double, align 8
+// 32BITLE-CLANG23-NEXT:    store double [[REAL:%.*]], ptr [[REAL_ADDR]], align 8
+// 32BITLE-CLANG23-NEXT:    store double [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 8
+// 32BITLE-CLANG23-NEXT:    [[TMP0:%.*]] = load double, ptr [[REAL_ADDR]], align 8
+// 32BITLE-CLANG23-NEXT:    [[TMP1:%.*]] = load double, ptr [[IMAG_ADDR]], align 8
+// 32BITLE-CLANG23-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 0
+// 32BITLE-CLANG23-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 1
+// 32BITLE-CLANG23-NEXT:    store double [[TMP0]], ptr [[RETVAL_REALP]], align 8
+// 32BITLE-CLANG23-NEXT:    store double [[TMP1]], ptr [[RETVAL_IMAGP]], align 8
+// 32BITLE-CLANG23-NEXT:    [[TMP2:%.*]] = load [4 x i32], ptr [[RETVAL]], align 8
+// 32BITLE-CLANG23-NEXT:    ret [4 x i32] [[TMP2]]
 //
 // 32BITAIX-LABEL: @testcmplx(
 // 32BITAIX-NEXT:  entry:
@@ -173,49 +209,81 @@ double _Complex testcmplx(double real, double imag) {
 // 64BITAIX-NEXT:    [[TMP2:%.*]] = load { float, float }, ptr [[RETVAL]], align 4
 // 64BITAIX-NEXT:    ret { float, float } [[TMP2]]
 //
-// 32BIT-LABEL: @testcmplxf(
-// 32BIT-NEXT:  entry:
-// 32BIT-NEXT:    [[REAL_ADDR:%.*]] = alloca float, align 4
-// 32BIT-NEXT:    [[IMAG_ADDR:%.*]] = alloca float, align 4
-// 32BIT-NEXT:    store float [[REAL:%.*]], ptr [[REAL_ADDR]], align 4
-// 32BIT-NEXT:    store float [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 4
-// 32BIT-NEXT:    [[TMP0:%.*]] = load float, ptr [[REAL_ADDR]], align 4
-// 32BIT-NEXT:    [[TMP1:%.*]] = load float, ptr [[IMAG_ADDR]], align 4
-// 32BIT-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
-// 32BIT-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
-// 32BIT-NEXT:    store float [[TMP0]], ptr [[AGG_RESULT_REALP]], align 4
-// 32BIT-NEXT:    store float [[TMP1]], ptr [[AGG_RESULT_IMAGP]], align 4
-// 32BIT-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 0
-// 32BIT-NEXT:    [[AGG_RESULT_REAL:%.*]] = load float, ptr [[AGG_RESULT_REALP1]], align 4
-// 32BIT-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
-// 32BIT-NEXT:    [[AGG_RESULT_IMAG:%.*]] = load float, ptr [[AGG_RESULT_IMAGP2]], align 4
-// 32BIT-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 0
-// 32BIT-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
-// 32BIT-NEXT:    store float [[AGG_RESULT_REAL]], ptr [[AGG_RESULT_REALP3]], align 4
-// 32BIT-NEXT:    store float [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 4
-// 32BIT-NEXT:    ret void
+// 32BIT-CLANG22-LABEL: @testcmplxf(
+// 32BIT-CLANG22-NEXT:  entry:
+// 32BIT-CLANG22-NEXT:    [[REAL_ADDR:%.*]] = alloca float, align 4
+// 32BIT-CLANG22-NEXT:    [[IMAG_ADDR:%.*]] = alloca float, align 4
+// 32BIT-CLANG22-NEXT:    store float [[REAL:%.*]], ptr [[REAL_ADDR]], align 4
+// 32BIT-CLANG22-NEXT:    store float [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 4
+// 32BIT-CLANG22-NEXT:    [[TMP0:%.*]] = load float, ptr [[REAL_ADDR]], align 4
+// 32BIT-CLANG22-NEXT:    [[TMP1:%.*]] = load float, ptr [[IMAG_ADDR]], align 4
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BIT-CLANG22-NEXT:    store float [[TMP0]], ptr [[AGG_RESULT_REALP]], align 4
+// 32BIT-CLANG22-NEXT:    store float [[TMP1]], ptr [[AGG_RESULT_IMAGP]], align 4
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_REAL:%.*]] = load float, ptr [[AGG_RESULT_REALP1]], align 4
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_IMAG:%.*]] = load float, ptr [[AGG_RESULT_IMAGP2]], align 4
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BIT-CLANG22-NEXT:    store float [[AGG_RESULT_REAL]], ptr [[AGG_RESULT_REALP3]], align 4
+// 32BIT-CLANG22-NEXT:    store float [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 4
+// 32BIT-CLANG22-NEXT:    ret void
 //
-// 32BITLE-LABEL: @testcmplxf(
-// 32BITLE-NEXT:  entry:
-// 32BITLE-NEXT:    [[REAL_ADDR:%.*]] = alloca float, align 4
-// 32BITLE-NEXT:    [[IMAG_ADDR:%.*]] = alloca float, align 4
-// 32BITLE-NEXT:    store float [[REAL:%.*]], ptr [[REAL_ADDR]], align 4
-// 32BITLE-NEXT:    store float [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 4
-// 32BITLE-NEXT:    [[TMP0:%.*]] = load float, ptr [[REAL_ADDR]], align 4
-// 32BITLE-NEXT:    [[TMP1:%.*]] = load float, ptr [[IMAG_ADDR]], align 4
-// 32BITLE-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
-// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
-// 32BITLE-NEXT:    store float [[TMP0]], ptr [[AGG_RESULT_REALP]], align 4
-// 32BITLE-NEXT:    store float [[TMP1]], ptr [[AGG_RESULT_IMAGP]], align 4
-// 32BITLE-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 0
-// 32BITLE-NEXT:    [[AGG_RESULT_REAL:%.*]] = load float, ptr [[AGG_RESULT_REALP1]], align 4
-// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
-// 32BITLE-NEXT:    [[AGG_RESULT_IMAG:%.*]] = load float, ptr [[AGG_RESULT_IMAGP2]], align 4
-// 32BITLE-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 0
-// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
-// 32BITLE-NEXT:    store float [[AGG_RESULT_REAL]], ptr [[AGG_RESULT_REALP3]], align 4
-// 32BITLE-NEXT:    store float [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 4
-// 32BITLE-NEXT:    ret void
+// 32BIT-CLANG23-LABEL: @testcmplxf(
+// 32BIT-CLANG23-NEXT:  entry:
+// 32BIT-CLANG23-NEXT:    [[RETVAL:%.*]] = alloca { float, float }, align 4
+// 32BIT-CLANG23-NEXT:    [[REAL_ADDR:%.*]] = alloca float, align 4
+// 32BIT-CLANG23-NEXT:    [[IMAG_ADDR:%.*]] = alloca float, align 4
+// 32BIT-CLANG23-NEXT:    store float [[REAL:%.*]], ptr [[REAL_ADDR]], align 4
+// 32BIT-CLANG23-NEXT:    store float [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 4
+// 32BIT-CLANG23-NEXT:    [[TMP0:%.*]] = load float, ptr [[REAL_ADDR]], align 4
+// 32BIT-CLANG23-NEXT:    [[TMP1:%.*]] = load float, ptr [[IMAG_ADDR]], align 4
+// 32BIT-CLANG23-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 0
+// 32BIT-CLANG23-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 1
+// 32BIT-CLANG23-NEXT:    store float [[TMP0]], ptr [[RETVAL_REALP]], align 4
+// 32BIT-CLANG23-NEXT:    store float [[TMP1]], ptr [[RETVAL_IMAGP]], align 4
+// 32BIT-CLANG23-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[RETVAL]], align 4
+// 32BIT-CLANG23-NEXT:    ret <2 x i32> [[TMP2]]
+//
+// 32BITLE-CLANG22-LABEL: @testcmplxf(
+// 32BITLE-CLANG22-NEXT:  entry:
+// 32BITLE-CLANG22-NEXT:    [[REAL_ADDR:%.*]] = alloca float, align 4
+// 32BITLE-CLANG22-NEXT:    [[IMAG_ADDR:%.*]] = alloca float, align 4
+// 32BITLE-CLANG22-NEXT:    store float [[REAL:%.*]], ptr [[REAL_ADDR]], align 4
+// 32BITLE-CLANG22-NEXT:    store float [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 4
+// 32BITLE-CLANG22-NEXT:    [[TMP0:%.*]] = load float, ptr [[REAL_ADDR]], align 4
+// 32BITLE-CLANG22-NEXT:    [[TMP1:%.*]] = load float, ptr [[IMAG_ADDR]], align 4
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BITLE-CLANG22-NEXT:    store float [[TMP0]], ptr [[AGG_RESULT_REALP]], align 4
+// 32BITLE-CLANG22-NEXT:    store float [[TMP1]], ptr [[AGG_RESULT_IMAGP]], align 4
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_REAL:%.*]] = load float, ptr [[AGG_RESULT_REALP1]], align 4
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_IMAG:%.*]] = load float, ptr [[AGG_RESULT_IMAGP2]], align 4
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BITLE-CLANG22-NEXT:    store float [[AGG_RESULT_REAL]], ptr [[AGG_RESULT_REALP3]], align 4
+// 32BITLE-CLANG22-NEXT:    store float [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 4
+// 32BITLE-CLANG22-NEXT:    ret void
+//
+// 32BITLE-CLANG23-LABEL: @testcmplxf(
+// 32BITLE-CLANG23-NEXT:  entry:
+// 32BITLE-CLANG23-NEXT:    [[RETVAL:%.*]] = alloca { float, float }, align 4
+// 32BITLE-CLANG23-NEXT:    [[REAL_ADDR:%.*]] = alloca float, align 4
+// 32BITLE-CLANG23-NEXT:    [[IMAG_ADDR:%.*]] = alloca float, align 4
+// 32BITLE-CLANG23-NEXT:    store float [[REAL:%.*]], ptr [[REAL_ADDR]], align 4
+// 32BITLE-CLANG23-NEXT:    store float [[IMAG:%.*]], ptr [[IMAG_ADDR]], align 4
+// 32BITLE-CLANG23-NEXT:    [[TMP0:%.*]] = load float, ptr [[REAL_ADDR]], align 4
+// 32BITLE-CLANG23-NEXT:    [[TMP1:%.*]] = load float, ptr [[IMAG_ADDR]], align 4
+// 32BITLE-CLANG23-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 0
+// 32BITLE-CLANG23-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 1
+// 32BITLE-CLANG23-NEXT:    store float [[TMP0]], ptr [[RETVAL_REALP]], align 4
+// 32BITLE-CLANG23-NEXT:    store float [[TMP1]], ptr [[RETVAL_IMAGP]], align 4
+// 32BITLE-CLANG23-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[RETVAL]], align 4
+// 32BITLE-CLANG23-NEXT:    ret <2 x i32> [[TMP2]]
 //
 // 32BITAIX-LABEL: @testcmplxf(
 // 32BITAIX-NEXT:  entry:
@@ -285,49 +353,81 @@ float _Complex testcmplxf(float real, float imag) {
 // 64BITAIX-NEXT:    [[TMP2:%.*]] = load { double, double }, ptr [[RETVAL]], align 4
 // 64BITAIX-NEXT:    ret { double, double } [[TMP2]]
 //
-// 32BIT-LABEL: @test_xl_cmplxl(
-// 32BIT-NEXT:  entry:
-// 32BIT-NEXT:    [[LDA_ADDR:%.*]] = alloca ppc_fp128, align 16
-// 32BIT-NEXT:    [[LDB_ADDR:%.*]] = alloca ppc_fp128, align 16
-// 32BIT-NEXT:    store ppc_fp128 [[LDA:%.*]], ptr [[LDA_ADDR]], align 16
-// 32BIT-NEXT:    store ppc_fp128 [[LDB:%.*]], ptr [[LDB_ADDR]], align 16
-// 32BIT-NEXT:    [[TMP0:%.*]] = load ppc_fp128, ptr [[LDA_ADDR]], align 16
-// 32BIT-NEXT:    [[TMP1:%.*]] = load ppc_fp128, ptr [[LDB_ADDR]], align 16
-// 32BIT-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
-// 32BIT-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
-// 32BIT-NEXT:    store ppc_fp128 [[TMP0]], ptr [[AGG_RESULT_REALP]], align 16
-// 32BIT-NEXT:    store ppc_fp128 [[TMP1]], ptr [[AGG_RESULT_IMAGP]], align 16
-// 32BIT-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 0
-// 32BIT-NEXT:    [[AGG_RESULT_REAL:%.*]] = load ppc_fp128, ptr [[AGG_RESULT_REALP1]], align 16
-// 32BIT-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
-// 32BIT-NEXT:    [[AGG_RESULT_IMAG:%.*]] = load ppc_fp128, ptr [[AGG_RESULT_IMAGP2]], align 16
-// 32BIT-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 0
-// 32BIT-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
-// 32BIT-NEXT:    store ppc_fp128 [[AGG_RESULT_REAL]], ptr [[AGG_RESULT_REALP3]], align 16
-// 32BIT-NEXT:    store ppc_fp128 [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 16
-// 32BIT-NEXT:    ret void
+// 32BIT-CLANG22-LABEL: @test_xl_cmplxl(
+// 32BIT-CLANG22-NEXT:  entry:
+// 32BIT-CLANG22-NEXT:    [[LDA_ADDR:%.*]] = alloca ppc_fp128, align 16
+// 32BIT-CLANG22-NEXT:    [[LDB_ADDR:%.*]] = alloca ppc_fp128, align 16
+// 32BIT-CLANG22-NEXT:    store ppc_fp128 [[LDA:%.*]], ptr [[LDA_ADDR]], align 16
+// 32BIT-CLANG22-NEXT:    store ppc_fp128 [[LDB:%.*]], ptr [[LDB_ADDR]], align 16
+// 32BIT-CLANG22-NEXT:    [[TMP0:%.*]] = load ppc_fp128, ptr [[LDA_ADDR]], align 16
+// 32BIT-CLANG22-NEXT:    [[TMP1:%.*]] = load ppc_fp128, ptr [[LDB_ADDR]], align 16
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BIT-CLANG22-NEXT:    store ppc_fp128 [[TMP0]], ptr [[AGG_RESULT_REALP]], align 16
+// 32BIT-CLANG22-NEXT:    store ppc_fp128 [[TMP1]], ptr [[AGG_RESULT_IMAGP]], align 16
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_REAL:%.*]] = load ppc_fp128, ptr [[AGG_RESULT_REALP1]], align 16
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_IMAG:%.*]] = load ppc_fp128, ptr [[AGG_RESULT_IMAGP2]], align 16
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BIT-CLANG22-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BIT-CLANG22-NEXT:    store ppc_fp128 [[AGG_RESULT_REAL]], ptr [[AGG_RESULT_REALP3]], align 16
+// 32BIT-CLANG22-NEXT:    store ppc_fp128 [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 16
+// 32BIT-CLANG22-NEXT:    ret void
 //
-// 32BITLE-LABEL: @test_xl_cmplxl(
-// 32BITLE-NEXT:  entry:
-// 32BITLE-NEXT:    [[LDA_ADDR:%.*]] = alloca ppc_fp128, align 16
-// 32BITLE-NEXT:    [[LDB_ADDR:%.*]] = alloca ppc_fp128, align 16
-// 32BITLE-NEXT:    store ppc_fp128 [[LDA:%.*]], ptr [[LDA_ADDR]], align 16
-// 32BITLE-NEXT:    store ppc_fp128 [[LDB:%.*]], ptr [[LDB_ADDR]], align 16
-// 32BITLE-NEXT:    [[TMP0:%.*]] = load ppc_fp128, ptr [[LDA_ADDR]], align 16
-// 32BITLE-NEXT:    [[TMP1:%.*]] = load ppc_fp128, ptr [[LDB_ADDR]], align 16
-// 32BITLE-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
-// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
-// 32BITLE-NEXT:    store ppc_fp128 [[TMP0]], ptr [[AGG_RESULT_REALP]], align 16
-// 32BITLE-NEXT:    store ppc_fp128 [[TMP1]], ptr [[AGG_RESULT_IMAGP]], align 16
-// 32BITLE-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 0
-// 32BITLE-NEXT:    [[AGG_RESULT_REAL:%.*]] = load ppc_fp128, ptr [[AGG_RESULT_REALP1]], align 16
-// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
-// 32BITLE-NEXT:    [[AGG_RESULT_IMAG:%.*]] = load ppc_fp128, ptr [[AGG_RESULT_IMAGP2]], align 16
-// 32BITLE-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 0
-// 32BITLE-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
-// 32BITLE-NEXT:    store ppc_fp128 [[AGG_RESULT_REAL]], ptr [[AGG_RESULT_REALP3]], align 16
-// 32BITLE-NEXT:    store ppc_fp128 [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 16
-// 32BITLE-NEXT:    ret void
+// 32BIT-CLANG23-LABEL: @test_xl_cmplxl(
+// 32BIT-CLANG23-NEXT:  entry:
+// 32BIT-CLANG23-NEXT:    [[RETVAL:%.*]] = alloca { ppc_fp128, ppc_fp128 }, align 16
+// 32BIT-CLANG23-NEXT:    [[LDA_ADDR:%.*]] = alloca ppc_fp128, align 16
+// 32BIT-CLANG23-NEXT:    [[LDB_ADDR:%.*]] = alloca ppc_fp128, align 16
+// 32BIT-CLANG23-NEXT:    store ppc_fp128 [[LDA:%.*]], ptr [[LDA_ADDR]], align 16
+// 32BIT-CLANG23-NEXT:    store ppc_fp128 [[LDB:%.*]], ptr [[LDB_ADDR]], align 16
+// 32BIT-CLANG23-NEXT:    [[TMP0:%.*]] = load ppc_fp128, ptr [[LDA_ADDR]], align 16
+// 32BIT-CLANG23-NEXT:    [[TMP1:%.*]] = load ppc_fp128, ptr [[LDB_ADDR]], align 16
+// 32BIT-CLANG23-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[RETVAL]], i32 0, i32 0
+// 32BIT-CLANG23-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[RETVAL]], i32 0, i32 1
+// 32BIT-CLANG23-NEXT:    store ppc_fp128 [[TMP0]], ptr [[RETVAL_REALP]], align 16
+// 32BIT-CLANG23-NEXT:    store ppc_fp128 [[TMP1]], ptr [[RETVAL_IMAGP]], align 16
+// 32BIT-CLANG23-NEXT:    [[TMP2:%.*]] = load [2 x i128], ptr [[RETVAL]], align 16
+// 32BIT-CLANG23-NEXT:    ret [2 x i128] [[TMP2]]
+//
+// 32BITLE-CLANG22-LABEL: @test_xl_cmplxl(
+// 32BITLE-CLANG22-NEXT:  entry:
+// 32BITLE-CLANG22-NEXT:    [[LDA_ADDR:%.*]] = alloca ppc_fp128, align 16
+// 32BITLE-CLANG22-NEXT:    [[LDB_ADDR:%.*]] = alloca ppc_fp128, align 16
+// 32BITLE-CLANG22-NEXT:    store ppc_fp128 [[LDA:%.*]], ptr [[LDA_ADDR]], align 16
+// 32BITLE-CLANG22-NEXT:    store ppc_fp128 [[LDB:%.*]], ptr [[LDB_ADDR]], align 16
+// 32BITLE-CLANG22-NEXT:    [[TMP0:%.*]] = load ppc_fp128, ptr [[LDA_ADDR]], align 16
+// 32BITLE-CLANG22-NEXT:    [[TMP1:%.*]] = load ppc_fp128, ptr [[LDB_ADDR]], align 16
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_REALP:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT:%.*]], i32 0, i32 0
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_IMAGP:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BITLE-CLANG22-NEXT:    store ppc_fp128 [[TMP0]], ptr [[AGG_RESULT_REALP]], align 16
+// 32BITLE-CLANG22-NEXT:    store ppc_fp128 [[TMP1]], ptr [[AGG_RESULT_IMAGP]], align 16
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_REALP1:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_REAL:%.*]] = load ppc_fp128, ptr [[AGG_RESULT_REALP1]], align 16
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_IMAGP2:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_IMAG:%.*]] = load ppc_fp128, ptr [[AGG_RESULT_IMAGP2]], align 16
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_REALP3:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 0
+// 32BITLE-CLANG22-NEXT:    [[AGG_RESULT_IMAGP4:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[AGG_RESULT]], i32 0, i32 1
+// 32BITLE-CLANG22-NEXT:    store ppc_fp128 [[AGG_RESULT_REAL]], ptr [[AGG_RESULT_REALP3]], align 16
+// 32BITLE-CLANG22-NEXT:    store ppc_fp128 [[AGG_RESULT_IMAG]], ptr [[AGG_RESULT_IMAGP4]], align 16
+// 32BITLE-CLANG22-NEXT:    ret void
+//
+// 32BITLE-CLANG23-LABEL: @test_xl_cmplxl(
+// 32BITLE-CLANG23-NEXT:  entry:
+// 32BITLE-CLANG23-NEXT:    [[RETVAL:%.*]] = alloca { ppc_fp128, ppc_fp128 }, align 16
+// 32BITLE-CLANG23-NEXT:    [[LDA_ADDR:%.*]] = alloca ppc_fp128, align 16
+// 32BITLE-CLANG23-NEXT:    [[LDB_ADDR:%.*]] = alloca ppc_fp128, align 16
+// 32BITLE-CLANG23-NEXT:    store ppc_fp128 [[LDA:%.*]], ptr [[LDA_ADDR]], align 16
+// 32BITLE-CLANG23-NEXT:    store ppc_fp128 [[LDB:%.*]], ptr [[LDB_ADDR]], align 16
+// 32BITLE-CLANG23-NEXT:    [[TMP0:%.*]] = load ppc_fp128, ptr [[LDA_ADDR]], align 16
+// 32BITLE-CLANG23-NEXT:    [[TMP1:%.*]] = load ppc_fp128, ptr [[LDB_ADDR]], align 16
+// 32BITLE-CLANG23-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[RETVAL]], i32 0, i32 0
+// 32BITLE-CLANG23-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr [[RETVAL]], i32 0, i32 1
+// 32BITLE-CLANG23-NEXT:    store ppc_fp128 [[TMP0]], ptr [[RETVAL_REALP]], align 16
+// 32BITLE-CLANG23-NEXT:    store ppc_fp128 [[TMP1]], ptr [[RETVAL_IMAGP]], align 16
+// 32BITLE-CLANG23-NEXT:    [[TMP2:%.*]] = load [2 x i128], ptr [[RETVAL]], align 16
+// 32BITLE-CLANG23-NEXT:    ret [2 x i128] [[TMP2]]
 //
 // 32BITAIX-LABEL: @test_xl_cmplxl(
 // 32BITAIX-NEXT:  entry:
