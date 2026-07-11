@@ -18,6 +18,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 
 namespace clang {
@@ -25,6 +26,16 @@ class Decl;
 class ParsedAttr;
 
 class SemaSYCL : public SemaBase {
+  /// SYCLKernelInfoClassTemplate caches the class template declaration built
+  /// by GetSYCLKernelInfoClassTemplate().
+  ClassTemplateDecl *SYCLKernelInfoClassTemplate = nullptr;
+
+  /// SYCLKernelInfoClassTemplateSpecializations maps SYCL kernel name types
+  /// to their corresponding synthesized explicit specialization declarations
+  /// of the SYCL kernel info class template.
+  llvm::DenseMap<CanQualType, ClassTemplateSpecializationDecl *>
+      SYCLKernelInfoClassTemplateSpecializations;
+
 public:
   SemaSYCL(Sema &S);
 
@@ -71,31 +82,69 @@ public:
   void CheckSYCLExternalFunctionDecl(FunctionDecl *FD);
   void CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD);
 
-  /// Builds an expression for the lookup of a 'sycl_kernel_launch' template
-  /// with 'KernelName' as an explicit template argument. Lookup is performed
-  /// as if from the first statement of the body of 'FD' and thus requires
-  /// searching the scopes that exist at parse time. This function therefore
-  /// requires the current semantic context to be the definition of 'FD'. In a
-  /// dependent context, the returned expression will be an UnresolvedLookupExpr
-  /// or an UnresolvedMemberExpr. In a non-dependent context, the returned
-  /// expression will be a DeclRefExpr or MemberExpr. If lookup fails, a null
-  /// error result is returned. The resulting expression is intended to be
-  /// passed as the 'LaunchIdExpr' argument in a call to either
-  /// BuildSYCLKernelCallStmt() or BuildUnresolvedSYCLKernelCallStmt() after
-  /// the function body has been parsed.
-  ExprResult BuildSYCLKernelLaunchIdExpr(FunctionDecl *FD, QualType KernelName);
+  /// GetSYCLKernelInfoClassTemplate builds a class template used to pass SYCL
+  /// kernel information in synthesized calls to SYCL runtime library functions.
+  /// The class template has an unspecified name, is an incomplete class
+  /// (explicit specializations are synthesized as needed), built on first call,
+  /// and cached for return in subsequent calls.
+  ClassTemplateDecl *GetSYCLKernelInfoClassTemplate();
 
-  /// Builds a SYCLKernelCallStmt to wrap 'Body' and to be used as the body of
-  /// 'FD'. 'LaunchIdExpr' specifies the lookup result returned by a previous
-  /// call to BuildSYCLKernelLaunchIdExpr().
-  StmtResult BuildSYCLKernelCallStmt(FunctionDecl *FD, CompoundStmt *Body,
-                                     Expr *LaunchIdExpr);
+  /// GetSYCLKernelInfoClassSpecializationType returns a type for the class
+  /// template returned by GetSYCLKernelInfoClassTemplate() specialized for
+  /// 'KNT'. 'KNT' may be a dependent type. If 'KNT' is not a dependent type,
+  /// an explicit specialization declaration for the specialization is
+  /// synthesized and a canonical type returned. A definition for the explicit
+  /// specialization is synthesized when SYCLKernelCallStmt is constructed for
+  /// 'KNT'.
+  QualType GetSYCLKernelInfoClassSpecializationType(QualType KNT);
 
-  /// Builds an UnresolvedSYCLKernelCallStmt to wrap 'Body'. 'LaunchIdExpr'
-  /// specifies the lookup result returned by a previous call to
-  /// BuildSYCLKernelLaunchIdExpr().
-  StmtResult BuildUnresolvedSYCLKernelCallStmt(CompoundStmt *Body,
-                                               Expr *LaunchIdExpr);
+  /// SYCLKernelCallStmtASTFragments holds portions of the AST used for lookup
+  /// of SYCL runtime library functions. These are constructed at the beginning
+  /// of a function definition and later used in synthesized calls to the
+  /// SYCL runtime library. In a dependent context, these are used to construct
+  /// an UnresolvedSYCLKernelCallStmt. During template instantiation, or in a
+  /// non-dependent context, these are used to construct a SYCLKernelCallStmt.
+  ///
+  /// KernelInfoType is the type to be passed as the explicit template argument
+  /// to SYCL runtime libraries.
+  ///
+  /// KernelLaunchIdExpr is an UnresolvedLookupExpr or UnresolvedMemberExpr
+  /// for the SYCL kernel launch function, with KernelInfoType used as the
+  /// explicit template argument.
+  struct SYCLKernelCallStmtASTFragments {
+    QualType KernelInfoType;
+    Expr *KernelLaunchIdExpr;
+  };
+
+  /// BuildSYCLKernelCallStmtASTFragments builds portions of the AST needed
+  /// to construct SYCLKernelCallStmt or UnresolvedSYCLKernelCallStmt that
+  /// must be constructed early in the definition of a function before the
+  /// body of the function has been parsed.
+  ///
+  /// 'FD' must be a function declared with a valid sycl_kernel_entry_point
+  /// attribute and the current Sema context must match 'FD'.
+  ///
+  /// If construction of the AST fragments fails, diagnostics are issued and
+  /// a disengaged optional value is returned.
+  std::optional<SYCLKernelCallStmtASTFragments>
+  BuildSYCLKernelCallStmtASTFragments(FunctionDecl *FD);
+
+  /// BuildSYCLKernelCallStmt constructs a SYCLKernelCallStmt or an
+  /// UnresolvedSYCLKernelCallStmt depending on whether 'FD' is a templated
+  /// function.
+  ///
+  /// 'FD' must be a function declared with a valid sycl_kernel_entry_point
+  /// attribute, must not have had its body assigned yet, and the current
+  /// Sema context must match 'FD'.
+  ///
+  /// 'Body' is the parsed compound statement body of 'FD' to be wrapped by
+  /// the new SYCLKernelCallStmt or UnresolvedSYCLKernelCallStmt.
+  ///
+  /// 'ASTFragments' contains the AST fragments previously returned by a call
+  /// to BuildSYCLKernelCallStmtASTFragments() for 'FD'.
+  StmtResult
+  BuildSYCLKernelCallStmt(FunctionDecl *FD, CompoundStmt *Body,
+                          const SYCLKernelCallStmtASTFragments &ASTFragments);
 };
 
 } // namespace clang

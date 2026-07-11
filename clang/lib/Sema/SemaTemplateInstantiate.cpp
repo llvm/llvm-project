@@ -1275,7 +1275,8 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
       DiagFunc(SKEPAttr->getLocation(), PDiag(diag::note_sycl_runtime_defect));
       DiagFunc(SKEPAttr->getLocation(),
                PDiag(diag::note_sycl_kernel_launch_lookup_here)
-                   << SKEPAttr->getKernelName());
+                   << SYCL().GetSYCLKernelInfoClassSpecializationType(
+                          SKEPAttr->getKernelName()));
       break;
     }
     case CodeSynthesisContext::SYCLKernelLaunchOverloadResolution: {
@@ -1287,7 +1288,8 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
       DiagFunc(SKEPAttr->getLocation(), PDiag(diag::note_sycl_runtime_defect));
       DiagFunc(SKEPAttr->getLocation(),
                PDiag(diag::note_sycl_kernel_launch_overload_resolution_here)
-                   << SKEPAttr->getKernelName()
+                   << SYCL().GetSYCLKernelInfoClassSpecializationType(
+                          SKEPAttr->getKernelName())
                    << convertCallArgsValueCategoryAndTypeToString(
                           *this, llvm::ArrayRef(Active->CallArgs,
                                                 Active->NumCallArgs)));

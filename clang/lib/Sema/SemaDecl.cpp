@@ -16513,27 +16513,23 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
 
   if (!FD->isInvalidDecl() && FD->hasAttr<SYCLKernelEntryPointAttr>() &&
       FnBodyScope) {
-    // An implicit call expression is synthesized for functions declared with
-    // the sycl_kernel_entry_point attribute. The call may resolve to a
-    // function template, a member function template, or a call operator
-    // of a variable template depending on the results of unqualified lookup
-    // for 'sycl_kernel_launch' from the beginning of the function body.
-    // Performing that lookup requires the stack of parsing scopes active
-    // when the definition is parsed and is thus done here; the result is
-    // cached in FunctionScopeInfo and used to synthesize the (possibly
-    // unresolved) call expression after the function body has been parsed.
+    // A function declared with the sycl_kernel_entry_point attribute has its
+    // body wrapped in a SYCLKernelCallStmt or UnresolvedSYCLKernelCallStmt.
+    // Those statements cannot be constructed until the function body has been
+    // parsed, but portions of the AST needed for construction have to be
+    // constructed early, before the function body has been parsed. Those are
+    // collected here.
     const auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
     if (!SKEPAttr->isInvalidAttr()) {
-      ExprResult LaunchIdExpr =
-          SYCL().BuildSYCLKernelLaunchIdExpr(FD, SKEPAttr->getKernelName());
-      // Do not mark 'FD' as invalid if construction of `LaunchIDExpr` produces
-      // an invalid result. Name lookup failure for 'sycl_kernel_launch' is
-      // treated as an error in the definition of 'FD'; treating it as an error
-      // of the declaration would affect overload resolution which would
-      // potentially result in additional errors. If construction of
-      // 'LaunchIDExpr' failed, then 'SYCLKernelLaunchIdExpr' will be assigned
-      // a null pointer value below; that is expected.
-      getCurFunction()->SYCLKernelLaunchIdExpr = LaunchIdExpr.get();
+      // If construction of the AST fragments fails, SYCLKernelASTFragments
+      // will be assigned a disengaged value. This is expected and checked
+      // after the function body is parsed. Failure to construct the AST
+      // fragments is treated as an error in the definition of 'FD'; 'FD'
+      // is not marked as invalid since treating such failures as an error
+      // in the declaration would affect overload resolution which would
+      // potentially result in additional errors.
+      getCurFunction()->SYCLKernelASTFragments =
+          SYCL().BuildSYCLKernelCallStmtASTFragments(FD);
     }
   }
 
@@ -16738,30 +16734,26 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
       SKEPAttr->setInvalidAttr();
     }
 
-    // Build an unresolved SYCL kernel call statement for a function template,
-    // validate that a SYCL kernel call statement was instantiated for an
-    // (implicit or explicit) instantiation of a function template, or otherwise
-    // build a (resolved) SYCL kernel call statement for a non-templated
-    // function or an explicit specialization.
+    // Build a SYCL kernel call statement to wrap the function body.
     if (Body && !SKEPAttr->isInvalidAttr()) {
       StmtResult SR;
       if (FD->isTemplateInstantiation()) {
         // The function body should already be a SYCLKernelCallStmt in this
         // case, but might not be if there were previous errors.
         SR = Body;
-      } else if (!getCurFunction()->SYCLKernelLaunchIdExpr) {
-        // If name lookup for a template named sycl_kernel_launch failed
-        // earlier, don't try to build a SYCL kernel call statement as that
-        // would cause additional errors to be issued; just proceed with the
-        // original function body.
+      } else if (!getCurFunction()->SYCLKernelASTFragments) {
+        // Construction of the AST fragments failed earlier and diagnostics
+        // will have already been issued. Don't try to build a SYCL kernel
+        // call statement as that would cause additional errors to be issued;
+        // proceed with the original function body.
         SR = Body;
-      } else if (FD->isTemplated()) {
-        SR = SYCL().BuildUnresolvedSYCLKernelCallStmt(
-            cast<CompoundStmt>(Body), getCurFunction()->SYCLKernelLaunchIdExpr);
       } else {
+        // Construct the SYCL kernel call statement. This will build an
+        // UnresolvedSYCLKernelCallStmt if FD is templated and a
+        // SYCLKernelCallStmt otherwise.
         SR = SYCL().BuildSYCLKernelCallStmt(
             FD, cast<CompoundStmt>(Body),
-            getCurFunction()->SYCLKernelLaunchIdExpr);
+            *getCurFunction()->SYCLKernelASTFragments);
       }
       // If construction of the replacement body fails, just continue with the
       // original function body. An early error return here is not valid; the

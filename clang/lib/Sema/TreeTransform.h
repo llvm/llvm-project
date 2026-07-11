@@ -13173,6 +13173,15 @@ StmtResult TreeTransform<Derived>::TransformUnresolvedSYCLKernelCallStmt(
   if (!SKEPAttr || SKEPAttr->isInvalidAttr())
     return StmtError();
 
+  // The kernel name type held by the transformed SKEPAttr should no longer be
+  // dependent. Ensure that is so and retrieve a non-dependent kernel info
+  // specialization type.
+  assert(!SKEPAttr->getKernelName()->isDependentType() &&
+         "SYCL kernel name type should not be dependent here");
+  QualType InfoType = SemaRef.SYCL().GetSYCLKernelInfoClassSpecializationType(
+      SKEPAttr->getKernelName());
+  assert(!InfoType.isNull());
+
   ExprResult IdExpr = getDerived().TransformExpr(S->getKernelLaunchIdExpr());
   if (IdExpr.isInvalid())
     return StmtError();
@@ -13181,9 +13190,9 @@ StmtResult TreeTransform<Derived>::TransformUnresolvedSYCLKernelCallStmt(
   if (Body.isInvalid())
     return StmtError();
 
+  SemaSYCL::SYCLKernelCallStmtASTFragments ASTFragments{InfoType, IdExpr.get()};
   StmtResult SR = SemaRef.SYCL().BuildSYCLKernelCallStmt(
-      cast<FunctionDecl>(SemaRef.CurContext), cast<CompoundStmt>(Body.get()),
-      IdExpr.get());
+      FD, cast<CompoundStmt>(Body.get()), ASTFragments);
   if (SR.isInvalid())
     return StmtError();
 

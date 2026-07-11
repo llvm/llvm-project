@@ -103,33 +103,47 @@ class UnresolvedSYCLKernelCallStmt : public Stmt {
 
 private:
   Stmt *OriginalStmt = nullptr;
+
+  // The kernel information type to use in synthesized calls to the SYCL
+  // runtime library. This type is a specialization of the class template
+  // returned by SemaSYCL::GetSYCLKernelInfoClassTemplate() specialized for
+  // the kernel name type. This will be a dependent type if the kernel name
+  // type is dependent.
+  QualType KernelInfoType;
+
   // KernelLaunchIdExpr stores an UnresolvedLookupExpr or UnresolvedMemberExpr
   // corresponding to the SYCL kernel launch function for which a call
   // will be synthesized during template instantiation.
   Expr *KernelLaunchIdExpr = nullptr;
 
-  UnresolvedSYCLKernelCallStmt(CompoundStmt *CS, Expr *IdExpr)
+  UnresolvedSYCLKernelCallStmt(CompoundStmt *CS, QualType InfoType,
+                               Expr *IdExpr)
       : Stmt(UnresolvedSYCLKernelCallStmtClass), OriginalStmt(CS),
-        KernelLaunchIdExpr(IdExpr) {}
+        KernelInfoType(InfoType), KernelLaunchIdExpr(IdExpr) {}
 
   void setOriginalStmt(CompoundStmt *CS) { OriginalStmt = CS; }
+
+  void setKernelInfoType(QualType InfoType) { KernelInfoType = InfoType; }
 
   void setKernelLaunchIdExpr(Expr *IdExpr) { KernelLaunchIdExpr = IdExpr; }
 
 public:
   static UnresolvedSYCLKernelCallStmt *Create(const ASTContext &C,
-                                              CompoundStmt *CS, Expr *IdExpr) {
-    return new (C) UnresolvedSYCLKernelCallStmt(CS, IdExpr);
+                                              CompoundStmt *CS,
+                                              QualType InfoType, Expr *IdExpr) {
+    return new (C) UnresolvedSYCLKernelCallStmt(CS, InfoType, IdExpr);
   }
 
   static UnresolvedSYCLKernelCallStmt *CreateEmpty(const ASTContext &C) {
-    return new (C) UnresolvedSYCLKernelCallStmt(nullptr, nullptr);
+    return new (C) UnresolvedSYCLKernelCallStmt(nullptr, QualType(), nullptr);
   }
 
   CompoundStmt *getOriginalStmt() { return cast<CompoundStmt>(OriginalStmt); }
   const CompoundStmt *getOriginalStmt() const {
     return cast<CompoundStmt>(OriginalStmt);
   }
+
+  QualType getKernelInfoType() const { return KernelInfoType; }
 
   Expr *getKernelLaunchIdExpr() { return KernelLaunchIdExpr; }
   const Expr *getKernelLaunchIdExpr() const { return KernelLaunchIdExpr; }

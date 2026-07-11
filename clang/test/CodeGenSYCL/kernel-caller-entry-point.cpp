@@ -30,8 +30,8 @@
 // these functions are used to generate offload kernel entry points (SYCL kernel
 // caller functions).
 
-template <typename KernelName, typename... Ts>
-void sycl_kernel_launch(const char *, Ts...) {}
+template <typename KernelInfo, typename... Ts>
+void sycl_kernel_launch(Ts...) {}
 
 struct single_purpose_kernel_name;
 struct single_purpose_kernel {
@@ -53,8 +53,8 @@ void kernel_single_task(KernelType kernelFunc) {
 struct \u03b4\u03c4\u03c7; // Delta Tau Chi (δτχ)
 
 class handler {
-  template <typename KernelName, typename... Ts>
-  void sycl_kernel_launch(const char *, Ts...) {}
+  template <typename KernelInfo, typename... Ts>
+  void sycl_kernel_launch(Ts...) {}
 public:
   template <typename KernelName, typename KernelType>
   [[clang::sycl_kernel_entry_point(KernelName)]]
@@ -140,28 +140,11 @@ int main() {
 // Verify that kernel launch code is generated for sycl_kernel_entry_point
 // attributed functions during host compilation.
 //
-// CHECK-HOST-LINUX:      @.str = private unnamed_addr constant [33 x i8] c"_ZTS26single_purpose_kernel_name\00", align 1
-// CHECK-HOST-LINUX:      @.str.1 = private unnamed_addr constant [18 x i8] c"_ZTSZ4mainEUlT_E_\00", align 1
-// CHECK-HOST-LINUX:      @.str.2 = private unnamed_addr constant [12 x i8] c"_ZTS6\CE\B4\CF\84\CF\87\00", align 1
-// CHECK-HOST-LINUX:      @.str.3 = private unnamed_addr constant [15 x i8] c"_ZTSZ4mainE2KN\00", align 1
-// CHECK-HOST-LINUX:      @.str.4 = private unnamed_addr constant [26 x i8] c"_ZTS19ref_arg_kernel_name\00", align 1
-// CHECK-HOST-LINUX       @.str.5 = private unnamed_addr constant [30 x i8] c"_ZTS23fwd_ref_arg_kernel_name\00", align 1
-// CHECK-HOST-LINUX:      @.str.6 = private unnamed_addr constant [35 x i8] c"_ZTS28fwd_ref_arg_kernel_name_move\00", align 1
-// CHECK-HOST-LINUX:      @.str.7 = private unnamed_addr constant [33 x i8] c"_ZTS26rvalue_ref_arg_kernel_name\00", align 1
-// CHECK-HOST-WINDOWS: @"??_C@_0CB@KFIJOMLB@_ZTS26single_purpose_kernel_name@" = linkonce_odr dso_local unnamed_addr constant [33 x i8] c"_ZTS26single_purpose_kernel_name\00", comdat
-// CHECK-HOST-WINDOWS: @"??_C@_0BC@NHCDOLAA@_ZTSZ4mainEUlT_E_?$AA@" = linkonce_odr dso_local unnamed_addr constant [18 x i8] c"_ZTSZ4mainEUlT_E_\00", comdat
-// CHECK-HOST-WINDOWS: @"??_C@_0M@BCGAEMBE@_ZTS6?N?$LE?O?$IE?O?$IH?$AA@" = linkonce_odr dso_local unnamed_addr constant [12 x i8] c"_ZTS6\CE\B4\CF\84\CF\87\00", comdat
-// CHECK-HOST-WINDOWS: @"??_C@_0P@DLGHPODL@_ZTSZ4mainE2KN?$AA@" = linkonce_odr dso_local unnamed_addr constant [15 x i8] c"_ZTSZ4mainE2KN\00", comdat
-// CHECK-HOST-WINDOWS: @"??_C@_0BK@PPDJPOBM@_ZTS19ref_arg_kernel_name?$AA@" = linkonce_odr dso_local unnamed_addr constant [26 x i8] c"_ZTS19ref_arg_kernel_name\00", comdat
-// CHECK-HOST-WINDOWS: @"??_C@_0BO@KEIBIHKH@_ZTS23fwd_ref_arg_kernel_name?$AA@" = linkonce_odr dso_local unnamed_addr constant [30 x i8] c"_ZTS23fwd_ref_arg_kernel_name\00", comdat
-// CHECK-HOST-WINDOWS: @"??_C@_0CD@FDALJLMM@_ZTS28fwd_ref_arg_kernel_name_mo@" = linkonce_odr dso_local unnamed_addr constant [35 x i8] c"_ZTS28fwd_ref_arg_kernel_name_move\00", comdat
-// CHECK-HOST-WINDOWS: @"??_C@_0CB@HCPMABHM@_ZTS26rvalue_ref_arg_kernel_name@" = linkonce_odr dso_local unnamed_addr constant [33 x i8] c"_ZTS26rvalue_ref_arg_kernel_name\00", comdat
-//
 // CHECK-HOST-LINUX:      define dso_local void @_Z26single_purpose_kernel_task21single_purpose_kernel() #{{[0-9]+}} {
 // CHECK-HOST-LINUX-NEXT: entry:
 // CHECK-HOST-LINUX-NEXT:   %kernelFunc = alloca %struct.single_purpose_kernel, align 1
 // CHECK-HOST-LINUX-NEXT:   %agg.tmp = alloca %struct.single_purpose_kernel, align 1
-// CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchI26single_purpose_kernel_nameJ21single_purpose_kernelEEvPKcDpT0_(ptr noundef @.str)
+// CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchI18__sycl_kernel_infoI26single_purpose_kernel_nameEJ21single_purpose_kernelEEvDpT0_()
 // CHECK-HOST-LINUX-NEXT:   ret void
 // CHECK-HOST-LINUX-NEXT: }
 //
@@ -174,7 +157,7 @@ int main() {
 // CHECK-HOST-LINUX-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %kernelFunc, i64 4, i1 false)
 // CHECK-HOST-LINUX-NEXT:   %coerce.dive1 = getelementptr inbounds nuw %class.anon, ptr %agg.tmp, i32 0, i32 0
 // CHECK-HOST-LINUX-NEXT:   %0 = load i32, ptr %coerce.dive1, align 4
-// CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchIZ4mainEUlT_E_JS1_EEvPKcDpT0_(ptr noundef @.str.1, i32 %0)
+// CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchI18__sycl_kernel_infoIZ4mainEUlT_E_EJS2_EEvDpT0_(i32 %0)
 // CHECK-HOST-LINUX-NEXT:   ret void
 // CHECK-HOST-LINUX-NEXT: }
 //
@@ -182,7 +165,7 @@ int main() {
 // CHECK-HOST-LINUX-NEXT: entry:
 // CHECK-HOST-LINUX-NEXT:   %kernelFunc = alloca %class.anon.0, align 1
 // CHECK-HOST-LINUX-NEXT:   %agg.tmp = alloca %class.anon.0, align 1
-// CHECK-HOST-LINUX-NEXT:   call void @"_Z18sycl_kernel_launchI6\CE\B4\CF\84\CF\87JZ4mainEUliE_EEvPKcDpT0_"(ptr noundef @.str.2)
+// CHECK-HOST-LINUX-NEXT:   call void @"_Z18sycl_kernel_launchI18__sycl_kernel_infoI6\CE\B4\CF\84\CF\87EJZ4mainEUliE_EEvDpT0_"()
 // CHECK-HOST-LINUX-NEXT:   ret void
 // CHECK-HOST-LINUX-NEXT: }
 
@@ -202,7 +185,7 @@ int main() {
 // CHECK-HOST-LINUX-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %k, i64 4, i1 false)
 // CHECK-HOST-LINUX-NEXT:   %0 = load i32, ptr %a.addr, align 4
 // CHECK-HOST-LINUX-NEXT:   %1 = load i32, ptr %b.addr, align 4
-// CHECK-HOST-LINUX-NEXT:   call void @_ZN7handler18sycl_kernel_launchIZ4mainE2KNJZ4mainEUliiE_iiEEEvPKcDpT0_(ptr noundef nonnull align 1 dereferenceable(1) %this1, ptr noundef @.str.3, ptr noundef align 4 %agg.tmp, i32 noundef %0, i32 noundef %1)
+// CHECK-HOST-LINUX-NEXT:   call void @_ZN7handler18sycl_kernel_launchI18__sycl_kernel_infoIZ4mainE2KNEJZ4mainEUliiE_iiEEEvDpT0_(ptr noundef nonnull align 1 dereferenceable(1) %this1, ptr noundef align 4 %agg.tmp, i32 noundef %0, i32 noundef %1)
 // CHECK-HOST-LINUX-NEXT:   call void @_ZZ4mainENUliiE_D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %agg.tmp) #{{[0-9]+}}
 // CHECK-HOST-LINUX-NEXT:   ret void
 // CHECK-HOST-LINUX-NEXT: }
@@ -216,7 +199,7 @@ int main() {
 // CHECK-HOST-LINUX-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %0, i64 4, i1 false)
 // CHECK-HOST-LINUX-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %agg.tmp, i32 0, i32 0
 // CHECK-HOST-LINUX-NEXT:   %1 = load i32, ptr %coerce.dive, align 4
-// CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchI19ref_arg_kernel_nameJZ4mainEUlT_E_EEvPKcDpT0_(ptr noundef @.str.4, i32 %1)
+// CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchI18__sycl_kernel_infoI19ref_arg_kernel_nameEJZ4mainEUlT_E_EEvDpT0_(i32 %1)
 // CHECK-HOST-LINUX-NEXT:   ret void
 // CHECK-HOST-LINUX-NEXT: }
 //
@@ -229,7 +212,7 @@ int main() {
 // CHECK-HOST-LINUX-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %0, i64 4, i1 false)
 // CHECK-HOST-LINUX-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %agg.tmp, i32 0, i32 0
 // CHECK-HOST-LINUX-NEXT:   %1 = load i32, ptr %coerce.dive, align 4
-// CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchI23fwd_ref_arg_kernel_nameJZ4mainEUlT_E_EEvPKcDpT0_(ptr noundef @.str.5, i32 %1)
+// CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchI18__sycl_kernel_infoI23fwd_ref_arg_kernel_nameEJZ4mainEUlT_E_EEvDpT0_(i32 %1)
 // CHECK-HOST-LINUX-NEXT:   ret void
 // CHECK-HOST-LINUX-NEXT: }
 //
@@ -242,7 +225,7 @@ int main() {
 // CHECK-HOST-LINUX-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %0, i64 4, i1 false)
 // CHECK-HOST-LINUX-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %agg.tmp, i32 0, i32 0
 // CHECK-HOST-LINUX-NEXT:   %1 = load i32, ptr %coerce.dive, align 4
-// CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchI28fwd_ref_arg_kernel_name_moveJZ4mainEUlT_E_EEvPKcDpT0_(ptr noundef @.str.6, i32 %1)
+// CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchI18__sycl_kernel_infoI28fwd_ref_arg_kernel_name_moveEJZ4mainEUlT_E_EEvDpT0_(i32 %1)
 // CHECK-HOST-LINUX-NEXT:   ret void
 // CHECK-HOST-LINUX-NEXT: }
 //
@@ -255,7 +238,7 @@ int main() {
 // CHECK-HOST-LINUX-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %0, i64 4, i1 false)
 // CHECK-HOST-LINUX-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon.2, ptr %agg.tmp, i32 0, i32 0
 // CHECK-HOST-LINUX-NEXT:   %1 = load i32, ptr %coerce.dive, align 4
-// CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchI26rvalue_ref_arg_kernel_nameJZ4mainEUlT_E0_EEvPKcDpT0_(ptr noundef @.str.7, i32 %1)
+// CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchI18__sycl_kernel_infoI26rvalue_ref_arg_kernel_nameEJZ4mainEUlT_E0_EEvDpT0_(i32 %1)
 // CHECK-HOST-LINUX-NEXT:   ret void
 // CHECK-HOST-LINUX-NEXT: }
 
@@ -267,7 +250,7 @@ int main() {
 // CHECK-HOST-WINDOWS-NEXT:   store i8 %kernelFunc.coerce, ptr %coerce.dive, align 1
 // CHECK-HOST-WINDOWS-NEXT:   %coerce.dive1 = getelementptr inbounds nuw %struct.single_purpose_kernel, ptr %agg.tmp, i32 0, i32 0
 // CHECK-HOST-WINDOWS-NEXT:   %0 = load i8, ptr %coerce.dive1, align 1
-// CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@Usingle_purpose_kernel_name@@Usingle_purpose_kernel@@@@YAXPEBDUsingle_purpose_kernel@@@Z"(ptr noundef @"??_C@_0CB@KFIJOMLB@_ZTS26single_purpose_kernel_name@", i8 %0)
+// CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@V?$__sycl_kernel_info@Usingle_purpose_kernel_name@@@@Usingle_purpose_kernel@@@@YAXUsingle_purpose_kernel@@@Z"(i8 %0)
 // CHECK-HOST-WINDOWS-NEXT:   ret void
 // CHECK-HOST-WINDOWS-NEXT: }
 //
@@ -280,7 +263,7 @@ int main() {
 // CHECK-HOST-WINDOWS-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %kernelFunc, i64 4, i1 false)
 // CHECK-HOST-WINDOWS-NEXT:   %coerce.dive1 = getelementptr inbounds nuw %class.anon, ptr %agg.tmp, i32 0, i32 0
 // CHECK-HOST-WINDOWS-NEXT:   %0 = load i32, ptr %coerce.dive1, align 4
-// CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@V<lambda_1>@?0??main@@9@V1?0??2@9@@@YAXPEBDV<lambda_1>@?0??main@@9@@Z"(ptr noundef @"??_C@_0BC@NHCDOLAA@_ZTSZ4mainEUlT_E_?$AA@", i32 %0)
+// CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@V?$__sycl_kernel_info@V<lambda_1>@?0??main@@9@@@V<lambda_1>@?0??main@@9@@@YAXV<lambda_1>@?0??main@@9@@Z"(i32 %0)
 //
 // CHECK-HOST-WINDOWS-NEXT:   ret void
 // CHECK-HOST-WINDOWS-NEXT: }
@@ -293,7 +276,7 @@ int main() {
 // CHECK-HOST-WINDOWS-NEXT:   store i8 %kernelFunc.coerce, ptr %coerce.dive, align 1
 // CHECK-HOST-WINDOWS-NEXT:   %coerce.dive1 = getelementptr inbounds nuw %class.anon.0, ptr %agg.tmp, i32 0, i32 0
 // CHECK-HOST-WINDOWS-NEXT:   %0 = load i8, ptr %coerce.dive1, align 1
-// CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@U\CE\B4\CF\84\CF\87@@V<lambda_2>@?0??main@@9@@@YAXPEBDV<lambda_2>@?0??main@@9@@Z"(ptr noundef @"??_C@_0M@BCGAEMBE@_ZTS6?N?$LE?O?$IE?O?$IH?$AA@", i8 %0)
+// CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@V?$__sycl_kernel_info@U\CE\B4\CF\84\CF\87@@@@V<lambda_2>@?0??main@@9@@@YAXV<lambda_2>@?0??main@@9@@Z"(i8 %0)
 // CHECK-HOST-WINDOWS-NEXT:   ret void
 // CHECK-HOST-WINDOWS-NEXT: }
 
@@ -317,7 +300,7 @@ int main() {
 // CHECK-HOST-WINDOWS-NEXT:   %coerce.dive3 = getelementptr inbounds nuw %class.anon.1, ptr %agg.tmp, i32 0, i32 0
 // CHECK-HOST-WINDOWS-NEXT:   %coerce.dive4 = getelementptr inbounds nuw %struct.copyable, ptr %coerce.dive3, i32 0, i32 0
 // CHECK-HOST-WINDOWS-NEXT:   %2 = load i32, ptr %coerce.dive4, align 4
-// CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@UKN@?1??main@@9@V<lambda_3>@?0??2@9@HH@handler@@AEAAXPEBDV<lambda_3>@?0??main@@9@HH@Z"(ptr noundef nonnull align 1 dereferenceable(1) %this2, ptr noundef @"??_C@_0P@DLGHPODL@_ZTSZ4mainE2KN?$AA@", i32 %2, i32 noundef %1, i32 noundef %0)
+// CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@V?$__sycl_kernel_info@UKN@?1??main@@9@@@V<lambda_3>@?0??main@@9@HH@handler@@AEAAXV<lambda_3>@?0??main@@9@HH@Z"(ptr noundef nonnull align 1 dereferenceable(1) %this2, i32 %2, i32 noundef %1, i32 noundef %0)
 // CHECK-HOST-WINDOWS-NEXT:   call void @"??1<lambda_3>@?0??main@@9@QEAA@XZ"(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %k) #{{[0-9]+}}
 // CHECK-HOST-WINDOWS-NEXT:   ret void
 // CHECK-HOST-WINDOWS-NEXT: }
@@ -331,7 +314,7 @@ int main() {
 // CHECK-HOST-WINDOWS-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %0, i64 4, i1 false)
 // CHECK-HOST-WINDOWS-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %agg.tmp, i32 0, i32 0
 // CHECK-HOST-WINDOWS-NEXT:   %1 = load i32, ptr %coerce.dive, align 4
-// CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@Uref_arg_kernel_name@@V<lambda_1>@?0??main@@9@@@YAXPEBDV<lambda_1>@?0??main@@9@@Z"(ptr noundef @"??_C@_0BK@PPDJPOBM@_ZTS19ref_arg_kernel_name?$AA@", i32 %1)
+// CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@V?$__sycl_kernel_info@Uref_arg_kernel_name@@@@V<lambda_1>@?0??main@@9@@@YAXV<lambda_1>@?0??main@@9@@Z"(i32 %1)
 // CHECK-HOST-WINDOWS-NEXT:   ret void
 // CHECK-HOST-WINDOWS-NEXT: }
 //
@@ -344,7 +327,7 @@ int main() {
 // CHECK-HOST-WINDOWS-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %0, i64 4, i1 false)
 // CHECK-HOST-WINDOWS-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %agg.tmp, i32 0, i32 0
 // CHECK-HOST-WINDOWS-NEXT:   %1 = load i32, ptr %coerce.dive, align 4
-// CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@Ufwd_ref_arg_kernel_name@@V<lambda_1>@?0??main@@9@@@YAXPEBDV<lambda_1>@?0??main@@9@@Z"(ptr noundef @"??_C@_0BO@KEIBIHKH@_ZTS23fwd_ref_arg_kernel_name?$AA@", i32 %1)
+// CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@V?$__sycl_kernel_info@Ufwd_ref_arg_kernel_name@@@@V<lambda_1>@?0??main@@9@@@YAXV<lambda_1>@?0??main@@9@@Z"(i32 %1)
 // CHECK-HOST-WINDOWS-NEXT:   ret void
 // CHECK-HOST-WINDOWS-NEXT: }
 //
@@ -357,7 +340,7 @@ int main() {
 // CHECK-HOST-WINDOWS-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %0, i64 4, i1 false)
 // CHECK-HOST-WINDOWS-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %agg.tmp, i32 0, i32 0
 // CHECK-HOST-WINDOWS-NEXT:   %1 = load i32, ptr %coerce.dive, align 4
-// CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@Ufwd_ref_arg_kernel_name_move@@V<lambda_1>@?0??main@@9@@@YAXPEBDV<lambda_1>@?0??main@@9@@Z"(ptr noundef @"??_C@_0CD@FDALJLMM@_ZTS28fwd_ref_arg_kernel_name_mo@", i32 %1)
+// CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@V?$__sycl_kernel_info@Ufwd_ref_arg_kernel_name_move@@@@V<lambda_1>@?0??main@@9@@@YAXV<lambda_1>@?0??main@@9@@Z"(i32 %1)
 // CHECK-HOST-WINDOWS-NEXT:   ret void
 // CHECK-HOST-WINDOWS-NEXT: }
 //
@@ -370,7 +353,7 @@ int main() {
 // CHECK-HOST-WINDOWS-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %0, i64 4, i1 false)
 // CHECK-HOST-WINDOWS-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon.2, ptr %agg.tmp, i32 0, i32 0
 // CHECK-HOST-WINDOWS-NEXT:   %1 = load i32, ptr %coerce.dive, align 4
-// CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@Urvalue_ref_arg_kernel_name@@V<lambda_4>@?0??main@@9@@@YAXPEBDV<lambda_4>@?0??main@@9@@Z"(ptr noundef @"??_C@_0CB@HCPMABHM@_ZTS26rvalue_ref_arg_kernel_name@", i32 %1)
+// CHECK-HOST-WINDOWS-NEXT:   call void @"??$sycl_kernel_launch@V?$__sycl_kernel_info@Urvalue_ref_arg_kernel_name@@@@V<lambda_4>@?0??main@@9@@@YAXV<lambda_4>@?0??main@@9@@Z"(i32 %1)
 // CHECK-HOST-WINDOWS-NEXT:   ret void
 // CHECK-HOST-WINDOWS-NEXT: }
 

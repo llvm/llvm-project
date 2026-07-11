@@ -701,13 +701,23 @@ follows.
 
   namespace sycl {
   class handler {
-    template<typename KernelName, typename... Ts>
-    void sycl_kernel_launch(const char* kernelSymbol, Ts&&... kernelArgs) {
+    template<typename KernelInfo, typename... Ts>
+    void sycl_kernel_launch(Ts&&... kernelArgs) {
       // This code will run on the host and is responsible for calling functions
       // appropriate for the desired offload backend (OpenCL, CUDA, HIP,
       // Level Zero, etc...) to copy the kernel arguments denoted by kernelArgs
       // to a device and to schedule an invocation of the offload kernel entry
-      // point denoted by kernelSymbol with the copied arguments.
+      // point with the copied arguments.
+      //
+      // The KernelInfo template parameter denotes an unspecified type which
+      // contains metadata for the kernel. It has the following members:
+      // - kernel_name: a type alias for the kernel name type. This corresponds
+      //   to the KernelName template parameter of SYCL kernel invocation
+      //   functions.
+      // - kernel_entry_point_name: a static constexpr array of char containing
+      //   the name of the generated offload kernel entry point function. The
+      //   array is suitable for use in constant expressions, including non-type
+      //   template arguments.
     }
 
     template<typename KernelName, typename KernelType>
@@ -823,12 +833,16 @@ There are a few items worthy of note:
    copyability and kernel parameter requirements.
 
 Within ``single_task()``, the call to ``kernel_entry_point()`` is effectively
-replaced with a synthesized call to a ''sycl_kernel_launch`` template that
+replaced with a synthesized call to a ``sycl_kernel_launch`` template that
 looks approximately as follows.
 
 .. code-block:: c++
 
-  sycl_kernel_launch<KN>("sycl-kernel-caller-for-KN", kernelFunc);
+  struct kernel-info {
+    using kernel_name = KN;
+    static constexpr const char kernel_entry_point_name[] = "sycl-kernel-caller-for-KN";
+  };
+  sycl_kernel_launch<KN>(kernelFunc);
 
 There are a few items worthy of note:
 
@@ -844,10 +858,10 @@ There are a few items worthy of note:
 #. The ``sycl_kernel_launch`` template is expected to be provided by the SYCL
    library implementation. It is responsible for copying the kernel arguments
    to device memory and for scheduling execution of the generated offload
-   kernel entry point identified by the symbol name passed as the first
-   function argument. ``sycl-kernel-caller-for-KN`` is substituted above for
-   the actual symbol name that would be generated for the offload kernel entry
-   point.
+   kernel entry point identified by the ``kernel_entry_point_name`` member of
+   the first template parameter. ``sycl-kernel-caller-for-KN`` is substituted
+   above for the actual symbol name that would be generated for the offload
+   kernel entry point.
 
 It is not necessary for a function declared with the ``sycl_kernel_entry_point``
 attribute to be called for the offload kernel entry point to be emitted. For

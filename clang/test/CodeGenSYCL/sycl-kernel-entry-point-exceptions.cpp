@@ -21,8 +21,8 @@ struct KT {
 // calls a potentially throwing sycl_kernel_launch function (a thrown
 // exception will propagate with no explicit handling required).
 namespace ns1 {
-  template<typename KN, typename... Ts>
-  void sycl_kernel_launch(const char *, Ts...);
+  template<typename KI, typename... Ts>
+  void sycl_kernel_launch(Ts...);
   [[clang::sycl_kernel_entry_point(KN<1>)]]
   void skep(KT<1> k) {
     k();
@@ -30,7 +30,7 @@ namespace ns1 {
 }
 // CHECK: ; Function Attrs: mustprogress noinline optnone
 // CHECK: define dso_local void @_ZN3ns14skepE2KTILi1ELi0EE() #{{[0-9]+}} {
-// CHECK:   call void @_ZN3ns118sycl_kernel_launchI2KNILi1EEJ2KTILi1ELi0EEEEEvPKcDpT0_(ptr noundef @.str)
+// CHECK:   call void @_ZN3ns118sycl_kernel_launchI18__sycl_kernel_infoI2KNILi1EEEJ2KTILi1ELi0EEEEEvDpT0_()
 // CHECK:   ret void
 // CHECK: }
 
@@ -39,8 +39,8 @@ namespace ns1 {
 // non-throwing sycl_kernel_entry_point attributed function calls
 // a potentially throwing sycl_kernel_launch function.
 namespace ns2 {
-  template<typename KN, typename... Ts>
-  void sycl_kernel_launch(const char *, Ts...);
+  template<typename KI, typename... Ts>
+  void sycl_kernel_launch(Ts...);
   [[clang::sycl_kernel_entry_point(KN<2>)]]
   void skep(KT<2> k) noexcept {
     k();
@@ -48,7 +48,7 @@ namespace ns2 {
 }
 // CHECK: ; Function Attrs: mustprogress noinline nounwind optnone
 // CHECK: define dso_local void @_ZN3ns24skepE2KTILi2ELi0EE() #{{[0-9]+}} personality ptr @__gxx_personality_v0 {
-// CHECK:   invoke void @_ZN3ns218sycl_kernel_launchI2KNILi2EEJ2KTILi2ELi0EEEEEvPKcDpT0_(ptr noundef @.str.1)
+// CHECK:   invoke void @_ZN3ns218sycl_kernel_launchI18__sycl_kernel_infoI2KNILi2EEEJ2KTILi2ELi0EEEEEvDpT0_()
 // CHECK:           to label %invoke.cont unwind label %terminate.lpad
 // CHECK: invoke.cont:
 // CHECK:   ret void
@@ -63,8 +63,8 @@ namespace ns2 {
 // calls a non-throwing sycl_kernel_launch function (a thrown
 // exception will terminate within sycl_kernel_launch).
 namespace ns3 {
-  template<typename KN, typename... Ts>
-  void sycl_kernel_launch(const char *, Ts...) noexcept;
+  template<typename KI, typename... Ts>
+  void sycl_kernel_launch(Ts...) noexcept;
   [[clang::sycl_kernel_entry_point(KN<3>)]]
   void skep(KT<3> k) {
     k();
@@ -72,7 +72,7 @@ namespace ns3 {
 }
 // CHECK: ; Function Attrs: mustprogress noinline nounwind optnone
 // CHECK: define dso_local void @_ZN3ns34skepE2KTILi3ELi0EE() #{{[0-9]+}} {
-// CHECK:   call void @_ZN3ns318sycl_kernel_launchI2KNILi3EEJ2KTILi3ELi0EEEEEvPKcDpT0_(ptr noundef @.str.2)
+// CHECK:   call void @_ZN3ns318sycl_kernel_launchI18__sycl_kernel_infoI2KNILi3EEEJ2KTILi3ELi0EEEEEvDpT0_()
 // CHECK:   ret void
 // CHECK: }
 
@@ -81,8 +81,8 @@ namespace ns3 {
 // non-throwing sycl_kernel_entry_point attributed function calls a
 // non-throwing sycl_kernel_launch function.
 namespace ns4 {
-  template<typename KN, typename... Ts>
-  void sycl_kernel_launch(const char *, Ts...) noexcept;
+  template<typename KI, typename... Ts>
+  void sycl_kernel_launch(Ts...) noexcept;
   [[clang::sycl_kernel_entry_point(KN<4>)]]
   void skep(KT<4> k) noexcept {
     k();
@@ -90,6 +90,6 @@ namespace ns4 {
 }
 // CHECK: ; Function Attrs: mustprogress noinline nounwind optnone
 // CHECK: define dso_local void @_ZN3ns44skepE2KTILi4ELi0EE() #{{[0-9]+}} {
-// CHECK:   call void @_ZN3ns418sycl_kernel_launchI2KNILi4EEJ2KTILi4ELi0EEEEEvPKcDpT0_(ptr noundef @.str.3)
+// CHECK:   call void @_ZN3ns418sycl_kernel_launchI18__sycl_kernel_infoI2KNILi4EEEJ2KTILi4ELi0EEEEEvDpT0_()
 // CHECK:   ret void
 // CHECK: }

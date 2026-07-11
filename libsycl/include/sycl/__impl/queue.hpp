@@ -401,18 +401,17 @@ private:
   /// Name of this function is defined by compiler. It generates a call to this
   /// function in the host implementation of KernelFunc in submitSingleTask or
   /// submitParallelFor.
-  /// \param KernelName the name of the kernel being invoked.
   /// \param args the kernel arguments for the kernel invocation.
-  template <typename KN, typename... Args>
-  void sycl_kernel_launch(const char *KernelName, Args &&...args) {
-    static_assert(
-        sizeof...(args) == 1,
-        "sycl_kernel_launch expects only 2 arguments now: name of kernel and "
-        "callable object passed to kernel invocation by the user.");
+  template <typename KI, typename... Args>
+  void sycl_kernel_launch(Args &&...args) {
+    static_assert(sizeof...(args) == 1,
+                  "sycl_kernel_launch expects only 1 argument now: the "
+                  "callable object passed to kernel invocation by the user.");
 
     auto FirstArg = std::get<0>(std::tie(args...));
-    submitKernelImpl(detail::getDeviceKernelInfo<KN>(KernelName), &FirstArg,
-                     sizeof(FirstArg));
+    submitKernelImpl(detail::getDeviceKernelInfo<typename KI::kernel_name>(
+                         KI::kernel_entry_point_name),
+                     &FirstArg, sizeof(FirstArg));
   }
 
   /// The sycl_kernel_entry_point attribute facilitates the generation of an
