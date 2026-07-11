@@ -54,6 +54,7 @@ public:
   bool hasSingleScalarOperands() const {
     return !(Info & (Agnostic | Wide)) || Info == (Wide | Agnostic);
   }
+  bool isVectorToScalar() const { return Info == (SingleScalar | Agnostic); }
 };
 
 namespace vputils {
