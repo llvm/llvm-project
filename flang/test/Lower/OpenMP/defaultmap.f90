@@ -4,7 +4,11 @@ subroutine defaultmap_allocatable_present()
     integer, dimension(:), allocatable :: arr
 
 ! CHECK: %[[MAP_1:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(implicit, present) capture(ByRef) var_ptr_ptr({{.*}}) bounds({{.*}}) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
+<<<<<<< HEAD
 ! CHECK: %[[MAP_2:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(always, implicit, descriptor, to) capture(ByRef) members({{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "arr"}
+=======
+! CHECK: %[[MAP_2:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(always, implicit, present, to) capture(ByRef) members({{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "arr"}
+>>>>>>> 7e89dcfba2dc
 !$omp target defaultmap(present: allocatable)
     arr(1) = 10
 !$omp end target
