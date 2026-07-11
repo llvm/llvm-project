@@ -122,9 +122,11 @@ bool DependencyTracker::resolveDependenciesAndMarkLiveness(
 
 void DependencyTracker::addActionToRootEntriesWorkList(
     LiveRootWorklistActionTy Action, const UnitEntryPairTy &Entry,
-    std::optional<UnitEntryPairTy> ReferencedBy) {
+    std::optional<UnitEntryPairTy> ReferencedBy,
+    const DWARFDebugInfoEntry *ReferencedTypeDieEntry) {
   if (ReferencedBy) {
-    RootEntriesWorkList.emplace_back(Action, Entry, *ReferencedBy);
+    RootEntriesWorkList.emplace_back(Action, Entry, *ReferencedBy,
+                                     ReferencedTypeDieEntry);
     return;
   }
 
@@ -264,8 +266,18 @@ bool DependencyTracker::updateDependenciesCompleteness() {
            "Root entry without dependency inside the dependencies list");
 
     UnitEntryPairTy RootEntry = Root.getRootEntry();
+
+    // Completeness must be checked against the actual referenced DIE, not its
+    // enclosing root. A nested type can be demoted to plain DWARF while its
+    // root stays in the type table, and a type-table DIE may only reference
+    // DIEs that are themselves in the type table. Checking the root instead
+    // leaves such a DIE in the type table, later tripping the type-unit
+    // reference assertion in DIEAttributeCloner::cloneDieRefAttr.
+    const DWARFDebugInfoEntry *ReferencedDieEntry =
+        Root.getReferencedTypeDieEntry() ? Root.getReferencedTypeDieEntry()
+                                         : RootEntry.DieEntry;
     CompileUnit::DIEInfo &RootInfo =
-        RootEntry.CU->getDIEInfo(RootEntry.DieEntry);
+        RootEntry.CU->getDIEInfo(ReferencedDieEntry);
 
     UnitEntryPairTy ReferencedByEntry = Root.getReferencedByEntry();
     CompileUnit::DIEInfo &ReferencedByInfo =
@@ -469,7 +481,7 @@ getFinalPlacementForEntry(const UnitEntryPairTy &Entry,
 bool DependencyTracker::markDIEEntryAsKeptRec(
     LiveRootWorklistActionTy Action, const UnitEntryPairTy &RootEntry,
     const UnitEntryPairTy &Entry, bool InterCUProcessingStarted,
-    std::atomic<bool> &HasNewInterconnectedCUs) {
+    std::atomic<bool> &HasNewInterconnectedCUs, bool RecordDepsOnly) {
   if (Entry.DieEntry->getAbbreviationDeclarationPtr() == nullptr)
     return true;
 
@@ -483,16 +495,31 @@ bool DependencyTracker::markDIEEntryAsKeptRec(
           Placement == CompileUnit::PlainDwarf) &&
          "Wrong kind of placement for ODR unavailable entry");
 
-  if (!isChildrenAction(Action))
-    if (isAlreadyMarked(Entry, Placement))
-      return true;
+  if (!RecordDepsOnly && !isChildrenAction(Action) &&
+      isAlreadyMarked(Entry, Placement)) {
+    // Entry (and its subtree) were already marked, possibly by a racing CU or
+    // another referencing root, and which one wins is non-deterministic. Skip
+    // the redundant marking, but re-walk the subtree in record-deps-only mode
+    // so this referencing root still contributes its outgoing completeness
+    // dependencies. Otherwise the recorded dependency set depends on thread
+    // interleaving, the demotion fixpoint misses demotions, and whole type
+    // subtrees are left in the artificial type unit non-deterministically.
+    // Recording extra dependencies is harmless: a dependency only triggers a
+    // demotion when the referenced type is actually placed in plain DWARF.
+    return markDIEEntryAsKeptRec(Action, RootEntry, Entry,
+                                 InterCUProcessingStarted,
+                                 HasNewInterconnectedCUs,
+                                 /*RecordDepsOnly=*/true);
+  }
 
-  // Mark current DIE as kept.
-  Info.setKeep();
-  Info.setPlacement(Placement);
+  if (!RecordDepsOnly) {
+    // Mark current DIE as kept.
+    Info.setKeep();
+    Info.setPlacement(Placement);
 
-  // Set keep children property for parents.
-  markParentsAsKeepingChildren(Entry);
+    // Set keep children property for parents.
+    markParentsAsKeepingChildren(Entry);
+  }
 
   UnitEntryPairTy FinalRootEntry =
       Entry.DieEntry->getTag() == dwarf::DW_TAG_subprogram ? Entry : RootEntry;
@@ -501,7 +528,7 @@ bool DependencyTracker::markDIEEntryAsKeptRec(
   bool Res = true;
   if (!maybeAddReferencedRoots(Action, FinalRootEntry, Entry,
                                InterCUProcessingStarted,
-                               HasNewInterconnectedCUs))
+                               HasNewInterconnectedCUs, RecordDepsOnly))
     Res = false;
 
   // Return if we do not need to process children.
@@ -566,9 +593,10 @@ bool DependencyTracker::markDIEEntryAsKeptRec(
       } break;
       }
 
-      if (!markDIEEntryAsKeptRec(
-              Action, FinalRootEntry, UnitEntryPairTy{Entry.CU, CurChild},
-              InterCUProcessingStarted, HasNewInterconnectedCUs))
+      if (!markDIEEntryAsKeptRec(Action, FinalRootEntry,
+                                 UnitEntryPairTy{Entry.CU, CurChild},
+                                 InterCUProcessingStarted,
+                                 HasNewInterconnectedCUs, RecordDepsOnly))
         Res = false;
     }
 
@@ -595,7 +623,7 @@ bool DependencyTracker::markDIEEntryAsKeptRec(
 
     if (!markDIEEntryAsKeptRec(
             Action, FinalRootEntry, UnitEntryPairTy{Entry.CU, CurChild},
-            InterCUProcessingStarted, HasNewInterconnectedCUs))
+            InterCUProcessingStarted, HasNewInterconnectedCUs, RecordDepsOnly))
       Res = false;
   }
 
@@ -653,10 +681,25 @@ bool DependencyTracker::isTypeTableCandidate(
 bool DependencyTracker::maybeAddReferencedRoots(
     LiveRootWorklistActionTy Action, const UnitEntryPairTy &RootEntry,
     const UnitEntryPairTy &Entry, bool InterCUProcessingStarted,
-    std::atomic<bool> &HasNewInterconnectedCUs) {
+    std::atomic<bool> &HasNewInterconnectedCUs, bool RecordDepsOnly) {
   const auto *Abbrev = Entry.DieEntry->getAbbreviationDeclarationPtr();
   if (Abbrev == nullptr)
     return true;
+
+  // In record-deps-only mode the referenced root is not scheduled for marking.
+  // The completeness dependency is appended directly so it participates in the
+  // demotion fixpoint without triggering any reference-following recursion.
+  auto AddRoot = [&](LiveRootWorklistActionTy RootAction,
+                     const UnitEntryPairTy &Root,
+                     const DWARFDebugInfoEntry *ReferencedTypeDieEntry) {
+    if (RecordDepsOnly) {
+      Dependencies.emplace_back(RootAction, Root, RootEntry,
+                                ReferencedTypeDieEntry);
+      return;
+    }
+    addActionToRootEntriesWorkList(RootAction, Root, RootEntry,
+                                   ReferencedTypeDieEntry);
+  };
 
   DWARFUnit &Unit = Entry.CU->getOrigUnit();
   DWARFDataExtractor Data = Unit.getDebugInfoExtractor();
@@ -685,6 +728,12 @@ bool DependencyTracker::maybeAddReferencedRoots(
     }
 
     if (!RefDie->DieEntry) {
+      // The reference could not be resolved yet. Recording dependencies
+      // happens only after marking has fully resolved interconnections, so skip
+      // it here. The scheduling path below handles the delayed-resolution case.
+      if (RecordDepsOnly)
+        continue;
+
       // Delay resolving reference.
       RefDie->CU->setInterconnectedCU();
       Entry.CU->setInterconnectedCU();
@@ -712,20 +761,23 @@ bool DependencyTracker::maybeAddReferencedRoots(
 
     if (AttrSpec.Attr == dwarf::DW_AT_import) {
       if (isNamespaceLikeEntry(RefDie->DieEntry)) {
-        addActionToRootEntriesWorkList(
-            isTypeAction(Action)
-                ? LiveRootWorklistActionTy::MarkSingleTypeEntry
-                : LiveRootWorklistActionTy::MarkSingleLiveEntry,
-            *RefDie, RootEntry);
+        AddRoot(isTypeAction(Action)
+                    ? LiveRootWorklistActionTy::MarkSingleTypeEntry
+                    : LiveRootWorklistActionTy::MarkSingleLiveEntry,
+                *RefDie, nullptr);
         continue;
       }
 
-      addActionToRootEntriesWorkList(Action, *RefDie, RootEntry);
+      AddRoot(Action, *RefDie, nullptr);
       continue;
     }
 
+    // Mark the enclosing root type as kept, but also record the actual
+    // referenced DIE: a nested type can be demoted to plain DWARF independently
+    // of its root, in which case ReferencedBy must be demoted too (see
+    // updateDependenciesCompleteness).
     UnitEntryPairTy RootForReferencedDie = getRootForSpecifiedEntry(*RefDie);
-    addActionToRootEntriesWorkList(Action, RootForReferencedDie, RootEntry);
+    AddRoot(Action, RootForReferencedDie, RefDie->DieEntry);
   }
 
   return true;
