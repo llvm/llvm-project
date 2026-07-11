@@ -1,5 +1,3 @@
-#include "../CodeGenCUDA/Inputs/cuda.h"
-
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
 // RUN:            -target-cpu gfx1100 -fcuda-is-device -emit-cir %s -o %t.cir
