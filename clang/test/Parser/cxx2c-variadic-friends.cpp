@@ -61,6 +61,10 @@ struct VS {
 
   template<class T>
   friend class D<T, Ts>::Nested...;
+
+  template<class T>
+  friend class Ts...[0]::Nested...;
+  // expected-error@-1 {{a pack indexing specifier cannot be used in a declarative nested name specifier}}
 };
 
 namespace length_mismatch {

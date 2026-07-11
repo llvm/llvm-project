@@ -18283,8 +18283,7 @@ DeclResult Sema::ActOnTemplatedFriendTag(
   }
 
   NestedNameSpecifier NNS = SS.getScopeRep();
-  if (EllipsisLoc.isInvalid() &&
-      CheckDependentFriendType(TagLoc, NNS, TempParamLists.front()))
+  if (CheckDependentFriendType(TagLoc, NNS, TempParamLists.front()))
     return true;
 
   ElaboratedTypeKeyword ETK = TypeWithKeyword::getKeywordForTagTypeKind(Kind);
