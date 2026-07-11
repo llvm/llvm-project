@@ -20,9 +20,10 @@
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_STD_VER >= 26
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 26
 // [range.prim.size.hint]
 
 namespace ranges {
@@ -72,8 +73,8 @@ inline constexpr auto reserve_hint = __reserve_hint::__fn{};
 } // namespace __cpo
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 26
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 26
 
 #endif // _LIBCPP___RANGES_RESERVE_HINT_H
