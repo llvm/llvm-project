@@ -84,8 +84,18 @@ public:
   /// Order is preserved; later providers take precedence over earlier ones.
   static std::unique_ptr<Provider> combine(std::vector<const Provider *>);
 
+  /// Returns providers for the configuration files that clangd tools read by
+  /// default: project config (ancestor `.clangd` files) and the user's
+  /// global config file.
+  static std::vector<std::unique_ptr<Provider>>
+  createDefaultProviders(const ThreadsafeFS &);
+
   /// Build a config based on this provider.
   Config getConfig(const Params &, DiagnosticCallback) const;
+
+  /// Help text for the --enable-config flag, shared by clangd tools that
+  /// expose createDefaultProviders() on the command line.
+  static const char *const EnableConfigFlagDesc;
 
 private:
   /// Provide fragments that may be relevant to the file.

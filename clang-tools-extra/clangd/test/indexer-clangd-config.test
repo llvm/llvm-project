@@ -1,0 +1,25 @@
+# Test that clangd-indexer respects CompileFlags
+
+# RUN: rm -rf %t.dir && mkdir -p %t.dir
+# RUN: split-file %s %t.dir
+
+# By default config is enabled, so the .clangd file's CompileFlags.Add should
+# define FROM_CLANGD_FILE, and the #error below must not fire.
+# RUN: clangd-indexer %t.dir/test.cpp 2>&1 | FileCheck --check-prefix=ENABLED %s
+# ENABLED-NOT: error: "FROM_CLANGD_FILE not defined
+
+# With config disabled, the macro isn't defined by the .clangd file, so the
+# #error must fire.
+# RUN: clangd-indexer --enable-config=0 %t.dir/test.cpp 2>&1 \
+# RUN:     | FileCheck --check-prefix=DISABLED %s
+# DISABLED: error: "FROM_CLANGD_FILE not defined - .clangd file was not applied"
+
+#--- .clangd
+CompileFlags:
+  Add: [-DFROM_CLANGD_FILE=1]
+
+#--- test.cpp
+#ifndef FROM_CLANGD_FILE
+#error "FROM_CLANGD_FILE not defined - .clangd file was not applied"
+#endif
+int foo() { return 0; }
