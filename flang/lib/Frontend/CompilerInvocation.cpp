@@ -1992,10 +1992,8 @@ void CompilerInvocation::setDefaultPredefinitions() {
     fortranOptions.predefinitions.emplace_back("__aarch64", "1");
     break;
   case llvm::Triple::ArchType::systemz:
-    fortranOptions.predefinitions.emplace_back("__s390__", "1");
     fortranOptions.predefinitions.emplace_back("__s390x__", "1");
     fortranOptions.predefinitions.emplace_back("__s390x", "1");
-    fortranOptions.predefinitions.emplace_back("__zarch__", "1");
     break;
   }
 }

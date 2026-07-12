@@ -1956,7 +1956,10 @@ struct TargetSystemZ : public GenericTarget<TargetSystemZ> {
   CodeGenSpecifics::Marshalling
   integerArgumentType(mlir::Location loc,
                       mlir::IntegerType argTy) const override {
-    if (argTy.getWidth() == 32) {
+    // SystemZ ABI requires all integers < 64 bits to be sign/zero extended.
+    // Handle widths 32 to 63 explicitly; GenericTarget handles widths < 32
+    // including the i1 zero-extension special case.
+    if (argTy.getWidth() >= 32 && argTy.getWidth() < defaultWidth) {
       AT::IntegerExtension intExt = argTy.isUnsigned()
                                         ? AT::IntegerExtension::Zero
                                         : AT::IntegerExtension::Sign;
@@ -1969,28 +1972,55 @@ struct TargetSystemZ : public GenericTarget<TargetSystemZ> {
     return GenericTarget::integerArgumentType(loc, argTy);
   }
 
-  CodeGenSpecifics::Marshalling
-  structType(mlir::Location loc, fir::RecordType ty, bool isResult) const {
-    CodeGenSpecifics::Marshalling marshal;
-    auto sizeAndAlign{
-        fir::getTypeSizeAndAlignmentOrCrash(loc, ty, getDataLayout(), kindMap)};
-    unsigned short align{
-        std::max(sizeAndAlign.second, static_cast<unsigned short>(8))};
-    marshal.emplace_back(
-        fir::ReferenceType::get(ty),
-        AT{/*align=*/align, /*byval=*/!isResult, /*sret=*/isResult});
-    return marshal;
+  // Check for a single floating-point member recursively.
+  static mlir::Type getSingleFPMember(fir::RecordType recTy) {
+    auto typeList = recTy.getTypeList();
+    if (typeList.size() != 1)
+      return {};
+    mlir::Type fieldTy = typeList[0].second;
+    if (auto nestedRec = mlir::dyn_cast<fir::RecordType>(fieldTy))
+      return getSingleFPMember(nestedRec);
+    if (auto floatTy = mlir::dyn_cast<mlir::FloatType>(fieldTy))
+      if (floatTy.getWidth() <= 64)
+        return floatTy;
+    return {};
   }
 
   CodeGenSpecifics::Marshalling
   structArgumentType(mlir::Location loc, fir::RecordType ty,
                      const Marshalling &previousArguments) const override {
-    return structType(loc, ty, false);
+    CodeGenSpecifics::Marshalling marshal;
+    // Single FP member <= 8 bytes passed in FPR.
+    if (mlir::Type fpTy = getSingleFPMember(ty)) {
+      marshal.emplace_back(fpTy, AT{});
+      return marshal;
+    }
+    // Small structs passed in GPR (1, 2, 4, 8 bytes).
+    auto sizeAndAlign{
+        fir::getTypeSizeAndAlignmentOrCrash(loc, ty, getDataLayout(), kindMap)};
+    uint64_t byteSize = sizeAndAlign.first;
+    if (byteSize == 1 || byteSize == 2 || byteSize == 4 || byteSize == 8) {
+      marshal.emplace_back(mlir::IntegerType::get(ty.getContext(), 64), AT{});
+      return marshal;
+    }
+    // Larger structs passed via implicit by-value reference.
+    unsigned short align{
+        std::max(sizeAndAlign.second, static_cast<unsigned short>(8))};
+    marshal.emplace_back(fir::ReferenceType::get(ty),
+                         AT{/*align=*/align, /*byval=*/true, /*sret=*/false});
+    return marshal;
   }
 
   CodeGenSpecifics::Marshalling
   structReturnType(mlir::Location loc, fir::RecordType ty) const override {
-    return structType(loc, ty, true);
+    CodeGenSpecifics::Marshalling marshal;
+    auto sizeAndAlign{
+        fir::getTypeSizeAndAlignmentOrCrash(loc, ty, getDataLayout(), kindMap)};
+    unsigned short align{
+        std::max(sizeAndAlign.second, static_cast<unsigned short>(8))};
+    marshal.emplace_back(fir::ReferenceType::get(ty),
+                         AT{/*align=*/align, /*byval=*/false, /*sret=*/true});
+    return marshal;
   }
 };
 } // namespace

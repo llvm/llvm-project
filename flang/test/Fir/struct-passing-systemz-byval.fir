@@ -1,51 +1,91 @@
 // Test SystemZ ABI rewrite of struct passed by value (BIND(C), VALUE derived types).
 // RUN: fir-opt --target-rewrite="target=s390x-unknown-linux-gnu" %s | FileCheck %s
 
-module attributes {
-  fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data_layout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:128-v128:64-a:8:16-n32:64", llvm.target_triple = "s390x-unknown-linux-gnu" } {
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data_layout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:128-v128:64-a:8:16-n32:64", llvm.target_triple = "s390x-unknown-linux-gnu"} {
 
-// CHECK-LABEL: func.func private @test_i32(!fir.ref<!fir.type<t1{i:i32}>>
-// CHECK-SAME:    {llvm.align = 8 : i32, llvm.byval = !fir.type<t1{i:i32}>})
-func.func private @test_i32(%arg0: !fir.type<t1{i:i32}>)
+// CHECK-LABEL: func.func private @test_i32(%arg0: i64)
+func.func private @test_i32(%arg0: !fir.type<t1{i:i32}>) { return }
 
 // CHECK-LABEL: func.func @test_call_i32(
 // CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.type<t1{i:i32}>>) {
-// CHECK: %[[IN:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.type<t1{i:i32}>>
-// CHECK: %[[STCK:.*]] = llvm.intr.stacksave : !llvm.ptr
-// CHECK: %[[TMP:.*]] = fir.alloca !fir.type<t1{i:i32}>
-// CHECK: fir.store %[[IN]] to %[[TMP]] : !fir.ref<!fir.type<t1{i:i32}>>
-// CHECK: fir.call @test_i32(%[[TMP]]) : (!fir.ref<!fir.type<t1{i:i32}>> {llvm.align = 8 : i32, llvm.byval = !fir.type<t1{i:i32}>}) -> ()
-// CHECK: llvm.intr.stackrestore %[[STCK]] : !llvm.ptr
-// CHECK: return
 func.func @test_call_i32(%arg0: !fir.ref<!fir.type<t1{i:i32}>>) {
+  // CHECK: %[[IN:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.type<t1{i:i32}>>
   %in = fir.load %arg0 : !fir.ref<!fir.type<t1{i:i32}>>
+  // CHECK: %[[STCK:.*]] = llvm.intr.stacksave : !llvm.ptr
+  // CHECK: %[[TMP:.*]] = fir.alloca i64
+  // CHECK: %[[CVT:.*]] = fir.convert %[[TMP]] : (!fir.ref<i64>) -> !fir.ref<!fir.type<t1{i:i32}>>
+  // CHECK: fir.store %[[IN]] to %[[CVT]] : !fir.ref<!fir.type<t1{i:i32}>>
+  // CHECK: %[[VAL:.*]] = fir.load %[[TMP]] : !fir.ref<i64>
+  // CHECK: fir.call @test_i32(%[[VAL]]) : (i64) -> ()
+  // CHECK: llvm.intr.stackrestore %[[STCK]] : !llvm.ptr
   fir.call @test_i32(%in) : (!fir.type<t1{i:i32}>) -> ()
+  // CHECK: return
   return
 }
 
-// CHECK-LABEL: func.func private @test_i64(!fir.ref<!fir.type<t2{i:i64}>>
-// CHECK-SAME:    {llvm.align = 8 : i32, llvm.byval = !fir.type<t2{i:i64}>})
-func.func private @test_i64(%arg0: !fir.type<t2{i:i64}>)
+// CHECK-LABEL: func.func private @test_i64(%arg0: i64)
+func.func private @test_i64(%arg0: !fir.type<t2{i:i64}>) { return }
 
-// CHECK-LABEL: func.func private @test_f32_f32(!fir.ref<!fir.type<t3{r:f32,i:f32}>>
-// CHECK-SAME:    {llvm.align = 8 : i32, llvm.byval = !fir.type<t3{r:f32,i:f32}>})
-func.func private @test_f32_f32(%arg0: !fir.type<t3{r:f32,i:f32}>)
+// CHECK-LABEL: func.func private @test_f32_f32(%arg0: i64)
+func.func private @test_f32_f32(%arg0: !fir.type<t3{r:f32,i:f32}>) { return }
 
-// CHECK-LABEL: func.func private @test_f64_f64(!fir.ref<!fir.type<t4{r:f64,i:f64}>>
+// CHECK-LABEL: func.func private @test_f64_f64(%arg0: !fir.ref<!fir.type<t4{r:f64,i:f64}>>
 // CHECK-SAME:    {llvm.align = 8 : i32, llvm.byval = !fir.type<t4{r:f64,i:f64}>})
-func.func private @test_f64_f64(%arg0: !fir.type<t4{r:f64,i:f64}>)
+func.func private @test_f64_f64(%arg0: !fir.type<t4{r:f64,i:f64}>) { return }
 
-// CHECK-LABEL: func.func private @test_large(!fir.ref<!fir.type<t5{i:!fir.array<8xi32>}>>
+// CHECK-LABEL: func.func private @test_large(%arg0: !fir.ref<!fir.type<t5{i:!fir.array<8xi32>}>>
 // CHECK-SAME:    {llvm.align = 8 : i32, llvm.byval = !fir.type<t5{i:!fir.array<8xi32>}>})
-func.func private @test_large(%arg0: !fir.type<t5{i:!fir.array<8xi32>}>)
+func.func private @test_large(%arg0: !fir.type<t5{i:!fir.array<8xi32>}>) { return }
 
-// CHECK-LABEL: func.func private @test_mixed(!fir.ref<!fir.type<t6{i:i32,r:f64}>>
+// CHECK-LABEL: func.func private @test_mixed(%arg0: !fir.ref<!fir.type<t6{i:i32,r:f64}>>
 // CHECK-SAME:    {llvm.align = 8 : i32, llvm.byval = !fir.type<t6{i:i32,r:f64}>})
-func.func private @test_mixed(%arg0: !fir.type<t6{i:i32,r:f64}>)
+func.func private @test_mixed(%arg0: !fir.type<t6{i:i32,r:f64}>) { return }
 
-// Struct with f128 field — alignment is 16, not clamped down to 8.
-// CHECK-LABEL: func.func private @test_f128(!fir.ref<!fir.type<t7{r:f128}>>
+// CHECK-LABEL: func.func private @test_f128(%arg0: !fir.ref<!fir.type<t7{r:f128}>>
 // CHECK-SAME:    {llvm.align = 16 : i32, llvm.byval = !fir.type<t7{r:f128}>})
-func.func private @test_f128(%arg0: !fir.type<t7{r:f128}>)
+func.func private @test_f128(%arg0: !fir.type<t7{r:f128}>) { return }
+
+// CHECK-LABEL: func.func private @test_f32(%arg0: f32)
+func.func private @test_f32(%arg0: !fir.type<t8{r:f32}>) { return }
+
+// CHECK-LABEL: func.func @test_call_f32(
+// CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.type<t8{r:f32}>>) {
+func.func @test_call_f32(%arg0: !fir.ref<!fir.type<t8{r:f32}>>) {
+  // CHECK: %[[IN:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.type<t8{r:f32}>>
+  %in = fir.load %arg0 : !fir.ref<!fir.type<t8{r:f32}>>
+  // CHECK: %[[STCK:.*]] = llvm.intr.stacksave : !llvm.ptr
+  // CHECK: %[[TMP:.*]] = fir.alloca f32
+  // CHECK: %[[CVT:.*]] = fir.convert %[[TMP]] : (!fir.ref<f32>) -> !fir.ref<!fir.type<t8{r:f32}>>
+  // CHECK: fir.store %[[IN]] to %[[CVT]] : !fir.ref<!fir.type<t8{r:f32}>>
+  // CHECK: %[[VAL:.*]] = fir.load %[[TMP]] : !fir.ref<f32>
+  // CHECK: fir.call @test_f32(%[[VAL]]) : (f32) -> ()
+  // CHECK: llvm.intr.stackrestore %[[STCK]] : !llvm.ptr
+  fir.call @test_f32(%in) : (!fir.type<t8{r:f32}>) -> ()
+  // CHECK: return
+  return
+}
+
+// CHECK-LABEL: func.func private @test_f64(%arg0: f64)
+func.func private @test_f64(%arg0: !fir.type<t9{r:f64}>) { return }
+
+// CHECK-LABEL: func.func @test_call_f64(
+// CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.type<t9{r:f64}>>) {
+func.func @test_call_f64(%arg0: !fir.ref<!fir.type<t9{r:f64}>>) {
+  // CHECK: %[[IN:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.type<t9{r:f64}>>
+  %in = fir.load %arg0 : !fir.ref<!fir.type<t9{r:f64}>>
+  // CHECK: %[[STCK:.*]] = llvm.intr.stacksave : !llvm.ptr
+  // CHECK: %[[TMP:.*]] = fir.alloca f64
+  // CHECK: %[[CVT:.*]] = fir.convert %[[TMP]] : (!fir.ref<f64>) -> !fir.ref<!fir.type<t9{r:f64}>>
+  // CHECK: fir.store %[[IN]] to %[[CVT]] : !fir.ref<!fir.type<t9{r:f64}>>
+  // CHECK: %[[VAL:.*]] = fir.load %[[TMP]] : !fir.ref<f64>
+  // CHECK: fir.call @test_f64(%[[VAL]]) : (f64) -> ()
+  // CHECK: llvm.intr.stackrestore %[[STCK]] : !llvm.ptr
+  fir.call @test_f64(%in) : (!fir.type<t9{r:f64}>) -> ()
+  // CHECK: return
+  return
+}
+
+// CHECK-LABEL: func.func private @test_nested_f64(%arg0: f64)
+func.func private @test_nested_f64(%arg0: !fir.type<t10{s:!fir.type<t9{r:f64}>}>) { return }
 
 } // end module
