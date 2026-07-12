@@ -8098,6 +8098,14 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
       MVT ConcatVT = MVT::getVectorVT(SrcEltVT, NumElems);
       if (NumElems > TruncDstLanes && !TLI.isTypeLegal(ConcatVT))
         return SDValue();
+      // The wide loads read (stride - element) bytes past the last element.
+      // That is safe if the whole span is dereferenceable or the base is a
+      // fixed stack slot which always has the caller's frame mapped above it.
+      bool RangeSafe = isa_and_nonnull<FixedStackPseudoSourceValue>(
+                           LDBase->getMemOperand()->getPseudoValue()) ||
+                       LDBase->getPointerInfo().isDereferenceable(
+                           NumElems * (WideEltBits / 8), *DAG.getContext(),
+                           DAG.getDataLayout());
       // Try wider register sizes first.
       for (unsigned WideRegBits : {512u, 256u, 128u}) {
         unsigned LanesPerWideLoad = WideRegBits / WideEltBits;
@@ -8115,11 +8123,27 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
                         (WideEltBits == 16 && !Subtarget.hasBWI())))
           continue;
         unsigned BytesPerWideLoad = WideRegBits / 8;
+        // VTRUNC below 512 bits needs VLX.
+        bool NarrowSafe = WideVT.is512BitVector() || !Subtarget.hasAVX512() ||
+                          Subtarget.hasVLX();
+        // A load aligned to its own size stays inside one page.
+        bool NaturalSafe =
+            RangeSafe ||
+            (NarrowSafe && LDBase->getBaseAlign() >= Align(BytesPerWideLoad));
+        // Otherwise the last load is shifted back to end at the last element.
+        // The shifted load overlaps the previous one, so two loads are needed.
+        bool CanShift = NumWideLoads >= 2 && NarrowSafe;
+        if (!NaturalSafe && !CanShift)
+          continue;
+        unsigned TailBits = WideEltBits - BaseSizeInBits;
         auto MMOFlags = LDBase->getMemOperand()->getFlags();
         SDValue BasePtr = LDBase->getBasePtr();
         SmallVector<SDValue, 8> Pieces;
         for (unsigned K = 0; K != NumWideLoads; ++K) {
+          bool ShiftLast = !NaturalSafe && K == NumWideLoads - 1;
           unsigned Offset = K * BytesPerWideLoad;
+          if (ShiftLast)
+            Offset -= TailBits / 8;
           SDValue Ptr = K == 0 ? BasePtr
                                : DAG.getMemBasePlusOffset(
                                      BasePtr, TypeSize::getFixed(Offset), DL);
@@ -8130,6 +8154,10 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
           for (auto *LD : Loads)
             if (LD)
               DAG.makeEquivalentMemoryOrdering(LD, Ld);
+          // The shifted load leaves each element in its lane's high bits.
+          if (ShiftLast)
+            Ld = DAG.getNode(ISD::SRL, DL, WideVT, Ld,
+                             DAG.getConstant(TailBits, DL, WideVT));
           unsigned TruncOp = Partial ? X86ISD::VTRUNC : ISD::TRUNCATE;
           Pieces.push_back(DAG.getNode(TruncOp, DL, TruncDstVT, Ld));
         }
