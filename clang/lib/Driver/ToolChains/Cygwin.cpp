@@ -216,15 +216,14 @@ void cygwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   CmdArgs.push_back("-o");
-  const char *OutputFile = Output.getFilename();
   // GCC implicitly adds an .exe extension if it is given an output file name
   // that lacks an extension.
   // GCC used to do this only when the compiler itself runs on windows, but
   // since GCC 8 it does the same when cross compiling as well.
-  if (!llvm::sys::path::has_extension(OutputFile)) {
+  if (const char *OutputFile = Output.getFilename();
+      !llvm::sys::path::has_extension(OutputFile))
     CmdArgs.push_back(Args.MakeArgString(Twine(OutputFile) + ".exe"));
-    OutputFile = CmdArgs.back();
-  } else
+  else
     CmdArgs.push_back(OutputFile);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
