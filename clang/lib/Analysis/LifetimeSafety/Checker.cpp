@@ -270,14 +270,11 @@ public:
             SemaHelper->reportUseAfterInvalidation(
                 InvalidatedPVD, UF->getUseExpr(), Warning.InvalidatedByExpr);
 
-        } else {
+        } else
           // Scope-based expiry (use-after-scope).
-          llvm::ImmutableList<OriginID>::Factory OriginFlowChainFactory;
           SemaHelper->reportUseAfterScope(
               IssueExpr, UF->getUseExpr(), MovedExpr, ExpiryLoc,
-              getExprChain(LoanPropagation.buildOriginFlowChain(
-                  UF, LID, Cfg, OriginFlowChainFactory)));
-        }
+              getExprChain(LoanPropagation.buildOriginFlowChain(UF, LID, Cfg)));
 
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {
@@ -530,7 +527,7 @@ public:
   /// extracts the corresponding expressions for each origin. Origins that refer
   /// to declarations (rather than expressions) are skipped.
   llvm::SmallVector<const Expr *>
-  getExprChain(llvm::ImmutableList<OriginID> OriginFlowChain) {
+  getExprChain(llvm::SmallVector<OriginID> OriginFlowChain) {
     llvm::SmallVector<const Expr *> rs;
     for (const OriginID CurrOID : OriginFlowChain)
       if (const Expr *CurrExpr =

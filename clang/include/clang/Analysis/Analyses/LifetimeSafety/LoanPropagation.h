@@ -48,14 +48,14 @@ public:
   /// The traversal follows OriginFlowFacts backwards to reconstruct the
   /// sequence of origins through which the loan flowed, ending at the origin
   /// where the loan was originally issued.
-  llvm::ImmutableList<OriginID> buildOriginFlowChain(
-      ProgramPoint StartPoint, const OriginID StartOID, const LoanID TargetLoan,
-      const CFG *Cfg,
-      llvm::ImmutableList<OriginID>::Factory &OriginFlowChainFactory) const;
+  llvm::SmallVector<OriginID> buildOriginFlowChain(ProgramPoint StartPoint,
+                                                   const OriginID StartOID,
+                                                   const LoanID TargetLoan,
+                                                   const CFG *Cfg) const;
 
-  llvm::ImmutableList<OriginID> buildOriginFlowChain(
-      const UseFact *UF, const LoanID TargetLoan, const CFG *Cfg,
-      llvm::ImmutableList<OriginID>::Factory &OriginFlowChainFactory) const;
+  llvm::SmallVector<OriginID> buildOriginFlowChain(const UseFact *UF,
+                                                   const LoanID TargetLoan,
+                                                   const CFG *Cfg) const;
 
 private:
   class Impl;

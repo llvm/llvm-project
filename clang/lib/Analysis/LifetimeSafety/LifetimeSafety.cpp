@@ -86,7 +86,6 @@ void LifetimeSafetyAnalysis::run() {
   ///    the analysis.
   /// 3. Collapse ExpireFacts belonging to same source location into a single
   ///    Fact.
-
   LoanPropagation = std::make_unique<LoanPropagationAnalysis>(
       Cfg, AC, *FactMgr, Factory.OriginMapFactory, Factory.LoanSetFactory);
 

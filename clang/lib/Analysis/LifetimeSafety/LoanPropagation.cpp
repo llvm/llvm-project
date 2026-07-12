@@ -204,10 +204,10 @@ public:
     return getLoans(getState(P), OID);
   }
 
-  llvm::ImmutableList<OriginID> buildOriginFlowChain(
-      ProgramPoint StartPoint, const OriginID StartOID, const LoanID TargetLoan,
-      const CFG *Cfg,
-      llvm::ImmutableList<OriginID>::Factory &OriginFlowChainFactory) const {
+  llvm::SmallVector<OriginID> buildOriginFlowChain(ProgramPoint StartPoint,
+                                                   const OriginID StartOID,
+                                                   const LoanID TargetLoan,
+                                                   const CFG *Cfg) const {
     assert(getLoans(StartOID, StartPoint).contains(TargetLoan) &&
            "TargetLoan must be present in the StartOID at the StartPoint");
 
@@ -231,6 +231,7 @@ public:
 
     llvm::SmallVector<DFSNode> PendingStates;
     llvm::SmallSet<SearchState, 16> VistedStates;
+    llvm::ImmutableList<OriginID>::Factory OriginFlowChainFactory;
     PendingStates.push_back(
         {{EndBlock, StartOID}, OriginFlowChainFactory.getEmptyList()});
 
@@ -250,8 +251,12 @@ public:
       }
 
       // If we found the IssueFact, we're done
-      if (Complete)
-        return CurrNode.OriginFlowChain;
+      if (Complete) {
+        llvm::SmallVector<OriginID> Chain;
+        for (OriginID OID : CurrNode.OriginFlowChain)
+          Chain.push_back(OID);
+        return Chain;
+      }
 
       // Only explore predecessor blocks where the target loan is present in the
       // current origin.
@@ -267,14 +272,14 @@ public:
                      "without reaching IssueFact");
   }
 
-  llvm::ImmutableList<OriginID> buildOriginFlowChain(
-      const UseFact *UF, const LoanID TargetLoan, const CFG *Cfg,
-      llvm::ImmutableList<OriginID>::Factory &OriginFlowChainFactory) const {
+  llvm::SmallVector<OriginID> buildOriginFlowChain(const UseFact *UF,
+                                                   const LoanID TargetLoan,
+                                                   const CFG *Cfg) const {
     for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
          Cur = Cur->peelOuterOrigin())
       if (getLoans(Cur->getOuterOriginID(), UF).contains(TargetLoan))
         return buildOriginFlowChain(UF, Cur->getOuterOriginID(), TargetLoan,
-                                    Cfg, OriginFlowChainFactory);
+                                    Cfg);
 
     return {};
   }
@@ -363,18 +368,14 @@ LoanSet LoanPropagationAnalysis::getLoans(OriginID OID, ProgramPoint P) const {
   return PImpl->getLoans(OID, P);
 }
 
-llvm::ImmutableList<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
+llvm::SmallVector<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
     ProgramPoint StartPoint, const OriginID StartOID, const LoanID TargetLoan,
-    const CFG *Cfg,
-    llvm::ImmutableList<OriginID>::Factory &OriginFlowChainFactory) const {
-  return PImpl->buildOriginFlowChain(StartPoint, StartOID, TargetLoan, Cfg,
-                                     OriginFlowChainFactory);
+    const CFG *Cfg) const {
+  return PImpl->buildOriginFlowChain(StartPoint, StartOID, TargetLoan, Cfg);
 }
 
-llvm::ImmutableList<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
-    const UseFact *UF, const LoanID TargetLoan, const CFG *Cfg,
-    llvm::ImmutableList<OriginID>::Factory &OriginFlowChainFactory) const {
-  return PImpl->buildOriginFlowChain(UF, TargetLoan, Cfg,
-                                     OriginFlowChainFactory);
+llvm::SmallVector<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
+    const UseFact *UF, const LoanID TargetLoan, const CFG *Cfg) const {
+  return PImpl->buildOriginFlowChain(UF, TargetLoan, Cfg);
 }
 } // namespace clang::lifetimes::internal
