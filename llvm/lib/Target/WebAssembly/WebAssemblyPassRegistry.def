@@ -1,0 +1,18 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file is used as the registry of passes that are part of the WebAssembly
+// backend.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef MACHINE_FUNCTION_PASS
+#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+MACHINE_FUNCTION_PASS("wasm-isel", WebAssemblyISelDAGToDAGPass(*this, getOptLevel()))
+#undef MACHINE_FUNCTION_PASS
