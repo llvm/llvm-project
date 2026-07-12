@@ -24060,19 +24060,54 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         const unsigned RBW = cast<VectorType>(R->getType())
                                  ->getElementType()
                                  ->getIntegerBitWidth();
-        if ((LBW < RBW && (!allConstant(E->getOperand(1)) ||
-                           any_of(
-                               E->getOperand(1),
-                               [&](Value *V) {
-                                 auto *CI = dyn_cast<ConstantInt>(V);
-                                 return !CI ||
-                                        CI->getValue().getActiveBits() > LBW;
-                               }))) ||
-            (LBW > RBW && allConstant(E->getOperand(0)) &&
-             all_of(E->getOperand(1), [&](Value *V) {
-               auto *CI = dyn_cast<ConstantInt>(V);
-               return CI && CI->getValue().getActiveBits() <= RBW;
-             }))) {
+        // Preserve the original bits whenever possible. However, for
+        // icmp signed_lhs, rhs, we must extend lhs to zext(signed_lhs)
+        // instead of truncate rhs to preserve the correct comparison
+        // result. Track whether the operation is signed and force the
+        // extension when it is.
+        auto NarrowOperandNonNeg = [&](unsigned OpIdx, unsigned BW) {
+          return all_of(E->getOperand(OpIdx), [&](Value *V) {
+            if (isa<PoisonValue>(V))
+              return true;
+            unsigned OrigBW = V->getType()->getScalarSizeInBits();
+            return MaskedValueIsZero(V, APInt::getOneBitSet(OrigBW, BW - 1),
+                                     SimplifyQuery(*DL));
+          });
+        };
+        auto ConstFitsNarrow = [&](Value *V, unsigned BW, bool OpSigned,
+                                   bool NarrowNonNeg) {
+          auto *CI = dyn_cast<ConstantInt>(V);
+          if (!CI)
+            return false;
+          if (OpSigned)
+            return CI->getValue().getSignificantBits() <= BW;
+          if (!cast<CmpInst>(VL0)->isSigned())
+            return CI->getValue().getActiveBits() <= BW;
+          return NarrowNonNeg && CI->getValue().getSignificantBits() <= BW;
+        };
+        bool ExpandNarrowOperand;
+        if (LBW < RBW) {
+          bool OpSigned = GetOperandSignedness(0);
+          bool NarrowNonNeg = !OpSigned && cast<CmpInst>(VL0)->isSigned() &&
+                              NarrowOperandNonNeg(0, LBW);
+          ExpandNarrowOperand =
+              !allConstant(E->getOperand(1)) ||
+              any_of(E->getOperand(1), [&](Value *V) {
+                return !ConstFitsNarrow(V, LBW, OpSigned, NarrowNonNeg);
+              });
+        } else if (LBW > RBW) {
+          bool OpSigned = GetOperandSignedness(1);
+          bool NarrowNonNeg = !OpSigned && cast<CmpInst>(VL0)->isSigned() &&
+                              NarrowOperandNonNeg(1, RBW);
+          ExpandNarrowOperand =
+              allConstant(E->getOperand(0)) &&
+              all_of(E->getOperand(0), [&](Value *V) {
+                return ConstFitsNarrow(V, RBW, OpSigned, NarrowNonNeg);
+              });
+        } else {
+          ExpandNarrowOperand = false;
+        }
+        if (ExpandNarrowOperand) {
           Type *CastTy = R->getType();
           L = Builder.CreateIntCast(L, CastTy, GetOperandSignedness(0));
         } else {
