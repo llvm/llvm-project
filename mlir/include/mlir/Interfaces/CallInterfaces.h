@@ -53,6 +53,7 @@ parseFunctionResultList(OpAsmParser &parser, SmallVectorImpl<Type> &resultTypes,
 /// signatures containing SSA region arguments (to parse these signatures, use
 /// function_interface_impl::parseFunctionSignature). When
 /// `mustParseEmptyResult`, `-> ()` is expected when there is no result type.
+/// Returns failure after emitting a diagnostic if the signature is malformed.
 ///
 ///   no-ssa-function-signature ::= `(` no-ssa-function-arg-list `)`
 ///                               -> function-result-list

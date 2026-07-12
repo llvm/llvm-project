@@ -254,8 +254,7 @@ func.func @call_missing_empty_result() {
 func.func private @standard_func_callee()
 
 func.func @call_missing_ptr_type(%arg : i8) {
-  // expected-error@+2 {{expected '('}}
-  // expected-error@+1 {{expected direct call to have 1 trailing type}}
+  // expected-error@+1 {{expected '('}}
   llvm.call @standard_func_callee(%arg) : !llvm.ptr, (i8) -> (i8)
   llvm.return
 }
@@ -271,8 +270,7 @@ func.func @call_non_pointer_type(%callee : !llvm.func<i8 (i8)>, %arg : i8) {
 // -----
 
 func.func @call_non_function_type(%callee : !llvm.ptr, %arg : i8) {
-  // expected-error@+2 {{expected '('}}
-  // expected-error@+1 {{expected trailing function type}}
+  // expected-error@+1 {{expected '('}}
   llvm.call %callee(%arg) : !llvm.ptr, !llvm.func<i8 (i8)>
   llvm.return
 }

@@ -1,5 +1,13 @@
 // RUN: fir-opt -split-input-file -verify-diagnostics --strict-fir-volatile-verifier %s
 
+func.func @call_missing_empty_result() {
+  // expected-error@+2{{expected '->' followed by function result list}}
+  fir.call @callee() : ()
+  return
+}
+
+// -----
+
 // expected-error@+1{{custom op 'fir.string_lit' must have character type}}
 %0 = fir.string_lit "Hello, World!"(13) : !fir.int<32>
 

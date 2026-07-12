@@ -1714,7 +1714,7 @@ mlir::ParseResult fir::CallOp::parse(mlir::OpAsmParser &parser,
   llvm::SmallVector<mlir::DictionaryAttr> resultAttrs;
   if (mlir::call_interface_impl::parseFunctionSignature(
           parser, argTypes, argAttrs, resTypes, resultAttrs))
-    return parser.emitError(parser.getNameLoc(), "expected function type");
+    return mlir::failure();
   mlir::FunctionType funcType =
       mlir::FunctionType::get(parser.getContext(), argTypes, resTypes);
   if (isDirect) {
