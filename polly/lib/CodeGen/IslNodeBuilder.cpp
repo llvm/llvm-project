@@ -510,6 +510,12 @@ void IslNodeBuilder::createForSequential(isl::ast_node_for For,
                                              GenSE->getSCEV(ValueUB));
 
   // Skip vectorize.enable for dist=1 FP loops; let the Loop Vectorizer decide.
+  // Note: llvm.loop.vectorize.enable=true has an additional property beyond
+  // requesting vectorization — it implicitly allows FP operation reordering
+  // (see https://github.com/llvm/llvm-project/issues/198726). This is a
+  // limitation of the metadata format: there is no way to separate the request
+  // for vectorization from the request for reassociating FP ops. We suppress
+  // the metadata here for loops where FP reordering would be harmful.
   bool SkipVectorizeEnableMetadata = hasLoopCarriedDependence(For, S);
 
   IV = createLoop(ValueLB, ValueUB, ValueInc, Builder, *GenLI, *GenDT,
