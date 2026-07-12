@@ -45,7 +45,7 @@ using namespace llvm;
 // for the purpose of testing with lit/llc ONLY.
 // This produces output which is not valid WebAssembly, and is not supported
 // by assemblers/disassemblers and other MC based tools.
-static cl::opt<bool> WasmDisableExplicitLocals(
+cl::opt<bool> WebAssembly::WasmDisableExplicitLocals(
     "wasm-disable-explicit-locals", cl::Hidden,
     cl::desc("WebAssembly: output implicit locals in"
              " instruction output for test purposes only."),
@@ -93,12 +93,12 @@ LLVMInitializeWebAssemblyTarget() {
   initializeGlobalISel(PR);
   initializeWebAssemblyPreLegalizerCombinerPass(PR);
   initializeWebAssemblyPostLegalizerCombinerPass(PR);
-  initializeWebAssemblyAddMissingPrototypesPass(PR);
-  initializeWebAssemblyLowerEmscriptenEHSjLjPass(PR);
+  initializeWebAssemblyAddMissingPrototypesLegacyPass(PR);
+  initializeWebAssemblyLowerEmscriptenEHSjLjLegacyPass(PR);
   initializeLowerGlobalDtorsLegacyPassPass(PR);
-  initializeFixFunctionBitcastsPass(PR);
-  initializeOptimizeReturnedPass(PR);
-  initializeWebAssemblyRefTypeMem2LocalPass(PR);
+  initializeWebAssemblyFixFunctionBitcastsLegacyPass(PR);
+  initializeWebAssemblyOptimizeReturnedLegacyPass(PR);
+  initializeWebAssemblyRefTypeMem2LocalLegacyPass(PR);
   initializeWebAssemblyArgumentMovePass(PR);
   initializeWebAssemblyAsmPrinterPass(PR);
   initializeWebAssemblySetP2AlignOperandsPass(PR);
@@ -134,6 +134,7 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
 
+using WebAssembly::WasmDisableExplicitLocals;
 using WebAssembly::WasmEnableEH;
 using WebAssembly::WasmEnableEmEH;
 using WebAssembly::WasmEnableEmSjLj;
@@ -486,18 +487,18 @@ FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
 
 void WebAssemblyPassConfig::addIRPasses() {
   // Add signatures to prototype-less function declarations
-  addPass(createWebAssemblyAddMissingPrototypes());
+  addPass(createWebAssemblyAddMissingPrototypesLegacyPass());
 
   // Lower .llvm.global_dtors into .llvm.global_ctors with __cxa_atexit calls.
   addPass(createLowerGlobalDtorsLegacyPass());
 
   // Fix function bitcasts, as WebAssembly requires caller and callee signatures
   // to match.
-  addPass(createWebAssemblyFixFunctionBitcasts());
+  addPass(createWebAssemblyFixFunctionBitcastsLegacyPass());
 
   // Optimize "returned" function attributes.
   if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createWebAssemblyOptimizeReturned());
+    addPass(createWebAssemblyOptimizeReturnedLegacyPass());
 
   // If exception handling is not enabled and setjmp/longjmp handling is
   // enabled, we lower invokes into calls and delete unreachable landingpad
@@ -517,13 +518,14 @@ void WebAssemblyPassConfig::addIRPasses() {
   // transformation algorithms with Emscripten SjLj, so we run
   // LowerEmscriptenEHSjLj pass also when Wasm SjLj is enabled.
   if (WasmEnableEmEH || WasmEnableEmSjLj || WasmEnableSjLj)
-    addPass(createWebAssemblyLowerEmscriptenEHSjLj());
+    addPass(createWebAssemblyLowerEmscriptenEHSjLjLegacyPass());
 
   // Expand indirectbr instructions to switches.
   addPass(createIndirectBrExpandPass());
 
   // Try to expand `vecreduce_{and, or}` into `{any, all}_true`.
-  addPass(createWebAssemblyReduceToAnyAllTrue(getWebAssemblyTargetMachine()));
+  addPass(createWebAssemblyReduceToAnyAllTrueLegacyPass(
+      getWebAssemblyTargetMachine()));
 
   TargetPassConfig::addIRPasses();
 }
@@ -531,7 +533,7 @@ void WebAssemblyPassConfig::addIRPasses() {
 void WebAssemblyPassConfig::addISelPrepare() {
   // We need to move reference type allocas to WASM_ADDRESS_SPACE_VAR so that
   // loads and stores are promoted to local.gets/local.sets.
-  addPass(createWebAssemblyRefTypeMem2Local());
+  addPass(createWebAssemblyRefTypeMem2LocalLegacyPass());
   // Lower atomics and TLS if necessary
   addPass(new CoalesceFeaturesAndStripAtomics(&getWebAssemblyTargetMachine()));
 
@@ -543,8 +545,8 @@ void WebAssemblyPassConfig::addISelPrepare() {
 
 bool WebAssemblyPassConfig::addInstSelector() {
   (void)TargetPassConfig::addInstSelector();
-  addPass(
-      createWebAssemblyISelDag(getWebAssemblyTargetMachine(), getOptLevel()));
+  addPass(createWebAssemblyISelDagLegacyPass(getWebAssemblyTargetMachine(),
+                                             getOptLevel()));
   // Run the argument-move pass immediately after the ScheduleDAG scheduler
   // so that we can fix up the ARGUMENT instructions before anything else
   // sees them in the wrong place.
