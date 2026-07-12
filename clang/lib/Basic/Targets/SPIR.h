@@ -288,8 +288,7 @@ public:
       SizeType = TargetInfo::UnsignedInt;
       PtrDiffType = IntPtrType = TargetInfo::SignedInt;
     } else {
-      assert(PointerWidth == 32 &&
-             "32-bit SPIR target requires a 32-bit host");
+      assert(PointerWidth == 32 && "32-bit SPIR target requires a 32-bit host");
     }
     // SPIR32 has support for atomic ops if atomic extension is enabled.
     // Take the maximum because it's possible the Host supports wider types.
@@ -313,8 +312,7 @@ public:
       SizeType = TargetInfo::UnsignedLong;
       PtrDiffType = IntPtrType = TargetInfo::SignedLong;
     } else {
-      assert(PointerWidth == 64 &&
-             "64-bit SPIR target requires a 64-bit host");
+      assert(PointerWidth == 64 && "64-bit SPIR target requires a 64-bit host");
     }
     // SPIR64 has support for atomic ops if atomic extension is enabled.
     // Take the maximum because it's possible the Host supports wider types.
