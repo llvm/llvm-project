@@ -174,10 +174,6 @@ protected:
       PtrDiffType = HostTarget->getPtrDiffType(LangAS::Default);
       IntPtrType = HostTarget->getIntPtrType();
 
-      // Inherit Microsoft C mangling if the host uses it.
-      if (HostTarget->shouldUseMicrosoftCCforMangling())
-        UseMicrosoftManglingForC = true;
-
       // This is a bit of a lie, but it controls __GCC_ATOMIC_XXX_LOCK_FREE, and
       // we need those macros to be identical on host and device, because (among
       // other things) they affect which standard library classes are defined,
