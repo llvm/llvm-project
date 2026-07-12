@@ -18,6 +18,9 @@
 #include "GISel/WebAssemblyRegisterBankInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/CodeGen.h"
 
@@ -29,7 +32,14 @@ class FunctionPass;
 
 // LLVM IR passes.
 ModulePass *createWebAssemblyLowerEmscriptenEHSjLj();
-ModulePass *createWebAssemblyAddMissingPrototypes();
+
+class WebAssemblyAddMissingPrototypesPass
+    : public RequiredPassInfoMixin<WebAssemblyAddMissingPrototypesPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+ModulePass *createWebAssemblyAddMissingPrototypesLegacyPass();
 ModulePass *createWebAssemblyFixFunctionBitcasts();
 FunctionPass *createWebAssemblyOptimizeReturned();
 FunctionPass *createWebAssemblyRefTypeMem2Local();
@@ -48,8 +58,14 @@ FunctionPass *createWebAssemblyPreLegalizerCombiner();
 void initializeWebAssemblyPreLegalizerCombinerPass(PassRegistry &);
 
 // ISel and immediate followup passes.
-FunctionPass *createWebAssemblyISelDag(WebAssemblyTargetMachine &TM,
-                                       CodeGenOptLevel OptLevel);
+class WebAssemblyISelDAGToDAGPass : public SelectionDAGISelPass {
+public:
+  WebAssemblyISelDAGToDAGPass(WebAssemblyTargetMachine &TM,
+                              CodeGenOptLevel OptLevel);
+};
+
+FunctionPass *createWebAssemblyISelDagLegacyPass(WebAssemblyTargetMachine &TM,
+                                                 CodeGenOptLevel OptLevel);
 FunctionPass *createWebAssemblyArgumentMove();
 FunctionPass *createWebAssemblySetP2AlignOperands();
 FunctionPass *createWebAssemblyCleanCodeAfterTrap();
@@ -78,7 +94,7 @@ ModulePass *createWebAssemblyMCLowerPrePass();
 void initializeFixFunctionBitcastsPass(PassRegistry &);
 void initializeOptimizeReturnedPass(PassRegistry &);
 void initializeWebAssemblyRefTypeMem2LocalPass(PassRegistry &);
-void initializeWebAssemblyAddMissingPrototypesPass(PassRegistry &);
+void initializeWebAssemblyAddMissingPrototypesLegacyPass(PassRegistry &);
 void initializeWebAssemblyArgumentMovePass(PassRegistry &);
 void initializeWebAssemblyAsmPrinterPass(PassRegistry &);
 void initializeWebAssemblyCleanCodeAfterTrapPass(PassRegistry &);
