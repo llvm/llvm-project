@@ -4,6 +4,9 @@
 Generic Opcodes
 ===============
 
+.. contents::
+   :local:
+
 .. note::
 
   This documentation does not yet fully account for vectors. Many of the

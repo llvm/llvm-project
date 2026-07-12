@@ -1,5 +1,9 @@
 # Advanced Build Configurations
 
+```{contents}
+:local:
+```
+
 ## Introduction
 
 [CMake](http://www.cmake.org/) is a cross-platform build-generator tool. CMake

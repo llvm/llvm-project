@@ -3,6 +3,9 @@ CodeView Symbol Records
 =====================================
 
 
+.. contents::
+   :local:
+
 .. _symbols_intro:
 
 Introduction

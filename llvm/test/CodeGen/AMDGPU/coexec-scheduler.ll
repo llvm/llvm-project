@@ -6,6 +6,8 @@
 define amdgpu_kernel void @ds_wmma(ptr addrspace(3) %base, ptr addrspace(1) %out, i1 %br0, i32 %delta) local_unnamed_addr #0 {
 ; COEXEC-LABEL: ds_wmma:
 ; COEXEC:       ; %bb.0: ; %entry
+; COEXEC-NEXT:    global_wb
+; COEXEC-NEXT:    v_nop
 ; COEXEC-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; COEXEC-NEXT:    v_mov_b32_e32 v0, 0
 ; COEXEC-NEXT:    s_clause 0x1
@@ -91,6 +93,8 @@ define amdgpu_kernel void @ds_wmma(ptr addrspace(3) %base, ptr addrspace(1) %out
 ;
 ; GCN-LABEL: ds_wmma:
 ; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    global_wb
+; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    s_clause 0x1
 ; GCN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x10 nv
@@ -247,6 +251,8 @@ end:
 define amdgpu_kernel void @ds_wmma_permute(ptr addrspace(3) %base, ptr addrspace(3) %base1, ptr addrspace(1) %out, i1 %br0, i32 %delta) local_unnamed_addr #0 {
 ; COEXEC-LABEL: ds_wmma_permute:
 ; COEXEC:       ; %bb.0: ; %entry
+; COEXEC-NEXT:    global_wb
+; COEXEC-NEXT:    v_nop
 ; COEXEC-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; COEXEC-NEXT:    s_mov_b32 s6, 0
 ; COEXEC-NEXT:    s_clause 0x1
@@ -363,6 +369,8 @@ define amdgpu_kernel void @ds_wmma_permute(ptr addrspace(3) %base, ptr addrspace
 ;
 ; GCN-LABEL: ds_wmma_permute:
 ; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    global_wb
+; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    s_clause 0x1
 ; GCN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x10 nv

@@ -2,6 +2,9 @@
 Vectorization Plan
 ==================
 
+.. contents::
+   :local:
+
 Abstract
 ========
 The vectorization transformation can be rather complicated, involving several

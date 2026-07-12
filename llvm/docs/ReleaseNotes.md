@@ -6,7 +6,8 @@ ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
 
 # LLVM {{env.config.release}} Release Notes
 
-
+```{contents}
+```
 
 ````{only} PreRelease
 ```{warning} These are in-progress notes for the upcoming LLVM {{env.config.release}}

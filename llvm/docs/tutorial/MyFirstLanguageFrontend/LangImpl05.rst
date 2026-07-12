@@ -2,6 +2,9 @@
 Kaleidoscope: Extending the Language: Control Flow
 ==================================================
 
+.. contents::
+   :local:
+
 Chapter 5 Introduction
 ======================
 

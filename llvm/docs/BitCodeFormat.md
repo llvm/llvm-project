@@ -1,6 +1,9 @@
 # LLVM Bitcode File Format
 
+```{contents}
+:local:
 
+```
 
 ## Abstract
 

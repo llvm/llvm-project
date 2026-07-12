@@ -1,5 +1,9 @@
 # Control Flow Verification Tool Design Document
 
+```{contents}
+:local:
+```
+
 ## Objective
 
 This document provides an overview of an external tool to verify the protection

@@ -1,6 +1,8 @@
 # LLVM Extensions
 
-
+```{contents}
+:local:
+```
 
 ```{toctree}
 :hidden:

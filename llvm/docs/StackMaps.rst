@@ -2,6 +2,10 @@
 Stack maps and patch points in LLVM
 ===================================
 
+.. contents::
+   :local:
+   :depth: 2
+
 Definitions
 ===========
 

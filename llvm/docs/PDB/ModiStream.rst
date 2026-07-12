@@ -2,6 +2,9 @@
 The Module Information Stream
 =====================================
 
+.. contents::
+   :local:
+
 .. _modi_stream_intro:
 
 Introduction
