@@ -13,9 +13,10 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/SmallVector.h"
 #include <optional>
 
-namespace clang ::lifetimes {
+namespace clang::lifetimes {
 
 // This function is needed because Decl::isInStdNamespace will return false for
 // iterators in some STL implementations due to them being defined in a
@@ -60,6 +61,10 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 
 using LifetimeBoundParamInfo =
     llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
+
+/// Returns the arguments corresponding to Call, including the implicit object
+/// argument as argument 0 for instance member calls.
+llvm::SmallVector<const Expr *, 4> getLifetimeSafetyCallArgs(const Expr *Call);
 
 /// Returns the lifetimebound parameter corresponding to argument I.
 /// For instance methods, argument 0 is the implicit object argument.

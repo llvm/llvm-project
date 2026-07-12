@@ -232,8 +232,7 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
       return;
     }
   }
-  handleFunctionCall(CCE, CCE->getConstructor(),
-                     {CCE->getArgs(), CCE->getNumArgs()},
+  handleFunctionCall(CCE, CCE->getConstructor(), getLifetimeSafetyCallArgs(CCE),
                      /*IsGslConstruction=*/false);
 }
 
@@ -257,18 +256,13 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
       isGslOwnerType(MCE->getImplicitObjectArgument()->getType())) {
     // The argument is the implicit object itself.
     handleFunctionCall(MCE, MCE->getMethodDecl(),
-                       {MCE->getImplicitObjectArgument()},
+                       getLifetimeSafetyCallArgs(MCE),
                        /*IsGslConstruction=*/true);
     return;
   }
   if (const CXXMethodDecl *Method = MCE->getMethodDecl()) {
-    // Construct the argument list, with the implicit 'this' object as the
-    // first argument.
-    llvm::SmallVector<const Expr *, 4> Args;
-    Args.push_back(MCE->getImplicitObjectArgument());
-    Args.append(MCE->getArgs(), MCE->getArgs() + MCE->getNumArgs());
-
-    handleFunctionCall(MCE, Method, Args, /*IsGslConstruction=*/false);
+    handleFunctionCall(MCE, Method, getLifetimeSafetyCallArgs(MCE),
+                       /*IsGslConstruction=*/false);
   }
 }
 
@@ -289,8 +283,7 @@ void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
 }
 
 void FactsGenerator::VisitCallExpr(const CallExpr *CE) {
-  handleFunctionCall(CE, CE->getDirectCallee(),
-                     {CE->getArgs(), CE->getNumArgs()});
+  handleFunctionCall(CE, CE->getDirectCallee(), getLifetimeSafetyCallArgs(CE));
 }
 
 void FactsGenerator::VisitCXXNullPtrLiteralExpr(
@@ -637,12 +630,8 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     }
   }
 
-  ArrayRef<const Expr *> Args(OCE->getArgs(), OCE->getNumArgs());
-  // For `static operator()`, the first argument is the object argument,
-  // remove it from the argument list to avoid off-by-one errors.
-  if (OCE->getOperator() == OO_Call && OCE->getDirectCallee()->isStatic())
-    Args = Args.slice(1);
-  handleFunctionCall(OCE, OCE->getDirectCallee(), Args);
+  handleFunctionCall(OCE, OCE->getDirectCallee(),
+                     getLifetimeSafetyCallArgs(OCE));
 }
 
 void FactsGenerator::VisitCXXFunctionalCastExpr(
@@ -899,7 +888,7 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
     // This could be a new borrow.
     // TODO: Add code example here.
     handleFunctionCall(CCE, CCE->getConstructor(),
-                       {CCE->getArgs(), CCE->getNumArgs()},
+                       getLifetimeSafetyCallArgs(CCE),
                        /*IsGslConstruction=*/true);
   }
 }

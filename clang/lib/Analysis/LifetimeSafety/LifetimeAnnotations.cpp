@@ -149,6 +149,29 @@ static bool isExprInCallArg(const Expr *Arg, const Expr *Source) {
   return false;
 }
 
+llvm::SmallVector<const Expr *, 4> getLifetimeSafetyCallArgs(const Expr *Call) {
+  llvm::SmallVector<const Expr *, 4> Args;
+  if (!Call)
+    return Args;
+
+  Call = Call->IgnoreParenImpCasts();
+  if (const auto *CCE = dyn_cast<CXXConstructExpr>(Call)) {
+    Args.append(CCE->getArgs(), CCE->getArgs() + CCE->getNumArgs());
+  } else if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(Call)) {
+    Args.push_back(MCE->getImplicitObjectArgument());
+    Args.append(MCE->getArgs(), MCE->getArgs() + MCE->getNumArgs());
+  } else if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(Call)) {
+    Args.append(OCE->getArgs(), OCE->getArgs() + OCE->getNumArgs());
+    if (const FunctionDecl *FD = OCE->getDirectCallee();
+        FD && OCE->getOperator() == OO_Call && FD->isStatic())
+      Args.erase(Args.begin());
+  } else if (const auto *CE = dyn_cast<CallExpr>(Call)) {
+    Args.append(CE->getArgs(), CE->getArgs() + CE->getNumArgs());
+  }
+
+  return Args;
+}
+
 std::optional<LifetimeBoundParamInfo>
 getLifetimeBoundParamInfoForCallArg(const Expr *Call, const Expr *Source) {
   if (!Call || !Source)
@@ -157,28 +180,21 @@ getLifetimeBoundParamInfoForCallArg(const Expr *Call, const Expr *Source) {
   Call = Call->IgnoreParenImpCasts();
 
   const FunctionDecl *FD = nullptr;
-  llvm::SmallVector<const Expr *, 4> Args;
 
   if (const auto *CCE = dyn_cast<CXXConstructExpr>(Call)) {
     FD = CCE->getConstructor();
-    Args.append(CCE->getArgs(), CCE->getArgs() + CCE->getNumArgs());
   } else if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(Call)) {
     FD = MCE->getMethodDecl();
-    Args.push_back(MCE->getImplicitObjectArgument());
-    Args.append(MCE->getArgs(), MCE->getArgs() + MCE->getNumArgs());
   } else if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(Call)) {
     FD = OCE->getDirectCallee();
-    Args.append(OCE->getArgs(), OCE->getArgs() + OCE->getNumArgs());
-    if (FD && OCE->getOperator() == OO_Call && FD->isStatic())
-      Args.erase(Args.begin());
   } else if (const auto *CE = dyn_cast<CallExpr>(Call)) {
     FD = CE->getDirectCallee();
-    Args.append(CE->getArgs(), CE->getArgs() + CE->getNumArgs());
   }
 
   if (!FD)
     return std::nullopt;
 
+  llvm::SmallVector<const Expr *, 4> Args = getLifetimeSafetyCallArgs(Call);
   for (unsigned I = 0; I < Args.size(); ++I)
     if (isExprInCallArg(Args[I], Source))
       if (std::optional<LifetimeBoundParamInfo> Info =

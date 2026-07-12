@@ -664,6 +664,26 @@ private:
     return CurrExpr->getSourceRange() != LastExpr->getSourceRange();
   }
 
+  bool shouldCarryHiddenLifetimeBound(const Expr *HiddenExpr,
+                                      const Expr *LastExpr) {
+    HiddenExpr = HiddenExpr->IgnoreImpCasts();
+    LastExpr = LastExpr->IgnoreImpCasts();
+
+    SourceRange HiddenRange = HiddenExpr->getSourceRange();
+    SourceRange LastRange = LastExpr->getSourceRange();
+    if (HiddenRange == LastRange)
+      return true;
+    if (HiddenRange.isInvalid() || LastRange.isInvalid())
+      return false;
+
+    const SourceManager &SM = S.getSourceManager();
+    auto IsBeforeOrEqual = [&SM](SourceLocation LHS, SourceLocation RHS) {
+      return LHS == RHS || SM.isBeforeInTranslationUnit(LHS, RHS);
+    };
+    return IsBeforeOrEqual(HiddenRange.getBegin(), LastRange.getBegin()) &&
+           IsBeforeOrEqual(LastRange.getEnd(), HiddenRange.getEnd());
+  }
+
   void reportAliasingChain(llvm::ArrayRef<const Expr *> OriginExprChain) {
     if (OriginExprChain.empty())
       return;
@@ -676,7 +696,8 @@ private:
       std::optional<LifetimeBoundParamInfo> LifetimeBound =
           getLifetimeBoundParamInfoForCallArg(CurrExpr, LastExpr);
       if (!shouldShowInAliasChain(CurrExpr, LastExpr)) {
-        if (!HiddenLifetimeBound && LifetimeBound)
+        if (!HiddenLifetimeBound && LifetimeBound &&
+            shouldCarryHiddenLifetimeBound(CurrExpr, LastExpr))
           HiddenLifetimeBound = LifetimeBound;
         continue;
       }
