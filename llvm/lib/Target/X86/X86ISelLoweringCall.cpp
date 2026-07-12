@@ -2590,6 +2590,17 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
              Callee.getValueType() == MVT::i32) {
     // Zero-extend the 32-bit Callee address into a 64-bit according to x32 ABI
     Callee = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Callee);
+  } else if (Is64Bit && Callee.getValueType() == MVT::i32) {
+    // On 64-bit targets, extend 32-bit MS __ptr32 callees before the call.
+    // Use sign-extension for __sptr (or when CallBase is null)
+    // and zero-extension for __uptr
+    ISD::NodeType ExtOpc = ISD::SIGN_EXTEND;
+    if (CB) {
+      unsigned AS = CB->getCalledOperand()->getType()->getPointerAddressSpace();
+      if (AS == X86AS::PTR32_UPTR)
+        ExtOpc = ISD::ZERO_EXTEND;
+    }
+    Callee = DAG.getNode(ExtOpc, dl, MVT::i64, Callee);
   } else if (Is64Bit && CB && isCFGuardCall(CB)) {
     // We'll use a specific psuedo instruction for tail calls to control flow
     // guard functions to guarantee the instruction used for the call. To do
