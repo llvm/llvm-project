@@ -992,7 +992,34 @@ void AMDGPUToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   // In an offloading compilation the device toolchain must pick up the host's
   // system include paths, even when compiling device code.
   if (HostTC) {
+    // OpenMP offload code targeting AMDGPU frequently includes ROCm/HIP headers
+    // (e.g. <hip/hip_runtime.h>) directly. Add the ROCm include directories so
+    // those headers are found without requiring an explicit -I. The install is
+    // laid out as <root>/lib/llvm/bin/clang, so the HIP headers live in
+    // <root>/include (three levels up from the driver dir) and the toolchain's
+    // own headers in <root>/lib/llvm/include (one level up). For HIP these come
+    // from AddHIPIncludeArgs, so only do this for OpenMP.
+    const bool IsOpenMP =
+        DriverArgs.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                           options::OPT_fno_openmp, false);
+    const Driver &D = HostTC->getDriver();
+    if (IsOpenMP) {
+      CC1Args.push_back("-internal-isystem");
+      CC1Args.push_back(DriverArgs.MakeArgString(D.Dir + "/../include"));
+      CC1Args.push_back("-internal-isystem");
+      CC1Args.push_back(DriverArgs.MakeArgString(D.Dir + "/../../../include"));
+    }
+
     HostTC->AddClangSystemIncludeArgs(DriverArgs, CC1Args);
+
+    // The HIP headers pull in the cuda_wrappers headers, which must precede the
+    // standard C++ headers added above.
+    if (IsOpenMP && !DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+      SmallString<128> P(D.ResourceDir);
+      llvm::sys::path::append(P, "include", "cuda_wrappers");
+      CC1Args.push_back("-internal-isystem");
+      CC1Args.push_back(DriverArgs.MakeArgString(P));
+    }
     return;
   }
 
