@@ -253,6 +253,7 @@
 ; CHECK-O-NEXT: Running pass: LoopLoadEliminationPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
+; CHECK-O23-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O23-NEXT: Running pass: SLPVectorizerPass
 ; CHECK-O-NEXT: Running pass: VectorCombinePass
 ; CHECK-O-NEXT: Running pass: InstCombinePass

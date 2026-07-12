@@ -180,6 +180,7 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopLoadEliminationPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: SimplifyCFGPass
+; CHECK-O23-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O23-NEXT: Running pass: SLPVectorizerPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: VectorCombinePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: InstCombinePass
