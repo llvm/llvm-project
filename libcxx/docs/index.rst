@@ -229,6 +229,7 @@ Design Documents
    DesignDocs/UnspecifiedBehaviorRandomization
    DesignDocs/VisibilityMacros
    DesignDocs/TimeZone
+   DesignDocs/WindowsSupport
 
 
 Build Bots and Test Coverage
