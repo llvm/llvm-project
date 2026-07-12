@@ -40,6 +40,7 @@ class Type;
 class VPBasicBlock;
 class VPRegionBlock;
 class VPlan;
+class VPSlotTracker;
 class Value;
 
 namespace Intrinsic {
@@ -335,9 +336,16 @@ struct VPCostContext {
   VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
                 const VPlan &Plan, LoopVectorizationCostModel &CM,
                 TargetTransformInfo::TargetCostKind CostKind,
-                PredicatedScalarEvolution &PSE, const Loop *L)
+                PredicatedScalarEvolution &PSE, const Loop *L,
+                std::unique_ptr<VPSlotTracker> SlotTracker = nullptr)
       : TTI(TTI), TLI(TLI), LLVMCtx(Plan.getContext()), CM(CM),
-        CostKind(CostKind), PSE(PSE), L(L) {}
+        CostKind(CostKind), PSE(PSE), L(L)
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+        ,
+        SlotTracker(std::move(SlotTracker))
+#endif
+  {
+  }
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.
@@ -382,6 +390,15 @@ struct VPCostContext {
   /// Returns true if \p ID is a pseudo intrinsic that is dropped via
   /// scalarization rather than widened.
   static bool isFreeScalarIntrinsic(Intrinsic::ID ID);
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Return SlotTracker to re-use for printing, if set.
+  VPSlotTracker *getSlotTracker() const { return SlotTracker.get(); }
+
+private:
+  /// SlotTracker to re-use when printing.
+  const std::unique_ptr<VPSlotTracker> SlotTracker;
+#endif
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without

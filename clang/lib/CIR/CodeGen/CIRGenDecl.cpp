@@ -915,6 +915,7 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
   case Decl::ImplicitConceptSpecialization:
   case Decl::TopLevelStmt:
   case Decl::UsingPack:
+  case Decl::CXXExpansionStmt:
     cgm.errorNYI(d.getSourceRange(),
                  std::string("emitDecl: unhandled decl type: ") +
                      d.getDeclKindName());
