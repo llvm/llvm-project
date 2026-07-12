@@ -5,7 +5,7 @@ define float @test(float %arg, <2 x float> %arg1, i64 %arg2) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[ARG2:%.*]] to i16
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[ARG2]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[ARG2]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i64> [[TMP1]], <i64 32, i64 16>
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc <2 x i64> [[TMP2]] to <2 x i16>

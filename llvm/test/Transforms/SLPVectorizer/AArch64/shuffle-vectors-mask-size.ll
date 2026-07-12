@@ -5,7 +5,7 @@ define void @p(double %0) {
 ; CHECK-LABEL: define void @p(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double poison>, double [[TMP0]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double poison>, double [[TMP0]], i64 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <4 x double> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x double> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x double> [[TMP3]], zeroinitializer

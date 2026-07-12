@@ -14,14 +14,14 @@ define void @fun0(ptr %0, double %1) {
 ; CHECK-LABEL: define void @fun0(
 ; CHECK-SAME: ptr [[TMP0:%.*]], double [[TMP1:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[TMP3]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[TMP5]], splat (double 2.000000e+00)
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP6]], <2 x double> [[TMP6]], <2 x double> zeroinitializer)
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP6]], <2 x double> [[TMP6]], <2 x double> [[TMP7]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP8]])
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP9]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x double> [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP9]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x double> [[TMP9]], i64 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = fadd double [[TMP10]], [[TMP11]]
 ; CHECK-NEXT:    store double [[TMP12]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    ret void
@@ -50,7 +50,7 @@ define void @fun0(ptr %0, double %1) {
 define void @fun1(double %0) {
 ; CHECK-LABEL: define void @fun1(
 ; CHECK-SAME: double [[TMP0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[TMP0]], i64 1
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x double> [ <double poison, double undef>, [[TMP1:%.*]] ], [ poison, %[[BB3]] ]
@@ -64,10 +64,10 @@ define void @fun1(double %0) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP8]], <2 x double> [[TMP8]], <2 x double> [[TMP11]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP9]], <2 x double> [[TMP9]], <2 x double> [[TMP12]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = fcmp olt <2 x double> [[TMP13]], [[TMP2]]
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i1> [[TMP14]], i32 0
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i1> [[TMP14]], i32 1
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i1> [[TMP14]], i64 0
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i1> [[TMP14]], i64 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP15]], [[TMP16]]
-; CHECK-NEXT:    [[TMP18]] = insertelement <2 x double> poison, double [[TMP10]], i32 1
+; CHECK-NEXT:    [[TMP18]] = insertelement <2 x double> poison, double [[TMP10]], i64 1
 ; CHECK-NEXT:    br label %[[BB3]]
 ;
 ; REMARK-LABEL: Function: fun1
