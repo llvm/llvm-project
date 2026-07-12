@@ -218,3 +218,12 @@ namespace InvalidVirtualCast {
   static_assert((X *)(Y *)&z, ""); // both-error {{not an integral constant expression}} \
                                    // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
 }
+
+namespace DefinitionInBody {
+  int foo(); // both-note {{declared here}}
+  int foo() {
+    static_assert(foo() == 1); // both-error {{not an integral constant expression}} \
+                               // both-note {{non-constexpr function 'foo' cannot be used in a constant expression}}
+    return 5;
+  }
+}

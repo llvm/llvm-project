@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=infer-address-spaces -o - %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu-amd-amdhsa -passes=infer-address-spaces -o - %s | FileCheck %s
 
 ; Check that InferAddressSpaces's cloneInstructionWithNewAddressSpace() propagates
 ; the debug location to new addrspacecast instruction which casts `%p` in the following test.
