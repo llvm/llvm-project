@@ -14,12 +14,14 @@
 // SPIR64-LINUX-DAG: #define __PTRDIFF_TYPE__ long int
 // SPIR64-LINUX-DAG: #define __INTPTR_TYPE__ long int
 // SPIR64-LINUX-DAG: #define __SIZEOF_LONG__ 8
+// SPIR64-LINUX-DAG: #define __SIZEOF_POINTER__ 8
 
 // SPIR64 + Windows (LLP64)
 // SPIR64-WIN-DAG: #define __SIZE_TYPE__ long long unsigned int
 // SPIR64-WIN-DAG: #define __PTRDIFF_TYPE__ long long int
 // SPIR64-WIN-DAG: #define __INTPTR_TYPE__ long long int
 // SPIR64-WIN-DAG: #define __SIZEOF_LONG__ 4
+// SPIR64-WIN-DAG: #define __SIZEOF_POINTER__ 8
 
 // SPIR32 + Linux i386 (ILP32)
 // SPIR32-LINUX-DAG: #define __SIZE_TYPE__ unsigned int
@@ -31,3 +33,4 @@
 // SPIR64-NOHOST-DAG: #define __SIZE_TYPE__ long unsigned int
 // SPIR64-NOHOST-DAG: #define __PTRDIFF_TYPE__ long int
 // SPIR64-NOHOST-DAG: #define __INTPTR_TYPE__ long int
+// SPIR64-NOHOST-DAG: #define __SIZEOF_POINTER__ 8
