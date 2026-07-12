@@ -8,8 +8,8 @@ target triple = "aarch64--linux-gnu"
 define void @test1(ptr nocapture readonly %J, i32 %xmin, i32 %ymin) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[XMIN:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[YMIN:%.*]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[XMIN:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[YMIN:%.*]], i64 1
 ; CHECK-NEXT:    br label [[FOR_BODY3_LR_PH:%.*]]
 ; CHECK:       for.body3.lr.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = sitofp <2 x i32> [[TMP1]] to <2 x float>
@@ -47,8 +47,8 @@ for.end27:
 define void @test2(ptr nocapture readonly %J, i32 %xmin, i32 %ymin) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[XMIN:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[YMIN:%.*]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[XMIN:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[YMIN:%.*]], i64 1
 ; CHECK-NEXT:    br label [[FOR_BODY3_LR_PH:%.*]]
 ; CHECK:       for.body3.lr.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = sitofp <2 x i32> [[TMP1]] to <2 x float>

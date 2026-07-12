@@ -116,9 +116,9 @@ define bfloat @select_fcmp_ord(bfloat %a, bfloat %b) nounwind {
 ; CHECK-LABEL: select_fcmp_ord:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
 ; CHECK-NEXT:    feq.s a0, fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-NEXT:    feq.s a1, fa5, fa5
+; CHECK-NEXT:    feq.s a1, fa4, fa4
 ; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    bnez a0, .LBB7_2
 ; CHECK-NEXT:  # %bb.1:
@@ -232,9 +232,9 @@ define bfloat @select_fcmp_uno(bfloat %a, bfloat %b) nounwind {
 ; CHECK-LABEL: select_fcmp_uno:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
 ; CHECK-NEXT:    feq.s a0, fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-NEXT:    feq.s a1, fa5, fa5
+; CHECK-NEXT:    feq.s a1, fa4, fa4
 ; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    beqz a0, .LBB14_2
 ; CHECK-NEXT:  # %bb.1:

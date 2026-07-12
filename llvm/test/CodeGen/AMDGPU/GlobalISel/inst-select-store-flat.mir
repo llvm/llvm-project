@@ -883,44 +883,44 @@ body: |
     ; GFX7-LABEL: name: store_flat_v2p1
     ; GFX7: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5
     ; GFX7-NEXT: {{  $}}
-    ; GFX7-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; GFX7-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x p1>) = COPY $vgpr2_vgpr3_vgpr4_vgpr5
-    ; GFX7-NEXT: G_STORE [[COPY1]](<2 x p1>), [[COPY]](p1) :: (store (<2 x p1>))
+    ; GFX7-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX7-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr2_vgpr3_vgpr4_vgpr5
+    ; GFX7-NEXT: FLAT_STORE_DWORDX4 [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<2 x p1>))
     ;
     ; GFX8-LABEL: name: store_flat_v2p1
     ; GFX8: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x p1>) = COPY $vgpr2_vgpr3_vgpr4_vgpr5
-    ; GFX8-NEXT: G_STORE [[COPY1]](<2 x p1>), [[COPY]](p1) :: (store (<2 x p1>))
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr2_vgpr3_vgpr4_vgpr5
+    ; GFX8-NEXT: FLAT_STORE_DWORDX4 [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<2 x p1>))
     ;
     ; GFX9-LABEL: name: store_flat_v2p1
     ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x p1>) = COPY $vgpr2_vgpr3_vgpr4_vgpr5
-    ; GFX9-NEXT: G_STORE [[COPY1]](<2 x p1>), [[COPY]](p1) :: (store (<2 x p1>))
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr2_vgpr3_vgpr4_vgpr5
+    ; GFX9-NEXT: FLAT_STORE_DWORDX4 [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<2 x p1>))
     ;
     ; GFX10-LABEL: name: store_flat_v2p1
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5
     ; GFX10-NEXT: {{  $}}
-    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x p1>) = COPY $vgpr2_vgpr3_vgpr4_vgpr5
-    ; GFX10-NEXT: G_STORE [[COPY1]](<2 x p1>), [[COPY]](p1) :: (store (<2 x p1>))
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr2_vgpr3_vgpr4_vgpr5
+    ; GFX10-NEXT: FLAT_STORE_DWORDX4 [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<2 x p1>))
     ;
     ; GFX11-LABEL: name: store_flat_v2p1
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x p1>) = COPY $vgpr2_vgpr3_vgpr4_vgpr5
-    ; GFX11-NEXT: G_STORE [[COPY1]](<2 x p1>), [[COPY]](p1) :: (store (<2 x p1>))
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr2_vgpr3_vgpr4_vgpr5
+    ; GFX11-NEXT: FLAT_STORE_DWORDX4 [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<2 x p1>))
     ;
     ; GFX12-LABEL: name: store_flat_v2p1
     ; GFX12: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x p1>) = COPY $vgpr2_vgpr3_vgpr4_vgpr5
-    ; GFX12-NEXT: G_STORE [[COPY1]](<2 x p1>), [[COPY]](p1) :: (store (<2 x p1>))
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr2_vgpr3_vgpr4_vgpr5
+    ; GFX12-NEXT: FLAT_STORE_DWORDX4 [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<2 x p1>))
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(<2 x p1>) = COPY $vgpr2_vgpr3_vgpr4_vgpr5
     G_STORE %1, %0 :: (store (<2 x p1>), align 16, addrspace 0)
@@ -999,44 +999,44 @@ body: |
     ; GFX7-LABEL: name: store_flat_v2p3
     ; GFX7: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX7-NEXT: {{  $}}
-    ; GFX7-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; GFX7-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x p3>) = COPY $vgpr2_vgpr3
-    ; GFX7-NEXT: G_STORE [[COPY1]](<2 x p3>), [[COPY]](p1) :: (store (<2 x p3>))
+    ; GFX7-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX7-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX7-NEXT: FLAT_STORE_DWORDX2 [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<2 x p3>))
     ;
     ; GFX8-LABEL: name: store_flat_v2p3
     ; GFX8: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x p3>) = COPY $vgpr2_vgpr3
-    ; GFX8-NEXT: G_STORE [[COPY1]](<2 x p3>), [[COPY]](p1) :: (store (<2 x p3>))
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX8-NEXT: FLAT_STORE_DWORDX2 [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<2 x p3>))
     ;
     ; GFX9-LABEL: name: store_flat_v2p3
     ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x p3>) = COPY $vgpr2_vgpr3
-    ; GFX9-NEXT: G_STORE [[COPY1]](<2 x p3>), [[COPY]](p1) :: (store (<2 x p3>))
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX9-NEXT: FLAT_STORE_DWORDX2 [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<2 x p3>))
     ;
     ; GFX10-LABEL: name: store_flat_v2p3
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX10-NEXT: {{  $}}
-    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x p3>) = COPY $vgpr2_vgpr3
-    ; GFX10-NEXT: G_STORE [[COPY1]](<2 x p3>), [[COPY]](p1) :: (store (<2 x p3>))
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX10-NEXT: FLAT_STORE_DWORDX2 [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<2 x p3>))
     ;
     ; GFX11-LABEL: name: store_flat_v2p3
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x p3>) = COPY $vgpr2_vgpr3
-    ; GFX11-NEXT: G_STORE [[COPY1]](<2 x p3>), [[COPY]](p1) :: (store (<2 x p3>))
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX11-NEXT: FLAT_STORE_DWORDX2 [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<2 x p3>))
     ;
     ; GFX12-LABEL: name: store_flat_v2p3
     ; GFX12: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x p3>) = COPY $vgpr2_vgpr3
-    ; GFX12-NEXT: G_STORE [[COPY1]](<2 x p3>), [[COPY]](p1) :: (store (<2 x p3>))
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX12-NEXT: FLAT_STORE_DWORDX2 [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<2 x p3>))
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(<2 x p3>) = COPY $vgpr2_vgpr3
     G_STORE %1, %0 :: (store (<2 x p3>), align 8, addrspace 0)

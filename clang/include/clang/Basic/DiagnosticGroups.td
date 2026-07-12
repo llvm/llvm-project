@@ -412,6 +412,9 @@ def CXXPre26CompatPedantic :
   DiagGroup<"pre-c++26-compat-pedantic", [CXXPre26Compat]>;
 def : DiagGroup<"pre-c++2c-compat", [CXXPre26Compat]>;
 def : DiagGroup<"pre-c++2c-compat-pedantic", [CXXPre26CompatPedantic]>;
+def CXXPre29Compat : DiagGroup<"pre-c++2d-compat">;
+def CXXPre29CompatPedantic :
+  DiagGroup<"pre-c++2d-compat-pedantic", [CXXPre29Compat]>;
 
 def CXX98CompatBindToTemporaryCopy :
   DiagGroup<"c++98-compat-bind-to-temporary-copy">;
@@ -631,6 +634,13 @@ This warning may produce false-positives diagnostics when it cannot fully model 
   }];
 }
 
+def LifetimeSafetyInapplicableLifetimebound
+    : DiagGroup<"lifetime-safety-inapplicable-lifetimebound"> {
+  code Documentation = [{
+Detects uses of [[clang::lifetimebound]] that have no effect because the type of the annotated parameter cannot carry a lifetime.
+  }];
+}
+
 def LifetimeSafetyCrossTUMisplacedLifetimebound
     : DiagGroup<"lifetime-safety-cross-tu-misplaced-lifetimebound">;
 def LifetimeSafetyIntraTUMisplacedLifetimebound
@@ -656,6 +666,7 @@ def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
                                     LifetimeSafetyUseAfterScopeMoved,
                                     LifetimeSafetyReturnStackAddrMoved,
                                     LifetimeSafetyDanglingFieldMoved,
+                                    LifetimeSafetyDanglingGlobalMoved,
                                     LifetimeSafetyInvalidation]>;
 
 def LifetimeSafety : DiagGroup<"lifetime-safety",
@@ -665,10 +676,17 @@ Warnings to detect use-after-free and related temporal safety bugs based on life
   }];
 }
 
+def LifetimeSafetyCrossTUConstructorSuggestions
+    : DiagGroup<"lifetime-safety-cross-tu-constructor-suggestions">;
+def LifetimeSafetyIntraTUConstructorSuggestions
+    : DiagGroup<"lifetime-safety-intra-tu-constructor-suggestions">;
+
 def LifetimeSafetyCrossTUSuggestions
-    : DiagGroup<"lifetime-safety-cross-tu-suggestions">;
+    : DiagGroup<"lifetime-safety-cross-tu-suggestions",
+                [LifetimeSafetyCrossTUConstructorSuggestions]>;
 def LifetimeSafetyIntraTUSuggestions
-    : DiagGroup<"lifetime-safety-intra-tu-suggestions">;
+    : DiagGroup<"lifetime-safety-intra-tu-suggestions",
+                [LifetimeSafetyIntraTUConstructorSuggestions]>;
 def LifetimeSafetySuggestions
     : DiagGroup<"lifetime-safety-suggestions",
                 [LifetimeSafetyCrossTUSuggestions,
@@ -685,13 +703,29 @@ Detects misuse of [[clang::noescape]] annotation where the parameter escapes (fo
   }];
 }
 
-def LifetimeSafetyValidations : DiagGroup<"lifetime-safety-validations",
-                                          [LifetimeSafetyNoescape,
-                                           LifetimeSafetyLifetimeboundViolation,
-                                           LifetimeSafetyMisplacedLifetimebound]> {
+def LifetimeSafetyAnnotationPlacement
+    : DiagGroup<"lifetime-safety-annotation-placement",
+                [LifetimeSafetyInapplicableLifetimebound,
+                 LifetimeSafetyMisplacedLifetimebound]> {
   code Documentation = [{
-Verify function implementations adhere to the annotated lifetime contracts through lifetime safety
-like verifying [[clang::noescape]] and [[clang::lifetimebound]].
+Validates that lifetime annotations are placed on appropriate types and in appropriate locations.
+  }];
+}
+
+def LifetimeSafetyAnnotationVerification
+    : DiagGroup<"lifetime-safety-annotation-verification",
+                [LifetimeSafetyNoescape,
+                 LifetimeSafetyLifetimeboundViolation]> {
+  code Documentation = [{
+Verifies that function implementations adhere to their lifetime annotation contracts through dataflow analysis.
+  }];
+}
+
+def LifetimeSafetyValidations : DiagGroup<"lifetime-safety-validations",
+                                         [LifetimeSafetyAnnotationPlacement,
+                                          LifetimeSafetyAnnotationVerification]> {
+  code Documentation = [{
+Validates correct usage and adherence to lifetime safety annotations like [[clang::noescape]] and [[clang::lifetimebound]].
   }];
 }
 
@@ -1335,7 +1369,7 @@ def Conversion
 def Unused : DiagGroup<"unused",
                        [UnusedArgument, UnusedFunction, UnusedLabel,
                         // UnusedParameter, (matches GCC's behavior)
-                        // UnusedTemplate, (clean-up libc++ before enabling)
+                        UnusedTemplate,
                         // UnusedMemberFunction, (clean-up llvm before enabling)
                         UnusedPrivateField, UnusedLambdaCapture,
                         UnusedLocalTypedef, UnusedValue, UnusedVariable,
@@ -1548,6 +1582,10 @@ def CXX23 : DiagGroup<"c++23-extensions", [CXX23AttrsOnLambda]>;
 // A warning group for warnings about using C++26 features as extensions in
 // earlier C++ versions.
 def CXX26 : DiagGroup<"c++26-extensions">;
+
+// A warning group for warnings about using C++29 features as extensions in
+// earlier C++ versions.
+def CXX29 : DiagGroup<"c++2d-extensions">;
 
 def : DiagGroup<"c++0x-extensions", [CXX11]>;
 def : DiagGroup<"c++1y-extensions", [CXX14]>;
@@ -1948,7 +1986,7 @@ def BitIntExtension : DiagGroup<"bit-int-extension">;
 def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;
 
 // Warnings related to the "Scalable Static Analysis Framework" - SSAF.
-def ScalableStaticAnalysisFramework : DiagGroup<"scalable-static-analysis-framework">;
+def ScalableStaticAnalysis : DiagGroup<"scalable-static-analysis-framework">;
 
 // Warnings about using the non-standard extension having an explicit specialization
 // with a storage class specifier.

@@ -247,8 +247,12 @@ public:
   // Access to inferior stdio
   virtual int GetTerminalFileDescriptor() { return m_terminal_fd; }
 
-  // Stop id interface
+  /// Write up to \p len bytes from \p buf to the inferior's stdin.
+  virtual size_t WriteStdin(const void *buf, size_t len, Status &error) {
+    return 0;
+  }
 
+  // Stop id interface
   uint32_t GetStopID() const;
 
   // Callbacks for low-level process state changes

@@ -2144,6 +2144,7 @@ bool Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
   // If we have a digit separator, continue.
   if (C == '\'' && LangOpts.AllowLiteralDigitSeparator) {
     auto [Next, NextSize] = getCharAndSizeNoWarn(CurPtr + Size, LangOpts);
+    // A digit or non-digit.
     if (isAsciiIdentifierContinue(Next)) {
       if (!isLexingRawMode())
         Diag(CurPtr, LangOpts.CPlusPlus
@@ -2153,6 +2154,11 @@ bool Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
       CurPtr = ConsumeChar(CurPtr, NextSize, Result);
       return LexNumericConstant(Result, CurPtr);
     }
+  }
+
+  if (C == '$' && LangOpts.DollarIdents) {
+    CurPtr = ConsumeChar(CurPtr, Size, Result);
+    return LexNumericConstant(Result, CurPtr);
   }
 
   // If we have a UCN or UTF-8 character (perhaps in a ud-suffix), continue.
@@ -2179,7 +2185,7 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
   char C = getCharAndSize(CurPtr, Size);
   bool Consumed = false;
 
-  if (!isAsciiIdentifierStart(C)) {
+  if (!isAsciiIdentifierStart(C, LangOpts.DollarIdents)) {
     if (C == '\\' && tryConsumeIdentifierUCN(CurPtr, Size, Result))
       Consumed = true;
     else if (!isASCII(C) && tryConsumeIdentifierUTF8Char(CurPtr, Result))
@@ -2217,7 +2223,7 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
       while (true) {
         auto [Next, NextSize] =
             getCharAndSizeNoWarn(CurPtr + Consumed, LangOpts);
-        if (!isAsciiIdentifierContinue(Next)) {
+        if (!isAsciiIdentifierContinue(Next, LangOpts.DollarIdents)) {
           // End of suffix. Check whether this is on the allowed list.
           const StringRef CompleteSuffix(Buffer, Chars);
           IsUDSuffix =
@@ -2249,7 +2255,7 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
   Result.setFlag(Token::HasUDSuffix);
   while (true) {
     C = getCharAndSize(CurPtr, Size);
-    if (isAsciiIdentifierContinue(C)) {
+    if (isAsciiIdentifierContinue(C, LangOpts.DollarIdents)) {
       CurPtr = ConsumeChar(CurPtr, Size, Result);
     } else if (C == '\\' && tryConsumeIdentifierUCN(CurPtr, Size, Result)) {
     } else if (!isASCII(C) && tryConsumeIdentifierUTF8Char(CurPtr, Result)) {
@@ -2279,8 +2285,28 @@ bool Lexer::LexStringLiteral(Token &Result, const char *CurPtr,
   while (C != '"') {
     // Skip escaped characters.  Escaped newlines will already be processed by
     // getAndAdvanceChar.
-    if (C == '\\')
+    if (C == '\\') {
+      const char *SavedCurPtr = CurPtr;
       C = getAndAdvanceChar(CurPtr, Result);
+
+      // lex.header
+      //
+      // header-name:
+      //    ...
+      //    " q-char-sequence "
+      //    ...
+      // q-char-sequence:
+      //    q-char q-char-sequence[opt]
+      // q-char:
+      //    any member of the translation character set except new-line and
+      //    U+0022 quotation mark
+      //
+      // The implementation-defined semantics cannot be taken as causing '\' to
+      // "escape" the following " because there is no provision for " in a
+      // q-char-sequence.
+      if (ParsingFilename && C == '"')
+        CurPtr = SavedCurPtr;
+    }
 
     if (C == '\n' || C == '\r' ||             // Newline.
         (C == 0 && CurPtr-1 == BufferEnd)) {  // End of file.

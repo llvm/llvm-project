@@ -21,16 +21,16 @@ define void @bar(ptr %0, i64 %1, double %2, i64 %3, double %4, double %5, double
 ; CHECK-NEXT:    [[TMP19:%.*]] = fmul nnan double [[TMP18]], f0x3EF0001000100010
 ; CHECK-NEXT:    [[TMP20:%.*]] = fmul double [[TMP2]], [[TMP19]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = fadd double [[TMP4]], [[TMP20]]
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x double> poison, double [[TMP20]], i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x double> poison, double [[TMP20]], i64 0
 ; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <2 x double> [[TMP22]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <2 x double> poison, double [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <2 x double> [[TMP24]], double [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <2 x double> poison, double [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <2 x double> [[TMP24]], double [[TMP5]], i64 1
 ; CHECK-NEXT:    [[TMP26:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP23]], <2 x double> [[TMP14]], <2 x double> [[TMP25]])
 ; CHECK-NEXT:    [[TMP27:%.*]] = uitofp <2 x i16> [[TMP15]] to <2 x double>
-; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <2 x double> poison, double [[TMP2]], i32 1
-; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <2 x double> [[TMP28]], double [[TMP20]], i32 0
-; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <2 x double> poison, double [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <2 x double> [[TMP30]], double [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <2 x double> poison, double [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <2 x double> [[TMP28]], double [[TMP20]], i64 0
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <2 x double> poison, double [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <2 x double> [[TMP30]], double [[TMP8]], i64 1
 ; CHECK-NEXT:    [[TMP32:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP29]], <2 x double> [[TMP27]], <2 x double> [[TMP31]])
 ; CHECK-NEXT:    br label %[[R:.*]]
 ; CHECK:       [[R]]:

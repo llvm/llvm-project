@@ -1,5 +1,4 @@
-"""Test that lldb can invoke blocks and access variables inside them"""
-
+"""Test that lldb can invoke blocks and read variables captured by blocks."""
 
 import lldb
 from lldbsuite.test.lldbtest import *
@@ -7,79 +6,70 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class BlocksTestCase(TestBase):
-    lines = []
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-        # Find the line numbers to break at.
-        self.lines.append(line_number("main.c", "// Set breakpoint 0 here."))
-        self.lines.append(line_number("main.c", "// Set breakpoint 1 here."))
-        self.lines.append(line_number("main.c", "// Set breakpoint 2 here."))
-
-    def launch_common(self):
-        self.build()
-        exe = self.getBuildArtifact("a.out")
-        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
-
-        self.is_started = False
-
-        # Break inside the foo function which takes a bar_ptr argument.
-        for line in self.lines:
-            lldbutil.run_break_set_by_file_and_line(
-                self, "main.c", line, num_expected_locations=1, loc_exact=True
-            )
-
-        self.wait_for_breakpoint()
-
     @skipUnlessDarwin
-    def test_expr(self):
-        self.launch_common()
-
-        self.expect("expression a + b", VARIABLES_DISPLAYED_CORRECTLY, substrs=["= 7"])
-
-        self.expect("expression c", VARIABLES_DISPLAYED_CORRECTLY, substrs=["= 1"])
-
-        self.wait_for_breakpoint()
-
-        # This should display correctly.
-        self.expect(
-            "expression (int)neg (-12)", VARIABLES_DISPLAYED_CORRECTLY, substrs=["= 12"]
+    def test(self):
+        self.build()
+        src = lldb.SBFileSpec("main.c")
+        _, process, _, _ = lldbutil.run_to_source_breakpoint(
+            self, "Set breakpoint 0 here.", src
         )
 
-        self.wait_for_breakpoint()
+        # Inside the 'add' block we can read its arguments and the captured
+        # variable 'c'.
+        self.expect_expr("a + b", result_type="int", result_value="7")
+        self.expect_expr("c", result_type="int", result_value="1")
 
+        # Calling a block from the expression evaluator works.
+        lldbutil.continue_to_source_breakpoint(
+            self, process, "Set breakpoint 1 here.", src
+        )
+        self.expect_expr("(int)neg(-12)", result_type="int", result_value="12")
+
+        # A block taking a struct argument can be called from the evaluator.
+        lldbutil.continue_to_source_breakpoint(
+            self, process, "Set breakpoint 2 here.", src
+        )
         self.expect_expr("h(cg)", result_type="int", result_value="42")
+
+        # Inside a block we can read captured variables of various types.
+        lldbutil.continue_to_source_breakpoint(
+            self, process, "Set breakpoint 3 here.", src
+        )
+        self.expect_var_path("captured_char", type="char", value="'a'")
+        self.expect_var_path("captured_int", type="int", value="42")
+        self.expect_var_path("captured_double", type="double", value="3.5")
+        self.expect_var_path("*captured_ptr", type="int", value="42")
+        self.expect_var_path("captured_struct.x", type="int", value="10")
+        self.expect_var_path("captured_struct.y", type="int", value="20")
+
+        # The same captured variables are also reachable from the expression
+        # evaluator.
+        self.expect_expr("captured_char", result_type="char", result_value="'a'")
+        self.expect_expr("captured_int", result_type="int", result_value="42")
+        self.expect_expr("captured_double", result_type="double", result_value="3.5")
+        self.expect_expr("*captured_ptr", result_type="int", result_value="42")
+        self.expect_expr("captured_struct.x", result_type="int", result_value="10")
 
     @skipUnlessDarwin
     def test_define(self):
-        self.launch_common()
+        """Test defining and calling a block from the expression evaluator."""
+        self.build()
+        lldbutil.run_to_source_breakpoint(
+            self, "Set breakpoint 0 here.", lldb.SBFileSpec("main.c")
+        )
 
         self.runCmd(
             "expression int (^$add)(int, int) = ^int(int a, int b) { return a + b; };"
         )
-        self.expect(
-            "expression $add(2,3)", VARIABLES_DISPLAYED_CORRECTLY, substrs=[" = 5"]
-        )
+        self.expect_expr("$add(2,3)", result_type="int", result_value="5")
 
+        # Blocks defined in the expression evaluator cannot capture persistent
+        # variables.
         self.runCmd("expression int $a = 3")
         self.expect(
             "expression int (^$addA)(int) = ^int(int b) { return $a + b; };",
             "Proper error is reported on capture",
             error=True,
-        )
-
-    def wait_for_breakpoint(self):
-        if not self.is_started:
-            self.is_started = True
-            self.runCmd("process launch", RUN_SUCCEEDED)
-        else:
-            self.runCmd("process continue", RUN_SUCCEEDED)
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect(
-            "thread list",
-            STOPPED_DUE_TO_BREAKPOINT,
-            substrs=["stopped", "stop reason = breakpoint"],
         )

@@ -3,7 +3,6 @@ set(LLVM_LINK_COMPONENTS
   BitWriter
   Core
   BinaryFormat
-  FrontendOffloading
   MC
   Target
   TransformUtils

@@ -15,6 +15,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/visit.h"
+#include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
@@ -40,9 +41,19 @@ namespace Fortran::semantics {
 using namespace Fortran::semantics::omp;
 
 void OmpStructureChecker::Enter(const parser::OmpClause::When &x) {
-  CheckAllowedClause(llvm::omp::Clause::OMPC_when);
   OmpVerifyModifiers(
       x.v, llvm::omp::OMPC_when, GetContext().clauseSource, context_);
+  // Record this WHEN clause's context selector so the variant directive it
+  // controls can be paired with it for static-applicability matching.
+  if (const auto &modifiers{std::get<0>(x.v.t)};
+      modifiers && modifiers->size() == 1) {
+    currentWhenSelector_ =
+        &std::get<parser::modifier::OmpContextSelector>(modifiers->front().u);
+  }
+}
+
+void OmpStructureChecker::Leave(const parser::OmpClause::When &) {
+  currentWhenSelector_ = nullptr;
 }
 
 void OmpStructureChecker::CheckContextSelectorSpecification(
@@ -549,7 +560,7 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
   // METADIRECTIVE.
   // In other cases it's a part of other constructs that handle directive
   // context stack by themselves.
-  if (!GetDirectiveNest(MetadirectiveNest)) {
+  if (!GetDirectiveNest(MetadirectiveNest) && !GetDirectiveNest(ApplyNest)) {
     return;
   }
 
@@ -575,33 +586,188 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
 
   PushContextAndClauseSets(
       std::get<parser::OmpDirectiveName>(x.t).source, dirId);
+
+  // Record each variant directive. A loop-associated one is later validated
+  // against the loop nest that follows the metadirective.
+  if (dirId != llvm::omp::Directive::OMPD_metadirective) {
+    metadirectiveLoopVariants_.push_back({currentWhenSelector_, &x});
+  }
 }
 
 void OmpStructureChecker::Leave(const parser::OmpDirectiveSpecification &x) {
-  if (GetDirectiveNest(MetadirectiveNest)) {
+  if (GetDirectiveNest(MetadirectiveNest) || GetDirectiveNest(ApplyNest)) {
     dirContext_.pop_back();
   }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpMetadirectiveDirective &x) {
   EnterDirectiveNest(MetadirectiveNest);
-  PushContextAndClauseSets(
-      x.v.source, llvm::omp::Directive::OMPD_metadirective);
+  metadirectiveLoopVariants_.clear();
 }
 
 void OmpStructureChecker::Leave(const parser::OmpMetadirectiveDirective &) {
   ExitDirectiveNest(MetadirectiveNest);
-  dirContext_.pop_back();
 }
 
-void OmpStructureChecker::Enter(
-    const parser::OmpDelimitedMetadirectiveDirective &x) {
-  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_metadirective);
+// Return true if the variant guarded by `selector` might be selected, so its
+// associated loop must still be checked. Skip it only when it is provably
+// unselectable.
+static bool mayVariantBeSelected(
+    const parser::traits::OmpContextSelectorSpecification *selector,
+    SemanticsContext &context, OmpVariantMatchContext &matchContext) {
+  if (!selector ||
+      FindUnsupportedSelectorFeature(*selector, context) !=
+          UnsupportedSelectorFeature::None) {
+    return true;
+  }
+  llvm::omp::VariantMatchInfo vmi;
+  (void)MakeVariantMatchInfo(vmi, *selector, context);
+  const auto &required{vmi.RequiredTraits};
+  using TP = llvm::omp::TraitProperty;
+  // In the default "match all" mode, a required trait that can never match
+  // (e.g. a compile-time-false condition or an invalid device/implementation
+  // property) makes the variant unselectable. match_any and match_none tolerate
+  // such traits, so only reject variants in the default mode.
+  bool matchAll{
+      !required.test(unsigned(TP::implementation_extension_match_any)) &&
+      !required.test(unsigned(TP::implementation_extension_match_none))};
+  if (matchAll &&
+      (required.test(unsigned(TP::user_condition_false)) ||
+          required.test(unsigned(TP::invalid)))) {
+    return false;
+  }
+  // Matching a device or implementation selector requires a known target.
+  if (context.targetTriple().empty()) {
+    return true;
+  }
+  return llvm::omp::isVariantApplicableInContext(
+      vmi, matchContext, /*DeviceOrImplementationSetOnly=*/true);
 }
 
-void OmpStructureChecker::Leave(
-    const parser::OmpDelimitedMetadirectiveDirective &) {
-  dirContext_.pop_back();
+// Check a loop-associated metadirective's variants against the loop nest they
+// apply to. The nest is not attached to the directive in the parse tree. It is
+// the next executable construct, either a following sibling or the first
+// execution-part construct for a declarative metadirective.
+void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
+  if (metadirectiveLoopVariants_.empty()) {
+    return;
+  }
+  if (parser::Unwrap<parser::CompilerDirective>(x)) {
+    return;
+  }
+  // This is the first construct after the metadirective. It consumes the
+  // pending variants, whether or not it is a loop nest.
+  if (!parser::Unwrap<parser::DoConstruct>(x)) {
+    // A non-loop construct follows, so a loop-associated variant has no loop
+    // nest to associate with.
+    CheckMetadirectiveVariantsWithoutLoop();
+    return;
+  }
+
+  // A loop nest follows. Take the pending variants off the worklist and
+  // validate them against it.
+  std::vector<MetadirectiveLoopVariant> variants;
+  variants.swap(metadirectiveLoopVariants_);
+
+  unsigned version{context_.langOptions().OpenMPVersion};
+  LoopSequence sequence(x, version, /*allowAllLoops=*/true, &context_);
+  const parser::DoConstruct &rootLoop{*parser::Unwrap<parser::DoConstruct>(x)};
+  const auto &[haveSemantic, havePerfect]{sequence.depth()};
+
+  const auto MsgRequiresCanonical{
+      "This construct requires a canonical loop %s"_err_en_US};
+  const auto MsgNotValidAffectedLoop{
+      "%s is not a valid affected loop"_because_en_US};
+
+  auto checkRootLoopCanonical =
+      [&](const parser::OmpDirectiveSpecification &spec, bool isSequence) {
+        parser::CharBlock source{*parser::GetSource(rootLoop)};
+        Reason reason;
+        if (rootLoop.IsDoWhile()) {
+          reason.Say(source, MsgNotValidAffectedLoop, "DO WHILE loop");
+        } else if (rootLoop.IsDoConcurrent() && !IsDoConcurrentLegal(version)) {
+          reason.Say(source, MsgNotValidAffectedLoop, "DO CONCURRENT loop");
+        } else if (!rootLoop.GetLoopControl()) {
+          reason.Say(
+              source, MsgNotValidAffectedLoop, "DO loop without loop control");
+        }
+
+        if (!reason) {
+          return true;
+        }
+
+        auto &msg{context_.Say(spec.DirName().source, MsgRequiresCanonical,
+            isSequence ? "sequence" : "nest")};
+        reason.AttachTo(msg);
+        return false;
+      };
+
+  // Build the matching context once for the static-applicability gate below.
+  OmpVariantMatchContext matchContext{context_};
+
+  for (const MetadirectiveLoopVariant &variant : variants) {
+    const parser::OmpDirectiveSpecification *spec{variant.spec};
+    // Skip variants that can never be selected on this compilation target so
+    // that their associated loop is not diagnosed.
+    if (!mayVariantBeSelected(variant.selector, context_, matchContext)) {
+      continue;
+    }
+    auto assoc{llvm::omp::getDirectiveAssociation(spec->DirId())};
+    if (assoc == llvm::omp::Association::LoopNest) {
+      if (!checkRootLoopCanonical(*spec, /*isSequence=*/false)) {
+        continue;
+      }
+
+      auto [needDepth, needPerfect]{
+          GetAffectedNestDepthWithReason(*spec, version, &context_)};
+      auto haveDepth{needPerfect ? havePerfect : haveSemantic};
+      if (!needDepth || *needDepth.value <= 0 || !haveDepth ||
+          *haveDepth.value <= 0) {
+        continue;
+      }
+      if (*needDepth.value > *haveDepth.value) {
+        std::string_view perfectTxt{needPerfect ? " perfect" : ""};
+        auto &msg{context_.Say(spec->DirName().source,
+            "This construct requires a%s nest of depth %" PRId64
+            ", but the associated nest is a%s nest of depth %" PRId64
+            ""_err_en_US,
+            perfectTxt, *needDepth.value, perfectTxt, *haveDepth.value)};
+        haveDepth.reason.AttachTo(msg);
+        needDepth.reason.AttachTo(msg);
+      } else {
+        CheckRectangularNest(*spec, sequence);
+      }
+    } else if (assoc == llvm::omp::Association::LoopSeq) {
+      (void)checkRootLoopCanonical(*spec, /*isSequence=*/true);
+    }
+  }
+}
+
+// Diagnose loop-associated metadirective variants that are not followed by a
+// loop nest, either because the metadirective is the last construct in the
+// execution part or because a non-loop construct follows it. Variants that
+// cannot be selected on this target are skipped.
+void OmpStructureChecker::CheckMetadirectiveVariantsWithoutLoop() {
+  std::vector<MetadirectiveLoopVariant> variants;
+  variants.swap(metadirectiveLoopVariants_);
+
+  OmpVariantMatchContext matchContext{context_};
+  const auto MsgShouldContainDoOr{
+      "This construct should contain a DO-loop or a loop-%s-generating construct"_err_en_US};
+
+  for (const MetadirectiveLoopVariant &variant : variants) {
+    if (!mayVariantBeSelected(variant.selector, context_, matchContext)) {
+      continue;
+    }
+    auto assoc{llvm::omp::getDirectiveAssociation(variant.spec->DirId())};
+    if (assoc == llvm::omp::Association::LoopNest) {
+      context_.Say(
+          variant.spec->DirName().source, MsgShouldContainDoOr, "nest");
+    } else if (assoc == llvm::omp::Association::LoopSeq) {
+      context_.Say(
+          variant.spec->DirName().source, MsgShouldContainDoOr, "sequence");
+    }
+  }
 }
 
 static const parser::traits::OmpContextSelectorSpecification *
@@ -658,10 +824,49 @@ void OmpStructureChecker::CheckDeclareVariantUserConditions(
   }
 }
 
+// OpenMP 6.0, 9.6 (declare_variant), Fortran restriction: "The characteristic
+// of the function variant must be compatible with the characteristic of the
+// base function after the implementation defined transformation for its OpenMP
+// context."
+static void CheckDeclareVariantInterface(SemanticsContext &context,
+    const Symbol &base, const Symbol &variant, parser::CharBlock source) {
+  auto &foldingContext{context.foldingContext()};
+  auto baseChars{
+      evaluate::characteristics::Procedure::Characterize(base, foldingContext)};
+  auto variantChars{evaluate::characteristics::Procedure::Characterize(
+      variant, foldingContext)};
+  // If either procedure cannot be characterized, Characterize has already
+  // emitted diagnostics; do not add more.
+  if (!baseChars || !variantChars) {
+    return;
+  }
+
+  std::string whyNot;
+  if (!baseChars->IsCompatibleWith(
+          *variantChars, /*ignoreImplicitVsExplicit=*/false, &whyNot)) {
+    context.Say(source,
+        "The variant procedure '%s' is not compatible with the base procedure '%s': %s"_err_en_US,
+        variant.name(), base.name(), whyNot);
+  }
+}
+
 void OmpStructureChecker::CheckOmpDeclareVariantDirective(
     const parser::OmpDeclareVariantDirective &x) {
   const parser::OmpDirectiveSpecification &spec{x.v};
   const parser::OmpArgumentList &args{spec.Arguments()};
+
+  bool hasArgModifiers{false};
+  for (const parser::OmpClause &clause : x.v.Clauses().v) {
+    if (clause.Id() == llvm::omp::Clause::OMPC_adjust_args) {
+      hasArgModifiers = true;
+      context_.Say(clause.source,
+          "ADJUST_ARGS clause on the DECLARE VARIANT directive is not yet implemented"_err_en_US);
+    } else if (clause.Id() == llvm::omp::Clause::OMPC_append_args) {
+      hasArgModifiers = true;
+      context_.Say(clause.source,
+          "APPEND_ARGS clause on the DECLARE VARIANT directive is not yet implemented"_err_en_US);
+    }
+  }
 
   if (args.v.size() != 1) {
     context_.Say(args.source,
@@ -701,7 +906,7 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
             CheckProcedureSymbol(base, arg.source);
             CheckProcedureSymbol(variant, arg.source);
           },
-          [&](const parser::OmpLocator &y) {
+          [&](const parser::OmpObject &y) {
             variant = GetArgumentSymbol(arg);
             CheckProcedureSymbol(variant, arg.source);
             const Scope &containingScope{context_.FindScope(x.source)};
@@ -724,6 +929,11 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
       context_.Say(arg.source,
           "Variant '%s' was already specified for '%s' in another DECLARE VARIANT directive"_err_en_US,
           variant->name(), base->name());
+    } else if (!hasArgModifiers) {
+      // adjust_args/append_args perform the "transformation for its OpenMP
+      // context", so the variant interface intentionally differs from the
+      // base; skip the same-interface check until they are supported.
+      CheckDeclareVariantInterface(context_, *base, *variant, arg.source);
     }
   }
 
@@ -742,13 +952,7 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
 }
 
 void OmpStructureChecker::Enter(const parser::OmpDeclareVariantDirective &x) {
-  const parser::OmpDirectiveName &dirName{x.v.DirName()};
-  PushContextAndClauseSets(dirName.source, dirName.v);
   CheckOmpDeclareVariantDirective(x);
-}
-
-void OmpStructureChecker::Leave(const parser::OmpDeclareVariantDirective &) {
-  dirContext_.pop_back();
 }
 
 } // namespace Fortran::semantics

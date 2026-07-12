@@ -1,4 +1,4 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mattr=+mad-mac-f32-insts -denormal-fp-math-f32=preserve-sign < %s | FileCheck --check-prefixes=SI,GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx600 -mattr=+mad-mac-f32-insts -denormal-fp-math-f32=preserve-sign < %s | FileCheck --check-prefixes=SI,GCN %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=tonga -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global < %s | FileCheck --check-prefixes=VI-FLUSH,GCN %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=tonga -denormal-fp-math=ieee -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
 

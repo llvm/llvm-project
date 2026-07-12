@@ -22,7 +22,7 @@ jobs:
     name: Test SPIR-V
     runs-on: ubuntu-24.04
     container:
-      image: ghcr.io/llvm/ci-ubuntu-24.04:latest
+      image: ghcr.io/llvm/ci-ubuntu-24.04:latest@sha256:cc4fd65c131d4de97ebc077a4608f78fa959e45f2f9e7cf690c133b48d9cd7fa
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:

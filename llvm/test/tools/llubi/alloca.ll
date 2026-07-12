@@ -30,12 +30,12 @@ define void @main() {
 ; CHECK-NEXT:   ret i32 4
 ; CHECK-NEXT: Exiting function: count
 ; CHECK-NEXT:   %count = call i32 @count() => i32 4
-; CHECK-NEXT:   %alloc_dyn = alloca i32, i32 %count, align 4 => ptr 0x44 [alloc_dyn]
-; CHECK-NEXT:   %alloc_struct = alloca %struct, align 8 => ptr 0x58 [alloc_struct]
+; CHECK-NEXT:   %alloc_dyn = alloca i32, i32 %count, align 4 => ptr 0x48 [alloc_dyn]
+; CHECK-NEXT:   %alloc_struct = alloca %struct, align 8 => ptr 0x60 [alloc_struct]
 ; CHECK-NEXT: Entering function: stack_address
-; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x70 [alloc]
+; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x7C [alloc]
 ; CHECK-NEXT:   ret ptr %alloc
 ; CHECK-NEXT: Exiting function: stack_address
-; CHECK-NEXT:   %ptr = call ptr @stack_address() => ptr 0x70 [alloc (dangling)]
+; CHECK-NEXT:   %ptr = call ptr @stack_address() => ptr 0x7C [alloc (dangling)]
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

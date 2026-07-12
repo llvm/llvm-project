@@ -1182,7 +1182,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       if (!S.getOpenCLOptions().isSupported("cl_khr_fp64", S.getLangOpts()))
         S.Diag(DS.getTypeSpecTypeLoc(), diag::err_opencl_requires_extension)
             << 0 << Result
-            << (S.getLangOpts().getOpenCLCompatibleVersion() == 300
+            << (S.getLangOpts().getOpenCLCompatibleVersion() >= 300
                     ? "cl_khr_fp64 and __opencl_c_fp64"
                     : "cl_khr_fp64");
       else if (!S.getOpenCLOptions().isAvailableOption("cl_khr_fp64", S.getLangOpts()))
@@ -1407,7 +1407,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   if (S.getLangOpts().OpenCL) {
     const auto &OpenCLOptions = S.getOpenCLOptions();
     bool IsOpenCLC30Compatible =
-        S.getLangOpts().getOpenCLCompatibleVersion() == 300;
+        S.getLangOpts().getOpenCLCompatibleVersion() >= 300;
     // OpenCL C v3.0 s6.3.3 - OpenCL image types require __opencl_c_images
     // support.
     // OpenCL C v3.0 s6.2.1 - OpenCL 3d image write types requires support
@@ -1608,14 +1608,6 @@ static std::string getPrintableNameForEntity(DeclarationName Entity) {
   return "type name";
 }
 
-static bool isDependentOrGNUAutoType(QualType T) {
-  if (T->isDependentType())
-    return true;
-
-  const auto *AT = dyn_cast<AutoType>(T);
-  return AT && AT->isGNUAutoType();
-}
-
 QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
                                   Qualifiers Qs, const DeclSpec *DS) {
   if (T.isNull())
@@ -1646,10 +1638,9 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
       if (!EltTy->isIncompleteOrObjectType())
         DiagID = diag::err_typecheck_invalid_restrict_invalid_pointee;
 
-    } else if (!isDependentOrGNUAutoType(T)) {
-      // For an __auto_type variable, we may not have seen the initializer yet
-      // and so have no idea whether the underlying type is a pointer type or
-      // not.
+    } else if (!T->isDependentType() && !isa<AutoType>(T)) {
+      // For an inferred type, we may not have seen the initializer yet and so
+      // have no idea whether the underlying type is a pointer type or not.
       DiagID = diag::err_typecheck_invalid_restrict_not_pointer;
       EltTy = T;
     }
@@ -3262,6 +3253,10 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
         (Auto && Auto->getKeyword() != AutoTypeKeyword::GNUAutoType);
     bool IsDeducedReturnType = false;
 
+    SourceRange AutoRange = D.getDeclSpec().getTypeSpecTypeLoc();
+    if (D.getName().getKind() == UnqualifiedIdKind::IK_ConversionFunctionId)
+      AutoRange = D.getName().getSourceRange();
+
     switch (D.getContext()) {
     case DeclaratorContext::LambdaExpr:
       // Declared return type of a lambda-declarator is implicit and is always
@@ -3279,11 +3274,16 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
       InventedTemplateParameterInfo *Info = nullptr;
       if (D.getContext() == DeclaratorContext::Prototype) {
         // With concepts we allow 'auto' in function parameters.
-        if (!SemaRef.getLangOpts().CPlusPlus20 || !Auto ||
+        if (!SemaRef.getLangOpts().CPlusPlus || !Auto ||
             Auto->getKeyword() != AutoTypeKeyword::Auto) {
           Error = 0;
           break;
-        } else if (!SemaRef.getCurScope()->isFunctionDeclarationScope()) {
+        }
+
+        if (!SemaRef.getLangOpts().CPlusPlus20)
+          SemaRef.DiagCompat(AutoRange.getBegin(), diag_compat::auto_param);
+
+        if (!SemaRef.getCurScope()->isFunctionDeclarationScope()) {
           Error = 21;
           break;
         }
@@ -3418,10 +3418,6 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     if (D.isFunctionDeclarator() &&
         (!SemaRef.getLangOpts().CPlusPlus11 || !IsCXXAutoType))
       Error = 13;
-
-    SourceRange AutoRange = D.getDeclSpec().getTypeSpecTypeLoc();
-    if (D.getName().getKind() == UnqualifiedIdKind::IK_ConversionFunctionId)
-      AutoRange = D.getName().getSourceRange();
 
     if (Error != -1) {
       unsigned Kind;
@@ -9104,10 +9100,13 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       // it it breaks large amounts of Linux software.
       attr.setUsedAsTypeAttr();
       break;
-    case ParsedAttr::AT_OpenCLPrivateAddressSpace:
-    case ParsedAttr::AT_OpenCLGlobalAddressSpace:
     case ParsedAttr::AT_OpenCLGlobalDeviceAddressSpace:
     case ParsedAttr::AT_OpenCLGlobalHostAddressSpace:
+      state.getSema().Diag(attr.getLoc(), diag::warn_deprecated_attribute)
+          << attr;
+      [[fallthrough]];
+    case ParsedAttr::AT_OpenCLPrivateAddressSpace:
+    case ParsedAttr::AT_OpenCLGlobalAddressSpace:
     case ParsedAttr::AT_OpenCLLocalAddressSpace:
     case ParsedAttr::AT_OpenCLConstantAddressSpace:
     case ParsedAttr::AT_OpenCLGenericAddressSpace:
@@ -9351,6 +9350,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_HLSLResourceDimension:
     case ParsedAttr::AT_HLSLROV:
     case ParsedAttr::AT_HLSLRawBuffer:
+    case ParsedAttr::AT_HLSLIsArray:
     case ParsedAttr::AT_HLSLContainedType: {
       // Only collect HLSL resource type attributes that are in
       // decl-specifier-seq; do not collect attributes on declarations or those
@@ -10108,16 +10108,17 @@ QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
                                      ArrayRef<QualType> Expansions) {
 
   UnsignedOrNone Index = std::nullopt;
-  if (FullySubstituted && !IndexExpr->isValueDependent() &&
-      !IndexExpr->isTypeDependent()) {
-    llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
+  if (!IndexExpr->isInstantiationDependent()) {
+    llvm::APSInt Value;
     ExprResult Res = CheckConvertedConstantExpression(
-        IndexExpr, Context.getSizeType(), Value, CCEKind::ArrayBound);
-    if (!Res.isUsable())
+        IndexExpr, Context.getSizeType(), Value, CCEKind::PackIndex);
+
+    if (!Res.isUsable() || !Value.isRepresentableByInt64())
       return QualType();
+
     IndexExpr = Res.get();
-    int64_t V = Value.getExtValue();
-    if (FullySubstituted && (V < 0 || V >= int64_t(Expansions.size()))) {
+    uint64_t V = Value.getZExtValue();
+    if (FullySubstituted && V >= Expansions.size()) {
       Diag(IndexExpr->getBeginLoc(), diag::err_pack_index_out_of_bound)
           << V << Pattern << Expansions.size();
       return QualType();
@@ -10384,7 +10385,7 @@ QualType Sema::BuildUnaryTransformType(QualType BaseType, UTTKind UKind,
 }
 
 QualType Sema::BuildAtomicType(QualType T, SourceLocation Loc) {
-  if (!isDependentOrGNUAutoType(T)) {
+  if (!T->isDependentType() && !isa<AutoType>(T)) {
     // FIXME: It isn't entirely clear whether incomplete atomic types
     // are allowed or not; for simplicity, ban them for the moment.
     if (RequireCompleteType(Loc, T, diag::err_atomic_specifier_bad_type, 0))

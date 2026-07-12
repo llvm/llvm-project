@@ -368,6 +368,7 @@ private:
     Other = 0, // Unknown value.
     Def,       // Exactly overlapping locations.
     Clobber,   // Reaching value superset of needed bits.
+    Select,    // Reaching value is a select of two reaching addresses.
   };
 
   // Describe a memory location value, such that there exists a path to a point
@@ -378,6 +379,11 @@ private:
     const Value *Addr;
     Instruction *Inst;
     int32_t Offset;
+    // For DepKind::Select only: the condition and the two addresses referenced
+    // by the "true" and "false" side of the select-dependent load.
+    const Value *SelCond = nullptr;
+    const Value *SelTrueAddr = nullptr;
+    const Value *SelFalseAddr = nullptr;
 
     static ReachingMemVal getUnknown(BasicBlock *BB, const Value *Addr,
                                      Instruction *Inst = nullptr) {
@@ -391,6 +397,13 @@ private:
     static ReachingMemVal getClobber(const Value *Addr, Instruction *Inst,
                                      int32_t Offset = -1) {
       return {DepKind::Clobber, Inst->getParent(), Addr, Inst, Offset};
+    }
+
+    static ReachingMemVal getSelect(BasicBlock *BB, const Value *Cond,
+                                    const Value *TrueAddr,
+                                    const Value *FalseAddr) {
+      return {DepKind::Select, BB,       nullptr, nullptr, -1, Cond,
+              TrueAddr,        FalseAddr};
     }
   };
 
@@ -443,6 +456,14 @@ private:
   std::optional<gvn::AvailableValue>
   AnalyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
                           Value *Address);
+
+  /// Given a select-dependency for the load (the load address is a select of
+  /// \p TrueAddr and \p FalseAddr guarded by \p Cond), determine whether a
+  /// value is available by finding dominating values for both addresses.  If
+  /// so, the load can be rematerialized as a select of those two values.
+  std::optional<gvn::AvailableValue>
+  AnalyzeSelectAvailability(LoadInst *Load, Value *Cond, Value *TrueAddr,
+                            Value *FalseAddr, Instruction *From);
 
   /// Given a list of non-local dependencies, determine if a value is
   /// available for the load in each specified block.  If it is, add it to

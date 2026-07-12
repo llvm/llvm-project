@@ -780,6 +780,77 @@ TEST_F(TransportBinderTest, InBoundRequestsVoidParamsAndResult) {
   EXPECT_TRUE(called);
 }
 
+// In-bound asynchronous request handler that defers its reply.
+TEST_F(TransportBinderTest, InBoundAsyncRequests) {
+  Reply<MyFnResult> saved_reply;
+  MyFnParams saved_params;
+  binder->BindAsync<MyFnResult, MyFnParams>(
+      "add", [&](const MyFnParams &params, Reply<MyFnResult> reply) {
+        saved_params = params;
+        saved_reply = std::move(reply);
+      });
+
+  EXPECT_THAT_ERROR(from_remote->Send(Request{1, "add", MyFnParams{3, 4}}),
+                    Succeeded());
+  // The handler runs but does not reply, so no response is sent yet.
+  Run();
+  ASSERT_TRUE(static_cast<bool>(saved_reply));
+  EXPECT_EQ(saved_params.a, 3);
+  EXPECT_EQ(saved_params.b, 4);
+
+  // Replying later sends the response.
+  saved_reply(MyFnResult{7});
+  EXPECT_CALL(remote, Received(Response{1, 0, MyFnResult{7}}));
+  Run();
+}
+
+TEST_F(TransportBinderTest, InBoundAsyncRequestsVoidParams) {
+  Reply<MyFnResult> saved_reply;
+  binder->BindAsync<MyFnResult, void>(
+      "ping", [&](Reply<MyFnResult> reply) { saved_reply = std::move(reply); });
+
+  EXPECT_THAT_ERROR(from_remote->Send(Request{2, "ping", std::nullopt}),
+                    Succeeded());
+  Run();
+  ASSERT_TRUE(static_cast<bool>(saved_reply));
+
+  saved_reply(MyFnResult{5});
+  EXPECT_CALL(remote, Received(Response{2, 0, MyFnResult{5}}));
+  Run();
+}
+
+TEST_F(TransportBinderTest, InBoundAsyncRequestsError) {
+  binder->BindAsync<MyFnResult, MyFnParams>(
+      "add", [&](const MyFnParams &, Reply<MyFnResult> reply) {
+        reply(llvm::createStringError("nope"));
+      });
+
+  EXPECT_THAT_ERROR(from_remote->Send(Request{3, "add", MyFnParams{1, 2}}),
+                    Succeeded());
+  EXPECT_CALL(remote, Received(Response{3, 1, "nope"}));
+  Run();
+}
+
+TEST_F(TransportBinderTest, FailPendingRequests) {
+  OutgoingRequest<MyFnResult, MyFnParams> addFn =
+      binder->Bind<MyFnResult, MyFnParams>("add");
+  bool replied = false;
+  std::string message;
+  addFn(MyFnParams{1, 2}, [&](Expected<MyFnResult> result) {
+    replied = true;
+    message = toString(result.takeError());
+  });
+
+  // The request is now awaiting a response. FailPendingRequests fires its reply
+  // with an error, synchronously.
+  binder->FailPendingRequests("connection closed");
+  EXPECT_TRUE(replied);
+  EXPECT_THAT(message, HasSubstr("connection closed"));
+
+  // A second call is a no-op: nothing is left pending.
+  binder->FailPendingRequests("again");
+}
+
 // Out-bound binding event handler.
 TEST_F(TransportBinderTest, OutBoundEvents) {
   OutgoingEvent<MyFnParams> emitEvent = binder->Bind<MyFnParams>("evt");

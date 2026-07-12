@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/PFTBuilder.h"
-#include "flang/Lower/IntervalSet.h"
 #include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Parser/dump-parse-tree.h"
@@ -334,6 +333,20 @@ public:
     return true;
   }
   void Post(const parser::SpecificationPart &) { --specificationPartLevel; }
+
+  bool Pre(const parser::InterfaceBody &) {
+    ++interfaceBodyLevel;
+    return true;
+  }
+  void Post(const parser::InterfaceBody &) { --interfaceBodyLevel; }
+
+  // An acc declare in an interface body describes the interface's procedure,
+  // not the enclosing unit; skip it so it is not hoisted and lowered there.
+  bool Pre(const parser::OpenACCDeclarativeConstruct &accDecl) {
+    if (interfaceBodyLevel > 0)
+      return false;
+    return enterConstructOrDirective(accDecl);
+  }
 
   bool Pre(const parser::ContainsStmt &) {
     if (!specificationPartLevel) {
@@ -1261,6 +1274,7 @@ private:
   lower::pft::SymbolLabelMap *assignSymbolLabelMap{};
   std::map<std::string, lower::pft::Evaluation *> constructNameMap{};
   int specificationPartLevel{};
+  int interfaceBodyLevel{};
   lower::pft::Evaluation *lastLexicalEvaluation{};
   /// Current function-like unit being processed (for USE statement tracking)
   lower::pft::FunctionLikeUnit *currentFunctionUnit{nullptr};

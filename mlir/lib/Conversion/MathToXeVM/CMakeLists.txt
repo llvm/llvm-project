@@ -11,8 +11,10 @@ add_mlir_conversion_library(MLIRMathToXeVM
   Core
 
   LINK_LIBS PUBLIC
+  MLIRAnalysis
   MLIRArithAttrToLLVMConversion
   MLIRArithDialect
+  MLIRGPUToGPURuntimeTransforms
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
   MLIRMathDialect

@@ -124,7 +124,8 @@ bool UnrollLoopsCheck::hasKnownBounds(const Stmt *Statement,
   if (!Initializer || !Conditional || !Increment)
     return false;
   // If the loop variable value isn't known, loop bounds are unknown.
-  if (const auto *InitDeclStatement = dyn_cast<DeclStmt>(Initializer)) {
+  if (const auto *InitDeclStatement = dyn_cast<DeclStmt>(Initializer);
+      InitDeclStatement && InitDeclStatement->isSingleDecl()) {
     if (const auto *VariableDecl =
             dyn_cast<VarDecl>(InitDeclStatement->getSingleDecl())) {
       const APValue *Evaluation = VariableDecl->evaluateValue();
@@ -173,10 +174,11 @@ bool UnrollLoopsCheck::hasLargeNumIterations(const Stmt *Statement,
   const Expr *Increment = ForLoop->getInc();
   int InitValue = 0;
   // If the loop variable value isn't known, we can't know the loop bounds.
-  if (const auto *InitDeclStatement = dyn_cast<DeclStmt>(Initializer)) {
+  if (const auto *InitDeclStatement = dyn_cast<DeclStmt>(Initializer);
+      InitDeclStatement && InitDeclStatement->isSingleDecl()) {
     if (const auto *VariableDecl =
             dyn_cast<VarDecl>(InitDeclStatement->getSingleDecl())) {
-      APValue *Evaluation = VariableDecl->evaluateValue();
+      const APValue *Evaluation = VariableDecl->evaluateValue();
       if (!Evaluation || !Evaluation->isInt())
         return true;
       InitValue = Evaluation->getInt().getExtValue();

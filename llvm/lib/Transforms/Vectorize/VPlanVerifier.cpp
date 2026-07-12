@@ -20,7 +20,6 @@
 #include "VPlanPatternMatch.h"
 #include "VPlanUtils.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 #define DEBUG_TYPE "loop-vectorize"
 
@@ -40,12 +39,6 @@ class VPlanVerifier {
 
   /// Verify that \p LastActiveLane's operand is guaranteed to be a prefix-mask.
   bool verifyLastActiveLaneRecipe(const VPInstruction &LastActiveLane) const;
-
-  /// Verify that the stored scalar type of \p R is consistent with the types
-  /// derived from its operands. A null stored type is tolerated during the
-  /// transition to fully threaded scalar types; once set, it must agree with
-  /// the operand-derived type.
-  bool verifyRecipeTypes(const VPRecipeBase &R) const;
 
   bool verifyVPBasicBlock(const VPBasicBlock *VPBB);
 
@@ -100,9 +93,14 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
       return false;
     }
 
+    // In region form, VPCurrentIterationPHIRecipe must be the first header phi
+    // recipe. In a plain CFG VPlan, it must either be the first or second.
     if (isa<VPCurrentIterationPHIRecipe>(RecipeI) &&
-        RecipeI->getIterator() != VPBB->begin()) {
-      errs() << "CurrentIteration PHI is not the first recipe\n";
+        (VPBB->getPlan()->getVectorLoopRegion()
+             ? RecipeI->getIterator() != VPBB->begin()
+             : RecipeI->getIterator() != VPBB->begin() &&
+                   RecipeI->getIterator() != std::next(VPBB->begin()))) {
+      errs() << "CurrentIteration PHI is not the first/second recipe\n";
       return false;
     }
 
@@ -174,15 +172,15 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
     return false;
   }
 
-  const VPlan &Plan = *LastActiveLane.getParent()->getPlan();
   // All operands must be prefix-mask. This means an icmp ult/ule LHS, RHS where
   // the LHS is monotonically increasing and RHS is uniform across VFs and UF.
   for (VPValue *Op : LastActiveLane.operands()) {
     VPValue *Mask = Op;
     VPValue *HeaderMask;
 
-    // Look through any `and`s with a loop_dependence_war_mask, which is always
-    // a prefix mask. TODO: Verify the full loop.dependence.mask chain.
+    // Look through any `and`s with the incoming alias mask or a
+    // loop_dependence_war_mask, which are always prefix masks.
+    // TODO: Verify the full loop.dependence.mask chain.
     if (match(Op,
               m_c_BinaryAnd(
                   m_VPValue(HeaderMask),
@@ -190,10 +188,18 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
                       m_c_BinaryAnd(
                           m_Intrinsic<Intrinsic::loop_dependence_war_mask>(),
                           m_VPValue()),
-                      m_Intrinsic<Intrinsic::loop_dependence_war_mask>()))))
+                      m_Intrinsic<Intrinsic::loop_dependence_war_mask>(),
+                      m_VPInstruction<VPInstruction::IncomingAliasMask>()))))
       Mask = HeaderMask;
 
-    if (vputils::isHeaderMask(Mask, Plan))
+    // The header mask is a prefix mask. Before being materialized it is the
+    // loop region's abstract header mask; afterwards it is an active lane mask
+    // (an intrinsic or a phi), or the icmp checked below.
+    if (match(Mask, m_HeaderMask()) || isa<VPActiveLaneMaskPHIRecipe>(Mask) ||
+        match(Mask, m_VPInstruction<VPInstruction::ActiveLaneMask>()))
+      continue;
+
+    if (match(Mask, m_ActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue())))
       continue;
 
     CmpPredicate Pred;
@@ -207,7 +213,7 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
 
     errs() << "LastActiveLane operand ";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    VPSlotTracker Tracker(&Plan);
+    VPSlotTracker Tracker(LastActiveLane.getParent()->getPlan());
     Op->printAsOperand(errs(), Tracker);
 #endif
     errs() << " must be prefix mask (a header mask or an "
@@ -216,96 +222,6 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
   }
 
   return true;
-}
-
-bool VPlanVerifier::verifyRecipeTypes(const VPRecipeBase &R) const {
-  const auto *SR = dyn_cast<VPSingleDefRecipe>(&R);
-  if (!SR)
-    return true;
-
-  auto CheckScalarType = [&](Type *Derived) -> bool {
-    if (Derived == SR->getScalarType())
-      return true;
-    errs() << "Recipe result type does not match type derived from operands";
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    errs() << ": ";
-    R.dump();
-#endif
-    errs() << "\n";
-    return false;
-  };
-
-  auto CheckOperandTypes = [&]() -> bool {
-    if (all_of(drop_begin(R.operands()), [&R](VPValue *Op) {
-          return R.getOperand(0)->getScalarType() == Op->getScalarType();
-        }))
-      return true;
-    errs() << "Recipe operand types do not match";
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    errs() << ": ";
-    R.dump();
-#endif
-    errs() << "\n";
-    return false;
-  };
-
-  if (auto *WII = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
-    return CheckScalarType(WII->getTruncInst()
-                               ? WII->getTruncInst()->getType()
-                               : WII->getStartValue()->getScalarType());
-
-  switch (R.getVPRecipeID()) {
-  case VPRecipeBase::VPVectorPointerSC:
-  case VPRecipeBase::VPVectorEndPointerSC:
-  case VPRecipeBase::VPWidenGEPSC:
-  case VPRecipeBase::VPScalarIVStepsSC:
-  case VPRecipeBase::VPWidenPointerInductionSC:
-  case VPRecipeBase::VPDerivedIVSC:
-    return CheckScalarType(R.getOperand(0)->getScalarType());
-  case VPRecipeBase::VPWidenPHISC:
-  case VPRecipeBase::VPPredInstPHISC:
-  case VPRecipeBase::VPReductionPHISC:
-  case VPRecipeBase::VPActiveLaneMaskPHISC:
-  case VPRecipeBase::VPCurrentIterationPHISC:
-  case VPRecipeBase::VPFirstOrderRecurrencePHISC:
-    return CheckOperandTypes() &&
-           CheckScalarType(R.getOperand(0)->getScalarType());
-  case VPRecipeBase::VPInstructionSC: {
-    auto *VPI = cast<VPInstruction>(&R);
-    if (isa<VPInstructionWithType>(VPI) ||
-        is_contained(
-            ArrayRef<unsigned>{
-                Instruction::ExtractValue, VPInstruction::FirstActiveLane,
-                VPInstruction::LastActiveLane, VPInstruction::NumActiveLanes,
-                VPInstruction::IncomingAliasMask, Instruction::Load,
-                Instruction::Alloca, Instruction::Call},
-            VPI->getOpcode()))
-      return true;
-    SmallVector<VPValue *, 4> Ops(VPI->operandsWithoutMask());
-    return CheckScalarType(
-        computeScalarTypeForInstruction(VPI->getOpcode(), Ops));
-  }
-  case VPRecipeBase::VPReplicateSC: {
-    auto *RepR = cast<VPReplicateRecipe>(&R);
-    SmallVector<VPValue *, 4> Ops(RepR->operands());
-    if (RepR->isPredicated())
-      Ops.pop_back();
-    return CheckScalarType(
-        VPReplicateRecipe::computeScalarType(RepR->getUnderlyingInstr(), Ops));
-  }
-  case VPRecipeBase::VPWidenSC: {
-    SmallVector<VPValue *, 4> Ops(R.operands());
-    return CheckScalarType(computeScalarTypeForInstruction(
-        cast<VPWidenRecipe>(&R)->getOpcode(), Ops));
-  }
-  case VPRecipeBase::VPExpressionSC:
-    return CheckScalarType(cast<VPExpressionRecipe>(&R)
-                               ->getOperandOfResultType()
-                               ->getScalarType());
-  default:
-    return true;
-  }
-  llvm_unreachable("all recipes must be handled above");
 }
 
 bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
@@ -328,8 +244,6 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
       errs() << "not in a VPIRBasicBlock!\n";
       return false;
     }
-    if (!verifyRecipeTypes(R))
-      return false;
     for (const VPValue *V : R.definedValues()) {
       // Verify that each defined value has a scalar type.
       if (!V->getScalarType()) {
@@ -420,6 +334,13 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         break;
       }
     }
+    if (const auto *DIV = dyn_cast<VPDerivedIVRecipe>(&R)) {
+      if (!DIV->getStartValue()->isDefinedOutsideLoopRegions()) {
+        errs() << "VPDerivedIVRecipe must have start value defined outside "
+                  "loop regions\n";
+        return false;
+      }
+    }
     if (const auto *ScalarIVSteps = dyn_cast<VPScalarIVStepsRecipe>(&R)) {
       unsigned NumOps = ScalarIVSteps->getNumOperands();
       if (NumOps != 3 && NumOps != 4) {
@@ -461,10 +382,7 @@ bool VPlanVerifier::verifyBlock(const VPBlockBase *VPB) {
       }
 
       if (VPBlockUtils::isLatch(VPBB, VPDT)) {
-        auto BranchTerminator =
-            m_CombineOr(m_BranchOnCond(),
-                        m_CombineOr(m_BranchOnCount(), m_BranchOnTwoConds()));
-        if (!match(VPBB->getTerminator(), BranchTerminator)) {
+        if (!match(VPBB->getTerminator(), m_Branch())) {
           errs() << "Latch block must have a branch terminator!\n";
           return false;
         }
@@ -597,9 +515,7 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
   }
 
   auto *LastInst = dyn_cast<VPInstruction>(std::prev(Exiting->end()));
-  if (!match(LastInst, m_CombineOr(m_BranchOnCond(),
-                                   m_CombineOr(m_BranchOnCount(),
-                                               m_BranchOnTwoConds())))) {
+  if (!match(LastInst, m_Branch())) {
     errs() << "VPlan vector loop exit must end with BranchOnCount, "
               "BranchOnCond, or BranchOnTwoConds VPInstruction\n";
     return false;

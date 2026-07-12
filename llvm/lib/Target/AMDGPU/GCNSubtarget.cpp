@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -53,6 +54,42 @@ static cl::opt<unsigned>
                  cl::init(2), cl::Hidden);
 
 GCNSubtarget::~GCNSubtarget() = default;
+
+static AMDGPUSubtarget::Generation computeDefaultGeneration(const Triple &TT) {
+  // Legacy triples without a subarch default to the first target that supports
+  // flat addressing for HSA, otherwise the first amdgcn target.
+  if (TT.getSubArch() == Triple::NoSubArch)
+    return TT.getOS() == Triple::AMDHSA ? AMDGPUSubtarget::SEA_ISLANDS
+                                        : AMDGPUSubtarget::SOUTHERN_ISLANDS;
+
+  switch (AMDGPU::getMajorSubArch(TT.getSubArch())) {
+  case Triple::AMDGPUSubArch6:
+    return AMDGPUSubtarget::SOUTHERN_ISLANDS;
+  case Triple::AMDGPUSubArch7:
+    return AMDGPUSubtarget::SEA_ISLANDS;
+  case Triple::AMDGPUSubArch8:
+  case Triple::AMDGPUSubArch810:
+    return AMDGPUSubtarget::VOLCANIC_ISLANDS;
+  case Triple::AMDGPUSubArch9:
+  case Triple::AMDGPUSubArch908:
+  case Triple::AMDGPUSubArch90A:
+  case Triple::AMDGPUSubArch9_4:
+    return AMDGPUSubtarget::GFX9;
+  case Triple::AMDGPUSubArch10_1:
+  case Triple::AMDGPUSubArch10_3:
+    return AMDGPUSubtarget::GFX10;
+  case Triple::AMDGPUSubArch11:
+  case Triple::AMDGPUSubArch11_7:
+    return AMDGPUSubtarget::GFX11;
+  case Triple::AMDGPUSubArch12:
+  case Triple::AMDGPUSubArch12_5:
+    return AMDGPUSubtarget::GFX12;
+  case Triple::AMDGPUSubArch13:
+    return AMDGPUSubtarget::GFX13;
+  default:
+    reportFatalUsageError("invalid subarch for amdgpu");
+  }
+}
 
 GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
                                                             StringRef GPU,
@@ -94,8 +131,7 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // the first amdgcn target that supports flat addressing. Other OSes defaults
   // to the first amdgcn target.
   if (Gen == AMDGPUSubtarget::INVALID) {
-    Gen = TT.getOS() == Triple::AMDHSA ? AMDGPUSubtarget::SEA_ISLANDS
-                                       : AMDGPUSubtarget::SOUTHERN_ISLANDS;
+    Gen = computeDefaultGeneration(TT);
     // Assume wave64 for the unknown target, if not explicitly set.
     if (getWavefrontSizeLog2() == 0)
       WavefrontSizeLog2 = 6;
@@ -144,6 +180,9 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
     FlatOffsetBitWidth = 13;
 
   LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(*this);
+  // LDS Allocation Granularity calculated in bytes from dwords
+  LDSAllocationGranularity =
+      AMDGPU::getLdsDwGranularity(*this) * sizeof(uint32_t);
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
   HasSMulHi = getGeneration() >= AMDGPUSubtarget::GFX9;
@@ -156,8 +195,6 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
   assert(llvm::isPowerOf2_32(InstCacheLineSize) &&
          "InstCacheLineSize must be a power of 2");
-
-  TargetID.setTargetIDFromFeaturesString(FS);
 
   LLVM_DEBUG(dbgs() << "xnack setting for subtarget: "
                     << TargetID.getXnackSetting() << '\n');
@@ -174,11 +211,9 @@ void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
     Ctx.diagnose(DiagnosticInfoUnsupported(
         F, "must specify exactly one of wavefrontsize32 and wavefrontsize64"));
   }
-  if (hasFeature(AMDGPU::FeatureXNACKAnyOnly) && TargetID.isXnackOnOrOff()) {
-    Ctx.diagnose(DiagnosticInfoUnsupported(
-        F, "target only supports xnack 'Any'; '+/-xnack' is not allowed"));
-  }
 }
+
+// TODO: Validate subarch for subtarget
 
 GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                            const GCNTargetMachine &TM, bool BufferOOBRelaxed,
@@ -186,7 +221,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     : // clang-format off
     AMDGPUGenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS),
     AMDGPUSubtarget(TT),
-    TargetID(*this),
+    TargetID(AMDGPU::createAMDGPUTargetID(*this, FS)),
     InstrItins(getInstrItineraryForCPU(GPU)),
     BufferOOBRelaxed(BufferOOBRelaxed),
     TBufferOOBRelaxed(TBufferOOBRelaxed),
@@ -195,6 +230,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     // Frame index expansion sometimes assumes the low bit of SP is 0
     FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0,
                   /*TransAl=*/Align(4)) {
+
   // clang-format on
   MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(*this);
   EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(*this);
@@ -207,7 +243,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   Legalizer = std::make_unique<AMDGPULegalizerInfo>(*this, TM);
   RegBankInfo = std::make_unique<AMDGPURegisterBankInfo>(*this);
   InstSelector =
-      std::make_unique<AMDGPUInstructionSelector>(*this, *RegBankInfo, TM);
+      std::make_unique<AMDGPUInstructionSelector>(*this, *RegBankInfo);
 }
 
 const SelectionDAGTargetInfo *GCNSubtarget::getSelectionDAGInfo() const {
@@ -423,8 +459,7 @@ bool GCNSubtarget::useVGPRIndexMode() const {
 bool GCNSubtarget::useAA() const { return UseAA; }
 
 unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
-  return AMDGPU::IsaInfo::getOccupancyWithNumSGPRs(SGPRs, getMaxWavesPerEU(),
-                                                   getGeneration());
+  return AMDGPU::IsaInfo::getOccupancyWithNumSGPRs(*this, SGPRs);
 }
 
 unsigned
@@ -478,7 +513,7 @@ GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
   unsigned VGPROcc = getOccupancyWithNumVGPRs(NumVGPRs, DynamicVGPRBlockSize);
 
   // Maximum occupancy may be further limited by high SGPR/VGPR usage.
-  MaxOcc = std::min(MaxOcc, std::min(SGPROcc, VGPROcc));
+  MaxOcc = std::min({MaxOcc, SGPROcc, VGPROcc});
   return {std::min(MinOcc, MaxOcc), MaxOcc};
 }
 
@@ -639,7 +674,7 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
     // Clamp values to be inbounds of our limits, and ensure min <= max.
 
     MaxNumAGPRs = std::min(std::max(MinNumAGPRs, MaxNumAGPRs), MaxVectorRegs);
-    MinNumAGPRs = std::min(std::min(MinNumAGPRs, TotalNumAGPRs), MaxNumAGPRs);
+    MinNumAGPRs = std::min({MinNumAGPRs, TotalNumAGPRs, MaxNumAGPRs});
 
     MaxNumVGPRs = std::min(MaxVectorRegs - MinNumAGPRs, NumArchVGPRs);
     MaxNumAGPRs = std::min(MaxVectorRegs - MaxNumVGPRs, MaxNumAGPRs);

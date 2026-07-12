@@ -475,6 +475,8 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   // need an explicit address space cast in CIR: they will get emitted when
   // lowering to LLVM IR.
 
+  setStaticLocalDeclAddress(&d, gv);
+
   // Ensure that the static local gets initialized by making sure the parent
   // function gets emitted eventually.
   const Decl *dc = cast<Decl>(d.getDeclContext());
@@ -500,9 +502,14 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
     // never defer them.
     assert(isa<ObjCMethodDecl>(dc) && "unexpected parent code decl");
   }
-  if (gd.getDecl() && cir::MissingFeatures::openMP()) {
-    // Disable emission of the parent function for the OpenMP device codegen.
-    errorNYI(d.getSourceRange(), "OpenMP");
+  if (gd.getDecl()) {
+    if (getLangOpts().OpenMPIsTargetDevice) {
+      // Disable emission of the parent function for the OpenMP device codegen.
+      // TODO(cir): Use CGOpenMPRuntime::DisableAutoDeclareTargetRAII here.
+      errorNYI(d.getSourceRange(),
+               "OpenMP: DisableAutoDeclareTargetRAII for static local");
+    }
+    (void)getAddrOfGlobal(gd);
   }
 
   return gv;
@@ -908,6 +915,7 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
   case Decl::ImplicitConceptSpecialization:
   case Decl::TopLevelStmt:
   case Decl::UsingPack:
+  case Decl::CXXExpansionStmt:
     cgm.errorNYI(d.getSourceRange(),
                  std::string("emitDecl: unhandled decl type: ") +
                      d.getDeclKindName());

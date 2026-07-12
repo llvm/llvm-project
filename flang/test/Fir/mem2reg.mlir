@@ -233,3 +233,30 @@ func.func @dummy_scope(%arg : i32) {
   fir.call @use(%result) : (i32) -> ()
   return
 }
+
+// -----
+
+// Do not create block-argument fir.declare_value ops with non-dominating
+// dummy scopes.
+
+// CHECK-LABEL: func.func @dummy_scope_block_argument(
+// CHECK: ^bb1(%{{.*}}: i32):
+// CHECK-NOT: fir.declare_value
+func.func @dummy_scope_block_argument(%arg : i32, %cond : i1) {
+  %c1 = arith.constant 1 : i32
+  %alloca = fir.alloca i32 {adapt.valuebyref}
+  fir.store %arg to %alloca : !fir.ref<i32>
+  cf.br ^loop
+^loop:
+  %result = fir.load %alloca : !fir.ref<i32>
+  cf.cond_br %cond, ^body, ^exit
+^body:
+  %scope = fir.dummy_scope : !fir.dscope
+  %declare = fir.declare %alloca dummy_scope %scope arg 1 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "foo"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %next = arith.addi %result, %c1 : i32
+  fir.store %next to %alloca : !fir.ref<i32>
+  cf.br ^loop
+^exit:
+  fir.call @use(%result) : (i32) -> ()
+  return
+}

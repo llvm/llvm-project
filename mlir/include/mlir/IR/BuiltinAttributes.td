@@ -271,7 +271,7 @@ def Builtin_DenseTypedElementsAttr : Builtin_Attr<
     dense<tensor<2xi32> : 10 : i32>
 
     // Type-first syntax: A tensor of 2 float32 elements.
-    dense<tensor<2xf32> : [10.0, 11.0]>
+    dense<tensor<2xf32> : [10.0 : f32, 11.0 : f32]>
     ```
 
     Note: The literal-first syntax is supported only for complex, float, index,

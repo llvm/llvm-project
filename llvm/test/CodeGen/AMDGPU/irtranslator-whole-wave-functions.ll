@@ -6,16 +6,16 @@ define amdgpu_gfx_whole_wave i32 @basic_test(i1 %active, i32 %a, i32 %b) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[AMDGPU_WHOLE_WAVE_FUNC_SETUP:%[0-9]+]]:_(s1) = G_AMDGPU_WHOLE_WAVE_FUNC_SETUP
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-  ; CHECK-NEXT:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AMDGPU_WHOLE_WAVE_FUNC_SETUP]](s1), [[COPY]], [[C]]
-  ; CHECK-NEXT:   [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[AMDGPU_WHOLE_WAVE_FUNC_SETUP]](s1), [[COPY1]], [[C1]]
-  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.update.dpp), [[SELECT]](s32), [[SELECT1]](s32), 1, 1, 1, 0
-  ; CHECK-NEXT:   $vgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
-  ; CHECK-NEXT:   G_AMDGPU_WHOLE_WAVE_FUNC_RETURN [[AMDGPU_WHOLE_WAVE_FUNC_SETUP]](s1), implicit $vgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[AMDGPU_WHOLE_WAVE_FUNC_SETUP:%[0-9]+]]:_(i1) = G_AMDGPU_WHOLE_WAVE_FUNC_SETUP
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 5
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 3
+  ; CHECK-NEXT:   [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[AMDGPU_WHOLE_WAVE_FUNC_SETUP]](i1), [[COPY]], [[C]]
+  ; CHECK-NEXT:   [[SELECT1:%[0-9]+]]:_(i32) = G_SELECT [[AMDGPU_WHOLE_WAVE_FUNC_SETUP]](i1), [[COPY1]], [[C1]]
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.update.dpp), [[SELECT]](i32), [[SELECT1]](i32), 1, 1, 1, 0
+  ; CHECK-NEXT:   $vgpr0 = COPY [[INTRINSIC_CONVERGENT]](i32)
+  ; CHECK-NEXT:   G_AMDGPU_WHOLE_WAVE_FUNC_RETURN [[AMDGPU_WHOLE_WAVE_FUNC_SETUP]](i1), implicit $vgpr0
   %x = select i1 %active, i32 %a, i32 5
   %y = select i1 %active, i32 %b, i32 3
   %ret = call i32 @llvm.amdgcn.update.dpp.i32(i32 %x, i32 %y, i32 1, i32 1, i32 1, i1 false)
@@ -28,12 +28,12 @@ define amdgpu_gfx_whole_wave i32 @unused_active(i1 %active, i32 %a, i32 %b) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[AMDGPU_WHOLE_WAVE_FUNC_SETUP:%[0-9]+]]:_(s1) = G_AMDGPU_WHOLE_WAVE_FUNC_SETUP
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 14
-  ; CHECK-NEXT:   $vgpr0 = COPY [[C]](s32)
-  ; CHECK-NEXT:   G_AMDGPU_WHOLE_WAVE_FUNC_RETURN [[AMDGPU_WHOLE_WAVE_FUNC_SETUP]](s1), implicit $vgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[AMDGPU_WHOLE_WAVE_FUNC_SETUP:%[0-9]+]]:_(i1) = G_AMDGPU_WHOLE_WAVE_FUNC_SETUP
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 14
+  ; CHECK-NEXT:   $vgpr0 = COPY [[C]](i32)
+  ; CHECK-NEXT:   G_AMDGPU_WHOLE_WAVE_FUNC_RETURN [[AMDGPU_WHOLE_WAVE_FUNC_SETUP]](i1), implicit $vgpr0
   ret i32 14
 }
 
@@ -43,25 +43,25 @@ define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[AMDGPU_WHOLE_WAVE_FUNC_SETUP:%[0-9]+]]:_(s1) = G_AMDGPU_WHOLE_WAVE_FUNC_SETUP
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s1), [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), [[ICMP]](s1)
-  ; CHECK-NEXT:   G_BRCOND [[INT]](s1), %bb.2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[AMDGPU_WHOLE_WAVE_FUNC_SETUP:%[0-9]+]]:_(i1) = G_AMDGPU_WHOLE_WAVE_FUNC_SETUP
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY]](i32), [[COPY1]]
+  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(i1), [[INT1:%[0-9]+]]:_(i32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), [[ICMP]](i1)
+  ; CHECK-NEXT:   G_BRCOND [[INT]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.if.then:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i32) = G_ADD [[COPY]], [[COPY1]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.if.end:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[COPY1]](s32), %bb.1, [[ADD]](s32), %bb.2
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT1]](s32)
-  ; CHECK-NEXT:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AMDGPU_WHOLE_WAVE_FUNC_SETUP]](s1), [[COPY]], [[PHI]]
-  ; CHECK-NEXT:   $vgpr0 = COPY [[SELECT]](s32)
-  ; CHECK-NEXT:   G_AMDGPU_WHOLE_WAVE_FUNC_RETURN [[AMDGPU_WHOLE_WAVE_FUNC_SETUP]](s1), implicit $vgpr0
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i32) = G_PHI [[COPY1]](i32), %bb.1, [[ADD]](i32), %bb.2
+  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT1]](i32)
+  ; CHECK-NEXT:   [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[AMDGPU_WHOLE_WAVE_FUNC_SETUP]](i1), [[COPY]], [[PHI]]
+  ; CHECK-NEXT:   $vgpr0 = COPY [[SELECT]](i32)
+  ; CHECK-NEXT:   G_AMDGPU_WHOLE_WAVE_FUNC_RETURN [[AMDGPU_WHOLE_WAVE_FUNC_SETUP]](i1), implicit $vgpr0
   %c = icmp eq i32 %a, %b
   br i1 %c, label %if.then, label %if.end
 
@@ -80,22 +80,22 @@ define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
-  ; CHECK-NEXT:   [[AMDGPU_WHOLE_WAVE_FUNC_SETUP:%[0-9]+]]:_(s1) = G_AMDGPU_WHOLE_WAVE_FUNC_SETUP
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
-  ; CHECK-NEXT:   [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[AMDGPU_WHOLE_WAVE_FUNC_SETUP]](s1), [[MV]], [[C]]
-  ; CHECK-NEXT:   [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[AMDGPU_WHOLE_WAVE_FUNC_SETUP]](s1), [[MV1]], [[C1]]
-  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.update.dpp), [[SELECT]](s64), [[SELECT1]](s64), 1, 1, 1, 0
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[INTRINSIC_CONVERGENT]](s64)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
-  ; CHECK-NEXT:   G_AMDGPU_WHOLE_WAVE_FUNC_RETURN [[AMDGPU_WHOLE_WAVE_FUNC_SETUP]](s1), implicit $vgpr0, implicit $vgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(i64) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $vgpr3
+  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(i64) = G_MERGE_VALUES [[COPY2]](i32), [[COPY3]](i32)
+  ; CHECK-NEXT:   [[AMDGPU_WHOLE_WAVE_FUNC_SETUP:%[0-9]+]]:_(i1) = G_AMDGPU_WHOLE_WAVE_FUNC_SETUP
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 5
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 3
+  ; CHECK-NEXT:   [[SELECT:%[0-9]+]]:_(i64) = G_SELECT [[AMDGPU_WHOLE_WAVE_FUNC_SETUP]](i1), [[MV]], [[C]]
+  ; CHECK-NEXT:   [[SELECT1:%[0-9]+]]:_(i64) = G_SELECT [[AMDGPU_WHOLE_WAVE_FUNC_SETUP]](i1), [[MV1]], [[C1]]
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.update.dpp), [[SELECT]](i64), [[SELECT1]](i64), 1, 1, 1, 0
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[INTRINSIC_CONVERGENT]](i64)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](i32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](i32)
+  ; CHECK-NEXT:   G_AMDGPU_WHOLE_WAVE_FUNC_RETURN [[AMDGPU_WHOLE_WAVE_FUNC_SETUP]](i1), implicit $vgpr0, implicit $vgpr1
   %x = select i1 %active, i64 %a, i64 5
   %y = select i1 %active, i64 %b, i64 3
   %ret = call i64 @llvm.amdgcn.update.dpp.i64(i64 %x, i64 %y, i32 1, i32 1, i32 1, i1 false)
@@ -110,18 +110,18 @@ define amdgpu_cs void @call(i32 %x, ptr %p) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr2
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](i32), [[COPY2]](i32)
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @callee
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @callee
-  ; CHECK-NEXT:   $vgpr0 = COPY [[COPY]](s32)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[COPY]](i32)
   ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV1]](p0), @callee, csr_amdgpu_si_gfx, implicit $vgpr0, implicit-def $vgpr0
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
-  ; CHECK-NEXT:   G_STORE [[COPY3]](s32), [[MV]](p0) :: (store (s32) into %ir.p)
+  ; CHECK-NEXT:   G_STORE [[COPY3]](i32), [[MV]](p0) :: (store (i32) into %ir.p)
   ; CHECK-NEXT:   S_ENDPGM 0
   %ret = call i32(ptr, ...) @llvm.amdgcn.call.whole.wave(ptr @callee, i32 %x) convergent
   store i32 %ret, ptr %p

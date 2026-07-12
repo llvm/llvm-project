@@ -2,6 +2,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 < %s | FileCheck --check-prefix=GFX12 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 -mattr=+cumode < %s | FileCheck --check-prefix=GFX12 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GFX1250 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1310 < %s | FileCheck --check-prefix=GFX13 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1310 -mattr=+cumode < %s | FileCheck --check-prefix=GFX13 %s
 
 define amdgpu_kernel void @global_last_use_load_0(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; GFX12-LABEL: global_last_use_load_0:
@@ -21,6 +23,8 @@ define amdgpu_kernel void @global_last_use_load_0(ptr addrspace(1) %in, ptr addr
 ;
 ; GFX1250-LABEL: global_last_use_load_0:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -34,6 +38,21 @@ define amdgpu_kernel void @global_last_use_load_0(ptr addrspace(1) %in, ptr addr
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
+;
+; GFX13-LABEL: global_last_use_load_0:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
+; GFX13-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0 nv
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
+; GFX13-NEXT:    v_mov_b32_e32 v0, 0
+; GFX13-NEXT:    s_load_b32 s2, s[2:3], 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_mov_b32_e32 v1, s2
+; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX13-NEXT:    s_endpgm
 entry:
   %val = load i32, ptr addrspace(1) %in, align 4, !amdgpu.last.use !{}
   store i32 %val, ptr addrspace(1) %out
@@ -77,6 +96,8 @@ define amdgpu_kernel void @global_last_use_load_1(ptr addrspace(1) %in, ptr addr
 ;
 ; GFX1250-LABEL: global_last_use_load_1:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
@@ -94,6 +115,24 @@ define amdgpu_kernel void @global_last_use_load_1(ptr addrspace(1) %in, ptr addr
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
+;
+; GFX13-LABEL: global_last_use_load_1:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    v_mov_b32_e32 v1, v0
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
+; GFX13-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0 nv
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
+; GFX13-NEXT:    v_mov_b32_e32 v0, 0
+; GFX13-NEXT:    s_mov_b32 s4, 0x3ff
+; GFX13-NEXT:    v_and_b32_e64 v1, v1, s4
+; GFX13-NEXT:    global_load_b32 v1, v1, s[2:3] scale_offset th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX13-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %val.gep = getelementptr inbounds i32, ptr addrspace(1) %in, i32 %tid
@@ -122,6 +161,8 @@ define amdgpu_kernel void @global_last_use_and_volatile_load(ptr addrspace(1) %i
 ;
 ; GFX1250-LABEL: global_last_use_and_volatile_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -136,6 +177,24 @@ define amdgpu_kernel void @global_last_use_and_volatile_load(ptr addrspace(1) %i
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
+;
+; GFX13-LABEL: global_last_use_and_volatile_load:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
+; GFX13-NEXT:    v_mov_b32_e32 v0, 0
+; GFX13-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0 nv
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
+; GFX13-NEXT:    s_wait_xcnt 0x0
+; GFX13-NEXT:    global_load_b32 v1, v0, s[2:3] th:TH_LOAD_BYPASS scope:SCOPE_SYS
+; GFX13-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX13-NEXT:    s_endpgm
 entry:
   %val = load volatile i32, ptr addrspace(1) %in, align 4, !amdgpu.last.use !{}
   store i32 %val, ptr addrspace(1) %out
@@ -179,6 +238,8 @@ define amdgpu_kernel void @global_last_use_and_nontemporal_load(ptr addrspace(1)
 ;
 ; GFX1250-LABEL: global_last_use_and_nontemporal_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
@@ -196,6 +257,24 @@ define amdgpu_kernel void @global_last_use_and_nontemporal_load(ptr addrspace(1)
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
+;
+; GFX13-LABEL: global_last_use_and_nontemporal_load:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    v_mov_b32_e32 v1, v0
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
+; GFX13-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0 nv
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
+; GFX13-NEXT:    v_mov_b32_e32 v0, 0
+; GFX13-NEXT:    s_mov_b32 s4, 0x3ff
+; GFX13-NEXT:    v_and_b32_e64 v1, v1, s4
+; GFX13-NEXT:    global_load_b32 v1, v1, s[2:3] scale_offset th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX13-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %val.gep = getelementptr inbounds i32, ptr addrspace(1) %in, i32 %tid

@@ -11,13 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
-#include "mlir/Dialect/SCF/Transforms/Patterns.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
-#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
+#include "mlir/Dialect/XeGPU/uArch/uArchCommon.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
@@ -73,21 +76,32 @@ FailureOr<VectorType>
 mlir::xegpu::getDistributedVectorType(VectorType originalType,
                                       xegpu::LayoutAttr layout) {
   int64_t rank = originalType.getRank();
-  // Distributed vector type is only supported for 1D, 2D and 3D vectors.
-  if (rank < 1 || rank > 3)
+  if (rank < 1)
     return failure();
   ArrayRef<int64_t> shape = originalType.getShape();
-  // arrayLength is 1 for 1D and 2D vectors, and equal to the first dimension
-  // of the 3D vector.
+  // For rank > 2, leading dimensions are treated as batch/array dimensions.
+  // Drop them and use the product as arrayLength.
   int arrayLength = 1;
-  if (rank == 3) {
-    arrayLength = shape[0];
+  while (shape.size() > 2) {
+    arrayLength *= shape[0];
     shape = shape.drop_front();
   }
+  // Drop matching leading dims from layout if the layout rank exceeds the
+  // remaining shape rank.
+  auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
+  auto laneData = layout.getEffectiveLaneDataAsInt();
+  while (!laneLayout.empty() && laneLayout.size() > shape.size()) {
+    laneLayout.erase(laneLayout.begin());
+    laneData.erase(laneData.begin());
+  }
+  auto trimmedLayout = xegpu::LayoutAttr::get(
+      layout.getContext(),
+      SmallVector<int32_t>(laneLayout.begin(), laneLayout.end()),
+      SmallVector<int32_t>(laneData.begin(), laneData.end()));
   auto helperTdescTy = xegpu::TensorDescType::get(
       shape, originalType.getElementType(), arrayLength,
       /*boundary_check=*/true,
-      /*memory_space=*/xegpu::MemorySpace::Global, layout);
+      /*memory_space=*/xegpu::MemorySpace::Global, trimmedLayout);
   return xegpu::getDistributedVectorType(helperTdescTy);
 }
 
@@ -457,153 +471,6 @@ Value xegpu::createVectorWithShapeFromValues(OpBuilder &builder, Location loc,
   return result;
 }
 
-void xegpu::doSCFStructuralTypeConversionWithTensorType(
-    Operation *op, TypeConverter converter) {
-  MLIRContext *context = op->getContext();
-
-  auto materializeCast = [](OpBuilder &builder, Type type, ValueRange inputs,
-                            Location loc) -> Value {
-    return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
-        .getResult(0);
-  };
-
-  { // convert VectorType to RankedTensorType for SCF Structural ops
-    TypeConverter converter;
-    converter.addConversion([](Type type) -> Type { return type; });
-    converter.addConversion([](VectorType type) -> Type {
-      return RankedTensorType::get(type.getShape(), type.getElementType());
-    });
-    converter.addSourceMaterialization(materializeCast);
-    converter.addTargetMaterialization(materializeCast);
-
-    mlir::ConversionTarget target(*context);
-    target.addLegalOp<UnrealizedConversionCastOp>();
-
-    mlir::RewritePatternSet patterns(context);
-    scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
-                                                         target);
-    (void)mlir::applyPartialConversion(op, target, std::move(patterns));
-  }
-
-  { // propagate the layout attribute to RankedTensorType by checking
-    // BuiltInUnrealizedCastOps
-    // for VectorType to RankedTensorType cast.
-    op->walk([](UnrealizedConversionCastOp castOp) {
-      if (castOp.getNumOperands() != 1 || castOp.getNumResults() != 1)
-        return WalkResult::skip();
-
-      Value input = castOp.getInputs()[0];
-      Value result = castOp.getResults()[0];
-      auto inputTy = dyn_cast<VectorType>(input.getType());
-      auto resultTy = dyn_cast<RankedTensorType>(result.getType());
-
-      // Only look at ops casting from VectorType to RankedTensorType
-      if (!inputTy || !resultTy)
-        return WalkResult::skip();
-
-      xegpu::DistributeLayoutAttr layout =
-          xegpu::getDistributeLayoutAttr(input);
-      if (!layout)
-        return WalkResult::skip();
-
-      RankedTensorType newTy = resultTy.cloneWithEncoding(layout);
-      result.setType(newTy);
-
-      // update the arguments if user is a LoopLike op.
-      for (OpOperand &use : result.getUses()) {
-        if (auto loop = dyn_cast<LoopLikeOpInterface>(use.getOwner())) {
-          BlockArgument arg = loop.getTiedLoopRegionIterArg(&use);
-          arg.setType(newTy);
-        }
-        // whileOp has two regions, the BlockArgument of the after region
-        // is not exposed by LoopLikeOpInterface
-        if (auto whileOp = dyn_cast<scf::WhileOp>(use.getOwner())) {
-          unsigned idx = use.getOperandNumber();
-          BlockArgument arg = whileOp.getAfterArguments()[idx];
-          arg.setType(newTy);
-        }
-      }
-      return WalkResult::advance();
-    });
-
-    // using yieldOp as anchor to update the result type of its ParentOp
-    op->walk([](scf::YieldOp yieldOp) {
-      Operation *parentOp = yieldOp->getParentOp();
-      for (OpResult r : parentOp->getOpResults()) {
-        unsigned idx = r.getResultNumber();
-        Type resultTy = r.getType();
-        Type yieldTy = yieldOp.getResults()[idx].getType();
-        if (isa<RankedTensorType>(resultTy) && yieldTy != resultTy)
-          r.setType(yieldTy);
-      }
-    });
-  }
-
-  { // perform the conversion from RankedTensorType to VectorType based on the
-    // DistributeLayoutAttr
-
-    // Handle the UnrealizedConversionCastOp introduced by the first step.
-    // For vector->RankedTensorType, it will simply forward the inputs.
-    // For RankedTensorType->vector, it will update the inputs with the
-    // one from the adaptor.
-    class UnrealizedConversionCastOpPattern
-        : public OpConversionPattern<mlir::UnrealizedConversionCastOp> {
-      using OpConversionPattern<
-          mlir::UnrealizedConversionCastOp>::OpConversionPattern;
-
-      mlir::LogicalResult
-      matchAndRewrite(mlir::UnrealizedConversionCastOp op,
-                      OneToNOpAdaptor adaptor,
-                      ConversionPatternRewriter &rewriter) const override {
-        auto inputs = op.getOperands();
-        auto outputs = op.getOutputs();
-
-        if (inputs.size() != 1 || outputs.size() != 1)
-          return failure();
-
-        auto inputTy = inputs[0].getType();
-        auto outputTy = outputs[0].getType();
-
-        if (isa<VectorType>(inputTy) && isa<RankedTensorType>(outputTy)) {
-          rewriter.replaceOpWithMultiple(op, adaptor.getInputs());
-          return success();
-        }
-
-        if (isa<RankedTensorType>(inputTy) && isa<VectorType>(outputTy)) {
-          SmallVector<Value> values = xegpu::flattenValues(adaptor.getInputs());
-          auto newOp = UnrealizedConversionCastOp::create(rewriter, op.getLoc(),
-                                                          outputTy, values);
-          rewriter.replaceOp(op, newOp);
-          return success();
-        }
-        return failure();
-      }
-    };
-
-    converter.addSourceMaterialization(materializeCast);
-    converter.addTargetMaterialization([&](OpBuilder &builder, TypeRange type,
-                                           ValueRange inputs, Location loc) {
-      return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
-          .getResults();
-    });
-
-    mlir::ConversionTarget target(*context);
-    target.addDynamicallyLegalOp<UnrealizedConversionCastOp>(
-        [](UnrealizedConversionCastOp op) {
-          auto isTensorTy = [](Type type) {
-            return isa<RankedTensorType>(type);
-          };
-          return llvm::none_of(op->getOperandTypes(), isTensorTy) &&
-                 llvm::none_of(op->getResultTypes(), isTensorTy);
-        });
-    mlir::RewritePatternSet patterns(context);
-    patterns.insert<UnrealizedConversionCastOpPattern>(context);
-    scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
-                                                         target);
-    (void)mlir::applyPartialConversion(op, target, std::move(patterns));
-  }
-}
-
 std::optional<std::string> xegpu::getChipStr(Operation *op) {
   auto gpuModuleOp = op->getParentOfType<gpu::GPUModuleOp>();
 
@@ -919,9 +786,7 @@ bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
                              const xegpu::uArch::uArch *uArch) {
   // Return false for unsupported targets.
   // TODO: Add more support or move to target info.
-  if (uArch->getName().equals_insensitive("pvc") &&
-      uArch->getName().equals_insensitive("bmg") &&
-      uArch->getName().equals_insensitive("cri"))
+  if (!isa<xegpu::uArch::Xe2>(uArch) && !isa<xegpu::uArch::Xe3>(uArch))
     return false;
   if (!layout)
     return false;
@@ -990,4 +855,319 @@ bool xegpu::matchSplitDimExpansion(
     }
   }
   return srcIdx == src.size();
+}
+
+//===----------------------------------------------------------------------===//
+// Context-aware type conversion utilities
+//===----------------------------------------------------------------------===//
+
+// Pre-computes distributed VectorType mappings for every value carried through
+// an SCF region-branch op (scf.while, scf.for, scf.if): block args (iter_args /
+// before-/after-args), op results, and the terminator operands feeding them.
+// These positions share one logical value and must convert identically, so each
+// is derived from a single source -- the layout of the feeding value (loop
+// init, `scf.condition` operand, or `scf.if` result) -- via
+// `getDistributeLayoutAttr(Value)`, and keyed by `Value`. Keying by Value is
+// required because the SCF converters
+// detach/replace the loop body mid-conversion (scf.while detaches before/after
+// blocks -> a detached-arg layout query trips an ilist assertion; scf.for
+// rebuilds the op, which loses the temporary `layout_operand_N` attrs -> the
+// query returns null). Recording results and terminator operands lets a 1:N
+// pass resolve them from the map after stripping the loop op's transient attrs
+// (see XeGPUBlocking).
+DenseMap<Value, SmallVector<Type>>
+xegpu::precomputeLoopBlockArgTypes(Operation *topLevelOp,
+                                   SubShapeAndCountFn getSubShapeAndCount) {
+  DenseMap<Value, SmallVector<Type>> loopArgTypes;
+  // Derive the distributed types from the feeding value's layout (the single
+  // authoritative source) and record them for every value that shares this
+  // loop-carried position.
+  auto recordTypes = [&](Value layoutSrc, ArrayRef<Value> dests) {
+    auto vecTy = dyn_cast<VectorType>(layoutSrc.getType());
+    if (!vecTy)
+      return;
+    auto layout = xegpu::getDistributeLayoutAttr(layoutSrc);
+    if (!layout)
+      return;
+    auto [subShape, count] = getSubShapeAndCount(vecTy, layout);
+    if (count <= 0)
+      return;
+    auto newTy = VectorType::get(subShape, vecTy.getElementType());
+    for (Value dest : dests)
+      loopArgTypes[dest] = SmallVector<Type>(count, newTy);
+  };
+  topLevelOp->walk([&](Operation *op) {
+    if (auto whileOp = dyn_cast<scf::WhileOp>(op)) {
+      // "before" args (and the after-region yield operands that feed them)
+      // correspond to the while `inits` operands.
+      auto yieldOp =
+          cast<scf::YieldOp>(whileOp.getAfterBody()->getTerminator());
+      for (auto [init, beforeArg, yieldVal] :
+           llvm::zip(whileOp.getInits(), whileOp.getBeforeArguments(),
+                     yieldOp.getOperands()))
+        recordTypes(init, {beforeArg, yieldVal});
+      // "after" args and the while results correspond to the operands of the
+      // embedded `scf.condition` op (not the `inits`).
+      scf::ConditionOp condOp = whileOp.getConditionOp();
+      for (auto [condArg, afterArg, res] :
+           llvm::zip(condOp.getArgs(), whileOp.getAfterArguments(),
+                     whileOp.getResults()))
+        recordTypes(condArg, {afterArg, res});
+      return;
+    }
+    if (auto forOp = dyn_cast<scf::ForOp>(op)) {
+      // Each loop-carried position pairs an init operand with its iter_arg,
+      // its loop result, and the yield operand that feeds the next iteration.
+      auto yieldOp = cast<scf::YieldOp>(forOp.getBody()->getTerminator());
+      for (auto [init, arg, res, yieldVal] :
+           llvm::zip(forOp.getInitArgs(), forOp.getRegionIterArgs(),
+                     forOp.getResults(), yieldOp.getOperands()))
+        recordTypes(init, {arg, res, yieldVal});
+      return;
+    }
+    if (auto ifOp = dyn_cast<scf::IfOp>(op)) {
+      // Each result and its then/else yield operands share one position and
+      // must convert identically; derive all from the result's layout.
+      scf::YieldOp thenYield = ifOp.thenYield();
+      scf::YieldOp elseYield = ifOp.elseBlock() ? ifOp.elseYield() : nullptr;
+      for (auto [idx, res] : llvm::enumerate(ifOp.getResults())) {
+        SmallVector<Value> dests{res, thenYield.getOperand(idx)};
+        if (elseYield)
+          dests.push_back(elseYield.getOperand(idx));
+        recordTypes(res, dests);
+      }
+      return;
+    }
+  });
+  return loopArgTypes;
+}
+
+void xegpu::addVectorTypeConversion(
+    TypeConverter &converter, SubShapeAndCountFn getSubShapeAndCount,
+    DenseMap<Value, SmallVector<Type>> loopArgTypes) {
+  // Context-aware VectorType conversion (1:1 shape-changing or 1:N). For
+  // SCF loop block arguments (scf.while, scf.for), uses the pre-computed
+  // map. For all other Values, retrieves the layout directly via
+  // getDistributeLayoutAttr.
+  auto loopArgTypeMap = std::make_shared<DenseMap<Value, SmallVector<Type>>>(
+      std::move(loopArgTypes));
+  converter.addConversion(
+      [loopArgTypeMap, getSubShapeAndCount](
+          Value v,
+          SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+        if (!isa<VectorType>(v.getType()))
+          return std::nullopt;
+
+        // Check the pre-computed map first. It covers every value carried
+        // through an SCF loop (operands, block args, results, yield
+        // operands), all keyed by Value identity.
+        auto it = loopArgTypeMap->find(v);
+        if (it != loopArgTypeMap->end()) {
+          result.append(it->second.begin(), it->second.end());
+          return success();
+        }
+
+        // For all other Values, retrieve the layout directly.
+        auto layout = xegpu::getDistributeLayoutAttr(v);
+        if (!layout)
+          return std::nullopt;
+
+        auto vecType = cast<VectorType>(v.getType());
+        auto [subShape, count] = getSubShapeAndCount(vecType, layout);
+        if (count <= 0)
+          return std::nullopt;
+
+        auto newTy = VectorType::get(subShape, vecType.getElementType());
+        result.append(count, newTy);
+        return success();
+      });
+}
+
+void xegpu::cleanupUnrealizedConversionCasts(
+    Operation *root,
+    const llvm::SmallSetVector<UnrealizedConversionCastOp, 8> &existingCasts) {
+  // Structural type conversion can generate some redundant
+  // UnrealizedConversionCastOps to materialize the original type from the
+  // type converted (sub-tile) type. These are redundant at this point and
+  // can be eliminated by either folding the cancelling cast chain or, when
+  // the original and final shapes differ but their element counts match,
+  // inserting a vector.shape_cast instead.
+  //
+  // Example (shape differs but element count matches -> shape_cast):
+  //   %1 = UnrealizedConversionCastOp %0 : vector<16x1xf32>
+  //                                     to vector<16x16xf32>
+  //   %2 = UnrealizedConversionCastOp %1 : vector<16x16xf32>
+  //                                     to vector<16xf32>
+  // becomes:
+  //   %2 = vector.shape_cast %0 : vector<16x1xf32> to vector<16xf32>
+  //
+  // For unpaired casts that emulate a pack (1:N) or unpack (N:1) between a
+  // single large VectorType and N identically-typed smaller VectorTypes,
+  // lower to vector.extract_strided_slice / vector.insert_strided_slice.
+  auto hasIdenticalVectorTypes = [](ValueRange values) {
+    auto types = values.getTypes();
+    return !types.empty() && llvm::all_of(types, [&](Type type) {
+      return isa<VectorType>(type) && type == types.front();
+    });
+  };
+  OpBuilder builder(root);
+  root->walk([&](UnrealizedConversionCastOp op) {
+    if (existingCasts.contains(op))
+      return;
+    // Handle N:1 cast (N >= 1) where all inputs come from a single 1:N cast.
+    if (op.getNumResults() == 1 && op.getNumOperands() >= 1) {
+      auto defOp =
+          op.getInputs()[0].getDefiningOp<UnrealizedConversionCastOp>();
+      if (defOp && !existingCasts.contains(defOp) &&
+          defOp.getNumOperands() == 1 &&
+          defOp.getNumResults() == op.getNumOperands() &&
+          llvm::all_of(op.getInputs(),
+                       [&](Value v) { return v.getDefiningOp() == defOp; })) {
+        Value orig = defOp.getInputs()[0];
+        auto origTy = dyn_cast<VectorType>(orig.getType());
+        auto resTy = dyn_cast<VectorType>(op.getResult(0).getType());
+        if (origTy && resTy &&
+            origTy.getNumElements() == resTy.getNumElements() &&
+            origTy != resTy) {
+          builder.setInsertionPoint(op);
+          auto shapeCast =
+              vector::ShapeCastOp::create(builder, op.getLoc(), resTy, orig);
+          op.replaceAllUsesWith(ValueRange{shapeCast.getResult()});
+        } else {
+          op.replaceAllUsesWith(ValueRange{orig});
+        }
+        return;
+      }
+      // Unpaired N:1 cast emulating unpack: stitch inputs into the output
+      // shape via vector.insert_strided_slice.
+      auto outputTy = dyn_cast<VectorType>(op.getResult(0).getType());
+      if (op.getNumOperands() > 1 && outputTy &&
+          hasIdenticalVectorTypes(op.getInputs())) {
+        builder.setInsertionPoint(op);
+        Value result = xegpu::createVectorWithShapeFromValues(
+            builder, op.getLoc(), op.getInputs(), outputTy.getShape());
+        op->replaceAllUsesWith(ValueRange(result));
+      }
+      return;
+    }
+    // Handle 1:N cast where the single input comes from an N:1 cast.
+    if (op.getNumOperands() == 1 && op.getNumResults() > 1) {
+      auto defOp =
+          op.getInputs()[0].getDefiningOp<UnrealizedConversionCastOp>();
+      if (defOp && !existingCasts.contains(defOp) &&
+          defOp.getNumResults() == 1 &&
+          defOp.getNumOperands() == op.getNumResults() &&
+          llvm::equal(ValueRange(defOp.getInputs()).getTypes(),
+                      op->getResultTypes())) {
+        op.replaceAllUsesWith(defOp.getInputs());
+        return;
+      }
+      // Unpaired 1:N cast emulating pack: split the input into the output
+      // tile shape via vector.extract_strided_slice.
+      auto tileTy = dyn_cast<VectorType>(op.getResult(0).getType());
+      if (tileTy && hasIdenticalVectorTypes(op.getResults())) {
+        builder.setInsertionPoint(op);
+        SmallVector<Value> results = xegpu::extractVectorsWithShapeFromValue(
+            builder, op.getLoc(), op.getInputs()[0], tileTy.getShape());
+        op->replaceAllUsesWith(results);
+      }
+      return;
+    }
+  });
+
+  // Erase dead casts iteratively.
+  bool changed = true;
+  while (changed) {
+    changed = false;
+    root->walk([&](UnrealizedConversionCastOp op) {
+      if (existingCasts.contains(op))
+        return;
+      if (op.use_empty()) {
+        op.erase();
+        changed = true;
+      }
+    });
+  }
+}
+
+// Checks if dst shape is a collapse of src shape where each dim in dst is
+// produced by one or more consecutive dims in src whose product equals the dst
+// dim. Populates collapseDims with one group per dst dim listing the src
+// indices collapsed into it. Unit dims in dst that have no backing src dim
+// (leading, in-between, or trailing) get empty groups; src unit dims that
+// fall past the last consumed dst dim are absorbed into the most-recent
+// non-empty group.
+// Examples:
+//   src=[8,16,32], dst=[1,4096]   -> true, collapseDims=[[],[0,1,2]]
+//   src=[8,16,32], dst=[4096,1]   -> true, collapseDims=[[0,1,2],[]]
+//   src=[2,3,4],   dst=[6,4]      -> true, collapseDims=[[0,1],[2]]
+//   src=[64],      dst=[64]       -> true, collapseDims=[[0]]
+bool xegpu::matchDimCollapse(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
+                             SmallVector<SmallVector<int64_t>> &collapseDims) {
+  collapseDims.clear();
+  collapseDims.resize(dst.size());
+
+  // Cheap precondition: src and dst must describe the same number of
+  // elements. Bails out early on mismatched shapes without walking the dims.
+  int64_t srcProd = std::accumulate(src.begin(), src.end(), int64_t{1},
+                                    std::multiplies<int64_t>());
+  int64_t dstProd = std::accumulate(dst.begin(), dst.end(), int64_t{1},
+                                    std::multiplies<int64_t>());
+  if (srcProd != dstProd)
+    return false;
+
+  // Step 1: validate the partition on the unit-dim-stripped (compact) shapes.
+  // Unit dims play no role in the matching decision — they only need to be
+  // placed somewhere in the final groups (handled in step 2).
+  SmallVector<int64_t> srcCompact, dstCompact;
+  for (int64_t s : src)
+    if (s != 1)
+      srcCompact.push_back(s);
+  for (int64_t d : dst)
+    if (d != 1)
+      dstCompact.push_back(d);
+
+  size_t s = 0;
+  for (int64_t need : dstCompact) {
+    int64_t acc = 1;
+    while (s < srcCompact.size() && acc < need)
+      acc *= srcCompact[s++];
+    if (acc != need)
+      return false;
+  }
+  if (s != srcCompact.size())
+    return false;
+
+  // Step 2: assign each original src index to the correct original dst group.
+  // Walk dst in original order, advancing past unit dst dims (they keep their
+  // pre-initialized empty group). Walk src in original order; non-unit src
+  // dims accumulate into the current dst group, unit src dims attach to the
+  // current group when one is open or to the most-recent non-empty group
+  // after dst is exhausted (leading unit src dims with no group yet are
+  // dropped).
+  size_t dstIdx = 0;
+  while (dstIdx < dst.size() && dst[dstIdx] == 1)
+    dstIdx++;
+
+  int64_t lastNonEmpty = -1;
+  int64_t acc = 1;
+  for (size_t srcIdx = 0; srcIdx < src.size(); ++srcIdx) {
+    if (dstIdx >= dst.size()) {
+      // dst exhausted; remaining src dims are unit (validated above) and
+      // attach to the last non-empty group, if any.
+      if (lastNonEmpty >= 0)
+        collapseDims[lastNonEmpty].push_back(srcIdx);
+      continue;
+    }
+    acc *= src[srcIdx];
+    collapseDims[dstIdx].push_back(srcIdx);
+    lastNonEmpty = dstIdx;
+    if (acc == dst[dstIdx]) {
+      acc = 1;
+      ++dstIdx;
+      while (dstIdx < dst.size() && dst[dstIdx] == 1)
+        ++dstIdx;
+    }
+  }
+  return true;
 }

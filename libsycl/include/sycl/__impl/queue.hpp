@@ -32,6 +32,7 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 class context;
 
 namespace detail {
+class MockQueue;
 class QueueImpl;
 
 template <typename, typename T> struct CheckFunctionCallOperator {
@@ -331,6 +332,43 @@ public:
                                        std::forward<Rest>(rest)...);
   }
 
+  /// Submits a memory copy operation from one USM or host pointer to another.
+  /// USM pointers must be accessible on the device associated with the queue.
+  ///
+  /// \param dest is the pointer to copy to.
+  /// \param src is the pointer to copy from.
+  /// \param numBytes is the number of bytes to copy.
+  /// \return an event that represents the status of the operation.
+  event memcpy(void *dest, const void *src, std::size_t numBytes) {
+    return memcpy(dest, src, numBytes, std::vector<event>{});
+  }
+
+  /// Submits a memory copy operation from one USM or host pointer to another.
+  /// USM pointers must be accessible on the device associated with the queue.
+  ///
+  /// \param dest is the pointer to copy to.
+  /// \param src is the pointer to copy from.
+  /// \param numBytes is the number of bytes to copy.
+  /// \param depEvent is an event that represents a dependency for the
+  /// operation.
+  /// \return an event that represents the status of the operation.
+  event memcpy(void *dest, const void *src, std::size_t numBytes,
+               event depEvent) {
+    return memcpy(dest, src, numBytes, std::vector<event>{depEvent});
+  }
+
+  /// Submits a memory copy operation from one USM or host pointer to another.
+  /// USM pointers must be accessible on the device associated with the queue.
+  ///
+  /// \param dest is the pointer to copy to.
+  /// \param src is the pointer to copy from.
+  /// \param numBytes is the number of bytes to copy.
+  /// \param depEvents is a vector of events that represent dependencies for the
+  /// operation.
+  /// \return an event that represents the status of the operation.
+  event memcpy(void *dest, const void *src, std::size_t numBytes,
+               const std::vector<event> &depEvents);
+
 private:
   template <typename KernelName, int Dims, typename... Rest>
   event parallelForImpl(range<Dims> numWorkItems,
@@ -430,6 +468,7 @@ private:
   std::shared_ptr<detail::QueueImpl> impl;
 
   friend sycl::detail::ImplUtils;
+  friend sycl::detail::MockQueue;
 }; // class queue
 
 _LIBSYCL_END_NAMESPACE_SYCL

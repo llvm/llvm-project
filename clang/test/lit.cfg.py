@@ -285,6 +285,10 @@ if config.clang_enable_cir:
 if lit.util.which("spirv-val", config.llvm_tools_dir):
     config.available_features.add("spirv-val")
 
+# SPIRV-Tools availability (e.g. built with -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS)
+if config.spirv_tools_tests:
+    config.available_features.add("spirv-tools")
+
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 config.substitutions.append(
@@ -305,6 +309,17 @@ config.substitutions.append(
         % (
             config.python_executable,
             os.path.join(config.clang_src_dir, "utils", "module-deps-to-rsp.py"),
+        ),
+    )
+)
+
+config.substitutions.append(
+    (
+        "%scan-deps-filter",
+        '"%s" %s'
+        % (
+            config.python_executable,
+            os.path.join(config.clang_src_dir, "utils", "scan-deps-filter.py"),
         ),
     )
 )
@@ -332,9 +347,7 @@ if config.clang_default_cxx_stdlib != "":
         "default-cxx-stdlib={}".format(config.clang_default_cxx_stdlib)
     )
 
-# As of 2011.08, crash-recovery tests still do not pass on FreeBSD.
-if platform.system() not in ["FreeBSD"]:
-    config.available_features.add("crash-recovery")
+config.available_features.add("crash-recovery")
 
 # ANSI escape sequences in non-dumb terminal
 if platform.system() not in ["Windows"]:

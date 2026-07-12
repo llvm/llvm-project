@@ -51,6 +51,48 @@ cl::opt<unsigned> AlignFunctions(
     cl::desc("align functions at a given value (relocation mode)"),
     cl::init(64), cl::cat(BoltOptCategory));
 
+cl::opt<bool> AlignBlocks("align-blocks", cl::desc("align basic blocks"),
+                          cl::cat(BoltOptCategory));
+
+cl::opt<unsigned> AlignBlocksMinSize(
+    "align-blocks-min-size",
+    cl::desc("minimal size of the basic block that should be aligned"),
+    cl::init(0), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
+
+cl::opt<unsigned> AlignBlocksThreshold(
+    "align-blocks-threshold",
+    cl::desc(
+        "align only blocks with frequency larger than containing function "
+        "execution frequency specified in percent. E.g. 1000 means aligning "
+        "blocks that are 10 times more frequently executed than the "
+        "containing function."),
+    cl::init(800), cl::Hidden, cl::cat(BoltOptCategory));
+
+cl::opt<unsigned> AlignFunctionsMaxBytes(
+    "align-functions-max-bytes",
+    cl::desc("maximum number of bytes to use to align functions"), cl::init(32),
+    cl::cat(BoltOptCategory));
+
+cl::opt<unsigned>
+    BlockAlignment("block-alignment",
+                   cl::desc("boundary to use for alignment of basic blocks"),
+                   cl::init(16), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+
+cl::opt<bool>
+    PreserveBlocksAlignment("preserve-blocks-alignment",
+                            cl::desc("try to preserve basic block alignment"),
+                            cl::cat(BoltOptCategory));
+
+cl::opt<bool>
+    UseCompactAligner("use-compact-aligner",
+                      cl::desc("Use compact approach for aligning functions"),
+                      cl::init(true), cl::cat(BoltOptCategory));
+
+cl::opt<bool> X86AlignBranchBoundaryHotOnly(
+    "x86-align-branch-boundary-hot-only",
+    cl::desc("only apply branch boundary alignment in hot code"),
+    cl::init(true), cl::cat(BoltOptCategory));
+
 cl::opt<bool>
 AggregateOnly("aggregate-only",
   cl::desc("exit after writing aggregated data file"),
@@ -322,12 +364,6 @@ cl::opt<unsigned>
     Verbosity("v", cl::desc("set verbosity level for diagnostic output"),
               cl::init(0), cl::ZeroOrMore, cl::cat(BoltCategory),
               cl::sub(cl::SubCommand::getAll()));
-
-cl::opt<bool> LivenessAnalysis(
-    "liveness-analysis",
-    cl::desc("use liveness analysis in FixupBranches and LongJmpPass"
-             "(needed for branch inversion on AArch64)"),
-    cl::init(false), cl::cat(BoltCategory));
 
 bool processAllFunctions() {
   if (opts::AggregateOnly)

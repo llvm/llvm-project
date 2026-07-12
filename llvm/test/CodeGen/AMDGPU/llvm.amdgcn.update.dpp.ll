@@ -89,6 +89,8 @@ define amdgpu_kernel void @dpp_test(ptr addrspace(1) %out, i32 %in1, i32 %in2) {
 ;
 ; GFX1250-LABEL: dpp_test:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -188,6 +190,8 @@ define amdgpu_kernel void @dpp_test_bc(ptr addrspace(1) %out, i32 %in1, i32 %in2
 ;
 ; GFX1250-LABEL: dpp_test_bc:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -215,12 +219,13 @@ define weak_odr amdgpu_kernel void @dpp_test1(ptr %arg) local_unnamed_addr {
 ; GFX8-OPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX8-OPT-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX8-OPT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-OPT-NEXT:    v_add_u32_e32 v4, vcc, v1, v1
-; GFX8-OPT-NEXT:    v_mov_b32_e32 v3, s1
+; GFX8-OPT-NEXT:    v_add_u32_e32 v1, vcc, v1, v1
+; GFX8-OPT-NEXT:    s_nop 1
+; GFX8-OPT-NEXT:    v_mov_b32_dpp v2, v1 quad_perm:[1,0,3,2] row_mask:0xf bank_mask:0xf
+; GFX8-OPT-NEXT:    v_add_u32_e32 v2, vcc, v2, v1
+; GFX8-OPT-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-OPT-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
-; GFX8-OPT-NEXT:    v_mov_b32_dpp v2, v4 quad_perm:[1,0,3,2] row_mask:0xf bank_mask:0xf
-; GFX8-OPT-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
-; GFX8-OPT-NEXT:    v_add_u32_e32 v2, vcc, v2, v4
+; GFX8-OPT-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-OPT-NEXT:    s_barrier
 ; GFX8-OPT-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8-OPT-NEXT:    s_endpgm
@@ -267,12 +272,12 @@ define weak_odr amdgpu_kernel void @dpp_test1(ptr %arg) local_unnamed_addr {
 ; GFX10-NEXT:    ds_read_b32 v1, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_add_co_u32 v0, s0, s0, v0
-; GFX10-NEXT:    v_add_nc_u32_e32 v3, v1, v1
-; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, s0, s1, 0, s0
-; GFX10-NEXT:    v_mov_b32_dpp v2, v3 quad_perm:[1,0,3,2] row_mask:0xf bank_mask:0xf
-; GFX10-NEXT:    v_add_nc_u32_e32 v2, v2, v3
+; GFX10-NEXT:    v_add_nc_u32_e32 v1, v1, v1
 ; GFX10-NEXT:    s_barrier
 ; GFX10-NEXT:    buffer_gl0_inv
+; GFX10-NEXT:    v_mov_b32_dpp v2, v1 quad_perm:[1,0,3,2] row_mask:0xf bank_mask:0xf
+; GFX10-NEXT:    v_add_nc_u32_e32 v2, v2, v1
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, s0, s1, 0, s0
 ; GFX10-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -286,13 +291,13 @@ define weak_odr amdgpu_kernel void @dpp_test1(ptr %arg) local_unnamed_addr {
 ; GFX11-NEXT:    ds_load_b32 v1, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_co_u32 v0, s0, s0, v0
-; GFX11-NEXT:    v_add_nc_u32_e32 v3, v1, v1
-; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, 0, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_mov_b32_dpp v2, v3 quad_perm:[1,0,3,2] row_mask:0xf bank_mask:0xf
-; GFX11-NEXT:    v_add_nc_u32_e32 v2, v2, v3
+; GFX11-NEXT:    v_add_nc_u32_e32 v1, v1, v1
 ; GFX11-NEXT:    s_barrier
 ; GFX11-NEXT:    buffer_gl0_inv
+; GFX11-NEXT:    v_mov_b32_dpp v2, v1 quad_perm:[1,0,3,2] row_mask:0xf bank_mask:0xf
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_nc_u32_e32 v2, v2, v1
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, 0, s0
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -306,6 +311,7 @@ define weak_odr amdgpu_kernel void @dpp_test1(ptr %arg) local_unnamed_addr {
 ; GFX12-NEXT:    ds_load_b32 v1, v0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_add_co_u32 v0, s0, s0, v0
+; GFX12-NEXT:    s_barrier_signal -1
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    v_add_nc_u32_e32 v3, v1, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
@@ -313,7 +319,6 @@ define weak_odr amdgpu_kernel void @dpp_test1(ptr %arg) local_unnamed_addr {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_mov_b32_dpp v2, v3 quad_perm:[1,0,3,2] row_mask:0xf bank_mask:0xf
 ; GFX12-NEXT:    v_add_nc_u32_e32 v2, v2, v3
-; GFX12-NEXT:    s_barrier_signal -1
 ; GFX12-NEXT:    s_barrier_wait -1
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
 ; GFX12-NEXT:    flat_store_b32 v[0:1], v2
@@ -321,19 +326,21 @@ define weak_odr amdgpu_kernel void @dpp_test1(ptr %arg) local_unnamed_addr {
 ;
 ; GFX1250-LABEL: dpp_test1:
 ; GFX1250:       ; %bb.0: ; %bb
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_and_b32_e32 v0, 0xffc, v0
 ; GFX1250-NEXT:    ds_load_b32 v1, v0
+; GFX1250-NEXT:    s_barrier_signal -1
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    v_add_nc_u32_e32 v1, v1, v1
 ; GFX1250-NEXT:    v_mov_b32_dpp v2, v1 quad_perm:[1,0,3,2] row_mask:0xf bank_mask:0xf
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_add_nc_u32_e32 v1, v2, v1
-; GFX1250-NEXT:    s_barrier_signal -1
 ; GFX1250-NEXT:    s_barrier_wait -1
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
@@ -464,6 +471,8 @@ define amdgpu_kernel void @update_dppi64_test(ptr addrspace(1) %arg, i64 %in1, i
 ;
 ; GFX1250-LABEL: update_dppi64_test:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
@@ -595,6 +604,8 @@ define amdgpu_kernel void @update_dppf64_test(ptr addrspace(1) %arg, double %in1
 ;
 ; GFX1250-LABEL: update_dppf64_test:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
@@ -726,6 +737,8 @@ define amdgpu_kernel void @update_dppv2i32_test(ptr addrspace(1) %arg, <2 x i32>
 ;
 ; GFX1250-LABEL: update_dppv2i32_test:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
@@ -857,6 +870,8 @@ define amdgpu_kernel void @update_dppv2f32_test(ptr addrspace(1) %arg, <2 x floa
 ;
 ; GFX1250-LABEL: update_dppv2f32_test:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
@@ -988,6 +1003,8 @@ define amdgpu_kernel void @update_dpp_p0_test(ptr addrspace(1) %arg, ptr %in1, p
 ;
 ; GFX1250-LABEL: update_dpp_p0_test:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
@@ -1091,6 +1108,8 @@ define amdgpu_kernel void @update_dpp_p3_test(ptr addrspace(3) %arg, ptr addrspa
 ;
 ; GFX1250-LABEL: update_dpp_p3_test:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
@@ -1208,6 +1227,8 @@ define amdgpu_kernel void @update_dpp_p5_test(ptr addrspace(5) %arg, ptr addrspa
 ;
 ; GFX1250-LABEL: update_dpp_p5_test:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
@@ -1336,6 +1357,8 @@ define amdgpu_kernel void @update_dppi64_imm_old_test(ptr addrspace(1) %arg, i64
 ;
 ; GFX1250-LABEL: update_dppi64_imm_old_test:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
@@ -1465,6 +1488,8 @@ define amdgpu_kernel void @update_dppf64_imm_old_test(ptr addrspace(1) %arg, dou
 ;
 ; GFX1250-LABEL: update_dppf64_imm_old_test:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
@@ -1591,6 +1616,8 @@ define amdgpu_kernel void @update_dppi64_imm_src_test(ptr addrspace(1) %out, i64
 ;
 ; GFX1250-LABEL: update_dppi64_imm_src_test:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0x7047
@@ -1716,6 +1743,8 @@ define amdgpu_kernel void @update_dppf64_imm_src_test(ptr addrspace(1) %out, dou
 ;
 ; GFX1250-LABEL: update_dppf64_imm_src_test:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0x405edce1
@@ -1818,6 +1847,8 @@ define amdgpu_kernel void @dpp_test_f32(ptr addrspace(1) %out, float %in1, float
 ;
 ; GFX1250-LABEL: dpp_test_f32:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -1917,6 +1948,8 @@ define amdgpu_kernel void @dpp_test_f32_imm_comb1(ptr addrspace(1) %out, float %
 ;
 ; GFX1250-LABEL: dpp_test_f32_imm_comb1:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -2016,6 +2049,8 @@ define amdgpu_kernel void @dpp_test_f32_imm_comb2(ptr addrspace(1) %out, float %
 ;
 ; GFX1250-LABEL: dpp_test_f32_imm_comb2:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -2115,6 +2150,8 @@ define amdgpu_kernel void @dpp_test_f32_imm_comb3(ptr addrspace(1) %out, float %
 ;
 ; GFX1250-LABEL: dpp_test_f32_imm_comb3:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -2214,6 +2251,8 @@ define amdgpu_kernel void @dpp_test_f32_imm_comb4(ptr addrspace(1) %out, float %
 ;
 ; GFX1250-LABEL: dpp_test_f32_imm_comb4:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -2313,6 +2352,8 @@ define amdgpu_kernel void @dpp_test_f32_imm_comb5(ptr addrspace(1) %out, float %
 ;
 ; GFX1250-LABEL: dpp_test_f32_imm_comb5:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -2412,6 +2453,8 @@ define amdgpu_kernel void @dpp_test_f32_imm_comb6(ptr addrspace(1) %out, float %
 ;
 ; GFX1250-LABEL: dpp_test_f32_imm_comb6:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -2512,6 +2555,8 @@ define amdgpu_kernel void @dpp_test_f32_imm_comb7(ptr addrspace(1) %out, float %
 ;
 ; GFX1250-LABEL: dpp_test_f32_imm_comb7:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -2611,6 +2656,8 @@ define amdgpu_kernel void @dpp_test_f32_imm_comb8(ptr addrspace(1) %out, float %
 ;
 ; GFX1250-LABEL: dpp_test_f32_imm_comb8:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -2710,6 +2757,8 @@ define amdgpu_kernel void @dpp_test_v2i16(ptr addrspace(1) %out, <2 x i16> %in1,
 ;
 ; GFX1250-LABEL: dpp_test_v2i16:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -2809,6 +2858,8 @@ define amdgpu_kernel void @dpp_test_v2i16_imm_comb1(ptr addrspace(1) %out, <2 x 
 ;
 ; GFX1250-LABEL: dpp_test_v2i16_imm_comb1:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -2908,6 +2959,8 @@ define amdgpu_kernel void @dpp_test_v2i16_imm_comb2(ptr addrspace(1) %out, <2 x 
 ;
 ; GFX1250-LABEL: dpp_test_v2i16_imm_comb2:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -3007,6 +3060,8 @@ define amdgpu_kernel void @dpp_test_v2i16_imm_comb3(ptr addrspace(1) %out, <2 x 
 ;
 ; GFX1250-LABEL: dpp_test_v2i16_imm_comb3:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -3106,6 +3161,8 @@ define amdgpu_kernel void @dpp_test_v2i16_imm_comb4(ptr addrspace(1) %out, <2 x 
 ;
 ; GFX1250-LABEL: dpp_test_v2i16_imm_comb4:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -3205,6 +3262,8 @@ define amdgpu_kernel void @dpp_test_v2i16_imm_comb5(ptr addrspace(1) %out, <2 x 
 ;
 ; GFX1250-LABEL: dpp_test_v2i16_imm_comb5:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -3304,6 +3363,8 @@ define amdgpu_kernel void @dpp_test_v2i16_imm_comb6(ptr addrspace(1) %out, <2 x 
 ;
 ; GFX1250-LABEL: dpp_test_v2i16_imm_comb6:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -3403,6 +3464,8 @@ define amdgpu_kernel void @dpp_test_v2i16_imm_comb7(ptr addrspace(1) %out, <2 x 
 ;
 ; GFX1250-LABEL: dpp_test_v2i16_imm_comb7:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -3502,6 +3565,8 @@ define amdgpu_kernel void @dpp_test_v2i16_imm_comb8(ptr addrspace(1) %out, <2 x 
 ;
 ; GFX1250-LABEL: dpp_test_v2i16_imm_comb8:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -3601,6 +3666,8 @@ define amdgpu_kernel void @dpp_test_v2f16(ptr addrspace(1) %out, <2 x half> %in1
 ;
 ; GFX1250-LABEL: dpp_test_v2f16:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -3700,6 +3767,8 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb1(ptr addrspace(1) %out, <2 x 
 ;
 ; GFX1250-LABEL: dpp_test_v2f16_imm_comb1:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -3799,6 +3868,8 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb2(ptr addrspace(1) %out, <2 x 
 ;
 ; GFX1250-LABEL: dpp_test_v2f16_imm_comb2:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -3898,6 +3969,8 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb3(ptr addrspace(1) %out, <2 x 
 ;
 ; GFX1250-LABEL: dpp_test_v2f16_imm_comb3:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -3997,6 +4070,8 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb4(ptr addrspace(1) %out, <2 x 
 ;
 ; GFX1250-LABEL: dpp_test_v2f16_imm_comb4:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -4096,6 +4171,8 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb5(ptr addrspace(1) %out, <2 x 
 ;
 ; GFX1250-LABEL: dpp_test_v2f16_imm_comb5:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -4195,6 +4272,8 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb6(ptr addrspace(1) %out, <2 x 
 ;
 ; GFX1250-LABEL: dpp_test_v2f16_imm_comb6:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -4294,6 +4373,8 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb7(ptr addrspace(1) %out, <2 x 
 ;
 ; GFX1250-LABEL: dpp_test_v2f16_imm_comb7:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -4393,6 +4474,8 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb8(ptr addrspace(1) %out, <2 x 
 ;
 ; GFX1250-LABEL: dpp_test_v2f16_imm_comb8:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0

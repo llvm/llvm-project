@@ -2,19 +2,13 @@
 
 # RUN: yaml2obj %s -o %t
 
-## Writing to a separate file with -o:
-# RUN: llvm-install-name-tool -id /usr/lib/short-id -o %t.short %t
-# RUN: llvm-objdump -p %t | FileCheck %s --check-prefix=INPUT --implicit-check-not='name /usr/lib/short-id'
-# RUN: llvm-objdump -p %t.short | FileCheck %s --check-prefix=SHORT --implicit-check-not='name /usr/lib/original-id'
+## Writing separate files produces the same output as editing in place.
+# RUN: llvm-install-name-tool -id /usr/lib/id1 -o %t.short %t
+# RUN: llvm-install-name-tool -id /usr/lib/id1 --output %t.long %t
+# RUN: llvm-install-name-tool -id /usr/lib/id1 %t
 
-# INPUT: name /usr/lib/original-id
-# SHORT: name /usr/lib/short-id
-
-## Writing to a separate file with --output:
-# RUN: llvm-install-name-tool -id /usr/lib/long-id --output %t.long %t
-# RUN: llvm-objdump -p %t.long | FileCheck %s --check-prefix=LONG --implicit-check-not='name /usr/lib/original-id'
-
-# LONG: name /usr/lib/long-id
+# RUN: cmp %t %t.short
+# RUN: cmp %t %t.long
 
 --- !mach-o
 FileHeader:

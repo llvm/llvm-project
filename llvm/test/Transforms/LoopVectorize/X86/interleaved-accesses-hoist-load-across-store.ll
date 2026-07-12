@@ -71,12 +71,12 @@ define void @pr63602_1(ptr %arr) {
 ; CHECK-NEXT:    [[TMP48:%.*]] = insertelement <4 x i32> [[TMP47]], i32 [[TMP44]], i32 3
 ; CHECK-NEXT:    [[TMP49:%.*]] = add <4 x i32> [[TMP48]], [[TMP40]]
 ; CHECK-NEXT:    [[TMP50:%.*]] = extractelement <4 x i32> [[TMP49]], i64 0
-; CHECK-NEXT:    [[TMP51:%.*]] = extractelement <4 x i32> [[TMP49]], i64 1
-; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <4 x i32> [[TMP49]], i64 2
-; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <4 x i32> [[TMP49]], i64 3
 ; CHECK-NEXT:    store i32 [[TMP50]], ptr [[TMP21]], align 4
+; CHECK-NEXT:    [[TMP51:%.*]] = extractelement <4 x i32> [[TMP49]], i64 1
 ; CHECK-NEXT:    store i32 [[TMP51]], ptr [[TMP22]], align 4
+; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <4 x i32> [[TMP49]], i64 2
 ; CHECK-NEXT:    store i32 [[TMP52]], ptr [[TMP23]], align 4
+; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <4 x i32> [[TMP49]], i64 3
 ; CHECK-NEXT:    store i32 [[TMP53]], ptr [[TMP24]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP54:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
@@ -204,12 +204,12 @@ define void @pr63602_2(ptr %arr) {
 ; CHECK-NEXT:    [[TMP48:%.*]] = insertelement <4 x i32> [[TMP47]], i32 [[TMP44]], i32 3
 ; CHECK-NEXT:    [[TMP49:%.*]] = add <4 x i32> [[TMP40]], [[TMP48]]
 ; CHECK-NEXT:    [[TMP50:%.*]] = extractelement <4 x i32> [[TMP49]], i64 0
-; CHECK-NEXT:    [[TMP51:%.*]] = extractelement <4 x i32> [[TMP49]], i64 1
-; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <4 x i32> [[TMP49]], i64 2
-; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <4 x i32> [[TMP49]], i64 3
 ; CHECK-NEXT:    store i32 [[TMP50]], ptr [[TMP21]], align 4
+; CHECK-NEXT:    [[TMP51:%.*]] = extractelement <4 x i32> [[TMP49]], i64 1
 ; CHECK-NEXT:    store i32 [[TMP51]], ptr [[TMP22]], align 4
+; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <4 x i32> [[TMP49]], i64 2
 ; CHECK-NEXT:    store i32 [[TMP52]], ptr [[TMP23]], align 4
+; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <4 x i32> [[TMP49]], i64 3
 ; CHECK-NEXT:    store i32 [[TMP53]], ptr [[TMP24]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP54:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16

@@ -39,7 +39,7 @@ CODEGENOPT(ImplicitMapSyms, 1, 0, Benign) ///< -Wa,-mmapsyms=implicit
 CODEGENOPT(AsmVerbose        , 1, 0, Benign) ///< -dA, -fverbose-asm.
 CODEGENOPT(PreserveAsmComments, 1, 1, Benign) ///< -dA, -fno-preserve-as-comments.
 CODEGENOPT(AssumeSaneOperatorNew , 1, 1, Benign) ///< implicit __attribute__((malloc)) operator new
-CODEGENOPT(AssumeUniqueVTables , 1, 1, Benign) ///< Assume a class has only one vtable.
+CODEGENOPT(DisableExactDynamicCast , 1, 0, Benign) ///< -fno-assume-unique-vtables: disable the exact dynamic_cast optimization.
 CODEGENOPT(Autolink          , 1, 1, Benign) ///< -fno-autolink
 CODEGENOPT(AutoImport        , 1, 1, Benign) ///< -fno-auto-import
 CODEGENOPT(ObjCAutoRefCountExceptions , 1, 0, Benign) ///< Whether ARC should be EH-safe.
@@ -351,6 +351,7 @@ CODEGENOPT(TimeTrace         , 1, 0, Benign) ///< Set when -ftime-trace is enabl
 VALUE_CODEGENOPT(TimeTraceGranularity, 32, 500, Benign) ///< Minimum time granularity (in microseconds),
                                                         ///< traced by time profiler
 CODEGENOPT(InterchangeLoops  , 1, 0, Benign) ///< Run loop-interchange.
+CODEGENOPT(EnableNewPMCodeGen, 1, 0, Benign) ///< Use NewPM for the CodeGen pipeline.
 CODEGENOPT(FuseLoops         , 1, 0, Benign) ///< Run loop-fusion.
 CODEGENOPT(UnrollLoops       , 1, 0, Benign) ///< Control whether loops are unrolled.
 CODEGENOPT(RerollLoops       , 1, 0, Benign) ///< Control whether loops are rerolled.
@@ -521,10 +522,12 @@ CODEGENOPT(ResMayAlias, 1, 0, Benign)
 /// Assume that all resources are bound if enabled
 CODEGENOPT(AllResourcesBound, 1, 0, Benign)
 
-/// Controls how unwind v2 (epilog) information should be generated for x64
-/// Windows.
-ENUM_CODEGENOPT(WinX64EHUnwindV2, WinX64EHUnwindV2Mode,
-                2, WinX64EHUnwindV2Mode::Disabled, Benign)
+/// Do not embed dx.source.* metadata in HLSL modules.
+CODEGENOPT(DisableDXSourceMetadata, 1, 0, Benign)
+
+/// Controls the x64 Windows unwind info version.
+ENUM_CODEGENOPT(WinX64EHUnwind, WinX64EHUnwindMode, 3,
+                WinX64EHUnwindMode::Default, Benign)
 
 /// Controls the mechanism used for Control Flow Guard (CFG) on Windows.
 ENUM_CODEGENOPT(WinControlFlowGuardMechanism, ControlFlowGuardMechanism,
@@ -532,6 +535,9 @@ ENUM_CODEGENOPT(WinControlFlowGuardMechanism, ControlFlowGuardMechanism,
 
 /// Adds attributes that prevent outlining (`-mno-outline`)
 CODEGENOPT(DisableOutlining, 1, 0, Benign)
+
+/// Controlls the emission of function name in PPA1 on z/OS.
+CODEGENOPT(ZOSPPA1Name, 1, 1, Benign)
 
 /// FIXME: Make DebugOptions its own top-level .def file.
 #include "DebugOptions.def"

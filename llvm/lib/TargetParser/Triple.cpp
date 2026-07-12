@@ -14,12 +14,26 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include <cassert>
 #include <cstring>
 using namespace llvm;
+
+bool Triple::operator==(const Triple &Other) const {
+  return Arch == Other.Arch && SubArch == Other.SubArch &&
+         Vendor == Other.Vendor && OS == Other.OS &&
+         Environment == Other.Environment && ObjectFormat == Other.ObjectFormat;
+}
+
+bool Triple::operator<(const Triple &Other) const {
+  return std::tie(Arch, SubArch, Vendor, OS, Environment, ObjectFormat, Data) <
+         std::tie(Other.Arch, Other.SubArch, Other.Vendor, Other.OS,
+                  Other.Environment, Other.ObjectFormat, Other.Data);
+}
 
 StringRef Triple::getArchTypeName(ArchType Kind) {
   switch (Kind) {
@@ -32,8 +46,8 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
     return "aarch64_32";
   case aarch64_be:
     return "aarch64_be";
-  case amdgcn:
-    return "amdgcn";
+  case amdgpu:
+    return "amdgpu";
   case amdil64:
     return "amdil64";
   case amdil:
@@ -181,6 +195,10 @@ StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) {
     if (SubArch == AArch64SubArch_lfi)
       return "aarch64_lfi";
     break;
+  case Triple::x86_64:
+    if (SubArch == X86_64SubArch_lfi)
+      return "x86_64_lfi";
+    break;
   case Triple::spirv:
     switch (SubArch) {
     case Triple::SPIRVSubArch_v10:
@@ -228,6 +246,51 @@ StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) {
       break;
     }
     break;
+  case Triple::amdgpu: {
+    if (SubArch < Triple::FirstAMDGPUSubArch ||
+        SubArch > Triple::LastAMDGPUSubArch)
+      break;
+
+    static const StringLiteral AMDGPUSubArchNames[Triple::LastAMDGPUSubArch -
+                                                  Triple::FirstAMDGPUSubArch +
+                                                  1] = {
+        "amdgpu6",     "amdgpu6.00",  "amdgpu6.01",  "amdgpu6.02",
+
+        "amdgpu7",     "amdgpu7.00",  "amdgpu7.01",  "amdgpu7.02",
+        "amdgpu7.03",  "amdgpu7.04",  "amdgpu7.05",
+
+        "amdgpu8",     "amdgpu8.01",  "amdgpu8.02",  "amdgpu8.03",
+        "amdgpu8.05",
+
+        "amdgpu8.10",
+
+        "amdgpu9",     "amdgpu9.00",  "amdgpu9.02",  "amdgpu9.04",
+        "amdgpu9.06",  "amdgpu9.09",  "amdgpu9.0c",
+
+        "amdgpu9.08",  "amdgpu9.0a",
+
+        "amdgpu9.4",   "amdgpu9.42",  "amdgpu9.50",
+
+        "amdgpu10.1",  "amdgpu10.10", "amdgpu10.11", "amdgpu10.12",
+        "amdgpu10.13",
+
+        "amdgpu10.3",  "amdgpu10.30", "amdgpu10.31", "amdgpu10.32",
+        "amdgpu10.33", "amdgpu10.34", "amdgpu10.35", "amdgpu10.36",
+
+        "amdgpu11",    "amdgpu11.00", "amdgpu11.01", "amdgpu11.02",
+        "amdgpu11.03", "amdgpu11.50", "amdgpu11.51", "amdgpu11.52",
+        "amdgpu11.53", "amdgpu11.54",
+
+        "amdgpu11.7",  "amdgpu11.70", "amdgpu11.71", "amdgpu11.72",
+
+        "amdgpu12",    "amdgpu12.00", "amdgpu12.01",
+
+        "amdgpu12.5",  "amdgpu12.50", "amdgpu12.51",
+
+        "amdgpu13",    "amdgpu13.10"};
+
+    return AMDGPUSubArchNames[SubArch - Triple::FirstAMDGPUSubArch];
+  }
   default:
     break;
   }
@@ -274,7 +337,8 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
   case hexagon:
     return "hexagon";
 
-  case amdgcn:
+  // Intrinsics use amdgcn prefix.
+  case amdgpu:
     return "amdgcn";
   case r600:
     return "r600";
@@ -358,37 +422,10 @@ StringRef Triple::getVendorTypeName(VendorType Kind) {
   switch (Kind) {
   case UnknownVendor:
     return "unknown";
-
-  case AMD:
-    return "amd";
-  case Apple:
-    return "apple";
-  case CSR:
-    return "csr";
-  case Freescale:
-    return "fsl";
-  case IBM:
-    return "ibm";
-  case ImaginationTechnologies:
-    return "img";
-  case Intel:
-    return "intel";
-  case Mesa:
-    return "mesa";
-  case MipsTechnologies:
-    return "mti";
-  case NVIDIA:
-    return "nvidia";
-  case OpenEmbedded:
-    return "oe";
-  case PC:
-    return "pc";
-  case SCEI:
-    return "scei";
-  case SUSE:
-    return "suse";
-  case Meta:
-    return "meta";
+#define TRIPLE_VENDOR(Enum, Name)                                              \
+  case Enum:                                                                   \
+    return Name;
+#include "llvm/TargetParser/TripleName.def"
   }
 
   llvm_unreachable("Invalid VendorType!");
@@ -398,105 +435,10 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   switch (Kind) {
   case UnknownOS:
     return "unknown";
-
-  case AIX:
-    return "aix";
-  case AMDHSA:
-    return "amdhsa";
-  case AMDPAL:
-    return "amdpal";
-  case BridgeOS:
-    return "bridgeos";
-  case CUDA:
-    return "cuda";
-  case Darwin:
-    return "darwin";
-  case DragonFly:
-    return "dragonfly";
-  case DriverKit:
-    return "driverkit";
-  case ELFIAMCU:
-    return "elfiamcu";
-  case Emscripten:
-    return "emscripten";
-  case FreeBSD:
-    return "freebsd";
-  case Fuchsia:
-    return "fuchsia";
-  case Haiku:
-    return "haiku";
-  case HermitCore:
-    return "hermit";
-  case Hurd:
-    return "hurd";
-  case IOS:
-    return "ios";
-  case KFreeBSD:
-    return "kfreebsd";
-  case Linux:
-    return "linux";
-  case Lv2:
-    return "lv2";
-  case MacOSX:
-    return "macosx";
-  case Managarm:
-    return "managarm";
-  case Mesa3D:
-    return "mesa3d";
-  case NVCL:
-    return "nvcl";
-  case NetBSD:
-    return "netbsd";
-  case OpenBSD:
-    return "openbsd";
-  case PS4:
-    return "ps4";
-  case PS5:
-    return "ps5";
-  case RTEMS:
-    return "rtems";
-  case Solaris:
-    return "solaris";
-  case Serenity:
-    return "serenity";
-  case TvOS:
-    return "tvos";
-  case UEFI:
-    return "uefi";
-  case WASI:
-    return "wasi";
-  case WASIp1:
-    return "wasip1";
-  case WASIp2:
-    return "wasip2";
-  case WASIp3:
-    return "wasip3";
-  case WatchOS:
-    return "watchos";
-  case Win32:
-    return "windows";
-  case ZOS:
-    return "zos";
-  case ShaderModel:
-    return "shadermodel";
-  case LiteOS:
-    return "liteos";
-  case XROS:
-    return "xros";
-  case Vulkan:
-    return "vulkan";
-  case CheriotRTOS:
-    return "cheriotrtos";
-  case OpenCL:
-    return "opencl";
-  case ChipStar:
-    return "chipstar";
-  case Firmware:
-    return "firmware";
-  case QURT:
-    return "qurt";
-  case H2:
-    return "h2";
+#define TRIPLE_OS(Enum, Name)                                                  \
+  case Enum:                                                                   \
+    return Name;
+#include "llvm/TargetParser/TripleName.def"
   }
 
   llvm_unreachable("Invalid OSType");
@@ -506,112 +448,10 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   switch (Kind) {
   case UnknownEnvironment:
     return "unknown";
-  case Android:
-    return "android";
-  case CODE16:
-    return "code16";
-  case CoreCLR:
-    return "coreclr";
-  case Cygnus:
-    return "cygnus";
-  case EABI:
-    return "eabi";
-  case EABIHF:
-    return "eabihf";
-  case GNU:
-    return "gnu";
-  case GNUT64:
-    return "gnut64";
-  case GNUABI64:
-    return "gnuabi64";
-  case GNUABIN32:
-    return "gnuabin32";
-  case GNUEABI:
-    return "gnueabi";
-  case GNUEABIT64:
-    return "gnueabit64";
-  case GNUEABIHF:
-    return "gnueabihf";
-  case GNUEABIHFT64:
-    return "gnueabihft64";
-  case GNUF32:
-    return "gnuf32";
-  case GNUF64:
-    return "gnuf64";
-  case GNUSF:
-    return "gnusf";
-  case GNUX32:
-    return "gnux32";
-  case GNUILP32:
-    return "gnu_ilp32";
-  case Itanium:
-    return "itanium";
-  case MSVC:
-    return "msvc";
-  case MacABI:
-    return "macabi";
-  case Musl:
-    return "musl";
-  case MuslABIN32:
-    return "muslabin32";
-  case MuslABI64:
-    return "muslabi64";
-  case MuslEABI:
-    return "musleabi";
-  case MuslEABIHF:
-    return "musleabihf";
-  case MuslF32:
-    return "muslf32";
-  case MuslSF:
-    return "muslsf";
-  case MuslX32:
-    return "muslx32";
-  case MuslWALI:
-    return "muslwali";
-  case Simulator:
-    return "simulator";
-  case Pixel:
-    return "pixel";
-  case Vertex:
-    return "vertex";
-  case Geometry:
-    return "geometry";
-  case Hull:
-    return "hull";
-  case Domain:
-    return "domain";
-  case Compute:
-    return "compute";
-  case Library:
-    return "library";
-  case RayGeneration:
-    return "raygeneration";
-  case Intersection:
-    return "intersection";
-  case AnyHit:
-    return "anyhit";
-  case ClosestHit:
-    return "closesthit";
-  case Miss:
-    return "miss";
-  case Callable:
-    return "callable";
-  case Mesh:
-    return "mesh";
-  case Amplification:
-    return "amplification";
-  case RootSignature:
-    return "rootsignature";
-  case OpenHOS:
-    return "ohos";
-  case PAuthTest:
-    return "pauthtest";
-  case MTIA:
-    return "mtia";
-  case LLVM:
-    return "llvm";
-  case Mlibc:
-    return "mlibc";
+#define TRIPLE_ENV(Enum, Name)                                                 \
+  case Enum:                                                                   \
+    return Name;
+#include "llvm/TargetParser/TripleName.def"
   }
 
   llvm_unreachable("Invalid EnvironmentType!");
@@ -681,8 +521,9 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
       .Case("ppc32le", ppcle)
       .Case("ppcle", ppcle)
       .Case("ppc64le", ppc64le)
+      .Case("amdgpu", amdgpu)
+      .Case("amdgcn", amdgpu) // Legacy name
       .Case("r600", r600)
-      .Case("amdgcn", amdgcn)
       .Case("riscv32", riscv32)
       .Case("riscv64", riscv64)
       .Case("riscv32be", riscv32be)
@@ -800,7 +641,7 @@ Triple::ArchType Triple::parseArch(StringRef ArchName) {
           .Cases({"i386", "i486", "i586", "i686"}, Triple::x86)
           // FIXME: Do we need to support these?
           .Cases({"i786", "i886", "i986"}, Triple::x86)
-          .Cases({"amd64", "x86_64", "x86_64h"}, Triple::x86_64)
+          .Cases({"amd64", "x86_64", "x86_64h", "x86_64_lfi"}, Triple::x86_64)
           .Cases({"powerpc", "powerpcspe", "ppc", "ppc32"}, Triple::ppc)
           .Cases({"powerpcle", "ppcle", "ppc32le"}, Triple::ppcle)
           .Cases({"powerpc64", "ppu", "ppc64"}, Triple::ppc64)
@@ -833,8 +674,9 @@ Triple::ArchType Triple::parseArch(StringRef ArchName) {
           .Cases({"mips64el", "mipsn32el", "mipsisa64r6el", "mips64r6el",
                   "mipsn32r6el"},
                  Triple::mips64el)
+          .StartsWith("amdgpu", Triple::amdgpu)
+          .Case("amdgcn", Triple::amdgpu)
           .Case("r600", Triple::r600)
-          .Case("amdgcn", Triple::amdgcn)
           .Case("riscv32", Triple::riscv32)
           .Case("riscv64", Triple::riscv64)
           .Case("riscv32be", Triple::riscv32be)
@@ -896,136 +738,24 @@ Triple::ArchType Triple::parseArch(StringRef ArchName) {
 
 static Triple::VendorType parseVendor(StringRef VendorName) {
   return StringSwitch<Triple::VendorType>(VendorName)
-      .Case("apple", Triple::Apple)
-      .Case("pc", Triple::PC)
-      .Case("scei", Triple::SCEI)
-      .Case("sie", Triple::SCEI)
-      .Case("fsl", Triple::Freescale)
-      .Case("ibm", Triple::IBM)
-      .Case("img", Triple::ImaginationTechnologies)
-      .Case("mti", Triple::MipsTechnologies)
-      .Case("nvidia", Triple::NVIDIA)
-      .Case("csr", Triple::CSR)
-      .Case("amd", Triple::AMD)
-      .Case("mesa", Triple::Mesa)
-      .Case("suse", Triple::SUSE)
-      .Case("oe", Triple::OpenEmbedded)
-      .Case("intel", Triple::Intel)
-      .Case("meta", Triple::Meta)
+#define TRIPLE_VENDOR(Enum, Name) .Case(Name, Triple::Enum)
+#define TRIPLE_VENDOR_ALIAS(Enum, AliasName) .Case(AliasName, Triple::Enum)
+#include "llvm/TargetParser/TripleName.def"
       .Default(Triple::UnknownVendor);
 }
 
 static Triple::OSType parseOS(StringRef OSName) {
   return StringSwitch<Triple::OSType>(OSName)
-      .StartsWith("darwin", Triple::Darwin)
-      .StartsWith("dragonfly", Triple::DragonFly)
-      .StartsWith("freebsd", Triple::FreeBSD)
-      .StartsWith("fuchsia", Triple::Fuchsia)
-      .StartsWith("ios", Triple::IOS)
-      .StartsWith("kfreebsd", Triple::KFreeBSD)
-      .StartsWith("linux", Triple::Linux)
-      .StartsWith("lv2", Triple::Lv2)
-      .StartsWith("macos", Triple::MacOSX)
-      .StartsWith("managarm", Triple::Managarm)
-      .StartsWith("netbsd", Triple::NetBSD)
-      .StartsWith("openbsd", Triple::OpenBSD)
-      .StartsWith("solaris", Triple::Solaris)
-      .StartsWith("uefi", Triple::UEFI)
-      .StartsWith("win32", Triple::Win32)
-      .StartsWith("windows", Triple::Win32)
-      .StartsWith("zos", Triple::ZOS)
-      .StartsWith("haiku", Triple::Haiku)
-      .StartsWith("rtems", Triple::RTEMS)
-      .StartsWith("aix", Triple::AIX)
-      .StartsWith("cuda", Triple::CUDA)
-      .StartsWith("nvcl", Triple::NVCL)
-      .StartsWith("amdhsa", Triple::AMDHSA)
-      .StartsWith("ps4", Triple::PS4)
-      .StartsWith("ps5", Triple::PS5)
-      .StartsWith("elfiamcu", Triple::ELFIAMCU)
-      .StartsWith("tvos", Triple::TvOS)
-      .StartsWith("watchos", Triple::WatchOS)
-      .StartsWith("bridgeos", Triple::BridgeOS)
-      .StartsWith("driverkit", Triple::DriverKit)
-      .StartsWith("xros", Triple::XROS)
-      .StartsWith("visionos", Triple::XROS)
-      .StartsWith("mesa3d", Triple::Mesa3D)
-      .StartsWith("amdpal", Triple::AMDPAL)
-      .StartsWith("hermit", Triple::HermitCore)
-      .StartsWith("hurd", Triple::Hurd)
-      .StartsWith("wasip1", Triple::WASIp1)
-      .StartsWith("wasip2", Triple::WASIp2)
-      .StartsWith("wasip3", Triple::WASIp3)
-      .StartsWith("wasi", Triple::WASI)
-      .StartsWith("emscripten", Triple::Emscripten)
-      .StartsWith("shadermodel", Triple::ShaderModel)
-      .StartsWith("liteos", Triple::LiteOS)
-      .StartsWith("serenity", Triple::Serenity)
-      .StartsWith("vulkan", Triple::Vulkan)
-      .StartsWith("cheriotrtos", Triple::CheriotRTOS)
-      .StartsWith("opencl", Triple::OpenCL)
-      .StartsWith("chipstar", Triple::ChipStar)
-      .StartsWith("firmware", Triple::Firmware)
-      .StartsWith("qurt", Triple::QURT)
-      .StartsWith("h2", Triple::H2)
+#define TRIPLE_OS(Enum, Name) .StartsWith(Name, Triple::Enum)
+#define TRIPLE_OS_ALIAS(Enum, AliasName) .StartsWith(AliasName, Triple::Enum)
+#include "llvm/TargetParser/TripleName.def"
       .Default(Triple::UnknownOS);
 }
 
 static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
   return StringSwitch<Triple::EnvironmentType>(EnvironmentName)
-      .StartsWith("eabihf", Triple::EABIHF)
-      .StartsWith("eabi", Triple::EABI)
-      .StartsWith("gnuabin32", Triple::GNUABIN32)
-      .StartsWith("gnuabi64", Triple::GNUABI64)
-      .StartsWith("gnueabihft64", Triple::GNUEABIHFT64)
-      .StartsWith("gnueabihf", Triple::GNUEABIHF)
-      .StartsWith("gnueabit64", Triple::GNUEABIT64)
-      .StartsWith("gnueabi", Triple::GNUEABI)
-      .StartsWith("gnuf32", Triple::GNUF32)
-      .StartsWith("gnuf64", Triple::GNUF64)
-      .StartsWith("gnusf", Triple::GNUSF)
-      .StartsWith("gnux32", Triple::GNUX32)
-      .StartsWith("gnu_ilp32", Triple::GNUILP32)
-      .StartsWith("code16", Triple::CODE16)
-      .StartsWith("gnut64", Triple::GNUT64)
-      .StartsWith("gnu", Triple::GNU)
-      .StartsWith("android", Triple::Android)
-      .StartsWith("muslabin32", Triple::MuslABIN32)
-      .StartsWith("muslabi64", Triple::MuslABI64)
-      .StartsWith("musleabihf", Triple::MuslEABIHF)
-      .StartsWith("musleabi", Triple::MuslEABI)
-      .StartsWith("muslf32", Triple::MuslF32)
-      .StartsWith("muslsf", Triple::MuslSF)
-      .StartsWith("muslx32", Triple::MuslX32)
-      .StartsWith("muslwali", Triple::MuslWALI)
-      .StartsWith("musl", Triple::Musl)
-      .StartsWith("msvc", Triple::MSVC)
-      .StartsWith("itanium", Triple::Itanium)
-      .StartsWith("cygnus", Triple::Cygnus)
-      .StartsWith("coreclr", Triple::CoreCLR)
-      .StartsWith("simulator", Triple::Simulator)
-      .StartsWith("macabi", Triple::MacABI)
-      .StartsWith("pixel", Triple::Pixel)
-      .StartsWith("vertex", Triple::Vertex)
-      .StartsWith("geometry", Triple::Geometry)
-      .StartsWith("hull", Triple::Hull)
-      .StartsWith("domain", Triple::Domain)
-      .StartsWith("compute", Triple::Compute)
-      .StartsWith("library", Triple::Library)
-      .StartsWith("raygeneration", Triple::RayGeneration)
-      .StartsWith("intersection", Triple::Intersection)
-      .StartsWith("anyhit", Triple::AnyHit)
-      .StartsWith("closesthit", Triple::ClosestHit)
-      .StartsWith("miss", Triple::Miss)
-      .StartsWith("callable", Triple::Callable)
-      .StartsWith("mesh", Triple::Mesh)
-      .StartsWith("amplification", Triple::Amplification)
-      .StartsWith("rootsignature", Triple::RootSignature)
-      .StartsWith("ohos", Triple::OpenHOS)
-      .StartsWith("pauthtest", Triple::PAuthTest)
-      .StartsWith("llvm", Triple::LLVM)
-      .StartsWith("mlibc", Triple::Mlibc)
-      .StartsWith("mtia", Triple::MTIA)
+#define TRIPLE_ENV(Enum, Name) .StartsWith(Name, Triple::Enum)
+#include "llvm/TargetParser/TripleName.def"
       .Default(Triple::UnknownEnvironment);
 }
 
@@ -1043,7 +773,7 @@ static Triple::ObjectFormatType parseFormat(StringRef EnvironmentName) {
       .Default(Triple::UnknownObjectFormat);
 }
 
-static Triple::SubArchType parseSubArch(StringRef SubArchName) {
+Triple::SubArchType Triple::parseSubArch(StringRef SubArchName) {
   if (SubArchName.starts_with("mips") &&
       (SubArchName.ends_with("r6el") || SubArchName.ends_with("r6")))
     return Triple::MipsSubArch_r6;
@@ -1059,6 +789,9 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
 
   if (SubArchName == "aarch64_lfi")
     return Triple::AArch64SubArch_lfi;
+
+  if (SubArchName == "x86_64_lfi")
+    return Triple::X86_64SubArch_lfi;
 
   if (SubArchName.starts_with("spirv"))
     return StringSwitch<Triple::SubArchType>(SubArchName)
@@ -1084,6 +817,77 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
         .EndsWith("v1.8", Triple::DXILSubArch_v1_8)
         .EndsWith("v1.9", Triple::DXILSubArch_v1_9)
         .Default(Triple::NoSubArch);
+
+  if (SubArchName.consume_front("amdgpu")) {
+    return StringSwitch<Triple::SubArchType>(SubArchName)
+        .Case("6", Triple::AMDGPUSubArch6)
+        .Case("6.00", Triple::AMDGPUSubArch600)
+        .Case("6.01", Triple::AMDGPUSubArch601)
+        .Case("6.02", Triple::AMDGPUSubArch602)
+        .Case("7", Triple::AMDGPUSubArch7)
+        .Case("7.00", Triple::AMDGPUSubArch700)
+        .Case("7.01", Triple::AMDGPUSubArch701)
+        .Case("7.02", Triple::AMDGPUSubArch702)
+        .Case("7.03", Triple::AMDGPUSubArch703)
+        .Case("7.04", Triple::AMDGPUSubArch704)
+        .Case("7.05", Triple::AMDGPUSubArch705)
+        .Case("8", Triple::AMDGPUSubArch8)
+        .Case("8.01", Triple::AMDGPUSubArch801)
+        .Case("8.02", Triple::AMDGPUSubArch802)
+        .Case("8.03", Triple::AMDGPUSubArch803)
+        .Case("8.05", Triple::AMDGPUSubArch805)
+        .Case("8.10", Triple::AMDGPUSubArch810)
+        .Case("9", Triple::AMDGPUSubArch9)
+        .Case("9.00", Triple::AMDGPUSubArch900)
+        .Case("9.02", Triple::AMDGPUSubArch902)
+        .Case("9.04", Triple::AMDGPUSubArch904)
+        .Case("9.06", Triple::AMDGPUSubArch906)
+        .Case("9.08", Triple::AMDGPUSubArch908)
+        .Case("9.09", Triple::AMDGPUSubArch909)
+        .Case("9.0a", Triple::AMDGPUSubArch90A)
+        .Case("9.0c", Triple::AMDGPUSubArch90C)
+        .Case("9.4", Triple::AMDGPUSubArch9_4)
+        .Case("9.5", Triple::AMDGPUSubArch9_4)
+        .Case("9.42", Triple::AMDGPUSubArch942)
+        .Case("9.50", Triple::AMDGPUSubArch950)
+        .Case("10", Triple::AMDGPUSubArch10_1)
+        .Case("10.1", Triple::AMDGPUSubArch10_1)
+        .Case("10.10", Triple::AMDGPUSubArch1010)
+        .Case("10.11", Triple::AMDGPUSubArch1011)
+        .Case("10.12", Triple::AMDGPUSubArch1012)
+        .Case("10.13", Triple::AMDGPUSubArch1013)
+        .Case("10.3", Triple::AMDGPUSubArch10_3)
+        .Case("10.30", Triple::AMDGPUSubArch1030)
+        .Case("10.31", Triple::AMDGPUSubArch1031)
+        .Case("10.32", Triple::AMDGPUSubArch1032)
+        .Case("10.33", Triple::AMDGPUSubArch1033)
+        .Case("10.34", Triple::AMDGPUSubArch1034)
+        .Case("10.35", Triple::AMDGPUSubArch1035)
+        .Case("10.36", Triple::AMDGPUSubArch1036)
+        .Case("11", Triple::AMDGPUSubArch11)
+        .Case("11.00", Triple::AMDGPUSubArch1100)
+        .Case("11.01", Triple::AMDGPUSubArch1101)
+        .Case("11.02", Triple::AMDGPUSubArch1102)
+        .Case("11.03", Triple::AMDGPUSubArch1103)
+        .Case("11.50", Triple::AMDGPUSubArch1150)
+        .Case("11.51", Triple::AMDGPUSubArch1151)
+        .Case("11.52", Triple::AMDGPUSubArch1152)
+        .Case("11.53", Triple::AMDGPUSubArch1153)
+        .Case("11.54", Triple::AMDGPUSubArch1154)
+        .Case("11.7", Triple::AMDGPUSubArch11_7)
+        .Case("11.70", Triple::AMDGPUSubArch1170)
+        .Case("11.71", Triple::AMDGPUSubArch1171)
+        .Case("11.72", Triple::AMDGPUSubArch1172)
+        .Case("12", Triple::AMDGPUSubArch12)
+        .Case("12.00", Triple::AMDGPUSubArch1200)
+        .Case("12.01", Triple::AMDGPUSubArch1201)
+        .Case("12.5", Triple::AMDGPUSubArch12_5)
+        .Case("12.50", Triple::AMDGPUSubArch1250)
+        .Case("12.51", Triple::AMDGPUSubArch1251)
+        .Case("13", Triple::AMDGPUSubArch13)
+        .Case("13.10", Triple::AMDGPUSubArch1310)
+        .Default(Triple::NoSubArch);
+  }
 
   StringRef ARMSubArch = ARM::getCanonicalArchName(SubArchName);
 
@@ -1197,7 +1001,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
       return T.isOSDarwin() ? Triple::MachO : Triple::ELF;
     }
   case Triple::aarch64_be:
-  case Triple::amdgcn:
+  case Triple::amdgpu:
   case Triple::amdil64:
   case Triple::amdil:
   case Triple::arc:
@@ -1744,9 +1548,12 @@ bool Triple::getMacOSXVersion(VersionTuple &Version) const {
     } else if (Version.getMajor() < 25) {
       // darwin20-24 corresponds to macOS 11-15.
       Version = VersionTuple(11 + Version.getMajor() - 20);
-    } else {
-      // darwin25 corresponds with macOS26+.
+    } else if ((Version.getMajor() == 25) || (Version.getMajor() == 26)) {
+      // darwin25-26 corresponds to macOS 26-27.
       Version = VersionTuple(Version.getMajor() + 1);
+    } else {
+      // Starting with darwin27, it naturally corresponds to the same macOS
+      // version.
     }
     break;
   case MacOSX:
@@ -2009,7 +1816,7 @@ unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
 
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_be:
-  case llvm::Triple::amdgcn:
+  case llvm::Triple::amdgpu:
   case llvm::Triple::amdil64:
   case llvm::Triple::bpfeb:
   case llvm::Triple::bpfel:
@@ -2071,7 +1878,7 @@ Triple Triple::get32BitArchVariant() const {
   Triple T(*this);
   switch (getArch()) {
   case Triple::UnknownArch:
-  case Triple::amdgcn:
+  case Triple::amdgpu:
   case Triple::avr:
   case Triple::bpfeb:
   case Triple::bpfel:
@@ -2205,7 +2012,7 @@ Triple Triple::get64BitArchVariant() const {
 
   case Triple::aarch64:
   case Triple::aarch64_be:
-  case Triple::amdgcn:
+  case Triple::amdgpu:
   case Triple::amdil64:
   case Triple::bpfeb:
   case Triple::bpfel:
@@ -2308,7 +2115,7 @@ Triple Triple::getBigEndianArchVariant() const {
     return T;
   switch (getArch()) {
   case Triple::UnknownArch:
-  case Triple::amdgcn:
+  case Triple::amdgpu:
   case Triple::amdil64:
   case Triple::amdil:
   case Triple::avr:
@@ -2443,7 +2250,7 @@ bool Triple::isLittleEndian() const {
   switch (getArch()) {
   case Triple::aarch64:
   case Triple::aarch64_32:
-  case Triple::amdgcn:
+  case Triple::amdgpu:
   case Triple::amdil64:
   case Triple::amdil:
   case Triple::arm:
@@ -2495,7 +2302,7 @@ bool Triple::isLittleEndian() const {
 unsigned Triple::getDefaultWCharSize() const {
   if (getArch() == Triple::xcore)
     return 1;
-  if (isOSWindows() || isWindowsCygwinEnvironment() || isPS() || isUEFI())
+  if (isOSWindowsOrUEFI() || isPS())
     return 2;
   if (isOSAIX() && isArch32Bit())
     return 2;
@@ -2523,6 +2330,14 @@ bool Triple::isCompatibleWith(const Triple &Other) const {
              getObjectFormat() == Other.getObjectFormat();
   }
 
+  if (getArch() == Triple::amdgpu && Other.getArch() == Triple::amdgpu) {
+    if (getOS() != Other.getOS() || getVendor() != Other.getVendor() ||
+        getEnvironment() != Other.getEnvironment() ||
+        getObjectFormat() != Other.getObjectFormat())
+      return false;
+    return AMDGPU::isSubArchCompatible(*this, Other);
+  }
+
   // If vendor is apple, ignore the version number (the environment field)
   // and the object format.
   if (getVendor() == Triple::Apple)
@@ -2539,9 +2354,12 @@ bool Triple::isCompatibleWith(const Triple &Other) const {
 
 std::string Triple::merge(const Triple &Other) const {
   // If vendor is apple, pick the triple with the larger version number.
-  if (getVendor() == Triple::Apple)
-    if (Other.isOSVersionLT(*this))
-      return str();
+  if (getVendor() == Triple::Apple && Other.isOSVersionLT(*this))
+    return str();
+
+  if (isAMDGCN() && Other.isAMDGCN() && getOS() == Other.getOS() &&
+      getVendor() == Other.getVendor())
+    return AMDGPU::mergeSubArch(*this, Other);
 
   return Other.str();
 }
@@ -2642,6 +2460,12 @@ VersionTuple Triple::getCanonicalVersionForOS(OSType OSKind,
       return VersionTuple(26, 0);
     if (!IsInValidRange)
       return Version.withMajorReplaced(Version.getMajor() + WatchOSRangeBump);
+    break;
+  }
+  case DriverKit: {
+    // DriverKit26 is canonicalized to 27.
+    if (Version.getMajor() == 26U)
+      return Version.withMajorReplaced(27);
     break;
   }
   default:

@@ -667,6 +667,7 @@ TestRunner.py:
  %/p                     %p but ``\`` is replaced by ``/``
  %/t                     %t but ``\`` is replaced by ``/``
  %{s:basename}           The last path component of %s
+ %{s:stem}               The last path component of %s but with the last extension removed.
  %{t:stem}               The last path component of %t but without the ``.tmp`` extension (alias for %basename_t)
  %{s:real}               %s after expanding all symbolic links and substitute drives
  %{S:real}               %S after expanding all symbolic links and substitute drives
