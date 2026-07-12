@@ -257,12 +257,12 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
 
   // The guard blocks were created outside the loop, so they need to become
   // members of the parent loop.
-  // Same goes for the callbr target blocks.  Although we try to add them to the
-  // smallest common parent loop of the callbr block and the corresponding
-  // original target block, there might not have been such a loop, in which case
-  // the newly created callbr target blocks are not part of any loop. For nested
-  // loops, this might result in them leading to a loop with multiple entry
-  // points.
+  // Same goes for the callbr/switch target blocks. Although we try to add them
+  // to the smallest common parent loop of the branching block and the
+  // corresponding original target block, there might not have been such a loop,
+  // in which case the newly created target blocks are not part of any
+  // loop. For nested loops, this might result in them leading to a loop with
+  // multiple entry points.
   if (auto *ParentLoop = L->getParentLoop()) {
     for (auto *G : GuardBlocks) {
       ParentLoop->addBasicBlockToLoop(G, LI);

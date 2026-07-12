@@ -703,31 +703,31 @@ BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
 }
 
 /// Helper function to update the cycle or loop information after inserting a
-/// new block between a callbr instruction and one of its target blocks.  Adds
-/// the new block to the innermost cycle or loop that the callbr instruction and
-/// the original target block share.
+/// new block between a callbr or switch instruction and one of its target
+/// blocks. Adds the new block to the innermost cycle or loop that the
+/// callbr/switch instruction and the original target block share.
 /// \p LCI            cycle or loop information to update
-/// \p CallBrBlock    block containing the callbr instruction
-/// \p CallBrTarget   new target block of the callbr instruction
-/// \p Succ           original target block of the callbr instruction
+/// \p MultiBrBlock   block containing the callbr/switch instruction
+/// \p BrTarget       new target block of the callbr/switch instruction
+/// \p Succ           original target block of the callbr/switch instruction
 template <typename TI, typename T>
-static bool updateCycleLoopInfo(TI *LCI, BasicBlock *CallBrBlock,
-                                BasicBlock *CallBrTarget, BasicBlock *Succ) {
+static bool updateCycleLoopInfo(TI *LCI, BasicBlock *MultiBrBlock,
+                                BasicBlock *BrTarget, BasicBlock *Succ) {
   static_assert(std::is_same_v<TI, CycleInfo> || std::is_same_v<TI, LoopInfo>,
                 "type must be CycleInfo or LoopInfo");
   if (!LCI)
     return false;
 
   if constexpr (std::is_same_v<TI, CycleInfo>) {
-    T LC = LCI->getSmallestCommonCycle(CallBrBlock, Succ);
+    T LC = LCI->getSmallestCommonCycle(MultiBrBlock, Succ);
     if (!LC)
       return false;
-    LCI->addBlockToCycle(CallBrTarget, LC);
+    LCI->addBlockToCycle(BrTarget, LC);
   } else {
-    T *LC = LCI->getSmallestCommonLoop(CallBrBlock, Succ);
+    T *LC = LCI->getSmallestCommonLoop(MultiBrBlock, Succ);
     if (!LC)
       return false;
-    LC->addBasicBlockToLoop(CallBrTarget, *LCI);
+    LC->addBasicBlockToLoop(BrTarget, *LCI);
   }
 
   return true;
@@ -745,7 +745,7 @@ BasicBlock *llvm::SplitMultiBrEdge(BasicBlock *MultiBrBlock, BasicBlock *Succ,
   if (UpdatedLI)
     *UpdatedLI = false;
 
-  bool ReusesCallBrTarget = BrTarget;
+  bool ReusesBrTarget = BrTarget;
 
   // Create a new block between terminator and the specified successor.
   // splitBlockBefore cannot be re-used here since it cannot split if the split
@@ -753,19 +753,19 @@ BasicBlock *llvm::SplitMultiBrEdge(BasicBlock *MultiBrBlock, BasicBlock *Succ,
   // handle that). But we don't need to rewire every part of a potential PHI
   // node. We only care about the edge between MultiBrBlock and the original
   // successor.
-  if (!ReusesCallBrTarget) {
+  if (!ReusesBrTarget) {
     BrTarget = BasicBlock::Create(MultiBrBlock->getContext(),
                                   MultiBrBlock->getName() + ".target." +
                                       Succ->getName(),
                                   MultiBrBlock->getParent());
     // Jump from the new target block to the original successor.
     UncondBrInst::Create(Succ, BrTarget);
-    // Replace a single incoming value with the callbr target block. We cannot
+    // Replace a single incoming value with the target block. We cannot
     // use replacePhiUsesWith, as this would replace the value for every edge
-    // from the callbr block to succ.
+    // from the MultiBrBlock to the successor.
     for (PHINode &PN : Succ->phis()) {
       int BBIdx = PN.getBasicBlockIndex(MultiBrBlock);
-      assert(BBIdx != -1 && "expected incoming value form callbr block");
+      assert(BBIdx != -1 && "expected incoming value form MultiBrBlock");
       PN.setIncomingBlock(BBIdx, BrTarget);
     }
 
@@ -779,16 +779,16 @@ BasicBlock *llvm::SplitMultiBrEdge(BasicBlock *MultiBrBlock, BasicBlock *Succ,
       PN.removeIncomingValue(MultiBrBlock, false);
   }
 
-  // Rewire control flow from callbr to the new target block.
+  // Rewire control flow from the MultiBrBlock to the new target block.
   Term->setSuccessor(SuccIdx, BrTarget);
 
   if (DTU) {
-    if (!ReusesCallBrTarget)
+    if (!ReusesBrTarget)
       DTU->applyUpdates({{DominatorTree::Insert, MultiBrBlock, BrTarget}});
     if (DTU->getDomTree().dominates(MultiBrBlock, Succ)) {
       if (!is_contained(successors(MultiBrBlock), Succ))
         DTU->applyUpdates({{DominatorTree::Delete, MultiBrBlock, Succ}});
-      if (!ReusesCallBrTarget)
+      if (!ReusesBrTarget)
         DTU->applyUpdates({{DominatorTree::Insert, BrTarget, Succ}});
     }
   }
