@@ -18,7 +18,6 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
-#include "llvm/ADT/ImmutableList.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/ImmutableSet.h"
 

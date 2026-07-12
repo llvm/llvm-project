@@ -527,7 +527,7 @@ public:
   /// extracts the corresponding expressions for each origin. Origins that refer
   /// to declarations (rather than expressions) are skipped.
   llvm::SmallVector<const Expr *>
-  getExprChain(llvm::SmallVector<OriginID> OriginFlowChain) {
+  getExprChain(llvm::ArrayRef<OriginID> OriginFlowChain) {
     llvm::SmallVector<const Expr *> rs;
     for (const OriginID CurrOID : OriginFlowChain)
       if (const Expr *CurrExpr =
