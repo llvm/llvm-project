@@ -1,6 +1,8 @@
 # REQUIRES: x86
 ## The address of a symbol assignment after a non-SHF_ALLOC section equals the
-## end address of the last SHF_ALLOC section.
+## end address of the last SHF_ALLOC section. However, script-defined symbols
+## appearing within the non-SHF_ALLOC section still behave as if the section
+## were SHF_ALLOC.
 
 # RUN: echo '.section .nonalloc,""; .quad 0' \
 # RUN:   | llvm-mc -filetype=obj -triple=x86_64-unknown-linux - -o %t
@@ -9,14 +11,20 @@
 
 # CHECK: Sections:
 # CHECK:  .text         00000000 0000000000000120
-# CHECK:  .nonalloc     00000008 0000000000000000
+# CHECK:  .nonalloc     00000008 0000000000000120
 
 # CHECK: SYMBOL TABLE:
+# CHECK:  0000000000000120 g .nonalloc 0000000000000000 start_nonalloc
+# CHECK:  0000000000000128 g .nonalloc 0000000000000000 end_nonalloc
 # CHECK:  0000000000000120 g .nonalloc 0000000000000000 Sym
 
 SECTIONS {
   . = SIZEOF_HEADERS;
   .text : { *(.text) }
-  .nonalloc : { *(.nonalloc) }
+  .nonalloc : {
+    start_nonalloc = .;
+    *(.nonalloc);
+    end_nonalloc = .;
+  }
   Sym = .;
 }
