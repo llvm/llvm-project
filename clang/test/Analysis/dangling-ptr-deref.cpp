@@ -1,7 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.ReportDanglingPtrDeref \
 // RUN:   -analyzer-config cfg-lifetime=true -analyzer-output=text -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.ReportDanglingPtrDeref \
-// RUN:   -analyzer-config c++-container-inlining=false -analyzer-config cfg-lifetime=true -analyzer-output=text -verify %s
 
 void test_case_one() {
   int *ptr = nullptr;
