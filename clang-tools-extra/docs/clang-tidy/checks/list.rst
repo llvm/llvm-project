@@ -373,6 +373,7 @@ Clang-Tidy Checks
    :doc:`performance-unnecessary-value-param <performance/unnecessary-value-param>`, "Yes"
    :doc:`performance-use-std-move <performance/use-std-move>`, "Yes"
    :doc:`portability-avoid-pragma-once <portability/avoid-pragma-once>`,
+   :doc:`portability-deprecated-posix-functions <portability/deprecated-posix-functions>`,
    :doc:`portability-no-assembler <portability/no-assembler>`,
    :doc:`portability-restrict-system-includes <portability/restrict-system-includes>`, "Yes"
    :doc:`portability-simd-intrinsics <portability/simd-intrinsics>`,
