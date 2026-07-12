@@ -605,34 +605,154 @@ define void @sdiv_by_const(ptr noalias %o, ptr noalias %i, i64 %n) {
 ; AVX512DQ-LABEL: define void @sdiv_by_const(
 ; AVX512DQ-SAME: ptr noalias [[O:%.*]], ptr noalias [[I:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; AVX512DQ-NEXT:  [[ENTRY:.*]]:
+; AVX512DQ-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; AVX512DQ-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; AVX512DQ:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
+; AVX512DQ-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], 32
+; AVX512DQ-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; AVX512DQ:       [[VECTOR_PH]]:
+; AVX512DQ-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 32
+; AVX512DQ-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; AVX512DQ-NEXT:    br label %[[LOOP:.*]]
 ; AVX512DQ:       [[LOOP]]:
-; AVX512DQ-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_N:%.*]], %[[LOOP]] ]
+; AVX512DQ-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
 ; AVX512DQ-NEXT:    [[P:%.*]] = getelementptr i64, ptr [[I]], i64 [[IV]]
-; AVX512DQ-NEXT:    [[V:%.*]] = load i64, ptr [[P]], align 8
+; AVX512DQ-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[P]], i64 8
+; AVX512DQ-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[P]], i64 16
+; AVX512DQ-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[P]], i64 24
+; AVX512DQ-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i64>, ptr [[P]], align 8
+; AVX512DQ-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x i64>, ptr [[TMP1]], align 8
+; AVX512DQ-NEXT:    [[WIDE_LOAD3:%.*]] = load <8 x i64>, ptr [[TMP2]], align 8
+; AVX512DQ-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x i64>, ptr [[TMP3]], align 8
+; AVX512DQ-NEXT:    [[TMP4:%.*]] = sdiv <8 x i64> [[WIDE_LOAD]], splat (i64 1000000007)
+; AVX512DQ-NEXT:    [[TMP5:%.*]] = sdiv <8 x i64> [[WIDE_LOAD2]], splat (i64 1000000007)
+; AVX512DQ-NEXT:    [[TMP6:%.*]] = sdiv <8 x i64> [[WIDE_LOAD3]], splat (i64 1000000007)
+; AVX512DQ-NEXT:    [[TMP7:%.*]] = sdiv <8 x i64> [[WIDE_LOAD4]], splat (i64 1000000007)
+; AVX512DQ-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[O]], i64 [[IV]]
+; AVX512DQ-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[TMP8]], i64 8
+; AVX512DQ-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP8]], i64 16
+; AVX512DQ-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[TMP8]], i64 24
+; AVX512DQ-NEXT:    store <8 x i64> [[TMP4]], ptr [[TMP8]], align 8
+; AVX512DQ-NEXT:    store <8 x i64> [[TMP5]], ptr [[TMP9]], align 8
+; AVX512DQ-NEXT:    store <8 x i64> [[TMP6]], ptr [[TMP10]], align 8
+; AVX512DQ-NEXT:    store <8 x i64> [[TMP7]], ptr [[TMP11]], align 8
+; AVX512DQ-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 32
+; AVX512DQ-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; AVX512DQ-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
+; AVX512DQ:       [[MIDDLE_BLOCK]]:
+; AVX512DQ-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; AVX512DQ-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; AVX512DQ:       [[VEC_EPILOG_ITER_CHECK]]:
+; AVX512DQ-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 8
+; AVX512DQ-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
+; AVX512DQ:       [[VEC_EPILOG_PH]]:
+; AVX512DQ-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; AVX512DQ-NEXT:    [[N_MOD_VF5:%.*]] = urem i64 [[N]], 8
+; AVX512DQ-NEXT:    [[N_VEC6:%.*]] = sub i64 [[N]], [[N_MOD_VF5]]
+; AVX512DQ-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
+; AVX512DQ:       [[VEC_EPILOG_VECTOR_BODY]]:
+; AVX512DQ-NEXT:    [[INDEX7:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; AVX512DQ-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[I]], i64 [[INDEX7]]
+; AVX512DQ-NEXT:    [[WIDE_LOAD8:%.*]] = load <8 x i64>, ptr [[TMP13]], align 8
+; AVX512DQ-NEXT:    [[TMP14:%.*]] = sdiv <8 x i64> [[WIDE_LOAD8]], splat (i64 1000000007)
+; AVX512DQ-NEXT:    [[TMP15:%.*]] = getelementptr i64, ptr [[O]], i64 [[INDEX7]]
+; AVX512DQ-NEXT:    store <8 x i64> [[TMP14]], ptr [[TMP15]], align 8
+; AVX512DQ-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX7]], 8
+; AVX512DQ-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT9]], [[N_VEC6]]
+; AVX512DQ-NEXT:    br i1 [[TMP16]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; AVX512DQ:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
+; AVX512DQ-NEXT:    [[CMP_N10:%.*]] = icmp eq i64 [[N]], [[N_VEC6]]
+; AVX512DQ-NEXT:    br i1 [[CMP_N10]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
+; AVX512DQ:       [[VEC_EPILOG_SCALAR_PH]]:
+; AVX512DQ-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC6]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ENTRY]] ]
+; AVX512DQ-NEXT:    br label %[[LOOP1:.*]]
+; AVX512DQ:       [[LOOP1]]:
+; AVX512DQ-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_N:%.*]], %[[LOOP1]] ]
+; AVX512DQ-NEXT:    [[P1:%.*]] = getelementptr i64, ptr [[I]], i64 [[IV1]]
+; AVX512DQ-NEXT:    [[V:%.*]] = load i64, ptr [[P1]], align 8
 ; AVX512DQ-NEXT:    [[D:%.*]] = sdiv i64 [[V]], 1000000007
-; AVX512DQ-NEXT:    [[Q:%.*]] = getelementptr i64, ptr [[O]], i64 [[IV]]
+; AVX512DQ-NEXT:    [[Q:%.*]] = getelementptr i64, ptr [[O]], i64 [[IV1]]
 ; AVX512DQ-NEXT:    store i64 [[D]], ptr [[Q]], align 8
-; AVX512DQ-NEXT:    [[IV_N]] = add i64 [[IV]], 1
+; AVX512DQ-NEXT:    [[IV_N]] = add i64 [[IV1]], 1
 ; AVX512DQ-NEXT:    [[C:%.*]] = icmp eq i64 [[IV_N]], [[N]]
-; AVX512DQ-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[LOOP]]
+; AVX512DQ-NEXT:    br i1 [[C]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP10:![0-9]+]]
 ; AVX512DQ:       [[EXIT]]:
 ; AVX512DQ-NEXT:    ret void
 ;
 ; AVX512DQ256-LABEL: define void @sdiv_by_const(
 ; AVX512DQ256-SAME: ptr noalias [[O:%.*]], ptr noalias [[I:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; AVX512DQ256-NEXT:  [[ENTRY:.*]]:
+; AVX512DQ256-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; AVX512DQ256-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; AVX512DQ256:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
+; AVX512DQ256-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], 16
+; AVX512DQ256-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; AVX512DQ256:       [[VECTOR_PH]]:
+; AVX512DQ256-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; AVX512DQ256-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; AVX512DQ256-NEXT:    br label %[[LOOP:.*]]
 ; AVX512DQ256:       [[LOOP]]:
-; AVX512DQ256-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_N:%.*]], %[[LOOP]] ]
+; AVX512DQ256-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
 ; AVX512DQ256-NEXT:    [[P:%.*]] = getelementptr i64, ptr [[I]], i64 [[IV]]
-; AVX512DQ256-NEXT:    [[V:%.*]] = load i64, ptr [[P]], align 8
+; AVX512DQ256-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[P]], i64 4
+; AVX512DQ256-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[P]], i64 8
+; AVX512DQ256-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[P]], i64 12
+; AVX512DQ256-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[P]], align 8
+; AVX512DQ256-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
+; AVX512DQ256-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
+; AVX512DQ256-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
+; AVX512DQ256-NEXT:    [[TMP4:%.*]] = sdiv <4 x i64> [[WIDE_LOAD]], splat (i64 1000000007)
+; AVX512DQ256-NEXT:    [[TMP5:%.*]] = sdiv <4 x i64> [[WIDE_LOAD2]], splat (i64 1000000007)
+; AVX512DQ256-NEXT:    [[TMP6:%.*]] = sdiv <4 x i64> [[WIDE_LOAD3]], splat (i64 1000000007)
+; AVX512DQ256-NEXT:    [[TMP7:%.*]] = sdiv <4 x i64> [[WIDE_LOAD4]], splat (i64 1000000007)
+; AVX512DQ256-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[O]], i64 [[IV]]
+; AVX512DQ256-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[TMP8]], i64 4
+; AVX512DQ256-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP8]], i64 8
+; AVX512DQ256-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[TMP8]], i64 12
+; AVX512DQ256-NEXT:    store <4 x i64> [[TMP4]], ptr [[TMP8]], align 8
+; AVX512DQ256-NEXT:    store <4 x i64> [[TMP5]], ptr [[TMP9]], align 8
+; AVX512DQ256-NEXT:    store <4 x i64> [[TMP6]], ptr [[TMP10]], align 8
+; AVX512DQ256-NEXT:    store <4 x i64> [[TMP7]], ptr [[TMP11]], align 8
+; AVX512DQ256-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 16
+; AVX512DQ256-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; AVX512DQ256-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
+; AVX512DQ256:       [[MIDDLE_BLOCK]]:
+; AVX512DQ256-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; AVX512DQ256-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; AVX512DQ256:       [[VEC_EPILOG_ITER_CHECK]]:
+; AVX512DQ256-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
+; AVX512DQ256-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
+; AVX512DQ256:       [[VEC_EPILOG_PH]]:
+; AVX512DQ256-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; AVX512DQ256-NEXT:    [[N_MOD_VF5:%.*]] = urem i64 [[N]], 4
+; AVX512DQ256-NEXT:    [[N_VEC6:%.*]] = sub i64 [[N]], [[N_MOD_VF5]]
+; AVX512DQ256-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
+; AVX512DQ256:       [[VEC_EPILOG_VECTOR_BODY]]:
+; AVX512DQ256-NEXT:    [[INDEX7:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; AVX512DQ256-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[I]], i64 [[INDEX7]]
+; AVX512DQ256-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x i64>, ptr [[TMP13]], align 8
+; AVX512DQ256-NEXT:    [[TMP14:%.*]] = sdiv <4 x i64> [[WIDE_LOAD8]], splat (i64 1000000007)
+; AVX512DQ256-NEXT:    [[TMP15:%.*]] = getelementptr i64, ptr [[O]], i64 [[INDEX7]]
+; AVX512DQ256-NEXT:    store <4 x i64> [[TMP14]], ptr [[TMP15]], align 8
+; AVX512DQ256-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX7]], 4
+; AVX512DQ256-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT9]], [[N_VEC6]]
+; AVX512DQ256-NEXT:    br i1 [[TMP16]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; AVX512DQ256:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
+; AVX512DQ256-NEXT:    [[CMP_N10:%.*]] = icmp eq i64 [[N]], [[N_VEC6]]
+; AVX512DQ256-NEXT:    br i1 [[CMP_N10]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
+; AVX512DQ256:       [[VEC_EPILOG_SCALAR_PH]]:
+; AVX512DQ256-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC6]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ENTRY]] ]
+; AVX512DQ256-NEXT:    br label %[[LOOP1:.*]]
+; AVX512DQ256:       [[LOOP1]]:
+; AVX512DQ256-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_N:%.*]], %[[LOOP1]] ]
+; AVX512DQ256-NEXT:    [[P1:%.*]] = getelementptr i64, ptr [[I]], i64 [[IV1]]
+; AVX512DQ256-NEXT:    [[V:%.*]] = load i64, ptr [[P1]], align 8
 ; AVX512DQ256-NEXT:    [[D:%.*]] = sdiv i64 [[V]], 1000000007
-; AVX512DQ256-NEXT:    [[Q:%.*]] = getelementptr i64, ptr [[O]], i64 [[IV]]
+; AVX512DQ256-NEXT:    [[Q:%.*]] = getelementptr i64, ptr [[O]], i64 [[IV1]]
 ; AVX512DQ256-NEXT:    store i64 [[D]], ptr [[Q]], align 8
-; AVX512DQ256-NEXT:    [[IV_N]] = add i64 [[IV]], 1
+; AVX512DQ256-NEXT:    [[IV_N]] = add i64 [[IV1]], 1
 ; AVX512DQ256-NEXT:    [[C:%.*]] = icmp eq i64 [[IV_N]], [[N]]
-; AVX512DQ256-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[LOOP]]
+; AVX512DQ256-NEXT:    br i1 [[C]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP10:![0-9]+]]
 ; AVX512DQ256:       [[EXIT]]:
 ; AVX512DQ256-NEXT:    ret void
 ;
@@ -709,34 +829,76 @@ define void @srem_by_const(ptr noalias %o, ptr noalias %i, i64 %n) {
 ; AVX512DQ-LABEL: define void @srem_by_const(
 ; AVX512DQ-SAME: ptr noalias [[O:%.*]], ptr noalias [[I:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; AVX512DQ-NEXT:  [[ENTRY:.*]]:
+; AVX512DQ-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; AVX512DQ-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; AVX512DQ:       [[VECTOR_PH]]:
+; AVX512DQ-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; AVX512DQ-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; AVX512DQ-NEXT:    br label %[[LOOP:.*]]
 ; AVX512DQ:       [[LOOP]]:
-; AVX512DQ-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_N:%.*]], %[[LOOP]] ]
+; AVX512DQ-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
 ; AVX512DQ-NEXT:    [[P:%.*]] = getelementptr i64, ptr [[I]], i64 [[IV]]
-; AVX512DQ-NEXT:    [[V:%.*]] = load i64, ptr [[P]], align 8
+; AVX512DQ-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i64>, ptr [[P]], align 8
+; AVX512DQ-NEXT:    [[TMP1:%.*]] = srem <8 x i64> [[WIDE_LOAD]], splat (i64 1000000007)
+; AVX512DQ-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[O]], i64 [[IV]]
+; AVX512DQ-NEXT:    store <8 x i64> [[TMP1]], ptr [[TMP2]], align 8
+; AVX512DQ-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 8
+; AVX512DQ-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; AVX512DQ-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP11:![0-9]+]]
+; AVX512DQ:       [[MIDDLE_BLOCK]]:
+; AVX512DQ-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; AVX512DQ-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; AVX512DQ:       [[SCALAR_PH]]:
+; AVX512DQ-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; AVX512DQ-NEXT:    br label %[[LOOP1:.*]]
+; AVX512DQ:       [[LOOP1]]:
+; AVX512DQ-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_N:%.*]], %[[LOOP1]] ]
+; AVX512DQ-NEXT:    [[P1:%.*]] = getelementptr i64, ptr [[I]], i64 [[IV1]]
+; AVX512DQ-NEXT:    [[V:%.*]] = load i64, ptr [[P1]], align 8
 ; AVX512DQ-NEXT:    [[D:%.*]] = srem i64 [[V]], 1000000007
-; AVX512DQ-NEXT:    [[Q:%.*]] = getelementptr i64, ptr [[O]], i64 [[IV]]
+; AVX512DQ-NEXT:    [[Q:%.*]] = getelementptr i64, ptr [[O]], i64 [[IV1]]
 ; AVX512DQ-NEXT:    store i64 [[D]], ptr [[Q]], align 8
-; AVX512DQ-NEXT:    [[IV_N]] = add i64 [[IV]], 1
+; AVX512DQ-NEXT:    [[IV_N]] = add i64 [[IV1]], 1
 ; AVX512DQ-NEXT:    [[C:%.*]] = icmp eq i64 [[IV_N]], [[N]]
-; AVX512DQ-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[LOOP]]
+; AVX512DQ-NEXT:    br i1 [[C]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP12:![0-9]+]]
 ; AVX512DQ:       [[EXIT]]:
 ; AVX512DQ-NEXT:    ret void
 ;
 ; AVX512DQ256-LABEL: define void @srem_by_const(
 ; AVX512DQ256-SAME: ptr noalias [[O:%.*]], ptr noalias [[I:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; AVX512DQ256-NEXT:  [[ENTRY:.*]]:
+; AVX512DQ256-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; AVX512DQ256-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; AVX512DQ256:       [[VECTOR_PH]]:
+; AVX512DQ256-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; AVX512DQ256-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; AVX512DQ256-NEXT:    br label %[[LOOP:.*]]
 ; AVX512DQ256:       [[LOOP]]:
-; AVX512DQ256-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_N:%.*]], %[[LOOP]] ]
+; AVX512DQ256-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
 ; AVX512DQ256-NEXT:    [[P:%.*]] = getelementptr i64, ptr [[I]], i64 [[IV]]
-; AVX512DQ256-NEXT:    [[V:%.*]] = load i64, ptr [[P]], align 8
+; AVX512DQ256-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[P]], align 8
+; AVX512DQ256-NEXT:    [[TMP1:%.*]] = srem <4 x i64> [[WIDE_LOAD]], splat (i64 1000000007)
+; AVX512DQ256-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[O]], i64 [[IV]]
+; AVX512DQ256-NEXT:    store <4 x i64> [[TMP1]], ptr [[TMP2]], align 8
+; AVX512DQ256-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
+; AVX512DQ256-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; AVX512DQ256-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP11:![0-9]+]]
+; AVX512DQ256:       [[MIDDLE_BLOCK]]:
+; AVX512DQ256-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; AVX512DQ256-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; AVX512DQ256:       [[SCALAR_PH]]:
+; AVX512DQ256-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; AVX512DQ256-NEXT:    br label %[[LOOP1:.*]]
+; AVX512DQ256:       [[LOOP1]]:
+; AVX512DQ256-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_N:%.*]], %[[LOOP1]] ]
+; AVX512DQ256-NEXT:    [[P1:%.*]] = getelementptr i64, ptr [[I]], i64 [[IV1]]
+; AVX512DQ256-NEXT:    [[V:%.*]] = load i64, ptr [[P1]], align 8
 ; AVX512DQ256-NEXT:    [[D:%.*]] = srem i64 [[V]], 1000000007
-; AVX512DQ256-NEXT:    [[Q:%.*]] = getelementptr i64, ptr [[O]], i64 [[IV]]
+; AVX512DQ256-NEXT:    [[Q:%.*]] = getelementptr i64, ptr [[O]], i64 [[IV1]]
 ; AVX512DQ256-NEXT:    store i64 [[D]], ptr [[Q]], align 8
-; AVX512DQ256-NEXT:    [[IV_N]] = add i64 [[IV]], 1
+; AVX512DQ256-NEXT:    [[IV_N]] = add i64 [[IV1]], 1
 ; AVX512DQ256-NEXT:    [[C:%.*]] = icmp eq i64 [[IV_N]], [[N]]
-; AVX512DQ256-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[LOOP]]
+; AVX512DQ256-NEXT:    br i1 [[C]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP12:![0-9]+]]
 ; AVX512DQ256:       [[EXIT]]:
 ; AVX512DQ256-NEXT:    ret void
 ;

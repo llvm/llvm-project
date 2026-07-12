@@ -422,6 +422,24 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
 
+  static const CostKindTblEntry AVX512DQUniformConstCostTable[] = {
+    { ISD::SDIV, MVT::v4i64, { 15 } }, // vpmullq-based MULHS sequence
+    { ISD::SREM, MVT::v4i64, { 17 } }, // vpmullq-based MULHS+mul+sub sequence
+    { ISD::SDIV, MVT::v8i64, { 15 } }, // vpmullq-based MULHS sequence
+    { ISD::SREM, MVT::v8i64, { 17 } }, // vpmullq-based MULHS+mul+sub sequence
+    // The remainder's multiply-back is a single vpmullq with DQ, just like the
+    // pmulld the vXi32 entries above rely on. Without DQ it is another
+    // vpmuludq schoolbook, so the AVX512/AVX2 tables charge more.
+    { ISD::UREM, MVT::v4i64, { 17 } }, // MULHU + vpmullq + sub sequence
+    { ISD::UREM, MVT::v8i64, { 17 } }, // MULHU + vpmullq + sub sequence
+  };
+
+  if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasDQI())
+    if (const auto *Entry =
+            CostTableLookup(AVX512DQUniformConstCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
   static const CostKindTblEntry AVX512UniformConstCostTable[] = {
     { ISD::SHL,  MVT::v64i8,  {  2, 12,  5,  6 } }, // psllw + pand.
     { ISD::SRL,  MVT::v64i8,  {  2, 12,  5,  6 } }, // psrlw + pand.
@@ -594,6 +612,23 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   if (Op2Info.isConstant() && ST->hasBWI())
     if (const auto *Entry =
             CostTableLookup(AVX512BWConstCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
+  static const CostKindTblEntry AVX512DQConstCostTable[] = {
+    { ISD::SDIV, MVT::v4i64, { 19 } }, // vpmullq-based MULHS sequence
+    { ISD::SREM, MVT::v4i64, { 21 } }, // vpmullq-based MULHS+mul+sub sequence
+    { ISD::SDIV, MVT::v8i64, { 19 } }, // vpmullq-based MULHS sequence
+    { ISD::SREM, MVT::v8i64, { 21 } }, // vpmullq-based MULHS+mul+sub sequence
+    // The remainder's multiply-back is a single vpmullq with DQ, whereas the
+    // AVX512/AVX2 tables have to charge for another vpmuludq schoolbook.
+    { ISD::UREM, MVT::v4i64, { 24 } }, // MULHU + vpmullq + sub sequence
+    { ISD::UREM, MVT::v8i64, { 24 } }, // MULHU + vpmullq + sub sequence
+  };
+
+  if (Op2Info.isConstant() && ST->hasDQI())
+    if (const auto *Entry =
+            CostTableLookup(AVX512DQConstCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
 
