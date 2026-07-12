@@ -112,7 +112,6 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
   addFunctionPass(IndirectBrExpandPass(TM), PMW);
 
   // Try to expand `vecreduce_{and, or}` into `{any, all}_true`.
-  // TODO(boomanaiden154): WebAssemblyReduceToAnyAllTrue
   addFunctionPass(WebAssemblyReduceToAnyAllTruePass(TM), PMW);
 
   Base::addIRPasses(PMW);
