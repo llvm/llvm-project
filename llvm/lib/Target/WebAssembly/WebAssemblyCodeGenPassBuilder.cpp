@@ -81,6 +81,7 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
   // Fix function bitcasts, as WebAssembly requires caller and callee signatures
   // to match.
   // TODO(boomanaiden154): WebAssemblyFixFunctionBitcasts
+  addModulePass(WebAssemblyFixFunctionBitcastsPass(), PMW);
 
   // Optimize "returned" function attributes.
   if (getOptLevel() != CodeGenOptLevel::None) {
