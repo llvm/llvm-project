@@ -1419,7 +1419,19 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       assert(ArgOutVals.size() == 1 && "We must pass only one value as byval");
       SDValue SrcPtr = ArgOutVals[0];
       const auto PointerInfo = refinePtrAS(SrcPtr, DAG, DL, *this);
-      const Align BaseSrcAlign = ArgOuts[0].Flags.getNonZeroByValAlign();
+      // Don't use Flags.getNonZeroByValAlign as this includes the stackalign,
+      // which does not apply to the source pointer.
+      const Align BaseSrcAlign = [&]() {
+        // The align attribute on a byval argument indicates the known alignment
+        // of the pointer passed to the function.
+        if (CB)
+          if (const MaybeAlign A = CB->getParamAlign(ArgI))
+            return *A;
+        // Fall back to the default alignment for the type.
+        // TODO: This might be too aggressive but we haven't had a problem with
+        // it yet.
+        return getPTXParamTypeAlign(ETy, DL);
+      }();
 
       if (IsVAArg)
         VAOffset = alignTo(VAOffset, ArgAlign);
