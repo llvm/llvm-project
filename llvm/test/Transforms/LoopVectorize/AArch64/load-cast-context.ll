@@ -125,7 +125,7 @@ define i32 @sext_of_non_memory_op(ptr %src, i32 %offset, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP33:%.*]] = shl nuw i64 [[TMP32]], 3
 ; CHECK-NEXT:    [[N_MOD_VF10:%.*]] = urem i64 [[TMP0]], [[TMP33]]
 ; CHECK-NEXT:    [[N_VEC11:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF10]]
-; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <vscale x 8 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
+; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <vscale x 8 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX12:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT15:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]

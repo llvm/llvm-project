@@ -209,11 +209,11 @@ define i32 @reverse_store_with_partial_reduction(ptr noalias %dst, ptr noalias %
 ; CHECK-NEXT:    [[N_MOD_VF10:%.*]] = urem i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[N_VEC11:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF10]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = sub i64 [[N]], [[N_VEC11]]
-; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX12:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT18:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI13:%.*]] = phi <4 x i32> [ [[TMP26]], %[[VEC_EPILOG_PH]] ], [ [[TMP33:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI13:%.*]] = phi <4 x i32> [ [[TMP24]], %[[VEC_EPILOG_PH]] ], [ [[TMP33:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[N]], [[INDEX12]]
 ; CHECK-NEXT:    [[TMP34:%.*]] = load i16, ptr [[SRC]], align 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT14:%.*]] = insertelement <4 x i16> poison, i16 [[TMP34]], i64 0

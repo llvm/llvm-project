@@ -318,7 +318,7 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; VEC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
 ; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; VEC-NEXT:    [[TMP4:%.*]] = add i64 [[V_1]], [[N_VEC]]
-; VEC-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[V_2]], i32 0
+; VEC-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[V_2]], i64 0
 ; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VEC:       [[VECTOR_BODY]]:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]

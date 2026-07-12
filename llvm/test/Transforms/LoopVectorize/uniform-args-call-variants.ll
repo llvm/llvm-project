@@ -81,8 +81,8 @@ define void @test_uniform_not_invariant(ptr noalias %dst, ptr readonly %src, i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo(double [[TMP2]], i64 [[INDEX]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[WIDE_LOAD]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = call double @foo(double [[TMP4]], i64 [[TMP0]]) #[[ATTR0]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP6]], double [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP6]], double [[TMP5]], i64 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
