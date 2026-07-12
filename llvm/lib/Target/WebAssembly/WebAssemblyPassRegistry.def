@@ -1,0 +1,31 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file is used as the registry of passes that are part of the WebAssembly
+// backend.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef MODULE_PASS
+#define MODULE_PASS(NAME, CREATE_PASS)
+#endif
+MODULE_PASS("wasm-add-missing-prototypes", WebAssemblyAddMissingPrototypesPass())
+MODULE_PASS("wasm-fix-function-bitcasts", WebAssemblyFixFunctionBitcastsPass())
+#undef MODULE_PASS
+
+#ifndef FUNCTION_PASS
+#define FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+FUNCTION_PASS("wasm-optimize-returned", WebAssemblyOptimizeReturnedPass())
+#undef FUNCTION_PASS
+
+#ifndef MACHINE_FUNCTION_PASS
+#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+MACHINE_FUNCTION_PASS("wasm-isel", WebAssemblyISelDAGToDAGPass(*this, getOptLevel()))
+#undef MACHINE_FUNCTION_PASS
