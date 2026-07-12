@@ -2,6 +2,7 @@ set(files
   AllocAction.cpp
   BootstrapInfo.cpp
   SimpleSymbolTable.cpp
+  Environment.cpp
   Error.cpp
   ExecutorProcessInfo.cpp
   InProcessControllerAccess.cpp
