@@ -895,3 +895,66 @@ module @func_with_non_call_users {
   }
   spirv.EntryPoint "GLCompute" @callee
 }
+
+// -----
+
+// Regression test for #205984. The loop header arguments are live on the entry
+// edge, even though the constant comparison makes the backedge unreachable.
+// CHECK-LABEL: func.func @keep_live_loop_header_args_with_unreachable_backedge
+// CHECK:         cf.br ^[[HEADER:bb[0-9]+]](%[[ZERO:.*]], %[[LIMIT:.*]] : index, index)
+// CHECK:       ^[[HEADER]](%[[IV:.*]]: index, %[[BOUND:.*]]: index):
+// CHECK-NEXT:    %[[CMP:.*]] = arith.cmpi slt, %[[IV]], %[[BOUND]] : index
+// CHECK-NEXT:    cf.cond_br %[[CMP]], ^[[BACKEDGE:bb[0-9]+]], ^[[EXIT:bb[0-9]+]]
+// CHECK:       ^[[BACKEDGE]]:
+// CHECK-NEXT:    %[[NEXT:.*]] = ub.poison : index
+// CHECK-NEXT:    %[[NEXT_BOUND:.*]] = ub.poison : index
+// CHECK-NEXT:    cf.br ^[[HEADER]](%[[NEXT]], %[[NEXT_BOUND]] : index, index)
+// CHECK:       ^[[EXIT]]:
+
+// CHECK-CANONICALIZE-LABEL: func.func @keep_live_loop_header_args_with_unreachable_backedge
+// CHECK-CANONICALIZE:         cf.br ^[[HEADER:bb[0-9]+]](%[[ZERO:.*]], %[[LIMIT:.*]] : index, index)
+// CHECK-CANONICALIZE:       ^[[HEADER]](%[[IV:.*]]: index, %[[BOUND:.*]]: index):
+// CHECK-CANONICALIZE-NEXT:    %[[CMP:.*]] = arith.cmpi slt, %[[IV]], %[[BOUND]] : index
+// CHECK-CANONICALIZE-NEXT:    cf.cond_br %[[CMP]], ^[[BACKEDGE:bb[0-9]+]], ^[[EXIT:bb[0-9]+]]
+// CHECK-CANONICALIZE:       ^[[BACKEDGE]]:
+// CHECK-CANONICALIZE-NEXT:    %[[NEXT:.*]] = ub.poison : index
+// CHECK-CANONICALIZE-NEXT:    %[[NEXT_BOUND:.*]] = ub.poison : index
+// CHECK-CANONICALIZE-NEXT:    cf.br ^[[HEADER]](%[[NEXT]], %[[NEXT_BOUND]] : index, index)
+// CHECK-CANONICALIZE:       ^[[EXIT]]:
+func.func @keep_live_loop_header_args_with_unreachable_backedge() {
+  %zero = arith.constant 0 : index
+  %limit = arith.constant 0 : index
+  cf.br ^bb1(%zero, %limit : index, index)
+^bb1(%iv: index, %bound: index):
+  %cmp = arith.cmpi slt, %iv, %bound : index
+  cf.cond_br %cmp, ^bb2(%limit, %limit : index, index), ^bb3
+^bb2(%next: index, %next_bound: index):
+  cf.br ^bb1(%next, %next_bound : index, index)
+^bb3:
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @keep_produced_successor_argument
+// CHECK:         "test.internal_br"()[^[[NORMAL:.*]], ^[[ERROR:.*]]]
+// CHECK:       ^[[NORMAL]]:
+// CHECK-NEXT:    "test.terminator"() : () -> ()
+// CHECK:       ^[[ERROR]](%{{.*}}: i32):
+// CHECK-NEXT:    "test.terminator"() : () -> ()
+
+// CHECK-CANONICALIZE-LABEL: func.func @keep_produced_successor_argument
+// CHECK-CANONICALIZE:         "test.internal_br"()[^[[NORMAL:.*]], ^[[ERROR:.*]]]
+// CHECK-CANONICALIZE:       ^[[NORMAL]]:
+// CHECK-CANONICALIZE-NEXT:    "test.terminator"() : () -> ()
+// CHECK-CANONICALIZE:       ^[[ERROR]](%{{.*}}: i32):
+// CHECK-CANONICALIZE-NEXT:    "test.terminator"() : () -> ()
+func.func @keep_produced_successor_argument() {
+  "test.internal_br"() [^bb0, ^bb1] {
+    operandSegmentSizes = array<i32: 0, 0>
+  } : () -> ()
+^bb0:
+  "test.terminator"() : () -> ()
+^bb1(%produced: i32):
+  "test.terminator"() : () -> ()
+}

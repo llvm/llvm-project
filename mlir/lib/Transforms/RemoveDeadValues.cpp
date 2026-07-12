@@ -96,15 +96,10 @@ struct OperandsToCleanup {
   bool replaceWithPoison = false;
 };
 
-struct BlockArgsToCleanup {
-  Block *b;
-  BitVector nonLiveArgs;
-};
-
 struct SuccessorOperandsToCleanup {
   BranchOpInterface branch;
   unsigned successorIndex;
-  BitVector nonLiveOperands;
+  Block *successorBlock;
 };
 
 struct RDVFinalCleanupList {
@@ -112,7 +107,7 @@ struct RDVFinalCleanupList {
   SmallVector<FunctionToCleanUp> functions;
   SmallVector<OperandsToCleanup> operands;
   SmallVector<ResultsToCleanup> results;
-  SmallVector<BlockArgsToCleanup> blocks;
+  DenseMap<Block *, BitVector> branchBlockArgs;
   SmallVector<SuccessorOperandsToCleanup> successorOperands;
 };
 
@@ -465,11 +460,10 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 /// conditional branch op), the entire operation is dead.
 ///
 /// Otherwise, iterate through each successor block of `branchOp`.
-/// (1) For each successor block, gather all operands from all successors.
-/// (2) Fetch their associated liveness analysis data and collect for future
-///     removal.
-/// (3) Identify and collect the dead operands from the successor block
-///     as well as their corresponding arguments.
+/// (1) Fetch the successor block arguments' liveness analysis data.
+/// (2) Exclude arguments produced internally by the branch operation.
+/// (3) Collect dead forwarded operands and their corresponding block arguments
+///     for future removal.
 
 static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
                             DenseSet<Value> &nonLiveSet,
@@ -494,25 +488,18 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
 
   for (unsigned succIdx = 0; succIdx < numSuccessors; ++succIdx) {
     Block *successorBlock = branchOp->getSuccessor(succIdx);
-
-    // Do (1)
     SuccessorOperands successorOperands =
         branchOp.getSuccessorOperands(succIdx);
-    SmallVector<Value> operandValues;
-    for (unsigned operandIdx = 0; operandIdx < successorOperands.size();
-         ++operandIdx) {
-      operandValues.push_back(successorOperands[operandIdx]);
-    }
 
-    // Do (2)
     BitVector successorNonLive =
-        markLives(operandValues, nonLiveSet, la).flip();
-    collectNonLiveValues(nonLiveSet, successorBlock->getArguments(),
-                         successorNonLive);
+        markLives(successorBlock->getArguments(), nonLiveSet, la).flip();
+    successorNonLive.reset(0, successorOperands.getProducedOperandCount());
+    auto [it, inserted] =
+        cl.branchBlockArgs.try_emplace(successorBlock, successorNonLive);
+    if (!inserted)
+      it->second &= successorNonLive;
 
-    // Do (3)
-    cl.blocks.push_back({successorBlock, successorNonLive});
-    cl.successorOperands.push_back({branchOp, succIdx, successorNonLive});
+    cl.successorOperands.push_back({branchOp, succIdx, successorBlock});
   }
 }
 
@@ -576,26 +563,33 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
 
   // 2. Blocks, We must remove the block arguments and successor operands before
   // deleting the operation, as they may reside in the region operation.
-  LDBG() << "Cleaning up " << list.blocks.size() << " block argument lists";
-  for (auto &b : list.blocks) {
-    // blocks that are accessed via multiple codepaths processed once
-    if (b.b->getNumArguments() != b.nonLiveArgs.size())
+  LDBG() << "Cleaning up " << list.branchBlockArgs.size()
+         << " block argument lists";
+  for (auto &entry : list.branchBlockArgs) {
+    Block *block = entry.first;
+    BitVector &nonLiveArgs = entry.second;
+    if (block->getNumArguments() != nonLiveArgs.size())
       continue;
     LDBG_OS([&](raw_ostream &os) {
       os << "Erasing non-live arguments [";
-      llvm::interleaveComma(b.nonLiveArgs.set_bits(), os);
-      os << "] from block #" << b.b->computeBlockNumber() << " in region #"
-         << b.b->getParent()->getRegionNumber() << " of operation "
-         << OpWithFlags(b.b->getParent()->getParentOp(),
+      llvm::interleaveComma(nonLiveArgs.set_bits(), os);
+      os << "] from block #" << block->computeBlockNumber() << " in region #"
+         << block->getParent()->getRegionNumber() << " of operation "
+         << OpWithFlags(block->getParent()->getParentOp(),
                         OpPrintingFlags().skipRegions().printGenericOpForm());
     });
     // Note: Iterate from the end to make sure that that indices of not yet
     // processes arguments do not change.
-    for (int i = b.nonLiveArgs.size() - 1; i >= 0; --i) {
-      if (!b.nonLiveArgs[i])
+    for (int i = nonLiveArgs.size() - 1; i >= 0; --i) {
+      if (!nonLiveArgs[i])
         continue;
-      b.b->getArgument(i).dropAllUses();
-      b.b->eraseArgument(i);
+      BlockArgument argument = block->getArgument(i);
+      if (!argument.use_empty()) {
+        rewriter.setInsertionPointToStart(block);
+        Value poison = createPoisonedValue(rewriter, argument);
+        rewriter.replaceAllUsesWith(argument, poison);
+      }
+      block->eraseArgument(i);
     }
   }
 
@@ -605,19 +599,21 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
   for (auto &op : list.successorOperands) {
     SuccessorOperands successorOperands =
         op.branch.getSuccessorOperands(op.successorIndex);
+    const BitVector &nonLiveOperands =
+        list.branchBlockArgs.find(op.successorBlock)->second;
     // blocks that are accessed via multiple codepaths processed once
-    if (successorOperands.size() != op.nonLiveOperands.size())
+    if (successorOperands.size() != nonLiveOperands.size())
       continue;
     LDBG_OS([&](raw_ostream &os) {
       os << "Erasing non-live successor operands [";
-      llvm::interleaveComma(op.nonLiveOperands.set_bits(), os);
+      llvm::interleaveComma(nonLiveOperands.set_bits(), os);
       os << "] from successor " << op.successorIndex << " of branch: "
          << OpWithFlags(op.branch.getOperation(),
                         OpPrintingFlags().skipRegions().printGenericOpForm());
     });
     // it iterates backwards because erase invalidates all successor indexes
     for (int i = successorOperands.size() - 1; i >= 0; --i) {
-      if (!op.nonLiveOperands[i])
+      if (!nonLiveOperands[i])
         continue;
       successorOperands.erase(i);
     }
