@@ -10786,11 +10786,11 @@ static const Value *stripExistingNullTestPattern(const Value *V) {
 
   const Value *X;
   const APInt *C1, *C2;
-  if (match(BO, m_c_BinOp(m_LShr(m_Value(X), m_APInt(C1)),
-                          m_ZExt(m_SpecificICmp(
-                              ICmpInst::ICMP_NE,
-                              m_And(m_Deferred(X), m_LowBitMask(C2)),
-                              m_Zero())))) &&
+  if (match(BO, m_c_BinOp(
+                    m_LShr(m_Value(X), m_APInt(C1)),
+                    m_ZExt(m_SpecificICmp(
+                        ICmpInst::ICMP_NE,
+                        m_And(m_Deferred(X), m_LowBitMask(C2)), m_Zero())))) &&
       C2->popcount() == C1->getZExtValue())
     return X;
 
