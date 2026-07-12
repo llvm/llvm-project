@@ -18,8 +18,8 @@
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
-#include "gtest/gtest.h"
 #include "llvm/Support/Compiler.h"
+#include "gtest/gtest.h"
 
 using namespace clang;
 
