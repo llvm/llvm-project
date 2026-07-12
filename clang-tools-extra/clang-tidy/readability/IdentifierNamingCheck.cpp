@@ -1396,7 +1396,7 @@ IdentifierNamingCheck::getDeclFailureInfo(const NamedDecl *Decl,
 
   const SourceLocation Loc = Decl->getLocation();
   const SourceLocation SpellingLoc = SM.getSpellingLoc(Loc);
-  const FileStyle &FileStyle = getStyleForFile(SM.getFilename(ConfigLoc));
+  const FileStyle &FileStyle = getStyleForFile(SM.getFilename(SpellingLoc));
   if (!FileStyle.isActive())
     return std::nullopt;
 
