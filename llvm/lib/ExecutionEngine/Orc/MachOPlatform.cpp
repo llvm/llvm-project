@@ -834,12 +834,13 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
     if (auto *CUSec = LG.findSectionByName(MachOCompactUnwindSectionName))
       LG.removeSection(*CUSec);
 
-  // Point the libunwind dso-base absolute symbol at the header for the
-  // JITDylib. This will prevent us from synthesizing a new header for
-  // every object.
-  if (HeaderAddr)
-    LG.addAbsoluteSymbol("__jitlink$libunwind_dso_base", HeaderAddr, 0,
-                         Linkage::Strong, Scope::Local, true);
+  // Note: we intentionally do *not* pin "__jitlink$libunwind_dso_base" to the
+  // JITDylib header. A shared base makes the __unwind_info writer encode
+  // unsigned 32-bit deltas from the header, so any object emitted below it
+  // underflows ("... exceeds 32 bits"). Instead the compact-unwind writer
+  // synthesizes a per-graph local header base (getOrCreateCompactUnwindBase),
+  // which always lays out first, and findUnwindSectionInfo threads that base to
+  // the runtime so the encode and decode (dso_base) bases match.
 
   // If we're in the bootstrap phase then increment the active graphs.
   if (LLVM_UNLIKELY(InBootstrapPhase))
@@ -1320,6 +1321,17 @@ MachOPlatform::MachOPlatformPlugin::findUnwindSectionInfo(
   if (CodeBlocks.empty())
     return std::nullopt;
 
+  // Record the compact-unwind base that the __unwind_info writer used to encode
+  // its deltas, so the runtime decodes them against the same base. This is the
+  // per-graph "__jitlink$libunwind_dso_base" symbol; if absent (e.g.
+  // DWARF-only) US.DSOBase stays null and the runtime falls back to the
+  // JITDylib header.
+  auto DSOBaseName = G.intern("__jitlink$libunwind_dso_base");
+  if (auto *DSOBaseSym = G.findAbsoluteSymbolByName(DSOBaseName))
+    US.DSOBase = DSOBaseSym->getAddress();
+  else if (auto *DSOBaseSym = G.findDefinedSymbolByName(DSOBaseName))
+    US.DSOBase = DSOBaseSym->getAddress();
+
   // We have info to register. Sort the code blocks into address order and
   // build a list of contiguous address ranges covering them all.
   llvm::sort(CodeBlocks, [](const Block *LHS, const Block *RHS) {
@@ -1413,12 +1425,12 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
     MachOPlatformSecs.push_back({SecName, R.getRange()});
   }
 
-  std::optional<std::tuple<SmallVector<ExecutorAddrRange>, ExecutorAddrRange,
-                           ExecutorAddrRange>>
+  std::optional<std::tuple<SmallVector<ExecutorAddrRange>, ExecutorAddr,
+                           ExecutorAddrRange, ExecutorAddrRange>>
       UnwindInfo;
   if (auto UI = findUnwindSectionInfo(G))
-    UnwindInfo = std::make_tuple(std::move(UI->CodeRanges), UI->DwarfSection,
-                                 UI->CompactUnwindSection);
+    UnwindInfo = std::make_tuple(std::move(UI->CodeRanges), UI->DSOBase,
+                                 UI->DwarfSection, UI->CompactUnwindSection);
 
   if (!MachOPlatformSecs.empty() || UnwindInfo) {
     // Dump the scraped inits.
@@ -1431,7 +1443,7 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
     assert(HeaderAddr && "Null header registered for JD");
     using SPSRegisterObjectPlatformSectionsArgs = SPSArgList<
         SPSExecutorAddr,
-        SPSOptional<SPSTuple<SPSSequence<SPSExecutorAddrRange>,
+        SPSOptional<SPSTuple<SPSSequence<SPSExecutorAddrRange>, SPSExecutorAddr,
                              SPSExecutorAddrRange, SPSExecutorAddrRange>>,
         SPSSequence<SPSTuple<SPSString, SPSExecutorAddrRange>>>;
 

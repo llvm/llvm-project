@@ -114,30 +114,34 @@ public:
 
 struct UnwindSectionInfo {
   std::vector<ExecutorAddrRange> CodeRanges;
+  ExecutorAddr DSOBase;
   ExecutorAddrRange DwarfSection;
   ExecutorAddrRange CompactUnwindSection;
 };
 
 using SPSUnwindSectionInfo =
-    SPSTuple<SPSSequence<SPSExecutorAddrRange>, SPSExecutorAddrRange,
-             SPSExecutorAddrRange>;
+    SPSTuple<SPSSequence<SPSExecutorAddrRange>, SPSExecutorAddr,
+             SPSExecutorAddrRange, SPSExecutorAddrRange>;
 
 template <>
 class SPSSerializationTraits<SPSUnwindSectionInfo, UnwindSectionInfo> {
 public:
   static size_t size(const UnwindSectionInfo &USI) {
-    return SPSUnwindSectionInfo::AsArgList::size(
-        USI.CodeRanges, USI.DwarfSection, USI.CompactUnwindSection);
+    return SPSUnwindSectionInfo::AsArgList::size(USI.CodeRanges, USI.DSOBase,
+                                                 USI.DwarfSection,
+                                                 USI.CompactUnwindSection);
   }
 
   static bool serialize(SPSOutputBuffer &OB, const UnwindSectionInfo &USI) {
     return SPSUnwindSectionInfo::AsArgList::serialize(
-        OB, USI.CodeRanges, USI.DwarfSection, USI.CompactUnwindSection);
+        OB, USI.CodeRanges, USI.DSOBase, USI.DwarfSection,
+        USI.CompactUnwindSection);
   }
 
   static bool deserialize(SPSInputBuffer &IB, UnwindSectionInfo &USI) {
     return SPSUnwindSectionInfo::AsArgList::deserialize(
-        IB, USI.CodeRanges, USI.DwarfSection, USI.CompactUnwindSection);
+        IB, USI.CodeRanges, USI.DSOBase, USI.DwarfSection,
+        USI.CompactUnwindSection);
   }
 };
 
@@ -171,9 +175,11 @@ private:
 
   struct UnwindSections {
     UnwindSections(const UnwindSectionInfo &USI)
-        : DwarfSection(USI.DwarfSection.toSpan<char>()),
+        : DSOBase(USI.DSOBase.getValue()),
+          DwarfSection(USI.DwarfSection.toSpan<char>()),
           CompactUnwindSection(USI.CompactUnwindSection.toSpan<char>()) {}
 
+    uintptr_t DSOBase;
     span<char> DwarfSection;
     span<char> CompactUnwindSection;
   };
@@ -968,7 +974,13 @@ bool MachOPlatformRuntimeState::lookupUnwindSections(
     auto &JD = KV.second;
     auto I = JD.UnwindSections.find(reinterpret_cast<char *>(Addr));
     if (I != JD.UnwindSections.end()) {
-      Info.dso_base = reinterpret_cast<uintptr_t>(JD.Header);
+      // Decode unwind-info offsets against the same base the JITLink
+      // compact-unwind writer used to encode them (a per-graph local Mach-O
+      // header). Fall back to the JITDylib header if no base was recorded
+      // (e.g. DWARF-only registration).
+      Info.dso_base = I->second.DSOBase
+                          ? I->second.DSOBase
+                          : reinterpret_cast<uintptr_t>(JD.Header);
       Info.dwarf_section =
           reinterpret_cast<uintptr_t>(I->second.DwarfSection.data());
       Info.dwarf_section_length = I->second.DwarfSection.size();

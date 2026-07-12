@@ -242,6 +242,7 @@ private:
   private:
     struct UnwindSections {
       SmallVector<ExecutorAddrRange> CodeRanges;
+      ExecutorAddr DSOBase;
       ExecutorAddrRange DwarfSection;
       ExecutorAddrRange CompactUnwindSection;
     };
