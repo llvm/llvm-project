@@ -19,6 +19,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "gtest/gtest.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace clang;
 
@@ -89,7 +90,11 @@ TEST_F(PPMemoryAllocationsTest, PPMacroDefinesAllocations) {
   // Assume a reasonable upper bound based on that number that we don't want
   // to exceed when storing information about a macro #define with 1 or 3
   // tokens.
+#if LLVM_ADDRESS_SANITIZER_BUILD
+  EXPECT_LT(BytesPerDefine, 145.0f);
+#else
   EXPECT_LT(BytesPerDefine, 130.0f);
+#endif
 }
 
 } // anonymous namespace
