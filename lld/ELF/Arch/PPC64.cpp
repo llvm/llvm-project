@@ -180,8 +180,8 @@ public:
   void writeIplt(uint8_t *buf, const Symbol &sym,
                  uint64_t pltEntryAddr) const override;
   template <class ELFT, class RelTy>
-  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
-  void scanSection(InputSectionBase &) override;
+  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>, unsigned shard);
+  void scanSection(InputSectionBase &, unsigned shard) override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
   void writeGotHeader(uint8_t *buf) const override;
@@ -1114,8 +1114,9 @@ static bool missingTlsGdLdMarker(InputSectionBase &sec, Relocs<RelTy> rels) {
 }
 
 template <class ELFT, class RelTy>
-void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
+void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                            unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
   sec.relocations.reserve(rels.size());
   bool optimizeTlsGdLd =
       !missingTlsGdLdMarker<RelTy>(sec, rels) && !ctx.arg.shared;
@@ -1352,11 +1353,11 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   }
 }
 
-void PPC64::scanSection(InputSectionBase &sec) {
+void PPC64::scanSection(InputSectionBase &sec, unsigned shard) {
   if (ctx.arg.isLE)
-    elf::scanSection1<PPC64, ELF64LE>(*this, sec);
+    elf::scanSection1<PPC64, ELF64LE>(*this, sec, shard);
   else
-    elf::scanSection1<PPC64, ELF64BE>(*this, sec);
+    elf::scanSection1<PPC64, ELF64BE>(*this, sec, shard);
 
   // Sort relocations by offset for .toc sections. This is needed so that
   // sections addressed with small code model relocations come first.

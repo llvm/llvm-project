@@ -31,12 +31,16 @@
 
 #include "test_iterators.h"
 
-using non_forward_iterator = cpp17_input_iterator<int*>;
+using non_forward_iterator       = cpp17_input_iterator<int*>;
+using non_bidirectional_iterator = forward_iterator<int*>;
 struct non_output_iterator : forward_iterator<int*> {
   constexpr int const& operator*() const; // prevent it from being an output iterator
 };
 
-void f(non_forward_iterator non_fwd, non_output_iterator non_output, std::execution::sequenced_policy pol) {
+void f(non_forward_iterator non_fwd,
+       non_output_iterator non_output,
+       non_bidirectional_iterator non_bidir,
+       std::execution::sequenced_policy pol) {
   auto pred     = [](auto&&...) -> bool { return true; };
   auto func     = [](auto&&...) -> int { return 1; };
   int* it       = nullptr;
@@ -108,6 +112,12 @@ void f(non_forward_iterator non_fwd, non_output_iterator non_output, std::execut
   {
     (void)std::generate(pol, non_fwd, non_fwd, func); // expected-error@*:* {{static assertion failed: generate}}
     (void)std::generate_n(pol, non_fwd, n, func);     // expected-error@*:* {{static assertion failed: generate_n}}
+  }
+
+  {
+    (void)std::reverse_copy(
+        pol, non_bidir, non_bidir, it);            // expected-error@*:* {{static assertion failed: reverse_copy}}
+    (void)std::reverse_copy(pol, it, it, non_fwd); // expected-error@*:* {{static assertion failed: reverse_copy}}
   }
 
   {
