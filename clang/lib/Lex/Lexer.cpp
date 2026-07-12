@@ -237,7 +237,7 @@ void Lexer::resetExtendedTokenMode() {
 
 /// Create_PragmaLexer: Lexer constructor - Create a new lexer object for
 /// _Pragma expansion.  This has a variety of magic semantics that this method
-/// sets up.  It returns a new'd Lexer that must be delete'd when done.
+/// sets up.
 ///
 /// On entrance to this routine, TokStartLoc is a macro location which has a
 /// spelling loc that indicates the bytes to be lexed for the token and an
@@ -250,16 +250,15 @@ void Lexer::resetExtendedTokenMode() {
 /// interface that could handle this stuff.  This would pull GetMappedTokenLoc
 /// out of the critical path of the lexer!
 ///
-Lexer *Lexer::Create_PragmaLexer(SourceLocation SpellingLoc,
-                                 SourceLocation ExpansionLocStart,
-                                 SourceLocation ExpansionLocEnd,
-                                 unsigned TokLen, Preprocessor &PP) {
+std::unique_ptr<Lexer> Lexer::Create_PragmaLexer(
+    SourceLocation SpellingLoc, SourceLocation ExpansionLocStart,
+    SourceLocation ExpansionLocEnd, unsigned TokLen, Preprocessor &PP) {
   SourceManager &SM = PP.getSourceManager();
 
   // Create the lexer as if we were going to lex the file normally.
   FileID SpellingFID = SM.getFileID(SpellingLoc);
   llvm::MemoryBufferRef InputFile = SM.getBufferOrFake(SpellingFID);
-  Lexer *L = new Lexer(SpellingFID, InputFile, PP);
+  auto L = std::make_unique<Lexer>(SpellingFID, InputFile, PP);
 
   // Now that the lexer is created, change the start/end locations so that we
   // just lex the subsection of the file that we want.  This is lexing from a
@@ -513,6 +512,29 @@ unsigned Lexer::MeasureTokenLength(SourceLocation Loc,
   if (getRawToken(Loc, TheTok, SM, LangOpts))
     return 0;
   return TheTok.getLength();
+}
+
+SourceLocation Lexer::findEndOfIdentifierContinuation(
+    SourceLocation Loc, const SourceManager &SM, const LangOptions &LangOpts) {
+  Loc = SM.getExpansionLoc(Loc);
+  const FileIDAndOffset LocInfo = SM.getDecomposedLoc(Loc);
+  bool Invalid = false;
+  const StringRef Buffer = SM.getBufferData(LocInfo.first, &Invalid);
+  if (Invalid)
+    return Loc;
+
+  const char *StrData = Buffer.data() + LocInfo.second;
+  if (StrData >= Buffer.end())
+    return Loc;
+
+  // Use the lexer continuation rules directly, without requiring identifier
+  // start at Loc.
+  Lexer TheLexer(SM.getLocForStartOfFile(LocInfo.first), LangOpts,
+                 Buffer.begin(), StrData, Buffer.end());
+  Token Tok;
+  Tok.startToken();
+  TheLexer.LexIdentifierContinue(Tok, StrData);
+  return Loc.getLocWithOffset(Tok.getLength());
 }
 
 /// Relex the token at the specified location.
@@ -2122,6 +2144,7 @@ bool Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
   // If we have a digit separator, continue.
   if (C == '\'' && LangOpts.AllowLiteralDigitSeparator) {
     auto [Next, NextSize] = getCharAndSizeNoWarn(CurPtr + Size, LangOpts);
+    // A digit or non-digit.
     if (isAsciiIdentifierContinue(Next)) {
       if (!isLexingRawMode())
         Diag(CurPtr, LangOpts.CPlusPlus
@@ -2131,6 +2154,11 @@ bool Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
       CurPtr = ConsumeChar(CurPtr, NextSize, Result);
       return LexNumericConstant(Result, CurPtr);
     }
+  }
+
+  if (C == '$' && LangOpts.DollarIdents) {
+    CurPtr = ConsumeChar(CurPtr, Size, Result);
+    return LexNumericConstant(Result, CurPtr);
   }
 
   // If we have a UCN or UTF-8 character (perhaps in a ud-suffix), continue.
@@ -2157,7 +2185,7 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
   char C = getCharAndSize(CurPtr, Size);
   bool Consumed = false;
 
-  if (!isAsciiIdentifierStart(C)) {
+  if (!isAsciiIdentifierStart(C, LangOpts.DollarIdents)) {
     if (C == '\\' && tryConsumeIdentifierUCN(CurPtr, Size, Result))
       Consumed = true;
     else if (!isASCII(C) && tryConsumeIdentifierUTF8Char(CurPtr, Result))
@@ -2195,7 +2223,7 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
       while (true) {
         auto [Next, NextSize] =
             getCharAndSizeNoWarn(CurPtr + Consumed, LangOpts);
-        if (!isAsciiIdentifierContinue(Next)) {
+        if (!isAsciiIdentifierContinue(Next, LangOpts.DollarIdents)) {
           // End of suffix. Check whether this is on the allowed list.
           const StringRef CompleteSuffix(Buffer, Chars);
           IsUDSuffix =
@@ -2227,7 +2255,7 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
   Result.setFlag(Token::HasUDSuffix);
   while (true) {
     C = getCharAndSize(CurPtr, Size);
-    if (isAsciiIdentifierContinue(C)) {
+    if (isAsciiIdentifierContinue(C, LangOpts.DollarIdents)) {
       CurPtr = ConsumeChar(CurPtr, Size, Result);
     } else if (C == '\\' && tryConsumeIdentifierUCN(CurPtr, Size, Result)) {
     } else if (!isASCII(C) && tryConsumeIdentifierUTF8Char(CurPtr, Result)) {
@@ -2257,8 +2285,28 @@ bool Lexer::LexStringLiteral(Token &Result, const char *CurPtr,
   while (C != '"') {
     // Skip escaped characters.  Escaped newlines will already be processed by
     // getAndAdvanceChar.
-    if (C == '\\')
+    if (C == '\\') {
+      const char *SavedCurPtr = CurPtr;
       C = getAndAdvanceChar(CurPtr, Result);
+
+      // lex.header
+      //
+      // header-name:
+      //    ...
+      //    " q-char-sequence "
+      //    ...
+      // q-char-sequence:
+      //    q-char q-char-sequence[opt]
+      // q-char:
+      //    any member of the translation character set except new-line and
+      //    U+0022 quotation mark
+      //
+      // The implementation-defined semantics cannot be taken as causing '\' to
+      // "escape" the following " because there is no provision for " in a
+      // q-char-sequence.
+      if (ParsingFilename && C == '"')
+        CurPtr = SavedCurPtr;
+    }
 
     if (C == '\n' || C == '\r' ||             // Newline.
         (C == 0 && CurPtr-1 == BufferEnd)) {  // End of file.

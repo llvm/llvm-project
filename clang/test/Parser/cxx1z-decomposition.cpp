@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -std=c++2b %s -triple x86_64-unknown-linux-gnu -verify=expected,cxx2b,pre2c,post2b -fcxx-exceptions
 // RUN: %clang_cc1 -std=c++2c %s -triple x86_64-unknown-linux-gnu -verify=expected,cxx2c,post2b -fcxx-exceptions
 // RUN: not %clang_cc1 -std=c++17 %s -triple x86_64-unknown-linux-gnu -emit-llvm-only -fcxx-exceptions
+// RUN: not %clang_cc1 -std=c++2b %s -triple x86_64-unknown-linux-gnu -fsyntax-only -fcxx-exceptions 2>&1 | FileCheck %s
 
 struct S { int a, b, c; }; // expected-note 2 {{'S::a' declared here}}
 
@@ -32,7 +33,7 @@ namespace ForRangeDecl {
 namespace OtherDecl {
   // A parameter-declaration is not a simple-declaration.
   // This parses as an array declaration.
-  void f(auto [a, b, c]); // cxx17-error {{'auto' not allowed in function prototype}} expected-error 1+{{'a'}}
+  void f(auto [a, b, c]); // cxx17-warning {{'auto' parameters are a C++20 extension}} expected-error 1+{{'a'}}
 
   void g() {
     // A condition is allowed as a Clang extension.
@@ -111,10 +112,12 @@ namespace BadSpecifiers {
 
     // FIXME: This error is not very good.
     auto [d]() = s; // expected-error {{expected ';'}} expected-error {{expected expression}}
-    auto [e][1] = s; // expected-error {{expected ';'}} expected-error {{requires an initializer}}
+    auto [e][1] = s; // expected-error {{expected ';'}} expected-error {{structured binding declaration '[e]' requires an initializer; expected '=' or braced initializer list}}
+                     // CHECK: :[[@LINE-1]]:13: error: structured binding declaration '[e]' requires an initializer; expected '=' or braced initializer list
 
     // FIXME: This should fire the 'misplaced array declarator' diagnostic.
-    int [K] arr = {0}; // expected-error {{expected ';'}} expected-error {{cannot be declared with type 'int'}} expected-error {{structured binding declaration '[K]' requires an initializer}}
+    int [K] arr = {0}; // expected-error {{structured binding declaration '[K]' requires an initializer; expected '=' or braced initializer list}} expected-error {{expected ';'}} expected-error {{cannot be declared with type 'int'}}
+                       // CHECK: :[[@LINE-1]]:13: error: structured binding declaration '[K]' requires an initializer; expected '=' or braced initializer list
     int [5] arr = {0}; // expected-error {{place the brackets after the name}}
 
     auto *[f] = s; // expected-error {{cannot be declared with type 'auto *'}} expected-error {{incompatible initializer}}
@@ -148,11 +151,14 @@ namespace Template {
   template<typename T> auto [a, b, c] = n; // expected-error {{structured binding declaration cannot be a template}}
 }
 
+#define MYC C
+
 namespace Init {
-  void f() {
+  template<typename T> T f(T t) {
     int arr[1];
     struct S { int n; };
-    auto &[bad1]; // expected-error {{structured binding declaration '[bad1]' requires an initializer}}
+    auto &[bad1]; // expected-error {{structured binding declaration '[bad1]' requires an initializer; expected '=' or braced initializer list}}
+                  // CHECK: :[[@LINE-1]]:17: error: structured binding declaration '[bad1]' requires an initializer; expected '=' or braced initializer list
     const auto &[bad2](S{}, S{}); // expected-error {{initializer for variable '[bad2]' with type 'const auto &' contains multiple expressions}}
     const auto &[bad3](); // expected-error {{expected expression}}
     auto &[good1] = arr;
@@ -160,6 +166,11 @@ namespace Init {
     const auto &[good3](S{});
     S [goodish3] = { 4 }; // expected-error {{cannot be declared with type 'S'}}
     S [goodish4] { 4 }; // expected-error {{cannot be declared with type 'S'}}
+    auto [A, B] C = {1, 2}; // expected-error{{structured binding declaration '[A, B]' requires an initializer; expected '=' or braced initializer list}} expected-error{{expected ';' at end of declaration}}
+                            // CHECK: :[[@LINE-1]]:17: error: structured binding declaration '[A, B]' requires an initializer; expected '=' or braced initializer list
+    T t1 = t; // check that uninitialized structured binding declaration error works with templates and macros
+    auto [t0, t2] MYC = {t, t1}; // expected-error{{structured binding declaration '[t0, t2]' requires an initializer; expected '=' or braced initializer list}} expected-error{{expected ';' at end of declaration}}
+                                 // CHECK: :[[@LINE-1]]:19: error: structured binding declaration '[t0, t2]' requires an initializer; expected '=' or braced initializer list
   }
 }
 

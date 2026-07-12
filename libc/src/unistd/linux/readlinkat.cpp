@@ -8,26 +8,22 @@
 
 #include "src/unistd/readlinkat.h"
 
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/linux/syscall_wrappers/readlinkat.h"
 #include "src/__support/common.h"
-
-#include "hdr/fcntl_macros.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(ssize_t, readlinkat,
                    (int fd, const char *__restrict path, char *__restrict buf,
                     size_t bufsize)) {
-  ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_readlinkat, fd, path,
-                                                      buf, bufsize);
-  if (ret < 0) {
-    libc_errno = static_cast<int>(-ret);
+  auto result = linux_syscalls::readlinkat(fd, path, buf, bufsize);
+  if (!result) {
+    libc_errno = result.error();
     return -1;
   }
-  return ret;
+  return result.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

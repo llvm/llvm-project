@@ -17,16 +17,16 @@
 ; YAML-NEXT: Function:        bcast_v2f64_load
 ; YAML-NEXT: Args:
 ; YAML-NEXT:  - String:          'Stores SLP vectorized with cost '
-; YAML-NEXT:  - Cost:            '-1'
+; YAML-NEXT:  - Cost:            '-2'
 
 define void @bcast_v2f64_load(ptr %A, double %y, double %z, ptr %S) {
 ; CHECK-LABEL: define void @bcast_v2f64_load(
 ; CHECK-SAME: ptr [[A:%.*]], double [[Y:%.*]], double [[Z:%.*]], ptr [[S:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[X:%.*]] = load double, ptr [[A]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[X]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[X]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[Y]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[Z]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[Y]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[Z]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[S]], align 8
 ; CHECK-NEXT:    ret void

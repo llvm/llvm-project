@@ -34,7 +34,8 @@ class MachineDominatorTree;
 class MachineRegisterInfo;
 class RegScavenger;
 class SIMachineFunctionInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class ScheduleHazardRecognizer;
 
 constexpr unsigned DefaultMemoryClusterDWordsLimit = 8;
@@ -97,6 +98,12 @@ private:
   /// that will be added by insert method.
   SetVector<MachineInstr *> DeferredList;
 };
+
+// In namespace llvm so ADL finds it when SIInstrFlags predicates are
+// instantiated with MachineInstr (MachineInstr is in namespace llvm).
+inline uint64_t getTSFlags(const MachineInstr &MI) {
+  return MI.getDesc().TSFlags;
+}
 
 class SIInstrInfo final : public AMDGPUGenInstrInfo {
   struct ThreeAddressUpdates;
@@ -300,16 +307,18 @@ public:
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
 
-  const TargetRegisterClass *getPreferredSelectRegClass(
-                               unsigned Size) const;
+private:
+  void storeRegToStackSlotImpl(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator MI, Register SrcReg,
+                               bool isKill, int FrameIndex,
+                               const TargetRegisterClass *RC, Register VReg,
+                               MachineInstr::MIFlag Flags, bool NeedsCFI) const;
 
-  Register insertNE(MachineBasicBlock *MBB,
-                    MachineBasicBlock::iterator I, const DebugLoc &DL,
-                    Register SrcReg, int Value) const;
-
-  Register insertEQ(MachineBasicBlock *MBB,
-                    MachineBasicBlock::iterator I, const DebugLoc &DL,
-                    Register SrcReg, int Value)  const;
+public:
+  void storeRegToStackSlotCFI(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI, Register SrcReg,
+                              bool isKill, int FrameIndex,
+                              const TargetRegisterClass *RC) const;
 
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
@@ -319,7 +328,8 @@ public:
   unsigned getVectorRegSpillSaveOpcode(Register Reg,
                                        const TargetRegisterClass *RC,
                                        unsigned Size,
-                                       const SIMachineFunctionInfo &MFI) const;
+                                       const SIMachineFunctionInfo &MFI,
+                                       bool NeedsCFI) const;
   unsigned
   getVectorRegSpillRestoreOpcode(Register Reg, const TargetRegisterClass *RC,
                                  unsigned Size,
@@ -423,11 +433,6 @@ public:
                     Register DstReg, ArrayRef<MachineOperand> Cond,
                     Register TrueReg, Register FalseReg) const override;
 
-  void insertVectorSelect(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator I, const DebugLoc &DL,
-                          Register DstReg, ArrayRef<MachineOperand> Cond,
-                          Register TrueReg, Register FalseReg) const;
-
   bool analyzeCompare(const MachineInstr &MI, Register &SrcReg,
                       Register &SrcReg2, int64_t &CmpMask,
                       int64_t &CmpValue) const override;
@@ -470,104 +475,116 @@ public:
                             const MachineFunction &MF) const override;
 
   static bool isSALU(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::SALU;
+    return SIInstrFlags::isSALU(MI);
   }
 
   bool isSALU(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::SALU;
+    return SIInstrFlags::isSALU(get(Opcode));
   }
 
-  static bool isVALU(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::VALU;
+  static bool isVALU(const MachineInstr &MI, bool AllowLDSDMA) {
+    if (!AllowLDSDMA && isLDSDMA(MI))
+      return false;
+
+    return SIInstrFlags::isVALU(MI);
   }
 
-  bool isVALU(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::VALU;
+  /// LDSDMA instructions act as both VALU and memory instructions, thus
+  /// we also tag them as VALU. However, in many places, we do not actually want
+  /// to include LDSDMA instructions in this query. By setting \p AllowLDSDMA to
+  /// false, this will return false for LDSDMA instructions.
+  bool isVALU(uint32_t Opcode, bool AllowLDSDMA) const {
+    if (!AllowLDSDMA && isLDSDMA(Opcode))
+      return false;
+
+    return SIInstrFlags::isVALU(get(Opcode));
   }
 
   static bool isImage(const MachineInstr &MI) {
-    return isMIMG(MI) || isVSAMPLE(MI) || isVIMAGE(MI);
+    return SIInstrFlags::isImage(MI);
   }
 
   bool isImage(uint32_t Opcode) const {
-    return isMIMG(Opcode) || isVSAMPLE(Opcode) || isVIMAGE(Opcode);
+    return SIInstrFlags::isImage(get(Opcode));
   }
 
   static bool isVMEM(const MachineInstr &MI) {
-    return isMUBUF(MI) || isMTBUF(MI) || isImage(MI) || isFLAT(MI);
+    return SIInstrFlags::isVMEM(MI);
   }
 
   bool isVMEM(uint32_t Opcode) const {
-    return isMUBUF(Opcode) || isMTBUF(Opcode) || isImage(Opcode) ||
-           isFLAT(Opcode);
+    return SIInstrFlags::isVMEM(get(Opcode));
   }
 
+  /// True if MI implicitly drains XCNT.
+  static bool isXcntDrain(const MachineInstr &MI);
+
   static bool isSOP1(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::SOP1;
+    return SIInstrFlags::isSOP1(MI);
   }
 
   bool isSOP1(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::SOP1;
+    return SIInstrFlags::isSOP1(get(Opcode));
   }
 
   static bool isSOP2(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::SOP2;
+    return SIInstrFlags::isSOP2(MI);
   }
 
   bool isSOP2(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::SOP2;
+    return SIInstrFlags::isSOP2(get(Opcode));
   }
 
   static bool isSOPC(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::SOPC;
+    return SIInstrFlags::isSOPC(MI);
   }
 
   bool isSOPC(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::SOPC;
+    return SIInstrFlags::isSOPC(get(Opcode));
   }
 
   static bool isSOPK(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::SOPK;
+    return SIInstrFlags::isSOPK(MI);
   }
 
   bool isSOPK(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::SOPK;
+    return SIInstrFlags::isSOPK(get(Opcode));
   }
 
   static bool isSOPP(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::SOPP;
+    return SIInstrFlags::isSOPP(MI);
   }
 
   bool isSOPP(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::SOPP;
+    return SIInstrFlags::isSOPP(get(Opcode));
   }
 
   static bool isPacked(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::IsPacked;
+    return SIInstrFlags::isPacked(MI);
   }
 
   bool isPacked(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::IsPacked;
+    return SIInstrFlags::isPacked(get(Opcode));
   }
 
   static bool isVOP1(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::VOP1;
+    return SIInstrFlags::isVOP1(MI);
   }
 
   bool isVOP1(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::VOP1;
+    return SIInstrFlags::isVOP1(get(Opcode));
   }
 
   static bool isVOP2(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::VOP2;
+    return SIInstrFlags::isVOP2(MI);
   }
 
   bool isVOP2(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::VOP2;
+    return SIInstrFlags::isVOP2(get(Opcode));
   }
 
   static bool isVOP3(const MCInstrDesc &Desc) {
-    return Desc.TSFlags & SIInstrFlags::VOP3;
+    return SIInstrFlags::isVOP3(Desc);
   }
 
   static bool isVOP3(const MachineInstr &MI) { return isVOP3(MI.getDesc()); }
@@ -575,35 +592,35 @@ public:
   bool isVOP3(uint32_t Opcode) const { return isVOP3(get(Opcode)); }
 
   static bool isSDWA(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::SDWA;
+    return SIInstrFlags::isSDWA(MI);
   }
 
   bool isSDWA(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::SDWA;
+    return SIInstrFlags::isSDWA(get(Opcode));
   }
 
   static bool isVOPC(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::VOPC;
+    return SIInstrFlags::isVOPC(MI);
   }
 
   bool isVOPC(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::VOPC;
+    return SIInstrFlags::isVOPC(get(Opcode));
   }
 
   static bool isMUBUF(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::MUBUF;
+    return SIInstrFlags::isMUBUF(MI);
   }
 
   bool isMUBUF(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::MUBUF;
+    return SIInstrFlags::isMUBUF(get(Opcode));
   }
 
   static bool isMTBUF(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::MTBUF;
+    return SIInstrFlags::isMTBUF(MI);
   }
 
   bool isMTBUF(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::MTBUF;
+    return SIInstrFlags::isMTBUF(get(Opcode));
   }
 
   static bool isBUF(const MachineInstr &MI) {
@@ -611,110 +628,101 @@ public:
   }
 
   static bool isSMRD(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::SMRD;
+    return SIInstrFlags::isSMRD(MI);
   }
 
   bool isSMRD(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::SMRD;
+    return SIInstrFlags::isSMRD(get(Opcode));
   }
 
   bool isBufferSMRD(const MachineInstr &MI) const;
 
-  static bool isDS(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::DS;
-  }
+  static bool isDS(const MachineInstr &MI) { return SIInstrFlags::isDS(MI); }
 
-  bool isDS(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::DS;
-  }
+  bool isDS(uint32_t Opcode) const { return SIInstrFlags::isDS(get(Opcode)); }
 
   static bool isLDSDMA(const MachineInstr &MI) {
-    return (isVALU(MI) && (isMUBUF(MI) || isFLAT(MI))) ||
-           (MI.getDesc().TSFlags & SIInstrFlags::TENSOR_CNT);
+    return (SIInstrFlags::isVALU(MI) && (isMUBUF(MI) || isFLAT(MI))) ||
+           SIInstrFlags::usesTENSOR_CNT(MI);
   }
 
-  bool isLDSDMA(uint32_t Opcode) {
-    return (isVALU(Opcode) && (isMUBUF(Opcode) || isFLAT(Opcode))) ||
-           (get(Opcode).TSFlags & SIInstrFlags::TENSOR_CNT);
+  bool isLDSDMA(uint32_t Opcode) const {
+    return (SIInstrFlags::isVALU(get(Opcode)) &&
+            (isMUBUF(Opcode) || isFLAT(Opcode))) ||
+           SIInstrFlags::usesTENSOR_CNT(get(Opcode));
   }
 
-  static bool isGWS(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::GWS;
-  }
+  static bool isGWS(const MachineInstr &MI) { return SIInstrFlags::isGWS(MI); }
 
-  bool isGWS(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::GWS;
-  }
+  bool isGWS(uint32_t Opcode) const { return SIInstrFlags::isGWS(get(Opcode)); }
 
   bool isAlwaysGDS(uint32_t Opcode) const;
 
   static bool isMIMG(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::MIMG;
+    return SIInstrFlags::isMIMG(MI);
   }
 
   bool isMIMG(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::MIMG;
+    return SIInstrFlags::isMIMG(get(Opcode));
   }
 
   static bool isVIMAGE(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::VIMAGE;
+    return SIInstrFlags::isVIMAGE(MI);
   }
 
   bool isVIMAGE(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::VIMAGE;
+    return SIInstrFlags::isVIMAGE(get(Opcode));
   }
 
   static bool isVSAMPLE(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::VSAMPLE;
+    return SIInstrFlags::isVSAMPLE(MI);
   }
 
   bool isVSAMPLE(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::VSAMPLE;
+    return SIInstrFlags::isVSAMPLE(get(Opcode));
   }
 
   static bool isGather4(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::Gather4;
+    return SIInstrFlags::isGather4(MI);
   }
 
   bool isGather4(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::Gather4;
+    return SIInstrFlags::isGather4(get(Opcode));
   }
 
   static bool isFLAT(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::FLAT;
+    return SIInstrFlags::isFLAT(MI);
   }
 
   // Is a FLAT encoded instruction which accesses a specific segment,
   // i.e. global_* or scratch_*.
   static bool isSegmentSpecificFLAT(const MachineInstr &MI) {
-    auto Flags = MI.getDesc().TSFlags;
-    return Flags & (SIInstrFlags::FlatGlobal | SIInstrFlags::FlatScratch);
+    return SIInstrFlags::isSegmentSpecificFLAT(MI);
   }
 
   bool isSegmentSpecificFLAT(uint32_t Opcode) const {
-    auto Flags = get(Opcode).TSFlags;
-    return Flags & (SIInstrFlags::FlatGlobal | SIInstrFlags::FlatScratch);
+    return SIInstrFlags::isSegmentSpecificFLAT(get(Opcode));
   }
 
   static bool isFLATGlobal(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::FlatGlobal;
+    return SIInstrFlags::isFlatGlobal(MI);
   }
 
   bool isFLATGlobal(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::FlatGlobal;
+    return SIInstrFlags::isFlatGlobal(get(Opcode));
   }
 
   static bool isFLATScratch(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::FlatScratch;
+    return SIInstrFlags::isFlatScratch(MI);
   }
 
   bool isFLATScratch(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::FlatScratch;
+    return SIInstrFlags::isFlatScratch(get(Opcode));
   }
 
   // Any FLAT encoded instruction, including global_* and scratch_*.
   bool isFLAT(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::FLAT;
+    return SIInstrFlags::isFLAT(get(Opcode));
   }
 
   /// \returns true for SCRATCH_ instructions, or FLAT/BUF instructions unless
@@ -727,11 +735,12 @@ public:
   bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
 
   /// \returns true for FLAT instructions that can access LDS.
-  bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
+  bool mayAccessLDSThroughFlat(const MachineInstr &MI, bool TgSplit) const;
 
   static bool isBlockLoadStore(uint32_t Opcode) {
     switch (Opcode) {
     case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
+    case AMDGPU::SI_BLOCK_SPILL_V1024_CFI_SAVE:
     case AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE:
     case AMDGPU::SCRATCH_STORE_BLOCK_SADDR:
     case AMDGPU::SCRATCH_LOAD_BLOCK_SADDR:
@@ -789,9 +798,7 @@ public:
     }
   }
 
-  static bool isEXP(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::EXP;
-  }
+  static bool isEXP(const MachineInstr &MI) { return SIInstrFlags::isEXP(MI); }
 
   static bool isDualSourceBlendEXP(const MachineInstr &MI) {
     if (!isEXP(MI))
@@ -801,34 +808,30 @@ public:
            Target == AMDGPU::Exp::ET_DUAL_SRC_BLEND1;
   }
 
-  bool isEXP(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::EXP;
-  }
+  bool isEXP(uint32_t Opcode) const { return SIInstrFlags::isEXP(get(Opcode)); }
 
   static bool isAtomicNoRet(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::IsAtomicNoRet;
+    return SIInstrFlags::isAtomicNoRet(MI);
   }
 
   bool isAtomicNoRet(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::IsAtomicNoRet;
+    return SIInstrFlags::isAtomicNoRet(get(Opcode));
   }
 
   static bool isAtomicRet(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::IsAtomicRet;
+    return SIInstrFlags::isAtomicRet(MI);
   }
 
   bool isAtomicRet(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::IsAtomicRet;
+    return SIInstrFlags::isAtomicRet(get(Opcode));
   }
 
   static bool isAtomic(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & (SIInstrFlags::IsAtomicRet |
-                                   SIInstrFlags::IsAtomicNoRet);
+    return SIInstrFlags::isAtomic(MI);
   }
 
   bool isAtomic(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & (SIInstrFlags::IsAtomicRet |
-                                  SIInstrFlags::IsAtomicNoRet);
+    return SIInstrFlags::isAtomic(get(Opcode));
   }
 
   static bool mayWriteLDSThroughDMA(const MachineInstr &MI) {
@@ -851,20 +854,16 @@ public:
            !MI.getOperand(1).isUndef();
   }
 
-  static bool isWQM(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::WQM;
-  }
+  static bool isWQM(const MachineInstr &MI) { return SIInstrFlags::isWQM(MI); }
 
-  bool isWQM(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::WQM;
-  }
+  bool isWQM(uint32_t Opcode) const { return SIInstrFlags::isWQM(get(Opcode)); }
 
   static bool isDisableWQM(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::DisableWQM;
+    return SIInstrFlags::isDisableWQM(MI);
   }
 
   bool isDisableWQM(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::DisableWQM;
+    return SIInstrFlags::isDisableWQM(get(Opcode));
   }
 
   // SI_SPILL_S32_TO_VGPR and SI_RESTORE_S32_FROM_VGPR form a special case of
@@ -875,13 +874,13 @@ public:
   static bool isVGPRSpill(const MachineInstr &MI) {
     return MI.getOpcode() != AMDGPU::SI_SPILL_S32_TO_VGPR &&
            MI.getOpcode() != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
-           (isSpill(MI) && isVALU(MI));
+           (isSpill(MI) && isVALU(MI, /*AllowLDSDMA=*/true));
   }
 
   bool isVGPRSpill(uint32_t Opcode) const {
     return Opcode != AMDGPU::SI_SPILL_S32_TO_VGPR &&
            Opcode != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
-           (isSpill(Opcode) && isVALU(Opcode));
+           (isSpill(Opcode) && isVALU(Opcode, /*AllowLDSDMA=*/true));
   }
 
   static bool isSGPRSpill(const MachineInstr &MI) {
@@ -897,11 +896,11 @@ public:
   }
 
   bool isSpill(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::Spill;
+    return SIInstrFlags::isSpill(get(Opcode));
   }
 
   static bool isSpill(const MCInstrDesc &Desc) {
-    return Desc.TSFlags & SIInstrFlags::Spill;
+    return SIInstrFlags::isSpill(Desc);
   }
 
   static bool isSpill(const MachineInstr &MI) { return isSpill(MI.getDesc()); }
@@ -918,28 +917,24 @@ public:
            Opcode == AMDGPU::SI_CS_CHAIN_TC_W64;
   }
 
-  static bool isDPP(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::DPP;
-  }
+  static bool isDPP(const MachineInstr &MI) { return SIInstrFlags::isDPP(MI); }
 
-  bool isDPP(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::DPP;
-  }
+  bool isDPP(uint32_t Opcode) const { return SIInstrFlags::isDPP(get(Opcode)); }
 
   static bool isTRANS(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::TRANS;
+    return SIInstrFlags::isTRANS(MI);
   }
 
   bool isTRANS(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::TRANS;
+    return SIInstrFlags::isTRANS(get(Opcode));
   }
 
   static bool isVOP3P(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::VOP3P;
+    return SIInstrFlags::isVOP3P(MI);
   }
 
   bool isVOP3P(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::VOP3P;
+    return SIInstrFlags::isVOP3P(get(Opcode));
   }
 
   bool isVOP3PMix(const MachineInstr &MI) const {
@@ -961,15 +956,15 @@ public:
   }
 
   static bool isVINTRP(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::VINTRP;
+    return SIInstrFlags::isVINTRP(MI);
   }
 
   bool isVINTRP(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::VINTRP;
+    return SIInstrFlags::isVINTRP(get(Opcode));
   }
 
   static bool isMAI(const MCInstrDesc &Desc) {
-    return Desc.TSFlags & SIInstrFlags::IsMAI;
+    return SIInstrFlags::isMAI(Desc);
   }
 
   static bool isMAI(const MachineInstr &MI) { return isMAI(MI.getDesc()); }
@@ -986,16 +981,14 @@ public:
            Opcode != AMDGPU::V_ACCVGPR_READ_B32_e64;
   }
 
-  static bool isDOT(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::IsDOT;
-  }
+  static bool isDOT(const MachineInstr &MI) { return SIInstrFlags::isDOT(MI); }
 
   static bool isWMMA(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::IsWMMA;
+    return SIInstrFlags::isWMMA(MI);
   }
 
   bool isWMMA(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::IsWMMA;
+    return SIInstrFlags::isWMMA(get(Opcode));
   }
 
   static bool isMFMAorWMMA(const MachineInstr &MI) {
@@ -1007,16 +1000,14 @@ public:
   }
 
   static bool isSWMMAC(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::IsSWMMAC;
+    return SIInstrFlags::isSWMMAC(MI);
   }
 
   bool isSWMMAC(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::IsSWMMAC;
+    return SIInstrFlags::isSWMMAC(get(Opcode));
   }
 
-  bool isDOT(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::IsDOT;
-  }
+  bool isDOT(uint32_t Opcode) const { return SIInstrFlags::isDOT(get(Opcode)); }
 
   bool isXDLWMMA(const MachineInstr &MI) const;
 
@@ -1025,39 +1016,47 @@ public:
   static bool isDGEMM(unsigned Opcode) { return AMDGPU::getMAIIsDGEMM(Opcode); }
 
   static bool isLDSDIR(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::LDSDIR;
+    return SIInstrFlags::isLDSDIR(MI);
   }
 
   bool isLDSDIR(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::LDSDIR;
+    return SIInstrFlags::isLDSDIR(get(Opcode));
   }
 
   static bool isVINTERP(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::VINTERP;
+    return SIInstrFlags::isVINTERP(MI);
   }
 
   bool isVINTERP(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::VINTERP;
+    return SIInstrFlags::isVINTERP(get(Opcode));
   }
 
   static bool isScalarUnit(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & (SIInstrFlags::SALU | SIInstrFlags::SMRD);
+    return SIInstrFlags::isSALU(MI) || SIInstrFlags::isSMRD(MI);
   }
 
   static bool usesVM_CNT(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::VM_CNT;
+    return SIInstrFlags::usesVM_CNT(MI);
   }
 
   static bool usesLGKM_CNT(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::LGKM_CNT;
+    return SIInstrFlags::usesLGKM_CNT(MI);
   }
 
   static bool usesASYNC_CNT(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::ASYNC_CNT;
+    return SIInstrFlags::usesASYNC_CNT(MI);
   }
 
   bool usesASYNC_CNT(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::ASYNC_CNT;
+    return SIInstrFlags::usesASYNC_CNT(get(Opcode));
+  }
+
+  static bool usesTENSOR_CNT(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::TENSOR_CNT;
+  }
+
+  bool usesTENSOR_CNT(uint32_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::TENSOR_CNT;
   }
 
   // Most sopk treat the immediate as a signed 16-bit, however some
@@ -1073,59 +1072,59 @@ public:
   /// \returns true if this is an s_store_dword* instruction. This is more
   /// specific than isSMEM && mayStore.
   static bool isScalarStore(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::SCALAR_STORE;
+    return SIInstrFlags::isScalarStore(MI);
   }
 
   bool isScalarStore(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::SCALAR_STORE;
+    return SIInstrFlags::isScalarStore(get(Opcode));
   }
 
   static bool isFixedSize(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::FIXED_SIZE;
+    return SIInstrFlags::isFixedSize(MI);
   }
 
   bool isFixedSize(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::FIXED_SIZE;
+    return SIInstrFlags::isFixedSize(get(Opcode));
   }
 
   static bool hasFPClamp(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::FPClamp;
+    return SIInstrFlags::hasFPClamp(MI);
   }
 
   bool hasFPClamp(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::FPClamp;
+    return SIInstrFlags::hasFPClamp(get(Opcode));
   }
 
   static bool hasIntClamp(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::IntClamp;
+    return SIInstrFlags::hasIntClamp(MI);
   }
 
-  uint64_t getClampMask(const MachineInstr &MI) const {
-    const uint64_t ClampFlags = SIInstrFlags::FPClamp |
-                                SIInstrFlags::IntClamp |
-                                SIInstrFlags::ClampLo |
-                                SIInstrFlags::ClampHi;
-      return MI.getDesc().TSFlags & ClampFlags;
+  static bool hasSameClamp(const MachineInstr &A, const MachineInstr &B) {
+    const MCInstrDesc &DA = A.getDesc(), &DB = B.getDesc();
+    return SIInstrFlags::hasFPClamp(DA) == SIInstrFlags::hasFPClamp(DB) &&
+           SIInstrFlags::hasIntClamp(DA) == SIInstrFlags::hasIntClamp(DB) &&
+           SIInstrFlags::hasClampLo(DA) == SIInstrFlags::hasClampLo(DB) &&
+           SIInstrFlags::hasClampHi(DA) == SIInstrFlags::hasClampHi(DB);
   }
 
   static bool usesFPDPRounding(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::FPDPRounding;
+    return SIInstrFlags::usesFPDPRounding(MI);
   }
 
   bool usesFPDPRounding(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::FPDPRounding;
+    return SIInstrFlags::usesFPDPRounding(get(Opcode));
   }
 
   static bool isFPAtomic(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::FPAtomic;
+    return SIInstrFlags::isFPAtomic(MI);
   }
 
   bool isFPAtomic(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::FPAtomic;
+    return SIInstrFlags::isFPAtomic(get(Opcode));
   }
 
   static bool isNeverUniform(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::IsNeverUniform;
+    return SIInstrFlags::isNeverUniform(MI);
   }
 
   // Check to see if opcode is for a barrier start. Pre gfx12 this is just the
@@ -1148,6 +1147,23 @@ public:
            Opcode == AMDGPU::DS_GWS_BARRIER;
   }
 
+  static bool isLoadMonitor(unsigned Opc) {
+    switch (Opc) {
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B32:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B32_SADDR:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B64:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B64_SADDR:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B128:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B128_SADDR:
+    case AMDGPU::FLAT_LOAD_MONITOR_B32:
+    case AMDGPU::FLAT_LOAD_MONITOR_B64:
+    case AMDGPU::FLAT_LOAD_MONITOR_B128:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   static bool isGFX12CacheInvOrWBInst(unsigned Opc) {
     return Opc == AMDGPU::GLOBAL_INV || Opc == AMDGPU::GLOBAL_WB ||
            Opc == AMDGPU::GLOBAL_WBINV;
@@ -1162,11 +1178,11 @@ public:
   }
 
   static bool doesNotReadTiedSource(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::TiedSourceNotRead;
+    return SIInstrFlags::isTiedSourceNotRead(MI);
   }
 
   bool doesNotReadTiedSource(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::TiedSourceNotRead;
+    return SIInstrFlags::isTiedSourceNotRead(get(Opcode));
   }
 
   bool isIGLP(unsigned Opcode) const {
@@ -1466,15 +1482,15 @@ public:
   bool isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
                          const MachineOperand &MO) const;
 
-  /// Check if \p MO would be a legal operand for gfx12+ packed math FP32
-  /// instructions. Packed math FP32 instructions typically accept SGPRs or
-  /// VGPRs as source operands. On gfx12+, if a source operand uses SGPRs, the
-  /// HW can only read the first SGPR and use it for both the low and high
-  /// operations.
+  /// Check if \p MO would be a legal operand for gfx12+ packed math FP32 or
+  /// 64 instructions. Packed math FP32/FP64/U64 instructions typically accept
+  /// SGPRs or VGPRs as source operands. On gfx12+, if a source operand uses
+  /// SGPRs, the HW can only read the first SGPR and use it for both the low and
+  /// high operations.
   /// \p SrcN can be 0, 1, or 2, representing src0, src1, and src2,
   /// respectively. If \p MO is nullptr, the operand corresponding to SrcN will
   /// be used.
-  bool isLegalGFX12PlusPackedMathFP32Operand(
+  bool isLegalGFX12PlusPackedMathFP32or64BitOperand(
       const MachineRegisterInfo &MRI, const MachineInstr &MI, unsigned SrcN,
       const MachineOperand *MO = nullptr) const;
 
@@ -1543,8 +1559,6 @@ public:
 
   void insertNoops(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                    unsigned Quantity) const override;
-
-  void insertReturn(MachineBasicBlock &MBB) const;
 
   /// Build instructions that simulate the behavior of a `s_trap 2` instructions
   /// for hardware (namely, gfx11) that runs in PRIV=1 mode. There, s_trap is
@@ -1697,16 +1711,16 @@ public:
   /// Returns if \p Offset is legal for the subtarget as the offset to a FLAT
   /// encoded instruction with the given \p FlatVariant.
   bool isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
-                         uint64_t FlatVariant) const;
+                         AMDGPU::FlatAddrSpace FlatVariant) const;
 
   /// Split \p COffsetVal into {immediate offset field, remainder offset}
   /// values.
-  std::pair<int64_t, int64_t> splitFlatOffset(int64_t COffsetVal,
-                                              unsigned AddrSpace,
-                                              uint64_t FlatVariant) const;
+  std::pair<int64_t, int64_t>
+  splitFlatOffset(int64_t COffsetVal, unsigned AddrSpace,
+                  AMDGPU::FlatAddrSpace FlatVariant) const;
 
   /// Returns true if negative offsets are allowed for the given \p FlatVariant.
-  bool allowNegativeFlatOffset(uint64_t FlatVariant) const;
+  bool allowNegativeFlatOffset(AMDGPU::FlatAddrSpace FlatVariant) const;
 
   /// \brief Return a target-specific opcode if Opcode is a pseudo instruction.
   /// Return -1 if the target-specific opcode for the pseudo instruction does

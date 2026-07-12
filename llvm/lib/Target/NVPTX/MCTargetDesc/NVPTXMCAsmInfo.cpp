@@ -49,7 +49,6 @@ NVPTXMCAsmInfo::NVPTXMCAsmInfo(const Triple &TheTriple,
   SupportsSignedData = false;
 
   InternalSymbolPrefix = "$L__";
-  PrivateLabelPrefix = InternalSymbolPrefix;
 
   // TODO: Can we just disable this?
   WeakDirective = "\t// .weak\t";

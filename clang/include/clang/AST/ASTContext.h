@@ -30,6 +30,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/MacroBase.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
@@ -39,6 +40,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -68,12 +70,6 @@ struct ScalableVecTyKey {
 // Provide a DenseMapInfo specialization so that ScalableVecTyKey can be used
 // as a key in DenseMap.
 template <> struct DenseMapInfo<ScalableVecTyKey> {
-  static inline ScalableVecTyKey getEmptyKey() {
-    return {DenseMapInfo<clang::QualType>::getEmptyKey(), ~0U, ~0U};
-  }
-  static inline ScalableVecTyKey getTombstoneKey() {
-    return {DenseMapInfo<clang::QualType>::getTombstoneKey(), ~0U, ~0U};
-  }
   static unsigned getHashValue(const ScalableVecTyKey &Val) {
     return hash_combine(DenseMapInfo<clang::QualType>::getHashValue(Val.EltTy),
                         Val.NumElts, Val.NumFields);
@@ -292,7 +288,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<DeducedTemplateSpecializationType>
     DeducedTemplateSpecializationTypes;
   mutable llvm::FoldingSet<AtomicType> AtomicTypes;
-  mutable llvm::FoldingSet<AttributedType> AttributedTypes;
+  mutable llvm::ContextualFoldingSet<AttributedType, ASTContext &>
+      AttributedTypes;
   mutable llvm::FoldingSet<PipeType> PipeTypes;
   mutable llvm::FoldingSet<BitIntType> BitIntTypes;
   mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
@@ -442,6 +439,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// The typedef for the predefined \c __builtin_ms_va_list type.
   mutable TypedefDecl *BuiltinMSVaListDecl = nullptr;
 
+  /// The typedef for the predefined \c __builtin_zos_va_list type.
+  mutable TypedefDecl *BuiltinZOSVaListDecl = nullptr;
+
   /// The typedef for the predefined \c id type.
   mutable TypedefDecl *ObjCIdDecl = nullptr;
 
@@ -516,6 +516,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   FunctionDecl *cudaGetParameterBufferDecl = nullptr;
   /// Declaration for the CUDA cudaLaunchDevice function.
   FunctionDecl *cudaLaunchDeviceDecl = nullptr;
+
+  llvm::DenseMap<const CXXConstructorDecl *, ArrayRef<CXXDefaultArgExpr *>>
+      CtorClosureDefaultArgs;
 
   /// Keeps track of all declaration attributes.
   ///
@@ -948,6 +951,9 @@ public:
   QualType getIntTypeForBitwidth(unsigned DestWidth,
                                  unsigned Signed) const;
 
+  QualType getLeastIntTypeForBitwidth(unsigned DestWidth,
+                                      unsigned Signed) const;
+
   /// getRealTypeForBitwidth -
   /// sets floating point QualTy according to specified bitwidth.
   /// Returns empty type if there is no appropriate target types.
@@ -996,11 +1002,15 @@ public:
   /// True if comments are already loaded from ExternalASTSource.
   mutable bool CommentsLoaded = false;
 
-  /// Mapping from declaration to directly attached comment.
+  /// Key used to look up the raw comment attached to a declaration or macro.
+  using RawCommentLookupKey =
+      llvm::PointerUnion<const Decl *, const MacroInfo *>;
+
+  /// Mapping from declaration or macro to directly attached comment.
   ///
   /// Raw comments are owned by Comments list.  This mapping is populated
   /// lazily.
-  mutable llvm::DenseMap<const Decl *, const RawComment *> DeclRawComments;
+  mutable llvm::DenseMap<RawCommentLookupKey, const RawComment *> RawComments;
 
   /// Mapping from canonical declaration to the first redeclaration in chain
   /// that has a comment attached.
@@ -1022,37 +1032,40 @@ public:
   /// redeclaration.
   mutable llvm::DenseMap<const Decl *, comments::FullComment *> ParsedComments;
 
-  /// Attaches \p Comment to \p OriginalD and to its redeclaration chain
-  /// and removes the redeclaration chain from the set of commentless chains.
+  /// Attaches \p Comment to \p Original (a declaration or macro), and to its
+  /// redeclaration chain when \p Original is a declaration. Removes the
+  /// redeclaration chain from the set of commentless chains.
   ///
-  /// Don't do anything if a comment has already been attached to \p OriginalD
+  /// Don't do anything if a comment has already been attached to \p Original
   /// or its redeclaration chain.
-  void cacheRawCommentForDecl(const Decl &OriginalD,
-                              const RawComment &Comment) const;
+  void cacheRawComment(RawCommentLookupKey Original,
+                       const RawComment &Comment) const;
 
-  /// \returns searches \p CommentsInFile for doc comment for \p D.
+  /// \returns searches \p CommentsInFile for doc comment for \p Key.
   ///
   /// \p RepresentativeLocForDecl is used as a location for searching doc
   /// comments. \p CommentsInFile is a mapping offset -> comment of files in the
   /// same file where \p RepresentativeLocForDecl is.
-  RawComment *getRawCommentForDeclNoCacheImpl(
-      const Decl *D, const SourceLocation RepresentativeLocForDecl,
+  RawComment *getRawCommentNoCacheImpl(
+      RawCommentLookupKey Key, const SourceLocation RepresentativeLoc,
       const std::map<unsigned, RawComment *> &CommentsInFile) const;
 
-  /// Return the documentation comment attached to a given declaration,
-  /// without looking into cache.
-  RawComment *getRawCommentForDeclNoCache(const Decl *D) const;
+  /// Return the documentation comment attached to a given declaration or
+  /// macro, without looking into cache.
+  RawComment *getRawCommentNoCache(RawCommentLookupKey Key) const;
 
 public:
   void addComment(const RawComment &RC);
 
-  /// Return the documentation comment attached to a given declaration.
-  /// Returns nullptr if no comment is attached.
+  /// Return the documentation comment attached to a given declaration or
+  /// macro.  Returns nullptr if no comment is attached.
   ///
   /// \param OriginalDecl if not nullptr, is set to declaration AST node that
   /// had the comment, if the comment we found comes from a redeclaration.
+  /// Macros have no redeclaration chain, so this is set to nullptr when
+  /// \p Key is a \c MacroInfo.
   const RawComment *
-  getRawCommentForAnyRedecl(const Decl *D,
+  getRawCommentForAnyRedecl(RawCommentLookupKey Key,
                             const Decl **OriginalDecl = nullptr) const;
 
   /// Searches existing comments for doc comments that should be attached to \p
@@ -1140,6 +1153,11 @@ public:
 
   /// Erase the attributes corresponding to the given declaration.
   void eraseDeclAttrs(const Decl *D);
+
+  ArrayRef<CXXDefaultArgExpr *>
+  getCtorClosureDefaultArgs(const CXXConstructorDecl *CD);
+  void setCtorClosureDefaultArgs(const CXXConstructorDecl *CD,
+                                 ArrayRef<CXXDefaultArgExpr *> Args);
 
   /// Get all ExplicitInstantiationDecls for a given specialization.
   ArrayRef<ExplicitInstantiationDecl *>
@@ -1394,6 +1412,9 @@ public:
   /// Keep track of CUDA/HIP implicit host device functions used on device side
   /// in device compilation.
   llvm::DenseSet<const FunctionDecl *> CUDAImplicitHostDeviceFunUsedByDevice;
+
+  /// Functions whose device body should be replaced with a trap stub.
+  llvm::SmallPtrSet<const FunctionDecl *, 4> CUDADeviceInvalidFuncs;
 
   /// Map of SYCL kernels indexed by the unique type used to name the kernel.
   /// Entries are not serialized but are recreated on deserialization of a
@@ -1998,8 +2019,7 @@ public:
   QualType getSubstBuiltinTemplatePack(const TemplateArgument &ArgPack);
 
   QualType
-  getTemplateTypeParmType(unsigned Depth, unsigned Index,
-                          bool ParameterPack,
+  getTemplateTypeParmType(int Depth, int Index, bool ParameterPack,
                           TemplateTypeParmDecl *ParmDecl = nullptr) const;
 
   QualType getCanonicalTemplateSpecializationType(
@@ -2512,6 +2532,17 @@ public:
     if (!MSTypeInfoTagDecl)
       MSTypeInfoTagDecl = buildImplicitRecord("type_info", TagTypeKind::Class);
     return MSTypeInfoTagDecl;
+  }
+
+  /// Retrieve the C type declaration corresponding to the predefined
+  /// \c __builtin_zos_va_list type.
+  TypedefDecl *getBuiltinZOSVaListDecl() const;
+
+  /// Retrieve the type of the \c __builtin_zos_va_list type.
+  QualType getBuiltinZOSVaListType() const {
+    return getTypedefType(ElaboratedTypeKeyword::None,
+                          /*Qualifier=*/std::nullopt,
+                          getBuiltinZOSVaListDecl());
   }
 
   /// Return whether a declaration to a builtin is allowed to be
@@ -3996,16 +4027,6 @@ typename clang::LazyGenerationalUpdatePtr<Owner, T, Update>::ValueType
   return Value;
 }
 template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
-  static FoldingSetNodeID getEmptyKey() { return FoldingSetNodeID{}; }
-
-  static FoldingSetNodeID getTombstoneKey() {
-    FoldingSetNodeID ID;
-    for (size_t I = 0; I < sizeof(ID) / sizeof(unsigned); ++I) {
-      ID.AddInteger(std::numeric_limits<unsigned>::max());
-    }
-    return ID;
-  }
-
   static unsigned getHashValue(const FoldingSetNodeID &Val) {
     return Val.ComputeHash();
   }

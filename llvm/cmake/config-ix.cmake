@@ -145,12 +145,7 @@ if(NOT WIN32)
       check_library_exists(c pthread_mutex_lock "" HAVE_PTHREAD_MUTEX_LOCK)
     endif()
   endif()
-  check_library_exists(dl dlopen "" HAVE_LIBDL)
-  check_library_exists(rt shm_open "" HAVE_LIBRT)
 endif()
-
-# Check for libpfm.
-include(FindLibpfm)
 
 if(HAVE_LIBPTHREAD)
   # We want to find pthreads library and at the moment we do want to
@@ -160,7 +155,21 @@ if(HAVE_LIBPTHREAD)
   set(THREADS_HAVE_PTHREAD_ARG Off)
   find_package(Threads REQUIRED)
   set(LLVM_PTHREAD_LIB ${CMAKE_THREAD_LIBS_INIT})
+  if(LLVM_PTHREAD_LIB)
+    list(APPEND CMAKE_REQUIRED_LIBRARIES ${LLVM_PTHREAD_LIB})
+  endif()
 endif()
+
+# Keep the dlopen and rt library checks after FindThreads so that
+# CMAKE_REQUIRED_LIBRARIES includes pthread. glibc versions before 2.34 may
+# need pthread to satisfy librt dependencies.
+if(NOT WIN32)
+  check_library_exists(dl dlopen "" HAVE_LIBDL)
+  check_library_exists(rt shm_open "" HAVE_LIBRT)
+endif()
+
+# Check for libpfm.
+include(FindLibpfm)
 
 if(LLVM_ENABLE_ZLIB)
   if(LLVM_ENABLE_ZLIB STREQUAL FORCE_ON)
@@ -172,8 +181,7 @@ if(LLVM_ENABLE_ZLIB)
     # Check if zlib we found is usable; for example, we may have found a 32-bit
     # library on a 64-bit system which would result in a link-time failure.
     cmake_push_check_state()
-    list(APPEND CMAKE_REQUIRED_INCLUDES ${ZLIB_INCLUDE_DIRS})
-    list(APPEND CMAKE_REQUIRED_LIBRARIES ${ZLIB_LIBRARY})
+    list(APPEND CMAKE_REQUIRED_LIBRARIES ZLIB::ZLIB)
     check_symbol_exists(compress2 zlib.h HAVE_ZLIB)
     cmake_pop_check_state()
     if(LLVM_ENABLE_ZLIB STREQUAL FORCE_ON AND NOT HAVE_ZLIB)
@@ -219,9 +227,7 @@ if(LLVM_ENABLE_LIBXML2)
     # Check if libxml2 we found is usable; for example, we may have found a 32-bit
     # library on a 64-bit system which would result in a link-time failure.
     cmake_push_check_state()
-    list(APPEND CMAKE_REQUIRED_INCLUDES ${LIBXML2_INCLUDE_DIRS})
-    list(APPEND CMAKE_REQUIRED_LIBRARIES ${LIBXML2_LIBRARIES})
-    list(APPEND CMAKE_REQUIRED_DEFINITIONS ${LIBXML2_DEFINITIONS})
+    list(APPEND CMAKE_REQUIRED_LIBRARIES LibXml2::LibXml2)
     check_symbol_exists(xmlReadMemory libxml/xmlreader.h HAVE_LIBXML2)
     cmake_pop_check_state()
     if(LLVM_ENABLE_LIBXML2 STREQUAL FORCE_ON AND NOT HAVE_LIBXML2)
@@ -445,16 +451,10 @@ else()
 endif()
 
 if (NOT WIN32)
-  if (LLVM_PTHREAD_LIB)
-    list(APPEND CMAKE_REQUIRED_LIBRARIES ${LLVM_PTHREAD_LIB})
-  endif()
   check_symbol_exists(pthread_getname_np pthread.h HAVE_PTHREAD_GETNAME_NP)
   check_symbol_exists(pthread_setname_np pthread.h HAVE_PTHREAD_SETNAME_NP)
   check_symbol_exists(pthread_get_name_np "pthread.h;pthread_np.h" HAVE_PTHREAD_GET_NAME_NP)
   check_symbol_exists(pthread_set_name_np "pthread.h;pthread_np.h" HAVE_PTHREAD_SET_NAME_NP)
-  if (LLVM_PTHREAD_LIB)
-    list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES ${LLVM_PTHREAD_LIB})
-  endif()
 
   if( HAVE_LIBDL )
     list(APPEND CMAKE_REQUIRED_LIBRARIES dl)

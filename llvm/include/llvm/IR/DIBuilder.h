@@ -53,7 +53,7 @@ namespace llvm {
     /// Track the RetainTypes, since they can be updated later on.
     SmallVector<TrackingMDNodeRef, 4> AllRetainTypes;
     SmallVector<DISubprogram *, 4> AllSubprograms;
-    SmallVector<Metadata *, 4> AllGVs;
+    SmallVector<Metadata *, 4> Globals;
     SmallVector<TrackingMDNodeRef, 4> ImportedModules;
     /// Map Macro parent (which can be DIMacroFile or nullptr) to a list of
     /// Metadata all of type DIMacroNode.
@@ -64,8 +64,8 @@ namespace llvm {
     SmallVector<TrackingMDNodeRef, 4> UnresolvedNodes;
     bool AllowUnresolvedNodes;
 
-    /// Each subprogram's preserved local variables, labels, imported entities,
-    /// and types.
+    /// Each subprogram's preserved local and static local variables, labels,
+    /// imported entities, and types.
     ///
     /// Do not use a std::vector.  Some versions of libc++ apparently copy
     /// instead of move on grow operations, and TrackingMDRef is expensive to
@@ -574,12 +574,15 @@ namespace llvm {
     ///                     for more info.
     /// \param TemplateParms Template type parameters.
     /// \param UniqueIdentifier A unique identifier for the class.
+    /// \param Annotations  Attribute annotations, emitted as
+    /// DW_TAG_LLVM_annotation entries.
     LLVM_ABI DICompositeType *createClassType(
         DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
         uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
         DINode::DIFlags Flags, DIType *DerivedFrom, DINodeArray Elements,
         unsigned RunTimeLang = 0, DIType *VTableHolder = nullptr,
-        MDNode *TemplateParms = nullptr, StringRef UniqueIdentifier = "");
+        MDNode *TemplateParms = nullptr, StringRef UniqueIdentifier = "",
+        DINodeArray Annotations = nullptr);
 
     /// Create debugging information entry for a struct.
     /// \param Scope        Scope in which this struct is defined.
@@ -597,12 +600,15 @@ namespace llvm {
     /// \param NumExtraInhabitants The number of extra inhabitants of the type.
     /// An extra inhabitant is a bit pattern that does not represent a valid
     /// value for instances of a given type. This is used by the Swift language.
+    /// \param Annotations  Attribute annotations, emitted as
+    /// DW_TAG_LLVM_annotation entries.
     LLVM_ABI DICompositeType *createStructType(
         DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
         Metadata *SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
         DIType *DerivedFrom, DINodeArray Elements, unsigned RunTimeLang = 0,
         DIType *VTableHolder = nullptr, StringRef UniqueIdentifier = "",
-        DIType *Specification = nullptr, uint32_t NumExtraInhabitants = 0);
+        DIType *Specification = nullptr, uint32_t NumExtraInhabitants = 0,
+        DINodeArray Annotations = nullptr);
 
     /// Create debugging information entry for a struct.
     /// \param Scope        Scope in which this struct is defined.
@@ -620,12 +626,15 @@ namespace llvm {
     /// \param NumExtraInhabitants The number of extra inhabitants of the type.
     /// An extra inhabitant is a bit pattern that does not represent a valid
     /// value for instances of a given type. This is used by the Swift language.
+    /// \param Annotations  Attribute annotations, emitted as
+    /// DW_TAG_LLVM_annotation entries.
     LLVM_ABI DICompositeType *createStructType(
         DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
         uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
         DIType *DerivedFrom, DINodeArray Elements, unsigned RunTimeLang = 0,
         DIType *VTableHolder = nullptr, StringRef UniqueIdentifier = "",
-        DIType *Specification = nullptr, uint32_t NumExtraInhabitants = 0);
+        DIType *Specification = nullptr, uint32_t NumExtraInhabitants = 0,
+        DINodeArray Annotations = nullptr);
 
     /// Create debugging information entry for an union.
     /// \param Scope        Scope in which this union is defined.
@@ -638,12 +647,13 @@ namespace llvm {
     /// \param Elements     Union elements.
     /// \param RunTimeLang  Optional parameter, Objective-C runtime version.
     /// \param UniqueIdentifier A unique identifier for the union.
-    LLVM_ABI DICompositeType *
-    createUnionType(DIScope *Scope, StringRef Name, DIFile *File,
-                    unsigned LineNumber, uint64_t SizeInBits,
-                    uint32_t AlignInBits, DINode::DIFlags Flags,
-                    DINodeArray Elements, unsigned RunTimeLang = 0,
-                    StringRef UniqueIdentifier = "");
+    /// \param Annotations  Attribute annotations, emitted as
+    /// DW_TAG_LLVM_annotation entries.
+    LLVM_ABI DICompositeType *createUnionType(
+        DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
+        uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
+        DINodeArray Elements, unsigned RunTimeLang = 0,
+        StringRef UniqueIdentifier = "", DINodeArray Annotations = nullptr);
 
     /// Create debugging information entry for a variant part.  A
     /// variant part normally has a discriminator (though this is not

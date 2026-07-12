@@ -616,6 +616,18 @@ mlir::Value fir::acc::getOriginalDef(mlir::Value value, bool stripDeclare) {
   mlir::Value currentValue = value;
 
   while (currentValue) {
+    if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(currentValue)) {
+      if (auto computeRegion =
+              mlir::dyn_cast_if_present<mlir::acc::ComputeRegionOp>(
+                  blockArg.getOwner()->getParentOp())) {
+        if (mlir::Value operand = computeRegion.getOperand(blockArg)) {
+          currentValue = operand;
+          continue;
+        }
+      }
+      break;
+    }
+
     auto *definingOp = currentValue.getDefiningOp();
     if (!definingOp)
       break;

@@ -670,6 +670,7 @@ protected:
   };
 
   class InitListExprBitfields {
+    friend class ASTStmtReader;
     friend class InitListExpr;
 
     LLVM_PREFERRED_TYPE(ExprBitfields)
@@ -679,6 +680,9 @@ protected:
     /// designator in it. This is a temporary marker used by CodeGen.
     LLVM_PREFERRED_TYPE(bool)
     unsigned HadArrayRangeDesignator : 1;
+    // Whether this list is explicitly written in the source (with braces).
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsExplicit : 1;
   };
 
   class ParenListExprBitfields {

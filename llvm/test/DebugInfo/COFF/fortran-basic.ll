@@ -114,7 +114,7 @@ alloca_0:
   store i32 2, ptr @"ARRAY$ARRAY2", align 1, !dbg !44
   store double 8.000000e+00, ptr @COM, align 1, !dbg !45
   store i32 -1, ptr getelementptr inbounds ([18 x i8], ptr @COM, i32 0, i64 8), align 1, !dbg !46
-  call void @llvm.for.cpystr.i64.i64.i64(ptr getelementptr inbounds ([18 x i8], ptr @COM, i32 0, i64 12), i64 6, ptr @strlit, i64 3, i64 0, i1 false), !dbg !47
+  call void @llvm.memcpy.p0.p0.i64(ptr getelementptr inbounds ([18 x i8], ptr @COM, i32 0, i64 12), ptr @strlit, i64 3, i1 false), !dbg !47
   store %complex_64bit { float 0x40219999A0000000, float 0x3FF19999A0000000 }, ptr %"ARRAY$CMP8", align 8, !dbg !48
   store %complex_128bit { double 0x403028F5C0000000, double 0x40019999A0000000 }, ptr %"ARRAY$CMP16", align 8, !dbg !49
   store %complex_256bit { fp128 0xL00000000000000004004028F5C000000, fp128 0xL00000000000000004000A66666000000 }, ptr %"ARRAY$CMP32", align 16, !dbg !50
@@ -123,17 +123,13 @@ alloca_0:
 
 declare i32 @for_set_reentrancy(ptr nocapture readonly)
 
-; Function Attrs: nounwind readnone speculatable
-declare ptr @llvm.intel.subscript.p0.i64.i64.p0.i64(i8, i64, i64, ptr, i64) #1
-
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.for.cpystr.i64.i64.i64(ptr noalias nocapture writeonly, i64, ptr noalias nocapture readonly, i64, i64, i1 immarg) #2
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #2
 
 ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #3
 
 attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="none" "intel-lang"="fortran" "min-legal-vector-width"="0" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" }
-attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { argmemonly nofree nosync nounwind willreturn }
 attributes #3 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
 
@@ -149,7 +145,7 @@ attributes #3 = { nocallback nofree nosync nounwind readnone speculatable willre
 !5 = !DISubroutineType(types: !6)
 !6 = !{null}
 !7 = distinct !DICompileUnit(language: DW_LANG_Fortran95, file: !4, producer: "Fortran", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: !8, splitDebugInlining: false, nameTableKind: None)
-!8 = !{!0, !9, !12, !15, !21}
+!8 = !{!0, !9, !12}
 !9 = !DIGlobalVariableExpression(var: !10, expr: !DIExpression(DW_OP_plus_uconst, 8))
 !10 = distinct !DIGlobalVariable(name: "L", linkageName: "COM", scope: !2, file: !4, line: 6, type: !11, isLocal: false, isDefinition: true)
 !11 = !DIBasicType(name: "LOGICAL*4", size: 32, encoding: DW_ATE_boolean)
@@ -167,7 +163,7 @@ attributes #3 = { nocallback nofree nosync nounwind readnone speculatable willre
 !23 = !DICompositeType(tag: DW_TAG_array_type, baseType: !18, elements: !24)
 !24 = !{!25}
 !25 = !DISubrange(count: 10, lowerBound: 1)
-!26 = !{!27, !29, !31}
+!26 = !{!15, !21, !27, !29, !31}
 !27 = !DILocalVariable(name: "CMP32", scope: !3, file: !4, line: 10, type: !28)
 !28 = !DIBasicType(name: "COMPLEX*32", size: 256, encoding: DW_ATE_complex_float)
 !29 = !DILocalVariable(name: "CMP16", scope: !3, file: !4, line: 9, type: !30)

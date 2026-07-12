@@ -384,7 +384,12 @@ static bool isLikelyToHaveSVEStack(const AArch64FrameLowering &AFL,
 }
 
 static bool isTargetWindows(const MachineFunction &MF) {
-  return MF.getTarget().getMCAsmInfo().usesWindowsCFI();
+  // TODO: Should this include targets like UEFI (which use Windows CFI)?
+  // Note: Currently, there is not AArch64 support for UEFI. The value returned
+  // here must align with the predicate used for returning the list of callee
+  // saved regs in AArch64RegisterInfo::getCalleeSavedRegs(), so that we use
+  // invalidateWindowsRegisterPairing() where appropriate.
+  return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
 }
 
 bool AArch64FrameLowering::hasSVECalleeSavesAboveFrameRecord(
@@ -570,6 +575,16 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   // funclets.
   if (MF.hasEHFunclets())
     return true;
+
+  // When the stack guard is mixed with the frame pointer, a dedicated FP is
+  // required so the guard value remains stable in the presence of dynamic
+  // stack allocations (e.g. _alloca on MSVCRT).
+  if (MFI.hasStackProtectorIndex()) {
+    const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+    if (Subtarget.getTargetLowering()->useStackGuardMixFP())
+      return true;
+  }
+
   // Retain behavior of always omitting the FP for leaf functions when possible.
   if (MF.getTarget().Options.DisableFramePointerElim(MF))
     return true;
@@ -728,9 +743,13 @@ void AArch64FrameLowering::resetCFIToInitialState(
   CFIBuilder.buildDefCFA(AArch64::SP, 0);
 
   // Flip the RA sign state.
-  if (MFI.shouldSignReturnAddress(MF))
-    MFI.branchProtectionPAuthLR() ? CFIBuilder.buildNegateRAStateWithPC()
-                                  : CFIBuilder.buildNegateRAState();
+  if (MFI.shouldSignReturnAddress(MF)) {
+    if (MFI.branchProtectionPAuthLR()) {
+      CFIBuilder.buildNegateRAStateWithPC();
+    } else if (!MF.getTarget().getTargetTriple().isOSBinFormatMachO()) {
+      CFIBuilder.buildNegateRAState();
+    }
+  }
 
   // Shadow call stack uses X18, reset it.
   if (MFI.needsShadowCallStackPrologueEpilogue(MF))
@@ -1779,23 +1798,27 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
     if (unsigned(i + RegInc) < Count && !HasCSHazardPadding) {
       MCRegister NextReg = CSI[i + RegInc].getReg();
       unsigned SpillCount = NeedsWinCFI ? FirstReg - i : i;
+      int Aligned = AlignOffset(ByteOffset, Scale);
+      int PairOffset = IsWindows ? Aligned : Aligned + StackFillDir * 2 * Scale;
+      bool PairFitsImmRange =
+          PairOffset / Scale >= -64 && PairOffset / Scale <= 63;
       switch (RPI.Type) {
       case RegPairInfo::GPR:
-        if (AArch64::GPR64RegClass.contains(NextReg) &&
+        if (AArch64::GPR64RegClass.contains(NextReg) && PairFitsImmRange &&
             !invalidateRegisterPairing(SpillExtendedVolatile, SpillCount,
                                        RPI.Reg1, NextReg, IsWindows,
                                        NeedsWinCFI, NeedsFrameRecord, TRI))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR64:
-        if (AArch64::FPR64RegClass.contains(NextReg) &&
+        if (AArch64::FPR64RegClass.contains(NextReg) && PairFitsImmRange &&
             !invalidateRegisterPairing(SpillExtendedVolatile, SpillCount,
                                        RPI.Reg1, NextReg, IsWindows,
                                        NeedsWinCFI, NeedsFrameRecord, TRI))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR128:
-        if (AArch64::FPR128RegClass.contains(NextReg))
+        if (AArch64::FPR128RegClass.contains(NextReg) && PairFitsImmRange)
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::PPR:
@@ -2632,8 +2655,16 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
       ZPRCSStackSize += SpillSize;
     else if (IsPPR)
       PPRCSStackSize += SpillSize;
-    else
-      CSStackSize += SpillSize;
+    else {
+      // A register and its super-register can both appear in SavedRegs.
+      // Only the widest register is actually spilled, so skip such
+      // sub-registers here to avoid double-counting the overlap.
+      bool SavedSuper = any_of(TRI->superregs(Reg), [&](MCPhysReg SuperReg) {
+        return SavedRegs.test(SuperReg);
+      });
+      if (!SavedSuper)
+        CSStackSize += SpillSize;
+    }
   }
 
   // Save number of saved regs, so we can easily update CSStackSize later to

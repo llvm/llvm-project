@@ -21,6 +21,7 @@ add_llvm_unittest(SupportTests
   Caching.cpp
   Casting.cpp
   CheckedArithmeticTest.cpp
+  CHERICapabilityFormatTest.cpp
   Chrono.cpp
   CommandLineTest.cpp
   CompressionTest.cpp

@@ -743,11 +743,7 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   // If we don't add __coro_frame to the RetainedNodes, user may get
   // `no symbol __coro_frame in context` rather than `__coro_frame`
   // is optimized out, which is more precise.
-  auto RetainedNodes = DIS->getRetainedNodes();
-  SmallVector<Metadata *, 32> RetainedNodesVec(RetainedNodes.begin(),
-                                               RetainedNodes.end());
-  RetainedNodesVec.push_back(FrameDIVar);
-  DIS->replaceOperandWith(7, (MDTuple::get(F.getContext(), RetainedNodesVec)));
+  DIS->retainNodes(&FrameDIVar, &FrameDIVar + 1);
 
   // Construct the location for the frame debug variable. The column number
   // is fake but it should be fine.
@@ -2002,7 +1998,7 @@ void coro::normalizeCoroutine(Function &F, coro::Shape &Shape,
 }
 
 void coro::BaseABI::buildCoroutineFrame(bool OptimizeFrame) {
-  SuspendCrossingInfo Checker(F, Shape.CoroSuspends, Shape.CoroEnds);
+  SuspendCrossingInfo Checker(F, Shape);
   doRematerializations(F, Checker, IsMaterializable);
 
   const DominatorTree DT(F);

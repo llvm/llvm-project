@@ -261,7 +261,8 @@ def or_oneuse : HasOneUseBinOp<or>;
 def xor_oneuse : HasOneUseBinOp<xor>;
 } // Properties = [SDNPCommutative, SDNPAssociative]
 
-def not_oneuse : HasOneUseUnaryOp<not>;
+def not_oneuse  : HasOneUseUnaryOp<not>;
+def vnot_oneuse : HasOneUseUnaryOp<vnot>;
 
 def add_oneuse : HasOneUseBinOp<add>;
 def sub_oneuse : HasOneUseBinOp<sub>;
@@ -765,7 +766,7 @@ int BF16_NEG_ONE = 0xBF80;
 def CONST : Constants;
 
 def fpimm_zero : FPImmLeaf<fAny, [{ return Imm.isZero(); }]> ;
-def fpimm_one : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(+1.0); }]> ;
+def fpimm_one : FPImmLeaf<fAny, [{ return Imm.isOne(); }]> ;
 def fpimm_half : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(+0.5); }]> ;
 
 /* Generic helper patterns for intrinsics */

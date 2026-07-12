@@ -149,15 +149,15 @@ bool RISCVCodeGenPrepare::widenVPMerge(Instruction *Root) {
   if (!Root->getType()->getScalarType()->isIntegerTy(1))
     return false;
 
-  Value *Mask, *True, *PhiV, *EVL;
+  Value *Mask, *True, *EVL;
+  PHINode *Phi;
   using namespace PatternMatch;
   auto m_VPMerge = m_Intrinsic<Intrinsic::vp_merge>(
-      m_Value(Mask), m_Value(True), m_Value(PhiV), m_Value(EVL));
+      m_Value(Mask), m_Value(True), m_Phi(Phi), m_Value(EVL));
   if (!match(Root, m_CombineOr(m_VPMerge, m_Freeze(m_VPMerge))))
     return false;
 
-  auto *Phi = dyn_cast<PHINode>(PhiV);
-  if (!Phi || !Phi->hasOneUse() || Phi->getNumIncomingValues() != 2 ||
+  if (!Phi->hasOneUse() || Phi->getNumIncomingValues() != 2 ||
       !match(Phi->getIncomingValue(0), m_Zero()) ||
       Phi->getIncomingValue(1) != Root)
     return false;

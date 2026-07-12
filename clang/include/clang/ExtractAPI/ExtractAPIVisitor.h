@@ -1538,14 +1538,14 @@ public:
 
   bool shouldDeclBeIncluded(const Decl *D) const { return true; }
   const RawComment *fetchRawCommentForDecl(const Decl *D) const {
-    if (const auto *Comment = this->Context.getRawCommentForDeclNoCache(D))
+    if (const auto *Comment = this->Context.getRawCommentNoCache(D))
       return Comment;
 
     if (const auto *Declarator = dyn_cast<DeclaratorDecl>(D)) {
       const auto *TagTypeDecl = Declarator->getType()->getAsTagDecl();
       if (TagTypeDecl && TagTypeDecl->isEmbeddedInDeclarator() &&
           TagTypeDecl->isCompleteDefinition())
-        return this->Context.getRawCommentForDeclNoCache(TagTypeDecl);
+        return this->Context.getRawCommentNoCache(TagTypeDecl);
     }
 
     return nullptr;

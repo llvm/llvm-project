@@ -10,8 +10,10 @@ import io
 import json
 import os
 import re
+import socket
 import sys
 import subprocess
+import time
 from typing import Dict, Tuple
 
 # LLDB modules
@@ -1690,24 +1692,20 @@ def read_file_from_process_wd(test, name):
     return read_file_on_target(test, path)
 
 
-def wait_for_file_on_target(testcase, file_path):
-    import time
+def wait_for_file_on_target(testcase, file_path: str):
+    timeout_seconds = 600 if "ASAN_OPTIONS" in os.environ else 120
+    sleep_interval_seconds = 0.5
+    deadline_seconds = time.monotonic() + timeout_seconds
 
-    MAX_ATTEMPTS = 60
-    timeout_seconds = 20 if "ASAN_OPTIONS" in os.environ else 2
-    for i in range(MAX_ATTEMPTS):
+    while time.monotonic() < deadline_seconds:
         command = f"ls {file_path}"
-        err, retcode, msg = testcase.run_platform_command(command)
+        err, retcode, _ = testcase.run_platform_command(command)
         if err.Success() and retcode == 0:
-            break
+            return read_file_on_target(testcase, file_path)
 
-        time.sleep(timeout_seconds)
-    else:
-        testcase.fail(
-            "File %s not found even after %d attempts." % (file_path, max_attempts)
-        )
+        time.sleep(sleep_interval_seconds)
 
-    return read_file_on_target(testcase, file_path)
+    testcase.fail(f"File {file_path} not found after {timeout_seconds} seconds.")
 
 
 def packetlog_get_process_info(log):
@@ -1892,3 +1890,23 @@ def send_packet_get_reply(test, packet_str):
 def get_qsupported_capabilities(test):
     reply = send_packet_get_reply(test, "qSupported")
     return reply.strip().split(";")
+
+
+def connect_to_new_remote_platform(testcase, platform_exe, extra_args=[]):
+    hostname = socket.getaddrinfo("localhost", 0, proto=socket.IPPROTO_TCP)[0][4][0]
+    port_file = testcase.getBuildArtifact("port")
+    commandline_args = [
+        "platform",
+        "--listen",
+        f"[{hostname}]:0",
+        "--socket-file",
+        port_file,
+    ] + extra_args
+    testcase.spawnSubprocess(platform_exe, commandline_args)
+
+    socket_id = wait_for_file_on_target(testcase, port_file)
+    new_platform = lldb.SBPlatform("remote-" + testcase.getPlatform())
+    testcase.dbg.SetSelectedPlatform(new_platform)
+    testcase.runCmd(f"platform connect connect://[{hostname}]:{socket_id}")
+
+    return new_platform

@@ -628,12 +628,12 @@ private:
   /// in \p RunningGCD. Also, the initial value of \p RunningGCD affects the
   /// result. If we find a term like (c_k * X_k * i_k), where i_k is the
   /// induction variable of \p CurLoop, c_k is stored in \p CurLoopCoeff and not
-  /// included in the GCD computation. Returns false if we fail to find a
+  /// included in the GCD computation. Returns nullptr if we fail to find a
   /// constant coefficient for some loop, e.g., when a term like (X+Y)*i is
-  /// present. Otherwise returns true.
-  bool accumulateCoefficientsGCD(const SCEV *Expr, const Loop *CurLoop,
-                                 const SCEV *&CurLoopCoeff,
-                                 APInt &RunningGCD) const;
+  /// present. Otherwise returns the remaining constant term C.
+  const SCEV *accumulateCoefficientsGCD(const SCEV *Expr, const Loop *CurLoop,
+                                        const SCEV *&CurLoopCoeff,
+                                        APInt &RunningGCD) const;
 
   /// getPositivePart - X^+ = max(X, 0).
   const SCEV *getPositivePart(const SCEV *X) const;

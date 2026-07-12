@@ -123,8 +123,7 @@ void atomic(void) {
                                c17-error {{type name does not allow storage class to be specified}} \
                                c17-error {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}
 
-  _Atomic auto atom2 = 12;  // c23-error {{_Atomic cannot be applied to type 'auto' in C23}} \
-                               c17-error {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}
+  _Atomic auto atom2 = 12;  // c17-error {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}
 }
 
 void attributes(void) {
@@ -166,6 +165,13 @@ void t1() {
 
   auto int d1 = 0;
   int auto d2 = 0;
+}
+
+void typedef_type_specifiers(void) {
+  typedef int MyInt;
+
+  auto MyInt a = 0;
+  MyInt auto b = 0;
 }
 
 void t2() {

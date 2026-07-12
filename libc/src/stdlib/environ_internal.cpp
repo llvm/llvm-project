@@ -17,6 +17,10 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/macros/config.h"
+#include "src/string/memory_utils/inline_memcpy.h"
+#ifdef LIBC_COPT_SUPPORT_ENVIRON
+#include "src/unistd/environ.h"
+#endif
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -141,6 +145,9 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
 
     // Update the global environ pointer.
     app.env_ptr = reinterpret_cast<uintptr_t *>(storage);
+#ifdef LIBC_COPT_SUPPORT_ENVIRON
+    environ = storage;
+#endif
 
     return true;
   }
@@ -167,8 +174,95 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
 
   // Update the global environ pointer.
   app.env_ptr = reinterpret_cast<uintptr_t *>(storage);
+#ifdef LIBC_COPT_SUPPORT_ENVIRON
+  environ = storage;
+#endif
 
   return true;
+}
+
+int EnvironmentManager::set(cpp::string_view name, cpp::string_view value,
+                            bool overwrite) {
+  cpp::optional<size_t> idx = find_var(name);
+
+  // If the variable exists and we're not overwriting, do nothing.
+  if (idx && !overwrite)
+    return 0;
+
+  // Ensure we have capacity. If the variable doesn't exist, we need one
+  // more slot.
+  size_t needed = idx ? count : count + 1;
+  if (!ensure_capacity(needed))
+    return -1;
+
+  // Build the "name=value" string.
+  size_t name_len = name.size();
+  size_t value_len = value.size();
+  size_t total_len = name_len + 1 + value_len + 1; // name + '=' + value + '\0'
+
+  AllocChecker ac;
+  char *new_string = new (ac) char[total_len];
+  if (!ac)
+    return -1;
+
+  inline_memcpy(new_string, name.data(), name_len);
+  new_string[name_len] = '=';
+  inline_memcpy(new_string + name_len + 1, value.data(), value_len);
+  new_string[name_len + 1 + value_len] = '\0';
+
+  char **env_array = get_array();
+
+  if (idx) {
+    // Replace existing variable. Free old string if we own it.
+    if (ownership[*idx].can_free())
+      delete[] env_array[*idx];
+
+    env_array[*idx] = new_string;
+    ownership[*idx].allocated_by_us = true;
+  } else {
+    // Add new variable at the end.
+    env_array[count] = new_string;
+    ownership[count].allocated_by_us = true;
+    count++;
+    env_array[count] = nullptr; // Maintain null terminator.
+  }
+
+  return 0;
+}
+
+int EnvironmentManager::unset(cpp::string_view name) {
+  cpp::optional<size_t> idx = find_var(name);
+  if (!idx)
+    return 0; // Variable not found; POSIX defines this as success.
+
+  // Transition to managed storage so we can modify the array and track
+  // ownership correctly.
+  if (!ensure_capacity(count))
+    return -1;
+
+  char **env_array = get_array();
+
+  // Loop to remove all instances of the variable (e.g. duplicates from execve).
+  while (idx) {
+    size_t i = *idx;
+    if (ownership[i].can_free())
+      delete[] env_array[i];
+
+    // Compact: shift remaining entries left to fill the gap.
+    // Shifting elements preserves the order of environment variables, which is
+    // desirable to maintain consistency with getenv resolution order and
+    // typical environ iteration behavior.
+    for (size_t j = i; j < count - 1; j++) {
+      env_array[j] = env_array[j + 1];
+      ownership[j] = ownership[j + 1];
+    }
+    count--;
+    env_array[count] = nullptr;
+
+    idx = find_var(name);
+  }
+
+  return 0;
 }
 
 } // namespace internal

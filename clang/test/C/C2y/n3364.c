@@ -39,4 +39,4 @@ long double ld2 = +LDBL_SNAN;
 long double ld3 = -LDBL_SNAN;
 // CHECK: @ld1 = {{.*}}global {{double|x86_fp80|fp128|ppc_fp128}} +snan(
 // CHECK: @ld2 = {{.*}}global {{double|x86_fp80|fp128|ppc_fp128}} +snan(
-// CHECK: @ld3 = {{.*}}global {{double|x86_fp80|fp128|ppc_fp128}} -snan(
+// CHECK: @ld3 = {{.*}}global {{double|x86_fp80|fp128|ppc_fp128}} {{-snan\(|f0x8000000000000000FFF4000000000000}}

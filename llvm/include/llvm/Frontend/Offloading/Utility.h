@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
@@ -154,6 +155,10 @@ struct AMDGPUKernelMetaData {
   uint32_t WavefrontSize = KInvalidValue;
   /// Maximum flat work-group size supported by the kernel in work-items.
   uint32_t MaxFlatWorkgroupSize = KInvalidValue;
+  /// Per-argument {offset, size} in bytes, read from the ".args" array in code
+  /// object metadata. Explicit user arguments are first, followed by
+  /// hidden arguments.
+  SmallVector<std::pair<uint32_t, uint32_t>, 8> ArgMDs;
 };
 
 /// Reads AMDGPU specific metadata from the ELF file and propagates the

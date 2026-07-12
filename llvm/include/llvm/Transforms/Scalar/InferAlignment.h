@@ -19,7 +19,7 @@
 namespace llvm {
 
 struct InferAlignmentPass : public OptionalPassInfoMixin<InferAlignmentPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // namespace llvm

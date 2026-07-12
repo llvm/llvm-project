@@ -166,9 +166,9 @@ static TypeSize getMinimalExtentFrom(const Value &V,
   // extent as accesses for a lower offset would be valid. We need to exclude
   // the "or null" part if null is a valid pointer. We can ignore frees, as an
   // access after free would be undefined behavior.
-  bool CanBeNull, CanBeFreed;
+  bool CanBeNull;
   uint64_t DerefBytes =
-    V.getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
+      V.getPointerDereferenceableBytes(DL, CanBeNull, /*CanBeFreed=*/nullptr);
   DerefBytes = (CanBeNull && NullIsValidLoc) ? 0 : DerefBytes;
   // If queried with a precise location size, we assume that location size to be
   // accessed, thus valid.
@@ -652,7 +652,11 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
         // because it should be in sync with CaptureTracking. Not using it may
         // cause weird miscompilations where 2 aliasing pointers are assumed to
         // noalias.
-        if (auto *RP = getArgumentAliasingToReturnedPointer(Call, false)) {
+        // Pass MustPreserveOffset=true so we exclude llvm.ptrmask, which can
+        // change the byte offset by clearing low bits and would otherwise
+        // corrupt the symbolic offset we are accumulating in `Decomposed`.
+        if (auto *RP = getArgumentAliasingToReturnedPointer(
+                Call, /*MustPreserveOffset=*/true)) {
           V = RP;
           continue;
         }
@@ -959,6 +963,20 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   ModRefInfo ErrnoMR = ME.getModRef(IRMemLocation::ErrnoMem);
   ModRefInfo OtherMR = ME.getModRef(IRMemLocation::Other);
 
+  // Take into account potential synchronization effects of the call.
+  // We assume synchronization can not occur if the call does not read/write
+  // other memory (this in particular ensures that readonly/argmemonly continue
+  // to work as expected for frontends that do not emit nosync).
+  // FIXME: This should apply to all calls, but is limited to inline asm to
+  // limit impact. This ensures that inline asm memory barriers work correctly.
+  ModRefInfo SyncMR = ModRefInfo::NoModRef;
+  if (isModAndRefSet(OtherMR) && Call->maySynchronize() &&
+      Call->isInlineAsm()) {
+    SyncMR = getSyncEffects(&AAQI.AAR, Loc, AAQI);
+    if (isModAndRefSet(SyncMR))
+      return SyncMR;
+  }
+
   // An identified function-local object that does not escape can only be
   // accessed via call arguments. Reduce OtherMR (which includes accesses to
   // escaped memory) based on that.
@@ -1002,7 +1020,7 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
     ArgMR = NewArgMR;
   }
 
-  ModRefInfo Result = ArgMR | OtherMR;
+  ModRefInfo Result = ArgMR | OtherMR | SyncMR;
 
   // Refine accesses to errno memory.
   if ((ErrnoMR | Result) != Result) {
@@ -1106,14 +1124,20 @@ AliasResult BasicAAResult::aliasGEP(
   };
 
   if (!V1Size.hasValue() && !V2Size.hasValue()) {
-    // TODO: This limitation exists for compile-time reasons. Relax it if we
-    // can avoid exponential pathological cases.
-    if (!isa<GEPOperator>(V2))
+    // Skip if V2 is itself a phi or select, leave the recursive walk to
+    // aliasPHI/aliasSelect.
+    if (isa<PHINode, SelectInst>(V2))
       return AliasResult::MayAlias;
 
-    // If both accesses have unknown size, we can only check whether the base
-    // objects don't alias.
-    return BaseObjectsAlias();
+    // Otherwise check whether the base objects don't alias. Only do so if V2
+    // is a GEP or an underlying object is a GEP/phi/select, which can be
+    // analyzed further.
+    if (isa<GEPOperator>(V2) ||
+        isa<GEPOperator, PHINode, SelectInst>(UnderlyingV1) ||
+        isa<GEPOperator, PHINode, SelectInst>(UnderlyingV2))
+      return BaseObjectsAlias();
+
+    return AliasResult::MayAlias;
   }
 
   DominatorTree *DT = getDT(AAQI);

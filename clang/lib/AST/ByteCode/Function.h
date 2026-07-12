@@ -148,7 +148,7 @@ public:
   }
 
   /// Returns a parameter descriptor.
-  ParamDescriptor getParamDescriptor(unsigned Index) const {
+  const ParamDescriptor &getParamDescriptor(unsigned Index) const {
     return ParamDescriptors[Index];
   }
 
@@ -224,6 +224,12 @@ public:
   bool isFullyCompiled() const { return IsFullyCompiled; }
 
   bool hasThisPointer() const { return HasThisPointer; }
+  bool hasExplicitThisPointer() const {
+    return HasThisPointer && ExplicitThisPointer;
+  }
+  bool hasImplicitThisPointer() const {
+    return HasThisPointer && !ExplicitThisPointer;
+  }
 
   /// Checks if the function already has a body attached.
   bool hasBody() const { return HasBody; }
@@ -232,7 +238,6 @@ public:
   bool isDefined() const { return Defined; }
 
   bool isVariadic() const { return Variadic; }
-
   unsigned getNumParams() const {
     return ParamDescriptors.size() + hasThisPointer() + hasRVO();
   }
@@ -245,13 +250,6 @@ public:
   }
   unsigned getWrittenArgSize() const {
     return ArgSize - (align(primSize(PT_Ptr)) * (hasThisPointer() + hasRVO()));
-  }
-
-  bool isThisPointerExplicit() const {
-    if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(
-            dyn_cast<const FunctionDecl *>(Source)))
-      return MD->isExplicitObjectMemberFunction();
-    return false;
   }
 
 private:
@@ -311,6 +309,8 @@ private:
   /// as the first implicit argument
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasThisPointer : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ExplicitThisPointer : 1;
   /// Whether this function has Return Value Optimization, i.e.
   /// the return value is constructed in the caller's stack frame.
   /// This is done for functions that return non-primive values.

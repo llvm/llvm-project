@@ -102,6 +102,7 @@ static_assert(test(std::ranges::fold_left_with_iter, a, 0, std::plus()));
 static_assert(test(std::ranges::fold_left_first, a, std::plus()));
 static_assert(test(std::ranges::fold_left_first_with_iter, a, std::plus()));
 static_assert(test(std::ranges::fold_right, a, 0, std::plus()));
+static_assert(test(std::ranges::fold_right_last, a, std::plus()));
 #endif
 static_assert(test(std::ranges::for_each, a, odd));
 static_assert(test(std::ranges::for_each_n, a, 10, odd));

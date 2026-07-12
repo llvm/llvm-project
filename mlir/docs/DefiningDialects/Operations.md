@@ -1567,14 +1567,6 @@ namespace llvm {
 template<> struct DenseMapInfo<Outer::Inner::MyIntEnum> {
   using StorageInfo = llvm::DenseMapInfo<uint32_t>;
 
-  static inline Outer::Inner::MyIntEnum getEmptyKey() {
-    return static_cast<Outer::Inner::MyIntEnum>(StorageInfo::getEmptyKey());
-  }
-
-  static inline Outer::Inner::MyIntEnum getTombstoneKey() {
-    return static_cast<Outer::Inner::MyIntEnum>(StorageInfo::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const Outer::Inner::MyIntEnum &val) {
     return StorageInfo::getHashValue(static_cast<uint32_t>(val));
   }
@@ -1696,14 +1688,6 @@ inline ::std::optional<MyBitEnum> symbolizeEnum<MyBitEnum>(::llvm::StringRef str
 namespace llvm {
 template<> struct DenseMapInfo<::MyBitEnum> {
   using StorageInfo = llvm::DenseMapInfo<uint32_t>;
-
-  static inline ::MyBitEnum getEmptyKey() {
-    return static_cast<::MyBitEnum>(StorageInfo::getEmptyKey());
-  }
-
-  static inline ::MyBitEnum getTombstoneKey() {
-    return static_cast<::MyBitEnum>(StorageInfo::getTombstoneKey());
-  }
 
   static unsigned getHashValue(const ::MyBitEnum &val) {
     return StorageInfo::getHashValue(static_cast<uint32_t>(val));

@@ -20,6 +20,7 @@
 #ifndef MLIR_DIALECT_NVGPU_IR_NVGPUOPS_TD
 #define MLIR_DIALECT_NVGPU_IR_NVGPUOPS_TD
 
+include "mlir/Dialect/LLVMIR/NVVMEnums.td"
 include "mlir/Dialect/NVGPU/IR/NVGPU.td"
 include "mlir/Dialect/NVGPU/IR/NVGPUTypes.td"
 
@@ -362,7 +363,7 @@ def NVGPU_MBarrierInitOp : NVGPU_Op<"mbarrier.init", []> {
 def NVGPU_MBarrierTestWaitOp : NVGPU_Op<"mbarrier.test.wait", []> {
   let summary = "Checks if the `nvgpu.mbarrier` has completed its current phase.";
   let description = [{
-    Checks whether the mbarrier object has completed the phase. It is is a 
+    Checks whether the mbarrier object has completed the phase. It is a 
     non-blocking instruction which tests for the completion of the phase.
 
     Example:
@@ -437,7 +438,7 @@ def NVGPU_MBarrierArriveExpectTxOp : NVGPU_Op<"mbarrier.arrive.expect_tx", []> {
 def NVGPU_MBarrierTryWaitParityOp : NVGPU_Op<"mbarrier.try_wait.parity", []> {
   let summary = "Waits for the `nvgpu.mbarrier` to complete its current phase.";
   let description = [{
-    Checks whether the mbarrier object has completed the phase. It is is a 
+    Checks whether the mbarrier object has completed the phase. It is a 
     potentially blocking instruction which tests for the completion of the 
     phase. Suspended thread resumes execution when the specified phase completes 
     OR before the phase completes following a system-dependent time limit. 
@@ -660,12 +661,12 @@ def NVGPU_RcpOp : NVGPU_Op<"rcp", [Pure,
     The input and output must be of the same vector type and shape.
   }];
   let arguments = (ins VectorOfNonZeroRankOf<[F32]>:$in,
-                       DefaultValuedAttr<RcpRoundingModeAttr, "RcpRoundingMode::APPROX">:$rounding,
-                       UnitAttr:$ftz);
+                       DefaultValuedAttr<FPRoundingModeAttr, "::mlir::NVVM::FPRoundingMode::NONE">:$rounding,
+                       DefaultValuedAttr<BoolAttr, "false">:$approx,
+                       DefaultValuedAttr<BoolAttr, "false">:$ftz);
   let results = (outs VectorOfNonZeroRankOf<[F32]>:$out);
   let assemblyFormat = [{
-    $in `{` `rounding` `=` $rounding (`,` `ftz` $ftz^)? `}` 
-    attr-dict `:` type($out)
+    $in attr-dict `:` type($out)
   }];
   let hasVerifier = 1;
 }

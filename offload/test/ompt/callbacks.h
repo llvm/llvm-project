@@ -51,8 +51,9 @@ static const char *ompt_target_t_values[] = {"",
                                              "ompt_target_exit_data_nowait",
                                              "ompt_target_update_nowait"};
 
-// For EMI callbacks
-ompt_id_t next_op_id = 0x8000000000000001;
+// OMPT entry points
+
+extern ompt_get_unique_id_t ompt_get_unique_id;
 
 // OMPT callbacks
 
@@ -127,7 +128,7 @@ static void on_ompt_callback_target_data_op_emi(
     const void *codeptr_ra) {
   assert(codeptr_ra != 0 && "Unexpected null codeptr");
   if (endpoint == ompt_scope_begin)
-    *host_op_id = next_op_id++;
+    *host_op_id = ompt_get_unique_id();
   // target_task_data may be null, avoid dereferencing it
   uint64_t target_task_data_value =
       (target_task_data) ? target_task_data->value : 0;
@@ -150,7 +151,7 @@ static void on_ompt_callback_target_emi(ompt_target_t kind,
                                         const void *codeptr_ra) {
   assert(codeptr_ra != 0 && "Unexpected null codeptr");
   if (endpoint == ompt_scope_begin)
-    target_data->value = next_op_id++;
+    target_data->value = ompt_get_unique_id();
   printf("Callback Target EMI: kind=%s endpoint=%s device_num=%d task_data=%p "
          "(0x%lx) target_task_data=%p (0x%lx) target_data=%p (0x%lx) code=%p\n",
          ompt_target_t_values[kind], ompt_scope_endpoint_t_values[endpoint],
@@ -162,6 +163,8 @@ static void on_ompt_callback_target_emi(ompt_target_t kind,
 static void on_ompt_callback_target_submit_emi(
     ompt_scope_endpoint_t endpoint, ompt_data_t *target_data,
     ompt_id_t *host_op_id, unsigned int requested_num_teams) {
+  if (endpoint == ompt_scope_begin)
+    *host_op_id = ompt_get_unique_id();
   printf("  Callback Submit EMI: endpoint=%s  req_num_teams=%d target_data=%p "
          "(0x%lx) host_op_id=%p (0x%lx)\n",
          ompt_scope_endpoint_t_values[endpoint], requested_num_teams,

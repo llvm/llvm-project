@@ -33,9 +33,10 @@
 using namespace llvm;
 
 WinException::WinException(AsmPrinter *A) : EHStreamer(A) {
-  // MSVC's EH tables are always composed of 32-bit words.  All known 64-bit
-  // platforms use an imagerel32 relocation to refer to symbols.
-  useImageRel32 = (A->getDataLayout().getPointerSizeInBits() == 64);
+  // MSVC's EH tables are always composed of 32-bit words. All known
+  // architectures use an imagerel32 relocation to refer to symbols, except
+  // 32-bit x86.
+  useImageRel32 = A->TM.getTargetTriple().getArch() != Triple::x86;
   isAArch64 = Asm->TM.getTargetTriple().isAArch64();
   isThumb = Asm->TM.getTargetTriple().isThumb();
 }

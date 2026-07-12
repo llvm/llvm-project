@@ -16,6 +16,7 @@ namespace LIBC_NAMESPACE_DECL {
 enum class MutexError : int {
   NONE,
   BUSY,
+  DEADLOCK,
   TIMEOUT,
   UNLOCK_WITHOUT_LOCK,
   BAD_LOCK_STATE,

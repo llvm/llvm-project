@@ -16,6 +16,7 @@
 extern "C" {
 #endif
 
+#define __riscv_intrinsic_b 1
 #define __riscv_intrinsic_zbb 1
 #define __riscv_intrinsic_zbc 1
 #define __riscv_intrinsic_zbkb 1

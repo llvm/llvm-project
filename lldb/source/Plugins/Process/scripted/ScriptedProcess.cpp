@@ -108,9 +108,8 @@ ScriptedProcess::ScriptedProcess(lldb::TargetSP target_sp,
   ExecutionContext exe_ctx(target_sp, /*get_process=*/false);
 
   // Create process script object
-  auto obj_or_err = GetInterface().CreatePluginObject(
-      m_scripted_metadata.GetClassName(), exe_ctx,
-      m_scripted_metadata.GetArgsSP());
+  auto obj_or_err =
+      GetInterface().CreatePluginObject(m_scripted_metadata, exe_ctx);
 
   if (!obj_or_err) {
     llvm::consumeError(obj_or_err.takeError());
@@ -505,7 +504,8 @@ ScriptedProcess::GetLoadedDynamicLibrariesInfos(
       return error_with_message("Couldn't set the load address for module.");
 
     FileSpec objfile(path);
-    module_sp->SetFileSpecAndObjectName(objfile, objfile.GetFilename());
+    module_sp->SetFileSpecAndObjectName(objfile,
+                                        ConstString(objfile.GetFilename()));
 
     if (is_placeholder_module) {
       target.GetImages().AppendIfNeeded(module_sp, true /*notify=*/);

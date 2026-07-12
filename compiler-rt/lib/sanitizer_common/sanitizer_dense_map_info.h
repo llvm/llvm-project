@@ -62,7 +62,6 @@ struct DenseMapPair {
 template <typename T>
 struct DenseMapInfo {
   // static T getEmptyKey();
-  // static T getTombstoneKey();
   // static unsigned getHashValue(const T &Val);
   // static bool isEqual(const T &LHS, const T &RHS);
 };
@@ -86,12 +85,6 @@ struct DenseMapInfo<T *> {
     return reinterpret_cast<T *>(Val);
   }
 
-  static constexpr T *getTombstoneKey() {
-    uptr Val = static_cast<uptr>(-2);
-    Val <<= Log2MaxAlign;
-    return reinterpret_cast<T *>(Val);
-  }
-
   static constexpr unsigned getHashValue(const T *PtrVal) {
     return (unsigned((uptr)PtrVal) >> 4) ^ (unsigned((uptr)PtrVal) >> 9);
   }
@@ -105,7 +98,6 @@ struct DenseMapInfo<T *> {
 template <>
 struct DenseMapInfo<char> {
   static constexpr char getEmptyKey() { return ~0; }
-  static constexpr char getTombstoneKey() { return ~0 - 1; }
   static constexpr unsigned getHashValue(const char &Val) { return Val * 37U; }
 
   static constexpr bool isEqual(const char &LHS, const char &RHS) {
@@ -117,7 +109,6 @@ struct DenseMapInfo<char> {
 template <>
 struct DenseMapInfo<unsigned char> {
   static constexpr unsigned char getEmptyKey() { return ~0; }
-  static constexpr unsigned char getTombstoneKey() { return ~0 - 1; }
   static constexpr unsigned getHashValue(const unsigned char &Val) {
     return Val * 37U;
   }
@@ -132,7 +123,6 @@ struct DenseMapInfo<unsigned char> {
 template <>
 struct DenseMapInfo<unsigned short> {
   static constexpr unsigned short getEmptyKey() { return 0xFFFF; }
-  static constexpr unsigned short getTombstoneKey() { return 0xFFFF - 1; }
   static constexpr unsigned getHashValue(const unsigned short &Val) {
     return Val * 37U;
   }
@@ -147,7 +137,6 @@ struct DenseMapInfo<unsigned short> {
 template <>
 struct DenseMapInfo<unsigned> {
   static constexpr unsigned getEmptyKey() { return ~0U; }
-  static constexpr unsigned getTombstoneKey() { return ~0U - 1; }
   static constexpr unsigned getHashValue(const unsigned &Val) {
     return Val * 37U;
   }
@@ -161,7 +150,6 @@ struct DenseMapInfo<unsigned> {
 template <>
 struct DenseMapInfo<unsigned long> {
   static constexpr unsigned long getEmptyKey() { return ~0UL; }
-  static constexpr unsigned long getTombstoneKey() { return ~0UL - 1L; }
 
   static constexpr unsigned getHashValue(const unsigned long &Val) {
     return (unsigned)(Val * 37UL);
@@ -177,7 +165,6 @@ struct DenseMapInfo<unsigned long> {
 template <>
 struct DenseMapInfo<unsigned long long> {
   static constexpr unsigned long long getEmptyKey() { return ~0ULL; }
-  static constexpr unsigned long long getTombstoneKey() { return ~0ULL - 1ULL; }
 
   static constexpr unsigned getHashValue(const unsigned long long &Val) {
     return (unsigned)(Val * 37ULL);
@@ -193,7 +180,6 @@ struct DenseMapInfo<unsigned long long> {
 template <>
 struct DenseMapInfo<short> {
   static constexpr short getEmptyKey() { return 0x7FFF; }
-  static constexpr short getTombstoneKey() { return -0x7FFF - 1; }
   static constexpr unsigned getHashValue(const short &Val) { return Val * 37U; }
   static constexpr bool isEqual(const short &LHS, const short &RHS) {
     return LHS == RHS;
@@ -204,7 +190,6 @@ struct DenseMapInfo<short> {
 template <>
 struct DenseMapInfo<int> {
   static constexpr int getEmptyKey() { return 0x7fffffff; }
-  static constexpr int getTombstoneKey() { return -0x7fffffff - 1; }
   static constexpr unsigned getHashValue(const int &Val) {
     return (unsigned)(Val * 37U);
   }
@@ -221,8 +206,6 @@ struct DenseMapInfo<long> {
     return (1UL << (sizeof(long) * 8 - 1)) - 1UL;
   }
 
-  static constexpr long getTombstoneKey() { return getEmptyKey() - 1L; }
-
   static constexpr unsigned getHashValue(const long &Val) {
     return (unsigned)(Val * 37UL);
   }
@@ -236,9 +219,6 @@ struct DenseMapInfo<long> {
 template <>
 struct DenseMapInfo<long long> {
   static constexpr long long getEmptyKey() { return 0x7fffffffffffffffLL; }
-  static constexpr long long getTombstoneKey() {
-    return -0x7fffffffffffffffLL - 1;
-  }
 
   static constexpr unsigned getHashValue(const long long &Val) {
     return (unsigned)(Val * 37ULL);
@@ -259,11 +239,6 @@ struct DenseMapInfo<detail::DenseMapPair<T, U>> {
   static constexpr Pair getEmptyKey() {
     return detail::DenseMapPair<T, U>(FirstInfo::getEmptyKey(),
                                       SecondInfo::getEmptyKey());
-  }
-
-  static constexpr Pair getTombstoneKey() {
-    return detail::DenseMapPair<T, U>(FirstInfo::getTombstoneKey(),
-                                      SecondInfo::getTombstoneKey());
   }
 
   static constexpr unsigned getHashValue(const Pair &PairVal) {

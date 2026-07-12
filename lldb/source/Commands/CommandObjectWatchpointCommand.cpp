@@ -98,7 +98,7 @@ described above.  Note that the global variable 'lldb.frame' will NOT be updated
 this function is called, so be sure to use the 'frame' argument. The 'frame' argument \
 can get you to the thread via frame.GetThread(), the thread can get you to the \
 process via thread.GetProcess(), and the process can get you back to the target \
-via process.GetTarget()."
+via process.GetTarget()->"
         R"(
 
 )"
@@ -356,9 +356,9 @@ are no syntax errors may indicate that a function was declared but never called.
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetTarget();
-
-    const WatchpointList &watchpoints = target.GetWatchpointList();
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
+    const WatchpointList &watchpoints = target->GetWatchpointList();
     size_t num_watchpoints = watchpoints.GetSize();
 
     if (num_watchpoints == 0) {
@@ -374,7 +374,7 @@ protected:
     }
 
     std::vector<uint32_t> valid_wp_ids;
-    if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(target, command,
+    if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(*target, command,
                                                                valid_wp_ids)) {
       result.AppendError("invalid watchpoints specification");
       return;
@@ -385,7 +385,7 @@ protected:
     for (size_t i = 0; i < count; ++i) {
       uint32_t cur_wp_id = valid_wp_ids.at(i);
       if (cur_wp_id != LLDB_INVALID_WATCH_ID) {
-        Watchpoint *wp = target.GetWatchpointList().FindByID(cur_wp_id).get();
+        Watchpoint *wp = target->GetWatchpointList().FindByID(cur_wp_id).get();
         // Sanity check wp first.
         if (wp == nullptr)
           continue;
@@ -451,9 +451,9 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetTarget();
-
-    const WatchpointList &watchpoints = target.GetWatchpointList();
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
+    const WatchpointList &watchpoints = target->GetWatchpointList();
     size_t num_watchpoints = watchpoints.GetSize();
 
     if (num_watchpoints == 0) {
@@ -468,7 +468,7 @@ protected:
     }
 
     std::vector<uint32_t> valid_wp_ids;
-    if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(target, command,
+    if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(*target, command,
                                                                valid_wp_ids)) {
       result.AppendError("invalid watchpoints specification");
       return;
@@ -479,7 +479,7 @@ protected:
     for (size_t i = 0; i < count; ++i) {
       uint32_t cur_wp_id = valid_wp_ids.at(i);
       if (cur_wp_id != LLDB_INVALID_WATCH_ID) {
-        Watchpoint *wp = target.GetWatchpointList().FindByID(cur_wp_id).get();
+        Watchpoint *wp = target->GetWatchpointList().FindByID(cur_wp_id).get();
         if (wp)
           wp->ClearCallback();
       } else {
@@ -506,9 +506,9 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetTarget();
-
-    const WatchpointList &watchpoints = target.GetWatchpointList();
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
+    const WatchpointList &watchpoints = target->GetWatchpointList();
     size_t num_watchpoints = watchpoints.GetSize();
 
     if (num_watchpoints == 0) {
@@ -523,7 +523,7 @@ protected:
     }
 
     std::vector<uint32_t> valid_wp_ids;
-    if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(target, command,
+    if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(*target, command,
                                                                valid_wp_ids)) {
       result.AppendError("invalid watchpoints specification");
       return;
@@ -534,7 +534,7 @@ protected:
     for (size_t i = 0; i < count; ++i) {
       uint32_t cur_wp_id = valid_wp_ids.at(i);
       if (cur_wp_id != LLDB_INVALID_WATCH_ID) {
-        Watchpoint *wp = target.GetWatchpointList().FindByID(cur_wp_id).get();
+        Watchpoint *wp = target->GetWatchpointList().FindByID(cur_wp_id).get();
 
         if (wp) {
           const WatchpointOptions *wp_options = wp->GetOptions();

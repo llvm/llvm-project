@@ -264,10 +264,10 @@ TEST(DiagnosticsTest, DeduplicatedClangTidyDiagnostics) {
     float foo = [[0.1f]];
   )cpp");
   auto TU = TestTU::withCode(Test.code());
-  // Enable alias clang-tidy checks, these check emits the same diagnostics
+  // Enable alias clang-tidy checks, these checks emit the same diagnostics
   // (except the check name).
   TU.ClangTidyProvider = addTidyChecks("readability-uppercase-literal-suffix,"
-                                       "hicpp-uppercase-literal-suffix");
+                                       "cert-dcl16-c");
   // Verify that we filter out the duplicated diagnostic message.
   EXPECT_THAT(
       TU.build().getDiagnostics(),
@@ -357,6 +357,29 @@ TEST(DiagnosticsTest, ClangTidy) {
                "function 'foo' is within a recursive call chain"),
           Diag(Test.range("bar"),
                "function 'bar' is within a recursive call chain"))));
+}
+
+TEST(DiagnosticsTest, ClangTidyRedundantParenthesesFix) {
+  Annotations Test(R"cpp(
+    int func() {
+      return$lparen[[(]]0$rparen[[)]];
+    }
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  TU.ClangTidyProvider = addTidyChecks("readability-redundant-parentheses");
+
+  clangd::Fix ExpectedFix;
+  ExpectedFix.Message = "redundant parentheses around expression";
+  ExpectedFix.Edits.push_back(TextEdit{Test.range("lparen"), " "});
+  ExpectedFix.Edits.push_back(TextEdit{Test.range("rparen"), ""});
+
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ifTidyChecks(ElementsAre(AllOf(
+          Diag(Test.range("lparen"), "redundant parentheses around expression"),
+          diagSource(Diag::ClangTidy),
+          diagName("readability-redundant-parentheses"),
+          withFix(equalToFix(ExpectedFix))))));
 }
 
 TEST(DiagnosticsTest, ClangTidyEOF) {

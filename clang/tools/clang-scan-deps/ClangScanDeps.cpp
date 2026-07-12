@@ -81,12 +81,29 @@ enum ResourceDirRecipeKind {
   RDRK_InvokeCompiler,
 };
 
+/// The format that is output by the dependency scanner.
+enum class ScanningOutputFormat {
+  /// This is the Makefile compatible dep format. This will include all of the
+  /// deps necessary for an implicit modules build, but won't include any
+  /// intermodule dependency information.
+  Make,
+
+  /// This outputs the full clang module dependency graph suitable for use for
+  /// explicitly building modules.
+  Full,
+
+  /// This outputs the dependency graph for standard c++ modules in P1689R5
+  /// format.
+  P1689,
+};
+
 static std::string OutputFileName = "-";
 static ScanningMode ScanMode = ScanningMode::DependencyDirectivesScan;
 static ScanningOutputFormat Format = ScanningOutputFormat::Make;
 static ScanningOptimizations OptimizeArgs;
 static std::string ModuleFilesDir;
 static bool EagerLoadModules;
+static bool CacheNegativeStats;
 static unsigned NumThreads = 0;
 static std::string CompilationDB;
 static std::optional<std::string> ModuleNames;
@@ -195,6 +212,8 @@ static void ParseArgs(int argc, char **argv) {
     OutputFileName = A->getValue();
 
   EagerLoadModules = Args.hasArg(OPT_eager_load_pcm);
+
+  CacheNegativeStats = Args.hasArg(OPT_cache_negative_stats);
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_j)) {
     StringRef S{A->getValue()};
@@ -1010,8 +1029,8 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
       // Run the tool on it.
       if (Format == ScanningOutputFormat::Make) {
-        auto MaybeFile =
-            WorkerTool.getDependencyFile(Input->CommandLine, CWD, DiagConsumer);
+        auto MaybeFile = WorkerTool.getDependencyFile(
+            Input->CommandLine, CWD, LookupOutput, DiagConsumer);
         handleDiagnostics(Filename, S, Errs);
         if (MaybeFile)
           DependencyOS.applyLocked([&](raw_ostream &OS) { OS << *MaybeFile; });
@@ -1086,16 +1105,18 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
         SmallVector<StringRef> Names;
         ModuleNameRef.split(Names, ',');
 
+        CallbackActionController Controller(LookupOutput);
+
         if (Names.size() == 1) {
           auto MaybeModuleDepsGraph = WorkerTool.getModuleDependencies(
               Names[0], Input->CommandLine, CWD, AlreadySeenModules,
-              LookupOutput);
+              Controller);
           if (handleModuleResult(Names[0], MaybeModuleDepsGraph, *FD,
                                  LocalIndex, DependencyOS, Errs))
             HadErrors = true;
         } else {
           auto CIWithCtx = CompilerInstanceWithContext::initializeOrError(
-              WorkerTool, CWD, Input->CommandLine, LookupOutput);
+              WorkerTool, CWD, Input->CommandLine, Controller);
           if (llvm::Error Err = CIWithCtx.takeError()) {
             handleErrorWithInfoString(
                 "Compiler instance with context setup error", std::move(Err),
@@ -1107,7 +1128,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
           for (auto N : Names) {
             auto MaybeModuleDepsGraph =
                 CIWithCtx->computeDependenciesByNameOrError(
-                    N, AlreadySeenModules, LookupOutput);
+                    N, AlreadySeenModules, Controller);
             if (handleModuleResult(N, MaybeModuleDepsGraph, *FD, LocalIndex,
                                    DependencyOS, Errs)) {
               HadErrors = true;
@@ -1141,22 +1162,23 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
       }
     }
 
-    WorkerTool.getWorkerVFS().visit([&](llvm::vfs::FileSystem &VFS) {
-      if (auto *T = dyn_cast_or_null<llvm::vfs::TracingFileSystem>(&VFS)) {
-        NumStatusCalls += T->NumStatusCalls;
-        NumOpenFileForReadCalls += T->NumOpenFileForReadCalls;
-        NumDirBeginCalls += T->NumDirBeginCalls;
-        NumGetRealPathCalls += T->NumGetRealPathCalls;
-        NumExistsCalls += T->NumExistsCalls;
-        NumIsLocalCalls += T->NumIsLocalCalls;
-      }
-    });
+    if (auto *T = WorkerTool.getWorkerTracingVFS()) {
+      NumStatusCalls += T->NumStatusCalls;
+      NumOpenFileForReadCalls += T->NumOpenFileForReadCalls;
+      NumDirBeginCalls += T->NumDirBeginCalls;
+      NumGetRealPathCalls += T->NumGetRealPathCalls;
+      NumExistsCalls += T->NumExistsCalls;
+      NumIsLocalCalls += T->NumIsLocalCalls;
+    }
   };
 
   DependencyScanningServiceOptions Opts;
   Opts.Mode = ScanMode;
-  Opts.Format = Format;
   Opts.OptimizeArgs = OptimizeArgs;
+  // The scanner currently ignores `#pragma clang diagnostic ...` and emits
+  // unexpected diagnostics. Work around this for now by disabling warnings
+  // entirely, at least for P1689 where people hit this most often.
+  Opts.EmitWarnings = Format != ScanningOutputFormat::P1689;
   // Within P1689 format, we don't want all the paths to be absolute path
   // since it may violate the traditional make style dependencies info.
   Opts.ReportAbsolutePaths = Format != ScanningOutputFormat::P1689;
@@ -1165,6 +1187,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   Opts.TraceVFS = Verbose;
   Opts.AsyncScanModules = AsyncScanModules;
   Opts.FlushModuleCache = !NoFlushModuleCache;
+  Opts.CacheNegativeStats = CacheNegativeStats;
 
   llvm::Timer T;
   T.startTimer();

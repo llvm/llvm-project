@@ -18,10 +18,7 @@
 #include "flang/Runtime/random.h"
 #include "flang/Runtime/stop.h"
 #include "flang/Runtime/time-intrinsic.h"
-#include "flang/Semantics/tools.h"
-#include "llvm/Support/Debug.h"
 #include <optional>
-#include <signal.h>
 
 #define DEBUG_TYPE "flang-lower-runtime"
 

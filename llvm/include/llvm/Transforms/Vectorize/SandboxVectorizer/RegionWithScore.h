@@ -85,7 +85,7 @@ public:
   /// \Returns the ScoreBoard data structure that keeps track of instr costs.
   const ScoreBoard &getScoreboard() const { return Scoreboard; }
 
-  static SmallVector<std::unique_ptr<RegionWithScore>>
+  LLVM_ABI static SmallVector<std::unique_ptr<RegionWithScore>>
   createRegionsFromMD(Function &F, const TargetTransformInfo &TTI);
 };
 

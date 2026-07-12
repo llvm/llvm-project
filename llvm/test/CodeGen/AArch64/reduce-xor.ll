@@ -273,7 +273,7 @@ define i8 @test_redxor_v8i8(<8 x i8> %a) {
 define i8 @test_redxor_v16i8(<16 x i8> %a) {
 ; CHECK-SD-LABEL: test_redxor_v16i8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    eor x8, x8, x8, lsr #32
@@ -284,7 +284,7 @@ define i8 @test_redxor_v16i8(<16 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: test_redxor_v16i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    umov w8, v0.b[0]
 ; CHECK-GI-NEXT:    umov w9, v0.b[1]
@@ -310,7 +310,7 @@ define i8 @test_redxor_v32i8(<32 x i8> %a) {
 ; CHECK-SD-LABEL: test_redxor_v32i8:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    eor v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    eor x8, x8, x8, lsr #32
@@ -322,7 +322,7 @@ define i8 @test_redxor_v32i8(<32 x i8> %a) {
 ; CHECK-GI-LABEL: test_redxor_v32i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    eor v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    umov w8, v0.b[0]
 ; CHECK-GI-NEXT:    umov w9, v0.b[1]
@@ -371,7 +371,7 @@ define i16 @test_redxor_v4i16(<4 x i16> %a) {
 define i16 @test_redxor_v8i16(<8 x i16> %a) {
 ; CHECK-SD-LABEL: test_redxor_v8i16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    eor x8, x8, x8, lsr #32
@@ -381,7 +381,7 @@ define i16 @test_redxor_v8i16(<8 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: test_redxor_v8i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    umov w8, v0.h[0]
 ; CHECK-GI-NEXT:    umov w9, v0.h[1]
@@ -399,7 +399,7 @@ define i16 @test_redxor_v16i16(<16 x i16> %a) {
 ; CHECK-SD-LABEL: test_redxor_v16i16:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    eor v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    eor x8, x8, x8, lsr #32
@@ -410,7 +410,7 @@ define i16 @test_redxor_v16i16(<16 x i16> %a) {
 ; CHECK-GI-LABEL: test_redxor_v16i16:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    eor v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    umov w8, v0.h[0]
 ; CHECK-GI-NEXT:    umov w9, v0.h[1]
@@ -446,7 +446,7 @@ define i32 @test_redxor_v2i32(<2 x i32> %a) {
 define i32 @test_redxor_v4i32(<4 x i32> %a) {
 ; CHECK-SD-LABEL: test_redxor_v4i32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    lsr x9, x8, #32
@@ -455,7 +455,7 @@ define i32 @test_redxor_v4i32(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: test_redxor_v4i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
 ; CHECK-GI-NEXT:    fmov w9, s0
@@ -469,7 +469,7 @@ define i32 @test_redxor_v8i32(<8 x i32> %a) {
 ; CHECK-SD-LABEL: test_redxor_v8i32:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    eor v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    lsr x9, x8, #32
@@ -479,7 +479,7 @@ define i32 @test_redxor_v8i32(<8 x i32> %a) {
 ; CHECK-GI-LABEL: test_redxor_v8i32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    eor v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
 ; CHECK-GI-NEXT:    fmov w9, s0
@@ -492,7 +492,7 @@ define i32 @test_redxor_v8i32(<8 x i32> %a) {
 define i64 @test_redxor_v2i64(<2 x i64> %a) {
 ; CHECK-SD-LABEL: test_redxor_v2i64:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    ret
@@ -511,7 +511,7 @@ define i64 @test_redxor_v4i64(<4 x i64> %a) {
 ; CHECK-SD-LABEL: test_redxor_v4i64:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    eor v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    ret

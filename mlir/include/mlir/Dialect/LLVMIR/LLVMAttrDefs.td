@@ -710,36 +710,34 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
                                       [LLVM_DIRecursiveTypeAttrInterface],
                                       "DILocalScopeAttr"> {
   let parameters = (ins
-    // DIRecursiveTypeAttrInterface specific parameters.
-    OptionalParameter<"DistinctAttr">:$recId,
-    OptionalParameter<"bool">:$isRecSelf,
-    // DISubprogramAttr specific parameters.
-    OptionalParameter<"DistinctAttr">:$id,
-    OptionalParameter<"DICompileUnitAttr">:$compileUnit,
-    OptionalParameter<"DIScopeAttr">:$scope,
-    OptionalParameter<"StringAttr">:$name,
-    OptionalParameter<"StringAttr">:$linkageName,
-    OptionalParameter<"DIFileAttr">:$file,
-    OptionalParameter<"unsigned">:$line,
-    OptionalParameter<"unsigned">:$scopeLine,
-    OptionalParameter<"DISubprogramFlags">:$subprogramFlags,
-    OptionalParameter<"DISubroutineTypeAttr">:$type,
-    OptionalArrayRefParameter<"DINodeAttr">:$retainedNodes,
-    OptionalArrayRefParameter<"DINodeAttr">:$annotations
-  );
-  let builders = [
-    AttrBuilder<(ins
-      "DistinctAttr":$id, "DICompileUnitAttr":$compileUnit,
-      "DIScopeAttr":$scope, "StringAttr":$name, "StringAttr":$linkageName,
-      "DIFileAttr":$file, "unsigned":$line, "unsigned":$scopeLine,
-      "DISubprogramFlags":$subprogramFlags, "DISubroutineTypeAttr":$type,
-      "ArrayRef<DINodeAttr>":$retainedNodes, "ArrayRef<DINodeAttr>":$annotations
-    ), [{
+      // DIRecursiveTypeAttrInterface specific parameters.
+      OptionalParameter<"DistinctAttr">:$recId,
+      OptionalParameter<"bool">:$isRecSelf,
+      // DISubprogramAttr specific parameters.
+      OptionalParameter<"DistinctAttr">:$id,
+      OptionalParameter<"DICompileUnitAttr">:$compileUnit,
+      OptionalParameter<"DIScopeAttr">:$scope,
+      OptionalParameter<"StringAttr">:$name,
+      OptionalParameter<"StringAttr">:$linkageName,
+      OptionalParameter<"DIFileAttr">:$file,
+      OptionalParameter<"unsigned">:$line,
+      OptionalParameter<"unsigned">:$scopeLine,
+      OptionalParameter<"DISubprogramFlags">:$subprogramFlags,
+      OptionalParameter<"DISubroutineTypeAttr">:$type,
+      OptionalArrayRefParameter<"Attribute">:$retainedNodes,
+      OptionalArrayRefParameter<"DINodeAttr">:$annotations);
+  let builders = [AttrBuilder<
+      (ins "DistinctAttr":$id, "DICompileUnitAttr":$compileUnit,
+          "DIScopeAttr":$scope, "StringAttr":$name, "StringAttr":$linkageName,
+          "DIFileAttr":$file, "unsigned":$line, "unsigned":$scopeLine,
+          "DISubprogramFlags":$subprogramFlags, "DISubroutineTypeAttr":$type,
+          "ArrayRef<Attribute>":$retainedNodes,
+          "ArrayRef<DINodeAttr>":$annotations),
+      [{
       return $_get($_ctxt, /*recId=*/nullptr, /*isRecSelf=*/false, id, compileUnit,
                    scope, name, linkageName, file, line, scopeLine,
                    subprogramFlags, type, retainedNodes, annotations);
-    }]>
-  ];
+    }]>];
   let assemblyFormat = "`<` struct(params) `>`";
   let extraClassDeclaration = [{
     /// Requirements of DIRecursiveTypeAttrInterface.
@@ -1585,14 +1583,16 @@ def LLVM_DereferenceableAttr : LLVM_Attr<"Dereferenceable", "dereferenceable"> {
 //===----------------------------------------------------------------------===//
 
 def ModuleFlagAttr
-    : LLVM_Attr<"ModuleFlag", "mlir.module_flag"> {
+    : LLVM_Attr<"ModuleFlag", "mlir.module_flag",
+                [DeclareAttrInterfaceMethods<LLVM_ModuleFlagAttrInterface>]> {
   let summary = "LLVM module flag metadata";
   let description = [{
     Represents a single entry of llvm.module.flags metadata
     (llvm::Module::ModuleFlagEntry in LLVM). The first element is a behavior
     flag described by `ModFlagBehaviorAttr`, the second is a string ID
     and third is the value of the flag. Supported keys and values include:
-      - Arbitrary `key`s holding integer constants or strings.
+      - Arbitrary `key`s holding integer constants, integer-like dialect
+        attributes, strings, or non-empty string arrays.
       - Domain specific keys (e.g "CG Profile"), holding lists of supported
         module flag values (e.g. `llvm.cgprofile_entry`).
 
@@ -1783,5 +1783,9 @@ def LLVM_MDNodeAttr : LLVM_Attr<"MDNode", "md_node"> {
   let parameters = (ins OptionalArrayRefParameter<"Attribute">:$operands);
   let assemblyFormat = "`<` (`>`) : ($operands^ `>`)?";
 }
+
+def LLVM_AnyMDAttr : AnyAttrOf<[
+    LLVM_MDStringAttr, LLVM_MDConstantAttr, LLVM_MDFuncAttr, LLVM_MDNodeAttr],
+    "LLVM metadata attribute (md_string, md_const, md_func, or md_node)">;
 
 #endif // LLVMIR_ATTRDEFS

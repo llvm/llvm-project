@@ -40,6 +40,8 @@ void pointer_param_read_only(Bar* b) {
 }
 
 void pointer_param_mutated_pointee(Bar* b) {
+  // CHECK-MESSAGES: [[@LINE-1]]:36: warning: variable 'b' of type 'Bar *' can be declared 'const'
+  // CHECK-FIXES: void pointer_param_mutated_pointee(Bar* const b) {
   b->mutating_method();
 }
 
@@ -213,6 +215,8 @@ void use_requires_const_method() {
 
 void lambda_params() {
   auto lambda = [](Bar& b) {
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'lambda' of type '(lambda at {{.*}})' can be declared 'const'
+  // CHECK-FIXES: auto const lambda = [](Bar& b) {
     b.const_method();
   };
 }
@@ -505,8 +509,9 @@ void struct_ptr_param(Bar** bp) {
 }
 
 void struct_ptr_param_modified(Bar** bp) {
-  // CHECK-MESSAGES: [[@LINE-1]]:32: warning: variable 'bp' of type 'Bar **' can be declared 'const'
-  // CHECK-FIXES: void struct_ptr_param_modified(Bar** const bp) {
+  // CHECK-MESSAGES: [[@LINE-1]]:32: warning: pointee of variable 'bp' of type 'Bar **' can be declared 'const'
+  // CHECK-MESSAGES: [[@LINE-2]]:32: warning: variable 'bp' of type 'Bar **' can be declared 'const'
+  // CHECK-FIXES: void struct_ptr_param_modified(Bar* const* const bp) {
   (*bp)->mutating_method();
 }
 

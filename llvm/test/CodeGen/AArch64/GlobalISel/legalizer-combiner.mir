@@ -110,11 +110,11 @@ body:             |
     ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[COPY]](p0) :: (load (s128))
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[LOAD1]](s128)
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[LOAD]], [[UV]]
-    ; CHECK-NEXT: [[MUL1:%[0-9]+]]:_(s64) = G_MUL [[C]], [[UV]]
-    ; CHECK-NEXT: [[MUL2:%[0-9]+]]:_(s64) = G_MUL [[LOAD]], [[UV1]]
     ; CHECK-NEXT: [[UMULH:%[0-9]+]]:_(s64) = G_UMULH [[LOAD]], [[UV]]
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[MUL1]], [[MUL2]]
-    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(s64) = G_ADD [[ADD]], [[UMULH]]
+    ; CHECK-NEXT: [[MUL1:%[0-9]+]]:_(s64) = G_MUL [[LOAD]], [[UV1]]
+    ; CHECK-NEXT: [[MUL2:%[0-9]+]]:_(s64) = G_MUL [[C]], [[UV]]
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[UMULH]], [[MUL1]]
+    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(s64) = G_ADD [[ADD]], [[MUL2]]
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[MUL]](s64), [[ADD1]](s64)
     ; CHECK-NEXT: $q0 = COPY [[MV]](s128)
     ; CHECK-NEXT: RET_ReallyLR

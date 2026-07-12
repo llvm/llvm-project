@@ -25,7 +25,7 @@ class LoopAccessInfoPrinterPass
 public:
   explicit LoopAccessInfoPrinterPass(raw_ostream &OS, bool AllowPartial)
       : OS(OS), AllowPartial(AllowPartial) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // End llvm namespace

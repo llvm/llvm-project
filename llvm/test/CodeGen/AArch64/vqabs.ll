@@ -89,9 +89,8 @@ entry:
 define <16 x i8> @vqabs_sat_v16i8(<16 x i8> %A) {
 ; CHECK-LABEL: vqabs_sat_v16i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    sqneg v1.16b, v0.16b
 ; CHECK-NEXT:    cmgt v2.16b, v0.16b, #0
-; CHECK-NEXT:    sqsub v1.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -104,9 +103,8 @@ entry:
 define <8 x i16> @vqabs_sat_v8i16(<8 x i16> %A) {
 ; CHECK-LABEL: vqabs_sat_v8i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    sqneg v1.8h, v0.8h
 ; CHECK-NEXT:    cmgt v2.8h, v0.8h, #0
-; CHECK-NEXT:    sqsub v1.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -119,9 +117,8 @@ entry:
 define <4 x i32> @vqabs_sat_v4i32(<4 x i32> %A) {
 ; CHECK-LABEL: vqabs_sat_v4i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    sqneg v1.4s, v0.4s
 ; CHECK-NEXT:    cmgt v2.4s, v0.4s, #0
-; CHECK-NEXT:    sqsub v1.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -134,9 +131,8 @@ entry:
 define <2 x i64> @vqabs_sat_v2i64(<2 x i64> %A) {
 ; CHECK-LABEL: vqabs_sat_v2i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    sqneg v1.2d, v0.2d
 ; CHECK-NEXT:    cmgt v2.2d, v0.2d, #0
-; CHECK-NEXT:    sqsub v1.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -149,9 +145,8 @@ entry:
 define <8 x i8> @vqabs_sat_v8i8(<8 x i8> %A) {
 ; CHECK-LABEL: vqabs_sat_v8i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    sqneg v1.8b, v0.8b
 ; CHECK-NEXT:    cmgt v2.8b, v0.8b, #0
-; CHECK-NEXT:    sqsub v1.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
 entry:
@@ -164,9 +159,8 @@ entry:
 define <4 x i16> @vqabs_sat_v4i16(<4 x i16> %A) {
 ; CHECK-LABEL: vqabs_sat_v4i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    sqneg v1.4h, v0.4h
 ; CHECK-NEXT:    cmgt v2.4h, v0.4h, #0
-; CHECK-NEXT:    sqsub v1.4h, v1.4h, v0.4h
 ; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
 entry:
@@ -179,9 +173,8 @@ entry:
 define <2 x i32> @vqabs_sat_v2i32(<2 x i32> %A) {
 ; CHECK-LABEL: vqabs_sat_v2i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    sqneg v1.2s, v0.2s
 ; CHECK-NEXT:    cmgt v2.2s, v0.2s, #0
-; CHECK-NEXT:    sqsub v1.2s, v1.2s, v0.2s
 ; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
 entry:
@@ -194,9 +187,8 @@ entry:
 define <1 x i64> @vqabs_sat_v1i64(<1 x i64> %A) {
 ; CHECK-SD-LABEL: vqabs_sat_v1i64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-SD-NEXT:    sqneg d1, d0
 ; CHECK-SD-NEXT:    cmgt d2, d0, #0
-; CHECK-SD-NEXT:    sqsub d1, d1, d0
 ; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-SD-NEXT:    ret
 ;

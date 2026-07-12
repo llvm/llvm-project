@@ -399,9 +399,9 @@ define <4 x i32> @mask_extracts_second_vector_sext(ptr %di, <8 x i16> %other) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[DI]], align 4
 ; CHECK-NEXT:    [[VEC_INS:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[L]], i64 0
-; CHECK-NEXT:    [[VEC_BC:%.*]] = bitcast <2 x i32> [[VEC_INS]] to <8 x i8>
-; CHECK-NEXT:    [[EXT_1:%.*]] = zext <8 x i8> [[VEC_BC]] to <8 x i16>
-; CHECK-NEXT:    [[VEC_SHUFFLE:%.*]] = shufflevector <8 x i16> [[EXT_1]], <8 x i16> [[OTHER]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x i32> [[VEC_INS]], <2 x i32> poison, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i32> [[TMP0]] to <4 x i8>
+; CHECK-NEXT:    [[VEC_SHUFFLE:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i16>
 ; CHECK-NEXT:    [[EXT_2:%.*]] = zext nneg <4 x i16> [[VEC_SHUFFLE]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[EXT_2]]
 ;
@@ -553,9 +553,9 @@ define <4 x i32> @mask_extracts_second_vector(ptr %di, <8 x i16> %other) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[DI]], align 4
 ; CHECK-NEXT:    [[VEC_INS:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[L]], i64 0
-; CHECK-NEXT:    [[VEC_BC:%.*]] = bitcast <2 x i32> [[VEC_INS]] to <8 x i8>
-; CHECK-NEXT:    [[EXT_1:%.*]] = sext <8 x i8> [[VEC_BC]] to <8 x i16>
-; CHECK-NEXT:    [[VEC_SHUFFLE:%.*]] = shufflevector <8 x i16> [[EXT_1]], <8 x i16> [[OTHER]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x i32> [[VEC_INS]], <2 x i32> poison, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i32> [[TMP0]] to <4 x i8>
+; CHECK-NEXT:    [[VEC_SHUFFLE:%.*]] = sext <4 x i8> [[TMP1]] to <4 x i16>
 ; CHECK-NEXT:    [[EXT_2:%.*]] = sext <4 x i16> [[VEC_SHUFFLE]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[EXT_2]]
 ;

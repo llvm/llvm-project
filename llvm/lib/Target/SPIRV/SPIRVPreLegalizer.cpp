@@ -21,6 +21,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/Support/MathExtras.h"
 
 #define DEBUG_TYPE "spirv-prelegalizer"
 
@@ -257,7 +258,9 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       Register Source = MI.getOperand(2).getReg();
       Type *ElemTy = getMDOperandAsType(MI.getOperand(3).getMetadata(), 0);
       auto SC =
-          isa<FunctionType>(ElemTy)
+          isa<FunctionType>(ElemTy) &&
+                  ST->canUseExtension(
+                      SPIRV::Extension::SPV_INTEL_function_pointers)
               ? SPIRV::StorageClass::CodeSectionINTEL
               : addressSpaceToStorageClass(MI.getOperand(4).getImm(), *ST);
       SPIRVTypeInst AssignedPtrType =
@@ -391,7 +394,7 @@ static SPIRVTypeInst propagateSPIRVType(MachineInstr *MI,
 static unsigned widenBitWidthToNextPow2(unsigned BitWidth) {
   if (BitWidth == 1)
     return 1; // No need to widen 1-bit values
-  return std::min(std::max(1u << Log2_32_Ceil(BitWidth), 8u), 128u);
+  return std::min(std::max<unsigned>(PowerOf2Ceil(BitWidth), 8u), 128u);
 }
 
 static void widenScalarType(Register Reg, MachineRegisterInfo &MRI) {
@@ -514,30 +517,44 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         Register DstReg = MI.getOperand(0).getReg();
         Register SrcReg = MI.getOperand(1).getReg();
 
-        // TODO: handle vector types.
-        if (!MRI.getType(DstReg).isScalar()) {
-          assert(!MRI.getType(SrcReg).isScalar());
-          continue;
-        }
+        LLT DstTy = MRI.getType(DstReg);
+        LLT SrcTy = MRI.getType(SrcReg);
+        assert((DstTy.isScalar() || DstTy.isVector()) &&
+               (SrcTy.isScalar() || SrcTy.isVector()) &&
+               "Expected scalar or vector G_TRUNC types");
+        assert(DstTy.isVector() == SrcTy.isVector() &&
+               "Expected matching scalar/vector G_TRUNC types");
+        assert((!DstTy.isVector() ||
+                DstTy.getElementCount() == SrcTy.getElementCount()) &&
+               "Expected equal vector element counts");
 
-        unsigned OriginalDstWidth = MRI.getType(DstReg).getScalarSizeInBits();
-        unsigned OriginalSrcWidth = MRI.getType(SrcReg).getScalarSizeInBits();
+        unsigned OriginalDstWidth = DstTy.getScalarSizeInBits();
+        unsigned OriginalSrcWidth = SrcTy.getScalarSizeInBits();
 
         unsigned NewDstWidth = widenBitWidthToNextPow2(OriginalDstWidth);
         unsigned NewSrcWidth = widenBitWidthToNextPow2(OriginalSrcWidth);
+        LLT NewDstTy = DstTy.changeElementSize(NewDstWidth);
+        LLT NewSrcTy = SrcTy.changeElementSize(NewSrcWidth);
 
-        // No Dst width change means no truncation semantics change.
-        if (OriginalDstWidth == NewDstWidth)
+        // No Dst width change means no truncation semantics change, but the
+        // source still needs a legal type.
+        if (OriginalDstWidth == NewDstWidth) {
+          MRI.setType(SrcReg, NewSrcTy);
           continue;
+        }
 
-        MRI.setType(SrcReg, LLT::scalar(NewSrcWidth));
-        MRI.setType(DstReg, LLT::scalar(NewDstWidth));
+        MRI.setType(SrcReg, NewSrcTy);
+        MRI.setType(DstReg, NewDstTy);
 
         MIB.setInsertPt(MBB, MI.getIterator());
         APInt Mask = APInt::getLowBitsSet(NewSrcWidth, OriginalDstWidth);
-        auto MaskReg = MIB.buildConstant(LLT::scalar(NewSrcWidth), Mask);
-        Register MaskedReg =
-            MRI.createGenericVirtualRegister(LLT::scalar(NewSrcWidth));
+        MachineInstrBuilder MaskReg =
+            DstTy.isVector()
+                ? MIB.buildBuildVectorConstant(
+                      NewSrcTy,
+                      SmallVector<APInt, 4>(DstTy.getNumElements(), Mask))
+                : MIB.buildConstant(NewSrcTy, Mask);
+        Register MaskedReg = MRI.createGenericVirtualRegister(NewSrcTy);
         MIB.buildAnd(MaskedReg, SrcReg, MaskReg);
 
         if (NewSrcWidth == NewDstWidth) {
@@ -579,6 +596,13 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         SPIRVTypeInst AssignedPtrType = GR->getOrCreateSPIRVPointerType(
             ElementTy, MI,
             addressSpaceToStorageClass(MI.getOperand(3).getImm(), *ST));
+        // The intrinsic also carries vector-of-pointer values produced by
+        // scalarized vector GEPs; wrap the pointer in OpTypeVector to match
+        // the vreg's LLT.
+        LLT RegTy = MRI.getType(Reg);
+        if (RegTy.isValid() && RegTy.isVector())
+          AssignedPtrType = GR->getOrCreateSPIRVVectorType(
+              AssignedPtrType, RegTy.getNumElements(), MIB, true);
         MachineInstr *Def = MRI.getVRegDef(Reg);
         assert(Def && "Expecting an instruction that defines the register");
         // G_GLOBAL_VALUE already has type info.
@@ -872,15 +896,6 @@ static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   insertInlineAsmProcess(MF, GR, ST, MIRBuilder, ToProcess);
 }
 
-static uint32_t convertFloatToSPIRVWord(float F) {
-  union {
-    float F;
-    uint32_t Spir;
-  } FPMaxError;
-  FPMaxError.F = F;
-  return FPMaxError.Spir;
-}
-
 static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                                    MachineIRBuilder MIB) {
   const SPIRVSubtarget &ST = cast<SPIRVSubtarget>(MIB.getMF().getSubtarget());
@@ -899,8 +914,7 @@ static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                                 Intrinsic::spv_assign_fpmaxerror_decoration)) {
         ConstantFP *OpV = mdconst::dyn_extract<ConstantFP>(
             MI.getOperand(2).getMetadata()->getOperand(0));
-        uint32_t OpValue =
-            convertFloatToSPIRVWord(OpV->getValueAPF().convertToFloat());
+        uint32_t OpValue = OpV->getValueAPF().bitcastToAPInt().getZExtValue();
 
         buildOpDecorate(MI.getOperand(1).getReg(), MIB,
                         SPIRV::Decoration::FPMaxErrorDecorationINTEL,

@@ -4,18 +4,16 @@
 ;; It should hoist fn_write_inaccessible_mem
 ;; because there is no conflict between inaccessible memory
 ;; fn_read_inaccessible_mem is a nice side effect
-; FIXME: fn_write_inaccessible_mem is currently not hoisted due to the preceding
-; load, even though it does not alias.
 define i32 @loop_alias(i64 %x, ptr %start) {
 ; CHECK-LABEL: define i32 @loop_alias(
 ; CHECK-SAME: i64 [[X:%.*]], ptr [[START:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    call void @fn_write_inaccessible_mem()
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[START]], %[[ENTRY]] ], [ [[GEP:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[PHI]], align 4
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @fn_args(i32 [[LOAD]])
-; CHECK-NEXT:    call void @fn_write_inaccessible_mem()
 ; CHECK-NEXT:    call void @fn_read_inaccessible_mem(i32 [[LOAD]])
 ; CHECK-NEXT:    [[GEP]] = getelementptr inbounds nuw i32, ptr [[PHI]], i64 [[X]]
 ; CHECK-NEXT:    [[ACC:%.*]] = add nuw nsw i32 [[VAL]], 1
@@ -156,6 +154,43 @@ loop:
   call void @fn_write_inaccessible_mem()
   call void @fn_read_inaccessible_mem(i32 %val)
   br label %loop
+}
+
+define i32 @non_dominated_load_that_does_not_alias_inaccessible_mem(ptr %dst, i64 %x, ptr %start) {
+; CHECK-LABEL: define i32 @non_dominated_load_that_does_not_alias_inaccessible_mem(
+; CHECK-SAME: ptr [[DST:%.*]], i64 [[X:%.*]], ptr [[START:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    call void @fn_write_inaccessible_mem()
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[START]], %[[ENTRY]] ], [ [[GEP:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[PHI]], align 4
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @fn_args(i32 [[LOAD]])
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @fn_read_inaccessible_mem_2(i32 [[LOAD]])
+; CHECK-NEXT:    store i32 [[RES]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[GEP]] = getelementptr inbounds nuw i32, ptr [[PHI]], i64 [[X]]
+; CHECK-NEXT:    [[ACC:%.*]] = add nuw nsw i32 [[VAL]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ACC]], 10
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[AFTER_LOOP:.*]]
+; CHECK:       [[AFTER_LOOP]]:
+; CHECK-NEXT:    [[ACC_LCSSA:%.*]] = phi i32 [ [[ACC]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[ACC_LCSSA]]
+;
+entry:
+  br label %loop
+loop:
+  %phi = phi ptr [ %start, %entry ], [ %gep, %loop ]
+  %load = load i32, ptr %phi
+  %val = call i32 @fn_args(i32 %load)
+  call void @fn_write_inaccessible_mem()
+  %res = call i32 @fn_read_inaccessible_mem_2(i32 %load)
+  store i32 %res, ptr %dst
+  %gep = getelementptr inbounds nuw i32, ptr %phi, i64 %x
+  %acc = add nuw nsw i32 %val, 1
+  %cmp = icmp ult i32 %acc, 10
+  br i1 %cmp, label %loop, label %after_loop
+after_loop:
+  ret i32 %acc
 }
 
 declare i32 @fn_args(i32) nounwind willreturn memory(argmem: read)

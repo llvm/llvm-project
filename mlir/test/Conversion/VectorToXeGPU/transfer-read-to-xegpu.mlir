@@ -598,7 +598,7 @@ gpu.func @load_2D_vector_addrspace3(%source: memref<16x32xf32, 3>,
 
 // -----
 gpu.module @xevm_module {
-gpu.func @load_1D_vector_addrspace3_unsupported(%source: memref<32xf32, 3>,
+gpu.func @load_1D_vector_addrspace3(%source: memref<32xf32, 3>,
     %offset: index) -> vector<8xf32> {
   %c0 = arith.constant 0.0 : f32
   %0 = vector.transfer_read %source[%offset], %c0
@@ -606,10 +606,100 @@ gpu.func @load_1D_vector_addrspace3_unsupported(%source: memref<32xf32, 3>,
   gpu.return %0 : vector<8xf32>
 }
 
-// LOAD-ND-LABEL: @load_1D_vector_addrspace3_unsupported
+// LOAD-ND-LABEL: @load_1D_vector_addrspace3
+// LOAD-ND-SAME: %[[SOURCE:.+]]: memref<32xf32, 3>
+// LOAD-ND-SAME: %[[OFFSET:.+]]: index
+// LOAD-ND: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<32xf32, 3> -> !xegpu.mem_desc<32xf32>
+// LOAD-ND: %[[DATA:.+]] = xegpu.load_matrix %[[MEM_DESC]][%[[OFFSET]]] : !xegpu.mem_desc<32xf32>, index -> vector<8xf32>
+// LOAD-ND: gpu.return %[[DATA]] : vector<8xf32>
+
+// LOAD-GATHER-LABEL: @load_1D_vector_addrspace3
+// LOAD-GATHER-SAME: %[[SOURCE:.+]]: memref<32xf32, 3>
+// LOAD-GATHER-SAME: %[[OFFSET:.+]]: index
+// LOAD-GATHER: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<32xf32, 3> -> !xegpu.mem_desc<32xf32>
+// LOAD-GATHER: %[[DATA:.+]] = xegpu.load_matrix %[[MEM_DESC]][%[[OFFSET]]] : !xegpu.mem_desc<32xf32>, index -> vector<8xf32>
+// LOAD-GATHER: gpu.return %[[DATA]] : vector<8xf32>
+
+}
+
+// -----
+// memref.alloca with the default address space is promoted to SLM
+// (address space 3) so that the transfer_read can be lowered to
+// xegpu.load_matrix.
+gpu.module @xevm_module {
+gpu.func @load_2D_vector_alloca_promoted_to_slm(%offset: index)
+    -> vector<8x16xf32> {
+  %buf = memref.alloca() : memref<16x32xf32>
+  %c0 = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %buf[%offset, %offset], %c0
+    {in_bounds = [true, true]} : memref<16x32xf32>, vector<8x16xf32>
+  gpu.return %0 : vector<8x16xf32>
+}
+
+// LOAD-ND-LABEL: @load_2D_vector_alloca_promoted_to_slm
+// LOAD-ND: %[[BUF:.+]] = memref.alloca() : memref<16x32xf32, 3>
+// LOAD-ND: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[BUF]] : memref<16x32xf32, 3> -> !xegpu.mem_desc<16x32xf32>
+// LOAD-ND: xegpu.load_matrix %[[MEM_DESC]]
+
+// LOAD-GATHER-LABEL: @load_2D_vector_alloca_promoted_to_slm
+// LOAD-GATHER: %[[BUF:.+]] = memref.alloca() : memref<16x32xf32, 3>
+// LOAD-GATHER: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[BUF]] : memref<16x32xf32, 3> -> !xegpu.mem_desc<16x32xf32>
+// LOAD-GATHER: xegpu.load_matrix %[[MEM_DESC]]
+
+}
+
+// -----
+// memref.alloca is unconditionally promoted to SLM (address space 3) and,
+// lowered to xegpu.load_matrix.
+gpu.module @xevm_module {
+gpu.func @load_1D_vector_alloca_promoted_to_slm(%offset: index)
+    -> vector<8xf32> {
+  %buf = memref.alloca() : memref<16xf32>
+  %c0 = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %buf[%offset], %c0
+    {in_bounds = [true]} : memref<16xf32>, vector<8xf32>
+  gpu.return %0 : vector<8xf32>
+}
+
+// LOAD-ND-LABEL: @load_1D_vector_alloca_promoted_to_slm
+// LOAD-ND: %[[BUF:.+]] = memref.alloca() : memref<16xf32, 3>
+// LOAD-ND: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[BUF]] : memref<16xf32, 3> -> !xegpu.mem_desc<16xf32>
+// LOAD-ND: xegpu.load_matrix %[[MEM_DESC]]
+
+// LOAD-GATHER-LABEL: @load_1D_vector_alloca_promoted_to_slm
+// LOAD-GATHER: %[[BUF:.+]] = memref.alloca() : memref<16xf32, 3>
+// LOAD-GATHER: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[BUF]] : memref<16xf32, 3> -> !xegpu.mem_desc<16xf32>
+// LOAD-GATHER: xegpu.load_matrix %[[MEM_DESC]]
+
+}
+
+// -----
+gpu.module @xevm_module {
+gpu.func @load_0D_memref_unsupported(%source: memref<f16>) -> vector<f16> {
+  %c0 = arith.constant 0.0 : f16
+  %0 = vector.transfer_read %source[], %c0 : memref<f16>, vector<f16>
+  gpu.return %0 : vector<f16>
+}
+
+// CHECK-LABEL: @load_0D_memref_unsupported
+// CHECK: vector.transfer_read
+
+}
+
+// -----
+gpu.module @xevm_module {
+gpu.func @load_0D_vector_unsupported(%source: memref<3xf32>,
+    %offset: index) -> vector<f32> {
+  %c0 = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %source[%offset], %c0
+    : memref<3xf32>, vector<f32>
+  gpu.return %0 : vector<f32>
+}
+
+// LOAD-ND-LABEL: @load_0D_vector_unsupported
 // LOAD-ND: vector.transfer_read
 
-// LOAD-GATHER-LABEL: @load_1D_vector_addrspace3_unsupported
+// LOAD-GATHER-LABEL: @load_0D_vector_unsupported
 // LOAD-GATHER: vector.transfer_read
 
 }
