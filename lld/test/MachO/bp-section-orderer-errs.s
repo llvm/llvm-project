@@ -1,3 +1,4 @@
+# REQUIRES: aarch64
 # RUN: rm -rf %t && mkdir %t && cd %t
 # RUN: not %no-fatal-warnings-lld -o /dev/null --irpgo-profile-sort %s --call-graph-profile-sort 2>&1 | FileCheck %s --check-prefix=IRPGO-ERR
 # RUN: not %no-fatal-warnings-lld -o /dev/null --irpgo-profile-sort=%s --call-graph-profile-sort 2>&1 | FileCheck %s --check-prefix=IRPGO-ERR
