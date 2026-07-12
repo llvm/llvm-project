@@ -264,9 +264,9 @@ void cygwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  if (D.isUsingLTO())
+  if (auto LTO = ToolChain.getLTOMode(Args); LTO != LTOK_None)
     tools::addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs,
-                         D.getLTOMode() == LTOK_Thin);
+                         LTO == LTOK_Thin);
 
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");
@@ -281,8 +281,6 @@ void cygwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   bool NeedsXRayDeps = tools::addXRayRuntime(ToolChain, Args, CmdArgs);
   tools::addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   tools::AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
-
-  tools::addHIPRuntimeLibArgs(ToolChain, C, Args, CmdArgs);
 
   // The profile runtime also needs access to system libraries.
   getToolChain().addProfileRTLibs(Args, CmdArgs);
