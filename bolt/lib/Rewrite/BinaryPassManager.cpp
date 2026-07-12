@@ -11,6 +11,7 @@
 #include "bolt/Passes/Aligner.h"
 #include "bolt/Passes/AllocCombiner.h"
 #include "bolt/Passes/AsmDump.h"
+#include "bolt/Passes/AssignDesiredFunctionOffset.h"
 #include "bolt/Passes/CMOVConversion.h"
 #include "bolt/Passes/FixRISCVCallsPass.h"
 #include "bolt/Passes/FixRelaxationPass.h"
@@ -524,6 +525,8 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   Manager.registerPass(std::make_unique<AssignSections>());
 
   Manager.registerPass(std::make_unique<AlignerPass>());
+
+  Manager.registerPass(std::make_unique<AssignDesiredFunctionOffset>());
 
   // Perform reordering on data contained in one or more sections using
   // memory profiling data.

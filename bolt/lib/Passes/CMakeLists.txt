@@ -3,6 +3,7 @@ add_llvm_library(LLVMBOLTPasses
   Aligner.cpp
   AllocCombiner.cpp
   AsmDump.cpp
+  AssignDesiredFunctionOffset.cpp
   BinaryPasses.cpp
   CMOVConversion.cpp
   CacheMetrics.cpp
