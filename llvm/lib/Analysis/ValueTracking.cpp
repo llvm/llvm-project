@@ -5713,8 +5713,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       auto *MD = cast<MetadataAsValue>(II->getArgOperand(1))->getMetadata();
       StringRef FormatStr = cast<MDString>(MD)->getString();
 
-      const fltSemantics SrcSemantics =
-          *APFloat::getArbitraryFPSemantics(FormatStr);
+      const fltSemantics *SrcSemanticsPtr =
+          APFloat::getArbitraryFPSemantics(FormatStr);
+      // TODO: the unsupported formats should be handle way before this
+      // remove once the verifier is updated.
+      if (!SrcSemanticsPtr)
+        break;
+
+      const fltSemantics SrcSemantics = *SrcSemanticsPtr;
       const fltSemantics DstSemantics =
           II->getType()->getScalarType()->getFltSemantics();
 
