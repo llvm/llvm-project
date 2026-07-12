@@ -5,9 +5,9 @@ define i16 @test(i32 %call5, i32 %add36) {
 ; CHECK-LABEL: define i16 @test(
 ; CHECK-SAME: i32 [[CALL5:%.*]], i32 [[ADD36:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> <i32 0, i32 0, i32 poison, i32 0, i32 0, i32 0, i32 0, i32 poison>, i32 [[CALL5]], i32 2
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> [[TMP0]], i32 [[ADD36]], i32 7
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> <i32 0, i32 0, i32 1, i32 poison, i32 0, i32 0, i32 0, i32 0>, i32 [[CALL5]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> <i32 0, i32 0, i32 poison, i32 0, i32 0, i32 0, i32 0, i32 poison>, i32 [[CALL5]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> [[TMP0]], i32 [[ADD36]], i64 7
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> <i32 0, i32 0, i32 1, i32 poison, i32 0, i32 0, i32 0, i32 0>, i32 [[CALL5]], i64 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <8 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <8 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i1> [[TMP3]], <8 x i1> [[TMP4]], <8 x i32> <i32 0, i32 9, i32 2, i32 3, i32 4, i32 13, i32 14, i32 7>
