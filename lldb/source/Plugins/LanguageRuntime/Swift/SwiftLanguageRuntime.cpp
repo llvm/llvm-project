@@ -2923,8 +2923,8 @@ private:
       std::optional<lldb::addr_t> maybe_task_addr =
           task_inspector.GetTaskAddrFromThreadLocalStorage(
               m_exe_ctx.GetThreadRef());
-      if (!task_addr) {
-        result.AppendError("could find the task address");
+      if (!maybe_task_addr) {
+        result.AppendError("could not find the task address");
         return;
       }
 
