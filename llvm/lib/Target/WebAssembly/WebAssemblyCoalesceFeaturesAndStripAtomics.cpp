@@ -8,6 +8,7 @@
 
 #include "WebAssembly.h"
 #include "WebAssemblyTargetMachine.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar/LowerAtomicPass.h"
