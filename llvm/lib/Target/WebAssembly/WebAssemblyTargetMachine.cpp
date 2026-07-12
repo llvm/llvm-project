@@ -543,8 +543,8 @@ void WebAssemblyPassConfig::addISelPrepare() {
 
 bool WebAssemblyPassConfig::addInstSelector() {
   (void)TargetPassConfig::addInstSelector();
-  addPass(
-      createWebAssemblyISelDag(getWebAssemblyTargetMachine(), getOptLevel()));
+  addPass(createWebAssemblyISelDagLegacyPass(getWebAssemblyTargetMachine(),
+                                             getOptLevel()));
   // Run the argument-move pass immediately after the ScheduleDAG scheduler
   // so that we can fix up the ARGUMENT instructions before anything else
   // sees them in the wrong place.
