@@ -4396,6 +4396,7 @@ static bool isSameGEPAddress(Value *A, Value *B) {
 /// memory or have side effects, as they cannot be safely speculated.
 static StoreInst *findUniqueSimpleStoreInBlock(BasicBlock *BB) {
   StoreInst *Found = nullptr;
+  unsigned NumOther = 0;
   for (Instruction &I : *BB) {
     if (I.isTerminator())
       continue;
@@ -4409,6 +4410,11 @@ static StoreInst *findUniqueSimpleStoreInBlock(BasicBlock *BB) {
     // Reject if any non-store instruction reads/writes memory or has
     // side effects — it cannot be safely speculated.
     if (I.mayReadOrWriteMemory() || I.mayHaveSideEffects())
+      return nullptr;
+    // Allow at most one non-store, non-terminator instruction. This ensures
+    // that HoistIfNeeded (which moves a single instruction) is sufficient —
+    // with only one instruction, its operands must come from outside the block.
+    if (++NumOther > 1)
       return nullptr;
   }
   return Found;

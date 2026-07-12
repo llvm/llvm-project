@@ -397,3 +397,83 @@ merge:
   %val = phi i8 [ %a, %then ], [ %b, %else.then ], [ %c, %else.else ]
   ret i8 %val
 }
+
+; Positive: store value computed by a single instruction in the same block.
+; One non-store instruction per block is allowed and hoisted correctly.
+define void @one_instr_in_block(ptr %p, i1 %cond1, i1 %cond2, i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: @one_instr_in_block(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[V:%.*]] = add i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[STORE_SEL_INNER:%.*]] = select i1 [[COND2:%.*]], i8 [[V]], i8 [[C:%.*]]
+; CHECK-NEXT:    [[STORE_SEL:%.*]] = select i1 [[COND1:%.*]], i8 [[A:%.*]], i8 [[STORE_SEL_INNER]]
+; CHECK-NEXT:    store i8 [[STORE_SEL]], ptr [[P:%.*]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond1, label %then, label %else
+
+then:
+  store i8 %a, ptr %p
+  br label %merge
+
+else:
+  br i1 %cond2, label %else.then, label %else.else
+
+else.then:
+  %v = add i8 %b, 1
+  store i8 %v, ptr %p
+  br label %merge
+
+else.else:
+  store i8 %c, ptr %p
+  br label %merge
+
+merge:
+  ret void
+}
+
+; Negative: two non-store instructions in a leaf block — cannot safely hoist
+; without recursive dependency analysis.
+define void @neg_two_instrs_in_block(ptr %p, i1 %cond1, i1 %cond2, i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: @neg_two_instrs_in_block(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND1:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    store i8 [[A:%.*]], ptr [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[ELSE_THEN:%.*]], label [[ELSE_ELSE:%.*]]
+; CHECK:       else.then:
+; CHECK-NEXT:    [[V0:%.*]] = add i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[V1:%.*]] = add i8 [[V0]], 1
+; CHECK-NEXT:    store i8 [[V1]], ptr [[P]], align 1
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       else.else:
+; CHECK-NEXT:    store i8 [[C:%.*]], ptr [[P]], align 1
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond1, label %then, label %else
+
+then:
+  store i8 %a, ptr %p
+  br label %merge
+
+else:
+  br i1 %cond2, label %else.then, label %else.else
+
+else.then:
+  %v0 = add i8 %b, 1
+  %v1 = add i8 %v0, 1
+  store i8 %v1, ptr %p
+  br label %merge
+
+else.else:
+  store i8 %c, ptr %p
+  br label %merge
+
+merge:
+  ret void
+}
