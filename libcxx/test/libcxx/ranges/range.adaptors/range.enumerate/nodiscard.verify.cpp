@@ -64,7 +64,8 @@ void test() {
 
   // [range.enumerate.sentinel]
 
-  auto st = ev.end();
+  auto st   = ev.end();
+  auto c_it = std::as_const(ev).begin();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::as_const(st).base();
@@ -73,6 +74,11 @@ void test() {
   it - st;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   st - it;
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  st - c_it;
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  c_it - st;
 
   // [range.enumerate.overview]
 
