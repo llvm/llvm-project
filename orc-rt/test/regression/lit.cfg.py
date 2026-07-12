@@ -27,6 +27,7 @@ llvm_config.with_environment("PATH", test_tools_dir, append_path=True)
 
 llvm_config.use_default_substitutions()
 
+
 def run_test_tool(name, *args):
     """Run a test-support tool from test/tools and return its stdout.
 
