@@ -351,6 +351,9 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
   case llvm::AArch64::OPERAND_SHIFTED_IMMEDIATE:
     AssignedValue = MCOperand::createImm(0);
     return Error::success();
+  case llvm::AArch64::OPERAND_IMM_UINT8:
+    AssignedValue = MCOperand::createImm(1);
+    return Error::success();
   case MCOI::OperandType::OPERAND_PCREL:
     AssignedValue = MCOperand::createImm(8);
     return Error::success();

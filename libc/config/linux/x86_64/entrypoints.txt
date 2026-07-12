@@ -4,6 +4,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.arpa.inet.htons
     libc.src.arpa.inet.inet_addr
     libc.src.arpa.inet.inet_aton
+    libc.src.arpa.inet.inet_ntop
     libc.src.arpa.inet.ntohl
     libc.src.arpa.inet.ntohs
 
@@ -32,6 +33,16 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.dlfcn.dlopen
     libc.src.dlfcn.dlsym
 
+    # err.h entrypoints
+    libc.src.err.err
+    libc.src.err.verr
+    libc.src.err.errx
+    libc.src.err.verrx
+    libc.src.err.warn
+    libc.src.err.vwarn
+    libc.src.err.warnx
+    libc.src.err.vwarnx
+
     # errno.h entrypoints
     libc.src.errno.errno
 
@@ -40,6 +51,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.fcntl.fcntl
     libc.src.fcntl.open
     libc.src.fcntl.openat
+
+    # net/if.h entrypoints
+    libc.src.net.if_indextoname
+    libc.src.net.if_nametoindex
 
     # netinet/in.h entrypoints
     libc.src.netinet.in6addr_any
@@ -333,6 +348,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.socket.sendto
     libc.src.sys.socket.setsockopt
     libc.src.sys.socket.shutdown
+    libc.src.sys.socket.sockatmark
     libc.src.sys.socket.socket
     libc.src.sys.socket.socketpair
     # TODO: These functions are not compatible with 64-bit musl. They need to
@@ -514,6 +530,8 @@ endif()
 
 set(TARGET_LIBM_ENTRYPOINTS
     # complex.h entrypoints
+    libc.src.complex.cabs
+    libc.src.complex.cabsf
     libc.src.complex.carg
     libc.src.complex.cargf
     libc.src.complex.creal
@@ -1223,6 +1241,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.dirent.dirfd
     libc.src.dirent.opendir
     libc.src.dirent.readdir
+    libc.src.dirent.fdopendir
 
     # pthread.h entrypoints
     libc.src.pthread.pthread_atfork

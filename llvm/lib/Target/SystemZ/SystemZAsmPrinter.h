@@ -100,9 +100,12 @@ private:
 
   struct PPA1Info {
     StringRef Name;
-    MCSymbol *FnEnd = nullptr;    // Symbol marking function end.
-    MCSymbol *PPA1 = nullptr;     // Symbol marking PPA1 begin.
-    MCSymbol *EPMarker = nullptr; // Symbol marking entry point.
+    MCSymbol *Fn = nullptr;          // Symbol marking function begin.
+    MCSymbol *FnEnd = nullptr;       // Symbol marking function end.
+    MCSymbol *PPA1 = nullptr;        // Symbol marking PPA1 begin.
+    MCSymbol *EPMarker = nullptr;    // Symbol marking entry point.
+    MCSymbol *EndOfProlog = nullptr; // Symbol marking the end of the prolog.
+    MCSymbol *StackUpdate = nullptr; // Symbol marking the stack updating instr.
     MCSymbol *PersonalityRoutine = nullptr;
     MCSymbol *GCCEH = nullptr;
     int64_t OffsetFPR = 0;

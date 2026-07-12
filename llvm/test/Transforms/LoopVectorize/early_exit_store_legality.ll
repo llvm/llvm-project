@@ -960,6 +960,30 @@ invalid.block:
   unreachable
 }
 
+define void @combined_exit_conditions(ptr align 4 dereferenceable(80) readonly %src, ptr align 4 dereferenceable(80) noalias %dst, ptr align 4 dereferenceable(80) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'combined_exit_conditions'
+; CHECK:       LV:  Not vectorizing: Cannot vectorize uncountable loop.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %src.ptr = getelementptr inbounds nuw [4 x i8], ptr %src, i64 %iv
+  %data = load i32, ptr %src.ptr, align 4
+  %add = add nsw i32 %data, 1
+  %dst.ptr = getelementptr inbounds nuw [4 x i8], ptr %dst, i64 %iv
+  store i32 %add, ptr %dst.ptr, align 4
+  %ee.ptr = getelementptr inbounds nuw [4 x i8], ptr %pred, i64 %iv
+  %ee.val = load i32, ptr %ee.ptr, align 4
+  %ee.cmp = icmp ne i32 %ee.val, 0
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cmp = icmp eq i64 %iv.next, 20
+  %combined.cond = select i1 %ee.cmp, i1 true, i1 %counted.cmp
+  br i1 %combined.cond, label %exit, label %for.body
+
+exit:
+  ret void
+}
 
 declare void @init_mem(ptr, i64);
 declare i64 @get_an_unknown_offset();

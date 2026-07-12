@@ -174,7 +174,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   llvm::SmallVector<APValue::LValuePathEntry, 5> Path;
 
   if (isZero())
-    return APValue(static_cast<const Expr *>(nullptr), CharUnits::Zero(), Path,
+    return APValue(APValue::LValueBase(), CharUnits::Zero(), Path,
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/true);
   if (isIntegralPointer())
     return APValue(static_cast<const Expr *>(nullptr),
@@ -801,7 +801,7 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
   if (A.isFunctionPointer() && B.isFunctionPointer())
     return true;
   if (A.isTypeidPointer() && B.isTypeidPointer())
-    return true;
+    return A.asTypeidPointer().TypePtr == B.asTypeidPointer().TypePtr;
 
   if (A.StorageKind != B.StorageKind)
     return false;

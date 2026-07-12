@@ -14,8 +14,6 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
-#include "flang/Optimizer/Support/FatalError.h"
-#include "flang/Optimizer/Support/Utils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeRange.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -1950,7 +1948,7 @@ std::unique_ptr<fir::CodeGenSpecifics> fir::CodeGenSpecifics::get(
     return std::make_unique<TargetRISCV64>(ctx, std::move(trp),
                                            std::move(kindMap), targetCPU,
                                            targetFeatures, targetABI, dl);
-  case llvm::Triple::ArchType::amdgcn:
+  case llvm::Triple::ArchType::amdgpu:
     return std::make_unique<TargetAMDGPU>(ctx, std::move(trp),
                                           std::move(kindMap), targetCPU,
                                           targetFeatures, targetABI, dl);
