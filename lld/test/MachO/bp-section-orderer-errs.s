@@ -1,4 +1,5 @@
 # RUN: rm -rf %t && mkdir %t && cd %t
+REQUIRES: stability
 # RUN: not %no-fatal-warnings-lld -o /dev/null --irpgo-profile-sort %s --call-graph-profile-sort 2>&1 | FileCheck %s --check-prefix=IRPGO-ERR
 # RUN: not %no-fatal-warnings-lld -o /dev/null --irpgo-profile-sort=%s --call-graph-profile-sort 2>&1 | FileCheck %s --check-prefix=IRPGO-ERR
 # IRPGO-ERR: --irpgo-profile-sort is incompatible with --call-graph-profile-sort
