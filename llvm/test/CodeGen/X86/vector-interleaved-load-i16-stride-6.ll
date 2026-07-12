@@ -2613,7 +2613,7 @@ define void @load_i16_stride6_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vpshufb %xmm5, %xmm3, %xmm3
 ; AVX512-FCP-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0],xmm10[1],xmm3[2,3],xmm10[4],xmm3[5,6,7]
 ; AVX512-FCP-NEXT:    vpshufb {{.*#+}} ymm5 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm6[6,7,2,3,14,15,26,27,22,23],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512-FCP-NEXT:    vpternlogq {{.*#+}} ymm5 = ymm5 | (ymm3 & ymm11)
+; AVX512-FCP-NEXT:    vpternlogq {{.*#+}} ymm5 = ymm5 | (ymm11 & ymm3)
 ; AVX512-FCP-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,1,2,3,2,3,6,7,10,11,14,15,2,3,14,15]
 ; AVX512-FCP-NEXT:    vpshufb %xmm3, %xmm7, %xmm6
 ; AVX512-FCP-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
@@ -2836,7 +2836,7 @@ define void @load_i16_stride6_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vpshufb %xmm5, %xmm3, %xmm3
 ; AVX512DQ-FCP-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0],xmm10[1],xmm3[2,3],xmm10[4],xmm3[5,6,7]
 ; AVX512DQ-FCP-NEXT:    vpshufb {{.*#+}} ymm5 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm6[6,7,2,3,14,15,26,27,22,23],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512DQ-FCP-NEXT:    vpternlogq {{.*#+}} ymm5 = ymm5 | (ymm3 & ymm11)
+; AVX512DQ-FCP-NEXT:    vpternlogq {{.*#+}} ymm5 = ymm5 | (ymm11 & ymm3)
 ; AVX512DQ-FCP-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,1,2,3,2,3,6,7,10,11,14,15,2,3,14,15]
 ; AVX512DQ-FCP-NEXT:    vpshufb %xmm3, %xmm7, %xmm6
 ; AVX512DQ-FCP-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
@@ -5489,7 +5489,7 @@ define void @load_i16_stride6_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vpshufb %xmm15, %xmm7, %xmm7
 ; AVX512-FCP-NEXT:    vpblendw {{.*#+}} xmm7 = xmm7[0],xmm9[1],xmm7[2,3],xmm9[4],xmm7[5,6,7]
 ; AVX512-FCP-NEXT:    vpshufb {{.*#+}} ymm2 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm2[6,7,2,3,14,15,26,27,22,23],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512-FCP-NEXT:    vpternlogq {{.*#+}} ymm2 = ymm2 | (ymm7 & ymm14)
+; AVX512-FCP-NEXT:    vpternlogq {{.*#+}} ymm2 = ymm2 | (ymm14 & ymm7)
 ; AVX512-FCP-NEXT:    vpshufb %xmm15, %xmm5, %xmm5
 ; AVX512-FCP-NEXT:    vpshufb %xmm15, %xmm0, %xmm0
 ; AVX512-FCP-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm5[1],xmm0[2,3],xmm5[4],xmm0[5,6,7]
@@ -6025,7 +6025,7 @@ define void @load_i16_stride6_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vpshufb %xmm15, %xmm7, %xmm7
 ; AVX512DQ-FCP-NEXT:    vpblendw {{.*#+}} xmm7 = xmm7[0],xmm9[1],xmm7[2,3],xmm9[4],xmm7[5,6,7]
 ; AVX512DQ-FCP-NEXT:    vpshufb {{.*#+}} ymm2 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm2[6,7,2,3,14,15,26,27,22,23],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512DQ-FCP-NEXT:    vpternlogq {{.*#+}} ymm2 = ymm2 | (ymm7 & ymm11)
+; AVX512DQ-FCP-NEXT:    vpternlogq {{.*#+}} ymm2 = ymm2 | (ymm11 & ymm7)
 ; AVX512DQ-FCP-NEXT:    vpshufb %xmm15, %xmm5, %xmm5
 ; AVX512DQ-FCP-NEXT:    vpshufb %xmm15, %xmm0, %xmm0
 ; AVX512DQ-FCP-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm5[1],xmm0[2,3],xmm5[4],xmm0[5,6,7]

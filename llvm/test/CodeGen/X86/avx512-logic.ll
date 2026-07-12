@@ -856,7 +856,7 @@ entry:
 define <16 x i32> @ternlog_and_andn(<16 x i32> %x, <16 x i32> %y, <16 x i32> %z) {
 ; ALL-LABEL: ternlog_and_andn:
 ; ALL:       ## %bb.0:
-; ALL-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm2 & zmm1 & ~zmm0
+; ALL-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm1 & zmm2 & ~zmm0
 ; ALL-NEXT:    retq
   %a = xor <16 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
   %b = and <16 x i32> %y, %a

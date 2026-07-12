@@ -874,12 +874,11 @@ define <16 x i8> @unsigned_sat_variable_v16i8_using_cmp_notval(<16 x i8> %x, <16
 ;
 ; AVX512-LABEL: unsigned_sat_variable_v16i8_using_cmp_notval:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vpaddb %xmm1, %xmm0, %xmm3
+; AVX512-NEXT:    vpaddb %xmm1, %xmm0, %xmm2
 ; AVX512-NEXT:    vpternlogq {{.*#+}} xmm1 = ~xmm1
 ; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm3 | (xmm0 ^ xmm2)
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm2 | ~xmm0
 ; AVX512-NEXT:    retq
   %noty = xor <16 x i8> %y, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %a = add <16 x i8> %x, %y
@@ -981,12 +980,11 @@ define <8 x i16> @unsigned_sat_variable_v8i16_using_cmp_notval(<8 x i16> %x, <8 
 ;
 ; AVX512-LABEL: unsigned_sat_variable_v8i16_using_cmp_notval:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vpaddw %xmm1, %xmm0, %xmm3
+; AVX512-NEXT:    vpaddw %xmm1, %xmm0, %xmm2
 ; AVX512-NEXT:    vpternlogq {{.*#+}} xmm1 = ~xmm1
 ; AVX512-NEXT:    vpminuw %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm3 | (xmm0 ^ xmm2)
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm2 | ~xmm0
 ; AVX512-NEXT:    retq
   %noty = xor <8 x i16> %y, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
   %a = add <8 x i16> %x, %y

@@ -3295,12 +3295,7 @@ define <16 x i1> @test_v16i1_select_chain(<16 x i1> %a0, <16 x i1> %a1, <16 x i1
 ;
 ; SKX-LABEL: test_v16i1_select_chain:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vmovdqa %xmm0, %xmm3
-; SKX-NEXT:    vpternlogq {{.*#+}} xmm3 = xmm3 & ~(xmm2 & xmm1)
-; SKX-NEXT:    vpternlogq {{.*#+}} xmm3 = xmm3 & xmm0 & xmm1
-; SKX-NEXT:    vpternlogq {{.*#+}} xmm3 = xmm3 & xmm0 & xmm1
-; SKX-NEXT:    vpternlogq {{.*#+}} xmm3 = xmm1 & (xmm3 ^ xmm1)
-; SKX-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm0 & xmm2 & xmm3
+; SKX-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm0 & xmm2 & xmm1
 ; SKX-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_v16i1_select_chain:
@@ -3331,12 +3326,7 @@ define <16 x i1> @test_v16i1_select_chain(<16 x i1> %a0, <16 x i1> %a1, <16 x i1
 ;
 ; X86-LABEL: test_v16i1_select_chain:
 ; X86:       ## %bb.0:
-; X86-NEXT:    vmovdqa %xmm0, %xmm3
-; X86-NEXT:    vpternlogq {{.*#+}} xmm3 = xmm3 & ~(xmm2 & xmm1)
-; X86-NEXT:    vpternlogq {{.*#+}} xmm3 = xmm3 & xmm0 & xmm1
-; X86-NEXT:    vpternlogq {{.*#+}} xmm3 = xmm3 & xmm0 & xmm1
-; X86-NEXT:    vpternlogq {{.*#+}} xmm3 = xmm1 & (xmm3 ^ xmm1)
-; X86-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm0 & xmm2 & xmm3
+; X86-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm0 & xmm2 & xmm1
 ; X86-NEXT:    retl
   %i3 = select <16 x i1> %a2, <16 x i1> %a1, <16 x i1> zeroinitializer
   %i4  = xor <16 x i1> %i3, splat (i1 true)
