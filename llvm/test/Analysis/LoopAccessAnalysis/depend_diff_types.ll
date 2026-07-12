@@ -320,9 +320,9 @@ define void @different_type_sizes_strided_accesses_independent(ptr %dst) {
 ; CHECK-LABEL: 'different_type_sizes_strided_accesses_independent'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:  Backward loop carried data dependence.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        Backward:
 ; CHECK-NEXT:            store i16 0, ptr %gep.iv, align 2 ->
 ; CHECK-NEXT:            store i32 1, ptr %gep.4.iv, align 4
 ; CHECK-EMPTY:
@@ -369,9 +369,9 @@ define void @different_type_sizes_strided_accesses_dependent(ptr %dst) {
 ; CHECK-LABEL: 'different_type_sizes_strided_accesses_dependent'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:  Backward loop carried data dependence.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        Backward:
 ; CHECK-NEXT:            store i16 0, ptr %gep.iv, align 2 ->
 ; CHECK-NEXT:            store i64 1, ptr %gep.3.iv, align 4
 ; CHECK-EMPTY:
@@ -444,15 +444,12 @@ exit:
 ; Source type-size differs from that of the sink, but when
 ; determining backward dependence, only the source size
 ; is relevant.
-; TODO: Relax the HasSameSize check; this test should report
-; BackwardVectorizable.
 define void @different_type_sizes_source_size_backwardvectorizible(ptr %dst) {
 ; CHECK-LABEL: 'different_type_sizes_source_size_backwardvectorizible'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 16 bits
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            store i16 0, ptr %gep.iv, align 2 ->
 ; CHECK-NEXT:            store i32 1, ptr %gep.10.iv, align 4
 ; CHECK-EMPTY:

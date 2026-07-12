@@ -2341,13 +2341,6 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
                                           : Dependence::Unknown;
   }
 
-  if (!HasSameSize) {
-    if (CheckCompletelyBeforeOrAfter())
-      return Dependence::NoDep;
-    LLVM_DEBUG(dbgs() << "LAA: ReadWrite-Write positive dependency with "
-                         "different type sizes\n");
-    return Dependence::Unknown;
-  }
   // Bail out early if passed-in parameters make vectorization not feasible.
   unsigned MinForcedFactor =
       std::max(1U, VectorizerParams::VectorizationFactor.getKnownMinValue());
