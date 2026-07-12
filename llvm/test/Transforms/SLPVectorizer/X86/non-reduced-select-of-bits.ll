@@ -6,11 +6,11 @@ define i8 @test(ptr %c, i1 %cmp3, i8 %c.promoted) {
 ; CHECK-SAME: ptr [[C:%.*]], i1 [[CMP3:%.*]], i8 [[C_PROMOTED:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i1> poison, i1 [[CMP3]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i1> poison, i1 [[CMP3]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i1> [[TMP1]], <8 x i1> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128>, <8 x i8> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP0]] to i8
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i8> poison, i8 [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i8> poison, i8 [[TMP4]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i8> [[TMP5]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = or <8 x i8> [[TMP6]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> [[TMP7]])

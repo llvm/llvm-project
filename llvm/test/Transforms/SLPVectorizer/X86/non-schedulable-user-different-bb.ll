@@ -13,8 +13,8 @@ define i1 @test() {
 ; CHECK-NEXT:    [[MUL1920:%.*]] = mul i32 poison, 0
 ; CHECK-NEXT:    [[REM1878:%.*]] = urem i32 [[MUL1877]], 0
 ; CHECK-NEXT:    [[REM1921:%.*]] = urem i32 [[MUL1920]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[REM1921]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[REM1878]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[REM1921]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[REM1878]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> <i32 poison, i32 poison, i32 0, i32 0>, <4 x i32> [[TMP2]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> poison, [[TMP3]]
@@ -22,7 +22,7 @@ define i1 @test() {
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> zeroinitializer, <4 x i32> [[TMP5]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = urem <4 x i32> [[TMP6]], splat (i32 46337)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult <4 x i32> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP8]], i64 0
 ; CHECK-NEXT:    ret i1 [[TMP9]]
 ;
 entry:

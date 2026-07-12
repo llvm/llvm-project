@@ -5,12 +5,12 @@ define i16 @test(i16 %v1, i16 %v2) {
 ; CHECK-LABEL: define i16 @test(
 ; CHECK-SAME: i16 [[V1:%.*]], i16 [[V2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i16> poison, i16 [[V1]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i16> [[TMP4]], i16 [[V2]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i16> poison, i16 [[V1]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i16> [[TMP4]], i16 [[V2]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i16> [[TMP5]], <4 x i16> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <4 x i16> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i16> [[TMP2]], <4 x i16> <i16 -1, i16 -1, i16 -1, i16 poison>, <4 x i32> <i32 4, i32 5, i32 6, i32 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> <i16 0, i16 0, i16 0, i16 poison>, i16 [[V1]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> <i16 0, i16 0, i16 0, i16 poison>, i16 [[V1]], i64 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i16> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = or <4 x i16> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = and <4 x i16> [[TMP7]], zeroinitializer
@@ -23,15 +23,15 @@ define i16 @test(i16 %v1, i16 %v2) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp ne <4 x i16> [[TMP15]], zeroinitializer
 ; CHECK-NEXT:    [[TMP17:%.*]] = or <4 x i1> zeroinitializer, [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = or <4 x i1> [[TMP12]], [[TMP17]]
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i1> [[TMP18]], i32 2
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i1> [[TMP18]], i32 3
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i1> [[TMP18]], i64 2
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i1> [[TMP18]], i64 3
 ; CHECK-NEXT:    [[TMP21:%.*]] = or i1 [[TMP20]], [[TMP19]]
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i1> [[TMP18]], i32 1
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i1> [[TMP18]], i64 1
 ; CHECK-NEXT:    [[TMP23:%.*]] = or i1 false, [[TMP22]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = freeze <4 x i1> [[TMP18]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP24]])
 ; CHECK-NEXT:    [[SPEC_SELECT31:%.*]] = select i1 [[TMP25]], i32 0, i32 0
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i1> [[TMP18]], i32 0
+; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i1> [[TMP18]], i64 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = or i1 false, [[TMP26]]
 ; CHECK-NEXT:    store i32 [[SPEC_SELECT31]], ptr null, align 4
 ; CHECK-NEXT:    ret i16 0
