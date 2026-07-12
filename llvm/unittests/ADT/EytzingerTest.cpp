@@ -22,6 +22,7 @@ TEST(EytzingerTest, EmptyTable) {
   EXPECT_EQ(Empty.data(), nullptr);
   EXPECT_TRUE(Empty.isSorted());
   EXPECT_EQ(Empty.findIndex(42), std::nullopt);
+  EXPECT_FALSE(Empty.contains(42));
 
   // Span initialized with nullptr and zero size should behave identically.
   EytzingerTableSpan<int> NullSpan(nullptr, 0);
@@ -29,6 +30,7 @@ TEST(EytzingerTest, EmptyTable) {
   EXPECT_EQ(NullSpan.size(), 0u);
   EXPECT_TRUE(NullSpan.isSorted());
   EXPECT_EQ(NullSpan.findIndex(42), std::nullopt);
+  EXPECT_FALSE(NullSpan.contains(42));
 }
 
 TEST(EytzingerTest, SingleElementTable) {
@@ -43,10 +45,13 @@ TEST(EytzingerTest, SingleElementTable) {
 
   // Successful lookup for the single element.
   EXPECT_EQ(Span.findIndex(100), 0u);
+  EXPECT_TRUE(Span.contains(100));
 
   // Unsuccessful lookups for keys smaller and larger than the element.
   EXPECT_EQ(Span.findIndex(99), std::nullopt);
+  EXPECT_FALSE(Span.contains(99));
   EXPECT_EQ(Span.findIndex(101), std::nullopt);
+  EXPECT_FALSE(Span.contains(101));
 }
 
 TEST(EytzingerTest, BinaryTreeWithSevenElements) {
@@ -66,22 +71,37 @@ TEST(EytzingerTest, BinaryTreeWithSevenElements) {
 
   // Verify successful lookups for every node in the tree.
   EXPECT_EQ(Span.findIndex(40), 0u);
+  EXPECT_TRUE(Span.contains(40));
   EXPECT_EQ(Span.findIndex(20), 1u);
+  EXPECT_TRUE(Span.contains(20));
   EXPECT_EQ(Span.findIndex(60), 2u);
+  EXPECT_TRUE(Span.contains(60));
   EXPECT_EQ(Span.findIndex(10), 3u);
+  EXPECT_TRUE(Span.contains(10));
   EXPECT_EQ(Span.findIndex(30), 4u);
+  EXPECT_TRUE(Span.contains(30));
   EXPECT_EQ(Span.findIndex(50), 5u);
+  EXPECT_TRUE(Span.contains(50));
   EXPECT_EQ(Span.findIndex(70), 6u);
+  EXPECT_TRUE(Span.contains(70));
 
   // Verify unsuccessful lookups for values not in the tree.
   EXPECT_EQ(Span.findIndex(0), std::nullopt);
+  EXPECT_FALSE(Span.contains(0));
   EXPECT_EQ(Span.findIndex(15), std::nullopt);
+  EXPECT_FALSE(Span.contains(15));
   EXPECT_EQ(Span.findIndex(25), std::nullopt);
+  EXPECT_FALSE(Span.contains(25));
   EXPECT_EQ(Span.findIndex(35), std::nullopt);
+  EXPECT_FALSE(Span.contains(35));
   EXPECT_EQ(Span.findIndex(45), std::nullopt);
+  EXPECT_FALSE(Span.contains(45));
   EXPECT_EQ(Span.findIndex(55), std::nullopt);
+  EXPECT_FALSE(Span.contains(55));
   EXPECT_EQ(Span.findIndex(65), std::nullopt);
+  EXPECT_FALSE(Span.contains(65));
   EXPECT_EQ(Span.findIndex(80), std::nullopt);
+  EXPECT_FALSE(Span.contains(80));
 }
 
 TEST(EytzingerTest, BinaryTreeWithFiveElements) {
@@ -101,18 +121,29 @@ TEST(EytzingerTest, BinaryTreeWithFiveElements) {
 
   // Verify lookups on existing elements.
   EXPECT_EQ(Span.findIndex(40), 0u);
+  EXPECT_TRUE(Span.contains(40));
   EXPECT_EQ(Span.findIndex(20), 1u);
+  EXPECT_TRUE(Span.contains(20));
   EXPECT_EQ(Span.findIndex(50), 2u);
+  EXPECT_TRUE(Span.contains(50));
   EXPECT_EQ(Span.findIndex(10), 3u);
+  EXPECT_TRUE(Span.contains(10));
   EXPECT_EQ(Span.findIndex(30), 4u);
+  EXPECT_TRUE(Span.contains(30));
 
   // Verify lookups on missing values across various boundary conditions.
   EXPECT_EQ(Span.findIndex(5), std::nullopt);
+  EXPECT_FALSE(Span.contains(5));
   EXPECT_EQ(Span.findIndex(15), std::nullopt);
+  EXPECT_FALSE(Span.contains(15));
   EXPECT_EQ(Span.findIndex(25), std::nullopt);
+  EXPECT_FALSE(Span.contains(25));
   EXPECT_EQ(Span.findIndex(35), std::nullopt);
+  EXPECT_FALSE(Span.contains(35));
   EXPECT_EQ(Span.findIndex(45), std::nullopt);
+  EXPECT_FALSE(Span.contains(45));
   EXPECT_EQ(Span.findIndex(60), std::nullopt);
+  EXPECT_FALSE(Span.contains(60));
 }
 
 TEST(EytzingerTest, EndianSpecificIntegerType) {
@@ -127,14 +158,22 @@ TEST(EytzingerTest, EndianSpecificIntegerType) {
   EXPECT_TRUE(Span.isSorted());
 
   EXPECT_EQ(Span.findIndex(uint64_t(400)), 0u);
+  EXPECT_TRUE(Span.contains(uint64_t(400)));
   EXPECT_EQ(Span.findIndex(uint64_t(200)), 1u);
+  EXPECT_TRUE(Span.contains(uint64_t(200)));
   EXPECT_EQ(Span.findIndex(uint64_t(600)), 2u);
+  EXPECT_TRUE(Span.contains(uint64_t(600)));
   EXPECT_EQ(Span.findIndex(uint64_t(100)), 3u);
+  EXPECT_TRUE(Span.contains(uint64_t(100)));
   EXPECT_EQ(Span.findIndex(uint64_t(300)), 4u);
+  EXPECT_TRUE(Span.contains(uint64_t(300)));
   EXPECT_EQ(Span.findIndex(uint64_t(500)), 5u);
+  EXPECT_TRUE(Span.contains(uint64_t(500)));
   EXPECT_EQ(Span.findIndex(uint64_t(700)), 6u);
+  EXPECT_TRUE(Span.contains(uint64_t(700)));
 
   EXPECT_EQ(Span.findIndex(uint64_t(999)), std::nullopt);
+  EXPECT_FALSE(Span.contains(uint64_t(999)));
 }
 
 TEST(EytzingerTest, IsSortedVerification) {

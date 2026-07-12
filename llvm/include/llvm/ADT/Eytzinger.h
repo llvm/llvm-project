@@ -55,6 +55,12 @@ public:
     return std::nullopt;
   }
 
+  /// Check if this Eytzinger table contains Target.
+  template <typename KeyT = T>
+  [[nodiscard]] bool contains(const KeyT &Target) const {
+    return findIndex(Target).has_value();
+  }
+
   /// Verify whether the buffer satisfies strictly ascending binary search tree
   /// order in Eytzinger layout. Runs iteratively in O(N) time and O(1) space.
   [[nodiscard]] bool isSorted() const {
