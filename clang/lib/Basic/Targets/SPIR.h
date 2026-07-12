@@ -101,9 +101,9 @@ static const unsigned SPIRDefIsGenMap[] = {
 
 // Base class for SPIR and SPIR-V target info.
 class LLVM_LIBRARY_VISIBILITY BaseSPIRTargetInfo : public TargetInfo {
+protected:
   std::unique_ptr<TargetInfo> HostTarget;
 
-protected:
   BaseSPIRTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : TargetInfo(Triple) {
     assert((Triple.isSPIR() || Triple.isSPIRV()) &&
