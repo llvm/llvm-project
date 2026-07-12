@@ -8,16 +8,16 @@
 
 define void @minnum_f16() {
 ; GFX9-LABEL: 'minnum_f16'
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.minnum.f16(half undef, half undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f16 = call <2 x half> @llvm.minnum.v2f16(<2 x half> undef, <2 x half> undef)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.minnum.f16(half undef, half undef)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = call <2 x half> @llvm.minnum.v2f16(<2 x half> undef, <2 x half> undef)
 ; GFX9-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f16 = call <3 x half> @llvm.minnum.v3f16(<3 x half> undef, <3 x half> undef)
 ; GFX9-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = call <4 x half> @llvm.minnum.v4f16(<4 x half> undef, <4 x half> undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8f16 = call <8 x half> @llvm.minnum.v8f16(<8 x half> undef, <8 x half> undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16f16 = call <16 x half> @llvm.minnum.v16f16(<16 x half> undef, <16 x half> undef)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8f16 = call <8 x half> @llvm.minnum.v8f16(<8 x half> undef, <8 x half> undef)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16f16 = call <16 x half> @llvm.minnum.v16f16(<16 x half> undef, <16 x half> undef)
 ; GFX9-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SLOWF64-LABEL: 'minnum_f16'
-; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.minnum.f16(half undef, half undef)
+; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.minnum.f16(half undef, half undef)
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = call <2 x half> @llvm.minnum.v2f16(<2 x half> undef, <2 x half> undef)
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.minnum.v3f16(<3 x half> undef, <3 x half> undef)
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = call <4 x half> @llvm.minnum.v4f16(<4 x half> undef, <4 x half> undef)
@@ -26,16 +26,16 @@ define void @minnum_f16() {
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX9-SIZE-LABEL: 'minnum_f16'
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.minnum.f16(half undef, half undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f16 = call <2 x half> @llvm.minnum.v2f16(<2 x half> undef, <2 x half> undef)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.minnum.f16(half undef, half undef)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = call <2 x half> @llvm.minnum.v2f16(<2 x half> undef, <2 x half> undef)
 ; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f16 = call <3 x half> @llvm.minnum.v3f16(<3 x half> undef, <3 x half> undef)
 ; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = call <4 x half> @llvm.minnum.v4f16(<4 x half> undef, <4 x half> undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8f16 = call <8 x half> @llvm.minnum.v8f16(<8 x half> undef, <8 x half> undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16f16 = call <16 x half> @llvm.minnum.v16f16(<16 x half> undef, <16 x half> undef)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8f16 = call <8 x half> @llvm.minnum.v8f16(<8 x half> undef, <8 x half> undef)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16f16 = call <16 x half> @llvm.minnum.v16f16(<16 x half> undef, <16 x half> undef)
 ; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLOW-SIZE-LABEL: 'minnum_f16'
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.minnum.f16(half undef, half undef)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.minnum.f16(half undef, half undef)
 ; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = call <2 x half> @llvm.minnum.v2f16(<2 x half> undef, <2 x half> undef)
 ; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.minnum.v3f16(<3 x half> undef, <3 x half> undef)
 ; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = call <4 x half> @llvm.minnum.v4f16(<4 x half> undef, <4 x half> undef)
@@ -71,7 +71,7 @@ define void @minnum_bf16() {
 ; GFX9-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SLOWF64-LABEL: 'minnum_bf16'
-; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = call bfloat @llvm.minnum.bf16(bfloat undef, bfloat undef)
+; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.minnum.bf16(bfloat undef, bfloat undef)
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2bf16 = call <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat> undef, <2 x bfloat> undef)
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3bf16 = call <3 x bfloat> @llvm.minnum.v3bf16(<3 x bfloat> undef, <3 x bfloat> undef)
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4bf16 = call <4 x bfloat> @llvm.minnum.v4bf16(<4 x bfloat> undef, <4 x bfloat> undef)
@@ -89,7 +89,7 @@ define void @minnum_bf16() {
 ; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLOW-SIZE-LABEL: 'minnum_bf16'
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = call bfloat @llvm.minnum.bf16(bfloat undef, bfloat undef)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.minnum.bf16(bfloat undef, bfloat undef)
 ; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2bf16 = call <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat> undef, <2 x bfloat> undef)
 ; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3bf16 = call <3 x bfloat> @llvm.minnum.v3bf16(<3 x bfloat> undef, <3 x bfloat> undef)
 ; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4bf16 = call <4 x bfloat> @llvm.minnum.v4bf16(<4 x bfloat> undef, <4 x bfloat> undef)
@@ -116,21 +116,21 @@ define void @minnum_bf16() {
 
 define void @minnum_f32() {
 ; ALL-LABEL: 'minnum_f32'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f32 = call float @llvm.minnum.f32(float undef, float undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = call <2 x float> @llvm.minnum.v2f32(<2 x float> undef, <2 x float> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f32 = call <3 x float> @llvm.minnum.v3f32(<3 x float> undef, <3 x float> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = call <4 x float> @llvm.minnum.v4f32(<4 x float> undef, <4 x float> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = call <8 x float> @llvm.minnum.v8f32(<8 x float> undef, <8 x float> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f32 = call <16 x float> @llvm.minnum.v16f32(<16 x float> undef, <16 x float> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f32 = call float @llvm.minnum.f32(float undef, float undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f32 = call <2 x float> @llvm.minnum.v2f32(<2 x float> undef, <2 x float> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3f32 = call <3 x float> @llvm.minnum.v3f32(<3 x float> undef, <3 x float> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f32 = call <4 x float> @llvm.minnum.v4f32(<4 x float> undef, <4 x float> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8f32 = call <8 x float> @llvm.minnum.v8f32(<8 x float> undef, <8 x float> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16f32 = call <16 x float> @llvm.minnum.v16f32(<16 x float> undef, <16 x float> undef)
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SIZE-LABEL: 'minnum_f32'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f32 = call float @llvm.minnum.f32(float undef, float undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = call <2 x float> @llvm.minnum.v2f32(<2 x float> undef, <2 x float> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f32 = call <3 x float> @llvm.minnum.v3f32(<3 x float> undef, <3 x float> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = call <4 x float> @llvm.minnum.v4f32(<4 x float> undef, <4 x float> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = call <8 x float> @llvm.minnum.v8f32(<8 x float> undef, <8 x float> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f32 = call <16 x float> @llvm.minnum.v16f32(<16 x float> undef, <16 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f32 = call float @llvm.minnum.f32(float undef, float undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f32 = call <2 x float> @llvm.minnum.v2f32(<2 x float> undef, <2 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3f32 = call <3 x float> @llvm.minnum.v3f32(<3 x float> undef, <3 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f32 = call <4 x float> @llvm.minnum.v4f32(<4 x float> undef, <4 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8f32 = call <8 x float> @llvm.minnum.v8f32(<8 x float> undef, <8 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16f32 = call <16 x float> @llvm.minnum.v16f32(<16 x float> undef, <16 x float> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f32 = call float @llvm.minnum.f32(float undef, float undef)
@@ -144,21 +144,21 @@ define void @minnum_f32() {
 
 define void @minnum_f64() {
 ; ALL-LABEL: 'minnum_f64'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f64 = call double @llvm.minnum.f64(double undef, double undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f64 = call <2 x double> @llvm.minnum.v2f64(<2 x double> undef, <2 x double> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f64 = call <3 x double> @llvm.minnum.v3f64(<3 x double> undef, <3 x double> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f64 = call <4 x double> @llvm.minnum.v4f64(<4 x double> undef, <4 x double> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f64 = call <8 x double> @llvm.minnum.v8f64(<8 x double> undef, <8 x double> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f64 = call <16 x double> @llvm.minnum.v16f64(<16 x double> undef, <16 x double> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f64 = call double @llvm.minnum.f64(double undef, double undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f64 = call <2 x double> @llvm.minnum.v2f64(<2 x double> undef, <2 x double> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3f64 = call <3 x double> @llvm.minnum.v3f64(<3 x double> undef, <3 x double> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f64 = call <4 x double> @llvm.minnum.v4f64(<4 x double> undef, <4 x double> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8f64 = call <8 x double> @llvm.minnum.v8f64(<8 x double> undef, <8 x double> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16f64 = call <16 x double> @llvm.minnum.v16f64(<16 x double> undef, <16 x double> undef)
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SIZE-LABEL: 'minnum_f64'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f64 = call double @llvm.minnum.f64(double undef, double undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f64 = call <2 x double> @llvm.minnum.v2f64(<2 x double> undef, <2 x double> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f64 = call <3 x double> @llvm.minnum.v3f64(<3 x double> undef, <3 x double> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f64 = call <4 x double> @llvm.minnum.v4f64(<4 x double> undef, <4 x double> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f64 = call <8 x double> @llvm.minnum.v8f64(<8 x double> undef, <8 x double> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f64 = call <16 x double> @llvm.minnum.v16f64(<16 x double> undef, <16 x double> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f64 = call double @llvm.minnum.f64(double undef, double undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f64 = call <2 x double> @llvm.minnum.v2f64(<2 x double> undef, <2 x double> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3f64 = call <3 x double> @llvm.minnum.v3f64(<3 x double> undef, <3 x double> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f64 = call <4 x double> @llvm.minnum.v4f64(<4 x double> undef, <4 x double> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8f64 = call <8 x double> @llvm.minnum.v8f64(<8 x double> undef, <8 x double> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16f64 = call <16 x double> @llvm.minnum.v16f64(<16 x double> undef, <16 x double> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f64 = call double @llvm.minnum.f64(double undef, double undef)

@@ -584,7 +584,8 @@ bool AMDGPURegBankCombinerImpl::getDX10Clamp() const {
 }
 
 bool AMDGPURegBankCombinerImpl::isFminnumIeee(const MachineInstr &MI) const {
-  return MI.getOpcode() == AMDGPU::G_FMINNUM_IEEE;
+  unsigned Opc = MI.getOpcode();
+  return Opc == AMDGPU::G_FMINNUM_IEEE || Opc == AMDGPU::G_FMINNUM;
 }
 
 bool AMDGPURegBankCombinerImpl::isFCst(MachineInstr *MI) const {

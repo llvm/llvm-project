@@ -1022,30 +1022,46 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .scalarize(0);
   }
 
-  auto &MinNumMaxNum = getActionDefinitionsBuilder(
-      {G_FMINNUM, G_FMAXNUM, G_FMINIMUMNUM, G_FMAXIMUMNUM});
+  // FMINNUM/FMAXNUM are legal. They quiet sNaNs like FMIN.*NUM_IEEE do through
+  // v_min v_max. FMINIMUMNUM/FMAXIMUMNUM still need custom lowering.
+  auto &MinNumMaxNum = getActionDefinitionsBuilder({G_FMINNUM, G_FMAXNUM});
+  auto &MinimumNumMaximumNum =
+      getActionDefinitionsBuilder({G_FMINIMUMNUM, G_FMAXIMUMNUM});
 
   if (ST.hasPackedFP64Ops()) {
-    MinNumMaxNum.customFor(FPTypesPK16_64)
+    MinNumMaxNum.legalFor(FPTypesPK16_64)
+        .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
+        .clampMaxNumElements(0, S16, 2)
+        .clampMaxNumElements(0, S64, 2)
+        .clampScalar(0, S16, S64)
+        .scalarize(0);
+    MinimumNumMaximumNum.customFor(FPTypesPK16_64)
         .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
         .clampMaxNumElements(0, S16, 2)
         .clampMaxNumElements(0, S64, 2)
         .clampScalar(0, S16, S64)
         .scalarize(0);
   } else if (ST.hasVOP3PInsts()) {
-    MinNumMaxNum.customFor(FPTypesPK16)
-      .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
-      .clampMaxNumElements(0, S16, 2)
-      .clampScalar(0, S16, S64)
-      .scalarize(0);
+    MinNumMaxNum.legalFor(FPTypesPK16)
+        .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
+        .clampMaxNumElements(0, S16, 2)
+        .clampScalar(0, S16, S64)
+        .scalarize(0);
+    MinimumNumMaximumNum.customFor(FPTypesPK16)
+        .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
+        .clampMaxNumElements(0, S16, 2)
+        .clampScalar(0, S16, S64)
+        .scalarize(0);
   } else if (ST.has16BitInsts()) {
-    MinNumMaxNum.customFor(FPTypes16)
-      .clampScalar(0, S16, S64)
-      .scalarize(0);
+    MinNumMaxNum.legalFor(FPTypes16).clampScalar(0, S16, S64).scalarize(0);
+    MinimumNumMaximumNum.customFor(FPTypes16)
+        .clampScalar(0, S16, S64)
+        .scalarize(0);
   } else {
-    MinNumMaxNum.customFor(FPTypesBase)
-      .clampScalar(0, S32, S64)
-      .scalarize(0);
+    MinNumMaxNum.legalFor(FPTypesBase).clampScalar(0, S32, S64).scalarize(0);
+    MinimumNumMaximumNum.customFor(FPTypesBase)
+        .clampScalar(0, S32, S64)
+        .scalarize(0);
   }
 
   if (ST.hasVOP3PInsts())
@@ -2330,8 +2346,6 @@ bool AMDGPULegalizerInfo::legalizeCustom(
     return legalizeFPTOI(MI, MRI, B, true);
   case TargetOpcode::G_FPTOUI:
     return legalizeFPTOI(MI, MRI, B, false);
-  case TargetOpcode::G_FMINNUM:
-  case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMINIMUMNUM:
   case TargetOpcode::G_FMAXIMUMNUM:
     return legalizeMinNumMaxNum(Helper, MI);

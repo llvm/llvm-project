@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,GFX678 %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,GFX678 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN %s
 
 declare double @llvm.minnum.f64(double, double) #0
 declare <2 x double> @llvm.minnum.v2f64(<2 x double>, <2 x double>) #0
@@ -9,13 +9,11 @@ declare <8 x double> @llvm.minnum.v8f64(<8 x double>, <8 x double>) #0
 declare <16 x double> @llvm.minnum.v16f64(<16 x double>, <16 x double>) #0
 
 ; GCN-LABEL: {{^}}test_fmin_f64_ieee_noflush:
-; GCN: s_load_dwordx2 [[A:s\[[0-9]+:[0-9]+\]]]
+; GCN: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}
 ; GCN: s_load_dwordx2 [[B:s\[[0-9]+:[0-9]+\]]]
-
-; GCN-DAG: v_max_f64 [[QUIETA:v\[[0-9]+:[0-9]+\]]], [[A]], [[A]]
-; GCN-DAG: v_max_f64 [[QUIETB:v\[[0-9]+:[0-9]+\]]], [[B]], [[B]]
-
-; GCN: v_min_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[QUIETB]], [[QUIETA]]
+; GCN-NOT: v_max_f64
+; GCN-NOT: v_mul_f64
+; GCN: v_min_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[B]], v{{\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @test_fmin_f64_ieee_noflush([8 x i32], double %a, [8 x i32], double %b) #1 {
   %val = call double @llvm.minnum.f64(double %a, double %b) #0
   store double %val, ptr addrspace(1) poison, align 8
@@ -23,15 +21,11 @@ define amdgpu_kernel void @test_fmin_f64_ieee_noflush([8 x i32], double %a, [8 x
 }
 
 ; GCN-LABEL: {{^}}test_fmin_f64_ieee_flush:
-; GCN: s_load_dwordx2 [[A:s\[[0-9]+:[0-9]+\]]]
+; GCN: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}
 ; GCN: s_load_dwordx2 [[B:s\[[0-9]+:[0-9]+\]]]
-; GFX678-DAG: v_mul_f64 [[QUIETA:v\[[0-9]+:[0-9]+\]]], 1.0, [[A]]
-; GFX678-DAG: v_mul_f64 [[QUIETB:v\[[0-9]+:[0-9]+\]]], 1.0, [[B]]
-
-; GFX9-DAG: v_max_f64 [[QUIETA:v\[[0-9]+:[0-9]+\]]], [[A]], [[A]]
-; GFX9-DAG: v_max_f64 [[QUIETB:v\[[0-9]+:[0-9]+\]]], [[B]], [[B]]
-
-; GCN: v_min_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[QUIETB]], [[QUIETA]]
+; GCN-NOT: v_max_f64
+; GCN-NOT: v_mul_f64
+; GCN: v_min_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[B]], v{{\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @test_fmin_f64_ieee_flush([8 x i32], double %a, [8 x i32], double %b) #2 {
   %val = call double @llvm.minnum.f64(double %a, double %b) #0
   store double %val, ptr addrspace(1) poison, align 8

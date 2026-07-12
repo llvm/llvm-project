@@ -28,8 +28,9 @@
 // RUN:   -mno-amdgpu-ieee 2>&1 | FileCheck -check-prefixes=DIAG %s
 
 // COMMON: define{{.*}} amdgpu_kernel void @kern{{.*}} [[ATTRS1:#[0-9]+]]
-// ISA-ON: v_mul_f32_e64 v{{[0-9]+}}, 1.0, s{{[0-9]+}}
-// ISA-ON: v_mul_f32_e64 v{{[0-9]+}}, 1.0, s{{[0-9]+}}
+// FMINNUM is legal now, so v_min quiets sNaNs directly without a separate
+// canonicalize, in both ieee and non-ieee mode.
+// ISA-ON-NOT: v_mul_f32_e64 v{{[0-9]+}}, 1.0, s{{[0-9]+}}
 // ISA-ON: v_min_f32_e32
 // ISA-ON: ; IeeeMode: 1
 // ISA-OFF-NOT: v_mul_f32_e64 v{{[0-9]+}}, 1.0, s{{[0-9]+}}

@@ -453,10 +453,8 @@ define amdgpu_kernel void @test_fold_canonicalize_qNaN_value_f32(ptr addrspace(1
 
 ; GCN-LABEL: test_fold_canonicalize_minnum_value_from_load_f32_ieee_mode:
 ; GCN: {{flat|global}}_load_dword [[VAL:v[0-9]+]]
-; VI: v_mul_f32_e32 [[QUIET:v[0-9]+]], 1.0, [[VAL]]
-; GFX9: v_max_f32_e32 [[QUIET:v[0-9]+]], [[VAL]], [[VAL]]
-
-; GCN: v_min_f32_e32 [[V:v[0-9]+]], 0, [[QUIET]]
+; GCN: v_min_f32_e32 [[V:v[0-9]+]], 0, [[VAL]]
+; VI-FLUSH-NEXT: v_mul_f32_e32 [[V]], 1.0, [[V]]
 ; GCN-NOT: v_max
 ; GCN-NOT: v_mul
 
@@ -524,12 +522,8 @@ define amdgpu_kernel void @test_fold_canonicalize_sNaN_value_f32(ptr addrspace(1
 ; GCN-LABEL: test_fold_canonicalize_maxnum_value_from_load_f32_ieee_mode:
 ; GCN: {{flat|global}}_load_dword [[VAL:v[0-9]+]]
 
-; GFX9:  v_max_f32_e32 [[RESULT:v[0-9]+]], 0, [[VAL]]
-
-; VI-FLUSH:    v_mul_f32_e32 [[QUIET:v[0-9]+]], 1.0, [[VAL]]
-; VI-FLUSH:    v_max_f32_e32 [[RESULT:v[0-9]+]], 0, [[QUIET]]
-
-; VI-DENORM: v_max_f32_e32 [[RESULT:v[0-9]+]], 0, [[VAL]]
+; GCN: v_max_f32_e32 [[RESULT:v[0-9]+]], 0, [[VAL]]
+; VI-FLUSH-NEXT: v_mul_f32_e32 [[RESULT]], 1.0, [[RESULT]]
 
 ; GCN-NOT: v_mul
 ; GCN-NOT: v_max
@@ -703,14 +697,9 @@ define amdgpu_ps float @test_fold_canonicalize_minnum_value_no_ieee_mode(float %
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_minnum_value_ieee_mode:
-; GFX9: v_min_f32_e32 v0, v0, v1
-; GFX9-NEXT: s_setpc_b64
-
-; VI-DAG: v_mul_f32_e32 v0, 1.0, v0
-; VI-DAG: v_mul_f32_e32 v1, 1.0, v1
-; VI: v_min_f32_e32 v0, v0, v1
-
-; VI-NEXT: s_setpc_b64
+; GCN: v_min_f32_e32 v0, v0, v1
+; VI-FLUSH-NEXT: v_mul_f32_e32 v0, 1.0, v0
+; GCN-NEXT: s_setpc_b64
 define float @test_fold_canonicalize_minnum_value_ieee_mode(float %arg0, float %arg1) {
   %v = tail call float @llvm.minnum.f32(float %arg0, float %arg1)
   %canonicalized = tail call float @llvm.canonicalize.f32(float %v)
