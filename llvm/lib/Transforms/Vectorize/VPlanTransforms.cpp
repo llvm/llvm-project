@@ -1879,8 +1879,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         continue;
 
       auto *Clone = VPBuilder::createSingleScalarOp(
-          vputils::getOpcodeOrIntrinsicID(RepOrWidenR)->second,
-          RepOrWidenR->operands(),
+          vputils::getOpcode(RepOrWidenR), RepOrWidenR->operands(),
           /*Mask=*/nullptr, *RepOrWidenR, {}, DebugLoc::getUnknown(),
           RepOrWidenR->getUnderlyingInstr());
       Clone->insertBefore(RepOrWidenR);
@@ -5084,8 +5083,7 @@ static bool canNarrowOps(ArrayRef<VPValue *> Ops, bool IsScalable) {
     if (!isa<VPWidenRecipe, VPWidenCastRecipe>(V))
       return false;
     auto *R = cast<VPRecipeWithIRFlags>(V);
-    if (vputils::getOpcodeOrIntrinsicID(R) !=
-        vputils::getOpcodeOrIntrinsicID(WideMember0))
+    if (vputils::getOpcode(R) != vputils::getOpcode(WideMember0))
       return false;
     if (R->getScalarType() != WideMember0->getScalarType())
       return false;
