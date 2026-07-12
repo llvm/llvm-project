@@ -7,7 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-tidy/ClangTidyCheck.h"
+#if CLANG_VERSION_MAJOR > 23
 #include "clang-tidy/ClangTidyModule.h"
+#else
+#include "clang-tidy/ClangTidyModuleRegistry.h"
+#endif
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/FixIt.h"
 
