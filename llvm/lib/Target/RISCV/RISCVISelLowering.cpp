@@ -4768,11 +4768,10 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
       SDValue Lo = DAG.getExtractSubvector(DL, MVT::v4i8, PPairE, 0);
       SDValue Hi = DAG.getExtractSubvector(DL, MVT::v4i8, PPairE, 4);
 
-      return DAG.getBitcast(
-          MVT::v4i8,
-          DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v2i16,
-                      DAG.getBitcast(MVT::v2i16, Lo),
-                      DAG.getBitcast(MVT::v2i16, Hi)));
+      return DAG.getBitcast(MVT::v4i8,
+                            DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v2i16,
+                                        DAG.getBitcast(MVT::v2i16, Lo),
+                                        DAG.getBitcast(MVT::v2i16, Hi)));
     }
 
     llvm_unreachable("Unexpected RV32 P BUILD_VECTOR type");
