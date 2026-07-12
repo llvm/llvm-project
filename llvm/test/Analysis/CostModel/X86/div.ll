@@ -216,8 +216,8 @@ define i32 @sdiv_const() {
 ; AVX512DQ-LABEL: 'sdiv_const'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = sdiv i64 undef, 7
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = sdiv <2 x i64> undef, <i64 6, i64 7>
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = sdiv <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = sdiv <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = sdiv <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = sdiv <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = sdiv i32 undef, 7
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = sdiv <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = sdiv <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
@@ -316,8 +316,8 @@ define i32 @udiv_const() {
 ; AVX2-LABEL: 'udiv_const'
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = udiv i64 undef, 7
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = udiv <2 x i64> undef, <i64 6, i64 7>
-; AVX2-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
-; AVX2-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
+; AVX2-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
+; AVX2-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = udiv i32 undef, 7
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = udiv <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = udiv <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
@@ -335,8 +335,8 @@ define i32 @udiv_const() {
 ; AVX512F-LABEL: 'udiv_const'
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = udiv i64 undef, 7
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = udiv <2 x i64> undef, <i64 6, i64 7>
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = udiv i32 undef, 7
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = udiv <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = udiv <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
@@ -354,8 +354,8 @@ define i32 @udiv_const() {
 ; AVX512BW-LABEL: 'udiv_const'
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = udiv i64 undef, 7
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = udiv <2 x i64> undef, <i64 6, i64 7>
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = udiv i32 undef, 7
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = udiv <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = udiv <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
@@ -373,8 +373,8 @@ define i32 @udiv_const() {
 ; AVX512DQ-LABEL: 'udiv_const'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = udiv i64 undef, 7
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = udiv <2 x i64> undef, <i64 6, i64 7>
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = udiv i32 undef, 7
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = udiv <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = udiv <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
@@ -511,8 +511,8 @@ define i32 @sdiv_uniformconst() {
 ; AVX512DQ-LABEL: 'sdiv_uniformconst'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = sdiv i64 undef, 7
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = sdiv <2 x i64> undef, splat (i64 7)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = sdiv <4 x i64> undef, splat (i64 7)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = sdiv <8 x i64> undef, splat (i64 7)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = sdiv <4 x i64> undef, splat (i64 7)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = sdiv <8 x i64> undef, splat (i64 7)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = sdiv i32 undef, 7
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = sdiv <4 x i32> undef, splat (i32 7)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = sdiv <8 x i32> undef, splat (i32 7)
@@ -592,8 +592,8 @@ define i32 @udiv_uniformconst() {
 ; AVX2-LABEL: 'udiv_uniformconst'
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = udiv i64 undef, 7
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = udiv <2 x i64> undef, splat (i64 7)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, splat (i64 7)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, splat (i64 7)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, splat (i64 7)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, splat (i64 7)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = udiv i32 undef, 7
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = udiv <4 x i32> undef, splat (i32 7)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = udiv <8 x i32> undef, splat (i32 7)
@@ -611,8 +611,8 @@ define i32 @udiv_uniformconst() {
 ; AVX512F-LABEL: 'udiv_uniformconst'
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = udiv i64 undef, 7
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = udiv <2 x i64> undef, splat (i64 7)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, splat (i64 7)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, splat (i64 7)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, splat (i64 7)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, splat (i64 7)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = udiv i32 undef, 7
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = udiv <4 x i32> undef, splat (i32 7)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = udiv <8 x i32> undef, splat (i32 7)
@@ -630,8 +630,8 @@ define i32 @udiv_uniformconst() {
 ; AVX512BW-LABEL: 'udiv_uniformconst'
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = udiv i64 undef, 7
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = udiv <2 x i64> undef, splat (i64 7)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, splat (i64 7)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, splat (i64 7)
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, splat (i64 7)
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, splat (i64 7)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = udiv i32 undef, 7
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = udiv <4 x i32> undef, splat (i32 7)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = udiv <8 x i32> undef, splat (i32 7)
@@ -649,8 +649,8 @@ define i32 @udiv_uniformconst() {
 ; AVX512DQ-LABEL: 'udiv_uniformconst'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = udiv i64 undef, 7
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = udiv <2 x i64> undef, splat (i64 7)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, splat (i64 7)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, splat (i64 7)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, splat (i64 7)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, splat (i64 7)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = udiv i32 undef, 7
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = udiv <4 x i32> undef, splat (i32 7)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = udiv <8 x i32> undef, splat (i32 7)
@@ -1472,8 +1472,8 @@ define i32 @sdiv_constnegpow2() {
 ; AVX512DQ-LABEL: 'sdiv_constnegpow2'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = sdiv i64 undef, -16
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = sdiv <2 x i64> undef, <i64 -8, i64 -16>
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = sdiv <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = sdiv <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = sdiv <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = sdiv <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = sdiv i32 undef, -16
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = sdiv <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = sdiv <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
@@ -1572,8 +1572,8 @@ define i32 @udiv_constnegpow2() {
 ; AVX2-LABEL: 'udiv_constnegpow2'
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = udiv i64 undef, -16
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = udiv <2 x i64> undef, <i64 -8, i64 -16>
-; AVX2-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
-; AVX2-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
+; AVX2-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
+; AVX2-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = udiv i32 undef, -16
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = udiv <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = udiv <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
@@ -1591,8 +1591,8 @@ define i32 @udiv_constnegpow2() {
 ; AVX512F-LABEL: 'udiv_constnegpow2'
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = udiv i64 undef, -16
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = udiv <2 x i64> undef, <i64 -8, i64 -16>
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = udiv i32 undef, -16
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = udiv <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = udiv <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
@@ -1610,8 +1610,8 @@ define i32 @udiv_constnegpow2() {
 ; AVX512BW-LABEL: 'udiv_constnegpow2'
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = udiv i64 undef, -16
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = udiv <2 x i64> undef, <i64 -8, i64 -16>
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = udiv i32 undef, -16
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = udiv <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = udiv <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
@@ -1629,8 +1629,8 @@ define i32 @udiv_constnegpow2() {
 ; AVX512DQ-LABEL: 'udiv_constnegpow2'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = udiv i64 undef, -16
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = udiv <2 x i64> undef, <i64 -8, i64 -16>
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = udiv i32 undef, -16
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = udiv <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = udiv <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
@@ -1767,8 +1767,8 @@ define i32 @sdiv_uniformconstnegpow2() {
 ; AVX512DQ-LABEL: 'sdiv_uniformconstnegpow2'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = sdiv i64 undef, -16
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = sdiv <2 x i64> undef, splat (i64 -16)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = sdiv <4 x i64> undef, splat (i64 -16)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = sdiv <8 x i64> undef, splat (i64 -16)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = sdiv <4 x i64> undef, splat (i64 -16)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = sdiv <8 x i64> undef, splat (i64 -16)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = sdiv i32 undef, -16
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = sdiv <4 x i32> undef, splat (i32 -16)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = sdiv <8 x i32> undef, splat (i32 -16)
@@ -1848,8 +1848,8 @@ define i32 @udiv_uniformconstnegpow2() {
 ; AVX2-LABEL: 'udiv_uniformconstnegpow2'
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = udiv i64 undef, -16
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = udiv <2 x i64> undef, splat (i64 -16)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, splat (i64 -16)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, splat (i64 -16)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, splat (i64 -16)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, splat (i64 -16)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = udiv i32 undef, -16
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = udiv <4 x i32> undef, splat (i32 -16)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = udiv <8 x i32> undef, splat (i32 -16)
@@ -1867,8 +1867,8 @@ define i32 @udiv_uniformconstnegpow2() {
 ; AVX512F-LABEL: 'udiv_uniformconstnegpow2'
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = udiv i64 undef, -16
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = udiv <2 x i64> undef, splat (i64 -16)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, splat (i64 -16)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, splat (i64 -16)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, splat (i64 -16)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, splat (i64 -16)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = udiv i32 undef, -16
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = udiv <4 x i32> undef, splat (i32 -16)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = udiv <8 x i32> undef, splat (i32 -16)
@@ -1886,8 +1886,8 @@ define i32 @udiv_uniformconstnegpow2() {
 ; AVX512BW-LABEL: 'udiv_uniformconstnegpow2'
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = udiv i64 undef, -16
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = udiv <2 x i64> undef, splat (i64 -16)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, splat (i64 -16)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, splat (i64 -16)
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, splat (i64 -16)
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, splat (i64 -16)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = udiv i32 undef, -16
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = udiv <4 x i32> undef, splat (i32 -16)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = udiv <8 x i32> undef, splat (i32 -16)
@@ -1905,8 +1905,8 @@ define i32 @udiv_uniformconstnegpow2() {
 ; AVX512DQ-LABEL: 'udiv_uniformconstnegpow2'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = udiv i64 undef, -16
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = udiv <2 x i64> undef, splat (i64 -16)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, splat (i64 -16)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, splat (i64 -16)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, splat (i64 -16)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:4 Lat:4 SizeLat:4 for: %V8i64 = udiv <8 x i64> undef, splat (i64 -16)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:4 Lat:4 SizeLat:4 for: %I32 = udiv i32 undef, -16
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V4i32 = udiv <4 x i32> undef, splat (i32 -16)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V8i32 = udiv <8 x i32> undef, splat (i32 -16)

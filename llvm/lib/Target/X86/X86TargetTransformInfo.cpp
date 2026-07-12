@@ -423,9 +423,9 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
         return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX512DQUniformConstCostTable[] = {
-    { ISD::SDIV, MVT::v4i64, { 15 } }, // vpmullq-based MULHS sequence
+    { ISD::SDIV, MVT::v4i64, { 9 } }, // vpmullq-based MULHS sequence
     { ISD::SREM, MVT::v4i64, { 17 } }, // vpmullq-based MULHS+mul+sub sequence
-    { ISD::SDIV, MVT::v8i64, { 15 } }, // vpmullq-based MULHS sequence
+    { ISD::SDIV, MVT::v8i64, { 9 } }, // vpmullq-based MULHS sequence
     { ISD::SREM, MVT::v8i64, { 17 } }, // vpmullq-based MULHS+mul+sub sequence
     // The remainder's multiply-back is a single vpmullq with DQ, just like the
     // pmulld the vXi32 entries above rely on. Without DQ it is another
@@ -469,7 +469,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::UDIV, MVT::v16i32, {  5 } }, // pmuludq sequence
     { ISD::UREM, MVT::v16i32, {  7 } }, // pmuludq+mul+sub sequence
 
-    { ISD::UDIV, MVT::v8i64,  { 15 } }, // pmuludq-based MULHU sequence
+    { ISD::UDIV, MVT::v8i64,  { 9 } }, // pmuludq-based MULHU sequence
     { ISD::UREM, MVT::v8i64,  { 21 } }, // pmuludq-based MULHU+mul+sub sequence
   };
 
@@ -513,7 +513,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::UDIV, MVT::v8i32, {  5 } }, // pmuludq sequence
     { ISD::UREM, MVT::v8i32, {  7 } }, // pmuludq+mul+sub sequence
 
-    { ISD::UDIV, MVT::v4i64, { 15 } }, // pmuludq-based MULHU sequence
+    { ISD::UDIV, MVT::v4i64, { 9 } }, // pmuludq-based MULHU sequence
     { ISD::UREM, MVT::v4i64, { 21 } }, // pmuludq-based MULHU+mul+sub sequence
   };
 
@@ -616,9 +616,9 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
         return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX512DQConstCostTable[] = {
-    { ISD::SDIV, MVT::v4i64, { 19 } }, // vpmullq-based MULHS sequence
+    { ISD::SDIV, MVT::v4i64, { 9 } }, // vpmullq-based MULHS sequence
     { ISD::SREM, MVT::v4i64, { 21 } }, // vpmullq-based MULHS+mul+sub sequence
-    { ISD::SDIV, MVT::v8i64, { 19 } }, // vpmullq-based MULHS sequence
+    { ISD::SDIV, MVT::v8i64, { 9 } }, // vpmullq-based MULHS sequence
     { ISD::SREM, MVT::v8i64, { 21 } }, // vpmullq-based MULHS+mul+sub sequence
     // The remainder's multiply-back is a single vpmullq with DQ, whereas the
     // AVX512/AVX2 tables have to charge for another vpmuludq schoolbook.
@@ -648,7 +648,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::UDIV, MVT::v16i32, { 15 } }, // vpmuludq sequence
     { ISD::UREM, MVT::v16i32, { 17 } }, // vpmuludq+mul+sub sequence
 
-    { ISD::UDIV, MVT::v8i64,  { 22 } }, // vpmuludq-based MULHU sequence
+    { ISD::UDIV, MVT::v8i64,  { 9 } }, // vpmuludq-based MULHU sequence
     { ISD::UREM, MVT::v8i64,  { 28 } }, // vpmuludq-based MULHU+mul+sub sequence
   };
 
@@ -674,7 +674,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::UDIV, MVT::v8i32,  { 15 } }, // vpmuludq sequence
     { ISD::UREM, MVT::v8i32,  { 19 } }, // vpmuludq+mul+sub sequence
 
-    { ISD::UDIV, MVT::v4i64,  { 22 } }, // vpmuludq-based MULHU sequence
+    { ISD::UDIV, MVT::v4i64,  { 9 } }, // vpmuludq-based MULHU sequence
     { ISD::UREM, MVT::v4i64,  { 28 } }, // vpmuludq-based MULHU+mul+sub sequence
   };
 
