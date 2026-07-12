@@ -5,13 +5,13 @@ define void @foo(double %i) {
 ; CHECK-LABEL: define void @foo(
 ; CHECK-SAME: double [[I:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> <double 0.000000e+00, double 0.000000e+00, double poison, double 0.000000e+00>, double [[I]], i32 2
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> <double 0.000000e+00, double 0.000000e+00, double poison, double 0.000000e+00>, double [[I]], i64 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub <4 x double> zeroinitializer, [[TMP0]]
 ; CHECK-NEXT:    [[I82:%.*]] = fsub double 0.000000e+00, poison
 ; CHECK-NEXT:    [[I103:%.*]] = fsub double 0.000000e+00, [[I]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <8 x i32> <i32 poison, i32 0, i32 poison, i32 1, i32 poison, i32 0, i32 poison, i32 1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x double> [[TMP8]], <8 x double> <double 0.000000e+00, double poison, double poison, double poison, double 0.000000e+00, double poison, double poison, double poison>, <8 x i32> <i32 8, i32 1, i32 poison, i32 3, i32 12, i32 5, i32 poison, i32 7>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x double> [[TMP5]], double [[I82]], i32 2
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x double> [[TMP5]], double [[I82]], i64 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x double> [[TMP6]], <8 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 2, i32 7>
 ; CHECK-NEXT:    [[TMP12:%.*]] = fmul <8 x double> <double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>, [[TMP7]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = fadd <8 x double> zeroinitializer, [[TMP12]]

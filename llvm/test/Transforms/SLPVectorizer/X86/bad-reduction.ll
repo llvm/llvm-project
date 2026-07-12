@@ -559,7 +559,7 @@ define void @PR47450(ptr nocapture readonly %p) {
 ; CHECK-NEXT:    [[X:%.*]] = load i16, ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[X]] to i32
 ; CHECK-NEXT:    [[S:%.*]] = shl nuw nsw i32 [[Z]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[S]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[S]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr @output, align 16
 ; CHECK-NEXT:    ret void

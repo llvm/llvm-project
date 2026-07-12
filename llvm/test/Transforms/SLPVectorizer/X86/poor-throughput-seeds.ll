@@ -8,17 +8,17 @@ define void @prim(double %x, double %y, double %z, double %w, ptr %p0, ptr %p1) 
 ; CHECK-LABEL: define void @prim(
 ; CHECK-SAME: double [[X:%.*]], double [[Y:%.*]], double [[Z:%.*]], double [[W:%.*]], ptr [[P0:%.*]], ptr [[P1:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[X]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[Y]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[Z]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[W]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[X]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[Y]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[Z]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[W]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> [[TMP5]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv <2 x double> [[TMP6]], [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP7]], i64 0
 ; CHECK-NEXT:    [[X3:%.*]] = fsub double [[TMP8]], [[Z]]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP7]], i64 1
 ; CHECK-NEXT:    [[Y3:%.*]] = fadd double [[TMP9]], [[W]]
 ; CHECK-NEXT:    store double [[X3]], ptr [[P0]], align 8
 ; CHECK-NEXT:    store double [[Y3]], ptr [[P1]], align 8
@@ -53,17 +53,17 @@ define void @prim_sqrt(double %x, double %y, double %z, double %w, ptr %p0, ptr 
 ; CHECK-LABEL: define void @prim_sqrt(
 ; CHECK-SAME: double [[X:%.*]], double [[Y:%.*]], double [[Z:%.*]], double [[W:%.*]], ptr [[P0:%.*]], ptr [[P1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[X]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[Y]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[Z]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[W]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[X]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[Y]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[Z]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[W]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> [[TMP5]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP6]])
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP7]], i64 0
 ; CHECK-NEXT:    [[X3:%.*]] = fsub double [[TMP8]], [[Z]]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP7]], i64 1
 ; CHECK-NEXT:    [[Y3:%.*]] = fadd double [[TMP9]], [[W]]
 ; CHECK-NEXT:    store double [[X3]], ptr [[P0]], align 8
 ; CHECK-NEXT:    store double [[Y3]], ptr [[P1]], align 8
@@ -98,27 +98,27 @@ define void @prim_v4(double %x0, double %x1, double %x2, double %x3, double %d0,
 ; CHECK-LABEL: define void @prim_v4(
 ; CHECK-SAME: double [[X0:%.*]], double [[X1:%.*]], double [[X2:%.*]], double [[X3:%.*]], double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], ptr [[P0:%.*]], ptr [[P1:%.*]], ptr [[P2:%.*]], ptr [[P3:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[X0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[X2]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[D0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[D2]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[X0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[X2]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[D0]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[D2]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[X1]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP5]], double [[X3]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> poison, double [[D1]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP7]], double [[D3]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[X1]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP5]], double [[X3]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> poison, double [[D1]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP7]], double [[D3]], i64 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = fdiv <2 x double> [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fsub <2 x double> [[TMP10]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = fdiv <2 x double> [[TMP9]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = fadd <2 x double> [[TMP12]], [[TMP8]]
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x double> [[TMP11]], i32 0
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x double> [[TMP11]], i64 0
 ; CHECK-NEXT:    store double [[TMP14]], ptr [[P0]], align 8
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x double> [[TMP13]], i32 0
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x double> [[TMP13]], i64 0
 ; CHECK-NEXT:    store double [[TMP15]], ptr [[P1]], align 8
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x double> [[TMP11]], i32 1
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x double> [[TMP11]], i64 1
 ; CHECK-NEXT:    store double [[TMP16]], ptr [[P2]], align 8
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x double> [[TMP13]], i32 1
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x double> [[TMP13]], i64 1
 ; CHECK-NEXT:    store double [[TMP17]], ptr [[P3]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -129,25 +129,25 @@ define void @prim_v4(double %x0, double %x1, double %x2, double %x3, double %d0,
 ; DISABLED-NEXT:    [[A1:%.*]] = fadd double [[X1]], [[D1]]
 ; DISABLED-NEXT:    [[A2:%.*]] = fsub double [[X2]], [[D2]]
 ; DISABLED-NEXT:    [[A3:%.*]] = fadd double [[X3]], [[D3]]
-; DISABLED-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> poison, double [[A1]], i32 0
-; DISABLED-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> [[TMP0]], double [[A3]], i32 1
-; DISABLED-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[A0]], i32 2
-; DISABLED-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[A2]], i32 3
-; DISABLED-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> poison, double [[D1]], i32 0
-; DISABLED-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> [[TMP4]], double [[D3]], i32 1
-; DISABLED-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> [[TMP5]], double [[D0]], i32 2
-; DISABLED-NEXT:    [[TMP7:%.*]] = insertelement <4 x double> [[TMP6]], double [[D2]], i32 3
+; DISABLED-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> poison, double [[A1]], i64 0
+; DISABLED-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> [[TMP0]], double [[A3]], i64 1
+; DISABLED-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[A0]], i64 2
+; DISABLED-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[A2]], i64 3
+; DISABLED-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> poison, double [[D1]], i64 0
+; DISABLED-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> [[TMP4]], double [[D3]], i64 1
+; DISABLED-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> [[TMP5]], double [[D0]], i64 2
+; DISABLED-NEXT:    [[TMP7:%.*]] = insertelement <4 x double> [[TMP6]], double [[D2]], i64 3
 ; DISABLED-NEXT:    [[TMP8:%.*]] = fdiv <4 x double> [[TMP3]], [[TMP7]]
 ; DISABLED-NEXT:    [[TMP9:%.*]] = fadd <4 x double> [[TMP8]], [[TMP7]]
 ; DISABLED-NEXT:    [[TMP10:%.*]] = fsub <4 x double> [[TMP8]], [[TMP7]]
 ; DISABLED-NEXT:    [[TMP11:%.*]] = shufflevector <4 x double> [[TMP9]], <4 x double> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; DISABLED-NEXT:    [[TMP12:%.*]] = extractelement <4 x double> [[TMP11]], i32 2
+; DISABLED-NEXT:    [[TMP12:%.*]] = extractelement <4 x double> [[TMP11]], i64 2
 ; DISABLED-NEXT:    store double [[TMP12]], ptr [[P0]], align 8
-; DISABLED-NEXT:    [[TMP13:%.*]] = extractelement <4 x double> [[TMP11]], i32 0
+; DISABLED-NEXT:    [[TMP13:%.*]] = extractelement <4 x double> [[TMP11]], i64 0
 ; DISABLED-NEXT:    store double [[TMP13]], ptr [[P1]], align 8
-; DISABLED-NEXT:    [[TMP14:%.*]] = extractelement <4 x double> [[TMP11]], i32 3
+; DISABLED-NEXT:    [[TMP14:%.*]] = extractelement <4 x double> [[TMP11]], i64 3
 ; DISABLED-NEXT:    store double [[TMP14]], ptr [[P2]], align 8
-; DISABLED-NEXT:    [[TMP15:%.*]] = extractelement <4 x double> [[TMP11]], i32 1
+; DISABLED-NEXT:    [[TMP15:%.*]] = extractelement <4 x double> [[TMP11]], i64 1
 ; DISABLED-NEXT:    store double [[TMP15]], ptr [[P3]], align 8
 ; DISABLED-NEXT:    ret void
 ;

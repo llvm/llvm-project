@@ -831,6 +831,26 @@ TEST_F(TransportBinderTest, InBoundAsyncRequestsError) {
   Run();
 }
 
+TEST_F(TransportBinderTest, FailPendingRequests) {
+  OutgoingRequest<MyFnResult, MyFnParams> addFn =
+      binder->Bind<MyFnResult, MyFnParams>("add");
+  bool replied = false;
+  std::string message;
+  addFn(MyFnParams{1, 2}, [&](Expected<MyFnResult> result) {
+    replied = true;
+    message = toString(result.takeError());
+  });
+
+  // The request is now awaiting a response. FailPendingRequests fires its reply
+  // with an error, synchronously.
+  binder->FailPendingRequests("connection closed");
+  EXPECT_TRUE(replied);
+  EXPECT_THAT(message, HasSubstr("connection closed"));
+
+  // A second call is a no-op: nothing is left pending.
+  binder->FailPendingRequests("again");
+}
+
 // Out-bound binding event handler.
 TEST_F(TransportBinderTest, OutBoundEvents) {
   OutgoingEvent<MyFnParams> emitEvent = binder->Bind<MyFnParams>("evt");

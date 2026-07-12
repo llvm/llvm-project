@@ -4,9 +4,9 @@
 define float @test() {
 ; CHECK-LABEL: define float @test() {
 ; CHECK-NEXT:  [[LABEL:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <12 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef>, float 0.000000e+00, i32 5
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <12 x float> <float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef, float 0.000000e+00, float 0.000000e+00, float undef>, float 0.000000e+00, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <12 x float> [[TMP1]], float 0.000000e+00, i32 8
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <12 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef>, float 0.000000e+00, i64 5
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <12 x float> <float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef, float 0.000000e+00, float 0.000000e+00, float undef>, float 0.000000e+00, i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <12 x float> [[TMP1]], float 0.000000e+00, i64 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <12 x float> [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <12 x float> [[TMP3]], <float 0.000000e+00, float 0.000000e+00, float -0.000000e+00, float 0.000000e+00, float -0.000000e+00, float 0.000000e+00, float -0.000000e+00, float 0.000000e+00, float 0.000000e+00, float -0.000000e+00, float 0.000000e+00, float poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = fsub <8 x float> zeroinitializer, <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison>
@@ -17,7 +17,7 @@ define float @test() {
 ; CHECK-NEXT:    br label %[[REGION_30:.*]]
 ; CHECK:       [[REGION_30]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = phi <20 x float> [ [[TMP9]], %[[LABEL]] ]
-; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <20 x float> [[TMP10]], i32 10
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <20 x float> [[TMP10]], i64 10
 ; CHECK-NEXT:    ret float [[TMP27]]
 ;
 label:

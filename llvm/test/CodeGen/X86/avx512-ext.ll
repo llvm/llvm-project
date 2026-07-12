@@ -1863,11 +1863,22 @@ define void @extload_v8i64(ptr %a, ptr %res) {
 define <64 x i16> @test21(<64 x i16> %x , <64 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: test21:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; KNL-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm3
-; KNL-NEXT:    vpmovqb %zmm3, %xmm3
-; KNL-NEXT:    vpmovqb %zmm2, %xmm2
-; KNL-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; KNL-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; KNL-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero,xmm2[8],zero,zero,zero,xmm2[9],zero,zero,zero,xmm2[10],zero,zero,zero,xmm2[11],zero,zero,zero,xmm2[12],zero,zero,zero,xmm2[13],zero,zero,zero,xmm2[14],zero,zero,zero,xmm2[15],zero,zero,zero
 ; KNL-NEXT:    vpbroadcastd {{.*#+}} zmm3 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; KNL-NEXT:    vptestmd %zmm3, %zmm2, %k1
@@ -1889,18 +1900,40 @@ define <64 x i16> @test21(<64 x i16> %x , <64 x i1> %mask) nounwind readnone {
 ; KNL-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero,xmm2[8],zero,zero,zero,xmm2[9],zero,zero,zero,xmm2[10],zero,zero,zero,xmm2[11],zero,zero,zero,xmm2[12],zero,zero,zero,xmm2[13],zero,zero,zero,xmm2[14],zero,zero,zero,xmm2[15],zero,zero,zero
 ; KNL-NEXT:    vptestmd %zmm3, %zmm2, %k2
-; KNL-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; KNL-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm4
-; KNL-NEXT:    vpmovqb %zmm4, %xmm4
-; KNL-NEXT:    vpmovqb %zmm2, %xmm2
-; KNL-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm4[0]
+; KNL-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; KNL-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero,xmm2[8],zero,zero,zero,xmm2[9],zero,zero,zero,xmm2[10],zero,zero,zero,xmm2[11],zero,zero,zero,xmm2[12],zero,zero,zero,xmm2[13],zero,zero,zero,xmm2[14],zero,zero,zero,xmm2[15],zero,zero,zero
 ; KNL-NEXT:    vptestmd %zmm3, %zmm2, %k3
-; KNL-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; KNL-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm4
-; KNL-NEXT:    vpmovqb %zmm4, %xmm4
-; KNL-NEXT:    vpmovqb %zmm2, %xmm2
-; KNL-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm4[0]
+; KNL-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; KNL-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; KNL-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero,xmm2[8],zero,zero,zero,xmm2[9],zero,zero,zero,xmm2[10],zero,zero,zero,xmm2[11],zero,zero,zero,xmm2[12],zero,zero,zero,xmm2[13],zero,zero,zero,xmm2[14],zero,zero,zero,xmm2[15],zero,zero,zero
 ; KNL-NEXT:    vptestmd %zmm3, %zmm2, %k4
 ; KNL-NEXT:    vpternlogd {{.*#+}} zmm2 {%k4} {z} = -1
@@ -1928,11 +1961,22 @@ define <64 x i16> @test21(<64 x i16> %x , <64 x i1> %mask) nounwind readnone {
 ;
 ; AVX512DQNOBW-LABEL: test21:
 ; AVX512DQNOBW:       # %bb.0:
-; AVX512DQNOBW-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; AVX512DQNOBW-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm3
-; AVX512DQNOBW-NEXT:    vpmovqb %zmm3, %xmm3
-; AVX512DQNOBW-NEXT:    vpmovqb %zmm2, %xmm2
-; AVX512DQNOBW-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; AVX512DQNOBW-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; AVX512DQNOBW-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; AVX512DQNOBW-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero,xmm2[8],zero,zero,zero,xmm2[9],zero,zero,zero,xmm2[10],zero,zero,zero,xmm2[11],zero,zero,zero,xmm2[12],zero,zero,zero,xmm2[13],zero,zero,zero,xmm2[14],zero,zero,zero,xmm2[15],zero,zero,zero
 ; AVX512DQNOBW-NEXT:    vpbroadcastd {{.*#+}} zmm3 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; AVX512DQNOBW-NEXT:    vptestmd %zmm3, %zmm2, %k0
@@ -1954,18 +1998,40 @@ define <64 x i16> @test21(<64 x i16> %x , <64 x i1> %mask) nounwind readnone {
 ; AVX512DQNOBW-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; AVX512DQNOBW-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero,xmm2[8],zero,zero,zero,xmm2[9],zero,zero,zero,xmm2[10],zero,zero,zero,xmm2[11],zero,zero,zero,xmm2[12],zero,zero,zero,xmm2[13],zero,zero,zero,xmm2[14],zero,zero,zero,xmm2[15],zero,zero,zero
 ; AVX512DQNOBW-NEXT:    vptestmd %zmm3, %zmm2, %k1
-; AVX512DQNOBW-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; AVX512DQNOBW-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm4
-; AVX512DQNOBW-NEXT:    vpmovqb %zmm4, %xmm4
-; AVX512DQNOBW-NEXT:    vpmovqb %zmm2, %xmm2
-; AVX512DQNOBW-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm4[0]
+; AVX512DQNOBW-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; AVX512DQNOBW-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; AVX512DQNOBW-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero,xmm2[8],zero,zero,zero,xmm2[9],zero,zero,zero,xmm2[10],zero,zero,zero,xmm2[11],zero,zero,zero,xmm2[12],zero,zero,zero,xmm2[13],zero,zero,zero,xmm2[14],zero,zero,zero,xmm2[15],zero,zero,zero
 ; AVX512DQNOBW-NEXT:    vptestmd %zmm3, %zmm2, %k2
-; AVX512DQNOBW-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; AVX512DQNOBW-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm4
-; AVX512DQNOBW-NEXT:    vpmovqb %zmm4, %xmm4
-; AVX512DQNOBW-NEXT:    vpmovqb %zmm2, %xmm2
-; AVX512DQNOBW-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm4[0]
+; AVX512DQNOBW-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; AVX512DQNOBW-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; AVX512DQNOBW-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero,xmm2[8],zero,zero,zero,xmm2[9],zero,zero,zero,xmm2[10],zero,zero,zero,xmm2[11],zero,zero,zero,xmm2[12],zero,zero,zero,xmm2[13],zero,zero,zero,xmm2[14],zero,zero,zero,xmm2[15],zero,zero,zero
 ; AVX512DQNOBW-NEXT:    vptestmd %zmm3, %zmm2, %k3
 ; AVX512DQNOBW-NEXT:    vpmovm2d %k3, %zmm2

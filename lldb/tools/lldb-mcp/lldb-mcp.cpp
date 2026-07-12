@@ -93,7 +93,7 @@ llvm::Error launch() {
   return Host::LaunchProcess(info).takeError();
 }
 
-Expected<ServerInfo> loadOrStart(
+Expected<std::vector<ServerInfo>> loadOrStart(
     // FIXME: This should become a CLI arg.
     lldb_private::Timeout<std::micro> timeout = std::chrono::seconds(30)) {
   using namespace std::chrono;
@@ -117,12 +117,7 @@ Expected<ServerInfo> loadOrStart(
       continue;
     }
 
-    // FIXME: Support selecting / multiplexing a specific lldb instance.
-    if (servers->size() > 1)
-      return createStringError("too many MCP servers running, picking a "
-                               "specific one is not yet implemented");
-
-    return servers->front();
+    return std::move(*servers);
   }
 
   return createStringError("timed out waiting for MCP server to start");
@@ -206,9 +201,9 @@ int main(int argc, char *argv[]) {
   IOObjectSP output_sp = std::make_shared<NativeFile>(
       fileno(stdout), File::eOpenOptionWriteOnly, NativeFile::Unowned);
 
-  Expected<ServerInfo> server_info = loadOrStart();
-  if (!server_info)
-    exitWithError(server_info.takeError());
+  Expected<std::vector<ServerInfo>> servers = loadOrStart();
+  if (!servers)
+    exitWithError(servers.takeError());
 
   static MainLoop loop;
   sys::SetInterruptFunction([]() {
@@ -216,24 +211,46 @@ int main(int argc, char *argv[]) {
         [](MainLoopBase &loop) { loop.RequestTermination(); });
   });
 
-  // Connect to the backend LLDB MCP server and drive it as an MCP client.
-  Expected<IOObjectSP> backend_io = connectToServer(*server_info);
-  if (!backend_io)
-    exitWithError(backend_io.takeError());
-
-  auto backend_transport = std::make_unique<lldb_protocol::mcp::Transport>(
-      loop, *backend_io, *backend_io, makeLogCallback());
-  auto backend = std::make_unique<lldb_protocol::mcp::Client>(
-      std::move(backend_transport), makeLogCallback());
-  if (llvm::Error error = backend->Run())
-    exitWithError(std::move(error));
-
   // Present a unified MCP server to the client over stdio.
   auto client_transport = std::make_unique<lldb_protocol::mcp::Transport>(
       loop, input_sp, output_sp, makeLogCallback());
   lldb_mcp::Multiplexer multiplexer(std::move(client_transport),
                                     makeLogCallback());
-  multiplexer.AddBackend(std::move(backend));
+
+  // A stale registry entry left by a crashed instance fails to connect; skip it
+  // rather than aborting.
+  LogCallback log = makeLogCallback();
+  size_t connected = 0;
+  for (const ServerInfo &info : *servers) {
+    Expected<IOObjectSP> backend_io = connectToServer(info);
+    if (!backend_io) {
+      std::string reason = toString(backend_io.takeError());
+      if (log)
+        log(formatv("skipping unreachable MCP server (pid {0}): {1}", info.pid,
+                    reason)
+                .str());
+      continue;
+    }
+
+    auto backend_transport = std::make_unique<lldb_protocol::mcp::Transport>(
+        loop, *backend_io, *backend_io, makeLogCallback());
+    auto backend = std::make_unique<lldb_protocol::mcp::Client>(
+        std::move(backend_transport), makeLogCallback());
+    if (llvm::Error error = backend->Run()) {
+      std::string reason = toString(std::move(error));
+      if (log)
+        log(formatv("skipping MCP server (pid {0}): {1}", info.pid, reason)
+                .str());
+      continue;
+    }
+
+    multiplexer.AddBackend(info.pid, std::move(backend));
+    ++connected;
+  }
+
+  if (connected == 0)
+    exitWithError(createStringError("failed to connect to any MCP server"));
+
   multiplexer.SetDisconnectHandler([]() { loop.RequestTermination(); });
   if (llvm::Error error = multiplexer.Run())
     exitWithError(std::move(error));
@@ -241,5 +258,8 @@ int main(int argc, char *argv[]) {
   if (llvm::Error error = loop.Run().takeError())
     exitWithError(std::move(error));
 
+  // The client is gone; fail any requests still in flight to a backend so their
+  // replies are satisfied rather than destroyed unanswered during teardown.
+  multiplexer.Shutdown();
   return EXIT_SUCCESS;
 }

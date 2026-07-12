@@ -128,9 +128,6 @@ Potentially breaking changes
   ``_LIBCPP_ABI_NO_ITERATOR_BASES``. If you are using this flag and care about ABI stability, you should set
   ``_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER`` as well.
 
-- ``std::exception_ptr`` on Windows no longer relies on STL and is now implemented entirely within libc++.
-  The implementation was donated by Microsoft and has been refactored to follow libc++ standards and conventions.
-
 Announcements About Future Releases
 -----------------------------------
 
@@ -156,9 +153,6 @@ ABI Affecting Changes
 - ``bitset::operator[]`` now returns ``bool``, making libc++ conforming. The behaviour can be reverted by defining
   ``_LIBCPP_DEPRECATED_ABI_BITSET_CONST_SUBSCRIPT_RETURN_REF``. Please inform the libc++ team if you need this flag,
   since it will be removed in LLVM 24 if there is no evidence that it's required.
-
-- ``std::exception_ptr`` now uses the same layout on Windows as on other platforms, changing the size from two to one
-  pointer.
 
 Build System Changes
 --------------------

@@ -375,46 +375,6 @@ template <class ELFT> void Writer<ELFT>::run() {
   }
 }
 
-template <class ELFT, class RelTy>
-static void markUsedLocalSymbolsImpl(ObjFile<ELFT> *file,
-                                     llvm::ArrayRef<RelTy> rels) {
-  for (const RelTy &rel : rels) {
-    Symbol &sym = file->getRelocTargetSym(rel);
-    if (sym.isLocal())
-      sym.setFlags(USED);
-  }
-}
-
-// The function ensures that the USED flag of local symbols reflects the fact
-// that the symbol is used in a relocation from a live section.
-template <class ELFT> static void markUsedLocalSymbols(Ctx &ctx) {
-  // With --gc-sections, the field is already filled.
-  // See MarkLive<ELFT>::resolveReloc().
-  if (ctx.arg.gcSections)
-    return;
-  for (ELFFileBase *file : ctx.objectFiles) {
-    ObjFile<ELFT> *f = cast<ObjFile<ELFT>>(file);
-    for (InputSectionBase *s : f->getSections()) {
-      InputSection *isec = dyn_cast_or_null<InputSection>(s);
-      if (!isec)
-        continue;
-      if (isec->type == SHT_REL) {
-        markUsedLocalSymbolsImpl(f, isec->getDataAs<typename ELFT::Rel>());
-      } else if (isec->type == SHT_RELA) {
-        markUsedLocalSymbolsImpl(f, isec->getDataAs<typename ELFT::Rela>());
-      } else if (isec->type == SHT_CREL) {
-        // The is64=true variant also works with ELF32 since only the r_symidx
-        // member is used.
-        for (Elf_Crel_Impl<true> r : RelocsCrel<true>(isec->content_)) {
-          Symbol &sym = file->getSymbol(r.r_symidx);
-          if (sym.isLocal())
-            sym.setFlags(USED);
-        }
-      }
-    }
-  }
-}
-
 static bool shouldKeepInSymtab(Ctx &ctx, const Defined &sym) {
   if (sym.isSection())
     return false;
@@ -826,6 +786,22 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
       addOptionalRegular(ctx, name, ctx.out.elfHeader.get(), 0, STV_HIDDEN);
 }
 
+static bool updateRelIpltSymbols(Ctx &ctx) {
+  if (ctx.sym.relaIpltStart) {
+    auto &dyn = getIRelativeSection(ctx);
+    if (dyn.isNeeded()) {
+      SectionBase *oldSec = ctx.sym.relaIpltEnd->section;
+      uint64_t oldVal = ctx.sym.relaIpltEnd->value;
+      ctx.sym.relaIpltStart->section = &dyn;
+      ctx.sym.relaIpltEnd->section = &dyn;
+      ctx.sym.relaIpltEnd->value = dyn.getSize();
+      return (oldSec != ctx.sym.relaIpltEnd->section ||
+              oldVal != ctx.sym.relaIpltEnd->value);
+    }
+  }
+  return false;
+}
+
 // This function generates assignments for predefined symbols (e.g. _end or
 // _etext) and inserts them into the commands sequence to be processed at the
 // appropriate time. This ensures that the value is going to be correct by the
@@ -844,14 +820,7 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
 
   // .rela_iplt_{start,end} mark the start and the end of the section containing
   // IRELATIVE relocations.
-  if (ctx.sym.relaIpltStart) {
-    auto &dyn = getIRelativeSection(ctx);
-    if (dyn.isNeeded()) {
-      ctx.sym.relaIpltStart->section = &dyn;
-      ctx.sym.relaIpltEnd->section = &dyn;
-      ctx.sym.relaIpltEnd->value = dyn.getSize();
-    }
-  }
+  (void)updateRelIpltSymbols(ctx);
 
   PhdrEntry *last = nullptr;
   OutputSection *lastRO = nullptr;
@@ -1577,6 +1546,18 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       changed |= ctx.in.relrDyn->updateAllocSize(ctx);
     if (ctx.in.relrAuthDyn)
       changed |= ctx.in.relrAuthDyn->updateAllocSize(ctx);
+    if (ctx.in.relrAuthDyn && ctx.in.dynamic && ctx.in.dynamic->getParent()) {
+      size_t oldSize = ctx.in.dynamic->getSize();
+      finalizeSynthetic(ctx, ctx.in.dynamic.get());
+      changed |= (oldSize != ctx.in.dynamic->getSize());
+    }
+
+    // .rela_iplt_{start,end} mark the start and the end of the section
+    // containing IRELATIVE relocations. Update them on each iteration because
+    // they might be affected by the above move of relocations from
+    // .relr.auth.dyn to .rela.dyn.
+    changed |= updateRelIpltSymbols(ctx);
+
     if (ctx.in.memtagGlobalDescriptors)
       changed |= ctx.in.memtagGlobalDescriptors->updateAllocSize(ctx);
     if (ctx.in.ehFrameHdr && ctx.in.ehFrameHdr->isNeeded())
@@ -1766,7 +1747,8 @@ static void removeUnusedSyntheticSections(Ctx &ctx) {
         // Conservatively keep .rela.dyn. .relr.auth.dyn can be made empty, but
         // we would fail to remove it here.
         if (ctx.arg.emachine == EM_AARCH64 && ctx.arg.relrPackDynRelocs &&
-            sec == ctx.in.relaDyn.get())
+            sec == ctx.in.relaDyn.get() && ctx.in.relrAuthDyn &&
+            ctx.in.relrAuthDyn->isNeeded())
           return false;
         unused.insert(sec);
         return true;
@@ -1875,8 +1857,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   demoteSymbolsAndComputeIsPreemptible(ctx);
 
-  if (ctx.arg.copyRelocs && ctx.arg.discard != DiscardPolicy::None)
-    markUsedLocalSymbols<ELFT>(ctx);
   demoteAndCopyLocalSymbols(ctx);
 
   if (ctx.arg.copyRelocs)

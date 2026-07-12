@@ -1,0 +1,8 @@
+# Check that an unrecognized ORC_RT_LOG value is reported once and then ignored
+# (logging proceeds at the default threshold).
+#
+# REQUIRES: orc-rt-log-level-error
+# RUN: env ORC_RT_LOG=bogus orc-rt-log-check 2>&1 | FileCheck %s
+
+# CHECK:      [orc-rt:General:ERROR] ignoring unrecognized ORC_RT_LOG value 'bogus'
+# CHECK-NEXT: [orc-rt:General:ERROR] error message

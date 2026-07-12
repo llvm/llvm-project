@@ -17,10 +17,10 @@ define  void @foo (ptr %A, ptr %B, ptr %Result) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], ptr [[B]], i64 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x float>, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> poison, float [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> poison, float [[TMP5]], i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul <2 x float> [[TMP8]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x float> poison, float [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x float> poison, float [[TMP7]], i64 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x float> [[TMP12]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = fmul <2 x float> [[TMP8]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x float> [[TMP14]], <2 x float> poison, <2 x i32> <i32 1, i32 0>

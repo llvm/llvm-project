@@ -80,12 +80,13 @@ public:
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
   template <class ELFT, class RelTy>
-  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
-  void scanSection(InputSectionBase &sec) override {
+  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                       unsigned shard);
+  void scanSection(InputSectionBase &sec, unsigned shard) override {
     if (ctx.arg.ekind == ELF64BEKind)
-      elf::scanSection1<AArch64, ELF64BE>(*this, sec);
+      elf::scanSection1<AArch64, ELF64BE>(*this, sec, shard);
     else
-      elf::scanSection1<AArch64, ELF64LE>(*this, sec);
+      elf::scanSection1<AArch64, ELF64LE>(*this, sec, shard);
   }
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
                   uint64_t branchAddr, const Symbol &s,
@@ -192,8 +193,9 @@ bool AArch64::usesOnlyLowPageBits(RelType type) const {
 }
 
 template <class ELFT, class RelTy>
-void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
+void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                              unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
   sec.relocations.reserve(rels.size());
 
   for (auto it = rels.begin(); it != rels.end(); ++it) {

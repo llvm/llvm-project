@@ -6,8 +6,8 @@
 ; nsw and the vector op must not be nsw.
 define void @mul_intmin_converted_to_shl(ptr %p, i32 %x, i32 %y) {
 ; CHECK-LABEL: @mul_intmin_converted_to_shl(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[Y:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl <2 x i32> [[TMP2]], <i32 1, i32 31>
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -23,8 +23,8 @@ define void @mul_intmin_converted_to_shl(ptr %p, i32 %x, i32 %y) {
 ; The mul lane keeps its own opcode (no conversion), so nsw stays valid.
 define void @keep_nsw_same_opcode(ptr %p, i32 %x, i32 %y) {
 ; CHECK-LABEL: @keep_nsw_same_opcode(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[Y:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw <2 x i32> [[TMP2]], <i32 2, i32 -2147483648>
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -40,8 +40,8 @@ define void @keep_nsw_same_opcode(ptr %p, i32 %x, i32 %y) {
 ; Non-INT_MIN power-of-2 mul converted to shl preserves nsw.
 define void @keep_nsw_non_intmin(ptr %p, i32 %x, i32 %y) {
 ; CHECK-LABEL: @keep_nsw_non_intmin(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[Y:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw <2 x i32> [[TMP2]], <i32 1, i32 2>
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void

@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
@@ -393,15 +394,13 @@ public:
 
   TreeTy* add(TreeTy* T, value_type_ref V) {
     T = add_internal(V,T);
-    markImmutable(T);
-    recoverNodes();
+    recoverNodes(T);
     return T;
   }
 
   TreeTy* remove(TreeTy* T, key_type_ref V) {
     T = remove_internal(V,T);
-    markImmutable(T);
-    recoverNodes();
+    recoverNodes(T);
     return T;
   }
 
@@ -460,11 +459,20 @@ protected:
     return createNode(newLeft, getValue(oldTree), newRight);
   }
 
-  void recoverNodes() {
-    for (unsigned i = 0, n = createdNodes.size(); i < n; ++i) {
-      TreeTy *N = createdNodes[i];
-      if (N->isMutable() && N->refCount == 0)
+  void recoverNodes(TreeTy *Result) {
+    // Mark Result's nodes immutable and reclaim the intermediates discarded
+    // during balancing, in one pass. Nodes are built bottom-up, so a node
+    // precedes its parents in createdNodes; visiting in reverse thus reaches
+    // each node only once its reference count is final. Unreferenced nodes are
+    // unreachable and destroyed; the rest belong to Result. Result is kept
+    // despite its zero count -- the caller has not taken ownership yet.
+    for (TreeTy *N : llvm::reverse(createdNodes)) {
+      if (!N->isMutable())
+        continue; // Already reclaimed while destroying an unreachable parent.
+      if (N != Result && N->refCount == 0)
         N->destroy();
+      else
+        N->markImmutable();
     }
     createdNodes.clear();
   }
@@ -592,15 +600,6 @@ protected:
     }
     return balanceTree(removeMinBinding(getLeft(T), Noderemoved),
                        getValue(T), getRight(T));
-  }
-
-  /// Clears the mutable bits of a root and all of its descendants.
-  void markImmutable(TreeTy* T) {
-    if (!T || !T->isMutable())
-      return;
-    T->markImmutable();
-    markImmutable(getLeft(T));
-    markImmutable(getRight(T));
   }
 
 public:

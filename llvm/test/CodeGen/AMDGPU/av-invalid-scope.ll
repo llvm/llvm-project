@@ -1,5 +1,5 @@
-; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx942 -filetype=null < %s 2>&1 | FileCheck %s
-; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx942 -filetype=null < %s 2>&1 | FileCheck %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu9.42 -filetype=null < %s 2>&1 | FileCheck %s
+; RUN: not llc -global-isel=1 -mtriple=amdgpu9.42 -filetype=null < %s 2>&1 | FileCheck %s
 
 ; CHECK: error: {{.*}}: in function av_load_bad_scope {{.*}}: Unsupported non-inclusive atomic synchronization scope
 ; CHECK: error: {{.*}}: in function av_store_bad_scope {{.*}}: Unsupported non-inclusive atomic synchronization scope

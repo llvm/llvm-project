@@ -129,6 +129,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/FixIrreducible.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -308,16 +309,18 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
                         << (Succ0 && Succ1 ? " " : "") << printBasicBlock(Succ1)
                         << '\n');
     } else if (CallBrInst *CallBr = dyn_cast<CallBrInst>(P->getTerminator())) {
+      BasicBlock *NewSucc = nullptr;
       for (unsigned I = 0; I < CallBr->getNumSuccessors(); ++I) {
         BasicBlock *Succ = CallBr->getSuccessor(I);
         if (Succ != Header)
           continue;
-        BasicBlock *NewSucc = SplitCallBrEdge(P, Succ, I, &DTU, &CI, LI);
-        CHub.addBranch(NewSucc, Succ);
+        NewSucc = SplitCallBrEdge(P, Succ, I, NewSucc, &DTU, &CI, LI);
         LLVM_DEBUG(dbgs() << "Added internal branch: "
                           << printBasicBlock(NewSucc) << " -> "
                           << printBasicBlock(Succ) << '\n');
       }
+      if (NewSucc)
+        CHub.addBranch(NewSucc, Header);
     } else {
       reportFatalUsageError("unsupported block terminator: fix-irreducible "
                             "only supports br and callbr instructions");
@@ -353,12 +356,23 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
                         << (Succ0 && Succ1 ? " " : "") << printBasicBlock(Succ1)
                         << '\n');
     } else if (CallBrInst *CallBr = dyn_cast<CallBrInst>(P->getTerminator())) {
+      SmallDenseMap<BasicBlock *, BasicBlock *> CallBrTargets;
       for (unsigned I = 0; I < CallBr->getNumSuccessors(); ++I) {
         BasicBlock *Succ = CallBr->getSuccessor(I);
         if (!C.contains(Succ))
           continue;
-        BasicBlock *NewSucc = SplitCallBrEdge(P, Succ, I, &DTU, &CI, LI);
-        CHub.addBranch(NewSucc, Succ);
+        auto It = CallBrTargets.find(Succ);
+        BasicBlock *ExistingTarget =
+            (It != CallBrTargets.end()) ? It->second : nullptr;
+
+        BasicBlock *NewSucc =
+            SplitCallBrEdge(P, Succ, I, ExistingTarget, &DTU, &CI, LI);
+
+        if (!ExistingTarget) {
+          CHub.addBranch(NewSucc, Succ);
+          CallBrTargets[Succ] = NewSucc;
+        }
+
         LLVM_DEBUG(dbgs() << "Added external branch: "
                           << printBasicBlock(NewSucc) << " -> "
                           << printBasicBlock(Succ) << '\n');

@@ -592,6 +592,19 @@ public:
       m_disconnect_handler();
   }
 
+  /// Fails every in-flight outgoing request, invoking its reply with an error.
+  /// Call when the connection is going away, so pending replies are satisfied
+  /// rather than destroyed unanswered.
+  void FailPendingRequests(llvm::StringRef reason) {
+    std::scoped_lock<std::recursive_mutex> guard(m_mutex);
+    std::map<Id, Callback<void(const Resp &)>> pending;
+    std::swap(pending, m_pending_responses);
+    for (auto &entry : pending) {
+      Req req = Proto::Make(entry.first, /*method=*/"", std::nullopt);
+      entry.second(Proto::Make(req, llvm::createStringError(reason)));
+    }
+  }
+
 private:
   template <typename T>
   llvm::Expected<T> static Parse(const llvm::json::Value &raw,

@@ -34,12 +34,12 @@ define fastcc i32 @test(ptr %0, <2 x float> %1, i1 %2, float %3, float %4) {
 ; CHECK-NEXT:    [[TMP30:%.*]] = fcmp olt float [[TMP21]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[TMP30]], label %[[BB57]], label %[[BB31:.*]]
 ; CHECK:       [[BB31]]:
-; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x float> poison, float [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x float> poison, float [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = shufflevector <4 x float> [[TMP32]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP34:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP33]], <4 x float> zeroinitializer, <4 x float> zeroinitializer)
-; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <4 x float> [[TMP25]], i32 0
+; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <4 x float> [[TMP25]], i64 0
 ; CHECK-NEXT:    [[TMP38:%.*]] = fsub float [[TMP15]], [[TMP37]]
-; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <4 x float> [[TMP25]], i32 1
+; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <4 x float> [[TMP25]], i64 1
 ; CHECK-NEXT:    [[TMP49:%.*]] = fsub float [[TMP17]], [[TMP48]]
 ; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <2 x float> zeroinitializer, float [[TMP14]], i64 0
 ; CHECK-NEXT:    [[TMP40:%.*]] = shufflevector <4 x float> [[TMP25]], <4 x float> poison, <2 x i32> <i32 poison, i32 2>
@@ -61,7 +61,7 @@ define fastcc i32 @test(ptr %0, <2 x float> %1, i1 %2, float %3, float %4) {
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[BB57]], label %[[BB53:.*]]
 ; CHECK:       [[BB53]]:
 ; CHECK-NEXT:    [[TMP54:%.*]] = extractelement <2 x float> [[TMP1]], i64 0
-; CHECK-NEXT:    [[TMP55:%.*]] = extractelement <4 x float> [[TMP25]], i32 3
+; CHECK-NEXT:    [[TMP55:%.*]] = extractelement <4 x float> [[TMP25]], i64 3
 ; CHECK-NEXT:    br label %[[BB57]]
 ; CHECK:       [[TMP56]]:
 ; CHECK-NEXT:    br label %[[BB8]]

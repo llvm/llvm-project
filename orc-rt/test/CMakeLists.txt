@@ -13,6 +13,7 @@ if (ORC_RT_LLVM_TOOLS_AVAILABLE)
 
   list(APPEND ORC_RT_TEST_DEPS
     orc-executor
+    orc-rt-log-check
     orc-rt-smoke-check
   )
 

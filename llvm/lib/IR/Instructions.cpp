@@ -1754,7 +1754,7 @@ bool InsertElementInst::isValidOperands(const Value *Vec, const Value *Elt,
     return false;// Second operand of insertelement must be vector element type.
 
   if (!Index->getType()->isIntegerTy())
-    return false;  // Third operand of insertelement must be i32.
+    return false; // Third operand of insertelement must be an integer.
   return true;
 }
 

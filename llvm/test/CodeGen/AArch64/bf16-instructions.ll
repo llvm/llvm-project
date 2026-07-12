@@ -8,6 +8,14 @@
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_i64
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_i32
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_i64
+; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i8
+; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i16
+; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i32
+; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i64
+; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i8
+; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i16
+; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i32
+; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i64
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i32
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i64
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i32
@@ -21,6 +29,14 @@
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_i64
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_i32
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_i64
+; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i8
+; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i16
+; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i32
+; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i64
+; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i8
+; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i16
+; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i32
+; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i64
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i32
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i64
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i32
@@ -29,6 +45,9 @@
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i32_fadd
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fpext_double
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fpext_double_fast
+;
+;
+;
 ;
 
 define bfloat @test_fadd(bfloat %a, bfloat %b) #0 {
@@ -1580,6 +1599,112 @@ define i64 @test_fptoui_i64(bfloat %a) #0 {
 ; CHECK-NEXT:    ret
   %r = fptoui bfloat %a to i64
   ret i64 %r
+}
+
+define i8 @test_fptosi_sat_i8(bfloat %a) {
+; CHECK-LABEL: test_fptosi_sat_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-NEXT:    mov w8, #127 // =0x7f
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcvtzs w9, s0
+; CHECK-NEXT:    cmp w9, #127
+; CHECK-NEXT:    csel w8, w9, w8, lt
+; CHECK-NEXT:    mov w9, #-128 // =0xffffff80
+; CHECK-NEXT:    cmn w8, #128
+; CHECK-NEXT:    csel w0, w8, w9, gt
+; CHECK-NEXT:    ret
+  %i = call i8 @llvm.fptosi.sat.i8.bf16(bfloat %a)
+  ret i8 %i
+}
+
+define i16 @test_fptosi_sat_i16(bfloat %a) {
+; CHECK-LABEL: test_fptosi_sat_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-NEXT:    mov w9, #32767 // =0x7fff
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcvtzs w8, s0
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    csel w8, w8, w9, lt
+; CHECK-NEXT:    mov w9, #-32768 // =0xffff8000
+; CHECK-NEXT:    cmn w8, #8, lsl #12 // =32768
+; CHECK-NEXT:    csel w0, w8, w9, gt
+; CHECK-NEXT:    ret
+  %i = call i16 @llvm.fptosi.sat.i16.bf16(bfloat %a)
+  ret i16 %i
+}
+
+define i32 @test_fptosi_sat_i32(bfloat %a) {
+; CHECK-LABEL: test_fptosi_sat_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcvtzs w0, s0
+; CHECK-NEXT:    ret
+  %i = call i32 @llvm.fptosi.sat.i32.bf16(bfloat %a)
+  ret i32 %i
+}
+
+define i64 @test_fptosi_sat_i64(bfloat %a) {
+; CHECK-LABEL: test_fptosi_sat_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcvtzs x0, s0
+; CHECK-NEXT:    ret
+  %i = call i64 @llvm.fptosi.sat.i64.bf16(bfloat %a)
+  ret i64 %i
+}
+
+define i8 @test_fptoui_sat_i8(bfloat %a) {
+; CHECK-LABEL: test_fptoui_sat_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-NEXT:    mov w8, #255 // =0xff
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcvtzu w9, s0
+; CHECK-NEXT:    cmp w9, #255
+; CHECK-NEXT:    csel w0, w9, w8, lo
+; CHECK-NEXT:    ret
+  %i = call i8 @llvm.fptoui.sat.i8.bf16(bfloat %a)
+  ret i8 %i
+}
+
+define i16 @test_fptoui_sat_i16(bfloat %a) {
+; CHECK-LABEL: test_fptoui_sat_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-NEXT:    mov w9, #65535 // =0xffff
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcvtzu w8, s0
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    csel w0, w8, w9, lo
+; CHECK-NEXT:    ret
+  %i = call i16 @llvm.fptoui.sat.i16.bf16(bfloat %a)
+  ret i16 %i
+}
+
+define i32 @test_fptoui_sat_i32(bfloat %a) {
+; CHECK-LABEL: test_fptoui_sat_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcvtzu w0, s0
+; CHECK-NEXT:    ret
+  %i = call i32 @llvm.fptoui.sat.i32.bf16(bfloat %a)
+  ret i32 %i
+}
+
+define i64 @test_fptoui_sat_i64(bfloat %a) {
+; CHECK-LABEL: test_fptoui_sat_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcvtzu x0, s0
+; CHECK-NEXT:    ret
+  %i = call i64 @llvm.fptoui.sat.i64.bf16(bfloat %a)
+  ret i64 %i
 }
 
 define bfloat @test_uitofp_i32(i32 %a) #0 {
