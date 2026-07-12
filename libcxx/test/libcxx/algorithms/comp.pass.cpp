@@ -8,9 +8,9 @@
 
 // REQUIRES: std-at-least-c++17
 
-// <__algorithm/comp.h>
+// <algorithm>
 
-#include <__algorithm/comp.h>
+#include <algorithm>
 
 // check that __less<> desugars to __totally_ordered_less_tag for integral types regardless of their cv-ref
 static_assert(std::__desugars_to_v<std::__totally_ordered_less_tag, std::__less<>, int, int>);
