@@ -398,14 +398,12 @@ define void @switch_duplicate_successors(i1 %Pred) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    switch i1 [[PRED:%.*]], label [[LOOP_TARGET_EXIT:%.*]] [
 ; CHECK-NEXT:      i1 false, label [[LOOP]]
-; CHECK-NEXT:      i1 true, label [[LOOP_TARGET_EXIT1:%.*]]
+; CHECK-NEXT:      i1 true, label [[LOOP_TARGET_EXIT]]
 ; CHECK-NEXT:    ]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       loop.target.exit:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       loop.target.exit1:
-; CHECK-NEXT:    br label [[EXIT]]
 ;
 entry:
   br label %loop
