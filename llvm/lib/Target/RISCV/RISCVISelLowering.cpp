@@ -4744,7 +4744,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
       SDValue Hi = DAG.getBitcast(
           MVT::v2i16,
           DAG.getAnyExtOrTrunc(Op->getOperand(1), DL, MVT::i32));
-      return DAG.getNode(RISCVISD::PAIRE, DL, MVT::v2i16, Lo, Hi);
+      return DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v2i16, Lo, Hi);
     }
 
     if (VT == MVT::v4i8) {
@@ -4764,7 +4764,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
       return DAG.getBitcast(
           MVT::v4i8,
-          DAG.getNode(RISCVISD::PAIRE, DL, MVT::v2i16,
+          DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v2i16,
                       DAG.getBitcast(MVT::v2i16, PPairDB.getValue(0)),
                       DAG.getBitcast(MVT::v2i16, PPairDB.getValue(1))));
     }

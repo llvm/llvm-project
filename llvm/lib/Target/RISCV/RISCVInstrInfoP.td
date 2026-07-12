@@ -1866,10 +1866,10 @@ def shiftMask16 : ComplexPattern<XLenVT, 1, "selectShiftMask<16>", [], [], 0>;
 def BuildGPRPair : OutPatFrag<(ops node:$lo, node:$hi),
   (REG_SEQUENCE GPRPair, $lo, sub_gpr_even, $hi, sub_gpr_odd)>;
 
-def SDT_RISCVPairEven : SDTypeProfile<1, 2, [SDTCisVec<0>,
-                                             SDTCisSameAs<0, 1>,
-                                             SDTCisSameAs<0, 2>]>;
-def riscv_paire : RVSDNode<"PAIRE", SDT_RISCVPairEven>;
+def SDT_RISCVPPairEven : SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                              SDTCisSameAs<0, 1>,
+                                              SDTCisSameAs<0, 2>]>;
+def riscv_ppaire : RVSDNode<"PPAIRE", SDT_RISCVPPairEven>;
 
 // Averaging subtraction, (a - b) >> 2
 def riscv_asub : RVSDNode<"ASUB", SDTIntBinOp>;
@@ -2237,7 +2237,7 @@ let append Predicates = [IsRV32] in {
   def : Pat<(riscv_nsra GPR:$lo, GPR:$hi, shiftMask64:$shamt),
             (NSRA (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
 
-  def : Pat<(v2i16 (riscv_paire (v2i16 GPR:$lo), (v2i16 GPR:$hi))),
+  def : Pat<(v2i16 (riscv_ppaire (v2i16 GPR:$lo), (v2i16 GPR:$hi))),
             (PACK GPR:$lo, GPR:$hi)>;
 
   // Match a pattern of 2 bytes being inserted into bits [31:16], with bits
