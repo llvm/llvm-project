@@ -45,7 +45,7 @@ static std::optional<Token> findConstToRemove(const VarDecl *VD,
 
   // Verify that there is no semicolon between ConstSearchStartLoc and
   // NameBeginLoc. This is to limit search area for our variable decl only
-  if (!PrevSemi.isInvalid() &&
+  if (PrevSemi.isValid() &&
       SM.isBeforeInTranslationUnit(ConstSearchStartLoc, PrevSemi))
     return std::nullopt;
 
