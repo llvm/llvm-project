@@ -16,14 +16,53 @@ config.suffixes = [
     ".test"
 ]
 
+# Regression test-support tools live under test/tools.
+test_tools_dir = os.path.join(config.orc_rt_obj_root, "test", "tools")
+
 llvm_config.with_environment(
     "PATH",
     os.path.join(config.orc_rt_obj_root, "tools", "orc-executor"),
     append_path=True)
-
-# Regression test-support tools live under test/tools.
-llvm_config.with_environment(
-    "PATH", os.path.join(config.orc_rt_obj_root, "test", "tools"), append_path=True
-)
+llvm_config.with_environment("PATH", test_tools_dir, append_path=True)
 
 llvm_config.use_default_substitutions()
+
+
+def run_test_tool(name, *args):
+    """Run a test-support tool from test/tools and return its stdout.
+
+    Returns None if the tool has not been built yet (so feature probing degrades
+    gracefully). Raises if the tool exits with a non-zero status.
+    """
+    tool = lit.util.which(name, test_tools_dir)
+    if tool is None:
+        return None
+    out, err, exit_code = lit.util.executeCommand([tool, *args])
+    if exit_code != 0:
+        raise RuntimeError(
+            "{} {} failed (exit {}):\n{}".format(name, " ".join(args), exit_code, err)
+        )
+    return out
+
+
+# Probe the compiled-in logging configuration from orc-rt-log-check and
+# expose it as lit features, so logging tests can gate on the build's backend
+# and on which levels are actually emitted:
+#   orc-rt-log-backend-<none|printf|os_log>
+#   orc-rt-log-level-<error|warning|info|debug>   (one per compiled-in level)
+def add_logging_features():
+    backend = run_test_tool("orc-rt-log-check", "--print-backend")
+    if backend is None:
+        return  # tool not built yet; skip feature probing
+    config.available_features.add("orc-rt-log-backend-" + backend.strip())
+    levels = run_test_tool("orc-rt-log-check", "--print-enabled-levels")
+    for level in levels.split():
+        config.available_features.add("orc-rt-log-level-" + level.lower())
+
+
+add_logging_features()
+
+# Give logging tests a deterministic baseline: clear any logging environment
+# inherited from the developer's shell. Tests opt in with `env ORC_RT_LOG=...`.
+for var in ("ORC_RT_LOG", "ORC_RT_LOG_OUTPUT"):
+    config.environment.pop(var, None)

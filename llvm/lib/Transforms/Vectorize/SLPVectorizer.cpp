@@ -12831,6 +12831,13 @@ public:
       // commutative (e.g. 0 - X is not X - 0, so `sub` must be
       // excluded).
       if (IsCommutative) {
+        // IsCommutative can hold for MainOp (e.g. a Sub/FSub feeding only
+        // fabs/icmp-eq-0) without every lane sharing that property, so
+        // re-check the specific lane before swapping it.
+        auto CanSwap = [&](Value *V) {
+          return isCommutative(S.getMatchingMainOpOrAltOp(cast<Instruction>(V)),
+                               V);
+        };
         // Count (ID0, ID1) pair frequencies for operand normalization.
         // Pairs and their inverses are tracked under a canonical key
         // so that (Load, Add) and (Add, Load) contribute to the same
@@ -12891,7 +12898,7 @@ public:
           if (BestCount > 0) {
             unsigned ID0 = Operands[0][Idx]->getValueID();
             unsigned ID1 = Operands[1][Idx]->getValueID();
-            if (ID0 == MajID1 && ID1 == MajID0)
+            if (ID0 == MajID1 && ID1 == MajID0 && CanSwap(V))
               std::swap(Operands[0][Idx], Operands[1][Idx]);
           }
           ++TotalNC;
@@ -12905,7 +12912,7 @@ public:
             if (S.isCopyableElement(V) || isa<PoisonValue>(V))
               continue;
             if (!isa<LoadInst>(Operands[0][Idx]) &&
-                isa<LoadInst>(Operands[1][Idx]))
+                isa<LoadInst>(Operands[1][Idx]) && CanSwap(V))
               std::swap(Operands[0][Idx], Operands[1][Idx]);
           }
         }
