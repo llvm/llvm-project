@@ -29,3 +29,23 @@ void rdar47689465() {
   // expected-error@-2 {{'auto' not allowed in lambda parameter before C++14}}
 #endif
 }
+
+namespace auto_declarator_name_lookup {
+namespace llvm {
+  class Use;
+namespace rdf {
+  template <class T> struct NodeAddr {};
+  class UseNode;
+  using Use = NodeAddr<UseNode *>;
+} // namespace rdf
+} // namespace llvm
+
+using namespace llvm;
+
+namespace {
+void f() {
+  using namespace rdf;
+  auto Use = 0;
+}
+} // namespace
+} // namespace auto_declarator_name_lookup

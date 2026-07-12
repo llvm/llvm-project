@@ -15,6 +15,14 @@
 
 using namespace lldb_private;
 
+// Declared out-of-line so every shared library resolves to the same
+// instance: a function-local static in an inline function is not
+// shared across shared library boundaries under hidden visibility.
+PolicyStack &PolicyStack::Get() {
+  static thread_local PolicyStack s_stack;
+  return s_stack;
+}
+
 Policy PolicyStack::Current() const {
   Policy p = m_stack.back();
   if (Log *log = GetLog(LLDBLog::Process)) {
