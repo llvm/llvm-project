@@ -3004,8 +3004,7 @@ static Value *optimizeIntegerToVectorInsertions(BitCastInst &CI,
   for (unsigned i = 0, e = Elements.size(); i != e; ++i) {
     if (!Elements[i]) continue;  // Unset element.
 
-    Result = IC.Builder.CreateInsertElement(Result, Elements[i],
-                                            IC.Builder.getInt32(i));
+    Result = IC.Builder.CreateInsertElement(Result, Elements[i], i);
   }
 
   return Result;
