@@ -40,6 +40,9 @@ ELF Improvements
   beats positional last-match-wins; default: positional). In ELF, the glob
   matches input section names (e.g. ``.text.unlikely.code1``).
 
+* ``--retain-symbols-file`` now filters ``.symtab`` instead of ``.dynsym``,
+  matching GNU ld.
+
 * When a ``SECTIONS`` command interleaves relro and non-relro sections, lld now
   emits one ``PT_GNU_RELRO`` segment per contiguous run of relro sections
   instead of reporting a ``not contiguous with other relro sections`` error.
