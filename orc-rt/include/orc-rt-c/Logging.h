@@ -27,7 +27,10 @@
 |* "none" backend emits no code (but still type-checks every call site). The  *|
 |* "printf" backend writes each message to stderr, or to the file named by    *|
 |* the ORC_RT_LOG_OUTPUT environment variable; the ORC_RT_LOG variable sets a *|
-|* runtime level threshold (error, warning, info, debug, or off).             *|
+|* runtime level threshold (error, warning, info, debug, or off). The         *|
+|* "os_log" backend (Apple) routes records to the unified logging system,     *|
+|* where filtering is configured out of band (e.g. `log config`), so          *|
+|* ORC_RT_LOG and ORC_RT_LOG_OUTPUT have no effect.                           *|
 |*                                                                            *|
 |* IMPORTANT: log arguments should be free of observable side effects.        *|
 |* Whether they are evaluated is backend- and level-dependent, so they must   *|
@@ -40,6 +43,10 @@
 
 #include "orc-rt-c/Compiler.h"
 #include "orc-rt-c/config.h"
+
+#if ORC_RT_LOG_BACKEND == ORC_RT_LOG_BACKEND_OS_LOG
+#include <os/log.h>
+#endif
 
 ORC_RT_C_EXTERN_C_BEGIN
 
@@ -175,7 +182,84 @@ void orc_rt_log_printf(orc_rt_log_Level Level, orc_rt_log_Category Category,
 #endif
 
 #elif ORC_RT_LOG_BACKEND == ORC_RT_LOG_BACKEND_OS_LOG
-#error "The os_log logging backend is not yet implemented."
+
+/*
+ * Per-category os_log_t cache, homed in Logging_oslog.cpp. Slots start null and
+ * are filled lazily (and read) atomically by orc_rt_log_osLogHandle. An
+ * implementation detail of that accessor; do not use directly.
+ */
+extern os_log_t orc_rt_log_OSLogHandles[orc_rt_log_Category_Count];
+
+/*
+ * Cold path for orc_rt_log_osLogHandle: creates the handle for Category (in the
+ * "org.llvm.orc-rt" subsystem), caches it, and returns it. Defined in
+ * Logging_oslog.cpp.
+ */
+os_log_t
+orc_rt_log_osLogHandleSlow(orc_rt_log_Category Category) ORC_RT_C_NOTHROW;
+
+/*
+ * Returns the os_log_t handle for the given category, creating it on first use.
+ * Inlined, with a per-category cache, so os_log_with_type's callsite enabled-
+ * check stays cheap; the warm path is just an atomic load. Returns
+ * OS_LOG_DEFAULT for an out-of-range category. Not called directly: use
+ * ORC_RT_LOG. (__atomic_* builtins are used rather than <atomic>/<stdatomic.h>
+ * so this compiles the same in C and C++; the os_log backend is Clang-only.)
+ */
+static inline os_log_t orc_rt_log_osLogHandle(orc_rt_log_Category Category) {
+  if (Category < 0 || Category >= orc_rt_log_Category_Count)
+    return OS_LOG_DEFAULT;
+  os_log_t Handle =
+      __atomic_load_n(&orc_rt_log_OSLogHandles[Category], __ATOMIC_ACQUIRE);
+  if (!Handle)
+    Handle = orc_rt_log_osLogHandleSlow(Category);
+  return Handle;
+}
+
+/*
+ * Each level maps to an os_log_type_t and expands, at the call site, directly
+ * to os_log_with_type -- os_log needs the format string as a literal and the
+ * type as a compile-time constant, so it cannot be routed through a runtime
+ * function. Runtime filtering is left to the system (e.g. `log config`);
+ * ORC_RT_LOG has no effect here. A level below the ORC_RT_LOG_LEVEL floor still
+ * compiles out to ORC_RT_LOG_DISABLED.
+ */
+#if ORC_RT_LOG_LEVEL_ERROR >= ORC_RT_LOG_LEVEL
+#define ORC_RT_LOG_Error(Category, ...)                                        \
+  os_log_with_type(orc_rt_log_osLogHandle(Category), OS_LOG_TYPE_ERROR,        \
+                   __VA_ARGS__)
+#else
+#define ORC_RT_LOG_Error(Category, ...)                                        \
+  ORC_RT_LOG_DISABLED(Category, __VA_ARGS__)
+#endif
+
+#if ORC_RT_LOG_LEVEL_WARNING >= ORC_RT_LOG_LEVEL
+#define ORC_RT_LOG_Warning(Category, ...)                                      \
+  os_log_with_type(orc_rt_log_osLogHandle(Category), OS_LOG_TYPE_DEFAULT,      \
+                   __VA_ARGS__)
+#else
+#define ORC_RT_LOG_Warning(Category, ...)                                      \
+  ORC_RT_LOG_DISABLED(Category, __VA_ARGS__)
+#endif
+
+#if ORC_RT_LOG_LEVEL_INFO >= ORC_RT_LOG_LEVEL
+#define ORC_RT_LOG_Info(Category, ...)                                         \
+  os_log_with_type(orc_rt_log_osLogHandle(Category), OS_LOG_TYPE_INFO,         \
+                   __VA_ARGS__)
+#else
+#define ORC_RT_LOG_Info(Category, ...)                                         \
+  ORC_RT_LOG_DISABLED(Category, __VA_ARGS__)
+#endif
+
+#if ORC_RT_LOG_LEVEL_DEBUG >= ORC_RT_LOG_LEVEL
+#define ORC_RT_LOG_Debug(Category, ...)                                        \
+  os_log_with_type(orc_rt_log_osLogHandle(Category), OS_LOG_TYPE_DEBUG,        \
+                   __VA_ARGS__)
+#else
+#define ORC_RT_LOG_Debug(Category, ...)                                        \
+  ORC_RT_LOG_DISABLED(Category, __VA_ARGS__)
+#endif
+
 #else
 #error "Unknown ORC_RT_LOG_BACKEND."
 #endif
