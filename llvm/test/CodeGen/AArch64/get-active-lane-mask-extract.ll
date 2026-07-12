@@ -603,15 +603,13 @@ if.end:
 define void @test_8bit_mask_with_32bit_index_and_trip_count(i32 %i, i32 %n) #0 {
 ; CHECK-SVE-LABEL: test_8bit_mask_with_32bit_index_and_trip_count:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    whilelo p0.b, w0, w1
-; CHECK-SVE-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE-NEXT:    whilelo p0.h, w0, w1
 ; CHECK-SVE-NEXT:    // fake_use: $p0
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-SVE2p1-SME2-LABEL: test_8bit_mask_with_32bit_index_and_trip_count:
 ; CHECK-SVE2p1-SME2:       // %bb.0:
-; CHECK-SVE2p1-SME2-NEXT:    whilelo p0.b, w0, w1
-; CHECK-SVE2p1-SME2-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE2p1-SME2-NEXT:    whilelo p0.h, w0, w1
 ; CHECK-SVE2p1-SME2-NEXT:    // fake_use: $p0
 ; CHECK-SVE2p1-SME2-NEXT:    ret
     %r = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 %i, i32 %n)
@@ -666,15 +664,13 @@ define void @test_8bit_mask_with_32bit_index_and_trip_count_multiuse(i32 %i, i32
 define void @test_8bit_mask_with_64bit_index_and_trip_count(i64 %i, i64 %n) #0 {
 ; CHECK-SVE-LABEL: test_8bit_mask_with_64bit_index_and_trip_count:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    whilelo p0.b, x0, x1
-; CHECK-SVE-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE-NEXT:    whilelo p0.h, x0, x1
 ; CHECK-SVE-NEXT:    // fake_use: $p0
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-SVE2p1-SME2-LABEL: test_8bit_mask_with_64bit_index_and_trip_count:
 ; CHECK-SVE2p1-SME2:       // %bb.0:
-; CHECK-SVE2p1-SME2-NEXT:    whilelo p0.b, x0, x1
-; CHECK-SVE2p1-SME2-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE2p1-SME2-NEXT:    whilelo p0.h, x0, x1
 ; CHECK-SVE2p1-SME2-NEXT:    // fake_use: $p0
 ; CHECK-SVE2p1-SME2-NEXT:    ret
     %r = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 %i, i64 %n)
@@ -686,17 +682,13 @@ define void @test_8bit_mask_with_64bit_index_and_trip_count(i64 %i, i64 %n) #0 {
 define void @test_4bit_mask_with_64bit_index_and_trip_count(i64 %i, i64 %n) #0 {
 ; CHECK-SVE-LABEL: test_4bit_mask_with_64bit_index_and_trip_count:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    whilelo p0.b, x0, x1
-; CHECK-SVE-NEXT:    punpklo p0.h, p0.b
-; CHECK-SVE-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE-NEXT:    whilelo p0.s, x0, x1
 ; CHECK-SVE-NEXT:    // fake_use: $p0
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-SVE2p1-SME2-LABEL: test_4bit_mask_with_64bit_index_and_trip_count:
 ; CHECK-SVE2p1-SME2:       // %bb.0:
-; CHECK-SVE2p1-SME2-NEXT:    whilelo p0.b, x0, x1
-; CHECK-SVE2p1-SME2-NEXT:    punpklo p0.h, p0.b
-; CHECK-SVE2p1-SME2-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE2p1-SME2-NEXT:    whilelo p0.s, x0, x1
 ; CHECK-SVE2p1-SME2-NEXT:    // fake_use: $p0
 ; CHECK-SVE2p1-SME2-NEXT:    ret
     %r = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 %i, i64 %n)
@@ -708,17 +700,13 @@ define void @test_4bit_mask_with_64bit_index_and_trip_count(i64 %i, i64 %n) #0 {
 define void @test_4bit_mask_with_2extracts_64bit_index_and_trip_count(i64 %i, i64 %n) #0 {
 ; CHECK-SVE-LABEL: test_4bit_mask_with_2extracts_64bit_index_and_trip_count:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    whilelo p0.b, x0, x1
-; CHECK-SVE-NEXT:    punpklo p0.h, p0.b
-; CHECK-SVE-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE-NEXT:    whilelo p0.s, x0, x1
 ; CHECK-SVE-NEXT:    // fake_use: $p0
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-SVE2p1-SME2-LABEL: test_4bit_mask_with_2extracts_64bit_index_and_trip_count:
 ; CHECK-SVE2p1-SME2:       // %bb.0:
-; CHECK-SVE2p1-SME2-NEXT:    whilelo p0.b, x0, x1
-; CHECK-SVE2p1-SME2-NEXT:    punpklo p0.h, p0.b
-; CHECK-SVE2p1-SME2-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE2p1-SME2-NEXT:    whilelo p0.s, x0, x1
 ; CHECK-SVE2p1-SME2-NEXT:    // fake_use: $p0
 ; CHECK-SVE2p1-SME2-NEXT:    ret
     %r = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 %i, i64 %n)
@@ -731,20 +719,14 @@ define void @test_4bit_mask_with_2extracts_64bit_index_and_trip_count(i64 %i, i6
 define void @test_1bit_mask_with_64bit_index_and_trip_count(i64 %i, i64 %n) #0 {
 ; CHECK-SVE-LABEL: test_1bit_mask_with_64bit_index_and_trip_count:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    whilelo p0.b, x0, x1
-; CHECK-SVE-NEXT:    punpklo p0.h, p0.b
-; CHECK-SVE-NEXT:    punpklo p0.h, p0.b
-; CHECK-SVE-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE-NEXT:    whilelo p0.d, x0, x1
 ; CHECK-SVE-NEXT:    punpklo p0.h, p0.b
 ; CHECK-SVE-NEXT:    // fake_use: $p0
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-SVE2p1-SME2-LABEL: test_1bit_mask_with_64bit_index_and_trip_count:
 ; CHECK-SVE2p1-SME2:       // %bb.0:
-; CHECK-SVE2p1-SME2-NEXT:    whilelo p0.b, x0, x1
-; CHECK-SVE2p1-SME2-NEXT:    punpklo p0.h, p0.b
-; CHECK-SVE2p1-SME2-NEXT:    punpklo p0.h, p0.b
-; CHECK-SVE2p1-SME2-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE2p1-SME2-NEXT:    whilelo p0.d, x0, x1
 ; CHECK-SVE2p1-SME2-NEXT:    punpklo p0.h, p0.b
 ; CHECK-SVE2p1-SME2-NEXT:    // fake_use: $p0
 ; CHECK-SVE2p1-SME2-NEXT:    ret
