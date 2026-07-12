@@ -8,7 +8,7 @@
 
 #include "clang-tidy/ClangTidyModule.h"
 #if CLANG_VERSION_MAJOR < 23
-#include "clang-tidy/ClangTidyModuleRegistry.h"
+#  include "clang-tidy/ClangTidyModuleRegistry.h"
 #endif
 
 #include "abi_tag_on_virtual.hpp"

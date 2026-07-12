@@ -8,9 +8,9 @@
 
 #include "clang-tidy/ClangTidyCheck.h"
 #if CLANG_VERSION_MAJOR > 23
-#include "clang-tidy/ClangTidyModule.h"
+#  include "clang-tidy/ClangTidyModule.h"
 #else
-#include "clang-tidy/ClangTidyModuleRegistry.h"
+#  include "clang-tidy/ClangTidyModuleRegistry.h"
 #endif
 
 #include "llvm/ADT/ArrayRef.h"
