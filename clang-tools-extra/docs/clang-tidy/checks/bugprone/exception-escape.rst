@@ -65,10 +65,20 @@ Options
 
 .. option:: FunctionsThatShouldNotThrow
 
-   Comma separated list containing function names which should not throw. An
-   example value for this parameter can be ``WinMain`` which adds function
-   ``WinMain()`` in the Windows API to the list of the functions which should
-   not throw. Default value is an empty string.
+   Comma separated list containing function names which should not throw. These
+   names add functions to the set of declarations diagnosed by this check if
+   they may throw. An example value for this parameter can be ``WinMain`` which
+   adds function ``WinMain()`` in the Windows API to the list of functions that
+   are checked to not throw. Default value is an empty string.
+
+.. option:: AssumedNonThrowingFunctions
+
+   Comma separated list containing function names which are assumed not to
+   throw when analyzing calls. Unlike ``FunctionsThatShouldNotThrow``, this
+   does not add functions to the set of declarations diagnosed by the check.
+   Instead, it suppresses warnings caused by calls to functions without visible
+   definitions or explicit exception specifications that are known not to
+   throw, such as ``fclose``. Default value is an empty string.
 
 .. option:: IgnoredExceptions
 

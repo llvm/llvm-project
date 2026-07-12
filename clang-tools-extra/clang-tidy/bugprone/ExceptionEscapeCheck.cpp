@@ -58,6 +58,8 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), RawFunctionsThatShouldNotThrow(Options.get(
                                          "FunctionsThatShouldNotThrow", "")),
+      RawAssumedNonThrowingFunctions(
+          Options.get("AssumedNonThrowingFunctions", "")),
       RawIgnoredExceptions(Options.get("IgnoredExceptions", "")),
       RawCheckedSwapFunctions(
           Options.get("CheckedSwapFunctions", "swap,iter_swap,iter_move")),
@@ -69,10 +71,15 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
           Options.get("TreatFunctionsWithoutSpecificationAsThrowing",
                       TreatFunctionsWithoutSpecification::None)) {
   SmallVector<StringRef, 8> FunctionsThatShouldNotThrowVec,
-      IgnoredExceptionsVec, CheckedSwapFunctionsVec;
+      AssumedNonThrowingFunctionsVec, IgnoredExceptionsVec,
+      CheckedSwapFunctionsVec;
   RawFunctionsThatShouldNotThrow.split(FunctionsThatShouldNotThrowVec, ",", -1,
                                        false);
   FunctionsThatShouldNotThrow.insert_range(FunctionsThatShouldNotThrowVec);
+
+  RawAssumedNonThrowingFunctions.split(AssumedNonThrowingFunctionsVec, ",", -1,
+                                       false);
+  AssumedNonThrowingFunctions.insert_range(AssumedNonThrowingFunctionsVec);
 
   RawCheckedSwapFunctions.split(CheckedSwapFunctionsVec, ",", -1, false);
   CheckedSwapFunctions.insert_range(CheckedSwapFunctionsVec);
@@ -81,6 +88,7 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
   RawIgnoredExceptions.split(IgnoredExceptionsVec, ",", -1, false);
   IgnoredExceptions.insert_range(IgnoredExceptionsVec);
   Tracer.ignoreExceptions(std::move(IgnoredExceptions));
+  Tracer.assumeNonThrowingFunctions(std::move(AssumedNonThrowingFunctions));
   Tracer.ignoreBadAlloc(true);
 
   Tracer.assumeMissingDefinitionsFunctionsAsThrowing(
@@ -95,6 +103,8 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
 void ExceptionEscapeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "FunctionsThatShouldNotThrow",
                 RawFunctionsThatShouldNotThrow);
+  Options.store(Opts, "AssumedNonThrowingFunctions",
+                RawAssumedNonThrowingFunctions);
   Options.store(Opts, "IgnoredExceptions", RawIgnoredExceptions);
   Options.store(Opts, "CheckedSwapFunctions", RawCheckedSwapFunctions);
   Options.store(Opts, "CheckDestructors", CheckDestructors);
