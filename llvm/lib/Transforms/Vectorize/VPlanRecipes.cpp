@@ -331,7 +331,12 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
 
   LLVM_DEBUG({
     dbgs() << "Cost of " << RecipeCost << " for VF " << VF << ": ";
-    dump();
+    if (auto SlotTracker = Ctx.getSlotTracker()) {
+      print(dbgs(), "", *SlotTracker);
+      dbgs() << "\n";
+    } else {
+      dump();
+    }
   });
   return RecipeCost;
 }

@@ -532,11 +532,11 @@ static void processSectionEdges(
 template <class ELFT, bool TrackWhyLive>
 void MarkLive<ELFT, TrackWhyLive>::markParallel() {
   const size_t numThreads = parallel::getThreadCount();
-  auto visit = [&](InputSection *sec, int depth,
+  auto visit = [&](InputSection &sec, int depth,
                    SmallVector<InputSection *, 0> &localQueue,
                    auto &self) -> void {
     processSectionEdges<ELFT>(
-        ctx, *sec, cNamedSections,
+        ctx, sec, cNamedSections,
         [&](InputSectionBase *target, uint64_t offset) {
           auto &part =
               reinterpret_cast<std::atomic<uint8_t> &>(target->partition);
@@ -547,7 +547,7 @@ void MarkLive<ELFT, TrackWhyLive>::markParallel() {
             return;
           if (auto *s = dyn_cast<InputSection>(target)) {
             if (depth < 3)
-              self(s, depth + 1, localQueue, self);
+              self(*s, depth + 1, localQueue, self);
             else
               localQueue.push_back(s);
           }
@@ -557,9 +557,12 @@ void MarkLive<ELFT, TrackWhyLive>::markParallel() {
   while (!queue.empty()) {
     auto queues =
         std::make_unique<SmallVector<InputSection *, 0>[]>(numThreads);
-    parallelFor(0, queue.size(), [&](size_t i) {
-      const unsigned tid = parallel::getThreadIndex();
-      visit(queue[i], 0, queues[tid], visit);
+    // Workers claim items off a shared counter and accumulate deeper
+    // discoveries into their own local queue, merged into `queue` below.
+    std::atomic<ptrdiff_t> next{ptrdiff_t(queue.size())};
+    parallelFor(0, numThreads, [&](size_t shard) {
+      for (ptrdiff_t i; (i = next.fetch_sub(1, std::memory_order_relaxed)) > 0;)
+        visit(*queue[i - 1], 0, queues[shard], visit);
     });
     queue.clear();
     for (size_t t = 0; t < numThreads; ++t)
