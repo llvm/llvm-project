@@ -139,7 +139,7 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_GET_ACTIVE_LANE_MASK) {
   auto TripCount = DAG->getConstant(8, Loc, Int64VT);
   auto Op =
       DAG->getNode(ISD::GET_ACTIVE_LANE_MASK, Loc, MaskVT, Base, TripCount);
-  EXPECT_EQ(DAG->ComputeNumSignBits(Op), 1u);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Op), 8u);
 }
 
 TEST_F(AArch64SelectionDAGTest, ComputeNumSignBitsSVE_GET_ACTIVE_LANE_MASK) {
@@ -150,7 +150,7 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBitsSVE_GET_ACTIVE_LANE_MASK) {
   auto TripCount = DAG->getConstant(8, Loc, Int64VT);
   auto Op =
       DAG->getNode(ISD::GET_ACTIVE_LANE_MASK, Loc, MaskVT, Base, TripCount);
-  EXPECT_EQ(DAG->ComputeNumSignBits(Op), 1u);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Op), 16u);
 }
 
 TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_SIGN_EXTEND_VECTOR_INREG) {
