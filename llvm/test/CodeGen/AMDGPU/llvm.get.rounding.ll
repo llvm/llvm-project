@@ -33,10 +33,10 @@ define i32 @func_rounding() {
 ; GFX678-GISEL-LABEL: func_rounding:
 ; GFX678-GISEL:       ; %bb.0:
 ; GFX678-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX678-GISEL-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 4)
-; GFX678-GISEL-NEXT:    s_lshl_b32 s6, s4, 2
+; GFX678-GISEL-NEXT:    s_getreg_b32 s6, hwreg(HW_REG_MODE, 0, 4)
 ; GFX678-GISEL-NEXT:    s_mov_b32 s4, 0xeb24da71
 ; GFX678-GISEL-NEXT:    s_mov_b32 s5, 0xc96f385
+; GFX678-GISEL-NEXT:    s_lshl_b32 s6, s6, 2
 ; GFX678-GISEL-NEXT:    s_lshr_b64 s[4:5], s[4:5], s6
 ; GFX678-GISEL-NEXT:    s_and_b32 s4, s4, 15
 ; GFX678-GISEL-NEXT:    s_add_i32 s5, s4, 4
@@ -63,10 +63,10 @@ define i32 @func_rounding() {
 ; GFX9-GISEL-LABEL: func_rounding:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 4)
-; GFX9-GISEL-NEXT:    s_lshl_b32 s6, s4, 2
+; GFX9-GISEL-NEXT:    s_getreg_b32 s6, hwreg(HW_REG_MODE, 0, 4)
 ; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0xeb24da71
 ; GFX9-GISEL-NEXT:    s_mov_b32 s5, 0xc96f385
+; GFX9-GISEL-NEXT:    s_lshl_b32 s6, s6, 2
 ; GFX9-GISEL-NEXT:    s_lshr_b64 s[4:5], s[4:5], s6
 ; GFX9-GISEL-NEXT:    s_and_b32 s4, s4, 15
 ; GFX9-GISEL-NEXT:    s_add_i32 s5, s4, 4

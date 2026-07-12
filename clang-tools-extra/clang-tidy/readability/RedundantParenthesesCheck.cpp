@@ -73,7 +73,10 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
                     parenExpr(), ConstantExpr,
                     declRefExpr(to(namedDecl(unless(
                         matchers::matchesAnyListedRegexName(AllowedDecls))))),
-                    memberExpr(), callExpr(unless(cxxOperatorCallExpr())))),
+                    memberExpr(),
+                    callExpr(unless(cxxOperatorCallExpr(
+                        unless(hasAnyOperatorName("()", "[]"))))),
+                    arraySubscriptExpr())),
                 unless(anyOf(isInMacro(),
                              // sizeof(...) is common used.
                              hasParent(unaryExprOrTypeTraitExpr()))))

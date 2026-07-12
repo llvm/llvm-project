@@ -441,7 +441,7 @@ define void @copysign_combine_v2f16(ptr addrspace(1) %arg, half %sign) {
 ; GCN-NEXT:    [[ITMP1:%.*]] = zext i32 [[TMP]] to i64
 ; GCN-NEXT:    [[ITMP2:%.*]] = getelementptr inbounds half, ptr addrspace(1) [[ARG]], i64 [[ITMP1]]
 ; GCN-NEXT:    [[TMP0:%.*]] = load <2 x half>, ptr addrspace(1) [[ITMP2]], align 2
-; GCN-NEXT:    [[TMP1:%.*]] = insertelement <2 x half> poison, half [[SIGN]], i32 0
+; GCN-NEXT:    [[TMP1:%.*]] = insertelement <2 x half> poison, half [[SIGN]], i64 0
 ; GCN-NEXT:    [[TMP2:%.*]] = shufflevector <2 x half> [[TMP1]], <2 x half> poison, <2 x i32> zeroinitializer
 ; GCN-NEXT:    [[TMP3:%.*]] = call <2 x half> @llvm.copysign.v2f16(<2 x half> [[TMP0]], <2 x half> [[TMP2]])
 ; GCN-NEXT:    store <2 x half> [[TMP3]], ptr addrspace(1) [[ITMP2]], align 2
@@ -474,7 +474,7 @@ define void @copysign_combine_v4f16(ptr addrspace(1) %arg, half %sign) {
 ; GCN-NEXT:    [[ITMP5:%.*]] = add nuw nsw i64 [[ITMP1]], 1
 ; GCN-NEXT:    [[ITMP6:%.*]] = getelementptr inbounds half, ptr addrspace(1) [[ARG]], i64 [[ITMP5]]
 ; GCN-NEXT:    [[TMP0:%.*]] = load <2 x half>, ptr addrspace(1) [[ITMP2]], align 2
-; GCN-NEXT:    [[TMP1:%.*]] = insertelement <2 x half> poison, half [[SIGN]], i32 0
+; GCN-NEXT:    [[TMP1:%.*]] = insertelement <2 x half> poison, half [[SIGN]], i64 0
 ; GCN-NEXT:    [[TMP2:%.*]] = shufflevector <2 x half> [[TMP1]], <2 x half> poison, <2 x i32> zeroinitializer
 ; GCN-NEXT:    [[TMP3:%.*]] = call <2 x half> @llvm.copysign.v2f16(<2 x half> [[TMP0]], <2 x half> [[TMP2]])
 ; GCN-NEXT:    store <2 x half> [[TMP3]], ptr addrspace(1) [[ITMP2]], align 2
@@ -561,8 +561,8 @@ define void @canonicalize_combine_v4f16(ptr addrspace(1) %arg) {
 ; GFX9-NEXT:    [[ITMP13:%.*]] = add nuw nsw i64 [[ITMP1]], 3
 ; GFX9-NEXT:    [[ITMP14:%.*]] = getelementptr inbounds half, ptr addrspace(1) [[ARG]], i64 [[ITMP13]]
 ; GFX9-NEXT:    [[ITMP15:%.*]] = load half, ptr addrspace(1) [[ITMP14]], align 2
-; GFX9-NEXT:    [[TMP2:%.*]] = insertelement <2 x half> poison, half [[ITMP11]], i32 0
-; GFX9-NEXT:    [[TMP3:%.*]] = insertelement <2 x half> [[TMP2]], half [[ITMP15]], i32 1
+; GFX9-NEXT:    [[TMP2:%.*]] = insertelement <2 x half> poison, half [[ITMP11]], i64 0
+; GFX9-NEXT:    [[TMP3:%.*]] = insertelement <2 x half> [[TMP2]], half [[ITMP15]], i64 1
 ; GFX9-NEXT:    [[TMP4:%.*]] = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> [[TMP3]])
 ; GFX9-NEXT:    store <2 x half> [[TMP4]], ptr addrspace(1) [[ITMP10]], align 2
 ; GFX9-NEXT:    ret void

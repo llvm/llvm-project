@@ -23571,6 +23571,41 @@ static SDValue performAddCombineForShiftedOperands(SDNode *N,
   return SDValue();
 }
 
+// Fold neg (and X, M) -> and (neg X), M when M is all-zeros or all-ones, so
+// the negate distributes across the AND.
+static SDValue performNegSignMaskedAndCombine(SDNode *N, SelectionDAG &DAG) {
+  if (N->getOpcode() != ISD::SUB || !isNullConstant(N->getOperand(0)))
+    return SDValue();
+
+  SDValue And = N->getOperand(1);
+  if (And.getOpcode() != ISD::AND || !And.hasOneUse())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32 && VT != MVT::i64)
+    return SDValue();
+
+  // A negate feeding a comparison folds into a cmn for free.
+  if (any_of(N->users(), [](const SDNode *U) {
+        unsigned UOpc = U->getOpcode();
+        return UOpc == ISD::SETCC || UOpc == ISD::SELECT_CC ||
+               UOpc == ISD::BR_CC;
+      }))
+    return SDValue();
+
+  // Negate whichever AND operand is not the all-zeros/all-ones mask.
+  unsigned NumBits = VT.getScalarSizeInBits();
+  SDValue X = And.getOperand(0), Mask = And.getOperand(1);
+  if (DAG.ComputeNumSignBits(Mask) != NumBits) {
+    std::swap(X, Mask);
+    if (DAG.ComputeNumSignBits(Mask) != NumBits)
+      return SDValue();
+  }
+
+  SDLoc DL(N);
+  return DAG.getNode(ISD::AND, DL, VT, DAG.getNegative(X, DL, VT), Mask);
+}
+
 // The mid end will reassociate sub(sub(x, m1), m2) to sub(x, add(m1, m2))
 // This reassociates it back to allow the creation of more mls instructions.
 static SDValue performSubAddMULCombine(SDNode *N, SelectionDAG &DAG) {
@@ -24102,6 +24137,8 @@ static SDValue performAddSubCombine(SDNode *N,
   if (SDValue Val = performVectorExtCombine(N, DCI.DAG))
     return Val;
   if (SDValue Val = performAddCombineForShiftedOperands(N, DCI.DAG))
+    return Val;
+  if (SDValue Val = performNegSignMaskedAndCombine(N, DCI.DAG))
     return Val;
   if (SDValue Val = performSubAddMULCombine(N, DCI.DAG))
     return Val;

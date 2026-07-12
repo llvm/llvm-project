@@ -1447,13 +1447,15 @@ LVScope *LVIRReader::getOrCreateSubprogram(LVScope *Function,
   }
 
   // Check for additional retained nodes.
-  for (const DINode *DN : SP->getRetainedNodes()) {
+  for (const MDNode *DN : SP->getRetainedNodes()) {
     if (const auto *IE = dyn_cast<DIImportedEntity>(DN))
       constructImportedEntity(Function, IE);
     else if (const auto *TTP = dyn_cast<DITemplateTypeParameter>(DN))
       constructTemplateTypeParameter(Function, TTP);
     else if (const auto *TVP = dyn_cast<DITemplateValueParameter>(DN))
       constructTemplateValueParameter(Function, TVP);
+    else if (const auto *GVE = dyn_cast<DIGlobalVariableExpression>(DN))
+      getOrCreateVariable(GVE);
   }
 
   applySubprogramAttributes(Function, SP);
