@@ -7,7 +7,6 @@
 
 using namespace clang;
 using namespace ento;
-using lifetime_modeling::isBoundToLifetimeSourceSet;
 
 namespace {
 class ReportDanglingPtrDeref : public Checker<check::Location> {
@@ -61,8 +60,7 @@ void ReportDanglingPtrDeref::reportUseAfterScope(const MemRegion *Region,
       (llvm::Twine("Use of '") + Region->getString() +
        "' after its lifetime ended."),
       N);
-  BR->addVisitor(
-      std::make_unique<ReportDanglingPtrDerefBRVisitor>(Val, Region));
+  BR->addVisitor<ReportDanglingPtrDerefBRVisitor>(Val, Region);
   C.emitReport(std::move(BR));
 }
 
@@ -70,8 +68,13 @@ PathDiagnosticPieceRef
 ReportDanglingPtrDerefBRVisitor::VisitNode(const ExplodedNode *N,
                                            BugReporterContext &BRC,
                                            PathSensitiveBugReport &BR) {
+  using lifetime_modeling::isBoundToLifetimeSourceSet;
+  const ExplodedNode *Pred = N->getFirstPred();
+  if (!Pred)
+    return nullptr;
+
   if (!isBoundToLifetimeSourceSet(N->getState(), BoundRegion) ||
-      isBoundToLifetimeSourceSet(N->getFirstPred()->getState(), BoundRegion))
+      isBoundToLifetimeSourceSet(Pred->getState(), BoundRegion))
     return nullptr;
 
   const Stmt *S = N->getStmtForDiagnostics();
