@@ -613,6 +613,21 @@ SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
                     Returns);
   NewF->takeName(F);
 
+  // After cloning, the ReturnInst instructions in NewF still return the
+  // original aggregate type, but the function signature now returns i32.
+  // This mismatch is caught by the IR verifier and causes a crash. Replace
+  // each such ReturnInst with a valid `ret i32 poison` placeholder; the
+  // actual aggregate value reconstruction is handled later by
+  // SPIRVEmitIntrinsics::reconstructAggregateReturns.
+  if (IsRetAggr) {
+    Value *PoisonI32 = PoisonValue::get(B.getInt32Ty());
+    for (ReturnInst *RI : Returns) {
+      B.SetInsertPoint(RI);
+      B.CreateRet(PoisonI32);
+      RI->eraseFromParent();
+    }
+  }
+
   addFunctionTypeMutation(
       NewF->getParent()->getOrInsertNamedMetadata("spv.cloned_funcs"),
       std::move(ChangedTypes), NewF->getName());
