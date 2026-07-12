@@ -152,6 +152,17 @@ void testandeq(void)
   l &= 42;
   s &= 42;
 }
+// CHECK: testaddeq_fp
+void testaddeq_fp(void)
+{
+  // CHECK:      [[TMP0:%.*]] = atomicrmw add ptr @i, i32 0 seq_cst, align 4
+  // CHECK-NEXT: add i32 [[TMP0]], 0
+  i += -0.5;
+
+  // CHECK:      [[TMP1:%.*]] = atomicrmw add ptr @i, i32 poison seq_cst, align 4
+  // CHECK-NEXT: add i32 [[TMP1]], poison
+  i += -2.5;
+}
 
 // CHECK-LABEL: define{{.*}} arm_aapcscc void @testFloat(ptr
 void testFloat(_Atomic(float) *fp) {
