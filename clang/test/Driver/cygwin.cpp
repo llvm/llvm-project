@@ -102,16 +102,6 @@
 // CHECK-64-CONSOLE-SAME: "--subsystem" "console"
 
 // RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
-// RUN:   -Wl,--high-entropy-va 2>&1 | FileCheck --check-prefix=CHECK-64-ASLR-ON %s
-// CHECK-64-ASLR-ON:      "{{.*}}ld{{(\.exe)?}}"
-// CHECK-64-ASLR-ON-SAME: "--high-entropy-va"
-
-// RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
-// RUN:   -Wl,--disable-high-entropy-va 2>&1 | FileCheck --check-prefix=CHECK-64-ASLR-OFF %s
-// CHECK-64-ASLR-OFF:      "{{.*}}ld{{(\.exe)?}}"
-// CHECK-64-ASLR-OFF-SAME: "--disable-high-entropy-va"
-
-// RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
 // RUN:   -o a 2>&1 | FileCheck --check-prefix=CHECK-64-EXENAME %s
 // CHECK-64-EXENAME:      "{{.*}}ld{{(\.exe)?}}"
 // CHECK-64-EXENAME-SAME: "-o" "a.exe"
@@ -120,3 +110,14 @@
 // RUN:   -o a.out 2>&1 | FileCheck --check-prefix=CHECK-64-EXENAME-WITH-EXT %s
 // CHECK-64-EXENAME-WITH-EXT:      "{{.*}}ld{{(\.exe)?}}"
 // CHECK-64-EXENAME-WITH-EXT-SAME: "-o" "a.out"
+
+// RUN: %clang -### %s --target=i686-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
+// RUN:   2>&1 | FileCheck --check-prefix=CHECK-ASLR-DEFAULT %s
+// CHECK-ASLR-DEFAULT:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-ASLR-DEFAULT-NOT:  "--disable-high-entropy-va"
+// CHECK-ASLR-DEFAULT-SAME: "--disable-nxcompat"
+
+// RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
+// RUN:   2>&1 | FileCheck --check-prefix=CHECK-64-ASLR-DEFAULT %s
+// CHECK-64-ASLR-DEFAULT:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-64-ASLR-DEFAULT-SAME: "--disable-high-entropy-va"
