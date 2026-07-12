@@ -11429,7 +11429,7 @@ of `idx` exceeds the runtime length of the vector, the result is a
 ##### Example:
 
 ```text
-<result> = extractelement <4 x i32> %vec, i32 0    ; yields i32
+<result> = extractelement <4 x i32> %vec, i64 0    ; yields i32
 ```
 
 (i_insertelement)=
@@ -11469,7 +11469,7 @@ is a {ref}`poison value <poisonvalues>`.
 ##### Example:
 
 ```text
-<result> = insertelement <4 x i32> %vec, i32 1, i32 0    ; yields <4 x i32>
+<result> = insertelement <4 x i32> %vec, i32 1, i64 0    ; yields <4 x i32>
 ```
 
 (i_shufflevector)=
