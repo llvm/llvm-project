@@ -4543,8 +4543,8 @@ static bool foldCondStoreToSelectImpl(CondBrInst *BI, DomTreeUpdater *DTU,
   }
 
   // All checks passed. Build select+store in HeadBB.
-  errs() << "[foldCondStore] firing in function: "
-         << HeadBB->getParent()->getName() << "\n";
+  LLVM_DEBUG(dbgs() << "[foldCondStore] firing in function: "
+                    << HeadBB->getParent()->getName() << "\n");
   IRBuilder<> Builder(BI);
 
   // Hoist cheap ElseBB instructions (e.g. icmp for cond2) into HeadBB.
