@@ -145,7 +145,8 @@ TEST(EytzingerTest, IsSortedVerification) {
 
   // Verify detection of across-level ancestor bounds violations.
   // Root (40), left (20), right (60). Left of 20 is 10, right of 20 is 50.
-  // Although 50 > 20 (local parent check passes), 50 > 40 violates the root bound.
+  // Although 50 > 20 (local parent check passes), 50 > 40 violates the root
+  // bound.
   const int AncestorViolation[] = {40, 20, 60, 10, 50, 55, 70};
   EXPECT_FALSE(EytzingerTableSpan<int>(AncestorViolation, 7).isSorted());
 
