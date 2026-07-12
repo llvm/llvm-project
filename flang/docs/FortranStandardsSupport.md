@@ -73,15 +73,10 @@ the multi-image execution. The table entries are based on the document [The new 
 | Change team construct                                      | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
 | Sync team construct                                        | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
 | Intrinsic functions get_team and team_number               | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
-| Intrinsic function image_index                             | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
-| Intrinsic function num_images                              | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
-| Intrinsic function this_image                              | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
 | Image failure and stat= specifiers                         | P      | Multi-image/Coarray feature. stat_failed_image is added |
 | Coarrays allocated in teams                                | N      | Multi-image/Coarray feature |
 | Critical construct                                         | N      | Multi-image/Coarray feature |
-| Lock and unlock statements                                 | N      | Multi-image/Coarray feature |
 | Events                                                     | N      | Multi-image/Coarray feature |
-| Image selectors                                            | N      | Multi-image/Coarray feature |
 | Intrinsic move_alloc extensions                            | P      | Multi-image/Coarray feature |
 | Detecting failed and stopped images                        | N      | Multi-image/Coarray feature |
 | New and enhanced atomic subroutines                        | N      | Multi-image/Coarray feature |
@@ -92,9 +87,13 @@ All features except those listed in the following table are supported.
 
 | Feature                                                    | Status | Comments                                                |
 |------------------------------------------------------------|--------|---------------------------------------------------------|
-| Coarrays                                                   | N      | Lowering and runtime support is not implemented         |
 | do concurrent                                              | P      | Sequential execution works. Parallel support in progress|
 | Internal procedure as an actual argument or pointer target | Y      | Current implementation requires stack to be executable. See [FAQ](FAQ.md#why-do-i-get-a-warning-or-an-error-about-an-executable-stack) and [Proposal](InternalProcedureTrampolines.md) |
+| Intrinsic functions this_image, num_images                 | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
+| Coarrays                                                   | N      | Lowering and runtime support is not implemented         |
+| Intrinsic function image_index                             | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
+| Image selectors (coindexed access)                         | N      | Multi-image/Coarray feature |
+| Lock and unlock statements                                 | N      | Multi-image/Coarray feature |
 
 ## Fortran 2003
 All features except those listed in the following table are supported.
