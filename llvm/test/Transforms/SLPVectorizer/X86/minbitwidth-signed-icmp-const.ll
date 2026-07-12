@@ -20,7 +20,8 @@ define i32 @test(i16 %c) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[XOR]] to i16
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> [[TMP1]], i16 [[TMP2]], i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i16> [[TMP3]], <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 2, i32 3, i32 2, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <8 x i16> [[TMP4]], <i16 1, i16 1, i16 -6943, i16 -6943, i16 -6943, i16 -6943, i16 1, i16 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = sext <8 x i16> [[TMP4]] to <8 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <8 x i32> [[TMP5]], <i32 1, i32 1, i32 58593, i32 58593, i32 58593, i32 58593, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP7:%.*]] = freeze <8 x i1> [[TMP6]]
 ; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> [[TMP7]])
 ; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP]], i32 1, i32 0
