@@ -45,7 +45,7 @@ using namespace llvm;
 // for the purpose of testing with lit/llc ONLY.
 // This produces output which is not valid WebAssembly, and is not supported
 // by assemblers/disassemblers and other MC based tools.
-static cl::opt<bool> WasmDisableExplicitLocals(
+cl::opt<bool> WebAssembly::WasmDisableExplicitLocals(
     "wasm-disable-explicit-locals", cl::Hidden,
     cl::desc("WebAssembly: output implicit locals in"
              " instruction output for test purposes only."),
@@ -134,6 +134,7 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
 
+using WebAssembly::WasmDisableExplicitLocals;
 using WebAssembly::WasmEnableEH;
 using WebAssembly::WasmEnableEmEH;
 using WebAssembly::WasmEnableEmSjLj;
@@ -543,8 +544,8 @@ void WebAssemblyPassConfig::addISelPrepare() {
 
 bool WebAssemblyPassConfig::addInstSelector() {
   (void)TargetPassConfig::addInstSelector();
-  addPass(
-      createWebAssemblyISelDag(getWebAssemblyTargetMachine(), getOptLevel()));
+  addPass(createWebAssemblyISelDagLegacyPass(getWebAssemblyTargetMachine(),
+                                             getOptLevel()));
   // Run the argument-move pass immediately after the ScheduleDAG scheduler
   // so that we can fix up the ARGUMENT instructions before anything else
   // sees them in the wrong place.
