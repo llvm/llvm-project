@@ -240,10 +240,20 @@ merge:
 define void @neg_value_not_available(ptr %p, i1 %cond1, i1 %cond2, i8 %a, i8 %c) {
 ; CHECK-LABEL: @neg_value_not_available(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[STORE_SEL_INNER:%.*]] = select i1 [[COND2:%.*]], i8 [[B]], i8 [[C:%.*]]
-; CHECK-NEXT:    [[STORE_SEL:%.*]] = select i1 [[COND1:%.*]], i8 [[A:%.*]], i8 [[STORE_SEL_INNER]]
-; CHECK-NEXT:    store i8 [[STORE_SEL]], ptr [[P]], align 1
+; CHECK-NEXT:    br i1 [[COND1:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    store i8 [[A:%.*]], ptr [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[ELSE_THEN:%.*]], label [[ELSE_ELSE:%.*]]
+; CHECK:       else.then:
+; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    store i8 [[B]], ptr [[P]], align 1
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       else.else:
+; CHECK-NEXT:    store i8 [[C:%.*]], ptr [[P]], align 1
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
 ; CHECK-NEXT:    ret void
 ;
 entry:

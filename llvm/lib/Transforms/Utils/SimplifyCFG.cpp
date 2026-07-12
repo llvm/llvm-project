@@ -4392,15 +4392,24 @@ static bool isSameGEPAddress(Value *A, Value *B) {
 
 /// Find the unique simple store in \p BB. Returns nullptr if there is no
 /// store, if there are multiple stores, or if the store is not simple.
+/// Also rejects blocks containing non-store instructions that read/write
+/// memory or have side effects, as they cannot be safely speculated.
 static StoreInst *findUniqueSimpleStoreInBlock(BasicBlock *BB) {
   StoreInst *Found = nullptr;
   for (Instruction &I : *BB) {
-    auto *SI = dyn_cast<StoreInst>(&I);
-    if (!SI)
+    if (I.isTerminator())
       continue;
-    if (!SI->isSimple() || Found)
+    auto *SI = dyn_cast<StoreInst>(&I);
+    if (SI) {
+      if (!SI->isSimple() || Found)
+        return nullptr;
+      Found = SI;
+      continue;
+    }
+    // Reject if any non-store instruction reads/writes memory or has
+    // side effects — it cannot be safely speculated.
+    if (I.mayReadOrWriteMemory() || I.mayHaveSideEffects())
       return nullptr;
-    Found = SI;
   }
   return Found;
 }
