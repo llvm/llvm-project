@@ -451,7 +451,7 @@ class SymStoreTests(TestBase):
         """
         exe, sym = self.build_inferior()
         with MockedSymStore(self, exe, sym) as dir:
-            SlowHTTPHandler.delay = 3  # seconds; exceeds the 1s timeout below
+            SlowHTTPHandler.delay = 4  # seconds; exceeds the 1s timeout below
             self.runCmd("settings set plugin.symbol-locator.symstore.timeout 1")
             with HTTPServer(dir, SlowHTTPHandler) as url:
                 self.runCmd(f"settings set plugin.symbol-locator.symstore.urls {url}")
