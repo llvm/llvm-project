@@ -140,6 +140,14 @@ public:
   /// containing object's other members.
   void SetTypeSynthetic(lldb::SBTypeSynthetic &synthetic);
 
+  /// This function's primary use is to ease inspecting the internal state of
+  /// scripted synthetic children providers for debugging purposes.
+  ///
+  /// An other alternative usecase is for parent synthetic children providers to
+  /// imbue their children's synthetic children providers with additional
+  /// context after creation.
+  lldb::SBScriptObject GetTypeSyntheticImplementation();
+
   lldb::SBValue GetChildAtIndex(uint32_t idx);
 
   lldb::SBValue CreateChildAtOffset(const char *name, uint32_t offset,

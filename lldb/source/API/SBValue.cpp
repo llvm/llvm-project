@@ -404,6 +404,20 @@ void SBValue::SetTypeSynthetic(lldb::SBTypeSynthetic &synthetic) {
   }
 }
 
+lldb::SBScriptObject SBValue::GetTypeSyntheticImplementation() {
+  LLDB_INSTRUMENT_VA(this);
+
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+
+  auto frontend = value_sp->GetSyntheticChildrenFrontEnd();
+  if (!frontend) {
+    return lldb::SBScriptObject(nullptr, eScriptLanguageDefault);
+  }
+  return lldb::SBScriptObject(frontend->GetImplementation(),
+                              eScriptLanguageDefault);
+}
+
 lldb::SBValue SBValue::CreateChildAtOffset(const char *name, uint32_t offset,
                                            SBType type) {
   LLDB_INSTRUMENT_VA(this, name, offset, type);

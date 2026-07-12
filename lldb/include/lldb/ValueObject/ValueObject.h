@@ -917,6 +917,10 @@ public:
     return m_synthetic_children_sp;
   }
 
+  virtual SyntheticChildrenFrontEnd *GetSyntheticChildrenFrontEnd() {
+    return nullptr;
+  }
+
   // Use GetParent for display purposes, but if you want to tell the parent to
   // update itself then use m_parent.  The ValueObjectDynamicValue's parent is
   // not the correct parent for displaying, they are really siblings, so for
@@ -981,6 +985,8 @@ public:
   llvm::ArrayRef<uint8_t> GetLocalBuffer() const;
 
   lldb::ValueObjectSP CheckValueObjectOwnership(ValueObject *child);
+
+  virtual void *GetImplementation() { return nullptr; }
 
 protected:
   typedef ClusterManager<ValueObject> ValueObjectManager;
