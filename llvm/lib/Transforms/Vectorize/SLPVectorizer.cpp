@@ -2930,7 +2930,7 @@ public:
     /// heuristic is based on ideas described in:
     ///   Look-ahead SLP: Auto-vectorization in the presence of commutative
     ///   operations, CGO 2018 by Vasileios Porpodas, Rodrigo C. O. Rocha,
-    ///   Luís F. W. Góes
+    ///   Lu├¡s F. W. G├│es
     int getScoreAtLevelRec(Value *LHS, Value *RHS, Instruction *U1,
                            Instruction *U2, int CurrLevel,
                            ArrayRef<Value *> MainAltOps) const {
@@ -14024,8 +14024,8 @@ unsigned BoUpSLP::getNumScalarInsts() const {
     }
     // CombinedVectorize entries (e.g. the fmul child of an FMulAdd, or the
     // cmp child of a MinMax select) are absorbed into the parent on both
-    // scalar and vector sides. The backend fuses fadd+fmul → fma and
-    // select+cmp → smin/smax even for scalar code, so skip to avoid
+    // scalar and vector sides. The backend fuses fadd+fmul ΓåÆ fma and
+    // select+cmp ΓåÆ smin/smax even for scalar code, so skip to avoid
     // double-counting.
     if (TE.State == TreeEntry::CombinedVectorize)
       continue;
@@ -14050,7 +14050,7 @@ unsigned BoUpSLP::getNumScalarInsts() const {
     }
     // Even when the whole node is not combined, individual scalar
     // instructions may be fused by the backend. Each fused pair (e.g.
-    // fadd+fmul → fma, select+cmp → smin/smax) becomes a single scalar
+    // fadd+fmul ΓåÆ fma, select+cmp ΓåÆ smin/smax) becomes a single scalar
     // instruction, absorbing the operand instruction. Subtract 1 for each
     // such match to avoid over-counting the scalar side.
     if (TE.CombinedOp == TreeEntry::NotCombinedOp && TE.hasState()) {
@@ -27548,6 +27548,40 @@ bool BoUpSLP::collectValuesToDemote(
     return TryProcessInstruction(BitWidth, Operands, CallChecker);
   }
 
+  // For ICmp instructions, we can demote the operands only if we can ensure
+  // that the comparison semantics are preserved.  For signed predicates, any
+  // constant operand that overflows the signed range of the target bit width
+  // would change sign under truncation, inverting the comparison result.
+  // Reject the demotion in that case.
+  case Instruction::ICmp: {
+    auto ICmpChecker = [&](unsigned BitWidth, unsigned OrigBitWidth) {
+      return all_of(E.Scalars, [&](Value *V) {
+        if (isa<PoisonValue>(V))
+          return true;
+        auto *IC = cast<ICmpInst>(V);
+        // For signed predicates, verify that any constant operand fits within
+        // the signed range of the target type.  If it doesn't, truncation
+        // would wrap the constant and change the comparison result.
+        if (IC->isSigned()) {
+          for (Value *Op : IC->operands()) {
+            auto *CI = dyn_cast<ConstantInt>(Op);
+            if (!CI)
+              continue;
+            const APInt &Val = CI->getValue();
+            // Sign-extend or truncate to BitWidth and check round-trip.
+            APInt Truncated = Val.trunc(BitWidth);
+            if (Truncated.sext(OrigBitWidth) != Val)
+              return false;
+          }
+        }
+        return true;
+      });
+    };
+    return TryProcessInstruction(
+        BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)},
+        ICmpChecker);
+  }
+
   // Otherwise, conservatively give up.
   default:
     break;
@@ -27557,6 +27591,7 @@ bool BoUpSLP::collectValuesToDemote(
 }
 
 static RecurKind getRdxKind(Value *V);
+
 
 void BoUpSLP::computeMinimumValueSizes() {
   // We only attempt to truncate integer expressions.
@@ -29637,7 +29672,7 @@ public:
     // Leaves are collected outer-to-inner (top-down).  Reverse to get the
     // accumulation order (innermost first) needed by ordered reduction
     // intrinsics.  This is correct for both LHS- and RHS-associated chains
-    // because fadd is commutative — each step only relies on a+b == b+a,
+    // because fadd is commutative ΓÇö each step only relies on a+b == b+a,
     // never on associativity.
     if (!ChainComplete || ReducedVals.back().size() < ReductionLimit) {
       for (ReductionOpsType &RdxOps : ReductionOps)
