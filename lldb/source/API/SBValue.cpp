@@ -393,6 +393,17 @@ lldb::SBTypeSynthetic SBValue::GetTypeSynthetic() {
   return synthetic;
 }
 
+void SBValue::SetTypeSynthetic(lldb::SBTypeSynthetic &synthetic) {
+  LLDB_INSTRUMENT_VA(this);
+
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  lldb::ScriptedSyntheticChildrenSP synthetic_sp(synthetic.GetSP());
+  if (value_sp && synthetic_sp) {
+    value_sp->SetSyntheticChildren(synthetic_sp);
+  }
+}
+
 lldb::SBValue SBValue::CreateChildAtOffset(const char *name, uint32_t offset,
                                            SBType type) {
   LLDB_INSTRUMENT_VA(this, name, offset, type);
