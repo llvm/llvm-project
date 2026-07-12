@@ -70,20 +70,56 @@ void RedundantConstCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
+static bool hasProblemSibling(const VarDecl *VD, SourceLocation ConstLoc,
+                              const SourceManager &SM, const LangOptions &LO) {
+  const SourceLocation Semi =
+      utils::lexer::findNextAnyTokenKind(ConstLoc, SM, LO, tok::semi);
+  if (Semi.isInvalid())
+    return false;
+
+  const SourceLocation Comma =
+      utils::lexer::findNextAnyTokenKind(ConstLoc, SM, LO, tok::comma);
+  if (Comma.isInvalid() || !SM.isBeforeInTranslationUnit(Comma, Semi))
+    return false;
+
+  for (Decl *D : VD->getDeclContext()->decls()) {
+    if (SM.isBeforeInTranslationUnit(Semi, D->getBeginLoc()))
+      break;
+
+    const auto *Sib = dyn_cast<VarDecl>(D);
+    if (!Sib || Sib == VD)
+      continue;
+
+    const SourceLocation N = Sib->getLocation();
+    if (SM.isBeforeInTranslationUnit(N, ConstLoc) ||
+        SM.isBeforeInTranslationUnit(Semi, N))
+      continue;
+
+    const QualType T = Sib->getType();
+    if (T->isReferenceType() || T->isPointerType() || T->isMemberPointerType())
+      return true;
+  }
+  return false;
+}
+
 void RedundantConstCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *VD = Result.Nodes.getNodeAs<VarDecl>("var_decl");
 
   // Since we cannot tell the difference between `constexpr const` and
   // `constexpr` from the AST only, if we cannot find the actual `const` token,
-  // we cannot do anything
+  // we cannot do anything.
   const std::optional<Token> Tok =
       findConstToRemove(VD, *Result.SourceManager, *Result.Context);
   if (!Tok)
     return;
 
-  diag(Tok->getLocation(),
-       "redundant use of 'const'; 'constexpr' already implies 'const'")
-      << FixItHint::CreateRemoval(Tok->getLocation());
+  const SourceLocation ConstLoc = Tok->getLocation();
+  auto Diag =
+      diag(ConstLoc,
+           "redundant use of 'const'; 'constexpr' already implies 'const'");
+  if (!hasProblemSibling(VD, ConstLoc, *Result.SourceManager,
+                         Result.Context->getLangOpts()))
+    Diag << FixItHint::CreateRemoval(ConstLoc);
 }
 
 } // namespace clang::tidy::readability

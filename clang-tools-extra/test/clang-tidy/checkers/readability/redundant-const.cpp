@@ -177,3 +177,42 @@ constexpr const decltype(nullptr) p21 = nullptr;
 constexpr const decltype(0) p22 = {};
 // CHECK-MESSAGES: [[@LINE-1]]:11: warning: redundant use of 'const'; 'constexpr' already implies 'const'
 // CHECK-FIXES: constexpr decltype(0) p22 = {};
+
+constexpr const int p23 = 1, p24 = 2;
+// CHECK-MESSAGES: [[@LINE-1]]:11: warning: redundant use of 'const'; 'constexpr' already implies 'const'
+// CHECK-FIXES: constexpr int p23 = 1, p24 = 2;
+
+// Reference sibling, warn without fixit.
+constexpr const int p25 = 0, &p26 = p25;
+// CHECK-MESSAGES: [[@LINE-1]]:11: warning: redundant use of 'const'; 'constexpr' already implies 'const'
+
+// Same for pointer siblings.
+constexpr const int p27 = 0, *p28 = &p27;
+// CHECK-MESSAGES: [[@LINE-1]]:11: warning: redundant use of 'const'; 'constexpr' already implies 'const'
+
+constexpr const int &p29 = p25, p30 = 0;
+// CHECK-MESSAGES: [[@LINE-1]]:11: warning: redundant use of 'const'; 'constexpr' already implies 'const'
+
+constexpr const int p31 = 0,
+                     &p32 = p31;
+// CHECK-MESSAGES: [[@LINE-2]]:11: warning: redundant use of 'const'; 'constexpr' already implies 'const'
+
+constexpr /* a */ const int p33 = 0, &p34 = p33;
+// CHECK-MESSAGES: [[@LINE-1]]:19: warning: redundant use of 'const'; 'constexpr' already implies 'const'
+
+constexpr const int p35 = 0, /* b */ &p36 = p35;
+// CHECK-MESSAGES: [[@LINE-1]]:11: warning: redundant use of 'const'; 'constexpr' already implies 'const'
+
+constexpr /* c */ const int p37 = 1, p38 = 2;
+// CHECK-MESSAGES: [[@LINE-1]]:19: warning: redundant use of 'const'; 'constexpr' already implies 'const'
+// CHECK-FIXES: constexpr /* c */ int p37 = 1, p38 = 2;
+
+// Brace-initialized struct with reference sibling.
+struct S { int x, y; };
+
+constexpr const S p39 = {0, 1}, &p40 = p39;
+// CHECK-MESSAGES: [[@LINE-1]]:11: warning: redundant use of 'const'; 'constexpr' already implies 'const'
+
+// Rvalue reference sibling.
+constexpr const int p41 = 0, &&p42 = 1;
+// CHECK-MESSAGES: [[@LINE-1]]:11: warning: redundant use of 'const'; 'constexpr' already implies 'const'
