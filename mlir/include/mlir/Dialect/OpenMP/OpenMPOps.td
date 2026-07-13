@@ -558,6 +558,41 @@ def UnrollHeuristicOp : OpenMPTransform_Op<"unroll_heuristic", []> {
 }
 
 //===----------------------------------------------------------------------===//
+// OpenMP unroll_partial operation
+//===----------------------------------------------------------------------===//
+
+def UnrollPartialOp : OpenMPTransform_Op<"unroll_partial", []> {
+  let summary = "OpenMP partial unroll operation";
+  let description = [{
+    Represents a `#pragma omp unroll partial` construct introduced in OpenMP
+    5.1.
+
+    The operation has one applyee and no generatees. The applyee is partially
+    unrolled by the factor given in the `unroll_factor` attribute, which must be
+    a positive constant. That is, the operation replaces `unroll_factor`
+    consecutive logical iterations of the applyee by a single iteration that
+    executes the original body `unroll_factor` times.
+
+    The resulting unrolled loop is currently not accessible as a generatee, so
+    no further loop-associated transformations can be chained onto it.
+
+    The lowering is implemented using `OpenMPIRBuilder::unrollLoopPartial`.
+
+    Assembly formats:
+      omp.unroll_partial(%cli) {unroll_factor = 4 : i64}
+  }];
+
+  let arguments = (ins CanonicalLoopInfoType:$applyee,
+                       ConfinedAttr<I64Attr, [IntPositive]>:$unroll_factor);
+
+  let builders = [
+    OpBuilder<(ins "::mlir::Value":$cli, "uint64_t":$unrollFactor)>,
+  ];
+
+  let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // OpenMP tile operation
 //===----------------------------------------------------------------------===//
 

@@ -176,15 +176,14 @@ define i64 @strided_search(ptr align 8 dereferenceable(14784) %p) {
 ; RV64-LABEL: define i64 @strided_search(
 ; RV64-SAME: ptr align 8 dereferenceable(14784) [[P:%.*]]) #[[ATTR0]] {
 ; RV64-NEXT:  [[ENTRY:.*]]:
+; RV64-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[P]], i64 88
 ; RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; RV64-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
 ; RV64-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 3)
-; RV64-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[P]], i64 88
 ; RV64-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 132, [[UMAX]]
 ; RV64-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV64:       [[VECTOR_PH]]:
-; RV64-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
+; RV64-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 1
 ; RV64-NEXT:    [[N_MOD_VF:%.*]] = urem i64 132, [[TMP3]]
 ; RV64-NEXT:    [[N_VEC:%.*]] = sub i64 132, [[N_MOD_VF]]
 ; RV64-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 112

@@ -2083,6 +2083,56 @@ uint64_t test_predsumu_u32x2_u64(uint32x2_t a, uint64_t b) {
   return __riscv_predsumu_u32x2_u64(a, b);
 }
 
+// CHECK-LABEL: test_pwcvt_i16x4:
+// RV32:        pwcvt.b
+// RV64:        pwcvtu.wb
+// RV64:        psext.h.b
+int16x4_t test_pwcvt_i16x4(int8x4_t rs1) { return __riscv_pwcvt_i16x4(rs1); }
+
+// CHECK-LABEL: test_pwcvt_i32x2:
+// RV32:        pwcvt.h
+// RV64:        pwcvtu.wh
+// RV64:        psext.w.h
+int32x2_t test_pwcvt_i32x2(int16x2_t rs1) { return __riscv_pwcvt_i32x2(rs1); }
+
+// CHECK-LABEL: test_pwcvtu_u16x4:
+// RV32:        pwcvtu.b
+// RV64:        pwcvtu.wb
+uint16x4_t test_pwcvtu_u16x4(uint8x4_t rs1) {
+  return __riscv_pwcvtu_u16x4(rs1);
+}
+
+// CHECK-LABEL: test_pwcvtu_u32x2:
+// RV32:        pwcvtu.h
+// RV64:        pwcvtu.wh
+uint32x2_t test_pwcvtu_u32x2(uint16x2_t rs1) {
+  return __riscv_pwcvtu_u32x2(rs1);
+}
+
+// CHECK-LABEL: test_pwcvth_i16x4:
+// RV32:        pwcvth.b
+// RV64:        pwcvth.wb
+int16x4_t test_pwcvth_i16x4(int8x4_t rs1) { return __riscv_pwcvth_i16x4(rs1); }
+
+// CHECK-LABEL: test_pwcvth_u16x4:
+// RV32:        pwcvth.b
+// RV64:        pwcvth.wb
+uint16x4_t test_pwcvth_u16x4(uint8x4_t rs1) {
+  return __riscv_pwcvth_u16x4(rs1);
+}
+
+// CHECK-LABEL: test_pwcvth_i32x2:
+// RV32:        pwcvth.h
+// RV64:        pwcvth.wh
+int32x2_t test_pwcvth_i32x2(int16x2_t rs1) { return __riscv_pwcvth_i32x2(rs1); }
+
+// CHECK-LABEL: test_pwcvth_u32x2:
+// RV32:        pwcvth.h
+// RV64:        pwcvth.wh
+uint32x2_t test_pwcvth_u32x2(uint16x2_t rs1) {
+  return __riscv_pwcvth_u32x2(rs1);
+}
+
 // CHECK-LABEL: test_pmerge_merge_u8x4:
 // CHECK:        merge
 uint8x4_t test_pmerge_merge_u8x4(uint8x4_t rd, uint8x4_t rs1, uint8x4_t rs2) {
