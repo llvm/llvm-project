@@ -1,3 +1,8 @@
+if(NOT LLVM_LIBC_FULL_BUILD)
+  set(use_system_file "COMPILE_OPTIONS")
+  libc_add_definition(use_system_file "LIBC_COPT_STDIO_USE_SYSTEM_FILE")
+endif()
+
 if(LIBC_CONF_PRINTF_DISABLE_FLOAT)
   libc_add_definition(printf_config_copts "LIBC_COPT_PRINTF_DISABLE_FLOAT")
 endif()
