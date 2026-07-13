@@ -19,13 +19,14 @@
 // TU2: starting scanning command:{{.*}}tu2.c
 // TU2: finished scanning command:{{.*}}tu2.c
 
-// Verify the total number of logged events.
-// RUN: wc -l < %t/scan.log | FileCheck %s --check-prefix=LINECOUNT
-// LINECOUNT: {{^ *32$}}
-
-// Verify exactly two pcm_writes.
+// Each module is compiled once, its pcm written once, and its timestamp written
+// once, regardless of which thread wins the race to build the shared module A.
+// RUN: grep -c "pcm_compile:" %t/scan.log | FileCheck %s --check-prefix=COMPILES
 // RUN: grep -c "pcm_write:" %t/scan.log | FileCheck %s --check-prefix=PCMWRITES
-// PCMWRITES: 2
+// RUN: grep -c "timestamp_write:" %t/scan.log | FileCheck %s --check-prefix=TSWRITES
+// COMPILES: {{^2$}}
+// PCMWRITES: {{^2$}}
+// TSWRITES: {{^2$}}
 
 // Verify A's pcm is written before B's pcm.
 // RUN: grep "pcm_write:" %t/scan.log | FileCheck %s --check-prefix=WRITEORDER
