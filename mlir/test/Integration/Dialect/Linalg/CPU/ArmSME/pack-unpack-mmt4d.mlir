@@ -40,9 +40,6 @@
 /// 4. The MMT4D and Pack/Unpack Ops are kept in seperate functions to isolate
 ///    the corresponding lowering and lowering configs.
 /// 
-/// TODO: Ideally, we should consider fusion opportunities by moving
-/// pack/unpack/mmt4d ops into one function:
-///   * https://github.com/llvm/llvm-project/issues/159770
 /// TODO: Vectorize linalg.pack + linalg.unpack:
 ///   * https://github.com/llvm/llvm-project/issues/159751
 //===----------------------------------------------------------------------===//
