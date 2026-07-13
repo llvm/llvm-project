@@ -2461,17 +2461,15 @@ static void PrintLocalVersionInfo(StringRef ExecutablePath, raw_ostream &OS) {
     return;
 
   // Print the additional version info
-  OS << Contents.trim() << " ";
+  OS << "Distribution: " << Contents.trim() << "\n";
 }
 
 void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
   if (IsFlangMode()) {
-    PrintLocalVersionInfo(DriverExecutable, OS);
     OS << getClangToolFullVersion("flang") << '\n';
   } else {
     // FIXME: The following handlers should use a callback mechanism, we don't
     // know what the client would like to do.
-    PrintLocalVersionInfo(DriverExecutable, OS);
     OS << getClangFullVersion() << '\n';
   }
   const ToolChain &TC = C.getDefaultToolChain();
@@ -2498,6 +2496,8 @@ void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
   // If configuration files were used, print their paths.
   for (auto ConfigFile : ConfigFiles)
     OS << "Configuration file: " << ConfigFile << '\n';
+
+  PrintLocalVersionInfo(DriverExecutable, OS);
 }
 
 /// PrintDiagnosticCategories - Implement the --print-diagnostic-categories
