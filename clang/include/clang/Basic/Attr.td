@@ -477,7 +477,7 @@ class TargetArch<list<string> arches> : TargetSpec {
 }
 def TargetARM : TargetArch<["arm", "thumb", "armeb", "thumbeb"]>;
 def TargetAArch64 : TargetArch<["aarch64", "aarch64_be", "aarch64_32"]>;
-def TargetAMDGPU : TargetArch<["amdgcn", "r600"]>;
+def TargetAMDGPU : TargetArch<["amdgpu", "r600"]>;
 def TargetAnyArm : TargetArch<!listconcat(TargetARM.Arches, TargetAArch64.Arches)>;
 def TargetAVR : TargetArch<["avr"]>;
 def TargetBPF : TargetArch<["bpfel", "bpfeb"]>;
@@ -512,7 +512,7 @@ def TargetMicrosoftCXXABI : TargetArch<["x86", "x86_64", "arm", "thumb", "aarch6
 // environment on Windows 2. an offloading target e.g. amdgcn or nvptx with
 // a host target in MSVC environment on Windows.
 def TargetMicrosoftRecordLayout : TargetArch<["x86", "x86_64", "arm", "thumb",
-                                              "aarch64", "amdgcn", "nvptx",
+                                              "aarch64", "amdgpu", "nvptx",
                                               "nvptx64", "spirv", "spirv32",
                                               "spirv64"]> {
   let CustomCode = [{ Target.hasMicrosoftRecordLayout() }];
@@ -1039,7 +1039,7 @@ def Annotate : InheritableParamOrStmtAttr {
   }];
   let PragmaAttributeSupport = 1;
   let AcceptsExprPack = 1;
-  let Documentation = [Undocumented];
+  let Documentation = [AnnotateDocs];
 }
 
 def AnnotateType : TypeAttr {
@@ -1497,6 +1497,7 @@ def Common : InheritableAttr {
 
 def Const : InheritableAttr {
   let Spellings = [GCC<"const">, GCC<"__const">];
+  let Subjects = SubjectList<[Function]>;
   let Documentation = [Undocumented];
   let SimpleHandler = 1;
 }
@@ -2129,16 +2130,26 @@ def ExplicitInit : InheritableAttr {
 }
 
 def LifetimeBound : DeclOrTypeAttr {
-  let Spellings = [Clang<"lifetimebound", 0>];
+  let Spellings = [Clang<"lifetimebound", 1>];
   let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
   let Documentation = [LifetimeBoundDocs];
   let SimpleHandler = 1;
 }
 
 def LifetimeCaptureBy : DeclOrTypeAttr {
-  let Spellings = [Clang<"lifetime_capture_by", 0>];
+  let Spellings = [Clang<"lifetime_capture_by">,
+                   Clang<"lifetime_capture_by_this">,
+                   Clang<"lifetime_capture_by_global">,
+                   Clang<"lifetime_capture_by_unknown">];
   let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
   let Args = [VariadicParamOrParamIdxArgument<"Params">];
+  let Accessors = [Accessor<"isThis", [Clang<"lifetime_capture_by_this">]>,
+                   Accessor<"isGlobal", [Clang<"lifetime_capture_by_global">]>,
+                   Accessor<"isUnknown", [Clang<"lifetime_capture_by_unknown">]>,
+                   Accessor<"isStandaloneSpecial",
+                            [Clang<"lifetime_capture_by_this">,
+                             Clang<"lifetime_capture_by_global">,
+                             Clang<"lifetime_capture_by_unknown">]>];
   let Documentation = [LifetimeCaptureByDocs];
   let AdditionalMembers = [{
 private:
@@ -2391,7 +2402,6 @@ def NoConvergent : InheritableAttr {
   let Spellings = [Clang<"noconvergent">, Declspec<"noconvergent">];
   let Subjects = SubjectList<[Function, Stmt], WarnDiag,
                              "functions and statements">;
-  let LangOpts = [CUDA];
   let Documentation = [NoConvergentDocs];
   let SimpleHandler = 1;
 }
@@ -3158,6 +3168,7 @@ def ArmLocallyStreaming : InheritableAttr, TargetSpecificAttr<TargetAArch64> {
 
 def Pure : InheritableAttr {
   let Spellings = [GCC<"pure">];
+  let Subjects = SubjectList<[Function]>;
   let Documentation = [Undocumented];
   let SimpleHandler = 1;
 }
@@ -5178,6 +5189,12 @@ def HLSLShader : InheritableAttr {
 }];
 }
 
+def HLSLIsArray : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "is_array">];
+  let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
+}
+
 def HLSLROV : TypeAttr {
   let Spellings = [CXX11<"hlsl", "is_rov">];
   let LangOpts = [HLSL];
@@ -5477,7 +5494,7 @@ def OverflowBehavior : TypeAttr {
   let Args = [IdentifierArgument<"BehaviorKind">];
   let Subjects = SubjectList<[Var, TypedefName, Field], WarnDiag,
                              "variables, typedefs, and data members">;
-  let Documentation = [Undocumented];
+  let Documentation = [OverflowBehaviorDocs];
 }
 
 def Personality : InheritableAttr {

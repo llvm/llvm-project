@@ -1,0 +1,18 @@
+# Evaluating an expression for a target whose object file format has no
+# Objective-C code generation used to abort the compiler, because LLDB enables
+# Objective-C speculatively. It should fall back to C/C++ instead.
+
+# RUN: yaml2obj %s -o %t
+# RUN: %lldb %t -b -o "expr 1 + 1" 2>&1 | FileCheck %s
+
+# CHECK: (int) $0 = 2
+
+--- !WASM
+FileHeader:
+  Version: 0x00000001
+Sections:
+  - Type: CODE
+    Functions:
+      - Index:  0
+        Locals: []
+        Body:   0B

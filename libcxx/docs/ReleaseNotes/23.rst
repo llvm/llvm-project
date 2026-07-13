@@ -39,7 +39,9 @@ Implemented Papers
 ------------------
 
 - P2440R1: ``ranges::iota``, ``ranges::shift_left`` and ``ranges::shift_right`` (`Github <https://llvm.org/PR105184>`__)
+- P1885R12: Naming Text Encodings to Demystify Them (`Github <https://llvm.org/PR105373>`__)
 - P1899R3: ``stride_view`` (`Github <https://llvm.org/PR105198>`__)
+- P2862R1: ``text_encoding::name()`` should never return null values (`Github <https://llvm.org/PR118371>`__)
 - P3936R1: Safer ``atomic_ref::address`` (`Github <https://llvm.org/PR189594>`__)
 - P3953R3: Rename ``std::runtime_format`` (`Github <https://llvm.org/PR189624>`__)
 - P4052R0: Renaming saturation arithmetic functions (`Github <https://llvm.org/PR189589>`__)
@@ -50,7 +52,9 @@ Implemented Papers
 - P4144R1: Remove ``span``'s ``initializer_list`` constructor for C++26 (`Github <https://llvm.org/PR189612>`__)
 - P2542R8: ``views::concat`` (`Github <https://llvm.org/PR105419>`__)
 - P3383R3: ``mdspan.at()`` (`Github <https://llvm.org/PR175213>`__)
+- P3369R0: constexpr for ``uninitialized_default_construct`` (`Github <https://llvm.org/PR118380>`__)
 - P3508R0: Wording for "constexpr for specialized memory algorithms" (`Github <https://llvm.org/PR118379>`__)
+- P4206R0: Revert string support in ``std::constant_wrapper`` (`Github <https://llvm.org/PR203338>`__)
 
 Improvements and New Features
 -----------------------------
@@ -60,10 +64,16 @@ Improvements and New Features
   for ``std::deque<int>`` iterators.
 - ``std::copy(CharT*, CharT*, ostreambuf_iterator<CharT>)`` has been optimized, resulting in performance improvements
   of up to 25x.
+- A lot of transitive includes have been removed, resulting in significant compile time improvements.
 - ``std::bad_variant_access::what()`` now returns a message identifying the cause of the failure:
   ``"std::visit: variant is valueless"``, ``"std::get: variant is valueless"``, or
   ``"std::get: wrong alternative for variant"``. The standard only requires ``what()`` to return an
   unspecified non-null string, so user code that does not match on the exact message remains correct.
+- ``ifstream::read`` has been optimized to pass through large reads to system calls directly instead of copying them in
+  chunks.
+- ``std::scoped_lock`` now carries Clang thread safety annotations when locking multiple mutexes, so
+  ``-Wthread-safety`` no longer incorrectly reports the guarded data accessed inside the block as
+  unprotected. This requires Clang 21 or later.
 
 Deprecations and Removals
 -------------------------
@@ -84,6 +94,12 @@ Potentially breaking changes
   causes programs which rely on these includes to not compile anymore. Any errors caused by this should be fixable by
   including the correct header. To ease the transition ``_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23`` can be defined, which
   includes the removed headers again. This macro will be removed in LLVM 24.
+
+- The output of ``ostream << std::thread::id`` and ``std::format("...", std::thread:id)`` changes on some platforms from
+  hexadecimal to decimal. This is done to have consistent formatting across all platforms libc++ supports.
+
+- ``std::exception_ptr`` on Windows no longer relies on STL and is now implemented entirely within libc++.
+  The implementation was donated by Microsoft and has been refactored to follow libc++ standards and conventions.
 
 Announcements About Future Releases
 -----------------------------------
@@ -111,6 +127,9 @@ ABI Affecting Changes
   layouts.  The ``iterator`` member type is also changed to store ``FancyPtr<const FancyPtr<T>>`` because the internal
   map is never modified via an ``iterator``. This is necessary for reducing undefined behavior and for adding
   ``constexpr`` support for ``deque`` in C++26, so we do not provide any way to opt-out of that behavior.
+
+- ``std::exception_ptr`` now uses the same layout in MSVC mode as on other platforms, changing the size from two to one
+  pointer.
 
 Build System Changes
 --------------------

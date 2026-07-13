@@ -30,10 +30,9 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #2
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @read_only(ptr nocapture noundef writeonly %out, ptr nocapture noundef readonly byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
 ; LOWER-ARGS-LABEL: define dso_local ptx_kernel void @read_only(
-; LOWER-ARGS-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) "nvvm.grid_constant" [[S:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; LOWER-ARGS-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr addrspace(101) noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; LOWER-ARGS-NEXT:  [[ENTRY:.*:]]
-; LOWER-ARGS-NEXT:    [[S3:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[S]])
-; LOWER-ARGS-NEXT:    [[I:%.*]] = load i32, ptr addrspace(101) [[S3]], align 4
+; LOWER-ARGS-NEXT:    [[I:%.*]] = load i32, ptr addrspace(101) [[S]], align 4
 ; LOWER-ARGS-NEXT:    store i32 [[I]], ptr [[OUT]], align 4
 ; LOWER-ARGS-NEXT:    ret void
 ;
@@ -64,10 +63,9 @@ entry:
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @read_only_gep(ptr nocapture noundef writeonly %out, ptr nocapture noundef readonly byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
 ; LOWER-ARGS-LABEL: define dso_local ptx_kernel void @read_only_gep(
-; LOWER-ARGS-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) "nvvm.grid_constant" [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; LOWER-ARGS-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr addrspace(101) noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; LOWER-ARGS-NEXT:  [[ENTRY:.*:]]
-; LOWER-ARGS-NEXT:    [[S3:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[S]])
-; LOWER-ARGS-NEXT:    [[B4:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(101) [[S3]], i64 4
+; LOWER-ARGS-NEXT:    [[B4:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(101) [[S]], i64 4
 ; LOWER-ARGS-NEXT:    [[I:%.*]] = load i32, ptr addrspace(101) [[B4]], align 4
 ; LOWER-ARGS-NEXT:    store i32 [[I]], ptr [[OUT]], align 4
 ; LOWER-ARGS-NEXT:    ret void
@@ -124,14 +122,21 @@ entry:
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @escape_ptr(ptr nocapture noundef readnone %out, ptr noundef byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
-; COMMON-LABEL: define dso_local ptx_kernel void @escape_ptr(
-; COMMON-SAME: ptr noundef readnone captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 "nvvm.grid_constant" [[S:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-; COMMON-NEXT:  [[ENTRY:.*:]]
-; COMMON-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
-; COMMON-NEXT:    [[S2:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[S]])
-; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S1]], ptr addrspace(101) align 4 [[S2]], i64 8, i1 false)
-; COMMON-NEXT:    call void @_Z6escapePv(ptr noundef nonnull [[S1]]) #[[ATTR6:[0-9]+]]
-; COMMON-NEXT:    ret void
+; LOWER-ARGS-LABEL: define dso_local ptx_kernel void @escape_ptr(
+; LOWER-ARGS-SAME: ptr noundef readnone captures(none) [[OUT:%.*]], ptr addrspace(101) noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; LOWER-ARGS-NEXT:  [[ENTRY:.*:]]
+; LOWER-ARGS-NEXT:    [[S:%.*]] = alloca [[STRUCT_S]], align 4
+; LOWER-ARGS-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S]], ptr addrspace(101) align 4 [[S1]], i64 8, i1 false)
+; LOWER-ARGS-NEXT:    call void @_Z6escapePv(ptr noundef nonnull [[S]]) #[[ATTR5:[0-9]+]]
+; LOWER-ARGS-NEXT:    ret void
+;
+; COPY-LABEL: define dso_local ptx_kernel void @escape_ptr(
+; COPY-SAME: ptr noundef readnone captures(none) [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
+; COPY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[S1]], ptr align 4 [[S]], i64 8, i1 false)
+; COPY-NEXT:    call void @_Z6escapePv(ptr noundef nonnull [[S1]]) #[[ATTR4:[0-9]+]]
+; COPY-NEXT:    ret void
 ;
 ; PTX-LABEL: escape_ptr(
 ; PTX:       {
@@ -163,15 +168,23 @@ entry:
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @escape_ptr_gep(ptr nocapture noundef readnone %out, ptr noundef byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
-; COMMON-LABEL: define dso_local ptx_kernel void @escape_ptr_gep(
-; COMMON-SAME: ptr noundef readnone captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 "nvvm.grid_constant" [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; COMMON-NEXT:  [[ENTRY:.*:]]
-; COMMON-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
-; COMMON-NEXT:    [[S2:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[S]])
-; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S1]], ptr addrspace(101) align 4 [[S2]], i64 8, i1 false)
-; COMMON-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[S1]], i64 4
-; COMMON-NEXT:    call void @_Z6escapePv(ptr noundef nonnull [[B]]) #[[ATTR6]]
-; COMMON-NEXT:    ret void
+; LOWER-ARGS-LABEL: define dso_local ptx_kernel void @escape_ptr_gep(
+; LOWER-ARGS-SAME: ptr noundef readnone captures(none) [[OUT:%.*]], ptr addrspace(101) noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; LOWER-ARGS-NEXT:  [[ENTRY:.*:]]
+; LOWER-ARGS-NEXT:    [[S:%.*]] = alloca [[STRUCT_S]], align 4
+; LOWER-ARGS-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S]], ptr addrspace(101) align 4 [[S1]], i64 8, i1 false)
+; LOWER-ARGS-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 4
+; LOWER-ARGS-NEXT:    call void @_Z6escapePv(ptr noundef nonnull [[B]]) #[[ATTR5]]
+; LOWER-ARGS-NEXT:    ret void
+;
+; COPY-LABEL: define dso_local ptx_kernel void @escape_ptr_gep(
+; COPY-SAME: ptr noundef readnone captures(none) [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
+; COPY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[S1]], ptr align 4 [[S]], i64 8, i1 false)
+; COPY-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[S1]], i64 4
+; COPY-NEXT:    call void @_Z6escapePv(ptr noundef nonnull [[B]]) #[[ATTR4]]
+; COPY-NEXT:    ret void
 ;
 ; PTX-LABEL: escape_ptr_gep(
 ; PTX:       {
@@ -205,14 +218,21 @@ entry:
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @escape_ptr_store(ptr nocapture noundef writeonly %out, ptr noundef byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
-; COMMON-LABEL: define dso_local ptx_kernel void @escape_ptr_store(
-; COMMON-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 "nvvm.grid_constant" [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; COMMON-NEXT:  [[ENTRY:.*:]]
-; COMMON-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
-; COMMON-NEXT:    [[S2:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[S]])
-; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S1]], ptr addrspace(101) align 4 [[S2]], i64 8, i1 false)
-; COMMON-NEXT:    store ptr [[S1]], ptr [[OUT]], align 8
-; COMMON-NEXT:    ret void
+; LOWER-ARGS-LABEL: define dso_local ptx_kernel void @escape_ptr_store(
+; LOWER-ARGS-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr addrspace(101) noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; LOWER-ARGS-NEXT:  [[ENTRY:.*:]]
+; LOWER-ARGS-NEXT:    [[S:%.*]] = alloca [[STRUCT_S]], align 4
+; LOWER-ARGS-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S]], ptr addrspace(101) align 4 [[S1]], i64 8, i1 false)
+; LOWER-ARGS-NEXT:    store ptr [[S]], ptr [[OUT]], align 8
+; LOWER-ARGS-NEXT:    ret void
+;
+; COPY-LABEL: define dso_local ptx_kernel void @escape_ptr_store(
+; COPY-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
+; COPY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[S1]], ptr align 4 [[S]], i64 8, i1 false)
+; COPY-NEXT:    store ptr [[S1]], ptr [[OUT]], align 8
+; COPY-NEXT:    ret void
 ;
 ; PTX-LABEL: escape_ptr_store(
 ; PTX:       {
@@ -242,15 +262,23 @@ entry:
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @escape_ptr_gep_store(ptr nocapture noundef writeonly %out, ptr noundef byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
-; COMMON-LABEL: define dso_local ptx_kernel void @escape_ptr_gep_store(
-; COMMON-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 "nvvm.grid_constant" [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; COMMON-NEXT:  [[ENTRY:.*:]]
-; COMMON-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
-; COMMON-NEXT:    [[S2:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[S]])
-; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S1]], ptr addrspace(101) align 4 [[S2]], i64 8, i1 false)
-; COMMON-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[S1]], i64 4
-; COMMON-NEXT:    store ptr [[B]], ptr [[OUT]], align 8
-; COMMON-NEXT:    ret void
+; LOWER-ARGS-LABEL: define dso_local ptx_kernel void @escape_ptr_gep_store(
+; LOWER-ARGS-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr addrspace(101) noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; LOWER-ARGS-NEXT:  [[ENTRY:.*:]]
+; LOWER-ARGS-NEXT:    [[S:%.*]] = alloca [[STRUCT_S]], align 4
+; LOWER-ARGS-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S]], ptr addrspace(101) align 4 [[S1]], i64 8, i1 false)
+; LOWER-ARGS-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 4
+; LOWER-ARGS-NEXT:    store ptr [[B]], ptr [[OUT]], align 8
+; LOWER-ARGS-NEXT:    ret void
+;
+; COPY-LABEL: define dso_local ptx_kernel void @escape_ptr_gep_store(
+; COPY-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
+; COPY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[S1]], ptr align 4 [[S]], i64 8, i1 false)
+; COPY-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[S1]], i64 4
+; COPY-NEXT:    store ptr [[B]], ptr [[OUT]], align 8
+; COPY-NEXT:    ret void
 ;
 ; PTX-LABEL: escape_ptr_gep_store(
 ; PTX:       {
@@ -282,15 +310,23 @@ entry:
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @escape_ptrtoint(ptr nocapture noundef writeonly %out, ptr noundef byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
-; COMMON-LABEL: define dso_local ptx_kernel void @escape_ptrtoint(
-; COMMON-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 "nvvm.grid_constant" [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; COMMON-NEXT:  [[ENTRY:.*:]]
-; COMMON-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
-; COMMON-NEXT:    [[S2:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[S]])
-; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S1]], ptr addrspace(101) align 4 [[S2]], i64 8, i1 false)
-; COMMON-NEXT:    [[I:%.*]] = ptrtoint ptr [[S1]] to i64
-; COMMON-NEXT:    store i64 [[I]], ptr [[OUT]], align 8
-; COMMON-NEXT:    ret void
+; LOWER-ARGS-LABEL: define dso_local ptx_kernel void @escape_ptrtoint(
+; LOWER-ARGS-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr addrspace(101) noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; LOWER-ARGS-NEXT:  [[ENTRY:.*:]]
+; LOWER-ARGS-NEXT:    [[S:%.*]] = alloca [[STRUCT_S]], align 4
+; LOWER-ARGS-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S]], ptr addrspace(101) align 4 [[S1]], i64 8, i1 false)
+; LOWER-ARGS-NEXT:    [[I:%.*]] = ptrtoint ptr [[S]] to i64
+; LOWER-ARGS-NEXT:    store i64 [[I]], ptr [[OUT]], align 8
+; LOWER-ARGS-NEXT:    ret void
+;
+; COPY-LABEL: define dso_local ptx_kernel void @escape_ptrtoint(
+; COPY-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
+; COPY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[S1]], ptr align 4 [[S]], i64 8, i1 false)
+; COPY-NEXT:    [[I:%.*]] = ptrtoint ptr [[S1]] to i64
+; COPY-NEXT:    store i64 [[I]], ptr [[OUT]], align 8
+; COPY-NEXT:    ret void
 ;
 ; PTX-LABEL: escape_ptrtoint(
 ; PTX:       {
@@ -322,10 +358,9 @@ entry:
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @memcpy_from_param(ptr nocapture noundef writeonly %out, ptr nocapture noundef readonly byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
 ; LOWER-ARGS-LABEL: define dso_local ptx_kernel void @memcpy_from_param(
-; LOWER-ARGS-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) "nvvm.grid_constant" [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; LOWER-ARGS-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr addrspace(101) noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; LOWER-ARGS-NEXT:  [[ENTRY:.*:]]
-; LOWER-ARGS-NEXT:    [[S3:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[S]])
-; LOWER-ARGS-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr [[OUT]], ptr addrspace(101) [[S3]], i64 16, i1 true)
+; LOWER-ARGS-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr [[OUT]], ptr addrspace(101) [[S]], i64 16, i1 true)
 ; LOWER-ARGS-NEXT:    ret void
 ;
 ; COPY-LABEL: define dso_local ptx_kernel void @memcpy_from_param(
@@ -382,10 +417,9 @@ entry:
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @memcpy_from_param_noalign (ptr nocapture noundef writeonly %out, ptr nocapture noundef readonly byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
 ; LOWER-ARGS-LABEL: define dso_local ptx_kernel void @memcpy_from_param_noalign(
-; LOWER-ARGS-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) "nvvm.grid_constant" [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; LOWER-ARGS-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr addrspace(101) noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; LOWER-ARGS-NEXT:  [[ENTRY:.*:]]
-; LOWER-ARGS-NEXT:    [[S3:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[S]])
-; LOWER-ARGS-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr [[OUT]], ptr addrspace(101) [[S3]], i64 16, i1 true)
+; LOWER-ARGS-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr [[OUT]], ptr addrspace(101) [[S]], i64 16, i1 true)
 ; LOWER-ARGS-NEXT:    ret void
 ;
 ; COPY-LABEL: define dso_local ptx_kernel void @memcpy_from_param_noalign(
@@ -441,14 +475,21 @@ entry:
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @memcpy_to_param(ptr nocapture noundef readonly %in, ptr nocapture noundef byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
-; COMMON-LABEL: define dso_local ptx_kernel void @memcpy_to_param(
-; COMMON-SAME: ptr noundef readonly captures(none) [[IN:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) "nvvm.grid_constant" [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; COMMON-NEXT:  [[ENTRY:.*:]]
-; COMMON-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
-; COMMON-NEXT:    [[S2:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[S]])
-; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S1]], ptr addrspace(101) align 4 [[S2]], i64 8, i1 false)
-; COMMON-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[S1]], ptr [[IN]], i64 16, i1 true)
-; COMMON-NEXT:    ret void
+; LOWER-ARGS-LABEL: define dso_local ptx_kernel void @memcpy_to_param(
+; LOWER-ARGS-SAME: ptr noundef readonly captures(none) [[IN:%.*]], ptr addrspace(101) noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; LOWER-ARGS-NEXT:  [[ENTRY:.*:]]
+; LOWER-ARGS-NEXT:    [[S:%.*]] = alloca [[STRUCT_S]], align 4
+; LOWER-ARGS-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S]], ptr addrspace(101) align 4 [[S1]], i64 8, i1 false)
+; LOWER-ARGS-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[S]], ptr [[IN]], i64 16, i1 true)
+; LOWER-ARGS-NEXT:    ret void
+;
+; COPY-LABEL: define dso_local ptx_kernel void @memcpy_to_param(
+; COPY-SAME: ptr noundef readonly captures(none) [[IN:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
+; COPY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[S1]], ptr align 4 [[S]], i64 8, i1 false)
+; COPY-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[S1]], ptr [[IN]], i64 16, i1 true)
+; COPY-NEXT:    ret void
 ;
 ; PTX-LABEL: memcpy_to_param(
 ; PTX:       {
@@ -496,15 +537,23 @@ entry:
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @copy_on_store(ptr nocapture noundef readonly %in, ptr nocapture noundef byval(%struct.S) align 4 %s, i1 noundef zeroext %b) local_unnamed_addr #0 {
-; COMMON-LABEL: define dso_local ptx_kernel void @copy_on_store(
-; COMMON-SAME: ptr noundef readonly captures(none) [[IN:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) "nvvm.grid_constant" [[S:%.*]], i1 noundef zeroext [[B:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; COMMON-NEXT:  [[BB:.*:]]
-; COMMON-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
-; COMMON-NEXT:    [[S2:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[S]])
-; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S1]], ptr addrspace(101) align 4 [[S2]], i64 8, i1 false)
-; COMMON-NEXT:    [[I:%.*]] = load i32, ptr [[IN]], align 4
-; COMMON-NEXT:    store i32 [[I]], ptr [[S1]], align 4
-; COMMON-NEXT:    ret void
+; LOWER-ARGS-LABEL: define dso_local ptx_kernel void @copy_on_store(
+; LOWER-ARGS-SAME: ptr noundef readonly captures(none) [[IN:%.*]], ptr addrspace(101) noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S1:%.*]], i1 noundef zeroext [[B:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; LOWER-ARGS-NEXT:  [[BB:.*:]]
+; LOWER-ARGS-NEXT:    [[S:%.*]] = alloca [[STRUCT_S]], align 4
+; LOWER-ARGS-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S]], ptr addrspace(101) align 4 [[S1]], i64 8, i1 false)
+; LOWER-ARGS-NEXT:    [[I:%.*]] = load i32, ptr [[IN]], align 4
+; LOWER-ARGS-NEXT:    store i32 [[I]], ptr [[S]], align 4
+; LOWER-ARGS-NEXT:    ret void
+;
+; COPY-LABEL: define dso_local ptx_kernel void @copy_on_store(
+; COPY-SAME: ptr noundef readonly captures(none) [[IN:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]], i1 noundef zeroext [[B:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COPY-NEXT:  [[BB:.*:]]
+; COPY-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
+; COPY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[S1]], ptr align 4 [[S]], i64 8, i1 false)
+; COPY-NEXT:    [[I:%.*]] = load i32, ptr [[IN]], align 4
+; COPY-NEXT:    store i32 [[I]], ptr [[S1]], align 4
+; COPY-NEXT:    ret void
 ;
 ; PTX-LABEL: copy_on_store(
 ; PTX:       {
@@ -520,40 +569,34 @@ bb:
 
 define ptx_kernel void @test_select(ptr byval(i32) align 4 %input1, ptr byval(i32) align 4 %input2, ptr %out, i1 %cond) {
 ; SM_60-LABEL: define ptx_kernel void @test_select(
-; SM_60-SAME: ptr readonly byval(i32) align 4 "nvvm.grid_constant" [[INPUT1:%.*]], ptr readonly byval(i32) align 4 "nvvm.grid_constant" [[INPUT2:%.*]], ptr [[OUT:%.*]], i1 [[COND:%.*]]) #[[ATTR3:[0-9]+]] {
+; SM_60-SAME: ptr addrspace(101) readonly byval(i32) align 4 [[INPUT11:%.*]], ptr addrspace(101) readonly byval(i32) align 4 [[INPUT22:%.*]], ptr [[OUT:%.*]], i1 [[COND:%.*]]) #[[ATTR3:[0-9]+]] {
 ; SM_60-NEXT:  [[BB:.*:]]
 ; SM_60-NEXT:    [[INPUT24:%.*]] = alloca i32, align 4
-; SM_60-NEXT:    [[INPUT25:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[INPUT2]])
-; SM_60-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT24]], ptr addrspace(101) align 4 [[INPUT25]], i64 4, i1 false)
-; SM_60-NEXT:    [[INPUT11:%.*]] = alloca i32, align 4
-; SM_60-NEXT:    [[INPUT12:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[INPUT1]])
-; SM_60-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT11]], ptr addrspace(101) align 4 [[INPUT12]], i64 4, i1 false)
-; SM_60-NEXT:    [[PTRNEW:%.*]] = select i1 [[COND]], ptr [[INPUT11]], ptr [[INPUT24]]
+; SM_60-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT24]], ptr addrspace(101) align 4 [[INPUT22]], i64 4, i1 false)
+; SM_60-NEXT:    [[INPUT1:%.*]] = alloca i32, align 4
+; SM_60-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT1]], ptr addrspace(101) align 4 [[INPUT11]], i64 4, i1 false)
+; SM_60-NEXT:    [[PTRNEW:%.*]] = select i1 [[COND]], ptr [[INPUT1]], ptr [[INPUT24]]
 ; SM_60-NEXT:    [[VALLOADED:%.*]] = load i32, ptr [[PTRNEW]], align 4
 ; SM_60-NEXT:    store i32 [[VALLOADED]], ptr [[OUT]], align 4
 ; SM_60-NEXT:    ret void
 ;
 ; SM_70-LABEL: define ptx_kernel void @test_select(
-; SM_70-SAME: ptr readonly byval(i32) align 4 "nvvm.grid_constant" [[INPUT1:%.*]], ptr readonly byval(i32) align 4 "nvvm.grid_constant" [[INPUT2:%.*]], ptr [[OUT:%.*]], i1 [[COND:%.*]]) #[[ATTR3:[0-9]+]] {
+; SM_70-SAME: ptr addrspace(101) readonly byval(i32) align 4 [[INPUT1:%.*]], ptr addrspace(101) readonly byval(i32) align 4 [[INPUT2:%.*]], ptr [[OUT:%.*]], i1 [[COND:%.*]]) #[[ATTR3:[0-9]+]] {
 ; SM_70-NEXT:  [[BB:.*:]]
-; SM_70-NEXT:    [[TMP0:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[INPUT2]])
-; SM_70-NEXT:    [[INPUT2_PARAM_GEN:%.*]] = addrspacecast ptr addrspace(101) [[TMP0]] to ptr
-; SM_70-NEXT:    [[TMP1:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[INPUT1]])
-; SM_70-NEXT:    [[INPUT1_PARAM_GEN:%.*]] = addrspacecast ptr addrspace(101) [[TMP1]] to ptr
+; SM_70-NEXT:    [[INPUT2_PARAM_GEN:%.*]] = addrspacecast ptr addrspace(101) [[INPUT2]] to ptr
+; SM_70-NEXT:    [[INPUT1_PARAM_GEN:%.*]] = addrspacecast ptr addrspace(101) [[INPUT1]] to ptr
 ; SM_70-NEXT:    [[PTRNEW:%.*]] = select i1 [[COND]], ptr [[INPUT1_PARAM_GEN]], ptr [[INPUT2_PARAM_GEN]]
 ; SM_70-NEXT:    [[VALLOADED:%.*]] = load i32, ptr [[PTRNEW]], align 4
 ; SM_70-NEXT:    store i32 [[VALLOADED]], ptr [[OUT]], align 4
 ; SM_70-NEXT:    ret void
 ;
 ; COPY-LABEL: define ptx_kernel void @test_select(
-; COPY-SAME: ptr readonly byval(i32) align 4 "nvvm.grid_constant" [[INPUT1:%.*]], ptr readonly byval(i32) align 4 "nvvm.grid_constant" [[INPUT2:%.*]], ptr [[OUT:%.*]], i1 [[COND:%.*]]) #[[ATTR3:[0-9]+]] {
+; COPY-SAME: ptr byval(i32) align 4 [[INPUT1:%.*]], ptr byval(i32) align 4 [[INPUT2:%.*]], ptr [[OUT:%.*]], i1 [[COND:%.*]]) #[[ATTR3:[0-9]+]] {
 ; COPY-NEXT:  [[BB:.*:]]
 ; COPY-NEXT:    [[INPUT23:%.*]] = alloca i32, align 4
-; COPY-NEXT:    [[INPUT24:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[INPUT2]])
-; COPY-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT23]], ptr addrspace(101) align 4 [[INPUT24]], i64 4, i1 false)
+; COPY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[INPUT23]], ptr align 4 [[INPUT2]], i64 4, i1 false)
 ; COPY-NEXT:    [[INPUT11:%.*]] = alloca i32, align 4
-; COPY-NEXT:    [[INPUT12:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[INPUT1]])
-; COPY-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT11]], ptr addrspace(101) align 4 [[INPUT12]], i64 4, i1 false)
+; COPY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[INPUT11]], ptr align 4 [[INPUT1]], i64 4, i1 false)
 ; COPY-NEXT:    [[PTRNEW:%.*]] = select i1 [[COND]], ptr [[INPUT11]], ptr [[INPUT23]]
 ; COPY-NEXT:    [[VALLOADED:%.*]] = load i32, ptr [[PTRNEW]], align 4
 ; COPY-NEXT:    store i32 [[VALLOADED]], ptr [[OUT]], align 4
@@ -587,27 +630,23 @@ bb:
 
 define ptx_kernel void @test_select_write(ptr byval(i32) align 4 %input1, ptr byval(i32) align 4 %input2, ptr %out, i1 %cond) {
 ; LOWER-ARGS-LABEL: define ptx_kernel void @test_select_write(
-; LOWER-ARGS-SAME: ptr readonly byval(i32) align 4 "nvvm.grid_constant" [[INPUT1:%.*]], ptr readonly byval(i32) align 4 "nvvm.grid_constant" [[INPUT2:%.*]], ptr [[OUT:%.*]], i1 [[COND:%.*]]) #[[ATTR3:[0-9]+]] {
+; LOWER-ARGS-SAME: ptr addrspace(101) readonly byval(i32) align 4 [[INPUT11:%.*]], ptr addrspace(101) readonly byval(i32) align 4 [[INPUT22:%.*]], ptr [[OUT:%.*]], i1 [[COND:%.*]]) #[[ATTR3:[0-9]+]] {
 ; LOWER-ARGS-NEXT:  [[BB:.*:]]
-; LOWER-ARGS-NEXT:    [[INPUT22:%.*]] = alloca i32, align 4
-; LOWER-ARGS-NEXT:    [[INPUT2_PARAM:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[INPUT2]])
-; LOWER-ARGS-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT22]], ptr addrspace(101) align 4 [[INPUT2_PARAM]], i64 4, i1 false)
-; LOWER-ARGS-NEXT:    [[INPUT11:%.*]] = alloca i32, align 4
-; LOWER-ARGS-NEXT:    [[INPUT1_PARAM:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[INPUT1]])
-; LOWER-ARGS-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT11]], ptr addrspace(101) align 4 [[INPUT1_PARAM]], i64 4, i1 false)
-; LOWER-ARGS-NEXT:    [[PTRNEW:%.*]] = select i1 [[COND]], ptr [[INPUT11]], ptr [[INPUT22]]
+; LOWER-ARGS-NEXT:    [[INPUT2:%.*]] = alloca i32, align 4
+; LOWER-ARGS-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT2]], ptr addrspace(101) align 4 [[INPUT22]], i64 4, i1 false)
+; LOWER-ARGS-NEXT:    [[INPUT1:%.*]] = alloca i32, align 4
+; LOWER-ARGS-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT1]], ptr addrspace(101) align 4 [[INPUT11]], i64 4, i1 false)
+; LOWER-ARGS-NEXT:    [[PTRNEW:%.*]] = select i1 [[COND]], ptr [[INPUT1]], ptr [[INPUT2]]
 ; LOWER-ARGS-NEXT:    store i32 1, ptr [[PTRNEW]], align 4
 ; LOWER-ARGS-NEXT:    ret void
 ;
 ; COPY-LABEL: define ptx_kernel void @test_select_write(
-; COPY-SAME: ptr readonly byval(i32) align 4 "nvvm.grid_constant" [[INPUT1:%.*]], ptr readonly byval(i32) align 4 "nvvm.grid_constant" [[INPUT2:%.*]], ptr [[OUT:%.*]], i1 [[COND:%.*]]) #[[ATTR3]] {
+; COPY-SAME: ptr byval(i32) align 4 [[INPUT1:%.*]], ptr byval(i32) align 4 [[INPUT2:%.*]], ptr [[OUT:%.*]], i1 [[COND:%.*]]) #[[ATTR3]] {
 ; COPY-NEXT:  [[BB:.*:]]
 ; COPY-NEXT:    [[INPUT22:%.*]] = alloca i32, align 4
-; COPY-NEXT:    [[INPUT2_PARAM:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[INPUT2]])
-; COPY-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT22]], ptr addrspace(101) align 4 [[INPUT2_PARAM]], i64 4, i1 false)
+; COPY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[INPUT22]], ptr align 4 [[INPUT2]], i64 4, i1 false)
 ; COPY-NEXT:    [[INPUT11:%.*]] = alloca i32, align 4
-; COPY-NEXT:    [[INPUT1_PARAM:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[INPUT1]])
-; COPY-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT11]], ptr addrspace(101) align 4 [[INPUT1_PARAM]], i64 4, i1 false)
+; COPY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[INPUT11]], ptr align 4 [[INPUT1]], i64 4, i1 false)
 ; COPY-NEXT:    [[PTRNEW:%.*]] = select i1 [[COND]], ptr [[INPUT11]], ptr [[INPUT22]]
 ; COPY-NEXT:    store i32 1, ptr [[PTRNEW]], align 4
 ; COPY-NEXT:    ret void
@@ -645,20 +684,18 @@ bb:
 
 define ptx_kernel void @test_phi(ptr byval(%struct.S) align 4 %input1, ptr byval(%struct.S) align 4 %input2, ptr %inout, i1 %cond) {
 ; SM_60-LABEL: define ptx_kernel void @test_phi(
-; SM_60-SAME: ptr readonly byval([[STRUCT_S:%.*]]) align 4 "nvvm.grid_constant" [[INPUT1:%.*]], ptr readonly byval([[STRUCT_S]]) align 4 "nvvm.grid_constant" [[INPUT2:%.*]], ptr [[INOUT:%.*]], i1 [[COND:%.*]]) #[[ATTR3]] {
+; SM_60-SAME: ptr addrspace(101) readonly byval([[STRUCT_S:%.*]]) align 4 [[INPUT11:%.*]], ptr addrspace(101) readonly byval([[STRUCT_S]]) align 4 [[INPUT22:%.*]], ptr [[INOUT:%.*]], i1 [[COND:%.*]]) #[[ATTR3]] {
 ; SM_60-NEXT:  [[BB:.*:]]
-; SM_60-NEXT:    [[INPUT11:%.*]] = alloca [[STRUCT_S]], align 4
-; SM_60-NEXT:    [[INPUT2_PARAM:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[INPUT2]])
-; SM_60-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT11]], ptr addrspace(101) align 4 [[INPUT2_PARAM]], i64 8, i1 false)
 ; SM_60-NEXT:    [[INPUT13:%.*]] = alloca [[STRUCT_S]], align 4
-; SM_60-NEXT:    [[INPUT12:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[INPUT1]])
-; SM_60-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT13]], ptr addrspace(101) align 4 [[INPUT12]], i64 8, i1 false)
+; SM_60-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT13]], ptr addrspace(101) align 4 [[INPUT22]], i64 8, i1 false)
+; SM_60-NEXT:    [[INPUT1:%.*]] = alloca [[STRUCT_S]], align 4
+; SM_60-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT1]], ptr addrspace(101) align 4 [[INPUT11]], i64 8, i1 false)
 ; SM_60-NEXT:    br i1 [[COND]], label %[[FIRST:.*]], label %[[SECOND:.*]]
 ; SM_60:       [[FIRST]]:
-; SM_60-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[INPUT13]], i32 0, i32 0
+; SM_60-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[INPUT1]], i32 0, i32 0
 ; SM_60-NEXT:    br label %[[MERGE:.*]]
 ; SM_60:       [[SECOND]]:
-; SM_60-NEXT:    [[PTR2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[INPUT11]], i32 0, i32 1
+; SM_60-NEXT:    [[PTR2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[INPUT13]], i32 0, i32 1
 ; SM_60-NEXT:    br label %[[MERGE]]
 ; SM_60:       [[MERGE]]:
 ; SM_60-NEXT:    [[PTRNEW:%.*]] = phi ptr [ [[PTR1]], %[[FIRST]] ], [ [[PTR2]], %[[SECOND]] ]
@@ -667,12 +704,10 @@ define ptx_kernel void @test_phi(ptr byval(%struct.S) align 4 %input1, ptr byval
 ; SM_60-NEXT:    ret void
 ;
 ; SM_70-LABEL: define ptx_kernel void @test_phi(
-; SM_70-SAME: ptr readonly byval([[STRUCT_S:%.*]]) align 4 "nvvm.grid_constant" [[INPUT1:%.*]], ptr readonly byval([[STRUCT_S]]) align 4 "nvvm.grid_constant" [[INPUT2:%.*]], ptr [[INOUT:%.*]], i1 [[COND:%.*]]) #[[ATTR3]] {
+; SM_70-SAME: ptr addrspace(101) readonly byval([[STRUCT_S:%.*]]) align 4 [[INPUT1:%.*]], ptr addrspace(101) readonly byval([[STRUCT_S]]) align 4 [[INPUT2:%.*]], ptr [[INOUT:%.*]], i1 [[COND:%.*]]) #[[ATTR3]] {
 ; SM_70-NEXT:  [[BB:.*:]]
-; SM_70-NEXT:    [[TMP0:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[INPUT2]])
-; SM_70-NEXT:    [[INPUT2_PARAM_GEN:%.*]] = addrspacecast ptr addrspace(101) [[TMP0]] to ptr
-; SM_70-NEXT:    [[TMP1:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[INPUT1]])
-; SM_70-NEXT:    [[INPUT1_PARAM_GEN:%.*]] = addrspacecast ptr addrspace(101) [[TMP1]] to ptr
+; SM_70-NEXT:    [[INPUT2_PARAM_GEN:%.*]] = addrspacecast ptr addrspace(101) [[INPUT2]] to ptr
+; SM_70-NEXT:    [[INPUT1_PARAM_GEN:%.*]] = addrspacecast ptr addrspace(101) [[INPUT1]] to ptr
 ; SM_70-NEXT:    br i1 [[COND]], label %[[FIRST:.*]], label %[[SECOND:.*]]
 ; SM_70:       [[FIRST]]:
 ; SM_70-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[INPUT1_PARAM_GEN]], i32 0, i32 0
@@ -687,14 +722,12 @@ define ptx_kernel void @test_phi(ptr byval(%struct.S) align 4 %input1, ptr byval
 ; SM_70-NEXT:    ret void
 ;
 ; COPY-LABEL: define ptx_kernel void @test_phi(
-; COPY-SAME: ptr readonly byval([[STRUCT_S:%.*]]) align 4 "nvvm.grid_constant" [[INPUT1:%.*]], ptr readonly byval([[STRUCT_S]]) align 4 "nvvm.grid_constant" [[INPUT2:%.*]], ptr [[INOUT:%.*]], i1 [[COND:%.*]]) #[[ATTR3]] {
+; COPY-SAME: ptr byval([[STRUCT_S:%.*]]) align 4 [[INPUT1:%.*]], ptr byval([[STRUCT_S]]) align 4 [[INPUT2:%.*]], ptr [[INOUT:%.*]], i1 [[COND:%.*]]) #[[ATTR3]] {
 ; COPY-NEXT:  [[BB:.*:]]
 ; COPY-NEXT:    [[INPUT23:%.*]] = alloca [[STRUCT_S]], align 4
-; COPY-NEXT:    [[INPUT24:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[INPUT2]])
-; COPY-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT23]], ptr addrspace(101) align 4 [[INPUT24]], i64 8, i1 false)
+; COPY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[INPUT23]], ptr align 4 [[INPUT2]], i64 8, i1 false)
 ; COPY-NEXT:    [[INPUT11:%.*]] = alloca [[STRUCT_S]], align 4
-; COPY-NEXT:    [[INPUT12:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[INPUT1]])
-; COPY-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT11]], ptr addrspace(101) align 4 [[INPUT12]], i64 8, i1 false)
+; COPY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[INPUT11]], ptr align 4 [[INPUT1]], i64 8, i1 false)
 ; COPY-NEXT:    br i1 [[COND]], label %[[FIRST:.*]], label %[[SECOND:.*]]
 ; COPY:       [[FIRST]]:
 ; COPY-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[INPUT11]], i32 0, i32 0
@@ -771,20 +804,18 @@ merge:                                            ; preds = %second, %first
 
 define ptx_kernel void @test_phi_write(ptr byval(%struct.S) align 4 %input1, ptr byval(%struct.S) align 4 %input2, i1 %cond) {
 ; LOWER-ARGS-LABEL: define ptx_kernel void @test_phi_write(
-; LOWER-ARGS-SAME: ptr readonly byval([[STRUCT_S:%.*]]) align 4 "nvvm.grid_constant" [[INPUT1:%.*]], ptr readonly byval([[STRUCT_S]]) align 4 "nvvm.grid_constant" [[INPUT2:%.*]], i1 [[COND:%.*]]) #[[ATTR3]] {
+; LOWER-ARGS-SAME: ptr addrspace(101) readonly byval([[STRUCT_S:%.*]]) align 4 [[INPUT11:%.*]], ptr addrspace(101) readonly byval([[STRUCT_S]]) align 4 [[INPUT22:%.*]], i1 [[COND:%.*]]) #[[ATTR3]] {
 ; LOWER-ARGS-NEXT:  [[BB:.*:]]
-; LOWER-ARGS-NEXT:    [[INPUT22:%.*]] = alloca [[STRUCT_S]], align 4
-; LOWER-ARGS-NEXT:    [[INPUT2_PARAM:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[INPUT2]])
-; LOWER-ARGS-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT22]], ptr addrspace(101) align 4 [[INPUT2_PARAM]], i64 8, i1 false)
-; LOWER-ARGS-NEXT:    [[INPUT11:%.*]] = alloca [[STRUCT_S]], align 4
-; LOWER-ARGS-NEXT:    [[INPUT1_PARAM:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[INPUT1]])
-; LOWER-ARGS-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT11]], ptr addrspace(101) align 4 [[INPUT1_PARAM]], i64 8, i1 false)
+; LOWER-ARGS-NEXT:    [[INPUT2:%.*]] = alloca [[STRUCT_S]], align 4
+; LOWER-ARGS-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT2]], ptr addrspace(101) align 4 [[INPUT22]], i64 8, i1 false)
+; LOWER-ARGS-NEXT:    [[INPUT1:%.*]] = alloca [[STRUCT_S]], align 4
+; LOWER-ARGS-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT1]], ptr addrspace(101) align 4 [[INPUT11]], i64 8, i1 false)
 ; LOWER-ARGS-NEXT:    br i1 [[COND]], label %[[FIRST:.*]], label %[[SECOND:.*]]
 ; LOWER-ARGS:       [[FIRST]]:
-; LOWER-ARGS-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[INPUT11]], i32 0, i32 0
+; LOWER-ARGS-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[INPUT1]], i32 0, i32 0
 ; LOWER-ARGS-NEXT:    br label %[[MERGE:.*]]
 ; LOWER-ARGS:       [[SECOND]]:
-; LOWER-ARGS-NEXT:    [[PTR2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[INPUT22]], i32 0, i32 1
+; LOWER-ARGS-NEXT:    [[PTR2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[INPUT2]], i32 0, i32 1
 ; LOWER-ARGS-NEXT:    br label %[[MERGE]]
 ; LOWER-ARGS:       [[MERGE]]:
 ; LOWER-ARGS-NEXT:    [[PTRNEW:%.*]] = phi ptr [ [[PTR1]], %[[FIRST]] ], [ [[PTR2]], %[[SECOND]] ]
@@ -792,14 +823,12 @@ define ptx_kernel void @test_phi_write(ptr byval(%struct.S) align 4 %input1, ptr
 ; LOWER-ARGS-NEXT:    ret void
 ;
 ; COPY-LABEL: define ptx_kernel void @test_phi_write(
-; COPY-SAME: ptr readonly byval([[STRUCT_S:%.*]]) align 4 "nvvm.grid_constant" [[INPUT1:%.*]], ptr readonly byval([[STRUCT_S]]) align 4 "nvvm.grid_constant" [[INPUT2:%.*]], i1 [[COND:%.*]]) #[[ATTR3]] {
+; COPY-SAME: ptr byval([[STRUCT_S:%.*]]) align 4 [[INPUT1:%.*]], ptr byval([[STRUCT_S]]) align 4 [[INPUT2:%.*]], i1 [[COND:%.*]]) #[[ATTR3]] {
 ; COPY-NEXT:  [[BB:.*:]]
 ; COPY-NEXT:    [[INPUT22:%.*]] = alloca [[STRUCT_S]], align 4
-; COPY-NEXT:    [[INPUT2_PARAM:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[INPUT2]])
-; COPY-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT22]], ptr addrspace(101) align 4 [[INPUT2_PARAM]], i64 8, i1 false)
+; COPY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[INPUT22]], ptr align 4 [[INPUT2]], i64 8, i1 false)
 ; COPY-NEXT:    [[INPUT11:%.*]] = alloca [[STRUCT_S]], align 4
-; COPY-NEXT:    [[INPUT1_PARAM:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[INPUT1]])
-; COPY-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT11]], ptr addrspace(101) align 4 [[INPUT1_PARAM]], i64 8, i1 false)
+; COPY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[INPUT11]], ptr align 4 [[INPUT1]], i64 8, i1 false)
 ; COPY-NEXT:    br i1 [[COND]], label %[[FIRST:.*]], label %[[SECOND:.*]]
 ; COPY:       [[FIRST]]:
 ; COPY-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[INPUT11]], i32 0, i32 0
@@ -858,13 +887,19 @@ merge:                                            ; preds = %second, %first
 }
 
 define ptx_kernel void @test_forward_byval_arg(ptr byval(i32) align 4 %input) {
-; COMMON-LABEL: define ptx_kernel void @test_forward_byval_arg(
-; COMMON-SAME: ptr readonly byval(i32) align 4 "nvvm.grid_constant" [[INPUT:%.*]]) #[[ATTR3:[0-9]+]] {
-; COMMON-NEXT:    [[INPUT1:%.*]] = alloca i32, align 4
-; COMMON-NEXT:    [[INPUT2:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[INPUT]])
-; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT1]], ptr addrspace(101) align 4 [[INPUT2]], i64 4, i1 false)
-; COMMON-NEXT:    call void @device_func(ptr byval(i32) align 4 [[INPUT1]])
-; COMMON-NEXT:    ret void
+; LOWER-ARGS-LABEL: define ptx_kernel void @test_forward_byval_arg(
+; LOWER-ARGS-SAME: ptr addrspace(101) readonly byval(i32) align 4 [[INPUT1:%.*]]) #[[ATTR3]] {
+; LOWER-ARGS-NEXT:    [[INPUT:%.*]] = alloca i32, align 4
+; LOWER-ARGS-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT]], ptr addrspace(101) align 4 [[INPUT1]], i64 4, i1 false)
+; LOWER-ARGS-NEXT:    call void @device_func(ptr byval(i32) align 4 [[INPUT]])
+; LOWER-ARGS-NEXT:    ret void
+;
+; COPY-LABEL: define ptx_kernel void @test_forward_byval_arg(
+; COPY-SAME: ptr byval(i32) align 4 [[INPUT:%.*]]) #[[ATTR3]] {
+; COPY-NEXT:    [[INPUT1:%.*]] = alloca i32, align 4
+; COPY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[INPUT1]], ptr align 4 [[INPUT]], i64 4, i1 false)
+; COPY-NEXT:    call void @device_func(ptr byval(i32) align 4 [[INPUT1]])
+; COPY-NEXT:    ret void
 ;
 ; PTX-LABEL: test_forward_byval_arg(
 ; PTX:       {
@@ -891,7 +926,7 @@ define ptx_kernel void @test_forward_byval_arg(ptr byval(i32) align 4 %input) {
 
 define void @device_func(ptr byval(i32) align 4 %input) {
 ; COMMON-LABEL: define void @device_func(
-; COMMON-SAME: ptr byval(i32) align 4 [[INPUT:%.*]]) #[[ATTR3]] {
+; COMMON-SAME: ptr byval(i32) align 4 [[INPUT:%.*]]) #[[ATTR3:[0-9]+]] {
 ; COMMON-NEXT:    call void @device_func(ptr byval(i32) align 4 [[INPUT]])
 ; COMMON-NEXT:    ret void
 ;

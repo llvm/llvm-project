@@ -856,26 +856,10 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
       continue;
 
     if (AssumeVH.Index != AssumptionCache::ExprResultIdx) {
-      auto OBU = I->getOperandBundleAt(AssumeVH.Index);
-      switch (getBundleAttrFromOBU(OBU)) {
-      case BundleAttr::NonNull:
-        if (getAssumeNonNullInfo(OBU).Ptr != Val)
-          break;
+      if (assumeBundleImpliesNonNull(Val, BBI->getFunction(),
+                                     I->getOperandBundleAt(AssumeVH.Index)))
         BBLV = BBLV.intersect(ValueLatticeElement::getNot(
             Constant::getNullValue(Val->getType())));
-        break;
-
-      case BundleAttr::Dereferenceable: {
-        auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
-        if (Ptr != Val || !Count || *Count == 0)
-          break;
-        BBLV = BBLV.intersect(ValueLatticeElement::getNot(
-            Constant::getNullValue(Val->getType())));
-      } break;
-
-      default:
-        break;
-      }
     } else {
       BBLV = BBLV.intersect(*getValueFromCondition(Val, I->getArgOperand(0),
                                                    /*IsTrueDest*/ true,
@@ -1904,6 +1888,11 @@ ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
     if (!CurrI->hasOneUse() ||
         !isSafeToSpeculativelyExecuteWithVariableReplaced(
             CurrI, /*IgnoreUBImplyingAttrs=*/false))
+      break;
+    // Also stop walking at cross-lane operations, since they may rearrange
+    // lanes so that a later select per-lane condition might no longer
+    // correspond to the original value's lanes.
+    if (V->getType()->isVectorTy() && !isNotCrossLaneOperation(CurrI))
       break;
     CurrU = &*CurrI->use_begin();
   }

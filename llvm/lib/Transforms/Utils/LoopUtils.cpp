@@ -1180,6 +1180,8 @@ unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
     return Instruction::ICmp;
   case Intrinsic::vector_reduce_fmax:
   case Intrinsic::vector_reduce_fmin:
+  case Intrinsic::vector_reduce_fmaximum:
+  case Intrinsic::vector_reduce_fminimum:
     return Instruction::FCmp;
   default:
     llvm_unreachable("Unexpected ID");
@@ -1275,6 +1277,10 @@ RecurKind llvm::getMinMaxReductionRecurKind(Intrinsic::ID RdxID) {
     return RecurKind::FMax;
   case Intrinsic::vector_reduce_fmin:
     return RecurKind::FMin;
+  case Intrinsic::vector_reduce_fmaximum:
+    return RecurKind::FMaximum;
+  case Intrinsic::vector_reduce_fminimum:
+    return RecurKind::FMinimum;
   default:
     return RecurKind::None;
   }
@@ -2284,12 +2290,22 @@ Value *llvm::addDiffRuntimeChecks(
   // Map to keep track of created compares, The key is the pair of operands for
   // the compare, to allow detecting and re-using redundant compares.
   DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
+  // Cache of (VF * IC * AccessSize) - 1, shared across checks with matching
+  // type and IC*AccessSize to avoid emitting duplicate runtime computations.
+  DenseMap<std::pair<Type *, unsigned>, Value *> ThresholdCache;
   for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
+    assert(IC * AccessSize > 0 &&
+           "Threshold must be non-zero to use diff-check");
     Type *Ty = SinkStart->getType();
-    // Compute VF * IC * AccessSize.
-    auto *VFTimesICTimesSize =
-        ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
-                             ConstantInt::get(Ty, IC * AccessSize));
+    unsigned ICTimesAccessSize = IC * AccessSize;
+    Value *One = ConstantInt::get(Ty, 1);
+    Value *&ThresholdMinusOne = ThresholdCache[{Ty, ICTimesAccessSize}];
+    if (!ThresholdMinusOne) {
+      Value *VFTimesICTimesSize =
+          ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
+                               ConstantInt::get(Ty, ICTimesAccessSize));
+      ThresholdMinusOne = ChkBuilder.CreateSub(VFTimesICTimesSize, One);
+    }
     const SCEV *SinkStartRewritten = Rewriter.visit(SinkStart);
     const SCEV *SrcStartRewritten = Rewriter.visit(SrcStart);
     Value *Diff = Expander.expandCodeFor(
@@ -2297,13 +2313,15 @@ Value *llvm::addDiffRuntimeChecks(
 
     // Check if the same compare has already been created earlier. In that case,
     // there is no need to check it again.
-    Value *IsConflict = SeenCompares.lookup({Diff, VFTimesICTimesSize});
+    Value *IsConflict = SeenCompares.lookup({Diff, ThresholdMinusOne});
     if (IsConflict)
       continue;
 
-    IsConflict =
-        ChkBuilder.CreateICmpULT(Diff, VFTimesICTimesSize, "diff.check");
-    SeenCompares.insert({{Diff, VFTimesICTimesSize}, IsConflict});
+    // Use (Diff - 1) <u (Threshold - 1), equivalent to 0 < Diff <u Threshold,
+    // to exclude Diff == 0 (equal pointers are safe).
+    IsConflict = ChkBuilder.CreateICmpULT(ChkBuilder.CreateSub(Diff, One),
+                                          ThresholdMinusOne, "diff.check");
+    SeenCompares.insert({{Diff, ThresholdMinusOne}, IsConflict});
     if (NeedsFreeze)
       IsConflict =
           ChkBuilder.CreateFreeze(IsConflict, IsConflict->getName() + ".fr");

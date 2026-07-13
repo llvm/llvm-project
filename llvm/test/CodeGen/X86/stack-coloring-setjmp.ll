@@ -4,10 +4,8 @@
 
 declare i32 @setjmp(ptr) returns_twice
 declare void @baz(ptr)
-declare void @llvm.lifetime.start.p0(ptr nocapture)
-declare void @llvm.lifetime.end.p0(ptr nocapture)
-declare dso_local void @stash(ptr noundef, ptr noundef) local_unnamed_addr 
-declare dso_local void @use(ptr noundef) local_unnamed_addr 
+declare void @stash(ptr, ptr)
+declare void @use(ptr)
 
 ; CHECK-LABEL: setjmp_test
 ; CHECK: Conservative slots : { 1 1 }
@@ -19,8 +17,8 @@ declare dso_local void @use(ptr noundef) local_unnamed_addr
 
 define void @setjmp_test(ptr %jump_buffer) {
 entry:
-  %foo = alloca i32, align 4
-  %bar = alloca [100 x i32], align 4
+  %foo = alloca i32
+  %bar = alloca [100 x i32]
 
   call void @llvm.lifetime.start.p0(ptr %foo)
   call void @llvm.lifetime.start.p0(ptr %bar)
@@ -30,11 +28,11 @@ entry:
   br i1 %cmp, label %after_setjmp, label %continue
 
 after_setjmp:
-  store volatile i32 100, ptr %foo, align 4
+  store volatile i32 100, ptr %foo
   br label %exit
 
 continue:
-  store i32 100, ptr %bar, align 4
+  store i32 100, ptr %bar
   call void @baz(ptr %bar)
   call void @llvm.lifetime.end.p0(ptr %foo)
   call void @llvm.lifetime.end.p0(ptr %bar)
@@ -55,10 +53,10 @@ exit:
 
 %struct.T = type { [100 x i32] }
 
-define dso_local void @setjmp_test_2(ptr %jump_buffer) local_unnamed_addr  {
+define void @setjmp_test_2(ptr %jump_buffer) {
 entry:
-  %test1 = alloca %struct.T, align 4
-  %test2 = alloca %struct.T, align 4
+  %test1 = alloca %struct.T
+  %test2 = alloca %struct.T
   call void @llvm.lifetime.start.p0(ptr %test1)
   %call = call i32 @setjmp(ptr %jump_buffer)
   %cmp = icmp eq i32 %call, 0
@@ -78,4 +76,3 @@ if.end:
   call void @llvm.lifetime.end.p0(ptr %test1) 
   ret void
 }
-

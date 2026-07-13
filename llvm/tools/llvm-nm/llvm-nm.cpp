@@ -801,8 +801,9 @@ static void printSymbolList(SymbolicFile &Obj,
     if (OutputFormat == sysv || !symbolIsDefined(S)) {
       if (OutputFormat == posix) {
         format(printFormat, S.Address)
-            .print(SymbolAddrStr, sizeof(SymbolAddrStr));
-        format(printFormat, S.Size).print(SymbolSizeStr, sizeof(SymbolSizeStr));
+            .snprint(SymbolAddrStr, sizeof(SymbolAddrStr));
+        format(printFormat, S.Size)
+            .snprint(SymbolSizeStr, sizeof(SymbolSizeStr));
       } else {
         strcpy(SymbolAddrStr, printBlanks);
         strcpy(SymbolSizeStr, printBlanks);
@@ -817,8 +818,8 @@ static void printSymbolList(SymbolicFile &Obj,
         strcpy(SymbolAddrStr, printBlanks);
       else
         format(printFormat, S.Address)
-            .print(SymbolAddrStr, sizeof(SymbolAddrStr));
-      format(printFormat, S.Size).print(SymbolSizeStr, sizeof(SymbolSizeStr));
+            .snprint(SymbolAddrStr, sizeof(SymbolAddrStr));
+      format(printFormat, S.Size).snprint(SymbolSizeStr, sizeof(SymbolSizeStr));
     }
 
     // If OutputFormat is darwin or we are printing Mach-O symbols in hex and

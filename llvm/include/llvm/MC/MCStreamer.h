@@ -294,7 +294,7 @@ protected:
   virtual void emitRawTextImpl(StringRef String);
 
   /// Returns true if the .cv_loc directive is in the right section.
-  bool checkCVLocSection(unsigned FuncId, unsigned FileNo, SMLoc Loc);
+  bool checkCVLocSection(unsigned FuncId, SMLoc Loc);
 
   std::unique_ptr<MCLFIRewriter> LFIRewriter;
 
@@ -365,6 +365,13 @@ public:
   }
 
   bool isInEpilogCFI() const { return CurrentWinEpilog; }
+
+  /// Returns true if a WinCFI prolog has been completed (.seh_endprologue)
+  /// in the current frame.
+  bool isWinCFIPrologEnded() const {
+    return CurrentWinFrameInfo && !CurrentWinFrameInfo->End &&
+           CurrentWinFrameInfo->PrologEnd;
+  }
 
   /// \name Assembly File Formatting.
   /// @{
@@ -846,7 +853,7 @@ public:
   /// \param MaxBytesToEmit - The maximum numbers of bytes to emit, or 0. If
   /// the alignment cannot be reached in this many bytes, no bytes are
   /// emitted.
-  virtual void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
+  virtual void emitCodeAlignment(Align Alignment, const MCSubtargetInfo &STI,
                                  unsigned MaxBytesToEmit = 0);
 
   virtual void emitPrefAlign(Align A, const MCSymbol &End, bool EmitNops,
@@ -1087,6 +1094,9 @@ public:
   /// Set the default unwind version for new WinCFI frames.
   void setDefaultWinCFIUnwindVersion(uint8_t V) {
     DefaultWinCFIUnwindVersion = V;
+  }
+  uint8_t getDefaultWinCFIUnwindVersion() const {
+    return DefaultWinCFIUnwindVersion;
   }
   virtual void emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
                                 SMLoc Loc = SMLoc());

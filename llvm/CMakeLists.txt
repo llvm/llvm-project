@@ -1,5 +1,12 @@
 # See docs/CMake.html for instructions about how to build LLVM with CMake.
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
 
 include(CMakeDependentOption)
 
@@ -483,19 +490,26 @@ set(CPACK_PACKAGE_VERSION_PATCH ${LLVM_VERSION_PATCH})
 set(CPACK_PACKAGE_VERSION ${PACKAGE_VERSION})
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.TXT")
 if(WIN32 AND NOT UNIX)
-  set(CPACK_NSIS_COMPRESSOR "/SOLID lzma \r\n SetCompressorDictSize 32")
   if(NOT DEFINED CPACK_PACKAGE_INSTALL_REGISTRY_KEY)
     set(CPACK_PACKAGE_INSTALL_REGISTRY_KEY "LLVM")
   endif()
   set(CPACK_PACKAGE_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\cmake\\\\nsis_logo.bmp")
-  set(CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\cmake\\\\nsis_icon.ico")
-  set(CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\cmake\\\\nsis_icon.ico")
-  set(CPACK_NSIS_MODIFY_PATH "ON")
-  set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL "ON")
-  if( CMAKE_CL_64 )
-    if(NOT DEFINED CPACK_NSIS_INSTALL_ROOT)
-      set(CPACK_NSIS_INSTALL_ROOT "$PROGRAMFILES64")
+  if (CPACK_GENERATOR STREQUAL "NSIS")
+    set(CPACK_NSIS_COMPRESSOR "/SOLID lzma \r\n SetCompressorDictSize 32")
+    set(CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\cmake\\\\nsis_icon.ico")
+    set(CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\cmake\\\\nsis_icon.ico")
+    set(CPACK_NSIS_MODIFY_PATH "ON")
+    set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL "ON")
+    if( CMAKE_CL_64 )
+      if(NOT DEFINED CPACK_NSIS_INSTALL_ROOT)
+        set(CPACK_NSIS_INSTALL_ROOT "$PROGRAMFILES64")
+      endif()
     endif()
+  endif()
+  if(CPACK_GENERATOR STREQUAL "WIX")
+    set(CPACK_WIX_PRODUCT_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\cmake\\\\nsis_icon.ico")
+    # The WIX installer needs admin privileges unless we use this flag.
+    set(CPACK_WIX_LIGHT_EXTRA_FLAGS "-sval")
   endif()
 endif()
 include(CPack)
@@ -927,17 +941,6 @@ option (LLVM_ENABLE_BINDINGS "Build bindings." ON)
 option (LLVM_ENABLE_TELEMETRY "Enable the telemetry library. If set to OFF, library cannot be enabled after build (eg., at runtime)" ON)
 
 include(HandleDoxygen)
-if (LLVM_ENABLE_DOXYGEN)
-  if (DOXYGEN_FOUND)
-    # If we find doxygen and we want to enable doxygen by default create a
-    # global aggregate doxygen target for generating llvm and any/all
-    # subprojects doxygen documentation.
-    if (LLVM_BUILD_DOCS)
-      add_custom_target(doxygen ALL)
-    endif()
-  endif()
-endif()
-
 
 set(LLVM_INSTALL_DOXYGEN_HTML_DIR "${CMAKE_INSTALL_DOCDIR}/llvm/doxygen-html"
     CACHE STRING "Doxygen-generated HTML documentation install directory")
@@ -1074,7 +1077,7 @@ set(LLVM_PROFDATA_FILE "" CACHE FILEPATH
 set(LLVM_SPROFDATA_FILE "" CACHE FILEPATH
   "Sampling profiling data file to use when compiling in order to improve runtime performance.")
 
-if(LLVM_INCLUDE_TESTS)
+if(LLVM_INCLUDE_TESTS OR LLVM_ENABLE_SPHINX)
   # All LLVM Python files should be compatible down to this minimum version.
   set(LLVM_MINIMUM_PYTHON_VERSION 3.8)
 else()

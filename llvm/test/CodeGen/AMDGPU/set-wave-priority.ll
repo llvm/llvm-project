@@ -1,9 +1,9 @@
-; RUN: llc -mtriple=amdgcn -amdgpu-set-wave-priority=true -o - %s | \
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -amdgpu-set-wave-priority=true -o - %s | \
 ; RUN:   FileCheck %s
 
-; RUN: llc -mtriple=amdgcn -stop-after=si-late-branch-lowering -o - %s | \
-; RUN:   llc -x mir -mtriple=amdgcn -passes=amdgpu-set-wave-priority -o - | \
-; RUN:   llc -x mir -mtriple=amdgcn -start-after=si-late-branch-lowering -o - | \
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -stop-after=si-late-branch-lowering -o - %s | \
+; RUN:   llc -x mir -mtriple=amdgcn -mcpu=gfx600 -passes=amdgpu-set-wave-priority -o - | \
+; RUN:   llc -x mir -mtriple=amdgcn -mcpu=gfx600 -start-after=si-late-branch-lowering -o - | \
 ; RUN:   FileCheck %s
 
 ; CHECK-LABEL: no_setprio:

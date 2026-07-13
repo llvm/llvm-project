@@ -1,10 +1,7 @@
 name: "Check LLVM ABI annotations"
 
-# TODO(https://github.com/llvm/llvm-project/issues/109483): Re-enable on pull
-# requests once the workflow is less diruptive.
 on:
-  # pull_request:
-  workflow_dispatch:
+  pull_request:
 
 permissions:
   contents: read
@@ -18,16 +15,11 @@ jobs:
     if: github.repository_owner == 'llvm'
     name: Check LLVM_ABI annotations with ids
     runs-on: ubuntu-24.04
+    container:
+      image: 'ghcr.io/llvm/ci-ubuntu-24.04-ids-checks:latest@sha256:c80bc0f562592a850f4460bcec6cba339fe21b29bb80763cc621fb01ed0e3883'
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-          repository: compnerd/ids
-          path: ${{ github.workspace }}/ids
-          ref: 6d9b77c89107743159fccaea109e8feb81959844 # main, pinned at the --main-file landing
-
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
@@ -44,27 +36,13 @@ jobs:
           base_sha: 'HEAD~1'
           sha: 'HEAD'
 
-      - name: Install dependencies
-        run: |
-          # Pull a recent clang from LLVM's apt repo so idt's parser stays in
-          # sync with the C++ language features used by current LLVM source.
-          sudo install -d -m 0755 /etc/apt/keyrings
-          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
-            | sudo gpg --dearmor -o /etc/apt/keyrings/llvm.gpg
-          echo "deb [signed-by=/etc/apt/keyrings/llvm.gpg] http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" \
-            | sudo tee /etc/apt/sources.list.d/llvm.list
-          sudo apt update
-          # oprofile provides opagent.h, used by llvm/ExecutionEngine/OProfileWrapper.h
-          sudo apt install -y clang-22 lld-22 ninja-build libclang-22-dev oprofile
-          pip install --require-hashes -r ${{ github.workspace }}/llvm-project/llvm/utils/git/requirements.txt
-
       - name: Configure and build minimal LLVM for use by ids
         run: |
-          cmake -B ${{ github.workspace }}/llvm-project/build/ \
-                -S ${{ github.workspace }}/llvm-project/llvm/ \
+          cmake -B ./llvm-project/build/ \
+                -S ./llvm-project/llvm/ \
                 -D CMAKE_BUILD_TYPE=Release \
-                -D CMAKE_C_COMPILER=clang-22 \
-                -D CMAKE_CXX_COMPILER=clang++-22 \
+                -D CMAKE_C_COMPILER=clang \
+                -D CMAKE_CXX_COMPILER=clang++ \
                 -D LLVM_ENABLE_PROJECTS=clang \
                 -D LLVM_TARGETS_TO_BUILD="host" \
                 -D LLVM_INCLUDE_TESTS=OFF \
@@ -75,7 +53,7 @@ jobs:
 
           # Build the generated-header prerequisites that idt needs to parse
           # LLVM source.
-          BUILD_DIR=${{ github.workspace }}/llvm-project/build
+          BUILD_DIR=./llvm-project/build
           ninja -C "$BUILD_DIR" \
             llvm_vcsrevision_h \
             intrinsics_gen omp_gen acc_gen analysis_gen target_parser_gen vt_gen \
@@ -96,33 +74,17 @@ jobs:
                 }')
           ninja -C "$BUILD_DIR" $TABLEGEN_TARGETS
 
-      - name: Configure and build ids
-        run: |
-          cmake -B ${{ github.workspace }}/ids/build/ \
-                -S ${{ github.workspace }}/ids/ \
-                -D CMAKE_BUILD_TYPE=Release \
-                -D CMAKE_C_COMPILER=clang-22 \
-                -D CMAKE_CXX_COMPILER=clang++-22 \
-                -D CMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld \
-                -D LLVM_DIR=/usr/lib/llvm-22/lib/cmake/llvm/ \
-                -D Clang_DIR=/usr/lib/llvm-22/lib/cmake/clang/ \
-                -D FILECHECK_EXECUTABLE=$(which FileCheck-22) \
-                -D LIT_EXECUTABLE=$(which lit) \
-                -G Ninja
-          ninja -C ${{ github.workspace }}/ids/build/
-
       - name: Run ids check
         env:
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
-        working-directory: ${{ github.workspace }}/llvm-project
         run: |
           echo "[]" > comments &&
-          python llvm/utils/git/ids-check-helper.py \
+          python ./llvm-project/llvm/utils/git/ids-check-helper.py \
             --token ${{ secrets.GITHUB_TOKEN }} \
             --issue-number $GITHUB_PR_NUMBER \
-            --idt-path ${{ github.workspace }}/ids/build/bin/idt \
-            --compile-commands ${{ github.workspace }}/llvm-project/build/compile_commands.json \
+            --idt-path $(which idt) \
+            --compile-commands ./llvm-project/build/compile_commands.json \
             --start-rev HEAD~1 \
             --end-rev HEAD \
             --changed-files "$CHANGED_FILES" \

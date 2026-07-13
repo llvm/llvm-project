@@ -38,6 +38,9 @@ struct LifetimeSafetyOpts {
   /// Maximum number of CFG blocks to analyze. Functions with larger CFGs will
   /// be skipped.
   size_t MaxCFGBlocks;
+
+  /// Whether to suggest lifetime annotations.
+  bool SuggestAnnotations;
 };
 
 /// Enum to track functions visible across or within TU.
@@ -63,7 +66,8 @@ public:
 
   virtual void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
                                    const Expr *MovedExpr,
-                                   SourceLocation FreeLoc) {}
+                                   SourceLocation FreeLoc,
+                                   llvm::ArrayRef<const Expr *> ExprChain) {}
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,
@@ -141,6 +145,8 @@ public:
                                             const ParmVarDecl *PVDDef,
                                             const ParmVarDecl *PVDDecl) {}
 
+  virtual void reportInapplicableLifetimebound(const ParmVarDecl *PVD) {}
+
   // Suggests lifetime bound annotations for implicit this.
   virtual void suggestLifetimeboundToImplicitThis(WarningScope Scope,
                                                   const CXXMethodDecl *MD,
@@ -154,6 +160,7 @@ public:
 /// The main entry point for the analysis.
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                LifetimeSafetySemaHelper *SemaHelper,
+                               const LifetimeSafetyOpts &Opts,
                                LifetimeSafetyStats &Stats, bool CollectStats);
 
 namespace internal {

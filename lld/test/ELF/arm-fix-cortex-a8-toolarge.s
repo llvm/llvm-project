@@ -1,6 +1,8 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-linux-gnueabihf --arm-add-build-attributes %s -o %t.o
 // RUN: ld.lld --fix-cortex-a8 -verbose %t.o -o /dev/null 2>&1 | FileCheck %s
+// RUN: rm %t.o
+
 /// Test that we warn, but don't attempt to patch when it is impossible to
 /// redirect the branch as the Section is too large.
 

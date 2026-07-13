@@ -10,6 +10,8 @@
 /// common to flang and the test tools.
 
 #include "flang/Optimizer/Passes/Pipelines.h"
+#include "flang/Optimizer/Builder/MIFCommon.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
@@ -113,7 +115,7 @@ void addDebugInfoPass(mlir::PassManager &pm,
   options.dwarfVersion = config.DwarfVersion;
   options.splitDwarfFile = config.SplitDwarfFile;
   options.dwarfDebugFlags = config.DwarfDebugFlags;
-  options.emitFakeUseForArguments =
+  options.emitFakeUseForDebugVars =
       (config.OptLevel == llvm::OptimizationLevel::O0) &&
       !disableArgumentFakeUse;
   addPassConditionally(pm, disableDebugInfo,
@@ -459,12 +461,19 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   }
 
   fir::addFIRToLLVMPass(pm, config);
+  pm.addPass(fir::createEmitMIFGlobalCtors());
 
-  // Convert applicable OpenMP stack allocations to shared memory allocations
-  // for GPU targets. This pass must run after any alloca-generating passes to
-  // ensure all are adequately accounted for.
-  if (config.EnableOpenMP && !config.EnableOpenMPSimd)
+  if (config.EnableOpenMP && !config.EnableOpenMPSimd) {
+    // Remove all non target-related operations from host functions still
+    // remaining at this point, if compiling for an OpenMP target device. This
+    // is required before translating 'omp' dialect operations to LLVM IR.
+    pm.addPass(mlir::omp::createHostOpFilteringPass());
+
+    // Convert applicable OpenMP stack allocations to shared memory allocations
+    // for GPU targets. This pass must run after any alloca-generating passes to
+    // ensure all are adequately accounted for.
     pm.addPass(mlir::omp::createStackToSharedPass());
+  }
 }
 
 /// Create a pass pipeline for lowering from MLIR to LLVM IR

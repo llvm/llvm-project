@@ -25,8 +25,12 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/DXContainerInfo.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
+#include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/Path.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <cstdint>
@@ -34,6 +38,14 @@
 using namespace llvm;
 using namespace llvm::dxil;
 using namespace llvm::mcdxbc;
+
+static cl::opt<bool> ShaderHashDependsOnSource(
+    "dx-Zss", cl::desc("Compute Shader Hash considering source information"));
+cl::opt<std::string> PdbDebugPath(
+    "dx-pdb-path",
+    cl::desc("Write debug information to the given file, or automatically "
+             "named file in directory when ending in '/'"),
+    cl::value_desc("filename"));
 
 namespace {
 class DXContainerGlobals : public llvm::ModulePass {
@@ -54,6 +66,7 @@ class DXContainerGlobals : public llvm::ModulePass {
   void addPipelineStateValidationInfo(Module &M,
                                       SmallVector<GlobalValue *> &Globals);
   void addCompilerVersion(Module &M, SmallVector<GlobalValue *> &Globals);
+  void addSourceInfo(Module &M, SmallVector<GlobalValue *> &Globals);
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -85,6 +98,7 @@ bool DXContainerGlobals::runOnModule(Module &M) {
   addRootSignature(M, Globals);
   addPipelineStateValidationInfo(M, Globals);
   addCompilerVersion(M, Globals);
+  addSourceInfo(M, Globals);
   appendToCompilerUsed(M, Globals);
   return true;
 }
@@ -113,15 +127,26 @@ void DXContainerGlobals::addSection(Module &M,
 
 void DXContainerGlobals::computeShaderHashAndDebugName(
     Module &M, SmallVector<GlobalValue *> &Globals) {
-  // TODO: Add -Zss flag to enable/disable calculating shader hash from ILDB.
-  auto *DXILConstant =
-      cast<ConstantDataArray>(M.getNamedGlobal("dx.dxil")->getInitializer());
+  ConstantDataArray *DXILConstant;
   MD5 Digest;
-  Digest.update(DXILConstant->getRawDataValues());
-  MD5::MD5Result Result = Digest.final();
   dxbc::ShaderHash HashData = {0, {0}};
 
-  memcpy(reinterpret_cast<void *>(&HashData.Digest), Result.data(), 16);
+  if (ShaderHashDependsOnSource) {
+    if (auto *ILDB = M.getNamedGlobal("dx.ildb")) {
+      DXILConstant = cast<ConstantDataArray>(ILDB->getInitializer());
+      HashData.Flags = static_cast<uint32_t>(dxbc::HashFlags::IncludesSource);
+    } else {
+      reportFatalUsageError("/Zss requires debug info (/Zi or /Zs)");
+    }
+  } else {
+    DXILConstant =
+        cast<ConstantDataArray>(M.getNamedGlobal("dx.dxil")->getInitializer());
+  }
+
+  Digest.update(DXILConstant->getRawDataValues());
+  MD5::MD5Result MD5 = Digest.final();
+
+  memcpy(reinterpret_cast<void *>(&HashData.Digest), MD5.data(), 16);
   if (sys::IsBigEndianHost)
     HashData.swapBytes();
   StringRef Data(reinterpret_cast<char *>(&HashData), sizeof(dxbc::ShaderHash));
@@ -131,19 +156,37 @@ void DXContainerGlobals::computeShaderHashAndDebugName(
   Globals.emplace_back(
       buildContainerGlobal(M, ModuleConstant, "dx.hash", "HASH"));
 
-  // Emit ILDN part in debug info mode.
-  // DXIL bitcode hash is used, which corresponds to DXC behavior with
-  // `/Zi /Qembed_debug /Zsb` flags.
   if (M.debug_compile_units().empty())
     return;
 
   SmallString<40> DebugNameStr;
-  Digest.stringifyResult(Result, DebugNameStr);
+  Digest.stringifyResult(MD5, DebugNameStr);
   DebugNameStr += ".pdb";
+  if (!PdbDebugPath.empty()) {
+    StringRef DebugFile = PdbDebugPath.getValue();
+    SmallString<256> AbsoluteDebugName;
+    if (sys::path::is_separator(DebugFile.back())) {
+      // If /Fd was specified as a directory, put the MD5.pdb file there.
+      AbsoluteDebugName = DebugFile;
+      sys::path::append(AbsoluteDebugName, DebugNameStr);
+    } else {
+      // Otherwise, use /Fd value as a user-provided PDB file name.
+      DebugNameStr = DebugFile;
+      AbsoluteDebugName = DebugNameStr;
+    }
 
+    // Pass PDB name to DXContainerPDBPass via PDBNAME section.
+    addSection(M, Globals, AbsoluteDebugName, "dx.pdb.name",
+               PdbFileNameSectionName);
+    // Pass module hash to DXContainerPDBPass.
+    Globals.emplace_back(buildContainerGlobal(
+        M, ConstantDataArray::get(M.getContext(), ArrayRef(HashData.Digest)),
+        "dx.pdb.hash", ModuleHashSectionName));
+  }
+
+  // Emit ILDN part in debug info mode.
   mcdxbc::DebugName DebugName;
   DebugName.setFilename(DebugNameStr);
-
   SmallString<64> ILDNData;
   raw_svector_ostream OS(ILDNData);
   DebugName.write(OS);
@@ -339,9 +382,6 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
 
 void DXContainerGlobals::addCompilerVersion(
     Module &M, SmallVector<GlobalValue *> &Globals) {
-  dxil::ModuleMetadataInfo &MMI =
-      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
-
   if (M.debug_compile_units().empty())
     return;
 
@@ -350,6 +390,22 @@ void DXContainerGlobals::addCompilerVersion(
   mcdxbc::CompilerVersion CompilerVersion;
   CompilerVersion.write(OS);
   addSection(M, Globals, Data, "dx.vers", "VERS");
+}
+
+void DXContainerGlobals::addSourceInfo(Module &M,
+                                       SmallVector<GlobalValue *> &Globals) {
+  dxil::ModuleMetadataInfo &MMI =
+      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
+
+  if (!MMI.SourceInfo)
+    return;
+
+  MMI.SourceInfo->computeEntries();
+  MMI.SourceInfo->finalize();
+  SmallString<256> Data;
+  raw_svector_ostream OS(Data);
+  MMI.SourceInfo->write(OS);
+  addSection(M, Globals, Data, "dx.srci", "SRCI");
 }
 
 char DXContainerGlobals::ID = 0;

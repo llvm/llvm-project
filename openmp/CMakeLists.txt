@@ -1,4 +1,12 @@
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
+
 set(LLVM_SUBPROJECT_TITLE "OpenMP")
 
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
@@ -165,8 +173,8 @@ if(LIBOMP_FORTRAN_MODULES)
 endif()
 
 # Use the current compiler target to determine the appropriate runtime to build.
-if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx|^spirv64" OR
-   "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn|^nvptx|^spirv64")
+if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgpu|^amdgcn|^nvptx|^spirv64" OR
+   "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgpu|^amdgcn|^nvptx|^spirv64")
   add_subdirectory(device)
 else()
   # Build host runtime library, after LIBOMPTARGET variables are set since they

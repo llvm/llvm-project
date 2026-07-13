@@ -41,10 +41,8 @@ using namespace MIPatternMatch;
 #undef AMDGPUSubtarget
 
 AMDGPUInstructionSelector::AMDGPUInstructionSelector(
-    const GCNSubtarget &STI, const AMDGPURegisterBankInfo &RBI,
-    const AMDGPUTargetMachine &TM)
-    : TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()), RBI(RBI), TM(TM),
-      STI(STI),
+    const GCNSubtarget &STI, const AMDGPURegisterBankInfo &RBI)
+    : TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()), RBI(RBI), STI(STI),
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "AMDGPUGenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATES_INIT
@@ -5359,6 +5357,13 @@ std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3PModsImpl(
   else if (Stat.second == SrcStatus::IS_LO_NEG)
     Mods ^= SISrcMods::NEG;
 
+  // 64-bit VOP3P instructions do not have OPSEL or ABS. Bail on v2f64 or v2i64.
+  // TODO: Select NEG_LO and NEG_HI modifiers from BUILD_VECTOR.
+  if (MRI.getType(RootReg).getSizeInBits() == 128) {
+    Mods |= SISrcMods::OP_SEL_1; // Just the default, OPSEL unsupported.
+    return {Stat.first, Mods};
+  }
+
   MachineInstr *MI = MRI.getVRegDef(Stat.first);
 
   if (MI->getOpcode() != AMDGPU::G_BUILD_VECTOR || MI->getNumOperands() != 3 ||
@@ -6460,7 +6465,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
 
     // TODO: Should this be inside the render function? The iterator seems to
     // move.
-    const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(*Subtarget);
+    const int64_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(*Subtarget);
     BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::V_MOV_B32_e32),
             HighBits)
         .addImm(Offset & ~MaxOffset);

@@ -18,6 +18,7 @@
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/Support/CommandLine.h"
 #include <atomic>
+#include <cmath>
 #include <mutex>
 #include <numeric>
 #include <vector>

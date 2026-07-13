@@ -83,11 +83,6 @@ public:
   SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG) const;
 
-  std::string getPrototype(const DataLayout &DL, Type *, const ArgListTy &,
-                           const SmallVectorImpl<ISD::OutputArg> &,
-                           std::optional<unsigned> FirstVAArg,
-                           const CallBase &CB, unsigned UniqueCallSite) const;
-
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &dl,
@@ -106,10 +101,6 @@ public:
 
   TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(MVT VT) const override;
-
-  bool isShuffleMaskLegal(ArrayRef<int>, EVT VT) const override {
-    return isTypeLegal(VT);
-  }
 
   // Get the degree of precision we want from 32-bit floating point division
   // operations.
