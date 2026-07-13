@@ -123,8 +123,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   // Some instructions only support s16 if the subtarget has full 16-bit FP
   // support.
   const bool HasFP16 = ST.hasFullFP16();
-  const LLT &MinFPScalar = HasFP16 ? f16 : f32;
-
   const bool HasCSSC = ST.hasCSSC();
   const bool HasRCPC3 = ST.hasRCPC3();
   const bool HasSVE = ST.hasSVE();
@@ -252,6 +250,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           {v4i32, v4i32},
           {v2i64, v2i64},
       })
+      .widenScalarToNextPow2(1)
       .widenScalarToNextPow2(0)
       .clampScalar(1, s32, s64)
       .clampScalar(0, s32, s64)
@@ -1391,7 +1390,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_VECREDUCE_FADD)
       .legalFor({{f32, v2f32}, {f32, v4f32}, {f64, v2f64}})
       .legalFor(HasFP16, {{f16, v4f16}, {f16, v8f16}})
-      .minScalarOrElt(0, MinFPScalar)
+      .widenScalarIf(
+          [HasFP16](const LegalityQuery &Query) {
+            return (!HasFP16 && Query.Types[0].getScalarType().isFloat16()) ||
+                   Query.Types[0].getScalarType().isBFloat16();
+          },
+          changeElementTo(0, f32))
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
       .clampMaxNumElements(1, s16, 8)
@@ -1403,7 +1407,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   // clamp to 128 bit vectors then to 64bit vectors to produce a cascade of
   // smaller types, followed by scalarizing what remains.
   getActionDefinitionsBuilder(G_VECREDUCE_FMUL)
-      .minScalarOrElt(0, MinFPScalar)
+      .widenScalarIf(
+          [HasFP16](const LegalityQuery &Query) {
+            return (!HasFP16 && Query.Types[0].getScalarType().isFloat16()) ||
+                   Query.Types[0].getScalarType().isBFloat16();
+          },
+          changeElementTo(0, f32))
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
       .clampMaxNumElements(1, s16, 8)
@@ -1436,7 +1445,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                                G_VECREDUCE_FMINIMUM, G_VECREDUCE_FMAXIMUM})
       .legalFor({{f32, v2f32}, {f32, v4f32}, {f64, v2f64}})
       .legalFor(HasFP16, {{f16, v4f16}, {f16, v8f16}})
-      .minScalarOrElt(0, MinFPScalar)
+      .widenScalarIf(
+          [HasFP16](const LegalityQuery &Query) {
+            return (!HasFP16 && Query.Types[0].getScalarType().isFloat16()) ||
+                   Query.Types[0].getScalarType().isBFloat16();
+          },
+          changeElementTo(0, f32))
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
       .clampMaxNumElements(1, s16, 8)
@@ -2686,9 +2700,9 @@ bool AArch64LegalizerInfo::legalizeFptrunc(MachineInstr &MI,
   // G_FPTRUNC.
 
   if (DstTy.isBFloat16() && SrcTy.isFloat64()) {
-    auto Mid =
-        MIRBuilder.buildInstr(AArch64::G_FPTRUNC_ODD, {LLT::float32()}, {Src});
-    MIRBuilder.buildInstr(AArch64::G_FPTRUNC, {Dst}, {Mid});
+    auto Mid = MIRBuilder.buildInstr(AArch64::G_FPTRUNC_ODD, {LLT::float32()},
+                                     {Src}, MI.getFlags());
+    MIRBuilder.buildInstr(AArch64::G_FPTRUNC, {Dst}, {Mid}, MI.getFlags());
     MI.eraseFromParent();
     return true;
   }
@@ -2726,9 +2740,10 @@ bool AArch64LegalizerInfo::legalizeFptrunc(MachineInstr &MI,
 
   // Create all of the round-to-odd instructions and store them
   for (auto SrcReg : RegsToUnmergeTo) {
-    Register Mid =
-        MIRBuilder.buildInstr(AArch64::G_FPTRUNC_ODD, {v2s32}, {SrcReg})
-            .getReg(0);
+    Register Mid = MIRBuilder
+                       .buildInstr(AArch64::G_FPTRUNC_ODD, {v2s32}, {SrcReg},
+                                   MI.getFlags())
+                       .getReg(0);
     TruncOddDstRegs.push_back(Mid);
   }
 
@@ -2744,10 +2759,12 @@ bool AArch64LegalizerInfo::legalizeFptrunc(MachineInstr &MI,
               .getReg(0);
 
       RegsToMerge.push_back(
-          MIRBuilder.buildFPTrunc(v4s16, ConcatDst).getReg(0));
+          MIRBuilder.buildFPTrunc(v4s16, ConcatDst, MI.getFlags()).getReg(0));
     } else {
       RegsToMerge.push_back(
-          MIRBuilder.buildFPTrunc(v2s16, TruncOddDstRegs[Index++]).getReg(0));
+          MIRBuilder
+              .buildFPTrunc(v2s16, TruncOddDstRegs[Index++], MI.getFlags())
+              .getReg(0));
     }
   }
 

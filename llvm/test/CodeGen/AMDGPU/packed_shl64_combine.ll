@@ -16,6 +16,8 @@ define <2 x i64> @func_v2i64_vector(<2 x i64> %arg) {
 define amdgpu_ps <2 x i64> @func_v2i64_scalar(<2 x i64> inreg %arg) {
 ; CHECK-LABEL: func_v2i64_scalar:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    global_wb
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    s_lshl_b64 s[0:1], s[0:1], 32
 ; CHECK-NEXT:    s_lshl_b64 s[2:3], s[2:3], 31
@@ -41,6 +43,8 @@ define <4 x i64> @func_4xi64_vector(<4 x i64> %arg) {
 define amdgpu_ps <4 x i64> @func_4xi64_scalar(<4 x i64> inreg %arg) {
 ; CHECK-LABEL: func_4xi64_scalar:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    global_wb
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    s_mov_b32 s3, s2
 ; CHECK-NEXT:    s_mov_b32 s1, s0
@@ -74,6 +78,8 @@ define <8 x i64> @func_8xi64_vector(<8 x i64> %arg) {
 define amdgpu_ps <8 x i64> @func_8xi64_scalar(<8 x i64> inreg %arg) {
 ; CHECK-LABEL: func_8xi64_scalar:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    global_wb
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    s_mov_b32 s11, s10
 ; CHECK-NEXT:    s_mov_b32 s9, s8
@@ -125,6 +131,8 @@ define <16 x i64> @func_16xi64_vector(<16 x i64> %arg) {
 define amdgpu_ps <16 x i64> @func_16xi64_scalar(<16 x i64> inreg %arg) {
 ; CHECK-LABEL: func_16xi64_scalar:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    global_wb
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    s_mov_b32 s27, s26
 ; CHECK-NEXT:    s_mov_b32 s25, s24

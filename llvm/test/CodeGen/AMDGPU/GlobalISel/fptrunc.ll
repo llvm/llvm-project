@@ -26,6 +26,8 @@ define amdgpu_ps half @fptrunc_f32_to_f16_uniform(float inreg %a) {
 ;
 ; GFX1250-LABEL: fptrunc_f32_to_f16_uniform:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_cvt_f16_f32 s0, s0
@@ -59,6 +61,8 @@ define amdgpu_ps half @fptrunc_f32_to_f16_div(float %a) {
 ;
 ; GFX1250-FAKE16-LABEL: fptrunc_f32_to_f16_div:
 ; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    global_wb
+; GFX1250-FAKE16-NEXT:    v_nop
 ; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
@@ -66,6 +70,8 @@ define amdgpu_ps half @fptrunc_f32_to_f16_div(float %a) {
 ;
 ; GFX1250-TRUE16-LABEL: fptrunc_f32_to_f16_div:
 ; GFX1250-TRUE16:       ; %bb.0:
+; GFX1250-TRUE16-NEXT:    global_wb
+; GFX1250-TRUE16-NEXT:    v_nop
 ; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
@@ -87,6 +93,8 @@ define amdgpu_ps float @fptrunc_f64_to_f32_uniform(double inreg %a) {
 ;
 ; GFX1250-LABEL: fptrunc_f64_to_f32_uniform:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_cvt_f32_f64_e32 v0, s[0:1]
 ; GFX1250-NEXT:    ; return to shader part epilog
@@ -107,6 +115,8 @@ define amdgpu_ps float @fptrunc_f64_to_f32_div(double %a) {
 ;
 ; GFX1250-LABEL: fptrunc_f64_to_f32_div:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_cvt_f32_f64_e32 v0, v[0:1]
 ; GFX1250-NEXT:    ; return to shader part epilog
@@ -231,6 +241,8 @@ define amdgpu_ps half @fptrunc_f64_to_f16_uniform(double inreg %a) {
 ;
 ; GFX1250-LABEL: fptrunc_f64_to_f16_uniform:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_and_b32 s2, s1, 0x1ff
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
@@ -496,6 +508,8 @@ define amdgpu_ps half @fptrunc_f64_to_f16_div(double %a) {
 ;
 ; GFX1250-FAKE16-LABEL: fptrunc_f64_to_f16_div:
 ; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    global_wb
+; GFX1250-FAKE16-NEXT:    v_nop
 ; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-FAKE16-NEXT:    v_and_or_b32 v0, 0x1ff, v1, v0
 ; GFX1250-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 8, v1
@@ -544,6 +558,8 @@ define amdgpu_ps half @fptrunc_f64_to_f16_div(double %a) {
 ;
 ; GFX1250-TRUE16-LABEL: fptrunc_f64_to_f16_div:
 ; GFX1250-TRUE16:       ; %bb.0:
+; GFX1250-TRUE16-NEXT:    global_wb
+; GFX1250-TRUE16-NEXT:    v_nop
 ; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-TRUE16-NEXT:    v_and_or_b32 v0, 0x1ff, v1, v0
 ; GFX1250-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 8, v1
@@ -630,6 +646,8 @@ define amdgpu_ps <2 x half> @fptrunc_v2f32_to_v2f16_uniform(<2 x float> inreg %a
 ;
 ; GFX1250-LABEL: fptrunc_v2f32_to_v2f16_uniform:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -670,6 +688,8 @@ define amdgpu_ps <2 x half> @fptrunc_v2f32_to_v2f16_div(<2 x float> %a) {
 ;
 ; GFX1250-LABEL: fptrunc_v2f32_to_v2f16_div:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
 ; GFX1250-NEXT:    ; return to shader part epilog
@@ -694,6 +714,8 @@ define amdgpu_ps void @fptrunc_v2f64_to_v2f32_uniform(<2 x double> inreg %a, ptr
 ;
 ; GFX1250-LABEL: fptrunc_v2f64_to_v2f32_uniform:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_cvt_f32_f64_e32 v2, s[0:1]
 ; GFX1250-NEXT:    v_cvt_f32_f64_e32 v3, s[2:3]
@@ -721,6 +743,8 @@ define amdgpu_ps void @fptrunc_v2f64_to_v2f32_div(<2 x double> %a, ptr addrspace
 ;
 ; GFX1250-LABEL: fptrunc_v2f64_to_v2f32_div:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_cvt_f32_f64_e32 v0, v[0:1]
 ; GFX1250-NEXT:    v_cvt_f32_f64_e32 v1, v[2:3]

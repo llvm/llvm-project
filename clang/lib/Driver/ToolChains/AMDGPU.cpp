@@ -881,15 +881,9 @@ void AMDGPUToolChain::addClangTargetOptions(
       if (DriverArgs.hasArgNoClaim(options::OPT_hipstdpar))
         CC1Args.append({"-mllvm", "-amdgpu-enable-hipstdpar"});
     }
-
-    // FIXME: This should not depend on HIP
-    StringRef MaxThreadsPerBlock =
-        DriverArgs.getLastArgValue(options::OPT_gpu_max_threads_per_block_EQ);
-    if (!MaxThreadsPerBlock.empty()) {
-      CC1Args.push_back(DriverArgs.MakeArgString(
-          Twine("--gpu-max-threads-per-block=") + MaxThreadsPerBlock));
-    }
   }
+
+  DriverArgs.AddLastArg(CC1Args, options::OPT_gpu_max_threads_per_block_EQ);
 
   // Default to "hidden" visibility, as object level linking will not be
   // supported for the foreseeable future.
@@ -931,7 +925,8 @@ void AMDGPUToolChain::addClangTargetOptions(
     if (DriverArgs.hasArg(options::OPT_nostdlib))
       return;
 
-    addOpenCLBuiltinsLib(getDriver(), getTriple(), DriverArgs, CC1Args);
+    if (addOpenCLBuiltinsLib(getDriver(), getTriple(), DriverArgs, CC1Args))
+      return;
   }
 
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
@@ -959,6 +954,13 @@ void AMDGPUToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
 
 void AMDGPUToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                                 ArgStringList &CC1Args) const {
+  // In an offloading compilation the device toolchain must pick up the host's
+  // system include paths, even when compiling device code.
+  if (HostTC) {
+    HostTC->AddClangSystemIncludeArgs(DriverArgs, CC1Args);
+    return;
+  }
+
   if (DriverArgs.hasArg(options::OPT_nostdinc) ||
       DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
