@@ -357,3 +357,28 @@ TEST_F(SelectionDAGNodeConstructionTest, CTLS) {
   SDValue Ctlsi1 = DAG->getNode(ISD::CTLS, DL, MVT::i32, i1Op);
   EXPECT_TRUE(isNullConstant(Ctlsi1));
 }
+
+TEST_F(SelectionDAGNodeConstructionTest, ExpandPartialReduceSUMLA) {
+  SDLoc DL;
+  SDValue Acc = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(1), MVT::v4i32);
+  SDValue LHS = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(2), MVT::v16i8);
+  SDValue RHS = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(3), MVT::v16i8);
+  SDValue PartialReduce =
+      DAG->getNode(ISD::PARTIAL_REDUCE_SUMLA, DL, MVT::v4i32, Acc, LHS, RHS);
+
+  SDValue Expanded = DAG->getTargetLoweringInfo().expandPartialReduceMLA(
+      PartialReduce.getNode(), *DAG);
+
+  unsigned NumSignExtends = 0;
+  unsigned NumZeroExtends = 0;
+  for (SDNode &N : DAG->allnodes()) {
+    NumSignExtends += N.getOpcode() == ISD::SIGN_EXTEND;
+    NumZeroExtends += N.getOpcode() == ISD::ZERO_EXTEND;
+  }
+  EXPECT_TRUE(Expanded);
+  EXPECT_EQ(NumSignExtends, 1u);
+  EXPECT_EQ(NumZeroExtends, 1u);
+}
