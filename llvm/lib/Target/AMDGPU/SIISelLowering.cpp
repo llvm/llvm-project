@@ -236,6 +236,15 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       setOperationAction(Opc, MVT::bf16, Promote);
     }
 
+    // Only targets with packed bf16 instructions, e.g. gfx13.
+    if (Subtarget->hasBF16PackedInsts()) {
+      // Turn fsub into fadd(x, fneg y) so it reuses the packed v_pk_add_bf16
+      // path instead of promoting to f32.
+      setOperationAction(ISD::FSUB, MVT::bf16, Expand);
+      // Use v_pk_add_bf16 for scalar fadd.
+      setOperationAction(ISD::FADD, MVT::bf16, Legal);
+    }
+
     setOperationAction(ISD::FP_ROUND, MVT::bf16, Expand);
 
     setOperationAction(ISD::SELECT, MVT::bf16, Promote);
