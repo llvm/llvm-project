@@ -1752,6 +1752,8 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CLMUL(SDNode *N) {
   EVT VT = TLI.getTypeToTransformTo(*DAG.getContext(), OldVT);
 
   if (Opcode == ISD::CLMUL) {
+    // Avoid the generic expansion if the cross-product expansion in
+    // ExpandIntRes_CLMUL would produce a better result.
     if (!TLI.isOperationLegalOrCustomOrPromote(ISD::CLMUL, VT) &&
         !(getTypeAction(VT) == TargetLowering::TypeExpandInteger &&
           TLI.isOperationLegalOrCustom(
