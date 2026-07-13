@@ -13,8 +13,8 @@ define void @test() {
 ; X86:       loop:
 ; X86-NEXT:    [[PH0:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[I4:%.*]], [[LOOP]] ]
 ; X86-NEXT:    [[PH1:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ 0.000000e+00, [[LOOP]] ]
-; X86-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[PH0]], i32 0
-; X86-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[PH1]], i32 1
+; X86-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[PH0]], i64 0
+; X86-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[PH1]], i64 1
 ; X86-NEXT:    [[TMP2:%.*]] = fadd <2 x float> zeroinitializer, [[TMP1]]
 ; X86-NEXT:    [[TMP3:%.*]] = select <2 x i1> zeroinitializer, <2 x float> [[TMP2]], <2 x float> zeroinitializer
 ; X86-NEXT:    [[I4]] = extractelement <2 x float> [[TMP3]], i64 0

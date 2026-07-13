@@ -1411,6 +1411,12 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   if ((ShAmt2 - ShAmt1) != ShiftDiff || (Offset2 - Offset1) != PrevSize)
     return false;
 
+  // Reject if the combined size of the loads exceeds the target type size.
+  // This avoids attempting to emit an invalid ZExt (from wider to narrower
+  // type) when out-of-bounds shifts lead to matching too many loads.
+  if (LoadSize1 + LoadSize2 > X->getType()->getScalarSizeInBits())
+    return false;
+
   // Update LOps
   AAMDNodes AATags1 = LOps.AATags;
   AAMDNodes AATags2 = LI2->getAAMetadata();
@@ -1478,9 +1484,8 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     NewLoad->setAAMetadata(LOps.AATags);
 
   Value *NewOp = NewLoad;
-  // Check if zero extend needed.
-  if (LOps.ZextType)
-    NewOp = Builder.CreateZExt(NewOp, LOps.ZextType);
+  // Zero extend if needed.
+  NewOp = Builder.CreateZExt(NewOp, LOps.ZextType);
 
   // Check if shift needed. We need to shift with the amount of load1
   // shift if not zero.

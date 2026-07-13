@@ -2009,13 +2009,8 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   unsigned ScopeFlags = Scope::ControlScope |
                         (C99orCXXorObjC ? Scope::DeclScope : Scope::NoScope);
   if (ESD)
-    ScopeFlags |= Scope::TemplateParamScope;
+    ScopeFlags |= Scope::TemplateParamScope | Scope::ExpansionStmtScope;
   ParseScope ForScope(this, ScopeFlags);
-  if (ESD)
-    // FIXME: Combine this with the scope flags above once this is actually a
-    // proper scope flag.
-    getCurScope()->setIsExpansionStmtScope();
-
   BalancedDelimiterTracker T(*this, tok::l_paren);
   T.consumeOpen();
 

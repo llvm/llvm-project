@@ -1140,6 +1140,7 @@ void CodeGenModule::Release() {
   applyReplacements();
   emitMultiVersionFunctions();
   emitPFPFieldsWithEvaluatedOffset();
+  emitGlobalDeleteForwardingBodies();
 
   if (Context.getLangOpts().IncrementalExtensions &&
       GlobalTopLevelStmtBlockInFlight.first) {
@@ -1536,14 +1537,16 @@ void CodeGenModule::Release() {
     if (!LangOpts.isSignReturnAddressWithAKey())
       getModule().addModuleFlag(llvm::Module::Min,
                                 "sign-return-address-with-bkey", 2);
-
-    if (LangOpts.PointerAuthELFGOT)
-      getModule().addModuleFlag(llvm::Module::Error, "ptrauth-elf-got", 1);
+  }
+  if (T.isAArch64()) {
+    if (getTriple().isOSBinFormatELF())
+      getModule().addModuleFlag(llvm::Module::Error, "ptrauth-elf-got",
+                                LangOpts.PointerAuthELFGOT);
 
     if (getTriple().isOSLinux()) {
-      if (LangOpts.PointerAuthCalls)
-        getModule().addModuleFlag(llvm::Module::Error,
-                                  "ptrauth-sign-personality", 1);
+      getModule().addModuleFlag(llvm::Module::Error, "ptrauth-sign-personality",
+                                LangOpts.PointerAuthCalls);
+
       assert(getTriple().isOSBinFormatELF());
       using namespace llvm::ELF;
       uint64_t PAuthABIVersion =
@@ -1574,14 +1577,15 @@ void CodeGenModule::Release() {
       static_assert(AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_FPTRTYPEDISCR ==
                         AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST,
                     "Update when new enum items are defined");
-      if (PAuthABIVersion != 0) {
-        getModule().addModuleFlag(llvm::Module::Error,
-                                  "aarch64-elf-pauthabi-platform",
-                                  AARCH64_PAUTH_PLATFORM_LLVM_LINUX);
-        getModule().addModuleFlag(llvm::Module::Error,
-                                  "aarch64-elf-pauthabi-version",
-                                  PAuthABIVersion);
-      }
+
+      // Always emit the aarch64-elf-pauthabi-{platform|version} flags even if
+      // the version value is 0 to guard against incorrect module merge
+      // behavior.
+      getModule().addModuleFlag(llvm::Module::Error,
+                                "aarch64-elf-pauthabi-platform",
+                                AARCH64_PAUTH_PLATFORM_LLVM_LINUX);
+      getModule().addModuleFlag(
+          llvm::Module::Error, "aarch64-elf-pauthabi-version", PAuthABIVersion);
     }
   }
   if ((T.isARM() || T.isThumb()) && getTriple().isTargetAEABI() &&
@@ -8909,4 +8913,55 @@ void CodeGenModule::requireVectorDestructorDefinition(const CXXRecordDecl *RD) {
   // destructor definition is required. That helps to enforse its generation
   // even if destructor is only declared.
   addDeferredDeclToEmit(VectorDtorGD);
+}
+
+void CodeGenModule::addPendingGlobalDelete(
+    llvm::Function *GlobalDeleteFn, const FunctionDecl *OperatorDeleteFD) {
+  // insert() is a no-op if this wrapper has already been recorded, keeping the
+  // first FunctionDecl seen for it.
+  PendingMSVCGlobalDeletes.insert({GlobalDeleteFn, OperatorDeleteFD});
+}
+
+void CodeGenModule::noteDirectGlobalDelete() { HasDirectGlobalDelete = true; }
+
+void CodeGenModule::emitGlobalDeleteForwardingBodies() {
+  // MSVC-compatible __global_delete forwarding bodies.
+  //
+  // Destructor helpers call __global_delete but they are only needed if there
+  // is a direct use of ::operator delete. When this TU contains a ::delete
+  // expression (or a dllexport deleting destructor that takes the global-delete
+  // path), we know ::operator delete must exist, so we emit a real
+  // __global_delete definition that forwards to it.
+  if (!HasDirectGlobalDelete)
+    return;
+
+  for (const auto &Entry : PendingMSVCGlobalDeletes) {
+    llvm::Function *GlobDelFn = Entry.first;
+    if (!GlobDelFn->isDeclaration())
+      continue;
+
+    const FunctionDecl *OperatorDeleteFD = Entry.second;
+    llvm::Constant *RealDeleteFn = GetAddrOfFunction(OperatorDeleteFD);
+
+    // Create the forwarding body: call ::operator delete with all args.
+    auto *BB =
+        llvm::BasicBlock::Create(getModule().getContext(), "", GlobDelFn);
+    llvm::SmallVector<llvm::Value *, 4> Args;
+    for (auto &Arg : GlobDelFn->args())
+      Args.push_back(&Arg);
+    llvm::CallInst::Create(GlobDelFn->getFunctionType(), RealDeleteFn, Args, "",
+                           BB);
+    llvm::ReturnInst::Create(getModule().getContext(), BB);
+
+    // Use LinkOnceODR so multiple TUs can emit this without conflicts.
+    GlobDelFn->setLinkage(llvm::GlobalValue::LinkOnceODRLinkage);
+    GlobDelFn->setComdat(getModule().getOrInsertComdat(GlobDelFn->getName()));
+    SetLLVMFunctionAttributes(
+        GlobalDecl(OperatorDeleteFD),
+        getTypes().arrangeGlobalDeclaration(GlobalDecl(OperatorDeleteFD)),
+        GlobDelFn, /*IsThunk=*/false);
+    SetLLVMFunctionAttributesForDefinition(OperatorDeleteFD, GlobDelFn);
+    getTargetCodeGenInfo().setTargetAttributes(OperatorDeleteFD, GlobDelFn,
+                                               *this);
+  }
 }

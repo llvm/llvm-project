@@ -18,7 +18,7 @@ define i1 @foo() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr null, align 4
 ; CHECK-NEXT:    br i1 false, label [[TMP11:%.*]], label [[TMP2:%.*]]
 ; CHECK:       2:
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> <float undef, float 0.000000e+00>, float [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> <float undef, float 0.000000e+00>, float [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x float> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
