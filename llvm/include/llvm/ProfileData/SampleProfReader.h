@@ -363,6 +363,12 @@ class SampleProfileNameTable {
   }
 
 public:
+  struct UseLazyT {};
+  static constexpr UseLazyT UseLazy{};
+
+  struct UseEagerT {};
+  static constexpr UseEagerT UseEager{};
+
   /// iterator is a lightweight, self-contained input iterator designed
   /// to stream FunctionId symbols from either the memory-mapped
   /// file buffer (lazy loading from the FixedMD5 layout) or from an eagerly
@@ -403,27 +409,30 @@ public:
 
   using const_iterator = iterator;
 
-  SampleProfileNameTable() = default;
+  SampleProfileNameTable() = delete;
+  SampleProfileNameTable(const SampleProfileNameTable &) = delete;
+  SampleProfileNameTable &operator=(const SampleProfileNameTable &) = delete;
+  SampleProfileNameTable(SampleProfileNameTable &&) = delete;
+  SampleProfileNameTable &operator=(SampleProfileNameTable &&) = delete;
 
-  void clear() {
-    Start = nullptr;
-    Size = 0;
-    Vec.clear();
+  /// Construct in lazy-loading mode, pointing directly to a contiguous
+  /// buffer of little-endian 64-bit MD5 hashes in the MemoryBuffer.
+  SampleProfileNameTable(UseLazyT, const uint8_t *Start, size_t Size)
+      : Start(Start), Size(Size) {
+    assert(Start && "Start pointer must not be null in lazy mode");
   }
 
-  /// Transitions the table to lazy-loading mode, pointing directly to a
-  /// contiguous buffer of little-endian 64-bit MD5 hashes.
-  void setLazy(const uint8_t *S, size_t Sz) {
-    clear();
-    Start = S;
-    Size = Sz;
+  /// Construct in eager-loading mode, reserving initial capacity for
+  /// the underlying vector.
+  explicit SampleProfileNameTable(UseEagerT, size_t InitialCapacity = 0) {
+    Vec.reserve(InitialCapacity);
   }
 
-  /// Transitions the table to eager-loading mode by clearing previous state and
-  /// returning a mutable reference to the underlying vector for population.
-  std::vector<FunctionId> &setToEager() {
-    clear();
-    return Vec;
+  /// Append a FunctionId into the eager vector during profile reading.
+  /// Enforces that the table must be in eager mode (Start == nullptr).
+  void push_back(FunctionId FId) {
+    assert(!Start && "Cannot push_back into a lazy-loaded name table");
+    Vec.push_back(FId);
   }
 
   size_t size() const { return Start ? Size : Vec.size(); }
@@ -768,7 +777,10 @@ public:
   /// or inline instance.
   llvm::iterator_range<SampleProfileNameTable::iterator>
   getNameTable() const override {
-    return {NameTable.begin(), NameTable.end()};
+    if (!NameTable)
+      return {SampleProfileNameTable::iterator(),
+              SampleProfileNameTable::iterator()};
+    return {NameTable->begin(), NameTable->end()};
   }
 
 protected:
@@ -838,7 +850,7 @@ protected:
   const uint8_t *End = nullptr;
 
   /// Function name table.
-  SampleProfileNameTable NameTable;
+  std::optional<SampleProfileNameTable> NameTable;
 
   /// CSNameTable is used to save full context vectors. It is the backing buffer
   /// for SampleContextFrames.

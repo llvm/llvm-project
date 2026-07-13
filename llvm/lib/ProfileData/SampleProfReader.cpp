@@ -604,12 +604,12 @@ inline ErrorOr<size_t> SampleProfileReaderBinary::readStringIndex(T &Table) {
 
 ErrorOr<FunctionId>
 SampleProfileReaderBinary::readStringFromTable(size_t *RetIdx) {
-  auto Idx = readStringIndex(NameTable);
+  auto Idx = readStringIndex(*NameTable);
   if (std::error_code EC = Idx.getError())
     return EC;
   if (RetIdx)
     *RetIdx = *Idx;
-  return NameTable[*Idx];
+  return (*NameTable)[*Idx];
 }
 
 ErrorOr<SampleContextFrames>
@@ -1243,8 +1243,7 @@ std::error_code SampleProfileReaderBinary::readNameTable() {
   // because optimization passes can only handle either type.
   bool UseMD5 = useMD5();
 
-  auto &TableVec = NameTable.setToEager();
-  TableVec.reserve(*Size);
+  NameTable.emplace(SampleProfileNameTable::UseEager, *Size);
   if (!ProfileIsCS) {
     MD5SampleContextTable.clear();
     if (UseMD5)
@@ -1263,9 +1262,9 @@ std::error_code SampleProfileReaderBinary::readNameTable() {
       FunctionId FID(*Name);
       if (!ProfileIsCS)
         MD5SampleContextTable.emplace_back(FID.getHashCode());
-      TableVec.emplace_back(FID);
+      NameTable->push_back(FID);
     } else
-      TableVec.push_back(FunctionId(*Name));
+      NameTable->push_back(FunctionId(*Name));
   }
   if (!ProfileIsCS)
     MD5SampleContextStart = MD5SampleContextTable.data();
@@ -1289,15 +1288,14 @@ SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5,
       return sampleprof_error::truncated;
 
     if (LazyLoadNameTable) {
-      NameTable.setLazy(Data, *Size);
+      NameTable.emplace(SampleProfileNameTable::UseLazy, Data, *Size);
     } else {
-      auto &TableVec = NameTable.setToEager();
-      TableVec.reserve(*Size);
+      NameTable.emplace(SampleProfileNameTable::UseEager, *Size);
       for (size_t I = 0; I < *Size; ++I) {
         using namespace support;
         uint64_t FID = endian::read<uint64_t, unaligned>(
             Data + I * sizeof(uint64_t), endianness::little);
-        TableVec.emplace_back(FunctionId(FID));
+        NameTable->push_back(FunctionId(FID));
       }
     }
     if (!ProfileIsCS)
@@ -1312,8 +1310,7 @@ SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5,
     if (std::error_code EC = Size.getError())
       return EC;
 
-    auto &TableVec = NameTable.setToEager();
-    TableVec.reserve(*Size);
+    NameTable.emplace(SampleProfileNameTable::UseEager, *Size);
     if (!ProfileIsCS)
       MD5SampleContextTable.resize(*Size);
     for (size_t I = 0; I < *Size; ++I) {
@@ -1322,7 +1319,7 @@ SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5,
         return EC;
       if (!ProfileIsCS)
         support::endian::write64le(&MD5SampleContextTable[I], *FID);
-      TableVec.emplace_back(FunctionId(*FID));
+      NameTable->push_back(FunctionId(*FID));
     }
     if (!ProfileIsCS)
       MD5SampleContextStart = MD5SampleContextTable.data();
