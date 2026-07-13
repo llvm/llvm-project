@@ -25,9 +25,9 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
      1. Has 2 input and 1 output shapes.
      2. Has at least one reduction dimension.
      3. Has only projected permutation indexing maps.
-     4. its body computes `u5(u1(c) + u2(u3(a) * u4(b)))` on some field
-     (AddOpType, MulOpType), where u1, u2, u3, u4 and u5 represent scalar unary
-     operations that may change the type (e.g. for mixed-precision).
+     4. its body computes `cast(c) + (cast(a) * cast(b))` on some field
+     (AddOpType, MulOpType), where each `cast` is either identity or one scalar
+     arith cast operation emitted by `linalg.generalize`.
    As a consequence, when vectorization of such an op occurs, the only special
    behavior is that the (unique) MulOpType is vectorized into a
    `vector.contract`. All other ops are handled in a generic fashion.
