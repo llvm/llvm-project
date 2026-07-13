@@ -2352,17 +2352,18 @@ static bool isUniqueInternalLinkageDecl(GlobalDecl GD,
          (CGM.getFunctionLinkage(GD) == llvm::GlobalValue::InternalLinkage);
 }
 
-static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
-                                      const NamedDecl *ND,
-                                      bool OmitMultiVersionMangling = false) {
+std::string CodeGenModule::getMangledNameImpl(GlobalDecl GD,
+                                              const NamedDecl *ND,
+                                              bool OmitMultiVersionMangling,
+                                              bool WantAsmLabel) {
   SmallString<256> Buffer;
   llvm::raw_svector_ostream Out(Buffer);
-  MangleContext &MC = CGM.getCXXABI().getMangleContext();
-  if (!CGM.getModuleNameHash().empty())
+  MangleContext &MC = getCXXABI().getMangleContext();
+  if (!getModuleNameHash().empty())
     MC.needsUniqueInternalLinkageNames();
-  bool ShouldMangle = MC.shouldMangleDeclName(ND);
+  bool ShouldMangle = MC.shouldMangleDeclName(ND, WantAsmLabel);
   if (ShouldMangle)
-    MC.mangleName(GD.getWithDecl(ND), Out);
+    MC.mangleName(GD.getWithDecl(ND), Out, WantAsmLabel);
   else {
     IdentifierInfo *II = ND->getIdentifier();
     assert(II && "Attempt to mangle unnamed decl.");
@@ -2370,7 +2371,7 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
 
     if (FD &&
         FD->getType()->castAs<FunctionType>()->getCallConv() == CC_X86RegCall) {
-      if (CGM.getLangOpts().RegCall4)
+      if (getLangOpts().RegCall4)
         Out << "__regcall4__" << II->getName();
       else
         Out << "__regcall3__" << II->getName();
@@ -2395,10 +2396,10 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
   // be properly demangled.  For example, for C functions without prototypes,
   // name mangling is not done and the unique suffix should not be appeneded
   // then.
-  if (ShouldMangle && isUniqueInternalLinkageDecl(GD, CGM)) {
-    assert(CGM.getCodeGenOpts().UniqueInternalLinkageNames &&
+  if (ShouldMangle && isUniqueInternalLinkageDecl(GD, *this)) {
+    assert(getCodeGenOpts().UniqueInternalLinkageNames &&
            "Hash computed when not explicitly requested");
-    Out << CGM.getModuleNameHash();
+    Out << getModuleNameHash();
   }
 
   if (const auto *FD = dyn_cast<FunctionDecl>(ND))
@@ -2406,7 +2407,7 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
       switch (FD->getMultiVersionKind()) {
       case MultiVersionKind::CPUDispatch:
       case MultiVersionKind::CPUSpecific:
-        AppendCPUSpecificCPUDispatchMangling(CGM,
+        AppendCPUSpecificCPUDispatchMangling(*this,
                                              FD->getAttr<CPUSpecificAttr>(),
                                              GD.getMultiVersionIndex(), Out);
         break;
@@ -2414,7 +2415,7 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
         auto *Attr = FD->getAttr<TargetAttr>();
         assert(Attr && "Expected TargetAttr to be present "
                        "for attribute mangling");
-        const ABIInfo &Info = CGM.getTargetCodeGenInfo().getABIInfo();
+        const ABIInfo &Info = getTargetCodeGenInfo().getABIInfo();
         Info.appendAttributeMangling(Attr, Out);
         break;
       }
@@ -2422,7 +2423,7 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
         auto *Attr = FD->getAttr<TargetVersionAttr>();
         assert(Attr && "Expected TargetVersionAttr to be present "
                        "for attribute mangling");
-        const ABIInfo &Info = CGM.getTargetCodeGenInfo().getABIInfo();
+        const ABIInfo &Info = getTargetCodeGenInfo().getABIInfo();
         Info.appendAttributeMangling(Attr, Out);
         break;
       }
@@ -2431,7 +2432,7 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
         assert(Attr && "Expected TargetClonesAttr to be present "
                        "for attribute mangling");
         unsigned Index = GD.getMultiVersionIndex();
-        const ABIInfo &Info = CGM.getTargetCodeGenInfo().getABIInfo();
+        const ABIInfo &Info = getTargetCodeGenInfo().getABIInfo();
         Info.appendAttributeMangling(Attr, Index, Out);
         break;
       }
@@ -2441,10 +2442,9 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
     }
 
   // Make unique name for device side static file-scope variable for HIP.
-  if (CGM.getContext().shouldExternalize(ND) &&
-      CGM.getLangOpts().GPURelocatableDeviceCode &&
-      CGM.getLangOpts().CUDAIsDevice)
-    CGM.printPostfixForExternalizedDecl(Out, ND);
+  if (getContext().shouldExternalize(ND) &&
+      getLangOpts().GPURelocatableDeviceCode && getLangOpts().CUDAIsDevice)
+    printPostfixForExternalizedDecl(Out, ND);
 
   return std::string(Out.str());
 }
@@ -2459,7 +2459,7 @@ void CodeGenModule::UpdateMultiVersionNames(GlobalDecl GD,
   // allows us to lookup the version that was emitted when this wasn't a
   // multiversion function.
   std::string NonTargetName =
-      getMangledNameImpl(*this, GD, FD, /*OmitMultiVersionMangling=*/true);
+      getMangledNameImpl(GD, FD, /*OmitMultiVersionMangling=*/true);
   GlobalDecl OtherGD;
   if (lookupRepresentativeDecl(NonTargetName, OtherGD)) {
     assert(OtherGD.getCanonicalDecl()
@@ -2473,7 +2473,7 @@ void CodeGenModule::UpdateMultiVersionNames(GlobalDecl GD,
                                       .getDecl()
                                       ->getAsFunction()
                                       ->getMostRecentDecl();
-    std::string OtherName = getMangledNameImpl(*this, OtherGD, OtherFD);
+    std::string OtherName = getMangledNameImpl(OtherGD, OtherFD);
     // This is so that if the initial version was already the 'default'
     // version, we don't try to update it.
     if (OtherName != NonTargetName) {
@@ -2520,7 +2520,7 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
 
   // Keep the first result in the case of a mangling collision.
   const auto *ND = cast<NamedDecl>(GD.getDecl());
-  std::string MangledName = getMangledNameImpl(*this, GD, ND);
+  std::string MangledName = getMangledNameImpl(GD, ND);
 
   // Ensure either we have different ABIs between host and device compilations,
   // says host compilation following MSVC ABI but device compilation follows
@@ -2538,7 +2538,6 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
            getContext().getTargetInfo().getCXXABI())) ||
          getCUDARuntime().getDeviceSideName(ND) ==
              getMangledNameImpl(
-                 *this,
                  GD.getWithKernelReferenceKind(KernelReferenceKind::Kernel),
                  ND));
 
@@ -5101,8 +5100,8 @@ void CodeGenModule::emitMultiVersionFunctions() {
       if (FD->isTargetClonesMultiVersion() &&
           !getTarget().getTriple().isAArch64() &&
           !getTarget().getTriple().isOSAIX()) {
-        std::string MangledName = getMangledNameImpl(
-            *this, GD, FD, /*OmitMultiVersionMangling=*/true);
+        std::string MangledName =
+            getMangledNameImpl(GD, FD, /*OmitMultiVersionMangling=*/true);
         if (!GetGlobalValue(MangledName + ".ifunc")) {
           const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
           llvm::FunctionType *DeclTy = getTypes().GetFunctionType(FI);
@@ -5243,7 +5242,7 @@ void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
   unsigned Index = 0;
   for (const IdentifierInfo *II : DD->cpus()) {
     // Get the name of the target function so we can look it up/create it.
-    std::string MangledName = getMangledNameImpl(*this, GD, FD, true) +
+    std::string MangledName = getMangledNameImpl(GD, FD, true) +
                               getCPUSpecificMangling(*this, II->getName());
 
     llvm::Constant *Func = GetGlobalValue(MangledName);
@@ -5315,8 +5314,8 @@ void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
       IFunc = GI;
     }
 
-    std::string AliasName = getMangledNameImpl(
-        *this, GD, FD, /*OmitMultiVersionMangling=*/true);
+    std::string AliasName =
+        getMangledNameImpl(GD, FD, /*OmitMultiVersionMangling=*/true);
     llvm::Constant *AliasFunc = GetGlobalValue(AliasName);
     if (!AliasFunc) {
       auto *GA = llvm::GlobalAlias::create(DeclTy, AS, Linkage, AliasName,
@@ -5333,7 +5332,7 @@ void CodeGenModule::AddDeferredMultiVersionResolverToEmit(GlobalDecl GD) {
 
   if (FD->isTargetVersionMultiVersion() || FD->isTargetClonesMultiVersion()) {
     std::string MangledName =
-        getMangledNameImpl(*this, GD, FD, /*OmitMultiVersionMangling=*/true);
+        getMangledNameImpl(GD, FD, /*OmitMultiVersionMangling=*/true);
     if (!DeferredResolversToEmit.insert(MangledName).second)
       return;
   }
@@ -5348,7 +5347,7 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
   assert(FD && "Not a FunctionDecl?");
 
   std::string MangledName =
-      getMangledNameImpl(*this, GD, FD, /*OmitMultiVersionMangling=*/true);
+      getMangledNameImpl(GD, FD, /*OmitMultiVersionMangling=*/true);
 
   // Holds the name of the resolver, in ifunc mode this is the ifunc (which has
   // a separate resolver).
@@ -5504,8 +5503,8 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
         // without FMV mangling (it may or may not be replaced later).
         if (getTarget().getTriple().isAArch64()) {
           AddDeferredMultiVersionResolverToEmit(GD);
-          NameWithoutMultiVersionMangling = getMangledNameImpl(
-              *this, GD, FD, /*OmitMultiVersionMangling=*/true);
+          NameWithoutMultiVersionMangling =
+              getMangledNameImpl(GD, FD, /*OmitMultiVersionMangling=*/true);
         }
         // On AIX, a declared (but not defined) FMV shall be treated like a
         // regular non-FMV function. If a definition is later seen, then
@@ -5513,8 +5512,8 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
         // definition) which will replace the IR declaration we're creating here
         // with the FMV ifunc (see replaceDeclarationWith).
         else if (getTriple().isOSAIX() && !FD->isDefined()) {
-          NameWithoutMultiVersionMangling = getMangledNameImpl(
-              *this, GD, FD, /*OmitMultiVersionMangling=*/true);
+          NameWithoutMultiVersionMangling =
+              getMangledNameImpl(GD, FD, /*OmitMultiVersionMangling=*/true);
         } else
           return GetOrCreateMultiVersionResolver(GD);
       }

@@ -854,6 +854,10 @@ public:
   bool lookupRepresentativeDecl(StringRef MangledName,
                                 GlobalDecl &Result) const;
 
+  std::string getMangledNameImpl(GlobalDecl GD, const NamedDecl *ND,
+                                 bool OmitMultiVersionMangling = false,
+                                 bool WantAsmLabel = true);
+
   llvm::Constant *getAtomicSetterHelperFnMap(QualType Ty) {
     return AtomicSetterHelperFnMap[Ty];
   }

@@ -1204,7 +1204,13 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   }
 
   if (!CGM.getCodeGenOpts().ZOSPPA1Name)
-    Fn->addFnAttr("zos-ppa1-name", "none");
+    Fn->addFnAttr("zos-ppa1-name", "");
+  else if (getContext().getTargetInfo().getTriple().isOSzOS() &&
+           FD->hasAttr<AsmLabelAttr>()) {
+    std::string OrigName = CGM.getMangledNameImpl(
+        GD, FD, /*OmitMultiVersionMangling=*/false, /*WantAsmLabel=*/false);
+    Fn->addFnAttr("zos-ppa1-name", OrigName);
+  }
 
   if (CGM.getCodeGenOpts().WarnStackSize != UINT_MAX &&
       !CGM.getDiags().isIgnored(diag::warn_fe_backend_frame_larger_than, Loc))
