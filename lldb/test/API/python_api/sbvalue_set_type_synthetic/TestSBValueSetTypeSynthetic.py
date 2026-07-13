@@ -16,6 +16,9 @@ class TestCase(TestBase):
         )
         self.runCmd("command script import library_support.py")
 
+        foo_t = target.FindFirstType("Foo")
+        bar_t = target.FindFirstType("Bar")
+
         info = thread.GetFrameAtIndex(0).FindVariable("info")
         self.assertTrue(info.IsValid())
         self.assertTrue(info.IsSynthetic())
@@ -28,25 +31,35 @@ class TestCase(TestBase):
         foos = info.GetChildMemberWithName("foos")
         self.assertTrue(foos.IsValid())
         self.assertTrue(foos.IsSynthetic())
-        self.assertEqual(foos.GetNumChildren(), 2)
 
         foos_impl = foos.GetTypeSyntheticImplementation()
         self.assertEqual(type(foos_impl).__name__, "FooHandleArraySynthetic")
 
-        # And it correcly converts to typed children
-        foos0 = foos.GetChildAtIndex(0)
-        self.assertTrue(foos0.IsValid())
-        self.assertEqual(foos0.GetType(), target.FindFirstType("Foo").GetPointerType())
+        # And it correcly imbues it's "data" member with type information
+        foos_data = foos.GetChildMemberWithName("data")
+        self.assertTrue(foos_data.IsValid())
+        self.assertEqual(
+            foos_data.GetType(), foo_t.GetPointerType().GetArrayType(2).GetPointerType()
+        )
+
+        foos_data0 = foos_data.Dereference().GetChildAtIndex(0).Dereference()
+        self.assertTrue(foos_data0.IsValid())
+        self.assertEqual(foos_data0.GetType(), foo_t)
 
         # Same with "bars"
         bars = info.GetChildMemberWithName("bars")
         self.assertTrue(bars.IsValid())
         self.assertTrue(bars.IsSynthetic())
-        self.assertEqual(bars.GetNumChildren(), 1)
 
         bars_impl = bars.GetTypeSyntheticImplementation()
         self.assertEqual(type(bars_impl).__name__, "BarHandleArraySynthetic")
 
-        bars0 = bars.GetChildAtIndex(0)
-        self.assertTrue(bars0.IsValid())
-        self.assertEqual(bars0.GetType(), target.FindFirstType("Bar").GetPointerType())
+        bars_data = bars.GetChildMemberWithName("data")
+        self.assertTrue(bars_data.IsValid())
+        self.assertEqual(
+            bars_data.GetType(), bar_t.GetPointerType().GetArrayType(1).GetPointerType()
+        )
+
+        bars_data0 = bars_data.Dereference().GetChildAtIndex(0).Dereference()
+        self.assertTrue(bars_data0.IsValid())
+        self.assertTrue(bars_data0.GetType(), bar_t)

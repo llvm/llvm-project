@@ -69,10 +69,19 @@ class HandleArraySyntheticBase:
         return True
 
     def num_children(self) -> int:
-        return self.size
+        return 2
 
     def get_child_at_index(self, index: int) -> lldb.SBValue:
-        return self.array.GetChildAtIndex(index)
+        if index == 0:
+            return self.valobj.GetChildMemberWithName("size")
+        if index == 1:
+            return self.array
+
+    def get_child_index(self, name: str) -> int:
+        if name == "size":
+            return 0
+        if name == "data":
+            return 1
 
 
 class FooHandleArraySynthetic(HandleArraySyntheticBase):
