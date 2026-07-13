@@ -1382,6 +1382,9 @@ private:
   uint32_t _walkedFrames;
 #endif
 #if defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
+  // TODO: this will need to be recorded in the unw_context_t by unw_getcontext
+  // to support cases where the cursor is retrieved prior to invocation of the
+  // Virtual API.
   bool _isKnownVapiNotActive;
 #endif
 };
@@ -1391,9 +1394,10 @@ UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
     : _addressSpace(as), _registers(context), _unwindInfoMissing(false),
       _isSignalFrame(false)
 #if defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
-      , _isKnownVapiNotActive(false)
+      ,
+      _isKnownVapiNotActive(false)
 #endif
-      {
+{
   static_assert((check_fit<UnwindCursor<A, R>, unw_cursor_t>::does_fit),
                 "UnwindCursor<> does not fit in unw_cursor_t");
   static_assert((alignof(UnwindCursor<A, R>) <= alignof(unw_cursor_t)),
@@ -1405,9 +1409,10 @@ template <typename A, typename R>
 UnwindCursor<A, R>::UnwindCursor(A &as, void *)
     : _addressSpace(as), _unwindInfoMissing(false), _isSignalFrame(false)
 #if defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
-      , _isKnownVapiNotActive(false)
+      ,
+      _isKnownVapiNotActive(false)
 #endif
-      {
+{
   memset(static_cast<void *>(&_info), 0, sizeof(_info));
   // FIXME
   // fill in _registers from thread arg
@@ -1484,7 +1489,7 @@ template <typename A, typename R> void UnwindCursor<A, R>::jumpto() {
 #else
 #if defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
   if (isKnownVapiNotActive()) {
-    // If the current frame is known VAPI not active , execute the VAPI return
+    // If the current frame is known VAPI not active, execute the VAPI return
     // glue to clear the VAPI control block. The VAPI return glue is used by
     // AIX longjmp based on the VAPI active status recorded by setjmp in the
     // jmp_buf, which means that the VAPI return glue can be called solely on
@@ -2497,18 +2502,18 @@ bool UnwindCursor<A, R>::getInfoFromTBTable(pint_t pc, R &registers) {
 }
 
 // VAPI glue addresses
-constexpr uintptr_t vapi_glue_addr_ext_32 = 0x8B80;
+constexpr uintptr_t vapi_glue_addr_ext_32 = 0x8b80;
 constexpr uintptr_t vapi_addr_64 = 0x8e00;
-constexpr uintptr_t vapi_size_64 = 0x0200;
+constexpr size_t vapi_size_64 = 0x0200;
 constexpr uintptr_t vapi_glue_addr_begin =
     vapi_glue_addr_ext_32; // Start address in 32-bit
 constexpr uintptr_t vapi_glue_addr_end =
     vapi_addr_64 + vapi_size_64; // End address in 64-bit
 
 #ifdef __64BIT__
-constexpr uintptr_t VAPI_CB_SIZE = 256;
-constexpr uintptr_t TLS_POINTER_OFFSET = 30 * 1024;
-constexpr uintptr_t TLSCB_BASE_SIZE = 256;
+constexpr size_t VAPI_CB_SIZE = 256;
+constexpr ptrdiff_t TLS_POINTER_OFFSET = 30 * 1024;
+constexpr size_t TLSCB_BASE_SIZE = 256;
 
 static __inline__ __attribute__((__always_inline__)) char *tptr(void) {
   char *result;
@@ -2516,9 +2521,9 @@ static __inline__ __attribute__((__always_inline__)) char *tptr(void) {
   return result;
 }
 #else // 32-bit
-constexpr uintptr_t VAPI_CB_SIZE = 128;
-constexpr uintptr_t TLS_POINTER_OFFSET = 31 * 1024;
-constexpr uintptr_t TLSCB_BASE_SIZE = 128;
+constexpr size_t VAPI_CB_SIZE = 128;
+constexpr ptrdiff_t TLS_POINTER_OFFSET = 31 * 1024;
+constexpr size_t TLSCB_BASE_SIZE = 128;
 
 static __inline__ __attribute__((__always_inline__)) char *tptr(void) {
   char *result;
@@ -2527,7 +2532,7 @@ static __inline__ __attribute__((__always_inline__)) char *tptr(void) {
 }
 #endif
 
-constexpr int VAPI_CB_OFFSET =
+constexpr ptrdiff_t VAPI_CB_OFFSET =
     TLS_POINTER_OFFSET + VAPI_CB_SIZE + TLSCB_BASE_SIZE;
 
 template <typename A, typename R>
@@ -2659,7 +2664,7 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
       if (vapi_glue_addr_begin <= returnAddress &&
           returnAddress < vapi_glue_addr_end) {
         _LIBUNWIND_TRACE_UNWINDING(
-            "The return address=%p is within the range of VAPI address, ",
+            "The return address=%p is within the range of VAPI address;",
             reinterpret_cast<void *>(returnAddress));
         setIsKnownVapiNotActive(true);
         returnAddress = getVAPILR();
@@ -2799,7 +2804,7 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
   if (vapi_glue_addr_begin <= nextReturnAddress &&
       nextReturnAddress < vapi_glue_addr_end) {
     _LIBUNWIND_TRACE_UNWINDING(
-        "The next return address=%p is within the range of VAPI address, ",
+        "The next return address=%p is within the range of VAPI address;",
         reinterpret_cast<void *>(nextReturnAddress));
     nextReturnAddress = getVAPILR();
     _LIBUNWIND_TRACE_UNWINDING("the next return address=%p from VAPI\n",
