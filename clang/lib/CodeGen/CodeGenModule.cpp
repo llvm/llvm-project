@@ -1539,17 +1539,18 @@ void CodeGenModule::Release() {
                                 "sign-return-address-with-bkey", 2);
   }
   if (T.isAArch64()) {
-    if (getTriple().isOSBinFormatELF())
+    if (getTriple().isOSBinFormatELF()) {
       getModule().addModuleFlag(llvm::Module::Error, "ptrauth-elf-got",
                                 LangOpts.PointerAuthELFGOT);
 
-    getModule().addModuleFlag(llvm::Module::Error, "ptrauth-init-fini",
-                              LangOpts.PointerAuthCalls &&
-                                  LangOpts.PointerAuthInitFini);
-    getModule().addModuleFlag(
-        llvm::Module::Error, "ptrauth-init-fini-address-discrimination",
-        LangOpts.PointerAuthCalls && LangOpts.PointerAuthInitFini &&
-            LangOpts.PointerAuthInitFiniAddressDiscrimination);
+      getModule().addModuleFlag(llvm::Module::Error, "ptrauth-init-fini",
+                                LangOpts.PointerAuthCalls &&
+                                    LangOpts.PointerAuthInitFini);
+      getModule().addModuleFlag(
+          llvm::Module::Error, "ptrauth-init-fini-address-discrimination",
+          LangOpts.PointerAuthCalls && LangOpts.PointerAuthInitFini &&
+              LangOpts.PointerAuthInitFiniAddressDiscrimination);
+    }
 
     if (getTriple().isOSLinux()) {
       getModule().addModuleFlag(llvm::Module::Error, "ptrauth-sign-personality",

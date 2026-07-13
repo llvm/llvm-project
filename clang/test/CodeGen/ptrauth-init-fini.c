@@ -20,16 +20,18 @@
 
 // The below checks assume no other module flags happens to be set.
 
-// COMMON: !llvm.module.flags = !{!0, !1}
+// COMMON: !llvm.module.flags = !{
+// COMMON-SAME: !1
+// COMMON-SAME: !2
 
-// UNSIGNED: !0 = !{i32 1, !"ptrauth-init-fini", i32 0}
-// UNSIGNED: !1 = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 0}
+// UNSIGNED: !1 = !{i32 1, !"ptrauth-init-fini", i32 0}
+// UNSIGNED: !2 = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 0}
 
-// SIGNED:   !0 = !{i32 1, !"ptrauth-init-fini", i32 1}
-// SIGNED:   !1 = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 0}
+// SIGNED:   !1 = !{i32 1, !"ptrauth-init-fini", i32 1}
+// SIGNED:   !2 = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 0}
 
-// ADDRDISC: !0 = !{i32 1, !"ptrauth-init-fini", i32 1}
-// ADDRDISC: !1 = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 1}
+// ADDRDISC: !1 = !{i32 1, !"ptrauth-init-fini", i32 1}
+// ADDRDISC: !2 = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 1}
 
 volatile int x = 0;
 
