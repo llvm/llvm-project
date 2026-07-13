@@ -2,8 +2,11 @@
 ! exception, and that trapping is selective (a different enabled trap does not
 ! halt on a divide-by-zero).
 
-! Halting control (feenableexcept) is only available on glibc targets.
-! REQUIRES: target={{.*}}-linux-gnu
+! Halting requires both glibc (feenableexcept) and hardware that delivers a
+! trap when an enabled FP exception is raised. Arm makes FP-exception trapping
+! optional, and the AArch64 CI hardware does not deliver SIGFPE, so restrict
+! this run-time test to x86 glibc.
+! REQUIRES: target=x86_64{{.*}}-linux-gnu
 ! UNSUPPORTED: offload-cuda
 
 ! Built without traps: the division by zero yields infinity and the program

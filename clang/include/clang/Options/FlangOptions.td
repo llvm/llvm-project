@@ -336,7 +336,9 @@ list of the exceptions to halt on: ``invalid``, ``zero``, ``overflow``,
 ``IEEE_OVERFLOW``, ``IEEE_UNDERFLOW``, and ``IEEE_INEXACT``. As a non-standard
 GFortran-compatible extension, ``denormal`` halts on the hardware denormal
 (subnormal) operand exception. An empty list, or the value ``none``, disables
-halting. Multiple occurrences are allowed; the last ``-ffpe-trap=`` wins.
+halting. In the absence of this option, the program runs with traps disabled
+(equivalent to passing ``none``). Multiple occurrences are allowed; only the
+last ``-ffpe-trap=`` takes effect.
 
 Halting is enabled only for exceptions the target's floating-point environment
 can trap on. Halting control is implemented for x86 targets and for glibc-based

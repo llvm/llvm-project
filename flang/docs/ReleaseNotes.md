@@ -38,11 +38,12 @@ page](https://llvm.org/releases/).
   exception halting mode for the main program to a comma-separated list of
   `invalid`, `zero`, `overflow`, `underflow`, and `inexact` (plus the
   non-standard, gfortran-compatible extension `denormal`). Use `none` or an
-  empty list to disable halting. The last `-ffpe-trap=` on the command line is
-  effective. The Fortran standard permits the initial halting mode to be
-  processor defined (Fortran 2023, 17.6). Halting control is implemented for x86
-  and glibc-based (Linux) targets; on other targets a warning is emitted and the
-  option is ignored. The `denormal` exception is an x86-only extension, so
+  empty list to disable halting. In the absence of this option, the program runs
+  with traps disabled (equivalent to passing `none`). If `-ffpe-trap=` occurs
+  more than once, only the last one takes effect. Processor dependent (Fortran
+  2023, 17.6) initial halting control is implemented for x86 and glibc-based
+  (Linux) targets only; on other targets a warning is emitted and the option is
+  ignored. Note that the `denormal` exception is an x86-only extension, so
   requesting it for a non-x86 target also warns and is ignored.
 
 ## Windows Support
