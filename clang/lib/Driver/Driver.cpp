@@ -6367,9 +6367,6 @@ InputInfoList Driver::BuildJobsForActionNoCache(
                                  UI.DependentOffloadKind == Action::OFK_HIP,
                              OffloadingPrefix),
           BaseInput);
-      if (UI.DependentOffloadKind == Action::OFK_Host &&
-          llvm::sys::path::extension(InputInfos[0].getFilename()) == ".a")
-        CurI = InputInfos[0];
       // Save the unbundling result.
       UnbundlingResults.push_back(CurI);
 
@@ -6767,11 +6764,8 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     NamedOutput =
         MakeCLOutputFilename(C.getArgs(), Val, BaseName, types::TY_Object);
   } else {
-    const char *Suffix = nullptr;
-    if (BaseName.ends_with(".a"))
-      Suffix = "a";
-    else
-      Suffix = types::getTypeTempSuffix(JA.getType(), IsCLMode() || IsDXCMode());
+    const char *Suffix =
+        types::getTypeTempSuffix(JA.getType(), IsCLMode() || IsDXCMode());
     assert(Suffix && "All types used for output should have a suffix.");
 
     std::string::size_type End = std::string::npos;
@@ -6839,10 +6833,9 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     // Must share the same path to conflict.
     if (SameFile) {
       StringRef Name = llvm::sys::path::filename(BaseInput);
-      size_t pos = Name.find_last_of(".");
-      StringRef PrefixName = Name.substr(0, pos);
+      std::pair<StringRef, StringRef> Split = Name.split('.');
       std::string TmpName = GetTemporaryPath(
-          PrefixName,
+          Split.first,
           types::getTypeTempSuffix(JA.getType(), IsCLMode() || IsDXCMode()));
       return C.addTempFile(C.getArgs().MakeArgString(TmpName));
     }
