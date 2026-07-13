@@ -13,8 +13,12 @@ bool test_if() {
   if (static_assert(true); true) {}
   if ([[clang::assume(1 > 0)]]; true) {}
   if ([[]]; true) {}
-  if (__attribute__((assume(1 > 0))); true) {}
-  if (__attribute__(()); true) {}
+  // FIXME(#198244): We need to support GNU attributes in C2y. We had a
+  // discussion about it and decided to wait and see what GCC would end up doing
+  // because as of now GCC does not support it either as an attribute
+  // declaration.
+  // if (__attribute__((assume(1 > 0))); true) {}
+  // if (__attribute__(()); true) {}
   if (__attribute__((deprecated)) auto x = 3) {}
   if (auto x __attribute__((deprecated)) = 3) {}
   if (__attribute__((deprecated)) auto x = 3) {x += 1;} /* expected-warning {{'x' is deprecated}}
@@ -79,8 +83,12 @@ int test_switch() {
 
   switch (int x [[maybe_unused]] = 1) {}
   switch ([[maybe_unused]] int x = 1) {}
-  switch (__attribute__((assume(1 > 0))); 1) {default:}
-  switch (__attribute__(()); 1) {default:}
+  // FIXME(#198244): We need to support GNU attributes in C2y. We had a
+  // discussion about it and decided to wait and see what GCC would end up doing
+  // because as of now GCC does not support it either as an attribute
+  // declaration.
+  // switch (__attribute__((assume(1 > 0))); 1) {default:}
+  // switch (__attribute__(()); 1) {default:}
   switch (__attribute__((deprecated)) auto x = 3) {default:}
   switch (auto x __attribute__((deprecated)) = 3) {default:}
   switch (__attribute__((deprecated)) auto x = 3) {default: x += 1;} /* expected-warning {{'x' is deprecated}}

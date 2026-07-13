@@ -1894,10 +1894,12 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
       ;
   }
 
+  // FIXME(#198244): We need to support GNU attributes in C2y. We had a
+  // discussion about it and decided to wait and see what GCC would end up doing
+  // because as of now GCC does not support it either as an attribute
+  // declaration.
   ParsedAttributes attrs(AttrFactory);
   bool ParsedAttrs = MaybeParseCXX11Attributes(attrs);
-  if (!getLangOpts().CPlusPlus)
-    ParsedAttrs = MaybeParseGNUAttributes(attrs) || ParsedAttrs;
 
   const auto WarnOnInit = [this, &CK] {
     if (getLangOpts().CPlusPlus)
@@ -1934,7 +1936,8 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
       return ParseCondition(nullptr, Loc, CK, MissingOK);
     }
 
-    // Handle '(; expr)', '(__attribute__((...)); expr)' and '([[...]]; expr)'.
+    // Handle '(; expr)', '([[...]]; expr)' and '(__attribute__((...)); expr)'
+    // when GNU-style attributes are finalized.
     if (Tok.is(tok::semi)) {
       StmtResult Null = Actions.ActOnNullStmt(ConsumeToken());
       if (ParsedAttrs) {
@@ -2026,13 +2029,6 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
   // type-specifier-seq
   DeclSpec DS(AttrFactory);
   ParseSpecifierQualifierList(DS, AS_none, DeclSpecContext::DSC_condition);
-
-  // The Declarator's DeclarationAttrs only accepts [[]] and keyword attributes;
-  // move any GNU attributes onto the DeclSpec instead.
-  if (!getLangOpts().CPlusPlus)
-    for (ParsedAttr &AL : attrs)
-      if (AL.isGNUAttribute())
-        DS.getAttributes().takeOneFrom(attrs, &AL);
 
   // declarator
   Declarator DeclaratorInfo(DS, attrs, DeclaratorContext::Condition);
