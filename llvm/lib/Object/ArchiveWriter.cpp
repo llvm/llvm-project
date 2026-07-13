@@ -432,7 +432,6 @@ static uint64_t computeSymbolTableSize(object::Archive::Kind Kind,
     Size += NumSyms * OffsetSize * 2; // Table
   else
     Size += NumSyms * OffsetSize; // Table
-
   if (isBSDLike(Kind))
     Size += OffsetSize; // byte count
   Size += StringTableSize;
@@ -924,6 +923,7 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
       if (!SymFileOrErr)
         return createFileError(M.MemberName, SymFileOrErr.takeError());
       D.SymFile = std::move(*SymFileOrErr);
+
       if (SymMap && D.SymFile.get()) {
         auto COFFObj = dyn_cast<COFFObjectFile>(D.SymFile.get());
         std::optional<MemoryBufferRef> HybridView;
@@ -1007,12 +1007,17 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
     // is happy with archives that we generate.
     unsigned MemberPadding =
         isDarwin(Kind) ? offsetToAlignment(D.Data.size(), Align(8)) : 0;
-    unsigned TailPadding =
-        offsetToAlignment(D.Data.size() + MemberPadding, Align(2));
-    D.Padding = StringRef(isZOSArchive(Kind) ? ZOSPaddingData : PaddingData,
-                          MemberPadding + TailPadding);
 
     StringRef MemberName = D.HybridName.size() ? D.HybridName : M->MemberName;
+
+    // z/OS stores long member names inline using their exact byte length.
+    // Include the inline name when computing alignment.
+    uint64_t PaddingBase = D.Data.size() + MemberPadding;
+    if (isZOSArchive(Kind) && MemberName.size() > 16)
+      PaddingBase += MemberName.size();
+    unsigned TailPadding = offsetToAlignment(PaddingBase, Align(2));
+    D.Padding = StringRef(isZOSArchive(Kind) ? ZOSPaddingData : PaddingData,
+                          MemberPadding + TailPadding);
 
     sys::TimePoint<std::chrono::seconds> ModTime;
     if (UniqueTimestamps)

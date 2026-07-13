@@ -28,14 +28,19 @@
 
 # PAD: 15
 
-## Long member names should be written and read back correctly.
+## Long member names should use their exact byte length and be read back
+## correctly. The 25-byte name plus the 3-byte contents is already even-sized,
+## so the archive should not contain a trailing padding byte.
 # RUN: printf 'xyz' > %t.dir/very_long_member_name.txt
 # RUN: llvm-ar rcSD --format=zos %t.long.a %t.dir/very_long_member_name.txt
 # RUN: llvm-ar t %t.long.a | FileCheck %s --check-prefix=LONG-LIST
 # RUN: llvm-ar p %t.long.a very_long_member_name.txt | FileCheck %s --check-prefix=LONG-CONTENT
+# RUN: %python -c "d=open(r'%t.long.a','rb').read(); print(d[8:24].decode('cp037').strip()); print(len(d))" | FileCheck %s --check-prefix=LONG-BYTES
 
 # LONG-LIST: very_long_member_name.txt
 # LONG-CONTENT: xyz
+# LONG-BYTES: #1/25
+# LONG-BYTES-NEXT: 96
 
 ## Use LLVM bitcode here so the test remains target-independent. The archive
 ## writer only needs a symbolic input in order to emit the archive symbol table.
