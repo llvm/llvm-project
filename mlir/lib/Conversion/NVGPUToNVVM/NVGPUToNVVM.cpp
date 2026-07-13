@@ -2047,6 +2047,16 @@ static LogicalResult lowerTruncf(nvgpu::TruncfOp op,
   return success();
 }
 
+struct NVGPUTruncfOpLowering : public ConvertOpToLLVMPattern<nvgpu::TruncfOp> {
+  using ConvertOpToLLVMPattern<nvgpu::TruncfOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(nvgpu::TruncfOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    return lowerTruncf(op, adaptor, rewriter, getTypeConverter());
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // NVGPUExtfOp Lowering
 //===----------------------------------------------------------------------===//
@@ -2256,16 +2266,6 @@ static LogicalResult lowerExtf(nvgpu::ExtfOp op, nvgpu::ExtfOp::Adaptor adaptor,
   rewriter.replaceOp(op, result);
   return success();
 }
-
-struct NVGPUTruncfOpLowering : public ConvertOpToLLVMPattern<nvgpu::TruncfOp> {
-  using ConvertOpToLLVMPattern<nvgpu::TruncfOp>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(nvgpu::TruncfOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    return lowerTruncf(op, adaptor, rewriter, getTypeConverter());
-  }
-};
 
 struct NVGPUExtfOpLowering : public ConvertOpToLLVMPattern<nvgpu::ExtfOp> {
   using ConvertOpToLLVMPattern<nvgpu::ExtfOp>::ConvertOpToLLVMPattern;
