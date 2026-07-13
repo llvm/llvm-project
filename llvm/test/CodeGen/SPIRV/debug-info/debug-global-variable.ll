@@ -15,13 +15,14 @@
 ; CHECK-DAG: [[C5:%[0-9]+]] = OpConstant [[I32T]] 5
 ; CHECK-DAG: [[C0:%[0-9]+]] = OpConstant [[I32T]] 0
 ; CHECK-DAG: [[C42:%[0-9]+]] = OpConstant [[I32T]] 42
+; CHECK-DAG: [[C8:%[0-9]+]] = OpConstant [[I32T]] 8
 ; CHECK-DAG: [[C32:%[0-9]+]] = OpConstant [[I32T]] 32
 ; CHECK-DAG: [[C4ENC:%[0-9]+]] = OpConstant [[I32T]] 4
 ; CHECK-DAG: [[DS:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugSource [[PATH]]
 ; CHECK-DAG: [[CU:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugCompilationUnit [[C100]] [[C5]] [[DS]] [[C0]]
 ; CHECK-DAG: [[DTI:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugTypeBasic [[STR_INT]] [[C32]] [[C4ENC]] [[C0]]
 ; CHECK-DAG: [[GV:%[0-9]+]] = OpVariable {{.*}} CrossWorkgroup
-; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugGlobalVariable [[NAME]] [[DTI]] [[DS]] [[C42]] [[C0]] [[CU]] [[NAME]] [[GV]]
+; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugGlobalVariable [[NAME]] [[DTI]] [[DS]] [[C42]] [[C0]] [[CU]] [[NAME]] [[GV]] [[C8]]
 
 target triple = "spirv64-unknown-unknown"
 
