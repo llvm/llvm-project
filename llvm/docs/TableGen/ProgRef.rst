@@ -4,9 +4,6 @@ TableGen Programmer's Reference
 
 .. sectnum::
 
-.. contents::
-   :local:
-
 Introduction
 ============
 

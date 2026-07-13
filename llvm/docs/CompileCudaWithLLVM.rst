@@ -2,9 +2,6 @@
 Compiling CUDA with clang
 =========================
 
-.. contents::
-   :local:
-
 Introduction
 ============
 

@@ -2,11 +2,6 @@
 User Guide for NVPTX Back-end
 =============================
 
-.. contents::
-   :local:
-   :depth: 3
-
-
 Introduction
 ============
 

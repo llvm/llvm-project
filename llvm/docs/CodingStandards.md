@@ -1,9 +1,5 @@
 # LLVM Coding Standards
 
-```{contents}
-:local:
-```
-
 ## Introduction
 
 This document describes coding standards that are used in the LLVM project.

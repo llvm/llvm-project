@@ -2,9 +2,6 @@
 AMDGPU Instruction Syntax
 =========================
 
-.. contents::
-   :local:
-
 .. _amdgpu_syn_instructions:
 
 Instructions

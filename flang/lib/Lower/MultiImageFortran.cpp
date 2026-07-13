@@ -328,7 +328,7 @@ Fortran::lower::genUpperCoBounds(Fortran::lower::AbstractConverter &converter,
     ucobounds = builder.createTemporary(loc, arrayType);
     mlir::Value ucovalue;
     for (size_t i = 0; i < corank - 1; i++) {
-      if (auto ub = object->coshape()[i].lbound().GetExplicit()) {
+      if (auto ub = object->coshape()[i].ubound().GetExplicit()) {
         auto ubExpr = ignoreEvConvert(*ub);
         ucovalue = fir::getBase(converter.genExprValue(loc, ubExpr, stmtCtx));
       } else {

@@ -1,10 +1,6 @@
 (developer_policy)=
 # LLVM Developer Policy
 
-```{contents}
-:local:
-```
-
 ## Introduction
 
 This document contains the LLVM Developer Policy which defines the project's

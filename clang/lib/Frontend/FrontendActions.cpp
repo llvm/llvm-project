@@ -1166,6 +1166,23 @@ void PrintPreambleAction::ExecuteAction() {
   }
 }
 
+static void writeCompilerOptionValues(raw_ostream &OS,
+                                      StringRef CompilerOptionNames,
+                                      ArrayRef<bool> CompilerOptionValues) {
+  bool FirstValue = true;
+  for (bool CompilerOptionValue : CompilerOptionValues) {
+    auto [CompilerOptionName, RemainingCompilerOptionNames] =
+        CompilerOptionNames.split('\0');
+    CompilerOptionNames = RemainingCompilerOptionNames;
+    if (!FirstValue)
+      OS << ",\n";
+    FirstValue = false;
+    OS << "\t{\"" << CompilerOptionName
+       << "\" : " << (CompilerOptionValue ? "true" : "false") << "}";
+  }
+  assert(CompilerOptionNames.empty() && "compiler option name count mismatch");
+}
+
 void DumpCompilerOptionsAction::ExecuteAction() {
   CompilerInstance &CI = getCompilerInstance();
   std::unique_ptr<raw_ostream> OSP =
@@ -1185,29 +1202,32 @@ void DumpCompilerOptionsAction::ExecuteAction() {
   OS << "{\n";
   OS << "\n\"features\" : [\n";
   {
-    llvm::SmallString<128> Str;
-#define FEATURE(Name, Predicate)                                               \
-  ("\t{\"" #Name "\" : " + llvm::Twine(Predicate ? "true" : "false") + "},\n") \
-      .toVector(Str);
+    static constexpr char FeatureNames[] = {
+#define FEATURE(Name, Predicate) #Name "\0"
 #include "clang/Basic/Features.def"
-#undef FEATURE
-    // Remove the newline and comma from the last entry to ensure this remains
-    // valid JSON.
-    OS << Str.substr(0, Str.size() - 2);
+    };
+    const bool FeatureValues[] = {
+#define FEATURE(Name, Predicate) static_cast<bool>(Predicate),
+#include "clang/Basic/Features.def"
+    };
+    writeCompilerOptionValues(
+        OS, StringRef(FeatureNames, sizeof(FeatureNames) - 1), FeatureValues);
   }
   OS << "\n],\n";
 
   OS << "\n\"extensions\" : [\n";
   {
-    llvm::SmallString<128> Str;
-#define EXTENSION(Name, Predicate)                                             \
-  ("\t{\"" #Name "\" : " + llvm::Twine(Predicate ? "true" : "false") + "},\n") \
-      .toVector(Str);
+    static constexpr char ExtensionNames[] = {
+#define EXTENSION(Name, Predicate) #Name "\0"
 #include "clang/Basic/Features.def"
-#undef EXTENSION
-    // Remove the newline and comma from the last entry to ensure this remains
-    // valid JSON.
-    OS << Str.substr(0, Str.size() - 2);
+    };
+    const bool ExtensionValues[] = {
+#define EXTENSION(Name, Predicate) static_cast<bool>(Predicate),
+#include "clang/Basic/Features.def"
+    };
+    writeCompilerOptionValues(
+        OS, StringRef(ExtensionNames, sizeof(ExtensionNames) - 1),
+        ExtensionValues);
   }
   OS << "\n]\n";
 

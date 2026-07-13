@@ -1773,6 +1773,10 @@ def UncountedLocalVarsChecker : Checker<"UncountedLocalVarsChecker">,
   HelpText<"Check uncounted local variables.">,
   Documentation<HasDocumentation>;
 
+def UncheckedLambdaCapturesChecker : Checker<"UncheckedLambdaCapturesChecker">,
+  HelpText<"Check unchecked lambda captures.">,
+  Documentation<HasDocumentation>;
+
 def UncheckedLocalVarsChecker : Checker<"UncheckedLocalVarsChecker">,
   HelpText<"Check unchecked local variables.">,
   Documentation<HasDocumentation>;

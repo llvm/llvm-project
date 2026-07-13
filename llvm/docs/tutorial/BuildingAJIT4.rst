@@ -2,9 +2,6 @@
 Building a JIT: Extreme Laziness - Using LazyReexports to JIT from ASTs
 =======================================================================
 
-.. contents::
-   :local:
-
 **This tutorial is under active development. It is incomplete and details may
 change frequently.** Nonetheless we invite you to try it out as it stands, and
 we welcome any feedback.

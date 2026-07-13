@@ -2,10 +2,6 @@
 
 # LLVM Cycle Terminology
 
-```{contents}
-:local:
-```
-
 (cycle-definition)=
 
 ## Cycles

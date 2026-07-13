@@ -124,8 +124,12 @@ UnsignedOrNone Program::getOrCreateGlobal(const ValueDecl *VD,
   return std::nullopt;
 }
 
-unsigned Program::getOrCreateDummy(const DeclTy &D, bool IsConstexprUnknown) {
+unsigned Program::getOrCreateDummy(DeclTy D, bool IsConstexprUnknown) {
   assert(D);
+
+  if (const auto *VD = dyn_cast_if_present<VarDecl>(dyn_cast<const Decl *>(D)))
+    D = VD->getFirstDecl();
+
   // Dedup blocks since they are immutable and pointers cannot be compared.
   if (auto It = DummyVariables.find(D.getOpaqueValue());
       It != DummyVariables.end())

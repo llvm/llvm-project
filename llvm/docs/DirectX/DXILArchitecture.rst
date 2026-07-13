@@ -2,9 +2,6 @@
 Architecture and Design of DXIL Support in LLVM
 ===============================================
 
-.. contents::
-   :local:
-
 .. toctree::
    :hidden:
 

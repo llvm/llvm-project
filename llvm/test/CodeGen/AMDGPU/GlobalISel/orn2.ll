@@ -501,8 +501,8 @@ define amdgpu_ps float @v_orn2_i16_sv(i16 inreg %src0, i16 %src1) {
 ; GFX11-TRUE16-LABEL: v_orn2_i16_sv:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_xor_b16 v0.l, v0.l, -1
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, s2, v0.l
+; GFX11-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-FAKE16-LABEL: v_orn2_i16_sv:
@@ -536,8 +536,8 @@ define amdgpu_ps float @v_orn2_i16_vs(i16 %src0, i16 inreg %src1) {
 ; GFX11-TRUE16-LABEL: v_orn2_i16_vs:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_xor_b32 s0, s2, -1
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, s0
+; GFX11-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-FAKE16-LABEL: v_orn2_i16_vs:

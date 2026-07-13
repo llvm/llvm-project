@@ -1,10 +1,6 @@
 ====================================================
 Using -opt-bisect-limit to debug optimization errors
 ====================================================
-.. contents::
-   :local:
-   :depth: 1
-
 Introduction
 ============
 

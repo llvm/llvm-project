@@ -2,9 +2,6 @@
 AMDGPU Instructions Notation
 ============================
 
-.. contents::
-   :local:
-
 .. _amdgpu_syn_instruction_notation:
 
 Introduction

@@ -744,6 +744,9 @@ VPRegionBlock *VPRegionBlock::clone() {
                                     getName(), NewEntry, NewExiting)
             : Plan.createReplicateRegion(NewEntry, NewExiting, getName());
 
+  if (getHeaderMask())
+    NewRegion->createHeaderMask();
+
   for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
     Block->setParent(NewRegion);
   return NewRegion;
@@ -817,6 +820,10 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
     O << '\n';
     CanIV->print(O, SlotTracker);
     O << " = CANONICAL-IV\n";
+  }
+  if (auto *HdrMask = getUsedHeaderMask()) {
+    HdrMask->print(O, SlotTracker);
+    O << " = HEADER-MASK\n";
   }
   for (auto *BlockBase : vp_depth_first_shallow(Entry)) {
     O << '\n';
@@ -1238,13 +1245,13 @@ VPlan *VPlan::duplicate() {
          "All VPSymbolicValues must be handled below");
 
   if (auto *LoopRegion = getVectorLoopRegion()) {
-    auto *OldCanIV = LoopRegion->getCanonicalIV();
-    auto *NewCanIV = NewPlan->getVectorLoopRegion()->getCanonicalIV();
-    assert(OldCanIV && NewCanIV &&
-           "Loop regions of both plans must have canonical IVs.");
-    Old2NewVPValues[OldCanIV] = NewCanIV;
-    if (OldCanIV->isMaterialized())
-      NewCanIV->markMaterialized();
+    auto *NewLoopRegion = NewPlan->getVectorLoopRegion();
+    for (auto [Old, New] : zip_equal(LoopRegion->getRegionValues(),
+                                     NewLoopRegion->getRegionValues())) {
+      Old2NewVPValues[Old] = New;
+      if (Old->isMaterialized())
+        New->markMaterialized();
+    }
   }
 
   if (BackedgeTakenCount)
@@ -1567,8 +1574,9 @@ void VPSlotTracker::assignNames(const VPlan &Plan) {
   for (const VPBlockBase *VPB : RPOT) {
     if (auto *VPBB = dyn_cast<VPBasicBlock>(VPB))
       assignNames(VPBB);
-    else if (auto *CanIV = cast<VPRegionBlock>(VPB)->getCanonicalIV())
-      assignName(CanIV);
+    else
+      for (auto *RV : cast<VPRegionBlock>(VPB)->getRegionValues())
+        assignName(RV);
   }
 }
 

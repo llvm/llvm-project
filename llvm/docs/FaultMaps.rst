@@ -2,10 +2,6 @@
 FaultMaps and implicit checks
 ==============================
 
-.. contents::
-   :local:
-   :depth: 2
-
 Motivation
 ==========
 

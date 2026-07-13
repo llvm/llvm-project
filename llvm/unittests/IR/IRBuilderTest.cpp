@@ -800,6 +800,26 @@ TEST_F(IRBuilderTest, FastMathFlags) {
 
   Builder.clearFastMathFlags();
 
+  // The FMFSource overload copies flags from the source, ignoring the builder's
+  // (here empty) flags.
+  FastMathFlags CallFMF;
+  CallFMF.setAllowContract();
+  FCall = Builder.CreateCall(Callee, {}, /*FMFSource=*/CallFMF);
+  EXPECT_FALSE(Builder.getFastMathFlags().any());
+  EXPECT_FALSE(FCall->hasNoNaNs());
+  EXPECT_TRUE(FCall->hasAllowContract());
+
+  // A source instruction forwards its flags too.
+  Instruction *FCall2 = Builder.CreateCall(V, {}, /*FMFSource=*/FCall);
+  EXPECT_TRUE(FCall2->hasAllowContract());
+
+  // The OpBundles + FMFSource overload behaves the same.
+  Instruction *FCall3 = Builder.CreateCall(
+      Callee, {}, ArrayRef<OperandBundleDef>{}, /*FMFSource=*/CallFMF);
+  EXPECT_TRUE(FCall3->hasAllowContract());
+
+  Builder.clearFastMathFlags();
+
   // To test a copy, make sure that a '0' and a '1' change state.
   F = Builder.CreateFDiv(F, F);
   ASSERT_TRUE(isa<Instruction>(F));

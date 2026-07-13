@@ -1,9 +1,5 @@
 # Building a Distribution of LLVM
 
-```{contents}
-:local:
-```
-
 ## Introduction
 
 This document is geared toward people who want to build and package LLVM and any
