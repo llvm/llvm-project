@@ -162,8 +162,8 @@ public:
     DS_GLOBAL = 1 << 0,
     ADDR_SPACE_CAST_PRIVATE_TO_FLAT = 1 << 1,
     ADDR_SPACE_CAST_LOCAL_TO_FLAT = 1 << 2,
-    ADDR_SPACE_CAST_BOTH_TO_FLAT =
-        ADDR_SPACE_CAST_PRIVATE_TO_FLAT | ADDR_SPACE_CAST_LOCAL_TO_FLAT,
+    ADDR_SPACE_CAST_BOTH_TO_FLAT = ADDR_SPACE_CAST_PRIVATE_TO_FLAT |
+        ADDR_SPACE_CAST_LOCAL_TO_FLAT,
     CS_WORST = DS_GLOBAL | ADDR_SPACE_CAST_BOTH_TO_FLAT,
   };
 
@@ -1395,9 +1395,11 @@ struct AAAMDGPUMinAGPRAlloc
     };
     auto CheckCallSite = [&](AbstractCallSite CS) {
       Function *Caller = CS.getInstruction()->getFunction();
-      LLVM_DEBUG(dbgs() << "[AAAMDGPUMinAGPRAlloc] " << '[' << getName() << "] Call " << Caller->getName()
-                        << "->" << getAssociatedFunction()->getName() << '\n');
-      const auto *CallerInfo = A.getAAFor<AAAMDGPUMinAGPRAlloc>(*this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
+      LLVM_DEBUG(dbgs() << "[AAAMDGPUMinAGPRAlloc] " << '[' << getName()
+                        << "] Call " << Caller->getName() << "->"
+                        << getAssociatedFunction()->getName() << '\n');
+      const auto *CallerInfo = A.getAAFor<AAAMDGPUMinAGPRAlloc>(
+          *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
       if (!CallerInfo || !CallerInfo->isValidState())
         return false;
 
