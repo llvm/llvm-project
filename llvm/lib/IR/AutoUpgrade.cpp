@@ -6412,8 +6412,8 @@ static bool upgradePtrauthInitFiniArrays(Module &M) {
   }
 
   auto UpgradeSinglePointer = [&UseAddressDisc](Constant *CV) -> Constant * {
-    const unsigned ExpectedConstDisc = 0xD9D4;
-    const unsigned ExpectedAddressMarker = 1;
+    constexpr unsigned ExpectedConstDisc = 0xD9D4;
+    constexpr unsigned ExpectedAddressMarker = 1;
 
     auto *CPA = dyn_cast<ConstantPtrAuth>(CV);
     if (!CPA || !CPA->getDiscriminator()->equalsInt(ExpectedConstDisc))
@@ -6444,7 +6444,7 @@ static bool upgradePtrauthInitFiniArrays(Module &M) {
       continue; // Skip, but it is okay to upgrade the other variable.
 
     auto *OldStructorsArray = dyn_cast<ConstantArray>(GV->getInitializer());
-    if (!OldStructorsArray)
+    if (!OldStructorsArray || OldStructorsArray->getNumOperands() == 0)
       return false;
 
     std::vector<Constant *> NewStructors;
@@ -6469,7 +6469,7 @@ static bool upgradePtrauthInitFiniArrays(Module &M) {
 
     Constant *NewInit =
         ConstantArray::get(OldStructorsArray->getType(), NewStructors);
-    GlobalArraysToUpgrade.push_back({GV, NewInit});
+    GlobalArraysToUpgrade.emplace_back(GV, NewInit);
   }
 
   if (GlobalArraysToUpgrade.empty())

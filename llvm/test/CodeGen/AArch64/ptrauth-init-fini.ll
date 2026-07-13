@@ -24,8 +24,8 @@
 ; OBJ-CONST-NEXT: 0x00000000 00000000 d4d90000
 ; OBJ-CONST:      Hex dump of section '.fini_array':
 ; OBJ-CONST-NEXT: 0x00000000 00000000 d4d90000
-;;                              ^^^^ 0xD9D4: constant discriminator = 55764
-;;                                    ^^ 0x80: bits 61..60 key = IA; bit 63 addr disc = false
+;;                                    ^^^^ 0xD9D4: constant discriminator = 55764
+;;                                          ^^ 0x80: bits 61..60 key = IA; bit 63 addr disc = false
 
 @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @foo, ptr null }]
 @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @bar, ptr null }]
@@ -90,8 +90,8 @@ define void @bar() {
 ; OBJ-BLENDED-NEXT: 0x00000000 00000000 d4d90080
 ; OBJ-BLENDED:      Hex dump of section '.fini_array':
 ; OBJ-BLENDED-NEXT: 0x00000000 00000000 d4d90080
-;;                                   ^^^^ 0xD9D4: constant discriminator = 55764
-;;                                         ^^ 0x80: bits 61..60 key = IA; bit 63 addr disc = true
+;;                                      ^^^^ 0xD9D4: constant discriminator = 55764
+;;                                            ^^ 0x80: bits 61..60 key = IA; bit 63 addr disc = true
 
 @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @foo, ptr null }]
 @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @bar, ptr null }]
