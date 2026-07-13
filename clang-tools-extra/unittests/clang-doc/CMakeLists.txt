@@ -31,7 +31,6 @@ add_extra_unittest(ClangDocTests
   SerializeTest.cpp
   YAMLGeneratorTest.cpp
   JSONGeneratorTest.cpp
-  MarkdownParserTest.cpp
   )
 
 clang_target_link_libraries(ClangDocTests
@@ -50,6 +49,5 @@ clang_target_link_libraries(ClangDocTests
 target_link_libraries(ClangDocTests
   PRIVATE
   clangDoc
-  clangDocMarkdown
   LLVMTestingSupport
   )
