@@ -1724,7 +1724,12 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   // within the module file.
   Scope *previousHermetic{context_.currentHermeticModuleFileScope()};
   if (parseTree.v.size() > 1) {
-    parser::Program hermeticModules{std::move(parseTree.v)};
+    // Retain the embedded modules' parse tree for the lifetime of the
+    // SemanticsContext: symbols resolved from it (e.g. UserReductionDetails and
+    // MapperDetails, which hold raw parse-tree pointers) outlive this function
+    // and are dereferenced later, including at lowering time.
+    parser::Program &hermeticModules{
+        context_.SaveParseTree(parser::Program{std::move(parseTree.v)})};
     parseTree.v.emplace_back(std::move(hermeticModules.v.front()));
     hermeticModules.v.pop_front();
     Scope &hermeticScope{topScope.MakeScope(Scope::Kind::Global)};
