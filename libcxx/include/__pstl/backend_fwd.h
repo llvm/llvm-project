@@ -167,6 +167,13 @@ struct __generate_n;
 // operator()(_Policy&&, _ForwardIterator __first, _Size __n, _Generator __gen) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __reverse_copy;
+// template <class _Policy, class _BidirectionalIterator, class _ForwardIterator>
+// optional<_ForwardIterator>
+// operator()(_Policy&&, _BidirectionalIterator __first, _BidirectionalIterator __last,
+//                       _ForwardIterator __result) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __merge;
 // template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _ForwardOutIterator, class _Comp>
 // optional<_ForwardOutIterator>
