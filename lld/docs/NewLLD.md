@@ -1,11 +1,9 @@
-The ELF, COFF and Wasm Linkers
-==============================
+# The ELF, COFF and Wasm Linkers
 
-The ELF Linker as a Library
----------------------------
+## The ELF Linker as a Library
 
 You can embed LLD to your program by linking against it and calling the linker's
-entry point function ``lld::lldMain``.
+entry point function `lld::lldMain`.
 
 The current policy is that it is your responsibility to give trustworthy object
 files. The function is guaranteed to return as long as you do not pass corrupted
@@ -14,13 +12,11 @@ That being said, you don't need to worry too much about it if you create object
 files in the usual way and give them to the linker. It is naturally expected to
 work, or otherwise it's a linker's bug.
 
-Design
-======
+# Design
 
 We will describe the design of the linkers in the rest of the document.
 
-Key Concepts
-------------
+## Key Concepts
 
 Linkers are fairly large pieces of software.
 There are many design choices you have to make to create a complete linker.
@@ -29,7 +25,7 @@ This is a list of design choices we've made for ELF and COFF LLD.
 We believe that these high-level design choices achieved a right balance
 between speed, simplicity and extensibility.
 
-* Implement as native linkers
+- Implement as native linkers
 
   We implemented the linkers as native linkers for each file format.
 
@@ -37,10 +33,10 @@ between speed, simplicity and extensibility.
   Sharing code makes sense if the benefit is worth its cost.
   In our case, the object formats are different enough that we thought the layer
   to abstract the differences wouldn't be worth its complexity and run-time
-  cost.  Elimination of the abstract layer has greatly simplified the
+  cost. Elimination of the abstract layer has greatly simplified the
   implementation.
 
-* Speed by design
+- Speed by design
 
   One of the most important things in achieving high performance is to
   do less rather than do it efficiently.
@@ -56,7 +52,7 @@ between speed, simplicity and extensibility.
   We obtain a handle (which is typically just a pointer to actual data)
   on the first operation and use it throughout the process.
 
-* Efficient archive file handling
+- Efficient archive file handling
 
   LLD's handling of archive files (the files with ".a" file extension) is
   different from the traditional Unix linkers and similar to Windows linkers.
@@ -64,28 +60,27 @@ between speed, simplicity and extensibility.
   problem is, and how LLD approached the problem.
 
   The traditional Unix linker maintains a set of undefined symbols during
-  linking.  The linker visits each file in the order as they appeared in the
+  linking. The linker visits each file in the order as they appeared in the
   command line until the set becomes empty. What the linker would do depends on
   file type.
 
   - If the linker visits an object file, the linker links object files to the
     result, and undefined symbols in the object file are added to the set.
-
   - If the linker visits an archive file, it checks for the archive file's
     symbol table and extracts all object files that have definitions for any
     symbols in the set.
 
-  This algorithm sometimes leads to a counter-intuitive behavior.  If you give
+  This algorithm sometimes leads to a counter-intuitive behavior. If you give
   archive files before object files, nothing will happen because when the linker
-  visits archives, there are no undefined symbols in the set.  As a result, no
+  visits archives, there are no undefined symbols in the set. As a result, no
   files are extracted from the first archive file, and the link is done at that
   point because the set is empty after it visits one file.
 
   You can fix the problem by reordering the files,
   but that cannot fix the issue of mutually-dependent archive files.
 
-  Linking mutually-dependent archive files is tricky.  You may specify the same
-  archive file multiple times to let the linker visit it more than once.  Or,
+  Linking mutually-dependent archive files is tricky. You may specify the same
+  archive file multiple times to let the linker visit it more than once. Or,
   you may use the special command line options, `--start-group` and
   `--end-group`, to let the linker loop over the files between the options until
   no new symbols are added to the set.
@@ -93,21 +88,20 @@ between speed, simplicity and extensibility.
   Visiting the same archive files multiple times makes the linker slower.
 
   Here is how LLD approaches the problem. Instead of memorizing only undefined
-  symbols, we program LLD so that it memorizes all symbols.  When it sees an
+  symbols, we program LLD so that it memorizes all symbols. When it sees an
   undefined symbol that can be resolved by extracting an object file from an
   archive file it previously visited, it immediately extracts the file and links
-  it.  It is doable because LLD does not forget symbols it has seen in archive
+  it. It is doable because LLD does not forget symbols it has seen in archive
   files.
 
   We believe that LLD's way is efficient and easy to justify.
 
   The semantics of LLD's archive handling are different from the traditional
-  Unix's.  You can observe it if you carefully craft archive files to exploit
-  it.  However, in reality, we don't know any program that cannot link with our
+  Unix's. You can observe it if you carefully craft archive files to exploit
+  it. However, in reality, we don't know any program that cannot link with our
   algorithm so far, so it's not going to cause trouble.
 
-Numbers You Want to Know
-------------------------
+## Numbers You Want to Know
 
 To give you intuition about what kinds of data the linker is mainly working on,
 I'll give you the list of objects and their numbers LLD has to read and process
@@ -136,14 +130,13 @@ it would slow down the linker by 10%. So, don't do that.
 On the other hand, you don't have to pursue efficiency
 when handling files.
 
-Important Data Structures
--------------------------
+## Important Data Structures
 
-We will describe the key data structures in LLD in this section.  The linker can
-be understood as the interactions between them.  Once you understand their
+We will describe the key data structures in LLD in this section. The linker can
+be understood as the interactions between them. Once you understand their
 functions, the code of the linker should look obvious to you.
 
-* Symbol
+- Symbol
 
   This class represents a symbol.
   They are created for symbols in object files or archive files.
@@ -171,7 +164,7 @@ functions, the code of the linker should look obvious to you.
   defined symbol, because the undefined symbol the pointer pointed to will have
   been replaced by the defined symbol in-place.
 
-* SymbolTable
+- SymbolTable
 
   SymbolTable is basically a hash table from strings to Symbols
   with logic to resolve symbol conflicts. It resolves conflicts by symbol type.
@@ -183,7 +176,7 @@ functions, the code of the linker should look obvious to you.
     but it will also trigger the Lazy symbol to load the archive member
     to actually resolve the symbol.
 
-* Chunk (COFF specific)
+- Chunk (COFF specific)
 
   Chunk represents a chunk of data that will occupy space in an output.
   Each regular section becomes a chunk.
@@ -195,7 +188,7 @@ functions, the code of the linker should look obvious to you.
   Specifically, section-based chunks know how to read relocation tables
   and how to apply them.
 
-* InputSection (ELF specific)
+- InputSection (ELF specific)
 
   Since we have less synthesized data for ELF, we don't abstract slices of
   input files as Chunks for ELF. Instead, we directly use the input section
@@ -204,28 +197,28 @@ functions, the code of the linker should look obvious to you.
   InputSection knows about their size and how to copy themselves to
   mmap'ed outputs, just like COFF Chunks.
 
-* OutputSection
+- OutputSection
 
   OutputSection is a container of InputSections (ELF) or Chunks (COFF).
   An InputSection or Chunk belongs to at most one OutputSection.
 
 There are mainly three actors in this linker.
 
-* InputFile
+- InputFile
 
   InputFile is a superclass of file readers.
   We have a different subclass for each input file type,
   such as regular object file, archive file, etc.
   They are responsible for creating and owning Symbols and InputSections/Chunks.
 
-* Writer
+- Writer
 
   The writer is responsible for writing file headers and InputSections/Chunks to
-  a file.  It creates OutputSections, puts all InputSections/Chunks into them,
+  a file. It creates OutputSections, puts all InputSections/Chunks into them,
   assigns unique, non-overlapping addresses and file offsets to them, and then
   writes them down to a file.
 
-* Driver
+- Driver
 
   The linking process is driven by the driver. The driver:
 
@@ -237,8 +230,7 @@ There are mainly three actors in this linker.
   - creates a writer,
   - and passes the symbol table to the writer to write the result to a file.
 
-Link-Time Optimization
-----------------------
+## Link-Time Optimization
 
 LTO is implemented by handling LLVM bitcode files as object files.
 The linker resolves symbols in bitcode files normally. If all symbols
@@ -248,12 +240,11 @@ Finally, the linker replaces bitcode symbols with ELF/COFF symbols,
 so that they are linked as if they were in the native format from the beginning.
 
 The details are described in this document.
-https://llvm.org/docs/LinkTimeOptimization.html
+<https://llvm.org/docs/LinkTimeOptimization.html>
 
-Glossary
---------
+## Glossary
 
-* RVA (COFF)
+- RVA (COFF)
 
   Short for Relative Virtual Address.
 
@@ -267,11 +258,11 @@ Glossary
   loader, so we apply relocations accordingly. Result texts and data
   will contain raw absolute addresses.
 
-* VA
+- VA
 
   Short for Virtual Address. For COFF, it is equivalent to RVA + image base.
 
-* Base relocations (COFF)
+- Base relocations (COFF)
 
   Relocation information for the loader. If the loader decides to map
   an executable or a DLL to a different address than their image
@@ -286,7 +277,7 @@ Glossary
   this breaks text sharing, I think this mechanism is not actually bad
   on today's computers.
 
-* ICF
+- ICF
 
   Short for Identical COMDAT Folding (COFF) or Identical Code Folding (ELF).
 
@@ -308,10 +299,11 @@ Glossary
   although large programs happen to work correctly.
   LLD works fine with ICF for example.
 
-Other Info
-----------
+## Other Info
 
-.. toctree::
-   :maxdepth: 1
+```{toctree}
+:maxdepth: 1
 
-   missingkeyfunction
+missingkeyfunction
+```
+

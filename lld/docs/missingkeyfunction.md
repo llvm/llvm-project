@@ -1,11 +1,12 @@
-Missing Key Function
-====================
+# Missing Key Function
 
-If your build failed with a linker error something like this::
+If your build failed with a linker error something like this:
 
-  foo.cc:28: error: undefined reference to 'vtable for C'
-  the vtable symbol may be undefined because the class is missing its key function
-  (see https://lld.llvm.org/missingkeyfunction)
+```
+foo.cc:28: error: undefined reference to 'vtable for C'
+the vtable symbol may be undefined because the class is missing its key function
+(see https://lld.llvm.org/missingkeyfunction)
+```
 
 it's likely that your class C has a key function (defined by the ABI as the first
 non-pure, non-inline, virtual function), but you haven't actually defined it.
@@ -25,21 +26,22 @@ ensure there is at least one eligible function that can serve as the key functio
 
 Here are the most common mistakes that lead to this error:
 
-Failing to define a virtual destructor
---------------------------------------
+## Failing to define a virtual destructor
 
-Say you have a base class declared in a header file::
+Say you have a base class declared in a header file:
 
-  class B {
-  public:
-    B();
-    virtual ~B();
-    ...
-  };
+```
+class B {
+public:
+  B();
+  virtual ~B();
+  ...
+};
+```
 
-Here, ``~B`` is the first non-pure, non-inline, virtual function, so it is the key
-function. If you forget to define ``B::~B`` in your source file, the compiler will
-not emit the vtable for ``B``, and you'll get an undefined reference to "vtable
+Here, `~B` is the first non-pure, non-inline, virtual function, so it is the key
+function. If you forget to define `B::~B` in your source file, the compiler will
+not emit the vtable for `B`, and you'll get an undefined reference to "vtable
 for B".
 
 This is just an example of the more general mistake of forgetting to define the
@@ -50,31 +52,31 @@ you won't see any undefined reference errors that point directly to the problem.
 
 The solution in this case is to implement the missing function.
 
-Forgetting to declare a virtual function in an abstract class as pure
----------------------------------------------------------------------
+## Forgetting to declare a virtual function in an abstract class as pure
 
-Say you have an abstract base class declared in a header file::
+Say you have an abstract base class declared in a header file:
 
-  class A {
-  public:
-    A();
-    virtual ~A() {}
-    virtual int foo() = 0;
-    ...
-    virtual int bar();
-    ...
-  };
+```
+class A {
+public:
+  A();
+  virtual ~A() {}
+  virtual int foo() = 0;
+  ...
+  virtual int bar();
+  ...
+};
+```
 
 This base class is intended to be abstract, but you forgot to mark one of the
-functions pure. Here, ``A::bar``, being non-pure, is nominated as the key function,
-and as a result, the vtable for ``A`` is not emitted, because the compiler is
-waiting for a translation unit that defines ``A::bar``.
+functions pure. Here, `A::bar`, being non-pure, is nominated as the key function,
+and as a result, the vtable for `A` is not emitted, because the compiler is
+waiting for a translation unit that defines `A::bar`.
 
-The solution in this case is to add the missing ``= 0`` to the declaration of
-``A::bar``.
+The solution in this case is to add the missing `= 0` to the declaration of
+`A::bar`.
 
-Key function is defined, but the linker doesn't see it
-------------------------------------------------------
+## Key function is defined, but the linker doesn't see it
 
 It's also possible that you have defined the key function somewhere, but the
 object file containing the definition of that function isn't being linked into
@@ -83,3 +85,4 @@ your application.
 The solution in this case is to check your dependencies to make sure that
 the object file or the library file containing the key function is given to
 the linker.
+
