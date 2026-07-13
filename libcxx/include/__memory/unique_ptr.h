@@ -115,14 +115,13 @@ inline const bool __is_pointable<_Tp, __void_t<_Tp*> > = true;
 
 template <class _Tp, class _Dp = default_delete<_Tp> >
 class _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI unique_ptr {
+  static_assert(__is_pointable<_Tp>, "unique_ptr<T, D> requires T* to be a valid type");
+  static_assert(!is_rvalue_reference<_Dp>::value, "the specified deleter type cannot be an rvalue reference");
+
 public:
   typedef _Tp element_type;
   typedef _Dp deleter_type;
-
-  static_assert(__is_pointable<_Tp>, "unique_ptr<T, D> requires T* to be a valid type");
   using pointer _LIBCPP_NODEBUG = __pointer<_Tp, deleter_type>;
-
-  static_assert(!is_rvalue_reference<deleter_type>::value, "the specified deleter type cannot be an rvalue reference");
 
   // A unique_ptr contains the following members which may be trivially relocatable:
   // - pointer : this may be trivially relocatable, so it's checked
