@@ -80,34 +80,34 @@ static ParsedAttrInfoRegistry::Add<ExampleAttrInfo> Z("example_attr","example at
 
 The members of `ParsedAttrInfo` that a plugin attribute must define are:
 
-> - `Spellings`, which must be populated with every [Spelling](/doxygen/structclang_1_1ParsedAttrInfo_1_1Spelling.html) of the
->   attribute, each of which consists of an attribute syntax and how the
->   attribute name is spelled for that syntax. If the syntax allows a scope then
->   the spelling must be "scope::attr" if a scope is present or "::attr" if not.
+- `Spellings`, which must be populated with every [Spelling](https://clang.llvm.org/doxygen/structclang_1_1ParsedAttrInfo_1_1Spelling.html) of the
+  attribute, each of which consists of an attribute syntax and how the
+  attribute name is spelled for that syntax. If the syntax allows a scope then
+  the spelling must be "scope::attr" if a scope is present or "::attr" if not.
 
 The members of `ParsedAttrInfo` that may need to be defined, depending on the
 attribute, are:
 
-> - `NumArgs` and `OptArgs`, which set the number of required and optional
->   arguments to the attribute.
-> - `diagAppertainsToDecl`, which checks if the attribute has been used on the
->   right kind of declaration and issues a diagnostic if not.
-> - `handleDeclAttribute`, which is the function that applies the attribute to
->   a declaration. It is responsible for checking that the attribute's arguments
->   are valid, and typically applies the attribute by adding an `Attr` to the
->   `Decl`. It returns either `AttributeApplied`, to indicate that the
->   attribute was successfully applied, or `AttributeNotApplied` if it wasn't.
-> - `diagAppertainsToStmt`, which checks if the attribute has been used on the
->   right kind of statement and issues a diagnostic if not.
-> - `handleStmtAttribute`, which is the function that applies the attribute to
->   a statement. It is responsible for checking that the attribute's arguments
->   are valid, and typically applies the attribute by adding an `Attr` to the
->   `Stmt`. It returns either `AttributeApplied`, to indicate that the
->   attribute was successfully applied, or `AttributeNotApplied` if it wasn't.
-> - `diagLangOpts`, which checks if the attribute is permitted for the current
->   language mode and issues a diagnostic if not.
-> - `existsInTarget`, which checks if the attribute is permitted for the given
->   target.
+- `NumArgs` and `OptArgs`, which set the number of required and optional
+  arguments to the attribute.
+- `diagAppertainsToDecl`, which checks if the attribute has been used on the
+  right kind of declaration and issues a diagnostic if not.
+- `handleDeclAttribute`, which is the function that applies the attribute to
+  a declaration. It is responsible for checking that the attribute's arguments
+  are valid, and typically applies the attribute by adding an `Attr` to the
+  `Decl`. It returns either `AttributeApplied`, to indicate that the
+  attribute was successfully applied, or `AttributeNotApplied` if it wasn't.
+- `diagAppertainsToStmt`, which checks if the attribute has been used on the
+  right kind of statement and issues a diagnostic if not.
+- `handleStmtAttribute`, which is the function that applies the attribute to
+  a statement. It is responsible for checking that the attribute's arguments
+  are valid, and typically applies the attribute by adding an `Attr` to the
+  `Stmt`. It returns either `AttributeApplied`, to indicate that the
+  attribute was successfully applied, or `AttributeNotApplied` if it wasn't.
+- `diagLangOpts`, which checks if the attribute is permitted for the current
+  language mode and issues a diagnostic if not.
+- `existsInTarget`, which checks if the attribute is permitted for the given
+  target.
 
 To see a working example of an attribute plugin, see [the Attribute.cpp example](https://github.com/llvm/llvm-project/blob/main/clang/examples/Attribute/Attribute.cpp).
 
@@ -200,4 +200,3 @@ optimizations. Use `CmdlineBeforeMainAction` or `AddBeforeMainAction` as
 `getActionType` to run plugins while still benefitting from
 `-clear-ast-before-backend`. Plugins must make sure not to modify the AST,
 otherwise they should run after the main action.
-

@@ -34,7 +34,7 @@ directory as the corresponding module map; for framework modules, they should
 be placed in the Headers and PrivateHeaders directories, respectively. The
 module map for a private top-level framework module should be placed in the
 PrivateHeaders directory as well, though it does not need an additional
-"\_private" suffix on its name.
+"_private" suffix on its name.
 
 Clang will search for API notes files next to module maps only when passed the
 `-fapinotes-modules` option.
@@ -60,6 +60,16 @@ An API notes file contains a YAML dictionary with the following top-level
 entries:
 
 ```{eval-rst}
+
+:Name:
+
+  The name of the module (the framework name, for frameworks). Note that this
+  is always the name of a top-level module, even within a private API notes
+  file.
+
+  ::
+
+    Name: MyFramework
 
 :Classes, Protocols, Tags, Typedefs, Globals, Enumerators, Functions, Namespaces:
 
@@ -98,12 +108,15 @@ Each entry under 'Classes' and 'Protocols' can contain "Methods" and
 
   Identified by 'Selector' and 'MethodKind'; the MethodKind is either
   "Instance" or "Class".
-```
 
-Each entry under 'Classes' and 'Protocols' can contain "Methods" and
-"Properties" arrays, in addition to the attributes described below:
+  ::
 
-```{eval-rst}
+    Classes:
+    - Name: UIViewController
+      Methods:
+      - Selector: "presentViewController:animated:"
+        MethodKind: Instance
+        …
 
 :Properties:
 
@@ -131,13 +144,9 @@ arrays. Methods under Tags are C++ methods identified by 'Name' (rather than
 
     Tags:
     - Name: MyClass
-```
-
-Each entry under "Tags" can contain "Methods", "Fields", and nested "Tags"
-arrays. Methods under Tags are C++ methods identified by 'Name' (rather than
-'Selector' and 'MethodKind' as used for Objective-C methods).
-
-```{eval-rst}
+      Methods:
+      - Name: doSomething
+        …
 
 :Fields:
 
@@ -173,12 +182,13 @@ declaration kind), all of which are optional:
   with all arguments. Use "_" to omit an argument label.
 
   ::
-```
 
-Each declaration supports the following annotations (if relevant to that
-declaration kind), all of which are optional:
+    - Selector: "presentViewController:animated:"
+      MethodKind: Instance
+      SwiftName: "present(_:animated:)"
 
-```{eval-rst}
+    - Class: NSBundle
+      SwiftName: Bundle
 
 :SwiftImportAs:
 
@@ -495,4 +505,3 @@ declaration kind), all of which are optional:
       MethodKind: Instance
       DesignatedInit: true
 ```
-

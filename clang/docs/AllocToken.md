@@ -142,7 +142,8 @@ token-enabled variants for a well-defined set of standard functions.
 
 To extend instrumentation to custom allocation functions, enable broader
 coverage with `-fsanitize-alloc-token-extended`. Such functions require being
-marked with the [malloc](https://clang.llvm.org/docs/AttributeReference.html#malloc) or [alloc_size](https://clang.llvm.org/docs/AttributeReference.html#alloc-size) attributes
+marked with the [malloc][malloc-attribute] or
+[alloc_size][alloc-size-attribute] attributes
 (or a combination).
 
 For example:
@@ -161,11 +162,15 @@ ptr2 = __alloc_token_my_malloc(size, token_id);
 ```
 
 Note: Even in the default mode (without `-fsanitize-alloc-token-extended`),
-an *inline* allocation wrapper marked with the [malloc](https://clang.llvm.org/docs/AttributeReference.html#malloc) or [alloc_size](https://clang.llvm.org/docs/AttributeReference.html#alloc-size) attribute is
+an *inline* allocation wrapper marked with the [malloc][malloc-attribute] or
+[alloc_size][alloc-size-attribute] attribute is
 supported if it is inlined into its caller: the inferred token is propagated to
 the allocation call the wrapper returns, which is then instrumented normally.
 Wrappers that are not inlined still require
 `-fsanitize-alloc-token-extended`.
+
+[malloc-attribute]: https://clang.llvm.org/docs/AttributeReference.html#malloc
+[alloc-size-attribute]: https://clang.llvm.org/docs/AttributeReference.html#alloc-size
 
 ### Disabling Instrumentation
 
@@ -218,4 +223,3 @@ can be used for this purpose.
 // Code specific to -fsanitize=alloc-token builds
 #endif
 ```
-

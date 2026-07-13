@@ -42,7 +42,7 @@ CFI checks for classes without visibility attributes. Most users will want
 to specify `-fvisibility=hidden`, which enables CFI checks for such classes.
 
 When using `-fsanitize=cfi*` with `-flto=thin`, it is recommended
-to reduce link times by passing [-funique-source-file-names](UsersManual.html#cmdoption-f-no-unique-source-file-names), provided
+to reduce link times by passing [-funique-source-file-names](https://clang.llvm.org/docs/UsersManual.html#cmdoption-f-no-unique-source-file-names), provided
 that your program is compatible with it.
 
 Experimental support for {ref}`cross-DSO control flow integrity
@@ -55,20 +55,20 @@ visibility. This cross-DSO support has unstable ABI at this time.
 
 Available schemes are:
 
-> - `-fsanitize=cfi-cast-strict`: Enables {ref}`strict cast checks
->   <cfi-strictness>`.
-> - `-fsanitize=cfi-derived-cast`: Base-to-derived cast to the wrong
->   dynamic type.
-> - `-fsanitize=cfi-unrelated-cast`: Cast from `void*` or another
->   unrelated type to the wrong dynamic type.
-> - `-fsanitize=cfi-nvcall`: Non-virtual call via an object whose vptr is of
->   the wrong dynamic type.
-> - `-fsanitize=cfi-vcall`: Virtual call via an object whose vptr is of the
->   wrong dynamic type.
-> - `-fsanitize=cfi-icall`: Indirect call of a function with wrong dynamic
->   type.
-> - `-fsanitize=cfi-mfcall`: Indirect call via a member function pointer with
->   wrong dynamic type.
+- `-fsanitize=cfi-cast-strict`: Enables {ref}`strict cast checks
+  <cfi-strictness>`.
+- `-fsanitize=cfi-derived-cast`: Base-to-derived cast to the wrong
+  dynamic type.
+- `-fsanitize=cfi-unrelated-cast`: Cast from `void*` or another
+  unrelated type to the wrong dynamic type.
+- `-fsanitize=cfi-nvcall`: Non-virtual call via an object whose vptr is of
+  the wrong dynamic type.
+- `-fsanitize=cfi-vcall`: Virtual call via an object whose vptr is of the
+  wrong dynamic type.
+- `-fsanitize=cfi-icall`: Indirect call of a function with wrong dynamic
+  type.
+- `-fsanitize=cfi-mfcall`: Indirect call via a member function pointer with
+  wrong dynamic type.
 
 You can use `-fsanitize=cfi` to enable all the schemes and use
 `-fno-sanitize` flag to narrow down the set of schemes as desired.
@@ -254,7 +254,7 @@ This option is currently experimental.
 The default behavior of Clang's indirect function call checker will replace
 the address of each CFI-checked function in the output file's symbol table
 with the address of a jump table entry which will pass CFI checks. We refer
-to this as making the jump table `canonical`. This property allows code that
+to this as making the jump table *canonical*. This property allows code that
 was not compiled with `-fsanitize=cfi-icall` to take a CFI-valid address
 of a function, but it comes with a couple of caveats that are especially
 relevant for users of cross-DSO CFI:
@@ -412,4 +412,3 @@ Caroline Tice, Tom Roeder, Peter Collingbourne, Stephen Checkoway,
 Úlfar Erlingsson, Luis Lozano, Geoff Pike.
 
 [gold plugin]: https://llvm.org/docs/GoldPlugin.html
-

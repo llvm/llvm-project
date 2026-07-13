@@ -1,7 +1,7 @@
 # `-fbounds-safety`: Enforcing bounds safety for C
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Overview
@@ -94,8 +94,8 @@ of `count`, like in the example below, may violate this invariant and permit
 out-of-bounds access to the pointer. To avoid this, the compiler employs
 compile-time restrictions and emits run-time checks as necessary to ensure the
 new count value doesn't exceed the actual length of the buffer. Section
-[Maintaining correctness of bounds annotations] provides more details about
-this programming model.
+[Maintaining correctness of bounds annotations](#maintaining-correctness-of-bounds-annotations)
+provides more details about this programming model.
 
 ```c
 int g;
@@ -128,7 +128,7 @@ which are considered ABI-visible. As local variables are typically hidden from
 the ABI, this approach has a marginal impact on it. In addition,
 `-fbounds-safety` employs compile-time restrictions to prevent implicit wide
 pointers from silently breaking the ABI (see [ABI implications of default bounds
-annotations][abi implications of default bounds annotations]). Pointers associated with any other variables, including function
+annotations](#abi-implications-of-default-bounds-annotations)). Pointers associated with any other variables, including function
 parameters, are treated as single object pointers (i.e., `__single`), ensuring
 that they always have the tightest bounds by default and offering a strong
 bounds safety guarantee.
@@ -225,7 +225,7 @@ Accessing a pointer outside the specified bounds causes a run-time trap or a
 compile-time error. Also, the model maintains correctness of bounds annotations
 when the pointer and/or the related value containing the bounds information are
 updated or passed as arguments. This is done by compile-time restrictions or
-run-time checks (see [Maintaining correctness of bounds annotations]
+run-time checks (see [Maintaining correctness of bounds annotations](#maintaining-correctness-of-bounds-annotations)
 for more detail). For instance, initializing `buf` with `null` while
 assigning non-zero value to `count`, as shown in the following example, would
 violate the `__counted_by` annotation because a null pointer does not point to
@@ -419,7 +419,7 @@ to `__unsafe_indexable` by default.
 
 The `__ptrcheck_abi_assume_*ATTR*()` macros are defined as pragmas in the
 toolchain header (See [Portability with toolchains that do not support the
-extension][portability with toolchains that do not support the extension] for more details about the toolchain header):
+extension](#portability-with-toolchains-that-do-not-support-the-extension) for more details about the toolchain header):
 
 ```C
 #define __ptrcheck_abi_assume_single() \
@@ -562,7 +562,7 @@ When `sizeof()` takes an expression, i.e., `sizeof(expr`, it behaves as
 `sizeof(typeof(expr))`, except that `sizeof(expr)` does not report an error
 with `expr` that has a type with an external bounds annotation dependent on
 another declaration, whereas `typeof()` on the same expression would be an
-error as described in {ref}`Default pointer types in typeof`.
+error as described in [Default pointer types in typeof()](#default-pointer-types-in-typeof).
 The following example describes this behavior.
 
 ```c
@@ -603,9 +603,9 @@ bounds annotation that can implicitly convert to `__bidi_indexable`. If
 the first element. However, if src has type `int *__unsafe_indexable`, the
 explicit cast `(int *__bidi_indexable)src` will cause an error because
 `__unsafe_indexable` cannot cast to `__bidi_indexable` as
-`__unsafe_indexable` doesn't have bounds information. [Cast rules] describes
-in more detail what kinds of casts are allowed between pointers with different
-bounds annotations.
+`__unsafe_indexable` doesn't have bounds information. [Cast rules](#cast-rules)
+describes in more detail what kinds of casts are allowed between pointers with
+different bounds annotations.
 
 #### Default pointer types in typedef
 
@@ -771,7 +771,7 @@ bound of the pointer is derived. If the source pointer has `__sized_by`,
 bound calculation doesn't overflow, e.g., `ptr + size` (where the type of
 `ptr` is `void *__sized_by(size)`), because when the `__sized_by` pointer
 is initialized, `-fbounds-safety` inserts run-time checks to ensure that `ptr
-\+ size` doesn't overflow and that `size >= 0`.
++ size` doesn't overflow and that `size >= 0`.
 
 Assuming the upper bound calculation doesn't overflow, the compiler can simplify
 the trap condition `upper(tmp_ptr) - tmp_ptr < tmp_count` to `size <
@@ -970,4 +970,3 @@ early on and remove unnecessary bounds checks in unoptimized builds.
 Your feedback on the programming model is valuable. You may want to follow the
 instruction in {doc}`BoundsSafetyAdoptionGuide` to play with `-fbounds-safety`
 and please send your feedback to [Yeoul Na](mailto:yeoul_na@apple.com).
-

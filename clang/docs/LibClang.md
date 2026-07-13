@@ -1,8 +1,3 @@
-```{eval-rst}
-.. role:: raw-html(raw)
-    :format: html
-```
-
 # Libclang tutorial
 
 The C Interface to Clang provides a relatively small API that exposes facilities for parsing source code into an abstract syntax tree (AST), loading already-parsed ASTs, traversing the AST, associating physical source locations with elements within the AST, and other facilities that support Clang-based development tools.
@@ -431,4 +426,3 @@ or some other mitigation approach if processing untrusted input.
 
 [index.h]: https://github.com/llvm/llvm-project/blob/main/clang/include/clang-c/Index.h
 [security-sensitive component]: https://llvm.org/docs/Security.html#what-is-considered-a-security-issue
-
