@@ -26,5 +26,6 @@
 // OFF-ELF:      !llvm.module.flags = !{
 // OFF-ELF-SAME: !0
 // OFF-ELF:      !0 = !{i32 1, !"ptrauth-elf-got", i32 0}
+// OFF-ELF-NOT:  ptrauth-sign-personality
 
 // ABSENT-NOT: "ptrauth-
