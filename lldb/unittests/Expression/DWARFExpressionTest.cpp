@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "lldb/Expression/DWARFExpression.h"
 #include "ValueMatcher.h"
+#include <numeric>
 #include <unordered_map>
 #ifdef ARCH_AARCH64
 #include "Plugins/ABI/AArch64/ABISysV_arm64.h"
@@ -670,6 +671,23 @@ TEST(DWARFExpression, DW_OP_piece) {
       ExpectHostAddress(expected_host_buffer));
 }
 
+TEST(DWARFExpression, DW_OP_bit_piece) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1u, 0x0a, DW_OP_stack_value, DW_OP_bit_piece, 4, 0,
+                DW_OP_const1u, 0x0b, DW_OP_stack_value, DW_OP_bit_piece, 4, 0}),
+      ExpectHostAddress({0xba}));
+
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1u, 0x11, DW_OP_stack_value, DW_OP_piece, 1,
+                DW_OP_const1u, 0x02, DW_OP_stack_value, DW_OP_bit_piece, 4, 0,
+                DW_OP_const1u, 0x03, DW_OP_stack_value, DW_OP_bit_piece, 4, 0}),
+      ExpectHostAddress({0x11, 0x32}));
+
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1u, 0xb6, DW_OP_stack_value, DW_OP_bit_piece, 4, 2}),
+      ExpectHostAddress({0x0d}));
+}
+
 TEST(DWARFExpression, DW_OP_implicit_value) {
   unsigned char bytes = 4;
 
@@ -1010,18 +1028,25 @@ TEST(DWARFExpression, DW_OP_GNU_const_index_no_unit) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_GNU_const_index, 0x00}), llvm::Failed());
 }
 
-TEST(DWARFExpression, DW_OP_bit_piece_overflow) {
-  // bit_piece extracting more bits than the underlying scalar holds: the
-  // implementation silently zero-extends-then-truncates back to the scalar's
-  // original width. This locks in the current behavior.
-  // ULEB128(99) = 0x63 (single byte; 99 < 128).
+TEST(DWARFExpression, DW_OP_bit_piece_extends_scalar) {
+  std::vector<uint8_t> expected(13, 0);
+  expected[0] = 5;
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit5, DW_OP_stack_value, DW_OP_bit_piece, 0x63, 0x00}),
-      ExpectScalar(5));
+      ExpectHostAddress(expected));
 }
 
 TEST(DWARFExpression, DW_OP_bit_piece_empty_stack) {
-  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_bit_piece, 0x08, 0x00}), llvm::Failed());
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_bit_piece, 0x08, 0x00}),
+                       ExpectHostAddress({0x00}));
+
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_bit_piece, 3, 0, DW_OP_const1u, 0x1f,
+                                 DW_OP_stack_value, DW_OP_bit_piece, 5, 0}),
+                       ExpectHostAddress({0xf8}));
+
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1u, 0xff, DW_OP_stack_value,
+                                 DW_OP_piece, 1, DW_OP_bit_piece, 12, 0}),
+                       ExpectHostAddress({0xff, 0x00, 0x00}));
 }
 
 TEST(DWARFExpression, DW_OP_deref_size_exceeds_address_size) {
@@ -1754,6 +1779,36 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_file_addr) {
                     DW_OP_addr, 0x50, 0x0, 0x0, 0x0, DW_OP_piece, 1};
   EXPECT_THAT_EXPECTED(Evaluate(expr, {}, {}, &exe_ctx),
                        ExpectHostAddress({0x11, 0x22}));
+
+  uint8_t bit_expr[] = {DW_OP_addr, 0x40, 0x0, 0x0, 0x0, DW_OP_bit_piece, 8, 0,
+                        DW_OP_addr, 0x50, 0x0, 0x0, 0x0, DW_OP_bit_piece, 8, 0};
+  EXPECT_THAT_EXPECTED(Evaluate(bit_expr, {}, {}, &exe_ctx),
+                       ExpectHostAddress({0x11, 0x22}));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_bit_piece_load_addr) {
+  std::vector<uint8_t> aligned_bytes(16);
+  std::iota(aligned_bytes.begin(), aligned_bytes.end(), 0x10);
+  MockMemory::Map memory = {
+      {{0x40, 16}, aligned_bytes},
+      {{0x40, 2}, {0xd6, 0x39}},
+  };
+
+  TestContext test_ctx;
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "i386-pc-linux",
+                                RegisterValue(uint32_t{0x40}), {},
+                                std::move(memory)));
+  ExecutionContext exe_ctx(test_ctx.process_sp);
+  MockDwarfDelegate delegate = MockDwarfDelegate::Dwarf5();
+
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_breg0, 0, DW_OP_bit_piece, 0x80, 0x01, 0}, {}, &delegate,
+               &exe_ctx, test_ctx.reg_ctx_sp.get()),
+      ExpectHostAddress(aligned_bytes));
+
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_breg0, 0, DW_OP_bit_piece, 8, 4}, {},
+                                &delegate, &exe_ctx, test_ctx.reg_ctx_sp.get()),
+                       ExpectHostAddress({0x9d}));
 }
 
 class DWARFExpressionMockProcessTestWithAArch

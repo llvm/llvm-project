@@ -17,6 +17,7 @@
 
 #include <cinttypes>
 
+#include <limits>
 #include <optional>
 #include <vector>
 
@@ -44,6 +45,7 @@
 #include "lldb/Target/Thread.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
@@ -61,6 +63,27 @@ enum LocationDescriptionKind {
   Register,
   Implicit
   /* Composite*/
+};
+
+enum class CompositePieceSourceKind {
+  Undefined,
+  Scalar,
+  Register,
+  Memory,
+};
+
+enum class CompositePieceEncoding {
+  Piece,
+  BitPiece,
+};
+
+/// Describes one part of a composite location without materializing it.
+struct CompositePiece {
+  CompositePieceSourceKind source_kind = CompositePieceSourceKind::Undefined;
+  CompositePieceEncoding encoding = CompositePieceEncoding::Piece;
+  Value source;
+  uint64_t bit_size = 0;
+  uint64_t source_bit_offset = 0;
 };
 
 /// Aggregates the inputs, derived pointers, and mutable evaluation state for
@@ -81,8 +104,7 @@ struct EvalContext {
   /// Mutable evaluation state.
   /// @{
   std::vector<Value> stack;
-  Value pieces;
-  uint64_t op_piece_offset = 0;
+  std::vector<CompositePiece> pieces;
   LocationDescriptionKind loc_desc_kind = Memory;
   /// @}
 
@@ -1098,135 +1120,282 @@ static llvm::Error Evaluate_DW_OP_deref(EvalContext &eval_ctx,
   return llvm::Error::success();
 }
 
+static const char *
+GetCompositePieceOpcodeName(CompositePieceEncoding encoding) {
+  return encoding == CompositePieceEncoding::Piece ? "DW_OP_piece"
+                                                   : "DW_OP_bit_piece";
+}
+
+/// Records a piece without immediately reading or serializing its source.
 static llvm::Error Evaluate_DW_OP_piece(EvalContext &eval_ctx,
-                                        uint64_t piece_byte_size) {
+                                        CompositePieceEncoding encoding,
+                                        uint64_t bit_size,
+                                        uint64_t source_bit_offset) {
   LocationDescriptionKind piece_locdesc = eval_ctx.loc_desc_kind;
-  // Reset for the next piece.
+  // Each piece starts a new location description.
   eval_ctx.loc_desc_kind = Memory;
 
-  if (piece_byte_size == 0)
+  if (bit_size == 0)
     return llvm::Error::success();
 
-  Value curr_piece;
+  CompositePiece piece;
+  piece.encoding = encoding;
+  piece.bit_size = bit_size;
+  piece.source_bit_offset = source_bit_offset;
 
   if (eval_ctx.stack.empty()) {
     UpdateValueTypeFromLocationDescription(eval_ctx,
                                            LocationDescriptionKind::Empty);
-    // In a multi-piece expression, this means that the current piece is
-    // not available. Fill with zeros for now by resizing the data and
-    // appending it
-    curr_piece.ResizeData(piece_byte_size);
-    // Note that "0" is not a correct value for the unknown bits.
-    // It would be better to also return a mask of valid bits together
-    // with the expression result, so the debugger can print missing
-    // members as "<optimized out>" or something.
-    ::memset(curr_piece.GetBuffer().GetBytes(), 0, piece_byte_size);
-    eval_ctx.pieces.AppendDataToHostBuffer(curr_piece);
-  } else {
-    Status error;
-    // Extract the current piece into "curr_piece"
-    Value curr_piece_source_value(eval_ctx.stack.back());
-    eval_ctx.stack.pop_back();
-    UpdateValueTypeFromLocationDescription(eval_ctx, piece_locdesc,
-                                           &curr_piece_source_value);
-
-    const Value::ValueType curr_piece_source_value_type =
-        curr_piece_source_value.GetValueType();
-    Scalar &scalar = curr_piece_source_value.GetScalar();
-    lldb::addr_t addr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
-    switch (curr_piece_source_value_type) {
-    case Value::ValueType::Invalid:
-      return llvm::createStringError("invalid value type");
-    case Value::ValueType::FileAddress:
-      if (eval_ctx.target) {
-        curr_piece_source_value.ConvertToLoadAddress(eval_ctx.module_sp.get(),
-                                                     eval_ctx.target);
-        addr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
-      } else {
-        return llvm::createStringError(
-            "unable to convert file address 0x%" PRIx64 " to load address "
-            "for DW_OP_piece(%" PRIu64 "): "
-            "no target available",
-            addr, piece_byte_size);
-      }
-      [[fallthrough]];
-    case Value::ValueType::LoadAddress: {
-      if (eval_ctx.target) {
-        if (curr_piece.ResizeData(piece_byte_size) == piece_byte_size) {
-          if (eval_ctx.target->ReadMemory(
-                  Address(addr), curr_piece.GetBuffer().GetBytes(),
-                  piece_byte_size, error,
-                  /*force_live_memory=*/false) != piece_byte_size) {
-            const char *addr_type =
-                (curr_piece_source_value_type == Value::ValueType::LoadAddress)
-                    ? "load"
-                    : "file";
-            return llvm::createStringError(
-                "failed to read memory DW_OP_piece(%" PRIu64
-                ") from %s address 0x%" PRIx64,
-                piece_byte_size, addr_type, addr);
-          }
-        } else {
-          return llvm::createStringError(
-              "failed to resize the piece memory buffer for "
-              "DW_OP_piece(%" PRIu64 ")",
-              piece_byte_size);
-        }
-      }
-    } break;
-    case Value::ValueType::HostAddress: {
-      return llvm::createStringError(
-          "failed to read memory DW_OP_piece(%" PRIu64
-          ") from host address 0x%" PRIx64,
-          piece_byte_size, addr);
-    } break;
-
-    case Value::ValueType::Scalar: {
-      uint32_t bit_size = piece_byte_size * 8;
-      uint32_t bit_offset = 0;
-      if (!scalar.ExtractBitfield(bit_size, bit_offset)) {
-        return llvm::createStringError(
-            "unable to extract %" PRIu64 " bytes from a %" PRIu64
-            " byte scalar value.",
-            piece_byte_size,
-            (uint64_t)curr_piece_source_value.GetScalar().GetByteSize());
-      }
-
-      // We have seen a case where we have expression like:
-      //      DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x28
-      // here we are assuming the compiler was trying to zero
-      // extend the value that we should append to the buffer.
-      scalar.TruncOrExtendTo(bit_size, /*sign=*/false);
-      curr_piece.GetScalar() = scalar;
-    } break;
-    }
-
-    // Check if this is the first piece?
-    if (eval_ctx.op_piece_offset == 0) {
-      // This is the first piece, we should push it back onto the stack
-      // so subsequent pieces will be able to access this piece and add
-      // to it.
-      if (eval_ctx.pieces.AppendDataToHostBuffer(curr_piece) == 0) {
-        return llvm::createStringError("failed to append piece data");
-      }
-    } else {
-      // If this is the second or later piece there should be a value on
-      // the stack.
-      if (eval_ctx.pieces.GetBuffer().GetByteSize() !=
-          eval_ctx.op_piece_offset) {
-        return llvm::createStringError(
-            "DW_OP_piece for offset %" PRIu64
-            " but top of stack is of size %" PRIu64,
-            eval_ctx.op_piece_offset,
-            eval_ctx.pieces.GetBuffer().GetByteSize());
-      }
-
-      if (eval_ctx.pieces.AppendDataToHostBuffer(curr_piece) == 0)
-        return llvm::createStringError("failed to append piece data");
-    }
+    piece.source_kind = CompositePieceSourceKind::Undefined;
+    eval_ctx.pieces.push_back(std::move(piece));
+    return llvm::Error::success();
   }
-  eval_ctx.op_piece_offset += piece_byte_size;
+
+  piece.source = eval_ctx.stack.back();
+  eval_ctx.stack.pop_back();
+  UpdateValueTypeFromLocationDescription(eval_ctx, piece_locdesc,
+                                         &piece.source);
+
+  switch (piece.source.GetValueType()) {
+  case Value::ValueType::Invalid:
+    return llvm::createStringError("invalid value type for %s",
+                                   GetCompositePieceOpcodeName(encoding));
+  case Value::ValueType::Scalar:
+    piece.source_kind = piece_locdesc == Register
+                            ? CompositePieceSourceKind::Register
+                            : CompositePieceSourceKind::Scalar;
+    break;
+  case Value::ValueType::FileAddress:
+  case Value::ValueType::LoadAddress:
+    piece.source_kind = CompositePieceSourceKind::Memory;
+    break;
+  case Value::ValueType::HostAddress:
+    return llvm::createStringError("unsupported host address source for %s",
+                                   GetCompositePieceOpcodeName(encoding));
+  }
+
+  eval_ctx.pieces.push_back(std::move(piece));
   return llvm::Error::success();
+}
+
+static bool IsSupportedByteOrder(lldb::ByteOrder byte_order) {
+  return byte_order == lldb::eByteOrderLittle ||
+         byte_order == lldb::eByteOrderBig;
+}
+
+/// Copies a bit range between buffers using each buffer's byte order.
+static llvm::Error CopyBits(llvm::MutableArrayRef<uint8_t> dst,
+                            uint64_t dst_bit_offset,
+                            lldb::ByteOrder dst_byte_order,
+                            llvm::ArrayRef<uint8_t> src,
+                            uint64_t src_bit_offset,
+                            lldb::ByteOrder src_byte_order, uint64_t bit_size) {
+  if (!IsSupportedByteOrder(dst_byte_order) ||
+      !IsSupportedByteOrder(src_byte_order))
+    return llvm::createStringError("unsupported byte order for DWARF piece");
+
+  std::optional<uint64_t> src_capacity =
+      llvm::checkedMulUnsigned(static_cast<uint64_t>(src.size()), uint64_t{8});
+  std::optional<uint64_t> dst_capacity =
+      llvm::checkedMulUnsigned(static_cast<uint64_t>(dst.size()), uint64_t{8});
+  std::optional<uint64_t> src_end =
+      llvm::checkedAddUnsigned(src_bit_offset, bit_size);
+  std::optional<uint64_t> dst_end =
+      llvm::checkedAddUnsigned(dst_bit_offset, bit_size);
+  if (!src_capacity || !dst_capacity || !src_end || !dst_end ||
+      *src_end > *src_capacity || *dst_end > *dst_capacity)
+    return llvm::createStringError("DWARF piece exceeds its buffer");
+
+  if (bit_size % 8 == 0 && src_bit_offset % 8 == 0 && dst_bit_offset % 8 == 0) {
+    ::memcpy(dst.data() + dst_bit_offset / 8, src.data() + src_bit_offset / 8,
+             bit_size / 8);
+    return llvm::Error::success();
+  }
+
+  auto bit_mask = [](uint64_t bit_offset, lldb::ByteOrder byte_order) {
+    uint8_t bit_in_byte = bit_offset % 8;
+    if (byte_order == lldb::eByteOrderBig)
+      bit_in_byte = 7 - bit_in_byte;
+    return static_cast<uint8_t>(1u << bit_in_byte);
+  };
+
+  for (uint64_t i = 0; i < bit_size; ++i) {
+    const uint64_t src_offset = src_bit_offset + i;
+    const uint64_t dst_offset = dst_bit_offset + i;
+    const bool bit = src[src_offset / 8] & bit_mask(src_offset, src_byte_order);
+    uint8_t &dst_byte = dst[dst_offset / 8];
+    const uint8_t dst_mask = bit_mask(dst_offset, dst_byte_order);
+    if (bit)
+      dst_byte |= dst_mask;
+    else
+      dst_byte &= ~dst_mask;
+  }
+
+  return llvm::Error::success();
+}
+
+struct MaterializedPiece {
+  Value data;
+  uint64_t source_bit_offset = 0;
+  lldb::ByteOrder byte_order = lldb::eByteOrderInvalid;
+};
+
+static llvm::Expected<MaterializedPiece>
+MaterializeCompositePiece(EvalContext &eval_ctx, const CompositePiece &piece,
+                          lldb::ByteOrder target_byte_order) {
+  MaterializedPiece result;
+
+  switch (piece.source_kind) {
+  case CompositePieceSourceKind::Undefined:
+    llvm_unreachable("undefined pieces do not have source data");
+
+  case CompositePieceSourceKind::Scalar:
+  case CompositePieceSourceKind::Register: {
+    if (piece.bit_size > std::numeric_limits<uint16_t>::max() ||
+        piece.source_bit_offset > std::numeric_limits<uint32_t>::max())
+      return llvm::createStringError(
+          "scalar %s is too large",
+          GetCompositePieceOpcodeName(piece.encoding));
+
+    Scalar scalar = piece.source.GetScalar();
+    if (!scalar.ExtractBitfield(static_cast<uint32_t>(piece.bit_size),
+                                static_cast<uint32_t>(piece.source_bit_offset)))
+      return llvm::createStringError(
+          "unable to extract %" PRIu64 " bits with %" PRIu64
+          " bit offset from a %" PRIu64 " bit scalar value",
+          piece.bit_size, piece.source_bit_offset,
+          static_cast<uint64_t>(piece.source.GetScalar().GetByteSize() * 8));
+
+    // Resize the scalar to the piece width, zero-extending when the source
+    // scalar does not contain enough bits.
+    scalar.TruncOrExtendTo(static_cast<uint16_t>(piece.bit_size),
+                           /*sign=*/false);
+    Value scalar_value(scalar);
+    if (result.data.AppendDataToHostBuffer(scalar_value) == 0)
+      return llvm::createStringError(
+          "failed to serialize scalar %s",
+          GetCompositePieceOpcodeName(piece.encoding));
+
+    result.byte_order = endian::InlHostByteOrder();
+    break;
+  }
+
+  case CompositePieceSourceKind::Memory: {
+    if (!eval_ctx.target)
+      return llvm::createStringError(
+          "no target available for memory %s",
+          GetCompositePieceOpcodeName(piece.encoding));
+
+    Value source = piece.source;
+    const Value::ValueType source_type = source.GetValueType();
+    lldb::addr_t addr = source.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+    if (source_type == Value::ValueType::FileAddress) {
+      source.ConvertToLoadAddress(eval_ctx.module_sp.get(), eval_ctx.target);
+      addr = source.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+    }
+
+    // Read the smallest byte range containing the requested source bits.
+    // CopyBits handles the remaining intra-byte offset.
+    const uint64_t first_byte = piece.source_bit_offset / 8;
+    const uint64_t intra_byte_offset = piece.source_bit_offset % 8;
+    std::optional<uint64_t> read_bits =
+        llvm::checkedAddUnsigned(intra_byte_offset, piece.bit_size);
+    if (!read_bits)
+      return llvm::createStringError(
+          "memory %s size overflow",
+          GetCompositePieceOpcodeName(piece.encoding));
+    std::optional<uint64_t> rounded_read_bits =
+        llvm::checkedAddUnsigned(*read_bits, uint64_t{7});
+    std::optional<lldb::addr_t> read_addr =
+        llvm::checkedAddUnsigned(addr, first_byte);
+    if (!rounded_read_bits || !read_addr)
+      return llvm::createStringError(
+          "memory %s range overflow",
+          GetCompositePieceOpcodeName(piece.encoding));
+
+    const uint64_t read_byte_size = *rounded_read_bits / 8;
+    if (read_byte_size > std::numeric_limits<size_t>::max())
+      return llvm::createStringError(
+          "memory %s is too large",
+          GetCompositePieceOpcodeName(piece.encoding));
+    if (result.data.ResizeData(static_cast<size_t>(read_byte_size)) !=
+        read_byte_size)
+      return llvm::createStringError(
+          "failed to resize memory %s buffer",
+          GetCompositePieceOpcodeName(piece.encoding));
+
+    Status error;
+    if (eval_ctx.target->ReadMemory(
+            Address(*read_addr), result.data.GetBuffer().GetBytes(),
+            static_cast<size_t>(read_byte_size), error,
+            /*force_live_memory=*/false) != read_byte_size) {
+      const char *addr_type =
+          source_type == Value::ValueType::LoadAddress ? "load" : "file";
+      return llvm::createStringError(
+          "failed to read memory %s from %s address 0x%" PRIx64,
+          GetCompositePieceOpcodeName(piece.encoding), addr_type, *read_addr);
+    }
+
+    result.source_bit_offset = intra_byte_offset;
+    result.byte_order = target_byte_order;
+    break;
+  }
+  }
+
+  return result;
+}
+
+static llvm::Expected<Value>
+MaterializeComposite(EvalContext &eval_ctx, lldb::ByteOrder target_byte_order) {
+  uint64_t total_bit_size = 0;
+  for (const CompositePiece &piece : eval_ctx.pieces) {
+    std::optional<uint64_t> new_size =
+        llvm::checkedAddUnsigned(total_bit_size, piece.bit_size);
+    if (!new_size)
+      return llvm::createStringError("composite DWARF piece size overflow");
+    total_bit_size = *new_size;
+  }
+
+  std::optional<uint64_t> rounded_bit_size =
+      llvm::checkedAddUnsigned(total_bit_size, uint64_t{7});
+  if (!rounded_bit_size)
+    return llvm::createStringError("composite DWARF piece size overflow");
+  const uint64_t total_byte_size = *rounded_bit_size / 8;
+  if (total_byte_size > std::numeric_limits<size_t>::max())
+    return llvm::createStringError("composite DWARF piece is too large");
+
+  Value result;
+  // ResizeData zero-initializes the destination buffer.
+  if (result.ResizeData(static_cast<size_t>(total_byte_size)) !=
+      total_byte_size)
+    return llvm::createStringError(
+        "failed to resize composite DWARF piece buffer");
+
+  llvm::MutableArrayRef<uint8_t> result_data(result.GetBuffer().GetBytes(),
+                                             result.GetBuffer().GetByteSize());
+  uint64_t destination_bit_offset = 0;
+  for (const CompositePiece &piece : eval_ctx.pieces) {
+    // Undefined pieces are temporarily represented by zero-filled bits.
+    // TODO: Propagate per-bit availability instead of materializing them as 0.
+    if (piece.source_kind != CompositePieceSourceKind::Undefined) {
+      llvm::Expected<MaterializedPiece> source =
+          MaterializeCompositePiece(eval_ctx, piece, target_byte_order);
+      if (!source)
+        return source.takeError();
+
+      llvm::ArrayRef<uint8_t> source_data(
+          source->data.GetBuffer().GetBytes(),
+          source->data.GetBuffer().GetByteSize());
+      if (llvm::Error error =
+              CopyBits(result_data, destination_bit_offset, target_byte_order,
+                       source_data, source->source_bit_offset,
+                       source->byte_order, piece.bit_size))
+        return std::move(error);
+    }
+    destination_bit_offset += piece.bit_size;
+  }
+
+  return result;
 }
 
 static llvm::Error Evaluate_DW_OP_convert(EvalContext &eval_ctx,
@@ -1811,50 +1980,21 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       break;
 
     case DW_OP_piece: {
-      if (llvm::Error err =
-              Evaluate_DW_OP_piece(eval_ctx, op->getRawOperand(0)))
+      std::optional<uint64_t> piece_bit_size =
+          llvm::checkedMulUnsigned(op->getRawOperand(0), uint64_t{8});
+      if (!piece_bit_size)
+        return llvm::createStringError("DW_OP_piece size overflow");
+      if (llvm::Error err = Evaluate_DW_OP_piece(
+              eval_ctx, CompositePieceEncoding::Piece, *piece_bit_size,
+              /*source_bit_offset=*/0))
         return err;
     } break;
 
     case DW_OP_bit_piece:
-      if (stack.size() < 1) {
-        UpdateValueTypeFromLocationDescription(eval_ctx,
-                                               LocationDescriptionKind::Empty);
-        // Reset for the next piece.
-        eval_ctx.loc_desc_kind = Memory;
-        return llvm::createStringError(
-            "expression stack needs at least 1 item for DW_OP_bit_piece");
-      } else {
-        UpdateValueTypeFromLocationDescription(eval_ctx, eval_ctx.loc_desc_kind,
-                                               &stack.back());
-        // Reset for the next piece.
-        eval_ctx.loc_desc_kind = Memory;
-        const uint64_t piece_bit_size = op->getRawOperand(0);
-        const uint64_t piece_bit_offset = op->getRawOperand(1);
-        switch (stack.back().GetValueType()) {
-        case Value::ValueType::Invalid:
-          return llvm::createStringError(
-              "unable to extract bit value from invalid value");
-        case Value::ValueType::Scalar: {
-          if (!stack.back().GetScalar().ExtractBitfield(piece_bit_size,
-                                                        piece_bit_offset)) {
-            return llvm::createStringError(
-                "unable to extract %" PRIu64 " bit value with %" PRIu64
-                " bit offset from a %" PRIu64 " bit scalar value.",
-                piece_bit_size, piece_bit_offset,
-                (uint64_t)(stack.back().GetScalar().GetByteSize() * 8));
-          }
-        } break;
-
-        case Value::ValueType::FileAddress:
-        case Value::ValueType::LoadAddress:
-        case Value::ValueType::HostAddress:
-          return llvm::createStringError(
-              "unable to extract DW_OP_bit_piece(bit_size = %" PRIu64
-              ", bit_offset = %" PRIu64 ") from an address value.",
-              piece_bit_size, piece_bit_offset);
-        }
-      }
+      if (llvm::Error err =
+              Evaluate_DW_OP_piece(eval_ctx, CompositePieceEncoding::BitPiece,
+                                   op->getRawOperand(0), op->getRawOperand(1)))
+        return err;
       break;
 
     case DW_OP_implicit_value: {
@@ -1998,8 +2138,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
   if (stack.empty()) {
     // Nothing on the stack, check if we created a piece value from DW_OP_piece
     // or DW_OP_bit_piece opcodes
-    if (eval_ctx.pieces.GetBuffer().GetByteSize())
-      return eval_ctx.pieces;
+    if (!eval_ctx.pieces.empty())
+      return MaterializeComposite(eval_ctx, opcodes.GetByteOrder());
 
     return llvm::createStringError("stack empty after evaluation");
   }
