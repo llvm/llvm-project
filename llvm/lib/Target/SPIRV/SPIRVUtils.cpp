@@ -324,9 +324,8 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
           OpMD->getNumOperands() == 2
               ? mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(1))
               : nullptr;
-      if (!ScopeV || !isUInt<32>(ScopeV->getZExtValue()))
-        report_fatal_error("Expect Scope <id> operand of the UniformId "
-                           "decoration");
+      assert(ScopeV && isUInt<32>(ScopeV->getZExtValue()) &&
+             "Expect Scope <id> operand of the UniformId decoration");
       SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
       SPIRVTypeInst SpvTypeInt32 =
           GR->getOrCreateSPIRVIntegerType(32, MIRBuilder);
