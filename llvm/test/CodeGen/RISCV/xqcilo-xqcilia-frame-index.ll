@@ -14,8 +14,7 @@ define i32 @stack_fi_load(i32 %x) nounwind {
 ; CHECK-LABEL: stack_fi_load:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    qc.e.addi sp, sp, -4000016
-; CHECK-NEXT:    c.addi4spn a1, sp, 16
-; CHECK-NEXT:    qc.e.lw a1, 3000000(a1)
+; CHECK-NEXT:    qc.e.lw a1, 3000016(sp)
 ; CHECK-NEXT:    c.mv a2, a0
 ; CHECK-NEXT:    c.mv a0, a1
 ; CHECK-NEXT:    c.swsp a2, 16(sp)
@@ -36,8 +35,7 @@ define void @stack_fi_store(i32 %x) nounwind {
 ; CHECK-LABEL: stack_fi_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    qc.e.addi sp, sp, -4000016
-; CHECK-NEXT:    c.addi4spn a1, sp, 16
-; CHECK-NEXT:    qc.e.sw a0, 3000000(a1)
+; CHECK-NEXT:    qc.e.sw a0, 3000016(sp)
 ; CHECK-NEXT:    c.swsp a0, 16(sp)
 ; CHECK-NEXT:    qc.e.addi sp, sp, 4000016
 ; CHECK-NEXT:    c.jr ra
@@ -60,8 +58,7 @@ define void @fi_addr_escapes(i32 %x) nounwind {
 ; CHECK-NEXT:    c.addi16sp sp, -256
 ; CHECK-NEXT:    c.swsp ra, 252(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    qc.e.addi sp, sp, -3999760
-; CHECK-NEXT:    c.addi4spn a0, sp, 12
-; CHECK-NEXT:    qc.e.addi a0, a0, 3000000
+; CHECK-NEXT:    qc.e.addi a0, sp, 3000012
 ; CHECK-NEXT:    call use
 ; CHECK-NEXT:    c.addi4spn a0, sp, 12
 ; CHECK-NEXT:    call use
@@ -86,8 +83,7 @@ define i32 @bare_fi_high_frame() nounwind {
 ; CHECK-NEXT:    qc.e.addi sp, sp, -8208
 ; CHECK-NEXT:    c.li a0, 1
 ; CHECK-NEXT:    c.swsp a0, 12(sp)
-; CHECK-NEXT:    qc.e.addi a0, sp, 8192
-; CHECK-NEXT:    c.lw a0, 12(a0)
+; CHECK-NEXT:    qc.e.lw a0, 8204(sp)
 ; CHECK-NEXT:    qc.e.addi sp, sp, 8208
 ; CHECK-NEXT:    c.jr ra
   %small = alloca i32
@@ -105,8 +101,7 @@ define void @bare_fi_high_frame_store(i32 %x) nounwind {
 ; CHECK-NEXT:    qc.e.addi sp, sp, -8208
 ; CHECK-NEXT:    c.li a1, 1
 ; CHECK-NEXT:    c.swsp a1, 12(sp)
-; CHECK-NEXT:    qc.e.addi a1, sp, 8192
-; CHECK-NEXT:    c.sw a0, 12(a1)
+; CHECK-NEXT:    qc.e.sw a0, 8204(sp)
 ; CHECK-NEXT:    qc.e.addi sp, sp, 8208
 ; CHECK-NEXT:    c.jr ra
   %small = alloca i32
