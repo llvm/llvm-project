@@ -126,7 +126,7 @@ def main(builtin_params={}):
         selected_tests, discovered_tests
     )
 
-    if opts.time_tests is not None:
+    if opts.time_tests:
         print_histogram(discovered_tests, opts.time_tests)
 
     print_results(discovered_tests, elapsed, opts)
