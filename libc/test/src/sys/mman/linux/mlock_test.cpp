@@ -75,20 +75,9 @@ TEST_F(LlvmLibcMlockTest, Overflow) {
               Fails(EINVAL));
 }
 
-static bool mlock2_supported() {
-  static bool supported = []() {
-    LIBC_NAMESPACE::mlock2(nullptr, 0, 0);
-    int err = libc_errno;
-    libc_errno = 0;
-    return err != ENOSYS;
-  }();
-  return supported;
-}
-
-#ifdef SYS_mlock2
+// QEMU user space emulation does not support mlock2 and returns ENOSYS.
+#if defined(SYS_mlock2) && !defined(LIBC_TEST_UNDER_EMULATOR)
 TEST_F(LlvmLibcMlockTest, MLock2) {
-  if (!mlock2_supported())
-    return;
   PageHolder holder;
   EXPECT_TRUE(holder.is_valid());
   EXPECT_THAT(LIBC_NAMESPACE::madvise(holder.addr, holder.size, MADV_DONTNEED),
@@ -112,8 +101,11 @@ TEST_F(LlvmLibcMlockTest, MLock2) {
   EXPECT_EQ(vec & 1, 1);
   EXPECT_THAT(LIBC_NAMESPACE::munlock(holder.addr, holder.size), Succeeds());
 }
-#endif
+#endif // defined(SYS_mlock2) && !defined(LIBC_TEST_UNDER_EMULATOR)
 
+// QEMU user space emulation stubs mlockall to return 0 instead of EINVAL on
+// invalid flags.
+#ifndef LIBC_TEST_UNDER_EMULATOR
 TEST_F(LlvmLibcMlockTest, InvalidFlag) {
   size_t alloc_size = 128; // page size
   void *addr = LIBC_NAMESPACE::mmap(nullptr, alloc_size, PROT_READ,
@@ -122,20 +114,10 @@ TEST_F(LlvmLibcMlockTest, InvalidFlag) {
   EXPECT_NE(addr, MAP_FAILED);
 
   // Invalid mlock2 flags.
-  if (mlock2_supported()) {
-    EXPECT_THAT(LIBC_NAMESPACE::mlock2(addr, alloc_size, 1234), Fails(EINVAL));
-  }
+  EXPECT_THAT(LIBC_NAMESPACE::mlock2(addr, alloc_size, 1234), Fails(EINVAL));
 
   // Invalid mlockall flags.
-  int mlockall_ret = LIBC_NAMESPACE::mlockall(1234);
-  if (mlockall_ret == 0) {
-    // Under QEMU, mlockall can be a stub returning 0. Clean up immediately.
-    LIBC_NAMESPACE::munlockall();
-  } else {
-    EXPECT_EQ(mlockall_ret, -1);
-    EXPECT_EQ(static_cast<int>(libc_errno), EINVAL);
-    libc_errno = 0;
-  }
+  EXPECT_THAT(LIBC_NAMESPACE::mlockall(1234), Fails(EINVAL));
 
   // man 2 mlockall says EINVAL is a valid return code when MCL_ONFAULT was
   // specified without MCL_FUTURE or MCL_CURRENT, but this seems to fail on
@@ -146,6 +128,7 @@ TEST_F(LlvmLibcMlockTest, InvalidFlag) {
 
   LIBC_NAMESPACE::munmap(addr, alloc_size);
 }
+#endif // LIBC_TEST_UNDER_EMULATOR
 
 TEST_F(LlvmLibcMlockTest, MLockAll) {
   {

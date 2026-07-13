@@ -36,14 +36,11 @@ TEST_F(LlvmLibcMadviseTest, NoError) {
   EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, alloc_size), Succeeds());
 }
 
+// QEMU user space emulation stubs madvise hints (e.g. MADV_SEQUENTIAL) to
+// return 0, which makes this test fail as it expects ENOMEM on nullptr.
+#ifndef LIBC_TEST_UNDER_EMULATOR
 TEST_F(LlvmLibcMadviseTest, Error_BadPtr) {
-  int err = LIBC_NAMESPACE::madvise(nullptr, 8, MADV_SEQUENTIAL);
-  if (err == 0) {
-    // Under emulators like QEMU, madvise with hint flags is a no-op returning
-    // 0.
-    return;
-  }
-  EXPECT_EQ(err, -1);
-  EXPECT_EQ(static_cast<int>(libc_errno), ENOMEM);
-  libc_errno = 0;
+  EXPECT_THAT(LIBC_NAMESPACE::madvise(nullptr, 8, MADV_SEQUENTIAL),
+              Fails(ENOMEM));
 }
+#endif // LIBC_TEST_UNDER_EMULATOR

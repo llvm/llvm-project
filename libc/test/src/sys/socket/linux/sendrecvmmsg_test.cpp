@@ -71,20 +71,21 @@ TEST_F(LlvmLibcSendRecvMmsgTest, SendRecvMmsgSucceedsWithSocketPair) {
     recv_msg_hdr[i].msg_hdr.msg_iovlen = 1;
   }
 
+#ifdef LIBC_TEST_UNDER_EMULATOR
+  // QEMU does not validate timespec when messages are available in the queue.
+  ASSERT_THAT(LIBC_NAMESPACE::recvmmsg(sockpair[1], recv_msg_hdr,
+                                       MESSAGES_COUNT, 0, nullptr),
+              Succeeds<int>(MESSAGES_COUNT));
+#else
   struct timespec invalid_timeout = {-1, 0};
-  int recv_res = LIBC_NAMESPACE::recvmmsg(sockpair[1], recv_msg_hdr,
-                                          MESSAGES_COUNT, 0, &invalid_timeout);
-  if (recv_res == -1) {
-    ASSERT_EQ(static_cast<int>(libc_errno), EINVAL);
-    libc_errno = 0;
+  ASSERT_THAT(LIBC_NAMESPACE::recvmmsg(sockpair[1], recv_msg_hdr,
+                                       MESSAGES_COUNT, 0, &invalid_timeout),
+              Fails<int>(EINVAL));
 
-    ASSERT_THAT(LIBC_NAMESPACE::recvmmsg(sockpair[1], recv_msg_hdr,
-                                         MESSAGES_COUNT, 0, nullptr),
-                Succeeds<int>(MESSAGES_COUNT));
-  } else {
-    // Under QEMU, the call might succeed and return MESSAGES_COUNT.
-    ASSERT_EQ(recv_res, static_cast<int>(MESSAGES_COUNT));
-  }
+  ASSERT_THAT(LIBC_NAMESPACE::recvmmsg(sockpair[1], recv_msg_hdr,
+                                       MESSAGES_COUNT, 0, nullptr),
+              Succeeds<int>(MESSAGES_COUNT));
+#endif
 
   for (size_t i = 0; i < MESSAGES_COUNT; ++i) {
     ASSERT_EQ(static_cast<size_t>(recv_msg_hdr[i].msg_len),
@@ -98,15 +99,12 @@ TEST_F(LlvmLibcSendRecvMmsgTest, SendMmsgFails) {
   ASSERT_THAT(LIBC_NAMESPACE::sendmmsg(-1, &msg_hdrs, 1, 0), Fails(EBADF, -1));
 }
 
+// QEMU user space emulation has a bug where recvmmsg on fd -1 returns 1 instead
+// of -1 (with EBADF).
+#ifndef LIBC_TEST_UNDER_EMULATOR
 TEST_F(LlvmLibcSendRecvMmsgTest, RecvmmsgFails) {
   struct mmsghdr msg_hdrs = {};
-  int ret = LIBC_NAMESPACE::recvmmsg(-1, &msg_hdrs, 1, 0, nullptr);
-  if (ret == 1) {
-    // Under QEMU, recvmmsg(-1, ...) is buggy and can return 1 instead of -1
-    // (EBADF).
-    return;
-  }
-  EXPECT_EQ(ret, -1);
-  EXPECT_EQ(static_cast<int>(libc_errno), EBADF);
-  libc_errno = 0;
+  ASSERT_THAT(LIBC_NAMESPACE::recvmmsg(-1, &msg_hdrs, 1, 0, nullptr),
+              Fails(EBADF, -1));
 }
+#endif // LIBC_TEST_UNDER_EMULATOR

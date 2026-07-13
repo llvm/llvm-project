@@ -26,19 +26,7 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LlvmLibcRemapFilePagesTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-static bool remap_file_pages_supported() {
-  static bool supported = []() {
-    LIBC_NAMESPACE::remap_file_pages(nullptr, 0, 0, 0, 0);
-    int err = libc_errno;
-    libc_errno = 0;
-    return err != ENOSYS;
-  }();
-  return supported;
-}
-
 TEST_F(LlvmLibcRemapFilePagesTest, NoError) {
-  if (!remap_file_pages_supported())
-    return;
   size_t page_size = PAGE_SIZE;
   ASSERT_GT(page_size, size_t(0));
 
@@ -65,8 +53,6 @@ TEST_F(LlvmLibcRemapFilePagesTest, NoError) {
 }
 
 TEST_F(LlvmLibcRemapFilePagesTest, ErrorInvalidFlags) {
-  if (!remap_file_pages_supported())
-    return;
   size_t page_size = PAGE_SIZE;
   ASSERT_GT(page_size, size_t(0));
 
@@ -94,8 +80,6 @@ TEST_F(LlvmLibcRemapFilePagesTest, ErrorInvalidFlags) {
 }
 
 TEST_F(LlvmLibcRemapFilePagesTest, ErrorInvalidAddress) {
-  if (!remap_file_pages_supported())
-    return;
   size_t page_size = PAGE_SIZE;
   ASSERT_GT(page_size, size_t(0));
 
