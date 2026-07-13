@@ -404,7 +404,7 @@ def EmitC_CastOp : EmitC_Op<"cast",
     bool hasSideEffects() {
       // Use the "pure" attribute to see whether this CastOp has side effects.
       // Note that by default, `pure` is not set.
-      return getPure();
+      return !getPure();
     }
   }];
 }

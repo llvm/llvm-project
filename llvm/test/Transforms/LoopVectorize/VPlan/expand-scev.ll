@@ -91,7 +91,7 @@ define void @scev_expand_vscale_mul(ptr %dst, i64 %n) {
 ; CHECK-NEXT:  Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop.preheader>:
-; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = vscale i64
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = call i64 @llvm.vscale()
 ; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = shl nuw vp<[[VP2]]>, ir<2>
 ; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%n>, vp<[[VP3]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>

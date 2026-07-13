@@ -368,6 +368,7 @@ public:
 
   void SelectPtrauthAuth(SDNode *N);
   void SelectPtrauthResign(SDNode *N);
+  void SelectPtrauthResignWithPC(SDNode *N);
 
   bool trySelectStackSlotTagP(SDNode *N);
   void SelectTagP(SDNode *N);
@@ -402,7 +403,6 @@ public:
   void SelectMultiVectorMoveZ(SDNode *N, unsigned NumVecs,
                               unsigned Op, unsigned MaxIdx, unsigned Scale,
                               unsigned BaseReg = 0);
-  bool SelectAddrModeFrameIndexSVE(SDValue N, SDValue &Base, SDValue &OffImm);
   /// SVE Reg+Imm addressing mode.
   template <int64_t Min, int64_t Max>
   bool SelectAddrModeIndexedSVE(SDNode *Root, SDValue N, SDValue &Base,
@@ -1765,6 +1765,39 @@ void AArch64DAGToDAGISel::SelectPtrauthResign(SDNode *N) {
   }
 }
 
+void AArch64DAGToDAGISel::SelectPtrauthResignWithPC(SDNode *N) {
+  SDLoc DL(N);
+  SDValue Val = N->getOperand(1);
+  SDValue AUTKey = N->getOperand(2);
+  SDValue AUTDisc = N->getOperand(3);
+  SDValue AUTPC = N->getOperand(4);
+  SDValue PACKey = N->getOperand(5);
+  SDValue PACDisc = N->getOperand(6);
+
+  unsigned AUTKeyC = cast<ConstantSDNode>(AUTKey)->getZExtValue();
+  unsigned PACKeyC = cast<ConstantSDNode>(PACKey)->getZExtValue();
+
+  AUTKey = CurDAG->getTargetConstant(AUTKeyC, DL, MVT::i64);
+  PACKey = CurDAG->getTargetConstant(PACKeyC, DL, MVT::i64);
+
+  SDValue PACAddrDisc, PACConstDisc;
+  std::tie(PACConstDisc, PACAddrDisc) =
+      extractPtrauthBlendDiscriminators(PACDisc, CurDAG);
+
+  SDValue X17Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
+                                         AArch64::X17, Val, SDValue());
+  SDValue X16Copy = CurDAG->getCopyToReg(
+      CurDAG->getEntryNode(), DL, AArch64::X16, AUTDisc, X17Copy.getValue(1));
+  SDValue X15Copy = CurDAG->getCopyToReg(
+      CurDAG->getEntryNode(), DL, AArch64::X15, AUTPC, X16Copy.getValue(1));
+
+  SDValue Ops[] = {AUTKey, PACKey, PACConstDisc, PACAddrDisc,
+                   X15Copy.getValue(1)};
+  SDNode *AUTPCPAC =
+      CurDAG->getMachineNode(AArch64::AUTPCPAC, DL, MVT::i64, Ops);
+  ReplaceNode(N, AUTPCPAC);
+}
+
 bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
   LoadSDNode *LD = cast<LoadSDNode>(N);
   if (LD->isUnindexed())
@@ -2532,23 +2565,6 @@ void AArch64DAGToDAGISel::SelectPredicatedStore(SDNode *N, unsigned NumVecs,
   SDNode *St = CurDAG->getMachineNode(Opc, dl, N->getValueType(0), Ops);
 
   ReplaceNode(N, St);
-}
-
-bool AArch64DAGToDAGISel::SelectAddrModeFrameIndexSVE(SDValue N, SDValue &Base,
-                                                      SDValue &OffImm) {
-  SDLoc dl(N);
-  const DataLayout &DL = CurDAG->getDataLayout();
-  const TargetLowering *TLI = getTargetLowering();
-
-  // Try to match it for the frame address
-  if (auto FINode = dyn_cast<FrameIndexSDNode>(N)) {
-    int FI = FINode->getIndex();
-    Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(DL));
-    OffImm = CurDAG->getTargetConstant(0, dl, MVT::i64);
-    return true;
-  }
-
-  return false;
 }
 
 void AArch64DAGToDAGISel::SelectPostStore(SDNode *N, unsigned NumVecs,
@@ -6077,6 +6093,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
 
     case Intrinsic::ptrauth_resign:
       SelectPtrauthResign(Node);
+      return;
+
+    case Intrinsic::ptrauth_auth_with_pc_and_resign:
+      SelectPtrauthResignWithPC(Node);
       return;
 
     case Intrinsic::aarch64_neon_tbl2:

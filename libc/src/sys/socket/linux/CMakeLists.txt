@@ -276,3 +276,16 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
+
+add_entrypoint_object(
+  sockatmark
+  SRCS
+    sockatmark.cpp
+  HDRS
+    ../sockatmark.h
+  DEPENDS
+    libc.include.sys_socket
+    libc.src.__support.common
+    libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
+    libc.src.errno.errno
+)

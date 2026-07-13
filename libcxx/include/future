@@ -2078,6 +2078,11 @@ _LIBCPP_POP_MACROS
 #    include <system_error>
 #    include <thread>
 #  endif
+
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 23
+#    include <sstream>
+#  endif
+
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_FUTURE

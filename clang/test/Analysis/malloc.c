@@ -1,6 +1,5 @@
 // RUN: %clang_analyze_cc1 -Wno-strict-prototypes -Wno-error=implicit-int -verify %s \
 // RUN:   -Wno-alloc-size \
-// RUN:   -Wno-stringop-overread \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
 // RUN:   -analyzer-checker=unix \
@@ -1018,6 +1017,21 @@ void testWinWcsdupContentIsDefined(const wchar_t *s, unsigned validIndex) {
   wchar_t result = s2[1];// no warning
   free(s2);
 }
+
+struct if_nameindex { char x; };
+struct if_nameindex *if_nameindex(void);
+void if_freenameindex(struct if_nameindex *ptr);
+
+char testIfnameindex() {
+  struct if_nameindex *i = if_nameindex();
+  return i->x; // expected-warning {{Potential leak of memory pointed to by}}
+}
+
+void testIffreenameindex() {
+  struct if_nameindex *i = if_nameindex();
+  char x = i->x;
+  if_freenameindex(i);
+} // no warning
 
 // ----------------------------------------------------------------------------
 // Test the system library functions to which the pointer can escape.

@@ -1385,7 +1385,8 @@ void Sema::PushDeclContext(Scope *S, DeclContext *DC) {
   assert(DC->getLexicalParent() == CurContext &&
       "The next DeclContext should be lexically contained in the current one.");
   CurContext = DC;
-  S->setEntity(DC);
+  if (S)
+    S->setEntity(DC);
 }
 
 void Sema::PopDeclContext() {
@@ -6407,6 +6408,12 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
   }
 
   if (Cur->isRecord()) {
+    // C++26 [temp.expl.spec]p3 (Adopted as a DR in CWG727):
+    //   An explicit specialization may be declared in any scope in which the
+    //   corresponding primary template may be defined.
+    if (IsMemberSpecialization)
+      return false;
+
     // Cannot qualify members within a class.
     Diag(Loc, diag::err_member_qualification)
       << Name << SS.getRange();
@@ -7465,7 +7472,7 @@ static bool shouldConsiderLinkage(const VarDecl *VD) {
   if (DC->getDeclKind() == Decl::HLSLBuffer)
     return false;
 
-  if (isa<RequiresExprBodyDecl>(DC))
+  if (isa<RequiresExprBodyDecl, CXXExpansionStmtDecl>(DC))
     return false;
   llvm_unreachable("Unexpected context");
 }
@@ -7475,7 +7482,7 @@ static bool shouldConsiderLinkage(const FunctionDecl *FD) {
   if (DC->isFileContext() || DC->isFunctionOrMethod() ||
       isa<OMPDeclareReductionDecl>(DC) || isa<OMPDeclareMapperDecl>(DC))
     return true;
-  if (DC->isRecord())
+  if (DC->isRecord() || isa<CXXExpansionStmtDecl>(DC))
     return false;
   llvm_unreachable("Unexpected context");
 }
@@ -8036,8 +8043,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       AddToScope = false;
     } else if (D.isDecompositionDeclarator()) {
       NewVD = DecompositionDecl::Create(Context, DC, D.getBeginLoc(),
-                                        D.getIdentifierLoc(), R, TInfo, SC,
-                                        Bindings);
+                                        D.getIdentifierLoc(), D.getEndLoc(), R,
+                                        TInfo, SC, Bindings);
     } else
       NewVD = VarDecl::Create(Context, DC, D.getBeginLoc(),
                               D.getIdentifierLoc(), II, R, TInfo, SC);
@@ -11040,6 +11047,25 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
     if (NewFD->hasAttr<HLSLShaderAttr>())
       HLSL().CheckEntryPoint(NewFD);
+
+    // Resources cannot be passed to functions that are not inlined.
+    if (const NoInlineAttr *NoInline = NewFD->getAttr<NoInlineAttr>()) {
+      for (const ParmVarDecl *PVD : NewFD->parameters()) {
+        QualType ParamTy = PVD->getType().getNonReferenceType();
+        QualType EltTy = Context.getBaseElementType(ParamTy);
+        // `isCompleteType` forces completion of the element type without
+        // reporting an error (diagnosed elsewhere) so the resource parameter
+        // check is valid.
+        if (!EltTy->isDependentType() &&
+            isCompleteType(PVD->getLocation(), EltTy) &&
+            ParamTy->isHLSLIntangibleType()) {
+          Diag(PVD->getLocation(),
+               diag::err_hlsl_resource_param_in_noinline_function)
+              << ParamTy;
+          Diag(NoInline->getLocation(), diag::note_attribute);
+        }
+      }
+    }
   }
 
   // If this is the first declaration of a library builtin function, add
@@ -14480,7 +14506,12 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     }
     // C++1z [dcl.dcl]p1 grammar implies that an initializer is mandatory.
     if (isa<DecompositionDecl>(RealDecl)) {
-      Diag(Var->getLocation(), diag::err_decomp_decl_requires_init) << Var;
+      // Point the caret to the token immediately after the closing bracket.
+      auto NextLoc = dyn_cast<DecompositionDecl>(RealDecl)->getRSquareLoc();
+      NextLoc =
+          Lexer::findNextToken(NextLoc, PP.getSourceManager(), PP.getLangOpts())
+              ->getLocation();
+      Diag(NextLoc, diag::err_decomp_decl_requires_init) << Var;
       Var->setInvalidDecl();
       return;
     }
@@ -14794,14 +14825,15 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
   }
 }
 
-void Sema::ActOnCXXForRangeDecl(Decl *D) {
+void Sema::ActOnCXXForRangeDecl(Decl *D, bool InExpansionStmt) {
   // If there is no declaration, there was an error parsing it. Ignore it.
   if (!D)
     return;
 
   VarDecl *VD = dyn_cast<VarDecl>(D);
   if (!VD) {
-    Diag(D->getLocation(), diag::err_for_range_decl_must_be_var);
+    Diag(D->getLocation(), diag::err_for_range_decl_must_be_var)
+        << InExpansionStmt;
     D->setInvalidDecl();
     return;
   }
@@ -14843,7 +14875,7 @@ void Sema::ActOnCXXForRangeDecl(Decl *D) {
 
   if (Error != -1) {
     Diag(VD->getOuterLocStart(), diag::err_for_range_storage_class)
-        << VD << Error;
+        << InExpansionStmt << VD << Error;
     D->setInvalidDecl();
   }
 }
@@ -15764,11 +15796,17 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
   }
 
   // Incomplete resource arrays are not allowed as function parameters in HLSL
-  if (getLangOpts().HLSL && parmDeclType->isIncompleteArrayType() &&
-      parmDeclType->isHLSLResourceRecordArray()) {
-    Diag(D.getIdentifierLoc(),
-         diag::err_hlsl_incomplete_resource_array_in_function_param);
-    D.setInvalidType(true);
+  if (getLangOpts().HLSL && parmDeclType->isIncompleteArrayType()) {
+    QualType EltTy = Context.getBaseElementType(parmDeclType);
+    // `isCompleteType` forces completion of the element type so the resource
+    // check is valid.
+    if (!EltTy->isDependentType() &&
+        isCompleteType(D.getIdentifierLoc(), EltTy) &&
+        parmDeclType->isHLSLResourceRecordArray()) {
+      Diag(D.getIdentifierLoc(),
+           diag::err_hlsl_incomplete_resource_array_in_function_param);
+      D.setInvalidType(true);
+    }
   }
 
   // Temporarily put parameter variables in the translation unit, not
@@ -18448,16 +18486,6 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
             Previous.resolveKind();
           }
         }
-      } else if (auto *RD = dyn_cast<CXXRecordDecl>(PrevDecl);
-                 TUK == TagUseKind::Reference && RD &&
-                 RD->isInjectedClassName()) {
-        // If lookup found the injected class name, the previous declaration is
-        // the class being injected into.
-        PrevDecl = cast<TagDecl>(RD->getDeclContext());
-        Previous.clear();
-        Previous.addDecl(PrevDecl);
-        Previous.resolveKind();
-        IsInjectedClassName = true;
       }
     }
 
@@ -18489,6 +18517,18 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
       if (TUK == TagUseKind::Reference || TUK == TagUseKind::Friend ||
           isDeclInScope(DirectPrevDecl, SearchDC, S,
                         SS.isNotEmpty() || isMemberSpecialization)) {
+
+        if (auto *RD = dyn_cast<CXXRecordDecl>(PrevDecl);
+            RD && RD->isInjectedClassName()) {
+          // If lookup found the injected class name, the previous declaration
+          // is the class being injected into.
+          Previous.clear();
+          PrevDecl = PrevTagDecl = cast<CXXRecordDecl>(RD->getDeclContext());
+          Previous.addDecl(PrevDecl);
+          Previous.resolveKind();
+          IsInjectedClassName = true;
+        }
+
         // Make sure that this wasn't declared as an enum and now used as a
         // struct or something similar.
         if (!isAcceptableTagRedeclaration(PrevTagDecl, Kind,
@@ -18689,7 +18729,8 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
           // Okay, we're going to make a redeclaration.  If this is some kind
           // of reference, make sure we build the redeclaration in the same DC
           // as the original, and ignore the current access specifier.
-          if (TUK == TagUseKind::Friend || TUK == TagUseKind::Reference) {
+          if (TUK == TagUseKind::Friend || TUK == TagUseKind::Reference ||
+              IsInjectedClassName) {
             SearchDC = PrevTagDecl->getDeclContext();
             AS = AS_none;
           }

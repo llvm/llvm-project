@@ -2229,16 +2229,18 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
     MVT PtrValueVT = TLI.getPointerTy(DL, DL.getAllocaAddrSpace());
     SDValue RetPtr =
         DAG.getCopyFromReg(Chain, getCurSDLoc(), DemoteReg, PtrValueVT);
+    Type *RetTy = I.getOperand(0)->getType();
+    Align BaseAlign = DL.getPrefTypeAlign(RetTy);
+    RetPtr =
+        TLI.annotateStackObjectPointer(RetPtr, DAG, getCurSDLoc(), BaseAlign);
     SDValue RetOp = getValue(I.getOperand(0));
 
     SmallVector<EVT, 4> ValueVTs, MemVTs;
     SmallVector<uint64_t, 4> Offsets;
-    ComputeValueVTs(TLI, DL, I.getOperand(0)->getType(), ValueVTs, &MemVTs,
-                    &Offsets, 0);
+    ComputeValueVTs(TLI, DL, RetTy, ValueVTs, &MemVTs, &Offsets, 0);
     unsigned NumValues = ValueVTs.size();
 
     SmallVector<SDValue, 4> Chains(NumValues);
-    Align BaseAlign = DL.getPrefTypeAlign(I.getOperand(0)->getType());
     for (unsigned i = 0; i != NumValues; ++i) {
       // An aggregate return value cannot wrap around the address space, so
       // offsets to its parts don't wrap either.
@@ -2867,7 +2869,7 @@ void SelectionDAGBuilder::visitCondBr(const CondBrInst &I) {
         !shouldKeepJumpConditionsTogether(
             FuncInfo, I, Opcode, BOp0, BOp1,
             DAG.getTargetLoweringInfo().getJumpConditionMergingParams(
-                Opcode, BOp0, BOp1))) {
+                Opcode, BOp0, BOp1, FuncInfo.Fn))) {
       FindMergedConditions(BOp, Succ0MBB, Succ1MBB, BrMBB, BrMBB, Opcode,
                            getEdgeProbability(BrMBB, Succ0MBB),
                            getEdgeProbability(BrMBB, Succ1MBB),
