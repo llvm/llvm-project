@@ -35,7 +35,7 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK:   local.set  2
 ; CHECK:   local.set  1
 ; CHECK:   local.get  0
-; CHECK:   call  _Unwind_CallPersonality
+; CHECK:   call  __gxx_wasm_personality_v0
 ; CHECK:   block
 ; CHECK:     br_if     0                                 # 0: down to label[[L2:[0-9]+]]
 ; CHECK:     call  __cxa_begin_catch
@@ -111,7 +111,7 @@ try.cont:                                         ; preds = %catch, %catch2, %en
 ; CHECK:         br        2                                      # 2: down to label[[L1:[0-9]+]]
 ; CHECK:       end_try_table
 ; CHECK:     end_block                                            # label[[L0]]:
-; CHECK:     call  _Unwind_CallPersonality
+; CHECK:     call  __gxx_wasm_personality_v0
 ; CHECK:     block
 ; CHECK:       block
 ; CHECK:         br_if     0                                      # 0: down to label[[L2:[0-9]+]]
@@ -124,7 +124,7 @@ try.cont:                                         ; preds = %catch, %catch2, %en
 ; CHECK:                 br        5                              # 5: down to label[[L5:[0-9]+]]
 ; CHECK:               end_try_table
 ; CHECK:             end_block                                    # label[[L4]]:
-; CHECK:             call  _Unwind_CallPersonality
+; CHECK:             call  __gxx_wasm_personality_v0
 ; CHECK:             block
 ; CHECK:               block
 ; CHECK:                 br_if     0                              # 0: down to label[[L6:[0-9]+]]
@@ -1644,7 +1644,7 @@ declare ptr @_ZN7MyClassD2Ev(ptr returned) #0
 ; Function Attrs: nounwind
 declare ptr @_ZN7MyClassC2ERKS_(ptr returned, ptr dereferenceable(4)) #0
 
-declare i32 @__gxx_wasm_personality_v0(...)
+declare void @__gxx_wasm_personality_v0(ptr)
 ; Function Attrs: nounwind
 declare ptr @llvm.wasm.get.exception(token) #0
 ; Function Attrs: nounwind

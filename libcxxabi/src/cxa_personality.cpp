@@ -1011,9 +1011,7 @@ static inline void get_landing_pad(__cxa_catch_temp_type &dest,
 #endif
 }
 
-#ifdef __WASM_EXCEPTIONS__
-_Unwind_Reason_Code __gxx_personality_wasm0
-#elif defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
+#  if (defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)) || defined(__WASM_EXCEPTIONS__)
 static _Unwind_Reason_Code __gxx_personality_imp
 #else
 _LIBCXXABI_FUNC_VIS _Unwind_Reason_Code
@@ -1113,6 +1111,20 @@ __gxx_personality_seh0(PEXCEPTION_RECORD ms_exc, void *this_frame,
                                __gxx_personality_imp);
 }
 #endif
+
+#  ifdef __WASM_EXCEPTIONS__
+extern "C" _LIBCXXABI_FUNC_VIS void __gxx_wasm_personality_v0(void* exception_ptr) {
+  struct _Unwind_Exception* exception_object = (struct _Unwind_Exception*)exception_ptr;
+
+  // Reset the selector.
+  __wasm_lpad_context.selector = 0;
+
+  // Call personality function. Wasm does not have two-phase unwinding, so we
+  // only do the search phase.
+  __gxx_personality_imp(1, _UA_SEARCH_PHASE, exception_object->exception_class, exception_object,
+                        (struct _Unwind_Context*)&__wasm_lpad_context);
+}
+#  endif
 
 #else
 

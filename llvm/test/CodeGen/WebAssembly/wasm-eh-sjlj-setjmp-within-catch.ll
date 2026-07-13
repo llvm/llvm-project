@@ -49,7 +49,7 @@ ehcleanup:                                        ; preds = %catch
 }
 
 declare void @foo()
-declare i32 @__gxx_wasm_personality_v0(...)
+declare void @__gxx_wasm_personality_v0(ptr)
 ; Function Attrs: nounwind
 declare ptr @llvm.wasm.get.exception(token) #0
 ; Function Attrs: nounwind
