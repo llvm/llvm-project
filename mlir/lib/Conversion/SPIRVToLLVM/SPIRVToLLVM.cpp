@@ -80,16 +80,6 @@ static unsigned getLLVMTypeBitWidth(Type type) {
   return cast<IntegerType>(type).getWidth();
 }
 
-/// Creates `IntegerAttribute` with all bits set for given type
-static IntegerAttr minusOneIntegerAttribute(Type type, Builder builder) {
-  if (auto vecType = dyn_cast<VectorType>(type)) {
-    auto integerType = cast<IntegerType>(vecType.getElementType());
-    return builder.getIntegerAttr(integerType, -1);
-  }
-  auto integerType = cast<IntegerType>(type);
-  return builder.getIntegerAttr(integerType, -1);
-}
-
 /// Creates `llvm.mlir.constant` with a scalar or vector integer value,
 /// broadcasting `scalarAttr` across the vector if `srcType` is a vector.
 static Value createIntegerConstant(Location loc, Type srcType, Type dstType,
@@ -104,8 +94,11 @@ static Value createIntegerConstant(Location loc, Type srcType, Type dstType,
 /// Creates `llvm.mlir.constant` with all bits set for the given type.
 static Value createConstantAllBitsSet(Location loc, Type srcType, Type dstType,
                                       PatternRewriter &rewriter) {
+  auto integerType = cast<IntegerType>(
+      isa<VectorType>(srcType) ? cast<VectorType>(srcType).getElementType()
+                               : srcType);
   return createIntegerConstant(loc, srcType, dstType, rewriter,
-                               minusOneIntegerAttribute(srcType, rewriter));
+                               rewriter.getIntegerAttr(integerType, -1));
 }
 
 /// Creates `llvm.mlir.constant` with a floating-point scalar or vector value.
@@ -1024,13 +1017,7 @@ public:
       return rewriter.notifyMatchFailure(notOp, "type conversion failed");
 
     Location loc = notOp.getLoc();
-    IntegerAttr minusOne = minusOneIntegerAttribute(srcType, rewriter);
-    auto mask =
-        isa<VectorType>(srcType)
-            ? LLVM::ConstantOp::create(
-                  rewriter, loc, dstType,
-                  SplatElementsAttr::get(cast<VectorType>(srcType), minusOne))
-            : LLVM::ConstantOp::create(rewriter, loc, dstType, minusOne);
+    Value mask = createConstantAllBitsSet(loc, srcType, dstType, rewriter);
     rewriter.template replaceOpWithNewOp<LLVM::XOrOp>(notOp, dstType,
                                                       notOp.getOperand(), mask);
     return success();
