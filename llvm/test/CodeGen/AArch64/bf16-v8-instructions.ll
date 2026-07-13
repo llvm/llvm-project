@@ -15,6 +15,14 @@
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_i16
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_i32
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_i64
+; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i8
+; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i16
+; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i32
+; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i64
+; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i8
+; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i16
+; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i32
+; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i64
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i8
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_v16i8
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i16
@@ -36,6 +44,14 @@
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_i16
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_i32
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_i64
+; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i8
+; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i16
+; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i32
+; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i64
+; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i8
+; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i16
+; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i32
+; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i64
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i8
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_v16i8
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i16
@@ -46,6 +62,9 @@
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i16
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i32
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i64
+;
+;
+;
 
 define <8 x bfloat> @test_build(<8 x bfloat> %a) {
 ; CHECK-CVT-SD-LABEL: test_build:
@@ -2525,6 +2544,173 @@ define <8 x i64> @test_fptoui_i64(<8 x bfloat> %a) #0 {
 ; CHECK-NEXT:    ret
   %1 = fptoui <8 x bfloat> %a to <8 x i64>
   ret <8 x i64> %1
+}
+
+define <8 x i8> @test_fptosi_sat_i8(<8 x bfloat> %a) {
+; CHECK-LABEL: test_fptosi_sat_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shll2 v2.4s, v0.8h, #16
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    movi v1.4s, #127
+; CHECK-NEXT:    mvni v3.4s, #127
+; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
+; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NEXT:    smin v2.4s, v2.4s, v1.4s
+; CHECK-NEXT:    smin v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    smax v1.4s, v2.4s, v3.4s
+; CHECK-NEXT:    smax v0.4s, v0.4s, v3.4s
+; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    ret
+  %i = call <8 x i8> @llvm.fptosi.sat.v8i8.v8bf16(<8 x bfloat> %a)
+  ret <8 x i8> %i
+}
+
+define <8 x i16> @test_fptosi_sat_i16(<8 x bfloat> %a) {
+; CHECK-LABEL: test_fptosi_sat_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shll v1.4s, v0.4h, #16
+; CHECK-NEXT:    shll2 v2.4s, v0.8h, #16
+; CHECK-NEXT:    fcvtzs v1.4s, v1.4s
+; CHECK-NEXT:    sqxtn v0.4h, v1.4s
+; CHECK-NEXT:    fcvtzs v1.4s, v2.4s
+; CHECK-NEXT:    sqxtn2 v0.8h, v1.4s
+; CHECK-NEXT:    ret
+  %i = call <8 x i16> @llvm.fptosi.sat.v8i16.v8bf16(<8 x bfloat> %a)
+  ret <8 x i16> %i
+}
+
+define <8 x i32> @test_fptosi_sat_i32(<8 x bfloat> %a) {
+; CHECK-LABEL: test_fptosi_sat_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shll2 v1.4s, v0.8h, #16
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcvtzs v1.4s, v1.4s
+; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NEXT:    ret
+  %i = call <8 x i32> @llvm.fptosi.sat.v8i32.v8bf16(<8 x bfloat> %a)
+  ret <8 x i32> %i
+}
+
+define <8 x i64> @test_fptosi_sat_i64(<8 x bfloat> %a) {
+; CHECK-LABEL: test_fptosi_sat_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov d1, v0.d[1]
+; CHECK-NEXT:    mov h4, v0.h[2]
+; CHECK-NEXT:    mov h3, v0.h[1]
+; CHECK-NEXT:    mov h7, v0.h[3]
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    mov h2, v1.h[2]
+; CHECK-NEXT:    mov h5, v1.h[1]
+; CHECK-NEXT:    mov h6, v1.h[3]
+; CHECK-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-NEXT:    shll v4.4s, v4.4h, #16
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-NEXT:    shll v7.4s, v7.4h, #16
+; CHECK-NEXT:    fcvtzs x9, s0
+; CHECK-NEXT:    shll v2.4s, v2.4h, #16
+; CHECK-NEXT:    shll v5.4s, v5.4h, #16
+; CHECK-NEXT:    shll v6.4s, v6.4h, #16
+; CHECK-NEXT:    fcvtzs x8, s1
+; CHECK-NEXT:    fcvtzs x12, s4
+; CHECK-NEXT:    fcvtzs x11, s3
+; CHECK-NEXT:    fcvtzs x15, s7
+; CHECK-NEXT:    fmov d0, x9
+; CHECK-NEXT:    fcvtzs x10, s2
+; CHECK-NEXT:    fcvtzs x13, s5
+; CHECK-NEXT:    fcvtzs x14, s6
+; CHECK-NEXT:    fmov d2, x8
+; CHECK-NEXT:    fmov d1, x12
+; CHECK-NEXT:    mov v0.d[1], x11
+; CHECK-NEXT:    fmov d3, x10
+; CHECK-NEXT:    mov v2.d[1], x13
+; CHECK-NEXT:    mov v1.d[1], x15
+; CHECK-NEXT:    mov v3.d[1], x14
+; CHECK-NEXT:    ret
+  %i = call <8 x i64> @llvm.fptosi.sat.v8i64.v8bf16(<8 x bfloat> %a)
+  ret <8 x i64> %i
+}
+
+define <8 x i8> @test_fptoui_sat_i8(<8 x bfloat> %a) {
+; CHECK-LABEL: test_fptoui_sat_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shll2 v2.4s, v0.8h, #16
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    movi v1.2d, #0x0000ff000000ff
+; CHECK-NEXT:    fcvtzu v2.4s, v2.4s
+; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NEXT:    umin v2.4s, v2.4s, v1.4s
+; CHECK-NEXT:    umin v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    ret
+  %i = call <8 x i8> @llvm.fptoui.sat.v8i8.v8bf16(<8 x bfloat> %a)
+  ret <8 x i8> %i
+}
+
+define <8 x i16> @test_fptoui_sat_i16(<8 x bfloat> %a) {
+; CHECK-LABEL: test_fptoui_sat_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shll v1.4s, v0.4h, #16
+; CHECK-NEXT:    shll2 v2.4s, v0.8h, #16
+; CHECK-NEXT:    fcvtzu v1.4s, v1.4s
+; CHECK-NEXT:    uqxtn v0.4h, v1.4s
+; CHECK-NEXT:    fcvtzu v1.4s, v2.4s
+; CHECK-NEXT:    uqxtn2 v0.8h, v1.4s
+; CHECK-NEXT:    ret
+  %i = call <8 x i16> @llvm.fptoui.sat.v8i16.v8bf16(<8 x bfloat> %a)
+  ret <8 x i16> %i
+}
+
+define <8 x i32> @test_fptoui_sat_i32(<8 x bfloat> %a) {
+; CHECK-LABEL: test_fptoui_sat_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shll2 v1.4s, v0.8h, #16
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcvtzu v1.4s, v1.4s
+; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NEXT:    ret
+  %i = call <8 x i32> @llvm.fptoui.sat.v8i32.v8bf16(<8 x bfloat> %a)
+  ret <8 x i32> %i
+}
+
+define <8 x i64> @test_fptoui_sat_i64(<8 x bfloat> %a) {
+; CHECK-LABEL: test_fptoui_sat_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov d1, v0.d[1]
+; CHECK-NEXT:    mov h4, v0.h[2]
+; CHECK-NEXT:    mov h3, v0.h[1]
+; CHECK-NEXT:    mov h7, v0.h[3]
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    mov h2, v1.h[2]
+; CHECK-NEXT:    mov h5, v1.h[1]
+; CHECK-NEXT:    mov h6, v1.h[3]
+; CHECK-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-NEXT:    shll v4.4s, v4.4h, #16
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-NEXT:    shll v7.4s, v7.4h, #16
+; CHECK-NEXT:    fcvtzu x9, s0
+; CHECK-NEXT:    shll v2.4s, v2.4h, #16
+; CHECK-NEXT:    shll v5.4s, v5.4h, #16
+; CHECK-NEXT:    shll v6.4s, v6.4h, #16
+; CHECK-NEXT:    fcvtzu x8, s1
+; CHECK-NEXT:    fcvtzu x12, s4
+; CHECK-NEXT:    fcvtzu x11, s3
+; CHECK-NEXT:    fcvtzu x15, s7
+; CHECK-NEXT:    fmov d0, x9
+; CHECK-NEXT:    fcvtzu x10, s2
+; CHECK-NEXT:    fcvtzu x13, s5
+; CHECK-NEXT:    fcvtzu x14, s6
+; CHECK-NEXT:    fmov d2, x8
+; CHECK-NEXT:    fmov d1, x12
+; CHECK-NEXT:    mov v0.d[1], x11
+; CHECK-NEXT:    fmov d3, x10
+; CHECK-NEXT:    mov v2.d[1], x13
+; CHECK-NEXT:    mov v1.d[1], x15
+; CHECK-NEXT:    mov v3.d[1], x14
+; CHECK-NEXT:    ret
+  %i = call <8 x i64> @llvm.fptoui.sat.v8i64.v8bf16(<8 x bfloat> %a)
+  ret <8 x i64> %i
 }
 
 define <8 x bfloat> @test_sitofp_i8(<8 x i8> %a) #0 {
