@@ -55,10 +55,13 @@
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
 #include "WebAssemblySubtarget.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/Debug.h"
 #include <limits>
 using namespace llvm;
@@ -256,10 +259,98 @@ class WebAssemblyFixIrreducibleControlFlow final : public MachineFunctionPass {
   void makeSingleEntryLoop(const BlockSet &Entries, BlockSet &Blocks,
                            MachineFunction &MF, const ReachabilityGraph &Graph);
 
+  bool cloneEHPadEntriesForBackedges(const BlockSet &Entries, BlockSet &Blocks,
+                                     MachineFunction &MF,
+                                     const ReachabilityGraph &Graph);
+
 public:
   static char ID; // Pass identification, replacement for typeid
   WebAssemblyFixIrreducibleControlFlow() : MachineFunctionPass(ID) {}
 };
+
+static bool hasEHPadEntry(const BlockSet &Entries) {
+  return llvm::any_of(Entries,
+                      [](MachineBasicBlock *MBB) { return MBB->isEHPad(); });
+}
+
+static void cloneInstrIntoBlock(MachineInstr &MI, MachineBasicBlock *Clone,
+                                MachineFunction &MF,
+                                const TargetInstrInfo &TII) {
+  // EH_LABEL contains an MCSymbol for exception ranges. Do not reuse the same
+  // symbol in both the original and cloned EH pad.
+  if (MI.getOpcode() == WebAssembly::EH_LABEL) {
+    MCSymbol *Sym = MF.getContext().createTempSymbol();
+    BuildMI(*Clone, Clone->end(), MI.getDebugLoc(),
+            TII.get(WebAssembly::EH_LABEL))
+        .addSym(Sym);
+    return;
+  }
+
+  MachineInstr *NewMI = MF.CloneMachineInstr(&MI);
+  Clone->push_back(NewMI);
+}
+
+static bool explicitlyBranchesTo(const MachineBasicBlock *MBB,
+                                 const MachineBasicBlock *Target) {
+  for (const MachineInstr &Term : MBB->terminators()) {
+    for (const MachineOperand &MO : Term.explicit_uses()) {
+      if (MO.isMBB() && MO.getMBB() == Target)
+        return true;
+    }
+  }
+  return false;
+}
+
+static MachineBasicBlock *
+getImplicitFallthroughSuccessor(MachineBasicBlock *MBB) {
+  auto Next = std::next(MBB->getIterator());
+  if (Next == MBB->getParent()->end())
+    return nullptr;
+
+  MachineBasicBlock *LayoutSucc = &*Next;
+
+  // If the next block is not a successor, there is no fallthrough successor.
+  if (!MBB->isSuccessor(LayoutSucc))
+    return nullptr;
+
+  // Do not create an explicit branch to an EH pad. EH successors must remain
+  // exceptional successors, not normal branch targets.
+  if (LayoutSucc->isEHPad())
+    return nullptr;
+
+  // Already explicit, not a fallthrough successor.
+  if (explicitlyBranchesTo(MBB, LayoutSucc))
+    return nullptr;
+
+  return LayoutSucc;
+}
+
+static void makeFallthroughExplicitIfNeeded(MachineBasicBlock *MBB,
+                                            const TargetInstrInfo &TII) {
+  MachineBasicBlock *Fallthrough = getImplicitFallthroughSuccessor(MBB);
+  if (!Fallthrough)
+    return;
+
+  // MBB currently reaches Fallthrough by layout fallthrough. Preserve that
+  // edge before inserting another block after MBB.
+  BuildMI(*MBB, MBB->end(), DebugLoc(), TII.get(WebAssembly::BR))
+      .addMBB(Fallthrough);
+}
+
+static void redirectSuccessor(MachineBasicBlock *Pred,
+                              MachineBasicBlock *OldSucc,
+                              MachineBasicBlock *NewSucc) {
+  // Explicit MBB operands, if any.
+  for (MachineInstr &Term : Pred->terminators()) {
+    for (MachineOperand &MO : Term.explicit_uses()) {
+      if (MO.isMBB() && MO.getMBB() == OldSucc)
+        MO.setMBB(NewSucc);
+    }
+  }
+
+  // CFG successor list.
+  Pred->replaceSuccessor(OldSucc, NewSucc);
+}
 
 bool WebAssemblyFixIrreducibleControlFlow::processRegion(
     MachineBasicBlock *Entry, BlockSet &Blocks, MachineFunction &MF) {
@@ -301,7 +392,17 @@ bool WebAssemblyFixIrreducibleControlFlow::processRegion(
           Graph.getLoopEntriesForSCC(Graph.getSCCId(LoopEntry));
 
       if (MutualLoopEntries.size() > 1) {
-        makeSingleEntryLoop(MutualLoopEntries, Blocks, MF, Graph);
+        if (hasEHPadEntry(MutualLoopEntries)) {
+          // EH pad entries cannot be routed through the normal dispatch block
+          // strategy, so split the in-loop EH backedges instead.
+          if (!cloneEHPadEntriesForBackedges(MutualLoopEntries, Blocks, MF,
+                                             Graph))
+            // Cannot safely fix this SCC; preserve changes made to earlier
+            // SCCs.
+            return Changed;
+        } else {
+          makeSingleEntryLoop(MutualLoopEntries, Blocks, MF, Graph);
+        }
         FoundIrreducibility = true;
         Changed = true;
         break;
@@ -341,6 +442,152 @@ bool WebAssemblyFixIrreducibleControlFlow::processRegion(
 
     return Changed;
   }
+}
+
+/// Fix irreducible SCCs whose entries include an EH pad without routing
+/// exceptional edges through normal dispatch blocks.
+///
+/// Before:
+///
+///   external EH
+///       |
+///       v
+///   original.catch [EHPad] ---> body <--- external normal
+///       ^                      |
+///       |                      | unwind
+///       +----------------------+
+///
+/// After:
+///
+///   external EH
+///       |
+///       v
+///   original.catch [EHPad] ---> body <--- external normal
+///                              |
+///                              | unwind
+///                              v
+///                       cloned.catch [EHPad]
+///                              |
+///                              +---> original EH continuation
+///
+///   1. Detect:
+///        irreducible SCC entries contain an EH pad entry.
+///
+///   2. Trace EH backedges:
+///        same-SCC normal predecessor -> EH pad entry
+///
+///   3. Prepare for cloning:
+///        remember the original EH pad fallthrough and make the predecessor's
+///        fallthrough explicit before inserting a clone.
+///
+///   4. Clone EH pad:
+///        copy EH flags, live-ins, instructions, successors, give cloned
+///        EH_LABELs fresh symbols, and materialize the remembered fallthrough.
+///
+///   5. Redirect:
+///        rewrite the in-loop exceptional edge to target the cloned EH pad.
+///
+/// This preserves the machine verifier invariant that exceptional successors
+/// remain direct-to-EHPad while turning the loop body into a single-entry loop.
+bool WebAssemblyFixIrreducibleControlFlow::cloneEHPadEntriesForBackedges(
+    const BlockSet &Entries, BlockSet &Blocks, MachineFunction &MF,
+    const ReachabilityGraph &Graph) {
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+
+  // (1) This EH-specific path is selected only for irreducible SCC entries
+  // that include an EH pad.
+  assert(hasEHPadEntry(Entries) && "Expected an EH pad entry");
+
+  bool Changed = false;
+
+  for (MachineBasicBlock *EHPadEntry : getSortedEntries(Entries)) {
+    if (!EHPadEntry->isEHPad())
+      continue;
+
+    const unsigned SCCId = Graph.getSCCId(EHPadEntry);
+
+    SmallVector<MachineBasicBlock *, 4> InLoopPreds;
+    // (2) Find only same-SCC normal predecessors. External EH predecessors
+    // must continue to target the original EH pad.
+    for (MachineBasicBlock *Pred : EHPadEntry->predecessors()) {
+      if (!Blocks.count(Pred))
+        continue;
+      if (Graph.getSCCId(Pred) != SCCId)
+        continue;
+
+      // Keep this first implementation conservative. The target pattern is:
+      //
+      //   normal throwing block -> EHPad entry
+      //
+      // Do not try to clone paths from an EHPad predecessor yet.
+      if (Pred->isEHPad())
+        continue;
+
+      InLoopPreds.push_back(Pred);
+    }
+
+    for (MachineBasicBlock *Pred : InLoopPreds) {
+      LLVM_DEBUG({
+        dbgs() << "Cloning EH pad entry for irreducible EH backedge: ";
+        Pred->printName(dbgs());
+        dbgs() << " -> ";
+        EHPadEntry->printName(dbgs());
+        dbgs() << "\n";
+      });
+
+      // (3) Remember fallthroughs before changing block layout. If Pred falls
+      // through to the next layout block, inserting the clone immediately after
+      // Pred would otherwise break that edge.
+      MachineBasicBlock *EHPadFallthrough =
+          getImplicitFallthroughSuccessor(EHPadEntry);
+      makeFallthroughExplicitIfNeeded(Pred, TII);
+
+      // (4) Clone the EH pad before rewiring the exceptional edge.
+      MachineBasicBlock *Clone =
+          MF.CreateMachineBasicBlock(EHPadEntry->getBasicBlock());
+      MF.insert(std::next(Pred->getIterator()), Clone);
+
+      Clone->setIsEHPad(EHPadEntry->isEHPad());
+      Clone->setIsEHScopeEntry(EHPadEntry->isEHScopeEntry());
+      Clone->setIsEHFuncletEntry(EHPadEntry->isEHFuncletEntry());
+      Clone->setIsCleanupFuncletEntry(EHPadEntry->isCleanupFuncletEntry());
+
+      // Keep virtual registers unchanged because EH continuations are shared
+      // and may use values defined in either EH pad.
+      for (const MachineBasicBlock::RegisterMaskPair &LI :
+           EHPadEntry->liveins())
+        Clone->addLiveIn(LI);
+
+      for (MachineInstr &MI : *EHPadEntry)
+        cloneInstrIntoBlock(MI, Clone, MF, TII);
+
+      for (auto SI = EHPadEntry->succ_begin(), SE = EHPadEntry->succ_end();
+           SI != SE; ++SI)
+        Clone->copySuccessor(EHPadEntry, SI);
+
+      // (4) The cloned EH pad is not laid out before the original fallthrough
+      // successor, so make that edge explicit if the original used fallthrough.
+      if (EHPadFallthrough)
+        BuildMI(*Clone, Clone->end(), DebugLoc(), TII.get(WebAssembly::BR))
+            .addMBB(EHPadFallthrough);
+
+      Blocks.insert(Clone);
+
+      // (5) Keep the exceptional successor direct-to-EHPad. We change the
+      // target from the original EH pad to its clone, not to a routing block.
+      redirectSuccessor(Pred, EHPadEntry, Clone);
+
+      LLVM_DEBUG({
+        dbgs() << "  created cloned EH pad ";
+        Clone->printName(dbgs());
+        dbgs() << "\n";
+      });
+
+      Changed = true;
+    }
+  }
+
+  return Changed;
 }
 
 // Given a set of entries to a single loop, create a single entry for that
@@ -483,9 +730,15 @@ void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
         if (Op.isMBB() && Indices.count(Op.getMBB()))
           Op.setMBB(Map[{Op.getMBB(), PredInLoop}]);
 
-    for (auto *Succ : Pred->successors()) {
+    for (MachineBasicBlock *Succ :
+         llvm::make_early_inc_range(Pred->successors())) {
       if (!Entries.count(Succ))
         continue;
+
+      assert(
+          !Succ->isEHPad() &&
+          "EH pad entries must not be routed through normal dispatch blocks");
+
       auto *Routing = Map[{Succ, PredInLoop}];
       Pred->replaceSuccessor(Succ, Routing);
     }
