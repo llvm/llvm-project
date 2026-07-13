@@ -207,7 +207,7 @@ public:
 /// bitcast of the other.
 class MergeFunctions {
 public:
-  explicit MergeFunctions(FunctionAnalysisManager *FAM = nullptr)
+  explicit MergeFunctions(FunctionAnalysisManager &FAM)
       : FnTree(FunctionNodeCmp(&GlobalNumbers)), FAM(FAM) {}
 
   template <typename FuncContainer> bool run(FuncContainer &Functions);
@@ -325,21 +325,21 @@ private:
   /// Deleted-New functions mapping
   DenseMap<Function *, Function *> DelToNewMap;
 
-  FunctionAnalysisManager *FAM = nullptr;
+  FunctionAnalysisManager &FAM;
 };
 } // end anonymous namespace
 
 PreservedAnalyses MergeFunctionsPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
-  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  if (!MergeFunctionsPass::runOnModule(M, &FAM))
+  if (!MergeFunctionsPass::runOnModule(M, AM))
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }
 
 SmallPtrSet<GlobalValue *, 4> &MergeFunctions::getUsed() { return Used; }
 
-bool MergeFunctionsPass::runOnModule(Module &M, FunctionAnalysisManager *FAM) {
+bool MergeFunctionsPass::runOnModule(Module &M, ModuleAnalysisManager &AM) {
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   MergeFunctions MF(FAM);
   SmallVector<GlobalValue *, 4> UsedV;
   collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/false);
@@ -350,7 +350,15 @@ bool MergeFunctionsPass::runOnModule(Module &M, FunctionAnalysisManager *FAM) {
 
 DenseMap<Function *, Function *>
 MergeFunctionsPass::runOnFunctions(ArrayRef<Function *> F,
-                                   FunctionAnalysisManager *FAM) {
+                                   ModuleAnalysisManager &AM) {
+  if (F.empty())
+    return DenseMap<Function *, Function *>();
+
+  Module &M = *F.front()->getParent();
+  assert(
+      llvm::all_of(F, [&M](Function *Fn) { return Fn->getParent() == &M; }) &&
+      "all functions must belong to the same module");
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   MergeFunctions MF(FAM);
   return MF.runOnFunctions(F);
 }
@@ -1068,10 +1076,7 @@ mergeValueProfileOnInstructions(Instruction *DstI, const Instruction *SrcI,
 }
 
 const BlockFrequencyInfo *MergeFunctions::getBFI(Function &F) {
-  if (!FAM)
-    return nullptr;
-
-  return &FAM->getResult<BlockFrequencyAnalysis>(F);
+  return &FAM.getResult<BlockFrequencyAnalysis>(F);
 }
 
 /// Merge \p Src's instruction-level branch weights and value profile
@@ -1107,12 +1112,10 @@ void MergeFunctions::mergeInstrProfMetadataInto(Function *Dst, Function *Src) {
                                      DstEntryCount, SrcEntryCount);
   }
 
-  if (FAM) {
-    PreservedAnalyses PA = PreservedAnalyses::all();
-    PA.abandon<BranchProbabilityAnalysis>();
-    PA.abandon<BlockFrequencyAnalysis>();
-    FAM->invalidate(*Dst, PA);
-  }
+  PreservedAnalyses PA = PreservedAnalyses::all();
+  PA.abandon<BranchProbabilityAnalysis>();
+  PA.abandon<BlockFrequencyAnalysis>();
+  FAM.invalidate(*Dst, PA);
 }
 
 static void mergeEntryCountsInto(Function *F, std::optional<uint64_t> FC,

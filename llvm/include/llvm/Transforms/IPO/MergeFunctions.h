@@ -28,13 +28,9 @@ class MergeFunctionsPass : public OptionalPassInfoMixin<MergeFunctionsPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
-  /// When null, instruction-level profile merging scales using function entry
-  /// counts only. The NewPM path always provides FAM.
-  LLVM_ABI static bool runOnModule(Module &M,
-                                   FunctionAnalysisManager *FAM = nullptr);
+  LLVM_ABI static bool runOnModule(Module &M, ModuleAnalysisManager &AM);
   LLVM_ABI static DenseMap<Function *, Function *>
-  runOnFunctions(ArrayRef<Function *> F,
-                 FunctionAnalysisManager *FAM = nullptr);
+  runOnFunctions(ArrayRef<Function *> F, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm
