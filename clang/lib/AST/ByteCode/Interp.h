@@ -1300,13 +1300,10 @@ static inline bool IsOpaqueConstantCall(const CallExpr *E) {
           Builtin == Builtin::BI__builtin_function_start);
 }
 
-bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
-                                             const Pointer &RHS);
-/// Returns true when LHS and RHS designate potentially non-unique objects that
-/// could share storage, making their comparison non-constant.
-bool arePotentiallyOverlappingNonUniqueObjects(InterpState &S,
-                                               const Pointer &LHS,
-                                               const Pointer &RHS);
+/// Classifies potentially overlapping string literals or non-unique objects.
+PotentiallyNonUniqueObject::OverlapResult
+arePotentiallyOverlappingNonUniqueObjects(InterpState &S, const Pointer &LHS,
+                                          const Pointer &RHS);
 
 template <>
 inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
@@ -1351,21 +1348,6 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     return true;
   }
 
-  // C++ [intro.object]/9:
-  //   An object is potentially non-unique if it is a string literal object,
-  //   the backing array of an initializer list, or a subobject thereof.
-  // FIXME: The string literal source check here isn't entirely correct.
-  if (LHS.pointsToStringLiteral() && RHS.pointsToStringLiteral() &&
-      LHS.getFieldDesc()->asExpr() != RHS.getFieldDesc()->asExpr()) {
-    if (arePotentiallyOverlappingStringLiterals(LHS, RHS)) {
-      const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_literal_comparison)
-          << LHS.toDiagnosticString(S.getASTContext())
-          << RHS.toDiagnosticString(S.getASTContext());
-      return false;
-    }
-  }
-
   if (Pointer::hasSameBase(LHS, RHS)) {
     std::optional<size_t> A = LHS.computeOffsetForComparison(S.getASTContext());
     std::optional<size_t> B = RHS.computeOffsetForComparison(S.getASTContext());
@@ -1376,10 +1358,24 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     return true;
   }
 
-  if (arePotentiallyOverlappingNonUniqueObjects(S, LHS, RHS)) {
+  // C++ [intro.object]/9:
+  //   An object is potentially non-unique if it is a string literal object,
+  //   the backing array of an initializer list, or a subobject thereof.
+  switch (arePotentiallyOverlappingNonUniqueObjects(S, LHS, RHS)) {
+  case PotentiallyNonUniqueObject::OverlapResult::StringLiteral: {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_literal_comparison)
+        << LHS.toDiagnosticString(S.getASTContext())
+        << RHS.toDiagnosticString(S.getASTContext());
+    return false;
+  }
+  case PotentiallyNonUniqueObject::OverlapResult::NonUniqueObject: {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_non_unique_object_comparison);
     return false;
+  }
+  case PotentiallyNonUniqueObject::OverlapResult::None:
+    break;
   }
 
   // Otherwise we need to do a bunch of extra checks before returning Unordered.

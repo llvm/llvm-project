@@ -102,6 +102,25 @@ namespace cwg2765 {
   // both-note@#cwg2765-init-list-string-compare {{comparison of addresses of potentially non-unique objects has unspecified value}}
   // both-note@-3 {{in call to}}
 
+  constexpr bool wide_init_list_overlaps_shifted_string() {
+    return std::initializer_list<char16_t>{u'x', u'a', u'b', u'\0'}.begin() + 1
+           != u"ab"; // #cwg2765-wide-init-list-string-compare \
+                      // both-warning {{result of comparison against a string literal is unspecified}}
+  }
+  static_assert(wide_init_list_overlaps_shifted_string(), "");
+  // both-error@-1 {{static assertion expression is not an integral constant expression}}
+  // both-note@#cwg2765-wide-init-list-string-compare {{comparison of addresses of potentially non-unique objects has unspecified value}}
+  // both-note@-3 {{in call to}}
+
+  constexpr bool p(bool Compare) {
+    return !Compare ||
+           std::initializer_list<char>{'p', '\0'}.begin() != +__func__; // #cwg2765-init-list-predefined-compare
+  }
+  static_assert(p(true), "");
+  // both-error@-1 {{static assertion expression is not an integral constant expression}}
+  // both-note@#cwg2765-init-list-predefined-compare {{comparison of addresses of potentially non-unique objects has unspecified value}}
+  // both-note@-3 {{in call to}}
+
   constexpr bool init_list_differs_from_string() {
     return std::initializer_list<char>{'h', 'e', 'l', 'p', '\0'}.begin()
            != "hello"; // both-warning {{result of comparison against a string literal is unspecified}}
@@ -124,6 +143,20 @@ namespace cwg2765 {
                                                           // both-note {{in instantiation of variable template specialization}} \
                                                           // both-note {{initializer of 'template_array_overlaps_string<FixedString<6>{"hello"}>' is not a constant expression}}
   // both-note@#cwg2765-template-array-string-compare {{comparison of addresses of potentially non-unique objects has unspecified value}}
+
+  template <FixedString S>
+  constexpr bool template_array_object_overlaps_string = // both-error {{constexpr variable 'template_array_object_overlaps_string<FixedString<6>{"hello"}>' must be initialized by a constant expression}} \
+                                                         // both-note {{declared here}}
+      &S.data != &"hello"; // #cwg2765-template-array-object-string-compare
+  static_assert(template_array_object_overlaps_string<"hello">); // both-error {{static assertion expression is not an integral constant expression}} \
+                                                                 // both-note {{in instantiation of variable template specialization}} \
+                                                                 // both-note {{initializer of 'template_array_object_overlaps_string<FixedString<6>{"hello"}>' is not a constant expression}}
+  // both-note@#cwg2765-template-array-object-string-compare {{comparison of addresses of potentially non-unique objects has unspecified value}}
+
+  template <FixedString S>
+  constexpr bool template_array_object_differs_from_string =
+      &S.data != &"world";
+  static_assert(template_array_object_differs_from_string<"hello">);
 
   template <FixedString S>
   constexpr bool template_array_differs_from_string =
@@ -433,3 +466,17 @@ namespace cwg2765 {
       {{__builtin_complex(1.0, 2.0)}}, {{__builtin_complex(1.0, 3.0)}});
   static_assert(!different_complex, "");
 }
+
+constexpr bool f(std::initializer_list<int> il1, std::initializer_list<double> il2) {
+  return (const void*)il1.begin() == (const void*)il2.begin();
+}
+
+static_assert(f({1,2}, {4.2439915824e-314}) == false);
+
+static_assert(f({}, {}), ""); // TODO: presumably this must give an error, since an empty list can go literally anywhere in memory, but clang accept this.
+
+int i = 42;
+constexpr bool g(std::initializer_list<int> il, int *p) { return il.begin() == p; }
+static_assert(g({42}, &i) == false, "");  // OK, right?
+constexpr bool value1 = g({}, &i);  // TODO: error, right? because the empty list could go right before `i` in memory? But clang accept this.
+

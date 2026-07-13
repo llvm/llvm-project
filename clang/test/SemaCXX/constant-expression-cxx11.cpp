@@ -1953,6 +1953,19 @@ namespace InitializerList {
   }
   static_assert(init_list_differs_from_string(), "");
 
+  constexpr bool f(std::initializer_list<int> il1, std::initializer_list<double> il2) {
+    return (const void*)il1.begin() == (const void*)il2.begin();
+  }
+
+  static_assert(f({1,2}, {4.2439915824e-314}) == false, "");
+
+  static_assert(f({}, {}), ""); // TODO: presumably this must give an error, since an empty list can go literally anywhere in memory, but clang accept this.
+
+  int i = 42;
+  constexpr bool g(std::initializer_list<int> il, int *p) { return il.begin() == p; }
+  static_assert(g({42}, &i) == false, "");  // OK, right?
+  constexpr bool value1 = g({}, &i);  // TODO: error, right? because the empty list could go right before `i` in memory? But clang accept this.
+
   namespace DR2126 {
     constexpr std::initializer_list<float> il = {1.0, 2.0, 3.0};
     static_assert(il.begin()[1] == 2.0, "");

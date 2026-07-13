@@ -12,6 +12,13 @@
 constexpr NSString *t0 = @"abc";
 constexpr NSString *t1 = @("abc");
 
+constexpr bool objc_encode_may_overlap(bool Compare) {
+  return !Compare || +@encode(int) != +"i"; // #objc-encode-compare
+}
+static_assert(objc_encode_may_overlap(true), ""); // both-error {{static assertion expression is not an integral constant expression}} \
+                                                  // both-note {{in call to 'objc_encode_may_overlap(true)'}}
+// both-note@#objc-encode-compare {{comparison of addresses of potentially overlapping literals has unspecified value}}
+
 
 #if __LP64__
 typedef unsigned long NSUInteger;

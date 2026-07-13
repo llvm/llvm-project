@@ -16,8 +16,12 @@
 
 #include "clang/AST/CharUnits.h"
 #include "clang/Basic/TypeTraits.h"
+#include <cassert>
 #include <cstdint>
 #include <optional>
+#include <string>
+#include <utility>
+#include <variant>
 
 namespace llvm {
 class APFloat;
@@ -32,6 +36,7 @@ class APValue;
 class ConstantArrayType;
 class Expr;
 class CallExpr;
+class StringLiteral;
 } // namespace clang
 using namespace clang;
 /// Values returned by __builtin_classify_type, chosen to match the values
@@ -100,12 +105,6 @@ unsigned ConvertBuiltinIDToX86BuiltinID(const ASTContext &Ctx,
                                         unsigned BuiltinID);
 unsigned ConvertBuiltinIDToX86BuiltinID(const ASTContext &Ctx,
                                         const CallExpr *E);
-/// Whether two APValues could be merged into a single storage location by
-/// the implementation (the relation [intro.object]/9 cares about for
-/// initializer_list backing arrays and string literals).
-bool AreAPValuesPotentiallyMergeable(const APValue &LHS, const APValue &RHS,
-                                     const ASTContext &Ctx);
-
 uint8_t GFNIMultiplicativeInverse(uint8_t Byte);
 uint8_t GFNIMul(uint8_t AByte, uint8_t BByte);
 uint8_t GFNIAffine(uint8_t XByte, const llvm::APInt &AQword,
@@ -135,5 +134,143 @@ struct ArraySubobjectLocation {
 std::optional<ArraySubobjectLocation> computeArraySubobjectLocation(
     const ASTContext &Ctx, const ConstantArrayType *ArrayType, uint64_t Index,
     CharUnits LValueOffset, bool IsValidOnePastEnd);
+
+/// A potentially-non-unique array object: a string literal, an
+/// std::initializer_list backing array, or an array subobject of a
+/// template-parameter object (NTTP). [intro.object]/9 lets the implementation
+/// merge two such objects when their overlapping contents agree, which is what
+/// makes their address comparisons non-constant.
+///
+/// This abstract class is an evaluator-independent view of an object that
+/// [intro.object] permits an implementation to give the same address as another
+/// potentially non-unique object. Evaluators provide their own object
+/// recognition, subobject-location logic, and element materialization through
+/// derived classes.
+class PotentiallyNonUniqueObject {
+public:
+  enum class Kind { StringLiteral, InitializerList, TemplateParamObject };
+  enum class OverlapResult { None, StringLiteral, NonUniqueObject };
+
+  virtual ~PotentiallyNonUniqueObject() = default;
+
+  Kind kind() const {
+    assert(ArrayType && "object has not been recognized");
+    return TheKind;
+  }
+  bool isStringLiteral() const { return String.has_value(); }
+  const ConstantArrayType *arrayType() const { return ArrayType; }
+  const ArraySubobjectLocation &location() const { return Loc; }
+  uint64_t size() const { return Size; }
+  bool empty() const { return Size == 0; }
+
+  /// Determine whether two expressions denote string-like objects whose
+  /// storage can overlap at the given byte offsets. Returns std::nullopt if
+  /// either expression is not a string literal, predefined function-name
+  /// string, or Objective-C encoding.
+  static std::optional<bool>
+  isPotentiallyOverlappingStrings(const ASTContext &Ctx, const Expr *LHSBase,
+                                  CharUnits LHSOffset, const Expr *RHSBase,
+                                  CharUnits RHSOffset);
+
+  /// Returns true if this object and \p Other can share storage at their
+  /// designated positions. Missing element data is treated conservatively as
+  /// a possible match.
+  bool
+  isPotentiallyOverlappingWith(const PotentiallyNonUniqueObject &Other) const;
+
+protected:
+  explicit PotentiallyNonUniqueObject(const ASTContext &Ctx) : Ctx(Ctx) {}
+
+  /// Computes an array-element location from only a byte offset relative to
+  /// the array. This is used by evaluator adapters whose lvalue representation
+  /// does not carry an explicit path for the designated string subobject.
+  static std::optional<ArraySubobjectLocation>
+  computeArraySubobjectLocationFromOffset(const ASTContext &Ctx,
+                                          const ConstantArrayType *ArrayType,
+                                          CharUnits LValueOffset);
+
+  PotentiallyNonUniqueObject(const ASTContext &Ctx, Kind TheKind,
+                             const ConstantArrayType *ArrayType,
+                             ArraySubobjectLocation Loc, uint64_t Size)
+      : Ctx(Ctx) {
+    setRecognizedObject(TheKind, ArrayType, Loc, Size);
+  }
+
+  void setRecognizedObject(Kind NewKind, const ConstantArrayType *NewArrayType,
+                           ArraySubobjectLocation NewLoc, uint64_t NewSize) {
+    assert(NewArrayType && !ArrayType && "object must be recognized once");
+    assert((NewKind == Kind::StringLiteral) == String.has_value() &&
+           "string kind and storage disagree");
+    TheKind = NewKind;
+    ArrayType = NewArrayType;
+    Loc = NewLoc;
+    Size = NewSize;
+  }
+
+  /// Recognize Base as a StringLiteral or PredefinedExpr and install its
+  /// borrowed AST storage together with the evaluator-computed array view.
+  /// Objective-C encodings are intentionally limited to
+  /// isPotentiallyOverlappingStrings; they are not exposed as generic array
+  /// objects here.
+  bool setRecognizedStringObject(const Expr *Base,
+                                 const ConstantArrayType *NewArrayType,
+                                 ArraySubobjectLocation NewLoc,
+                                 uint64_t NewSize, CharUnits RawOffset);
+
+  /// Materialize an array element from the evaluator's storage representation.
+  /// Returns false if the representation cannot expose enough data to prove
+  /// the element's value.
+  virtual bool getArrayElement(uint64_t Index, APValue &Result) const = 0;
+
+  const ASTContext &Ctx;
+
+private:
+  /// Owns string-like bytes synthesized during normalization (currently for
+  /// ObjCEncodeExpr), together with their code-unit width in bytes.
+  struct OwnedString {
+    std::string Bytes;
+    unsigned CharWidth;
+  };
+
+  /// Normalized storage and location for a string-like object. StringLiteral
+  /// storage is borrowed for the ASTContext lifetime, while synthesized bytes
+  /// are owned. Offset is the designated pointer's byte offset from the string
+  /// base; it remains separate from the evaluator-specific array location so
+  /// strings with different code-unit widths can be compared.
+  struct StringData {
+    StringData(const StringLiteral *Literal, CharUnits Offset)
+        : Storage(Literal), Offset(Offset) {}
+    StringData(std::string Bytes, unsigned CharWidth, CharUnits Offset)
+        : Storage(OwnedString{std::move(Bytes), CharWidth}), Offset(Offset) {}
+
+    std::variant<const StringLiteral *, OwnedString> Storage;
+    CharUnits Offset;
+  };
+
+  static std::optional<StringData>
+  getStringData(const ASTContext &Ctx, const Expr *Base, CharUnits Offset);
+  static bool isPotentiallyOverlappingStrings(const StringData &LHS,
+                                              const StringData &RHS);
+
+  /// Whether two APValues could be merged into a single storage location by
+  /// the implementation. The slow path recursively handles values whose
+  /// profiles differ.
+  static bool areAPValuesPotentiallyMergeable(const APValue &LHS,
+                                              const APValue &RHS,
+                                              const ASTContext &Ctx);
+  static bool areAPValuesPotentiallyMergeableSlow(const APValue &LHS,
+                                                  const APValue &RHS,
+                                                  const ASTContext &Ctx);
+
+  /// Materialize element Index, handling strings in the shared base before
+  /// delegating evaluator-backed objects to getArrayElement.
+  bool getElement(uint64_t Index, APValue &Result) const;
+
+  Kind TheKind = Kind::StringLiteral;
+  const ConstantArrayType *ArrayType = nullptr;
+  ArraySubobjectLocation Loc{0, CharUnits::Zero()};
+  uint64_t Size = 0;
+  std::optional<StringData> String;
+};
 
 #endif // LLVM_CLANG_LIB_AST_EXPRCONSTSHARED_H

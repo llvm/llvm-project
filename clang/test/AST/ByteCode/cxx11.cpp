@@ -298,6 +298,15 @@ namespace OverlappingStrings {
   constexpr bool may_overlap_2 = +"foo" == +"foo\0bar"; // both-error {{}} both-note {{addresses of potentially overlapping literals}}
   constexpr bool may_overlap_3 = +"foo" == &"bar\0foo"[4]; // both-error {{}} both-note {{addresses of potentially overlapping literals}}
   constexpr bool may_overlap_4 = &"xfoo"[1] == &"xfoo"[1]; // both-error {{}} both-note {{addresses of potentially overlapping literals}}
+  constexpr bool wide_may_overlap = &u"foo"[1] == &u"xfoo"[2]; // both-error {{}} both-note {{addresses of potentially overlapping literals}}
+  constexpr bool wide_may_overlap_reverse = &u"xfoo"[2] == &u"foo"[1]; // both-error {{}} both-note {{addresses of potentially overlapping literals}}
+
+  constexpr bool predefined_may_overlap(bool Compare) {
+    return !Compare || +__func__ != "predefined_may_overlap"; // both-warning {{result of comparison against a string literal is unspecified}} #predefined-compare
+  }
+  static_assert(predefined_may_overlap(true), ""); // both-error {{static assertion expression is not an integral constant expression}} \
+                                                    // both-note {{in call to 'predefined_may_overlap(true)'}}
+  // both-note@#predefined-compare {{comparison of addresses of potentially overlapping literals has unspecified value}}
 
 
   /// Used to crash.
