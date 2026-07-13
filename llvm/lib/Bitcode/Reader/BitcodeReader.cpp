@@ -894,7 +894,7 @@ private:
     if (!TargetTriple) {
       BitstreamCursor TripleStream(Stream.getBitcodeBytes());
       if (Expected<std::string> TripleStr = readTriple(TripleStream))
-        TargetTriple.emplace(*TripleStr);
+        TargetTriple.emplace(std::move(*TripleStr));
       else {
         consumeError(TripleStr.takeError());
         TargetTriple.emplace();
