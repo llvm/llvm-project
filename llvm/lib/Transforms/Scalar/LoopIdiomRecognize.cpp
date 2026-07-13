@@ -32,6 +32,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -83,6 +84,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -90,6 +92,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <limits>
 #include <utility>
 
 using namespace llvm;
@@ -100,6 +103,10 @@ using namespace SCEVPatternMatch;
 STATISTIC(NumMemSet, "Number of memset's formed from loop stores");
 STATISTIC(NumMemCpy, "Number of memcpy's formed from loop load+stores");
 STATISTIC(NumMemMove, "Number of memmove's formed from loop load+stores");
+STATISTIC(NumContGuardedMemSet,
+          "Number of contiguity-guarded memset's formed from loop stores");
+STATISTIC(NumContGuardedMemCpy,
+          "Number of contiguity-guarded memcpy's formed from loop load+stores");
 STATISTIC(NumStrLen, "Number of strlen's and wcslen's formed from loop loads");
 STATISTIC(
     NumShiftUntilBitTest,
@@ -166,9 +173,25 @@ static cl::opt<bool> ForceMemsetPatternIntrinsic(
     cl::desc("Use memset.pattern intrinsic whenever possible"), cl::init(false),
     cl::Hidden);
 
+// Optional runtime NumBytes == parent-stride check before memset/memcpy (off by
+// default).
+static cl::opt<bool> EnableMemsetContCheck(
+    "loop-idiom-enable-memset-cont-check",
+    cl::desc("Specialize loop-idiom memset on contiguity at runtime"),
+    cl::init(false), cl::Hidden);
+
+static cl::opt<bool> EnableMemcpyContCheck(
+    "loop-idiom-enable-memcpy-cont-check",
+    cl::desc("Specialize loop-idiom memcpy on contiguity at runtime"),
+    cl::init(false), cl::Hidden);
+
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 } // namespace llvm
+
+// Fast-path step must fit AAMDNodes::extendTo(ssize_t) positive range.
+static constexpr unsigned ContiguityMaxStepBits =
+    std::numeric_limits<int64_t>::digits;
 
 namespace {
 
@@ -241,6 +264,27 @@ private:
       const SCEV *BECount);
   bool processLoopMemCpy(MemCpyInst *MCI, const SCEV *BECount);
   bool processLoopMemSet(MemSetInst *MSI, const SCEV *BECount);
+
+  struct RuntimeGuardedFastPathResult {
+    BasicBlock *MergeBB;
+    BasicBlock *ThenBB;
+    BasicBlock *ElseBB;
+    ConstantInt *RealStep;
+  };
+
+  /// Preheader diamond: NumBytes == RealStep. \p Expander enumerates expanded
+  /// values for SCEV disposition invalidation only.
+  RuntimeGuardedFastPathResult
+  emitRuntimeGuardedFastPath(IRBuilder<> &Builder, SCEVExpander &Expander,
+                             Value *NumBytes, ConstantInt *RealStep);
+  /// Fast/slow call pair; \p BuildSlowCall runs with insert point at ElseBB.
+  CallInst *
+  emitContiguitySpecializedCallPair(IRBuilder<> &Builder,
+                                    SCEVExpander &Expander, Value *NumBytes,
+                                    ConstantInt *RealStep, AAMDNodes BaseAATags,
+                                    SmallVectorImpl<CallInst *> &NewCalls,
+                                    function_ref<CallInst *()> BuildSlowCall);
+  void wireNewCalls(ArrayRef<CallInst *> NewCalls, Instruction *DebugLocSource);
 
   bool processLoopStridedStore(Value *DestPtr, const SCEV *StoreSizeSCEV,
                                MaybeAlign StoreAlignment, Value *StoredVal,
@@ -1071,6 +1115,195 @@ static const SCEV *getNumBytes(const SCEV *BECount, Type *IntPtr,
                         SCEV::FlagNUW);
 }
 
+/// Parent-loop constant byte stride for contiguity specialization, or null.
+/// Requires: parent loop, non-constant inner trip, affine pointer AddRec on
+/// the immediate parent with positive constant step divisible by store size.
+static ConstantInt *getConstantContiguityStep(const SCEV *Start,
+                                              const SCEV *StoreSizeSCEV,
+                                              const SCEV *BECount,
+                                              const Loop *CurLoop,
+                                              ScalarEvolution &SE) {
+  if (!CurLoop->getParentLoop()) {
+    LLVM_DEBUG(dbgs() << "  contiguity: no parent loop\n");
+    return nullptr;
+  }
+  if (isa<SCEVConstant>(BECount)) {
+    LLVM_DEBUG(dbgs() << "  contiguity: constant inner trip count\n");
+    return nullptr;
+  }
+
+  const auto *StartAR = dyn_cast<SCEVAddRecExpr>(Start);
+  if (!StartAR || !StartAR->isAffine() || !StartAR->getType()->isPointerTy()) {
+    LLVM_DEBUG(dbgs() << "  contiguity: pointer not affine on parent loop\n");
+    return nullptr;
+  }
+
+  if (StartAR->getLoop() != CurLoop->getParentLoop()) {
+    LLVM_DEBUG(
+        dbgs()
+        << "  contiguity: pointer AddRec not on immediate parent loop\n");
+    return nullptr;
+  }
+
+  const auto *StepC = dyn_cast<SCEVConstant>(StartAR->getStepRecurrence(SE));
+  if (!StepC || !StepC->getAPInt().isStrictlyPositive()) {
+    LLVM_DEBUG(
+        dbgs() << "  contiguity: parent stride not a positive constant\n");
+    return nullptr;
+  }
+
+  if (const auto *StoreSizeC = dyn_cast<SCEVConstant>(StoreSizeSCEV)) {
+    const APInt &Size = StoreSizeC->getAPInt();
+    if (!Size.isZero() && !StepC->getAPInt().urem(Size).isZero()) {
+      LLVM_DEBUG(dbgs() << "  contiguity: parent stride not divisible by "
+                           "store size\n");
+      return nullptr;
+    }
+  }
+
+  return StepC->getValue();
+}
+
+LoopIdiomRecognize::RuntimeGuardedFastPathResult
+LoopIdiomRecognize::emitRuntimeGuardedFastPath(IRBuilder<> &Builder,
+                                               SCEVExpander &Expander,
+                                               Value *NumBytes,
+                                               ConstantInt *RealStep) {
+  [[maybe_unused]] BasicBlock *Preheader = CurLoop->getLoopPreheader();
+  assert(Builder.GetInsertBlock() == Preheader &&
+         "contiguity check must be inserted from the loop preheader");
+  assert(&*Builder.GetInsertPoint() == Preheader->getTerminator() &&
+         "contiguity check must be inserted at preheader terminator");
+
+  Function *F = Builder.GetInsertBlock()->getParent();
+  LLVMContext &Context = F->getContext();
+
+  BasicBlock *CondBB =
+      SplitBlock(Builder.GetInsertBlock(), &*Builder.GetInsertPoint(), DT, LI,
+                 MSSAU.get());
+  CondBB->setName("loop.idiom.cont.cond");
+  BasicBlock *MergeBB =
+      SplitBlock(CondBB, &CondBB->front(), DT, LI, MSSAU.get());
+  MergeBB->setName("loop.idiom.cont.merge");
+
+  BasicBlock *ThenBB = BasicBlock::Create(Context, "loop.idiom.cont.then", F);
+  BasicBlock *ElseBB = BasicBlock::Create(Context, "loop.idiom.cont.else", F);
+
+  DT->addNewBlock(ThenBB, CondBB);
+  DT->addNewBlock(ElseBB, CondBB);
+  DT->changeImmediateDominator(MergeBB, CondBB);
+
+  Loop *ParentLoop = CurLoop->getParentLoop();
+  assert(ParentLoop && "contiguity diamond requires a parent loop");
+  assert(LI->getLoopFor(CondBB) == ParentLoop &&
+         "CondBB must live in CurLoop's parent loop");
+  ParentLoop->addBasicBlockToLoop(ThenBB, *LI);
+  ParentLoop->addBasicBlockToLoop(ElseBB, *LI);
+
+  CondBB->getTerminator()->eraseFromParent();
+  Builder.SetInsertPoint(CondBB);
+  assert(NumBytes->getType()->isIntegerTy() &&
+         "contiguity size must be an integer type");
+  assert(RealStep->getType()->isIntegerTy() &&
+         "contiguity step must be an integer type");
+  if (RealStep->getType() != NumBytes->getType()) {
+    auto *NumBytesIntTy = cast<IntegerType>(NumBytes->getType());
+    assert(RealStep->getValue().getActiveBits() <=
+               NumBytesIntTy->getBitWidth() &&
+           "contiguity step must fit NumBytes type");
+    RealStep = cast<ConstantInt>(ConstantInt::get(
+        NumBytesIntTy,
+        RealStep->getValue().zextOrTrunc(NumBytesIntTy->getBitWidth())));
+  }
+  Value *IsCont = Builder.CreateICmpEQ(NumBytes, RealStep, "lir.is.cont");
+  auto *ContBr = Builder.CreateCondBr(IsCont, ThenBB, ElseBB);
+  // Dynamic shape test: !unpredictable, no synthetic branch_weights.
+  ContBr->setMetadata(LLVMContext::MD_unpredictable, MDNode::get(Context, {}));
+
+  Builder.SetInsertPoint(ThenBB);
+  Builder.CreateBr(MergeBB);
+  Builder.SetInsertPoint(ElseBB);
+  Builder.CreateBr(MergeBB);
+
+  if (MSSAU) {
+    SmallVector<CFGUpdate, 5> Updates;
+    Updates.push_back({cfg::UpdateKind::Insert, CondBB, ThenBB});
+    Updates.push_back({cfg::UpdateKind::Insert, CondBB, ElseBB});
+    Updates.push_back({cfg::UpdateKind::Insert, ThenBB, MergeBB});
+    Updates.push_back({cfg::UpdateKind::Insert, ElseBB, MergeBB});
+    Updates.push_back({cfg::UpdateKind::Delete, CondBB, MergeBB});
+    MSSAU->applyUpdates(Updates, *DT);
+  }
+
+  for (Instruction *I : Expander.getAllInsertedInstructions())
+    SE->forgetBlockAndLoopDispositions(I);
+  SE->forgetTopmostLoop(CurLoop);
+
+  assert(CurLoop->getLoopPreheader() == MergeBB &&
+         "contiguity rewrite must preserve a valid loop preheader");
+  assert(LI->getLoopFor(MergeBB) == ParentLoop &&
+         "MergeBB (new preheader of CurLoop) must live in the parent loop");
+
+  return {MergeBB, ThenBB, ElseBB, RealStep};
+}
+
+CallInst *LoopIdiomRecognize::emitContiguitySpecializedCallPair(
+    IRBuilder<> &Builder, SCEVExpander &Expander, Value *NumBytes,
+    ConstantInt *RealStep, AAMDNodes BaseAATags,
+    SmallVectorImpl<CallInst *> &NewCalls,
+    function_ref<CallInst *()> BuildSlowCall) {
+  assert(NewCalls.empty() && "NewCalls must be empty on entry");
+  assert(BuildSlowCall && "BuildSlowCall must be a valid callable");
+  if (!NumBytes->getType()->isIntegerTy() ||
+      RealStep->getValue().getActiveBits() >
+          cast<IntegerType>(NumBytes->getType())->getBitWidth() ||
+      RealStep->getValue().getActiveBits() > ContiguityMaxStepBits) {
+    LLVM_DEBUG(dbgs() << "  contiguity: outer stride " << RealStep->getValue()
+                      << " does not fit NumBytes type\n");
+    CallInst *SlowCall = BuildSlowCall();
+    NewCalls.push_back(SlowCall);
+    return SlowCall;
+  }
+
+  RuntimeGuardedFastPathResult CCR =
+      emitRuntimeGuardedFastPath(Builder, Expander, NumBytes, RealStep);
+  BasicBlock *MergeBB = CCR.MergeBB;
+  BasicBlock *ThenBB = CCR.ThenBB;
+  BasicBlock *ElseBB = CCR.ElseBB;
+  RealStep = CCR.RealStep;
+
+  Builder.SetInsertPoint(ElseBB->getTerminator());
+  CallInst *ElseCall = BuildSlowCall();
+  assert(ElseCall && ElseCall->getParent() == ElseBB &&
+         "BuildSlowCall must materialize the slow call in ElseBB");
+
+  CallInst *ThenCall = cast<CallInst>(ElseCall->clone());
+  cast<MemIntrinsic>(ThenCall)->setLength(RealStep);
+  ThenCall->setAAMetadata(BaseAATags.extendTo(RealStep->getZExtValue()));
+  ThenCall->insertBefore(ThenBB->getTerminator()->getIterator());
+
+  NewCalls.push_back(ThenCall);
+  NewCalls.push_back(ElseCall);
+  Builder.SetInsertPoint(MergeBB->getTerminator());
+  assert(NewCalls.size() == 2 && NewCalls.back() == ElseCall &&
+         "contiguity diamond must leave NewCalls as {ThenCall, ElseCall}");
+  return ElseCall;
+}
+
+void LoopIdiomRecognize::wireNewCalls(ArrayRef<CallInst *> NewCalls,
+                                      Instruction *DebugLocSource) {
+  assert(DebugLocSource && "wireNewCalls requires a debug-loc source");
+  for (CallInst *CI : NewCalls) {
+    CI->setDebugLoc(DebugLocSource->getDebugLoc());
+    if (!MSSAU)
+      continue;
+
+    MemoryAccess *NewMemAcc = MSSAU->createMemoryAccessInBB(
+        CI, nullptr, CI->getParent(), MemorySSA::BeforeTerminator);
+    MSSAU->insertDef(cast<MemoryDef>(NewMemAcc), /*RenameUses=*/true);
+  }
+}
+
 /// processLoopStridedStore - We see a strided store of some value.  If we can
 /// transform this into a memset or memset_pattern in the loop preheader, do so.
 bool LoopIdiomRecognize::processLoopStridedStore(
@@ -1179,19 +1412,35 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   }
   assert(MemsetArg && "MemsetArg should have been set");
 
-  AAMDNodes AATags = TheStore->getAAMetadata();
+  AAMDNodes BaseAATags = TheStore->getAAMetadata();
   for (Instruction *Store : Stores)
-    AATags = AATags.merge(Store->getAAMetadata());
+    BaseAATags = BaseAATags.merge(Store->getAAMetadata());
+  AAMDNodes AATags = BaseAATags;
   if (BytesWritten)
     AATags = AATags.extendTo(BytesWritten.value());
   else
     AATags = AATags.extendTo(-1);
 
-  CallInst *NewCall;
+  CallInst *NewCall = nullptr;
+  SmallVector<CallInst *, 2> NewCalls;
+  ConstantInt *RealStep = EnableMemsetContCheck
+                              ? getConstantContiguityStep(Start, StoreSizeSCEV,
+                                                          BECount, CurLoop, *SE)
+                              : nullptr;
   if (SplatValue) {
-    NewCall = Builder.CreateMemSet(BasePtr, SplatValue, MemsetArg,
-                                   MaybeAlign(StoreAlignment),
-                                   /*isVolatile=*/false, AATags);
+    auto BuildSlowMemSet = [&]() {
+      return Builder.CreateMemSet(BasePtr, SplatValue, MemsetArg,
+                                  MaybeAlign(StoreAlignment),
+                                  /*isVolatile=*/false, AATags);
+    };
+    if (RealStep) {
+      NewCall = emitContiguitySpecializedCallPair(Builder, Expander, MemsetArg,
+                                                  RealStep, BaseAATags,
+                                                  NewCalls, BuildSlowMemSet);
+    } else {
+      NewCall = BuildSlowMemSet();
+      NewCalls.push_back(NewCall);
+    }
   } else if (ForceMemsetPatternIntrinsic ||
              isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16)) {
     assert(isa<SCEVConstant>(StoreSizeSCEV) && "Expected constant store size");
@@ -1204,36 +1453,51 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     if (StoreAlignment)
       cast<MemSetPatternInst>(NewCall)->setDestAlignment(*StoreAlignment);
     NewCall->setAAMetadata(AATags);
+    NewCalls.push_back(NewCall);
   } else {
     // Neither a memset, nor memset_pattern16
     return Changed;
   }
 
-  NewCall->setDebugLoc(TheStore->getDebugLoc());
+  wireNewCalls(NewCalls, TheStore);
 
-  if (MSSAU) {
-    MemoryAccess *NewMemAcc = MSSAU->createMemoryAccessInBB(
-        NewCall, nullptr, NewCall->getParent(), MemorySSA::BeforeTerminator);
-    MSSAU->insertDef(cast<MemoryDef>(NewMemAcc), true);
+  LLVM_DEBUG({
+    for (CallInst *CI : NewCalls)
+      dbgs() << "  Formed memset: " << *CI << "\n";
+    dbgs() << "    from store to: " << *Ev << " at: " << *TheStore << "\n";
+  });
+
+  DebugLoc RemarkLoc = NewCall->getDebugLoc();
+  BasicBlock *RemarkBB = CurLoop->getLoopPreheader();
+  const bool ContiguityGuarded = NewCalls.size() > 1;
+  if (ContiguityGuarded) {
+    ++NumContGuardedMemSet;
+    LLVM_DEBUG(dbgs() << "  contiguity-guarded memset (NumBytes == "
+                      << RealStep->getZExtValue() << " fast path)\n");
   }
-
-  LLVM_DEBUG(dbgs() << "  Formed memset: " << *NewCall << "\n"
-                    << "    from store to: " << *Ev << " at: " << *TheStore
-                    << "\n");
-
   ORE.emit([&]() {
-    OptimizationRemark R(DEBUG_TYPE, "ProcessLoopStridedStore",
-                         NewCall->getDebugLoc(), Preheader);
-    R << "Transformed loop-strided store in "
-      << ore::NV("Function", TheStore->getFunction())
-      << " function into a call to "
-      << ore::NV("NewFunction", NewCall->getCalledFunction())
-      << "() intrinsic";
-    if (!Stores.empty())
-      R << ore::setExtraArgs();
+    const char *RemarkName = ContiguityGuarded ? "ContiguityGuardedMemset"
+                                               : "ProcessLoopStridedStore";
+    OptimizationRemark R(DEBUG_TYPE, RemarkName, RemarkLoc, RemarkBB);
+    if (ContiguityGuarded)
+      R << "Formed contiguity-guarded memset in "
+        << ore::NV("Function", TheStore->getFunction()) << " via call to "
+        << ore::NV("NewFunction", NewCall->getCalledFunction())
+        << "() intrinsic";
+    else
+      R << "Transformed loop-strided store in "
+        << ore::NV("Function", TheStore->getFunction())
+        << " function into a call to "
+        << ore::NV("NewFunction", NewCall->getCalledFunction())
+        << "() intrinsic";
+    R << ore::setExtraArgs();
+    if (ContiguityGuarded)
+      R << ore::NV("ContiguityGuarded", true);
+    if (BytesWritten)
+      R << ore::NV("BytesWritten", static_cast<int64_t>(*BytesWritten));
     for (auto *I : Stores) {
       R << ore::NV("FromBlock", I->getParent()->getName())
-        << ore::NV("ToBlock", Preheader->getName());
+        << ore::NV("ToBlock", RemarkBB->getName());
     }
     return R;
   });
@@ -1242,7 +1506,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   // feeds into it.
   for (auto *I : Stores) {
     if (MSSAU)
-      MSSAU->removeMemoryAccess(I, true);
+      MSSAU->removeMemoryAccess(I, /*OptimizePhis=*/true);
     deleteDeadInstruction(I);
   }
   if (MSSAU && VerifyMemorySSA)
@@ -1483,66 +1747,103 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   Value *NumBytes =
       Expander.expandCodeFor(NumBytesS, IntIdxTy, Preheader->getTerminator());
 
-  AAMDNodes AATags = TheLoad->getAAMetadata();
+  AAMDNodes BaseAATags = TheLoad->getAAMetadata();
   AAMDNodes StoreAATags = TheStore->getAAMetadata();
-  AATags = AATags.merge(StoreAATags);
-  if (auto CI = dyn_cast<ConstantInt>(NumBytes))
-    AATags = AATags.extendTo(CI->getZExtValue());
-  else
+  BaseAATags = BaseAATags.merge(StoreAATags);
+  AAMDNodes AATags = BaseAATags;
+  std::optional<uint64_t> KnownBytes;
+  if (auto CI = dyn_cast<ConstantInt>(NumBytes)) {
+    KnownBytes = CI->getZExtValue();
+    AATags = AATags.extendTo(*KnownBytes);
+  } else
     AATags = AATags.extendTo(-1);
 
   CallInst *NewCall = nullptr;
+  SmallVector<CallInst *, 2> NewCalls;
+  ConstantInt *RealStep =
+      EnableMemcpyContCheck ? getConstantContiguityStep(StrStart, StoreSizeSCEV,
+                                                        BECount, CurLoop, *SE)
+                            : nullptr;
   // Check whether to generate an unordered atomic memcpy:
   //  If the load or store are atomic, then they must necessarily be unordered
   //  by previous checks.
   if (!IsAtomic) {
-    if (UseMemMove)
-      NewCall = Builder.CreateMemMove(StoreBasePtr, StoreAlign, LoadBasePtr,
-                                      LoadAlign, NumBytes,
-                                      /*isVolatile=*/false, AATags);
-    else
-      NewCall =
-          Builder.CreateMemCpy(StoreBasePtr, StoreAlign, LoadBasePtr, LoadAlign,
-                               NumBytes, /*isVolatile=*/false, AATags);
+    auto BuildSlowMemCpy = [&]() {
+      return Builder.CreateMemCpy(StoreBasePtr, StoreAlign, LoadBasePtr,
+                                  LoadAlign, NumBytes,
+                                  /*isVolatile=*/false, AATags);
+    };
+
+    if (UseMemMove) {
+      NewCalls.push_back(Builder.CreateMemMove(StoreBasePtr, StoreAlign,
+                                               LoadBasePtr, LoadAlign, NumBytes,
+                                               /*isVolatile=*/false, AATags));
+    } else if (RealStep) {
+      NewCall = emitContiguitySpecializedCallPair(Builder, Expander, NumBytes,
+                                                  RealStep, BaseAATags,
+                                                  NewCalls, BuildSlowMemCpy);
+    } else {
+      NewCalls.push_back(BuildSlowMemCpy());
+    }
   } else {
     // Create the call.
     // Note that unordered atomic loads/stores are *required* by the spec to
     // have an alignment but non-atomic loads/stores may not.
-    NewCall = Builder.CreateElementUnorderedAtomicMemCpy(
+    NewCalls.push_back(Builder.CreateElementUnorderedAtomicMemCpy(
         StoreBasePtr, *StoreAlign, LoadBasePtr, *LoadAlign, NumBytes, StoreSize,
-        AATags);
-  }
-  NewCall->setDebugLoc(TheStore->getDebugLoc());
-
-  if (MSSAU) {
-    MemoryAccess *NewMemAcc = MSSAU->createMemoryAccessInBB(
-        NewCall, nullptr, NewCall->getParent(), MemorySSA::BeforeTerminator);
-    MSSAU->insertDef(cast<MemoryDef>(NewMemAcc), true);
+        AATags));
   }
 
-  LLVM_DEBUG(dbgs() << "  Formed new call: " << *NewCall << "\n"
-                    << "    from load ptr=" << *LoadEv << " at: " << *TheLoad
-                    << "\n"
-                    << "    from store ptr=" << *StoreEv << " at: " << *TheStore
-                    << "\n");
+  assert(!NewCalls.empty() && "Expected to form at least one replacement call");
+  if (!NewCall)
+    NewCall = NewCalls.back();
 
+  wireNewCalls(NewCalls, TheStore);
+
+  LLVM_DEBUG({
+    for (CallInst *CI : NewCalls)
+      dbgs() << "  Formed new call: " << *CI << "\n";
+    dbgs() << "    from load ptr=" << *LoadEv << " at: " << *TheLoad << "\n"
+           << "    from store ptr=" << *StoreEv << " at: " << *TheStore << "\n";
+  });
+
+  DebugLoc RemarkLoc = NewCall->getDebugLoc();
+  BasicBlock *RemarkBB = CurLoop->getLoopPreheader();
+  const bool ContiguityGuarded = NewCalls.size() > 1;
+  if (ContiguityGuarded) {
+    ++NumContGuardedMemCpy;
+    LLVM_DEBUG(dbgs() << "  contiguity-guarded memcpy (NumBytes == "
+                      << RealStep->getZExtValue() << " fast path)\n");
+  }
   ORE.emit([&]() {
-    return OptimizationRemark(DEBUG_TYPE, "ProcessLoopStoreOfLoopLoad",
-                              NewCall->getDebugLoc(), Preheader)
-           << "Formed a call to "
-           << ore::NV("NewFunction", NewCall->getCalledFunction())
-           << "() intrinsic from " << ore::NV("Inst", InstRemark)
-           << " instruction in " << ore::NV("Function", TheStore->getFunction())
-           << " function"
-           << ore::setExtraArgs()
-           << ore::NV("FromBlock", TheStore->getParent()->getName())
-           << ore::NV("ToBlock", Preheader->getName());
+    const char *RemarkName = ContiguityGuarded ? "ContiguityGuardedMemcpy"
+                                               : "ProcessLoopStoreOfLoopLoad";
+    OptimizationRemark R(DEBUG_TYPE, RemarkName, RemarkLoc, RemarkBB);
+    if (ContiguityGuarded)
+      R << "Formed contiguity-guarded memcpy in "
+        << ore::NV("Function", TheStore->getFunction()) << " via call to "
+        << ore::NV("NewFunction", NewCall->getCalledFunction())
+        << "() intrinsic";
+    else
+      R << "Formed a call to "
+        << ore::NV("NewFunction", NewCall->getCalledFunction())
+        << "() intrinsic from " << ore::NV("Inst", InstRemark)
+        << " instruction in " << ore::NV("Function", TheStore->getFunction())
+        << " function";
+    R << ore::setExtraArgs();
+    if (ContiguityGuarded)
+      R << ore::NV("ContiguityGuarded", true);
+    if (KnownBytes)
+      R << ore::NV("BytesWritten", static_cast<int64_t>(*KnownBytes));
+    R << ore::NV("FromBlock", TheStore->getParent()->getName())
+      << ore::NV("ToBlock", RemarkBB->getName());
+    return R;
   });
 
   // Okay, a new call to memcpy/memmove has been formed.  Zap the original store
   // and anything that feeds into it.
   if (MSSAU)
-    MSSAU->removeMemoryAccess(TheStore, true);
+    MSSAU->removeMemoryAccess(TheStore, /*OptimizePhis=*/true);
   deleteDeadInstruction(TheStore);
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
