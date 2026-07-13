@@ -2413,8 +2413,7 @@ bool RewriteMFMAFormStage::initHeuristics(
             continue;
           // When Src2NeedsVGPR, still skip candidate MAI reaching defs — they
           // will produce AGPR and don't need bridge copies.
-          if (Src2NeedsVGPR && TII->isMAI(*RD) &&
-              RewriteSet.contains(RD))
+          if (Src2NeedsVGPR && TII->isMAI(*RD) && RewriteSet.contains(RD))
             continue;
           CopyForDef.insert(RD);
         }
@@ -2690,8 +2689,7 @@ bool RewriteMFMAFormStage::rewrite(
           continue;
         // When Src2NeedsVGPR, still skip candidate MAI reaching defs — they
         // will produce AGPR and don't need bridge copies.
-        if (Src2NeedsVGPR && TII->isMAI(*RD) &&
-            RewriteCandsSet.contains(RD))
+        if (Src2NeedsVGPR && TII->isMAI(*RD) && RewriteCandsSet.contains(RD))
           continue;
 
         Src2DefsReplace.insert(RD);
