@@ -1215,7 +1215,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - The unmaintained and crash-prone Z3 constraint-manager backend selected via `-analyzer-constraints=z3` was renamed to `-analyzer-constraints=unsupported-z3` to make its unsupported status explicit. (#GH205370)
 - The conservative call-invalidation logic now invalidates the object of an opaque constructor call regardless of whether an argument refers to it. (#GH170887)
 - Improved the resolution of constant values from initializers in RegionStore, including preserving default bindings for aggregate-like cases, generalized field-initializer resolution for arbitrary nesting, and normalized sub-array indices. (#GH199271)
-- The analyzer now conservatively evaluates `std::sort`, `std::stable_sort`, and `std::inplace_merge` to prevent false positives caused by complex STL internals that cannot be modeled adequately by the engine. (#GH177804)
+- The analyzer now conservatively evaluates `std::sort`, `std::stable_sort`, and `std::inplace_merge` to prevent false positives caused by complex STL internals that cannot be modeled adequately by the engine. (#GH178910)
 - The `optin.cplusplus.VirtualCall` checker no longer reports virtual method calls during construction/destruction when the call site is in a system header. (#GH184178)
 - Reduced false positives of the `unix.MallocSizeof` checker for layout-compatible types, such as `malloc(sizeof(std::atomic<int32_t>))` assigned to an `int32_t *`. (#GH200253)
 - The `optin.core.FixedAddressDereference` checker no longer reports dereferences of a fixed address when the pointee is `volatile`. (#GH181644)
