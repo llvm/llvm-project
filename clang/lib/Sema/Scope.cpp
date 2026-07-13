@@ -18,7 +18,6 @@
 using namespace clang;
 
 void Scope::setFlags(Scope *parent, unsigned flags) {
-  IsExpansionStmtScope = false;
   AnyParent = parent;
   Flags = flags;
 
@@ -235,7 +234,7 @@ void Scope::dumpImpl(raw_ostream &OS) const {
       {CompoundStmtScope, "CompoundStmtScope"},
       {ClassInheritanceScope, "ClassInheritanceScope"},
       {CatchScope, "CatchScope"},
-      {Unused, "Unused"},
+      {ExpansionStmtScope, "ExpansionStmtScope"},
       {OpenMPOrderClauseScope, "OpenMPOrderClauseScope"},
       {LambdaScope, "LambdaScope"},
       {OpenACCComputeConstructScope, "OpenACCComputeConstructScope"},

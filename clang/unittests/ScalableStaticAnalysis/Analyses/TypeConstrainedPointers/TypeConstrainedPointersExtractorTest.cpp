@@ -150,7 +150,7 @@ TEST_F(TypeConstrainedPointersExtractorTest, FreeOperatorDelete) {
 
   ASSERT_TRUE(PtrId);
 
-  EXPECT_EQ(*S, std::set{*PtrId});
+  EXPECT_EQ(*S, std::set<EntityId>{*PtrId});
 }
 
 TEST_F(TypeConstrainedPointersExtractorTest, MemberOperatorDelete) {
@@ -168,7 +168,7 @@ TEST_F(TypeConstrainedPointersExtractorTest, MemberOperatorDelete) {
   auto PId = getEntityId("p");
   ASSERT_TRUE(PId);
 
-  EXPECT_EQ(*S, std::set{*PId});
+  EXPECT_EQ(*S, std::set<EntityId>{*PId});
 }
 
 TEST_F(TypeConstrainedPointersExtractorTest, OperatorDeleteArray) {
@@ -184,7 +184,7 @@ TEST_F(TypeConstrainedPointersExtractorTest, OperatorDeleteArray) {
   auto PId = getEntityId("p");
 
   ASSERT_TRUE(PId);
-  EXPECT_EQ(*S, std::set{*PId});
+  EXPECT_EQ(*S, std::set<EntityId>{*PId});
 }
 
 TEST_F(TypeConstrainedPointersExtractorTest, OperatorNew) {
@@ -201,7 +201,7 @@ TEST_F(TypeConstrainedPointersExtractorTest, OperatorNew) {
   auto RetId = getEntityIdForReturn("operator new");
 
   ASSERT_TRUE(RetId);
-  EXPECT_EQ(*S, std::set{*RetId});
+  EXPECT_EQ(*S, std::set<EntityId>{*RetId});
 }
 
 TEST_F(TypeConstrainedPointersExtractorTest, PlacementNew) {
@@ -222,7 +222,7 @@ TEST_F(TypeConstrainedPointersExtractorTest, PlacementNew) {
 
   ASSERT_TRUE(PlacementId);
   ASSERT_TRUE(RetId);
-  EXPECT_EQ(*S, (std::set{*PlacementId, *RetId}));
+  EXPECT_EQ(*S, (std::set<EntityId>{*PlacementId, *RetId}));
 }
 
 TEST_F(TypeConstrainedPointersExtractorTest, PlacementDelete) {
@@ -242,7 +242,7 @@ TEST_F(TypeConstrainedPointersExtractorTest, PlacementDelete) {
 
   ASSERT_TRUE(PtrId);
   ASSERT_TRUE(PlacementId);
-  EXPECT_EQ(*S, (std::set{*PtrId, *PlacementId}));
+  EXPECT_EQ(*S, (std::set<EntityId>{*PtrId, *PlacementId}));
 }
 
 TEST_F(TypeConstrainedPointersExtractorTest, NoOperatorNewOrDeleteSummary) {
