@@ -369,11 +369,9 @@ bool vputils::isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE,
 /// be narrowed to single-scalar if legal and profitable. For instructions not
 /// producing values, like an assume or store, the bits talk about the
 /// appropriate operands. Finally, there is a class of instructions that
-/// necessarily take vector operands and produce a scalar result, like
-/// (Insert|Extract)Element, or necessarily take a scalar values and produce a
-/// vector, like Build(Struct)Vector, or could be interepreted as either a wide
-/// or narrow recipe like Broadcasts and non-constant live-ins: these are marked
-/// with the Agnostic bit.
+/// necessarily take vector operands and produce a scalar result termed
+/// VectorToScalar, or necessarily take a scalar values and produce a vector,
+/// termed ScalarToVector. These are marked with the Agnostic bit.
 class VPWideningInfo {
   unsigned char Info : 4;
 
@@ -493,11 +491,16 @@ static VPWideningInfo getWideningInfo(const VPRecipeBase &R) {
 }
 
 static VPWideningInfo getWideningInfo(const VPValue *VPV) {
-  // A non-constant live-in may be introduce a Broadcast.
-  if (!VPV->hasDefiningRecipe())
+  if (!VPV->hasDefiningRecipe()) {
+    if (auto *RV = dyn_cast<VPRegionValue>(VPV))
+      return RV == RV->getDefiningRegion()->getCanonicalIV()
+                 ? VPWideningInfo::SingleScalar
+                 : VPWideningInfo::Wide;
+    // A non-constant live-in may be introduce a Broadcast.
     return isa<VPConstant>(VPV)
                ? VPWideningInfo::SingleScalar
                : VPWideningInfo::SingleScalar | VPWideningInfo::Agnostic;
+  }
   return getWideningInfo(*VPV->getDefiningRecipe());
 }
 
