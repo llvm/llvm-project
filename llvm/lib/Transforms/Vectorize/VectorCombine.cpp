@@ -2082,7 +2082,15 @@ bool VectorCombine::foldInsertElementsToStores(Instruction &I) {
   Worklist.push(Load);
   StoreInst *LastStore = nullptr;
   for (auto [InsertVal, Idx] : InsertElements) {
-    Value *GEPIdx = materializeScalarizedGEPIndex(Idx, GEPIndex, Builder);
+    auto ScalarizableIdx =
+        canScalarizeAccess(VecTy, Idx, SQ.getWithInstruction(&I));
+    if (ScalarizableIdx.isUnsafe())
+      return false;
+
+    IntegerType *GEPIndexTy =
+        getScalarizedGEPIndexInfo(VecTy, Idx, SI->getPointerOperandType(), *DL);
+
+    Value *GEPIdx = materializeScalarizedGEPIndex(Idx, GEPIndexTy, Builder);
     Value *GEP = Builder.CreateInBoundsGEP(
         SI->getValueOperand()->getType(), SI->getPointerOperand(),
         {ConstantInt::get(GEPIdx->getType(), 0), GEPIdx});
@@ -2092,7 +2100,7 @@ bool VectorCombine::foldInsertElementsToStores(Instruction &I) {
 
     // The new GEP may change the pointer operand, so !invariant.group cannot
     // be transferred to the scalar store.
-    NSI->setMetadata(LLVMContext::MD_invariant_group, nullptr);
+    LastStore->setMetadata(LLVMContext::MD_invariant_group, nullptr);
     Align ScalarOpAlignment = computeAlignmentAfterScalarization(
         std::max(SI->getAlign(), Load->getAlign()), InsertVal->getType(), Idx,
         *DL);
