@@ -222,6 +222,11 @@ void ODRHash::AddTemplateParameterList(const TemplateParameterList *TPL) {
   for (auto *ND : TPL->asArray()) {
     AddSubDecl(ND);
   }
+
+  const Expr *RequiresClause = TPL->getRequiresClause();
+  AddBoolean(RequiresClause);
+  if (RequiresClause)
+    AddStmt(RequiresClause);
 }
 
 void ODRHash::clear() {
@@ -485,6 +490,7 @@ public:
       VisitFriendDecl(D);
     } else {
       Hash.AddTemplateName(TN);
+      Hash.AddBoolean(D->isPackExpansion());
     }
   }
 
@@ -572,6 +578,7 @@ bool ODRHash::isSubDeclToBeProcessed(const Decl *D, const DeclContext *Parent) {
     case Decl::EnumConstant: // Only found in EnumDecl's.
     case Decl::Field:
     case Decl::Friend:
+    case Decl::FriendTemplate:
     case Decl::FunctionTemplate:
     case Decl::StaticAssert:
     case Decl::TypeAlias:
