@@ -1303,7 +1303,7 @@ BinaryFunction::getInstructionSequenceLength(uint64_t Offset,
 }
 
 bool BinaryFunction::keepOffsetForInstruction(const MCInst &Inst,
-                                              uint64_t Offset) {
+                                              uint32_t Offset) {
   MCPlusBuilder &MIB = *BC.MIB;
   if (MIB.isCall(Inst) || MIB.isBranch(Inst) || MIB.isReturn(Inst) ||
       MIB.isPrefix(Inst) || MIB.isIndirectBranch(Inst))
@@ -1335,10 +1335,6 @@ Error BinaryFunction::disassemble() {
   // used, for example, on RISC-V where %pcrel_lo relocations point to the
   // corresponding %pcrel_hi.
   LabelsMapType InstructionLabels;
-
-  // Scope boundaries were appended unsorted during preprocessDebugInfo(); sort
-  // them so keepOffsetForInstruction() can query them below.
-  sortDebugScopeBoundaryOffsets();
 
   uint64_t Size = 0; // instruction size
   for (uint64_t Offset = 0; Offset < getSize(); Offset += Size) {
@@ -1565,7 +1561,7 @@ add_instruction:
 
     // Record offset of the instruction for profile matching, for control-flow
     // instructions, and for instructions on a DWARF lexical-scope boundary.
-    if (keepOffsetForInstruction(Instruction, Offset))
+    if (keepOffsetForInstruction(Instruction, static_cast<uint32_t>(Offset)))
       MIB->setOffset(Instruction, static_cast<uint32_t>(Offset));
 
     if (BC.isX86() && BC.MIB->isNoop(Instruction)) {
@@ -1579,7 +1575,7 @@ add_instruction:
   }
 
   // Scope-boundary markers are only consulted while assigning offsets above.
-  clearList(DebugScopeBoundaryOffsets);
+  DebugScopeBoundaryOffsets.clear();
 
   for (auto [Offset, Label] : InstructionLabels) {
     InstrMapType::iterator II = Instructions.find(Offset);

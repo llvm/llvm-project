@@ -39,6 +39,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -297,15 +298,9 @@ private:
 
   /// Offsets of instructions that begin or end a DWARF lexical scope
   /// (inlined_subroutine / lexical_block low_pc/high_pc and DW_AT_ranges).
-  /// Populated (unsorted, with possible duplicates) before disassembly, sorted
-  /// and deduplicated at the start of disassembly, and cleared once disassembly
-  /// of this function is done.
-  std::vector<uint64_t> DebugScopeBoundaryOffsets;
-
-  /// Cursor into the sorted DebugScopeBoundaryOffsets. Disassembly queries
-  /// offsets in monotonically increasing order, so isDebugScopeBoundaryOffset()
-  /// advances this cursor instead of binary-searching from scratch.
-  size_t DebugScopeBoundaryCursor = 0;
+  /// Populated before disassembly and cleared once disassembly of this
+  /// function is done.
+  SparseBitVector<> DebugScopeBoundaryOffsets;
 
   /// A set of local and global symbols corresponding to secondary entry points.
   /// Each additional function entry point has a corresponding entry in the map.
@@ -1360,32 +1355,14 @@ public:
     return InternalRefDataRelocations;
   }
 
-  /// Append function-relative \p Offset as a DWARF lexical-scope boundary. The
-  /// list is sorted later (sortDebugScopeBoundaryOffsets) before it is queried.
-  void addDebugScopeBoundaryOffset(uint64_t Offset) {
-    DebugScopeBoundaryOffsets.push_back(Offset);
-  }
-
-  /// Sort and deduplicate the collected scope boundaries and reset the query
-  /// cursor. Call once, before the first isDebugScopeBoundaryOffset() query.
-  void sortDebugScopeBoundaryOffsets() {
-    llvm::sort(DebugScopeBoundaryOffsets);
-    DebugScopeBoundaryOffsets.erase(llvm::unique(DebugScopeBoundaryOffsets),
-                                    DebugScopeBoundaryOffsets.end());
-    DebugScopeBoundaryCursor = 0;
+  /// Add function-relative \p Offset as a DWARF lexical-scope boundary.
+  void addDebugScopeBoundaryOffset(uint32_t Offset) {
+    DebugScopeBoundaryOffsets.set(Offset);
   }
 
   /// Return true if function-relative \p Offset begins/ends a DWARF scope.
-  /// Requires sortDebugScopeBoundaryOffsets() to have been called, and that
-  /// queries arrive with non-decreasing \p Offset. This is designed to be
-  /// used in lock-step with the disassembly loop, don't use it outside of it.
-  bool isDebugScopeBoundaryOffset(uint64_t Offset) {
-    const size_t Size = DebugScopeBoundaryOffsets.size();
-    while (DebugScopeBoundaryCursor < Size &&
-           DebugScopeBoundaryOffsets[DebugScopeBoundaryCursor] < Offset)
-      ++DebugScopeBoundaryCursor;
-    return DebugScopeBoundaryCursor < Size &&
-           DebugScopeBoundaryOffsets[DebugScopeBoundaryCursor] == Offset;
+  bool isDebugScopeBoundaryOffset(uint32_t Offset) {
+    return DebugScopeBoundaryOffsets.test(Offset);
   }
 
   /// Return true if an "Offset" annotation should be kept for instruction
@@ -1393,7 +1370,7 @@ public:
   /// control-flow instructions (profile matching) and for instructions that
   /// begin/end a DWARF lexical scope (needed to translate scope ranges
   /// precisely; see DebugScopeBoundaryOffsets).
-  bool keepOffsetForInstruction(const MCInst &Inst, uint64_t Offset);
+  bool keepOffsetForInstruction(const MCInst &Inst, uint32_t Offset);
 
   /// Return the name of the section this function originated from.
   std::optional<StringRef> getOriginSectionName() const {

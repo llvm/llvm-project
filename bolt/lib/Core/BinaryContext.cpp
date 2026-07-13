@@ -1973,10 +1973,12 @@ void BinaryContext::collectDebugScopeBoundaries() {
     BinaryFunction *BF = getBinaryFunctionContainingAddress(LowPC);
     if (!BF)
       return;
-    BF->addDebugScopeBoundaryOffset(LowPC - BF->getAddress());
+    BF->addDebugScopeBoundaryOffset(
+        static_cast<uint32_t>(LowPC - BF->getAddress()));
     // Mark HighPC only if it lies strictly inside the same function.
     if (HighPC > LowPC && getBinaryFunctionContainingAddress(HighPC) == BF)
-      BF->addDebugScopeBoundaryOffset(HighPC - BF->getAddress());
+      BF->addDebugScopeBoundaryOffset(
+          static_cast<uint32_t>(HighPC - BF->getAddress()));
   };
 
   // Record the boundaries of a single scope DIE.
