@@ -42,6 +42,8 @@
 
 EXECUTION_POLICY_SFINAE_TEST(mismatch);
 
+static_assert(sfinae_test_mismatch<int, int*, int*, int*>);
+static_assert(!sfinae_test_mismatch<std::execution::parallel_policy, int*, int*, int*>);
 static_assert(sfinae_test_mismatch<int, int*, int*, int*, int*>);
 static_assert(!sfinae_test_mismatch<std::execution::parallel_policy, int*, int*, int*, int*>);
 
