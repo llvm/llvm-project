@@ -29,14 +29,15 @@ define i64 @reduction(ptr %a, i64 %n) {
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    br label %[[LS_GUARD1]]
 ; CHECK:       [[LS_GUARD1]]:
-; CHECK-NEXT:    [[SUM_NEXT5:%.*]] = phi i64 [ [[SUM_NEXT]], %[[EXIT]] ], [ 0, %[[LS_GUARD0]] ]
+; CHECK-NEXT:    [[SUM_NEXT6:%.*]] = phi i64 [ [[SUM_NEXT]], %[[EXIT]] ], [ 0, %[[LS_GUARD0]] ]
+; CHECK-NEXT:    [[I_NEXT4:%.*]] = phi i64 [ [[I_NEXT]], %[[EXIT]] ], [ 0, %[[LS_GUARD0]] ]
 ; CHECK-NEXT:    [[ITR_CHK2:%.*]] = icmp sle i64 50, [[TMP0]]
 ; CHECK-NEXT:    br i1 [[ITR_CHK2]], label %[[ENTRY_LS1:.*]], label %[[LS_FINAL_EXIT:.*]]
 ; CHECK:       [[ENTRY_LS1]]:
 ; CHECK-NEXT:    br label %[[LOOP_LS1:.*]]
 ; CHECK:       [[LOOP_LS1]]:
-; CHECK-NEXT:    [[I_LS1:%.*]] = phi i64 [ 50, %[[ENTRY_LS1]] ], [ [[I_NEXT_LS1:%.*]], %[[LOOP_LS1]] ]
-; CHECK-NEXT:    [[SUM_LS1:%.*]] = phi i64 [ [[SUM_NEXT5]], %[[ENTRY_LS1]] ], [ [[SUM_NEXT_LS1:%.*]], %[[LOOP_LS1]] ]
+; CHECK-NEXT:    [[I_LS1:%.*]] = phi i64 [ [[I_NEXT4]], %[[ENTRY_LS1]] ], [ [[I_NEXT_LS1:%.*]], %[[LOOP_LS1]] ]
+; CHECK-NEXT:    [[SUM_LS1:%.*]] = phi i64 [ [[SUM_NEXT6]], %[[ENTRY_LS1]] ], [ [[SUM_NEXT_LS1:%.*]], %[[LOOP_LS1]] ]
 ; CHECK-NEXT:    [[P_LS1:%.*]] = getelementptr i64, ptr [[A]], i64 [[I_LS1]]
 ; CHECK-NEXT:    [[V_LS1:%.*]] = load i64, ptr [[P_LS1]], align 4
 ; CHECK-NEXT:    [[SUM_NEXT_LS1]] = add i64 [[SUM_LS1]], [[V_LS1]]
@@ -46,7 +47,7 @@ define i64 @reduction(ptr %a, i64 %n) {
 ; CHECK:       [[LS_EXIT1]]:
 ; CHECK-NEXT:    br label %[[LS_FINAL_EXIT]]
 ; CHECK:       [[LS_FINAL_EXIT]]:
-; CHECK-NEXT:    [[SUM_NEXT4:%.*]] = phi i64 [ [[SUM_NEXT_LS1]], %[[LS_EXIT1]] ], [ [[SUM_NEXT5]], %[[LS_GUARD1]] ]
+; CHECK-NEXT:    [[SUM_NEXT4:%.*]] = phi i64 [ [[SUM_NEXT_LS1]], %[[LS_EXIT1]] ], [ [[SUM_NEXT6]], %[[LS_GUARD1]] ]
 ; CHECK-NEXT:    ret i64 [[SUM_NEXT4]]
 ;
 ; The second partition's entry guard joins the first partition's result with the

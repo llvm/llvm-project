@@ -63,8 +63,8 @@ static bool splitLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     return false;
 
   const SCEV *Start = IndAR->getStart();
-  const SCEV *BTC = SE.getBackedgeTakenCount(L);
-  const SCEV *End = IndAR->evaluateAtIteration(BTC, SE);
+  // Use the utility's counted induction end (works for multi-exit loops too).
+  const SCEV *End = LSU.getInductionEnd();
   Type *Ty = Start->getType();
   if (End->getType() != Ty)
     End = SE.getTruncateExpr(End, Ty);
@@ -74,7 +74,7 @@ static bool splitLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   // iteration `Start +/- offset`; the previous partition ends one step before.
   bool Descending = false;
   if (const auto *StepC = dyn_cast<SCEVConstant>(IndAR->getStepRecurrence(SE)))
-    Descending = StepC->getValue()->isMinusOne();
+    Descending = StepC->getAPInt().isNegative();
 
   const SCEV *PrevStart = Start;
   const SCEV *One = SE.getOne(Ty);

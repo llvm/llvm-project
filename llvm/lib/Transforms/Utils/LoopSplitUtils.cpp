@@ -48,6 +48,7 @@
 
 #include "llvm/Transforms/Utils/LoopSplitUtils.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -124,6 +125,12 @@ void LoopSplitUtils::avoidPartitionGuard(unsigned PartitionIndex) {
   Partitions[PartitionIndex].Guarded = false;
 }
 
+// Return the loop driving a partition (original for 0, clone otherwise).
+Loop *LoopSplitUtils::getPartitionLoop(unsigned PartitionIndex) const {
+  assert(PartitionIndex < getNumPartitions() && "partition index out of range");
+  return Partitions[PartitionIndex].SubLoop;
+}
+
 // Return a partition's original-to-clone map, or null if it has none.
 const ValueToValueMapTy *
 LoopSplitUtils::getPartitionValueMap(unsigned PartitionIndex) const {
@@ -149,41 +156,64 @@ Value *LoopSplitUtils::getPartitionValue(const Value *V,
 // Find the induction variable and the latch operand it is compared against;
 // returns the induction's add-recurrence, or null if the loop is unsuitable.
 const SCEVAddRecExpr *LoopSplitUtils::analyzeInduction() {
-  // The loop must exit on an integer compare living in the latch.
-  LatchCmp = L->getLatchCmpInst();
-  if (!LatchCmp || LatchCmp->getParent() != L->getLoopLatch())
-    return nullptr;
+  BasicBlock *Header = L->getHeader();
+  BasicBlock *Latch = L->getLoopLatch();
 
-  // SCEV's induction variable, restricted to a unit-step affine recurrence.
-  Induction = L->getInductionVariable(*SE);
-  if (!Induction)
-    return nullptr;
-  const auto *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Induction));
-  if (!AR || !AR->isAffine())
-    return nullptr;
-  // Accept a unit step in either direction: +1 (ascending) or -1 (descending).
-  const auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*SE));
-  if (!Step || !(Step->getValue()->isOne() || Step->getValue()->isMinusOne()))
-    return nullptr;
-  InductionIsDescending = Step->getValue()->isMinusOne();
+  // The counted exit lives in the latch (bottom-tested) or header (top-tested).
+  // Try the latch first so a single-exit loop keeps its previous classification.
+  SmallVector<BasicBlock *, 2> Candidates;
+  Candidates.push_back(Latch);
+  if (Header != Latch)
+    Candidates.push_back(Header);
 
-  // The induction's "next" value (i + 1), produced in the latch.
-  auto *StepInst = dyn_cast<Instruction>(
-      Induction->getIncomingValueForBlock(L->getLoopLatch()));
-  if (!StepInst)
-    return nullptr;
+  for (BasicBlock *Cand : Candidates) {
+    if (!L->isLoopExiting(Cand))
+      continue;
+    auto *ExitBr = dyn_cast<BranchInst>(Cand->getTerminator());
+    if (!ExitBr || !ExitBr->isConditional())
+      continue;
+    auto *Cmp = dyn_cast<ICmpInst>(ExitBr->getCondition());
+    if (!Cmp)
+      continue;
 
-  // Select the compare operand that is the induction (PHI or its step).
-  if (LatchCmp->getOperand(0) == Induction ||
-      LatchCmp->getOperand(0) == StepInst)
-    LatchIndOperand = LatchCmp->getOperand(0);
-  else if (LatchCmp->getOperand(1) == Induction ||
-           LatchCmp->getOperand(1) == StepInst)
-    LatchIndOperand = LatchCmp->getOperand(1);
-  else
-    return nullptr;
-  LatchUsesInductionPHI = (LatchIndOperand == Induction);
-  return AR;
+    // The exit compare identifies the induction: one operand is the header PHI
+    // (pre-increment) or its PHI+step value (post-increment), the other the
+    // invariant bound. Accept any non-zero constant step, either direction.
+    Value *CmpOp0 = Cmp->getOperand(0), *CmpOp1 = Cmp->getOperand(1);
+    for (PHINode &PN : Header->phis()) {
+      if (!PN.getType()->isIntegerTy() || !SE->isSCEVable(PN.getType()))
+        continue;
+      InductionDescriptor ID;
+      if (!InductionDescriptor::isInductionPHI(&PN, L, SE, ID))
+        continue;
+      const auto *Step = dyn_cast<SCEVConstant>(ID.getStep());
+      if (!Step || Step->getValue()->isZero())
+        continue;
+
+      // Match a compare operand to this IV: the PHI is the pre-increment value,
+      // its latch-incoming value is the post-increment (PHI+step) value.
+      Value *StepVal = PN.getIncomingValueForBlock(Latch);
+      bool UsesPHI;
+      if (CmpOp0 == &PN || CmpOp1 == &PN)
+        UsesPHI = true;
+      else if (CmpOp0 == StepVal || CmpOp1 == StepVal)
+        UsesPHI = false;
+      else
+        continue;
+
+      // Commit the counted-exit analysis for this candidate.
+      ExitingBlock = Cand;
+      IsTopTested = Cand != Latch;
+      LatchCmp = Cmp;
+      LatchIndOperand = UsesPHI ? static_cast<Value *>(&PN) : StepVal;
+      LatchUsesInductionPHI = UsesPHI;
+      Induction = &PN;
+      InductionStep = Step->getAPInt();
+      InductionIsDescending = InductionStep.isNegative();
+      return cast<SCEVAddRecExpr>(SE->getSCEV(&PN));
+    }
+  }
+  return nullptr;
 }
 
 // Decide whether the iteration ordering is signed or unsigned.
@@ -211,15 +241,24 @@ bool LoopSplitUtils::isLegal() {
     LLVM_DEBUG(dbgs() << "LS: missing preheader/latch\n");
     return false;
   }
-  if (!L->getExitingBlock() || !L->getExitBlock() ||
-      L->getExitingBlock() != L->getLoopLatch()) {
-    LLVM_DEBUG(dbgs() << "LS: not a bottom-tested single-exit loop\n");
+  if (!L->getExitingBlock() || !L->getExitBlock()) {
+    LLVM_DEBUG(dbgs() << "LS: not a single-exit loop\n");
     return false;
   }
   if (!L->isLCSSAForm(*DT)) {
     LLVM_DEBUG(dbgs() << "LS: loop is not in LCSSA form\n");
     return false;
   }
+
+  // Identify the counted (induction) exit.
+  const SCEVAddRecExpr *IndAR = analyzeInduction();
+  if (!IndAR) {
+    LLVM_DEBUG(dbgs() << "LS: no counted induction exit\n");
+    return false;
+  }
+
+  if (!computeSignedness(IndAR))
+    return false;
 
   // A computable backedge-taken count fixes the iteration space we rebuild.
   const SCEV *BTC = SE->getBackedgeTakenCount(L);
@@ -228,16 +267,13 @@ bool LoopSplitUtils::isLegal() {
     return false;
   }
 
-  const SCEVAddRecExpr *IndAR = analyzeInduction();
-  if (!IndAR) {
-    LLVM_DEBUG(dbgs() << "LS: no unique unit-step integer induction\n");
-    return false;
-  }
-
-  if (!computeSignedness(IndAR))
-    return false;
-
+  // evaluateAtIteration(BTC) is the induction value at the final exit test: the
+  // last value the body ran with when bottom-tested; for top-tested the body
+  // ran a step earlier, so step back to the last executed value.
   InductionEnd = IndAR->evaluateAtIteration(BTC, *SE);
+  if (IsTopTested)
+    InductionEnd =
+        SE->getMinusSCEV(InductionEnd, IndAR->getStepRecurrence(*SE));
   // Start and end must share the induction type; reject any width mismatch.
   if (InductionEnd->getType() != IndAR->getStart()->getType()) {
     LLVM_DEBUG(dbgs() << "LS: induction end/start type mismatch\n");
@@ -317,16 +353,19 @@ void LoopSplitUtils::collectEscapingValues(SplitState &S) {
   // predecessor is the original exit block.
   DT->addNewBlock(S.FinalExit, S.ExitBlock);
 
-  // (1) Carried values: each non-induction header PHI whose backedge value
-  // differs from its initial value must resume in later partitions.
+  // (1) Carried values: each header PHI whose backedge value differs from its
+  // initial value must resume in later partitions. The induction PHI is now
+  // included -- carrying its runtime value lets a non-unit stride tile correctly.
   DenseMap<Value *, unsigned> CarriedDefToEscapingIdx;
   for (PHINode &HeaderPHI : L->getHeader()->phis()) {
-    if (&HeaderPHI == Induction)
-      continue;
-    Value *CarriedValue = HeaderPHI.getIncomingValueForBlock(Latch);
+    Value *BackedgeValue = HeaderPHI.getIncomingValueForBlock(Latch);
     Value *InitialValue = HeaderPHI.getIncomingValueForBlock(S.OrigPreheader);
-    if (CarriedValue == InitialValue)
+    if (BackedgeValue == InitialValue)
       continue; // invariant and equal to the initial value: nothing to carry.
+    // Value live at a partition's exit, seeding the next. Bottom-tested exits
+    // from the latch (backedge value live); top-tested exits from the header
+    // before the latch, so the header PHI holds it (and dominates the exit).
+    Value *CarriedValue = IsTopTested ? &HeaderPHI : BackedgeValue;
     auto &EV = S.addEscaping(CarriedValue);
     EV.CarriedHeaderPHI = &HeaderPHI;
     // Track in-loop carried defs so a matching live-out in (2) merges onto
@@ -389,12 +428,12 @@ void LoopSplitUtils::expandPartitionBounds(SplitState &S) {
   for (unsigned I = 0; I < N; ++I) {
     PartitionInfo &P = Partitions[I];
 
-    // Provably empty when Start overshoots End by exactly one step. Compile-time
-    // only: a runtime overshoot wraps at the type extreme and would falsely enter.
+    // Provably empty when Start overshoots End by one step (Start - End == step).
+    // Compile-time only: a runtime overshoot wraps and would falsely enter.
     const SCEV *PartWidth = SE->getMinusSCEV(P.StartExpr, P.EndExpr);
     if (auto *PartWidthConst = dyn_cast<SCEVConstant>(PartWidth)) {
       const APInt &W = PartWidthConst->getAPInt();
-      P.Empty = InductionIsDescending ? W.isAllOnes() : W.isOne();
+      P.Empty = W == InductionStep;
     }
 
     P.StartVal = Expander.expandCodeFor(P.StartExpr, IndTy, EntryGuardTerm);
@@ -424,6 +463,7 @@ void LoopSplitUtils::clonePartitions(SplitState &S) {
   P0.GuardBlock = S.EntryGuard;
   P0.Preheader = S.OrigPreheader;
   P0.Exit = S.ExitBlock;
+  P0.ExitingBlk = ExitingBlock;
   P0.SubLoop = L;
   P0.LatchIndOp = LatchIndOperand;
 
@@ -458,6 +498,7 @@ void LoopSplitUtils::clonePartitions(SplitState &S) {
     P.GuardBlock = Guardi;
     P.Preheader = PHi;
     P.Exit = Exiti;
+    P.ExitingBlk = cast<BasicBlock>(remapValue(VMap, ExitingBlock));
     P.SubLoop = PL;
     P.LatchIndOp = remapValue(VMap, LatchIndOperand);
 
@@ -469,21 +510,31 @@ void LoopSplitUtils::clonePartitions(SplitState &S) {
   }
 }
 
-// Replace a partition's latch test so it iterates only within [start, SelEnd].
-void LoopSplitUtils::rewriteLatch(Loop *PL, Value *IndOp, Value *SelEnd,
-                                  BasicBlock *Exit) {
-  auto *Term = cast<CondBrInst>(PL->getLoopLatch()->getTerminator());
+// Replace a partition's exit test so it iterates only within [start, SelEnd].
+void LoopSplitUtils::rewriteLatch(Loop *PL, BasicBlock *ExitingBlk,
+                                  Value *IndOp, Value *SelEnd, BasicBlock *Exit,
+                                  bool IsLastPartition) {
+  auto *Term = cast<BranchInst>(ExitingBlk->getTerminator());
   auto *Cmp = cast<ICmpInst>(Term->getCondition());
+  // Preserve the original in-loop successor (the header for a bottom-tested
+  // loop); only the out-of-loop edge is redirected to this partition's exit.
+  BasicBlock *ContinueTarget = PL->contains(Term->getSuccessor(0))
+                                   ? Term->getSuccessor(0)
+                                   : Term->getSuccessor(1);
   IRBuilder<> B(Cmp);
+
   Value *Bound = SelEnd;
   if (Bound->getType() != IndOp->getType())
     Bound = B.CreateIntCast(Bound, IndOp->getType(), InductionIsSigned);
-  // Strict when the PHI itself is compared, inclusive when the step value is.
-  ICmpInst::Predicate Pred = continuePredicate(
-      InductionIsSigned, InductionIsDescending, /*Inclusive=*/!LatchUsesInductionPHI);
+  // The clamp keeps iterations with induction <= SelEnd. The continue test is
+  // inclusive iff (compares PHI) == (test precedes body) -- so bottom-tested+PHI
+  // and top-tested+step are strict, the other two inclusive.
+  bool Inclusive = LatchUsesInductionPHI == IsTopTested;
+  ICmpInst::Predicate Pred =
+      continuePredicate(InductionIsSigned, InductionIsDescending, Inclusive);
   Value *NewCmp = B.CreateICmp(Pred, IndOp, Bound, "itr.chk");
   B.SetInsertPoint(Term);
-  B.CreateCondBr(NewCmp, PL->getHeader(), Exit);
+  B.CreateCondBr(NewCmp, ContinueTarget, Exit);
   Term->eraseFromParent();
   if (Cmp->use_empty())
     Cmp->eraseFromParent();
@@ -532,7 +583,8 @@ void LoopSplitUtils::chainPartitions(SplitState &S) {
     }
     GuardTerm->eraseFromParent();
 
-    rewriteLatch(P.SubLoop, P.LatchIndOp, P.SelEnd, P.Exit);
+    rewriteLatch(P.SubLoop, P.ExitingBlk, P.LatchIndOp, P.SelEnd, P.Exit,
+                 /*IsLastPartition=*/I + 1 == N);
     P.Exit->getTerminator()->setSuccessor(0, MergeAfter);
   }
 
@@ -547,7 +599,9 @@ void LoopSplitUtils::chainPartitions(SplitState &S) {
     PartitionInfo &Cur = Partitions[I];
     DT->addNewBlock(Cur.GuardBlock, MergeTargetIDom(Prev));
     DT->changeImmediateDominator(Cur.Preheader, Cur.GuardBlock);
-    DT->addNewBlock(Cur.Exit, Cur.SubLoop->getLoopLatch());
+    // The partition's exit is reached only from its exiting block, so that block
+    // is its immediate dominator.
+    DT->addNewBlock(Cur.Exit, Cur.ExitingBlk);
   }
   // The final exit is the last partition's merge target.
   DT->changeImmediateDominator(S.FinalExit, MergeTargetIDom(Partitions.back()));

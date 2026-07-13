@@ -14,6 +14,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOOPSPLITUTILS_H
 #define LLVM_TRANSFORMS_UTILS_LOOPSPLITUTILS_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -49,13 +50,17 @@ public:
   LoopSplitUtils(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT)
       : L(L), LI(LI), SE(SE), DT(DT) {}
 
-  /// Analyze \p L and return true if it is a counted loop this utility can split:
-  /// a bottom-tested single-exit loop in LCSSA form with a unique unit-step
-  /// integer induction and a computable trip count. Must succeed before split().
+  /// Analyze \p L; true if it is a counted loop we can split: LCSSA, a counted
+  /// exit in the latch or header, a constant-step integer induction, and an
+  /// exact count. Extra side exits are allowed. Must succeed before split().
   LLVM_ABI bool isLegal();
 
   /// Return the loop's induction variable. Valid only after isLegal() succeeds.
   PHINode *getInductionVariable() const { return Induction; }
+
+  /// Induction value on the final counted iteration (inclusive) -- the end of
+  /// the space the partitions tile. Valid only after isLegal() succeeds.
+  const SCEV *getInductionEnd() const { return InductionEnd; }
 
   /// Append an inclusive partition range [Start, End] in iteration order.
   /// Partitions must tile the whole space: first Start = induction start, each
@@ -74,6 +79,10 @@ public:
   LLVM_ABI void avoidPartitionGuard(unsigned PartitionIndex);
 
   unsigned getNumPartitions() const { return Partitions.size(); }
+
+  /// The loop driving partition \p PartitionIndex: the original loop for 0, the
+  /// clone for a later partition, or null if not cloned. Valid after split().
+  LLVM_ABI Loop *getPartitionLoop(unsigned PartitionIndex) const;
 
   /// Perform the split. Requires a successful isLegal() and at least two
   /// partitions. Returns true if the loop was rewritten.
@@ -108,8 +117,10 @@ private:
     BasicBlock *GuardBlock = nullptr;
     BasicBlock *Preheader = nullptr;
     BasicBlock *Exit = nullptr;
+    BasicBlock *ExitingBlk =
+        nullptr; // block holding this partition's exit test.
     Loop *SubLoop = nullptr;
-    Value *LatchIndOp = nullptr; // induction operand of the latch compare.
+    Value *LatchIndOp = nullptr; // induction operand of the exit-test compare.
   };
 
   /// Per-split() scratch threaded through the phase helpers (the escaping
@@ -124,11 +135,15 @@ private:
 
   // Induction analysis, populated by isLegal().
   PHINode *Induction = nullptr;
-  ICmpInst *LatchCmp = nullptr;        // the loop's latch exit compare.
-  Value *LatchIndOperand = nullptr;    // induction operand of the latch compare.
-  bool LatchUsesInductionPHI = false;  // latch compares the PHI, not the step.
+  BasicBlock *ExitingBlock = nullptr; // the loop's single exiting block.
+  bool IsTopTested = false;           // exit test precedes the body (header).
+  ICmpInst *LatchCmp = nullptr;       // the exiting block's exit compare.
+  Value *LatchIndOperand = nullptr;   // induction operand of the exit compare.
+  bool LatchUsesInductionPHI =
+      false; // exit test compares the PHI, not the step.
   bool InductionIsSigned = false;      // iteration ordering signedness.
-  bool InductionIsDescending = false;  // step is -1 (loop counts down).
+  bool InductionIsDescending = false;  // step is negative (loop counts down).
+  APInt InductionStep;                 // signed constant step, induction width.
   const SCEV *InductionEnd = nullptr;
 
   /// One record per partition, in add order.
@@ -154,8 +169,11 @@ private:
   void chainPartitions(SplitState &S);
   /// Rebuild SSA for every escaping value with a per-value SSAUpdater.
   void reconstructSSA(SplitState &S);
-  /// Clamp \p PL's latch so it iterates only within [start, \p SelEnd].
-  void rewriteLatch(Loop *PL, Value *IndOp, Value *SelEnd, BasicBlock *Exit);
+  /// Clamp \p PL's exit test (in \p ExitingBlk) so it iterates only within
+  /// [start, \p SelEnd], sending the out-of-range edge to \p Exit.
+  void rewriteLatch(Loop *PL, BasicBlock *ExitingBlk, Value *IndOp,
+                    Value *SelEnd, BasicBlock *Exit,
+                    bool IsLastPartition = false);
 };
 
 } // namespace llvm

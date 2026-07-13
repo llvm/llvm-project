@@ -7,7 +7,7 @@
 define void @basic(ptr %a, i64 %n) {
 ; CHECK-LABEL: define void @basic(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
-; CHECK-NEXT:  [[LS_GUARD0:.*:]]
+; CHECK-NEXT:  [[LS_GUARD0:.*]]:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 49)
@@ -25,12 +25,13 @@ define void @basic(ptr %a, i64 %n) {
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    br label %[[LS_GUARD1]]
 ; CHECK:       [[LS_GUARD1]]:
+; CHECK-NEXT:    [[I_NEXT4:%.*]] = phi i64 [ [[I_NEXT]], %[[EXIT]] ], [ 0, %[[LS_GUARD0]] ]
 ; CHECK-NEXT:    [[ITR_CHK2:%.*]] = icmp sle i64 50, [[TMP0]]
 ; CHECK-NEXT:    br i1 [[ITR_CHK2]], label %[[ENTRY_LS1:.*]], label %[[LS_FINAL_EXIT:.*]]
 ; CHECK:       [[ENTRY_LS1]]:
 ; CHECK-NEXT:    br label %[[LOOP_LS1:.*]]
 ; CHECK:       [[LOOP_LS1]]:
-; CHECK-NEXT:    [[I_LS1:%.*]] = phi i64 [ 50, %[[ENTRY_LS1]] ], [ [[I_NEXT_LS1:%.*]], %[[LOOP_LS1]] ]
+; CHECK-NEXT:    [[I_LS1:%.*]] = phi i64 [ [[I_NEXT4]], %[[ENTRY_LS1]] ], [ [[I_NEXT_LS1:%.*]], %[[LOOP_LS1]] ]
 ; CHECK-NEXT:    [[P_LS1:%.*]] = getelementptr i64, ptr [[A]], i64 [[I_LS1]]
 ; CHECK-NEXT:    store i64 [[I_LS1]], ptr [[P_LS1]], align 4
 ; CHECK-NEXT:    [[I_NEXT_LS1]] = add i64 [[I_LS1]], 1
