@@ -942,6 +942,8 @@ public:
   using OnDiskTableType =
       llvm::OnDiskIterableChainedHashTable<FuncOffsetHashTableInfo>;
 
+  SampleProfileFuncOffsetTable() = delete;
+
   explicit SampleProfileFuncOffsetTable(InMemoryModeT,
                                         size_t InitialCapacity = 0) {
     InMemoryTable.reserve(InitialCapacity);
@@ -974,12 +976,6 @@ public:
         return Iter->second;
     }
     return std::nullopt;
-  }
-
-  /// Clear the in-memory map and release the on-disk table.
-  void clear() {
-    InMemoryTable.clear();
-    OnDiskTable.reset();
   }
 
 private:
