@@ -287,8 +287,8 @@ func.func @test_matmul_t_fp8_mixed(%arg0: tensor<2x14x19xf8E4M3FN>, %arg1: tenso
 }
 
 // -----
-// CHECK-LABEL: test_matmul_t_block_scaled
-func.func @test_matmul_t_block_scaled(%arg0: tensor<2x14x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>, %arg1: tensor<2x28x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>) -> tensor<2x14x28xf32> {
+// CHECK-LABEL: test_matmul_t_with_block_scaled_inputs
+func.func @test_matmul_t_with_block_scaled_inputs(%arg0: tensor<2x14x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>, %arg1: tensor<2x28x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>) -> tensor<2x14x28xf32> {
 %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
 %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
 %0 = tosa.matmul_t %arg0, %arg1, %azp0, %bzp0 : (tensor<2x14x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>, tensor<2x28x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>, tensor<1xf32>, tensor<1xf32>)  -> tensor<2x14x28xf32>
