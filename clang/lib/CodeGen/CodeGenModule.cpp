@@ -2532,15 +2532,15 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
   // result in undefined behavior. Even though we cannot check that naming
   // directly between host- and device-compilations, the host- and
   // device-mangling in host compilation could help catching certain ones.
-  assert(!isa<FunctionDecl>(ND) || !ND->hasAttr<CUDAGlobalAttr>() ||
-         getContext().shouldExternalize(ND) || getLangOpts().CUDAIsDevice ||
-         (getContext().getAuxTargetInfo() &&
-          (getContext().getAuxTargetInfo()->getCXXABI() !=
-           getContext().getTargetInfo().getCXXABI())) ||
-         getCUDARuntime().getDeviceSideName(ND) ==
-             getMangledNameImpl(
-                 GD.getWithKernelReferenceKind(KernelReferenceKind::Kernel),
-                 ND));
+  assert(
+      !isa<FunctionDecl>(ND) || !ND->hasAttr<CUDAGlobalAttr>() ||
+      getContext().shouldExternalize(ND) || getLangOpts().CUDAIsDevice ||
+      (getContext().getAuxTargetInfo() &&
+       (getContext().getAuxTargetInfo()->getCXXABI() !=
+        getContext().getTargetInfo().getCXXABI())) ||
+      getCUDARuntime().getDeviceSideName(ND) ==
+          getMangledNameImpl(
+              GD.getWithKernelReferenceKind(KernelReferenceKind::Kernel), ND));
 
   // This invariant should hold true in the future.
   // Prior work:
