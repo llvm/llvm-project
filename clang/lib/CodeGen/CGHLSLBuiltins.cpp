@@ -1467,9 +1467,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                "hlsl.interlocked.or");
   }
   case Builtin::BI__builtin_hlsl_interlocked_xor: {
-    return handleInterlockedOp(*this, E,
-                               CGM.getHLSLRuntime().getInterlockedXorIntrinsic(),
-                               "hlsl.interlocked.xor");
+    return handleInterlockedOp(
+        *this, E, CGM.getHLSLRuntime().getInterlockedXorIntrinsic(),
+        "hlsl.interlocked.xor");
   }
   case Builtin::BI__builtin_hlsl_wave_active_ballot: {
     [[maybe_unused]] Value *Op = EmitScalarExpr(E->getArg(0));
