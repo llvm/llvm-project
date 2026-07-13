@@ -14,6 +14,10 @@
 # CHECK: - instruction: $d0 = FMOVDi 256
 # CHECK: *** Bad machine code: OPERAND_IMM_UINT8 should be in the range 0 to 255 ***
 # CHECK: - instruction: $q0 = FMOVv2f64_ns 256
+# CHECK: *** Bad machine code: OPERAND_IMM_UINT5 should be in the range 0 to 31 ***
+# CHECK: - instruction: $p0 = PTRUE_D 32, implicit $vg
+# CHECK: *** Bad machine code: OPERAND_IMM_UINT5 should be in the range 0 to 31 ***
+# CHECK: - instruction: $p0 = PTRUES_H -1, implicit-def $nzcv, implicit $vg
 
 ---
 name:            verifyImm
@@ -30,5 +34,7 @@ body:             |
     $s0 = FMOVSi -1
     $d0 = FMOVDi 256
     $q0 = FMOVv2f64_ns 256
+    $p0 = PTRUE_D 32, implicit $vg
+    $p0 = PTRUES_H -1, implicit-def $nzcv, implicit $vg
     RET undef $lr, implicit $x0
 ...
