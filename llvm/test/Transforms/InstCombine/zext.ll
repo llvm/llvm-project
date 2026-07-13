@@ -1094,6 +1094,15 @@ define i32 @zext_ne_lower_cst_sub(i32 range(i32 7, 9) %x) {
   ret i32 %zext
 }
 
+define i32 @zext_ne_lower_cst_sub_zero(i32 range(i32 0, 2) %x) {
+; CHECK-LABEL: @zext_ne_lower_cst_sub_zero(
+; CHECK-NEXT:    ret i32 [[X:%.*]]
+;
+  %cmp = icmp ne i32 %x, 0
+  %zext = zext i1 %cmp to i32
+  ret i32 %zext
+}
+
 define <4 x i32> @zext_ne_lower_cst_sub_vec(<4 x i32> range(i32 7, 9) %x) {
 ; CHECK-LABEL: @zext_ne_lower_cst_sub_vec(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <4 x i32> [[X:%.*]], splat (i32 7)
