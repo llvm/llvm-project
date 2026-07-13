@@ -185,3 +185,15 @@ A<int, int> foo() { // expected-error {{implicit instantiation of undefined temp
   return A<int, int>(1); // expected-error 2{{implicit instantiation of undefined template}}
 }
 }
+
+namespace test17 {
+template <template <int> typename> struct S;
+template <int, int = (foo<void, void>())> struct T; // expected-error {{use of undeclared identifier 'foo'}}
+template <typename...> struct U;
+using V = U<S<T>>;
+
+template<template<decltype(foo())> typename T> struct S2 {}; // expected-error {{use of undeclared identifier 'foo'}}
+template<int*> struct P;
+S2<P> s;
+} // namespace test17
+
