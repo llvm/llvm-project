@@ -538,9 +538,9 @@ define <2 x i43> @lshr_shl_eq_amt_multi_use_splat_vec(<2 x i43> %A) {
 define i37 @test25(i37 %AA, i37 %BB) {
 ; CHECK-LABEL: @test25(
 ; CHECK-NEXT:    [[D:%.*]] = and i37 [[AA:%.*]], -131072
-; CHECK-NEXT:    [[C2:%.*]] = add i37 [[BB:%.*]], [[D]]
-; CHECK-NEXT:    [[F:%.*]] = and i37 [[C2]], -131072
-; CHECK-NEXT:    ret i37 [[F]]
+; CHECK-NEXT:    [[F:%.*]] = and i37 [[C2:%.*]], -131072
+; CHECK-NEXT:    [[E1:%.*]] = add i37 [[F]], [[D]]
+; CHECK-NEXT:    ret i37 [[E1]]
 ;
   %C = lshr i37 %BB, 17
   %D = lshr i37 %AA, 17
@@ -562,11 +562,10 @@ define i40 @test26(i40 %A) {
 
 ; OSS-Fuzz #9880
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=9880
-define i177 @ossfuzz_9880(i177 %X) {
+define i177 @ossfuzz_9880(i177 %X, ptr %A) {
 ; CHECK-LABEL: @ossfuzz_9880(
 ; CHECK-NEXT:    ret i177 0
 ;
-  %A = alloca i177
   %L1 = load i177, ptr %A
   %B = or i177 0, -1
   %B5 = udiv i177 %L1, %B

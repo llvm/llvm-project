@@ -11,11 +11,13 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Threading.h"
 
 #include <algorithm>
+#include <atomic>
 #include <condition_variable>
 #include <functional>
 #include <mutex>
@@ -27,7 +29,7 @@ namespace parallel {
 // Strategy for the default executor used by the parallel routines provided by
 // this file. It defaults to using all hardware threads and should be
 // initialized before the first use of parallel routines.
-extern ThreadPoolStrategy strategy;
+LLVM_ABI extern ThreadPoolStrategy strategy;
 
 #if LLVM_ENABLE_THREADS
 #define GET_THREAD_INDEX_IMPL                                                  \
@@ -41,15 +43,15 @@ extern ThreadPoolStrategy strategy;
 #ifdef _WIN32
 // Direct access to thread_local variables from a different DLL isn't
 // possible with Windows Native TLS.
-unsigned getThreadIndex();
+LLVM_ABI unsigned getThreadIndex();
 #else
 // Don't access this directly, use the getThreadIndex wrapper.
-extern thread_local unsigned threadIndex;
+LLVM_ABI extern thread_local unsigned threadIndex;
 
 inline unsigned getThreadIndex() { GET_THREAD_INDEX_IMPL; }
 #endif
 
-size_t getThreadCount();
+LLVM_ABI size_t getThreadCount();
 #else
 inline unsigned getThreadIndex() { return 0; }
 inline size_t getThreadCount() { return 1; }
@@ -57,31 +59,30 @@ inline size_t getThreadCount() { return 1; }
 
 namespace detail {
 class Latch {
-  uint32_t Count;
+  std::atomic<uint32_t> Count;
   mutable std::mutex Mutex;
   mutable std::condition_variable Cond;
 
 public:
   explicit Latch(uint32_t Count = 0) : Count(Count) {}
-  ~Latch() {
-    // Ensure at least that sync() was called.
-    assert(Count == 0);
-  }
+  ~Latch() { assert(Count.load(std::memory_order_relaxed) == 0); }
 
-  void inc() {
-    std::lock_guard<std::mutex> lock(Mutex);
-    ++Count;
-  }
+  void inc() { Count.fetch_add(1, std::memory_order_relaxed); }
 
+  // dec() must hold Mutex so that sync() cannot observe Count==0 and
+  // destroy the Latch while dec() is still running.
   void dec() {
     std::lock_guard<std::mutex> lock(Mutex);
-    if (--Count == 0)
+    // fetch_sub returns the previous value; == 1 means Count is now 0.
+    if (Count.fetch_sub(1, std::memory_order_acq_rel) == 1)
       Cond.notify_all();
   }
 
+  uint32_t getCount() const { return Count.load(std::memory_order_acquire); }
+
   void sync() const {
     std::unique_lock<std::mutex> lock(Mutex);
-    Cond.wait(lock, [&] { return Count == 0; });
+    Cond.wait(lock, [&] { return Count.load(std::memory_order_relaxed) == 0; });
   }
 };
 } // namespace detail
@@ -91,15 +92,11 @@ class TaskGroup {
   bool Parallel;
 
 public:
-  TaskGroup();
-  ~TaskGroup();
+  LLVM_ABI TaskGroup();
+  LLVM_ABI ~TaskGroup();
 
   // Spawn a task, but does not wait for it to finish.
-  // Tasks marked with \p Sequential will be executed
-  // exactly in the order which they were spawned.
-  void spawn(std::function<void()> f);
-
-  void sync() const { L.sync(); }
+  LLVM_ABI void spawn(std::function<void()> f);
 
   bool isParallel() const { return Parallel; }
 };
@@ -225,7 +222,8 @@ void parallelSort(RandomAccessIterator Start, RandomAccessIterator End,
   llvm::sort(Start, End, Comp);
 }
 
-void parallelFor(size_t Begin, size_t End, function_ref<void(size_t)> Fn);
+LLVM_ABI void parallelFor(size_t Begin, size_t End,
+                          function_ref<void(size_t)> Fn);
 
 template <class IterTy, class FuncTy>
 void parallelForEach(IterTy Begin, IterTy End, FuncTy Fn) {

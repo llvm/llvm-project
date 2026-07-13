@@ -151,20 +151,20 @@ define void @zip_v32i16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    .cfi_offset b13, -48
 ; CHECK-NEXT:    .cfi_offset b14, -56
 ; CHECK-NEXT:    .cfi_offset b15, -64
-; CHECK-NEXT:    ldp q1, q0, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    mov z5.h, z0.h[7]
-; CHECK-NEXT:    mov z7.h, z0.h[6]
-; CHECK-NEXT:    mov z17.h, z0.h[5]
-; CHECK-NEXT:    mov z4.h, z3.h[7]
-; CHECK-NEXT:    mov z6.h, z3.h[6]
-; CHECK-NEXT:    mov z16.h, z3.h[5]
-; CHECK-NEXT:    mov z18.h, z3.h[4]
-; CHECK-NEXT:    mov z19.h, z0.h[4]
-; CHECK-NEXT:    mov z20.h, z2.h[7]
-; CHECK-NEXT:    mov z21.h, z1.h[7]
-; CHECK-NEXT:    mov z22.h, z2.h[6]
-; CHECK-NEXT:    mov z23.h, z1.h[6]
+; CHECK-NEXT:    ldp q1, q2, [x1]
+; CHECK-NEXT:    ldp q0, q3, [x0]
+; CHECK-NEXT:    mov z4.h, z2.h[7]
+; CHECK-NEXT:    mov z6.h, z2.h[6]
+; CHECK-NEXT:    mov z16.h, z2.h[5]
+; CHECK-NEXT:    mov z5.h, z3.h[7]
+; CHECK-NEXT:    mov z7.h, z3.h[6]
+; CHECK-NEXT:    mov z17.h, z3.h[5]
+; CHECK-NEXT:    mov z18.h, z2.h[4]
+; CHECK-NEXT:    mov z19.h, z3.h[4]
+; CHECK-NEXT:    mov z20.h, z1.h[7]
+; CHECK-NEXT:    mov z21.h, z0.h[7]
+; CHECK-NEXT:    mov z22.h, z1.h[6]
+; CHECK-NEXT:    mov z23.h, z0.h[6]
 ; CHECK-NEXT:    zip1 z24.h, z5.h, z4.h
 ; CHECK-NEXT:    zip1 z25.h, z7.h, z6.h
 ; CHECK-NEXT:    zip1 z16.h, z17.h, z16.h
@@ -174,12 +174,12 @@ define void @zip_v32i16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    zip1 z18.h, z21.h, z20.h
 ; CHECK-NEXT:    zip1 z21.s, z25.s, z24.s
 ; CHECK-NEXT:    zip1 z22.h, z23.h, z22.h
-; CHECK-NEXT:    mov z23.h, z2.h[5]
+; CHECK-NEXT:    mov z23.h, z1.h[5]
 ; CHECK-NEXT:    mov z20.h, z6.h[7]
-; CHECK-NEXT:    mov z24.h, z1.h[5]
-; CHECK-NEXT:    mov z25.h, z2.h[4]
+; CHECK-NEXT:    mov z24.h, z0.h[5]
+; CHECK-NEXT:    mov z25.h, z1.h[4]
 ; CHECK-NEXT:    mov z19.h, z7.h[7]
-; CHECK-NEXT:    mov z26.h, z1.h[4]
+; CHECK-NEXT:    mov z26.h, z0.h[4]
 ; CHECK-NEXT:    mov z27.h, z6.h[6]
 ; CHECK-NEXT:    mov z28.h, z7.h[5]
 ; CHECK-NEXT:    mov z29.h, z6.h[5]
@@ -212,22 +212,22 @@ define void @zip_v32i16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    zip1 z19.s, z28.s, z27.s
 ; CHECK-NEXT:    zip1 z18.s, z22.s, z18.s
 ; CHECK-NEXT:    zip1 z20.s, z24.s, z23.s
-; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
+; CHECK-NEXT:    zip1 z2.h, z3.h, z2.h
 ; CHECK-NEXT:    zip1 z3.s, z26.s, z25.s
 ; CHECK-NEXT:    zip1 z22.s, z30.s, z29.s
 ; CHECK-NEXT:    zip1 z6.h, z6.h, z7.h
 ; CHECK-NEXT:    zip1 z7.d, z16.d, z21.d
 ; CHECK-NEXT:    zip1 z16.d, z19.d, z17.d
-; CHECK-NEXT:    zip1 z1.h, z1.h, z2.h
-; CHECK-NEXT:    zip1 z2.h, z4.h, z5.h
+; CHECK-NEXT:    zip1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    zip1 z1.h, z4.h, z5.h
 ; CHECK-NEXT:    zip1 z4.d, z20.d, z18.d
 ; CHECK-NEXT:    zip1 z3.d, z22.d, z3.d
-; CHECK-NEXT:    add z0.h, z0.h, z6.h
+; CHECK-NEXT:    add z2.h, z2.h, z6.h
 ; CHECK-NEXT:    add z5.h, z7.h, z16.h
-; CHECK-NEXT:    add z1.h, z1.h, z2.h
-; CHECK-NEXT:    add z2.h, z4.h, z3.h
-; CHECK-NEXT:    stp q0, q5, [x0, #32]
-; CHECK-NEXT:    stp q1, q2, [x0]
+; CHECK-NEXT:    add z0.h, z0.h, z1.h
+; CHECK-NEXT:    add z1.h, z4.h, z3.h
+; CHECK-NEXT:    stp q2, q5, [x0, #32]
+; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ldp d15, d14, [sp], #64 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 ;
@@ -526,10 +526,9 @@ define void @zip_v4f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    zip1 z5.d, z0.d, z2.d
 ; CHECK-NEXT:    trn2 z1.d, z1.d, z3.d
 ; CHECK-NEXT:    trn2 z0.d, z0.d, z2.d
-; CHECK-NEXT:    movprfx z2, z4
-; CHECK-NEXT:    fadd z2.d, p0/m, z2.d, z5.d
+; CHECK-NEXT:    fadd z4.d, p0/m, z4.d, z5.d
 ; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    stp q2, q0, [x0]
+; CHECK-NEXT:    stp q4, q0, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: zip_v4f64:
@@ -659,10 +658,10 @@ define void @zip1_v8i32_undef(ptr %a) {
 define void @trn_v32i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: trn_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q2, [x0]
-; CHECK-NEXT:    ldp q1, q3, [x1]
-; CHECK-NEXT:    trn1 z4.b, z0.b, z1.b
-; CHECK-NEXT:    trn2 z0.b, z0.b, z1.b
+; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    trn1 z4.b, z1.b, z0.b
+; CHECK-NEXT:    trn2 z0.b, z1.b, z0.b
 ; CHECK-NEXT:    trn1 z1.b, z2.b, z3.b
 ; CHECK-NEXT:    trn2 z2.b, z2.b, z3.b
 ; CHECK-NEXT:    add z0.b, z4.b, z0.b
@@ -862,10 +861,10 @@ define void @trn_v8i16(ptr %a, ptr %b) {
 define void @trn_v16i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: trn_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q2, [x0]
-; CHECK-NEXT:    ldp q1, q3, [x1]
-; CHECK-NEXT:    trn1 z4.h, z0.h, z1.h
-; CHECK-NEXT:    trn2 z0.h, z0.h, z1.h
+; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    trn1 z4.h, z1.h, z0.h
+; CHECK-NEXT:    trn2 z0.h, z1.h, z0.h
 ; CHECK-NEXT:    trn1 z1.h, z2.h, z3.h
 ; CHECK-NEXT:    trn2 z2.h, z2.h, z3.h
 ; CHECK-NEXT:    add z0.h, z4.h, z0.h
@@ -961,10 +960,10 @@ define void @trn_v16i16(ptr %a, ptr %b) {
 define void @trn_v8i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: trn_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q2, [x0]
-; CHECK-NEXT:    ldp q1, q3, [x1]
-; CHECK-NEXT:    zip1 z4.s, z0.s, z1.s
-; CHECK-NEXT:    trn2 z0.s, z0.s, z1.s
+; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    zip1 z4.s, z1.s, z0.s
+; CHECK-NEXT:    trn2 z0.s, z1.s, z0.s
 ; CHECK-NEXT:    trn1 z1.s, z2.s, z3.s
 ; CHECK-NEXT:    trn2 z2.s, z2.s, z3.s
 ; CHECK-NEXT:    add z0.s, z4.s, z0.s
@@ -1006,11 +1005,11 @@ define void @trn_v8i32(ptr %a, ptr %b) {
 define void @trn_v4f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: trn_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q2, [x0]
+; CHECK-NEXT:    ldp q0, q3, [x1]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ldp q1, q3, [x1]
-; CHECK-NEXT:    zip1 z4.d, z0.d, z1.d
-; CHECK-NEXT:    trn2 z0.d, z0.d, z1.d
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    zip1 z4.d, z1.d, z0.d
+; CHECK-NEXT:    trn2 z0.d, z1.d, z0.d
 ; CHECK-NEXT:    zip1 z1.d, z2.d, z3.d
 ; CHECK-NEXT:    trn2 z2.d, z2.d, z3.d
 ; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z4.d
@@ -2159,10 +2158,9 @@ define void @zip_vscale2_4(ptr %a, ptr %b) {
 ; CHECK-NEXT:    zip1 z5.d, z0.d, z2.d
 ; CHECK-NEXT:    trn2 z1.d, z1.d, z3.d
 ; CHECK-NEXT:    trn2 z0.d, z0.d, z2.d
-; CHECK-NEXT:    movprfx z2, z4
-; CHECK-NEXT:    fadd z2.d, p0/m, z2.d, z5.d
+; CHECK-NEXT:    fadd z4.d, p0/m, z4.d, z5.d
 ; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    stp q2, q0, [x0]
+; CHECK-NEXT:    stp q4, q0, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: zip_vscale2_4:

@@ -52,7 +52,8 @@ def Linalg_Dialect : Dialect {
         kMemoizedIndexingMapsAttrName = "linalg.memoized_indexing_maps";
 
     using RegionBuilderFunType = llvm::function_ref<
-      void(ImplicitLocOpBuilder &b, Block &, ArrayRef<NamedAttribute>)>;
+      void(ImplicitLocOpBuilder &b, Block &, ArrayRef<NamedAttribute>,
+           function_ref<InFlightDiagnostic()>)>;
     RegionBuilderFunType getRegionBuilder(StringRef name) {
       return namedStructuredOpRegionBuilders.lookup(name);
     }

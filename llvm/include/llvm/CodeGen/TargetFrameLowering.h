@@ -16,6 +16,8 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TypeSize.h"
 #include <vector>
 
@@ -31,6 +33,7 @@ enum Value {
   SGPRSpill = 1,
   ScalableVector = 2,
   WasmLocal = 3,
+  ScalablePredicateVector = 4,
   NoAlloc = 255
 };
 }
@@ -42,7 +45,7 @@ enum Value {
 /// The offset to the local area is the offset from the stack pointer on
 /// function entry to the first location where function data (local variables,
 /// spill locations) can be stored.
-class TargetFrameLowering {
+class LLVM_ABI TargetFrameLowering {
 public:
   enum StackDirection {
     StackGrowsUp,        // Adding to the stack increases the stack address
@@ -157,14 +160,6 @@ public:
   /// returns false, spill slots will be assigned using generic implementation.
   /// assignCalleeSavedSpillSlots() may add, delete or rearrange elements of
   /// CSI.
-  virtual bool assignCalleeSavedSpillSlots(MachineFunction &MF,
-                                           const TargetRegisterInfo *TRI,
-                                           std::vector<CalleeSavedInfo> &CSI,
-                                           unsigned &MinCSFrameIndex,
-                                           unsigned &MaxCSFrameIndex) const {
-    return assignCalleeSavedSpillSlots(MF, TRI, CSI);
-  }
-
   virtual bool
   assignCalleeSavedSpillSlots(MachineFunction &MF,
                               const TargetRegisterInfo *TRI,
@@ -408,7 +403,7 @@ public:
                                             RegScavenger *RS = nullptr) const {}
 
   virtual unsigned getWinEHParentFrameOffset(const MachineFunction &MF) const {
-    report_fatal_error("WinEH not implemented for this target");
+    reportFatalUsageError("WinEH not implemented for this target");
   }
 
   /// This method is called during prolog/epilog code insertion to eliminate

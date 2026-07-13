@@ -31,7 +31,7 @@ int main(int, char**) {
     forward_iterator<int *> it(a+1);
     std::advance(it, 1);  // should work fine
     std::advance(it, 0);  // should work fine
-    TEST_LIBCPP_ASSERT_FAILURE(std::advance(it, -1), "Attempt to advance(it, n) with negative n on a non-bidirectional iterator");
+    TEST_LIBCPP_ASSERT_FAILURE(std::advance(it, -1), "std::advance: Can only pass a negative `n` with a bidirectional_iterator.");
 
     return 0;
 }

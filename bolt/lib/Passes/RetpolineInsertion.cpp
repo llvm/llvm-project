@@ -23,6 +23,7 @@
 
 #include "bolt/Passes/RetpolineInsertion.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "bolt-retpoline"
@@ -78,7 +79,7 @@ BinaryFunction *createNewRetpoline(BinaryContext &BC,
                                    const IndirectBranchInfo &BrInfo,
                                    bool R11Available) {
   auto &MIB = *BC.MIB;
-  MCContext &Ctx = *BC.Ctx.get();
+  MCContext &Ctx = *BC.Ctx;
   LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Creating a new retpoline function["
                     << RetpolineTag << "]\n");
 
@@ -195,7 +196,7 @@ std::string createRetpolineFunctionTag(BinaryContext &BC,
 
   TagOS << "+";
   if (MemRef.DispExpr)
-    MemRef.DispExpr->print(TagOS, BC.AsmInfo.get());
+    BC.AsmInfo->printExpr(TagOS, *MemRef.DispExpr);
   else
     TagOS << MemRef.DispImm;
 
@@ -271,8 +272,10 @@ Error RetpolineInsertion::runOnFunctions(BinaryContext &BC) {
   if (!opts::InsertRetpolines)
     return Error::success();
 
-  assert(BC.isX86() &&
-         "retpoline insertion not supported for target architecture");
+  if (!BC.isX86()) {
+    BC.errs() << "BOLT-ERROR: " << getName() << " is specific to X86\n";
+    exit(1);
+  }
 
   assert(BC.HasRelocations && "retpoline mode not supported in non-reloc");
 

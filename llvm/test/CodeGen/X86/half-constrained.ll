@@ -194,7 +194,7 @@ define void @float_to_half(float %0) strictfp {
 ; X64-F16C-LABEL: float_to_half:
 ; X64-F16C:       # %bb.0:
 ; X64-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-F16C-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X64-F16C-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X64-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; X64-F16C-NEXT:    movq a@GOTPCREL(%rip), %rax
 ; X64-F16C-NEXT:    vpextrw $0, %xmm0, (%rax)
@@ -350,7 +350,7 @@ define void @add() strictfp {
 ; X86-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; X86-F16C-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; X86-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X86-F16C-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X86-F16C-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X86-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; X86-F16C-NEXT:    vpextrw $0, %xmm0, c
 ; X86-F16C-NEXT:    retl
@@ -387,7 +387,7 @@ define void @add() strictfp {
 ; X64-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; X64-F16C-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; X64-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-F16C-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X64-F16C-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X64-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; X64-F16C-NEXT:    movq c@GOTPCREL(%rip), %rax
 ; X64-F16C-NEXT:    vpextrw $0, %xmm0, (%rax)

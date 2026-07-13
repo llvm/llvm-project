@@ -51,8 +51,8 @@ def AmdgpuResolveStridedMetadataPass : Pass<"amdgpu-resolve-strided-metadata"> {
   ];
 }
 
-def AmdgpuTransferReadToLoadPass : Pass<"amdgpu-transfer-read-to-load"> {
-  let summary = "Lower the operations from the vector transfer_read to vector load";
+def AmdgpuMaskedloadToLoadPass : Pass<"amdgpu-maskedload-to-load"> {
+  let summary = "Lower the operations from the vector maskedload to vector load";
   let description = [{
     This pass creates a transfer read op lowering optimization. The lowering
     will produce a conditional check at runtime. If within bounds, a vector
@@ -70,4 +70,5 @@ def AmdgpuTransferReadToLoadPass : Pass<"amdgpu-transfer-read-to-load"> {
     "memref::MemRefDialect"
   ];
 }
+
 #endif // MLIR_DIALECT_AMDGPU_TRANSFORMS_PASSES_TD_

@@ -182,6 +182,11 @@ def OutlineableOpenMPOpInterface : OpInterface<"OutlineableOpenMPOpInterface"> {
   let methods = [
     InterfaceMethod<"Get alloca block", "::mlir::Block*", "getAllocaBlock",
       (ins), [{
+      // For taskloop: put the allocas inside of the wrapped loop. Loop wrappers
+      // are expected to contain only the wrapped loop (or another loop wrapper)
+      if (LoopWrapperInterface loopWrapper =
+              mlir::dyn_cast<LoopWrapperInterface>($_op.getOperation()))
+        return &loopWrapper.getWrappedLoop()->getRegion(0).front();
       return &$_op.getRegion().front();
       }]>,
   ];
@@ -276,8 +281,9 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
 
 def ComposableOpInterface : OpInterface<"ComposableOpInterface"> {
   let description = [{
-    OpenMP operations that can represent a single leaf of a composite OpenMP
-    construct.
+    OpenMP operations that can represent a single leaf of a compound OpenMP
+    construct, or one leaf of a combined construct or equivalent immediate
+    nesting of constructs.
   }];
 
   let cppNamespace = "::mlir::omp";
@@ -306,8 +312,48 @@ def ComposableOpInterface : OpInterface<"ComposableOpInterface"> {
         else
           $_op->removeDiscardableAttr("omp.composite");
       }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Check whether the operation is representing a non-innermost child leaf
+        of a combined OpenMP construct or an equivalent immediate nesting of
+        constructs.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isCombined",
+      (ins ), [{}], [{
+        return $_op->hasAttr("omp.combined");
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Mark the operation as a non-innermost child leaf of an OpenMP combined
+        construct or an equivalent immediate nesting of constructs.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setCombined",
+      (ins "bool":$val), [{}], [{
+        if (val)
+          $_op->setDiscardableAttr("omp.combined", mlir::UnitAttr::get($_op->getContext()));
+        else
+          $_op->removeDiscardableAttr("omp.combined");
+      }]
     >
   ];
+
+  let extraClassDeclaration = [{
+    /// Follows the combined-composite chain of nested operations and returns
+    /// the deepest-nested one.
+    Operation *findCapturedOp();
+
+    /// Interface verifier implementation.
+    llvm::LogicalResult verifyImpl();
+  }];
+
+  let verify = [{
+    return ::llvm::cast<::mlir::omp::ComposableOpInterface>($_op).verifyImpl();
+  }];
+  let verifyWithRegions = 1;
 }
 
 def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
@@ -329,14 +375,16 @@ def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
       /*retTy=*/"void",
       /*methodName=*/"setDeclareTarget",
       (ins "mlir::omp::DeclareTargetDeviceType":$deviceType,
-            "mlir::omp::DeclareTargetCaptureClause":$captureClause), [{}], [{
+           "mlir::omp::DeclareTargetCaptureClause":$captureClause,
+           "bool":$automap), [{}], [{
         $_op->setAttr("omp.declare_target",
                   mlir::omp::DeclareTargetAttr::get(
                       $_op->getContext(),
                       mlir::omp::DeclareTargetDeviceTypeAttr::get(
                           $_op->getContext(), deviceType),
                       mlir::omp::DeclareTargetCaptureClauseAttr::get(
-                          $_op->getContext(), captureClause)));
+                          $_op->getContext(), captureClause),
+                      mlir::BoolAttr::get($_op->getContext(), automap)));
       }]>,
       InterfaceMethod<
       /*description=*/[{
@@ -374,6 +422,19 @@ def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
           if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
             return dAttr.getCaptureClause().getValue();
         return {};
+      }]>,
+      InterfaceMethod<
+      /*description=*/[{
+        Return true if the DeclareTarget attribute has the AUTOMAP modifier.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"getDeclareTargetAutomap",
+      (ins), [{}], [{
+        if (mlir::Attribute dTar = $_op->getAttr("omp.declare_target"))
+          if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
+            if (auto autoVal = dAttr.getAutomap())
+              return autoVal.getValue();
+         return false;
       }]>
   ];
 }
@@ -548,6 +609,92 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
             ::mlir::StringAttr::get($_op->getContext(), "omp.target_triples"),
             ::mlir::ArrayAttr::get($_op->getContext(), names));
       }]>
+  ];
+}
+
+def LoopTransformationInterface : OpInterface<"LoopTransformationInterface"> {
+  let description = [{
+    Methods that are common for OpenMP loop transformation operations.
+  }];
+
+  let cppNamespace = "::mlir::omp";
+
+  let methods = [
+
+    InterfaceMethod<
+      /*description=*/[{
+        Get the indices for the arguments that represent CanonicalLoopInfo
+        applyees, i.e. loops that are transformed/consumed by this operation.
+      }],
+      /*returnType=*/ "std::pair<unsigned, unsigned>",
+      /*methodName=*/ "getApplyeesODSOperandIndexAndLength",
+      /*args=*/(ins)
+    >,
+
+    InterfaceMethod<
+      /*description=*/[{
+        Get the indices for the arguments that represent CanonicalLoopInfo
+        generatees, i.e. loops that are emitted by this operation.
+      }],
+      /*returnType=*/ "std::pair<unsigned, unsigned>",
+      /*methodName=*/ "getGenerateesODSOperandIndexAndLength",
+      /*args=*/(ins)
+    >,
+
+    InterfaceMethod<
+      /*description=*/[{
+        Return the number of applyees of this loop transformation.
+      }],
+      /*returnType=*/ "unsigned",
+      /*methodName=*/ "getNumApplyees",
+      /*args=*/       (ins),
+      /*methodBody=*/ "",
+      /*defaultImpl=*/[{
+        return $_op.getApplyeesODSOperandIndexAndLength().second;
+      }]
+    >,
+
+    InterfaceMethod<
+      /*description=*/[{
+        Return the number of generatees of this loop transformation.
+      }],
+      /*returnType=*/ "unsigned",
+      /*methodName=*/ "getNumGeneratees",
+      /*args=*/       (ins),
+      /*methodBody=*/ "",
+      /*defaultImpl=*/[{
+        return $_op.getGenerateesODSOperandIndexAndLength().second;
+      }]
+    >,
+
+    InterfaceMethod<
+      /*description=*/[{
+        Return whether the provided operand is an applyee of this operation.
+      }],
+      /*returnType=*/ "unsigned",
+      /*methodName=*/ "isApplyee",
+      /*args=*/       (ins "unsigned":$opnum),
+      /*methodBody=*/ "",
+      /*defaultImpl=*/[{
+        auto applyeeArgs = $_op.getApplyeesODSOperandIndexAndLength();
+        return (applyeeArgs.first <= opnum && opnum < applyeeArgs.first + applyeeArgs.second) ;
+      }]
+    >,
+
+    InterfaceMethod<
+      /*description=*/[{
+        Return whether the provided operand is a generatee of this operation.
+      }],
+      /*returnType=*/ "unsigned",
+      /*methodName=*/ "isGeneratee",
+      /*args=*/       (ins "unsigned":$opnum),
+      /*methodBody=*/ "",
+      /*defaultImpl=*/[{
+        auto generateeArgs = $_op.getGenerateesODSOperandIndexAndLength();
+        return (generateeArgs.first <= opnum && opnum < generateeArgs.first + generateeArgs.second) ;
+      }]
+    >,
+
   ];
 }
 

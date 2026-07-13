@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fopenacc -verify -Wno-empty-body -Wno-unused-value
+// RUN: %clang_cc1 %s -fopenacc -verify -Wno-empty-body -Wno-unused-value -Wopenacc-extension
 
 void HasStmt() {
   {
@@ -185,7 +185,7 @@ void HostDataRules() {
 #pragma acc host_data use_device(Array)
   ;
 
-  // expected-error@+1{{OpenACC variable in 'use_device' clause is not a valid variable name or array name}}
+  // expected-warning@+1{{sub-array as a variable in 'use_device' clause is not a valid variable name or array name}}
 #pragma acc host_data use_device(Array[1:1])
   ;
 

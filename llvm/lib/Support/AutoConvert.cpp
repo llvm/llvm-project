@@ -14,7 +14,6 @@
 #ifdef __MVS__
 
 #include "llvm/Support/AutoConvert.h"
-#include "llvm/Support/Error.h"
 #include <cassert>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -83,42 +82,39 @@ int enablezOSAutoConversion(int FD) {
   return fcntl(FD, F_CONTROL_CVT, &Query);
 }
 
-std::error_code llvm::disablezOSAutoConversion(int FD) {
-  if (::disablezOSAutoConversion(FD) == -1)
-    return errnoAsErrorCode();
-
-  return std::error_code();
+int enablezOSAutoConversionCcsid(int FD, int ccsid) {
+  struct f_cnvrt cvt = {
+      SETCVTALL,   // cvtcmd
+      CCSID_UTF_8, // pccsid
+      0,           // fccsid
+  };
+  if (ccsid == FT_UNTAGGED)
+    return -1;
+  cvt.fccsid = ccsid;
+  return fcntl(FD, F_CONTROL_CVT, &cvt);
 }
 
-std::error_code llvm::enablezOSAutoConversion(int FD) {
-  if (::enablezOSAutoConversion(FD) == -1)
-    return errnoAsErrorCode();
-
-  return std::error_code();
-}
-
-std::error_code llvm::restorezOSStdHandleAutoConversion(int FD) {
-  if (::restorezOSStdHandleAutoConversion(FD) == -1)
-    return errnoAsErrorCode();
-
-  return std::error_code();
-}
-
-std::error_code llvm::setzOSFileTag(int FD, int CCSID, bool Text) {
-  assert((!Text || (CCSID != FT_UNTAGGED && CCSID != FT_BINARY)) &&
+std::error_code llvm::setzOSFileTag(int FD, int CCSID, bool IsText) {
+  assert((!IsText || (CCSID != FT_UNTAGGED && CCSID != FT_BINARY)) &&
          "FT_UNTAGGED and FT_BINARY are not allowed for text files");
   struct file_tag Tag;
   Tag.ft_ccsid = CCSID;
-  Tag.ft_txtflag = Text;
+  Tag.ft_txtflag = IsText;
   Tag.ft_deferred = 0;
   Tag.ft_rsvflags = 0;
 
-  if (fcntl(FD, F_SETTAG, &Tag) == -1)
-    return errnoAsErrorCode();
+  if (fcntl(FD, F_SETTAG, &Tag) == -1) {
+    if (errno == ENOSYS)
+      // Some file systems do not support filetags.
+      // Ignore ENOSYS error to allow compilation.
+      errno = 0;
+    else
+      return errnoAsErrorCode();
+  }
   return std::error_code();
 }
 
-ErrorOr<__ccsid_t> llvm::getzOSFileTag(const char *FileName, const int FD) {
+ErrorOr<__ccsid_t> llvm::getzOSFileTag(const Twine &FileName, const int FD) {
   // If we have a file descriptor, use it to find out file tagging. Otherwise we
   // need to use stat() with the file path.
   if (FD != -1) {
@@ -132,12 +128,12 @@ ErrorOr<__ccsid_t> llvm::getzOSFileTag(const char *FileName, const int FD) {
     return Query.fccsid;
   }
   struct stat Attr;
-  if (stat(FileName, &Attr) == -1)
+  if (stat(FileName.str().c_str(), &Attr) == -1)
     return std::error_code(errno, std::generic_category());
   return Attr.st_tag.ft_ccsid;
 }
 
-ErrorOr<bool> llvm::needzOSConversion(const char *FileName, const int FD) {
+ErrorOr<bool> llvm::needzOSConversion(const Twine &FileName, const int FD) {
   ErrorOr<__ccsid_t> Ccsid = getzOSFileTag(FileName, FD);
   if (std::error_code EC = Ccsid.getError())
     return EC;
@@ -152,6 +148,21 @@ ErrorOr<bool> llvm::needzOSConversion(const char *FileName, const int FD) {
   default:
     return true;
   }
+}
+
+std::error_code llvm::copyFileTagAttributes(const std::string &Source,
+                                            const int DestinationFD) {
+  struct stat SourceAttributes;
+  if (stat(Source.c_str(), &SourceAttributes) == -1)
+    return std::error_code(errno, std::generic_category());
+
+  if (SourceAttributes.st_tag.ft_txtflag)
+    if (enablezOSAutoConversionCcsid(DestinationFD,
+                                     SourceAttributes.st_tag.ft_ccsid) == -1)
+      return errnoAsErrorCode();
+
+  return setzOSFileTag(DestinationFD, SourceAttributes.st_tag.ft_ccsid,
+                       SourceAttributes.st_tag.ft_txtflag);
 }
 
 #endif //__MVS__

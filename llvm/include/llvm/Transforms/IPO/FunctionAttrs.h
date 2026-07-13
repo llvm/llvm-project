@@ -19,6 +19,7 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -28,11 +29,12 @@ class Function;
 class Module;
 
 /// Returns the memory access properties of this copy of the function.
-MemoryEffects computeFunctionBodyMemoryAccess(Function &F, AAResults &AAR);
+LLVM_ABI MemoryEffects computeFunctionBodyMemoryAccess(Function &F,
+                                                       AAResults &AAR);
 
 /// Propagate function attributes for function summaries along the index's
 /// callgraph during thinlink
-bool thinLTOPropagateFunctionAttrs(
+LLVM_ABI bool thinLTOPropagateFunctionAttrs(
     ModuleSummaryIndex &Index,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing);
@@ -46,14 +48,17 @@ bool thinLTOPropagateFunctionAttrs(
 /// access memory, or only read memory, and give them the readnone/readonly
 /// attribute. It also discovers function arguments that are not captured by
 /// the function and marks them with the nocapture attribute.
-struct PostOrderFunctionAttrsPass : PassInfoMixin<PostOrderFunctionAttrsPass> {
+struct PostOrderFunctionAttrsPass
+    : OptionalPassInfoMixin<PostOrderFunctionAttrsPass> {
   PostOrderFunctionAttrsPass(bool SkipNonRecursive = false)
       : SkipNonRecursive(SkipNonRecursive) {}
-  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
-                        LazyCallGraph &CG, CGSCCUpdateResult &UR);
+  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &C,
+                                 CGSCCAnalysisManager &AM, LazyCallGraph &CG,
+                                 CGSCCUpdateResult &UR);
 
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
 private:
   bool SkipNonRecursive;
@@ -70,11 +75,24 @@ private:
 // this is a boring module pass, but eventually it should be an RPO CGSCC pass
 // when such infrastructure is available.
 class ReversePostOrderFunctionAttrsPass
-    : public PassInfoMixin<ReversePostOrderFunctionAttrsPass> {
+    : public OptionalPassInfoMixin<ReversePostOrderFunctionAttrsPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
+/// Additional 'norecurse' attribute deduction during postlink LTO phase.
+///
+/// This is a module pass that infers 'norecurse' attribute on functions.
+/// It runs during LTO and analyzes the module's call graph to find functions
+/// that are guaranteed not to call themselves, either directly or indirectly.
+/// The pass uses a module-wide flag which checks if any function's address is
+/// taken or any function in the module has external linkage, to safely handle
+/// indirect and library function calls from current function.
+class NoRecurseLTOInferencePass
+    : public OptionalPassInfoMixin<NoRecurseLTOInferencePass> {
+public:
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_FUNCTIONATTRS_H

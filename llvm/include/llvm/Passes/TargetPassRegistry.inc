@@ -92,6 +92,19 @@ if (PIC) {
     return true;                                                               \
   }
 
+#define ADD_ANALYSIS_PASS(NAME, CREATE_PASS)                                   \
+  if (Name == "invalidate<" NAME ">") {                                        \
+    PM.addPass(InvalidateAnalysisPass<                                         \
+               std::remove_reference_t<decltype(CREATE_PASS)>>());             \
+    return true;                                                               \
+  }                                                                            \
+  if (Name == "require<" NAME ">") {                                           \
+    PM.addPass(                                                                \
+        RequireAnalysisPass<std::remove_reference_t<decltype(CREATE_PASS)>,    \
+                            MachineFunction>());                               \
+    return true;                                                               \
+  }
+
 PB.registerPipelineParsingCallback([=](StringRef Name, ModulePassManager &PM,
                                        ArrayRef<PassBuilder::PipelineElement>) {
 #define MODULE_PASS(NAME, CREATE_PASS) ADD_PASS(NAME, CREATE_PASS)
@@ -151,6 +164,16 @@ PB.registerPipelineParsingCallback([=](StringRef Name, FunctionPassManager &PM,
   return false;
 });
 
+PB.registerPipelineParsingCallback([=](StringRef Name,
+                                       MachineFunctionPassManager &PM,
+                                       ArrayRef<PassBuilder::PipelineElement>) {
+#define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS)                           \
+  ADD_ANALYSIS_PASS(NAME, CREATE_PASS)
+#include GET_PASS_REGISTRY
+#undef MACHINE_FUNCTION_ANALYSIS
+  return false;
+});
+
 #undef ADD_PASS
 #undef ADD_PASS_WITH_PARAMS
 
@@ -187,12 +210,13 @@ PB.registerAnalysisRegistrationCallback([](LoopAnalysisManager &AM) {
 #undef LOOP_ANALYSIS
 });
 
-PB.registerAnalysisRegistrationCallback([](MachineFunctionAnalysisManager &AM) {
+PB.registerAnalysisRegistrationCallback(
+    [=](MachineFunctionAnalysisManager &AM) {
 #define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS)                           \
   AM.registerPass([&] { return CREATE_PASS; });
 #include GET_PASS_REGISTRY
 #undef MACHINE_FUNCTION_ANALYSIS
-});
+    });
 
 #undef GET_PASS_REGISTRY
 #endif // GET_PASS_REGISTRY

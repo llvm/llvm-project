@@ -36,6 +36,17 @@ struct transparent_less_not_referenceable
     using is_transparent = void () const &;  // it's a type; a weird one, but a type
 };
 
+// Prevent regression when empty base class optimization is not suitable.
+// See llvm.org/PR152543.
+struct transparent_less_nonempty {
+  template <class T, class U>
+  constexpr bool operator()(T&& t, U&& u) const {
+    return std::forward<T>(t) < std::forward<U>(u);
+  }
+  struct is_transparent {
+  } pad_; // making this comparator non-empty
+};
+
 struct transparent_less_no_type
 {
     template <class T, class U>
@@ -70,16 +81,17 @@ struct transparent_less_not_a_type
 };
 
 struct C2Int { // comparable to int
-    C2Int() : i_(0) {}
-    C2Int(int i): i_(i) {}
-    int get () const { return i_; }
+  TEST_CONSTEXPR_CXX26 C2Int() : i_(0) {}
+  TEST_CONSTEXPR_CXX26 C2Int(int i) : i_(i) {}
+  TEST_CONSTEXPR_CXX26 int get() const { return i_; }
+
 private:
     int i_;
     };
 
-bool operator <(int          rhs,   const C2Int& lhs) { return rhs       < lhs.get(); }
-bool operator <(const C2Int& rhs,   const C2Int& lhs) { return rhs.get() < lhs.get(); }
-bool operator <(const C2Int& rhs,            int lhs) { return rhs.get() < lhs; }
+    TEST_CONSTEXPR_CXX26 bool operator<(int rhs, const C2Int& lhs) { return rhs < lhs.get(); }
+    TEST_CONSTEXPR_CXX26 bool operator<(const C2Int& rhs, const C2Int& lhs) { return rhs.get() < lhs.get(); }
+    TEST_CONSTEXPR_CXX26 bool operator<(const C2Int& rhs, int lhs) { return rhs.get() < lhs; }
 
 #endif // TEST_STD_VER > 11
 

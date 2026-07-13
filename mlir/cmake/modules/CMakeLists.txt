@@ -56,9 +56,15 @@ set(MLIR_CONFIG_INCLUDE_DIRS
   "${MLIR_BINARY_DIR}/include"
   )
 # Refer to the best host mlir-tblgen, which might be a host-optimized version
-set(MLIR_CONFIG_TABLEGEN_EXE "${MLIR_TABLEGEN_EXE}")
-set(MLIR_CONFIG_PDLL_TABLEGEN_EXE "${MLIR_PDLL_TABLEGEN_EXE}")
-set(MLIR_CONFIG_SRC_SHARDER_TABLEGEN_EXE "${MLIR_SRC_SHARDER_TABLEGEN_EXE}")
+# TO_CMAKE_PATH normalizes path separators across platforms. Backslashes would
+# cause a syntax error in MLIRConfig.cmake.
+file(TO_CMAKE_PATH "${MLIR_TABLEGEN_EXE}" MLIR_CONFIG_TABLEGEN_EXE)
+file(TO_CMAKE_PATH "${MLIR_PDLL_TABLEGEN_EXE}" MLIR_CONFIG_PDLL_TABLEGEN_EXE)
+file(TO_CMAKE_PATH "${MLIR_SRC_SHARDER_TABLEGEN_EXE}" MLIR_CONFIG_SRC_SHARDER_TABLEGEN_EXE)
+set(MLIR_CONFIG_LINK_MLIR_DYLIB ${MLIR_LINK_MLIR_DYLIB})
+llvm_canonicalize_cmake_booleans(
+  MLIR_CONFIG_LINK_MLIR_DYLIB
+)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/MLIRConfig.cmake.in
@@ -112,6 +118,8 @@ set(MLIR_CONFIG_TABLEGEN_EXE mlir-tblgen)
 set(MLIR_CONFIG_PDLL_TABLEGEN_EXE mlir-pdll)
 set(MLIR_CONFIG_SRC_SHARDER_TABLEGEN_EXE mlir-src-sharder)
 
+set(MLIR_CONFIG_IRDL_TO_CPP_EXE mlir-irdl-to-cpp)
+
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/MLIRConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/MLIRConfig.cmake
@@ -135,6 +143,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/MLIRConfigVersion.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/AddMLIR.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/AddMLIRPython.cmake
+    ${CMAKE_CURRENT_SOURCE_DIR}/IRDLToCpp.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/MLIRDetectPythonEnv.cmake
     DESTINATION ${MLIR_INSTALL_PACKAGE_DIR}
     COMPONENT mlir-cmake-exports)

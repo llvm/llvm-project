@@ -28,6 +28,10 @@ public:
       : TextTreeStructure(OS, /* showColors */ false), OS(OS) {}
 
   void Visit(const Decl *D) {
+    if (!D) {
+      OS << "<<<NULL>>>";
+      return;
+    }
     OS << D->getDeclKindName() << "Decl";
     if (auto *ND = dyn_cast<NamedDecl>(D)) {
       OS << " '" << ND->getDeclName() << "'";
@@ -1170,6 +1174,12 @@ struct Pair
     int x, y;
 };
 
+// Tuple-like structure with a `get` method that has a default argument.
+struct Pair2
+{
+    int x, y;
+};
+
 // Note: these utilities are required to force binding to tuple like structure
 namespace std
 {
@@ -1180,6 +1190,12 @@ namespace std
 
     template <>
     struct tuple_size<Pair>
+    {
+        static constexpr size_t value = 2;
+    };
+
+    template <>
+    struct tuple_size<Pair2>
     {
         static constexpr size_t value = 2;
     };
@@ -1195,12 +1211,17 @@ namespace std
 template <size_t I>
 int &&get(Pair &&p);
 
+template <size_t I>
+int &&get(Pair2 &&p, int unused = 0);
+
 void decompTuple()
 {
     Pair p{1, 2};
     auto [a, b] = p;
 
     a = 3;
+
+    auto [c, d] = Pair2{3, 4};
 }
 
 )cpp",
@@ -1584,6 +1605,62 @@ DecompositionDecl ''
 `-BindingDecl 'b'
 )cpp");
   }
+
+  {
+    auto FN = ast_matchers::match(
+        functionDecl(hasName("decompTuple"),
+                     hasDescendant(callExpr(hasAncestor(varDecl(
+                                                hasName("a"),
+                                                hasAncestor(bindingDecl()))))
+                                       .bind("decomp_call"))),
+        AST2->getASTContext());
+    EXPECT_EQ(FN.size(), 1u);
+
+    EXPECT_EQ(dumpASTString(TK_AsIs, FN[0].getNodeAs<CallExpr>("decomp_call")),
+              R"cpp(
+CallExpr
+|-ImplicitCastExpr
+| `-DeclRefExpr 'get'
+`-ImplicitCastExpr
+  `-DeclRefExpr ''
+)cpp");
+
+    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
+                            FN[0].getNodeAs<CallExpr>("decomp_call")),
+              R"cpp(
+DeclRefExpr ''
+)cpp");
+  }
+
+  {
+    auto FN = ast_matchers::match(
+        functionDecl(hasName("decompTuple"),
+                     hasDescendant(callExpr(hasAncestor(varDecl(
+                                                hasName("c"),
+                                                hasAncestor(bindingDecl()))))
+                                       .bind("decomp_call_with_default"))),
+        AST2->getASTContext());
+    EXPECT_EQ(FN.size(), 1u);
+
+    EXPECT_EQ(dumpASTString(TK_AsIs, FN[0].getNodeAs<CallExpr>(
+                                         "decomp_call_with_default")),
+              R"cpp(
+CallExpr
+|-ImplicitCastExpr
+| `-DeclRefExpr 'get'
+|-ImplicitCastExpr
+| `-DeclRefExpr ''
+`-CXXDefaultArgExpr
+  `-IntegerLiteral
+)cpp");
+
+    EXPECT_EQ(
+        dumpASTString(TK_IgnoreUnlessSpelledInSource,
+                      FN[0].getNodeAs<CallExpr>("decomp_call_with_default")),
+        R"cpp(
+DeclRefExpr ''
+)cpp");
+  }
 }
 
 TEST(Traverse, IgnoreUnlessSpelledInSourceTemplateInstantiations) {
@@ -1930,6 +2007,77 @@ CXXRewrittenBinaryOperator
 `-DeclRefExpr 'hs2'
 )cpp");
   }
+}
+
+TEST(Traverse, CatchStatements) {
+
+  auto AST = buildASTFromCode(R"cpp(
+void test()
+{
+  try
+  {
+    int a;
+  }
+  catch (...)
+  {
+    int b;
+  }
+
+  try
+  {
+    int a;
+  }
+  catch (const int&)
+  {
+    int b;
+  }
+}
+)cpp");
+
+  auto BN =
+      ast_matchers::match(cxxCatchStmt().bind("catch"), AST->getASTContext());
+  EXPECT_EQ(BN.size(), 2u);
+  const auto *catchWithoutDecl = BN[0].getNodeAs<Stmt>("catch");
+
+  llvm::StringRef Expected = R"cpp(
+CXXCatchStmt
+|-<<<NULL>>>
+`-CompoundStmt
+  `-DeclStmt
+    `-VarDecl 'b'
+)cpp";
+  EXPECT_EQ(dumpASTString(TK_AsIs, catchWithoutDecl), Expected);
+
+  Expected = R"cpp(
+CXXCatchStmt
+|-<<<NULL>>>
+`-CompoundStmt
+  `-DeclStmt
+    `-VarDecl 'b'
+)cpp";
+  EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource, catchWithoutDecl),
+            Expected);
+
+  const auto *catchWithDecl = BN[1].getNodeAs<Stmt>("catch");
+
+  Expected = R"cpp(
+CXXCatchStmt
+|-VarDecl ''
+`-CompoundStmt
+  `-DeclStmt
+    `-VarDecl 'b'
+)cpp";
+  EXPECT_EQ(dumpASTString(TK_AsIs, catchWithDecl), Expected);
+
+  Expected = R"cpp(
+CXXCatchStmt
+|-VarDecl ''
+`-CompoundStmt
+  `-DeclStmt
+    `-VarDecl 'b'
+)cpp";
+  EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource, catchWithDecl),
+            Expected);
 }
 
 } // namespace clang

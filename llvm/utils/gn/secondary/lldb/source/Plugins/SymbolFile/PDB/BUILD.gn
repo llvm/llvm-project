@@ -1,3 +1,14 @@
+import("//lldb/utils/TableGen/lldb_tablegen.gni")
+
+lldb_tablegen("SymbolFilePDBProperties") {
+  args = [ "-gen-lldb-property-defs" ]
+}
+
+lldb_tablegen("SymbolFilePDBPropertiesEnum") {
+  args = [ "-gen-lldb-property-enum-defs" ]
+  td_file = "SymbolFilePDBProperties.td"
+}
+
 static_library("PDB") {
   output_name = "lldbPluginSymbolFilePDB"
   configs += [
@@ -5,6 +16,8 @@ static_library("PDB") {
     "//llvm/utils/gn/build:lldb_code",
   ]
   deps = [
+    ":SymbolFilePDBProperties",
+    ":SymbolFilePDBPropertiesEnum",
     "//clang/lib/AST",
     "//clang/lib/Lex",
     "//lldb/source/Core",

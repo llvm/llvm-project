@@ -9,7 +9,7 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_none_none
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: $x0 = COPY [[COPY]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY %0(s64)
     $x0 = COPY %1(s64)
@@ -20,7 +20,7 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_gpr_none
     ; CHECK: [[COPY:%[0-9]+]]:gpr(s64) = COPY $x0
-    ; CHECK: $x0 = COPY [[COPY]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](s64)
     %0:gpr(s64) = COPY $x0
     %1:_(s64) = COPY %0(s64)
     $x0 = COPY %1(s64)
@@ -31,8 +31,8 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_none_gpr
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr(s64) = COPY [[COPY]](s64)
-    ; CHECK: $x0 = COPY [[COPY1]](s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr(s64) = COPY [[COPY]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[COPY1]](s64)
     %0:_(s64) = COPY $x0
     %1:gpr(s64) = COPY %0(s64)
     $x0 = COPY %1(s64)
@@ -43,8 +43,8 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_fpr_gpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr(s64) = COPY [[COPY]](s64)
-    ; CHECK: $x0 = COPY [[COPY1]](s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr(s64) = COPY [[COPY]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[COPY1]](s64)
     %0:fpr(s64) = COPY $x0
     %1:gpr(s64) = COPY %0(s64)
     $x0 = COPY %1(s64)
@@ -55,8 +55,8 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_gpr64_gpr64_dst_no_llt
     ; CHECK: [[COPY:%[0-9]+]]:gpr64(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]](s64)
-    ; CHECK: $x0 = COPY [[COPY1]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[COPY1]]
     %0:gpr64(s64) = COPY $x0
     %1:gpr64 = COPY %0(s64)
     $x0 = COPY %1
@@ -67,8 +67,8 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_gpr64_gpr64_src_no_llt
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64(s64) = COPY [[COPY]]
-    ; CHECK: $x0 = COPY [[COPY1]](s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64(s64) = COPY [[COPY]]
+    ; CHECK-NEXT: $x0 = COPY [[COPY1]](s64)
     %0:gpr64 = COPY $x0
     %1:gpr64(s64) = COPY %0
     $x0 = COPY %1(s64)
@@ -79,7 +79,7 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_gpr64_gpr64_both_no_llt
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: $x0 = COPY [[COPY]]
+    ; CHECK-NEXT: $x0 = COPY [[COPY]]
     %0:gpr64 = COPY $x0
     %1:gpr64 = COPY %0
     $x0 = COPY %1

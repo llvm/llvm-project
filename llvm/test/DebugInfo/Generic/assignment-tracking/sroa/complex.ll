@@ -1,5 +1,5 @@
 ; RUN: opt -passes=sroa -S -o - %s \
-; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: | FileCheck %s --implicit-check-not="#dbg_"
 ;
 ;; Based on llvm/test/DebugInfo/ARM/sroa-complex.ll
 ;; generated from:

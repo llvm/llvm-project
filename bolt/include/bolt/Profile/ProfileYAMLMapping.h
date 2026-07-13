@@ -29,6 +29,10 @@ struct CallSiteInfo {
   uint32_t EntryDiscriminator{0}; /// multiple entry discriminator
   uint64_t Count{0};
   uint64_t Mispreds{0};
+  // Pseudo probe information, optional
+  uint32_t Probe{0};
+  bool Indirect = false;
+  uint32_t InlineTreeNode{0};
 
   bool operator==(const CallSiteInfo &Other) const {
     return Offset == Other.Offset && DestId == Other.DestId &&
@@ -63,6 +67,9 @@ template <> struct MappingTraits<bolt::CallSiteInfo> {
     YamlIO.mapOptional("disc", CSI.EntryDiscriminator, (uint32_t)0);
     YamlIO.mapRequired("cnt", CSI.Count);
     YamlIO.mapOptional("mis", CSI.Mispreds, (uint64_t)0);
+    YamlIO.mapOptional("pp", CSI.Probe, 0);
+    YamlIO.mapOptional("ppn", CSI.InlineTreeNode, 0);
+    YamlIO.mapOptional("ind", CSI.Indirect, false);
   }
 
   static const bool flow = true;
@@ -95,29 +102,20 @@ template <> struct MappingTraits<bolt::SuccessorInfo> {
 
 namespace bolt {
 struct PseudoProbeInfo {
-  uint32_t InlineTreeIndex = 0;
-  uint64_t BlockMask = 0;            // bitset with probe indices from 1 to 64
-  std::vector<uint64_t> BlockProbes; // block probes with indices above 64
-  std::vector<uint64_t> CallProbes;
-  std::vector<uint64_t> IndCallProbes;
+  std::vector<uint64_t> BlockProbes;
   std::vector<uint32_t> InlineTreeNodes;
 
   bool operator==(const PseudoProbeInfo &Other) const {
-    return InlineTreeIndex == Other.InlineTreeIndex &&
-           BlockProbes == Other.BlockProbes && CallProbes == Other.CallProbes &&
-           IndCallProbes == Other.IndCallProbes;
+    return InlineTreeNodes == Other.InlineTreeNodes &&
+           BlockProbes == Other.BlockProbes;
   }
 };
 } // end namespace bolt
 
 template <> struct MappingTraits<bolt::PseudoProbeInfo> {
   static void mapping(IO &YamlIO, bolt::PseudoProbeInfo &PI) {
-    YamlIO.mapOptional("blx", PI.BlockMask, 0);
-    YamlIO.mapOptional("blk", PI.BlockProbes, std::vector<uint64_t>());
-    YamlIO.mapOptional("call", PI.CallProbes, std::vector<uint64_t>());
-    YamlIO.mapOptional("icall", PI.IndCallProbes, std::vector<uint64_t>());
-    YamlIO.mapOptional("id", PI.InlineTreeIndex, 0);
-    YamlIO.mapOptional("ids", PI.InlineTreeNodes, std::vector<uint32_t>());
+    YamlIO.mapOptional("blk", PI.BlockProbes, std::vector<uint64_t>(1, 1));
+    YamlIO.mapOptional("ids", PI.InlineTreeNodes, std::vector<uint32_t>(1, 0));
   }
 
   static const bool flow = true;
@@ -206,6 +204,7 @@ struct BinaryFunctionProfile {
   uint32_t Id{0};
   llvm::yaml::Hex64 Hash{0};
   uint64_t ExecCount{0};
+  uint64_t ExternEntryCount{0};
   std::vector<BinaryBasicBlockProfile> Blocks;
   std::vector<InlineTreeNode> InlineTree;
   bool Used{false};
@@ -218,6 +217,7 @@ template <> struct MappingTraits<bolt::BinaryFunctionProfile> {
     YamlIO.mapRequired("fid", BFP.Id);
     YamlIO.mapRequired("hash", BFP.Hash);
     YamlIO.mapRequired("exec", BFP.ExecCount);
+    YamlIO.mapOptional("extern", BFP.ExternEntryCount, 0);
     YamlIO.mapRequired("nblocks", BFP.NumBasicBlocks);
     YamlIO.mapOptional("blocks", BFP.Blocks,
                        std::vector<bolt::BinaryBasicBlockProfile>());
@@ -230,8 +230,8 @@ LLVM_YAML_STRONG_TYPEDEF(uint16_t, PROFILE_PF)
 
 template <> struct ScalarBitSetTraits<PROFILE_PF> {
   static void bitset(IO &io, PROFILE_PF &value) {
-    io.bitSetCase(value, "lbr", BinaryFunction::PF_LBR);
-    io.bitSetCase(value, "sample", BinaryFunction::PF_SAMPLE);
+    io.bitSetCase(value, "lbr", BinaryFunction::PF_BRANCH);
+    io.bitSetCase(value, "sample", BinaryFunction::PF_BASIC);
     io.bitSetCase(value, "memevent", BinaryFunction::PF_MEMEVENT);
   }
 };

@@ -38,6 +38,18 @@ static Attr *handleFallThroughAttr(Sema &S, Stmt *St, const ParsedAttr &A,
     return nullptr;
   }
 
+  // CWG 3045: The innermost enclosing switch statement of a fallthrough
+  // statement S shall be contained in the innermost enclosing expansion
+  // statement (8.7 [stmt.expand]) of S, if any.
+  for (Scope *Sc = S.getCurScope();
+       Sc && !Sc->isFunctionScope() && !Sc->isSwitchScope();
+       Sc = Sc->getParent()) {
+    if (Sc->isExpansionStmtScope()) {
+      S.Diag(A.getLoc(), diag::err_fallthrough_attr_invalid_placement);
+      return nullptr;
+    }
+  }
+
   // If this is spelled as the standard C++17 attribute, but not in C++17, warn
   // about using it as an extension.
   if (!S.getLangOpts().CPlusPlus17 && A.isCXX11Attribute() &&
@@ -81,7 +93,7 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
   StringRef PragmaName =
       llvm::StringSwitch<StringRef>(
           PragmaNameLoc->getIdentifierInfo()->getName())
-          .Cases("unroll", "nounroll", "unroll_and_jam", "nounroll_and_jam",
+          .Cases({"unroll", "nounroll", "unroll_and_jam", "nounroll_and_jam"},
                  PragmaNameLoc->getIdentifierInfo()->getName())
           .Default("clang loop");
 
@@ -143,6 +155,7 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                  .Case("pipeline_initiation_interval",
                        LoopHintAttr::PipelineInitiationInterval)
                  .Case("distribute", LoopHintAttr::Distribute)
+                 .Case("licm", LoopHintAttr::LICMDisabled)
                  .Default(LoopHintAttr::Vectorize);
     if (Option == LoopHintAttr::VectorizeWidth) {
       assert((ValueExpr || (StateLoc && StateLoc->getIdentifierInfo())) &&
@@ -168,7 +181,8 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                Option == LoopHintAttr::VectorizePredicate ||
                Option == LoopHintAttr::Unroll ||
                Option == LoopHintAttr::Distribute ||
-               Option == LoopHintAttr::PipelineDisabled) {
+               Option == LoopHintAttr::PipelineDisabled ||
+               Option == LoopHintAttr::LICMDisabled) {
       assert(StateLoc && StateLoc->getIdentifierInfo() &&
              "Loop hint must have an argument");
       if (StateLoc->getIdentifierInfo()->isStr("disable"))
@@ -312,7 +326,17 @@ static Attr *handleNoInlineAttr(Sema &S, Stmt *St, const ParsedAttr &A,
 static Attr *handleAlwaysInlineAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                     SourceRange Range) {
   AlwaysInlineAttr AIA(S.Context, A);
-  if (!AIA.isClangAlwaysInline()) {
+  if (!S.getLangOpts().MicrosoftExt &&
+      (AIA.isMSVCForceInline() || AIA.isMSVCForceInlineCalls())) {
+    S.Diag(St->getBeginLoc(), diag::warn_attribute_ignored) << A;
+    return nullptr;
+  }
+  if (AIA.isMSVCForceInline()) {
+    S.Diag(St->getBeginLoc(), diag::warn_function_attribute_ignored_in_stmt)
+        << "[[msvc::forceinline_calls]]";
+    return nullptr;
+  }
+  if (!AIA.isClangAlwaysInline() && !AIA.isMSVCForceInlineCalls()) {
     S.Diag(St->getBeginLoc(), diag::warn_function_attribute_ignored_in_stmt)
         << "[[clang::always_inline]]";
     return nullptr;
@@ -395,7 +419,7 @@ static Attr *handleCodeAlignAttr(Sema &S, Stmt *St, const ParsedAttr &A) {
 template <typename LoopAttrT>
 static void CheckForDuplicateLoopAttrs(Sema &S, ArrayRef<const Attr *> Attrs) {
   auto FindFunc = [](const Attr *A) { return isa<const LoopAttrT>(A); };
-  const auto *FirstItr = std::find_if(Attrs.begin(), Attrs.end(), FindFunc);
+  const auto *FirstItr = llvm::find_if(Attrs, FindFunc);
 
   if (FirstItr == Attrs.end()) // no attributes found
     return;
@@ -422,13 +446,13 @@ static void CheckForDuplicateLoopAttrs(Sema &S, ArrayRef<const Attr *> Attrs) {
     if (!FirstValue)
       FirstValue = CAFA->getResultAsAPSInt();
 
-    if (FirstValue != SecondValue) {
-      S.Diag((*LastFoundItr)->getLocation(), diag::err_loop_attr_conflict)
-          << *FirstItr;
-      S.Diag((*FirstItr)->getLocation(), diag::note_previous_attribute);
-    }
+    if (llvm::APSInt::isSameValue(*FirstValue, SecondValue))
+      continue;
+
+    S.Diag((*LastFoundItr)->getLocation(), diag::err_loop_attr_conflict)
+        << *FirstItr;
+    S.Diag((*FirstItr)->getLocation(), diag::note_previous_attribute);
   }
-  return;
 }
 
 static Attr *handleMSConstexprAttr(Sema &S, Stmt *St, const ParsedAttr &A,
@@ -475,6 +499,9 @@ CheckForIncompatibleAttributes(Sema &S,
     // The vector predication only has a state form that is exposed by
     // #pragma clang loop vectorize_predicate (enable | disable).
     VectorizePredicate,
+    // The LICM transformation only has a disable state form that is
+    // exposed by #pragma clang loop licm(disable).
+    LICM,
     // This serves as a indicator to how many category are listed in this enum.
     NumberOfCategories
   };
@@ -522,6 +549,9 @@ CheckForIncompatibleAttributes(Sema &S,
     case LoopHintAttr::VectorizePredicate:
       Category = VectorizePredicate;
       break;
+    case LoopHintAttr::LICMDisabled:
+      Category = LICM;
+      break;
     };
 
     assert(Category != NumberOfCategories && "Unhandled loop hint option");
@@ -532,6 +562,7 @@ CheckForIncompatibleAttributes(Sema &S,
         Option == LoopHintAttr::UnrollAndJam ||
         Option == LoopHintAttr::VectorizePredicate ||
         Option == LoopHintAttr::PipelineDisabled ||
+        Option == LoopHintAttr::LICMDisabled ||
         Option == LoopHintAttr::Distribute) {
       // Enable|Disable|AssumeSafety hint.  For example, vectorize(enable).
       PrevAttr = CategoryState.StateAttr;
@@ -673,12 +704,15 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
       !(A.existsInTarget(S.Context.getTargetInfo()) ||
         (S.Context.getLangOpts().SYCLIsDevice && Aux &&
          A.existsInTarget(*Aux)))) {
-    S.Diag(A.getLoc(), A.isRegularKeywordAttribute()
-                           ? (unsigned)diag::err_keyword_not_supported_on_target
-                       : A.isDeclspecAttribute()
-                           ? (unsigned)diag::warn_unhandled_ms_attribute_ignored
-                           : (unsigned)diag::warn_unknown_attribute_ignored)
-        << A << A.getRange();
+    if (A.isRegularKeywordAttribute()) {
+      S.Diag(A.getLoc(), diag::err_keyword_not_supported_on_target)
+          << A << A.getRange();
+    } else if (A.isDeclspecAttribute()) {
+      S.Diag(A.getLoc(), diag::warn_unhandled_ms_attribute_ignored)
+          << A << A.getRange();
+    } else {
+      S.DiagnoseUnknownAttribute(A);
+    }
     return nullptr;
   }
 
@@ -783,15 +817,18 @@ ExprResult Sema::ActOnCXXAssumeAttr(Stmt *St, const ParsedAttr &A,
 ExprResult Sema::BuildCXXAssumeExpr(Expr *Assumption,
                                     const IdentifierInfo *AttrName,
                                     SourceRange Range) {
-  ExprResult Res = CorrectDelayedTyposInExpr(Assumption);
-  if (Res.isInvalid())
+  if (!Assumption)
     return ExprError();
 
-  Res = CheckPlaceholderExpr(Res.get());
+  ExprResult Res = CheckPlaceholderExpr(Assumption);
   if (Res.isInvalid())
     return ExprError();
 
   Res = PerformContextuallyConvertToBool(Res.get());
+  if (Res.isInvalid())
+    return ExprError();
+
+  Res = ActOnFinishFullExpr(Res.get(), /*DiscardedValue=*/false);
   if (Res.isInvalid())
     return ExprError();
 

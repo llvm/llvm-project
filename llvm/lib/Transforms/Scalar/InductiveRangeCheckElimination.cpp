@@ -226,7 +226,7 @@ public:
   /// NB! There may be conditions feeding into \p BI that aren't inductive range
   /// checks, and hence don't end up in \p Checks.
   static void extractRangeChecksFromBranch(
-      BranchInst *BI, Loop *L, ScalarEvolution &SE, BranchProbabilityInfo *BPI,
+      CondBrInst *BI, Loop *L, ScalarEvolution &SE, BranchProbabilityInfo *BPI,
       std::optional<uint64_t> EstimatedTripCount,
       SmallVectorImpl<InductiveRangeCheck> &Checks, bool &Changed);
 };
@@ -237,8 +237,7 @@ class InductiveRangeCheckElimination {
   DominatorTree &DT;
   LoopInfo &LI;
 
-  using GetBFIFunc =
-      std::optional<llvm::function_ref<llvm::BlockFrequencyInfo &()>>;
+  using GetBFIFunc = llvm::function_ref<llvm::BlockFrequencyInfo &()>;
   GetBFIFunc GetBFI;
 
   // Returns the estimated number of iterations based on block frequency info if
@@ -249,7 +248,7 @@ class InductiveRangeCheckElimination {
 public:
   InductiveRangeCheckElimination(ScalarEvolution &SE,
                                  BranchProbabilityInfo *BPI, DominatorTree &DT,
-                                 LoopInfo &LI, GetBFIFunc GetBFI = std::nullopt)
+                                 LoopInfo &LI, GetBFIFunc GetBFI = nullptr)
       : SE(SE), BPI(BPI), DT(DT), LI(LI), GetBFI(GetBFI) {}
 
   bool run(Loop *L, function_ref<void(Loop *, bool)> LPMAddNewLoop);
@@ -424,7 +423,7 @@ bool InductiveRangeCheck::reassociateSubLHS(
   auto getExprScaledIfOverflow = [&](Instruction::BinaryOps BinOp,
                                      const SCEV *LHS,
                                      const SCEV *RHS) -> const SCEV * {
-    const SCEV *(ScalarEvolution::*Operation)(const SCEV *, const SCEV *,
+    const SCEV *(ScalarEvolution::*Operation)(SCEVUse, SCEVUse,
                                               SCEV::NoWrapFlags, unsigned);
     switch (BinOp) {
     default:
@@ -517,10 +516,10 @@ void InductiveRangeCheck::extractRangeChecksFromCond(
 }
 
 void InductiveRangeCheck::extractRangeChecksFromBranch(
-    BranchInst *BI, Loop *L, ScalarEvolution &SE, BranchProbabilityInfo *BPI,
+    CondBrInst *BI, Loop *L, ScalarEvolution &SE, BranchProbabilityInfo *BPI,
     std::optional<uint64_t> EstimatedTripCount,
     SmallVectorImpl<InductiveRangeCheck> &Checks, bool &Changed) {
-  if (BI->isUnconditional() || BI->getParent() == L->getLoopLatch())
+  if (BI->getParent() == L->getLoopLatch())
     return;
 
   unsigned IndexLoopSucc = L->contains(BI->getSuccessor(0)) ? 0 : 1;
@@ -959,7 +958,7 @@ PreservedAnalyses IRCEPass::run(Function &F, FunctionAnalysisManager &AM) {
 std::optional<uint64_t>
 InductiveRangeCheckElimination::estimatedTripCount(const Loop &L) {
   if (GetBFI) {
-    BlockFrequencyInfo &BFI = (*GetBFI)();
+    BlockFrequencyInfo &BFI = GetBFI();
     uint64_t hFreq = BFI.getBlockFreq(L.getHeader()).getFrequency();
     uint64_t phFreq = BFI.getBlockFreq(L.getLoopPreheader()).getFrequency();
     if (phFreq == 0 || hFreq == 0)
@@ -973,7 +972,7 @@ InductiveRangeCheckElimination::estimatedTripCount(const Loop &L) {
   auto *Latch = L.getLoopLatch();
   if (!Latch)
     return std::nullopt;
-  auto *LatchBr = dyn_cast<BranchInst>(Latch->getTerminator());
+  auto *LatchBr = dyn_cast<CondBrInst>(Latch->getTerminator());
   if (!LatchBr)
     return std::nullopt;
 
@@ -1013,7 +1012,7 @@ bool InductiveRangeCheckElimination::run(
   bool Changed = false;
 
   for (auto *BBI : L->getBlocks())
-    if (BranchInst *TBI = dyn_cast<BranchInst>(BBI->getTerminator()))
+    if (CondBrInst *TBI = dyn_cast<CondBrInst>(BBI->getTerminator()))
       InductiveRangeCheck::extractRangeChecksFromBranch(
           TBI, L, SE, BPI, EstimatedTripCount, RangeChecks, Changed);
 

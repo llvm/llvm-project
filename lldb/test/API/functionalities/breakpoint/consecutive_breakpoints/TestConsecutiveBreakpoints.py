@@ -91,6 +91,11 @@ class ConsecutiveBreakpointsTestCase(TestBase):
         self.finish_test()
 
     @no_debug_info_test
+    @skipIf(
+        oslist=["windows"],
+        archs=["x86_64"],
+        bugnumber="github.com/llvm/llvm-project/issues/138083",
+    )
     def test_single_step_thread_specific(self):
         """Test that single step stops, even though the second breakpoint is not valid."""
         self.prepare_test()

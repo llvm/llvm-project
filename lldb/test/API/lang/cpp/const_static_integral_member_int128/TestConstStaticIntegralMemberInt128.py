@@ -9,9 +9,10 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class TestCase(TestBase):
     # int128 is not available on 32-bit ARM.
-    @skipIf(archs=["arm"])
+    @skipIf(archs=["arm$"])
     def test_int128(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

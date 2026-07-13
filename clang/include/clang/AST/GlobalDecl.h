@@ -164,7 +164,7 @@ public:
   }
 
   static KernelReferenceKind getDefaultKernelReference(const FunctionDecl *D) {
-    return (D->hasAttr<OpenCLKernelAttr>() || D->getLangOpts().CUDAIsDevice)
+    return (D->hasAttr<DeviceKernelAttr>() || D->getLangOpts().CUDAIsDevice)
                ? KernelReferenceKind::Kernel
                : KernelReferenceKind::Stub;
   }
@@ -215,15 +215,6 @@ public:
 namespace llvm {
 
   template<> struct DenseMapInfo<clang::GlobalDecl> {
-    static inline clang::GlobalDecl getEmptyKey() {
-      return clang::GlobalDecl();
-    }
-
-    static inline clang::GlobalDecl getTombstoneKey() {
-      return clang::GlobalDecl::
-        getFromOpaquePtr(reinterpret_cast<void*>(-1));
-    }
-
     static unsigned getHashValue(clang::GlobalDecl GD) {
       return DenseMapInfo<void*>::getHashValue(GD.getAsOpaquePtr());
     }

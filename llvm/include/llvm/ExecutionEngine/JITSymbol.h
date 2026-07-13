@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_JITSYMBOL_H
 #define LLVM_EXECUTIONENGINE_JITSYMBOL_H
 
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -176,15 +177,15 @@ public:
 
   /// Construct a JITSymbolFlags value based on the flags of the given global
   /// value.
-  static JITSymbolFlags fromGlobalValue(const GlobalValue &GV);
+  LLVM_ABI static JITSymbolFlags fromGlobalValue(const GlobalValue &GV);
 
   /// Construct a JITSymbolFlags value based on the flags of the given global
   /// value summary.
-  static JITSymbolFlags fromSummary(GlobalValueSummary *S);
+  LLVM_ABI static JITSymbolFlags fromSummary(GlobalValueSummary *S);
 
   /// Construct a JITSymbolFlags value based on the flags of the given libobject
   /// symbol.
-  static Expected<JITSymbolFlags>
+  LLVM_ABI static Expected<JITSymbolFlags>
   fromObjectSymbol(const object::SymbolRef &Symbol);
 
 private:
@@ -219,7 +220,8 @@ public:
 
   operator JITSymbolFlags::TargetFlagsType&() { return Flags; }
 
-  static ARMJITSymbolFlags fromObjectSymbol(const object::SymbolRef &Symbol);
+  LLVM_ABI static ARMJITSymbolFlags
+  fromObjectSymbol(const object::SymbolRef &Symbol);
 
 private:
   JITSymbolFlags::TargetFlagsType Flags = 0;
@@ -368,7 +370,7 @@ private:
 /// Symbol queries are done in bulk (i.e. you request resolution of a set of
 /// symbols, rather than a single one) to reduce IPC overhead in the case of
 /// remote JITing, and expose opportunities for parallel compilation.
-class JITSymbolResolver {
+class LLVM_ABI JITSymbolResolver {
 public:
   using LookupSet = std::set<StringRef>;
   using LookupResult = std::map<StringRef, JITEvaluatedSymbol>;
@@ -398,7 +400,7 @@ private:
 };
 
 /// Legacy symbol resolution interface.
-class LegacyJITSymbolResolver : public JITSymbolResolver {
+class LLVM_ABI LegacyJITSymbolResolver : public JITSymbolResolver {
 public:
   /// Performs lookup by, for each symbol, first calling
   ///        findSymbolInLogicalDylib and if that fails calling

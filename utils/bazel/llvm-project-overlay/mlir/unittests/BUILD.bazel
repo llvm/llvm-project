@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@rules_cc//cc:defs.bzl", "cc_test")
 load("//mlir:tblgen.bzl", "gentbl_cc_library")
 
 package(
@@ -36,12 +37,17 @@ cc_test(
         "IR/*.cpp",
     ]),
     deps = [
+        "//llvm:Core",
+        "//llvm:Remarks",
         "//llvm:Support",
         "//mlir:BytecodeReader",
+        "//mlir:BytecodeWriter",
         "//mlir:CallOpInterfaces",
         "//mlir:FunctionInterfaces",
         "//mlir:IR",
+        "//mlir:MemRefDialect",
         "//mlir:Parser",
+        "//mlir:RemarkStreamer",
         "//mlir:Support",
         "//mlir/test:TestDialect",
         "//third-party/unittest:gmock",
@@ -68,7 +74,11 @@ cc_test(
         "//mlir:IR",
         "//mlir:InferIntRangeInterface",
         "//mlir:InferTypeOpInterface",
+        "//mlir:MemorySlotUtils",
         "//mlir:Parser",
+        "//mlir:SideEffectInterfaces",
+        "//mlir:Support",
+        "//mlir/test:TestDialect",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
@@ -85,6 +95,7 @@ cc_test(
         "//llvm:TestingSupport",
         "//mlir:Support",
         "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
 )
@@ -160,6 +171,7 @@ cc_test(
         "//llvm:TestingSupport",
         "//mlir:IR",
         "//mlir:MemRefDialect",
+        "//mlir:MemRefUtils",
         "//mlir:SideEffectInterfaces",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
@@ -173,11 +185,15 @@ cc_test(
         "Dialect/SCF/*.cpp",
     ]),
     deps = [
+        "//mlir:AffineDialect",
         "//mlir:ArithDialect",
+        "//mlir:DialectUtils",
         "//mlir:FuncDialect",
         "//mlir:IR",
+        "//mlir:LoopLikeInterface",
         "//mlir:Parser",
         "//mlir:SCFDialect",
+        "//mlir:SCFUtils",
         "//mlir:SideEffectInterfaces",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
@@ -414,6 +430,7 @@ cc_test(
         "//mlir:Parser",
         "//mlir:Pass",
         "//mlir:ReconcileUnrealizedCasts",
+        "//mlir:RegisterAllDialects",
         "//mlir:ToLLVMIRTranslation",
         "//mlir:VectorToLLVM",
         "//mlir:VectorToSCF",

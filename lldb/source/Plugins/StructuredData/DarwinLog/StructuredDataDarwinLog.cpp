@@ -126,7 +126,7 @@ public:
 
   StructuredDataDarwinLogProperties() : Properties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_darwinlog_properties);
+    m_collection_sp->Initialize(g_darwinlog_properties_def);
   }
 
   ~StructuredDataDarwinLogProperties() override = default;
@@ -574,8 +574,7 @@ public:
       return config_sp;
 
     // Handle source stream flags.
-    auto source_flags_sp =
-        StructuredData::DictionarySP(new StructuredData::Dictionary());
+    auto source_flags_sp = std::make_shared<StructuredData::Dictionary>();
     config_sp->AddItem("source-flags", source_flags_sp);
 
     source_flags_sp->AddBooleanItem("any-process", m_include_any_process);
@@ -591,8 +590,7 @@ public:
 
     // Handle filter rules
     if (!m_filter_rules.empty()) {
-      auto json_filter_rules_sp =
-          StructuredData::ArraySP(new StructuredData::Array);
+      auto json_filter_rules_sp = std::make_shared<StructuredData::Array>();
       config_sp->AddItem("filter-rules", json_filter_rules_sp);
       for (auto &rule_sp : m_filter_rules) {
         if (!rule_sp)
@@ -743,8 +741,10 @@ class EnableCommand : public CommandObjectParsed {
 public:
   EnableCommand(CommandInterpreter &interpreter, bool enable, const char *name,
                 const char *help, const char *syntax)
-      : CommandObjectParsed(interpreter, name, help, syntax), m_enable(enable),
-        m_options_sp(enable ? new EnableOptions() : nullptr) {}
+      : CommandObjectParsed(interpreter, name, help, syntax,
+                            eCommandAllowsDummyTarget),
+        m_enable(enable), m_options_sp(enable ? new EnableOptions() : nullptr) {
+  }
 
 protected:
   void AppendStrictSourcesWarning(CommandReturnObject &result,
@@ -786,10 +786,10 @@ protected:
 
     // Now check if we have a running process.  If so, we should instruct the
     // process monitor to enable/disable DarwinLog support now.
-    Target &target = GetTarget();
-
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandAllowsDummyTarget");
     // Grab the active process.
-    auto process_sp = target.GetProcessSP();
+    auto process_sp = target->GetProcessSP();
     if (!process_sp) {
       // No active process, so there is nothing more to do right now.
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -860,7 +860,8 @@ public:
       : CommandObjectParsed(interpreter, "status",
                             "Show whether Darwin log supported is available"
                             " and enabled.",
-                            "plugin structured-data darwin-log status") {}
+                            "plugin structured-data darwin-log status",
+                            eCommandAllowsDummyTarget) {}
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
@@ -868,8 +869,9 @@ protected:
 
     // Figure out if we've got a process.  If so, we can tell if DarwinLog is
     // available for that process.
-    Target &target = GetTarget();
-    auto process_sp = target.GetProcessSP();
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandAllowsDummyTarget");
+    auto process_sp = target->GetProcessSP();
     if (!process_sp) {
       stream.PutCString("Availability: unknown (requires process)\n");
       stream.PutCString("Enabled: not applicable "
@@ -1603,6 +1605,7 @@ void StructuredDataDarwinLog::AddInitCompletionHook(Process &process) {
 
   const char *func_name = "_libtrace_init";
   const lldb::addr_t offset = 0;
+  const bool offset_is_insn_count = false;
   const LazyBool skip_prologue = eLazyBoolCalculate;
   // This is an internal breakpoint - the user shouldn't see it.
   const bool internal = true;
@@ -1610,7 +1613,8 @@ void StructuredDataDarwinLog::AddInitCompletionHook(Process &process) {
 
   auto breakpoint_sp = target.CreateBreakpoint(
       &module_spec_list, source_spec_list, func_name, eFunctionNameTypeFull,
-      eLanguageTypeC, offset, skip_prologue, internal, hardware);
+      eLanguageTypeC, offset, offset_is_insn_count, skip_prologue, internal,
+      hardware);
   if (!breakpoint_sp) {
     // Huh?  Bail here.
     LLDB_LOGF(log,
@@ -1804,18 +1808,16 @@ void StructuredDataDarwinLog::EnableNow() {
     // care of the rest.
     auto &interpreter = debugger_sp->GetCommandInterpreter();
     const bool success = RunEnableCommand(interpreter);
-    if (log) {
-      if (success)
-        LLDB_LOGF(log,
-                  "StructuredDataDarwinLog::%s() ran enable command "
-                  "successfully for (process uid %u)",
-                  __FUNCTION__, process_sp->GetUniqueID());
-      else
-        LLDB_LOGF(log,
-                  "StructuredDataDarwinLog::%s() error: running "
-                  "enable command failed (process uid %u)",
-                  __FUNCTION__, process_sp->GetUniqueID());
-    }
+    if (success)
+      LLDB_LOGF(log,
+                "StructuredDataDarwinLog::%s() ran enable command "
+                "successfully for (process uid %u)",
+                __FUNCTION__, process_sp->GetUniqueID());
+    else
+      LLDB_LOGF(log,
+                "StructuredDataDarwinLog::%s() error: running "
+                "enable command failed (process uid %u)",
+                __FUNCTION__, process_sp->GetUniqueID());
     Debugger::ReportError("failed to configure DarwinLog support",
                           debugger_sp->GetID());
     return;

@@ -109,7 +109,7 @@ void dumpFunction(const BinaryFunction &BF) {
   }
 
   std::string PrintName = BF.getPrintName();
-  std::replace(PrintName.begin(), PrintName.end(), '/', '-');
+  llvm::replace(PrintName, '/', '-');
   std::string Filename =
       opts::AsmDump.empty()
           ? (PrintName + ".s")
@@ -142,7 +142,7 @@ void dumpFunction(const BinaryFunction &BF) {
   std::unique_ptr<MCStreamer> AsmStreamer(createAsmStreamer(
       *LocalCtx, std::move(FOut), std::move(InstructionPrinter),
       std::move(MCEInstance.MCE), std::move(MAB)));
-  AsmStreamer->initSections(true, *BC.STI);
+  AsmStreamer->initSections(*BC.STI);
   std::unique_ptr<TargetMachine> TM(BC.TheTarget->createTargetMachine(
       *BC.TheTriple, "", "", TargetOptions(), std::nullopt));
   std::unique_ptr<AsmPrinter> MAP(
@@ -175,7 +175,7 @@ void dumpFunction(const BinaryFunction &BF) {
       // Dump pseudo instructions (CFI)
       if (BC.MIB->isPseudo(Instr)) {
         if (BC.MIB->isCFI(Instr))
-          dumpCFI(BF, Instr, *MAP.get());
+          dumpCFI(BF, Instr, *MAP);
         continue;
       }
 
@@ -227,7 +227,7 @@ void dumpFunction(const BinaryFunction &BF) {
   OS << "# Jump tables\n";
   // Print all jump tables.
   for (auto &JTI : BF.jumpTables())
-    dumpJumpTableSymbols(OS, JTI.second, *MAP.get(), LastSection);
+    dumpJumpTableSymbols(OS, JTI.second, *MAP, LastSection);
 
   OS << "# BinaryData\n";
   // Print data references.

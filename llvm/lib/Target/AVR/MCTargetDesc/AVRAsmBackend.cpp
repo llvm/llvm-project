@@ -19,7 +19,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
@@ -368,14 +367,23 @@ AVRAsmBackend::createObjectTargetWriter() const {
   return createAVRELFObjectWriter(MCELFObjectTargetWriter::getOSABI(OSType));
 }
 
-void AVRAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                               const MCValue &Target,
-                               MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved,
-                               const MCSubtargetInfo *STI) const {
+void AVRAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
+                               const MCValue &Target, uint8_t *Data,
+                               uint64_t Value, bool IsResolved) {
+  // AVR sets the fixup value to bypass the assembly time overflow with a
+  // relocation.
+  if (IsResolved) {
+    auto TargetVal = MCValue::get(Target.getAddSym(), Target.getSubSym(), Value,
+                                  Target.getSpecifier());
+    if (forceRelocation(F, Fixup, TargetVal))
+      IsResolved = false;
+  }
+  if (!IsResolved)
+    Asm->getWriter().recordRelocation(F, Fixup, Target, Value);
+
   if (mc::isRelocation(Fixup.getKind()))
     return;
-  adjustFixupValue(Fixup, Target, Value, &Asm.getContext());
+  adjustFixupValue(Fixup, Target, Value, &getContext());
   if (Value == 0)
     return; // Doesn't change encoding.
 
@@ -388,14 +396,14 @@ void AVRAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   // Shift the value into position.
   Value <<= Info.TargetOffset;
 
-  unsigned Offset = Fixup.getOffset();
-  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + NumBytes <= F.getSize() &&
+         "Invalid fixup offset!");
 
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
   for (unsigned i = 0; i < NumBytes; ++i) {
     uint8_t mask = (((Value >> (i * 8)) & 0xff));
-    Data[Offset + i] |= mask;
+    Data[i] |= mask;
   }
 }
 
@@ -424,8 +432,8 @@ MCFixupKindInfo AVRAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       // name                    offset  bits  flags
       {"fixup_32", 0, 32, 0},
 
-      {"fixup_7_pcrel", 3, 7, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_13_pcrel", 0, 12, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_7_pcrel", 3, 7, 0},
+      {"fixup_13_pcrel", 0, 12, 0},
 
       {"fixup_16", 0, 16, 0},
       {"fixup_16_pm", 0, 16, 0},
@@ -476,7 +484,7 @@ MCFixupKindInfo AVRAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   // Fixup kinds from .reloc directive are like R_AVR_NONE. They do not require
   // any extra processing.
   if (mc::isRelocation(Kind))
-    return MCAsmBackend::getFixupKindInfo(FK_NONE);
+    return {};
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
@@ -498,27 +506,14 @@ bool AVRAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-bool AVRAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
-                                          const MCFixup &Fixup,
-                                          const MCValue &Target,
-                                          const MCSubtargetInfo *STI) {
+bool AVRAsmBackend::forceRelocation(const MCFragment &F, const MCFixup &Fixup,
+                                    const MCValue &Target) {
   switch ((unsigned)Fixup.getKind()) {
   default:
     return false;
 
   case AVR::fixup_7_pcrel:
-  case AVR::fixup_13_pcrel: {
-    uint64_t Offset = Target.getConstant();
-    uint64_t Size = AVRAsmBackend::getFixupKindInfo(Fixup.getKind()).TargetSize;
-
-    // If the jump is too large to encode it, fall back to a relocation.
-    //
-    // Note that trying to actually link that relocation *would* fail, but the
-    // hopes are that the module we're currently compiling won't be actually
-    // linked to the final binary.
-    return !adjust::adjustRelativeBranch(Size, Fixup, Offset, STI);
-  }
-
+  case AVR::fixup_13_pcrel:
   case AVR::fixup_call:
     return true;
   }

@@ -8,10 +8,8 @@
 
 #include "llvm/ExecutionEngine/Orc/UnwindInfoRegistrationPlugin.h"
 
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MachOObjectFormat.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 
 #define DEBUG_TYPE "orc"
@@ -21,18 +19,19 @@ using namespace llvm::jitlink;
 namespace llvm::orc {
 
 Expected<std::shared_ptr<UnwindInfoRegistrationPlugin>>
-UnwindInfoRegistrationPlugin::Create(ExecutionSession &ES) {
+UnwindInfoRegistrationPlugin::Create(
+    ExecutionSession &ES, rt::MachOUnwindInfoRegistrarSymbolNames SNs) {
 
-  ExecutorAddr Register, Deregister;
+  ExecutorAddr RegisterSections, DeregisterSections;
 
   auto &EPC = ES.getExecutorProcessControl();
   if (auto Err = EPC.getBootstrapSymbols(
-          {{Register, rt_alt::UnwindInfoManagerRegisterActionName},
-           {Deregister, rt_alt::UnwindInfoManagerDeregisterActionName}}))
+          {{RegisterSections, SNs.RegisterSectionsName},
+           {DeregisterSections, SNs.DeregisterSectionsName}}))
     return std::move(Err);
 
-  return std::make_shared<UnwindInfoRegistrationPlugin>(ES, Register,
-                                                        Deregister);
+  return std::make_shared<UnwindInfoRegistrationPlugin>(ES, RegisterSections,
+                                                        DeregisterSections);
 }
 
 void UnwindInfoRegistrationPlugin::modifyPassConfig(
@@ -107,16 +106,18 @@ Error UnwindInfoRegistrationPlugin::addUnwindInfoRegistrationActions(
                                    inconvertibleErrorCode());
 
   using namespace shared;
-  using SPSRegisterArgs =
+  using SPSRegisterSectionsArgs =
       SPSArgList<SPSSequence<SPSExecutorAddrRange>, SPSExecutorAddr,
                  SPSExecutorAddrRange, SPSExecutorAddrRange>;
-  using SPSDeregisterArgs = SPSArgList<SPSSequence<SPSExecutorAddrRange>>;
+  using SPSDeregisterSectionsArgs =
+      SPSArgList<SPSSequence<SPSExecutorAddrRange>>;
 
   G.allocActions().push_back(
-      {cantFail(WrapperFunctionCall::Create<SPSRegisterArgs>(
-           Register, CodeRanges, DSOBase, EHFrameRange, UnwindInfoRange)),
-       cantFail(WrapperFunctionCall::Create<SPSDeregisterArgs>(Deregister,
-                                                               CodeRanges))});
+      {cantFail(WrapperFunctionCall::Create<SPSRegisterSectionsArgs>(
+           RegisterSections, CodeRanges, DSOBase, EHFrameRange,
+           UnwindInfoRange)),
+       cantFail(WrapperFunctionCall::Create<SPSDeregisterSectionsArgs>(
+           DeregisterSections, CodeRanges))});
 
   return Error::success();
 }

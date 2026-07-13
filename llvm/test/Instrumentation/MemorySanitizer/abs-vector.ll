@@ -6,19 +6,22 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 define <4 x i64> @test_mm256_abs_epi8(<4 x i64> %a) local_unnamed_addr #0 {
-; CHECK-LABEL: @test_mm256_abs_epi8(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
-; ORIGIN-NEXT:   [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
-; CHECK:         call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[TMP0]] to <32 x i8>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64> [[A:%.*]] to <32 x i8>
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call <32 x i8> @llvm.abs.v32i8(<32 x i8> [[TMP3]], i1 false)
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <32 x i8> [[TMP2]] to <4 x i64>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <32 x i8> [[TMP4]] to <4 x i64>
-; CHECK-NEXT:    store <4 x i64> [[TMP5]], ptr @__msan_retval_tls, align 8
-; ORIGIN-NEXT:   store i32 [[TMP1]], ptr @__msan_retval_origin_tls, align 4
-; CHECK:         ret <4 x i64> [[TMP6]]
+; ORIGIN-LABEL: @test_mm256_abs_epi8(
+; ORIGIN-NEXT:  entry:
+; ORIGIN-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
+; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
+; ORIGIN-NEXT:    call void @llvm.donothing()
+; ORIGIN-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[TMP0]] to <32 x i8>
+; ORIGIN-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64> [[A:%.*]] to <32 x i8>
+; ORIGIN-NEXT:    [[TMP4:%.*]] = icmp eq <32 x i8> [[TMP3]], splat (i8 -128)
+; ORIGIN-NEXT:    [[TMP5:%.*]] = select <32 x i1> [[TMP4]], <32 x i8> splat (i8 -1), <32 x i8> [[TMP2]]
+; ORIGIN-NEXT:    [[TMP6:%.*]] = select i1 false, <32 x i8> [[TMP5]], <32 x i8> [[TMP2]]
+; ORIGIN-NEXT:    [[TMP7:%.*]] = tail call <32 x i8> @llvm.abs.v32i8(<32 x i8> [[TMP3]], i1 false)
+; ORIGIN-NEXT:    [[TMP8:%.*]] = bitcast <32 x i8> [[TMP6]] to <4 x i64>
+; ORIGIN-NEXT:    [[TMP9:%.*]] = bitcast <32 x i8> [[TMP7]] to <4 x i64>
+; ORIGIN-NEXT:    store <4 x i64> [[TMP8]], ptr @__msan_retval_tls, align 8
+; ORIGIN-NEXT:    store i32 [[TMP1]], ptr @__msan_retval_origin_tls, align 4
+; ORIGIN-NEXT:    ret <4 x i64> [[TMP9]]
 ;
 entry:
   %0 = bitcast <4 x i64> %a to <32 x i8>
@@ -28,19 +31,22 @@ entry:
 }
 
 define <4 x i64> @test_mm256_abs_epi16(<4 x i64> %a) local_unnamed_addr #0 {
-; CHECK-LABEL: @test_mm256_abs_epi16(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
-; ORIGIN-NEXT:   [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
-; CHECK:         call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[TMP0]] to <16 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64> [[A:%.*]] to <16 x i16>
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call <16 x i16> @llvm.abs.v16i16(<16 x i16> [[TMP3]], i1 false)
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <16 x i16> [[TMP2]] to <4 x i64>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <16 x i16> [[TMP4]] to <4 x i64>
-; CHECK-NEXT:    store <4 x i64> [[TMP5]], ptr @__msan_retval_tls, align 8
-; ORIGIN-NEXT:   store i32 [[TMP1]], ptr @__msan_retval_origin_tls, align 4
-; CHECK:         ret <4 x i64> [[TMP6]]
+; ORIGIN-LABEL: @test_mm256_abs_epi16(
+; ORIGIN-NEXT:  entry:
+; ORIGIN-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
+; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
+; ORIGIN-NEXT:    call void @llvm.donothing()
+; ORIGIN-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[TMP0]] to <16 x i16>
+; ORIGIN-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64> [[A:%.*]] to <16 x i16>
+; ORIGIN-NEXT:    [[TMP4:%.*]] = icmp eq <16 x i16> [[TMP3]], splat (i16 -32768)
+; ORIGIN-NEXT:    [[TMP5:%.*]] = select <16 x i1> [[TMP4]], <16 x i16> splat (i16 -1), <16 x i16> [[TMP2]]
+; ORIGIN-NEXT:    [[TMP6:%.*]] = select i1 false, <16 x i16> [[TMP5]], <16 x i16> [[TMP2]]
+; ORIGIN-NEXT:    [[TMP7:%.*]] = tail call <16 x i16> @llvm.abs.v16i16(<16 x i16> [[TMP3]], i1 false)
+; ORIGIN-NEXT:    [[TMP8:%.*]] = bitcast <16 x i16> [[TMP6]] to <4 x i64>
+; ORIGIN-NEXT:    [[TMP9:%.*]] = bitcast <16 x i16> [[TMP7]] to <4 x i64>
+; ORIGIN-NEXT:    store <4 x i64> [[TMP8]], ptr @__msan_retval_tls, align 8
+; ORIGIN-NEXT:    store i32 [[TMP1]], ptr @__msan_retval_origin_tls, align 4
+; ORIGIN-NEXT:    ret <4 x i64> [[TMP9]]
 ;
 entry:
   %0 = bitcast <4 x i64> %a to <16 x i16>
@@ -50,19 +56,22 @@ entry:
 }
 
 define <4 x i64> @test_mm256_abs_epi32(<4 x i64> %a) local_unnamed_addr #0 {
-; CHECK-LABEL: @test_mm256_abs_epi32(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
-; ORIGIN-NEXT:   [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
-; CHECK:         call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[TMP0]] to <8 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64> [[A:%.*]] to <8 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call <8 x i32> @llvm.abs.v8i32(<8 x i32> [[TMP3]], i1 false)
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i32> [[TMP2]] to <4 x i64>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i32> [[TMP4]] to <4 x i64>
-; CHECK-NEXT:    store <4 x i64> [[TMP5]], ptr @__msan_retval_tls, align 8
-; ORIGIN-NEXT:   store i32 [[TMP1]], ptr @__msan_retval_origin_tls, align 4
-; CHECK:         ret <4 x i64> [[TMP6]]
+; ORIGIN-LABEL: @test_mm256_abs_epi32(
+; ORIGIN-NEXT:  entry:
+; ORIGIN-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
+; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
+; ORIGIN-NEXT:    call void @llvm.donothing()
+; ORIGIN-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[TMP0]] to <8 x i32>
+; ORIGIN-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64> [[A:%.*]] to <8 x i32>
+; ORIGIN-NEXT:    [[TMP4:%.*]] = icmp eq <8 x i32> [[TMP3]], splat (i32 -2147483648)
+; ORIGIN-NEXT:    [[TMP5:%.*]] = select <8 x i1> [[TMP4]], <8 x i32> splat (i32 -1), <8 x i32> [[TMP2]]
+; ORIGIN-NEXT:    [[TMP6:%.*]] = select i1 false, <8 x i32> [[TMP5]], <8 x i32> [[TMP2]]
+; ORIGIN-NEXT:    [[TMP7:%.*]] = tail call <8 x i32> @llvm.abs.v8i32(<8 x i32> [[TMP3]], i1 false)
+; ORIGIN-NEXT:    [[TMP8:%.*]] = bitcast <8 x i32> [[TMP6]] to <4 x i64>
+; ORIGIN-NEXT:    [[TMP9:%.*]] = bitcast <8 x i32> [[TMP7]] to <4 x i64>
+; ORIGIN-NEXT:    store <4 x i64> [[TMP8]], ptr @__msan_retval_tls, align 8
+; ORIGIN-NEXT:    store i32 [[TMP1]], ptr @__msan_retval_origin_tls, align 4
+; ORIGIN-NEXT:    ret <4 x i64> [[TMP9]]
 ;
 entry:
   %0 = bitcast <4 x i64> %a to <8 x i32>

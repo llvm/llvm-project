@@ -29,11 +29,13 @@ RUN: lld-link -machine:arm64ec -dll -noentry -out:test2.dll symref-arm64ec.obj s
 Verify that both native and EC symbols can be referenced in a hybrid target.
 RUN: lld-link -machine:arm64x -dll -noentry -out:test3.dll symref-arm64ec.obj nsymref-aarch64.obj sym-arm64ec.lib \
 RUN:          loadconfig-arm64.obj loadconfig-arm64ec.obj
+RUN: lld-link -machine:arm64ec -dll -noentry -out:test3ec.dll symref-arm64ec.obj nsymref-aarch64.obj sym-arm64ec.lib \
+RUN:          loadconfig-arm64.obj loadconfig-arm64ec.obj
 
 Ensure that an EC symbol is not resolved using a regular symbol map.
 RUN: not lld-link -machine:arm64ec -dll -noentry -out:test-err.dll nsymref-arm64ec.obj sym-arm64ec.lib loadconfig-arm64ec.obj 2>&1 |\
 RUN:              FileCheck --check-prefix=ERR %s
-ERR: error: undefined symbol: nsym
+ERR: error: undefined symbol: nsym (EC symbol)
 
 Verify that a library symbol can be referenced, even if its name conflicts with an anti-dependency alias.
 RUN: lld-link -machine:arm64ec -dll -noentry -out:ref-alias-1.dll ref-alias.obj func.lib loadconfig-arm64ec.obj

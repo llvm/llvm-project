@@ -7,7 +7,7 @@ module attributes {omp.is_target_device = false} {
     %3 = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr
     %6 = omp.map.info var_ptr(%1 : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     %7 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr
-    omp.target nowait map_entries(%6 -> %arg0, %7 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+    omp.target kernel_type(generic) nowait map_entries(%6 -> %arg0, %7 -> %arg1 : !llvm.ptr, !llvm.ptr) {
       %8 = llvm.mlir.constant(0 : i64) : i64
       %9 = llvm.mlir.constant(100 : i32) : i32
       llvm.br ^bb1(%9, %8 : i32, i64)
@@ -20,7 +20,7 @@ module attributes {omp.is_target_device = false} {
     ^bb3:  // pred: ^bb1
       llvm.store %13, %arg1 : i32, !llvm.ptr
       omp.terminator
-    }
+    } loc(#loc3)
     llvm.return
   } loc(#loc2)
 }
@@ -34,7 +34,10 @@ module attributes {omp.is_target_device = false} {
  types = #di_null_type>
 #sp = #llvm.di_subprogram<compileUnit = #cu, name = "main", file=#file,
  subprogramFlags = "Definition", type = #sp_ty>
+#sp1 = #llvm.di_subprogram<compileUnit = #cu, name = "target", file=#file,
+ subprogramFlags = "Definition", type = #sp_ty>
 
 #loc1 = loc("test.f90":6:7)
 #loc2 = loc(fused<#sp>[#loc1])
+#loc3 = loc(fused<#sp1>[#loc1])
 

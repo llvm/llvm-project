@@ -30,31 +30,31 @@
 # DIS:      <_start>:
 ## Direct call
 ## Call foo directly
-# DIS-NEXT:   { call 0x2003c }
+# DIS-NEXT:   { call 0x2003c <foo> }
 ## Call bar via plt
-# DIS-NEXT:   { call 0x20060 }
+# DIS-NEXT:   { call 0x20060 <bar@plt> }
 ## Call weak via plt
-# DIS-NEXT:   { call 0x20070 }
+# DIS-NEXT:   { call 0x20070 <weak@plt> }
 # DIS-NEXT: { 	immext(#0)
 
 ## Call foo directly
-# DIS-NEXT: if (p0) jump:nt 0x2003c }
+# DIS-NEXT: if (p0) jump:nt 0x2003c <foo> }
 # DIS-NEXT: { 	immext(#64)
 ## Call bar via plt
-# DIS-NEXT: if (p0) jump:nt 0x20060 }
+# DIS-NEXT: if (p0) jump:nt 0x20060 <bar@plt> }
 # DIS-NEXT: { 	immext(#64)
 ## Call weak via plt
-# DIS-NEXT: if (p0) jump:nt 0x20070 }
+# DIS-NEXT: if (p0) jump:nt 0x20070 <weak@plt> }
 # DIS-NEXT: { 	immext(#0)
 
 ## Call foo directly
-# DIS-NEXT: r0 = #0 ; jump 0x2003c }
+# DIS-NEXT: r0 = #0 ; jump 0x2003c <foo> }
 # DIS-NEXT: { 	immext(#0)
 ## Call bar via plt
-# DIS-NEXT: r0 = #0 ; jump 0x20060 }
+# DIS-NEXT: r0 = #0 ; jump 0x20060 <bar@plt> }
 # DIS-NEXT: { 	immext(#0)
 ## Call weak via plt
-# DIS-NEXT: r0 = #0 ; jump 0x20070 }
+# DIS-NEXT: r0 = #0 ; jump 0x20070 <weak@plt> }
 
 # DIS:      <foo>:
 # DIS-NEXT:   2003c:

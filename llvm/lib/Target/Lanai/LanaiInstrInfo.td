@@ -212,7 +212,6 @@ def MemImmAsmOperand : AsmOperandClass {
   let ParserMethod  = "parseMemoryOperand";
 }
 def MEMi : Operand<i32> {
-  let MIOperandInfo = (ops i32lo21:$offset);
   let ParserMatchClass = MemImmAsmOperand;
   let PrintMethod   = "printMemImmOperand";
 }
@@ -402,7 +401,7 @@ def : Pat<(LanaiSubbF GPR:$Rs1, i32lo16z:$imm),
 def : Pat<(LanaiSubbF GPR:$Rs1, i32hi16:$imm),
           (SUBB_F_I_HI GPR:$Rs1, i32hi16:$imm)>;
 
-def : InstAlias<"mov $src, $dst", (ADD_R GPR:$dst, GPR:$src, R0, 0)>;
+def : InstAlias<"mov $src, $dst", (ADD_R GPR:$dst, GPR:$src, R0, (pred 0))>;
 
 let isAsCheapAsAMove = 1, Rs1 = R0.Num, isCodeGenOnly = 1, H = 1, F = 0,
   isReMaterializable = 1 in
@@ -682,7 +681,8 @@ let isBranch = 1, isBarrier = 1, isTerminator = 1, hasDelaySlot = 1 in {
                   [(br bb:$addr)]> {
     let DDDI = 0b0000;
   }
-  let Uses = [SR] in
+  // BRCC is a conditional branch. It can fall through, so isBarrer = 0.
+  let isBarrier = 0, Uses = [SR] in
     def BRCC : InstBR<(outs), (ins BrTarget:$addr, CCOp:$DDDI),
                       "b$DDDI\t$addr",
                       [(LanaiBrCC bb:$addr, imm:$DDDI)]>;

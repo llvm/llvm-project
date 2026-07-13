@@ -19,7 +19,7 @@
 
 #if !SANITIZER_LINUX && !SANITIZER_FREEBSD && !SANITIZER_APPLE &&    \
     !SANITIZER_NETBSD && !SANITIZER_WINDOWS && !SANITIZER_FUCHSIA && \
-    !SANITIZER_SOLARIS && !SANITIZER_HAIKU
+    !SANITIZER_SOLARIS && !SANITIZER_HAIKU && !SANITIZER_AIX
 #  error "Interception doesn't work on this operating system."
 #endif
 
@@ -168,6 +168,16 @@ const interpose_substitution substitution_##func_name[]             \
     extern "C" ret_type func(__VA_ARGS__);
 # define DECLARE_WRAPPER_WINAPI(ret_type, func, ...)  \
     extern "C" __declspec(dllimport) ret_type __stdcall func(__VA_ARGS__);
+#elif SANITIZER_AIX
+#  define WRAP(x) __interceptor_##x
+#  define TRAMPOLINE(x) WRAP(x)
+// # define WRAPPER_NAME(x) "__interceptor_" #x
+#  define INTERCEPTOR_ATTRIBUTE __attribute__((visibility("default")))
+// AIX's linker will not select the weak symbol, so don't use weak for the
+// interceptors.
+#  define DECLARE_WRAPPER(ret_type, func, ...) \
+    extern "C" ret_type func(__VA_ARGS__)      \
+        __attribute__((alias("__interceptor_" #func), visibility("default")));
 #elif !SANITIZER_FUCHSIA  // LINUX, FREEBSD, NETBSD, SOLARIS
 # define INTERCEPTOR_ATTRIBUTE __attribute__((visibility("default")))
 # if ASM_INTERCEPTOR_TRAMPOLINE_SUPPORT
@@ -352,6 +362,16 @@ const interpose_substitution substitution_##func_name[]             \
 // so we use casts via uintptr_t (the local __sanitizer::uptr equivalent).
 namespace __interception {
 
+// Dynamic library loading helpers (dlopen/LoadLibrary, dlsym/GetProcAddress).
+// Implemented in interception_linux.cpp on non-Windows targets and
+// interception_win.cpp on Windows.
+bool DynamicLoaderAvailable();
+void* OpenLibrary(const char* name);
+void* LookupSymbol(void* handle, const char* symbol);
+void* LookupSymbolDefault(const char* symbol);
+void* LookupSymbolNext(const char* symbol);
+void* LookupSymbolNextVersioned(const char* symbol, const char* version);
+
 #if defined(__ELF__) && !SANITIZER_FUCHSIA
 // The use of interceptors makes many sanitizers unusable for static linking.
 // Define a function, if called, will cause a linker error (undefined _DYNAMIC).
@@ -367,12 +387,17 @@ inline void DoesNotSupportStaticLinking() {}
 
 #define INCLUDED_FROM_INTERCEPTION_LIB
 
-#if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD || \
+#if SANITIZER_AIX
+#  include "interception_aix.h"
+#  define INTERCEPT_FUNCTION(func) INTERCEPT_FUNCTION_AIX(func)
+#  define INTERCEPT_FUNCTION_VER(func, symver) INTERCEPT_FUNCTION_AIX(func)
+
+#elif SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD || \
     SANITIZER_SOLARIS || SANITIZER_HAIKU
 
-# include "interception_linux.h"
-# define INTERCEPT_FUNCTION(func) INTERCEPT_FUNCTION_LINUX_OR_FREEBSD(func)
-# define INTERCEPT_FUNCTION_VER(func, symver) \
+#  include "interception_linux.h"
+#  define INTERCEPT_FUNCTION(func) INTERCEPT_FUNCTION_LINUX_OR_FREEBSD(func)
+#  define INTERCEPT_FUNCTION_VER(func, symver) \
     INTERCEPT_FUNCTION_VER_LINUX_OR_FREEBSD(func, symver)
 #elif SANITIZER_APPLE
 # include "interception_mac.h"

@@ -18,31 +18,13 @@ class TestStepTarget(TestBase):
     @add_test_categories(["pyapi"])
     def get_to_start(self):
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
 
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
-        break_in_main = target.BreakpointCreateBySourceRegex(
-            "Break here to try targetted stepping", self.main_source_spec
+        _, _, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "Break here to try targetted stepping", self.main_source_spec
         )
-        self.assertTrue(break_in_main, VALID_BREAKPOINT)
-        self.assertGreater(break_in_main.GetNumLocations(), 0, "Has locations.")
 
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, break_in_main)
-
-        if len(threads) != 1:
-            self.fail("Failed to stop at first breakpoint in main.")
-
-        thread = threads[0]
         return thread
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
@@ -83,14 +65,16 @@ class TestStepTarget(TestBase):
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
     def test_with_command_and_block(self):
         """Test stepping over vrs. hitting breakpoints & subsequent stepping in various forms."""
+        self.do_command_and_block()
+        self.do_command_and_block(True)
 
+    def do_command_and_block(self, use_regexp_step=False):
         thread = self.get_to_start()
 
-        result = lldb.SBCommandReturnObject()
-        self.dbg.GetCommandInterpreter().HandleCommand(
-            'thread step-in -t "lotsOfArgs" -e block', result
-        )
-        self.assertTrue(result.Succeeded(), "thread step-in command succeeded.")
+        if use_regexp_step:
+            self.expect("s lotsOfArgs")
+        else:
+            self.expect('thread step-in -t "lotsOfArgs" -e block')
 
         frame = thread.frames[0]
         self.assertEqual(frame.name, "lotsOfArgs", "Stepped to lotsOfArgs.")
@@ -98,14 +82,16 @@ class TestStepTarget(TestBase):
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
     def test_with_command_and_block_and_bad_name(self):
         """Test stepping over vrs. hitting breakpoints & subsequent stepping in various forms."""
+        self.do_with_command_and_block_and_bad_name()
+        self.do_with_command_and_block_and_bad_name(True)
 
+    def do_with_command_and_block_and_bad_name(self, use_regexp_step=False):
         thread = self.get_to_start()
 
-        result = lldb.SBCommandReturnObject()
-        self.dbg.GetCommandInterpreter().HandleCommand(
-            'thread step-in -t "lotsOfArgsssss" -e block', result
-        )
-        self.assertTrue(result.Succeeded(), "thread step-in command succeeded.")
+        if use_regexp_step:
+            self.expect("s lotsOfArgsssss")
+        else:
+            self.expect('thread step-in -t "lotsOfArgsssss" -e block')
 
         frame = thread.frames[0]
 

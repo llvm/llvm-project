@@ -160,7 +160,8 @@ SourceSelectionArgument::fromString(StringRef Value) {
     return std::make_unique<SourceRangeSelectionArgument>(std::move(*Range));
   llvm::errs() << "error: '-selection' option must be specified using "
                   "<file>:<line>:<column> or "
-                  "<file>:<line>:<column>-<line>:<column> format\n";
+                  "<file>:<line>:<column>-<line>:<column> format, "
+                  "where <line> and <column> are integers greater than zero.\n";
   return nullptr;
 }
 
@@ -616,7 +617,7 @@ int main(int argc, const char **argv) {
       argc, argv, cl::getGeneralCategory(), cl::ZeroOrMore,
       "Clang-based refactoring tool for C, C++ and Objective-C");
   if (!ExpectedParser) {
-    llvm::errs() << ExpectedParser.takeError();
+    llvm::errs() << llvm::toString(ExpectedParser.takeError());
     return 1;
   }
   CommonOptionsParser &Options = ExpectedParser.get();

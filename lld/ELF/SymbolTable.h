@@ -41,7 +41,6 @@ public:
   SymbolTable(Ctx &ctx) : ctx(ctx) {}
   ArrayRef<Symbol *> getSymbols() const { return symVector; }
 
-  void redirect(Symbol *from, Symbol *to);
   void wrap(Symbol *sym, Symbol *real, Symbol *wrap);
 
   Symbol *insert(StringRef name);

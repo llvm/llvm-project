@@ -158,6 +158,26 @@ define ptr addrspace(1) @ptrmask_simplify_ptrmask_i32(ptr addrspace(1) %p) {
   ret ptr addrspace(1) %r
 }
 
+define ptr @ptrmask_simplify_ptrtoaddr(ptr %p) {
+; CHECK-LABEL: define ptr @ptrmask_simplify_ptrtoaddr
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  %m = ptrtoaddr ptr %p to i64
+  %r = call ptr @llvm.ptrmask.p0.i64(ptr %p, i64 %m)
+  ret ptr %r
+}
+
+define ptr addrspace(1) @ptrmask_simplify_ptrtoaddr_i32(ptr addrspace(1) %p) {
+; CHECK-LABEL: define ptr addrspace(1) @ptrmask_simplify_ptrtoaddr_i32
+; CHECK-SAME: (ptr addrspace(1) [[P:%.*]]) {
+; CHECK-NEXT:    ret ptr addrspace(1) [[P]]
+;
+  %m = ptrtoaddr ptr addrspace(1) %p to i32
+  %r = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) %p, i32 %m)
+  ret ptr addrspace(1) %r
+}
+
 define ptr @ptrmask_simplify_aligned_unused(ptr align 64 %p) {
 ; CHECK-LABEL: define ptr @ptrmask_simplify_aligned_unused
 ; CHECK-SAME: (ptr align 64 [[P:%.*]]) {

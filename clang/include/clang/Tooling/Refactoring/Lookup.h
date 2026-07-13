@@ -38,8 +38,7 @@ namespace tooling {
 /// \param ReplacementString The replacement nested name. Must be fully
 ///                          qualified including a leading "::".
 /// \returns The new name to be inserted in place of the current nested name.
-std::string replaceNestedName(const NestedNameSpecifier *Use,
-                              SourceLocation UseLoc,
+std::string replaceNestedName(NestedNameSpecifier Use, SourceLocation UseLoc,
                               const DeclContext *UseContext,
                               const NamedDecl *FromDecl,
                               StringRef ReplacementString);

@@ -15,8 +15,8 @@
 #include "src/__support/FPUtil/generic/sqrt.h"
 
 // Generic instruction specializations with __builtin_elementwise_sqrt.
-#if defined(LIBC_TARGET_CPU_HAS_FPU_FLOAT) ||                                  \
-    defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE)
+#if !defined(LIBC_USE_CONSTEXPR) && (defined(LIBC_TARGET_CPU_HAS_FPU_FLOAT) || \
+                                     defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE))
 
 #if __has_builtin(__builtin_elementwise_sqrt)
 
@@ -34,6 +34,14 @@ template <> LIBC_INLINE double sqrt<double>(double x) {
   return __builtin_elementwise_sqrt(x);
 }
 #endif // LIBC_TARGET_CPU_HAS_FPU_DOUBLE
+
+// Use 80-bit long double instruction on x86.
+// https://godbolt.org/z/oWEaj6hxK
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+template <> LIBC_INLINE long double sqrt<long double>(long double x) {
+  return __builtin_elementwise_sqrt(x);
+}
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL

@@ -4,11 +4,9 @@
 define void @autogen_SD19655(ptr %addr, ptr %addrfloat) {
 ; CHECK-LABEL: autogen_SD19655:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    mov.d x8, v0[1]
-; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    scvtf s1, x9
-; CHECK-NEXT:    scvtf s0, x8
+; CHECK-NEXT:    ldp x8, x9, [x0]
+; CHECK-NEXT:    scvtf s0, x9
+; CHECK-NEXT:    scvtf s1, x8
 ; CHECK-NEXT:    mov.s v1[1], v0[0]
 ; CHECK-NEXT:    str d1, [x1]
 ; CHECK-NEXT:    ret

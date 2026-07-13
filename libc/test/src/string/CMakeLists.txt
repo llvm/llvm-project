@@ -168,6 +168,7 @@ add_libc_test(
   DEPENDS
     libc.src.string.strdup
     libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 # FIXME: This is failing on the bot for some reason, disable for now.
@@ -271,6 +272,16 @@ add_libc_test(
     strnlen_test.cpp
   DEPENDS
     libc.src.string.strnlen
+)
+
+add_libc_test(
+  strnlen_s_test
+  SUITE
+    libc-string-tests
+  SRCS
+    strnlen_s_test.cpp
+  DEPENDS
+    libc.src.string.strnlen_s
 )
 
 add_libc_test(

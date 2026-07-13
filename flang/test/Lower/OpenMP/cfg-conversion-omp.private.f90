@@ -2,12 +2,12 @@
 
 ! RUN: split-file %s %t && cd %t
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - test.f90 2>&1 | \
 ! RUN: fir-opt --cfg-conversion -o test.cfg-conv.mlir
 ! RUN: FileCheck --input-file=test.cfg-conv.mlir %s --check-prefix="CFGConv"
 
-! RUN: fir-opt --convert-hlfir-to-fir --cg-rewrite --fir-to-llvm-ir test.cfg-conv.mlir -o - | \
+! RUN: fir-opt --convert-hlfir-to-fir --cfg-conversion --cg-rewrite --fir-to-llvm-ir test.cfg-conv.mlir -o - | \
 ! RUN: FileCheck %s --check-prefix="LLVMDialect"
 
 !--- test.f90

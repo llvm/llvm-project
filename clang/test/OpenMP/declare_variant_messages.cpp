@@ -16,7 +16,7 @@ T foofoo();
 #pragma omp declare variant // expected-error {{expected '(' after 'declare variant'}}
 #pragma omp declare variant( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp declare variant(foo // expected-error {{expected ')'}} omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}} expected-note {{to match this '('}}
-#pragma omp declare variant(x) // expected-error {{use of undeclared identifier 'x'}} omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
+#pragma omp declare variant(x) // expected-error {{use of undeclared identifier 'x'}}
 #pragma omp declare variant(foo) // omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
 #pragma omp declare variant(foofoo <int>) // omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
 #pragma omp declare variant(foofoo <int>) xxx // omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
@@ -57,7 +57,7 @@ int bar();
 #pragma omp declare variant // expected-error {{expected '(' after 'declare variant'}}
 #pragma omp declare variant( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp declare variant(foofoo <T> // expected-error {{expected ')'}} omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}} expected-note {{to match this '('}}
-#pragma omp declare variant(x) // expected-error {{use of undeclared identifier 'x'}} omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
+#pragma omp declare variant(x) // expected-error {{use of undeclared identifier 'x'}}
 #pragma omp declare variant(foo) // omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
 #pragma omp declare variant(foofoo) // omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
 #pragma omp declare variant(foofoo <T>) // omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}

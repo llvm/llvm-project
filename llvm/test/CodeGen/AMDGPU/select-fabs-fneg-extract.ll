@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs -enable-no-signed-zeros-fp-math < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -mtriple=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs -enable-no-signed-zeros-fp-math < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI %s
 
 ; GCN-LABEL: {{^}}add_select_fabs_fabs_f32:
 ; GCN: buffer_load_dword [[X:v[0-9]+]]
@@ -132,12 +132,11 @@ define amdgpu_kernel void @add_select_fabs_negk_f32(i32 %c) #0 {
   ret void
 }
 
-; FIXME: fabs should fold away
 ; GCN-LABEL: {{^}}add_select_fabs_negk_negk_f32:
 ; GCN: buffer_load_dword [[X:v[0-9]+]]
 
 ; GCN: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], -1.0, -2.0, s
-; GCN: v_add_f32_e64 v{{[0-9]+}}, |[[SELECT]]|, [[X]]
+; GCN: v_sub_f32_e32 v{{[0-9]+}}, [[X]], [[SELECT]]
 define amdgpu_kernel void @add_select_fabs_negk_negk_f32(i32 %c) #0 {
   %x = load volatile float, ptr addrspace(1) poison
   %cmp = icmp eq i32 %c, 0
@@ -727,7 +726,7 @@ define amdgpu_kernel void @select_fneg_posk_src_add_f32(i32 %c) #0 {
   %y = load volatile float, ptr addrspace(1) poison
   %cmp = icmp eq i32 %c, 0
   %add = fadd float %x, 4.0
-  %fneg = fsub float -0.0, %add
+  %fneg = fsub nsz float -0.0, %add
   %select = select i1 %cmp, float %fneg, float 2.0
   store volatile float %select, ptr addrspace(1) poison
   ret void
@@ -743,7 +742,7 @@ define amdgpu_kernel void @select_fneg_posk_src_sub_f32(i32 %c) #0 {
   %x = load volatile float, ptr addrspace(1) poison
   %cmp = icmp eq i32 %c, 0
   %add = fsub float %x, 4.0
-  %fneg = fsub float -0.0, %add
+  %fneg = fsub nsz float -0.0, %add
   %select = select i1 %cmp, float %fneg, float 2.0
   store volatile float %select, ptr addrspace(1) poison
   ret void
@@ -759,7 +758,7 @@ define amdgpu_kernel void @select_fneg_posk_src_mul_f32(i32 %c) #0 {
   %x = load volatile float, ptr addrspace(1) poison
   %cmp = icmp eq i32 %c, 0
   %mul = fmul float %x, 4.0
-  %fneg = fsub float -0.0, %mul
+  %fneg = fsub nsz float -0.0, %mul
   %select = select i1 %cmp, float %fneg, float 2.0
   store volatile float %select, ptr addrspace(1) poison
   ret void
@@ -777,7 +776,7 @@ define amdgpu_kernel void @select_fneg_posk_src_fma_f32(i32 %c) #0 {
   %z = load volatile float, ptr addrspace(1) poison
   %cmp = icmp eq i32 %c, 0
   %fma = call float @llvm.fma.f32(float %x, float 4.0, float %z)
-  %fneg = fsub float -0.0, %fma
+  %fneg = fsub nsz float -0.0, %fma
   %select = select i1 %cmp, float %fneg, float 2.0
   store volatile float %select, ptr addrspace(1) poison
   ret void
@@ -794,7 +793,7 @@ define amdgpu_kernel void @select_fneg_posk_src_fmad_f32(i32 %c) #0 {
   %z = load volatile float, ptr addrspace(1) poison
   %cmp = icmp eq i32 %c, 0
   %fmad = call float @llvm.fmuladd.f32(float %x, float 4.0, float %z)
-  %fneg = fsub float -0.0, %fmad
+  %fneg = fsub nsz float -0.0, %fmad
   %select = select i1 %cmp, float %fneg, float 2.0
   store volatile float %select, ptr addrspace(1) poison
   ret void
@@ -812,7 +811,7 @@ define amdgpu_kernel void @select_fneg_posk_src_rcp_f32(i32 %c) #0 {
   %y = load volatile float, ptr addrspace(1) poison
   %cmp = icmp eq i32 %c, 0
   %rcp = call float @llvm.amdgcn.rcp.f32(float %x)
-  %fneg = fsub float -0.0, %rcp
+  %fneg = fsub nsz float -0.0, %rcp
   %select = select i1 %cmp, float %fneg, float 2.0
   store volatile float %select, ptr addrspace(1) poison
   ret void

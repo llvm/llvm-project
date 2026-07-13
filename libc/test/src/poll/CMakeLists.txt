@@ -10,5 +10,5 @@ add_libc_unittest(
     libc.hdr.limits_macros
     libc.src.errno.errno
     libc.src.poll.poll
-    libc.test.UnitTest.ErrnoSetterMatcher
+    libc.test.UnitTest.ErrnoCheckingTest
 )

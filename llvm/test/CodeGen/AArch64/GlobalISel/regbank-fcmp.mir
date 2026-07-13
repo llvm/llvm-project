@@ -13,11 +13,12 @@ body:             |
 
     ; CHECK-LABEL: name: vector
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: %x:fpr(<2 x s64>) = COPY $q0
-    ; CHECK: %y:fpr(<2 x s64>) = COPY $q1
-    ; CHECK: %fcmp:fpr(<2 x s64>) = G_FCMP floatpred(olt), %x(<2 x s64>), %y
-    ; CHECK: $q0 = COPY %fcmp(<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:fpr(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %y:fpr(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: %fcmp:fpr(<2 x s64>) = G_FCMP floatpred(olt), %x(<2 x s64>), %y
+    ; CHECK-NEXT: $q0 = COPY %fcmp(<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %x:_(<2 x s64>) = COPY $q0
     %y:_(<2 x s64>) = COPY $q1
     %fcmp:_(<2 x s64>) = G_FCMP floatpred(olt), %x:_(<2 x s64>), %y:_

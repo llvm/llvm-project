@@ -27,7 +27,7 @@
 #include "container_test_types.h"
 
 template <class Container>
-void testSetInsert() {
+TEST_CONSTEXPR_CXX26 void testSetInsert() {
   typedef typename Container::value_type ValueTp;
   ConstructController* cc = getConstructController();
   cc->reset();
@@ -125,7 +125,7 @@ void testSetInsert() {
     // Testing C::insert(Iter, Iter) for *Iter = value_type&"
     Container c;
     ValueTp ValueList[] = {ValueTp(1), ValueTp(2), ValueTp(3)};
-    cc->expect<ValueTp const&>(3);
+    cc->expect<ValueTp&>(3);
     c.insert(std::begin(ValueList), std::end(ValueList));
     assert(!cc->unchecked());
     {

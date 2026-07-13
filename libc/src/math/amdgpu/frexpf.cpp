@@ -9,7 +9,6 @@
 #include "src/math/frexpf.h"
 #include "src/__support/common.h"
 
-#include "declarations.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {

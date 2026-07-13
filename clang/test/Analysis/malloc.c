@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 -Wno-strict-prototypes -Wno-error=implicit-int -verify %s \
+// RUN:   -Wno-alloc-size \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
-// RUN:   -analyzer-checker=alpha.core.CastSize \
 // RUN:   -analyzer-checker=unix \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-checker=optin.taint.TaintPropagation \
@@ -73,6 +73,27 @@ void t3(void) {
   free(p);
 }
 
+void t3_mul_bounded(void) {
+  size_t size = 0;
+  scanf("%zu", &size);
+  if (65536 < size)
+    return;
+  // A bounded tainted size stays bounded after multiplication by a constant,
+  // so the product cannot reach a dangerous magnitude. The 64-bit size_t
+  // product must not warn (used to be a false positive because the range of
+  // the multiplication was not inferred from its operands).
+  int *p = malloc(size * sizeof(int)); // No warning expected as the product is bound
+  free(p);
+}
+
+void t3_mul_unbounded(void) {
+  size_t size = 0;
+  scanf("%zu", &size);
+  // Without a bound the product is still attacker-controlled and can overflow.
+  int *p = malloc(size * sizeof(int)); // expected-warning{{malloc is called with a tainted (potentially attacker controlled) value}}
+  free(p);
+}
+
 void t4(void) {
   size_t size = 0;
   int *p = malloc(sizeof(int));
@@ -97,13 +118,13 @@ void f1(void) {
 void f2(void) {
   int *p = malloc(12);
   free(p);
-  free(p); // expected-warning{{Attempt to free released memory}}
+  free(p); // expected-warning{{Attempt to release already released memory}}
 }
 
 void f2_realloc_0(void) {
   int *p = malloc(12);
   realloc(p,0);
-  realloc(p,0); // expected-warning{{Attempt to free released memory}}
+  realloc(p,0); // expected-warning{{Attempt to release already released memory}}
 }
 
 void f2_realloc_1(void) {
@@ -153,7 +174,7 @@ void reallocSizeZero1(void) {
   char *p = malloc(12);
   char *r = realloc(p, 0);
   if (!r) {
-    free(p); // expected-warning {{Attempt to free released memory}}
+    free(p); // expected-warning {{Attempt to release already released memory}}
   } else {
     free(r);
   }
@@ -163,11 +184,11 @@ void reallocSizeZero2(void) {
   char *p = malloc(12);
   char *r = realloc(p, 0);
   if (!r) {
-    free(p); // expected-warning {{Attempt to free released memory}}
+    free(p); // expected-warning {{Attempt to release already released memory}}
   } else {
     free(r);
   }
-  free(p); // expected-warning {{Attempt to free released memory}}
+  free(p); // expected-warning {{Attempt to release already released memory}}
 }
 
 void reallocSizeZero3(void) {
@@ -262,7 +283,7 @@ void reallocfRadar6337483_3(void) {
     char * tmp;
     tmp = (char*)reallocf(buf, 0x1000000);
     if (!tmp) {
-        free(buf); // expected-warning {{Attempt to free released memory}}
+        free(buf); // expected-warning {{Attempt to release already released memory}}
         return;
     }
     buf = tmp;
@@ -480,244 +501,19 @@ void pr6293(void) {
 void f7(void) {
   char *x = (char*) malloc(4);
   free(x);
-  x[0] = 'a'; // expected-warning{{Use of memory after it is freed}}
+  x[0] = 'a'; // expected-warning{{Use of memory after it is released}}
 }
 
 void f8(void) {
   char *x = (char*) malloc(4);
   free(x);
-  char *y = strndup(x, 4); // expected-warning{{Use of memory after it is freed}}
+  char *y = strndup(x, 4); // expected-warning{{Use of memory after it is released}}
 }
 
 void f7_realloc(void) {
   char *x = (char*) malloc(4);
   realloc(x,0);
-  x[0] = 'a'; // expected-warning{{Use of memory after it is freed}}
-}
-
-void PR6123(void) {
-  int *x = malloc(11); // expected-warning{{Cast a region whose size is not a multiple of the destination type size}}
-}
-
-void PR7217(void) {
-  int *buf = malloc(2); // expected-warning{{Cast a region whose size is not a multiple of the destination type size}}
-  buf[1] = 'c'; // not crash
-}
-
-void cast_emtpy_struct(void) {
-  struct st {
-  };
-
-  struct st *s = malloc(sizeof(struct st)); // no-warning
-  free(s);
-}
-
-void cast_struct_1(void) {
-  struct st {
-    int i[100];
-    char j[];
-  };
-
-  struct st *s = malloc(sizeof(struct st)); // no-warning
-  free(s);
-}
-
-void cast_struct_2(void) {
-  struct st {
-    int i[100];
-    char j[0];
-  };
-
-  struct st *s = malloc(sizeof(struct st)); // no-warning
-  free(s);
-}
-
-void cast_struct_3(void) {
-  struct st {
-    int i[100];
-    char j[1];
-  };
-
-  struct st *s = malloc(sizeof(struct st)); // no-warning
-  free(s);
-}
-
-void cast_struct_4(void) {
-  struct st {
-    int i[100];
-    char j[2];
-  };
-
-  struct st *s = malloc(sizeof(struct st)); // no-warning
-  free(s);
-}
-
-void cast_struct_5(void) {
-  struct st {
-    char i[200];
-    char j[1];
-  };
-
-  struct st *s = malloc(sizeof(struct st) - sizeof(char)); // no-warning
-  free(s);
-}
-
-void cast_struct_warn_1(void) {
-  struct st {
-    int i[100];
-    char j[2];
-  };
-
-  struct st *s = malloc(sizeof(struct st) + 2); // expected-warning{{Cast a region whose size is not a multiple of the destination type size}}
-  free(s);
-}
-
-void cast_struct_warn_2(void) {
-  struct st {
-    int i[100];
-    char j[2];
-  };
-
-  struct st *s = malloc(2); // expected-warning{{Cast a region whose size is not a multiple of the destination type size}}
-  free(s);
-}
-
-void cast_struct_flex_array_1(void) {
-  struct st {
-    int i[100];
-    char j[];
-  };
-
-  struct st *s = malloc(sizeof(struct st) + 3); // no-warning
-  free(s);
-}
-
-void cast_struct_flex_array_2(void) {
-  struct st {
-    int i[100];
-    char j[0];
-  };
-
-  struct st *s = malloc(sizeof(struct st) + 3); // no-warning
-  free(s);
-}
-
-void cast_struct_flex_array_3(void) {
-  struct st {
-    int i[100];
-    char j[1];
-  };
-
-  struct st *s = malloc(sizeof(struct st) + 3); // no-warning
-  free(s);
-}
-
-void cast_struct_flex_array_4(void) {
-  struct foo {
-    char f[32];
-  };
-  struct st {
-    char i[100];
-    struct foo data[];
-  };
-
-  struct st *s = malloc(sizeof(struct st) + 3 * sizeof(struct foo)); // no-warning
-  free(s);
-}
-
-void cast_struct_flex_array_5(void) {
-  struct foo {
-    char f[32];
-  };
-  struct st {
-    char i[100];
-    struct foo data[0];
-  };
-
-  struct st *s = malloc(sizeof(struct st) + 3 * sizeof(struct foo)); // no-warning
-  free(s);
-}
-
-void cast_struct_flex_array_6(void) {
-  struct foo {
-    char f[32];
-  };
-  struct st {
-    char i[100];
-    struct foo data[1];
-  };
-
-  struct st *s = malloc(sizeof(struct st) + 3 * sizeof(struct foo)); // no-warning
-  free(s);
-}
-
-void cast_struct_flex_array_warn_1(void) {
-  struct foo {
-    char f[32];
-  };
-  struct st {
-    char i[100];
-    struct foo data[];
-  };
-
-  struct st *s = malloc(3 * sizeof(struct st) + 3 * sizeof(struct foo)); // expected-warning{{Cast a region whose size is not a multiple of the destination type size}}
-  free(s);
-}
-
-void cast_struct_flex_array_warn_2(void) {
-  struct foo {
-    char f[32];
-  };
-  struct st {
-    char i[100];
-    struct foo data[0];
-  };
-
-  struct st *s = malloc(3 * sizeof(struct st) + 3 * sizeof(struct foo)); // expected-warning{{Cast a region whose size is not a multiple of the destination type size}}
-  free(s);
-}
-
-void cast_struct_flex_array_warn_3(void) {
-  struct foo {
-    char f[32];
-  };
-  struct st {
-    char i[100];
-    struct foo data[1];
-  };
-
-  struct st *s = malloc(3 * sizeof(struct st) + 3 * sizeof(struct foo)); // expected-warning{{Cast a region whose size is not a multiple of the destination type size}}
-  free(s);
-}
-
-void cast_struct_flex_array_warn_4(void) {
-  struct st {
-    int i[100];
-    int j[];
-  };
-
-  struct st *s = malloc(sizeof(struct st) + 3); // expected-warning{{Cast a region whose size is not a multiple of the destination type size}}
-  free(s);
-}
-
-void cast_struct_flex_array_warn_5(void) {
-  struct st {
-    int i[100];
-    int j[0];
-  };
-
-  struct st *s = malloc(sizeof(struct st) + 3); // expected-warning{{Cast a region whose size is not a multiple of the destination type size}}
-  free(s);
-}
-
-void cast_struct_flex_array_warn_6(void) {
-  struct st {
-    int i[100];
-    int j[1];
-  };
-
-  struct st *s = malloc(sizeof(struct st) + 3); // expected-warning{{Cast a region whose size is not a multiple of the destination type size}}
-  free(s);
+  x[0] = 'a'; // expected-warning{{Use of memory after it is released}}
 }
 
 void mallocCastToVoid(void) {
@@ -773,7 +569,7 @@ void nullFree(void) {
 void paramFree(int *p) {
   myfoo(p);
   free(p); // no warning
-  myfoo(p); // expected-warning {{Use of memory after it is freed}}
+  myfoo(p); // expected-warning {{Use of memory after it is released}}
 }
 
 void allocaFree(void) {
@@ -813,14 +609,14 @@ void mallocEscapeFreeFree(void) {
   int *p = malloc(12);
   myfoo(p);
   free(p);
-  free(p); // expected-warning{{Attempt to free released memory}}
+  free(p); // expected-warning{{Attempt to release already released memory}}
 }
 
 void mallocEscapeFreeUse(void) {
   int *p = malloc(12);
   myfoo(p);
   free(p);
-  myfoo(p); // expected-warning{{Use of memory after it is freed}}
+  myfoo(p); // expected-warning{{Use of memory after it is released}}
 }
 
 int *myalloc(void);
@@ -846,7 +642,7 @@ void mallocBindFreeUse(void) {
   int *x = malloc(12);
   int *y = x;
   free(y);
-  myfoo(x); // expected-warning{{Use of memory after it is freed}}
+  myfoo(x); // expected-warning{{Use of memory after it is released}}
 }
 
 void mallocEscapeMalloc(void) {
@@ -871,13 +667,13 @@ void mallocFreeMalloc(void) {
 void mallocFreeUse_params(void) {
   int *p = malloc(12);
   free(p);
-  myfoo(p); //expected-warning{{Use of memory after it is freed}}
+  myfoo(p); //expected-warning{{Use of memory after it is released}}
 }
 
 void mallocFreeUse_params2(void) {
   int *p = malloc(12);
   free(p);
-  myfooint(*p); //expected-warning{{Use of memory after it is freed}}
+  myfooint(*p); //expected-warning{{Use of memory after it is released}}
 }
 
 void mallocFailedOrNot(void) {
@@ -895,14 +691,14 @@ struct StructWithInt {
 int *mallocReturnFreed(void) {
   int *p = malloc(12);
   free(p);
-  return p; // expected-warning {{Use of memory after it is freed}}
+  return p; // expected-warning {{Use of memory after it is released}}
 }
 
 int useAfterFreeStruct(void) {
   struct StructWithInt *px= malloc(sizeof(struct StructWithInt));
   px->g = 5;
   free(px);
-  return px->g; // expected-warning {{Use of memory after it is freed}}
+  return px->g; // expected-warning {{Use of memory after it is released}}
 }
 
 void nonSymbolAsFirstArg(int *pp, struct StructWithInt *p);
@@ -935,7 +731,7 @@ void vallocEscapeFreeUse(void) {
   int *p = valloc(12);
   myfoo(p);
   free(p);
-  myfoo(p); // expected-warning{{Use of memory after it is freed}}
+  myfoo(p); // expected-warning{{Use of memory after it is released}}
 }
 
 int *Gl;
@@ -1095,10 +891,21 @@ void doNotInvalidateWhenPassedToSystemCalls(char *s) {
   strlen(p);
   strcpy(p, s);
   strcpy(s, p);
+  // FIXME: We should stop analysis here, even if we emit no warnings, since
+  // overlapping buffers for strycpy is a fatal error.
   strcpy(p, p);
   memcpy(p, s, 1);
   memcpy(s, p, 1);
   memcpy(p, p, 1);
+} // expected-warning {{leak}}
+
+void overlappingMemcpyDoesNotSinkPath(char *s) {
+  char *p = malloc(12);
+  // FIXME: We should stop analysis here, even if we emit no warnings, since
+  // overlapping buffers for strycpy is a fatal error.
+  int a[4] = {0};
+  memcpy(a+2, a+1, 8);
+  (void)p;
 } // expected-warning {{leak}}
 
 // Treat source buffer contents as escaped.
@@ -1231,6 +1038,21 @@ void testWinWcsdupContentIsDefined(const wchar_t *s, unsigned validIndex) {
   wchar_t result = s2[1];// no warning
   free(s2);
 }
+
+struct if_nameindex { char x; };
+struct if_nameindex *if_nameindex(void);
+void if_freenameindex(struct if_nameindex *ptr);
+
+char testIfnameindex() {
+  struct if_nameindex *i = if_nameindex();
+  return i->x; // expected-warning {{Potential leak of memory pointed to by}}
+}
+
+void testIffreenameindex() {
+  struct if_nameindex *i = if_nameindex();
+  char x = i->x;
+  if_freenameindex(i);
+} // no warning
 
 // ----------------------------------------------------------------------------
 // Test the system library functions to which the pointer can escape.
@@ -1543,7 +1365,7 @@ void freeButNoMalloc(int *p, int x){
     free(p);
     //user forgot a return here.
   }
-  free(p); // expected-warning {{Attempt to free released memory}}
+  free(p); // expected-warning {{Attempt to release already released memory}}
 }
 
 struct HasPtr {
@@ -1553,7 +1375,7 @@ struct HasPtr {
 char* reallocButNoMalloc(struct HasPtr *a, int c, int size) {
   int *s;
   char *b = realloc(a->p, size);
-  char *m = realloc(a->p, size); // expected-warning {{Attempt to free released memory}}
+  char *m = realloc(a->p, size); // expected-warning {{Attempt to release already released memory}}
   // We don't expect a use-after-free for a->P here because the warning above
   // is a sink.
   return a->p; // no-warning
@@ -1722,7 +1544,7 @@ void testOffsetZeroDoubleFree(void) {
   int *array = malloc(sizeof(int)*2);
   int *p = &array[0];
   free(p);
-  free(&array[0]); // expected-warning{{Attempt to free released memory}}
+  free(&array[0]); // expected-warning{{Attempt to release already released memory}}
 }
 
 void testOffsetPassedToStrlen(void) {
@@ -1835,7 +1657,7 @@ int testNoCheckerDataPropagationFromLogicalOpOperandToOpResult(void) {
    int ok = (param && value);
    free(param);
    free(value);
-   // Previously we ended up with 'Use of memory after it is freed' on return.
+   // Previously we ended up with 'Use of memory after it is released' on return.
    return ok; // no warning
 }
 
@@ -1954,9 +1776,23 @@ int conjure(void);
 void testExtent(void) {
   int x = conjure();
   clang_analyzer_dump(x);
-  // expected-warning-re@-1 {{{{^conj_\$[[:digit:]]+{int, LC1, S[[:digit:]]+, #1}}}}}}
+  // expected-warning-re@-1 {{{{^conj_\$[[:digit:]]+{int, LC[[:digit:]]+, S[[:digit:]]+, #1}}}}}}
   int *p = (int *)malloc(x);
   clang_analyzer_dumpExtent(p);
-  // expected-warning-re@-1 {{{{^conj_\$[[:digit:]]+{int, LC1, S[[:digit:]]+, #1}}}}}}
+  // expected-warning-re@-1 {{{{^conj_\$[[:digit:]]+{int, LC[[:digit:]]+, S[[:digit:]]+, #1}}}}}}
   free(p);
+}
+
+void gh149754(void *p) {
+  // This testcase demonstrates an unusual situation where a certain symbol
+  // (the value of `p`) is released (more precisely, transitions from
+  // untracked state to Released state) twice within the same bug path because
+  // the `EvalAssume` callback resets it to untracked state after the first
+  // time when it is released. This caused the failure of an assertion, which
+  // was since then removed for the codebase.
+  if (!realloc(p, 8)) {
+    realloc(p, 8);
+    free(p); // expected-warning {{Attempt to release already released memory}}
+  }
+  // expected-warning@+1 {{Potential memory leak}}
 }

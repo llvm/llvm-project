@@ -3,11 +3,11 @@
 # Test the ${function.basename} frame-format variable.
 
 # RUN: split-file %s %t
-# RUN: %clang_host -g -gdwarf %t/main.cpp -o %t.out
+# RUN: %clangxx_host -g -gdwarf %t/main.cpp -o %t.out
 # RUN: %lldb -x -b -s %t/commands.input %t.out -o exit 2>&1 \
 # RUN:       | FileCheck %s
 #
-# RUN: %clang_host -O0 %t/main.cpp -o %t-nodebug.out
+# RUN: %clangxx_host -O0 %t/main.cpp -o %t-nodebug.out
 # RUN: %lldb -x -b -s %t/commands.input %t-nodebug.out -o exit 2>&1 \
 # RUN:       | FileCheck %s
 

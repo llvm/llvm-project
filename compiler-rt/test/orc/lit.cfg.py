@@ -18,11 +18,11 @@ if host_arch_compatible:
     config.available_features.add("host-arch-compatible")
 
 # If the target OS hasn't been set then assume host.
-if not config.target_os:
-    config.target_os = config.host_os
+if not config.orc_test_target_os:
+    config.orc_test_target_os = config.target_os
 
 config.test_target_is_host_executable = (
-    config.target_os == config.host_os and host_arch_compatible
+    config.orc_test_target_os == config.target_os and host_arch_compatible
 )
 
 # Assume that llvm-jitlink is in the config.llvm_tools_dir.
@@ -31,7 +31,7 @@ orc_rt_executor_stem = os.path.join(
     config.compiler_rt_obj_root, "lib/orc/tests/tools/orc-rt-executor"
 )
 lli = os.path.join(config.llvm_tools_dir, "lli")
-if config.host_os == "Darwin":
+if config.target_os == "Darwin":
     orc_rt_path = "%s/liborc_rt_osx.a" % config.compiler_rt_libdir
 else:
     orc_rt_path = "%s/liborc_rt%s.a" % (config.compiler_rt_libdir, config.target_suffix)
@@ -53,7 +53,7 @@ config.substitutions.append(
 config.substitutions.append(
     ("%clang_cl ", build_invocation(["--driver-mode=cl"] + [config.target_cflags]))
 )
-if config.host_os == "Windows":
+if config.target_os == "Windows":
     config.substitutions.append(
         (
             "%llvm_jitlink",
@@ -86,7 +86,7 @@ config.suffixes = [".c", ".cpp", ".m", ".S", ".ll", ".test"]
 # Exclude Inputs directories.
 config.excludes = ["Inputs"]
 
-if config.host_os not in ["Darwin", "FreeBSD", "Linux", "Windows"]:
+if config.target_os not in ["Darwin", "FreeBSD", "Linux", "Windows"]:
     config.unsupported = True
 
 # Ask llvm-config about assertion mode.

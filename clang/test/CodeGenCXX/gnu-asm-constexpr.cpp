@@ -16,6 +16,13 @@ struct string_view {
     }
 };
 
+namespace GH143242 {
+    constexpr string_view code2 = R"(nop; nop; nop; nop)";
+    asm((code2));
+    // CHECK: module asm(target_features: "{{.*}}")
+    // CHECK-NEXT: "nop; nop; nop; nop"
+}
+
 int func() {return 0;};
 
 void f() {
@@ -49,4 +56,4 @@ void test_srcloc() {
         foobar)o")
 
     ) ::(string_view("r"))(func()));
-  }
+}

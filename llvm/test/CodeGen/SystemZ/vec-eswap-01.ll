@@ -50,9 +50,21 @@ define <2 x i64> @f4(ptr %ptr) {
   ret <2 x i64> %ret
 }
 
-; Test v4f32 loads.
-define <4 x float> @f5(ptr %ptr) {
+; Test v8f16 loads.
+define <8 x half> @f5(ptr %ptr) {
 ; CHECK-LABEL: f5:
+; CHECK: vlerh %v24, 0(%r2)
+; CHECK: br %r14
+  %load = load <8 x half>, ptr %ptr
+  %ret = shufflevector <8 x half> %load, <8 x half> undef,
+                       <8 x i32> <i32 7, i32 6, i32 5, i32 4,
+                                  i32 3, i32 2, i32 1, i32 0>
+  ret <8 x half> %ret
+}
+
+; Test v4f32 loads.
+define <4 x float> @f6(ptr %ptr) {
+; CHECK-LABEL: f6:
 ; CHECK: vlerf %v24, 0(%r2)
 ; CHECK: br %r14
   %load = load <4 x float>, ptr %ptr
@@ -62,8 +74,8 @@ define <4 x float> @f5(ptr %ptr) {
 }
 
 ; Test v2f64 loads.
-define <2 x double> @f6(ptr %ptr) {
-; CHECK-LABEL: f6:
+define <2 x double> @f7(ptr %ptr) {
+; CHECK-LABEL: f7:
 ; CHECK: vlerg %v24, 0(%r2)
 ; CHECK: br %r14
   %load = load <2 x double>, ptr %ptr
@@ -73,8 +85,8 @@ define <2 x double> @f6(ptr %ptr) {
 }
 
 ; Test the highest aligned in-range offset.
-define <4 x i32> @f7(ptr %base) {
-; CHECK-LABEL: f7:
+define <4 x i32> @f8(ptr %base) {
+; CHECK-LABEL: f8:
 ; CHECK: vlerf %v24, 4080(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr <4 x i32>, ptr %base, i64 255
@@ -85,8 +97,8 @@ define <4 x i32> @f7(ptr %base) {
 }
 
 ; Test the highest unaligned in-range offset.
-define <4 x i32> @f8(ptr %base) {
-; CHECK-LABEL: f8:
+define <4 x i32> @f9(ptr %base) {
+; CHECK-LABEL: f9:
 ; CHECK: vlerf %v24, 4095(%r2)
 ; CHECK: br %r14
   %addr = getelementptr i8, ptr %base, i64 4095
@@ -97,8 +109,8 @@ define <4 x i32> @f8(ptr %base) {
 }
 
 ; Test the next offset up, which requires separate address logic,
-define <4 x i32> @f9(ptr %base) {
-; CHECK-LABEL: f9:
+define <4 x i32> @f10(ptr %base) {
+; CHECK-LABEL: f10:
 ; CHECK: aghi %r2, 4096
 ; CHECK: vlerf %v24, 0(%r2)
 ; CHECK: br %r14
@@ -110,8 +122,8 @@ define <4 x i32> @f9(ptr %base) {
 }
 
 ; Test negative offsets, which also require separate address logic,
-define <4 x i32> @f10(ptr %base) {
-; CHECK-LABEL: f10:
+define <4 x i32> @f11(ptr %base) {
+; CHECK-LABEL: f11:
 ; CHECK: aghi %r2, -16
 ; CHECK: vlerf %v24, 0(%r2)
 ; CHECK: br %r14
@@ -123,8 +135,8 @@ define <4 x i32> @f10(ptr %base) {
 }
 
 ; Check that indexes are allowed.
-define <4 x i32> @f11(ptr %base, i64 %index) {
-; CHECK-LABEL: f11:
+define <4 x i32> @f12(ptr %base, i64 %index) {
+; CHECK-LABEL: f12:
 ; CHECK: vlerf %v24, 0(%r3,%r2)
 ; CHECK: br %r14
   %addr = getelementptr i8, ptr %base, i64 %index

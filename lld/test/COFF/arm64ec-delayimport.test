@@ -51,28 +51,28 @@ DISASM-NEXT: 180002016: 48 8d 05 6b 50 00 00         leaq    0x506b(%rip), %rax 
 DISASM-NEXT: 18000201d: e9 0c 00 00 00               jmp     0x18000202e <.text+0x102e>
 DISASM-NEXT: 180002022: 48 8d 05 67 50 00 00         leaq    0x5067(%rip), %rax      # 0x180007090
 DISASM-NEXT: 180002029: e9 00 00 00 00               jmp     0x18000202e <.text+0x102e>
-DISASM-NEXT: 18000202e: 51                           pushq   %rcx
-DISASM-NEXT: 18000202f: 52                           pushq   %rdx
-DISASM-NEXT: 180002030: 41 50                        pushq   %r8
-DISASM-NEXT: 180002032: 41 51                        pushq   %r9
-DISASM-NEXT: 180002034: 48 83 ec 48                  subq    $0x48, %rsp
-DISASM-NEXT: 180002038: 66 0f 7f 04 24               movdqa  %xmm0, (%rsp)
-DISASM-NEXT: 18000203d: 66 0f 7f 4c 24 10            movdqa  %xmm1, 0x10(%rsp)
-DISASM-NEXT: 180002043: 66 0f 7f 54 24 20            movdqa  %xmm2, 0x20(%rsp)
-DISASM-NEXT: 180002049: 66 0f 7f 5c 24 30            movdqa  %xmm3, 0x30(%rsp)
-DISASM-NEXT: 18000204f: 48 8b d0                     movq    %rax, %rdx
-DISASM-NEXT: 180002052: 48 8d 0d a7 21 00 00         leaq    0x21a7(%rip), %rcx      # 0x180004200
-DISASM-NEXT: 180002059: e8 aa ef ff ff               callq   0x180001008 <.text+0x8>
-DISASM-NEXT: 18000205e: 66 0f 6f 04 24               movdqa  (%rsp), %xmm0
-DISASM-NEXT: 180002063: 66 0f 6f 4c 24 10            movdqa  0x10(%rsp), %xmm1
-DISASM-NEXT: 180002069: 66 0f 6f 54 24 20            movdqa  0x20(%rsp), %xmm2
-DISASM-NEXT: 18000206f: 66 0f 6f 5c 24 30            movdqa  0x30(%rsp), %xmm3
-DISASM-NEXT: 180002075: 48 83 c4 48                  addq    $0x48, %rsp
-DISASM-NEXT: 180002079: 41 59                        popq    %r9
-DISASM-NEXT: 18000207b: 41 58                        popq    %r8
-DISASM-NEXT: 18000207d: 5a                           popq    %rdx
-DISASM-NEXT: 18000207e: 59                           popq    %rcx
-DISASM-NEXT: 18000207f: ff e0                        jmpq    *%rax
+DISASM-NEXT: 18000202e: 48 89 4c 24 08               movq    %rcx, 0x8(%rsp)
+DISASM-NEXT: 180002033: 48 89 54 24 10               movq    %rdx, 0x10(%rsp)
+DISASM-NEXT: 180002038: 4c 89 44 24 18               movq    %r8, 0x18(%rsp)
+DISASM-NEXT: 18000203d: 4c 89 4c 24 20               movq    %r9, 0x20(%rsp)
+DISASM-NEXT: 180002042: 48 83 ec 68                  subq    $0x68, %rsp
+DISASM-NEXT: 180002046: 66 0f 7f 44 24 20            movdqa  %xmm0, 0x20(%rsp)
+DISASM-NEXT: 18000204c: 66 0f 7f 4c 24 30            movdqa  %xmm1, 0x30(%rsp)
+DISASM-NEXT: 180002052: 66 0f 7f 54 24 40            movdqa  %xmm2, 0x40(%rsp)
+DISASM-NEXT: 180002058: 66 0f 7f 5c 24 50            movdqa  %xmm3, 0x50(%rsp)
+DISASM-NEXT: 18000205e: 48 8b d0                     movq    %rax, %rdx
+DISASM-NEXT: 180002061: 48 8d 0d 90 21 00 00         leaq    0x2190(%rip), %rcx      # 0x1800041f8
+DISASM-NEXT: 180002068: e8 9b ef ff ff               callq   0x180001008 <.text+0x8>
+DISASM-NEXT: 18000206d: 66 0f 6f 44 24 20            movdqa  0x20(%rsp), %xmm0
+DISASM-NEXT: 180002073: 66 0f 6f 4c 24 30            movdqa  0x30(%rsp), %xmm1
+DISASM-NEXT: 180002079: 66 0f 6f 54 24 40            movdqa  0x40(%rsp), %xmm2
+DISASM-NEXT: 18000207f: 66 0f 6f 5c 24 50            movdqa  0x50(%rsp), %xmm3
+DISASM-NEXT: 180002085: 48 8b 4c 24 70               movq    0x70(%rsp), %rcx
+DISASM-NEXT: 18000208a: 48 8b 54 24 78               movq    0x78(%rsp), %rdx
+DISASM-NEXT: 18000208f: 4c 8b 84 24 80 00 00 00      movq    0x80(%rsp), %r8
+DISASM-NEXT: 180002097: 4c 8b 8c 24 88 00 00 00      movq    0x88(%rsp), %r9
+DISASM-NEXT: 18000209f: 48 83 c4 68                  addq    $0x68, %rsp
+DISASM-NEXT: 1800020a3: ff e0                        jmpq    *%rax
 
 RUN: llvm-readobj --coff-load-config out.dll | FileCheck --check-prefix=LOADCFG %s
 LOADCFG:      CHPEMetadata [
@@ -85,7 +85,7 @@ IMPORTS-NEXT:   Name: test.dll
 IMPORTS-NEXT:   Attributes: 0x1
 IMPORTS-NEXT:   ModuleHandle: 0x7080
 IMPORTS-NEXT:   ImportAddressTable: 0x7088
-IMPORTS-NEXT:   ImportNameTable: 0x4240
+IMPORTS-NEXT:   ImportNameTable: 0x4238
 IMPORTS-NEXT:   BoundDelayImportTable: 0x0
 IMPORTS-NEXT:   UnloadDelayImportTable: 0x0
 IMPORTS-NEXT:   Import {
@@ -141,7 +141,7 @@ RELOC-NEXT:     Address: 0x6008
 RELOC-NEXT:   }
 
 RUN: llvm-readobj --hex-dump=.pdata out.dll | FileCheck --check-prefix=PDATA %s
-PDATA: 0x180008000 2e200000 81200000 18400000
+PDATA: 0x180008000 2e200000 a5200000 18400000
 
 Verify that a demangled version of __delayLoadHelper2 can be used.
 

@@ -19,7 +19,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
@@ -30,8 +30,7 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   static const char *const GCCRegNames[];
 
-  static const LangASMap AMDGPUDefIsGenMap;
-  static const LangASMap AMDGPUDefIsPrivMap;
+  static const LangASMap AMDGPUAddrSpaceMap;
 
   llvm::AMDGPU::GPUKind GPUKind;
   unsigned GPUFeatures;
@@ -78,18 +77,27 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
            !!(GPUFeatures & llvm::AMDGPU::FEATURE_LDEXP);
   }
 
-  static bool isAMDGCN(const llvm::Triple &TT) { return TT.isAMDGCN(); }
-
   static bool isR600(const llvm::Triple &TT) {
     return TT.getArch() == llvm::Triple::r600;
+  }
+
+  bool hasFlatSupport() const {
+    if (GPUKind >= llvm::AMDGPU::GK_GFX700)
+      return true;
+
+    // Dummy target is assumed to be gfx700+ for amdhsa.
+    if (GPUKind == llvm::AMDGPU::GK_NONE &&
+        getTriple().getOS() == llvm::Triple::AMDHSA)
+      return true;
+
+    return false;
   }
 
 public:
   AMDGPUTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
 
-  void setAddressSpaceMap(bool DefaultIsPrivate);
-
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override;
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override;
 
   uint64_t getPointerWidthV(LangAS AS) const override {
     if (isR600(getTriple()))
@@ -124,7 +132,7 @@ public:
     return getTriple().isAMDGCN() ? 64 : 32;
   }
 
-  bool hasBFloat16Type() const override { return isAMDGCN(getTriple()); }
+  bool hasBFloat16Type() const override { return getTriple().isAMDGCN(); }
 
   std::string_view getClobbers() const override { return ""; }
 
@@ -255,8 +263,6 @@ public:
 
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
-  bool useFP16ConversionIntrinsics() const override { return false; }
-
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
@@ -272,7 +278,7 @@ public:
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     if (getTriple().isAMDGCN()) {
       GPUKind = llvm::AMDGPU::parseArchAMDGCN(Name);
       GPUFeatures = llvm::AMDGPU::getArchAttrAMDGCN(GPUKind);
@@ -289,10 +295,11 @@ public:
     Opts["cl_clang_storage_class_specifiers"] = true;
     Opts["__cl_clang_variadic_functions"] = true;
     Opts["__cl_clang_function_pointers"] = true;
+    Opts["__cl_clang_function_scope_local_variables"] = true;
     Opts["__cl_clang_non_portable_kernel_param_types"] = true;
     Opts["__cl_clang_bitfields"] = true;
 
-    bool IsAMDGCN = isAMDGCN(getTriple());
+    bool IsAMDGCN = getTriple().isAMDGCN();
 
     Opts["cl_khr_fp64"] = hasFP64();
     Opts["__opencl_c_fp64"] = hasFP64();
@@ -315,12 +322,27 @@ public:
       Opts["cl_amd_media_ops"] = true;
       Opts["cl_amd_media_ops2"] = true;
 
+      // FIXME: Check subtarget for image support.
       Opts["__opencl_c_images"] = true;
       Opts["__opencl_c_3d_image_writes"] = true;
+      Opts["__opencl_c_read_write_images"] = true;
       Opts["cl_khr_3d_image_writes"] = true;
+      Opts["__opencl_c_program_scope_global_variables"] = true;
+      Opts["__opencl_c_atomic_order_acq_rel"] = true;
+      Opts["__opencl_c_atomic_order_seq_cst"] = true;
+      Opts["__opencl_c_atomic_scope_device"] = true;
+      Opts["__opencl_c_atomic_scope_all_devices"] = true;
+      Opts["__opencl_c_work_group_collective_functions"] = true;
 
-      Opts["__opencl_c_generic_address_space"] =
-          GPUKind >= llvm::AMDGPU::GK_GFX700;
+      if (hasFlatSupport()) {
+        Opts["__opencl_c_generic_address_space"] = true;
+        Opts["__opencl_c_device_enqueue"] = true;
+        Opts["__opencl_c_pipes"] = true;
+      }
+
+      if (getTriple().getEnvironment() == llvm::Triple::LLVM) {
+        Opts["cl_khr_subgroup_extended_types"] = true;
+      }
     }
   }
 
@@ -399,15 +421,12 @@ public:
   /// in the DWARF.
   std::optional<unsigned>
   getDWARFAddressSpace(unsigned AddressSpace) const override {
-    const unsigned DWARF_Private = 1;
-    const unsigned DWARF_Local = 2;
-    if (AddressSpace == llvm::AMDGPUAS::PRIVATE_ADDRESS) {
-      return DWARF_Private;
-    } else if (AddressSpace == llvm::AMDGPUAS::LOCAL_ADDRESS) {
-      return DWARF_Local;
-    } else {
+    int DWARFAS = llvm::AMDGPU::mapToDWARFAddrSpace(AddressSpace);
+    // If there is no corresponding address space identifier, or it would be
+    // the default, then don't emit the attribute.
+    if (DWARFAS == -1 || DWARFAS == llvm::AMDGPU::DWARFAS::DEFAULT)
       return std::nullopt;
-    }
+    return DWARFAS;
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
@@ -415,8 +434,7 @@ public:
     default:
       return CCCR_Warning;
     case CC_C:
-    case CC_OpenCLKernel:
-    case CC_AMDGPUKernelCall:
+    case CC_DeviceKernel:
       return CCCR_OK;
     }
   }
@@ -425,11 +443,13 @@ public:
   // address space has value 0 but in private and local address space has
   // value ~0.
   uint64_t getNullPointerValue(LangAS AS) const override {
-    // FIXME: Also should handle region.
-    return (AS == LangAS::opencl_local || AS == LangAS::opencl_private ||
-            AS == LangAS::sycl_local || AS == LangAS::sycl_private)
-               ? ~0
-               : 0;
+    // Check language-specific address spaces
+    if (AS == LangAS::opencl_local || AS == LangAS::opencl_private ||
+        AS == LangAS::sycl_local || AS == LangAS::sycl_private)
+      return ~0;
+    if (isTargetAddressSpace(AS))
+      return llvm::AMDGPU::getNullPointerValue(toTargetAddressSpace(AS));
+    return 0;
   }
 
   void setAuxTarget(const TargetInfo *Aux) override;
@@ -440,6 +460,7 @@ public:
   // pre-defined macros.
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override {
+    HasFullBFloat16 = true;
     auto TargetIDFeatures =
         getAllPossibleTargetIDFeatures(getTriple(), getArchNameAMDGCN(GPUKind));
     for (const auto &F : Features) {
@@ -462,15 +483,11 @@ public:
     return true;
   }
 
-  std::optional<std::string> getTargetID() const override {
-    if (!isAMDGCN(getTriple()))
-      return std::nullopt;
-    // When -target-cpu is not set, we assume generic code that it is valid
-    // for all GPU and use an empty string as target ID to represent that.
-    if (GPUKind == llvm::AMDGPU::GK_NONE)
-      return std::string("");
-    return getCanonicalTargetID(getArchNameAMDGCN(GPUKind),
-                                OffloadArchFeatures);
+  bool isProcessorName(StringRef Name) const override {
+    llvm::AMDGPU::GPUKind NameKind = getTriple().isAMDGCN()
+                                         ? llvm::AMDGPU::parseArchAMDGCN(Name)
+                                         : llvm::AMDGPU::parseArchR600(Name);
+    return NameKind == GPUKind;
   }
 
   bool hasHIPImageSupport() const override { return HasImage; }

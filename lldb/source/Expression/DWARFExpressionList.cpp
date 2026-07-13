@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Expression/DWARFExpressionList.h"
+#include "lldb/Core/AddressRange.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
@@ -20,7 +21,7 @@ bool DWARFExpressionList::IsAlwaysValidSingleExpr() const {
   return GetAlwaysValidExpr() != nullptr;
 }
 
-const DWARFExpression * DWARFExpressionList::GetAlwaysValidExpr() const {
+const DWARFExpression *DWARFExpressionList::GetAlwaysValidExpr() const {
   if (m_exprs.GetSize() != 1)
     return nullptr;
   const auto *expr = m_exprs.GetEntryAtIndex(0);
@@ -51,6 +52,38 @@ bool DWARFExpressionList::ContainsAddress(lldb::addr_t func_load_addr,
   if (IsAlwaysValidSingleExpr())
     return true;
   return GetExpressionAtAddress(func_load_addr, addr) != nullptr;
+}
+
+std::optional<DWARFExpressionList::DWARFExpressionEntry>
+DWARFExpressionList::GetExpressionEntryAtAddress(lldb::addr_t func_load_addr,
+                                                 lldb::addr_t load_addr) const {
+  if (const DWARFExpression *always = GetAlwaysValidExpr()) {
+    return DWARFExpressionEntry{std::nullopt, always};
+  }
+
+  if (func_load_addr == LLDB_INVALID_ADDRESS)
+    func_load_addr = m_func_file_addr;
+
+  // Guard against underflow when translating a load address back into file
+  // space.
+  if (load_addr < func_load_addr)
+    return std::nullopt;
+
+  // Guard against overflow.
+  lldb::addr_t delta = load_addr - func_load_addr;
+  if (delta > std::numeric_limits<lldb::addr_t>::max() - m_func_file_addr)
+    return std::nullopt;
+
+  lldb::addr_t file_pc = (load_addr - func_load_addr) + m_func_file_addr;
+
+  if (const auto *entry = m_exprs.FindEntryThatContains(file_pc)) {
+    AddressRange range_in_file(entry->GetRangeBase(),
+                               entry->GetRangeEnd() - entry->GetRangeBase());
+    return DWARFExpressionEntry{range_in_file, &entry->data};
+  }
+
+  // No entry covers this PC:
+  return std::nullopt;
 }
 
 const DWARFExpression *
@@ -196,43 +229,64 @@ void DWARFExpressionList::GetDescription(Stream *s,
   }
 }
 
+llvm::Expected<const DWARFExpression *>
+DWARFExpressionList::GetExpressionAtPC(ExecutionContext *exe_ctx,
+                                       RegisterContext *reg_ctx,
+                                       lldb::addr_t func_load_addr) const {
+  if (const DWARFExpression *always = GetAlwaysValidExpr())
+    return always;
+
+  Address pc;
+  StackFrame *frame = nullptr;
+  if (!reg_ctx || !reg_ctx->GetPCForSymbolication(pc)) {
+    if (exe_ctx)
+      frame = exe_ctx->GetFramePtr();
+    if (!frame)
+      return llvm::createStringError("no frame");
+    RegisterContextSP reg_ctx_sp = frame->GetRegisterContext();
+    if (!reg_ctx_sp)
+      return llvm::createStringError("no register context");
+    reg_ctx_sp->GetPCForSymbolication(pc);
+  }
+
+  if (!pc.IsValid())
+    return llvm::createStringError("invalid PC in frame");
+
+  addr_t pc_load_addr = pc.GetLoadAddress(exe_ctx->GetTargetPtr());
+  const DWARFExpression *entry =
+      GetExpressionAtAddress(func_load_addr, pc_load_addr);
+  if (!entry)
+    return llvm::createStringError("variable not available");
+  return entry;
+}
+
 llvm::Expected<Value> DWARFExpressionList::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::addr_t func_load_addr, const Value *initial_value_ptr,
     const Value *object_address_ptr) const {
+  llvm::Expected<const DWARFExpression *> expr =
+      GetExpressionAtPC(exe_ctx, reg_ctx, func_load_addr);
+  if (!expr)
+    return expr.takeError();
+
   ModuleSP module_sp = m_module_wp.lock();
   DataExtractor data;
-  RegisterKind reg_kind;
-  DWARFExpression expr;
-  if (IsAlwaysValidSingleExpr()) {
-    expr = m_exprs.Back()->data;
-  } else {
-    Address pc;
-    StackFrame *frame = nullptr;
-    if (!reg_ctx || !reg_ctx->GetPCForSymbolication(pc)) {
-      if (exe_ctx)
-        frame = exe_ctx->GetFramePtr();
-      if (!frame)
-        return llvm::createStringError("no frame");
-      RegisterContextSP reg_ctx_sp = frame->GetRegisterContext();
-      if (!reg_ctx_sp)
-        return llvm::createStringError("no register context");
-      reg_ctx_sp->GetPCForSymbolication(pc);
-    }
-
-    if (!pc.IsValid()) {
-      return llvm::createStringError("Invalid PC in frame.");
-    }
-    addr_t pc_load_addr = pc.GetLoadAddress(exe_ctx->GetTargetPtr());
-    const DWARFExpression *entry =
-        GetExpressionAtAddress(func_load_addr, pc_load_addr);
-    if (!entry)
-      return llvm::createStringError("variable not available");
-    expr = *entry;
-  }
-  expr.GetExpressionData(data);
-  reg_kind = expr.GetRegisterKind();
+  (*expr)->GetExpressionData(data);
+  RegisterKind reg_kind = (*expr)->GetRegisterKind();
   return DWARFExpression::Evaluate(exe_ctx, reg_ctx, module_sp, data,
                                    m_dwarf_cu, reg_kind, initial_value_ptr,
                                    object_address_ptr);
+}
+
+bool DWARFExpressionList::IsImplicit(ExecutionContext *exe_ctx,
+                                     RegisterContext *reg_ctx,
+                                     lldb::addr_t func_load_addr) const {
+  llvm::Expected<const DWARFExpression *> expr =
+      GetExpressionAtPC(exe_ctx, reg_ctx, func_load_addr);
+  if (!expr) {
+    // No location in scope, so nothing to write back to.
+    llvm::consumeError(expr.takeError());
+    return true;
+  }
+  return (*expr)->IsImplicit(m_dwarf_cu);
 }

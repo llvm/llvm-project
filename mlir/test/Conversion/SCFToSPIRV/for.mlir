@@ -5,6 +5,7 @@ module attributes {
     #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
 } {
 
+// CHECK-LABEL: @loop_kernel
 func.func @loop_kernel(%arg2 : memref<10xf32, #spirv.storage_class<StorageBuffer>>, %arg3 : memref<10xf32, #spirv.storage_class<StorageBuffer>>) {
   // CHECK: %[[LB:.*]] = spirv.Constant 4 : i32
   %lb = arith.constant 4 : index
@@ -28,6 +29,19 @@ func.func @loop_kernel(%arg2 : memref<10xf32, #spirv.storage_class<StorageBuffer
   // CHECK:        spirv.mlir.merge
   // CHECK:      }
   scf.for %arg4 = %lb to %ub step %step {
+    %1 = memref.load %arg2[%arg4] : memref<10xf32, #spirv.storage_class<StorageBuffer>>
+    memref.store %1, %arg3[%arg4] : memref<10xf32, #spirv.storage_class<StorageBuffer>>
+  }
+  return
+}
+
+// CHECK-LABEL: @unsigned_loop
+//       CHECK:   spirv.ULessThan
+func.func @unsigned_loop(%arg2 : memref<10xf32, #spirv.storage_class<StorageBuffer>>, %arg3 : memref<10xf32, #spirv.storage_class<StorageBuffer>>) {
+  %lb = arith.constant 4 : index
+  %ub = arith.constant 42 : index
+  %step = arith.constant 2 : index
+  scf.for unsigned %arg4 = %lb to %ub step %step {
     %1 = memref.load %arg2[%arg4] : memref<10xf32, #spirv.storage_class<StorageBuffer>>
     memref.store %1, %arg3[%arg4] : memref<10xf32, #spirv.storage_class<StorageBuffer>>
   }
@@ -72,6 +86,32 @@ func.func @loop_yield(%arg2 : memref<10xf32, #spirv.storage_class<StorageBuffer>
   // CHECK: spirv.Store "StorageBuffer" {{%.*}}, %[[OUT2]] : f32
   memref.store %result#0, %arg3[%lb] : memref<10xf32, #spirv.storage_class<StorageBuffer>>
   memref.store %result#1, %arg3[%ub] : memref<10xf32, #spirv.storage_class<StorageBuffer>>
+  return
+}
+
+// CHECK-LABEL: @loop_unroll
+func.func @loop_unroll(%arg2 : memref<10xf32, #spirv.storage_class<StorageBuffer>>, %arg3 : memref<10xf32, #spirv.storage_class<StorageBuffer>>) {
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 10 : index
+  %step = arith.constant 1 : index
+  // CHECK: spirv.mlir.loop control(Unroll) {
+  scf.for %arg4 = %lb to %ub step %step {
+    %1 = memref.load %arg2[%arg4] : memref<10xf32, #spirv.storage_class<StorageBuffer>>
+    memref.store %1, %arg3[%arg4] : memref<10xf32, #spirv.storage_class<StorageBuffer>>
+  } {spirv.loop_control = #spirv.loop_control<Unroll>}
+  return
+}
+
+// CHECK-LABEL: @loop_dont_unroll
+func.func @loop_dont_unroll(%arg2 : memref<10xf32, #spirv.storage_class<StorageBuffer>>, %arg3 : memref<10xf32, #spirv.storage_class<StorageBuffer>>) {
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 10 : index
+  %step = arith.constant 1 : index
+  // CHECK: spirv.mlir.loop control(DontUnroll) {
+  scf.for %arg4 = %lb to %ub step %step {
+    %1 = memref.load %arg2[%arg4] : memref<10xf32, #spirv.storage_class<StorageBuffer>>
+    memref.store %1, %arg3[%arg4] : memref<10xf32, #spirv.storage_class<StorageBuffer>>
+  } {spirv.loop_control = #spirv.loop_control<DontUnroll>}
   return
 }
 

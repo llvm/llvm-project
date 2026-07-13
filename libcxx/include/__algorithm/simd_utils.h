@@ -26,9 +26,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 // TODO: Find out how altivec changes things and allow vectorizations there too.
-// TODO: Simplify this condition once we stop building with AppleClang 15 in the CI.
-#if _LIBCPP_STD_VER >= 14 && defined(_LIBCPP_COMPILER_CLANG_BASED) && !defined(__ALTIVEC__) &&                         \
-    !(defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600)
+#if _LIBCPP_STD_VER >= 14 && defined(_LIBCPP_COMPILER_CLANG_BASED) && !defined(__ALTIVEC__)
 #  define _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS 1
 #else
 #  define _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS 0
@@ -92,6 +90,9 @@ inline constexpr size_t __native_vector_size = 1;
 template <class _ArithmeticT, size_t _Np>
 using __simd_vector __attribute__((__ext_vector_type__(_Np))) _LIBCPP_NODEBUG = _ArithmeticT;
 
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wpsabi")
+
 template <class _VecT>
 inline constexpr size_t __simd_vector_size_v = []<bool _False = false>() -> size_t {
   static_assert(_False, "Not a vector!");
@@ -116,16 +117,35 @@ template <class _VecT, class _Iter>
   }(make_index_sequence<__simd_vector_size_v<_VecT>>{});
 }
 
+// Load the first _Np elements, zero the rest
+template <class _VecT, size_t _Np, class _Iter>
+[[__nodiscard__]] _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _VecT __partial_load(_Iter __iter) noexcept {
+  return [=]<size_t... _LoadIndices, size_t... _ZeroIndices>(
+             index_sequence<_LoadIndices...>, index_sequence<_ZeroIndices...>) _LIBCPP_ALWAYS_INLINE noexcept {
+    return _VecT{__iter[_LoadIndices]..., ((void)_ZeroIndices, 0)...};
+  }(make_index_sequence<_Np>{}, make_index_sequence<__simd_vector_size_v<_VecT> - _Np>{});
+}
+
+template <class _Tp, size_t _Np>
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __any_of(__simd_vector<_Tp, _Np> __vec) noexcept {
+  return __builtin_reduce_or(__builtin_convertvector(__vec, __simd_vector<bool, _Np>));
+}
+
 template <class _Tp, size_t _Np>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __all_of(__simd_vector<_Tp, _Np> __vec) noexcept {
   return __builtin_reduce_and(__builtin_convertvector(__vec, __simd_vector<bool, _Np>));
 }
 
 template <class _Tp, size_t _Np>
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __none_of(__simd_vector<_Tp, _Np> __vec) noexcept {
+  return !__builtin_reduce_or(__builtin_convertvector(__vec, __simd_vector<bool, _Np>));
+}
+
+template <class _Tp, size_t _Np>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t __find_first_set(__simd_vector<_Tp, _Np> __vec) noexcept {
   using __mask_vec = __simd_vector<bool, _Np>;
 
-  // This has MSan disabled du to https://github.com/llvm/llvm-project/issues/85876
+  // This has MSan disabled du to https://llvm.org/PR85876
   auto __impl = [&]<class _MaskT>(_MaskT) _LIBCPP_NO_SANITIZE("memory") noexcept {
 #  if defined(_LIBCPP_BIG_ENDIAN)
     return std::min<size_t>(
@@ -154,6 +174,7 @@ template <class _Tp, size_t _Np>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t __find_first_not_set(__simd_vector<_Tp, _Np> __vec) noexcept {
   return std::__find_first_set(~__vec);
 }
+_LIBCPP_DIAGNOSTIC_POP
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -16,7 +16,7 @@
 
 using namespace llvm;
 
-const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
+const MCAsmInfo::AtSpecifier atSpecifiers[] = {
     {HexagonMCExpr::VK_DTPREL, "DTPREL"}, {HexagonMCExpr::VK_GD_GOT, "GDGOT"},
     {HexagonMCExpr::VK_GD_PLT, "GDPLT"},  {HexagonMCExpr::VK_GOT, "GOT"},
     {HexagonMCExpr::VK_GOTREL, "GOTREL"}, {HexagonMCExpr::VK_IE, "IE"},
@@ -28,7 +28,9 @@ const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
 // Pin the vtable to this file.
 void HexagonMCAsmInfo::anchor() {}
 
-HexagonMCAsmInfo::HexagonMCAsmInfo(const Triple &TT) {
+HexagonMCAsmInfo::HexagonMCAsmInfo(const Triple &TT,
+                                   const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   Data16bitsDirective = "\t.half\t";
   Data32bitsDirective = "\t.word\t";
   Data64bitsDirective = nullptr;  // .xword is only supported by V9.
@@ -38,6 +40,7 @@ HexagonMCAsmInfo::HexagonMCAsmInfo(const Triple &TT) {
   LCOMMDirectiveAlignmentType = LCOMM::ByteAlignment;
   InlineAsmStart = "# InlineAsm Start";
   InlineAsmEnd = "# InlineAsm End";
+  UsesSetToEquateSymbol = true;
   ZeroDirective = "\t.space\t";
   AscizDirective = "\t.string\t";
 
@@ -46,5 +49,5 @@ HexagonMCAsmInfo::HexagonMCAsmInfo(const Triple &TT) {
   ExceptionsType = ExceptionHandling::DwarfCFI;
   UseLogicalShr = false;
 
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(atSpecifiers);
 }

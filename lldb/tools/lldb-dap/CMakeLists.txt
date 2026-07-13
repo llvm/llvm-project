@@ -1,25 +1,18 @@
-if(APPLE)
-  configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/lldb-dap-Info.plist.in
-    ${CMAKE_CURRENT_BINARY_DIR}/lldb-dap-Info.plist
-    )
-  # Inline info plist in binary (use target_link_options for this as soon as CMake 3.13 is available)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-sectcreate,__TEXT,__info_plist,${CMAKE_CURRENT_BINARY_DIR}/lldb-dap-Info.plist")
-endif()
-
-# We need to include the llvm components we depend on manually, as liblldb does
-# not re-export those.
-set(LLVM_LINK_COMPONENTS Support)
-set(LLVM_TARGET_DEFINITIONS Options.td)
-tablegen(LLVM Options.inc -gen-opt-parser-defs)
-add_public_tablegen_target(LLDBDAPOptionsTableGen)
-add_lldb_tool(lldb-dap
-  lldb-dap.cpp
+# lldbDAP is an OBJECT library: a collection of compiled object files that is
+# shared between the lldb-dap tool and the DAPTests unit test, with no declared
+# link dependencies of its own. Each consumer lists its own LINK_LIBS and
+# LINK_COMPONENTS, avoiding transitive propagation of static LLVM components
+# that would collide with symbols re-exported by liblldb when
+# LLDB_EXPORT_ALL_SYMBOLS is ON.
+add_lldb_library(lldbDAP OBJECT
   Breakpoint.cpp
   BreakpointBase.cpp
+  ClientLauncher.cpp
+  CommandPlugins.cpp
   DAP.cpp
   DAPError.cpp
   DAPLog.cpp
+  DAPSessionManager.cpp
   EventHelper.cpp
   ExceptionBreakpoint.cpp
   FifoFiles.cpp
@@ -29,17 +22,19 @@ add_lldb_tool(lldb-dap
   LLDBUtils.cpp
   OutputRedirector.cpp
   ProgressEvent.cpp
+  ProtocolUtils.cpp
   RunInTerminal.cpp
   SourceBreakpoint.cpp
   Transport.cpp
+  Variables.cpp
   Watchpoint.cpp
 
   Handler/ResponseHandler.cpp
   Handler/AttachRequestHandler.cpp
-  Handler/BreakpointLocationsHandler.cpp
+  Handler/BreakpointLocationsRequestHandler.cpp
   Handler/CancelRequestHandler.cpp
   Handler/CompileUnitsRequestHandler.cpp
-  Handler/CompletionsHandler.cpp
+  Handler/CompletionsRequestHandler.cpp
   Handler/ConfigurationDoneRequestHandler.cpp
   Handler/ContinueRequestHandler.cpp
   Handler/DataBreakpointInfoRequestHandler.cpp
@@ -51,6 +46,7 @@ add_lldb_tool(lldb-dap
   Handler/LaunchRequestHandler.cpp
   Handler/LocationsRequestHandler.cpp
   Handler/ModulesRequestHandler.cpp
+  Handler/ModuleSymbolsRequestHandler.cpp
   Handler/NextRequestHandler.cpp
   Handler/PauseRequestHandler.cpp
   Handler/ReadMemoryRequestHandler.cpp
@@ -70,38 +66,31 @@ add_lldb_tool(lldb-dap
   Handler/StepOutRequestHandler.cpp
   Handler/TestGetTargetBreakpointsRequestHandler.cpp
   Handler/ThreadsRequestHandler.cpp
+  Handler/UnknownRequestHandler.cpp
   Handler/VariablesRequestHandler.cpp
+  Handler/WriteMemoryRequestHandler.cpp
 
+  Protocol/DAPTypes.cpp
   Protocol/ProtocolBase.cpp
+  Protocol/ProtocolEvents.cpp
   Protocol/ProtocolTypes.cpp
   Protocol/ProtocolRequests.cpp
-
-  LINK_LIBS
-    liblldb
-    lldbHost
-
-  LINK_COMPONENTS
-    Option
-    Support
   )
 
-target_include_directories(lldb-dap PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+# When building with precompiled headers and Xcode as a generator,
+# It adds obj.lldbDAP.dir/${BUILD_TYPE}/cmake_pch.xxx but does not generate one
+# causing the build to fail.
+if(CMAKE_GENERATOR STREQUAL "Xcode")
+  set_target_properties(lldbDAP PROPERTIES DISABLE_PRECOMPILE_HEADERS ON)
+endif()
+
+target_include_directories(lldbDAP
+  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
 if(LLDB_DAP_WELCOME_MESSAGE)
-  target_compile_definitions(lldb-dap
+  target_compile_definitions(lldbDAP
     PRIVATE
     -DLLDB_DAP_WELCOME_MESSAGE=\"${LLDB_DAP_WELCOME_MESSAGE}\")
 endif()
 
-if(LLDB_BUILD_FRAMEWORK)
-  # In the build-tree, we know the exact path to the framework directory.
-  # The installed framework can be in different locations.
-  lldb_setup_rpaths(lldb-dap
-    BUILD_RPATH
-      "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}"
-    INSTALL_RPATH
-      "@loader_path/../../../SharedFrameworks"
-      "@loader_path/../../System/Library/PrivateFrameworks"
-      "@loader_path/../../Library/PrivateFrameworks"
-  )
-endif()
+add_subdirectory(tool)

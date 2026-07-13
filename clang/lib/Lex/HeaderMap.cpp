@@ -18,7 +18,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SystemZ/zOSSupport.h"
 #include <cstring>
 #include <memory>
 #include <optional>

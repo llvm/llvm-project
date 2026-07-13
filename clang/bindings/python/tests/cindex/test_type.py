@@ -1,7 +1,4 @@
-import os
-
 from clang.cindex import (
-    Config,
     CursorKind,
     PrintingPolicy,
     PrintingPolicyProperty,
@@ -10,8 +7,6 @@ from clang.cindex import (
     TypeKind,
 )
 
-if "CLANG_LIBRARY_PATH" in os.environ:
-    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
 import gc
 import unittest
@@ -63,7 +58,7 @@ class TestType(unittest.TestCase):
         self.assertIsNotNone(fields[1].translation_unit)
         self.assertEqual(fields[1].spelling, "b")
         self.assertFalse(fields[1].type.is_const_qualified())
-        self.assertEqual(fields[1].type.kind, TypeKind.ELABORATED)
+        self.assertEqual(fields[1].type.kind, TypeKind.TYPEDEF)
         self.assertEqual(fields[1].type.get_canonical().kind, TypeKind.INT)
         self.assertEqual(fields[1].type.get_declaration().spelling, "I")
         self.assertEqual(fields[1].type.get_typedef_name(), "I")

@@ -6,7 +6,8 @@
 namespace test1 {
 template <bool> struct S {};
 template <typename> concept C = true;
-template <typename T = int> S<C<T>> f0() { return S<C<T>>{}; }
+template <typename T = int>
+S<C<T>> f0() { return S<C<T>>{}; }
 template S<C<int>> f0<>();
 // CHECK: @_ZN5test12f0IiEENS_1SIX1CIT_EEEEv(
 // CLANG17: @_ZN5test12f0IiEENS_1SIL_ZNS_1CIT_EEEEEv(

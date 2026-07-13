@@ -30,7 +30,6 @@ class PDLByteCode;
 /// entries. ByteCodeAddr refers to size of indices into the bytecode.
 using ByteCodeField = uint16_t;
 using ByteCodeAddr = uint32_t;
-using OwningOpRange = llvm::OwningArrayRef<Operation *>;
 
 //===----------------------------------------------------------------------===//
 // PDLByteCodePattern
@@ -94,21 +93,21 @@ private:
   /// the bytecode to store ranges of operations. These are always stored by
   /// owning references, because at no point in the execution of the byte code
   /// we get an indexed range (view) of operations.
-  std::vector<OwningOpRange> opRangeMemory;
+  std::vector<std::vector<Operation *>> opRangeMemory;
 
   /// A mutable block of memory used during the matching and rewriting phase of
   /// the bytecode to store ranges of types.
   std::vector<TypeRange> typeRangeMemory;
   /// A set of type ranges that have been allocated by the byte code interpreter
   /// to provide a guaranteed lifetime.
-  std::vector<llvm::OwningArrayRef<Type>> allocatedTypeRangeMemory;
+  std::vector<std::vector<Type>> allocatedTypeRangeMemory;
 
   /// A mutable block of memory used during the matching and rewriting phase of
   /// the bytecode to store ranges of values.
   std::vector<ValueRange> valueRangeMemory;
   /// A set of value ranges that have been allocated by the byte code
   /// interpreter to provide a guaranteed lifetime.
-  std::vector<llvm::OwningArrayRef<Value>> allocatedValueRangeMemory;
+  std::vector<std::vector<Value>> allocatedValueRangeMemory;
 
   /// The current index of ranges being iterated over for each level of nesting.
   /// These are always maintained at 0 for the loops that are not active, so we

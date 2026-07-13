@@ -103,9 +103,9 @@ subroutine test
   dt3x = dt3(pps1=null(mold=dt2x%pps0))
   dt3x = dt3(pps1=null(mold=dt3x%pps1))
   dt4x = dt4(null()) ! ok
-  !PORTABILITY: NULL() with arguments is not standard conforming as the value for allocatable component 'ra0'
+  !PORTABILITY: NULL() with arguments is not standard conforming as the value for allocatable component 'ra0' [-Wnull-mold-allocatable-component-value]
   dt4x = dt4(null(rp0))
-  !PORTABILITY: NULL() with arguments is not standard conforming as the value for allocatable component 'ra0'
+  !PORTABILITY: NULL() with arguments is not standard conforming as the value for allocatable component 'ra0' [-Wnull-mold-allocatable-component-value]
   !ERROR: Rank-1 array value is not compatible with scalar component 'ra0'
   dt4x = dt4(null(rp1))
   !ERROR: A NULL procedure pointer may not be used as the value for component 'ra0'
@@ -116,9 +116,9 @@ subroutine test
   call optionalAllocatable(null(mold=ip0))
   call optionalAllocatable(null(mold=ia0)) ! fine
   call optionalAllocatable(null()) ! fine
-  !ERROR: Null pointer argument requires an explicit interface
+  !ERROR: Null pointer argument 'NULL()' requires an explicit interface
   call implicit(null())
-  !ERROR: Null pointer argument requires an explicit interface
+  !ERROR: Null pointer argument 'null(mold=ip0)' requires an explicit interface
   call implicit(null(mold=ip0))
   !ERROR: A NULL() pointer is not allowed for 'x=' intrinsic argument
   print *, sin(null(rp0))
@@ -133,7 +133,7 @@ subroutine test
   print *, same_type_as(null(dt5p), null(dt4p)) ! ok
   !ERROR: A NULL() pointer is not allowed for 'source=' intrinsic argument
   print *, transfer(null(rp0),ip0)
-  !WARNING: Source of TRANSFER contains allocatable or pointer component %ra0
+  !WARNING: Source of TRANSFER contains allocatable or pointer component %ra0 [-Wpointer-component-transfer-arg]
   print *, transfer(dt4(null()),[0])
   !ERROR: NULL() may not be used as an expression in this context
   select case(null(ip0))

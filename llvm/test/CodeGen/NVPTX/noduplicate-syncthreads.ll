@@ -3,8 +3,8 @@
 ; Make sure the call to syncthreads is not duplicate here by the LLVM
 ; optimizations, because it has the noduplicate attribute set.
 
-; CHECK: call void @llvm.nvvm.barrier0
-; CHECK-NOT: call void @llvm.nvvm.barrier0
+; CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all
+; CHECK-NOT: call void @llvm.nvvm.barrier.cta.sync.aligned.all
 
 ; Function Attrs: nounwind
 define void @foo(ptr %output) #1 {
@@ -36,7 +36,7 @@ if.else:                                          ; preds = %entry
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
-  call void @llvm.nvvm.barrier0()
+  call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
   %6 = load ptr, ptr %output.addr, align 8
   %7 = load float, ptr %6, align 4
   %conv7 = fpext float %7 to double

@@ -672,9 +672,13 @@ private:
   DynTypedMatcher Implementation;
 };  // class Matcher
 
-/// A convenient helper for creating a Matcher<T> without specifying
-/// the template type argument.
+// Deduction guide for Matcher.
+template <typename T> Matcher(MatcherInterface<T> *) -> Matcher<T>;
+
+// TODO: Remove in LLVM 23.
 template <typename T>
+[[deprecated(
+    "Use CTAD constructor instead, 'makeMatcher' will be removed in LLVM 23.")]]
 inline Matcher<T> makeMatcher(MatcherInterface<T> *Implementation) {
   return Matcher<T>(Implementation);
 }
@@ -1015,9 +1019,6 @@ private:
     if (const auto *S = dyn_cast<TagType>(&Node)) {
       return matchesDecl(S->getDecl(), Finder, Builder);
     }
-    if (const auto *S = dyn_cast<InjectedClassNameType>(&Node)) {
-      return matchesDecl(S->getDecl(), Finder, Builder);
-    }
     if (const auto *S = dyn_cast<TemplateTypeParmType>(&Node)) {
       return matchesDecl(S->getDecl(), Finder, Builder);
     }
@@ -1027,6 +1028,9 @@ private:
     if (const auto *S = dyn_cast<UnresolvedUsingType>(&Node)) {
       return matchesDecl(S->getDecl(), Finder, Builder);
     }
+    if (const auto *S = dyn_cast<UsingType>(&Node)) {
+      return matchesDecl(S->getDecl(), Finder, Builder);
+    }
     if (const auto *S = dyn_cast<ObjCObjectType>(&Node)) {
       return matchesDecl(S->getInterface(), Finder, Builder);
     }
@@ -1034,7 +1038,7 @@ private:
     // A SubstTemplateTypeParmType exists solely to mark a type substitution
     // on the instantiated template. As users usually want to match the
     // template parameter on the uninitialized template, we can always desugar
-    // one level without loss of expressivness.
+    // one level without loss of expressiveness.
     // For example, given:
     //   template<typename T> struct X { T t; } class A {}; X<A> a;
     // The following matcher will match, which otherwise would not:
@@ -1062,12 +1066,6 @@ private:
                          Builder);
     }
 
-    // FIXME: We desugar elaborated types. This makes the assumption that users
-    // do never want to match on whether a type is elaborated - there are
-    // arguments for both sides; for now, continue desugaring.
-    if (const auto *S = dyn_cast<ElaboratedType>(&Node)) {
-      return matchesSpecialized(S->desugar(), Finder, Builder);
-    }
     // Similarly types found via using declarations.
     // These are *usually* meaningless sugar, and this matches the historical
     // behavior prior to the introduction of UsingType.
@@ -1207,8 +1205,8 @@ using AdaptativeDefaultToTypes =
 /// All types that are supported by HasDeclarationMatcher above.
 using HasDeclarationSupportedTypes =
     TypeList<CallExpr, CXXConstructExpr, CXXNewExpr, DeclRefExpr, EnumType,
-             ElaboratedType, InjectedClassNameType, LabelStmt, AddrLabelExpr,
-             MemberExpr, QualType, RecordType, TagType,
+             InjectedClassNameType, LabelStmt, AddrLabelExpr, MemberExpr,
+             QualType, RecordType, TagType, UsingType,
              TemplateSpecializationType, TemplateTypeParmType, TypedefType,
              UnresolvedUsingType, ObjCIvarRefExpr, ObjCInterfaceDecl>;
 
@@ -1785,7 +1783,7 @@ public:
 
 private:
   static DynTypedNode extract(const NestedNameSpecifierLoc &Loc) {
-    return DynTypedNode::create(*Loc.getNestedNameSpecifier());
+    return DynTypedNode::create(Loc.getNestedNameSpecifier());
   }
 };
 
@@ -1988,6 +1986,46 @@ getTemplateArgsWritten(const TemplateSpecializationTypeLoc &T) {
   return Args;
 }
 
+inline ArrayRef<TemplateArgumentLoc>
+getTemplateArgsWritten(const OverloadExpr &OE) {
+  return OE.template_arguments();
+}
+
+inline unsigned
+getNumTemplateArgsWritten(const ClassTemplateSpecializationDecl &D) {
+  if (const ASTTemplateArgumentListInfo *Args = D.getTemplateArgsAsWritten())
+    return Args->getNumTemplateArgs();
+  return 0;
+}
+
+inline unsigned
+getNumTemplateArgsWritten(const VarTemplateSpecializationDecl &D) {
+  if (const ASTTemplateArgumentListInfo *Args = D.getTemplateArgsAsWritten())
+    return Args->getNumTemplateArgs();
+  return 0;
+}
+
+inline unsigned getNumTemplateArgsWritten(const FunctionDecl &FD) {
+  if (const auto *Args = FD.getTemplateSpecializationArgsAsWritten())
+    return Args->getNumTemplateArgs();
+  return 0;
+}
+
+inline unsigned getNumTemplateArgsWritten(const DeclRefExpr &DRE) {
+  return DRE.getNumTemplateArgs();
+}
+
+inline unsigned
+getNumTemplateArgsWritten(const TemplateSpecializationTypeLoc &T) {
+  if (!T.isNull())
+    return T.getNumArgs();
+  return 0;
+}
+
+inline unsigned getNumTemplateArgsWritten(const OverloadExpr &OE) {
+  return OE.getNumTemplateArgs();
+}
+
 struct NotEqualsBoundNodePredicate {
   bool operator()(const internal::BoundNodesMap &Nodes) const {
     return Nodes.getNode(ID) != Node;
@@ -2161,8 +2199,10 @@ inline const Expr *getSubExpr(const NodeType &Node) {
 template <>
 inline const Expr *
 getSubExpr<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
-  if (!internal::equivalentUnaryOperator(Node))
+  if (!internal::equivalentUnaryOperator(Node) &&
+      Node.getOperator() != OO_Arrow) {
     return nullptr;
+  }
   return Node.getArg(0);
 }
 
@@ -2223,14 +2263,9 @@ inline StringRef getOpName(const CXXRewrittenBinaryOperator &Node) {
   return Node.getOpcodeStr();
 }
 inline std::optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
-  auto optBinaryOpcode = equivalentBinaryOperator(Node);
-  if (!optBinaryOpcode) {
-    auto optUnaryOpcode = equivalentUnaryOperator(Node);
-    if (!optUnaryOpcode)
-      return std::nullopt;
-    return UnaryOperator::getOpcodeStr(*optUnaryOpcode);
-  }
-  return BinaryOperator::getOpcodeStr(*optBinaryOpcode);
+  if (const char *Str = getOperatorSpelling(Node.getOperator()))
+    return Str;
+  return std::nullopt;
 }
 inline StringRef getOpName(const CXXFoldExpr &Node) {
   return BinaryOperator::getOpcodeStr(Node.getOperator());
@@ -2271,14 +2306,9 @@ private:
     return Node.getOpcodeStr();
   }
   static std::optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
-    auto optBinaryOpcode = equivalentBinaryOperator(Node);
-    if (!optBinaryOpcode) {
-      auto optUnaryOpcode = equivalentUnaryOperator(Node);
-      if (!optUnaryOpcode)
-        return std::nullopt;
-      return UnaryOperator::getOpcodeStr(*optUnaryOpcode);
-    }
-    return BinaryOperator::getOpcodeStr(*optBinaryOpcode);
+    if (const char *Str = getOperatorSpelling(Node.getOperator()))
+      return Str;
+    return std::nullopt;
   }
 
   std::vector<std::string> Names;

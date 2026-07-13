@@ -71,11 +71,13 @@
 
 #include "Error.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/ilist.h"
+#include "llvm/ADT/ilist_node.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/StringSaver.h"
 #include <functional>
-#include <vector>
 
 namespace llvm::mustache {
 
@@ -83,44 +85,54 @@ using Lambda = std::function<llvm::json::Value()>;
 using SectionLambda = std::function<llvm::json::Value(std::string)>;
 
 class ASTNode;
-using AstPtr = std::unique_ptr<ASTNode>;
+using AstPtr = ASTNode *;
+using EscapeMap = DenseMap<char, std::string>;
+using ASTNodeList = iplist<ASTNode>;
+
+struct MustacheContext {
+  MustacheContext(BumpPtrAllocator &Allocator, StringSaver &Saver)
+      : Allocator(Allocator), Saver(Saver) {}
+  BumpPtrAllocator &Allocator;
+  StringSaver &Saver;
+  StringMap<AstPtr> Partials;
+  StringMap<Lambda> Lambdas;
+  StringMap<SectionLambda> SectionLambdas;
+  EscapeMap Escapes;
+};
 
 // A Template represents the container for the AST and the partials
 // and Lambdas that are registered with it.
 class Template {
 public:
-  Template(StringRef TemplateStr);
+  LLVM_ABI Template(StringRef TemplateStr, MustacheContext &Ctx);
 
   Template(const Template &) = delete;
 
   Template &operator=(const Template &) = delete;
 
-  Template(Template &&Other) noexcept;
+  LLVM_ABI Template(Template &&Other) noexcept;
 
   // Define this in the cpp file to  work around ASTNode being an incomplete
   // type.
-  ~Template();
+  LLVM_ABI ~Template();
 
-  Template &operator=(Template &&Other) noexcept;
+  Template &operator=(Template &&) = delete;
 
-  void render(const llvm::json::Value &Data, llvm::raw_ostream &OS);
+  LLVM_ABI void render(const llvm::json::Value &Data, llvm::raw_ostream &OS);
 
-  void registerPartial(std::string Name, std::string Partial);
+  LLVM_ABI void registerPartial(std::string Name, std::string Partial);
 
-  void registerLambda(std::string Name, Lambda Lambda);
+  LLVM_ABI void registerLambda(std::string Name, Lambda Lambda);
 
-  void registerLambda(std::string Name, SectionLambda Lambda);
+  LLVM_ABI void registerLambda(std::string Name, SectionLambda Lambda);
 
   // By default the Mustache Spec Specifies that HTML special characters
   // should be escaped. This function allows the user to specify which
   // characters should be escaped.
-  void overrideEscapeCharacters(DenseMap<char, std::string> Escapes);
+  LLVM_ABI void overrideEscapeCharacters(DenseMap<char, std::string> Escapes);
 
 private:
-  StringMap<AstPtr> Partials;
-  StringMap<Lambda> Lambdas;
-  StringMap<SectionLambda> SectionLambdas;
-  DenseMap<char, std::string> Escapes;
+  MustacheContext &Ctx;
   AstPtr Tree;
 };
 } // namespace llvm::mustache

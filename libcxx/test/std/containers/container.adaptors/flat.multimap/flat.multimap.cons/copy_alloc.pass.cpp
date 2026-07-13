@@ -22,7 +22,30 @@
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-int main(int, char**) {
+template <template <class...> class KeyContainer, template <class...> class ValueContainer>
+constexpr void test() {
+  using C = test_less<int>;
+  KeyContainer<int, test_allocator<int>> ks({1, 1, 3, 5}, test_allocator<int>(6));
+  ValueContainer<char, test_allocator<char>> vs({2, 2, 2, 1}, test_allocator<char>(7));
+  using M = std::flat_multimap<int, char, C, decltype(ks), decltype(vs)>;
+  auto mo = M(ks, vs, C(5));
+  auto m  = M(mo, test_allocator<int>(3));
+
+  assert(m.key_comp() == C(5));
+  assert(m.keys() == ks);
+  assert(m.values() == vs);
+  assert(m.keys().get_allocator() == test_allocator<int>(3));
+  assert(m.values().get_allocator() == test_allocator<char>(3));
+
+  // mo is unchanged
+  assert(mo.key_comp() == C(5));
+  assert(mo.keys() == ks);
+  assert(mo.values() == vs);
+  assert(mo.keys().get_allocator() == test_allocator<int>(6));
+  assert(mo.values().get_allocator() == test_allocator<char>(7));
+}
+
+constexpr bool test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<key_container_type, Alloc> is true
@@ -41,27 +64,24 @@ int main(int, char**) {
     static_assert(!std::is_constructible_v<M2, const M2&, const A2&>);
     static_assert(!std::is_constructible_v<M3, const M3&, const A2&>);
   }
+
+  test<std::vector, std::vector>();
+
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
   {
-    using C = test_less<int>;
-    std::vector<int, test_allocator<int>> ks({1, 3, 3, 5, 5}, test_allocator<int>(6));
-    std::vector<char, test_allocator<char>> vs({2, 2, 1, 1, 1}, test_allocator<char>(7));
-    using M = std::flat_multimap<int, char, C, decltype(ks), decltype(vs)>;
-    auto mo = M(ks, vs, C(5));
-    auto m  = M(mo, test_allocator<int>(3));
-
-    assert(m.key_comp() == C(5));
-    assert(m.keys() == ks);
-    assert(m.values() == vs);
-    assert(m.keys().get_allocator() == test_allocator<int>(3));
-    assert(m.values().get_allocator() == test_allocator<char>(3));
-
-    // mo is unchanged
-    assert(mo.key_comp() == C(5));
-    assert(mo.keys() == ks);
-    assert(mo.values() == vs);
-    assert(mo.keys().get_allocator() == test_allocator<int>(6));
-    assert(mo.values().get_allocator() == test_allocator<char>(7));
+    test<std::deque, std::deque>();
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

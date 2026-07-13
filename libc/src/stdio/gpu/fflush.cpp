@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/fflush.h"
-#include "file.h"
-#include "src/__support/macros/config.h"
 
+#include "file.h"
 #include "hdr/types/FILE.h"
+#include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -24,7 +24,6 @@ LLVM_LIBC_FUNCTION(int, fflush, (::FILE * stream)) {
       [&](rpc::Buffer *buffer, uint32_t) {
         ret = static_cast<int>(buffer->data[0]);
       });
-  port.close();
   return ret;
 }
 

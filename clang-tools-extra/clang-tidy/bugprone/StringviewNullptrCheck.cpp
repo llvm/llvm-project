@@ -1,4 +1,4 @@
-//===--- StringviewNullptrCheck.cpp - clang-tidy --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,10 +8,8 @@
 
 #include "StringviewNullptrCheck.h"
 #include "../utils/TransformerClangTidyCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/OperationKinds.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Transformer/RangeSelector.h"
 #include "clang/Tooling/Transformer/RewriteRule.h"
@@ -29,13 +27,13 @@ AST_MATCHER_P(InitListExpr, initCountIs, unsigned, N) {
   return Node.getNumInits() == N;
 }
 
-AST_MATCHER(clang::VarDecl, isDirectInitialization) {
-  return Node.getInitStyle() != clang::VarDecl::InitializationStyle::CInit;
+AST_MATCHER(VarDecl, isDirectInitialization) {
+  return Node.getInitStyle() != VarDecl::InitializationStyle::CInit;
 }
 
 } // namespace
 
-RewriteRuleWith<std::string> stringviewNullptrCheckImpl() {
+static RewriteRuleWith<std::string> stringviewNullptrCheckImpl() {
   auto ConstructionWarning =
       cat("constructing basic_string_view from null is undefined; replace with "
           "the default constructor");
@@ -61,7 +59,7 @@ RewriteRuleWith<std::string> stringviewNullptrCheckImpl() {
 
   // Matches `nullptr` and `(nullptr)` binding to a pointer
   auto NullLiteral = implicitCastExpr(
-      hasCastKind(clang::CK_NullToPointer),
+      hasCastKind(CK_NullToPointer),
       hasSourceExpression(ignoringParens(cxxNullPtrLiteralExpr())));
 
   // Matches `{nullptr}` and `{(nullptr)}` binding to a pointer
@@ -235,7 +233,7 @@ RewriteRuleWith<std::string> stringviewNullptrCheckImpl() {
       cxxOperatorCallExpr(
           hasOverloadedOperatorName("=="),
           hasOperands(ignoringImpCasts(BasicStringViewConstructingFromNullExpr),
-                      traverse(clang::TK_IgnoreUnlessSpelledInSource,
+                      traverse(TK_IgnoreUnlessSpelledInSource,
                                expr().bind("instance"))))
           .bind("root"),
       changeTo(node("root"), cat(access("instance", cat("empty")), "()")),
@@ -246,7 +244,7 @@ RewriteRuleWith<std::string> stringviewNullptrCheckImpl() {
       cxxOperatorCallExpr(
           hasOverloadedOperatorName("!="),
           hasOperands(ignoringImpCasts(BasicStringViewConstructingFromNullExpr),
-                      traverse(clang::TK_IgnoreUnlessSpelledInSource,
+                      traverse(TK_IgnoreUnlessSpelledInSource,
                                expr().bind("instance"))))
           .bind("root"),
       changeTo(node("root"), cat("!", access("instance", cat("empty")), "()")),

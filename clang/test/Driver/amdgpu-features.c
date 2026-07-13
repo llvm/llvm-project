@@ -10,8 +10,8 @@
 // RUN: %clang -### --target=amdgcn-amdhsa -mcpu=gfx908:sramecc- -nogpulib %s 2>&1 | FileCheck --check-prefix=NO-SRAM-ECC %s
 // NO-SRAM-ECC: "-target-feature" "-sramecc"
 
-// RUN: %clang -### -target amdgcn -mcpu=gfx90A -mtgsplit %s 2>&1 | FileCheck --check-prefix=TGSPLIT %s
-// RUN: %clang -### -target amdgcn -mcpu=gfx90A -mno-tgsplit %s 2>&1 | FileCheck --check-prefix=NO-TGSPLIT %s
+// RUN: %clang -### -target amdgcn -mcpu=gfx90a -mtgsplit %s 2>&1 | FileCheck --check-prefix=TGSPLIT %s
+// RUN: %clang -### -target amdgcn -mcpu=gfx90a -mno-tgsplit %s 2>&1 | FileCheck --check-prefix=NO-TGSPLIT %s
 // TGSPLIT: "-target-feature" "+tgsplit"
 // NO-TGSPLIT: "-target-feature" "-tgsplit"
 

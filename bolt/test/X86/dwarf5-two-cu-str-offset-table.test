@@ -8,7 +8,7 @@
 # RUN: llvm-dwarfdump --show-form --verbose --debug-str-offsets %t.bolt >> %t.txt
 # RUN: cat %t.txt | FileCheck --check-prefix=CHECK %s
 
-## This test checks we correclty re-renerate .debug_str_offsets.
+## This test checks we correctly re-renerate .debug_str_offsets.
 
 # CHECK: .debug_str_offsets contents
 # CHECK-NEXT: 0x00000000: Contribution size = 52, Format = DWARF32, Version = 5

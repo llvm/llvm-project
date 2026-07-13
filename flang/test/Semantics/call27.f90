@@ -4,9 +4,9 @@ program test
   real, allocatable :: a
   !ERROR: NULL() actual argument 'NULL()' may not be associated with allocatable dummy argument dummy argument 'a=' that is INTENT(OUT) or INTENT(IN OUT)
   call foo0(null())
-  !WARNING: NULL() actual argument 'NULL()' should not be associated with allocatable dummy argument dummy argument 'a=' without INTENT(IN)
+  !WARNING: NULL() actual argument 'NULL()' should not be associated with allocatable dummy argument dummy argument 'a=' without INTENT(IN) [-Wnull-actual-for-default-intent-allocatable]
   call foo1(null())
-  !PORTABILITY: Allocatable dummy argument 'a=' is associated with NULL()
+  !PORTABILITY: Allocatable dummy argument 'a=' is associated with NULL() [-Wnull-actual-for-allocatable]
   call foo2(null())
   call foo3(null()) ! ok
   !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'a=' is not definable

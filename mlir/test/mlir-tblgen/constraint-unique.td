@@ -16,7 +16,7 @@ def AType : Type<ATypePred, "a type">;
 def OtherType : Type<ATypePred, "another type">;
 
 def AnAttrPred : CPred<"attrPred($_self, $_op)">;
-def AnAttr : Attr<AnAttrPred, "an attribute">;
+def AnAttr : Attr<AnAttrPred, "an attribute (got {{reformat($_self)}})">;
 def OtherAttr : Attr<AnAttrPred, "another attribute">;
 
 def ASuccessorPred : CPred<"successorPred($_self, $_op)">;
@@ -24,7 +24,7 @@ def ASuccessor : Successor<ASuccessorPred, "a successor">;
 def OtherSuccessor : Successor<ASuccessorPred, "another successor">;
 
 def ARegionPred : CPred<"regionPred($_self, $_op)">;
-def ARegion : Region<ARegionPred, "a region">;
+def ARegion : Region<ARegionPred, "a region ({{find(foo)}})">;
 def OtherRegion : Region<ARegionPred, "another region">;
 
 // OpA and OpB have the same type, attribute, successor, and region constraints.
@@ -71,10 +71,10 @@ def OpC : NS_Op<"op_c"> {
 // CHECK:    static ::llvm::LogicalResult [[$A_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
 // CHECK:      if (attr && !((attrPred(attr, *op))))
 // CHECK-NEXT:   return emitError() << "attribute '" << attrName
-// CHECK-NEXT:       << "' failed to satisfy constraint: an attribute";
+// CHECK-NEXT:       << "' failed to satisfy constraint: an attribute (got " << reformat(attr) << ")";
 
 /// Test that duplicate attribute constraint was not generated.
-// CHECK-NOT:        << "' failed to satisfy constraint: an attribute";
+// CHECK-NOT:        << "' failed to satisfy constraint: an attribute
 
 /// Test that a attribute constraint with a different description was generated.
 // CHECK:    static ::llvm::LogicalResult [[$O_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
@@ -87,23 +87,23 @@ def OpC : NS_Op<"op_c"> {
 // CHECK:    static ::llvm::LogicalResult [[$A_SUCCESSOR_CONSTRAINT:__mlir_ods_local_successor_constraint.*]](
 // CHECK:      if (!((successorPred(successor, *op)))) {
 // CHECK-NEXT:   return op->emitOpError("successor #") << successorIndex << " ('"
-// CHECK-NEXT:       << successorName << ")' failed to verify constraint: a successor";
+// CHECK-NEXT:       << successorName << "') failed to verify constraint: a successor";
 
 /// Test that duplicate successor constraint was not generated.
-// CHECK-NOT:        << successorName << ")' failed to verify constraint: a successor";
+// CHECK-NOT:        << successorName << "') failed to verify constraint: a successor";
 
 /// Test that a successor constraint with a different description was generated.
 // CHECK:    static ::llvm::LogicalResult [[$O_SUCCESSOR_CONSTRAINT:__mlir_ods_local_successor_constraint.*]](
 // CHECK:      if (!((successorPred(successor, *op)))) {
 // CHECK-NEXT:   return op->emitOpError("successor #") << successorIndex << " ('"
-// CHECK-NEXT:       << successorName << ")' failed to verify constraint: another successor";
+// CHECK-NEXT:       << successorName << "') failed to verify constraint: another successor";
 
 /// Test that a region contraint was generated.
 // CHECK:    static ::llvm::LogicalResult [[$A_REGION_CONSTRAINT:__mlir_ods_local_region_constraint.*]](
 // CHECK:      if (!((regionPred(region, *op)))) {
 // CHECK-NEXT:   return op->emitOpError("region #") << regionIndex
 // CHECK-NEXT:       << (regionName.empty() ? " " : " ('" + regionName + "') ")
-// CHECK-NEXT:       << "failed to verify constraint: a region";
+// CHECK-NEXT:       << "failed to verify constraint: a region (" << find(foo) << ")";
 
 /// Test that duplicate region constraint was not generated.
 // CHECK-NOT:        << "failed to verify constraint: a region";
@@ -131,8 +131,7 @@ def OpC : NS_Op<"op_c"> {
 // CHECK:         for (auto &region : ::llvm::MutableArrayRef((*this)->getRegion(0)))
 // CHECK-NEXT:      if (::mlir::failed([[$A_REGION_CONSTRAINT]](*this, region, "d", index++)))
 // CHECK-NEXT:        return ::mlir::failure();
-// CHECK:         for (auto *successor : ::llvm::MutableArrayRef(c()))
-// CHECK-NEXT:      if (::mlir::failed([[$A_SUCCESSOR_CONSTRAINT]](*this, successor, "c", index++)))
+// CHECK:         if (::mlir::failed([[$A_SUCCESSOR_CONSTRAINT]](*this, getC(), "c", index++)))
 // CHECK-NEXT:        return ::mlir::failure();
 
 /// Test that the op with the same predicates but different with descriptions
@@ -152,6 +151,5 @@ def OpC : NS_Op<"op_c"> {
 // CHECK:         for (auto &region : ::llvm::MutableArrayRef((*this)->getRegion(0)))
 // CHECK-NEXT:      if (::mlir::failed([[$O_REGION_CONSTRAINT]](*this, region, "d", index++)))
 // CHECK-NEXT:        return ::mlir::failure();
-// CHECK:         for (auto *successor : ::llvm::MutableArrayRef(c()))
-// CHECK-NEXT:      if (::mlir::failed([[$O_SUCCESSOR_CONSTRAINT]](*this, successor, "c", index++)))
+// CHECK:         if (::mlir::failed([[$O_SUCCESSOR_CONSTRAINT]](*this, getC(), "c", index++)))
 // CHECK-NEXT:        return ::mlir::failure();

@@ -27,16 +27,13 @@ namespace {
 class CommentLexerTest : public ::testing::Test {
 protected:
   CommentLexerTest()
-    : FileMgr(FileMgrOpts),
-      DiagID(new DiagnosticIDs()),
-      Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
-      SourceMgr(Diags, FileMgr),
-      Traits(Allocator, CommentOptions()) {
-  }
+      : FileMgr(FileMgrOpts),
+        Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
+        SourceMgr(Diags, FileMgr), Traits(Allocator, CommentOptions()) {}
 
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   llvm::BumpPtrAllocator Allocator;
@@ -450,22 +447,22 @@ TEST_F(CommentLexerTest, DoxygenCommand9) {
   ASSERT_EQ(tok::text,        Toks[0].getKind());
   ASSERT_EQ(StringRef(" "),   Toks[0].getText());
 
-  ASSERT_EQ(tok::unknown_command, Toks[1].getKind());
+  ASSERT_EQ(tok::unknown_backslash_command, Toks[1].getKind());
   ASSERT_EQ(StringRef("aaa"), Toks[1].getUnknownCommandName());
 
-  ASSERT_EQ(tok::unknown_command, Toks[2].getKind());
+  ASSERT_EQ(tok::unknown_backslash_command, Toks[2].getKind());
   ASSERT_EQ(StringRef("bbb"), Toks[2].getUnknownCommandName());
 
   ASSERT_EQ(tok::text,        Toks[3].getKind());
   ASSERT_EQ(StringRef(" "),   Toks[3].getText());
 
-  ASSERT_EQ(tok::unknown_command, Toks[4].getKind());
+  ASSERT_EQ(tok::unknown_backslash_command, Toks[4].getKind());
   ASSERT_EQ(StringRef("ccc"), Toks[4].getUnknownCommandName());
 
   ASSERT_EQ(tok::text,        Toks[5].getKind());
   ASSERT_EQ(StringRef("\t"),  Toks[5].getText());
 
-  ASSERT_EQ(tok::unknown_command, Toks[6].getKind());
+  ASSERT_EQ(tok::unknown_backslash_command, Toks[6].getKind());
   ASSERT_EQ(StringRef("ddd"), Toks[6].getUnknownCommandName());
 
   ASSERT_EQ(tok::newline,     Toks[7].getKind());
@@ -486,6 +483,38 @@ TEST_F(CommentLexerTest, DoxygenCommand10) {
   ASSERT_EQ(StringRef("c"), getCommandName(Toks[1]));
 
   ASSERT_EQ(tok::newline,   Toks[2].getKind());
+}
+
+TEST_F(CommentLexerTest, DoxygenCommand11) {
+  const char *Source = "/// @aaa@bbb @ccc\t@ddd\n";
+  std::vector<Token> Toks;
+
+  lexString(Source, Toks);
+
+  ASSERT_EQ(8U, Toks.size());
+
+  ASSERT_EQ(tok::text, Toks[0].getKind());
+  ASSERT_EQ(StringRef(" "), Toks[0].getText());
+
+  ASSERT_EQ(tok::unknown_at_command, Toks[1].getKind());
+  ASSERT_EQ(StringRef("aaa"), Toks[1].getUnknownCommandName());
+
+  ASSERT_EQ(tok::unknown_at_command, Toks[2].getKind());
+  ASSERT_EQ(StringRef("bbb"), Toks[2].getUnknownCommandName());
+
+  ASSERT_EQ(tok::text, Toks[3].getKind());
+  ASSERT_EQ(StringRef(" "), Toks[3].getText());
+
+  ASSERT_EQ(tok::unknown_at_command, Toks[4].getKind());
+  ASSERT_EQ(StringRef("ccc"), Toks[4].getUnknownCommandName());
+
+  ASSERT_EQ(tok::text, Toks[5].getKind());
+  ASSERT_EQ(StringRef("\t"), Toks[5].getText());
+
+  ASSERT_EQ(tok::unknown_at_command, Toks[6].getKind());
+  ASSERT_EQ(StringRef("ddd"), Toks[6].getUnknownCommandName());
+
+  ASSERT_EQ(tok::newline, Toks[7].getKind());
 }
 
 TEST_F(CommentLexerTest, RegisterCustomBlockCommand) {
@@ -2008,4 +2037,3 @@ TEST_F(CommentLexerTest, MultipleComments) {
 
 } // end namespace comments
 } // end namespace clang
-

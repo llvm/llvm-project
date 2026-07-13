@@ -14,6 +14,7 @@
 #define LLVM_SUPPORT_BRANCHPROBABILITY_H
 
 #include "llvm/ADT/ADL.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include <algorithm>
 #include <cassert>
@@ -38,24 +39,41 @@ class BranchProbability {
 
   // Construct a BranchProbability with only numerator assuming the denominator
   // is 1<<31. For internal use only.
-  explicit BranchProbability(uint32_t n) : N(n) {}
+  explicit constexpr BranchProbability(uint32_t n) : N(n) {}
 
 public:
-  BranchProbability() : N(UnknownN) {}
-  BranchProbability(uint32_t Numerator, uint32_t Denominator);
+  constexpr BranchProbability() : N(UnknownN) {}
+  constexpr BranchProbability(uint32_t Numerator, uint32_t Denominator)
+      : N(Numerator) {
+    assert(Denominator > 0 && "Denominator cannot be 0!");
+    assert(Numerator <= Denominator && "Probability cannot be bigger than 1!");
+    if (Denominator != D) {
+      uint64_t Prob64 =
+          (Numerator * static_cast<uint64_t>(D) + Denominator / 2) /
+          Denominator;
+      N = static_cast<uint32_t>(Prob64);
+    }
+  }
 
   bool isZero() const { return N == 0; }
+  bool isOne() const { return N == D; }
   bool isUnknown() const { return N == UnknownN; }
 
-  static BranchProbability getZero() { return BranchProbability(0); }
-  static BranchProbability getOne() { return BranchProbability(D); }
-  static BranchProbability getUnknown() { return BranchProbability(UnknownN); }
+  static constexpr BranchProbability getZero() { return BranchProbability(0); }
+  static constexpr BranchProbability getOne() { return BranchProbability(D); }
+  static constexpr BranchProbability getUnknown() {
+    return BranchProbability(UnknownN);
+  }
   // Create a BranchProbability object with the given numerator and 1<<31
   // as denominator.
-  static BranchProbability getRaw(uint32_t N) { return BranchProbability(N); }
+  static constexpr BranchProbability getRaw(uint32_t N) {
+    return BranchProbability(N);
+  }
   // Create a BranchProbability object from 64-bit integers.
-  static BranchProbability getBranchProbability(uint64_t Numerator,
-                                                uint64_t Denominator);
+  LLVM_ABI static BranchProbability getBranchProbability(uint64_t Numerator,
+                                                         uint64_t Denominator);
+  // Create a BranchProbability from a double, which must be from 0 to 1.
+  LLVM_ABI static BranchProbability getBranchProbability(double Prob);
 
   // Normalize given probabilties so that the sum of them becomes approximate
   // one.
@@ -70,13 +88,16 @@ public:
 
   uint32_t getNumerator() const { return N; }
   static uint32_t getDenominator() { return D; }
+  double toDouble() const { return static_cast<double>(N) / D; }
 
   // Return (1 - Probability).
   BranchProbability getCompl() const { return BranchProbability(D - N); }
 
-  raw_ostream &print(raw_ostream &OS) const;
+  LLVM_ABI raw_ostream &print(raw_ostream &OS) const;
 
-  void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
   /// Scale a large integer.
   ///
@@ -84,7 +105,7 @@ public:
   /// result.
   ///
   /// \return \c Num times \c this.
-  uint64_t scale(uint64_t Num) const;
+  LLVM_ABI uint64_t scale(uint64_t Num) const;
 
   /// Scale a large integer by the inverse.
   ///
@@ -92,7 +113,10 @@ public:
   /// Returns the floor of the result.
   ///
   /// \return \c Num divided by \c this.
-  uint64_t scaleByInverse(uint64_t Num) const;
+  LLVM_ABI uint64_t scaleByInverse(uint64_t Num) const;
+
+  /// Compute pow(Probability, N).
+  LLVM_ABI BranchProbability pow(unsigned N) const;
 
   BranchProbability &operator+=(BranchProbability RHS) {
     assert(N != UnknownN && RHS.N != UnknownN &&

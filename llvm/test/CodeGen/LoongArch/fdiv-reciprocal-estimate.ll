@@ -9,15 +9,15 @@
 define float @fdiv_s(float %x, float %y) {
 ; LA32F-LABEL: fdiv_s:
 ; LA32F:       # %bb.0:
-; LA32F-NEXT:    fdiv.s	$fa0, $fa0, $fa1
+; LA32F-NEXT:    fdiv.s $fa0, $fa0, $fa1
 ; LA32F-NEXT:    ret
 ;
 ; LA32F-FRECIPE-LABEL: fdiv_s:
 ; LA32F-FRECIPE:       # %bb.0:
-; LA32F-FRECIPE-NEXT:    frecipe.s	$fa2, $fa1
-; LA32F-FRECIPE-NEXT:    fmul.s	$fa3, $fa0, $fa2
-; LA32F-FRECIPE-NEXT:    fnmsub.s	$fa0, $fa1, $fa3, $fa0
-; LA32F-FRECIPE-NEXT:    fmadd.s	$fa0, $fa2, $fa0, $fa3
+; LA32F-FRECIPE-NEXT:    frecipe.s $fa2, $fa1
+; LA32F-FRECIPE-NEXT:    fmul.s $fa3, $fa0, $fa2
+; LA32F-FRECIPE-NEXT:    fnmsub.s $fa0, $fa1, $fa3, $fa0
+; LA32F-FRECIPE-NEXT:    fmadd.s $fa0, $fa2, $fa0, $fa3
 ; LA32F-FRECIPE-NEXT:    ret
 ;
 ; LA64D-LABEL: fdiv_s:
@@ -27,10 +27,10 @@ define float @fdiv_s(float %x, float %y) {
 ;
 ; LA64D-FRECIPE-LABEL: fdiv_s:
 ; LA64D-FRECIPE:       # %bb.0:
-; LA64D-FRECIPE-NEXT:    frecipe.s	$fa2, $fa1
-; LA64D-FRECIPE-NEXT:    fmul.s	$fa3, $fa0, $fa2
-; LA64D-FRECIPE-NEXT:    fnmsub.s	$fa0, $fa1, $fa3, $fa0
-; LA64D-FRECIPE-NEXT:    fmadd.s	$fa0, $fa2, $fa0, $fa3
+; LA64D-FRECIPE-NEXT:    frecipe.s $fa2, $fa1
+; LA64D-FRECIPE-NEXT:    fmul.s $fa3, $fa0, $fa2
+; LA64D-FRECIPE-NEXT:    fnmsub.s $fa0, $fa1, $fa3, $fa0
+; LA64D-FRECIPE-NEXT:    fmadd.s $fa0, $fa2, $fa0, $fa3
 ; LA64D-FRECIPE-NEXT:    ret
   %div = fdiv fast float %x, %y
   ret float %div
@@ -39,24 +39,24 @@ define float @fdiv_s(float %x, float %y) {
 define double @fdiv_d(double %x, double %y) {
 ; LA32F-LABEL: fdiv_d:
 ; LA32F:       # %bb.0:
-; LA32F-NEXT:    addi.w	$sp, $sp, -16
+; LA32F-NEXT:    addi.w $sp, $sp, -16
 ; LA32F-NEXT:    .cfi_def_cfa_offset 16
-; LA32F-NEXT:    st.w	$ra, $sp, 12                    # 4-byte Folded Spill
+; LA32F-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32F-NEXT:    .cfi_offset 1, -4
-; LA32F-NEXT:    bl	%plt(__divdf3)
-; LA32F-NEXT:    ld.w	$ra, $sp, 12                    # 4-byte Folded Reload
-; LA32F-NEXT:    addi.w	$sp, $sp, 16
+; LA32F-NEXT:    bl __divdf3
+; LA32F-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32F-NEXT:    addi.w $sp, $sp, 16
 ; LA32F-NEXT:    ret
 ;
 ; LA32F-FRECIPE-LABEL: fdiv_d:
 ; LA32F-FRECIPE:       # %bb.0:
-; LA32F-FRECIPE-NEXT:    addi.w	$sp, $sp, -16
+; LA32F-FRECIPE-NEXT:    addi.w $sp, $sp, -16
 ; LA32F-FRECIPE-NEXT:    .cfi_def_cfa_offset 16
-; LA32F-FRECIPE-NEXT:    st.w	$ra, $sp, 12                    # 4-byte Folded Spill
+; LA32F-FRECIPE-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32F-FRECIPE-NEXT:    .cfi_offset 1, -4
-; LA32F-FRECIPE-NEXT:    bl	%plt(__divdf3)
-; LA32F-FRECIPE-NEXT:    ld.w	$ra, $sp, 12                    # 4-byte Folded Reload
-; LA32F-FRECIPE-NEXT:    addi.w	$sp, $sp, 16
+; LA32F-FRECIPE-NEXT:    bl __divdf3
+; LA32F-FRECIPE-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32F-FRECIPE-NEXT:    addi.w $sp, $sp, 16
 ; LA32F-FRECIPE-NEXT:    ret
 ;
 ; LA64D-LABEL: fdiv_d:

@@ -25,7 +25,7 @@ define <8 x i16> @different_const_one_replaced_i16x8(i16 %x) {
 ; CHECK-LABEL: different_const_one_replaced_i16x8:
 ; CHECK:         .functype different_const_one_replaced_i16x8 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const $push0=, 1, -2, 3, -4, 5, 0, 7, -8
+; CHECK-NEXT:    v128.const $push0=, 1, 65534, 3, 65532, 5, 0, 7, 65528
 ; CHECK-NEXT:    i16x8.replace_lane $push1=, $pop0, 5, $0
 ; CHECK-NEXT:    return $pop1
   %v = insertelement
@@ -523,3 +523,14 @@ define <2 x double> @load_zero_lane_f64x2(ptr %addr.a, ptr %addr.b) {
   ret <2 x double> %v.1
 }
 
+define <2 x i8> @pr165713() {
+; CHECK-LABEL: pr165713:
+; CHECK:         .functype pr165713 () -> (v128)
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    v128.const $push0=, 0, 55, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    return $pop0
+entry:
+  %shuffle3.i = shufflevector <32 x i32> zeroinitializer, <32 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 -62880201, i32 poison, i32 poison, i32 poison>, <2 x i32> <i32 17, i32 60>
+  %conv.i = trunc <2 x i32> %shuffle3.i to <2 x i8>
+  ret <2 x i8> %conv.i
+}

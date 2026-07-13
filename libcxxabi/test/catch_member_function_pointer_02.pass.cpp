@@ -12,7 +12,7 @@
 
 // GCC supports noexcept function types but this test still fails.
 // This is likely a bug in their implementation. Investigation needed.
-// XFAIL: gcc-14
+// XFAIL: gcc-14, gcc-15
 
 #include <cassert>
 

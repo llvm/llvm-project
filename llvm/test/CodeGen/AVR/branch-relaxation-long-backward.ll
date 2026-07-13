@@ -1,28 +1,21 @@
 ; RUN: llc < %s -mtriple=avr -mcpu=attiny85 -filetype=obj -o - | llvm-objdump --mcpu=attiny85 -dr --no-show-raw-insn --no-leading-addr - | FileCheck --check-prefix=ATTINY85 %s
-; RUN: llc < %s -mtriple=avr -mcpu=avr25 -filetype=obj -o - | llvm-objdump --mcpu=avr25 -dr --no-show-raw-insn --no-leading-addr - | FileCheck --check-prefix=AVR25 %s
 ; RUN: llc < %s -mtriple=avr -mcpu=avr3 -filetype=obj -o - | llvm-objdump --mcpu=avr3 -dr --no-show-raw-insn --no-leading-addr - | FileCheck --check-prefix=AVR3 %s
 
 ; ATTINY85: <main>:
 ; ATTINY85-NEXT: andi r24, 0x1
 ; ATTINY85: cpi r24, 0x0
-; ATTINY85-NEXT: breq .+2
-; ATTINY85-NEXT: rjmp .+4086
+; ATTINY85-NEXT: breq .-2
+; ATTINY85-NEXT: R_AVR_7_PCREL .text+0x100c
+; ATTINY85-NEXT: rjmp .-2
+; ATTINY85-NEXT: R_AVR_13_PCREL .text+0x2
 ; ATTINY85: ldi r24, 0x3
 ; ATTINY85-NEXT: ret
-
-; AVR25: <main>:
-; AVR25-NEXT: andi r24, 0x1
-; AVR25: cpi r24, 0x0
-; AVR25-NEXT: breq .+2
-; AVR25-NEXT: rjmp .-2
-; AVR25-NEXT: R_AVR_13_PCREL .text+0x2
-; AVR25: ldi r24, 0x3
-; AVR25-NEXT: ret
 
 ; AVR3: <main>:
 ; AVR3-NEXT: andi r24, 0x1
 ; AVR3: cpi r24, 0x0
-; AVR3-NEXT: breq .+4
+; AVR3-NEXT: breq .-2
+; AVR3-NEXT: R_AVR_7_PCREL .text+0x100e
 ; AVR3-NEXT: jmp 0x0
 ; AVR3-NEXT: R_AVR_CALL .text+0x2
 ; AVR3: ldi r24, 0x3

@@ -1,4 +1,4 @@
-//===--- ExceptionAnalyzer.h - clang-tidy -----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_EXCEPTION_ANALYZER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_EXCEPTION_ANALYZER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_EXCEPTIONANALYZER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_EXCEPTIONANALYZER_H
 
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 
 namespace clang::tidy::utils {
@@ -28,6 +29,10 @@ public:
                  ///< definition.
   };
 
+  /// We use a MapVector to preserve the order of the functions in the call
+  /// stack as well as have fast lookup.
+  using CallStack = llvm::MapVector<const FunctionDecl *, SourceLocation>;
+
   /// Bundle the gathered information about an entity like a function regarding
   /// it's exception behaviour. The 'NonThrowing'-state can be considered as the
   /// neutral element in terms of information propagation.
@@ -37,9 +42,17 @@ public:
   /// exception at runtime.
   class ExceptionInfo {
   public:
-    using Throwables = llvm::SmallSet<const Type *, 2>;
+    /// Holds information about where an exception is thrown.
+    /// First element in the call stack is analyzed function.
+    struct ThrowInfo {
+      SourceLocation Loc;
+      CallStack Stack;
+    };
+
+    using Throwables = llvm::SmallDenseMap<const Type *, ThrowInfo, 2>;
+
     static ExceptionInfo createUnknown() { return {State::Unknown}; }
-    static ExceptionInfo createNonThrowing() { return {State::Throwing}; }
+    static ExceptionInfo createNonThrowing() { return {State::NotThrowing}; }
 
     /// By default the exception situation is unknown and must be
     /// clarified step-wise.
@@ -56,7 +69,8 @@ public:
 
     /// Register a single exception type as recognized potential exception to be
     /// thrown.
-    void registerException(const Type *ExceptionType);
+    void registerException(const Type *ExceptionType,
+                           const ThrowInfo &ThrowInfo);
 
     /// Registers a `SmallVector` of exception types as recognized potential
     /// exceptions to be thrown.
@@ -73,8 +87,8 @@ public:
     /// This method is useful in case 'catch' clauses are analyzed as it is
     /// possible to catch multiple exception types by one 'catch' if they
     /// are a subclass of the 'catch'ed exception type.
-    /// Returns 'true' if some exceptions were filtered, otherwise 'false'.
-    bool filterByCatch(const Type *HandlerTy, const ASTContext &Context);
+    /// Returns filtered exceptions.
+    Throwables filterByCatch(const Type *HandlerTy, const ASTContext &Context);
 
     /// Filter the set of thrown exception type against a set of ignored
     /// types that shall not be considered in the exception analysis.
@@ -87,15 +101,21 @@ public:
     /// neutral.
     void clear();
 
-    /// References the set of known exception types that can escape from the
+    /// References the set of known exceptions that can escape from the
     /// corresponding entity.
-    const Throwables &getExceptionTypes() const { return ThrownExceptions; }
+    const Throwables &getExceptions() const { return ThrownExceptions; }
 
     /// Signal if the there is any 'Unknown' element within the scope of
     /// the related entity. This might be relevant if the entity is 'Throwing'
     /// and to ensure that no other exception then 'getExceptionTypes' can
     /// occur. If there is an 'Unknown' element this can not be guaranteed.
     bool containsUnknownElements() const { return ContainsUnknown; }
+
+    void registerUnknownException() {
+      Behaviour = State::Throwing;
+      ThrowsUnknown = true;
+      ContainsUnknown = true;
+    }
 
   private:
     /// Recalculate the 'Behaviour' for example after filtering.
@@ -110,12 +130,25 @@ public:
     /// after filtering.
     bool ContainsUnknown;
 
+    /// True if the entity is determined to be Throwing due to an unknown cause,
+    /// based on analyzer configuration.
+    bool ThrowsUnknown = false;
+
     /// 'ThrownException' is empty if the 'Behaviour' is either 'NotThrowing' or
     /// 'Unknown'.
     Throwables ThrownExceptions;
   };
 
   ExceptionAnalyzer() = default;
+
+  void assumeUnannotatedFunctionsAsThrowing(bool AssumeUnannotatedAsThrowing) {
+    AssumeUnannotatedFunctionsAsThrowing = AssumeUnannotatedAsThrowing;
+  }
+  void assumeMissingDefinitionsFunctionsAsThrowing(
+      bool AssumeMissingDefinitionsAsThrowing) {
+    AssumeMissingDefinitionsFunctionsAsThrowing =
+        AssumeMissingDefinitionsAsThrowing;
+  }
 
   void ignoreBadAlloc(bool ShallIgnore) { IgnoreBadAlloc = ShallIgnore; }
   void ignoreExceptions(llvm::StringSet<> ExceptionNames) {
@@ -126,14 +159,12 @@ public:
   ExceptionInfo analyze(const Stmt *Stmt);
 
 private:
-  ExceptionInfo
-  throwsException(const FunctionDecl *Func,
-                  const ExceptionInfo::Throwables &Caught,
-                  llvm::SmallSet<const FunctionDecl *, 32> &CallStack);
-  ExceptionInfo
-  throwsException(const Stmt *St, const ExceptionInfo::Throwables &Caught,
-                  llvm::SmallSet<const FunctionDecl *, 32> &CallStack);
-
+  ExceptionInfo throwsException(const FunctionDecl *Func,
+                                const ExceptionInfo::Throwables &Caught,
+                                CallStack &CallStack, SourceLocation CallLoc);
+  ExceptionInfo throwsException(const Stmt *St,
+                                const ExceptionInfo::Throwables &Caught,
+                                CallStack &CallStack);
   ExceptionInfo analyzeImpl(const FunctionDecl *Func);
   ExceptionInfo analyzeImpl(const Stmt *Stmt);
 
@@ -142,8 +173,10 @@ private:
   bool IgnoreBadAlloc = true;
   llvm::StringSet<> IgnoredExceptions;
   llvm::DenseMap<const FunctionDecl *, ExceptionInfo> FunctionCache{32U};
+  bool AssumeUnannotatedFunctionsAsThrowing = false;
+  bool AssumeMissingDefinitionsFunctionsAsThrowing = false;
 };
 
 } // namespace clang::tidy::utils
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_EXCEPTION_ANALYZER_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_EXCEPTIONANALYZER_H

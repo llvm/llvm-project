@@ -10,7 +10,7 @@ namespace call_args_unchecked_uncounted {
 
 static void foo() {
   someFunction(makeObj());
-  // expected-warning@-1{{Call argument is unchecked and unsafe [alpha.webkit.UncheckedCallArgsChecker]}}
+  // expected-warning@-1{{Function argument 'makeObj()' (to 'someFunction') is a raw pointer to CheckedPtr-capable type 'RefCountableAndCheckable'}}
 }
 
 } // namespace call_args_unchecked_uncounted
@@ -32,10 +32,30 @@ static void baz() {
 
 } // namespace call_args_checked
 
+namespace call_args_member {
+
+void consume(CheckedObj&);
+
+struct WrapperObj {
+  CheckedObj checked;
+  CheckedObj& checkedRef;
+  void foo() {
+    consume(checked);
+    consume(checkedRef);
+    // expected-warning@-1{{Function argument 'this->checkedRef' (to 'call_args_member::consume') is a raw reference to CheckedPtr-capable type 'CheckedObj'}}
+  }
+  void bar(WrapperObj& other) {
+    consume(other.checked);
+    // expected-warning@-1{{Function argument 'other.checked' (to 'call_args_member::consume') is a raw reference to CheckedPtr-capable type 'CheckedObj'}}
+  }
+};
+
+} // namespace call_args_checked
+
 namespace call_args_default {
 
 void someFunction(RefCountableAndCheckable* = makeObj());
-// expected-warning@-1{{Call argument is unchecked and unsafe [alpha.webkit.UncheckedCallArgsChecker]}}
+// expected-warning@-1{{Function argument 'makeObj()' (to 'call_args_default::someFunction') is a raw pointer to CheckedPtr-capable type 'RefCountableAndCheckable'}}
 void otherFunction(RefCountableAndCheckable* = makeObjChecked().ptr());
 
 void foo() {
@@ -51,6 +71,16 @@ CheckedObj* provide();
 void foo() {
   CheckedPtr<CheckedObj> ptr;
   ptr = provide();
+}
+
+}
+
+namespace call_with_std_move {
+
+void consume(CheckedObj&&);
+void foo(CheckedObj&& obj) {
+  consume(std::move(obj));
+  consume(WTF::move(obj));
 }
 
 }

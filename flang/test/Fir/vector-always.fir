@@ -13,7 +13,9 @@ func.func @_QPvector_always() -> i32 {
     %c10_i32 = arith.constant 10 : i32
     %c1_i32 = arith.constant 1 : i32
     %c10 = arith.constant 10 : index
-// CHECK:   cf.cond_br %{{.*}}, ^{{.*}}, ^{{.*}} {loop_annotation = #[[ANNOTATION]]}
+// CHECK: cf.cond_br
+// CHECK-NOT: loop_annotation
+// CHECK:   cf.br ^{{.*}} {loop_annotation = #[[ANNOTATION]]}
     %8:2 = fir.do_loop %arg0 = %c1 to %c10 step %c1 iter_args(%arg1 = %c1_i32) -> (index, i32) attributes {loopAnnotation = #loop_annotation} {
       fir.result %c1, %c1_i32 : index, i32
     }

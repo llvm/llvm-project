@@ -32,3 +32,62 @@ int test2(int *a) {
   __builtin_assume_dereferenceable(a, 32ull);
   return a[0];
 }
+
+// CHECK-LABEL: @test3(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[A:%.*]], ptr [[A_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[N:%.*]], ptr [[N_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[N_ADDR]], align 4
+// CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP1]] to i64
+// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP0]], i64 [[CONV]]) ]
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 0
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+// CHECK-NEXT:    ret i32 [[TMP3]]
+//
+int test3(int *a, int n) {
+  __builtin_assume_dereferenceable(a, n);
+  return a[0];
+}
+
+// CHECK-LABEL: @test4(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    store ptr [[A:%.*]], ptr [[A_ADDR]], align 8
+// CHECK-NEXT:    store i64 [[N:%.*]], ptr [[N_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[N_ADDR]], align 8
+// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP0]], i64 [[TMP1]]) ]
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 0
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+// CHECK-NEXT:    ret i32 [[TMP3]]
+//
+int test4(int *a, unsigned long long n) {
+  __builtin_assume_dereferenceable(a, n);
+  return a[0];
+}
+
+// CHECK-LABEL: @test5(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[N_ADDR:%.*]] = alloca float, align 4
+// CHECK-NEXT:    store ptr [[A:%.*]], ptr [[A_ADDR]], align 8
+// CHECK-NEXT:    store float [[N:%.*]], ptr [[N_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[N_ADDR]], align 4
+// CHECK-NEXT:    [[CONV:%.*]] = fptoui float [[TMP1]] to i64
+// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP0]], i64 [[CONV]]) ]
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 0
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+// CHECK-NEXT:    ret i32 [[TMP3]]
+//
+int test5(int *a, float n) {
+  __builtin_assume_dereferenceable(a, n);
+  return a[0];
+}

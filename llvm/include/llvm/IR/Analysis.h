@@ -13,6 +13,7 @@
 #define LLVM_IR_ANALYSIS_H
 
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -56,8 +57,8 @@ private:
 
 template <typename IRUnitT> AnalysisSetKey AllAnalysesOn<IRUnitT>::SetKey;
 
-extern template class AllAnalysesOn<Module>;
-extern template class AllAnalysesOn<Function>;
+extern template class LLVM_TEMPLATE_ABI AllAnalysesOn<Module>;
+extern template class LLVM_TEMPLATE_ABI AllAnalysesOn<Function>;
 
 /// Represents analyses that only rely on functions' control flow.
 ///
@@ -74,7 +75,7 @@ public:
   static AnalysisSetKey *ID() { return &SetKey; }
 
 private:
-  static AnalysisSetKey SetKey;
+  LLVM_ABI static AnalysisSetKey SetKey;
 };
 
 /// A set of analyses that are preserved following a run of a transformation
@@ -310,7 +311,7 @@ public:
 
 private:
   /// A special key used to indicate all analyses.
-  static AnalysisSetKey AllAnalysesKey;
+  LLVM_ABI static AnalysisSetKey AllAnalysesKey;
 
   /// The IDs of analyses and analysis sets that are preserved.
   SmallPtrSet<void *, 2> PreservedIDs;

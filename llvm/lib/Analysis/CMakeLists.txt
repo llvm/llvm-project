@@ -30,8 +30,12 @@ endif()
 # handled correctly.
 if (MSVC)
   set_source_files_properties(ConstantFolding.cpp PROPERTIES COMPILE_OPTIONS "/fp:except")
+  # Prevent warning about mismatching compile flags.
+  set_source_files_properties(ConstantFolding.cpp PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   set_source_files_properties(ConstantFolding.cpp PROPERTIES COMPILE_OPTIONS "-ftrapping-math")
+  # Clang's -ftrapping-math may conflict with precompiled headers too, #183643.
+  set_source_files_properties(ConstantFolding.cpp PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 endif()
 
 add_llvm_component_library(LLVMAnalysis
@@ -74,10 +78,13 @@ add_llvm_component_library(LLVMAnalysis
   DXILResource.cpp
   DXILMetadataAnalysis.cpp
   EphemeralValuesCache.cpp
+  FloatingPointPredicateUtils.cpp
   FunctionPropertiesAnalysis.cpp
   GlobalsModRef.cpp
   GuardUtils.cpp
+  HashRecognize.cpp
   HeatUtils.cpp
+  IR2Vec.cpp
   IRSimilarityIdentifier.cpp
   IVDescriptors.cpp
   IVUsers.cpp
@@ -86,7 +93,6 @@ add_llvm_component_library(LLVMAnalysis
   InlineCost.cpp
   InlineAdvisor.cpp
   InlineOrder.cpp
-  InlineSizeEstimatorAnalysis.cpp
   InstCount.cpp
   InstructionPrecedenceTracking.cpp
   InstructionSimplify.cpp
@@ -134,6 +140,7 @@ add_llvm_component_library(LLVMAnalysis
   RegionPass.cpp
   RegionPrinter.cpp
   ReplayInlineAdvisor.cpp
+  RuntimeLibcallInfo.cpp
   ScalarEvolution.cpp
   ScalarEvolutionAliasAnalysis.cpp
   ScalarEvolutionDivision.cpp
@@ -163,6 +170,7 @@ add_llvm_component_library(LLVMAnalysis
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Analysis
 
   DEPENDS
+  analysis_gen
   intrinsics_gen
   ${MLDeps}
 
@@ -172,6 +180,7 @@ add_llvm_component_library(LLVMAnalysis
   LINK_COMPONENTS
   BinaryFormat
   Core
+  FrontendHLSL
   Object
   ProfileData
   Support

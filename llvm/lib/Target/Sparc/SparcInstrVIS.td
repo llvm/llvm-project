@@ -279,8 +279,10 @@ def XMULXHI  : VISInst<0b100010110, "xmulxhi", I64Regs>;
 } // Predicates = [IsVIS3]
 
 // FP immediate patterns.
-def fpimm0 : FPImmLeaf<fAny, [{return Imm.isExactlyValue(+0.0);}]>;
-def fpnegimm0 : FPImmLeaf<fAny, [{return Imm.isExactlyValue(-0.0);}]>;
+def fpimm0 : FPImmLeaf<fAny, [{return Imm.isPosZero();}]>;
+def fpnegimm0 : FPImmLeaf<fAny, [{return Imm.isNegZero();}]>;
+def fpimmhalf : FPImmLeaf<fAny, [{return Imm.isExactlyValue(+0.5);}]>;
+def fpnegimmhalf : FPImmLeaf<fAny, [{return Imm.isExactlyValue(-0.5);}]>;
 
 // VIS instruction patterns.
 let Predicates = [HasVIS] in {
@@ -293,6 +295,16 @@ def : Pat<(f32 fpnegimm0), (FNEGS (FZEROS))>;
 
 // VIS3 instruction patterns.
 let Predicates = [HasVIS3] in {
+// +/-0.5 immediate.
+// This is needed to enable halving instructions.
+// FIXME generalize this to arbitrary immediates.
+// SET/MOVWTOS or SETX/MOVXTOD pair should let us materialize FP constants
+// faster than constant pool loading.
+def : Pat<(f32 fpimmhalf), (MOVWTOS (SETHIi 0x0FC000))>;
+def : Pat<(f32 fpnegimmhalf), (MOVWTOS (SETHIi 0x2FC000))>;
+def : Pat<(f64 fpimmhalf), (MOVXTOD (SLLXri (SETHIi 0x0FF800), 32))>;
+def : Pat<(f64 fpnegimmhalf), (MOVXTOD (SLLXri (SETHIi 0x2FF800), 32))>;
+
 def : Pat<(i64 (adde i64:$lhs, i64:$rhs)), (ADDXCCC $lhs, $rhs)>;
 
 def : Pat<(i64 (mulhu i64:$lhs, i64:$rhs)), (UMULXHI $lhs, $rhs)>;
@@ -306,14 +318,14 @@ def : Pat<(i64 (mulhs i64:$lhs, i64:$rhs)),
                     (ANDrr (SRAXri $rhs, 63), $lhs)))>;
 
 def : Pat<(i64 (ctlz i64:$src)), (LZCNT $src)>;
-def : Pat<(i64 (ctlz_zero_undef i64:$src)), (LZCNT $src)>;
+def : Pat<(i64 (ctlz_zero_poison i64:$src)), (LZCNT $src)>;
 // 32-bit LZCNT.
 // The zero extension will leave us with 32 extra leading zeros,
 // so we need to compensate for it.
 // FIXME remove this when the codegen supports using 64-bit values directly
 // in V8+ mode.
 def : Pat<(i32 (ctlz i32:$src)), (ADDri (LZCNT (SRLri $src, 0)), (i32 -32))>;
-def : Pat<(i32 (ctlz_zero_undef i32:$src)), (ADDri (LZCNT (SRLri $src, 0)), (i32 -32))>;
+def : Pat<(i32 (ctlz_zero_poison i32:$src)), (ADDri (LZCNT (SRLri $src, 0)), (i32 -32))>;
 
 def : Pat<(i32 (bitconvert f32:$src)), (MOVSTOUW $src)>;
 def : Pat<(i64 (zanyext (i32 (bitconvert f32:$src)))), (MOVSTOUW $src)>;
@@ -321,4 +333,20 @@ def : Pat<(i64 (sext (i32 (bitconvert f32:$src)))), (MOVSTOSW $src)>;
 def : Pat<(f32 (bitconvert i32:$src)), (MOVWTOS $src)>;
 def : Pat<(i64 (bitconvert f64:$src)), (MOVDTOX $src)>;
 def : Pat<(f64 (bitconvert i64:$src)), (MOVXTOD $src)>;
+
+// OP-then-neg FP operations.
+// TODO handle equivalent patterns like `rs1*-rs2`.
+def : Pat<(f32 (fneg (fadd f32:$rs1, f32:$rs2))), (FNADDS $rs1, $rs2)>;
+def : Pat<(f64 (fneg (fadd f64:$rs1, f64:$rs2))), (FNADDD $rs1, $rs2)>;
+def : Pat<(f32 (fneg (fmul f32:$rs1, f32:$rs2))), (FNMULS $rs1, $rs2)>;
+def : Pat<(f64 (fneg (fmul f64:$rs1, f64:$rs2))), (FNMULD $rs1, $rs2)>;
+def : Pat<(f64 (fneg (fmul (fpextend f32:$rs1), (fpextend f32:$rs2)))), (FNSMULD $rs1, $rs2)>;
+
+// Op-then-halve FP operations.
+def : Pat<(f32 (fmul (fadd f32:$rs1, f32:$rs2), fpimmhalf)), (FHADDS $rs1, $rs2)>;
+def : Pat<(f64 (fmul (fadd f64:$rs1, f64:$rs2), fpimmhalf)), (FHADDD $rs1, $rs2)>;
+def : Pat<(f32 (fmul (fsub f32:$rs1, f32:$rs2), fpimmhalf)), (FHSUBS $rs1, $rs2)>;
+def : Pat<(f64 (fmul (fsub f64:$rs1, f64:$rs2), fpimmhalf)), (FHSUBD $rs1, $rs2)>;
+def : Pat<(f32 (fmul (fadd f32:$rs1, f32:$rs2), fpnegimmhalf)), (FNHADDS $rs1, $rs2)>;
+def : Pat<(f64 (fmul (fadd f64:$rs1, f64:$rs2), fpnegimmhalf)), (FNHADDD $rs1, $rs2)>;
 } // Predicates = [HasVIS3]

@@ -47,6 +47,8 @@
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -101,7 +103,7 @@ void fixupIndexV4(DWARFContext &C, DWARFUnitIndex &Index) {
                                                        Header.getOffset()}});
       if (!Iter.second) {
         logAllUnhandledErrors(
-            createError("Collision occured between for truncated offset 0x" +
+            createError("Collision occurred between for truncated offset 0x" +
                         Twine::utohexstr(TruncOffset)),
             errs());
         Map.clear();
@@ -194,7 +196,7 @@ static T &getAccelTable(std::unique_ptr<T> &Cache, const DWARFObject &Obj,
   if (Cache)
     return *Cache;
   DWARFDataExtractor AccelSection(Obj, Section, IsLittleEndian, 0);
-  DataExtractor StrData(StringSection, IsLittleEndian, 0);
+  DataExtractor StrData(StringSection, IsLittleEndian);
   Cache = std::make_unique<T>(AccelSection, StrData);
   if (Error E = Cache->extract())
     llvm::consumeError(std::move(E));
@@ -318,7 +320,7 @@ public:
     if (AbbrevDWO)
       return AbbrevDWO.get();
     const DWARFObject &DObj = D.getDWARFObj();
-    DataExtractor abbrData(DObj.getAbbrevDWOSection(), D.isLittleEndian(), 0);
+    DataExtractor abbrData(DObj.getAbbrevDWOSection(), D.isLittleEndian());
     AbbrevDWO = std::make_unique<DWARFDebugAbbrev>(abbrData);
     return AbbrevDWO.get();
   }
@@ -327,8 +329,7 @@ public:
     if (CUIndex)
       return *CUIndex;
 
-    DataExtractor Data(D.getDWARFObj().getCUIndexSection(),
-                       D.isLittleEndian(), 0);
+    DataExtractor Data(D.getDWARFObj().getCUIndexSection(), D.isLittleEndian());
     CUIndex = std::make_unique<DWARFUnitIndex>(DW_SECT_INFO);
     if (CUIndex->parse(Data))
       fixupIndex(D, *CUIndex);
@@ -338,8 +339,7 @@ public:
     if (TUIndex)
       return *TUIndex;
 
-    DataExtractor Data(D.getDWARFObj().getTUIndexSection(),
-                       D.isLittleEndian(), 0);
+    DataExtractor Data(D.getDWARFObj().getTUIndexSection(), D.isLittleEndian());
     TUIndex = std::make_unique<DWARFUnitIndex>(DW_SECT_EXT_TYPES);
     bool isParseSuccessful = TUIndex->parse(Data);
     // If we are parsing TU-index and for .debug_types section we don't need
@@ -353,7 +353,8 @@ public:
     if (GdbIndex)
       return *GdbIndex;
 
-    DataExtractor Data(D.getDWARFObj().getGdbIndexSection(), true /*LE*/, 0);
+    DataExtractor Data(D.getDWARFObj().getGdbIndexSection(),
+                       /*IsLittleEndian=*/true);
     GdbIndex = std::make_unique<DWARFGdbIndex>();
     GdbIndex->parse(Data);
     return *GdbIndex;
@@ -363,8 +364,7 @@ public:
     if (Abbrev)
       return Abbrev.get();
 
-    DataExtractor Data(D.getDWARFObj().getAbbrevSection(),
-                       D.isLittleEndian(), 0);
+    DataExtractor Data(D.getDWARFObj().getAbbrevSection(), D.isLittleEndian());
     Abbrev = std::make_unique<DWARFDebugAbbrev>(Data);
     return Abbrev.get();
   }
@@ -621,8 +621,6 @@ public:
     else
       return getNormalTypeUnitMap();
   }
-
-
 };
 
 class ThreadSafeState : public ThreadUnsafeDWARFContextState {
@@ -834,7 +832,7 @@ static void dumpStringOffsetsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
                                      bool LittleEndian) {
   auto Contributions = collectContributionData(Units);
   DWARFDataExtractor StrOffsetExt(Obj, StringOffsetsSection, LittleEndian, 0);
-  DataExtractor StrData(StringSection, LittleEndian, 0);
+  DataExtractor StrData(StringSection, LittleEndian);
   uint64_t SectionSize = StringOffsetsSection.Data.size();
   uint64_t Offset = 0;
   for (auto &Contribution : Contributions) {
@@ -865,10 +863,10 @@ static void dumpStringOffsetsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
     }
     // Report a gap in the table.
     if (Offset < ContributionHeader) {
-      OS << format("0x%8.8" PRIx64 ": Gap, length = ", Offset);
+      OS << formatv("{0:x8}: Gap, length = ", Offset);
       OS << (ContributionHeader - Offset) << "\n";
     }
-    OS << format("0x%8.8" PRIx64 ": ", ContributionHeader);
+    OS << formatv("{0:x8}: ", ContributionHeader);
     // In DWARF v5 the contribution size in the descriptor does not equal
     // the originally encoded length (it does not contain the length of the
     // version field and the padding, a total of 4 bytes). Add them back in
@@ -880,19 +878,20 @@ static void dumpStringOffsetsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
     Offset = Contribution->Base;
     unsigned EntrySize = Contribution->getDwarfOffsetByteSize();
     while (Offset - Contribution->Base < Contribution->Size) {
-      OS << format("0x%8.8" PRIx64 ": ", Offset);
+      OS << formatv("{0:x8}: ", Offset);
       uint64_t StringOffset =
           StrOffsetExt.getRelocatedValue(EntrySize, &Offset);
-      OS << format("%0*" PRIx64 " ", OffsetDumpWidth, StringOffset);
+      OS << formatv("{0:x-} ", fmt_align(StringOffset, AlignStyle::Right,
+                                         OffsetDumpWidth, '0'));
       const char *S = StrData.getCStr(&StringOffset);
       if (S)
-        OS << format("\"%s\"", S);
+        OS << formatv("\"{0}\"", S);
       OS << "\n";
     }
   }
   // Report a gap at the end of the table.
   if (Offset < SectionSize) {
-    OS << format("0x%8.8" PRIx64 ": Gap, length = ", Offset);
+    OS << formatv("{0:x8}: Gap, length = ", Offset);
     OS << (SectionSize - Offset) << "\n";
   }
 }
@@ -1168,15 +1167,14 @@ void DWARFContext::dump(
         Parser.skip(DumpOpts.WarningHandler, DumpOpts.WarningHandler);
         continue;
       }
-      OS << "debug_line[" << format("0x%8.8" PRIx64, Parser.getOffset())
-         << "]\n";
+      OS << "debug_line[" << formatv("{0:x8}", Parser.getOffset()) << "]\n";
       Parser.parseNext(DumpOpts.WarningHandler, DumpOpts.WarningHandler, &OS,
                        DumpOpts.Verbose);
     }
   };
 
   auto DumpStrSection = [&](StringRef Section) {
-    DataExtractor StrData(Section, isLittleEndian(), 0);
+    DataExtractor StrData(Section, isLittleEndian());
     uint64_t Offset = 0;
     uint64_t StrOffset = 0;
     while (StrData.isValidOffset(Offset)) {
@@ -1186,7 +1184,7 @@ void DWARFContext::dump(
         DumpOpts.WarningHandler(std::move(Err));
         return;
       }
-      OS << format("0x%8.8" PRIx64 ": \"", StrOffset);
+      OS << formatv("{0:x8}: \"", StrOffset);
       OS.write_escaped(CStr);
       OS << "\"\n";
       StrOffset = Offset;
@@ -1346,9 +1344,20 @@ void DWARFContext::dump(
 DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint64_t Hash, bool IsDWO) {
   DWARFUnitVector &DWOUnits = State->getDWOUnits();
   if (const auto &TUI = getTUIndex()) {
-    if (const auto *R = TUI.getFromHash(Hash))
-      return dyn_cast_or_null<DWARFTypeUnit>(
-          DWOUnits.getUnitForIndexEntry(*R));
+    if (const auto *R = TUI.getFromHash(Hash)) {
+      if (TUI.getVersion() >= 5) {
+        return dyn_cast_or_null<DWARFTypeUnit>(
+            DWOUnits.getUnitForIndexEntry(*R, DW_SECT_INFO));
+      } else {
+        DWARFUnit *TypesUnit = nullptr;
+        getDWARFObj().forEachTypesDWOSections([&](const DWARFSection &S) {
+          if (!TypesUnit)
+            TypesUnit =
+                DWOUnits.getUnitForIndexEntry(*R, DW_SECT_EXT_TYPES, &S);
+        });
+        return dyn_cast_or_null<DWARFTypeUnit>(TypesUnit);
+      }
+    }
     return nullptr;
   }
   return State->getTypeUnitMap(IsDWO).lookup(Hash);
@@ -1360,7 +1369,7 @@ DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
   if (const auto &CUI = getCUIndex()) {
     if (const auto *R = CUI.getFromHash(Hash))
       return dyn_cast_or_null<DWARFCompileUnit>(
-          DWOUnits.getUnitForIndexEntry(*R));
+          DWOUnits.getUnitForIndexEntry(*R, DW_SECT_INFO));
     return nullptr;
   }
 
@@ -1904,8 +1913,8 @@ static Error createError(const Twine &Reason, llvm::Error E) {
 /// SymInfo contains information about symbol: it's address
 /// and section index which is -1LL for absolute symbols.
 struct SymInfo {
-  uint64_t Address;
-  uint64_t SectionIndex;
+  uint64_t Address = 0;
+  uint64_t SectionIndex = 0;
 };
 
 /// Returns the address of symbol relocation used against and a section index.
@@ -1923,7 +1932,7 @@ static Expected<SymInfo> getSymbolInfo(const object::ObjectFile &Obj,
   // in the object file
   if (Sym != Obj.symbol_end()) {
     bool New;
-    std::tie(CacheIt, New) = Cache.insert({*Sym, {0, 0}});
+    std::tie(CacheIt, New) = Cache.try_emplace(*Sym);
     if (!New)
       return CacheIt->second;
 
@@ -2262,7 +2271,7 @@ public:
           continue;
       }
 
-      if (Section.relocation_begin() == Section.relocation_end())
+      if (Section.relocations().empty())
         continue;
 
       // Symbol to [address, section index] cache mapping.

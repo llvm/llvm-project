@@ -25,6 +25,8 @@
 
 namespace Fortran::runtime::io {
 
+RT_OFFLOAD_API_GROUP_BEGIN
+
 // I, B, O, Z, and G output editing for INTEGER.
 // The DataEdit reference is const here (and elsewhere in this header) so that
 // one edit descriptor with a repeat factor may safely serve to edit
@@ -75,7 +77,8 @@ private:
   RT_API_ATTRS bool IsZero() const { return x_.IsZero(); }
 
   RT_API_ATTRS decimal::ConversionToDecimalResult ConvertToDecimal(
-      int significantDigits, enum decimal::FortranRounding, int flags = 0);
+      int significantDigits, enum decimal::FortranRounding,
+      int width = 3 /*len("Inf")*/, int flags = 0);
 
   struct ConvertToHexadecimalResult {
     const char *str;
@@ -83,7 +86,8 @@ private:
     int exponent;
   };
   RT_API_ATTRS ConvertToHexadecimalResult ConvertToHexadecimal(
-      int significantDigits, enum decimal::FortranRounding, int flags = 0);
+      int significantDigits, enum decimal::FortranRounding, int width,
+      int flags);
 
   BinaryFloatingPoint x_;
   char buffer_[BinaryFloatingPoint::maxDecimalConversionDigits +
@@ -136,6 +140,8 @@ extern template class RealOutputEditing<8>;
 extern template class RealOutputEditing<10>;
 // TODO: double/double
 extern template class RealOutputEditing<16>;
+
+RT_OFFLOAD_API_GROUP_END
 
 } // namespace Fortran::runtime::io
 #endif // FLANG_RT_RUNTIME_EDIT_OUTPUT_H_

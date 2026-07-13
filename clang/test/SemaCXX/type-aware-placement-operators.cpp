@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s        -std=c++26 -fexceptions -fcxx-exceptions    -fsized-deallocation    -faligned-allocation
-// RUN: %clang_cc1 -fsyntax-only -verify %s        -std=c++26 -fexceptions -fcxx-exceptions -fno-sized-deallocation    -faligned-allocation
-// RUN: %clang_cc1 -fsyntax-only -verify %s        -std=c++26 -fexceptions -fcxx-exceptions -fno-sized-deallocation -fno-aligned-allocation
-// RUN: %clang_cc1 -fsyntax-only -verify %s        -std=c++26 -fexceptions -fcxx-exceptions    -fsized-deallocation -fno-aligned-allocation
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -Wno-ext-cxx-type-aware-allocators -fexceptions -fcxx-exceptions    -fsized-deallocation    -faligned-allocation
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -Wno-ext-cxx-type-aware-allocators -fexceptions -fcxx-exceptions -fno-sized-deallocation    -faligned-allocation
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -Wno-ext-cxx-type-aware-allocators -fexceptions -fcxx-exceptions -fno-sized-deallocation -fno-aligned-allocation
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -Wno-ext-cxx-type-aware-allocators -fexceptions -fcxx-exceptions    -fsized-deallocation -fno-aligned-allocation
 
 namespace std {
   template <class T> struct type_identity {};

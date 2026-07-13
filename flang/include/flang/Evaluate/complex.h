@@ -45,7 +45,7 @@ public:
         im_.Compare(that.im_) == Relation::Equal;
   }
 
-  constexpr bool IsZero() const { return re_.IsZero() || im_.IsZero(); }
+  constexpr bool IsZero() const { return re_.IsZero() && im_.IsZero(); }
 
   constexpr bool IsInfinite() const {
     return re_.IsInfinite() || im_.IsInfinite();
@@ -76,6 +76,9 @@ public:
   ValueWithRealFlags<Complex> Multiply(const Complex &,
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
   ValueWithRealFlags<Complex> Divide(const Complex &,
+      Rounding rounding = TargetCharacteristics::defaultRounding) const;
+  ValueWithRealFlags<Complex> KahanSummation(const Complex &,
+      Complex &correction,
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
 
   // ABS/CABS = HYPOT(re_, imag_) = SQRT(re_**2 + im_**2)

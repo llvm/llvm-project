@@ -8,17 +8,18 @@
 
 // <forward_list>
 
-// reference       front();
-// const_reference front() const;
+// reference       front();       // constexpr since C++26
+// const_reference front() const; // constexpr since C++26
 
 #include <forward_list>
 #include <cassert>
 #include <iterator>
 
+#include "test_allocator.h"
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef int T;
     typedef std::forward_list<T> C;
@@ -56,6 +57,15 @@ int main(int, char**) {
     assert(c.front() == 0);
     assert(*c.begin() == 0);
   }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

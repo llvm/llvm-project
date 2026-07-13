@@ -10,7 +10,6 @@
 #include "llvm/Support/ELFAttrParserExtended.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/AArch64BuildAttributes.h"
 #include "llvm/Support/ELFAttributes.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -78,7 +77,7 @@ Error ELFExtendedAttrParser::parse(ArrayRef<uint8_t> Section,
                                    llvm::endianness Endian) {
 
   unsigned SectionNumber = 0;
-  De = DataExtractor(Section, Endian == llvm::endianness::little, 0);
+  De = DataExtractor(Section, Endian == llvm::endianness::little);
 
   // Early returns have specific errors. Consume the Error in Cursor.
   struct ClearCursorError {

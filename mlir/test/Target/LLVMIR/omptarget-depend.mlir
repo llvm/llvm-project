@@ -47,7 +47,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
     %11 = omp.map.info var_ptr(%5 : !llvm.ptr, !llvm.array<40 x i32>) map_clauses(from) capture(ByRef) bounds(%9) -> !llvm.ptr {name = "b"}
     %12 = omp.map.info var_ptr(%7 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "i"}
     %13 = omp.map.info var_ptr(%8 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "n"}
-    omp.target depend(taskdependin -> %4 : !llvm.ptr) map_entries(%10 -> %arg0, %11 -> %arg1, %12 -> %arg2, %13 -> %arg3 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    omp.target kernel_type(generic) depend(taskdependin -> %4 : !llvm.ptr) map_entries(%10 -> %arg0, %11 -> %arg1, %12 -> %arg2, %13 -> %arg3 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       %14 = llvm.mlir.constant(0 : index) : i64
       %15 = llvm.mlir.constant(10 : i32) : i32
       %16 = llvm.mlir.constant(1 : index) : i64
@@ -126,7 +126,8 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // CHECK-DAG:  %[[DEP_ARRAY:.+]] = alloca [1 x %struct.kmp_dep_info], align 8
 
 // CHECK: %[[TASKDATA:.+]] = call ptr @__kmpc_omp_task_alloc({{.+}}, ptr @.omp_target_task_proxy_func)
-// CHECK: %[[SHARED_DATA:.+]] = load ptr, ptr %[[TASKDATA]], align 8
+// CHECK: %[[SHARED_PTR:.+]] = getelementptr inbounds nuw %struct.kmp_task_ompbuilder_t, ptr %[[TASKDATA]], i32 0, i32 0
+// CHECK: %[[SHARED_DATA:.+]] = load ptr, ptr %[[SHARED_PTR]], align 8
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[SHARED_DATA]], ptr align 1 %[[STRUCTARG]], i64 24, i1 false)
 
 // CHECK: %[[DEP_INFO:.+]]  = getelementptr inbounds [1 x %struct.kmp_dep_info], ptr %[[DEP_ARRAY]], i64 0, i64 0

@@ -95,7 +95,7 @@ and flexibility.
 ``VariadicDynCastAllOfMatcher<Base, Derived>``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Those match all nodes of type *Base* if they can be dynamically casted to
+Those match all nodes of type *Base* if they can be dynamically cast to
 *Derived*.  The names of those matchers are nouns, which closely resemble
 *Derived*.  ``VariadicDynCastAllOfMatchers`` are the backbone of the matcher
 hierarchy.  Most often, your match expression will start with one of them, and

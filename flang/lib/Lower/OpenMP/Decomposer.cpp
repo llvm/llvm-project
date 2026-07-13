@@ -12,11 +12,10 @@
 
 #include "Decomposer.h"
 
-#include "Clauses.h"
 #include "Utils.h"
+#include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Semantics/semantics.h"
-#include "flang/Tools/CrossToolHelpers.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -28,7 +27,6 @@
 
 #include <optional>
 #include <utility>
-#include <variant>
 
 using namespace Fortran;
 
@@ -42,9 +40,9 @@ struct ConstructDecomposition {
                          llvm::omp::Directive compound,
                          const List<Clause> &clauses)
       : semaCtx(semaCtx), mod(modOp), eval(ev) {
-    tomp::ConstructDecompositionT decompose(getOpenMPVersionAttribute(modOp),
-                                            *this, compound,
-                                            llvm::ArrayRef(clauses));
+    tomp::ConstructDecompositionT decompose(
+        mlir::omp::getOpenMPVersionAttribute(modOp), *this, compound,
+        llvm::ArrayRef(clauses));
     output = std::move(decompose.output);
   }
 
@@ -70,7 +68,7 @@ struct ConstructDecomposition {
 namespace Fortran::lower::omp {
 LLVM_DUMP_METHOD llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                                                const UnitConstruct &uc) {
-  os << llvm::omp::getOpenMPDirectiveName(uc.id);
+  os << llvm::omp::getOpenMPDirectiveName(uc.id, llvm::omp::FallbackVersion);
   for (auto [index, clause] : llvm::enumerate(uc.clauses)) {
     os << (index == 0 ? '\t' : ' ');
     os << llvm::omp::getOpenMPClauseName(clause.id);

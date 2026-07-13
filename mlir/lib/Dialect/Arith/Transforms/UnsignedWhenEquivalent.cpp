@@ -8,6 +8,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
@@ -18,7 +19,7 @@
 
 namespace mlir {
 namespace arith {
-#define GEN_PASS_DEF_ARITHUNSIGNEDWHENEQUIVALENT
+#define GEN_PASS_DEF_ARITHUNSIGNEDWHENEQUIVALENTPASS
 #include "mlir/Dialect/Arith/Transforms/Passes.h.inc"
 } // namespace arith
 } // namespace mlir
@@ -118,13 +119,14 @@ private:
 };
 
 struct ArithUnsignedWhenEquivalentPass
-    : public arith::impl::ArithUnsignedWhenEquivalentBase<
+    : public arith::impl::ArithUnsignedWhenEquivalentPassBase<
           ArithUnsignedWhenEquivalentPass> {
 
   void runOnOperation() override {
     Operation *op = getOperation();
     MLIRContext *ctx = op->getContext();
     DataFlowSolver solver;
+    solver.load<SparseConstantPropagation>();
     solver.load<DeadCodeAnalysis>();
     solver.load<IntegerRangeAnalysis>();
     if (failed(solver.initializeAndRun(op)))
@@ -150,8 +152,4 @@ void mlir::arith::populateUnsignedWhenEquivalentPatterns(
                ConvertOpToUnsigned<MaxSIOp, MaxUIOp>,
                ConvertOpToUnsigned<ExtSIOp, ExtUIOp>, ConvertCmpIToUnsigned>(
       patterns.getContext(), solver);
-}
-
-std::unique_ptr<Pass> mlir::arith::createArithUnsignedWhenEquivalentPass() {
-  return std::make_unique<ArithUnsignedWhenEquivalentPass>();
 }

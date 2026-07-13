@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "hdr/sys_mman_macros.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"
 #include "src/sys/mman/posix_madvise.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -17,10 +18,10 @@
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+using LlvmLibcPosixMadviseTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST(LlvmLibcPosixMadviseTest, NoError) {
+TEST_F(LlvmLibcPosixMadviseTest, NoError) {
   size_t alloc_size = 128;
-  LIBC_NAMESPACE::libc_errno = 0;
   void *addr = LIBC_NAMESPACE::mmap(nullptr, alloc_size, PROT_READ,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   ASSERT_ERRNO_SUCCESS();
@@ -37,14 +38,19 @@ TEST(LlvmLibcPosixMadviseTest, NoError) {
   EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, alloc_size), Succeeds());
 }
 
-TEST(LlvmLibcPosixMadviseTest, Error_BadPtr) {
-  LIBC_NAMESPACE::libc_errno = 0;
+TEST_F(LlvmLibcPosixMadviseTest, Error_BadPtr) {
   // posix_madvise is a no-op on DONTNEED, so it shouldn't fail even with the
   // nullptr.
   EXPECT_EQ(LIBC_NAMESPACE::posix_madvise(nullptr, 8, POSIX_MADV_DONTNEED), 0);
 
   // posix_madvise doesn't set errno, but the return value is actually the error
   // code.
+#ifdef LIBC_TEST_UNDER_EMULATOR
+  // QEMU stubs madvise hints, so posix_madvise returns 0.
+  EXPECT_EQ(LIBC_NAMESPACE::posix_madvise(nullptr, 8, POSIX_MADV_SEQUENTIAL),
+            0);
+#else
   EXPECT_EQ(LIBC_NAMESPACE::posix_madvise(nullptr, 8, POSIX_MADV_SEQUENTIAL),
             ENOMEM);
+#endif
 }

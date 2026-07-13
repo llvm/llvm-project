@@ -10,21 +10,17 @@
 #include "definable.h"
 #include "pointer-assignment.h"
 #include "flang/Common/idioms.h"
-#include "flang/Common/restorer.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/message.h"
-#include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include <optional>
-#include <set>
 #include <string>
-#include <type_traits>
 
 using namespace Fortran::parser::literals;
 
@@ -41,8 +37,7 @@ public:
   void PopWhereContext();
   void Analyze(const parser::AssignmentStmt &);
   void Analyze(const parser::PointerAssignmentStmt &);
-  void Analyze(const parser::ConcurrentControl &);
-  int deviceConstructDepth_{0};
+  SemanticsContext &context() { return context_; }
 
 private:
   bool CheckForPureContext(const SomeExpr &rhs, parser::CharBlock rhsSource);
@@ -72,6 +67,16 @@ void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
         std::holds_alternative<evaluate::ProcedureRef>(assignment->u)};
     if (isDefinedAssignment) {
       flags.set(DefinabilityFlag::AllowEventLockOrNotifyType);
+    } else if (const Symbol *
+        whole{evaluate::UnwrapWholeSymbolOrComponentDataRef(lhs)}) {
+      if (IsAllocatable(whole->GetUltimate())) {
+        flags.set(DefinabilityFlag::PotentialDeallocation);
+        if (IsPolymorphic(*whole) && whereDepth_ > 0) {
+          Say(lhsLoc,
+              "Assignment to whole polymorphic allocatable '%s' may not be nested in a WHERE statement or construct"_err_en_US,
+              whole->name());
+        }
+      }
     }
     if (auto whyNot{WhyNotDefinable(lhsLoc, scope, flags, lhs)}) {
       if (whyNot->IsFatal()) {
@@ -90,21 +95,6 @@ void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
     }
     if (whereDepth_ > 0) {
       CheckShape(lhsLoc, &lhs);
-    }
-    if (context_.foldingContext().languageFeatures().IsEnabled(
-            common::LanguageFeature::CUDA)) {
-      const auto &scope{context_.FindScope(lhsLoc)};
-      const Scope &progUnit{GetProgramUnitContaining(scope)};
-      if (!IsCUDADeviceContext(&progUnit) && deviceConstructDepth_ == 0) {
-        if (Fortran::evaluate::HasCUDADeviceAttrs(lhs) &&
-            Fortran::evaluate::HasCUDAImplicitTransfer(rhs)) {
-          if (GetNbOfCUDAManagedOrUnifiedSymbols(lhs) == 1 &&
-              GetNbOfCUDAManagedOrUnifiedSymbols(rhs) == 1 &&
-              GetNbOfCUDADeviceSymbols(rhs) == 1)
-            return; // This is a special case handled on the host.
-          context_.Say(lhsLoc, "Unsupported CUDA data transfer"_err_en_US);
-        }
-      }
     }
   }
 }
@@ -200,7 +190,8 @@ void AssignmentContext::CheckShape(parser::CharBlock at, const SomeExpr *expr) {
 
 template <typename A> void AssignmentContext::PushWhereContext(const A &x) {
   const auto &expr{std::get<parser::LogicalExpr>(x.t)};
-  CheckShape(expr.thing.value().source, GetExpr(context_, expr));
+  CheckShape(
+      parser::UnwrapRef<parser::Expr>(expr).source, GetExpr(context_, expr));
   ++whereDepth_;
 }
 
@@ -213,8 +204,16 @@ void AssignmentContext::PopWhereContext() {
 
 AssignmentChecker::~AssignmentChecker() {}
 
+SemanticsContext &AssignmentChecker::context() {
+  return context_.value().context();
+}
+
 AssignmentChecker::AssignmentChecker(SemanticsContext &context)
     : context_{new AssignmentContext{context}} {}
+
+void AssignmentChecker::Enter(const parser::OmpDeclareReductionDirective &x) {
+  context().set_location(x.source);
+}
 void AssignmentChecker::Enter(const parser::AssignmentStmt &x) {
   context_.value().Analyze(x);
 }
@@ -238,46 +237,6 @@ void AssignmentChecker::Enter(const parser::MaskedElsewhereStmt &x) {
 }
 void AssignmentChecker::Leave(const parser::MaskedElsewhereStmt &) {
   context_.value().PopWhereContext();
-}
-void AssignmentChecker::Enter(const parser::CUFKernelDoConstruct &x) {
-  ++context_.value().deviceConstructDepth_;
-}
-void AssignmentChecker::Leave(const parser::CUFKernelDoConstruct &) {
-  --context_.value().deviceConstructDepth_;
-}
-static bool IsOpenACCComputeConstruct(const parser::OpenACCBlockConstruct &x) {
-  const auto &beginBlockDirective =
-      std::get<Fortran::parser::AccBeginBlockDirective>(x.t);
-  const auto &blockDirective =
-      std::get<Fortran::parser::AccBlockDirective>(beginBlockDirective.t);
-  if (blockDirective.v == llvm::acc::ACCD_parallel ||
-      blockDirective.v == llvm::acc::ACCD_serial ||
-      blockDirective.v == llvm::acc::ACCD_kernels) {
-    return true;
-  }
-  return false;
-}
-void AssignmentChecker::Enter(const parser::OpenACCBlockConstruct &x) {
-  if (IsOpenACCComputeConstruct(x)) {
-    ++context_.value().deviceConstructDepth_;
-  }
-}
-void AssignmentChecker::Leave(const parser::OpenACCBlockConstruct &x) {
-  if (IsOpenACCComputeConstruct(x)) {
-    --context_.value().deviceConstructDepth_;
-  }
-}
-void AssignmentChecker::Enter(const parser::OpenACCCombinedConstruct &) {
-  ++context_.value().deviceConstructDepth_;
-}
-void AssignmentChecker::Leave(const parser::OpenACCCombinedConstruct &) {
-  --context_.value().deviceConstructDepth_;
-}
-void AssignmentChecker::Enter(const parser::OpenACCLoopConstruct &) {
-  ++context_.value().deviceConstructDepth_;
-}
-void AssignmentChecker::Leave(const parser::OpenACCLoopConstruct &) {
-  --context_.value().deviceConstructDepth_;
 }
 
 } // namespace Fortran::semantics

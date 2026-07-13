@@ -14,15 +14,10 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Parser/parse-tree.h"
-#include "flang/Runtime/misc-intrinsic.h"
 #include "flang/Runtime/pointer.h"
-#include "flang/Runtime/random.h"
 #include "flang/Runtime/stop.h"
-#include "flang/Runtime/time-intrinsic.h"
 #include "flang/Semantics/tools.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -39,11 +34,10 @@ static void genUnreachable(fir::FirOpBuilder &builder, mlir::Location loc) {
   if (parentOp->getDialect()->getNamespace() ==
       mlir::omp::OpenMPDialect::getDialectNamespace())
     Fortran::lower::genOpenMPTerminator(builder, parentOp, loc);
-  else if (parentOp->getDialect()->getNamespace() ==
-           mlir::acc::OpenACCDialect::getDialectNamespace())
+  else if (Fortran::lower::isInsideOpenACCComputeConstruct(builder))
     Fortran::lower::genOpenACCTerminator(builder, parentOp, loc);
   else
-    builder.create<fir::UnreachableOp>(loc);
+    fir::UnreachableOp::create(builder, loc);
   mlir::Block *newBlock = curBlock->splitBlock(builder.getInsertionPoint());
   builder.setInsertionPointToStart(newBlock);
 }
@@ -90,8 +84,7 @@ void Fortran::lower::genStopStatement(
           operands.push_back(cast);
         },
         [&](auto) {
-          mlir::emitError(loc, "unhandled expression in STOP");
-          std::exit(1);
+          fir::emitFatalError(loc, "unhandled expression in STOP");
         });
   } else {
     callee = fir::runtime::getRuntimeFunc<mkRTKey(StopStatement)>(loc, builder);
@@ -118,7 +111,8 @@ void Fortran::lower::genStopStatement(
         loc, calleeType.getInput(operands.size()), 0));
   }
 
-  builder.create<fir::CallOp>(loc, callee, operands);
+  fir::CallOp::create(builder, loc, callee, operands);
+
   auto blockIsUnterminated = [&builder]() {
     mlir::Block *currentBlock = builder.getBlock();
     return currentBlock->empty() ||
@@ -134,7 +128,7 @@ void Fortran::lower::genFailImageStatement(
   mlir::Location loc = converter.getCurrentLocation();
   mlir::func::FuncOp callee =
       fir::runtime::getRuntimeFunc<mkRTKey(FailImageStatement)>(loc, builder);
-  builder.create<fir::CallOp>(loc, callee, std::nullopt);
+  fir::CallOp::create(builder, loc, callee, mlir::ValueRange{});
   genUnreachable(builder, loc);
 }
 
@@ -168,38 +162,57 @@ void Fortran::lower::genUnlockStatement(
   TODO(converter.getCurrentLocation(), "coarray: UNLOCK runtime");
 }
 
-void Fortran::lower::genSyncAllStatement(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::parser::SyncAllStmt &) {
-  TODO(converter.getCurrentLocation(), "coarray: SYNC ALL runtime");
-}
-
-void Fortran::lower::genSyncImagesStatement(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::parser::SyncImagesStmt &) {
-  TODO(converter.getCurrentLocation(), "coarray: SYNC IMAGES runtime");
-}
-
-void Fortran::lower::genSyncMemoryStatement(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::parser::SyncMemoryStmt &) {
-  TODO(converter.getCurrentLocation(), "coarray: SYNC MEMORY runtime");
-}
-
-void Fortran::lower::genSyncTeamStatement(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::parser::SyncTeamStmt &) {
-  TODO(converter.getCurrentLocation(), "coarray: SYNC TEAM runtime");
-}
-
 void Fortran::lower::genPauseStatement(
     Fortran::lower::AbstractConverter &converter,
-    const Fortran::parser::PauseStmt &) {
+    const Fortran::parser::PauseStmt &stmt) {
+
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location loc = converter.getCurrentLocation();
-  mlir::func::FuncOp callee =
-      fir::runtime::getRuntimeFunc<mkRTKey(PauseStatement)>(loc, builder);
-  builder.create<fir::CallOp>(loc, callee, std::nullopt);
+  Fortran::lower::StatementContext stmtCtx;
+
+  llvm::SmallVector<mlir::Value> operands;
+  mlir::func::FuncOp callee;
+  mlir::FunctionType calleeType;
+
+  if (stmt.v.has_value()) {
+    const auto &code = stmt.v.value();
+    auto expr =
+        converter.genExprValue(*Fortran::semantics::GetExpr(code), stmtCtx);
+    expr.match(
+        // Character-valued expression -> call PauseStatementText (CHAR, LEN)
+        [&](const fir::CharBoxValue &x) {
+          callee = fir::runtime::getRuntimeFunc<mkRTKey(PauseStatementText)>(
+              loc, builder);
+          calleeType = callee.getFunctionType();
+
+          operands.push_back(
+              builder.createConvert(loc, calleeType.getInput(0), x.getAddr()));
+          operands.push_back(
+              builder.createConvert(loc, calleeType.getInput(1), x.getLen()));
+        },
+        // Unboxed value -> call PauseStatementInt which accepts an integer.
+        [&](fir::UnboxedValue x) {
+          callee = fir::runtime::getRuntimeFunc<mkRTKey(PauseStatementInt)>(
+              loc, builder);
+          calleeType = callee.getFunctionType();
+          assert(calleeType.getNumInputs() >= 1);
+          mlir::Value cast =
+              builder.createConvert(loc, calleeType.getInput(0), x);
+          operands.push_back(cast);
+        },
+        [&](auto) {
+          fir::emitFatalError(loc, "unhandled expression in PAUSE");
+        });
+  } else {
+    callee =
+        fir::runtime::getRuntimeFunc<mkRTKey(PauseStatement)>(loc, builder);
+    calleeType = callee.getFunctionType();
+  }
+
+  fir::CallOp::create(builder, loc, callee, operands);
+
+  // NOTE: PAUSE does not terminate the current block. The program may resume
+  // and continue normal execution, so we do not emit control-flow terminators.
 }
 
 void Fortran::lower::genPointerAssociate(fir::FirOpBuilder &builder,
@@ -210,17 +223,18 @@ void Fortran::lower::genPointerAssociate(fir::FirOpBuilder &builder,
       fir::runtime::getRuntimeFunc<mkRTKey(PointerAssociate)>(loc, builder);
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, func.getFunctionType(), pointer, target);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
-void Fortran::lower::genPointerAssociateRemapping(fir::FirOpBuilder &builder,
-                                                  mlir::Location loc,
-                                                  mlir::Value pointer,
-                                                  mlir::Value target,
-                                                  mlir::Value bounds) {
+void Fortran::lower::genPointerAssociateRemapping(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value pointer,
+    mlir::Value target, mlir::Value bounds, bool isMonomorphic) {
   mlir::func::FuncOp func =
-      fir::runtime::getRuntimeFunc<mkRTKey(PointerAssociateRemapping)>(loc,
-                                                                       builder);
+      isMonomorphic
+          ? fir::runtime::getRuntimeFunc<mkRTKey(
+                PointerAssociateRemappingMonomorphic)>(loc, builder)
+          : fir::runtime::getRuntimeFunc<mkRTKey(PointerAssociateRemapping)>(
+                loc, builder);
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
@@ -228,7 +242,7 @@ void Fortran::lower::genPointerAssociateRemapping(fir::FirOpBuilder &builder,
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, func.getFunctionType(), pointer, target, bounds, sourceFile,
       sourceLine);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 void Fortran::lower::genPointerAssociateLowerBounds(fir::FirOpBuilder &builder,
@@ -241,5 +255,5 @@ void Fortran::lower::genPointerAssociateLowerBounds(fir::FirOpBuilder &builder,
           loc, builder);
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, func.getFunctionType(), pointer, target, lbounds);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }

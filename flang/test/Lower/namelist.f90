@@ -42,8 +42,8 @@ program p
   ! CHECK:     %[[V_42:[0-9]+]] = fir.insert_value %[[V_39]], %[[V_41]], [0 : index] : (tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>, !fir.ref<i8>) -> tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>
   ! CHECK:     %[[V_43:[0-9]+]] = fir.insert_value %[[V_42]], %c2{{.*}}, [1 : index] : (tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>, i64) -> tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>
   ! CHECK:     %[[V_44:[0-9]+]] = fir.insert_value %[[V_43]], %[[V_24]], [2 : index] : (tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>) -> tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>
-  ! CHECK:     %[[V_45:[0-9]+]] = fir.address_of(@_QQdefault.nonTbpDefinedIoTable) : !fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>
-  ! CHECK:     %[[V_46:[0-9]+]] = fir.convert %[[V_45]] : (!fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>) -> !fir.ref<none>
+  ! CHECK:     %[[V_45:[0-9]+]] = fir.address_of(@_QQdefault.nonTbpDefinedIoTable) : !fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i8>>>, i1>>
+  ! CHECK:     %[[V_46:[0-9]+]] = fir.convert %[[V_45]] : (!fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i8>>>, i1>>) -> !fir.ref<none>
   ! CHECK:     %[[V_47:[0-9]+]] = fir.insert_value %[[V_44]], %[[V_46]], [3 : index] : (tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>, !fir.ref<none>) -> tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>
   ! CHECK:     fir.store %[[V_47]] to %[[V_38]] : !fir.ref<tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>>
   ! CHECK:     %[[V_48:[0-9]+]] = fir.convert %[[V_38]] : (!fir.ref<tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>>) -> !fir.ref<tuple<>>
@@ -100,8 +100,8 @@ subroutine sss
   ! CHECK:     %[[V_20:[0-9]+]] = fir.insert_value %[[V_17]], %[[V_19]], [0 : index] : (tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>, !fir.ref<i8>) -> tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>
   ! CHECK:     %[[V_21:[0-9]+]] = fir.insert_value %[[V_20]], %c1{{.*}}, [1 : index] : (tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>, i64) -> tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>
   ! CHECK:     %[[V_22:[0-9]+]] = fir.insert_value %[[V_21]], %[[V_8]], [2 : index] : (tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>) -> tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>
-  ! CHECK:     %[[V_23:[0-9]+]] = fir.address_of(@_QQdefault.nonTbpDefinedIoTable) : !fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>
-  ! CHECK:     %[[V_24:[0-9]+]] = fir.convert %[[V_23]] : (!fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>) -> !fir.ref<none>
+  ! CHECK:     %[[V_23:[0-9]+]] = fir.address_of(@_QQdefault.nonTbpDefinedIoTable) : !fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i8>>>, i1>>
+  ! CHECK:     %[[V_24:[0-9]+]] = fir.convert %[[V_23]] : (!fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i8>>>, i1>>) -> !fir.ref<none>
   ! CHECK:     %[[V_25:[0-9]+]] = fir.insert_value %[[V_22]], %[[V_24]], [3 : index] : (tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>, !fir.ref<none>) -> tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>
   ! CHECK:     fir.store %[[V_25]] to %[[V_16]] : !fir.ref<tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>>
   ! CHECK:     %[[V_26:[0-9]+]] = fir.convert %[[V_16]] : (!fir.ref<tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>>) -> !fir.ref<tuple<>>
@@ -123,6 +123,45 @@ subroutine global_pointer
   write(10, nml=mygroup)
 end
 
+module m
+  type base
+    real :: r1
+  end type
+  interface write(formatted)
+    subroutine writeformatted(dtv, unit, iotype, v_list, iostat, iomsg )
+      import base
+        class(base), intent(in) :: dtv
+        integer,  intent(in) :: unit
+        character(*), intent(in) :: iotype
+        integer, intent(in)     :: v_list(:)
+        integer,  intent(out) :: iostat
+        character(*),  intent(inout) :: iomsg
+     end subroutine
+  end interface
+end module
+
+! CHECK-LABEL: c.func @_QPlocal_poly_namelist
+subroutine local_poly_namelist
+  use m
+  class(base), allocatable :: b1
+! CHECK:  %[[V_0:[0-9]+]]  = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMmTbase{r1:f32}>>>
+! CHECK:  %[[V_2:[0-9]+]]  = fir.alloca !fir.class<!fir.heap<!fir.type<_QMmTbase{r1:f32}>>> {bindc_name = "b1", uniq_name = "_QFlocal_poly_namelistEb1"}
+! CHECK:  %[[V_5:[0-9]+]]  = fir.declare %[[V_2]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFlocal_poly_namelistEb1"} : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMmTbase{r1:f32}>>>>) -> !fir.ref<!fir.class<!fir.heap<!fir.type<_QMmTbase{r1:f32}>>>>
+! CHECK:  %[[V_9:[0-9]+]]  = fir.alloca !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>
+! CHECK:  %[[V_10:[0-9]+]] = fir.undefined !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>
+! CHECK:  %[[V_11:[0-9]+]] = fir.address_of(@_QQclX623100) : !fir.ref<!fir.char<1,3>>
+! CHECK:  %[[V_12:[0-9]+]] = fir.convert %[[V_11]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
+! CHECK:  %[[V_13:[0-9]+]] = fir.insert_value %[[V_10]], %[[V_12]], [0 : index, 0 : index] : (!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>, !fir.ref<i8>) -> !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>
+! CHECK:  %[[V_14:[0-9]+]] = fir.load %[[V_5]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMmTbase{r1:f32}>>>>
+! CHECK:  %[[V_15:[0-9]+]] = fir.rebox %[[V_14]] : (!fir.class<!fir.heap<!fir.type<_QMmTbase{r1:f32}>>>) -> !fir.class<!fir.ptr<!fir.type<_QMmTbase{r1:f32}>>>
+! CHECK:  fir.store %[[V_15]] to %[[V_0]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMmTbase{r1:f32}>>>>
+! CHECK:  %[[V_16:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMmTbase{r1:f32}>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:  %[[V_17:[0-9]+]] = fir.insert_value %[[V_13]], %[[V_16]], [0 : index, 1 : index] : (!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>, !fir.ref<!fir.box<none>>) -> !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>
+! CHECK:  fir.store %[[V_17]] to %[[V_9]] : !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>
+  namelist/mygroup/b1
+  write(10, nml=mygroup)
+end subroutine
+
 module mmm
   real rrr
   namelist /aaa/ rrr
@@ -130,15 +169,16 @@ end
 
 ! CHECK-LABEL: c.func @_QPrename_sub
 subroutine rename_sub
-  use mmm, bbb => aaa
+  use mmm, ggg => aaa
   rrr = 3.
   ! CHECK:     %[[V_4:[0-9]+]] = fir.call @_FortranAioBeginExternalListOutput
   ! CHECK:     %[[V_5:[0-9]+]] = fir.address_of(@_QMmmmNaaa) : !fir.ref<tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>>
   ! CHECK:     %[[V_6:[0-9]+]] = fir.convert %[[V_5]] : (!fir.ref<tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>>) -> !fir.ref<tuple<>>
   ! CHECK:     %[[V_7:[0-9]+]] = fir.call @_FortranAioOutputNamelist(%[[V_4]], %[[V_6]]) fastmath<contract> : (!fir.ref<i8>, !fir.ref<tuple<>>) -> i1
   ! CHECK:     %[[V_8:[0-9]+]] = fir.call @_FortranAioEndIoStatement(%[[V_4]]) fastmath<contract> : (!fir.ref<i8>) -> i32
-  write(*,bbb)
+  write(*,ggg)
 end
 
-! CHECK-NOT:   bbb
+! CHECK-NOT:   ggg
 ! CHECK:       fir.string_lit "aaa\00"(4) : !fir.char<1,4>
+

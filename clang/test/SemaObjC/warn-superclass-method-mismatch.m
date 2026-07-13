@@ -38,7 +38,7 @@ void f(Base *base, Sub *sub) {
   Base *b;
   [base method1:b]; // if base is actuall 'Sub'  it will use [Sub method1] with wrong argument.
 
-  [base method2:b];  // expected-warning {{}}
+  [base method2:b];  // expected-error {{incompatible pointer types}}
 
   Sub *s;
   [base method2:s]; // if base is actually 'Sub' OK. Either way OK.

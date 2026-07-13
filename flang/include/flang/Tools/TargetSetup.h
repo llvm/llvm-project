@@ -13,7 +13,6 @@
 #include "flang/Evaluate/target.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "llvm/Target/TargetMachine.h"
-#include <cfloat>
 
 namespace Fortran::tools {
 
@@ -47,7 +46,7 @@ namespace Fortran::tools {
   }
 
   switch (targetTriple.getArch()) {
-  case llvm::Triple::ArchType::amdgcn:
+  case llvm::Triple::ArchType::amdgpu:
   case llvm::Triple::ArchType::x86_64:
     break;
   default:
@@ -93,6 +92,10 @@ namespace Fortran::tools {
 
   if (targetTriple.isOSWindows())
     targetCharacteristics.set_isOSWindows(true);
+
+  // Currently the integer kind happens to be the same as the byte size
+  targetCharacteristics.set_integerKindForPointer(
+      targetTriple.getArchPointerBitWidth() / 8);
 
   // TODO: use target machine data layout to set-up the target characteristics
   // type size and alignment info.

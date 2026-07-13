@@ -24,14 +24,14 @@ namespace interp {
 class Pointer;
 class Boolean;
 class Floating;
-class FunctionPointer;
 class MemberPointer;
 class FixedPoint;
 template <bool Signed> class IntegralAP;
+template <bool Signed> class Char;
 template <unsigned Bits, bool Signed> class Integral;
 
 /// Enumeration of the primitive types of the VM.
-enum PrimType : unsigned {
+enum PrimType : uint8_t {
   PT_Sint8 = 0,
   PT_Uint8 = 1,
   PT_Sint16 = 2,
@@ -49,12 +49,62 @@ enum PrimType : unsigned {
   PT_MemberPtr = 14,
 };
 
+constexpr bool isIntegerOrBoolType(PrimType T) { return T <= PT_Bool; }
+constexpr bool isIntegerType(PrimType T) { return T <= PT_IntAPS; }
+
 inline constexpr bool isPtrType(PrimType T) {
   return T == PT_Ptr || T == PT_MemberPtr;
 }
 
+inline constexpr bool isSignedType(PrimType T) {
+  switch (T) {
+  case PT_Sint8:
+  case PT_Sint16:
+  case PT_Sint32:
+  case PT_Sint64:
+    return true;
+  default:
+    return false;
+  }
+  return false;
+}
+
+// Like std::optional<PrimType>, but only sizeof(PrimType).
+class OptPrimType final {
+  static constexpr uint8_t None = 0xFF;
+  uint8_t V = None;
+
+public:
+  OptPrimType() = default;
+  OptPrimType(std::nullopt_t) {}
+  OptPrimType(PrimType T) : V(static_cast<unsigned>(T)) {}
+
+  explicit constexpr operator bool() const { return V != None; }
+  PrimType operator*() const {
+    assert(operator bool());
+    return static_cast<PrimType>(V);
+  }
+
+  PrimType value_or(PrimType PT) const {
+    if (operator bool())
+      return static_cast<PrimType>(V);
+    return PT;
+  }
+
+  bool operator==(PrimType PT) const {
+    if (!operator bool())
+      return false;
+    return V == static_cast<unsigned>(PT);
+  }
+  bool operator==(OptPrimType OPT) const { return V == OPT.V; }
+  bool operator!=(PrimType PT) const { return !(*this == PT); }
+  bool operator!=(OptPrimType OPT) const { return V != OPT.V; }
+};
+static_assert(sizeof(OptPrimType) == sizeof(PrimType));
+
 enum class CastKind : uint8_t {
   Reinterpret,
+  ReinterpretLike,
   Volatile,
   Dynamic,
 };
@@ -64,6 +114,9 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   switch (CK) {
   case interp::CastKind::Reinterpret:
     OS << "reinterpret_cast";
+    break;
+  case interp::CastKind::ReinterpretLike:
+    OS << "reinterpret_like";
     break;
   case interp::CastKind::Volatile:
     OS << "volatile";
@@ -75,15 +128,31 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   return OS;
 }
 
-constexpr bool isIntegralType(PrimType T) { return T <= PT_FixedPoint; }
+template <typename T> constexpr bool needsAlloc() {
+  return std::is_same_v<T, IntegralAP<false>> ||
+         std::is_same_v<T, IntegralAP<true>> || std::is_same_v<T, Floating> ||
+         std::is_same_v<T, MemberPointer>;
+}
+constexpr bool needsAlloc(PrimType T) {
+  return T == PT_IntAP || T == PT_IntAPS || T == PT_Float || T == PT_MemberPtr;
+}
+
+template <typename T> constexpr bool isIntegralOrPointer() {
+  return std::is_same_v<T, Integral<16, false>> ||
+         std::is_same_v<T, Integral<16, true>> ||
+         std::is_same_v<T, Integral<32, false>> ||
+         std::is_same_v<T, Integral<32, true>> ||
+         std::is_same_v<T, Integral<64, false>> ||
+         std::is_same_v<T, Integral<64, true>>;
+}
 
 /// Mapping from primitive types to their representation.
 template <PrimType T> struct PrimConv;
 template <> struct PrimConv<PT_Sint8> {
-  using T = Integral<8, true>;
+  using T = Char<true>;
 };
 template <> struct PrimConv<PT_Uint8> {
-  using T = Integral<8, false>;
+  using T = Char<false>;
 };
 template <> struct PrimConv<PT_Sint16> {
   using T = Integral<16, true>;
@@ -191,6 +260,22 @@ static inline bool aligned(const void *P) {
     }                                                                          \
   } while (0)
 
+#define FIXED_SIZE_INT_TYPE_SWITCH(Expr, B)                                    \
+  do {                                                                         \
+    switch (Expr) {                                                            \
+      TYPE_SWITCH_CASE(PT_Sint8, B)                                            \
+      TYPE_SWITCH_CASE(PT_Uint8, B)                                            \
+      TYPE_SWITCH_CASE(PT_Sint16, B)                                           \
+      TYPE_SWITCH_CASE(PT_Uint16, B)                                           \
+      TYPE_SWITCH_CASE(PT_Sint32, B)                                           \
+      TYPE_SWITCH_CASE(PT_Uint32, B)                                           \
+      TYPE_SWITCH_CASE(PT_Sint64, B)                                           \
+      TYPE_SWITCH_CASE(PT_Uint64, B)                                           \
+    default:                                                                   \
+      llvm_unreachable("Not an integer value");                                \
+    }                                                                          \
+  } while (0)
+
 #define INT_TYPE_SWITCH_NO_BOOL(Expr, B)                                       \
   do {                                                                         \
     switch (Expr) {                                                            \
@@ -209,14 +294,15 @@ static inline bool aligned(const void *P) {
     }                                                                          \
   } while (0)
 
-#define COMPOSITE_TYPE_SWITCH(Expr, B, D)                                      \
+#define TYPE_SWITCH_ALLOC(Expr, B)                                             \
   do {                                                                         \
     switch (Expr) {                                                            \
-      TYPE_SWITCH_CASE(PT_Ptr, B)                                              \
-    default: {                                                                 \
-      D;                                                                       \
-      break;                                                                   \
-    }                                                                          \
+      TYPE_SWITCH_CASE(PT_Float, B)                                            \
+      TYPE_SWITCH_CASE(PT_IntAP, B)                                            \
+      TYPE_SWITCH_CASE(PT_IntAPS, B)                                           \
+      TYPE_SWITCH_CASE(PT_MemberPtr, B)                                        \
+    default:;                                                                  \
     }                                                                          \
   } while (0)
+
 #endif

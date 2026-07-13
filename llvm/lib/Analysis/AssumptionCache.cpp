@@ -12,9 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -32,7 +34,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <utility>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -53,6 +54,22 @@ AssumptionCache::getOrInsertAffectedValues(Value *V) {
   return AffectedValues[AffectedValueCallbackVH(V, this)];
 }
 
+void AssumptionCache::findValuesAffectedByOperandBundle(
+    OperandBundleUse Bundle, function_ref<void(Value *)> InsertAffected) {
+  auto AddAffectedVal = [&](Value *V) {
+    if (isa<Argument, GlobalValue, Instruction>(V))
+      InsertAffected(V);
+  };
+
+  if (Bundle.getTagName() == "separate_storage") {
+    assert(Bundle.Inputs.size() == 2 && "separate_storage must have two args");
+    AddAffectedVal(getUnderlyingObject(Bundle.Inputs[0]));
+    AddAffectedVal(getUnderlyingObject(Bundle.Inputs[1]));
+  } else if (Bundle.Inputs.size() > ABA_WasOn &&
+             Bundle.getTagName() != IgnoreBundleTag)
+    AddAffectedVal(Bundle.Inputs[ABA_WasOn]);
+}
+
 static void
 findAffectedValues(CallBase *CI, TargetTransformInfo *TTI,
                    SmallVectorImpl<AssumptionCache::ResultElem> &Affected) {
@@ -69,17 +86,10 @@ findAffectedValues(CallBase *CI, TargetTransformInfo *TTI,
     }
   };
 
-  for (unsigned Idx = 0; Idx != CI->getNumOperandBundles(); Idx++) {
-    OperandBundleUse Bundle = CI->getOperandBundleAt(Idx);
-    if (Bundle.getTagName() == "separate_storage") {
-      assert(Bundle.Inputs.size() == 2 &&
-             "separate_storage must have two args");
-      AddAffectedVal(getUnderlyingObject(Bundle.Inputs[0]), Idx);
-      AddAffectedVal(getUnderlyingObject(Bundle.Inputs[1]), Idx);
-    } else if (Bundle.Inputs.size() > ABA_WasOn &&
-               Bundle.getTagName() != IgnoreBundleTag)
-      AddAffectedVal(Bundle.Inputs[ABA_WasOn], Idx);
-  }
+  for (unsigned Idx = 0; Idx != CI->getNumOperandBundles(); Idx++)
+    AssumptionCache::findValuesAffectedByOperandBundle(
+        CI->getOperandBundleAt(Idx),
+        [&](Value *V) { Affected.push_back({V, Idx}); });
 
   Value *Cond = CI->getArgOperand(0);
   findValuesAffectedByCondition(Cond, /*IsAssume=*/true, InsertAffected);
@@ -107,9 +117,29 @@ void AssumptionCache::updateAffectedValues(AssumeInst *CI) {
   }
 }
 
-void AssumptionCache::unregisterAssumption(AssumeInst *CI) {
+void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
   SmallVector<AssumptionCache::ResultElem, 16> Affected;
   findAffectedValues(CI, TTI, Affected);
+
+  // If a value appears more than once in an AssumeInst e.g., 'ptr %arg1' in:
+  //     call void @llvm.assume(i1 true)
+  //                   [ "dereferenceable"(ptr %arg1, i64 1),
+  //                     "align"(ptr %arg1, i64 8) ]
+  // it will appear multiple times in Affected, but we may (depending on
+  // how the results in AffectedValues.find_as(AV.Assume) are ordered)
+  // nullify multiple instances of Elem.Assume during one iteration of the
+  // 'for (auto &AV : Affected)' loop below. The next iteration of that for
+  // loop may then find only a match to a different AssumeInst, resulting in
+  // an assertion failure. Avoid this by counting the number of expected
+  // matches.
+#ifndef NDEBUG
+  SmallDenseSet<std::pair<Value *, unsigned>, 16> Seen;
+  DenseMap<Value *, int> ExpectedMatches;
+  for (auto &AV : Affected)
+    if (Seen.insert({AV.Assume, AV.Index}).second &&
+        AffectedValues.find_as(AV.Assume) != AffectedValues.end())
+      ExpectedMatches[AV.Assume]++;
+#endif
 
   for (auto &AV : Affected) {
     auto AVI = AffectedValues.find_as(AV.Assume);
@@ -121,17 +151,41 @@ void AssumptionCache::unregisterAssumption(AssumeInst *CI) {
       if (Elem.Assume == CI) {
         Found = true;
         Elem.Assume = nullptr;
+
+#ifndef NDEBUG
+        ExpectedMatches[AV.Assume]--;
+#endif
+        assert(ExpectedMatches[AV.Assume] >= 0);
+        // After ExpectedMatches[AV.Assume] == 0, we still need to iterate
+        // through this loop to determine the value of HasNonnull, to avoid
+        // prematurely calling AffectedValues.erase(AVI).
       }
       HasNonnull |= !!Elem.Assume;
       if (HasNonnull && Found)
         break;
     }
-    assert(Found && "already unregistered or incorrect cache state");
+
+    assert(ExpectedMatches[AV.Assume] == 0 ||
+           Found && "already unregistered or incorrect cache state");
+
     if (!HasNonnull)
       AffectedValues.erase(AVI);
   }
 
+  assert(
+      none_of(Affected, [&](auto &AV) { return ExpectedMatches[AV.Assume]; }) &&
+      "already unregistered or incorrect cache state");
+}
+
+void AssumptionCache::unregisterAssumption(AssumeInst *CI) {
+  removeAffectedValues(CI);
   llvm::erase(AssumeHandles, CI);
+}
+
+void AssumptionCache::replaceAssumption(WeakVH &Handle, AssumeInst *New) {
+  removeAffectedValues(cast<AssumeInst>(Handle));
+  Handle = New;
+  updateAffectedValues(New);
 }
 
 void AssumptionCache::AffectedValueCallbackVH::deleted() {
@@ -172,7 +226,7 @@ void AssumptionCache::scanFunction() {
   for (BasicBlock &B : F)
     for (Instruction &I : B)
       if (isa<AssumeInst>(&I))
-        AssumeHandles.push_back({&I, ExprResultIdx});
+        AssumeHandles.push_back(&I);
 
   // Mark the scan as complete.
   Scanned = true;
@@ -188,7 +242,7 @@ void AssumptionCache::registerAssumption(AssumeInst *CI) {
   if (!Scanned)
     return;
 
-  AssumeHandles.push_back({CI, ExprResultIdx});
+  AssumeHandles.push_back(CI);
 
 #ifndef NDEBUG
   assert(CI->getParent() &&
@@ -229,9 +283,28 @@ PreservedAnalyses AssumptionPrinterPass::run(Function &F,
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
 
   OS << "Cached assumptions for function: " << F.getName() << "\n";
-  for (auto &VH : AC.assumptions())
-    if (VH)
-      OS << "  " << *cast<CallInst>(VH)->getArgOperand(0) << "\n";
+  for (auto &VH : AC.assumptions()) {
+    if (!VH)
+      continue;
+
+    auto *Assume = cast<CallInst>(VH);
+    if (!Assume->hasOperandBundles()) {
+      OS << "  " << *Assume->getArgOperand(0) << "\n";
+      continue;
+    }
+
+    assert(match(Assume->getArgOperand(0), m_One()) &&
+           "assume must have trivial cond");
+    OS << "  [ ";
+    ListSeparator LS;
+    for (const OperandBundleUse &BU : Assume->operand_bundles()) {
+      OS << LS << '"' << BU.getTagName() << "\"(";
+      interleaveComma(BU.Inputs, OS,
+                      [&](const Use &Input) { Input->printAsOperand(OS); });
+      OS << ')';
+    }
+    OS << " ]\n";
+  }
 
   return PreservedAnalyses::all();
 }

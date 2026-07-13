@@ -14,11 +14,11 @@ struct S s[]; // expected-warning {{tentative array definition}} expected-note {
 void f1(void) {
   ++s[3].a;
   ++s[7073650413200313099].b;
-  // addr16-warning@-1 {{array index 7073650413200313099 refers past the last possible element for an array in 16-bit address space containing 152-bit (19-byte) elements (max possible 3449 elements)}}
-  // addr32-warning@-2 {{array index 7073650413200313099 refers past the last possible element for an array in 32-bit address space containing 192-bit (24-byte) elements (max possible 178956970 elements)}}
-  // addr64-warning@-3 {{array index 7073650413200313099 refers past the last possible element for an array in 64-bit address space containing 256-bit (32-byte) elements (max possible 576460752303423488 elements)}}
+  // addr16-warning@-1 {{array index 7'073'650'413'200'313'099 refers past the last possible element for an array in 16-bit address space containing 152-bit (19-byte) elements (max possible 3'449 elements)}}
+  // addr32-warning@-2 {{array index 7'073'650'413'200'313'099 refers past the last possible element for an array in 32-bit address space containing 192-bit (24-byte) elements (max possible 178'956'970 elements)}}
+  // addr64-warning@-3 {{array index 7'073'650'413'200'313'099 refers past the last possible element for an array in 64-bit address space containing 256-bit (32-byte) elements (max possible 576'460'752'303'423'488 elements)}}
   ++s[7073650].c;
-  // addr16-warning@-1 {{array index 7073650 refers past the last possible element for an array in 16-bit address space containing 152-bit (19-byte) elements (max possible 3449 elements)}}
+  // addr16-warning@-1 {{array index 7'073'650 refers past the last possible element for an array in 16-bit address space containing 152-bit (19-byte) elements (max possible 3'449 elements)}}
 }
 
 long long ll[]; // expected-warning {{tentative array definition}} expected-note {{declared here}} addr16-note {{declared here}} addr32-note {{declared here}}
@@ -26,32 +26,32 @@ long long ll[]; // expected-warning {{tentative array definition}} expected-note
 void f2(void) {
   ++ll[3];
   ++ll[2705843009213693952];
-  // addr16-warning@-1 {{array index 2705843009213693952 refers past the last possible element for an array in 16-bit address space containing 64-bit (8-byte) elements (max possible 8192 elements)}}
-  // addr32-warning@-2 {{array index 2705843009213693952 refers past the last possible element for an array in 32-bit address space containing 64-bit (8-byte) elements (max possible 536870912 elements)}}
-  // addr64-warning@-3 {{array index 2705843009213693952 refers past the last possible element for an array in 64-bit address space containing 64-bit (8-byte) elements (max possible 2305843009213693952 elements)}}
+  // addr16-warning@-1 {{array index 2'705'843'009'213'693'952 refers past the last possible element for an array in 16-bit address space containing 64-bit (8-byte) elements (max possible 8'192 elements)}}
+  // addr32-warning@-2 {{array index 2'705'843'009'213'693'952 refers past the last possible element for an array in 32-bit address space containing 64-bit (8-byte) elements (max possible 536'870'912 elements)}}
+  // addr64-warning@-3 {{array index 2'705'843'009'213'693'952 refers past the last possible element for an array in 64-bit address space containing 64-bit (8-byte) elements (max possible 2'305'843'009'213'693'952 elements)}}
   ++ll[847073650];
-  // addr16-warning@-1 {{array index 847073650 refers past the last possible element for an array in 16-bit address space containing 64-bit (8-byte) elements (max possible 8192 elements)}}
-  // addr32-warning@-2 {{array index 847073650 refers past the last possible element for an array in 32-bit address space containing 64-bit (8-byte) elements (max possible 536870912 elements)}}
+  // addr16-warning@-1 {{array index 847'073'650 refers past the last possible element for an array in 16-bit address space containing 64-bit (8-byte) elements (max possible 8'192 elements)}}
+  // addr32-warning@-2 {{array index 847'073'650 refers past the last possible element for an array in 32-bit address space containing 64-bit (8-byte) elements (max possible 536'870'912 elements)}}
 }
 
 void f3(struct S p[]) { // expected-note {{declared here}} addr16-note {{declared here}}
   ++p[3].a;
   ++p[7073650413200313099].b;
-  // addr16-warning@-1 {{array index 7073650413200313099 refers past the last possible element for an array in 16-bit address space containing 152-bit (19-byte) elements (max possible 3449 elements)}}
-  // addr32-warning@-2 {{array index 7073650413200313099 refers past the last possible element for an array in 32-bit address space containing 192-bit (24-byte) elements (max possible 178956970 elements)}}
-  // addr64-warning@-3 {{array index 7073650413200313099 refers past the last possible element for an array in 64-bit address space containing 256-bit (32-byte) elements (max possible 576460752303423488 elements)}}
+  // addr16-warning@-1 {{array index 7'073'650'413'200'313'099 refers past the last possible element for an array in 16-bit address space containing 152-bit (19-byte) elements (max possible 3'449 elements)}}
+  // addr32-warning@-2 {{array index 7'073'650'413'200'313'099 refers past the last possible element for an array in 32-bit address space containing 192-bit (24-byte) elements (max possible 178'956'970 elements)}}
+  // addr64-warning@-3 {{array index 7'073'650'413'200'313'099 refers past the last possible element for an array in 64-bit address space containing 256-bit (32-byte) elements (max possible 576'460'752'303'423'488 elements)}}
   ++p[7073650].c;
-  // addr16-warning@-1 {{array index 7073650 refers past the last possible element for an array in 16-bit address space containing 152-bit (19-byte) elements (max possible 3449 elements)}}
+  // addr16-warning@-1 {{array index 7'073'650 refers past the last possible element for an array in 16-bit address space containing 152-bit (19-byte) elements (max possible 3'449 elements)}}
 }
 
 void f4(struct S *p) { // expected-note {{declared here}} addr16-note {{declared here}}
   p += 3;
   p += 7073650413200313099;
-  // addr16-warning@-1 {{the pointer incremented by 7073650413200313099 refers past the last possible element for an array in 16-bit address space containing 152-bit (19-byte) elements (max possible 3449 elements)}}
-  // addr32-warning@-2 {{the pointer incremented by 7073650413200313099 refers past the last possible element for an array in 32-bit address space containing 192-bit (24-byte) elements (max possible 178956970 elements)}}
-  // addr64-warning@-3 {{the pointer incremented by 7073650413200313099 refers past the last possible element for an array in 64-bit address space containing 256-bit (32-byte) elements (max possible 576460752303423488 elements)}}
+  // addr16-warning@-1 {{the pointer incremented by 7'073'650'413'200'313'099 refers past the last possible element for an array in 16-bit address space containing 152-bit (19-byte) elements (max possible 3'449 elements)}}
+  // addr32-warning@-2 {{the pointer incremented by 7'073'650'413'200'313'099 refers past the last possible element for an array in 32-bit address space containing 192-bit (24-byte) elements (max possible 178'956'970 elements)}}
+  // addr64-warning@-3 {{the pointer incremented by 7'073'650'413'200'313'099 refers past the last possible element for an array in 64-bit address space containing 256-bit (32-byte) elements (max possible 576'460'752'303'423'488 elements)}}
   p += 7073650;
-  // addr16-warning@-1 {{the pointer incremented by 7073650 refers past the last possible element for an array in 16-bit address space containing 152-bit (19-byte) elements (max possible 3449 elements)}}
+  // addr16-warning@-1 {{the pointer incremented by 7'073'650 refers past the last possible element for an array in 16-bit address space containing 152-bit (19-byte) elements (max possible 3'449 elements)}}
 }
 
 struct BQ {
@@ -63,7 +63,7 @@ struct BQ bq[]; // expected-warning {{tentative array definition}} addr16-note {
 void f5(void) {
   ++bq[0].bigblock[0].a;
   ++bq[1].bigblock[0].a;
-  // addr16-warning@-1 {{array index 1 refers past the last possible element for an array in 16-bit address space containing 497952-bit (62244-byte) elements (max possible 1 element)}}
+  // addr16-warning@-1 {{array index 1 refers past the last possible element for an array in 16-bit address space containing 497952-bit (62'244-byte) elements (max possible 1 element)}}
 }
 
 void f6(void) {
@@ -102,15 +102,15 @@ struct {
 
 void fam_ily() {
   ++fam.tail[7073650413200313099];
-  // addr16-warning@-1 {{array index 7073650413200313099 refers past the last possible element for an array in 16-bit address space containing 8-bit (1-byte) elements (max possible 65536 elements)}}
-  // addr32-warning@-2 {{array index 7073650413200313099 refers past the last possible element for an array in 32-bit address space containing 8-bit (1-byte) elements (max possible 4294967296 elements)}}
+  // addr16-warning@-1 {{array index 7'073'650'413'200'313'099 refers past the last possible element for an array in 16-bit address space containing 8-bit (1-byte) elements (max possible 65'536 elements)}}
+  // addr32-warning@-2 {{array index 7'073'650'413'200'313'099 refers past the last possible element for an array in 32-bit address space containing 8-bit (1-byte) elements (max possible 4'294'967'296 elements)}}
   // No warning for addr64 because the array index is inbound in that case.
   ++fam0.tail[7073650413200313099];
-  // addr16-warning@-1 {{array index 7073650413200313099 refers past the last possible element for an array in 16-bit address space containing 8-bit (1-byte) elements (max possible 65536 elements)}}
-  // addr32-warning@-2 {{array index 7073650413200313099 refers past the last possible element for an array in 32-bit address space containing 8-bit (1-byte) elements (max possible 4294967296 elements)}}
+  // addr16-warning@-1 {{array index 7'073'650'413'200'313'099 refers past the last possible element for an array in 16-bit address space containing 8-bit (1-byte) elements (max possible 65'536 elements)}}
+  // addr32-warning@-2 {{array index 7'073'650'413'200'313'099 refers past the last possible element for an array in 32-bit address space containing 8-bit (1-byte) elements (max possible 4'294'967'296 elements)}}
   // No warning for addr64 because the array index is inbound in that case.
   ++fam1.tail[7073650413200313099];
-  // addr16-warning@-1 {{array index 7073650413200313099 refers past the last possible element for an array in 16-bit address space containing 8-bit (1-byte) elements (max possible 65536 elements)}}
-  // addr32-warning@-2 {{array index 7073650413200313099 refers past the last possible element for an array in 32-bit address space containing 8-bit (1-byte) elements (max possible 4294967296 elements)}}
+  // addr16-warning@-1 {{array index 7'073'650'413'200'313'099 refers past the last possible element for an array in 16-bit address space containing 8-bit (1-byte) elements (max possible 65'536 elements)}}
+  // addr32-warning@-2 {{array index 7'073'650'413'200'313'099 refers past the last possible element for an array in 32-bit address space containing 8-bit (1-byte) elements (max possible 4'294'967'296 elements)}}
   // No warning for addr64 because the array index is inbound in that case.
 }

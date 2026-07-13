@@ -11,7 +11,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestBreakpointThumbCodesection(TestBase):
-    @skipIf(archs=no_match(["arm"]))
+    @skipIf(archs=no_match(["arm$"]))
     @skipIf(archs=["arm64"])
     @skipIfDarwinEmbedded  # codegen on darwin always defaults to thumb for armv7/armv7k targets
     def test_breakpoint(self):

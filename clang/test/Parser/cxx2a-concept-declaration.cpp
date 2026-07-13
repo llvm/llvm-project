@@ -9,11 +9,6 @@ template<concept T> concept D1 = true;
 // expected-error@-1{{expected template parameter}}
 // expected-error@-2{{concept template parameter list must have at least one parameter; explicit specialization of concepts is not allowed}}
 
-template<template<typename> concept T> concept D2 = true;
-// expected-error@-1{{expected identifier}}
-// expected-error@-2{{template template parameter requires 'class' or 'typename' after the parameter list}}
-// expected-error@-3{{concept template parameter list must have at least one parameter; explicit specialization of concepts is not allowed}}
-
 struct S1 {
   template<typename T> concept C1 = true; // expected-error {{concept declarations may only appear in global or namespace scope}}
 };

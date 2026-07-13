@@ -116,11 +116,8 @@ bool ThreadPlanStepInstruction::IsPlanStale() {
     // done.
     return !m_step_over;
   } else {
-    if (log) {
-      LLDB_LOGF(log,
-                "ThreadPlanStepInstruction::IsPlanStale - Current frame is "
-                "older than start frame, plan is stale.");
-    }
+    LLDB_LOGF(log, "ThreadPlanStepInstruction::IsPlanStale - Current frame is "
+                   "older than start frame, plan is stale.");
     return true;
   }
 }
@@ -171,11 +168,8 @@ bool ThreadPlanStepInstruction::ShouldStop(Event *event_ptr) {
                 parent_frame_sp->GetConcreteFrameIndex() ==
                     cur_frame_sp->GetConcreteFrameIndex()) {
               SetPlanComplete();
-              if (log) {
-                LLDB_LOGF(log,
-                          "Frame we stepped into is inlined into the frame "
-                          "we were stepping from, stopping.");
-              }
+              LLDB_LOGF(log, "Frame we stepped into is inlined into the frame "
+                             "we were stepping from, stopping.");
               return true;
             }
           }

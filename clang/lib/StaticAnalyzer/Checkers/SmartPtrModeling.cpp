@@ -20,7 +20,6 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
@@ -34,7 +33,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <optional>
-#include <string>
 
 using namespace clang;
 using namespace ento;
@@ -56,8 +54,8 @@ public:
   checkRegionChanges(ProgramStateRef State,
                      const InvalidatedSymbols *Invalidated,
                      ArrayRef<const MemRegion *> ExplicitRegions,
-                     ArrayRef<const MemRegion *> Regions,
-                     const LocationContext *LCtx, const CallEvent *Call) const;
+                     ArrayRef<const MemRegion *> Regions, const StackFrame *SF,
+                     const CallEvent *Call) const;
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
                   const char *Sep) const override;
   void checkLiveSymbols(ProgramStateRef State, SymbolReaper &SR) const;
@@ -78,10 +76,9 @@ private:
   bool handleOstreamOperator(const CallEvent &Call, CheckerContext &C) const;
   bool handleSwap(ProgramStateRef State, SVal First, SVal Second,
                   CheckerContext &C) const;
-  std::pair<SVal, ProgramStateRef>
-  retrieveOrConjureInnerPtrVal(ProgramStateRef State,
-                               const MemRegion *ThisRegion, const Expr *E,
-                               QualType Type, CheckerContext &C) const;
+  std::pair<SVal, ProgramStateRef> retrieveOrConjureInnerPtrVal(
+      ProgramStateRef State, const MemRegion *ThisRegion,
+      ConstCFGElementRef Elem, QualType Type, CheckerContext &C) const;
 
   using SmartPtrMethodHandlerFn =
       void (SmartPtrModeling::*)(const CallEvent &Call, CheckerContext &) const;
@@ -306,7 +303,7 @@ bool SmartPtrModeling::evalCall(const CallEvent &Call,
       return false;
 
     const auto PtrVal = C.getSValBuilder().getConjuredHeapSymbolVal(
-        Call.getOriginExpr(), C.getLocationContext(),
+        Call.getCFGElementRef(), C.getStackFrame(),
         getPointerTypeFromTemplateArg(Call, C), C.blockCount());
 
     const MemRegion *ThisRegion = ThisRegionOpt->getAsRegion();
@@ -331,7 +328,7 @@ bool SmartPtrModeling::evalCall(const CallEvent &Call,
     // automatically deduced).
     auto &Engine = State->getStateManager().getOwningEngine();
     State = Engine.updateObjectsUnderConstruction(
-        *ThisRegionOpt, nullptr, State, C.getLocationContext(),
+        *ThisRegionOpt, nullptr, State, C.getStackFrame(),
         Call.getConstructionContext(), {});
 
     // We don't leave a note here since it is guaranteed the
@@ -363,7 +360,7 @@ bool SmartPtrModeling::evalCall(const CallEvent &Call,
 
       // TODO: Add a note to bug reports describing this decision.
       C.addTransition(State->BindExpr(
-          Call.getOriginExpr(), C.getLocationContext(),
+          Call.getOriginExpr(), C.getStackFrame(),
           C.getSValBuilder().makeZeroVal(Call.getResultType())));
 
       return true;
@@ -437,13 +434,13 @@ bool SmartPtrModeling::evalCall(const CallEvent &Call,
 }
 
 std::pair<SVal, ProgramStateRef> SmartPtrModeling::retrieveOrConjureInnerPtrVal(
-    ProgramStateRef State, const MemRegion *ThisRegion, const Expr *E,
+    ProgramStateRef State, const MemRegion *ThisRegion, ConstCFGElementRef Elem,
     QualType Type, CheckerContext &C) const {
   const auto *Ptr = State->get<TrackedRegionMap>(ThisRegion);
   if (Ptr)
     return {*Ptr, State};
-  auto Val = C.getSValBuilder().conjureSymbolVal(E, C.getLocationContext(),
-                                                 Type, C.blockCount());
+  auto Val = C.getSValBuilder().conjureSymbolVal(Elem, C.getStackFrame(), Type,
+                                                 C.blockCount());
   State = State->set<TrackedRegionMap>(ThisRegion, Val);
   return {Val, State};
 }
@@ -469,6 +466,7 @@ bool SmartPtrModeling::handleComparisionOp(const CallEvent &Call,
   // https://en.cppreference.com/w/cpp/memory/unique_ptr/operator_cmp.
 
   auto makeSValFor = [&C, this](ProgramStateRef State, const Expr *E,
+                                ConstCFGElementRef Elem,
                                 SVal S) -> std::pair<SVal, ProgramStateRef> {
     if (S.isZeroConstant()) {
       return {S, State};
@@ -477,7 +475,7 @@ bool SmartPtrModeling::handleComparisionOp(const CallEvent &Call,
     assert(Reg &&
            "this pointer of std::unique_ptr should be obtainable as MemRegion");
     QualType Type = getInnerPointerType(C, E->getType()->getAsCXXRecordDecl());
-    return retrieveOrConjureInnerPtrVal(State, Reg, E, Type, C);
+    return retrieveOrConjureInnerPtrVal(State, Reg, Elem, Type, C);
   };
 
   SVal First = Call.getArgSVal(0);
@@ -486,13 +484,15 @@ bool SmartPtrModeling::handleComparisionOp(const CallEvent &Call,
   const auto *SecondExpr = Call.getArgExpr(1);
 
   const auto *ResultExpr = Call.getOriginExpr();
-  const auto *LCtx = C.getLocationContext();
+  const auto *SF = C.getStackFrame();
   auto &Bldr = C.getSValBuilder();
   ProgramStateRef State = C.getState();
 
   SVal FirstPtrVal, SecondPtrVal;
-  std::tie(FirstPtrVal, State) = makeSValFor(State, FirstExpr, First);
-  std::tie(SecondPtrVal, State) = makeSValFor(State, SecondExpr, Second);
+  std::tie(FirstPtrVal, State) =
+      makeSValFor(State, FirstExpr, Call.getCFGElementRef(), First);
+  std::tie(SecondPtrVal, State) =
+      makeSValFor(State, SecondExpr, Call.getCFGElementRef(), Second);
   BinaryOperatorKind BOK =
       operationKindFromOverloadedOperator(OOK, true).GetBinaryOpUnsafe();
   auto RetVal = Bldr.evalBinOp(State, BOK, FirstPtrVal, SecondPtrVal,
@@ -504,12 +504,12 @@ bool SmartPtrModeling::handleComparisionOp(const CallEvent &Call,
         State->assume(*RetVal.getAs<DefinedOrUnknownSVal>());
     if (TrueState)
       C.addTransition(
-          TrueState->BindExpr(ResultExpr, LCtx, Bldr.makeTruthVal(true)));
+          TrueState->BindExpr(ResultExpr, SF, Bldr.makeTruthVal(true)));
     if (FalseState)
       C.addTransition(
-          FalseState->BindExpr(ResultExpr, LCtx, Bldr.makeTruthVal(false)));
+          FalseState->BindExpr(ResultExpr, SF, Bldr.makeTruthVal(false)));
   } else {
-    C.addTransition(State->BindExpr(ResultExpr, LCtx, RetVal));
+    C.addTransition(State->BindExpr(ResultExpr, SF, RetVal));
   }
   return true;
 }
@@ -529,11 +529,9 @@ bool SmartPtrModeling::handleOstreamOperator(const CallEvent &Call,
   const MemRegion *StreamThisRegion = StreamVal.getAsRegion();
   if (!StreamThisRegion)
     return false;
-  State =
-      State->invalidateRegions({StreamThisRegion}, Call.getOriginExpr(),
-                               C.blockCount(), C.getLocationContext(), false);
-  State =
-      State->BindExpr(Call.getOriginExpr(), C.getLocationContext(), StreamVal);
+  State = State->invalidateRegions({StreamThisRegion}, Call.getCFGElementRef(),
+                                   C.blockCount(), C.getStackFrame(), false);
+  State = State->BindExpr(Call.getOriginExpr(), C.getStackFrame(), StreamVal);
   C.addTransition(State);
   return true;
 }
@@ -573,7 +571,7 @@ void SmartPtrModeling::printState(raw_ostream &Out, ProgramStateRef State,
 ProgramStateRef SmartPtrModeling::checkRegionChanges(
     ProgramStateRef State, const InvalidatedSymbols *Invalidated,
     ArrayRef<const MemRegion *> ExplicitRegions,
-    ArrayRef<const MemRegion *> Regions, const LocationContext *LCtx,
+    ArrayRef<const MemRegion *> Regions, const StackFrame *SF,
     const CallEvent *Call) const {
   TrackedRegionMapTy RegionMap = State->get<TrackedRegionMap>();
   TrackedRegionMapTy::Factory &RegionMapFactory =
@@ -639,7 +637,7 @@ void SmartPtrModeling::handleRelease(const CallEvent &Call,
   const auto *InnerPointVal = State->get<TrackedRegionMap>(ThisRegion);
 
   if (InnerPointVal) {
-    State = State->BindExpr(Call.getOriginExpr(), C.getLocationContext(),
+    State = State->BindExpr(Call.getOriginExpr(), C.getStackFrame(),
                             *InnerPointVal);
   }
 
@@ -722,9 +720,9 @@ void SmartPtrModeling::handleGet(const CallEvent &Call,
 
   SVal InnerPointerVal;
   std::tie(InnerPointerVal, State) = retrieveOrConjureInnerPtrVal(
-      State, ThisRegion, Call.getOriginExpr(), Call.getResultType(), C);
-  State = State->BindExpr(Call.getOriginExpr(), C.getLocationContext(),
-                          InnerPointerVal);
+      State, ThisRegion, Call.getCFGElementRef(), Call.getResultType(), C);
+  State =
+      State->BindExpr(Call.getOriginExpr(), C.getStackFrame(), InnerPointerVal);
   // TODO: Add NoteTag, for how the raw pointer got using 'get' method.
   C.addTransition(State);
 }
@@ -857,20 +855,20 @@ void SmartPtrModeling::handleBoolConversion(const CallEvent &Call,
   }
 
   if (State->isNull(InnerPointerVal).isConstrainedTrue()) {
-    State = State->BindExpr(CallExpr, C.getLocationContext(),
+    State = State->BindExpr(CallExpr, C.getStackFrame(),
                             C.getSValBuilder().makeTruthVal(false));
 
     C.addTransition(State);
     return;
   } else if (State->isNonNull(InnerPointerVal).isConstrainedTrue()) {
-    State = State->BindExpr(CallExpr, C.getLocationContext(),
+    State = State->BindExpr(CallExpr, C.getStackFrame(),
                             C.getSValBuilder().makeTruthVal(true));
 
     C.addTransition(State);
     return;
   } else if (move::isMovedFrom(State, ThisRegion)) {
     C.addTransition(
-        State->BindExpr(CallExpr, C.getLocationContext(),
+        State->BindExpr(CallExpr, C.getStackFrame(),
                         C.getSValBuilder().makeZeroVal(Call.getResultType())));
     return;
   } else {
@@ -882,7 +880,7 @@ void SmartPtrModeling::handleBoolConversion(const CallEvent &Call,
     // Explicitly tracking the region as null.
     NullState = NullState->set<TrackedRegionMap>(ThisRegion, NullVal);
 
-    NullState = NullState->BindExpr(CallExpr, C.getLocationContext(),
+    NullState = NullState->BindExpr(CallExpr, C.getStackFrame(),
                                     C.getSValBuilder().makeTruthVal(false));
     C.addTransition(NullState, C.getNoteTag(
                                    [ThisRegion](PathSensitiveBugReport &BR,
@@ -892,9 +890,8 @@ void SmartPtrModeling::handleBoolConversion(const CallEvent &Call,
                                      OS << " is null";
                                    },
                                    /*IsPrunable=*/true));
-    NotNullState =
-        NotNullState->BindExpr(CallExpr, C.getLocationContext(),
-                               C.getSValBuilder().makeTruthVal(true));
+    NotNullState = NotNullState->BindExpr(
+        CallExpr, C.getStackFrame(), C.getSValBuilder().makeTruthVal(true));
     C.addTransition(
         NotNullState,
         C.getNoteTag(

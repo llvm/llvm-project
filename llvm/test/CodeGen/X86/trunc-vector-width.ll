@@ -5,7 +5,7 @@ define void @test(ptr %a0) #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqu (%rdi), %ymm0
-; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [0,4,0,0]
+; CHECK-NEXT:    vmovq {{.*#+}} xmm1 = [0,4,0,0]
 ; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = mem[0],ymm0[1,2,3,4,5,6,7]
 ; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,u,u,u,u,u,u,u,u,u,u,u,u,u,u,16,20,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; CHECK-NEXT:    vpermd %ymm0, %ymm1, %ymm0

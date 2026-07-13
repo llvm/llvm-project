@@ -79,7 +79,7 @@ void f3(void) {
   extern void f3_helper(int, int*);
 
   // CHECK:      [[X:%.*]] = alloca i32
-  // CHECK:      call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[X]])
+  // CHECK:      call void @llvm.lifetime.start.p0(ptr nonnull [[X]])
   // CHECK:      store i32 0, ptr [[X]]
   int x = 0;
 
@@ -120,7 +120,7 @@ void f3(void) {
   }
 
   // CHECK:      call void @f3_helper(i32 noundef 4, ptr noundef nonnull [[X]])
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[X]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr nonnull [[X]])
   // CHECK-NEXT: ret void
   f3_helper(4, &x);
 }
@@ -144,18 +144,17 @@ void f4(void) {
   // CHECK-NEXT: br label
   //   -> rethrow
 
-  // finally.call-exit:  Predecessors are the @try and @catch fallthroughs
-  // as well as the no-match case in the catch mechanism.  The i1 is whether
-  // to rethrow and should be true only in the last case.
-  // CHECK:      phi ptr
-  // CHECK-NEXT: phi i1
-  // CHECK-NEXT: call void @objc_exception_try_exit(ptr nonnull [[EXNDATA]])
+  // finally.call-exit:  Predecessor is the no-match case in the catch mechanism
+  // which rethrows.
+  // CHECK:      call void @objc_exception_try_exit(ptr nonnull [[EXNDATA]])
   // CHECK-NEXT: call void @f4_help(i32 noundef 2)
-  // CHECK-NEXT: br i1
-  //   -> ret, rethrow
+  // CHECK-NEXT: br label
+  //   -> rethrow
 
-  // ret:
-  // CHECK:      ret void
+  // finally.end.critedge:  Predecessors are the @try and @catch fallthroughs.
+  // CHECK:      call void @objc_exception_try_exit(ptr nonnull [[EXNDATA]])
+  // CHECK-NEXT: call void @f4_help(i32 noundef 2)
+  // CHECK-NEXT: ret void
 
   // Catch mechanism:
   // CHECK:      call ptr @objc_exception_extract(ptr nonnull [[EXNDATA]])

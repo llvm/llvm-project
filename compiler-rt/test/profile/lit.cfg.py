@@ -1,7 +1,9 @@
 # -*- Python -*-
 
+import glob
 import os
 import re
+import subprocess
 
 
 def get_required_attr(config, attr_name):
@@ -30,7 +32,7 @@ if (
 
 target_is_msvc = bool(re.match(r".*-windows-msvc$", config.target_triple))
 
-if config.host_os in ["Linux"]:
+if config.target_os in ["Linux"]:
     extra_link_flags = ["-ldl"]
 elif target_is_msvc:
     # InstrProf is incompatible with incremental linking. Disable it as a
@@ -154,7 +156,7 @@ config.substitutions.append(
     )
 )
 
-if config.host_os not in [
+if config.target_os not in [
     "Windows",
     "Darwin",
     "FreeBSD",
@@ -167,10 +169,10 @@ if config.host_os not in [
     config.unsupported = True
 
 config.substitutions.append(
-    ("%shared_lib_flag", "-dynamiclib" if (config.host_os == "Darwin") else "-shared")
+    ("%shared_lib_flag", "-dynamiclib" if (config.target_os == "Darwin") else "-shared")
 )
 
-if config.host_os in ["AIX"]:
+if config.target_os in ["AIX"]:
     config.available_features.add("system-aix")
     exclude_unsupported_files_for_aix(config.test_source_root)
     exclude_unsupported_files_for_aix(config.test_source_root + "/Posix")
@@ -184,5 +186,70 @@ if config.android:
 if config.have_curl:
     config.available_features.add("curl")
 
-if config.host_os in ("AIX", "Darwin", "Linux"):
+if config.target_os in ("AIX", "Darwin", "Linux"):
     config.available_features.add("continuous-mode")
+
+# GPU (HIP/AMDGPU) device-profile tests.
+#
+# The GPU/ and AMDGPU/ subdirectories exercise the device-PGO drain end to end
+# and need a real AMD GPU plus a ROCm/HIP install. Detect that here and, when
+# present, expose the features ('hip', 'amdgpu', 'multi-device') and
+# substitutions ('%amdgpu_arch', '%hip_lib_path') those tests use. Without a GPU
+# the subdirectory lit.local.cfg.py files mark themselves unsupported, so the
+# tests report UNSUPPORTED instead of failing.
+#
+# Both knobs are overridable from the command line, e.g.:
+#   llvm-lit --param amdgpu_arch=gfx90a --param hip_lib_path=/opt/rocm/lib ...
+config.suffixes.append(".hip")
+
+
+def _amdgpu_archs():
+    # config.clang is a wrapped command ("<wrappers> <clang>"); the clang path is
+    # the last token. amdgpu-arch ships next to it and prints one line per GPU.
+    clang_path = config.clang.split()[-1] if config.clang else ""
+    tool = os.path.join(os.path.dirname(clang_path), "amdgpu-arch")
+    if not os.path.exists(tool):
+        return []
+    try:
+        proc = subprocess.run(tool, capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return []
+    if proc.returncode != 0:
+        return []
+    return [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+
+
+def _hip_lib_path():
+    # An explicit --param hip_lib_path=DIR is authoritative; otherwise probe the
+    # usual ROCm locations for libamdhip64.
+    explicit = lit_config.params.get("hip_lib_path")
+    if explicit:
+        candidates = [explicit]
+    else:
+        candidates = []
+        for var in ("ROCM_PATH", "HIP_PATH"):
+            if os.environ.get(var):
+                candidates.append(os.path.join(os.environ[var], "lib"))
+        candidates.append("/opt/rocm/lib")
+    for directory in candidates:
+        if directory and glob.glob(os.path.join(directory, "libamdhip64.so*")):
+            return directory
+    return None
+
+
+_amdgpu_arch_list = _amdgpu_archs()
+_hip_lib_dir = _hip_lib_path()
+if _amdgpu_arch_list and _hip_lib_dir:
+    config.available_features.add("hip")
+    config.available_features.add("amdgpu")
+    if len(_amdgpu_arch_list) >= 2:
+        config.available_features.add("multi-device")
+    config.substitutions.append(
+        ("%amdgpu_arch", lit_config.params.get("amdgpu_arch", "native"))
+    )
+    config.substitutions.append(("%hip_lib_path", _hip_lib_dir))
+    # The GPU tests share the device(s) and pin HIP_VISIBLE_DEVICES, so they must
+    # not run concurrently with each other. The subdirectories opt into this
+    # group; the size-1 cap serializes them while leaving the CPU profile tests
+    # fully parallel.
+    lit_config.parallelism_groups["gpu"] = 1

@@ -8,6 +8,7 @@
 
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -15,8 +16,10 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -47,6 +50,7 @@ const char *ARMArch[] = {
     "armv9-a",     "armv9",     "armv9a",       "armv9.1-a",   "armv9.1a",
     "armv9.2-a",   "armv9.2a",  "armv9.3-a",    "armv9.3a",    "armv9.4-a",
     "armv9.4a",    "armv9.5-a", "armv9.5a",     "armv9.6a",    "armv9.6-a",
+    "armv9.7a",    "armv9.7-a",
 };
 
 std::string FormatExtensionFlags(int64_t Flags) {
@@ -58,11 +62,8 @@ std::string FormatExtensionFlags(int64_t Flags) {
 
   // The target parser also includes every extension you don't have.
   // E.g. if AEK_CRC is not set then it adds "-crc". Not useful here.
-  Features.erase(std::remove_if(Features.begin(), Features.end(),
-                                [](StringRef extension) {
-                                  return extension.starts_with("-");
-                                }),
-                 Features.end());
+  llvm::erase_if(
+      Features, [](StringRef extension) { return extension.starts_with("-"); });
 
   return llvm::join(Features, ", ");
 }
@@ -520,6 +521,11 @@ INSTANTIATE_TEST_SUITE_P(
             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_MVE | ARM::AEK_FP |
                 ARM::AEK_RAS | ARM::AEK_LOB | ARM::AEK_FP16 | ARM::AEK_PACBTI,
             "8.1-M.Mainline"),
+        ARMCPUTestParams<uint64_t>(
+            "star-mc3", "armv8.1-m.main", "fp-armv8-fullfp16-d16",
+            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_MVE | ARM::AEK_FP |
+                ARM::AEK_RAS | ARM::AEK_LOB | ARM::AEK_FP16 | ARM::AEK_PACBTI,
+            "8.1-M.Mainline"),
         ARMCPUTestParams<uint64_t>("iwmmxt", "iwmmxt", "none", ARM::AEK_NONE,
                                    "iwmmxt"),
         ARMCPUTestParams<uint64_t>("xscale", "xscale", "none", ARM::AEK_NONE,
@@ -530,7 +536,37 @@ INSTANTIATE_TEST_SUITE_P(
                                    "7-S")),
     ARMCPUTestParams<uint64_t>::PrintToStringParamName);
 
-static constexpr unsigned NumARMCPUArchs = 94;
+static constexpr unsigned NumARMCPUArchs = 95;
+
+TEST(FeatureBitsetTest, Iterator) {
+  // Empty bitset yields nothing.
+  FeatureBitset Empty;
+  EXPECT_EQ(Empty.begin(), Empty.end());
+  for (unsigned Index : Empty) {
+    (void)Index;
+    FAIL() << "empty bitset should yield no set bits";
+  }
+
+  // Yields the set indices in order, crossing the 63/64 word boundary.
+  FeatureBitset Bits;
+  Bits.set(0).set(5).set(63).set(64).set(200);
+  std::vector<unsigned> SetIndices;
+  for (unsigned Index : Bits)
+    SetIndices.push_back(Index);
+  EXPECT_EQ(SetIndices, (std::vector<unsigned>{0, 5, 63, 64, 200}));
+
+  // Every yielded index is set, and the count matches.
+  for (unsigned Index : Bits)
+    EXPECT_TRUE(Bits[Index]);
+  EXPECT_EQ(SetIndices.size(), Bits.count());
+
+  // The final position is reached.
+  FeatureBitset Last;
+  unsigned LastIndex = Last.size() - 1;
+  Last.set(LastIndex);
+  SetIndices.assign(Last.begin(), Last.end());
+  EXPECT_EQ(SetIndices, (std::vector<unsigned>{LastIndex}));
+}
 
 TEST(TargetParserTest, testARMCPUArchList) {
   SmallVector<StringRef, NumARMCPUArchs> List;
@@ -624,6 +660,8 @@ TEST(TargetParserTest, testARMArch) {
   EXPECT_TRUE(testARMArch("armv9.5-a", "generic", "v9.5a",
                           ARMBuildAttrs::CPUArch::v9_A));
   EXPECT_TRUE(testARMArch("armv9.6-a", "generic", "v9.6a",
+                          ARMBuildAttrs::CPUArch::v9_A));
+  EXPECT_TRUE(testARMArch("armv9.7-a", "generic", "v9.7a",
                           ARMBuildAttrs::CPUArch::v9_A));
   EXPECT_TRUE(
       testARMArch("armv8-r", "generic", "v8r", ARMBuildAttrs::CPUArch::v8_R));
@@ -732,8 +770,7 @@ TEST(TargetParserTest, ARMFPUNeonSupportLevel) {
   for (ARM::FPUKind FK = static_cast<ARM::FPUKind>(0);
        FK <= ARM::FPUKind::FK_LAST;
        FK = static_cast<ARM::FPUKind>(static_cast<unsigned>(FK) + 1))
-    if (FK == ARM::FK_LAST ||
-        ARM::getFPUName(FK).find("neon") == std::string::npos)
+    if (FK == ARM::FK_LAST || !ARM::getFPUName(FK).contains("neon"))
       EXPECT_EQ(ARM::NeonSupportLevel::None, ARM::getFPUNeonSupportLevel(FK));
     else
       EXPECT_NE(ARM::NeonSupportLevel::None, ARM::getFPUNeonSupportLevel(FK));
@@ -743,9 +780,8 @@ TEST(TargetParserTest, ARMFPURestriction) {
   for (ARM::FPUKind FK = static_cast<ARM::FPUKind>(0);
        FK <= ARM::FPUKind::FK_LAST;
        FK = static_cast<ARM::FPUKind>(static_cast<unsigned>(FK) + 1)) {
-    if (FK == ARM::FK_LAST ||
-        (ARM::getFPUName(FK).find("d16") == std::string::npos &&
-         ARM::getFPUName(FK).find("vfpv3xd") == std::string::npos))
+    if (FK == ARM::FK_LAST || (!ARM::getFPUName(FK).contains("d16") &&
+                               !ARM::getFPUName(FK).contains("vfpv3xd")))
       EXPECT_EQ(ARM::FPURestriction::None, ARM::getFPURestriction(FK));
     else
       EXPECT_NE(ARM::FPURestriction::None, ARM::getFPURestriction(FK));
@@ -940,6 +976,7 @@ TEST(TargetParserTest, ARMparseArchProfile) {
     case ARM::ArchKind::ARMV9_4A:
     case ARM::ArchKind::ARMV9_5A:
     case ARM::ArchKind::ARMV9_6A:
+    case ARM::ArchKind::ARMV9_7A:
       EXPECT_EQ(ARM::ProfileKind::A, ARM::parseArchProfile(ARMArch[i]));
       break;
     default:
@@ -959,10 +996,6 @@ TEST(TargetParserTest, ARMparseArchVersion) {
 
 TEST(TargetParserTest, getARMCPUForArch) {
   // Platform specific defaults.
-  {
-    llvm::Triple Triple("arm--nacl");
-    EXPECT_EQ("cortex-a8", ARM::getARMCPUForArch(Triple));
-  }
   {
     llvm::Triple Triple("arm--openbsd");
     EXPECT_EQ("cortex-a8", ARM::getARMCPUForArch(Triple));
@@ -1078,13 +1111,15 @@ TEST_P(AArch64CPUTestFixture, testAArch64CPU) {
 
   const std::optional<AArch64::CpuInfo> Cpu = AArch64::parseCpu(params.CPUName);
   EXPECT_TRUE(Cpu);
-  EXPECT_EQ(params.ExpectedArch, Cpu->Arch.Name);
+  EXPECT_EQ(params.ExpectedArch,
+            AArch64::StrTab[AArch64::ArchInfos[Cpu->ArchIdx].Name]);
 }
 
 INSTANTIATE_TEST_SUITE_P(
     AArch64CPUTests, AArch64CPUTestFixture,
     ::testing::Values(AArch64CPUTestParams("cortex-a34", "armv8-a"),
                       AArch64CPUTestParams("cortex-a35", "armv8-a"),
+                      AArch64CPUTestParams("cortex-a320", "armv9.2-a"),
                       AArch64CPUTestParams("cortex-a53", "armv8-a"),
                       AArch64CPUTestParams("cortex-a55", "armv8.2-a"),
                       AArch64CPUTestParams("cortex-a510", "armv9-a"),
@@ -1111,6 +1146,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("neoverse-v2", "armv9-a"),
                       AArch64CPUTestParams("neoverse-v3", "armv9.2-a"),
                       AArch64CPUTestParams("neoverse-v3ae", "armv9.2-a"),
+                      AArch64CPUTestParams("armagicpu", "armv9.2-a"),
                       AArch64CPUTestParams("cortex-r82", "armv8-r"),
                       AArch64CPUTestParams("cortex-r82ae", "armv8-r"),
                       AArch64CPUTestParams("cortex-x1", "armv8.2-a"),
@@ -1119,6 +1155,10 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("cortex-x3", "armv9-a"),
                       AArch64CPUTestParams("cortex-x4", "armv9.2-a"),
                       AArch64CPUTestParams("cortex-x925", "armv9.2-a"),
+                      AArch64CPUTestParams("c1-nano", "armv9.3-a"),
+                      AArch64CPUTestParams("c1-premium", "armv9.3-a"),
+                      AArch64CPUTestParams("c1-pro", "armv9.3-a"),
+                      AArch64CPUTestParams("c1-ultra", "armv9.3-a"),
                       AArch64CPUTestParams("cyclone", "armv8-a"),
                       AArch64CPUTestParams("apple-a7", "armv8-a"),
                       AArch64CPUTestParams("apple-a8", "armv8-a"),
@@ -1143,6 +1183,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("apple-a17", "armv8.6-a"),
                       AArch64CPUTestParams("apple-m4", "armv8.7-a"),
                       AArch64CPUTestParams("apple-a18", "armv8.7-a"),
+                      AArch64CPUTestParams("apple-m5", "armv8.7-a"),
                       AArch64CPUTestParams("exynos-m3", "armv8-a"),
                       AArch64CPUTestParams("exynos-m4", "armv8.2-a"),
                       AArch64CPUTestParams("exynos-m5", "armv8.2-a"),
@@ -1155,6 +1196,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("ampere1", "armv8.6-a"),
                       AArch64CPUTestParams("ampere1a", "armv8.6-a"),
                       AArch64CPUTestParams("ampere1b", "armv8.7-a"),
+                      AArch64CPUTestParams("ampere1c", "armv9.2-a"),
                       AArch64CPUTestParams("neoverse-512tvb", "armv8.4-a"),
                       AArch64CPUTestParams("thunderx2t99", "armv8.1-a"),
                       AArch64CPUTestParams("thunderx3t110", "armv8.3-a"),
@@ -1163,11 +1205,14 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("thunderxt83", "armv8-a"),
                       AArch64CPUTestParams("thunderxt88", "armv8-a"),
                       AArch64CPUTestParams("tsv110", "armv8.2-a"),
+                      AArch64CPUTestParams("hip12", "armv8.7-a"),
                       AArch64CPUTestParams("a64fx", "armv8.2-a"),
                       AArch64CPUTestParams("fujitsu-monaka", "armv9.3-a"),
                       AArch64CPUTestParams("carmel", "armv8.2-a"),
+                      AArch64CPUTestParams("gb10", "armv9.2-a"),
                       AArch64CPUTestParams("grace", "armv9-a"),
                       AArch64CPUTestParams("olympus", "armv9.2-a"),
+                      AArch64CPUTestParams("rigel", "armv9.2-a"),
                       AArch64CPUTestParams("saphira", "armv8.4-a"),
                       AArch64CPUTestParams("oryon-1", "armv8.6-a")),
     AArch64CPUTestParams::PrintToStringParamName);
@@ -1216,14 +1261,14 @@ TEST_P(AArch64CPUAliasTestFixture, testCPUAlias) {
 
   StringRef MainName = params.Aliases[0];
   const std::optional<AArch64::CpuInfo> Cpu = AArch64::parseCpu(MainName);
-  const AArch64::ArchInfo &MainAI = Cpu->Arch;
-  AArch64::ExtensionBitset MainFlags = Cpu->getImpliedExtensions();
+  const AArch64::ArchInfo &MainAI = AArch64::ArchInfos[Cpu->ArchIdx];
+  AArch64::ExtensionBitset MainFlags = Cpu->DefaultExtensions;
 
   for (size_t I = 1, E = params.Aliases.size(); I != E; ++I) {
     StringRef OtherName = params.Aliases[I];
     const std::optional<AArch64::CpuInfo> OtherCpu =
         AArch64::parseCpu(OtherName);
-    const AArch64::ArchInfo &OtherAI = OtherCpu->Arch;
+    const AArch64::ArchInfo &OtherAI = AArch64::ArchInfos[OtherCpu->ArchIdx];
 
     EXPECT_EQ(MainAI.Version, OtherAI.Version)
         << MainName << " vs " << OtherName;
@@ -1234,7 +1279,7 @@ TEST_P(AArch64CPUAliasTestFixture, testCPUAlias) {
         << MainName << " vs " << OtherName;
     EXPECT_EQ(MainAI, OtherAI) << MainName << " vs " << OtherName;
 
-    AArch64::ExtensionBitset OtherFlags = OtherCpu->getImpliedExtensions();
+    AArch64::ExtensionBitset OtherFlags = OtherCpu->DefaultExtensions;
 
     EXPECT_EQ(MainFlags, OtherFlags) << MainName << " vs " << OtherName;
 
@@ -1258,11 +1303,12 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUAliasTestParams({"apple-a15", "apple-m2"}),
                       AArch64CPUAliasTestParams({"apple-a16", "apple-m3",
                                                  "apple-s9", "apple-s10"}),
-                      AArch64CPUAliasTestParams({"apple-m4", "apple-a18"})),
+                      AArch64CPUAliasTestParams({"apple-m4", "apple-a18"}),
+                      AArch64CPUAliasTestParams({"apple-m5", "apple-a19"})),
     AArch64CPUAliasTestParams::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 89;
+static constexpr unsigned NumAArch64CPUArchs = 101;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -1299,6 +1345,7 @@ TEST(TargetParserTest, testAArch64Arch) {
   EXPECT_TRUE(testAArch64Arch("armv9.4-a"));
   EXPECT_TRUE(testAArch64Arch("armv9.5-a"));
   EXPECT_TRUE(testAArch64Arch("armv9.6-a"));
+  EXPECT_TRUE(testAArch64Arch("armv9.7-a"));
 }
 
 bool testAArch64Extension(StringRef CPUName, StringRef ArchExt) {
@@ -1307,7 +1354,7 @@ bool testAArch64Extension(StringRef CPUName, StringRef ArchExt) {
   if (!Extension)
     return false;
   std::optional<AArch64::CpuInfo> CpuInfo = AArch64::parseCpu(CPUName);
-  return CpuInfo->getImpliedExtensions().test(Extension->ID);
+  return CpuInfo->DefaultExtensions.test(Extension->ID);
 }
 
 bool testAArch64Extension(const AArch64::ArchInfo &AI, StringRef ArchExt) {
@@ -1391,6 +1438,9 @@ TEST(TargetParserTest, testAArch64Extension) {
   EXPECT_FALSE(testAArch64Extension(AArch64::ARMV8_3A, "fp16fml"));
   EXPECT_FALSE(testAArch64Extension(AArch64::ARMV8_4A, "fp16"));
   EXPECT_FALSE(testAArch64Extension(AArch64::ARMV8_4A, "fp16fml"));
+  EXPECT_FALSE(testAArch64Extension(AArch64::ARMV9_5A, "hinte"));
+  EXPECT_TRUE(testAArch64Extension(AArch64::ARMV9_6A, "hinte"));
+  EXPECT_TRUE(testAArch64Extension(AArch64::ARMV9_7A, "hinte"));
 }
 
 TEST(TargetParserTest, AArch64ExtensionFeatures) {
@@ -1410,7 +1460,6 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_SSBS,         AArch64::AEK_SB,
       AArch64::AEK_PREDRES,      AArch64::AEK_BF16,
       AArch64::AEK_I8MM,         AArch64::AEK_F32MM,
-      AArch64::AEK_F64MM,        AArch64::AEK_TME,
       AArch64::AEK_LS64,         AArch64::AEK_BRBE,
       AArch64::AEK_PAUTH,        AArch64::AEK_FLAGM,
       AArch64::AEK_SME,          AArch64::AEK_SMEF64F64,
@@ -1439,10 +1488,18 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_F8F16MM,      AArch64::AEK_LSFE,
       AArch64::AEK_FPRCVT,       AArch64::AEK_CMPBR,
       AArch64::AEK_LSUI,         AArch64::AEK_OCCMO,
-      AArch64::AEK_PCDPHINT,     AArch64::AEK_POPS,
       AArch64::AEK_SVEAES,       AArch64::AEK_SME_MOP4,
       AArch64::AEK_SME_TMOP,     AArch64::AEK_SVEBITPERM,
-      AArch64::AEK_SSVE_BITPERM,
+      AArch64::AEK_SSVE_BITPERM, AArch64::AEK_SVESHA3,
+      AArch64::AEK_LSCP,         AArch64::AEK_TLBID,
+      AArch64::AEK_GCIE,         AArch64::AEK_SME2P3,
+      AArch64::AEK_SVE2P3,       AArch64::AEK_SVE_B16MM,
+      AArch64::AEK_F16MM,        AArch64::AEK_F16F32DOT,
+      AArch64::AEK_F16F32MM,     AArch64::AEK_MOPS_GO,
+      AArch64::AEK_POE2,         AArch64::AEK_TEV,
+      AArch64::AEK_BTIE,         AArch64::AEK_F64MM,
+      AArch64::AEK_POPS,         AArch64::AEK_SVESM4,
+      AArch64::AEK_MTETC,        AArch64::AEK_HINTE,
   };
 
   std::vector<StringRef> Features;
@@ -1480,7 +1537,9 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve-aes"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-aes"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve-sm4"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-sm4"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve-sha3"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-sha3"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve-bitperm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-bitperm"));
@@ -1499,7 +1558,6 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+i8mm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+f32mm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+f64mm"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+tme"));
   EXPECT_TRUE(llvm::is_contained(Features, "+ls64"));
   EXPECT_TRUE(llvm::is_contained(Features, "+brbe"));
   EXPECT_TRUE(llvm::is_contained(Features, "+pauth"));
@@ -1548,10 +1606,24 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+cmpbr"));
   EXPECT_TRUE(llvm::is_contained(Features, "+lsui"));
   EXPECT_TRUE(llvm::is_contained(Features, "+occmo"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+pcdphint"));
   EXPECT_TRUE(llvm::is_contained(Features, "+pops"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-mop4"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-tmop"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+lscp"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+tlbid"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+mtetc"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+gcie"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sme2p3"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve2p3"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve-b16mm"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+f16mm"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+f16f32dot"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+f16f32mm"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+mops-go"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+poe2"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+tev"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+btie"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+hinte"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1561,34 +1633,35 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
 }
 
 TEST(TargetParserTest, AArch64ArchFeatures) {
-  EXPECT_EQ(AArch64::ARMV8A.ArchFeature, "+v8a");
-  EXPECT_EQ(AArch64::ARMV8_1A.ArchFeature, "+v8.1a");
-  EXPECT_EQ(AArch64::ARMV8_2A.ArchFeature, "+v8.2a");
-  EXPECT_EQ(AArch64::ARMV8_3A.ArchFeature, "+v8.3a");
-  EXPECT_EQ(AArch64::ARMV8_4A.ArchFeature, "+v8.4a");
-  EXPECT_EQ(AArch64::ARMV8_5A.ArchFeature, "+v8.5a");
-  EXPECT_EQ(AArch64::ARMV8_6A.ArchFeature, "+v8.6a");
-  EXPECT_EQ(AArch64::ARMV8_7A.ArchFeature, "+v8.7a");
-  EXPECT_EQ(AArch64::ARMV8_8A.ArchFeature, "+v8.8a");
-  EXPECT_EQ(AArch64::ARMV8_9A.ArchFeature, "+v8.9a");
-  EXPECT_EQ(AArch64::ARMV9A.ArchFeature, "+v9a");
-  EXPECT_EQ(AArch64::ARMV9_1A.ArchFeature, "+v9.1a");
-  EXPECT_EQ(AArch64::ARMV9_2A.ArchFeature, "+v9.2a");
-  EXPECT_EQ(AArch64::ARMV9_3A.ArchFeature, "+v9.3a");
-  EXPECT_EQ(AArch64::ARMV9_4A.ArchFeature, "+v9.4a");
-  EXPECT_EQ(AArch64::ARMV9_5A.ArchFeature, "+v9.5a");
-  EXPECT_EQ(AArch64::ARMV9_6A.ArchFeature, "+v9.6a");
-  EXPECT_EQ(AArch64::ARMV8R.ArchFeature, "+v8r");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8A.ArchFeature], "+v8a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_1A.ArchFeature], "+v8.1a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_2A.ArchFeature], "+v8.2a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_3A.ArchFeature], "+v8.3a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_4A.ArchFeature], "+v8.4a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_5A.ArchFeature], "+v8.5a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_6A.ArchFeature], "+v8.6a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_7A.ArchFeature], "+v8.7a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_8A.ArchFeature], "+v8.8a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_9A.ArchFeature], "+v8.9a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9A.ArchFeature], "+v9a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_1A.ArchFeature], "+v9.1a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_2A.ArchFeature], "+v9.2a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_3A.ArchFeature], "+v9.3a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_4A.ArchFeature], "+v9.4a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_5A.ArchFeature], "+v9.5a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_6A.ArchFeature], "+v9.6a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_7A.ArchFeature], "+v9.7a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8R.ArchFeature], "+v8r");
 }
 
 TEST(TargetParserTest, AArch64ArchPartialOrder) {
-  for (const auto *A : AArch64::ArchInfos) {
-    EXPECT_EQ(*A, *A);
+  for (const auto &A : AArch64::ArchInfos) {
+    EXPECT_EQ(A, A);
 
     // v8r has no relation to other valid architectures
-    if (*A != AArch64::ARMV8R) {
-      EXPECT_FALSE(A->implies(AArch64::ARMV8R));
-      EXPECT_FALSE(AArch64::ARMV8R.implies(*A));
+    if (A != AArch64::ARMV8R) {
+      EXPECT_FALSE(A.implies(AArch64::ARMV8R));
+      EXPECT_FALSE(AArch64::ARMV8R.implies(A));
     }
   }
 
@@ -1607,7 +1680,8 @@ TEST(TargetParserTest, AArch64ArchPartialOrder) {
 
   for (const auto *A :
        {&AArch64::ARMV9_1A, &AArch64::ARMV9_2A, &AArch64::ARMV9_3A,
-        &AArch64::ARMV9_4A, &AArch64::ARMV9_5A, &AArch64::ARMV9_6A})
+        &AArch64::ARMV9_4A, &AArch64::ARMV9_5A, &AArch64::ARMV9_6A,
+        &AArch64::ARMV9_7A})
     EXPECT_TRUE(A->implies(AArch64::ARMV9A));
 
   EXPECT_TRUE(AArch64::ARMV8_1A.implies(AArch64::ARMV8A));
@@ -1626,6 +1700,7 @@ TEST(TargetParserTest, AArch64ArchPartialOrder) {
   EXPECT_TRUE(AArch64::ARMV9_4A.implies(AArch64::ARMV9_3A));
   EXPECT_TRUE(AArch64::ARMV9_5A.implies(AArch64::ARMV9_4A));
   EXPECT_TRUE(AArch64::ARMV9_6A.implies(AArch64::ARMV9_5A));
+  EXPECT_TRUE(AArch64::ARMV9_7A.implies(AArch64::ARMV9_6A));
 
   EXPECT_TRUE(AArch64::ARMV9A.implies(AArch64::ARMV8_5A));
   EXPECT_TRUE(AArch64::ARMV9_1A.implies(AArch64::ARMV8_6A));
@@ -1653,6 +1728,8 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"sve-f16f32mm", "nosve-f16f32mm", "+sve-f16f32mm", "-sve-f16f32mm"},
       {"sve2", "nosve2", "+sve2", "-sve2"},
       {"sve-aes", "nosve-aes", "+sve-aes", "-sve-aes"},
+      {"sve-sm4", "nosve-sm4", "+sve-sm4", "-sve-sm4"},
+      {"sve-sha3", "nosve-sha3", "+sve-sha3", "-sve-sha3"},
       {"sve2-aes", "nosve2-aes", "+sve2-aes", "-sve2-aes"},
       {"sve2-sm4", "nosve2-sm4", "+sve2-sm4", "-sve2-sm4"},
       {"sve2-sha3", "nosve2-sha3", "+sve2-sha3", "-sve2-sha3"},
@@ -1667,7 +1744,6 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"rcpc", "norcpc", "+rcpc", "-rcpc"},
       {"rng", "norng", "+rand", "-rand"},
       {"memtag", "nomemtag", "+mte", "-mte"},
-      {"tme", "notme", "+tme", "-tme"},
       {"pauth", "nopauth", "+pauth", "-pauth"},
       {"ssbs", "nossbs", "+ssbs", "-ssbs"},
       {"sb", "nosb", "+sb", "-sb"},
@@ -1709,10 +1785,24 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"cmpbr", "nocmpbr", "+cmpbr", "-cmpbr"},
       {"lsui", "nolsui", "+lsui", "-lsui"},
       {"occmo", "nooccmo", "+occmo", "-occmo"},
-      {"pcdphint", "nopcdphint", "+pcdphint", "-pcdphint"},
       {"pops", "nopops", "+pops", "-pops"},
       {"sme-mop4", "nosme-mop4", "+sme-mop4", "-sme-mop4"},
       {"sme-tmop", "nosme-tmop", "+sme-tmop", "-sme-tmop"},
+      {"lscp", "nolscp", "+lscp", "-lscp"},
+      {"tlbid", "notlbid", "+tlbid", "-tlbid"},
+      {"mtetc", "nomtetc", "+mtetc", "-mtetc"},
+      {"gcie", "nogcie", "+gcie", "-gcie"},
+      {"sme2p3", "nosme2p3", "+sme2p3", "-sme2p3"},
+      {"sve2p3", "nosve2p3", "+sve2p3", "-sve2p3"},
+      {"sve-b16mm", "nosve-b16mm", "+sve-b16mm", "-sve-b16mm"},
+      {"f16mm", "nof16mm", "+f16mm", "-f16mm"},
+      {"f16f32dot", "nof16f32dot", "+f16f32dot", "-f16f32dot"},
+      {"f16f32mm", "nof16f32mm", "+f16f32mm", "-f16f32mm"},
+      {"mops-go", "nomops-go", "+mops-go", "-mops-go"},
+      {"poe2", "nopoe2", "+poe2", "-poe2"},
+      {"tev", "notev", "+tev", "-tev"},
+      {"btie", "nobtie", "+btie", "-btie"},
+      {"hinte", "nohinte", "+hinte", "-hinte"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {
@@ -1833,6 +1923,22 @@ TEST_P(AArch64ExtensionDependenciesBaseCPUTestFixture,
   }
 }
 
+TEST(TargetParserTest, testAArch64ReconstructFromParsedFeatures) {
+  AArch64::ExtensionSet Extensions;
+  std::vector<std::string> FeatureOptions = {
+      "-sve2", "-Baz", "+sve", "+FooBar", "+sve2", "+neon", "-sve",
+  };
+  std::vector<std::string> NonExtensions;
+  Extensions.reconstructFromParsedFeatures(FeatureOptions, NonExtensions);
+
+  std::vector<std::string> NonExtensionsExpected = {"-Baz", "+FooBar"};
+  ASSERT_THAT(NonExtensions, testing::ContainerEq(NonExtensionsExpected));
+  std::vector<StringRef> Features;
+  Extensions.toLLVMFeatureList(Features);
+  std::vector<StringRef> FeaturesExpected = {"+neon", "-sve", "+sve2"};
+  ASSERT_THAT(Features, testing::ContainerEq(FeaturesExpected));
+}
+
 AArch64ExtensionDependenciesBaseArchTestParams
     AArch64ExtensionDependenciesArchData[] = {
         // Base architecture features
@@ -1842,6 +1948,7 @@ AArch64ExtensionDependenciesBaseArchTestParams
          {"v8.1a", "crc", "fp-armv8", "lse", "rdm", "neon"},
          {}},
         {AArch64::ARMV9_5A, {}, {"v9.5a", "mops", "cpa"}, {}},
+        {AArch64::ARMV9_7A, {}, {"v9.7a", "f16f32dot"}, {}},
 
         // Positive modifiers
         {AArch64::ARMV8A, {"fp16"}, {"fullfp16"}, {}},
@@ -1911,7 +2018,8 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_6A, {"nofp", "fprcvt"}, {"fp-armv8", "fprcvt"}, {}},
         {AArch64::ARMV9_6A, {"fprcvt", "nofp"}, {}, {"fp-armv8", "fprcvt"}},
 
-        // simd -> {aes, sha2, sha3, sm4, f8f16mm, f8f32mm, faminmax, lut, fp8}
+        // simd -> {aes, sha2, sha3, sm4, f8f16mm, f8f32mm, faminmax, lut, fp8,
+        // f16f32dot, f16f32mm}
         {AArch64::ARMV8A, {"nosimd", "aes"}, {"neon", "aes"}, {}},
         {AArch64::ARMV8A, {"aes", "nosimd"}, {}, {"neon", "aes"}},
         {AArch64::ARMV8A, {"nosimd", "sha2"}, {"neon", "sha2"}, {}},
@@ -1930,6 +2038,10 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_6A, {"nosimd", "lut"}, {"neon", "lut"}, {}},
         {AArch64::ARMV9_6A, {"fp8", "nosimd"}, {}, {"neon", "fp8"}},
         {AArch64::ARMV9_6A, {"nosimd", "fp8"}, {"neon", "fp8"}, {}},
+        {AArch64::ARMV9_7A, {"nosimd", "f16f32mm"}, {"neon", "f16f32mm"}, {}},
+        {AArch64::ARMV9_7A, {"f16f32mm", "nosimd"}, {}, {"neon", "f16f32mm"}},
+        {AArch64::ARMV9_7A, {"nosimd", "f16f32dot"}, {"neon", "f16f32dot"}, {}},
+        {AArch64::ARMV9_7A, {"f16f32dot", "nosimd"}, {}, {"neon", "f16f32dot"}},
 
         // fp8 -> {fp8dot4, fp8dot2}
         {AArch64::ARMV9_6A, {"nofp8", "fp8dot4"}, {"fp8", "fp8dot4"}, {}},
@@ -1945,17 +2057,37 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"nosimd", "fcma"}, {"neon", "complxnum"}, {}},
         {AArch64::ARMV8A, {"fcma", "nosimd"}, {}, {"neon", "complxnum"}},
 
-        // fp16 -> {fp16fml, sve}
+        // fp16 -> {fp16fml, sve, f16f32dot, f16f32mm, f16mm}
         {AArch64::ARMV8A, {"nofp16", "fp16fml"}, {"fullfp16", "fp16fml"}, {}},
         {AArch64::ARMV8A, {"fp16fml", "nofp16"}, {}, {"fullfp16", "fp16fml"}},
         {AArch64::ARMV8A, {"nofp16", "sve"}, {"fullfp16", "sve"}, {}},
         {AArch64::ARMV8A, {"sve", "nofp16"}, {}, {"fullfp16", "sve"}},
+        {AArch64::ARMV9_7A, {"nofp16", "f16mm"}, {"fullfp16", "f16mm"}, {}},
+        {AArch64::ARMV9_7A, {"f16mm", "nofp16"}, {}, {"fullfp16", "f16mm"}},
+        {AArch64::ARMV9_7A, {"nosimd", "f16mm"}, {"neon", "f16mm"}, {}},
+        {AArch64::ARMV9_7A, {"f16mm", "nosimd"}, {}, {"neon", "f16mm"}},
+        {AArch64::ARMV9_7A,
+         {"nofp16", "f16f32mm"},
+         {"fullfp16", "f16f32mm"},
+         {}},
+        {AArch64::ARMV9_7A,
+         {"f16f32mm", "nofp16"},
+         {},
+         {"fullfp16", "f16f32mm"}},
+        {AArch64::ARMV9_7A,
+         {"nofp16", "f16f32dot"},
+         {"fullfp16", "f16f32dot"},
+         {}},
+        {AArch64::ARMV9_7A,
+         {"f16f32dot", "nofp16"},
+         {},
+         {"fullfp16", "f16f32dot"}},
 
         // bf16 -> {sme}
         {AArch64::ARMV8A, {"nobf16", "sme"}, {"bf16", "sme"}, {}},
         {AArch64::ARMV8A, {"sme", "nobf16"}, {}, {"bf16", "sme"}},
 
-        // sve -> {sve2, f32mm, f64mm, sve-f16f32mm}
+        // sve -> {sve2, f32mm, f64mm, sve-f16f32mm, sve-b16mm}
         {AArch64::ARMV8A, {"nosve", "sve2"}, {"sve", "sve2"}, {}},
         {AArch64::ARMV8A, {"sve2", "nosve"}, {}, {"sve", "sve2"}},
         {AArch64::ARMV8A, {"nosve", "f32mm"}, {"sve", "f32mm"}, {}},
@@ -1970,6 +2102,8 @@ AArch64ExtensionDependenciesBaseArchTestParams
          {"sve-f16f32mm", "nosve"},
          {},
          {"sve", "sve-f16f32mm"}},
+        {AArch64::ARMV9_7A, {"nosve", "sve-b16mm"}, {"sve", "sve-b16mm"}, {}},
+        {AArch64::ARMV9_7A, {"sve-b16mm", "nosve"}, {}, {"sve", "sve-b16mm"}},
 
         // aes -> {sve-aes}
         {AArch64::ARMV8A, {"noaes", "sve-aes"}, {"aes", "sve-aes"}, {}},
@@ -2014,6 +2148,10 @@ AArch64ExtensionDependenciesBaseArchTestParams
         // sve2p1 -> {sve2p2}
         {AArch64::ARMV9_6A, {"nosve2p1", "sve2p2"}, {"sve2p1", "sve2p2"}, {}},
         {AArch64::ARMV9_6A, {"sve2p2", "nosve2p1"}, {}, {"sve2p1", "sve2p2"}},
+
+        // sve2p2 -> {sve2p3}
+        {AArch64::ARMV9_7A, {"nosve2p2", "sve2p3"}, {"sve2p2", "sve2p3"}, {}},
+        {AArch64::ARMV9_7A, {"sve2p3", "nosve2p2"}, {}, {"sve2p2", "sve2p3"}},
 
         // sme -> {sme2, sme-f16f16, sme-f64f64, sme-i16i64, sme-fa64}
         {AArch64::ARMV8A, {"nosme", "sme2"}, {"sme", "sme2"}, {}},
@@ -2068,6 +2206,10 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_6A, {"nosme2p1", "sme2p2"}, {"sme2p2", "sme2p1"}, {}},
         {AArch64::ARMV9_6A, {"sme2p2", "nosme2p1"}, {}, {"sme2p1", "sme2p2"}},
 
+        // sme2p2 -> {sme2p3}
+        {AArch64::ARMV9_7A, {"nosme2p2", "sme2p3"}, {"sme2p3", "sme2p2"}, {}},
+        {AArch64::ARMV9_7A, {"sme2p3", "nosme2p2"}, {}, {"sme2p2", "sme2p3"}},
+
         // fp8 -> {sme-f8f16, sme-f8f32, f8f16mm, f8f32mm, fp8dot4, fp8dot2,
         // ssve-fp8dot4, ssve-fp8dot2}
         {AArch64::ARMV8A, {"nofp8", "sme-f8f16"}, {"fp8", "sme-f8f16"}, {}},
@@ -2102,6 +2244,15 @@ AArch64ExtensionDependenciesBaseArchTestParams
         // lse -> lse128
         {AArch64::ARMV8A, {"nolse", "lse128"}, {"lse", "lse128"}, {}},
         {AArch64::ARMV8A, {"lse128", "nolse"}, {}, {"lse", "lse128"}},
+
+        // mtetc -> mte
+        {AArch64::ARMV9_7A, {"nomemtag", "mtetc"}, {"mte"}, {}},
+
+        // mops-go -> mops, mte
+        {AArch64::ARMV9_7A,
+         {"nomops", "nomemtag", "mops-go"},
+         {"mops", "mte"},
+         {}},
 
         // predres -> predres2
         {AArch64::ARMV8A,
@@ -2144,6 +2295,18 @@ AArch64ExtensionDependenciesBaseArchTestParams
          {"sve2", "sve-aes", "nosve2-aes"},
          {"sve2"},
          {"sve2-aes", "sve-aes"}},
+
+        // -sve2-sm4 should disable sve-sm4 (only)
+        {AArch64::ARMV9_6A,
+         {"sve2", "sve-sm4", "nosve2-sm4"},
+         {"sve2"},
+         {"sve2-sm4", "sve-sm4"}},
+
+        // -sve2-sha3 should disable sve-sha3 (only)
+        {AArch64::ARMV9_6A,
+         {"sve2", "sve-sha3", "nosve2-sha3"},
+         {"sve2"},
+         {"sve2-sha3", "sve-sha3"}},
 
         // sme-tmop -> sme
         {AArch64::ARMV8A, {"nosme2", "sme-tmop"}, {"sme2", "sme-tmop"}, {}},
@@ -2238,6 +2401,479 @@ TEST(TargetParserTest, checkFindSinglePrecisionFPU) {
         ARM::appendArchExtFeatures(X.Cpu, X.Arch, X.Archext, X.Features, FPU));
     EXPECT_EQ(FPU, X.Output);
   }
+}
+
+TEST(TargetParserTest, testAMDGPUArch) {
+  EXPECT_EQ(Triple("amdgpu--").getArch(), Triple::amdgpu);
+  EXPECT_EQ(Triple("amdgpu--").getSubArch(), Triple::NoSubArch);
+  EXPECT_EQ(Triple("amdgpu0--").getSubArch(), Triple::NoSubArch);
+  EXPECT_EQ(Triple("amdgpufoo--").getSubArch(), Triple::NoSubArch);
+
+  {
+    EXPECT_EQ(Triple("amdgpu6--").getSubArch(), Triple::AMDGPUSubArch6);
+    EXPECT_EQ(Triple("amdgpu6.0").getSubArch(), Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu6.00").getSubArch(), Triple::AMDGPUSubArch600);
+    EXPECT_EQ(Triple("amdgpu6.01").getSubArch(), Triple::AMDGPUSubArch601);
+    EXPECT_EQ(Triple("amdgpu6.02").getSubArch(), Triple::AMDGPUSubArch602);
+    EXPECT_EQ(Triple("amdgpu6.03").getSubArch(), Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu60").getSubArch(), Triple::NoSubArch);   // Unknown
+  }
+
+  {
+    EXPECT_EQ(Triple("amdgpu7--").getSubArch(), Triple::AMDGPUSubArch7);
+    EXPECT_EQ(Triple("amdgpu7.0--").getSubArch(), Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu7.00").getSubArch(), Triple::AMDGPUSubArch700);
+    EXPECT_EQ(Triple("amdgpu7.01").getSubArch(), Triple::AMDGPUSubArch701);
+    EXPECT_EQ(Triple("amdgpu7.02").getSubArch(), Triple::AMDGPUSubArch702);
+    EXPECT_EQ(Triple("amdgpu7.03").getSubArch(), Triple::AMDGPUSubArch703);
+    EXPECT_EQ(Triple("amdgpu7.04").getSubArch(), Triple::AMDGPUSubArch704);
+    EXPECT_EQ(Triple("amdgpu7.05").getSubArch(), Triple::AMDGPUSubArch705);
+    EXPECT_EQ(Triple("amdgpu7.06").getSubArch(), Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu71").getSubArch(), Triple::NoSubArch);   // Unknown
+  }
+
+  {
+    EXPECT_EQ(Triple("amdgpu8--").getSubArch(), Triple::AMDGPUSubArch8);
+    EXPECT_EQ(Triple("amdgpu8.0--").getSubArch(), Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu8.01--").getSubArch(), Triple::AMDGPUSubArch801);
+    EXPECT_EQ(Triple("amdgpu8.02--").getSubArch(), Triple::AMDGPUSubArch802);
+    EXPECT_EQ(Triple("amdgpu8.03--").getSubArch(), Triple::AMDGPUSubArch803);
+    EXPECT_EQ(Triple("amdgpu8.05--").getSubArch(), Triple::AMDGPUSubArch805);
+    EXPECT_EQ(Triple("amdgpu8.1--").getSubArch(), Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu8.10--").getSubArch(), Triple::AMDGPUSubArch810);
+    EXPECT_EQ(Triple("amdgpu81--").getSubArch(), Triple::NoSubArch); // Unknown
+  }
+
+  {
+    EXPECT_EQ(Triple("amdgpu9--").getArch(), Triple::amdgpu);
+    EXPECT_EQ(Triple("amdgpu9--").getSubArch(), Triple::AMDGPUSubArch9);
+    EXPECT_EQ(Triple("amdgpu9.0--").getSubArch(), Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu9.00--").getSubArch(), Triple::AMDGPUSubArch900);
+    EXPECT_EQ(Triple("amdgpu9.02--").getSubArch(), Triple::AMDGPUSubArch902);
+    EXPECT_EQ(Triple("amdgpu9.04--").getSubArch(), Triple::AMDGPUSubArch904);
+    EXPECT_EQ(Triple("amdgpu9.06--").getSubArch(), Triple::AMDGPUSubArch906);
+    EXPECT_EQ(Triple("amdgpu9.08--").getSubArch(), Triple::AMDGPUSubArch908);
+    EXPECT_EQ(Triple("amdgpu9.0a--").getSubArch(), Triple::AMDGPUSubArch90A);
+    EXPECT_EQ(Triple("amdgpu9.0c--").getSubArch(), Triple::AMDGPUSubArch90C);
+
+    EXPECT_EQ(Triple("amdgpu9.4--").getSubArch(), Triple::AMDGPUSubArch9_4);
+    EXPECT_EQ(Triple("amdgpu9.42--").getSubArch(), Triple::AMDGPUSubArch942);
+    EXPECT_EQ(Triple("amdgpu9.50--").getSubArch(), Triple::AMDGPUSubArch950);
+    EXPECT_EQ(Triple("amdgpu99").getSubArch(), Triple::NoSubArch); // Unknown
+  }
+
+  {
+    EXPECT_EQ(Triple("amdgpu10--").getArch(), Triple::amdgpu);
+    EXPECT_EQ(Triple("amdgpu10--").getSubArch(), Triple::AMDGPUSubArch10_1);
+    EXPECT_EQ(Triple("amdgpu10.1--").getSubArch(), Triple::AMDGPUSubArch10_1);
+    EXPECT_EQ(Triple("amdgpu10.10--").getSubArch(), Triple::AMDGPUSubArch1010);
+    EXPECT_EQ(Triple("amdgpu10.11--").getSubArch(), Triple::AMDGPUSubArch1011);
+    EXPECT_EQ(Triple("amdgpu10.12--").getSubArch(), Triple::AMDGPUSubArch1012);
+    EXPECT_EQ(Triple("amdgpu10.13--").getSubArch(), Triple::AMDGPUSubArch1013);
+    EXPECT_EQ(Triple("amdgpu101").getSubArch(), Triple::NoSubArch); // Unknown
+  }
+
+  {
+    EXPECT_EQ(Triple("amdgpu10.3--").getSubArch(), Triple::AMDGPUSubArch10_3);
+    EXPECT_EQ(Triple("amdgpu10.30--").getSubArch(), Triple::AMDGPUSubArch1030);
+    EXPECT_EQ(Triple("amdgpu10.31--").getSubArch(), Triple::AMDGPUSubArch1031);
+    EXPECT_EQ(Triple("amdgpu10.32--").getSubArch(), Triple::AMDGPUSubArch1032);
+    EXPECT_EQ(Triple("amdgpu10.33--").getSubArch(), Triple::AMDGPUSubArch1033);
+    EXPECT_EQ(Triple("amdgpu10.34--").getSubArch(), Triple::AMDGPUSubArch1034);
+    EXPECT_EQ(Triple("amdgpu10.35--").getSubArch(), Triple::AMDGPUSubArch1035);
+    EXPECT_EQ(Triple("amdgpu10.36--").getSubArch(), Triple::AMDGPUSubArch1036);
+    EXPECT_EQ(Triple("amdgpu10.39").getSubArch(), Triple::NoSubArch); // Unknown
+  }
+
+  {
+    EXPECT_EQ(Triple("amdgpu11--").getSubArch(), Triple::AMDGPUSubArch11);
+    EXPECT_EQ(Triple("amdgpu11.0--").getSubArch(),
+              Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu11.00--").getSubArch(), Triple::AMDGPUSubArch1100);
+    EXPECT_EQ(Triple("amdgpu11.01--").getSubArch(), Triple::AMDGPUSubArch1101);
+    EXPECT_EQ(Triple("amdgpu11.02--").getSubArch(), Triple::AMDGPUSubArch1102);
+    EXPECT_EQ(Triple("amdgpu11.03--").getSubArch(), Triple::AMDGPUSubArch1103);
+    EXPECT_EQ(Triple("amdgpu11.5--").getSubArch(),
+              Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu11.50--").getSubArch(), Triple::AMDGPUSubArch1150);
+    EXPECT_EQ(Triple("amdgpu11.51--").getSubArch(), Triple::AMDGPUSubArch1151);
+    EXPECT_EQ(Triple("amdgpu11.52--").getSubArch(), Triple::AMDGPUSubArch1152);
+    EXPECT_EQ(Triple("amdgpu11.53--").getSubArch(), Triple::AMDGPUSubArch1153);
+    EXPECT_EQ(Triple("amdgpu11.54--").getSubArch(), Triple::AMDGPUSubArch1154);
+    EXPECT_EQ(Triple("amdgpu11.7--").getSubArch(), Triple::AMDGPUSubArch11_7);
+    EXPECT_EQ(Triple("amdgpu11.70--").getSubArch(), Triple::AMDGPUSubArch1170);
+    EXPECT_EQ(Triple("amdgpu11.71--").getSubArch(), Triple::AMDGPUSubArch1171);
+    EXPECT_EQ(Triple("amdgpu11.72--").getSubArch(), Triple::AMDGPUSubArch1172);
+    EXPECT_EQ(Triple("amdgpu111--").getSubArch(), Triple::NoSubArch); // Unknown
+  }
+
+  {
+    EXPECT_EQ(Triple("amdgpu12--").getSubArch(), Triple::AMDGPUSubArch12);
+    EXPECT_EQ(Triple("amdgpu12.0--").getSubArch(),
+              Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu12.00--").getSubArch(), Triple::AMDGPUSubArch1200);
+    EXPECT_EQ(Triple("amdgpu12.01--").getSubArch(), Triple::AMDGPUSubArch1201);
+    EXPECT_EQ(Triple("amdgpu12.5--").getSubArch(), Triple::AMDGPUSubArch12_5);
+    EXPECT_EQ(Triple("amdgpu12.50--").getSubArch(), Triple::AMDGPUSubArch1250);
+    EXPECT_EQ(Triple("amdgpu12.51--").getSubArch(), Triple::AMDGPUSubArch1251);
+    EXPECT_EQ(Triple("amdgpu122--").getSubArch(), Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu12.59--").getSubArch(),
+              Triple::NoSubArch); // Unknown
+  }
+
+  {
+    EXPECT_EQ(Triple("amdgpu13--").getSubArch(), Triple::AMDGPUSubArch13);
+    EXPECT_EQ(Triple("amdgpu13.10--").getSubArch(), Triple::AMDGPUSubArch1310);
+    EXPECT_EQ(Triple("amdgpu13.1").getSubArch(), Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu131").getSubArch(), Triple::NoSubArch);  // Unknown
+  }
+}
+
+TEST(TargetParserTest, testAMDGPUgetMajorSubArch) {
+  // Make sure every subarch is handled by the function
+  for (unsigned SubArch = Triple::FirstAMDGPUSubArch;
+       SubArch <= Triple::LastAMDGPUSubArch; ++SubArch) {
+
+    EXPECT_NE(
+        AMDGPU::getMajorSubArch(static_cast<Triple::SubArchType>(SubArch)),
+        Triple::NoSubArch);
+  }
+}
+
+TEST(TargetParserTest, testAMDGPUisSubArchCompatible) {
+  // A major-family subarch is compatible with itself and with any specific
+  // subarch in its family.
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch9,
+                                          Triple::AMDGPUSubArch9));
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch9,
+                                          Triple::AMDGPUSubArch900));
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch900,
+                                          Triple::AMDGPUSubArch9));
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch9,
+                                          Triple::AMDGPUSubArch90C));
+
+  // NoSubArch is compatible with anything.
+  EXPECT_TRUE(
+      AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch9, Triple::NoSubArch));
+  EXPECT_TRUE(
+      AMDGPU::isSubArchCompatible(Triple::NoSubArch, Triple::AMDGPUSubArch9));
+  EXPECT_TRUE(
+      AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch900, Triple::NoSubArch));
+  EXPECT_TRUE(
+      AMDGPU::isSubArchCompatible(Triple::NoSubArch, Triple::AMDGPUSubArch900));
+
+  // gfx9 and gfx9.4 are distinct major families.
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch9,
+                                           Triple::AMDGPUSubArch9_4));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch9,
+                                           Triple::AMDGPUSubArch942));
+
+  // gfx908 and gfx90a are their own major families, not part of gfx9-generic,
+  // because they have ABI-incompatible feature differences (e.g. gfx90a
+  // requires aligned VGPRs).
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch9,
+                                           Triple::AMDGPUSubArch908));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch9,
+                                           Triple::AMDGPUSubArch90A));
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch90A,
+                                          Triple::AMDGPUSubArch90A));
+
+  // gfx11 and gfx11.7 are distinct major families.
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch11_7,
+                                          Triple::AMDGPUSubArch11_7));
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch11_7,
+                                          Triple::AMDGPUSubArch1170));
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch1172,
+                                          Triple::AMDGPUSubArch11_7));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch11,
+                                           Triple::AMDGPUSubArch11_7));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch11,
+                                           Triple::AMDGPUSubArch1170));
+
+  // Two specific subarches in the same family are not compatible with each
+  // other; only the major-family subarch is.
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch900,
+                                           Triple::AMDGPUSubArch90A));
+
+  // Different major families are incompatible.
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch9,
+                                           Triple::AMDGPUSubArch10_3));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch10_3,
+                                           Triple::AMDGPUSubArch9));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch900,
+                                           Triple::AMDGPUSubArch1030));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch1030,
+                                           Triple::AMDGPUSubArch900));
+
+  // NoSubArch is compatible with anything.
+  EXPECT_TRUE(
+      AMDGPU::isSubArchCompatible(Triple::NoSubArch, Triple::NoSubArch));
+  EXPECT_TRUE(
+      AMDGPU::isSubArchCompatible(Triple::NoSubArch, Triple::AMDGPUSubArch9));
+  EXPECT_TRUE(
+      AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch9, Triple::NoSubArch));
+  EXPECT_TRUE(
+      AMDGPU::isSubArchCompatible(Triple::NoSubArch, Triple::AMDGPUSubArch900));
+
+  // The Triple-based overload checks the same compatibility.
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple("amdgpu9-amd-amdhsa"),
+                                          Triple("amdgpu9.00-amd-amdhsa")));
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple("amdgpu-amd-amdhsa"),
+                                          Triple("amdgpu9.00-amd-amdhsa")));
+
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple("amdgpu9.00-amd-amdhsa"),
+                                           Triple("amdgpu9.0a-amd-amdhsa")));
+
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple("amdgpu9.0a-amd-amdhsa"),
+                                           Triple("amdgpu9.00-amd-amdhsa")));
+
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple("amdgpu9-amd-amdhsa"),
+                                           Triple("amdgpu10.3-amd-amdhsa")));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple("amdgpu10.3-amd-amdhsa"),
+                                           Triple("amdgpu9-amd-amdhsa")));
+
+  // An unrecognized subarch is incompatible with any recognized subarch.
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple("amdgpu9.99-amd-amdhsa"),
+                                           Triple("amdgpu9.00-amd-amdhsa")));
+}
+
+TEST(TargetParserTest, testAMDGPUisCPUValidForSubArch) {
+  EXPECT_TRUE(
+      AMDGPU::isCPUValidForSubArch(Triple::AMDGPUSubArch9, AMDGPU::GK_GFX900));
+  EXPECT_TRUE(AMDGPU::isCPUValidForSubArch(Triple::AMDGPUSubArch9, "gfx900"));
+
+  EXPECT_TRUE(AMDGPU::isCPUValidForSubArch(Triple::AMDGPUSubArch900,
+                                           AMDGPU::GK_GFX900));
+  EXPECT_TRUE(AMDGPU::isCPUValidForSubArch(Triple::AMDGPUSubArch900, "gfx900"));
+
+  EXPECT_FALSE(AMDGPU::isCPUValidForSubArch(Triple::AMDGPUSubArch900,
+                                            AMDGPU::GK_GFX902));
+  EXPECT_FALSE(
+      AMDGPU::isCPUValidForSubArch(Triple::AMDGPUSubArch900, "gfx902"));
+
+  EXPECT_TRUE(
+      AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, AMDGPU::GK_GFX900));
+  EXPECT_TRUE(AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, "gfx900"));
+
+  EXPECT_FALSE(
+      AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, AMDGPU::GK_NONE));
+  EXPECT_FALSE(AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, ""));
+}
+
+TEST(TargetParserTest, testAMDGPUfillValidArchListAMDGCN) {
+  SmallVector<StringRef, 0> All;
+  AMDGPU::fillValidArchListAMDGCN(All, Triple::NoSubArch);
+  EXPECT_FALSE(All.empty());
+
+  SmallVector<StringRef, 16> Filtered;
+
+  // For every subarch, the filtered list must agree exactly with
+  // isCPUValidForSubArch over the full set of names.
+  for (unsigned SA = Triple::FirstAMDGPUSubArch;
+       SA <= Triple::LastAMDGPUSubArch; ++SA) {
+    auto SubArch = static_cast<Triple::SubArchType>(SA);
+    Triple::SubArchType Major = AMDGPU::getMajorSubArch(SubArch);
+
+    AMDGPU::fillValidArchListAMDGCN(Filtered, SubArch);
+
+    for (StringRef Name : All) {
+      AMDGPU::GPUKind Kind = AMDGPU::parseArchAMDGCN(Name);
+      bool Valid = AMDGPU::isCPUValidForSubArch(SubArch, Kind);
+      EXPECT_EQ(Valid, llvm::is_contained(Filtered, Name))
+          << "subarch " << Triple::getArchName(Triple::amdgpu, SubArch)
+          << " name " << Name;
+    }
+
+    for (StringRef Name : Filtered)
+      EXPECT_TRUE(llvm::is_contained(All, Name)) << Name;
+
+    // A specific subarch matches its own concrete GPU, plus the family-generic
+    // GPU. Names may repeat through aliases, so compare distinct GPUKinds.
+    if (Major != SubArch) {
+      SmallSet<AMDGPU::GPUKind, 2> Kinds;
+      for (StringRef Name : Filtered)
+        Kinds.insert(AMDGPU::parseArchAMDGCN(Name));
+
+      bool FamilyHasGeneric =
+          AMDGPU::getGPUKindFromSubArch(Major) != AMDGPU::GK_NONE;
+      EXPECT_EQ(Kinds.size(), FamilyHasGeneric ? 2u : 1u)
+          << "subarch " << Triple::getArchName(Triple::amdgpu, SubArch);
+    }
+
+    Filtered.clear();
+  }
+}
+
+TEST(TargetParserTest, testAMDGPUgetGPUKindFromSubArch) {
+  EXPECT_EQ(AMDGPU::getGPUKindFromSubArch(Triple::NoSubArch), AMDGPU::GK_NONE);
+
+  struct SubArchMapping {
+    Triple::SubArchType SubArch;
+    AMDGPU::GPUKind Kind;
+  };
+
+  static const SubArchMapping Mappings[] = {
+      // GFX6 family
+      {Triple::AMDGPUSubArch6, AMDGPU::GK_NONE},
+      {Triple::AMDGPUSubArch600, AMDGPU::GK_GFX600},
+      {Triple::AMDGPUSubArch601, AMDGPU::GK_GFX601},
+      {Triple::AMDGPUSubArch602, AMDGPU::GK_GFX602},
+
+      // GFX7 family
+      {Triple::AMDGPUSubArch7, AMDGPU::GK_NONE},
+      {Triple::AMDGPUSubArch700, AMDGPU::GK_GFX700},
+      {Triple::AMDGPUSubArch701, AMDGPU::GK_GFX701},
+      {Triple::AMDGPUSubArch702, AMDGPU::GK_GFX702},
+      {Triple::AMDGPUSubArch703, AMDGPU::GK_GFX703},
+      {Triple::AMDGPUSubArch704, AMDGPU::GK_GFX704},
+      {Triple::AMDGPUSubArch705, AMDGPU::GK_GFX705},
+
+      // GFX8 family
+      {Triple::AMDGPUSubArch8, AMDGPU::GK_NONE},
+      {Triple::AMDGPUSubArch801, AMDGPU::GK_GFX801},
+      {Triple::AMDGPUSubArch802, AMDGPU::GK_GFX802},
+      {Triple::AMDGPUSubArch803, AMDGPU::GK_GFX803},
+      {Triple::AMDGPUSubArch805, AMDGPU::GK_GFX805},
+      {Triple::AMDGPUSubArch810, AMDGPU::GK_GFX810},
+
+      // GFX9 family
+      {Triple::AMDGPUSubArch9, AMDGPU::GK_GFX9_GENERIC},
+      {Triple::AMDGPUSubArch900, AMDGPU::GK_GFX900},
+      {Triple::AMDGPUSubArch902, AMDGPU::GK_GFX902},
+      {Triple::AMDGPUSubArch904, AMDGPU::GK_GFX904},
+      {Triple::AMDGPUSubArch906, AMDGPU::GK_GFX906},
+      {Triple::AMDGPUSubArch908, AMDGPU::GK_GFX908},
+      {Triple::AMDGPUSubArch909, AMDGPU::GK_GFX909},
+      {Triple::AMDGPUSubArch90A, AMDGPU::GK_GFX90A},
+      {Triple::AMDGPUSubArch90C, AMDGPU::GK_GFX90C},
+      {Triple::AMDGPUSubArch9_4, AMDGPU::GK_GFX9_4_GENERIC},
+      {Triple::AMDGPUSubArch942, AMDGPU::GK_GFX942},
+      {Triple::AMDGPUSubArch950, AMDGPU::GK_GFX950},
+
+      // GFX10 family
+      {Triple::AMDGPUSubArch10_1, AMDGPU::GK_GFX10_1_GENERIC},
+      {Triple::AMDGPUSubArch1010, AMDGPU::GK_GFX1010},
+      {Triple::AMDGPUSubArch1011, AMDGPU::GK_GFX1011},
+      {Triple::AMDGPUSubArch1012, AMDGPU::GK_GFX1012},
+      {Triple::AMDGPUSubArch1013, AMDGPU::GK_GFX1013},
+      {Triple::AMDGPUSubArch10_3, AMDGPU::GK_GFX10_3_GENERIC},
+      {Triple::AMDGPUSubArch1030, AMDGPU::GK_GFX1030},
+      {Triple::AMDGPUSubArch1031, AMDGPU::GK_GFX1031},
+      {Triple::AMDGPUSubArch1032, AMDGPU::GK_GFX1032},
+      {Triple::AMDGPUSubArch1033, AMDGPU::GK_GFX1033},
+      {Triple::AMDGPUSubArch1034, AMDGPU::GK_GFX1034},
+      {Triple::AMDGPUSubArch1035, AMDGPU::GK_GFX1035},
+      {Triple::AMDGPUSubArch1036, AMDGPU::GK_GFX1036},
+
+      // GFX11 family
+      {Triple::AMDGPUSubArch11, AMDGPU::GK_GFX11_GENERIC},
+      {Triple::AMDGPUSubArch1100, AMDGPU::GK_GFX1100},
+      {Triple::AMDGPUSubArch1101, AMDGPU::GK_GFX1101},
+      {Triple::AMDGPUSubArch1102, AMDGPU::GK_GFX1102},
+      {Triple::AMDGPUSubArch1103, AMDGPU::GK_GFX1103},
+      {Triple::AMDGPUSubArch1150, AMDGPU::GK_GFX1150},
+      {Triple::AMDGPUSubArch1151, AMDGPU::GK_GFX1151},
+      {Triple::AMDGPUSubArch1152, AMDGPU::GK_GFX1152},
+      {Triple::AMDGPUSubArch1153, AMDGPU::GK_GFX1153},
+      {Triple::AMDGPUSubArch1154, AMDGPU::GK_GFX1154},
+      {Triple::AMDGPUSubArch11_7, AMDGPU::GK_GFX11_7_GENERIC},
+      {Triple::AMDGPUSubArch1170, AMDGPU::GK_GFX1170},
+      {Triple::AMDGPUSubArch1171, AMDGPU::GK_GFX1171},
+      {Triple::AMDGPUSubArch1172, AMDGPU::GK_GFX1172},
+
+      // GFX12 family
+      {Triple::AMDGPUSubArch12, AMDGPU::GK_GFX12_GENERIC},
+      {Triple::AMDGPUSubArch1200, AMDGPU::GK_GFX1200},
+      {Triple::AMDGPUSubArch1201, AMDGPU::GK_GFX1201},
+      {Triple::AMDGPUSubArch12_5, AMDGPU::GK_GFX12_5_GENERIC},
+      {Triple::AMDGPUSubArch1250, AMDGPU::GK_GFX1250},
+      {Triple::AMDGPUSubArch1251, AMDGPU::GK_GFX1251},
+
+      // GFX13 family
+      {Triple::AMDGPUSubArch13, AMDGPU::GK_GFX13_GENERIC},
+      {Triple::AMDGPUSubArch1310, AMDGPU::GK_GFX1310},
+  };
+
+  for (const auto &Mapping : Mappings)
+    EXPECT_EQ(AMDGPU::getGPUKindFromSubArch(Mapping.SubArch), Mapping.Kind);
+}
+
+TEST(TargetParserTest, testAMDGPUgetIsaVersionFromSubArch) {
+  // Concrete subarches map to their exact ISA version.
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch600),
+            (AMDGPU::IsaVersion{6, 0, 0}));
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch900),
+            (AMDGPU::IsaVersion{9, 0, 0}));
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch1250),
+            (AMDGPU::IsaVersion{12, 5, 0}));
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch1251),
+            (AMDGPU::IsaVersion{12, 5, 1}));
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch1310),
+            (AMDGPU::IsaVersion{13, 1, 0}));
+
+  // Generic subarches map to the generic target's version.
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch9),
+            (AMDGPU::IsaVersion{9, 0, 0}));
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch12),
+            (AMDGPU::IsaVersion{12, 0, 0}));
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch12_5),
+            (AMDGPU::IsaVersion{12, 5, 0}));
+
+  // Major-family subarches with no associated GPU have no version.
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch6),
+            (AMDGPU::IsaVersion{0, 0, 0}));
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch13),
+            (AMDGPU::IsaVersion{13, 1, 0}));
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::NoSubArch),
+            (AMDGPU::IsaVersion{0, 0, 0}));
+}
+
+TEST(TargetParserTest, testAMDGPUTargetIDCompat) {
+  using AMDGPU::TargetID;
+  Triple AMDHSA("amdgcn-amd-amdhsa");
+  Triple AMDHSACanon("amdgpu-amd-amdhsa");
+
+  auto Compatible = [](const TargetID &A, const TargetID &B) {
+    // Compatibility is symmetric for the cases exercised here.
+    EXPECT_EQ(A.isCompatibleWith(B), B.isCompatibleWith(A));
+    return A.isCompatibleWith(B);
+  };
+
+  // Exact match is compatible.
+  EXPECT_TRUE(
+      Compatible(TargetID(AMDHSA, "gfx90a"), TargetID(AMDHSA, "gfx90a")));
+
+  // Different processors are not compatible.
+  EXPECT_FALSE(
+      Compatible(TargetID(AMDHSA, "gfx90a"), TargetID(AMDHSA, "gfx908")));
+
+  // "generic" and empty act as a wildcard that merges into a specific image,
+  // in both directions.
+  EXPECT_TRUE(
+      Compatible(TargetID(AMDHSA, "generic"), TargetID(AMDHSA, "gfx90a")));
+  EXPECT_TRUE(Compatible(TargetID(AMDHSA, ""), TargetID(AMDHSA, "gfx908")));
+
+  // Major-subarch wildcard triple merges into a specific processor.
+  Triple AMDHSAMajor9("amdgpu9-amd-amdhsa");
+  EXPECT_TRUE(
+      Compatible(TargetID(AMDHSAMajor9, ""), TargetID(AMDHSA, "gfx900")));
+
+  // Explicit On vs Off features must not match.
+  EXPECT_FALSE(Compatible(TargetID(AMDHSA, "gfx90a:xnack+"),
+                          TargetID(AMDHSA, "gfx90a:xnack-")));
+  EXPECT_FALSE(Compatible(TargetID(AMDHSA, "gfx90a:sramecc+"),
+                          TargetID(AMDHSA, "gfx90a:sramecc-")));
+
+  // "Any"/"Unsupported" settings act as wildcards: a plain gfx90a (xnack "Any")
+  // merges with an explicit xnack+ or xnack- request.
+  EXPECT_TRUE(Compatible(TargetID(AMDHSA, "gfx90a"),
+                         TargetID(AMDHSA, "gfx90a:xnack+")));
+  EXPECT_TRUE(Compatible(TargetID(AMDHSA, "gfx90a"),
+                         TargetID(AMDHSA, "gfx90a:xnack-")));
+
+  // The legacy "amdgcn" and canonical "amdgpu" triple spellings merge.
+  EXPECT_TRUE(
+      Compatible(TargetID(AMDHSA, "gfx90a"), TargetID(AMDHSACanon, "gfx90a")));
 }
 
 } // namespace

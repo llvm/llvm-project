@@ -40,7 +40,7 @@ public:
 
     SmallVector<BasicBlock *, 32> PredCache(predecessors(BB));
     BasicBlock **Data = Memory.Allocate<BasicBlock *>(PredCache.size());
-    std::copy(PredCache.begin(), PredCache.end(), Data);
+    llvm::copy(PredCache, Data);
     Entry = ArrayRef(Data, PredCache.size());
     return Entry;
   }

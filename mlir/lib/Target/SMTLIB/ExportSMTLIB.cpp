@@ -21,7 +21,6 @@
 #include "mlir/Tools/mlir-translate/Translation.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
@@ -675,7 +674,8 @@ static LogicalResult emit(SolverOp solver, const SMTEmissionOptions &options,
   if (result.wasInterrupted())
     return failure();
 
-  stream << "(reset)\n";
+  if (options.emitReset)
+    stream << "(reset)\n";
   return success();
 }
 

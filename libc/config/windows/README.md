@@ -59,7 +59,7 @@ libc, and finally, build and test the libc.
    by Clang, so ensure Clang is specified as the C and C++ compiler.
 
     ```
-    cmake -G Ninja ../llvm-project/llvm -DCMAKE_C_COMPILER=C:/src/clang-build/bin/clang-cl.exe -DCMAKE_CXX_COMPILER=C:/src/clang-build/bin/clang-cl.exe  -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_FORCE_BUILD_RUNTIME=libc -DLLVM_ENABLE_PROJECTS=libc -DLLVM_NATIVE_ARCH=x86_64 -DLLVM_HOST_TRIPLE=x86_64-window-x86-gnu
+    cmake -G Ninja ../llvm-project/runtimes -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=C:/src/clang-build/bin/clang-cl.exe -DCMAKE_CXX_COMPILER=C:/src/clang-build/bin/clang-cl.exe  -DLLVM_ENABLE_RUNTIMES=libc
     ```
 
     Some LLVM libc math unittests test correctness/accuracy against results from

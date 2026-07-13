@@ -208,3 +208,21 @@ uint64_t test_svlen_f64(svfloat64_t op) MODE_ATTR
 {
   return SVE_ACLE_FUNC(svlen,_f64,,)(op);
 }
+
+// CHECK-LABEL: @test_svlen_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
+// CHECK-NEXT:    ret i64 [[TMP1]]
+//
+// CPP-CHECK-LABEL: @_Z15test_svlen_bf16u14__SVBfloat16_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
+// CPP-CHECK-NEXT:    ret i64 [[TMP1]]
+//
+uint64_t test_svlen_bf16(svbfloat16_t op) MODE_ATTR
+{
+  // expected-warning@+1 {{implicit declaration of function 'svlen_bf16'}}
+  return SVE_ACLE_FUNC(svlen,_bf16,,)(op);
+}

@@ -87,6 +87,16 @@ std::string getFullyQualifiedName(QualType QT, const ASTContext &Ctx,
 /// specifier "::" should be prepended or not.
 QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
                                bool WithGlobalNsPrefix = false);
+
+/// Get the fully qualified name for the declared context of a declaration.
+///
+/// \param[in] Ctx - the ASTContext to be used.
+/// \param[in] Decl - the declaration for which to get the fully qualified name.
+/// \param[in] WithGlobalNsPrefix - If true, then the global namespace
+/// specifier "::" will be prepended to the fully qualified name.
+NestedNameSpecifier
+getFullyQualifiedDeclaredContext(const ASTContext &Ctx, const Decl *Decl,
+                                 bool WithGlobalNsPrefix = false);
 } // end namespace TypeName
 } // end namespace clang
 #endif // LLVM_CLANG_AST_QUALTYPENAMES_H

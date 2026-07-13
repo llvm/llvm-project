@@ -14,7 +14,8 @@
 
 namespace llvm {
 
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 class MachineRegisterInfo;
 

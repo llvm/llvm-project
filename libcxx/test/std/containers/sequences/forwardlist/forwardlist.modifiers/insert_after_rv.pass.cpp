@@ -10,7 +10,7 @@
 
 // <forward_list>
 
-// iterator insert_after(const_iterator p, value_type&& v);
+// iterator insert_after(const_iterator p, value_type&& v); // constexpr since C++26
 
 #include <forward_list>
 #include <cassert>
@@ -19,7 +19,7 @@
 #include "MoveOnly.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef MoveOnly T;
     typedef std::forward_list<T> C;
@@ -84,6 +84,15 @@ int main(int, char**) {
     assert(*std::next(c.begin(), 3) == 2);
     assert(std::distance(c.begin(), c.end()) == 4);
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

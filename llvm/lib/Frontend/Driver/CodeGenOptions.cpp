@@ -8,52 +8,51 @@
 
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/SystemLibraries.h"
+#include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/TargetParser/Triple.h"
+
+namespace llvm {
+extern llvm::cl::opt<llvm::InstrProfCorrelator::ProfCorrelatorKind>
+    ProfileCorrelate;
+} // namespace llvm
 
 namespace llvm::driver {
 
-TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
-                                  driver::VectorLibrary Veclib) {
-  TargetLibraryInfoImpl *TLII = new TargetLibraryInfoImpl(TargetTriple);
-
-  using VectorLibrary = llvm::driver::VectorLibrary;
-  switch (Veclib) {
-  case VectorLibrary::Accelerate:
-    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::Accelerate,
-                                             TargetTriple);
-    break;
-  case VectorLibrary::LIBMVEC:
-    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::LIBMVEC_X86,
-                                             TargetTriple);
-    break;
-  case VectorLibrary::MASSV:
-    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::MASSV,
-                                             TargetTriple);
-    break;
-  case VectorLibrary::SVML:
-    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::SVML,
-                                             TargetTriple);
-    break;
-  case VectorLibrary::SLEEF:
-    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::SLEEFGNUABI,
-                                             TargetTriple);
-    break;
-  case VectorLibrary::Darwin_libsystem_m:
-    TLII->addVectorizableFunctionsFromVecLib(
-        TargetLibraryInfoImpl::DarwinLibSystemM, TargetTriple);
-    break;
-  case VectorLibrary::ArmPL:
-    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::ArmPL,
-                                             TargetTriple);
-    break;
-  case VectorLibrary::AMDLIBM:
-    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::AMDLIBM,
-                                             TargetTriple);
-    break;
-  default:
-    break;
+llvm::VectorLibrary
+convertDriverVectorLibraryToVectorLibrary(llvm::driver::VectorLibrary VecLib) {
+  switch (VecLib) {
+  case llvm::driver::VectorLibrary::NoLibrary:
+    return llvm::VectorLibrary::NoLibrary;
+  case llvm::driver::VectorLibrary::Accelerate:
+    return llvm::VectorLibrary::Accelerate;
+  case llvm::driver::VectorLibrary::Darwin_libsystem_m:
+    return llvm::VectorLibrary::DarwinLibSystemM;
+  case llvm::driver::VectorLibrary::LIBMVEC:
+    return llvm::VectorLibrary::LIBMVEC;
+  case llvm::driver::VectorLibrary::MASSV:
+    return llvm::VectorLibrary::MASSV;
+  case llvm::driver::VectorLibrary::SVML:
+    return llvm::VectorLibrary::SVML;
+  case llvm::driver::VectorLibrary::SLEEF:
+    return llvm::VectorLibrary::SLEEFGNUABI;
+  case llvm::driver::VectorLibrary::ArmPL:
+    return llvm::VectorLibrary::ArmPL;
+  case llvm::driver::VectorLibrary::AMDLIBM:
+    return llvm::VectorLibrary::AMDLIBM;
   }
-  return TLII;
+  llvm_unreachable("Unexpected driver::VectorLibrary");
 }
 
+TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
+                                  driver::VectorLibrary Veclib) {
+  return new TargetLibraryInfoImpl(
+      TargetTriple, convertDriverVectorLibraryToVectorLibrary(Veclib));
+}
+
+std::string getDefaultProfileGenName() {
+  return llvm::ProfileCorrelate != InstrProfCorrelator::NONE
+             ? "default_%m.proflite"
+             : "default_%m.profraw";
+}
 } // namespace llvm::driver

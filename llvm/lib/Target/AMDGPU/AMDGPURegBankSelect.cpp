@@ -53,8 +53,7 @@ public:
   // This pass assigns register banks to all virtual registers, and we maintain
   // this property in subsequent passes
   MachineFunctionProperties getSetProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::RegBankSelected);
+    return MachineFunctionProperties().setRegBankSelected();
   }
 };
 
@@ -112,7 +111,7 @@ public:
 
   const RegisterBank *getRegBankToAssign(Register Reg) {
     if (!isTemporalDivergenceCopy(Reg) &&
-        (MUI.isUniform(Reg) || ILMA.isS32S64LaneMask(Reg)))
+        (MUI.isUniformAtDef(Reg) || ILMA.isS32S64LaneMask(Reg)))
       return SgprRB;
     if (MRI.getType(Reg) == LLT::scalar(1))
       return VccRB;
@@ -199,8 +198,7 @@ static Register getVReg(MachineOperand &Op) {
 }
 
 bool AMDGPURegBankSelect::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
 
   // Setup the instruction builder with CSE.

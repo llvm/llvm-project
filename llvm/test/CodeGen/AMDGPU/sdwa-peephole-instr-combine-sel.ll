@@ -64,7 +64,7 @@ bb14:                                             ; preds = %bb20, %bb11
   ret void
 
 bb19:                                             ; preds = %bb
-  store i32 0, ptr addrspace(3) null, align 4
+  store i32 0, ptr addrspace(3) zeroinitializer, align 4
   br label %bb20
 
 bb20:                                             ; preds = %bb19, %bb

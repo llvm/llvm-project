@@ -24,14 +24,14 @@ define void @scalar_vector_mismatch_1() {
 }
 
 ; CHECK: llvm.ptrmask intrinsic arguments must be both scalars or both vectors
-; CHECK: %1 = call <2 x ptr> @llvm.ptrmask.v2p0.i64(<2 x ptr> zeroinitializer, i64 0)
+; CHECK: %1 = call <2 x ptr> @llvm.ptrmask.v2p0.i64(<2 x ptr> splat (ptr null), i64 0)
 define void @scalar_vector_mismatch_2() {
   call <2 x ptr> @llvm.ptrmask.v2p0.i64(<2 x ptr> zeroinitializer, i64 0)
   ret void
 }
 
 ; CHECK: llvm.ptrmask intrinsic arguments must have the same number of elements
-; CHECK: %1 = call <2 x ptr> @llvm.ptrmask.v2p0.v4i64(<2 x ptr> zeroinitializer, <4 x i64> zeroinitializer)
+; CHECK: %1 = call <2 x ptr> @llvm.ptrmask.v2p0.v4i64(<2 x ptr> splat (ptr null), <4 x i64> zeroinitializer)
 define void @vector_size_mismatch() {
   call <2 x ptr> @llvm.ptrmask.v2p0.v4i64(<2 x ptr> zeroinitializer, <4 x i64> zeroinitializer)
   ret void

@@ -2,7 +2,6 @@
 Test the AddressSanitizer runtime support for report breakpoint and data extraction.
 """
 
-
 import json
 import lldb
 from lldbsuite.test.decorators import *
@@ -10,7 +9,10 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from lldbsuite.test_event.build_exception import BuildError
 
+
 class AsanTestReportDataCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
     @expectedFailureNetBSD
     @skipUnlessAddressSanitizer
@@ -66,6 +68,11 @@ class AsanTestReportDataCase(TestBase):
             self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason(),
             lldb.eStopReasonInstrumentation,
         )
+
+        if self.platformIsDarwin():
+            # Make sure we're not stopped in the sanitizer library but instead at the
+            # point of failure in the user-code.
+            self.assertEqual(self.frame().GetFunctionName(), "main")
 
         self.expect(
             "bt",

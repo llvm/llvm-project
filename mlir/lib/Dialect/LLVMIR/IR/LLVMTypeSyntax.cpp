@@ -9,8 +9,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
@@ -25,7 +24,9 @@ using namespace mlir::LLVM;
 /// prints it as usual.
 static void dispatchPrint(AsmPrinter &printer, Type type) {
   if (isCompatibleType(type) &&
-      !llvm::isa<IntegerType, FloatType, VectorType>(type))
+      !(llvm::isa<IntegerType, FloatType, VectorType>(type) ||
+        (llvm::isa<PtrLikeTypeInterface>(type) &&
+         !llvm::isa<LLVMPointerType>(type))))
     return mlir::LLVM::detail::printType(type, printer);
   printer.printType(type);
 }
@@ -35,18 +36,16 @@ static StringRef getTypeKeyword(Type type) {
   return TypeSwitch<Type, StringRef>(type)
       .Case<LLVMVoidType>([&](Type) { return "void"; })
       .Case<LLVMPPCFP128Type>([&](Type) { return "ppc_fp128"; })
-      .Case<LLVMTokenType>([&](Type) { return "token"; })
       .Case<LLVMLabelType>([&](Type) { return "label"; })
       .Case<LLVMMetadataType>([&](Type) { return "metadata"; })
       .Case<LLVMFunctionType>([&](Type) { return "func"; })
       .Case<LLVMPointerType>([&](Type) { return "ptr"; })
       .Case<LLVMArrayType>([&](Type) { return "array"; })
+      .Case<LLVMByteType>([&](Type) { return "byte"; })
       .Case<LLVMStructType>([&](Type) { return "struct"; })
       .Case<LLVMTargetExtType>([&](Type) { return "target"; })
       .Case<LLVMX86AMXType>([&](Type) { return "x86_amx"; })
-      .Default([](Type) -> StringRef {
-        llvm_unreachable("unexpected 'llvm' type kind");
-      });
+      .DefaultUnreachable("unexpected 'llvm' type kind");
 }
 
 /// Prints a structure type. Keeps track of known struct names to handle self-
@@ -58,7 +57,9 @@ void LLVMStructType::print(AsmPrinter &printer) const {
   if (isIdentified()) {
     cyclicPrint = printer.tryStartCyclicPrint(*this);
 
-    printer << '"' << getName() << '"';
+    printer << '"';
+    llvm::printEscapedString(getName(), printer.getStream());
+    printer << '"';
     // If we are printing a reference to one of the enclosing structs, just
     // print the name and stop to avoid infinitely long output.
     if (failed(cyclicPrint)) {
@@ -102,8 +103,9 @@ void mlir::LLVM::detail::printType(Type type, AsmPrinter &printer) {
   printer << getTypeKeyword(type);
 
   llvm::TypeSwitch<Type>(type)
-      .Case<LLVMPointerType, LLVMArrayType, LLVMFunctionType, LLVMTargetExtType,
-            LLVMStructType>([&](auto type) { type.print(printer); });
+      .Case<LLVMPointerType, LLVMArrayType, LLVMByteType, LLVMFunctionType,
+            LLVMTargetExtType, LLVMStructType>(
+          [&](auto type) { type.print(printer); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -265,12 +267,12 @@ static Type dispatchParse(AsmParser &parser, bool allowAny = true) {
   return StringSwitch<function_ref<Type()>>(key)
       .Case("void", [&] { return LLVMVoidType::get(ctx); })
       .Case("ppc_fp128", [&] { return LLVMPPCFP128Type::get(ctx); })
-      .Case("token", [&] { return LLVMTokenType::get(ctx); })
       .Case("label", [&] { return LLVMLabelType::get(ctx); })
       .Case("metadata", [&] { return LLVMMetadataType::get(ctx); })
       .Case("func", [&] { return LLVMFunctionType::parse(parser); })
       .Case("ptr", [&] { return LLVMPointerType::parse(parser); })
       .Case("array", [&] { return LLVMArrayType::parse(parser); })
+      .Case("byte", [&] { return LLVMByteType::parse(parser); })
       .Case("struct", [&] { return LLVMStructType::parse(parser); })
       .Case("target", [&] { return LLVMTargetExtType::parse(parser); })
       .Case("x86_amx", [&] { return LLVMX86AMXType::get(ctx); })

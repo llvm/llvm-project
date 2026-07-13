@@ -15,8 +15,10 @@ foo:
 ; CHECK: brcc .Ltmp1-16+2  ; encoding: [0bAAAAA000,0b111101AA]
 
 ; INST-LABEL: <foo>:
-; INST-NEXT: 23 f4   brvc .+8
-; INST-NEXT: c0 f7   brsh .-16
+; INST-NEXT: fb f7   brvc .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0xa
+; INST-NEXT: f8 f7   brsh .-2
+; INST-NEXT: R_AVR_7_PCREL .text-0xc
 ; INST-NEXT: 59 f7   brne .-42
 ; INST-NEXT: 52 f7   brpl .-44
 ; INST-NEXT: 4c f7   brge .-46

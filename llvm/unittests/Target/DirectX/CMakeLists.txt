@@ -10,7 +10,7 @@ set(LLVM_LINK_COMPONENTS
   DirectXCodeGen
   DirectXDesc
   DirectXInfo
-  DirectXPointerTypeAnalysis
+  DirectXIRPasses
   MC
   Passes
   Support
@@ -22,4 +22,5 @@ add_llvm_target_unittest(DirectXTests
   PointerTypeAnalysisTests.cpp
   UniqueResourceFromUseTests.cpp
   RegisterCostTests.cpp
+  ResourceBindingAnalysisTests.cpp
   )

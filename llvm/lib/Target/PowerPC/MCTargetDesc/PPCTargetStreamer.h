@@ -9,7 +9,7 @@
 #ifndef LLVM_LIB_TARGET_POWERPC_PPCTARGETSTREAMER_H
 #define LLVM_LIB_TARGET_POWERPC_PPCTARGETSTREAMER_H
 
-#include "PPCMCExpr.h"
+#include "PPCMCAsmInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"

@@ -10,9 +10,22 @@ extern void __enable_execute_stack(void* addr);
 
 typedef int (*pfunc)(void);
 
+#ifdef __arm64ec__
+// On ARM64EC, we need the x86_64 version of this function, but the compiler
+// would normally generate the AArch64 variant, so we hardcode it here.
+static char func1[] = {
+    0xb8, 0x01, 0x00, 0x00, 0x00, // movl    $0x1, %eax
+    0xc3                          // retq
+};
+static char func2[] = {
+    0xb8, 0x02, 0x00, 0x00, 0x00, // movl    $0x2, %eax
+    0xc3                          // retq
+};
+#else
 // Make these static to avoid ILT jumps for incremental linking on Windows.
 static int func1() { return 1; }
 static int func2() { return 2; }
+#endif
 
 void *__attribute__((noinline))
 memcpy_f(void *dst, const void *src, size_t n) {

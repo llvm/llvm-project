@@ -45,4 +45,17 @@ STRING_EXTENSION_OUTSIDE(SBDebugger)
     lldb::FileSP GetErrorFileHandle() {
         return self->GetErrorFile().GetFile();
     }
+
+#ifdef SWIGPYTHON
+    %pythoncode %{
+        class staticproperty:
+            def __init__(self, func):
+                self.func = func
+            def __get__(self, instance, owner):
+                return self.func()
+        @staticproperty
+        def version():
+            return SBDebugger.GetVersionString()
+    %}
+#endif
 }

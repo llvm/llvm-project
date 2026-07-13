@@ -9,7 +9,7 @@
 // <list>
 
 // template <class Pred> void      remove_if(Pred pred); // before C++20
-// template <class Pred> size_type remove_if(Pred pred); // c++20 and later
+// template <class Pred> size_type remove_if(Pred pred); // c++20 and later; constexpr since C++26
 
 #include <list>
 #include <cassert>
@@ -19,22 +19,22 @@
 #include "min_allocator.h"
 #include "counting_predicates.h"
 
-bool even(int i) { return i % 2 == 0; }
+TEST_CONSTEXPR bool even(int i) { return i % 2 == 0; }
 
-bool g(int i) { return i < 3; }
+TEST_CONSTEXPR bool g(int i) { return i < 3; }
 
 struct PredLWG526 {
-  PredLWG526(int i) : i_(i) {}
-  ~PredLWG526() { i_ = -32767; }
-  bool operator()(const PredLWG526& p) const { return p.i_ == i_; }
+  TEST_CONSTEXPR_CXX20 PredLWG526(int i) : i_(i) {}
+  TEST_CONSTEXPR_CXX20 ~PredLWG526() { i_ = -32767; }
+  TEST_CONSTEXPR bool operator()(const PredLWG526& p) const { return p.i_ == i_; }
 
-  bool operator==(int i) const { return i == i_; }
+  TEST_CONSTEXPR bool operator==(int i) const { return i == i_; }
   int i_;
 };
 
 typedef unary_counting_predicate<bool (*)(int), int> Predicate;
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     int a1[] = {1, 2, 3, 4};
     int a2[] = {3, 4};
@@ -90,6 +90,15 @@ int main(int, char**) {
     assert((c == std::list<int, min_allocator<int>>(a2, a2 + 2)));
     assert(cp.count() == 4);
   }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

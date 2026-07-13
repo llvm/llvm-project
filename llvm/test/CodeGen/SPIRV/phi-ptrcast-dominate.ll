@@ -20,11 +20,14 @@
 ; CHECK: %[[#Case1]] = OpFunction
 define spir_func void @case1(i1 %b1, i1 %b2, i1 %b3) {
 entry:
+  %tmp.1 = alloca i8, align 1
 ; CHECK: OpBranchConditional %[[#]] %[[#l1:]] %[[#l2:]]
   br i1 %b1, label %l1, label %l2
 
 l1:
   %str = phi ptr addrspace(1) [ @.str.1, %entry ], [ @.str.2, %l2 ], [ @.str.2, %l3 ]
+  %v1 = load i8, ptr addrspace(1) %str, align 1
+  store i8 %v1, ptr %tmp.1, align 1
   br label %exit
 
 ; CHECK: %[[#l2]] = OpLabel
@@ -51,11 +54,14 @@ exit:
 ; CHECK: %[[#Case2]] = OpFunction
 define spir_func void @case2(i1 %b1, i1 %b2, i1 %b3, ptr addrspace(1) byval(%struct1) %str1, ptr addrspace(1) byval(%struct2) %str2) {
 entry:
+  %tmp.2 = alloca i8, align 1
 ; CHECK: OpBranchConditional %[[#]] %[[#l1:]] %[[#l2:]]
   br i1 %b1, label %l1, label %l2
 
 l1:
   %str = phi ptr addrspace(1) [ %str1, %entry ], [ %str2, %l2 ], [ %str2, %l3 ]
+  %v2 = load i8, ptr addrspace(1) %str, align 1
+  store i8 %v2, ptr %tmp.2, align 1
   br label %exit
 
 ; CHECK: %[[#l2]] = OpLabel
@@ -83,10 +89,13 @@ define spir_func void @case3(i1 %b1, i1 %b2, i1 %b3, ptr addrspace(1) byval(%str
 
 ; CHECK: OpBranchConditional %[[#]] %[[#l1:]] %[[#l2:]]
 entry:
+  %tmp.3 = alloca i8, align 1
   br i1 %b1, label %l1, label %l2
 
 l1:
   %str = phi ptr addrspace(1) [ %_arg_str1, %entry ], [ %str2, %l2 ], [ %str3, %l3 ]
+  %v3 = load i8, ptr addrspace(1) %str, align 1
+  store i8 %v3, ptr %tmp.3, align 1
   br label %exit
 
 ; CHECK: %[[#l2]] = OpLabel

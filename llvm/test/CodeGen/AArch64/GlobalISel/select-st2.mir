@@ -13,16 +13,17 @@ body:             |
 
     ; CHECK-LABEL: name: v8i8_ST2Twov8b
     ; CHECK: liveins: $d0, $d1, $x0
-    ; CHECK: %ptr:gpr64sp = COPY $x0
-    ; CHECK: %src1:fpr64 = COPY $d0
-    ; CHECK: %src2:fpr64 = COPY $d1
-    ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:dd = REG_SEQUENCE %src1, %subreg.dsub0, %src2, %subreg.dsub1
-    ; CHECK: ST2Twov8b [[REG_SEQUENCE]], %ptr :: (store (<2 x s64>))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %src1:fpr64 = COPY $d0
+    ; CHECK-NEXT: %src2:fpr64 = COPY $d1
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:dd = REG_SEQUENCE %src1, %subreg.dsub0, %src2, %subreg.dsub1
+    ; CHECK-NEXT: ST2Twov8b [[REG_SEQUENCE]], %ptr :: (store (<2 x i64>))
+    ; CHECK-NEXT: RET_ReallyLR
     %ptr:gpr(p0) = COPY $x0
-    %src1:fpr(<8 x s8>) = COPY $d0
-    %src2:fpr(<8 x s8>) = COPY $d1
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.st2), %src1(<8 x s8>), %src2(<8 x s8>), %ptr(p0) :: (store (<2 x s64>))
+    %src1:fpr(<8 x i8>) = COPY $d0
+    %src2:fpr(<8 x i8>) = COPY $d1
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.st2), %src1(<8 x i8>), %src2(<8 x i8>), %ptr(p0) :: (store (<2 x i64>))
     RET_ReallyLR
 
 ...
@@ -38,16 +39,17 @@ body:             |
 
     ; CHECK-LABEL: name: v16i8_ST2Twov16b
     ; CHECK: liveins: $q0, $q1, $x0
-    ; CHECK: %ptr:gpr64sp = COPY $x0
-    ; CHECK: %src1:fpr128 = COPY $q0
-    ; CHECK: %src2:fpr128 = COPY $q1
-    ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:qq = REG_SEQUENCE %src1, %subreg.qsub0, %src2, %subreg.qsub1
-    ; CHECK: ST2Twov16b [[REG_SEQUENCE]], %ptr :: (store (<4 x s64>))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %src1:fpr128 = COPY $q0
+    ; CHECK-NEXT: %src2:fpr128 = COPY $q1
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:qq = REG_SEQUENCE %src1, %subreg.qsub0, %src2, %subreg.qsub1
+    ; CHECK-NEXT: ST2Twov16b [[REG_SEQUENCE]], %ptr :: (store (<4 x i64>))
+    ; CHECK-NEXT: RET_ReallyLR
     %ptr:gpr(p0) = COPY $x0
-    %src1:fpr(<16 x s8>) = COPY $q0
-    %src2:fpr(<16 x s8>) = COPY $q1
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.st2), %src1(<16 x s8>), %src2(<16 x s8>), %ptr(p0) :: (store (<4 x s64>))
+    %src1:fpr(<16 x i8>) = COPY $q0
+    %src2:fpr(<16 x i8>) = COPY $q1
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.st2), %src1(<16 x i8>), %src2(<16 x i8>), %ptr(p0) :: (store (<4 x i64>))
     RET_ReallyLR
 
 ...
@@ -63,16 +65,17 @@ body:             |
 
     ; CHECK-LABEL: name: v4i16_ST2Twov4h
     ; CHECK: liveins: $d0, $d1, $x0
-    ; CHECK: %ptr:gpr64sp = COPY $x0
-    ; CHECK: %src1:fpr64 = COPY $d0
-    ; CHECK: %src2:fpr64 = COPY $d1
-    ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:dd = REG_SEQUENCE %src1, %subreg.dsub0, %src2, %subreg.dsub1
-    ; CHECK: ST2Twov4h [[REG_SEQUENCE]], %ptr :: (store (<2 x s64>))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %src1:fpr64 = COPY $d0
+    ; CHECK-NEXT: %src2:fpr64 = COPY $d1
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:dd = REG_SEQUENCE %src1, %subreg.dsub0, %src2, %subreg.dsub1
+    ; CHECK-NEXT: ST2Twov4h [[REG_SEQUENCE]], %ptr :: (store (<2 x i64>))
+    ; CHECK-NEXT: RET_ReallyLR
     %ptr:gpr(p0) = COPY $x0
-    %src1:fpr(<4 x s16>) = COPY $d0
-    %src2:fpr(<4 x s16>) = COPY $d1
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.st2), %src1(<4 x s16>), %src2(<4 x s16>), %ptr(p0) :: (store (<2 x s64>))
+    %src1:fpr(<4 x i16>) = COPY $d0
+    %src2:fpr(<4 x i16>) = COPY $d1
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.st2), %src1(<4 x i16>), %src2(<4 x i16>), %ptr(p0) :: (store (<2 x i64>))
     RET_ReallyLR
 
 ...
@@ -88,16 +91,17 @@ body:             |
 
     ; CHECK-LABEL: name: v8i16_ST2Twov8h
     ; CHECK: liveins: $q0, $q1, $x0
-    ; CHECK: %ptr:gpr64sp = COPY $x0
-    ; CHECK: %src1:fpr128 = COPY $q0
-    ; CHECK: %src2:fpr128 = COPY $q1
-    ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:qq = REG_SEQUENCE %src1, %subreg.qsub0, %src2, %subreg.qsub1
-    ; CHECK: ST2Twov8h [[REG_SEQUENCE]], %ptr :: (store (<4 x s64>))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %src1:fpr128 = COPY $q0
+    ; CHECK-NEXT: %src2:fpr128 = COPY $q1
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:qq = REG_SEQUENCE %src1, %subreg.qsub0, %src2, %subreg.qsub1
+    ; CHECK-NEXT: ST2Twov8h [[REG_SEQUENCE]], %ptr :: (store (<4 x i64>))
+    ; CHECK-NEXT: RET_ReallyLR
     %ptr:gpr(p0) = COPY $x0
-    %src1:fpr(<8 x s16>) = COPY $q0
-    %src2:fpr(<8 x s16>) = COPY $q1
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.st2), %src1(<8 x s16>), %src2(<8 x s16>), %ptr(p0) :: (store (<4 x s64>))
+    %src1:fpr(<8 x i16>) = COPY $q0
+    %src2:fpr(<8 x i16>) = COPY $q1
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.st2), %src1(<8 x i16>), %src2(<8 x i16>), %ptr(p0) :: (store (<4 x i64>))
     RET_ReallyLR
 
 ...
@@ -112,16 +116,17 @@ body:             |
 
     ; CHECK-LABEL: name: v2i32_ST2Twov2s
     ; CHECK: liveins: $d0, $d1, $x0
-    ; CHECK: %ptr:gpr64sp = COPY $x0
-    ; CHECK: %src1:fpr64 = COPY $d0
-    ; CHECK: %src2:fpr64 = COPY $d1
-    ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:dd = REG_SEQUENCE %src1, %subreg.dsub0, %src2, %subreg.dsub1
-    ; CHECK: ST2Twov2s [[REG_SEQUENCE]], %ptr :: (store (<2 x s64>))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %src1:fpr64 = COPY $d0
+    ; CHECK-NEXT: %src2:fpr64 = COPY $d1
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:dd = REG_SEQUENCE %src1, %subreg.dsub0, %src2, %subreg.dsub1
+    ; CHECK-NEXT: ST2Twov2s [[REG_SEQUENCE]], %ptr :: (store (<2 x i64>))
+    ; CHECK-NEXT: RET_ReallyLR
     %ptr:gpr(p0) = COPY $x0
-    %src1:fpr(<2 x s32>) = COPY $d0
-    %src2:fpr(<2 x s32>) = COPY $d1
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.st2), %src1(<2 x s32>), %src2(<2 x s32>), %ptr(p0) :: (store (<2 x s64>))
+    %src1:fpr(<2 x i32>) = COPY $d0
+    %src2:fpr(<2 x i32>) = COPY $d1
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.st2), %src1(<2 x i32>), %src2(<2 x i32>), %ptr(p0) :: (store (<2 x i64>))
     RET_ReallyLR
 
 ...
@@ -136,16 +141,17 @@ body:             |
 
     ; CHECK-LABEL: name: v4i32_ST2Twov4s
     ; CHECK: liveins: $q0, $q1, $x0
-    ; CHECK: %ptr:gpr64sp = COPY $x0
-    ; CHECK: %src1:fpr128 = COPY $q0
-    ; CHECK: %src2:fpr128 = COPY $q1
-    ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:qq = REG_SEQUENCE %src1, %subreg.qsub0, %src2, %subreg.qsub1
-    ; CHECK: ST2Twov4s [[REG_SEQUENCE]], %ptr :: (store (<4 x s64>))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %src1:fpr128 = COPY $q0
+    ; CHECK-NEXT: %src2:fpr128 = COPY $q1
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:qq = REG_SEQUENCE %src1, %subreg.qsub0, %src2, %subreg.qsub1
+    ; CHECK-NEXT: ST2Twov4s [[REG_SEQUENCE]], %ptr :: (store (<4 x i64>))
+    ; CHECK-NEXT: RET_ReallyLR
     %ptr:gpr(p0) = COPY $x0
-    %src1:fpr(<4 x s32>) = COPY $q0
-    %src2:fpr(<4 x s32>) = COPY $q1
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.st2), %src1(<4 x s32>), %src2(<4 x s32>), %ptr(p0) :: (store (<4 x s64>))
+    %src1:fpr(<4 x i32>) = COPY $q0
+    %src2:fpr(<4 x i32>) = COPY $q1
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.st2), %src1(<4 x i32>), %src2(<4 x i32>), %ptr(p0) :: (store (<4 x i64>))
     RET_ReallyLR
 
 ...
@@ -160,16 +166,17 @@ body:             |
 
     ; CHECK-LABEL: name: v2i64_ST2Twov2d_s64_elts
     ; CHECK: liveins: $q0, $q1, $x0
-    ; CHECK: %ptr:gpr64sp = COPY $x0
-    ; CHECK: %src1:fpr128 = COPY $q0
-    ; CHECK: %src2:fpr128 = COPY $q1
-    ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:qq = REG_SEQUENCE %src1, %subreg.qsub0, %src2, %subreg.qsub1
-    ; CHECK: ST2Twov2d [[REG_SEQUENCE]], %ptr :: (store (<4 x s64>))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %src1:fpr128 = COPY $q0
+    ; CHECK-NEXT: %src2:fpr128 = COPY $q1
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:qq = REG_SEQUENCE %src1, %subreg.qsub0, %src2, %subreg.qsub1
+    ; CHECK-NEXT: ST2Twov2d [[REG_SEQUENCE]], %ptr :: (store (<4 x i64>))
+    ; CHECK-NEXT: RET_ReallyLR
     %ptr:gpr(p0) = COPY $x0
-    %src1:fpr(<2 x s64>) = COPY $q0
-    %src2:fpr(<2 x s64>) = COPY $q1
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.st2), %src1(<2 x s64>), %src2(<2 x s64>), %ptr(p0) :: (store (<4 x s64>))
+    %src1:fpr(<2 x i64>) = COPY $q0
+    %src2:fpr(<2 x i64>) = COPY $q1
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.st2), %src1(<2 x i64>), %src2(<2 x i64>), %ptr(p0) :: (store (<4 x i64>))
     RET_ReallyLR
 
 ...
@@ -184,16 +191,17 @@ body:             |
 
     ; CHECK-LABEL: name: v2i64_ST2Twov2d_s64_p0_elts
     ; CHECK: liveins: $q0, $q1, $x0
-    ; CHECK: %ptr:gpr64sp = COPY $x0
-    ; CHECK: %src1:fpr128 = COPY $q0
-    ; CHECK: %src2:fpr128 = COPY $q1
-    ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:qq = REG_SEQUENCE %src1, %subreg.qsub0, %src2, %subreg.qsub1
-    ; CHECK: ST2Twov2d [[REG_SEQUENCE]], %ptr :: (store (<4 x s64>))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %src1:fpr128 = COPY $q0
+    ; CHECK-NEXT: %src2:fpr128 = COPY $q1
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:qq = REG_SEQUENCE %src1, %subreg.qsub0, %src2, %subreg.qsub1
+    ; CHECK-NEXT: ST2Twov2d [[REG_SEQUENCE]], %ptr :: (store (<4 x i64>))
+    ; CHECK-NEXT: RET_ReallyLR
     %ptr:gpr(p0) = COPY $x0
     %src1:fpr(<2 x p0>) = COPY $q0
     %src2:fpr(<2 x p0>) = COPY $q1
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.st2), %src1(<2 x p0>), %src2(<2 x p0>), %ptr(p0) :: (store (<4 x s64>))
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.st2), %src1(<2 x p0>), %src2(<2 x p0>), %ptr(p0) :: (store (<4 x i64>))
     RET_ReallyLR
 
 ...
@@ -208,16 +216,17 @@ body:             |
 
     ; CHECK-LABEL: name: v1i64_ST1Twov1d_s64
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: %ptr:gpr64sp = COPY $x0
-    ; CHECK: %src1:gpr64all = COPY $x0
-    ; CHECK: %src2:gpr64all = COPY $x1
-    ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:dd = REG_SEQUENCE %src1, %subreg.dsub0, %src2, %subreg.dsub1
-    ; CHECK: ST1Twov1d [[REG_SEQUENCE]], %ptr :: (store (<2 x s64>))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %src1:gpr64all = COPY $x0
+    ; CHECK-NEXT: %src2:gpr64all = COPY $x1
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:dd = REG_SEQUENCE %src1, %subreg.dsub0, %src2, %subreg.dsub1
+    ; CHECK-NEXT: ST1Twov1d [[REG_SEQUENCE]], %ptr :: (store (<2 x i64>))
+    ; CHECK-NEXT: RET_ReallyLR
     %ptr:gpr(p0) = COPY $x0
-    %src1:gpr(s64) = COPY $x0
-    %src2:gpr(s64) = COPY $x1
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.st2), %src1(s64), %src2(s64), %ptr(p0) :: (store (<2 x s64>))
+    %src1:gpr(i64) = COPY $x0
+    %src2:gpr(i64) = COPY $x1
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.st2), %src1(i64), %src2(i64), %ptr(p0) :: (store (<2 x i64>))
     RET_ReallyLR
 
 ...
@@ -232,16 +241,17 @@ body:             |
 
     ; CHECK-LABEL: name: v1i64_ST1Twov1d_p0
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: %ptr:gpr64sp = COPY $x0
-    ; CHECK: %src1:gpr64all = COPY $x0
-    ; CHECK: %src2:gpr64all = COPY $x1
-    ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:dd = REG_SEQUENCE %src1, %subreg.dsub0, %src2, %subreg.dsub1
-    ; CHECK: ST1Twov1d [[REG_SEQUENCE]], %ptr :: (store (<2 x s64>))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %src1:gpr64all = COPY $x0
+    ; CHECK-NEXT: %src2:gpr64all = COPY $x1
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:dd = REG_SEQUENCE %src1, %subreg.dsub0, %src2, %subreg.dsub1
+    ; CHECK-NEXT: ST1Twov1d [[REG_SEQUENCE]], %ptr :: (store (<2 x i64>))
+    ; CHECK-NEXT: RET_ReallyLR
     %ptr:gpr(p0) = COPY $x0
     %src1:gpr(p0) = COPY $x0
     %src2:gpr(p0) = COPY $x1
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.st2), %src1(p0), %src2(p0), %ptr(p0) :: (store (<2 x s64>))
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.st2), %src1(p0), %src2(p0), %ptr(p0) :: (store (<2 x i64>))
     RET_ReallyLR
 
 ...

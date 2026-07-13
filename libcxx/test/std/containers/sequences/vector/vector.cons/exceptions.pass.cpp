@@ -11,8 +11,6 @@
 // (bug report: https://llvm.org/PR58392)
 // Check that vector constructors don't leak memory when an operation inside the constructor throws an exception
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <cstddef>
 #include <memory>
 #include <type_traits>

@@ -6,8 +6,13 @@
 SomeObj *provide();
 void consume_obj(SomeObj*);
 
+NSString *provide_str();
+
 CFMutableArrayRef provide_cf();
 void consume_cf(CFMutableArrayRef);
+
+dispatch_queue_t provide_dispatch();
+void consume_dispatch(dispatch_queue_t);
 
 CGImageRef provideImage();
 NSString *stringForImage(CGImageRef);
@@ -17,9 +22,11 @@ void some_function();
 namespace simple {
   void foo() {
     consume_obj(provide());
-    // expected-warning@-1{{Call argument is unretained and unsafe}}
+    // expected-warning@-1{{Function argument 'provide()' (to 'consume_obj') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
     consume_cf(provide_cf());
-    // expected-warning@-1{{Call argument is unretained and unsafe}}
+    // expected-warning@-1{{Function argument 'provide_cf()' (to 'consume_cf') is a RetainPtr-capable type 'CFMutableArrayRef'}}
+    consume_dispatch(provide_dispatch());
+    // expected-warning@-1{{Function argument 'provide_dispatch()' (to 'consume_dispatch') is a RetainPtr-capable type 'dispatch_queue_t'}}
   }
 
   // Test that the checker works with [[clang::suppress]].
@@ -31,32 +38,32 @@ namespace simple {
 }
 
 namespace multi_arg {
-  void consume_retainable(int, SomeObj* foo, CFMutableArrayRef bar, bool);
+  void consume_retainable(int, SomeObj* foo, CFMutableArrayRef bar, dispatch_queue_t baz, bool);
   void foo() {
-    consume_retainable(42, provide(), provide_cf(), true);
-    // expected-warning@-1{{Call argument for parameter 'foo' is unretained and unsafe}}
-    // expected-warning@-2{{Call argument for parameter 'bar' is unretained and unsafe}}
+    consume_retainable(42, provide(), provide_cf(), provide_dispatch(), true);
+    // expected-warning@-1{{Function argument 'provide()' (parameter 'foo' to 'multi_arg::consume_retainable') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
+    // expected-warning@-2{{Function argument 'provide_cf()' (parameter 'bar' to 'multi_arg::consume_retainable') is a RetainPtr-capable type 'CFMutableArrayRef'}}
+    // expected-warning@-3{{Function argument 'provide_dispatch()' (parameter 'baz' to 'multi_arg::consume_retainable') is a RetainPtr-capable type 'dispatch_queue_t'}}
   }
 
   void consume_retainable(SomeObj* foo, ...);
   void bar() {
-    consume_retainable(provide(), 1, provide_cf(), RetainPtr<CFMutableArrayRef> { provide_cf() }.get());
-    // expected-warning@-1{{Call argument for parameter 'foo' is unretained and unsafe}}
-    // expected-warning@-2{{Call argument is unretained and unsafe}}
+    consume_retainable(provide(), 1, provide_cf(), RetainPtr<CFMutableArrayRef> { provide_cf() }.get(), provide_dispatch());
+    // expected-warning@-1{{Function argument 'provide()' (parameter 'foo' to 'multi_arg::consume_retainable') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
+    // expected-warning@-2{{Function argument 'provide_cf()' (to 'multi_arg::consume_retainable') is a RetainPtr-capable type 'CFMutableArrayRef'}}
+    // expected-warning@-3{{Function argument 'provide_dispatch()' (to 'multi_arg::consume_retainable') is a RetainPtr-capable type 'dispatch_queue_t'}}
      consume_retainable(RetainPtr<SomeObj> { provide() }.get(), 1, RetainPtr<CFMutableArrayRef> { provide_cf() }.get());
   }
 }
 
 namespace retained {
-  RetainPtr<SomeObj> provide_obj() { return RetainPtr<SomeObj>{}; }
-  void consume_obj(RetainPtr<SomeObj>) {}
-
-  RetainPtr<CFMutableArrayRef> provide_cf() { return CFMutableArrayRef{}; }
-  void consume_cf(RetainPtr<CFMutableArrayRef>) {}
-
+  RetainPtr<SomeObj> provide_obj();
+  RetainPtr<CFMutableArrayRef> provide_cf();
+  OSObjectPtr<dispatch_queue_t> provide_dispatch();
   void foo() {
     consume_obj(provide_obj().get()); // no warning
     consume_cf(provide_cf().get()); // no warning
+    consume_dispatch(provide_dispatch().get()); // no warning
   }
 }
 
@@ -64,15 +71,18 @@ namespace methods {
   struct Consumer {
     void consume_obj(SomeObj* ptr);
     void consume_cf(CFMutableArrayRef ref);
+    void consume_dispatch(dispatch_queue_t ptr);
   };
 
   void foo() {
     Consumer c;
 
     c.consume_obj(provide());
-    // expected-warning@-1{{Call argument for parameter 'ptr' is unretained and unsafe}}
+    // expected-warning@-1{{Function argument 'provide()' (parameter 'ptr' to 'methods::Consumer::consume_obj') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
     c.consume_cf(provide_cf());
-    // expected-warning@-1{{Call argument for parameter 'ref' is unretained and unsafe}}
+    // expected-warning@-1{{Function argument 'provide_cf()' (parameter 'ref' to 'methods::Consumer::consume_cf') is a RetainPtr-capable type 'CFMutableArrayRef'}}
+    c.consume_dispatch(provide_dispatch());
+    // expected-warning@-1{{Function argument 'provide_dispatch()' (parameter 'ptr' to 'methods::Consumer::consume_dispatch') is a RetainPtr-capable type 'dispatch_queue_t'}}
   }
 
   void foo2() {
@@ -80,13 +90,19 @@ namespace methods {
       void consume(SomeObj*) { some_function(); }
       void whatever() {
         consume(provide());
-        // expected-warning@-1{{Call argument is unretained and unsafe}}
+        // expected-warning@-1{{Function argument 'provide()' (to 'methods::foo2()::Consumer::consume') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
       }
 
       void consume_cf(CFMutableArrayRef) { some_function(); }
       void something() {
         consume_cf(provide_cf());
-        // expected-warning@-1{{Call argument is unretained and unsafe}}
+        // expected-warning@-1{{Function argument 'provide_cf()' (to 'methods::foo2()::Consumer::consume_cf') is a RetainPtr-capable type 'CFMutableArrayRef'}}
+      }
+
+      void consume_dispatch(dispatch_queue_t) { some_function(); }
+      void anything() {
+        consume_dispatch(provide_dispatch());
+        // expected-warning@-1{{Function argument 'provide_dispatch()' (to 'methods::foo2()::Consumer::consume_dispatch') is a RetainPtr-capable type 'dispatch_queue_t'}}
       }
     };
   }
@@ -96,13 +112,19 @@ namespace methods {
       void consume(SomeObj*) { some_function(); }
       void whatever() {
         this->consume(provide());
-        // expected-warning@-1{{Call argument is unretained and unsafe}}
+        // expected-warning@-1{{Function argument 'provide()' (to 'methods::foo3()::Consumer::consume') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
       }
 
       void consume_cf(CFMutableArrayRef) { some_function(); }
       void something() {
         this->consume_cf(provide_cf());
-        // expected-warning@-1{{Call argument is unretained and unsafe}}
+        // expected-warning@-1{{Function argument 'provide_cf()' (to 'methods::foo3()::Consumer::consume_cf') is a RetainPtr-capable type 'CFMutableArrayRef'}}
+      }
+
+      void consume_dispatch(dispatch_queue_t) { some_function(); }
+      void anything() {
+        this->consume_dispatch(provide_dispatch());
+        // expected-warning@-1{{Function argument 'provide_dispatch()' (to 'methods::foo3()::Consumer::consume_dispatch') is a RetainPtr-capable type 'dispatch_queue_t'}}
       }
     };
   }
@@ -112,16 +134,16 @@ namespace methods {
 namespace casts {
   void foo() {
     consume_obj(provide());
-    // expected-warning@-1{{Call argument is unretained and unsafe}}
+    // expected-warning@-1{{Function argument 'provide()' (to 'consume_obj') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
 
     consume_obj(static_cast<OtherObj*>(provide()));
-    // expected-warning@-1{{Call argument is unretained and unsafe}}
+    // expected-warning@-1{{Function argument 'static_cast<OtherObj *>(provide())' (to 'consume_obj') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
 
     consume_obj(reinterpret_cast<OtherObj*>(provide()));
-    // expected-warning@-1{{Call argument is unretained and unsafe}}
+    // expected-warning@-1{{Function argument 'reinterpret_cast<OtherObj *>(provide())' (to 'consume_obj') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
 
     consume_obj(downcast<OtherObj>(provide()));
-    // expected-warning@-1{{Call argument is unretained and unsafe}}
+    // expected-warning@-1{{Function argument 'downcast<OtherObj>(provide())' (to 'consume_obj') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
   }
 }
 
@@ -131,6 +153,8 @@ namespace null_ptr {
     consume_obj(0);
     consume_cf(nullptr);
     consume_cf(0);
+    consume_dispatch(nullptr);
+    consume_dispatch(0);
   }
 }
 
@@ -143,7 +167,7 @@ namespace retain_ptr_lookalike {
     Decoy D;
 
     consume_obj(D.get());
-    // expected-warning@-1{{Call argument is unretained and unsafe}}
+    // expected-warning@-1{{Function argument 'D.get()' (to 'consume_obj') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
   }
 
   struct Decoy2 {
@@ -154,13 +178,14 @@ namespace retain_ptr_lookalike {
     Decoy2 D;
 
     consume_cf(D.get());
-    // expected-warning@-1{{Call argument is unretained and unsafe}}
+    // expected-warning@-1{{Function argument 'D.get()' (to 'consume_cf') is a RetainPtr-capable type 'CFMutableArrayRef'}}
   }
 }
 
 namespace param_formarding_function {
   void consume_more_obj(OtherObj*);
   void consume_more_cf(CFMutableArrayRef);
+  void consume_more_dispatch(dispatch_queue_t);
 
   namespace objc {
     void foo(SomeObj* param) {
@@ -178,6 +203,7 @@ namespace param_formarding_function {
 namespace param_formarding_lambda {
   auto consume_more_obj = [](OtherObj*) { some_function(); };
   auto consume_more_cf = [](CFMutableArrayRef) { some_function(); };
+  auto consume_more_dispatch = [](dispatch_queue_t) { some_function(); };
 
   namespace objc {
     void foo(SomeObj* param) {
@@ -190,6 +216,12 @@ namespace param_formarding_lambda {
       consume_more_cf(param);
     }
   }
+  
+  namespace os_obj {
+    void foo(dispatch_queue_t param) {
+      consume_more_dispatch(param);
+    }
+  }
 }
 
 namespace param_forwarding_method {
@@ -198,6 +230,8 @@ namespace param_forwarding_method {
     static void consume_obj_s(SomeObj*);
     void consume_cf(CFMutableArrayRef);
     static void consume_cf_s(CFMutableArrayRef);
+    void consume_dispatch(dispatch_queue_t);
+    static void consume_dispatch_s(dispatch_queue_t);
   };
 
   void bar(Consumer* consumer, SomeObj* param) {
@@ -212,22 +246,32 @@ namespace param_forwarding_method {
     consumer->consume_cf(param);
     Consumer::consume_cf_s(param);
   }
+
+  void baz(Consumer* consumer, dispatch_queue_t param) {
+    consumer->consume_dispatch(param);
+    Consumer::consume_dispatch_s(param);
+  }
 }
 
 
 namespace default_arg {
   SomeObj* global;
   CFMutableArrayRef global_cf;
+  dispatch_queue_t global_dispatch;
 
   void function_with_default_arg1(SomeObj* param = global);
-  // expected-warning@-1{{Call argument for parameter 'param' is unretained and unsafe}}
+  // expected-warning@-1{{Function argument 'global' (parameter 'param' to 'default_arg::function_with_default_arg1') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
 
   void function_with_default_arg2(CFMutableArrayRef param = global_cf);
-  // expected-warning@-1{{Call argument for parameter 'param' is unretained and unsafe}}
+  // expected-warning@-1{{Function argument 'global_cf' (parameter 'param' to 'default_arg::function_with_default_arg2') is a RetainPtr-capable type 'CFMutableArrayRef'}}
+
+  void function_with_default_arg3(dispatch_queue_t param = global_dispatch);
+  // expected-warning@-1{{Function argument 'global_dispatch' (parameter 'param' to 'default_arg::function_with_default_arg3') is a RetainPtr-capable type 'dispatch_queue_t'}}
 
   void foo() {
     function_with_default_arg1();
     function_with_default_arg2();
+    function_with_default_arg3();
   }
 }
 
@@ -237,17 +281,17 @@ namespace cxx_member_func {
 
   void foo() {
     [provide() doWork];
-    // expected-warning@-1{{Reciever is unretained and unsafe}}
+    // expected-warning@-1{{Receiver 'provide()' (to 'SomeObj::doWork') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
     [protectedProvide().get() doWork];
 
     CFArrayAppendValue(provide_cf(), nullptr);
-    // expected-warning@-1{{Call argument for parameter 'theArray' is unretained and unsafe}}
+    // expected-warning@-1{{Function argument 'provide_cf()' (parameter 'theArray' to 'CFArrayAppendValue') is a RetainPtr-capable type 'CFMutableArrayRef'}}
     CFArrayAppendValue(protectedProvideCF(), nullptr);
   };
 
   void bar() {
     [downcast<OtherObj>(protectedProvide().get()) doMoreWork:downcast<OtherObj>(provide())];
-    // expected-warning@-1{{Call argument for parameter 'other' is unretained and unsafe}}
+    // expected-warning@-1{{Function argument 'downcast<OtherObj>(provide())' (parameter 'other' to 'OtherObj::doMoreWork:') is a raw pointer to RetainPtr-capable type 'OtherObj'}}
     [protectedProvide().get() doWork];
   };
 
@@ -259,18 +303,22 @@ namespace cxx_member_operator_call {
     Foo& operator+(SomeObj* bad);
     friend Foo& operator-(Foo& lhs, SomeObj* bad);
     void operator()(SomeObj* bad);
+    Foo& operator<<(dispatch_queue_t bad);
   };
 
   SomeObj* global;
+  dispatch_queue_t global_dispatch;
 
   void foo() {
     Foo f;
     f + global;
-    // expected-warning@-1{{Call argument for parameter 'bad' is unretained and unsafe}}
+    // expected-warning@-1{{Function argument 'global' (parameter 'bad' to 'cxx_member_operator_call::Foo::operator+') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
     f - global;
-    // expected-warning@-1{{Call argument for parameter 'bad' is unretained and unsafe}}
+    // expected-warning@-1{{Function argument 'global' (parameter 'bad' to 'cxx_member_operator_call::operator-') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
     f(global);
-    // expected-warning@-1{{Call argument for parameter 'bad' is unretained and unsafe}}
+    // expected-warning@-1{{Function argument 'global' (parameter 'bad' to 'cxx_member_operator_call::Foo::operator()') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
+    f << global_dispatch;
+    // expected-warning@-1{{Function argument 'global_dispatch' (parameter 'bad' to 'cxx_member_operator_call::Foo::operator<<') is a RetainPtr-capable type 'dispatch_queue_t'}}
   }
 }
 
@@ -280,6 +328,8 @@ namespace cxx_assignment_op {
   void foo() {
     RetainPtr<SomeObj> ptr;
     ptr = provide();
+    OSObjectPtr<dispatch_queue_t> objPtr;
+    objPtr = provide_dispatch();
   }
 
 }
@@ -287,23 +337,32 @@ namespace cxx_assignment_op {
 namespace call_with_ptr_on_ref {
   RetainPtr<SomeObj> provideProtected();
   RetainPtr<CFMutableArrayRef> provideProtectedCF();
+  OSObjectPtr<dispatch_queue_t> provideProtectedDispatch();
   void bar(SomeObj* bad);
   void bar_cf(CFMutableArrayRef bad);
+  void bar_dispatch(dispatch_queue_t);
   bool baz();
   void foo(bool v) {
     bar(v ? nullptr : provideProtected().get());
     bar(baz() ? provideProtected().get() : nullptr);
     bar(v ? provide() : provideProtected().get());
-    // expected-warning@-1{{Call argument for parameter 'bad' is unretained and unsafe}}
+    // expected-warning@-1{{Function argument 'v ? provide() : provideProtected().get()' (parameter 'bad' to 'call_with_ptr_on_ref::bar') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
     bar(v ? provideProtected().get() : provide());
-    // expected-warning@-1{{Call argument for parameter 'bad' is unretained and unsafe}}
+    // expected-warning@-1{{Function argument 'v ? provideProtected().get() : provide()' (parameter 'bad' to 'call_with_ptr_on_ref::bar') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
 
     bar_cf(v ? nullptr : provideProtectedCF().get());
     bar_cf(baz() ? provideProtectedCF().get() : nullptr);
     bar_cf(v ? provide_cf() : provideProtectedCF().get());
-    // expected-warning@-1{{Call argument for parameter 'bad' is unretained and unsafe}}
+    // expected-warning@-1{{Function argument 'v ? provide_cf() : provideProtectedCF().get()' (parameter 'bad' to 'call_with_ptr_on_ref::bar_cf') is a raw pointer to RetainPtr-capable type '__CFArray'}}
     bar_cf(v ? provideProtectedCF().get() : provide_cf());
-    // expected-warning@-1{{Call argument for parameter 'bad' is unretained and unsafe}}
+    // expected-warning@-1{{Function argument 'v ? provideProtectedCF().get() : provide_cf()' (parameter 'bad' to 'call_with_ptr_on_ref::bar_cf') is a raw pointer to RetainPtr-capable type '__CFArray'}}
+
+    bar_dispatch(v ? nullptr : provideProtectedDispatch().get());
+    bar_dispatch(baz() ? provideProtectedDispatch().get() : nullptr);
+    bar_dispatch(v ? provide_dispatch() : provideProtectedDispatch().get());
+    // expected-warning@-1{{Function argument 'v ? provide_dispatch() : provideProtectedDispatch(...' (to 'call_with_ptr_on_ref::bar_dispatch') is a raw pointer to RetainPtr-capable type 'NSObject'}}
+    bar_dispatch(v ? provideProtectedDispatch().get() : provide_dispatch());
+    // expected-warning@-1{{Function argument 'v ? provideProtectedDispatch().get() : provide_dis...' (to 'call_with_ptr_on_ref::bar_dispatch') is a raw pointer to RetainPtr-capable type 'NSObject'}}
   }
 }
 
@@ -320,22 +379,41 @@ namespace call_with_explicit_temporary_obj {
   void baz() {
     bar<int>();
   }
+  void os_ptr() {
+    consume_dispatch(OSObjectPtr { provide_dispatch() }.get());
+  }
 }
 
 namespace call_with_adopt_ref {
   void foo() {
     [adoptNS(provide()).get() doWork];
+    [adoptNSNullable(provide()).get() doWork];
     CFArrayAppendValue(adoptCF(provide_cf()).get(), nullptr);
+    CFArrayAppendValue(adoptCFNullable(provide_cf()).get(), nullptr);
+    consume_dispatch(adoptOSObject(provide_dispatch()).get());
   }
 }
+
+#define YES __objc_yes
+#define NO 0
 
 namespace call_with_cf_constant {
   void bar(const NSArray *);
   void baz(const NSDictionary *);
-  void foo() {
+  void boo(NSNumber *);
+  void boo(CFTypeRef);
+
+  struct Details {
+    int value;
+  };
+
+  void foo(Details* details) {
     CFArrayCreateMutable(kCFAllocatorDefault, 10);
     bar(@[@"hello"]);
     baz(@{@"hello": @3});
+    boo(@YES);
+    boo(@NO);
+    boo(@(details->value));
   }
 }
 
@@ -371,6 +449,15 @@ namespace alloc_init_pair {
   void foo() {
     auto obj = adoptNS([[SomeObj alloc] init]);
     [obj doWork];
+    auto obj2 = adoptNS([[SomeObj alloc] _init]);
+    [obj2 doWork];
+  }
+
+  void bar(NSZone *zone) {
+    auto obj = adoptNS([[SomeObj allocWithZone:zone] init]);
+    [obj doWork];
+    auto obj2 = adoptNS([(SomeObj *)[SomeObj allocWithZone:zone] _init]);
+    [obj2 doWork];
   }
 }
 
@@ -419,25 +506,145 @@ namespace const_global {
 
 extern NSString * const SomeConstant;
 extern CFDictionaryRef const SomeDictionary;
-void doWork(NSString *str, CFDictionaryRef dict);
+extern dispatch_queue_t const SomeDispatch;
+void doWork(NSString *str, CFDictionaryRef dict, dispatch_queue_t dispatch);
 void use_const_global() {
-  doWork(SomeConstant, SomeDictionary);
+  doWork(SomeConstant, SomeDictionary, SomeDispatch);
 }
 
 NSString *provide_str();
 CFDictionaryRef provide_dict();
 void use_const_local() {
-  doWork(provide_str(), provide_dict());
-  // expected-warning@-1{{Call argument for parameter 'str' is unretained and unsafe}}
-  // expected-warning@-2{{Call argument for parameter 'dict' is unretained and unsafe}}
+  doWork(provide_str(), provide_dict(), provide_dispatch());
+  // expected-warning@-1{{Function argument 'provide_str()' (parameter 'str' to 'const_global::doWork') is a raw pointer to RetainPtr-capable type 'NSString}}
+  // expected-warning@-2{{Function argument 'provide_dict()' (parameter 'dict' to 'const_global::doWork') is a RetainPtr-capable type 'CFDictionaryRef'}}
+  // expected-warning@-3{{Function argument 'provide_dispatch()' (parameter 'dispatch' to 'const_global::doWork') is a RetainPtr-capable type 'dispatch_queue_t'}}
 }
 
 } // namespace const_global
+
+namespace var_decl_ref_singleton {
+
+static Class initSomeObject() { return nil; }
+static Class (*getSomeObjectClassSingleton)() = initSomeObject;
+
+bool foo(NSString *obj) {
+  return [obj isKindOfClass:getSomeObjectClassSingleton()];
+}
+
+class Bar {
+public:
+  Class someObject();
+  static Class staticSomeObject();
+};
+typedef Class (Bar::*SomeObjectSingleton)();
+
+bool bar(NSObject *obj, Bar *bar, SomeObjectSingleton someObjSingleton) {
+  return [obj isKindOfClass:(bar->*someObjSingleton)()];
+  // expected-warning@-1{{Function argument '(bar ->* someObjSingleton)()' (parameter 'aClass' to 'NSObject::isKindOfClass:') is a RetainPtr-capable type 'Class'}}
+}
+
+bool baz(NSObject *obj) {
+  Class (*someObjectSingleton)() = Bar::staticSomeObject;
+  return [obj isKindOfClass:someObjectSingleton()];
+}
+
+} // namespace var_decl_ref_singleton
+
+namespace ns_retained_return_value {
+
+NSString *provideNS() NS_RETURNS_RETAINED;
+CFDictionaryRef provideCF() CF_RETURNS_RETAINED;
+dispatch_queue_t provideDispatch() NS_RETURNS_RETAINED;
+void consumeNS(NSString *);
+void consumeCF(CFDictionaryRef);
+void consumeDispatch(dispatch_queue_t);
+
+void foo() {
+  consumeNS(provideNS());
+  consumeCF(provideCF());
+  consumeDispatch(provideDispatch());
+}
+
+struct Base {
+  NSString *provideStr() NS_RETURNS_RETAINED;
+};
+
+struct Derived : Base {
+  void consumeStr(NSString *);
+
+  void foo() {
+    consumeStr(provideStr());
+  }
+};
+
+} // namespace ns_retained_return_value
+
+namespace autoreleased {
+
+NSString *provideAutoreleased() __attribute__((ns_returns_autoreleased));
+void consume(NSString *);
+
+void foo() {
+  consume(provideAutoreleased());
+}
+
+} // autoreleased
+
+namespace sel_string {
+
+void consumeStr(NSString *);
+void consumeSel(SEL);
+void consumeClass(Class);
+void consumeProtocol(Protocol *);
+
+void foo() {
+  consumeStr(NSStringFromSelector(@selector(mutableCopy)));
+  consumeSel(NSSelectorFromString(@"mutableCopy"));
+  consumeStr(NSStringFromClass(NSNumber.class));
+  consumeClass(NSClassFromString(@"NSNumber"));
+  consumeStr(NSStringFromProtocol(@protocol(NSCopying)));
+  consumeProtocol(NSProtocolFromString(@"NSCopying"));
+}
+
+} // namespace sel_string
+
+namespace template_function {
+
+class Base {
+public:
+    virtual ~Base() = default;
+    void send(dispatch_queue_t) const;
+    void ref() const;
+    void deref() const;
+};
+
+template<typename Traits>
+class Derived : public Base {
+public:
+    virtual ~Derived() = default;
+
+    void send(typename Traits::MessageType) const;
+
+    virtual OSObjectPtr<dispatch_queue_t> msg(typename Traits::MessageType) const = 0;
+};
+
+template<typename Traits>
+void Derived<Traits>::send(typename Traits::MessageType messageType) const
+{
+    OSObjectPtr dictionary = msg(messageType);
+    Base::send(dictionary.get());
+}
+
+} // namespace template_function
+
+SomeObj *allocObj();
 
 @interface TestObject : NSObject
 - (void)doWork:(NSString *)msg, ...;
 - (void)doWorkOnSelf;
 - (SomeObj *)getSomeObj;
++ (SomeObj *)sharedObj;
 @end
 
 @implementation TestObject
@@ -448,18 +655,34 @@ void use_const_local() {
 
 - (void)doWorkOnSelf {
   [self doWork:nil];
-  [self doWork:@"hello", provide(), provide_cf()];
-  // expected-warning@-1{{Call argument is unretained and unsafe}}
-  // expected-warning@-2{{Call argument is unretained and unsafe}}
-  [self doWork:@"hello", RetainPtr<SomeObj> { provide() }.get(), RetainPtr<CFMutableArrayRef> { provide_cf() }.get()];
+  [self doWork:@"hello", provide(), provide_cf(), provide_dispatch()];
+  // expected-warning@-1{{Function argument 'provide()' (to 'TestObject::doWork:') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
+  // expected-warning@-2{{Function argument 'provide_cf()' (to 'TestObject::doWork:') is a RetainPtr-capable type 'CFMutableArrayRef'}}
+  // expected-warning@-3{{Function argument 'provide_dispatch()' (to 'TestObject::doWork:') is a RetainPtr-capable type 'dispatch_queue_t'}}
+  [self doWork:@"hello", RetainPtr<SomeObj> { provide() }.get(), RetainPtr<CFMutableArrayRef> { provide_cf() }.get(), OSObjectPtr { provide_dispatch() }.get()];
+  [self doWork:__null];
+  [self doWork:nil];
+  [NSApp run];
+  adoptNS([allocObj() init]);
+  [provide() isEqual:provide()];
+  [provide_str() isEqualToString:@"foo"];
+  [provide_str() copyWithZone:nullptr];
+  [provide_str() mutableCopy];
 }
 
 - (SomeObj *)getSomeObj {
     return RetainPtr<SomeObj *>(provide()).autorelease();
 }
 
++ (SomeObj *)sharedObj
+{
+    return adoptNS([[SomeObj alloc] init]).autorelease();
+}
+
 - (void)doWorkOnSomeObj {
     [[self getSomeObj] doWork];
+    // expected-warning@-1{{Receiver '[self getSomeObj]' (to 'SomeObj::doWork') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
+    [[TestObject sharedObj] doWork];
 }
 
 - (CGImageRef)createImage {

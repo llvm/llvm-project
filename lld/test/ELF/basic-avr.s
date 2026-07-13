@@ -1,6 +1,6 @@
 # REQUIRES: avr
 # RUN: llvm-mc -filetype=obj -triple=avr-unknown-linux -mcpu=atmega328p %s -o %t.o
-# RUN: ld.lld %t.o -o %t.exe -Ttext=0
+# RUN: ld.lld %t.o -o %t.exe --image-base=0 -Ttext=0
 # RUN: llvm-objdump -d %t.exe --mcpu=atmega328 | FileCheck %s --check-prefix=ASM
 # RUN: llvm-readelf --file-headers --sections -l --symbols %t.exe \
 # RUN:     | FileCheck %s --check-prefix=ELF
@@ -61,8 +61,8 @@ foo:
 
 # ELF:      Program Headers:
 # ELF-NEXT:   Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
-# ELF-NEXT:   PHDR           0x000034 0x00010034 0x00010034 0x00080 0x00080 R   0x4
-# ELF-NEXT:   LOAD           0x000000 0x00010000 0x00010000 0x000b4 0x000b4 R   0x1000
+# ELF-NEXT:   PHDR           0x000034 0x00000034 0x00000034 0x00080 0x00080 R   0x4
+# ELF-NEXT:   LOAD           0x000000 0x00000000 0x00000000 0x000b4 0x000b4 R   0x1000
 # ELF-NEXT:   LOAD           0x001000 0x00000000 0x00000000 0x0000c 0x0000c R E 0x1000
 # ELF-NEXT:   GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000 RW  0x0
 

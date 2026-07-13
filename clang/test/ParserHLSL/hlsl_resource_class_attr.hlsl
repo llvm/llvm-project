@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.0-compute -x hlsl -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -ast-dump -o - %s | FileCheck %s
 
 // CHECK: CXXRecordDecl 0x{{[0-9a-f]+}} {{.*}} struct MyBuffer definition
 // CHECK: FieldDecl 0x{{[0-9a-f]+}} <line:[[# @LINE + 3]]:3, col:51> col:51 h '__hlsl_resource_t
@@ -18,7 +18,7 @@ void f() {
   __hlsl_resource_t [[hlsl::resource_class(Sampler)]] r;
 }
 
-// CHECK: ClassTemplateDecl 0x{{[0-9a-f]+}} <line:[[# @LINE + 6]]:1, line:[[# @LINE + 8]]:1> line:[[# @LINE + 6]]:29 MyBuffer2
+// CHECK: ClassTemplateDecl 0x{{[0-9a-f]+}} <line:[[# @LINE + 6]]:1, line:[[# @LINE + 8]]:1> line:[[# @LINE + 6]]:29 referenced MyBuffer2
 // CHECK: TemplateTypeParmDecl 0x{{[0-9a-f]+}} <col:10, col:19> col:19 typename depth 0 index 0 T
 // CHECK: CXXRecordDecl 0x{{[0-9a-f]+}} <col:22, line:[[# @LINE + 6]]:1> line:[[# @LINE + 4]]:29 struct MyBuffer2 definition
 // CHECK: CXXRecordDecl 0x{{[0-9a-f]+}} <col:22, col:29> col:29 implicit struct MyBuffer2
@@ -28,7 +28,7 @@ template<typename T> struct MyBuffer2 {
   __hlsl_resource_t [[hlsl::resource_class(UAV)]] h;
 };
 
-// CHECK: ClassTemplateSpecializationDecl 0x{{[0-9a-f]+}} <line:[[# @LINE - 4]]:1, line:[[# @LINE - 2]]:1> line:[[# @LINE - 4]]:29 struct MyBuffer2 definition implicit_instantiation
+// CHECK: ClassTemplateSpecializationDecl 0x{{[0-9a-f]+}} <line:[[# @LINE - 4]]:1, line:[[# @LINE - 2]]:1> line:[[# @LINE - 4]]:29 referenced struct MyBuffer2 definition external-linkage instantiated_from 0x{{.+}} implicit_instantiation
 // CHECK: TemplateArgument type 'float'
 // CHECK: BuiltinType 0x{{[0-9a-f]+}} 'float'
 // CHECK: CXXRecordDecl 0x{{[0-9a-f]+}} <col:22, col:29> col:29 implicit struct MyBuffer2

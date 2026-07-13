@@ -21,5 +21,5 @@ unsigned test3() {
 //
 // CHECK: ![[INT]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed
 // CHECK: ![[INT_POINTER]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[INT]], size: 64
-// CHECK: ![[STRUCT_T1]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "t1"
 // CHECK: ![[TYPEDEF_T1]] = !DIDerivedType(tag: DW_TAG_typedef, name: "__t1"
+// CHECK: ![[STRUCT_T1]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "t1"

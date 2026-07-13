@@ -89,6 +89,9 @@ crswap(r12,sgp0)
 #CHECK: 652dc000 { crswap(r13,sgp1) }
 crswap(r13,sgp1)
 
+#CHECK: 6d8ec000 { crswap(r15:14,s1:0) }
+crswap(r15:14,sgp1:0)
+
 #CHECK: 660fc00e { r14 = getimask(r15) }
 r14=getimask(r15)
 

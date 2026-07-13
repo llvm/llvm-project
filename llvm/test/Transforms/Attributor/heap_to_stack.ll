@@ -27,7 +27,7 @@ declare i32 @no_return_call() noreturn
 
 declare void @free(ptr nocapture) allockind("free")
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
+declare void @llvm.lifetime.start.p0(ptr nocapture) nounwind
 
 ;.
 ; CHECK: @G = internal global ptr undef, align 4
@@ -393,26 +393,6 @@ bb:
   ret i32 %i2
 }
 
-define i32 @test_lifetime() {
-; CHECK-LABEL: define {{[^@]+}}@test_lifetime() {
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I_H2S:%.*]] = alloca i8, i64 4, align 1
-; CHECK-NEXT:    tail call void @no_sync_func(ptr noalias nofree captures(none) [[I_H2S]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noalias nofree nonnull align 4 captures(none) dereferenceable(4) [[I_H2S]])
-; CHECK-NEXT:    store i32 10, ptr [[I_H2S]], align 4
-; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr [[I_H2S]], align 4
-; CHECK-NEXT:    ret i32 [[I2]]
-;
-bb:
-  %i = tail call noalias ptr @malloc(i64 4)
-  tail call void @no_sync_func(ptr %i)
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i)
-  store i32 10, ptr %i, align 4
-  %i2 = load i32, ptr %i, align 4
-  tail call void @free(ptr %i)
-  ret i32 %i2
-}
-
 ; TEST 11
 
 define void @test11() {
@@ -726,7 +706,7 @@ bb:
 ; CHECK: attributes #[[ATTR7:[0-9]+]] = { allockind("alloc,uninitialized,aligned") allocsize(1) }
 ; CHECK: attributes #[[ATTR8:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1) }
 ; CHECK: attributes #[[ATTR9]] = { norecurse }
-; CHECK: attributes #[[ATTR10:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; CHECK: attributes #[[ATTR10:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; CHECK: attributes #[[ATTR11]] = { nounwind }
 ; CHECK: attributes #[[ATTR12]] = { nocallback nosync nounwind willreturn }
 ;.

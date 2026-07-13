@@ -7,16 +7,10 @@ from lldbsuite.test import lldbutil
 
 
 class ExprSyscallTestCase(TestBase):
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr21765, getpid() does not exist on Windows",
-    )
     @expectedFailureNetBSD
     def test_setpgid(self):
         self.build()
-        self.expr_syscall()
 
-    def expr_syscall(self):
         # Create a target by the debugger.
         target = self.createTestTarget()
 
@@ -65,7 +59,12 @@ class ExprSyscallTestCase(TestBase):
 
         # try evaluating a couple of expressions in this state
         self.expect_expr("release_flag = 1", result_value="1")
-        self.expect_expr("(int)getpid()", result_value=str(process.GetProcessID()))
+        func = (
+            "GetCurrentProcessId"
+            if lldbplatformutil.getPlatform() == "windows"
+            else "getpid"
+        )
+        self.expect_expr(f"(int){func}()", result_value=str(process.GetProcessID()))
 
         # and run the process to completion
         process.Continue()

@@ -74,13 +74,13 @@ define void @reorder_i8half(ptr addrspace(3) %in.ptr, i64 %in.idx0, i64 %in.idx1
 ; CHECK-NEXT:    [[IDX0:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IDXPROM1]]
 ; CHECK-NEXT:    [[IDXPROM2:%.*]] = trunc i64 [[IN_IDX1]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IDXPROM2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP0]], i64 256
+; CHECK-NEXT:    [[IDX13:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP0]], i32 256
 ; CHECK-NEXT:    [[IDXPROM3:%.*]] = trunc i64 [[IN_IDX1]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IDXPROM3]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP2]], i64 512
+; CHECK-NEXT:    [[IDX25:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP2]], i32 512
 ; CHECK-NEXT:    [[IDXPROM4:%.*]] = trunc i64 [[IN_IDX1]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IDXPROM4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP4]], i64 768
+; CHECK-NEXT:    [[IDX37:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP4]], i32 768
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -169,13 +169,13 @@ define void @bad_index(ptr addrspace(3) %in.ptr, i64 %in.idx0, i64 %in.idx1) {
 ; CHECK-NEXT:    [[IDX0:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IDXPROM1]]
 ; CHECK-NEXT:    [[IDXPROM2:%.*]] = trunc i64 [[IN_IDX1]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IDXPROM2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP4]], i64 1
+; CHECK-NEXT:    [[IDX13:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP4]], i32 1
 ; CHECK-NEXT:    [[IDXPROM3:%.*]] = trunc i64 [[IN_IDX1]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IDXPROM3]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP2]], i64 2
+; CHECK-NEXT:    [[IDX25:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP2]], i32 2
 ; CHECK-NEXT:    [[IDXPROM4:%.*]] = trunc i64 [[IN_IDX1]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IDXPROM4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP0]], i64 3
+; CHECK-NEXT:    [[IDX37:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP0]], i32 3
 ; CHECK-NEXT:    ret void
 ;
 entry:

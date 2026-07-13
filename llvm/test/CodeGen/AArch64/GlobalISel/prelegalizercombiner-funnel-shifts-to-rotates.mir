@@ -17,11 +17,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_rotr
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[ROTR:%[0-9]+]]:_(s32) = G_ROTR [[COPY]], [[COPY1]](s32)
-    ; CHECK: $w0 = COPY [[ROTR]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[ROTR:%[0-9]+]]:_(s32) = G_ROTR [[COPY]], [[COPY1]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[ROTR]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(s32) = G_FSHR %0, %0, %1(s32)
@@ -45,11 +46,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_rotl
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[ROTL:%[0-9]+]]:_(s32) = G_ROTL [[COPY]], [[COPY1]](s32)
-    ; CHECK: $w0 = COPY [[ROTL]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[ROTL:%[0-9]+]]:_(s32) = G_ROTL [[COPY]], [[COPY1]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[ROTL]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(s32) = G_FSHL %0, %0, %1(s32)
@@ -73,11 +75,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_vector_rotr
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK: [[ROTR:%[0-9]+]]:_(<4 x s32>) = G_ROTR [[COPY]], [[COPY1]](<4 x s32>)
-    ; CHECK: $q0 = COPY [[ROTR]](<4 x s32>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[ROTR:%[0-9]+]]:_(<4 x s32>) = G_ROTR [[COPY]], [[COPY1]](<4 x s32>)
+    ; CHECK-NEXT: $q0 = COPY [[ROTR]](<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s32>) = COPY $q1
     %2:_(<4 x s32>) = G_FSHR %0, %0, %1(<4 x s32>)
@@ -101,11 +104,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_vector_rotl
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK: [[ROTL:%[0-9]+]]:_(<4 x s32>) = G_ROTL [[COPY]], [[COPY1]](<4 x s32>)
-    ; CHECK: $q0 = COPY [[ROTL]](<4 x s32>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[ROTL:%[0-9]+]]:_(<4 x s32>) = G_ROTL [[COPY]], [[COPY1]](<4 x s32>)
+    ; CHECK-NEXT: $q0 = COPY [[ROTL]](<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s32>) = COPY $q1
     %2:_(<4 x s32>) = G_FSHL %0, %0, %1(<4 x s32>)

@@ -2,12 +2,12 @@
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
 # RUN: ld.lld --no-toc-optimize %t.o -o %t
-# RUN: llvm-readelf -x .rodata -x .R_PPC64_TOC -x .eh_frame %t | FileCheck %s --check-prefix=DATALE
+# RUN: llvm-readelf -x .rodata -x .R_PPC64_TOC %t | FileCheck %s --check-prefix=DATALE
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
 # RUN: ld.lld --no-toc-optimize %t.o -o %t
-# RUN: llvm-readelf -x .rodata -x .R_PPC64_TOC -x .eh_frame %t | FileCheck %s --check-prefix=DATABE
+# RUN: llvm-readelf -x .rodata -x .R_PPC64_TOC %t | FileCheck %s --check-prefix=DATABE
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 .text

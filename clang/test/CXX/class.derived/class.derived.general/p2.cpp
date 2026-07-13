@@ -2,7 +2,7 @@
 
 namespace CurrentInstantiation {
   template<typename T>
-  struct A0 { // expected-note 6{{definition of 'A0<T>' is not complete until the closing '}'}}
+  struct A0 { // expected-note 6{{definition of 'CurrentInstantiation::A0<T>' is not complete until the closing '}'}}
     struct B0 : A0 { }; // expected-error {{base class has incomplete type}}
 
     template<typename U>
@@ -26,7 +26,7 @@ namespace CurrentInstantiation {
     };
 
     template<typename U>
-    struct B5 { // expected-note 2{{definition of 'B5<U>' is not complete until the closing '}'}}
+    struct B5 { // expected-note 2{{definition of 'CurrentInstantiation::A0::B5<U>' is not complete until the closing '}'}}
       struct C0 : A0, B5 { }; // expected-error 2{{base class has incomplete type}}
 
       template<typename V>
@@ -63,7 +63,7 @@ namespace CurrentInstantiation {
   struct A0<T>::B5<U>::C3 : A0, B5 { };
 
   template<typename T>
-  struct A0<T*> { // expected-note 2{{definition of 'A0<T *>' is not complete until the closing '}'}}
+  struct A0<T*> { // expected-note 2{{definition of 'CurrentInstantiation::A0<T *>' is not complete until the closing '}'}}
     struct B0 : A0 { }; // expected-error {{base class has incomplete type}}
 
     template<typename U>
@@ -91,7 +91,7 @@ namespace MemberOfCurrentInstantiation {
 
     template<typename U>
     struct C : C<U> { }; // expected-error {{base class has incomplete type}}
-                         // expected-note@-1 {{definition of 'C<U>' is not complete until the closing '}'}}
+                         // expected-note@-1 {{definition of 'MemberOfCurrentInstantiation::A0::C<U>' is not complete until the closing '}'}}
   };
 
   template<typename T>

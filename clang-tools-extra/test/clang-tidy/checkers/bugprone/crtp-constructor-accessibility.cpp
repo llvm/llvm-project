@@ -253,3 +253,34 @@ void foo() {
     (void) A;
 }
 } // namespace no_warning_unsupported
+
+namespace public_copy_move_constructors_deleted {
+template <typename T>
+class CRTP
+{
+    CRTP() = default;
+    friend T;
+  public:
+    CRTP(const CRTP&) = delete;
+    CRTP(CRTP&&) = delete;
+};
+
+class A : CRTP<A> {};
+
+} // namespace public_copy_move_constructors_deleted
+
+namespace public_copy_protected_move_constructor_deleted {
+template <typename T>
+class CRTP
+{
+    CRTP() = default;
+    friend T;
+  public:
+    CRTP(const CRTP&) = delete;
+  protected:
+    CRTP(CRTP&&) = delete;
+};
+
+class A : CRTP<A> {};
+
+} // namespace public_copy_protected_move_constructor_deleted

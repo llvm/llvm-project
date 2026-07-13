@@ -1,0 +1,65 @@
+REQUIRES: x86
+
+## Test that a DTLTO link assigns Module IDs to thin archive members as expected.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+RUN: sed 's/@t1/@t2/g' t1.ll > t2.ll
+RUN: sed 's/@t1/@t3/g' t1.ll > t3.ll
+
+RUN: opt -thinlto-bc t1.ll -o t1.bc
+RUN: opt -thinlto-bc t2.ll -o t2.bc
+RUN: opt -thinlto-bc t3.ll -o t3.bc
+
+RUN: llvm-ar rcs t1.a t1.bc --thin
+## Create this bitcode thin archive in a subdirectory to test the expansion of
+## the path to a bitcode file that is referenced using "..", e.g., in this case
+## "../t2.bc".
+RUN: mkdir lib
+RUN: llvm-ar rcs lib/t2.a t2.bc --thin
+## Create this bitcode thin archive with an absolute path entry containing "..".
+RUN: llvm-ar rcs t3.a %t/lib/../t3.bc --thin
+
+## Link from a different directory to ensure that thin archive member paths are
+## resolved correctly relative to the archive locations.
+RUN: mkdir %t/out && cd %t/out
+
+## Build a response file to share common linking arguments.
+## Note: validate.py does not perform any compilation. Instead, it validates the
+## received JSON, pretty-prints the JSON and the supplied arguments, and then
+## exits with an error. This allows FileCheck directives to verify the
+## distributor inputs.
+RUN: echo "%t/t1.a %t/lib/t2.a ../t3.a \
+RUN:   --thinlto-distributor=\"%python\" \
+RUN:   --thinlto-distributor-arg=\"%llvm_src_root/utils/dtlto/validate.py\"" > rsp
+
+## Link thin archives using -u/--undefined.
+RUN: not ld.lld @rsp -u t1 -u t2 -u t3 2>&1 | FileCheck %s
+
+## Link thin archives using --whole-archive.
+RUN: not ld.lld --whole-archive @rsp 2>&1 | FileCheck %s
+
+## Check the module IDs in the JSON jobs description.
+CHECK: "jobs": [
+CHECK: "inputs": [
+CHECK-NEXT: "{{([a-zA-Z]:)|/}}
+CHECK-SAME: {{/|\\\\}}archive-thin.test.tmp{{/|\\\\}}t1.bc"
+
+CHECK: "inputs": [
+CHECK-NEXT: "{{([a-zA-Z]\:)|/}}
+CHECK-SAME: {{/|\\\\}}archive-thin.test.tmp{{/|\\\\}}t2.bc"
+
+CHECK: "inputs": [
+CHECK-NEXT: "{{([a-zA-Z]:)|/}}
+CHECK-SAME: {{/|\\\\}}archive-thin.test.tmp{{/|\\\\}}t3.bc"
+
+## Ensure backend compilation fails as expected (due to validate.py dummy behavior).
+CHECK: error: DTLTO backend compilation: cannot open native object file:
+
+#--- t1.ll
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+define void @t1() {
+  ret void
+}

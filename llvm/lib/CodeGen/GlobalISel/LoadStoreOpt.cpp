@@ -30,7 +30,6 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
@@ -67,8 +66,7 @@ void LoadStoreOpt::init(MachineFunction &MF) {
   TLI = MF.getSubtarget().getTargetLowering();
   LI = MF.getSubtarget().getLegalizerInfo();
   Builder.setMF(MF);
-  IsPreLegalizer = !MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::Legalized);
+  IsPreLegalizer = !MF.getProperties().hasLegalized();
   InstsToErase.clear();
 }
 
@@ -312,10 +310,10 @@ bool LoadStoreOpt::mergeStores(SmallVectorImpl<GStore *> &StoresToMerge) {
   initializeStoreMergeTargetInfo(AS);
   const auto &LegalSizes = LegalStoreSizes[AS];
 
-#ifndef NDEBUG
+  // FIXME: Support mismatching types (i16 + f16).
   for (auto *StoreMI : StoresToMerge)
-    assert(MRI->getType(StoreMI->getValueReg()) == OrigTy);
-#endif
+    if (MRI->getType(StoreMI->getValueReg()) != OrigTy)
+      return false;
 
   bool AnyMerged = false;
   do {
@@ -371,7 +369,7 @@ bool LoadStoreOpt::doSingleStoreMerge(SmallVectorImpl<GStore *> &Stores) {
   // For each store, compute pairwise merged debug locs.
   DebugLoc MergedLoc = Stores.front()->getDebugLoc();
   for (auto *Store : drop_begin(Stores))
-    MergedLoc = DILocation::getMergedLocation(MergedLoc, Store->getDebugLoc());
+    MergedLoc = DebugLoc::getMergedLocation(MergedLoc, Store->getDebugLoc());
 
   Builder.setInstr(*Stores.back());
   Builder.setDebugLoc(MergedLoc);
@@ -460,7 +458,7 @@ bool LoadStoreOpt::processMergeCandidate(StoreMergeCandidate &C) {
     for (auto AliasInfo : reverse(C.PotentialAliases)) {
       MachineInstr *PotentialAliasOp = AliasInfo.first;
       unsigned PreCheckedIdx = AliasInfo.second;
-      if (static_cast<unsigned>(Idx) < PreCheckedIdx) {
+      if (Idx < PreCheckedIdx) {
         // Once our store index is lower than the index associated with the
         // potential alias, we know that we've already checked for this alias
         // and all of the earlier potential aliases too.
@@ -821,7 +819,8 @@ bool LoadStoreOpt::mergeTruncStore(GStore &StoreMI,
     // We didn't find enough stores to merge into the size of the original
     // source value, but we may be able to generate a smaller store if we
     // truncate the source value.
-    WideStoreTy = LLT::scalar(FoundStores.size() * MemTy.getScalarSizeInBits());
+    WideStoreTy =
+        LLT::integer(FoundStores.size() * MemTy.getScalarSizeInBits());
   }
 
   unsigned NumStoresFound = FoundStores.size();
@@ -960,7 +959,8 @@ void LoadStoreOpt::initializeStoreMergeTargetInfo(unsigned AddrSpace) {
   for (unsigned Size = 2; Size <= MaxStoreSizeToForm; Size *= 2) {
     LLT Ty = LLT::scalar(Size);
     SmallVector<LegalityQuery::MemDesc, 2> MemDescrs(
-        {{Ty, Ty.getSizeInBits(), AtomicOrdering::NotAtomic}});
+        {{Ty, Ty.getSizeInBits(), AtomicOrdering::NotAtomic,
+          AtomicOrdering::NotAtomic}});
     SmallVector<LLT> StoreTys({Ty, PtrTy});
     LegalityQuery Q(TargetOpcode::G_STORE, StoreTys, MemDescrs);
     LegalizeActionStep ActionStep = LI.getAction(Q);
@@ -968,13 +968,12 @@ void LoadStoreOpt::initializeStoreMergeTargetInfo(unsigned AddrSpace) {
       LegalSizes.set(Size);
   }
   assert(LegalSizes.any() && "Expected some store sizes to be legal!");
-  LegalStoreSizes[AddrSpace] = LegalSizes;
+  LegalStoreSizes[AddrSpace] = std::move(LegalSizes);
 }
 
 bool LoadStoreOpt::runOnMachineFunction(MachineFunction &MF) {
   // If the ISel pipeline failed, do not bother running that pass.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
 
   LLVM_DEBUG(dbgs() << "Begin memory optimizations for: " << MF.getName()

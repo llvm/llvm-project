@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes -std=c++20 %s modernize-use-integer-sign-comparison %t
+// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-integer-sign-comparison %t
 
 // CHECK-FIXES: #include <utility>
 
@@ -113,6 +113,11 @@ int AllComparisons() {
         return 0;
 // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
 // CHECK-FIXES: if (std::cmp_greater(uArray[6] , VALUE))
+
+    if (unsigned(uArray[7]) >= int(sArray[7]))
+        return 0;
+// CHECK-MESSAGES: :[[@LINE-2]]:9: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
+// CHECK-FIXES: if (std::cmp_greater_equal(uArray[7],sArray[7]))
 
 
     FuncParameters(uVar);

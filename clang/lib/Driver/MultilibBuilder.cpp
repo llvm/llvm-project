@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/MultilibBuilder.h"
-#include "ToolChains/CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"

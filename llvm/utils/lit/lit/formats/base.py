@@ -1,11 +1,10 @@
-from __future__ import absolute_import
 import os
 
 import lit.Test
 import lit.util
 
 
-class TestFormat(object):
+class TestFormat:
     def getTestsForPath(self, testSuite, path_in_suite, litConfig, localConfig):
         """
         Given the path to a test in the test suite, generates the Lit tests associated
@@ -34,8 +33,7 @@ class FileBasedTest(TestFormat):
         if filename.startswith(".") or filename in localConfig.excludes:
             return
 
-        base, ext = os.path.splitext(filename)
-        if ext in localConfig.suffixes:
+        if any(filename.endswith(suffix) for suffix in localConfig.suffixes):
             yield lit.Test.Test(testSuite, path_in_suite, localConfig)
 
     def getTestsInDirectory(self, testSuite, path_in_suite, litConfig, localConfig):

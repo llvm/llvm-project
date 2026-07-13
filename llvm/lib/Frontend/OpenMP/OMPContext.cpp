@@ -49,7 +49,7 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple,
     case Triple::x86_64:
       ActiveTraits.set(unsigned(TraitProperty::target_device_kind_cpu));
       break;
-    case Triple::amdgcn:
+    case Triple::amdgpu:
     case Triple::nvptx:
     case Triple::nvptx64:
     case Triple::spirv64:
@@ -61,11 +61,7 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple,
     // Add the appropriate device architecture trait based on the triple.
 #define OMP_TRAIT_PROPERTY(Enum, TraitSetEnum, TraitSelectorEnum, Str)         \
   if (TraitSelector::TraitSelectorEnum == TraitSelector::target_device_arch) { \
-    if (TargetOffloadTriple.getArch() ==                                       \
-        TargetOffloadTriple.getArchTypeForLLVMName(Str))                       \
-      ActiveTraits.set(unsigned(TraitProperty::Enum));                         \
-    if (StringRef(Str) == "x86_64" &&                                          \
-        TargetOffloadTriple.getArch() == Triple::x86_64)                       \
+    if (TargetOffloadTriple.getArch() == Triple::parseArch(Str))               \
       ActiveTraits.set(unsigned(TraitProperty::Enum));                         \
   }
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
@@ -96,7 +92,7 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple,
       ActiveTraits.set(unsigned(TraitProperty::device_kind_cpu));
       ActiveTraits.set(unsigned(TraitProperty::target_device_kind_cpu));
       break;
-    case Triple::amdgcn:
+    case Triple::amdgpu:
     case Triple::nvptx:
     case Triple::nvptx64:
     case Triple::spirv64:
@@ -111,10 +107,7 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple,
 #define OMP_TRAIT_PROPERTY(Enum, TraitSetEnum, TraitSelectorEnum, Str)         \
   if (TraitSelector::TraitSelectorEnum == TraitSelector::device_arch ||        \
       TraitSelector::TraitSelectorEnum == TraitSelector::target_device_arch) { \
-    if (TargetTriple.getArch() == TargetTriple.getArchTypeForLLVMName(Str))    \
-      ActiveTraits.set(unsigned(TraitProperty::Enum));                         \
-    if (StringRef(Str) == "x86_64" &&                                          \
-        TargetTriple.getArch() == Triple::x86_64)                              \
+    if (TargetTriple.getArch() == Triple::parseArch(Str))                      \
       ActiveTraits.set(unsigned(TraitProperty::Enum));                         \
   }
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
@@ -169,15 +162,6 @@ template <typename T> static bool isSubset(ArrayRef<T> C0, ArrayRef<T> C1) {
   return true;
 }
 
-/// Return true if \p C0 is a strict subset of \p C1. Note that both arrays are
-/// expected to be sorted.
-template <typename T>
-static bool isStrictSubset(ArrayRef<T> C0, ArrayRef<T> C1) {
-  if (C0.size() >= C1.size())
-    return false;
-  return isSubset<T>(C0, C1);
-}
-
 static bool isStrictSubset(const VariantMatchInfo &VMI0,
                            const VariantMatchInfo &VMI1) {
   // If all required traits are a strict subset and the ordered vectors storing
@@ -193,9 +177,11 @@ static bool isStrictSubset(const VariantMatchInfo &VMI0,
   return true;
 }
 
-static int isVariantApplicableInContextHelper(
-    const VariantMatchInfo &VMI, const OMPContext &Ctx,
-    SmallVectorImpl<unsigned> *ConstructMatches, bool DeviceSetOnly) {
+static int
+isVariantApplicableInContextHelper(const VariantMatchInfo &VMI,
+                                   const OMPContext &Ctx,
+                                   SmallVectorImpl<unsigned> *ConstructMatches,
+                                   bool DeviceOrImplementationSetOnly) {
 
   // The match kind determines if we need to match all traits, any of the
   // traits, or none of the traits for it to be an applicable context.
@@ -245,8 +231,10 @@ static int isVariantApplicableInContextHelper(
 
   for (unsigned Bit : VMI.RequiredTraits.set_bits()) {
     TraitProperty Property = TraitProperty(Bit);
-    if (DeviceSetOnly &&
-        getOpenMPContextTraitSetForProperty(Property) != TraitSet::device)
+    if (DeviceOrImplementationSetOnly &&
+        getOpenMPContextTraitSetForProperty(Property) != TraitSet::device &&
+        getOpenMPContextTraitSetForProperty(Property) !=
+            TraitSet::implementation)
       continue;
 
     // So far all extensions are handled elsewhere, we skip them here as they
@@ -272,7 +260,7 @@ static int isVariantApplicableInContextHelper(
       return *Result;
   }
 
-  if (!DeviceSetOnly) {
+  if (!DeviceOrImplementationSetOnly) {
     // We could use isSubset here but we also want to record the match
     // locations.
     unsigned ConstructIdx = 0, NoConstructTraits = Ctx.ConstructTraits.size();
@@ -315,11 +303,11 @@ static int isVariantApplicableInContextHelper(
   return true;
 }
 
-bool llvm::omp::isVariantApplicableInContext(const VariantMatchInfo &VMI,
-                                             const OMPContext &Ctx,
-                                             bool DeviceSetOnly) {
+bool llvm::omp::isVariantApplicableInContext(
+    const VariantMatchInfo &VMI, const OMPContext &Ctx,
+    bool DeviceOrImplementationSetOnly) {
   return isVariantApplicableInContextHelper(
-      VMI, Ctx, /* ConstructMatches */ nullptr, DeviceSetOnly);
+      VMI, Ctx, /* ConstructMatches */ nullptr, DeviceOrImplementationSetOnly);
 }
 
 static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
@@ -418,8 +406,9 @@ int llvm::omp::getBestVariantMatchForContext(
 
     SmallVector<unsigned, 8> ConstructMatches;
     // If the variant is not applicable its not the best.
-    if (!isVariantApplicableInContextHelper(VMI, Ctx, &ConstructMatches,
-                                            /* DeviceSetOnly */ false))
+    if (!isVariantApplicableInContextHelper(
+            VMI, Ctx, &ConstructMatches,
+            /* DeviceOrImplementationSetOnly */ false))
       continue;
     // Check if its clearly not the best.
     APInt Score = getVariantMatchScore(VMI, Ctx, ConstructMatches);

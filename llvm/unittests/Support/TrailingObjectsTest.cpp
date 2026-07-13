@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/TrailingObjects.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -15,27 +17,27 @@ namespace {
 // This class, beyond being used by the test case, a nice
 // demonstration of the intended usage of TrailingObjects, with a
 // single trailing array.
-class Class1 final : protected TrailingObjects<Class1, short> {
+class Class1 final : private TrailingObjects<Class1, short> {
   friend TrailingObjects;
 
   unsigned NumShorts;
 
 protected:
-  size_t numTrailingObjects(OverloadToken<short>) const { return NumShorts; }
-
-  Class1(int *ShortArray, unsigned NumShorts) : NumShorts(NumShorts) {
-    std::uninitialized_copy(ShortArray, ShortArray + NumShorts,
-                            getTrailingObjects<short>());
+  Class1(ArrayRef<int> ShortArray) : NumShorts(ShortArray.size()) {
+    // This tests the non-templated getTrailingObjects() that returns a pointer
+    // when using a single trailing type.
+    llvm::copy(ShortArray, getTrailingObjects());
   }
 
 public:
-  static Class1 *create(int *ShortArray, unsigned NumShorts) {
-    void *Mem = ::operator new(totalSizeToAlloc<short>(NumShorts));
-    return new (Mem) Class1(ShortArray, NumShorts);
+  static Class1 *create(ArrayRef<int> ShortArray) {
+    void *Mem = ::operator new(totalSizeToAlloc<short>(ShortArray.size()));
+    return new (Mem) Class1(ShortArray);
   }
-  void operator delete(void *p) { ::operator delete(p); }
+  void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
-  short get(unsigned Num) const { return getTrailingObjects<short>()[Num]; }
+  // This indexes into the ArrayRef<> returned by `getTrailingObjects`.
+  short get(unsigned Num) const { return getTrailingObjects(NumShorts)[Num]; }
 
   unsigned numShorts() const { return NumShorts; }
 
@@ -43,23 +45,21 @@ public:
   template <typename... Ty>
   using FixedSizeStorage = TrailingObjects::FixedSizeStorage<Ty...>;
 
-  using TrailingObjects::totalSizeToAlloc;
   using TrailingObjects::additionalSizeToAlloc;
   using TrailingObjects::getTrailingObjects;
+  using TrailingObjects::getTrailingObjectsNonStrict;
+  using TrailingObjects::totalSizeToAlloc;
 };
 
-// Here, there are two singular optional object types appended.  Note
+// Here, there are two singular optional object types appended. Note
 // that the alignment of Class2 is automatically increased to account
 // for the alignment requirements of the trailing objects.
-class Class2 final : protected TrailingObjects<Class2, double, short> {
+class Class2 final : private TrailingObjects<Class2, double, short> {
   friend TrailingObjects;
 
   bool HasShort, HasDouble;
 
 protected:
-  size_t numTrailingObjects(OverloadToken<short>) const {
-    return HasShort ? 1 : 0;
-  }
   size_t numTrailingObjects(OverloadToken<double>) const {
     return HasDouble ? 1 : 0;
   }
@@ -81,7 +81,7 @@ public:
       *C->getTrailingObjects<double>() = D;
     return C;
   }
-  void operator delete(void *p) { ::operator delete(p); }
+  void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
   short getShort() const {
     if (!HasShort)
@@ -106,7 +106,7 @@ public:
 
 TEST(TrailingObjects, OneArg) {
   int arr[] = {1, 2, 3};
-  Class1 *C = Class1::create(arr, 3);
+  Class1 *C = Class1::create(arr);
   EXPECT_EQ(sizeof(Class1), sizeof(unsigned));
   EXPECT_EQ(Class1::additionalSizeToAlloc<short>(1), sizeof(short));
   EXPECT_EQ(Class1::additionalSizeToAlloc<short>(3), sizeof(short) * 3);
@@ -124,9 +124,12 @@ TEST(TrailingObjects, OneArg) {
   EXPECT_EQ(Class1::totalSizeToAlloc<short>(3),
             sizeof(Class1) + sizeof(short) * 3);
 
-  EXPECT_EQ(C->getTrailingObjects<short>(), reinterpret_cast<short *>(C + 1));
+  EXPECT_EQ(C->getTrailingObjects(), reinterpret_cast<short *>(C + 1));
   EXPECT_EQ(C->get(0), 1);
   EXPECT_EQ(C->get(2), 3);
+
+  EXPECT_EQ(C->getTrailingObjects(), C->getTrailingObjectsNonStrict<short>());
+
   delete C;
 }
 
@@ -172,14 +175,23 @@ TEST(TrailingObjects, TwoArg) {
 }
 
 // This test class is not trying to be a usage demo, just asserting
-// that three args does actually work too (it's the same code as
+// that three args does actually work too (it's the same code that
 // handles the second arg, so it's basically covered by the above, but
 // just in case..)
-class Class3 final : public TrailingObjects<Class3, double, short, bool> {
+class Class3 final : private TrailingObjects<Class3, double, short, bool> {
   friend TrailingObjects;
 
   size_t numTrailingObjects(OverloadToken<double>) const { return 1; }
   size_t numTrailingObjects(OverloadToken<short>) const { return 1; }
+
+public:
+  // Pull some protected members in as public, for testability.
+  template <typename... Ty>
+  using FixedSizeStorage = TrailingObjects::FixedSizeStorage<Ty...>;
+
+  using TrailingObjects::additionalSizeToAlloc;
+  using TrailingObjects::getTrailingObjects;
+  using TrailingObjects::totalSizeToAlloc;
 };
 
 TEST(TrailingObjects, ThreeArg) {
@@ -209,9 +221,18 @@ TEST(TrailingObjects, ThreeArg) {
           1));
 }
 
-class Class4 final : public TrailingObjects<Class4, char, long> {
+class Class4 final : private TrailingObjects<Class4, char, long> {
   friend TrailingObjects;
   size_t numTrailingObjects(OverloadToken<char>) const { return 1; }
+
+public:
+  // Pull some protected members in as public, for testability.
+  template <typename... Ty>
+  using FixedSizeStorage = TrailingObjects::FixedSizeStorage<Ty...>;
+
+  using TrailingObjects::additionalSizeToAlloc;
+  using TrailingObjects::getTrailingObjects;
+  using TrailingObjects::totalSizeToAlloc;
 };
 
 TEST(TrailingObjects, Realignment) {
@@ -247,11 +268,6 @@ class Class5Tmpl : private llvm::TrailingObjects<Derived, float, int> {
   size_t numTrailingObjects(
       typename TrailingObjects::template OverloadToken<float>) const {
     return 1;
-  }
-
-  size_t numTrailingObjects(
-      typename TrailingObjects::template OverloadToken<int>) const {
-    return 2;
   }
 };
 

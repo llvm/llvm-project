@@ -10,8 +10,8 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
@@ -23,7 +23,7 @@ LLVM_LIBC_FUNCTION(int, pipe2, (int pipefd[2], int flags)) {
     libc_errno = -ret;
     return -1;
   }
-  MSAN_UNPOISON(pipefd, sizeof(int) * 2);
+  LIBC_MSAN_UNPOISON(pipefd, sizeof(int) * 2);
   return ret;
 }
 

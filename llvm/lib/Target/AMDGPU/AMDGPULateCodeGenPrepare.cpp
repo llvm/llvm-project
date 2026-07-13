@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
@@ -21,6 +22,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -61,7 +63,7 @@ public:
 
   // Check if the specified value is at least DWORD aligned.
   bool isDWORDAligned(const Value *V) const {
-    KnownBits Known = computeKnownBits(V, DL, 0, AC);
+    KnownBits Known = computeKnownBits(V, DL, AC);
     return Known.countMinTrailingZeros() >= 2;
   }
 
@@ -79,8 +81,6 @@ private:
 
   /// The scalar type to convert to
   Type *const ConvertToScalar;
-  /// The set of visited Instructions
-  SmallPtrSet<Instruction *, 4> Visited;
   /// Map of Value -> Converted Value
   ValueToValueMap ValMap;
   /// Map of containing conversions from Optimal Type -> Original Type per BB.
@@ -115,10 +115,10 @@ public:
     const auto *TLI = ST.getTargetLowering();
 
     Type *EltTy = VTy->getElementType();
-    // If the element size is not less than the convert to scalar size, then we
-    // can't do any bit packing
+    // If the element size is not is not a multiple scalar size, then we can't
+    // do any bit packing
     if (!EltTy->isIntegerTy() ||
-        EltTy->getScalarSizeInBits() > ConvertToScalar->getScalarSizeInBits())
+        ConvertToScalar->getScalarSizeInBits() % EltTy->getScalarSizeInBits())
       return false;
 
     // Only coerce illegal types
@@ -127,7 +127,38 @@ public:
     return LK.first != TargetLoweringBase::TypeLegal;
   }
 
-  bool isOpLegal(Instruction *I) { return isa<StoreInst, IntrinsicInst>(I); }
+  bool isOpLegal(const Instruction *I) {
+    if (isa<IntrinsicInst>(I))
+      return true;
+
+    // Any store is a profitable sink (prevents flip-flopping)
+    if (isa<StoreInst>(I))
+      return true;
+
+    if (auto *BO = dyn_cast<BinaryOperator>(I)) {
+      if (auto *VT = dyn_cast<FixedVectorType>(BO->getType())) {
+        if (const auto *IT = dyn_cast<IntegerType>(VT->getElementType())) {
+          unsigned EB = IT->getBitWidth();
+          unsigned EC = VT->getNumElements();
+          // Check for SDWA-compatible operation
+          if ((EB == 8 || EB == 16) && ST.hasSDWA() && EC * EB <= 32) {
+            switch (BO->getOpcode()) {
+            case Instruction::Add:
+            case Instruction::Sub:
+            case Instruction::And:
+            case Instruction::Or:
+            case Instruction::Xor:
+              return true;
+            default:
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    return false;
+  }
 
   bool isCoercionProfitable(Instruction *II) {
     SmallPtrSet<Instruction *, 4> CVisited;
@@ -151,7 +182,10 @@ public:
       if (!CVisited.insert(CII).second)
         continue;
 
-      if (CII->getParent() == II->getParent() && !IsLookThru(II))
+      // Same-BB filter must look at the *user*; and allow non-lookthrough
+      // users when the def is a PHI (loop-header pattern).
+      if (CII->getParent() == II->getParent() && !IsLookThru(CII) &&
+          !isa<PHINode>(II))
         continue;
 
       if (isOpLegal(CII))
@@ -288,6 +322,7 @@ bool LiveRegOptimizer::optimizeLiveType(
   SmallPtrSet<PHINode *, 4> PhiNodes;
   SmallPtrSet<Instruction *, 4> Defs;
   SmallPtrSet<Instruction *, 4> Uses;
+  SmallPtrSet<Instruction *, 4> Visited;
 
   Worklist.push_back(cast<Instruction>(I));
   while (!Worklist.empty()) {
@@ -386,10 +421,9 @@ bool LiveRegOptimizer::optimizeLiveType(
         Value *NextDeadValue = PHIWorklist.pop_back_val();
         VisitedPhis.insert(NextDeadValue);
         auto OriginalPhi =
-            std::find_if(PhiNodes.begin(), PhiNodes.end(),
-                         [this, &NextDeadValue](PHINode *CandPhi) {
-                           return ValMap[CandPhi] == NextDeadValue;
-                         });
+            llvm::find_if(PhiNodes, [this, &NextDeadValue](PHINode *CandPhi) {
+              return ValMap[CandPhi] == NextDeadValue;
+            });
         // This PHI may have already been removed from maps when
         // unwinding a previous Phi
         if (OriginalPhi != PhiNodes.end())
@@ -460,7 +494,7 @@ bool AMDGPULateCodeGenPrepare::canWidenScalarExtLoad(LoadInst &LI) const {
   if (LI.getAlign() < DL.getABITypeAlign(Ty))
     return false;
   // It should be uniform, i.e. a scalar load.
-  return UA.isUniform(&LI);
+  return UA.isUniformAtDef(&LI);
 }
 
 bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
@@ -503,8 +537,7 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
       Offset - Adjust);
 
   LoadInst *NewLd = IRB.CreateAlignedLoad(IRB.getInt32Ty(), NewPtr, Align(4));
-  NewLd->copyMetadata(LI);
-  NewLd->setMetadata(LLVMContext::MD_range, nullptr);
+  AMDGPU::copyMetadataForWidenedLoad(*NewLd, LI);
 
   unsigned ShAmt = Adjust * 8;
   Value *NewVal = IRB.CreateBitCast(
@@ -547,7 +580,8 @@ public:
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<UniformityInfoWrapperPass>();
-    AU.setPreservesAll();
+    // Invalidates UniformityInfo
+    AU.setPreservesCFG();
   }
 
   bool runOnFunction(Function &F) override;

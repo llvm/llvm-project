@@ -19,11 +19,8 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_BINDERS)
-
 template <class _Arg, class _Result>
-class _LIBCPP_TEMPLATE_VIS
-_LIBCPP_DEPRECATED_IN_CXX11 pointer_to_unary_function : public __unary_function<_Arg, _Result> {
+class _LIBCPP_TEMPLATE_VIS pointer_to_unary_function : public __unary_function<_Arg, _Result> {
   _Result (*__f_)(_Arg);
 
 public:
@@ -32,12 +29,9 @@ public:
 };
 
 template <class _Arg, class _Result>
-_LIBCPP_DEPRECATED_IN_CXX11 inline _LIBCPP_HIDE_FROM_ABI pointer_to_unary_function<_Arg, _Result>
-ptr_fun(_Result (*__f)(_Arg)) {
+inline _LIBCPP_HIDE_FROM_ABI pointer_to_unary_function<_Arg, _Result> ptr_fun(_Result (*__f)(_Arg)) {
   return pointer_to_unary_function<_Arg, _Result>(__f);
 }
-
-#endif // _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_BINDERS)
 
 _LIBCPP_END_NAMESPACE_STD
 

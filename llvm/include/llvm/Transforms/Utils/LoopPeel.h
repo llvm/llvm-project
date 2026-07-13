@@ -19,26 +19,36 @@
 
 namespace llvm {
 
-bool canPeel(const Loop *L);
+LLVM_ABI bool canPeel(const Loop *L);
+
+/// Returns true if the last iteration of \p L can be peeled off. It makes sure
+/// the loop exit condition can be adjusted when peeling and that the loop
+/// executes at least 2 iterations.
+LLVM_ABI bool canPeelLastIteration(const Loop &L, ScalarEvolution &SE);
 
 /// VMap is the value-map that maps instructions from the original loop to
-/// instructions in the last peeled-off iteration.
-bool peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI, ScalarEvolution *SE,
-              DominatorTree &DT, AssumptionCache *AC, bool PreserveLCSSA,
-              ValueToValueMapTy &VMap);
+/// instructions in the last peeled-off iteration. If \p PeelLast is true, peel
+/// off the last \p PeelCount iterations from \p L (canPeelLastIteration must be
+/// true for \p L), otherwise peel off the first \p PeelCount iterations.
+LLVM_ABI void peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
+                       ScalarEvolution *SE, DominatorTree &DT,
+                       AssumptionCache *AC, bool PreserveLCSSA,
+                       ValueToValueMapTy &VMap);
 
-TargetTransformInfo::PeelingPreferences
+LLVM_ABI TargetTransformInfo::PeelingPreferences
 gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
                          const TargetTransformInfo &TTI,
                          std::optional<bool> UserAllowPeeling,
                          std::optional<bool> UserAllowProfileBasedPeeling,
                          bool UnrollingSpecficValues = false);
 
-void computePeelCount(Loop *L, unsigned LoopSize,
-                      TargetTransformInfo::PeelingPreferences &PP,
-                      unsigned TripCount, DominatorTree &DT,
-                      ScalarEvolution &SE, AssumptionCache *AC = nullptr,
-                      unsigned Threshold = UINT_MAX);
+LLVM_ABI void computePeelCount(Loop *L, unsigned LoopSize,
+                               TargetTransformInfo::PeelingPreferences &PP,
+                               unsigned TripCount, DominatorTree &DT,
+                               ScalarEvolution &SE,
+                               const TargetTransformInfo &TTI,
+                               AssumptionCache *AC = nullptr,
+                               unsigned Threshold = UINT_MAX);
 
 } // end namespace llvm
 

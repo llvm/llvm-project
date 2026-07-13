@@ -469,9 +469,9 @@ unreachable:                                      ; preds = %rethrow
 ; }
 ;
 ; ~Temp() generates cleanupret, which is lowered to a 'throw_ref' later. That
-; throw_ref's argument should correctly target the top-level cleanuppad
-; (catch_all_ref). This is a regression test for the bug where we did not
-; compute throw_ref's argument correctly.
+; throw_ref's argument should correctly rethrow the exception caught by the
+; top-level cleanuppad (catch_all_ref). This is a regression test for the bug
+; where we did not compute throw_ref's argument correctly.
 
 ; CHECK-LABEL: inlined_cleanupret:
 ; CHECK: block     exnref
@@ -484,6 +484,7 @@ unreachable:                                      ; preds = %rethrow
 ; try_table (catch_all_ref 0)'s caught exception is stored in local 2
 ; CHECK:     local.set  2
 ; CHECK:     block
+; catch_all 0 dispatches to %terminate.i (the 'call _ZSt9terminatev' instruction).
 ; CHECK:       try_table    (catch_all 0)
 ; CHECK:         block
 ; CHECK:           block     i32
@@ -495,7 +496,8 @@ unreachable:                                      ; preds = %rethrow
 ; CHECK:           block     i32
 ; CHECK:             try_table    (catch_all_ref 5)
 ; CHECK:               try_table    (catch __cpp_exception 1)
-; Note that the throw_ref below targets the top-level catch_all_ref (local 2)
+; Note that the throw_ref below rethrows the exception caught by the top-level
+; catch_all_ref (local 2)
 ; CHECK:                 local.get  2
 ; CHECK:                 throw_ref
 ; CHECK:               end_try_table
@@ -670,4 +672,32 @@ attributes #0 = { nounwind }
 attributes #1 = { noreturn }
 attributes #2 = { noreturn nounwind }
 
-; CHECK: __cpp_exception:
+; CHECK-LABEL: empty_cleanup_pad:
+; CHECK:     try_table    (catch_all_ref 0)
+; CHECK:     throw_ref
+define void @empty_cleanup_pad(i32 %arg) personality ptr @__gxx_wasm_personality_v0 {
+entry:
+  br label %loop
+
+loop:
+  invoke void @foo()
+          to label %loop unwind label %cleanup
+
+cleanup:
+  %exn = cleanuppad within none []
+  br label %dispatch
+
+dispatch:                                         ; preds = %cleanup, %dispatch
+  %cond = icmp eq i32 %arg, 0
+  br i1 %cond, label %ret, label %dispatch
+
+ret:                                              ; preds = %dispatch
+  cleanupret from %exn unwind label %cleanup2
+
+cleanup2:                                         ; preds = %ret
+  %exn2 = cleanuppad within none []
+  ret void
+}
+
+;; The exception tag should not be defined locally
+; CHECK-NOT: __cpp_exception:

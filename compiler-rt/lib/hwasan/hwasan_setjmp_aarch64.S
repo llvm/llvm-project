@@ -28,7 +28,7 @@
 // stack pointer when compiling a C function.
 // Hence we have to write this function in assembly.
 
-.section .text
+TEXT_SECTION
 .file "hwasan_setjmp_aarch64.S"
 
 .global ASM_WRAPPER_NAME(setjmp)
@@ -99,4 +99,4 @@ ASM_TRAMPOLINE_ALIAS(_setjmp, setjmp)
 // We do not need executable stack.
 NO_EXEC_STACK_DIRECTIVE
 
-GNU_PROPERTY_BTI_PAC
+GNU_PROPERTY_BTI_PAC_GCS

@@ -13,7 +13,7 @@ entry:
   ;   }
   ;
   ; CHECK-LABEL: Machine code for function test1
-  ; CHECK: DBG_VALUE %[[#]]:int32regs, $noreg, !"xyz", !DIExpression(), debug-location ![[#]]; test.cu:2 line no:6
+  ; CHECK: DBG_VALUE %[[#]]:b32, $noreg, !"xyz", !DIExpression(), debug-location ![[#]]; test.cu:2 line no:6
   ;
   %cmp = icmp eq i32 %gid, 0, !dbg !12
   %conv = zext i1 %cmp to i32, !dbg !12
@@ -35,7 +35,7 @@ entry:
   ;   }
   ;
   ; CHECK-LABEL: Machine code for function test2
-  ; CHECK: DBG_VALUE %[[#]]:int32regs, $noreg, !"abc", !DIExpression(), debug-location ![[#]]; test.cu:12 line no:11
+  ; CHECK: DBG_VALUE %[[#]]:b32, $noreg, !"abc", !DIExpression(), debug-location ![[#]]; test.cu:12 line no:11
   ;
   %cmp = icmp eq i32 %gid, 0, !dbg !17
   %conv = zext i1 %cmp to i32, !dbg !17

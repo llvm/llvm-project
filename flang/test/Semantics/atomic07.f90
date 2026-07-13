@@ -34,7 +34,7 @@ program test_atomic_fetch_or
   call atomic_fetch_or(array, val, old_val)
 
   !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_fetch_or'
-  call atomic_fetch_or(non_scalar_coarray[1], val, old_val)
+  call atomic_fetch_or(non_scalar_coarray(:)[1], val, old_val)
 
   !ERROR: Actual argument for 'atom=' must have kind=atomic_int_kind, but is 'INTEGER(4)'
   call atomic_fetch_or(default_kind_coarray, val, old_val)

@@ -12,8 +12,8 @@
 #include "lldb/Core/Declaration.h"
 #include "lldb/Target/Language.h"
 
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 static bool IsStructOrClassTag(llvm::dwarf::Tag Tag) {
   return Tag == llvm::dwarf::Tag::DW_TAG_class_type ||

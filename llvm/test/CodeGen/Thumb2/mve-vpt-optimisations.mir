@@ -1042,5 +1042,28 @@ body:             |
     %5:mqpr = IMPLICIT_DEF
     %6:mqpr = MVE_VORR %5:mqpr, %5:mqpr, 1, killed %4, $noreg, undef %6
     tBX_RET 14 /* CC::al */, $noreg, implicit %5:mqpr
-
+...
+---
+name:            kill_flags_2
+alignment:       4
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: kill_flags_2
+    ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
+    ; CHECK-NEXT: [[t2MOVi:%[0-9]+]]:rgpr = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vccr = COPY [[t2MOVi]]
+    ; CHECK-NEXT: [[MVE_VHADDs8_:%[0-9]+]]:mqpr = MVE_VHADDs8 [[COPY]], [[COPY]], 1, [[COPY1]], $noreg, [[COPY]]
+    ; CHECK-NEXT: [[MVE_VPNOT:%[0-9]+]]:vccr = MVE_VPNOT [[COPY1]], 0, $noreg, $noreg
+    ; CHECK-NEXT: [[MVE_VSLIimm8_:%[0-9]+]]:mqpr = MVE_VSLIimm8 [[MVE_VHADDs8_]], [[COPY]], 0, 1, [[MVE_VPNOT]], $noreg
+    ; CHECK-NEXT: $q0 = COPY [[MVE_VSLIimm8_]]
+    ; CHECK-NEXT: tBX_RET 14 /* CC::al */, $noreg, implicit $q0
+    %0:mqpr = COPY $q0
+    %1:rgpr = t2MOVi 0, 14, $noreg, $noreg
+    %2:vccr = COPY %1:rgpr
+    %3:mqpr = MVE_VHADDs8 %0:mqpr, %0:mqpr, 1, killed %2:vccr, $noreg, %0:mqpr
+    %4:rgpr = t2MOVi16 65535, 14, $noreg
+    %5:vccr = COPY %4:rgpr
+    %6:mqpr = MVE_VSLIimm8 %3:mqpr, %0:mqpr, 0, 1, killed %5:vccr, $noreg
+    $q0 = COPY %6:mqpr
+    tBX_RET 14, $noreg, implicit $q0
 ...

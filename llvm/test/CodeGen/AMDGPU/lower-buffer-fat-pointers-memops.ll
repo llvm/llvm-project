@@ -175,7 +175,9 @@ define {i32, i1} @cmpxchg_weak(ptr addrspace(8) %buf, i32 %wanted, i32 %new) {
 ; CHECK-NEXT:    [[RET:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i32(i32 [[NEW]], i32 [[WANTED]], ptr addrspace(8) align 4 [[BUF]], i32 16, i32 0, i32 0)
 ; CHECK-NEXT:    fence syncscope("wavefront") acquire
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } poison, i32 [[RET]], 0
-; CHECK-NEXT:    ret { i32, i1 } [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[RET]], [[WANTED]]
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i32, i1 } [[TMP1]], i1 [[TMP2]], 1
+; CHECK-NEXT:    ret { i32, i1 } [[TMP3]]
 ;
   %base = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
   %p = getelementptr i32, ptr addrspace(7) %base, i32 4

@@ -12,6 +12,7 @@
 
 #include "ARCSubtarget.h"
 #include "ARC.h"
+#include "ARCSelectionDAGInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
@@ -27,4 +28,12 @@ void ARCSubtarget::anchor() {}
 ARCSubtarget::ARCSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS, const TargetMachine &TM)
     : ARCGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS), InstrInfo(*this),
-      FrameLowering(*this), TLInfo(TM, *this) {}
+      FrameLowering(*this), TLInfo(TM, *this) {
+  TSInfo = std::make_unique<ARCSelectionDAGInfo>();
+}
+
+ARCSubtarget::~ARCSubtarget() = default;
+
+const SelectionDAGTargetInfo *ARCSubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
+}

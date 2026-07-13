@@ -14,6 +14,7 @@ from lldbsuite.test import lldbutil
 from functionalities.breakpoint.hardware_breakpoints.base import *
 
 
+@skipIfWasm  # no hardware breakpoints
 class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
     def test_breakpoint(self):
         """Test regular breakpoints when hardware breakpoints are required."""
@@ -26,7 +27,7 @@ class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
         breakpoint = target.BreakpointCreateByLocation("main.c", 1)
         self.assertTrue(breakpoint.IsHardware())
 
-    @skipTestIfFn(HardwareBreakpointTestBase.supports_hw_breakpoints)
+    @skipTestIfFn(HardwareBreakpointTestBase.hw_breakpoints_supported)
     def test_step_range(self):
         """Test stepping when hardware breakpoints are required."""
         self.build()
@@ -49,7 +50,7 @@ class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
             "Could not create hardware breakpoint for thread plan", error.GetCString()
         )
 
-    @skipTestIfFn(HardwareBreakpointTestBase.supports_hw_breakpoints)
+    @skipTestIfFn(HardwareBreakpointTestBase.hw_breakpoints_supported)
     def test_step_out(self):
         """Test stepping out when hardware breakpoints are required."""
         self.build()
@@ -71,7 +72,7 @@ class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
             "Could not create hardware breakpoint for thread plan", error.GetCString()
         )
 
-    @skipTestIfFn(HardwareBreakpointTestBase.supports_hw_breakpoints)
+    @skipTestIfFn(HardwareBreakpointTestBase.hw_breakpoints_supported)
     def test_step_over(self):
         """Test stepping over when hardware breakpoints are required."""
         self.build()
@@ -90,8 +91,8 @@ class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
         )
 
     # Was reported to sometimes pass on certain hardware.
-    @skipIf(oslist=["linux"], archs=["arm"])
-    @skipTestIfFn(HardwareBreakpointTestBase.supports_hw_breakpoints)
+    @skipIf(oslist=["linux"], archs=["arm$"])
+    @skipTestIfFn(HardwareBreakpointTestBase.hw_breakpoints_supported)
     def test_step_until(self):
         """Test stepping until when hardware breakpoints are required."""
         self.build()

@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=amdgcn-- -passes='print<machine-uniformity>' -filetype=null %s 2>&1 | FileCheck %s
 
 # CHECK-LABEL: MachineUniformityInfo for function:  @basic
-# CHECK-NEXT: CYCLES ASSSUMED DIVERGENT:
+# CHECK-NEXT: CYCLES ASSUMED DIVERGENT:
 # CHECK-NEXT: depth=1: entries(bb.1 bb.3) bb.2
 # CHECK-LABEL: BLOCK bb.1
 # CHECK: DIVERGENT

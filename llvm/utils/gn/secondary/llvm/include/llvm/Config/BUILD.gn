@@ -51,7 +51,8 @@ declare_args() {
   llvm_force_enable_stats = false
 
   # glibc is at least 2.33 which has mallinfo2.
-  # TODO: remove this once nobody using the gn build is building against an old glibc.
+  # TODO: remove this once nobody using the gn build is building against an old
+  # glibc.
   llvm_have_mallinfo2 = current_os == "linux"
 }
 
@@ -94,12 +95,15 @@ write_cmake_config("config") {
     "HAVE_FFI_CALL=",
     "HAVE_FFI_FFI_H=",
     "HAVE_FFI_H=",
+    "HAVE_ICONV=",
+    "HAVE_ICU=",
     "HAVE_LIBPFM=",
     "HAVE_LIBPSAPI=",
     "HAVE_MALLCTL=",
     "HAVE_PTHREAD_GET_NAME_NP=",
     "HAVE_PTHREAD_SET_NAME_NP=",
     "HAVE_VALGRIND_VALGRIND_H=",
+    "HAVE_WINDOWS_ICU=",
     "HAVE__ALLOCA=",
     "HAVE___ALLOCA=",
     "HAVE___ASHLDI3=",
@@ -221,6 +225,7 @@ write_cmake_config("config") {
       "HAVE_SIGALTSTACK=",
       "HAVE_STRERROR_R=",
       "HAVE_SYSCONF=",
+      "HAVE_SYS_IOCTL_H=",
       "HAVE_SYS_MMAN_H=",
       "HAVE_UNISTD_H=",
       "HAVE__CHSIZE_S=1",
@@ -248,6 +253,7 @@ write_cmake_config("config") {
       "HAVE_SIGALTSTACK=1",
       "HAVE_STRERROR_R=1",
       "HAVE_SYSCONF=1",
+      "HAVE_SYS_IOCTL_H=1",
       "HAVE_SYS_MMAN_H=1",
       "HAVE_UNISTD_H=1",
       "HAVE__CHSIZE_S=",
@@ -292,13 +298,18 @@ write_cmake_config("llvm-config") {
   input = "llvm-config.h.cmake"
   output = "$target_gen_dir/llvm-config.h"
   values = [
+    "LLVM_ENABLE_PROFCHECK=",
     "LLVM_BUILD_LLVM_DYLIB=",
     "LLVM_BUILD_SHARED_LIBS=",
+    "LLVM_ENABLE_LLVM_C_EXPORT_ANNOTATIONS=",
     "LLVM_ENABLE_TELEMETRY=",
     "LLVM_DEFAULT_TARGET_TRIPLE=$llvm_target_triple",
-    "LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING=",
+    "LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE=",
+    "LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN=",
     "LLVM_ENABLE_DUMP=",
     "LLVM_ENABLE_HTTPLIB=",
+    "LLVM_ENABLE_IO_SANDBOX=",
+    "LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS=",
     "LLVM_FORCE_USE_OLD_TOOLCHAIN=",
     "LLVM_HAS_ATOMICS=1",
     "LLVM_HAS_LOGF128=",
@@ -356,6 +367,12 @@ write_cmake_config("llvm-config") {
     values += [ "LLVM_ENABLE_DIA_SDK=1" ]
   } else {
     values += [ "LLVM_ENABLE_DIA_SDK=" ]
+  }
+
+  if (llvm_enable_ondisk_cas) {
+    values += [ "LLVM_ENABLE_ONDISK_CAS=1" ]
+  } else {
+    values += [ "LLVM_ENABLE_ONDISK_CAS=" ]
   }
 
   if (llvm_enable_threads) {

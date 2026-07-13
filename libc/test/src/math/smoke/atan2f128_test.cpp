@@ -25,4 +25,9 @@ TEST_F(LlvmLibcAtan2f128Test, SpecialNumbers) {
   float128 y = 0x1.fffffffffffffffffffffffffff2p1q;
   float128 r = 0x1.921fb54442d18469898cc51701b3p-1q;
   EXPECT_FP_EQ(r, LIBC_NAMESPACE::atan2f128(x, y));
+
+  x = -0x1.f122e07fff556143p+3524q;
+  y = 0x1.f122e07fff55615b75p+6316q;
+  r = -0x1.ffffffffffffffe6cfcdc604fc99p-2793q;
+  EXPECT_FP_EQ(r, LIBC_NAMESPACE::atan2f128(x, y));
 }

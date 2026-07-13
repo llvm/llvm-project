@@ -1,8 +1,8 @@
 ! Test delayed privatization for allocatable arrays.
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %s 2>&1 | FileCheck %s
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - %s 2>&1 |\
+! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization -o - %s 2>&1 |\
 ! RUN:   FileCheck %s
 
 subroutine delayed_privatization_private(var1, l1)
@@ -36,7 +36,6 @@ end subroutine
 ! CHECK-NEXT:     %[[DIMS:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C0]]
 ! CHECK-NEXT:     %[[SHAPE:.*]] = fir.shape %[[DIMS]]#1
 ! CHECK-NEXT:     %[[MEM:.*]] = fir.allocmem !fir.array<?xi32>, %[[DIMS]]#1
-! CHECK-NEXT:     %[[TRUE:.*]] = arith.constant true
 ! CHECK-NEXT:     %[[DECL:.*]]:2 = hlfir.declare %[[MEM]](%[[SHAPE]])
 ! CHECK-NEXT:     %[[C0_2:.*]] = arith.constant 0 : index
 ! CHECK-NEXT:     %[[DIMS_2:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C0_2]]

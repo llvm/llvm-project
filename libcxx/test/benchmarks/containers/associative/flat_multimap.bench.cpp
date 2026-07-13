@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++26
+// REQUIRES: std-at-least-c++23
 
 #include <flat_map>
 
@@ -23,6 +23,14 @@ struct support::adapt_operations<std::flat_multimap<K, V>> {
 
   using InsertionResult = typename std::flat_multimap<K, V>::iterator;
   static auto get_iterator(InsertionResult const& result) { return result; }
+
+  template <class Allocator>
+  using rebind_alloc =
+      std::flat_multimap<K,
+                         V,
+                         std::less<K>,
+                         std::vector<K, typename std::allocator_traits<Allocator>::template rebind_alloc<K>>,
+                         std::vector<V, typename std::allocator_traits<Allocator>::template rebind_alloc<V>>>;
 };
 
 int main(int argc, char** argv) {

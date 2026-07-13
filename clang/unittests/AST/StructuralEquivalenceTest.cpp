@@ -617,8 +617,7 @@ TEST_F(StructuralEquivalenceCXXMethodTest, OutOfClass2) {
 struct StructuralEquivalenceRecordTest : StructuralEquivalenceTest {
   // FIXME Use a common getRecordDecl with ASTImporterTest.cpp!
   RecordDecl *getRecordDecl(FieldDecl *FD) {
-    auto *ET = cast<ElaboratedType>(FD->getType().getTypePtr());
-    return cast<RecordType>(ET->getNamedType().getTypePtr())->getDecl();
+    return FD->getType()->getAsRecordDecl();
   };
 };
 

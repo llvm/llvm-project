@@ -77,6 +77,44 @@ static void DescribeAddressBriefly(Stream &strm, const Address &addr,
   strm.Printf(".\n");
 }
 
+std::optional<addr_t> StopInfoMachException::GetTagFaultAddress() const {
+  const bool bad_access =
+      (m_value == 1 || m_value == 12);          // EXC_BAD_ACCESS or EXC_GUARD
+  const bool tag_fault = (m_exc_code == 0x106); // EXC_ARM_MTE_TAG_FAULT
+  // Whether the subcode (m_exc_subcode) holds the fault address.
+  const bool has_fault_addr = (m_exc_data_count >= 2);
+
+  if (bad_access && tag_fault && has_fault_addr)
+    return m_exc_subcode; // The subcode is the fault address.
+
+  return std::nullopt;
+}
+
+static constexpr uint8_t g_mte_tag_shift = 64 - 8;
+static constexpr addr_t g_mte_tag_mask = (addr_t)0x0f << g_mte_tag_shift;
+
+bool StopInfoMachException::DetermineTagMismatch() {
+  std::optional<addr_t> fault_address = GetTagFaultAddress();
+  if (!fault_address)
+    return false;
+
+  const uint64_t bad_address = *fault_address;
+
+  StreamString strm;
+  strm.Printf("EXC_ARM_MTE_TAG_FAULT (code=%" PRIu64 ", address=0x%" PRIx64
+              ")\n",
+              m_exc_code, bad_address);
+
+  const uint8_t tag = (bad_address & g_mte_tag_mask) >> g_mte_tag_shift;
+  const addr_t canonical_addr = bad_address & ~g_mte_tag_mask;
+  strm.Printf(
+      "Note: MTE tag mismatch detected: pointer tag=%d, address=0x%" PRIx64,
+      tag, canonical_addr);
+  m_description = std::string(strm.GetString());
+
+  return true;
+}
+
 bool StopInfoMachException::DeterminePtrauthFailure(ExecutionContext &exe_ctx) {
   bool IsBreakpoint = m_value == 6; // EXC_BREAKPOINT
   bool IsBadAccess = m_value == 1;  // EXC_BAD_ACCESS
@@ -265,6 +303,8 @@ const char *StopInfoMachException::GetDescription() {
 
     case llvm::Triple::aarch64:
       if (DeterminePtrauthFailure(exe_ctx))
+        return m_description.c_str();
+      if (DetermineTagMismatch())
         return m_description.c_str();
       break;
 
@@ -459,6 +499,8 @@ const char *StopInfoMachException::GetDescription() {
 #endif
     break;
   case 12:
+    if (DetermineTagMismatch())
+      return m_description.c_str();
     exc_desc = "EXC_GUARD";
     break;
   }
@@ -594,7 +636,7 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
   addr_t pc = reg_ctx_sp->GetPC();
   BreakpointSiteSP bp_site_sp =
       process_sp->GetBreakpointSiteList().FindByAddress(pc);
-  if (bp_site_sp && bp_site_sp->IsEnabled())
+  if (bp_site_sp && process_sp->IsBreakpointSitePhysicallyEnabled(*bp_site_sp))
     thread.SetThreadStoppedAtUnexecutedBP(pc);
 
   switch (exc_type) {
@@ -729,7 +771,8 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
       if (!bp_site_sp && reg_ctx_sp) {
         bp_site_sp = process_sp->GetBreakpointSiteList().FindByAddress(pc);
       }
-      if (bp_site_sp && bp_site_sp->IsEnabled()) {
+      if (bp_site_sp &&
+          process_sp->IsBreakpointSitePhysicallyEnabled(*bp_site_sp)) {
         // We've hit this breakpoint, whether it was intended for this thread
         // or not.  Clear this in the Tread object so we step past it on resume.
         thread.SetThreadHitBreakpointSite();
@@ -785,6 +828,16 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
       not_stepping_but_got_singlestep_exception);
 }
 
+void StopInfoMachException::PerformAction([[maybe_unused]] Event *event_ptr) {
+  // This action currently only fires if the exception is an ARM breakpoint
+  // and if the PC is still at the instruction that caused the exception.
+  if (!(m_value == 6 /*EXC_BREAKPOINT*/ &&
+        m_exc_code == 1 /*EXC_ARM_BREAKPOINT*/) ||
+      m_exc_subcode != m_thread_wp.lock()->GetRegisterContext()->GetPC())
+    return;
+  SkipOverTrapInstruction();
+}
+
 // Detect an unusual situation on Darwin where:
 //
 //   0. We did an instruction-step before this.
@@ -823,7 +876,8 @@ bool StopInfoMachException::WasContinueInterrupted(Thread &thread) {
   // We have a hardware breakpoint -- this is the kernel bug.
   auto &bp_site_list = process_sp->GetBreakpointSiteList();
   for (auto &site : bp_site_list.Sites()) {
-    if (site->IsHardware() && site->IsEnabled()) {
+    if (site->IsHardware() &&
+        process_sp->IsBreakpointSitePhysicallyEnabled(*site)) {
       LLDB_LOGF(log,
                 "Thread stopped with insn-step completed mach exception but "
                 "thread was not stepping; there is a hardware breakpoint set.");

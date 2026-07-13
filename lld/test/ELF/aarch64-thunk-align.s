@@ -1,6 +1,6 @@
 // REQUIRES: aarch64
 // RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t
-// RUN: ld.lld -Ttext=0x12000 -defsym long=0x10000000 -defsym short=0x8012004 -defsym short2=0x8012008 -defsym short3=0x801200c %t -o %t.exe
+// RUN: ld.lld --image-base=0x12000 -Ttext=0x12000 -defsym long=0x10000000 -defsym short=0x8012004 -defsym short2=0x8012008 -defsym short3=0x801200c %t -o %t.exe
 // RUN: llvm-objdump -d --no-show-raw-insn %t.exe | FileCheck %s
 
 /// The AArch64AbsLongThunk requires 8-byte alignment just in case unaligned

@@ -3,7 +3,7 @@
 
 template <typename T> struct G {
   T __ptrauth(0,0,1234) test;
-  // expected-error@-1 2 {{type '__ptrauth(0,0,1234) T' is already __ptrauth-qualified}}
+  // expected-error@-1 2 {{type '__ptrauth(0,0,1234) T' is already '__ptrauth'-qualified}}
 };
 
 template <typename T> struct Indirect {

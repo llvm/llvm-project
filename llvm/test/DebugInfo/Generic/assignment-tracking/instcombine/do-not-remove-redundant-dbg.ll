@@ -1,5 +1,5 @@
 ; RUN: opt -passes=instcombine -S %s -o -  \
-; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: | FileCheck %s --implicit-check-not="#dbg_"
 
 ;; Based on the test remove-redundant-dbg.ll.
 ;;

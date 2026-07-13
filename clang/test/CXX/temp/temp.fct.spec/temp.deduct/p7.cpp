@@ -54,3 +54,20 @@ namespace reversed_operator_substitution_order {
   float &s = no_adl::f<int>(true);
 }
 #endif
+
+namespace GH53609 {
+
+template <class, int>
+struct a;
+
+template <class, class...>
+struct b;
+
+template <class x, class... y, y... z>
+struct b<x, a<y, z>...> {};
+
+template <class... x> struct c: b<x>...  {};
+
+c<int> d;
+
+}

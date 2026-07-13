@@ -5,8 +5,8 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "nvptx-nvidia-cuda"
 
 define void @main(ptr %a1, i32 %a2, ptr %arg3) {
-; CHECK: ld.u8
-; CHECK-NOT: ld.u1
+; CHECK: ld.b8
+; CHECK-NOT: ld.b1
   %t1 = getelementptr i1, ptr %a1, i32 %a2
   %t2 = load i1, ptr %t1
   %t3 = sext i1 %t2 to i32

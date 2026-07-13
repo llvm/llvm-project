@@ -277,15 +277,6 @@ public:
 
   CompilerDeclContext GetDeclContext();
 
-  /// Get the memory cost of this object.
-  ///
-  /// Returns the cost of this object plus any owned objects from the ranges,
-  /// variables, and inline function information.
-  ///
-  /// \return
-  ///     The number of bytes that this object occupies in memory.
-  size_t MemorySize() const;
-
   /// Set accessor for any inlined function information.
   ///
   /// \param[in] name
@@ -354,7 +345,12 @@ protected:
   // Member variables.
   SymbolContextScope &m_parent_scope;
   collection m_children;
+
+  /// Address ranges of this block. They are relative to the function entry
+  /// point so one must add/subtract GetFunction().GetAddress().GetFileAddress()
+  /// when converting from/to to the AddressRange representation.
   RangeList m_ranges;
+
   lldb::InlineFunctionInfoSP m_inlineInfoSP; ///< Inlined function information.
   lldb::VariableListSP m_variable_list_sp; ///< The variable list for all local,
                                            ///static and parameter variables

@@ -80,7 +80,7 @@ void ThreadContextBase::SetFinished() {
   OnFinished();
 }
 
-void ThreadContextBase::SetStarted(tid_t _os_id, ThreadType _thread_type,
+void ThreadContextBase::SetStarted(ThreadID _os_id, ThreadType _thread_type,
                                    void *arg) {
   status = ThreadStatusRunning;
   os_id = _os_id;
@@ -228,7 +228,8 @@ static bool FindThreadContextByOsIdCallback(ThreadContextBase *tctx,
           tctx->status != ThreadStatusDead);
 }
 
-ThreadContextBase *ThreadRegistry::FindThreadContextByOsIDLocked(tid_t os_id) {
+ThreadContextBase *ThreadRegistry::FindThreadContextByOsIDLocked(
+    ThreadID os_id) {
   return FindThreadContextLocked(FindThreadContextByOsIdCallback,
                                  (void *)os_id);
 }
@@ -322,8 +323,8 @@ ThreadStatus ThreadRegistry::FinishThread(u32 tid) {
   return prev_status;
 }
 
-void ThreadRegistry::StartThread(u32 tid, tid_t os_id, ThreadType thread_type,
-                                 void *arg) {
+void ThreadRegistry::StartThread(u32 tid, ThreadID os_id,
+                                 ThreadType thread_type, void *arg) {
   ThreadRegistryLock l(this);
   running_threads_++;
   ThreadContextBase *tctx = threads_[tid];

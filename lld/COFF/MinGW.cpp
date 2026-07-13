@@ -13,7 +13,6 @@
 #include "SymbolTable.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/Object/COFF.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -47,6 +46,8 @@ AutoExporter::AutoExporter(
       "libclang_rt.profile-arm",
       "libclang_rt.profile-i386",
       "libclang_rt.profile-x86_64",
+      "libcygwin",
+      "libmsys-2.0",
       "libc++",
       "libc++abi",
       "libflang_rt.runtime",
@@ -149,7 +150,8 @@ bool AutoExporter::shouldExport(Defined *sym) const {
   // disallow import symbols.
   if (!isa<DefinedRegular>(sym) && !isa<DefinedCommon>(sym))
     return false;
-  if (excludeSymbols.count(sym->getName()) || manualExcludeSymbols.count(sym->getName()))
+  if (excludeSymbols.contains(sym->getName()) ||
+      manualExcludeSymbols.contains(sym->getName()))
     return false;
 
   for (StringRef prefix : excludeSymbolPrefixes.keys())
@@ -173,10 +175,10 @@ bool AutoExporter::shouldExport(Defined *sym) const {
   // Drop the file extension.
   libName = libName.substr(0, libName.rfind('.'));
   if (!libName.empty())
-    return !excludeLibs.count(libName);
+    return !excludeLibs.contains(libName);
 
   StringRef fileName = sys::path::filename(sym->getFile()->getName());
-  return !excludeObjects.count(fileName);
+  return !excludeObjects.contains(fileName);
 }
 
 void lld::coff::writeDefFile(COFFLinkerContext &ctx, StringRef name,
@@ -268,10 +270,15 @@ void lld::coff::wrapSymbols(SymbolTable &symtab) {
       // (We can't easily distinguish whether any object file actually
       // referenced it or not, though.)
       if (imp) {
-        DefinedLocalImport *wrapimp = make<DefinedLocalImport>(
-            symtab.ctx, saver().save("__imp_" + w.wrap->getName()), d);
-        symtab.localImportChunks.push_back(wrapimp->getChunk());
-        map[imp] = wrapimp;
+        if (Symbol *wrapimp =
+                symtab.find(("__imp_" + w.wrap->getName()).str())) {
+          map[imp] = wrapimp;
+        } else {
+          DefinedLocalImport *localwrapimp = make<DefinedLocalImport>(
+              symtab.ctx, saver().save("__imp_" + w.wrap->getName()), d);
+          symtab.localImportChunks.push_back(localwrapimp->getChunk());
+          map[imp] = localwrapimp;
+        }
       }
     }
   }

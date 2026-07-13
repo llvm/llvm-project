@@ -1,0 +1,144 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+import pathlib
+import subprocess
+import sys
+import tempfile
+
+PARENT_DIR = pathlib.Path(os.path.dirname(os.path.abspath(__file__)))
+
+LIT_CONFIG_FILE = """
+#
+# This testing configuration handles running the test suite against a version
+# of libc++ installed at the given path.
+#
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+config.substitutions.append(('%{{flags}}',
+    '-pthread' + (' -isysroot {{}}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else '')
+))
+config.substitutions.append(('%{{compile_flags}}', '-nostdinc++ -I {INSTALL_ROOT}/include/c++/v1 -I %{{libcxx-dir}}/test/support'))
+config.substitutions.append(('%{{link_flags}}', '-nostdlib++ -L {INSTALL_ROOT}/lib -Wl,-rpath,{INSTALL_ROOT}/lib -lc++'))
+config.substitutions.append(('%{{exec}}', '%{{executor}} --execdir %{{temp}} -- '))
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+import libcxx.test.params, libcxx.test.config
+libcxx.test.config.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)
+"""
+
+# Unofficial list of directories required to build libc++. This is a best guess that should work
+# when checking out the monorepo at most commits, but it's technically not guaranteed to work
+# (especially for much older commits).
+LIBCXX_REQUIRED_DIRECTORIES = [
+    'libcxx',
+    'libcxxabi',
+    'llvm/cmake',
+    'llvm/utils/llvm-lit',
+    'llvm/utils/lit',
+    'runtimes',
+    'cmake',
+    'third-party/benchmark',
+    'libc'
+]
+
+def checkout_subdirectories(git_repo, commit, paths, destination):
+    """
+    Produce a copy of the specified Git-tracked files/directories at the given commit.
+    The resulting files and directories at placed at the given location.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        tmpfile = os.path.join(tmp, 'archive.tar.gz')
+        git_archive = ['git', '-C', git_repo, 'archive', '--format', 'tar.gz', '--output', tmpfile, commit, '--'] + list(paths)
+        subprocess.check_call(git_archive)
+        os.makedirs(destination, exist_ok=True)
+        subprocess.check_call(['tar', '-x', '-z', '-f', tmpfile, '-C', destination])
+
+def exists_in_commit(git_repo, commit, path):
+    """
+    Return whether the given path (file or directory) existed at the given commit.
+    """
+    cmd = ['git', '-C', git_repo, 'show', f'{commit}:{path}']
+    result = subprocess.call(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return result == 0
+
+def directory_path(string):
+    if os.path.isdir(string):
+        return pathlib.Path(string)
+    else:
+        raise NotADirectoryError(string)
+
+def main(argv):
+    parser = argparse.ArgumentParser(
+        prog='test-at-commit',
+        description='Test the provided libc++ installation against the test suite at the specified commit (or '
+                    'the currently checked-out sources by default). This makes it easier to perform historical '
+                    'analyses of libc++ behavior, gather historical performance data, bisect issues, and so on.')
+    parser.add_argument('--build-dir', '-B', type=pathlib.Path, required=True,
+        help='Path to create the build directory for running the test suite at. The results of the tests '
+             'are located in that directory after the run.')
+    parser.add_argument('--libcxx-installation', type=pathlib.Path, required=True,
+        help='Path to the directory where a copy of libc++ to run tests on is installed.')
+    parser.add_argument('--test-suite-commit', type=str, required=False,
+        help='Commit to use for the test suite. If left unspecified, the currently checked-out version of the '
+             'test suite is used. Otherwise, the requested version is checked out in a separate directory and '
+             'that version of the test suite is used.')
+    parser.add_argument('lit_options', nargs=argparse.REMAINDER,
+        help='Optional arguments passed to lit when running the tests. Should be provided last and '
+             'separated from other arguments with a `--`.')
+    parser.add_argument('--git-repo', type=directory_path, default=pathlib.Path(os.getcwd()),
+        help='Optional path to the Git repository to use. By default, the current working directory is used.')
+    args = parser.parse_args(argv)
+
+    args.build_dir = args.build_dir.resolve()
+    args.libcxx_installation = args.libcxx_installation.resolve()
+
+    # Gather lit options
+    lit_options = []
+    if args.lit_options is not None:
+        if args.lit_options[0] != '--':
+            raise ArgumentError('For clarity, Lit options must be separated from other options by --')
+        lit_options = args.lit_options[1:]
+
+    # This is the list of directories that must be cleaned up before we return
+    tempdirs = []
+    try:
+        # If needed, check out the test suite at the commit we're going to use for the suite
+        if args.test_suite_commit is None:
+            test_suite_sources = args.git_repo
+        else:
+            tempdirs.append(tempfile.TemporaryDirectory())
+            test_suite_sources = pathlib.Path(tempdirs[-1].name)
+            checkout_dirs = [d for d in LIBCXX_REQUIRED_DIRECTORIES if exists_in_commit(args.git_repo, args.test_suite_commit, d)]
+            checkout_subdirectories(args.git_repo, args.test_suite_commit, checkout_dirs, test_suite_sources)
+
+        # Configure the test suite in the specified build directory
+        args.build_dir.mkdir(parents=True, exist_ok=True)
+        lit_cfg = (args.build_dir / 'temp_lit_cfg.cfg.in').absolute()
+        with open(lit_cfg, 'w') as f:
+            f.write(LIT_CONFIG_FILE.format(INSTALL_ROOT=args.libcxx_installation))
+
+        test_suite_cmd = ['cmake', '-B', args.build_dir, '-S', test_suite_sources / 'runtimes', '-G', 'Ninja']
+        test_suite_cmd += ['-D', 'LLVM_ENABLE_RUNTIMES=libcxx;libcxxabi']
+        test_suite_cmd += ['-D', 'LIBCXXABI_USE_LLVM_UNWINDER=OFF']
+        test_suite_cmd += ['-D', f'LIBCXX_TEST_CONFIG={lit_cfg}']
+        subprocess.check_call(test_suite_cmd)
+
+        # Run the specified tests against the built library
+        lit_cmd = [PARENT_DIR / 'libcxx-lit', args.build_dir] + lit_options
+        subprocess.check_call(lit_cmd)
+    finally:
+        for d in tempdirs:
+            d.cleanup()
+
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

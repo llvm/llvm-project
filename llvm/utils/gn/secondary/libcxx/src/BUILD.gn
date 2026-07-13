@@ -47,9 +47,10 @@ config("cxx_config") {
     "-Wextra-semi",
     "-Wno-user-defined-literals",
     "-Wno-covered-switch-default",
+    "-Wno-nullability-completeness",
   ]
   cflags_cc = [
-    "-std=c++23",
+    "-std=c++26",
     "-nostdinc++",
   ]
   defines = [
@@ -130,7 +131,6 @@ cxx_sources = [
   "functional.cpp",
   "future.cpp",
   "hash.cpp",
-  "include/apple_availability.h",
   "include/atomic_support.h",
   "include/config_elast.h",
   "include/from_chars_floating_point.h",
@@ -183,6 +183,7 @@ cxx_sources = [
   "support/runtime/stdexcept_default.ipp",
   "support/runtime/stdexcept_vcruntime.ipp",
   "system_error.cpp",
+  "text_encoding.cpp",
   "thread.cpp",
   "typeinfo.cpp",
   "valarray.cpp",
@@ -316,7 +317,10 @@ if (libcxx_enable_experimental) {
   static_library("cxx_experimental") {
     output_dir = runtimes_dir
     output_name = "c++experimental"
-    sources = [ "experimental/keep.cpp" ]
+    sources = [
+      "experimental/keep.cpp",
+      "experimental/log_hardening_failure.cpp",
+    ]
     if (libcxx_enable_filesystem && libcxx_enable_time_zone_database) {
       sources += [
         # TODO TZDB The exception could be moved in chrono once the TZDB library

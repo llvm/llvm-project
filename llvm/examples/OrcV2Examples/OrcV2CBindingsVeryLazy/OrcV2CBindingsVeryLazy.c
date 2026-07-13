@@ -74,24 +74,27 @@ LLVMErrorRef applyDataLayout(void *Ctx, LLVMModuleRef M) {
 LLVMErrorRef parseExampleModule(const char *Source, size_t Len,
                                 const char *Name,
                                 LLVMOrcThreadSafeModuleRef *TSM) {
-  // Create a new ThreadSafeContext and underlying LLVMContext.
-  LLVMOrcThreadSafeContextRef TSCtx = LLVMOrcCreateNewThreadSafeContext();
-
-  // Get a reference to the underlying LLVMContext.
-  LLVMContextRef Ctx = LLVMOrcThreadSafeContextGetContext(TSCtx);
-
-  // Wrap Source in a MemoryBuffer
-  LLVMMemoryBufferRef MB =
-      LLVMCreateMemoryBufferWithMemoryRange(Source, Len, Name, 1);
+  // Create an LLVMContext.
+  LLVMContextRef Ctx = LLVMContextCreate();
 
   // Parse the LLVM module.
   LLVMModuleRef M;
   char *ErrMsg;
-  if (LLVMParseIRInContext(Ctx, MB, &M, &ErrMsg)) {
+  // Wrap Source in a MemoryBuffer.
+  LLVMMemoryBufferRef MB =
+      LLVMCreateMemoryBufferWithMemoryRange(Source, Len, Name, 0);
+  LLVMBool Ret = LLVMParseIRInContext2(Ctx, MB, &M, &ErrMsg);
+  LLVMDisposeMemoryBuffer(MB);
+
+  if (Ret) {
     LLVMErrorRef Err = LLVMCreateStringError(ErrMsg);
     LLVMDisposeMessage(ErrMsg);
     return Err;
   }
+
+  // Create a new ThreadSafeContext to hold the context.
+  LLVMOrcThreadSafeContextRef TSCtx =
+      LLVMOrcCreateNewThreadSafeContextFromLLVMContext(Ctx);
 
   // Our module is now complete. Wrap it and our ThreadSafeContext in a
   // ThreadSafeModule.

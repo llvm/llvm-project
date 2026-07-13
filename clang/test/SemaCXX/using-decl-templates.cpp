@@ -153,3 +153,11 @@ T foo(T t) { // OK
 }
 } // namespace sss
 } // namespace func_templ
+
+namespace DependentName {
+  template <typename T> struct S {
+    using typename T::Ty;
+    static Ty Val;
+  };
+  template <typename T> typename S<T>::Ty S<T>::Val;
+} // DependentName

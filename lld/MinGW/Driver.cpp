@@ -31,7 +31,6 @@
 #include "lld/Common/Driver.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Memory.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
@@ -45,6 +44,7 @@
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
+#include <stack>
 
 using namespace lld;
 using namespace llvm::opt;
@@ -70,7 +70,7 @@ enum {
 static constexpr opt::OptTable::Info infoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
                VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
-               VALUES)                                                         \
+               VALUES, SUBCOMMANDIDS_OFFSET)                                   \
   {PREFIX,                                                                     \
    NAME,                                                                       \
    HELPTEXT,                                                                   \
@@ -84,7 +84,8 @@ static constexpr opt::OptTable::Info infoTable[] = {
    OPT_##GROUP,                                                                \
    OPT_##ALIAS,                                                                \
    ALIASARGS,                                                                  \
-   VALUES},
+   VALUES,                                                                     \
+   SUBCOMMANDIDS_OFFSET},
 #include "Options.inc"
 #undef OPTION
 };
@@ -139,8 +140,9 @@ static std::optional<std::string> findFile(StringRef path1,
 }
 
 // This is for -lfoo. We'll look for libfoo.dll.a or libfoo.a from search paths.
-static std::string
-searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
+static std::string searchLibrary(StringRef name,
+                                 ArrayRef<StringRef> searchPaths, bool bStatic,
+                                 StringRef prefix) {
   if (name.starts_with(":")) {
     for (StringRef dir : searchPaths)
       if (std::optional<std::string> s = findFile(dir, name.substr(1)))
@@ -161,7 +163,7 @@ searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
     if (std::optional<std::string> s = findFile(dir, name + ".lib"))
       return *s;
     if (!bStatic) {
-      if (std::optional<std::string> s = findFile(dir, "lib" + name + ".dll"))
+      if (std::optional<std::string> s = findFile(dir, prefix + name + ".dll"))
         return *s;
       if (std::optional<std::string> s = findFile(dir, name + ".dll"))
         return *s;
@@ -350,6 +352,12 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       add("-functionpadmin:" + v);
   }
 
+  if (auto *a = args.getLastArg(OPT_native_def)) {
+    StringRef v = a->getValue();
+    if (!v.empty())
+      add("-defarm64native:" + v);
+  }
+
   if (args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false))
     add("-WX");
   else
@@ -448,6 +456,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       add("-machine:arm64");
     else if (s == "arm64ecpe")
       add("-machine:arm64ec");
+    else if (s == "arm64xpe")
+      add("-machine:arm64x");
+    else if (s == "mipspe")
+      add("-machine:mips");
     else
       error("unknown parameter: -m" + s);
   }
@@ -513,6 +525,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     add("-thinlto-object-suffix-replace:" + StringRef(arg->getValue()));
   if (auto *arg = args.getLastArg(OPT_thinlto_prefix_replace_eq))
     add("-thinlto-prefix-replace:" + StringRef(arg->getValue()));
+  if (args.hasFlag(OPT_fat_lto_objects, OPT_no_fat_lto_objects, false))
+    add("-fat-lto-objects");
+  else
+    add("-fat-lto-objects:no");
 
   for (auto *a : args.filtered(OPT_plugin_opt_eq_minus))
     add("-mllvm:-" + StringRef(a->getValue()));
@@ -555,18 +571,32 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     add("-libpath:" + StringRef(a->getValue()));
   }
 
+  StringRef dllPrefix = "lib";
+  if (auto *arg = args.getLastArg(OPT_dll_search_prefix))
+    dllPrefix = arg->getValue();
+
   StringRef prefix = "";
   bool isStatic = false;
+  struct PushPopState {
+    StringRef prefix;
+    bool isStatic;
+  };
+  std::stack<PushPopState, std::vector<PushPopState>> pushPopStates;
   for (auto *a : args) {
     switch (a->getOption().getID()) {
     case OPT_INPUT:
-      if (StringRef(a->getValue()).ends_with_insensitive(".def"))
+      if (StringRef(a->getValue()).ends_with_insensitive(".def")) {
         add("-def:" + StringRef(a->getValue()));
-      else
+        if (args.getLastArgValue(OPT_m) == "arm64xpe" &&
+            !args.hasArg(OPT_native_def))
+          add("-defarm64native:" + StringRef(a->getValue()));
+      } else {
         add(prefix + StringRef(a->getValue()));
+      }
       break;
     case OPT_l:
-      add(prefix + searchLibrary(a->getValue(), searchPaths, isStatic));
+      add(prefix +
+          searchLibrary(a->getValue(), searchPaths, isStatic, dllPrefix));
       break;
     case OPT_whole_archive:
       prefix = "-wholearchive:";
@@ -579,6 +609,18 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       break;
     case OPT_Bdynamic:
       isStatic = false;
+      break;
+    case OPT_push_state:
+      pushPopStates.push({prefix, isStatic});
+      break;
+    case OPT_pop_state:
+      if (pushPopStates.empty()) {
+        error("unbalanced --push-state/--pop-state");
+        break;
+      }
+      prefix = pushPopStates.top().prefix;
+      isStatic = pushPopStates.top().isStatic;
+      pushPopStates.pop();
       break;
     }
   }

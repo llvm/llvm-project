@@ -1,5 +1,6 @@
-; RUN: llc -mtriple=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -mtriple=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -mtriple=bpfel -mcpu=v3 -filetype=obj -o %t1 %s
+; RUN: llvm-objcopy --dump-section='.BTF'=%t2 %t1
+; RUN: %python %p/print_btf.py %t2 | FileCheck -check-prefixes=CHECK-BTF %s
 ;
 ; Source code:
 ;   struct key_type {
@@ -18,51 +19,17 @@
 
 @hash_map = dso_local local_unnamed_addr global %struct.map_type zeroinitializer, section ".maps", align 8, !dbg !0
 
-; CHECK:             .long   0                               # BTF_KIND_PTR(id = 1)
-; CHECK-NEXT:        .long   33554432                        # 0x2000000
-; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   1                               # BTF_KIND_STRUCT(id = 2)
-; CHECK-NEXT:        .long   67108865                        # 0x4000001
-; CHECK-NEXT:        .long   4
-; CHECK-NEXT:        .long   10
-; CHECK-NEXT:        .long   3
-; CHECK-NEXT:        .long   0                               # 0x0
-; CHECK-NEXT:        .long   13                              # BTF_KIND_INT(id = 3)
-; CHECK-NEXT:        .long   16777216                        # 0x1000000
-; CHECK-NEXT:        .long   4
-; CHECK-NEXT:        .long   16777248                        # 0x1000020
-; CHECK-NEXT:        .long   17                              # BTF_KIND_TYPEDEF(id = 4)
-; CHECK-NEXT:        .long   134217728                       # 0x8000000
-; CHECK-NEXT:        .long   5
-; CHECK-NEXT:        .long   28                              # BTF_KIND_TYPEDEF(id = 5)
-; CHECK-NEXT:        .long   134217728                       # 0x8000000
-; CHECK-NEXT:        .long   6
-; CHECK-NEXT:        .long   38                              # BTF_KIND_STRUCT(id = 6)
-; CHECK-NEXT:        .long   67108865                        # 0x4000001
-; CHECK-NEXT:        .long   8
-; CHECK-NEXT:        .long   47
-; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   0                               # 0x0
-; CHECK-NEXT:        .long   51                              # BTF_KIND_VAR(id = 7)
-; CHECK-NEXT:        .long   234881024                       # 0xe000000
-; CHECK-NEXT:        .long   4
-; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   60                              # BTF_KIND_DATASEC(id = 8)
-; CHECK-NEXT:        .long   251658241                       # 0xf000001
-; CHECK-NEXT:        .long   0
-; CHECK-NEXT:        .long   7
-; CHECK-NEXT:        .long   hash_map
-; CHECK-NEXT:        .long   8
-
-; CHECK:             .ascii  "key_type"                      # string offset=1
-; CHECK:             .ascii  "a1"                            # string offset=10
-; CHECK:             .ascii  "int"                           # string offset=13
-; CHECK:             .ascii  "__map_type"                    # string offset=17
-; CHECK:             .ascii  "_map_type"                     # string offset=28
-; CHECK:             .ascii  "map_type"                      # string offset=38
-; CHECK:             .ascii  "key"                           # string offset=47
-; CHECK:             .ascii  "hash_map"                      # string offset=51
-; CHECK:             .ascii  ".maps"                         # string offset=60
+; CHECK-BTF: [1] PTR '(anon)' type_id=2
+; CHECK-BTF-NEXT: [2] STRUCT 'key_type' size=4 vlen=1
+; CHECK-BTF-NEXT:         'a1' type_id=3 bits_offset=0
+; CHECK-BTF-NEXT: [3] INT 'int' size=4 bits_offset=0 nr_bits=32 encoding=SIGNED
+; CHECK-BTF-NEXT: [4] STRUCT 'map_type' size=8 vlen=1
+; CHECK-BTF-NEXT:         'key' type_id=1 bits_offset=0
+; CHECK-BTF-NEXT: [5] TYPEDEF '_map_type' type_id=4
+; CHECK-BTF-NEXT: [6] TYPEDEF '__map_type' type_id=5
+; CHECK-BTF-NEXT: [7] VAR 'hash_map' type_id=6, linkage=global
+; CHECK-BTF-NEXT: [8] DATASEC '.maps' size=0 vlen=1
+; CHECK-BTF-NEXT:         type_id=7 offset=0 size=8
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!16, !17, !18}

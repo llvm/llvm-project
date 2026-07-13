@@ -2,7 +2,7 @@
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-unknown-linux-gnu -mattr=+pauth -relocation-model=pic \
 ; RUN:   -filetype=obj < %s | llvm-readelf -r -s - | FileCheck --check-prefix=CHECK-OBJ %s
-; RUN: not --crash llc -mtriple=aarch64-unknown-linux-gnu -mattr=+pauth -relocation-model=pic \
+; RUN: not llc -mtriple=aarch64-unknown-linux-gnu -mattr=+pauth -relocation-model=pic \
 ; RUN:   -global-isel=1 < %s 2>&1 | FileCheck --check-prefix=CHECK-ERR %s
 
 @general_dynamic_var = external thread_local global i32

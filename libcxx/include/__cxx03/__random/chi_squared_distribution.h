@@ -54,12 +54,7 @@ private:
 
 public:
   // constructor and reset functions
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI chi_squared_distribution() : chi_squared_distribution(1) {}
-  _LIBCPP_HIDE_FROM_ABI explicit chi_squared_distribution(result_type __n) : __p_(param_type(__n)) {}
-#else
   _LIBCPP_HIDE_FROM_ABI explicit chi_squared_distribution(result_type __n = 1) : __p_(param_type(__n)) {}
-#endif
   _LIBCPP_HIDE_FROM_ABI explicit chi_squared_distribution(const param_type& __p) : __p_(__p) {}
   _LIBCPP_HIDE_FROM_ABI void reset() {}
 

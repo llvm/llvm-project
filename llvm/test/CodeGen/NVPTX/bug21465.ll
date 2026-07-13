@@ -8,17 +8,19 @@ target triple = "nvptx64-unknown-unknown"
 %struct.S = type { i32, i32 }
 
 ; Function Attrs: nounwind
-define ptx_kernel void @_Z11TakesStruct1SPi(ptr byval(%struct.S) nocapture readonly %input, ptr nocapture %output) #0 {
+define ptx_kernel void @_Z11TakesStruct1SPi(ptr byval(%struct.S) align 4 nocapture readonly %input, ptr nocapture %output) #0 {
 entry:
 ; CHECK-LABEL: @_Z11TakesStruct1SPi
+; CHECK-SAME: ptr addrspace(101) readonly byval(%struct.S) align 4 captures(none) %input
 ; PTX-LABEL: .visible .entry _Z11TakesStruct1SPi(
-; CHECK: call ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr %input)
+; CHECK: getelementptr inbounds %struct.S, ptr addrspace(101) %input, i64 0, i32 1
+; CHECK: load i32, ptr addrspace(101)
   %b = getelementptr inbounds %struct.S, ptr %input, i64 0, i32 1
   %0 = load i32, ptr %b, align 4
-; PTX-NOT: ld.param.u32 {{%r[0-9]+}}, [{{%rd[0-9]+}}]
-; PTX: ld.param.u32 [[value:%r[0-9]+]], [_Z11TakesStruct1SPi_param_0+4]
+; PTX-NOT: ld.param.b32 {{%r[0-9]+}}, [{{%rd[0-9]+}}]
+; PTX: ld.param.b32 [[value:%r[0-9]+]], [_Z11TakesStruct1SPi_param_0+4]
   store i32 %0, ptr %output, align 4
-; PTX-NEXT: st.global.u32 [{{%rd[0-9]+}}], [[value]]
+; PTX-NEXT: st.global.b32 [{{%rd[0-9]+}}], [[value]]
   ret void
 }
 

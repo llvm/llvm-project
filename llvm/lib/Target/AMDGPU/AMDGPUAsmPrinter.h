@@ -15,13 +15,16 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUASMPRINTER_H
 
 #include "AMDGPUMCResourceInfo.h"
+#include "AMDGPUResourceUsageAnalysis.h"
+#include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "SIProgramInfo.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 
 namespace llvm {
 
-class AMDGPUMachineFunction;
-struct AMDGPUResourceUsageAnalysis;
+class AMDGPUMachineFunctionInfo;
+class AMDGPUResourceUsageAnalysis;
 class AMDGPUTargetStreamer;
 class MCCodeEmitter;
 class MCOperand;
@@ -36,11 +39,15 @@ class MetadataStreamer;
 } // namespace AMDGPU
 
 class AMDGPUAsmPrinter final : public AsmPrinter {
+public:
+  static char ID;
+
 private:
   unsigned CodeObjectVersion;
   void initializeTargetID(const Module &M);
 
-  AMDGPUResourceUsageAnalysis *ResourceUsage;
+  const AMDGPUResourceUsageAnalysisWrapperPass::FunctionResourceInfo
+      *ResourceUsage;
 
   MCResourceInfo RI;
 
@@ -49,6 +56,9 @@ private:
   std::unique_ptr<AMDGPU::HSAMD::MetadataStreamer> HSAMetadataStream;
 
   MCCodeEmitter *DumpCodeInstEmitter = nullptr;
+
+  // When appropriate, add a _dvgpr$ symbol.
+  void emitDVgprSymbol(MachineFunction &MF);
 
   void getSIProgramInfo(SIProgramInfo &Out, const MachineFunction &MF);
   void getAmdKernelCode(AMDGPU::AMDGPUMCKernelCodeT &Out,
@@ -66,7 +76,7 @@ private:
                                   const MCExpr *TotalNumVGPR,
                                   const MCExpr *NumSGPR,
                                   const MCExpr *ScratchSize, uint64_t CodeSize,
-                                  const AMDGPUMachineFunction *MFI);
+                                  const AMDGPUMachineFunctionInfo *MFI);
   void emitResourceUsageRemarks(const MachineFunction &MF,
                                 const SIProgramInfo &CurrentProgramInfo,
                                 bool isModuleEntryFunction, bool hasMAIInsts);
@@ -79,6 +89,13 @@ private:
 
   void initTargetStreamer(Module &M);
 
+  void emitAMDGPUInfo(Module &M);
+  void collectCallEdge(const MachineInstr &MI);
+
+  SetVector<std::pair<MCSymbol *, MCSymbol *>> DirectCallEdges;
+
+  SmallVector<AMDGPU::FuncInfo, 8> FunctionInfos;
+
   SmallString<128> getMCExprStr(const MCExpr *Value);
 
   /// Attempts to replace the validation that is missed in getSIProgramInfo due
@@ -87,6 +104,9 @@ private:
   void validateMCResourceInfo(Function &F);
 
 public:
+  std::function<const AMDGPUResourceUsageAnalysisImpl::SIFunctionResourceInfo *(
+      MachineFunction &)>
+      GetResourceUsage;
   explicit AMDGPUAsmPrinter(TargetMachine &TM,
                             std::unique_ptr<MCStreamer> Streamer);
 
@@ -119,7 +139,7 @@ public:
 
   void emitFunctionBodyStart() override;
 
-  void emitFunctionBodyEnd() override;
+  void endFunction(const MachineFunction *MF);
 
   void emitImplicitDef(const MachineInstr *MI) const override;
 
@@ -142,6 +162,25 @@ protected:
   std::vector<std::string> DisasmLines, HexLines;
   size_t DisasmLineMaxLen;
   bool IsTargetStreamerInitialized;
+};
+
+class AMDGPUAsmPrinterBeginPass
+    : public RequiredPassInfoMixin<AMDGPUAsmPrinterBeginPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+class AMDGPUAsmPrinterPass
+    : public RequiredPassInfoMixin<AMDGPUAsmPrinterPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AMDGPUAsmPrinterEndPass
+    : public RequiredPassInfoMixin<AMDGPUAsmPrinterEndPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 } // end namespace llvm

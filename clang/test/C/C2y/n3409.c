@@ -1,7 +1,6 @@
-// RUN: %clang_cc1 -verify -std=c2y -pedantic %s
-// RUN: %clang_cc1 -verify=pre-c2y -std=c2y -Wpre-c2y-compat %s
-// RUN: %clang_cc1 -verify=ext -std=c23 -pedantic %s
-// expected-no-diagnostics
+// RUN: %clang_cc1 -verify -std=c2y -pedantic -Wno-unused %s
+// RUN: %clang_cc1 -verify=expected,pre-c2y -std=c2y -Wpre-c2y-compat -Wno-unused %s
+// RUN: %clang_cc1 -verify=expected,ext -std=c23 -pedantic -Wno-unused %s
 
 /* WG14 N3409: Clang 21
  * Slay Some Earthly Demons X
@@ -34,3 +33,25 @@ void foo() {
   // C23 and earlier.
   return x; // ext-warning {{void function 'foo' should not return void expression}}
 }
+
+
+// Ensure we behave correctly with incomplete types. See GH141549.
+static_assert(
+  _Generic(
+    void,    /* ext-warning {{passing a type argument as the first operand to '_Generic' is a C2y extension}}
+                pre-c2y-warning {{passing a type argument as the first operand to '_Generic' is incompatible with C standards before C2y}}
+              */
+    void : 1,
+    default : 0
+  )
+);
+
+static_assert(
+  _Generic( // expected-error {{static assertion failed}}
+    12,
+    void : 1, /* ext-warning {{incomplete type 'void' in a '_Generic' association is a C2y extension}}
+                 pre-c2y-warning {{use of incomplete type 'void' in a '_Generic' association is incompatible with C standards before C2y}}
+               */
+    default : 0
+  )
+);

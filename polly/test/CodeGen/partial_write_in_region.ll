@@ -1,7 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-import-jscop,polly-codegen' \
-; RUN: -polly-import-jscop-postfix=transformed \
-; RUN: -verify-dom-info \
-; RUN: -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' -polly-import-jscop-postfix=transformed -verify-dom-info -S < %s | FileCheck %s
 ;
 ;    void foo(long A[], float B[], float C[]) {
 ;      for (long i = 0; i < 1024; i++) {

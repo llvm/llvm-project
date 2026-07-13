@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_20 | FileCheck %s
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
 ; RUN: %if ptxas %{llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 ; This test makes sure that vector selects are scalarized by the type legalizer.
@@ -9,9 +9,9 @@
 ; CHECK-LABEL: .visible .func foo(
 define void @foo(ptr addrspace(1) %def_a, ptr addrspace(1) %def_b, ptr addrspace(1) %def_c) {
 entry:
-; CHECK:  ld.global.v2.u32
-; CHECK:  ld.global.v2.u32
-; CHECK:  ld.global.v2.u32
+; CHECK:  ld.global.v2.b32
+; CHECK:  ld.global.v2.b32
+; CHECK:  ld.global.v2.b32
   %tmp4 = load <2 x i32>, ptr addrspace(1) %def_a
   %tmp6 = load <2 x i32>, ptr addrspace(1) %def_c
   %tmp8 = load <2 x i32>, ptr addrspace(1) %def_b
@@ -21,7 +21,7 @@ entry:
 ; CHECK:  selp.b32
 ; CHECK:  selp.b32
   %cond = select <2 x i1> %0, <2 x i32> %tmp6, <2 x i32> %tmp8
-; CHECK:  st.global.v2.u32
+; CHECK:  st.global.v2.b32
   store <2 x i32> %cond, ptr addrspace(1) %def_c
   ret void
 }

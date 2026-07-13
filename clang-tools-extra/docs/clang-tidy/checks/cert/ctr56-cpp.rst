@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-ctr56-cpp
-.. meta::
-    :http-equiv=refresh: 5;URL=../bugprone/pointer-arithmetic-on-polymorphic-object.html
 
 cert-ctr56-cpp
 ==============

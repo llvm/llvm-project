@@ -1,3 +1,6 @@
+// RUN: rm -rf %t && mkdir %t
+// RUN: sed -e "s|DIR|%/S/Inputs|g" %S/Inputs/taint-generic-config-vfs.json > %t/taint-generic-config-vfs.json
+
 // RUN: %clang_analyze_cc1 -Wno-format-security -Wno-pointer-to-int-cast \
 // RUN:   -Wno-incompatible-library-redeclaration -verify %s \
 // RUN:   -analyzer-checker=optin.taint.GenericTaint \
@@ -6,7 +9,8 @@
 // RUN:   -analyzer-checker=security.ArrayBound \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
-// RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
+// RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-virtual.yaml \
+// RUN:   -ivfsoverlay %t/taint-generic-config-vfs.json
 
 // RUN: %clang_analyze_cc1 -Wno-format-security -Wno-pointer-to-int-cast \
 // RUN:   -Wno-incompatible-library-redeclaration -verify %s \
@@ -112,6 +116,7 @@ char *stpcpy(char *restrict s1, const char *restrict s2);
 char *strncpy( char * destination, const char * source, size_t num );
 char *strndup(const char *s, size_t n);
 char *strncat(char *restrict s1, const char *restrict s2, size_t n);
+char *strcat( char *dest, const char *src );
 
 void *malloc(size_t);
 void *calloc(size_t nmemb, size_t size);
@@ -410,6 +415,19 @@ int testTaintedDivFP(void) {
   if (!x)
     return 0;
   return 5/x; // x cannot be 0, so no tainted warning either
+}
+
+void clang_analyzer_warnIfReached();
+
+int testTaintDivZeroNonfatal() {
+  int x;
+  scanf("%d", &x);
+  int y = 5/x; // expected-warning {{Division by a tainted value, possibly zero}}
+  if (x == 0)
+    clang_analyzer_warnIfReached();
+  else
+    clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+  return y;
 }
 
 // Zero-sized VLAs.
@@ -1379,3 +1397,13 @@ void testAcceptPropagates() {
   int acceptSocket = accept(listenSocket, 0, 0);
   clang_analyzer_isTainted_int(acceptSocket); // expected-warning {{YES}}
 }
+
+int main(int argc, char * argv[]) {
+   if (argc < 2)
+     return 1;
+   char cmd[2048] = "/bin/cat ";
+   clang_analyzer_isTainted_char(*argv[1]); // expected-warning{{YES}}
+   strncat(cmd, argv[1], sizeof(cmd) - strlen(cmd)-1);
+   system(cmd);// expected-warning {{Untrusted data is passed to a system call}}
+   return 0;
+ }

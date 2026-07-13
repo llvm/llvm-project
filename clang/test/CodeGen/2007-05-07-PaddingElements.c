@@ -1,6 +1,9 @@
 // PR 1278
-// RUN: %clang_cc1 %s -emit-llvm -o - | grep struct.s | not grep "4 x i8] zeroinitializer"
-// RUN: %clang_cc1 %s -emit-llvm -o - | not grep "i32 0, i32 2"
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix %s -emit-llvm -o - | FileCheck %s --check-prefix=AIX
+
+// CHECK: %struct.s = type { double, i32 }
+// AIX: %struct.s = type { double, i32, [4 x i8] }
 struct s {
   double d1;
   int s1;

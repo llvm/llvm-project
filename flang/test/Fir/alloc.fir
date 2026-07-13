@@ -87,7 +87,9 @@ func.func @alloca_scalar_dynchar_kind(%l : i32) -> !fir.ref<!fir.char<2,?>> {
 // CHECK-SAME: i32 %[[len:.*]])
 // CHECK: %[[mul1:.*]] = sext i32 %[[len]] to i64
 // CHECK: %[[mul2:.*]] = mul i64 1, %[[mul1]]
-// CHECK: call ptr @malloc(i64 %[[mul2]])
+// CHECK: %[[cmp:.*]] = icmp sgt i64 %[[mul2]], 0
+// CHECK: %[[size:.*]] = select i1 %[[cmp]], i64 %[[mul2]], i64 1
+// CHECK: call ptr @malloc(i64 %[[size]])
 func.func @allocmem_scalar_dynchar(%l : i32) -> !fir.heap<!fir.char<1,?>> {
   %1 = fir.allocmem !fir.char<1,?>(%l : i32)
   return %1 : !fir.heap<!fir.char<1,?>>
@@ -97,7 +99,9 @@ func.func @allocmem_scalar_dynchar(%l : i32) -> !fir.heap<!fir.char<1,?>> {
 // CHECK-SAME: i32 %[[len:.*]])
 // CHECK: %[[mul1:.*]] = sext i32 %[[len]] to i64
 // CHECK: %[[mul2:.*]] = mul i64 2, %[[mul1]]
-// CHECK: call ptr @malloc(i64 %[[mul2]])
+// CHECK: %[[cmp:.*]] = icmp sgt i64 %[[mul2]], 0
+// CHECK: %[[size:.*]] = select i1 %[[cmp]], i64 %[[mul2]], i64 1
+// CHECK: call ptr @malloc(i64 %[[size]])
 func.func @allocmem_scalar_dynchar_kind(%l : i32) -> !fir.heap<!fir.char<2,?>>{
   %1 = fir.allocmem !fir.char<2,?>(%l : i32)
   return %1 : !fir.heap<!fir.char<2,?>>
@@ -152,7 +156,9 @@ func.func @allocmem_array_of_char() -> !fir.heap<!fir.array<3x3x!fir.char<1,10>>
 // CHECK-SAME: i32 %[[len:.*]])
 // CHECK: %[[mul1:.*]] = sext i32 %[[len]] to i64
 // CHECK: %[[mul2:.*]] = mul i64 9, %[[mul1]]
-// CHECK: call ptr @malloc(i64 %[[mul2]])
+// CHECK: %[[cmp:.*]] = icmp sgt i64 %[[mul2]], 0
+// CHECK: %[[size:.*]] = select i1 %[[cmp]], i64 %[[mul2]], i64 1
+// CHECK: call ptr @malloc(i64 %[[size]])
 func.func @allocmem_array_of_dynchar(%l: i32) -> !fir.heap<!fir.array<3x3x!fir.char<1,?>>> {
   %1 = fir.allocmem !fir.array<3x3x!fir.char<1,?>>(%l : i32)
   return %1 : !fir.heap<!fir.array<3x3x!fir.char<1,?>>>
@@ -180,7 +186,9 @@ func.func @alloca_dynarray_of_nonchar2(%e: index) -> !fir.ref<!fir.array<?x?xi32
 // CHECK-LABEL: define ptr @allocmem_dynarray_of_nonchar(
 // CHECK-SAME: i64 %[[extent:.*]])
 // CHECK: %[[prod1:.*]] = mul i64 12, %[[extent]]
-// CHECK: call ptr @malloc(i64 %[[prod1]])
+// CHECK: %[[cmp:.*]] = icmp sgt i64 %[[prod1]], 0
+// CHECK: %[[size:.*]] = select i1 %[[cmp]], i64 %[[prod1]], i64 1
+// CHECK: call ptr @malloc(i64 %[[size]])
 func.func @allocmem_dynarray_of_nonchar(%e: index) -> !fir.heap<!fir.array<3x?xi32>> {
   %1 = fir.allocmem !fir.array<3x?xi32>, %e
   return %1 : !fir.heap<!fir.array<3x?xi32>>
@@ -190,7 +198,9 @@ func.func @allocmem_dynarray_of_nonchar(%e: index) -> !fir.heap<!fir.array<3x?xi
 // CHECK-SAME: i64 %[[extent:.*]])
 // CHECK: %[[prod1:.*]] = mul i64 4, %[[extent]]
 // CHECK: %[[prod2:.*]] = mul i64 %[[prod1]], %[[extent]]
-// CHECK: call ptr @malloc(i64 %[[prod2]])
+// CHECK: %[[cmp:.*]] = icmp sgt i64 %[[prod2]], 0
+// CHECK: %[[size:.*]] = select i1 %[[cmp]], i64 %[[prod2]], i64 1
+// CHECK: call ptr @malloc(i64 %[[size]])
 func.func @allocmem_dynarray_of_nonchar2(%e: index) -> !fir.heap<!fir.array<?x?xi32>> {
   %1 = fir.allocmem !fir.array<?x?xi32>, %e, %e
   return %1 : !fir.heap<!fir.array<?x?xi32>>
@@ -218,7 +228,9 @@ func.func @alloca_dynarray_of_char2(%e : index) -> !fir.ref<!fir.array<?x?x!fir.
 // CHECK-LABEL: define ptr @allocmem_dynarray_of_char(
 // CHECK-SAME: i64 %[[extent:.*]])
 // CHECK: %[[prod1:.*]] = mul i64 60, %[[extent]]
-// CHECK: call ptr @malloc(i64 %[[prod1]])
+// CHECK: %[[cmp:.*]] = icmp sgt i64 %[[prod1]], 0
+// CHECK: %[[size:.*]] = select i1 %[[cmp]], i64 %[[prod1]], i64 1
+// CHECK: call ptr @malloc(i64 %[[size]])
 func.func @allocmem_dynarray_of_char(%e : index) -> !fir.heap<!fir.array<3x?x!fir.char<2,10>>> {
   %1 = fir.allocmem !fir.array<3x?x!fir.char<2,10>>, %e
   return %1 : !fir.heap<!fir.array<3x?x!fir.char<2,10>>>
@@ -228,7 +240,9 @@ func.func @allocmem_dynarray_of_char(%e : index) -> !fir.heap<!fir.array<3x?x!fi
 // CHECK-SAME: i64 %[[extent:.*]])
 // CHECK: %[[prod1:.*]] = mul i64 20, %[[extent]]
 // CHECK: %[[prod2:.*]] = mul i64 %[[prod1]], %[[extent]]
-// CHECK: call ptr @malloc(i64 %[[prod2]])
+// CHECK: %[[cmp:.*]] = icmp sgt i64 %[[prod2]], 0
+// CHECK: %[[size:.*]] = select i1 %[[cmp]], i64 %[[mul2]], i64 1
+// CHECK: call ptr @malloc(i64 %[[size]])
 func.func @allocmem_dynarray_of_char2(%e : index) -> !fir.heap<!fir.array<?x?x!fir.char<2,10>>> {
   %1 = fir.allocmem !fir.array<?x?x!fir.char<2,10>>, %e, %e
   return %1 : !fir.heap<!fir.array<?x?x!fir.char<2,10>>>
@@ -261,7 +275,9 @@ func.func @alloca_dynarray_of_dynchar2(%l: i32, %e : index) -> !fir.ref<!fir.arr
 // CHECK: %[[prod1:.*]] = sext i32 %[[len]] to i64
 // CHECK: %[[prod2:.*]] = mul i64 6, %[[prod1]]
 // CHECK: %[[prod3:.*]] = mul i64 %[[prod2]], %[[extent]]
-// CHECK: call ptr @malloc(i64 %[[prod3]])
+// CHECK: %[[cmp:.*]] = icmp sgt i64 %[[prod3]], 0
+// CHECK: %[[size:.*]] = select i1 %[[cmp]], i64 %[[prod3]], i64 1
+// CHECK: call ptr @malloc(i64 %[[size]])
 func.func @allocmem_dynarray_of_dynchar(%l: i32, %e : index) -> !fir.heap<!fir.array<3x?x!fir.char<2,?>>> {
   %1 = fir.allocmem !fir.array<3x?x!fir.char<2,?>>(%l : i32), %e
   return %1 : !fir.heap<!fir.array<3x?x!fir.char<2,?>>>
@@ -273,7 +289,9 @@ func.func @allocmem_dynarray_of_dynchar(%l: i32, %e : index) -> !fir.heap<!fir.a
 // CHECK: %[[prod1:.*]] = mul i64 2, %[[a]]
 // CHECK: %[[prod2:.*]] = mul i64 %[[prod1]], %[[extent]]
 // CHECK: %[[prod3:.*]] = mul i64 %[[prod2]], %[[extent]]
-// CHECK: call ptr @malloc(i64 %[[prod3]])
+// CHECK: %[[cmp:.*]] = icmp sgt i64 %[[prod3]], 0
+// CHECK: %[[size:.*]] = select i1 %[[cmp]], i64 %[[prod3]], i64 1
+// CHECK: call ptr @malloc(i64 %[[size]])
 func.func @allocmem_dynarray_of_dynchar2(%l: i32, %e : index) -> !fir.heap<!fir.array<?x?x!fir.char<2,?>>> {
   %1 = fir.allocmem !fir.array<?x?x!fir.char<2,?>>(%l : i32), %e, %e
   return %1 : !fir.heap<!fir.array<?x?x!fir.char<2,?>>>
@@ -312,7 +330,9 @@ func.func @alloca_array_with_holes_dynchar(%arg0: index, %arg1: index) -> !fir.r
 // CHECK-SAME: i64 %[[e1:.*]], i64 %[[e2:.*]])
 // CHECK: %[[a:.*]] = mul i64 240, %[[e1]]
 // CHECK: %[[b:.*]] = mul i64 %3, %[[e2]]
-// CHECK: call ptr @malloc(i64 %[[b]])
+// CHECK: %[[cmp:.*]] = icmp sgt i64 %[[b]], 0
+// CHECK: %[[size:.*]] = select i1 %[[cmp]], i64 %[[b]], i64 1
+// CHECK: call ptr @malloc(i64 %[[size]])
 func.func @allocmem_array_with_holes_nonchar(%0 : index, %1 : index) -> !fir.heap<!fir.array<4x?x3x?x5xi32>> {
   %a = fir.allocmem !fir.array<4x?x3x?x5xi32>, %0, %1
   return %a : !fir.heap<!fir.array<4x?x3x?x5xi32>>
@@ -321,7 +341,9 @@ func.func @allocmem_array_with_holes_nonchar(%0 : index, %1 : index) -> !fir.hea
 // CHECK-LABEL: define ptr @allocmem_array_with_holes_char(
 // CHECK-SAME: i64 %[[e:.*]])
 // CHECK: %[[mul:.*]] = mul i64 240, %[[e]]
-// CHECK: call ptr @malloc(i64 %[[mul]])
+// CHECK: %[[cmp:.*]] = icmp sgt i64 %[[mul]], 0
+// CHECK: %[[size:.*]] = select i1 %[[cmp]], i64 %[[mul]], i64 1
+// CHECK: call ptr @malloc(i64 %[[size]])
 func.func @allocmem_array_with_holes_char(%e: index) -> !fir.heap<!fir.array<3x?x4x!fir.char<2,10>>> {
   %1 = fir.allocmem !fir.array<3x?x4x!fir.char<2,10>>, %e
   return %1 : !fir.heap<!fir.array<3x?x4x!fir.char<2,10>>>
@@ -331,7 +353,9 @@ func.func @allocmem_array_with_holes_char(%e: index) -> !fir.heap<!fir.array<3x?
 // CHECK-SAME: i64 %[[len:.*]], i64 %[[extent:.*]])
 // CHECK: %[[a:.*]] = mul i64 24, %[[len]]
 // CHECK: %[[b:.*]] = mul i64 %[[a]], %[[extent]]
-// CHECK: call ptr @malloc(i64 %[[b]])
+// CHECK: %[[cmp:.*]] = icmp sgt i64 %[[b]], 0
+// CHECK: %[[size:.*]] = select i1 %[[cmp]], i64 %[[b]], i64 1
+// CHECK: call ptr @malloc(i64 %[[size]])
 func.func @allocmem_array_with_holes_dynchar(%arg0: index, %arg1: index) -> !fir.heap<!fir.array<3x?x4x!fir.char<2,?>>> {
   %1 = fir.allocmem !fir.array<3x?x4x!fir.char<2,?>>(%arg0 : index), %arg1
   return %1 : !fir.heap<!fir.array<3x?x4x!fir.char<2,?>>>
@@ -348,8 +372,17 @@ func.func @alloca_unlimited_polymorphic_box() {
   %1 = fir.alloca !fir.class<!fir.array<?xnone>>
   %2 = fir.alloca !fir.box<none>
   %3 = fir.alloca !fir.box<!fir.array<?xnone>>
+  // Add real uses so allocas are not trivially dead.
+  fir.call @__use_class_none(%0) : (!fir.ref<!fir.class<none>>) -> ()
+  fir.call @__use_class_array(%1) : (!fir.ref<!fir.class<!fir.array<?xnone>>>) -> ()
+  fir.call @__use_box_none(%2) : (!fir.ref<!fir.box<none>>) -> ()
+  fir.call @__use_box_array(%3) : (!fir.ref<!fir.box<!fir.array<?xnone>>>) -> ()
   return
 }
+func.func private @__use_class_none(!fir.ref<!fir.class<none>>) -> ()
+func.func private @__use_class_array(!fir.ref<!fir.class<!fir.array<?xnone>>>) -> ()
+func.func private @__use_box_none(!fir.ref<!fir.box<none>>) -> ()
+func.func private @__use_box_array(!fir.ref<!fir.box<!fir.array<?xnone>>>) -> ()
 // Note: allocmem of fir.box are not possible (fir::HeapType::verify does not
 // accept box types), so there is no equivalent of
 // alloca_unlimited_polymorphic_box for allocmem.

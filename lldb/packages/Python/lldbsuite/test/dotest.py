@@ -43,6 +43,7 @@ from . import lldbtest_config
 from . import test_categories
 from . import test_result
 from ..support import seven
+from ..support import temp_file
 
 
 def is_exe(fpath):
@@ -275,10 +276,15 @@ def parseOptionsAndInitTestdirs():
         configuration.dsymutil = seven.get_command_output(
             "xcrun -find -toolchain default dsymutil"
         )
+    if args.resource_dir:
+        configuration.resource_dir = args.resource_dir
     if args.llvm_tools_dir:
         configuration.llvm_tools_dir = args.llvm_tools_dir
         configuration.filecheck = shutil.which("FileCheck", path=args.llvm_tools_dir)
         configuration.yaml2obj = shutil.which("yaml2obj", path=args.llvm_tools_dir)
+        configuration.nm = shutil.which(
+            "llvm-nm", path=args.llvm_tools_dir
+        ) or shutil.which("nm", path=args.llvm_tools_dir)
 
     if not configuration.get_filecheck_path():
         logging.warning("No valid FileCheck executable; some tests may fail...")
@@ -289,14 +295,27 @@ def parseOptionsAndInitTestdirs():
             logging.warning(
                 "Custom libc++ is not supported for remote runs: ignoring --libcxx arguments"
             )
+            # Don't set libcxx paths for remote platforms - use SDK's libc++ instead
+            configuration.libcxx_include_dir = None
+            configuration.libcxx_include_target_dir = None
+            configuration.libcxx_library_dir = None
         elif not (args.libcxx_include_dir and args.libcxx_library_dir):
             logging.error(
                 "Custom libc++ requires both --libcxx-include-dir and --libcxx-library-dir"
             )
             sys.exit(-1)
-    configuration.libcxx_include_dir = args.libcxx_include_dir
-    configuration.libcxx_include_target_dir = args.libcxx_include_target_dir
-    configuration.libcxx_library_dir = args.libcxx_library_dir
+        else:
+            # Use custom libcxx for local runs
+            configuration.libcxx_include_dir = args.libcxx_include_dir
+            configuration.libcxx_include_target_dir = args.libcxx_include_target_dir
+            configuration.libcxx_library_dir = args.libcxx_library_dir
+    else:
+        # No custom libcxx specified
+        configuration.libcxx_include_dir = None
+        configuration.libcxx_include_target_dir = None
+        configuration.libcxx_library_dir = None
+
+    configuration.cmake_build_type = args.cmake_build_type.lower()
 
     if args.channels:
         lldbtest_config.channels = args.channels
@@ -308,7 +327,7 @@ def parseOptionsAndInitTestdirs():
         lldbtest_config.out_of_tree_debugserver = args.out_of_tree_debugserver
 
     # Set SDKROOT if we are using an Apple SDK
-    if args.sysroot is not None:
+    if args.sysroot:
         configuration.sdkroot = args.sysroot
     elif platform_system == "Darwin" and args.apple_sdk:
         configuration.sdkroot = seven.get_command_output(
@@ -318,10 +337,12 @@ def parseOptionsAndInitTestdirs():
             logging.error("No SDK found with the name %s; aborting...", args.apple_sdk)
             sys.exit(-1)
 
-    if args.arch:
-        configuration.arch = args.arch
-    else:
-        configuration.arch = platform_machine
+    if args.triple:
+        configuration.triple = args.triple
+
+    configuration.arch = (
+        configuration.triple.split("-")[0] if configuration.triple else platform_machine
+    )
 
     if args.categories_list:
         configuration.categories_list = set(
@@ -447,6 +468,18 @@ def parseOptionsAndInitTestdirs():
     if args.enabled_plugins:
         configuration.enabled_plugins = args.enabled_plugins
 
+    if args.enable_mte:
+        configuration.mte_enabled = True
+
+    if args.arm64e_debugserver:
+        configuration.arm64e_debugserver = True
+
+    if args.print_lldb_version:
+        configuration.print_lldb_version = True
+
+    if args.lldb_python_dir:
+        configuration.lldb_python_dir = args.lldb_python_dir
+
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:
         configuration.testdirs = [
@@ -543,27 +576,47 @@ def setupSysPath():
         )
         sys.exit(-1)
 
-    os.system("%s -v" % lldbtest_config.lldbExec)
+    if configuration.print_lldb_version:
+        os.system("%s -v" % lldbtest_config.lldbExec)
 
     lldbDir = os.path.dirname(lldbtest_config.lldbExec)
 
-    lldbDAPExec = os.path.join(lldbDir, "lldb-dap")
+    lldbDAPExec = os.path.join(
+        lldbDir, "lldb-dap.exe" if sys.platform == "win32" else "lldb-dap"
+    )
     if is_exe(lldbDAPExec):
         os.environ["LLDBDAP_EXEC"] = lldbDAPExec
 
+    configuration.yaml2macho_core = shutil.which("yaml2macho-core", path=lldbDir)
+
     lldbPythonDir = None  # The directory that contains 'lldb/__init__.py'
 
-    # If our lldb supports the -P option, use it to find the python path:
-    lldb_dash_p_result = subprocess.check_output(
-        [lldbtest_config.lldbExec, "-P"], universal_newlines=True
-    )
-    if lldb_dash_p_result:
-        for line in lldb_dash_p_result.splitlines():
-            if os.path.isdir(line) and os.path.exists(
-                os.path.join(line, "lldb", "__init__.py")
-            ):
-                lldbPythonDir = line
-                break
+    if configuration.lldb_python_dir:
+        # The path was passed in (typically by LIT, which discovers it once for
+        # the whole test run). Trust it without spawning lldb.
+        candidate = configuration.lldb_python_dir
+        if os.path.isdir(candidate) and os.path.exists(
+            os.path.join(candidate, "lldb", "__init__.py")
+        ):
+            lldbPythonDir = candidate
+        else:
+            print(
+                "warning: --lldb-python-dir '%s' does not contain 'lldb/__init__.py'; "
+                "falling back to '%s -P'" % (candidate, lldbtest_config.lldbExec)
+            )
+
+    if not lldbPythonDir:
+        # If our lldb supports the -P option, use it to find the python path:
+        lldb_dash_p_result = subprocess.check_output(
+            [lldbtest_config.lldbExec, "-P"], universal_newlines=True
+        )
+        if lldb_dash_p_result:
+            for line in lldb_dash_p_result.splitlines():
+                if os.path.isdir(line) and os.path.exists(
+                    os.path.join(line, "lldb", "__init__.py")
+                ):
+                    lldbPythonDir = line
+                    break
 
     if not lldbPythonDir:
         print(
@@ -773,12 +826,37 @@ def canRunLibcxxTests():
 
     platform = lldbplatformutil.getPlatform()
 
-    if lldbplatformutil.target_is_android() or lldbplatformutil.platformIsDarwin():
+    if lldbplatformutil.target_is_android():
         return True, "libc++ always present"
 
+    if lldbplatformutil.platformIsDarwin():
+        if not configuration.libcxx_include_dir or not configuration.libcxx_library_dir:
+            return False, "libc++ tests require a locally built libc++"
+
+        # Check that the libc++ architecture matches the test architecture.
+        test_architecture = lldbplatformutil.getArchitecture()
+
+        libcxx_dylib_path = os.path.join(
+            configuration.libcxx_library_dir, "libc++.dylib"
+        )
+        try:
+            libcxx_arch_list = subprocess.check_output(
+                ["lipo", "-archs", libcxx_dylib_path], text=True
+            ).split()
+            if test_architecture not in libcxx_arch_list:
+                return False, f"libc++ dylib missing {test_architecture} slice"
+        except subprocess.CalledProcessError:
+            return False, "libc++ dylib is not present"
+
+        return True, "libc++ present"
+
     if platform == "linux":
-        with tempfile.NamedTemporaryFile() as f:
-            cmd = [configuration.compiler, "-xc++", "-stdlib=libc++", "-o", f.name, "-"]
+        if not configuration.libcxx_include_dir or not configuration.libcxx_library_dir:
+            return False, "API tests require a locally built libc++."
+
+        # Make sure -stdlib=libc++ works since that's how the tests will be built.
+        with temp_file.OnDiskTempFile() as f:
+            cmd = [configuration.compiler, "-xc++", "-stdlib=libc++", "-o", f.path, "-"]
             p = subprocess.Popen(
                 cmd,
                 stdin=subprocess.PIPE,
@@ -830,10 +908,52 @@ def checkLibstdcxxSupport():
     configuration.skip_categories.append("libstdcxx")
 
 
+def canRunMsvcStlTests():
+    from lldbsuite.test import lldbplatformutil
+
+    platform = lldbplatformutil.getPlatform()
+    if platform != "windows":
+        return False, f"Don't know how to build with MSVC's STL on {platform}"
+
+    with temp_file.OnDiskTempFile() as f:
+        cmd = [configuration.compiler, "-xc++", "-o", f.path, "-E", "-"]
+        p = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+        )
+        _, stderr = p.communicate(
+            """
+            #include <yvals_core.h>
+            #ifndef _MSVC_STL_VERSION
+            #error _MSVC_STL_VERSION not defined
+            #endif
+            """
+        )
+        if not p.returncode:
+            return True, "Compiling with MSVC STL"
+        return (False, f"Not compiling with MSVC STL: {stderr}")
+
+
+def checkMsvcStlSupport():
+    result, reason = canRunMsvcStlTests()
+    if result:
+        return  # msvcstl supported
+    if "msvcstl" in configuration.categories_list:
+        return  # msvcstl category explicitly requested, let it run.
+    if configuration.verbose:
+        print(f"msvcstl tests will not be run because: {reason}")
+    configuration.skip_categories.append("msvcstl")
+
+
 def canRunWatchpointTests():
     from lldbsuite.test import lldbplatformutil
 
     platform = lldbplatformutil.getPlatform()
+    if platform.startswith("wasi"):
+        return False, "watchpoints are not supported on WebAssembly"
     if platform == "netbsd":
         if os.geteuid() == 0:
             return True, "root can always write dbregs"
@@ -876,6 +996,18 @@ def checkObjcSupport():
         if configuration.verbose:
             print("objc tests will be skipped because of unsupported platform")
         configuration.skip_categories.append("objc")
+
+
+def checkExpressionSupport():
+    from lldbsuite.test import lldbplatformutil
+
+    # WebAssembly targets cannot JIT or interpret expressions yet.
+    if lldbplatformutil.getPlatform().startswith("wasi"):
+        if "expression" in configuration.categories_list:
+            return  # explicitly requested, let it run.
+        if configuration.verbose:
+            print("expression tests will be skipped because of unsupported platform")
+        configuration.skip_categories.append("expression")
 
 
 def checkDebugInfoSupport():
@@ -1016,8 +1148,8 @@ def run_suite():
             % (configuration.lldb_platform_working_dir)
         )
         error = lldb.remote_platform.MakeDirectory(
-            configuration.lldb_platform_working_dir, 448
-        )  # 448 = 0o700
+            configuration.lldb_platform_working_dir, 0o700
+        )
         if error.Fail():
             raise Exception(
                 "making remote directory '%s': %s"
@@ -1043,20 +1175,18 @@ def run_suite():
 
     checkLibcxxSupport()
     checkLibstdcxxSupport()
+    checkMsvcStlSupport()
     checkWatchpointSupport()
     checkDebugInfoSupport()
     checkDebugServerSupport()
     checkObjcSupport()
+    checkExpressionSupport()
     checkForkVForkSupport()
     checkPexpectSupport()
     checkDAPSupport()
 
     skipped_categories_list = ", ".join(configuration.skip_categories)
-    print(
-        "Skipping the following test categories: {}".format(
-            configuration.skip_categories
-        )
-    )
+    print(f"Skipping the following test categories: {skipped_categories_list}")
 
     for testdir in configuration.testdirs:
         for dirpath, dirnames, filenames in os.walk(testdir):

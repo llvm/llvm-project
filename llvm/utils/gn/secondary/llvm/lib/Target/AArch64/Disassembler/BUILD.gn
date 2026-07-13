@@ -2,10 +2,7 @@ import("//llvm/utils/TableGen/tablegen.gni")
 
 tablegen("AArch64GenDisassemblerTables") {
   visibility = [ ":Disassembler" ]
-  args = [
-    "-gen-disassembler",
-    "--large-decoder-table",
-  ]
+  args = [ "-gen-disassembler" ]
   td_file = "../AArch64.td"
 }
 

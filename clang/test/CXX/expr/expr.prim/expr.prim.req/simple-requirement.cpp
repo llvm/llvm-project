@@ -39,14 +39,14 @@ using r2i4 = r2<const D>; // expected-error{{constraints not satisfied for class
 
 template<typename T> requires requires { sizeof(T); }
 // expected-note@-1{{because 'sizeof(T)' would be invalid: invalid application of 'sizeof' to an incomplete type 'void'}}
-// expected-note@-2{{because 'sizeof(T)' would be invalid: invalid application of 'sizeof' to an incomplete type 'nonexistent'}}
+// expected-note@-2{{because 'sizeof(T)' would be invalid: invalid application of 'sizeof' to an incomplete type 'class nonexistent'}}
 struct r3 {};
 
 using r3i1 = r3<int>;
 using r3i2 = r3<A>;
 using r3i3 = r3<A &>;
 using r3i4 = r3<void>; // expected-error{{constraints not satisfied for class template 'r3' [with T = void]}}
-using r3i4 = r3<class nonexistent>; // expected-error{{constraints not satisfied for class template 'r3' [with T = nonexistent]}}
+using r3i4 = r3<class nonexistent>; // expected-error{{constraints not satisfied for class template 'r3' [with T = class nonexistent]}}
 
 template<typename T> requires requires (T t) { 0; "a"; (void)'a'; }
 struct r4 {};
@@ -102,8 +102,10 @@ namespace std_example {
 // of a polymorphic type.
 class X { virtual ~X(); };
 constexpr bool b = requires (X &x) { static_cast<int(*)[(typeid(x), 0)]>(nullptr); };
-// expected-error@-1{{constraint variable 'x' cannot be used in an evaluated context}}
-// expected-note@-2{{'x' declared here}}
+// expected-warning@-1 {{left operand of comma operator has no effect}}
+// expected-warning@-2 {{variable length arrays in C++ are a Clang extension}}
+// expected-note@-3{{function parameter 'x' with unknown value cannot be used in a constant expression}}
+// expected-note@-4{{declared here}}
 
 namespace access_checks {
 namespace in_requires_expression {

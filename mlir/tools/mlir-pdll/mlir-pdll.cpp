@@ -19,6 +19,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <set>
 
 using namespace mlir;
@@ -41,6 +42,7 @@ processBuffer(raw_ostream &os, std::unique_ptr<llvm::MemoryBuffer> chunkBuffer,
               bool dumpODS, std::set<std::string> *includedFiles) {
   llvm::SourceMgr sourceMgr;
   sourceMgr.setIncludeDirs(includeDirs);
+  sourceMgr.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
   sourceMgr.AddNewSourceBuffer(std::move(chunkBuffer), SMLoc());
 
   // If we are dumping ODS information, also enable documentation to ensure the
@@ -201,6 +203,12 @@ int main(int argc, char **argv) {
   llvm::raw_string_ostream outputStrOS(outputStr);
   auto processFn = [&](std::unique_ptr<llvm::MemoryBuffer> chunkBuffer,
                        raw_ostream &os) {
+    // Split does not guarantee null-termination. Make a copy of the buffer to
+    // ensure null-termination.
+    if (!chunkBuffer->getBuffer().ends_with('\0')) {
+      chunkBuffer = llvm::MemoryBuffer::getMemBufferCopy(
+          chunkBuffer->getBuffer(), chunkBuffer->getBufferIdentifier());
+    }
     return processBuffer(os, std::move(chunkBuffer), outputType, includeDirs,
                          dumpODS, includedFiles);
   };

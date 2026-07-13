@@ -17,17 +17,17 @@
 pmlal   {z0.q-z1.q}, z0.d, z0.d  // 01000101-00100000-11111100-00000000
 // CHECK-INST: pmlal   { z0.q, z1.q }, z0.d, z0.d
 // CHECK-ENCODING: [0x00,0xfc,0x20,0x45]
-// CHECK-ERROR: instruction requires: sve2p1 or ssve-aes sve-aes2
+// CHECK-ERROR: instruction requires: sve or ssve-aes sve-aes2
 // CHECK-UNKNOWN: 4520fc00 <unknown>
 
 pmlal   {z22.q-z23.q}, z13.d, z8.d  // 01000101-00101000-11111101-10110110
 // CHECK-INST: pmlal   { z22.q, z23.q }, z13.d, z8.d
 // CHECK-ENCODING: [0xb6,0xfd,0x28,0x45]
-// CHECK-ERROR: instruction requires: sve2p1 or ssve-aes sve-aes2
+// CHECK-ERROR: instruction requires: sve or ssve-aes sve-aes2
 // CHECK-UNKNOWN: 4528fdb6 <unknown>
 
 pmlal   {z30.q-z31.q}, z31.d, z31.d  // 01000101-00111111-11111111-11111110
 // CHECK-INST: pmlal   { z30.q, z31.q }, z31.d, z31.d
 // CHECK-ENCODING: [0xfe,0xff,0x3f,0x45]
-// CHECK-ERROR: instruction requires: sve2p1 or ssve-aes sve-aes2
+// CHECK-ERROR: instruction requires: sve or ssve-aes sve-aes2
 // CHECK-UNKNOWN: 453ffffe <unknown>

@@ -70,6 +70,14 @@ __attribute__((noinline)) kernel void callee_kern(global int *A){
   *A = 1;
 }
 
+__attribute__((optnone)) kernel void callee_kern_with_optnone_attribute(global int *A){
+  *A = 1;
+}
+
+__attribute__((always_inline)) kernel void callee_kern_with_alwaysinline_attribute(global int *A){
+  *A = 1;
+}
+
 kernel void callee_kern_Mat3X3(global Mat3X3 *in, global Mat4X4 *out) {
   out[0] = foo(in[1]);
 }
@@ -111,7 +119,8 @@ kernel void ext_KernelLargeTwoMember(struct LargeStructTwoMember u);
 kernel void caller_kern(global int* A, global Mat3X3 *mat3X3, global Mat4X4 *mat4X4, global Mat32X32 *mat32X32, global Mat64X64 *mat64X64){
   callee_kern(A);
   ext_callee_kern(A);
-
+  callee_kern_with_optnone_attribute(A);
+  callee_kern_with_alwaysinline_attribute(A);
   callee_kern_Mat3X3(mat3X3, mat4X4);
   callee_kern_Mat32X32(mat32X32, mat64X64);
   ext_callee_kern_Mat3X3(mat3X3, mat4X4);
@@ -208,8 +217,8 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 //
 // X86: Function Attrs: convergent noinline norecurse nounwind optnone
-// X86-LABEL: define spir_kernel void @callee_kern(
-// X86-SAME: ptr noundef align 4 [[A:%.*]]) #[[ATTR2:[0-9]+]] !kernel_arg_addr_space [[META4:![0-9]+]] !kernel_arg_access_qual [[META5:![0-9]+]] !kernel_arg_type [[META6:![0-9]+]] !kernel_arg_base_type [[META6]] !kernel_arg_type_qual [[META7:![0-9]+]] {
+// X86-LABEL: define void @callee_kern(
+// X86-SAME: ptr noundef align 4 [[A:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META3:![0-9]+]] !kernel_arg_access_qual [[META4:![0-9]+]] !kernel_arg_type [[META5:![0-9]+]] !kernel_arg_base_type [[META5]] !kernel_arg_type_qual [[META6:![0-9]+]] {
 // X86-NEXT:  entry:
 // X86-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // X86-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -220,7 +229,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // X86: Function Attrs: convergent noinline norecurse nounwind optnone
 // X86-LABEL: define void @__clang_ocl_kern_imp_callee_kern(
-// X86-SAME: ptr noundef align 4 [[A:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META4]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META6]] !kernel_arg_base_type [[META6]] !kernel_arg_type_qual [[META7]] {
+// X86-SAME: ptr noundef align 4 [[A:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META3]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META5]] !kernel_arg_base_type [[META5]] !kernel_arg_type_qual [[META6]] {
 // X86-NEXT:  entry:
 // X86-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // X86-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -230,8 +239,55 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 //
 // X86: Function Attrs: convergent noinline norecurse nounwind optnone
-// X86-LABEL: define spir_kernel void @callee_kern_Mat3X3(
-// X86-SAME: ptr noundef align 4 [[IN:%.*]], ptr noundef align 4 [[OUT:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META8:![0-9]+]] !kernel_arg_access_qual [[META9:![0-9]+]] !kernel_arg_type [[META10:![0-9]+]] !kernel_arg_base_type [[META10]] !kernel_arg_type_qual [[META11:![0-9]+]] {
+// X86-LABEL: define void @callee_kern_with_optnone_attribute(
+// X86-SAME: ptr noundef align 4 [[A:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META3]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META5]] !kernel_arg_base_type [[META5]] !kernel_arg_type_qual [[META6]] {
+// X86-NEXT:  entry:
+// X86-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// X86-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// X86-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4
+// X86-NEXT:    call void @__clang_ocl_kern_imp_callee_kern_with_optnone_attribute(ptr noundef align 4 [[TMP0]]) #[[ATTR4]]
+// X86-NEXT:    ret void
+//
+//
+// X86: Function Attrs: convergent noinline norecurse nounwind optnone
+// X86-LABEL: define void @__clang_ocl_kern_imp_callee_kern_with_optnone_attribute(
+// X86-SAME: ptr noundef align 4 [[A:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META3]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META5]] !kernel_arg_base_type [[META5]] !kernel_arg_type_qual [[META6]] {
+// X86-NEXT:  entry:
+// X86-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// X86-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// X86-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4
+// X86-NEXT:    store i32 1, ptr [[TMP0]], align 4
+// X86-NEXT:    ret void
+//
+//
+// X86: Function Attrs: alwaysinline convergent norecurse nounwind
+// X86-LABEL: define void @callee_kern_with_alwaysinline_attribute(
+// X86-SAME: ptr noundef align 4 [[A:%.*]]) #[[ATTR2:[0-9]+]] !kernel_arg_addr_space [[META3]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META5]] !kernel_arg_base_type [[META5]] !kernel_arg_type_qual [[META6]] {
+// X86-NEXT:  entry:
+// X86-NEXT:    [[A_ADDR_I:%.*]] = alloca ptr, align 4
+// X86-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// X86-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// X86-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4
+// X86-NEXT:    store ptr [[TMP0]], ptr [[A_ADDR_I]], align 4
+// X86-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_I]], align 4
+// X86-NEXT:    store i32 1, ptr [[TMP1]], align 4
+// X86-NEXT:    ret void
+//
+//
+// X86: Function Attrs: alwaysinline convergent norecurse nounwind
+// X86-LABEL: define void @__clang_ocl_kern_imp_callee_kern_with_alwaysinline_attribute(
+// X86-SAME: ptr noundef align 4 [[A:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META3]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META5]] !kernel_arg_base_type [[META5]] !kernel_arg_type_qual [[META6]] {
+// X86-NEXT:  entry:
+// X86-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// X86-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// X86-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4
+// X86-NEXT:    store i32 1, ptr [[TMP0]], align 4
+// X86-NEXT:    ret void
+//
+//
+// X86: Function Attrs: convergent noinline norecurse nounwind optnone
+// X86-LABEL: define void @callee_kern_Mat3X3(
+// X86-SAME: ptr noundef align 4 [[IN:%.*]], ptr noundef align 4 [[OUT:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META7:![0-9]+]] !kernel_arg_access_qual [[META8:![0-9]+]] !kernel_arg_type [[META9:![0-9]+]] !kernel_arg_base_type [[META9]] !kernel_arg_type_qual [[META10:![0-9]+]] {
 // X86-NEXT:  entry:
 // X86-NEXT:    [[IN_ADDR:%.*]] = alloca ptr, align 4
 // X86-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 4
@@ -245,7 +301,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // X86: Function Attrs: convergent noinline norecurse nounwind optnone
 // X86-LABEL: define void @__clang_ocl_kern_imp_callee_kern_Mat3X3(
-// X86-SAME: ptr noundef align 4 [[IN:%.*]], ptr noundef align 4 [[OUT:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META8]] !kernel_arg_access_qual [[META9]] !kernel_arg_type [[META10]] !kernel_arg_base_type [[META10]] !kernel_arg_type_qual [[META11]] {
+// X86-SAME: ptr noundef align 4 [[IN:%.*]], ptr noundef align 4 [[OUT:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META7]] !kernel_arg_access_qual [[META8]] !kernel_arg_type [[META9]] !kernel_arg_base_type [[META9]] !kernel_arg_type_qual [[META10]] {
 // X86-NEXT:  entry:
 // X86-NEXT:    [[IN_ADDR:%.*]] = alloca ptr, align 4
 // X86-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 4
@@ -262,8 +318,8 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 //
 // X86: Function Attrs: convergent noinline norecurse nounwind optnone
-// X86-LABEL: define spir_kernel void @callee_kern_Mat32X32(
-// X86-SAME: ptr noundef align 4 [[IN:%.*]], ptr noundef align 4 [[OUT:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META8]] !kernel_arg_access_qual [[META9]] !kernel_arg_type [[META12:![0-9]+]] !kernel_arg_base_type [[META12]] !kernel_arg_type_qual [[META11]] {
+// X86-LABEL: define void @callee_kern_Mat32X32(
+// X86-SAME: ptr noundef align 4 [[IN:%.*]], ptr noundef align 4 [[OUT:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META7]] !kernel_arg_access_qual [[META8]] !kernel_arg_type [[META11:![0-9]+]] !kernel_arg_base_type [[META11]] !kernel_arg_type_qual [[META10]] {
 // X86-NEXT:  entry:
 // X86-NEXT:    [[IN_ADDR:%.*]] = alloca ptr, align 4
 // X86-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 4
@@ -277,7 +333,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // X86: Function Attrs: convergent noinline norecurse nounwind optnone
 // X86-LABEL: define void @__clang_ocl_kern_imp_callee_kern_Mat32X32(
-// X86-SAME: ptr noundef align 4 [[IN:%.*]], ptr noundef align 4 [[OUT:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META8]] !kernel_arg_access_qual [[META9]] !kernel_arg_type [[META12]] !kernel_arg_base_type [[META12]] !kernel_arg_type_qual [[META11]] {
+// X86-SAME: ptr noundef align 4 [[IN:%.*]], ptr noundef align 4 [[OUT:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META7]] !kernel_arg_access_qual [[META8]] !kernel_arg_type [[META11]] !kernel_arg_base_type [[META11]] !kernel_arg_type_qual [[META10]] {
 // X86-NEXT:  entry:
 // X86-NEXT:    [[IN_ADDR:%.*]] = alloca ptr, align 4
 // X86-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 4
@@ -294,8 +350,8 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 //
 // X86: Function Attrs: convergent noinline norecurse nounwind optnone
-// X86-LABEL: define spir_kernel void @KernelOneMember(
-// X86-SAME: ptr noundef byval([[STRUCT_STRUCTONEMEMBER:%.*]]) align 8 [[U:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META13:![0-9]+]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META14:![0-9]+]] !kernel_arg_base_type [[META14]] !kernel_arg_type_qual [[META7]] {
+// X86-LABEL: define void @KernelOneMember(
+// X86-SAME: ptr noundef byval([[STRUCT_STRUCTONEMEMBER:%.*]]) align 8 [[U:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META12:![0-9]+]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META13:![0-9]+]] !kernel_arg_base_type [[META13]] !kernel_arg_type_qual [[META6]] {
 // X86-NEXT:  entry:
 // X86-NEXT:    call void @__clang_ocl_kern_imp_KernelOneMember(ptr noundef byval([[STRUCT_STRUCTONEMEMBER]]) align 4 [[U]]) #[[ATTR4]]
 // X86-NEXT:    ret void
@@ -303,7 +359,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // X86: Function Attrs: convergent noinline norecurse nounwind optnone
 // X86-LABEL: define void @__clang_ocl_kern_imp_KernelOneMember(
-// X86-SAME: ptr noundef byval([[STRUCT_STRUCTONEMEMBER:%.*]]) align 4 [[TMP0:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META13]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META14]] !kernel_arg_base_type [[META14]] !kernel_arg_type_qual [[META7]] {
+// X86-SAME: ptr noundef byval([[STRUCT_STRUCTONEMEMBER:%.*]]) align 4 [[TMP0:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META12]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META13]] !kernel_arg_base_type [[META13]] !kernel_arg_type_qual [[META6]] {
 // X86-NEXT:  entry:
 // X86-NEXT:    [[U:%.*]] = alloca [[STRUCT_STRUCTONEMEMBER]], align 8
 // X86-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[U]], ptr align 4 [[TMP0]], i32 8, i1 false)
@@ -312,8 +368,8 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 //
 // X86: Function Attrs: convergent noinline norecurse nounwind optnone
-// X86-LABEL: define spir_kernel void @KernelLargeOneMember(
-// X86-SAME: ptr noundef byval([[STRUCT_LARGESTRUCTONEMEMBER:%.*]]) align 8 [[U:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META13]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META15:![0-9]+]] !kernel_arg_base_type [[META15]] !kernel_arg_type_qual [[META7]] {
+// X86-LABEL: define void @KernelLargeOneMember(
+// X86-SAME: ptr noundef byval([[STRUCT_LARGESTRUCTONEMEMBER:%.*]]) align 8 [[U:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META12]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META14:![0-9]+]] !kernel_arg_base_type [[META14]] !kernel_arg_type_qual [[META6]] {
 // X86-NEXT:  entry:
 // X86-NEXT:    call void @__clang_ocl_kern_imp_KernelLargeOneMember(ptr noundef byval([[STRUCT_LARGESTRUCTONEMEMBER]]) align 4 [[U]]) #[[ATTR4]]
 // X86-NEXT:    ret void
@@ -321,7 +377,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // X86: Function Attrs: convergent noinline norecurse nounwind optnone
 // X86-LABEL: define void @__clang_ocl_kern_imp_KernelLargeOneMember(
-// X86-SAME: ptr noundef byval([[STRUCT_LARGESTRUCTONEMEMBER:%.*]]) align 4 [[TMP0:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META13]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META15]] !kernel_arg_base_type [[META15]] !kernel_arg_type_qual [[META7]] {
+// X86-SAME: ptr noundef byval([[STRUCT_LARGESTRUCTONEMEMBER:%.*]]) align 4 [[TMP0:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META12]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META14]] !kernel_arg_base_type [[META14]] !kernel_arg_type_qual [[META6]] {
 // X86-NEXT:  entry:
 // X86-NEXT:    [[U:%.*]] = alloca [[STRUCT_LARGESTRUCTONEMEMBER]], align 8
 // X86-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[U]], ptr align 4 [[TMP0]], i32 800, i1 false)
@@ -330,8 +386,8 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 //
 // X86: Function Attrs: convergent noinline norecurse nounwind optnone
-// X86-LABEL: define spir_kernel void @KernelTwoMember(
-// X86-SAME: ptr noundef byval([[STRUCT_STRUCTTWOMEMBER:%.*]]) align 8 [[U:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META13]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META16:![0-9]+]] !kernel_arg_base_type [[META16]] !kernel_arg_type_qual [[META7]] {
+// X86-LABEL: define void @KernelTwoMember(
+// X86-SAME: ptr noundef byval([[STRUCT_STRUCTTWOMEMBER:%.*]]) align 8 [[U:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META12]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META15:![0-9]+]] !kernel_arg_base_type [[META15]] !kernel_arg_type_qual [[META6]] {
 // X86-NEXT:  entry:
 // X86-NEXT:    call void @__clang_ocl_kern_imp_KernelTwoMember(ptr noundef byval([[STRUCT_STRUCTTWOMEMBER]]) align 4 [[U]]) #[[ATTR4]]
 // X86-NEXT:    ret void
@@ -339,7 +395,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // X86: Function Attrs: convergent noinline norecurse nounwind optnone
 // X86-LABEL: define void @__clang_ocl_kern_imp_KernelTwoMember(
-// X86-SAME: ptr noundef byval([[STRUCT_STRUCTTWOMEMBER:%.*]]) align 4 [[TMP0:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META13]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META16]] !kernel_arg_base_type [[META16]] !kernel_arg_type_qual [[META7]] {
+// X86-SAME: ptr noundef byval([[STRUCT_STRUCTTWOMEMBER:%.*]]) align 4 [[TMP0:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META12]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META15]] !kernel_arg_base_type [[META15]] !kernel_arg_type_qual [[META6]] {
 // X86-NEXT:  entry:
 // X86-NEXT:    [[U:%.*]] = alloca [[STRUCT_STRUCTTWOMEMBER]], align 8
 // X86-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[U]], ptr align 4 [[TMP0]], i32 16, i1 false)
@@ -348,8 +404,8 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 //
 // X86: Function Attrs: convergent noinline norecurse nounwind optnone
-// X86-LABEL: define spir_kernel void @KernelLargeTwoMember(
-// X86-SAME: ptr noundef byval([[STRUCT_LARGESTRUCTTWOMEMBER:%.*]]) align 8 [[U:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META13]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META17:![0-9]+]] !kernel_arg_base_type [[META17]] !kernel_arg_type_qual [[META7]] {
+// X86-LABEL: define void @KernelLargeTwoMember(
+// X86-SAME: ptr noundef byval([[STRUCT_LARGESTRUCTTWOMEMBER:%.*]]) align 8 [[U:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META12]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META16:![0-9]+]] !kernel_arg_base_type [[META16]] !kernel_arg_type_qual [[META6]] {
 // X86-NEXT:  entry:
 // X86-NEXT:    call void @__clang_ocl_kern_imp_KernelLargeTwoMember(ptr noundef byval([[STRUCT_LARGESTRUCTTWOMEMBER]]) align 4 [[U]]) #[[ATTR4]]
 // X86-NEXT:    ret void
@@ -357,7 +413,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // X86: Function Attrs: convergent noinline norecurse nounwind optnone
 // X86-LABEL: define void @__clang_ocl_kern_imp_KernelLargeTwoMember(
-// X86-SAME: ptr noundef byval([[STRUCT_LARGESTRUCTTWOMEMBER:%.*]]) align 4 [[TMP0:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META13]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META17]] !kernel_arg_base_type [[META17]] !kernel_arg_type_qual [[META7]] {
+// X86-SAME: ptr noundef byval([[STRUCT_LARGESTRUCTTWOMEMBER:%.*]]) align 4 [[TMP0:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META12]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META16]] !kernel_arg_base_type [[META16]] !kernel_arg_type_qual [[META6]] {
 // X86-NEXT:  entry:
 // X86-NEXT:    [[U:%.*]] = alloca [[STRUCT_LARGESTRUCTTWOMEMBER]], align 8
 // X86-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[U]], ptr align 4 [[TMP0]], i32 480, i1 false)
@@ -366,8 +422,8 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 //
 // X86: Function Attrs: convergent noinline norecurse nounwind optnone
-// X86-LABEL: define spir_kernel void @caller_kern(
-// X86-SAME: ptr noundef align 4 [[A:%.*]], ptr noundef align 4 [[MAT3X3:%.*]], ptr noundef align 4 [[MAT4X4:%.*]], ptr noundef align 4 [[MAT32X32:%.*]], ptr noundef align 4 [[MAT64X64:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META18:![0-9]+]] !kernel_arg_access_qual [[META19:![0-9]+]] !kernel_arg_type [[META20:![0-9]+]] !kernel_arg_base_type [[META20]] !kernel_arg_type_qual [[META21:![0-9]+]] {
+// X86-LABEL: define void @caller_kern(
+// X86-SAME: ptr noundef align 4 [[A:%.*]], ptr noundef align 4 [[MAT3X3:%.*]], ptr noundef align 4 [[MAT4X4:%.*]], ptr noundef align 4 [[MAT32X32:%.*]], ptr noundef align 4 [[MAT64X64:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META17:![0-9]+]] !kernel_arg_access_qual [[META18:![0-9]+]] !kernel_arg_type [[META19:![0-9]+]] !kernel_arg_base_type [[META19]] !kernel_arg_type_qual [[META20:![0-9]+]] {
 // X86-NEXT:  entry:
 // X86-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // X86-NEXT:    [[MAT3X3_ADDR:%.*]] = alloca ptr, align 4
@@ -390,8 +446,9 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // X86: Function Attrs: convergent noinline norecurse nounwind optnone
 // X86-LABEL: define void @__clang_ocl_kern_imp_caller_kern(
-// X86-SAME: ptr noundef align 4 [[A:%.*]], ptr noundef align 4 [[MAT3X3:%.*]], ptr noundef align 4 [[MAT4X4:%.*]], ptr noundef align 4 [[MAT32X32:%.*]], ptr noundef align 4 [[MAT64X64:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META18]] !kernel_arg_access_qual [[META19]] !kernel_arg_type [[META20]] !kernel_arg_base_type [[META20]] !kernel_arg_type_qual [[META21]] {
+// X86-SAME: ptr noundef align 4 [[A:%.*]], ptr noundef align 4 [[MAT3X3:%.*]], ptr noundef align 4 [[MAT4X4:%.*]], ptr noundef align 4 [[MAT32X32:%.*]], ptr noundef align 4 [[MAT64X64:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META17]] !kernel_arg_access_qual [[META18]] !kernel_arg_type [[META19]] !kernel_arg_base_type [[META19]] !kernel_arg_type_qual [[META20]] {
 // X86-NEXT:  entry:
+// X86-NEXT:    [[A_ADDR_I:%.*]] = alloca ptr, align 4
 // X86-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // X86-NEXT:    [[MAT3X3_ADDR:%.*]] = alloca ptr, align 4
 // X86-NEXT:    [[MAT4X4_ADDR:%.*]] = alloca ptr, align 4
@@ -406,24 +463,30 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 // X86-NEXT:    call void @__clang_ocl_kern_imp_callee_kern(ptr noundef align 4 [[TMP0]]) #[[ATTR4]]
 // X86-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4
 // X86-NEXT:    call void @__clang_ocl_kern_imp_ext_callee_kern(ptr noundef align 4 [[TMP1]]) #[[ATTR4]]
-// X86-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[MAT3X3_ADDR]], align 4
-// X86-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[MAT4X4_ADDR]], align 4
-// X86-NEXT:    call void @__clang_ocl_kern_imp_callee_kern_Mat3X3(ptr noundef align 4 [[TMP2]], ptr noundef align 4 [[TMP3]]) #[[ATTR4]]
-// X86-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[MAT32X32_ADDR]], align 4
-// X86-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[MAT64X64_ADDR]], align 4
-// X86-NEXT:    call void @__clang_ocl_kern_imp_callee_kern_Mat32X32(ptr noundef align 4 [[TMP4]], ptr noundef align 4 [[TMP5]]) #[[ATTR4]]
-// X86-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[MAT3X3_ADDR]], align 4
-// X86-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[MAT4X4_ADDR]], align 4
-// X86-NEXT:    call void @__clang_ocl_kern_imp_ext_callee_kern_Mat3X3(ptr noundef align 4 [[TMP6]], ptr noundef align 4 [[TMP7]]) #[[ATTR4]]
-// X86-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[MAT32X32_ADDR]], align 4
-// X86-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[MAT64X64_ADDR]], align 4
-// X86-NEXT:    call void @__clang_ocl_kern_imp_ext_callee_kern_Mat32X32(ptr noundef align 4 [[TMP8]], ptr noundef align 4 [[TMP9]]) #[[ATTR4]]
+// X86-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR]], align 4
+// X86-NEXT:    call void @__clang_ocl_kern_imp_callee_kern_with_optnone_attribute(ptr noundef align 4 [[TMP2]]) #[[ATTR4]]
+// X86-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[A_ADDR]], align 4
+// X86-NEXT:    store ptr [[TMP3]], ptr [[A_ADDR_I]], align 4
+// X86-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[A_ADDR_I]], align 4
+// X86-NEXT:    store i32 1, ptr [[TMP4]], align 4
+// X86-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[MAT3X3_ADDR]], align 4
+// X86-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[MAT4X4_ADDR]], align 4
+// X86-NEXT:    call void @__clang_ocl_kern_imp_callee_kern_Mat3X3(ptr noundef align 4 [[TMP5]], ptr noundef align 4 [[TMP6]]) #[[ATTR4]]
+// X86-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[MAT32X32_ADDR]], align 4
+// X86-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[MAT64X64_ADDR]], align 4
+// X86-NEXT:    call void @__clang_ocl_kern_imp_callee_kern_Mat32X32(ptr noundef align 4 [[TMP7]], ptr noundef align 4 [[TMP8]]) #[[ATTR4]]
+// X86-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[MAT3X3_ADDR]], align 4
+// X86-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[MAT4X4_ADDR]], align 4
+// X86-NEXT:    call void @__clang_ocl_kern_imp_ext_callee_kern_Mat3X3(ptr noundef align 4 [[TMP9]], ptr noundef align 4 [[TMP10]]) #[[ATTR4]]
+// X86-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[MAT32X32_ADDR]], align 4
+// X86-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[MAT64X64_ADDR]], align 4
+// X86-NEXT:    call void @__clang_ocl_kern_imp_ext_callee_kern_Mat32X32(ptr noundef align 4 [[TMP11]], ptr noundef align 4 [[TMP12]]) #[[ATTR4]]
 // X86-NEXT:    ret void
 //
 //
 // X86: Function Attrs: convergent noinline norecurse nounwind optnone
-// X86-LABEL: define spir_kernel void @caller_kern2(
-// X86-SAME: ptr noundef byval([[STRUCT_STRUCTONEMEMBER:%.*]]) align 8 [[STRUCTONEMEM:%.*]], ptr noundef align 8 [[GLOBAL_STRUCTONEMEM:%.*]], ptr noundef byval([[STRUCT_STRUCTTWOMEMBER:%.*]]) align 8 [[STRUCTTWOMEM:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META22:![0-9]+]] !kernel_arg_access_qual [[META23:![0-9]+]] !kernel_arg_type [[META24:![0-9]+]] !kernel_arg_base_type [[META24]] !kernel_arg_type_qual [[META25:![0-9]+]] {
+// X86-LABEL: define void @caller_kern2(
+// X86-SAME: ptr noundef byval([[STRUCT_STRUCTONEMEMBER:%.*]]) align 8 [[STRUCTONEMEM:%.*]], ptr noundef align 8 [[GLOBAL_STRUCTONEMEM:%.*]], ptr noundef byval([[STRUCT_STRUCTTWOMEMBER:%.*]]) align 8 [[STRUCTTWOMEM:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META21:![0-9]+]] !kernel_arg_access_qual [[META22:![0-9]+]] !kernel_arg_type [[META23:![0-9]+]] !kernel_arg_base_type [[META23]] !kernel_arg_type_qual [[META24:![0-9]+]] {
 // X86-NEXT:  entry:
 // X86-NEXT:    [[GLOBAL_STRUCTONEMEM_ADDR:%.*]] = alloca ptr, align 4
 // X86-NEXT:    store ptr [[GLOBAL_STRUCTONEMEM]], ptr [[GLOBAL_STRUCTONEMEM_ADDR]], align 4
@@ -434,7 +497,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // X86: Function Attrs: convergent noinline norecurse nounwind optnone
 // X86-LABEL: define void @__clang_ocl_kern_imp_caller_kern2(
-// X86-SAME: ptr noundef byval([[STRUCT_STRUCTONEMEMBER:%.*]]) align 4 [[TMP0:%.*]], ptr noundef align 8 [[GLOBAL_STRUCTONEMEM:%.*]], ptr noundef byval([[STRUCT_STRUCTTWOMEMBER:%.*]]) align 4 [[TMP1:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META22]] !kernel_arg_access_qual [[META23]] !kernel_arg_type [[META24]] !kernel_arg_base_type [[META24]] !kernel_arg_type_qual [[META25]] {
+// X86-SAME: ptr noundef byval([[STRUCT_STRUCTONEMEMBER:%.*]]) align 4 [[TMP0:%.*]], ptr noundef align 8 [[GLOBAL_STRUCTONEMEM:%.*]], ptr noundef byval([[STRUCT_STRUCTTWOMEMBER:%.*]]) align 4 [[TMP1:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META21]] !kernel_arg_access_qual [[META22]] !kernel_arg_type [[META23]] !kernel_arg_base_type [[META23]] !kernel_arg_type_qual [[META24]] {
 // X86-NEXT:  entry:
 // X86-NEXT:    [[STRUCTONEMEM:%.*]] = alloca [[STRUCT_STRUCTONEMEMBER]], align 8
 // X86-NEXT:    [[STRUCTTWOMEM:%.*]] = alloca [[STRUCT_STRUCTTWOMEMBER]], align 8
@@ -450,8 +513,8 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 //
 // X86: Function Attrs: convergent noinline norecurse nounwind optnone
-// X86-LABEL: define spir_kernel void @caller_kern3(
-// X86-SAME: ptr noundef byval([[STRUCT_LARGESTRUCTONEMEMBER:%.*]]) align 8 [[LARGESTRUCTONEMEM:%.*]], ptr noundef byval([[STRUCT_LARGESTRUCTTWOMEMBER:%.*]]) align 8 [[LARGESTRUCTTWOMEM:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META26:![0-9]+]] !kernel_arg_access_qual [[META9]] !kernel_arg_type [[META27:![0-9]+]] !kernel_arg_base_type [[META27]] !kernel_arg_type_qual [[META11]] {
+// X86-LABEL: define void @caller_kern3(
+// X86-SAME: ptr noundef byval([[STRUCT_LARGESTRUCTONEMEMBER:%.*]]) align 8 [[LARGESTRUCTONEMEM:%.*]], ptr noundef byval([[STRUCT_LARGESTRUCTTWOMEMBER:%.*]]) align 8 [[LARGESTRUCTTWOMEM:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META25:![0-9]+]] !kernel_arg_access_qual [[META8]] !kernel_arg_type [[META26:![0-9]+]] !kernel_arg_base_type [[META26]] !kernel_arg_type_qual [[META10]] {
 // X86-NEXT:  entry:
 // X86-NEXT:    call void @__clang_ocl_kern_imp_caller_kern3(ptr noundef byval([[STRUCT_LARGESTRUCTONEMEMBER]]) align 4 [[LARGESTRUCTONEMEM]], ptr noundef byval([[STRUCT_LARGESTRUCTTWOMEMBER]]) align 4 [[LARGESTRUCTTWOMEM]]) #[[ATTR4]]
 // X86-NEXT:    ret void
@@ -459,7 +522,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // X86: Function Attrs: convergent noinline norecurse nounwind optnone
 // X86-LABEL: define void @__clang_ocl_kern_imp_caller_kern3(
-// X86-SAME: ptr noundef byval([[STRUCT_LARGESTRUCTONEMEMBER:%.*]]) align 4 [[TMP0:%.*]], ptr noundef byval([[STRUCT_LARGESTRUCTTWOMEMBER:%.*]]) align 4 [[TMP1:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META26]] !kernel_arg_access_qual [[META9]] !kernel_arg_type [[META27]] !kernel_arg_base_type [[META27]] !kernel_arg_type_qual [[META11]] {
+// X86-SAME: ptr noundef byval([[STRUCT_LARGESTRUCTONEMEMBER:%.*]]) align 4 [[TMP0:%.*]], ptr noundef byval([[STRUCT_LARGESTRUCTTWOMEMBER:%.*]]) align 4 [[TMP1:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META25]] !kernel_arg_access_qual [[META8]] !kernel_arg_type [[META26]] !kernel_arg_base_type [[META26]] !kernel_arg_type_qual [[META10]] {
 // X86-NEXT:  entry:
 // X86-NEXT:    [[LARGESTRUCTONEMEM:%.*]] = alloca [[STRUCT_LARGESTRUCTONEMEMBER]], align 8
 // X86-NEXT:    [[LARGESTRUCTTWOMEM:%.*]] = alloca [[STRUCT_LARGESTRUCTTWOMEMBER]], align 8
@@ -557,7 +620,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
 // AMDGCN-LABEL: define dso_local amdgpu_kernel void @callee_kern(
-// AMDGCN-SAME: ptr addrspace(1) noundef align 4 [[A:%.*]]) #[[ATTR2:[0-9]+]] !kernel_arg_addr_space [[META4:![0-9]+]] !kernel_arg_access_qual [[META5:![0-9]+]] !kernel_arg_type [[META6:![0-9]+]] !kernel_arg_base_type [[META6]] !kernel_arg_type_qual [[META7:![0-9]+]] {
+// AMDGCN-SAME: ptr addrspace(1) noundef align 4 [[A:%.*]]) #[[ATTR2:[0-9]+]] !kernel_arg_addr_space [[META3:![0-9]+]] !kernel_arg_access_qual [[META4:![0-9]+]] !kernel_arg_type [[META5:![0-9]+]] !kernel_arg_base_type [[META5]] !kernel_arg_type_qual [[META6:![0-9]+]] {
 // AMDGCN-NEXT:  entry:
 // AMDGCN-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // AMDGCN-NEXT:    store ptr addrspace(1) [[A]], ptr addrspace(5) [[A_ADDR]], align 8
@@ -568,7 +631,54 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
 // AMDGCN-LABEL: define dso_local void @__clang_ocl_kern_imp_callee_kern(
-// AMDGCN-SAME: ptr addrspace(1) noundef align 4 [[A:%.*]]) #[[ATTR3:[0-9]+]] !kernel_arg_addr_space [[META4]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META6]] !kernel_arg_base_type [[META6]] !kernel_arg_type_qual [[META7]] {
+// AMDGCN-SAME: ptr addrspace(1) noundef align 4 [[A:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META3]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META5]] !kernel_arg_base_type [[META5]] !kernel_arg_type_qual [[META6]] {
+// AMDGCN-NEXT:  entry:
+// AMDGCN-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// AMDGCN-NEXT:    store ptr addrspace(1) [[A]], ptr addrspace(5) [[A_ADDR]], align 8
+// AMDGCN-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[A_ADDR]], align 8
+// AMDGCN-NEXT:    store i32 1, ptr addrspace(1) [[TMP0]], align 4
+// AMDGCN-NEXT:    ret void
+//
+//
+// AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
+// AMDGCN-LABEL: define dso_local amdgpu_kernel void @callee_kern_with_optnone_attribute(
+// AMDGCN-SAME: ptr addrspace(1) noundef align 4 [[A:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META3]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META5]] !kernel_arg_base_type [[META5]] !kernel_arg_type_qual [[META6]] {
+// AMDGCN-NEXT:  entry:
+// AMDGCN-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// AMDGCN-NEXT:    store ptr addrspace(1) [[A]], ptr addrspace(5) [[A_ADDR]], align 8
+// AMDGCN-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[A_ADDR]], align 8
+// AMDGCN-NEXT:    call void @__clang_ocl_kern_imp_callee_kern_with_optnone_attribute(ptr addrspace(1) noundef align 4 [[TMP0]]) #[[ATTR5]]
+// AMDGCN-NEXT:    ret void
+//
+//
+// AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
+// AMDGCN-LABEL: define dso_local void @__clang_ocl_kern_imp_callee_kern_with_optnone_attribute(
+// AMDGCN-SAME: ptr addrspace(1) noundef align 4 [[A:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META3]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META5]] !kernel_arg_base_type [[META5]] !kernel_arg_type_qual [[META6]] {
+// AMDGCN-NEXT:  entry:
+// AMDGCN-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// AMDGCN-NEXT:    store ptr addrspace(1) [[A]], ptr addrspace(5) [[A_ADDR]], align 8
+// AMDGCN-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[A_ADDR]], align 8
+// AMDGCN-NEXT:    store i32 1, ptr addrspace(1) [[TMP0]], align 4
+// AMDGCN-NEXT:    ret void
+//
+//
+// AMDGCN: Function Attrs: alwaysinline convergent norecurse nounwind
+// AMDGCN-LABEL: define dso_local amdgpu_kernel void @callee_kern_with_alwaysinline_attribute(
+// AMDGCN-SAME: ptr addrspace(1) noundef align 4 [[A:%.*]]) #[[ATTR3:[0-9]+]] !kernel_arg_addr_space [[META3]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META5]] !kernel_arg_base_type [[META5]] !kernel_arg_type_qual [[META6]] {
+// AMDGCN-NEXT:  entry:
+// AMDGCN-NEXT:    [[A_ADDR_I:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// AMDGCN-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// AMDGCN-NEXT:    store ptr addrspace(1) [[A]], ptr addrspace(5) [[A_ADDR]], align 8
+// AMDGCN-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[A_ADDR]], align 8
+// AMDGCN-NEXT:    store ptr addrspace(1) [[TMP0]], ptr addrspace(5) [[A_ADDR_I]], align 8
+// AMDGCN-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[A_ADDR_I]], align 8
+// AMDGCN-NEXT:    store i32 1, ptr addrspace(1) [[TMP1]], align 4
+// AMDGCN-NEXT:    ret void
+//
+//
+// AMDGCN: Function Attrs: alwaysinline convergent norecurse nounwind
+// AMDGCN-LABEL: define dso_local void @__clang_ocl_kern_imp_callee_kern_with_alwaysinline_attribute(
+// AMDGCN-SAME: ptr addrspace(1) noundef align 4 [[A:%.*]]) #[[ATTR3]] !kernel_arg_addr_space [[META3]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META5]] !kernel_arg_base_type [[META5]] !kernel_arg_type_qual [[META6]] {
 // AMDGCN-NEXT:  entry:
 // AMDGCN-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // AMDGCN-NEXT:    store ptr addrspace(1) [[A]], ptr addrspace(5) [[A_ADDR]], align 8
@@ -579,7 +689,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
 // AMDGCN-LABEL: define dso_local amdgpu_kernel void @callee_kern_Mat3X3(
-// AMDGCN-SAME: ptr addrspace(1) noundef align 4 [[IN:%.*]], ptr addrspace(1) noundef align 4 [[OUT:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META8:![0-9]+]] !kernel_arg_access_qual [[META9:![0-9]+]] !kernel_arg_type [[META10:![0-9]+]] !kernel_arg_base_type [[META10]] !kernel_arg_type_qual [[META11:![0-9]+]] {
+// AMDGCN-SAME: ptr addrspace(1) noundef align 4 [[IN:%.*]], ptr addrspace(1) noundef align 4 [[OUT:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META7:![0-9]+]] !kernel_arg_access_qual [[META8:![0-9]+]] !kernel_arg_type [[META9:![0-9]+]] !kernel_arg_base_type [[META9]] !kernel_arg_type_qual [[META10:![0-9]+]] {
 // AMDGCN-NEXT:  entry:
 // AMDGCN-NEXT:    [[IN_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // AMDGCN-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
@@ -593,7 +703,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
 // AMDGCN-LABEL: define dso_local void @__clang_ocl_kern_imp_callee_kern_Mat3X3(
-// AMDGCN-SAME: ptr addrspace(1) noundef align 4 [[IN:%.*]], ptr addrspace(1) noundef align 4 [[OUT:%.*]]) #[[ATTR3]] !kernel_arg_addr_space [[META8]] !kernel_arg_access_qual [[META9]] !kernel_arg_type [[META10]] !kernel_arg_base_type [[META10]] !kernel_arg_type_qual [[META11]] {
+// AMDGCN-SAME: ptr addrspace(1) noundef align 4 [[IN:%.*]], ptr addrspace(1) noundef align 4 [[OUT:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META7]] !kernel_arg_access_qual [[META8]] !kernel_arg_type [[META9]] !kernel_arg_base_type [[META9]] !kernel_arg_type_qual [[META10]] {
 // AMDGCN-NEXT:  entry:
 // AMDGCN-NEXT:    [[IN_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // AMDGCN-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
@@ -616,7 +726,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
 // AMDGCN-LABEL: define dso_local amdgpu_kernel void @callee_kern_Mat32X32(
-// AMDGCN-SAME: ptr addrspace(1) noundef align 4 [[IN:%.*]], ptr addrspace(1) noundef align 4 [[OUT:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META8]] !kernel_arg_access_qual [[META9]] !kernel_arg_type [[META12:![0-9]+]] !kernel_arg_base_type [[META12]] !kernel_arg_type_qual [[META11]] {
+// AMDGCN-SAME: ptr addrspace(1) noundef align 4 [[IN:%.*]], ptr addrspace(1) noundef align 4 [[OUT:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META7]] !kernel_arg_access_qual [[META8]] !kernel_arg_type [[META11:![0-9]+]] !kernel_arg_base_type [[META11]] !kernel_arg_type_qual [[META10]] {
 // AMDGCN-NEXT:  entry:
 // AMDGCN-NEXT:    [[IN_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // AMDGCN-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
@@ -630,7 +740,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
 // AMDGCN-LABEL: define dso_local void @__clang_ocl_kern_imp_callee_kern_Mat32X32(
-// AMDGCN-SAME: ptr addrspace(1) noundef align 4 [[IN:%.*]], ptr addrspace(1) noundef align 4 [[OUT:%.*]]) #[[ATTR3]] !kernel_arg_addr_space [[META8]] !kernel_arg_access_qual [[META9]] !kernel_arg_type [[META12]] !kernel_arg_base_type [[META12]] !kernel_arg_type_qual [[META11]] {
+// AMDGCN-SAME: ptr addrspace(1) noundef align 4 [[IN:%.*]], ptr addrspace(1) noundef align 4 [[OUT:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META7]] !kernel_arg_access_qual [[META8]] !kernel_arg_type [[META11]] !kernel_arg_base_type [[META11]] !kernel_arg_type_qual [[META10]] {
 // AMDGCN-NEXT:  entry:
 // AMDGCN-NEXT:    [[IN_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // AMDGCN-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
@@ -650,7 +760,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
 // AMDGCN-LABEL: define dso_local amdgpu_kernel void @KernelOneMember(
-// AMDGCN-SAME: <2 x i32> [[U_COERCE:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META13:![0-9]+]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META14:![0-9]+]] !kernel_arg_base_type [[META14]] !kernel_arg_type_qual [[META7]] {
+// AMDGCN-SAME: <2 x i32> [[U_COERCE:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META12:![0-9]+]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META13:![0-9]+]] !kernel_arg_base_type [[META13]] !kernel_arg_type_qual [[META6]] {
 // AMDGCN-NEXT:  entry:
 // AMDGCN-NEXT:    [[U:%.*]] = alloca [[STRUCT_STRUCTONEMEMBER:%.*]], align 8, addrspace(5)
 // AMDGCN-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_STRUCTONEMEMBER]], ptr addrspace(5) [[U]], i32 0, i32 0
@@ -663,7 +773,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
 // AMDGCN-LABEL: define dso_local void @__clang_ocl_kern_imp_KernelOneMember(
-// AMDGCN-SAME: <2 x i32> [[U_COERCE:%.*]]) #[[ATTR3]] !kernel_arg_addr_space [[META13]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META14]] !kernel_arg_base_type [[META14]] !kernel_arg_type_qual [[META7]] {
+// AMDGCN-SAME: <2 x i32> [[U_COERCE:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META12]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META13]] !kernel_arg_base_type [[META13]] !kernel_arg_type_qual [[META6]] {
 // AMDGCN-NEXT:  entry:
 // AMDGCN-NEXT:    [[U:%.*]] = alloca [[STRUCT_STRUCTONEMEMBER:%.*]], align 8, addrspace(5)
 // AMDGCN-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_STRUCTONEMEMBER]], ptr addrspace(5) [[U]], i32 0, i32 0
@@ -676,7 +786,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
 // AMDGCN-LABEL: define dso_local amdgpu_kernel void @KernelLargeOneMember(
-// AMDGCN-SAME: ptr addrspace(4) noundef byref([[STRUCT_LARGESTRUCTONEMEMBER:%.*]]) align 8 [[TMP0:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META13]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META15:![0-9]+]] !kernel_arg_base_type [[META15]] !kernel_arg_type_qual [[META7]] {
+// AMDGCN-SAME: ptr addrspace(4) noundef byref([[STRUCT_LARGESTRUCTONEMEMBER:%.*]]) align 8 [[TMP0:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META12]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META14:![0-9]+]] !kernel_arg_base_type [[META14]] !kernel_arg_type_qual [[META6]] {
 // AMDGCN-NEXT:  entry:
 // AMDGCN-NEXT:    [[U:%.*]] = alloca [[STRUCT_LARGESTRUCTONEMEMBER]], align 8, addrspace(5)
 // AMDGCN-NEXT:    call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) align 8 [[U]], ptr addrspace(4) align 8 [[TMP0]], i64 800, i1 false)
@@ -686,7 +796,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
 // AMDGCN-LABEL: define dso_local void @__clang_ocl_kern_imp_KernelLargeOneMember(
-// AMDGCN-SAME: ptr addrspace(5) noundef byref([[STRUCT_LARGESTRUCTONEMEMBER:%.*]]) align 8 [[TMP0:%.*]]) #[[ATTR3]] !kernel_arg_addr_space [[META13]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META15]] !kernel_arg_base_type [[META15]] !kernel_arg_type_qual [[META7]] {
+// AMDGCN-SAME: ptr addrspace(5) noundef byref([[STRUCT_LARGESTRUCTONEMEMBER:%.*]]) align 8 [[TMP0:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META12]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META14]] !kernel_arg_base_type [[META14]] !kernel_arg_type_qual [[META6]] {
 // AMDGCN-NEXT:  entry:
 // AMDGCN-NEXT:    [[U:%.*]] = alloca [[STRUCT_LARGESTRUCTONEMEMBER]], align 8, addrspace(5)
 // AMDGCN-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 8 [[U]], ptr addrspace(5) align 8 [[TMP0]], i64 800, i1 false)
@@ -696,7 +806,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
 // AMDGCN-LABEL: define dso_local amdgpu_kernel void @KernelTwoMember(
-// AMDGCN-SAME: ptr addrspace(4) noundef byref([[STRUCT_STRUCTTWOMEMBER:%.*]]) align 8 [[TMP0:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META13]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META16:![0-9]+]] !kernel_arg_base_type [[META16]] !kernel_arg_type_qual [[META7]] {
+// AMDGCN-SAME: ptr addrspace(4) noundef byref([[STRUCT_STRUCTTWOMEMBER:%.*]]) align 8 [[TMP0:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META12]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META15:![0-9]+]] !kernel_arg_base_type [[META15]] !kernel_arg_type_qual [[META6]] {
 // AMDGCN-NEXT:  entry:
 // AMDGCN-NEXT:    [[U:%.*]] = alloca [[STRUCT_STRUCTTWOMEMBER]], align 8, addrspace(5)
 // AMDGCN-NEXT:    call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) align 8 [[U]], ptr addrspace(4) align 8 [[TMP0]], i64 16, i1 false)
@@ -710,7 +820,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
 // AMDGCN-LABEL: define dso_local void @__clang_ocl_kern_imp_KernelTwoMember(
-// AMDGCN-SAME: <2 x i32> [[U_COERCE0:%.*]], <2 x i32> [[U_COERCE1:%.*]]) #[[ATTR3]] !kernel_arg_addr_space [[META13]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META16]] !kernel_arg_base_type [[META16]] !kernel_arg_type_qual [[META7]] {
+// AMDGCN-SAME: <2 x i32> [[U_COERCE0:%.*]], <2 x i32> [[U_COERCE1:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META12]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META15]] !kernel_arg_base_type [[META15]] !kernel_arg_type_qual [[META6]] {
 // AMDGCN-NEXT:  entry:
 // AMDGCN-NEXT:    [[U:%.*]] = alloca [[STRUCT_STRUCTTWOMEMBER:%.*]], align 8, addrspace(5)
 // AMDGCN-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[STRUCT_STRUCTTWOMEMBER]], ptr addrspace(5) [[U]], i32 0, i32 0
@@ -727,7 +837,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
 // AMDGCN-LABEL: define dso_local amdgpu_kernel void @KernelLargeTwoMember(
-// AMDGCN-SAME: ptr addrspace(4) noundef byref([[STRUCT_LARGESTRUCTTWOMEMBER:%.*]]) align 8 [[TMP0:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META13]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META17:![0-9]+]] !kernel_arg_base_type [[META17]] !kernel_arg_type_qual [[META7]] {
+// AMDGCN-SAME: ptr addrspace(4) noundef byref([[STRUCT_LARGESTRUCTTWOMEMBER:%.*]]) align 8 [[TMP0:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META12]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META16:![0-9]+]] !kernel_arg_base_type [[META16]] !kernel_arg_type_qual [[META6]] {
 // AMDGCN-NEXT:  entry:
 // AMDGCN-NEXT:    [[U:%.*]] = alloca [[STRUCT_LARGESTRUCTTWOMEMBER]], align 8, addrspace(5)
 // AMDGCN-NEXT:    call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) align 8 [[U]], ptr addrspace(4) align 8 [[TMP0]], i64 480, i1 false)
@@ -737,7 +847,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
 // AMDGCN-LABEL: define dso_local void @__clang_ocl_kern_imp_KernelLargeTwoMember(
-// AMDGCN-SAME: ptr addrspace(5) noundef byref([[STRUCT_LARGESTRUCTTWOMEMBER:%.*]]) align 8 [[TMP0:%.*]]) #[[ATTR3]] !kernel_arg_addr_space [[META13]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META17]] !kernel_arg_base_type [[META17]] !kernel_arg_type_qual [[META7]] {
+// AMDGCN-SAME: ptr addrspace(5) noundef byref([[STRUCT_LARGESTRUCTTWOMEMBER:%.*]]) align 8 [[TMP0:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META12]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META16]] !kernel_arg_base_type [[META16]] !kernel_arg_type_qual [[META6]] {
 // AMDGCN-NEXT:  entry:
 // AMDGCN-NEXT:    [[U:%.*]] = alloca [[STRUCT_LARGESTRUCTTWOMEMBER]], align 8, addrspace(5)
 // AMDGCN-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 8 [[U]], ptr addrspace(5) align 8 [[TMP0]], i64 480, i1 false)
@@ -747,7 +857,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
 // AMDGCN-LABEL: define dso_local amdgpu_kernel void @caller_kern(
-// AMDGCN-SAME: ptr addrspace(1) noundef align 4 [[A:%.*]], ptr addrspace(1) noundef align 4 [[MAT3X3:%.*]], ptr addrspace(1) noundef align 4 [[MAT4X4:%.*]], ptr addrspace(1) noundef align 4 [[MAT32X32:%.*]], ptr addrspace(1) noundef align 4 [[MAT64X64:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META18:![0-9]+]] !kernel_arg_access_qual [[META19:![0-9]+]] !kernel_arg_type [[META20:![0-9]+]] !kernel_arg_base_type [[META20]] !kernel_arg_type_qual [[META21:![0-9]+]] {
+// AMDGCN-SAME: ptr addrspace(1) noundef align 4 [[A:%.*]], ptr addrspace(1) noundef align 4 [[MAT3X3:%.*]], ptr addrspace(1) noundef align 4 [[MAT4X4:%.*]], ptr addrspace(1) noundef align 4 [[MAT32X32:%.*]], ptr addrspace(1) noundef align 4 [[MAT64X64:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META17:![0-9]+]] !kernel_arg_access_qual [[META18:![0-9]+]] !kernel_arg_type [[META19:![0-9]+]] !kernel_arg_base_type [[META19]] !kernel_arg_type_qual [[META20:![0-9]+]] {
 // AMDGCN-NEXT:  entry:
 // AMDGCN-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // AMDGCN-NEXT:    [[MAT3X3_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
@@ -770,8 +880,9 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
 // AMDGCN-LABEL: define dso_local void @__clang_ocl_kern_imp_caller_kern(
-// AMDGCN-SAME: ptr addrspace(1) noundef align 4 [[A:%.*]], ptr addrspace(1) noundef align 4 [[MAT3X3:%.*]], ptr addrspace(1) noundef align 4 [[MAT4X4:%.*]], ptr addrspace(1) noundef align 4 [[MAT32X32:%.*]], ptr addrspace(1) noundef align 4 [[MAT64X64:%.*]]) #[[ATTR3]] !kernel_arg_addr_space [[META18]] !kernel_arg_access_qual [[META19]] !kernel_arg_type [[META20]] !kernel_arg_base_type [[META20]] !kernel_arg_type_qual [[META21]] {
+// AMDGCN-SAME: ptr addrspace(1) noundef align 4 [[A:%.*]], ptr addrspace(1) noundef align 4 [[MAT3X3:%.*]], ptr addrspace(1) noundef align 4 [[MAT4X4:%.*]], ptr addrspace(1) noundef align 4 [[MAT32X32:%.*]], ptr addrspace(1) noundef align 4 [[MAT64X64:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META17]] !kernel_arg_access_qual [[META18]] !kernel_arg_type [[META19]] !kernel_arg_base_type [[META19]] !kernel_arg_type_qual [[META20]] {
 // AMDGCN-NEXT:  entry:
+// AMDGCN-NEXT:    [[A_ADDR_I:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // AMDGCN-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // AMDGCN-NEXT:    [[MAT3X3_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // AMDGCN-NEXT:    [[MAT4X4_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
@@ -786,24 +897,30 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 // AMDGCN-NEXT:    call void @__clang_ocl_kern_imp_callee_kern(ptr addrspace(1) noundef align 4 [[TMP0]]) #[[ATTR5]]
 // AMDGCN-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[A_ADDR]], align 8
 // AMDGCN-NEXT:    call void @__clang_ocl_kern_imp_ext_callee_kern(ptr addrspace(1) noundef align 4 [[TMP1]]) #[[ATTR5]]
-// AMDGCN-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[MAT3X3_ADDR]], align 8
-// AMDGCN-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[MAT4X4_ADDR]], align 8
-// AMDGCN-NEXT:    call void @__clang_ocl_kern_imp_callee_kern_Mat3X3(ptr addrspace(1) noundef align 4 [[TMP2]], ptr addrspace(1) noundef align 4 [[TMP3]]) #[[ATTR5]]
-// AMDGCN-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[MAT32X32_ADDR]], align 8
-// AMDGCN-NEXT:    [[TMP5:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[MAT64X64_ADDR]], align 8
-// AMDGCN-NEXT:    call void @__clang_ocl_kern_imp_callee_kern_Mat32X32(ptr addrspace(1) noundef align 4 [[TMP4]], ptr addrspace(1) noundef align 4 [[TMP5]]) #[[ATTR5]]
-// AMDGCN-NEXT:    [[TMP6:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[MAT3X3_ADDR]], align 8
-// AMDGCN-NEXT:    [[TMP7:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[MAT4X4_ADDR]], align 8
-// AMDGCN-NEXT:    call void @__clang_ocl_kern_imp_ext_callee_kern_Mat3X3(ptr addrspace(1) noundef align 4 [[TMP6]], ptr addrspace(1) noundef align 4 [[TMP7]]) #[[ATTR5]]
-// AMDGCN-NEXT:    [[TMP8:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[MAT32X32_ADDR]], align 8
-// AMDGCN-NEXT:    [[TMP9:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[MAT64X64_ADDR]], align 8
-// AMDGCN-NEXT:    call void @__clang_ocl_kern_imp_ext_callee_kern_Mat32X32(ptr addrspace(1) noundef align 4 [[TMP8]], ptr addrspace(1) noundef align 4 [[TMP9]]) #[[ATTR5]]
+// AMDGCN-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[A_ADDR]], align 8
+// AMDGCN-NEXT:    call void @__clang_ocl_kern_imp_callee_kern_with_optnone_attribute(ptr addrspace(1) noundef align 4 [[TMP2]]) #[[ATTR5]]
+// AMDGCN-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[A_ADDR]], align 8
+// AMDGCN-NEXT:    store ptr addrspace(1) [[TMP3]], ptr addrspace(5) [[A_ADDR_I]], align 8
+// AMDGCN-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[A_ADDR_I]], align 8
+// AMDGCN-NEXT:    store i32 1, ptr addrspace(1) [[TMP4]], align 4
+// AMDGCN-NEXT:    [[TMP5:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[MAT3X3_ADDR]], align 8
+// AMDGCN-NEXT:    [[TMP6:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[MAT4X4_ADDR]], align 8
+// AMDGCN-NEXT:    call void @__clang_ocl_kern_imp_callee_kern_Mat3X3(ptr addrspace(1) noundef align 4 [[TMP5]], ptr addrspace(1) noundef align 4 [[TMP6]]) #[[ATTR5]]
+// AMDGCN-NEXT:    [[TMP7:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[MAT32X32_ADDR]], align 8
+// AMDGCN-NEXT:    [[TMP8:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[MAT64X64_ADDR]], align 8
+// AMDGCN-NEXT:    call void @__clang_ocl_kern_imp_callee_kern_Mat32X32(ptr addrspace(1) noundef align 4 [[TMP7]], ptr addrspace(1) noundef align 4 [[TMP8]]) #[[ATTR5]]
+// AMDGCN-NEXT:    [[TMP9:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[MAT3X3_ADDR]], align 8
+// AMDGCN-NEXT:    [[TMP10:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[MAT4X4_ADDR]], align 8
+// AMDGCN-NEXT:    call void @__clang_ocl_kern_imp_ext_callee_kern_Mat3X3(ptr addrspace(1) noundef align 4 [[TMP9]], ptr addrspace(1) noundef align 4 [[TMP10]]) #[[ATTR5]]
+// AMDGCN-NEXT:    [[TMP11:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[MAT32X32_ADDR]], align 8
+// AMDGCN-NEXT:    [[TMP12:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[MAT64X64_ADDR]], align 8
+// AMDGCN-NEXT:    call void @__clang_ocl_kern_imp_ext_callee_kern_Mat32X32(ptr addrspace(1) noundef align 4 [[TMP11]], ptr addrspace(1) noundef align 4 [[TMP12]]) #[[ATTR5]]
 // AMDGCN-NEXT:    ret void
 //
 //
 // AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
 // AMDGCN-LABEL: define dso_local amdgpu_kernel void @caller_kern2(
-// AMDGCN-SAME: <2 x i32> [[STRUCTONEMEM_COERCE:%.*]], ptr addrspace(1) noundef align 8 [[GLOBAL_STRUCTONEMEM:%.*]], ptr addrspace(4) noundef byref([[STRUCT_STRUCTTWOMEMBER:%.*]]) align 8 [[TMP0:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META22:![0-9]+]] !kernel_arg_access_qual [[META23:![0-9]+]] !kernel_arg_type [[META24:![0-9]+]] !kernel_arg_base_type [[META24]] !kernel_arg_type_qual [[META25:![0-9]+]] {
+// AMDGCN-SAME: <2 x i32> [[STRUCTONEMEM_COERCE:%.*]], ptr addrspace(1) noundef align 8 [[GLOBAL_STRUCTONEMEM:%.*]], ptr addrspace(4) noundef byref([[STRUCT_STRUCTTWOMEMBER:%.*]]) align 8 [[TMP0:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META21:![0-9]+]] !kernel_arg_access_qual [[META22:![0-9]+]] !kernel_arg_type [[META23:![0-9]+]] !kernel_arg_base_type [[META23]] !kernel_arg_type_qual [[META24:![0-9]+]] {
 // AMDGCN-NEXT:  entry:
 // AMDGCN-NEXT:    [[STRUCTONEMEM:%.*]] = alloca [[STRUCT_STRUCTONEMEMBER:%.*]], align 8, addrspace(5)
 // AMDGCN-NEXT:    [[STRUCTTWOMEM:%.*]] = alloca [[STRUCT_STRUCTTWOMEMBER]], align 8, addrspace(5)
@@ -825,7 +942,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
 // AMDGCN-LABEL: define dso_local void @__clang_ocl_kern_imp_caller_kern2(
-// AMDGCN-SAME: <2 x i32> [[STRUCTONEMEM_COERCE:%.*]], ptr addrspace(1) noundef align 8 [[GLOBAL_STRUCTONEMEM:%.*]], <2 x i32> [[STRUCTTWOMEM_COERCE0:%.*]], <2 x i32> [[STRUCTTWOMEM_COERCE1:%.*]]) #[[ATTR3]] !kernel_arg_addr_space [[META22]] !kernel_arg_access_qual [[META23]] !kernel_arg_type [[META24]] !kernel_arg_base_type [[META24]] !kernel_arg_type_qual [[META25]] {
+// AMDGCN-SAME: <2 x i32> [[STRUCTONEMEM_COERCE:%.*]], ptr addrspace(1) noundef align 8 [[GLOBAL_STRUCTONEMEM:%.*]], <2 x i32> [[STRUCTTWOMEM_COERCE0:%.*]], <2 x i32> [[STRUCTTWOMEM_COERCE1:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META21]] !kernel_arg_access_qual [[META22]] !kernel_arg_type [[META23]] !kernel_arg_base_type [[META23]] !kernel_arg_type_qual [[META24]] {
 // AMDGCN-NEXT:  entry:
 // AMDGCN-NEXT:    [[STRUCTONEMEM:%.*]] = alloca [[STRUCT_STRUCTONEMEMBER:%.*]], align 8, addrspace(5)
 // AMDGCN-NEXT:    [[STRUCTTWOMEM:%.*]] = alloca [[STRUCT_STRUCTTWOMEMBER:%.*]], align 8, addrspace(5)
@@ -858,7 +975,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
 // AMDGCN-LABEL: define dso_local amdgpu_kernel void @caller_kern3(
-// AMDGCN-SAME: ptr addrspace(4) noundef byref([[STRUCT_LARGESTRUCTONEMEMBER:%.*]]) align 8 [[TMP0:%.*]], ptr addrspace(4) noundef byref([[STRUCT_LARGESTRUCTTWOMEMBER:%.*]]) align 8 [[TMP1:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META26:![0-9]+]] !kernel_arg_access_qual [[META9]] !kernel_arg_type [[META27:![0-9]+]] !kernel_arg_base_type [[META27]] !kernel_arg_type_qual [[META11]] {
+// AMDGCN-SAME: ptr addrspace(4) noundef byref([[STRUCT_LARGESTRUCTONEMEMBER:%.*]]) align 8 [[TMP0:%.*]], ptr addrspace(4) noundef byref([[STRUCT_LARGESTRUCTTWOMEMBER:%.*]]) align 8 [[TMP1:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META25:![0-9]+]] !kernel_arg_access_qual [[META8]] !kernel_arg_type [[META26:![0-9]+]] !kernel_arg_base_type [[META26]] !kernel_arg_type_qual [[META10]] {
 // AMDGCN-NEXT:  entry:
 // AMDGCN-NEXT:    [[LARGESTRUCTONEMEM:%.*]] = alloca [[STRUCT_LARGESTRUCTONEMEMBER]], align 8, addrspace(5)
 // AMDGCN-NEXT:    [[LARGESTRUCTTWOMEM:%.*]] = alloca [[STRUCT_LARGESTRUCTTWOMEMBER]], align 8, addrspace(5)
@@ -870,7 +987,7 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 //
 // AMDGCN: Function Attrs: convergent noinline norecurse nounwind optnone
 // AMDGCN-LABEL: define dso_local void @__clang_ocl_kern_imp_caller_kern3(
-// AMDGCN-SAME: ptr addrspace(5) noundef byref([[STRUCT_LARGESTRUCTONEMEMBER:%.*]]) align 8 [[TMP0:%.*]], ptr addrspace(5) noundef byref([[STRUCT_LARGESTRUCTTWOMEMBER:%.*]]) align 8 [[TMP1:%.*]]) #[[ATTR3]] !kernel_arg_addr_space [[META26]] !kernel_arg_access_qual [[META9]] !kernel_arg_type [[META27]] !kernel_arg_base_type [[META27]] !kernel_arg_type_qual [[META11]] {
+// AMDGCN-SAME: ptr addrspace(5) noundef byref([[STRUCT_LARGESTRUCTONEMEMBER:%.*]]) align 8 [[TMP0:%.*]], ptr addrspace(5) noundef byref([[STRUCT_LARGESTRUCTTWOMEMBER:%.*]]) align 8 [[TMP1:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META25]] !kernel_arg_access_qual [[META8]] !kernel_arg_type [[META26]] !kernel_arg_base_type [[META26]] !kernel_arg_type_qual [[META10]] {
 // AMDGCN-NEXT:  entry:
 // AMDGCN-NEXT:    [[LARGESTRUCTONEMEM:%.*]] = alloca [[STRUCT_LARGESTRUCTONEMEMBER]], align 8, addrspace(5)
 // AMDGCN-NEXT:    [[LARGESTRUCTTWOMEM:%.*]] = alloca [[STRUCT_LARGESTRUCTTWOMEMBER]], align 8, addrspace(5)
@@ -883,53 +1000,53 @@ kernel void caller_kern3( struct LargeStructOneMember largeStructOneMem, struct 
 // AMDGCN-NEXT:    ret void
 //
 //.
-// X86: [[META4]] = !{i32 1}
-// X86: [[META5]] = !{!"none"}
-// X86: [[META6]] = !{!"int*"}
-// X86: [[META7]] = !{!""}
-// X86: [[META8]] = !{i32 1, i32 1}
-// X86: [[META9]] = !{!"none", !"none"}
-// X86: [[META10]] = !{!"Mat3X3*", !"Mat4X4*"}
-// X86: [[META11]] = !{!"", !""}
-// X86: [[META12]] = !{!"Mat32X32*", !"Mat64X64*"}
-// X86: [[META13]] = !{i32 0}
-// X86: [[META14]] = !{!"struct StructOneMember"}
-// X86: [[META15]] = !{!"struct LargeStructOneMember"}
-// X86: [[META16]] = !{!"struct StructTwoMember"}
-// X86: [[META17]] = !{!"struct LargeStructTwoMember"}
-// X86: [[META18]] = !{i32 1, i32 1, i32 1, i32 1, i32 1}
-// X86: [[META19]] = !{!"none", !"none", !"none", !"none", !"none"}
-// X86: [[META20]] = !{!"int*", !"Mat3X3*", !"Mat4X4*", !"Mat32X32*", !"Mat64X64*"}
-// X86: [[META21]] = !{!"", !"", !"", !"", !""}
-// X86: [[META22]] = !{i32 0, i32 1, i32 0}
-// X86: [[META23]] = !{!"none", !"none", !"none"}
-// X86: [[META24]] = !{!"struct StructOneMember", !"struct StructOneMember*", !"struct StructTwoMember"}
-// X86: [[META25]] = !{!"", !"", !""}
-// X86: [[META26]] = !{i32 0, i32 0}
-// X86: [[META27]] = !{!"struct LargeStructOneMember", !"struct LargeStructTwoMember"}
+// X86: [[META3]] = !{i32 1}
+// X86: [[META4]] = !{!"none"}
+// X86: [[META5]] = !{!"int*"}
+// X86: [[META6]] = !{!""}
+// X86: [[META7]] = !{i32 1, i32 1}
+// X86: [[META8]] = !{!"none", !"none"}
+// X86: [[META9]] = !{!"Mat3X3*", !"Mat4X4*"}
+// X86: [[META10]] = !{!"", !""}
+// X86: [[META11]] = !{!"Mat32X32*", !"Mat64X64*"}
+// X86: [[META12]] = !{i32 0}
+// X86: [[META13]] = !{!"struct StructOneMember"}
+// X86: [[META14]] = !{!"struct LargeStructOneMember"}
+// X86: [[META15]] = !{!"struct StructTwoMember"}
+// X86: [[META16]] = !{!"struct LargeStructTwoMember"}
+// X86: [[META17]] = !{i32 1, i32 1, i32 1, i32 1, i32 1}
+// X86: [[META18]] = !{!"none", !"none", !"none", !"none", !"none"}
+// X86: [[META19]] = !{!"int*", !"Mat3X3*", !"Mat4X4*", !"Mat32X32*", !"Mat64X64*"}
+// X86: [[META20]] = !{!"", !"", !"", !"", !""}
+// X86: [[META21]] = !{i32 0, i32 1, i32 0}
+// X86: [[META22]] = !{!"none", !"none", !"none"}
+// X86: [[META23]] = !{!"struct StructOneMember", !"struct StructOneMember*", !"struct StructTwoMember"}
+// X86: [[META24]] = !{!"", !"", !""}
+// X86: [[META25]] = !{i32 0, i32 0}
+// X86: [[META26]] = !{!"struct LargeStructOneMember", !"struct LargeStructTwoMember"}
 //.
-// AMDGCN: [[META4]] = !{i32 1}
-// AMDGCN: [[META5]] = !{!"none"}
-// AMDGCN: [[META6]] = !{!"int*"}
-// AMDGCN: [[META7]] = !{!""}
-// AMDGCN: [[META8]] = !{i32 1, i32 1}
-// AMDGCN: [[META9]] = !{!"none", !"none"}
-// AMDGCN: [[META10]] = !{!"Mat3X3*", !"Mat4X4*"}
-// AMDGCN: [[META11]] = !{!"", !""}
-// AMDGCN: [[META12]] = !{!"Mat32X32*", !"Mat64X64*"}
-// AMDGCN: [[META13]] = !{i32 0}
-// AMDGCN: [[META14]] = !{!"struct StructOneMember"}
-// AMDGCN: [[META15]] = !{!"struct LargeStructOneMember"}
-// AMDGCN: [[META16]] = !{!"struct StructTwoMember"}
-// AMDGCN: [[META17]] = !{!"struct LargeStructTwoMember"}
-// AMDGCN: [[META18]] = !{i32 1, i32 1, i32 1, i32 1, i32 1}
-// AMDGCN: [[META19]] = !{!"none", !"none", !"none", !"none", !"none"}
-// AMDGCN: [[META20]] = !{!"int*", !"Mat3X3*", !"Mat4X4*", !"Mat32X32*", !"Mat64X64*"}
-// AMDGCN: [[META21]] = !{!"", !"", !"", !"", !""}
-// AMDGCN: [[META22]] = !{i32 0, i32 1, i32 0}
-// AMDGCN: [[META23]] = !{!"none", !"none", !"none"}
-// AMDGCN: [[META24]] = !{!"struct StructOneMember", !"struct StructOneMember*", !"struct StructTwoMember"}
-// AMDGCN: [[META25]] = !{!"", !"", !""}
-// AMDGCN: [[META26]] = !{i32 0, i32 0}
-// AMDGCN: [[META27]] = !{!"struct LargeStructOneMember", !"struct LargeStructTwoMember"}
+// AMDGCN: [[META3]] = !{i32 1}
+// AMDGCN: [[META4]] = !{!"none"}
+// AMDGCN: [[META5]] = !{!"int*"}
+// AMDGCN: [[META6]] = !{!""}
+// AMDGCN: [[META7]] = !{i32 1, i32 1}
+// AMDGCN: [[META8]] = !{!"none", !"none"}
+// AMDGCN: [[META9]] = !{!"Mat3X3*", !"Mat4X4*"}
+// AMDGCN: [[META10]] = !{!"", !""}
+// AMDGCN: [[META11]] = !{!"Mat32X32*", !"Mat64X64*"}
+// AMDGCN: [[META12]] = !{i32 0}
+// AMDGCN: [[META13]] = !{!"struct StructOneMember"}
+// AMDGCN: [[META14]] = !{!"struct LargeStructOneMember"}
+// AMDGCN: [[META15]] = !{!"struct StructTwoMember"}
+// AMDGCN: [[META16]] = !{!"struct LargeStructTwoMember"}
+// AMDGCN: [[META17]] = !{i32 1, i32 1, i32 1, i32 1, i32 1}
+// AMDGCN: [[META18]] = !{!"none", !"none", !"none", !"none", !"none"}
+// AMDGCN: [[META19]] = !{!"int*", !"Mat3X3*", !"Mat4X4*", !"Mat32X32*", !"Mat64X64*"}
+// AMDGCN: [[META20]] = !{!"", !"", !"", !"", !""}
+// AMDGCN: [[META21]] = !{i32 0, i32 1, i32 0}
+// AMDGCN: [[META22]] = !{!"none", !"none", !"none"}
+// AMDGCN: [[META23]] = !{!"struct StructOneMember", !"struct StructOneMember*", !"struct StructTwoMember"}
+// AMDGCN: [[META24]] = !{!"", !"", !""}
+// AMDGCN: [[META25]] = !{i32 0, i32 0}
+// AMDGCN: [[META26]] = !{!"struct LargeStructOneMember", !"struct LargeStructTwoMember"}
 //.

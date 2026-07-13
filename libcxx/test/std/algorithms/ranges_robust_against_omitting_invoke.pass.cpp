@@ -35,7 +35,7 @@ struct Bar {
   Bar create() const { return Bar(); }
 };
 
-// Invokes both the (iterator, sentinel, ...) and the (range, ...) overloads of the given niebloid.
+// Invokes both the (iterator, sentinel, ...) and the (range, ...) overloads of the given algorithm function object.
 
 // (in, ...)
 template <class Func, std::ranges::range Input, class... Args>

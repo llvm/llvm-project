@@ -28,7 +28,7 @@
 // C-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/crtbegin.o"
 // C-RV32-BAREMETAL-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1"
 // C-RV32-BAREMETAL-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/riscv32-unknown-elf/lib"
-// C-RV32-BAREMETAL-ILP32: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// C-RV32-BAREMETAL-ILP32: "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
 // C-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/crtend.o"
 
 // RUN: %clang -### %s -fuse-ld= \
@@ -42,7 +42,7 @@
 // C-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/crtbegin.o"
 // C-RV32-BAREMETAL-NOSYSROOT-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1"
 // C-RV32-BAREMETAL-NOSYSROOT-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/../../../../riscv32-unknown-elf/lib"
-// C-RV32-BAREMETAL-NOSYSROOT-ILP32: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// C-RV32-BAREMETAL-NOSYSROOT-ILP32: "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
 // C-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/crtend.o"
 
 // RUN: %clangxx -### %s -fuse-ld= \
@@ -58,7 +58,7 @@
 // CXX-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/crtbegin.o"
 // CXX-RV32-BAREMETAL-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1"
 // CXX-RV32-BAREMETAL-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/riscv32-unknown-elf/lib"
-// CXX-RV32-BAREMETAL-ILP32: "-lstdc++" "-lm" "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// CXX-RV32-BAREMETAL-ILP32: "-lstdc++" "-lm" "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
 // CXX-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/crtend.o"
 
 // RUN: %clangxx -### %s -fuse-ld= \
@@ -73,7 +73,7 @@
 // CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/crtbegin.o"
 // CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1"
 // CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/../../../../riscv32-unknown-elf/lib"
-// CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "-lstdc++" "-lm" "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "-lstdc++" "-lm" "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
 // CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/crtend.o"
 
 // RUN: env "PATH=" %clang -### %s -fuse-ld=ld -no-pie \
@@ -117,7 +117,7 @@
 // C-RV32I-BAREMETAL-MULTI-ILP32: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv32imac/ilp32/crtbegin.o"
 // C-RV32I-BAREMETAL-MULTI-ILP32: "-L{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0"
 // C-RV32I-BAREMETAL-MULTI-ILP32: "-L{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/../../../../riscv64-unknown-elf/lib"
-// C-RV32I-BAREMETAL-MULTI-ILP32: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// C-RV32I-BAREMETAL-MULTI-ILP32: "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
 // C-RV32I-BAREMETAL-MULTI-ILP32: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv32imac/ilp32/crtend.o"
 
 // RUN: env "PATH=" %clang -### %s -fuse-ld=ld \
@@ -132,7 +132,7 @@
 // C-RV32IM-BAREMETAL-MULTI-ILP32: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv32im/ilp32/crtbegin.o"
 // C-RV32IM-BAREMETAL-MULTI-ILP32: "-L{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0"
 // C-RV32IM-BAREMETAL-MULTI-ILP32: "-L{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/../../../../riscv64-unknown-elf/lib"
-// C-RV32IM-BAREMETAL-MULTI-ILP32: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// C-RV32IM-BAREMETAL-MULTI-ILP32: "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
 // C-RV32IM-BAREMETAL-MULTI-ILP32: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv32im/ilp32/crtend.o"
 
 // RUN: env "PATH=" %clang -### %s -fuse-ld=ld \
@@ -147,7 +147,7 @@
 // C-RV32IAC-BAREMETAL-MULTI-ILP32: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv32iac/ilp32/crtbegin.o"
 // C-RV32IAC-BAREMETAL-MULTI-ILP32: "-L{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0"
 // C-RV32IAC-BAREMETAL-MULTI-ILP32: "-L{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/../../../../riscv64-unknown-elf/lib"
-// C-RV32IAC-BAREMETAL-MULTI-ILP32: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// C-RV32IAC-BAREMETAL-MULTI-ILP32: "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
 // C-RV32IAC-BAREMETAL-MULTI-ILP32: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv32iac/ilp32/crtend.o"
 
 // RUN: env "PATH=" %clang -### %s -fuse-ld=ld \
@@ -162,7 +162,7 @@
 // C-RV32IMAC-BAREMETAL-MULTI-ILP32: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv32imac/ilp32/crtbegin.o"
 // C-RV32IMAC-BAREMETAL-MULTI-ILP32: "-L{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0"
 // C-RV32IMAC-BAREMETAL-MULTI-ILP32: "-L{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/../../../../riscv64-unknown-elf/lib"
-// C-RV32IMAC-BAREMETAL-MULTI-ILP32: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// C-RV32IMAC-BAREMETAL-MULTI-ILP32: "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
 // C-RV32IMAC-BAREMETAL-MULTI-ILP32: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv32imac/ilp32/crtend.o"
 
 // RUN: env "PATH=" %clang -### %s -fuse-ld=ld \
@@ -177,7 +177,7 @@
 // C-RV32IMAFC-BAREMETAL-MULTI-ILP32F: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv32imafc/ilp32f/crtbegin.o"
 // C-RV32IMAFC-BAREMETAL-MULTI-ILP32F: "-L{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0"
 // C-RV32IMAFC-BAREMETAL-MULTI-ILP32F: "-L{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/../../../../riscv64-unknown-elf/lib"
-// C-RV32IMAFC-BAREMETAL-MULTI-ILP32F: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// C-RV32IMAFC-BAREMETAL-MULTI-ILP32F: "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
 // C-RV32IMAFC-BAREMETAL-MULTI-ILP32F: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv32imafc/ilp32f/crtend.o"
 
 // Check that --rtlib can be used to override the used runtime library
@@ -187,7 +187,7 @@
 // RUN:   | FileCheck -check-prefix=C-RV32-RTLIB-LIBGCC-ILP32 %s
 // C-RV32-RTLIB-LIBGCC-ILP32: "{{.*}}crt0.o"
 // C-RV32-RTLIB-LIBGCC-ILP32: "{{.*}}crtbegin.o"
-// C-RV32-RTLIB-LIBGCC-ILP32: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// C-RV32-RTLIB-LIBGCC-ILP32: "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
 // C-RV32-RTLIB-LIBGCC-ILP32: "{{.*}}crtend.o"
 
 // RUN: %clang -### %s \
@@ -196,7 +196,7 @@
 // RUN:   | FileCheck -check-prefix=C-RV32-RTLIB-COMPILERRT-ILP32 %s
 // C-RV32-RTLIB-COMPILERRT-ILP32: "{{.*}}crt0.o"
 // C-RV32-RTLIB-COMPILERRT-ILP32: "{{.*}}clang_rt.crtbegin.o"
-// C-RV32-RTLIB-COMPILERRT-ILP32: "--start-group" "-lc" "-lgloss" "--end-group" "{{.*}}libclang_rt.builtins.a"
+// C-RV32-RTLIB-COMPILERRT-ILP32: "--start-group" "{{.*}}libclang_rt.builtins.a" "-lc" "-lgloss" "--end-group"
 // C-RV32-RTLIB-COMPILERRT-ILP32: "{{.*}}clang_rt.crtend.o"
 
 // RUN: %clang -### %s --target=riscv32 \
@@ -215,7 +215,7 @@
 
 // RUN: %clang --target=riscv32 %s -emit-llvm -S -o - | FileCheck %s
 
-// Check that "--no-relax" is forwarded to the linker for RISC-V (RISCVToolchain.cpp).
+/// Check that "--no-relax" is forwarded to the linker for RISC-V.
 // RUN: env "PATH=" %clang %s -### 2>&1 -mno-relax \
 // RUN:   --target=riscv32-unknown-elf --rtlib=platform --unwindlib=platform --sysroot= \
 // RUN:   -march=rv32imac -mabi=lp32\
@@ -223,7 +223,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-RV32-NORELAX %s
 // CHECK-RV32-NORELAX: "--no-relax"
 
-// Check that "--no-relax" is not forwarded to the linker for RISC-V (RISCVToolchain.cpp).
+/// Check that "--no-relax" is not forwarded to the linker for RISC-V.
 // RUN:env "PATH=" %clang %s -### 2>&1 \
 // RUN:   --target=riscv32-unknown-elf --rtlib=platform --unwindlib=platform --sysroot= \
 // RUN:   -march=rv32imac -mabi=lp32\
@@ -231,7 +231,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-RV32-RELAX %s
 // CHECK-RV32-RELAX-NOT: "--no-relax"
 
-// Check that "--no-relax" is forwarded to the linker for RISC-V (Gnu.cpp).
+/// Check that "--no-relax" is forwarded to the linker for RISC-V (Gnu.cpp).
 // RUN: env "PATH=" %clang -### %s -fuse-ld=ld -no-pie -mno-relax \
 // RUN:   --target=riscv32-unknown-linux-gnu --rtlib=platform --unwindlib=platform -mabi=ilp32 \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
@@ -239,13 +239,26 @@
 // RUN:   | FileCheck -check-prefix=CHECK-RV32-GNU-NORELAX %s
 // CHECK-RV32-GNU-NORELAX: "--no-relax"
 
-// Check that "--no-relax" is not forwarded to the linker for RISC-V (Gnu.cpp).
+/// Check that "--no-relax" is not forwarded to the linker for RISC-V (Gnu.cpp).
 // RUN: env "PATH=" %clang -### %s -fuse-ld=ld -no-pie \
 // RUN:   --target=riscv32-unknown-linux-gnu --rtlib=platform --unwindlib=platform -mabi=ilp32 \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
 // RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-RV32-GNU-RELAX %s
 // CHECK-RV32-GNU-RELAX-NOT: "--no-relax"
+
+/// Check that "-static -pie" is forwarded to linker when "-static-pie" is used
+// RUN: %clang -static-pie -### %s -fuse-ld= \
+// RUN:   --target=riscv32-unknown-elf -rtlib=platform --unwindlib=platform \
+// RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree \
+// RUN:   --sysroot=%S/Inputs/basic_riscv32_tree/riscv32-unknown-elf 2>&1 \
+// RUN:   | FileCheck -check-prefix=C-RV32-STATIC-PIE %s
+
+// C-RV32-STATIC-PIE: "-Bstatic" "-pie" "--no-dynamic-linker" "-z" "text" "-m" "elf32lriscv" "-X"
+// C-RV32-STATIC-PIE: "{{.*}}rcrt1.o"
+// C-RV32-STATIC-PIE: "{{.*}}crtbeginS.o"
+// C-RV32-STATIC-PIE: "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
+// C-RV32-STATIC-PIE: "{{.*}}crtendS.o"
 
 typedef __builtin_va_list va_list;
 typedef __SIZE_TYPE__ size_t;

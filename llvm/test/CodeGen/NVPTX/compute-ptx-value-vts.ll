@@ -6,12 +6,11 @@ target triple = "nvptx-nvidia-cuda"
 define <6 x half> @half6() {
 ; CHECK-LABEL: half6(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<2>;
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.b16 %rs1, 0x0000;
-; CHECK-NEXT:    st.param.v4.b16 [func_retval0], {%rs1, %rs1, %rs1, %rs1};
-; CHECK-NEXT:    st.param.v2.b16 [func_retval0+8], {%rs1, %rs1};
+; CHECK-NEXT:    st.param.b32 [func_retval0+8], 0;
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {0, 0};
 ; CHECK-NEXT:    ret;
   ret <6 x half> zeroinitializer
 }
@@ -19,13 +18,12 @@ define <6 x half> @half6() {
 define <10 x half> @half10() {
 ; CHECK-LABEL: half10(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<2>;
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.b16 %rs1, 0x0000;
-; CHECK-NEXT:    st.param.v4.b16 [func_retval0], {%rs1, %rs1, %rs1, %rs1};
-; CHECK-NEXT:    st.param.v4.b16 [func_retval0+8], {%rs1, %rs1, %rs1, %rs1};
-; CHECK-NEXT:    st.param.v2.b16 [func_retval0+16], {%rs1, %rs1};
+; CHECK-NEXT:    st.param.b32 [func_retval0+16], 0;
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0+8], {0, 0};
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {0, 0};
 ; CHECK-NEXT:    ret;
   ret <10 x half> zeroinitializer
 }
@@ -33,13 +31,11 @@ define <10 x half> @half10() {
 define <12 x i8> @byte12() {
 ; CHECK-LABEL: byte12(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<2>;
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.b16 %rs1, 0;
-; CHECK-NEXT:    st.param.v4.b8 [func_retval0], {%rs1, %rs1, %rs1, %rs1};
-; CHECK-NEXT:    st.param.v4.b8 [func_retval0+4], {%rs1, %rs1, %rs1, %rs1};
-; CHECK-NEXT:    st.param.v4.b8 [func_retval0+8], {%rs1, %rs1, %rs1, %rs1};
+; CHECK-NEXT:    st.param.b32 [func_retval0+8], 0;
+; CHECK-NEXT:    st.param.b64 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
   ret <12 x i8> zeroinitializer
 }
@@ -47,15 +43,12 @@ define <12 x i8> @byte12() {
 define <20 x i8> @byte20() {
 ; CHECK-LABEL: byte20(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<2>;
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.b16 %rs1, 0;
-; CHECK-NEXT:    st.param.v4.b8 [func_retval0], {%rs1, %rs1, %rs1, %rs1};
-; CHECK-NEXT:    st.param.v4.b8 [func_retval0+4], {%rs1, %rs1, %rs1, %rs1};
-; CHECK-NEXT:    st.param.v4.b8 [func_retval0+8], {%rs1, %rs1, %rs1, %rs1};
-; CHECK-NEXT:    st.param.v4.b8 [func_retval0+12], {%rs1, %rs1, %rs1, %rs1};
-; CHECK-NEXT:    st.param.v4.b8 [func_retval0+16], {%rs1, %rs1, %rs1, %rs1};
+; CHECK-NEXT:    st.param.b32 [func_retval0+16], 0;
+; CHECK-NEXT:    st.param.b64 [func_retval0+8], 0;
+; CHECK-NEXT:    st.param.b64 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
   ret <20 x i8> zeroinitializer
 }

@@ -1,5 +1,4 @@
 // REQUIRES: host-supports-jit
-// UNSUPPORTED: system-aix
 //
 // This test is flaky with ASan: https://github.com/llvm/llvm-project/issues/135401
 // UNSUPPORTED: asan

@@ -37,7 +37,7 @@ void addFlagFlipperChecker(AnalysisASTConsumer &AnalysisConsumer,
   AnOpts.CheckersAndPackages = {{"test.FlipFlagOnCheckLocation", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
     Registry.addChecker<FlipFlagOnCheckLocation>("test.FlipFlagOnCheckLocation",
-                                                 "Description", "");
+                                                 "MockDescription");
   });
 }
 

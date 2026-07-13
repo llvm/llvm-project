@@ -34,6 +34,42 @@ func.func @simple_pipeline(%A: memref<?xf32>, %result: memref<?xf32>) {
   return
 }
 
+// -----
+
+// A static loop does not satisfy `numIteration >= maxStage`
+
+// CHECK-LABEL: func.func @iteration_lt_stage(
+//   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:   %[[C_NEG1:.*]] = arith.constant -1 : index
+//   CHECK-DAG:   %[[TRUE:.*]] = arith.constant true
+//   CHECK-DAG:   %[[FALSE:.*]] = arith.constant false
+// Prologue:
+//       CHECK:   scf.if %[[TRUE]]
+//       CHECK:   scf.if %[[TRUE]]
+//       CHECK:   scf.if %[[FALSE]]
+// Kernel:
+//       CHECK:   scf.for %[[IV:.*]] = %[[C0:.*]] to %[[C_NEG1:.*]] step %[[C1:.*]]
+// Epilogue:
+//       CHECK:   scf.if %[[TRUE]]
+//       CHECK:   scf.if %[[TRUE]]
+//       CHECK:   scf.if %[[TRUE]]
+//       CHECK:   scf.if %[[TRUE]]
+//       CHECK:   scf.if %[[FALSE]]
+//       CHECK:   scf.if %[[FALSE]]
+func.func @iteration_lt_stage(%A: memref<?xf32>, %result: memref<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %cf = arith.constant 1.0 : f32
+  scf.for %i0 = %c0 to %c2 step %c1 {
+    %A_elem = memref.load %A[%i0] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 2 } : memref<?xf32>
+    %A1_elem = arith.addf %A_elem, %cf { __test_pipelining_stage__ = 3, __test_pipelining_op_order__ = 0 } : f32
+    memref.store %A1_elem, %result[%i0] { __test_pipelining_stage__ = 3, __test_pipelining_op_order__ = 1 } : memref<?xf32>
+  }  { __test_pipelining_loop__ }
+  return
+}
+
 
 // -----
 
@@ -983,6 +1019,102 @@ func.func @invalid_schedule3(%A: memref<?xf32>, %result: memref<?xf32>, %ext: in
     memref.store %A_elem, %result[%idx1] { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 4 } : memref<?xf32>
     scf.yield %idx2 : index
   }  { __test_pipelining_loop__ }
+  return
+}
+
+// -----
+
+func.func @invalid_schedule_order_out_of_range(%A: memref<?xf32>, %result: memref<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %cf = arith.constant 1.0 : f32
+  scf.for %i0 = %c0 to %c2 step %c1 {
+    // expected-error@+1 {{invalid pipeline op order}}
+    %A_elem = memref.load %A[%i0] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 3 } : memref<?xf32>
+    %A1_elem = arith.addf %A_elem, %cf : f32
+    memref.store %A1_elem, %result[%i0] { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 1 } : memref<?xf32>
+  } { __test_pipelining_loop__ }
+  return
+}
+
+// -----
+
+func.func @invalid_schedule_order_negative(%A: memref<?xf32>, %result: memref<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %cf = arith.constant 1.0 : f32
+  scf.for %i0 = %c0 to %c2 step %c1 {
+    // expected-error@+1 {{invalid pipeline op order}}
+    %A_elem = memref.load %A[%i0] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = -1 } : memref<?xf32>
+    %A1_elem = arith.addf %A_elem, %cf { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 1 } : f32
+    memref.store %A1_elem, %result[%i0] { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 2 } : memref<?xf32>
+  } { __test_pipelining_loop__ }
+  return
+}
+
+// -----
+
+func.func @invalid_schedule_order_overflow(%A: memref<?xf32>, %result: memref<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %cf = arith.constant 1.0 : f32
+  scf.for %i0 = %c0 to %c2 step %c1 {
+    // expected-error@+1 {{invalid pipeline op order}}
+    %A_elem = memref.load %A[%i0] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 9223372036854775808 : i128 } : memref<?xf32>
+    %A1_elem = arith.addf %A_elem, %cf { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 1 } : f32
+    memref.store %A1_elem, %result[%i0] { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 2 } : memref<?xf32>
+  } { __test_pipelining_loop__ }
+  return
+}
+
+// -----
+
+func.func @invalid_schedule_order_duplicate(%A: memref<?xf32>, %result: memref<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %cf = arith.constant 1.0 : f32
+  scf.for %i0 = %c0 to %c2 step %c1 {
+    %A_elem = memref.load %A[%i0] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 0 } : memref<?xf32>
+    // expected-error@+1 {{duplicate pipeline op order}}
+    %A1_elem = arith.addf %A_elem, %cf { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 0 } : f32
+    memref.store %A1_elem, %result[%i0] { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 2 } : memref<?xf32>
+  } { __test_pipelining_loop__ }
+  return
+}
+
+// -----
+
+func.func @invalid_schedule_stage_negative(%A: memref<?xf32>, %result: memref<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %cf = arith.constant 1.0 : f32
+  scf.for %i0 = %c0 to %c2 step %c1 {
+    // expected-error@+1 {{invalid pipeline stage}}
+    %A_elem = memref.load %A[%i0] { __test_pipelining_stage__ = -1, __test_pipelining_op_order__ = 0 } : memref<?xf32>
+    %A1_elem = arith.addf %A_elem, %cf { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 1 } : f32
+    memref.store %A1_elem, %result[%i0] { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 2 } : memref<?xf32>
+  } { __test_pipelining_loop__ }
+  return
+}
+
+// -----
+
+func.func @invalid_schedule_stage_overflow(%A: memref<?xf32>, %result: memref<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %cf = arith.constant 1.0 : f32
+  scf.for %i0 = %c0 to %c2 step %c1 {
+    // expected-error@+1 {{invalid pipeline stage}}
+    %A_elem = memref.load %A[%i0] { __test_pipelining_stage__ = 4294967296 : i128, __test_pipelining_op_order__ = 0 } : memref<?xf32>
+    %A1_elem = arith.addf %A_elem, %cf { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 1 } : f32
+    memref.store %A1_elem, %result[%i0] { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 2 } : memref<?xf32>
+  } { __test_pipelining_loop__ }
   return
 }
 

@@ -20,13 +20,14 @@
 @.str = private constant [3 x i8] c"%u\00", align 1
 @test.table = internal constant [32 x i8] c"\00\01\1C\02\1D\0E\18\03\1E\16\14\0F\19\11\04\08\1F\1B\0D\17\15\13\10\07\1A\0C\12\06\0B\05\0A\09", align 1
 
-define i32 @test() {
+define i32 @test() !prof !0 {
 ; CHECK-LABEL: @test(
+; CHECK: !prof [[PROF_0:![0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @x, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.cttz.i32(i32 [[TMP0]], i1 true)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 0, i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 0, i32 [[TMP1]], !prof [[PROF_1:![0-9]+]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i8
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP4]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -43,3 +44,7 @@ entry:
   %conv = zext i8 %1 to i32
   ret i32 %conv
 }
+
+!0 = !{!"function_entry_count", i64 1000}
+; CHECK: [[PROF_0]] = !{!"function_entry_count", i64 1000}
+; CHECK: [[PROF_1]] = !{!"branch_weights", i32 1, i32 1048575}

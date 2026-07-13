@@ -17,13 +17,13 @@
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_fract(__CLC_GENTYPE x,
                                                  private __CLC_GENTYPE *iptr) {
   *iptr = __clc_floor(x);
-  __CLC_GENTYPE r = __clc_fmin(x - *iptr, MIN_CONSTANT);
+  __CLC_GENTYPE sub = x - *iptr;
+  __CLC_GENTYPE r = sub >= MIN_CONSTANT ? MIN_CONSTANT : sub;
   r = __clc_isinf(x) ? __CLC_FP_LIT(0.0) : r;
-  r = __clc_isnan(x) ? x : r;
   return r;
 }
 
-#define FRACT_DEF(addrspace)                                                   \
+#define __CLC_FRACT_DEF(addrspace)                                             \
   _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_fract(                            \
       __CLC_GENTYPE x, addrspace __CLC_GENTYPE *iptr) {                        \
     __CLC_GENTYPE private_iptr;                                                \
@@ -32,7 +32,10 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_fract(__CLC_GENTYPE x,
     return ret;                                                                \
   }
 
-FRACT_DEF(local);
-FRACT_DEF(global);
+__CLC_FRACT_DEF(local);
+__CLC_FRACT_DEF(global);
+#if _CLC_DISTINCT_GENERIC_AS_SUPPORTED
+__CLC_FRACT_DEF(generic);
+#endif
 
 #undef MIN_CONSTANT

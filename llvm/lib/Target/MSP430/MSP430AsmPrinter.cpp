@@ -11,22 +11,29 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MSP430AsmPrinter.h"
 #include "MCTargetDesc/MSP430InstPrinter.h"
 #include "MSP430MCInstLower.h"
 #include "MSP430TargetMachine.h"
 #include "TargetInfo/MSP430TargetInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -36,7 +43,7 @@ namespace {
   class MSP430AsmPrinter : public AsmPrinter {
   public:
     MSP430AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-        : AsmPrinter(TM, std::move(Streamer)) {}
+        : AsmPrinter(TM, std::move(Streamer), ID) {}
 
     StringRef getPassName() const override { return "MSP430 Assembly Printer"; }
 
@@ -54,6 +61,8 @@ namespace {
     void emitInstruction(const MachineInstr *MI) override;
 
     void EmitInterruptVectorSection(MachineFunction &ISR);
+
+    static char ID;
   };
 } // end of anonymous namespace
 
@@ -181,7 +190,43 @@ bool MSP430AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   return false;
 }
 
+char MSP430AsmPrinter::ID = 0;
+
+INITIALIZE_PASS(MSP430AsmPrinter, "msp430-asm-printer",
+                "MSP430 Assembly Printer", false, false)
+
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMSP430AsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeMSP430AsmPrinter() {
   RegisterAsmPrinter<MSP430AsmPrinter> X(getTheMSP430Target());
+}
+
+PreservedAnalyses MSP430AsmPrinterBeginPass::run(Module &M,
+                                                 ModuleAnalysisManager &MAM) {
+  MSP430AsmPrinter &AsmPrinter = static_cast<MSP430AsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+MSP430AsmPrinterPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  MSP430AsmPrinter &AsmPrinter = static_cast<MSP430AsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses MSP430AsmPrinterEndPass::run(Module &M,
+                                               ModuleAnalysisManager &MAM) {
+  MSP430AsmPrinter &AsmPrinter = static_cast<MSP430AsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }

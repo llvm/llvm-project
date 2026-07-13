@@ -396,11 +396,11 @@ int main(int argc, char **argv) {
 #pragma omp for simd reduction(+ : fl) // expected-error {{reduction variable must be shared}}
   for (int i = 0; i < 10; ++i)
     foo();
-#endif
 #pragma omp parallel reduction(* : fl) // expected-note {{defined as reduction}}
 #pragma omp for simd reduction(+ : fl)      // expected-error {{reduction variable must be shared}}
   for (int i = 0; i < 10; ++i)
     foo();
+#endif
   static int m;
 #pragma omp for simd reduction(+ : m)
   for (int i = 0; i < 10; ++i)

@@ -8,7 +8,7 @@
 func.func @transfer_read_0d(%m: memref<?x?x?xf32>, %idx: index) -> f32 {
   %cst = arith.constant 0.0 : f32
   %0 = vector.transfer_read %m[%idx, %idx, %idx], %cst : memref<?x?x?xf32>, vector<f32>
-  %1 = vector.extractelement %0[] : vector<f32>
+  %1 = vector.extract %0[] : f32 from vector<f32>
   return %1 : f32
 }
 
@@ -24,7 +24,7 @@ func.func @transfer_read_1d(%m: memref<?x?x?xf32>, %idx: index, %idx2: index) ->
   %cst = arith.constant 0.0 : f32
   %c0 = arith.constant 0 : index
   %0 = vector.transfer_read %m[%idx, %idx, %idx], %cst {in_bounds = [true]} : memref<?x?x?xf32>, vector<5xf32>
-  %1 = vector.extractelement %0[%idx2 : index] : vector<5xf32>
+  %1 = vector.extract %0[%idx2] : f32 from vector<5xf32>
   return %1 : f32
 }
 
@@ -37,7 +37,7 @@ func.func @transfer_read_1d(%m: memref<?x?x?xf32>, %idx: index, %idx2: index) ->
 func.func @tensor_transfer_read_0d(%t: tensor<?x?x?xf32>, %idx: index) -> f32 {
   %cst = arith.constant 0.0 : f32
   %0 = vector.transfer_read %t[%idx, %idx, %idx], %cst : tensor<?x?x?xf32>, vector<f32>
-  %1 = vector.extractelement %0[] : vector<f32>
+  %1 = vector.extract %0[] : f32 from vector<f32>
   return %1 : f32
 }
 
@@ -148,3 +148,33 @@ func.func @subvector_extract(%m: memref<?x?xf32>, %idx: index) -> vector<16xf32>
   return %1 : vector<16xf32>
 }
 
+// -----
+
+//       CHECK: #[[$MAP:.*]] = affine_map<()[s0, s1] -> (s0 + s1)>
+// CHECK-LABEL: func @transfer_read_1d_extract_dynamic(
+//  CHECK-SAME:     %[[MEMREF:.*]]: memref<?xf32>, %[[M_IDX:.*]]: index, %[[E_IDX:.*]]: index
+//       CHECK:   %[[APPLY:.*]] = affine.apply #[[$MAP]]()[%[[M_IDX]], %[[E_IDX]]]
+//       CHECK:   %[[RES:.*]] = memref.load %[[MEMREF]][%[[APPLY]]]
+func.func @transfer_read_1d_extract_dynamic(%m: memref<?xf32>, %idx: index,
+                                            %offset: index) -> f32 {
+  %cst = arith.constant 0.0 : f32
+  %vec = vector.transfer_read %m[%idx], %cst {in_bounds = [true]} : memref<?xf32>, vector<5xf32>
+  %elem = vector.extract %vec[%offset] : f32 from vector<5xf32>
+  return %elem : f32
+}
+
+// -----
+
+//       CHECK: #[[$MAP:.*]] = affine_map<()[s0, s1] -> (s0 + s1)>
+// CHECK-LABEL: func @transfer_read_2d_extract_dynamic(
+//  CHECK-SAME:     %[[MEMREF:.*]]: memref<?x?xf32>, %[[ROW_IDX:.*]]: index, %[[COL_IDX:.*]]: index, %[[ROW_OFFSET:.*]]: index, %[[COL_OFFSET:.*]]: index
+//       CHECK:   %[[ROW_APPLY:.*]] = affine.apply #[[$MAP]]()[%[[ROW_IDX]], %[[ROW_OFFSET]]]
+//       CHECK:   %[[COL_APPLY:.*]] = affine.apply #[[$MAP]]()[%[[COL_IDX]], %[[COL_OFFSET]]]
+//       CHECK:   %[[RES:.*]] = memref.load %[[MEMREF]][%[[ROW_APPLY]], %[[COL_APPLY]]]
+func.func @transfer_read_2d_extract_dynamic(%m: memref<?x?xf32>, %row_idx: index, %col_idx: index,
+                                            %row_offset: index, %col_offset: index) -> f32 {
+  %cst = arith.constant 0.0 : f32
+  %vec = vector.transfer_read %m[%row_idx, %col_idx], %cst {in_bounds = [true, true]} : memref<?x?xf32>, vector<10x5xf32>
+  %elem = vector.extract %vec[%row_offset, %col_offset] : f32 from vector<10x5xf32>
+  return %elem : f32
+}

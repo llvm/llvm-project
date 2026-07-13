@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "spir-unknown-unknown" | FileCheck %s --check-prefixes=COMMON,B32,SPIR,TRIPLESPIR 
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "spir64-unknown-unknown" | FileCheck %s --check-prefixes=COMMON,B64,SPIR,TRIPLESPIR 
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -ffake-address-space-map -O1 -emit-llvm -o - -triple "spir64-unknown-unknown" | FileCheck %s --check-prefixes=CHECK-LIFETIMES,TRIPLESPIR 
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL3.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "spir-unknown-unknown" | FileCheck %s --check-prefixes=COMMON,B32,SPIR,TRIPLESPIR 
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL3.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "spir64-unknown-unknown" | FileCheck %s --check-prefixes=COMMON,B64,SPIR,TRIPLESPIR 
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL3.0 -ffake-address-space-map -O1 -emit-llvm -o - -triple "spir64-unknown-unknown" | FileCheck %s --check-prefixes=CHECK-LIFETIMES,TRIPLESPIR 
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "x86_64-unknown-linux-gnu" | FileCheck %s --check-prefixes=COMMON,B64,X86,TRIPLEX86 
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL3.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "x86_64-unknown-linux-gnu" | FileCheck %s --check-prefixes=COMMON,B64,X86,TRIPLEX86 
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL3.0 -ffake-address-space-map -O1 -emit-llvm -o - -triple "x86_64-unknown-linux-gnu" | FileCheck %s --check-prefixes=CHECK-LIFETIMES,TRIPLEX86 
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "spir-unknown-unknown" | FileCheck %s --check-prefixes=COMMON,B32,SPIR 
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "spir64-unknown-unknown" | FileCheck %s --check-prefixes=COMMON,B64,SPIR 
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -ffake-address-space-map -O1 -emit-llvm -o - -triple "spir64-unknown-unknown" | FileCheck %s --check-prefix=CHECK-LIFETIMES 
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL3.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "spir-unknown-unknown" | FileCheck %s --check-prefixes=COMMON,B32,SPIR 
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL3.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "spir64-unknown-unknown" | FileCheck %s --check-prefixes=COMMON,B64,SPIR 
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL3.0 -ffake-address-space-map -O1 -emit-llvm -o - -triple "spir64-unknown-unknown" | FileCheck %s --check-prefix=CHECK-LIFETIMES 
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "x86_64-unknown-linux-gnu" | FileCheck %s --check-prefixes=COMMON,B64,X86 
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL3.0 -ffake-address-space-map -O0 -emit-llvm -o - -triple "x86_64-unknown-linux-gnu" | FileCheck %s --check-prefixes=COMMON,B64,X86 
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL3.0 -ffake-address-space-map -O1 -emit-llvm -o - -triple "x86_64-unknown-linux-gnu" | FileCheck %s --check-prefix=CHECK-LIFETIMES 
 
 #pragma OPENCL EXTENSION cl_khr_subgroups : enable
 
@@ -38,12 +38,6 @@ const bl_t block_G = (bl_t) ^ (local void *a) {};
 void callee(int id, __global int *out) {
   out[id] = id;
 }
-
-// TRIPLESPIR: define{{.*}} void @device_side_enqueue(ptr addrspace(1) align 4 %{{.*}}, ptr addrspace(1) align 4 %b, i32 %i)
-// TRIPLESPIR:    call spir_func void @__clang_ocl_kern_imp_device_side_enqueue({{.*}})
-
-// TRIPLEX86: define{{.*}} void @device_side_enqueue(ptr addrspace(1) align 4 %{{.*}}, ptr addrspace(1) align 4 %b, i32 %i)
-// TRIPLEX86:    call void @__clang_ocl_kern_imp_device_side_enqueue({{.*}})
 
 // COMMON-LABEL: define{{.*}} void @__clang_ocl_kern_imp_device_side_enqueue(ptr addrspace(1) align 4 %{{.*}}, ptr addrspace(1) align 4 %b, i32 %i)
 kernel void device_side_enqueue(global int *a, global int *b, int i) {
@@ -134,9 +128,9 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // SPIR: [[DEF_Q:%[0-9]+]] = load target("spirv.Queue"), ptr %default_queue
   // X86: [[DEF_Q:%[0-9]+]] = load ptr, ptr %default_queue
   // COMMON: [[FLAGS:%[0-9]+]] = load i32, ptr %flags
-  // CHECK-LIFETIMES: call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %[[BLOCK_SIZES1]])
+  // CHECK-LIFETIMES: call void @llvm.lifetime.start.p0(ptr nonnull %[[BLOCK_SIZES1]])
   // CHECK-LIFETIMES-LABEL: call {{(spir_func )?}}i32 @__enqueue_kernel_varargs(
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %[[BLOCK_SIZES1]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(ptr nonnull %[[BLOCK_SIZES1]])
   // B32: %[[TMP:.*]] = getelementptr [1 x i32], ptr %[[BLOCK_SIZES1]], i32 0, i32 0
   // B32: store i32 256, ptr %[[TMP]], align 4
   // B64: %[[TMP:.*]] = getelementptr [1 x i64], ptr %[[BLOCK_SIZES1]], i32 0, i32 0
@@ -159,9 +153,9 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // SPIR: [[DEF_Q:%[0-9]+]] = load target("spirv.Queue"), ptr %default_queue
   // X86: [[DEF_Q:%[0-9]+]] = load ptr, ptr %default_queue
   // COMMON: [[FLAGS:%[0-9]+]] = load i32, ptr %flags
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %[[BLOCK_SIZES2]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.start.p0(ptr nonnull %[[BLOCK_SIZES2]])
   // CHECK-LIFETIMES-LABEL: call {{(spir_func )?}}i32 @__enqueue_kernel_varargs(
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %[[BLOCK_SIZES2]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(ptr nonnull %[[BLOCK_SIZES2]])
   // B32: %[[TMP:.*]] = getelementptr [1 x i32], ptr %[[BLOCK_SIZES2]], i32 0, i32 0
   // B32: store i32 %{{.*}}, ptr %[[TMP]], align 4
   // B64: %[[TMP:.*]] = getelementptr [1 x i64], ptr %[[BLOCK_SIZES2]], i32 0, i32 0
@@ -187,9 +181,9 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // X86: [[AD:%arraydecay[0-9]*]] = getelementptr inbounds [1 x ptr], ptr %event_wait_list2, i{{32|64}} 0, i{{32|64}} 0
   // COMMON: [[WAIT_EVNT:%[0-9]+]] ={{.*}} addrspacecast ptr [[AD]] to ptr addrspace(4)
   // COMMON: [[EVNT:%[0-9]+]]  ={{.*}} addrspacecast ptr %clk_event to ptr addrspace(4)
-  // CHECK-LIFETIMES: call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %[[BLOCK_SIZES3]])
+  // CHECK-LIFETIMES: call void @llvm.lifetime.start.p0(ptr nonnull %[[BLOCK_SIZES3]])
   // CHECK-LIFETIMES-LABEL: call {{(spir_func )?}}i32 @__enqueue_kernel_events_varargs(
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %[[BLOCK_SIZES3]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(ptr nonnull %[[BLOCK_SIZES3]])
   // B32: %[[TMP:.*]] = getelementptr [1 x i32], ptr %[[BLOCK_SIZES3]], i32 0, i32 0
   // B32: store i32 256, ptr %[[TMP]], align 4
   // B64: %[[TMP:.*]] = getelementptr [1 x i64], ptr %[[BLOCK_SIZES3]], i32 0, i32 0
@@ -215,9 +209,9 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // X86: [[AD:%arraydecay[0-9]*]] = getelementptr inbounds [1 x ptr], ptr %event_wait_list2, i{{32|64}} 0, i{{32|64}} 0
   // COMMON: [[WAIT_EVNT:%[0-9]+]] ={{.*}} addrspacecast ptr [[AD]] to ptr addrspace(4)
   // COMMON: [[EVNT:%[0-9]+]]  ={{.*}} addrspacecast ptr %clk_event to ptr addrspace(4)
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %[[BLOCK_SIZES4]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.start.p0(ptr nonnull %[[BLOCK_SIZES4]])
   // CHECK-LIFETIMES-LABEL: call {{(spir_func )?}}i32 @__enqueue_kernel_events_varargs(
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %[[BLOCK_SIZES4]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(ptr nonnull %[[BLOCK_SIZES4]])
   // B32: %[[TMP:.*]] = getelementptr [1 x i32], ptr %[[BLOCK_SIZES4]], i32 0, i32 0
   // B32: store i32 %{{.*}}, ptr %[[TMP]], align 4
   // B64: %[[TMP:.*]] = getelementptr [1 x i64], ptr %[[BLOCK_SIZES4]], i32 0, i32 0
@@ -240,9 +234,9 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // SPIR: [[DEF_Q:%[0-9]+]] = load target("spirv.Queue"), ptr %default_queue
   // X86: [[DEF_Q:%[0-9]+]] = load ptr, ptr %default_queue
   // COMMON: [[FLAGS:%[0-9]+]] = load i32, ptr %flags
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %[[BLOCK_SIZES5]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.start.p0(ptr nonnull %[[BLOCK_SIZES5]])
   // CHECK-LIFETIMES-LABEL: call {{(spir_func )?}}i32 @__enqueue_kernel_varargs(
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %[[BLOCK_SIZES5]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(ptr nonnull %[[BLOCK_SIZES5]])
   // B32: %[[TMP:.*]] = getelementptr [1 x i32], ptr %[[BLOCK_SIZES5]], i32 0, i32 0
   // B32: store i32 %{{.*}}, ptr %[[TMP]], align 4
   // B64: %[[TMP:.*]] = getelementptr [1 x i64], ptr %[[BLOCK_SIZES5]], i32 0, i32 0
@@ -264,9 +258,9 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // SPIR: [[DEF_Q:%[0-9]+]] = load target("spirv.Queue"), ptr %default_queue
   // X86: [[DEF_Q:%[0-9]+]] = load ptr, ptr %default_queue
   // COMMON: [[FLAGS:%[0-9]+]] = load i32, ptr %flags
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.start.p0(i64 24, ptr nonnull %[[BLOCK_SIZES6]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.start.p0(ptr nonnull %[[BLOCK_SIZES6]])
   // CHECK-LIFETIMES-LABEL: call {{(spir_func )?}}i32 @__enqueue_kernel_varargs(
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(i64 24, ptr nonnull %[[BLOCK_SIZES6]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(ptr nonnull %[[BLOCK_SIZES6]])
   // B32: %[[TMP:.*]] = getelementptr [3 x i32], ptr %[[BLOCK_SIZES6]], i32 0, i32 0
   // B32: store i32 1, ptr %[[TMP]], align 4
   // B32: %[[BLOCK_SIZES62:.*]] = getelementptr [3 x i32], ptr %[[BLOCK_SIZES6]], i32 0, i32 1
@@ -296,9 +290,9 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // SPIR: [[DEF_Q:%[0-9]+]] = load target("spirv.Queue"), ptr %default_queue
   // X86: [[DEF_Q:%[0-9]+]] = load ptr, ptr %default_queue
   // COMMON: [[FLAGS:%[0-9]+]] = load i32, ptr %flags
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %[[BLOCK_SIZES7]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.start.p0(ptr nonnull %[[BLOCK_SIZES7]])
   // CHECK-LIFETIMES-LABEL: call {{(spir_func )?}}i32 @__enqueue_kernel_varargs(
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %[[BLOCK_SIZES7]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(ptr nonnull %[[BLOCK_SIZES7]])
   // B32: %[[TMP:.*]] = getelementptr [1 x i32], ptr %[[BLOCK_SIZES7]], i32 0, i32 0
   // B32: store i32 0, ptr %[[TMP]], align 4
   // B64: %[[TMP:.*]] = getelementptr [1 x i64], ptr %[[BLOCK_SIZES7]], i32 0, i32 0
@@ -425,31 +419,31 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   size = get_kernel_sub_group_count_for_ndrange(ndrange, ^(){});
 }
 
-// COMMON: define spir_kernel void [[INVLK1]](ptr addrspace(4) %0) #{{[0-9]+}} {
+// COMMON: define{{.*}} void [[INVLK1]](ptr addrspace(4) %0) #{{[0-9]+}} {
 // COMMON: entry:
 // COMMON:  call {{(spir_func )?}}void @__device_side_enqueue_block_invoke(ptr addrspace(4) %0)
 // COMMON:  ret void
 // COMMON: }
-// COMMON: define spir_kernel void [[INVLK2]](ptr addrspace(4){{.*}})
-// COMMON: define spir_kernel void [[INVGK1]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})  [[INVOKE_KERNEL_ATTR:#[0-9]+]]
-// COMMON: define spir_kernel void [[INVGK2]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
-// COMMON: define spir_kernel void [[INVGK3]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
-// COMMON: define spir_kernel void [[INVGK4]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
-// COMMON: define spir_kernel void [[INVGK5]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
-// COMMON: define spir_kernel void [[INVGK6]](ptr addrspace(4) %0, ptr addrspace(3) %1, ptr addrspace(3) %2, ptr addrspace(3) %3) #{{[0-9]+}} {
+// COMMON: define{{.*}} void [[INVLK2]](ptr addrspace(4){{.*}})
+// COMMON: define{{.*}} void [[INVGK1]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})  [[INVOKE_KERNEL_ATTR:#[0-9]+]]
+// COMMON: define{{.*}} void [[INVGK2]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
+// COMMON: define{{.*}} void [[INVGK3]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
+// COMMON: define{{.*}} void [[INVGK4]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
+// COMMON: define{{.*}} void [[INVGK5]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
+// COMMON: define{{.*}} void [[INVGK6]](ptr addrspace(4) %0, ptr addrspace(3) %1, ptr addrspace(3) %2, ptr addrspace(3) %3) #{{[0-9]+}} {
 // COMMON: entry:
 // COMMON:  call {{(spir_func )?}}void @__device_side_enqueue_block_invoke_9(ptr addrspace(4) %0, ptr addrspace(3) %1, ptr addrspace(3) %2, ptr addrspace(3) %3)
 // COMMON:  ret void
 // COMMON: }
-// COMMON: define spir_kernel void [[INVGK7]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
+// COMMON: define{{.*}} void [[INVGK7]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
 // COMMON: define internal {{(spir_func )?}}void [[INVG8]](ptr addrspace(4){{.*}}) [[INVG8_INVOKE_FUNC_ATTR:#[0-9]+]]
 // COMMON: define internal {{(spir_func )?}}void [[INVG9]](ptr addrspace(4){{.*}}, ptr addrspace(3) %{{.*}})
-// COMMON: define spir_kernel void [[INVGK8]](ptr addrspace(4){{.*}})
-// COMMON: define spir_kernel void [[INV_G_K]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
-// COMMON: define spir_kernel void [[INVLK3]](ptr addrspace(4){{.*}})
-// COMMON: define spir_kernel void [[INVGK9]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
-// COMMON: define spir_kernel void [[INVGK10]](ptr addrspace(4){{.*}})
-// COMMON: define spir_kernel void [[INVGK11]](ptr addrspace(4){{.*}})
+// COMMON: define{{.*}} void [[INVGK8]](ptr addrspace(4){{.*}})
+// COMMON: define{{.*}} void [[INV_G_K]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
+// COMMON: define{{.*}} void [[INVLK3]](ptr addrspace(4){{.*}})
+// COMMON: define{{.*}} void [[INVGK9]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
+// COMMON: define{{.*}} void [[INVGK10]](ptr addrspace(4){{.*}})
+// COMMON: define{{.*}} void [[INVGK11]](ptr addrspace(4){{.*}})
 
 // SPIR: attributes [[INVG8_INVOKE_FUNC_ATTR]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // SPIR: attributes [[INVOKE_KERNEL_ATTR]] = { convergent nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }

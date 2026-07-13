@@ -54,7 +54,7 @@ public:
 
       if (max >= 11 && FXRep::FRACTION_LEN >= kMinFbits) {
         // (10.71875)_10 = (1010.1011100)_2
-        constexpr long long kExpected = 1372;
+        constexpr int64_t kExpected = 1372;
         EXPECT_EQ(
             static_cast<XType>(kExpected << (FXRep::FRACTION_LEN - kMinFbits)),
             func(special_num_t));
@@ -63,9 +63,11 @@ public:
       if constexpr (FXRep::SIGN_LEN > 0) {
         if (min <= -11 && FXRep::FRACTION_LEN >= kMinFbits) {
           // (-10.71875)_10 = (-1010.1011100)_2
-          constexpr long long kExpected = -1372;
-          EXPECT_EQ(static_cast<XType>(kExpected
-                                       << (FXRep::FRACTION_LEN - kMinFbits)),
+          constexpr int64_t kExpected =
+              static_cast<int64_t>(static_cast<uint64_t>(-1372)
+                                   << (FXRep::FRACTION_LEN - kMinFbits));
+
+          EXPECT_EQ(static_cast<XType>(kExpected),
                     func(negative_special_num_t));
         }
       }

@@ -4,8 +4,6 @@
 // RUN: %libomptarget-compilexx-run-and-check-x86_64-unknown-linux-gnu
 // RUN: %libomptarget-compilexx-run-and-check-nvptx64-nvidia-cuda
 
-// UNSUPPORTED: clang
-
 #include <cstdio>
 #include <cstdlib>
 
@@ -50,7 +48,7 @@ int main() {
   sa[1].h = N;
 
   printf("%d %d %d %4.5f %d\n", sa[1].e, sa[1].f.a, sa[1].f.c.a, sa[1].f.b[1],
-         sa[1].f.b == &x[0] ? 1 : 0);
+         sa[1].f.b == &y[0] ? 1 : 0);
   // CHECK: 111 222 777 20.00000 1
 
   __intptr_t p = reinterpret_cast<__intptr_t>(&y[0]);
@@ -65,6 +63,6 @@ int main() {
     sa[1].f.b[1] = 40;
   }
   printf("%d %d %d %4.5f %d\n", sa[1].e, sa[1].f.a, sa[1].f.c.a, sa[1].f.b[1],
-         sa[1].f.b == &x[0] ? 1 : 0);
+         sa[1].f.b == &y[0] ? 1 : 0);
   // CHECK: 333 222 777 40.00000 1
 }

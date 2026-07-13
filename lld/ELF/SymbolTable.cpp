@@ -17,7 +17,6 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "Symbols.h"
-#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
@@ -28,12 +27,6 @@ using namespace llvm::object;
 using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
-
-void SymbolTable::redirect(Symbol *from, Symbol *to) {
-  int &fromIdx = symMap[CachedHashStringRef(from->getName())];
-  const int toIdx = symMap[CachedHashStringRef(to->getName())];
-  fromIdx = toIdx;
-}
 
 void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
   // Redirect __real_foo to the original foo and foo to the original __wrap_foo.
@@ -92,10 +85,9 @@ Symbol *SymbolTable::insert(StringRef name) {
   Symbol *sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
   symVector.push_back(sym);
 
-  // *sym was not initialized by a constructor. Initialize all Symbol fields.
-  memset(static_cast<void *>(sym), 0, sizeof(Symbol));
+  // make<SymbolUnion>() value-initializes the storage, so the Symbol fields
+  // are zero. Set the ones that need a non-zero value.
   sym->setName(name);
-  sym->partition = 1;
   sym->versionId = VER_NDX_GLOBAL;
   if (pos != StringRef::npos)
     sym->hasVersionSuffix = true;

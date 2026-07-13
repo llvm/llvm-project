@@ -29,7 +29,7 @@ void test_getline_malloc_buffer() {
 
   ssize_t r = getdelim(&buffer, &n, '\r', F1);
   // ptr may be dangling
-  free(ptr);    // expected-warning {{Attempt to free released memory}}
+  free(ptr);    // expected-warning {{Attempt to release already released memory}}
   free(buffer); // ok
   fclose(F1);
 }

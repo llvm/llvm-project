@@ -56,6 +56,39 @@ define i64 @add_multiuse(i64 %x) {
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    ret
   %add = add i64 %x, -1099511627775
-  %xor = and i64 %add, -1099511627775
+  %and = and i64 %add, -1099511627775
+  ret i64 %and
+}
+
+define i64 @add_multiuse_const(i64 %x, i64 %y) {
+; CHECK-LABEL: add_multiuse_const:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, -1
+; CHECK-NEXT:    srli a2, a2, 24
+; CHECK-NEXT:    sub a0, a0, a2
+; CHECK-NEXT:    sub a1, a1, a2
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = add i64 %x, -1099511627775
+  %b = add i64 %y, -1099511627775
+  %xor = xor i64 %a, %b
   ret i64 %xor
+}
+
+
+define i64 @add_i64_min(i64 %x) {
+; NOZBS-LABEL: add_i64_min:
+; NOZBS:       # %bb.0:
+; NOZBS-NEXT:    li a1, -1
+; NOZBS-NEXT:    slli a1, a1, 63
+; NOZBS-NEXT:    add a0, a0, a1
+; NOZBS-NEXT:    ret
+;
+; ZBS-LABEL: add_i64_min:
+; ZBS:       # %bb.0:
+; ZBS-NEXT:    bseti a1, zero, 63
+; ZBS-NEXT:    add a0, a0, a1
+; ZBS-NEXT:    ret
+  %a = add i64 %x, -9223372036854775808
+  ret i64 %a
 }

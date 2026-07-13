@@ -29,14 +29,26 @@ class Dialect;
 class Type;
 class Pred;
 
+// Wrapper class providing helper methods for accesing property constraint
+// values.
+class PropConstraint : public Constraint {
+public:
+  using Constraint::Constraint;
+
+  static bool classof(const Constraint *c) { return c->getKind() == CK_Prop; }
+
+  StringRef getInterfaceType() const;
+};
+
 // Wrapper class providing helper methods for accessing MLIR Property defined
 // in TableGen. This class should closely reflect what is defined as class
 // `Property` in TableGen.
-class Property {
+class Property : public PropConstraint {
 public:
-  explicit Property(const llvm::Record *record);
+  explicit Property(const llvm::Record *def);
   explicit Property(const llvm::DefInit *init);
-  Property(StringRef summary, StringRef description, StringRef storageType,
+  Property(const llvm::Record *maybeDef, StringRef summary,
+           StringRef description, StringRef storageType,
            StringRef interfaceType, StringRef convertFromStorageCall,
            StringRef assignToStorageCall, StringRef convertToAttributeCall,
            StringRef convertFromAttributeCall, StringRef parserCall,
@@ -131,13 +143,11 @@ public:
   // property constraints, this function is added for future-proofing)
   Property getBaseProperty() const;
 
-  // Returns the TableGen definition this Property was constructed from.
-  const llvm::Record &getDef() const { return *def; }
+  // Returns true if this property is backed by a TableGen definition and that
+  // definition is a subclass of `className`.
+  bool isSubClassOf(StringRef className) const;
 
 private:
-  // The TableGen definition of this constraint.
-  const llvm::Record *def;
-
   // Elements describing a Property, in general fetched from the record.
   StringRef summary;
   StringRef description;
@@ -163,6 +173,21 @@ struct NamedProperty {
   Property prop;
 };
 
+// Wrapper class providing helper methods for processing constant property
+// values defined using the `ConstantProp` subclass of `Property`
+// in TableGen.
+class ConstantProp : public Property {
+public:
+  explicit ConstantProp(const llvm::DefInit *def) : Property(def) {
+    assert(isSubClassOf("ConstantProp"));
+  }
+
+  static bool classof(Property *p) { return p->isSubClassOf("ConstantProp"); }
+
+  // Return the constant value of the property as an expression
+  // that produces an interface-type constant.
+  StringRef getValue() const;
+};
 } // namespace tblgen
 } // namespace mlir
 

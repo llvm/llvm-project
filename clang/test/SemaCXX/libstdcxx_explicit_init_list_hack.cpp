@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -Wsystem-headers %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -Wsystem-headers -D__GLIBCXX__=20100000L %s
 
 // libstdc++4.6 in debug mode has explicit default constructors.
 // stlport has this for all containers.

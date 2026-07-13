@@ -20,6 +20,7 @@
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallSet.h"
 
 class RemoteNXMapTable;
 
@@ -197,7 +198,7 @@ private:
   public:
     bool IsPossibleTaggedPointer(lldb::addr_t ptr) override;
 
-    ObjCLanguageRuntime::ClassDescriptorSP
+    std::unique_ptr<ObjCLanguageRuntime::ClassDescriptor>
     GetClassDescriptor(lldb::addr_t ptr) override;
 
   protected:
@@ -230,7 +231,7 @@ private:
   class TaggedPointerVendorExtended
       : public TaggedPointerVendorRuntimeAssisted {
   public:
-    ObjCLanguageRuntime::ClassDescriptorSP
+    std::unique_ptr<ObjCLanguageRuntime::ClassDescriptor>
     GetClassDescriptor(lldb::addr_t ptr) override;
 
   protected:
@@ -271,7 +272,7 @@ private:
   public:
     bool IsPossibleTaggedPointer(lldb::addr_t ptr) override;
 
-    ObjCLanguageRuntime::ClassDescriptorSP
+    std::unique_ptr<ObjCLanguageRuntime::ClassDescriptor>
     GetClassDescriptor(lldb::addr_t ptr) override;
 
   protected:
@@ -417,9 +418,13 @@ private:
 
   AppleObjCRuntimeV2(Process *process, const lldb::ModuleSP &objc_module_sp);
 
-  ObjCISA GetPointerISA(ObjCISA isa);
+  ObjCISA GetPointerISA(ObjCISA isa) override;
 
   lldb::addr_t GetISAHashTablePointer();
+
+  using ValueObjectSet = llvm::SmallPtrSet<ValueObject *, 8>;
+  ClassDescriptorSP GetClassDescriptorImpl(ValueObject &valobj,
+                                           ValueObjectSet &seen);
 
   /// Update the generation count of realized classes. This is not an exact
   /// count but rather a value that is incremented when new classes are realized

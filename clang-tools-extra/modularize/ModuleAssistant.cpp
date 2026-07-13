@@ -156,8 +156,8 @@ ensureNoCollisionWithReservedName(llvm::StringRef MightBeReservedName) {
 static std::string
 ensureVaidModuleName(llvm::StringRef MightBeInvalidName) {
   std::string SafeName(MightBeInvalidName);
-  std::replace(SafeName.begin(), SafeName.end(), '-', '_');
-  std::replace(SafeName.begin(), SafeName.end(), '.', '_');
+  llvm::replace(SafeName, '-', '_');
+  llvm::replace(SafeName, '.', '_');
   if (isdigit(SafeName[0]))
     SafeName = "_" + SafeName;
   return SafeName;
@@ -192,7 +192,7 @@ static bool addModuleDescription(Module *RootModule,
     return true;
   }
   // Make canonical.
-  std::replace(FilePath.begin(), FilePath.end(), '\\', '/');
+  llvm::replace(FilePath, '\\', '/');
   // Insert module into tree, using subdirectories as submodules.
   for (llvm::sys::path::const_iterator I = llvm::sys::path::begin(FilePath),
                                        E = llvm::sys::path::end(FilePath);

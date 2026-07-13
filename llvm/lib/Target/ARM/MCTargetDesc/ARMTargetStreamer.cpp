@@ -22,7 +22,7 @@
 using namespace llvm;
 
 //
-// ARMTargetStreamer Implemenation
+// ARMTargetStreamer Implementation
 //
 
 ARMTargetStreamer::ARMTargetStreamer(MCStreamer &S)
@@ -52,7 +52,7 @@ void ARMTargetStreamer::reset() {}
 void ARMTargetStreamer::emitInst(uint32_t Inst, char Suffix) {
   unsigned Size;
   char Buffer[4];
-  const bool LittleEndian = getContext().getAsmInfo()->isLittleEndian();
+  const bool LittleEndian = getContext().getAsmInfo().isLittleEndian();
 
   switch (Suffix) {
   case '\0':
@@ -115,6 +115,9 @@ void ARMTargetStreamer::emitFPU(ARM::FPUKind FPU) {}
 void ARMTargetStreamer::finishAttributeSection() {}
 void ARMTargetStreamer::annotateTLSDescriptorSequence(
     const MCSymbolRefExpr *SRE) {}
+void ARMTargetStreamer::emitSyntaxUnified() {}
+void ARMTargetStreamer::emitCode16() {}
+void ARMTargetStreamer::emitCode32() {}
 void ARMTargetStreamer::emitThumbFunc(MCSymbol *Symbol) {}
 void ARMTargetStreamer::emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) {}
 

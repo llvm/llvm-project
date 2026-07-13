@@ -12,6 +12,7 @@
 
 #include "NVPTXInstrInfo.h"
 #include "NVPTX.h"
+#include "NVPTXSubtarget.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -24,7 +25,8 @@ using namespace llvm;
 // Pin the vtable to this file.
 void NVPTXInstrInfo::anchor() {}
 
-NVPTXInstrInfo::NVPTXInstrInfo() : RegInfo() {}
+NVPTXInstrInfo::NVPTXInstrInfo(const NVPTXSubtarget &STI)
+    : NVPTXGenInstrInfo(STI, RegInfo), RegInfo() {}
 
 void NVPTXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
@@ -35,31 +37,23 @@ void NVPTXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   const TargetRegisterClass *DestRC = MRI.getRegClass(DestReg);
   const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
 
-  if (RegInfo.getRegSizeInBits(*DestRC) != RegInfo.getRegSizeInBits(*SrcRC))
+  if (DestRC != SrcRC)
     report_fatal_error("Copy one register into another with a different width");
 
   unsigned Op;
-  if (DestRC == &NVPTX::Int1RegsRegClass) {
-    Op = NVPTX::IMOV1r;
-  } else if (DestRC == &NVPTX::Int16RegsRegClass) {
-    Op = NVPTX::MOV16r;
-  } else if (DestRC == &NVPTX::Int32RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Int32RegsRegClass ? NVPTX::IMOV32r
-                                             : NVPTX::BITCONVERT_32_F2I);
-  } else if (DestRC == &NVPTX::Int64RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Int64RegsRegClass ? NVPTX::IMOV64r
-                                             : NVPTX::BITCONVERT_64_F2I);
-  } else if (DestRC == &NVPTX::Int128RegsRegClass) {
-    Op = NVPTX::IMOV128r;
-  } else if (DestRC == &NVPTX::Float32RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Float32RegsRegClass ? NVPTX::FMOV32r
-                                               : NVPTX::BITCONVERT_32_I2F);
-  } else if (DestRC == &NVPTX::Float64RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Float64RegsRegClass ? NVPTX::FMOV64r
-                                               : NVPTX::BITCONVERT_64_I2F);
-  } else {
+  if (DestRC == &NVPTX::B1RegClass)
+    Op = NVPTX::MOV_B1_r;
+  else if (DestRC == &NVPTX::B16RegClass)
+    Op = NVPTX::MOV_B16_r;
+  else if (DestRC == &NVPTX::B32RegClass)
+    Op = NVPTX::MOV_B32_r;
+  else if (DestRC == &NVPTX::B64RegClass)
+    Op = NVPTX::MOV_B64_r;
+  else if (DestRC == &NVPTX::B128RegClass)
+    Op = NVPTX::MOV_B128_r;
+  else
     llvm_unreachable("Bad register copy");
-  }
+
   BuildMI(MBB, I, DL, get(Op), DestReg)
       .addReg(SrcReg, getKillRegState(KillSrc));
 }
@@ -109,6 +103,7 @@ bool NVPTXInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       // Block ends with fall-through condbranch.
       TBB = LastInst.getOperand(1).getMBB();
       Cond.push_back(LastInst.getOperand(0));
+      Cond.push_back(LastInst.getOperand(2));
       return false;
     }
     // Otherwise, don't know what this is.
@@ -127,6 +122,7 @@ bool NVPTXInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       LastInst.getOpcode() == NVPTX::GOTO) {
     TBB = SecondLastInst.getOperand(1).getMBB();
     Cond.push_back(SecondLastInst.getOperand(0));
+    Cond.push_back(SecondLastInst.getOperand(2));
     FBB = LastInst.getOperand(0).getMBB();
     return false;
   }
@@ -182,7 +178,7 @@ unsigned NVPTXInstrInfo::insertBranch(MachineBasicBlock &MBB,
 
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
-  assert((Cond.size() == 1 || Cond.size() == 0) &&
+  assert((Cond.size() == 2 || Cond.size() == 0) &&
          "NVPTX branch conditions have two components!");
 
   // One-way branch.
@@ -190,30 +186,186 @@ unsigned NVPTXInstrInfo::insertBranch(MachineBasicBlock &MBB,
     if (Cond.empty()) // Unconditional branch
       BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(TBB);
     else // Conditional branch
-      BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB);
+      BuildMI(&MBB, DL, get(NVPTX::CBranch))
+          .add(Cond[0])
+          .addMBB(TBB)
+          .add(Cond[1]);
     return 1;
   }
 
   // Two-way Conditional Branch.
-  BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB);
+  BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB).add(Cond[1]);
   BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(FBB);
   return 2;
 }
 
-bool NVPTXInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
-                                          const MachineBasicBlock *MBB,
-                                          const MachineFunction &MF) const {
-  // Prevent the scheduler from reordering & splitting up MachineInstrs
-  // which must stick together (in initially set order) to
-  // comprise a valid PTX function call sequence.
+bool NVPTXInstrInfo::reverseBranchCondition(
+    SmallVectorImpl<MachineOperand> &Cond) const {
+  assert(Cond.size() == 2 && "Invalid NVPTX branch condition!");
+  Cond[1].setImm(!Cond[1].getImm());
+  return false;
+}
+
+bool NVPTXInstrInfo::invertPredicateBranchInstr(MachineBasicBlock &MBB) const {
+  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+  SmallVector<MachineOperand, 4> Cond;
+  if (analyzeBranch(MBB, TBB, FBB, Cond, /*AllowModify=*/false))
+    return false;
+  if (Cond.empty())
+    return false;
+  if (reverseBranchCondition(Cond))
+    return false;
+  DebugLoc DL = MBB.findBranchDebugLoc();
+  removeBranch(MBB);
+  insertBranch(MBB, TBB, FBB, Cond, DL);
+  return true;
+}
+
+static bool isIntegerSetp(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
-  case NVPTX::CallUniPrintCallRetInst1:
-  case NVPTX::CallArgBeginInst:
-  case NVPTX::CallArgParam:
-  case NVPTX::LastCallArgParam:
-  case NVPTX::CallArgEndInst1:
+  case NVPTX::SETP_i16rr:
+  case NVPTX::SETP_i16ri:
+  case NVPTX::SETP_i16ir:
+  case NVPTX::SETP_i32rr:
+  case NVPTX::SETP_i32ri:
+  case NVPTX::SETP_i32ir:
+  case NVPTX::SETP_i64rr:
+  case NVPTX::SETP_i64ri:
+  case NVPTX::SETP_i64ir:
     return true;
+  default:
+    return false;
+  }
+}
+
+static bool isScalarFloatSetp(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case NVPTX::SETP_bf16rr:
+  case NVPTX::SETP_f16rr:
+  case NVPTX::SETP_f32rr:
+  case NVPTX::SETP_f32ri:
+  case NVPTX::SETP_f32ir:
+  case NVPTX::SETP_f64rr:
+  case NVPTX::SETP_f64ri:
+  case NVPTX::SETP_f64ir:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static int64_t invertIntegerCmpMode(int64_t Mode) {
+  switch (Mode) {
+  case NVPTX::PTXCmpMode::EQ:
+    return NVPTX::PTXCmpMode::NE;
+  case NVPTX::PTXCmpMode::NE:
+    return NVPTX::PTXCmpMode::EQ;
+  case NVPTX::PTXCmpMode::LT:
+    return NVPTX::PTXCmpMode::GE;
+  case NVPTX::PTXCmpMode::LE:
+    return NVPTX::PTXCmpMode::GT;
+  case NVPTX::PTXCmpMode::GT:
+    return NVPTX::PTXCmpMode::LE;
+  case NVPTX::PTXCmpMode::GE:
+    return NVPTX::PTXCmpMode::LT;
+  case NVPTX::PTXCmpMode::LTU:
+    return NVPTX::PTXCmpMode::GEU;
+  case NVPTX::PTXCmpMode::LEU:
+    return NVPTX::PTXCmpMode::GTU;
+  case NVPTX::PTXCmpMode::GTU:
+    return NVPTX::PTXCmpMode::LEU;
+  case NVPTX::PTXCmpMode::GEU:
+    return NVPTX::PTXCmpMode::LTU;
+  default:
+    llvm_unreachable("Invalid integer comparison mode");
+  }
+}
+
+static int64_t invertScalarFloatCmpMode(int64_t Mode) {
+  switch (Mode) {
+  case NVPTX::PTXCmpMode::EQ:
+    return NVPTX::PTXCmpMode::NEU;
+  case NVPTX::PTXCmpMode::NE:
+    return NVPTX::PTXCmpMode::EQU;
+  case NVPTX::PTXCmpMode::EQU:
+    return NVPTX::PTXCmpMode::NE;
+  case NVPTX::PTXCmpMode::NEU:
+    return NVPTX::PTXCmpMode::EQ;
+  case NVPTX::PTXCmpMode::LT:
+    return NVPTX::PTXCmpMode::GEU;
+  case NVPTX::PTXCmpMode::LE:
+    return NVPTX::PTXCmpMode::GTU;
+  case NVPTX::PTXCmpMode::GT:
+    return NVPTX::PTXCmpMode::LEU;
+  case NVPTX::PTXCmpMode::GE:
+    return NVPTX::PTXCmpMode::LTU;
+  case NVPTX::PTXCmpMode::LTU:
+    return NVPTX::PTXCmpMode::GE;
+  case NVPTX::PTXCmpMode::LEU:
+    return NVPTX::PTXCmpMode::GT;
+  case NVPTX::PTXCmpMode::GTU:
+    return NVPTX::PTXCmpMode::LE;
+  case NVPTX::PTXCmpMode::GEU:
+    return NVPTX::PTXCmpMode::LT;
+  case NVPTX::PTXCmpMode::NUM:
+    return NVPTX::PTXCmpMode::NotANumber;
+  case NVPTX::PTXCmpMode::NotANumber:
+    return NVPTX::PTXCmpMode::NUM;
+  default:
+    llvm_unreachable("Invalid scalar float comparison mode");
+  }
+}
+
+static void invertScalarCompareInstr(MachineInstr &MI) {
+  MachineOperand &ModeOp = MI.getOperand(3);
+
+  if (isIntegerSetp(MI))
+    ModeOp.setImm(invertIntegerCmpMode(ModeOp.getImm()));
+  else if (isScalarFloatSetp(MI))
+    ModeOp.setImm(invertScalarFloatCmpMode(ModeOp.getImm()));
+  else
+    llvm_unreachable("Invalid SETP instruction");
+}
+
+bool NVPTXInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
+                                           unsigned &SrcOpIdx1,
+                                           unsigned &SrcOpIdx2) const {
+  if (isIntegerSetp(MI) || isScalarFloatSetp(MI))
+    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 1, 2);
+  return TargetInstrInfo::findCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2);
+}
+
+MachineInstr *NVPTXInstrInfo::commuteInstructionImpl(MachineInstr &MI,
+                                                     bool NewMI,
+                                                     unsigned OpIdx1,
+                                                     unsigned OpIdx2) const {
+  assert(!NewMI && "this should never be used");
+
+  if (!isIntegerSetp(MI) && !isScalarFloatSetp(MI))
+    return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
+
+  // For now all users must be invertible conditional branches.
+  // TODO: Support other users such as selects.
+  MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+  SmallVector<MachineBasicBlock *, 4> BranchMBBs;
+  for (MachineInstr &UseMI :
+       MRI.use_nodbg_instructions(MI.getOperand(0).getReg())) {
+    if (!UseMI.isConditionalBranch())
+      return nullptr;
+    BranchMBBs.push_back(UseMI.getParent());
   }
 
-  return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
+  invertScalarCompareInstr(MI);
+  auto *Failed = llvm::find_if(BranchMBBs, [this](MachineBasicBlock *MBB) {
+    return !invertPredicateBranchInstr(*MBB);
+  });
+  if (Failed == BranchMBBs.end())
+    return &MI;
+
+  // Couldn't invert one of the branches. Roll back the prefix we
+  // already inverted and the compare-mode flip.
+  for (MachineBasicBlock *MBB : make_range(BranchMBBs.begin(), Failed))
+    invertPredicateBranchInstr(*MBB);
+  invertScalarCompareInstr(MI);
+  return nullptr;
 }

@@ -47,7 +47,7 @@
 ; RUN: llvm-as src1.ll -o src1.o
 ; RUN: llvm-as src1.o.thinlto.ll -o src1.o.thinlto.bc
 
-; RUN: opt -passes=memprof-context-disambiguation src1.o -S -memprof-import-summary=src1.o.thinlto.bc | FileCheck %s
+; RUN: opt -passes=assign-guid,memprof-context-disambiguation src1.o -S -memprof-import-summary=src1.o.thinlto.bc | FileCheck %s
 
 ;; Per the cloning results in the summary, none of the original functions should
 ;; call any memprof clones.
@@ -63,14 +63,14 @@
 ; CHECK:  tail call void @_ZL9internal1v.llvm.3267420853450984672()
 ; CHECK:  tail call void @_ZL9internal2v.llvm.3267420853450984672.memprof.1()
 ; CHECK-LABEL: declare void @_ZL9internal2v.llvm.3267420853450984672.memprof.1()
-;; We should have 2 clones of src2.cc's internal1 function, calling a single
-;; clone of external2.
+;; We should have one clone of src2.cc's internal1 function, calling a single
+;; clone of external2, and a second clone that was detected to be a duplicate
+;; of the first that becomes a declaration (since this is available_externally -
+;; in the module with the prevailing copy it would be an alias to clone 1).
 ; CHECK-LABEL: define available_externally void @_ZL9internal1v.llvm.3267420853450984672.memprof.1()
 ; CHECK:  tail call void @_Z9external2v.memprof.1()
 ; CHECK:  tail call void @_Z9external2v.memprof.1()
-; CHECK-LABEL: define available_externally void @_ZL9internal1v.llvm.3267420853450984672.memprof.2()
-; CHECK:  tail call void @_Z9external2v.memprof.1()
-; CHECK:  tail call void @_Z9external2v.memprof.1()
+; CHECK: declare void @_ZL9internal1v.llvm.3267420853450984672.memprof.2()
 ; CHECK-NOT: memprof
 
 ;--- src1.ll

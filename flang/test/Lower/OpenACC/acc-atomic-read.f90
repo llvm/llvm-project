@@ -8,7 +8,7 @@ program acc_atomic_test
      g = h
 end program acc_atomic_test
 
-! CHECK: func @_QQmain() attributes {fir.bindc_name = "acc_atomic_test"} {
+! CHECK: func @_QQmain() attributes {fir.bindc_name = "ACC_ATOMIC_TEST"} {
 ! CHECK: %[[VAR_G:.*]] = fir.alloca f32 {bindc_name = "g", uniq_name = "_QFEg"}
 ! CHECK: %[[G_DECL:.*]]:2 = hlfir.declare %[[VAR_G]] {uniq_name = "_QFEg"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK: %[[VAR_H:.*]] = fir.alloca f32 {bindc_name = "h", uniq_name = "_QFEh"}

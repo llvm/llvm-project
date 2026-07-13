@@ -15,7 +15,6 @@
 #include "TokenAnalyzer.h"
 #include "TokenAnnotator.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -24,7 +23,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
-#include <algorithm>
 #include <string>
 
 #define DEBUG_TYPE "format-formatter"
@@ -441,7 +439,7 @@ private:
   // for grammar EBNF (production ModuleItem).
   bool parseModuleReference(const AdditionalKeywords &Keywords,
                             JsModuleReference &Reference) {
-    if (!Current || !Current->isOneOf(Keywords.kw_import, tok::kw_export))
+    if (!Current || Current->isNoneOf(Keywords.kw_import, tok::kw_export))
       return false;
     Reference.IsExport = Current->is(tok::kw_export);
 
@@ -572,7 +570,7 @@ private:
       Symbol.Range.setEnd(Current->Tok.getLocation());
       Reference.Symbols.push_back(Symbol);
 
-      if (!Current->isOneOf(tok::r_brace, tok::comma))
+      if (Current->isNoneOf(tok::r_brace, tok::comma))
         return false;
     }
     Reference.SymbolsEnd = Current->Tok.getLocation();

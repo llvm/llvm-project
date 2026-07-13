@@ -1,5 +1,24 @@
-// RUN: %clang_cc1 -std=c++2a -fsyntax-only -fcxx-exceptions -verify=ref,both %s
+// RUN: %clang_cc1 -std=c++2a -fsyntax-only -fcxx-exceptions -verify=ref,both      %s
 // RUN: %clang_cc1 -std=c++2a -fsyntax-only -fcxx-exceptions -verify=expected,both %s -fexperimental-new-constant-interpreter
+
+
+namespace std {
+  struct type_info;
+  struct destroying_delete_t {
+    explicit destroying_delete_t() = default;
+  } inline constexpr destroying_delete{};
+  struct nothrow_t {
+    explicit nothrow_t() = default;
+  } inline constexpr nothrow{};
+  using size_t = decltype(sizeof(0));
+  enum class align_val_t : size_t {};
+};
+
+constexpr void *operator new(std::size_t, void *p) { return p; }
+namespace std {
+  template<typename T> constexpr T *construct(T *p) { return new (p) T; }
+  template<typename T> constexpr void destroy(T *p) { p->~T(); }
+}
 
 template <unsigned N>
 struct S {
@@ -33,6 +52,39 @@ namespace Covariant {
   constexpr Covariant3 cb;
   constexpr const Covariant1 *cb1 = &cb;
   static_assert(cb1->f()->a == 'Z');
+}
+
+namespace Covariant2 {
+  struct A {
+  };
+  struct B : A {
+  };
+  struct C : A {
+  };
+  struct D :  B, C {
+  };
+
+  // Check that we apply a proper adjustment for a covariant return type.
+  struct Covariant1 {
+    D d;
+    virtual const A *f() const;
+  };
+
+  template<typename T>
+  struct Covariant2 : Covariant1 {
+    virtual const T *f() const;
+  };
+
+  template<typename T>
+  struct Covariant3 : Covariant2<T> {
+    constexpr virtual const D *f() const { return &this->d; }
+  };
+
+  constexpr       Covariant3<C>  cc;
+  constexpr const Covariant1    *cc1 = &cc;
+
+  // LHS static type is A*.
+  static_assert(cc1->f() == (C*)&cc.d); // expected-error {{static assertion failed}}
 }
 
 namespace DtorOrder {
@@ -186,4 +238,67 @@ namespace PureVirtual {
   };
   struct PureVirtualCall : Abstract { void f(); }; // both-note {{in call to 'Abstract}}
   constexpr PureVirtualCall pure_virtual_call; // both-error {{constant expression}} both-note {{in call to 'PureVirtualCall}}
+}
+
+namespace Dtor {
+  constexpr bool pseudo(bool read, bool recreate) {
+    using T = bool;
+    bool b = false; // both-note {{lifetime has already ended}} \
+                    // both-note {{declared here}}
+    // This evaluates the store to 'b'...
+    (b = true).~T();
+    // ... and ends the lifetime of the object.
+    return (read
+            ? b // both-note {{read of object outside its lifetime}}
+            : true) +
+           (recreate
+            ? (std::construct(&b), true)
+            : true);
+  }
+  static_assert(pseudo(false, false)); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(pseudo(true, false)); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(pseudo(false, true));
+}
+
+namespace GH150705 {
+  struct A { };
+  struct B : A { };
+  struct C : A {
+    constexpr virtual int foo() const { return 0; }
+  };
+
+  constexpr auto p = &C::foo;
+  constexpr auto q = static_cast<int (A::*)() const>(p);
+  constexpr B b;
+  constexpr const A& a = b;
+  constexpr auto x = (a.*q)(); // both-error {{constant expression}}
+}
+
+namespace DependentRequiresExpr {
+  template <class T,
+            bool = []() -> bool { // both-error {{not a constant expression}}
+              if (requires { T::type; })
+                return true;
+              return false;
+            }()>
+  struct p {
+    using type = void;
+  };
+
+  template <class T> using P = p<T>::type; // both-note {{while checking a default template argument}}
+}
+
+namespace PseudoDtorOnGlobal {
+  struct A {
+    int m;
+    mutable int n;
+    constexpr int f() const { return m; }
+    constexpr int g() const { return n; }
+  };
+
+  constexpr A a = {1, 2};
+  using T = int;
+  constexpr void destroy2() { // both-error {{never produces a constant expression}}
+    a.m.~T(); // both-note {{cannot modify an object that is visible outside}}
+  }
 }

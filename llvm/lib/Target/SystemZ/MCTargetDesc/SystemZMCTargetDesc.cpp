@@ -23,6 +23,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
@@ -35,12 +36,6 @@ using namespace llvm;
 
 #define GET_REGINFO_MC_DESC
 #include "SystemZGenRegisterInfo.inc"
-
-// Temporary option to assist with the migration to a new HLASMAsmStreamer on
-// z/OS
-static cl::opt<bool> GNUAsOnzOSCL("emit-gnuas-syntax-on-zos",
-                                  cl::desc("Emit GNU Assembly Syntax on z/OS."),
-                                  cl::init(true));
 
 const unsigned SystemZMC::GR32Regs[16] = {
     SystemZ::R0L,  SystemZ::R1L,  SystemZ::R2L,  SystemZ::R3L,
@@ -161,9 +156,9 @@ static MCAsmInfo *createSystemZMCAsmInfo(const MCRegisterInfo &MRI,
                                          const Triple &TT,
                                          const MCTargetOptions &Options) {
   if (TT.isOSzOS())
-    return new SystemZMCAsmInfoGOFF(TT);
+    return new SystemZMCAsmInfoGOFF(TT, Options);
 
-  MCAsmInfo *MAI = new SystemZMCAsmInfoELF(TT);
+  MCAsmInfo *MAI = new SystemZMCAsmInfoELF(TT, Options);
   MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(
       nullptr, MRI.getDwarfRegNum(SystemZ::R15D, true),
       SystemZMC::ELFCFAOffsetFromInitialSP);
@@ -214,7 +209,7 @@ static MCStreamer *createSystemZAsmStreamer(
     std::unique_ptr<MCAsmBackend> TAB) {
 
   auto TT = Ctx.getTargetTriple();
-  if (TT.isOSzOS() && !GNUAsOnzOSCL)
+  if (TT.isOSzOS())
     return new SystemZHLASMAsmStreamer(Ctx, std::move(OS), std::move(IP),
                                        std::move(CE), std::move(TAB));
 
@@ -239,7 +234,8 @@ static MCInstrAnalysis *createSystemZMCInstrAnalysis(const MCInstrInfo *Info) {
   return new MCInstrAnalysis(Info);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSystemZTargetMC() {
   // Register the MCAsmInfo.
   TargetRegistry::RegisterMCAsmInfo(getTheSystemZTarget(),
                                     createSystemZMCAsmInfo);

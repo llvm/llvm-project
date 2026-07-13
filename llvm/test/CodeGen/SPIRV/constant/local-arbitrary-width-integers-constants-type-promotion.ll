@@ -1,7 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
-
-; TODO: This test currently fails with LLVM_ENABLE_EXPENSIVE_CHECKS enabled
-; XFAIL: expensive_checks
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 define i4 @getConstantI4() {
   ret i4 2 ; i4 => OpTypeInt 8

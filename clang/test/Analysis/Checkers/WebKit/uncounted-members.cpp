@@ -7,7 +7,7 @@ namespace members {
   struct Foo {
   private:
     RefCountable* a = nullptr;
-// expected-warning@-1{{Member variable 'a' in 'members::Foo' is a raw pointer to ref-countable type 'RefCountable'}}
+// expected-warning@-1{{Member variable 'a' (of 'members::Foo') is a raw pointer to RefPtr-capable type 'RefCountable'}}
 
     [[clang::suppress]]
     RefCountable* a_suppressed = nullptr;
@@ -18,14 +18,14 @@ namespace members {
   public:
     RefCountable silenceWarningAboutInit;
     RefCountable& c = silenceWarningAboutInit;
-// expected-warning@-1{{Member variable 'c' in 'members::Foo' is a reference to ref-countable type 'RefCountable'}}
+// expected-warning@-1{{Member variable 'c' (of 'members::Foo') is a reference to RefPtr-capable type 'RefCountable'}}
     Ref<RefCountable> d;
   };
 
   template<class T>
   struct FooTmpl {
     T* a;
-// expected-warning@-1{{Member variable 'a' in 'members::FooTmpl<RefCountable>' is a raw pointer to ref-countable type 'RefCountable'}}
+// expected-warning@-1{{Member variable 'a' (of 'members::FooTmpl<RefCountable>') is a raw pointer to RefPtr-capable type 'RefCountable'}}
   };
 
   void forceTmplToInstantiate(FooTmpl<RefCountable>) {}
@@ -36,20 +36,22 @@ namespace members {
   };
 } // members
 
-namespace ignore_unions {
+namespace unions {
   union Foo {
     RefCountable* a;
+    // expected-warning@-1{{Member variable 'a' (of 'unions::Foo') is a raw pointer to RefPtr-capable type 'RefCountable'}}
     RefPtr<RefCountable> b;
     Ref<RefCountable> c;
   };
 
   template<class T>
-  union RefPtr {
+  union FooTmpl {
     T* a;
+    // expected-warning@-1{{Member variable 'a' (of 'unions::FooTmpl<RefCountable>') is a raw pointer to RefPtr-capable type 'RefCountable'}}
   };
 
-  void forceTmplToInstantiate(RefPtr<RefCountable>) {}
-} // ignore_unions
+  void forceTmplToInstantiate(FooTmpl<RefCountable>) {}
+} // unions
 
 namespace ignore_system_header {
 
@@ -77,3 +79,23 @@ namespace checked_ptr_ref_ptr_capable {
   }
 
 } // checked_ptr_ref_ptr_capable
+
+namespace ptr_to_ptr_to_ref_counted {
+
+  struct List {
+    RefCountable** elements;
+    // expected-warning@-1{{Member variable 'elements' (of 'ptr_to_ptr_to_ref_counted::List') contains a raw pointer to RefPtr-capable type 'RefCountable'}}
+  };
+
+  template <typename T>
+  struct TemplateList {
+    T** elements;
+    // expected-warning@-1{{Member variable 'elements' (of 'ptr_to_ptr_to_ref_counted::TemplateList<RefCountable>') contains a raw pointer to RefPtr-capable type 'RefCountable'}}
+  };
+  TemplateList<RefCountable> list;
+
+  struct SafeList {
+    RefPtr<RefCountable>* elements;
+  };
+
+} // namespace ptr_to_ptr_to_ref_counted

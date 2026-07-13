@@ -10,7 +10,7 @@ define i32 @test0() {
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK-NEXT:   successors: %bb.1(0x80000000), %bb.2(0x00000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM_BR &"", 0 /* attdialect */, 2686986 /* regdef:GR32_NOREX2 */, def %1, 13 /* imm */, %bb.2
+  ; CHECK-NEXT:   INLINEASM_BR &"", attdialect, regdef:GR32_NOREX2, def %1, imm, %bb.2
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY %1
   ; CHECK-NEXT:   JMP_1 %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -19,7 +19,7 @@ define i32 @test0() {
   ; CHECK-NEXT:   $eax = COPY [[MOV32ri]]
   ; CHECK-NEXT:   RET 0, $eax
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.z.split (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.2.z.split (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   $eax = COPY %1
   ; CHECK-NEXT:   RET 0, $eax
   %direct = callbr i32 asm "", "=r,!i"()
@@ -39,11 +39,11 @@ define i32 @test1() {
   ; CHECK-NEXT:   successors: %bb.2(0x80000000), %bb.1(0x00000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[MOV32ri:%[0-9]+]]:gr32 = MOV32ri 42
-  ; CHECK-NEXT:   INLINEASM_BR &"", 0 /* attdialect */, 2686986 /* regdef:GR32_NOREX2 */, def %4, 13 /* imm */, %bb.1
+  ; CHECK-NEXT:   INLINEASM_BR &"", attdialect, regdef:GR32_NOREX2, def %4, imm, %bb.1
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY %4
   ; CHECK-NEXT:   JMP_1 %bb.2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1.z.split (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.1.z.split (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY %4
@@ -72,12 +72,12 @@ define i32 @test2() {
   ; CHECK-NEXT:   successors: %bb.2(0x80000000), %bb.1(0x00000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[MOV32ri:%[0-9]+]]:gr32 = MOV32ri 42
-  ; CHECK-NEXT:   INLINEASM_BR &"", 0 /* attdialect */, 2686986 /* regdef:GR32_NOREX2 */, def %5, 2686986 /* regdef:GR32_NOREX2 */, def %6, 13 /* imm */, %bb.1
+  ; CHECK-NEXT:   INLINEASM_BR &"", attdialect, regdef:GR32_NOREX2, def %5, regdef:GR32_NOREX2, def %6, imm, %bb.1
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY %6
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY %5
   ; CHECK-NEXT:   JMP_1 %bb.2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1.z.split (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.1.z.split (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY %5
@@ -107,12 +107,12 @@ define i32 @test3() {
   ; CHECK-NEXT:   successors: %bb.2(0x80000000), %bb.1(0x00000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[MOV32ri:%[0-9]+]]:gr32 = MOV32ri 42
-  ; CHECK-NEXT:   INLINEASM_BR &"", 0 /* attdialect */, 10 /* regdef */, implicit-def $ebx, 13 /* imm */, %bb.1
+  ; CHECK-NEXT:   INLINEASM_BR &"", attdialect, regdef, implicit-def $ebx, imm, %bb.1
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $ebx
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY [[COPY]]
   ; CHECK-NEXT:   JMP_1 %bb.2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1.z.split (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.1.z.split (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT:   liveins: $ebx
   ; CHECK-NEXT: {{  $}}
@@ -143,14 +143,14 @@ define i32 @test4() {
   ; CHECK-NEXT:   successors: %bb.2(0x80000000), %bb.1(0x00000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[MOV32ri:%[0-9]+]]:gr32 = MOV32ri 42
-  ; CHECK-NEXT:   INLINEASM_BR &"", 0 /* attdialect */, 10 /* regdef */, implicit-def $ebx, 10 /* regdef */, implicit-def $edx, 13 /* imm */, %bb.1
+  ; CHECK-NEXT:   INLINEASM_BR &"", attdialect, regdef, implicit-def $ebx, regdef, implicit-def $edx, imm, %bb.1
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $ebx
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $edx
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY [[COPY1]]
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY [[COPY]]
   ; CHECK-NEXT:   JMP_1 %bb.2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1.z.split (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.1.z.split (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT:   liveins: $ebx, $edx
   ; CHECK-NEXT: {{  $}}
@@ -182,12 +182,12 @@ define i32 @test5() {
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM_BR &"# $0", 0 /* attdialect */, 10 /* regdef */, implicit-def $ebx, 13 /* imm */, %bb.1
+  ; CHECK-NEXT:   INLINEASM_BR &"# $0", attdialect, regdef, implicit-def $ebx, imm, %bb.1
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $ebx
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY [[COPY]]
   ; CHECK-NEXT:   JMP_1 %bb.1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1.cleanup (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.1.cleanup (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   liveins: $ebx
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY $ebx
@@ -209,7 +209,7 @@ define i64 @test6() {
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000), %bb.3(0x00000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM_BR &"", 0 /* attdialect */, 10 /* regdef */, implicit-def $rdx, 13 /* imm */, %bb.3
+  ; CHECK-NEXT:   INLINEASM_BR &"", attdialect, regdef, implicit-def $rdx, imm, %bb.3
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdx
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY [[COPY]]
   ; CHECK-NEXT:   JMP_1 %bb.1
@@ -217,7 +217,7 @@ define i64 @test6() {
   ; CHECK-NEXT: bb.1.asm.fallthrough:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000), %bb.4(0x00000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM_BR &"", 0 /* attdialect */, 10 /* regdef */, implicit-def $rbx, 13 /* imm */, %bb.4
+  ; CHECK-NEXT:   INLINEASM_BR &"", attdialect, regdef, implicit-def $rbx, imm, %bb.4
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY $rbx
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY [[COPY2]]
   ; CHECK-NEXT:   JMP_1 %bb.2
@@ -227,7 +227,7 @@ define i64 @test6() {
   ; CHECK-NEXT:   $rax = COPY [[PHI]]
   ; CHECK-NEXT:   RET 0, $rax
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3.foo.split (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.3.foo.split (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT:   liveins: $rdx
   ; CHECK-NEXT: {{  $}}
@@ -235,7 +235,7 @@ define i64 @test6() {
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gr64 = COPY [[COPY4]]
   ; CHECK-NEXT:   JMP_1 %bb.2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.4.foo.split2 (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.4.foo.split2 (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT:   liveins: $rbx
   ; CHECK-NEXT: {{  $}}
@@ -277,7 +277,7 @@ define i32 @test7() {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gr32 = PHI [[DEF]], %bb.0, %2, %bb.3
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY [[PHI]]
-  ; CHECK-NEXT:   INLINEASM_BR &"", 0 /* attdialect */, 10 /* regdef */, implicit-def $edx, 2147483657 /* reguse tiedto:$0 */, [[COPY]](tied-def 3), 13 /* imm */, %bb.3
+  ; CHECK-NEXT:   INLINEASM_BR &"", attdialect, regdef, implicit-def $edx, reguse tiedto:$0, [[COPY]](tied-def 3), imm, %bb.3
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $edx
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY [[COPY1]]
   ; CHECK-NEXT:   JMP_1 %bb.2
@@ -286,7 +286,7 @@ define i32 @test7() {
   ; CHECK-NEXT:   $eax = COPY [[COPY2]]
   ; CHECK-NEXT:   RET 0, $eax
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3.retry.split (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.3.retry.split (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $edx
   ; CHECK-NEXT: {{  $}}
@@ -317,11 +317,11 @@ define i32 @test8() {
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM_BR &"# $0", 0 /* attdialect */, 2686986 /* regdef:GR32_NOREX2 */, def %1, 13 /* imm */, %bb.1
+  ; CHECK-NEXT:   INLINEASM_BR &"# $0", attdialect, regdef:GR32_NOREX2, def %1, imm, %bb.1
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY %1
   ; CHECK-NEXT:   JMP_1 %bb.1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1.cleanup (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.1.cleanup (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   $eax = COPY %1
   ; CHECK-NEXT:   RET 0, $eax
 entry:
@@ -338,20 +338,20 @@ define i64 @condition_code() {
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK-NEXT:   successors: %bb.1(0x80000000), %bb.2(0x00000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM_BR &"", 16 /* maystore attdialect */, 2359306 /* regdef:GR32 */, def %1, 13 /* imm */, %bb.2
+  ; CHECK-NEXT:   INLINEASM_BR &"", maystore attdialect, regdef:GR32, def %1, imm, %bb.2
   ; CHECK-NEXT:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
   ; CHECK-NEXT:   [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 killed [[SETCCr]]
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, killed [[MOVZX32rr8_]], %subreg.sub_32bit
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG killed [[MOVZX32rr8_]], %subreg.sub_32bit
   ; CHECK-NEXT:   JMP_1 %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.b:
   ; CHECK-NEXT:   $rax = COPY [[SUBREG_TO_REG]]
   ; CHECK-NEXT:   RET 0, $rax
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.c (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.2.c (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
   ; CHECK-NEXT:   [[MOVZX32rr8_1:%[0-9]+]]:gr32 = MOVZX32rr8 killed [[SETCCr1]]
-  ; CHECK-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, killed [[MOVZX32rr8_1]], %subreg.sub_32bit
+  ; CHECK-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:gr64 = SUBREG_TO_REG killed [[MOVZX32rr8_1]], %subreg.sub_32bit
   ; CHECK-NEXT:   $rax = COPY [[SUBREG_TO_REG1]]
   ; CHECK-NEXT:   RET 0, $rax
   %a = callbr i64 asm "", "={@ccz},!i"()

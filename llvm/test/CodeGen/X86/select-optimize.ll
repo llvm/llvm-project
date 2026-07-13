@@ -23,6 +23,16 @@ define i32 @weighted_select1(i32 %a, i32 %b, i1 %cmp) {
   ret i32 %sel
 }
 
+; But don't do anything for optnone functions.
+define i32 @weighted_select1_optnone(i32 %a, i32 %b, i1 %cmp) optnone noinline {
+; CHECK-LABEL: @weighted_select1_optnone(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP:%.*]], i32 [[A:%.*]], i32 [[B:%.*]], !prof [[PROF16]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %sel = select i1 %cmp, i32 %a, i32 %b, !prof !15
+  ret i32 %sel
+}
+
 ; If a select is obviously predictable (reversed profile weights),
 ; turn it into a branch.
 define i32 @weighted_select2(i32 %a, i32 %b, i1 %cmp) {
@@ -229,10 +239,11 @@ define i32 @expensive_val_operand4(ptr nocapture %a, i32 %b, i32 %y, i1 %cmp) {
 }
 
 ; Expensive cold value operand with unsafe-to-sink (due to lifetime-end marker) load (partial slice sinking).
-define i32 @expensive_val_operand5(ptr nocapture %a, i32 %b, i32 %y, i1 %cmp) {
+define i32 @expensive_val_operand5(i32 %b, i32 %y, i1 %cmp) {
 ; CHECK-LABEL: @expensive_val_operand5(
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr nonnull [[A]])
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[A]], align 8
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[A]])
 ; CHECK-NEXT:    [[CMP_FROZEN:%.*]] = freeze i1 [[CMP:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END:%.*]], !prof [[PROF18]]
 ; CHECK:       select.true.sink:
@@ -242,8 +253,9 @@ define i32 @expensive_val_operand5(ptr nocapture %a, i32 %b, i32 %y, i1 %cmp) {
 ; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[X]], [[SELECT_TRUE_SINK]] ], [ [[Y:%.*]], [[TMP0:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
+  %a = alloca i32
   %load = load i32, ptr %a, align 8
-  call void @llvm.lifetime.end.p0(i64 2, ptr nonnull %a)
+  call void @llvm.lifetime.end.p0(ptr nonnull %a)
   %x = add i32 %load, %b
   %sel = select i1 %cmp, i32 %x, i32 %y, !prof !17
   ret i32 %sel
@@ -518,10 +530,12 @@ for.body:                                         ; preds = %for.body.preheader,
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 ; Function Attrs: argmemonly mustprogress nocallback nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 declare void @free(ptr nocapture)
 
+!29 = !{null}
+!30 = !DISubroutineType(types: !29)
 !llvm.module.flags = !{!0, !26, !27}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
@@ -546,7 +560,7 @@ declare void @free(ptr nocapture)
 !20 = !{}
 !21 = !DIFile(filename: "test.c", directory: "/test")
 !22 = distinct !DICompileUnit(language: DW_LANG_C99, file: !21, producer: "clang version 15.0.0", isOptimized: true, emissionKind: FullDebug, globals: !25, splitDebugInlining: false, nameTableKind: None)
-!23 = distinct !DISubprogram(name: "test", scope: !21, file: !21, line: 1, unit: !22)
+!23 = distinct !DISubprogram(name: "test", scope: !21, file: !21, line: 1, type: !30, unit: !22)
 !24 = !DILocalVariable(name: "x", scope: !23)
 !25 = !{}
 !26 = !{i32 2, !"Dwarf Version", i32 4}

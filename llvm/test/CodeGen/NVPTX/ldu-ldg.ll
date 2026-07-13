@@ -27,15 +27,14 @@ define i8 @test_ldu_i8(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: test_ldu_i8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldu_i8_param_0];
-; CHECK-NEXT:    ldu.global.u8 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldu_i8_param_0];
+; CHECK-NEXT:    ldu.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    and.b32 %r2, %r1, 255;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = tail call i8 @llvm.nvvm.ldu.global.i.i8.p1(ptr addrspace(1) %ptr, i32 4)
   ret i8 %val
@@ -49,8 +48,8 @@ define i16 @test_ldu_i16(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldu_i16_param_0];
-; CHECK-NEXT:    ldu.global.u16 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldu_i16_param_0];
+; CHECK-NEXT:    ldu.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -65,8 +64,8 @@ define i32 @test_ldu_i32(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldu_i32_param_0];
-; CHECK-NEXT:    ldu.global.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldu_i32_param_0];
+; CHECK-NEXT:    ldu.global.b32 %r1, [%rd1];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = tail call i32 @llvm.nvvm.ldu.global.i.i32.p1(ptr addrspace(1) %ptr, i32 4)
@@ -79,8 +78,8 @@ define i64 @test_ldu_i64(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldu_i64_param_0];
-; CHECK-NEXT:    ldu.global.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldu_i64_param_0];
+; CHECK-NEXT:    ldu.global.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %val = tail call i64 @llvm.nvvm.ldu.global.i.i64.p1(ptr addrspace(1) %ptr, i32 8)
@@ -93,8 +92,8 @@ define ptr @test_ldu_p(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldu_p_param_0];
-; CHECK-NEXT:    ldu.global.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldu_p_param_0];
+; CHECK-NEXT:    ldu.global.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %val = tail call ptr @llvm.nvvm.ldu.global.p.p1(ptr addrspace(1) %ptr, i32 8)
@@ -104,13 +103,13 @@ define ptr @test_ldu_p(ptr addrspace(1) %ptr) {
 define float @test_ldu_f32(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: test_ldu_f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldu_f32_param_0];
-; CHECK-NEXT:    ldu.global.f32 %f1, [%rd1];
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f1;
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldu_f32_param_0];
+; CHECK-NEXT:    ldu.global.b32 %r1, [%rd1];
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = tail call float @llvm.nvvm.ldu.global.f.f32.p1(ptr addrspace(1) %ptr, i32 4)
   ret float %val
@@ -119,13 +118,12 @@ define float @test_ldu_f32(ptr addrspace(1) %ptr) {
 define double @test_ldu_f64(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: test_ldu_f64(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .b64 %fd<2>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldu_f64_param_0];
-; CHECK-NEXT:    ldu.global.f64 %fd1, [%rd1];
-; CHECK-NEXT:    st.param.f64 [func_retval0], %fd1;
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldu_f64_param_0];
+; CHECK-NEXT:    ldu.global.b64 %rd2, [%rd1];
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %val = tail call double @llvm.nvvm.ldu.global.f.f64.p1(ptr addrspace(1) %ptr, i32 8)
   ret double %val
@@ -138,8 +136,8 @@ define half @test_ldu_f16(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldu_f16_param_0];
-; CHECK-NEXT:    ldu.global.u16 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldu_f16_param_0];
+; CHECK-NEXT:    ldu.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
   %val = tail call half @llvm.nvvm.ldu.global.f.f16.p1(ptr addrspace(1) %ptr, i32 2)
@@ -153,8 +151,8 @@ define <2 x half> @test_ldu_v2f16(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldu_v2f16_param_0];
-; CHECK-NEXT:    ldu.global.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldu_v2f16_param_0];
+; CHECK-NEXT:    ldu.global.b32 %r1, [%rd1];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = tail call <2 x half> @llvm.nvvm.ldu.global.f.v2f16.p1(ptr addrspace(1) %ptr, i32 4)
@@ -164,14 +162,12 @@ define <2 x half> @test_ldu_v2f16(ptr addrspace(1) %ptr) {
 define i8 @test_ldg_i8(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: test_ldg_i8(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldg_i8_param_0];
-; CHECK-NEXT:    ld.global.nc.u8 %rs1, [%rd1];
-; CHECK-NEXT:    cvt.u32.u8 %r1, %rs1;
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldg_i8_param_0];
+; CHECK-NEXT:    ld.global.nc.b8 %r1, [%rd1];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = tail call i8 @llvm.nvvm.ldg.global.i.i8.p1(ptr addrspace(1) %ptr, i32 4)
@@ -181,14 +177,12 @@ define i8 @test_ldg_i8(ptr addrspace(1) %ptr) {
 define i16 @test_ldg_i16(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: test_ldg_i16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldg_i16_param_0];
-; CHECK-NEXT:    ld.global.nc.u16 %rs1, [%rd1];
-; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldg_i16_param_0];
+; CHECK-NEXT:    ld.global.nc.b16 %r1, [%rd1];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = tail call i16 @llvm.nvvm.ldg.global.i.i16.p1(ptr addrspace(1) %ptr, i32 2)
@@ -202,8 +196,8 @@ define i32 @test_ldg_i32(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldg_i32_param_0];
-; CHECK-NEXT:    ld.global.nc.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldg_i32_param_0];
+; CHECK-NEXT:    ld.global.nc.b32 %r1, [%rd1];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = tail call i32 @llvm.nvvm.ldg.global.i.i32.p1(ptr addrspace(1) %ptr, i32 4)
@@ -216,8 +210,8 @@ define i64 @test_ldg_i64(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldg_i64_param_0];
-; CHECK-NEXT:    ld.global.nc.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldg_i64_param_0];
+; CHECK-NEXT:    ld.global.nc.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %val = tail call i64 @llvm.nvvm.ldg.global.i.i64.p1(ptr addrspace(1) %ptr, i32 8)
@@ -230,8 +224,8 @@ define ptr @test_ldg_p(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldg_p_param_0];
-; CHECK-NEXT:    ld.global.nc.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldg_p_param_0];
+; CHECK-NEXT:    ld.global.nc.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %val = tail call ptr @llvm.nvvm.ldg.global.p.p1(ptr addrspace(1) %ptr, i32 8)
@@ -241,13 +235,13 @@ define ptr @test_ldg_p(ptr addrspace(1) %ptr) {
 define float @test_ldg_f32(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: test_ldg_f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldg_f32_param_0];
-; CHECK-NEXT:    ld.global.nc.f32 %f1, [%rd1];
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f1;
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldg_f32_param_0];
+; CHECK-NEXT:    ld.global.nc.b32 %r1, [%rd1];
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = tail call float @llvm.nvvm.ldg.global.f.f32.p1(ptr addrspace(1) %ptr, i32 4)
   ret float %val
@@ -256,13 +250,12 @@ define float @test_ldg_f32(ptr addrspace(1) %ptr) {
 define double @test_ldg_f64(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: test_ldg_f64(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .b64 %fd<2>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldg_f64_param_0];
-; CHECK-NEXT:    ld.global.nc.f64 %fd1, [%rd1];
-; CHECK-NEXT:    st.param.f64 [func_retval0], %fd1;
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldg_f64_param_0];
+; CHECK-NEXT:    ld.global.nc.b64 %rd2, [%rd1];
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %val = tail call double @llvm.nvvm.ldg.global.f.f64.p1(ptr addrspace(1) %ptr, i32 8)
   ret double %val
@@ -275,8 +268,8 @@ define half @test_ldg_f16(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldg_f16_param_0];
-; CHECK-NEXT:    ld.global.nc.u16 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldg_f16_param_0];
+; CHECK-NEXT:    ld.global.nc.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
   %val = tail call half @llvm.nvvm.ldg.global.f.f16.p1(ptr addrspace(1) %ptr, i32 2)
@@ -290,8 +283,8 @@ define <2 x half> @test_ldg_v2f16(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldg_v2f16_param_0];
-; CHECK-NEXT:    ld.global.nc.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldg_v2f16_param_0];
+; CHECK-NEXT:    ld.global.nc.b32 %r1, [%rd1];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = tail call <2 x half> @llvm.nvvm.ldg.global.f.v2f16.p1(ptr addrspace(1) %ptr, i32 4)
@@ -306,7 +299,7 @@ define i32 @test_ldg_asi() {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.global.nc.u32 %r1, [g+4];
+; CHECK-NEXT:    ld.global.nc.b32 %r1, [g+4];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = tail call i32 @llvm.nvvm.ldg.global.i.i32.p1(ptr addrspace(1) getelementptr (i8, ptr addrspace(1) @g, i32 4), i32 4)
@@ -319,7 +312,7 @@ define i32 @test_lug_asi() {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ldu.global.u32 %r1, [g+4];
+; CHECK-NEXT:    ldu.global.b32 %r1, [g+4];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = tail call i32 @llvm.nvvm.ldu.global.i.i32.p1(ptr addrspace(1) getelementptr (i8, ptr addrspace(1) @g, i32 4), i32 4)

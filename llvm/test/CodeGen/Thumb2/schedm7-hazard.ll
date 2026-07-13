@@ -17,6 +17,7 @@ define i32 @test(ptr %x0, i32 %y, i32 %z) {
 ; CHECK-NEXT:    adds r1, #1
 ; CHECK-NEXT:    muls r0, r1, r0
 ; CHECK-NEXT:    bx lr
+;
 ; NOBANK-LABEL: test:
 ; NOBANK:       @ %bb.0: @ %entry
 ; NOBANK-NEXT:    ldr r3, [r0]

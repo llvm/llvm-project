@@ -49,6 +49,23 @@ struct dat {
 #pragma omp declare mapper(struct dat d) map(to: d.d)
 // CHECK: #pragma omp declare mapper (default : struct dat d) map(to: d.d){{$}}
 
+// Verify that nested default mappers do not lead to a crash during parsing / sema.
+// CHECK: struct inner {
+struct inner {
+  int size;
+  int *data;
+};
+#pragma omp declare mapper(struct inner i) map(i, i.data[0 : i.size])
+// CHECK: #pragma omp declare mapper (default : struct inner i) map(tofrom: default::i,i.data[0:i.size]){{$}}
+
+// CHECK: struct outer {
+struct outer {
+  int a;
+  struct inner i;
+};
+#pragma omp declare mapper(struct outer o) map(o)
+// CHECK: #pragma omp declare mapper (default : struct outer o) map(tofrom: default::o) map(tofrom: o.i){{$}}
+
 // CHECK: int main(void) {
 int main(void) {
 #pragma omp declare mapper(id: struct vec v) map(v.len)
@@ -77,6 +94,14 @@ int main(void) {
 #pragma omp declare mapper(id1: struct vec vvec) map(iterator(it=0:vvec.len:2), tofrom:vvec.data[it])
 // OMP52: #pragma omp declare mapper (id1 : struct vec vvec) map(iterator(int it = 0:vvec.len:2),tofrom: vvec.data[it]);
 #endif
+
+  {
+    struct outer outer;
+#pragma omp target map(outer)
+// CHECK: #pragma omp target map(tofrom: outer)
+    { }
+  }
+
   return 0;
 }
 // CHECK: }

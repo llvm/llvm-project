@@ -91,6 +91,12 @@ public:
                              CodeGen::Address VAListAddr, QualType Ty,
                              AggValueSlot Slot) const;
 
+  /// Emit the target dependent code to load a value of
+  /// \arg Ty from the \c __builtin_zos_va_list pointed to by \arg VAListAddr.
+  virtual RValue EmitZOSVAArg(CodeGen::CodeGenFunction &CGF,
+                              CodeGen::Address VAListAddr, QualType Ty,
+                              AggValueSlot Slot) const;
+
   virtual bool isHomogeneousAggregateBaseType(QualType Ty) const;
 
   virtual bool isHomogeneousAggregateSmallEnough(const Type *Base,
@@ -132,6 +138,16 @@ public:
   virtual llvm::FixedVectorType *
   getOptimalVectorMemoryType(llvm::FixedVectorType *T,
                              const LangOptions &Opt) const;
+
+  virtual llvm::Value *createCoercedLoad(Address SrcAddr, const ABIArgInfo &AI,
+                                         CodeGenFunction &CGF) const;
+  virtual void createCoercedStore(llvm::Value *Val, Address DstAddr,
+                                  const ABIArgInfo &AI, bool DestIsVolatile,
+                                  CodeGenFunction &CGF) const;
+
+  /// Used by Arm64EC calling convention code to call into x86 calling
+  /// convention code for varargs function.
+  virtual ABIArgInfo classifyArgForArm64ECVarArg(QualType Ty) const;
 };
 
 /// Target specific hooks for defining how a type should be passed or returned

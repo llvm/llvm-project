@@ -5,7 +5,7 @@ module m1
     integer :: parent_field
   end type parent_type
   type, extends(parent_type) :: child_type
-    integer :: child_field 
+    integer :: child_field
   end type child_type
   type parent_array_type
     integer, dimension(2) :: parent_field
@@ -21,7 +21,7 @@ module m1
   type(child_type), parameter :: child_const2 = child_type(12, 13)
   type(child_type), parameter :: array_var(2) = &
     [child_type(14, 15), child_type(16, 17)]
-  logical, parameter :: test_array_child = array_var(2)%child_field == 17 
+  logical, parameter :: test_array_child = array_var(2)%child_field == 17
   logical, parameter :: test_array_parent = array_var(2)%parent_field == 16
 
   type array_type
@@ -40,7 +40,7 @@ module m1
   type(child_array_type), parameter, dimension(2) :: child_const5 = &
     [child_array_type([22, 23], 24), child_array_type([25, 26], 27)]
   integer, dimension(2), parameter :: int_const6 = child_const5(:)%parent_field(2)
-  logical, parameter :: test_child3 = int_const6(1) == 23 
+  logical, parameter :: test_child3 = int_const6(1) == 23
 
   type(child_type), parameter :: child_const7 =  child_type(28, 29)
   type(parent_type), parameter :: parent_const8 = child_const7%parent_type
@@ -114,7 +114,7 @@ module m3
   logical, parameter :: test_parent1 = child_const1%parent_field1 == 12
   logical, parameter :: test_parent2 = child_const1%parent_field2 == 10.0
   logical, parameter :: test_parent3 = child_const1%parent_field3 .eqv. .false.
-  logical, parameter :: test_parent4 = & 
+  logical, parameter :: test_parent4 = &
     child_const1%parent_type%parent_field1 == 12
   logical, parameter :: test_parent5 = &
     child_const1%parent_type%parent_field2 == 10.0

@@ -77,6 +77,7 @@
 #include "BPF.h"
 #include "BPFCORE.h"
 #include "BPFTargetMachine.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/BTF/BTF.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -97,7 +98,6 @@
 #define DEBUG_TYPE "bpf-abstract-member-access"
 
 namespace llvm {
-constexpr StringRef BPFCoreSharedInfo::AmaAttr;
 uint32_t BPFCoreSharedInfo::SeqNum;
 
 Instruction *BPFCoreSharedInfo::insertPassThrough(Module *M, BasicBlock *BB,
@@ -209,7 +209,7 @@ bool BPFAbstractMemberAccess::run(Function &F) {
   if (SP && SP->isDefinition()) {
     for (DIType *Ty: SP->getType()->getTypeArray())
       CheckAnonRecordType(nullptr, Ty);
-    for (const DINode *DN : SP->getRetainedNodes()) {
+    for (const MDNode *DN : SP->getRetainedNodes()) {
       if (const auto *DV = dyn_cast<DILocalVariable>(DN))
         CheckAnonRecordType(nullptr, DV->getType());
     }
@@ -414,9 +414,7 @@ static void replaceWithGEP(CallInst *Call, uint32_t DimensionIndex,
 
   Constant *Zero =
       ConstantInt::get(Type::getInt32Ty(Call->getParent()->getContext()), 0);
-  SmallVector<Value *, 4> IdxList;
-  for (unsigned I = 0; I < Dimension; ++I)
-    IdxList.push_back(Zero);
+  SmallVector<Value *, 4> IdxList(Dimension, Zero);
   IdxList.push_back(Call->getArgOperand(GEPIndex));
 
   auto *GEP = GetElementPtrInst::CreateInBounds(getBaseElementType(Call),
@@ -961,11 +959,26 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
 
     // Access Index
     uint64_t AccessIndex = CInfo.AccessIndex;
-    AccessKey += ":" + std::to_string(AccessIndex);
-
     MDNode *MDN = CInfo.Metadata;
     // At this stage, it cannot be pointer type.
     auto *CTy = cast<DICompositeType>(stripQualifiers(cast<DIType>(MDN)));
+
+    uint64_t BTFIndex = AccessIndex;
+    if (CTy->getTag() == dwarf::DW_TAG_structure_type) {
+      DINodeArray Elements = CTy->getElements();
+      uint64_t Offset = getBTFRecordElementOffset(Elements[AccessIndex]);
+      // Find this element's position in the stable offset order without
+      // sorting the whole record for every CO-RE access.
+      BTFIndex = 0;
+      for (unsigned I = 0; I < Elements.size(); ++I) {
+        uint64_t ElementOffset = getBTFRecordElementOffset(Elements[I]);
+        if (ElementOffset < Offset ||
+            (ElementOffset == Offset && I < AccessIndex))
+          ++BTFIndex;
+      }
+    }
+    AccessKey += ":" + std::to_string(BTFIndex);
+
     PatchImm = GetFieldInfo(InfoKind, CTy, AccessIndex, PatchImm,
                             CInfo.RecordAlignment);
   }

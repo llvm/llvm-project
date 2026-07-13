@@ -8,7 +8,6 @@
 
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
@@ -164,6 +163,12 @@ spirv::getDefaultResourceLimits(MLIRContext *context) {
       /*max_subgroup_size=*/std::nullopt,
       /*cooperative_matrix_properties_khr=*/ArrayAttr{},
       /*cooperative_matrix_properties_nv=*/ArrayAttr{});
+}
+
+StringRef spirv::getLoopControlAttrName() { return "spirv.loop_control"; }
+
+StringRef spirv::getSelectionControlAttrName() {
+  return "spirv.selection_control";
 }
 
 StringRef spirv::getTargetEnvAttrName() { return "spirv.target_env"; }

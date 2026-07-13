@@ -108,7 +108,6 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -150,10 +149,10 @@ static CallInst *isGEPAndStore(Value *I) {
 }
 
 template <class T = Instruction>
-static DILocation *mergeDILocations(SmallVector<T *> &Insns) {
-  DILocation *Merged = (*Insns.begin())->getDebugLoc();
+static DebugLoc mergeDebugLocs(SmallVector<T *> &Insns) {
+  DebugLoc Merged = (*Insns.begin())->getDebugLoc();
   for (T *I : Insns)
-    Merged = DILocation::getMergedLocation(Merged, I->getDebugLoc());
+    Merged = DebugLoc::getMergedLocation(Merged, I->getDebugLoc());
   return Merged;
 }
 
@@ -227,7 +226,7 @@ static Instruction *makeGEPAndLoad(Module *M, GEPChainInfo &GEP,
   CallInst *Call = makeIntrinsicCall(M, Intrinsic::bpf_getelementptr_and_load,
                                      {Load->getType()}, Args);
   setParamElementType(Call, 0, GEP.SourceElementType);
-  Call->applyMergedLocation(mergeDILocations(GEP.Members), Load->getDebugLoc());
+  Call->applyMergedLocation(mergeDebugLocs(GEP.Members), Load->getDebugLoc());
   Call->setName((*GEP.Members.rbegin())->getName());
   if (Load->isUnordered()) {
     Call->setOnlyReadsMemory();
@@ -251,8 +250,7 @@ static Instruction *makeGEPAndStore(Module *M, GEPChainInfo &GEP,
   setParamElementType(Call, 1, GEP.SourceElementType);
   if (Store->getValueOperand()->getType()->isPointerTy())
     setParamReadNone(Call, 0);
-  Call->applyMergedLocation(mergeDILocations(GEP.Members),
-                            Store->getDebugLoc());
+  Call->applyMergedLocation(mergeDebugLocs(GEP.Members), Store->getDebugLoc());
   if (Store->isUnordered()) {
     Call->setOnlyWritesMemory();
     Call->setOnlyAccessesArgMemory();
@@ -392,15 +390,14 @@ static bool foldGEPChainAsU8Access(SmallVector<GetElementPtrInst *> &GEPs,
 }
 
 static void reportNonStaticGEPChain(Instruction *Insn) {
-  auto Msg = DiagnosticInfoUnsupported(
+  Insn->getContext().diagnose(DiagnosticInfoUnsupported(
       *Insn->getFunction(),
       Twine("Non-constant offset in access to a field of a type marked "
             "with preserve_static_offset might be rejected by BPF verifier")
           .concat(Insn->getDebugLoc()
                       ? ""
                       : " (pass -g option to get exact location)"),
-      Insn->getDebugLoc(), DS_Warning);
-  Insn->getContext().diagnose(Msg);
+      Insn->getDebugLoc(), DS_Warning));
 }
 
 static bool allZeroIndices(SmallVector<GetElementPtrInst *> &GEPs) {

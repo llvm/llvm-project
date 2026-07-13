@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
-template<typename T, typename U> 
+template<typename T, typename U>
 struct is_same {
   static const bool value = false;
 };
@@ -26,10 +26,10 @@ struct make_pair {
   };
 };
 
-int a0[is_same<metafun_apply2<make_pair, int, float>::type, 
+int a0[is_same<metafun_apply2<make_pair, int, float>::type,
                pair<int, float> >::value? 1 : -1];
 int a1[is_same<
-         typename make_pair::template apply<int, float>, 
+         typename make_pair::template apply<int, float>,
 #if __cplusplus <= 199711L // C++03 and earlier modes
          // expected-warning@-2 {{'template' keyword outside of a template}}
          // expected-warning@-3 {{'typename' outside of a template is a C++11 extension}}
@@ -46,7 +46,7 @@ struct swap_and_apply2 {
   };
 };
 
-int a2[is_same<swap_and_apply2<make_pair>::apply<int, float>::type, 
+int a2[is_same<swap_and_apply2<make_pair>::apply<int, float>::type,
                pair<float, int> >::value? 1 : -1];
 
 template<typename MetaFun>
@@ -57,14 +57,14 @@ struct swap_and_apply2b {
   };
 };
 
-int a3[is_same<swap_and_apply2b<make_pair>::apply<int, float>::type, 
+int a3[is_same<swap_and_apply2b<make_pair>::apply<int, float>::type,
                pair<float, int> >::value? 1 : -1];
 
 template<typename T>
 struct X0 {
   template<typename U, typename V>
   struct Inner;
-  
+
   void f0(X0<T>::Inner<T*, T&>); // expected-note{{here}}
   void f0(typename X0<T>::Inner<T*, T&>); // expected-error{{redecl}}
 
@@ -77,10 +77,10 @@ struct X0 {
 
 namespace PR6236 {
   template<typename T, typename U> struct S { };
-  
+
   template<typename T> struct S<T, T> {
     template<typename U> struct K { };
-    
+
     void f() {
       typedef typename S<T, T>::template K<T> Foo;
     }
@@ -111,9 +111,9 @@ namespace PR6463 {
   struct C { typedef const int type; }; // expected-note 2{{member type 'const int' found by ambiguous name lookup}}
 
   template<typename T>
-  struct A : B, C { 
+  struct A : B, C {
     type& a(); // expected-error{{found in multiple base classes}}
-    int x; 
+    int x;
   };
 
   // FIXME: Improve source location info here.
@@ -147,7 +147,7 @@ namespace rdar8740998 {
     // expected-error{{dependent using declaration resolved to type without 'typename'}}
 
     void f() {
-      typename X<T>::iterator i; // expected-error{{typename specifier refers to a dependent using declaration for a value 'iterator' in 'X<T>'}}
+      typename X<T>::iterator i; // expected-error{{typename specifier refers to a dependent using declaration for a value 'iterator' in 'rdar8740998::X<T>'}}
     }
   };
 

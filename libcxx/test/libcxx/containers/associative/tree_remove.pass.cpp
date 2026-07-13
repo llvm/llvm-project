@@ -13,8 +13,6 @@
 // void
 // __tree_remove(_NodePtr __root, _NodePtr __z)
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <__tree>
 #include <cassert>
 

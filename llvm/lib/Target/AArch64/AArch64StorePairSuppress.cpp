@@ -133,7 +133,7 @@ bool AArch64StorePairSuppress::runOnMachineFunction(MachineFunction &MF) {
   if (!ST.enableStorePairSuppress())
     return false;
 
-  TII = static_cast<const AArch64InstrInfo *>(ST.getInstrInfo());
+  TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
   MRI = &MF.getRegInfo();
   SchedModel.init(&ST);

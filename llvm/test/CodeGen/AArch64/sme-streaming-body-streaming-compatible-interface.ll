@@ -8,17 +8,11 @@ declare void @streaming_compatible_callee() "aarch64_pstate_sm_compatible";
 define float @sm_body_sm_compatible_simple() "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" nounwind {
 ; CHECK-LABEL: sm_body_sm_compatible_simple:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    rdsvl x9, #1
+; CHECK-NEXT:    stp d15, d14, [sp, #-64]! // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    lsr x9, x9, #3
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
-; CHECK-NEXT:    str x9, [sp, #80] // 8-byte Folded Spill
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    and x8, x0, #0x1
+; CHECK-NEXT:    mrs x8, SVCR
 ; CHECK-NEXT:    tbnz w8, #0, .LBB0_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstart sm
@@ -30,9 +24,8 @@ define float @sm_body_sm_compatible_simple() "aarch64_pstate_sm_compatible" "aar
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    fmov s0, wzr
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #64 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   ret float zeroinitializer
 }
@@ -40,17 +33,12 @@ define float @sm_body_sm_compatible_simple() "aarch64_pstate_sm_compatible" "aar
 define void @sm_body_caller_sm_compatible_caller_normal_callee() "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" nounwind {
 ; CHECK-LABEL: sm_body_caller_sm_compatible_caller_normal_callee:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    rdsvl x9, #1
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    lsr x9, x9, #3
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    and x19, x0, #0x1
+; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    mrs x19, SVCR
 ; CHECK-NEXT:    tbnz w19, #0, .LBB1_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstart sm
@@ -62,12 +50,11 @@ define void @sm_body_caller_sm_compatible_caller_normal_callee() "aarch64_pstate
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB1_4:
+; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   call void @normal_callee()
   ret void
@@ -77,35 +64,28 @@ define void @sm_body_caller_sm_compatible_caller_normal_callee() "aarch64_pstate
 define void @streaming_body_and_streaming_compatible_interface_multi_basic_block(i32 noundef %x) "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" nounwind {
 ; CHECK-LABEL: streaming_body_and_streaming_compatible_interface_multi_basic_block:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    rdsvl x9, #1
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    lsr x9, x9, #3
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    cntd x9
-; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    and x19, x0, #0x1
+; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    mrs x19, SVCR
 ; CHECK-NEXT:    tbnz w19, #0, .LBB2_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB2_2: // %entry
-; CHECK-NEXT:    cbz w8, .LBB2_6
+; CHECK-NEXT:    cbz w0, .LBB2_6
 ; CHECK-NEXT:  // %bb.3: // %if.else
 ; CHECK-NEXT:    bl streaming_compatible_callee
 ; CHECK-NEXT:    tbnz w19, #0, .LBB2_5
 ; CHECK-NEXT:  // %bb.4: // %if.else
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB2_5: // %if.else
+; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB2_6: // %if.then
 ; CHECK-NEXT:    smstop sm
@@ -115,12 +95,11 @@ define void @streaming_body_and_streaming_compatible_interface_multi_basic_block
 ; CHECK-NEXT:  // %bb.7: // %if.then
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB2_8: // %if.then
+; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %x, 0

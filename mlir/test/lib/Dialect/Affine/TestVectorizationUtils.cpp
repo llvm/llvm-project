@@ -154,7 +154,10 @@ void VectorizerTestPass::testBackwardSlicing(llvm::raw_ostream &outs) {
   patternTestSlicingOps().match(f, &matches);
   for (auto m : matches) {
     SetVector<Operation *> backwardSlice;
-    getBackwardSlice(m.getMatchedOperation(), &backwardSlice);
+    LogicalResult result =
+        getBackwardSlice(m.getMatchedOperation(), &backwardSlice);
+    assert(result.succeeded() && "expected a backward slice");
+    (void)result;
     outs << "\nmatched: " << *m.getMatchedOperation()
          << " backward static slice: ";
     for (auto *op : backwardSlice)
@@ -239,12 +242,13 @@ void VectorizerTestPass::testVecAffineLoopNest(llvm::raw_ostream &outs) {
   strategy.vectorSizes.push_back(4 /*vectorization factor*/);
   strategy.loopToVectorDim[outermostLoop] = 0;
 
-  ReductionLoopMap reductionLoops;
   SmallVector<LoopReduction, 2> reductions;
   if (!isLoopParallel(outermostLoop, &reductions)) {
     outs << "Outermost loop cannot be parallel\n";
     return;
   }
+  if (!reductions.empty())
+    strategy.reductionLoops[outermostLoop] = reductions;
   std::vector<SmallVector<AffineForOp, 2>> loopsToVectorize;
   loopsToVectorize.push_back({outermostLoop});
   (void)vectorizeAffineLoopNest(loopsToVectorize, strategy);

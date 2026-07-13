@@ -14,13 +14,14 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: apply_ne
     ; CHECK: liveins: $w0
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %one:_(s32) = G_CONSTANT i32 1
-    ; CHECK: %known_zero_or_one:_(s32) = G_AND %x, %one
-    ; CHECK: %cmp:_(s1) = G_TRUNC %known_zero_or_one(s32)
-    ; CHECK: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK: $w0 = COPY %ext(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %one:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %known_zero_or_one:_(s32) = G_AND %x, %one
+    ; CHECK-NEXT: %cmp:_(s1) = G_TRUNC %known_zero_or_one(s32)
+    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
+    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %one:_(s32) = G_CONSTANT i32 1
     %known_zero_or_one:_(s32) = G_AND %x, %one
@@ -41,13 +42,14 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: apply_eq
     ; CHECK: liveins: $w0
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %one:_(s32) = G_CONSTANT i32 1
-    ; CHECK: %known_zero_or_one:_(s32) = G_AND %x, %one
-    ; CHECK: %cmp:_(s1) = G_TRUNC %known_zero_or_one(s32)
-    ; CHECK: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK: $w0 = COPY %ext(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %one:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %known_zero_or_one:_(s32) = G_AND %x, %one
+    ; CHECK-NEXT: %cmp:_(s1) = G_TRUNC %known_zero_or_one(s32)
+    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
+    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %one:_(s32) = G_CONSTANT i32 1
     %known_zero_or_one:_(s32) = G_AND %x, %one
@@ -69,14 +71,15 @@ body:             |
 
     ; CHECK-LABEL: name: dont_apply_wrong_cst_eq
     ; CHECK: liveins: $w0
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %one:_(s32) = G_CONSTANT i32 1
-    ; CHECK: %known_zero_or_one:_(s32) = G_AND %x, %one
-    ; CHECK: %wrong_cst:_(s32) = G_CONSTANT i32 10
-    ; CHECK: %cmp:_(s1) = G_ICMP intpred(eq), %known_zero_or_one(s32), %wrong_cst
-    ; CHECK: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK: $w0 = COPY %ext(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %one:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %known_zero_or_one:_(s32) = G_AND %x, %one
+    ; CHECK-NEXT: %wrong_cst:_(s32) = G_CONSTANT i32 10
+    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(eq), %known_zero_or_one(s32), %wrong_cst
+    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
+    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %one:_(s32) = G_CONSTANT i32 1
     %known_zero_or_one:_(s32) = G_AND %x, %one
@@ -99,14 +102,15 @@ body:             |
 
     ; CHECK-LABEL: name: dont_apply_wrong_cst_ne
     ; CHECK: liveins: $w0
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %one:_(s32) = G_CONSTANT i32 1
-    ; CHECK: %known_zero_or_one:_(s32) = G_AND %x, %one
-    ; CHECK: %wrong_cst:_(s32) = G_CONSTANT i32 10
-    ; CHECK: %cmp:_(s1) = G_ICMP intpred(ne), %known_zero_or_one(s32), %wrong_cst
-    ; CHECK: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK: $w0 = COPY %ext(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %one:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %known_zero_or_one:_(s32) = G_AND %x, %one
+    ; CHECK-NEXT: %wrong_cst:_(s32) = G_CONSTANT i32 10
+    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(ne), %known_zero_or_one(s32), %wrong_cst
+    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
+    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %one:_(s32) = G_CONSTANT i32 1
     %known_zero_or_one:_(s32) = G_AND %x, %one
@@ -166,12 +170,13 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: apply_no_zext_or_trunc
     ; CHECK: liveins: $w0
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %one:_(s32) = G_CONSTANT i32 1
-    ; CHECK: %known_zero_or_one:_(s32) = G_AND %x, %one
-    ; CHECK: %cmp:_(s32) = COPY %known_zero_or_one(s32)
-    ; CHECK: $w0 = COPY %cmp(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %one:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %known_zero_or_one:_(s32) = G_AND %x, %one
+    ; CHECK-NEXT: %cmp:_(s32) = COPY %known_zero_or_one(s32)
+    ; CHECK-NEXT: $w0 = COPY %cmp(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %one:_(s32) = G_CONSTANT i32 1
     %known_zero_or_one:_(s32) = G_AND %x, %one
@@ -191,13 +196,14 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: apply_wide_cmp
     ; CHECK: liveins: $w0
-    ; CHECK: %x:_(s64) = COPY $x0
-    ; CHECK: %one:_(s64) = G_CONSTANT i64 1
-    ; CHECK: %known_zero_or_one:_(s64) = G_AND %x, %one
-    ; CHECK: %cmp:_(s64) = COPY %known_zero_or_one(s64)
-    ; CHECK: %trunc:_(s32) = G_TRUNC %cmp(s64)
-    ; CHECK: $w0 = COPY %trunc(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s64) = COPY $x0
+    ; CHECK-NEXT: %one:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: %known_zero_or_one:_(s64) = G_AND %x, %one
+    ; CHECK-NEXT: %cmp:_(s64) = COPY %known_zero_or_one(s64)
+    ; CHECK-NEXT: %trunc:_(s32) = G_TRUNC %cmp(s64)
+    ; CHECK-NEXT: $w0 = COPY %trunc(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s64) = COPY $x0
     %one:_(s64) = G_CONSTANT i64 1
     %known_zero_or_one:_(s64) = G_AND %x, %one
@@ -218,12 +224,13 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: apply_narrow_lhs
     ; CHECK: liveins: $w0
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %one:_(s32) = G_CONSTANT i32 1
-    ; CHECK: %known_zero_or_one:_(s32) = G_AND %x, %one
-    ; CHECK: %cmp:_(s64) = G_ZEXT %known_zero_or_one(s32)
-    ; CHECK: $x0 = COPY %cmp(s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %one:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %known_zero_or_one:_(s32) = G_AND %x, %one
+    ; CHECK-NEXT: %cmp:_(s64) = G_ZEXT %known_zero_or_one(s32)
+    ; CHECK-NEXT: $x0 = COPY %cmp(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %x:_(s32) = COPY $w0
     %one:_(s32) = G_CONSTANT i32 1
     %known_zero_or_one:_(s32) = G_AND %x, %one

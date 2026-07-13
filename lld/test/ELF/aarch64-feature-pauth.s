@@ -7,14 +7,18 @@
 # RUN: ld.lld -shared tag1.o tag1a.o -o tagok.so
 # RUN: llvm-readelf -n tagok.so | FileCheck --check-prefix OK %s
 
-# OK: AArch64 PAuth ABI core info: platform 0x2a (unknown), version 0x1
+# OK: AArch64 PAuth ABI core info: platform 0x142 (unknown), version 0x1
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu abi-tag2.s -o tag2.o
 # RUN: not ld.lld tag1.o tag1a.o tag2.o -o /dev/null 2>&1 | FileCheck --check-prefix ERR1 %s
 
 # ERR1:      error: incompatible values of AArch64 PAuth core info found
-# ERR1-NEXT: >>> tag1.o: 0x2a000000000000000{{1|2}}00000000000000
-# ERR1-NEXT: >>> tag2.o: 0x2a000000000000000{{1|2}}00000000000000
+# ERR1-NEXT: platform:
+# ERR1-NEXT: >>> tag1.o: 0x0000000000000142
+# ERR1-NEXT: >>> tag2.o: 0x0000000000000142
+# ERR1-NEXT: version:
+# ERR1-NEXT: >>> tag1.o: 0x0000000000000001
+# ERR1-NEXT: >>> tag2.o: 0x0000000000000002
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu abi-tag-short.s -o short.o
 # RUN: not ld.lld short.o -o /dev/null 2>&1 | FileCheck --check-prefix ERR2 %s
@@ -121,12 +125,12 @@
 .asciz "GNU"
 .long 0xc0000001
 .long 16
-.quad 42 // platform
-.quad 1  // version
+.quad 322 // platform
+.quad 1   // version
 .long 0xc0000001
 .long 16
-.quad 42 // platform
-.quad 1  // version
+.quad 322 // platform
+.quad 1   // version
 
 #--- abi-tag1.s
 
@@ -137,8 +141,8 @@
 .asciz "GNU"
 .long 0xc0000001
 .long 16
-.quad 42 // platform
-.quad 1  // version
+.quad 322 // platform
+.quad 1   // version
 
 #--- abi-tag2.s
 
@@ -149,8 +153,8 @@
 .asciz "GNU"
 .long 0xc0000001
 .long 16
-.quad 42 // platform
-.quad 2  // version
+.quad 322 // platform
+.quad 2   // version
 
 #--- abi-tag-zero.s
 

@@ -231,6 +231,13 @@ namespace DeprecatedVolatile {
     a = c = a;
     b += a;
   }
+
+  volatile struct amber jurassic();
+    // cxx20-warning@-1 {{volatile-qualified return type 'volatile struct amber' is deprecated}}
+  void trex(volatile short left_arm, volatile struct amber right_arm);
+    // cxx20-warning@-1 {{volatile-qualified parameter type 'volatile short' is deprecated}}
+    // cxx20-warning@-2 {{volatile-qualified parameter type 'volatile struct amber' is deprecated}}
+  void fly(volatile struct pterosaur* pteranodon);
 }
 
 namespace ArithConv {

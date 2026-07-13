@@ -544,6 +544,34 @@ func.func @dynamic_dimension_index() {
 
 // -----
 
+func.func @dynamic_linearized_index() {
+  "unknown.region"() ({
+    %idx = "unknown.test"() : () -> (index)
+    %memref = "unknown.test"() : () -> memref<?xf32>
+    %pos = affine.linearize_index [%idx, %idx] by (8) : index
+    // expected-error@below {{op operand cannot be used as a dimension id}}
+    affine.load %memref[%pos] : memref<?xf32>
+    "unknown.terminator"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+func.func @dynamic_delinearized_index() {
+  "unknown.region"() ({
+    %idx = "unknown.test"() : () -> (index)
+    %memref = "unknown.test"() : () -> memref<?x?xf32>
+    %pos0, %pos1 = affine.delinearize_index %idx into (8) : index, index
+    // expected-error@below {{op operand cannot be used as a dimension id}}
+    affine.load %memref[%pos0, %pos1] : memref<?x?xf32>
+    "unknown.terminator"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
 #map = affine_map<() -> ()>
 #map1 = affine_map<() -> (1)>
 func.func @no_lower_bound() {
@@ -575,5 +603,32 @@ func.func @invalid_symbol() {
       }
     }
   }
+  return
+}
+
+
+// -----
+
+// Regression test: affine.for with step 0 must be rejected by the parser.
+// https://github.com/llvm/llvm-project/issues/107812
+func.func @affine_for_zero_step_parser(%mem : memref<8xf32>) {
+  // expected-error@+1 {{expected step to be representable as a positive signed integer}}
+  affine.for %i = 0 to 8 step 0 {
+    affine.load %mem[%i] : memref<8xf32>
+  }
+  return
+}
+
+// -----
+
+// Regression test: affine.for with step 0 constructed via generic syntax must
+// be rejected by the verifier.
+// https://github.com/llvm/llvm-project/issues/107812
+func.func @affine_for_zero_step_verifier() {
+  // expected-error@+1 {{'affine.for' op expected step to be a positive integer, got 0}}
+  "affine.for"() <{lowerBoundMap = affine_map<() -> (0)>, operandSegmentSizes = array<i32: 0, 0, 0>, step = 0 : index, upperBoundMap = affine_map<() -> (8)>}> ({
+  ^bb0(%i : index):
+    "affine.yield"() : () -> ()
+  }) : () -> ()
   return
 }

@@ -1,7 +1,11 @@
+; RUN: llc -mtriple=hexagon  < %s -o - | FileCheck %s --check-prefix=CHECK
 ; RUN: llc -mtriple=hexagon -mattr=+hvxv79,+hvx-length64b < %s -o - | FileCheck %s --check-prefix=CHECK-64
 ; RUN: llc -mtriple=hexagon -mattr=+hvxv79,+hvx-length128b < %s -o - | FileCheck %s --check-prefix=CHECK-128
 
 ; CHECK-LABEL: compare_vectors
+; CHECK: [[REG8:(r[0-9]+):[0-9]]] = CONST64(#72340172838076673)
+; CHECK: r{{[0-9]+}}:{{[0-9]+}} = and(r{{[0-9]+}}:{{[0-9]+}},[[REG8]])
+; CHECK: r{{[0-9]+}}:{{[0-9]+}} = and(r{{[0-9]+}}:{{[0-9]+}},[[REG8]])
 ; CHECK-64: [[REG1:(q[0-9]+)]] = vcmp.eq(v{{[0-9]+}}.h,v{{[0-9]+}}.h)
 ; CHECK-64: [[REG2:(r[0-9]+)]] = #-1
 ; CHECK-64: v0 = vand([[REG1]],[[REG2]])
@@ -21,6 +25,8 @@ entry:
 }
 
 ; CHECK-LABEL: f.1:
+; CHECK: [[REG9:(r[0-9]+)]] = and([[REG9]],##16843009)
+; CHECK: [[REG10:(r[0-9]+)]] = and([[REG10]],##16843009)
 ; CHECK-64: [[REG3:(q[0-9]+)]] = vand(v0,r{{[0-9]+}})
 ; CHECK-64: [[REG4:(v[0-9]+)]] = vand([[REG3]],r{{[0-9]+}})
 ; CHECK-64: r{{[0-9]+}} = vextract([[REG4]],r{{[0-9]+}})

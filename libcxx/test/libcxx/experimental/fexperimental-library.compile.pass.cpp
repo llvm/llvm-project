@@ -14,9 +14,11 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -fexperimental-library
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <version>
+
+#if !_LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
+#  error "-fexperimental-library should enable optional::iterator"
+#endif
 
 #if !_LIBCPP_HAS_EXPERIMENTAL_PSTL
 #  error "-fexperimental-library should enable the PSTL"
@@ -28,4 +30,8 @@
 
 #if !_LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 #  error "-fexperimental-library should enable the syncstream header"
+#endif
+
+#if !_LIBCPP_HAS_EXPERIMENTAL_HARDENING_OBSERVE_SEMANTIC
+#  error "-fexperimental-library should allow using the Hardening observe semantic"
 #endif

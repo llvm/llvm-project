@@ -24,13 +24,12 @@ using namespace llvm;
 namespace {
 class PseudoLoweringEmitter {
   struct OpData {
-    enum MapKind { Operand, Imm, Reg };
-    MapKind Kind;
+    enum MapKind { Operand, Imm, Reg } Kind;
     union {
-      unsigned Operand; // Operand number mapped to.
-      uint64_t Imm;     // Integer immedate value.
-      const Record *Reg; // Physical register.
-    } Data;
+      unsigned OpNo;        // Operand number mapped to.
+      uint64_t ImmVal;      // Integer immedate value.
+      const Record *RegRec; // Physical register.
+    };
   };
   struct PseudoExpansion {
     CodeGenInstruction Source; // The source pseudo instruction definition.
@@ -77,10 +76,11 @@ void PseudoLoweringEmitter::addOperandMapping(
     // Physical register reference. Explicit check for the special case
     // "zero_reg" definition.
     if (DI->getDef()->isSubClassOf("Register") ||
+        DI->getDef()->isSubClassOf("RegisterByHwMode") ||
         DI->getDef()->getName() == "zero_reg") {
       auto &Entry = OperandMap[MIOpNo];
       Entry.Kind = OpData::Reg;
-      Entry.Data.Reg = DI->getDef();
+      Entry.RegRec = DI->getDef();
       return;
     }
 
@@ -111,7 +111,7 @@ void PseudoLoweringEmitter::addOperandMapping(
     for (unsigned I = 0, E = NumOps; I != E; ++I) {
       auto &Entry = OperandMap[MIOpNo + I];
       Entry.Kind = OpData::Operand;
-      Entry.Data.Operand = SrcOpnd.MIOperandNo + I;
+      Entry.OpNo = SrcOpnd.MIOperandNo + I;
     }
 
     LLVM_DEBUG(dbgs() << "    " << SourceOp->getValue() << " ==> " << DagIdx
@@ -120,14 +120,15 @@ void PseudoLoweringEmitter::addOperandMapping(
     assert(NumOps == 1);
     auto &Entry = OperandMap[MIOpNo];
     Entry.Kind = OpData::Imm;
-    Entry.Data.Imm = II->getValue();
+    Entry.ImmVal = II->getValue();
   } else if (const auto *BI = dyn_cast<BitsInit>(DagArg)) {
     assert(NumOps == 1);
     auto &Entry = OperandMap[MIOpNo];
     Entry.Kind = OpData::Imm;
-    Entry.Data.Imm = *BI->convertInitializerToInt();
-  } else
+    Entry.ImmVal = *BI->convertInitializerToInt();
+  } else {
     llvm_unreachable("Unhandled pseudo-expansion argument type!");
+  }
 }
 
 void PseudoLoweringEmitter::evaluateExpansion(const Record *Rec) {
@@ -229,11 +230,10 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
     for (auto &Expansion : Expansions) {
       CodeGenInstruction &Source = Expansion.Source;
       CodeGenInstruction &Dest = Expansion.Dest;
-      o << "  case " << Source.Namespace << "::" << Source.TheDef->getName()
-        << ": {\n"
+      o << "  case " << Source.Namespace << "::" << Source.getName() << ": {\n"
         << "    MCOperand MCOp;\n"
-        << "    Inst.setOpcode(" << Dest.Namespace
-        << "::" << Dest.TheDef->getName() << ");\n";
+        << "    Inst.setOpcode(" << Dest.Namespace << "::" << Dest.getName()
+        << ");\n";
 
       // Copy the operands from the source instruction.
       // FIXME: Instruction operands with defaults values (predicates and cc_out
@@ -246,21 +246,26 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
           switch (Expansion.OperandMap[MIOpNo + i].Kind) {
           case OpData::Operand:
             o << "    lowerOperand(MI->getOperand("
-              << Expansion.OperandMap[MIOpNo + i].Data.Operand << "), MCOp);\n"
+              << Expansion.OperandMap[MIOpNo + i].OpNo << "), MCOp);\n"
               << "    Inst.addOperand(MCOp);\n";
             break;
           case OpData::Imm:
             o << "    Inst.addOperand(MCOperand::createImm("
-              << Expansion.OperandMap[MIOpNo + i].Data.Imm << "));\n";
+              << Expansion.OperandMap[MIOpNo + i].ImmVal << "));\n";
             break;
           case OpData::Reg: {
-            const Record *Reg = Expansion.OperandMap[MIOpNo + i].Data.Reg;
+            const Record *Reg = Expansion.OperandMap[MIOpNo + i].RegRec;
             o << "    Inst.addOperand(MCOperand::createReg(";
             // "zero_reg" is special.
-            if (Reg->getName() == "zero_reg")
+            if (Reg->getName() == "zero_reg") {
               o << "0";
-            else
+            } else if (Reg->isSubClassOf("RegisterByHwMode")) {
+              RegisterByHwMode(Reg, Target.getRegBank())
+                  .emitResolverCall(
+                      o, "STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo)");
+            } else {
               o << Reg->getValueAsString("Namespace") << "::" << Reg->getName();
+            }
             o << "));\n";
             break;
           }
@@ -281,8 +286,9 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
         << "  }\n";
     }
     o << "  }\n  return true;";
-  } else
+  } else {
     o << "  return false;";
+  }
 
   o << "\n}\n\n";
 }

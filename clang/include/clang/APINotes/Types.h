@@ -46,6 +46,8 @@ enum class SwiftNewTypeKind {
   Enum,
 };
 
+enum class SwiftSafetyKind { Unspecified, Safe, Unsafe, None };
+
 /// Describes API notes data for any entity.
 ///
 /// This is used as the base of all API notes.
@@ -71,13 +73,19 @@ private:
   LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftPrivate : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SwiftSafetyAudited : 1;
+
+  LLVM_PREFERRED_TYPE(SwiftSafetyKind)
+  unsigned SwiftSafety : 2;
+
 public:
   /// Swift name of this entity.
   std::string SwiftName;
 
   CommonEntityInfo()
       : Unavailable(0), UnavailableInSwift(0), SwiftPrivateSpecified(0),
-        SwiftPrivate(0) {}
+        SwiftPrivate(0), SwiftSafetyAudited(0), SwiftSafety(0) {}
 
   std::optional<bool> isSwiftPrivate() const {
     return SwiftPrivateSpecified ? std::optional<bool>(SwiftPrivate)
@@ -87,6 +95,17 @@ public:
   void setSwiftPrivate(std::optional<bool> Private) {
     SwiftPrivateSpecified = Private.has_value();
     SwiftPrivate = Private.value_or(0);
+  }
+
+  std::optional<SwiftSafetyKind> getSwiftSafety() const {
+    return SwiftSafetyAudited ? std::optional<SwiftSafetyKind>(
+                                    static_cast<SwiftSafetyKind>(SwiftSafety))
+                              : std::nullopt;
+  }
+
+  void setSwiftSafety(SwiftSafetyKind Safety) {
+    SwiftSafetyAudited = 1;
+    SwiftSafety = static_cast<unsigned>(Safety);
   }
 
   friend bool operator==(const CommonEntityInfo &, const CommonEntityInfo &);
@@ -108,6 +127,9 @@ public:
     if (!SwiftPrivateSpecified)
       setSwiftPrivate(RHS.isSwiftPrivate());
 
+    if (!SwiftSafetyAudited && RHS.SwiftSafetyAudited)
+      setSwiftSafety(*RHS.getSwiftSafety());
+
     if (SwiftName.empty())
       SwiftName = RHS.SwiftName;
 
@@ -123,7 +145,9 @@ inline bool operator==(const CommonEntityInfo &LHS,
          LHS.Unavailable == RHS.Unavailable &&
          LHS.UnavailableInSwift == RHS.UnavailableInSwift &&
          LHS.SwiftPrivateSpecified == RHS.SwiftPrivateSpecified &&
-         LHS.SwiftPrivate == RHS.SwiftPrivate && LHS.SwiftName == RHS.SwiftName;
+         LHS.SwiftPrivate == RHS.SwiftPrivate &&
+         LHS.SwiftSafetyAudited == RHS.SwiftSafetyAudited &&
+         LHS.SwiftSafety == RHS.SwiftSafety && LHS.SwiftName == RHS.SwiftName;
 }
 
 inline bool operator!=(const CommonEntityInfo &LHS,
@@ -140,6 +164,9 @@ class CommonTypeInfo : public CommonEntityInfo {
 
   /// The NS error domain for this type.
   std::optional<std::string> NSErrorDomain;
+
+  /// The Swift protocol that this type should be automatically conformed to.
+  std::optional<std::string> SwiftConformance;
 
 public:
   CommonTypeInfo() {}
@@ -165,6 +192,14 @@ public:
                            : std::nullopt;
   }
 
+  std::optional<std::string> getSwiftConformance() const {
+    return SwiftConformance;
+  }
+
+  void setSwiftConformance(std::optional<std::string> conformance) {
+    SwiftConformance = conformance;
+  }
+
   friend bool operator==(const CommonTypeInfo &, const CommonTypeInfo &);
 
   CommonTypeInfo &operator|=(const CommonTypeInfo &RHS) {
@@ -175,6 +210,8 @@ public:
       setSwiftBridge(RHS.getSwiftBridge());
     if (!NSErrorDomain)
       setNSErrorDomain(RHS.getNSErrorDomain());
+    if (SwiftConformance)
+      setSwiftConformance(RHS.getSwiftConformance());
 
     return *this;
   }
@@ -185,7 +222,8 @@ public:
 inline bool operator==(const CommonTypeInfo &LHS, const CommonTypeInfo &RHS) {
   return static_cast<const CommonEntityInfo &>(LHS) == RHS &&
          LHS.SwiftBridge == RHS.SwiftBridge &&
-         LHS.NSErrorDomain == RHS.NSErrorDomain;
+         LHS.NSErrorDomain == RHS.NSErrorDomain &&
+         LHS.SwiftConformance == RHS.SwiftConformance;
 }
 
 inline bool operator!=(const CommonTypeInfo &LHS, const CommonTypeInfo &RHS) {
@@ -195,13 +233,9 @@ inline bool operator!=(const CommonTypeInfo &LHS, const CommonTypeInfo &RHS) {
 /// Describes API notes data for an Objective-C class or protocol or a C++
 /// namespace.
 class ContextInfo : public CommonTypeInfo {
-  /// Whether this class has a default nullability.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned HasDefaultNullability : 1;
-
-  /// The default nullability.
-  LLVM_PREFERRED_TYPE(NullabilityKind)
-  unsigned DefaultNullability : 2;
+  /// The default nullability, if any.
+  LLVM_PREFERRED_TYPE(NullabilityKindOrNone)
+  unsigned DefaultNullabilityOrNone : 3;
 
   /// Whether this class has designated initializers recorded.
   LLVM_PREFERRED_TYPE(bool)
@@ -219,7 +253,7 @@ class ContextInfo : public CommonTypeInfo {
 
 public:
   ContextInfo()
-      : HasDefaultNullability(0), DefaultNullability(0), HasDesignatedInits(0),
+      : DefaultNullabilityOrNone(0), HasDesignatedInits(0),
         SwiftImportAsNonGenericSpecified(false), SwiftImportAsNonGeneric(false),
         SwiftObjCMembersSpecified(false), SwiftObjCMembers(false) {}
 
@@ -228,17 +262,15 @@ public:
   ///
   /// Returns the default nullability, if implied, or std::nullopt if there is
   /// none.
-  std::optional<NullabilityKind> getDefaultNullability() const {
-    return HasDefaultNullability
-               ? std::optional<NullabilityKind>(
-                     static_cast<NullabilityKind>(DefaultNullability))
-               : std::nullopt;
+  NullabilityKindOrNone getDefaultNullability() const {
+    return NullabilityKindOrNone::fromInternalRepresentation(
+        DefaultNullabilityOrNone);
   }
 
   /// Set the default nullability for properties and methods of this class.
   void setDefaultNullability(NullabilityKind Kind) {
-    HasDefaultNullability = true;
-    DefaultNullability = static_cast<unsigned>(Kind);
+    DefaultNullabilityOrNone =
+        NullabilityKindOrNone(Kind).toInternalRepresentation();
   }
 
   bool hasDesignatedInits() const { return HasDesignatedInits; }
@@ -300,32 +332,97 @@ inline bool operator!=(const ContextInfo &LHS, const ContextInfo &RHS) {
   return !(LHS == RHS);
 }
 
+class BoundsSafetyInfo {
+public:
+  enum class BoundsSafetyKind {
+    CountedBy,
+    CountedByOrNull,
+    SizedBy,
+    SizedByOrNull,
+    EndedBy,
+  };
+
+private:
+  /// The kind of bounds safety for this property. Only valid if the bounds
+  /// safety has been audited.
+  LLVM_PREFERRED_TYPE(BoundsSafetyKind)
+  unsigned Kind : 3;
+
+  /// Whether the bounds safety kind has been audited.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned KindAudited : 1;
+
+  /// The pointer indirection level at which the bounds annotation applies.
+  /// Only valid if LevelAudited is set.
+  unsigned Level : 3;
+
+  /// Whether the pointer indirection level has been specified.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned LevelAudited : 1;
+
+public:
+  std::string ExternalBounds;
+
+  BoundsSafetyInfo()
+      : Kind(0), KindAudited(false), Level(0), LevelAudited(false),
+        ExternalBounds("") {}
+
+  std::optional<BoundsSafetyKind> getKind() const {
+    return KindAudited ? std::optional<BoundsSafetyKind>(
+                             static_cast<BoundsSafetyKind>(Kind))
+                       : std::nullopt;
+  }
+
+  void setKindAudited(BoundsSafetyKind kind) {
+    KindAudited = true;
+    Kind = static_cast<unsigned>(kind);
+  }
+
+  std::optional<unsigned> getLevel() const {
+    return LevelAudited ? std::optional<unsigned>(Level) : std::nullopt;
+  }
+
+  void setLevelAudited(unsigned level) {
+    LevelAudited = true;
+    Level = level;
+  }
+
+  friend bool operator==(const BoundsSafetyInfo &, const BoundsSafetyInfo &);
+
+  LLVM_DUMP_METHOD void dump(llvm::raw_ostream &OS) const;
+};
+
+inline bool operator==(const BoundsSafetyInfo &LHS,
+                       const BoundsSafetyInfo &RHS) {
+  return LHS.KindAudited == RHS.KindAudited && LHS.Kind == RHS.Kind &&
+         LHS.LevelAudited == RHS.LevelAudited && LHS.Level == RHS.Level &&
+         LHS.ExternalBounds == RHS.ExternalBounds;
+}
+
+inline bool operator!=(const BoundsSafetyInfo &LHS,
+                       const BoundsSafetyInfo &RHS) {
+  return !(LHS == RHS);
+}
+
 /// API notes for a variable/property.
 class VariableInfo : public CommonEntityInfo {
-  /// Whether this property has been audited for nullability.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned NullabilityAudited : 1;
-
-  /// The kind of nullability for this property. Only valid if the nullability
+  /// The kind of nullability for this property, if the nullability
   /// has been audited.
-  LLVM_PREFERRED_TYPE(NullabilityKind)
-  unsigned Nullable : 2;
+  LLVM_PREFERRED_TYPE(NullabilityKindOrNone)
+  unsigned NullabilityOrNone : 3;
 
   /// The C type of the variable, as a string.
   std::string Type;
 
 public:
-  VariableInfo() : NullabilityAudited(false), Nullable(0) {}
+  VariableInfo() : NullabilityOrNone(0) {}
 
-  std::optional<NullabilityKind> getNullability() const {
-    return NullabilityAudited ? std::optional<NullabilityKind>(
-                                    static_cast<NullabilityKind>(Nullable))
-                              : std::nullopt;
+  NullabilityKindOrNone getNullability() const {
+    return NullabilityKindOrNone::fromInternalRepresentation(NullabilityOrNone);
   }
 
   void setNullabilityAudited(NullabilityKind kind) {
-    NullabilityAudited = true;
-    Nullable = static_cast<unsigned>(kind);
+    NullabilityOrNone = NullabilityKindOrNone(kind).toInternalRepresentation();
   }
 
   const std::string &getType() const { return Type; }
@@ -336,7 +433,7 @@ public:
   VariableInfo &operator|=(const VariableInfo &RHS) {
     static_cast<CommonEntityInfo &>(*this) |= RHS;
 
-    if (!NullabilityAudited && RHS.NullabilityAudited)
+    if (!getNullability() && RHS.getNullability())
       setNullabilityAudited(*RHS.getNullability());
     if (Type.empty())
       Type = RHS.Type;
@@ -349,8 +446,7 @@ public:
 
 inline bool operator==(const VariableInfo &LHS, const VariableInfo &RHS) {
   return static_cast<const CommonEntityInfo &>(LHS) == RHS &&
-         LHS.NullabilityAudited == RHS.NullabilityAudited &&
-         LHS.Nullable == RHS.Nullable && LHS.Type == RHS.Type;
+         LHS.NullabilityOrNone == RHS.NullabilityOrNone && LHS.Type == RHS.Type;
 }
 
 inline bool operator!=(const VariableInfo &LHS, const VariableInfo &RHS) {
@@ -439,10 +535,12 @@ class ParamInfo : public VariableInfo {
   unsigned RawRetainCountConvention : 3;
 
 public:
+  std::optional<BoundsSafetyInfo> BoundsSafety;
+
   ParamInfo()
       : NoEscapeSpecified(false), NoEscape(false),
         LifetimeboundSpecified(false), Lifetimebound(false),
-        RawRetainCountConvention() {}
+        RawRetainCountConvention(), BoundsSafety(std::nullopt) {}
 
   std::optional<bool> isNoEscape() const {
     return NoEscapeSpecified ? std::optional<bool>(NoEscape) : std::nullopt;
@@ -488,6 +586,9 @@ public:
     if (!RawRetainCountConvention)
       RawRetainCountConvention = RHS.RawRetainCountConvention;
 
+    if (!BoundsSafety)
+      BoundsSafety = RHS.BoundsSafety;
+
     return *this;
   }
 
@@ -502,7 +603,8 @@ inline bool operator==(const ParamInfo &LHS, const ParamInfo &RHS) {
          LHS.NoEscape == RHS.NoEscape &&
          LHS.LifetimeboundSpecified == RHS.LifetimeboundSpecified &&
          LHS.Lifetimebound == RHS.Lifetimebound &&
-         LHS.RawRetainCountConvention == RHS.RawRetainCountConvention;
+         LHS.RawRetainCountConvention == RHS.RawRetainCountConvention &&
+         LHS.BoundsSafety == RHS.BoundsSafety;
 }
 
 inline bool operator!=(const ParamInfo &LHS, const ParamInfo &RHS) {
@@ -532,6 +634,10 @@ public:
   /// A biased RetainCountConventionKind, where 0 means "unspecified".
   unsigned RawRetainCountConvention : 3;
 
+  /// Whether the function has the [[clang::unsafe_buffer_usage]] attribute
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned UnsafeBufferUsage : 1;
+
   // NullabilityKindSize bits are used to encode the nullability. The info
   // about the return type is stored at position 0, followed by the nullability
   // of the parameters.
@@ -550,7 +656,7 @@ public:
 
   FunctionInfo()
       : NullabilityAudited(false), NumAdjustedNullable(0),
-        RawRetainCountConvention() {}
+        RawRetainCountConvention(), UnsafeBufferUsage(0) {}
 
   static unsigned getMaxNullabilityIndex() {
     return ((sizeof(NullabilityPayload) * CHAR_BIT) / NullabilityKindSize);
@@ -622,6 +728,7 @@ public:
 inline bool operator==(const FunctionInfo &LHS, const FunctionInfo &RHS) {
   return static_cast<const CommonEntityInfo &>(LHS) == RHS &&
          LHS.NullabilityAudited == RHS.NullabilityAudited &&
+         LHS.UnsafeBufferUsage == RHS.UnsafeBufferUsage &&
          LHS.NumAdjustedNullable == RHS.NumAdjustedNullable &&
          LHS.NullabilityPayload == RHS.NullabilityPayload &&
          LHS.ResultType == RHS.ResultType && LHS.Params == RHS.Params &&
@@ -737,9 +844,8 @@ public:
   std::optional<std::string> SwiftImportAs;
   std::optional<std::string> SwiftRetainOp;
   std::optional<std::string> SwiftReleaseOp;
-
-  /// The Swift protocol that this type should be automatically conformed to.
-  std::optional<std::string> SwiftConformance;
+  std::optional<std::string> SwiftDestroyOp;
+  std::optional<std::string> SwiftDefaultOwnership;
 
   std::optional<EnumExtensibilityKind> EnumExtensibility;
 
@@ -786,9 +892,10 @@ public:
       SwiftRetainOp = RHS.SwiftRetainOp;
     if (!SwiftReleaseOp)
       SwiftReleaseOp = RHS.SwiftReleaseOp;
-
-    if (!SwiftConformance)
-      SwiftConformance = RHS.SwiftConformance;
+    if (!SwiftDestroyOp)
+      SwiftDestroyOp = RHS.SwiftDestroyOp;
+    if (!SwiftDefaultOwnership)
+      SwiftDefaultOwnership = RHS.SwiftDefaultOwnership;
 
     if (!HasFlagEnum)
       setFlagEnum(RHS.isFlagEnum());
@@ -815,7 +922,8 @@ inline bool operator==(const TagInfo &LHS, const TagInfo &RHS) {
          LHS.SwiftImportAs == RHS.SwiftImportAs &&
          LHS.SwiftRetainOp == RHS.SwiftRetainOp &&
          LHS.SwiftReleaseOp == RHS.SwiftReleaseOp &&
-         LHS.SwiftConformance == RHS.SwiftConformance &&
+         LHS.SwiftDestroyOp == RHS.SwiftDestroyOp &&
+         LHS.SwiftDefaultOwnership == RHS.SwiftDefaultOwnership &&
          LHS.isFlagEnum() == RHS.isFlagEnum() &&
          LHS.isSwiftCopyable() == RHS.isSwiftCopyable() &&
          LHS.isSwiftEscapable() == RHS.isSwiftEscapable() &&

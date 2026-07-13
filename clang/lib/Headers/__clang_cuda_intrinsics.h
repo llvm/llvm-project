@@ -449,36 +449,304 @@ inline __device__ double2 __ldg(const double2 *ptr) {
 inline __device__ unsigned __funnelshift_l(unsigned low32, unsigned high32,
                                            unsigned shiftWidth) {
   unsigned result;
-  asm("shf.l.wrap.b32 %0, %1, %2, %3;"
-      : "=r"(result)
-      : "r"(low32), "r"(high32), "r"(shiftWidth));
+  __asm__("shf.l.wrap.b32 %0, %1, %2, %3;"
+          : "=r"(result)
+          : "r"(low32), "r"(high32), "r"(shiftWidth));
   return result;
 }
 inline __device__ unsigned __funnelshift_lc(unsigned low32, unsigned high32,
                                             unsigned shiftWidth) {
   unsigned result;
-  asm("shf.l.clamp.b32 %0, %1, %2, %3;"
-      : "=r"(result)
-      : "r"(low32), "r"(high32), "r"(shiftWidth));
+  __asm__("shf.l.clamp.b32 %0, %1, %2, %3;"
+          : "=r"(result)
+          : "r"(low32), "r"(high32), "r"(shiftWidth));
   return result;
 }
 inline __device__ unsigned __funnelshift_r(unsigned low32, unsigned high32,
                                            unsigned shiftWidth) {
   unsigned result;
-  asm("shf.r.wrap.b32 %0, %1, %2, %3;"
-      : "=r"(result)
-      : "r"(low32), "r"(high32), "r"(shiftWidth));
+  __asm__("shf.r.wrap.b32 %0, %1, %2, %3;"
+          : "=r"(result)
+          : "r"(low32), "r"(high32), "r"(shiftWidth));
   return result;
 }
 inline __device__ unsigned __funnelshift_rc(unsigned low32, unsigned high32,
                                             unsigned shiftWidth) {
   unsigned ret;
-  asm("shf.r.clamp.b32 %0, %1, %2, %3;"
-      : "=r"(ret)
-      : "r"(low32), "r"(high32), "r"(shiftWidth));
+  __asm__("shf.r.clamp.b32 %0, %1, %2, %3;"
+          : "=r"(ret)
+          : "r"(low32), "r"(high32), "r"(shiftWidth));
   return ret;
 }
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+
+#pragma push_macro("__INTRINSIC_LOAD")
+#define __INTRINSIC_LOAD(__FnName, __AsmOp, __DeclType, __TmpType, __AsmType,  \
+                         __Volatile, __Clobber)                                \
+  inline __device__ __DeclType __FnName(const __DeclType *__ptr) {             \
+    __TmpType __ret;                                                           \
+    __asm__ __Volatile(__AsmOp " %0, [%1];"                                    \
+                       : __AsmType(__ret)                                      \
+                       : "l"(__ptr)__Clobber);                                 \
+    return (__DeclType)__ret;                                                  \
+  }
+
+#pragma push_macro("__INTRINSIC_LOAD2")
+#define __INTRINSIC_LOAD2(__FnName, __AsmOp, __DeclType, __TmpType, __AsmType, \
+                          __Volatile, __Clobber)                               \
+  inline __device__ __DeclType __FnName(const __DeclType *__ptr) {             \
+    __DeclType __ret;                                                          \
+    __TmpType __tmp;                                                           \
+    __asm__ __Volatile(__AsmOp " {%0,%1}, [%2];"                               \
+                       : __AsmType(__tmp.x), __AsmType(__tmp.y)                \
+                       : "l"(__ptr)__Clobber);                                 \
+    using __ElementType = decltype(__ret.x);                                   \
+    __ret.x = (__ElementType)__tmp.x;                                          \
+    __ret.y = (__ElementType)__tmp.y;                                          \
+    return __ret;                                                              \
+  }
+
+#pragma push_macro("__INTRINSIC_LOAD4")
+#define __INTRINSIC_LOAD4(__FnName, __AsmOp, __DeclType, __TmpType, __AsmType, \
+                          __Volatile, __Clobber)                               \
+  inline __device__ __DeclType __FnName(const __DeclType *__ptr) {             \
+    __DeclType __ret;                                                          \
+    __TmpType __tmp;                                                           \
+    __asm__ __Volatile(__AsmOp " {%0,%1,%2,%3}, [%4];"                         \
+                       : __AsmType(__tmp.x), __AsmType(__tmp.y),               \
+                         __AsmType(__tmp.z), __AsmType(__tmp.w)                \
+                       : "l"(__ptr)__Clobber);                                 \
+    using __ElementType = decltype(__ret.x);                                   \
+    __ret.x = (__ElementType)__tmp.x;                                          \
+    __ret.y = (__ElementType)__tmp.y;                                          \
+    __ret.z = (__ElementType)__tmp.z;                                          \
+    __ret.w = (__ElementType)__tmp.w;                                          \
+    return __ret;                                                              \
+  }
+
+#pragma push_macro("__INTRINSIC_LOAD_LONG")
+#define __INTRINSIC_LOAD_LONG(__Mode)                                          \
+  inline __device__ long __ld##__Mode(const long *__ptr) {                     \
+    if (__SIZEOF_LONG__ == __SIZEOF_LONG_LONG__) {                             \
+      return (long)__ld##__Mode((const long long *)__ptr);                     \
+    } else {                                                                   \
+      return (long)__ld##__Mode((const int *)__ptr);                           \
+    }                                                                          \
+  }
+
+#pragma push_macro("__INTRINSIC_LOAD_ULONG")
+#define __INTRINSIC_LOAD_ULONG(__Mode)                                         \
+  inline __device__ unsigned long __ld##__Mode(const unsigned long *__ptr) {   \
+    if (__SIZEOF_LONG__ == __SIZEOF_LONG_LONG__) {                             \
+      return (unsigned long)__ld##__Mode((const unsigned long long *)__ptr);   \
+    } else {                                                                   \
+      return (unsigned long)__ld##__Mode((const unsigned int *)__ptr);         \
+    }                                                                          \
+  }
+
+#define __INTRINSIC_LOAD_FAMILY(__Mode, __Volatile, __Clobber)                 \
+  __INTRINSIC_LOAD(__ld##__Mode, "ld.global." #__Mode ".s8", char,             \
+                   unsigned int, "=r", __Volatile, __Clobber)                  \
+  __INTRINSIC_LOAD(__ld##__Mode, "ld.global." #__Mode ".s8", signed char,      \
+                   unsigned int, "=r", __Volatile, __Clobber)                  \
+  __INTRINSIC_LOAD(__ld##__Mode, "ld.global." #__Mode ".s16", short,           \
+                   unsigned short, "=h", __Volatile, __Clobber)                \
+  __INTRINSIC_LOAD(__ld##__Mode, "ld.global." #__Mode ".s32", int,             \
+                   unsigned int, "=r", __Volatile, __Clobber)                  \
+  __INTRINSIC_LOAD(__ld##__Mode, "ld.global." #__Mode ".s64", long long,       \
+                   unsigned long long, "=l", __Volatile, __Clobber)            \
+  __INTRINSIC_LOAD2(__ld##__Mode, "ld.global." #__Mode ".v2.s8", char2, int2,  \
+                    "=r", __Volatile, __Clobber)                               \
+  __INTRINSIC_LOAD4(__ld##__Mode, "ld.global." #__Mode ".v4.s8", char4, int4,  \
+                    "=r", __Volatile, __Clobber)                               \
+  __INTRINSIC_LOAD2(__ld##__Mode, "ld.global." #__Mode ".v2.s16", short2,      \
+                    short2, "=h", __Volatile, __Clobber)                       \
+  __INTRINSIC_LOAD4(__ld##__Mode, "ld.global." #__Mode ".v4.s16", short4,      \
+                    short4, "=h", __Volatile, __Clobber)                       \
+  __INTRINSIC_LOAD2(__ld##__Mode, "ld.global." #__Mode ".v2.s32", int2, int2,  \
+                    "=r", __Volatile, __Clobber)                               \
+  __INTRINSIC_LOAD4(__ld##__Mode, "ld.global." #__Mode ".v4.s32", int4, int4,  \
+                    "=r", __Volatile, __Clobber)                               \
+  __INTRINSIC_LOAD2(__ld##__Mode, "ld.global." #__Mode ".v2.s64", longlong2,   \
+                    longlong2, "=l", __Volatile, __Clobber)                    \
+  __INTRINSIC_LOAD(__ld##__Mode, "ld.global." #__Mode ".u8", unsigned char,    \
+                   unsigned int, "=r", __Volatile, __Clobber)                  \
+  __INTRINSIC_LOAD(__ld##__Mode, "ld.global." #__Mode ".u16", unsigned short,  \
+                   unsigned short, "=h", __Volatile, __Clobber)                \
+  __INTRINSIC_LOAD(__ld##__Mode, "ld.global." #__Mode ".u32", unsigned int,    \
+                   unsigned int, "=r", __Volatile, __Clobber)                  \
+  __INTRINSIC_LOAD(__ld##__Mode, "ld.global." #__Mode ".u64",                  \
+                   unsigned long long, unsigned long long, "=l", __Volatile,   \
+                   __Clobber)                                                  \
+  __INTRINSIC_LOAD2(__ld##__Mode, "ld.global." #__Mode ".v2.u8", uchar2,       \
+                    uint2, "=r", __Volatile, __Clobber)                        \
+  __INTRINSIC_LOAD4(__ld##__Mode, "ld.global." #__Mode ".v4.u8", uchar4,       \
+                    uint4, "=r", __Volatile, __Clobber)                        \
+  __INTRINSIC_LOAD2(__ld##__Mode, "ld.global." #__Mode ".v2.u16", ushort2,     \
+                    ushort2, "=h", __Volatile, __Clobber)                      \
+  __INTRINSIC_LOAD4(__ld##__Mode, "ld.global." #__Mode ".v4.u16", ushort4,     \
+                    ushort4, "=h", __Volatile, __Clobber)                      \
+  __INTRINSIC_LOAD2(__ld##__Mode, "ld.global." #__Mode ".v2.u32", uint2,       \
+                    uint2, "=r", __Volatile, __Clobber)                        \
+  __INTRINSIC_LOAD4(__ld##__Mode, "ld.global." #__Mode ".v4.u32", uint4,       \
+                    uint4, "=r", __Volatile, __Clobber)                        \
+  __INTRINSIC_LOAD2(__ld##__Mode, "ld.global." #__Mode ".v2.u64", ulonglong2,  \
+                    ulonglong2, "=l", __Volatile, __Clobber)                   \
+  __INTRINSIC_LOAD(__ld##__Mode, "ld.global." #__Mode ".f32", float, float,    \
+                   "=f", __Volatile, __Clobber)                                \
+  __INTRINSIC_LOAD(__ld##__Mode, "ld.global." #__Mode ".f64", double, double,  \
+                   "=d", __Volatile, __Clobber)                                \
+  __INTRINSIC_LOAD2(__ld##__Mode, "ld.global." #__Mode ".v2.f32", float2,      \
+                    float2, "=f", __Volatile, __Clobber)                       \
+  __INTRINSIC_LOAD4(__ld##__Mode, "ld.global." #__Mode ".v4.f32", float4,      \
+                    float4, "=f", __Volatile, __Clobber)                       \
+  __INTRINSIC_LOAD2(__ld##__Mode, "ld.global." #__Mode ".v2.f64", double2,     \
+                    double2, "=d", __Volatile, __Clobber)                      \
+  __INTRINSIC_LOAD_LONG(__Mode)                                                \
+  __INTRINSIC_LOAD_ULONG(__Mode)
+
+__INTRINSIC_LOAD_FAMILY(ca, __volatile__, /* no clobber */)
+__INTRINSIC_LOAD_FAMILY(cg, __volatile__, /* no clobber */)
+__INTRINSIC_LOAD_FAMILY(cs, __volatile__, /* no clobber */)
+__INTRINSIC_LOAD_FAMILY(cv, /* not volatile */, : "memory")
+__INTRINSIC_LOAD_FAMILY(lu, /* not volatile */, : "memory")
+
+#pragma pop_macro("__INTRINSIC_LOAD")
+#pragma pop_macro("__INTRINSIC_LOAD2")
+#pragma pop_macro("__INTRINSIC_LOAD4")
+#pragma pop_macro("__INTRINSIC_LOAD_LONG")
+#pragma pop_macro("__INTRINSIC_LOAD_ULONG")
+#pragma pop_macro("__INTRINSIC_LOAD_FAMILY")
+
+#pragma push_macro("__INTRINSIC_STORE")
+#define __INTRINSIC_STORE(__FnName, __AsmOp, __DeclType, __TmpType, __AsmType) \
+  inline __device__ void __FnName(__DeclType *__ptr, __DeclType __value) {     \
+    __TmpType __tmp = (__TmpType)__value;                                      \
+    __asm__(__AsmOp " [%0], %1;" ::"l"(__ptr), __AsmType(__tmp) : "memory");   \
+  }
+
+#pragma push_macro("__INTRINSIC_STORE2")
+#define __INTRINSIC_STORE2(__FnName, __AsmOp, __DeclType, __TmpType,           \
+                           __AsmType)                                          \
+  inline __device__ void __FnName(__DeclType *__ptr, __DeclType __value) {     \
+    __TmpType __tmp;                                                           \
+    using __ElementType = decltype(__tmp.x);                                   \
+    __tmp.x = (__ElementType)(__value.x);                                      \
+    __tmp.y = (__ElementType)(__value.y);                                      \
+    __asm__(__AsmOp " [%0], {%1,%2};" ::"l"(__ptr), __AsmType(__tmp.x),        \
+            __AsmType(__tmp.y)                                                 \
+            : "memory");                                                       \
+  }
+
+#pragma push_macro("__INTRINSIC_STORE4")
+#define __INTRINSIC_STORE4(__FnName, __AsmOp, __DeclType, __TmpType,           \
+                           __AsmType)                                          \
+  inline __device__ void __FnName(__DeclType *__ptr, __DeclType __value) {     \
+    __TmpType __tmp;                                                           \
+    using __ElementType = decltype(__tmp.x);                                   \
+    __tmp.x = (__ElementType)(__value.x);                                      \
+    __tmp.y = (__ElementType)(__value.y);                                      \
+    __tmp.z = (__ElementType)(__value.z);                                      \
+    __tmp.w = (__ElementType)(__value.w);                                      \
+    __asm__(__AsmOp " [%0], {%1,%2,%3,%4};" ::"l"(__ptr), __AsmType(__tmp.x),  \
+            __AsmType(__tmp.y), __AsmType(__tmp.z), __AsmType(__tmp.w)         \
+            : "memory");                                                       \
+  }
+
+#pragma push_macro("__INTRINSIC_STORE_LONG")
+#define __INTRINSIC_STORE_LONG(__Mode)                                         \
+  inline __device__ void __st##__Mode(long *__ptr, long __value) {             \
+    if (__SIZEOF_LONG__ == __SIZEOF_LONG_LONG__) {                             \
+      __st##__Mode((long long *)__ptr, (long long)__value);                    \
+    } else {                                                                   \
+      __st##__Mode((int *)__ptr, (int)__value);                                \
+    }                                                                          \
+  }
+
+#pragma push_macro("__INTRINSIC_STORE_ULONG")
+#define __INTRINSIC_STORE_ULONG(__Mode)                                        \
+  inline __device__ void __st##__Mode(unsigned long *__ptr,                    \
+                                      unsigned long __value) {                 \
+    if (__SIZEOF_LONG__ == __SIZEOF_LONG_LONG__) {                             \
+      __st##__Mode((unsigned long long *)__ptr, (unsigned long long)__value);  \
+    } else {                                                                   \
+      __st##__Mode((unsigned int *)__ptr, (unsigned int)__value);              \
+    }                                                                          \
+  }
+
+#pragma push_macro("__INTRINSIC_STORE_FAMILY")
+#define __INTRINSIC_STORE_FAMILY(__Mode)                                       \
+  __INTRINSIC_STORE(__st##__Mode, "st.global." #__Mode ".s8", char, int, "r")  \
+  __INTRINSIC_STORE(__st##__Mode, "st.global." #__Mode ".s8", signed char,     \
+                    int, "r")                                                  \
+  __INTRINSIC_STORE(__st##__Mode, "st.global." #__Mode ".s16", short, short,   \
+                    "h")                                                       \
+  __INTRINSIC_STORE(__st##__Mode, "st.global." #__Mode ".s32", int, int, "r")  \
+  __INTRINSIC_STORE(__st##__Mode, "st.global." #__Mode ".s64", long long,      \
+                    long long, "l")                                            \
+  __INTRINSIC_STORE2(__st##__Mode, "st.global." #__Mode ".v2.s8", char2, int2, \
+                     "r")                                                      \
+  __INTRINSIC_STORE4(__st##__Mode, "st.global." #__Mode ".v4.s8", char4, int4, \
+                     "r")                                                      \
+  __INTRINSIC_STORE2(__st##__Mode, "st.global." #__Mode ".v2.s16", short2,     \
+                     short2, "h")                                              \
+  __INTRINSIC_STORE4(__st##__Mode, "st.global." #__Mode ".v4.s16", short4,     \
+                     short4, "h")                                              \
+  __INTRINSIC_STORE2(__st##__Mode, "st.global." #__Mode ".v2.s32", int2, int2, \
+                     "r")                                                      \
+  __INTRINSIC_STORE4(__st##__Mode, "st.global." #__Mode ".v4.s32", int4, int4, \
+                     "r")                                                      \
+  __INTRINSIC_STORE2(__st##__Mode, "st.global." #__Mode ".v2.s64", longlong2,  \
+                     longlong2, "l")                                           \
+  __INTRINSIC_STORE(__st##__Mode, "st.global." #__Mode ".u8", unsigned char,   \
+                    int, "r")                                                  \
+  __INTRINSIC_STORE(__st##__Mode, "st.global." #__Mode ".u16", unsigned short, \
+                    unsigned short, "h")                                       \
+  __INTRINSIC_STORE(__st##__Mode, "st.global." #__Mode ".u32", unsigned int,   \
+                    unsigned int, "r")                                         \
+  __INTRINSIC_STORE(__st##__Mode, "st.global." #__Mode ".u64",                 \
+                    unsigned long long, unsigned long long, "l")               \
+  __INTRINSIC_STORE2(__st##__Mode, "st.global." #__Mode ".v2.u8", uchar2,      \
+                     uchar2, "r")                                              \
+  __INTRINSIC_STORE4(__st##__Mode, "st.global." #__Mode ".v4.u8", uchar4,      \
+                     uint4, "r")                                               \
+  __INTRINSIC_STORE2(__st##__Mode, "st.global." #__Mode ".v2.u16", ushort2,    \
+                     ushort2, "h")                                             \
+  __INTRINSIC_STORE4(__st##__Mode, "st.global." #__Mode ".v4.u16", ushort4,    \
+                     ushort4, "h")                                             \
+  __INTRINSIC_STORE2(__st##__Mode, "st.global." #__Mode ".v2.u32", uint2,      \
+                     uint2, "r")                                               \
+  __INTRINSIC_STORE4(__st##__Mode, "st.global." #__Mode ".v4.u32", uint4,      \
+                     uint4, "r")                                               \
+  __INTRINSIC_STORE2(__st##__Mode, "st.global." #__Mode ".v2.u64", ulonglong2, \
+                     ulonglong2, "l")                                          \
+  __INTRINSIC_STORE(__st##__Mode, "st.global." #__Mode ".f32", float, float,   \
+                    "f")                                                       \
+  __INTRINSIC_STORE(__st##__Mode, "st.global." #__Mode ".f64", double, double, \
+                    "d")                                                       \
+  __INTRINSIC_STORE2(__st##__Mode, "st.global." #__Mode ".v2.f32", float2,     \
+                     float2, "f")                                              \
+  __INTRINSIC_STORE4(__st##__Mode, "st.global." #__Mode ".v4.f32", float4,     \
+                     float4, "f")                                              \
+  __INTRINSIC_STORE2(__st##__Mode, "st.global." #__Mode ".v2.f64", double2,    \
+                     double2, "d")                                             \
+  __INTRINSIC_STORE_LONG(__Mode)                                               \
+  __INTRINSIC_STORE_ULONG(__Mode)
+
+__INTRINSIC_STORE_FAMILY(cg)
+__INTRINSIC_STORE_FAMILY(cs)
+__INTRINSIC_STORE_FAMILY(wb)
+__INTRINSIC_STORE_FAMILY(wt)
+
+#pragma pop_macro("__INTRINSIC_STORE")
+#pragma pop_macro("__INTRINSIC_STORE2")
+#pragma pop_macro("__INTRINSIC_STORE4")
+#pragma pop_macro("__INTRINSIC_STORE_LONG")
+#pragma pop_macro("__INTRINSIC_STORE_ULONG")
+#pragma pop_macro("__INTRINSIC_STORE_FAMILY")
+
+#endif // defined(__cplusplus) && (__cplusplus >= 201103L)
 #endif // !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 320
 
 #if CUDA_VERSION >= 11000

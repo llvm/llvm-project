@@ -12,7 +12,6 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/Support/EndianStream.h"
 #include <cassert>
@@ -27,10 +26,8 @@ public:
   BPFAsmBackend(llvm::endianness Endian) : MCAsmBackend(Endian) {}
   ~BPFAsmBackend() override = default;
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
@@ -45,7 +42,7 @@ public:
 
 MCFixupKindInfo BPFAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[BPF::NumTargetFixupKinds] = {
-    { "FK_BPF_PCRel_4",  0, 32, MCFixupKindInfo::FKF_IsPCRel },
+      {"FK_BPF_PCRel_4", 0, 32, 0},
   };
 
   if (Kind < FirstTargetFixupKind)
@@ -67,46 +64,42 @@ bool BPFAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-void BPFAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                               const MCValue &Target,
-                               MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved,
-                               const MCSubtargetInfo *STI) const {
+void BPFAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
+                               const MCValue &Target, uint8_t *Data,
+                               uint64_t Value, bool IsResolved) {
+  maybeAddReloc(F, Fixup, Target, Value, IsResolved);
   if (Fixup.getKind() == FK_SecRel_8) {
     // The Value is 0 for global variables, and the in-section offset
     // for static variables. Write to the immediate field of the inst.
     assert(Value <= UINT32_MAX);
-    support::endian::write<uint32_t>(&Data[Fixup.getOffset() + 4],
-                                     static_cast<uint32_t>(Value),
+    support::endian::write<uint32_t>(Data + 4, static_cast<uint32_t>(Value),
                                      Endian);
-  } else if (Fixup.getKind() == FK_Data_4) {
-    support::endian::write<uint32_t>(&Data[Fixup.getOffset()], Value, Endian);
+  } else if (Fixup.getKind() == FK_Data_4 && !Fixup.isPCRel()) {
+    support::endian::write<uint32_t>(Data, Value, Endian);
   } else if (Fixup.getKind() == FK_Data_8) {
-    support::endian::write<uint64_t>(&Data[Fixup.getOffset()], Value, Endian);
-  } else if (Fixup.getKind() == FK_PCRel_4) {
+    support::endian::write<uint64_t>(Data, Value, Endian);
+  } else if (Fixup.getKind() == FK_Data_4 && Fixup.isPCRel()) {
     Value = (uint32_t)((Value - 8) / 8);
     if (Endian == llvm::endianness::little) {
-      Data[Fixup.getOffset() + 1] = 0x10;
-      support::endian::write32le(&Data[Fixup.getOffset() + 4], Value);
+      Data[1] = 0x10;
+      support::endian::write32le(Data + 4, Value);
     } else {
-      Data[Fixup.getOffset() + 1] = 0x1;
-      support::endian::write32be(&Data[Fixup.getOffset() + 4], Value);
+      Data[1] = 0x1;
+      support::endian::write32be(Data + 4, Value);
     }
-  } else if (Fixup.getTargetKind() == BPF::FK_BPF_PCRel_4) {
+  } else if (Fixup.getKind() == BPF::FK_BPF_PCRel_4) {
     // The input Value represents the number of bytes.
     Value = (uint32_t)((Value - 8) / 8);
-    support::endian::write<uint32_t>(&Data[Fixup.getOffset() + 4], Value,
-                                     Endian);
+    support::endian::write<uint32_t>(Data + 4, Value, Endian);
   } else {
-    assert(Fixup.getKind() == FK_PCRel_2);
+    assert(Fixup.getKind() == FK_Data_2 && Fixup.isPCRel());
 
     int64_t ByteOff = (int64_t)Value - 8;
     if (ByteOff > INT16_MAX * 8 || ByteOff < INT16_MIN * 8)
       report_fatal_error("Branch target out of insn range");
 
     Value = (uint16_t)((Value - 8) / 8);
-    support::endian::write<uint16_t>(&Data[Fixup.getOffset() + 2], Value,
-                                     Endian);
+    support::endian::write<uint16_t>(Data + 2, Value, Endian);
   }
 }
 

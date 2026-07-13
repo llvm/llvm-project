@@ -22,7 +22,7 @@ using namespace mlir;
 LogicalResult BVConstantOp::inferReturnTypes(
     mlir::MLIRContext *context, std::optional<mlir::Location> location,
     ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
-    ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+    ::mlir::PropertyRef properties, ::mlir::RegionRange regions,
     ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
   inferredReturnTypes.push_back(
       properties.as<Properties *>()->getValue().getType());
@@ -173,7 +173,7 @@ LogicalResult ExtractOp::verify() {
 
 LogicalResult ConcatOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   inferredReturnTypes.push_back(BitVectorType::get(
       context, cast<BitVectorType>(operands[0].getType()).getWidth() +
@@ -405,7 +405,7 @@ static void buildQuantifier(
         SmallVector<Location>(boundVarTypes.size(), odsState.location));
     Value returnVal =
         bodyBuilder(odsBuilder, odsState.location, block->getArguments());
-    odsBuilder.create<smt::YieldOp>(odsState.location, returnVal);
+    smt::YieldOp::create(odsBuilder, odsState.location, returnVal);
   }
   if (patternBuilder) {
     Region *region = odsState.addRegion();
@@ -416,7 +416,7 @@ static void buildQuantifier(
         SmallVector<Location>(boundVarTypes.size(), odsState.location));
     ValueRange returnVals =
         patternBuilder(odsBuilder, odsState.location, block->getArguments());
-    odsBuilder.create<smt::YieldOp>(odsState.location, returnVals);
+    smt::YieldOp::create(odsBuilder, odsState.location, returnVals);
   }
 }
 

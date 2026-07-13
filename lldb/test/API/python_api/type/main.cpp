@@ -44,7 +44,12 @@ template <unsigned Value> struct PointerInfo {
 };
 
 template <unsigned Value, typename InfoType = PointerInfo<Value>>
-struct Pointer {};
+struct Pointer {
+  // When compiling for Windows with exceptions enabled, this struct
+  // must contain something that takes space and is initialised.
+  // Otherwise it will not be present in the debug information.
+  int pad = 0;
+};
 
 enum EnumType {};
 enum class ScopedEnumType {};
@@ -57,6 +62,17 @@ struct WithNestedTypedef {
   typedef int TheTypedef;
 };
 WithNestedTypedef::TheTypedef typedefed_value;
+
+struct PolymorphicBase {
+  using Nested = int;
+  Nested get() { return {}; }
+  virtual void foo() {}
+};
+
+struct PolymorphicDerived : PolymorphicBase {
+  using Nested = float;
+  Nested get() { return {}; }
+};
 
 int main (int argc, char const *argv[])
 {
@@ -94,6 +110,8 @@ int main (int argc, char const *argv[])
     Pointer<3> pointer;
     PointerInfo<3>::Masks1 mask1 = PointerInfo<3>::Masks1::pointer_mask;
     PointerInfo<3>::Masks2 mask2 = PointerInfo<3>::Masks2::pointer_mask;
+
+    PolymorphicBase *polymorphic = new PolymorphicDerived();
 
     return 0; // Break at this line
 }

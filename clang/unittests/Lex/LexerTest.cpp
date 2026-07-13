@@ -41,12 +41,9 @@ using testing::ElementsAre;
 class LexerTest : public ::testing::Test {
 protected:
   LexerTest()
-    : FileMgr(FileMgrOpts),
-      DiagID(new DiagnosticIDs()),
-      Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
-      SourceMgr(Diags, FileMgr),
-      TargetOpts(new TargetOptions)
-  {
+      : FileMgr(FileMgrOpts),
+        Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
+        SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
     Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }
@@ -64,6 +61,8 @@ protected:
         PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
         /*IILookup =*/nullptr,
         /*OwnsHeaderSearch =*/false);
+    if (!PreDefines.empty())
+      PP->setPredefines(PreDefines);
     PP->Initialize(*Target);
     PP->EnterMainSourceFile();
     return PP;
@@ -90,6 +89,30 @@ protected:
     return toks;
   }
 
+  bool MainFileIsMultipleIncludeGuarded(StringRef Filename, StringRef Source) {
+    FileEntryRef FE = FileMgr.getVirtualFileRef(Filename, Source.size(), 0);
+    SourceMgr.setMainFileID(
+        SourceMgr.createFileID(FE, SourceLocation(), SrcMgr::C_User));
+    SourceMgr.overrideFileContents(
+        FE, llvm::MemoryBuffer::getMemBufferCopy(Source, Filename));
+
+    TrivialModuleLoader ModLoader;
+    HeaderSearchOptions HSOpts;
+    HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
+    PreprocessorOptions PPOpts;
+    std::unique_ptr<Preprocessor> LocalPP = std::make_unique<Preprocessor>(
+        PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+        /*IILookup=*/nullptr,
+        /*OwnsHeaderSearch=*/false);
+    if (!PreDefines.empty())
+      LocalPP->setPredefines(PreDefines);
+    LocalPP->Initialize(*Target);
+    LocalPP->EnterMainSourceFile();
+    std::vector<Token> Toks;
+    LocalPP->LexTokensUntilEOF(&Toks);
+    return LocalPP->getHeaderSearchInfo().isFileMultipleIncludeGuarded(FE);
+  }
+
   std::string getSourceText(Token Begin, Token End) {
     bool Invalid;
     StringRef Str =
@@ -103,13 +126,14 @@ protected:
 
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   LangOptions LangOpts;
   std::shared_ptr<TargetOptions> TargetOpts;
   IntrusiveRefCntPtr<TargetInfo> Target;
   std::unique_ptr<Preprocessor> PP;
+  std::string PreDefines;
 };
 
 TEST_F(LexerTest, GetSourceTextExpandsToMaximumInMacroArgument) {
@@ -360,6 +384,16 @@ TEST_F(LexerTest, LexAPI) {
   EXPECT_EQ("N", Lexer::getImmediateMacroName(idLoc4, SourceMgr, LangOpts));
 }
 
+TEST_F(LexerTest, MainFileHeaderGuardedWithCPlusPlusModules) {
+  LangOpts.CPlusPlus = true;
+  LangOpts.CPlusPlusModules = true;
+
+  EXPECT_TRUE(MainFileIsMultipleIncludeGuarded("guarded.h", "#ifndef GUARD\n"
+                                                            "#define GUARD\n"
+                                                            "int x;\n"
+                                                            "#endif\n"));
+}
+
 TEST_F(LexerTest, HandlesSplitTokens) {
   std::vector<tok::TokenKind> ExpectedTokens;
   // Line 1 (after the #defines)
@@ -521,15 +555,14 @@ TEST_F(LexerTest, GetBeginningOfTokenWithEscapedNewLine) {
   std::vector<Token> LexedTokens = CheckLex(TextToLex, ExpectedTokens);
 
   for (const Token &Tok : LexedTokens) {
-    std::pair<FileID, unsigned> OriginalLocation =
+    FileIDAndOffset OriginalLocation =
         SourceMgr.getDecomposedLoc(Tok.getLocation());
     for (unsigned Offset = 0; Offset < IdentifierLength; ++Offset) {
       SourceLocation LookupLocation =
           Tok.getLocation().getLocWithOffset(Offset);
 
-      std::pair<FileID, unsigned> FoundLocation =
-          SourceMgr.getDecomposedExpansionLoc(
-              Lexer::GetBeginningOfToken(LookupLocation, SourceMgr, LangOpts));
+      FileIDAndOffset FoundLocation = SourceMgr.getDecomposedExpansionLoc(
+          Lexer::GetBeginningOfToken(LookupLocation, SourceMgr, LangOpts));
 
       // Check that location returned by the GetBeginningOfToken
       // is the same as original token location reported by Lexer.
@@ -769,6 +802,90 @@ TEST(LexerPreambleTest, PreambleBounds) {
     auto Bounds = Lexer::ComputePreamble(A.code(), LangOpts);
     EXPECT_EQ(Bounds.Size, A.range().End) << Case;
   }
+}
+
+TEST_F(LexerTest, CheckFirstPPToken) {
+  LangOpts.CPlusPlusModules = true;
+  {
+    TrivialModuleLoader ModLoader;
+    auto PP = CreatePP("// This is a comment\n"
+                       "int a;",
+                       ModLoader);
+    Token Tok;
+    PP->Lex(Tok);
+    EXPECT_TRUE(Tok.is(tok::kw_int));
+    EXPECT_TRUE(PP->getMainFileFirstPPTokenLoc().isValid());
+    EXPECT_EQ(PP->getMainFileFirstPPTokenLoc(), Tok.getLocation());
+  }
+  {
+    TrivialModuleLoader ModLoader;
+    auto PP = CreatePP("// This is a comment\n"
+                       "#define FOO int\n"
+                       "FOO a;",
+                       ModLoader);
+    Token Tok;
+    PP->Lex(Tok);
+    EXPECT_TRUE(Tok.is(tok::kw_int));
+    EXPECT_FALSE(Lexer::getRawToken(PP->getMainFileFirstPPTokenLoc(), Tok,
+                                    PP->getSourceManager(), PP->getLangOpts(),
+                                    /*IgnoreWhiteSpace=*/false));
+    EXPECT_TRUE(PP->getMainFileFirstPPTokenLoc() == Tok.getLocation());
+    EXPECT_TRUE(Tok.is(tok::hash));
+  }
+
+  {
+    PreDefines = "#define FOO int\n";
+    TrivialModuleLoader ModLoader;
+    auto PP = CreatePP("// This is a comment\n"
+                       "FOO a;",
+                       ModLoader);
+    Token Tok;
+    PP->Lex(Tok);
+    EXPECT_TRUE(Tok.is(tok::kw_int));
+    EXPECT_FALSE(Lexer::getRawToken(PP->getMainFileFirstPPTokenLoc(), Tok,
+                                    PP->getSourceManager(), PP->getLangOpts(),
+                                    /*IgnoreWhiteSpace=*/false));
+    EXPECT_TRUE(PP->getMainFileFirstPPTokenLoc() == Tok.getLocation());
+    EXPECT_TRUE(Tok.is(tok::raw_identifier));
+    EXPECT_TRUE(Tok.getRawIdentifier() == "FOO");
+  }
+}
+
+TEST_F(LexerTest, FindEndOfIdentifierContinuation) {
+  const auto Measure = [&](const StringRef Code,
+                           const unsigned Offset) -> unsigned {
+    auto Buf = llvm::MemoryBuffer::getMemBuffer(Code);
+    SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
+    const auto Loc = SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID())
+                         .getLocWithOffset(Offset);
+    const auto End =
+        Lexer::findEndOfIdentifierContinuation(Loc, SourceMgr, LangOpts);
+    const unsigned Length = SourceMgr.getFileOffset(End) - Offset;
+    SourceMgr.clearIDTables();
+    return Length;
+  };
+
+  // ASCII identifiers.
+  EXPECT_EQ(Measure("abcd", 0), 4u);       // Full identifier.
+  EXPECT_EQ(Measure("abcd", 1), 3u);       // Mid-identifier.
+  EXPECT_EQ(Measure("ab12", 1), 3u);       // At digit.
+  EXPECT_EQ(Measure("ab cd", 1), 1u);      // At space.
+  EXPECT_EQ(Measure("ab+cd", 1), 1u);      // At non-identifier.
+  EXPECT_EQ(Measure("ab(cd)", 1), 1u);     // At '('.
+  EXPECT_EQ(Measure("ab<cd>(ef)", 1), 1u); // At '<'.
+  EXPECT_EQ(Measure("ab{cd}", 1), 1u);     // At '{'.
+  EXPECT_EQ(Measure("ab=cd;", 1), 1u);     // At '='.
+
+  // UTF-8 identifier characters.
+  LangOpts.CPlusPlus = true;
+  EXPECT_EQ(Measure("naïve", 2), 4u); // 'ï' (2 bytes) + "ve".
+  EXPECT_EQ(Measure("æon", 0), 4u);   // Starts with 'æ' (2 bytes).
+
+  // Dollar sign (requires DollarIdents).
+  LangOpts.DollarIdents = true;
+  EXPECT_EQ(Measure("ab$cd", 2), 3u); // '$' is identifier continue.
+  LangOpts.DollarIdents = false;
+  EXPECT_EQ(Measure("ab$cd", 2), 0u); // '$' is not identifier continue.
 }
 
 } // anonymous namespace

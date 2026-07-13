@@ -4,12 +4,9 @@
 define i8 @scmp_8_8(i8 signext %x, i8 signext %y) nounwind {
 ; CHECK-LABEL: scmp_8_8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    movwlt r0, #1
-; CHECK-NEXT:    movwgt r2, #1
-; CHECK-NEXT:    sub r0, r2, r0
+; CHECK-NEXT:    subs r0, r0, r1
+; CHECK-NEXT:    movwgt r0, #1
+; CHECK-NEXT:    mvnlt r0, #0
 ; CHECK-NEXT:    bx lr
   %1 = call i8 @llvm.scmp(i8 %x, i8 %y)
   ret i8 %1
@@ -18,12 +15,9 @@ define i8 @scmp_8_8(i8 signext %x, i8 signext %y) nounwind {
 define i8 @scmp_8_16(i16 signext %x, i16 signext %y) nounwind {
 ; CHECK-LABEL: scmp_8_16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    movwlt r0, #1
-; CHECK-NEXT:    movwgt r2, #1
-; CHECK-NEXT:    sub r0, r2, r0
+; CHECK-NEXT:    subs r0, r0, r1
+; CHECK-NEXT:    movwgt r0, #1
+; CHECK-NEXT:    mvnlt r0, #0
 ; CHECK-NEXT:    bx lr
   %1 = call i8 @llvm.scmp(i16 %x, i16 %y)
   ret i8 %1
@@ -32,12 +26,9 @@ define i8 @scmp_8_16(i16 signext %x, i16 signext %y) nounwind {
 define i8 @scmp_8_32(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: scmp_8_32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    movwlt r0, #1
-; CHECK-NEXT:    movwgt r2, #1
-; CHECK-NEXT:    sub r0, r2, r0
+; CHECK-NEXT:    subs r0, r0, r1
+; CHECK-NEXT:    movwgt r0, #1
+; CHECK-NEXT:    mvnlt r0, #0
 ; CHECK-NEXT:    bx lr
   %1 = call i8 @llvm.scmp(i32 %x, i32 %y)
   ret i8 %1
@@ -92,14 +83,23 @@ define i8 @scmp_8_128(i128 %x, i128 %y) nounwind {
 define i32 @scmp_32_32(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: scmp_32_32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    movwlt r0, #1
-; CHECK-NEXT:    movwgt r2, #1
-; CHECK-NEXT:    sub r0, r2, r0
+; CHECK-NEXT:    subs r0, r0, r1
+; CHECK-NEXT:    movwgt r0, #1
+; CHECK-NEXT:    mvnlt r0, #0
 ; CHECK-NEXT:    bx lr
   %1 = call i32 @llvm.scmp(i32 %x, i32 %y)
+  ret i32 %1
+}
+
+define i32 @scmp_neg(i32 %x, i32 %y) nounwind {
+; CHECK-LABEL: scmp_neg:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    adds r0, r0, r1
+; CHECK-NEXT:    movwgt r0, #1
+; CHECK-NEXT:    mvnlt r0, #0
+; CHECK-NEXT:    bx lr
+  %yy = sub nsw i32 0, %y
+  %1 = call i32 @llvm.scmp(i32 %x, i32 %yy)
   ret i32 %1
 }
 

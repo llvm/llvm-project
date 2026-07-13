@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++20  -Wno-all  -Wunsafe-buffer-usage-in-container -verify %s
 
+typedef unsigned int size_t;
+
 namespace std {
   template <class T> class span {
   public:
@@ -16,6 +18,9 @@ namespace std {
 
     template<class R>
     constexpr span(R && range){};
+
+    T* begin() noexcept;
+    T* end() noexcept;
   };
 
 
@@ -27,6 +32,37 @@ namespace std {
     return &__x;
   }
 
+  template <typename T, size_t N>
+  struct array {
+    T* begin() noexcept;
+    const T* begin() const noexcept;
+    T* end() noexcept;
+    const T* end() const noexcept;
+    size_t size() const noexcept;
+    T * data() const noexcept;
+    T& operator[](size_t n);
+  };
+
+  template<class T>
+  class initializer_list {
+  public:
+    size_t size() const noexcept;
+    const T* begin() const noexcept;
+    const T* end() const noexcept;
+    T * data() const noexcept;
+  };
+
+  template<typename T>
+  struct basic_string {
+    T *c_str() const noexcept;
+    T *data()  const noexcept;
+    unsigned size();
+    const T* begin() const noexcept;
+    const T* end() const noexcept;
+  };
+
+  typedef basic_string<char> string;
+  typedef basic_string<wchar_t> wstring;
 }
 
 namespace irrelevant_constructors {
@@ -232,3 +268,27 @@ struct HoldsStdSpanAndNotInitializedInCtor {
       : Ptr(P), Size(S)
   {}
 };
+
+namespace test_begin_end {
+  struct Object {
+    int * begin();
+    int * end();
+  };
+  void safe_cases(std::span<int> Sp, std::array<int, 10> Arr, std::string Str, std::initializer_list<Object> Il) {
+    std::span<int>{Sp.begin(), Sp.end()};
+    std::span<int>{Arr.begin(), Arr.end()};
+    std::span<char>{Str.begin(), Str.end()};
+    std::span<Object>{Il.begin(), Il.end()};
+  }
+
+  void unsafe_cases(std::span<int> Sp, std::array<int, 10> Arr, std::string Str, std::initializer_list<Object> Il,
+		    Object Obj) {
+    std::span<int>{Obj.begin(), Obj.end()}; // expected-warning {{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+    std::span<int>{Sp.end(), Sp.begin()};   // expected-warning {{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+    std::span<int>{Sp.begin(), Arr.end()};   // expected-warning {{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+  }
+
+  void unsupport_cases(std::array<Object, 10> Arr) {
+    std::span<int>{Arr[0].begin(), Arr[0].end()}; // expected-warning {{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+  }
+}

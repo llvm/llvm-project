@@ -792,14 +792,24 @@ define <4 x i32> @or_tree_with_mismatching_shifts_vec_i32(<4 x i32> %a, <4 x i32
 define void @combineShiftOfShiftedLogic(i128 %a1, i32 %a2, ptr %p) {
 ; X86-LABEL: combineShiftOfShiftedLogic:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 24(%ebp), %eax
+; X86-NEXT:    movl 28(%ebp), %ecx
 ; X86-NEXT:    movl %eax, 20(%ecx)
 ; X86-NEXT:    movl $0, 16(%ecx)
 ; X86-NEXT:    movl $0, 12(%ecx)
 ; X86-NEXT:    movl $0, 8(%ecx)
 ; X86-NEXT:    movl $0, 4(%ecx)
 ; X86-NEXT:    movl $0, (%ecx)
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combineShiftOfShiftedLogic:

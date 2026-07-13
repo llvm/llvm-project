@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
 ; RUN: llc -mtriple=amdgcn -O1 -mcpu=gfx90a -debug-only=machine-scheduler -filetype=null < %s 2>&1 | FileCheck --check-prefix=DEBUG %s
 
-; DEBUG: Attempting to revert scheduling.
+; DEBUG: Reverting scheduling for region 0
 
 @G = global <32 x i8> splat (i8 1)
 @G.1 = global <32 x i8> splat (i8 127)

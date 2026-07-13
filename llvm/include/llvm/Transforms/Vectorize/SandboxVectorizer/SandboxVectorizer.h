@@ -8,6 +8,7 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SANDBOXVECTORIZER_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SANDBOXVECTORIZER_H
 
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -20,7 +21,8 @@ namespace llvm {
 
 class TargetTransformInfo;
 
-class SandboxVectorizerPass : public PassInfoMixin<SandboxVectorizerPass> {
+class SandboxVectorizerPass
+    : public OptionalPassInfoMixin<SandboxVectorizerPass> {
   TargetTransformInfo *TTI = nullptr;
   AAResults *AA = nullptr;
   ScalarEvolution *SE = nullptr;
@@ -49,11 +51,11 @@ public:
   // Vectorizer component can't find the vtable for classes like
   // sandboxir::Pass. This way we don't have to make LLVMPasses add a direct
   // dependency on SandboxIR.
-  SandboxVectorizerPass();
-  SandboxVectorizerPass(SandboxVectorizerPass &&);
-  ~SandboxVectorizerPass();
+  LLVM_ABI SandboxVectorizerPass();
+  LLVM_ABI SandboxVectorizerPass(SandboxVectorizerPass &&);
+  LLVM_ABI ~SandboxVectorizerPass();
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // namespace llvm

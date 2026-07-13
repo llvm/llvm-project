@@ -8,7 +8,7 @@ define <4 x i32> @extract_v4i32_nxv16i32_12(<vscale x 16 x i32> %arg) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-4
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 32 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 16 + 32 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    str z3, [sp, #3, mul vl]
 ; CHECK-NEXT:    str z2, [sp, #2, mul vl]
@@ -27,7 +27,7 @@ define <8 x i16> @extract_v8i16_nxv32i16_8(<vscale x 32 x i16> %arg) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    str z0, [sp]
@@ -44,7 +44,7 @@ define <4 x i16> @extract_v4i16_nxv32i16_8(<vscale x 32 x i16> %arg) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-4
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 32 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 16 + 32 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    str z3, [sp, #3, mul vl]
 ; CHECK-NEXT:    str z2, [sp, #2, mul vl]
@@ -65,7 +65,7 @@ define <2 x i16> @extract_v2i16_nxv32i16_8(<vscale x 32 x i16> %arg) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-8
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0xc0, 0x00, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 64 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0xc0, 0x00, 0x1e, 0x22 // sp + 16 + 64 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    str z3, [sp, #3, mul vl]
@@ -94,7 +94,7 @@ define <2 x i64> @extract_v2i64_nxv8i64_8(<vscale x 8 x i64> %arg) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-4
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 32 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 16 + 32 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    cnth x8
 ; CHECK-NEXT:    mov w9, #8 // =0x8
@@ -120,7 +120,7 @@ define <4 x float> @extract_v4f32_nxv16f32_12(<vscale x 16 x float> %arg) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-4
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 32 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 16 + 32 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    str z3, [sp, #3, mul vl]
 ; CHECK-NEXT:    str z2, [sp, #2, mul vl]
@@ -168,7 +168,7 @@ define <4 x i1> @extract_v4i1_nxv32i1_16(<vscale x 32 x i1> %arg) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-8
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0xc0, 0x00, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 64 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0xc0, 0x00, 0x1e, 0x22 // sp + 16 + 64 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov z0.b, p1/z, #1 // =0x1
 ; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
@@ -224,7 +224,7 @@ define <4 x i3> @extract_v4i3_nxv32i3_16(<vscale x 32 x i3> %arg) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-8
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0xc0, 0x00, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 64 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0xc0, 0x00, 0x1e, 0x22 // sp + 16 + 64 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    str z1, [sp, #1, mul vl]
@@ -271,7 +271,7 @@ define <4 x i64> @extract_v4i64_nxv8i64_0(<vscale x 8 x i64> %arg) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    str z0, [sp]
@@ -331,17 +331,13 @@ define <2 x half> @extract_v2f16_nxv4f16_6(<vscale x 4 x half> %arg) {
   ret <2 x half> %ext
 }
 
-declare <4 x float> @llvm.vector.extract.v4f32.nxv16f32(<vscale x 16 x float>, i64)
-declare <2 x float> @llvm.vector.extract.v2f32.nxv16f32(<vscale x 16 x float>, i64)
-declare <4 x half> @llvm.vector.extract.v4f16.nxv2f16(<vscale x 2 x half>, i64);
-declare <2 x half> @llvm.vector.extract.v2f16.nxv4f16(<vscale x 4 x half>, i64);
-declare <2 x i64> @llvm.vector.extract.v2i64.nxv8i64(<vscale x 8 x i64>, i64)
-declare <4 x i64> @llvm.vector.extract.v4i64.nxv8i64(<vscale x 8 x i64>, i64)
-declare <4 x i32> @llvm.vector.extract.v4i32.nxv16i32(<vscale x 16 x i32>, i64)
-declare <2 x i32> @llvm.vector.extract.v2i32.nxv16i32(<vscale x 16 x i32>, i64)
-declare <8 x i16> @llvm.vector.extract.v8i16.nxv32i16(<vscale x 32 x i16>, i64)
-declare <4 x i16> @llvm.vector.extract.v4i16.nxv32i16(<vscale x 32 x i16>, i64)
-declare <2 x i16> @llvm.vector.extract.v2i16.nxv32i16(<vscale x 32 x i16>, i64)
-declare <4 x i1> @llvm.vector.extract.v4i1.nxv32i1(<vscale x 32 x i1>, i64)
-declare <4 x i1> @llvm.vector.extract.v4i1.v32i1(<32 x i1>, i64)
-declare <4 x i3> @llvm.vector.extract.v4i3.nxv32i3(<vscale x 32 x i3>, i64)
+define <2 x i32> @extract_nxv2i32_from_nxv4i32_then_extract_v2i32(<vscale x 4 x i32> %arg) {
+; CHECK-LABEL: extract_nxv2i32_from_nxv4i32_then_extract_v2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpkhi z0.d, z0.s
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    ret
+  %ext1 = call <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv4i32(<vscale x 4 x i32> %arg, i64 2)
+  %ext2 = call <2 x i32> @llvm.vector.extract.v2i32.nxv2i32(<vscale x 2 x i32> %ext1, i64 0)
+  ret <2 x i32> %ext2
+}

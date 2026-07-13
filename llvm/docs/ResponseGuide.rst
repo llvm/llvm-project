@@ -40,7 +40,7 @@ Reports are typically received by email (conduct@llvm.org) or in person from
 the reporter or event CoC response team.
 
 When receiving a report by email, the CoC Committee should acknowledge receipt
-within 24 hours.  The acknowledgement should be understanding and compassionate
+within 24 hours.  The acknowledgment should be understanding and compassionate
 but no commitment should be made on whether this is a violation or which action
 will be taken. Specific guidance is in the checklist below.
 
@@ -283,9 +283,7 @@ Transparency Reports
 Lack of transparency in the outcomes of our Code of Conduct incidents leaves
 our community without an understanding of how or if the organizers worked to
 resolve incidents. The CoC committee should aim to publish transparency
-reports, if reports are received, after major events (such as the LLVM
-Developers' meetings) and on the following dates: Jan 15, April 15, July 15,
-Oct 15. 
+reports, if reports are received, at least 2 times in a calendar year.
 
 A transparency report consists of 2 parts:
 

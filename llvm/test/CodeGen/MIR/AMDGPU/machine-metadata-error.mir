@@ -1,4 +1,4 @@
-# RUN: not llc -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not llc -run-pass none -filetype=null %s 2>&1 | FileCheck %s
 # This test ensures that the MIR parser detects errors when parsing machine
 # metadata.
 --- |

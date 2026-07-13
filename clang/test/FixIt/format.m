@@ -237,14 +237,14 @@ void testSizeTypes(void) {
   printf("%zu", 0.f); // expected-warning-re{{format specifies type 'size_t' (aka '{{.+}}') but the argument has type 'float'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:14}:"%f"
 
-  printf("%zd", 0.f); // expected-warning-re{{format specifies type 'ssize_t' (aka '{{.+}}') but the argument has type 'float'}}
+  printf("%zd", 0.f); // expected-warning-re{{format specifies type 'signed size_t' (aka '{{.+}}') but the argument has type 'float'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:14}:"%f"
 
   short x;
 #if !defined(__ANDROID__) && !defined(__Fuchsia__)
-  printf("%zn", &x); // expected-warning-re{{format specifies type 'ssize_t *' (aka '{{.+}}') but the argument has type 'short *'}}
+  printf("%zn", &x); // expected-warning-re{{format specifies type 'signed size_t *' (aka '{{.+}}') but the argument has type 'short *'}}
 #else
-  printf("%zn", &x); // expected-warning-re{{format specifies type 'ssize_t *' (aka '{{.+}}') but the argument has type 'short *'}}
+  printf("%zn", &x); // expected-warning-re{{format specifies type 'signed size_t *' (aka '{{.+}}') but the argument has type 'short *'}}
   // expected-warning@-1 {{'%n' specifier not supported on this platform}}
 #endif // !defined(__ANDROID__) && !defined(__Fuchsia__)
   // PrintfSpecifier::fixType doesn't handle %n, so a fix-it is not emitted,

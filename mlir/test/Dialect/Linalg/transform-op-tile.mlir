@@ -84,10 +84,11 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     // expected-note @below {{for this parameter}}
-    %1 = transform.test_produce_param (0 : i64) : !transform.param<i64>
+    %c0 = transform.test_produce_param (0 : i64) : !transform.param<i64>
+    %c0_as_any = transform.test_produce_param (0 : i64) : !transform.any_param
     // expected-error @below {{expected as many parameter values (0) as target ops (2)}}
-    transform.structured.tile_using_for %0 tile_sizes [%1, %1, %1]
-      : (!transform.any_op, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>)
+    transform.structured.tile_using_for %0 tile_sizes [%c0, %c0, %c0_as_any]
+      : (!transform.any_op, !transform.param<i64>, !transform.param<i64>, !transform.any_param)
       -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
@@ -254,6 +255,26 @@ module attributes {transform.with_named_sequence} {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     // expected-error @below {{op expected number of loops to tile (3) to match number of `loops` results (1)}}
     %1, %loops = transform.structured.tile_using_for %0 tile_sizes [4, 4, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+func.func @tile_linalg_matmul(
+  %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32> {
+  %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
+                     outs(%arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32>
+  return %0 : tensor<128x128xf32>
+}
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{op expected number of loops to tile (0) to match number of `loops` results (1)}}
+    %1, %loops = transform.structured.tile_using_for %0 tile_sizes [0, 0] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }

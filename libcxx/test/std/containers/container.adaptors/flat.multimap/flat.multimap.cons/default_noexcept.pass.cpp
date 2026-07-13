@@ -28,11 +28,11 @@
 #include "test_allocator.h"
 
 struct ThrowingCtorComp {
-  ThrowingCtorComp() noexcept(false) {}
-  bool operator()(const auto&, const auto&) const { return false; }
+  constexpr ThrowingCtorComp() noexcept(false) {}
+  constexpr bool operator()(const auto&, const auto&) const { return false; }
 };
 
-int main(int, char**) {
+constexpr bool test() {
 #if defined(_LIBCPP_VERSION)
   {
     using C = std::flat_multimap<MoveOnly, MoveOnly>;
@@ -57,5 +57,14 @@ int main(int, char**) {
     static_assert(!std::is_nothrow_default_constructible_v<C>);
     C c;
   }
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
+
   return 0;
 }

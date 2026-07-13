@@ -41,7 +41,7 @@ static_assert(!CanInsertRange<Map, std::ranges::subrange<int*>>);
 static_assert(!CanInsertRange<Map, std::ranges::subrange<double*>>);
 
 template <class KeyContainer, class ValueContainer>
-void test() {
+constexpr void test() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
 
@@ -71,9 +71,12 @@ void test() {
   }
 }
 
-int main(int, char**) {
+constexpr bool test() {
   test<std::vector<int>, std::vector<int>>();
-  test<std::deque<int>, std::vector<int>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test<std::deque<int>, std::vector<int>>();
   test<MinSequenceContainer<int>, MinSequenceContainer<int>>();
   test<std::vector<int, min_allocator<int>>, std::vector<int, min_allocator<int>>>();
   {
@@ -87,15 +90,24 @@ int main(int, char**) {
   {
     // The element type of the range doesn't need to be std::pair (P2767).
     std::pair<int, int> pa[] = {{3, 3}, {1, 1}, {4, 4}, {1, 1}, {5, 5}};
-    std::deque<std::reference_wrapper<std::pair<int, int>>> a(pa, pa + 5);
+    std::vector<std::reference_wrapper<std::pair<int, int>>> a(pa, pa + 5);
     std::flat_multimap<int, int> m;
     m.insert_range(a);
     std::pair<int, int> expected[] = {{1, 1}, {1, 1}, {3, 3}, {4, 4}, {5, 5}};
     assert(std::ranges::equal(m, expected));
   }
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     auto insert_func = [](auto& m, const auto& newValues) { m.insert_range(newValues); };
     test_insert_range_exception_guarantee(insert_func);
   }
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
+
   return 0;
 }

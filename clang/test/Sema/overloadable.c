@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -Wincompatible-pointer-types -Wno-strict-prototypes
 
 int var __attribute__((overloadable)); // expected-error{{'overloadable' attribute only applies to functions}}
-void bad_attr_target(int) [[clang::overloadable]]; // expected-error{{'overloadable' attribute cannot be applied to types}}
+void bad_attr_target(int) [[clang::overloadable]]; // expected-error{{'clang::overloadable' attribute cannot be applied to types}}
 void params(void) __attribute__((overloadable(12))); // expected-error {{'overloadable' attribute takes no arguments}}
 
 int *f(int) __attribute__((overloadable)); // expected-note{{previous overload of function is here}}
@@ -268,4 +268,4 @@ void can_overload_2(...) __attribute__((overloadable)); // ok
 [[clang::overloadable]] void can_overload_3(...);       // ok, was previously rejected
 void can_overload_4 [[clang::overloadable]] (...);      // ok
 void cannot_overload(...) [[clang::overloadable]];      // expected-error {{ISO C requires a named parameter before '...'}} \
-                                                        // expected-error {{'overloadable' attribute cannot be applied to types}}
+                                                        // expected-error {{'clang::overloadable' attribute cannot be applied to types}}

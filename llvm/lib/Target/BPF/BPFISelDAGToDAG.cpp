@@ -193,25 +193,36 @@ void BPFDAGToDAGISel::Select(SDNode *Node) {
   switch (Opcode) {
   default:
     break;
-  case ISD::INTRINSIC_W_CHAIN: {
-    unsigned IntNo = Node->getConstantOperandVal(1);
-    switch (IntNo) {
-    case Intrinsic::bpf_load_byte:
-    case Intrinsic::bpf_load_half:
-    case Intrinsic::bpf_load_word: {
-      SDLoc DL(Node);
-      SDValue Chain = Node->getOperand(0);
-      SDValue N1 = Node->getOperand(1);
-      SDValue Skb = Node->getOperand(2);
-      SDValue N3 = Node->getOperand(3);
+  case BPFISD::LOAD_STACK_ARG: {
+    SDValue Chain = Node->getOperand(0);
+    auto *CN = cast<ConstantSDNode>(Node->getOperand(1));
+    SDValue Off =
+        CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(Node), MVT::i64);
+    EVT ValVT = Node->getValueType(0);
+    CurDAG->SelectNodeTo(Node, BPF::LOAD_STACK_ARG_PSEUDO, ValVT, MVT::Other,
+                         Off, Chain);
+    return;
+  }
 
-      SDValue R6Reg = CurDAG->getRegister(BPF::R6, MVT::i64);
-      Chain = CurDAG->getCopyToReg(Chain, DL, R6Reg, Skb, SDValue());
-      Node = CurDAG->UpdateNodeOperands(Node, Chain, N1, R6Reg, N3);
-      break;
+  case BPFISD::STORE_STACK_ARG: {
+    SDValue Chain = Node->getOperand(0);
+    auto *CN = cast<ConstantSDNode>(Node->getOperand(1));
+    SDValue Off =
+        CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(Node), MVT::i64);
+    SDValue Val = Node->getOperand(2);
+
+    // Use store-immediate when the value is a constant that fits in 32 bits.
+    if (auto *ValCN = dyn_cast<ConstantSDNode>(Val);
+        ValCN && Subtarget->hasStoreImm() && isInt<32>(ValCN->getSExtValue())) {
+      SDValue Imm = CurDAG->getTargetConstant(ValCN->getSExtValue(),
+                                              SDLoc(Node), MVT::i64);
+      CurDAG->SelectNodeTo(Node, BPF::STORE_STACK_ARG_IMM_PSEUDO, MVT::Other,
+                           Off, Imm, Chain);
+    } else {
+      CurDAG->SelectNodeTo(Node, BPF::STORE_STACK_ARG_PSEUDO, MVT::Other, Off,
+                           Val, Chain);
     }
-    }
-    break;
+    return;
   }
 
   case ISD::FrameIndex: {

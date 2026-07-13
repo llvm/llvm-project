@@ -29,3 +29,36 @@ func.func @neither_permutation_nor_broadcast(%init : tensor<8xi32>) -> tensor<8x
   } -> tensor<8xi32>
   return %res : tensor<8xi32>
 }
+
+// -----
+
+#map = affine_map<(d0) -> (d0)>
+// CHECK-LABEL: func @not_copy
+//  CHECK-NOT:    linalg.copy
+//      CHECK:    linalg.generic
+func.func @not_copy(%input: tensor<8xi32>, %init: tensor<8xi32>) -> tensor<8xi32> {
+  %c0_i32 = arith.constant 0 : i32
+  %res = linalg.generic {
+    indexing_maps = [#map, #map], iterator_types = ["parallel"]
+  } ins(%input: tensor<8xi32>) outs(%init: tensor<8xi32>) {
+  ^bb0(%in: i32, %out: i32):
+    linalg.yield %c0_i32 : i32
+  } -> tensor<8xi32>
+  return %res : tensor<8xi32>
+}
+
+
+// -----
+
+// CHECK-LABEL: @scalar_input
+// CHECK: linalg.generic
+#map = affine_map<(d0) -> (d0)>
+#map1 = affine_map<(d0) -> ()>
+func.func @scalar_input(%arg0: tensor<128xf32>, %arg1: f32) -> tensor<128xf32> {
+  %1 = linalg.generic {indexing_maps = [#map, #map1, #map], iterator_types = ["parallel"]} ins(%arg0, %arg1 : tensor<128xf32>, f32) outs(%arg0 : tensor<128xf32>) {
+  ^bb0(%in: f32, %in_1: f32, %out: f32):
+    %2 = arith.addf %in_1, %in_1 : f32
+    linalg.yield %2 : f32
+  } -> tensor<128xf32>
+  return %1 : tensor<128xf32>
+}

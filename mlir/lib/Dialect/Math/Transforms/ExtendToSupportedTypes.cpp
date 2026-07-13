@@ -73,7 +73,7 @@ void mlir::math::populateExtendToSupportedTypesTypeConverter(
       });
   typeConverter.addTargetMaterialization(
       [](OpBuilder &b, Type target, ValueRange input, Location loc) {
-        auto extFOp = b.create<arith::ExtFOp>(loc, target, input);
+        auto extFOp = arith::ExtFOp::create(b, loc, target, input);
         extFOp.setFastmath(arith::FastMathFlags::contract);
         return extFOp;
       });
@@ -104,7 +104,7 @@ LogicalResult ExtendToSupportedTypesRewritePattern::matchAndRewrite(
   for (auto [result, newType, origType] : llvm::zip_equal(
            results, (*legalized)->getResultTypes(), op->getResultTypes())) {
     if (newType != origType) {
-      auto truncFOp = rewriter.create<arith::TruncFOp>(loc, origType, result);
+      auto truncFOp = arith::TruncFOp::create(rewriter, loc, origType, result);
       truncFOp.setFastmath(arith::FastMathFlags::contract);
       result = truncFOp.getResult();
     }
@@ -124,28 +124,25 @@ void ExtendToSupportedTypesPass::runOnOperation() {
   MLIRContext *ctx = &getContext();
 
   // Parse target type
-  std::optional<Type> maybeTargetType =
-      arith::parseFloatType(ctx, targetTypeStr);
-  if (!maybeTargetType.has_value()) {
+  FloatType targetType = arith::parseFloatType(ctx, targetTypeStr);
+  if (!targetType) {
     emitError(UnknownLoc::get(ctx), "could not map target type '" +
                                         targetTypeStr +
                                         "' to a known floating-point type");
     return signalPassFailure();
   }
-  Type targetType = maybeTargetType.value();
 
   // Parse source types
   llvm::SetVector<Type> sourceTypes;
   for (const auto &extraTypeStr : extraTypeStrs) {
-    std::optional<FloatType> maybeExtraType =
-        arith::parseFloatType(ctx, extraTypeStr);
-    if (!maybeExtraType.has_value()) {
+    FloatType extraType = arith::parseFloatType(ctx, extraTypeStr);
+    if (!extraType) {
       emitError(UnknownLoc::get(ctx), "could not map source type '" +
                                           extraTypeStr +
                                           "' to a known floating-point type");
       return signalPassFailure();
     }
-    sourceTypes.insert(maybeExtraType.value());
+    sourceTypes.insert(extraType);
   }
   // f64 and f32 are implicitly supported
   Builder b(ctx);

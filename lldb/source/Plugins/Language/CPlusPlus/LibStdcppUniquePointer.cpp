@@ -12,6 +12,7 @@
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "llvm/Support/ErrorExtras.h"
 
 #include <memory>
 #include <vector>
@@ -42,8 +43,7 @@ private:
   // objects are only destroyed when every shared pointer to any of them
   // is destroyed, so we must not store a shared pointer to any ValueObject
   // derived from our backend ValueObject (since we're in the same cluster).
-  ValueObject* m_ptr_obj = nullptr;
-  ValueObject* m_obj_obj = nullptr;
+  ValueObject *m_ptr_obj = nullptr;
   ValueObject* m_del_obj = nullptr;
 
   ValueObjectSP GetTuple();
@@ -92,8 +92,10 @@ lldb::ChildCacheState LibStdcppUniquePtrSyntheticFrontEnd::Update() {
       LibStdcppTupleSyntheticFrontEndCreator(nullptr, tuple_sp));
 
   ValueObjectSP ptr_obj = tuple_frontend->GetChildAtIndex(0);
-  if (ptr_obj)
-    m_ptr_obj = ptr_obj->Clone(ConstString("pointer")).get();
+  if (!ptr_obj)
+    return lldb::ChildCacheState::eRefetch;
+
+  m_ptr_obj = ptr_obj->Clone("pointer").get();
 
   // Add a 'deleter' child if there was a non-empty deleter type specified.
   //
@@ -105,9 +107,8 @@ lldb::ChildCacheState LibStdcppUniquePtrSyntheticFrontEnd::Update() {
       llvm::expectedToOptional(ptr_obj->GetByteSize()).value_or(0)) {
     ValueObjectSP del_obj = tuple_frontend->GetChildAtIndex(1);
     if (del_obj)
-      m_del_obj = del_obj->Clone(ConstString("deleter")).get();
+      m_del_obj = del_obj->Clone("deleter").get();
   }
-  m_obj_obj = nullptr;
 
   return lldb::ChildCacheState::eRefetch;
 }
@@ -119,15 +120,13 @@ LibStdcppUniquePtrSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (idx == 1 && m_del_obj)
     return m_del_obj->GetSP();
   if (idx == 2) {
-    if (m_ptr_obj && !m_obj_obj) {
-      Status error;
-      ValueObjectSP obj_obj = m_ptr_obj->Dereference(error);
-      if (error.Success()) {
-        m_obj_obj = obj_obj->Clone(ConstString("object")).get();
+    if (m_ptr_obj) {
+      Status status;
+      auto value_sp = m_ptr_obj->Dereference(status);
+      if (status.Success()) {
+        return value_sp;
       }
     }
-    if (m_obj_obj)
-      return m_obj_obj->GetSP();
   }
   return lldb::ValueObjectSP();
 }
@@ -147,8 +146,7 @@ LibStdcppUniquePtrSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
     return 1;
   if (name == "obj" || name == "object" || name == "$$dereference$$")
     return 2;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 bool LibStdcppUniquePtrSyntheticFrontEnd::GetSummary(
@@ -156,14 +154,8 @@ bool LibStdcppUniquePtrSyntheticFrontEnd::GetSummary(
   if (!m_ptr_obj)
     return false;
 
-  bool success;
-  uint64_t ptr_value = m_ptr_obj->GetValueAsUnsigned(0, &success);
-  if (!success)
-    return false;
-  if (ptr_value == 0)
-    stream.Printf("nullptr");
-  else
-    stream.Printf("0x%" PRIx64, ptr_value);
+  DumpCxxSmartPtrPointerSummary(stream, *m_ptr_obj, options);
+
   return true;
 }
 

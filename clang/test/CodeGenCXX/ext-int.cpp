@@ -67,6 +67,18 @@ struct HasBitIntMiddle {
 };
 // CHECK: %struct.HasBitIntMiddle = type { i32, i64, i32 }
 
+// Check array filler lowering.
+namespace gh189643 {
+_BitInt(129) arr[2] = {};
+// LIN64: {{.*}}arr{{.*}} = {{.*}}global [2 x [24 x i8]] zeroinitializer
+// LIN32: {{.*}}arr{{.*}} = {{.*}}global [2 x [20 x i8]] zeroinitializer
+// WIN: {{.*}}arr{{.*}} = {{.*}}global [2 x [24 x i8]] zeroinitializer
+_BitInt(129) arr2[10] = {1};
+// LIN64: {{.*}}arr2{{.*}} = {{.*}}global <{ <{ i8, [23 x i8] }>, [9 x <{ i8, [23 x i8] }>] }> <{ <{ i8, [23 x i8] }> <{ i8 1, [23 x i8] zeroinitializer }>, [9 x <{ i8, [23 x i8] }>] zeroinitializer }>
+// LIN32: {{.*}}arr2{{.*}} = {{.*}}global <{ <{ i8, [19 x i8] }>, [9 x <{ i8, [19 x i8] }>] }> <{ <{ i8, [19 x i8] }> <{ i8 1, [19 x i8] zeroinitializer }>, [9 x <{ i8, [19 x i8] }>] zeroinitializer }>
+// WIN: {{.*}}arr2{{.*}} = {{.*}}global <{ <{ i8, [23 x i8] }>, [9 x <{ i8, [23 x i8] }>] }> <{ <{ i8, [23 x i8] }> <{ i8 1, [23 x i8] zeroinitializer }>, [9 x <{ i8, [23 x i8] }>] zeroinitializer }>
+}
+
 // Force emitting of the above structs.
 void StructEmit() {
   BitFieldsByte A;
@@ -571,6 +583,41 @@ void VectorTest(uint16_t4 first, uint16_t4 second) {
   // CHECK: %[[ADD:.+]] = add <3 x i16> %[[Shuffle]], %[[Shuffle1]]
 }
 
+typedef unsigned _BitInt(4) uint4_t4 __attribute__((ext_vector_type(4)));
+void VectorTest(uint4_t4 first, uint4_t4 second) {
+  // LIN64: define{{.*}} void @_Z10VectorTestDv4_DU4_S0_(i32 %{{.+}}, i32 %{{.+}})
+  // LIN32: define{{.*}} void @_Z10VectorTestDv4_DU4_S0_(<4 x i4> %{{.+}}, <4 x i4> %{{.+}})
+  // WIN64: define dso_local void @"?VectorTest@@YAXT?$__vector@U?$_UBitInt@$03@__clang@@$03@__clang@@0@Z"(<4 x i4> %{{.+}}, <4 x i4> %{{.+}})
+  // WIN32: define dso_local void @"?VectorTest@@YAXT?$__vector@U?$_UBitInt@$03@__clang@@$03@__clang@@0@Z"(<4 x i4> inreg %{{.+}}, <4 x i4> inreg %{{.+}})
+  first.xzw + second.zwx;
+  // CHECK: %[[Shuffle:.+]] = shufflevector <4 x i4> %{{.+}}, <4 x i4> poison, <3 x i32> <i32 0, i32 2, i32 3>
+  // CHECK: %[[Shuffle1:.+]] = shufflevector <4 x i4> %{{.+}}, <4 x i4> poison, <3 x i32> <i32 2, i32 3, i32 0>
+  // CHECK: %[[ADD:.+]] = add <3 x i4> %[[Shuffle]], %[[Shuffle1]]
+}
+
+typedef unsigned _BitInt(2) uint2_t2 __attribute__((ext_vector_type(2)));
+uint2_t2 TestBitIntVector2x2Alloca(uint2_t2 v1, uint2_t2 v2) {
+  // LIN64: define dso_local i16 @_Z25TestBitIntVector2x2AllocaDv2_DU2_S0_(i16 %[[V1Coerce:.+]], i16 %[[V2Coerce:.+]])
+  // LIN64: %[[RetVal:.+]] = alloca <2 x i2>, align 2
+  // LIN64: %[[V1Addr:.+]] = alloca <2 x i2>, align 2
+  // LIN64: %[[V2Addr:.+]] = alloca <2 x i2>, align 2
+  // LIN64: %[[RetValCoerce:.+]] = alloca i16, align 2
+  // LIN64: call void @llvm.memcpy.p0.p0.i64(ptr align 2 %[[RetValCoerce]], ptr align 2 %[[RetVal]], i64 1, i1 false)
+  // LIN64: %[[Ret:.+]] = load i16, ptr %[[RetValCoerce]], align 2
+  // LIN64: ret i16 %[[Ret]]
+
+  // LIN32: define dso_local <2 x i2> @_Z25TestBitIntVector2x2AllocaDv2_DU2_S0_(<2 x i2> %{{.+}}, <2 x i2> %{{.+}})
+  // LIN32: %[[V1Addr:.+]] = alloca <2 x i2>, align 2
+  // LIN32: %[[V2Addr:.+]] = alloca <2 x i2>, align 2
+  // LIN32: ret <2 x i2> %[[Ret:.+]]
+
+  // WIN: define dso_local <2 x i2> @"?TestBitIntVector2x2Alloca@@YAT?$__vector@U?$_UBitInt@$01@__clang@@$01@__clang@@T12@0@Z"(<2 x i2>{{.*}}, <2 x i2>{{.*}})
+  // WIN: %[[V1:.+]] = alloca <2 x i2>, align 2
+  // WIN: %[[V2:.+]] = alloca <2 x i2>, align 2
+  // WIN: ret <2 x i2> %[[Ret:.+]]
+  return v1 + v2;
+}
+
 // Ensure that these types don't alias the normal int types.
 void TBAATest(_BitInt(sizeof(int) * 8) ExtInt,
               unsigned _BitInt(sizeof(int) * 8) ExtUInt,
@@ -581,6 +628,24 @@ void TBAATest(_BitInt(sizeof(int) * 8) ExtInt,
   ExtInt = 5;
   ExtUInt = 5;
   Other = 5;
+}
+
+namespace gh189643 {
+void test() {
+// LIN: define{{.*}} void @_ZN8gh1896434testEv()
+// WIN: define dso_local void @"?test@gh189643@@YAXXZ"()
+_BitInt(140) arr3[2] = {};
+// LIN64: %[[ARR3:.+]] = alloca [2 x [24 x i8]], align 16
+// LIN32: %[[ARR3:.+]] = alloca [2 x [20 x i8]], align 4
+// WIN: %[[ARR3:.+]] = alloca [2 x [24 x i8]],
+_BitInt(239) arr4[10] = {1};
+// CHECK: %[[ARR4:.+]] = alloca [10 x i256],
+// LIN64: call void @llvm.memset{{.+}}(ptr align 16 %[[ARR3]], i8 0, i64 48,
+// LIN32: call void @llvm.memset{{.+}}(ptr align 4 %[[ARR3]], i8 0, i32 40,
+// WIN: call void @llvm.memset{{.+}}(ptr {{.*}} %[[ARR3]], i8 0, {{.*}} 48,
+// CHECK: call void @llvm.memset{{.+}}(ptr {{.*}} %[[ARR4]], i8 0, {{.*}} 320,
+// CHECK: store i256 1, ptr {{.*}}
+}
 }
 
 // NoNewStructPathTBAA-DAG: ![[CHAR_TBAA_ROOT:.+]] = !{!"omnipotent char", ![[TBAA_ROOT:.+]], i64 0}

@@ -214,17 +214,11 @@
 #    error "__cpp_lib_make_from_tuple should have the value 201606L in c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should be defined in c++23"
-#    endif
-#    if __cpp_lib_ranges_zip != 202110L
-#      error "__cpp_lib_ranges_zip should have the value 202110L in c++23"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_zip
+#    error "__cpp_lib_ranges_zip should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_zip != 202110L
+#    error "__cpp_lib_ranges_zip should have the value 202110L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_tuple_element_t
@@ -270,17 +264,11 @@
 #    error "__cpp_lib_constexpr_tuple should have the value 201811L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_constrained_equality
-#      error "__cpp_lib_constrained_equality should be defined in c++26"
-#    endif
-#    if __cpp_lib_constrained_equality != 202403L
-#      error "__cpp_lib_constrained_equality should have the value 202403L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_constrained_equality
-#      error "__cpp_lib_constrained_equality should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_constrained_equality
+#    error "__cpp_lib_constrained_equality should be defined in c++26"
+#  endif
+#  if __cpp_lib_constrained_equality != 202411L
+#    error "__cpp_lib_constrained_equality should have the value 202411L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_make_from_tuple
@@ -290,17 +278,11 @@
 #    error "__cpp_lib_make_from_tuple should have the value 201606L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should be defined in c++26"
-#    endif
-#    if __cpp_lib_ranges_zip != 202110L
-#      error "__cpp_lib_ranges_zip should have the value 202110L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_zip
+#    error "__cpp_lib_ranges_zip should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_zip != 202110L
+#    error "__cpp_lib_ranges_zip should have the value 202110L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_tuple_element_t
@@ -333,4 +315,3 @@
 #endif // TEST_STD_VER > 23
 
 // clang-format on
-

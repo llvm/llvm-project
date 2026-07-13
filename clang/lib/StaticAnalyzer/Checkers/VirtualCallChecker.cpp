@@ -28,7 +28,7 @@ using namespace ento;
 namespace {
 enum class ObjectState : bool { CtorCalled, DtorCalled };
 } // end namespace
-  // FIXME: Ascending over StackFrameContext maybe another method.
+  // FIXME: Ascending over StackFrame maybe another method.
 
 namespace llvm {
 template <> struct FoldingSetTrait<ObjectState> {
@@ -40,21 +40,22 @@ template <> struct FoldingSetTrait<ObjectState> {
 
 namespace {
 class VirtualCallChecker
-    : public Checker<check::BeginFunction, check::EndFunction, check::PreCall> {
+    : public CheckerFamily<check::BeginFunction, check::EndFunction,
+                           check::PreCall> {
 public:
-  enum : CheckerPartIdx { PureChecker, ImpureChecker, NumCheckerParts };
-
-  BugType BugTypes[NumCheckerParts] = {
-      {this, PureChecker, "Pure virtual method call",
-       categories::CXXObjectLifecycle},
-      {this, ImpureChecker, "Unexpected loss of virtual dispatch",
-       categories::CXXObjectLifecycle}};
+  CheckerFrontendWithBugType PureChecker{"Pure virtual method call",
+                                         categories::CXXObjectLifecycle};
+  CheckerFrontendWithBugType ImpureChecker{
+      "Unexpected loss of virtual dispatch", categories::CXXObjectLifecycle};
 
   bool ShowFixIts = false;
 
   void checkBeginFunction(CheckerContext &C) const;
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
+
+  /// Identifies this checker family for debugging purposes.
+  StringRef getDebugTag() const override { return "VirtualCallChecker"; }
 
 private:
   void registerCtorDtorCallInState(bool IsBeginFunction,
@@ -117,6 +118,11 @@ void VirtualCallChecker::checkPreCall(const CallEvent &Call,
   if (!isVirtualCall(CE))
     return;
 
+  // Don't warn about virtual calls in system headers (e.g. libraries included
+  // via -isystem), as the user has no control over such code.
+  if (C.getSourceManager().isInSystemHeader(CE->getBeginLoc()))
+    return;
+
   const MemRegion *Reg = MC->getCXXThisVal().getAsRegion();
   const ObjectState *ObState = State->get<CtorDtorMap>(Reg);
   if (!ObState)
@@ -147,15 +153,14 @@ void VirtualCallChecker::checkPreCall(const CallEvent &Call,
   if (!N)
     return;
 
-  const CheckerPartIdx Part = IsPure ? PureChecker : ImpureChecker;
+  const CheckerFrontendWithBugType &Part = IsPure ? PureChecker : ImpureChecker;
 
-  if (!isPartEnabled(Part)) {
+  if (!Part.isEnabled()) {
     // The respective check is disabled.
     return;
   }
 
-  auto Report =
-      std::make_unique<PathSensitiveBugReport>(BugTypes[Part], OS.str(), N);
+  auto Report = std::make_unique<PathSensitiveBugReport>(Part, OS.str(), N);
 
   if (ShowFixIts && !IsPure) {
     // FIXME: These hints are valid only when the virtual call is made
@@ -172,8 +177,8 @@ void VirtualCallChecker::checkPreCall(const CallEvent &Call,
 
 void VirtualCallChecker::registerCtorDtorCallInState(bool IsBeginFunction,
                                                      CheckerContext &C) const {
-  const auto *LCtx = C.getLocationContext();
-  const auto *MD = dyn_cast_or_null<CXXMethodDecl>(LCtx->getDecl());
+  const auto *SF = C.getStackFrame();
+  const auto *MD = dyn_cast_or_null<CXXMethodDecl>(SF->getDecl());
   if (!MD)
     return;
 
@@ -182,8 +187,7 @@ void VirtualCallChecker::registerCtorDtorCallInState(bool IsBeginFunction,
 
   // Enter a constructor, set the corresponding memregion be true.
   if (isa<CXXConstructorDecl>(MD)) {
-    auto ThiSVal =
-        State->getSVal(SVB.getCXXThis(MD, LCtx->getStackFrame()));
+    auto ThiSVal = State->getSVal(SVB.getCXXThis(MD, SF));
     const MemRegion *Reg = ThiSVal.getAsRegion();
     if (IsBeginFunction)
       State = State->set<CtorDtorMap>(Reg, ObjectState::CtorCalled);
@@ -196,8 +200,7 @@ void VirtualCallChecker::registerCtorDtorCallInState(bool IsBeginFunction,
 
   // Enter a Destructor, set the corresponding memregion be true.
   if (isa<CXXDestructorDecl>(MD)) {
-    auto ThiSVal =
-        State->getSVal(SVB.getCXXThis(MD, LCtx->getStackFrame()));
+    auto ThiSVal = State->getSVal(SVB.getCXXThis(MD, SF));
     const MemRegion *Reg = ThiSVal.getAsRegion();
     if (IsBeginFunction)
       State = State->set<CtorDtorMap>(Reg, ObjectState::DtorCalled);
@@ -210,7 +213,7 @@ void VirtualCallChecker::registerCtorDtorCallInState(bool IsBeginFunction,
 }
 
 void ento::registerPureVirtualCallChecker(CheckerManager &Mgr) {
-  Mgr.registerChecker<VirtualCallChecker, VirtualCallChecker::PureChecker>();
+  Mgr.getChecker<VirtualCallChecker>()->PureChecker.enable(Mgr);
 }
 
 bool ento::shouldRegisterPureVirtualCallChecker(const CheckerManager &Mgr) {
@@ -218,8 +221,8 @@ bool ento::shouldRegisterPureVirtualCallChecker(const CheckerManager &Mgr) {
 }
 
 void ento::registerVirtualCallChecker(CheckerManager &Mgr) {
-  auto *Chk = Mgr.registerChecker<VirtualCallChecker,
-                                  VirtualCallChecker::ImpureChecker>();
+  auto *Chk = Mgr.getChecker<VirtualCallChecker>();
+  Chk->ImpureChecker.enable(Mgr);
   Chk->ShowFixIts = Mgr.getAnalyzerOptions().getCheckerBooleanOption(
       Mgr.getCurrentCheckerName(), "ShowFixIts");
 }

@@ -38,6 +38,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/InitUndef.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/DetectDeadLanes.h"
@@ -59,7 +60,23 @@ using namespace llvm;
 
 namespace {
 
-class InitUndef : public MachineFunctionPass {
+class InitUndefLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  InitUndefLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  StringRef getPassName() const override { return INIT_UNDEF_NAME; }
+};
+
+class InitUndef {
   const TargetInstrInfo *TII;
   MachineRegisterInfo *MRI;
   const TargetSubtargetInfo *ST;
@@ -70,17 +87,7 @@ class InitUndef : public MachineFunctionPass {
   SmallVector<MachineInstr *, 8> DeadInsts;
 
 public:
-  static char ID;
-
-  InitUndef() : MachineFunctionPass(ID) {}
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  StringRef getPassName() const override { return INIT_UNDEF_NAME; }
+  bool run(MachineFunction &MF);
 
 private:
   bool processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB,
@@ -93,9 +100,9 @@ private:
 
 } // end anonymous namespace
 
-char InitUndef::ID = 0;
-INITIALIZE_PASS(InitUndef, DEBUG_TYPE, INIT_UNDEF_NAME, false, false)
-char &llvm::InitUndefID = InitUndef::ID;
+char InitUndefLegacy::ID = 0;
+INITIALIZE_PASS(InitUndefLegacy, DEBUG_TYPE, INIT_UNDEF_NAME, false, false)
+char &llvm::InitUndefID = InitUndefLegacy::ID;
 
 static bool isEarlyClobberMI(MachineInstr &MI) {
   return llvm::any_of(MI.all_defs(), [](const MachineOperand &DefMO) {
@@ -225,7 +232,7 @@ bool InitUndef::processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB,
       MachineOperand &UseMO = MI.getOperand(UseOpIdx);
       if (UseMO.getReg() == MCRegister::NoRegister) {
         const TargetRegisterClass *RC =
-            TII->getRegClass(MI.getDesc(), UseOpIdx, TRI, MF);
+            TII->getRegClass(MI.getDesc(), UseOpIdx);
         Register NewDest = MRI->createVirtualRegister(RC);
         // We don't have a way to update dead lanes, so keep track of the
         // new register so that we avoid querying it later.
@@ -246,7 +253,20 @@ bool InitUndef::processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB,
   return Changed;
 }
 
-bool InitUndef::runOnMachineFunction(MachineFunction &MF) {
+bool InitUndefLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return InitUndef().run(MF);
+}
+
+PreservedAnalyses InitUndefPass::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &MFAM) {
+  if (!InitUndef().run(MF))
+    return PreservedAnalyses::all();
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+bool InitUndef::run(MachineFunction &MF) {
   ST = &MF.getSubtarget();
 
   // The pass is only needed if early-clobber defs and undef ops cannot be

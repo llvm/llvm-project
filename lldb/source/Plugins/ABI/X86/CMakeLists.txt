@@ -6,12 +6,12 @@ add_lldb_library(lldbPluginABIX86 PLUGIN
   ABISysV_x86_64.cpp
   ABIWindows_x86_64.cpp
 
+  LINK_COMPONENTS
+    Support
+    TargetParser
   LINK_LIBS
     lldbCore
     lldbSymbol
     lldbTarget
     lldbValueObject
-  LINK_COMPONENTS
-    Support
-    TargetParser
   )

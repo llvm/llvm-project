@@ -15,7 +15,7 @@ module attributes {transform.with_named_sequence} {
 func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf32>) {
   %c0 = arith.constant 0 : index
 
-  // CHECK: %[[A_memref:.*]] = bufferization.to_memref %[[A]]
+  // CHECK: %[[A_memref:.*]] = bufferization.to_buffer %[[A]]
   // CHECK: %[[dim:.*]] = memref.dim %[[A_memref]]
   // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
   // CHECK: memref.copy %[[A_memref]], %[[alloc]]
@@ -45,7 +45,7 @@ module attributes {transform.with_named_sequence} {
 func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf32>) {
   %c0 = arith.constant 0 : index
 
-  // CHECK: %[[A_memref:.*]] = bufferization.to_memref %[[A]]
+  // CHECK: %[[A_memref:.*]] = bufferization.to_buffer %[[A]]
   // CHECK: %[[dim:.*]] = memref.dim %[[A_memref]]
   // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
   // CHECK: linalg.copy ins(%[[A_memref]] : memref<{{.*}}>) outs(%[[alloc]]
@@ -116,7 +116,7 @@ module attributes {transform.with_named_sequence} {
 func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf32>) {
   %c0 = arith.constant 0 : index
 
-  // CHECK: %[[A_memref:.*]] = bufferization.to_memref %[[A]]
+  // CHECK: %[[A_memref:.*]] = bufferization.to_buffer %[[A]]
   // CHECK: %[[dim:.*]] = memref.dim %[[A_memref]]
   // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
   // CHECK: memref.copy %[[A_memref]], %[[alloc]]

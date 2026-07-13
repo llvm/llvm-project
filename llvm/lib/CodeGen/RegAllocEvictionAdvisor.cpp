@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -189,6 +188,21 @@ RegAllocEvictionAdvisor::RegAllocEvictionAdvisor(const MachineFunction &MF,
                           MF.getSubtarget().enableRALocalReassignment(
                               MF.getTarget().getOptLevel())) {}
 
+/// isUrgentEviction - Returns true if this is an urgent eviction. Once a live
+/// range becomes small enough, it is urgent that we find a register for it.
+/// This is indicated by an infinite spill weight. These urgent live ranges
+/// get to evict almost anything.
+///
+/// Also allow urgent evictions of unspillable ranges from a strictly larger
+/// allocation order.
+bool RegAllocEvictionAdvisor::isUrgentEviction(const LiveInterval &VirtReg,
+                                               const LiveInterval &Intf) const {
+  return !VirtReg.isSpillable() &&
+         (Intf.isSpillable() ||
+          RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(VirtReg.reg())) <
+              RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(Intf.reg())));
+}
+
 /// shouldEvict - determine if A should evict the assigned live range B. The
 /// eviction policy defined by this function together with the allocation order
 /// defined by enqueue() decides which registers ultimately end up being split
@@ -225,7 +239,7 @@ bool DefaultEvictionAdvisor::canEvictHintInterference(
     const LiveInterval &VirtReg, MCRegister PhysReg,
     const SmallVirtRegSet &FixedRegisters) const {
   EvictionCost MaxCost;
-  MaxCost.setBrokenHints(1);
+  MaxCost.setBrokenHints(MRI->getRegClass(VirtReg.reg())->getCopyCost());
   return canEvictInterferenceBasedOnCost(VirtReg, PhysReg, true, MaxCost,
                                          FixedRegisters);
 }
@@ -279,18 +293,8 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
       // Never evict spill products. They cannot split or spill.
       if (RA.getExtraInfo().getStage(*Intf) == RS_Done)
         return false;
-      // Once a live range becomes small enough, it is urgent that we find a
-      // register for it. This is indicated by an infinite spill weight. These
-      // urgent live ranges get to evict almost anything.
-      //
-      // Also allow urgent evictions of unspillable ranges from a strictly
-      // larger allocation order.
-      bool Urgent =
-          !VirtReg.isSpillable() &&
-          (Intf->isSpillable() ||
-           RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(VirtReg.reg())) <
-               RegClassInfo.getNumAllocatableRegs(
-                   MRI->getRegClass(Intf->reg())));
+
+      bool Urgent = isUrgentEviction(VirtReg, *Intf);
       // Only evict older cascades or live ranges without a cascade.
       unsigned IntfCascade = RA.getExtraInfo().getCascade(Intf->reg());
       if (Cascade == IntfCascade)
@@ -301,15 +305,17 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
           return false;
         // We permit breaking cascades for urgent evictions. It should be the
         // last resort, though, so make it really expensive.
-        Cost.BrokenHints += 10;
+        Cost.BrokenHints += 10 * MRI->getRegClass(Intf->reg())->getCopyCost();
       }
       // Would this break a satisfied hint?
       bool BreaksHint = VRM->hasPreferredPhys(Intf->reg());
       // Update eviction cost.
-      Cost.BrokenHints += BreaksHint;
+      if (BreaksHint)
+        Cost.BrokenHints += MRI->getRegClass(Intf->reg())->getCopyCost();
+
       Cost.MaxWeight = std::max(Cost.MaxWeight, Intf->weight());
       // Abort if this would be too expensive.
-      if (!(Cost < MaxCost))
+      if (Cost >= MaxCost)
         return false;
       if (Urgent)
         continue;

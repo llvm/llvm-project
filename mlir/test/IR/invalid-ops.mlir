@@ -107,7 +107,7 @@ func.func @return_not_in_function() {
 // -----
 
 func.func @invalid_splat(%v : f32) { // expected-note {{prior use here}}
-  vector.splat %v : vector<8xf64>
+  vector.broadcast %v : f64 to vector<8xf64>
   // expected-error@-1 {{expects different type than prior uses}}
   return
 }
@@ -144,4 +144,12 @@ func.func @verify_fail_3() {
   // expected-error@+1 {{'arith.constant' op integer return type must be signless}}
   %r = "arith.constant"() {value = -3 : si32} : () -> si32
   return
+}
+
+// -----
+
+// Verify that symbols with results are rejected
+module {
+  // expected-error@+1 {{'test.symbol_with_result' op symbols must not have results}}
+  %0 = "test.symbol_with_result"() <{sym_name = "test_symbol"}> : () -> i32
 }

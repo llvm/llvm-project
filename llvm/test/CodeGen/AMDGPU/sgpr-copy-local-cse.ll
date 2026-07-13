@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -verify-machineinstrs -o - %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -o - %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}t0:
 ; CHECK: s_load_dwordx2 s[[[PTR_LO:[0-9]+]]:[[PTR_HI:[0-9]+]]], s[8:9], 0x0

@@ -84,7 +84,7 @@ end subroutine
 ! CHECK:           %[[VAL_30:.*]] = arith.muli %[[VAL_29]], %[[VAL_4]] overflow<nsw> : i32
 ! CHECK:           %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (i32) -> index
 ! CHECK:           %[[VAL_32:.*]] = fir.convert %[[VAL_26]] : (index) -> i32
-! CHECK:           %[[VAL_33:.*]]:2 = fir.do_loop %[[VAL_34:.*]] = %[[VAL_26]] to %[[VAL_28]] step %[[VAL_31]] iter_args(%[[VAL_35:.*]] = %[[VAL_32]]) -> (index, i32) {
+! CHECK:           %[[VAL_33:.*]] = fir.do_loop %[[VAL_34:.*]] = %[[VAL_26]] to %[[VAL_28]] step %[[VAL_31]] iter_args(%[[VAL_35:.*]] = %[[VAL_32]]) -> (i32) {
 
 subroutine loop_params2(a,lb,ub,st)
   integer :: i, lb, ub, st
@@ -139,7 +139,6 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPloop_params3(
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 2 : i32
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 1 : i32
-! CHECK:           %[[VAL_9:.*]] = fir.declare %{{.*}}i"} : (!fir.ref<i32>) -> !fir.ref<i32>
 ! CHECK:           %[[VAL_11:.*]] = fir.declare %{{.*}}lb"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 ! CHECK:           %[[VAL_12:.*]] = fir.declare %{{.*}}ub"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 ! CHECK:           %[[VAL_14:.*]] = fir.declare %{{.*}}i"} : (!fir.ref<i32>) -> !fir.ref<i32>
@@ -153,4 +152,6 @@ end subroutine
 ! CHECK:           %[[VAL_31:.*]] = fir.load %[[VAL_15]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_32:.*]] = arith.muli %[[VAL_31]], %[[VAL_4]] overflow<nsw> : i32
 ! CHECK:           %[[VAL_33:.*]] = fir.convert %[[VAL_32]] : (i32) -> index
-! CHECK:           fir.do_loop %[[VAL_34:.*]] = %[[VAL_28]] to %[[VAL_30]] step %[[VAL_33]] unordered {
+! CHECK:           fir.do_concurrent {
+! CHECK:             %[[VAL_9:.*]] = fir.declare %{{.*}}i"} : (!fir.ref<i32>) -> !fir.ref<i32>
+! CHECK:             fir.do_concurrent.loop (%[[VAL_34:.*]]) = (%[[VAL_28]]) to (%[[VAL_30]]) step (%[[VAL_33]]) {

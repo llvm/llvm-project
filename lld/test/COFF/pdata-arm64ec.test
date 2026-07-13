@@ -80,9 +80,62 @@ DIR3-NEXT:     ExtraRFETableSize: 0x10
 DIR3:        ]
 DIR3:      }
 
+arm64x with no x86 .pdata:
+
 RUN: llvm-objdump -s --section=.pdata test4.dll | FileCheck -check-prefix=DATA4 %s
 DATA4: 180006000 00100000 11000001 00200000 11000001  ......... ......
 DATA4: 180006010 00300000 0e300000
+
+RUN: lld-link -out:testx2.dll -machine:arm64x arm64-func-sym.obj arm64ec-func-sym.obj \
+RUN:          loadconfig-arm64.obj loadconfig-arm64ec.obj -dll -noentry
+
+RUN: llvm-readobj --headers --coff-load-config testx2.dll | FileCheck -check-prefix=DIR4 %s
+DIR4:      ImageOptionalHeader {
+DIR4:        DataDirectory {
+DIR4:          ExceptionTableRVA: 0x5000
+DIR4-NEXT:     ExceptionTableSize: 0x10
+DIR4:        }
+DIR4:      }
+DIR4:      CHPEMetadata [
+DIR4:        ExtraRFETable: 0x0
+DIR4-NEXT:   ExtraRFETableSize: 0x0
+DIR4:      ]
+DIR4:      HybridObject {
+DIR4:        ImageOptionalHeader {
+DIR4:          ExceptionTableRVA: 0x0
+DIR4-NEXT:     ExceptionTableSize: 0x0
+DIR4:        }
+DIR4:        CHPEMetadata [
+DIR4:          ExtraRFETable: 0x5000
+DIR4-NEXT:     ExtraRFETableSize: 0x10
+DIR4:        ]
+DIR4:      }
+
+arm64x with no ARM .pdata:
+
+RUN: lld-link -out:testx3.dll -machine:arm64x x86_64-func-sym.obj loadconfig-arm64.obj loadconfig-arm64ec.obj -dll -noentry
+
+RUN: llvm-readobj --headers --coff-load-config testx3.dll | FileCheck -check-prefix=DIR5 %s
+DIR5:      ImageOptionalHeader {
+DIR5:        DataDirectory {
+DIR5:          ExceptionTableRVA: 0x0
+DIR5-NEXT:     ExceptionTableSize: 0x0
+DIR5:        }
+DIR5:      }
+DIR5:      CHPEMetadata [
+DIR5:        ExtraRFETable: 0x4000
+DIR5-NEXT:   ExtraRFETableSize: 0xC
+DIR5:      ]
+DIR5:      HybridObject {
+DIR5:        ImageOptionalHeader {
+DIR5:          ExceptionTableRVA: 0x4000
+DIR5-NEXT:     ExceptionTableSize: 0xC
+DIR5:        }
+DIR5:        CHPEMetadata [
+DIR5:          ExtraRFETable: 0x0
+DIR5-NEXT:     ExtraRFETableSize: 0x0
+DIR5:        ]
+DIR5:      }
 
 Order of inputs doesn't matter, the data is sorted by type and RVA:
 

@@ -7,14 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "CSKY.h"
-#include "ToolChains/CommonArgs.h"
-#include "clang/Basic/CharInfo.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/CSKYTargetParser.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/TargetParser.h"
@@ -37,7 +33,7 @@ csky::getCSKYArchName(const Driver &D, const ArgList &Args,
     return std::optional<llvm::StringRef>(A->getValue());
   }
 
-  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ)) {
+  if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
     llvm::CSKY::ArchKind ArchKind = llvm::CSKY::parseCPUArch(A->getValue());
     if (ArchKind == llvm::CSKY::ArchKind::INVALID) {
       D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);
@@ -130,7 +126,7 @@ void csky::getCSKYTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     archName = A->getValue();
   }
 
-  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ)) {
+  if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
     llvm::CSKY::ArchKind Kind = llvm::CSKY::parseCPUArch(A->getValue());
     if (Kind == llvm::CSKY::ArchKind::INVALID) {
       D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);

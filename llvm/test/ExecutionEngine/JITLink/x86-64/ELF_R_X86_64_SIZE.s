@@ -7,7 +7,7 @@
 # RUN: llvm-mc -triple=x86_64-unknown-linux -position-independent --defsym=OVERFLOW=1 \
 # RUN:     -filetype=obj -o %t.2.o %s
 # RUN: not llvm-jitlink -noexec %t.2.o 2>&1 | FileCheck %s
-# CHECK: llvm-jitlink error: In graph {{.*}}, section .text: relocation target "main" at address {{.*}} is out of range of Size32 fixup at {{.*}} (main, {{.*}})
+# CHECK: llvm-jitlink error: In graph {{.*}}, section .text: relocation target {{.*}} (main:{{.*}} + {{.*}}) is out of range of Size32 fixup at address {{.*}} (main, {{.*}})
 
 	.text
 	.globl	main

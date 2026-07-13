@@ -49,11 +49,11 @@ define dso_local void @_Z19test_multiple_exitsi(i32 %param) local_unnamed_addr #
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[PARAM_TR]], 10
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[TEMP]]) #1
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TEMP]]) #1
 ; CHECK-NEXT:    call void @_Z11capture_argPi(ptr nonnull [[TEMP]])
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[PARAM_TR]], 1
 ; CHECK-NEXT:    call void @_Z19test_multiple_exitsi(i32 [[ADD]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[TEMP]]) #1
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TEMP]]) #1
 ; CHECK-NEXT:    br label [[IF_END14:%.*]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[PARAM_OFF:%.*]] = add i32 [[PARAM_TR]], -10
@@ -80,11 +80,11 @@ entry:
   br i1 %0, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %temp) #2
+  call void @llvm.lifetime.start.p0(ptr nonnull %temp) #2
   call void @_Z11capture_argPi(ptr nonnull %temp)
   %add = add nuw nsw i32 %param, 1
   call void @_Z19test_multiple_exitsi(i32 %add)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %temp) #2
+  call void @llvm.lifetime.end.p0(ptr nonnull %temp) #2
   br label %if.end14
 
 if.else:                                          ; preds = %entry
@@ -113,10 +113,10 @@ if.end14:                                         ; preds = %if.then5, %if.then1
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.start.p0(ptr nocapture) #2
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.end.p0(ptr nocapture) #2
 
 attributes #0 = { nofree noinline norecurse nounwind uwtable }
 attributes #1 = { nounwind uwtable }

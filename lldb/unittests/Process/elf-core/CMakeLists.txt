@@ -4,6 +4,8 @@ include(CMakePushCheckState)
 add_lldb_unittest(ProcessElfCoreTests
   ThreadElfCoreTest.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbCore
     lldbHost
@@ -12,9 +14,6 @@ add_lldb_unittest(ProcessElfCoreTests
     lldbPluginPlatformLinux
 
     LLVMTestingSupport
-
-  LINK_COMPONENTS
-    Support
   )
 
 cmake_push_check_state()

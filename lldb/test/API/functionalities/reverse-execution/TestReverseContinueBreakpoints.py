@@ -8,6 +8,7 @@ from lldbsuite.test.lldbreverse import ReverseTestBase
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no reverse execution
 class TestReverseContinueBreakpoints(ReverseTestBase):
     @skipIfRemote
     def test_reverse_continue(self):
@@ -63,10 +64,20 @@ class TestReverseContinueBreakpoints(ReverseTestBase):
         self.assertEqual(threads_now, initial_threads)
 
     @skipIfRemote
+    @skipIf(
+        oslist=["windows"],
+        archs=["x86_64"],
+        bugnumber="github.com/llvm/llvm-project/issues/138084",
+    )
     def test_reverse_continue_skip_breakpoint(self):
         self.reverse_continue_skip_breakpoint_internal(async_mode=False)
 
     @skipIfRemote
+    @skipIf(
+        oslist=["windows"],
+        archs=["x86_64"],
+        bugnumber="github.com/llvm/llvm-project/issues/138084",
+    )
     def test_reverse_continue_skip_breakpoint_async(self):
         self.reverse_continue_skip_breakpoint_internal(async_mode=True)
 

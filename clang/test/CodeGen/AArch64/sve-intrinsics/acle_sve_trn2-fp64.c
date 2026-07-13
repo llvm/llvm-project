@@ -168,3 +168,17 @@ svfloat32_t test_svtrn2_f32(svfloat32_t op1, svfloat32_t op2) {
 svfloat64_t test_svtrn2_f64(svfloat64_t op1, svfloat64_t op2) {
   return SVE_ACLE_FUNC(svtrn2q, _f64, , )(op1, op2);
 }
+
+// CHECK-LABEL: @test_svtrn2_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.trn2q.nxv8bf16(<vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[OP2:%.*]])
+// CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
+//
+// CPP-CHECK-LABEL: @_Z16test_svtrn2_bf16u14__SVBfloat16_tS_(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.trn2q.nxv8bf16(<vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[OP2:%.*]])
+// CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
+//
+svbfloat16_t test_svtrn2_bf16(svbfloat16_t op1, svbfloat16_t op2) {
+  return SVE_ACLE_FUNC(svtrn2q, _bf16, , )(op1, op2);
+}

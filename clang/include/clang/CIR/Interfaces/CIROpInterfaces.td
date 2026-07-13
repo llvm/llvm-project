@@ -21,7 +21,8 @@ let cppNamespace = "::cir" in {
   // The CIRCallOpInterface must be used instead of CallOpInterface when looking
   // at arguments and other bits of CallOp. This creates a level of abstraction
   // that's useful for handling indirect calls and other details.
-  def CIRCallOpInterface : OpInterface<"CIRCallOpInterface", [CallOpInterface]> {
+  def CIRCallOpInterface
+      : OpInterface<"CIRCallOpInterface", [CallOpInterface]> {
     // Currently we don't have any methods defined in CIRCallOpInterface. We'll
     // add more methods as the upstreaming proceeds.
     let methods = [
@@ -34,6 +35,10 @@ let cppNamespace = "::cir" in {
           "Return the number of operands, accounts for indirect call or "
           "exception info",
           "unsigned", "getNumArgOperands", (ins)>,
+      InterfaceMethod<"Return whether the callee is nothrow",
+                      "bool", "getNothrow", (ins)>,
+      InterfaceMethod<"Return the side effects of the call operation",
+                      "cir::SideEffect", "getSideEffect", (ins)>,
     ];
   }
 
@@ -136,13 +141,19 @@ let cppNamespace = "::cir" in {
       InterfaceMethod<"",
       "void", "setDSOLocal", (ins "bool":$val), [{}],
       /*defaultImplementation=*/[{
-        $_op.setDsolocal(val);
+        $_op.setDsoLocal(val);
+      }]
+      >,
+      InterfaceMethod<"",
+      "void", "setGlobalVisibility", (ins "cir::VisibilityKind":$val), [{}],
+      /*defaultImplementation=*/[{
+        $_op.setGlobalVisibility(val);
       }]
       >,
       InterfaceMethod<"",
       "bool", "isDSOLocal", (ins), [{}],
       /*defaultImplementation=*/[{
-        return $_op.getDsolocal();
+        return $_op.getDsoLocal();
       }]
       >,
       InterfaceMethod<"",
@@ -150,12 +161,101 @@ let cppNamespace = "::cir" in {
       /*defaultImplementation=*/[{
         return cir::isWeakForLinker($_op.getLinkage());
       }]
+      >,
+      InterfaceMethod<"",
+      "void", "setSection", (ins "mlir::StringAttr":$val), [{}],
+      /*defaultImplementation=*/[{
+        if (val)
+          $_op->setAttr("section", val);
+        else
+          $_op->removeAttr("section");
+      }]
+      >,
+      InterfaceMethod<"",
+      "mlir::StringAttr", "getSectionAttr", (ins), [{}],
+      /*defaultImplementation=*/[{
+        return mlir::dyn_cast_if_present<mlir::StringAttr>(
+            $_op->getAttr("section"));
+      }]
+      >,
+      // Added for readability.
+      InterfaceMethod<"",
+      "bool", "isDefinition", (ins), [{}],
+      /*defaultImplementation=*/[{
+        return !$_op.isDeclaration();
+      }]
+      >,
+      // TODO(cir): Make GlobalAlias a separate op.
+      InterfaceMethod<"",
+      "void", "setAliasee", (ins "::std::optional<::llvm::StringRef>":$val), [{}],
+      /*defaultImplementation=*/[{
+        if (val) {
+          auto aliaseeRef =
+              ::mlir::FlatSymbolRefAttr::get($_op->getContext(), *val);
+          $_op->setAttr("aliasee", aliaseeRef);
+        } else {
+          $_op->removeAttr("aliasee");
+        }
+      }]
+      >,
+      InterfaceMethod<"",
+      "void", "setLinkage", (ins "::cir::GlobalLinkageKind":$val), [{}],
+      /*defaultImplementation=*/[{
+        $_op.setLinkage(val);
+      }]
       >
     ];
     let extraClassDeclaration = [{
       bool hasDefaultVisibility();
       bool canBenefitFromLocalAlias();
     }];
+  }
+
+  def CIR_BinaryOpInterface : OpInterface<"BinaryOpInterface"> {
+    let description = [{
+      Common interface for CIR binary arithmetic and logic operations.
+      Provides uniform access to the left-hand side operand, right-hand side
+      operand, and result of any binary operation in the CIR dialect.
+    }];
+
+    let methods = [
+      InterfaceMethod<"Return the left-hand side operand.",
+        "mlir::Value", "getLhs", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getLhs();
+        }]>,
+      InterfaceMethod<"Return the right-hand side operand.",
+        "mlir::Value", "getRhs", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getRhs();
+        }]>,
+      InterfaceMethod<"Return the result value.",
+        "mlir::Value", "getResult", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getResult();
+        }]>,
+    ];
+  }
+
+  def CIR_UnaryOpInterface : OpInterface<"UnaryOpInterface"> {
+    let description = [{
+      Common interface for CIR unary operations.
+      Provides uniform access to the input operand and result of any unary
+      operation in the CIR dialect.
+    }];
+
+    let methods = [
+      InterfaceMethod<"Return the input operand.",
+        "mlir::Value", "getInput", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getInput();
+        }]>,
+      InterfaceMethod<"Return the result value.",
+        "mlir::Value", "getResult", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getResult();
+        }]>,
+    ];
   }
 
 } // namespace cir

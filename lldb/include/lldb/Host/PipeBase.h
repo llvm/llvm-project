@@ -21,18 +21,14 @@ class PipeBase {
 public:
   virtual ~PipeBase();
 
-  virtual Status CreateNew(bool child_process_inherit) = 0;
-  virtual Status CreateNew(llvm::StringRef name,
-                           bool child_process_inherit) = 0;
+  virtual Status CreateNew() = 0;
+  virtual Status CreateNew(llvm::StringRef name) = 0;
   virtual Status CreateWithUniqueName(llvm::StringRef prefix,
-                                      bool child_process_inherit,
                                       llvm::SmallVectorImpl<char> &name) = 0;
 
-  virtual Status OpenAsReader(llvm::StringRef name,
-                              bool child_process_inherit) = 0;
+  virtual Status OpenAsReader(llvm::StringRef name) = 0;
 
   virtual llvm::Error OpenAsWriter(llvm::StringRef name,
-                                   bool child_process_inherit,
                                    const Timeout<std::micro> &timeout) = 0;
 
   virtual bool CanRead() const = 0;

@@ -136,8 +136,34 @@ func.func @fold_concat(%arg0: tensor<1x2x?xi32>) -> (tensor<1x2x3xi32>, tensor<1
 
 // -----
 
+// CHECK-LABEL: infer_concat_operand_types
+// CHECK-SAME: %[[ARG0:.+]]: tensor<?x12xi32>
+// CHECK-SAME: %[[ARG1:.+]]: tensor<?x?xi32>
+func.func @infer_concat_operand_types(%arg0: tensor<?x12xi32>, %arg1: tensor<?x?xi32>) -> (tensor<?x12xi32>) {
+  // CHECK-NEXT: %[[CAST:.+]] = tensor.cast %[[ARG1]] : tensor<?x?xi32> to tensor<?x12xi32>
+  %0 = tensor.concat dim(0) %arg0, %arg1: (tensor<?x12xi32>, tensor<?x?xi32>) -> tensor<?x12xi32>
+  // CHECK-NEXT: %[[CONCAT:.+]] = tensor.concat dim(0) %[[ARG0]], %[[CAST]] : (tensor<?x12xi32>, tensor<?x12xi32>) -> tensor<?x12xi32>
+  return %0 : tensor<?x12xi32>
+  // CHECK-NEXT: return %[[CONCAT]] : tensor<?x12xi32>
+}
+
+// -----
+
+// CHECK-LABEL: infer_concat_return_type
+// CHECK-SAME: %[[ARG0:.+]]: tensor<5x12xi32>
+// CHECK-SAME: %[[ARG1:.+]]: tensor<?x12xi32>
+func.func @infer_concat_return_type(%arg0: tensor<5x12xi32>, %arg1: tensor<?x12xi32>) -> (tensor<?x?xi32>) {
+  %0 = tensor.concat dim(0) %arg0, %arg1: (tensor<5x12xi32>, tensor<?x12xi32>) -> tensor<?x?xi32>
+  // CHECK-NEXT: %[[CONCAT:.+]] = tensor.concat dim(0) %[[ARG0]], %[[ARG1]] : (tensor<5x12xi32>, tensor<?x12xi32>) -> tensor<?x12xi32>
+  // CHECK-NEXT: %[[CAST:.+]] = tensor.cast %[[CONCAT]] : tensor<?x12xi32> to tensor<?x?xi32>
+  return %0 : tensor<?x?xi32>
+  // CHECK-NEXT: return %[[CAST]] : tensor<?x?xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_extract
-func.func @fold_extract(%arg0 : index) -> (f32, f16, f16, i32, complex<f32>) {
+func.func @fold_extract(%arg0 : index) -> (f32, f16, f16, i32, complex<f32>, i32) {
   %const_0 = arith.constant 0 : index
   %const_1 = arith.constant 1 : index
   %const_3 = arith.constant 3 : index
@@ -167,8 +193,15 @@ func.func @fold_extract(%arg0 : index) -> (f32, f16, f16, i32, complex<f32>) {
   %4 = arith.constant dense<(1.2, 2.3)> : tensor<complex<f32>>
   %ext_5 = tensor.extract %4[] : tensor<complex<f32>>
 
-  // CHECK-NEXT: return [[C4]], [[CM2]], [[C0]], [[C64]], [[C5]]
-  return %ext_1, %ext_2, %ext_3, %ext_4, %ext_5 : f32, f16, f16, i32, complex<f32>
+  // Fold an extract after an insert.
+  // CHECK-DAG: [[C6:%.+]] = arith.constant 4 : i32
+  %c4_i32 = arith.constant 4 : i32
+  %5 = arith.constant dense<[[1, 3], [0, 2]]> : tensor<2x2xi32>
+  %inserted = tensor.insert %c4_i32 into %5[%const_1, %const_0] : tensor<2x2xi32>
+  %ext_6 = tensor.extract %inserted[%const_1, %const_0] : tensor<2x2xi32>
+
+  // CHECK-NEXT: return [[C4]], [[CM2]], [[C0]], [[C64]], [[C5]], [[C6]]
+  return %ext_1, %ext_2, %ext_3, %ext_4, %ext_5, %ext_6 : f32, f16, f16, i32, complex<f32>, i32
 }
 
 // -----
@@ -365,6 +398,34 @@ func.func @extract_from_elements_complex_f() -> tensor<3xcomplex<f32>> {
 
 // -----
 
+// Ensure tensor.from_elements with poison values doesn't crash.
+// CHECK-LABEL: func @from_elements_with_poison
+func.func @from_elements_with_poison() -> tensor<1xindex> {
+  // CHECK: %[[POISON:.*]] = ub.poison : index
+  // CHECK: %[[TENSOR:.*]] = tensor.from_elements %[[POISON]] : tensor<1xindex>
+  // CHECK: return %[[TENSOR]]
+  %0 = ub.poison : index
+  %1 = tensor.from_elements %0 : tensor<1xindex>
+  return %1 : tensor<1xindex>
+}
+
+// -----
+
+// Ensure tensor.from_elements with a vector element type doesn't crash
+// when the elements fold to constants (DenseElementsAttr does not support
+// non-scalar element types via the Attribute overload).
+// CHECK-LABEL: func @from_elements_with_vector_element_type
+func.func @from_elements_with_vector_element_type() -> tensor<1xvector<1xi1>> {
+  // CHECK: %[[CST:.*]] = arith.constant dense<true> : vector<1xi1>
+  // CHECK: %[[TENSOR:.*]] = tensor.from_elements %[[CST]] : tensor<1xvector<1xi1>>
+  // CHECK: return %[[TENSOR]]
+  %0 = vector.constant_mask [1] : vector<1xi1>
+  %1 = tensor.from_elements %0 : tensor<1xvector<1xi1>>
+  return %1 : tensor<1xvector<1xi1>>
+}
+
+// -----
+
 // Ensure the optimization doesn't segfault from bad constants
 // CHECK-LABEL: func @extract_negative_from_tensor.from_elements
 func.func @extract_negative_from_tensor.from_elements(%element : index) -> index {
@@ -531,6 +592,23 @@ func.func @rank_reducing_slice_canonicalize(%arg0 : tensor<?x?x?xf32>, %arg1 : i
 //  CHECK-SAME:      : tensor<?x?x?xf32> to tensor<4x?xf32>
 //       CHECK:   %[[RESULT:.+]] = tensor.cast %[[SLICE]]
 //       CHECK:   return %[[RESULT]]
+
+// -----
+
+func.func @rank_reducing_slice_preserve_dropped_dims(
+    %arg0 : tensor<1x1x8x1xf16>, %arg1 : index) -> tensor<1x4xf16> {
+  %c0 = arith.constant 0 : index
+  %0 = tensor.extract_slice %arg0[%c0, 0, %arg1, 0] [1, 1, 4, 1] [1, 1, 1, 1]
+    : tensor<1x1x8x1xf16> to tensor<1x4xf16>
+  return %0 : tensor<1x4xf16>
+}
+// CHECK-LABEL: func @rank_reducing_slice_preserve_dropped_dims
+//  CHECK-SAME:   %[[ARG0:.+]]: tensor<1x1x8x1xf16>
+//  CHECK-SAME:   %[[ARG1:.+]]: index
+//       CHECK:   %[[SLICE:.+]] = tensor.extract_slice %[[ARG0]]
+//  CHECK-SAME:      [0, 0, %[[ARG1]], 0] [1, 1, 4, 1] [1, 1, 1, 1]
+//  CHECK-SAME:      : tensor<1x1x8x1xf16> to tensor<1x4xf16>
+//       CHECK:   return %[[SLICE]]
 
 // -----
 
@@ -938,6 +1016,17 @@ func.func @fold_reshape_1d(%input: tensor<?xf32>, %shape: tensor<1xindex>) -> te
 
 // -----
 
+// CHECK-LABEL: func @fold_reshape_0d
+//  CHECK-SAME: %[[INPUT:[a-zA-Z0-9_]+]]: tensor<f32>
+//  CHECK-SAME: %[[SHAPE:[a-zA-Z0-9_]+]]: tensor<0xindex>
+//       CHECK: return %[[INPUT]]
+func.func @fold_reshape_0d(%input: tensor<f32>, %shape: tensor<0xindex>) -> tensor<f32> {
+  %0 = tensor.reshape %input(%shape) : (tensor<f32>, tensor<0xindex>) -> tensor<f32>
+  return %0 : tensor<f32>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_extract_constant_splat
 //   CHECK-NOT: tensor.extract_slice
 //       CHECK: arith.constant dense<42> : tensor<4x4xi32>
@@ -1068,7 +1157,7 @@ func.func @fold_expand_of_collapse(%arg0 : tensor<3x4x4xf32>) -> tensor<3x4x4xf3
 
 // -----
 
-func.func @fold_expand_of_collapse_dynamic(%arg0 : tensor<?x4x?xf32>, %arg1: index, %arg2: index)
+func.func @fold_expand_of_collapse_mixed_subshape(%arg0 : tensor<?x4x?xf32>, %arg1: index, %arg2: index)
     -> tensor<?x4x?xf32> {
   %0 = tensor.collapse_shape %arg0 [[0, 1], [2]]
       : tensor<?x4x?xf32> into tensor<?x?xf32>
@@ -1076,12 +1165,28 @@ func.func @fold_expand_of_collapse_dynamic(%arg0 : tensor<?x4x?xf32>, %arg1: ind
       : tensor<?x?xf32> into tensor<?x4x?xf32>
   return %1 : tensor<?x4x?xf32>
 }
-// CHECK-LABEL: @fold_expand_of_collapse_dynamic
+// CHECK-LABEL: @fold_expand_of_collapse_mixed_subshape
 //   CHECK-NOT:   tensor.{{.*}}_shape
 
 // -----
 
-func.func @no_fold_expand_of_collapse_dynamic(%arg0 : tensor<?x?x?xf32>, %arg1: index, %arg2: index, %arg3: index)
+func.func @fold_expand_of_collapse_mixed_target_subshape(%arg0 : tensor<?x4x?x2xf32>, %arg1: index, %arg2: index)
+    -> tensor<?x4x?xf32> {
+  %0 = tensor.collapse_shape %arg0 [[0, 1], [2, 3]]
+      : tensor<?x4x?x2xf32> into tensor<?x?xf32>
+  %1 = tensor.expand_shape %0 [[0, 1], [2]] output_shape [%arg1, 4, %arg2]
+      : tensor<?x?xf32> into tensor<?x4x?xf32>
+  return %1 : tensor<?x4x?xf32>
+}
+// CHECK-LABEL: @fold_expand_of_collapse_mixed_target_subshape
+//   CHECK-NOT:   tensor.expand_shape
+//       CHECK:   %[[COLLAPSE:.+]] = tensor.collapse_shape %arg0 {{\[}}[0], [1], [2, 3]]
+//  CHECK-SAME:     : tensor<?x4x?x2xf32> into tensor<?x4x?xf32>
+//  CHECK-NEXT:   return %[[COLLAPSE]]
+
+// -----
+
+func.func @no_fold_expand_of_collapse_fully_dynamic(%arg0 : tensor<?x?x?xf32>, %arg1: index, %arg2: index, %arg3: index)
     -> tensor<?x?x?xf32> {
   %0 = tensor.collapse_shape %arg0 [[0, 1], [2]]
       : tensor<?x?x?xf32> into tensor<?x?xf32>
@@ -1089,7 +1194,22 @@ func.func @no_fold_expand_of_collapse_dynamic(%arg0 : tensor<?x?x?xf32>, %arg1: 
       : tensor<?x?xf32> into tensor<?x?x?xf32>
   return %1 : tensor<?x?x?xf32>
 }
-// CHECK-LABEL: @no_fold_expand_of_collapse_dynamic
+// CHECK-LABEL: @no_fold_expand_of_collapse_fully_dynamic
+//       CHECK:   tensor.collapse_shape
+//       CHECK:   %[[EXPAND:.+]] = tensor.expand_shape
+//       CHECK:   return %[[EXPAND]]
+
+// -----
+
+func.func @no_fold_expand_of_collapse_adjacent_dynamic(%arg0 : tensor<?x?x?xf32>, %arg1: index, %arg2: index)
+    -> tensor<?x?xf32> {
+  %0 = tensor.collapse_shape %arg0 [[0, 1, 2]]
+      : tensor<?x?x?xf32> into tensor<?xf32>
+  %1 = tensor.expand_shape %0 [[0, 1]] output_shape [%arg1, %arg2]
+      : tensor<?xf32> into tensor<?x?xf32>
+  return %1 : tensor<?x?xf32>
+}
+// CHECK-LABEL: @no_fold_expand_of_collapse_adjacent_dynamic
 //       CHECK:   tensor.collapse_shape
 //       CHECK:   %[[EXPAND:.+]] = tensor.expand_shape
 //       CHECK:   return %[[EXPAND]]
@@ -1179,6 +1299,24 @@ func.func @compose_collapse_of_expand_1D(%arg0 : tensor<2048xf32>)
 
 // -----
 
+func.func @compose_collapse_of_expand_partially_dynamic(%arg0: tensor<?xf16>, %arg1: index, %arg2: index) -> tensor<8x?x?xf16> {
+  %expanded = tensor.expand_shape %arg0 [[0, 1, 2, 3, 4]] output_shape [4, 2, %arg1, %arg2, 32] : tensor<?xf16> into tensor<4x2x?x?x32xf16>
+  %collapsed = tensor.collapse_shape %expanded [[0, 1], [2], [3, 4]] : tensor<4x2x?x?x32xf16> into tensor<8x?x?xf16>
+  return %collapsed : tensor<8x?x?xf16>
+}
+//       CHECK: func @compose_collapse_of_expand_partially_dynamic
+//  CHECK-SAME:   %[[SRC:.[a-zA-Z0-9]+]]
+//  CHECK-SAME:   %[[ORIG_D2:.[a-zA-Z0-9]+]]
+//  CHECK-SAME:   %[[ORIG_D3:.[a-zA-Z0-9]+]]
+//   CHECK-DAG:   %[[C32:.+]] = arith.constant 32
+//       CHECK:   %[[COLLAPSED_D2:.+]] = arith.muli %[[ORIG_D3]], %[[C32]] overflow<nsw>
+//       CHECK:   %[[RESULT:.+]] = tensor.expand_shape %[[SRC]]
+//  CHECK-SAME:     [0, 1, 2]
+//  CHECK-SAME:     output_shape [8, %[[ORIG_D2]], %[[COLLAPSED_D2]]]
+//       CHECK:   return %[[RESULT]]
+
+// -----
+
 func.func @compose_expand_of_collapse_0_rank_to_expand(%arg0 : tensor<1x1x1xf32>)
     -> tensor<1x1x1x1xf32> {
   %0 = tensor.collapse_shape %arg0 []
@@ -1236,6 +1374,20 @@ func.func @compose_expand_of_collapse_dynamic(%arg0 : tensor<4x?x10x64x2xf16>, %
 //      CHECK:   %[[RESULT:.+]] = tensor.collapse_shape %[[ARG0]]
 // CHECK-SAME:     [0], [1], [2], [3, 4]
 //      CHECK:   return %[[RESULT]]
+
+// -----
+
+func.func @no_compose_collapse_of_expand_dynamic(%arg0 : tensor<?x8x128x?xf16>, %arg1: index) -> tensor<?x128x?xf16> {
+  %collapse = tensor.collapse_shape %arg0 [[0, 1, 2, 3]] : tensor<?x8x128x?xf16> into tensor<?xf16>
+  %expanded_19 = tensor.expand_shape %collapse [[0, 1, 2]] output_shape [%arg1, 128, %arg1] : tensor<?xf16> into tensor<?x128x?xf16>
+  return %expanded_19 : tensor<?x128x?xf16>
+}
+// CHECK-LABEL: func @no_compose_collapse_of_expand_dynamic
+//  CHECK-SAME:   %[[ARG0:.+]]: tensor
+//  CHECK-SAME:   %[[ARG1:.+]]: index
+//       CHECK:   %[[COLLAPSE:.+]] = tensor.collapse_shape %[[ARG0]]
+//       CHECK:   %[[EXPAND:.+]] = tensor.expand_shape %[[COLLAPSE]]
+//       CHECK:   return %[[EXPAND]]
 
 // -----
 
@@ -1532,6 +1684,22 @@ func.func @reshape_splat_constant_float64() -> tensor<2x4x2xf64> {
 //       CHECK:   %[[CST:.*]] = arith.constant dense<{{.*}}> : tensor<2x4x2xf64>
 //   CHECK-NOT:   tensor.expand_shape
 //       CHECK:   return %[[CST]]
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/177845:
+// tensor.expand_shape of a constant to a dynamic shape must not crash.
+// FoldReshapeWithConstant must not call DenseElementsAttr::getFromRawBuffer
+// when the result type is dynamic (getFromRawBuffer requires static shape).
+
+// CHECK-LABEL: @expand_shape_splat_constant_dynamic_result
+//       CHECK:   arith.constant
+//       CHECK:   tensor.expand_shape
+func.func @expand_shape_splat_constant_dynamic_result(%n: index) -> tensor<?xi32> {
+  %cst = arith.constant dense<1> : tensor<i32>
+  %result = tensor.expand_shape %cst [] output_shape [%n] : tensor<i32> into tensor<?xi32>
+  return %result : tensor<?xi32>
+}
 
 // -----
 
@@ -2108,6 +2276,19 @@ func.func @fold_empty_tensor_with_cast(%arg0 : index) -> tensor<1x12xf32> {
 //      CHECK: func @fold_empty_tensor_with_cast(%[[ARG0:.+]]: index)
 //      CHECK:   %[[T0:.+]] = tensor.empty() : tensor<1x12xf32>
 //      CHECK:   return %[[T0]] : tensor<1x12xf32>
+
+// -----
+
+func.func @fold_empty_tensor_with_cast_encoding(%arg0 : index)
+    -> tensor<1x12xf32, "foo"> {
+  %0 = tensor.empty(%arg0) : tensor<?x12xf32, "foo">
+  %1 = tensor.cast %0 : tensor<?x12xf32, "foo"> to tensor<1x12xf32, "foo">
+  return %1 : tensor<1x12xf32, "foo">
+}
+// CHECK-LABEL: func @fold_empty_tensor_with_cast_encoding
+//       CHECK:   %[[T0:.+]] = tensor.empty() : tensor<1x12xf32, "foo">
+//   CHECK-NOT:   tensor.cast
+//       CHECK:   return %[[T0]] : tensor<1x12xf32, "foo">
 
 // -----
 

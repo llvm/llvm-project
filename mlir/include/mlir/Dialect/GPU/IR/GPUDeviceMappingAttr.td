@@ -228,6 +228,41 @@ def GPUThreadMappingAttr
   }];
 }
 
+def GPULaneMappingAttr
+    : GPU_Attr<"GPULaneMapping", "lane", [
+      DeclareAttrInterfaceMethods<DeviceMappingAttrInterface> ]> {
+  let parameters = (ins
+    EnumParameter<MappingIdEnum>:$lane
+  );
+  let assemblyFormat = "`<` params `>`";
+  let description = [{
+    An attribute that allows defining lane parallelism for GPU devices.
+
+    It can be consumed by lowering to generate GPU.
+
+    #### 3D mapping mode
+
+    Unsupported
+
+    #### Linear mapping mode
+
+    The linear lane id is obtained by linearizing the index of the lane.
+    If required, predication occurs on the linear id. This allows specifying
+    predication on a 1D subset of the (linearized) lanes.
+  }];
+}
+
+def GPUMappingMaskAttr : GPU_Attr<"GPUMappingMask", "mask", [
+  DeclareAttrInterfaceMethods<DeviceMaskingAttrInterface> ] >  {
+  let parameters = (ins "uint64_t":$mask);
+  let assemblyFormat = "`<` params `>`";
+  let description = [{
+    Attribute describing how to filter the processing units that a region is
+    mapped to. The masking is a bitfield that specifies for each processing
+    unit whether it is active or not.
+  }];
+}
+
 def GPUMemorySpaceMappingAttr : GPU_Attr<"GPUMemorySpaceMapping", "memory_space", [
   DeclareAttrInterfaceMethods<DeviceMappingAttrInterface> ] >  {
   let parameters = (ins

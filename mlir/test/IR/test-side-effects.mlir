@@ -15,7 +15,7 @@ func.func @side_effect(%arg : index) {
     {effect="write", test_resource}
   ]} : () -> i32
   
-  // expected-remark@+1 {{found an instance of 'allocate' on a op result, on resource '<Test>'}}
+  // expected-remark@+1 {{found an instance of 'allocate' on op result 0, on resource '<Test>'}}
   %3 = "test.side_effect_op"() {effects = [
     {effect="allocate", on_result, test_resource}
   ]} : () -> i32
@@ -38,23 +38,32 @@ func.func @side_effect(%arg : index) {
     effect_parameter = affine_map<(i, j) -> (j, i)>
   } : () -> i32
 
-  // expected-remark@+1 {{found an instance of 'allocate' on a op operand, on resource '<Test>'}}
+  // expected-remark@+1 {{found an instance of 'allocate' on op operand 0, on resource '<Test>'}}
   %6 = test.side_effect_with_region_op (%arg) {
   ^bb0(%arg0 : index):
     test.region_yield %arg0 : index 
   } {effects = [ {effect="allocate", on_operand, test_resource} ]} : index -> index
 
-  // expected-remark@+1 {{found an instance of 'allocate' on a op result, on resource '<Test>'}}
+  // expected-remark@+1 {{found an instance of 'allocate' on op result 0, on resource '<Test>'}}
   %7 = test.side_effect_with_region_op (%arg) {
   ^bb0(%arg0 : index):
     test.region_yield %arg0 : index 
   } {effects = [ {effect="allocate", on_result, test_resource} ]} : index -> index
 
-  // expected-remark@+1 {{found an instance of 'allocate' on a block argument, on resource '<Test>'}}
+  // expected-remark@+1 {{found an instance of 'allocate' on block argument 0, on resource '<Test>'}}
   %8 = test.side_effect_with_region_op (%arg) {
   ^bb0(%arg0 : index):
     test.region_yield %arg0 : index 
   } {effects = [ {effect="allocate", on_argument, test_resource} ]} : index -> index
+
+  // expected-remark@+1 {{operation has no memory effects}}
+  %9 = "test.conditional_side_effect_op"() {has_effects = false} : () -> i32
+
+  // expected-remark@+4 {{found an instance of 'read' on resource '<Default>'}}
+  // expected-remark@+3 {{found an instance of 'write' on resource '<Default>'}}
+  // expected-remark@+2 {{found an instance of 'free' on resource '<Default>'}}
+  // expected-remark@+1 {{found an instance of 'allocate' on resource '<Default>'}}
+  %10 = "test.conditional_side_effect_op"() {has_effects = true} : () -> i32
 
   func.return 
 }

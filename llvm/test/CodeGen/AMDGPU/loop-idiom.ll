@@ -1,6 +1,6 @@
 ; RUN: opt -passes=loop-idiom -S < %s -mtriple=r600 -mcpu=redwood | FileCheck --check-prefix=R600 --check-prefix=FUNC %s
-; RUN: opt -passes=loop-idiom -S < %s -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs| FileCheck --check-prefix=SI --check-prefix=FUNC %s
-; RUN: opt -passes=loop-idiom -S < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs| FileCheck --check-prefix=SI --check-prefix=FUNC %s
+; RUN: opt -passes=loop-idiom -S < %s -mtriple=amdgcn -mcpu=tahiti | FileCheck --check-prefix=SI --check-prefix=FUNC %s
+; RUN: opt -passes=loop-idiom -S < %s -mtriple=amdgcn -mcpu=tonga | FileCheck --check-prefix=SI --check-prefix=FUNC %s
 
 ; Make sure loop-idiom doesn't create memcpy or memset.  There are no library
 ; implementations of these for R600.

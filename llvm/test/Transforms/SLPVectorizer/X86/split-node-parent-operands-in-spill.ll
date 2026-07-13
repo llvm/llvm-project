@@ -23,15 +23,16 @@ define void @test(i32 %arg) {
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[BB8]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i32> [ zeroinitializer, %[[BB4]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[LOAD]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[LOAD1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[LOAD3]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[LOAD2]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[LOAD]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[LOAD1]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[LOAD3]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[LOAD2]], i64 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> [[TMP5]], <4 x i32> [[TMP4]], i64 4)
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i32> [[TMP5]], <8 x i32> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    br label %[[BB12]]
 ; CHECK:       [[BB12]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <8 x i32> [ [[TMP6]], %[[BB8]] ], [ poison, %[[BB6]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <8 x i32> [ [[TMP7]], %[[BB8]] ], [ poison, %[[BB6]] ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[BB21]]:
 ; CHECK-NEXT:    ret void

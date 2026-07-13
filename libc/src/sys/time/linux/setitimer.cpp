@@ -6,22 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 #include "src/sys/time/setitimer.h"
-#include "hdr/types/struct_itimerval.h"
-#include "src/__support/OSUtil/syscall.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/setitimer.h"
 #include "src/__support/common.h"
-#include "src/errno/libc_errno.h"
-#include <sys/syscall.h>
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, setitimer,
                    (int which, const struct itimerval *new_value,
                     struct itimerval *old_value)) {
-  long ret = LIBC_NAMESPACE::syscall_impl<long>(SYS_setitimer, which, new_value,
-                                                old_value);
-  // On failure, return -1 and set errno.
-  if (ret < 0) {
-    libc_errno = static_cast<int>(-ret);
+  ErrorOr<int> ret = linux_syscalls::setitimer(which, new_value, old_value);
+  if (!ret) {
+    libc_errno = ret.error();
     return -1;
   }
   return 0;

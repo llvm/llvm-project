@@ -6,28 +6,22 @@
 define void @vld4_v2i32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vld4_v2i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q1, [r0, #16]
+; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
+; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
+; CHECK-NEXT:    vmov r7, r3, d0
+; CHECK-NEXT:    vmov r12, lr, d1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vmov.f32 s10, s7
-; CHECK-NEXT:    vmov r2, s6
-; CHECK-NEXT:    vmov.f32 s6, s5
-; CHECK-NEXT:    vmov r3, s4
-; CHECK-NEXT:    vmov.f32 s8, s3
-; CHECK-NEXT:    vmov.f32 s12, s1
-; CHECK-NEXT:    vmov r0, s10
-; CHECK-NEXT:    add r0, r2
-; CHECK-NEXT:    vmov r2, s6
+; CHECK-NEXT:    vmov r0, r4, d1
+; CHECK-NEXT:    vmov r5, r6, d0
+; CHECK-NEXT:    add r3, r7
+; CHECK-NEXT:    add.w r2, r12, lr
 ; CHECK-NEXT:    add r2, r3
-; CHECK-NEXT:    vmov r3, s2
-; CHECK-NEXT:    add.w r12, r2, r0
-; CHECK-NEXT:    vmov r2, s8
-; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    add r2, r3
-; CHECK-NEXT:    vmov r3, s12
+; CHECK-NEXT:    add r0, r4
+; CHECK-NEXT:    adds r3, r5, r6
 ; CHECK-NEXT:    add r0, r3
-; CHECK-NEXT:    add r0, r2
-; CHECK-NEXT:    strd r0, r12, [r1]
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    strd r0, r2, [r1]
+; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:
   %l1 = load <8 x i32>, ptr %src, align 4
   %s1 = shufflevector <8 x i32> %l1, <8 x i32> undef, <2 x i32> <i32 0, i32 4>
@@ -391,17 +385,18 @@ define void @vld4_v8i16_align1(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vmovx.f16 s1, s2
 ; CHECK-NEXT:    vmovx.f16 s20, s8
 ; CHECK-NEXT:    vins.f16 s23, s1
-; CHECK-NEXT:    vmovx.f16 s1, s10
-; CHECK-NEXT:    vins.f16 s20, s1
+; CHECK-NEXT:    vmov.f32 s1, s10
+; CHECK-NEXT:    vmovx.f16 s10, s10
 ; CHECK-NEXT:    vmovx.f16 s21, s12
-; CHECK-NEXT:    vmovx.f16 s1, s14
+; CHECK-NEXT:    vins.f16 s20, s10
+; CHECK-NEXT:    vmovx.f16 s10, s14
 ; CHECK-NEXT:    vins.f16 s0, s2
 ; CHECK-NEXT:    vins.f16 s12, s14
 ; CHECK-NEXT:    vins.f16 s4, s6
-; CHECK-NEXT:    vins.f16 s8, s10
-; CHECK-NEXT:    vins.f16 s21, s1
-; CHECK-NEXT:    vmov.f32 s9, s12
+; CHECK-NEXT:    vins.f16 s21, s10
 ; CHECK-NEXT:    vmov.f32 s10, s4
+; CHECK-NEXT:    vins.f16 s8, s1
+; CHECK-NEXT:    vmov.f32 s9, s12
 ; CHECK-NEXT:    vmov.f32 s11, s0
 ; CHECK-NEXT:    vadd.i16 q0, q2, q5
 ; CHECK-NEXT:    vadd.i16 q0, q0, q4

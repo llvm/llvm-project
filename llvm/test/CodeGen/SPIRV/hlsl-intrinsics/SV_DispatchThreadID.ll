@@ -37,21 +37,21 @@ entry:
 
 ; CHECK:        %[[#load:]] = OpLoad %[[#v3int]] %[[#GlobalInvocationId]]
 ; CHECK:        %[[#load0:]] = OpCompositeExtract %[[#int]] %[[#load]] 0
-  %0 = call i32 @llvm.spv.thread.id(i32 0)
+  %0 = call i32 @llvm.spv.thread.id.i32(i32 0)
 
 ; CHECK:        %[[#tempvar:]] = OpCompositeInsert %[[#v3int]] %[[#load0]] %[[#tempvar]] 0
   %1 = insertelement <3 x i32> poison, i32 %0, i64 0
 
 ; CHECK:        %[[#load:]] = OpLoad %[[#v3int]] %[[#GlobalInvocationId]]
 ; CHECK:        %[[#load1:]] = OpCompositeExtract %[[#int]] %[[#load]] 1
-  %2 = call i32 @llvm.spv.thread.id(i32 1)
+  %2 = call i32 @llvm.spv.thread.id.i32(i32 1)
 
 ; CHECK:        %[[#tempvar:]] = OpCompositeInsert %[[#v3int]] %[[#load1]] %[[#tempvar]] 1
   %3 = insertelement <3 x i32> %1, i32 %2, i64 1
 
 ; CHECK:        %[[#load:]] = OpLoad %[[#v3int]] %[[#GlobalInvocationId]]
 ; CHECK:        %[[#load2:]] = OpCompositeExtract %[[#int]] %[[#load]] 2
-  %4 = call i32 @llvm.spv.thread.id(i32 2)
+  %4 = call i32 @llvm.spv.thread.id.i32(i32 2)
 
 ; CHECK:        %[[#tempvar:]] = OpCompositeInsert %[[#v3int]] %[[#load2]] %[[#tempvar]] 2
   %5 = insertelement <3 x i32> %3, i32 %4, i64 2
@@ -61,7 +61,7 @@ entry:
 }
 
 ; Function Attrs: nounwind willreturn memory(none)
-declare i32 @llvm.spv.thread.id(i32) #2
+declare i32 @llvm.spv.thread.id.i32(i32) #2
 
 attributes #0 = { noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #1 = { norecurse "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }

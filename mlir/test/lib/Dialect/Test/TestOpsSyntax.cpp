@@ -285,7 +285,7 @@ void ParseB64BytesOp::print(OpAsmPrinter &p) {
 ::llvm::LogicalResult FormatInferType2Op::inferReturnTypes(
     ::mlir::MLIRContext *context, ::std::optional<::mlir::Location> location,
     ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
-    OpaqueProperties properties, ::mlir::RegionRange regions,
+    PropertyRef properties, ::mlir::RegionRange regions,
     ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
   inferredReturnTypes.assign({::mlir::IntegerType::get(context, 16)});
   return ::mlir::success();
@@ -313,7 +313,7 @@ ParseResult WrappingRegionOp::parse(OpAsmParser &parser,
   SmallVector<Value, 8> returnOperands(wrappedOp->getResults());
   OpBuilder builder(parser.getContext());
   builder.setInsertionPointToEnd(&block);
-  builder.create<TestReturnOp>(wrappedOp->getLoc(), returnOperands);
+  TestReturnOp::create(builder, wrappedOp->getLoc(), returnOperands);
 
   // Get the results type for the wrapping op from the terminator operands.
   Operation &returnOp = body.back().back();
@@ -397,7 +397,7 @@ ParseResult PrettyPrintedRegionOp::parse(OpAsmParser &parser,
       builder.create(opLoc, innerOpName, /*operands=*/{lhs, rhs}, innerOpType);
 
   // Insert a return statement in the block returning the inner-op's result.
-  builder.create<TestReturnOp>(innerOp->getLoc(), innerOp->getResults());
+  TestReturnOp::create(builder, innerOp->getLoc(), innerOp->getResults());
 
   // Populate the op operation-state with result-type and location.
   result.addTypes(opFntype.getResults());

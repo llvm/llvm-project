@@ -38,7 +38,8 @@ TEST(FrontendOutputTests, TestOutputStream) {
       new raw_svector_ostream(IRBuffer));
 
   Compiler.setOutputStream(std::move(IRStream));
-  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  Compiler.createDiagnostics();
 
   bool Success = ExecuteCompilerInvocation(&Compiler);
   EXPECT_TRUE(Success);
@@ -61,10 +62,10 @@ TEST(FrontendOutputTests, TestVerboseOutputStreamShared) {
   raw_string_ostream VerboseStream(VerboseBuffer);
 
   Compiler.setOutputStream(std::make_unique<raw_null_ostream>());
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
-  Compiler.createDiagnostics(
-      *llvm::vfs::getRealFileSystem(),
-      new TextDiagnosticPrinter(llvm::nulls(), &*DiagOpts), true);
+  DiagnosticOptions DiagOpts;
+  Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  Compiler.createDiagnostics(new TextDiagnosticPrinter(llvm::nulls(), DiagOpts),
+                             true);
   Compiler.setVerboseOutputStream(VerboseStream);
 
   bool Success = ExecuteCompilerInvocation(&Compiler);
@@ -91,10 +92,10 @@ TEST(FrontendOutputTests, TestVerboseOutputStreamOwned) {
         std::make_unique<raw_string_ostream>(VerboseBuffer);
 
     Compiler.setOutputStream(std::make_unique<raw_null_ostream>());
-    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+    DiagnosticOptions DiagOpts;
+    Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
     Compiler.createDiagnostics(
-        *llvm::vfs::getRealFileSystem(),
-        new TextDiagnosticPrinter(llvm::nulls(), &*DiagOpts), true);
+        new TextDiagnosticPrinter(llvm::nulls(), DiagOpts), true);
     Compiler.setVerboseOutputStream(std::move(VerboseStream));
 
     Success = ExecuteCompilerInvocation(&Compiler);

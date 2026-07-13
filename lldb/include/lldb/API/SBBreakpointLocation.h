@@ -24,6 +24,8 @@ class SWIGBridge;
 namespace lldb {
 
 class LLDB_API SBBreakpointLocation {
+  friend class lldb_private::ScriptInterpreter;
+
 public:
   SBBreakpointLocation();
 

@@ -10,7 +10,7 @@ Findings correspond to https://clangd.llvm.org/design/include-cleaner.
 Example:
 
 .. code-block:: c++
-   
+
    // foo.h
    class Foo{};
    // bar.h
@@ -38,3 +38,14 @@ Options
 
    A boolean that controls whether the check should deduplicate findings for the
    same symbol. Defaults to `true`.
+
+.. option:: UnusedIncludes
+
+   A boolean that controls whether the check should report unused includes
+   (includes that are not used directly). Defaults to `true`.
+
+.. option:: MissingIncludes
+
+   A boolean that controls whether the check should report missing includes
+   (header files from which symbols are used but which are not directly included).
+   Defaults to `true`.

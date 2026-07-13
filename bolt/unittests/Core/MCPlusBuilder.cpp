@@ -8,6 +8,7 @@
 
 #ifdef AARCH64_AVAILABLE
 #include "AArch64Subtarget.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #endif // AARCH64_AVAILABLE
 
@@ -64,8 +65,8 @@ protected:
     Relocation::Arch = ObjFile->makeTriple().getArch();
     BC = cantFail(BinaryContext::createBinaryContext(
         ObjFile->makeTriple(), std::make_shared<orc::SymbolStringPool>(),
-        ObjFile->getFileName(), nullptr, true,
-        DWARFContext::create(*ObjFile.get()), {llvm::outs(), llvm::errs()}));
+        ObjFile->getFileName(), nullptr, true, DWARFContext::create(*ObjFile),
+        {llvm::outs(), llvm::errs()}));
     ASSERT_FALSE(!BC);
     BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(
         createMCPlusBuilder(GetParam(), BC->MIA.get(), BC->MII.get(),
@@ -119,6 +120,204 @@ TEST_P(MCPlusBuilderTester, AliasSmallerX0) {
                  /*OnlySmaller=*/true);
 }
 
+TEST_P(MCPlusBuilderTester, AArch64_createLoadImmediate) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  // mov  x0, 0x0001000100010001 --> orr x0, xzr, 0x0001000100010001
+  auto Insts1 = BC->MIB->createLoadImmediate(AArch64::X0, 0x0001000100010001);
+  ASSERT_EQ(Insts1.size(), 1U);
+  ASSERT_EQ(Insts1[0].getOpcode(), AArch64::ORRXri);
+  ASSERT_EQ(Insts1[0].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts1[0].getOperand(1).getReg(), AArch64::XZR);
+  ASSERT_EQ(Insts1[0].getOperand(2).getImm(), 32);
+
+  // mov  w0, #0x00030003 --> orr w0, wzr, 0x00030003
+  auto Insts2 = BC->MIB->createLoadImmediate(AArch64::W0, 0x00030003);
+  ASSERT_EQ(Insts2.size(), 1U);
+  ASSERT_EQ(Insts2[0].getOpcode(), AArch64::ORRWri);
+  ASSERT_EQ(Insts2[0].getOperand(0).getReg(), AArch64::W0);
+  ASSERT_EQ(Insts2[0].getOperand(1).getReg(), AArch64::WZR);
+  ASSERT_EQ(Insts2[0].getOperand(2).getImm(), 33);
+
+  // mov  x0, #-16  --> movn x0, #15
+  auto Insts3 = BC->MIB->createLoadImmediate(AArch64::X0, 0xfffffffffffffff0);
+  ASSERT_EQ(Insts3.size(), 1U);
+  ASSERT_EQ(Insts3[0].getOpcode(), AArch64::MOVNXi);
+  ASSERT_EQ(Insts3[0].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts3[0].getOperand(1).getImm(), 15);
+  ASSERT_EQ(Insts3[0].getOperand(2).getImm(), 0);
+
+  // mov  w0, #-1 --> movn  w0, #0
+  auto Insts4 = BC->MIB->createLoadImmediate(AArch64::W0, 0xffffffff);
+  ASSERT_EQ(Insts4.size(), 1U);
+  ASSERT_EQ(Insts4[0].getOpcode(), AArch64::MOVNWi);
+  ASSERT_EQ(Insts4[0].getOperand(0).getReg(), AArch64::W0);
+  ASSERT_EQ(Insts4[0].getOperand(1).getImm(), 0);
+  ASSERT_EQ(Insts4[0].getOperand(2).getImm(), 0);
+
+  // mov    x0, #0x1
+  // movk   x0, #0x2, lsl #16
+  auto Insts5 = BC->MIB->createLoadImmediate(AArch64::X0, 0x00020001);
+  ASSERT_EQ(Insts5.size(), 2U);
+  ASSERT_EQ(Insts5[0].getOpcode(), AArch64::MOVZXi);
+  ASSERT_EQ(Insts5[0].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts5[0].getOperand(1).getImm(), 1);
+  ASSERT_EQ(Insts5[0].getOperand(2).getImm(), 0);
+  ASSERT_EQ(Insts5[1].getOpcode(), AArch64::MOVKXi);
+  ASSERT_EQ(Insts5[1].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts5[1].getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts5[1].getOperand(2).getImm(), 2);
+  ASSERT_EQ(Insts5[1].getOperand(3).getImm(), 16);
+
+  // mov    x0, #0x1
+  // movk   x0, #0x2, lsl #16
+  // movk   x0, #0x3, lsl #32
+  auto Insts6 = BC->MIB->createLoadImmediate(AArch64::X0, 0x000300020001);
+  ASSERT_EQ(Insts6.size(), 3U);
+  ASSERT_EQ(Insts6[0].getOpcode(), AArch64::MOVZXi);
+  ASSERT_EQ(Insts6[0].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts6[0].getOperand(1).getImm(), 1);
+  ASSERT_EQ(Insts6[0].getOperand(2).getImm(), 0);
+  ASSERT_EQ(Insts6[1].getOpcode(), AArch64::MOVKXi);
+  ASSERT_EQ(Insts6[1].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts6[1].getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts6[1].getOperand(2).getImm(), 2);
+  ASSERT_EQ(Insts6[1].getOperand(3).getImm(), 16);
+  ASSERT_EQ(Insts6[2].getOpcode(), AArch64::MOVKXi);
+  ASSERT_EQ(Insts6[2].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts6[2].getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts6[2].getOperand(2).getImm(), 3);
+  ASSERT_EQ(Insts6[2].getOperand(3).getImm(), 32);
+
+  // mov    x0, #0x1
+  // movk   x0, #0x2, lsl #16
+  // movk   x0, #0x3, lsl #32
+  // movk   x0, #0x4, lsl #48
+  auto Insts7 = BC->MIB->createLoadImmediate(AArch64::X0, 0x0004000300020001);
+  ASSERT_EQ(Insts7.size(), 4U);
+  ASSERT_EQ(Insts7[0].getOpcode(), AArch64::MOVZXi);
+  ASSERT_EQ(Insts7[0].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts7[0].getOperand(1).getImm(), 1);
+  ASSERT_EQ(Insts7[0].getOperand(2).getImm(), 0);
+  ASSERT_EQ(Insts7[1].getOpcode(), AArch64::MOVKXi);
+  ASSERT_EQ(Insts7[1].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts7[1].getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts7[1].getOperand(2).getImm(), 2);
+  ASSERT_EQ(Insts7[1].getOperand(3).getImm(), 16);
+  ASSERT_EQ(Insts7[2].getOpcode(), AArch64::MOVKXi);
+  ASSERT_EQ(Insts7[2].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts7[2].getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts7[2].getOperand(2).getImm(), 3);
+  ASSERT_EQ(Insts7[2].getOperand(3).getImm(), 32);
+  ASSERT_EQ(Insts7[3].getOpcode(), AArch64::MOVKXi);
+  ASSERT_EQ(Insts7[3].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts7[3].getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts7[3].getOperand(2).getImm(), 4);
+  ASSERT_EQ(Insts7[3].getOperand(3).getImm(), 48);
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> TargetBB = BF->createBasicBlock();
+
+  // Compare register with immediate and branch.
+  // Inversion requires incrementing the immediate value.
+  // cbgt x0, #0, target ~> cblt x0, #1, target
+  MCInst NeedsImmInc = MCInstBuilder(AArch64::CBGTXri)
+                           .addReg(AArch64::X0)
+                           .addImm(0)
+                           .addExpr(MCSymbolRefExpr::create(
+                               TargetBB->getLabel(), *BC->Ctx.get()));
+  ASSERT_TRUE(BC->MIB->isReversibleBranch(NeedsImmInc));
+  BC->MIB->reverseBranchCondition(NeedsImmInc, TargetBB->getLabel(),
+                                  BC->Ctx.get());
+  ASSERT_EQ(NeedsImmInc.getOpcode(), AArch64::CBLTXri);
+  ASSERT_EQ(NeedsImmInc.getOperand(1).getImm(), 1);
+
+  // Compare register with immediate and branch.
+  // Inversion requires decrementing the immediate value.
+  // cblo x0, #1, target ~> cbhi x0, #0, target
+  MCInst NeedsImmDec = MCInstBuilder(AArch64::CBLOXri)
+                           .addReg(AArch64::X0)
+                           .addImm(1)
+                           .addExpr(MCSymbolRefExpr::create(
+                               TargetBB->getLabel(), *BC->Ctx.get()));
+  ASSERT_TRUE(BC->MIB->isReversibleBranch(NeedsImmDec));
+  BC->MIB->reverseBranchCondition(NeedsImmDec, TargetBB->getLabel(),
+                                  BC->Ctx.get());
+  ASSERT_EQ(NeedsImmDec.getOpcode(), AArch64::CBHIXri);
+  ASSERT_EQ(NeedsImmDec.getOperand(1).getImm(), 0);
+
+  // Compare registers and branch.
+  // Inversion requires swapping registers.
+  // cbge x0, x1, target ~> cbgt x1, x0, target
+  MCInst CompRegNeedsRegSwap = MCInstBuilder(AArch64::CBGEXrr)
+                                   .addReg(AArch64::X0)
+                                   .addReg(AArch64::X1)
+                                   .addExpr(MCSymbolRefExpr::create(
+                                       TargetBB->getLabel(), *BC->Ctx.get()));
+  ASSERT_TRUE(BC->MIB->isReversibleBranch(CompRegNeedsRegSwap));
+  BC->MIB->reverseBranchCondition(CompRegNeedsRegSwap, TargetBB->getLabel(),
+                                  BC->Ctx.get());
+  ASSERT_EQ(CompRegNeedsRegSwap.getOpcode(), AArch64::CBGTXrr);
+  ASSERT_EQ(CompRegNeedsRegSwap.getOperand(0).getReg(), AArch64::X1);
+  ASSERT_EQ(CompRegNeedsRegSwap.getOperand(1).getReg(), AArch64::X0);
+
+  // Compare bytes and branch.
+  // Inversion requires swapping registers.
+  // cbbhi w0, w1, target ~> cbbhs w1, w0, target
+  MCInst CompByteNeedsRegSwap = MCInstBuilder(AArch64::CBBHIWrr)
+                                    .addReg(AArch64::W0)
+                                    .addReg(AArch64::W1)
+                                    .addExpr(MCSymbolRefExpr::create(
+                                        TargetBB->getLabel(), *BC->Ctx.get()));
+  ASSERT_TRUE(BC->MIB->isReversibleBranch(CompByteNeedsRegSwap));
+  BC->MIB->reverseBranchCondition(CompByteNeedsRegSwap, TargetBB->getLabel(),
+                                  BC->Ctx.get());
+  ASSERT_EQ(CompByteNeedsRegSwap.getOpcode(), AArch64::CBBHSWrr);
+  ASSERT_EQ(CompByteNeedsRegSwap.getOperand(0).getReg(), AArch64::W1);
+  ASSERT_EQ(CompByteNeedsRegSwap.getOperand(1).getReg(), AArch64::W0);
+
+  // Compare halfwords and branch.
+  // Inversion requires swapping registers.
+  // cbhhs w0, w1, target ~> cbhhi w1, w0, target
+  MCInst CompHalfNeedsRegSwap = MCInstBuilder(AArch64::CBHHSWrr)
+                                    .addReg(AArch64::W0)
+                                    .addReg(AArch64::W1)
+                                    .addExpr(MCSymbolRefExpr::create(
+                                        TargetBB->getLabel(), *BC->Ctx.get()));
+  ASSERT_TRUE(BC->MIB->isReversibleBranch(CompHalfNeedsRegSwap));
+  BC->MIB->reverseBranchCondition(CompHalfNeedsRegSwap, TargetBB->getLabel(),
+                                  BC->Ctx.get());
+  ASSERT_EQ(CompHalfNeedsRegSwap.getOpcode(), AArch64::CBHHIWrr);
+  ASSERT_EQ(CompHalfNeedsRegSwap.getOperand(0).getReg(), AArch64::W1);
+  ASSERT_EQ(CompHalfNeedsRegSwap.getOperand(1).getReg(), AArch64::W0);
+
+  // Compare register with immediate and branch.
+  // Inversion not possible, immediate value underflows.
+  // cblt x0, #0, target
+  MCInst Underflows = MCInstBuilder(AArch64::CBLTXri)
+                          .addReg(AArch64::X0)
+                          .addImm(0)
+                          .addExpr(MCSymbolRefExpr::create(TargetBB->getLabel(),
+                                                           *BC->Ctx.get()));
+  ASSERT_FALSE(BC->MIB->isReversibleBranch(Underflows));
+
+  // Compare register with immediate and branch.
+  // Inversion not possible, immediate value overflows.
+  // cbhi x0, #63, target
+  MCInst Overflows = MCInstBuilder(AArch64::CBHIXri)
+                         .addReg(AArch64::X0)
+                         .addImm(63)
+                         .addExpr(MCSymbolRefExpr::create(TargetBB->getLabel(),
+                                                          *BC->Ctx.get()));
+  ASSERT_FALSE(BC->MIB->isReversibleBranch(Overflows));
+}
+
 TEST_P(MCPlusBuilderTester, AArch64_CmpJE) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();
@@ -141,6 +340,193 @@ TEST_P(MCPlusBuilderTester, AArch64_CmpJE) {
   ASSERT_EQ(II->getOperand(0).getImm(), AArch64CC::EQ);
   const MCSymbol *Label = BC->MIB->getTargetSymbol(*II, 1);
   ASSERT_EQ(Label, BB->getLabel());
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_BTI) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+
+  MCInst BTIjc;
+  BC->MIB->createBTI(BTIjc, BTIKind::JC);
+  BB->addInstruction(BTIjc);
+  BC->MIB->setRAState(BTIjc, true);
+  ASSERT_NE(BTIjc.getNumOperands(), 1u);
+  ASSERT_EQ(MCPlus::getNumPrimeOperands(BTIjc), 1u);
+  auto II = BB->begin();
+  ASSERT_EQ(II->getOpcode(), AArch64::HINT);
+  ASSERT_EQ(II->getOperand(0).getImm(), 38);
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, BTIKind::JC));
+
+  MCInst BTIj;
+  BC->MIB->createBTI(BTIj, BTIKind::J);
+  BC->MIB->setRAState(BTIj, false);
+  ASSERT_NE(BTIj.getNumOperands(), 1u);
+  ASSERT_EQ(MCPlus::getNumPrimeOperands(BTIj), 1u);
+  II = BB->addInstruction(BTIj);
+  ASSERT_EQ(II->getOpcode(), AArch64::HINT);
+  ASSERT_EQ(II->getOperand(0).getImm(), 36);
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, BTIKind::J));
+
+  MCInst BTIc;
+  BC->MIB->createBTI(BTIc, BTIKind::C);
+  II = BB->addInstruction(BTIc);
+  ASSERT_EQ(II->getOpcode(), AArch64::HINT);
+  ASSERT_EQ(II->getOperand(0).getImm(), 34);
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, BTIKind::C));
+
+  MCInst Paciasp = MCInstBuilder(AArch64::PACIASP);
+  II = BB->addInstruction(Paciasp);
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, BTIKind::C));
+  ASSERT_FALSE(BC->MIB->isBTILandingPad(*II, BTIKind::JC));
+  ASSERT_FALSE(BC->MIB->isBTILandingPad(*II, BTIKind::J));
+  ASSERT_TRUE(BC->MIB->isImplicitBTIC(*II));
+
+  MCInst Pacibsp = MCInstBuilder(AArch64::PACIBSP);
+  II = BB->addInstruction(Pacibsp);
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, BTIKind::C));
+  ASSERT_FALSE(BC->MIB->isBTILandingPad(*II, BTIKind::JC));
+  ASSERT_FALSE(BC->MIB->isBTILandingPad(*II, BTIKind::J));
+  ASSERT_TRUE(BC->MIB->isImplicitBTIC(*II));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_empty) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X16);
+  BC->MIB->insertBTI(*BB, CallInst);
+  // Check that BTI c is added to the empty block.
+  auto II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, BTIKind::C));
+}
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_0) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst Inst = MCInstBuilder(AArch64::RET).addReg(AArch64::LR);
+  BB->addInstruction(Inst);
+  // BR x16 needs BTI c or BTI j. We prefer adding a BTI c.
+  MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X16);
+  // Adding an annotation to the call, to check if param numbers are calculated
+  // correctly. Could be any other annotation as well.
+  BC->MIB->setRAState(CallInst, false);
+  ASSERT_NE(CallInst.getNumOperands(), 1u);
+  ASSERT_EQ(MCPlus::getNumPrimeOperands(CallInst), 1u);
+  auto II = BB->begin();
+  ASSERT_FALSE(BC->MIB->isCallCoveredByBTI(CallInst, *II));
+  BC->MIB->insertBTI(*BB, CallInst);
+  II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, BTIKind::C));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_1) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst BTIc;
+  BC->MIB->createBTI(BTIc, BTIKind::C);
+  BB->addInstruction(BTIc);
+  // BR x16 needs BTI c or BTI j. We have a BTI c, no change is needed.
+  MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X16);
+  BC->MIB->setRAState(CallInst, true);
+  ASSERT_NE(CallInst.getNumOperands(), 1u);
+  ASSERT_EQ(MCPlus::getNumPrimeOperands(CallInst), 1u);
+  auto II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isCallCoveredByBTI(CallInst, *II));
+  BC->MIB->insertBTI(*BB, CallInst);
+  II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, BTIKind::C));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_2) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst BTIc;
+  BC->MIB->createBTI(BTIc, BTIKind::C);
+  BB->addInstruction(BTIc);
+  // BR x5 needs BTI j
+  // we have BTI c -> extend it to BTI jc.
+  MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X5);
+  auto II = BB->begin();
+  ASSERT_FALSE(BC->MIB->isCallCoveredByBTI(CallInst, *II));
+  BC->MIB->insertBTI(*BB, CallInst);
+  II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, BTIKind::JC));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_3) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst Inst = MCInstBuilder(AArch64::RET).addReg(AArch64::LR);
+  BB->addInstruction(Inst);
+  // BR x5 needs BTI j
+  MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X5);
+  auto II = BB->begin();
+  ASSERT_FALSE(BC->MIB->isCallCoveredByBTI(CallInst, *II));
+  BC->MIB->insertBTI(*BB, CallInst);
+  II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, BTIKind::J));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_4) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst Inst = MCInstBuilder(AArch64::RET).addReg(AArch64::LR);
+  BB->addInstruction(Inst);
+  // BLR needs BTI c, regardless of the register used.
+  MCInst CallInst = MCInstBuilder(AArch64::BLR).addReg(AArch64::X5);
+  auto II = BB->begin();
+  ASSERT_FALSE(BC->MIB->isCallCoveredByBTI(CallInst, *II));
+  BC->MIB->insertBTI(*BB, CallInst);
+  II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, BTIKind::C));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_5) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst BTIj;
+  BC->MIB->createBTI(BTIj, BTIKind::J);
+  BB->addInstruction(BTIj);
+  // BLR needs BTI c, regardless of the register used.
+  // We have a BTI j -> extend it to BTI jc.
+  MCInst CallInst = MCInstBuilder(AArch64::BLR).addReg(AArch64::X5);
+  auto II = BB->begin();
+  ASSERT_FALSE(BC->MIB->isCallCoveredByBTI(CallInst, *II));
+  BC->MIB->insertBTI(*BB, CallInst);
+  II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, BTIKind::JC));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_6) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst Paciasp =
+      MCInstBuilder(AArch64::PACIASP).addReg(AArch64::LR).addReg(AArch64::SP);
+  BB->addInstruction(Paciasp);
+  // PACI(AB)SP are implicit BTI c, no change needed.
+  MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X17);
+  auto II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isCallCoveredByBTI(CallInst, *II));
+  BC->MIB->insertBTI(*BB, CallInst);
+  II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, BTIKind::C));
+  ASSERT_TRUE(BC->MIB->isPSignOnLR(*II));
 }
 
 TEST_P(MCPlusBuilderTester, AArch64_CmpJNE) {
@@ -259,6 +645,141 @@ TEST_P(MCPlusBuilderTester, testAccessedRegsMultipleDefs) {
 
   assertRegMask([&](BitVector &BV) { BC->MIB->getSrcRegs(Inst, BV); },
                 {AArch64::W5, AArch64::X5, AArch64::W5_HI});
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_Psign_Pauth_variants) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  MCInst Paciasp = MCInstBuilder(AArch64::PACIASP);
+  MCInst Pacibsp = MCInstBuilder(AArch64::PACIBSP);
+  ASSERT_TRUE(BC->MIB->isPSignOnLR(Paciasp));
+  ASSERT_TRUE(BC->MIB->isPSignOnLR(Pacibsp));
+
+  MCInst PaciaSPLR =
+      MCInstBuilder(AArch64::PACIA).addReg(AArch64::LR).addReg(AArch64::SP);
+  MCInst PacibSPLR =
+      MCInstBuilder(AArch64::PACIB).addReg(AArch64::LR).addReg(AArch64::SP);
+  ASSERT_TRUE(BC->MIB->isPSignOnLR(PaciaSPLR));
+  ASSERT_TRUE(BC->MIB->isPSignOnLR(PacibSPLR));
+
+  MCInst PacizaX5 = MCInstBuilder(AArch64::PACIZA).addReg(AArch64::X5);
+  MCInst PacizbX5 = MCInstBuilder(AArch64::PACIZB).addReg(AArch64::X5);
+  ASSERT_FALSE(BC->MIB->isPSignOnLR(PacizaX5));
+  ASSERT_FALSE(BC->MIB->isPSignOnLR(PacizbX5));
+
+  MCInst Paciaz = MCInstBuilder(AArch64::PACIZA).addReg(AArch64::LR);
+  MCInst Pacibz = MCInstBuilder(AArch64::PACIZB).addReg(AArch64::LR);
+  ASSERT_TRUE(BC->MIB->isPSignOnLR(Paciaz));
+  ASSERT_TRUE(BC->MIB->isPSignOnLR(Pacibz));
+
+  MCInst Pacia1716 = MCInstBuilder(AArch64::PACIA1716);
+  MCInst Pacib1716 = MCInstBuilder(AArch64::PACIB1716);
+  ASSERT_FALSE(BC->MIB->isPSignOnLR(Pacia1716));
+  ASSERT_FALSE(BC->MIB->isPSignOnLR(Pacib1716));
+
+  MCInst Pacia171615 = MCInstBuilder(AArch64::PACIA171615);
+  MCInst Pacib171615 = MCInstBuilder(AArch64::PACIB171615);
+  ASSERT_FALSE(BC->MIB->isPSignOnLR(Pacia171615));
+  ASSERT_FALSE(BC->MIB->isPSignOnLR(Pacib171615));
+
+  MCInst Autiasp = MCInstBuilder(AArch64::AUTIASP);
+  MCInst Autibsp = MCInstBuilder(AArch64::AUTIBSP);
+  ASSERT_TRUE(BC->MIB->isPAuthOnLR(Autiasp));
+  ASSERT_TRUE(BC->MIB->isPAuthOnLR(Autibsp));
+
+  MCInst AutiaSPLR =
+      MCInstBuilder(AArch64::AUTIA).addReg(AArch64::LR).addReg(AArch64::SP);
+  MCInst AutibSPLR =
+      MCInstBuilder(AArch64::AUTIB).addReg(AArch64::LR).addReg(AArch64::SP);
+  ASSERT_TRUE(BC->MIB->isPAuthOnLR(AutiaSPLR));
+  ASSERT_TRUE(BC->MIB->isPAuthOnLR(AutibSPLR));
+
+  MCInst AutizaX5 = MCInstBuilder(AArch64::AUTIZA).addReg(AArch64::X5);
+  MCInst AutizbX5 = MCInstBuilder(AArch64::AUTIZB).addReg(AArch64::X5);
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(AutizaX5));
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(AutizbX5));
+
+  MCInst Autiaz = MCInstBuilder(AArch64::AUTIZA).addReg(AArch64::LR);
+  MCInst Autibz = MCInstBuilder(AArch64::AUTIZB).addReg(AArch64::LR);
+  ASSERT_TRUE(BC->MIB->isPAuthOnLR(Autiaz));
+  ASSERT_TRUE(BC->MIB->isPAuthOnLR(Autibz));
+
+  MCInst Autia1716 = MCInstBuilder(AArch64::AUTIA1716);
+  MCInst Autib1716 = MCInstBuilder(AArch64::AUTIB1716);
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(Autia1716));
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(Autib1716));
+
+  MCInst Autia171615 = MCInstBuilder(AArch64::AUTIA171615);
+  MCInst Autib171615 = MCInstBuilder(AArch64::AUTIB171615);
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(Autia171615));
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(Autib171615));
+
+  MCInst Retaa = MCInstBuilder(AArch64::RETAA);
+  MCInst Retab = MCInstBuilder(AArch64::RETAB);
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(Retaa));
+  ASSERT_FALSE(BC->MIB->isPAuthOnLR(Retab));
+  ASSERT_TRUE(BC->MIB->isPAuthAndRet(Retaa));
+  ASSERT_TRUE(BC->MIB->isPAuthAndRet(Retab));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_isCleanRegXOR) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  BinaryBasicBlock *BB = BF->addBasicBlock();
+
+  // eor x0, x0, x0
+  MCInst EORXrs = MCInstBuilder(AArch64::EORXrs)
+                      .addReg(AArch64::X0)
+                      .addReg(AArch64::X0)
+                      .addReg(AArch64::X0)
+                      .addImm(0);
+  ASSERT_TRUE(BC->MIB->isCleanRegXOR(EORXrs));
+
+  // eor w0, w0, w0
+  MCInst EORWrs = MCInstBuilder(AArch64::EORWrs)
+                      .addReg(AArch64::W0)
+                      .addReg(AArch64::W0)
+                      .addReg(AArch64::W0)
+                      .addImm(0);
+  ASSERT_TRUE(BC->MIB->isCleanRegXOR(EORWrs));
+
+  // mov x0, xzr
+  MCInst ORRXrs = MCInstBuilder(AArch64::ORRXrs)
+                      .addReg(AArch64::X0)
+                      .addReg(AArch64::XZR)
+                      .addReg(AArch64::XZR)
+                      .addImm(0);
+  ASSERT_TRUE(BC->MIB->isCleanRegXOR(ORRXrs));
+
+  // mov w0, wzr
+  MCInst ORRWrs = MCInstBuilder(AArch64::ORRWrs)
+                      .addReg(AArch64::W0)
+                      .addReg(AArch64::WZR)
+                      .addReg(AArch64::WZR)
+                      .addImm(0);
+  ASSERT_TRUE(BC->MIB->isCleanRegXOR(ORRWrs));
+
+  // mov x0, #0
+  MCInst MOVZXi =
+      MCInstBuilder(AArch64::MOVZXi).addReg(AArch64::X0).addImm(0).addImm(0);
+  ASSERT_TRUE(BC->MIB->isCleanRegXOR(MOVZXi));
+
+  // mov w0, #0
+  MCInst MOVZWi =
+      MCInstBuilder(AArch64::MOVZWi).addReg(AArch64::W0).addImm(0).addImm(0);
+  ASSERT_TRUE(BC->MIB->isCleanRegXOR(MOVZWi));
+
+  // movz x0, #:abs_g3:symbol
+  MCInst MOVZXiWithExpr =
+      MCInstBuilder(AArch64::MOVZXi)
+          .addReg(AArch64::X0)
+          .addExpr(MCSpecifierExpr::create(BB->getLabel(), AArch64::S_ABS_G3,
+                                           *BC->Ctx.get()))
+          .addImm(48);
+  ASSERT_FALSE(BC->MIB->isCleanRegXOR(MOVZXiWithExpr));
 }
 
 #endif // AARCH64_AVAILABLE

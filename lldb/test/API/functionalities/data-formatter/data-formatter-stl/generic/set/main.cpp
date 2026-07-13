@@ -27,8 +27,8 @@ int main() {
   ii.insert(3);
   ii.insert(4);
   ii.insert(5);
-  thefoo_rw(1); // Set break point at this line.
 
+  thefoo_rw(1); // Set break point at this line.
   ii.insert(6);
   thefoo_rw(1); // Set break point at this line.
 

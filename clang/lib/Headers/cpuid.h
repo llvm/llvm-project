@@ -253,10 +253,6 @@
 #define bit_RDPRU       0x00000010
 #define bit_WBNOINVD    0x00000200
 
-/* Features in %ebx for leaf 0x24 */
-#define bit_AVX10_256   0x00020000
-#define bit_AVX10_512   0x00040000
-
 #ifdef __i386__
 #define __cpuid(__leaf, __eax, __ebx, __ecx, __edx) \
     __asm("cpuid" : "=a"(__eax), "=b" (__ebx), "=c"(__ecx), "=d"(__edx) \
@@ -282,6 +278,24 @@
         : "0"(__leaf), "2"(__count))
 #endif
 
+/// Queries the processor to determine the highest supported \c CPUID leaf.
+/// This intrinsic is only available on x86 and x64.
+///
+/// \headerfile <cpuid.h>
+///
+/// This intrinsic corresponds to the <c> CPUID </c> instruction.
+///
+/// \param __leaf
+///    \a __leaf can be either 0x0 or 0x8000000. If \a __leaf == 0x0, the
+///    highest supported value for basic \c CPUID information is returned.
+///    If \a __leaf == 0x8000000, the highest supported value for extended
+///    \c CPUID information is returned.
+/// \param __sig
+///    If the \a __sig pointer is non-null, the first four bytes of the
+///    signature (as found in the \c EBX register) are returned in the
+///    location pointed to by \a __sig.
+/// \returns Returns 0 if \c CPUID is supported; otherwise returns the value
+///    that \c CPUID returns in the \c EAX register.
 static __inline unsigned int __get_cpuid_max (unsigned int __leaf,
                                               unsigned int *__sig)
 {
@@ -315,6 +329,32 @@ static __inline unsigned int __get_cpuid_max (unsigned int __leaf,
     return __eax;
 }
 
+/// For the requested \c CPUID leaf, queries the processor for information
+/// about the CPU type and CPU features (such as processor vendor, supported
+/// instruction sets, CPU capabilities, cache sizes, CPU model and family, and
+/// other hardware details). This intrinsic is only available on x86 and x64.
+///
+/// \headerfile <cpuid.h>
+///
+/// This intrinsic corresponds to the <c> CPUID </c> instruction.
+///
+/// \param __leaf
+///    An unsigned integer that identifies the level (also called "leaf") at
+///    which the \c CPUID instruction will be executed.
+/// \param __eax
+///    A pointer to an integer that corresponds to the \c EAX register where
+///    \c CPUID stores output results.
+/// \param __ebx
+///    A pointer to an integer that corresponds to the \c EBX register where
+///    \c CPUID stores output results.
+/// \param __ecx
+///    A pointer to an integer that corresponds to the \c ECX register where
+///    \c CPUID stores output results.
+/// \param __edx
+///    A pointer to an integer that corresponds to the \c EDX register where
+///    \c CPUID stores output results.
+/// \returns Returns 1 if the requested \c CPUID leaf is supported; otherwise
+///    returns 0.
 static __inline int __get_cpuid (unsigned int __leaf, unsigned int *__eax,
                                  unsigned int *__ebx, unsigned int *__ecx,
                                  unsigned int *__edx)
@@ -328,6 +368,36 @@ static __inline int __get_cpuid (unsigned int __leaf, unsigned int *__eax,
     return 1;
 }
 
+/// For the requested \c CPUID leaf and subleaf, queries the processor for
+/// information about the CPU type and CPU features (such as processor vendor,
+/// supported instruction sets, CPU capabilities, cache sizes, CPU model and
+/// family, and other hardware details). This intrinsic is only available on
+/// x86 and x64.
+///
+/// \headerfile <cpuid.h>
+///
+/// This intrinsic corresponds to the <c> CPUID </c> instruction.
+///
+/// \param __leaf
+///    An unsigned integer that identifies the level (also called "leaf") at
+///    which the \c CPUID instruction will be executed.
+/// \param __subleaf
+///    An unsigned integer that identifies the sublevel (also called
+///    "subleaf") at which the \c CPUID instruction will be executed.
+/// \param __eax
+///    A pointer to an integer that corresponds to the \c EAX register where
+///    \c CPUID stores output results.
+/// \param __ebx
+///    A pointer to an integer that corresponds to the \c EBX register where
+///    \c CPUID stores output results.
+/// \param __ecx
+///    A pointer to an integer that corresponds to the \c ECX register where
+///    \c CPUID stores output results.
+/// \param __edx
+///    A pointer to an integer that corresponds to the \c EDX register where
+///    \c CPUID stores output results.
+/// \returns Returns 1 if the requested \c CPUID leaf is supported; otherwise
+///    returns 0.
 static __inline int __get_cpuid_count (unsigned int __leaf,
                                        unsigned int __subleaf,
                                        unsigned int *__eax, unsigned int *__ebx,
@@ -345,10 +415,37 @@ static __inline int __get_cpuid_count (unsigned int __leaf,
 // In some configurations, __cpuidex is defined as a builtin (primarily
 // -fms-extensions) which will conflict with the __cpuidex definition below.
 #if !(__has_builtin(__cpuidex))
+// In some cases, offloading will set the host as the aux triple and define the
+// builtin. Given __has_builtin does not detect builtins on aux triples, we need
+// to explicitly check for some offloading cases.
+#if !defined(__NVPTX__) && !defined(__AMDGPU__) && !defined(__SPIRV__)
+/// Executes the \c CPUID instruction with the specified leaf and subleaf
+/// values, and returns the results from the CPU's registers. This intrinsic
+/// is only available on x86 and x64.
+///
+/// \headerfile <cpuid.h>
+///
+/// This intrinsic corresponds to the <c> CPUID </c> instruction.
+///
+/// \param __cpu_info
+///    An output array of four integers:
+///    <ul>
+///    <li>\a __cpuInfo[0] receives the value of the \c EAX register.</li>
+///    <li>\a __cpuInfo[1] receives the value of the \c EBX register.</li>
+///    <li>\a __cpuInfo[2] receives the value of the \c ECX register.</li>
+///    <li>\a __cpuInfo[3] receives the value of the \c EDX register.</li>
+///    </ul>
+/// \param __leaf
+///    An unsigned integer that identifies the level (also called the "leaf")
+///    at which the \c CPUID instruction will be executed.
+/// \param __subleaf
+///    An unsigned integer that identifies the sublevel (also called the
+///    "subleaf") at which the \c CPUID instruction will be executed.
 static __inline void __cpuidex(int __cpu_info[4], int __leaf, int __subleaf) {
   __cpuid_count(__leaf, __subleaf, __cpu_info[0], __cpu_info[1], __cpu_info[2],
                 __cpu_info[3]);
 }
+#endif
 #endif
 
 #endif /* __CPUID_H */

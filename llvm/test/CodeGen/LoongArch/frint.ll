@@ -7,11 +7,11 @@
 define float @rint_f32(float %f) nounwind {
 ; LA32F-LABEL: rint_f32:
 ; LA32F:       # %bb.0: # %entry
-; LA32F-NEXT:    b %plt(rintf)
+; LA32F-NEXT:    b rintf
 ;
 ; LA32D-LABEL: rint_f32:
 ; LA32D:       # %bb.0: # %entry
-; LA32D-NEXT:    b %plt(rintf)
+; LA32D-NEXT:    b rintf
 ;
 ; LA64F-LABEL: rint_f32:
 ; LA64F:       # %bb.0: # %entry
@@ -34,14 +34,14 @@ define double @rint_f64(double %d) nounwind {
 ; LA32F:       # %bb.0: # %entry
 ; LA32F-NEXT:    addi.w $sp, $sp, -16
 ; LA32F-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32F-NEXT:    bl %plt(rint)
+; LA32F-NEXT:    bl rint
 ; LA32F-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32F-NEXT:    addi.w $sp, $sp, 16
 ; LA32F-NEXT:    ret
 ;
 ; LA32D-LABEL: rint_f64:
 ; LA32D:       # %bb.0: # %entry
-; LA32D-NEXT:    b %plt(rint)
+; LA32D-NEXT:    b rint
 ;
 ; LA64F-LABEL: rint_f64:
 ; LA64F:       # %bb.0: # %entry

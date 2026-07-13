@@ -1,11 +1,13 @@
 // RUN: llvm-mc -triple x86_64-unknown-unknown %s -o -      | FileCheck %s
 // RUN: not llvm-mc -triple x86_64 --defsym ERR=1 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
 	
-// CHECK-NOT: .set var_xdata
+// CHECK: var_xdata = %rcx
 var_xdata = %rcx
 
 // CHECK: xorq %rcx, %rcx
 xorq var_xdata, var_xdata
+
+unused_reg = %xmm0
 
 // CHECK: .data
 // CHECK-NEXT: .byte 1	

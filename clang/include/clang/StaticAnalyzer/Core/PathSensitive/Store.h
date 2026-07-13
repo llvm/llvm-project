@@ -14,13 +14,13 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_STORE_H
 
 #include "clang/AST/Type.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/StoreRef.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
-#include "clang/Basic/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -37,9 +37,8 @@ class CompoundLiteralExpr;
 class CXXBasePath;
 class Decl;
 class Expr;
-class LocationContext;
 class ObjCIvarDecl;
-class StackFrameContext;
+class StackFrame;
 
 namespace ento {
 
@@ -132,7 +131,7 @@ public:
 
   /// getInitialStore - Returns the initial "empty" store representing the
   ///  value bindings upon entry to an analyzed function.
-  virtual StoreRef getInitialStore(const LocationContext *InitLoc) = 0;
+  virtual StoreRef getInitialStore(const StackFrame *InitSF) = 0;
 
   /// getRegionManager - Returns the internal RegionManager object that is
   ///  used to query and manipulate MemRegion objects.
@@ -140,13 +139,13 @@ public:
 
   SValBuilder& getSValBuilder() { return svalBuilder; }
 
-  virtual Loc getLValueVar(const VarDecl *VD, const LocationContext *LC) {
-    return svalBuilder.makeLoc(MRMgr.getVarRegion(VD, LC));
+  virtual Loc getLValueVar(const VarDecl *VD, const StackFrame *SF) {
+    return svalBuilder.makeLoc(MRMgr.getVarRegion(VD, SF));
   }
 
   Loc getLValueCompoundLiteral(const CompoundLiteralExpr *CL,
-                               const LocationContext *LC) {
-    return loc::MemRegionVal(MRMgr.getCompoundLiteralRegion(CL, LC));
+                               const StackFrame *SF) {
+    return loc::MemRegionVal(MRMgr.getCompoundLiteralRegion(CL, SF));
   }
 
   virtual SVal getLValueIvar(const ObjCIvarDecl *decl, SVal base);
@@ -193,7 +192,7 @@ public:
   std::optional<const MemRegion *> castRegion(const MemRegion *region,
                                               QualType CastToTy);
 
-  virtual StoreRef removeDeadBindings(Store store, const StackFrameContext *LCtx,
+  virtual StoreRef removeDeadBindings(Store store, const StackFrame *SF,
                                       SymbolReaper &SymReaper) = 0;
 
   virtual bool includedInBindings(Store store,
@@ -223,7 +222,7 @@ public:
   ///
   /// \param[in] store The initial store.
   /// \param[in] Values The values to invalidate.
-  /// \param[in] S The current statement being evaluated. Used to conjure
+  /// \param[in] Elem The current CFG Element being evaluated. Used to conjure
   ///   symbols to mark the values of invalidated regions.
   /// \param[in] Count The current block count. Used to conjure
   ///   symbols to mark the values of invalidated regions.
@@ -241,15 +240,15 @@ public:
   ///   even if they do not currently have bindings. Pass \c NULL if this
   ///   information will not be used.
   virtual StoreRef invalidateRegions(
-      Store store, ArrayRef<SVal> Values, const Stmt *S, unsigned Count,
-      const LocationContext *LCtx, const CallEvent *Call,
+      Store store, ArrayRef<SVal> Values, ConstCFGElementRef Elem,
+      unsigned Count, const StackFrame *SF, const CallEvent *Call,
       InvalidatedSymbols &IS, RegionAndSymbolInvalidationTraits &ITraits,
       InvalidatedRegions *TopLevelRegions, InvalidatedRegions *Invalidated) = 0;
 
   /// enterStackFrame - Let the StoreManager to do something when execution
   /// engine is about to execute into a callee.
   BindResult enterStackFrame(Store store, const CallEvent &Call,
-                             const StackFrameContext *CalleeCtx);
+                             const StackFrame *CalleeSF);
 
   /// Finds the transitive closure of symbols within the given region.
   ///

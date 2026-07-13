@@ -1,5 +1,5 @@
 ; RUN: opt -passes=sroa,verify -S %s -o - \
-; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: | FileCheck %s --implicit-check-not="#dbg_"
 
 ; Check that the new slices of an alloca and memset intructions get dbg.assign
 ; intrinsics with the correct fragment info. Ensure that only the

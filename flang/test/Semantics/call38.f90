@@ -516,9 +516,9 @@ module char
     !ERROR: Actual argument associated with coarray dummy argument 'a=' must be a coarray
     call coarray0(matrix11(1,1))
 
-    !WARNING: Actual argument variable length '1' is less than expected length '2'
+    !WARNING: Actual argument variable length '1' is less than expected length '2' [-Wshort-character-actual]
     call scalar(scalar0(1:1))
-    !WARNING: Actual argument expression length '1' is less than expected length '2'
+    !WARNING: Actual argument expression length '1' is less than expected length '2' [-Wshort-character-actual]
     call scalar('a')
   end
 end

@@ -15,10 +15,12 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_aarch32.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_aarch64.h"
-#include "llvm/ExecutionEngine/JITLink/ELF_i386.h"
+#include "llvm/ExecutionEngine/JITLink/ELF_hexagon.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_loongarch.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_ppc64.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_riscv.h"
+#include "llvm/ExecutionEngine/JITLink/ELF_systemz.h"
+#include "llvm/ExecutionEngine/JITLink/ELF_x86.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_x86_64.h"
 #include "llvm/Object/ELF.h"
 #include <cstring>
@@ -88,6 +90,8 @@ createLinkGraphFromELFObject(MemoryBufferRef ObjectBuffer,
     return createLinkGraphFromELFObject_aarch64(ObjectBuffer, std::move(SSP));
   case ELF::EM_ARM:
     return createLinkGraphFromELFObject_aarch32(ObjectBuffer, std::move(SSP));
+  case ELF::EM_HEXAGON:
+    return createLinkGraphFromELFObject_hexagon(ObjectBuffer, std::move(SSP));
   case ELF::EM_PPC64: {
     if (DataEncoding == ELF::ELFDATA2LSB)
       return createLinkGraphFromELFObject_ppc64le(ObjectBuffer, std::move(SSP));
@@ -98,10 +102,12 @@ createLinkGraphFromELFObject(MemoryBufferRef ObjectBuffer,
     return createLinkGraphFromELFObject_loongarch(ObjectBuffer, std::move(SSP));
   case ELF::EM_RISCV:
     return createLinkGraphFromELFObject_riscv(ObjectBuffer, std::move(SSP));
+  case ELF::EM_S390:
+    return createLinkGraphFromELFObject_systemz(ObjectBuffer, std::move(SSP));
   case ELF::EM_X86_64:
     return createLinkGraphFromELFObject_x86_64(ObjectBuffer, std::move(SSP));
   case ELF::EM_386:
-    return createLinkGraphFromELFObject_i386(ObjectBuffer, std::move(SSP));
+    return createLinkGraphFromELFObject_x86(ObjectBuffer, std::move(SSP));
   default:
     return make_error<JITLinkError>(
         "Unsupported target machine architecture in ELF object " +
@@ -121,6 +127,9 @@ void link_ELF(std::unique_ptr<LinkGraph> G,
   case Triple::thumbeb:
     link_ELF_aarch32(std::move(G), std::move(Ctx));
     return;
+  case Triple::hexagon:
+    link_ELF_hexagon(std::move(G), std::move(Ctx));
+    return;
   case Triple::loongarch32:
   case Triple::loongarch64:
     link_ELF_loongarch(std::move(G), std::move(Ctx));
@@ -135,11 +144,14 @@ void link_ELF(std::unique_ptr<LinkGraph> G,
   case Triple::riscv64:
     link_ELF_riscv(std::move(G), std::move(Ctx));
     return;
+  case Triple::systemz:
+    link_ELF_systemz(std::move(G), std::move(Ctx));
+    return;
   case Triple::x86_64:
     link_ELF_x86_64(std::move(G), std::move(Ctx));
     return;
   case Triple::x86:
-    link_ELF_i386(std::move(G), std::move(Ctx));
+    link_ELF_x86(std::move(G), std::move(Ctx));
     return;
   default:
     Ctx->notifyFailed(make_error<JITLinkError>(

@@ -33,8 +33,8 @@ define i1 @foo(ptr %p) {
 ; branch instruction, 4 bytes each. For non-BTI, we shift right by 2,
 ; because it's just the branch.
 
-; BTI:   lshr i64 {{.*}}, 3
-; NOBTI: lshr i64 {{.*}}, 2
+; BTI:   @llvm.fshr.i64({{.*}}, i64 3)
+; NOBTI: @llvm.fshr.i64({{.*}}, i64 2)
 
 ; CHECK: define private void @.cfi.jumptable() [[ATTRS:#[0-9]+]]
 

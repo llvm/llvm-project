@@ -31,7 +31,7 @@
 // CHECK-DAG:       %[[VAL_11:.*]] = sparse_tensor.positions %[[VAL_2]] {level = 1 : index} : tensor<64x32xf64, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_12:.*]] = sparse_tensor.coordinates %[[VAL_2]] {level = 1 : index} : tensor<64x32xf64, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_13:.*]] = sparse_tensor.values %[[VAL_2]] : tensor<64x32xf64, #sparse{{[0-9]*}}> to memref<?xf64>
-// CHECK-DAG:       %[[VAL_14:.*]] = bufferization.to_memref %[[VAL_0]] : tensor<f64> to memref<f64>
+// CHECK-DAG:       %[[VAL_14:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<f64> to memref<f64>
 // CHECK:           %[[VAL_15:.*]] = memref.load %[[VAL_14]][] : memref<f64>
 // CHECK:           %[[VAL_16:.*]] = scf.for %[[VAL_17:.*]] = %[[VAL_6]] to %[[VAL_5]] step %[[VAL_7]] iter_args(%[[VAL_18:.*]] = %[[VAL_15]]) -> (f64) {
 // CHECK:             %[[VAL_19:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_17]]] : memref<?xindex>
@@ -82,7 +82,7 @@
 // CHECK:               %[[VAL_57:.*]] = arith.select %[[VAL_39]], %[[VAL_56]], %[[VAL_32]] : index
 // CHECK:               scf.yield %[[VAL_55]], %[[VAL_57]], %[[VAL_58:.*]] : index, index, f64
 // CHECK:             } attributes {"Emitted from" = "linalg.generic"}
-// CHECK:             %[[VAL_59:.*]] = vector.insertelement %[[VAL_60:.*]]#2, %[[VAL_4]]{{\[}}%[[VAL_6]] : index] : vector<8xf64>
+// CHECK:             %[[VAL_59:.*]] = vector.insert %[[VAL_60:.*]]#2, %[[VAL_4]] [0] : f64 into vector<8xf64>
 // CHECK:             %[[VAL_61:.*]] = scf.for %[[VAL_62:.*]] = %[[VAL_60]]#0 to %[[VAL_21]] step %[[VAL_3]] iter_args(%[[VAL_63:.*]] = %[[VAL_59]]) -> (vector<8xf64>) {
 // CHECK:               %[[VAL_64:.*]] = affine.min #map(%[[VAL_21]], %[[VAL_62]]){{\[}}%[[VAL_3]]]
 // CHECK:               %[[VAL_65:.*]] = vector.create_mask %[[VAL_64]] : vector<8xi1>

@@ -80,7 +80,7 @@ static void callee0() {}
 void callee1() {}
 typedef void (*FPT)();
 FPT calleeAddrs[] = {callee0, callee1};
-// `global_func`` might call one of two indirect callees. callee0 has internal
+// `global_func` might call one of two indirect callees. callee0 has internal
 // linkage and callee1 has external linkage.
 void global_func() {
   FPT fp = calleeAddrs[0];

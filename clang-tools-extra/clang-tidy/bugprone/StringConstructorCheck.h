@@ -1,4 +1,4 @@
-//===--- StringConstructorCheck.h - clang-tidy-------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STRING_CONSTRUCTOR_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STRING_CONSTRUCTOR_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STRINGCONSTRUCTORCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STRINGCONSTRUCTORCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -16,7 +16,7 @@ namespace clang::tidy::bugprone {
 /// Finds suspicious string constructor and check their parameters.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/string-constructor.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/string-constructor.html
 class StringConstructorCheck : public ClangTidyCheck {
 public:
   StringConstructorCheck(StringRef Name, ClangTidyContext *Context);
@@ -36,4 +36,4 @@ private:
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STRING_CONSTRUCTOR_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STRINGCONSTRUCTORCHECK_H

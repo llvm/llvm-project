@@ -11,6 +11,7 @@
 #include "PdbYaml.h"
 #include "llvm-pdbutil.h"
 
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugUnknownSubsection.h"
@@ -18,6 +19,7 @@
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
+#include "llvm/DebugInfo/PDB/Native/ISectionContribVisitor.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/ModuleDebugStream.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
@@ -73,7 +75,18 @@ Error YAMLOutputStyle::dump() {
   if (auto EC = dumpPublics())
     return EC;
 
+  if (auto EC = dumpDXContainer())
+    return EC;
+
+  // Fake Coff header for dumping register enumerations.
+  COFF::header Header;
+  auto MachineType =
+      Obj.DbiStream ? Obj.DbiStream->MachineType : PDB_Machine::Unknown;
+  Header.Machine = static_cast<uint16_t>(MachineType);
+  Out.setContext(&Header);
   flush();
+  Out.setContext(nullptr);
+
   return Error::success();
 }
 
@@ -105,6 +118,9 @@ Error YAMLOutputStyle::dumpStringTable() {
                              !opts::pdb2yaml::DumpModuleSubsections.empty();
   bool RequestedStringTable = opts::pdb2yaml::StringTable;
   if (!RequiresStringTable && !RequestedStringTable)
+    return Error::success();
+
+  if (!File.hasPDBStringTable())
     return Error::success();
 
   auto ExpectedST = File.getStringTable();
@@ -276,11 +292,67 @@ Error YAMLOutputStyle::dumpDbiStream() {
       }
     }
   }
+
+  if (opts::pdb2yaml::DumpSectionHeaders) {
+    for (const auto &Section : DS.getSectionHeaders()) {
+      yaml::CoffSectionHeader Hdr;
+      Hdr.Name = Section.Name;
+      Hdr.VirtualSize = Section.VirtualSize;
+      Hdr.VirtualAddress = Section.VirtualAddress;
+      Hdr.SizeOfRawData = Section.SizeOfRawData;
+      Hdr.PointerToRawData = Section.PointerToRawData;
+      Hdr.PointerToRelocations = Section.PointerToRelocations;
+      Hdr.PointerToLinenumbers = Section.PointerToLinenumbers;
+      Hdr.NumberOfRelocations = Section.NumberOfRelocations;
+      Hdr.NumberOfLinenumbers = Section.NumberOfLinenumbers;
+      Hdr.Characteristics = Section.Characteristics;
+      Obj.DbiStream->SectionHeaders.emplace_back(Hdr);
+    }
+  }
+
+  if (opts::pdb2yaml::DumpSectionContribs) {
+    struct Visitor : public ISectionContribVisitor {
+      Visitor(std::vector<yaml::PdbDbiSectionContrib> &Out) : Out(Out) {}
+
+      static yaml::PdbDbiSectionContrib createFromSC(const SectionContrib &C) {
+        yaml::PdbDbiSectionContrib SC;
+        SC.ISect = C.ISect;
+        SC.Off = C.Off;
+        SC.Size = C.Size;
+        SC.Characteristics = C.Characteristics;
+        SC.Imod = C.Imod;
+        SC.DataCrc = C.DataCrc;
+        SC.RelocCrc = C.RelocCrc;
+        return SC;
+      }
+
+      void visit(const SectionContrib &C) override {
+        Out.emplace_back(createFromSC(C));
+      }
+      void visit(const SectionContrib2 &C) override {
+        yaml::PdbDbiSectionContrib SC = createFromSC(C.Base);
+        SC.ISectCoff = C.ISectCoff;
+        Out.emplace_back(SC);
+      }
+
+      std::vector<yaml::PdbDbiSectionContrib> &Out;
+    };
+    Obj.DbiStream->SectionContribs.emplace(yaml::PdbDbiSectionContribs{
+        /*Version=*/DS.getSectionContributionsVersion(),
+        /*Items=*/{},
+    });
+    Visitor Vis(Obj.DbiStream->SectionContribs->Items);
+    DS.visitSectionContributions(Vis);
+  }
+
   return Error::success();
 }
 
 Error YAMLOutputStyle::dumpTpiStream() {
   if (!opts::pdb2yaml::TpiStream)
+    return Error::success();
+
+  if (!File.hasPDBTpiStream())
     return Error::success();
 
   auto TpiS = File.getPDBTpiStream();
@@ -302,6 +374,9 @@ Error YAMLOutputStyle::dumpTpiStream() {
 
 Error YAMLOutputStyle::dumpIpiStream() {
   if (!opts::pdb2yaml::IpiStream)
+    return Error::success();
+
+  if (!File.hasPDBIpiStream())
     return Error::success();
 
   auto InfoS = File.getPDBInfoStream();
@@ -361,6 +436,25 @@ Error YAMLOutputStyle::dumpPublics() {
     Obj.PublicsStream->PubSyms.push_back(*ES);
   }
 
+  return Error::success();
+}
+
+Error YAMLOutputStyle::dumpDXContainer() {
+  if (!opts::pdb2yaml::DXContainerStream)
+    return Error::success();
+
+  auto DxcS = File.getDXContainerStream();
+  if (!DxcS) {
+    // Not finding a DXContainer is not an error.
+    consumeError(DxcS.takeError());
+    return Error::success();
+  }
+
+  auto DXCYaml = DXContainerYAML::fromDXContainer(*DxcS);
+  if (!DXCYaml)
+    return DXCYaml.takeError();
+  Obj.DXContainerStream.emplace();
+  Obj.DXContainerStream->DXC = *DXCYaml->get();
   return Error::success();
 }
 

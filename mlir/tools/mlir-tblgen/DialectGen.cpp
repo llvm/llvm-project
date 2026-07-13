@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CppGenUtilities.h"
 #include "DialectGenUtilities.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
@@ -206,23 +207,23 @@ static const char *const discardableAttrHelperDecl = R"(
       static constexpr ::llvm::StringLiteral getNameStr() {{
         return "{4}.{1}";
       }
-      constexpr ::mlir::StringAttr getName() {{
+      constexpr ::mlir::StringAttr getName() const {{
         return name;
       }
 
-      {0}AttrHelper(::mlir::MLIRContext *ctx)
+      explicit {0}AttrHelper(::mlir::MLIRContext *ctx)
         : name(::mlir::StringAttr::get(ctx, getNameStr())) {{}
 
-     {2} getAttr(::mlir::Operation *op) {{
+     {2} getAttr(::mlir::Operation *op) const {{
        return op->getAttrOfType<{2}>(name);
      }
-     void setAttr(::mlir::Operation *op, {2} val) {{
+     void setAttr(::mlir::Operation *op, {2} val) const {{
        op->setAttr(name, val);
      }
-     bool isAttrPresent(::mlir::Operation *op) {{
+     bool isAttrPresent(::mlir::Operation *op) const {{
        return op->hasAttrOfType<{2}>(name);
      }
-     void removeAttr(::mlir::Operation *op) {{
+     void removeAttr(::mlir::Operation *op) const {{
        assert(op->hasAttrOfType<{2}>(name));
        op->removeAttr(name);
      }
@@ -239,12 +240,16 @@ static const char *const discardableAttrHelperDecl = R"(
 static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
   // Emit all nested namespaces.
   {
-    NamespaceEmitter nsEmitter(os, dialect);
+    DialectNamespaceEmitter nsEmitter(os, dialect);
 
     // Emit the start of the decl.
     std::string cppName = dialect.getCppClassName();
     StringRef superClassName =
         dialect.isExtensible() ? "ExtensibleDialect" : "Dialect";
+
+    tblgen::emitSummaryAndDescComments(os, dialect.getSummary(),
+                                       dialect.getDescription(),
+                                       /*terminateCmment=*/false);
     os << llvm::formatv(dialectDeclBeginStr, cppName, dialect.getName(),
                         superClassName);
 
@@ -352,7 +357,7 @@ static void emitDialectDef(Dialect &dialect, const RecordKeeper &records,
        << "::" << cppClassName << ")\n";
 
   // Emit all nested namespaces.
-  NamespaceEmitter nsEmitter(os, dialect);
+  DialectNamespaceEmitter nsEmitter(os, dialect);
 
   /// Build the list of dependent dialects.
   std::string dependentDialectRegistrations;

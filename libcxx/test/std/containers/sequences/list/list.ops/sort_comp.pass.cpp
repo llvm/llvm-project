@@ -8,7 +8,7 @@
 
 // <list>
 
-// template <class Compare> sort(Compare comp);
+// template <class Compare> sort(Compare comp); // constexpr since C++26
 
 #include <list>
 #include <functional>
@@ -76,7 +76,7 @@ void test_stable(int N) {
   }
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     int a1[] = {4, 8, 1, 0, 5, 7, 2, 3, 6, 11, 10, 9};
     int a2[] = {11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
@@ -85,37 +85,48 @@ int main(int, char**) {
     assert(c1 == std::list<int>(a2, a2 + sizeof(a2) / sizeof(a2[0])));
   }
 
+  if (!TEST_IS_CONSTANT_EVALUATED) {
 //  Test with throwing comparison; make sure that nothing is lost.
 //  This is (sort of) LWG #2824
 #ifndef TEST_HAS_NO_EXCEPTIONS
-  {
-    int a1[]     = {4, 8, 1, 0, 5, 7, 2, 3, 6, 11, 10, 9};
-    const int sz = sizeof(a1) / sizeof(a1[0]);
-    for (int i = 0; i < 10; ++i) {
-      std::list<int> c1(a1, a1 + sz);
-      try {
-        throwingLess<int> comp(i);
-        c1.sort(std::cref(comp));
-      } catch (int) {
+    {
+      int a1[]     = {4, 8, 1, 0, 5, 7, 2, 3, 6, 11, 10, 9};
+      const int sz = sizeof(a1) / sizeof(a1[0]);
+      for (int i = 0; i < 10; ++i) {
+        std::list<int> c1(a1, a1 + sz);
+        try {
+          throwingLess<int> comp(i);
+          c1.sort(std::cref(comp));
+        } catch (int) {
+        }
+        assert((c1.size() == sz));
+        assert((std::is_permutation(c1.begin(), c1.end(), a1)));
       }
-      assert((c1.size() == sz));
-      assert((std::is_permutation(c1.begin(), c1.end(), a1)));
     }
-  }
 #endif
 
 #if TEST_STD_VER >= 11
-  {
-    int a1[] = {4, 8, 1, 0, 5, 7, 2, 3, 6, 11, 10, 9};
-    int a2[] = {11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
-    std::list<int, min_allocator<int>> c1(a1, a1 + sizeof(a1) / sizeof(a1[0]));
-    c1.sort(std::greater<int>());
-    assert((c1 == std::list<int, min_allocator<int>>(a2, a2 + sizeof(a2) / sizeof(a2[0]))));
-  }
+    {
+      int a1[] = {4, 8, 1, 0, 5, 7, 2, 3, 6, 11, 10, 9};
+      int a2[] = {11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
+      std::list<int, min_allocator<int>> c1(a1, a1 + sizeof(a1) / sizeof(a1[0]));
+      c1.sort(std::greater<int>());
+      assert((c1 == std::list<int, min_allocator<int>>(a2, a2 + sizeof(a2) / sizeof(a2[0]))));
+    }
 #endif
 
-  for (int i = 0; i < 40; ++i)
-    test_stable(i);
+    for (int i = 0; i < 40; ++i)
+      test_stable(i);
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

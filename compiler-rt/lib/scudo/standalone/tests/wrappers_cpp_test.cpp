@@ -84,10 +84,10 @@ protected:
     verifyAllocHookPtr(P);
     verifyAllocHookSize(sizeof(T));
     memset(P, 0x42, sizeof(T));
-    EXPECT_DEATH(delete[] P, "");
+    SCUDO_EXPECT_DEATH(delete[] P, "");
     delete P;
     verifyDeallocHookPtr(P);
-    EXPECT_DEATH(delete P, "");
+    SCUDO_EXPECT_DEATH(delete P, "");
 
     P = new T;
     EXPECT_NE(P, nullptr);
@@ -109,10 +109,10 @@ protected:
     verifyAllocHookPtr(A);
     verifyAllocHookSize(sizeof(T) * N);
     memset(A, 0x42, sizeof(T) * N);
-    EXPECT_DEATH(delete A, "");
+    SCUDO_EXPECT_DEATH(delete A, "");
     delete[] A;
     verifyDeallocHookPtr(A);
-    EXPECT_DEATH(delete[] A, "");
+    SCUDO_EXPECT_DEATH(delete[] A, "");
 
     A = new T[N];
     EXPECT_NE(A, nullptr);
@@ -184,7 +184,7 @@ static void stressNew() {
 }
 
 TEST_F(ScudoWrappersCppTest, ThreadedNew) {
-  // TODO: Investigate why libc sometimes crashes with tag missmatch in
+  // TODO: Investigate why libc sometimes crashes with tag mismatch in
   // __pthread_clockjoin_ex.
   std::unique_ptr<scudo::ScopedDisableMemoryTagChecks> NoTags;
   if (!SCUDO_ANDROID && scudo::archSupportsMemoryTagging() &&
@@ -207,7 +207,7 @@ TEST_F(ScudoWrappersCppTest, ThreadedNew) {
 #if !SCUDO_FUCHSIA
 TEST_F(ScudoWrappersCppTest, AllocAfterFork) {
   // This test can fail flakily when ran as a part of large number of
-  // other tests if the maxmimum number of mappings allowed is low.
+  // other tests if the maximum number of mappings allowed is low.
   // We tried to reduce the number of iterations of the loops with
   // moderate success, so we will now skip this test under those
   // circumstances.
