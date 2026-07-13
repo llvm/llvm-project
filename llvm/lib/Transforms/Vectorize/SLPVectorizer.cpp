@@ -5850,6 +5850,9 @@ private:
               continue;
             return false;
           }
+          // Only count the occurrence matching this call's NumOps.
+          if (CurNumOps != NumOps)
+            continue;
           PotentiallyReorderedEntriesCount.try_emplace(TE, 0)
               .first->getSecond() += Inc;
         }
