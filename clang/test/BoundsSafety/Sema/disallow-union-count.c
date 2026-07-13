@@ -9,13 +9,13 @@
 
 union S {
   int *p1 __counted_by(count);
-  // expected-error@-1 {{cannot use '__counted_by' on union fields}}
+  // expected-error@-1 {{'counted_by' cannot be applied to a union member}}
   int count;
   int *p2 __ended_by(end);
-  // expected-error@-1 {{cannot use '__ended_by' on union fields}}
+  // expected-error@-1 {{'ended_by' cannot be applied to a union member}}
   int *end;
   int *p3 __sized_by(size);
-  // expected-error@-1 {{cannot use '__sized_by' on union fields}}
+  // expected-error@-1 {{'sized_by' cannot be applied to a union member}}
   int size;
   struct
   {

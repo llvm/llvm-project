@@ -7891,8 +7891,14 @@ void Sema::applyPtrCountedByEndedByAttr(Decl *D, unsigned Level,
 
   const auto *FD = dyn_cast<FieldDecl>(D);
   if (FD && FD->getParent()->isUnion()) {
-    Diag(Loc, diag::err_invalid_decl_kind_bounds_safety_union_count)
-        << DiagName;
+    unsigned DiagKind =
+        IsEndedBy
+            ? BoundsAttributedType::EndedBy
+            : (CountInBytes ? (OrNull ? BoundsAttributedType::SizedByOrNull
+                                      : BoundsAttributedType::SizedBy)
+                            : (OrNull ? BoundsAttributedType::CountedByOrNull
+                                      : BoundsAttributedType::CountedBy));
+    Diag(Loc, diag::err_count_attr_in_union) << DiagKind;
     return;
   }
 

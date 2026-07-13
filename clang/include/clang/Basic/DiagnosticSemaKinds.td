@@ -7261,8 +7261,11 @@ def err_count_attr_argument_not_integer : Error<
   "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' requires a non-boolean integer type argument">;
 def err_count_attr_only_support_simple_decl_reference : Error<
   "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' argument must be a simple declaration reference">;
+/* TO_UPSTREAM(BoundsSafety) ON */
+// `ended_by` in %select is downstream only
 def err_count_attr_in_union : Error<
-  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' cannot be applied to a union member">;
+  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null|ended_by}0' cannot be applied to a union member">;
+/* TO_UPSTREAM(BoundsSafety) OFF */
 def err_count_attr_refer_to_union : Error<
   "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' argument cannot refer to a union member">;
 def note_flexible_array_counted_by_attr_field : Note<
@@ -13479,8 +13482,6 @@ def err_attribute_invalid_argument_expression_for_pointer_bounds_attribute : Err
 def err_invalid_decl_kind_bounds_safety_dynamic_count : Error<
   "count expression %select{on struct field|in function declaration}0 may only "
   "reference %select{other fields of the same struct|parameters of that function}0">;
-def err_invalid_decl_kind_bounds_safety_union_count : Error<
-  "cannot use %0 on union fields">;
 def err_multiple_coupled_decls_in_bounds_safety_dynamic_count : Error<
   "multiple coupled declarations in a -fbounds-safety attribute are not supported yet">;
 def err_attribute_argument_type_for_bounds_safety_count : Error<
