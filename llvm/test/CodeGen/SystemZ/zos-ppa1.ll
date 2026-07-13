@@ -206,3 +206,25 @@ declare i32 @other(ptr, i32)
 ; CHECK-NEXT: * Name of Function
 ; CHECK-NEXT:  DC XL10'A689A388819393968381'
 ; CHECK-NEXT:  DC AD(L#EPM_withalloca_0-L#PPA1_withalloca_0)
+
+; Attribute "zos-ppa1-name"="none" removes the function name from PPA1.
+; CHECK: * PPA1
+; CHECK-NEXT: L#PPA1_no_name_0 DS 0H
+; CHECK:      * PPA1 Flags 4
+; CHECK-NEXT:  DC XL1'80'
+; CHECK-NEXT: * Length/4 of Parms
+; CHECK-NEXT:  DC XL2'0000'
+; CHECK-NEXT: * Length/2 of Prolog
+; CHECK-NEXT:  DC XL1'00'
+; CHECK-NEXT: * Alloca Reg + Offset/2 to SP Update
+; CHECK-NEXT: *   Bit 0-3: Register R0
+; CHECK-NEXT: *   Bit 4-8: Offset
+; CHECK-NEXT:  DC XL1'0'
+; CHECK-NEXT: * Length of Code
+; CHECK-NEXT:  DC AD(L#no_name_end_0-L#EPM_no_name_0)
+; CHECK-NEXT:  DC AD(L#EPM_no_name_0-L#PPA1_no_name_0)
+define void @no_name() #0 {
+entry:
+  ret void
+}
+attributes #0 = { "zos-ppa1-name"="none" }

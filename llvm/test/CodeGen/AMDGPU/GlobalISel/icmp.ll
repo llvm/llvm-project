@@ -74,8 +74,8 @@ define void @icmp_i16_uniform(i16 inreg %a, i16 inreg %b, ptr addrspace(1) %p) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_bfe_u32 s2, s0, 0x100000
-; GFX12-NEXT:    s_bfe_u32 s3, s1, 0x100000
+; GFX12-NEXT:    s_and_b32 s2, 0xffff, s0
+; GFX12-NEXT:    s_and_b32 s3, 0xffff, s1
 ; GFX12-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_cmp_eq_u32 s2, s3

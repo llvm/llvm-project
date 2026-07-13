@@ -9716,6 +9716,20 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
     CCInfo.AllocateStack(32, Align(16));
 
   unsigned NumArgs = Outs.size();
+
+  // IsVarArg is only set on an ARM64EC_Thunk_X64 for exit thunks, so if set
+  // we know we have a vararg exit thunk where x4 and x5 must be consumed in
+  // this lowering (copying the data to the stack).
+  bool IsArm64ECVarArgExitThunk = CalleeCC == CallingConv::ARM64EC_Thunk_X64 &&
+                                  IsVarArg &&
+                                  !(CLI.CB && CLI.CB->isMustTailCall());
+  if (IsArm64ECVarArgExitThunk) {
+    if (NumArgs < 2)
+      report_fatal_error("variadic arm64ec_thunk_x64 call is missing the "
+                         "x4/x5 (pointer/length) arguments");
+    NumArgs -= 2;
+  }
+
   for (unsigned i = 0; i != NumArgs; ++i) {
     MVT ArgVT = Outs[i].VT;
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
@@ -10305,6 +10319,50 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     });
   }
 
+  auto PtrVT = getPointerTy(DAG.getDataLayout());
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  // If we have a variadic Arm64EC exit thunk, we must lower the x4/x5
+  // parameters (address and length of additional arguments) into an outgoing
+  // stack area.
+  bool IsArm64ECVarArgExitThunk = CallConv == CallingConv::ARM64EC_Thunk_X64 &&
+                                  IsVarArg &&
+                                  !(CLI.CB && CLI.CB->isMustTailCall());
+  if (IsArm64ECVarArgExitThunk) {
+    // Materialize an aligned outgoing stack area now
+    // so the args described by x4 (pointer) and x5 (length) can be copied
+    // into a real x64-style stack layout.
+    if (Outs.size() < 2)
+      report_fatal_error("variadic arm64ec_thunk_x64 call is missing the "
+                         "x4/x5 (pointer/length) arguments");
+    if (IsTailCall)
+      report_fatal_error("tail calls are not supported for variadic "
+                         "arm64ec_thunk_x64 calls");
+
+    SDValue ThunkVarArgSrc = OutVals[Outs.size() - 2];
+    SDValue ThunkVarArgSize =
+        DAG.getZExtOrTrunc(OutVals[Outs.size() - 1], DL, PtrVT);
+    SDValue RoundedThunkVarArgSize = DAG.getNode(
+        ISD::ADD, DL, PtrVT, ThunkVarArgSize, DAG.getConstant(15, DL, PtrVT));
+    RoundedThunkVarArgSize =
+        DAG.getNode(ISD::AND, DL, PtrVT, RoundedThunkVarArgSize,
+                    DAG.getSignedConstant(-16, DL, PtrVT));
+    SDValue ThunkVarArgDst = DAG.getNode(
+        ISD::DYNAMIC_STACKALLOC, DL, DAG.getVTList(PtrVT, MVT::Other),
+        {Chain, RoundedThunkVarArgSize, DAG.getConstant(0, DL, PtrVT)});
+    Chain = ThunkVarArgDst.getValue(1);
+    MFI.CreateVariableSizedObject(Align(16), nullptr);
+
+    // The x64 shadow store for the final thunk call is allocated by the normal
+    // CALLSEQ_START below. Copy the variadic stack arguments before that call
+    // sequence starts so lowering the memcpy libcall cannot create nested
+    // ADJCALLSTACKDOWN/ADJCALLSTACKUP pairs.
+    Chain = DAG.getMemcpy(
+        Chain, DL, ThunkVarArgDst, ThunkVarArgSrc, ThunkVarArgSize, Align(16),
+        Align(1), /*isVol=*/false, /*AlwaysInline=*/false,
+        /*CI=*/nullptr, std::nullopt, MachinePointerInfo::getUnknownStack(MF),
+        MachinePointerInfo());
+  }
+
   // Adjust the stack pointer for the new arguments... and mark ZA uses.
   // These operations are automatically eliminated by the prolog/epilog pass
   assert((!IsSibCall || !ZAMarkerNode) && "ZA markers require CALLSEQ_START");
@@ -10327,7 +10385,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
   SmallSet<unsigned, 8> RegsUsed;
   SmallVector<SDValue, 8> MemOpChains;
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
 
   if (IsVarArg && CLI.CB && CLI.CB->isMustTailCall()) {
     const auto &Forwards = FuncInfo->getForwardedMustTailRegParms();
@@ -10339,7 +10396,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Walk the register/memloc assignments, inserting copies/loads.
   unsigned ExtraArgLocs = 0;
-  for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
+  unsigned NumThunkVarArgOperands = IsArm64ECVarArgExitThunk ? 2 : 0;
+  for (unsigned i = 0, e = Outs.size() - NumThunkVarArgOperands; i != e; ++i) {
     CCValAssign &VA = ArgLocs[i - ExtraArgLocs];
     SDValue Arg = OutVals[i];
     ISD::ArgFlagsTy Flags = Outs[i].Flags;
@@ -10561,7 +10619,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   if (IsVarArg && Subtarget->isWindowsArm64EC() &&
-      !(CLI.CB && CLI.CB->isMustTailCall())) {
+      !(CLI.CB && CLI.CB->isMustTailCall()) && !IsArm64ECVarArgExitThunk) {
     SDValue ParamPtr = StackPtr;
     if (IsTailCall) {
       // Create a dummy object at the top of the stack that can be used to get
@@ -20226,7 +20284,7 @@ static SDValue performVecReduceAddCombineWithUADDLP(SDNode *N,
 static SDValue
 performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                              const AArch64Subtarget *ST) {
-  if (DCI.isBeforeLegalize())
+  if (DCI.isBeforeLegalize() || !ST->isSVEorStreamingSVEAvailable())
     return SDValue();
 
   if (SDValue Brk = optimizeBrk(N, DCI.DAG))
@@ -20235,11 +20293,6 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (SDValue While = optimizeIncrementingWhile(N, DCI.DAG, /*IsSigned=*/false,
                                                 /*IsEqual=*/false))
     return While;
-
-  if (!N->getValueType(0).isScalableVector() ||
-      !ST->isSVEorStreamingSVEAvailable() ||
-      !(ST->hasSVE2p1() || ST->hasSME2()))
-    return SDValue();
 
   // Count the number of users which are extract_vectors.
   unsigned NumExts = count_if(N->users(), [](SDNode *Use) {
@@ -20275,18 +20328,41 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   SelectionDAG &DAG = DCI.DAG;
   SDLoc DL(N);
+  SDValue Idx = N->getOperand(0);
+  SDValue TC = N->getOperand(1);
+  EVT IdxVT = Idx.getValueType();
+  EVT ExtVT = Extracts[0]->getValueType(0);
+
+  if (N->getValueType(0).isFixedLengthVector() ||
+      !(ST->hasSVE2p1() || ST->hasSME2())) {
+
+    // If the whilelo_x2 instruction is not available or the types are
+    // fixed-width, prefer to use multiple smaller whilelo instructions.
+    SmallVector<SDValue> Masks;
+    SDValue StartVal = Idx;
+    for (unsigned I = 0; I < NumExts; ++I) {
+      if (I > 0)
+        StartVal = DAG.getNode(ISD::UADDSAT, DL, IdxVT, Idx,
+                               DAG.getElementCount(DL, IdxVT, ExtMinEC * I));
+
+      auto ALMForPart =
+          DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, ExtVT, StartVal, TC);
+      Masks.push_back(ALMForPart);
+      DCI.CombineTo(Extracts[I], ALMForPart);
+    }
+
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, N->getValueType(0), Masks);
+  }
+
   SDValue ID =
       DAG.getTargetConstant(Intrinsic::aarch64_sve_whilelo_x2, DL, MVT::i64);
 
-  SDValue Idx = N->getOperand(0);
-  SDValue TC = N->getOperand(1);
-  if (Idx.getValueType() != MVT::i64) {
+  if (IdxVT != MVT::i64) {
     Idx = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Idx);
     TC = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, TC);
   }
 
   // Create the whilelo_x2 intrinsics from each pair of extracts
-  EVT ExtVT = Extracts[0]->getValueType(0);
   EVT DoubleExtVT = ExtVT.getDoubleNumVectorElementsVT(*DAG.getContext());
   auto R =
       DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, {ExtVT, ExtVT}, {ID, Idx, TC});
@@ -23553,6 +23629,41 @@ static SDValue performAddCombineForShiftedOperands(SDNode *N,
   return SDValue();
 }
 
+// Fold neg (and X, M) -> and (neg X), M when M is all-zeros or all-ones, so
+// the negate distributes across the AND.
+static SDValue performNegSignMaskedAndCombine(SDNode *N, SelectionDAG &DAG) {
+  if (N->getOpcode() != ISD::SUB || !isNullConstant(N->getOperand(0)))
+    return SDValue();
+
+  SDValue And = N->getOperand(1);
+  if (And.getOpcode() != ISD::AND || !And.hasOneUse())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32 && VT != MVT::i64)
+    return SDValue();
+
+  // A negate feeding a comparison folds into a cmn for free.
+  if (any_of(N->users(), [](const SDNode *U) {
+        unsigned UOpc = U->getOpcode();
+        return UOpc == ISD::SETCC || UOpc == ISD::SELECT_CC ||
+               UOpc == ISD::BR_CC;
+      }))
+    return SDValue();
+
+  // Negate whichever AND operand is not the all-zeros/all-ones mask.
+  unsigned NumBits = VT.getScalarSizeInBits();
+  SDValue X = And.getOperand(0), Mask = And.getOperand(1);
+  if (DAG.ComputeNumSignBits(Mask) != NumBits) {
+    std::swap(X, Mask);
+    if (DAG.ComputeNumSignBits(Mask) != NumBits)
+      return SDValue();
+  }
+
+  SDLoc DL(N);
+  return DAG.getNode(ISD::AND, DL, VT, DAG.getNegative(X, DL, VT), Mask);
+}
+
 // The mid end will reassociate sub(sub(x, m1), m2) to sub(x, add(m1, m2))
 // This reassociates it back to allow the creation of more mls instructions.
 static SDValue performSubAddMULCombine(SDNode *N, SelectionDAG &DAG) {
@@ -24084,6 +24195,8 @@ static SDValue performAddSubCombine(SDNode *N,
   if (SDValue Val = performVectorExtCombine(N, DCI.DAG))
     return Val;
   if (SDValue Val = performAddCombineForShiftedOperands(N, DCI.DAG))
+    return Val;
+  if (SDValue Val = performNegSignMaskedAndCombine(N, DCI.DAG))
     return Val;
   if (SDValue Val = performSubAddMULCombine(N, DCI.DAG))
     return Val;
@@ -32485,7 +32598,8 @@ bool AArch64TargetLowering::
 TargetLoweringBase::CondMergingParams
 AArch64TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
                                                      const Value *Lhs,
-                                                     const Value *Rhs) const {
+                                                     const Value *Rhs,
+                                                     const Function *) const {
   using namespace llvm::PatternMatch;
 
   // Keep floating-point conditions split rather than folding them into an

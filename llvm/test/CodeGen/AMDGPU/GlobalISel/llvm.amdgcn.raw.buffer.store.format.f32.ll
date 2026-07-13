@@ -466,7 +466,7 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffse
   ; GFX8-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; GFX8-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-  ; GFX8-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY6]], [[COPY8]], 0, implicit $exec
+  ; GFX8-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[COPY6]], [[COPY8]], 0, implicit $exec
   ; GFX8-NEXT:   BUFFER_STORE_FORMAT_XY_OFFEN_exact [[REG_SEQUENCE1]], [[V_ADD_CO_U32_e64_]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, implicit $exec :: (dereferenceable store (<2 x f32>), align 1, addrspace 8)
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
@@ -513,7 +513,7 @@ define amdgpu_ps void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffse
   ; GFX8-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; GFX8-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; GFX8-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-  ; GFX8-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY8]], [[COPY10]], 0, implicit $exec
+  ; GFX8-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[COPY8]], [[COPY10]], 0, implicit $exec
   ; GFX8-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.2:

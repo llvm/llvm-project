@@ -4,13 +4,13 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck --check-prefixes=VI,VI-SDAG %s
 ; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck --check-prefixes=VI,VI-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck --check-prefixes=GFX9,GFX9-SDAG %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck --check-prefixes=GFX9,GFX9-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck --check-prefixes=GFX9,GFX9-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck --check-prefixes=GFX10,GFX10-SDAG %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck --check-prefixes=GFX10,GFX10-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck --check-prefixes=GFX10,GFX10-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck --check-prefixes=GFX11,GFX11-SDAG,GFX11-SDAG-TRUE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck --check-prefixes=GFX11,GFX11-SDAG,GFX11-SDAG-FAKE16 %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck --check-prefixes=GFX11,GFX11-GISEL,GFX11-GISEL-TRUE16 %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck --check-prefixes=GFX11,GFX11-GISEL,GFX11-GISEL-FAKE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck --check-prefixes=GFX11,GFX11-GISEL,GFX11-GISEL-TRUE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck --check-prefixes=GFX11,GFX11-GISEL,GFX11-GISEL-FAKE16 %s
 
 ; Test that add/sub with a constant is swapped to sub/add with negated
 ; constant to minimize code size.
@@ -3482,22 +3482,39 @@ define amdgpu_kernel void @v_test_v2i16_x_add_undef_neg32(ptr addrspace(1) %out,
 }
 
 define amdgpu_kernel void @v_test_v2i16_x_add_neg32_undef(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-; SI-LABEL: v_test_v2i16_x_add_neg32_undef:
-; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    s_mov_b32 s6, 0
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; SI-NEXT:    v_mov_b32_e32 v1, 0
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
-; SI-NEXT:    s_mov_b64 s[2:3], s[6:7]
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_subrev_i32_e32 v2, vcc, 32, v2
-; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; SI-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
-; SI-NEXT:    s_endpgm
+; SI-SDAG-LABEL: v_test_v2i16_x_add_neg32_undef:
+; SI-SDAG:       ; %bb.0:
+; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; SI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
+; SI-SDAG-NEXT:    s_mov_b32 s6, 0
+; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; SI-SDAG-NEXT:    v_mov_b32_e32 v1, 0
+; SI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-SDAG-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; SI-SDAG-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
+; SI-SDAG-NEXT:    s_mov_b64 s[2:3], s[6:7]
+; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; SI-SDAG-NEXT:    v_subrev_i32_e32 v2, vcc, 32, v2
+; SI-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; SI-SDAG-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
+; SI-SDAG-NEXT:    s_endpgm
+;
+; SI-GISEL-LABEL: v_test_v2i16_x_add_neg32_undef:
+; SI-GISEL:       ; %bb.0:
+; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; SI-GISEL-NEXT:    s_mov_b32 s6, 0
+; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
+; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
+; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
+; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; SI-GISEL-NEXT:    v_add_i32_e32 v2, vcc, 0xffffffe0, v2
+; SI-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; SI-GISEL-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
+; SI-GISEL-NEXT:    s_endpgm
 ;
 ; VI-LABEL: v_test_v2i16_x_add_neg32_undef:
 ; VI:       ; %bb.0:

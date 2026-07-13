@@ -28,23 +28,18 @@ define amdgpu_kernel void @div_fixup_f16(
 ;
 ; VI-GISEL-LABEL: div_fixup_f16:
 ; VI-GISEL:  ; %bb.0: ; %entry
-; VI-GISEL:    s_mov_b32 s11, 0xf000
 ; VI-GISEL:    s_mov_b32 s10, -1
-; VI-GISEL:    s_mov_b32 s14, s10
-; VI-GISEL:    s_mov_b32 s15, s11
-; VI-GISEL:    s_mov_b32 s12, s2
-; VI-GISEL:    s_mov_b32 s13, s3
-; VI-GISEL:    s_mov_b32 s16, s4
-; VI-GISEL:    s_mov_b32 s17, s5
-; VI-GISEL:    s_mov_b32 s18, s10
-; VI-GISEL:    s_mov_b32 s19, s11
-; VI-GISEL:    s_mov_b32 s4, s6
-; VI-GISEL:    s_mov_b32 s5, s7
-; VI-GISEL:    s_mov_b32 s6, s10
-; VI-GISEL:    s_mov_b32 s7, s11
-; VI-GISEL:    s_mov_b32 s8, s0
-; VI-GISEL:    s_mov_b32 s9, s1
-; VI-GISEL:    v_div_fixup_f16 v0, v0, v1, v2
+; VI-GISEL:    s_mov_b32 s11, 0xf000
+; VI-GISEL:    s_mov_b64 s[8:9], s[2:3]
+; VI-GISEL:    s_mov_b64 s[8:9], s[4:5]
+; VI-GISEL:    s_mov_b64 s[8:9], s[6:7]
+; VI-GISEL:    v_readfirstlane_b32 s2, v0
+; VI-GISEL:    v_readfirstlane_b32 s3, v1
+; VI-GISEL:    v_mov_b32_e32 v0, s3
+; VI-GISEL:    v_readfirstlane_b32 s4, v2
+; VI-GISEL:    v_mov_b32_e32 v1, s4
+; VI-GISEL:    v_div_fixup_f16 v0, s2, v0, v1
+; VI-GISEL:    s_mov_b64 s[2:3], s[10:11]
 ; VI-GISEL:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
@@ -78,18 +73,17 @@ define amdgpu_kernel void @div_fixup_f16_imm_a(
 ;
 ; VI-GISEL-LABEL: div_fixup_f16_imm_a:
 ; VI-GISEL:  ; %bb.0: ; %entry
-; VI-GISEL:    s_mov_b32 s7, 0xf000
 ; VI-GISEL:    s_mov_b32 s6, -1
-; VI-GISEL:    s_mov_b32 s14, s6
-; VI-GISEL:    s_mov_b32 s12, s2
-; VI-GISEL:    s_mov_b32 s13, s3
-; VI-GISEL:    s_mov_b32 s15, s7
-; VI-GISEL:    s_mov_b32 s10, s6
-; VI-GISEL:    s_mov_b32 s11, s7
-; VI-GISEL:    s_mov_b32 s4, s0
-; VI-GISEL:    s_movk_i32 s0, 0x4200
-; VI-GISEL:    s_mov_b32 s5, s1
-; VI-GISEL:    v_div_fixup_f16 v0, s0, v0, v1
+; VI-GISEL:    s_mov_b32 s7, 0xf000
+; VI-GISEL:    s_mov_b64 s[10:11], s[6:7]
+; VI-GISEL:    s_mov_b64 s[4:5], s[2:3]
+; VI-GISEL:    v_mov_b32_e32 v2, 0x4200
+; VI-GISEL:    v_readfirstlane_b32 s2, v0
+; VI-GISEL:    v_readfirstlane_b32 s3, v1
+; VI-GISEL:    v_mov_b32_e32 v0, s3
+; VI-GISEL:    v_div_fixup_f16 v0, v2, s2, v0
+; VI-GISEL:    s_mov_b64 s[2:3], s[6:7]
+; VI-GISEL:    s_nop 1
 ; VI-GISEL:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %b,
@@ -121,18 +115,17 @@ define amdgpu_kernel void @div_fixup_f16_imm_b(
 ;
 ; VI-GISEL-LABEL: div_fixup_f16_imm_b:
 ; VI-GISEL:  ; %bb.0: ; %entry
-; VI-GISEL:    s_mov_b32 s7, 0xf000
 ; VI-GISEL:    s_mov_b32 s6, -1
-; VI-GISEL:    s_mov_b32 s14, s6
-; VI-GISEL:    s_mov_b32 s12, s2
-; VI-GISEL:    s_mov_b32 s13, s3
-; VI-GISEL:    s_mov_b32 s15, s7
-; VI-GISEL:    s_mov_b32 s10, s6
-; VI-GISEL:    s_mov_b32 s11, s7
-; VI-GISEL:    s_mov_b32 s4, s0
-; VI-GISEL:    s_movk_i32 s0, 0x4200
-; VI-GISEL:    s_mov_b32 s5, s1
-; VI-GISEL:    v_div_fixup_f16 v0, v0, s0, v1
+; VI-GISEL:    s_mov_b32 s7, 0xf000
+; VI-GISEL:    s_mov_b64 s[10:11], s[6:7]
+; VI-GISEL:    s_mov_b64 s[4:5], s[2:3]
+; VI-GISEL:    v_mov_b32_e32 v2, 0x4200
+; VI-GISEL:    v_readfirstlane_b32 s2, v0
+; VI-GISEL:    v_readfirstlane_b32 s3, v1
+; VI-GISEL:    v_mov_b32_e32 v0, s3
+; VI-GISEL:    v_div_fixup_f16 v0, s2, v2, v0
+; VI-GISEL:    s_mov_b64 s[2:3], s[6:7]
+; VI-GISEL:    s_nop 1
 ; VI-GISEL:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
@@ -164,18 +157,17 @@ define amdgpu_kernel void @div_fixup_f16_imm_c(
 ;
 ; VI-GISEL-LABEL: div_fixup_f16_imm_c:
 ; VI-GISEL:  ; %bb.0: ; %entry
-; VI-GISEL:    s_mov_b32 s7, 0xf000
 ; VI-GISEL:    s_mov_b32 s6, -1
-; VI-GISEL:    s_mov_b32 s14, s6
-; VI-GISEL:    s_mov_b32 s12, s2
-; VI-GISEL:    s_mov_b32 s13, s3
-; VI-GISEL:    s_mov_b32 s15, s7
-; VI-GISEL:    s_mov_b32 s10, s6
-; VI-GISEL:    s_mov_b32 s11, s7
-; VI-GISEL:    s_mov_b32 s4, s0
-; VI-GISEL:    s_movk_i32 s0, 0x4200
-; VI-GISEL:    s_mov_b32 s5, s1
-; VI-GISEL:    v_div_fixup_f16 v0, v0, v1, s0
+; VI-GISEL:    s_mov_b32 s7, 0xf000
+; VI-GISEL:    s_mov_b64 s[10:11], s[6:7]
+; VI-GISEL:    s_mov_b64 s[4:5], s[2:3]
+; VI-GISEL:    v_mov_b32_e32 v2, 0x4200
+; VI-GISEL:    v_readfirstlane_b32 s2, v0
+; VI-GISEL:    v_readfirstlane_b32 s3, v1
+; VI-GISEL:    v_mov_b32_e32 v0, s3
+; VI-GISEL:    v_div_fixup_f16 v0, s2, v0, v2
+; VI-GISEL:    s_mov_b64 s[2:3], s[6:7]
+; VI-GISEL:    s_nop 1
 ; VI-GISEL:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
@@ -205,16 +197,14 @@ define amdgpu_kernel void @div_fixup_f16_imm_a_imm_b(
 ;
 ; VI-GISEL-LABEL: div_fixup_f16_imm_a_imm_b:
 ; VI-GISEL:  ; %bb.0: ; %entry
-; VI-GISEL:    s_mov_b32 s7, 0xf000
 ; VI-GISEL:    s_mov_b32 s6, -1
-; VI-GISEL:    s_mov_b32 s10, s6
-; VI-GISEL:    s_mov_b32 s11, s7
-; VI-GISEL:    s_mov_b32 s8, s2
-; VI-GISEL:    s_mov_b32 s9, s3
-; VI-GISEL:    s_mov_b32 s4, s0
-; VI-GISEL:    s_movk_i32 s0, 0x4200
-; VI-GISEL:    s_mov_b32 s5, s1
-; VI-GISEL:    v_div_fixup_f16 v0, s0, s0, v0
+; VI-GISEL:    s_mov_b32 s7, 0xf000
+; VI-GISEL:    v_mov_b32_e32 v1, 0x4200
+; VI-GISEL:    s_mov_b64 s[4:5], s[2:3]
+; VI-GISEL:    v_readfirstlane_b32 s2, v0
+; VI-GISEL:    v_div_fixup_f16 v0, v1, v1, s2
+; VI-GISEL:    s_mov_b64 s[2:3], s[6:7]
+; VI-GISEL:    s_nop 2
 ; VI-GISEL:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %c) {
@@ -242,16 +232,14 @@ define amdgpu_kernel void @div_fixup_f16_imm_b_imm_c(
 ;
 ; VI-GISEL-LABEL: div_fixup_f16_imm_b_imm_c:
 ; VI-GISEL:  ; %bb.0: ; %entry
-; VI-GISEL:    s_mov_b32 s7, 0xf000
 ; VI-GISEL:    s_mov_b32 s6, -1
-; VI-GISEL:    s_mov_b32 s10, s6
-; VI-GISEL:    s_mov_b32 s11, s7
-; VI-GISEL:    s_mov_b32 s8, s2
-; VI-GISEL:    s_mov_b32 s9, s3
-; VI-GISEL:    s_mov_b32 s4, s0
-; VI-GISEL:    s_movk_i32 s0, 0x4200
-; VI-GISEL:    s_mov_b32 s5, s1
-; VI-GISEL:    v_div_fixup_f16 v0, v0, s0, s0
+; VI-GISEL:    s_mov_b32 s7, 0xf000
+; VI-GISEL:    v_mov_b32_e32 v1, 0x4200
+; VI-GISEL:    s_mov_b64 s[4:5], s[2:3]
+; VI-GISEL:    v_readfirstlane_b32 s2, v0
+; VI-GISEL:    v_div_fixup_f16 v0, s2, v1, v1
+; VI-GISEL:    s_mov_b64 s[2:3], s[6:7]
+; VI-GISEL:    s_nop 2
 ; VI-GISEL:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a) {
@@ -279,16 +267,14 @@ define amdgpu_kernel void @div_fixup_f16_imm_a_imm_c(
 ;
 ; VI-GISEL-LABEL: div_fixup_f16_imm_a_imm_c:
 ; VI-GISEL:  ; %bb.0: ; %entry
-; VI-GISEL:    s_mov_b32 s7, 0xf000
 ; VI-GISEL:    s_mov_b32 s6, -1
-; VI-GISEL:    s_mov_b32 s10, s6
-; VI-GISEL:    s_mov_b32 s11, s7
-; VI-GISEL:    s_mov_b32 s8, s2
-; VI-GISEL:    s_mov_b32 s9, s3
-; VI-GISEL:    s_mov_b32 s4, s0
-; VI-GISEL:    s_movk_i32 s0, 0x4200
-; VI-GISEL:    s_mov_b32 s5, s1
-; VI-GISEL:    v_div_fixup_f16 v0, s0, v0, s0
+; VI-GISEL:    s_mov_b32 s7, 0xf000
+; VI-GISEL:    v_mov_b32_e32 v1, 0x4200
+; VI-GISEL:    s_mov_b64 s[4:5], s[2:3]
+; VI-GISEL:    v_readfirstlane_b32 s2, v0
+; VI-GISEL:    v_div_fixup_f16 v0, v1, s2, v1
+; VI-GISEL:    s_mov_b64 s[2:3], s[6:7]
+; VI-GISEL:    s_nop 2
 ; VI-GISEL:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %b) {

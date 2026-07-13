@@ -109,10 +109,21 @@ define amdgpu_ps void @fadd_s64_div(double %a, double %b, ptr addrspace(1) %ptr)
 }
 
 define amdgpu_ps <2 x half> @fadd_v2s16_uniform(<2 x half> inreg %a, <2 x half> inreg %b) {
-; GCN-LABEL: fadd_v2s16_uniform:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_pk_add_f16 v0, s0, s1
-; GCN-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: fadd_v2s16_uniform:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_pk_add_f16 v0, s0, s1
+; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: fadd_v2s16_uniform:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX12-NEXT:    s_lshr_b32 s3, s1, 16
+; GFX12-NEXT:    s_add_f16 s0, s0, s1
+; GFX12-NEXT:    s_add_f16 s1, s2, s3
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
+; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    ; return to shader part epilog
   %fadd = fadd <2 x half> %a, %b
   ret <2 x half> %fadd
 }

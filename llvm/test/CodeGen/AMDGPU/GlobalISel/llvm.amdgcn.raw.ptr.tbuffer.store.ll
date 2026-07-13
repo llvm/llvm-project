@@ -127,8 +127,8 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__vgpr_voffset__sgpr_soff
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr5
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sreg_32(i32) = COPY $sgpr2
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:vreg_128(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32_xm0_xexec = IMPLICIT_DEF
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; CHECK-NEXT: {{  $}}
@@ -140,15 +140,15 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__vgpr_voffset__sgpr_soff
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT2:%[0-9]+]]:sreg_32(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY3]](s32)
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT3:%[0-9]+]]:sreg_32(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY4]](s32)
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128(<4 x s32>) = REG_SEQUENCE [[INTRINSIC_CONVERGENT]](s32), %subreg.sub0, [[INTRINSIC_CONVERGENT1]](s32), %subreg.sub1, [[INTRINSIC_CONVERGENT2]](s32), %subreg.sub2, [[INTRINSIC_CONVERGENT3]](s32), %subreg.sub3
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vreg_64(s64) = COPY [[BUILD_VECTOR]].sub0_sub1(<4 x s32>)
-  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vreg_64(s64) = COPY [[BUILD_VECTOR]].sub2_sub3(<4 x s32>)
-  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:sreg_64(s64) = COPY [[REG_SEQUENCE]].sub0_sub1(<4 x s32>)
-  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:sreg_64(s64) = COPY [[REG_SEQUENCE]].sub2_sub3(<4 x s32>)
-  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U64_e64 [[COPY10]](s64), [[COPY8]](s64), implicit $exec
-  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U64_e64 [[COPY11]](s64), [[COPY9]](s64), implicit $exec
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vreg_64(i64) = COPY [[BUILD_VECTOR]].sub0_sub1(<4 x s32>)
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vreg_64(i64) = COPY [[BUILD_VECTOR]].sub2_sub3(<4 x s32>)
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:sreg_64(i64) = COPY [[REG_SEQUENCE]].sub0_sub1(<4 x s32>)
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:sreg_64(i64) = COPY [[REG_SEQUENCE]].sub2_sub3(<4 x s32>)
+  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U64_e64 [[COPY10]](i64), [[COPY8]](i64), implicit $exec
+  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U64_e64 [[COPY11]](i64), [[COPY9]](i64), implicit $exec
   ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_AND_B32 [[V_CMP_EQ_U64_e64_]](s1), [[V_CMP_EQ_U64_e64_1]](s1), implicit-def dead $scc
-  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:sreg_32_xm0_xexec(s32) = COPY [[S_AND_B32_]](s1)
-  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[COPY12]](s32), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:sreg_32_xm0_xexec(i32) = COPY [[S_AND_B32_]](s1)
+  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[COPY12]](i32), implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
@@ -183,8 +183,8 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__vgpr_voffset__vgpr_soff
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr5
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr6
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:vreg_128(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32_xm0_xexec = IMPLICIT_DEF
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; CHECK-NEXT: {{  $}}
@@ -196,18 +196,18 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__vgpr_voffset__vgpr_soff
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT2:%[0-9]+]]:sreg_32(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY3]](s32)
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT3:%[0-9]+]]:sreg_32(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY4]](s32)
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128(<4 x s32>) = REG_SEQUENCE [[INTRINSIC_CONVERGENT]](s32), %subreg.sub0, [[INTRINSIC_CONVERGENT1]](s32), %subreg.sub1, [[INTRINSIC_CONVERGENT2]](s32), %subreg.sub2, [[INTRINSIC_CONVERGENT3]](s32), %subreg.sub3
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vreg_64(s64) = COPY [[BUILD_VECTOR]].sub0_sub1(<4 x s32>)
-  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vreg_64(s64) = COPY [[BUILD_VECTOR]].sub2_sub3(<4 x s32>)
-  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:sreg_64(s64) = COPY [[REG_SEQUENCE]].sub0_sub1(<4 x s32>)
-  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:sreg_64(s64) = COPY [[REG_SEQUENCE]].sub2_sub3(<4 x s32>)
-  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U64_e64 [[COPY10]](s64), [[COPY8]](s64), implicit $exec
-  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U64_e64 [[COPY11]](s64), [[COPY9]](s64), implicit $exec
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vreg_64(i64) = COPY [[BUILD_VECTOR]].sub0_sub1(<4 x s32>)
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vreg_64(i64) = COPY [[BUILD_VECTOR]].sub2_sub3(<4 x s32>)
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:sreg_64(i64) = COPY [[REG_SEQUENCE]].sub0_sub1(<4 x s32>)
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:sreg_64(i64) = COPY [[REG_SEQUENCE]].sub2_sub3(<4 x s32>)
+  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U64_e64 [[COPY10]](i64), [[COPY8]](i64), implicit $exec
+  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U64_e64 [[COPY11]](i64), [[COPY9]](i64), implicit $exec
   ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_AND_B32 [[V_CMP_EQ_U64_e64_]](s1), [[V_CMP_EQ_U64_e64_1]](s1), implicit-def dead $scc
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(i32) = V_READFIRSTLANE_B32 [[COPY6]](i32), implicit $exec
   ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](i32), [[COPY6]](i32), implicit $exec
   ; CHECK-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_AND_B32 [[S_AND_B32_]](s1), [[V_CMP_EQ_U32_e64_]](s1), implicit-def dead $scc
-  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:sreg_32_xm0_xexec(s32) = COPY [[S_AND_B32_1]](s1)
-  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[COPY12]](s32), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:sreg_32_xm0_xexec(i32) = COPY [[S_AND_B32_1]](s1)
+  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[COPY12]](i32), implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
@@ -242,8 +242,8 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__sgpr_voffset__vgpr_soff
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sgpr(i32) = COPY $sgpr2
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr5
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:vreg_128(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32(i32) = COPY [[COPY5]](i32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32_xm0_xexec = IMPLICIT_DEF
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
@@ -256,18 +256,18 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__sgpr_voffset__vgpr_soff
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT2:%[0-9]+]]:sreg_32(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY3]](s32)
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT3:%[0-9]+]]:sreg_32(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY4]](s32)
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128(<4 x s32>) = REG_SEQUENCE [[INTRINSIC_CONVERGENT]](s32), %subreg.sub0, [[INTRINSIC_CONVERGENT1]](s32), %subreg.sub1, [[INTRINSIC_CONVERGENT2]](s32), %subreg.sub2, [[INTRINSIC_CONVERGENT3]](s32), %subreg.sub3
-  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vreg_64(s64) = COPY [[BUILD_VECTOR]].sub0_sub1(<4 x s32>)
-  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vreg_64(s64) = COPY [[BUILD_VECTOR]].sub2_sub3(<4 x s32>)
-  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:sreg_64(s64) = COPY [[REG_SEQUENCE]].sub0_sub1(<4 x s32>)
-  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:sreg_64(s64) = COPY [[REG_SEQUENCE]].sub2_sub3(<4 x s32>)
-  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U64_e64 [[COPY11]](s64), [[COPY9]](s64), implicit $exec
-  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U64_e64 [[COPY12]](s64), [[COPY10]](s64), implicit $exec
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vreg_64(i64) = COPY [[BUILD_VECTOR]].sub0_sub1(<4 x s32>)
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vreg_64(i64) = COPY [[BUILD_VECTOR]].sub2_sub3(<4 x s32>)
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:sreg_64(i64) = COPY [[REG_SEQUENCE]].sub0_sub1(<4 x s32>)
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:sreg_64(i64) = COPY [[REG_SEQUENCE]].sub2_sub3(<4 x s32>)
+  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U64_e64 [[COPY11]](i64), [[COPY9]](i64), implicit $exec
+  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U64_e64 [[COPY12]](i64), [[COPY10]](i64), implicit $exec
   ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_AND_B32 [[V_CMP_EQ_U64_e64_]](s1), [[V_CMP_EQ_U64_e64_1]](s1), implicit-def dead $scc
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(i32) = V_READFIRSTLANE_B32 [[COPY6]](i32), implicit $exec
   ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](i32), [[COPY6]](i32), implicit $exec
   ; CHECK-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_AND_B32 [[S_AND_B32_]](s1), [[V_CMP_EQ_U32_e64_]](s1), implicit-def dead $scc
-  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:sreg_32_xm0_xexec(s32) = COPY [[S_AND_B32_1]](s1)
-  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[COPY13]](s32), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:sreg_32_xm0_xexec(i32) = COPY [[S_AND_B32_1]](s1)
+  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[COPY13]](i32), implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
@@ -416,8 +416,8 @@ define amdgpu_ps void @raw_tbuffer_store_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr5
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; CHECK-NEXT:   TBUFFER_STORE_FORMAT_X_OFFEN_exact [[COPY]], [[COPY6]], [[REG_SEQUENCE]], [[COPY5]], 0, 94, 0, 0, implicit $exec :: (dereferenceable store (f32) into %ir.rsrc, align 1, addrspace 8)
   ; CHECK-NEXT:   S_ENDPGM 0
@@ -477,10 +477,10 @@ define amdgpu_ps void @raw_tbuffer_store_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr5
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; CHECK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY5]], [[COPY7]], 0, implicit $exec
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; CHECK-NEXT:   TBUFFER_STORE_FORMAT_X_OFFEN_exact [[COPY]], [[V_ADD_U32_e64_]], [[REG_SEQUENCE]], [[COPY6]], 0, 94, 0, 0, implicit $exec :: (dereferenceable store (f32) into %ir.rsrc, align 1, addrspace 8)
   ; CHECK-NEXT:   S_ENDPGM 0
   %voffset = add i32 %voffset.base, 4096
@@ -609,8 +609,8 @@ define amdgpu_ps void @raw_tbuffer_store_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; CHECK-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 5000
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:sreg_32(i32) = G_ADD [[COPY6]], [[C]]
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:vreg_128(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr(i32) = COPY [[C1]](i32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32_xm0_xexec = IMPLICIT_DEF
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; CHECK-NEXT: {{  $}}
@@ -622,15 +622,15 @@ define amdgpu_ps void @raw_tbuffer_store_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT2:%[0-9]+]]:sreg_32(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY3]](s32)
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT3:%[0-9]+]]:sreg_32(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY4]](s32)
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128(<4 x s32>) = REG_SEQUENCE [[INTRINSIC_CONVERGENT]](s32), %subreg.sub0, [[INTRINSIC_CONVERGENT1]](s32), %subreg.sub1, [[INTRINSIC_CONVERGENT2]](s32), %subreg.sub2, [[INTRINSIC_CONVERGENT3]](s32), %subreg.sub3
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vreg_64(s64) = COPY [[BUILD_VECTOR]].sub0_sub1(<4 x s32>)
-  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vreg_64(s64) = COPY [[BUILD_VECTOR]].sub2_sub3(<4 x s32>)
-  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:sreg_64(s64) = COPY [[REG_SEQUENCE]].sub0_sub1(<4 x s32>)
-  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:sreg_64(s64) = COPY [[REG_SEQUENCE]].sub2_sub3(<4 x s32>)
-  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U64_e64 [[COPY10]](s64), [[COPY8]](s64), implicit $exec
-  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U64_e64 [[COPY11]](s64), [[COPY9]](s64), implicit $exec
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vreg_64(i64) = COPY [[BUILD_VECTOR]].sub0_sub1(<4 x s32>)
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vreg_64(i64) = COPY [[BUILD_VECTOR]].sub2_sub3(<4 x s32>)
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:sreg_64(i64) = COPY [[REG_SEQUENCE]].sub0_sub1(<4 x s32>)
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:sreg_64(i64) = COPY [[REG_SEQUENCE]].sub2_sub3(<4 x s32>)
+  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U64_e64 [[COPY10]](i64), [[COPY8]](i64), implicit $exec
+  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U64_e64 [[COPY11]](i64), [[COPY9]](i64), implicit $exec
   ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_AND_B32 [[V_CMP_EQ_U64_e64_]](s1), [[V_CMP_EQ_U64_e64_1]](s1), implicit-def dead $scc
-  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:sreg_32_xm0_xexec(s32) = COPY [[S_AND_B32_]](s1)
-  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[COPY12]](s32), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:sreg_32_xm0_xexec(i32) = COPY [[S_AND_B32_]](s1)
+  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[COPY12]](i32), implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
@@ -666,11 +666,11 @@ define amdgpu_ps void @raw_tbuffer_store_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr(i32) = COPY $vgpr5
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sreg_32(i32) = COPY $sgpr2
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:vreg_128(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 4096
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:vgpr_32(s32) = G_ADD [[COPY5]], [[COPY7]]
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 4096
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr(i32) = COPY [[C1]](i32)
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:vgpr_32(i32) = G_ADD [[COPY5]], [[COPY7]]
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32_xm0_xexec = IMPLICIT_DEF
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; CHECK-NEXT: {{  $}}
@@ -682,20 +682,20 @@ define amdgpu_ps void @raw_tbuffer_store_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT2:%[0-9]+]]:sreg_32(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY3]](s32)
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT3:%[0-9]+]]:sreg_32(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY4]](s32)
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128(<4 x s32>) = REG_SEQUENCE [[INTRINSIC_CONVERGENT]](s32), %subreg.sub0, [[INTRINSIC_CONVERGENT1]](s32), %subreg.sub1, [[INTRINSIC_CONVERGENT2]](s32), %subreg.sub2, [[INTRINSIC_CONVERGENT3]](s32), %subreg.sub3
-  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vreg_64(s64) = COPY [[BUILD_VECTOR]].sub0_sub1(<4 x s32>)
-  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vreg_64(s64) = COPY [[BUILD_VECTOR]].sub2_sub3(<4 x s32>)
-  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:sreg_64(s64) = COPY [[REG_SEQUENCE]].sub0_sub1(<4 x s32>)
-  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:sreg_64(s64) = COPY [[REG_SEQUENCE]].sub2_sub3(<4 x s32>)
-  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U64_e64 [[COPY11]](s64), [[COPY9]](s64), implicit $exec
-  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U64_e64 [[COPY12]](s64), [[COPY10]](s64), implicit $exec
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vreg_64(i64) = COPY [[BUILD_VECTOR]].sub0_sub1(<4 x s32>)
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vreg_64(i64) = COPY [[BUILD_VECTOR]].sub2_sub3(<4 x s32>)
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:sreg_64(i64) = COPY [[REG_SEQUENCE]].sub0_sub1(<4 x s32>)
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:sreg_64(i64) = COPY [[REG_SEQUENCE]].sub2_sub3(<4 x s32>)
+  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U64_e64 [[COPY11]](i64), [[COPY9]](i64), implicit $exec
+  ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = V_CMP_EQ_U64_e64 [[COPY12]](i64), [[COPY10]](i64), implicit $exec
   ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_AND_B32 [[V_CMP_EQ_U64_e64_]](s1), [[V_CMP_EQ_U64_e64_1]](s1), implicit-def dead $scc
-  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:sreg_32_xm0_xexec(s32) = COPY [[S_AND_B32_]](s1)
-  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[COPY13]](s32), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:sreg_32_xm0_xexec(i32) = COPY [[S_AND_B32_]](s1)
+  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[COPY13]](i32), implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   TBUFFER_STORE_FORMAT_X_OFFEN_exact [[COPY]](f32), [[ADD]](s32), [[REG_SEQUENCE]](<4 x s32>), [[COPY6]](i32), 904, 94, 0, 0, implicit $exec :: (dereferenceable store (f32) into %ir.rsrc, align 1, addrspace 8)
+  ; CHECK-NEXT:   TBUFFER_STORE_FORMAT_X_OFFEN_exact [[COPY]](f32), [[ADD]](i32), [[REG_SEQUENCE]](<4 x s32>), [[COPY6]](i32), 904, 94, 0, 0, implicit $exec :: (dereferenceable store (f32) into %ir.rsrc, align 1, addrspace 8)
   ; CHECK-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
   ; CHECK-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}

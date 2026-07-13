@@ -925,6 +925,8 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align1(ptr addrspace(4) inreg 
 ;
 ; GFX1250-UNALIGNED-LABEL: s_load_constant_v3i32_align1:
 ; GFX1250-UNALIGNED:       ; %bb.0:
+; GFX1250-UNALIGNED-NEXT:    global_wb
+; GFX1250-UNALIGNED-NEXT:    v_nop
 ; GFX1250-UNALIGNED-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-UNALIGNED-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-UNALIGNED-NEXT:    global_load_b96 v[0:2], v0, s[0:1] nv
@@ -936,6 +938,8 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align1(ptr addrspace(4) inreg 
 ;
 ; GFX1250-NOUNALIGNED-LABEL: s_load_constant_v3i32_align1:
 ; GFX1250-NOUNALIGNED:       ; %bb.0:
+; GFX1250-NOUNALIGNED-NEXT:    global_wb
+; GFX1250-NOUNALIGNED-NEXT:    v_nop
 ; GFX1250-NOUNALIGNED-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NOUNALIGNED-NEXT:    s_clause 0xb
 ; GFX1250-NOUNALIGNED-NEXT:    s_load_u8 s2, s[0:1], 0x1 nv
@@ -1205,6 +1209,8 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align2(ptr addrspace(4) inreg 
 ;
 ; GFX1250-UNALIGNED-LABEL: s_load_constant_v3i32_align2:
 ; GFX1250-UNALIGNED:       ; %bb.0:
+; GFX1250-UNALIGNED-NEXT:    global_wb
+; GFX1250-UNALIGNED-NEXT:    v_nop
 ; GFX1250-UNALIGNED-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-UNALIGNED-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-UNALIGNED-NEXT:    global_load_b96 v[0:2], v0, s[0:1] nv
@@ -1216,6 +1222,8 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align2(ptr addrspace(4) inreg 
 ;
 ; GFX1250-NOUNALIGNED-LABEL: s_load_constant_v3i32_align2:
 ; GFX1250-NOUNALIGNED:       ; %bb.0:
+; GFX1250-NOUNALIGNED-NEXT:    global_wb
+; GFX1250-NOUNALIGNED-NEXT:    v_nop
 ; GFX1250-NOUNALIGNED-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NOUNALIGNED-NEXT:    s_clause 0x5
 ; GFX1250-NOUNALIGNED-NEXT:    s_load_u16 s2, s[0:1], 0x2 nv
@@ -1361,6 +1369,8 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align4(ptr addrspace(4) inreg 
 ;
 ; GFX1250-LABEL: s_load_constant_v3i32_align4:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_mov_b32 s4, s0
 ; GFX1250-NEXT:    s_mov_b32 s5, s1
@@ -1413,6 +1423,8 @@ define amdgpu_ps i96 @s_load_constant_i96_align8(ptr addrspace(4) inreg %ptr) {
 ;
 ; GFX1250-LABEL: s_load_constant_i96_align8:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_mov_b32 s4, s0
 ; GFX1250-NEXT:    s_mov_b32 s5, s1
@@ -1465,6 +1477,8 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align8(ptr addrspace(4) inreg 
 ;
 ; GFX1250-LABEL: s_load_constant_v3i32_align8:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_mov_b32 s4, s0
 ; GFX1250-NEXT:    s_mov_b32 s5, s1
@@ -1517,6 +1531,8 @@ define amdgpu_ps <3 x i32> @s_load_constant_v6i16_align8(ptr addrspace(4) inreg 
 ;
 ; GFX1250-LABEL: s_load_constant_v6i16_align8:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_mov_b32 s4, s0
 ; GFX1250-NEXT:    s_mov_b32 s5, s1
@@ -1596,6 +1612,8 @@ define amdgpu_ps <12 x i8> @s_load_constant_v12i8_align8(ptr addrspace(4) inreg 
 ;
 ; GFX1250-LABEL: s_load_constant_v12i8_align8:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_mov_b32 s5, s1
 ; GFX1250-NEXT:    s_mov_b32 s4, s0
@@ -1652,6 +1670,8 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align16(ptr addrspace(4) inreg
 ;
 ; GFX1250-LABEL: s_load_constant_v3i32_align16:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0

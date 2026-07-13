@@ -38,8 +38,8 @@ define half @v_fdiv_f16(half %a, half %b) {
 ; GFX6-FLUSH-LABEL: v_fdiv_f16:
 ; GFX6-FLUSH:       ; %bb.0:
 ; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-FLUSH-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
 ; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v3, v2
 ; GFX6-FLUSH-NEXT:    v_div_scale_f32 v4, vcc, v0, v1, v0
@@ -203,8 +203,8 @@ define half @v_fdiv_f16_ulp25(half %a, half %b) {
 ; GFX6-FLUSH-LABEL: v_fdiv_f16_ulp25:
 ; GFX6-FLUSH:       ; %bb.0:
 ; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-FLUSH-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
 ; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v3, v2
 ; GFX6-FLUSH-NEXT:    v_div_scale_f32 v4, vcc, v0, v1, v0
@@ -612,8 +612,8 @@ define half @v_fdiv_f16_arcp_ulp25(half %a, half %b) {
 ; GFX6-FLUSH-LABEL: v_fdiv_f16_arcp_ulp25:
 ; GFX6-FLUSH:       ; %bb.0:
 ; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-FLUSH-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
 ; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v3, v2
 ; GFX6-FLUSH-NEXT:    v_div_scale_f32 v4, vcc, v0, v1, v0
@@ -2964,13 +2964,50 @@ define amdgpu_ps i32 @s_rsq_v2f16(i32 inreg %a.arg) {
 }
 
 define half @v_rsq_f16(half %a) {
-; GFX6-LABEL: v_rsq_f16:
-; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-NEXT:    v_rsq_f32_e32 v0, v0
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX6-NEXT:    s_setpc_b64 s[30:31]
+; GFX6-IEEE-LABEL: v_rsq_f16:
+; GFX6-IEEE:       ; %bb.0:
+; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
+; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, 1.0
+; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v3, vcc, 1.0, v0, 1.0
+; GFX6-IEEE-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX6-IEEE-NEXT:    v_fma_f32 v2, v4, v2, v2
+; GFX6-IEEE-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX6-IEEE-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX6-IEEE-NEXT:    v_fma_f32 v4, v5, v2, v4
+; GFX6-IEEE-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX6-IEEE-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX6-IEEE-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
+; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-IEEE-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX6-FLUSH-LABEL: v_rsq_f16:
+; GFX6-FLUSH:       ; %bb.0:
+; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-FLUSH-NEXT:    v_sqrt_f32_e32 v0, v0
+; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
+; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, 1.0
+; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v3, vcc, 1.0, v0, 1.0
+; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
+; GFX6-FLUSH-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX6-FLUSH-NEXT:    v_fma_f32 v2, v4, v2, v2
+; GFX6-FLUSH-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX6-FLUSH-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX6-FLUSH-NEXT:    v_fma_f32 v4, v5, v2, v4
+; GFX6-FLUSH-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
+; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
+; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX89-LABEL: v_rsq_f16:
 ; GFX89:       ; %bb.0:
@@ -2989,34 +3026,71 @@ define half @v_rsq_f16(half %a) {
 }
 
 define half @v_neg_rsq_f16(half %a) {
-; GFX6-LABEL: v_neg_rsq_f16:
-; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-NEXT:    v_rsq_f32_e32 v0, v0
-; GFX6-NEXT:    v_cvt_f16_f32_e64 v0, -v0
-; GFX6-NEXT:    s_setpc_b64 s[30:31]
+; GFX6-IEEE-LABEL: v_neg_rsq_f16:
+; GFX6-IEEE:       ; %bb.0:
+; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
+; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, -1.0
+; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v3, vcc, -1.0, v0, -1.0
+; GFX6-IEEE-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX6-IEEE-NEXT:    v_fma_f32 v2, v4, v2, v2
+; GFX6-IEEE-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX6-IEEE-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX6-IEEE-NEXT:    v_fma_f32 v4, v5, v2, v4
+; GFX6-IEEE-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX6-IEEE-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX6-IEEE-NEXT:    v_div_fixup_f32 v0, v1, v0, -1.0
+; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-IEEE-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX6-FLUSH-LABEL: v_neg_rsq_f16:
+; GFX6-FLUSH:       ; %bb.0:
+; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-FLUSH-NEXT:    v_sqrt_f32_e32 v0, v0
+; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
+; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, -1.0
+; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v3, vcc, -1.0, v0, -1.0
+; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
+; GFX6-FLUSH-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX6-FLUSH-NEXT:    v_fma_f32 v2, v4, v2, v2
+; GFX6-FLUSH-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX6-FLUSH-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX6-FLUSH-NEXT:    v_fma_f32 v4, v5, v2, v4
+; GFX6-FLUSH-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
+; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v0, v1, v0, -1.0
+; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX89-LABEL: v_neg_rsq_f16:
 ; GFX89:       ; %bb.0:
 ; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX89-NEXT:    v_rcp_f16_e64 v0, -v0
+; GFX89-NEXT:    v_rsq_f16_e32 v0, v0
+; GFX89-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_neg_rsq_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX10-NEXT:    v_rcp_f16_e64 v0, -v0
+; GFX10-NEXT:    v_rsq_f16_e32 v0, v0
+; GFX10-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_neg_rsq_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_sqrt_f16_e32 v0, v0
+; GFX11-NEXT:    v_rsq_f16_e32 v0, v0
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_rcp_f16_e64 v0, -v0
+; GFX11-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract half @llvm.sqrt.f16(half %a)
   %fdiv = fdiv contract half -1.0, %sqrt
@@ -3072,26 +3146,23 @@ define { half, half } @v_rsq_f16_multi_use(half %a) {
 ; GFX89-LABEL: v_rsq_f16_multi_use:
 ; GFX89:       ; %bb.0:
 ; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    v_sqrt_f16_e32 v2, v0
-; GFX89-NEXT:    v_rsq_f16_e32 v1, v0
-; GFX89-NEXT:    v_mov_b32_e32 v0, v2
+; GFX89-NEXT:    v_sqrt_f16_e32 v0, v0
+; GFX89-NEXT:    v_rcp_f16_e32 v1, v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_rsq_f16_multi_use:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_sqrt_f16_e32 v2, v0
-; GFX10-NEXT:    v_rsq_f16_e32 v1, v0
-; GFX10-NEXT:    v_mov_b32_e32 v0, v2
+; GFX10-NEXT:    v_sqrt_f16_e32 v0, v0
+; GFX10-NEXT:    v_rcp_f16_e32 v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_rsq_f16_multi_use:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_sqrt_f16_e32 v2, v0
-; GFX11-NEXT:    v_rsq_f16_e32 v1, v0
+; GFX11-NEXT:    v_sqrt_f16_e32 v0, v0
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_mov_b32_e32 v0, v2
+; GFX11-NEXT:    v_rcp_f16_e32 v1, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract half @llvm.sqrt.f16(half %a)
   %insert.0 = insertvalue { half, half } poison, half %sqrt, 0
@@ -3389,34 +3460,71 @@ define half @v_neg_rsq_f16_missing_contract1(half %a) {
 }
 
 define half @v_neg_rsq_f16_fabs(half %a) {
-; GFX6-LABEL: v_neg_rsq_f16_fabs:
-; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cvt_f32_f16_e64 v0, |v0|
-; GFX6-NEXT:    v_rsq_f32_e32 v0, v0
-; GFX6-NEXT:    v_cvt_f16_f32_e64 v0, -v0
-; GFX6-NEXT:    s_setpc_b64 s[30:31]
+; GFX6-IEEE-LABEL: v_neg_rsq_f16_fabs:
+; GFX6-IEEE:       ; %bb.0:
+; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e64 v0, |v0|
+; GFX6-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
+; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, -1.0
+; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v3, vcc, -1.0, v0, -1.0
+; GFX6-IEEE-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX6-IEEE-NEXT:    v_fma_f32 v2, v4, v2, v2
+; GFX6-IEEE-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX6-IEEE-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX6-IEEE-NEXT:    v_fma_f32 v4, v5, v2, v4
+; GFX6-IEEE-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX6-IEEE-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX6-IEEE-NEXT:    v_div_fixup_f32 v0, v1, v0, -1.0
+; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-IEEE-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX6-FLUSH-LABEL: v_neg_rsq_f16_fabs:
+; GFX6-FLUSH:       ; %bb.0:
+; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e64 v0, |v0|
+; GFX6-FLUSH-NEXT:    v_sqrt_f32_e32 v0, v0
+; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
+; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, -1.0
+; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v3, vcc, -1.0, v0, -1.0
+; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
+; GFX6-FLUSH-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX6-FLUSH-NEXT:    v_fma_f32 v2, v4, v2, v2
+; GFX6-FLUSH-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX6-FLUSH-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX6-FLUSH-NEXT:    v_fma_f32 v4, v5, v2, v4
+; GFX6-FLUSH-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
+; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v0, v1, v0, -1.0
+; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX89-LABEL: v_neg_rsq_f16_fabs:
 ; GFX89:       ; %bb.0:
 ; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    v_sqrt_f16_e64 v0, |v0|
-; GFX89-NEXT:    v_rcp_f16_e64 v0, -v0
+; GFX89-NEXT:    v_rsq_f16_e64 v0, |v0|
+; GFX89-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_neg_rsq_f16_fabs:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_sqrt_f16_e64 v0, |v0|
-; GFX10-NEXT:    v_rcp_f16_e64 v0, -v0
+; GFX10-NEXT:    v_rsq_f16_e64 v0, |v0|
+; GFX10-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_neg_rsq_f16_fabs:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_sqrt_f16_e64 v0, |v0|
+; GFX11-NEXT:    v_rsq_f16_e64 v0, |v0|
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_rcp_f16_e64 v0, -v0
+; GFX11-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %a.fabs = call half @llvm.fabs.f16(half %a)
   %sqrt = call contract half @llvm.sqrt.f16(half %a.fabs)
@@ -3425,13 +3533,50 @@ define half @v_neg_rsq_f16_fabs(half %a) {
 }
 
 define half @v_rsq_f16_arcp(half %a) {
-; GFX6-LABEL: v_rsq_f16_arcp:
-; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-NEXT:    v_rsq_f32_e32 v0, v0
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX6-NEXT:    s_setpc_b64 s[30:31]
+; GFX6-IEEE-LABEL: v_rsq_f16_arcp:
+; GFX6-IEEE:       ; %bb.0:
+; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
+; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, 1.0
+; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v3, vcc, 1.0, v0, 1.0
+; GFX6-IEEE-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX6-IEEE-NEXT:    v_fma_f32 v2, v4, v2, v2
+; GFX6-IEEE-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX6-IEEE-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX6-IEEE-NEXT:    v_fma_f32 v4, v5, v2, v4
+; GFX6-IEEE-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX6-IEEE-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX6-IEEE-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
+; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-IEEE-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX6-FLUSH-LABEL: v_rsq_f16_arcp:
+; GFX6-FLUSH:       ; %bb.0:
+; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-FLUSH-NEXT:    v_sqrt_f32_e32 v0, v0
+; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
+; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, 1.0
+; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v3, vcc, 1.0, v0, 1.0
+; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
+; GFX6-FLUSH-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX6-FLUSH-NEXT:    v_fma_f32 v2, v4, v2, v2
+; GFX6-FLUSH-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX6-FLUSH-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX6-FLUSH-NEXT:    v_fma_f32 v4, v5, v2, v4
+; GFX6-FLUSH-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
+; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
+; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX89-LABEL: v_rsq_f16_arcp:
 ; GFX89:       ; %bb.0:
@@ -3450,34 +3595,71 @@ define half @v_rsq_f16_arcp(half %a) {
 }
 
 define half @v_neg_rsq_f16_arcp(half %a) {
-; GFX6-LABEL: v_neg_rsq_f16_arcp:
-; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-NEXT:    v_rsq_f32_e32 v0, v0
-; GFX6-NEXT:    v_cvt_f16_f32_e64 v0, -v0
-; GFX6-NEXT:    s_setpc_b64 s[30:31]
+; GFX6-IEEE-LABEL: v_neg_rsq_f16_arcp:
+; GFX6-IEEE:       ; %bb.0:
+; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
+; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, -1.0
+; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX6-IEEE-NEXT:    v_div_scale_f32 v3, vcc, -1.0, v0, -1.0
+; GFX6-IEEE-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX6-IEEE-NEXT:    v_fma_f32 v2, v4, v2, v2
+; GFX6-IEEE-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX6-IEEE-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX6-IEEE-NEXT:    v_fma_f32 v4, v5, v2, v4
+; GFX6-IEEE-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX6-IEEE-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX6-IEEE-NEXT:    v_div_fixup_f32 v0, v1, v0, -1.0
+; GFX6-IEEE-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-IEEE-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX6-FLUSH-LABEL: v_neg_rsq_f16_arcp:
+; GFX6-FLUSH:       ; %bb.0:
+; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-FLUSH-NEXT:    v_sqrt_f32_e32 v0, v0
+; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
+; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, -1.0
+; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX6-FLUSH-NEXT:    v_div_scale_f32 v3, vcc, -1.0, v0, -1.0
+; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
+; GFX6-FLUSH-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX6-FLUSH-NEXT:    v_fma_f32 v2, v4, v2, v2
+; GFX6-FLUSH-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX6-FLUSH-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX6-FLUSH-NEXT:    v_fma_f32 v4, v5, v2, v4
+; GFX6-FLUSH-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
+; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v0, v1, v0, -1.0
+; GFX6-FLUSH-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX89-LABEL: v_neg_rsq_f16_arcp:
 ; GFX89:       ; %bb.0:
 ; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX89-NEXT:    v_rcp_f16_e64 v0, -v0
+; GFX89-NEXT:    v_rsq_f16_e32 v0, v0
+; GFX89-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_neg_rsq_f16_arcp:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX10-NEXT:    v_rcp_f16_e64 v0, -v0
+; GFX10-NEXT:    v_rsq_f16_e32 v0, v0
+; GFX10-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_neg_rsq_f16_arcp:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_sqrt_f16_e32 v0, v0
+; GFX11-NEXT:    v_rsq_f16_e32 v0, v0
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_rcp_f16_e64 v0, -v0
+; GFX11-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract half @llvm.sqrt.f16(half %a)
   %fdiv = fdiv contract arcp half -1.0, %sqrt
@@ -3489,7 +3671,10 @@ define half @v_rsq_f16_afn(half %a) {
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-NEXT:    v_rsq_f32_e32 v0, v0
+; GFX6-NEXT:    v_sqrt_f32_e32 v0, v0
+; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;

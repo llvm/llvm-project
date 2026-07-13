@@ -58,6 +58,7 @@
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
@@ -5417,6 +5418,67 @@ Action *Driver::ConstructPhaseAction(
   llvm_unreachable("invalid phase in ConstructPhaseAction");
 }
 
+static bool isOffloadDeviceCC1JobCandidate(Command &Job) {
+  const Action &Source = Job.getSource();
+  if (!isa<CompileJobAction>(Source) && !isa<BackendJobAction>(Source))
+    return false;
+
+  if (Job.getBoundArch().empty() && !Source.getOffloadingArch().empty())
+    Job.setBoundArch(Source.getOffloadingArch());
+
+  if (Job.getBoundArch().empty())
+    return false;
+
+  if (StringRef(Job.getCreator().getName()) != "clang")
+    return false;
+
+  Action::OffloadKind OKind = Source.getOffloadingDeviceKind();
+  if (OKind != Action::OFK_None && OKind != Action::OFK_Host)
+    return true;
+
+  const llvm::Triple &Triple = Job.getCreator().getToolChain().getTriple();
+  return Triple.isAMDGPU() || Triple.isNVPTX() || Triple.isSPIROrSPIRV();
+}
+
+static std::string getOffloadDeviceCC1ParallelJobGroup(const Command &Job) {
+  const Action &Source = Job.getSource();
+  // This key groups device cc1 jobs that can run in parallel. Jobs may differ
+  // by offload arch, but must have the same offload kind, target triple,
+  // action kind, and output type. For example, HIP compile jobs for gfx900 and
+  // gfx906 can share a group, but HIP and OpenMP jobs cannot.
+  return (Twine(Action::GetOffloadKindName(Source.getOffloadingDeviceKind())) +
+          ":" + Job.getCreator().getToolChain().getTripleString() + ":" +
+          Source.getClassName() + ":" + types::getTypeName(Source.getType()))
+      .str();
+}
+
+static void claimAndDiagnoseOffloadJobs(const Driver &D, const ArgList &Args) {
+  auto OffloadJobs = tools::parseOffloadJobs(Args);
+  if (!OffloadJobs.A)
+    return;
+
+  if (!OffloadJobs.isValid())
+    D.Diag(diag::err_drv_invalid_int_value)
+        << OffloadJobs.A->getAsString(Args) << OffloadJobs.Value;
+
+  OffloadJobs.A->claim();
+}
+
+static void markOffloadDeviceCC1JobsForParallelExecution(Compilation &C) {
+  bool FoundCandidate = false;
+  for (auto &Job : C.getJobs()) {
+    if (!isOffloadDeviceCC1JobCandidate(Job))
+      continue;
+
+    Job.setOffloadDeviceParallelJobGroup(
+        getOffloadDeviceCC1ParallelJobGroup(Job));
+    FoundCandidate = true;
+  }
+
+  if (FoundCandidate)
+    claimAndDiagnoseOffloadJobs(C.getDriver(), C.getArgs());
+}
+
 void Driver::BuildJobs(Compilation &C) const {
   llvm::PrettyStackTraceString CrashInfo("Building compilation jobs");
 
@@ -5516,6 +5578,8 @@ void Driver::BuildJobs(Compilation &C) const {
   if (C.getJobs().size() > 1 || CCPrintProcessStats)
     for (auto &J : C.getJobs())
       J.InProcess = false;
+
+  markOffloadDeviceCC1JobsForParallelExecution(C);
 
   if (CCPrintProcessStats) {
     C.setPostCallback([=](const Command &Cmd, int Res) {
@@ -7384,9 +7448,8 @@ Driver::getOptionVisibilityMask(bool UseDriverMode) const {
     return llvm::opt::Visibility(options::CLOption);
   if (IsDXCMode())
     return llvm::opt::Visibility(options::DXCOption);
-  if (IsFlangMode())  {
+  if (IsFlangMode())
     return llvm::opt::Visibility(options::FlangOption);
-  }
   return llvm::opt::Visibility(options::ClangOption);
 }
 

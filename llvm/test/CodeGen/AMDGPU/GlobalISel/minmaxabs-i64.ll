@@ -117,9 +117,13 @@ define i64 @test_abs_i64(i64 %a) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    v_sub_nc_u64_e32 v[2:3], 0, v[0:1]
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_max_i64 v[0:1], v[0:1], v[2:3]
+; CHECK-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_mov_b32_e32 v3, v2
+; CHECK-NEXT:    v_add_nc_u64_e32 v[0:1], v[0:1], v[2:3]
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_xor_b32_e32 v0, v0, v2
+; CHECK-NEXT:    v_xor_b32_e32 v1, v1, v2
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %r = call i64 @llvm.abs.i64(i64 %a, i1 0)
   ret i64 %r
@@ -128,6 +132,8 @@ define i64 @test_abs_i64(i64 %a) {
 define amdgpu_ps i64 @test_umin_i64_s(i64 inreg %a, i64 inreg %b) {
 ; CHECK-LABEL: test_umin_i64_s:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    global_wb
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    v_min_u64 v[0:1], s[0:1], s[2:3]
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -141,6 +147,8 @@ define amdgpu_ps i64 @test_umin_i64_s(i64 inreg %a, i64 inreg %b) {
 define amdgpu_ps i64 @test_umax_i64_s(i64 inreg %a, i64 inreg %b) {
 ; CHECK-LABEL: test_umax_i64_s:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    global_wb
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    v_max_u64 v[0:1], s[0:1], s[2:3]
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -154,6 +162,8 @@ define amdgpu_ps i64 @test_umax_i64_s(i64 inreg %a, i64 inreg %b) {
 define amdgpu_ps i64 @test_smin_i64_s(i64 inreg %a, i64 inreg %b) {
 ; CHECK-LABEL: test_smin_i64_s:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    global_wb
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    v_min_i64 v[0:1], s[0:1], s[2:3]
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -167,6 +177,8 @@ define amdgpu_ps i64 @test_smin_i64_s(i64 inreg %a, i64 inreg %b) {
 define amdgpu_ps i64 @test_smax_i64_s(i64 inreg %a, i64 inreg %b) {
 ; CHECK-LABEL: test_smax_i64_s:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    global_wb
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    v_max_i64 v[0:1], s[0:1], s[2:3]
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -180,6 +192,8 @@ define amdgpu_ps i64 @test_smax_i64_s(i64 inreg %a, i64 inreg %b) {
 define amdgpu_ps i64 @test_abs_i64_s(i64 inreg %a) {
 ; CHECK-LABEL: test_abs_i64_s:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    global_wb
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    s_sub_nc_u64 s[2:3], 0, s[0:1]
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)

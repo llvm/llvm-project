@@ -645,16 +645,30 @@ define amdgpu_ps i32 @s_sext_inreg_v2i16_11(<2 x i16> inreg %value) {
 ;
 ; GFX9-LABEL: s_sext_inreg_v2i16_11:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_pk_lshlrev_b16 v0, 11, s0 op_sel_hi:[0,1]
-; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 11, v0 op_sel_hi:[0,1]
-; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-NEXT:    s_lshr_b32 s1, s0, 16
+; GFX9-NEXT:    s_lshl_b32 s0, s0, 0xb000b
+; GFX9-NEXT:    s_lshl_b32 s1, s1, 11
+; GFX9-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
+; GFX9-NEXT:    s_sext_i32_i16 s1, s0
+; GFX9-NEXT:    s_ashr_i32 s0, s0, 16
+; GFX9-NEXT:    s_sext_i32_i16 s2, 0xb000b
+; GFX9-NEXT:    s_ashr_i32 s1, s1, s2
+; GFX9-NEXT:    s_ashr_i32 s0, s0, 11
+; GFX9-NEXT:    s_pack_ll_b32_b16 s0, s1, s0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_sext_inreg_v2i16_11:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    v_pk_lshlrev_b16 v0, 11, s0 op_sel_hi:[0,1]
-; GFX10PLUS-NEXT:    v_pk_ashrrev_i16 v0, 11, v0 op_sel_hi:[0,1]
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10PLUS-NEXT:    s_lshr_b32 s1, s0, 16
+; GFX10PLUS-NEXT:    s_lshl_b32 s0, s0, 0xb000b
+; GFX10PLUS-NEXT:    s_lshl_b32 s1, s1, 11
+; GFX10PLUS-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
+; GFX10PLUS-NEXT:    s_sext_i32_i16 s1, 0xb000b
+; GFX10PLUS-NEXT:    s_sext_i32_i16 s2, s0
+; GFX10PLUS-NEXT:    s_ashr_i32 s0, s0, 16
+; GFX10PLUS-NEXT:    s_ashr_i32 s1, s2, s1
+; GFX10PLUS-NEXT:    s_ashr_i32 s0, s0, 11
+; GFX10PLUS-NEXT:    s_pack_ll_b32_b16 s0, s1, s0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %shl = shl <2 x i16> %value, <i16 11, i16 11>
   %ashr = ashr <2 x i16> %shl, <i16 11, i16 11>
@@ -767,22 +781,48 @@ define amdgpu_ps <2 x i32> @s_sext_inreg_v4i16_14(<4 x i16> inreg %value) {
 ;
 ; GFX9-LABEL: s_sext_inreg_v4i16_14:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_pk_lshlrev_b16 v0, 14, s1 op_sel_hi:[0,1]
-; GFX9-NEXT:    v_pk_lshlrev_b16 v1, 14, s0 op_sel_hi:[0,1]
-; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 14, v0 op_sel_hi:[0,1]
-; GFX9-NEXT:    v_pk_ashrrev_i16 v1, 14, v1 op_sel_hi:[0,1]
-; GFX9-NEXT:    v_readfirstlane_b32 s0, v1
-; GFX9-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX9-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX9-NEXT:    s_lshl_b32 s0, s0, 0xe000e
+; GFX9-NEXT:    s_lshl_b32 s2, s2, 14
+; GFX9-NEXT:    s_pack_ll_b32_b16 s0, s0, s2
+; GFX9-NEXT:    s_sext_i32_i16 s2, s0
+; GFX9-NEXT:    s_ashr_i32 s0, s0, 16
+; GFX9-NEXT:    s_sext_i32_i16 s3, 0xe000e
+; GFX9-NEXT:    s_ashr_i32 s2, s2, s3
+; GFX9-NEXT:    s_ashr_i32 s0, s0, 14
+; GFX9-NEXT:    s_pack_ll_b32_b16 s0, s2, s0
+; GFX9-NEXT:    s_lshr_b32 s2, s1, 16
+; GFX9-NEXT:    s_lshl_b32 s1, s1, 0xe000e
+; GFX9-NEXT:    s_lshl_b32 s2, s2, 14
+; GFX9-NEXT:    s_pack_ll_b32_b16 s1, s1, s2
+; GFX9-NEXT:    s_sext_i32_i16 s2, s1
+; GFX9-NEXT:    s_ashr_i32 s1, s1, 16
+; GFX9-NEXT:    s_ashr_i32 s2, s2, s3
+; GFX9-NEXT:    s_ashr_i32 s1, s1, 14
+; GFX9-NEXT:    s_pack_ll_b32_b16 s1, s2, s1
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_sext_inreg_v4i16_14:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    v_pk_lshlrev_b16 v0, 14, s0 op_sel_hi:[0,1]
-; GFX10PLUS-NEXT:    v_pk_lshlrev_b16 v1, 14, s1 op_sel_hi:[0,1]
-; GFX10PLUS-NEXT:    v_pk_ashrrev_i16 v0, 14, v0 op_sel_hi:[0,1]
-; GFX10PLUS-NEXT:    v_pk_ashrrev_i16 v1, 14, v1 op_sel_hi:[0,1]
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX10PLUS-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX10PLUS-NEXT:    s_lshr_b32 s4, s1, 16
+; GFX10PLUS-NEXT:    s_lshl_b32 s0, s0, 0xe000e
+; GFX10PLUS-NEXT:    s_lshl_b32 s2, s2, 14
+; GFX10PLUS-NEXT:    s_lshl_b32 s1, s1, 0xe000e
+; GFX10PLUS-NEXT:    s_lshl_b32 s4, s4, 14
+; GFX10PLUS-NEXT:    s_pack_ll_b32_b16 s0, s0, s2
+; GFX10PLUS-NEXT:    s_pack_ll_b32_b16 s1, s1, s4
+; GFX10PLUS-NEXT:    s_sext_i32_i16 s2, 0xe000e
+; GFX10PLUS-NEXT:    s_sext_i32_i16 s3, s0
+; GFX10PLUS-NEXT:    s_ashr_i32 s0, s0, 16
+; GFX10PLUS-NEXT:    s_sext_i32_i16 s4, s1
+; GFX10PLUS-NEXT:    s_ashr_i32 s1, s1, 16
+; GFX10PLUS-NEXT:    s_ashr_i32 s3, s3, s2
+; GFX10PLUS-NEXT:    s_ashr_i32 s0, s0, 14
+; GFX10PLUS-NEXT:    s_ashr_i32 s2, s4, s2
+; GFX10PLUS-NEXT:    s_ashr_i32 s1, s1, 14
+; GFX10PLUS-NEXT:    s_pack_ll_b32_b16 s0, s3, s0
+; GFX10PLUS-NEXT:    s_pack_ll_b32_b16 s1, s2, s1
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %shl = shl <4 x i16> %value, <i16 14, i16 14, i16 14, i16 14>
   %ashr = ashr <4 x i16> %shl, <i16 14, i16 14, i16 14, i16 14>
@@ -959,34 +999,84 @@ define amdgpu_ps <4 x i32> @s_sext_inreg_v8i16_5(<8 x i16> inreg %value) {
 ;
 ; GFX9-LABEL: s_sext_inreg_v8i16_5:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_pk_lshlrev_b16 v0, 5, s3 op_sel_hi:[0,1]
-; GFX9-NEXT:    v_pk_lshlrev_b16 v1, 5, s2 op_sel_hi:[0,1]
-; GFX9-NEXT:    v_pk_lshlrev_b16 v2, 5, s1 op_sel_hi:[0,1]
-; GFX9-NEXT:    v_pk_lshlrev_b16 v3, 5, s0 op_sel_hi:[0,1]
-; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 5, v0 op_sel_hi:[0,1]
-; GFX9-NEXT:    v_pk_ashrrev_i16 v1, 5, v1 op_sel_hi:[0,1]
-; GFX9-NEXT:    v_pk_ashrrev_i16 v2, 5, v2 op_sel_hi:[0,1]
-; GFX9-NEXT:    v_pk_ashrrev_i16 v3, 5, v3 op_sel_hi:[0,1]
-; GFX9-NEXT:    v_readfirstlane_b32 s0, v3
-; GFX9-NEXT:    v_readfirstlane_b32 s1, v2
-; GFX9-NEXT:    v_readfirstlane_b32 s2, v1
-; GFX9-NEXT:    v_readfirstlane_b32 s3, v0
+; GFX9-NEXT:    s_lshr_b32 s4, s0, 16
+; GFX9-NEXT:    s_lshl_b32 s0, s0, 0x50005
+; GFX9-NEXT:    s_lshl_b32 s4, s4, 5
+; GFX9-NEXT:    s_pack_ll_b32_b16 s0, s0, s4
+; GFX9-NEXT:    s_sext_i32_i16 s4, s0
+; GFX9-NEXT:    s_ashr_i32 s0, s0, 16
+; GFX9-NEXT:    s_sext_i32_i16 s5, 0x50005
+; GFX9-NEXT:    s_ashr_i32 s4, s4, s5
+; GFX9-NEXT:    s_ashr_i32 s0, s0, 5
+; GFX9-NEXT:    s_pack_ll_b32_b16 s0, s4, s0
+; GFX9-NEXT:    s_lshr_b32 s4, s1, 16
+; GFX9-NEXT:    s_lshl_b32 s1, s1, 0x50005
+; GFX9-NEXT:    s_lshl_b32 s4, s4, 5
+; GFX9-NEXT:    s_pack_ll_b32_b16 s1, s1, s4
+; GFX9-NEXT:    s_sext_i32_i16 s4, s1
+; GFX9-NEXT:    s_ashr_i32 s1, s1, 16
+; GFX9-NEXT:    s_ashr_i32 s4, s4, s5
+; GFX9-NEXT:    s_ashr_i32 s1, s1, 5
+; GFX9-NEXT:    s_pack_ll_b32_b16 s1, s4, s1
+; GFX9-NEXT:    s_lshr_b32 s4, s2, 16
+; GFX9-NEXT:    s_lshl_b32 s2, s2, 0x50005
+; GFX9-NEXT:    s_lshl_b32 s4, s4, 5
+; GFX9-NEXT:    s_pack_ll_b32_b16 s2, s2, s4
+; GFX9-NEXT:    s_sext_i32_i16 s4, s2
+; GFX9-NEXT:    s_ashr_i32 s2, s2, 16
+; GFX9-NEXT:    s_ashr_i32 s4, s4, s5
+; GFX9-NEXT:    s_ashr_i32 s2, s2, 5
+; GFX9-NEXT:    s_pack_ll_b32_b16 s2, s4, s2
+; GFX9-NEXT:    s_lshr_b32 s4, s3, 16
+; GFX9-NEXT:    s_lshl_b32 s3, s3, 0x50005
+; GFX9-NEXT:    s_lshl_b32 s4, s4, 5
+; GFX9-NEXT:    s_pack_ll_b32_b16 s3, s3, s4
+; GFX9-NEXT:    s_sext_i32_i16 s4, s3
+; GFX9-NEXT:    s_ashr_i32 s3, s3, 16
+; GFX9-NEXT:    s_ashr_i32 s4, s4, s5
+; GFX9-NEXT:    s_ashr_i32 s3, s3, 5
+; GFX9-NEXT:    s_pack_ll_b32_b16 s3, s4, s3
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_sext_inreg_v8i16_5:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    v_pk_lshlrev_b16 v0, 5, s0 op_sel_hi:[0,1]
-; GFX10PLUS-NEXT:    v_pk_lshlrev_b16 v1, 5, s1 op_sel_hi:[0,1]
-; GFX10PLUS-NEXT:    v_pk_lshlrev_b16 v2, 5, s2 op_sel_hi:[0,1]
-; GFX10PLUS-NEXT:    v_pk_lshlrev_b16 v3, 5, s3 op_sel_hi:[0,1]
-; GFX10PLUS-NEXT:    v_pk_ashrrev_i16 v0, 5, v0 op_sel_hi:[0,1]
-; GFX10PLUS-NEXT:    v_pk_ashrrev_i16 v1, 5, v1 op_sel_hi:[0,1]
-; GFX10PLUS-NEXT:    v_pk_ashrrev_i16 v2, 5, v2 op_sel_hi:[0,1]
-; GFX10PLUS-NEXT:    v_pk_ashrrev_i16 v3, 5, v3 op_sel_hi:[0,1]
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX10PLUS-NEXT:    s_lshr_b32 s4, s0, 16
+; GFX10PLUS-NEXT:    s_lshr_b32 s6, s1, 16
+; GFX10PLUS-NEXT:    s_lshl_b32 s0, s0, 0x50005
+; GFX10PLUS-NEXT:    s_lshl_b32 s4, s4, 5
+; GFX10PLUS-NEXT:    s_lshl_b32 s1, s1, 0x50005
+; GFX10PLUS-NEXT:    s_lshl_b32 s6, s6, 5
+; GFX10PLUS-NEXT:    s_pack_ll_b32_b16 s0, s0, s4
+; GFX10PLUS-NEXT:    s_pack_ll_b32_b16 s1, s1, s6
+; GFX10PLUS-NEXT:    s_lshr_b32 s6, s2, 16
+; GFX10PLUS-NEXT:    s_sext_i32_i16 s4, s0
+; GFX10PLUS-NEXT:    s_sext_i32_i16 s5, 0x50005
+; GFX10PLUS-NEXT:    s_ashr_i32 s0, s0, 16
+; GFX10PLUS-NEXT:    s_lshl_b32 s2, s2, 0x50005
+; GFX10PLUS-NEXT:    s_lshl_b32 s6, s6, 5
+; GFX10PLUS-NEXT:    s_ashr_i32 s4, s4, s5
+; GFX10PLUS-NEXT:    s_ashr_i32 s0, s0, 5
+; GFX10PLUS-NEXT:    s_pack_ll_b32_b16 s2, s2, s6
+; GFX10PLUS-NEXT:    s_lshr_b32 s6, s3, 16
+; GFX10PLUS-NEXT:    s_pack_ll_b32_b16 s0, s4, s0
+; GFX10PLUS-NEXT:    s_sext_i32_i16 s4, s1
+; GFX10PLUS-NEXT:    s_ashr_i32 s1, s1, 16
+; GFX10PLUS-NEXT:    s_lshl_b32 s3, s3, 0x50005
+; GFX10PLUS-NEXT:    s_lshl_b32 s6, s6, 5
+; GFX10PLUS-NEXT:    s_ashr_i32 s4, s4, s5
+; GFX10PLUS-NEXT:    s_ashr_i32 s1, s1, 5
+; GFX10PLUS-NEXT:    s_pack_ll_b32_b16 s3, s3, s6
+; GFX10PLUS-NEXT:    s_pack_ll_b32_b16 s1, s4, s1
+; GFX10PLUS-NEXT:    s_sext_i32_i16 s4, s2
+; GFX10PLUS-NEXT:    s_ashr_i32 s2, s2, 16
+; GFX10PLUS-NEXT:    s_sext_i32_i16 s6, s3
+; GFX10PLUS-NEXT:    s_ashr_i32 s3, s3, 16
+; GFX10PLUS-NEXT:    s_ashr_i32 s4, s4, s5
+; GFX10PLUS-NEXT:    s_ashr_i32 s2, s2, 5
+; GFX10PLUS-NEXT:    s_ashr_i32 s5, s6, s5
+; GFX10PLUS-NEXT:    s_ashr_i32 s3, s3, 5
+; GFX10PLUS-NEXT:    s_pack_ll_b32_b16 s2, s4, s2
+; GFX10PLUS-NEXT:    s_pack_ll_b32_b16 s3, s5, s3
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %shl = shl <8 x i16> %value, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
   %ashr = ashr <8 x i16> %shl, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>

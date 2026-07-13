@@ -26,10 +26,10 @@ define ptr addrspace(4) @external_constant_got() {
   ;
   ; GCN-PAL-LABEL: name: external_constant_got
   ; GCN-PAL: bb.1 (%ir-block.0):
-  ; GCN-PAL-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32(s32) = S_MOV_B32 target-flags(amdgpu-abs32-lo) @external_constant
-  ; GCN-PAL-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32(s32) = S_MOV_B32 target-flags(amdgpu-abs32-hi) @external_constant
-  ; GCN-PAL-NEXT:   $vgpr0 = COPY [[S_MOV_B32_]](s32)
-  ; GCN-PAL-NEXT:   $vgpr1 = COPY [[S_MOV_B32_1]](s32)
+  ; GCN-PAL-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32(i32) = S_MOV_B32 target-flags(amdgpu-abs32-lo) @external_constant
+  ; GCN-PAL-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32(i32) = S_MOV_B32 target-flags(amdgpu-abs32-hi) @external_constant
+  ; GCN-PAL-NEXT:   $vgpr0 = COPY [[S_MOV_B32_]](i32)
+  ; GCN-PAL-NEXT:   $vgpr1 = COPY [[S_MOV_B32_1]](i32)
   ; GCN-PAL-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   ret ptr addrspace(4) @external_constant
 }
@@ -47,10 +47,10 @@ define ptr addrspace(1) @external_global_got() {
   ;
   ; GCN-PAL-LABEL: name: external_global_got
   ; GCN-PAL: bb.1 (%ir-block.0):
-  ; GCN-PAL-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32(s32) = S_MOV_B32 target-flags(amdgpu-abs32-lo) @external_global
-  ; GCN-PAL-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32(s32) = S_MOV_B32 target-flags(amdgpu-abs32-hi) @external_global
-  ; GCN-PAL-NEXT:   $vgpr0 = COPY [[S_MOV_B32_]](s32)
-  ; GCN-PAL-NEXT:   $vgpr1 = COPY [[S_MOV_B32_1]](s32)
+  ; GCN-PAL-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32(i32) = S_MOV_B32 target-flags(amdgpu-abs32-lo) @external_global
+  ; GCN-PAL-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32(i32) = S_MOV_B32 target-flags(amdgpu-abs32-hi) @external_global
+  ; GCN-PAL-NEXT:   $vgpr0 = COPY [[S_MOV_B32_]](i32)
+  ; GCN-PAL-NEXT:   $vgpr1 = COPY [[S_MOV_B32_1]](i32)
   ; GCN-PAL-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   ret ptr addrspace(1) @external_global
 }
@@ -68,10 +68,10 @@ define ptr addrspace(999) @external_other_got() {
   ;
   ; GCN-PAL-LABEL: name: external_other_got
   ; GCN-PAL: bb.1 (%ir-block.0):
-  ; GCN-PAL-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32(s32) = S_MOV_B32 target-flags(amdgpu-abs32-lo) @external_other
-  ; GCN-PAL-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32(s32) = S_MOV_B32 target-flags(amdgpu-abs32-hi) @external_other
-  ; GCN-PAL-NEXT:   $vgpr0 = COPY [[S_MOV_B32_]](s32)
-  ; GCN-PAL-NEXT:   $vgpr1 = COPY [[S_MOV_B32_1]](s32)
+  ; GCN-PAL-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32(i32) = S_MOV_B32 target-flags(amdgpu-abs32-lo) @external_other
+  ; GCN-PAL-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32(i32) = S_MOV_B32 target-flags(amdgpu-abs32-hi) @external_other
+  ; GCN-PAL-NEXT:   $vgpr0 = COPY [[S_MOV_B32_]](i32)
+  ; GCN-PAL-NEXT:   $vgpr1 = COPY [[S_MOV_B32_1]](i32)
   ; GCN-PAL-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   ret ptr addrspace(999) @external_other
 }
@@ -88,10 +88,10 @@ define ptr addrspace(4) @internal_constant_pcrel() {
   ;
   ; GCN-PAL-LABEL: name: internal_constant_pcrel
   ; GCN-PAL: bb.1 (%ir-block.0):
-  ; GCN-PAL-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32(s32) = S_MOV_B32 target-flags(amdgpu-abs32-lo) @internal_constant
-  ; GCN-PAL-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32(s32) = S_MOV_B32 target-flags(amdgpu-abs32-hi) @internal_constant
-  ; GCN-PAL-NEXT:   $vgpr0 = COPY [[S_MOV_B32_]](s32)
-  ; GCN-PAL-NEXT:   $vgpr1 = COPY [[S_MOV_B32_1]](s32)
+  ; GCN-PAL-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32(i32) = S_MOV_B32 target-flags(amdgpu-abs32-lo) @internal_constant
+  ; GCN-PAL-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32(i32) = S_MOV_B32 target-flags(amdgpu-abs32-hi) @internal_constant
+  ; GCN-PAL-NEXT:   $vgpr0 = COPY [[S_MOV_B32_]](i32)
+  ; GCN-PAL-NEXT:   $vgpr1 = COPY [[S_MOV_B32_1]](i32)
   ; GCN-PAL-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   ret ptr addrspace(4) @internal_constant
 }
@@ -108,10 +108,10 @@ define ptr addrspace(1) @internal_global_pcrel() {
   ;
   ; GCN-PAL-LABEL: name: internal_global_pcrel
   ; GCN-PAL: bb.1 (%ir-block.0):
-  ; GCN-PAL-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32(s32) = S_MOV_B32 target-flags(amdgpu-abs32-lo) @internal_global
-  ; GCN-PAL-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32(s32) = S_MOV_B32 target-flags(amdgpu-abs32-hi) @internal_global
-  ; GCN-PAL-NEXT:   $vgpr0 = COPY [[S_MOV_B32_]](s32)
-  ; GCN-PAL-NEXT:   $vgpr1 = COPY [[S_MOV_B32_1]](s32)
+  ; GCN-PAL-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32(i32) = S_MOV_B32 target-flags(amdgpu-abs32-lo) @internal_global
+  ; GCN-PAL-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32(i32) = S_MOV_B32 target-flags(amdgpu-abs32-hi) @internal_global
+  ; GCN-PAL-NEXT:   $vgpr0 = COPY [[S_MOV_B32_]](i32)
+  ; GCN-PAL-NEXT:   $vgpr1 = COPY [[S_MOV_B32_1]](i32)
   ; GCN-PAL-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   ret ptr addrspace(1) @internal_global
 }
@@ -128,10 +128,10 @@ define ptr addrspace(999) @internal_other_pcrel() {
   ;
   ; GCN-PAL-LABEL: name: internal_other_pcrel
   ; GCN-PAL: bb.1 (%ir-block.0):
-  ; GCN-PAL-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32(s32) = S_MOV_B32 target-flags(amdgpu-abs32-lo) @internal_other
-  ; GCN-PAL-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32(s32) = S_MOV_B32 target-flags(amdgpu-abs32-hi) @internal_other
-  ; GCN-PAL-NEXT:   $vgpr0 = COPY [[S_MOV_B32_]](s32)
-  ; GCN-PAL-NEXT:   $vgpr1 = COPY [[S_MOV_B32_1]](s32)
+  ; GCN-PAL-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32(i32) = S_MOV_B32 target-flags(amdgpu-abs32-lo) @internal_other
+  ; GCN-PAL-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32(i32) = S_MOV_B32 target-flags(amdgpu-abs32-hi) @internal_other
+  ; GCN-PAL-NEXT:   $vgpr0 = COPY [[S_MOV_B32_]](i32)
+  ; GCN-PAL-NEXT:   $vgpr1 = COPY [[S_MOV_B32_1]](i32)
   ; GCN-PAL-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   ret ptr addrspace(999) @internal_other
 }

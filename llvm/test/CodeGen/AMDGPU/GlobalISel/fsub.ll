@@ -109,10 +109,23 @@ define amdgpu_ps void @fsub_s64_div(double %a, double %b, ptr addrspace(1) %ptr)
 }
 
 define amdgpu_ps <2 x half> @fsub_v2s16_uniform(<2 x half> inreg %a, <2 x half> inreg %b) {
-; GCN-LABEL: fsub_v2s16_uniform:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_pk_add_f16 v0, s0, s1 neg_lo:[0,1] neg_hi:[0,1]
-; GCN-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: fsub_v2s16_uniform:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_pk_add_f16 v0, s0, s1 neg_lo:[0,1] neg_hi:[0,1]
+; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: fsub_v2s16_uniform:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_lshr_b32 s2, s1, 16
+; GFX12-NEXT:    s_xor_b32 s1, s1, 0x8000
+; GFX12-NEXT:    s_xor_b32 s2, s2, 0x8000
+; GFX12-NEXT:    s_lshr_b32 s3, s0, 16
+; GFX12-NEXT:    s_add_f16 s0, s0, s1
+; GFX12-NEXT:    s_add_f16 s1, s3, s2
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
+; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    ; return to shader part epilog
   %fsub = fsub <2 x half> %a, %b
   ret <2 x half> %fsub
 }

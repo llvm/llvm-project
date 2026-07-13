@@ -1568,7 +1568,7 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; GFX8-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-  ; GFX8-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY4]], [[COPY6]], 0, implicit $exec
+  ; GFX8-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[COPY4]], [[COPY6]], 0, implicit $exec
   ; GFX8-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_ADD_CO_U32_e64_]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, implicit $exec :: (dereferenceable load (f32), align 1, addrspace 8)
   ; GFX8-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX8-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
@@ -1964,7 +1964,7 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; GFX8-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; GFX8-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-  ; GFX8-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY4]], [[COPY6]], 0, implicit $exec
+  ; GFX8-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[COPY4]], [[COPY6]], 0, implicit $exec
   ; GFX8-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.2:

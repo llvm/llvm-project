@@ -377,8 +377,8 @@ body: |
     ; GFX8-NEXT: [[MUL1:%[0-9]+]]:_(s32) = G_MUL [[AND2]], [[AND3]]
     ; GFX8-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[MUL1]], [[C1]](s32)
     ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LSHR1]], [[C1]](s32)
-    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[LSHR]], [[SHL]]
-    ; GFX8-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[LSHR]], [[SHL]]
+    ; GFX8-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[BITCAST]](<2 x s16>)
     ; GFX8-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C1]](s32)
     ; GFX8-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[BITCAST1]], [[C]]
