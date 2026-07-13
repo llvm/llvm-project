@@ -18,7 +18,7 @@ entry:
   ret <16 x i8> %data
 }
 
-define void @active_lane_mask_mstore_vscaleX2(ptr %p, i64 %n) #0 {
+define void @active_lane_mask_mstore_vscaleX2(ptr %p, i64 %n) vscale_range(2,2) {
 ; CHECK-LABEL: active_lane_mask_mstore_vscaleX2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    whilelo p0.b, xzr, x1
@@ -32,7 +32,7 @@ entry:
   ret void
 }
 
-define void @active_lane_mask_mstore_vscaleX4(ptr %p, i64 %n) #1 {
+define void @active_lane_mask_mstore_vscaleX4(ptr %p, i64 %n) vscale_range(4,4) {
 ; CHECK-LABEL: active_lane_mask_mstore_vscaleX4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilelo p0.b, xzr, x1
@@ -45,6 +45,3 @@ define void @active_lane_mask_mstore_vscaleX4(ptr %p, i64 %n) #1 {
   call void @llvm.masked.store.v16i32.p0(<16 x i32> splat(i32 123), ptr %p, <16 x i1> %mask)
   ret void
 }
-
-attributes #0 = { vscale_range(2,2) }
-attributes #1 = { vscale_range(4,4) }
