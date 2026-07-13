@@ -95,3 +95,53 @@ __INT_LEAST32_TYPE__ test_les32(const unsigned char *p) { return stdc_load8_les3
 // BE: load i32, ptr {{.+}}, align 1
 // BE-NOT: bswap
 __INT_LEAST32_TYPE__ test_bes32(const unsigned char *p) { return stdc_load8_bes32(p); }
+
+// Aligned load's alignment scales with the result type's width.
+// LE-LABEL: @test_aligned_leu16(
+// LE: load i16, ptr {{.+}}, align 2
+// LE-NOT: bswap
+// BE-LABEL: @test_aligned_leu16(
+// BE: load i16, ptr {{.+}}, align 2
+// BE: call i16 @llvm.bswap.i16(
+__UINT_LEAST16_TYPE__ test_aligned_leu16(const unsigned char *p) { return stdc_load8_aligned_leu16(p); }
+
+// LE-LABEL: @test_aligned_beu16(
+// LE: load i16, ptr {{.+}}, align 2
+// LE: call i16 @llvm.bswap.i16(
+// BE-LABEL: @test_aligned_beu16(
+// BE: load i16, ptr {{.+}}, align 2
+// BE-NOT: bswap
+__UINT_LEAST16_TYPE__ test_aligned_beu16(const unsigned char *p) { return stdc_load8_aligned_beu16(p); }
+
+// LE-LABEL: @test_aligned_leu64(
+// LE: load i64, ptr {{.+}}, align 8
+// LE-NOT: bswap
+// BE-LABEL: @test_aligned_leu64(
+// BE: load i64, ptr {{.+}}, align 8
+// BE: call i64 @llvm.bswap.i64(
+__UINT_LEAST64_TYPE__ test_aligned_leu64(const unsigned char *p) { return stdc_load8_aligned_leu64(p); }
+
+// LE-LABEL: @test_aligned_beu64(
+// LE: load i64, ptr {{.+}}, align 8
+// LE: call i64 @llvm.bswap.i64(
+// BE-LABEL: @test_aligned_beu64(
+// BE: load i64, ptr {{.+}}, align 8
+// BE-NOT: bswap
+__UINT_LEAST64_TYPE__ test_aligned_beu64(const unsigned char *p) { return stdc_load8_aligned_beu64(p); }
+
+// Signed aligned variants use the same alignment lowering as unsigned.
+// LE-LABEL: @test_aligned_les32(
+// LE: load i32, ptr {{.+}}, align 4
+// LE-NOT: bswap
+// BE-LABEL: @test_aligned_les32(
+// BE: load i32, ptr {{.+}}, align 4
+// BE: call i32 @llvm.bswap.i32(
+__INT_LEAST32_TYPE__ test_aligned_les32(const unsigned char *p) { return stdc_load8_aligned_les32(p); }
+
+// LE-LABEL: @test_aligned_bes32(
+// LE: load i32, ptr {{.+}}, align 4
+// LE: call i32 @llvm.bswap.i32(
+// BE-LABEL: @test_aligned_bes32(
+// BE: load i32, ptr {{.+}}, align 4
+// BE-NOT: bswap
+__INT_LEAST32_TYPE__ test_aligned_bes32(const unsigned char *p) { return stdc_load8_aligned_bes32(p); }
