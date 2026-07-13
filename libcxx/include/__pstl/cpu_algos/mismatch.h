@@ -9,9 +9,9 @@
 #ifndef _LIBCPP___PSTL_CPU_ALGOS_MISMATCH_H
 #define _LIBCPP___PSTL_CPU_ALGOS_MISMATCH_H
 
-#include <__config>
-#include <__algorithm/mismatch.h>
 #include <__algorithm/min.h>
+#include <__algorithm/mismatch.h>
+#include <__config>
 #include <__functional/operations.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
