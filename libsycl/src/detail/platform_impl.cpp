@@ -45,6 +45,8 @@ const std::vector<PlatformImplUPtr> &PlatformImpl::getPlatforms() {
 
     auto &PlatformCache = getPlatformCache();
     for (const auto &Topo : getOffloadTopologies()) {
+      if (Topo.getBackend() == OL_PLATFORM_BACKEND_HOST)
+        continue;
       size_t PlatformIndex = 0;
       for (const auto &OffloadPlatform : Topo.getPlatforms()) {
         PlatformCache.emplace_back(std::make_unique<PlatformImpl>(

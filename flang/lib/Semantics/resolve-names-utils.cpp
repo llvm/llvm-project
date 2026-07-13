@@ -21,7 +21,6 @@
 #include "flang/Support/Fortran-features.h"
 #include "flang/Support/Fortran.h"
 #include "llvm/ADT/StringRef.h"
-#include <initializer_list>
 #include <variant>
 
 namespace Fortran::semantics {

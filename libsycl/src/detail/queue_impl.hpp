@@ -107,7 +107,20 @@ public:
   /// \return the async_handler associated with this queue.
   const async_handler &getAsyncHandler() const { return MAsyncHandler; }
 
+  /// Submits a memory copy operation from one USM or host pointer to another.
+  ///
+  /// \param Dest is the pointer to copy to.
+  /// \param Src is the pointer to copy from.
+  /// \param NumBytes is the number of bytes to copy.
+  /// \param DepEvents is a vector of dependencies for the operation.
+  /// \return an event impl object that represents the status of the operation.
+  EventImplPtr memcpy(void *Dest, const void *Src, std::size_t NumBytes,
+                      const std::vector<EventImplPtr> &DepEvents);
+
 private:
+  void handleEventDependencies(const std::vector<EventImplPtr> &Dep);
+  EventImplPtr createEvent(std::vector<EventImplPtr> &&Deps = {});
+
   // Queue features.
   ol_queue_handle_t MOffloadQueue = {};
   const bool MIsInorder;

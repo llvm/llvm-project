@@ -230,6 +230,15 @@ public:
   static std::unique_ptr<Architecture>
   CreateArchitectureInstance(const ArchSpec &arch);
 
+  // BugReporter
+  static void RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                             BugReporterCreateInstance create_callback);
+
+  static void UnregisterPlugin(BugReporterCreateInstance create_callback);
+
+  static std::unique_ptr<BugReporter>
+  CreateBugReporterInstance(llvm::StringRef name = {});
+
   // Disassembler
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              DisassemblerCreateInstance create_callback);
@@ -791,6 +800,9 @@ public:
 
   static llvm::SmallVector<RegisteredPluginInfo> GetArchitecturePluginInfo();
   static bool SetArchitecturePluginEnabled(llvm::StringRef name, bool enable);
+
+  static llvm::SmallVector<RegisteredPluginInfo> GetBugReporterPluginInfo();
+  static bool SetBugReporterPluginEnabled(llvm::StringRef name, bool enable);
 
   static llvm::SmallVector<RegisteredPluginInfo> GetDisassemblerPluginInfo();
   static bool SetDisassemblerPluginEnabled(llvm::StringRef name, bool enable);

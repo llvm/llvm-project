@@ -1058,14 +1058,11 @@ OutputSegment *Writer::createOutputSegment(StringRef name) {
   OutputSegment *s = make<OutputSegment>(name);
   // In the shared memory case, all data segments must be passive since they
   // will be initialized once by the main thread and then shared with other
-  // threads. In the cooperative threading case, TLS segments must be passive
-  // so they can be re-initialized per-thread via memory.init, and .bss
-  // segments are passive to avoid serializing their zero bytes into the binary;
-  // they are still present as passive segment entries and zero-filled via
-  // memory.fill in __wasm_init_memory.
+  // threads. In the cooperative threading case, TLS segments need to exist to
+  // be able to run TLS initialization on spawned threads, so that's managed
+  // here by flagging TLS as passive as well.
   bool needsPassiveInit =
-      ctx.arg.sharedMemory || (ctx.arg.cooperativeThreading &&
-                               (s->isTLS() || s->name.starts_with(".bss")));
+      ctx.arg.sharedMemory || (ctx.arg.cooperativeThreading && s->isTLS());
   if (needsPassiveInit)
     s->initFlags = WASM_DATA_SEGMENT_IS_PASSIVE;
   if (!ctx.arg.relocatable && name.starts_with(".bss"))
