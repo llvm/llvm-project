@@ -5192,14 +5192,14 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   // AArch64 FP-to-int conversions saturate to the destination element size, so
   // we can lower common saturating conversions to simple instructions.
   SDValue SrcVal = Op.getOperand(0);
-  EVT SrcVT = SrcVal.getValueType();
-  EVT DstVT = Op.getValueType();
-  EVT DstElementVT = DstVT.getVectorElementType();
-  EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
+  const EVT SrcVT = SrcVal.getValueType();
+  const EVT DstVT = Op.getValueType();
+  const EVT DstElementVT = DstVT.getVectorElementType();
+  const EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
 
-  uint64_t SrcElementWidth = SrcVT.getScalarSizeInBits();
-  uint64_t DstElementWidth = DstVT.getScalarSizeInBits();
-  uint64_t SatWidth = SatVT.getScalarSizeInBits();
+  const uint64_t SrcElementWidth = SrcVT.getScalarSizeInBits();
+  const uint64_t DstElementWidth = DstVT.getScalarSizeInBits();
+  const uint64_t SatWidth = SatVT.getScalarSizeInBits();
   assert(SatWidth <= DstElementWidth &&
          "Saturation width cannot exceed result width");
 
@@ -5209,7 +5209,7 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   if (DstVT.isScalableVector())
     return SDValue();
 
-  EVT SrcElementVT = SrcVT.getVectorElementType();
+  const EVT SrcElementVT = SrcVT.getVectorElementType();
   if (SrcElementVT != MVT::f64 && SrcElementVT != MVT::f32 &&
       SrcElementVT != MVT::f16 && SrcElementVT != MVT::bf16)
     return SDValue();
@@ -5231,7 +5231,7 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
 
   // Try to promote the operation to a wider type if SrcVT < DstVT,
   // or if type is bf16 or if the target has no +fullfp16.
-  EVT PromVT = SrcVT;
+  std::optional<EVT> PromVT;
   switch (SrcElementVT.getSimpleVT().SimpleTy) {
   case MVT::f16:
   case MVT::bf16:
@@ -5254,10 +5254,10 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
 
   SDLoc DL(Op);
   unsigned Opc = Op.getOpcode();
-  if (PromVT != SrcVT && !Expand(PromVT)) {
+  if (PromVT && !Expand(*PromVT)) {
     // When promoting the input type, SatWidth stays unchanged.
-    SrcVal = DAG.getNode(ISD::FP_EXTEND, DL, PromVT, SrcVal);
-    if (PromVT != MVT::v8f32)
+    SrcVal = DAG.getNode(ISD::FP_EXTEND, DL, *PromVT, SrcVal);
+    if (*PromVT != MVT::v8f32)
       return DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal, Op.getOperand(1));
 
     // If we are extending to a wider type (e.g. v8f16 -> v8f32) due to lack
