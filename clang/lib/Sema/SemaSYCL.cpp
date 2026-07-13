@@ -666,6 +666,78 @@ OutlinedFunctionDecl *BuildSYCLKernelEntryPointOutline(Sema &SemaRef,
   return OFD;
 }
 
+NamespaceDecl* getSyclNamespace(Sema &SemaRef) {
+  ASTContext &Ctx = SemaRef.getASTContext();
+  IdentifierInfo const &SyclNamespaceID = Ctx.Idents.get("sycl");
+
+  LookupResult NamespaceResult(SemaRef, &SyclNamespaceID, SourceLocation(),
+                               Sema::LookupNamespaceName);
+  SemaRef.LookupQualifiedName(NamespaceResult, Ctx.getTranslationUnitDecl());
+
+  if (NamespaceResult.isAmbiguous())
+    return nullptr;
+
+  return NamespaceResult.getAsSingle<NamespaceDecl>();
+}
+
+bool lookupIsDeviceCopyable(Sema &SemaRef, QualType Ty) {
+  NamespaceDecl* SyclNamespace = getSyclNamespace(SemaRef);
+  if (nullptr == SyclNamespace) {
+    // TODO Decide if I throw error or just let it pass
+    // - Throw error: Assumes the SYCL namespace must exist
+    // - Let it pass: Assumes that the SYCL namespace might not necessarily be declared
+    return false;
+  }
+
+  ASTContext &Ctx = SemaRef.getASTContext();
+  IdentifierInfo const &IsDeviceCopyableIdent =
+    Ctx.Idents.get("is_device_copyable");
+
+  LookupResult Result(SemaRef, &IsDeviceCopyableIdent, SourceLocation(),
+                      Sema::LookupOrdinaryName);
+  SemaRef.LookupQualifiedName(Result, SyclNamespace);
+
+  if (Result.isAmbiguous())
+    // TODO error or let go? perhaps letgo here?
+    return false;
+
+  ClassTemplateDecl* IsDeviceCopyable =
+    Result.getAsSingle<ClassTemplateDecl>();
+
+  // TODO: reference this from SemaCoroutine:
+
+  // // Form template argument list for coroutine_traits<R, P1, P2, ...> according
+  // // to [dcl.fct.def.coroutine]3
+  // TemplateArgumentListInfo Args(KwLoc, KwLoc);
+  // auto AddArg = [&](QualType T) {
+  //   Args.addArgument(TemplateArgumentLoc(
+  //       TemplateArgument(T), S.Context.getTrivialTypeSourceInfo(T, KwLoc)));
+  // };
+  // AddArg(FnType->getReturnType());
+  // // If the function is a non-static member function, add the type
+  // // of the implicit object parameter before the formal parameters.
+  // if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+  //   if (MD->isImplicitObjectMemberFunction()) {
+  //     // [over.match.funcs]4
+  //     // For non-static member functions, the type of the implicit object
+  //     // parameter is
+  //     //  -- "lvalue reference to cv X" for functions declared without a
+  //     //      ref-qualifier or with the & ref-qualifier
+  //     //  -- "rvalue reference to cv X" for functions declared with the &&
+  //     //      ref-qualifier
+  //     QualType T = MD->getFunctionObjectParameterType();
+  //     T = FnType->getRefQualifier() == RQ_RValue
+  //             ? S.Context.getRValueReferenceType(T)
+  //             : S.Context.getLValueReferenceType(T, /*SpelledAsLValue*/ true);
+  //     AddArg(T);
+  //   }
+  // }
+  // for (QualType T : FnType->getParamTypes())
+  //   AddArg(T);
+  
+  return false;
+}
+
 class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
   SemaSYCL &SemaSYCLRef;
   bool IsValid = true;
