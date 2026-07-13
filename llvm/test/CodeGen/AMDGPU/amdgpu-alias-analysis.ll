@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-- -passes=aa-eval -aa-pipeline=amdgpu-aa -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple=amdgpu-- -passes=aa-eval -aa-pipeline=amdgpu-aa -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt -mtriple=r600-- -passes=aa-eval -aa-pipeline=amdgpu-aa -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: Function: test
