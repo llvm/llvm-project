@@ -74,11 +74,11 @@ public:
   /// Behaves as if calling event::wait on each event in eventList.
   static void wait(const std::vector<event> &eventList);
 
-  /// Blocks until all commands associated with this event and any dependent
+  /// Blocks until all commands associated with this event and any dependency
   /// events have completed. Passes at least all unconsumed asynchronous errors
-  /// held by queues (or their associated contexts) which were used to enqueue
-  /// commands associated with this event and any dependent events, to the
-  /// appropriate async_handler.
+  /// held by the queues (or their associated contexts) that were used to
+  /// enqueue commands associated with this event and any dependency events, to
+  /// the appropriate async_handler.
   void wait_and_throw();
 
   /// Behaves as if calling event::wait_and_throw on each event in eventList.

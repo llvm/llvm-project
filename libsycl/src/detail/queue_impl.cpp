@@ -94,9 +94,8 @@ void QueueImpl::setKernelParameters(std::vector<EventImplPtr> &&Events,
         "libsycl doesn't support cross-context/platform event dependencies "
         "now.");
 
-  // Clean up previous kernel submit data to prepare structures for submission.
-  // It is done in the beginning of new submission to ensure that if previous
-  // submit throws we still can submit new kernel properly.
+  // It is done at the beginning of a new submission to ensure that we can still
+  // submit a kernel properly if the previous submission throws.
   MCurrentSubmitInfo.DepEvents.clear();
   MCurrentSubmitInfo.Range = {};
 

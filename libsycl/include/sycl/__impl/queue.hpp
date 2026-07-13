@@ -169,7 +169,7 @@ public:
   /// Blocks the calling thread until all commands previously submitted to this
   /// queue have completed. Synchronous errors are reported through SYCL
   /// exceptions. At least all unconsumed asynchronous errors held by this queue
-  /// are passed to the appropriate async_handler.
+  /// are passed to the async_handler associated with the queue.
   void wait_and_throw();
 
   /// Checks to see if any unconsumed asynchronous errors have been produced by
