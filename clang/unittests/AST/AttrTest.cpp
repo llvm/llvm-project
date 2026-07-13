@@ -11,8 +11,10 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/AttrKinds.h"
+#include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/AttributeScopeInfo.h"
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Tooling.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -270,6 +272,37 @@ TEST(Attr, UnknownScopedAttributeSpellingIndex) {
 
   ASSERT_EQ(CI.getParsedKind(), clang::AttributeCommonInfo::UnknownAttribute);
   EXPECT_EQ(CI.getAttributeSpellingListIndex(), 0u);
+}
+
+// Stage 1: an UnknownAttr can be constructed from an AttributeCommonInfo plus
+// the argument-clause text, and round-trips name / scope / syntax / args. The
+// argument text is interned into the ASTContext, so the node is self-contained.
+TEST(Attr, UnknownConstruction) {
+  auto AST = clang::tooling::buildASTFromCode("");
+  auto &Ctx = AST->getASTContext();
+
+  // Model what the parser will hand us for [[ns::transient(x, y)]].
+  const clang::IdentifierInfo *Name = &Ctx.Idents.get("transient");
+  const clang::IdentifierInfo *Scope = &Ctx.Idents.get("ns");
+  clang::AttributeScopeInfo ScopeInfo(Scope, clang::SourceLocation());
+  clang::AttributeCommonInfo CommonInfo(
+      Name, ScopeInfo, clang::SourceRange(),
+      clang::AttributeCommonInfo::Form::CXX11());
+
+  auto *A = clang::UnknownAttr::Create(Ctx, "(x, y)", CommonInfo);
+  ASSERT_NE(A, nullptr);
+
+  EXPECT_EQ(A->getKind(), clang::attr::Unknown);
+  EXPECT_EQ(A->getSyntax(), clang::AttributeCommonInfo::AS_CXX11);
+  ASSERT_NE(A->getAttrName(), nullptr);
+  EXPECT_EQ(A->getAttrName()->getName(), "transient");
+  ASSERT_NE(A->getScopeName(), nullptr);
+  EXPECT_EQ(A->getScopeName()->getName(), "ns");
+  EXPECT_EQ(A->getArgsText(), "(x, y)");
+
+  // With no argument clause the text is empty.
+  auto *B = clang::UnknownAttr::Create(Ctx, "", CommonInfo);
+  EXPECT_TRUE(B->getArgsText().empty());
 }
 
 } // namespace
