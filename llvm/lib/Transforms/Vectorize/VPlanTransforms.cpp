@@ -7776,7 +7776,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
           VPSCEVExpander(Builder, *PSE.getSE(), LoadR->getDebugLoc())
               .tryToExpand(Start);
       if (!StartVPV)
-        continue;
+        StartVPV = VPBuilder(Plan.getEntry()).createExpandSCEV(Start);
       VPValue *StrideInBytes = Plan.getOrAddLiveIn(Step->getValue());
       Type *IndexTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
       assert(IndexTy == StrideInBytes->getScalarType() &&
