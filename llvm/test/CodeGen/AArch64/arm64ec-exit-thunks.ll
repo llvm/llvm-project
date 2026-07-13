@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=arm64ec-pc-windows-msvc < %s | FileCheck %s
+; RUN: llc -mtriple=arm64ec-pc-windows-msvc -verify-machineinstrs < %s | FileCheck %s
 
 declare void @no_op() nounwind;
 ; CHECK-LABEL:    .def    $iexit_thunk$cdecl$v$v;
