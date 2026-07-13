@@ -33,8 +33,10 @@ ManagedEventThread::~ManagedEventThread() {
 }
 
 DAPSessionManager &DAPSessionManager::GetInstance() {
-  static DAPSessionManager instance;
-  return instance;
+  // NOTE: Intentionally leaked. Detached client threads may still notify
+  // m_sessions_condition at exit, so it has to outlive them.
+  static auto *instance = new DAPSessionManager();
+  return *instance;
 }
 
 void DAPSessionManager::RegisterSession(lldb_private::MainLoop *loop,
