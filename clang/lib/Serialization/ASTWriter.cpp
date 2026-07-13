@@ -1608,6 +1608,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   // Language options.
   Record.clear();
   const LangOptions &LangOpts = PP.getLangOpts();
+  Record.push_back(static_cast<unsigned>(LangOpts.LangStd));
   const uint64_t LanguageOptionValues[] = {
 #define LANGOPT(Name, Bits, Default, Compatibility, Description) LangOpts.Name,
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
@@ -5720,6 +5721,8 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
   RegisterPredefDecl(Context.VaListTagDecl, PREDEF_DECL_VA_LIST_TAG);
   RegisterPredefDecl(Context.BuiltinMSVaListDecl,
                      PREDEF_DECL_BUILTIN_MS_VA_LIST_ID);
+  RegisterPredefDecl(Context.BuiltinZOSVaListDecl,
+                     PREDEF_DECL_BUILTIN_ZOS_VA_LIST_ID);
   RegisterPredefDecl(Context.MSGuidTagDecl,
                      PREDEF_DECL_BUILTIN_MS_GUID_ID);
   RegisterPredefDecl(Context.MSTypeInfoTagDecl,

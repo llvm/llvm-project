@@ -1464,8 +1464,12 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
   if (auto *Array = N.getRawGlobalVariables()) {
     CheckDI(isa<MDTuple>(Array), "invalid global variable list", &N, Array);
     for (Metadata *Op : N.getGlobalVariables()->operands()) {
-      CheckDI(Op && (isa<DIGlobalVariableExpression>(Op)),
-              "invalid global variable ref", &N, Op);
+      auto *GVE = dyn_cast_or_null<DIGlobalVariableExpression>(Op);
+      CheckDI(GVE, "invalid global variable ref", &N, Op);
+      CheckDI(!isa_and_nonnull<DILocalScope>(GVE->getVariable()->getScope()),
+              "function-local variables are not allowed in a DICompileUnit's "
+              "global variables list",
+              &N, Op);
     }
   }
   if (auto *Array = N.getRawImportedEntities()) {
@@ -1516,13 +1520,13 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
       auto True = [](const Metadata *) { return true; };
       auto False = [](const Metadata *) { return false; };
       bool IsTypeCorrect = DISubprogram::visitRetainedNode<bool>(
-          Op, True, True, True, True, False);
+          Op, True, True, True, True, True, False);
       CheckDI(IsTypeCorrect,
               "invalid retained nodes, expected DILocalVariable, DILabel, "
-              "DIImportedEntity or DIType",
+              "DIImportedEntity, DIType or DIGlobalVariableExpression",
               &N, Node, Op);
 
-      auto *RetainedNode = cast<DINode>(Op);
+      auto *RetainedNode = cast<MDNode>(Op);
       auto *RetainedNodeScope = dyn_cast_or_null<DILocalScope>(
           DISubprogram::getRawRetainedNodeScope(RetainedNode));
       CheckDI(RetainedNodeScope,
@@ -4684,9 +4688,9 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
               "type!",
           &RMWI, ElTy);
   } else {
-    Check(ScalarTy->isIntegerTy(),
+    Check(ElTy->isIntOrIntVectorTy() && !isa<ScalableVectorType>(ElTy),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
-              " operand must have integer type!",
+              " operand must have integer or fixed vector of integer type!",
           &RMWI, ElTy);
   }
   checkAtomicMemAccessSize(ElTy, &RMWI);
@@ -5770,6 +5774,14 @@ void Verifier::visitInstruction(Instruction &I) {
           "invariant.group metadata is only for loads and stores", &I);
   }
 
+  if (I.hasMetadata(LLVMContext::MD_invariant_load)) {
+    auto *II = dyn_cast<IntrinsicInst>(&I);
+    Check(isa<LoadInst>(I) || (II && II->onlyReadsMemory()),
+          "invariant.load metadata is only for loads and readonly "
+          "intrinsic calls",
+          &I);
+  }
+
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_nonnull)) {
     Check(I.getType()->isPointerTy(), "nonnull applies only to pointer types",
           &I);
@@ -5930,8 +5942,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
               "bits",
               Call);
         Check(OBU.Inputs.size() < 3 ||
-                  GetTypeAt(2)->isIntegerTy() &&
-                      GetTypeAt(2)->getIntegerBitWidth() <= 64,
+                  (GetTypeAt(2)->isIntegerTy() &&
+                   GetTypeAt(2)->getIntegerBitWidth() <= 64),
               "third argument should be an integer with a maximum width of 64 "
               "bits if present",
               Call);
@@ -6958,6 +6970,15 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
         cast<MetadataAsValue>(Call.getArgOperand(0))->getMetadata());
     Check(MD->getNumOperands() == 1 && isa<MDString>(MD->getOperand(0)),
           "llvm.write_volatile_register metadata must be a single MDString",
+          &Call);
+    break;
+  }
+  case Intrinsic::ptrauth_auth_with_pc_and_resign: {
+    // Verify that the auth key is IA (0) or IB (1), not DA (2) or DB (3)
+    auto *AuthKey = cast<ConstantInt>(Call.getArgOperand(1));
+    uint64_t Key = AuthKey->getZExtValue();
+    Check(Key == 0 || Key == 1,
+          "ptrauth.auth.with.pc.and.resign key must be IA (0) or IB (1)",
           &Call);
     break;
   }
