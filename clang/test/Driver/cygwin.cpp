@@ -115,9 +115,29 @@
 // RUN:   2>&1 | FileCheck --check-prefix=CHECK-ASLR-DEFAULT %s
 // CHECK-ASLR-DEFAULT:      "{{.*}}ld{{(\.exe)?}}"
 // CHECK-ASLR-DEFAULT-NOT:  "--disable-high-entropy-va"
-// CHECK-ASLR-DEFAULT-SAME: "--disable-nxcompat"
 
 // RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
 // RUN:   2>&1 | FileCheck --check-prefix=CHECK-64-ASLR-DEFAULT %s
 // CHECK-64-ASLR-DEFAULT:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-64-ASLR-DEFAULT-SAME: "--wrap=_Znwm"
+// CHECK-64-ASLR-DEFAULT-SAME: "--wrap=_Znam"
+// CHECK-64-ASLR-DEFAULT-SAME: "--wrap=_ZdlPv"
+// CHECK-64-ASLR-DEFAULT-SAME: "--wrap=_ZdaPv"
+// CHECK-64-ASLR-DEFAULT-SAME: "--wrap=_ZnwmRKSt9nothrow_t"
+// CHECK-64-ASLR-DEFAULT-SAME: "--wrap=_ZnamRKSt9nothrow_t"
+// CHECK-64-ASLR-DEFAULT-SAME: "--wrap=_ZdlPvRKSt9nothrow_t"
+// CHECK-64-ASLR-DEFAULT-SAME: "--wrap=_ZdaPvRKSt9nothrow_t"
 // CHECK-64-ASLR-DEFAULT-SAME: "--disable-high-entropy-va"
+// CHECK-64-ASLR-DEFAULT-SAME: "--disable-nxcompat"
+
+// RUN: %clang -### %s --target=i686-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
+// RUN:   2>&1 | FileCheck --check-prefix=CHECK-WRAP %s
+// CHECK-WRAP:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-WRAP-SAME: "--wrap=_Znwj"
+// CHECK-WRAP-SAME: "--wrap=_Znaj"
+// CHECK-WRAP-SAME: "--wrap=_ZdlPv"
+// CHECK-WRAP-SAME: "--wrap=_ZdaPv"
+// CHECK-WRAP-SAME: "--wrap=_ZnwjRKSt9nothrow_t"
+// CHECK-WRAP-SAME: "--wrap=_ZnajRKSt9nothrow_t"
+// CHECK-WRAP-SAME: "--wrap=_ZdlPvRKSt9nothrow_t"
+// CHECK-WRAP-SAME: "--wrap=_ZdaPvRKSt9nothrow_t"
