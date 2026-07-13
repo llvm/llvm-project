@@ -9,7 +9,7 @@ gpu.module @test_module_0 {
   func.func @gpu_index_ops()
       -> (index, index, index, index, index, index,
           index, index, index, index, index, index,
-          index) {
+          index, index, index, index) {
 
     // CHECK: = nvvm.read.ptx.sreg.tid.x : i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
@@ -55,13 +55,22 @@ gpu.module @test_module_0 {
     // CHECK: = nvvm.read.ptx.sreg.laneid range <i32, 0, 32> : i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
     %laneId = gpu.lane_id
+    // CHECK: = nvvm.read.ptx.sreg.warpsize range <i32, 1, 129> : i32
+    // CHECK: = llvm.sext %{{.*}} : i32 to i64
+    %subgroupSize = gpu.subgroup_size : index
+    // CHECK: = nvvm.read.ptx.sreg.warpid range <i32, 0, 4294967295> : i32
+    // CHECK: = llvm.sext %{{.*}} : i32 to i64
+    %subgroupId = gpu.subgroup_id : index
+    // CHECK: = nvvm.read.ptx.sreg.nwarpid : i32
+    // CHECK: = llvm.sext %{{.*}} : i32 to i64
+    %numSubgroups = gpu.num_subgroups : index
 
     func.return %tIdX, %tIdY, %tIdZ, %bDimX, %bDimY, %bDimZ,
                %bIdX, %bIdY, %bIdZ, %gDimX, %gDimY, %gDimZ,
-               %laneId
+               %laneId, %subgroupSize, %subgroupId, %numSubgroups
         : index, index, index, index, index, index,
           index, index, index, index, index, index,
-          index
+          index, index, index, index
   }
 }
 
@@ -998,15 +1007,21 @@ gpu.module @test_module_48 {
 
 gpu.module @test_module_49 {
 // CHECK-LABEL: func @explicit_id_bounds()
-  func.func @explicit_id_bounds() -> (index, index, index) {
+  func.func @explicit_id_bounds() -> (index, index, index, index, index, index) {
     // CHECK: = nvvm.read.ptx.sreg.tid.x range <i32, 0, 32> : i32
     %0 = gpu.thread_id x upper_bound 32
     // CHECK: = nvvm.read.ptx.sreg.ntid.x range <i32, 1, 33> : i32
     %1 = gpu.block_dim x upper_bound 32
     // CHECK: = nvvm.read.ptx.sreg.laneid range <i32, 0, 16> : i32
     %2 = gpu.lane_id upper_bound 16
+    // CHECK: = nvvm.read.ptx.sreg.warpsize range <i32, 1, 33> : i32
+    %3 = gpu.subgroup_size upper_bound 32 : index
+    // CHECK: = nvvm.read.ptx.sreg.warpid range <i32, 0, 16> : i32
+    %4 = gpu.subgroup_id upper_bound 16 : index
+    // CHECK: = nvvm.read.ptx.sreg.nwarpid range <i32, 1, 17> : i32
+    %5 = gpu.num_subgroups upper_bound 16 : index
 
-    return %0, %1, %2 : index, index, index
+    return %0, %1, %2, %3, %4, %5 : index, index, index, index, index, index
   }
 }
 

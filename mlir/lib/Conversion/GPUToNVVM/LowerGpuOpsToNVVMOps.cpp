@@ -35,9 +35,12 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
+#include "llvm/Support/MathExtras.h"
+
 #include "../GPUCommon/GPUOpsLowering.h"
 #include "../GPUCommon/IndexIntrinsicsOpLowering.h"
 #include "../GPUCommon/OpToFuncCallLowering.h"
+#include <limits>
 #include <optional>
 
 namespace mlir {
@@ -101,6 +104,31 @@ static constexpr llvm::StringLiteral kNVVMNamedBarrierIdPrefix =
 static constexpr int32_t kNVVMFirstNamedBarrierId = 1;
 static constexpr int32_t kNVVMLastNamedBarrierId = 15;
 static constexpr int32_t kNVVMWarpSize = 32;
+static constexpr uint64_t kMaxDim = std::numeric_limits<uint32_t>::max();
+static constexpr uint64_t kMaxSubgroupSize = 128;
+
+// Truncate or extend the result depending on the index bitwidth specified by
+// the LLVMTypeConverter options.
+static Value truncOrExtToIndexBitwidth(ConversionPatternRewriter &rewriter,
+                                       Location loc, Value value,
+                                       const LLVMTypeConverter &converter) {
+  auto valueType = cast<IntegerType>(value.getType());
+  unsigned valueBitwidth = valueType.getWidth();
+  unsigned indexBitwidth = converter.getIndexTypeBitwidth();
+  if (indexBitwidth > valueBitwidth) {
+    return LLVM::SExtOp::create(rewriter, loc,
+                                IntegerType::get(rewriter.getContext(),
+                                                 indexBitwidth),
+                                value);
+  }
+  if (indexBitwidth < valueBitwidth) {
+    return LLVM::TruncOp::create(rewriter, loc,
+                                 IntegerType::get(rewriter.getContext(),
+                                                  indexBitwidth),
+                                 value);
+  }
+  return value;
+}
 
 static FailureOr<StringAttr>
 createNVVMNamedBarrierIdGlobal(gpu::InitializeNamedBarrierOp op,
@@ -256,7 +284,6 @@ struct GPULaneIdOpToNVVM : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
   matchAndRewrite(gpu::LaneIdOp op, gpu::LaneIdOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
-    MLIRContext *context = rewriter.getContext();
     LLVM::ConstantRangeAttr bounds = nullptr;
     if (std::optional<APInt> upperBound = op.getUpperBound())
       bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
@@ -266,17 +293,85 @@ struct GPULaneIdOpToNVVM : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
           /*bitWidth=*/32, /*lower=*/0, /*upper=*/kWarpSize);
     Value newOp =
         NVVM::LaneIdOp::create(rewriter, loc, rewriter.getI32Type(), bounds);
-    // Truncate or extend the result depending on the index bitwidth specified
-    // by the LLVMTypeConverter options.
-    const unsigned indexBitwidth = getTypeConverter()->getIndexTypeBitwidth();
-    if (indexBitwidth > 32) {
-      newOp = LLVM::SExtOp::create(
-          rewriter, loc, IntegerType::get(context, indexBitwidth), newOp);
-    } else if (indexBitwidth < 32) {
-      newOp = LLVM::TruncOp::create(
-          rewriter, loc, IntegerType::get(context, indexBitwidth), newOp);
-    }
+    newOp = truncOrExtToIndexBitwidth(rewriter, loc, newOp, *getTypeConverter());
     rewriter.replaceOp(op, {newOp});
+    return success();
+  }
+};
+
+struct GPUSubgroupSizeOpToNVVM
+    : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupSizeOp op, gpu::SubgroupSizeOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    LLVM::ConstantRangeAttr bounds = nullptr;
+    if (std::optional<APInt> upperBound = op.getUpperBound()) {
+      bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
+          /*bitWidth=*/32, /*lower=*/1,
+          /*upper=*/llvm::SaturatingAdd(upperBound->getZExtValue(), 1ULL));
+    } else {
+      bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
+          /*bitWidth=*/32, /*lower=*/1, /*upper=*/kMaxSubgroupSize + 1);
+    }
+
+    Value subgroupSize =
+        NVVM::WarpSizeOp::create(rewriter, op.getLoc(), rewriter.getI32Type(),
+                                 bounds);
+    subgroupSize = truncOrExtToIndexBitwidth(rewriter, op.getLoc(), subgroupSize,
+                                             *getTypeConverter());
+    rewriter.replaceOp(op, subgroupSize);
+    return success();
+  }
+};
+
+struct GPUSubgroupIdOpToNVVM : ConvertOpToLLVMPattern<gpu::SubgroupIdOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupIdOp op, gpu::SubgroupIdOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // TODO: Derive tighter bounds from known launch dimensions when available.
+    uint64_t upperBound = kMaxDim;
+    if (std::optional<APInt> specifiedBound = op.getUpperBound())
+      upperBound = specifiedBound->getZExtValue();
+    LLVM::ConstantRangeAttr bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
+        /*bitWidth=*/32, /*lower=*/0, /*upper=*/upperBound);
+
+    Value subgroupId =
+        NVVM::WarpIdOp::create(rewriter, op.getLoc(), rewriter.getI32Type(),
+                               bounds);
+    subgroupId = truncOrExtToIndexBitwidth(rewriter, op.getLoc(), subgroupId,
+                                           *getTypeConverter());
+    rewriter.replaceOp(op, subgroupId);
+    return success();
+  }
+};
+
+struct GPUNumSubgroupsOpToNVVM
+    : ConvertOpToLLVMPattern<gpu::NumSubgroupsOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult matchAndRewrite(gpu::NumSubgroupsOp op,
+                                gpu::NumSubgroupsOp::Adaptor adaptor,
+                                ConversionPatternRewriter &rewriter) const
+      override {
+    LLVM::ConstantRangeAttr bounds = nullptr;
+    if (std::optional<APInt> upperBound = op.getUpperBound()) {
+      bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
+          /*bitWidth=*/32, /*lower=*/1,
+          /*upper=*/llvm::SaturatingAdd(upperBound->getZExtValue(), 1ULL));
+    }
+    // Without an explicit upper bound, the target-independent default for
+    // gpu.num_subgroups cannot be encoded as a finite i32 upper-exclusive range.
+
+    Value numSubgroups =
+        NVVM::WarpDimOp::create(rewriter, op.getLoc(), rewriter.getI32Type(),
+                                bounds);
+    numSubgroups = truncOrExtToIndexBitwidth(rewriter, op.getLoc(),
+                                             numSubgroups, *getTypeConverter());
+    rewriter.replaceOp(op, numSubgroups);
     return success();
   }
 };
@@ -666,8 +761,10 @@ void mlir::populateGpuToNVVMConversionPatterns(
   patterns.add<gpu::index_lowering::OpLowering<
       gpu::GridDimOp, NVVM::GridDimXOp, NVVM::GridDimYOp, NVVM::GridDimZOp>>(
       converter, IndexKind::Grid, IntrType::Dim, benefit);
-  patterns.add<GPULaneIdOpToNVVM, GPUBallotOpToNVVM, GPUShuffleOpLowering,
-               GPUReturnOpLowering>(converter, benefit);
+  patterns.add<GPULaneIdOpToNVVM, GPUSubgroupIdOpToNVVM,
+               GPUNumSubgroupsOpToNVVM, GPUSubgroupSizeOpToNVVM,
+               GPUBallotOpToNVVM, GPUShuffleOpLowering, GPUReturnOpLowering>(
+      converter, benefit);
 
   patterns.add<GPUDynamicSharedMemoryOpLowering>(
       converter, NVVM::kSharedMemoryAlignmentBit, benefit);
