@@ -25,6 +25,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/MathExtras.h"
 
 namespace mlir {
 namespace acc {
@@ -213,12 +214,14 @@ void copyParDimsAttr(Operation *from, Operation *to) {
   setParDimsAttr(to, getParDimsAttr(from));
 }
 
-int64_t SharedMemoryBudget::alignOffset(int64_t offset) {
-  return (offset + 15) & ~static_cast<int64_t>(15);
+int64_t SharedMemoryBudget::alignOffset(int64_t offset, int64_t alignment) {
+  assert(alignment > 0 && llvm::isPowerOf2_64(alignment) &&
+         "alignment must be a power of two");
+  return (offset + alignment - 1) & ~(alignment - 1);
 }
 
-bool SharedMemoryBudget::tryAllocate(int64_t bytes) {
-  int64_t aligned = alignOffset(bytesUsed_);
+bool SharedMemoryBudget::tryAllocate(int64_t bytes, int64_t alignment) {
+  int64_t aligned = alignOffset(bytesUsed_, alignment);
   if (aligned + bytes > maxTotalBytes_) {
     return false;
   }

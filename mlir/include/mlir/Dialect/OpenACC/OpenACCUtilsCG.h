@@ -98,17 +98,27 @@ void copyParDimsAttr(Operation *from, Operation *to);
 /// Tracks aligned byte consumption against a configurable shared memory cap.
 class SharedMemoryBudget {
 public:
+  /// Default allocation alignment (bytes).
+  static constexpr int64_t kDefaultAlignmentBytes = 16;
+
   SharedMemoryBudget(int64_t maxTotalBytes, int64_t initialBytesUsed = 0)
       : bytesUsed_(initialBytesUsed), maxTotalBytes_(maxTotalBytes) {}
 
-  bool tryAllocate(int64_t bytes);
+  /// Reserve \p bytes, rounding the current offset up to \p alignment first.
+  /// Returns false without mutating state if the reservation would exceed the
+  /// cap. \p alignment must be a power of two.
+  bool tryAllocate(int64_t bytes,
+                   int64_t alignment = kDefaultAlignmentBytes);
   int64_t bytesUsed() const { return bytesUsed_; }
   int64_t maxTotalBytes() const { return maxTotalBytes_; }
   void setMaxTotalBytes(int64_t maxTotalBytes) {
     maxTotalBytes_ = maxTotalBytes;
   }
 
-  static int64_t alignOffset(int64_t offset);
+  /// Round \p offset up to the next multiple of \p alignment, which must be a
+  /// power of two.
+  static int64_t alignOffset(int64_t offset,
+                             int64_t alignment = kDefaultAlignmentBytes);
 
 private:
   int64_t bytesUsed_ = 0;
