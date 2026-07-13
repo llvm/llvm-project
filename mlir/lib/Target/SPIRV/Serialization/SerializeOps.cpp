@@ -16,13 +16,39 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
+#include "mlir/Target/SPIRV/SPIRVExtInstSets.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "spirv-serialization"
 
 using namespace mlir;
+
+namespace {
+// Location::print() emits MLIR syntax such as `loc("name")` or
+// `loc(fused["op", "file":1:2])`. NonSemantic.Graph.DebugInfo stores the
+// source/debug name itself in an OpString, so keep this conversion to the
+// payload string explicit.
+std::string getDebugInfoStringFromLoc(Location loc) {
+  if (auto fileLineCol = dyn_cast<FileLineColLoc>(loc)) {
+    return llvm::formatv("{0}:{1}:{2}", fileLineCol.getFilename(),
+                         fileLineCol.getLine(), fileLineCol.getColumn());
+  }
+  if (auto nameLoc = dyn_cast<NameLoc>(loc)) {
+    return nameLoc.getName().str();
+  }
+  if (auto fusedLoc = dyn_cast<FusedLoc>(loc)) {
+    std::string result;
+    llvm::raw_string_ostream os(result);
+    llvm::interleave(
+        map_range(fusedLoc.getLocations(), getDebugInfoStringFromLoc), os, ";");
+    return result;
+  }
+  return "";
+}
+} // namespace
 
 /// A pre-order depth-first visitor function for processing basic blocks.
 ///
@@ -61,6 +87,9 @@ LogicalResult Serializer::processConstantOp(spirv::ConstantOp op) {
   if (auto resultID =
           prepareConstant(op.getLoc(), op.getType(), op.getValue())) {
     valueIDMap[op.getResult()] = resultID;
+    if (isa<spirv::TensorArmType>(op.getType()) &&
+        failed(encodeDebugInfoTensorInst(op.getResult())))
+      return failure();
     return success();
   }
   return failure();
@@ -121,8 +150,8 @@ Serializer::processSpecConstantCompositeOp(spirv::SpecConstantCompositeOp op) {
     operands.push_back(constituentID);
   }
 
-  encodeInstructionInto(typesGlobalValues,
-                        spirv::Opcode::OpSpecConstantComposite, operands);
+  encodeInstructionWithContinuationInto(
+      typesGlobalValues, spirv::Opcode::OpSpecConstantComposite, operands);
   specConstIDMap[op.getSymName()] = resultID;
 
   return processName(resultID, op.getSymName());
@@ -386,6 +415,121 @@ LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
   return success();
 }
 
+uint32_t Serializer::encodeDebugStringInst(StringRef str) {
+  uint32_t stringID = debugStringIDMap.lookup(str);
+  if (stringID > 0) {
+    return stringID;
+  }
+
+  SmallVector<uint32_t, 2> operands;
+  stringID = getNextID();
+  debugStringIDMap[str] = stringID;
+  operands.push_back(stringID);
+  spirv::encodeStringLiteralInto(operands, str);
+  encodeInstructionInto(debug, spirv::Opcode::OpString, operands);
+
+  return stringID;
+}
+
+LogicalResult Serializer::encodeDebugInfoGraphInst(spirv::GraphARMOp op,
+                                                   uint32_t &debugGraphID) {
+  if (!options.emitDebugInfo)
+    return success();
+
+  uint32_t voidTypeID = 0;
+  if (failed(processType(op.getLoc(), getVoidType(), voidTypeID)))
+    return failure();
+
+  uint32_t stringID =
+      encodeDebugStringInst(getDebugInfoStringFromLoc(op.getLoc()));
+
+  SmallVector<uint32_t, 6> operands;
+  operands.push_back(voidTypeID);
+  debugGraphID = getNextID();
+  operands.push_back(debugGraphID);
+  uint32_t graphID = getOrCreateFunctionID(op.getName());
+  operands.push_back(graphID);
+  operands.push_back(stringID);
+
+  if (failed(encodeExtensionInstruction(
+          nullptr, extDebugInfo,
+          static_cast<uint32_t>(GraphDebugInfoExtInst::DebugGraph), operands,
+          graphsDebugInfo)))
+    return failure();
+
+  return success();
+}
+
+LogicalResult
+Serializer::encodeDebugInfoOperationInst(uint32_t debugGraphID,
+                                         const SetVector<Operation *> &ops) {
+  if (!options.emitDebugInfo)
+    return success();
+
+  if (ops.empty())
+    return success();
+
+  SmallVector<uint32_t, 4> instructionIDs;
+  for (Operation *op : ops)
+    for (OpResult result : op->getOpResults())
+      instructionIDs.push_back(getValueID(result));
+
+  if (instructionIDs.empty())
+    return success();
+
+  uint32_t voidTypeID = 0;
+  if (failed(processType(ops[0]->getLoc(), getVoidType(), voidTypeID)))
+    return failure();
+
+  uint32_t stringID =
+      encodeDebugStringInst(getDebugInfoStringFromLoc(ops[0]->getLoc()));
+
+  SmallVector<uint32_t, 5> operands;
+  operands.push_back(voidTypeID);
+  operands.push_back(getNextID());
+  operands.push_back(debugGraphID);
+  operands.push_back(stringID);
+  operands.append(instructionIDs);
+
+  if (failed(encodeExtensionInstruction(
+          nullptr, extDebugInfo,
+          static_cast<uint32_t>(GraphDebugInfoExtInst::DebugOperation),
+          operands, graphsDebugInfo)))
+    return failure();
+
+  return success();
+}
+
+LogicalResult Serializer::encodeDebugInfoTensorInst(Value tensor) {
+  if (!options.emitDebugInfo)
+    return success();
+
+  uint32_t voidTypeID = 0;
+  if (failed(processType(tensor.getLoc(), getVoidType(), voidTypeID)))
+    return failure();
+
+  uint32_t tensorID = valueIDMap.lookup(tensor);
+  if (tensorID == 0)
+    return success();
+
+  uint32_t stringID =
+      encodeDebugStringInst(getDebugInfoStringFromLoc(tensor.getLoc()));
+
+  SmallVector<uint32_t, 4> operands;
+  operands.push_back(voidTypeID);
+  operands.push_back(getNextID());
+  operands.push_back(tensorID);
+  operands.push_back(stringID);
+
+  if (failed(encodeExtensionInstruction(
+          nullptr, extDebugInfo,
+          static_cast<uint32_t>(GraphDebugInfoExtInst::DebugTensor), operands,
+          graphsDebugInfo)))
+    return failure();
+
+  return success();
+}
+
 LogicalResult Serializer::processGraphARMOp(spirv::GraphARMOp op) {
   if (op.getNumResults() < 1) {
     return op.emitError("cannot serialize graph with no return types");
@@ -423,6 +567,9 @@ LogicalResult Serializer::processGraphARMOp(spirv::GraphARMOp op) {
 
     encodeInstructionInto(functionHeader, spirv::Opcode::OpGraphInputARM,
                           inputOperands);
+
+    if (failed(encodeDebugInfoTensorInst(arg)))
+      return failure();
   }
 
   if (failed(processBlock(&op.front(), /*omitLabel=*/true)))
@@ -442,6 +589,15 @@ LogicalResult Serializer::processGraphARMOp(spirv::GraphARMOp op) {
   llvm::append_range(graphs, functionBody);
   functionHeader.clear();
   functionBody.clear();
+
+  uint32_t debugGraphID = 0;
+  if (failed(encodeDebugInfoGraphInst(op, debugGraphID)))
+    return failure();
+
+  for (const auto &debugEntry : tosaOpsMap[funcID]) {
+    if (failed(encodeDebugInfoOperationInst(debugGraphID, debugEntry.second)))
+      return failure();
+  }
 
   return success();
 }
@@ -491,6 +647,9 @@ Serializer::processGraphOutputsARMOp(spirv::GraphOutputsARMOp op) {
 
     outputOperands.push_back(outputID);
     outputOperands.push_back(indexID);
+
+    if (failed(encodeDebugInfoTensorInst(value)))
+      return failure();
 
     encodeInstructionInto(functionBody, spirv::Opcode::OpGraphSetOutputARM,
                           outputOperands);
@@ -775,6 +934,27 @@ LogicalResult Serializer::processBranchOp(spirv::BranchOp branchOp) {
   return success();
 }
 
+LogicalResult Serializer::processSwitchOp(spirv::SwitchOp switchOp) {
+  uint32_t selectorID = getValueID(switchOp.getSelector());
+  uint32_t defaultLabelID = getOrCreateBlockID(switchOp.getDefaultTarget());
+  SmallVector<uint32_t> arguments{selectorID, defaultLabelID};
+
+  std::optional<mlir::DenseIntElementsAttr> literals = switchOp.getLiterals();
+  BlockRange targets = switchOp.getTargets();
+  if (literals) {
+    for (auto [literal, target] : llvm::zip_equal(*literals, targets)) {
+      arguments.push_back(literal.getLimitedValue());
+      uint32_t targetLabelID = getOrCreateBlockID(target);
+      arguments.push_back(targetLabelID);
+    }
+  }
+
+  if (failed(emitDebugLine(functionBody, switchOp.getLoc())))
+    return failure();
+  encodeInstructionInto(functionBody, spirv::Opcode::OpSwitch, arguments);
+  return success();
+}
+
 LogicalResult Serializer::processAddressOfOp(spirv::AddressOfOp addressOfOp) {
   auto varName = addressOfOp.getVariable();
   auto variableID = getVariableID(varName);
@@ -855,10 +1035,38 @@ Serializer::processOp<spirv::ExecutionModeOp>(spirv::ExecutionModeOp op) {
   if (values) {
     for (auto &intVal : values.getValue()) {
       operands.push_back(static_cast<uint32_t>(
-          llvm::cast<IntegerAttr>(intVal).getValue().getZExtValue()));
+          cast<IntegerAttr>(intVal).getValue().getZExtValue()));
     }
   }
   encodeInstructionInto(executionModes, spirv::Opcode::OpExecutionMode,
+                        operands);
+  return success();
+}
+
+template <>
+LogicalResult
+Serializer::processOp<spirv::ExecutionModeIdOp>(spirv::ExecutionModeIdOp op) {
+  SmallVector<uint32_t, 4> operands;
+  // Add the function <id>.
+  uint32_t funcID = getFunctionID(op.getFn());
+  if (!funcID)
+    return op.emitError("missing <id> for function ")
+           << op.getFn()
+           << "; function needs to be serialized before ExecutionModeIdOp is "
+              "serialized";
+
+  operands.push_back(funcID);
+  operands.push_back(static_cast<uint32_t>(op.getExecutionMode()));
+
+  for (Attribute refVal : op.getValues().getValue()) {
+    uint32_t id = getSpecConstID(cast<FlatSymbolRefAttr>(refVal).getValue());
+    if (!id)
+      return op.emitError("unknown <id> for specialization constant ")
+             << cast<FlatSymbolRefAttr>(refVal).getValue();
+
+    operands.push_back(id);
+  }
+  encodeInstructionInto(executionModes, spirv::Opcode::OpExecutionModeId,
                         operands);
   return success();
 }

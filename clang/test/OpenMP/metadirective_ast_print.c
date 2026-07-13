@@ -2,17 +2,25 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -triple x86_64-unknown-linux-gnu -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT
 
-// RUN: %clang_cc1 -verify -fopenmp -triple amdgcn-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT-AMDGCN
+// RUN: %clang_cc1 -verify -fopenmp -triple amdgcn-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT-GPU
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -triple amdgcn-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT-AMDGCN
+// RUN: %clang_cc1 -verify -fopenmp-simd -triple amdgcn-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT-GPU
+
+// RUN: %clang_cc1 -verify -fopenmp -triple spirv64-intel -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT-GPU
+
+// RUN: %clang_cc1 -verify -fopenmp-simd -triple spirv64-intel -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT-GPU
 
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -DOMP52 -triple x86_64-unknown-linux-gnu -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=OMP52
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=52 -DOMP52 -triple x86_64-unknown-linux-gnu -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=OMP52
 
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -DOMP52 -triple amdgcn-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=OMP52-AMDGCN
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -DOMP52 -triple amdgcn-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=OMP52-GPU
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=52 -DOMP52 -triple amdgcn-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=OMP52-AMDGCN
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=52 -DOMP52 -triple amdgcn-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=OMP52-GPU
+
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -DOMP52 -triple spirv64-intel -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=OMP52-GPU
+
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=52 -DOMP52 -triple spirv64-intel -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=OMP52-GPU
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -77,6 +85,12 @@ void foo1(void) {
   for (int i = 0; i < 100; i++)
   ;
 
+#pragma omp metadirective when(device={arch("spirv64")}: \
+                                teams distribute parallel for)\
+                                otherwise(parallel for)
+  for (int i = 0; i < 100; i++)
+  ;
+
 #pragma omp metadirective when(implementation = {extension(match_all)} \
                                : nothing) otherwise(parallel for)
   for (int i = 0; i < 16; i++)
@@ -134,8 +148,8 @@ void foo1(void) {
 // OMP52-NEXT: for (int i = 0; i < 16; i++) {
 // OMP52-NEXT: #pragma omp simd
 // OMP52-NEXT: for (int j = 0; j < 16; j++)
-// OMP52-AMDGCN: #pragma omp teams distribute parallel for
-// OMP52-AMDGCN-NEXT: for (int i = 0; i < 100; i++)
+// OMP52-GPU: #pragma omp teams distribute parallel for
+// OMP52-GPU-NEXT: for (int i = 0; i < 100; i++)
 // OMP52: for (int i = 0; i < 16; i++)
 // OMP52: for (int i = 0; i < 16; i++)
 
@@ -197,6 +211,12 @@ void foo2(void) {
                                 default(parallel for)
   for (int i = 0; i < 100; i++)
   ;
+
+#pragma omp metadirective when(device={arch("spirv64")}: \
+                                teams distribute parallel for)\
+                                default(parallel for)
+  for (int i = 0; i < 100; i++)
+  ;  
 
 #pragma omp metadirective when(implementation = {extension(match_all)} \
                                : nothing) default(parallel for)
@@ -266,8 +286,8 @@ void foo2(void) {
 // DEFAULT-NEXT: for (int i = 0; i < 16; i++) {
 // DEFAULT-NEXT: #pragma omp simd
 // DEFAULT-NEXT: for (int j = 0; j < 16; j++)
-// DEFAULT-AMDGCN: #pragma omp teams distribute parallel for
-// DEFAULT-AMDGCN-NEXT: for (int i = 0; i < 100; i++)
+// DEFAULT-GPU: #pragma omp teams distribute parallel for
+// DEFAULT-GPU-NEXT: for (int i = 0; i < 100; i++)
 // DEFAULT: for (int i = 0; i < 16; i++)
 // DEFAULT: for (int i = 0; i < 16; i++)
 

@@ -1,4 +1,4 @@
-; RUN: not llc -mcpu=sm_100a -mtriple=nvptx64 -mattr=+ptx86 %s 2>&1 | FileCheck %s
+; RUN: not llc -mcpu=sm_100a -mtriple=nvptx64 -mattr=+ptx86 %s -o /dev/null 2>&1 | FileCheck %s
 
 ; Test that we get a clear error message when using an unsupported syncscope.
 

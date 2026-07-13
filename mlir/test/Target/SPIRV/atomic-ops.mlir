@@ -36,6 +36,10 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Linkage, Addre
     %12 = spirv.AtomicCompareExchange <Workgroup> <Release> <Acquire> %ptr, %value, %comparator: !spirv.ptr<i32, Workgroup>
     // CHECK: spirv.AtomicExchange <Workgroup> <Release> %{{.*}}, %{{.*}} : !spirv.ptr<i32, Workgroup>
     %13 = spirv.AtomicExchange <Workgroup> <Release> %ptr, %value: !spirv.ptr<i32, Workgroup>
+    // CHECK: spirv.AtomicLoad <Workgroup> <Acquire> %{{.*}} : !spirv.ptr<i32, Workgroup>
+    %14 = spirv.AtomicLoad <Workgroup> <Acquire> %ptr : !spirv.ptr<i32, Workgroup>
+    // CHECK: spirv.AtomicStore <Workgroup> <Release> %{{.*}}, %{{.*}} : !spirv.ptr<i32, Workgroup>
+    spirv.AtomicStore <Workgroup> <Release> %ptr, %value : !spirv.ptr<i32, Workgroup>
     spirv.ReturnValue %0: i32
   }
 
@@ -43,6 +47,10 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Linkage, Addre
   spirv.func @test_float_atomics(%ptr: !spirv.ptr<f32, Workgroup>, %value: f32) -> f32 "None" {
     // CHECK: spirv.EXT.AtomicFAdd <Workgroup> <Acquire> %{{.*}}, %{{.*}} : !spirv.ptr<f32, Workgroup>
     %0 = spirv.EXT.AtomicFAdd <Workgroup> <Acquire> %ptr, %value : !spirv.ptr<f32, Workgroup>
+    // CHECK: spirv.AtomicLoad <Workgroup> <Acquire> %{{.*}} : !spirv.ptr<f32, Workgroup>
+    %1 = spirv.AtomicLoad <Workgroup> <Acquire> %ptr : !spirv.ptr<f32, Workgroup>
+    // CHECK: spirv.AtomicStore <Workgroup> <Release> %{{.*}}, %{{.*}} : !spirv.ptr<f32, Workgroup>
+    spirv.AtomicStore <Workgroup> <Release> %ptr, %value : !spirv.ptr<f32, Workgroup>
     spirv.ReturnValue %0: f32
   }
 }

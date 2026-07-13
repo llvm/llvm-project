@@ -1,0 +1,5 @@
+InheritParentConfig: true
+# FIXME(vbvictor) enable this check when https://github.com/llvm/llvm-project/issues/166750 is fixed
+# and github runners are updated to include the fix
+Checks: >
+  -llvm-header-guard

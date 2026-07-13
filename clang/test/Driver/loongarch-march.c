@@ -1,3 +1,11 @@
+// RUN: %clang --target=loongarch32 -march=la32v1.0 -fsyntax-only %s -### 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=CC1-LA32V1P0
+// RUN: %clang --target=loongarch32 -march=la32v1.0 -S -emit-llvm %s -o - | \
+// RUN:   FileCheck %s --check-prefix=IR-LA32V1P0
+// RUN: %clang --target=loongarch32 -march=la32rv1.0 -fsyntax-only %s -### 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=CC1-LA32RV1P0
+// RUN: %clang --target=loongarch32 -march=la32rv1.0 -S -emit-llvm %s -o - | \
+// RUN:   FileCheck %s --check-prefix=IR-LA32RV1P0
 // RUN: %clang --target=loongarch64 -march=loongarch64 -fsyntax-only %s -### 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=CC1-LOONGARCH64
 // RUN: %clang --target=loongarch64 -march=la464 -fsyntax-only %s -### 2>&1 | \
@@ -18,6 +26,18 @@
 // RUN:   FileCheck %s --check-prefix=IR-LA64V1P1
 // RUN: %clang --target=loongarch64 -march=la664 -S -emit-llvm %s -o - | \
 // RUN:   FileCheck %s --check-prefix=IR-LA664
+
+// CC1-LA32V1P0: "-target-cpu" "loongarch32"
+// CC1-LA32V1P0-NOT: "-target-feature"
+// CC1-LA32V1P0: "-target-feature" "+32bit" "-target-feature" "+32s"
+// CC1-LA32V1P0-NOT: "-target-feature"
+// CC1-LA32V1P0: "-target-abi" "ilp32d"
+
+// CC1-LA32RV1P0: "-target-cpu" "loongarch32"
+// CC1-LA32RV1P0-NOT: "-target-feature"
+// CC1-LA32RV1P0: "-target-feature" "+32bit"
+// CC1-LA32RV1P0-NOT: "-target-feature"
+// CC1-LA32RV1P0: "-target-abi" "ilp32d"
 
 // CC1-LOONGARCH64: "-target-cpu" "loongarch64"
 // CC1-LOONGARCH64-NOT: "-target-feature"
@@ -48,6 +68,9 @@
 // CC1-LA664: "-target-feature" "+relax" "-target-feature" "+64bit" "-target-feature" "+f" "-target-feature" "+d" "-target-feature" "+lsx" "-target-feature" "+lasx" "-target-feature" "+ual" "-target-feature" "+frecipe" "-target-feature" "+lam-bh" "-target-feature" "+lamcas" "-target-feature" "+ld-seq-sa" "-target-feature" "+div32" "-target-feature" "+scq"
 // CC1-LA664-NOT: "-target-feature"
 // CC1-LA664: "-target-abi" "lp64d"
+
+// IR-LA32V1P0: attributes #[[#]] ={{.*}}"target-cpu"="loongarch32" {{.*}}"target-features"="+32bit,+32s"
+// IR-LA32RV1P0: attributes #[[#]] ={{.*}}"target-cpu"="loongarch32" {{.*}}"target-features"="+32bit"
 
 // IR-LOONGARCH64: attributes #[[#]] ={{.*}}"target-cpu"="loongarch64" {{.*}}"target-features"="+64bit,+d,+f,+relax,+ual"
 // IR-LA464: attributes #[[#]] ={{.*}}"target-cpu"="la464" {{.*}}"target-features"="+64bit,+d,+f,+lasx,+lsx,+relax,+ual"

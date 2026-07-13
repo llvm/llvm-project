@@ -35,18 +35,6 @@ raw_ostream &BranchProbability::print(raw_ostream &OS) const {
 LLVM_DUMP_METHOD void BranchProbability::dump() const { print(dbgs()) << '\n'; }
 #endif
 
-BranchProbability::BranchProbability(uint32_t Numerator, uint32_t Denominator) {
-  assert(Denominator > 0 && "Denominator cannot be 0!");
-  assert(Numerator <= Denominator && "Probability cannot be bigger than 1!");
-  if (Denominator == D)
-    N = Numerator;
-  else {
-    uint64_t Prob64 =
-        (Numerator * static_cast<uint64_t>(D) + Denominator / 2) / Denominator;
-    N = static_cast<uint32_t>(Prob64);
-  }
-}
-
 BranchProbability
 BranchProbability::getBranchProbability(uint64_t Numerator,
                                         uint64_t Denominator) {
@@ -58,6 +46,11 @@ BranchProbability::getBranchProbability(uint64_t Numerator,
     Scale++;
   }
   return BranchProbability(Numerator >> Scale, Denominator);
+}
+
+BranchProbability BranchProbability::getBranchProbability(double Prob) {
+  assert(0 <= Prob && Prob <= 1 && "Probability must be between 0 and 1!");
+  return BranchProbability(std::round(Prob * D), D);
 }
 
 // If ConstD is not zero, then replace D by ConstD so that division and modulo

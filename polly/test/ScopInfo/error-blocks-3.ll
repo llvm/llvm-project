@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-scops -polly-detect-keep-going -polly-allow-nonaffine -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -polly-detect-keep-going -polly-allow-nonaffine -disable-output < %s | FileCheck %s
 ;
 ; The instruction
 ;

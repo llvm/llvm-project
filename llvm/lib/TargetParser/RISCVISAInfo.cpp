@@ -14,7 +14,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <array>
 #include <atomic>
 #include <optional>
 #include <string>
@@ -594,7 +593,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
   if (XLen == 0 || Arch.empty())
     return getError(
-        "string must begin with rv32{i,e,g}, rv64{i,e,g}, or a supported "
+        "string must begin with rv32{i,e,g,y}, rv64{i,e,g,y}, or a supported "
         "profile name");
 
   std::unique_ptr<RISCVISAInfo> ISAInfo(new RISCVISAInfo(XLen));
@@ -607,11 +606,11 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
   unsigned Major, Minor, ConsumeLength;
 
-  // First letter should be 'e', 'i' or 'g'.
+  // First letter should be 'e', 'i', 'g' or 'y'.
   switch (Baseline) {
   default:
     return getError("first letter after \'rv" + Twine(XLen) +
-                    "\' should be 'e', 'i' or 'g'");
+                    "\' should be 'e', 'i', 'g' or 'y'");
   case 'e':
   case 'i':
     // Baseline is `i` or `e`
@@ -622,6 +621,22 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
     ISAInfo->Exts[std::string(1, Baseline)] = {Major, Minor};
     break;
+  case 'y': {
+    // If the first character is 'y', this is equivalent to "iy".
+    // TODO: arch string syntax for RVE+RVY (and y in non-first position) will
+    // be included following conclusion of "long base name" syntax
+    // https://lists.riscv.org/g/tech-unprivileged/message/1134
+    if (auto E = getExtensionVersion("y", Arch, Major, Minor, ConsumeLength,
+                                     EnableExperimentalExtension,
+                                     ExperimentalExtensionVersionCheck))
+      return std::move(E);
+
+    ISAInfo->Exts["y"] = {Major, Minor};
+    auto IVersion = findDefaultVersion("i");
+    assert(IVersion && "Default 'i' extension version not found?");
+    ISAInfo->Exts["i"] = {IVersion->Major, IVersion->Minor};
+    break;
+  }
   case 'g':
     // g expands to extensions in RISCVGImplications.
     if (!Arch.empty() && isDigit(Arch.front()))
@@ -731,6 +746,10 @@ static Error getIncompatibleError(StringRef Ext1, StringRef Ext2) {
                   "' extensions are incompatible");
 }
 
+static Error getBaseIncompatibleError(StringRef Ext, StringRef Base) {
+  return getError("'" + Ext + "' is incompatible with " + Base + " base");
+}
+
 static Error getExtensionRequiresError(StringRef Ext, StringRef ReqExt) {
   return getError("'" + Ext + "' requires '" + ReqExt +
                   "' extension to also be specified");
@@ -739,7 +758,6 @@ static Error getExtensionRequiresError(StringRef Ext, StringRef ReqExt) {
 Error RISCVISAInfo::checkDependency() {
   bool HasE = Exts.count("e") != 0;
   bool HasI = Exts.count("i") != 0;
-  bool HasC = Exts.count("c") != 0;
   bool HasF = Exts.count("f") != 0;
   bool HasD = Exts.count("d") != 0;
   bool HasZfinx = Exts.count("zfinx") != 0;
@@ -747,14 +765,19 @@ Error RISCVISAInfo::checkDependency() {
   bool HasZvl = MinVLen != 0;
   bool HasZcmp = Exts.count("zcmp") != 0;
   bool HasXqccmp = Exts.count("xqccmp") != 0;
+  bool HasZcmt = Exts.count("zcmt") != 0;
+  bool HasXqccmt = Exts.count("xqccmt") != 0;
 
-  static constexpr StringLiteral XqciExts[] = {
-      {"xqcia"},   {"xqciac"},  {"xqcibi"},  {"xqcibm"},  {"xqcicli"},
-      {"xqcicm"},  {"xqcics"},  {"xqcicsr"}, {"xqciint"}, {"xqciio"},
-      {"xqcilb"},  {"xqcili"},  {"xqcilia"}, {"xqcilo"},  {"xqcilsm"},
-      {"xqcisim"}, {"xqcisls"}, {"xqcisync"}};
   static constexpr StringLiteral ZcdOverlaps[] = {
-      {"zcmt"}, {"zcmp"}, {"xqccmp"}, {"xqciac"}, {"xqcicm"}};
+      {"zcmt"}, {"zcmp"}, {"xqccmp"}, {"xqccmt"}, {"xqciac"}, {"xqcicm"},
+  };
+  static constexpr StringLiteral RV32Only[] = {
+      {"zcf"},     {"zclsd"},   {"zilsd"},    {"xwchc"},   {"xqci"},
+      {"xqcia"},   {"xqciac"},  {"xqcibi"},   {"xqcibm"},  {"xqcicli"},
+      {"xqcicm"},  {"xqcics"},  {"xqcicsr"},  {"xqciint"}, {"xqciio"},
+      {"xqcilb"},  {"xqcili"},  {"xqcilia"},  {"xqcilo"},  {"xqcilsm"},
+      {"xqcisim"}, {"xqcisls"}, {"xqcisync"},
+  };
 
   if (HasI && HasE)
     return getIncompatibleError("i", "e");
@@ -771,20 +794,17 @@ Error RISCVISAInfo::checkDependency() {
                              "'xsfvfbfexp16e' requires 'zvfbfmin' or "
                              "'zvfbfa' extension to also be specified");
 
-  if (HasD && (HasC || Exts.count("zcd")))
+  if (Exts.count("zcd"))
     for (auto Ext : ZcdOverlaps)
       if (Exts.count(Ext.str()))
-        return getError(
-            Twine("'") + Ext + "' extension is incompatible with '" +
-            (HasC ? "c" : "zcd") + "' extension when 'd' extension is enabled");
+        return getIncompatibleError(Ext, "zcd");
 
-  if (XLen != 32 && Exts.count("zcf"))
-    return getError("'zcf' is only supported for 'rv32'");
+  if (XLen != 32)
+    for (auto Ext : RV32Only)
+      if (Exts.count(Ext.str()))
+        return getError(Twine("'") + Ext + "' is only supported for 'rv32'");
 
   if (Exts.count("xwchc") != 0) {
-    if (XLen != 32)
-      return getError("'xwchc' is only supported for 'rv32'");
-
     if (HasD)
       return getIncompatibleError("d", "xwchc");
 
@@ -792,23 +812,31 @@ Error RISCVISAInfo::checkDependency() {
       return getIncompatibleError("xwchc", "zcb");
   }
 
-  if (Exts.count("zclsd") != 0) {
-    if (XLen != 32)
-      return getError("'zclsd' is only supported for 'rv32'");
+  if (Exts.count("zclsd") != 0 && Exts.count("zcf") != 0)
+    return getIncompatibleError("zclsd", "zcf");
 
-    if (Exts.count("zcf") != 0)
-      return getIncompatibleError("zclsd", "zcf");
+  if (Exts.count("y") != 0) {
+    if (XLen == 32) {
+      // On RV32Y systems the zclsd/zcf encodings are used for y load/stores.
+      if (Exts.count("zclsd") != 0)
+        return getBaseIncompatibleError("zclsd", "rv32y");
+      if (Exts.count("zcf") != 0)
+        return getBaseIncompatibleError("zcf", "rv32y");
+    } else {
+      // On RV64Y systems the zcd encodings are used for y load/stores.
+      if (Exts.count("zcd") != 0)
+        return getBaseIncompatibleError("zcd", "rv64y");
+      for (auto Ext : ZcdOverlaps)
+        if (Exts.count(Ext.str()))
+          return getBaseIncompatibleError(Ext, "rv64y");
+    }
   }
-
-  if (XLen != 32 && Exts.count("zilsd") != 0)
-    return getError("'zilsd' is only supported for 'rv32'");
-
-  for (auto Ext : XqciExts)
-    if (Exts.count(Ext.str()) && (XLen != 32))
-      return getError("'" + Twine(Ext) + "'" + " is only supported for 'rv32'");
 
   if (HasZcmp && HasXqccmp)
     return getIncompatibleError("zcmp", "xqccmp");
+
+  if (HasZcmt && HasXqccmt)
+    return getIncompatibleError("zcmt", "xqccmt");
 
   return Error::success();
 }
@@ -857,23 +885,75 @@ void RISCVISAInfo::updateImplication() {
     }
   }
 
-  // Add Zcd if C and D are enabled.
-  if (Exts.count("c") && Exts.count("d") && !Exts.count("zcd")) {
+  // Add Zcd if C and D are enabled and we aren't targeting 64-bit RVY.
+  if (Exts.count("c") && Exts.count("d") && !Exts.count("zcd") &&
+      (XLen == 32 || !Exts.count("y"))) {
     auto Version = findDefaultVersion("zcd");
     Exts["zcd"] = *Version;
   }
 
-  // Add Zcf if C and F are enabled on RV32.
-  if (XLen == 32 && Exts.count("c") && Exts.count("f") && !Exts.count("zcf")) {
+  // Add Zcf if C and F are enabled on RV32 and Y is not enabled.
+  if (XLen == 32 && Exts.count("c") && Exts.count("f") && !Exts.count("zcf") &&
+      !Exts.count("y")) {
     auto Version = findDefaultVersion("zcf");
     Exts["zcf"] = *Version;
   }
 
-  // Add Zcf if Zce and F are enabled on RV32.
+  // Add Zcf if Zce and F are enabled on RV32 and Y is not enabled.
   if (XLen == 32 && Exts.count("zce") && Exts.count("f") &&
-      !Exts.count("zcf")) {
+      !Exts.count("zcf") && !Exts.count("y")) {
     auto Version = findDefaultVersion("zcf");
     Exts["zcf"] = *Version;
+  }
+
+  // Add C if Zca is enabled and the conditions are met.
+  // This follows the RISC-V spec rules for MISA.C and matches GCC behavior
+  // (PR119122). The rule is:
+  // For RV32:
+  //   - No F and no D: Zca alone implies C
+  //   - F but no D: Zca + Zcf implies C
+  //   - F and D: Zca + Zcf + Zcd implies C
+  // For RV64:
+  //   - No D: Zca alone implies C
+  //   - D: Zca + Zcd implies C
+  // For RV32Y (Zcf incompatible):
+  //   - No D (but maybe F): Zca alone implies C
+  //   - F and D: Zca + Zcd implies C
+  // For RV64Y (Zcf and Zcd incompatible):
+  //   - Zca alone implies C
+  if (Exts.count("zca") && !Exts.count("c")) {
+    bool ShouldAddC = false;
+    if (XLen == 32) {
+      if (Exts.count("d"))
+        ShouldAddC =
+            Exts.count("zcd") && (Exts.count("y") || Exts.count("zcf"));
+      else if (Exts.count("f"))
+        ShouldAddC = Exts.count("y") || Exts.count("zcf");
+      else
+        ShouldAddC = true;
+    } else if (XLen == 64) {
+      if (Exts.count("d"))
+        ShouldAddC = Exts.count("y") || Exts.count("zcd");
+      else
+        ShouldAddC = true;
+    }
+    if (ShouldAddC) {
+      auto Version = findDefaultVersion("c");
+      Exts["c"] = *Version;
+    }
+  }
+
+  if (!Exts.count("zce") && Exts.count("zca") && Exts.count("zcb") &&
+      Exts.count("zcmp") && Exts.count("zcmt")) {
+    bool ShouldAddZce = false;
+    if (XLen == 32) {
+      ShouldAddZce = !Exts.count("f") || Exts.count("zcf") || Exts.count("y");
+    } else if (XLen == 64) {
+      // Zce is incompatible with RV64Y, only add it if Y is not enabled.
+      ShouldAddZce = !Exts.count("y");
+    }
+    if (ShouldAddZce)
+      Exts["zce"] = *findDefaultVersion("zce");
   }
 
   // Handle I/E after implications have been resolved, in case either
@@ -893,8 +973,9 @@ void RISCVISAInfo::updateImplication() {
 }
 
 static constexpr StringLiteral CombineIntoExts[] = {
-    {"a"},     {"b"},     {"zk"},   {"zkn"},   {"zks"},   {"zvkn"},
-    {"zvknc"}, {"zvkng"}, {"zvks"}, {"zvksc"}, {"zvksg"},
+    {"a"},     {"b"},     {"zk"},       {"zkn"},  {"zks"},
+    {"zvkn"},  {"zvknc"}, {"zvkng"},    {"zvks"}, {"zvksc"},
+    {"zvksg"}, {"xqci"},  {"xsfmm32a"},
 };
 
 void RISCVISAInfo::updateCombination() {
@@ -1057,12 +1138,6 @@ std::string RISCVISAInfo::getTargetFeatureForExtension(StringRef Ext) {
   return isExperimentalExtension(Name) ? "experimental-" + Name.str()
                                        : Name.str();
 }
-
-struct RISCVExtBit {
-  const StringLiteral ext;
-  uint8_t groupid;
-  uint8_t bitpos;
-};
 
 struct RISCVExtensionBitmask {
   const char *Name;

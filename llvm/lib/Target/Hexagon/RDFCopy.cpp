@@ -26,14 +26,16 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
-#include <utility>
 
 using namespace llvm;
 using namespace rdf;
 
 #ifndef NDEBUG
-static cl::opt<unsigned> CpLimit("rdf-cp-limit", cl::init(0), cl::Hidden);
-static unsigned CpCount = 0;
+cl::opt<unsigned> RDFCpLimit(
+    "rdf-cp-limit", cl::init(0), cl::Hidden,
+    cl::desc(
+        "Limit number of copy propagations in RDF-based copy propagation"));
+static unsigned RDFCpCount = 0;
 #endif
 
 bool CopyPropagation::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
@@ -44,11 +46,11 @@ bool CopyPropagation::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
       const MachineOperand &Src = MI->getOperand(1);
       RegisterRef DstR = DFG.makeRegRef(Dst.getReg(), Dst.getSubReg());
       RegisterRef SrcR = DFG.makeRegRef(Src.getReg(), Src.getSubReg());
-      assert(Register::isPhysicalRegister(DstR.Reg));
-      assert(Register::isPhysicalRegister(SrcR.Reg));
+      assert(DstR.asMCReg().isPhysical());
+      assert(SrcR.asMCReg().isPhysical());
       const TargetRegisterInfo &TRI = DFG.getTRI();
-      if (TRI.getMinimalPhysRegClass(DstR.Reg) !=
-          TRI.getMinimalPhysRegClass(SrcR.Reg))
+      if (TRI.getMinimalPhysRegClass(DstR.asMCReg()) !=
+          TRI.getMinimalPhysRegClass(SrcR.asMCReg()))
         return false;
       if (!DFG.isTracked(SrcR) || !DFG.isTracked(DstR))
         return false;
@@ -66,7 +68,7 @@ void CopyPropagation::recordCopy(NodeAddr<StmtNode*> SA, EqualityMap &EM) {
   Copies.push_back(SA.Id);
 
   for (auto I : EM) {
-    auto FS = DefM.find(I.second.Reg);
+    auto FS = DefM.find(I.second.Id);
     if (FS == DefM.end() || FS->second.empty())
       continue; // Undefined source
     RDefMap[I.second][SA.Id] = FS->second.top()->Id;
@@ -93,7 +95,7 @@ void CopyPropagation::updateMap(NodeAddr<InstrNode*> IA) {
   for (auto &R : RDefMap) {
     if (!RRs.count(R.first))
       continue;
-    auto F = DefM.find(R.first.Reg);
+    auto F = DefM.find(R.first.Id);
     if (F == DefM.end() || F->second.empty())
       continue;
     R.second[IA.Id] = F->second.top()->Id;
@@ -152,26 +154,26 @@ bool CopyPropagation::run() {
 
   bool Changed = false;
 #ifndef NDEBUG
-  bool HasLimit = CpLimit.getNumOccurrences() > 0;
+  bool HasLimit = RDFCpLimit.getNumOccurrences() > 0;
 #endif
 
-  auto MinPhysReg = [this] (RegisterRef RR) -> unsigned {
+  auto MinPhysReg = [this](RegisterRef RR) -> MCRegister {
     const TargetRegisterInfo &TRI = DFG.getTRI();
-    const TargetRegisterClass &RC = *TRI.getMinimalPhysRegClass(RR.Reg);
+    const TargetRegisterClass &RC = *TRI.getMinimalPhysRegClass(RR.asMCReg());
     if ((RC.LaneMask & RR.Mask) == RC.LaneMask)
-      return RR.Reg;
-    for (MCSubRegIndexIterator S(RR.Reg, &TRI); S.isValid(); ++S)
+      return RR.asMCReg();
+    for (MCSubRegIndexIterator S(RR.asMCReg(), &TRI); S.isValid(); ++S)
       if (RR.Mask == TRI.getSubRegIndexLaneMask(S.getSubRegIndex()))
         return S.getSubReg();
     llvm_unreachable("Should have found a register");
-    return 0;
+    return MCRegister();
   };
 
   const PhysicalRegisterInfo &PRI = DFG.getPRI();
 
   for (NodeId C : Copies) {
 #ifndef NDEBUG
-    if (HasLimit && CpCount >= CpLimit)
+    if (HasLimit && RDFCpCount >= RDFCpLimit)
       break;
 #endif
     auto SA = DFG.addr<InstrNode*>(C);
@@ -215,7 +217,7 @@ bool CopyPropagation::run() {
                  << *NodeAddr<StmtNode*>(IA).Addr->getCode();
         }
 
-        unsigned NewReg = MinPhysReg(SR);
+        MCRegister NewReg = MinPhysReg(SR);
         Op.setReg(NewReg);
         Op.setSubReg(0);
         DFG.unlinkUse(UA, false);
@@ -227,11 +229,11 @@ bool CopyPropagation::run() {
         }
 
         Changed = true;
-  #ifndef NDEBUG
-        if (HasLimit && CpCount >= CpLimit)
+#ifndef NDEBUG
+        if (HasLimit && RDFCpCount >= RDFCpLimit)
           break;
-        CpCount++;
-  #endif
+        RDFCpCount++;
+#endif
 
         auto FC = CopyMap.find(IA.Id);
         if (FC != CopyMap.end()) {

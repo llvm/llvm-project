@@ -27,25 +27,10 @@ int main(int argc, char** argv) {
     return std::is_permutation(first1, last1, first2, last2);
   };
   auto std_is_permutation_3leg_pred = [](auto first1, auto last1, auto first2, auto) {
-    return std::is_permutation(first1, last1, first2, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x == y;
-    });
+    return std::is_permutation(first1, last1, first2, [](auto x, auto y) { return x == y; });
   };
   auto std_is_permutation_4leg_pred = [](auto first1, auto last1, auto first2, auto last2) {
-    return std::is_permutation(first1, last1, first2, last2, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x == y;
-    });
-  };
-  auto ranges_is_permutation_4leg_pred = [](auto first1, auto last1, auto first2, auto last2) {
-    return std::ranges::is_permutation(first1, last1, first2, last2, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x == y;
-    });
+    return std::is_permutation(first1, last1, first2, last2, [](auto x, auto y) { return x == y; });
   };
 
   auto register_benchmarks = [&](auto bm, std::string comment) {
@@ -72,12 +57,6 @@ int main(int argc, char** argv) {
         "std::is_permutation(deque<int>) (4leg) (" + comment + ")", std_is_permutation_4leg);
     bm.template operator()<std::list<int>>(
         "std::is_permutation(list<int>) (4leg) (" + comment + ")", std_is_permutation_4leg);
-    bm.template operator()<std::vector<int>>(
-        "rng::is_permutation(vector<int>) (4leg) (" + comment + ")", std::ranges::is_permutation);
-    bm.template operator()<std::deque<int>>(
-        "rng::is_permutation(deque<int>) (4leg) (" + comment + ")", std::ranges::is_permutation);
-    bm.template operator()<std::list<int>>(
-        "rng::is_permutation(list<int>) (4leg) (" + comment + ")", std::ranges::is_permutation);
 
     // {std,ranges}::is_permutation(it, it, it, it, pred)
     bm.template operator()<std::vector<int>>(
@@ -86,12 +65,6 @@ int main(int argc, char** argv) {
         "std::is_permutation(deque<int>) (4leg, pred) (" + comment + ")", std_is_permutation_4leg_pred);
     bm.template operator()<std::list<int>>(
         "std::is_permutation(list<int>) (4leg, pred) (" + comment + ")", std_is_permutation_4leg_pred);
-    bm.template operator()<std::vector<int>>(
-        "rng::is_permutation(vector<int>) (4leg, pred) (" + comment + ")", ranges_is_permutation_4leg_pred);
-    bm.template operator()<std::deque<int>>(
-        "rng::is_permutation(deque<int>) (4leg, pred) (" + comment + ")", ranges_is_permutation_4leg_pred);
-    bm.template operator()<std::list<int>>(
-        "rng::is_permutation(list<int>) (4leg, pred) (" + comment + ")", ranges_is_permutation_4leg_pred);
   };
 
   // Benchmark {std,ranges}::is_permutation where both sequences share a common prefix (this can be optimized).

@@ -18,11 +18,11 @@ body: |
     ; CHECK-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; CHECK-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[V_ADD_U32_e32_]], implicit $exec
     ; CHECK-NEXT: $m0 = S_MOV_B32 0
-    ; CHECK-NEXT: BUFFER_LOAD_DWORDX4_LDS_OFFEN [[DEF]], [[DEF1]], 0, 0, 0, 0, implicit $exec, implicit $m0
+    ; CHECK-NEXT: BUFFER_LOAD_DWORDX4_LDS_OFFEN [[DEF]], [[DEF1]], 0, 0, 0, 0, 0, implicit $exec, implicit $m0
     ; CHECK-NEXT: [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[V_ADD_U32_e32_]], [[V_ADD_U32_e32_1]], implicit $exec
     ; CHECK-NEXT: [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[V_ADD_U32_e32_1]], [[V_ADD_U32_e32_2]], implicit $exec
     ; CHECK-NEXT: $m0 = S_MOV_B32 1
-    ; CHECK-NEXT: BUFFER_LOAD_DWORDX4_LDS_OFFEN [[DEF]], [[DEF1]], 0, 0, 0, 0, implicit $exec, implicit $m0
+    ; CHECK-NEXT: BUFFER_LOAD_DWORDX4_LDS_OFFEN [[DEF]], [[DEF1]], 0, 0, 0, 0, 0, implicit $exec, implicit $m0
     ; CHECK-NEXT: [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[V_ADD_U32_e32_2]], [[V_ADD_U32_e32_3]], implicit $exec
     ; CHECK-NEXT: [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[V_ADD_U32_e32_3]], [[V_ADD_U32_e32_4]], implicit $exec
     ; CHECK-NEXT: [[V_ADD_U32_e32_6:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[V_ADD_U32_e32_4]], [[V_ADD_U32_e32_5]], implicit $exec
@@ -41,9 +41,9 @@ body: |
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
     %5:vgpr_32 = V_ADD_U32_e32 %3, %4, implicit $exec
     $m0 = S_MOV_B32 0
-    BUFFER_LOAD_DWORDX4_LDS_OFFEN %0, %1, 0, 0, 0, 0, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORDX4_LDS_OFFEN %0, %1, 0, 0, 0, 0, 0, implicit $exec, implicit $m0
     $m0 = S_MOV_B32 1
-    BUFFER_LOAD_DWORDX4_LDS_OFFEN %0, %1, 0, 0, 0, 0, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORDX4_LDS_OFFEN %0, %1, 0, 0, 0, 0, 0, implicit $exec, implicit $m0
     %6:vgpr_32 = V_ADD_U32_e32 %4, %5, implicit $exec
     %7:vgpr_32 = V_ADD_U32_e32 %5, %6, implicit $exec
     %8:vgpr_32 = V_ADD_U32_e32 %6, %7, implicit $exec

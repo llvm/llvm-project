@@ -14,7 +14,7 @@ define void @osfx(ptr %this) comdat personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:  // %bb.0: // %invoke.cont
 ; CHECK-NEXT:    stp x19, x20, [sp, #-64]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_regp_x x19, 64
-; CHECK-NEXT:    str x21, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x21, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    .seh_save_reg x21, 16
 ; CHECK-NEXT:    stp x29, x30, [sp, #24] // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_fplr 24
@@ -48,7 +48,7 @@ define void @osfx(ptr %this) comdat personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    .seh_add_fp 24
 ; CHECK-NEXT:    ldp x29, x30, [sp, #24] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_fplr 24
-; CHECK-NEXT:    ldr x21, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x21, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x21, 16
 ; CHECK-NEXT:    ldp x19, x20, [sp], #64 // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_regp_x x19, 64
@@ -70,7 +70,7 @@ define void @osfx(ptr %this) comdat personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:  .LBB0_3: // %catch
 ; CHECK-NEXT:    stp x19, x20, [sp, #-48]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_regp_x x19, 48
-; CHECK-NEXT:    str x21, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x21, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    .seh_save_reg x21, 16
 ; CHECK-NEXT:    stp x29, x30, [sp, #24] // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_fplr 24
@@ -80,7 +80,7 @@ define void @osfx(ptr %this) comdat personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    ldp x29, x30, [sp, #24] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_fplr 24
-; CHECK-NEXT:    ldr x21, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x21, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x21, 16
 ; CHECK-NEXT:    ldp x19, x20, [sp], #48 // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_regp_x x19, 48

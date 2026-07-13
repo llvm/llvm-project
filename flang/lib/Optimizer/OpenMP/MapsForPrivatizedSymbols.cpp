@@ -36,7 +36,6 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/Support/Debug.h"
-#include <type_traits>
 
 #define DEBUG_TYPE "omp-maps-for-privatized-symbols"
 #define PDBGS() (llvm::dbgs() << "[" << DEBUG_TYPE << "]: ")
@@ -104,23 +103,33 @@ class MapsForPrivatizedSymbolsPass
     llvm::SmallVector<mlir::Value> boundsOps;
     if (needsBoundsOps(varPtr))
       genBoundsOps(builder, varPtr, boundsOps);
+    mlir::Type varType = varPtr.getType();
 
     mlir::omp::VariableCaptureKind captureKind =
         mlir::omp::VariableCaptureKind::ByRef;
-    if (fir::isa_trivial(fir::unwrapRefType(varPtr.getType())) ||
-        fir::isa_char(fir::unwrapRefType(varPtr.getType()))) {
-      if (canPassByValue(fir::unwrapRefType(varPtr.getType()))) {
+    if (fir::isa_trivial(fir::unwrapRefType(varType)) ||
+        fir::isa_char(fir::unwrapRefType(varType))) {
+      if (canPassByValue(fir::unwrapRefType(varType))) {
         captureKind = mlir::omp::VariableCaptureKind::ByCopy;
       }
     }
 
+    // Use tofrom if what we are mapping is not a trivial type. In all
+    // likelihood, it is a descriptor
+    mlir::omp::ClauseMapFlags mapFlag;
+    if (fir::isa_trivial(fir::unwrapRefType(varType)) ||
+        fir::isa_char(fir::unwrapRefType(varType)))
+      mapFlag = mlir::omp::ClauseMapFlags::to;
+    else
+      mapFlag = mlir::omp::ClauseMapFlags::to | mlir::omp::ClauseMapFlags::from;
+
     return omp::MapInfoOp::create(
-        builder, loc, varPtr.getType(), varPtr,
-        TypeAttr::get(llvm::cast<omp::PointerLikeType>(varPtr.getType())
-                          .getElementType()),
-        builder.getAttr<omp::ClauseMapFlagsAttr>(omp::ClauseMapFlags::to),
+        builder, loc, varType, varPtr,
+        TypeAttr::get(
+            llvm::cast<omp::PointerLikeType>(varType).getElementType()),
+        builder.getAttr<omp::ClauseMapFlagsAttr>(mapFlag),
         builder.getAttr<omp::VariableCaptureKindAttr>(captureKind),
-        /*varPtrPtr=*/Value{},
+        /*varPtrPtr=*/Value{}, /*varPtrPtrType=*/TypeAttr{},
         /*members=*/SmallVector<Value>{},
         /*member_index=*/mlir::ArrayAttr{},
         /*bounds=*/boundsOps,

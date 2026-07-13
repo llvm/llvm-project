@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
+#include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
@@ -256,7 +257,6 @@ formatted_bytes_str(ArrayRef<uint8_t> Bytes,
   std::string S;
   raw_string_ostream Str(S);
   Str << format_bytes(Bytes, Offset, NumPerLine, ByteGroupSize);
-  Str.flush();
   return S;
 }
 
@@ -266,7 +266,6 @@ static std::string format_bytes_with_ascii_str(
   std::string S;
   raw_string_ostream Str(S);
   Str << format_bytes_with_ascii(Bytes, Offset, NumPerLine, ByteGroupSize);
-  Str.flush();
   return S;
 }
 
@@ -434,7 +433,8 @@ TEST(raw_ostreamTest, flush_tied_to_stream_on_write) {
 
   SmallString<64> Path;
   int FD;
-  ASSERT_FALSE(sys::fs::createTemporaryFile("tietest", "", FD, Path));
+  ASSERT_FALSE(
+      sys::fs::createTemporaryFile("tietest", "", FD, Path, sys::fs::OF_Text));
   FileRemover Cleanup(Path);
   raw_fd_ostream TiedStream(FD, /*ShouldClose=*/false);
   TiedStream.SetUnbuffered();
@@ -497,7 +497,7 @@ TEST(raw_ostreamTest, flush_tied_to_stream_on_write) {
 
 static void checkFileData(StringRef FileName, StringRef GoldenData) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-      MemoryBuffer::getFileOrSTDIN(FileName);
+      MemoryBuffer::getFileOrSTDIN(FileName, /*IsText=*/true);
   EXPECT_FALSE(BufOrErr.getError());
 
   EXPECT_EQ((*BufOrErr)->getBufferSize(), GoldenData.size());
@@ -509,15 +509,15 @@ static void checkFileData(StringRef FileName, StringRef GoldenData) {
 TEST(raw_ostreamTest, raw_fd_ostream_mutual_ties) {
   SmallString<64> PathTiedTo;
   int FDTiedTo;
-  ASSERT_FALSE(
-      sys::fs::createTemporaryFile("tietest1", "", FDTiedTo, PathTiedTo));
+  ASSERT_FALSE(sys::fs::createTemporaryFile("tietest1", "", FDTiedTo,
+                                            PathTiedTo, sys::fs::OF_Text));
   FileRemover CleanupTiedTo(PathTiedTo);
   raw_fd_ostream TiedTo(FDTiedTo, /*ShouldClose=*/false);
 
   SmallString<64> PathTiedStream;
   int FDTiedStream;
   ASSERT_FALSE(sys::fs::createTemporaryFile("tietest2", "", FDTiedStream,
-                                            PathTiedStream));
+                                            PathTiedStream, sys::fs::OF_Text));
   FileRemover CleanupTiedStream(PathTiedStream);
   raw_fd_ostream TiedStream(FDTiedStream, /*ShouldClose=*/false);
 
@@ -553,14 +553,14 @@ TEST(raw_ostreamTest, reserve_stream) {
   OS << "hello";
   OS << 1;
   OS << 'w' << 'o' << 'r' << 'l' << 'd';
-  OS.flush();
   EXPECT_EQ("11111111111111111111hello1world", Str);
 }
 
 TEST(raw_ostreamTest, writeToOutputFile) {
   SmallString<64> Path;
   int FD;
-  ASSERT_FALSE(sys::fs::createTemporaryFile("foo", "bar", FD, Path));
+  ASSERT_FALSE(
+      sys::fs::createTemporaryFile("foo", "bar", FD, Path, sys::fs::OF_Text));
   FileRemover Cleanup(Path);
 
   ASSERT_THAT_ERROR(writeToOutput(Path,
@@ -571,6 +571,40 @@ TEST(raw_ostreamTest, writeToOutputFile) {
                     Succeeded());
   checkFileData(Path, "HelloWorld");
 }
+
+#ifdef __MVS__
+TEST(raw_ostreamTest, writeToOutputFileEncoding) {
+  // Create the temp file with that has ISO8859-1 encoding
+  // Then update the file.  The new file should have ISO8859-1
+  // characters and be tagged as ISO8859-1.  This test will
+  // check to make sure that the encoding used in the file matches
+  // the tag on the file.
+  SmallString<64> Path;
+  int FD = 0;
+  ASSERT_FALSE(
+      sys::fs::createTemporaryFile("foo", "bar", FD, Path, sys::fs::OF_Text));
+  setzOSFileTag(FD, 819, true);
+  FileRemover Cleanup(Path);
+
+  {
+    raw_fd_ostream out(FD, true);
+    out << "01234";
+  }
+
+  // Now update the file.
+  ASSERT_THAT_ERROR(writeToOutput(Path,
+                                  [](raw_ostream &Out) -> Error {
+                                    Out << "6789";
+                                    return Error::success();
+                                  }),
+                    Succeeded());
+
+  ErrorOr<__ccsid_t> Cssid = getzOSFileTag(Path, -1);
+  ASSERT_TRUE(Cssid);
+  EXPECT_EQ(Cssid.get(), 819);
+  checkFileData(Path, "6789");
+}
+#endif
 
 #ifndef _WIN32
 TEST(raw_ostreamTest, filePermissions) {

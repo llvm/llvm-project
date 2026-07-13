@@ -18,6 +18,7 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LSP/Logging.h"
@@ -72,7 +73,7 @@ private:
 };
 
 /// Concrete implementation of the JSONTransportInput that reads from a file.
-class JSONTransportInputOverFile : public JSONTransportInput {
+class LLVM_ABI JSONTransportInputOverFile : public JSONTransportInput {
 public:
   explicit JSONTransportInputOverFile(
       std::FILE *In, JSONStreamStyle Style = JSONStreamStyle::Standard)
@@ -103,12 +104,14 @@ public:
         PrettyOutput(PrettyOutput) {}
 
   /// The following methods are used to send a message to the LSP client.
-  void notify(StringRef Method, llvm::json::Value Params);
-  void call(StringRef Method, llvm::json::Value Params, llvm::json::Value Id);
-  void reply(llvm::json::Value Id, llvm::Expected<llvm::json::Value> Result);
+  LLVM_ABI void notify(StringRef Method, llvm::json::Value Params);
+  LLVM_ABI void call(StringRef Method, llvm::json::Value Params,
+                     llvm::json::Value Id);
+  LLVM_ABI void reply(llvm::json::Value Id,
+                      llvm::Expected<llvm::json::Value> Result);
 
   /// Start executing the JSON-RPC transport.
-  llvm::Error run(MessageHandler &Handler);
+  LLVM_ABI llvm::Error run(MessageHandler &Handler);
 
 private:
   /// Dispatches the given incoming json message to the message handler.
@@ -158,9 +161,11 @@ class MessageHandler {
 public:
   MessageHandler(JSONTransport &Transport) : Transport(Transport) {}
 
-  bool onNotify(StringRef Method, llvm::json::Value Value);
-  bool onCall(StringRef Method, llvm::json::Value Params, llvm::json::Value Id);
-  bool onReply(llvm::json::Value Id, llvm::Expected<llvm::json::Value> Result);
+  LLVM_ABI bool onNotify(StringRef Method, llvm::json::Value Value);
+  LLVM_ABI bool onCall(StringRef Method, llvm::json::Value Params,
+                       llvm::json::Value Id);
+  LLVM_ABI bool onReply(llvm::json::Value Id,
+                        llvm::Expected<llvm::json::Value> Result);
 
   template <typename T>
   static llvm::Expected<T> parse(const llvm::json::Value &Raw,

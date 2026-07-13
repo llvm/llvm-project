@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx803 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.03 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx803 -filetype=obj < %s | llvm-objdump --triple=amdgcn--amdhsa --mcpu=gfx803 -d - | FileCheck -check-prefix=DISASSEMBLY-VI %s
 
 ; Make sure we can encode and don't fail on functions which have
@@ -33,6 +33,6 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32_wrong_subtarget(ptr addr
   ret void
 }
 
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" "target-features"="+atomic-fadd-no-rtn-insts" }
+attributes #0 = { denormal_fpenv(float: preservesign) "target-features"="+atomic-fadd-no-rtn-insts" }
 
 !0 = !{}

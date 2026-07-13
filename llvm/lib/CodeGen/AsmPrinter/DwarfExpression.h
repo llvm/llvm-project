@@ -19,7 +19,6 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include <cassert>
 #include <cstdint>
-#include <iterator>
 #include <optional>
 
 namespace llvm {
@@ -240,6 +239,9 @@ public:
 
   /// Emit an unsigned constant.
   void addUnsignedConstant(const APInt &Value);
+
+  /// Emit an implicit value.
+  void addImplicitValue(const APInt &Value, const AsmPrinter &AP);
 
   /// Emit an floating point constant.
   void addConstantFP(const APFloat &Value, const AsmPrinter &AP);

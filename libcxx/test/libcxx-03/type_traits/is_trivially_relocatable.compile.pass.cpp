@@ -128,30 +128,10 @@ static_assert(!std::__libcpp_is_trivially_relocatable<std::deque<int, test_alloc
 static_assert(std::__libcpp_is_trivially_relocatable<std::exception_ptr>::value, "");
 #endif
 
-// expected
-#if TEST_STD_VER >= 23
-static_assert(std::__libcpp_is_trivially_relocatable<std::expected<int, int> >::value);
-static_assert(std::__libcpp_is_trivially_relocatable<std::expected<std::unique_ptr<int>, int>>::value);
-static_assert(std::__libcpp_is_trivially_relocatable<std::expected<int, std::unique_ptr<int>>>::value);
-static_assert(std::__libcpp_is_trivially_relocatable<std::expected<std::unique_ptr<int>, std::unique_ptr<int>>>::value);
-
-static_assert(!std::__libcpp_is_trivially_relocatable<std::expected<int, NotTriviallyCopyable>>::value);
-static_assert(!std::__libcpp_is_trivially_relocatable<std::expected<NotTriviallyCopyable, int>>::value);
-static_assert(
-    !std::__libcpp_is_trivially_relocatable<std::expected<NotTriviallyCopyable, NotTriviallyCopyable>>::value);
-#endif
-
 // locale
 #ifndef TEST_HAS_NO_LOCALIZATION
 static_assert(std::__libcpp_is_trivially_relocatable<std::locale>::value, "");
 #endif
-
-// optional
-#if TEST_STD_VER >= 17
-static_assert(std::__libcpp_is_trivially_relocatable<std::optional<int>>::value, "");
-static_assert(!std::__libcpp_is_trivially_relocatable<std::optional<NotTriviallyCopyable>>::value, "");
-static_assert(std::__libcpp_is_trivially_relocatable<std::optional<std::unique_ptr<int>>>::value, "");
-#endif // TEST_STD_VER >= 17
 
 // pair
 static_assert(std::__libcpp_is_trivially_relocatable<std::pair<int, int> >::value, "");
@@ -164,23 +144,6 @@ static_assert(std::__libcpp_is_trivially_relocatable<std::pair<std::unique_ptr<i
 
 // shared_ptr
 static_assert(std::__libcpp_is_trivially_relocatable<std::shared_ptr<NotTriviallyCopyable> >::value, "");
-
-// tuple
-#if TEST_STD_VER >= 11
-static_assert(std::__libcpp_is_trivially_relocatable<std::tuple<> >::value, "");
-
-static_assert(std::__libcpp_is_trivially_relocatable<std::tuple<int> >::value, "");
-static_assert(!std::__libcpp_is_trivially_relocatable<std::tuple<NotTriviallyCopyable> >::value, "");
-static_assert(std::__libcpp_is_trivially_relocatable<std::tuple<std::unique_ptr<int> > >::value, "");
-
-static_assert(std::__libcpp_is_trivially_relocatable<std::tuple<int, int> >::value, "");
-static_assert(!std::__libcpp_is_trivially_relocatable<std::tuple<NotTriviallyCopyable, int> >::value, "");
-static_assert(!std::__libcpp_is_trivially_relocatable<std::tuple<int, NotTriviallyCopyable> >::value, "");
-static_assert(!std::__libcpp_is_trivially_relocatable<std::tuple<NotTriviallyCopyable, NotTriviallyCopyable> >::value,
-              "");
-static_assert(std::__libcpp_is_trivially_relocatable<std::tuple<std::unique_ptr<int>, std::unique_ptr<int> > >::value,
-              "");
-#endif // TEST_STD_VER >= 11
 
 // unique_ptr
 struct NotTriviallyRelocatableDeleter {
@@ -214,21 +177,6 @@ static_assert(!std::__libcpp_is_trivially_relocatable<std::unique_ptr<int, NotTr
               "");
 static_assert(!std::__libcpp_is_trivially_relocatable<std::unique_ptr<int[], NotTriviallyRelocatablePointer> >::value,
               "");
-
-// variant
-#if TEST_STD_VER >= 17
-static_assert(std::__libcpp_is_trivially_relocatable<std::variant<int> >::value, "");
-static_assert(!std::__libcpp_is_trivially_relocatable<std::variant<NotTriviallyCopyable> >::value, "");
-static_assert(std::__libcpp_is_trivially_relocatable<std::variant<std::unique_ptr<int> > >::value, "");
-
-static_assert(std::__libcpp_is_trivially_relocatable<std::variant<int, int> >::value, "");
-static_assert(!std::__libcpp_is_trivially_relocatable<std::variant<NotTriviallyCopyable, int> >::value, "");
-static_assert(!std::__libcpp_is_trivially_relocatable<std::variant<int, NotTriviallyCopyable> >::value, "");
-static_assert(!std::__libcpp_is_trivially_relocatable<std::variant<NotTriviallyCopyable, NotTriviallyCopyable> >::value,
-              "");
-static_assert(std::__libcpp_is_trivially_relocatable<std::variant<std::unique_ptr<int>, std::unique_ptr<int> > >::value,
-              "");
-#endif // TEST_STD_VER >= 17
 
 // vector
 static_assert(std::__libcpp_is_trivially_relocatable<std::vector<int> >::value, "");

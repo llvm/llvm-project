@@ -6,11 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
-
-// LLDB Python header must be included first
 #include "lldb-python.h"
 
 #include "Interfaces/ScriptInterpreterPythonInterfaces.h"
@@ -29,6 +24,8 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/ThreadedCommunication.h"
 #include "lldb/DataFormatters/TypeSummary.h"
+#include "lldb/Host/Config.h"
+#include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Pipe.h"
@@ -46,14 +43,19 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
+
+#if defined(_WIN32)
+#include "lldb/Host/windows/ConnectionGenericFileWindows.h"
+#endif
 
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
-#include <mutex>
 #include <optional>
+#include <stdlib.h>
 #include <string>
 
 using namespace lldb;
@@ -137,16 +139,17 @@ public:
 
     m_was_already_initialized = true;
     m_gil_state = gil_state;
-    LLDB_LOGV(GetLog(LLDBLog::Script),
-              "Ensured PyGILState. Previous state = {0}",
-              m_gil_state == PyGILState_UNLOCKED ? "unlocked" : "locked");
+    LLDB_LOG_VERBOSE(
+        GetLog(LLDBLog::Script), "Ensured PyGILState. Previous state = {0}",
+        m_gil_state == PyGILState_UNLOCKED ? "unlocked" : "locked");
   }
 
   ~InitializePythonRAII() {
     if (m_was_already_initialized) {
-      LLDB_LOGV(GetLog(LLDBLog::Script),
-                "Releasing PyGILState. Returning to state = {0}",
-                m_gil_state == PyGILState_UNLOCKED ? "unlocked" : "locked");
+      LLDB_LOG_VERBOSE(GetLog(LLDBLog::Script),
+                       "Releasing PyGILState. Returning to state = {0}",
+                       m_gil_state == PyGILState_UNLOCKED ? "unlocked"
+                                                          : "locked");
       PyGILState_Release(m_gil_state);
     } else {
       // We initialized the threads in this function, just unlock the GIL.
@@ -272,6 +275,7 @@ void ScriptInterpreterPython::SharedLibraryDirectoryHelper(
   // does.
   if (this_file.GetFileNameExtension() == ".pyd") {
     this_file.RemoveLastPathComponent(); // _lldb.pyd or _lldb_d.pyd
+    this_file.RemoveLastPathComponent(); // native
     this_file.RemoveLastPathComponent(); // lldb
     llvm::StringRef libdir = LLDB_PYTHON_RELATIVE_LIBDIR;
     for (auto it = llvm::sys::path::begin(libdir),
@@ -293,17 +297,32 @@ llvm::StringRef ScriptInterpreterPython::GetPluginDescriptionStatic() {
 }
 
 void ScriptInterpreterPython::Initialize() {
-  static llvm::once_flag g_once_flag;
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(),
-                                  lldb::eScriptLanguagePython,
-                                  ScriptInterpreterPythonImpl::CreateInstance);
-    ScriptInterpreterPythonImpl::Initialize();
-  });
+#if LLDB_ENABLE_MTE
+  // Python's allocator (pymalloc) is not aware of Memory Tagging Extension
+  // (MTE) and crashes.
+  // https://bugs.python.org/issue43593
+  setenv("PYTHONMALLOC", "malloc", /*overwrite=*/true);
+#endif
+
+  // When the plugin is a separate shared library, the SWIG wrapper lives in
+  // the plugin library, so the path helper that redirects lookups back to
+  // liblldb is unnecessary.
+#if !LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS
+  HostInfo::SetSharedLibraryDirectoryHelper(
+      ScriptInterpreterPython::SharedLibraryDirectoryHelper);
+#endif
+  PluginManager::RegisterPlugin(
+      GetPluginNameStatic(), GetPluginDescriptionStatic(),
+      lldb::eScriptLanguagePython, ScriptInterpreterPythonImpl::CreateInstance,
+      ScriptInterpreterPythonImpl::GetPythonDir);
+  ScriptInterpreterPythonImpl::Initialize();
+  ScriptInterpreterPythonInterfaces::Initialize();
 }
 
-void ScriptInterpreterPython::Terminate() {}
+void ScriptInterpreterPython::Terminate() {
+  ScriptInterpreterPythonInterfaces::Terminate();
+  PluginManager::UnregisterPlugin(ScriptInterpreterPythonImpl::CreateInstance);
+}
 
 ScriptInterpreterPythonImpl::Locker::Locker(
     ScriptInterpreterPythonImpl *py_interpreter, uint16_t on_entry,
@@ -322,8 +341,9 @@ ScriptInterpreterPythonImpl::Locker::Locker(
 
 bool ScriptInterpreterPythonImpl::Locker::DoAcquireLock() {
   m_GILState = PyGILState_Ensure();
-  LLDB_LOGV(GetLog(LLDBLog::Script), "Ensured PyGILState. Previous state = {0}",
-            m_GILState == PyGILState_UNLOCKED ? "unlocked" : "locked");
+  LLDB_LOG_VERBOSE(GetLog(LLDBLog::Script),
+                   "Ensured PyGILState. Previous state = {0}",
+                   m_GILState == PyGILState_UNLOCKED ? "unlocked" : "locked");
 
   // we need to save the thread state when we first start the command because
   // we might decide to interrupt it while some action is taking place outside
@@ -344,9 +364,9 @@ bool ScriptInterpreterPythonImpl::Locker::DoInitSession(uint16_t on_entry_flags,
 }
 
 bool ScriptInterpreterPythonImpl::Locker::DoFreeLock() {
-  LLDB_LOGV(GetLog(LLDBLog::Script),
-            "Releasing PyGILState. Returning to state = {0}",
-            m_GILState == PyGILState_UNLOCKED ? "unlocked" : "locked");
+  LLDB_LOG_VERBOSE(GetLog(LLDBLog::Script),
+                   "Releasing PyGILState. Returning to state = {0}",
+                   m_GILState == PyGILState_UNLOCKED ? "unlocked" : "locked");
   PyGILState_Release(m_GILState);
   m_python_interpreter->DecrementLockCount();
   return true;
@@ -415,11 +435,101 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
   RunSimpleString(run_string.GetData());
   run_string.Clear();
 
+  // Configure pydoc (built-in module) to use the "plain" pager. The default one
+  // doesn't play nice with the statusline.
+  run_string.Printf("run_one_line (%s, 'import pydoc; pydoc.pager = "
+                    "pydoc.plainpager')",
+                    m_dictionary_name.c_str());
+  RunSimpleString(run_string.GetData());
+  run_string.Clear();
+
   run_string.Printf("run_one_line (%s, 'lldb.debugger_unique_id = %" PRIu64
                     "')",
                     m_dictionary_name.c_str(), m_debugger.GetID());
   RunSimpleString(run_string.GetData());
 }
+
+/// A Python sys.stdout/stderr file backed by a pipe whose read end is drained
+/// by a reader thread that writes to the debugger's terminal under the output
+/// lock (Debugger::PrintAsync). Handing Python the raw terminal descriptor
+/// instead lets a script's print() race the statusline, which redraws on the
+/// event thread under that lock. Its cursor save/restore then rewinds over and
+/// eats the script's output.
+class ScriptInterpreterPythonImpl::SessionIORedirect {
+public:
+  static std::unique_ptr<SessionIORedirect> Create(lldb::user_id_t debugger_id,
+                                                   bool is_stdout) {
+    Pipe pipe;
+    if (pipe.CreateNew().Fail())
+      return nullptr;
+
+    std::unique_ptr<SessionIORedirect> redirect(
+        new SessionIORedirect(debugger_id, is_stdout));
+
+#if defined(_WIN32)
+    lldb::file_t read_handle = pipe.GetReadNativeHandle();
+    pipe.ReleaseReadFileDescriptor();
+    std::unique_ptr<Connection> conn =
+        std::make_unique<ConnectionGenericFile>(read_handle, true);
+#else
+    std::unique_ptr<Connection> conn =
+        std::make_unique<ConnectionFileDescriptor>(
+            pipe.ReleaseReadFileDescriptor(), /*owns_fd=*/true);
+#endif
+    if (!conn->IsConnected())
+      return nullptr;
+
+    redirect->m_communication.SetConnection(std::move(conn));
+    redirect->m_communication.SetReadThreadBytesReceivedCallback(
+        ReadThreadBytesReceived, redirect.get());
+    if (!redirect->m_communication.StartReadThread())
+      return nullptr;
+    redirect->m_connected = true;
+
+    // The write end is owned here. Python only borrows its descriptor.
+    redirect->m_write_file_sp = std::make_shared<NativeFile>(
+        pipe.ReleaseWriteFileDescriptor(), File::eOpenOptionWriteOnly,
+        NativeFile::Owned);
+    return redirect;
+  }
+
+  ~SessionIORedirect() {
+    if (!m_connected)
+      return;
+    // Close the write end so the reader sees EOF and exits, then join it.
+    if (m_write_file_sp)
+      m_write_file_sp->Close();
+    m_communication.JoinReadThread();
+    m_communication.Disconnect();
+  }
+
+  int GetWriteDescriptor() const {
+    return m_write_file_sp ? m_write_file_sp->GetDescriptor()
+                           : File::kInvalidDescriptor;
+  }
+
+private:
+  SessionIORedirect(lldb::user_id_t debugger_id, bool is_stdout)
+      : m_debugger_id(debugger_id), m_is_stdout(is_stdout),
+        m_communication("lldb.ScriptInterpreterPython.io-redirect") {}
+
+  static void ReadThreadBytesReceived(void *baton, const void *src,
+                                      size_t src_len) {
+    if (!src || !src_len)
+      return;
+    auto *self = static_cast<SessionIORedirect *>(baton);
+    if (lldb::DebuggerSP debugger_sp =
+            Debugger::FindDebuggerWithID(self->m_debugger_id))
+      debugger_sp->PrintAsync(static_cast<const char *>(src), src_len,
+                              self->m_is_stdout);
+  }
+
+  lldb::user_id_t m_debugger_id;
+  bool m_is_stdout;
+  lldb::FileSP m_write_file_sp;
+  ThreadedCommunication m_communication;
+  bool m_connected = false;
+};
 
 ScriptInterpreterPythonImpl::~ScriptInterpreterPythonImpl() {
   // the session dictionary may hold objects with complex state which means
@@ -544,6 +654,26 @@ void ScriptInterpreterPythonImpl::LeaveSession() {
   if (PyThreadState_GetDict()) {
     PythonDictionary &sys_module_dict = GetSysModuleDictionary();
     if (sys_module_dict.IsValid()) {
+      // Flush the pipe-backed wrappers while they are still sys.stdout/stderr.
+      // Line buffering already flushes on each newline, but a trailing
+      // unterminated line would otherwise be stranded (and later flushed into
+      // a closed descriptor) once we close the pipe write end below.
+      auto flush_redirect = [&](const char *py_name,
+                                std::unique_ptr<SessionIORedirect> &redirect) {
+        if (!redirect)
+          return;
+        PythonObject file =
+            sys_module_dict.GetItemForKey(PythonString(py_name));
+        if (!file.IsValid())
+          return;
+        if (llvm::Expected<PythonObject> result = file.CallMethod("flush"))
+          (void)result;
+        else
+          llvm::consumeError(result.takeError());
+      };
+      flush_redirect("stdout", m_stdout_redirect);
+      flush_redirect("stderr", m_stderr_redirect);
+
       if (m_saved_stdin.IsValid()) {
         sys_module_dict.SetItemForKey(PythonString("stdin"), m_saved_stdin);
         m_saved_stdin.Reset();
@@ -559,18 +689,85 @@ void ScriptInterpreterPythonImpl::LeaveSession() {
     }
   }
 
+  // Tear down the pipe redirects (closes each write end and joins its reader).
+  // The wrappers were flushed above, so nothing buffered is lost.
+  m_stdout_redirect.reset();
+  m_stderr_redirect.reset();
+
   m_session_is_active = false;
+}
+
+bool ScriptInterpreterPythonImpl::RedirectTerminalHandleThroughLock(
+    const char *py_name, PythonObject &save_file, const char *mode,
+    File &file) {
+  const bool is_stdout = ::strcmp(py_name, "stdout") == 0;
+  if (!is_stdout && ::strcmp(py_name, "stderr") != 0)
+    return false;
+
+  // The statusline is the only writer that races Python's terminal output.
+  // When it isn't drawing there is nothing to serialize against, so keep the
+  // normal wrapping and skip the reader thread and pipe.
+  if (!m_debugger.StatuslineSupported())
+    return false;
+
+  // Only the debugger's own terminal races the statusline. A redirect to a
+  // pipe or user file (a different descriptor) is wrapped normally.
+  lldb::FileSP debugger_file =
+      is_stdout ? m_debugger.GetOutputFileSP() : m_debugger.GetErrorFileSP();
+  int fd = file.GetDescriptor();
+  if (!debugger_file || fd == File::kInvalidDescriptor ||
+      fd != debugger_file->GetDescriptor())
+    return false;
+
+  std::unique_ptr<SessionIORedirect> &redirect =
+      is_stdout ? m_stdout_redirect : m_stderr_redirect;
+  redirect = SessionIORedirect::Create(m_debugger.GetID(), is_stdout);
+  if (!redirect)
+    return false;
+
+  // Line-buffer the wrapper so each print() reaches the reader (and the
+  // terminal) promptly: the pipe descriptor is not a tty, so the default
+  // buffering would hold output back until the buffer filled.
+  PyObject *pipe_file = PyFile_FromFd(
+      redirect->GetWriteDescriptor(), nullptr, mode, /*buffering=*/1,
+      /*encoding=*/nullptr, /*errors=*/"ignore", /*newline=*/nullptr,
+      /*closefd=*/0);
+  if (!pipe_file) {
+    // Fall back to the raw descriptor. That reopens the statusline race, so
+    // leave a breadcrumb rather than failing silently.
+    LLDB_LOG(GetLog(LLDBLog::Script),
+             "failed to wrap sys.{0} on a synchronized pipe; falling back to "
+             "the unsynchronized terminal descriptor",
+             py_name);
+    PyErr_Clear();
+    redirect.reset();
+    return false;
+  }
+
+  PythonObject new_file(PyRefType::Owned, pipe_file);
+  PythonDictionary &sys_module_dict = GetSysModuleDictionary();
+  save_file = sys_module_dict.GetItemForKey(PythonString(py_name));
+  sys_module_dict.SetItemForKey(PythonString(py_name), new_file);
+  return true;
 }
 
 bool ScriptInterpreterPythonImpl::SetStdHandle(FileSP file_sp,
                                                const char *py_name,
                                                PythonObject &save_file,
-                                               const char *mode) {
+                                               const char *mode,
+                                               bool serialize_terminal_output) {
   if (!file_sp || !*file_sp) {
     save_file.Reset();
     return false;
   }
   File &file = *file_sp;
+
+  // When stdout/stderr point at the debugger's own terminal, route Python's
+  // output through a pipe drained under the output lock so a script's print()
+  // cannot race the statusline. Any other target keeps the normal wrapping.
+  if (serialize_terminal_output &&
+      RedirectTerminalHandleThroughLock(py_name, save_file, mode, file))
+    return true;
 
   // Flush the file before giving it to python to avoid interleaved output.
   file.Flush();
@@ -579,7 +776,10 @@ bool ScriptInterpreterPythonImpl::SetStdHandle(FileSP file_sp,
 
   auto new_file = PythonFile::FromFile(file, mode);
   if (!new_file) {
-    llvm::consumeError(new_file.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Script), new_file.takeError(),
+                   "ScriptInterpreterPythonImpl::SetStdHandle failed to wrap "
+                   "sys.{1}: {0}",
+                   py_name);
     return false;
   }
 
@@ -649,22 +849,31 @@ bool ScriptInterpreterPythonImpl::EnterSession(uint16_t on_entry_flags,
     if (on_entry_flags & Locker::NoSTDIN) {
       m_saved_stdin.Reset();
     } else {
-      if (!SetStdHandle(in_sp, "stdin", m_saved_stdin, "r")) {
+      if (!SetStdHandle(in_sp, "stdin", m_saved_stdin, "r",
+                        /*serialize_terminal_output=*/false)) {
         if (top_in_sp)
-          SetStdHandle(top_in_sp, "stdin", m_saved_stdin, "r");
+          SetStdHandle(top_in_sp, "stdin", m_saved_stdin, "r",
+                       /*serialize_terminal_output=*/false);
       }
     }
 
-    if (!SetStdHandle(out_sp, "stdout", m_saved_stdout, "w")) {
+    // Serialize terminal output for every session except those that opt out
+    // with NoOutputRedirect (see the flag for why).
+    const bool serialize_terminal_output =
+        !(on_entry_flags & Locker::NoOutputRedirect);
+
+    if (!SetStdHandle(out_sp, "stdout", m_saved_stdout, "w",
+                      serialize_terminal_output)) {
       if (top_out_sp)
         SetStdHandle(top_out_sp->GetUnlockedFileSP(), "stdout", m_saved_stdout,
-                     "w");
+                     "w", serialize_terminal_output);
     }
 
-    if (!SetStdHandle(err_sp, "stderr", m_saved_stderr, "w")) {
+    if (!SetStdHandle(err_sp, "stderr", m_saved_stderr, "w",
+                      serialize_terminal_output)) {
       if (top_err_sp)
         SetStdHandle(top_err_sp->GetUnlockedFileSP(), "stderr", m_saved_stderr,
-                     "w");
+                     "w", serialize_terminal_output);
     }
   }
 
@@ -848,8 +1057,8 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
 
     // The one-liner failed.  Append the error message.
     if (result) {
-      result->AppendErrorWithFormat(
-          "python failed attempting to evaluate '%s'\n", command_str.c_str());
+      result->AppendErrorWithFormat("python failed attempting to evaluate '%s'",
+                                    command_str.c_str());
     }
     return false;
   }
@@ -1228,7 +1437,7 @@ Status ScriptInterpreterPythonImpl::ExportFunctionDefinitionToInterpreter(
     StringList &function_def) {
   // Convert StringList to one long, newline delimited, const char *.
   std::string function_def_string(function_def.CopyList());
-  LLDB_LOG(GetLog(LLDBLog::Script), "Added Function:\n%s\n",
+  LLDB_LOG(GetLog(LLDBLog::Script), "Added Function:\n{0}\n",
            function_def_string.c_str());
 
   Status error = ExecuteMultipleLines(
@@ -1511,6 +1720,11 @@ ScriptInterpreterPythonImpl::CreateScriptedStopHookInterface() {
   return std::make_shared<ScriptedStopHookPythonInterface>(*this);
 }
 
+ScriptedHookInterfaceSP
+ScriptInterpreterPythonImpl::CreateScriptedHookInterface() {
+  return std::make_shared<ScriptedHookPythonInterface>(*this);
+}
+
 ScriptedBreakpointInterfaceSP
 ScriptInterpreterPythonImpl::CreateScriptedBreakpointInterface() {
   return std::make_shared<ScriptedBreakpointPythonInterface>(*this);
@@ -1524,6 +1738,11 @@ ScriptInterpreterPythonImpl::CreateScriptedThreadInterface() {
 ScriptedFrameInterfaceSP
 ScriptInterpreterPythonImpl::CreateScriptedFrameInterface() {
   return std::make_shared<ScriptedFramePythonInterface>(*this);
+}
+
+ScriptedFrameProviderInterfaceSP
+ScriptInterpreterPythonImpl::CreateScriptedFrameProviderInterface() {
+  return std::make_shared<ScriptedFrameProviderPythonInterface>(*this);
 }
 
 ScriptedThreadPlanInterfaceSP
@@ -1942,14 +2161,17 @@ lldb::ValueObjectSP ScriptInterpreterPythonImpl::GetChildAtIndex(
 llvm::Expected<uint32_t> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
     const StructuredData::ObjectSP &implementor_sp, const char *child_name) {
   if (!implementor_sp)
-    return llvm::createStringError("Type has no child named '%s'", child_name);
+    return llvm::createStringErrorV("type has no child named '{0}'",
+                                    child_name);
 
   StructuredData::Generic *generic = implementor_sp->GetAsGeneric();
   if (!generic)
-    return llvm::createStringError("Type has no child named '%s'", child_name);
+    return llvm::createStringErrorV("type has no child named '{0}'",
+                                    child_name);
   auto *implementor = static_cast<PyObject *>(generic->GetValue());
   if (!implementor)
-    return llvm::createStringError("Type has no child named '%s'", child_name);
+    return llvm::createStringErrorV("type has no child named '{0}'",
+                                    child_name);
 
   uint32_t ret_val = UINT32_MAX;
 
@@ -1961,7 +2183,8 @@ llvm::Expected<uint32_t> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
   }
 
   if (ret_val == UINT32_MAX)
-    return llvm::createStringError("Type has no child named '%s'", child_name);
+    return llvm::createStringErrorV("type has no child named '{0}'",
+                                    child_name);
   return ret_val;
 }
 
@@ -2303,17 +2526,16 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
       // Not a filename, probably a package of some sort, let it go through.
       possible_package = true;
     } else if (is_directory(st) || is_regular_file(st)) {
-      if (module_file.GetDirectory().IsEmpty()) {
+      if (module_file.GetDirectory().empty()) {
         error = Status::FromErrorStringWithFormatv(
             "invalid directory name '{0}'", pathname);
         return false;
       }
-      if (llvm::Error e =
-              ExtendSysPath(module_file.GetDirectory().GetCString())) {
+      if (llvm::Error e = ExtendSysPath(module_file.GetDirectory().str())) {
         error = Status::FromError(std::move(e));
         return false;
       }
-      module_name = module_file.GetFilename().GetCString();
+      module_name = module_file.GetFilename().str();
     } else {
       error = Status::FromErrorString(
           "no known way to import this module specification");
@@ -3090,5 +3312,3 @@ void ScriptInterpreterPythonImpl::AddToSysPath(AddLocation location,
 // when the process exits).
 //
 // void ScriptInterpreterPythonImpl::Terminate() { Py_Finalize (); }
-
-#endif

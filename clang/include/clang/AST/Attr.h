@@ -40,6 +40,7 @@ class AttributeCommonInfo;
 class FunctionDecl;
 class OMPTraitInfo;
 class OpenACCClause;
+struct StructuralEquivalenceContext;
 
 /// Attr - This represents one attribute.
 class Attr : public AttributeCommonInfo {
@@ -111,6 +112,11 @@ public:
   Attr *clone(ASTContext &C) const;
 
   bool isLateParsed() const { return IsLateParsed; }
+
+  bool isEquivalent(const Attr &Other,
+                    StructuralEquivalenceContext &Context) const;
+
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx) const;
 
   // Pretty print this attribute.
   void printPretty(raw_ostream &OS, const PrintingPolicy &Policy) const;
@@ -233,44 +239,19 @@ public:
   }
 };
 
-class HLSLSemanticAttr : public HLSLAnnotationAttr {
-  unsigned SemanticIndex = 0;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned SemanticIndexable : 1;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned SemanticExplicitIndex : 1;
-
-  Decl *TargetDecl = nullptr;
-
+class HLSLSemanticBaseAttr : public HLSLAnnotationAttr {
 protected:
-  HLSLSemanticAttr(ASTContext &Context, const AttributeCommonInfo &CommonInfo,
-                   attr::Kind AK, bool IsLateParsed,
-                   bool InheritEvenIfAlreadyPresent, bool SemanticIndexable)
+  HLSLSemanticBaseAttr(ASTContext &Context,
+                       const AttributeCommonInfo &CommonInfo, attr::Kind AK,
+                       bool IsLateParsed, bool InheritEvenIfAlreadyPresent)
       : HLSLAnnotationAttr(Context, CommonInfo, AK, IsLateParsed,
-                           InheritEvenIfAlreadyPresent) {
-    this->SemanticIndexable = SemanticIndexable;
-    this->SemanticExplicitIndex = false;
-  }
+                           InheritEvenIfAlreadyPresent) {}
 
 public:
-  bool isSemanticIndexable() const { return SemanticIndexable; }
-
-  void setSemanticIndex(unsigned SemanticIndex) {
-    this->SemanticIndex = SemanticIndex;
-    this->SemanticExplicitIndex = true;
-  }
-
-  unsigned getSemanticIndex() const { return SemanticIndex; }
-
-  bool isSemanticIndexExplicit() const { return SemanticExplicitIndex; }
-
-  void setTargetDecl(Decl *D) { TargetDecl = D; }
-  Decl *getTargetDecl() const { return TargetDecl; }
-
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Attr *A) {
-    return A->getKind() >= attr::FirstHLSLSemanticAttr &&
-           A->getKind() <= attr::LastHLSLSemanticAttr;
+    return A->getKind() >= attr::FirstHLSLSemanticBaseAttr &&
+           A->getKind() <= attr::LastHLSLSemanticBaseAttr;
   }
 };
 
@@ -296,8 +277,12 @@ public:
 /// A single parameter index whose accessors require each use to make explicit
 /// the parameter index encoding needed.
 class ParamIdx {
+public:
+  constexpr static unsigned IdxBitWidth = 30;
+
+private:
   // Idx is exposed only via accessors that specify specific encodings.
-  unsigned Idx : 30;
+  unsigned Idx : IdxBitWidth;
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasThis : 1;
   LLVM_PREFERRED_TYPE(bool)

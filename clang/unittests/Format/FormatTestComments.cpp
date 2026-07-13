@@ -187,11 +187,10 @@ TEST_F(FormatTestComments, UnderstandsSingleLineComments) {
 
   verifyGoogleFormat("#endif  // HEADER_GUARD");
 
-  verifyFormat("const char *test[] = {\n"
-               "    // A\n"
-               "    \"aaaa\",\n"
-               "    // B\n"
-               "    \"aaaaa\"};");
+  verifyFormat("const char *test[] = {// A\n"
+               "                      \"aaaa\",\n"
+               "                      // B\n"
+               "                      \"aaaaa\"};");
   verifyGoogleFormat(
       "aaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
       "    aaaaaaaaaaaaaaaaaaaaaa);  // 81_cols_with_this_comment");
@@ -349,7 +348,7 @@ TEST_F(FormatTestComments, KeepsParameterWithTrailingCommentsOnTheirOwnLine) {
                "aaaa, bbbbb);");
 
   FormatStyle BreakAlways = getLLVMStyle();
-  BreakAlways.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+  BreakAlways.PackParameters.BinPack = FormatStyle::BPPS_AlwaysOnePerLine;
   verifyFormat("int SomeFunction(a,\n"
                "                 b, // comment\n"
                "                 c,\n"
@@ -405,7 +404,7 @@ TEST_F(FormatTestComments, UnderstandsBlockComments) {
       "                  /* 3rd */ int dddddddddddd);");
 
   auto Style = getLLVMStyle();
-  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  Style.PackParameters.BinPack = FormatStyle::BPPS_OnePerLine;
   verifyFormat("aaaaaaaa(/* parameter 1 */ aaaaaa,\n"
                "         /* parameter 2 */ aaaaaa,\n"
                "         /* parameter 3 */ aaaaaa,\n"
@@ -417,7 +416,7 @@ TEST_F(FormatTestComments, UnderstandsBlockComments) {
                "                  /* 3rd */ int dddddddddddd);",
                Style);
 
-  Style.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+  Style.PackParameters.BinPack = FormatStyle::BPPS_AlwaysOnePerLine;
   verifyFormat("int a(/* 1st */ int b,\n"
                "      /* 2nd */ int c);",
                Style);
@@ -1421,12 +1420,11 @@ TEST_F(FormatTestComments, CommentsInStaticInitializers) {
                "       {// Group #3\n"
                "        g, h, i}};");
 
-  verifyFormat("S s = {\n"
-               "    // Some comment\n"
-               "    a,\n"
+  verifyFormat("S s = {// Some comment\n"
+               "       a,\n"
                "\n"
-               "    // Comment after empty line\n"
-               "    b}",
+               "       // Comment after empty line\n"
+               "       b}",
                "S s =    {\n"
                "      // Some comment\n"
                "  a,\n"
@@ -1434,12 +1432,11 @@ TEST_F(FormatTestComments, CommentsInStaticInitializers) {
                "     // Comment after empty line\n"
                "      b\n"
                "}");
-  verifyFormat("S s = {\n"
-               "    /* Some comment */\n"
-               "    a,\n"
+  verifyFormat("S s = {/* Some comment */\n"
+               "       a,\n"
                "\n"
-               "    /* Comment after empty line */\n"
-               "    b}",
+               "       /* Comment after empty line */\n"
+               "       b}",
                "S s =    {\n"
                "      /* Some comment */\n"
                "  a,\n"
@@ -2444,7 +2441,7 @@ TEST_F(FormatTestComments, BlockComments) {
                getLLVMStyleWithColumns(50));
 
   FormatStyle NoBinPacking = getLLVMStyle();
-  NoBinPacking.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  NoBinPacking.PackParameters.BinPack = FormatStyle::BPPS_OnePerLine;
   verifyFormat("someFunction(1, /* comment 1 */\n"
                "             2, /* comment 2 */\n"
                "             3, /* comment 3 */\n"
@@ -3063,6 +3060,42 @@ TEST_F(FormatTestComments, AlignTrailingCommentsLeave) {
                "}",
                Style);
 
+  // Move comments along, when it appears, that the indentation changed when a
+  // scope has been added or removed.
+  verifyFormat("void func() {\n"
+               "  int i;\n"
+               "  // comment\n"
+               "  // comment 2\n"
+               "}",
+               "void func() {\n"
+               "    int i;\n"
+               "    // comment\n"
+               "    // comment 2\n"
+               "}",
+               Style);
+
+  verifyFormat("void func() {\n"
+               "  // comment\n"
+               "  // comment 2\n"
+               "  int i;\n"
+               "}",
+               "void func() {\n"
+               "    // comment\n"
+               "    // comment 2\n"
+               "    int i;\n"
+               "}",
+               Style);
+
+  verifyFormat("void func() {\n"
+               "  // non-trailing comment\n"
+               "  int i;\n"
+               "}",
+               "void func() {\n"
+               "     // non-trailing comment\n"
+               "    int i;\n"
+               "}",
+               Style);
+
   Style.AlignEscapedNewlines = FormatStyle::ENAS_Left;
   verifyNoChange("#define FOO    \\\n"
                  "  /* foo(); */ \\\n"
@@ -3376,6 +3409,66 @@ TEST_F(FormatTestComments, DontAlignOverScope) {
                "} /* middle comment */; // not aligned\n"
                "int bar;    // new align\n"
                "int foobar; // group");
+}
+
+TEST_F(FormatTestComments, DontAlignOverPPDirective) {
+  auto Style = getLLVMStyle();
+  Style.AlignTrailingComments.AlignPPAndNotPP = false;
+
+  verifyFormat("int i;    // Aligned\n"
+               "int long; // with this\n"
+               "#define FOO    // only aligned\n"
+               "#define LOOONG // with other pp directives\n"
+               "int loooong; // new alignment",
+               "int i;//Aligned\n"
+               "int long;//with this\n"
+               "#define FOO //only aligned\n"
+               "#define LOOONG //with other pp directives\n"
+               "int loooong; //new alignment",
+               Style);
+
+  verifyFormat("#define A  // Comment\n"
+               "#define AB // Comment",
+               Style);
+
+  Style.ColumnLimit = 30;
+  verifyNoChange("#define A // Comment\n"
+                 "          // Continued\n"
+                 "int i = 0; // New Stuff\n"
+                 "           // Continued\n"
+                 "#define Func(X)              \\\n"
+                 "  X();                       \\\n"
+                 "  X(); // Comment\n"
+                 "       // Continued\n"
+                 "long loong = 1; // Dont align",
+                 Style);
+
+  verifyFormat("#define A   // Comment that\n"
+               "            // would wrap\n"
+               "#define FOO // For the\n"
+               "            // alignment\n"
+               "#define B   // Also\n"
+               "            // aligned",
+               "#define A // Comment that would wrap\n"
+               "#define FOO // For the alignment\n"
+               "#define B // Also\n"
+               " // aligned",
+               Style);
+
+  Style.AlignTrailingComments.OverEmptyLines = 1;
+  verifyNoChange("#define A // Comment\n"
+                 "\n"
+                 "          // Continued\n"
+                 "int i = 0; // New Stuff\n"
+                 "\n"
+                 "           // Continued\n"
+                 "#define Func(X)              \\\n"
+                 "  X();                       \\\n"
+                 "  X(); // Comment\n"
+                 "\n"
+                 "       // Continued\n"
+                 "long loong = 1; // Dont align",
+                 Style);
 }
 
 TEST_F(FormatTestComments, AlignsBlockCommentDecorations) {

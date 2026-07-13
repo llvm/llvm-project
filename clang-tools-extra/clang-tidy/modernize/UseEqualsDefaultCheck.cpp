@@ -18,12 +18,12 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
-static const char SpecialFunction[] = "SpecialFunction";
+static constexpr char SpecialFunction[] = "SpecialFunction";
 
 /// Finds all the named non-static fields of \p Record.
-static std::set<const FieldDecl *>
+static llvm::SmallPtrSet<const FieldDecl *, 0>
 getAllNamedFields(const CXXRecordDecl *Record) {
-  std::set<const FieldDecl *> Result;
+  llvm::SmallPtrSet<const FieldDecl *, 0> Result;
   for (const auto *Field : Record->fields()) {
     // Static data members are not in this range.
     if (Field->isUnnamedBitField())
@@ -35,8 +35,9 @@ getAllNamedFields(const CXXRecordDecl *Record) {
 
 /// Returns the names of the direct bases of \p Record, both virtual and
 /// non-virtual.
-static std::set<const Type *> getAllDirectBases(const CXXRecordDecl *Record) {
-  std::set<const Type *> Result;
+static llvm::SmallPtrSet<const Type *, 0>
+getAllDirectBases(const CXXRecordDecl *Record) {
+  llvm::SmallPtrSet<const Type *, 0> Result;
   for (auto Base : Record->bases()) {
     // CXXBaseSpecifier.
     const auto *BaseType = Base.getTypeSourceInfo()->getType().getTypePtr();
@@ -200,7 +201,7 @@ static bool isCopyAssignmentAndCanBeDefaulted(ASTContext *Context,
 /// Returns false if the body has any non-whitespace character.
 static bool bodyEmpty(const ASTContext *Context, const CompoundStmt *Body) {
   bool Invalid = false;
-  StringRef Text = Lexer::getSourceText(
+  const StringRef Text = Lexer::getSourceText(
       CharSourceRange::getCharRange(Body->getLBracLoc().getLocWithOffset(1),
                                     Body->getRBracLoc()),
       Context->getSourceManager(), Context->getLangOpts(), &Invalid);
@@ -306,8 +307,8 @@ void UseEqualsDefaultCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // If there are comments inside the body, don't do the change.
-  bool ApplyFix = SpecialFunctionDecl->isCopyAssignmentOperator() ||
-                  bodyEmpty(Result.Context, Body);
+  const bool ApplyFix = SpecialFunctionDecl->isCopyAssignmentOperator() ||
+                        bodyEmpty(Result.Context, Body);
 
   std::vector<FixItHint> RemoveInitializers;
   unsigned MemberType = 0;
@@ -345,14 +346,14 @@ void UseEqualsDefaultCheck::check(const MatchFinder::MatchResult &Result) {
   Diag << MemberType;
 
   if (ApplyFix) {
-    SourceLocation UnifiedEnd = utils::lexer::getUnifiedEndLoc(
+    const SourceLocation UnifiedEnd = utils::lexer::getUnifiedEndLoc(
         *Body, Result.Context->getSourceManager(),
         Result.Context->getLangOpts());
     // Skipping comments, check for a semicolon after Body->getSourceRange()
     std::optional<Token> Token = utils::lexer::findNextTokenSkippingComments(
         UnifiedEnd, Result.Context->getSourceManager(),
         Result.Context->getLangOpts());
-    StringRef Replacement =
+    const StringRef Replacement =
         Token && Token->is(tok::semi) ? "= default" : "= default;";
     Diag << FixItHint::CreateReplacement(Body->getSourceRange(), Replacement)
          << RemoveInitializers;

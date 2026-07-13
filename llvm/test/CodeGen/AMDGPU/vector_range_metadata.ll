@@ -37,8 +37,8 @@ define <2 x i64> @test_add2x64(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_load_dwordx4 v[6:9], v[2:3]
-; CHECK-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
 ; CHECK-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
+; CHECK-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 48
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -91,8 +91,8 @@ define <3 x i64> @test_add3x64(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_load_dwordx4 v[6:9], v[2:3]
-; CHECK-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
 ; CHECK-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
+; CHECK-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 48
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

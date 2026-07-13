@@ -451,7 +451,7 @@ void X86InstPrinterCommon::printVKPair(const MCInst *MI, unsigned OpNo,
   // the assembly would look something like:
   // "vp2intersect %zmm5, %zmm7, {%k2, %k3}"
   // but this can work too.
-  switch (MI->getOperand(OpNo).getReg()) {
+  switch (MI->getOperand(OpNo).getReg().id()) {
   case X86::K0_K1:
     printRegName(OS, X86::K0);
     return;

@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: %[[#int_32:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#float:]] = OpTypeFloat 32
@@ -19,6 +20,6 @@ define dso_local spir_kernel void @K(ptr addrspace(1) nocapture %A, i32 %B) loca
 entry:
   %cmp = icmp sgt i32 %B, 0
   %conv = sitofp i1 %cmp to float
-  store float %conv, float addrspace(1)* %A, align 4
+  store float %conv, ptr addrspace(1) %A, align 4
   ret void
 }

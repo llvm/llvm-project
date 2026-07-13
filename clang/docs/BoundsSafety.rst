@@ -58,7 +58,7 @@ adopt, offering these properties that make it widely adoptable in practice:
 * It has a relatively low adoption cost.
 
 This document discusses the key designs of ``-fbounds-safety``. The document is
-subject to be actively updated with a more detailed specification.
+subject to active updates with a more detailed specification.
 
 Programming Model
 =================
@@ -352,7 +352,7 @@ Annotations for sentinel-delimited arrays
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A C string is an array of characters. The null terminator — the first null
-character ('\0') element in the array — marks the end of the string.
+character (``'\0'``) element in the array — marks the end of the string.
 ``-fbounds-safety`` provides ``__null_terminated`` to annotate C strings and the
 generalized form ``__terminated_by(T)`` to annotate pointers and arrays with an
 end marked by a sentinel value. The model prevents dereferencing a
@@ -439,17 +439,17 @@ extension`_ for more details about the toolchain header):
 
 .. code-block:: C
 
-#define __ptrcheck_abi_assume_single() \
-   _Pragma("clang abi_ptr_attr set(single)")
+   #define __ptrcheck_abi_assume_single() \
+      _Pragma("clang abi_ptr_attr set(single)")
 
-#define __ptrcheck_abi_assume_indexable() \
-  _Pragma("clang abi_ptr_attr set(indexable)")
+   #define __ptrcheck_abi_assume_indexable() \
+     _Pragma("clang abi_ptr_attr set(indexable)")
 
-#define __ptrcheck_abi_assume_bidi_indexable() \
-  _Pragma("clang abi_ptr_attr set(bidi_indexable)")
+   #define __ptrcheck_abi_assume_bidi_indexable() \
+     _Pragma("clang abi_ptr_attr set(bidi_indexable)")
 
-#define __ptrcheck_abi_assume_unsafe_indexable() \
-  _Pragma("clang abi_ptr_attr set(unsafe_indexable)")
+   #define __ptrcheck_abi_assume_unsafe_indexable() \
+     _Pragma("clang abi_ptr_attr set(unsafe_indexable)")
 
 
 ABI implications of default bounds annotations
@@ -574,7 +574,7 @@ When ``sizeof()`` takes a type name, the compiler doesn't apply an implicit
 bounds annotation on the named pointer types. This means if a bounds annotation
 is not specified, the evaluated pointer type is treated identically to a plain C
 pointer type. Therefore, ``sizeof(int*)`` remains the same with or without
-``-fbounds-safety``. That said, programmers can explicitly add attribute to the
+``-fbounds-safety``. That said, programmers can explicitly add attributes to the
 types, e.g., ``sizeof(int *__bidi_indexable)``, in which case the sizeof
 evaluates to the size of type ``int *__bidi_indexable`` (the value equivalent to
 ``3 * sizeof(int*)``).
@@ -912,7 +912,7 @@ unsafe library by calling ``get_buf()`` which returns ``void
   ``__bidi_indexable`` gets the lower bound same as the pointer value.
 
 * A type conversion may involve both a bitcast and a bounds annotation cast. For
-  example, casting from ``int *__bidi_indexable`` to ``char *__single`` involve
+  example, casting from ``int *__bidi_indexable`` to ``char *__single`` involves
   a bitcast (``int *`` to ``char *``) and a bounds annotation cast
   (``__bidi_indexable`` to ``__single``). In this case, the compiler performs
   the bitcast and then converts the bounds annotation. This means, ``int
@@ -994,7 +994,7 @@ other types of safety violations such as type confusion. For instance,
 
 ``-fbounds-safety`` heavily relies on run-time checks to keep the bounds safety
 and the soundness of the type system. This may incur significant code size
-overhead in unoptimized builds and leaving some of the adoption mistakes to be
+overhead in unoptimized builds and leave some of the adoption mistakes to be
 caught only at run time. This is not a fundamental limitation, however, because
 incrementally adding necessary static analysis will allow us to catch issues
 early on and remove unnecessary bounds checks in unoptimized builds.

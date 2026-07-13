@@ -39,9 +39,7 @@ define amdgpu_ps void @atomic_cmpswap_1d_agpr(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a1
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_accvgpr_read_b32 v2, a0
-; GFX90A-NEXT:    v_accvgpr_read_b32 v3, a1
-; GFX90A-NEXT:    image_atomic_cmpswap v[2:3], v0, s[0:7] dmask:0x3 unorm glc
+; GFX90A-NEXT:    image_atomic_cmpswap a[0:1], v0, s[0:7] dmask:0x3 unorm glc
 ; GFX90A-NEXT:    s_endpgm
   %cmp = call i32 asm "; def $0", "=a"()
   %swap = call i32 asm "; def $0", "=a"()
@@ -70,14 +68,10 @@ define amdgpu_ps void @atomic_cmpswap_1d_64_agpr(<8 x i32> inreg %rsrc, i32 %s) 
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_accvgpr_read_b32 v3, a1
-; GFX90A-NEXT:    v_accvgpr_read_b32 v2, a0
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def a[0:1]
+; GFX90A-NEXT:    ; def a[2:3]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_accvgpr_read_b32 v5, a1
-; GFX90A-NEXT:    v_accvgpr_read_b32 v4, a0
-; GFX90A-NEXT:    image_atomic_cmpswap v[2:5], v0, s[0:7] dmask:0xf unorm glc
+; GFX90A-NEXT:    image_atomic_cmpswap a[0:3], v0, s[0:7] dmask:0xf unorm glc
 ; GFX90A-NEXT:    s_endpgm
   %cmp = call i64 asm "; def $0", "=a"()
   %swap = call i64 asm "; def $0", "=a"()

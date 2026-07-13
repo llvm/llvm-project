@@ -198,10 +198,4 @@ entry:
   ret i32 0
 }
 
-declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
-
-declare i64 @llvm.riscv.vsetvli.i64(i64, i64 immarg, i64 immarg)
-
-declare <vscale x 16 x i32> @llvm.riscv.vle.nxv16i32.i64(<vscale x 16 x i32>, ptr nocapture, i64)
-
 attributes #0 = { noinline nounwind optnone "frame-pointer"="all" }

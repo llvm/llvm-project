@@ -45,7 +45,7 @@ end subroutine subri
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca i32
 ! CHECK:           fir.store %[[VAL_0]] to %[[VAL_2]] : !fir.ref<i32>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %[[VAL_1]] {fortran_attrs = #fir.var_attrs<value>, uniq_name = "_QFsubriEval"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<value>, uniq_name = "_QFsubriEval"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           fir.call @_QPtest_numeric_scalar_value(%[[VAL_3]]#0) fastmath<contract> : (!fir.ref<i32>) -> ()
 ! CHECK:           return
 ! CHECK:         }

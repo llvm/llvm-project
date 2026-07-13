@@ -14,20 +14,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/ScopGraphPrinter.h"
-#include "polly/LinkAllPasses.h"
 #include "polly/ScopDetection.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace polly;
 using namespace llvm;
-static cl::opt<std::string>
-    ViewFilter("polly-view-only",
-               cl::desc("Only view functions that match this pattern"),
-               cl::Hidden, cl::init(""));
 
-static cl::opt<bool> ViewAll("polly-view-all",
-                             cl::desc("Also show functions without any scops"),
-                             cl::Hidden, cl::init(false));
+namespace polly {
+std::string ViewFilter;
+bool ViewAll;
+} // namespace polly
+
+static cl::opt<std::string, true>
+    XViewFilter("polly-view-only",
+                cl::desc("Only view functions that match this pattern"),
+                cl::location(ViewFilter), cl::Hidden, cl::init(""));
+
+static cl::opt<bool, true>
+    XViewAll("polly-view-all",
+             cl::desc("Also show functions without any scops"),
+             cl::location(ViewAll), cl::Hidden, cl::init(false));
 
 namespace llvm {
 
@@ -133,104 +139,6 @@ void DOTGraphTraits<ScopDetection *>::addCustomGraphFeatures(
 }
 
 } // namespace llvm
-
-struct ScopDetectionAnalysisGraphTraits {
-  static ScopDetection *getGraph(ScopDetectionWrapperPass *Analysis) {
-    return &Analysis->getSD();
-  }
-};
-
-struct ScopViewerWrapperPass
-    : DOTGraphTraitsViewerWrapperPass<ScopDetectionWrapperPass, false,
-                                      ScopDetection *,
-                                      ScopDetectionAnalysisGraphTraits> {
-  static char ID;
-  ScopViewerWrapperPass()
-      : DOTGraphTraitsViewerWrapperPass<ScopDetectionWrapperPass, false,
-                                        ScopDetection *,
-                                        ScopDetectionAnalysisGraphTraits>(
-            "scops", ID) {}
-  bool processFunction(Function &F, ScopDetectionWrapperPass &SD) override {
-    if (ViewFilter != "" && !F.getName().count(ViewFilter))
-      return false;
-
-    if (ViewAll)
-      return true;
-
-    // Check that at least one scop was detected.
-    return std::distance(SD.getSD().begin(), SD.getSD().end()) > 0;
-  }
-};
-char ScopViewerWrapperPass::ID = 0;
-
-struct ScopOnlyViewerWrapperPass
-    : DOTGraphTraitsViewerWrapperPass<ScopDetectionWrapperPass, false,
-                                      ScopDetection *,
-                                      ScopDetectionAnalysisGraphTraits> {
-  static char ID;
-  ScopOnlyViewerWrapperPass()
-      : DOTGraphTraitsViewerWrapperPass<ScopDetectionWrapperPass, false,
-                                        ScopDetection *,
-                                        ScopDetectionAnalysisGraphTraits>(
-            "scopsonly", ID) {}
-};
-char ScopOnlyViewerWrapperPass::ID = 0;
-
-struct ScopPrinterWrapperPass
-    : DOTGraphTraitsPrinterWrapperPass<ScopDetectionWrapperPass, false,
-                                       ScopDetection *,
-                                       ScopDetectionAnalysisGraphTraits> {
-  static char ID;
-  ScopPrinterWrapperPass()
-      : DOTGraphTraitsPrinterWrapperPass<ScopDetectionWrapperPass, false,
-                                         ScopDetection *,
-                                         ScopDetectionAnalysisGraphTraits>(
-            "scops", ID) {}
-};
-char ScopPrinterWrapperPass::ID = 0;
-
-struct ScopOnlyPrinterWrapperPass
-    : DOTGraphTraitsPrinterWrapperPass<ScopDetectionWrapperPass, true,
-                                       ScopDetection *,
-                                       ScopDetectionAnalysisGraphTraits> {
-  static char ID;
-  ScopOnlyPrinterWrapperPass()
-      : DOTGraphTraitsPrinterWrapperPass<ScopDetectionWrapperPass, true,
-                                         ScopDetection *,
-                                         ScopDetectionAnalysisGraphTraits>(
-            "scopsonly", ID) {}
-};
-char ScopOnlyPrinterWrapperPass::ID = 0;
-
-static RegisterPass<ScopViewerWrapperPass> X("view-scops",
-                                             "Polly - View Scops of function");
-
-static RegisterPass<ScopOnlyViewerWrapperPass>
-    Y("view-scops-only",
-      "Polly - View Scops of function (with no function bodies)");
-
-static RegisterPass<ScopPrinterWrapperPass>
-    M("dot-scops", "Polly - Print Scops of function");
-
-static RegisterPass<ScopOnlyPrinterWrapperPass>
-    N("dot-scops-only",
-      "Polly - Print Scops of function (with no function bodies)");
-
-Pass *polly::createDOTViewerWrapperPass() {
-  return new ScopViewerWrapperPass();
-}
-
-Pass *polly::createDOTOnlyViewerWrapperPass() {
-  return new ScopOnlyViewerWrapperPass();
-}
-
-Pass *polly::createDOTPrinterWrapperPass() {
-  return new ScopPrinterWrapperPass();
-}
-
-Pass *polly::createDOTOnlyPrinterWrapperPass() {
-  return new ScopOnlyPrinterWrapperPass();
-}
 
 bool ScopViewer::processFunction(Function &F, const ScopDetection &SD) {
   if (ViewFilter != "" && !F.getName().count(ViewFilter))

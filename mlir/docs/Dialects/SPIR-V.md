@@ -566,7 +566,7 @@ merge block.
 For example, for the given function
 
 ```c++
-void loop(bool cond) {
+void if(bool cond) {
   int x = 0;
   if (cond) {
     x = 1;
@@ -595,6 +595,62 @@ func.func @selection(%cond: i1) -> () {
 
   ^else:
     spirv.Store "Function" %x, %two : i32
+    spirv.Branch ^merge
+
+  ^merge:
+    spirv.mlir.merge
+  }
+
+  // ...
+}
+```
+
+Similarly, for the give function with a `switch` statement
+
+```c++
+void switch(int selector) {
+  int x = 0;
+  switch (selector) {
+  case 0:
+    x = 2;
+    break;
+  case 1:
+    x = 3;
+    break;
+  default:
+    x = 1;
+    break;
+  }
+  // ...
+}
+```
+
+It will be represented as
+
+```mlir
+func.func @selection(%selector: i32) -> () {
+  %zero = spirv.Constant 0: i32
+  %one = spirv.Constant 1: i32
+  %two = spirv.Constant 2: i32
+  %three = spirv.Constant 3: i32
+  %var = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+
+  spirv.mlir.selection {
+    spirv.Switch %selector : i32, [
+      default: ^default,
+      0: ^case0,
+      1: ^case1
+    ]
+  ^default:
+    spirv.Store "Function" %var, %one : i32
+    spirv.Branch ^merge
+
+  ^case0:
+    spirv.Store "Function" %var, %two : i32
+    spirv.Branch ^merge
+
+  ^case1:
+    spirv.Store "Function" %var, %three : i32
     spirv.Branch ^merge
 
   ^merge:

@@ -288,10 +288,6 @@ bool DAGTypeLegalizer::run() {
         WidenVectorResult(N, i);
         Changed = true;
         goto NodeDone;
-      case TargetLowering::TypePromoteFloat:
-        PromoteFloatResult(N, i);
-        Changed = true;
-        goto NodeDone;
       case TargetLowering::TypeSoftPromoteHalf:
         SoftPromoteHalfResult(N, i);
         Changed = true;
@@ -349,10 +345,6 @@ ScanOperands:
         break;
       case TargetLowering::TypeWidenVector:
         NeedsReanalyzing = WidenVectorOperand(N, i);
-        Changed = true;
-        break;
-      case TargetLowering::TypePromoteFloat:
-        NeedsReanalyzing = PromoteFloatOperand(N, i);
         Changed = true;
         break;
       case TargetLowering::TypeSoftPromoteHalf:
@@ -695,6 +687,12 @@ void DAGTypeLegalizer::ReplaceValueWith(SDValue From, SDValue To) {
           auto OldValId = getTableId(OldVal);
           auto NewValId = getTableId(NewVal);
           DAG.ReplaceAllUsesOfValueWith(OldVal, NewVal);
+          // Re-remap ids after RAUW, since the call above may have caused
+          // nodes to be deleted (via CSE), triggering NoteDeletion callbacks
+          // that added new entries to ReplacedValues. Without re-remapping,
+          // we could create a cycle like A -> B -> A.
+          RemapId(OldValId);
+          RemapId(NewValId);
           if (OldValId != NewValId)
             ReplacedValues[OldValId] = NewValId;
         }

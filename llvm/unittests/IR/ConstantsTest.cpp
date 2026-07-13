@@ -10,6 +10,7 @@
 #include "llvm-c/Core.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/ConstantFold.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -18,7 +19,8 @@
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
-namespace llvm {
+using namespace llvm;
+
 namespace {
 
 // Check that use count checks treat ConstantData like they have no uses.
@@ -29,8 +31,13 @@ TEST(ConstantsTest, UseCounts) {
 
   EXPECT_TRUE(Zero->use_empty());
   EXPECT_EQ(Zero->getNumUses(), 0u);
+  EXPECT_TRUE(Zero->hasNUses(0));
   EXPECT_FALSE(Zero->hasOneUse());
   EXPECT_FALSE(Zero->hasOneUser());
+  EXPECT_FALSE(Zero->hasNUses(1));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(1));
+  EXPECT_FALSE(Zero->hasNUses(2));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(2));
 
   std::unique_ptr<Module> M(new Module("MyModule", Context));
 
@@ -45,40 +52,19 @@ TEST(ConstantsTest, UseCounts) {
   // Still looks like use_empty with uses.
   EXPECT_TRUE(Zero->use_empty());
   EXPECT_EQ(Zero->getNumUses(), 0u);
+  EXPECT_TRUE(Zero->hasNUses(0));
   EXPECT_FALSE(Zero->hasOneUse());
   EXPECT_FALSE(Zero->hasOneUser());
+  EXPECT_FALSE(Zero->hasNUses(1));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(1));
+  EXPECT_FALSE(Zero->hasNUses(2));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(2));
 }
-
-#ifdef GTEST_HAS_DEATH_TEST
-#ifndef NDEBUG
-
-TEST(ConstantsTest, hasNUsesInvalid) {
-  LLVMContext Context;
-  Type *Int32Ty = Type::getInt32Ty(Context);
-  Constant *Zero = ConstantInt::get(Int32Ty, 0);
-  std::unique_ptr<Module> M(new Module("MyModule", Context));
-
-  // Introduce some uses
-  new GlobalVariable(*M, Int32Ty, /*isConstant=*/false,
-                     GlobalValue::ExternalLinkage, /*Initializer=*/Zero,
-                     "gv_user0");
-  new GlobalVariable(*M, Int32Ty, /*isConstant=*/false,
-                     GlobalValue::ExternalLinkage, /*Initializer=*/Zero,
-                     "gv_user1");
-
-  for (int I = 0; I != 3; ++I) {
-    EXPECT_DEATH(Zero->hasNUses(I), "hasUseList\\(\\)");
-    EXPECT_DEATH(Zero->hasNUsesOrMore(I), "hasUseList\\(\\)");
-  }
-}
-
-#endif
-#endif
 
 TEST(ConstantsTest, Integer_i1) {
   LLVMContext Context;
   IntegerType *Int1 = IntegerType::get(Context, 1);
-  Constant *One = ConstantInt::get(Int1, 1, true);
+  Constant *One = ConstantInt::get(Int1, 1);
   Constant *Zero = ConstantInt::get(Int1, 0);
   Constant *NegOne = ConstantInt::get(Int1, static_cast<uint64_t>(-1), true);
   EXPECT_EQ(NegOne, ConstantInt::getSigned(Int1, -1));
@@ -158,7 +144,9 @@ TEST(ConstantsTest, IntSigns) {
   EXPECT_EQ(206U, ConstantInt::getSigned(Int8Ty, -50)->getZExtValue());
 
   // Overflow is handled by truncation.
-  EXPECT_EQ(0x3b, ConstantInt::get(Int8Ty, 0x13b)->getSExtValue());
+  EXPECT_EQ(0x3b, ConstantInt::get(Int8Ty, 0x13b, /*IsSigned=*/false,
+                                   /*ImplicitTrunc=*/true)
+                      ->getSExtValue());
 }
 
 TEST(ConstantsTest, PointerCast) {
@@ -274,7 +262,7 @@ TEST(ConstantsTest, AsInstructionsTest) {
   // FIXME: getGetElementPtr() actually creates an inbounds ConstantGEP,
   //        not a normal one!
   // CHECK(ConstantExpr::getGetElementPtr(Global, V, false),
-  //      "getelementptr i32*, i32** @dummy, i32 1");
+  //      "getelementptr ptr, ptr @dummy, i32 1");
   CHECK(ConstantExpr::getInBoundsGetElementPtr(PointerType::getUnqual(Context),
                                                Global, V),
         "getelementptr inbounds ptr, ptr @dummy, i32 1");
@@ -785,6 +773,34 @@ TEST(ConstantsTest, GetSplatValueRoundTrip) {
   }
 }
 
+TEST(ConstantsTest, ConstantPointerNullVectorSplat) {
+  LLVMContext Context;
+
+  PointerType *PtrTy = PointerType::getUnqual(Context);
+  Constant *ScalarNull = ConstantPointerNull::get(PtrTy);
+
+  for (unsigned Min : {1, 2, 8}) {
+    ElementCount ScalableEC = ElementCount::getScalable(Min);
+    ElementCount FixedEC = ElementCount::getFixed(Min);
+
+    for (ElementCount EC : {ScalableEC, FixedEC}) {
+      VectorType *VecTy = VectorType::get(PtrTy, EC);
+      Constant *Null = Constant::getNullValue(VecTy);
+
+      ASSERT_TRUE(isa<ConstantPointerNull>(Null));
+      EXPECT_EQ(VecTy, Null->getType());
+      EXPECT_TRUE(Null->isNullValue());
+      EXPECT_EQ(ScalarNull, Null->getSplatValue());
+      EXPECT_EQ(ScalarNull, Null->getAggregateElement(0U));
+      EXPECT_EQ(PtrTy, cast<ConstantPointerNull>(Null)->getPointerType());
+
+      Constant *Splat = ConstantVector::getSplat(EC, ScalarNull);
+      EXPECT_EQ(Null, Splat);
+      EXPECT_EQ(ScalarNull, Splat->getSplatValue());
+    }
+  }
+}
+
 TEST(ConstantsTest, ComdatUserTracking) {
   LLVMContext Context;
   Module M("MyModule", Context);
@@ -851,5 +867,57 @@ TEST(ConstantsTest, BlockAddressCAPITest) {
   EXPECT_EQ(&BB, OutBB);
 }
 
+TEST(ConstantsTest, Float128Test) {
+  LLVMContextRef C = LLVMContextCreate();
+  LLVMTypeRef Ty128 = LLVMFP128TypeInContext(C);
+  LLVMTypeRef TyPPC128 = LLVMPPCFP128TypeInContext(C);
+  LLVMTypeRef TyFloat = LLVMFloatTypeInContext(C);
+  LLVMTypeRef TyDouble = LLVMDoubleTypeInContext(C);
+  LLVMTypeRef TyHalf = LLVMHalfTypeInContext(C);
+  LLVMBuilderRef Builder = LLVMCreateBuilderInContext(C);
+  uint64_t n[2] = {0x4000000000000000, 0x0}; //+2
+  uint64_t m[2] = {0xC000000000000000, 0x0}; //-2
+  LLVMValueRef val1 = LLVMConstFPFromBits(Ty128, n);
+  EXPECT_TRUE(val1 != nullptr);
+  LLVMValueRef val2 = LLVMConstFPFromBits(Ty128, m);
+  EXPECT_TRUE(val2 != nullptr);
+  LLVMValueRef val3 = LLVMBuildFAdd(Builder, val1, val2, "test");
+  EXPECT_TRUE(val3 != nullptr);
+  LLVMValueRef val4 = LLVMConstFPFromBits(TyPPC128, n);
+  EXPECT_TRUE(val4 != nullptr);
+  uint64_t p[1] = {0x0000000040000000}; //+2
+  LLVMValueRef val5 = LLVMConstFPFromBits(TyFloat, p);
+  EXPECT_EQ(APFloat(2.0f), unwrap<ConstantFP>(val5)->getValue());
+  uint64_t q[1] = {0x4000000000000000}; //+2
+  LLVMValueRef val6 = LLVMConstFPFromBits(TyDouble, q);
+  EXPECT_EQ(APFloat(2.0), unwrap<ConstantFP>(val6)->getValue());
+  uint64_t r[1] = {0x0000000000003c00}; //+1
+  LLVMValueRef val7 = LLVMConstFPFromBits(TyHalf, r);
+  EXPECT_TRUE(val7 != nullptr);
+  LLVMDisposeBuilder(Builder);
+  LLVMContextDispose(C);
+}
+
+TEST(ConstantsTest, ToConstantRangeConstantByteVector) {
+  LLVMContext Context;
+  // Use 7-bit ByteType so the vector is not folded into ConstantDataVector
+  // (ConstantDataSequential only supports 8/16/32/64-bit element types).
+  ByteType *B7Ty = Type::getByteNTy(Context, 7);
+
+  ConstantByte *CB1 = ConstantByte::get(B7Ty, 10);
+  ConstantByte *CB2 = ConstantByte::get(B7Ty, 20);
+  Constant *Elts[] = {CB1, CB2};
+  Constant *CV = ConstantVector::get(Elts);
+  ASSERT_TRUE(isa<ConstantVector>(CV));
+
+  ConstantRange CR = CV->toConstantRange();
+  EXPECT_EQ(CR, ConstantRange(APInt(7, 10), APInt(7, 21)));
+
+  Constant *CVWithPoison =
+      ConstantVector::get({CB1, PoisonValue::get(B7Ty), CB2});
+  ASSERT_TRUE(isa<ConstantVector>(CVWithPoison));
+  ConstantRange CRPoison = CVWithPoison->toConstantRange();
+  EXPECT_EQ(CRPoison, ConstantRange(APInt(7, 10), APInt(7, 21)));
+}
+
 } // end anonymous namespace
-} // end namespace llvm

@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -verify-machineinstrs %s -o - | FileCheck -check-prefixes=FULL,ALL %s
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -simplify-mir -verify-machineinstrs %s -o - | FileCheck -check-prefixes=SIMPLE,ALL %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mattr=+dx10-clamp-and-ieee-mode -run-pass=none -verify-machineinstrs %s -o - | FileCheck -check-prefixes=FULL,ALL %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mattr=+dx10-clamp-and-ieee-mode -run-pass=none -simplify-mir -verify-machineinstrs %s -o - | FileCheck -check-prefixes=SIMPLE,ALL %s
 
 
 ---
@@ -12,7 +12,6 @@
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: true
 # FULL-NEXT: isChainFunction: false
-# FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     true
 # FULL-NEXT: waveLimiter:     true
 # FULL-NEXT: hasSpilledSGPRs: false
@@ -57,7 +56,9 @@
 # FULL-NEXT:  hasInitWholeWave: false
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
+# FULL-NEXT: numKernargPreloadSGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
+# FULL-NEXT: minNumAGPRs: 4294967295
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -87,6 +88,7 @@
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # SIMPLE-NEXT: occupancy: 8
+# SIMPLE-NEXT: dynamicVGPRBlockSize: 0
 # SIMPLE-NEXT: body:
 name: kernel0
 machineFunctionInfo:
@@ -95,7 +97,6 @@ machineFunctionInfo:
   ldsSize: 2048
   gdsSize: 256
   isEntryFunction: true
-  noSignedZerosFPMath: false
   memoryBound:     true
   waveLimiter:     true
   scratchRSrcReg:  '$sgpr8_sgpr9_sgpr10_sgpr11'
@@ -124,7 +125,6 @@ body:             |
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: false
 # FULL-NEXT: isChainFunction: false
-# FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     false
 # FULL-NEXT: waveLimiter:     false
 # FULL-NEXT: hasSpilledSGPRs: false
@@ -167,7 +167,9 @@ body:             |
 # FULL-NEXT: hasInitWholeWave: false
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
+# FULL-NEXT: numKernargPreloadSGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
+# FULL-NEXT: minNumAGPRs: 4294967295
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -186,6 +188,7 @@ body:             |
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # SIMPLE-NEXT:  occupancy: 10
+# SIMPLE-NEXT: dynamicVGPRBlockSize: 0
 # SIMPLE-NEXT: body:
 
 name: no_mfi
@@ -205,7 +208,6 @@ body:             |
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: false
 # FULL-NEXT: isChainFunction: false
-# FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     false
 # FULL-NEXT: waveLimiter:     false
 # FULL-NEXT: hasSpilledSGPRs: false
@@ -248,7 +250,9 @@ body:             |
 # FULL-NEXT: hasInitWholeWave: false
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
+# FULL-NEXT: numKernargPreloadSGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
+# FULL-NEXT: minNumAGPRs: 4294967295
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -267,6 +271,7 @@ body:             |
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # SIMPLE-NEXT:  occupancy: 10
+# SIMPLE-NEXT: dynamicVGPRBlockSize: 0
 # SIMPLE-NEXT: body:
 
 name: empty_mfi
@@ -287,7 +292,6 @@ body:             |
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: true
 # FULL-NEXT: isChainFunction: false
-# FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     false
 # FULL-NEXT: waveLimiter:     false
 # FULL-NEXT: hasSpilledSGPRs: false
@@ -330,7 +334,9 @@ body:             |
 # FULL-NEXT: hasInitWholeWave: false
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
+# FULL-NEXT: numKernargPreloadSGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
+# FULL-NEXT: minNumAGPRs: 4294967295
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -350,6 +356,7 @@ body:             |
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # SIMPLE-NEXT: occupancy: 10
+# SIMPLE-NEXT: dynamicVGPRBlockSize: 0
 # SIMPLE-NEXT: body:
 
 name: empty_mfi_entry_func
@@ -624,6 +631,20 @@ body: |
 name: max_memory_cluster_dwords
 machineFunctionInfo:
   maxMemoryClusterDWords: 16
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+
+---
+# A non-default minNumAGPRs parsed from the YAML must round-trip.
+# ALL-LABEL: name: min_num_agprs
+# FULL: minNumAGPRs:     8
+# SIMPLE: minNumAGPRs:     8
+name: min_num_agprs
+machineFunctionInfo:
+  minNumAGPRs:     8
 body:             |
   bb.0:
     SI_RETURN

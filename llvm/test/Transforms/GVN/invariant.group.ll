@@ -213,7 +213,7 @@ define void @loadCombine1() {
 ; CHECK-NEXT:    [[PTR:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    store i8 42, ptr [[PTR]], align 1
 ; CHECK-NEXT:    call void @foo(ptr [[PTR]])
-; CHECK-NEXT:    [[C:%.*]] = load i8, ptr [[PTR]], align 1, !invariant.group [[META0]]
+; CHECK-NEXT:    [[C:%.*]] = load i8, ptr [[PTR]], align 1
 ; CHECK-NEXT:    call void @bar(i8 [[C]])
 ; CHECK-NEXT:    call void @bar(i8 [[C]])
 ; CHECK-NEXT:    ret void

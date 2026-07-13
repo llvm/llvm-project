@@ -8,7 +8,7 @@ define i16 @constant() {
 ; CHECK:       loop1:
 ; CHECK-NEXT:    [[L1:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[L1_ADD:%.*]], [[LOOP1]] ]
 ; CHECK-NEXT:    [[L1_ADD]] = add nuw nsw i16 [[L1]], 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i16 [[L1_ADD]], 2
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ult i16 [[L1_ADD]], 2
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[LOOP1]], label [[LOOP2_PREHEADER:%.*]]
 ; CHECK:       loop2.preheader:
 ; CHECK-NEXT:    br label [[LOOP2:%.*]]
@@ -18,7 +18,7 @@ define i16 @constant() {
 ; CHECK-NEXT:    [[L2_ADD]] = add nuw nsw i16 [[L2]], 1
 ; CHECK-NEXT:    tail call void @foo(i16 [[K2]])
 ; CHECK-NEXT:    [[K2_ADD]] = add nuw nsw i16 [[K2]], 1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i16 [[L2_ADD]], 2
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i16 [[L2_ADD]], 2
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP2]], label [[LOOP2_END:%.*]]
 ; CHECK:       loop2.end:
 ; CHECK-NEXT:    ret i16 184
@@ -59,7 +59,7 @@ define i16 @dom_argument(i16 %arg1, i16 %arg2) {
 ; CHECK:       loop1:
 ; CHECK-NEXT:    [[L1:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[L1_ADD:%.*]], [[LOOP1]] ]
 ; CHECK-NEXT:    [[L1_ADD]] = add nuw nsw i16 [[L1]], 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i16 [[L1_ADD]], 2
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ult i16 [[L1_ADD]], 2
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[LOOP1]], label [[LOOP2_PREHEADER:%.*]]
 ; CHECK:       loop2.preheader:
 ; CHECK-NEXT:    br label [[LOOP2:%.*]]
@@ -69,7 +69,7 @@ define i16 @dom_argument(i16 %arg1, i16 %arg2) {
 ; CHECK-NEXT:    [[L2_ADD]] = add nuw nsw i16 [[L2]], 1
 ; CHECK-NEXT:    tail call void @foo(i16 [[K2]])
 ; CHECK-NEXT:    [[K2_ADD]] = add nuw nsw i16 [[K2]], 1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i16 [[L2_ADD]], 2
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i16 [[L2_ADD]], 2
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP2]], label [[LOOP2_END:%.*]]
 ; CHECK:       loop2.end:
 ; CHECK-NEXT:    [[K2_ADD_LCSSA:%.*]] = phi i16 [ [[K2_ADD]], [[LOOP2]] ]
@@ -118,7 +118,7 @@ define i16 @dummy_phi_outside_loop(i16 %arg) {
 ; CHECK-NEXT:    [[L2_ADD]] = add nuw nsw i16 [[L2]], 1
 ; CHECK-NEXT:    tail call void @foo(i16 [[K2]])
 ; CHECK-NEXT:    [[K2_ADD]] = add nuw nsw i16 [[K2]], 1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i16 [[L2_ADD]], 2
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i16 [[L2_ADD]], 2
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP2]], label [[LOOP2_END:%.*]]
 ; CHECK:       loop2.end:
 ; CHECK-NEXT:    [[K2_ADD_LCSSA:%.*]] = phi i16 [ [[K2_ADD]], [[LOOP2]] ]
@@ -148,14 +148,14 @@ loop2.end:                                       ; preds = %loop2
 define i16 @neg_loop_carried(i16 %arg) {
 ; CHECK-LABEL: @neg_loop_carried(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[ARG:%.*]], 2
 ; CHECK-NEXT:    br label [[LOOP1:%.*]]
 ; CHECK:       loop1:
 ; CHECK-NEXT:    [[L1:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[L1_ADD:%.*]], [[LOOP1]] ]
 ; CHECK-NEXT:    [[L1_ADD]] = add nuw nsw i16 [[L1]], 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i16 [[L1_ADD]], 2
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ult i16 [[L1_ADD]], 2
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[LOOP1]], label [[LOOP2_PREHEADER:%.*]]
 ; CHECK:       loop2.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[ARG:%.*]], 2
 ; CHECK-NEXT:    br label [[LOOP2:%.*]]
 ; CHECK:       loop2:
 ; CHECK-NEXT:    [[K2:%.*]] = phi i16 [ [[K2_ADD:%.*]], [[LOOP2]] ], [ [[TMP0]], [[LOOP2_PREHEADER]] ]
@@ -163,7 +163,7 @@ define i16 @neg_loop_carried(i16 %arg) {
 ; CHECK-NEXT:    [[L2_ADD]] = add nuw nsw i16 [[L2]], 1
 ; CHECK-NEXT:    tail call void @foo(i16 [[K2]])
 ; CHECK-NEXT:    [[K2_ADD]] = add nuw nsw i16 [[K2]], 1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i16 [[L2_ADD]], 2
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i16 [[L2_ADD]], 2
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP2]], label [[LOOP2_END:%.*]]
 ; CHECK:       loop2.end:
 ; CHECK-NEXT:    [[K2_ADD_LCSSA:%.*]] = phi i16 [ [[K2_ADD]], [[LOOP2]] ]

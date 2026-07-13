@@ -57,6 +57,8 @@ public:
   // Pass Pipeline Configuration
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
+
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
@@ -96,6 +98,29 @@ public:
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
     // Addrspacecasts are always noops.
     return true;
+  }
+
+  bool isGVIndirectSymbol(const GlobalValue *GV) const {
+    if (!shouldAssumeDSOLocal(GV))
+      return true;
+
+    // 32 bit macho has no relocation for a-b if a is undefined, even if b is in
+    // the section that is being relocated. This means we have to use o load
+    // even for GVs that are known to be local to the dso.
+    if (getTargetTriple().isOSBinFormatMachO() && isPositionIndependent() &&
+        (GV->isDeclarationForLinker() || GV->hasCommonLinkage()))
+      return true;
+
+    // In ELF PIC mode, weak symbols referenced via the constant pool use a
+    // PC-relative expression (e.g. .long xxx-(.LPC+8)) that the assembler
+    // eagerly resolves when both the symbol and label are in the same section.
+    // This prevents the linker from overriding a weak definition with a
+    // non-weak one. Use GOT indirection for weak symbols to avoid this.
+    if (getTargetTriple().isOSBinFormatELF() && isPositionIndependent() &&
+        GV->isWeakForLinker())
+      return true;
+
+    return false;
   }
 
   yaml::MachineFunctionInfo *createDefaultFuncInfoYAML() const override;

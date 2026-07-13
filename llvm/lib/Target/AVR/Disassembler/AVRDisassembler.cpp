@@ -13,9 +13,6 @@
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 #include "TargetInfo/AVRTargetInfo.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
-
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDecoder.h"
@@ -82,7 +79,7 @@ static DecodeStatus DecodeGPR8RegisterClass(MCInst &Inst, unsigned RegNo,
   if (RegNo > 31)
     return MCDisassembler::Fail;
 
-  unsigned Register = GPRDecoderTable[RegNo];
+  MCRegister Register = GPRDecoderTable[RegNo];
   Inst.addOperand(MCOperand::createReg(Register));
   return MCDisassembler::Success;
 }
@@ -174,7 +171,7 @@ static DecodeStatus decodeLoadStore(MCInst &Inst, unsigned Insn,
                                     uint64_t Address,
                                     const MCDisassembler *Decoder) {
   // Get the register will be loaded or stored.
-  unsigned RegVal = GPRDecoderTable[(Insn >> 4) & 0x1f];
+  MCRegister RegVal = GPRDecoderTable[(Insn >> 4) & 0x1f];
 
   // Decode LDD/STD with offset less than 8.
   if ((Insn & 0xf000) == 0x8000) {

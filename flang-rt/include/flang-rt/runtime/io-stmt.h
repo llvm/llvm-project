@@ -346,6 +346,7 @@ public:
   }
 
 private:
+#if !defined(RT_CUDA_THIN_IO)
   std::variant<common::reference_wrapper<OpenStatementState>,
       common::reference_wrapper<CloseStatementState>,
       common::reference_wrapper<NoopStatementState>,
@@ -384,6 +385,14 @@ private:
       common::reference_wrapper<ExternalMiscIoStatementState>,
       common::reference_wrapper<ErroneousIoStatementState>>
       u_;
+#else
+  // Use a thinner I/O API for CUDA runtime.
+  std::variant<common::reference_wrapper<NoopStatementState>,
+      common::reference_wrapper<
+          ExternalListIoStatementState<Direction::Output>>,
+      common::reference_wrapper<ErroneousIoStatementState>>
+      u_;
+#endif
 };
 
 // Base class for all per-I/O statement state classes.
@@ -730,8 +739,7 @@ public:
   RT_API_ATTRS bool AdvanceRecord(int = 1);
   RT_API_ATTRS int EndIoStatement();
   RT_API_ATTRS bool CanAdvance() {
-    return DIR == Direction::Input &&
-        (canAdvance_ || this->mutableModes().inNamelist);
+    return canAdvance_ || this->mutableModes().inNamelist;
   }
 
 private:

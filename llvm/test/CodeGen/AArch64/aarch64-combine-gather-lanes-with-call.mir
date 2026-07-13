@@ -20,7 +20,7 @@ body:             |
     ; CHECK-NEXT: [[PTR_2:%[0-9]+]]:gpr64common = COPY $x2
     ; CHECK-NEXT: [[PTR_3:%[0-9]+]]:gpr64common = COPY $x3
     ; CHECK-NEXT: [[LD_i32:%[0-9]+]]:fpr32 = LDRSroX [[BASE_REG]], killed [[PTR_1]], 0, 1
-    ; CHECK-NEXT: [[LD_LANE_0:%[0-9]+]]:fpr128 = SUBREG_TO_REG 0, killed [[LD_i32]], %subreg.ssub
+    ; CHECK-NEXT: [[LD_LANE_0:%[0-9]+]]:fpr128 = SUBREG_TO_REG killed [[LD_i32]], %subreg.ssub
     ; CHECK-NEXT: [[LD_LANE_1:%[0-9]+]]:fpr128 = LD1i32 [[LD_LANE_0]], 1, [[PTR_2]]
     ; CHECK-NEXT: $x0 = COPY [[PTR_2]]
     ; CHECK-NEXT: BL @external_func, csr_aarch64_aapcs, implicit-def $lr, implicit $x0, implicit-def $x0
@@ -34,7 +34,7 @@ body:             |
     %2:gpr64common = COPY $x2
     %3:gpr64common = COPY $x3
     %5:fpr32 = LDRSroX %0, killed %1, 0, 1
-    %6:fpr128 = SUBREG_TO_REG 0, killed %5, %subreg.ssub
+    %6:fpr128 = SUBREG_TO_REG killed %5, %subreg.ssub
     %7:fpr128 = LD1i32 %6, 1, %2
     $x0 = COPY %2
     BL @external_func, csr_aarch64_aapcs, implicit-def $lr, implicit $x0, implicit-def $x0

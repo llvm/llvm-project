@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/nextafterl.h"
-#include "src/__support/FPUtil/ManipulationFunctions.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/nextafterl.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long double, nextafterl, (long double x, long double y)) {
-  return fputil::nextafter(x, y);
+  return math::nextafterl(x, y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

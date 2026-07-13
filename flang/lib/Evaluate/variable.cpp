@@ -11,8 +11,6 @@
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
-#include "flang/Parser/char-block.h"
-#include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
@@ -89,6 +87,14 @@ std::optional<Expr<SomeType>> CoarrayRef::team() const {
   }
 }
 
+std::optional<Expr<SomeType>> CoarrayRef::notify() const {
+  if (notify_) {
+    return notify_.value().value();
+  } else {
+    return std::nullopt;
+  }
+}
+
 CoarrayRef &CoarrayRef::set_stat(Expr<SomeInteger> &&v) {
   CHECK(IsVariable(v));
   stat_.emplace(std::move(v));
@@ -97,6 +103,11 @@ CoarrayRef &CoarrayRef::set_stat(Expr<SomeInteger> &&v) {
 
 CoarrayRef &CoarrayRef::set_team(Expr<SomeType> &&v) {
   team_.emplace(std::move(v));
+  return *this;
+}
+
+CoarrayRef &CoarrayRef::set_notify(Expr<SomeType> &&v) {
+  notify_.emplace(std::move(v));
   return *this;
 }
 

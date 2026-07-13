@@ -12,11 +12,16 @@
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64"
 target triple = "spir64-unknown-unknown"
 
+@G1 = global bfloat 0.0
+@G2 = global <2 x bfloat> zeroinitializer
+
 define spir_kernel void @test() {
 entry:
   %addr1 = alloca bfloat
   %addr2 = alloca <2 x bfloat>
   %data1 = load bfloat, ptr %addr1
   %data2 = load <2 x bfloat>, ptr %addr2
+  store bfloat %data1, ptr @G1
+  store <2 x bfloat> %data2, ptr @G2
   ret void
 }

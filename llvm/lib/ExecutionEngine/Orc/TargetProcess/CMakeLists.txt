@@ -30,7 +30,7 @@ add_llvm_component_library(LLVMOrcTargetProcess
   UnwindInfoManager.cpp
 
   ADDITIONAL_HEADER_DIRS
-  ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/Orc
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/Orc/TargetProcess
 
   LINK_LIBS
   ${LLVM_PTHREAD_LIB}
@@ -44,3 +44,13 @@ add_llvm_component_library(LLVMOrcTargetProcess
   Support
   TargetParser
   )
+
+if ((MINGW OR CYGWIN) AND BUILD_SHARED_LIBS)
+  # This library contains symbols marked with LLVM_ALWAYS_EXPORT (__declspec(
+  # dllexport)) so that they can be found via GetProcAddress from a statically
+  # linked exe. When any symbol in a DLL carries dllexport, the MinGW/Cygwin
+  # linker switches to exclusive-export mode and omits all other symbols from
+  # the export table. Add --export-all-symbols to restore full export of all
+  # symbols despite the targeted dllexports.
+  target_link_options(LLVMOrcTargetProcess PRIVATE LINKER:--export-all-symbols)
+endif()

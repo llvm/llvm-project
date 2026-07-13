@@ -27,9 +27,7 @@
 const scudo::uptr PageSize = scudo::getPageSizeCached();
 
 template <typename Config> static scudo::Options getOptionsForConfig() {
-  if (!Config::getMaySupportMemoryTagging() ||
-      !scudo::archSupportsMemoryTagging() ||
-      !scudo::systemSupportsMemoryTagging())
+  if (!scudo::systemSupportsMemoryTagging())
     return {};
   scudo::AtomicOptions AO;
   AO.set(scudo::OptionBit::UseMemoryTagging);
@@ -147,7 +145,7 @@ template <typename Config> static void testBasic() {
 
   // If the Secondary can't cache that pointer, it will be unmapped.
   if (!Info.Allocator->canCache(Size)) {
-    EXPECT_DEATH(
+    SCUDO_EXPECT_DEATH(
         {
           // Repeat few time to avoid missing crash if it's mmaped by unrelated
           // code.

@@ -91,8 +91,6 @@ static cl::opt<bool> PrintThinLTOIndexOnly(
     cl::desc("Only read thinlto index and print the index as LLVM assembly."),
     cl::init(false), cl::Hidden, cl::cat(DisCategory));
 
-namespace {
-
 static void printDebugLoc(const DebugLoc &DL, formatted_raw_ostream &OS) {
   OS << DL.getLine() << ":" << DL.getCol();
   if (DILocation *IDL = DL.getInlinedAt()) {
@@ -100,14 +98,30 @@ static void printDebugLoc(const DebugLoc &DL, formatted_raw_ostream &OS) {
     printDebugLoc(IDL, OS);
   }
 }
+
+namespace {
 class CommentWriter : public AssemblyAnnotationWriter {
+private:
+  bool canSafelyAccessUses(const Value &V) {
+    // Can't safely access uses, if module not materialized.
+    const GlobalValue *GV = dyn_cast<GlobalValue>(&V);
+    return !GV || (GV->getParent() && GV->getParent()->isMaterialized());
+  }
+
 public:
   void emitFunctionAnnot(const Function *F,
                          formatted_raw_ostream &OS) override {
+    if (!canSafelyAccessUses(*F))
+      return;
+
     OS << "; [#uses=" << F->getNumUses() << ']';  // Output # uses
     OS << '\n';
   }
+
   void printInfoComment(const Value &V, formatted_raw_ostream &OS) override {
+    if (!canSafelyAccessUses(V))
+      return;
+
     bool Padded = false;
     if (!V.getType()->isVoidTy()) {
       OS.PadToColumn(50);
@@ -152,7 +166,7 @@ struct LLVMDisDiagnosticHandler : public DiagnosticHandler {
     return true;
   }
 };
-} // end anon namespace
+} // namespace
 
 static ExitOnError ExitOnErr;
 
@@ -249,7 +263,6 @@ int main(int argc, char **argv) {
       // All that llvm-dis does is write the assembly to a file.
       if (!DontPrint) {
         if (M) {
-          M->removeDebugIntrinsicDeclarations();
           M->print(Out->os(), Annotator.get(),
                    /* ShouldPreserveUseListOrder */ false);
         }

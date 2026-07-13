@@ -372,13 +372,13 @@ define void @store_trunc_from_64bits(ptr %src, ptr %dst) {
 ; BE-NEXT:    ldr s0, [x0]
 ; BE-NEXT:    ldrh w8, [x0, #4]
 ; BE-NEXT:    rev32 v0.4h, v0.4h
+; BE-NEXT:    strb w8, [x1, #2]
 ; BE-NEXT:    mov v0.h[2], w8
 ; BE-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; BE-NEXT:    rev32 v0.16b, v0.16b
-; BE-NEXT:    str s0, [sp, #12]
-; BE-NEXT:    ldrh w9, [sp, #12]
-; BE-NEXT:    strb w8, [x1, #2]
-; BE-NEXT:    strh w9, [x1]
+; BE-NEXT:    rev32 v0.4h, v0.4h
+; BE-NEXT:    ushll v0.4s, v0.4h, #0
+; BE-NEXT:    str h0, [x1]
 ; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
 entry:
@@ -422,10 +422,10 @@ define void @store_trunc_add_from_64bits(ptr %src, ptr %dst) {
 ; BE-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
 ; BE-NEXT:    mov h0, v0.h[2]
 ; BE-NEXT:    rev32 v1.16b, v1.16b
-; BE-NEXT:    str s1, [sp, #12]
-; BE-NEXT:    ldrh w8, [sp, #12]
 ; BE-NEXT:    stur b0, [x1, #2]
-; BE-NEXT:    strh w8, [x1]
+; BE-NEXT:    rev32 v1.4h, v1.4h
+; BE-NEXT:    ushll v1.4s, v1.4h, #0
+; BE-NEXT:    str h1, [x1]
 ; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
 entry:
@@ -604,10 +604,10 @@ define void @shift_trunc_store(ptr %src, ptr %dst) {
 ; BE-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
 ; BE-NEXT:    mov h0, v0.h[2]
 ; BE-NEXT:    rev32 v1.16b, v1.16b
-; BE-NEXT:    str s1, [sp, #12]
-; BE-NEXT:    ldrh w8, [sp, #12]
 ; BE-NEXT:    stur b0, [x1, #2]
-; BE-NEXT:    strh w8, [x1]
+; BE-NEXT:    rev32 v1.4h, v1.4h
+; BE-NEXT:    ushll v1.4s, v1.4h, #0
+; BE-NEXT:    str h1, [x1]
 ; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
   %l = load <3 x i32>, ptr %src
@@ -638,10 +638,10 @@ define void @shift_trunc_store_default_align(ptr %src, ptr %dst) {
 ; BE-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
 ; BE-NEXT:    mov h0, v0.h[2]
 ; BE-NEXT:    rev32 v1.16b, v1.16b
-; BE-NEXT:    str s1, [sp, #12]
-; BE-NEXT:    ldrh w8, [sp, #12]
 ; BE-NEXT:    stur b0, [x1, #2]
-; BE-NEXT:    strh w8, [x1]
+; BE-NEXT:    rev32 v1.4h, v1.4h
+; BE-NEXT:    ushll v1.4s, v1.4h, #0
+; BE-NEXT:    str h1, [x1]
 ; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
   %l = load <3 x i32>, ptr %src
@@ -672,10 +672,10 @@ define void @shift_trunc_store_align_4(ptr %src, ptr %dst) {
 ; BE-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
 ; BE-NEXT:    mov h0, v0.h[2]
 ; BE-NEXT:    rev32 v1.16b, v1.16b
-; BE-NEXT:    str s1, [sp, #12]
-; BE-NEXT:    ldrh w8, [sp, #12]
 ; BE-NEXT:    stur b0, [x1, #2]
-; BE-NEXT:    strh w8, [x1]
+; BE-NEXT:    rev32 v1.4h, v1.4h
+; BE-NEXT:    ushll v1.4s, v1.4h, #0
+; BE-NEXT:    str h1, [x1]
 ; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
   %l = load <3 x i32>, ptr %src
@@ -706,10 +706,10 @@ define void @shift_trunc_store_const_offset_1(ptr %src, ptr %dst) {
 ; BE-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
 ; BE-NEXT:    mov h0, v0.h[2]
 ; BE-NEXT:    rev32 v1.16b, v1.16b
-; BE-NEXT:    str s1, [sp, #12]
-; BE-NEXT:    ldrh w8, [sp, #12]
 ; BE-NEXT:    stur b0, [x1, #3]
-; BE-NEXT:    sturh w8, [x1, #1]
+; BE-NEXT:    rev32 v1.4h, v1.4h
+; BE-NEXT:    ushll v1.4s, v1.4h, #0
+; BE-NEXT:    stur h1, [x1, #1]
 ; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
   %l = load <3 x i32>, ptr %src
@@ -741,10 +741,10 @@ define void @shift_trunc_store_const_offset_3(ptr %src, ptr %dst) {
 ; BE-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
 ; BE-NEXT:    mov h0, v0.h[2]
 ; BE-NEXT:    rev32 v1.16b, v1.16b
-; BE-NEXT:    str s1, [sp, #12]
-; BE-NEXT:    ldrh w8, [sp, #12]
 ; BE-NEXT:    stur b0, [x1, #5]
-; BE-NEXT:    sturh w8, [x1, #3]
+; BE-NEXT:    rev32 v1.4h, v1.4h
+; BE-NEXT:    ushll v1.4s, v1.4h, #0
+; BE-NEXT:    stur h1, [x1, #3]
 ; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
   %l = load <3 x i32>, ptr %src
@@ -764,10 +764,9 @@ define void @shift_trunc_volatile_store(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    shrn.4h v0, v0, #16
 ; CHECK-NEXT:    uzp1.8b v1, v0, v0
 ; CHECK-NEXT:    mov h0, v0[2]
-; CHECK-NEXT:    str s1, [sp, #12]
-; CHECK-NEXT:    ldrh w8, [sp, #12]
+; CHECK-NEXT:    ushll.4s v1, v1, #0
 ; CHECK-NEXT:    stur b0, [x1, #2]
-; CHECK-NEXT:    strh w8, [x1]
+; CHECK-NEXT:    str h1, [x1]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 ;
@@ -780,10 +779,10 @@ define void @shift_trunc_volatile_store(ptr %src, ptr %dst) {
 ; BE-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
 ; BE-NEXT:    mov h0, v0.h[2]
 ; BE-NEXT:    rev32 v1.16b, v1.16b
-; BE-NEXT:    str s1, [sp, #12]
-; BE-NEXT:    ldrh w8, [sp, #12]
 ; BE-NEXT:    stur b0, [x1, #2]
-; BE-NEXT:    strh w8, [x1]
+; BE-NEXT:    rev32 v1.4h, v1.4h
+; BE-NEXT:    ushll v1.4s, v1.4h, #0
+; BE-NEXT:    str h1, [x1]
 ; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
   %l = load <3 x i32>, ptr %src
@@ -832,10 +831,10 @@ define void @load_v3i8_zext_to_3xi32_add_trunc_store(ptr %src) {
 ; BE-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
 ; BE-NEXT:    mov h0, v0.h[2]
 ; BE-NEXT:    rev32 v1.16b, v1.16b
-; BE-NEXT:    str s1, [sp, #8]
-; BE-NEXT:    ldrh w8, [sp, #8]
 ; BE-NEXT:    stur b0, [x0, #2]
-; BE-NEXT:    strh w8, [x0]
+; BE-NEXT:    rev32 v1.4h, v1.4h
+; BE-NEXT:    ushll v1.4s, v1.4h, #0
+; BE-NEXT:    str h1, [x0]
 ; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
   %l = load <3 x i8>, ptr %src, align 1
@@ -885,10 +884,10 @@ define void @load_v3i8_sext_to_3xi32_add_trunc_store(ptr %src) {
 ; BE-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
 ; BE-NEXT:    mov h0, v0.h[2]
 ; BE-NEXT:    rev32 v1.16b, v1.16b
-; BE-NEXT:    str s1, [sp, #8]
-; BE-NEXT:    ldrh w8, [sp, #8]
 ; BE-NEXT:    stur b0, [x0, #2]
-; BE-NEXT:    strh w8, [x0]
+; BE-NEXT:    rev32 v1.4h, v1.4h
+; BE-NEXT:    ushll v1.4s, v1.4h, #0
+; BE-NEXT:    str h1, [x0]
 ; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
   %l = load <3 x i8>, ptr %src, align 1
@@ -896,5 +895,57 @@ define void @load_v3i8_sext_to_3xi32_add_trunc_store(ptr %src) {
   %add = add <3 x i32> %e, <i32 1, i32 2, i32 3>
   %t = trunc <3 x i32> %add to <3 x i8>
   store <3 x i8> %t, ptr %src
+  ret void
+}
+
+define void @store_trunc_v3i64_to_v3i8(ptr %p, <3 x i64> %x) {
+; CHECK-LABEL: store_trunc_v3i64_to_v3i8:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    ; kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    mov.d v0[1], v1[0]
+; CHECK-NEXT:    xtn.2s v1, v2
+; CHECK-NEXT:    xtn.2s v0, v0
+; CHECK-NEXT:    stur b1, [x0, #2]
+; CHECK-NEXT:    mov.s w8, v0[1]
+; CHECK-NEXT:    mov.h v0[1], w8
+; CHECK-NEXT:    mov.s w8, v1[1]
+; CHECK-NEXT:    mov.h v0[2], v1[0]
+; CHECK-NEXT:    mov.h v0[3], w8
+; CHECK-NEXT:    xtn.8b v0, v0
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    str h0, [x0]
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    ret
+;
+; BE-LABEL: store_trunc_v3i64_to_v3i8:
+; BE:       // %bb.0: // %entry
+; BE-NEXT:    sub sp, sp, #16
+; BE-NEXT:    .cfi_def_cfa_offset 16
+; BE-NEXT:    // kill: def $d0 killed $d0 def $q0
+; BE-NEXT:    // kill: def $d1 killed $d1 def $q1
+; BE-NEXT:    // kill: def $d2 killed $d2 def $q2
+; BE-NEXT:    mov v0.d[1], v1.d[0]
+; BE-NEXT:    xtn v1.2s, v2.2d
+; BE-NEXT:    xtn v0.2s, v0.2d
+; BE-NEXT:    stur b1, [x0, #2]
+; BE-NEXT:    mov w8, v0.s[1]
+; BE-NEXT:    mov v0.h[1], w8
+; BE-NEXT:    mov w8, v1.s[1]
+; BE-NEXT:    mov v0.h[2], v1.h[0]
+; BE-NEXT:    mov v0.h[3], w8
+; BE-NEXT:    xtn v0.8b, v0.8h
+; BE-NEXT:    rev32 v0.16b, v0.16b
+; BE-NEXT:    rev32 v0.4h, v0.4h
+; BE-NEXT:    ushll v0.4s, v0.4h, #0
+; BE-NEXT:    str h0, [x0]
+; BE-NEXT:    add sp, sp, #16
+; BE-NEXT:    ret
+entry:
+  %t = trunc <3 x i64> %x to <3 x i8>
+  store <3 x i8> %t, ptr %p, align 1
   ret void
 }

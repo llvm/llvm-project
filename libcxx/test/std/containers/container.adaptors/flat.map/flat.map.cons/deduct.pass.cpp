@@ -33,19 +33,19 @@ using PC = std::pair<const int, long>;
 
 void test_copy() {
   {
-    std::flat_map<long, short> source = {{1, 2}, {2, 3}};
+    std::flat_map<long, int> source = {{1, 2}, {2, 3}};
     std::flat_map s(source);
     ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s == source);
   }
   {
-    std::flat_map<long, short, std::greater<long>> source = {{1, 2}, {2, 3}};
+    std::flat_map<long, int, std::greater<long>> source = {{1, 2}, {2, 3}};
     std::flat_map s{source}; // braces instead of parens
     ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s == source);
   }
   {
-    std::flat_map<long, short, std::greater<long>> source = {{1, 2}, {2, 3}};
+    std::flat_map<long, int, std::greater<long>> source = {{1, 2}, {2, 3}};
     std::flat_map s(source, std::allocator<int>());
     ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s == source);
@@ -54,14 +54,14 @@ void test_copy() {
 
 void test_containers() {
   std::deque<int, test_allocator<int>> ks({1, 2, 1, INT_MAX, 3}, test_allocator<int>(0, 42));
-  std::deque<short, test_allocator<short>> vs({1, 2, 1, 4, 5}, test_allocator<int>(0, 43));
+  std::deque<long, test_allocator<long>> vs({1, 2, 1, 4, 5}, test_allocator<int>(0, 43));
   std::deque<int, test_allocator<int>> sorted_ks({1, 2, 3, INT_MAX}, test_allocator<int>(0, 42));
-  std::deque<short, test_allocator<short>> sorted_vs({1, 2, 5, 4}, test_allocator<int>(0, 43));
-  const std::pair<int, short> expected[] = {{1, 1}, {2, 2}, {3, 5}, {INT_MAX, 4}};
+  std::deque<long, test_allocator<long>> sorted_vs({1, 2, 5, 4}, test_allocator<int>(0, 43));
+  const std::pair<int, long> expected[] = {{1, 1}, {2, 2}, {3, 5}, {INT_MAX, 4}};
   {
     std::flat_map s(ks, vs);
 
-    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, short, std::less<int>, decltype(ks), decltype(vs)>);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, long, std::less<int>, decltype(ks), decltype(vs)>);
     assert(std::ranges::equal(s, expected));
     assert(s.keys().get_allocator().get_id() == 42);
     assert(s.values().get_allocator().get_id() == 43);
@@ -69,7 +69,7 @@ void test_containers() {
   {
     std::flat_map s(std::sorted_unique, sorted_ks, sorted_vs);
 
-    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, short, std::less<int>, decltype(ks), decltype(vs)>);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, long, std::less<int>, decltype(ks), decltype(vs)>);
     assert(std::ranges::equal(s, expected));
     assert(s.keys().get_allocator().get_id() == 42);
     assert(s.values().get_allocator().get_id() == 43);
@@ -77,7 +77,7 @@ void test_containers() {
   {
     std::flat_map s(ks, vs, test_allocator<long>(0, 44));
 
-    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, short, std::less<int>, decltype(ks), decltype(vs)>);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, long, std::less<int>, decltype(ks), decltype(vs)>);
     assert(std::ranges::equal(s, expected));
     assert(s.keys().get_allocator().get_id() == 44);
     assert(s.values().get_allocator().get_id() == 44);
@@ -85,7 +85,7 @@ void test_containers() {
   {
     std::flat_map s(std::sorted_unique, sorted_ks, sorted_vs, test_allocator<long>(0, 44));
 
-    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, short, std::less<int>, decltype(ks), decltype(vs)>);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, long, std::less<int>, decltype(ks), decltype(vs)>);
     assert(std::ranges::equal(s, expected));
     assert(s.keys().get_allocator().get_id() == 44);
     assert(s.values().get_allocator().get_id() == 44);
@@ -94,14 +94,14 @@ void test_containers() {
 
 void test_containers_compare() {
   std::deque<int, test_allocator<int>> ks({1, 2, 1, INT_MAX, 3}, test_allocator<int>(0, 42));
-  std::deque<short, test_allocator<short>> vs({1, 2, 1, 4, 5}, test_allocator<int>(0, 43));
+  std::deque<long, test_allocator<long>> vs({1, 2, 1, 4, 5}, test_allocator<int>(0, 43));
   std::deque<int, test_allocator<int>> sorted_ks({INT_MAX, 3, 2, 1}, test_allocator<int>(0, 42));
-  std::deque<short, test_allocator<short>> sorted_vs({4, 5, 2, 1}, test_allocator<int>(0, 43));
-  const std::pair<int, short> expected[] = {{INT_MAX, 4}, {3, 5}, {2, 2}, {1, 1}};
+  std::deque<long, test_allocator<long>> sorted_vs({4, 5, 2, 1}, test_allocator<int>(0, 43));
+  const std::pair<int, long> expected[] = {{INT_MAX, 4}, {3, 5}, {2, 2}, {1, 1}};
   {
     std::flat_map s(ks, vs, std::greater<int>());
 
-    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, short, std::greater<int>, decltype(ks), decltype(vs)>);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, long, std::greater<int>, decltype(ks), decltype(vs)>);
     assert(std::ranges::equal(s, expected));
     assert(s.keys().get_allocator().get_id() == 42);
     assert(s.values().get_allocator().get_id() == 43);
@@ -109,7 +109,7 @@ void test_containers_compare() {
   {
     std::flat_map s(std::sorted_unique, sorted_ks, sorted_vs, std::greater<int>());
 
-    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, short, std::greater<int>, decltype(ks), decltype(vs)>);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, long, std::greater<int>, decltype(ks), decltype(vs)>);
     assert(std::ranges::equal(s, expected));
     assert(s.keys().get_allocator().get_id() == 42);
     assert(s.values().get_allocator().get_id() == 43);
@@ -117,7 +117,7 @@ void test_containers_compare() {
   {
     std::flat_map s(ks, vs, std::greater<int>(), test_allocator<long>(0, 44));
 
-    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, short, std::greater<int>, decltype(ks), decltype(vs)>);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, long, std::greater<int>, decltype(ks), decltype(vs)>);
     assert(std::ranges::equal(s, expected));
     assert(s.keys().get_allocator().get_id() == 44);
     assert(s.values().get_allocator().get_id() == 44);
@@ -125,7 +125,7 @@ void test_containers_compare() {
   {
     std::flat_map s(std::sorted_unique, sorted_ks, sorted_vs, std::greater<int>(), test_allocator<long>(0, 44));
 
-    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, short, std::greater<int>, decltype(ks), decltype(vs)>);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, long, std::greater<int>, decltype(ks), decltype(vs)>);
     assert(std::ranges::equal(s, expected));
     assert(s.keys().get_allocator().get_id() == 44);
     assert(s.values().get_allocator().get_id() == 44);
@@ -280,11 +280,11 @@ void test_initializer_list_compare() {
 }
 
 void test_from_range() {
-  std::list<std::pair<int, short>> r     = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 4}, {3, 5}};
-  const std::pair<int, short> expected[] = {{1, 1}, {2, 2}, {3, 5}, {INT_MAX, 4}};
+  std::list<std::pair<int, long>> r     = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 4}, {3, 5}};
+  const std::pair<int, long> expected[] = {{1, 1}, {2, 2}, {3, 5}, {INT_MAX, 4}};
   {
     std::flat_map s(std::from_range, r);
-    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, short, std::less<int>>);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, long, std::less<int>>);
     assert(std::ranges::equal(s, expected));
   }
   {
@@ -292,10 +292,10 @@ void test_from_range() {
     ASSERT_SAME_TYPE(
         decltype(s),
         std::flat_map<int,
-                      short,
+                      long,
                       std::less<int>,
                       std::vector<int, test_allocator<int>>,
-                      std::vector<short, test_allocator<short>>>);
+                      std::vector<long, test_allocator<long>>>);
     assert(std::ranges::equal(s, expected));
     assert(s.keys().get_allocator().get_id() == 42);
     assert(s.values().get_allocator().get_id() == 42);
@@ -303,11 +303,11 @@ void test_from_range() {
 }
 
 void test_from_range_compare() {
-  std::list<std::pair<int, short>> r     = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 4}, {3, 5}};
-  const std::pair<int, short> expected[] = {{INT_MAX, 4}, {3, 5}, {2, 2}, {1, 1}};
+  std::list<std::pair<int, long>> r     = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 4}, {3, 5}};
+  const std::pair<int, long> expected[] = {{INT_MAX, 4}, {3, 5}, {2, 2}, {1, 1}};
   {
     std::flat_map s(std::from_range, r, std::greater<int>());
-    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, short, std::greater<int>>);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, long, std::greater<int>>);
     assert(std::ranges::equal(s, expected));
   }
   {
@@ -315,10 +315,10 @@ void test_from_range_compare() {
     ASSERT_SAME_TYPE(
         decltype(s),
         std::flat_map<int,
-                      short,
+                      long,
                       std::greater<int>,
                       std::vector<int, test_allocator<int>>,
-                      std::vector<short, test_allocator<short>>>);
+                      std::vector<long, test_allocator<long>>>);
     assert(std::ranges::equal(s, expected));
     assert(s.keys().get_allocator().get_id() == 42);
     assert(s.values().get_allocator().get_id() == 42);

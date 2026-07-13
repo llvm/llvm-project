@@ -89,14 +89,14 @@ void SmartPtrArrayMismatchCheck::check(const MatchFinder::MatchResult &Result) {
   if (VarOrField) {
     auto TSTypeLoc = VarOrField->getTypeSourceInfo()
                          ->getTypeLoc()
-                         .getAsAdjusted<clang::TemplateSpecializationTypeLoc>();
+                         .getAsAdjusted<TemplateSpecializationTypeLoc>();
     assert(TSTypeLoc.getNumArgs() >= 1 &&
            "Matched type should have at least 1 template argument.");
 
-    SourceRange TemplateArgumentRange = TSTypeLoc.getArgLoc(0)
-                                            .getTypeSourceInfo()
-                                            ->getTypeLoc()
-                                            .getSourceRange();
+    const SourceRange TemplateArgumentRange = TSTypeLoc.getArgLoc(0)
+                                                  .getTypeSourceInfo()
+                                                  ->getTypeLoc()
+                                                  .getSourceRange();
     D << TemplateArgumentRange;
 
     if (isInSingleDeclStmt(VarOrField)) {
@@ -104,7 +104,7 @@ void SmartPtrArrayMismatchCheck::check(const MatchFinder::MatchResult &Result) {
       if (!utils::rangeCanBeFixed(TemplateArgumentRange, &SM))
         return;
 
-      SourceLocation InsertLoc = Lexer::getLocForEndOfToken(
+      const SourceLocation InsertLoc = Lexer::getLocForEndOfToken(
           TemplateArgumentRange.getEnd(), 0, SM, Ctx.getLangOpts());
       D << FixItHint::CreateInsertion(InsertLoc, "[]");
     }

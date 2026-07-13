@@ -6,26 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../lldb-python.h"
+
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Host/Config.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
-
-#if LLDB_ENABLE_PYTHON
-
-// clang-format off
-// LLDB Python header must be included first
-#include "../lldb-python.h"
 
 #include "../SWIGPythonBridge.h"
 #include "../ScriptInterpreterPythonImpl.h"
 #include "ScriptedThreadPythonInterface.h"
 #include "ScriptedProcessPythonInterface.h"
-
-// Included in this position to prevent redefinition of pid_t on Windows.
-#include "lldb/Target/Process.h"
-//clang-format off
 
 #include <optional>
 
@@ -40,13 +32,13 @@ ScriptedProcessPythonInterface::ScriptedProcessPythonInterface(
 
 llvm::Expected<StructuredData::GenericSP>
 ScriptedProcessPythonInterface::CreatePluginObject(
-    llvm::StringRef class_name, ExecutionContext &exe_ctx,
-    StructuredData::DictionarySP args_sp, StructuredData::Generic *script_obj) {
+    const ScriptedMetadata &scripted_metadata, ExecutionContext &exe_ctx,
+    StructuredData::Generic *script_obj) {
   ExecutionContextRefSP exe_ctx_ref_sp =
       std::make_shared<ExecutionContextRef>(exe_ctx);
-  StructuredDataImpl sd_impl(args_sp);
-  return ScriptedPythonInterface::CreatePluginObject(class_name, script_obj,
-                                                     exe_ctx_ref_sp, sd_impl);
+  return ScriptedPythonInterface::CreatePluginObject(
+      scripted_metadata, script_obj, exe_ctx_ref_sp,
+      scripted_metadata.GetArgsSP());
 }
 
 StructuredData::DictionarySP ScriptedProcessPythonInterface::GetCapabilities() {
@@ -232,5 +224,3 @@ void ScriptedProcessPythonInterface::Initialize() {
 void ScriptedProcessPythonInterface::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-#endif

@@ -66,13 +66,13 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT %copy(s32)
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[ZEXT]](s64)
-    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
-    ; CHECK-NEXT: [[UADDLV:%[0-9]+]]:_(<4 x s32>) = G_UADDLV [[CTPOP]]
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[UADDLV]](<4 x s32>), [[C]](s64)
-    ; CHECK-NEXT: %ctpop:_(s32) = COPY [[EVEC]](s32)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT %copy(s32)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x i8>) = G_BITCAST [[ZEXT]](i64)
+    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x i8>) = G_CTPOP [[BITCAST]](<8 x i8>)
+    ; CHECK-NEXT: [[UADDLV:%[0-9]+]]:_(<4 x i32>) = G_UADDLV [[CTPOP]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(i32) = G_EXTRACT_VECTOR_ELT [[UADDLV]](<4 x i32>), [[C]](i64)
+    ; CHECK-NEXT: %ctpop:_(s32) = COPY [[EVEC]](i32)
     ; CHECK-NEXT: $w0 = COPY %ctpop(s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     ;
@@ -99,13 +99,13 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:_(s64) = COPY $x0
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST %copy(s64)
-    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
-    ; CHECK-NEXT: [[UADDLV:%[0-9]+]]:_(<4 x s32>) = G_UADDLV [[CTPOP]]
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[UADDLV]](<4 x s32>), [[C]](s64)
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[EVEC]](s32)
-    ; CHECK-NEXT: %ctpop:_(s64) = G_ZEXT [[COPY]](s32)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x i8>) = G_BITCAST %copy(s64)
+    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x i8>) = G_CTPOP [[BITCAST]](<8 x i8>)
+    ; CHECK-NEXT: [[UADDLV:%[0-9]+]]:_(<4 x i32>) = G_UADDLV [[CTPOP]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(i32) = G_EXTRACT_VECTOR_ELT [[UADDLV]](<4 x i32>), [[C]](i64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY [[EVEC]](i32)
+    ; CHECK-NEXT: %ctpop:_(s64) = G_ZEXT [[COPY]](i32)
     ; CHECK-NEXT: $x0 = COPY %ctpop(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     ;
@@ -135,16 +135,17 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](s64), [[COPY1]](s64)
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x s8>) = G_BITCAST [[MV]](s128)
-    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<16 x s8>) = G_CTPOP [[BITCAST]](<16 x s8>)
-    ; CHECK-NEXT: [[UADDLV:%[0-9]+]]:_(<4 x s32>) = G_UADDLV [[CTPOP]]
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[UADDLV]](<4 x s32>), [[C]](s64)
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[EVEC]](s32)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](s32), [[C1]](s32)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x i8>) = G_BITCAST [[MV]](s128)
+    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<16 x i8>) = G_CTPOP [[BITCAST]](<16 x i8>)
+    ; CHECK-NEXT: [[UADDLV:%[0-9]+]]:_(<4 x i32>) = G_UADDLV [[CTPOP]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(i32) = G_EXTRACT_VECTOR_ELT [[UADDLV]](<4 x i32>), [[C]](i64)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY [[EVEC]](i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](i32), [[C1]](i32)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; CHECK-NEXT: $x0 = COPY [[MV1]](s64)
-    ; CHECK-NEXT: $x1 = COPY [[C]](s64)
+    ; CHECK-NEXT: $x1 = COPY [[C2]](s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0, implicit $x1
     ;
     ; CHECK-CSSC-LABEL: name: s128_lower
@@ -152,11 +153,11 @@ body:             |
     ; CHECK-CSSC-NEXT: {{  $}}
     ; CHECK-CSSC-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK-CSSC-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK-CSSC-NEXT: [[CTPOP:%[0-9]+]]:_(s64) = G_CTPOP [[COPY]](s64)
-    ; CHECK-CSSC-NEXT: [[CTPOP1:%[0-9]+]]:_(s64) = G_CTPOP [[COPY1]](s64)
-    ; CHECK-CSSC-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[CTPOP]], [[CTPOP1]]
+    ; CHECK-CSSC-NEXT: [[CTPOP:%[0-9]+]]:_(i64) = G_CTPOP [[COPY]](s64)
+    ; CHECK-CSSC-NEXT: [[CTPOP1:%[0-9]+]]:_(i64) = G_CTPOP [[COPY1]](s64)
+    ; CHECK-CSSC-NEXT: [[ADD:%[0-9]+]]:_(i64) = G_ADD [[CTPOP]], [[CTPOP1]]
     ; CHECK-CSSC-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-CSSC-NEXT: $x0 = COPY [[ADD]](s64)
+    ; CHECK-CSSC-NEXT: $x0 = COPY [[ADD]](i64)
     ; CHECK-CSSC-NEXT: $x1 = COPY [[C]](s64)
     ; CHECK-CSSC-NEXT: RET_ReallyLR implicit $x0, implicit $x1
     %1:_(s64) = COPY $x0
@@ -180,15 +181,15 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %copy(s32)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 65535
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C]]
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[AND]](s64)
-    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
-    ; CHECK-NEXT: [[UADDLV:%[0-9]+]]:_(<4 x s32>) = G_UADDLV [[CTPOP]]
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[UADDLV]](<4 x s32>), [[C1]](s64)
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[EVEC]](s32)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT %copy(s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 65535
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND [[ANYEXT]], [[C]]
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x i8>) = G_BITCAST [[AND]](i64)
+    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x i8>) = G_CTPOP [[BITCAST]](<8 x i8>)
+    ; CHECK-NEXT: [[UADDLV:%[0-9]+]]:_(<4 x i32>) = G_UADDLV [[CTPOP]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(i32) = G_EXTRACT_VECTOR_ELT [[UADDLV]](<4 x i32>), [[C1]](i64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[EVEC]](i32)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; CHECK-NEXT: $w0 = COPY [[COPY1]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
@@ -222,15 +223,15 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %copy(s32)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C]]
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[AND]](s64)
-    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
-    ; CHECK-NEXT: [[UADDLV:%[0-9]+]]:_(<4 x s32>) = G_UADDLV [[CTPOP]]
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[UADDLV]](<4 x s32>), [[C1]](s64)
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[EVEC]](s32)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT %copy(s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 255
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND [[ANYEXT]], [[C]]
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x i8>) = G_BITCAST [[AND]](i64)
+    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x i8>) = G_CTPOP [[BITCAST]](<8 x i8>)
+    ; CHECK-NEXT: [[UADDLV:%[0-9]+]]:_(<4 x i32>) = G_UADDLV [[CTPOP]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(i32) = G_EXTRACT_VECTOR_ELT [[UADDLV]](<4 x i32>), [[C1]](i64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[EVEC]](i32)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; CHECK-NEXT: $w0 = COPY [[COPY1]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
@@ -264,15 +265,15 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %copy(s32)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 7
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C]]
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[AND]](s64)
-    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
-    ; CHECK-NEXT: [[UADDLV:%[0-9]+]]:_(<4 x s32>) = G_UADDLV [[CTPOP]]
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[UADDLV]](<4 x s32>), [[C1]](s64)
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[EVEC]](s32)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT %copy(s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 7
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND [[ANYEXT]], [[C]]
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x i8>) = G_BITCAST [[AND]](i64)
+    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x i8>) = G_CTPOP [[BITCAST]](<8 x i8>)
+    ; CHECK-NEXT: [[UADDLV:%[0-9]+]]:_(<4 x i32>) = G_UADDLV [[CTPOP]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(i32) = G_EXTRACT_VECTOR_ELT [[UADDLV]](<4 x i32>), [[C1]](i64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[EVEC]](i32)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; CHECK-NEXT: $w0 = COPY [[COPY1]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
@@ -305,15 +306,15 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %copy(s32)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C]]
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[AND]](s64)
-    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
-    ; CHECK-NEXT: [[UADDLV:%[0-9]+]]:_(<4 x s32>) = G_UADDLV [[CTPOP]]
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[UADDLV]](<4 x s32>), [[C1]](s64)
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[EVEC]](s32)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT %copy(s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 255
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND [[ANYEXT]], [[C]]
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x i8>) = G_BITCAST [[AND]](i64)
+    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x i8>) = G_CTPOP [[BITCAST]](<8 x i8>)
+    ; CHECK-NEXT: [[UADDLV:%[0-9]+]]:_(<4 x i32>) = G_UADDLV [[CTPOP]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(i32) = G_EXTRACT_VECTOR_ELT [[UADDLV]](<4 x i32>), [[C1]](i64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[EVEC]](i32)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; CHECK-NEXT: $w0 = COPY [[COPY1]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
@@ -347,8 +348,8 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x s8>) = G_BITCAST [[COPY]](<8 x s16>)
-    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<16 x s8>) = G_CTPOP [[BITCAST]](<16 x s8>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x i8>) = G_BITCAST [[COPY]](<8 x s16>)
+    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<16 x i8>) = G_CTPOP [[BITCAST]](<16 x i8>)
     ; CHECK-NEXT: [[UADDLP:%[0-9]+]]:_(<8 x s16>) = G_UADDLP [[CTPOP]]
     ; CHECK-NEXT: $q0 = COPY [[UADDLP]](<8 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
@@ -357,8 +358,8 @@ body:             |
     ; CHECK-CSSC: liveins: $q0
     ; CHECK-CSSC-NEXT: {{  $}}
     ; CHECK-CSSC-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK-CSSC-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x s8>) = G_BITCAST [[COPY]](<8 x s16>)
-    ; CHECK-CSSC-NEXT: [[CTPOP:%[0-9]+]]:_(<16 x s8>) = G_CTPOP [[BITCAST]](<16 x s8>)
+    ; CHECK-CSSC-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x i8>) = G_BITCAST [[COPY]](<8 x s16>)
+    ; CHECK-CSSC-NEXT: [[CTPOP:%[0-9]+]]:_(<16 x i8>) = G_CTPOP [[BITCAST]](<16 x i8>)
     ; CHECK-CSSC-NEXT: [[UADDLP:%[0-9]+]]:_(<8 x s16>) = G_UADDLP [[CTPOP]]
     ; CHECK-CSSC-NEXT: $q0 = COPY [[UADDLP]](<8 x s16>)
     ; CHECK-CSSC-NEXT: RET_ReallyLR implicit $q0
@@ -379,9 +380,9 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x s8>) = G_BITCAST [[COPY]](<4 x s32>)
-    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<16 x s8>) = G_CTPOP [[BITCAST]](<16 x s8>)
-    ; CHECK-NEXT: [[UADDLP:%[0-9]+]]:_(<8 x s16>) = G_UADDLP [[CTPOP]]
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x i8>) = G_BITCAST [[COPY]](<4 x s32>)
+    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<16 x i8>) = G_CTPOP [[BITCAST]](<16 x i8>)
+    ; CHECK-NEXT: [[UADDLP:%[0-9]+]]:_(<8 x i16>) = G_UADDLP [[CTPOP]]
     ; CHECK-NEXT: [[UADDLP1:%[0-9]+]]:_(<4 x s32>) = G_UADDLP [[UADDLP]]
     ; CHECK-NEXT: $q0 = COPY [[UADDLP1]](<4 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
@@ -390,9 +391,9 @@ body:             |
     ; CHECK-CSSC: liveins: $q0
     ; CHECK-CSSC-NEXT: {{  $}}
     ; CHECK-CSSC-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK-CSSC-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x s8>) = G_BITCAST [[COPY]](<4 x s32>)
-    ; CHECK-CSSC-NEXT: [[CTPOP:%[0-9]+]]:_(<16 x s8>) = G_CTPOP [[BITCAST]](<16 x s8>)
-    ; CHECK-CSSC-NEXT: [[UADDLP:%[0-9]+]]:_(<8 x s16>) = G_UADDLP [[CTPOP]]
+    ; CHECK-CSSC-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x i8>) = G_BITCAST [[COPY]](<4 x s32>)
+    ; CHECK-CSSC-NEXT: [[CTPOP:%[0-9]+]]:_(<16 x i8>) = G_CTPOP [[BITCAST]](<16 x i8>)
+    ; CHECK-CSSC-NEXT: [[UADDLP:%[0-9]+]]:_(<8 x i16>) = G_UADDLP [[CTPOP]]
     ; CHECK-CSSC-NEXT: [[UADDLP1:%[0-9]+]]:_(<4 x s32>) = G_UADDLP [[UADDLP]]
     ; CHECK-CSSC-NEXT: $q0 = COPY [[UADDLP1]](<4 x s32>)
     ; CHECK-CSSC-NEXT: RET_ReallyLR implicit $q0
@@ -413,10 +414,10 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x s8>) = G_BITCAST [[COPY]](<2 x s64>)
-    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<16 x s8>) = G_CTPOP [[BITCAST]](<16 x s8>)
-    ; CHECK-NEXT: [[UADDLP:%[0-9]+]]:_(<8 x s16>) = G_UADDLP [[CTPOP]]
-    ; CHECK-NEXT: [[UADDLP1:%[0-9]+]]:_(<4 x s32>) = G_UADDLP [[UADDLP]]
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x i8>) = G_BITCAST [[COPY]](<2 x s64>)
+    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<16 x i8>) = G_CTPOP [[BITCAST]](<16 x i8>)
+    ; CHECK-NEXT: [[UADDLP:%[0-9]+]]:_(<8 x i16>) = G_UADDLP [[CTPOP]]
+    ; CHECK-NEXT: [[UADDLP1:%[0-9]+]]:_(<4 x i32>) = G_UADDLP [[UADDLP]]
     ; CHECK-NEXT: [[UADDLP2:%[0-9]+]]:_(<2 x s64>) = G_UADDLP [[UADDLP1]]
     ; CHECK-NEXT: $q0 = COPY [[UADDLP2]](<2 x s64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
@@ -425,10 +426,10 @@ body:             |
     ; CHECK-CSSC: liveins: $q0
     ; CHECK-CSSC-NEXT: {{  $}}
     ; CHECK-CSSC-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK-CSSC-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x s8>) = G_BITCAST [[COPY]](<2 x s64>)
-    ; CHECK-CSSC-NEXT: [[CTPOP:%[0-9]+]]:_(<16 x s8>) = G_CTPOP [[BITCAST]](<16 x s8>)
-    ; CHECK-CSSC-NEXT: [[UADDLP:%[0-9]+]]:_(<8 x s16>) = G_UADDLP [[CTPOP]]
-    ; CHECK-CSSC-NEXT: [[UADDLP1:%[0-9]+]]:_(<4 x s32>) = G_UADDLP [[UADDLP]]
+    ; CHECK-CSSC-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x i8>) = G_BITCAST [[COPY]](<2 x s64>)
+    ; CHECK-CSSC-NEXT: [[CTPOP:%[0-9]+]]:_(<16 x i8>) = G_CTPOP [[BITCAST]](<16 x i8>)
+    ; CHECK-CSSC-NEXT: [[UADDLP:%[0-9]+]]:_(<8 x i16>) = G_UADDLP [[CTPOP]]
+    ; CHECK-CSSC-NEXT: [[UADDLP1:%[0-9]+]]:_(<4 x i32>) = G_UADDLP [[UADDLP]]
     ; CHECK-CSSC-NEXT: [[UADDLP2:%[0-9]+]]:_(<2 x s64>) = G_UADDLP [[UADDLP1]]
     ; CHECK-CSSC-NEXT: $q0 = COPY [[UADDLP2]](<2 x s64>)
     ; CHECK-CSSC-NEXT: RET_ReallyLR implicit $q0
@@ -449,8 +450,8 @@ body:             |
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[COPY]](<4 x s16>)
-    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x i8>) = G_BITCAST [[COPY]](<4 x s16>)
+    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x i8>) = G_CTPOP [[BITCAST]](<8 x i8>)
     ; CHECK-NEXT: [[UADDLP:%[0-9]+]]:_(<4 x s16>) = G_UADDLP [[CTPOP]]
     ; CHECK-NEXT: $d0 = COPY [[UADDLP]](<4 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
@@ -459,8 +460,8 @@ body:             |
     ; CHECK-CSSC: liveins: $d0
     ; CHECK-CSSC-NEXT: {{  $}}
     ; CHECK-CSSC-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK-CSSC-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[COPY]](<4 x s16>)
-    ; CHECK-CSSC-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
+    ; CHECK-CSSC-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x i8>) = G_BITCAST [[COPY]](<4 x s16>)
+    ; CHECK-CSSC-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x i8>) = G_CTPOP [[BITCAST]](<8 x i8>)
     ; CHECK-CSSC-NEXT: [[UADDLP:%[0-9]+]]:_(<4 x s16>) = G_UADDLP [[CTPOP]]
     ; CHECK-CSSC-NEXT: $d0 = COPY [[UADDLP]](<4 x s16>)
     ; CHECK-CSSC-NEXT: RET_ReallyLR implicit $d0
@@ -481,9 +482,9 @@ body:             |
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[COPY]](<2 x s32>)
-    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
-    ; CHECK-NEXT: [[UADDLP:%[0-9]+]]:_(<4 x s16>) = G_UADDLP [[CTPOP]]
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x i8>) = G_BITCAST [[COPY]](<2 x s32>)
+    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x i8>) = G_CTPOP [[BITCAST]](<8 x i8>)
+    ; CHECK-NEXT: [[UADDLP:%[0-9]+]]:_(<4 x i16>) = G_UADDLP [[CTPOP]]
     ; CHECK-NEXT: [[UADDLP1:%[0-9]+]]:_(<2 x s32>) = G_UADDLP [[UADDLP]]
     ; CHECK-NEXT: $d0 = COPY [[UADDLP1]](<2 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
@@ -492,9 +493,9 @@ body:             |
     ; CHECK-CSSC: liveins: $d0
     ; CHECK-CSSC-NEXT: {{  $}}
     ; CHECK-CSSC-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK-CSSC-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[COPY]](<2 x s32>)
-    ; CHECK-CSSC-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
-    ; CHECK-CSSC-NEXT: [[UADDLP:%[0-9]+]]:_(<4 x s16>) = G_UADDLP [[CTPOP]]
+    ; CHECK-CSSC-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x i8>) = G_BITCAST [[COPY]](<2 x s32>)
+    ; CHECK-CSSC-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x i8>) = G_CTPOP [[BITCAST]](<8 x i8>)
+    ; CHECK-CSSC-NEXT: [[UADDLP:%[0-9]+]]:_(<4 x i16>) = G_UADDLP [[CTPOP]]
     ; CHECK-CSSC-NEXT: [[UADDLP1:%[0-9]+]]:_(<2 x s32>) = G_UADDLP [[UADDLP]]
     ; CHECK-CSSC-NEXT: $d0 = COPY [[UADDLP1]](<2 x s32>)
     ; CHECK-CSSC-NEXT: RET_ReallyLR implicit $d0

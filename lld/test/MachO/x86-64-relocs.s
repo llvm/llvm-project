@@ -4,6 +4,7 @@
 # RUN: llvm-objdump --no-print-imm-hex --section-headers --syms -d %t | FileCheck %s
 
 # CHECK-LABEL: Sections:
+# CHECK:       __branch_target {{[0-9a-z]+}} [[#%x, BRANCH_SECT:]]
 # CHECK:       __data {{[0-9a-z]+}} [[#%x, DATA_ADDR:]]
 
 # CHECK-LABEL: SYMBOL TABLE:
@@ -12,10 +13,18 @@
 
 # CHECK-LABEL: <_main>:
 ## Test X86_64_RELOC_BRANCH
+## Test symbol (extern) relocations first (most common case)
 # CHECK:       callq 0x[[#%x, F_ADDR]] <_f>
 # CHECK:       jrcxz 0x[[#%x, F_ADDR]] <_f>
 # CHECK:       callq 0x[[#%x, G_ADDR]] <_g>
 # CHECK:       jrcxz 0x[[#%x, G_ADDR]] <_g>
+## Test section (local) BRANCH relocations
+# CHECK:       callq 0x[[#%x, BRANCH_SECT]]
+## NOTE: ld64 rejects 1-byte local branch relocations as unsupported, but it
+## doesn't take any extra code for us to support it
+# CHECK:       jrcxz 0x[[#%x, BRANCH_SECT]]
+
+# CHECK-LABEL: <_f>:
 ## Test extern (symbol) X86_64_RELOC_SIGNED
 # CHECK:       leaq [[#%u, LOCAL_OFF:]](%rip), %rsi
 # CHECK-NEXT:  [[#%x, DATA_ADDR - LOCAL_OFF]]
@@ -33,9 +42,12 @@
 _main:
   callq _f # X86_64_RELOC_BRANCH with r_length=2
   jrcxz _f # X86_64_RELOC_BRANCH with r_length=0
-  # test negative addends
+  # Test negative addends
   callq _f - 1
   jrcxz _f - 1
+  # Test section relocations
+  callq L_.branch_target
+  jrcxz L_.branch_target
   mov $0, %rax
   ret
 
@@ -46,6 +58,10 @@ _f:
   leaq _local(%rip), %rsi # Generates a X86_64_RELOC_SIGNED pcrel symbol relocation
   leaq L_.private(%rip), %rsi # Generates a X86_64_RELOC_SIGNED pcrel section relocation
   movq L_.ptr_1(%rip), %rsi
+  ret
+
+.section __TEXT,__branch_target
+L_.branch_target:
   ret
 
 .data

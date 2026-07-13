@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-canonicalize -polly-print-ast -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' -polly-print-ast -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
 ;
 ;        void f(int *restrict A, int *restrict sum) {
 ; CHECK:   #pragma minimal dependence distance: 1

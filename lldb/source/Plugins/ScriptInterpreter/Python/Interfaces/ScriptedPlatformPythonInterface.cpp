@@ -6,19 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../lldb-python.h"
+
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Host/Config.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
-
-#if LLDB_ENABLE_PYTHON
-
-// clang-format off
-// LLDB Python header must be included first
-#include "../lldb-python.h"
-//clang-format on
 
 #include "../SWIGPythonBridge.h"
 #include "../ScriptInterpreterPythonImpl.h"
@@ -39,9 +33,9 @@ ScriptedPlatformPythonInterface::CreatePluginObject(
     StructuredData::DictionarySP args_sp, StructuredData::Generic *script_obj) {
   ExecutionContextRefSP exe_ctx_ref_sp =
       std::make_shared<ExecutionContextRef>(exe_ctx);
-  StructuredDataImpl sd_impl(args_sp);
-  return ScriptedPythonInterface::CreatePluginObject(class_name, script_obj,
-                                                     exe_ctx_ref_sp, sd_impl);
+  ScriptedMetadata scripted_metadata(class_name, args_sp);
+  return ScriptedPythonInterface::CreatePluginObject(
+      scripted_metadata, script_obj, exe_ctx_ref_sp, args_sp);
 }
 
 StructuredData::DictionarySP ScriptedPlatformPythonInterface::ListProcesses() {
@@ -104,5 +98,3 @@ void ScriptedPlatformPythonInterface::Initialize() {
 void ScriptedPlatformPythonInterface::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-#endif // LLDB_ENABLE_PYTHON

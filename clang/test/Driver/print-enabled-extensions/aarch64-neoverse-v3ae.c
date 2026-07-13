@@ -1,5 +1,6 @@
 // REQUIRES: aarch64-registered-target
 // RUN: %clang --target=aarch64 --print-enabled-extensions -mcpu=neoverse-v3ae | FileCheck --strict-whitespace --implicit-check-not=FEAT_ %s
+// RUN: %clang --target=aarch64 --print-enabled-extensions -mcpu=armagicpu | FileCheck --strict-whitespace --implicit-check-not=FEAT_ %s
 
 // CHECK: Extensions enabled for the given AArch64 target
 // CHECK-EMPTY:

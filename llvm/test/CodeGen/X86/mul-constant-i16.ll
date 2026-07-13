@@ -715,8 +715,8 @@ define i16 @test_mul_by_66(i16 %x) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shll $6, %eax
-; X64-NEXT:    leal (%rax,%rdi,2), %eax
+; X64-NEXT:    shll $6, %edi
+; X64-NEXT:    leal (%rdi,%rax,2), %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %mul = mul nsw i16 %x, 66
@@ -757,8 +757,8 @@ define i16 @test_mul_by_520(i16 %x) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shll $9, %eax
-; X64-NEXT:    leal (%rax,%rdi,8), %eax
+; X64-NEXT:    shll $9, %edi
+; X64-NEXT:    leal (%rdi,%rax,8), %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %mul = mul nsw i16 %x, 520

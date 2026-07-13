@@ -16,7 +16,6 @@
 #include "llvm/ADT/SmallVector.h"
 
 #include <cinttypes>
-#include <utility>
 
 namespace mlir {
 class Operation;
@@ -35,12 +34,12 @@ namespace Fortran {
 namespace parser {
 struct OpenMPConstruct;
 struct OpenMPDeclarativeConstruct;
-struct OmpEndLoopDirective;
 struct OmpClauseList;
 } // namespace parser
 
 namespace semantics {
 class Symbol;
+class Scope;
 class SemanticsContext;
 } // namespace semantics
 
@@ -80,6 +79,7 @@ void genOpenMPDeclarativeConstruct(AbstractConverter &,
 void genOpenMPSymbolProperties(AbstractConverter &converter,
                                const pft::Variable &var);
 
+void genGroupprivateOp(AbstractConverter &, const pft::Variable &);
 void genThreadprivateOp(AbstractConverter &, const pft::Variable &);
 void genDeclareTargetIntGlobal(AbstractConverter &, const pft::Variable &);
 bool isOpenMPTargetConstruct(const parser::OpenMPConstruct &);
@@ -96,6 +96,22 @@ bool markOpenMPDeferredDeclareTargetFunctions(
     mlir::Operation *, llvm::SmallVectorImpl<OMPDeferredDeclareTargetInfo> &,
     AbstractConverter &);
 void genOpenMPRequires(mlir::Operation *, const Fortran::semantics::Symbol *);
+
+// Materialize omp.declare_mapper ops for mapper declarations found in
+// imported modules. If \p scope is null, materialize for the whole
+// semantics global scope; otherwise, operate recursively starting at \p scope.
+void materializeOpenMPDeclareMappers(
+    Fortran::lower::AbstractConverter &, Fortran::semantics::SemanticsContext &,
+    const Fortran::semantics::Scope *scope = nullptr);
+
+namespace omp {
+/// If \p base carries OpenMP DECLARE VARIANT entries, return the variant symbol
+/// that best matches the enclosing OpenMP context, or nullptr if none matches.
+/// \p base is expected to have variant entries.
+const Fortran::semantics::Symbol *
+resolveDeclareVariantCallee(const Fortran::semantics::Symbol &base,
+                            AbstractConverter &converter);
+} // namespace omp
 
 } // namespace lower
 } // namespace Fortran

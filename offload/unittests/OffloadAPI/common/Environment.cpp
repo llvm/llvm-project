@@ -11,6 +11,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <OffloadAPI.h>
+#include <cstdlib>
 #include <fstream>
 
 using namespace llvm;
@@ -19,8 +20,22 @@ using namespace llvm;
 // test, while having sensible lifetime for the platform environment
 #ifndef DISABLE_WRAPPER
 struct OffloadInitWrapper {
-  OffloadInitWrapper() { olInit(); }
-  ~OffloadInitWrapper() { olShutDown(); }
+  OffloadInitWrapper() {
+    if (ol_result_t Res = olInit(nullptr)) {
+      errs() << "olInit failed: "
+             << (Res->Details ? Res->Details : "(no details)") << " (code "
+             << Res->Code << ")\n";
+      std::abort();
+    }
+  }
+  ~OffloadInitWrapper() {
+    if (ol_result_t Res = olShutDown()) {
+      errs() << "olShutDown failed: "
+             << (Res->Details ? Res->Details : "(no details)") << " (code "
+             << Res->Code << ")\n";
+      std::abort();
+    }
+  }
 };
 static OffloadInitWrapper Wrapper{};
 #endif
@@ -97,11 +112,11 @@ const std::vector<TestEnvironment::Device> &TestEnvironment::getDevices() {
             S << Platform;
             if (PlatformName == SelectedPlatform &&
                 Backend != OL_PLATFORM_BACKEND_HOST) {
+              auto *OutDevices = static_cast<decltype(Devices) *>(Data);
               std::string Name;
               raw_string_ostream NameStr(Name);
-              NameStr << PlatformName << "_" << D;
-              static_cast<std::vector<TestEnvironment::Device> *>(Data)
-                  ->push_back({D, Name});
+              NameStr << PlatformName << "_" << D << OutDevices->size();
+              OutDevices->push_back({D, Name});
             }
             return true;
           },
@@ -117,11 +132,11 @@ const std::vector<TestEnvironment::Device> &TestEnvironment::getDevices() {
             olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,
                               sizeof(Backend), &Backend);
             if (Backend != OL_PLATFORM_BACKEND_HOST) {
+              auto *OutDevices = static_cast<decltype(Devices) *>(Data);
               std::string Name;
               raw_string_ostream NameStr(Name);
-              NameStr << Platform << "_" << D;
-              static_cast<std::vector<TestEnvironment::Device> *>(Data)
-                  ->push_back({D, Name});
+              NameStr << Platform << "_" << D << "_" << OutDevices->size();
+              OutDevices->push_back({D, Name});
             }
             return true;
           },
@@ -179,6 +194,8 @@ bool TestEnvironment::loadDeviceBinary(
     FileExtension = ".amdgpu.bin";
   } else if (Backend == OL_PLATFORM_BACKEND_CUDA) {
     FileExtension = ".nvptx64.bin";
+  } else if (Backend == OL_PLATFORM_BACKEND_LEVEL_ZERO) {
+    FileExtension = ".spirv64.bin";
   } else {
     errs() << "Unsupported platform type for a device binary test.\n";
     return false;

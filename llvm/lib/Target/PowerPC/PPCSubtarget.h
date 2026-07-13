@@ -23,7 +23,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/TargetParser/Triple.h"
-#include <string>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "PPCGenSubtargetInfo.inc"
@@ -285,6 +284,10 @@ public:
 
   MCRegister getStackPointerRegister() const {
     return IsPPC64 ? PPC::X1 : PPC::R1;
+  }
+
+  MCRegister getGlueCodeDescriptorRegister() const {
+    return IsPPC64 ? PPC::X11 : PPC::R11;
   }
 
   bool isXRaySupported() const override { return IsPPC64 && IsLittleEndian; }

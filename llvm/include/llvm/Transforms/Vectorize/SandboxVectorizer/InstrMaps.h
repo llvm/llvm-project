@@ -19,7 +19,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
-#include <algorithm>
 
 namespace llvm::sandboxir {
 
@@ -62,6 +61,10 @@ class InstrMaps {
 public:
   InstrMaps() = default;
   ~InstrMaps() = default;
+  /// \Returns true if \p Orig was vectorized
+  bool isVectorized(Value *Orig) const {
+    return OrigToVectorMap.contains(Orig);
+  }
   /// \Returns the vector value that we got from vectorizing \p Orig, or
   /// nullptr if not found.
   Action *getVectorForOrig(Value *Orig) const {

@@ -25,7 +25,7 @@ define amdgpu_cs void @if_then(ptr addrspace(8) inreg %input, ptr addrspace(8) i
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    buffer_store_dword v4, v0, s[4:7], 0 offen
 ; GCN-NEXT:  .LBB0_4: ; %.end
-; GCN-NEXT:    s_waitcnt_depctr 0xffe3
+; GCN-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GCN-NEXT:    v_mov_b32_e32 v0, -1
 ; GCN-NEXT:    buffer_store_dword v0, v3, s[4:7], 0 offen

@@ -27,7 +27,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/SystemZ/zOSSupport.h"
 #include <cmath>
 #include <memory>
 #include <string>
@@ -293,7 +292,7 @@ private:
                    SmallVectorImpl<int64_t> &CounterValues,
                    ArrayRef<const char *> ValidationCounters,
                    SmallVectorImpl<int64_t> &ValidationCounterValues) const {
-    auto WriteFDClose = make_scope_exit([WriteFD]() { close(WriteFD); });
+    scope_exit WriteFDClose([WriteFD]() { close(WriteFD); });
     const ExegesisTarget &ET = State.getExegesisTarget();
     auto CounterOrError =
         ET.createCounter(CounterName, State, ValidationCounters, ChildPID);

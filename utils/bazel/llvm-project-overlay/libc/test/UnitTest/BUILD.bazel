@@ -35,6 +35,7 @@ libc_test_library(
     srcs = [
         "BazelFilePath.cpp",
         "ExecuteFunctionUnix.cpp",
+        "LibcDeathTestExecutors.cpp",
         "LibcTest.cpp",
         "LibcTestMain.cpp",
     ],
@@ -152,6 +153,7 @@ libc_test_library(
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_macros_config",
         "//libc:hdr_stdint_proxy",
+        "//libc:printf_config",
         "//libc:printf_core_structs",
     ],
 )

@@ -11,7 +11,7 @@ subroutine test_inline()
   y = g(x)
   !CHECK:  %[[VAL_4:.*]] = fir.call @_QFtest_inlinePg(%[[VAL_1]]) fastmath<contract> {inline_attr = #fir.inline_attrs<always_inline>} : (!fir.ref<i32>) -> i32
   !CHECK:  fir.store %[[VAL_4]] to %[[VAL_3]] : !fir.ref<i32>
-  
+
   !dir$ forceinline
   call f(x, y)
   !CHECK:  fir.call @_QFtest_inlinePf(%[[VAL_1]], %[[VAL_3]]) fastmath<contract> {inline_attr = #fir.inline_attrs<always_inline>} : (!fir.ref<i32>, !fir.ref<i32>) -> ()

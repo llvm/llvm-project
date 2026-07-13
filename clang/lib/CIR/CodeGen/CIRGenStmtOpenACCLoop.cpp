@@ -117,8 +117,7 @@ CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
   //
 
   // Emit all clauses.
-  emitOpenACCClauses(op, s.getDirectiveKind(), s.getDirectiveLoc(),
-                     s.clauses());
+  emitOpenACCClauses(op, s.getDirectiveKind(), s.clauses());
 
   updateLoopOpParallelism(op, s.isOrphanedLoopConstruct(),
                           s.getParentComputeConstructKind());

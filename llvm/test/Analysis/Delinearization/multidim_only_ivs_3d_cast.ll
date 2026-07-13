@@ -18,6 +18,7 @@ define void @foo(i32 %n, i32 %m, i32 %o, ptr %A) {
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][(zext i32 %m to i64)][(zext i32 %o to i64)] with elements of 8 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i>][{0,+,1}<nuw><nsw><%for.j>][{0,+,1}<nuw><nsw><%for.k>]
+; CHECK-NEXT:  Delinearization validation: Failed
 ;
 entry:
   %m_zext = zext i32 %m to i64

@@ -11,7 +11,6 @@
 
 #include <cassert>
 #include <type_traits>
-#include <utility>
 
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/bit.h"

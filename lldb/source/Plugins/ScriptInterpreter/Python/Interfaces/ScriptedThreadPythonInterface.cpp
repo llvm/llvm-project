@@ -6,15 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../lldb-python.h"
+
 #include "lldb/Host/Config.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
-
-#if LLDB_ENABLE_PYTHON
-
-// LLDB Python header must be included first
-#include "../lldb-python.h"
 
 #include "../SWIGPythonBridge.h"
 #include "../ScriptInterpreterPythonImpl.h"
@@ -32,13 +29,13 @@ ScriptedThreadPythonInterface::ScriptedThreadPythonInterface(
 
 llvm::Expected<StructuredData::GenericSP>
 ScriptedThreadPythonInterface::CreatePluginObject(
-    const llvm::StringRef class_name, ExecutionContext &exe_ctx,
-    StructuredData::DictionarySP args_sp, StructuredData::Generic *script_obj) {
+    const ScriptedMetadata &scripted_metadata, ExecutionContext &exe_ctx,
+    StructuredData::Generic *script_obj) {
   ExecutionContextRefSP exe_ctx_ref_sp =
       std::make_shared<ExecutionContextRef>(exe_ctx);
-  StructuredDataImpl sd_impl(args_sp);
-  return ScriptedPythonInterface::CreatePluginObject(class_name, script_obj,
-                                                     exe_ctx_ref_sp, sd_impl);
+  return ScriptedPythonInterface::CreatePluginObject(
+      scripted_metadata, script_obj, exe_ctx_ref_sp,
+      scripted_metadata.GetArgsSP());
 }
 
 lldb::tid_t ScriptedThreadPythonInterface::GetThreadID() {
@@ -160,5 +157,3 @@ lldb::ScriptedFrameInterfaceSP
 ScriptedThreadPythonInterface::CreateScriptedFrameInterface() {
   return m_interpreter.CreateScriptedFrameInterface();
 }
-
-#endif

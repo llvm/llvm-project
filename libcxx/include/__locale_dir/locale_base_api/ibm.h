@@ -53,11 +53,6 @@ private:
 
 // The following are not POSIX routines.  These are quick-and-dirty hacks
 // to make things pretend to work
-inline _LIBCPP_HIDE_FROM_ABI long long strtoll_l(const char* __nptr, char** __endptr, int __base, locale_t locale) {
-  __setAndRestore __newloc(locale);
-  return ::strtoll(__nptr, __endptr, __base);
-}
-
 inline _LIBCPP_HIDE_FROM_ABI double strtod_l(const char* __nptr, char** __endptr, locale_t locale) {
   __setAndRestore __newloc(locale);
   return ::strtod(__nptr, __endptr);
@@ -71,12 +66,6 @@ inline _LIBCPP_HIDE_FROM_ABI float strtof_l(const char* __nptr, char** __endptr,
 inline _LIBCPP_HIDE_FROM_ABI long double strtold_l(const char* __nptr, char** __endptr, locale_t locale) {
   __setAndRestore __newloc(locale);
   return ::strtold(__nptr, __endptr);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI unsigned long long
-strtoull_l(const char* __nptr, char** __endptr, int __base, locale_t locale) {
-  __setAndRestore __newloc(locale);
-  return ::strtoull(__nptr, __endptr, __base);
 }
 
 inline _LIBCPP_HIDE_FROM_ABI

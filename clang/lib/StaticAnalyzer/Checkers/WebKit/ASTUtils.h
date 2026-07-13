@@ -77,6 +77,13 @@ bool isConstOwnerPtrMemberExpr(const clang::Expr *E);
 /// supports CheckedPtr.
 bool isExprToGetCheckedPtrCapableMember(const clang::Expr *E);
 
+/// \returns true if \p E is a [[alloc] init] pattern expression.
+/// Sets \p InnerExpr to the inner function call or selector invocation.
+bool isAllocInit(const Expr *E, const Expr **InnerExpr = nullptr);
+
+/// \returns ObjCInterfaceDecl from a pointer type.
+ObjCInterfaceDecl *getObjCDeclFromObjCPtr(const Type *TypePtr);
+
 /// \returns true if E is a CXXMemberCallExpr which returns a const smart
 /// pointer type.
 class EnsureFunctionAnalysis {

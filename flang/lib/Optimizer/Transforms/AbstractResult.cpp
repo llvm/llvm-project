@@ -12,6 +12,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "flang/Optimizer/Support/LazySymbolTable.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -32,28 +33,6 @@ using namespace mlir;
 
 namespace fir {
 namespace {
-
-// Helper to only build the symbol table if needed because its build time is
-// linear on the number of symbols in the module.
-struct LazySymbolTable {
-  LazySymbolTable(mlir::Operation *op)
-      : module{op->getParentOfType<mlir::ModuleOp>()} {}
-  void build() {
-    if (table)
-      return;
-    table = std::make_unique<mlir::SymbolTable>(module);
-  }
-
-  template <typename T>
-  T lookup(llvm::StringRef name) {
-    build();
-    return table->lookup<T>(name);
-  }
-
-private:
-  std::unique_ptr<mlir::SymbolTable> table;
-  mlir::ModuleOp module;
-};
 
 bool hasScalarDerivedResult(mlir::FunctionType funTy) {
   // C_PTR/C_FUNPTR are results to void* in this pass, do not consider
@@ -485,7 +464,7 @@ public:
       return;
     }
 
-    LazySymbolTable symbolTable(op);
+    fir::LazySymbolTable symbolTable(op);
 
     mlir::RewritePatternSet patterns(context);
     mlir::ConversionTarget target = *context;

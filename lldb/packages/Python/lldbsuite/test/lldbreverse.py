@@ -5,6 +5,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.gdbclientutils import *
 from lldbsuite.test.lldbgdbproxy import *
 import lldbgdbserverutils
+import json
 import re
 
 
@@ -132,6 +133,10 @@ class ReverseTestBase(GDBProxyTestBase):
             if reply == "OK":
                 self.update_breakpoints(packet)
             return reply
+        if packet.startswith("jMultiBreakpoint:"):
+            reply = self.pass_through(packet)
+            self.update_multi_breakpoints(packet, reply)
+            return reply
         return GDBProxyTestBase.respond(self, packet)
 
     def start_recording(self):
@@ -160,6 +165,23 @@ class ReverseTestBase(GDBProxyTestBase):
             self.breakpoints[t].add((addr, kind))
         else:
             self.breakpoints[t].discard((addr, kind))
+
+    def update_multi_breakpoints(self, packet, reply):
+        # Remove the final ], which is binary-escaping the }.
+        packet = packet[:-1]
+        reply = reply[:-1]
+        body = packet[len("jMultiBreakpoint:") :]
+        requests = json.loads(body)["breakpoint_requests"]
+        try:
+            results = json.loads(reply)["results"]
+        except (ValueError, KeyError):
+            # Empty/unsupported/error reply: nothing was installed.
+            return
+        if len(requests) != len(results):
+            raise ValueError("jMultiBreakpoint response count mismatch")
+        for inner_packet, result in zip(requests, results):
+            if result == "OK":
+                self.update_breakpoints(inner_packet)
 
     def breakpoint_triggered_at(self, pc):
         if any(addr == pc for addr, kind in self.breakpoints[SOFTWARE_BREAKPOINTS]):

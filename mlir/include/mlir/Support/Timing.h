@@ -473,6 +473,11 @@ void registerDefaultTimingManagerCLOptions();
 /// 'registerDefaultTimingManagerOptions' to a `DefaultTimingManager`.
 void applyDefaultTimingManagerCLOptions(DefaultTimingManager &tm);
 
+/// Create an output strategy for the specified format, to be passed to
+/// DefaultTimingManager::setOutput().
+std::unique_ptr<OutputStrategy>
+createOutputStrategy(DefaultTimingManager::OutputFormat fmt, raw_ostream &os);
+
 } // namespace mlir
 
 #endif // MLIR_SUPPORT_TIMING_H

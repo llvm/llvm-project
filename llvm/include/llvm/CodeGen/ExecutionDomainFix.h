@@ -113,7 +113,7 @@ struct DomainValue {
   }
 };
 
-class ExecutionDomainFix : public MachineFunctionPass {
+class LLVM_ABI ExecutionDomainFix : public MachineFunctionPass {
   SpecificBumpPtrAllocator<DomainValue> Allocator;
   SmallVector<DomainValue *, 16> Avail;
 

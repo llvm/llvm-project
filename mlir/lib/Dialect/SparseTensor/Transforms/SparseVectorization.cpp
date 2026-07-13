@@ -132,8 +132,8 @@ static void genVectorStore(PatternRewriter &rewriter, Location loc, Value mem,
     SmallVector<Value> scalarArgs(idxs);
     Value indexVec = idxs.back();
     scalarArgs.back() = constantIndex(rewriter, loc, 0);
-    vector::ScatterOp::create(rewriter, loc, mem, scalarArgs, indexVec, vmask,
-                              rhs);
+    vector::ScatterOp::create(rewriter, loc, /*resultType=*/nullptr, mem,
+                              scalarArgs, indexVec, vmask, rhs);
     return;
   }
   vector::MaskedStoreOp::create(rewriter, loc, mem, idxs, vmask, rhs);

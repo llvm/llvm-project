@@ -6,7 +6,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 ; Make sure the loop is vectorized and unrolled under -Os without folding its
 ; tail based on its trip-count being provably divisible by chosen VFxIC.
 
-define dso_local void @constTC(ptr noalias nocapture %A) optsize {
+define void @constTC(ptr noalias nocapture %A) optsize {
 ; CHECK-LABEL: @constTC(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -15,8 +15,8 @@ define dso_local void @constTC(ptr noalias nocapture %A) optsize {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i32 2
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i32 4
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 2
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 4
 ; CHECK-NEXT:    store <2 x i32> splat (i32 13), ptr [[TMP3]], align 1
 ; CHECK-NEXT:    store <2 x i32> splat (i32 13), ptr [[TMP7]], align 1
 ; CHECK-NEXT:    store <2 x i32> splat (i32 13), ptr [[TMP8]], align 1

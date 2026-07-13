@@ -11,12 +11,14 @@ define void @mat_mul(ptr %C, ptr %A, ptr %B, i64 %N) !kernel_arg_addr_space !2 !
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][%N] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[%call][{0,+,1}<nuw><nsw><%for.inc>]
+; CHECK-NEXT:  Delinearization validation: Failed
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Inst: %tmp5 = load float, ptr %arrayidx4, align 4
 ; CHECK-NEXT:  AccessFunction: {(4 * %call1),+,(4 * %N)}<%for.inc>
 ; CHECK-NEXT:  Base offset: %B
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][%N] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.inc>][%call1]
+; CHECK-NEXT:  Delinearization validation: Failed
 ;
 entry:
   br label %entry.split

@@ -352,7 +352,7 @@ public:
 
   /// Applies composition by the dims of `this` to the integer `values` and
   /// returns the resulting values. `this` must be symbol-less.
-  SmallVector<int64_t, 4> compose(ArrayRef<int64_t> values) const;
+  SmallVector<int64_t, 8> compose(ArrayRef<int64_t> values) const;
 
   /// Returns the number of "zero" results (constant values == 0) in this map.
   ///
@@ -715,14 +715,6 @@ namespace llvm {
 // AffineExpr hash just like pointers
 template <>
 struct DenseMapInfo<mlir::AffineMap> {
-  static mlir::AffineMap getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::AffineMap(static_cast<mlir::AffineMap::ImplType *>(pointer));
-  }
-  static mlir::AffineMap getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::AffineMap(static_cast<mlir::AffineMap::ImplType *>(pointer));
-  }
   static unsigned getHashValue(mlir::AffineMap val) {
     return mlir::hash_value(val);
   }

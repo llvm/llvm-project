@@ -9,21 +9,18 @@
 #ifndef _LIBCPP___ALGORITHM_COPY_MOVE_COMMON_H
 #define _LIBCPP___ALGORITHM_COPY_MOVE_COMMON_H
 
+#include <__algorithm/in_out_result.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__algorithm/unwrap_range.h>
 #include <__config>
 #include <__cstddef/size_t.h>
-#include <__iterator/iterator_traits.h>
-#include <__memory/pointer_traits.h>
 #include <__string/constexpr_c_functions.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_always_bitcastable.h>
-#include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_trivially_assignable.h>
 #include <__type_traits/is_volatile.h>
 #include <__utility/move.h>
-#include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -57,24 +54,24 @@ struct __can_lower_move_assignment_to_memmove {
 // `memmove` algorithms implementation.
 
 template <class _In, class _Out>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_In*, _Out*>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __in_out_result<_In*, _Out*>
 __copy_trivial_impl(_In* __first, _In* __last, _Out* __result) {
   const size_t __n = static_cast<size_t>(__last - __first);
 
   std::__constexpr_memmove(__result, __first, __element_count(__n));
 
-  return std::make_pair(__last, __result + __n);
+  return {__last, __result + __n};
 }
 
 template <class _In, class _Out>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_In*, _Out*>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __in_out_result<_In*, _Out*>
 __copy_backward_trivial_impl(_In* __first, _In* __last, _Out* __result) {
   const size_t __n = static_cast<size_t>(__last - __first);
   __result -= __n;
 
   std::__constexpr_memmove(__result, __first, __element_count(__n));
 
-  return std::make_pair(__last, __result);
+  return {__last, __result};
 }
 
 // Iterator unwrapping and dispatching to the correct overload.
@@ -88,12 +85,12 @@ template <class _Algorithm,
           class _Sent,
           class _OutIter,
           __enable_if_t<__can_rewrap<_InIter, _OutIter>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 pair<_InIter, _OutIter>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 __in_out_result<_InIter, _OutIter>
 __copy_move_unwrap_iters(_InIter __first, _Sent __last, _OutIter __out_first) {
   auto __range  = std::__unwrap_range(__first, std::move(__last));
   auto __result = _Algorithm()(std::move(__range.first), std::move(__range.second), std::__unwrap_iter(__out_first));
-  return std::make_pair(std::__rewrap_range<_Sent>(std::move(__first), std::move(__result.first)),
-                        std::__rewrap_iter(std::move(__out_first), std::move(__result.second)));
+  return {std::__rewrap_range<_Sent>(std::move(__first), std::move(__result.__in_)),
+          std::__rewrap_iter(std::move(__out_first), std::move(__result.__out_))};
 }
 
 template <class _Algorithm,
@@ -101,7 +98,7 @@ template <class _Algorithm,
           class _Sent,
           class _OutIter,
           __enable_if_t<!__can_rewrap<_InIter, _OutIter>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 pair<_InIter, _OutIter>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 __in_out_result<_InIter, _OutIter>
 __copy_move_unwrap_iters(_InIter __first, _Sent __last, _OutIter __out_first) {
   return _Algorithm()(std::move(__first), std::move(__last), std::move(__out_first));
 }

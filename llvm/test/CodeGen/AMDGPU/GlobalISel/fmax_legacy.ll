@@ -274,3 +274,23 @@ define <2 x float> @v_test_fmax_legacy_ogt_v2f32(<2 x float> %a, <2 x float> %b)
   %val = select <2 x i1> %cmp, <2 x float> %a, <2 x float> %b
   ret <2 x float> %val
 }
+
+define amdgpu_ps float @s_test_fmax_legacy_f32(float inreg %a, float inreg %b) {
+; GFX6-LABEL: s_test_fmax_legacy_f32:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    v_mov_b32_e32 v0, s3
+; GFX6-NEXT:    v_max_legacy_f32_e32 v0, s2, v0
+; GFX6-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: s_test_fmax_legacy_f32:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_mov_b32_e32 v0, s3
+; GFX8-NEXT:    v_cmp_gt_f32_e32 vcc, s2, v0
+; GFX8-NEXT:    s_cmp_lg_u64 vcc, 0
+; GFX8-NEXT:    s_cselect_b32 s0, s2, s3
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
+; GFX8-NEXT:    ; return to shader part epilog
+  %cmp = fcmp ogt float %a, %b
+  %val = select i1 %cmp, float %a, float %b
+  ret float %val
+}

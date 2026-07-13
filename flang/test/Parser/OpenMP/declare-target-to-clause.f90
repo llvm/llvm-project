@@ -12,10 +12,10 @@ end
 !UNPARSE: !$OMP DECLARE TARGET TO(x,y)
 !UNPARSE: END MODULE
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareTargetDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> To -> OmpToClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | OmpObject -> Designator -> DataRef -> Name = 'y'
 !PARSE-TREE: | | bool = 'true'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}

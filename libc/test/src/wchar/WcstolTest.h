@@ -29,8 +29,11 @@ struct WcstoTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
 
   void InvalidBase(FunctionT func) {
     const wchar_t *ten = L"10";
-    ASSERT_EQ(func(ten, nullptr, -1), ReturnT(0));
+    wchar_t *str_end = nullptr;
+    ASSERT_EQ(func(ten, &str_end, -1), ReturnT(0));
     ASSERT_ERRNO_EQ(EINVAL);
+    // Verify that str_end isn't touched for EINVAL errors.
+    ASSERT_EQ(str_end, nullptr);
   }
 
   void CleanBaseTenDecode(FunctionT func) {
@@ -178,8 +181,8 @@ struct WcstoTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
     wchar_t small_string[4] = {L'\0', L'\0', L'\0', L'\0'};
     for (int base = 2; base <= 36; ++base) {
       for (int first_digit = 0; first_digit <= 36; ++first_digit) {
-        small_string[0] = static_cast<wchar_t>(
-            LIBC_NAMESPACE::internal::int_to_b36_wchar(first_digit));
+        small_string[0] =
+            LIBC_NAMESPACE::internal::int_to_b36_wchar(first_digit);
         if (first_digit < base) {
           ASSERT_EQ(func(small_string, nullptr, base),
                     static_cast<ReturnT>(first_digit));
@@ -193,11 +196,11 @@ struct WcstoTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
 
     for (int base = 2; base <= 36; ++base) {
       for (int first_digit = 0; first_digit <= 36; ++first_digit) {
-        small_string[0] = static_cast<wchar_t>(
-            LIBC_NAMESPACE::internal::int_to_b36_wchar(first_digit));
+        small_string[0] =
+            LIBC_NAMESPACE::internal::int_to_b36_wchar(first_digit);
         for (int second_digit = 0; second_digit <= 36; ++second_digit) {
-          small_string[1] = static_cast<wchar_t>(
-              LIBC_NAMESPACE::internal::int_to_b36_wchar(second_digit));
+          small_string[1] =
+              LIBC_NAMESPACE::internal::int_to_b36_wchar(second_digit);
           if (first_digit < base && second_digit < base) {
             ASSERT_EQ(
                 func(small_string, nullptr, base),
@@ -217,14 +220,14 @@ struct WcstoTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
 
     for (int base = 2; base <= 36; ++base) {
       for (int first_digit = 0; first_digit <= 36; ++first_digit) {
-        small_string[0] = static_cast<wchar_t>(
-            LIBC_NAMESPACE::internal::int_to_b36_wchar(first_digit));
+        small_string[0] =
+            LIBC_NAMESPACE::internal::int_to_b36_wchar(first_digit);
         for (int second_digit = 0; second_digit <= 36; ++second_digit) {
-          small_string[1] = static_cast<wchar_t>(
-              LIBC_NAMESPACE::internal::int_to_b36_wchar(second_digit));
+          small_string[1] =
+              LIBC_NAMESPACE::internal::int_to_b36_wchar(second_digit);
           for (int third_digit = 0; third_digit <= limit; ++third_digit) {
-            small_string[2] = static_cast<wchar_t>(
-                LIBC_NAMESPACE::internal::int_to_b36_wchar(third_digit));
+            small_string[2] =
+                LIBC_NAMESPACE::internal::int_to_b36_wchar(third_digit);
 
             if (first_digit < base && second_digit < base &&
                 third_digit < base) {
@@ -239,9 +242,13 @@ struct WcstoTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
                   static_cast<ReturnT>(second_digit + (first_digit * base)));
               ASSERT_ERRNO_SUCCESS();
             } else if (first_digit < base) {
-              // if the base is 16 there is a special case for the prefix 0X.
-              // The number is treated as a one digit hexadecimal.
-              if (base == 16 && first_digit == 0 && second_digit == 33) {
+              /* Special case: if the string is "0x?" for base 16 or "0b?" for
+               * base 2, the "0x"/"0b" prefix is consumed and the third
+               * character is parsed as the actual digit. If the third character
+               * is also invalid for the base, the result is 0.
+               */
+              if ((base == 16 && first_digit == 0 && second_digit == 33) ||
+                  (base == 2 && first_digit == 0 && second_digit == 11)) {
                 if (third_digit < base) {
                   ASSERT_EQ(func(small_string, nullptr, base),
                             static_cast<ReturnT>(third_digit));
@@ -399,6 +406,16 @@ struct WcstoTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
     ASSERT_ERRNO_SUCCESS();
     EXPECT_EQ(str_end - base_eight_with_prefix, ptrdiff_t(6));
 
+    const wchar_t *base_two_with_prefix = L"0b10101";
+    ASSERT_EQ(func(base_two_with_prefix, &str_end, 0), ReturnT(0b10101));
+    ASSERT_ERRNO_SUCCESS();
+    EXPECT_EQ(str_end - base_two_with_prefix, ptrdiff_t(7));
+
+    const wchar_t *octal_not_binary = L"010101";
+    ASSERT_EQ(func(octal_not_binary, &str_end, 0), ReturnT(010101));
+    ASSERT_ERRNO_SUCCESS();
+    EXPECT_EQ(str_end - octal_not_binary, ptrdiff_t(6));
+
     const wchar_t *just_zero = L"0";
     ASSERT_EQ(func(just_zero, &str_end, 0), ReturnT(0));
     ASSERT_ERRNO_SUCCESS();
@@ -413,6 +430,11 @@ struct WcstoTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
     ASSERT_EQ(func(just_zero_eight, &str_end, 0), ReturnT(0));
     ASSERT_ERRNO_SUCCESS();
     EXPECT_EQ(str_end - just_zero_eight, ptrdiff_t(1));
+
+    const wchar_t *just_zero_b = L"0b";
+    ASSERT_EQ(func(just_zero_b, &str_end, 0), ReturnT(0));
+    ASSERT_ERRNO_SUCCESS();
+    EXPECT_EQ(str_end - just_zero_b, ptrdiff_t(1));
   }
 };
 

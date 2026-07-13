@@ -4,5 +4,5 @@
 [shader("compute")]
 [numthreads(8,8,1)]
 void foo(uint Idx : SV_DispatchThreadID1) {
-  // expected-error@-1 {{semantic SV_DispatchThreadID does not allow indexing}}
+  // expected-error@-1 {{semantic 'SV_DispatchThreadID' does not allow indexing}}
 }

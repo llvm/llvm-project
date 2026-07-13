@@ -15,7 +15,6 @@
 
 #include "test_macros.h"
 #include "test_allocator.h"
-#include "min_allocator.h"
 
 template <class S>
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -33,13 +32,6 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
 int main(int, char**) {
   test<std::basic_string<char, std::char_traits<char>, test_allocator<char> > >();
-#if TEST_STD_VER >= 11
-  test<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
-#endif
-#if TEST_STD_VER > 17
-  static_assert(test<std::basic_string<char, std::char_traits<char>, test_allocator<char>>>());
-  static_assert(test<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>());
-#endif
 
   return 0;
 }

@@ -31,11 +31,10 @@ concept NoExceptAdlSwap = requires(T t1, T t2) {
   { swap(t1, t2) } noexcept;
 };
 
-static_assert(NoExceptAdlSwap<std::flat_map<int, int>>);
-
+static_assert(NoExceptAdlSwap<std::flat_map<int, int, std::less<int>, std::vector<int>, std::vector<int>>>);
 #ifndef TEST_HAS_NO_EXCEPTIONS
 static_assert(
-    NoExceptAdlSwap<std::flat_map<int, int, std::less<int>, ThrowOnMoveContainer<int>, ThrowOnMoveContainer<int>>>);
+    !NoExceptAdlSwap<std::flat_map<int, int, std::less<int>, ThrowOnMoveContainer<int>, ThrowOnMoveContainer<int>>>);
 #endif
 
 template <class KeyContainer, class ValueContainer>

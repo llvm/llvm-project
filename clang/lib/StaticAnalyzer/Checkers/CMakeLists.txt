@@ -44,7 +44,6 @@ add_clang_library(clangStaticAnalyzerCheckers
   ErrnoModeling.cpp
   ErrnoTesterChecker.cpp
   ExprInspectionChecker.cpp
-  FixedAddressChecker.cpp
   FuchsiaHandleChecker.cpp
   GCDAntipatternChecker.cpp
   GenericTaintChecker.cpp
@@ -56,6 +55,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   IteratorModeling.cpp
   IteratorRangeChecker.cpp
   IvarInvalidationChecker.cpp
+  LifetimeModeling.cpp
   LLVMConventionsChecker.cpp
   LocalizationChecker.cpp
   MacOSKeychainAPIChecker.cpp
@@ -86,6 +86,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   ObjCSelfInitChecker.cpp
   ObjCSuperDeallocChecker.cpp
   ObjCUnusedIVarsChecker.cpp
+  OpaqueSTLFunctionsModeling.cpp
   OSObjectCStyleCast.cpp
   PaddingChecker.cpp
   PointerArithChecker.cpp
@@ -115,6 +116,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   TraversalChecker.cpp
   TrustNonnullChecker.cpp
   TrustReturnsNonnullChecker.cpp
+  UnconditionalVAArgChecker.cpp
   UndefBranchChecker.cpp
   UndefCapturedBlockVarChecker.cpp
   UndefResultChecker.cpp
@@ -125,6 +127,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   UninitializedObject/UninitializedPointee.cpp
   UnixAPIChecker.cpp
   UnreachableCodeChecker.cpp
+  UseAfterLifetimeEnd.cpp
   VforkChecker.cpp
   VLASizeChecker.cpp
   VAListChecker.cpp
@@ -132,6 +135,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   WebKit/ASTUtils.cpp
   WebKit/ForwardDeclChecker.cpp
   WebKit/MemoryUnsafeCastChecker.cpp
+  WebKit/NoDeleteChecker.cpp
   WebKit/PtrTypesSemantics.cpp
   WebKit/RefCntblBaseVirtualDtorChecker.cpp
   WebKit/RetainPtrCtorAdoptChecker.cpp
@@ -144,6 +148,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   clangAST
   clangASTMatchers
   clangAnalysis
+  clangAnalysisLifetimeSafety
   clangBasic
   clangLex
   clangStaticAnalyzerCore

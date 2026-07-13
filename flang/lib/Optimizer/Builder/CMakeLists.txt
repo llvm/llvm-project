@@ -5,13 +5,16 @@ add_flang_library(FIRBuilder
   BoxValue.cpp
   Character.cpp
   Complex.cpp
+  CUDAIntrinsicCall.cpp
   CUFCommon.cpp
   DoLoopHelper.cpp
   FIRBuilder.cpp
   HLFIRTools.cpp
   IntrinsicCall.cpp
   LowLevelIntrinsics.cpp
+  MIFCommon.cpp
   MutableBox.cpp
+  OpenACCIntrinsicCall.cpp
   PPCIntrinsicCall.cpp
   Runtime/Allocatable.cpp
   Runtime/ArrayConstructor.cpp
@@ -33,6 +36,7 @@ add_flang_library(FIRBuilder
   Runtime/Stop.cpp
   Runtime/Support.cpp
   Runtime/TemporaryStack.cpp
+  Runtime/Trampoline.cpp
   Runtime/Transformational.cpp
   TemporaryStorage.cpp
 
@@ -46,10 +50,10 @@ add_flang_library(FIRBuilder
   LINK_LIBS
   CUFAttrs
   CUFDialect
+  FIRAnalysis
   FIRDialect
   FIRDialectSupport
   FIRSupport
-  FortranEvaluate
   FortranSupport
   HLFIRDialect
   MIFDialect

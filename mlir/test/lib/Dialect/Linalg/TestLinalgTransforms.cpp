@@ -229,7 +229,7 @@ static void applyDecomposeWinogradOps(func::FuncOp funcOp) {
 
 static void applyFoldIntoPackAndUnpackPatterns(
     Operation *rootOp,
-    linalg::ControlFoldIntoPackUnpackFn controlFn = nullptr) {
+    const linalg::ControlFoldIntoPackUnpackFn &controlFn = nullptr) {
   RewritePatternSet patterns(rootOp->getContext());
   linalg::populateFoldIntoPackAndUnpackPatterns(patterns, controlFn);
   (void)applyPatternsGreedily(rootOp, std::move(patterns));

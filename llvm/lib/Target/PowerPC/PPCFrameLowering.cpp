@@ -2520,11 +2520,11 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
         // saved vector registers.
         if (Subtarget.needsSwapsForVSXMemOps() &&
             !MF->getFunction().hasFnAttribute(Attribute::NoUnwind))
-          TII.storeRegToStackSlotNoUpd(MBB, MI, Reg, !IsLiveIn,
-                                       I.getFrameIdx(), RC, TRI);
+          TII.storeRegToStackSlotNoUpd(MBB, MI, Reg, !IsLiveIn, I.getFrameIdx(),
+                                       RC);
         else
           TII.storeRegToStackSlot(MBB, MI, Reg, !IsLiveIn, I.getFrameIdx(), RC,
-                                  TRI, Register());
+                                  Register());
       }
     }
   }
@@ -2690,10 +2690,9 @@ bool PPCFrameLowering::restoreCalleeSavedRegisters(
         // saved vector registers.
         if (Subtarget.needsSwapsForVSXMemOps() &&
             !MF->getFunction().hasFnAttribute(Attribute::NoUnwind))
-          TII.loadRegFromStackSlotNoUpd(MBB, I, Reg, CSI[i].getFrameIdx(), RC,
-                                        TRI);
+          TII.loadRegFromStackSlotNoUpd(MBB, I, Reg, CSI[i].getFrameIdx(), RC);
         else
-          TII.loadRegFromStackSlot(MBB, I, Reg, CSI[i].getFrameIdx(), RC, TRI,
+          TII.loadRegFromStackSlot(MBB, I, Reg, CSI[i].getFrameIdx(), RC,
                                    Register());
 
         assert(I != MBB.begin() &&
@@ -2811,9 +2810,9 @@ uint64_t PPCFrameLowering::getStackThreshold() const {
   // when extending the stack and is positive when releasing the stack frame.
   // To make `stux` and `add` paired, the absolute value of the number contained
   // in the scratch register should be the same. Thus the maximum stack size
-  // is (2^63)-1, i.e., LONG_MAX.
+  // is (2^63)-1, i.e., INT64_MAX.
   if (Subtarget.isPPC64())
-    return LONG_MAX;
+    return INT64_MAX;
 
   return TargetFrameLowering::getStackThreshold();
 }

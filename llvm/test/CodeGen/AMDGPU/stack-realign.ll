@@ -32,7 +32,6 @@ define void @needs_align16_default_stack_align(i32 %idx) #0 {
 ; GCN-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-; GCN: ; ScratchSize: 144
   %alloca.align16 = alloca [8 x <4 x i32>], align 16, addrspace(5)
   %gep0 = getelementptr inbounds [8 x <4 x i32>], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
   store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) %gep0, align 16
@@ -71,7 +70,6 @@ define void @needs_align16_stack_align4(i32 %idx) #2 {
 ; GCN-NEXT:    s_mov_b32 s34, s5
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-; GCN: ; ScratchSize: 160
   %alloca.align16 = alloca [8 x <4 x i32>], align 16, addrspace(5)
   %gep0 = getelementptr inbounds [8 x <4 x i32>], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
   store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) %gep0, align 16
@@ -111,7 +109,6 @@ define void @needs_align32(i32 %idx) #0 {
 ; GCN-NEXT:    s_mov_b32 s34, s5
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-; GCN: ; ScratchSize: 192
   %alloca.align16 = alloca [8 x <4 x i32>], align 32, addrspace(5)
   %gep0 = getelementptr inbounds [8 x <4 x i32>], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
   store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) %gep0, align 32
@@ -138,7 +135,6 @@ define void @force_realign4(i32 %idx) #1 {
 ; GCN-NEXT:    s_mov_b32 s34, s5
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-; GCN: ; ScratchSize: 52
   %alloca.align16 = alloca [8 x i32], align 4, addrspace(5)
   %gep0 = getelementptr inbounds [8 x i32], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
   store volatile i32 3, ptr addrspace(5) %gep0, align 4
@@ -178,7 +174,7 @@ define amdgpu_kernel void @kernel_call_align16_from_8() #0 {
 }
 
 ; The call sequence should keep the stack on call aligned to 4
-define amdgpu_kernel void @kernel_call_align16_from_5() {
+define amdgpu_kernel void @kernel_call_align16_from_5() #6 {
 ; GCN-LABEL: kernel_call_align16_from_5:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_add_i32 s12, s12, s17
@@ -211,7 +207,7 @@ define amdgpu_kernel void @kernel_call_align16_from_5() {
   ret void
 }
 
-define amdgpu_kernel void @kernel_call_align4_from_5() {
+define amdgpu_kernel void @kernel_call_align4_from_5() #6 {
 ; GCN-LABEL: kernel_call_align4_from_5:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_add_i32 s12, s12, s17
@@ -295,28 +291,28 @@ define void @func_call_align1024_bp_gets_vgpr_spill(<32 x i32> %a, i32 %b) #0 {
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:1028 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[18:19]
 ; GCN-NEXT:    v_writelane_b32 v40, s16, 2
-; GCN-NEXT:    v_mov_b32_e32 v32, 0
 ; GCN-NEXT:    v_writelane_b32 v40, s34, 3
+; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    s_mov_b32 s34, s32
+; GCN-NEXT:    s_add_i32 s32, s32, 0x30000
+; GCN-NEXT:    v_writelane_b32 v40, s31, 1
+; GCN-NEXT:    v_mov_b32_e32 v32, 0
 ; GCN-NEXT:    buffer_store_dword v32, off, s[0:3], s33 offset:1024
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v32, off, s[0:3], s34
 ; GCN-NEXT:    buffer_load_dword v33, off, s[0:3], s34 offset:4
-; GCN-NEXT:    s_add_i32 s32, s32, 0x30000
 ; GCN-NEXT:    s_getpc_b64 s[16:17]
 ; GCN-NEXT:    s_add_u32 s16, s16, extern_func@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, extern_func@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
-; GCN-NEXT:    v_writelane_b32 v40, s30, 0
-; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    buffer_store_dword v32, off, s[0:3], s32
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 0
+; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    s_mov_b32 s32, s34
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 2
 ; GCN-NEXT:    v_readlane_b32 s34, v40, 3
@@ -457,7 +453,7 @@ define void @no_free_regs_spill_bp_to_memory(<32 x i32> %a, i32 %b) #5 {
 ; GCN-NEXT:    v_writelane_b32 v39, s4, 32
 ; GCN-NEXT:    v_writelane_b32 v39, s34, 33
 ; GCN-NEXT:    s_mov_b32 s34, s32
-; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s34 offset:4
+; GCN-NEXT:    s_addk_i32 s32, 0x6000
 ; GCN-NEXT:    v_writelane_b32 v39, s39, 0
 ; GCN-NEXT:    v_writelane_b32 v39, s48, 1
 ; GCN-NEXT:    v_writelane_b32 v39, s49, 2
@@ -489,8 +485,8 @@ define void @no_free_regs_spill_bp_to_memory(<32 x i32> %a, i32 %b) #5 {
 ; GCN-NEXT:    v_writelane_b32 v39, s99, 28
 ; GCN-NEXT:    v_writelane_b32 v39, s100, 29
 ; GCN-NEXT:    v_writelane_b32 v39, s101, 30
-; GCN-NEXT:    s_addk_i32 s32, 0x6000
 ; GCN-NEXT:    v_writelane_b32 v39, s102, 31
+; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s34 offset:4
 ; GCN-NEXT:    s_mov_b32 s32, s34
 ; GCN-NEXT:    v_readlane_b32 s34, v39, 33
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -580,7 +576,7 @@ define void @spill_bp_to_memory_scratch_reg_needed_mubuf_offset(<32 x i32> %a, i
 ; GCN-NEXT:    v_writelane_b32 v39, s4, 32
 ; GCN-NEXT:    v_writelane_b32 v39, s34, 33
 ; GCN-NEXT:    s_mov_b32 s34, s32
-; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s34 offset:4
+; GCN-NEXT:    s_add_i32 s32, s32, 0x46000
 ; GCN-NEXT:    v_writelane_b32 v39, s39, 0
 ; GCN-NEXT:    v_writelane_b32 v39, s48, 1
 ; GCN-NEXT:    v_writelane_b32 v39, s49, 2
@@ -612,9 +608,9 @@ define void @spill_bp_to_memory_scratch_reg_needed_mubuf_offset(<32 x i32> %a, i
 ; GCN-NEXT:    v_writelane_b32 v39, s99, 28
 ; GCN-NEXT:    v_writelane_b32 v39, s100, 29
 ; GCN-NEXT:    v_writelane_b32 v39, s101, 30
-; GCN-NEXT:    v_mov_b32_e32 v1, 0x1080
-; GCN-NEXT:    s_add_i32 s32, s32, 0x46000
 ; GCN-NEXT:    v_writelane_b32 v39, s102, 31
+; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s34 offset:4
+; GCN-NEXT:    v_mov_b32_e32 v1, 0x1080
 ; GCN-NEXT:    s_mov_b32 s32, s34
 ; GCN-NEXT:    v_readlane_b32 s34, v39, 33
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -695,3 +691,4 @@ attributes #2 = { noinline nounwind alignstack=4 }
 attributes #3 = { noinline nounwind "no-realign-stack" }
 attributes #4 = { noinline nounwind "frame-pointer"="all"}
 attributes #5 = { noinline nounwind "amdgpu-waves-per-eu"="6,6" }
+attributes #6 = { nounwind }

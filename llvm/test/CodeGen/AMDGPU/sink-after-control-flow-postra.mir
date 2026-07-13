@@ -263,7 +263,7 @@ body:             |
   ; GFX10-NEXT:   liveins: $sgpr4, $sgpr5, $sgpr8, $vgpr0, $vgpr1
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   $exec_lo = S_OR_B32 $exec_lo, killed renamable $sgpr5, implicit-def $scc
-  ; GFX10-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit killed renamable $vgpr1
+  ; GFX10-NEXT:   INLINEASM &"", sideeffect attdialect, implicit killed renamable $vgpr1
   ; GFX10-NEXT:   S_BRANCH %bb.3
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.7:
@@ -325,7 +325,7 @@ body:             |
     liveins: $sgpr4, $sgpr5, $sgpr8, $vgpr0, $vgpr1
 
     $exec_lo = S_OR_B32 $exec_lo, killed renamable $sgpr5, implicit-def $scc
-    INLINEASM &"", 1 /* sideeffect attdialect */, implicit killed renamable $vgpr1
+    INLINEASM &"", sideeffect attdialect, implicit killed renamable $vgpr1
     S_BRANCH %bb.2
 
   bb.6:
@@ -386,7 +386,7 @@ body:             |
   ; GFX10-NEXT:   renamable $sgpr6 = S_ADD_I32 renamable $sgpr8, renamable $sgpr9, implicit-def dead $scc
   ; GFX10-NEXT:   renamable $sgpr5 = S_AND_B32 $exec_lo, killed renamable $sgpr5, implicit-def $scc
   ; GFX10-NEXT:   renamable $sgpr5 = S_OR_B32 killed renamable $sgpr5, renamable $sgpr4, implicit-def $scc
-  ; GFX10-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; GFX10-NEXT:   INLINEASM &"", sideeffect attdialect
   ; GFX10-NEXT:   $exec_lo = S_ANDN2_B32 $exec_lo, renamable $sgpr5, implicit-def $scc
   ; GFX10-NEXT:   S_CBRANCH_EXECNZ %bb.3, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.6
@@ -396,7 +396,7 @@ body:             |
   ; GFX10-NEXT:   liveins: $sgpr4, $sgpr5, $sgpr6, $sgpr8, $sgpr9
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   $exec_lo = S_OR_B32 $exec_lo, killed renamable $sgpr5, implicit-def $scc
-  ; GFX10-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit killed renamable $sgpr6
+  ; GFX10-NEXT:   INLINEASM &"", sideeffect attdialect, implicit killed renamable $sgpr6
   ; GFX10-NEXT:   S_BRANCH %bb.3
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.7:
@@ -450,7 +450,7 @@ body:             |
     renamable $sgpr6 = S_ADD_I32 renamable $sgpr8, renamable $sgpr9, implicit-def dead $scc
     renamable $sgpr5 = S_AND_B32 $exec_lo, killed renamable $sgpr5, implicit-def $scc
     renamable $sgpr5 = S_OR_B32 killed renamable $sgpr5, renamable $sgpr4, implicit-def $scc
-    INLINEASM &"", 1 /* sideeffect attdialect */
+    INLINEASM &"", sideeffect attdialect
     $exec_lo = S_ANDN2_B32 $exec_lo, renamable $sgpr5, implicit-def $scc
     S_CBRANCH_EXECNZ %bb.2, implicit $exec
     S_BRANCH %bb.5
@@ -459,7 +459,7 @@ body:             |
     liveins: $sgpr4, $sgpr5, $sgpr6, $sgpr8, $sgpr9
 
     $exec_lo = S_OR_B32 $exec_lo, killed renamable $sgpr5, implicit-def $scc
-    INLINEASM &"", 1 /* sideeffect attdialect */, implicit killed renamable $sgpr6
+    INLINEASM &"", sideeffect attdialect, implicit killed renamable $sgpr6
     S_BRANCH %bb.2
 
   bb.6:

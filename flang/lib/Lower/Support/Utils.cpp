@@ -16,9 +16,11 @@
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/IterationSpace.h"
+#include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/PrivateReductionUtils.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -82,7 +84,7 @@ public:
          x.cosubscript())
       cosubs -= getHashValue(v);
     return getHashValue(x.base()) * 97u - cosubs + getHashValue(x.stat()) +
-           257u + getHashValue(x.team());
+           257u + getHashValue(x.team()) + getHashValue(x.notify());
   }
   static unsigned getHashValue(const Fortran::evaluate::NamedEntity &x) {
     if (x.IsSymbol())
@@ -156,6 +158,11 @@ public:
     return (getHashValue(x.left()) + getHashValue(x.right())) * 41u +
            static_cast<unsigned>(TC) + static_cast<unsigned>(KIND) +
            static_cast<unsigned>(x.ordering) * 7u;
+  }
+  template <typename T>
+  static unsigned getHashValue(const Fortran::evaluate::ConditionalExpr<T> &x) {
+    return getHashValue(x.condition()) * 151u -
+           getHashValue(x.thenValue()) * 3u + getHashValue(x.elseValue());
   }
   template <Fortran::common::TypeCategory TC, int KIND>
   static unsigned getHashValue(
@@ -341,7 +348,8 @@ public:
                       const Fortran::evaluate::CoarrayRef &y) {
     return isEqual(x.base(), y.base()) &&
            isEqual(x.cosubscript(), y.cosubscript()) &&
-           isEqual(x.stat(), y.stat()) && isEqual(x.team(), y.team());
+           isEqual(x.stat(), y.stat()) && isEqual(x.team(), y.team()) &&
+           isEqual(x.notify(), y.notify());
   }
   static bool isEqual(const Fortran::evaluate::NamedEntity &x,
                       const Fortran::evaluate::NamedEntity &y) {
@@ -413,6 +421,13 @@ public:
   static bool isEqual(const Fortran::evaluate::Extremum<A> &x,
                       const Fortran::evaluate::Extremum<A> &y) {
     return isBinaryEqual(x, y);
+  }
+  template <typename T>
+  static bool isEqual(const Fortran::evaluate::ConditionalExpr<T> &x,
+                      const Fortran::evaluate::ConditionalExpr<T> &y) {
+    return isEqual(x.condition(), y.condition()) &&
+           isEqual(x.thenValue(), y.thenValue()) &&
+           isEqual(x.elseValue(), y.elseValue());
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::RealToIntPower<A> &x,
@@ -610,14 +625,12 @@ unsigned getHashValue(const Fortran::lower::ExplicitIterSpace::ArrayBases &x) {
       [&](const auto *p) { return HashEvaluateExpr::getHashValue(*p); }, x);
 }
 
+unsigned getHashValue(const Fortran::evaluate::Component *x) {
+  return HashEvaluateExpr::getHashValue(*x);
+}
+
 bool isEqual(const Fortran::lower::SomeExpr *x,
              const Fortran::lower::SomeExpr *y) {
-  const auto *empty =
-      llvm::DenseMapInfo<const Fortran::lower::SomeExpr *>::getEmptyKey();
-  const auto *tombstone =
-      llvm::DenseMapInfo<const Fortran::lower::SomeExpr *>::getTombstoneKey();
-  if (x == empty || y == empty || x == tombstone || y == tombstone)
-    return x == y;
   return x == y || IsEqualEvaluateExpr::isEqual(*x, *y);
 }
 
@@ -641,12 +654,31 @@ bool isEqual(const Fortran::lower::ExplicitIterSpace::ArrayBases &x,
       x, y);
 }
 
+bool isEqual(const Fortran::evaluate::Component *x,
+             const Fortran::evaluate::Component *y) {
+  return x == y || IsEqualEvaluateExpr::isEqual(*x, *y);
+}
+
 void copyFirstPrivateSymbol(lower::AbstractConverter &converter,
                             const semantics::Symbol *sym,
                             mlir::OpBuilder::InsertPoint *copyAssignIP) {
   if (sym->test(semantics::Symbol::Flag::OmpFirstPrivate) ||
       sym->test(semantics::Symbol::Flag::LocalityLocalInit))
     converter.copyHostAssociateVar(*sym, copyAssignIP);
+}
+
+static bool isDynamicallySizedBoxArrayType(mlir::Type type) {
+  auto boxType = mlir::dyn_cast<fir::BaseBoxType>(type);
+  if (!boxType)
+    return false;
+  auto seqType = mlir::dyn_cast<fir::SequenceType>(boxType.getEleTy());
+  return seqType && (seqType.hasUnknownShape() || seqType.hasDynamicExtents());
+}
+
+static bool isGpuModule(fir::FirOpBuilder &builder) {
+  auto offloadMod =
+      llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(*builder.getModule());
+  return offloadMod && offloadMod.getIsGPU();
 }
 
 template <typename OpType, typename OperandsStructType>
@@ -656,7 +688,8 @@ void privatizeSymbol(
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
     llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps,
-    std::optional<llvm::omp::Directive> dir) {
+    std::optional<llvm::omp::Directive> dir,
+    bool forceHeapAllocationForPrivateDynamicArrays) {
   constexpr bool isDoConcurrent =
       std::is_same_v<OpType, fir::LocalitySpecifierOp>;
   mlir::OpBuilder::InsertPoint dcIP;
@@ -669,7 +702,17 @@ void privatizeSymbol(
 
   const semantics::Symbol *sym =
       isDoConcurrent ? &symToPrivatize->GetUltimate() : symToPrivatize;
-  const lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
+  // Module variables accessed via USE inside nested BLOCKs may not be
+  // instantiated yet. Ensure they are bound before looking up the host box.
+  const auto &ultimate = sym->GetUltimate();
+  if (ultimate.owner().kind() == semantics::Scope::Kind::Module &&
+      !symTable.lookupSymbol(ultimate)) {
+    Fortran::lower::AggregateStoreMap storeMap;
+    Fortran::lower::instantiateVariable(
+        converter, Fortran::lower::pft::Variable{ultimate, /*global=*/true},
+        symTable, storeMap);
+  }
+  lower::SymbolBox hsb = symTable.lookupSymbol(*sym);
   assert(hsb && "Host symbol box not found");
 
   mlir::Location symLoc = hsb.getAddr().getLoc();
@@ -687,7 +730,10 @@ void privatizeSymbol(
 
   mlir::Value privVal = hsb.getAddr();
   mlir::Type allocType = privVal.getType();
-  if (!mlir::isa<fir::PointerType>(privVal.getType()))
+  // Only preserve fir.ptr wrapping for true Fortran POINTERs; EQUIVALENCE
+  // aliases also use fir.ptr but need the underlying type for allocation.
+  if (!mlir::isa<fir::PointerType>(privVal.getType()) ||
+      !semantics::IsPointer(ultimate))
     allocType = fir::unwrapRefType(privVal.getType());
 
   if (auto poly = mlir::dyn_cast<fir::ClassType>(allocType)) {
@@ -718,17 +764,29 @@ void privatizeSymbol(
   }
 
   mlir::Type argType = privVal.getType();
+  bool forceHeapAllocation = forceHeapAllocationForPrivateDynamicArrays &&
+                             isGpuModule(firOpBuilder) &&
+                             isDynamicallySizedBoxArrayType(allocType);
 
   OpType privatizerOp = [&]() {
     auto moduleOp = firOpBuilder.getModule();
-    auto uniquePrivatizerName = fir::getTypeAsString(
-        allocType, converter.getKindMap(),
+    std::string privatizerPrefix =
         converter.mangleName(*sym) +
-            (emitCopyRegion ? "_firstprivate" : "_private"));
+        (emitCopyRegion ? "_firstprivate" : "_private");
+    if (forceHeapAllocation)
+      privatizerPrefix += "_heap";
+    auto uniquePrivatizerName = fir::getTypeAsString(
+        allocType, converter.getKindMap(), privatizerPrefix);
 
     if (auto existingPrivatizer =
             moduleOp.lookupSymbol<OpType>(uniquePrivatizerName))
       return existingPrivatizer;
+
+    if (forceHeapAllocation)
+      mlir::emitWarning(symLoc)
+          << "OpenMP private dynamic array '" << sym->name().ToString()
+          << "' on a GPU target may exceed stack memory; using device heap "
+             "allocation instead, which can severely degrade performance";
 
     mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
     firOpBuilder.setInsertionPointToStart(moduleOp.getBody());
@@ -762,7 +820,7 @@ void privatizeSymbol(
         mlir::isa<fir::BaseBoxType>(allocType) ||
         mlir::isa<fir::BoxCharType>(allocType);
     if (needsInitialization) {
-      lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(
+      lower::SymbolBox hsb = symTable.lookupSymbol(
           isDoConcurrent ? symToPrivatize->GetUltimate() : *symToPrivatize);
 
       assert(hsb && "Host symbol box not found");
@@ -786,7 +844,8 @@ void privatizeSymbol(
           result.getDeallocRegion(),
           emitCopyRegion ? DeclOperationKind::FirstPrivateOrLocalInit
                          : DeclOperationKind::PrivateOrLocal,
-          symToPrivatize, cannotHaveNonDefaultLowerBounds, isDoConcurrent);
+          symToPrivatize, cannotHaveNonDefaultLowerBounds, isDoConcurrent,
+          forceHeapAllocation);
       // TODO: currently there are false positives from dead uses of the mold
       // arg
       if (result.initReadsFromMold())
@@ -857,7 +916,8 @@ privatizeSymbol<mlir::omp::PrivateClauseOp, mlir::omp::PrivateClauseOps>(
     llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize,
     mlir::omp::PrivateClauseOps *clauseOps,
-    std::optional<llvm::omp::Directive> dir);
+    std::optional<llvm::omp::Directive> dir,
+    bool forceHeapAllocationForPrivateDynamicArrays);
 
 template void
 privatizeSymbol<fir::LocalitySpecifierOp, fir::LocalitySpecifierOperands>(
@@ -867,6 +927,7 @@ privatizeSymbol<fir::LocalitySpecifierOp, fir::LocalitySpecifierOperands>(
     llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize,
     fir::LocalitySpecifierOperands *clauseOps,
-    std::optional<llvm::omp::Directive> dir);
+    std::optional<llvm::omp::Directive> dir,
+    bool forceHeapAllocationForPrivateDynamicArrays);
 
 } // end namespace Fortran::lower

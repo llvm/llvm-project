@@ -167,7 +167,7 @@ define void @fold_strlen_A(ptr %plen) {
 
 define void @fold_strlen_A_pI(ptr %plen, i64 %I) {
 ; CHECK-LABEL: @fold_strlen_A_pI(
-; CHECK-NEXT:    [[PA0A:%.*]] = getelementptr [[STRUCT_A:%.*]], ptr @a, i64 0, i32 0, i64 [[I:%.*]]
+; CHECK-NEXT:    [[PA0A:%.*]] = getelementptr i8, ptr @a, i64 [[I:%.*]]
 ; CHECK-NEXT:    [[LENA0A:%.*]] = call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[PA0A]])
 ; CHECK-NEXT:    store i64 [[LENA0A]], ptr [[PLEN:%.*]], align 4
 ; CHECK-NEXT:    [[PA0B:%.*]] = getelementptr i8, ptr getelementptr inbounds nuw (i8, ptr @a, i64 4), i64 [[I]]

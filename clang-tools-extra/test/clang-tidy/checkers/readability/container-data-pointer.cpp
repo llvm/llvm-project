@@ -1,41 +1,10 @@
-// RUN: %check_clang_tidy -check-suffixes=,CLASSIC %s readability-container-data-pointer %t -- -- -isystem %clang_tidy_headers -fno-delayed-template-parsing
-// RUN: %check_clang_tidy -check-suffixes=,WITH-CONFIG %s readability-container-data-pointer %t -- -config="{CheckOptions: {readability-container-data-pointer.IgnoredContainers: '::std::basic_string'}}" -- -isystem %clang_tidy_headers -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -check-suffixes=,CLASSIC %s readability-container-data-pointer %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -check-suffixes=,WITH-CONFIG %s readability-container-data-pointer %t -- -config="{CheckOptions: {readability-container-data-pointer.IgnoredContainers: '::std::basic_string'}}" -- -fno-delayed-template-parsing
 
 #include <string>
-
-typedef __SIZE_TYPE__ size_t;
-
-namespace std {
-template <typename T>
-struct vector {
-  using size_type = size_t;
-
-  vector();
-  explicit vector(size_type);
-
-  T *data();
-  const T *data() const;
-
-  T &operator[](size_type);
-  const T &operator[](size_type) const;
-};
-
-template <typename T>
-struct is_integral;
-
-template <>
-struct is_integral<size_t> {
-  static const bool value = true;
-};
-
-template <bool, typename T = void>
-struct enable_if { };
-
-template <typename T>
-struct enable_if<true, T> {
-  typedef T type;
-};
-}
+#include <type_traits>
+#include <vector>
+#include <memory>
 
 template <typename T>
 void f(const T *);
@@ -143,4 +112,21 @@ int *r() {
   return &holder.v[0];
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
   // CHECK-FIXES: return holder.v.data();
+}
+
+void s(std::unique_ptr<std::vector<unsigned char>> p) {
+  f(&(*p)[0]);
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
+  // CHECK-FIXES: f((*p).data());
+}
+
+void t(std::unique_ptr<container_without_data<unsigned char>> p) {
+  // p has no "data" member function, so no warning
+  f(&(*p)[0]);
+}
+
+template <typename T>
+void u(std::unique_ptr<T> p) {
+  // we don't know if 'T' will always have "data" member function, so no warning
+  f(&(*p)[0]);
 }

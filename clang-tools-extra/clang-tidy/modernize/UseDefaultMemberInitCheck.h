@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USE_DEFAULT_MEMBER_INIT_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USE_DEFAULT_MEMBER_INIT_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USEDEFAULTMEMBERINITCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USEDEFAULTMEMBERINITCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -34,14 +34,15 @@ public:
 
 private:
   void checkDefaultInit(const ast_matchers::MatchFinder::MatchResult &Result,
-                        const CXXCtorInitializer *Init);
+                        const CXXCtorInitializer *Init, bool EmitFix);
   void checkExistingInit(const ast_matchers::MatchFinder::MatchResult &Result,
                          const CXXCtorInitializer *Init);
 
   const bool UseAssignment;
   const bool IgnoreMacros;
+  const bool IgnoreNonVisibleReferences;
 };
 
 } // namespace clang::tidy::modernize
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USE_DEFAULT_MEMBER_INIT_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USEDEFAULTMEMBERINITCHECK_H

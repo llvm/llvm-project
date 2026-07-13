@@ -552,7 +552,8 @@ public:
     return *this;
   }
 
-  /// Check if (This - RHS) is zero. This is the same as reset(RHS) and any().
+  /// Check if (This - RHS) is non-zero.
+  /// This is the same as reset(RHS) and any().
   bool test(const SmallBitVector &RHS) const {
     if (isSmall() && RHS.isSmall())
       return (getSmallBits() & ~RHS.getSmallBits()) != 0;
@@ -570,6 +571,9 @@ public:
 
     return false;
   }
+
+  /// Check if This is a subset of RHS.
+  bool subsetOf(const SmallBitVector &RHS) const { return !test(RHS); }
 
   SmallBitVector &operator|=(const SmallBitVector &RHS) {
     resize(std::max(size(), RHS.size()));
@@ -679,12 +683,6 @@ public:
       getPointer()->clearBitsNotInMask(Mask, MaskWords);
   }
 
-  void invalid() {
-    assert(empty());
-    X = (uintptr_t)-1;
-  }
-  bool isInvalid() const { return X == (uintptr_t)-1; }
-
   ArrayRef<uintptr_t> getData(uintptr_t &Store) const {
     if (!isSmall())
       return getPointer()->getData();
@@ -730,12 +728,6 @@ operator^(const SmallBitVector &LHS, const SmallBitVector &RHS) {
 }
 
 template <> struct DenseMapInfo<SmallBitVector> {
-  static inline SmallBitVector getEmptyKey() { return SmallBitVector(); }
-  static inline SmallBitVector getTombstoneKey() {
-    SmallBitVector V;
-    V.invalid();
-    return V;
-  }
   static unsigned getHashValue(const SmallBitVector &V) {
     uintptr_t Store;
     return DenseMapInfo<
@@ -743,8 +735,6 @@ template <> struct DenseMapInfo<SmallBitVector> {
         getHashValue(std::make_pair(V.size(), V.getData(Store)));
   }
   static bool isEqual(const SmallBitVector &LHS, const SmallBitVector &RHS) {
-    if (LHS.isInvalid() || RHS.isInvalid())
-      return LHS.isInvalid() == RHS.isInvalid();
     return LHS == RHS;
   }
 };

@@ -2,14 +2,14 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
 ! --- Check that with shared(i) the variable outside the parallel section
-! --- is updated. 
+! --- is updated.
 ! CHECK-LABEL:  func.func @_QPomploop()
 ! CHECK:    %[[ALLOC_I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFomploopEi"}
 ! CHECK:    %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOC_I]] {uniq_name = "_QFomploopEi"} :
 ! CHECK:    omp.parallel {
 ! CHECK:      omp.sections {
 ! CHECK:        omp.section {
-! CHECK:          %[[RES:.*]] = fir.do_loop %[[ARG0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG1:.*]] = 
+! CHECK:          %[[RES:.*]] = fir.do_loop %[[ARG0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG1:.*]] =
 ! CHECK:            fir.store %[[ARG1]] to %[[DECL_I]]#0
 ! CHECK:            hlfir.assign
 ! CHECK:            %[[LOAD_I:.*]] = fir.load %[[DECL_I]]#0
@@ -47,7 +47,7 @@ end subroutine
 ! CHECK:      %[[DECL_PRIV_I:.*]]:2 = hlfir.declare %[[ALLOC_PRIV_I]]
 ! CHECK:      omp.sections {
 ! CHECK:        omp.section {
-! CHECK:          %[[RES:.*]] = fir.do_loop %[[ARG0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG1:.*]] = 
+! CHECK:          %[[RES:.*]] = fir.do_loop %[[ARG0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG1:.*]] =
 ! CHECK-NOT:            fir.store %[[ARG1]] to %[[DECL_I]]#1
 ! CHECK:            fir.store %[[ARG1]] to %[[DECL_PRIV_I]]#0
 ! CHECK:            hlfir.assign
@@ -87,7 +87,7 @@ end subroutine
 ! CHECK:      %[[DECL_PRIV_I:.*]]:2 = hlfir.declare %[[ALLOC_PRIV_I]]
 ! CHECK:      omp.sections {
 ! CHECK:        omp.section {
-! CHECK:          %[[RES:.*]] = fir.do_loop %[[ARG0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG1:.*]] = 
+! CHECK:          %[[RES:.*]] = fir.do_loop %[[ARG0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG1:.*]] =
 ! CHECK-NOT:            fir.store %[[ARG1]] to %[[DECL_I]]#1
 ! CHECK:            fir.store %[[ARG1]] to %[[DECL_PRIV_I]]#0
 ! CHECK:            hlfir.assign
@@ -115,6 +115,3 @@ subroutine omploop3
     !$omp end sections
   !$omp end parallel
 end subroutine
-
-
- 

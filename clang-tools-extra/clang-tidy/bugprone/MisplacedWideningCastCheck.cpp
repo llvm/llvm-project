@@ -42,7 +42,14 @@ void MisplacedWideningCastCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(varDecl(hasInitializer(Cast)), this);
   Finder->addMatcher(returnStmt(hasReturnValue(Cast)), this);
   Finder->addMatcher(callExpr(hasAnyArgument(Cast)), this);
-  Finder->addMatcher(binaryOperator(hasOperatorName("="), hasRHS(Cast)), this);
+  // When assigning to a bit field, bind the FieldDecl so check() can use the
+  // actual bit width instead of the declared type width.
+  Finder->addMatcher(
+      binaryOperator(hasOperatorName("="),
+                     hasLHS(expr(optionally(memberExpr(hasDeclaration(
+                         fieldDecl(isBitField()).bind("BitField")))))),
+                     hasRHS(Cast)),
+      this);
   Finder->addMatcher(
       binaryOperator(isComparisonOperator(), hasEitherOperand(Cast)), this);
 }
@@ -52,8 +59,8 @@ static unsigned getMaxCalculationWidth(const ASTContext &Context,
   E = E->IgnoreParenImpCasts();
 
   if (const auto *Bop = dyn_cast<BinaryOperator>(E)) {
-    unsigned LHSWidth = getMaxCalculationWidth(Context, Bop->getLHS());
-    unsigned RHSWidth = getMaxCalculationWidth(Context, Bop->getRHS());
+    const unsigned LHSWidth = getMaxCalculationWidth(Context, Bop->getLHS());
+    const unsigned RHSWidth = getMaxCalculationWidth(Context, Bop->getRHS());
     if (Bop->getOpcode() == BO_Mul)
       return LHSWidth + RHSWidth;
     if (Bop->getOpcode() == BO_Add)
@@ -79,7 +86,7 @@ static unsigned getMaxCalculationWidth(const ASTContext &Context,
     if (Uop->getOpcode() == UO_Not)
       return 1024U;
 
-    QualType T = Uop->getType();
+    const QualType T = Uop->getType();
     return T->isIntegerType() ? Context.getIntWidth(T) : 1024U;
   } else if (const auto *I = dyn_cast<IntegerLiteral>(E)) {
     return I->getValue().getActiveBits();
@@ -190,19 +197,32 @@ void MisplacedWideningCastCheck::check(const MatchFinder::MatchResult &Result) {
       Calc->isTypeDependent() || Calc->isValueDependent())
     return;
 
-  ASTContext &Context = *Result.Context;
+  const ASTContext &Context = *Result.Context;
 
-  QualType CastType = Cast->getType();
-  QualType CalcType = Calc->getType();
+  const QualType CastType = Cast->getType();
+  const QualType CalcType = Calc->getType();
+
+  // If assigning to a bit field, use the bit field width as the effective
+  // target width. The declared type may be wider than the actual bit field
+  // storage.
+  unsigned TargetWidth = Context.getIntWidth(CastType);
+  bool IsBitfieldAssign = false;
+  if (const auto *FD = Result.Nodes.getNodeAs<FieldDecl>("BitField")) {
+    TargetWidth = FD->getBitWidthValue();
+    IsBitfieldAssign = true;
+  }
 
   // Explicit truncation using cast.
-  if (Context.getIntWidth(CastType) < Context.getIntWidth(CalcType))
+  if (TargetWidth < Context.getIntWidth(CalcType))
     return;
 
   // If CalcType and CastType have same size then there is no real danger, but
   // there can be a portability problem.
 
-  if (Context.getIntWidth(CastType) == Context.getIntWidth(CalcType)) {
+  if (TargetWidth == Context.getIntWidth(CalcType)) {
+    // Bit field width is fixed across platforms — no portability concern.
+    if (IsBitfieldAssign)
+      return;
     const auto *CastBuiltinType =
         dyn_cast<BuiltinType>(CastType->getUnqualifiedDesugaredType());
     const auto *CalcBuiltinType =

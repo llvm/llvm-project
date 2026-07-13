@@ -18,6 +18,8 @@
 
 #if defined(_AIX)
     .toc
+#elif defined(__aarch64__) && defined(__ELF__) && defined(_LIBUNWIND_EXECUTE_ONLY_CODE)
+    .section .text,"axy",@progbits,unique,0
 #else
     .text
 #endif
@@ -792,13 +794,20 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   stp    x18,x19, [x0, #0x090]
   stp    x20,x21, [x0, #0x0A0]
   stp    x22,x23, [x0, #0x0B0]
+#if defined(__LFI__)
+  str    x24,     [x0, #0x0C0]
+  // Skip spilling x25-x28; reserved by LFI ABI.
+  str    x29,     [x0, #0x0E8]
+#else
   stp    x24,x25, [x0, #0x0C0]
   stp    x26,x27, [x0, #0x0D0]
   stp    x28,x29, [x0, #0x0E0]
+#endif
   str    x30,     [x0, #0x0F0]
   mov    x1,sp
   str    x1,      [x0, #0x0F8]
   str    x30,     [x0, #0x100]    // store return address as pc
+  str    xzr,     [x0, #0x108]    // zero __ra_sign_state
   // skip cpsr
 #if defined(__ARM_FP) && __ARM_FP != 0
   stp    d0, d1,  [x0, #0x110]
@@ -821,6 +830,68 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 #endif
   mov    x0, #0                   // return UNW_ESUCCESS
 
+#if __has_feature(ptrauth_calls)
+  retab
+#else
+  ret
+#endif
+
+//
+// extern "C" int64_t __libunwind_Registers_arm64_za_disable()
+//
+//   This function implements the requirements of the __arm_za_disable ABI
+//   routine, except that it will not abort; it will return a non-zero value
+//   to signify the routine failed.
+//
+//   Note: This function uses SME instructions. It must only be called if SME
+//   has been confirmed to be available.
+//
+// On return:
+//
+//   A status is placed in x0. A zero value indicates success; any non-zero
+//   value indicates failure.
+//
+  .p2align 2
+DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_za_disable)
+  .variant_pcs __libunwind_Registers_arm64_za_disable
+#if __has_feature(ptrauth_calls)
+  pacibsp
+#endif
+  // If TPIDR2_EL0 is null, the subroutine just disables ZA.
+  .inst 0xd53bd0b0 // mrs x16, TPIDR2_EL0
+  cbz x16, 1f
+
+  // If any of the reserved bytes in the first 16 bytes of the TPIDR2 block are
+  // nonzero, return a non-zero value (libunwind will then abort).
+  ldrh w0, [x16, #10]
+  cbnz w0, 2f
+  ldr w0, [x16, #12]
+  cbnz w0, 2f
+
+  // If num_za_save_slices is zero, the subroutine just disables ZA.
+  ldrh w0, [x16, #8]
+  cbz x0, 1f
+
+  // If za_save_buffer is NULL, the subroutine just disables ZA.
+  ldr x16, [x16]
+  cbz x16, 1f
+
+  // Store ZA to za_save_buffer.
+  mov x15, xzr
+0:
+  .inst 0xe1206200 // str za[w15,0], [x16]
+  .inst 0x04305830 // addsvl x16, x16, #1
+  add x15, x15, #1
+  cmp x0, x15
+  b.ne 0b
+1:
+  // * Set TPIDR2_EL0 to null.
+  .inst 0xd51bd0bf // msr TPIDR2_EL0, xzr
+  // * Set PSTATE.ZA to 0.
+  .inst 0xd503447f // smstop za
+  // * Return zero (success)
+  mov x0, xzr
+2:
 #if __has_feature(ptrauth_calls)
   retab
 #else
@@ -1032,8 +1103,21 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 # On entry:
 #  thread_state pointer is in r0
 #
+# The context layout is hexagon_thread_state_t: unsigned int __r[35]
+# __r[0..31] = r0..r31, __r[32] = predicates, __r[33] = PC, __r[34] = unused
+# Offsets: __r[n] is at byte offset n*4.
+#
 #define OFFSET(offset) (offset/4)
 DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
+  // Save r1-r7 first (r0 is the context pointer, saved last)
+  memw(r0+#4)  = r1
+  memw(r0+#8)  = r2
+  memw(r0+#12) = r3
+  memw(r0+#16) = r4
+  memw(r0+#20) = r5
+  memw(r0+#24) = r6
+  memw(r0+#28) = r7
+
   memw(r0+#32) = r8
   memw(r0+#36) = r9
   memw(r0+#40) = r10
@@ -1063,12 +1147,17 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   memw(r0+#116) = r29
   memw(r0+#120) = r30
   memw(r0+#124) = r31
-  r1 = c4   // Predicate register
+
+  r1 = c4                  // Predicate register
   memw(r0+#128) = r1
-  r1 = memw(r30)           // *FP == Saved FP
-  r1 = r31
+
+  r1 = r31                 // Store return address as PC
   memw(r0+#132) = r1
 
+  // Save r0 (the context pointer itself) last
+  memw(r0+#0) = r0
+
+  r0 = #0                  // return UNW_ESUCCESS
   jumpr r31
 
 #elif defined(__sparc__) && defined(__arch64__)

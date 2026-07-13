@@ -122,7 +122,7 @@
     __unwind_ptrauth_restricted_intptr(ptrauth_key_function_pointer, 1, \
                                        __ptrauth_unwind_cie_info_personality_disc)
 
-  // ptrauth_string_discriminator("personality") == 0x7EAD)
+  // ptrauth_string_discriminator("personality") == 0x7EAD
   #define __ptrauth_unwind_pauthtest_personality_disc 0x7EAD
 
 #else
@@ -234,6 +234,7 @@ extern int unw_is_fpreg(unw_cursor_t *, unw_regnum_t) LIBUNWIND_AVAIL;
 extern int unw_is_signal_frame(unw_cursor_t *) LIBUNWIND_AVAIL;
 extern int unw_get_proc_name(unw_cursor_t *, char *, size_t, unw_word_t *) LIBUNWIND_AVAIL;
 //extern int       unw_get_save_loc(unw_cursor_t*, int, unw_save_loc_t*);
+extern const char *unw_strerror(int) LIBUNWIND_AVAIL;
 
 extern unw_addr_space_t unw_local_addr_space;
 

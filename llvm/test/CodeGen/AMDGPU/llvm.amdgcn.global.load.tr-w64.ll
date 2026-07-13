@@ -74,3 +74,37 @@ entry:
   store <4 x bfloat> %val, ptr addrspace(1) %use
   ret void
 }
+
+define i32 @global_load_tr_b64_i32_vaddr(ptr addrspace(1) %addr) {
+; GFX12-LABEL: global_load_tr_b64_i32_vaddr:
+; GFX12:       ; %bb.0: ; %entry
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_load_tr_b64 v0, v[0:1], off offset:32
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
+  %val = call i32 @llvm.amdgcn.global.load.tr.b64.i32.p1(ptr addrspace(1) %gep)
+  ret i32 %val
+}
+
+define <4 x i16> @global_load_tr_b128_v4i16_vaddr(ptr addrspace(1) %addr) {
+; GFX12-LABEL: global_load_tr_b128_v4i16_vaddr:
+; GFX12:       ; %bb.0: ; %entry
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_load_tr_b128 v[0:1], v[0:1], off offset:32
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
+  %val = call <4 x i16> @llvm.amdgcn.global.load.tr.b128.v4i16.p1(ptr addrspace(1) %gep)
+  ret <4 x i16> %val
+}

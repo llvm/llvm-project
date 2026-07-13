@@ -71,8 +71,6 @@ public:
   StringRef ShouldParse;
   StringRef Normalizer;
   StringRef Denormalizer;
-  StringRef ValueMerger;
-  StringRef ValueExtractor;
   int TableIndex = -1;
   std::vector<StringRef> Values;
   std::vector<StringRef> NormalizedValues;
@@ -118,10 +116,6 @@ struct SimpleEnumValueTable {
     OS << ", ";
     OS << Denormalizer;
     OS << ", ";
-    OS << ValueMerger;
-    OS << ", ";
-    OS << ValueExtractor;
-    OS << ", ";
     OS << TableIndex;
   }
 
@@ -155,7 +149,6 @@ size_t MarshallingInfo::NextTableIndex = 0;
 static MarshallingInfo createMarshallingInfo(const Record &R) {
   assert(!isa<UnsetInit>(R.getValueInit("KeyPath")) &&
          !isa<UnsetInit>(R.getValueInit("DefaultValue")) &&
-         !isa<UnsetInit>(R.getValueInit("ValueMerger")) &&
          "MarshallingInfo must have a provide a keypath, default value and a "
          "value merger");
 
@@ -173,8 +166,6 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
   Ret.ShouldParse = R.getValueAsString("ShouldParse");
   Ret.Normalizer = R.getValueAsString("Normalizer");
   Ret.Denormalizer = R.getValueAsString("Denormalizer");
-  Ret.ValueMerger = R.getValueAsString("ValueMerger");
-  Ret.ValueExtractor = R.getValueAsString("ValueExtractor");
 
   if (!isa<UnsetInit>(R.getValueInit("NormalizedValues"))) {
     assert(!isa<UnsetInit>(R.getValueInit("Values")) &&
@@ -266,8 +257,8 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Option Parsing Definitions", OS);
 
   // Generate prefix groups.
-  typedef SmallVector<SmallString<2>, 2> PrefixKeyT;
-  typedef std::map<PrefixKeyT, unsigned> PrefixesT;
+  using PrefixKeyT = SmallVector<SmallString<2>, 2>;
+  using PrefixesT = std::map<PrefixKeyT, unsigned>;
   PrefixesT Prefixes;
   Prefixes.try_emplace(PrefixKeyT(), 0);
   for (const Record &R : llvm::make_pointee_range(Opts)) {
@@ -277,8 +268,8 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   }
 
   // Generate sub command groups.
-  typedef SmallVector<StringRef, 2> SubCommandKeyT;
-  typedef std::map<SubCommandKeyT, unsigned> SubCommandIDsT;
+  using SubCommandKeyT = SmallVector<StringRef, 2>;
+  using SubCommandIDsT = std::map<SubCommandKeyT, unsigned>;
   SubCommandIDsT SubCommandIDs;
 
   auto PrintSubCommandIdsOffset = [&SubCommandIDs, &OS](const Record &R) {
@@ -378,9 +369,9 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       assert((CurIndex == 0 || !SubCommand.empty()) &&
              "Only first subcommand set should be empty!");
       for (const auto &SubCommandKey : SubCommand) {
-        auto It = std::find_if(
-            SubCommands.begin(), SubCommands.end(),
-            [&](const Record *R) { return R->getName() == SubCommandKey; });
+        auto It = llvm::find_if(SubCommands, [&](const Record *R) {
+          return R->getName() == SubCommandKey;
+        });
         assert(It != SubCommands.end() && "SubCommand not found");
         OS << ", " << std::distance(SubCommands.begin(), It) << " /* '"
            << SubCommandKey << "' */";

@@ -388,14 +388,14 @@ define amdgpu_kernel void @flat_scratch_load(float %a, float %b, <8 x i32> %desc
 ; GCN-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x44
 ; GCN-NEXT:    s_addc_u32 s17, s17, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0x40b00000
+; GCN-NEXT:    s_brev_b32 s0, 1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[16:19], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    s_brev_b32 s0, 1
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN-NEXT:    s_mov_b32 s3, 0
 ; GCN-NEXT:    s_mov_b32 s1, s0
 ; GCN-NEXT:    s_mov_b32 s2, s0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN-NEXT:    v_mov_b32_e32 v1, s7
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
@@ -404,7 +404,7 @@ define amdgpu_kernel void @flat_scratch_load(float %a, float %b, <8 x i32> %desc
 ; GCN-NEXT:    image_sample v0, v[0:1], s[8:15], s[0:3] dmask:0x1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_add_f32_e32 v0, v2, v0
-; GCN-NEXT:    exp mrt0 v0, off, off, off done vm
+; GCN-NEXT:    exp mrt0, v0, off, off, off done vm
 ; GCN-NEXT:    s_endpgm
 ;
 ; GCN-SCRATCH-LABEL: flat_scratch_load:
@@ -432,7 +432,7 @@ define amdgpu_kernel void @flat_scratch_load(float %a, float %b, <8 x i32> %desc
 ; GCN-SCRATCH-NEXT:    image_sample v0, v[0:1], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SCRATCH-NEXT:    v_add_f32_e32 v0, v2, v0
-; GCN-SCRATCH-NEXT:    exp mrt0 v0, off, off, off done vm
+; GCN-SCRATCH-NEXT:    exp mrt0, v0, off, off, off done vm
 ; GCN-SCRATCH-NEXT:    s_endpgm
 .entry:
   %alloca = alloca float, align 4, addrspace(5)
@@ -469,7 +469,7 @@ define amdgpu_kernel void @flat_scratch_load_clause(float %a, float %b, <8 x i32
 ; GCN-NEXT:    buffer_load_dword v1, off, s[12:15], 0 offset:4
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_add_f32_e32 v0, v0, v1
-; GCN-NEXT:    exp mrt0 v0, off, off, off done vm
+; GCN-NEXT:    exp mrt0, v0, off, off, off done vm
 ; GCN-NEXT:    s_endpgm
 ;
 ; GCN-SCRATCH-LABEL: flat_scratch_load_clause:
@@ -491,7 +491,7 @@ define amdgpu_kernel void @flat_scratch_load_clause(float %a, float %b, <8 x i32
 ; GCN-SCRATCH-NEXT:    scratch_load_dword v1, off, off offset:4
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SCRATCH-NEXT:    v_add_f32_e32 v0, v0, v1
-; GCN-SCRATCH-NEXT:    exp mrt0 v0, off, off, off done vm
+; GCN-SCRATCH-NEXT:    exp mrt0, v0, off, off, off done vm
 ; GCN-SCRATCH-NEXT:    s_endpgm
 .entry:
   %alloca = alloca float, align 4, addrspace(5)
