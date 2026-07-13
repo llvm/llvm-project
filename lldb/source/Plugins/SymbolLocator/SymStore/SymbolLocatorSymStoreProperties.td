@@ -9,7 +9,7 @@ let Definition = "symbollocatorsymstore", Path = "plugin.symbol-locator.symstore
     Desc<"Default cache directory for downloaded symbol files. Used when no cache is specified in _NT_SYMBOL_PATH.">;
   def Timeout : Property<"timeout", "UInt64">,
     DefaultUnsignedValue<60>,
-    Desc<"Timeout in seconds for send/receive in HTTP connections to symbol servers.">;
+    Desc<"Timeout in seconds for send/receive in HTTP connections to symbol servers. A value of 0 indicates an infinite (no) timeout.">;
   def TLSCertFingerprint : Property<"tls-cert-fingerprint", "String">,
     DefaultStringValue<"">,
     Desc<"SHA-256 fingerprint (lowercase hex, no separators) of the symbol server's TLS certificate. When set, LLDB will accept an HTTPS server that presents this self-signed certificate even if it is not trusted by the system certificate store (Windows only).">;
