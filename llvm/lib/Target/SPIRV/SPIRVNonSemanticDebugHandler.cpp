@@ -255,10 +255,8 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
       SubprogramDeclarations.push_back(SP);
   }
 
-  // SPIR-V supports at most one DIGlobalVariableExpression per DIGlobalVariable
-  // (see DebugGlobalVariable opcode). Walk LLVM globals to map each
-  // DIGlobalVariable (returned by DIFinder) to its llvm::GlobalVariable,
-  // keeping only the first expression attached to each LLVM global.
+  // Walk LLVM globals to map each DIGlobalVariable (returned by DIFinder) to
+  // its llvm::GlobalVariable.
   DenseMap<const DIGlobalVariable *, const GlobalVariable *> DIGVToLLVMGV;
   for (const GlobalVariable &G : M->globals()) {
     SmallVector<DIGlobalVariableExpression *> GVEs;
@@ -266,7 +264,6 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
     for (DIGlobalVariableExpression *GVE : GVEs) {
       if (const DIGlobalVariable *GV = GVE->getVariable()) {
         DIGVToLLVMGV.try_emplace(GV, &G);
-        break;
       }
     }
   }
