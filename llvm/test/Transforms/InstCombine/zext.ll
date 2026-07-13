@@ -1085,56 +1085,59 @@ define <2 x i8> @zext_or_trunc_nuw_vec(<2 x i8> %x, <2 x i4> %y) {
 
 define i32 @zext_ne_lower_cst_sub(i32 range(i32 7, 9) %x) {
 ; CHECK-LABEL: @zext_ne_lower_cst_sub(
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[X:%.*]], -7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
-  %1 = icmp ne i32 %x, 7
-  %2 = zext i1 %1 to i32
-  ret i32 %2
+  %cmp = icmp ne i32 %x, 7
+  %zext = zext i1 %cmp to i32
+  ret i32 %zext
 }
 
 define <4 x i32> @zext_ne_lower_cst_sub_vec(<4 x i32> range(i32 7, 9) %x) {
 ; CHECK-LABEL: @zext_ne_lower_cst_sub_vec(
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[X:%.*]], splat (i32 -7)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <4 x i32> [[X:%.*]], splat (i32 7)
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i1> [[CMP]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
-  %1 = icmp ne <4 x i32> %x, splat(i32 7)
-  %2 = zext <4 x i1> %1 to <4 x i32>
-  ret <4 x i32> %2
+  %cmp = icmp ne <4 x i32> %x, splat(i32 7)
+  %zext = zext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %zext
 }
 
 define i64 @zext_ne_lower_cst_sub_widen(i32 range(i32 7, 9) %x) {
 ; CHECK-LABEL: @zext_ne_lower_cst_sub_widen(
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[X:%.*]], -7
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[CMP]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
-  %1 = icmp ne i32 %x, 7
-  %2 = zext i1 %1 to i64
-  ret i64 %2
+  %cmp = icmp ne i32 %x, 7
+  %zext = zext i1 %cmp to i64
+  ret i64 %zext
 }
 
 define i32 @zext_ne_multiuse_icmp(i32 range(i32 7, 9) %x) {
 ; CHECK-LABEL: @zext_ne_multiuse_icmp(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[X:%.*]], 7
 ; CHECK-NEXT:    call void @use1(i1 [[TMP1]])
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[X]], -7
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
-  %1 = icmp ne i32 %x, 7
-  call void @use1(i1 %1)
-  %2 = zext i1 %1 to i32
-  ret i32 %2
+  %cmp = icmp ne i32 %x, 7
+  call void @use1(i1 %cmp)
+  %zext = zext i1 %cmp to i32
+  ret i32 %zext
 }
 
 define i32 @zext_ne_lower_wrapped(i32 range(i32 -1, 1) %x) {
 ; CHECK-LABEL: @zext_ne_lower_wrapped(
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
-  %1 = icmp ne i32 %x, -1
-  %2 = zext i1 %1 to i32
-  ret i32 %2
+  %cmp = icmp ne i32 %x, -1
+  %zext = zext i1 %cmp to i32
+  ret i32 %zext
 }
 
 ; Negative cases
@@ -1145,9 +1148,9 @@ define i32 @neg_zext_ne_range_too_wide(i32 range(i32 7, 10) %x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
-  %1 = icmp ne i32 %x, 7
-  %2 = zext i1 %1 to i32
-  ret i32 %2
+  %cmp = icmp ne i32 %x, 7
+  %zext = zext i1 %cmp to i32
+  ret i32 %zext
 }
 
 define i32 @neg_zext_ne_no_range(i32 %x) {
@@ -1156,9 +1159,9 @@ define i32 @neg_zext_ne_no_range(i32 %x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
-  %1 = icmp ne i32 %x, 7
-  %2 = zext i1 %1 to i32
-  ret i32 %2
+  %cmp = icmp ne i32 %x, 7
+  %zext = zext i1 %cmp to i32
+  ret i32 %zext
 }
 
 define i64 @neg_zext_ne_widen_multiuse_icmp(i32 range(i32 7, 9) %x) {
@@ -1168,8 +1171,8 @@ define i64 @neg_zext_ne_widen_multiuse_icmp(i32 range(i32 7, 9) %x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
-  %1 = icmp ne i32 %x, 7
-  call void @use1(i1 %1)
-  %2 = zext i1 %1 to i64
-  ret i64 %2
+  %cmp = icmp ne i32 %x, 7
+  call void @use1(i1 %cmp)
+  %zext = zext i1 %cmp to i64
+  ret i64 %zext
 }
