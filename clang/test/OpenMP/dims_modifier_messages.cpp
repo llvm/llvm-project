@@ -17,6 +17,7 @@ void bar(int N) { // expected-note {{declared here}}
 #pragma omp target thread_limit(dim(2) 4, 5)
   // expected-error@-1 {{use of undeclared identifier 'dim'}}
   // expected-error@-2 {{expected ',' or ')' in 'thread_limit' clause}}
+  // expected-error@-3 {{unexpected number of expressions in 'thread_limit' clause (expected 1, have 3)}}
   foo();
 
 #pragma omp target thread_limit(dims((2): 4, 5)
@@ -45,13 +46,13 @@ void bar(int N) { // expected-note {{declared here}}
 
   // 2. Mismatching number of expressions.
 
-#pragma omp target teams num_teams(dims(2): 4) // expected-error {{unexpected number of expressions in 'num_teams' clause}}
+#pragma omp target teams num_teams(dims(2): 4) // expected-error {{unexpected number of expressions in 'num_teams' clause (expected 2, have 1)}}
   foo();
 
-#pragma omp target thread_limit(dims(1): 4, 5) // expected-error {{unexpected number of expressions in 'thread_limit' clause}}
+#pragma omp target thread_limit(dims(1): 4, 5) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 1, have 2)}}
   foo();
 
-#pragma omp target teams distribute num_teams(dims(3): 4, 5) // expected-error {{unexpected number of expressions in 'num_teams' clause}}
+#pragma omp target teams distribute num_teams(dims(3): 4, 5) // expected-error {{unexpected number of expressions in 'num_teams' clause (expected 3, have 2)}}
   for (int i = 0; i < 10; ++i) {}
 
   // 3. Exceeding three dimensions.
@@ -59,7 +60,7 @@ void bar(int N) { // expected-note {{declared here}}
 #pragma omp target teams num_teams(dims(4): 1, 2, 3, 4) // expected-error {{maximum three expressions are supported in 'num_teams' clause}}
   foo();
 
-#pragma omp target thread_limit(dims(2): 1, 2, 3, 4) // expected-error {{unexpected number of expressions in 'thread_limit' clause}}
+#pragma omp target thread_limit(dims(4): 1, 2, 3, 4) // expected-error {{maximum three expressions are supported in 'thread_limit' clause}}
   foo();
 
 #pragma omp target teams distribute thread_limit(dims(4): 1, 2, 3, 4) // expected-error {{maximum three expressions are supported in 'thread_limit' clause}}
@@ -88,6 +89,98 @@ void bar(int N) { // expected-note {{declared here}}
 
 #pragma omp target teams thread_limit(dims(-1): 4) // expected-error {{argument to 'thread_limit' clause must be a strictly positive integer value}}
   foo();
+
+  // 6. Coverage of directives.
+
+#pragma omp target teams num_teams(dims(2): 4) // expected-error {{unexpected number of expressions in 'num_teams' clause (expected 2, have 1)}}
+  foo();
+
+#pragma omp target teams distribute num_teams(dims(2): 4) // expected-error {{unexpected number of expressions in 'num_teams' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp target teams distribute parallel for num_teams(dims(2): 4) // expected-error {{unexpected number of expressions in 'num_teams' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp target teams distribute parallel for simd num_teams(dims(2): 4) // expected-error {{unexpected number of expressions in 'num_teams' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp target teams distribute simd num_teams(dims(2): 4) // expected-error {{unexpected number of expressions in 'num_teams' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp target teams loop num_teams(dims(2): 4) // expected-error {{unexpected number of expressions in 'num_teams' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp teams num_teams(dims(2): 4) // expected-error {{unexpected number of expressions in 'num_teams' clause (expected 2, have 1)}}
+  foo();
+
+#pragma omp teams distribute num_teams(dims(2): 4) // expected-error {{unexpected number of expressions in 'num_teams' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp teams distribute simd num_teams(dims(2): 4) // expected-error {{unexpected number of expressions in 'num_teams' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp teams distribute parallel for simd num_teams(dims(2): 4) // expected-error {{unexpected number of expressions in 'num_teams' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp teams distribute parallel for num_teams(dims(2): 4) // expected-error {{unexpected number of expressions in 'num_teams' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp teams loop num_teams(dims(2): 4) // expected-error {{unexpected number of expressions in 'num_teams' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp target thread_limit(dims(2): 4) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 2, have 1)}}
+  foo();
+
+#pragma omp target parallel thread_limit(dims(2): 4) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 2, have 1)}}
+  foo();
+
+#pragma omp target parallel for thread_limit(dims(2): 4) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp target parallel for simd thread_limit(dims(2): 4) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp target simd thread_limit(dims(2): 4) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp target teams thread_limit(dims(2): 4) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 2, have 1)}}
+  foo();
+
+#pragma omp target teams distribute thread_limit(dims(2): 4) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp target teams distribute parallel for thread_limit(dims(2): 4) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp target teams distribute parallel for simd thread_limit(dims(2): 4) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp target teams distribute simd thread_limit(dims(2): 4) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp target teams loop thread_limit(dims(2): 4) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp target parallel loop thread_limit(dims(2): 4) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp teams thread_limit(dims(2): 4) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 2, have 1)}}
+  foo();
+
+#pragma omp teams distribute thread_limit(dims(2): 4) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp teams distribute simd thread_limit(dims(2): 4) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp teams distribute parallel for simd thread_limit(dims(2): 4) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp teams distribute parallel for thread_limit(dims(2): 4) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
+
+#pragma omp teams loop thread_limit(dims(2): 4) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 2, have 1)}}
+  for (int i = 0; i < 10; ++i) {}
 }
 
 template <int D>
@@ -118,7 +211,7 @@ void call_templates() {
 
 #ifdef VERSION52
 void version() {
-  // 6. Dims modifier requires OpenMP 6.1.
+  // 8. Dims modifier requires OpenMP 6.1.
 
 #pragma omp target teams num_teams(dims(1): 4) // expected-error {{'dims' modifier in 'num_teams' clause requires OpenMP 6.1 or later}}
   foo();
