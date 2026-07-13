@@ -5538,6 +5538,40 @@ int a = 1;
 __builtin_dcbf (&a);
 ```
 
+### z/OS Language Extensions
+
+#### z/OS builtins
+
+z/OS supports builtins for compare-and-swap operations that generate the
+corresponding z/OS assembly instructions (CS, CSG, CDSG). These builtins compare
+the value pointed to by oldptr to the value pointed to by curptr. If they are
+equal, the value pointed to by newword (or newword itself for `__cs`) is
+copied into the location pointed to by curptr. If they are unequal, the value
+pointed to by curptr is copied into the location pointed to by oldptr.
+The builtins return 0 if the values are equal, or 1 if they are unequal.
+
+- `int __cs(unsigned int *oldptr, unsigned int *curptr, unsigned int newword)`
+
+  Generates a 4-byte compare-and-swap using the CS instruction.
+  Use `__cs` instead of `__cs1` when the newword arg is an r-value instead
+  of an l-value.
+
+- `int __cs1(void *oldptr, void *curptr, void *newword)`
+
+  Generates a 4-byte compare-and-swap using the CS instruction.
+
+- `int __csg(void *oldptr, void *curptr, void *newword)`
+
+  Generates an 8-byte compare-and-swap using the CSG instruction.
+
+- `int __cds1(void *oldptr, void *curptr, void *newword)`
+
+  Generates an 8-byte compare-and-swap using the CSG instruction.
+
+- `int __cdsg(void *oldptr, void *curptr, void *newword)`
+
+  Generates a 16-byte compare-and-swap using the CDSG instruction.
+
 ## Extensions for Static Analysis
 
 Clang supports additional attributes that are useful for documenting program

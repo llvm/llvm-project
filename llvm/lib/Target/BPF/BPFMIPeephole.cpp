@@ -155,7 +155,11 @@ bool BPFMIPeephole::isInsnFrom32Def(MachineInstr *DefInsn)
 
 bool BPFMIPeephole::isMovFrom32Def(MachineInstr *MovMI)
 {
-  MachineInstr *DefInsn = MRI->getVRegDef(MovMI->getOperand(1).getReg());
+  const MachineOperand &Src = MovMI->getOperand(1);
+  if (Src.getSubReg())
+    return false;
+
+  MachineInstr *DefInsn = MRI->getVRegDef(Src.getReg());
 
   LLVM_DEBUG(dbgs() << "  Def of Mov Src:");
   LLVM_DEBUG(DefInsn->dump());

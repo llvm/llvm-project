@@ -3512,7 +3512,7 @@ void CIRGenModule::setCXXSpecialMemberAttr(
     auto cxxDtor = cir::CXXDtorAttr::get(
         convertType(getASTContext().getCanonicalTagType(dtor->getParent())),
         dtor->isTrivial());
-    funcOp.setCxxSpecialMemberAttr(cxxDtor);
+    funcOp.setFuncInfoAttr(cxxDtor);
     return;
   }
 
@@ -3521,7 +3521,7 @@ void CIRGenModule::setCXXSpecialMemberAttr(
     auto cxxCtor = cir::CXXCtorAttr::get(
         convertType(getASTContext().getCanonicalTagType(ctor->getParent())),
         kind, ctor->isTrivial());
-    funcOp.setCxxSpecialMemberAttr(cxxCtor);
+    funcOp.setFuncInfoAttr(cxxCtor);
     return;
   }
 
@@ -3532,7 +3532,7 @@ void CIRGenModule::setCXXSpecialMemberAttr(
     auto cxxAssign = cir::CXXAssignAttr::get(
         convertType(getASTContext().getCanonicalTagType(method->getParent())),
         assignKind, method->isTrivial());
-    funcOp.setCxxSpecialMemberAttr(cxxAssign);
+    funcOp.setFuncInfoAttr(cxxAssign);
     return;
   }
 }

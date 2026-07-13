@@ -31,7 +31,6 @@
 #include <cmath>
 #include <cstdint>
 #include <memory>
-#include <set>
 #include <system_error>
 #include <utility>
 #include <vector>
@@ -347,21 +346,34 @@ std::error_code SampleProfileWriterExtBinaryBase::writeFuncMetadata(
   return sampleprof_error::success;
 }
 
+template <class KeyT, class ValT>
+static SmallVector<std::pair<KeyT, ValT> *, 0>
+stabilizeTable(MapVector<KeyT, ValT> &Table) {
+  SmallVector<std::pair<KeyT, ValT> *, 0> Entries(
+      llvm::make_pointer_range(Table));
+
+  llvm::sort(Entries,
+             [](const auto *L, const auto *R) { return L->first < R->first; });
+
+  for (const auto &[I, Entry] : llvm::enumerate(Entries))
+    Entry->second = I;
+
+  return Entries;
+}
+
 std::error_code SampleProfileWriterExtBinaryBase::writeNameTable() {
   if (!UseMD5)
     return SampleProfileWriterBinary::writeNameTable();
 
   auto &OS = *OutputStream;
-  std::set<FunctionId> V;
-  stablizeNameTable(NameTable, V);
 
   // Write out the MD5 name table. We wrote unencoded MD5 so reader can
   // retrieve the name using the name index without having to read the
   // whole name table.
   encodeULEB128(NameTable.size(), OS);
   support::endian::Writer Writer(OS, llvm::endianness::little);
-  for (auto N : V)
-    Writer.write(N.getHashCode());
+  for (const auto *Entry : stabilizeTable(NameTable))
+    Writer.write(Entry->first.getHashCode());
   return sampleprof_error::success;
 }
 
@@ -391,21 +403,11 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTableSection(
 }
 
 std::error_code SampleProfileWriterExtBinaryBase::writeCSNameTableSection() {
-  // Sort the names to make CSNameTable deterministic.
-  std::set<SampleContext> OrderedContexts;
-  for (const auto &I : CSNameTable)
-    OrderedContexts.insert(I.first);
-  assert(OrderedContexts.size() == CSNameTable.size() &&
-         "Unmatched ordered and unordered contexts");
-  uint64_t I = 0;
-  for (auto &Context : OrderedContexts)
-    CSNameTable[Context] = I++;
-
   auto &OS = *OutputStream;
-  encodeULEB128(OrderedContexts.size(), OS);
+  encodeULEB128(CSNameTable.size(), OS);
   support::endian::Writer Writer(OS, llvm::endianness::little);
-  for (auto Context : OrderedContexts) {
-    auto Frames = Context.getContextFrames();
+  for (const auto *Entry : stabilizeTable(CSNameTable)) {
+    auto Frames = Entry->first.getContextFrames();
     encodeULEB128(Frames.size(), OS);
     for (auto &Callsite : Frames) {
       if (std::error_code EC = writeNameIdx(Callsite.Func))
@@ -731,25 +733,13 @@ void SampleProfileWriterExtBinaryBase::addContext(
   }
 }
 
-void SampleProfileWriterBinary::stablizeNameTable(
-    MapVector<FunctionId, uint32_t> &NameTable, std::set<FunctionId> &V) {
-  // Sort the names to make NameTable deterministic.
-  for (const auto &I : NameTable)
-    V.insert(I.first);
-  int i = 0;
-  for (const FunctionId &N : V)
-    NameTable[N] = i++;
-}
-
 std::error_code SampleProfileWriterBinary::writeNameTable() {
   auto &OS = *OutputStream;
-  std::set<FunctionId> V;
-  stablizeNameTable(NameTable, V);
 
   // Write out the name table.
   encodeULEB128(NameTable.size(), OS);
-  for (auto N : V) {
-    OS << N;
+  for (const auto *Entry : stabilizeTable(NameTable)) {
+    OS << Entry->first;
     encodeULEB128(0, OS);
   }
   return sampleprof_error::success;
