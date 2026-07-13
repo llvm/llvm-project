@@ -55,7 +55,9 @@ class TestOutputAction(argparse.Action):
             setattr(namespace, "test_output", value)
 
 
+_TIME_TESTS_OPT = "--time-tests"
 _TIME_TESTS_SLOWEST_DEFAULT = 20
+_TIME_TESTS_PREFIX = f"{_TIME_TESTS_OPT}="
 
 
 class AliasAction(argparse.Action):
@@ -385,7 +387,7 @@ def parse_args():
         action="store_true",
     )
     execution_test_time_group.add_argument(
-        "--time-tests",
+        _TIME_TESTS_OPT,
         help="Track elapsed wall time for each test and print a histogram; "
         "optionally limit the slowest-test list with =N or report all with =all "
         f"(default slowest count: {_TIME_TESTS_SLOWEST_DEFAULT})",
@@ -534,7 +536,7 @@ def parse_args():
 
     if opts.time_tests is not None and opts.skip_test_time_recording:
         parser.error(
-            "argument --skip-test-time-recording: not allowed with argument --time-tests"
+            f"argument --skip-test-time-recording: not allowed with argument {_TIME_TESTS_OPT}"
         )
 
     # Validate command line options
@@ -584,12 +586,12 @@ def _extract_time_tests_args(args):
     processed = []
     time_tests = None
     for arg in args:
-        if arg == "--time-tests":
+        if arg == _TIME_TESTS_OPT:
             time_tests = _TIME_TESTS_SLOWEST_DEFAULT
-        elif arg.startswith("--time-tests="):
-            value = arg.partition("=")[2]
+        elif arg.startswith(_TIME_TESTS_PREFIX):
+            value = arg[len(_TIME_TESTS_PREFIX) :]
             if not value:
-                raise _error("argument --time-tests requires a value after '='")
+                raise _error(f"argument {_TIME_TESTS_OPT} requires a value after '='")
             time_tests = _time_tests_count(value)
         else:
             processed.append(arg)

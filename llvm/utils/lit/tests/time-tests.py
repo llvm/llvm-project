@@ -47,3 +47,9 @@
 # RUN: not %{lit-no-order-opt} --time-tests=0 %{inputs}/time-tests 2>&1 | FileCheck %s --check-prefix=INVALID
 
 # INVALID: requires positive integer
+
+## Check that malformed --time-tests values with extra '=' are rejected.
+
+# RUN: not %{lit-no-order-opt} --time-tests=all=foo %{inputs}/time-tests 2>&1 | FileCheck %s --check-prefix=MALFORMED
+
+# MALFORMED: requires positive integer, but found 'all=foo'
