@@ -2077,11 +2077,13 @@ void test_lambda_implicit_capture() {
 // CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META18]], !align [[META19]]
 // CHECK:    store ptr [[TMP1]], ptr [[TMP:%.*]], align 8
 // CHECK:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META18]], !align [[META19]]
-// CHECK:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 4, !nonnull [[META18]], !align [[META19]]
+// CHECK:    store ptr [[TMP2]], ptr [[OMP_BINDING_REF:%.*]], align 8
+// CHECK:    [[TMP3:%.*]] = load ptr, ptr [[OMP_BINDING_REF]], align 8, !nonnull [[META18]], !align [[META19]]
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP3]], i32 0, i32 0
 // CHECK:    [[TMP4:%.*]] = load i32, ptr [[X]], align 4
 // CHECK:    [[TMP5:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META18]], !align [[META19]]
-// CHECK:    [[TMP6:%.*]] = load ptr, ptr [[TMP5]], align 4, !nonnull [[META18]], !align [[META19]]
+// CHECK:    store ptr [[TMP5]], ptr [[OMP_BINDING_REF1:%.*]], align 8
+// CHECK:    [[TMP6:%.*]] = load ptr, ptr [[OMP_BINDING_REF1]], align 8, !nonnull [[META18]], !align [[META19]]
 // CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP6]], i32 0, i32 1
 // CHECK:    [[TMP7:%.*]] = load i32, ptr [[Y]], align 4
 // CHECK:    [[ADD:%.*]] = add nsw i32 [[TMP4]], [[TMP7]]
@@ -3363,7 +3365,8 @@ void test_lambda_implicit_capture() {
 // CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META18]], !align [[META19]]
 // CHECK:    store ptr [[TMP1]], ptr [[TMP:%.*]], align 8
 // CHECK:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META18]], !align [[META19]]
-// CHECK:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 4, !nonnull [[META18]], !align [[META19]]
+// CHECK:    store ptr [[TMP2]], ptr [[OMP_BINDING_REF:%.*]], align 8
+// CHECK:    [[TMP3:%.*]] = load ptr, ptr [[OMP_BINDING_REF]], align 8, !nonnull [[META18]], !align [[META19]]
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR:%.*]], ptr [[TMP3]], i32 0, i32 0
 // CHECK:    call void @_ZN14NonTrivialCopyC1ERKS_(ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[X]])
 // CHECK:    [[VALUE:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIALCOPY:%.*]], ptr [[A]], i32 0, i32 0
@@ -3394,7 +3397,8 @@ void test_lambda_implicit_capture() {
 // CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META18]], !align [[META19]]
 // CHECK:    store ptr [[TMP1]], ptr [[TMP:%.*]], align 8
 // CHECK:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META18]], !align [[META19]]
-// CHECK:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 4, !nonnull [[META18]], !align [[META19]]
+// CHECK:    store ptr [[TMP2]], ptr [[OMP_BINDING_REF:%.*]], align 8
+// CHECK:    [[TMP3:%.*]] = load ptr, ptr [[OMP_BINDING_REF]], align 8, !nonnull [[META18]], !align [[META19]]
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR:%.*]], ptr [[TMP3]], i32 0, i32 0
 // CHECK:    call void @_ZN14NonTrivialCopyC1ERKS_(ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[X]])
 // CHECK:    [[VALUE:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIALCOPY:%.*]], ptr [[A]], i32 0, i32 0
@@ -3829,17 +3833,19 @@ void test_lambda_implicit_capture() {
 // CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META18]], !align [[META19]]
 // CHECK:    store ptr [[TMP1]], ptr [[TMP:%.*]], align 8
 // CHECK:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META18]], !align [[META19]]
-// CHECK:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 4, !nonnull [[META18]], !align [[META19]]
+// CHECK:    store ptr [[TMP2]], ptr [[OMP_BINDING_REF:%.*]], align 8
+// CHECK:    [[TMP3:%.*]] = load ptr, ptr [[OMP_BINDING_REF]], align 8, !nonnull [[META18]], !align [[META19]]
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR:%.*]], ptr [[TMP3]], i32 0, i32 0
 // CHECK:    call void @_ZN14NonTrivialCopyC1ERKS_(ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[X]])
 // CHECK:    [[TMP4:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META18]], !align [[META19]]
-// CHECK:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 4, !nonnull [[META18]], !align [[META19]]
+// CHECK:    store ptr [[TMP4]], ptr [[OMP_BINDING_REF1:%.*]], align 8
+// CHECK:    [[TMP5:%.*]] = load ptr, ptr [[OMP_BINDING_REF1]], align 8, !nonnull [[META18]], !align [[META19]]
 // CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR]], ptr [[TMP5]], i32 0, i32 1
 // CHECK:    call void @_ZN14NonTrivialCopyC1ERKS_(ptr noundef nonnull align 4 dereferenceable(8) [[B:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[Y]])
 // CHECK:    [[VALUE:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIALCOPY:%.*]], ptr [[A]], i32 0, i32 0
 // CHECK:    [[TMP6:%.*]] = load i32, ptr [[VALUE]], align 4
-// CHECK:    [[VALUE1:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIALCOPY]], ptr [[B]], i32 0, i32 0
-// CHECK:    [[TMP7:%.*]] = load i32, ptr [[VALUE1]], align 4
+// CHECK:    [[VALUE2:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIALCOPY]], ptr [[B]], i32 0, i32 0
+// CHECK:    [[TMP7:%.*]] = load i32, ptr [[VALUE2]], align 4
 // CHECK:    [[ADD:%.*]] = add nsw i32 [[TMP6]], [[TMP7]]
 // CHECK:    call void @_ZN14NonTrivialCopyD1Ev(ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[B]]) #[[ATTR3]]
 // CHECK:    call void @_ZN14NonTrivialCopyD1Ev(ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[A]]) #[[ATTR3]]
@@ -3869,17 +3875,19 @@ void test_lambda_implicit_capture() {
 // CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META18]], !align [[META19]]
 // CHECK:    store ptr [[TMP1]], ptr [[TMP:%.*]], align 8
 // CHECK:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META18]], !align [[META19]]
-// CHECK:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 4, !nonnull [[META18]], !align [[META19]]
+// CHECK:    store ptr [[TMP2]], ptr [[OMP_BINDING_REF:%.*]], align 8
+// CHECK:    [[TMP3:%.*]] = load ptr, ptr [[OMP_BINDING_REF]], align 8, !nonnull [[META18]], !align [[META19]]
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR:%.*]], ptr [[TMP3]], i32 0, i32 0
 // CHECK:    call void @_ZN14NonTrivialCopyC1ERKS_(ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[X]])
 // CHECK:    [[TMP4:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META18]], !align [[META19]]
-// CHECK:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 4, !nonnull [[META18]], !align [[META19]]
+// CHECK:    store ptr [[TMP4]], ptr [[OMP_BINDING_REF1:%.*]], align 8
+// CHECK:    [[TMP5:%.*]] = load ptr, ptr [[OMP_BINDING_REF1]], align 8, !nonnull [[META18]], !align [[META19]]
 // CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR]], ptr [[TMP5]], i32 0, i32 1
 // CHECK:    call void @_ZN14NonTrivialCopyC1ERKS_(ptr noundef nonnull align 4 dereferenceable(8) [[B:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[Y]])
 // CHECK:    [[VALUE:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIALCOPY:%.*]], ptr [[A]], i32 0, i32 0
 // CHECK:    [[TMP6:%.*]] = load i32, ptr [[VALUE]], align 4
-// CHECK:    [[VALUE1:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIALCOPY]], ptr [[B]], i32 0, i32 0
-// CHECK:    [[TMP7:%.*]] = load i32, ptr [[VALUE1]], align 4
+// CHECK:    [[VALUE2:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIALCOPY]], ptr [[B]], i32 0, i32 0
+// CHECK:    [[TMP7:%.*]] = load i32, ptr [[VALUE2]], align 4
 // CHECK:    [[ADD:%.*]] = add nsw i32 [[TMP6]], [[TMP7]]
 // CHECK:    call void @_ZN14NonTrivialCopyD1Ev(ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[B]]) #[[ATTR3]]
 // CHECK:    call void @_ZN14NonTrivialCopyD1Ev(ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[A]]) #[[ATTR3]]

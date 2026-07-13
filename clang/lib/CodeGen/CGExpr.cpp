@@ -3676,9 +3676,9 @@ LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
     MapAddr = RefSlot;
   }
   if (WasMapped)
-    It->second = BaseAddr;
+    It->second = MapAddr;
   else
-    LocalDeclMap.insert({DD, BaseAddr});
+    LocalDeclMap.insert({DD, MapAddr});
   llvm::scope_exit Guard([&] {
     if (WasMapped) {
       auto RestoreIt = LocalDeclMap.find(DD);
