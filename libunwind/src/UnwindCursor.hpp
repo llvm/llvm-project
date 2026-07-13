@@ -1389,7 +1389,11 @@ private:
 template <typename A, typename R>
 UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
     : _addressSpace(as), _registers(context), _unwindInfoMissing(false),
-      _isSignalFrame(false), _isKnownVapiNotActive(false) {
+      _isSignalFrame(false)
+#if defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
+      , _isKnownVapiNotActive(false)
+#endif
+      {
   static_assert((check_fit<UnwindCursor<A, R>, unw_cursor_t>::does_fit),
                 "UnwindCursor<> does not fit in unw_cursor_t");
   static_assert((alignof(UnwindCursor<A, R>) <= alignof(unw_cursor_t)),
@@ -1399,8 +1403,11 @@ UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
 
 template <typename A, typename R>
 UnwindCursor<A, R>::UnwindCursor(A &as, void *)
-    : _addressSpace(as), _unwindInfoMissing(false), _isSignalFrame(false),
-      _isKnownVapiNotActive(false) {
+    : _addressSpace(as), _unwindInfoMissing(false), _isSignalFrame(false)
+#if defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
+      , _isKnownVapiNotActive(false)
+#endif
+      {
   memset(static_cast<void *>(&_info), 0, sizeof(_info));
   // FIXME
   // fill in _registers from thread arg
