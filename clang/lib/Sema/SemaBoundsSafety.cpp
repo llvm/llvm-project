@@ -54,6 +54,68 @@ Sema::BoundsAttrFlags Sema::getBoundsAttrFlags(AttributeCommonInfo::Kind K) {
   return Flags;
 }
 
+void Sema::DiagnoseCountedByPointeeType(QualType PointerTy,
+                                        SourceLocation AttrLoc,
+                                        bool &CountInBytes, bool OrNull) {
+  // Check the pointee for counted_by has a size. One exception, we don't
+  // error for incomplete pointee types that might be later completed (e.g. a
+  // struct forward declaration). Instead for those completable-incomplete types
+  // we delay checking until the type is used see
+  // `HasCountedByAttrOnIncompletePointee()`. This allows the counted_by
+  // attribute to be used on code that prefers to keep its pointees incomplete
+  // until they need to be used.
+
+  const auto *PT = PointerTy->getAs<PointerType>();
+  if (!PT)
+    return;
+
+  if (CountInBytes)
+    return;
+
+  QualType PointeeTy = PT->getPointeeType();
+  if (!PointeeTy->isAlwaysIncompleteType() && !PointeeTy->isFunctionType() &&
+      !PointeeTy->isSizelessType() &&
+      !PointeeTy->isStructureTypeWithFlexibleArrayMember())
+    return;
+
+  // Use unspecified pointer attributes for diagnostic purposes.
+  QualType Unsp = Context.getBoundsSafetyPointerType(
+      QualType(PT, 0), BoundsSafetyPointerAttributes::unspecified());
+
+  auto PD = PDiag(diag::err_bounds_safety_counted_by_without_size);
+  PD << Unsp << Unsp->getPointeeType() << OrNull;
+
+  // Suggest `__sized_by` if the `__counted_by` macro was used.
+  // We intentionally don't suggest a fixit if the attribute is used
+  // directly (i.e. without the macro) because it is not expected that
+  // users will use it.
+  int SuggestFixIt = 0; // Default don't suggest __sized_by
+  if (AttrLoc.isMacroID()) {
+    // FIXME(dliew): Use `AL.MacroII` to get the name. Unfortunately
+    // `AL.MacroII` is not set so we can't simply check the macro name
+    // is what we expect. So instead we have the lexer tell us the
+    // contents of the token and check against that.
+    // rdar://100631458
+    auto MacroName = Lexer::getImmediateMacroName(AttrLoc, SourceMgr, LangOpts);
+    if (MacroName == "__counted_by") {
+      // Emit text to suggest __sized_by
+      SuggestFixIt = 1;
+      auto MacroLoc = SourceMgr.getExpansionLoc(AttrLoc);
+      PD << FixItHint::CreateReplacement(MacroLoc, "__sized_by");
+    } else if (MacroName == "__counted_by_or_null") {
+      // Emit text to suggest __sized_by_or_null
+      SuggestFixIt = 1;
+      auto MacroLoc = SourceMgr.getExpansionLoc(AttrLoc);
+      PD << FixItHint::CreateReplacement(MacroLoc, "__sized_by_or_null");
+    }
+  }
+  PD << SuggestFixIt;
+  Diag(AttrLoc, PD);
+
+  // Recover by assuming a byte count.
+  CountInBytes = true;
+}
+
 static const RecordDecl *GetEnclosingNamedOrTopAnonRecord(const FieldDecl *FD,
                                                   // TO_UPSTREAM(BoundsSafety)
                                                           Sema &S) {
