@@ -5298,7 +5298,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
                                : static_cast<int>(OMPC_THREADLIMIT_unknown);
 
     // Lower-bound modifier is only accepted in num_teams.
-    const bool CanParseLowerBoundModifier = (Kind == OMPC_num_teams);
+    bool CanParseLowerBoundModifier = (Kind == OMPC_num_teams);
     if (Tok.is(tok::identifier) && Tok.getIdentifierInfo()->isStr("dims") &&
         NextToken().is(tok::l_paren)) {
       SourceLocation TLoc = Tok.getLocation();
@@ -5314,8 +5314,10 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         ++Mod;
       }
 
-      if (CanParseLowerBoundModifier || Tok.is(tok::colon)) {
+      if (Tok.is(tok::colon)) {
+        // A colon was found, no more modifiers are expected.
         ConsumeToken();
+        CanParseLowerBoundModifier = false;
       } else if (CanParseLowerBoundModifier && Tok.is(tok::comma)) {
         // num_teams(dims(N), lower : upper) is invalid. Only lower:upper may
         // follow dims via comma, but sema will reject the combination.
