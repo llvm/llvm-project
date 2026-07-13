@@ -63,8 +63,10 @@ public:
 
   /// Check if the load or store instruction \p VPI should widened for \p
   /// Range.Start and potentially masked. Such instructions are handled by a
-  /// recipe that takes an additional VPInstruction for the mask.
-  VPRecipeBase *tryToWidenMemory(VPInstruction *VPI, VFRange &Range);
+  /// recipe that takes an additional VPInstruction for the mask. Also receives
+  /// potentially faulting Loads will  widen to first-only-fault.
+  VPRecipeBase *tryToWidenMemory(VPInstruction *VPI, VFRange &Range,
+                                 VPlan &Plan);
 
   /// If \p VPI represents a histogram operation (as determined by
   /// LoopVectorizationLegality) make that safe for vectorization, by emitting a

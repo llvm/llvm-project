@@ -282,9 +282,48 @@ define void @loop_contains_store_assumed_bounds(ptr noalias %array, ptr readonly
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[N_BYTES:%.*]] = mul nuw nsw i64 [[N]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PRED]], i64 2), "dereferenceable"(ptr [[PRED]], i64 [[N_BYTES]]) ]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY1:.*]]
 ; CHECK:       [[FOR_BODY1]]:
-; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_INC:.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[FOR_BODY1]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i32 [[TMP3]], 8
+; CHECK-NEXT:    [[WIDE_LOAD_FF:%.*]] = call { <vscale x 8 x i16>, i32 } @llvm.vp.load.ff.nxv8i16.p0(ptr align 2 [[TMP2]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP4]])
+; CHECK-NEXT:    [[WIDE_LOAD_FF_VAL:%.*]] = extractvalue { <vscale x 8 x i16>, i32 } [[WIDE_LOAD_FF]], 0
+; CHECK-NEXT:    [[WIDE_LOAD_FF_COUNT:%.*]] = extractvalue { <vscale x 8 x i16>, i32 } [[WIDE_LOAD_FF]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[WIDE_LOAD_FF_COUNT]] to i64
+; CHECK-NEXT:    [[FF_MASK:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <vscale x 8 x i16> [[WIDE_LOAD_FF_VAL]], splat (i16 500)
+; CHECK-NEXT:    [[TMP7:%.*]] = freeze <vscale x 8 x i1> [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> [[TMP7]], i1 false)
+; CHECK-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 [[TMP8]])
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i16, ptr [[ARRAY]], i64 [[INDEX]]
+; CHECK-NEXT:    [[FF_MASK_MERGE:%.*]] = and <vscale x 8 x i1> [[UNCOUNTABLE_EXIT_MASK]], [[FF_MASK]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr align 2 [[TMP9]], <vscale x 8 x i1> [[FF_MASK_MERGE]], <vscale x 8 x i16> poison)
+; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <vscale x 8 x i16> [[WIDE_MASKED_LOAD]], splat (i16 1)
+; CHECK-NEXT:    call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> [[TMP10]], ptr align 2 [[TMP9]], <vscale x 8 x i1> [[FF_MASK_MERGE]])
+; CHECK-NEXT:    [[TMP11:%.*]] = call i1 @llvm.vector.reduce.or.nxv8i1(<vscale x 8 x i1> [[TMP7]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX_NEXT]], [[TMP1]]
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp uge i64 [[TMP12]], [[N]]
+; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP11]], [[TMP13]]
+; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY1]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult i64 [[TMP5]], [[TMP8]]
+; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[TMP15]], i64 [[TMP5]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[TMP17]], [[N]]
+; CHECK-NEXT:    br i1 [[TMP18]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP17]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_INC:.*]] ]
 ; CHECK-NEXT:    [[ST_ADDR1:%.*]] = getelementptr inbounds nuw i16, ptr [[ARRAY]], i64 [[IV1]]
 ; CHECK-NEXT:    [[DATA:%.*]] = load i16, ptr [[ST_ADDR1]], align 2
 ; CHECK-NEXT:    [[INC:%.*]] = add nsw i16 [[DATA]], 1
@@ -292,11 +331,11 @@ define void @loop_contains_store_assumed_bounds(ptr noalias %array, ptr readonly
 ; CHECK-NEXT:    [[EE_ADDR:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[IV1]]
 ; CHECK-NEXT:    [[EE_VAL:%.*]] = load i16, ptr [[EE_ADDR]], align 2
 ; CHECK-NEXT:    [[EE_COND:%.*]] = icmp sgt i16 [[EE_VAL]], 500
-; CHECK-NEXT:    br i1 [[EE_COND]], label %[[EXIT:.*]], label %[[FOR_INC]]
+; CHECK-NEXT:    br i1 [[EE_COND]], label %[[EXIT]], label %[[FOR_INC]]
 ; CHECK:       [[FOR_INC]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; CHECK-NEXT:    [[COUNTED_COND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[COUNTED_COND]], label %[[EXIT]], label %[[FOR_BODY1]]
+; CHECK-NEXT:    br i1 [[COUNTED_COND]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -354,7 +393,7 @@ define void @loop_contains_store_to_pointer_with_no_deref_info(ptr align 2 deref
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[IV]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[TMP14]], 20
@@ -376,7 +415,7 @@ define void @loop_contains_store_to_pointer_with_no_deref_info(ptr align 2 deref
 ; CHECK:       [[FOR_INC]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; CHECK-NEXT:    [[COUNTED_COND:%.*]] = icmp eq i64 [[IV_NEXT]], 20
-; CHECK-NEXT:    br i1 [[COUNTED_COND]], label %[[EXIT]], label %[[FOR_BODY1]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[COUNTED_COND]], label %[[EXIT]], label %[[FOR_BODY1]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -408,9 +447,48 @@ define void @loop_contains_store_unknown_bounds(ptr align 2 dereferenceable(100)
 ; CHECK-LABEL: define void @loop_contains_store_unknown_bounds(
 ; CHECK-SAME: ptr noalias align 2 dereferenceable(100) [[ARRAY:%.*]], ptr readonly align 2 dereferenceable(100) [[PRED:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[SCALAR_PH:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH1:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY1:.*]]
 ; CHECK:       [[FOR_BODY1]]:
-; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_INC:.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[FOR_BODY1]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i32 [[TMP3]], 8
+; CHECK-NEXT:    [[WIDE_LOAD_FF:%.*]] = call { <vscale x 8 x i16>, i32 } @llvm.vp.load.ff.nxv8i16.p0(ptr align 2 [[TMP2]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP4]])
+; CHECK-NEXT:    [[WIDE_LOAD_FF_VAL:%.*]] = extractvalue { <vscale x 8 x i16>, i32 } [[WIDE_LOAD_FF]], 0
+; CHECK-NEXT:    [[WIDE_LOAD_FF_COUNT:%.*]] = extractvalue { <vscale x 8 x i16>, i32 } [[WIDE_LOAD_FF]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[WIDE_LOAD_FF_COUNT]] to i64
+; CHECK-NEXT:    [[FF_MASK:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <vscale x 8 x i16> [[WIDE_LOAD_FF_VAL]], splat (i16 500)
+; CHECK-NEXT:    [[TMP7:%.*]] = freeze <vscale x 8 x i1> [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> [[TMP7]], i1 false)
+; CHECK-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 [[TMP8]])
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i16, ptr [[ARRAY]], i64 [[INDEX]]
+; CHECK-NEXT:    [[FF_MASK_MERGE:%.*]] = and <vscale x 8 x i1> [[UNCOUNTABLE_EXIT_MASK]], [[FF_MASK]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr align 2 [[TMP9]], <vscale x 8 x i1> [[FF_MASK_MERGE]], <vscale x 8 x i16> poison)
+; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <vscale x 8 x i16> [[WIDE_MASKED_LOAD]], splat (i16 1)
+; CHECK-NEXT:    call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> [[TMP10]], ptr align 2 [[TMP9]], <vscale x 8 x i1> [[FF_MASK_MERGE]])
+; CHECK-NEXT:    [[TMP11:%.*]] = call i1 @llvm.vector.reduce.or.nxv8i1(<vscale x 8 x i1> [[TMP7]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX_NEXT]], [[TMP1]]
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp uge i64 [[TMP12]], [[N]]
+; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP11]], [[TMP13]]
+; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY1]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult i64 [[TMP5]], [[TMP8]]
+; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[TMP15]], i64 [[TMP5]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[TMP17]], [[N]]
+; CHECK-NEXT:    br i1 [[TMP18]], label %[[EXIT:.*]], label %[[SCALAR_PH1]]
+; CHECK:       [[SCALAR_PH1]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP17]], %[[MIDDLE_BLOCK]] ], [ 0, %[[SCALAR_PH]] ]
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH1]] ], [ [[IV_NEXT:%.*]], %[[FOR_INC:.*]] ]
 ; CHECK-NEXT:    [[ST_ADDR1:%.*]] = getelementptr inbounds nuw i16, ptr [[ARRAY]], i64 [[IV1]]
 ; CHECK-NEXT:    [[DATA:%.*]] = load i16, ptr [[ST_ADDR1]], align 2
 ; CHECK-NEXT:    [[INC:%.*]] = add nsw i16 [[DATA]], 1
@@ -418,11 +496,11 @@ define void @loop_contains_store_unknown_bounds(ptr align 2 dereferenceable(100)
 ; CHECK-NEXT:    [[EE_ADDR:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[IV1]]
 ; CHECK-NEXT:    [[EE_VAL:%.*]] = load i16, ptr [[EE_ADDR]], align 2
 ; CHECK-NEXT:    [[EE_COND:%.*]] = icmp sgt i16 [[EE_VAL]], 500
-; CHECK-NEXT:    br i1 [[EE_COND]], label %[[EXIT:.*]], label %[[FOR_INC]]
+; CHECK-NEXT:    br i1 [[EE_COND]], label %[[EXIT]], label %[[FOR_INC]]
 ; CHECK:       [[FOR_INC]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; CHECK-NEXT:    [[COUNTED_COND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[COUNTED_COND]], label %[[EXIT]], label %[[FOR_BODY1]]
+; CHECK-NEXT:    br i1 [[COUNTED_COND]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -522,7 +600,7 @@ define void @loop_contains_store_in_latch_block(ptr dereferenceable(40) noalias 
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[IV]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[TMP13]], 20
@@ -543,7 +621,7 @@ define void @loop_contains_store_in_latch_block(ptr dereferenceable(40) noalias 
 ; CHECK-NEXT:    store i16 [[INC]], ptr [[ST_ADDR]], align 2
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; CHECK-NEXT:    [[COUNTED_COND:%.*]] = icmp eq i64 [[IV_NEXT]], 20
-; CHECK-NEXT:    br i1 [[COUNTED_COND]], label %[[EXIT]], label %[[FOR_BODY1]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[COUNTED_COND]], label %[[EXIT]], label %[[FOR_BODY1]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -1194,7 +1272,7 @@ define i32 @uncountable_exit_with_separate_exit_block(ptr dereferenceable(40) no
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[IV]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[TMP13]], 20
@@ -1215,7 +1293,7 @@ define i32 @uncountable_exit_with_separate_exit_block(ptr dereferenceable(40) no
 ; CHECK:       [[FOR_INC]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; CHECK-NEXT:    [[COUNTED_COND:%.*]] = icmp eq i64 [[IV_NEXT]], 20
-; CHECK-NEXT:    br i1 [[COUNTED_COND]], label %[[EXIT_COUNTABLE]], label %[[FOR_BODY1]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[COUNTED_COND]], label %[[EXIT_COUNTABLE]], label %[[FOR_BODY1]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[EXIT_COUNTABLE]]:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       [[EXIT_UNCOUNTABLE]]:

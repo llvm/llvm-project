@@ -1236,11 +1236,13 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
     R->eraseFromParent();
 }
 
-bool VPlanTransforms::areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
-                                                 Loop *TheLoop,
-                                                 PredicatedScalarEvolution &PSE,
-                                                 DominatorTree &DT,
-                                                 AssumptionCache *AC) {
+/// Check if all loads in the loop are dereferenceable. Iterates over the
+/// loop body blocks reachable from \p HeaderVPBB. Returns false if any
+/// non-dereferenceable load is found.
+bool VPlanTransforms::areAllLoadsDereferenceable(
+    VPlan &Plan, VPBasicBlock *HeaderVPBB, Loop *TheLoop,
+    PredicatedScalarEvolution &PSE, DominatorTree &DT, AssumptionCache *AC,
+    bool supportsFirstOnlyFaultLoads) {
   ScalarEvolution &SE = *PSE.getSE();
   const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
   for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(HeaderVPBB)) {
@@ -1266,11 +1268,20 @@ bool VPlanTransforms::areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
           SE.getStoreSizeOfExpr(DL.getIndexType(PtrSCEV->getType()), LoadTy);
       auto *Load = cast<LoadInst>(VPI->getUnderlyingValue());
       SmallVector<const SCEVPredicate *> Preds;
-      if (isDereferenceableAndAlignedInLoop(PtrSCEV, Load->getAlign(), SizeSCEV,
-                                            TheLoop, SE, DT, AC, &Preds))
-        continue;
-
-      return false;
+      if (!isDereferenceableAndAlignedInLoop(PtrSCEV, Load->getAlign(),
+                                             SizeSCEV, TheLoop, SE, DT, AC,
+                                             &Preds)) {
+        if (supportsFirstOnlyFaultLoads) {
+          // Tag this load so it is widened as first faulting
+          Plan.addPotentiallyFaultingLoad(Load);
+          LLVM_DEBUG(dbgs() << "LV: Load may fault. Using first-fault load.\n");
+        } else {
+          LLVM_DEBUG(dbgs()
+                     << "LV: Not vectorizing: Auto-vectorization of loops with "
+                        "potentially faulting load is disabled.\n");
+          return false;
+        }
+      }
     }
   }
   return true;
