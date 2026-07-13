@@ -33,12 +33,16 @@
 // A descending (step -1) loop uses the same structure mirrored: partitions run
 // high-to-low and the empty test, clamp, and predicates flip (>=/>).
 //
+// Multi-exit loops: only the counted exit is threaded through the guard chain;
+// any "side" exit stays a shared block each partition's clone branches to, so
+// taking it leaves the whole chain. Its LCSSA PHIs gain one incoming/partition.
+//
 // Usage guidelines:
 //  - Caller bounds must not wrap the induction type. The clamp absorbs a bound
 //    past the runtime trip count, but a Start +/- offset that overshoots the
 //    type extreme wraps in the bound arithmetic and cannot be repaired here.
-//  - Bounds must be loop-invariant: they are expanded in guard0 (the preheader),
-//    so a bound depending on a value defined inside the loop cannot be placed.
+//  - Bounds must be loop-invariant: expanded in guard0 (the preheader), so a
+//    bound depending on a value defined inside the loop cannot be placed.
 //  - The partitions must tile the original iteration space exactly -- same
 //    iterations, same order -- so the split preserves program behaviour.
 //  - A caller that drops a guard via avoidPartitionGuard() must itself ensure
@@ -48,6 +52,7 @@
 
 #include "llvm/Transforms/Utils/LoopSplitUtils.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -103,6 +108,12 @@ struct LoopSplitUtils::SplitState {
 
   /// Values that must survive across partitions (carried and/or live-out).
   SmallVector<EscapingValue, 8> Escaping;
+
+  /// Exit edges of the loop other than the counted (induction) exit, as
+  /// (exiting block, exit block) pairs. Each is cloned per partition.
+  SmallVector<std::pair<BasicBlock *, BasicBlock *>, 4> SideExitEdges;
+  /// The distinct target blocks of \c SideExitEdges.
+  SmallPtrSet<BasicBlock *, 4> SideExitBlocks;
 
   EscapingValue &addEscaping(Value *Def) {
     Escaping.emplace_back();
@@ -241,16 +252,13 @@ bool LoopSplitUtils::isLegal() {
     LLVM_DEBUG(dbgs() << "LS: missing preheader/latch\n");
     return false;
   }
-  if (!L->getExitingBlock() || !L->getExitBlock()) {
-    LLVM_DEBUG(dbgs() << "LS: not a single-exit loop\n");
-    return false;
-  }
   if (!L->isLCSSAForm(*DT)) {
     LLVM_DEBUG(dbgs() << "LS: loop is not in LCSSA form\n");
     return false;
   }
 
-  // Identify the counted (induction) exit.
+  // Identify the counted (induction) exit. A loop with extra "side" exits is
+  // accepted -- they are cloned per partition in split().
   const SCEVAddRecExpr *IndAR = analyzeInduction();
   if (!IndAR) {
     LLVM_DEBUG(dbgs() << "LS: no counted induction exit\n");
@@ -260,8 +268,11 @@ bool LoopSplitUtils::isLegal() {
   if (!computeSignedness(IndAR))
     return false;
 
-  // A computable backedge-taken count fixes the iteration space we rebuild.
-  const SCEV *BTC = SE->getBackedgeTakenCount(L);
+  // The trip count fixes the iteration space; it must be exact since split()
+  // replaces the counted test with the clamped bound. Single-exit uses the
+  // whole-loop count; multi-exit uses the counted exit's own exact count.
+  const SCEV *BTC = L->getExitingBlock() ? SE->getBackedgeTakenCount(L)
+                                         : SE->getExitCount(L, ExitingBlock);
   if (isa<SCEVCouldNotCompute>(BTC)) {
     LLVM_DEBUG(dbgs() << "LS: no computable trip count\n");
     return false;
@@ -326,7 +337,60 @@ bool LoopSplitUtils::split() {
 
   SplitState S;
   S.OrigPreheader = L->getLoopPreheader();
-  S.ExitBlock = L->getExitBlock();
+
+  // The counted exit is the unique out-of-loop successor of the counted exiting
+  // block; recompute it here since formDedicatedExitBlocks may have split it.
+  for (BasicBlock *Succ : successors(ExitingBlock))
+    if (!L->contains(Succ)) {
+      if (S.ExitBlock) // counted exiting block leaves the loop on two edges
+        return false;
+      S.ExitBlock = Succ;
+    }
+  if (!S.ExitBlock)
+    return false;
+
+  // A nested loop whose side exit re-enters the enclosing loop cannot be split:
+  // each clone adds another edge into it, giving irreducible flow. Decline
+  // before mutating IR. The counted exit is exempt (threaded linearly).
+  if (Loop *Parent = L->getParentLoop()) {
+    for (BasicBlock *BB : L->blocks())
+      for (BasicBlock *Succ : successors(BB))
+        if (!L->contains(Succ) &&
+            !(BB == ExitingBlock && Succ == S.ExitBlock) &&
+            Parent->contains(Succ))
+          return false;
+  }
+
+  // Isolating the counted-exit live-outs needs the exit reached solely from the
+  // counted exiting block. If the target is shared, peel the counted edge onto
+  // its own block (SplitBlockPredecessors fixes the LCSSA PHIs accordingly).
+  bool CountedExitShared = false;
+  for (BasicBlock *Pred : predecessors(S.ExitBlock))
+    if (Pred != ExitingBlock) {
+      CountedExitShared = true;
+      break;
+    }
+  if (CountedExitShared) {
+    // Cannot peel an EH pad; those are handled conservatively upstream.
+    if (S.ExitBlock->isEHPad())
+      return false;
+    BasicBlock *Dedicated =
+        SplitBlockPredecessors(S.ExitBlock, {ExitingBlock}, ".ls.counted.exit",
+                               DT, LI, /*MSSAU=*/nullptr, /*PreserveLCSSA=*/true);
+    if (!Dedicated)
+      return false;
+    S.ExitBlock = Dedicated;
+  }
+
+  // Every other exit edge is a "side" exit: cloned per partition, its target's
+  // LCSSA PHIs gaining one incoming per partition (see clonePartitions()).
+  for (BasicBlock *BB : L->blocks())
+    for (BasicBlock *Succ : successors(BB))
+      if (!L->contains(Succ) && !(BB == ExitingBlock && Succ == S.ExitBlock)) {
+        S.SideExitEdges.emplace_back(BB, Succ);
+        S.SideExitBlocks.insert(Succ);
+      }
+
   S.OuterLoop = LI->getLoopFor(S.ExitBlock);
 
   collectEscapingValues(S);
@@ -507,6 +571,19 @@ void LoopSplitUtils::clonePartitions(SplitState &S) {
       if (EV.CarriedHeaderPHI)
         EV.PerPartitionPHI[I] = cast<PHINode>(VMap[EV.CarriedHeaderPHI]);
     }
+
+    // Wire this partition's side-exit edges. The clone's side exiting block
+    // already branches to the shared side-exit block, so it is a new
+    // predecessor; add the matching LCSSA incoming (the cloned value).
+    for (auto &Edge : S.SideExitEdges) {
+      BasicBlock *OrigExiting = Edge.first;
+      BasicBlock *SideExit = Edge.second;
+      auto *ClonedExiting = cast<BasicBlock>(remapValue(VMap, OrigExiting));
+      for (PHINode &PN : SideExit->phis()) {
+        Value *Incoming = PN.getIncomingValueForBlock(OrigExiting);
+        PN.addIncoming(remapValue(VMap, Incoming), ClonedExiting);
+      }
+    }
   }
 }
 
@@ -605,6 +682,11 @@ void LoopSplitUtils::chainPartitions(SplitState &S) {
   }
   // The final exit is the last partition's merge target.
   DT->changeImmediateDominator(S.FinalExit, MergeTargetIDom(Partitions.back()));
+
+  // Every side-exit block now has a predecessor in each partition; their common
+  // dominator is the entry guard, which dominates the whole chain.
+  for (BasicBlock *SideExit : S.SideExitBlocks)
+    DT->changeImmediateDominator(SideExit, S.EntryGuard);
 }
 
 // Rebuild SSA for every escaping value, repairing outside uses and seeding each
@@ -630,8 +712,15 @@ void LoopSplitUtils::reconstructSSA(SplitState &S) {
       SmallVector<Use *, 8> OutsideUses;
       for (Use &U : EV.Def->uses())
         if (auto *User = dyn_cast<Instruction>(U.getUser()))
-          if (!L->contains(User))
+          if (!L->contains(User)) {
+            // Side-exit LCSSA PHIs are repaired per-partition in
+            // clonePartitions(); don't rewrite them here (they need the running
+            // per-partition def, not the SSAUpdater's end-of-partition merge).
+            if (auto *P = dyn_cast<PHINode>(User))
+              if (S.SideExitBlocks.count(P->getParent()))
+                continue;
             OutsideUses.push_back(&U);
+          }
       for (Use *U : OutsideUses)
         Updater.RewriteUse(*U);
     }
