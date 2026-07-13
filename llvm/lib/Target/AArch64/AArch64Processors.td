@@ -1493,6 +1493,10 @@ def : ProcessorModel<"carmel", NoSchedModel, ProcessorFeatures.Carmel,
 def : ProcessorModel<"olympus", OlympusModel, ProcessorFeatures.Olympus,
                      [TuneOlympus]>;
 
+// NVIDIA Rigel
+def : ProcessorModel<"rigel", OlympusModel, ProcessorFeatures.Olympus,
+                     [TuneOlympus]>;
+
 // Ampere Computing
 def : ProcessorModel<"ampere1", Ampere1Model, ProcessorFeatures.Ampere1,
                      [TuneAmpere1]>;
