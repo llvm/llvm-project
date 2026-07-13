@@ -5,16 +5,16 @@
 ; RUN: not llvm-as %t/bad-interpretation-empty.ll -disable-output 2>&1 | FileCheck %s --check-prefix=BAD-INTERP-EMPTY
 ; RUN: not llvm-as %t/bad-interpretation-unknown.ll -disable-output 2>&1 | FileCheck %s --check-prefix=BAD-INTERP-UNKNOWN
 ; RUN: not llvm-as %t/bad-rounding.ll -disable-output 2>&1 | FileCheck %s --check-prefix=BAD-ROUNDING
-; RUN: not opt -S -passes=verify %t/ptr-to-arbitrary-fp.ll 2>&1 | FileCheck %s --check-prefix=PTR-TO-FP
-; RUN: not opt -S -passes=verify %t/arbitrary-fp-to-ptr.ll 2>&1 | FileCheck %s --check-prefix=FP-TO-PTR
-; RUN: not opt -S -passes=verify %t/int-to-arbitrary-fp.ll 2>&1 | FileCheck %s --check-prefix=INT-TO-FP
-; RUN: not opt -S -passes=verify %t/arbitrary-fp-to-int.ll 2>&1 | FileCheck %s --check-prefix=FP-TO-INT
-; RUN: not opt -S -passes=verify %t/vec-ptr-to-arbitrary-fp.ll 2>&1 | FileCheck %s --check-prefix=VEC-PTR-TO-FP
-; RUN: not opt -S -passes=verify %t/vec-to-scalar-mismatch.ll 2>&1 | FileCheck %s --check-prefix=VEC-SCALAR-MISMATCH
-; RUN: not opt -S -passes=verify %t/vec-size-mismatch.ll 2>&1 | FileCheck %s --check-prefix=VEC-SIZE-MISMATCH
-; RUN: not opt -S -passes=verify %t/width-to-mismatch.ll 2>&1 | FileCheck %s --check-prefix=WIDTH-TO-MISMATCH
-; RUN: not opt -S -passes=verify %t/width-from-mismatch.ll 2>&1 | FileCheck %s --check-prefix=WIDTH-FROM-MISMATCH
-; RUN: not opt -S -passes=verify %t/width-vec-mismatch.ll 2>&1 | FileCheck %s --check-prefix=WIDTH-VEC-MISMATCH
+; RUN: not llvm-as %t/ptr-to-arbitrary-fp.ll -disable-output 2>&1 | FileCheck %s --check-prefix=PTR-TO-FP
+; RUN: not llvm-as %t/arbitrary-fp-to-ptr.ll -disable-output 2>&1 | FileCheck %s --check-prefix=FP-TO-PTR
+; RUN: not llvm-as %t/int-to-arbitrary-fp.ll -disable-output 2>&1 | FileCheck %s --check-prefix=INT-TO-FP
+; RUN: not llvm-as %t/arbitrary-fp-to-int.ll -disable-output 2>&1 | FileCheck %s --check-prefix=FP-TO-INT
+; RUN: not llvm-as %t/vec-ptr-to-arbitrary-fp.ll -disable-output 2>&1 | FileCheck %s --check-prefix=VEC-PTR-TO-FP
+; RUN: not llvm-as %t/vec-to-scalar-mismatch.ll -disable-output 2>&1 | FileCheck %s --check-prefix=VEC-SCALAR-MISMATCH
+; RUN: not llvm-as %t/vec-size-mismatch.ll -disable-output 2>&1 | FileCheck %s --check-prefix=VEC-SIZE-MISMATCH
+; RUN: not llvm-as %t/width-to-mismatch.ll -disable-output 2>&1 | FileCheck %s --check-prefix=WIDTH-TO-MISMATCH
+; RUN: not llvm-as %t/width-from-mismatch.ll -disable-output 2>&1 | FileCheck %s --check-prefix=WIDTH-FROM-MISMATCH
+; RUN: not llvm-as %t/width-vec-mismatch.ll -disable-output 2>&1 | FileCheck %s --check-prefix=WIDTH-VEC-MISMATCH
 
 ;--- bad-interpretation-empty.ll
 ; BAD-INTERP-EMPTY: interpretation metadata string must not be empty
