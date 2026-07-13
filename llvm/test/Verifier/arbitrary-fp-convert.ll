@@ -12,6 +12,9 @@
 ; RUN: not opt -S -passes=verify %t/vec-ptr-to-arbitrary-fp.ll 2>&1 | FileCheck %s --check-prefix=VEC-PTR-TO-FP
 ; RUN: not opt -S -passes=verify %t/vec-to-scalar-mismatch.ll 2>&1 | FileCheck %s --check-prefix=VEC-SCALAR-MISMATCH
 ; RUN: not opt -S -passes=verify %t/vec-size-mismatch.ll 2>&1 | FileCheck %s --check-prefix=VEC-SIZE-MISMATCH
+; RUN: not opt -S -passes=verify %t/width-to-mismatch.ll 2>&1 | FileCheck %s --check-prefix=WIDTH-TO-MISMATCH
+; RUN: not opt -S -passes=verify %t/width-from-mismatch.ll 2>&1 | FileCheck %s --check-prefix=WIDTH-FROM-MISMATCH
+; RUN: not opt -S -passes=verify %t/width-vec-mismatch.ll 2>&1 | FileCheck %s --check-prefix=WIDTH-VEC-MISMATCH
 
 ;--- bad-interpretation-empty.ll
 ; BAD-INTERP-EMPTY: interpretation metadata string must not be empty
@@ -120,5 +123,38 @@ declare <4 x i8> @llvm.convert.to.arbitrary.fp.v4i8.v2f32(<2 x float>, metadata,
 define <4 x i8> @bad_vec_size_mismatch(<2 x float> %v) {
   %r = call <4 x i8> @llvm.convert.to.arbitrary.fp.v4i8.v2f32(
       <2 x float> %v, metadata !"Float8E4M3", metadata !"round.tonearest", i1 false)
+  ret <4 x i8> %r
+}
+
+;--- width-to-mismatch.ll
+; WIDTH-TO-MISMATCH: integer type bit width must equal the arbitrary FP format width
+
+declare i8 @llvm.convert.to.arbitrary.fp.i8.f16(half, metadata, metadata, i1)
+
+define i8 @bad_width_to(half %v) {
+  %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f16(
+      half %v, metadata !"Float4E2M1FN", metadata !"round.tonearest", i1 false)
+  ret i8 %r
+}
+
+;--- width-from-mismatch.ll
+; WIDTH-FROM-MISMATCH: integer type bit width must equal the arbitrary FP format width
+
+declare float @llvm.convert.from.arbitrary.fp.f32.i8(i8, metadata)
+
+define float @bad_width_from(i8 %v) {
+  %r = call float @llvm.convert.from.arbitrary.fp.f32.i8(
+      i8 %v, metadata !"Float4E2M1FN")
+  ret float %r
+}
+
+;--- width-vec-mismatch.ll
+; WIDTH-VEC-MISMATCH: integer type bit width must equal the arbitrary FP format width
+
+declare <4 x i8> @llvm.convert.to.arbitrary.fp.v4i8.v4f16(<4 x half>, metadata, metadata, i1)
+
+define <4 x i8> @bad_width_vec(<4 x half> %v) {
+  %r = call <4 x i8> @llvm.convert.to.arbitrary.fp.v4i8.v4f16(
+      <4 x half> %v, metadata !"Float4E2M1FN", metadata !"round.tonearest", i1 false)
   ret <4 x i8> %r
 }
