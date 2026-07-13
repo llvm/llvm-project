@@ -8845,14 +8845,6 @@ static Instruction *foldFCmpFmulIntoFCmp(FCmpInst &I, Instruction *LHSI,
                                          Constant *RHSC) {
   FCmpInst::Predicate Pred = I.getPredicate();
 
-  if ((Pred != FCmpInst::FCMP_OGE) && (Pred != FCmpInst::FCMP_OGT) &&
-      (Pred != FCmpInst::FCMP_OLE) && (Pred != FCmpInst::FCMP_OLT) &&
-      (Pred != FCmpInst::FCMP_ONE) && (Pred != FCmpInst::FCMP_OEQ) &&
-      (Pred != FCmpInst::FCMP_UGE) && (Pred != FCmpInst::FCMP_UGT) &&
-      (Pred != FCmpInst::FCMP_ULE) && (Pred != FCmpInst::FCMP_ULT) &&
-      (Pred != FCmpInst::FCMP_UNE) && (Pred != FCmpInst::FCMP_UEQ))
-    return nullptr;
-
   const APFloat *C1, *C2;
   if (!match(LHSI->getOperand(1), m_APFloat(C1)) || !match(RHSC, m_APFloat(C2)))
     return nullptr;

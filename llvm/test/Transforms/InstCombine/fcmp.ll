@@ -3062,8 +3062,7 @@ define i1 @fcmp_ogt_fmul_zero_const(float %x) {
 
 define i1 @fcmp_ord_fmul_pos_const(float %x) {
 ; CHECK-LABEL: @fcmp_ord_fmul_pos_const(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[MUL]], 0.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[MUL:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %mul = fmul float %x, 2.0
@@ -3073,12 +3072,29 @@ define i1 @fcmp_ord_fmul_pos_const(float %x) {
 
 define i1 @fcmp_uno_fmul_pos_const(float %x) {
 ; CHECK-LABEL: @fcmp_uno_fmul_pos_const(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[MUL]], 0.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[MUL:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %mul = fmul float %x, 2.0
   %cmp = fcmp uno float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_false_fmul_pos_const(float %x) {
+; CHECK-LABEL: @fcmp_false_fmul_pos_const(
+; CHECK-NEXT:    ret i1 false
+;
+  %mul = fmul float %x, 2.0
+  %cmp = fcmp false float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_true_fmul_pos_const(float %x) {
+; CHECK-LABEL: @fcmp_true_fmul_pos_const(
+; CHECK-NEXT:    ret i1 true
+;
+  %mul = fmul float %x, 2.0
+  %cmp = fcmp true float %mul, 6.0
   ret i1 %cmp
 }
 
