@@ -24071,18 +24071,23 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         const unsigned RBW = cast<VectorType>(R->getType())
                                  ->getElementType()
                                  ->getIntegerBitWidth();
+        // A signed comparison needs the sign bit getActiveBits() ignores.
+        const bool Signed = cast<CmpInst>(VL0)->isSigned();
+        auto GetRequiredBits = [Signed](const APInt &V) {
+          return Signed ? V.getSignificantBits() : V.getActiveBits();
+        };
         if ((LBW < RBW && (!allConstant(E->getOperand(1)) ||
                            any_of(
                                E->getOperand(1),
                                [&](Value *V) {
                                  auto *CI = dyn_cast<ConstantInt>(V);
                                  return !CI ||
-                                        CI->getValue().getActiveBits() > LBW;
+                                        GetRequiredBits(CI->getValue()) > LBW;
                                }))) ||
             (LBW > RBW && allConstant(E->getOperand(0)) &&
              all_of(E->getOperand(1), [&](Value *V) {
                auto *CI = dyn_cast<ConstantInt>(V);
-               return CI && CI->getValue().getActiveBits() <= RBW;
+               return CI && GetRequiredBits(CI->getValue()) <= RBW;
              }))) {
           Type *CastTy = R->getType();
           L = Builder.CreateIntCast(L, CastTy, GetOperandSignedness(0));
