@@ -140,3 +140,6 @@ void invalid_predefined_lib_function(void) __riscv_in("xsfmm") {
   // expected-warning@-1 {{call to undeclared library function 'memcpy' with type 'void *(void *, const void *, __size_t)' (aka 'void *(void *, const void *, unsigned long)'); ISO C99 and later do not support implicit function declarations}}
   // expected-note@-2 {{include the header <string.h> or explicitly provide a declaration for 'memcpy'}}
 }
+
+void invalid_state(void) __riscv_new("12345") { // expected-error {{unknown state '12345'}}
+}
