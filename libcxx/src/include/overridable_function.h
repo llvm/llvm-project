@@ -62,7 +62,7 @@ namespace {
 
 // This is used to prevent TBAA from optimizing away the function pointer comparison.
 template <typename T>
-[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI T* __libcpp_launder(T* __ptr) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI T* __launder_function_pointer(T* __ptr) noexcept {
   __asm__ volatile("" : "+r"(__ptr));
   return __ptr;
 }
@@ -96,7 +96,7 @@ _LIBCPP_HIDE_FROM_ABI inline bool __is_function_overridden() noexcept {
   // the _Func symbol. The compiler thinks __impl_ref<...>::__impl_ is defined elsewhere
   // at link time and will be an undefined symbol. It doesn't know that the __asm__ tells
   // the assembler to define it as a local symbol.
-  return __libcpp_launder(_Func) != __impl_ref<_Func>::__impl_;
+  return __launder_function_pointer(_Func) != __impl_ref<_Func>::__impl_;
 }
 
 _LIBCPP_END_NAMESPACE_STD
