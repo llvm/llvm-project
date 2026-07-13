@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
@@ -393,15 +394,13 @@ public:
 
   TreeTy* add(TreeTy* T, value_type_ref V) {
     T = add_internal(V,T);
-    markImmutable(T);
-    recoverNodes();
+    recoverNodes(T);
     return T;
   }
 
   TreeTy* remove(TreeTy* T, key_type_ref V) {
     T = remove_internal(V,T);
-    markImmutable(T);
-    recoverNodes();
+    recoverNodes(T);
     return T;
   }
 
@@ -428,17 +427,6 @@ protected:
     unsigned hl = getHeight(L);
     unsigned hr = getHeight(R);
     return (hl > hr ? hl : hr) + 1;
-  }
-
-  static bool compareTreeWithSection(TreeTy* T,
-                                     typename TreeTy::iterator& TI,
-                                     typename TreeTy::iterator& TE) {
-    typename TreeTy::iterator I = T->begin(), E = T->end();
-    for ( ; I!=E ; ++I, ++TI) {
-      if (TI == TE || !I->isElementEqual(&*TI))
-        return false;
-    }
-    return true;
   }
 
   //===--------------------------------------------------===//
@@ -471,11 +459,20 @@ protected:
     return createNode(newLeft, getValue(oldTree), newRight);
   }
 
-  void recoverNodes() {
-    for (unsigned i = 0, n = createdNodes.size(); i < n; ++i) {
-      TreeTy *N = createdNodes[i];
-      if (N->isMutable() && N->refCount == 0)
+  void recoverNodes(TreeTy *Result) {
+    // Mark Result's nodes immutable and reclaim the intermediates discarded
+    // during balancing, in one pass. Nodes are built bottom-up, so a node
+    // precedes its parents in createdNodes; visiting in reverse thus reaches
+    // each node only once its reference count is final. Unreferenced nodes are
+    // unreachable and destroyed; the rest belong to Result. Result is kept
+    // despite its zero count -- the caller has not taken ownership yet.
+    for (TreeTy *N : llvm::reverse(createdNodes)) {
+      if (!N->isMutable())
+        continue; // Already reclaimed while destroying an unreachable parent.
+      if (N != Result && N->refCount == 0)
         N->destroy();
+      else
+        N->markImmutable();
     }
     createdNodes.clear();
   }
@@ -605,15 +602,6 @@ protected:
                        getValue(T), getRight(T));
   }
 
-  /// Clears the mutable bits of a root and all of its descendants.
-  void markImmutable(TreeTy* T) {
-    if (!T || !T->isMutable())
-      return;
-    T->markImmutable();
-    markImmutable(getLeft(T));
-    markImmutable(getRight(T));
-  }
-
 public:
   TreeTy *getCanonicalTree(TreeTy *TNew) {
     if (!TNew)
@@ -628,12 +616,12 @@ public:
     TreeTy *&entry = Cache[maskCacheIndex(digest)];
     if (entry) {
       for (TreeTy *T = entry ; T != nullptr; T = T->next) {
-        // Compare the Contents('T') with Contents('TNew')
-        typename TreeTy::iterator TI = T->begin(), TE = T->end();
-        if (!compareTreeWithSection(TNew, TI, TE))
+        // Compare the contents of 'T' with 'TNew'. isEqual skips subtrees that
+        // are shared by pointer, so for structurally-shared persistent trees
+        // (the common case, e.g. one derived from the other) this is linear in
+        // the number of differing nodes rather than in the tree size.
+        if (!TNew->isEqual(*T))
           continue;
-        if (TI != TE)
-          continue; // T has more contents than TNew.
         // Trees did match!  Return 'T'.
         if (TNew->refCount == 0)
           TNew->destroy();

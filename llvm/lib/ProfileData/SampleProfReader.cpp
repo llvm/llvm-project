@@ -1013,9 +1013,9 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncOffsetTable() {
       // Because Porfiles replace existing value with new value if collision
       // happens, we also use the latest offset so that they are consistent.
       FuncOffsetTable->insert(Hash, *Offset);
- }
+  }
 
- return sampleprof_error::success;
+  return sampleprof_error::success;
 }
 
 std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
@@ -1423,8 +1423,7 @@ SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute,
         if (FProfile) {
           CalleeProfile = const_cast<FunctionSamples *>(
               &FProfile->functionSamplesAt(LineLocation(
-                  *LineOffset,
-                  *Discriminator))[FContext.getFunction()]);
+                  *LineOffset, *Discriminator))[FContext.getFunction()]);
         }
         if (std::error_code EC =
                 readFuncMetadata(ProfileHasAttribute, CalleeProfile))
@@ -1636,8 +1635,9 @@ std::error_code SampleProfileReaderBinary::readMagicIdent() {
   auto Version = readNumber<uint64_t>();
   if (std::error_code EC = Version.getError())
     return EC;
-  else if (*Version != SPVersion())
+  else if (!formatVersionIsSupported(*Version))
     return sampleprof_error::unsupported_version;
+  FormatVersion = *Version;
 
   return sampleprof_error::success;
 }
@@ -1926,8 +1926,7 @@ std::error_code SampleProfileReaderGCC::readOneFunctionProfile(
 
       if (Update)
         FProfile->addCalledTargetSamples(LineOffset, Discriminator,
-                                         FunctionId(TargetName),
-                                         TargetCount);
+                                         FunctionId(TargetName), TargetCount);
     }
   }
 

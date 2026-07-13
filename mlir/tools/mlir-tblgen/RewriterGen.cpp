@@ -524,8 +524,8 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
                          "passing the defining Operation");
 
   auto nativeCodeCall = std::string(
-      tgfmt(fmt, &fmtCtx.addSubst("_loc", locToUse).withSelf(opName.str()),
-            static_cast<ArrayRef<std::string>>(capture)));
+      tgfmtv(fmt, &fmtCtx.addSubst("_loc", locToUse).withSelf(opName.str()),
+             static_cast<ArrayRef<std::string>>(capture)));
 
   emitMatchCheck(opName, formatv("!::mlir::failed({0})", nativeCodeCall),
                  formatv("\"{0} return ::mlir::failure\"", nativeCodeCall));
@@ -1490,8 +1490,8 @@ std::string PatternEmitter::handleReplaceWithNativeCodeCall(DagNode tree,
                             << " replacement: " << attrs[i] << "\n");
   }
 
-  std::string symbol = tgfmt(fmt, &fmtCtx.addSubst("_loc", locToUse),
-                             static_cast<ArrayRef<std::string>>(attrs));
+  std::string symbol = tgfmtv(fmt, &fmtCtx.addSubst("_loc", locToUse),
+                              static_cast<ArrayRef<std::string>>(attrs));
 
   // In general, NativeCodeCall without naming binding don't need this. To
   // ensure void helper function has been correctly labeled, i.e., use

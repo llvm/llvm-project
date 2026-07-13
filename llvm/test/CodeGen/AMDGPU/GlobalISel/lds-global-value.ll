@@ -17,8 +17,8 @@ define amdgpu_kernel void @use_lds_globals(ptr addrspace(1) %out, ptr addrspace(
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_add_u32 s0, s0, 4
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
-; CHECK-NEXT:    v_mov_b32_e32 v0, s0
 ; CHECK-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; CHECK-NEXT:    v_mov_b32_e32 v0, s0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s1
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 9
 ; CHECK-NEXT:    flat_store_dword v[0:1], v2

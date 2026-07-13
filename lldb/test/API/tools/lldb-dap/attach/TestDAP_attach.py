@@ -15,6 +15,7 @@ import time
 # Often fails on Arm Linux, but not specifically because it's Arm, something in
 # process scheduling can cause a massive (minutes) delay during this test.
 @skipIf(oslist=["linux"], archs=["arm$"])
+@skipIfWasm  # no attach support
 class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
     SHARED_BUILD_TESTCASE = False
 
