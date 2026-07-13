@@ -88,6 +88,41 @@ static cl::opt<bool>
                                "be combined with a shift"),
                       cl::init(true));
 
+static cl::opt<int> BrMergingBaseCostThresh(
+    "riscv-br-merging-base-cost", cl::init(2),
+    cl::desc(
+        "Sets the cost threshold for when multiple conditionals will be merged "
+        "into one branch versus be split in multiple branches. Merging "
+        "conditionals saves branches at the cost of additional instructions. "
+        "This value sets the instruction cost limit, below which conditionals "
+        "will be merged, and above which conditionals will be split. Set to -1 "
+        "to never merge branches."),
+    cl::Hidden);
+
+static cl::opt<int> BrMergingLikelyBias(
+    "riscv-br-merging-likely-bias", cl::init(0),
+    cl::desc(
+        "Increases 'riscv-br-merging-base-cost' in cases that it is "
+        "likely that all conditionals will be executed. For example for "
+        "merging the conditionals (a == b && c > d), if its known that "
+        "a == b is likely, then it is likely that if the conditionals are "
+        "split both sides will be executed, so it may be desirable to "
+        "increase the instruction cost threshold. Set to -1 to never merge "
+        "likely branches."),
+    cl::Hidden);
+
+static cl::opt<int> BrMergingUnlikelyBias(
+    "riscv-br-merging-unlikely-bias", cl::init(-1),
+    cl::desc(
+        "Decreases 'riscv-br-merging-base-cost' in cases that it is unlikely "
+        "that all conditionals will be executed. For example for merging "
+        "the conditionals (a == b && c > d), if its known that a == b is "
+        "unlikely, then it is unlikely that if the conditionals are split "
+        "both sides will be executed, so it may be desirable to decrease "
+        "the instruction cost threshold. Set to -1 to never merge unlikely "
+        "branches."),
+    cl::Hidden);
+
 // TODO: Support more ops
 static const unsigned ZvfbfaOps[] = {
     ISD::FNEG,        ISD::FABS,        ISD::FCOPYSIGN,   ISD::FADD,
@@ -2036,6 +2071,25 @@ EVT RISCVTargetLowering::getSetCCResultType(const DataLayout &DL,
       (VT.isScalableVector() || Subtarget.useRVVForFixedLengthVectors()))
     return EVT::getVectorVT(Context, MVT::i1, VT.getVectorElementCount());
   return VT.changeVectorElementTypeToInteger();
+}
+
+TargetLoweringBase::CondMergingParams
+RISCVTargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
+                                                   const Value *LHS,
+                                                   const Value *RHS,
+                                                   const Function *F) const {
+  if (F->hasOptSize())
+    return TargetLowering::getJumpConditionMergingParams(Opc, LHS, RHS, F);
+
+  // Merging conditions eliminates a branch, so the budget we are willing to
+  // spend eagerly computing the RHS condition should scale with how expensive a
+  // mispredicted branch is. A branch only costs the full penalty when actually
+  // mispredicted, so scale it down by an assumed misprediction rate (~25%).
+  int BaseCost = Subtarget.getSchedModel().MispredictPenalty / 4;
+  if (BrMergingBaseCostThresh.getNumOccurrences() > 1)
+    BaseCost = BrMergingBaseCostThresh;
+
+  return {BaseCost, BrMergingLikelyBias, BrMergingUnlikelyBias};
 }
 
 MVT RISCVTargetLowering::getVPExplicitVectorLengthTy() const {
@@ -4758,15 +4812,20 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
           DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(2));
       SDValue Val3 =
           DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(3));
-      SDValue PPairDB =
-          DAG.getNode(RISCVISD::PPAIRE_DB, DL, {MVT::v4i8, MVT::v4i8},
-                      {Val0, Val2, Val1, Val3});
+      SDValue Concat1 =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8, Val0, Val2);
+      SDValue Concat2 =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8, Val1, Val3);
+      SDValue PPairE =
+          DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v8i8, Concat1, Concat2);
 
-      return DAG.getBitcast(
-          MVT::v4i8,
-          DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v2i16,
-                      DAG.getBitcast(MVT::v2i16, PPairDB.getValue(0)),
-                      DAG.getBitcast(MVT::v2i16, PPairDB.getValue(1))));
+      SDValue Lo = DAG.getExtractSubvector(DL, MVT::v4i8, PPairE, 0);
+      SDValue Hi = DAG.getExtractSubvector(DL, MVT::v4i8, PPairE, 4);
+
+      return DAG.getBitcast(MVT::v4i8,
+                            DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v2i16,
+                                        DAG.getBitcast(MVT::v2i16, Lo),
+                                        DAG.getBitcast(MVT::v2i16, Hi)));
     }
 
     llvm_unreachable("Unexpected RV32 P BUILD_VECTOR type");

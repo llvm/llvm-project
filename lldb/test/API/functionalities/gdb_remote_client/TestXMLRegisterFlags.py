@@ -237,10 +237,10 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         self.expect(
             "register read r0 fpc",
             substrs=[
-                "      r0 = 0x77777777eeeeeeee\n"
-                "         = (msb = 0, lsb = 0)\n"
-                "     fpc = 0x7777eeee\n"
-                "         = (msb = 0, lsb = 0)\n"
+                "   r0 = 0x77777777eeeeeeee\n"
+                "    = (msb = 0, lsb = 0)\n"
+                "  fpc = 0x7777eeee\n"
+                "    = (msb = 0, lsb = 0)\n"
             ],
         )
 

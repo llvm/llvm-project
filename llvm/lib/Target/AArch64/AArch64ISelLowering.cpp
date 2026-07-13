@@ -32540,7 +32540,8 @@ bool AArch64TargetLowering::
 TargetLoweringBase::CondMergingParams
 AArch64TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
                                                      const Value *Lhs,
-                                                     const Value *Rhs) const {
+                                                     const Value *Rhs,
+                                                     const Function *) const {
   using namespace llvm::PatternMatch;
 
   // Keep floating-point conditions split rather than folding them into an
