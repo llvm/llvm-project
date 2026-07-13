@@ -183,7 +183,10 @@ GOFFObjectFile::GOFFObjectFile(MemoryBufferRef Object, Error &Err)
       LLVM_DEBUG(dbgs() << "  --  HDR (GOFF record type) unhandled\n");
       break;
     default:
-      llvm_unreachable("Unknown record type");
+      Err = createStringError(object_error::parse_failed,
+                              "record %zu has unknown record type 0x%02" PRIX8,
+                              RecordNum, RecordType);
+      return;
     }
     PrevRecordType = RecordType;
     PrevContinuationBits = I[1] & 0x03;
