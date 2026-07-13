@@ -5,6 +5,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown -mattr=+avx512bw,+avx512vl,+gfni | FileCheck %s --check-prefixes=CHECK,GFNI,X86GFNI
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512bw,+avx512vl,+gfni | FileCheck %s --check-prefixes=CHECK,GFNI,X64GFNI
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512bw,+avx512vl,+avx512bmm | FileCheck %s --check-prefixes=CHECK,BMM
+; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512bw,+avx512vl,+gfni,+avx512bmm | FileCheck %s --check-prefixes=CHECK,BMM
 
 ; These tests just check that the plumbing is in place for @llvm.bitreverse. The
 ; actual output is massive at the moment as llvm.bitreverse is not yet legal.
