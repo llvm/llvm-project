@@ -3,9 +3,9 @@
 ; RUN: cat common.ll elf-got-flag-0.ll > noauth1.ll
 ; RUN: cat common.ll                   > noauth2.ll
 
-; RUN: llc -mtriple aarch64-linux-pauthtest -mattr +pauth -filetype=asm auth.ll -o - | \
+; RUN: llc -mtriple aarch64-linux-gnu -mattr +pauth -filetype=asm auth.ll -o - | \
 ; RUN:   FileCheck %s --check-prefix=ASM
-; RUN: llc -mtriple aarch64-linux-pauthtest -mattr +pauth -filetype=obj auth.ll -o - | \
+; RUN: llc -mtriple aarch64-linux-gnu -mattr +pauth -filetype=obj auth.ll -o - | \
 ; RUN:   llvm-readelf -s - | FileCheck %s --check-prefix=OBJ
 
 ; ASM:               .type   foo,@function
@@ -34,12 +34,12 @@
 ; OBJ:              0000000000000000     0 FUNC    GLOBAL DEFAULT   UND bar
 
 
-; RUN: llc -mtriple aarch64-linux-pauthtest -mattr +pauth -filetype=asm noauth1.ll -o - | \
+; RUN: llc -mtriple aarch64-linux-gnu -mattr +pauth -filetype=asm noauth1.ll -o - | \
 ; RUN:   FileCheck %s --check-prefix=ASM-NOAUTH
 ; RUN: llc -mtriple aarch64-linux-gnu -mattr +pauth -filetype=obj noauth1.ll -o - | \
 ; RUN:   llvm-readelf -s - | FileCheck %s --check-prefix=OBJ-NOAUTH
 
-; RUN: llc -mtriple aarch64-linux-pauthtest -mattr +pauth -filetype=asm noauth2.ll -o - | \
+; RUN: llc -mtriple aarch64-linux-gnu -mattr +pauth -filetype=asm noauth2.ll -o - | \
 ; RUN:   FileCheck %s --check-prefix=ASM-NOAUTH
 ; RUN: llc -mtriple aarch64-linux-gnu -mattr +pauth -filetype=obj noauth2.ll -o - | \
 ; RUN:   llvm-readelf -s - | FileCheck %s --check-prefix=OBJ-NOAUTH
