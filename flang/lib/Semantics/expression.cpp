@@ -5683,17 +5683,30 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc(
   }
   ActualArguments actualsCopy{actuals_};
   // Ensure that the RHS argument is not passed as a variable unless
-  // the dummy argument has the VALUE attribute.
-  if (evaluate::IsVariable(actualsCopy.at(1).value().UnwrapExpr())) {
+  // the dummy argument has the VALUE attribute, or the actual's own attributes
+  // already require reference semantics that must be preserved.
+  if (const auto *rhsExpr{actualsCopy.at(1).value().UnwrapExpr()};
+      evaluate::IsVariable(rhsExpr)) {
     auto chars{evaluate::characteristics::Procedure::Characterize(
         *proc, context_.GetFoldingContext())};
     const auto *rhsDummy{chars && chars->dummyArguments.size() == 2
             ? std::get_if<evaluate::characteristics::DummyDataObject>(
                   &chars->dummyArguments.at(1).u)
             : nullptr};
-    if (!rhsDummy ||
-        !rhsDummy->attrs.test(
-            evaluate::characteristics::DummyDataObject::Attr::Value)) {
+    std::optional<common::CUDADataAttr> rhsDataAttr;
+    for (const Symbol &symbol : evaluate::GetSymbolVector(*rhsExpr)) {
+      if (auto cudaAttr{GetCUDADataAttr(&symbol)}) {
+        rhsDataAttr = *cudaAttr;
+      }
+    }
+    const Symbol *rhsFirstSymbol{evaluate::GetFirstSymbol(*rhsExpr)};
+    const bool preserveActualReference{
+        (rhsDataAttr && *rhsDataAttr == common::CUDADataAttr::Device) ||
+        (rhsFirstSymbol && IsValue(*rhsFirstSymbol))};
+    if (!preserveActualReference &&
+        (!rhsDummy ||
+            !rhsDummy->attrs.test(
+                evaluate::characteristics::DummyDataObject::Attr::Value))) {
       actualsCopy.at(1).value().Parenthesize();
     }
   }
