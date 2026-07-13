@@ -428,7 +428,7 @@ std::enable_if_t<!std::is_reference_v<OStream> &&
                  OStream &&>
 operator<<(OStream &&OS, const T &Value) {
   OS << Value;
-  return std::forward<OStream>(OS);
+  return std::move(OS);
 }
 
 /// An abstract base class for streams implementations that also support a
