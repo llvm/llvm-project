@@ -4,6 +4,7 @@
 // # Test for UBSan suppressions with nested function calls
 //
 // RUN: %clang -fsanitize=integer -O0 -g %s -o %t.o0
+// RUN: %clang -fsanitize=integer -O1 -g %s -o %t.o1
 //
 // # Only the directly suppressed my_make_signed hit should disappear.
 // RUN: echo "implicit-integer-sign-change:my_make_signed" > %t.make_signed.name.supp
@@ -11,6 +12,8 @@
 //
 // RUN: %env_ubsan_opts=suppressions='"%t.make_signed.name.supp"' %run %t.o0 2>&1 | FileCheck %s --check-prefix=CHECK-MAKE-SIGNED
 // RUN: %env_ubsan_opts=suppressions='"%t.make_signed.file.supp"' %run %t.o0 2>&1 | FileCheck %s --check-prefix=CHECK-MAKE-SIGNED
+// RUN: %env_ubsan_opts=suppressions='"%t.make_signed.name.supp"' %run %t.o1 2>&1 | FileCheck %s --check-prefix=CHECK-MAKE-SIGNED
+// RUN: %env_ubsan_opts=suppressions='"%t.make_signed.file.supp"' %run %t.o1 2>&1 | FileCheck %s --check-prefix=CHECK-MAKE-SIGNED
 //
 // # Only the suppressed wrapper-originated hit should disappear.
 // RUN: echo "implicit-integer-sign-change:my_wrapper_2" > %t.my_wrapper_2.name.supp
@@ -18,6 +21,8 @@
 //
 // RUN: %env_ubsan_opts=suppressions='"%t.my_wrapper_2.name.supp"' %run %t.o0 2>&1 | FileCheck %s --check-prefix=CHECK-WRAPPERS
 // RUN: %env_ubsan_opts=suppressions='"%t.wrappers.file.supp"'     %run %t.o0 2>&1 | FileCheck %s --check-prefix=CHECK-WRAPPERS
+// RUN: %env_ubsan_opts=suppressions='"%t.my_wrapper_2.name.supp"' %run %t.o1 2>&1 | FileCheck %s --check-prefix=CHECK-WRAPPERS
+// RUN: %env_ubsan_opts=suppressions='"%t.wrappers.file.supp"'     %run %t.o1 2>&1 | FileCheck %s --check-prefix=CHECK-WRAPPERS
 //
 // # Suppress both.
 // RUN: cat %t.make_signed.name.supp %t.my_wrapper_2.name.supp > %t.both.name.supp
@@ -25,6 +30,8 @@
 //
 // RUN: %env_ubsan_opts=suppressions='"%t.both.name.supp"' %run %t.o0 2>&1 | FileCheck %s --allow-empty --check-prefix=CHECK-BOTH
 // RUN: %env_ubsan_opts=suppressions='"%t.both.file.supp"' %run %t.o0 2>&1 | FileCheck %s --allow-empty --check-prefix=CHECK-BOTH
+// RUN: %env_ubsan_opts=suppressions='"%t.both.name.supp"' %run %t.o1 2>&1 | FileCheck %s --allow-empty --check-prefix=CHECK-BOTH
+// RUN: %env_ubsan_opts=suppressions='"%t.both.file.supp"' %run %t.o1 2>&1 | FileCheck %s --allow-empty --check-prefix=CHECK-BOTH
 
 #include "Inputs/make_signed.h"
 #include "Inputs/wrappers.h"
