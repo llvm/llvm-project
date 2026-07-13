@@ -182,6 +182,15 @@ findSwiftSelf(StackFrame &frame, lldb::VariableSP self_var_sp) {
 
   if (!info.type.IsValid())
     return {};
+
+  // If `self`'s static type is meaningless without dynamic type resolution
+  // there's nothing we can do with it. This does not apply to metatypes (i.e.
+  // `self` in a static method): the expression evaluator can still bind their
+  // generic parameters directly, without relying on dynamic type resolution of
+  // an instance's metadata.
+  if (!info.is_metatype && info.type.IsMeaninglessWithoutDynamicResolution())
+    return {};
+
   return info;
 }
 
