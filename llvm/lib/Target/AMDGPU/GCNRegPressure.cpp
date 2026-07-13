@@ -509,10 +509,14 @@ GCNRPTracker::LiveRegSet llvm::getLiveRegs(SlotIndex SI,
   GCNRPTracker::LiveRegSet LiveRegs;
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
     auto Reg = Register::index2VirtReg(I);
+    // Check for a live interval before querying the register kind: getRegKind
+    // reads the register class, which is unset for classless vregs (e.g. unused
+    // GlobalISel InstructionSelect leftovers). Such vregs have no interval, so
+    // testing hasInterval first skips them without touching their (absent) class.
+    if (!LIS.hasInterval(Reg))
+      continue;
     if (RegKind != GCNRegPressure::TOTAL_KINDS &&
         GCNRegPressure::getRegKind(Reg, MRI) != RegKind)
-      continue;
-    if (!LIS.hasInterval(Reg))
       continue;
     auto LiveMask = getLiveLaneMask(Reg, SI, LIS, MRI);
     if (LiveMask.any())
