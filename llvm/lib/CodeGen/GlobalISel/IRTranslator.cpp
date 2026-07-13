@@ -56,6 +56,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
+#include "llvm/IR/GlobalPtrAuthInfo.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
@@ -3906,9 +3907,32 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
     EntryBuilder->buildUndef(Reg);
   else if (isa<ConstantPointerNull>(C))
     EntryBuilder->buildConstant(Reg, 0);
-  else if (auto GV = dyn_cast<GlobalValue>(&C))
-    EntryBuilder->buildGlobalValue(Reg, GV);
-  else if (auto CPA = dyn_cast<ConstantPtrAuth>(&C)) {
+  else if (auto GV = dyn_cast<GlobalValue>(&C)) {
+    auto GVB = dyn_cast<GlobalValue>(GV);
+    if (!GVB || GVB->getSection() != "llvm.ptrauth")
+      return EntryBuilder->buildGlobalValue(Reg, GV);
+
+    auto PAI = GlobalPtrAuthInfo::analyze(GV);
+    Register Addr = getOrCreateVReg(*PAI->getPointer());
+    Register AddrDiscPtr;
+
+    if (!PAI->hasAddressDiversity()) {
+      AddrDiscPtr = getOrCreateVReg(
+          *Constant::getNullValue(PAI->getPointer()->getType()));
+    } else {
+      AddrDiscPtr = MRI->createGenericVirtualRegister(
+          getLLTForType(*PAI->getPointer()->getType(), *DL));
+      EntryBuilder->buildIntToPtr(
+          AddrDiscPtr, getOrCreateVReg(*PAI->getAddrDiscriminator()));
+    }
+
+    EntryBuilder->buildInstr(TargetOpcode::G_PTRAUTH_GLOBAL_VALUE)
+        .addDef(Reg)
+        .addUse(Addr)
+        .addImm(PAI->getKey()->getZExtValue())
+        .addUse(AddrDiscPtr)
+        .addImm(PAI->getDiscriminator()->getZExtValue());
+  } else if (auto CPA = dyn_cast<ConstantPtrAuth>(&C)) {
     Register Addr = getOrCreateVReg(*CPA->getPointer());
     Register AddrDisc = getOrCreateVReg(*CPA->getAddrDiscriminator());
     EntryBuilder->buildConstantPtrAuth(Reg, CPA, Addr, AddrDisc);
