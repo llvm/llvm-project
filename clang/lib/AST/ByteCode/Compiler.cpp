@@ -4140,7 +4140,8 @@ bool Compiler<Emitter>::VisitCXXInheritedCtorInitExpr(
   assert(!Ctor->isTrivial() &&
          "Trivial CXXInheritedCtorInitExpr, implement. (possible?)");
   const Function *F = this->getFunction(Ctor);
-  assert(F);
+  if (!F)
+    return false;
   assert(!F->hasRVO());
   assert(F->hasThisPointer());
 
