@@ -16,6 +16,7 @@
 #include <__algorithm/find_if.h>
 #include <__algorithm/for_each_n.h>
 #include <__algorithm/is_sorted.h>
+#include <__algorithm/mismatch.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/not_fn.h>

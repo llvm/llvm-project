@@ -63,6 +63,30 @@ void runway_sample(size_t size, Callable callable) {
   }
 }
 
+// The types X and Y are provided to test that the mismatch algorithm can be used with heterogeneous custom types.
+
+struct X {
+  X() = delete;
+  X(int i) : i(i) {}
+  X(const X&) = delete;
+  int value() const { return i; }
+
+private:
+  int i;
+};
+
+struct Y {
+  Y() = delete;
+  Y(int i) : i(i) {}
+  Y(const Y&) = delete;
+  int value() const { return i; }
+
+private:
+  int i;
+};
+
+bool operator==(const X& lhs, const Y& rhs) { return lhs.value() == rhs.value(); }
+
 template <class Iter1, class Iter2>
 struct Test {
   template <class ExecutionPolicy>
@@ -150,12 +174,41 @@ struct Test {
   }
 };
 
+template <class Iter1, class Iter2>
+struct TestXY {
+  template <class ExecutionPolicy>
+  void operator()(ExecutionPolicy&& policy) {
+    { // same ranges
+      std::array<X, 3> lhs = {X(1), X(5), X(7)};
+      std::array<Y, 3> rhs = {Y(1), Y(5), Y(7)};
+      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin())) ==
+             std::make_pair(Iter1(lhs.end()), Iter2(rhs.end())));
+      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin()), Iter2(rhs.end())) ==
+             std::make_pair(Iter1(lhs.end()), Iter2(rhs.end())));
+    }
+    { // one element mismatch
+      std::array<X, 3> lhs = {X(1), X(5), X(7)};
+      std::array<Y, 3> rhs = {Y(1), Y(5), Y(8)};
+      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin())) ==
+             std::make_pair(Iter1(lhs.begin() + 2), Iter2(rhs.begin() + 2)));
+      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin()), Iter2(rhs.end())) ==
+             std::make_pair(Iter1(lhs.begin() + 2), Iter2(rhs.begin() + 2)));
+    }
+  }
+};
+
 int main(int, char**) {
   types::for_each(types::forward_iterator_list<const int*>{}, types::apply_type_identity{[](auto v) {
                     using Iter = typename decltype(v)::type;
                     types::for_each(
                         types::forward_iterator_list<const int*>{},
                         TestIteratorWithPolicies<types::partial_instantiation<Test, Iter>::template apply>{});
+                  }});
+  types::for_each(types::forward_iterator_list<const X*>{}, types::apply_type_identity{[](auto v) {
+                    using Iter = typename decltype(v)::type;
+                    types::for_each(
+                        types::forward_iterator_list<const Y*>{},
+                        TestIteratorWithPolicies<types::partial_instantiation<TestXY, Iter>::template apply>{});
                   }});
   return 0;
 }
