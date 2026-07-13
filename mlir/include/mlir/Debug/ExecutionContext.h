@@ -66,7 +66,14 @@ public:
   ///           reach the parent/enclosing operation. If there are no enclosing
   ///           operation, the execution continues without stopping.
   /// - Rerun: The action gets executed again immediately after it finishes.
-  enum Control { Apply = 1, Skip = 2, Step = 3, Next = 4, Finish = 5, Rerun = 6 };
+  enum Control {
+    Apply = 1,
+    Skip = 2,
+    Step = 3,
+    Next = 4,
+    Finish = 5,
+    Rerun = 6
+  };
 
   /// The type of the callback that is used to control the execution.
   /// The callback is passed the current action.
