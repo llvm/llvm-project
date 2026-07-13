@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SCCIterator.h"
@@ -2947,6 +2948,25 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
   AAUndefinedBehaviorImpl(const IRPosition &IRP, Attributor &A)
       : AAUndefinedBehavior(IRP, A) {}
 
+  struct UBInfo {
+    enum Kind {
+      NullPtrAccess,
+      UndefPtrAccess,
+      UndefBranchCondition,
+      UndefReturnValue,
+      NullReturnViolatesNonNull,
+      UndefCallArgument,
+      NullArgViolatesNonNull,
+    };
+
+    Kind K;
+    std::optional<unsigned> ArgNo;
+
+    UBInfo(Kind K) : K(K), ArgNo(std::nullopt) {}
+
+    UBInfo(Kind K, std::optional<unsigned> ArgNo) : K(K), ArgNo(ArgNo) {}
+  };
+
   /// See AbstractAttribute::updateImpl(...).
   // through a pointer (i.e. also branches etc.)
   ChangeStatus updateImpl(Attributor &A) override {
@@ -2973,7 +2993,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
       // Either we stopped and the appropriate action was taken,
       // or we got back a simplified value to continue.
       std::optional<Value *> SimplifiedPtrOp =
-          stopOnUndefOrAssumed(A, PtrOp, &I);
+          stopOnUndefOrAssumed(A, PtrOp, &I, UBInfo::UndefPtrAccess);
       if (!SimplifiedPtrOp || !*SimplifiedPtrOp)
         return true;
       const Value *PtrOpVal = *SimplifiedPtrOp;
@@ -2996,7 +3016,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
       if (llvm::NullPointerIsDefined(F, PtrTy->getPointerAddressSpace()))
         AssumedNoUBInsts.insert(&I);
       else
-        KnownUBInsts.insert(&I);
+        KnownUBInsts.try_emplace(&I, UBInfo::NullPtrAccess);
       return true;
     };
 
@@ -3013,8 +3033,8 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
 
       // Either we stopped and the appropriate action was taken,
       // or we got back a simplified value to continue.
-      std::optional<Value *> SimplifiedCond =
-          stopOnUndefOrAssumed(A, BrInst->getCondition(), BrInst);
+      std::optional<Value *> SimplifiedCond = stopOnUndefOrAssumed(
+          A, BrInst->getCondition(), BrInst, UBInfo::UndefBranchCondition);
       if (!SimplifiedCond || !*SimplifiedCond)
         return true;
       AssumedNoUBInsts.insert(&I);
@@ -3066,7 +3086,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
         if (SimplifiedVal && !*SimplifiedVal)
           return true;
         if (!SimplifiedVal || isa<UndefValue>(**SimplifiedVal)) {
-          KnownUBInsts.insert(&I);
+          KnownUBInsts.try_emplace(&I, UBInfo(UBInfo::UndefCallArgument, idx));
           continue;
         }
         if (!ArgVal->getType()->isPointerTy() ||
@@ -3076,7 +3096,8 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
         AA::hasAssumedIRAttr<Attribute::NonNull>(
             A, this, CalleeArgumentIRP, DepClassTy::NONE, IsKnownNonNull);
         if (IsKnownNonNull)
-          KnownUBInsts.insert(&I);
+          KnownUBInsts.try_emplace(&I,
+                                   UBInfo(UBInfo::NullArgViolatesNonNull, idx));
       }
       return true;
     };
@@ -3085,8 +3106,8 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
       auto &RI = cast<ReturnInst>(I);
       // Either we stopped and the appropriate action was taken,
       // or we got back a simplified return value to continue.
-      std::optional<Value *> SimplifiedRetValue =
-          stopOnUndefOrAssumed(A, RI.getReturnValue(), &I);
+      std::optional<Value *> SimplifiedRetValue = stopOnUndefOrAssumed(
+          A, RI.getReturnValue(), &I, UBInfo::UndefReturnValue);
       if (!SimplifiedRetValue || !*SimplifiedRetValue)
         return true;
 
@@ -3110,7 +3131,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
             A, this, IRPosition::returned(*getAnchorScope()), DepClassTy::NONE,
             IsKnownNonNull);
         if (IsKnownNonNull)
-          KnownUBInsts.insert(&I);
+          KnownUBInsts.try_emplace(&I, UBInfo::NullReturnViolatesNonNull);
       }
 
       return true;
@@ -3174,11 +3195,55 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
     return false;
   }
 
+  /// Emit an optimization remark explaining why \p I is known to cause UB,
+  /// per \p Info, right before it is replaced with 'unreachable'.
+  static void emitUBRemark(Attributor &A, Instruction *I, const UBInfo &Info) {
+    auto Remark = [&](OptimizationRemark OR) {
+      switch (Info.K) {
+      case UBInfo::NullPtrAccess:
+      case UBInfo::UndefPtrAccess: {
+        return OR << "Memory access through a pointer known to be "
+                  << ore::NV("Pointer",
+                             getPointerOperand(I, /*AllowVolatile*/ true))
+                  << " is undefined behavior; replacing with 'unreachable'.";
+      }
+      case UBInfo::UndefBranchCondition:
+        return OR << "Branch condition known to be "
+                  << ore::NV("Condition", cast<CondBrInst>(I)->getCondition())
+                  << " is undefined behavior; replacing with 'unreachable'.";
+      case UBInfo::UndefReturnValue:
+      case UBInfo::NullReturnViolatesNonNull:
+        return OR << "Value returned known to be "
+                  << ore::NV("ReturnValue",
+                             cast<ReturnInst>(I)->getReturnValue())
+                  << " is undefined behavior; replacing with 'unreachable'.";
+      case UBInfo::UndefCallArgument:
+      case UBInfo::NullArgViolatesNonNull: {
+        bool IsUndef = Info.K == UBInfo::UndefCallArgument;
+        CallBase &CB = *cast<CallBase>(I);
+        OR << "Argument " << ore::NV("ArgNo", *Info.ArgNo)
+           << " passed to parameter of ";
+        if (auto *Callee = dyn_cast_if_present<Function>(CB.getCalledOperand()))
+          OR << ore::NV("Callee", Callee);
+        else
+          OR << "the callee";
+        return OR << " known to be "
+                  << ore::NV("Argument", IsUndef ? "undef" : "null")
+                  << " is undefined behavior; replacing with 'unreachable'.";
+      }
+      }
+      llvm_unreachable("Unknown UBInfo::Kind");
+    };
+    A.emitRemark<OptimizationRemark>(I, "UndefinedBehavior", Remark);
+  }
+
   ChangeStatus manifest(Attributor &A) override {
     if (KnownUBInsts.empty())
       return ChangeStatus::UNCHANGED;
-    for (Instruction *I : KnownUBInsts)
+    for (const auto &[I, Info] : KnownUBInsts) {
+      emitUBRemark(A, I, Info);
       A.changeToUnreachableAfterManifest(I);
+    }
     return ChangeStatus::CHANGED;
   }
 
@@ -3211,8 +3276,9 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
   ///    Note however that instructions in this set may cause UB.
 
 protected:
-  /// A set of all live instructions _known_ to cause UB.
-  SmallPtrSet<Instruction *, 8> KnownUBInsts;
+  /// A map from all live instructions _known_ to cause UB to the reason why,
+  /// used to build actionable optimization remarks in manifest().
+  MapVector<Instruction *, UBInfo> KnownUBInsts;
 
 private:
   /// A set of all the (live) instructions that are assumed to _not_ cause UB.
@@ -3221,14 +3287,14 @@ private:
   // Should be called on updates in which if we're processing an instruction
   // \p I that depends on a value \p V, one of the following has to happen:
   // - If the value is assumed, then stop.
-  // - If the value is known but undef, then consider it UB.
+  // - If the value is known but undef, then consider it UB for \p K.
   // - Otherwise, do specific processing with the simplified value.
   // We return std::nullopt in the first 2 cases to signify that an appropriate
   // action was taken and the caller should stop.
   // Otherwise, we return the simplified value that the caller should
   // use for specific processing.
   std::optional<Value *> stopOnUndefOrAssumed(Attributor &A, Value *V,
-                                              Instruction *I) {
+                                              Instruction *I, UBInfo::Kind K) {
     bool UsedAssumedInformation = false;
     std::optional<Value *> SimplifiedV =
         A.getAssumedSimplified(IRPosition::value(*V), *this,
@@ -3238,7 +3304,7 @@ private:
       if (!SimplifiedV) {
         // If it is known (which we tested above) but it doesn't have a value,
         // then we can assume `undef` and hence the instruction is UB.
-        KnownUBInsts.insert(I);
+        KnownUBInsts.try_emplace(I, K);
         return std::nullopt;
       }
       if (!*SimplifiedV)
@@ -3246,7 +3312,7 @@ private:
       V = *SimplifiedV;
     }
     if (isa<UndefValue>(V)) {
-      KnownUBInsts.insert(I);
+      KnownUBInsts.try_emplace(I, K);
       return std::nullopt;
     }
     return V;
@@ -4291,7 +4357,7 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
         A.deleteAfterManifest(*FI);
         return ChangeStatus::CHANGED;
       }
-      if (isAssumedSideEffectFree(A, I) && !isa<InvokeInst>(I)) {
+      if (isAssumedSideEffectFree(A, I) && !I->isTerminator()) {
         A.deleteAfterManifest(*I);
         return ChangeStatus::CHANGED;
       }

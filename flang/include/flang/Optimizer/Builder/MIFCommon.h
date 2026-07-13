@@ -9,15 +9,18 @@
 #ifndef FORTRAN_OPTIMIZER_TRANSFORMS_MIFCOMMON_H_
 #define FORTRAN_OPTIMIZER_TRANSFORMS_MIFCOMMON_H_
 
-#include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/MIF/MIFOps.h"
-#include "mlir/IR/BuiltinOps.h"
 
 static constexpr llvm::StringRef coarrayHandleSuffix = "_coarray_handle";
 
 namespace mif {
 
 std::string getFullUniqName(mlir::Value addr);
+
+mlir::Value genImageIndex(fir::FirOpBuilder &, mlir::Location loc,
+                          mlir::Value coarray, mlir::Value sub,
+                          mlir::Value team);
 
 } // namespace mif
 

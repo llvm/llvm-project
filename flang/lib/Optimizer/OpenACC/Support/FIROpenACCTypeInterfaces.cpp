@@ -28,6 +28,7 @@
 #include "flang/Optimizer/Transforms/FIRToMemRefTypeConverter.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallVector.h"
@@ -38,7 +39,7 @@ static llvm::cl::opt<bool> useAccReductionCombine(
     "openacc-use-reduction-combine",
     llvm::cl::desc("Whether to generate acc.reduction_combine. Does not "
                    "control reduction for MIN/MAX and logical reductions."),
-    llvm::cl::init(false));
+    llvm::cl::init(true));
 
 static llvm::cl::opt<bool> useAccReductionCombineAll(
     "openacc-use-reduction-combine-all",
@@ -345,7 +346,9 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
           firBuilder, loc, exv, info);
     }
 
-    assert(false && "array with unknown dimension expected to have descriptor");
+    // An assumed-size array (or other non-descriptor array with an unknown
+    // trailing extent) has no recoverable bounds here and is passed without a
+    // descriptor; map it without bounds rather than asserting.
     return {};
   }
 
@@ -825,6 +828,15 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
   hlfir::genLengthParameters(loc, builder, privatizedVar, typeParams);
   mlir::Type baseType = privatizedVar.getElementOrSequenceType();
   // Step2: Create a temporary allocation for the privatized part.
+
+  // Create a `var_name` attribute with a placeholder value to be
+  // attached to the allocation. ACCRecipeMaterialization will then
+  // propagate the actual variable name to all ops that have this
+  // placeholder while materializing the recipe
+  mlir::NamedAttribute placeholderAttr = builder.getNamedAttr(
+      mlir::acc::getVarNameAttrName(),
+      mlir::acc::VarNameAttr::get(builder.getContext(),
+                                  mlir::acc::getVarNamePlaceholder()));
   mlir::Value alloc;
   if (fir::hasDynamicSize(baseType) ||
       (isPointerOrAllocatable && bounds.empty())) {
@@ -836,11 +848,11 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     // of POINTER/ALLOCATABLE can use alloca since only part of the data is
     // privatized (it makes no sense to deallocate them).
     alloc = builder.createHeapTemporary(loc, baseType, varName, tempExtents,
-                                        typeParams);
+                                        typeParams, {placeholderAttr});
     needsDestroy = true;
   } else {
     alloc = builder.createTemporary(loc, baseType, varName, tempExtents,
-                                    typeParams);
+                                    typeParams, {placeholderAttr});
   }
   // Step3: Assign the initial value to the privatized part if any.
   if (initVal) {

@@ -816,6 +816,22 @@ public:
   std::atomic<uint16_t> MaxMainCodeAlignment{1};
   std::atomic<uint16_t> MaxColdCodeAlignment{1};
 
+  /// Alignment-related options sourced from CommandLineOpts. Populated by
+  /// RewriteInstance::adjustCommandLineOptions() so passes and the emitter
+  /// can read them via BinaryContext instead of touching opts::* directly.
+  /// Defaults must stay in sync with the cl::init values in
+  /// bolt/lib/Utils/CommandLineOpts.cpp.
+  unsigned AlignText{0};
+  unsigned AlignFunctions{64};
+  unsigned AlignBlocksMinSize{0};
+  unsigned AlignBlocksThreshold{800};
+  unsigned AlignFunctionsMaxBytes{32};
+  unsigned BlockAlignment{16};
+  bool AlignBlocks{false};
+  bool PreserveBlocksAlignment{false};
+  bool UseCompactAligner{true};
+  bool X86AlignBranchBoundaryHotOnly{true};
+
   /// Fold \p Alignment into the running max for the main code section (when
   /// \p InMainSection) and/or the cold code section (when \p InColdSection),
   /// reflecting which output section(s) the object is emitted into. Safe to
@@ -1393,7 +1409,8 @@ public:
 
   /// Register dynamic relocation at \p Address.
   void addDynamicRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t Type,
-                            uint64_t Addend, uint64_t Value = 0);
+                            uint64_t Addend, uint64_t Value = 0,
+                            bool IsRELR = false);
 
   /// Return a dynamic relocation registered at a given \p Address, or nullptr
   /// if there is no dynamic relocation at such address.

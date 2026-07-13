@@ -23,11 +23,8 @@
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
-#include "flang/Support/Fortran.h"
 #include <map>
 #include <optional>
-#include <stack>
-#include <type_traits>
 #include <variant>
 
 using namespace Fortran::parser::literals;
@@ -252,6 +249,8 @@ public:
   MaybeExpr Analyze(const parser::InitialDataTarget &);
   MaybeExpr Analyze(const parser::NullInit &);
   MaybeExpr Analyze(const parser::StmtFunctionStmt &);
+  MaybeExpr Analyze(const parser::FunctionReference &,
+      std::optional<parser::StructureConstructor> * = nullptr);
 
   void Analyze(const parser::CallStmt &);
   const Assignment *Analyze(const parser::AssignmentStmt &);
@@ -293,8 +292,6 @@ private:
   MaybeExpr Analyze(const parser::CharLiteralConstantSubstring &);
   MaybeExpr Analyze(const parser::SubstringInquiry &);
   MaybeExpr Analyze(const parser::ArrayConstructor &);
-  MaybeExpr Analyze(const parser::FunctionReference &,
-      std::optional<parser::StructureConstructor> * = nullptr);
   MaybeExpr Analyze(const parser::Expr::Parentheses &);
   MaybeExpr Analyze(const parser::Expr::UnaryPlus &);
   MaybeExpr Analyze(const parser::Expr::Negate &);
@@ -414,6 +411,9 @@ private:
   };
   MaybeExpr CheckStructureConstructor(parser::CharBlock typeName,
       const semantics::DerivedTypeSpec &, std::list<ComponentSpec> &&);
+  MaybeExpr AnalyzeEnumerationConstructor(parser::CharBlock typeName,
+      const semantics::DerivedTypeSpec &,
+      const std::list<parser::ComponentSpec> &);
 
   MaybeExpr IterativelyAnalyzeSubexpressions(const parser::Expr &);
 

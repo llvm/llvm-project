@@ -3741,8 +3741,10 @@ CheckOriginalCallArgDeduction(Sema &S, TemplateDeductionInfo &Info,
   QualType A = OriginalArg.OriginalArgType;
   QualType OriginalParamType = OriginalArg.OriginalParamType;
 
-  // Check for type equality (top-level cv-qualifiers are ignored).
-  if (Context.hasSameUnqualifiedType(A, DeducedA))
+  // Check for type equality (top-level cv-qualifiers and _Atomic are ignored,
+  // since _Atomic is treated as a qualifier).
+  if (Context.hasSameType(A.getAtomicUnqualifiedType(),
+                          DeducedA.getAtomicUnqualifiedType()))
     return TemplateDeductionResult::Success;
 
   // Strip off references on the argument types; they aren't needed for
@@ -4831,6 +4833,10 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
             /*HasDeducedAnyParam=*/nullptr);
         Result != TemplateDeductionResult::Success)
       return Result;
+    // Substituting the function type can instantiate the trailing return type,
+    // so handle the same immediate-context substitution failure here.
+    if (Trap.hasErrorOccurred())
+      return TemplateDeductionResult::SubstitutionFailure;
   }
 
   TemplateDeductionResult Result;
@@ -4840,6 +4846,42 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
         /*OriginalCallArgs=*/nullptr, /*PartialOverloading=*/false,
         /*PartialOrdering=*/true, IsAddressOfFunction);
   });
+  // Taking the address of a function template forms its function type, and
+  // substituting into that type can require instantiating a trailing return
+  // type whose expression selects a deleted function. That is a deduction
+  // failure, not a hard error:
+  //
+  // C++ [temp.deduct.funcaddr]p1:
+  //   [...] If there is a target, the function template's function type and
+  //   the target type are used as the types of P and A, and the deduction is
+  //   done as described in [temp.deduct.type].
+  //
+  // C++ [temp.deduct.general]p7:
+  //   [...] The substitution occurs in all types and expressions that are
+  //   used in the deduction substitution loci. The expressions include [...]
+  //   general expressions (i.e., non-constant expressions) inside sizeof,
+  //   decltype, and other contexts that allow non-constant expressions. [...]
+  //
+  // C++ [dcl.fct.def.delete]p2:
+  //   A construct that designates a deleted function implicitly or
+  //   explicitly, other than to declare it [...], is ill-formed.
+  //   [Note: [...] It applies even for references in expressions that are not
+  //   potentially evaluated. - end note]
+  //
+  // C++ [temp.deduct.general]p8:
+  //   If a substitution results in an invalid type or expression, type
+  //   deduction fails. [...] Invalid types and expressions can result in a
+  //   deduction failure only in the immediate context of the deduction
+  //   substitution loci. [...]
+  //
+  // This substitution is in that immediate context, so treat diagnostics
+  // recorded by the SFINAE trap as deduction failure instead of replaying
+  // them as hard errors.
+  if (Trap.hasErrorOccurred()) {
+    if (Specialization)
+      Specialization->setInvalidDecl(true);
+    return TemplateDeductionResult::SubstitutionFailure;
+  }
   if (Result != TemplateDeductionResult::Success)
     return Result;
 
@@ -5110,6 +5152,25 @@ namespace {
       NewTL.setNameLoc(TL.getNameLoc());
       NewTL.setQualifierLoc(TL.getQualifierLoc());
       return Result;
+    }
+
+    QualType TransformAtomicType(TypeLocBuilder &TLB, AtomicTypeLoc TL) {
+      // When building the function parameter for placeholder type deduction
+      // (Replacement is the invented template parameter), dig through _Atomic
+      // around an auto placeholder so deduction matches the non-atomic
+      // argument. The _Atomic wrapper is re-applied by the final substitution
+      // pass, which uses a concrete Replacement and falls through to the
+      // default transform.
+      //
+      // This handles only the simple case where _Atomic wraps auto directly
+      // (e.g. _Atomic(auto)), which is what the C standard currently permits.
+      // If more complex forms such as _Atomic(auto*) are ever allowed, the
+      // correct fix would be to treat _Atomic as a qualifier inside
+      // DeduceTemplateArgumentsByTypeMatch instead.
+      if (isa_and_nonnull<TemplateTypeParmType>(Replacement) &&
+          TL.getValueLoc().getType()->getContainedAutoType())
+        return getDerived().TransformType(TLB, TL.getValueLoc());
+      return inherited::TransformAtomicType(TLB, TL);
     }
 
     ExprResult TransformLambdaExpr(LambdaExpr *E) {

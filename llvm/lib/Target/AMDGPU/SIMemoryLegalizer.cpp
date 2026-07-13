@@ -160,8 +160,7 @@ private:
       bool IsCrossAddressSpaceOrdering = true,
       AtomicOrdering FailureOrdering = AtomicOrdering::SequentiallyConsistent,
       bool IsVolatile = false, bool IsNonTemporal = false,
-      bool IsLastUse = false, bool IsCooperative = false,
-      bool CanDemoteWorkgroupToWavefront = false, bool IsAVNone = false)
+      bool IsLastUse = false, bool IsCooperative = false, bool IsAVNone = false)
       : Ordering(Ordering), FailureOrdering(FailureOrdering), Scope(Scope),
         OrderingAddrSpace(OrderingAddrSpace), InstrAddrSpace(InstrAddrSpace),
         IsCrossAddressSpaceOrdering(IsCrossAddressSpaceOrdering),
@@ -209,17 +208,6 @@ private:
     // AGENT scope as a conservatively correct alternative.
     if (this->Scope == SIAtomicScope::CLUSTER && !ST.hasClusters())
       this->Scope = SIAtomicScope::AGENT;
-
-    // When max flat work-group size is at most the wavefront size, the
-    // work-group fits in a single wave, so LLVM workgroup scope matches
-    // wavefront scope. Demote workgroup → wavefront here for fences and for
-    // atomics with ordering stronger than monotonic.
-    if (CanDemoteWorkgroupToWavefront &&
-        this->Scope == SIAtomicScope::WORKGROUP &&
-        (llvm::isStrongerThan(this->Ordering, AtomicOrdering::Monotonic) ||
-         llvm::isStrongerThan(this->FailureOrdering,
-                              AtomicOrdering::Monotonic)))
-      this->Scope = SIAtomicScope::WAVEFRONT;
   }
 
 public:
@@ -293,7 +281,6 @@ class SIMemOpAccess final {
 private:
   const AMDGPUMachineModuleInfo *MMI = nullptr;
   const GCNSubtarget &ST;
-  const bool CanDemoteWorkgroupToWavefront;
 
   /// Reports unsupported message \p Msg for \p MI to LLVM context.
   void reportUnsupported(const MachineBasicBlock::iterator &MI,
@@ -316,9 +303,8 @@ private:
 
 public:
   /// Construct class to support accessing the machine memory operands
-  /// of instructions in the machine function \p MF.
-  SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI, const GCNSubtarget &ST,
-                const Function &F);
+  /// of instructions.
+  SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI, const GCNSubtarget &ST);
 
   /// \returns Load info if \p MI is a load operation, "std::nullopt" otherwise.
   std::optional<SIMemOpInfo>
@@ -360,7 +346,10 @@ protected:
   /// Whether to insert cache invalidating instructions.
   bool InsertCacheInv;
 
-  SICacheControl(const GCNSubtarget &ST);
+  /// Cached value of whether tgsplit is enabled for this function.
+  bool TgSplitEnabled;
+
+  SICacheControl(const GCNSubtarget &ST, bool TgSplit);
 
   /// Sets CPol \p Bits to "true" if present in instruction \p MI.
   /// \returns Returns true if \p MI is modified, false otherwise.
@@ -375,7 +364,8 @@ public:
   using CPol = AMDGPU::CPol::CPol;
 
   /// Create a cache control for the subtarget \p ST.
-  static std::unique_ptr<SICacheControl> create(const GCNSubtarget &ST);
+  static std::unique_ptr<SICacheControl> create(const GCNSubtarget &ST,
+                                                bool TgSplit);
 
   /// Update \p MI memory load instruction to bypass any caches up to
   /// the \p Scope memory scope for address spaces \p
@@ -483,8 +473,8 @@ public:
 /// GFX10.
 class SIGfx6CacheControl final : public SICacheControl {
 public:
-
-  SIGfx6CacheControl(const GCNSubtarget &ST) : SICacheControl(ST) {}
+  SIGfx6CacheControl(const GCNSubtarget &ST, bool TgSplit)
+      : SICacheControl(ST, TgSplit) {}
 
   bool enableLoadCacheBypass(const MachineBasicBlock::iterator &MI,
                              SIAtomicScope Scope,
@@ -521,7 +511,8 @@ public:
 /// Generates code sequences for the memory model of GFX10/11.
 class SIGfx10CacheControl final : public SICacheControl {
 public:
-  SIGfx10CacheControl(const GCNSubtarget &ST) : SICacheControl(ST) {}
+  SIGfx10CacheControl(const GCNSubtarget &ST, bool TgSplit)
+      : SICacheControl(ST, TgSplit) {}
 
   bool enableLoadCacheBypass(const MachineBasicBlock::iterator &MI,
                              SIAtomicScope Scope,
@@ -584,7 +575,8 @@ protected:
                       SIAtomicScope Scope, SIAtomicAddrSpace AddrSpace) const;
 
 public:
-  SIGfx12CacheControl(const GCNSubtarget &ST) : SICacheControl(ST) {
+  SIGfx12CacheControl(const GCNSubtarget &ST, bool TgSplit)
+      : SICacheControl(ST, TgSplit) {
     // GFX120x and GFX125x memory models greatly overlap, and in some cases
     // the behavior is the same if assuming GFX120x in CU mode.
     assert(!ST.hasGFX1250Insts() || ST.hasGFX13Insts() || ST.isCuModeEnabled());
@@ -833,13 +825,9 @@ SIAtomicAddrSpace SIMemOpAccess::toSIAtomicAddrSpace(unsigned AS) const {
   return SIAtomicAddrSpace::OTHER;
 }
 
-// TODO: Consider moving single-wave workgroup->wavefront scope relaxation to an
-// IR pass (and extending it to other scoped operations), so middle-end
-// optimizations see wavefront scope earlier.
 SIMemOpAccess::SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI_,
-                             const GCNSubtarget &ST, const Function &F)
-    : MMI(&MMI_), ST(ST),
-      CanDemoteWorkgroupToWavefront(ST.isSingleWavefrontWorkgroup(F)) {}
+                             const GCNSubtarget &ST)
+    : MMI(&MMI_), ST(ST) {}
 
 std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     const MachineBasicBlock::iterator &MI) const {
@@ -910,7 +898,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   return SIMemOpInfo(ST, Ordering, Scope, OrderingAddrSpace, InstrAddrSpace,
                      IsCrossAddressSpaceOrdering, FailureOrdering, IsVolatile,
                      IsNonTemporal, IsLastUse, IsCooperative,
-                     CanDemoteWorkgroupToWavefront, hasAVNoneMMRA(*MI));
+                     hasAVNoneMMRA(*MI));
 }
 
 std::optional<SIMemOpInfo>
@@ -980,7 +968,7 @@ SIMemOpAccess::getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const {
   return SIMemOpInfo(ST, Ordering, Scope, OrderingAddrSpace,
                      SIAtomicAddrSpace::ATOMIC, IsCrossAddressSpaceOrdering,
                      AtomicOrdering::NotAtomic, false, false, false, false,
-                     CanDemoteWorkgroupToWavefront, hasAVNoneMMRA(*MI));
+                     hasAVNoneMMRA(*MI));
 }
 
 std::optional<SIMemOpInfo> SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(
@@ -1019,10 +1007,11 @@ static bool isNonVolatileMemoryAccess(const MachineInstr &MI) {
   });
 }
 
-SICacheControl::SICacheControl(const GCNSubtarget &ST) : ST(ST) {
+SICacheControl::SICacheControl(const GCNSubtarget &ST, bool TgSplit) : ST(ST) {
   TII = ST.getInstrInfo();
   IV = getIsaVersion(ST.getCPU());
   InsertCacheInv = !AmdgcnSkipCacheInvalidations;
+  TgSplitEnabled = TgSplit;
 }
 
 bool SICacheControl::enableCPolBits(const MachineBasicBlock::iterator MI,
@@ -1045,13 +1034,14 @@ bool SICacheControl::canAffectGlobalAddrSpace(SIAtomicAddrSpace AS) const {
 }
 
 /* static */
-std::unique_ptr<SICacheControl> SICacheControl::create(const GCNSubtarget &ST) {
+std::unique_ptr<SICacheControl> SICacheControl::create(const GCNSubtarget &ST,
+                                                       bool TgSplit) {
   GCNSubtarget::Generation Generation = ST.getGeneration();
   if (Generation < AMDGPUSubtarget::GFX10)
-    return std::make_unique<SIGfx6CacheControl>(ST);
+    return std::make_unique<SIGfx6CacheControl>(ST, TgSplit);
   if (Generation < AMDGPUSubtarget::GFX12)
-    return std::make_unique<SIGfx10CacheControl>(ST);
-  return std::make_unique<SIGfx12CacheControl>(ST);
+    return std::make_unique<SIGfx10CacheControl>(ST, TgSplit);
+  return std::make_unique<SIGfx12CacheControl>(ST, TgSplit);
 }
 
 bool SIGfx6CacheControl::enableLoadCacheBypass(
@@ -1102,7 +1092,7 @@ bool SIGfx6CacheControl::enableLoadCacheBypass(
       // on different CUs. Therefore need to bypass the L1 which is per CU.
       // Otherwise in non-threadgroup split mode all waves of a work-group are
       // on the same CU, and so the L1 does not need to be bypassed.
-      if (ST.isTgSplitEnabled())
+      if (TgSplitEnabled)
         Changed |= enableCPolBits(MI, CPol::GLC);
     }
     break;
@@ -1265,7 +1255,7 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     ++MI;
 
   // GFX90A+
-  if (ST.hasGFX90AInsts() && ST.isTgSplitEnabled()) {
+  if (ST.hasGFX90AInsts() && TgSplitEnabled) {
     // In threadgroup split mode the waves of a work-group can be executing on
     // different CUs. Therefore need to wait for global or GDS memory operations
     // to complete to ensure they are visible to waves in the other CUs.
@@ -1454,7 +1444,7 @@ bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
       Changed = true;
       break;
     case SIAtomicScope::WORKGROUP:
-      if (ST.isTgSplitEnabled()) {
+      if (TgSplitEnabled) {
         if (ST.hasGFX940Insts()) {
           // In threadgroup split mode the waves of a work-group can be
           // executing on different CUs. Therefore need to invalidate the L1
@@ -2595,9 +2585,10 @@ bool SIMemoryLegalizer::run(MachineFunction &MF) {
   bool Changed = false;
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  SIMemOpAccess MOA(MMI.getObjFileInfo<AMDGPUMachineModuleInfo>(), ST,
-                    MF.getFunction());
-  CC = SICacheControl::create(ST);
+  const Function &F = MF.getFunction();
+  SIMemOpAccess MOA(MMI.getObjFileInfo<AMDGPUMachineModuleInfo>(), ST);
+  bool TgSplit = ST.hasTgSplitSupport() && AMDGPU::isTgSplitEnabled(F);
+  CC = SICacheControl::create(ST, TgSplit);
 
   for (auto &MBB : MF) {
     for (auto MI = MBB.begin(); MI != MBB.end(); ++MI) {

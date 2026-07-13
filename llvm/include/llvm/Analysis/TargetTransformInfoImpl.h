@@ -722,7 +722,10 @@ public:
     return InstructionCost::getInvalid();
   }
 
-  virtual unsigned getMaxInterleaveFactor(ElementCount VF) const { return 1; }
+  virtual unsigned getMaxInterleaveFactor(ElementCount VF,
+                                          bool HasUnorderedReductions) const {
+    return 1;
+  }
 
   virtual InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
@@ -1170,7 +1173,7 @@ public:
   virtual bool preferEpilogueVectorization(ElementCount Iters) const {
     // We consider epilogue vectorization unprofitable for targets that
     // don't consider interleaving beneficial (eg. MVE).
-    return getMaxInterleaveFactor(Iters) > 1;
+    return getMaxInterleaveFactor(Iters, false) > 1;
   }
 
   virtual bool shouldConsiderVectorizationRegPressure() const { return false; }
