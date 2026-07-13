@@ -4541,10 +4541,11 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_interlocked_add:
-  case Builtin::BI__builtin_hlsl_interlocked_or: {
+  case Builtin::BI__builtin_hlsl_interlocked_or:
+  case Builtin::BI__builtin_hlsl_interlocked_xor: {
     // The builtin's prototype in Builtins.td is `void (...)`, so direct calls
-    // to `__builtin_hlsl_interlocked_add` bypass argument checking entirely.
-    // When reached via the synthesized `InterlockedAdd` overload set in
+    // to `__builtin_hlsl_interlocked_op` bypass argument checking entirely.
+    // When reached via the synthesized `InterlockedOp` overload set in
     // HLSLExternalSemaSource, overload resolution has already enforced the
     // argument count, integer-type matching, and the address-space requirement
     // on `dest`. The checks below are a safety net for callers that invoke the
