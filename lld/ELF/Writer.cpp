@@ -364,7 +364,14 @@ template <class ELFT> void Writer<ELFT>::run() {
     if (errCount(ctx))
       return;
 
-    if (!ctx.e.disableOutput) {
+    // With -o -, write to lld::outs() (the stdoutOS argument of
+    // link()) instead of committing the buffer, which would write to the
+    // process's stdout.
+    if (ctx.arg.outputFile == "-") {
+      ctx.e.outs() << StringRef(
+          reinterpret_cast<const char *>(buffer->getBufferStart()),
+          buffer->getBufferSize());
+    } else if (!ctx.e.disableOutput) {
       if (auto e = buffer->commit())
         Err(ctx) << "failed to write output '" << buffer->getPath()
                  << "': " << std::move(e);
@@ -372,46 +379,6 @@ template <class ELFT> void Writer<ELFT>::run() {
 
     if (!ctx.arg.cmseOutputLib.empty())
       writeARMCmseImportLib<ELFT>(ctx);
-  }
-}
-
-template <class ELFT, class RelTy>
-static void markUsedLocalSymbolsImpl(ObjFile<ELFT> *file,
-                                     llvm::ArrayRef<RelTy> rels) {
-  for (const RelTy &rel : rels) {
-    Symbol &sym = file->getRelocTargetSym(rel);
-    if (sym.isLocal())
-      sym.setFlags(USED);
-  }
-}
-
-// The function ensures that the USED flag of local symbols reflects the fact
-// that the symbol is used in a relocation from a live section.
-template <class ELFT> static void markUsedLocalSymbols(Ctx &ctx) {
-  // With --gc-sections, the field is already filled.
-  // See MarkLive<ELFT>::resolveReloc().
-  if (ctx.arg.gcSections)
-    return;
-  for (ELFFileBase *file : ctx.objectFiles) {
-    ObjFile<ELFT> *f = cast<ObjFile<ELFT>>(file);
-    for (InputSectionBase *s : f->getSections()) {
-      InputSection *isec = dyn_cast_or_null<InputSection>(s);
-      if (!isec)
-        continue;
-      if (isec->type == SHT_REL) {
-        markUsedLocalSymbolsImpl(f, isec->getDataAs<typename ELFT::Rel>());
-      } else if (isec->type == SHT_RELA) {
-        markUsedLocalSymbolsImpl(f, isec->getDataAs<typename ELFT::Rela>());
-      } else if (isec->type == SHT_CREL) {
-        // The is64=true variant also works with ELF32 since only the r_symidx
-        // member is used.
-        for (Elf_Crel_Impl<true> r : RelocsCrel<true>(isec->content_)) {
-          Symbol &sym = file->getSymbol(r.r_symidx);
-          if (sym.isLocal())
-            sym.setFlags(USED);
-        }
-      }
-    }
   }
 }
 
@@ -1897,8 +1864,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   demoteSymbolsAndComputeIsPreemptible(ctx);
 
-  if (ctx.arg.copyRelocs && ctx.arg.discard != DiscardPolicy::None)
-    markUsedLocalSymbols<ELFT>(ctx);
   demoteAndCopyLocalSymbols(ctx);
 
   if (ctx.arg.copyRelocs)

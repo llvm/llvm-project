@@ -691,6 +691,11 @@ def MIFOpConversion : Pass<"mif-convert", "mlir::ModuleOp"> {
                            "mlir::cf::ControlFlowDialect", "mlir::DLTIDialect"];
 }
 
+def EmitMIFGlobalCtors : Pass<"emit-mif-global-ctors", "mlir::ModuleOp"> {
+  let summary = "Generate GlobalCtorOp to init MIF and allocate coarrays.";
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect"];
+}
+
 def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {
   let summary = "Hoist invariants from loops";
   let description = [{

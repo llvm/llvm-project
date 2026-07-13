@@ -1537,14 +1537,16 @@ void CodeGenModule::Release() {
     if (!LangOpts.isSignReturnAddressWithAKey())
       getModule().addModuleFlag(llvm::Module::Min,
                                 "sign-return-address-with-bkey", 2);
-
-    if (LangOpts.PointerAuthELFGOT)
-      getModule().addModuleFlag(llvm::Module::Error, "ptrauth-elf-got", 1);
+  }
+  if (T.isAArch64()) {
+    if (getTriple().isOSBinFormatELF())
+      getModule().addModuleFlag(llvm::Module::Error, "ptrauth-elf-got",
+                                LangOpts.PointerAuthELFGOT);
 
     if (getTriple().isOSLinux()) {
-      if (LangOpts.PointerAuthCalls)
-        getModule().addModuleFlag(llvm::Module::Error,
-                                  "ptrauth-sign-personality", 1);
+      getModule().addModuleFlag(llvm::Module::Error, "ptrauth-sign-personality",
+                                LangOpts.PointerAuthCalls);
+
       assert(getTriple().isOSBinFormatELF());
       using namespace llvm::ELF;
       uint64_t PAuthABIVersion =
@@ -1575,14 +1577,15 @@ void CodeGenModule::Release() {
       static_assert(AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_FPTRTYPEDISCR ==
                         AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST,
                     "Update when new enum items are defined");
-      if (PAuthABIVersion != 0) {
-        getModule().addModuleFlag(llvm::Module::Error,
-                                  "aarch64-elf-pauthabi-platform",
-                                  AARCH64_PAUTH_PLATFORM_LLVM_LINUX);
-        getModule().addModuleFlag(llvm::Module::Error,
-                                  "aarch64-elf-pauthabi-version",
-                                  PAuthABIVersion);
-      }
+
+      // Always emit the aarch64-elf-pauthabi-{platform|version} flags even if
+      // the version value is 0 to guard against incorrect module merge
+      // behavior.
+      getModule().addModuleFlag(llvm::Module::Error,
+                                "aarch64-elf-pauthabi-platform",
+                                AARCH64_PAUTH_PLATFORM_LLVM_LINUX);
+      getModule().addModuleFlag(
+          llvm::Module::Error, "aarch64-elf-pauthabi-version", PAuthABIVersion);
     }
   }
   if ((T.isARM() || T.isThumb()) && getTriple().isTargetAEABI() &&

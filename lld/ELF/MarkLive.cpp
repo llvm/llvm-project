@@ -339,6 +339,21 @@ void MarkLive<ELFT, TrackWhyLive>::markSymbol(Symbol *sym, StringRef reason) {
       enqueue(isec, d->value, sym, {std::nullopt, reason});
 }
 
+template <class ELFT> static void markUsedLocalSymbols(InputSectionBase &sec) {
+  auto mark = [&](const auto &rel) {
+    Symbol &sym = sec.file->getRelocTargetSym(rel);
+    if (sym.isLocal())
+      sym.setFlags(USED);
+  };
+  const RelsOrRelas<ELFT> rels = sec.template relsOrRelas<ELFT>();
+  for (const typename ELFT::Rel &rel : rels.rels)
+    mark(rel);
+  for (const typename ELFT::Rela &rel : rels.relas)
+    mark(rel);
+  for (const typename ELFT::Crel &rel : rels.crels)
+    mark(rel);
+}
+
 // This is the main function of the garbage collector.
 // Starting from GC-root sections, this function visits all reachable
 // sections to set their "Live" bits.
@@ -370,6 +385,7 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
   // referenced by .eh_frame sections, so we scan them for that here.
   for (EhInputSection *eh : ctx.ehInputSections)
     scanEhFrameSection(*eh);
+  bool markUsed = ctx.arg.copyRelocs && ctx.arg.discard != DiscardPolicy::None;
   for (InputSectionBase *sec : ctx.inputSections) {
     if (sec->flags & SHF_GNU_RETAIN) {
       enqueue(sec, /*offset=*/0, /*sym=*/nullptr, {std::nullopt, "retained"});
@@ -405,6 +421,10 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
         sec->markLive();
         for (InputSection *isec : sec->dependentSections)
           isec->markLive();
+        // If -r or --emit-relocs, ensure referenced local symbols are
+        // preserved by --discard-{locals,all} (see shouldKeepInSymtab).
+        if (markUsed)
+          markUsedLocalSymbols<ELFT>(*sec);
       }
     }
 
@@ -582,6 +602,15 @@ template <class ELFT> void elf::markLive(Ctx &ctx) {
       if (auto *s = dyn_cast<SharedSymbol>(sym))
         if (s->isUsedInRegularObj && !s->isWeak())
           cast<SharedFile>(s->file)->isNeeded = true;
+    // If -r or --emit-relocs, ensure referenced local symbols are preserved so
+    // that they won't be discarded by --discard-{locals,all} (see
+    // shouldKeepInSymtab).
+    if (ctx.arg.copyRelocs && ctx.arg.discard != DiscardPolicy::None)
+      parallelForEach(ctx.objectFiles, [](ELFFileBase *file) {
+        for (InputSectionBase *sec : file->getSections())
+          if (sec)
+            markUsedLocalSymbols<ELFT>(*sec);
+      });
     return;
   }
 

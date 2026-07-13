@@ -4812,3 +4812,19 @@ func.func @free_shared_mem_invalid_alignment2(%n: i32, %ptr : !llvm.ptr) -> () {
   omp.free_shared_mem [%n x i64 : (i32) align(3)] %ptr : !llvm.ptr
   return
 }
+
+// -----
+// unroll_factor = 0 is not a strictly positive integer.
+func.func @omp_unroll_partial_factor_zero(%cli : !omp.cli) -> () {
+  // expected-error @below {{op attribute 'unroll_factor' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive}}
+  omp.unroll_partial(%cli) {unroll_factor = 0 : i64}
+  return
+}
+
+// -----
+// unroll_factor = -1 is not a strictly positive integer.
+func.func @omp_unroll_partial_factor_negative(%cli : !omp.cli) -> () {
+  // expected-error @below {{op attribute 'unroll_factor' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive}}
+  omp.unroll_partial(%cli) {unroll_factor = -1 : i64}
+  return
+}
