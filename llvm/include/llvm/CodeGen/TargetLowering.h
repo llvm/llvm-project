@@ -93,7 +93,8 @@ class Module;
 class ProfileSummaryInfo;
 class TargetLibraryInfo;
 class TargetMachine;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 class TargetTransformInfo;
 class Value;
@@ -527,7 +528,8 @@ public:
   /// can be used to store the results of comparisons for use by selects
   /// and conditional branches. With multiple condition registers, the code
   /// generator will not aggressively sink comparisons into the blocks of their
-  /// users.
+  /// users. \p VT is the type of the condition value, e.g. the type of the
+  /// result of a comparison.
   virtual bool hasMultipleConditionRegisters(EVT VT) const { return false; }
 
   /// Return true if the target has BitExtract instructions.
@@ -657,9 +659,10 @@ public:
   // Arg0: The binary op joining the two conditions (and/or).
   // Arg1: The first condition (cond1)
   // Arg2: The second condition (cond2)
+  // Arg3: The containing function.
   virtual CondMergingParams
   getJumpConditionMergingParams(Instruction::BinaryOps, const Value *,
-                                const Value *) const {
+                                const Value *, const Function *) const {
     // -1 will always result in splitting.
     return {-1, -1, -1};
   }
@@ -2138,7 +2141,7 @@ public:
   }
 
   virtual bool needsFixedCatchObjects() const {
-    report_fatal_error("Funclet EH is not implemented for this target");
+    reportFatalUsageError("Funclet EH is not implemented for this target");
   }
 
   /// Return the minimum stack alignment of an argument.
@@ -2182,11 +2185,11 @@ public:
   virtual Value *getSDagStackGuard(const Module &M,
                                    const LibcallLoweringInfo &Libcalls) const;
 
-  /// If this function returns true, stack protection checks should XOR the
+  /// If this function returns true, stack protection checks should mix the
   /// frame pointer (or whichever pointer is used to address locals) into the
   /// stack guard value before checking it. getIRStackGuard must return nullptr
   /// if this returns true.
-  virtual bool useStackGuardXorFP() const { return false; }
+  virtual bool useStackGuardMixFP() const { return false; }
 
   /// If the target has a standard stack protection check function that
   /// performs validation and error handling, returns the function. Otherwise,
@@ -2487,8 +2490,11 @@ public:
   /// AtomicRMW, if at all. Default is to never expand.
   virtual AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
-    return RMW->isFloatingPointOperation() ?
-      AtomicExpansionKind::CmpXChg : AtomicExpansionKind::None;
+    if (RMW->isFloatingPointOperation())
+      return AtomicExpansionKind::CmpXChg;
+    if (RMW->getType()->isVectorTy())
+      return AtomicExpansionKind::CmpXChg;
+    return AtomicExpansionKind::None;
   }
 
   /// Returns how the given atomic atomicrmw should be cast by the IR-level
@@ -2550,8 +2556,10 @@ public:
   /// select(N0|N1, X, Y) => select(N0, select(N1, X, Y, Y)) if it is likely
   /// that it saves us from materializing N0 and N1 in an integer register.
   /// Targets that are able to perform and/or on flags should return false here.
-  virtual bool shouldNormalizeToSelectSequence(LLVMContext &Context,
-                                               EVT VT) const {
+  /// \p VT is the type of the select (and X and Y). \p CCVT is the type of its
+  /// condition (N0 and N1).
+  virtual bool shouldNormalizeToSelectSequence(LLVMContext &Context, EVT VT,
+                                               EVT CCVT) const {
     // If a target has multiple condition registers, then it likely has logical
     // operations on those registers.
     if (hasMultipleConditionRegisters(VT))
@@ -3124,6 +3132,8 @@ public:
     case ISD::FSUB:
     case ISD::FDIV:
     case ISD::FREM:
+    case ISD::PSEUDO_FMIN:
+    case ISD::PSEUDO_FMAX:
       return true;
     default:
       return false;
@@ -4381,6 +4391,19 @@ public:
     return true;
   }
 
+  /// If only low elements of a vector are demanded, shrink the operation to the
+  /// returned size in bits by converting
+  /// (op x) to insert_subvector (op (extract_subvector x)).
+  ///
+  /// The returned size must be a multiple of the element size, greater than or
+  /// equal to the demanded part of the vector and less than the original
+  /// vector size. Return 0 to disable shrinking.
+  virtual unsigned
+  getPreferredShrunkVectorSizeInBits(SDValue Op,
+                                     const APInt &DemandedElts) const {
+    return 0;
+  }
+
   /// Determine which of the bits specified in Mask are known to be either zero
   /// or one and return them in the KnownZero/KnownOne bitsets. The DemandedElts
   /// argument allows us to only collect the known bits that are shared by the
@@ -4417,12 +4440,11 @@ public:
                                                 const MachineRegisterInfo &MRI,
                                                 unsigned Depth = 0) const;
 
-  /// Determine which of the bits of FrameIndex \p FIOp are known to be 0.
-  /// Default implementation computes low bits based on alignment
-  /// information. This should preserve known bits passed into it.
-  virtual void computeKnownBitsForFrameIndex(int FIOp,
-                                             KnownBits &Known,
-                                             const MachineFunction &MF) const;
+  /// Determine known bits of a pointer to a known valid stack object.
+  /// The default implementation computes low bits based on alignment.
+  virtual void computeKnownBitsForStackObjectPointer(KnownBits &Known,
+                                                     const MachineFunction &MF,
+                                                     Align Alignment) const;
 
   /// This method can be implemented by targets that want to expose additional
   /// information about sign bits to the DAG Combiner. The DemandedElts
@@ -5114,6 +5136,10 @@ public:
     return true;
   }
 
+  /// Annotate a stack object pointer with known-bits assertions.
+  SDValue annotateStackObjectPointer(SDValue Ptr, SelectionDAG &DAG,
+                                     const SDLoc &DL, Align Alignment) const;
+
   /// This hook must be implemented to lower outgoing return values, described
   /// by the Outs array, into the specified DAG. The implementation should
   /// return the resulting token chain value.
@@ -5147,7 +5173,7 @@ public:
   /// so the default action is to bail.
   virtual Register getRegisterByName(const char* RegName, LLT Ty,
                                      const MachineFunction &MF) const {
-    report_fatal_error("Named registers not implemented for this target");
+    reportFatalUsageError("Named registers not implemented for this target");
   }
 
   /// Return the type that should be used to zero or sign extend a
@@ -5572,6 +5598,16 @@ public:
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandCLMUL(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand parallel bit extract (compress).
+  /// \param N Node to expand
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandPEXT(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand parallel bit deposit (expand).
+  /// \param N Node to expand
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandPDEP(SDNode *N, SelectionDAG &DAG) const;
+
   /// Expand rotations.
   /// \param N Node to expand
   /// \param AllowVectorOps expand vector rotate, this should only be performed
@@ -5649,6 +5685,11 @@ public:
   /// \param NodeNode to expand
   /// \returns The expansion result
   SDValue expandFCANONICALIZE(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expand CONVERT_TO_ARBITRARY_FP using bit manipulation.
+  /// \param Node Node to expand.
+  /// \returns The expansion result, or SDValue() if fails.
+  SDValue expandCONVERT_TO_ARBITRARY_FP(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Expand CONVERT_FROM_ARBITRARY_FP using bit manipulation.
   /// \param Node Node to expand.
@@ -5970,7 +6011,7 @@ public:
   /// LOAD_STACK_GUARD node when it is lowering Intrinsic::stackprotector.
   virtual bool useLoadStackGuardNode(const Module &M) const { return false; }
 
-  virtual SDValue emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
+  virtual SDValue emitStackGuardMixFP(SelectionDAG &DAG, SDValue Val,
                                       const SDLoc &DL) const {
     llvm_unreachable("not implemented for this target");
   }

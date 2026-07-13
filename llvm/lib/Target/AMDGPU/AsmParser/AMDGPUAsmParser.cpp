@@ -617,6 +617,11 @@ public:
 
   bool isVSrc_b64() const { return isVCSrc_f64() || isLiteralImm(MVT::i64); }
 
+  bool isVSrc_v2b64() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_128RegClassID, MVT::i64) ||
+           isLiteralImm(MVT::i64);
+  }
+
   bool isVSrc_v2f64() const {
     return isRegOrInlineNoMods(AMDGPU::VS_128RegClassID, MVT::f64) ||
            isLiteralImm(MVT::f64);
@@ -2086,6 +2091,7 @@ static const fltSemantics *getOpFltSemantics(uint8_t OperandType) {
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
   case AMDGPU::OPERAND_REG_IMM_V2FP64:
+  case AMDGPU::OPERAND_REG_IMM_V2INT64:
   case AMDGPU::OPERAND_KIMM64:
     return &APFloat::IEEEdouble();
   case AMDGPU::OPERAND_REG_IMM_FP16:
@@ -2407,6 +2413,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     case AMDGPU::OPERAND_REG_INLINE_C_FP64:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
     case AMDGPU::OPERAND_REG_IMM_V2FP64:
+    case AMDGPU::OPERAND_REG_IMM_V2INT64:
       if (Lit == LitModifier::None &&
           AMDGPU::isInlinableLiteral64(Literal.getZExtValue(),
                                        AsmParser->hasInv2PiInlineImm())) {
@@ -2540,6 +2547,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+  case AMDGPU::OPERAND_REG_IMM_V2INT64:
     if (Lit == LitModifier::None &&
         AMDGPU::isInlinableLiteral64(Val, AsmParser->hasInv2PiInlineImm())) {
       Inst.addOperand(MCOperand::createImm(Val));
@@ -2989,7 +2997,7 @@ MCRegister AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
   }
 
   const MCRegisterInfo *TRI = getContext().getRegisterInfo();
-  const MCRegisterClass RC = TRI->getRegClass(RCID);
+  const MCRegisterClass &RC = TRI->getRegClass(RCID);
   if (RegIdx >= RC.getNumRegs() || (RegKind == IS_VGPR && RegIdx > 255)) {
     Error(Loc, "register index is out of range");
     return AMDGPU::NoRegister;
@@ -5187,8 +5195,11 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
           Desc.operands()[OpIdx].OperandType == AMDGPU::OPERAND_KIMM64 ||
           (Desc.operands()[OpIdx].OperandType == AMDGPU::OPERAND_REG_IMM_FP64 &&
            HasMandatoryLiteral);
-      bool IsFP64 = (IsForcedFP64 || AMDGPU::isSISrcFPOperand(Desc, OpIdx)) &&
-                    AMDGPU::getOperandSize(Desc.operands()[OpIdx]) == 8;
+      unsigned OpTy = Desc.operands()[OpIdx].OperandType;
+      bool IsFP64 =
+          (IsForcedFP64 || (AMDGPU::isSISrcFPOperand(Desc, OpIdx) &&
+                            OpTy != AMDGPU::OPERAND_REG_IMM_V2INT64)) &&
+          AMDGPU::getOperandSize(Desc.operands()[OpIdx]) == 8;
       bool IsValid32Op =
           IsForcedLit || AMDGPU::isValid32BitLiteral(Value, IsFP64);
 
@@ -5969,13 +5980,36 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGCNTarget() {
   if (getParser().parseEscapedString(TargetIDDirective))
     return true;
 
-  SMRange TargetRange = SMRange(TargetStart, getTok().getLoc());
-  if (getTargetStreamer().getTargetID()->toString() != TargetIDDirective)
-    return getParser().Error(TargetRange.Start,
-        (Twine(".amdgcn_target directive's target id ") +
-         Twine(TargetIDDirective) +
-         Twine(" does not match the specified target id ") +
-         Twine(getTargetStreamer().getTargetID()->toString())).str());
+  std::optional<AMDGPU::TargetID> MaybeParsed =
+      AMDGPU::TargetID::parseTargetIDString(TargetIDDirective);
+  if (!MaybeParsed)
+    return getParser().Error(TargetStart,
+                             "malformed target id '" + TargetIDDirective + "'");
+
+  const AMDGPU::TargetID &ParsedTargetID = *MaybeParsed;
+  const Triple &TT = getSTI().getTargetTriple();
+
+  // The processor named in the target id must be covered by the triple's
+  // subarch.
+  if (!AMDGPU::isCPUValidForSubArch(TT.getSubArch(),
+                                    ParsedTargetID.getGPUKind())) {
+    return getParser().Error(
+        TargetStart, "target id '" + TargetIDDirective +
+                         "' specifies a processor that is not valid for "
+                         "subarch '" +
+                         TT.getArchName() + "'");
+  }
+
+  const std::optional<AMDGPU::TargetID> &CurrentTargetID =
+      getTargetStreamer().getTargetID();
+
+  if (*CurrentTargetID != ParsedTargetID) {
+    return getParser().Error(
+        TargetStart, Twine(".amdgcn_target directive's target id ") +
+                         Twine(ParsedTargetID.toString()) +
+                         Twine(" does not match the specified target id ") +
+                         Twine(CurrentTargetID->toString()));
+  }
 
   return false;
 }
@@ -6670,9 +6704,37 @@ bool AMDGPUAsmParser::ParseDirectiveISAVersion() {
                  "architectures");
   }
 
-  auto TargetIDDirective = getLexer().getTok().getStringContents();
-  if (getTargetStreamer().getTargetID()->toString() != TargetIDDirective)
-    return Error(getParser().getTok().getLoc(), "target id must match options");
+  StringRef TargetIDDirective = getLexer().getTok().getStringContents();
+
+  std::optional<AMDGPU::TargetID> MaybeParsed =
+      AMDGPU::TargetID::parseTargetIDString(TargetIDDirective);
+  if (!MaybeParsed)
+    return Error(getParser().getTok().getLoc(),
+                 "malformed target id '" + TargetIDDirective + "'");
+
+  const AMDGPU::TargetID &ParsedTargetID = *MaybeParsed;
+  const Triple &TT = getSTI().getTargetTriple();
+
+  // The processor named in the target id must be covered by the triple's
+  // subarch.
+  if (!AMDGPU::isCPUValidForSubArch(TT.getSubArch(),
+                                    ParsedTargetID.getGPUKind())) {
+    return Error(getParser().getTok().getLoc(),
+                 "target id '" + TargetIDDirective +
+                     "' specifies a processor that is not valid for subarch '" +
+                     TT.getArchName() + "'");
+  }
+
+  const std::optional<AMDGPU::TargetID> &CurrentTargetID =
+      getTargetStreamer().getTargetID();
+
+  if (*CurrentTargetID != ParsedTargetID) {
+    return Error(getParser().getTok().getLoc(),
+                 Twine(".amd_amdgpu_isa directive's target id ") +
+                     Twine(ParsedTargetID.toString()) +
+                     Twine(" does not match the specified target id ") +
+                     Twine(CurrentTargetID->toString()));
+  }
 
   getTargetStreamer().EmitISAVersion();
   Lex();
@@ -8234,7 +8296,7 @@ bool AMDGPUAsmParser::parseDepCtr(int64_t &DepCtr, unsigned &UsedOprMask) {
     }
   }
 
-  unsigned CntValMask = PrevOprMask ^ UsedOprMask;
+  int64_t CntValMask = PrevOprMask ^ UsedOprMask;
   DepCtr = (DepCtr & ~CntValMask) | CntVal;
   return true;
 }
@@ -9436,6 +9498,12 @@ bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
                   "mismatch of commas in " + Twine(TokenId) + " expression");
             return true;
           }
+          if (unsigned Expected = AMDGPUMCExpr::getNumExpectedArgs(VK);
+              Expected && Exprs.size() != Expected) {
+            Error(getToken().getLoc(), Twine(TokenId) + " expression expects " +
+                                           Twine(Expected) + " operands");
+            return true;
+          }
           Res = AMDGPUMCExpr::create(VK, Exprs, getContext());
           return false;
         }
@@ -9921,6 +9989,11 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
     int ModIdx = AMDGPU::getNamedOperandIdx(Opc, ModOps[J]);
 
     if (ModIdx == -1)
+      continue;
+
+    // For MAC instructions, src2 is tied to vdst and its op_sel bit
+    // is not encoded.
+    if (AMDGPU::isMAC(Opc) && ModOps[J] == AMDGPU::OpName::src2_modifiers)
       continue;
 
     uint32_t ModVal = 0;
@@ -10686,6 +10759,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAMDGPUAsmParser() {
   RegisterMCAsmParser<AMDGPUAsmParser> A(getTheR600Target());
   RegisterMCAsmParser<AMDGPUAsmParser> B(getTheGCNTarget());
+  RegisterMCAsmParser<AMDGPUAsmParser> C(getTheGCNLegacyTarget());
 }
 
 #define GET_MATCHER_IMPLEMENTATION

@@ -16,7 +16,6 @@
 #include "llvm/ADT/SmallVector.h"
 
 #include <cinttypes>
-#include <utility>
 
 namespace mlir {
 class Operation;
@@ -80,6 +79,7 @@ void genOpenMPDeclarativeConstruct(AbstractConverter &,
 void genOpenMPSymbolProperties(AbstractConverter &converter,
                                const pft::Variable &var);
 
+void genGroupprivateOp(AbstractConverter &, const pft::Variable &);
 void genThreadprivateOp(AbstractConverter &, const pft::Variable &);
 void genDeclareTargetIntGlobal(AbstractConverter &, const pft::Variable &);
 bool isOpenMPTargetConstruct(const parser::OpenMPConstruct &);

@@ -62,6 +62,13 @@ public:
   /// similar to ELF's "protected";  Apple Mach-O requires a "weak" attribute on
   /// declarations that can be dynamically replaced.
   bool hasProtectedVisibility() const override { return false; }
+
+  /// Apple Mach-O can autohide a vague-linkage vtable so that each image gets
+  /// its own copy, so such a vtable may have more than one address in a
+  /// program. A strong (key-function) vtable still has a unique address.
+  VTableUniquenessKind getVTableUniqueness() const override {
+    return VTableUniquenessKind::UniqueIfStrongLinkage;
+  }
 };
 
 template <typename Target>
@@ -1092,6 +1099,8 @@ protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
     Builder.defineMacro("__qurt__");
+    if (Opts.CPlusPlus)
+      Builder.defineMacro("_GNU_SOURCE");
   }
 
 public:
@@ -1105,6 +1114,8 @@ protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
     Builder.defineMacro("__h2__");
+    if (Opts.CPlusPlus)
+      Builder.defineMacro("_GNU_SOURCE");
   }
 
 public:

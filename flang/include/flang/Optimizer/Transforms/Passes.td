@@ -267,9 +267,9 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
     Option<"dwarfDebugFlags", "dwarf-debug-flags",
            "std::string", /*default=*/"std::string{}",
            "Command-line flags to append to DWARF producer">,
-    Option<"emitFakeUseForArguments", "emit-fake-use-for-arguments",
+    Option<"emitFakeUseForDebugVars", "emit-fake-use-for-debug-vars",
            "bool", /*default=*/"false",
-           "Emit fake use for function arguments to extend their lifetime">
+           "Emit fake use for debug variables to extend their lifetime">
   ];
 }
 
@@ -492,6 +492,17 @@ def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
   ];
 }
 
+def CUFAllocDelay : Pass<"cuf-alloc-delay", "::mlir::func::FuncOp"> {
+  let summary = "Delay cuf.alloc of descriptor types to just before first use";
+  let description = [{
+    Moves cuf.alloc operations for allocatable/pointer descriptors (box types)
+    from function entry to just before their first use. This defers
+    cudaMallocManaged calls so that users can call cudaSetDevice before any
+    CUDA context is created.
+  }];
+  let dependentDialects = ["fir::FIROpsDialect", "cuf::CUFDialect"];
+}
+
 def CUFAllocationConversion : Pass<"cuf-allocation-convert", "mlir::ModuleOp"> {
   let summary = "Convert allocation related CUF operations to runtime calls";
   let dependentDialects = ["fir::FIROpsDialect"];
@@ -577,6 +588,13 @@ def CUFDeviceFuncTransform
 def CUFFunctionRewrite : Pass<"cuf-function-rewrite", ""> {
   let summary = "Convert some CUDA Fortran specific call";
   let dependentDialects = ["fir::FIROpsDialect"];
+  let options = [Option<
+      "deferAccRoutines", "defer-acc-routines", "bool", /*default=*/"false",
+      "Do not fold device-detection intrinsics located in the host copy of an "
+      "OpenACC routine. Such a routine is later cloned to build its device "
+      "counterpart, so folding it to the host value here would bake that value "
+      "into the device clone. Deferred calls are folded by a later run that "
+      "executes after device specialization.">];
 }
 
 def CUFLaunchAttachAttr : Pass<"cuf-launch-attach-attr", ""> {
@@ -670,7 +688,12 @@ def OptimizeArrayRepacking
 def MIFOpConversion : Pass<"mif-convert", "mlir::ModuleOp"> {
   let summary = "Convert some MIF operations to runtime calls";
   let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect",
-                           "mlir::cf::ControlFlowDialect"];
+                           "mlir::cf::ControlFlowDialect", "mlir::DLTIDialect"];
+}
+
+def EmitMIFGlobalCtors : Pass<"emit-mif-global-ctors", "mlir::ModuleOp"> {
+  let summary = "Generate GlobalCtorOp to init MIF and allocate coarrays.";
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect"];
 }
 
 def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {

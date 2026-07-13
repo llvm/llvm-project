@@ -12,6 +12,7 @@
 
 #include "DXILIntrinsicExpansion.h"
 #include "DirectX.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Passes.h"
@@ -228,11 +229,14 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_step:
   case Intrinsic::dx_radians:
   case Intrinsic::dx_interlocked_add:
+  case Intrinsic::dx_interlocked_or:
   case Intrinsic::usub_sat:
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:
   case Intrinsic::matrix_multiply:
   case Intrinsic::matrix_transpose:
+  case Intrinsic::umul_with_overflow:
+  case Intrinsic::smul_with_overflow:
     return true;
   case Intrinsic::dx_resource_load_rawbuffer:
     return resourceAccessNeeds64BitExpansion(
@@ -263,6 +267,98 @@ static Value *expandUsubSat(CallInst *Orig) {
   Value *Sub = Builder.CreateSub(A, B, "usub.sub");
   Value *Zero = ConstantInt::get(Ty, 0);
   return Builder.CreateSelect(Cmp, Zero, Sub, "usub.sat");
+}
+
+// Compute the high N bits of the 2N-bit unsigned product of two N-bit values
+// using only N-bit arithmetic, so we don't introduce a wider integer type that
+// may be unsupported in DXIL.
+static Value *createMulHighUnsigned(IRBuilder<> &Builder, Value *A, Value *B,
+                                    Type *Ty, unsigned BW) {
+  assert(BW % 2 == 0 && "high-half split needs symmetric halves");
+  unsigned Half = BW / 2;
+  Value *HalfShift = ConstantInt::get(Ty, Half);
+  Value *LoMask = ConstantInt::get(Ty, APInt::getLowBitsSet(BW, Half));
+
+  Value *U0 = Builder.CreateAnd(A, LoMask);
+  Value *U1 = Builder.CreateLShr(A, HalfShift);
+  Value *V0 = Builder.CreateAnd(B, LoMask);
+  Value *V1 = Builder.CreateLShr(B, HalfShift);
+
+  Value *W0 = Builder.CreateMul(U0, V0);
+  Value *T = Builder.CreateAdd(Builder.CreateMul(U1, V0),
+                               Builder.CreateLShr(W0, HalfShift));
+  Value *W1 = Builder.CreateAnd(T, LoMask);
+  Value *W2 = Builder.CreateLShr(T, HalfShift);
+  W1 = Builder.CreateAdd(Builder.CreateMul(U0, V1), W1);
+  return Builder.CreateAdd(Builder.CreateAdd(Builder.CreateMul(U1, V1), W2),
+                           Builder.CreateLShr(W1, HalfShift));
+}
+
+// Expand a {u,s}mul.with.overflow intrinsic. The low half of the result is a
+// plain multiply; overflow is derived from the high half of the double-width
+// product.
+static Value *expandMulWithOverflow(CallInst *Orig, bool Signed) {
+  IRBuilder<> Builder(Orig);
+  Value *A = Orig->getArgOperand(0);
+  Value *B = Orig->getArgOperand(1);
+  Type *Ty = A->getType();
+  unsigned BW = Ty->getScalarSizeInBits();
+
+  Value *Lo;
+  Value *Ov;
+
+  // A plain double-width multiply is simplest, but we avoid it once it would
+  // introduce a 64-bit (or wider) integer, which DXIL does not always support.
+  // For i32 we use the native DXIL IMul/UMul ops, which return the full product
+  // as two i32s; wider types fall back to a same-width high-half computation.
+  if (2 * BW <= 32) {
+    Lo = Builder.CreateMul(A, B);
+    Type *WideTy = Ty->getWithNewBitWidth(2 * BW);
+    Value *WideA =
+        Signed ? Builder.CreateSExt(A, WideTy) : Builder.CreateZExt(A, WideTy);
+    Value *WideB =
+        Signed ? Builder.CreateSExt(B, WideTy) : Builder.CreateZExt(B, WideTy);
+    Value *Wide = Builder.CreateMul(WideA, WideB);
+    if (Signed) {
+      // Overflow when the full product doesn't fit back into BW signed bits.
+      Ov = Builder.CreateICmpNE(Wide, Builder.CreateSExt(Lo, WideTy));
+    } else {
+      Value *Hi = Builder.CreateLShr(Wide, ConstantInt::get(WideTy, BW));
+      Ov = Builder.CreateICmpNE(Hi, ConstantInt::get(WideTy, 0));
+    }
+  } else if (BW == 32) {
+    // IMul/UMul return {high, low}; index 0 is the high 32 bits.
+    Type *ResTy = StructType::get(Ty, Ty);
+    Intrinsic::ID IntrinsicID =
+        Signed ? Intrinsic::dx_imul : Intrinsic::dx_umul;
+    Value *Mul = Builder.CreateIntrinsic(ResTy, IntrinsicID, {A, B});
+    Value *Hi = Builder.CreateExtractValue(Mul, 0);
+    Lo = Builder.CreateExtractValue(Mul, 1);
+    if (Signed)
+      Ov = Builder.CreateICmpNE(
+          Hi, Builder.CreateAShr(Lo, ConstantInt::get(Ty, BW - 1)));
+    else
+      Ov = Builder.CreateICmpNE(Hi, ConstantInt::get(Ty, 0));
+  } else {
+    Lo = Builder.CreateMul(A, B);
+    Value *Hi = createMulHighUnsigned(Builder, A, B, Ty, BW);
+    if (Signed) {
+      // Turn the unsigned high half into the signed one, then overflow means it
+      // isn't the sign extension of the low half.
+      Value *SignShift = ConstantInt::get(Ty, BW - 1);
+      Value *ASign = Builder.CreateAShr(A, SignShift);
+      Value *BSign = Builder.CreateAShr(B, SignShift);
+      Hi = Builder.CreateSub(Hi, Builder.CreateAnd(ASign, B));
+      Hi = Builder.CreateSub(Hi, Builder.CreateAnd(BSign, A));
+      Ov = Builder.CreateICmpNE(Hi, Builder.CreateAShr(Lo, SignShift));
+    } else {
+      Ov = Builder.CreateICmpNE(Hi, ConstantInt::get(Ty, 0));
+    }
+  }
+
+  Value *Agg = PoisonValue::get(Orig->getType());
+  Agg = Builder.CreateInsertValue(Agg, Lo, 0);
+  return Builder.CreateInsertValue(Agg, Ov, 1);
 }
 
 static Value *expandVecReduceAdd(CallInst *Orig, Intrinsic::ID IntrinsicId) {
@@ -443,8 +539,8 @@ static Value *expandExpIntrinsic(CallInst *Orig) {
                              ConstantFP::get(EltTy, numbers::log2ef))
                        : ConstantFP::get(EltTy, numbers::log2ef);
   Value *NewX = Builder.CreateFMul(Log2eConst, X);
-  auto *Exp2Call =
-      Builder.CreateIntrinsic(Ty, Intrinsic::exp2, {NewX}, nullptr, "dx.exp2");
+  CallInst *Exp2Call = Builder.CreateIntrinsicWithoutFolding(
+      Ty, Intrinsic::exp2, {NewX}, nullptr, "dx.exp2");
   Exp2Call->setTailCall(Orig->isTailCall());
   Exp2Call->setAttributes(Orig->getAttributes());
   return Exp2Call;
@@ -569,8 +665,8 @@ static Value *expandLogIntrinsic(CallInst *Orig,
                                  cast<FixedVectorType>(Ty)->getNumElements()),
                              ConstantFP::get(EltTy, LogConstVal))
                        : ConstantFP::get(EltTy, LogConstVal);
-  auto *Log2Call =
-      Builder.CreateIntrinsic(Ty, Intrinsic::log2, {X}, nullptr, "elt.log2");
+  CallInst *Log2Call = Builder.CreateIntrinsicWithoutFolding(
+      Ty, Intrinsic::log2, {X}, nullptr, "elt.log2");
   Log2Call->setTailCall(Orig->isTailCall());
   Log2Call->setAttributes(Orig->getAttributes());
   return Builder.CreateFMul(Ln2Const, Log2Call);
@@ -625,8 +721,8 @@ static Value *expandAtan2Intrinsic(CallInst *Orig) {
 
   Value *Tan = Builder.CreateFDiv(Y, X);
 
-  CallInst *Atan =
-      Builder.CreateIntrinsic(Ty, Intrinsic::atan, {Tan}, nullptr, "Elt.Atan");
+  CallInst *Atan = Builder.CreateIntrinsicWithoutFolding(
+      Ty, Intrinsic::atan, {Tan}, nullptr, "Elt.Atan");
   Atan->setTailCall(Orig->isTailCall());
   Atan->setAttributes(Orig->getAttributes());
 
@@ -731,11 +827,11 @@ static Value *expandPowIntrinsic(CallInst *Orig, Intrinsic::ID IntrinsicId) {
   if (IntrinsicId == Intrinsic::powi)
     Y = Builder.CreateSIToFP(Y, Ty);
 
-  auto *Log2Call =
+  Value *Log2Call =
       Builder.CreateIntrinsic(Ty, Intrinsic::log2, {X}, nullptr, "elt.log2");
   auto *Mul = Builder.CreateFMul(Log2Call, Y);
-  auto *Exp2Call =
-      Builder.CreateIntrinsic(Ty, Intrinsic::exp2, {Mul}, nullptr, "elt.exp2");
+  CallInst *Exp2Call = Builder.CreateIntrinsicWithoutFolding(
+      Ty, Intrinsic::exp2, {Mul}, nullptr, "elt.exp2");
   Exp2Call->setTailCall(Orig->isTailCall());
   Exp2Call->setAttributes(Orig->getAttributes());
   return Exp2Call;
@@ -771,15 +867,16 @@ static Value *expandRadiansIntrinsic(CallInst *Orig) {
   return Builder.CreateFMul(X, PiOver180);
 }
 
-static Value *expandInterlockedAddIntrinsic(CallInst *Orig) {
-  // Lower @llvm.dx.interlocked.add(ptr, val) to `atomicrmw add ptr, val
+static Value *expandInterlockedIntrinsic(CallInst *Orig,
+                                         AtomicRMWInst::BinOp Op) {
+  // Lower @llvm.dx.interlocked.OP(ptr, val) to `atomicrmw OP ptr, val
   // monotonic`. HLSL Interlocked operations imply no fence/barrier, which maps
   // to monotonic ordering. The instruction's result is the old value, matching
   // the intrinsic's return value.
   Value *Ptr = Orig->getArgOperand(0);
   Value *Val = Orig->getArgOperand(1);
   IRBuilder<> Builder(Orig);
-  return Builder.CreateAtomicRMW(AtomicRMWInst::Add, Ptr, Val, MaybeAlign(),
+  return Builder.CreateAtomicRMW(Op, Ptr, Val, MaybeAlign(),
                                  AtomicOrdering::Monotonic);
 }
 
@@ -818,7 +915,7 @@ static bool expandBufferLoadIntrinsic(CallInst *Orig, bool IsRaw) {
       Args.push_back(Builder.CreateAdd(Orig->getOperand(2), Tmp));
     }
 
-    CallInst *Load = Builder.CreateIntrinsic(LoadType, LoadIntrinsic, Args);
+    Value *Load = Builder.CreateIntrinsic(LoadType, LoadIntrinsic, Args);
     Loads.push_back(Load);
 
     // extract the buffer load's result
@@ -1245,7 +1342,10 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     Result = expandRadiansIntrinsic(Orig);
     break;
   case Intrinsic::dx_interlocked_add:
-    Result = expandInterlockedAddIntrinsic(Orig);
+    Result = expandInterlockedIntrinsic(Orig, AtomicRMWInst::Add);
+    break;
+  case Intrinsic::dx_interlocked_or:
+    Result = expandInterlockedIntrinsic(Orig, AtomicRMWInst::Or);
     break;
   case Intrinsic::dx_resource_load_rawbuffer:
     if (expandBufferLoadIntrinsic(Orig, /*IsRaw*/ true))
@@ -1265,6 +1365,11 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::usub_sat:
     Result = expandUsubSat(Orig);
+    break;
+  case Intrinsic::umul_with_overflow:
+  case Intrinsic::smul_with_overflow:
+    Result = expandMulWithOverflow(Orig, /*Signed=*/IntrinsicId ==
+                                             Intrinsic::smul_with_overflow);
     break;
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:

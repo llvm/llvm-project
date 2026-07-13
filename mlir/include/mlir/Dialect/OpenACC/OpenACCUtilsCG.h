@@ -17,6 +17,7 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "llvm/ADT/SmallVector.h"
 #include <optional>
 
 namespace mlir {
@@ -61,6 +62,33 @@ ComputeRegionOp buildComputeRegion(Location loc, ValueRange launchArgs,
                                    FlatSymbolRefAttr kernelModuleName = {},
                                    Value stream = {},
                                    ValueRange inputArgsToMap = {});
+
+/// Insert \p parDim into \p parDims while preserving dimension ordering. If the
+/// dimension is already present, this is a no-op.
+void insertParDim(llvm::SmallVector<GPUParallelDimAttr> &parDims,
+                  GPUParallelDimAttr parDim);
+
+/// Remove \p parDim from \p parDims if present.
+void removeParDim(llvm::SmallVector<GPUParallelDimAttr> &parDims,
+                  GPUParallelDimAttr parDim);
+
+/// Obtain the parallel dimensions carried by \p op, if any.
+GPUParallelDimsAttr getParDimsAttr(Operation *op);
+
+/// Return whether \p op carries parallel dimensions.
+bool hasParDimsAttr(Operation *op);
+
+/// Return whether \p op carries sequential parallel dimensions.
+bool hasSeqParDims(Operation *op);
+
+/// Set parallel dimensions on \p op.
+void setParDimsAttr(Operation *op, GPUParallelDimsAttr attr);
+
+/// Update parallel dimensions on \p op.
+void updateParDimsAttr(Operation *op, GPUParallelDimsAttr attr);
+
+/// Copy parallel dimensions from \p from to \p to.
+void copyParDimsAttr(Operation *from, Operation *to);
 
 } // namespace acc
 } // namespace mlir

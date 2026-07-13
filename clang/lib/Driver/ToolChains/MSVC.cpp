@@ -498,6 +498,31 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   C.addCommand(std::move(LinkCmd));
 }
 
+void tools::ARM64XObjcopy::ConstructJob(Compilation &C, const JobAction &JA,
+                                        const InputInfo &Output,
+                                        const InputInfoList &Inputs,
+                                        const ArgList &Args,
+                                        const char *LinkingOutput) const {
+  // Assume llvm-objcopy is only used for hybrid ARM64X object files.
+  if (Inputs.size() != 2)
+    return;
+
+  std::string ObjcopyPath = getToolChain().GetProgramPath("llvm-objcopy");
+  const char *Exec = Args.MakeArgString(ObjcopyPath);
+
+  // Embed the hybrid object in the .obj.arm64ec section.
+  ArgStringList CmdArgs;
+  CmdArgs.push_back(Args.MakeArgString("--add-section=.obj.arm64ec=" +
+                                       Twine(Inputs[1].getFilename())));
+  // Mark the .obj.arm64ec section as discardable.
+  CmdArgs.push_back("--set-section-flags=.obj.arm64ec=exclude");
+  CmdArgs.push_back(Inputs[0].getFilename());
+  CmdArgs.push_back(Output.getFilename());
+
+  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+                                         Exec, CmdArgs, Inputs, Output));
+}
+
 MSVCToolChain::MSVCToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)
     : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args),
@@ -529,6 +554,17 @@ MSVCToolChain::MSVCToolChain(const Driver &D, const llvm::Triple &Triple,
       llvm::findVCToolChainViaRegistry(VCToolChainPath, VSLayout);
 
   loadMultilibsFromYAML(Args, D);
+}
+
+Tool *MSVCToolChain::getTool(Action::ActionClass AC) const {
+  switch (AC) {
+  case Action::ObjcopyJobClass:
+    if (!Objcopy)
+      Objcopy.reset(new tools::ARM64XObjcopy(*this));
+    return Objcopy.get();
+  default:
+    return ToolChain::getTool(AC);
+  }
 }
 
 Tool *MSVCToolChain::buildLinker() const {
@@ -908,15 +944,16 @@ VersionTuple MSVCToolChain::computeMSVCVersion(const Driver *D,
                    IsWindowsMSVC)) {
     // -fms-compatibility-version=19.33 is default, aka 2022, 17.3
     // NOTE: when changing this value, also update
-    // clang/docs/CommandGuide/clang.rst and clang/docs/UsersManual.rst
+    // clang/docs/CommandGuide/clang.rst and clang/docs/UsersManual.md
     // accordingly.
     MSVT = VersionTuple(19, 33);
   }
   return MSVT;
 }
 
-std::string MSVCToolChain::ComputeEffectiveClangTriple(
-    const ArgList &Args, llvm::StringRef BoundArch, types::ID InputType) const {
+std::string
+MSVCToolChain::ComputeEffectiveClangTriple(const ArgList &Args, BoundArch BA,
+                                           types::ID InputType) const {
   // The MSVC version doesn't care about the architecture, even though it
   // may look at the triple internally.
   VersionTuple MSVT = computeMSVCVersion(/*D=*/nullptr, Args);
@@ -926,7 +963,7 @@ std::string MSVCToolChain::ComputeEffectiveClangTriple(
   // For the rest of the triple, however, a computed architecture name may
   // be needed.
   llvm::Triple Triple(
-      ToolChain::ComputeEffectiveClangTriple(Args, BoundArch, InputType));
+      ToolChain::ComputeEffectiveClangTriple(Args, BA, InputType));
   if (Triple.getEnvironment() == llvm::Triple::MSVC) {
     StringRef ObjFmt = Triple.getEnvironmentName().split('-').second;
     if (ObjFmt.empty())
@@ -939,9 +976,8 @@ std::string MSVCToolChain::ComputeEffectiveClangTriple(
 }
 
 SanitizerMask MSVCToolChain::getSupportedSanitizers(
-    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
-  SanitizerMask Res =
-      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
+    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
@@ -1078,8 +1114,7 @@ static void TranslatePermissiveMinus(Arg *A, llvm::opt::DerivedArgList &DAL,
 
 llvm::opt::DerivedArgList *
 MSVCToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
-                             StringRef BoundArch,
-                             Action::OffloadKind OFK) const {
+                             BoundArch BA, Action::OffloadKind OFK) const {
   DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
   const OptTable &Opts = getDriver().getOpts();
 
@@ -1134,7 +1169,7 @@ MSVCToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 }
 
 void MSVCToolChain::addClangTargetOptions(
-    const ArgList &DriverArgs, ArgStringList &CC1Args, StringRef BoundArch,
+    const ArgList &DriverArgs, ArgStringList &CC1Args, BoundArch BA,
     Action::OffloadKind DeviceOffloadKind) const {
   // MSVC STL kindly allows removing all usages of typeid by defining
   // _HAS_STATIC_RTTI to 0. Do so, when compiling with -fno-rtti
