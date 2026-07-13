@@ -564,19 +564,17 @@ define void @decb_incb_scalar_i64(i64 %a, i64 %b, ptr %p, ptr %q) {
 ; CHECK-LABEL: decb_incb_scalar_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    incb x1
-; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    sub x8, x0, x8
+; CHECK-NEXT:    decb x0
 ; CHECK-NEXT:    str x1, [x2]
-; CHECK-NEXT:    str x8, [x3]
+; CHECK-NEXT:    str x0, [x3]
 ; CHECK-NEXT:    ret
 ;
 ; NO_FAST_INC-LABEL: decb_incb_scalar_i64:
 ; NO_FAST_INC:       // %bb.0:
-; NO_FAST_INC-NEXT:    rdvl x8, #1
-; NO_FAST_INC-NEXT:    addvl x9, x1, #1
-; NO_FAST_INC-NEXT:    sub x8, x0, x8
-; NO_FAST_INC-NEXT:    str x9, [x2]
-; NO_FAST_INC-NEXT:    str x8, [x3]
+; NO_FAST_INC-NEXT:    addvl x8, x1, #1
+; NO_FAST_INC-NEXT:    addvl x9, x0, #-1
+; NO_FAST_INC-NEXT:    str x8, [x2]
+; NO_FAST_INC-NEXT:    str x9, [x3]
 ; NO_FAST_INC-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %mul = mul i64 %vscale, 16
@@ -600,19 +598,17 @@ define void @dech_inch_scalar_i64(i64 %a, i64 %b, ptr %p, ptr %q) {
 ; CHECK-LABEL: dech_inch_scalar_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    inch x1
-; CHECK-NEXT:    cnth x8
-; CHECK-NEXT:    sub x8, x0, x8
+; CHECK-NEXT:    dech x0
 ; CHECK-NEXT:    str x1, [x2]
-; CHECK-NEXT:    str x8, [x3]
+; CHECK-NEXT:    str x0, [x3]
 ; CHECK-NEXT:    ret
 ;
 ; NO_FAST_INC-LABEL: dech_inch_scalar_i64:
 ; NO_FAST_INC:       // %bb.0:
 ; NO_FAST_INC-NEXT:    inch x1
-; NO_FAST_INC-NEXT:    cnth x8
-; NO_FAST_INC-NEXT:    sub x8, x0, x8
+; NO_FAST_INC-NEXT:    dech x0
 ; NO_FAST_INC-NEXT:    str x1, [x2]
-; NO_FAST_INC-NEXT:    str x8, [x3]
+; NO_FAST_INC-NEXT:    str x0, [x3]
 ; NO_FAST_INC-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %mul = mul i64 %vscale, 8
@@ -636,19 +632,17 @@ define void @decw_incw_scalar_i64(i64 %a, i64 %b, ptr %p, ptr %q) {
 ; CHECK-LABEL: decw_incw_scalar_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    incw x1
-; CHECK-NEXT:    cntw x8
-; CHECK-NEXT:    sub x8, x0, x8
+; CHECK-NEXT:    decw x0
 ; CHECK-NEXT:    str x1, [x2]
-; CHECK-NEXT:    str x8, [x3]
+; CHECK-NEXT:    str x0, [x3]
 ; CHECK-NEXT:    ret
 ;
 ; NO_FAST_INC-LABEL: decw_incw_scalar_i64:
 ; NO_FAST_INC:       // %bb.0:
 ; NO_FAST_INC-NEXT:    incw x1
-; NO_FAST_INC-NEXT:    cntw x8
-; NO_FAST_INC-NEXT:    sub x8, x0, x8
+; NO_FAST_INC-NEXT:    decw x0
 ; NO_FAST_INC-NEXT:    str x1, [x2]
-; NO_FAST_INC-NEXT:    str x8, [x3]
+; NO_FAST_INC-NEXT:    str x0, [x3]
 ; NO_FAST_INC-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %mul = mul i64 %vscale, 4
@@ -672,19 +666,17 @@ define void @decd_incd_scalar_i64(i64 %a, i64 %b, ptr %p, ptr %q) {
 ; CHECK-LABEL: decd_incd_scalar_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    incd x1
-; CHECK-NEXT:    cntd x8
-; CHECK-NEXT:    sub x8, x0, x8
+; CHECK-NEXT:    decd x0
 ; CHECK-NEXT:    str x1, [x2]
-; CHECK-NEXT:    str x8, [x3]
+; CHECK-NEXT:    str x0, [x3]
 ; CHECK-NEXT:    ret
 ;
 ; NO_FAST_INC-LABEL: decd_incd_scalar_i64:
 ; NO_FAST_INC:       // %bb.0:
 ; NO_FAST_INC-NEXT:    incd x1
-; NO_FAST_INC-NEXT:    cntd x8
-; NO_FAST_INC-NEXT:    sub x8, x0, x8
+; NO_FAST_INC-NEXT:    decd x0
 ; NO_FAST_INC-NEXT:    str x1, [x2]
-; NO_FAST_INC-NEXT:    str x8, [x3]
+; NO_FAST_INC-NEXT:    str x0, [x3]
 ; NO_FAST_INC-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %mul = mul i64 %vscale, 2
@@ -708,21 +700,21 @@ define void @decb_incb_scalar_i32(i32 %a, i32 %b, ptr %p, ptr %q) {
 ; CHECK-LABEL: decb_incb_scalar_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    decb x0
 ; CHECK-NEXT:    incb x1
-; CHECK-NEXT:    sub w8, w0, w8
-; CHECK-NEXT:    str w8, [x2]
+; CHECK-NEXT:    str w0, [x2]
 ; CHECK-NEXT:    str w1, [x3]
 ; CHECK-NEXT:    ret
 ;
 ; NO_FAST_INC-LABEL: decb_incb_scalar_i32:
 ; NO_FAST_INC:       // %bb.0:
-; NO_FAST_INC-NEXT:    rdvl x8, #1
 ; NO_FAST_INC-NEXT:    // kill: def $w1 killed $w1 def $x1
-; NO_FAST_INC-NEXT:    addvl x9, x1, #1
-; NO_FAST_INC-NEXT:    sub w8, w0, w8
-; NO_FAST_INC-NEXT:    str w8, [x2]
-; NO_FAST_INC-NEXT:    str w9, [x3]
+; NO_FAST_INC-NEXT:    // kill: def $w0 killed $w0 def $x0
+; NO_FAST_INC-NEXT:    addvl x8, x1, #1
+; NO_FAST_INC-NEXT:    addvl x9, x0, #-1
+; NO_FAST_INC-NEXT:    str w9, [x2]
+; NO_FAST_INC-NEXT:    str w8, [x3]
 ; NO_FAST_INC-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %mul = mul i64 %vscale, 16
@@ -747,20 +739,20 @@ define void @dech_inch_scalar_i32(i32 %a, i32 %b, ptr %p, ptr %q) {
 ; CHECK-LABEL: dech_inch_scalar_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    cnth x8
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    dech x0
 ; CHECK-NEXT:    inch x1
-; CHECK-NEXT:    sub w8, w0, w8
-; CHECK-NEXT:    str w8, [x2]
+; CHECK-NEXT:    str w0, [x2]
 ; CHECK-NEXT:    str w1, [x3]
 ; CHECK-NEXT:    ret
 ;
 ; NO_FAST_INC-LABEL: dech_inch_scalar_i32:
 ; NO_FAST_INC:       // %bb.0:
 ; NO_FAST_INC-NEXT:    // kill: def $w1 killed $w1 def $x1
-; NO_FAST_INC-NEXT:    cnth x8
+; NO_FAST_INC-NEXT:    // kill: def $w0 killed $w0 def $x0
+; NO_FAST_INC-NEXT:    dech x0
 ; NO_FAST_INC-NEXT:    inch x1
-; NO_FAST_INC-NEXT:    sub w8, w0, w8
-; NO_FAST_INC-NEXT:    str w8, [x2]
+; NO_FAST_INC-NEXT:    str w0, [x2]
 ; NO_FAST_INC-NEXT:    str w1, [x3]
 ; NO_FAST_INC-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
@@ -786,20 +778,20 @@ define void @decw_incw_scalar_i32(i32 %a, i32 %b, ptr %p, ptr %q) {
 ; CHECK-LABEL: decw_incw_scalar_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    cntw x8
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    decw x0
 ; CHECK-NEXT:    incw x1
-; CHECK-NEXT:    sub w8, w0, w8
-; CHECK-NEXT:    str w8, [x2]
+; CHECK-NEXT:    str w0, [x2]
 ; CHECK-NEXT:    str w1, [x3]
 ; CHECK-NEXT:    ret
 ;
 ; NO_FAST_INC-LABEL: decw_incw_scalar_i32:
 ; NO_FAST_INC:       // %bb.0:
 ; NO_FAST_INC-NEXT:    // kill: def $w1 killed $w1 def $x1
-; NO_FAST_INC-NEXT:    cntw x8
+; NO_FAST_INC-NEXT:    // kill: def $w0 killed $w0 def $x0
+; NO_FAST_INC-NEXT:    decw x0
 ; NO_FAST_INC-NEXT:    incw x1
-; NO_FAST_INC-NEXT:    sub w8, w0, w8
-; NO_FAST_INC-NEXT:    str w8, [x2]
+; NO_FAST_INC-NEXT:    str w0, [x2]
 ; NO_FAST_INC-NEXT:    str w1, [x3]
 ; NO_FAST_INC-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
@@ -825,20 +817,20 @@ define void @decd_incb_scalar_i32(i32 %a, i32 %b, ptr %p, ptr %q) {
 ; CHECK-LABEL: decd_incb_scalar_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    cntd x8
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    decd x0
 ; CHECK-NEXT:    incd x1
-; CHECK-NEXT:    sub w8, w0, w8
-; CHECK-NEXT:    str w8, [x2]
+; CHECK-NEXT:    str w0, [x2]
 ; CHECK-NEXT:    str w1, [x3]
 ; CHECK-NEXT:    ret
 ;
 ; NO_FAST_INC-LABEL: decd_incb_scalar_i32:
 ; NO_FAST_INC:       // %bb.0:
 ; NO_FAST_INC-NEXT:    // kill: def $w1 killed $w1 def $x1
-; NO_FAST_INC-NEXT:    cntd x8
+; NO_FAST_INC-NEXT:    // kill: def $w0 killed $w0 def $x0
+; NO_FAST_INC-NEXT:    decd x0
 ; NO_FAST_INC-NEXT:    incd x1
-; NO_FAST_INC-NEXT:    sub w8, w0, w8
-; NO_FAST_INC-NEXT:    str w8, [x2]
+; NO_FAST_INC-NEXT:    str w0, [x2]
 ; NO_FAST_INC-NEXT:    str w1, [x3]
 ; NO_FAST_INC-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
