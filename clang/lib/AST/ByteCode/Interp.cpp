@@ -1564,6 +1564,34 @@ bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T) {
   return false;
 }
 
+static bool diagnoseTypeIdField(InterpState &S, CodePtr OpPC,
+                                const Pointer &Ptr, unsigned Offset) {
+  assert(Ptr.isTypeidPointer());
+  const Record *R = S.getContext().getRecord(
+      Ptr.asTypeidPointer().TypeInfoType->getAsRecordDecl());
+  if (!R)
+    return false;
+  const Record::Field *Field =
+      llvm::find_if(R->fields(), [=](const Record::Field &F) -> bool {
+        return F.Offset == Offset;
+      });
+  if (!Field)
+    return false;
+
+  std::string TypeIdStr;
+  llvm::raw_string_ostream SS(TypeIdStr);
+  SS << "typeid(";
+  QualType(Ptr.asTypeidPointer().TypePtr, 0)
+      .print(SS, S.getASTContext().getPrintingPolicy());
+  SS << ").";
+  SS << Field->Decl->getNameAsString();
+
+  S.FFDiag(S.Current->getSource(OpPC),
+           diag::note_constexpr_access_unreadable_object)
+      << AK_Read << TypeIdStr;
+  return false;
+}
+
 static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                      uint32_t Off) {
   if (S.getLangOpts().CPlusPlus && S.inConstantContext() &&
@@ -1587,12 +1615,10 @@ static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   }
 
   if (!Ptr.isBlockPointer()) {
-    // FIXME: The only time we (seem to) get here is when trying to access a
-    // field of a typeid pointer. In that case, we're supposed to diagnose e.g.
-    // `typeid(int).name`, but we currently diagnose `&typeid(int)`.
-    S.FFDiag(S.Current->getSource(OpPC),
-             diag::note_constexpr_access_unreadable_object)
-        << AK_Read << Ptr.toDiagnosticString(S.getASTContext());
+    // If we're trying to get the field of a TypeId pointer, try to produce a
+    // proper diagnostic.
+    if (Ptr.isTypeidPointer())
+      return diagnoseTypeIdField(S, OpPC, Ptr, Off);
     return false;
   }
 
