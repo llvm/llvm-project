@@ -148,3 +148,49 @@ constexpr __UINT_LEAST32_TYPE__ misaligned32_half = stdc_load8_aligned_leu32(ali
 // align_buf[4..5] == {0x12, 0x00}, so LE u16 == 0x0012.
 constexpr __UINT_LEAST16_TYPE__ partially_aligned16 = stdc_load8_aligned_leu16(align_buf + 4);
 static_assert(partially_aligned16 == 0x0012, "");
+
+constexpr unsigned char noalign_buf[8] = {0x78, 0x56, 0x34, 0x12, 0, 0, 0, 0};
+constexpr __UINT_LEAST8_TYPE__  noalign_ok   = stdc_load8_aligned_leu8(noalign_buf);
+static_assert(noalign_ok == 0x78, "");
+constexpr __UINT_LEAST16_TYPE__ noalign_fail16 = stdc_load8_aligned_leu16(noalign_buf); // expected-error{{must be initialized by a constant expression}} expected-note{{'stdc_load8_aligned_leu16' requires a pointer aligned to 2 bytes, but the given pointer is only aligned to 1 byte}}
+constexpr __UINT_LEAST32_TYPE__ noalign_fail32 = stdc_load8_aligned_leu32(noalign_buf); // expected-error{{must be initialized by a constant expression}} expected-note{{'stdc_load8_aligned_leu32' requires a pointer aligned to 4 bytes, but the given pointer is only aligned to 1 byte}}
+
+void test_block_scope_vardecl(void) {
+  alignas(8) constexpr unsigned char blk_buf[4] = {0x78, 0x56, 0x34, 0x12};
+  static_assert(stdc_load8_aligned_leu32(blk_buf) == 0x12345678U, "");
+
+  constexpr unsigned char blk_noalign[4] = {0x78, 0x56, 0x34, 0x12};
+  constexpr __UINT_LEAST32_TYPE__ blk_fail = stdc_load8_aligned_leu32(blk_noalign); // expected-error{{must be initialized by a constant expression}} expected-note{{'stdc_load8_aligned_leu32' requires a pointer aligned to 4 bytes, but the given pointer is only aligned to 1 byte}}
+}
+
+constexpr __UINT_LEAST8_TYPE__ strlit_ok = stdc_load8_aligned_leu8((const unsigned char *)u8"\xAB");
+static_assert(strlit_ok == (__UINT_LEAST8_TYPE__)0xAB, "");
+
+constexpr __UINT_LEAST16_TYPE__ strlit_fail = stdc_load8_aligned_leu16((const unsigned char *)u8"\x34\x12"); // expected-error{{must be initialized by a constant expression}} expected-note{{'stdc_load8_aligned_leu16' requires a pointer aligned to 2 bytes, but the given pointer is only aligned to 1 byte}}
+
+constexpr __UINT_LEAST32_TYPE__ complit_fail = stdc_load8_aligned_leu32((unsigned char[4]){0x78, 0x56, 0x34, 0x12}); // expected-error{{must be initialized by a constant expression}} expected-note{{'stdc_load8_aligned_leu32' requires a pointer aligned to 4 bytes, but the given pointer is only aligned to 1 byte}}
+
+typedef unsigned char AlignedBuf8[8] __attribute__((aligned(8)));
+
+constexpr __UINT_LEAST32_TYPE__ complit_offset_fail = stdc_load8_aligned_leu32((AlignedBuf8){0, 0, 0x78, 0x56, 0x34, 0x12} + 2); // expected-error{{must be initialized by a constant expression}} expected-note{{'stdc_load8_aligned_leu32' requires a pointer aligned to 4 bytes, but the given pointer is only aligned to 2 bytes}}
+
+alignas(8) constexpr unsigned char align_buf_be[9] = {0, 0x12, 0x34, 0x56, 0x78, 0, 0, 0, 0};
+
+constexpr __UINT_LEAST16_TYPE__ misaligned16_be = stdc_load8_aligned_beu16(align_buf_be + 1); // expected-error{{must be initialized by a constant expression}} expected-note{{'stdc_load8_aligned_beu16' requires a pointer aligned to 2 bytes, but the given pointer is only aligned to 1 byte}}
+constexpr __UINT_LEAST32_TYPE__ misaligned32_be = stdc_load8_aligned_beu32(align_buf_be + 1); // expected-error{{must be initialized by a constant expression}} expected-note{{'stdc_load8_aligned_beu32' requires a pointer aligned to 4 bytes, but the given pointer is only aligned to 1 byte}}
+constexpr __UINT_LEAST64_TYPE__ misaligned64_be = stdc_load8_aligned_beu64(align_buf_be + 1); // expected-error{{must be initialized by a constant expression}} expected-note{{'stdc_load8_aligned_beu64' requires a pointer aligned to 8 bytes, but the given pointer is only aligned to 1 byte}}
+
+constexpr __UINT_LEAST16_TYPE__ partially_aligned16_be = stdc_load8_aligned_beu16(align_buf_be + 4);
+static_assert(partially_aligned16_be == 0x7800, "");
+
+alignas(8) constexpr unsigned char align_buf_les[9] = {0, 0x80, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0};
+constexpr __INT_LEAST32_TYPE__ misaligned32_les = stdc_load8_aligned_les32(align_buf_les + 1); // expected-error{{must be initialized by a constant expression}} expected-note{{'stdc_load8_aligned_les32' requires a pointer aligned to 4 bytes, but the given pointer is only aligned to 1 byte}}
+
+alignas(8) constexpr unsigned char align_buf_bes[9] = {0, 0xFF, 0xFF, 0xFF, 0x80, 0, 0, 0, 0};
+constexpr __INT_LEAST32_TYPE__ misaligned32_bes = stdc_load8_aligned_bes32(align_buf_bes + 1); // expected-error{{must be initialized by a constant expression}} expected-note{{'stdc_load8_aligned_bes32' requires a pointer aligned to 4 bytes, but the given pointer is only aligned to 1 byte}}
+
+alignas(8) constexpr unsigned char onepastend_buf[4] = {0x78, 0x56, 0x34, 0x12};
+constexpr __UINT_LEAST32_TYPE__ onepastend_aligned = stdc_load8_aligned_leu32(onepastend_buf + 4); // expected-error{{must be initialized by a constant expression}} expected-note{{cannot refer to element 7 of array of 4 elements in a constant expression}}
+
+alignas(8) constexpr unsigned char onepastend_misaligned_buf[5] = {0, 0x78, 0x56, 0x34, 0x12};
+constexpr __UINT_LEAST32_TYPE__ onepastend_misaligned = stdc_load8_aligned_leu32(onepastend_misaligned_buf + 5); // expected-error{{must be initialized by a constant expression}} expected-note{{'stdc_load8_aligned_leu32' requires a pointer aligned to 4 bytes, but the given pointer is only aligned to 1 byte}}
