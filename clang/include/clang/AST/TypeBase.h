@@ -2864,6 +2864,14 @@ public:
     return getDependence() & TypeDependence::VariablyModified;
   }
 
+  /// Whether this type contains a LateParsedAttrType placeholder that still
+  /// needs to be resolved by RebuildTypeWithLateParsedAttr. Meaningful only on
+  /// the sugared type as written; canonical types do not carry the
+  /// placeholder.
+  bool hasLateParsedAttr() const {
+    return getDependence() & TypeDependence::LateParsedAttr;
+  }
+
   /// Whether this type involves a variable-length array type
   /// with a definite size.
   bool hasSizedVLAType() const;
@@ -3559,7 +3567,7 @@ class LateParsedAttrType : public Type, public llvm::FoldingSetNode {
 
   LateParsedAttrType(QualType Wrapped, QualType Canon,
                      LateParsedTypeAttribute *Attr)
-      : Type(LateParsedAttr, Canon, Wrapped->getDependence()),
+      : Type(LateParsedAttr, Canon, TypeDependence::LateParsedAttr | Wrapped->getDependence()),
         WrappedTy(Wrapped), LateParsedTypeAttr(Attr) {}
 
 public:

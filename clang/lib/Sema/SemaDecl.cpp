@@ -20193,7 +20193,7 @@ void Sema::ProcessLateParsedTypeAttributes(
     if (!FD && IFD) {
       FD = IFD->getAnonField();
     }
-    if (!FD || FD->getType()->isRecordType())
+    if (!FD || !FD->getType()->hasLateParsedAttr() || FD->getType()->isRecordType())
       continue;
 
     RebuildTypeWithLateParsedAttr RebuildFieldType(*this, FD, ParseCB);
