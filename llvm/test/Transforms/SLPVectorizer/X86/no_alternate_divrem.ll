@@ -5,11 +5,11 @@ define void @test_add_sdiv(ptr %arr1, ptr %arr2, i32 %a0, i32 %a1, i32 %a2, i32 
 ; CHECK-LABEL: @test_add_sdiv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[ARR1:%.*]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 poison, i32 0>, i32 [[A2:%.*]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 poison, i32 0>, i32 [[A2:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[TMP5]], <i32 1, i32 1, i32 42, i32 1>
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, i32 [[A0:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[A1:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[A3:%.*]], i32 3
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, i32 [[A0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[A1:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[A3:%.*]], i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> <i32 1146, i32 146, i32 0, i32 0>, [[TMP3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sdiv <4 x i32> [[TMP0]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = add nsw <4 x i32> [[TMP8]], [[TMP4]]
@@ -52,11 +52,11 @@ define void @test_add_udiv(ptr %arr1, ptr %arr2, i32 %a0, i32 %a1, i32 %a2, i32 
 ; CHECK-LABEL: @test_add_udiv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[ARR1:%.*]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 poison, i32 0>, i32 [[A2:%.*]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 poison, i32 0>, i32 [[A2:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[TMP5]], <i32 1, i32 1, i32 42, i32 1>
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, i32 [[A0:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[A1:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[A3:%.*]], i32 3
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, i32 [[A0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[A1:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[A3:%.*]], i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> <i32 1146, i32 146, i32 0, i32 0>, [[TMP3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = udiv <4 x i32> [[TMP0]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = add nsw <4 x i32> [[TMP8]], [[TMP4]]
