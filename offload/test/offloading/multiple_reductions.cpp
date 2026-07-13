@@ -1,5 +1,9 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 // RUN: %libomptarget-compileoptxx-run-and-check-generic
+// RUN: %libomptarget-compilexx-generic -fopenmp-target-fast-reduction && \
+// RUN:   %libomptarget-run-generic | %fcheck-generic
+// RUN: %libomptarget-compileoptxx-generic -fopenmp-target-fast-reduction && \
+// RUN:   %libomptarget-run-generic | %fcheck-generic
 // UNSUPPORTED: intelgpu
 
 // See array_reductions.cpp for a clone of this file for array reductions.

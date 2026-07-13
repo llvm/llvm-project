@@ -241,6 +241,7 @@ LANGOPT(OpenMPNoThreadState  , 1, 0, NotCompatible, "Assume that no thread in a 
 LANGOPT(OpenMPNoNestedParallelism  , 1, 0, NotCompatible, "Assume that no thread in a parallel region will encounter a parallel region")
 LANGOPT(OpenMPOffloadMandatory  , 1, 0, NotCompatible, "Assert that offloading is mandatory and do not create a host fallback.")
 LANGOPT(OpenMPForceUSM     , 1, 0, NotCompatible, "Enable OpenMP unified shared memory mode via compiler.")
+LANGOPT(OpenMPTargetFastReduction , 1, 0, NotCompatible, "Use atomic operations for OpenMP GPU cross-team reductions where supported.")
 LANGOPT(NoGPULib  , 1, 0, NotCompatible, "Indicate a build without the standard GPU libraries.")
 
 LANGOPT(HLSL, 1, 0, NotCompatible, "HLSL")
