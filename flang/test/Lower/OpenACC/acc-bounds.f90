@@ -77,7 +77,7 @@ contains
 ! CHECK: %[[DECL_ARG0:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QMopenacc_boundsFacc_undefined_extentEa"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
 ! CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[DECL_ARG0]]#0, %c0{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 ! CHECK: %[[UB:.*]] = arith.subi %[[DIMS0]]#1, %c1{{.*}} : index
-! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%[[UB]] : index) extent(%[[DIMS0]]#1 : index) sourceExtent(%[[DIMS0]]#1 : index) stride(%[[DIMS0]]#2 : index) startIdx(%c1{{.*}} : index) {strideInBytes = true}
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%[[UB]] : index) extent(%[[DIMS0]]#1 : index) stride(%[[DIMS0]]#2 : index) startIdx(%c1{{.*}} : index) {strideInBytes = true}
 ! CHECK: %[[PRESENT:.*]] = acc.present var(%[[DECL_ARG0]]#0 : !fir.box<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.box<!fir.array<?xf32>> {name = "a"}
 ! CHECK: acc.kernels dataOperands(%[[PRESENT]] : !fir.box<!fir.array<?xf32>>) {
 

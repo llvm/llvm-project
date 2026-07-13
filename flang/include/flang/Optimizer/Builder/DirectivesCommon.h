@@ -128,7 +128,8 @@ template <typename BoundsOp, typename BoundsType>
 llvm::SmallVector<mlir::Value>
 gatherBoundsOrBoundValues(fir::FirOpBuilder &builder, mlir::Location loc,
                           fir::ExtendedValue dataExv, mlir::Value box,
-                          bool collectValuesOnly = false) {
+                          bool collectValuesOnly = false,
+                          bool isAssumedSize = false) {
   assert(box && "box must exist");
   llvm::SmallVector<mlir::Value> values;
   mlir::Value byteStride;
@@ -153,9 +154,12 @@ gatherBoundsOrBoundValues(fir::FirOpBuilder &builder, mlir::Location loc,
       values.push_back(byteStride);
       values.push_back(baseLb);
     } else {
+      mlir::Value sourceExtent = isAssumedSize && dim + 1 == dataExv.rank()
+                                     ? mlir::Value{}
+                                     : dimInfo.getExtent();
       mlir::Value bound = createBoundsOp<BoundsOp>(
-          builder, loc, boundTy, lb, ub, dimInfo.getExtent(),
-          dimInfo.getExtent(), byteStride, true, baseLb);
+          builder, loc, boundTy, lb, ub, dimInfo.getExtent(), sourceExtent,
+          byteStride, true, baseLb);
       values.push_back(bound);
     }
     // Compute the stride for the next dimension.
@@ -233,7 +237,8 @@ genBoundsOpFromBoxChar(fir::FirOpBuilder &builder, mlir::Location loc,
 template <typename BoundsOp, typename BoundsType>
 llvm::SmallVector<mlir::Value>
 genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
-                    fir::ExtendedValue dataExv, AddrAndBoundsInfo &info) {
+                    fir::ExtendedValue dataExv, AddrAndBoundsInfo &info,
+                    bool isAssumedSize = false) {
   llvm::SmallVector<mlir::Value> bounds;
   mlir::Type idxTy = builder.getIndexType();
   mlir::Type boundTy = builder.getType<BoundsType>();
@@ -259,7 +264,7 @@ genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
               llvm::SmallVector<mlir::Value> boundValues =
                   gatherBoundsOrBoundValues<BoundsOp, BoundsType>(
                       builder, loc, dataExv, box,
-                      /*collectValuesOnly=*/true);
+                      /*collectValuesOnly=*/true, isAssumedSize);
               fir::ResultOp::create(builder, loc, boundValues);
             })
             .genElse([&] {
@@ -280,17 +285,21 @@ genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
     // Create the bound operations outside the if-then-else with the if op
     // results.
     for (unsigned i = 0; i < ifRes.size(); i += nbValuesPerBound) {
+      unsigned dim = i / nbValuesPerBound;
+      mlir::Value sourceExtent = isAssumedSize && dim + 1 == dataExv.rank()
+                                     ? mlir::Value{}
+                                     : ifRes[i + 2];
       mlir::Value bound = createBoundsOp<BoundsOp>(
           builder, loc, boundTy, ifRes[i], ifRes[i + 1], ifRes[i + 2],
-          ifRes[i + 2], ifRes[i + 3], true, ifRes[i + 4]);
+          sourceExtent, ifRes[i + 3], true, ifRes[i + 4]);
       bounds.push_back(bound);
     }
   } else {
     mlir::Value box = !fir::isBoxAddress(info.addr.getType())
                           ? info.addr
                           : fir::LoadOp::create(builder, loc, info.addr);
-    bounds = gatherBoundsOrBoundValues<BoundsOp, BoundsType>(builder, loc,
-                                                             dataExv, box);
+    bounds = gatherBoundsOrBoundValues<BoundsOp, BoundsType>(
+        builder, loc, dataExv, box, false, isAssumedSize);
   }
   return bounds;
 }
@@ -319,7 +328,9 @@ genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
     mlir::Value ub;
     mlir::Value lb = zero;
     mlir::Value extent = fir::factory::readExtent(builder, loc, dataExv, dim);
+    mlir::Value sourceExtent = extent;
     if (isAssumedSize && dim + 1 == rank) {
+      sourceExtent = {};
       extent = zero;
       ub = lb;
     } else {
@@ -334,7 +345,8 @@ genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
     }
 
     mlir::Value bound = createBoundsOp<BoundsOp>(
-        builder, loc, boundTy, lb, ub, extent, extent, stride, false, baseLb);
+        builder, loc, boundTy, lb, ub, extent, sourceExtent, stride, false,
+        baseLb);
     bounds.push_back(bound);
   }
   return bounds;
@@ -360,8 +372,8 @@ genImplicitBoundsOps(fir::FirOpBuilder &builder, AddrAndBoundsInfo &info,
 
   mlir::Value baseOp = info.rawInput;
   if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(baseOp.getType())))
-    bounds =
-        genBoundsOpsFromBox<BoundsOp, BoundsType>(builder, loc, dataExv, info);
+    bounds = genBoundsOpsFromBox<BoundsOp, BoundsType>(
+        builder, loc, dataExv, info, dataExvIsAssumedSize);
   if (mlir::isa<fir::SequenceType>(fir::unwrapRefType(baseOp.getType()))) {
     bounds = genBaseBoundsOps<BoundsOp, BoundsType>(builder, loc, dataExv,
                                                     dataExvIsAssumedSize);

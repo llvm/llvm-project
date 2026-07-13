@@ -304,6 +304,13 @@ acc.enter_data dataOperands(%value : memref<10xf32>)
 
 // -----
 
+%c1 = arith.constant 1 : index
+%c-1 = arith.constant -1 : index
+// expected-error@+1 {{expected nonnegative source extent}}
+%0 = acc.bounds extent(%c1 : index) sourceExtent(%c-1 : index)
+
+// -----
+
 %value = memref.alloc() : memref<10xf32>
 // expected-error@+1 {{expect data entry/exit operation or acc.getdeviceptr as defining op}}
 acc.update dataOperands(%value : memref<10xf32>)

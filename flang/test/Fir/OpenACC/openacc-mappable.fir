@@ -66,7 +66,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
   // CHECK: Type category: array
   // CHECK: Has unknown dimensions: true
   // CHECK: Shape: %{{.*}} = fir.shape %[[EXTENT1:.*]] : (index) -> !fir.shape<1>
-  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%[[LB1:.*]] : index) upperbound(%[[UB1:.*]] : index) extent(%{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
+  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%[[LB1:.*]] : index) upperbound(%[[UB1:.*]] : index) extent(%{{.*}} : index) sourceExtent(%{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
   // CHECK: Lower bound: %[[LB1]] = arith.constant 0 : index
   // CHECK: Upper bound: %[[UB1]] = arith.subi %[[EXTENT1]], %c1{{.*}} : index
 
@@ -75,7 +75,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
   // CHECK: Type category: array
   // CHECK: Has unknown dimensions: true
   // CHECK: Shape: %{{.*}} = fir.shape_shift %c2{{.*}}, %[[EXTENT2:.*]] : (index, index) -> !fir.shapeshift<1>
-  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%[[LB2:.*]] : index) upperbound(%[[UB2:.*]] : index) extent(%{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c2{{.*}} : index)
+  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%[[LB2:.*]] : index) upperbound(%[[UB2:.*]] : index) extent(%{{.*}} : index) sourceExtent(%{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c2{{.*}} : index)
   // CHECK: Lower bound: %[[LB2]] = arith.constant 0 : index
   // CHECK: Upper bound: %[[UB2]] = arith.subi %[[EXTENT2]], %c1{{.*}} : index
 
@@ -86,7 +86,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
   // CHECK: Offset: 0
   // CHECK: Has unknown dimensions: false
   // CHECK: Shape: %{{.*}} = fir.shape %[[EXTENT3:.*]] : (index) -> !fir.shape<1>
-  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%[[LB3:.*]] : index) upperbound(%[[UB3:.*]] : index) extent(%c10{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
+  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%[[LB3:.*]] : index) upperbound(%[[UB3:.*]] : index) extent(%c10{{.*}} : index) sourceExtent(%c10{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
   // CHECK: Lower bound: %[[LB3]] = arith.constant 0 : index
   // CHECK: Upper bound: %[[UB3]] = arith.subi %[[EXTENT3]], %c1{{.*}} : index
 
@@ -104,11 +104,11 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
   // CHECK: Type category: array
   // CHECK: Has unknown dimensions: false
   // CHECK: Shape: <<NULL VALUE>>
-  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%[[LB0:.*]] : index) upperbound(%[[UB0:.*]] : index) extent(%[[DIM0:.*]]#1 : index)
+  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%[[LB0:.*]] : index) upperbound(%[[UB0:.*]] : index) extent(%[[DIM0:.*]]#1 : index) sourceExtent(%[[DIM0]]#1 : index)
   // CHECK-SAME: stride(%[[DIM0]]#2 : index) startIdx(%c1{{.*}} : index) {strideInBytes = true}
   // CHECK: Lower bound: %[[LB0]] = arith.constant 0 : index
   // CHECK: Upper bound: %[[UB0]] = arith.subi %[[DIM0]]#1, %c1{{.*}} : index
-  // CHECK: Bound[1]: %{{.*}} = acc.bounds lowerbound(%[[LB1:.*]] : index) upperbound(%[[UB1:.*]] : index) extent(%[[DIM1:.*]]#1 : index)
+  // CHECK: Bound[1]: %{{.*}} = acc.bounds lowerbound(%[[LB1:.*]] : index) upperbound(%[[UB1:.*]] : index) extent(%[[DIM1:.*]]#1 : index) sourceExtent(%[[DIM1]]#1 : index)
   // CHECK-SAME: stride(%{{.*}} : index) startIdx(%c1{{.*}} : index) {strideInBytes = true}
   // CHECK: Lower bound: %[[LB1]] = arith.constant 0 : index
   // CHECK: Upper bound: %[[UB1]] = arith.subi %[[DIM1]]#1, %c1{{.*}} : index
@@ -126,7 +126,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
   // CHECK: Type category: array
   // CHECK: Has unknown dimensions: false
   // CHECK: Shape: <<NULL VALUE>>
-  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%[[IF:.*]]#0 : index) upperbound(%[[IF]]#1 : index) extent(%[[IF]]#2 : index) stride(%[[IF]]#3 : index) startIdx(%[[IF]]#4 : index) {strideInBytes = true}
+  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%[[IF:.*]]#0 : index) upperbound(%[[IF]]#1 : index) extent(%[[IF]]#2 : index) sourceExtent(%[[IF]]#2 : index) stride(%[[IF]]#3 : index) startIdx(%[[IF]]#4 : index) {strideInBytes = true}
   // CHECK: Lower bound: %[[IF]]:5 = fir.if %[[PRESENT:.*]] -> (index, index, index, index, index) {
   // CHECK: %[[ONE:.*]] = arith.constant 1 : index
   // CHECK: %[[ZERO1:.*]] = arith.constant 0 : index
@@ -156,4 +156,17 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
   // CHECK: Type category: array
   // CHECK: Has unknown dimensions: true
   // CHECK-NOT: Bound[
+
+  // An assumed-size extent recovered from fir.declare is not a known source
+  // extent and must remain absent from the generated bounds.
+  func.func @_QPassumed_size_declare(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "a"}) {
+    %extent = fir.assumed_size_extent : index
+    %shape = fir.shape %extent : (index) -> !fir.shape<1>
+    %array = fir.declare %arg0(%shape) {uniq_name = "a"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
+    %copyin = acc.copyin varPtr(%array : !fir.ref<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>> {name = "a", structured = false}
+    acc.enter_data dataOperands(%copyin : !fir.ref<!fir.array<?xf32>>)
+    return
+  }
+  // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>> {name = "a", structured = false}
+  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%[[ASSUMED:.*]] : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
 }

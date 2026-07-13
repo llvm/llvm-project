@@ -196,6 +196,8 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
         return fir::factory::readExtent(builder, loc, dataExv, dimension);
       };
       mlir::Value sourceExtent;
+      bool isAssumedSizeDimension =
+          dataExvIsAssumedSize && dimension + 1 == dataExvRank;
 
       if (mlir::isa<fir::BaseBoxType>(
               fir::unwrapRefType(info.addr.getType()))) {
@@ -306,20 +308,20 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
           if (lval && uval && *uval < *lval) {
             mlir::emitError(loc, "zero sized array section");
             break;
-          } else {
-            // Stride is mandatory in evaluate::Triplet. Make sure it's 1.
-            auto val = Fortran::evaluate::ToInt64(triplet->GetStride());
-            if (!val || *val != 1) {
-              mlir::emitError(loc, "stride cannot be specified on "
-                                   "an array section");
-              break;
-            }
           }
         }
+        // Stride is mandatory in evaluate::Triplet. Make sure it's 1.
+        auto val = Fortran::evaluate::ToInt64(triplet->GetStride());
+        if (!val || *val != 1) {
+          mlir::emitError(loc,
+                          "stride cannot be specified on an array section");
+          break;
+        }
 
-        sourceExtent = genSourceExtent();
+        if (!isAssumedSizeDimension)
+          sourceExtent = genSourceExtent();
 
-        if (dataExvIsAssumedSize && dimension + 1 == dataExvRank) {
+        if (isAssumedSizeDimension) {
           extent = zero;
           if (ubound && lbound) {
             mlir::Value diff =
@@ -340,15 +342,16 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
           extent = builder.createOrFold<mlir::arith::AddIOp>(loc, diff, one);
         }
       }
-      if (!sourceExtent)
+      if (!sourceExtent && !isAssumedSizeDimension)
         sourceExtent = genSourceExtent();
 
       // When the strideInBytes is true, it means the stride is from descriptor
       // and this already includes the lower extents.
       if (strideIncludeLowerExtent && !strideInBytes) {
         stride = cumulativeExtent;
+        mlir::Value strideExtent = sourceExtent ? sourceExtent : extent;
         cumulativeExtent = builder.createOrFold<mlir::arith::MulIOp>(
-            loc, cumulativeExtent, sourceExtent);
+            loc, cumulativeExtent, strideExtent);
       }
 
       mlir::Value bound = fir::factory::createBoundsOp<BoundsOp>(
@@ -515,16 +518,16 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
     } else if (auto symRef = detail::getRef<semantics::SymbolRef>(designator)) {
       // Scalar or full array.
       fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(*symRef);
+      bool dataExvIsAssumedSize =
+          Fortran::semantics::IsAssumedSizeArray(symRef->get().GetUltimate());
       info = getDataOperandBaseAddr(converter, builder, *symRef,
                                     operandLocation, unwrapFirBox);
       if (genDefaultBounds && mlir::isa<fir::BaseBoxType>(
                                   fir::unwrapRefType(info.addr.getType()))) {
         info.boxType = fir::unwrapRefType(info.addr.getType());
         bounds = fir::factory::genBoundsOpsFromBox<BoundsOp, BoundsType>(
-            builder, operandLocation, dataExv, info);
+            builder, operandLocation, dataExv, info, dataExvIsAssumedSize);
       }
-      bool dataExvIsAssumedSize =
-          Fortran::semantics::IsAssumedSizeArray(symRef->get().GetUltimate());
       if (genDefaultBounds && mlir::isa<fir::SequenceType>(
                                   fir::unwrapRefType(info.addr.getType()))) {
         bounds = fir::factory::genBaseBoundsOps<BoundsOp, BoundsType>(

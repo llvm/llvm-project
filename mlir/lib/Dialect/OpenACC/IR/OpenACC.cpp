@@ -943,6 +943,11 @@ LogicalResult acc::DataBoundsOp::verify() {
   auto upperbound = getUpperbound();
   if (!extent && !upperbound)
     return emitError("expected extent or upperbound.");
+  if (Value sourceExtent = getSourceExtent()) {
+    APSInt value;
+    if (matchPattern(sourceExtent, m_ConstantInt(&value)) && value.isNegative())
+      return emitError("expected nonnegative source extent.");
+  }
   return success();
 }
 

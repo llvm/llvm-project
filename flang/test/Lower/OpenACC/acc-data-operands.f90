@@ -25,12 +25,14 @@ end subroutine
 ! CHECK: %[[ONE:.*]] = arith.constant 1 : index
 ! CHECK: %[[LB:.*]] = arith.constant 0 : index
 ! CHECK: %[[UB:.*]] = arith.constant 49 : index
-! CHECK: %[[BOUND_1_50:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%{{.*}} : index) sourceExtent(%{{.*}} : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
+! CHECK: %[[SECTION_EXTENT:.*]] = arith.constant 50 : index
+! CHECK: %[[BOUND_1_50:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[SECTION_EXTENT]] : index) sourceExtent(%[[EXT]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
 ! CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[DECL]]#0 : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND_1_50]]) -> !fir.ref<!fir.array<100xf32>> {name = "a(1:50)"}
 ! CHECK: %[[ONE:.*]] = arith.constant 1 : index
 ! CHECK: %[[LB:.*]] = arith.constant 50 : index
 ! CHECK: %[[UB:.*]] = arith.constant 99 : index
-! CHECK: %[[BOUND_51_100:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%{{.*}} : index) sourceExtent(%{{.*}} : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
+! CHECK: %[[SECTION_EXTENT:.*]] = arith.constant 50 : index
+! CHECK: %[[BOUND_51_100:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[SECTION_EXTENT]] : index) sourceExtent(%[[EXT]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
 ! CHECK: %[[COPYOUT_CREATE:.*]] = acc.create varPtr(%[[DECL]]#0 : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND_51_100]]) -> !fir.ref<!fir.array<100xf32>> {dataClause = #acc<data_clause acc_copyout>, name = "a(51:100)"}
 ! CHECK: acc.data dataOperands(%[[COPYIN]], %[[COPYOUT_CREATE]] : !fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>) {
 ! CHECK:   acc.terminator
@@ -55,7 +57,8 @@ end subroutine
 ! CHECK: %[[ONE:.*]] = arith.constant 1 : index
 ! CHECK: %[[LB:.*]] = arith.constant 0 : index
 ! CHECK: %[[UB:.*]] = arith.constant 19 : index
-! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%{{.*}} : index) sourceExtent(%{{.*}} : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
+! CHECK: %[[SECTION_EXTENT:.*]] = arith.constant 20 : index
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[SECTION_EXTENT]] : index) sourceExtent(%[[EXT]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
 ! CHECK: %[[COPY_COPYIN:.*]] = acc.copyin varPtr(%[[COORD_DATA]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xf32>> {dataClause = #acc<data_clause acc_copy>, name = "w%data(1:20)"}
 ! CHECK: acc.data dataOperands(%[[COPY_COPYIN]] : !fir.ref<!fir.array<100xf32>>) {
 ! CHECK:   acc.terminator

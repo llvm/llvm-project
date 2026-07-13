@@ -265,6 +265,11 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
     if (auto shapeOp = mlir::dyn_cast_if_present<fir::ShapeOp>(anyShapeOp)) {
       mlir::Value cummulativeExtent = one;
       for (auto extent : shapeOp.getExtents()) {
+        mlir::Value sourceExtent =
+            llvm::isa_and_nonnull<fir::AssumedSizeExtentOp>(
+                extent.getDefiningOp())
+                ? mlir::Value{}
+                : extent;
         mlir::Value upperbound =
             mlir::arith::SubIOp::create(builder, loc, extent, one);
         mlir::Value stride = one;
@@ -276,7 +281,7 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
         auto accBound = mlir::acc::DataBoundsOp::create(
             builder, loc, mlir::acc::DataBoundsType::get(builder.getContext()),
             /*lowerbound=*/zero, /*upperbound=*/upperbound,
-            /*extent=*/extent, /*sourceExtent=*/extent, /*stride=*/stride,
+            /*extent=*/extent, /*sourceExtent=*/sourceExtent, /*stride=*/stride,
             /*strideInBytes=*/false, /*startIdx=*/one);
         accBounds.push_back(accBound);
       }
@@ -289,6 +294,11 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
           lowerbound = val;
         } else {
           mlir::Value extent = val;
+          mlir::Value sourceExtent =
+              llvm::isa_and_nonnull<fir::AssumedSizeExtentOp>(
+                  extent.getDefiningOp())
+                  ? mlir::Value{}
+                  : extent;
           mlir::Value upperbound =
               mlir::arith::SubIOp::create(builder, loc, extent, one);
           mlir::Value stride = one;
@@ -301,7 +311,8 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
               builder, loc,
               mlir::acc::DataBoundsType::get(builder.getContext()),
               /*lowerbound=*/zero, /*upperbound=*/upperbound,
-              /*extent=*/extent, /*sourceExtent=*/extent, /*stride=*/stride,
+              /*extent=*/extent, /*sourceExtent=*/sourceExtent,
+              /*stride=*/stride,
               /*strideInBytes=*/false, /*startIdx=*/lowerbound);
           accBounds.push_back(accBound);
         }

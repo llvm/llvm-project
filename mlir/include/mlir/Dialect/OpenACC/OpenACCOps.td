@@ -546,8 +546,17 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
     but not checked for consistency). When the source language's arrays are
     not zero-based, the `startIdx` must specify the zero-position index.
 
-    The optional `sourceExtent` is the complete source dimension extent. It can
-    differ from `extent` when the bounds select an array section.
+    The optional `sourceExtent` is the logical extent of the source object's
+    dimension in the normalized coordinate system used by this operation,
+    before applying this section or later selection-narrowing transformations.
+    It can differ from `extent`, which is the number of selected elements.
+    It does not describe byte pitch or allocation size; those remain represented
+    by `stride`. A known source extent is carried as an SSA value. If the source
+    extent is semantically unknown, the operand is absent.
+
+    Transformations that narrow `lowerbound`, `upperbound`, or `extent` must
+    preserve `sourceExtent`, even when it initially equals `extent`. The operand
+    must not be canonicalized away on that basis.
 
     The `stride` represents the distance between consecutive elements. For
     multi-dimensional arrays, the `stride` for each outer dimension must account
@@ -620,6 +629,18 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
           lowerbound, upperbound, /*extent=*/{},
           /*sourceExtent=*/{}, /*stride=*/{},
           /*strideInBytes=*/$_builder.getBoolAttr(false), /*startIdx=*/{});
+      }]
+    >,
+    OpBuilder<(ins "::mlir::Type":$result,
+                   "::mlir::Value":$lowerbound,
+                   "::mlir::Value":$upperbound,
+                   "::mlir::Value":$extent,
+                   "::mlir::Value":$stride,
+                   "bool":$strideInBytes,
+                   "::mlir::Value":$startIdx), [{
+        build($_builder, $_state, result, lowerbound, upperbound, extent,
+          /*sourceExtent=*/{}, stride,
+          $_builder.getBoolAttr(strideInBytes), startIdx);
       }]
     >
   ];
