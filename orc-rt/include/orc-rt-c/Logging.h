@@ -96,7 +96,7 @@ const char *orc_rt_log_Level_getName(orc_rt_log_Level L) ORC_RT_C_NOTHROW;
  */
 orc_rt_log_Level orc_rt_log_Level_parse(const char *Str) ORC_RT_C_NOTHROW;
 
-/**
+/*
  * Declared but never defined: referenced only in unevaluated (sizeof) contexts
  * to type-check a printf-style format string against its arguments without
  * evaluating them or emitting any code.
@@ -135,7 +135,7 @@ int orc_rt_log_formatCheck(const char *Fmt, ...) ORC_RT_C_FORMAT_PRINTF(1, 2);
 
 #elif ORC_RT_LOG_BACKEND == ORC_RT_LOG_BACKEND_PRINTF
 
-/**
+/*
  * printf-backend log sink. Formats the message and writes it, prefixed with its
  * category and level, to the logging output (stderr, or the file named by the
  * ORC_RT_LOG_OUTPUT environment variable). Not called directly: use ORC_RT_LOG.
