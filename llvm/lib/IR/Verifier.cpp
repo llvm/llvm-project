@@ -5942,8 +5942,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
               "bits",
               Call);
         Check(OBU.Inputs.size() < 3 ||
-                  GetTypeAt(2)->isIntegerTy() &&
-                      GetTypeAt(2)->getIntegerBitWidth() <= 64,
+                  (GetTypeAt(2)->isIntegerTy() &&
+                   GetTypeAt(2)->getIntegerBitWidth() <= 64),
               "third argument should be an integer with a maximum width of 64 "
               "bits if present",
               Call);

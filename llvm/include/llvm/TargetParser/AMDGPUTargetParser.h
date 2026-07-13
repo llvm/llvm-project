@@ -166,6 +166,10 @@ public:
   TargetID(GPUKind Arch, const Triple &TT, TargetIDSetting XnackSetting,
            TargetIDSetting SramEccSetting);
 
+  /// Construct a TargetID from a triple \p TT and the processor+features string
+  /// e.g. "gfx90a", "gfx90a:xnack+:sramecc-", "".
+  TargetID(const Triple &TT, StringRef TargetIDStr);
+
   ~TargetID() = default;
 
   /// \return True if the current xnack setting is not "Unsupported".
@@ -233,6 +237,10 @@ public:
 
   static std::optional<TargetID>
   parseTargetIDString(StringRef TargetIDDirective);
+
+  /// Returns true if a device image built for *this can satisfy a request for
+  /// \p Other (i.e. they are compatible and can be grouped together).
+  bool isCompatibleWith(const TargetID &Other) const;
 
   void print(raw_ostream &OS) const;
 
