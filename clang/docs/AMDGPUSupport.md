@@ -1,29 +1,34 @@
-.. raw:: html
+```{raw} html
+<style type="text/css">
+  .none { background-color: #FFCCCC }
+  .part { background-color: #FFFF99 }
+  .good { background-color: #CCFF99 }
+</style>
+```
 
-  <style type="text/css">
-    .none { background-color: #FFCCCC }
-    .part { background-color: #FFFF99 }
-    .good { background-color: #CCFF99 }
-  </style>
-
+```{eval-rst}
 .. role:: none
+```
+
+```{eval-rst}
 .. role:: part
+```
+
+```{eval-rst}
 .. role:: good
+```
 
-.. contents::
-   :local:
+```{contents}
+:local: true
+```
 
-==============
-AMDGPU Support
-==============
+# AMDGPU Support
 
 Clang supports OpenCL, HIP and OpenMP on AMD GPU targets.
 
+## Predefined Macros
 
-Predefined Macros
-=================
-
-
+```{eval-rst}
 .. list-table::
    :header-rows: 1
 
@@ -55,12 +60,12 @@ Predefined Macros
      - Defined if LDEXPF instruction is available (deprecated).
    * - ``__HAS_FP64__``
      - Defined if FP64 instruction is available (deprecated).
+```
 
 Please note that the specific architecture and feature names will vary depending on the GPU. Also, some macros are deprecated and may be removed in future releases.
 
-
-Target-Specific Builtins
-========================
+## Target-Specific Builtins
 
 Clang exposes AMDGPU hardware intrinsics as target-specific builtins with the
-``__builtin_amdgcn_`` prefix. These are documented in :doc:`AMDGPUBuiltinReference`.
+`__builtin_amdgcn_` prefix. These are documented in {doc}`AMDGPUBuiltinReference`.
+
