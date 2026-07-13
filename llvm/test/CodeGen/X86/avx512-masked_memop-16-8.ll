@@ -183,27 +183,60 @@ declare void @llvm.masked.store.v16f16.p0(<16 x half>, ptr, i32, <16 x i1>)
 define void @test_maskz_store_v192i8(ptr %p0, <192 x i1> %mask) nounwind {
 ; CHECK-LABEL: test_maskz_store_v192i8:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm0
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm1
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm3
-; CHECK-NEXT:    vpmovqb %zmm1, %xmm1
-; CHECK-NEXT:    vpmovqb %zmm3, %xmm3
-; CHECK-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
-; CHECK-NEXT:    vpmovqb %zmm0, %xmm0
-; CHECK-NEXT:    vpmovqb %zmm2, %xmm2
-; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; CHECK-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm1
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; CHECK-NEXT:    vpmovqb %zmm2, %xmm2
-; CHECK-NEXT:    vpmovqb %zmm1, %xmm1
-; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; CHECK-NEXT:    vmovd %esi, %xmm2
-; CHECK-NEXT:    vpinsrb $1, %edx, %xmm2, %xmm2
-; CHECK-NEXT:    vpinsrb $2, %ecx, %xmm2, %xmm2
-; CHECK-NEXT:    vpinsrb $3, %r8d, %xmm2, %xmm2
-; CHECK-NEXT:    vpinsrb $4, %r9d, %xmm2, %xmm2
+; CHECK-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vmovd %esi, %xmm1
+; CHECK-NEXT:    vpinsrb $1, %edx, %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $2, %ecx, %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $3, %r8d, %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $4, %r9d, %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; CHECK-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; CHECK-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; CHECK-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm2, %xmm2
@@ -215,58 +248,146 @@ define void @test_maskz_store_v192i8(ptr %p0, <192 x i1> %mask) nounwind {
 ; CHECK-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; CHECK-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; CHECK-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; CHECK-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; CHECK-NEXT:    vpbroadcastb {{.*#+}} zmm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; CHECK-NEXT:    vptestmb %zmm1, %zmm0, %k1
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm0
-; CHECK-NEXT:    vpmovqb %zmm0, %xmm0
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; CHECK-NEXT:    vpmovqb %zmm2, %xmm2
-; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm3
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm4
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm5
-; CHECK-NEXT:    vpmovqb %zmm3, %xmm3
-; CHECK-NEXT:    vpmovqb %zmm5, %xmm5
-; CHECK-NEXT:    vinserti128 $1, %xmm5, %ymm3, %ymm3
-; CHECK-NEXT:    vinserti64x4 $1, %ymm0, %zmm3, %zmm0
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm3
-; CHECK-NEXT:    vpmovqb %zmm3, %xmm3
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm5
-; CHECK-NEXT:    vpmovqb %zmm5, %xmm5
-; CHECK-NEXT:    vinserti128 $1, %xmm5, %ymm3, %ymm3
-; CHECK-NEXT:    vpmovqb %zmm2, %xmm2
-; CHECK-NEXT:    vpmovqb %zmm4, %xmm4
-; CHECK-NEXT:    vinserti128 $1, %xmm4, %ymm2, %ymm2
-; CHECK-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm2
-; CHECK-NEXT:    vpunpcklqdq {{.*#+}} zmm0 = zmm2[0],zmm0[0],zmm2[2],zmm0[2],zmm2[4],zmm0[4],zmm2[6],zmm0[6]
-; CHECK-NEXT:    vptestmb %zmm1, %zmm0, %k2
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm0
-; CHECK-NEXT:    vpmovqb %zmm0, %xmm0
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; CHECK-NEXT:    vpmovqb %zmm2, %xmm2
-; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm3
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm4
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm5
-; CHECK-NEXT:    vpmovqb %zmm3, %xmm3
-; CHECK-NEXT:    vpmovqb %zmm5, %xmm5
-; CHECK-NEXT:    vinserti128 $1, %xmm5, %ymm3, %ymm3
-; CHECK-NEXT:    vinserti64x4 $1, %ymm0, %zmm3, %zmm0
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm3
-; CHECK-NEXT:    vpmovqb %zmm3, %xmm3
-; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm5
-; CHECK-NEXT:    vpmovqb %zmm5, %xmm5
-; CHECK-NEXT:    vinserti128 $1, %xmm5, %ymm3, %ymm3
-; CHECK-NEXT:    vpmovqb %zmm2, %xmm2
-; CHECK-NEXT:    vpmovqb %zmm4, %xmm4
-; CHECK-NEXT:    vinserti128 $1, %xmm4, %ymm2, %ymm2
-; CHECK-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm2
-; CHECK-NEXT:    vpunpcklqdq {{.*#+}} zmm0 = zmm2[0],zmm0[0],zmm2[2],zmm0[2],zmm2[4],zmm0[4],zmm2[6],zmm0[6]
-; CHECK-NEXT:    vptestmb %zmm1, %zmm0, %k3
+; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; CHECK-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm1
+; CHECK-NEXT:    vpbroadcastb {{.*#+}} zmm0 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; CHECK-NEXT:    vptestmb %zmm0, %zmm1, %k1
+; CHECK-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; CHECK-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vmovd {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
+; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm2, %zmm1
+; CHECK-NEXT:    vptestmb %zmm0, %zmm1, %k2
+; CHECK-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; CHECK-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; CHECK-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vmovd {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
+; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm2, %zmm1
+; CHECK-NEXT:    vptestmb %zmm0, %zmm1, %k3
 ; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovdqu8 %zmm0, 64(%rdi) {%k3}
 ; CHECK-NEXT:    vmovdqu8 %zmm0, 128(%rdi) {%k2}
