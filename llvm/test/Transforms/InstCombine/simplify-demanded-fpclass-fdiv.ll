@@ -247,7 +247,7 @@ define nofpclass(inf) half @ret_src_must_be_zero_or_nan_self_other_use_input1(ha
 define nofpclass(snan) half @ret_src_nonan_self(half noundef nofpclass(nan) %x) !prof !0 {
 ; CHECK-LABEL: define nofpclass(snan) half @ret_src_nonan_self(
 ; CHECK-SAME: half noundef nofpclass(nan) [[X:%.*]]) !prof [[PROF0:![0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X]], i32 612)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X]], /* (inf zero) */ i32 612)
 ; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[TMP1]], half +qnan, half 1.000000e+00, !prof [[PROF1:![0-9]+]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
@@ -278,7 +278,7 @@ define nofpclass(snan) half @ret_src_noinf_self(half noundef nofpclass(inf) %x) 
 define nofpclass(inf) half @ret_noinf_self(half noundef %x) {
 ; CHECK-LABEL: define nofpclass(inf) half @ret_noinf_self(
 ; CHECK-SAME: half noundef [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X]], i32 615)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X]], /* (nan inf zero) */ i32 615)
 ; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[TMP1]], half +qnan, half 1.000000e+00
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
@@ -361,7 +361,7 @@ define nofpclass(snan) half @ret_fdiv_nnan_self(half noundef %x) {
 define nofpclass(snan) half @ret_fdiv_ninf_self(half noundef %x) {
 ; CHECK-LABEL: define nofpclass(snan) half @ret_fdiv_ninf_self(
 ; CHECK-SAME: half noundef [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X]], i32 615)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X]], /* (nan inf zero) */ i32 615)
 ; CHECK-NEXT:    [[DIV:%.*]] = select ninf i1 [[TMP1]], half +qnan, half 1.000000e+00
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
@@ -390,7 +390,7 @@ define nofpclass(pnorm) half @ret_nopnorm_self(half noundef %x) {
 define nofpclass(ninf) half @ret_noninf_self(half noundef %x) {
 ; CHECK-LABEL: define nofpclass(ninf) half @ret_noninf_self(
 ; CHECK-SAME: half noundef [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X]], i32 615)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X]], /* (nan inf zero) */ i32 615)
 ; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[TMP1]], half +qnan, half 1.000000e+00
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
@@ -401,7 +401,7 @@ define nofpclass(ninf) half @ret_noninf_self(half noundef %x) {
 define nofpclass(pinf) half @ret_nopinf_self(half noundef %x) {
 ; CHECK-LABEL: define nofpclass(pinf) half @ret_nopinf_self(
 ; CHECK-SAME: half noundef [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X]], i32 615)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X]], /* (nan inf zero) */ i32 615)
 ; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[TMP1]], half +qnan, half 1.000000e+00
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
@@ -412,7 +412,7 @@ define nofpclass(pinf) half @ret_nopinf_self(half noundef %x) {
 define nofpclass(zero) half @ret_nozero_self(half noundef %x) {
 ; CHECK-LABEL: define nofpclass(zero) half @ret_nozero_self(
 ; CHECK-SAME: half noundef [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X]], i32 615)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X]], /* (nan inf zero) */ i32 615)
 ; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[TMP1]], half +qnan, half 1.000000e+00
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
@@ -2354,7 +2354,7 @@ define float @fdiv_replacement_insert_point_regression(i1 %cmp, float %x, float 
 ; CHECK-LABEL: define float @fdiv_replacement_insert_point_regression(
 ; CHECK-SAME: i1 [[CMP:%.*]], float [[X:%.*]], float noundef [[Y:%.*]], float noundef [[Z:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[Y]], i32 615)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[Y]], /* (nan inf zero) */ i32 615)
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], float +qnan, float 1.000000e+00
 ; CHECK-NEXT:    [[SCALE_0:%.*]] = select i1 [[CMP]], float [[TMP1]], float [[Y]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SCALE_0]], [[X]]
