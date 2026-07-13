@@ -4985,6 +4985,42 @@ def CIR_CoroSizeOp : CIR_CoroIntrinsicOp<"size", (ins),
 }
 
 //===----------------------------------------------------------------------===//
+// CoroSuspendPoint
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroSuspendPoint : CIR_Op<"coro.suspend.point", [
+  Pure, Terminator, HasParent<"AwaitOp">
+]> {
+  let summary = "";
+  let description = [{
+  }];
+
+  let assemblyFormat = [{
+    attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// CoroSuspendPointDest
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroSuspendPointDest : CIR_Op<"coro.suspend.point.dest", [
+  Pure
+]> {
+  let summary = "";
+  let description = [{
+  }];
+
+  let assemblyFormat = [{
+    attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
 // CopyOp
 //===----------------------------------------------------------------------===//
 

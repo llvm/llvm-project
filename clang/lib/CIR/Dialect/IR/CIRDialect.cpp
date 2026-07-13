@@ -31,6 +31,7 @@
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/LogicalResult.h"
 
 using namespace mlir;
@@ -2874,12 +2875,18 @@ mlir::LogicalResult cir::FuncOp::verify() {
   if (!isDeclaration() && getCoroutine()) {
     bool foundAwait = false;
     int coroBodyCount = 0;
+    int coroSuspendPointDestCount = 0;
     this->walk([&](Operation *op) {
       if (auto await = dyn_cast<AwaitOp>(op)) {
         foundAwait = true;
       } else if (isa<CoroBodyOp>(op)) {
         coroBodyCount++;
         if (coroBodyCount > 1) {
+          return mlir::WalkResult::interrupt();
+        }
+      } else if (isa<CoroSuspendPointDest>(op)) {
+        coroSuspendPointDestCount++;
+        if (coroSuspendPointDestCount > 1) {
           return mlir::WalkResult::interrupt();
         }
       }
@@ -2891,6 +2898,9 @@ mlir::LogicalResult cir::FuncOp::verify() {
     if (coroBodyCount != 1)
       return emitOpError()
              << "coroutine function must have exactly one cir.body op";
+    if (coroSuspendPointDestCount != 1)
+      return emitOpError()
+             << "coroutine function must have exactly one cir.coro.suspend.point.dest";
   }
 
   llvm::SmallSet<llvm::StringRef, 16> labels;
@@ -3292,6 +3302,8 @@ mlir::ValueRange cir::AwaitOp::getSuccessorInputs(RegionSuccessor successor) {
 LogicalResult cir::AwaitOp::verify() {
   if (!isa<ConditionOp>(this->getReady().back().getTerminator()))
     return emitOpError("ready region must end with cir.condition");
+  if (!isa<CoroSuspendPoint>(this->getSuspend().back().getTerminator()))
+    return emitOpError("ready region must end with cir.coro.suspend.point");
   return success();
 }
 

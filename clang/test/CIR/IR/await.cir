@@ -5,12 +5,13 @@ cir.func coroutine @checkPrintParse(%arg0 : !cir.bool) {
     cir.await(user, ready : {
       cir.condition(%arg0)
     }, suspend : {
-      cir.yield
+      cir.coro.suspend.point
     }, resume : {
       cir.yield
     },)
     cir.yield
   }
+  cir.coro.suspend.point.dest
   cir.return
 }
 
@@ -18,7 +19,8 @@ cir.func coroutine @checkPrintParse(%arg0 : !cir.bool) {
 // CHECK:  cir.await(user, ready : {
 // CHECK:    cir.condition(%arg0)
 // CHECK:  }, suspend : {
-// CHECK:    cir.yield
+// CHECK:    cir.coro.suspend.point
 // CHECK:  }, resume : {
 // CHECK:    cir.yield
 // CHECK:  },)
+// CHECK:  cir.coro.suspend.point.dest

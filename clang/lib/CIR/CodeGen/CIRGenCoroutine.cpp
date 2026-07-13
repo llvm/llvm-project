@@ -528,6 +528,8 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
   auto tkNone = cir::TokenNoneOp::create(builder, openCurlyLoc);
   cir::CoroEndOp::create(builder, openCurlyLoc, nullHandler, noUnwind, tkNone);
 
+  cir::CoroSuspendPointDest::create(builder, openCurlyLoc);
+
   if (auto *ret = cast_or_null<ReturnStmt>(s.getReturnStmt())) {
     // Since we already emitted the return value above, so we shouldn't
     // emit it again here.
@@ -609,7 +611,7 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
         }
 
         // Signals the parent that execution flows to next region.
-        cir::YieldOp::create(builder, loc);
+        cir::CoroSuspendPoint::create(builder,loc);
       },
       /*resumeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
