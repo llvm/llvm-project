@@ -1172,6 +1172,17 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   FuncOp f = buildRuntimeFunction(builder, fnName, op.getLoc(), fnType,
                                   cir::GlobalLinkageKind::InternalLinkage);
 
+  // Forward the constrained floating-point marker recorded on the global by
+  // CodeGen onto the generated initializer function, matching classic codegen
+  // which marks __cxx_global_var_init strictfp when the initializer runs under
+  // a constrained floating-point environment. The marker on the global is no
+  // longer meaningful once its regions have been moved out, so clear it.
+  if (op.getStrictfp()) {
+    f->setAttr(cir::CIRDialect::getStrictFPAttrName(),
+               mlir::UnitAttr::get(&getContext()));
+    op.setStrictfp(false);
+  }
+
   // Move over the initialization code of the ctor region.
   // The ctor region may have multiple blocks when exception handling
   // scaffolding creates extra blocks (e.g., unreachable/trap blocks).

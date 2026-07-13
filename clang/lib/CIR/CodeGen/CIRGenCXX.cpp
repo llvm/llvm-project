@@ -352,6 +352,29 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
   CIRGenFunction::SourceLocRAIIObject fnLoc{cgf,
                                             getLoc(varDecl->getLocation())};
 
+  // Set up the constrained floating-point environment for the dynamic
+  // initializer, mirroring the handling in CIRGenFunction::startFunction for
+  // functions that have no FunctionDecl. Classic codegen emits the dynamic
+  // initializer into a __cxx_global_var_init function whose StartFunction call
+  // enables constrained floating-point (and adds the strictfp attribute) when
+  // the default rounding or exception mode is non-standard. Here the
+  // initializer is emitted into the global's ctor region, which LoweringPrepare
+  // later moves into that function, so we enable constrained FP on the builder
+  // while emitting the initializer (so its floating-point operations carry a
+  // #cir.fenv attribute) and record the strictfp requirement on the global for
+  // LoweringPrepare to forward to the generated function. The CIRGenFunction's
+  // ConstrainedFPRAII restores the builder state when it is destroyed.
+  llvm::RoundingMode rm = getLangOpts().getDefaultRoundingMode();
+  LangOptions::FPExceptionModeKind eb = getLangOpts().getDefaultExceptionMode();
+  builder.setDefaultConstrainedRounding(rm);
+  builder.setDefaultConstrainedExcept(eb);
+  builder.setIsFPConstrained(false);
+  if (eb != LangOptions::FPE_Ignore ||
+      rm != llvm::RoundingMode::NearestTiesToEven) {
+    builder.setIsFPConstrained(true);
+    addr.setStrictfp(true);
+  }
+
   emitCXXSpecialVarDeclInit(varDecl, addr, performInit, addr.getCtorRegion(),
                             addr.getDtorRegion());
 }
