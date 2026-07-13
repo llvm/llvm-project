@@ -274,7 +274,7 @@ private:
   mutable const CXXRecordDecl *InstanceContext;
   const CXXRecordDecl *DeclaringClass;
 };
-}
+} // namespace
 
 static CanQual<FunctionProtoType> GetCanonicalFunctionProto(ASTContext &Context,
                                                             QualType Ty) {
