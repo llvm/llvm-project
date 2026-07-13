@@ -349,4 +349,31 @@ TEST(ExecutionContext, EnableDisableBreakpointOnCallback) {
   executionCtx(original, DebuggerAction{});
   EXPECT_EQ(counter, 4);
 }
+
+TEST(ExecutionContext, RerunRequestedFromPostActionCallback) {
+  // If rerun is requested from the post-action callback path,
+  // the same action must be rerun immediately.
+  std::vector<ExecutionContext::Control> controlSequence = {
+      ExecutionContext::Next, ExecutionContext::Rerun, ExecutionContext::Apply};
+  int idx = 0;
+  int callbackCounter = 0;
+  int executionCounter = 0;
+
+  auto onBreakpoint = [&](const ActionActiveStack *backtrace) {
+    ++callbackCounter;
+    EXPECT_EQ(backtrace->getAction().getTag(), DebuggerAction::tag);
+    return controlSequence[idx++];
+  };
+
+  TagBreakpointManager simpleManager;
+  ExecutionContext executionCtx(onBreakpoint);
+  executionCtx.addBreakpointManager(&simpleManager);
+  simpleManager.addBreakpoint(DebuggerAction::tag);
+
+  auto callback = [&]() { ++executionCounter; };
+
+  executionCtx(callback, DebuggerAction{});
+  EXPECT_EQ(callbackCounter, 3);
+  EXPECT_EQ(executionCounter, 2);
+}
 } // namespace
