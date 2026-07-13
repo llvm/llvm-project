@@ -290,10 +290,75 @@ void test_conflicting_capture_kinds_map_firstprivate() {
 void test_conflicting_capture_kinds_map_private() {
   Point p{1, 2};
   auto [a, b] = p;
-  // map(a) creates by-ref capture, private(b) creates by-copy capture
   // expected-error@+1{{bindings from structured binding 'b' require conflicting capture kinds (by-reference vs. by-copy)}}
 #pragma omp target map(a) private(b)
   {
+    a++;
+    b++;
+  }
+}
+
+void test_conflicting_capture_kinds_target_teams() {
+  Point p{1, 2};
+  auto [a, b] = p;
+  // expected-error@+1{{bindings from structured binding 'b' require conflicting capture kinds (by-reference vs. by-copy)}}
+#pragma omp target teams map(a) firstprivate(b)
+  {
+    a++;
+    b++;
+  }
+}
+
+void test_conflicting_capture_kinds_target_teams_distribute() {
+  Point p{1, 2};
+  auto [a, b] = p;
+  // expected-error@+1{{bindings from structured binding 'b' require conflicting capture kinds (by-reference vs. by-copy)}}
+#pragma omp target teams distribute map(a) firstprivate(b)
+  for (int i = 0; i < 10; ++i) {
+    a++;
+    b++;
+  }
+}
+
+void test_conflicting_capture_kinds_target_teams_loop() {
+  Point p{1, 2};
+  auto [a, b] = p;
+  // expected-error@+1{{bindings from structured binding 'b' require conflicting capture kinds (by-reference vs. by-copy)}}
+#pragma omp target teams loop map(a) firstprivate(b)
+  for (int i = 0; i < 10; ++i) {
+    a++;
+    b++;
+  }
+}
+
+void test_conflicting_capture_kinds_target_teams_distribute_parallel_for() {
+  Point p{1, 2};
+  auto [a, b] = p;
+  // expected-error@+1{{bindings from structured binding 'b' require conflicting capture kinds (by-reference vs. by-copy)}}
+#pragma omp target teams distribute parallel for map(a) firstprivate(b)
+  for (int i = 0; i < 10; ++i) {
+    a++;
+    b++;
+  }
+}
+
+void test_conflicting_capture_kinds_target_teams_distribute_parallel_for_simd() {
+  Point p{1, 2};
+  auto [a, b] = p;
+  // expected-error@+1{{bindings from structured binding 'b' require conflicting capture kinds (by-reference vs. by-copy)}}
+#pragma omp target teams distribute parallel for simd map(a) firstprivate(b)
+  for (int i = 0; i < 10; ++i) {
+    a++;
+    b++;
+  }
+}
+
+void test_conflicting_capture_kinds_target_teams_distribute_simd() {
+  Point p{1, 2};
+  auto [a, b] = p;
+  // expected-error@+1{{bindings from structured binding 'b' require conflicting capture kinds (by-reference vs. by-copy)}}
+#pragma omp target teams distribute simd map(a) firstprivate(b)
+  for (int i = 0; i < 10; ++i) {
     a++;
     b++;
   }
