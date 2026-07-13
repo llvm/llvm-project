@@ -246,46 +246,46 @@ def TLI_size_returning_new_aligned_hot_cold
 def TLI_acos_finite : TargetLibCall<__acos_finite>;
 
 /// float __acosf_finite(float x);
-def TLI_acosf_finite : TargetLibCall<__acosf_finite>;
+def TLI_acosf_finite : TargetLibCall<__acos_finitef>;
 
 /// double __acosh_finite(double x);
 def TLI_acosh_finite : TargetLibCall<__acosh_finite>;
 
 /// float __acoshf_finite(float x);
-def TLI_acoshf_finite : TargetLibCall<__acoshf_finite>;
+def TLI_acoshf_finite : TargetLibCall<__acosh_finitef>;
 
 /// long double __acoshl_finite(long double x);
-def TLI_acoshl_finite : TargetLibCall<__acoshl_finite>;
+def TLI_acoshl_finite : TargetLibCall<__acosh_finitel_f128>;
 
 /// long double __acosl_finite(long double x);
-def TLI_acosl_finite : TargetLibCall<__acosl_finite>;
+def TLI_acosl_finite : TargetLibCall<__acos_finitel_f128>;
 
 /// double __asin_finite(double x);
 def TLI_asin_finite : TargetLibCall<__asin_finite>;
 
 /// float __asinf_finite(float x);
-def TLI_asinf_finite : TargetLibCall<__asinf_finite>;
+def TLI_asinf_finite : TargetLibCall<__asin_finitef>;
 
 /// long double __asinl_finite(long double x);
-def TLI_asinl_finite : TargetLibCall<__asinl_finite>;
+def TLI_asinl_finite : TargetLibCall<__asin_finitel_f128>;
 
 /// double atan2_finite(double y, double x);
 def TLI_atan2_finite : TargetLibCall<__atan2_finite>;
 
 /// float atan2f_finite(float y, float x);
-def TLI_atan2f_finite : TargetLibCall<__atan2f_finite>;
+def TLI_atan2f_finite : TargetLibCall<__atan2_finitef>;
 
 /// long double atan2l_finite(long double y, long double x);
-def TLI_atan2l_finite : TargetLibCall<__atan2l_finite>;
+def TLI_atan2l_finite : TargetLibCall<__atan2_finitel_f128>;
 
 /// double __atanh_finite(double x);
 def TLI_atanh_finite : TargetLibCall<__atanh_finite>;
 
 /// float __atanhf_finite(float x);
-def TLI_atanhf_finite : TargetLibCall<__atanhf_finite>;
+def TLI_atanhf_finite : TargetLibCall<__atanh_finitef>;
 
 /// long double __atanhl_finite(long double x);
-def TLI_atanhl_finite : TargetLibCall<__atanhl_finite>;
+def TLI_atanhl_finite : TargetLibCall<__atanh_finitel_f128>;
 
 /// void __atomic_load(size_t size, void *mptr, void *vptr, int smodel);
 def TLI_atomic_load : TargetLibCall<__atomic_load>;
@@ -297,10 +297,10 @@ def TLI_atomic_store : TargetLibCall<__atomic_store>;
 def TLI_cosh_finite : TargetLibCall<__cosh_finite>;
 
 /// float __coshf_finite(float x);
-def TLI_coshf_finite : TargetLibCall<__coshf_finite>;
+def TLI_coshf_finite : TargetLibCall<__cosh_finitef>;
 
 /// long double __coshl_finite(long double x);
-def TLI_coshl_finite : TargetLibCall<__coshl_finite>;
+def TLI_coshl_finite : TargetLibCall<__cosh_finitel_f128>;
 
 /// double __cospi(double x);
 def TLI_cospi : TargetLibCall<__cospi>;
@@ -344,28 +344,28 @@ def TLI_exp10_finite : TargetLibCall<__exp10_finite>;
 
 
 /// float __exp10f_finite(float x);
-def TLI_exp10f_finite : TargetLibCall<__exp10f_finite>;
+def TLI_exp10f_finite : TargetLibCall<__exp10_finitef>;
 
 /// long double __exp10l_finite(long double x);
-def TLI_exp10l_finite : TargetLibCall<__exp10l_finite>;
+def TLI_exp10l_finite : TargetLibCall<__exp10_finitel_f128>;
 
 /// double __exp2_finite(double x);
 def TLI_exp2_finite : TargetLibCall<__exp2_finite>;
 
 /// float __exp2f_finite(float x);
-def TLI_exp2f_finite : TargetLibCall<__exp2f_finite>;
+def TLI_exp2f_finite : TargetLibCall<__exp2_finitef>;
 
 /// long double __exp2l_finite(long double x);
-def TLI_exp2l_finite : TargetLibCall<__exp2l_finite_f128>;
+def TLI_exp2l_finite : TargetLibCall<__exp2_finitel_f128>;
 
 /// double __exp_finite(double x);
 def TLI_exp_finite : TargetLibCall<__exp_finite>;
 
 /// float __expf_finite(float x);
-def TLI_expf_finite : TargetLibCall<__expf_finite>;
+def TLI_expf_finite : TargetLibCall<__exp_finitef>;
 
 /// long double __expl_finite(long double x);
-def TLI_expl_finite : TargetLibCall<__expl_finite_f128>;
+def TLI_expl_finite : TargetLibCall<__exp_finitel_f128>;
 
 /// int __isoc99_scanf (const char *format, ...)
 def TLI_dunder_isoc99_scanf : TargetLibCall<__isoc99_scanf>;
@@ -377,28 +377,28 @@ def TLI_dunder_isoc99_sscanf : TargetLibCall<__isoc99_sscanf>;
 def TLI_log10_finite : TargetLibCall<__log10_finite>;
 
 /// float __log10f_finite(float x);
-def TLI_log10f_finite : TargetLibCall<__log10f_finite>;
+def TLI_log10f_finite : TargetLibCall<__log10_finitef>;
 
 /// long double __log10l_finite(long double x);
-def TLI_log10l_finite : TargetLibCall<__log10l_finite_f128>;
+def TLI_log10l_finite : TargetLibCall<__log10_finitel_f128>;
 
 /// double __log2_finite(double x);
 def TLI_log2_finite : TargetLibCall<__log2_finite>;
 
 /// float __log2f_finite(float x);
-def TLI_log2f_finite : TargetLibCall<__log2f_finite>;
+def TLI_log2f_finite : TargetLibCall<__log2_finitef>;
 
 /// long double __log2l_finite(long double x);
-def TLI_log2l_finite : TargetLibCall<__log2l_finite_f128>;
+def TLI_log2l_finite : TargetLibCall<__log2_finitel_f128>;
 
 /// double __log_finite(double x);
 def TLI_log_finite : TargetLibCall<__log_finite>;
 
 /// float __logf_finite(float x);
-def TLI_logf_finite : TargetLibCall<__logf_finite>;
+def TLI_logf_finite : TargetLibCall<__log_finitef>;
 
 /// long double __logl_finite(long double x);
-def TLI_logl_finite : TargetLibCall<__logl_finite_f128>;
+def TLI_logl_finite : TargetLibCall<__log_finitel_f128>;
 
 /// void *__memccpy_chk(void *dst, const void *src, int c, size_t n,
 /// size_t dstsize)
@@ -423,10 +423,10 @@ def TLI_nvvm_reflect : TargetLibCall<__nvvm_reflect>;
 def TLI_pow_finite : TargetLibCall<__pow_finite>;
 
 /// float _powf_finite(float x, float y);
-def TLI_powf_finite : TargetLibCall<__powf_finite>;
+def TLI_powf_finite : TargetLibCall<__pow_finitef>;
 
 /// long double __powl_finite(long double x, long double y);
-def TLI_powl_finite : TargetLibCall<__powl_finite_f128>;
+def TLI_powl_finite : TargetLibCall<__pow_finitel_f128>;
 
 /// double __sincospi_stret(double x);
 def TLI_sincospi_stret : TargetLibCall<__sincospi_stret>;
@@ -438,10 +438,10 @@ def TLI_sincospif_stret : TargetLibCall<__sincospif_stret>;
 def TLI_sinh_finite : TargetLibCall<__sinh_finite>;
 
 /// float _sinhf_finite(float x);
-def TLI_sinhf_finite : TargetLibCall<__sinhf_finite>;
+def TLI_sinhf_finite : TargetLibCall<__sinh_finitef>;
 
 /// long double __sinhl_finite(long double x);
-def TLI_sinhl_finite : TargetLibCall<__sinhl_finite>;
+def TLI_sinhl_finite : TargetLibCall<__sinh_finitel_f128>;
 
 /// double __sinpi(double x);
 def TLI_sinpi : TargetLibCall<__sinpi>;
@@ -470,10 +470,10 @@ def TLI_sprintf_chk : TargetLibCall<__sprintf_chk>;
 def TLI_sqrt_finite : TargetLibCall<__sqrt_finite>;
 
 /// float __sqrt_finite(float x);
-def TLI_sqrtf_finite : TargetLibCall<__sqrtf_finite>;
+def TLI_sqrtf_finite : TargetLibCall<__sqrt_finitef>;
 
 /// long double __sqrt_finite(long double x);
-def TLI_sqrtl_finite : TargetLibCall<__sqrtl_finite>;
+def TLI_sqrtl_finite : TargetLibCall<__sqrt_finitel_f128>;
 
 /// char *__stpcpy_chk(char *s1, const char *s2, size_t s1size);
 def TLI_stpcpy_chk : TargetLibCall<__stpcpy_chk>;
@@ -540,7 +540,7 @@ def TLI_acosh : TargetLibCall<acosh>;
 def TLI_acoshf : TargetLibCall<acoshf>;
 
 /// long double acoshl(long double x);
-def TLI_acoshl : TargetLibCall<acoshl>;
+def TLI_acoshl : TargetLibCall<acoshl_f128>;
 
 /// long double acosl(long double x);
 def TLI_acosl : TargetLibCall<acosl_f128>;
@@ -561,7 +561,7 @@ def TLI_asinh : TargetLibCall<asinh>;
 def TLI_asinhf : TargetLibCall<asinhf>;
 
 /// long double asinhl(long double x);
-def TLI_asinhl : TargetLibCall<asinhl>;
+def TLI_asinhl : TargetLibCall<asinhl_f128>;
 
 /// long double asinl(long double x);
 def TLI_asinl : TargetLibCall<asinl_f128>;
@@ -589,7 +589,7 @@ def TLI_atanh : TargetLibCall<atanh>;
 def TLI_atanhf : TargetLibCall<atanhf>;
 
 /// long double atanhl(long double x);
-def TLI_atanhl : TargetLibCall<atanhl>;
+def TLI_atanhl : TargetLibCall<atanhl_f128>;
 
 /// long double atanl(long double x);
 def TLI_atanl : TargetLibCall<atanl_f128>;
@@ -690,12 +690,11 @@ def TLI_ctermid : TargetLibCall<ctermid>;
 /// double erf(double x);
 def TLI_erf : TargetLibCall<erf>;
 
-
 /// float erff(float x);
 def TLI_erff : TargetLibCall<erff>;
 
 /// long double erfl(long double x);
-def TLI_erfl : TargetLibCall<erfl>;
+def TLI_erfl : TargetLibCall<erfl_f128>;
 
 /// double tgamma(double x);
 def TLI_tgamma : TargetLibCall<tgamma>;
@@ -764,7 +763,7 @@ def TLI_expm1 : TargetLibCall<expm1>;
 def TLI_expm1f : TargetLibCall<expm1f>;
 
 /// long double expm1l(long double x);
-def TLI_expm1l : TargetLibCall<expm1l>;
+def TLI_expm1l : TargetLibCall<expm1l_f128>;
 
 /// double fabs(double x);
 def TLI_fabs : TargetLibCall<fabs>;
@@ -773,7 +772,7 @@ def TLI_fabs : TargetLibCall<fabs>;
 def TLI_fabsf : TargetLibCall<fabsf>;
 
 /// long double fabsl(long double x);
-def TLI_fabsl : TargetLibCall<fabsl>;
+def TLI_fabsl : TargetLibCall<fabsl_f128>;
 
 /// int fclose(FILE *stream);
 def TLI_fclose : TargetLibCall<fclose>;
@@ -1026,7 +1025,7 @@ def TLI_hypot : TargetLibCall<hypot>;
 def TLI_hypotf : TargetLibCall<hypotf>;
 
 /// long double hypotl(long double x, long double y);
-def TLI_hypotl : TargetLibCall<hypotl>;
+def TLI_hypotl : TargetLibCall<hypotl_f128>;
 
 /// int iprintf(const char *format, ...);
 def TLI_iprintf : TargetLibCall<iprintf>;
@@ -1074,7 +1073,7 @@ def TLI_log1p : TargetLibCall<log1p>;
 def TLI_log1pf : TargetLibCall<log1pf>;
 
 /// long double log1pl(long double x);
-def TLI_log1pl : TargetLibCall<log1pl>;
+def TLI_log1pl : TargetLibCall<log1pl_f128>;
 
 /// double log2(double x);
 def TLI_log2 : TargetLibCall<log2>;
@@ -1092,7 +1091,7 @@ def TLI_ilogb : TargetLibCall<ilogb>;
 def TLI_ilogbf : TargetLibCall<ilogbf>;
 
 /// int ilogbl(long double x);
-def TLI_ilogbl : TargetLibCall<ilogbl>;
+def TLI_ilogbl : TargetLibCall<ilogbl_f128>;
 
 /// double logb(double x);
 def TLI_logb : TargetLibCall<logb>;
@@ -1101,7 +1100,7 @@ def TLI_logb : TargetLibCall<logb>;
 def TLI_logbf : TargetLibCall<logbf>;
 
 /// long double logbl(long double x);
-def TLI_logbl : TargetLibCall<logbl>;
+def TLI_logbl : TargetLibCall<logbl_f128>;
 
 /// float logf(float x);
 def TLI_logf : TargetLibCall<logf>;
@@ -1194,7 +1193,7 @@ def TLI_nextafter : TargetLibCall<nextafter>;
 def TLI_nextafterf : TargetLibCall<nextafterf>;
 
 /// long double nextafterl(long double x, long double y);
-def TLI_nextafterl : TargetLibCall<nextafterl>;
+def TLI_nextafterl : TargetLibCall<nextafterl_f128>;
 
 /// double nexttoward(double x, long double y);
 def TLI_nexttoward : TargetLibCall<nexttoward>;
