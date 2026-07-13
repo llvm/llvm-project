@@ -1203,9 +1203,10 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     Fn->addFnAttr("packed-stack");
   }
 
+  fprintf(stderr, "SDP: FD=%p\n", FD);
   if (!CGM.getCodeGenOpts().ZOSPPA1Name)
     Fn->addFnAttr("zos-ppa1-name", "");
-  else if (getContext().getTargetInfo().getTriple().isOSzOS() &&
+  else if (getContext().getTargetInfo().getTriple().isOSzOS() && FD &&
            FD->hasAttr<AsmLabelAttr>()) {
     std::string OrigName = CGM.getMangledNameImpl(
         GD, FD, /*OmitMultiVersionMangling=*/false, /*WantAsmLabel=*/false);
