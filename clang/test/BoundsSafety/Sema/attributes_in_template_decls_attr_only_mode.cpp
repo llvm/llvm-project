@@ -446,22 +446,22 @@ class RefParamMustBePtrExternallyCountedBad {
     public:
     int size;
     T end_ptr;
-    T __counted_by(size) cb; // expected-error 2{{'counted_by' attribute only applies to pointer arguments}}
-    T __counted_by_or_null(size) cbon; // expected-error 2{{'counted_by_or_null' attribute only applies to pointer arguments}}
-    T __sized_by(size) sb; // expected-error 2{{'sized_by' attribute only applies to pointer arguments}}
-    T __sized_by_or_null(size) sbon; // expected-error 2{{'sized_by_or_null' attribute only applies to pointer arguments}}
+    T __counted_by(size) cb; // expected-error 2{{'counted_by' only applies to pointers or C99 flexible array members}}
+    T __counted_by_or_null(size) cbon; // expected-error 2{{'counted_by_or_null' only applies to pointers}}
+    T __sized_by(size) sb; // expected-error 2{{'sized_by' only applies to pointers}}
+    T __sized_by_or_null(size) sbon; // expected-error 2{{'sized_by_or_null' only applies to pointers}}
     T __ended_by(end_ptr) eb; // expected-error 2{{'ended_by' attribute requires a pointer type argument}}
 
-    T __counted_by(size) ret_cb() { // expected-error 2{{'counted_by' attribute only applies to pointer arguments}}
+    T __counted_by(size) ret_cb() { // expected-error 2{{'counted_by' only applies to pointers or C99 flexible array members}}
         return cb;
     }
 
-    // expected-error@+1{{'__counted_by' attribute only applies to pointer arguments}}
+    // expected-error@+1{{'counted_by' only applies to pointers or C99 flexible array members}}
     void cb_param(T __counted_by(size) ptr, int size) {}
 
     void useT() {
         int size_local = size;
-        T __counted_by(size_local) tmp = cb; // expected-error{{'counted_by' attribute only applies to pointer arguments}}
+        T __counted_by(size_local) tmp = cb; // expected-error{{'counted_by' only applies to pointers or C99 flexible array members}}
     }
 };
 

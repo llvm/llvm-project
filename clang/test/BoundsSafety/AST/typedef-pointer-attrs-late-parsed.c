@@ -22,7 +22,7 @@ void test_fdecl2(unsigned size, cptr_t __sized_by(size));
 // CHECK: `-ParmVarDecl {{.*}} 'char *__single __sized_by(size)':'char *__single'
 
 void test_fdecl_err1(int64_t __counted_by(len), int len);
-// expected-error@-1{{'__counted_by' attribute only applies to pointer arguments}}
+// expected-error@-1{{'counted_by' only applies to pointers or C99 flexible array members}}
 
 int glen;
 void test_fdecl_err2(cptr_t __counted_by(glen));

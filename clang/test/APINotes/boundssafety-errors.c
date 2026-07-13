@@ -70,13 +70,13 @@ Functions:
             Level: 0
             BoundedBy: apinote_end
 //--- SemaErrors.h
-// CHECK: SemaErrors.h:{{.*}}:{{.*}}: error: __counted_by attribute only applies to pointer arguments
+// CHECK: SemaErrors.h:{{.*}}:{{.*}}: error: 'counted_by' only applies to pointers or C99 flexible array members
 // CHECK-NEXT: oob_level
 void oob_level(int * buf, int len);
-// CHECK: SemaErrors.h:{{.*}}:{{.*}}: error: __counted_by attribute only applies to pointer arguments
+// CHECK: SemaErrors.h:{{.*}}:{{.*}}: error: 'counted_by' only applies to pointers or C99 flexible array members
 // CHECK-NEXT: off_by_1_level
 void off_by_1_level(int * buf, int len);
-// CHECK: SemaErrors.h:{{.*}}:{{.*}}: error: __counted_by attribute only applies to pointer arguments
+// CHECK: SemaErrors.h:{{.*}}:{{.*}}: error: 'counted_by' only applies to pointers or C99 flexible array members
 // CHECK-NEXT: nonpointer_param
 void nonpointer_param(int buf, int len);
 // CHECK: <API Notes>:1:1: error: use of undeclared identifier 'len'; did you mean 'len2'?

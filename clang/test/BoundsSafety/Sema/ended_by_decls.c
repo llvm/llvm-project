@@ -66,7 +66,7 @@ int *__ended_by(end) foo_ret_end(int *end);
 
 // expected-note@+3{{add a count attribute}}
 // expected-error@+2{{parameter of array type 'int[]' decays to a __single pointer}}
-// expected-error@+1{{'__ended_by' attribute only applies to pointer arguments}}
+// expected-error@+1{{'ended_by' only applies to pointers}}
 void foo_end_in_bracket(int buf[__ended_by(end)], int *end);
 
 // expected-error@+1{{invalid argument expression to bounds attribute}}
