@@ -206,3 +206,15 @@ union FieldUnion { unsigned char c; unsigned char data[8]; };
 alignas(8) constexpr union FieldUnion field_u = {.data = {0x78, 0x56, 0x34, 0x12}};
 constexpr __UINT_LEAST32_TYPE__ union_ok = stdc_load8_aligned_leu32(field_u.data);
 static_assert(union_ok == 0x12345678U, "");
+
+constexpr unsigned char scalar_ok = 0x42;
+constexpr __UINT_LEAST8_TYPE__ scalar_aligned_ok = stdc_load8_aligned_leu8(&scalar_ok);
+static_assert(scalar_aligned_ok == 0x42, "");
+
+alignas(4) constexpr unsigned char scalar_aligned_oob = 0x42;
+constexpr __UINT_LEAST32_TYPE__ oob_scalar_aligned = stdc_load8_aligned_leu32(&scalar_aligned_oob); // expected-error{{must be initialized by a constant expression}} expected-note{{cannot refer to element 3 of non-array object in a constant expression}}
+
+void test_block_scope_scalar(void) {
+  constexpr unsigned char local_scalar = 0x42;
+  static_assert(stdc_load8_aligned_leu8(&local_scalar) == 0x42, "");
+}

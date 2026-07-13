@@ -2174,7 +2174,7 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
   // where b_index = ptr[index] (LE) or ptr[N/8 - index - 1] (BE).
   for (unsigned I = 0; I < ByteWidth; ++I) {
     size_t SrcIdx = IsBigEndian ? (ByteWidth - I - 1) : I;
-    Pointer BytePtr = Ptr.atIndex(BaseIdx + SrcIdx);
+    Pointer BytePtr = IsArray ? Ptr.atIndex(BaseIdx + SrcIdx) : Ptr;
     if (!CheckLoad(S, OpPC, BytePtr, AK_Read))
       return false;
     uint64_t B;
