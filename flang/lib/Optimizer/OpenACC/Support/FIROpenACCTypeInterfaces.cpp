@@ -276,8 +276,8 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
         auto accBound = mlir::acc::DataBoundsOp::create(
             builder, loc, mlir::acc::DataBoundsType::get(builder.getContext()),
             /*lowerbound=*/zero, /*upperbound=*/upperbound,
-            /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
-            /*startIdx=*/one);
+            /*extent=*/extent, /*sourceExtent=*/extent, /*stride=*/stride,
+            /*strideInBytes=*/false, /*startIdx=*/one);
         accBounds.push_back(accBound);
       }
     } else if (auto shapeShiftOp =
@@ -301,8 +301,8 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
               builder, loc,
               mlir::acc::DataBoundsType::get(builder.getContext()),
               /*lowerbound=*/zero, /*upperbound=*/upperbound,
-              /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
-              /*startIdx=*/lowerbound);
+              /*extent=*/extent, /*sourceExtent=*/extent, /*stride=*/stride,
+              /*strideInBytes=*/false, /*startIdx=*/lowerbound);
           accBounds.push_back(accBound);
         }
       }

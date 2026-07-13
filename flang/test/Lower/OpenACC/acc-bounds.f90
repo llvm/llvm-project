@@ -45,7 +45,7 @@ contains
 ! CHECK: %[[C1:.*]] = arith.constant 1 : index
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
 ! CHECK: %[[UB:.*]] = arith.subi %[[C10]], %[[C1]] : index
-! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[C0]] : index) upperbound(%[[UB]] : index) extent(%[[C10]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[C0]] : index) upperbound(%[[UB]] : index) extent(%[[C10]] : index) sourceExtent(%[[C10]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
 ! CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[COORD]] : !fir.ref<!fir.array<10xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xi32>> {name = "d%array_comp", structured = false}
 ! CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<10xi32>>)
 ! CHECK: return
@@ -77,7 +77,7 @@ contains
 ! CHECK: %[[DECL_ARG0:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QMopenacc_boundsFacc_undefined_extentEa"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
 ! CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[DECL_ARG0]]#0, %c0{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 ! CHECK: %[[UB:.*]] = arith.subi %[[DIMS0]]#1, %c1{{.*}} : index
-! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%[[UB]] : index) extent(%[[DIMS0]]#1 : index) stride(%[[DIMS0]]#2 : index) startIdx(%c1{{.*}} : index) {strideInBytes = true}
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%[[UB]] : index) extent(%[[DIMS0]]#1 : index) sourceExtent(%[[DIMS0]]#1 : index) stride(%[[DIMS0]]#2 : index) startIdx(%c1{{.*}} : index) {strideInBytes = true}
 ! CHECK: %[[PRESENT:.*]] = acc.present var(%[[DECL_ARG0]]#0 : !fir.box<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.box<!fir.array<?xf32>> {name = "a"}
 ! CHECK: acc.kernels dataOperands(%[[PRESENT]] : !fir.box<!fir.array<?xf32>>) {
 
@@ -92,13 +92,13 @@ contains
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?x?x?xf32>> {fir.bindc_name = "a"})
 ! CHECK: %[[DECL_ARG0:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QMopenacc_boundsFacc_multi_stridesEa"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?xf32>>, !fir.box<!fir.array<?x?x?xf32>>)
 ! CHECK: %[[BOX_DIMS0:.*]]:3 = fir.box_dims %[[DECL_ARG0]]#0, %c0{{.*}} : (!fir.box<!fir.array<?x?x?xf32>>, index) -> (index, index, index)
-! CHECK: %[[BOUNDS0:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%[[BOX_DIMS0]]#1 : index) stride(%[[BOX_DIMS0]]#2 : index) startIdx(%{{.*}} : index) {strideInBytes = true}
+! CHECK: %[[BOUNDS0:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%[[BOX_DIMS0]]#1 : index) sourceExtent(%[[BOX_DIMS0]]#1 : index) stride(%[[BOX_DIMS0]]#2 : index) startIdx(%{{.*}} : index) {strideInBytes = true}
 ! CHECK: %[[STRIDE1:.*]] = arith.muli %[[BOX_DIMS0]]#2, %[[BOX_DIMS0]]#1 : index
 ! CHECK: %[[BOX_DIMS1:.*]]:3 = fir.box_dims %[[DECL_ARG0]]#0, %c1{{.*}} : (!fir.box<!fir.array<?x?x?xf32>>, index) -> (index, index, index)
-! CHECK: %[[BOUNDS1:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%[[BOX_DIMS1]]#1 : index) stride(%[[STRIDE1]] : index) startIdx(%{{.*}} : index) {strideInBytes = true}
+! CHECK: %[[BOUNDS1:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%[[BOX_DIMS1]]#1 : index) sourceExtent(%[[BOX_DIMS1]]#1 : index) stride(%[[STRIDE1]] : index) startIdx(%{{.*}} : index) {strideInBytes = true}
 ! CHECK: %[[STRIDE2:.*]] = arith.muli %[[STRIDE1]], %[[BOX_DIMS1]]#1 : index
 ! CHECK: %[[BOX_DIMS2:.*]]:3 = fir.box_dims %[[DECL_ARG0]]#0, %c2{{.*}} : (!fir.box<!fir.array<?x?x?xf32>>, index) -> (index, index, index)
-! CHECK: %[[BOUNDS2:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%[[BOX_DIMS2]]#1 : index) stride(%[[STRIDE2]] : index) startIdx(%{{.*}} : index) {strideInBytes = true}
+! CHECK: %[[BOUNDS2:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%[[BOX_DIMS2]]#1 : index) sourceExtent(%[[BOX_DIMS2]]#1 : index) stride(%[[STRIDE2]] : index) startIdx(%{{.*}} : index) {strideInBytes = true}
 ! CHECK: %[[PRESENT:.*]] = acc.present var(%[[DECL_ARG0]]#0 : !fir.box<!fir.array<?x?x?xf32>>) bounds(%[[BOUNDS0]], %[[BOUNDS1]], %[[BOUNDS2]]) -> !fir.box<!fir.array<?x?x?xf32>> {name = "a"}
 ! CHECK: acc.kernels dataOperands(%[[PRESENT]] : !fir.box<!fir.array<?x?x?xf32>>) {
 
@@ -120,7 +120,7 @@ contains
 ! CHECK:   %[[CM1:.*]] = arith.constant -1 : index
 ! CHECK:   fir.result %[[C0]], %[[CM1]], %[[C0]], %[[C0]], %[[C0]] : index, index, index, index, index
 ! CHECK: }
-! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[RES]]#0 : index) upperbound(%[[RES]]#1 : index) extent(%[[RES]]#2 : index) stride(%[[RES]]#3 : index) startIdx(%[[RES]]#4 : index) {strideInBytes = true}
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[RES]]#0 : index) upperbound(%[[RES]]#1 : index) extent(%[[RES]]#2 : index) sourceExtent(%[[RES]]#2 : index) stride(%[[RES]]#3 : index) startIdx(%[[RES]]#4 : index) {strideInBytes = true}
 ! CHECK: %[[ATTACH:.*]] = acc.attach varPtr(%[[ARG0_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> {name = "a"}
 ! CHECK: acc.data dataOperands(%[[ATTACH]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) {
 
@@ -149,12 +149,17 @@ contains
 ! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[A]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QMopenacc_boundsFacc_optional_data3Ea"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
 ! CHECK: %[[PRES:.*]] = fir.is_present %[[DECL_A]]#1 : (!fir.ref<!fir.array<?xf32>>) -> i1
 ! CHECK: %[[STRIDE:.*]] = fir.if %[[PRES]] -> (index) {
-! CHECK:   %[[DIMS:.*]]:3 = fir.box_dims %[[DECL_A]]#0, %c0{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
-! CHECK:   fir.result %[[DIMS]]#2 : index
+! CHECK:   %[[STRIDE_DIMS:.*]]:3 = fir.box_dims %[[DECL_A]]#0, %c0{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+! CHECK:   fir.result %[[STRIDE_DIMS]]#2 : index
 ! CHECK: } else {
 ! CHECK:   fir.result %c0{{.*}} : index
 ! CHECK: }
-! CHECK: %[[BOUNDS:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%[[STRIDE]] : index) startIdx(%c1 : index) {strideInBytes = true}
+! CHECK: %[[SOURCE_EXTENT:.*]] = fir.if %[[PRES]] -> (index) {
+! CHECK:   fir.result %{{.*}} : index
+! CHECK: } else {
+! CHECK:   fir.result %c0{{.*}} : index
+! CHECK: }
+! CHECK: %[[BOUNDS:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) sourceExtent(%[[SOURCE_EXTENT]] : index) stride(%[[STRIDE]] : index) startIdx(%c1 : index) {strideInBytes = true}
 ! CHECK: %[[NOCREATE:.*]] = acc.nocreate varPtr(%[[DECL_A]]#1 : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xf32>> {name = "a(1:n)"}
 ! CHECK: acc.data dataOperands(%[[NOCREATE]] : !fir.ref<!fir.array<?xf32>>) {
 
@@ -167,9 +172,9 @@ contains
 ! Test that the stride is cummulative of the lower extents
 ! CHECK-LABEL: func.func @_QMopenacc_boundsPacc_explicit_shape_3d(
 ! CHECK-SAME: %[[ARR:.*]]: !fir.ref<!fir.array<1000x100x10xf32>> {fir.bindc_name = "arr"}) {
-! CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%c0 : index) upperbound(%c999 : index) extent(%c1000 : index) stride(%c1{{.*}} : index) startIdx(%c1 : index)
-! CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%c0 : index) upperbound(%c99 : index) extent(%c100 : index) stride(%c1000{{.*}} : index) startIdx(%c1 : index)
-! CHECK: %[[BOUND3:.*]] = acc.bounds lowerbound(%c0 : index) upperbound(%c9 : index) extent(%c10 : index) stride(%c100000{{.*}} : index) startIdx(%c1 : index)
+! CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%c0 : index) upperbound(%c999 : index) extent(%c1000{{.*}} : index) sourceExtent(%c1000 : index) stride(%c1{{.*}} : index) startIdx(%c1 : index)
+! CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%c0 : index) upperbound(%c99 : index) extent(%c100{{.*}} : index) sourceExtent(%c100 : index) stride(%c1000{{.*}} : index) startIdx(%c1 : index)
+! CHECK: %[[BOUND3:.*]] = acc.bounds lowerbound(%c0 : index) upperbound(%c9 : index) extent(%c10{{.*}} : index) sourceExtent(%c10 : index) stride(%c100000{{.*}} : index) startIdx(%c1 : index)
 ! CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<!fir.array<1000x100x10xf32>>) bounds(%[[BOUND1]], %[[BOUND2]], %[[BOUND3]]) -> !fir.ref<!fir.array<1000x100x10xf32>> {name = "arr(:1000,:100,:10)"}
 ! CHECK: acc.data dataOperands(%[[COPYIN]] : !fir.ref<!fir.array<1000x100x10xf32>>) {
 
@@ -181,10 +186,10 @@ contains
 
 ! Scalar dimensions select one element but must not reduce outer linear strides.
 ! CHECK-LABEL: func.func @_QMopenacc_boundsPacc_explicit_shape_scalar_dims(
-! CHECK: %[[B0:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%c10{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
-! CHECK: %[[B1:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%c0{{.*}} : index) extent(%c1{{.*}} : index) stride(%c10{{.*}} : index) startIdx(%c1{{.*}} : index)
-! CHECK: %[[B2:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%c10{{.*}} : index) stride(%c100{{.*}} : index) startIdx(%c1{{.*}} : index)
-! CHECK: %[[B3:.*]] = acc.bounds lowerbound(%c3{{.*}} : index) upperbound(%c3{{.*}} : index) extent(%c1{{.*}} : index) stride(%c1000{{.*}} : index) startIdx(%c1{{.*}} : index)
+! CHECK: %[[B0:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%c10{{.*}} : index) sourceExtent(%c10{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
+! CHECK: %[[B1:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%c0{{.*}} : index) extent(%c1{{.*}} : index) sourceExtent(%c10{{.*}} : index) stride(%c10{{.*}} : index) startIdx(%c1{{.*}} : index)
+! CHECK: %[[B2:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%c10{{.*}} : index) sourceExtent(%c10{{.*}} : index) stride(%c100{{.*}} : index) startIdx(%c1{{.*}} : index)
+! CHECK: %[[B3:.*]] = acc.bounds lowerbound(%c3{{.*}} : index) upperbound(%c3{{.*}} : index) extent(%c1{{.*}} : index) sourceExtent(%c10{{.*}} : index) stride(%c1000{{.*}} : index) startIdx(%c1{{.*}} : index)
 ! CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<!fir.array<10x10x10x10xf32>>) bounds(%[[B0]], %[[B1]], %[[B2]], %[[B3]]) -> !fir.ref<!fir.array<10x10x10x10xf32>> {name = "arr(:,1,:,4)"}
 
   subroutine acc_explicit_shape_leading_scalar(arr)
@@ -194,9 +199,19 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMopenacc_boundsPacc_explicit_shape_leading_scalar(
-! CHECK: %[[B0:.*]] = acc.bounds lowerbound(%c1{{.*}} : index) upperbound(%c1{{.*}} : index) extent(%c1{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
-! CHECK: %[[B1:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%c3{{.*}} : index) stride(%c2{{.*}} : index) startIdx(%c1{{.*}} : index)
-! CHECK: %[[B2:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%c4{{.*}} : index) stride(%c6{{.*}} : index) startIdx(%c1{{.*}} : index)
+! CHECK: %[[B0:.*]] = acc.bounds lowerbound(%c1{{.*}} : index) upperbound(%c1{{.*}} : index) extent(%c1{{.*}} : index) sourceExtent(%c2{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
+! CHECK: %[[B1:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%c3{{.*}} : index) sourceExtent(%c3{{.*}} : index) stride(%c2{{.*}} : index) startIdx(%c1{{.*}} : index)
+! CHECK: %[[B2:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%c4{{.*}} : index) sourceExtent(%c4{{.*}} : index) stride(%c6{{.*}} : index) startIdx(%c1{{.*}} : index)
 ! CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<!fir.array<2x3x4xf32>>) bounds(%[[B0]], %[[B1]], %[[B2]]) -> !fir.ref<!fir.array<2x3x4xf32>> {name = "arr(2,:,:)"}
+
+  subroutine acc_explicit_shape_narrowed_triplet(arr)
+    real :: arr(100)
+    !$acc data copyin(arr(2:50))
+    !$acc end data
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMopenacc_boundsPacc_explicit_shape_narrowed_triplet(
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%c1{{.*}} : index) upperbound(%c49{{.*}} : index) extent(%c49{{.*}} : index) sourceExtent(%c100{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
+! CHECK: acc.copyin {{.*}} bounds(%[[BOUND]]) {{.*}} {name = "arr(2:50)"}
 
 end module

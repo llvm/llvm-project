@@ -1711,7 +1711,7 @@ end subroutine
 ! CHECK: %[[C1:.*]] = arith.constant 1 : index
 ! CHECK: %[[LB:.*]] = arith.constant 10 : index
 ! CHECK: %[[UB:.*]] = arith.constant 19 : index
-! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[C100]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%{{.*}} : index) sourceExtent(%{{.*}} : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLARG0]]#0 : !fir.ref<!fir.array<100xi32>>) bounds(%[[BOUND]]) recipe(@reduction_add_section_lb10.ub19_ref_100xi32) -> !fir.ref<!fir.array<100xi32>> {name = "a(11:20)"}
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<!fir.array<100xi32>>)
 
@@ -1730,9 +1730,9 @@ end subroutine
 ! CHECK: %[[C1:.*]] = arith.constant 1 : index
 ! CHECK: %[[UB9:.*]] = arith.constant 9 : index
 ! CHECK: %[[STRIDE1:.*]] = arith.constant 10 : index
-! CHECK: %[[BOUND0:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB9]] : index) extent(%[[C10]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
+! CHECK: %[[BOUND0:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB9]] : index) extent(%{{.*}} : index) sourceExtent(%{{.*}} : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
 ! CHECK: %[[UB19:.*]] = arith.constant 19 : index
-! CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB19]] : index) extent(%[[C20]] : index)
+! CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB19]] : index) extent(%{{.*}} : index)
 ! stride(%[[STRIDE1]] : index) startIdx(%[[C1]] : index)
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLARG0]]#0 : !fir.ref<!fir.array<10x20xi32>>) bounds(%[[BOUND0]], %[[BOUND1]]) recipe(@reduction_add_section_lb0.ub9xlb0.ub19_ref_10x20xi32) ->
 ! !fir.ref<!fir.array<10x20xi32>> {name = "a(:10,:20)"}
@@ -1771,7 +1771,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_dynamic_extent_add_with_section(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"})
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFacc_reduction_add_dynamic_extent_add_with_sectionEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%c1{{.*}} : index) upperbound(%c3{{.*}} : index) extent(%{{.*}}#1 : index) stride(%{{.*}}#2 : index) startIdx(%{{.*}} : index) {strideInBytes = true}
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%c1{{.*}} : index) upperbound(%c3{{.*}} : index) extent(%{{.*}} : index) sourceExtent(%{{.*}} : index) stride(%{{.*}}#2 : index) startIdx(%{{.*}} : index) {strideInBytes = true}
 ! CHECK: %[[RED:.*]] = acc.reduction var(%[[DECL]]#0 : !fir.box<!fir.array<?xi32>>) bounds(%[[BOUND]]) recipe(@reduction_add_section_lb1.ub3_box_Uxi32) -> !fir.box<!fir.array<?xi32>> {name = "a(2:4)"}
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.box<!fir.array<?xi32>>)
 

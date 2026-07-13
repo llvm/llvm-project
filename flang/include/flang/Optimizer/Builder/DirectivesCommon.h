@@ -51,6 +51,31 @@ struct AddrAndBoundsInfo {
   }
 };
 
+template <typename BoundsOp, typename = void>
+struct HasSourceExtent : std::false_type {};
+
+template <typename BoundsOp>
+struct HasSourceExtent<
+    BoundsOp,
+    std::void_t<decltype(std::declval<BoundsOp>().getSourceExtentMutable())>>
+    : std::true_type {};
+
+template <typename BoundsOp>
+mlir::Value createBoundsOp(fir::FirOpBuilder &builder, mlir::Location loc,
+                           mlir::Type boundTy, mlir::Value lowerBound,
+                           mlir::Value upperBound, mlir::Value extent,
+                           mlir::Value sourceExtent, mlir::Value stride,
+                           bool strideInBytes, mlir::Value startIdx) {
+  if constexpr (HasSourceExtent<BoundsOp>::value) {
+    return BoundsOp::create(builder, loc, boundTy, lowerBound, upperBound,
+                            extent, sourceExtent, stride, strideInBytes,
+                            startIdx);
+  } else {
+    return BoundsOp::create(builder, loc, boundTy, lowerBound, upperBound,
+                            extent, stride, strideInBytes, startIdx);
+  }
+}
+
 inline AddrAndBoundsInfo getDataOperandBaseAddr(fir::FirOpBuilder &builder,
                                                 mlir::Value symAddr,
                                                 bool isOptional,
@@ -128,9 +153,9 @@ gatherBoundsOrBoundValues(fir::FirOpBuilder &builder, mlir::Location loc,
       values.push_back(byteStride);
       values.push_back(baseLb);
     } else {
-      mlir::Value bound =
-          BoundsOp::create(builder, loc, boundTy, lb, ub, dimInfo.getExtent(),
-                           byteStride, true, baseLb);
+      mlir::Value bound = createBoundsOp<BoundsOp>(
+          builder, loc, boundTy, lb, ub, dimInfo.getExtent(),
+          dimInfo.getExtent(), byteStride, true, baseLb);
       values.push_back(bound);
     }
     // Compute the stride for the next dimension.
@@ -194,13 +219,14 @@ genBoundsOpFromBoxChar(fir::FirOpBuilder &builder, mlir::Location loc,
 
   mlir::Value ub = mlir::arith::SubIOp::create(builder, loc, extent, one);
   mlir::Type boundTy = builder.getType<BoundsType>();
-  return BoundsOp::create(builder, loc, boundTy,
-                          /*lower_bound=*/zero,
-                          /*upper_bound=*/ub,
-                          /*extent=*/extent,
-                          /*stride=*/stride,
-                          /*stride_in_bytes=*/true,
-                          /*start_idx=*/zero);
+  return createBoundsOp<BoundsOp>(builder, loc, boundTy,
+                                  /*lower_bound=*/zero,
+                                  /*upper_bound=*/ub,
+                                  /*extent=*/extent,
+                                  /*source_extent=*/extent,
+                                  /*stride=*/stride,
+                                  /*stride_in_bytes=*/true,
+                                  /*start_idx=*/zero);
 }
 
 /// Generate the bounds operation from the descriptor information.
@@ -254,9 +280,9 @@ genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
     // Create the bound operations outside the if-then-else with the if op
     // results.
     for (unsigned i = 0; i < ifRes.size(); i += nbValuesPerBound) {
-      mlir::Value bound =
-          BoundsOp::create(builder, loc, boundTy, ifRes[i], ifRes[i + 1],
-                           ifRes[i + 2], ifRes[i + 3], true, ifRes[i + 4]);
+      mlir::Value bound = createBoundsOp<BoundsOp>(
+          builder, loc, boundTy, ifRes[i], ifRes[i + 1], ifRes[i + 2],
+          ifRes[i + 2], ifRes[i + 3], true, ifRes[i + 4]);
       bounds.push_back(bound);
     }
   } else {
@@ -307,8 +333,8 @@ genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
           loc, cumulativeExtent, extent);
     }
 
-    mlir::Value bound = BoundsOp::create(builder, loc, boundTy, lb, ub, extent,
-                                         stride, false, baseLb);
+    mlir::Value bound = createBoundsOp<BoundsOp>(
+        builder, loc, boundTy, lb, ub, extent, extent, stride, false, baseLb);
     bounds.push_back(bound);
   }
   return bounds;

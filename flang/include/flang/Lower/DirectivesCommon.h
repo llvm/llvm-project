@@ -195,6 +195,7 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
         }
         return fir::factory::readExtent(builder, loc, dataExv, dimension);
       };
+      mlir::Value sourceExtent;
 
       if (mlir::isa<fir::BaseBoxType>(
               fir::unwrapRefType(info.addr.getType()))) {
@@ -316,7 +317,7 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
           }
         }
 
-        extent = genSourceExtent();
+        sourceExtent = genSourceExtent();
 
         if (dataExvIsAssumedSize && dimension + 1 == dataExvRank) {
           extent = zero;
@@ -327,28 +328,32 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
           }
           if (!ubound)
             ubound = lbound;
-        }
-
-        if (!ubound) {
-          // ub = extent - 1
-          ubound = mlir::arith::SubIOp::create(builder, loc, extent, one);
+        } else if (!lower && !upper) {
+          ubound = mlir::arith::SubIOp::create(builder, loc, sourceExtent, one);
+          extent = sourceExtent;
+        } else {
+          if (!ubound)
+            ubound =
+                mlir::arith::SubIOp::create(builder, loc, sourceExtent, one);
+          mlir::Value diff =
+              builder.createOrFold<mlir::arith::SubIOp>(loc, ubound, lbound);
+          extent = builder.createOrFold<mlir::arith::AddIOp>(loc, diff, one);
         }
       }
+      if (!sourceExtent)
+        sourceExtent = genSourceExtent();
 
       // When the strideInBytes is true, it means the stride is from descriptor
       // and this already includes the lower extents.
       if (strideIncludeLowerExtent && !strideInBytes) {
         stride = cumulativeExtent;
-        mlir::Value strideExtent = extent;
-        if (!triplet && dimension + 1 < dataExvRank)
-          strideExtent = genSourceExtent();
         cumulativeExtent = builder.createOrFold<mlir::arith::MulIOp>(
-            loc, cumulativeExtent, strideExtent);
+            loc, cumulativeExtent, sourceExtent);
       }
 
-      mlir::Value bound =
-          BoundsOp::create(builder, loc, boundTy, lbound, ubound, extent,
-                           stride, strideInBytes, baseLb);
+      mlir::Value bound = fir::factory::createBoundsOp<BoundsOp>(
+          builder, loc, boundTy, lbound, ubound, extent, sourceExtent, stride,
+          strideInBytes, baseLb);
       bounds.push_back(bound);
       ++dimension;
     }

@@ -143,7 +143,7 @@ end subroutine
 ! CHECK:           %[[DESIGNATE_2:.*]] = hlfir.designate %[[DESIGNATE_1]]{"y"}   shape %[[SHAPE_1]] : (!fir.ref<!fir.type<_QMmhdata_typesTt_array{x:i32,y:!fir.array<10xf32>}>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:           %[[CONSTANT_4:.*]] = arith.constant 1 : index
 ! CHECK:           %[[CONSTANT_5:.*]] = arith.constant 3 : index
-! CHECK:           %[[BOUNDS_0:.*]] = acc.bounds lowerbound(%[[CONSTANT_5]] : index) upperbound(%[[CONSTANT_5]] : index) extent(%[[CONSTANT_4]] : index) stride(%[[CONSTANT_4]] : index) startIdx(%[[CONSTANT_4]] : index)
+! CHECK:           %[[BOUNDS_0:.*]] = acc.bounds lowerbound(%[[CONSTANT_5]] : index) upperbound(%[[CONSTANT_5]] : index) extent(%[[CONSTANT_4]] : index) sourceExtent(%{{.*}} : index) stride(%[[CONSTANT_4]] : index) startIdx(%[[CONSTANT_4]] : index)
 ! CHECK:           %[[USE_DEVICE_0:.*]] = acc.use_device varPtr(%[[DESIGNATE_2]] : !fir.ref<!fir.array<10xf32>>)
 ! bounds(%[[BOUNDS_0]]) -> !fir.ref<!fir.array<10xf32>> {name = "obj(10_8)%comp(2_8)%y(4)"}
 ! CHECK:           acc.host_data dataOperands(%[[USE_DEVICE_0]] : !fir.ref<!fir.array<10xf32>>) {
