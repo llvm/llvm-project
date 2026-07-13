@@ -3979,7 +3979,6 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
 
 static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
                                           SetVector<Function *> &Functions,
-                                          AnalysisGetter &AG,
                                           CallGraphUpdater &CGUpdater,
                                           FunctionAnalysisManager &FAM,
                                           bool IsModulePass) {
@@ -4156,7 +4155,7 @@ PreservedAnalyses AttributorLightPass::run(Module &M,
   CallGraphUpdater CGUpdater;
   BumpPtrAllocator Allocator;
   InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ nullptr);
-  if (runAttributorLightOnFunctions(InfoCache, Functions, AG, CGUpdater, FAM,
+  if (runAttributorLightOnFunctions(InfoCache, Functions, CGUpdater, FAM,
                                     /* IsModulePass */ true)) {
     PreservedAnalyses PA;
     // We have not added or removed functions.
@@ -4188,7 +4187,7 @@ PreservedAnalyses AttributorLightCGSCCPass::run(LazyCallGraph::SCC &C,
   CGUpdater.initialize(CG, C, AM, UR);
   BumpPtrAllocator Allocator;
   InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ &Functions);
-  if (runAttributorLightOnFunctions(InfoCache, Functions, AG, CGUpdater, FAM,
+  if (runAttributorLightOnFunctions(InfoCache, Functions, CGUpdater, FAM,
                                     /* IsModulePass */ false)) {
     PreservedAnalyses PA;
     // We have not added or removed functions.
