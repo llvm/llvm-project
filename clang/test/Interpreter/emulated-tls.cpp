@@ -1,6 +1,9 @@
 // REQUIRES: host-supports-jit
 // UNSUPPORTED: system-windows
 //
+// Emulated TLS is not supported by the LoongArch backend.
+// UNSUPPORTED: target=loongarch{{.*}}
+//
 // An inline function that odr-uses a non-zero-initialized thread_local is
 // emitted as a weak (linkonce_odr) definition into every PartialTranslationUnit
 // that references it. With emulated TLS that set includes an __emutls_t.<var>

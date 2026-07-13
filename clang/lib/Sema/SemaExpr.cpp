@@ -433,6 +433,8 @@ void Sema::DiagnoseSentinelCalls(const NamedDecl *D, SourceLocation Loc,
   } else if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     NumFormalParams = FD->param_size();
     CalleeKind = CK_Function;
+    if (FD->hasCXXExplicitFunctionObjectParameter())
+      NumFormalParams++;
   } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
     QualType Ty = VD->getType();
     const FunctionType *Fn = nullptr;
@@ -19847,11 +19849,12 @@ bool Sema::tryCaptureVariable(
     QualType &DeclRefType, const unsigned *const FunctionScopeIndexToStopAt) {
   // An init-capture is notionally from the context surrounding its
   // declaration, but its parent DC is the lambda class.
-  DeclContext *VarDC = Var->getDeclContext();
+  DeclContext *VarDC =
+      Var->getDeclContext()->getEnclosingNonExpansionStatementContext();
   DeclContext *DC = CurContext;
 
   // Skip past RequiresExprBodys because they don't constitute function scopes.
-  while (DC->isRequiresExprBody())
+  while (DC->isRequiresExprBody() || DC->isExpansionStmt())
     DC = DC->getParent();
 
   // tryCaptureVariable is called every time a DeclRef is formed,
