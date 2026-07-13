@@ -25,7 +25,7 @@ static_assert(!std::same_as<std::ranges::iterator_t<View>, std::ranges::iterator
 static_assert(!std::same_as<std::ranges::sentinel_t<View>, std::ranges::sentinel_t<const View>>);
 
 void test() {
-  auto v  = View{} | std::views::enumerate;
+  auto v = View{} | std::views::enumerate;
 
   // [range.enumerate.view]
 
@@ -92,7 +92,7 @@ void test() {
 
   // [range.enumerate.overview]
 
-  std::vector<int> range { 1, 2, 3 };
+  std::vector<int> range{1, 2, 3};
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::enumerate(range);
