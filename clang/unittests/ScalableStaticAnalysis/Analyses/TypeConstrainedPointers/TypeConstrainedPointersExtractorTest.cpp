@@ -150,7 +150,7 @@ TEST_F(TypeConstrainedPointersExtractorTest, FreeOperatorDelete) {
 
   ASSERT_TRUE(PtrId);
 
-  EXPECT_EQ(*S, std::set{*PtrId});
+  EXPECT_EQ(*S, std::set<EntityId>{*PtrId});
 }
 
 TEST_F(TypeConstrainedPointersExtractorTest, MemberOperatorDelete) {
@@ -168,7 +168,7 @@ TEST_F(TypeConstrainedPointersExtractorTest, MemberOperatorDelete) {
   auto PId = getEntityId("p");
   ASSERT_TRUE(PId);
 
-  EXPECT_EQ(*S, std::set{*PId});
+  EXPECT_EQ(*S, std::set<EntityId>{*PId});
 }
 
 TEST_F(TypeConstrainedPointersExtractorTest, OperatorDeleteArray) {
@@ -184,7 +184,7 @@ TEST_F(TypeConstrainedPointersExtractorTest, OperatorDeleteArray) {
   auto PId = getEntityId("p");
 
   ASSERT_TRUE(PId);
-  EXPECT_EQ(*S, std::set{*PId});
+  EXPECT_EQ(*S, std::set<EntityId>{*PId});
 }
 
 TEST_F(TypeConstrainedPointersExtractorTest, OperatorNew) {
@@ -201,7 +201,7 @@ TEST_F(TypeConstrainedPointersExtractorTest, OperatorNew) {
   auto RetId = getEntityIdForReturn("operator new");
 
   ASSERT_TRUE(RetId);
-  EXPECT_EQ(*S, std::set{*RetId});
+  EXPECT_EQ(*S, std::set<EntityId>{*RetId});
 }
 
 TEST_F(TypeConstrainedPointersExtractorTest, PlacementNew) {
@@ -222,7 +222,7 @@ TEST_F(TypeConstrainedPointersExtractorTest, PlacementNew) {
 
   ASSERT_TRUE(PlacementId);
   ASSERT_TRUE(RetId);
-  EXPECT_EQ(*S, (std::set{*PlacementId, *RetId}));
+  EXPECT_EQ(*S, (std::set<EntityId>{*PlacementId, *RetId}));
 }
 
 TEST_F(TypeConstrainedPointersExtractorTest, PlacementDelete) {
@@ -242,7 +242,7 @@ TEST_F(TypeConstrainedPointersExtractorTest, PlacementDelete) {
 
   ASSERT_TRUE(PtrId);
   ASSERT_TRUE(PlacementId);
-  EXPECT_EQ(*S, (std::set{*PtrId, *PlacementId}));
+  EXPECT_EQ(*S, (std::set<EntityId>{*PtrId, *PlacementId}));
 }
 
 TEST_F(TypeConstrainedPointersExtractorTest, NoOperatorNewOrDeleteSummary) {
@@ -269,8 +269,26 @@ TEST_F(TypeConstrainedPointersExtractorTest, MainPointerParams) {
   auto ArgvId = getEntityId("argv");
 
   ASSERT_TRUE(ArgvId);
-  // argc is not a pointer — only argv and envp are extracted.
+  // argc is not a pointer — only argv is extracted.
   EXPECT_EQ(*S, (std::set<EntityId>{*ArgvId}));
+}
+
+TEST_F(TypeConstrainedPointersExtractorTest, MainThreePointerParams) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    int main(int argc, char **argv, char **envp) { return 0; }
+  )cpp"));
+
+  const auto *S = getEntitySummary("main");
+
+  ASSERT_TRUE(S);
+
+  auto ArgvId = getEntityId("argv");
+  auto EnvpId = getEntityId("envp");
+
+  ASSERT_TRUE(ArgvId);
+  ASSERT_TRUE(EnvpId);
+  // argc is not a pointer — argv and envp are both extracted.
+  EXPECT_EQ(*S, (std::set<EntityId>{*ArgvId, *EnvpId}));
 }
 
 TEST_F(TypeConstrainedPointersExtractorTest, MainNoPointerParams) {

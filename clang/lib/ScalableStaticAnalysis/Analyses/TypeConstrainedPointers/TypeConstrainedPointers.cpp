@@ -108,11 +108,10 @@ TypeConstrainedPointersExtractor::extractEntitySummary(
     default:
       // Extract case 5: pointer-typed parameters of main.
       if (FD->isMain())
-        for (unsigned I = 0; I < FD->getNumParams(); ++I) {
-          if (!hasPtrOrArrType(FD->getParamDecl(I)))
-            continue;
-          if (auto Id = addEntity(FD->getParamDecl(I)))
-            Summary->Entities.insert(*Id);
+        for (const ParmVarDecl *PVD : FD->parameters()) {
+          if (hasPtrOrArrType(PVD))
+            if (auto Id = addEntity(PVD))
+              Summary->Entities.insert(*Id);
         }
       return;
     };
