@@ -1,5 +1,6 @@
 import getopt
 import os
+import platform
 import sys
 from io import StringIO
 
@@ -70,12 +71,13 @@ def run(argv, stdin, stdout, stderr, cwd):
 
         contents = None
         is_text = False
-        try:
-            with open(path, "r") as fileToCat:
-                contents = fileToCat.read()
-                is_text = True
-        except:
-            pass
+        if platform.system() == "OS/390":
+            try:
+                with open(path, "r") as fileToCat:
+                    contents = fileToCat.read()
+                    is_text = True
+            except:
+                pass
 
         if contents is None:
             try:
