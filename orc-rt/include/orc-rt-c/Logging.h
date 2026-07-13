@@ -14,7 +14,7 @@
 |*   ORC_RT_LOG(Level, Category, Fmt, ...)                                    *|
 |*                                                                            *|
 |* where Level is one of Error, Warning, Info, Debug; Category is one of the  *|
-|* orc_rt_LogCategory tokens (without the leading "orc_rt_LogCategory_");     *|
+|* orc_rt_log_Category tokens (without the leading "orc_rt_log_Category_");   *|
 |* and Fmt, ... are a printf-style format string and arguments, e.g.          *|
 |*                                                                            *|
 |*   ORC_RT_LOG(Error, General, "failed to map %zu bytes", Size);             *|
@@ -24,8 +24,10 @@
 |* the category enum gives typo-safe, filterable subsystems.                  *|
 |*                                                                            *|
 |* The backend is selected at build time via ORC_RT_LOG_BACKEND. The default  *|
-|* "none" backend emits no code (but still type-checks the format string and  *|
-|* arguments at every call site).                                             *|
+|* "none" backend emits no code (but still type-checks every call site). The  *|
+|* "printf" backend writes each message to stderr, or to the file named by    *|
+|* the ORC_RT_LOG_OUTPUT environment variable; the ORC_RT_LOG variable sets a *|
+|* runtime level threshold (error, warning, info, debug, or off).             *|
 |*                                                                            *|
 |* IMPORTANT: log arguments should be free of observable side effects.        *|
 |* Whether they are evaluated is backend- and level-dependent, so they must   *|
@@ -50,17 +52,49 @@ ORC_RT_C_EXTERN_C_BEGIN
  * categories here as call sites require them.
  */
 typedef enum {
-  orc_rt_LogCategory_General,
-} orc_rt_LogCategory;
+  orc_rt_log_Category_General,
+
+  /*
+   * Count is the number of defined categories; it is not itself a valid
+   * category.
+   */
+  orc_rt_log_Category_Count
+} orc_rt_log_Category;
+
+/**
+ * Logging levels are integers. Valid values are ORC_RT_LOG_LEVEL_DEBUG,
+ * ORC_RT_LOG_LEVEL_INFO, ORC_RT_LOG_LEVEL_WARNING, ORC_RT_LOG_LEVEL_ERROR, and
+ * ORC_RT_LOG_LEVEL_OFF.
+ */
+typedef int orc_rt_log_Level;
+
+/**
+ * Returns the display name for the given category, or null if the category is
+ * unrecognized.
+ */
+const char *
+orc_rt_log_Category_getName(orc_rt_log_Category Cat) ORC_RT_C_NOTHROW;
+
+/**
+ * Returns the display name for the given log level, or null if the log level
+ * is unrecognized.
+ */
+const char *orc_rt_log_Level_getName(orc_rt_log_Level L) ORC_RT_C_NOTHROW;
+
+/**
+ * Returns the level corresponding to the given level name, or -1 if the level
+ * name is unrecognized.
+ *
+ * Comparison is case-insensitive.
+ */
+orc_rt_log_Level orc_rt_log_Level_parse(const char *Str) ORC_RT_C_NOTHROW;
 
 /**
  * Declared but never defined: referenced only in unevaluated (sizeof) contexts
  * to type-check a printf-style format string against its arguments without
  * evaluating them or emitting any code.
  */
-int orc_rt_log_format_check(const char *Fmt, ...) ORC_RT_C_FORMAT_PRINTF(1, 2);
-
-ORC_RT_C_EXTERN_C_END
+int orc_rt_log_formatCheck(const char *Fmt, ...) ORC_RT_C_FORMAT_PRINTF(1, 2);
 
 /*
  * A disabled log site. Validates the category token, format string, and
@@ -68,7 +102,7 @@ ORC_RT_C_EXTERN_C_END
  * both operands sit in unevaluated sizeof contexts.
  */
 #define ORC_RT_LOG_DISABLED(Category, ...)                                     \
-  ((void)sizeof(Category), (void)sizeof(orc_rt_log_format_check(__VA_ARGS__)))
+  ((void)sizeof(Category), (void)sizeof(orc_rt_log_formatCheck(__VA_ARGS__)))
 
 /*
  * ORC_RT_LOG dispatches on the level token to a per-level macro, which each
@@ -78,7 +112,7 @@ ORC_RT_C_EXTERN_C_END
  * needed.
  */
 #define ORC_RT_LOG(Level, Category, ...)                                       \
-  ORC_RT_LOG_##Level(orc_rt_LogCategory_##Category, __VA_ARGS__)
+  ORC_RT_LOG_##Level(orc_rt_log_Category_##Category, __VA_ARGS__)
 
 #if ORC_RT_LOG_BACKEND == ORC_RT_LOG_BACKEND_NONE
 
@@ -93,11 +127,59 @@ ORC_RT_C_EXTERN_C_END
   ORC_RT_LOG_DISABLED(Category, __VA_ARGS__)
 
 #elif ORC_RT_LOG_BACKEND == ORC_RT_LOG_BACKEND_PRINTF
-#error "The printf logging backend is not yet implemented."
+
+/**
+ * printf-backend log sink. Formats the message and writes it, prefixed with its
+ * category and level, to the logging output (stderr, or the file named by the
+ * ORC_RT_LOG_OUTPUT environment variable). Not called directly: use ORC_RT_LOG.
+ */
+void orc_rt_log_printf(orc_rt_log_Level Level, orc_rt_log_Category Category,
+                       const char *Fmt, ...) ORC_RT_C_NOTHROW
+    ORC_RT_C_FORMAT_PRINTF(3, 4);
+
+/*
+ * Each level is compiled in only if it is at or above the ORC_RT_LOG_LEVEL
+ * floor; a below-floor level expands to ORC_RT_LOG_DISABLED so it
+ * vanishes from the binary while remaining type-checked.
+ */
+#if ORC_RT_LOG_LEVEL_ERROR >= ORC_RT_LOG_LEVEL
+#define ORC_RT_LOG_Error(Category, ...)                                        \
+  orc_rt_log_printf(ORC_RT_LOG_LEVEL_ERROR, Category, __VA_ARGS__)
+#else
+#define ORC_RT_LOG_Error(Category, ...)                                        \
+  ORC_RT_LOG_DISABLED(Category, __VA_ARGS__)
+#endif
+
+#if ORC_RT_LOG_LEVEL_WARNING >= ORC_RT_LOG_LEVEL
+#define ORC_RT_LOG_Warning(Category, ...)                                      \
+  orc_rt_log_printf(ORC_RT_LOG_LEVEL_WARNING, Category, __VA_ARGS__)
+#else
+#define ORC_RT_LOG_Warning(Category, ...)                                      \
+  ORC_RT_LOG_DISABLED(Category, __VA_ARGS__)
+#endif
+
+#if ORC_RT_LOG_LEVEL_INFO >= ORC_RT_LOG_LEVEL
+#define ORC_RT_LOG_Info(Category, ...)                                         \
+  orc_rt_log_printf(ORC_RT_LOG_LEVEL_INFO, Category, __VA_ARGS__)
+#else
+#define ORC_RT_LOG_Info(Category, ...)                                         \
+  ORC_RT_LOG_DISABLED(Category, __VA_ARGS__)
+#endif
+
+#if ORC_RT_LOG_LEVEL_DEBUG >= ORC_RT_LOG_LEVEL
+#define ORC_RT_LOG_Debug(Category, ...)                                        \
+  orc_rt_log_printf(ORC_RT_LOG_LEVEL_DEBUG, Category, __VA_ARGS__)
+#else
+#define ORC_RT_LOG_Debug(Category, ...)                                        \
+  ORC_RT_LOG_DISABLED(Category, __VA_ARGS__)
+#endif
+
 #elif ORC_RT_LOG_BACKEND == ORC_RT_LOG_BACKEND_OS_LOG
 #error "The os_log logging backend is not yet implemented."
 #else
 #error "Unknown ORC_RT_LOG_BACKEND."
 #endif
+
+ORC_RT_C_EXTERN_C_END
 
 #endif /* ORC_RT_C_LOGGING_H */

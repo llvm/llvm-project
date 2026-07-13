@@ -69,6 +69,11 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
 
       Instruction *Inst = cast<Instruction>(VPV->getUnderlyingValue());
 
+      // Atomic accesses and fences have ordering/atomicity semantics that
+      // cannot be preserved by lane-wise widening.
+      if (isa<AtomicRMWInst, AtomicCmpXchgInst, FenceInst>(Inst))
+        return false;
+
       VPRecipeBase *NewRecipe = nullptr;
       if (auto *PhiR = dyn_cast<VPPhi>(&Ingredient)) {
         auto *Phi = cast<PHINode>(PhiR->getUnderlyingValue());
@@ -1153,14 +1158,14 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPValue *Op,
 }
 
 void VPlanTransforms::optimizeInductionLiveOutUsers(
-    VPlan &Plan, PredicatedScalarEvolution &PSE, bool FoldTail) {
+    VPlan &Plan, PredicatedScalarEvolution &PSE) {
   // Compute end values for all inductions.
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   auto *VectorPH = cast<VPBasicBlock>(VectorRegion->getSinglePredecessor());
   VPBuilder VectorPHBuilder(VectorPH, VectorPH->begin());
   DenseMap<VPValue *, VPValue *> EndValues;
   VPValue *ResumeTC =
-      FoldTail ? Plan.getTripCount() : &Plan.getVectorTripCount();
+      Plan.hasTailFolded() ? Plan.getTripCount() : &Plan.getVectorTripCount();
   for (auto &Phi : VectorRegion->getEntryBasicBlock()->phis()) {
     auto *WideIV = dyn_cast<VPWidenInductionRecipe>(&Phi);
     if (!WideIV)
@@ -1256,6 +1261,9 @@ getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
       .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe,
             VPReplicateRecipe>(
           [](auto *I) { return std::make_pair(false, I->getOpcode()); })
+      .Case([](const VPWidenPHIRecipe *I) {
+        return std::make_pair(true, Instruction::PHI);
+      })
       .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
           [](auto *I) {
             // For recipes that do not directly map to LLVM IR instructions,
@@ -2571,6 +2579,10 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
       if (LSIV->getInductionOpcode() !=
           cast<VPScalarIVStepsRecipe>(R)->getInductionOpcode())
         return false;
+    // Phi recipes can only be equal if they are in the same VPBB, as they
+    // implicitly depend on their predecessors.
+    if (isa<VPWidenPHIRecipe>(L) && L->getParent() != R->getParent())
+      return false;
     // Recipes in replicate regions implicitly depend on predicate. If either
     // recipe is in a replicate region, only consider them equal if both have
     // the same parent.
@@ -4086,7 +4098,7 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R) {
 /// Expand a VPDerivedIVRecipe into executable recipes.
 static void expandVPDerivedIV(VPDerivedIVRecipe *R) {
   VPBuilder Builder(R);
-  VPIRValue *Start = R->getStartValue();
+  VPValue *Start = R->getStartValue();
   VPValue *Step = R->getStepValue();
   VPValue *Index = R->getIndex();
   Type *StepTy = Step->getScalarType();
@@ -6639,6 +6651,22 @@ struct VPPartialReductionChain {
   VPBlendRecipe *Blend = nullptr;
 };
 
+// Return the incoming index of the single-use value in the blend, which is
+// expected to be the predicated reduction update.
+static std::optional<unsigned>
+getBlendReductionUpdateValueIdx(VPBlendRecipe *Blend) {
+  assert(Blend && !Blend->isNormalized() &&
+         Blend->getNumIncomingValues() == 2 &&
+         "Expected a non-normalized blend with two incoming values");
+  bool FirstIncomingHasOneUse = Blend->getIncomingValue(0)->hasOneUse();
+
+  // Only the update value should have one use (the blend). The previous
+  // value should always have at least two uses, the blend and the reduction.
+  if (FirstIncomingHasOneUse == Blend->getIncomingValue(1)->hasOneUse())
+    return std::nullopt;
+  return FirstIncomingHasOneUse ? 0 : 1;
+}
+
 static VPSingleDefRecipe *
 optimizeExtendsForPartialReduction(VPSingleDefRecipe *Op) {
   // reduce.add(mul(ext(A), C))
@@ -6836,7 +6864,12 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
                                       m_Specific(RdxPhi))));
 
   if (Chain.Blend) {
-    VPValue *BlendCond = Chain.Blend->getMask(0);
+    std::optional<unsigned> BlendReductionIdx =
+        getBlendReductionUpdateValueIdx(Chain.Blend);
+    assert(BlendReductionIdx &&
+           Chain.Blend->getIncomingValue(*BlendReductionIdx) == WidenRecipe &&
+           "Expected blend to contain the reduction update");
+    VPValue *BlendCond = Chain.Blend->getMask(*BlendReductionIdx);
     Cond = ExitValue ? VPBuilder(WidenRecipe)
                            .createLogicalAnd(Cond, BlendCond,
                                              WidenRecipe->getDebugLoc())
@@ -7084,11 +7117,17 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
   VPValue *CurrentValue = ExitValue;
   while (CurrentValue != RedPhiR) {
     VPBlendRecipe *Blend = dyn_cast<VPBlendRecipe>(CurrentValue);
+    std::optional<unsigned> BlendReductionIdx;
     if (Blend) {
       assert(!Blend->isNormalized() && "Expect Blend not to be normalized.");
-      CurrentValue = Blend->getIncomingValue(0);
-      if (Blend->getNumIncomingValues() != 2 || !CurrentValue->hasOneUse())
+      if (Blend->getNumIncomingValues() != 2)
         return std::nullopt;
+
+      BlendReductionIdx = getBlendReductionUpdateValueIdx(Blend);
+      if (!BlendReductionIdx)
+        return std::nullopt;
+
+      CurrentValue = Blend->getIncomingValue(*BlendReductionIdx);
     }
 
     auto *UpdateR = dyn_cast<VPWidenRecipe>(CurrentValue);
@@ -7112,7 +7151,7 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
     // Look for VPBlend(reduce(PrevValue, Op), PrevValue), where
     // reduce is equal to CurrentValue. This can be lowered as
     // a conditional reduction by hoisting the select to the inputs.
-    if (Blend && Blend->getIncomingValue(1) != PrevValue)
+    if (Blend && Blend->getIncomingValue(1 - *BlendReductionIdx) != PrevValue)
       return std::nullopt;
 
     Type *ExtSrcType = ExtendedOp->ExtendA.SrcType;

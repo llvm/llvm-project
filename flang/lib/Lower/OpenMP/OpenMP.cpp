@@ -36,7 +36,6 @@
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Parser/openmp-utils.h"
@@ -933,167 +932,6 @@ static void genNestedEvaluations(lower::AbstractConverter &converter,
     converter.genEval(e);
 }
 
-static mlir::Operation *setLoopVar(lower::AbstractConverter &converter,
-                                   mlir::Location loc, mlir::Value indexVal,
-                                   const semantics::Symbol *sym);
-
-/// Emit the body of a collapsed loop nest, including any intervening code
-/// from imperfect nesting at intermediate levels (CLN relaxation, applied
-/// retroactively for all OMP versions).
-///
-/// Because omp.loop_nest places its entire body at the innermost nesting
-/// level, intervening code must be guarded so that it only executes on the
-/// iterations where the corresponding inner induction variables are at their
-/// initial (for intervening code before nested loop) or final (for intervening
-/// code after nested loop) values.
-///
-/// \param [in] converter - PFT to MLIR conversion interface.
-/// \param [in] outerEval - the evaluation containing the outermost loop
-///                         (typically the OpenMP construct evaluation).
-/// \param [in] collapseValue - number of loops being collapsed (>= 1).
-static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
-                                     lower::pft::Evaluation &outerEval,
-                                     int collapseValue) {
-  assert(collapseValue >= 1);
-  if (collapseValue == 1) {
-    genNestedEvaluations(converter, outerEval, /*collapseValue=*/1);
-    return;
-  }
-
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  const mlir::Location loc = converter.getCurrentLocation();
-
-  // Get the enclosing omp.loop_nest to access induction variables and bounds.
-  auto loopNestOp = mlir::dyn_cast<mlir::omp::LoopNestOp>(
-      firOpBuilder.getInsertionBlock()->getParentOp());
-  assert(loopNestOp && "expected to be inside omp.loop_nest");
-
-  // Collect before/after evaluations at each intermediate level.
-  struct LevelInfo {
-    llvm::SmallVector<lower::pft::Evaluation *> before;
-    llvm::SmallVector<lower::pft::Evaluation *> after;
-  };
-  llvm::SmallVector<LevelInfo> levels;
-
-  // DO-variable symbol of each collapsed level (index 0 = outermost). Used to
-  // restore an inner loop's variable to its Fortran terminal value before
-  // emitting "after" intervening code (see below).
-  llvm::SmallVector<const semantics::Symbol *> ivSyms;
-
-  lower::pft::Evaluation *curEval = &outerEval;
-  for (int i = 0; i < collapseValue - 1; ++i) {
-    lower::pft::Evaluation *doEval = getNestedDoConstruct(*curEval);
-    const semantics::Symbol *ivSym = getIterationVariableSymbol(*doEval);
-    assert(ivSym && "expected iteration variable on collapsed DO loop");
-    ivSyms.push_back(ivSym);
-    LevelInfo level;
-    bool pastDo = false;
-    for (lower::pft::Evaluation &e : doEval->getNestedEvaluations()) {
-      if (e.getIf<parser::NonLabelDoStmt>() || e.getIf<parser::EndDoStmt>())
-        continue;
-      // Semantics guarantees the only DoConstruct here is the next associated
-      // loop (non-associated DO loops are rejected as intervening code).
-      if (e.getIf<parser::DoConstruct>()) {
-        pastDo = true;
-        continue;
-      }
-      if (!pastDo)
-        level.before.push_back(&e);
-      else
-        level.after.push_back(&e);
-    }
-    levels.push_back(std::move(level));
-    curEval = doEval;
-  }
-  // DO-variable symbol of the innermost collapsed loop must be restored
-  // inside enclosing "after" regions.
-  const semantics::Symbol *innermostIvSym =
-      getIterationVariableSymbol(*getNestedDoConstruct(*curEval));
-  assert(innermostIvSym && "expected iteration variable on collapsed DO loop");
-  ivSyms.push_back(innermostIvSym);
-
-  // Build a guard condition: all induction variables from
-  // startLevel..endLevel-1 equal their respective bound values.
-  // For "before" guards (useLowerBound=true), compare iv == lb (first iter).
-  // For "after" guards (useLowerBound=false), compare iv == last_iv.
-  const auto lbs = loopNestOp.getLoopLowerBounds();
-  const auto ubs = loopNestOp.getLoopUpperBounds();
-  const auto steps = loopNestOp.getLoopSteps();
-
-  // Last value the induction variable at \p lvl actually takes:
-  // lb + ((ub - lb) / step) * step. For unit steps this is exactly ub.
-  auto computeLastIV = [&](const int lvl) -> mlir::Value {
-    const auto constStep = fir::getIntIfConstant(steps[lvl]);
-    if (constStep && (*constStep == 1 || *constStep == -1))
-      return ubs[lvl];
-    const mlir::Value lb = lbs[lvl];
-    const mlir::Value ub = ubs[lvl];
-    const mlir::Value step = steps[lvl];
-    const mlir::Value range =
-        mlir::arith::SubIOp::create(firOpBuilder, loc, ub, lb);
-    const mlir::Value tripMinus1 =
-        mlir::arith::DivSIOp::create(firOpBuilder, loc, range, step);
-    const mlir::Value lastOffset =
-        mlir::arith::MulIOp::create(firOpBuilder, loc, tripMinus1, step);
-    return mlir::arith::AddIOp::create(firOpBuilder, loc, lb, lastOffset);
-  };
-
-  auto buildGuard = [&](const int startLevel, const int endLevel,
-                        const bool useLowerBound) -> mlir::Value {
-    mlir::Value cond;
-    for (int lvl = startLevel; lvl < endLevel; ++lvl) {
-      const mlir::Value iv = loopNestOp.getRegion().getArgument(lvl);
-      const mlir::Value target = useLowerBound ? lbs[lvl] : computeLastIV(lvl);
-      const mlir::Value cmp = mlir::arith::CmpIOp::create(
-          firOpBuilder, loc, mlir::arith::CmpIPredicate::eq, iv, target);
-      if (!cond)
-        cond = cmp;
-      else
-        cond = mlir::arith::AndIOp::create(firOpBuilder, loc, cond, cmp);
-    }
-    return cond;
-  };
-
-  // Emit "before" code at each level, guarded by inner IVs == lower bounds.
-  for (int i = 0; i < static_cast<int>(levels.size()); ++i) {
-    if (levels[i].before.empty())
-      continue;
-    const mlir::Value guard =
-        buildGuard(i + 1, collapseValue, /*useLowerBound=*/true);
-    auto ifOp = fir::IfOp::create(firOpBuilder, loc, guard, /*else*/ false);
-    firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-    for (auto *e : levels[i].before)
-      converter.genEval(*e);
-    firOpBuilder.setInsertionPointAfter(ifOp);
-  }
-
-  // Emit innermost loop body.
-  genNestedEvaluations(converter, *curEval, /*collapseValue=*/1);
-
-  // Emit "after" code at each level (innermost first), guarded by
-  // inner IVs == last iteration values (accounts for non-unit steps).
-  for (int i = static_cast<int>(levels.size()) - 1; i >= 0; --i) {
-    if (levels[i].after.empty())
-      continue;
-    const mlir::Value guard =
-        buildGuard(i + 1, collapseValue, /*useLowerBound=*/false);
-    auto ifOp = fir::IfOp::create(firOpBuilder, loc, guard, /*else*/ false);
-    firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-    // A normally-terminated Fortran DO loop leaves its variable one step past
-    // the last executed value, but the flattened nest leaves each at its last
-    // executed value. Restore the terminal value before running "after" code
-    // that may read it.
-    for (int lvl = i + 1; lvl < collapseValue; ++lvl) {
-      const mlir::Value terminal = mlir::arith::AddIOp::create(
-          firOpBuilder, loc, computeLastIV(lvl), steps[lvl]);
-      setLoopVar(converter, loc, terminal, ivSyms[lvl]);
-    }
-    for (auto *e : levels[i].after)
-      converter.genEval(*e);
-    firOpBuilder.setInsertionPointAfter(ifOp);
-  }
-}
-
 static fir::GlobalOp globalInitialization(lower::AbstractConverter &converter,
                                           fir::FirOpBuilder &firOpBuilder,
                                           const semantics::Symbol &sym,
@@ -1785,13 +1623,6 @@ struct OpWithBodyGenInfo {
     return *this;
   }
 
-  OpWithBodyGenInfo &setCollapseInfo(int value,
-                                     lower::pft::Evaluation &outerEval) {
-    collapseValue = value;
-    outerCollapseEval = &outerEval;
-    return *this;
-  }
-
   /// [inout] converter to use for the clauses.
   lower::AbstractConverter &converter;
   /// [in] Symbol table
@@ -1820,10 +1651,6 @@ struct OpWithBodyGenInfo {
   bool genSkeletonOnly = false;
   /// [in] enables handling of privatized variable unless set to `false`.
   bool privatize = true;
-  /// [in] if set, outermost evaluation and collapse depth for emitting
-  /// intervening code from imperfect collapsed loop nests.
-  lower::pft::Evaluation *outerCollapseEval = nullptr;
-  int collapseValue = 0;
 };
 
 static mlir::Value getReductionOverrideValue(fir::FirOpBuilder &builder,
@@ -2123,11 +1950,7 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
       firOpBuilder.setInsertionPointToEnd(&op.getRegion(0).back());
       auto *temp = lower::genOpenMPTerminator(firOpBuilder, &op, info.loc);
       firOpBuilder.setInsertionPointAfter(marker);
-      if (info.outerCollapseEval)
-        genCollapsedLoopNestBody(info.converter, *info.outerCollapseEval,
-                                 info.collapseValue);
-      else
-        genNestedEvaluations(info.converter, info.eval);
+      genNestedEvaluations(info.converter, info.eval);
       temp->erase();
     }
 
@@ -2983,8 +2806,7 @@ genLoopNestOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                         directive)
           .setClauses(&item->clauses)
           .setDataSharingProcessor(&dsp)
-          .setGenRegionEntryCb(ivCallback)
-          .setCollapseInfo(nestValue, eval),
+          .setGenRegionEntryCb(ivCallback),
       queue, item, clauseOps);
   converter.overrideExprValues(oldOverrides);
   return loopNestOp;
@@ -3076,7 +2898,7 @@ static void genCanonicalLoopNest(
   // Step 1: Loop prologues
   // Computing the trip count must happen before entering the outermost loop
   lower::pft::Evaluation *innermostEval = nestedEval;
-  for (std::size_t i = 0; i < ivs.size(); ++i) {
+  for ([[maybe_unused]] auto iv : ivs) {
     if (innermostEval->getIf<parser::DoConstruct>()->IsDoConcurrent()) {
       // OpenMP specifies DO CONCURRENT only with the `!omp loop` construct.
       // Will need to add special cases for this combination.
@@ -3158,8 +2980,7 @@ static void genCanonicalLoopNest(
     mlir::Value cli = newcli.getResult();
     clis.push_back(cli);
 
-    if (i + 1 < ivs.size())
-      innermostEval = getNestedDoConstruct(*innermostEval);
+    innermostEval = &*std::next(innermostEval->getNestedEvaluations().begin());
   }
 
   // Step 2: Create nested canoncial loops

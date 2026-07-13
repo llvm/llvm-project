@@ -3620,7 +3620,7 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
     }
 
     if (Result.Width.isScalar() ||
-        isMoreProfitable(NextVF, Result, MaxTripCount, !CM.foldTailByMasking(),
+        isMoreProfitable(NextVF, Result, MaxTripCount, !hasTailFolded(MainPlan),
                          /*IsEpilogue*/ true)) {
       Result = NextVF;
       BestPlan = &CurrentPlan;
@@ -5672,7 +5672,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     // TODO: Remove this code after stepping away from the legacy cost model and
     // adding code to simplify VPlans before calculating their costs.
     auto TC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
-    if (TC == VF && !CM.foldTailByMasking())
+    if (TC == VF && !hasTailFolded(Plan))
       addFullyUnrolledInstructionsToIgnore(OrigLoop, Legal->getInductionVars(),
                                            CostCtx.SkipCostComputation);
 
@@ -5929,7 +5929,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   }
 
   if (CM.maskPartialAliasing()) {
-    assert(CM.foldTailByMasking() && "Expected tail folding to be enabled");
+    assert(BestVPlan.hasTailFolded() && "Expected tail folding to be enabled");
     RUN_VPLAN_PASS(VPlanTransforms::materializeAliasMaskCheckBlock, BestVPlan,
                    *CM.Legal->getRuntimePointerChecking()->getDiffChecks(),
                    HasBranchWeights);
@@ -5969,6 +5969,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   RUN_VPLAN_PASS(VPlanTransforms::convertEVLExitCond, BestVPlan);
   // Regions are dissolved after optimizing for VF and UF, which completely
   // removes unneeded loop regions first.
+  const bool HasTailFolded = hasTailFolded(BestVPlan);
   RUN_VPLAN_PASS(VPlanTransforms::dissolveLoopRegions, BestVPlan);
   // Expand BranchOnTwoConds after dissolution, when latch has direct access to
   // its successors.
@@ -5986,7 +5987,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   assert((OrigLoop->getUniqueLatchExitBlock() || RequiresScalarEpilogue) &&
          "loops not exiting via the latch without required epilogue?");
   VPlanTransforms::materializeVectorTripCount(
-      BestVPlan, VectorPH, CM.foldTailByMasking(), RequiresScalarEpilogue,
+      BestVPlan, VectorPH, HasTailFolded, RequiresScalarEpilogue,
       &BestVPlan.getVFxUF(), MaxRuntimeStep);
   VPlanTransforms::materializeFactors(BestVPlan, VectorPH, BestVF);
   // Limit expansions to VPInstruction to when not vectorizing the epilogue.
@@ -6197,9 +6198,8 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
                                                        : VPI->getOperand(1);
   if (Consecutive) {
     Builder.setInsertPoint(VPI);
-    Ptr = Builder.createConsecutiveVectorPointer(
-        Ptr, getLoadStoreType(I), Reverse, CM.foldTailByMasking(),
-        VPI->getDebugLoc());
+    Ptr = Builder.createConsecutiveVectorPointer(Ptr, getLoadStoreType(I),
+                                                 Reverse, VPI->getDebugLoc());
   }
 
   if (Reverse && Mask)
@@ -6638,8 +6638,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
     if (!RUN_VPLAN_PASS(VPlanTransforms::tryToConvertVPInstructionsToVPRecipes,
                         *Plan, *TLI))
       return nullptr;
-    RUN_VPLAN_PASS(VPlanTransforms::optimizeInductionLiveOutUsers, *Plan, PSE,
-                   /*FoldTail=*/false);
+    RUN_VPLAN_PASS(VPlanTransforms::optimizeInductionLiveOutUsers, *Plan, PSE);
     return Plan;
   }
 
@@ -6808,8 +6807,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // Optimize FindIV reductions to use sentinel-based approach when possible.
   RUN_VPLAN_PASS(VPlanTransforms::optimizeFindIVReductions, *Plan, PSE,
                  *OrigLoop);
-  RUN_VPLAN_PASS(VPlanTransforms::optimizeInductionLiveOutUsers, *Plan, PSE,
-                 CM.foldTailByMasking());
+  RUN_VPLAN_PASS(VPlanTransforms::optimizeInductionLiveOutUsers, *Plan, PSE);
 
   // Apply mandatory transformation to handle reductions with multiple in-loop
   // uses if possible, bail out otherwise.
@@ -7126,6 +7124,13 @@ bool LoopVectorizationPlanner::requiresScalarEpilogue(VPlan &Plan,
   return Result;
 }
 
+bool LoopVectorizationPlanner::hasTailFolded(const VPlan &Plan) const {
+  bool Result = Plan.hasTailFolded();
+  assert(CM.foldTailByMasking() == Result &&
+         "CM.foldTailByMasking and the VPlan-based check must agree");
+  return Result;
+}
+
 void LoopVectorizationPlanner::addMinimumIterationCheck(
     VPlan &Plan, ElementCount VF, unsigned UF,
     ElementCount MinProfitableTripCount) const {
@@ -7135,7 +7140,7 @@ void LoopVectorizationPlanner::addMinimumIterationCheck(
           : nullptr;
   RUN_VPLAN_PASS(VPlanTransforms::addMinimumIterationCheck, Plan, VF, UF,
                  MinProfitableTripCount, requiresScalarEpilogue(Plan, VF),
-                 CM.foldTailByMasking(), OrigLoop, BranchWeights,
+                 hasTailFolded(Plan), OrigLoop, BranchWeights,
                  OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(),
                  PSE, Plan.getEntry());
 }

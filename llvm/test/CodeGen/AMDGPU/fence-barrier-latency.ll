@@ -6,6 +6,8 @@
 define amdgpu_kernel void @fence_barrier_latency_test(ptr addrspace(1) %global_ptr, i32 %offset, <8 x i32> %tdesc, <4 x i32> %src_desc) #0 {
 ; CHECK-LABEL: fence_barrier_latency_test:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    global_wb
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    s_clause 0x2
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x40 nv

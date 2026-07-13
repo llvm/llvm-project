@@ -36,9 +36,11 @@ body: |
     ; GFX12-LABEL: name: ffloor_s16_ss
     ; GFX12: liveins: $sgpr0
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX12-NEXT: [[S_FLOOR_F16_:%[0-9]+]]:sreg_32 = nofpexcept S_FLOOR_F16 [[COPY]], implicit $mode
-    ; GFX12-NEXT: $sgpr0 = COPY [[S_FLOOR_F16_]]
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; GFX12-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; GFX12-NEXT: [[FFLOOR:%[0-9]+]]:sreg_32(s16) = G_FFLOOR [[TRUNC]]
+    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sreg_32(s32) = COPY [[FFLOOR]](s16)
+    ; GFX12-NEXT: $sgpr0 = COPY [[COPY1]](s32)
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0
     %2:sgpr(s16) = G_FFLOOR %1
@@ -59,43 +61,47 @@ body: |
     ; VI-LABEL: name: ffloor_s16_vv
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; VI-NEXT: [[V_FLOOR_F16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_FLOOR_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; VI-NEXT: $vgpr0 = COPY [[V_FLOOR_F16_e64_]]
+    ; VI-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; VI-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; VI-NEXT: [[FFLOOR:%[0-9]+]]:vgpr_32(s16) = G_FFLOOR [[TRUNC]]
+    ; VI-NEXT: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY [[FFLOOR]](s16)
+    ; VI-NEXT: $vgpr0 = COPY [[COPY1]](s32)
     ;
     ; GFX11-TRUE16-LABEL: name: ffloor_s16_vv
     ; GFX11-TRUE16: liveins: $vgpr0
     ; GFX11-TRUE16-NEXT: {{  $}}
-    ; GFX11-TRUE16-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX11-TRUE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_16 = COPY [[COPY]].lo16
-    ; GFX11-TRUE16-NEXT: [[V_FLOOR_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_FLOOR_F16_t16_e64 0, [[COPY1]], 0, 0, 0, implicit $mode, implicit $exec
-    ; GFX11-TRUE16-NEXT: [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
-    ; GFX11-TRUE16-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_FLOOR_F16_t16_e64_]], %subreg.lo16, [[DEF]], %subreg.hi16
-    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[REG_SEQUENCE]]
+    ; GFX11-TRUE16-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; GFX11-TRUE16-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; GFX11-TRUE16-NEXT: [[FFLOOR:%[0-9]+]]:vgpr_16(s16) = G_FFLOOR [[TRUNC]]
+    ; GFX11-TRUE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY [[FFLOOR]](s16)
+    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[COPY1]](s32)
     ;
     ; GFX11-FAKE16-LABEL: name: ffloor_s16_vv
     ; GFX11-FAKE16: liveins: $vgpr0
     ; GFX11-FAKE16-NEXT: {{  $}}
-    ; GFX11-FAKE16-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX11-FAKE16-NEXT: [[V_FLOOR_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_FLOOR_F16_fake16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX11-FAKE16-NEXT: $vgpr0 = COPY [[V_FLOOR_F16_fake16_e64_]]
+    ; GFX11-FAKE16-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; GFX11-FAKE16-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; GFX11-FAKE16-NEXT: [[FFLOOR:%[0-9]+]]:vgpr_32(s16) = G_FFLOOR [[TRUNC]]
+    ; GFX11-FAKE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY [[FFLOOR]](s16)
+    ; GFX11-FAKE16-NEXT: $vgpr0 = COPY [[COPY1]](s32)
     ;
     ; GFX12-TRUE16-LABEL: name: ffloor_s16_vv
     ; GFX12-TRUE16: liveins: $vgpr0
     ; GFX12-TRUE16-NEXT: {{  $}}
-    ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX12-TRUE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_16 = COPY [[COPY]].lo16
-    ; GFX12-TRUE16-NEXT: [[V_FLOOR_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_FLOOR_F16_t16_e64 0, [[COPY1]], 0, 0, 0, implicit $mode, implicit $exec
-    ; GFX12-TRUE16-NEXT: [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
-    ; GFX12-TRUE16-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_FLOOR_F16_t16_e64_]], %subreg.lo16, [[DEF]], %subreg.hi16
-    ; GFX12-TRUE16-NEXT: $vgpr0 = COPY [[REG_SEQUENCE]]
+    ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; GFX12-TRUE16-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; GFX12-TRUE16-NEXT: [[FFLOOR:%[0-9]+]]:vgpr_16(s16) = G_FFLOOR [[TRUNC]]
+    ; GFX12-TRUE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY [[FFLOOR]](s16)
+    ; GFX12-TRUE16-NEXT: $vgpr0 = COPY [[COPY1]](s32)
     ;
     ; GFX12-FAKE16-LABEL: name: ffloor_s16_vv
     ; GFX12-FAKE16: liveins: $vgpr0
     ; GFX12-FAKE16-NEXT: {{  $}}
-    ; GFX12-FAKE16-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX12-FAKE16-NEXT: [[V_FLOOR_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_FLOOR_F16_fake16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX12-FAKE16-NEXT: $vgpr0 = COPY [[V_FLOOR_F16_fake16_e64_]]
+    ; GFX12-FAKE16-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; GFX12-FAKE16-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; GFX12-FAKE16-NEXT: [[FFLOOR:%[0-9]+]]:vgpr_32(s16) = G_FFLOOR [[TRUNC]]
+    ; GFX12-FAKE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY [[FFLOOR]](s16)
+    ; GFX12-FAKE16-NEXT: $vgpr0 = COPY [[COPY1]](s32)
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0
     %2:vgpr(s16) = G_FFLOOR %1
@@ -116,41 +122,47 @@ body: |
     ; VI-LABEL: name: ffloor_s16_vs
     ; VI: liveins: $sgpr0
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; VI-NEXT: [[V_FLOOR_F16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_FLOOR_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; VI-NEXT: $vgpr0 = COPY [[V_FLOOR_F16_e64_]]
+    ; VI-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; VI-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; VI-NEXT: [[FFLOOR:%[0-9]+]]:vgpr_32(s16) = G_FFLOOR [[TRUNC]]
+    ; VI-NEXT: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY [[FFLOOR]](s16)
+    ; VI-NEXT: $vgpr0 = COPY [[COPY1]](s32)
     ;
     ; GFX11-TRUE16-LABEL: name: ffloor_s16_vs
     ; GFX11-TRUE16: liveins: $sgpr0
     ; GFX11-TRUE16-NEXT: {{  $}}
-    ; GFX11-TRUE16-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX11-TRUE16-NEXT: [[V_FLOOR_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_FLOOR_F16_t16_e64 0, [[COPY]], 0, 0, 0, implicit $mode, implicit $exec
-    ; GFX11-TRUE16-NEXT: [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
-    ; GFX11-TRUE16-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_FLOOR_F16_t16_e64_]], %subreg.lo16, [[DEF]], %subreg.hi16
-    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[REG_SEQUENCE]]
+    ; GFX11-TRUE16-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; GFX11-TRUE16-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; GFX11-TRUE16-NEXT: [[FFLOOR:%[0-9]+]]:vgpr_16(s16) = G_FFLOOR [[TRUNC]]
+    ; GFX11-TRUE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY [[FFLOOR]](s16)
+    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[COPY1]](s32)
     ;
     ; GFX11-FAKE16-LABEL: name: ffloor_s16_vs
     ; GFX11-FAKE16: liveins: $sgpr0
     ; GFX11-FAKE16-NEXT: {{  $}}
-    ; GFX11-FAKE16-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX11-FAKE16-NEXT: [[V_FLOOR_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_FLOOR_F16_fake16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX11-FAKE16-NEXT: $vgpr0 = COPY [[V_FLOOR_F16_fake16_e64_]]
+    ; GFX11-FAKE16-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; GFX11-FAKE16-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; GFX11-FAKE16-NEXT: [[FFLOOR:%[0-9]+]]:vgpr_32(s16) = G_FFLOOR [[TRUNC]]
+    ; GFX11-FAKE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY [[FFLOOR]](s16)
+    ; GFX11-FAKE16-NEXT: $vgpr0 = COPY [[COPY1]](s32)
     ;
     ; GFX12-TRUE16-LABEL: name: ffloor_s16_vs
     ; GFX12-TRUE16: liveins: $sgpr0
     ; GFX12-TRUE16-NEXT: {{  $}}
-    ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX12-TRUE16-NEXT: [[V_FLOOR_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_FLOOR_F16_t16_e64 0, [[COPY]], 0, 0, 0, implicit $mode, implicit $exec
-    ; GFX12-TRUE16-NEXT: [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
-    ; GFX12-TRUE16-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_FLOOR_F16_t16_e64_]], %subreg.lo16, [[DEF]], %subreg.hi16
-    ; GFX12-TRUE16-NEXT: $vgpr0 = COPY [[REG_SEQUENCE]]
+    ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; GFX12-TRUE16-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; GFX12-TRUE16-NEXT: [[FFLOOR:%[0-9]+]]:vgpr_16(s16) = G_FFLOOR [[TRUNC]]
+    ; GFX12-TRUE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY [[FFLOOR]](s16)
+    ; GFX12-TRUE16-NEXT: $vgpr0 = COPY [[COPY1]](s32)
     ;
     ; GFX12-FAKE16-LABEL: name: ffloor_s16_vs
     ; GFX12-FAKE16: liveins: $sgpr0
     ; GFX12-FAKE16-NEXT: {{  $}}
-    ; GFX12-FAKE16-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX12-FAKE16-NEXT: [[V_FLOOR_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_FLOOR_F16_fake16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX12-FAKE16-NEXT: $vgpr0 = COPY [[V_FLOOR_F16_fake16_e64_]]
+    ; GFX12-FAKE16-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; GFX12-FAKE16-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; GFX12-FAKE16-NEXT: [[FFLOOR:%[0-9]+]]:vgpr_32(s16) = G_FFLOOR [[TRUNC]]
+    ; GFX12-FAKE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY [[FFLOOR]](s16)
+    ; GFX12-FAKE16-NEXT: $vgpr0 = COPY [[COPY1]](s32)
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0
     %2:vgpr(s16) = G_FFLOOR %1
@@ -171,43 +183,52 @@ body: |
     ; VI-LABEL: name: ffloor_fneg_s16_vv
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; VI-NEXT: [[V_FLOOR_F16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_FLOOR_F16_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; VI-NEXT: $vgpr0 = COPY [[V_FLOOR_F16_e64_]]
+    ; VI-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; VI-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; VI-NEXT: [[FNEG:%[0-9]+]]:vgpr(s16) = G_FNEG [[TRUNC]]
+    ; VI-NEXT: [[FFLOOR:%[0-9]+]]:vgpr_32(s16) = G_FFLOOR [[FNEG]]
+    ; VI-NEXT: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY [[FFLOOR]](s16)
+    ; VI-NEXT: $vgpr0 = COPY [[COPY1]](s32)
     ;
     ; GFX11-TRUE16-LABEL: name: ffloor_fneg_s16_vv
     ; GFX11-TRUE16: liveins: $vgpr0
     ; GFX11-TRUE16-NEXT: {{  $}}
-    ; GFX11-TRUE16-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX11-TRUE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_16 = COPY [[COPY]].lo16
-    ; GFX11-TRUE16-NEXT: [[V_FLOOR_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_FLOOR_F16_t16_e64 1, [[COPY1]], 0, 0, 0, implicit $mode, implicit $exec
-    ; GFX11-TRUE16-NEXT: [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
-    ; GFX11-TRUE16-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_FLOOR_F16_t16_e64_]], %subreg.lo16, [[DEF]], %subreg.hi16
-    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[REG_SEQUENCE]]
+    ; GFX11-TRUE16-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; GFX11-TRUE16-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; GFX11-TRUE16-NEXT: [[FNEG:%[0-9]+]]:vgpr(s16) = G_FNEG [[TRUNC]]
+    ; GFX11-TRUE16-NEXT: [[FFLOOR:%[0-9]+]]:vgpr_16(s16) = G_FFLOOR [[FNEG]]
+    ; GFX11-TRUE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY [[FFLOOR]](s16)
+    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[COPY1]](s32)
     ;
     ; GFX11-FAKE16-LABEL: name: ffloor_fneg_s16_vv
     ; GFX11-FAKE16: liveins: $vgpr0
     ; GFX11-FAKE16-NEXT: {{  $}}
-    ; GFX11-FAKE16-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX11-FAKE16-NEXT: [[V_FLOOR_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_FLOOR_F16_fake16_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX11-FAKE16-NEXT: $vgpr0 = COPY [[V_FLOOR_F16_fake16_e64_]]
+    ; GFX11-FAKE16-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; GFX11-FAKE16-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; GFX11-FAKE16-NEXT: [[FNEG:%[0-9]+]]:vgpr(s16) = G_FNEG [[TRUNC]]
+    ; GFX11-FAKE16-NEXT: [[FFLOOR:%[0-9]+]]:vgpr_32(s16) = G_FFLOOR [[FNEG]]
+    ; GFX11-FAKE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY [[FFLOOR]](s16)
+    ; GFX11-FAKE16-NEXT: $vgpr0 = COPY [[COPY1]](s32)
     ;
     ; GFX12-TRUE16-LABEL: name: ffloor_fneg_s16_vv
     ; GFX12-TRUE16: liveins: $vgpr0
     ; GFX12-TRUE16-NEXT: {{  $}}
-    ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX12-TRUE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_16 = COPY [[COPY]].lo16
-    ; GFX12-TRUE16-NEXT: [[V_FLOOR_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_FLOOR_F16_t16_e64 1, [[COPY1]], 0, 0, 0, implicit $mode, implicit $exec
-    ; GFX12-TRUE16-NEXT: [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
-    ; GFX12-TRUE16-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_FLOOR_F16_t16_e64_]], %subreg.lo16, [[DEF]], %subreg.hi16
-    ; GFX12-TRUE16-NEXT: $vgpr0 = COPY [[REG_SEQUENCE]]
+    ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; GFX12-TRUE16-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; GFX12-TRUE16-NEXT: [[FNEG:%[0-9]+]]:vgpr(s16) = G_FNEG [[TRUNC]]
+    ; GFX12-TRUE16-NEXT: [[FFLOOR:%[0-9]+]]:vgpr_16(s16) = G_FFLOOR [[FNEG]]
+    ; GFX12-TRUE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY [[FFLOOR]](s16)
+    ; GFX12-TRUE16-NEXT: $vgpr0 = COPY [[COPY1]](s32)
     ;
     ; GFX12-FAKE16-LABEL: name: ffloor_fneg_s16_vv
     ; GFX12-FAKE16: liveins: $vgpr0
     ; GFX12-FAKE16-NEXT: {{  $}}
-    ; GFX12-FAKE16-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX12-FAKE16-NEXT: [[V_FLOOR_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_FLOOR_F16_fake16_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX12-FAKE16-NEXT: $vgpr0 = COPY [[V_FLOOR_F16_fake16_e64_]]
+    ; GFX12-FAKE16-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; GFX12-FAKE16-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; GFX12-FAKE16-NEXT: [[FNEG:%[0-9]+]]:vgpr(s16) = G_FNEG [[TRUNC]]
+    ; GFX12-FAKE16-NEXT: [[FFLOOR:%[0-9]+]]:vgpr_32(s16) = G_FFLOOR [[FNEG]]
+    ; GFX12-FAKE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY [[FFLOOR]](s16)
+    ; GFX12-FAKE16-NEXT: $vgpr0 = COPY [[COPY1]](s32)
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0
     %2:vgpr(s16) = G_FNEG %1

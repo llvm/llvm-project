@@ -2815,7 +2815,7 @@ emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
     // These are actually NYI, but that will be reported by emitBuiltinExpr.
     // At this point, we don't even know that the builtin is target-specific.
     return std::nullopt;
-  case llvm::Triple::amdgcn:
+  case llvm::Triple::amdgpu:
     return cgf->emitAMDGPUBuiltinExpr(builtinID, e);
   case llvm::Triple::systemz:
     return std::nullopt;

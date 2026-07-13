@@ -51,8 +51,8 @@ body: |
     ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
     ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr(s16) = COPY [[TRUNC]](s16)
     ; GFX8-NEXT: [[INT:%[0-9]+]]:vgpr(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.exp2), [[COPY1]](s16)
-    ; GFX8-NEXT: [[ANYEXT:%[0-9]+]]:vgpr(s32) = G_ANYEXT [[INT]](s16)
-    ; GFX8-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; GFX8-NEXT: [[ANYEXT:%[0-9]+]]:vgpr(i32) = G_ANYEXT [[INT]](s16)
+    ; GFX8-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
     ;
     ; GFX11-LABEL: name: amdgcn_exp2_s16_s
     ; GFX11: liveins: $sgpr0
@@ -61,8 +61,8 @@ body: |
     ; GFX11-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr(s16) = COPY [[TRUNC]](s16)
     ; GFX11-NEXT: [[INT:%[0-9]+]]:vgpr(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.exp2), [[COPY1]](s16)
-    ; GFX11-NEXT: [[ANYEXT:%[0-9]+]]:vgpr(s32) = G_ANYEXT [[INT]](s16)
-    ; GFX11-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; GFX11-NEXT: [[ANYEXT:%[0-9]+]]:vgpr(i32) = G_ANYEXT [[INT]](s16)
+    ; GFX11-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
     ;
     ; GFX12-LABEL: name: amdgcn_exp2_s16_s
     ; GFX12: liveins: $sgpr0
