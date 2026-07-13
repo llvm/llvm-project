@@ -27993,6 +27993,14 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   Size = 0;
   LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length " << Chain.size()
                     << "\n");
+  if (Chain.empty())
+    return false;
+  if (any_of(Chain, [&R](Value *V) {
+        auto *I = dyn_cast_or_null<Instruction>(V);
+        return I == nullptr || R.isDeleted(I);
+      }))
+    return false;
+
   const unsigned Sz = R.getVectorElementSize(Chain[0]);
   unsigned VF = Chain.size();
 
@@ -28349,6 +28357,12 @@ bool StoreChainContext::initializeContext(
     BoUpSLP &R, const DataLayout &DL, const TargetTransformInfo &TTI,
     DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
         &Visited) {
+  if (Operands.empty() || any_of(Operands, [&R](const StoreLane &Lane) {
+        return Lane.Store == nullptr || Lane.ScalarValue == nullptr ||
+               R.isDeleted(Lane.Store);
+      }))
+    return false;
+
   if (!Visited
            .insert({Operands.front().Store, Operands.front().ScalarValue,
                     Operands.back().Store, Operands.back().ScalarValue,
@@ -29037,6 +29051,17 @@ bool SLPVectorizerPass::vectorizeStores(
                       // surrounding scalar stores; fall through and decline
                       // so the existing scalar-only path is unaffected.
                       Size = 1;
+                      return false;
+                    }
+                    if (Chain.empty()) {
+                      Size = 0;
+                      return false;
+                    }
+                    if (any_of(Chain, [&R](const StoreLane &Lane) {
+                          return Lane.Store == nullptr ||
+                                 R.isDeleted(Lane.Store);
+                        })) {
+                      Size = 0;
                       return false;
                     }
                     SmallVector<Value *> Stores;
