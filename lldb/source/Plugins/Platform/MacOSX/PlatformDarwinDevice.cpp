@@ -49,8 +49,7 @@ void PlatformDarwinDevice::AddSharedCacheDirectory(
     FileSpec sc_directory_symbols = sc_directory;
     sc_directory_symbols.AppendPathComponent("Symbols");
     if (FileSystem::Instance().Exists(sc_directory_symbols)) {
-      SDKDirectoryInfo thisdir(sc_directory,
-                               sc_directory.GetFilename().GetStringRef());
+      SDKDirectoryInfo thisdir(sc_directory, sc_directory.GetFilename());
       m_sdk_directory_infos.push_back(thisdir);
       LLDB_LOGF(log,
                 "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
@@ -69,8 +68,7 @@ void PlatformDarwinDevice::AddSharedCacheDirectory(
       FileSpec subdir_directory_symbols = subdir;
       subdir_directory_symbols.AppendPathComponent("Symbols");
       if (FileSystem::Instance().Exists(subdir_directory_symbols)) {
-        SDKDirectoryInfo thisdir(subdir,
-                                 sc_directory.GetFilename().GetStringRef());
+        SDKDirectoryInfo thisdir(subdir, sc_directory.GetFilename());
         m_sdk_directory_infos.push_back(thisdir);
         LLDB_LOGF(log,
                   "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "

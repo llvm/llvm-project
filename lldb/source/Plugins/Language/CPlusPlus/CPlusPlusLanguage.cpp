@@ -1154,7 +1154,9 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "libc++ std::chrono::sys_seconds summary provider",
                 "^std::__[[:alnum:]]+::chrono::time_point<"
                 "std::__[[:alnum:]]+::chrono::system_clock, "
-                "std::__[[:alnum:]]+::chrono::duration<[^,]*> >$",
+                "std::__[[:alnum:]]+::chrono::duration<.*, "
+                "std::__[[:alnum:]]+::ratio<1, 1> "
+                "> >$",
                 eTypeOptionHideChildren | eTypeOptionHideValue |
                     eTypeOptionCascade,
                 true);
@@ -1164,7 +1166,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "^std::__[[:alnum:]]+::chrono::time_point<"
                 "std::__[[:alnum:]]+::chrono::system_clock, "
                 "std::__[[:alnum:]]+::chrono::duration<int, "
-                "std::__[[:alnum:]]+::ratio<86400> "
+                "std::__[[:alnum:]]+::ratio<86400, 1> "
                 "> >$",
                 eTypeOptionHideChildren | eTypeOptionHideValue |
                     eTypeOptionCascade,
@@ -1176,7 +1178,9 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "libc++ std::chrono::local_seconds summary provider",
       "^std::__[[:alnum:]]+::chrono::time_point<"
       "std::__[[:alnum:]]+::chrono::local_t, "
-      "std::__[[:alnum:]]+::chrono::duration<[^,]*> >$",
+      "std::__[[:alnum:]]+::chrono::duration<.*, "
+      "std::__[[:alnum:]]+::ratio<1, 1> "
+      "> >$",
       eTypeOptionHideChildren | eTypeOptionHideValue | eTypeOptionCascade,
       true);
   AddCXXSummary(cpp_category_sp,
@@ -1185,7 +1189,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "^std::__[[:alnum:]]+::chrono::time_point<"
                 "std::__[[:alnum:]]+::chrono::local_t, "
                 "std::__[[:alnum:]]+::chrono::duration<int, "
-                "std::__[[:alnum:]]+::ratio<86400> "
+                "std::__[[:alnum:]]+::ratio<86400, 1> "
                 "> >$",
                 eTypeOptionHideChildren | eTypeOptionHideValue |
                     eTypeOptionCascade,
@@ -1298,6 +1302,12 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "libc++ std::strong_ordering summary provider",
                 "^std::__[[:alnum:]]+::strong_ordering$",
                 eTypeOptionHideChildren | eTypeOptionHideValue, true);
+
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxSourceLocationSummaryProvider,
+                "libc++ std::source_location summary provider",
+                "^std::__[[:alnum:]]+::source_location$", stl_summary_flags,
+                true);
 }
 
 static void RegisterStdStringSummaryProvider(
@@ -1518,6 +1528,12 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::StdlibCoroutineHandleSummaryProvider,
                 "libstdc++ std::coroutine_handle summary provider",
                 libstdcpp_std_coroutine_handle_regex, stl_summary_flags, true);
+
+  AddCXXSummary(
+      cpp_category_sp,
+      lldb_private::formatters::LibStdcppSourceLocationSummaryProvider,
+      "libstdc++ std::source_location summary provider", "std::source_location",
+      stl_summary_flags);
 }
 
 static lldb_private::SyntheticChildrenFrontEnd *

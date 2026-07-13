@@ -2,10 +2,10 @@
 
 void acc_host_data(int cond, int var1, int var2, int *arr) {
   // CHECK: cir.func{{.*}} @acc_host_data(%[[ARG_COND:.*]]: !s32i {{.*}}, %[[ARG_V1:.*]]: !s32i {{.*}}, %[[ARG_V2:.*]]: !s32i {{.*}}, %[[ARG_ARR:.*]]: !cir.ptr<!s32i> {{.*}}) {{.*}}{
-  // CHECK-NEXT: %[[COND:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["cond", init]
-  // CHECK-NEXT: %[[V1:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["var1", init]
-  // CHECK-NEXT: %[[V2:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["var2", init]
-  // CHECK-NEXT: %[[ARR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arr", init]
+  // CHECK-NEXT: %[[COND:.*]] = cir.alloca "cond" {{.*}} init : !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[V1:.*]] = cir.alloca "var1" {{.*}} init : !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[V2:.*]] = cir.alloca "var2" {{.*}} init : !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[ARR:.*]] = cir.alloca "arr" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
   // CHECK-NEXT: cir.store %[[ARG_COND]], %[[COND]] : !s32i, !cir.ptr<!s32i>
   // CHECK-NEXT: cir.store %[[ARG_V1]], %[[V1]] : !s32i, !cir.ptr<!s32i>
   // CHECK-NEXT: cir.store %[[ARG_V2]], %[[V2]] : !s32i, !cir.ptr<!s32i>
@@ -58,9 +58,9 @@ void acc_host_data(int cond, int var1, int var2, int *arr) {
 #pragma acc host_data use_device(arr[0:var1])
   {}
   // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0>
-  // CHECK-NEXT: %[[ZERO_CAST:.*]] = builtin.unrealized_conversion_cast %[[ZERO]] : !s32i to si32
+  // CHECK-NEXT: %[[ZERO_CAST:.*]] = cir.builtin_int_cast %[[ZERO]] : !s32i -> si32
   // CHECK-NEXT: %[[VAR1_LOAD:.*]] = cir.load{{.*}} %[[V1]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[VAR1_CAST:.*]] = builtin.unrealized_conversion_cast %[[VAR1_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[VAR1_CAST:.*]] = cir.builtin_int_cast %[[VAR1_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[CONST_ZERO:.*]] = arith.constant 0
   // CHECK-NEXT: %[[CONST_ONE:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ZERO_CAST]] : si32) extent(%[[VAR1_CAST]] : si32) stride(%[[CONST_ONE]] : i64) startIdx(%[[CONST_ZERO]] : i64)

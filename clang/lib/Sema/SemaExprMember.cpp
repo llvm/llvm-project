@@ -1129,8 +1129,9 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
       return ExprError();
     }
 
-    DeclResult VDecl = CheckVarTemplateId(
-        VarTempl, TemplateKWLoc, MemberNameInfo.getLoc(), *TemplateArgs);
+    DeclResult VDecl =
+        CheckVarTemplateId(VarTempl, TemplateKWLoc, MemberNameInfo.getLoc(),
+                           *TemplateArgs, /*SetWrittenArgs=*/false);
     if (VDecl.isInvalid())
       return ExprError();
 
@@ -1297,7 +1298,7 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
   // to access the member.
   if (S.getLangOpts().HLSL && BaseType->isHLSLResourceRecord()) {
     if (std::optional<ExprResult> ConvBase =
-            S.HLSL().tryPerformConstantBufferConversion(BaseExpr)) {
+            S.HLSL().tryPerformConstantBufferConversion(BaseExpr.get())) {
       assert(!ConvBase->isInvalid());
       BaseExpr = *ConvBase;
       BaseType = BaseExpr.get()->getType();

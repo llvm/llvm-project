@@ -19,19 +19,24 @@
 #define IPPROTO_IPV6 41
 #define IPPROTO_RAW 255
 
-#define IPV6_UNICAST_HOPS 16
-#define IPV6_MULTICAST_IF 17
-#define IPV6_MULTICAST_HOPS 18
-#define IPV6_MULTICAST_LOOP 19
-#define IPV6_JOIN_GROUP 20
-#define IPV6_LEAVE_GROUP 21
-#define IPV6_V6ONLY 26
-
 #define INADDR_ANY __LLVM_LIBC_CAST(static_cast, in_addr_t, 0x00000000)
 #define INADDR_BROADCAST __LLVM_LIBC_CAST(static_cast, in_addr_t, 0xffffffff)
 #define INADDR_NONE __LLVM_LIBC_CAST(static_cast, in_addr_t, 0xffffffff)
 // Not specified by POSIX, added in SVR4
 #define INADDR_LOOPBACK __LLVM_LIBC_CAST(static_cast, in_addr_t, 0x7f000001)
+
+#define IN6ADDR_ANY_INIT                                                       \
+  {                                                                            \
+    {                                                                          \
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }                       \
+    }                                                                          \
+  }
+#define IN6ADDR_LOOPBACK_INIT                                                  \
+  {                                                                            \
+    {                                                                          \
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 }                       \
+    }                                                                          \
+  }
 
 // The following macros test for special IPv6 addresses. Each macro is of type
 // int and takes a single argument of type const struct in6_addr *:

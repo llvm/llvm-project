@@ -62,14 +62,14 @@ auto make_non_virtual() -> void (Foo::*)(int) {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z16make_non_virtualv() -> !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
-// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>, !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>, ["__retval"]
+// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
 // CIR-BEFORE:   %[[METHOD_PTR:.*]] = cir.const #cir.method<@_ZN3Foo2m1Ei> : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 // CIR-BEFORE:   cir.store %[[METHOD_PTR]], %[[RETVAL]]
 // CIR-BEFORE:   %[[RET:.*]] = cir.load %[[RETVAL]]
 // CIR-BEFORE:   cir.return %[[RET]] : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 
 // CIR-AFTER: cir.func {{.*}} @_Z16make_non_virtualv() -> !rec_anon_struct attributes {{{.*}}nothrow} {
-// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca !rec_anon_struct, !cir.ptr<!rec_anon_struct>, ["__retval"]
+// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[METHOD_PTR:.*]] = cir.get_global @[[NONVIRT_RET]] : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   cir.copy %[[METHOD_PTR]] to %[[RETVAL]] : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[RET:.*]] = cir.load %[[RETVAL]]
@@ -77,7 +77,7 @@ auto make_non_virtual() -> void (Foo::*)(int) {
 
 // LLVM: define {{.*}} { i64, i64 } @_Z16make_non_virtualv()
 // LLVM:   %[[RETVAL:.*]] = alloca { i64, i64 }
-// LLVM:   call void @llvm.memcpy{{.*}}(ptr %[[RETVAL]], ptr @[[NONVIRT_RET]]
+// LLVM:   call void @llvm.memcpy{{.*}}(ptr align 8 %[[RETVAL]], ptr align 8 @[[NONVIRT_RET]]
 // LLVM:   %[[RET:.*]] = load { i64, i64 }, ptr %[[RETVAL]]
 // LLVM:   ret { i64, i64 } %[[RET]]
 
@@ -95,14 +95,14 @@ auto make_virtual() -> void (Foo::*)(int) {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z12make_virtualv() -> !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
-// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>, !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>, ["__retval"]
+// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
 // CIR-BEFORE:   %[[METHOD_PTR:.*]] = cir.const #cir.method<vtable_offset = 8> : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 // CIR-BEFORE:   cir.store %[[METHOD_PTR]], %[[RETVAL]]
 // CIR-BEFORE:   %[[RET:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>, !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 // CIR-BEFORE:   cir.return %[[RET]] : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 
 // CIR-AFTER: cir.func {{.*}} @_Z12make_virtualv() -> !rec_anon_struct
-// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca !rec_anon_struct, !cir.ptr<!rec_anon_struct>, ["__retval"]
+// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[METHOD_PTR:.*]] = cir.get_global @[[VIRT_RET]] : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   cir.copy %[[METHOD_PTR]] to %[[RETVAL]] : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[RET:.*]] = cir.load %[[RETVAL]]
@@ -110,7 +110,7 @@ auto make_virtual() -> void (Foo::*)(int) {
 
 // LLVM: define {{.*}} @_Z12make_virtualv()
 // LLVM:   %[[RETVAL:.*]] = alloca { i64, i64 }
-// LLVM:   call void @llvm.memcpy{{.*}}(ptr %[[RETVAL]], ptr @[[VIRT_RET]]
+// LLVM:   call void @llvm.memcpy{{.*}}(ptr align 8 %[[RETVAL]], ptr align 8 @[[VIRT_RET]]
 // LLVM:   %[[RET:.*]] = load { i64, i64 }, ptr %[[RETVAL]]
 // LLVM:   ret { i64, i64 } %[[RET]]
 
@@ -126,14 +126,14 @@ auto make_null() -> void (Foo::*)(int) {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z9make_nullv() -> !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
-// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>, !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>, ["__retval"]
+// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
 // CIR-BEFORE:   %[[METHOD_PTR:.*]] = cir.const #cir.method<null> : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 // CIR-BEFORE:   cir.store %[[METHOD_PTR]], %[[RETVAL]]
 // CIR-BEFORE:   %[[RET:.*]] = cir.load %[[RETVAL]]
 // CIR-BEFORE:   cir.return %[[RET]] : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 
 // CIR-AFTER: cir.func {{.*}} @_Z9make_nullv() -> !rec_anon_struct
-// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca !rec_anon_struct, !cir.ptr<!rec_anon_struct>, ["__retval"]
+// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[METHOD_PTR:.*]] = cir.get_global @[[NULL_RET]] : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   cir.copy %[[METHOD_PTR]] to %[[RETVAL]] : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[RET:.*]] = cir.load %[[RETVAL]]
@@ -141,7 +141,7 @@ auto make_null() -> void (Foo::*)(int) {
 
 // LLVM: define {{.*}} @_Z9make_nullv()
 // LLVM:   %[[RETVAL:.*]] = alloca { i64, i64 }
-// LLVM:   call void @llvm.memcpy{{.*}}(ptr %[[RETVAL]], ptr @[[NULL_RET]]
+// LLVM:   call void @llvm.memcpy{{.*}}(ptr align 8 %[[RETVAL]], ptr align 8 @[[NULL_RET]]
 // LLVM:   %[[RET:.*]] = load { i64, i64 }, ptr %[[RETVAL]]
 // LLVM:   ret { i64, i64 } %[[RET]]
 

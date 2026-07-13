@@ -42,6 +42,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
 #include <atomic>
@@ -3481,6 +3482,17 @@ unsigned X86::getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand,
   }
 }
 
+unsigned X86::getMOVriOpcode(bool Use64BitReg, int64_t Imm) {
+  if (!Use64BitReg)
+    return X86::MOV32ri;
+
+  if (isUInt<32>(Imm))
+    return X86::MOV32ri64;
+  if (isInt<32>(Imm))
+    return X86::MOV64ri32;
+  return X86::MOV64ri;
+}
+
 /// Get the VPCMP immediate for the given condition.
 unsigned X86::getVPCMPImmForCond(ISD::CondCode CC) {
   switch (CC) {
@@ -5699,7 +5711,7 @@ static bool canConvert2Copy(unsigned Opc) {
 
 /// Convert an ALUrr opcode to corresponding ALUri opcode. Such as
 ///     ADD32rr  ==>  ADD32ri
-static unsigned convertALUrr2ALUri(unsigned Opc, bool HasNDDI) {
+static unsigned convertALUrr2ALUri(unsigned Opc) {
   switch (Opc) {
   default:
     return 0;
@@ -5750,9 +5762,9 @@ static unsigned convertALUrr2ALUri(unsigned Opc, bool HasNDDI) {
     FROM_TO(CCMP32rr, CCMP32ri)
 #undef FROM_TO
   case X86::ADD64rr_ND:
-    return HasNDDI ? X86::ADD64ri32_ND : 0;
+    return X86::ADD64ri32_ND;
   case X86::SUB64rr_ND:
-    return HasNDDI ? X86::SUB64ri32_ND : 0;
+    return X86::SUB64ri32_ND;
   }
 }
 
@@ -5839,7 +5851,7 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
     else
       return false;
   } else
-    NewOpc = convertALUrr2ALUri(Opc, Subtarget.hasNDDI());
+    NewOpc = convertALUrr2ALUri(Opc);
 
   if (!NewOpc)
     return false;
@@ -7628,10 +7640,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
         return NewMI;
 
       Register NewSrc = MI.getOperand(0).getReg();
-      if (MRI.isSSA()) {
-        const TargetRegisterClass &RC = *MF.getRegInfo().getRegClass(SrcReg);
-        NewSrc = MRI.createVirtualRegister(&RC);
-      }
+      if (MRI.isSSA())
+        NewSrc = MRI.createVirtualRegister(getRegClass(NewMI->getDesc(), 1));
 
       CopyMI = BuildMI(*NewMI->getParent(), *NewMI, MI.getDebugLoc(),
                        get(TargetOpcode::COPY))
@@ -10388,7 +10398,7 @@ X86InstrInfo::describeLoadedValue(const MachineInstr &MI, Register Reg) const {
     if (Reg == MI.getOperand(0).getReg())
       Expr = DIExpression::appendExt(Expr, 32, 64, true);
     else
-      assert(X86MCRegisterClasses[X86::GR32RegClassID].contains(Reg) &&
+      assert(getX86MCRegisterClass(X86::GR32RegClassID).contains(Reg) &&
              "Unhandled sub-register case for MOVSX64rr32");
 
     return ParamLoadedValue(MI.getOperand(1), Expr);

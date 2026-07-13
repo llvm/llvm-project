@@ -192,6 +192,7 @@ void DataAggregator::mergeFrom(const DataAggregator &Other) {
   NumInvalidTraces += Other.NumInvalidTraces;
   NumLongRangeTraces += Other.NumLongRangeTraces;
   NumTotalSamples += Other.NumTotalSamples;
+  Parsed = true;
 }
 
 void DataAggregator::markFunctionsWithProfile() {
@@ -250,15 +251,15 @@ void DataAggregator::findPerfExecutable() {
   PerfPath = *PerfExecutable;
 }
 
-void DataAggregator::start() {
+Error DataAggregator::start() {
   outs() << "PERF2BOLT: Starting data aggregation job for " << Filename << "\n";
 
   // Don't launch perf for pre-aggregated files or when perf input is specified
   // by the user.
   if (opts::ReadPreAggregated)
-    return;
+    return Error::success();
 
-  findPerfExecutable();
+  assert(!PerfPath.empty() && "perf executable must be set before start()");
 
   if (opts::ArmSPE) {
     // pid    from_ip      to_ip        flags
@@ -271,31 +272,38 @@ void DataAggregator::start() {
     opts::BasicAggregation = false;
   }
 
+  SmallVector<std::tuple<StringRef, PerfProcessInfo *, std::string>, 5> Jobs;
   if (opts::BasicAggregation) {
-    launchPerfProcess("events without brstack", MainEventsPPI,
+    Jobs.emplace_back("events without brstack", &MainEventsPPI,
                       "script -F pid,event,ip");
   } else if (!opts::ITraceAggregation.empty()) {
     // Disable parsing memory profile from trace data, unless requested by user.
     if (!opts::ParseMemProfile.getNumOccurrences())
       opts::ParseMemProfile = false;
-    launchPerfProcess("branch events with itrace", MainEventsPPI,
+    Jobs.emplace_back("branch events with itrace", &MainEventsPPI,
                       "script -F pid,brstack --itrace=" +
                           opts::ITraceAggregation);
   } else {
-    launchPerfProcess("branch events", MainEventsPPI, "script -F pid,brstack");
+    Jobs.emplace_back("branch events", &MainEventsPPI, "script -F pid,brstack");
   }
 
   if (opts::ParseMemProfile)
-    launchPerfProcess("mem events", MemEventsPPI,
+    Jobs.emplace_back("mem events", &MemEventsPPI,
                       "script -F pid,event,addr,ip");
 
-  launchPerfProcess("process events", MMapEventsPPI,
+  Jobs.emplace_back("process events", &MMapEventsPPI,
                     "script --show-mmap-events --no-itrace");
 
-  launchPerfProcess("task events", TaskEventsPPI,
+  Jobs.emplace_back("task events", &TaskEventsPPI,
                     "script --show-task-events --no-itrace");
 
-  launchPerfProcess("buildid list", BuildIDProcessInfo, "buildid-list");
+  Jobs.emplace_back("buildid list", &BuildIDProcessInfo, "buildid-list");
+
+  for (auto &[Name, PPI, Args] : Jobs)
+    if (Error E = launchPerfProcess(Name, *PPI, Args))
+      return E;
+
+  return Error::success();
 }
 
 void DataAggregator::abort() {
@@ -316,8 +324,8 @@ void DataAggregator::abort() {
   exit(1);
 }
 
-void DataAggregator::launchPerfProcess(StringRef Name, PerfProcessInfo &PPI,
-                                       StringRef Args) {
+Error DataAggregator::launchPerfProcess(StringRef Name, PerfProcessInfo &PPI,
+                                        StringRef Args) {
   SmallVector<StringRef, 4> Argv;
 
   outs() << "PERF2BOLT: spawning perf job to read " << Name << '\n';
@@ -328,21 +336,14 @@ void DataAggregator::launchPerfProcess(StringRef Name, PerfProcessInfo &PPI,
   Argv.push_back("-i");
   Argv.push_back(Filename.c_str());
 
-  if (std::error_code Errc =
-          sys::fs::createTemporaryFile("perf.script", "out", PPI.StdoutPath)) {
-    errs() << "PERF2BOLT: failed to create temporary file " << PPI.StdoutPath
-           << " with error " << Errc.message() << "\n";
-    exit(1);
+  for (auto [Ext, Path] : {std::make_pair("out", &PPI.StdoutPath),
+                           std::make_pair("err", &PPI.StderrPath)}) {
+    if (std::error_code Errc =
+            sys::fs::createTemporaryFile("perf.script", Ext, *Path))
+      return createStringError(Errc, "failed to create temporary file %s",
+                               Path->data());
+    TempFiles.push_back(Path->data());
   }
-  TempFiles.push_back(PPI.StdoutPath.data());
-
-  if (std::error_code Errc =
-          sys::fs::createTemporaryFile("perf.script", "err", PPI.StderrPath)) {
-    errs() << "PERF2BOLT: failed to create temporary file " << PPI.StderrPath
-           << " with error " << Errc.message() << "\n";
-    exit(1);
-  }
-  TempFiles.push_back(PPI.StderrPath.data());
 
   std::optional<StringRef> Redirects[] = {
       std::nullopt,                      // Stdin
@@ -359,15 +360,14 @@ void DataAggregator::launchPerfProcess(StringRef Name, PerfProcessInfo &PPI,
 
   PPI.PI = sys::ExecuteNoWait(PerfPath.data(), Argv, /*envp*/ std::nullopt,
                               Redirects);
+  return Error::success();
 }
 
 void DataAggregator::processFileBuildID(StringRef FileBuildID) {
-  auto WarningCallback = [](int ReturnCode, StringRef ErrBuf) {
-    errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
-  };
-
-  if (prepareToParse("buildid", BuildIDProcessInfo, WarningCallback))
+  if (Error E = prepareToParse("buildid", BuildIDProcessInfo)) {
+    consumeError(std::move(E));
     return;
+  }
 
   std::optional<StringRef> FileName = getFileNameForBuildID(FileBuildID);
   if (FileName && *FileName == sys::path::filename(BC->getFilename())) {
@@ -430,14 +430,11 @@ bool DataAggregator::checkInputFileMagic(StringRef FileName,
   return false;
 }
 
-void DataAggregator::parsePreAggregated() {
+std::error_code DataAggregator::parsePreAggregated() {
   ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
       MemoryBuffer::getFileOrSTDIN(Filename);
-  if (std::error_code EC = MB.getError()) {
-    errs() << "PERF2BOLT-ERROR: cannot open " << Filename << ": "
-           << EC.message() << "\n";
-    exit(1);
-  }
+  if (std::error_code EC = MB.getError())
+    return EC;
 
   FileBuf = std::move(*MB);
   ParsingBuf = FileBuf->getBuffer();
@@ -459,10 +456,7 @@ void DataAggregator::parsePreAggregated() {
     }
   }
 
-  if (parsePreAggregatedLBRSamples()) {
-    errs() << "PERF2BOLT: failed to parse samples\n";
-    exit(1);
-  }
+  return parsePreAggregatedLBRSamples();
 }
 
 std::error_code DataAggregator::parsePerfScriptFileHeader() {
@@ -565,11 +559,11 @@ Error DataAggregator::parsePerfScript() {
     if (std::error_code EC = parsePerfScriptFileHeader())
       return errorCodeToError(EC);
   }
-  parsePerfData();
-  return Error::success();
+  return parsePerfData();
 }
 
 Error DataAggregator::generatePerfScriptData() {
+  llvm::scope_exit Cleanup([&] { deleteTempFiles(); });
   std::error_code EC;
   raw_fd_ostream OutFile(opts::OutputFilename, EC, sys::fs::OpenFlags::OF_None);
   if (EC) {
@@ -624,11 +618,10 @@ Error DataAggregator::generatePerfScriptData() {
   OutFile.close();
   outs() << "PERF2BOLT: Profile is saved to file " << opts::OutputFilename
          << "\n";
-  deleteTempFiles();
   return Error::success();
 }
 
-void DataAggregator::filterBinaryMMapInfo() {
+Error DataAggregator::filterBinaryMMapInfo() {
   if (opts::FilterPID) {
     auto MMapInfoIter = BinaryMMapInfo.find(opts::FilterPID);
     if (MMapInfoIter != BinaryMMapInfo.end()) {
@@ -650,17 +643,18 @@ void DataAggregator::filterBinaryMMapInfo() {
       if (errs().has_colors())
         errs().resetColor();
 
-      exit(1);
+      return createStringError(std::errc::not_supported,
+                               "could not find a profile matching PID");
     }
   }
+  return Error::success();
 }
 
-int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
-                                   PerfProcessErrorCallbackTy Callback) {
+Error DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process) {
   if (opts::ReadPreAggregated) {
     // No profile, ParsingBuf is set directly in unittests.
     if (Filename.empty())
-      return 0;
+      return Error::success();
     if (Process.Length == 0) {
       errs() << "PERF2BOLT-WARNING: your input profile was generated with "
              << "parsing " << Process.Type << " event enabled. "
@@ -669,16 +663,14 @@ int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
 
     ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
         MemoryBuffer::getFileSlice(Filename, Process.Length, Process.Offset);
-    if (std::error_code EC = MB.getError()) {
-      errs() << "Cannot open " << Process.Type << ": " << EC.message() << "\n";
-      exit(1);
-    }
+    if (std::error_code EC = MB.getError())
+      return errorCodeToError(EC);
 
     FileBuf = std::move(*MB);
     ParsingBuf = FileBuf->getBuffer();
     Col = 0;
     Line = 1;
-    return 0;
+    return Error::success();
   }
 
   std::string Error;
@@ -687,11 +679,9 @@ int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
   std::optional<sys::ProcessStatistics> PS;
   sys::ProcessInfo PI = sys::Wait(Process.PI, std::nullopt, &Error, &PS);
 
-  if (!Error.empty()) {
-    errs() << "PERF-ERROR: " << PerfPath << ": " << Error << "\n";
-    deleteTempFiles();
-    exit(1);
-  }
+  if (!Error.empty())
+    return createStringError(inconvertibleErrorCode(), "%s: %s",
+                             PerfPath.c_str(), Error.c_str());
 
   LLVM_DEBUG({
     const float UserSec = 1.f * PS->UserTime.count() / 1e6;
@@ -705,41 +695,29 @@ int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
   if (PI.ReturnCode != 0) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorMB =
         MemoryBuffer::getFileOrSTDIN(Process.StderrPath.data());
-    StringRef ErrBuf = (*ErrorMB)->getBuffer();
+    if (std::error_code EC = ErrorMB.getError())
+      return errorCodeToError(EC);
 
-    deleteTempFiles();
-    Callback(PI.ReturnCode, ErrBuf);
-    return PI.ReturnCode;
+    return createStringError(inconvertibleErrorCode(), (*ErrorMB)->getBuffer());
   }
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
       MemoryBuffer::getFileOrSTDIN(Process.StdoutPath.data());
-  if (std::error_code EC = MB.getError()) {
-    errs() << "Cannot open " << Process.StdoutPath.data() << ": "
-           << EC.message() << "\n";
-    deleteTempFiles();
-    exit(1);
-  }
+  if (std::error_code EC = MB.getError())
+    return errorCodeToError(EC);
 
   FileBuf = std::move(*MB);
   ParsingBuf = FileBuf->getBuffer();
   Col = 0;
   Line = 1;
-  return PI.ReturnCode;
+  return Error::success();
 }
 
-void DataAggregator::parsePerfData() {
-  auto ErrorCallback = [](int ReturnCode, StringRef ErrBuf) {
-    errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
-    exit(1);
-  };
+Error DataAggregator::parsePerfData() {
+  llvm::scope_exit Cleanup([&] { deleteTempFiles(); });
 
-  auto MemEventsErrorCallback = [&](int ReturnCode, StringRef ErrBuf) {
-    Regex NoData("Samples for '.*' event do not have ADDR attribute set. "
-                 "Cannot print 'addr' field.");
-    if (!NoData.match(ErrBuf))
-      ErrorCallback(ReturnCode, ErrBuf);
-  };
+  using ParseFn = std::error_code (DataAggregator::*)();
+  SmallVector<std::tuple<StringRef, PerfProcessInfo *, ParseFn>, 3> Jobs;
 
   if (std::optional<StringRef> FileBuildID = BC->getFileBuildID()) {
     outs() << "BOLT-INFO: binary build-id is:     " << *FileBuildID << "\n";
@@ -765,30 +743,36 @@ void DataAggregator::parsePerfData() {
     // in Linux kernel mode.
     opts::IgnoreInterruptLBR = false;
   } else {
-    prepareToParse("mmap events", MMapEventsPPI, ErrorCallback);
-    if (parseMMapEvents())
-      errs() << "PERF2BOLT: failed to parse mmap events\n";
+    Jobs.emplace_back("mmap events", &MMapEventsPPI,
+                      &DataAggregator::parseMMapEvents);
   }
 
-  prepareToParse("task events", TaskEventsPPI, ErrorCallback);
-  if (parseTaskEvents())
-    errs() << "PERF2BOLT: failed to parse task events\n";
+  Jobs.emplace_back("task events", &TaskEventsPPI,
+                    &DataAggregator::parseTaskEvents);
 
-  filterBinaryMMapInfo();
-  prepareToParse("events", MainEventsPPI, ErrorCallback);
+  Jobs.emplace_back("events", &MainEventsPPI, &DataAggregator::parseMainEvents);
 
-  if ((!opts::BasicAggregation && parseBranchEvents()) ||
-      (opts::BasicAggregation && parseBasicEvents()))
-    errs() << "PERF2BOLT: failed to parse samples\n";
+  for (auto &[Name, PPI, Parse] : Jobs) {
+    if (Error E = prepareToParse(Name, *PPI))
+      return E;
+    if (std::error_code EC = (this->*Parse)())
+      return errorCodeToError(EC);
+  }
 
   // Special handling for memory events
-  if (opts::ParseMemProfile &&
-      !prepareToParse("mem events", MemEventsPPI, MemEventsErrorCallback))
-    if (const std::error_code EC = parseMemEvents())
-      errs() << "PERF2BOLT: failed to parse memory events: " << EC.message()
-             << '\n';
+  if (opts::ParseMemProfile) {
+    if (Error E = prepareToParse("mem events", MemEventsPPI)) {
+      std::string ErrMsg = toString(std::move(E));
+      Regex NoData("Samples for '.*' event do not have ADDR attribute set. "
+                   "Cannot print 'addr' field.");
+      if (!NoData.match(ErrMsg))
+        return E;
+    }
+    if (std::error_code EC = parseMemEvents())
+      return errorCodeToError(EC);
+  }
 
-  deleteTempFiles();
+  return Error::success();
 }
 
 void DataAggregator::imputeFallThroughs() {
@@ -854,21 +838,70 @@ void DataAggregator::imputeFallThroughs() {
     outs() << "BOLT-INFO: imputed " << InferredTraces << " traces\n";
 }
 
-void DataAggregator::parseInput() {
-  start();
-  if (opts::ReadPreAggregated) {
-    if (checkInputFileMagic(Filename, PerfTextMagicStr)) {
-      if (Error Err = parsePerfScript()) {
-        errs() << "PERF2BOLT-ERROR: failed to parse perfscript profile"
-               << llvm::toString(std::move(Err)) << "\n";
-        exit(1);
-      }
-    } else {
-      parsePreAggregated();
-    }
-  } else {
-    parsePerfData();
+Error DataAggregator::parseInput() {
+  if (Error E = start())
+    return E;
+
+  if (!opts::ReadPreAggregated)
+    return parsePerfData();
+
+  if (checkInputFileMagic(Filename, PerfTextMagicStr))
+    return parsePerfScript();
+
+  return errorCodeToError(parsePreAggregated());
+}
+
+Error DataAggregator::parseAllInputs(BinaryContext &BC) {
+  if (InputFilenames.size() == 1)
+    return parseInput();
+
+  // Multiple inputs
+
+  // Struct keeping DataAggregator and its diagnostics buffer/stream.
+  struct AggregatorJob {
+    DataAggregator *DA{nullptr};
+    std::string DiagBuffer{};
+    raw_string_ostream DiagStream{DiagBuffer};
+  };
+
+  // Create a job for each input file.
+  SmallVector<AggregatorJob *, 1> Jobs;
+  for (StringRef InputFilename : InputFilenames) {
+    auto *Job = Jobs.emplace_back(new AggregatorJob());
+    Job->DA = new DataAggregator(InputFilename, Job->DiagStream);
+    Job->DA->BAT = BAT;
+    Job->DA->BC = &BC;
+    Job->DA->PerfPath = PerfPath;
   }
+
+  ThreadPoolStrategy SavedStrategy = parallel::strategy;
+  parallel::strategy = hardware_concurrency(opts::PerfDataJobs);
+  Error ParseErrors =
+      parallelForEachError(Jobs, [](AggregatorJob *Job) -> Error {
+        if (Error E = Job->DA->parseInput()) {
+          Job->DiagStream.flush();
+          return createStringError(
+              inconvertibleErrorCode(), "%s: %s%s", Job->DA->Filename.c_str(),
+              Job->DiagBuffer.c_str(), toString(std::move(E)).c_str());
+        }
+        Job->DA->Parsed = true;
+        return Error::success();
+      });
+  parallel::strategy = SavedStrategy;
+
+  for (AggregatorJob *Job : Jobs) {
+    if (Job->DA->Parsed)
+      mergeFrom(*Job->DA);
+    delete Job->DA;
+    delete Job;
+  }
+
+  if (!Parsed)
+    return ParseErrors;
+  handleAllErrors(std::move(ParseErrors), [](const ErrorInfoBase &EI) {
+    errs() << "PERF2BOLT-WARNING: " << EI.message() << "\n";
+  });
+  return Error::success();
 }
 
 Error DataAggregator::preprocessProfile(BinaryContext &BC) {
@@ -878,30 +911,19 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
 
   this->BC = &BC;
 
+  if (!opts::ReadPreAggregated)
+    findPerfExecutable();
+
   if (opts::ProfileFormat == opts::ProfileFormatKind::PF_PerfScript) {
-    start();
-    if (Error E = generatePerfScriptData()) {
-      deleteTempFiles();
-      exit(1);
-    }
+    if (Error E = start())
+      return E;
+    if (Error E = generatePerfScriptData())
+      return E;
     exit(0);
   }
 
-  SmallVector<DataAggregator *, 1> Aggregators(1, this);
-  for (StringRef InputFilename : InputFilenames) {
-    auto *DA = Aggregators.emplace_back(new DataAggregator(InputFilename));
-    DA->BC = &BC;
-  }
-
-  ThreadPoolStrategy SavedStrategy = parallel::strategy;
-  parallel::strategy = hardware_concurrency(opts::PerfDataJobs);
-  parallelForEach(Aggregators, [](DataAggregator *DA) { DA->parseInput(); });
-  parallel::strategy = SavedStrategy;
-
-  for (DataAggregator *DA : llvm::drop_begin(Aggregators)) {
-    mergeFrom(*DA);
-    delete DA;
-  }
+  if (Error E = parseAllInputs(BC))
+    return E;
 
   markFunctionsWithProfile();
 
@@ -1292,7 +1314,10 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
 }
 
 ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
+  /// perf script -F brstack entry format:
+  /// FROM/TO/EVENT/INTX/ABORT/CYCLES/TYPE/SPEC
   LBREntry Res;
+  // From
   ErrorOr<StringRef> FromStrRes = parseString('/');
   if (std::error_code EC = FromStrRes.getError())
     return EC;
@@ -1303,6 +1328,7 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
     return make_error_code(llvm::errc::io_error);
   }
 
+  // To
   ErrorOr<StringRef> ToStrRes = parseString('/');
   if (std::error_code EC = ToStrRes.getError())
     return EC;
@@ -1313,10 +1339,11 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
     return make_error_code(llvm::errc::io_error);
   }
 
-  ErrorOr<StringRef> MispredStrRes = parseString('/');
-  if (std::error_code EC = MispredStrRes.getError())
+  // Event: M: mispredicted, P: predicted, N: not taken
+  ErrorOr<StringRef> EventStrRes = parseString('/');
+  if (std::error_code EC = EventStrRes.getError())
     return EC;
-  StringRef MispredStr = MispredStrRes.get();
+  StringRef MispredStr = EventStrRes.get();
   // SPE brstack mispredicted flags might be up to two characters long:
   // 'PN' or 'MN'. Where 'N' optionally appears.
   bool ValidStrSize = opts::ArmSPE
@@ -1344,10 +1371,24 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
     MispredWarning = false;
   }
 
+  // Transaction, abort, cycles
+  for (unsigned I = 0; I < 3; ++I) {
+    ErrorOr<StringRef> IgnoredStr = parseString('/');
+    if (std::error_code EC = IgnoredStr.getError())
+      return EC;
+  }
+
+  // Type: COND/UNCOND/IND/CALL/IND_CALL/RET
+  ErrorOr<StringRef> TypeStr = parseString('/');
+  if (std::error_code EC = TypeStr.getError())
+    return EC;
+  Res.IsReturn = TypeStr.get() == "RET";
+
+  // Branch speculation
   ErrorOr<StringRef> Rest = parseString(FieldSeparator, true);
   if (std::error_code EC = Rest.getError())
     return EC;
-  if (Rest.get().size() < 5) {
+  if (Rest.get().size() < 1) {
     reportError("expected rest of brstack entry");
     Diag << "Found: " << Rest.get() << "\n";
     return make_error_code(llvm::errc::io_error);
@@ -1590,7 +1631,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     using SSI = StringSwitch<int>;
     AddrNum =
         SSI(Str).Cases({"T", "R"}, 3).Case("S", 1).Case("E", 0).Default(2);
-    CounterNum = SSI(Str).Case("B", 2).Case("E", 0).Default(1);
+    CounterNum = Str != "E";
   }
 
   /// Parse locations depending on entry type, recording them in \p Addr array.
@@ -1609,6 +1650,8 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   }
 
   /// Parse counters depending on entry type.
+  if (Type == BRANCH || Type == TRACE || Type == RETURN)
+    CounterNum += ParsingBuf.split('\n').first.contains(FieldSeparator);
   for (int I = 0; I < CounterNum; ++I) {
     while (checkAndConsumeFS()) {
     }
@@ -1789,6 +1832,8 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     TakenBranchInfo &Info = TraceMap[Trace{LBR.From, LBR.To, TraceTo}];
     ++Info.TakenCount;
     Info.MispredCount += LBR.Mispred;
+    if (LBR.IsReturn)
+      Returns.emplace(LBR.From, true);
   }
   // Record LBR addresses not covered by fallthroughs (bottom-of-stack source
   // and top-of-stack target) as basic samples for heatmap.
@@ -1949,6 +1994,12 @@ void DataAggregator::processBranchEvents() {
       doTrace(Trace, Info.TakenCount, IsReturn);
   }
   printBranchSamplesDiagnostics();
+}
+
+std::error_code DataAggregator::parseMainEvents() {
+  if (Error E = filterBinaryMMapInfo())
+    return errorToErrorCode(std::move(E));
+  return opts::BasicAggregation ? parseBasicEvents() : parseBranchEvents();
 }
 
 std::error_code DataAggregator::parseBasicEvents() {
@@ -2466,9 +2517,13 @@ DataAggregator::writePreAggregatedFile(StringRef OutputFilename) const {
   if (EC)
     return EC;
 
-  for (const auto &[Trace, Info] : Traces)
-    OS << Trace << " " << Info.TakenCount << '\n';
-  OS << formatv("E {0:$[,]}\n", EventNames.keys());
+  for (const auto &[Trace, Info] : Traces) {
+    auto ReturnIt = Returns.find(Trace.Branch);
+    const bool IsRet = ReturnIt != Returns.end() && ReturnIt->second;
+    OS << (IsRet ? 'R' : 'T') << " " << Trace << " " << Info << '\n';
+  }
+  if (!EventNames.empty())
+    OS << formatv("E {0:$[,]}\n", EventNames.keys());
   for (const auto &[PC, Count] : BasicSamples)
     OS << formatv("S {0:x-} {1}\n", PC, Count);
 

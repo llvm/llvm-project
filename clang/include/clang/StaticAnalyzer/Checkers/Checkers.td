@@ -460,6 +460,11 @@ def CStringSyntaxChecker : Checker<"BadSizeArg">,
   Dependencies<[CStringModeling]>,
   Documentation<HasDocumentation>;
 
+def CStringUninitializedRead : Checker<"UninitializedRead">,
+  HelpText<"Checks if the string manipulation function would read uninitialized bytes">,
+  Dependencies<[CStringModeling]>,
+  Documentation<HasDocumentation>;
+
 } // end "unix.cstring"
 
 let ParentPackage = CStringAlpha in {
@@ -471,11 +476,6 @@ def CStringOutOfBounds : Checker<"OutOfBounds">,
 
 def CStringBufferOverlap : Checker<"BufferOverlap">,
   HelpText<"Checks for overlap in two buffer arguments">,
-  Dependencies<[CStringModeling]>,
-  Documentation<HasDocumentation>;
-
-def CStringUninitializedRead : Checker<"UninitializedRead">,
-  HelpText<"Checks if the string manipulation function would read uninitialized bytes">,
   Dependencies<[CStringModeling]>,
   Documentation<HasDocumentation>;
 
@@ -512,7 +512,14 @@ def DynamicMemoryModeling: Checker<"DynamicMemoryModeling">,
                   "NoStoreFuncVisitor.",
                   "true",
                   Released,
-                  Hide>
+                  Hide>,
+    CmdLineOption<Boolean,
+                  "ModelAllocationFailure",
+                  "At allocation functions, add extra execution branches for "
+                  "failed memory allocation (function returns null value when "
+                  "size is non-null) if applicable.",
+                  "false",
+                  Released>
   ]>,
   Dependencies<[CStringModeling]>,
   Documentation<NotDocumented>,
@@ -787,6 +794,17 @@ def SmartPtrChecker: Checker<"SmartPtr">,
   HelpText<"Find the dereference of null SmrtPtr">,
   Dependencies<[SmartPtrModeling]>,
   Documentation<HasDocumentation>;
+
+def LifetimeModeling : Checker<"LifetimeModeling">,
+  HelpText<"Model lifetime annotations for other checkers">,
+  Documentation<NotDocumented>,
+  Hidden;
+
+def UseAfterLifetimeEnd : Checker<"UseAfterLifetimeEnd">,
+  HelpText<"Check for uses of references or pointers that "
+           "outlive their bound object">,
+  Dependencies<[LifetimeModeling]>,
+  Documentation<NotDocumented>;
 
 } // end: "alpha.cplusplus"
 
@@ -1576,6 +1594,11 @@ def CheckerDocumentationChecker : Checker<"CheckerDocumentation">,
   HelpText<"Defines an empty checker callback for all possible handlers.">,
   Documentation<NotDocumented>;
 
+def DebugLifetimeModeling : Checker<"DebugLifetimeModeling">,
+  HelpText<"Dump the set of regions the bound variable originates from">,
+  Dependencies<[LifetimeModeling]>,
+  Documentation<NotDocumented>;
+
 } // end "debug"
 
 
@@ -1753,6 +1776,10 @@ def UnretainedCallArgsChecker : Checker<"UnretainedCallArgsChecker">,
 
 def UncountedLocalVarsChecker : Checker<"UncountedLocalVarsChecker">,
   HelpText<"Check uncounted local variables.">,
+  Documentation<HasDocumentation>;
+
+def UncheckedLambdaCapturesChecker : Checker<"UncheckedLambdaCapturesChecker">,
+  HelpText<"Check unchecked lambda captures.">,
   Documentation<HasDocumentation>;
 
 def UncheckedLocalVarsChecker : Checker<"UncheckedLocalVarsChecker">,

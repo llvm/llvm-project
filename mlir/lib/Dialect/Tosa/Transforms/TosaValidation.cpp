@@ -107,7 +107,8 @@ static LogicalResult checkConstantOperandConvOps(Operation *op,
 
 static LogicalResult checkConstantOperandMatMul(Operation *op,
                                                 const TargetEnv &env) {
-  if (!env.allows(Extension::dynamic) && isa<tosa::MatMulOp>(op)) {
+  if (!env.allows(Extension::dynamic) &&
+      isa<tosa::MatMulOp, tosa::MatMulTOp>(op)) {
     // Check 'A_zp' and 'B_zp'
     return checkConstantOperands(op, {2, 3});
   }
@@ -121,6 +122,15 @@ checkConstantOperandRowGatherBlockScaled(Operation *op, const TargetEnv &env) {
     auto rowGatherOp = cast<tosa::RowGatherBlockScaledOp>(op);
     const unsigned rowCountIndex = rowGatherOp.getValues().size() + 1;
     return checkConstantOperands(op, {rowCountIndex});
+  }
+  return success();
+}
+
+static LogicalResult checkConstantOperandRowGather(Operation *op,
+                                                   const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<tosa::RowGatherOp>(op)) {
+    // Check 'row_count'
+    return checkConstantOperands(op, {2});
   }
   return success();
 }
@@ -210,6 +220,7 @@ private:
     constCheckers.emplace_back(
         checkConstantOperandConvOps<tosa::TransposeConv2DOp>);
     constCheckers.emplace_back(checkConstantOperandMatMul);
+    constCheckers.emplace_back(checkConstantOperandRowGather);
     constCheckers.emplace_back(checkConstantOperandRowGatherBlockScaled);
     constCheckers.emplace_back(checkConstantOperandAvgPool2d);
     constCheckers.emplace_back(checkConstantOperandAvgPool2dAdaptive);
@@ -828,12 +839,14 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_SIZES(TransposeConv2D);
   CHECK_SIZES(FFT2d);
   CHECK_SIZES(MatMul);
+  CHECK_SIZES(MatMulT);
   CHECK_SIZES(MatmulTBlockScaled);
   CHECK_SIZES(MaxPool2d);
   CHECK_SIZES(MaxPool2dAdaptive);
   CHECK_SIZES(RFFT2d);
   // Scatter/Gather Operators
   CHECK_SIZES(Gather);
+  CHECK_SIZES(RowGather);
   CHECK_SIZES(Scatter);
   // Image Operators
   CHECK_SIZES(Resize);
@@ -1482,7 +1495,7 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
     }
   } else if (isa<tosa::shapeType>(type))
     return true;
-  else if (isa<tosa::mxint8Type>(type))
+  else if (isa<tosa::mxint8Type, tosa::BlockScaledType>(type))
     return true;
   return false;
 }

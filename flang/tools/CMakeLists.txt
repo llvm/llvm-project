@@ -8,6 +8,14 @@
 
 add_subdirectory(bbc)
 add_subdirectory(flang-driver)
+if (FLANG_STANDALONE_BUILD)
+  # Mock flang only needed in bootstrapping builds;
+  # fall back to full flang otherwise
+  add_custom_target(flang-lazy)
+  add_dependencies(flang-lazy flang)
+else ()
+  add_subdirectory(fakeflang)
+endif ()
 add_subdirectory(tco)
 add_subdirectory(f18-parse-demo)
 add_subdirectory(fir-opt)

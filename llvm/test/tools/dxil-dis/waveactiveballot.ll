@@ -27,5 +27,3 @@ entry:
 
   ret <4 x i32> %vec3
 }
-
-declare %dx.types.fouri32 @llvm.dx.wave.ballot(i1)

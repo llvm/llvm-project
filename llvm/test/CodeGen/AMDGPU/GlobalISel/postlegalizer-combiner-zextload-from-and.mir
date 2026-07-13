@@ -14,8 +14,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p1) :: (load (s64), addrspace 1)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[LOAD]](s64)
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC]](s32)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[LOAD]](s64)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC]](i32)
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_LOAD %0 :: (load (s64), align 8, addrspace 1)

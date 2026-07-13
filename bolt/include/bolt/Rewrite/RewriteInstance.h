@@ -136,6 +136,11 @@ private:
   /// Read relocations from a given RELR section.
   void readDynamicRelrRelocations(BinarySection &Section);
 
+  /// Process relative dynamic relocations targeting code. This happens in code
+  /// using indirect goto.
+  void handleRelativeDynamicRelocation(uint64_t RelOffset,
+                                       uint64_t ReferencedAddress);
+
   /// Print relocation information.
   void printRelocationInfo(const RelocationRef &Rel, StringRef SymbolName,
                            uint64_t SymbolAddress, uint64_t Addend,
@@ -230,6 +235,11 @@ private:
   /// Rewrite functions in place by overwriting their original locations.
   /// Used by non-relocation mode and for patched functions.
   void rewriteFunctionsInPlace(raw_fd_ostream &OS);
+
+  /// When --use-old-text reuses input file regions, zero the alignment
+  /// padding after BOLT-written text sections so the output does not retain
+  /// stale bytes from the input binary.
+  void zeroPaddingForReusedSections(raw_fd_ostream &OS);
 
   /// Return address of a function in the new binary corresponding to
   /// \p OldAddress address in the original binary.

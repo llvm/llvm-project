@@ -93,12 +93,16 @@ struct RematerializerWrapper {
 class RematerializerTest : public CodeGenTestBase {
 public:
   static void SetUpTestCase() {
+#if LLVM_HAS_AMDGPU_TARGET
     LLVMInitializeAMDGPUTargetInfo();
     LLVMInitializeAMDGPUTarget();
     LLVMInitializeAMDGPUTargetMC();
+#else
+    GTEST_SKIP();
+#endif
   }
 
-  void SetUp() override { setUpImpl("amdgcn--", "gfx950", ""); }
+  void SetUp() override { setUpImpl("amdgpu9.50--", "", ""); }
 
   using RematerializerTestFn = std::function<void(RematerializerWrapper &RW)>;
 

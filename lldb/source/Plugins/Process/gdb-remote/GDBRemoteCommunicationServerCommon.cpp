@@ -991,7 +991,10 @@ GDBRemoteCommunicationServerCommon::Handle_QSetSTDIOWindowSize(
       continue;
     *dest = static_cast<uint16_t>(parsed);
   }
-  if (cols == 0 || rows == 0)
+  // 0x0 is a valid request: it signals "no terminal" and a redirection
+  // backend that supports an alternative path (anonymous pipes on Windows
+  // ConPTY) can switch on it. Reject only the malformed cases.
+  if ((cols == 0) != (rows == 0))
     return SendErrorResponse(28);
 
   m_process_launch_info.SetSTDIOWindowSize(cols, rows);

@@ -48,7 +48,17 @@ hostOSLibraryLookup(void *Handle, const std::vector<std::string> &Names) {
   // symbol isn't in the library" via per-iteration dlerror() checks.
   dlerror();
   for (const auto &Name : Names) {
-    if (void *Addr = dlsym(Handle, Name.c_str()))
+#if defined(__APPLE__)
+    if (Name.empty() || Name[0] != '_') {
+      Result.push_back(std::nullopt);
+      continue;
+    }
+    const char *LookupName = Name.c_str() + 1;
+#else
+    const char *LookupName = Name.c_str();
+#endif // defined(__APPLE__)
+
+    if (void *Addr = dlsym(Handle, LookupName))
       Result.push_back(Addr);
     else if (dlerror() == nullptr)
       Result.push_back(nullptr);

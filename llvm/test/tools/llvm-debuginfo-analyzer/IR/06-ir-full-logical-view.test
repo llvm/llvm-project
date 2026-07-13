@@ -1,0 +1,121 @@
+; REQUIRES: x86-registered-target
+
+; Test case 6 - Full logical view
+
+; test.cpp
+;  1  using INTPTR = const int *;
+;  2  int foo(INTPTR ParamPtr, unsigned ParamUnsigned, bool ParamBool) {
+;  3    if (ParamBool) {
+;  4      typedef int INTEGER;
+;  5      const INTEGER CONSTANT = 7;
+;  6      return CONSTANT;
+;  7    }
+;  8    return ParamUnsigned;
+;  9  }
+
+; Print low level details.
+; The following command prints low level information that includes
+; offsets within the debug information, debug location operands,
+; linkage names, etc.
+
+; RUN: llvm-debuginfo-analyzer --attribute=all \
+; RUN:                         --output-sort=offset \
+; RUN:                         --print=all \
+; RUN:                         %p/Inputs/test-clang.ll 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
+
+; ONE:      Logical View:
+; ONE-NEXT: [0x0000000000][000]            {File} '{{.*}}test-clang{{.*}}.ll' -> LLVM IR
+; ONE-EMPTY:
+; ONE-NEXT: [0x0000000004][001]              {CompileUnit} 'test.cpp'
+; ONE-NEXT: [0x0000000004][002]                {Producer} 'clang version 20{{.*}}'
+; ONE-NEXT: [0x0000000004][002]                {Language} 'DW_LANG_C_plus_plus_14'
+; ONE-NEXT:                                    {Directory} '{{.*}}/general'
+; ONE-NEXT:                                    {File} 'test.cpp'
+; ONE-NEXT:                                    {Public} 'foo' [0x0000000000:0x0000000023]
+; ONE-NEXT: [0x0000000004][002]                {Range} Lines 2:2 [0x0000000000:0x0000000023]
+; ONE-NEXT: [0x0000000004][002]                {Range} Lines 3:3 [0x0000000024:0x000000002f]
+; ONE-NEXT: [0x0000000004][002]                {Range} Lines 5:6 [0x0000000030:0x000000003b]
+; ONE-NEXT: [0x0000000004][002]                {Range} Lines 8:9 [0x000000003c:0x000000004f]
+; ONE-EMPTY:
+; ONE-NEXT: [0x0000000008][002]   {Source} '{{.*}}/general/test.cpp'
+; ONE-NEXT: [0x0000000008][002]      2         {Function} extern not_inlined 'foo' -> [0x0000000024]'int'
+; ONE-NEXT: [0x0000000008][003]                  {Range} Lines 2:2 [0x0000000000:0x0000000023]
+; ONE-NEXT: [0x0000000008][003]                  {Range} Lines 3:3 [0x0000000024:0x000000002f]
+; ONE-NEXT: [0x0000000008][003]                  {Range} Lines 8:9 [0x000000003c:0x000000004f]
+; ONE-NEXT: [0x0000000008][003]                  {Linkage}  0x0 '_Z3fooPKijb'
+; ONE-NEXT: [0x000000000c][003]                  {Block}
+; ONE-NEXT: [0x000000000c][004]                    {Range} Lines 5:6 [0x0000000030:0x000000003b]
+; ONE-NEXT: [0x0000000010][004]      5             {Variable} 'CONSTANT' -> [0x000000003c]'const INTEGER'
+; ONE-NEXT: [0x0000000010][005]                      {Coverage} 100.00%
+; ONE-NEXT: [0x0000000000][006]                        {Location}
+; ONE-NEXT: [0x0000000000][007]                          {Entry} bregx 3 ptr %CONSTANT+0
+; ONE-NEXT: [0x0000000030][004]      5             {Line} '{{.*}}/general/test.cpp'
+; ONE-NEXT: [0x0000000030][004]                    {Code} 'store i32 7, ptr %CONSTANT, align 4, !dbg !32'
+; ONE-NEXT: [0x0000000034][004]      6             {Line} '{{.*}}/general/test.cpp'
+; ONE-NEXT: [0x0000000034][004]                    {Code} 'store i32 7, ptr %retval, align 4, !dbg !33'
+; ONE-NEXT: [0x0000000038][004]      6             {Line} '{{.*}}/general/test.cpp'
+; ONE-NEXT: [0x0000000038][004]                    {Code} 'br label %return, !dbg !33'
+; ONE-NEXT: [0x0000000014][003]      2           {Parameter} 'ParamPtr' -> [0x0000000028]'INTPTR'
+; ONE-NEXT: [0x0000000014][004]                    {Coverage} 100.00%
+; ONE-NEXT: [0x0000000000][004]                    {Location}
+; ONE-NEXT: [0x0000000000][005]                      {Entry} bregx 0 ptr %ParamPtr.addr+0
+; ONE-NEXT: [0x0000000018][003]      2           {Parameter} 'ParamUnsigned' -> [0x0000000034]'unsigned int'
+; ONE-NEXT: [0x0000000018][004]                    {Coverage} 100.00%
+; ONE-NEXT: [0x0000000000][004]                    {Location}
+; ONE-NEXT: [0x0000000000][005]                      {Entry} bregx 1 ptr %ParamUnsigned.addr+0
+; ONE-NEXT: [0x000000001c][003]      2           {Parameter} 'ParamBool' -> [0x0000000038]'bool'
+; ONE-NEXT: [0x000000001c][004]                    {Coverage} 100.00%
+; ONE-NEXT: [0x0000000000][004]                    {Location}
+; ONE-NEXT: [0x0000000000][005]                      {Entry} bregx 2 ptr %ParamBool.addr+0
+; ONE-NEXT: [0x0000000020][003]      4           {TypeAlias} 'INTEGER' -> [0x0000000024]'int'
+; ONE-NEXT: [0x0000000000][003]      2           {Line} '{{.*}}/general/test.cpp'
+; ONE-NEXT: [0x0000000000][003]                  {Code} '%retval = alloca i32, align 4'
+; ONE-NEXT: [0x0000000004][003]                  {Code} '%ParamPtr.addr = alloca ptr, align 8'
+; ONE-NEXT: [0x0000000008][003]                  {Code} '%ParamUnsigned.addr = alloca i32, align 4'
+; ONE-NEXT: [0x000000000c][003]                  {Code} '%ParamBool.addr = alloca i8, align 1'
+; ONE-NEXT: [0x0000000010][003]                  {Code} '%CONSTANT = alloca i32, align 4'
+; ONE-NEXT: [0x0000000014][003]                  {Code} 'store ptr %ParamPtr, ptr %ParamPtr.addr, align 8'
+; ONE-NEXT: [0x0000000018][003]                  {Code} 'store i32 %ParamUnsigned, ptr %ParamUnsigned.addr, align 4'
+; ONE-NEXT: [0x000000001c][003]                  {Code} '%storedv = zext i1 %ParamBool to i8'
+; ONE-NEXT: [0x0000000020][003]                  {Code} 'store i8 %storedv, ptr %ParamBool.addr, align 1'
+; ONE-NEXT: [0x000000003c][003]      8           {Line} '{{.*}}/general/test.cpp'
+; ONE-NEXT: [0x000000003c][003]                  {Code} '%1 = load i32, ptr %ParamUnsigned.addr, align 4, !dbg !34'
+; ONE-NEXT: [0x0000000040][003]      8           {Line} '{{.*}}/general/test.cpp'
+; ONE-NEXT: [0x0000000040][003]                  {Code} 'store i32 %1, ptr %retval, align 4, !dbg !35'
+; ONE-NEXT: [0x0000000044][003]      8           {Line} '{{.*}}/general/test.cpp'
+; ONE-NEXT: [0x0000000044][003]                  {Code} 'br label %return, !dbg !35'
+; ONE-NEXT: [0x0000000048][003]      9           {Line} '{{.*}}/general/test.cpp'
+; ONE-NEXT: [0x0000000048][003]                  {Code} '%2 = load i32, ptr %retval, align 4, !dbg !36'
+; ONE-NEXT: [0x000000004c][003]      9           {Line} '{{.*}}/general/test.cpp'
+; ONE-NEXT: [0x000000004c][003]                  {Code} 'ret i32 %2, !dbg !36'
+; ONE-NEXT: [0x0000000024][003]      3           {Line} '{{.*}}/general/test.cpp'
+; ONE-NEXT: [0x0000000024][003]                  {Code} '%0 = load i8, ptr %ParamBool.addr, align 1, !dbg !26'
+; ONE-NEXT: [0x0000000028][003]      3           {Line} '{{.*}}/general/test.cpp'
+; ONE-NEXT: [0x0000000028][003]                  {Code} '%loadedv = trunc i8 %0 to i1, !dbg !26'
+; ONE-NEXT: [0x000000002c][003]      3           {Line} '{{.*}}/general/test.cpp'
+; ONE-NEXT: [0x000000002c][003]                  {Code} 'br i1 %loadedv, label %if.then, label %if.end, !dbg !26'
+; ONE-NEXT: [0x0000000024][002]                {BaseType} 'int'
+; ONE-NEXT: [0x0000000028][002]      1         {TypeAlias} 'INTPTR' -> [0x000000002c]'* const int'
+; ONE-NEXT: [0x0000000034][002]                {BaseType} 'unsigned int'
+; ONE-NEXT: [0x0000000038][002]                {BaseType} 'bool'
+; ONE-EMPTY:
+; ONE-NEXT: -----------------------------
+; ONE-NEXT: Element      Total    Printed
+; ONE-NEXT: -----------------------------
+; ONE-NEXT: Scopes           5          3
+; ONE-NEXT: Symbols          4          4
+; ONE-NEXT: Types            5          5
+; ONE-NEXT: Lines           38         32
+; ONE-NEXT: -----------------------------
+; ONE-NEXT: Total           52         44
+; ONE-EMPTY:
+; ONE-NEXT: Scope Sizes:
+; ONE-NEXT:         60 (100.00%) : [0x0000000004][001]              {CompileUnit} 'test.cpp'
+; ONE-NEXT:         28 ( 46.67%) : [0x0000000008][002]      2         {Function} extern not_inlined 'foo' -> [0x0000000024]'int'
+; ONE-NEXT:          8 ( 13.33%) : [0x000000000c][003]                  {Block}
+; ONE-EMPTY:
+; ONE-NEXT: Totals by lexical level:
+; ONE-NEXT: [001]:         60 (100.00%)
+; ONE-NEXT: [002]:         28 ( 46.67%)
+; ONE-NEXT: [003]:          8 ( 13.33%)
