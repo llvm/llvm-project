@@ -39,12 +39,6 @@ public:
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
 
-  void Clear() override {
-    std::lock_guard<std::recursive_mutex> lock(m_mutex);
-    m_current_value.Clear();
-    m_value_was_set = false;
-  }
-
   bool IsAggregateValue() const override { return true; }
 
   // Subclass specific functions
@@ -66,6 +60,11 @@ public:
 
 protected:
   lldb::OptionValueSP Clone() const override;
+
+  void ClearImpl() override {
+    m_current_value.Clear();
+    m_value_was_set = false;
+  }
 
   FileSpecList m_current_value;
 };

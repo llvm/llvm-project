@@ -303,8 +303,7 @@ OptionValueString *OptionValueProperties::GetPropertyAtIndexAsOptionValueString(
   return nullptr;
 }
 
-void OptionValueProperties::Clear() {
-  std::lock_guard<std::recursive_mutex> lock(m_mutex);
+void OptionValueProperties::ClearImpl() {
   const size_t num_properties = m_properties.size();
   for (size_t i = 0; i < num_properties; ++i)
     m_properties[i].GetValue()->Clear();

@@ -36,12 +36,6 @@ public:
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
 
-  void Clear() override {
-    std::lock_guard<std::recursive_mutex> lock(m_mutex);
-    m_regex = RegularExpression(m_default_regex_str);
-    m_value_was_set = false;
-  }
-
   bool IsDefault() const override {
     return m_regex.GetText() == m_default_regex_str;
   }
@@ -61,6 +55,11 @@ public:
   bool IsValid() const { return m_regex.IsValid(); }
 
 protected:
+  void ClearImpl() override {
+    m_regex = RegularExpression(m_default_regex_str);
+    m_value_was_set = false;
+  }
+
   RegularExpression m_regex;
   std::string m_default_regex_str;
 };

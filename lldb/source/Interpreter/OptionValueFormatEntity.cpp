@@ -28,8 +28,7 @@ OptionValueFormatEntity::OptionValueFormatEntity(const char *default_format) {
   }
 }
 
-void OptionValueFormatEntity::Clear() {
-  std::lock_guard<std::recursive_mutex> lock(m_mutex);
+void OptionValueFormatEntity::ClearImpl() {
   m_current_entry = m_default_entry;
   m_current_format = m_default_format;
   m_value_was_set = false;

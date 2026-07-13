@@ -45,12 +45,6 @@ public:
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
 
-  void Clear() override {
-    std::lock_guard<std::recursive_mutex> lock(m_mutex);
-    m_current_value = m_default_value;
-    m_value_was_set = false;
-  }
-
   bool IsDefault() const override { return m_current_value == m_default_value; }
 
   void AutoComplete(CommandInterpreter &interpreter,
@@ -73,6 +67,11 @@ public:
   void SetDefaultValue(const ArchSpec &value) { m_default_value = value; }
 
 protected:
+  void ClearImpl() override {
+    m_current_value = m_default_value;
+    m_value_was_set = false;
+  }
+
   ArchSpec m_current_value;
   ArchSpec m_default_value;
 };

@@ -102,7 +102,10 @@ public:
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign);
 
-  virtual void Clear() = 0;
+  void Clear() {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    ClearImpl();
+  }
 
   virtual lldb::OptionValueSP
   DeepCopy(const lldb::OptionValueSP &new_parent) const;
@@ -349,6 +352,8 @@ protected:
   // Must be overriden by a derived class for correct downcasting the result of
   // DeepCopy to it. Inherit from Cloneable to avoid doing this manually.
   virtual lldb::OptionValueSP Clone() const = 0;
+
+  virtual void ClearImpl() = 0;
 
   class DefaultValueFormat {
   public:
