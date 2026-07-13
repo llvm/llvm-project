@@ -106,7 +106,7 @@ INTERCEPTOR(void*, __linux_realloc, void* ptr, uptr size) {
   if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Realloc(ptr, size, kWordSize);
   GET_STACK_TRACE_MALLOC;
-  return asan_vec_realloc(ptr, size, &stack);
+  return asan_realloc(ptr, size, &stack);
 }
 
 // Unlike malloc, vec_malloc must return memory aligned to 16 bytes.
