@@ -195,6 +195,9 @@ public:
 private:
   SemanticsContext &context_;
   ArraySpec arraySpec_;
+  // Set when an explicit-shape-bounds-spec with a zero-size bounds array
+  // legitimately produces a scalar (rank 0), leaving arraySpec_ empty.
+  bool zeroRankExplicitBounds_{false};
 
   template <typename T> void Analyze(const std::list<T> &list) {
     for (const auto &elem : list) {
@@ -364,7 +367,9 @@ ArraySpec ArraySpecAnalyzer::Analyze(const parser::ArraySpec &x) {
                     [&](const auto &y) { Analyze(y); },
                 },
       x.u);
-  CHECK(!arraySpec_.empty());
+  // arraySpec_ may legitimately be empty when an explicit-shape-bounds-spec
+  // has a zero-size bounds array, which declares a scalar (rank 0).
+  CHECK(!arraySpec_.empty() || zeroRankExplicitBounds_);
   return arraySpec_;
 }
 ArraySpec ArraySpecAnalyzer::AnalyzeDeferredShapeSpecList(
@@ -410,12 +415,13 @@ ArraySpecAnalyzer::checkExplicitShapeBoundsSpec(
   const auto &upperBound{std::get<1>(x.t)};
 
   // Analyze, validate, fold, and wrap one bound expression in a Bound.
-  // Returns the Bound and, for rank-1, the constant extent; for scalar
-  // the extent is 0 (meaning "broadcast").
+  // Returns the Bound paired with the extent of the bound: std::nullopt
+  // for a scalar bound (which broadcasts to every dimension) or, for a
+  // rank-1 array bound, its constant extent (which may be zero).
   bool hasError{false};
   auto analyzeBound =
-      [&](const auto &parseBound,
-          bool isUpper) -> std::optional<std::pair<Bound, std::int64_t>> {
+      [&](const auto &parseBound, bool isUpper)
+      -> std::optional<std::pair<Bound, std::optional<std::int64_t>>> {
     MaybeExpr expr{AnalyzeExpr(context_, parseBound.thing)};
     if (expr->Rank() > 1) {
       context_.Say(parser::FindSourceLocation(parseBound),
@@ -435,8 +441,9 @@ ArraySpecAnalyzer::checkExplicitShapeBoundsSpec(
         evaluate::ConvertToType<evaluate::SubscriptInteger>(
             common::Clone(*someInt)))};
     if (folded.Rank() == 0) {
-      return std::make_pair(
-          Bound{MaybeSubscriptIntExpr{std::move(asSI)}}, std::int64_t{0});
+      // Scalar bound: broadcasts to every dimension.
+      return std::make_pair(Bound{MaybeSubscriptIntExpr{std::move(asSI)}},
+          std::optional<std::int64_t>{});
     }
     // Rank-1: must have constant extent.
     auto extents{
@@ -449,15 +456,15 @@ ArraySpecAnalyzer::checkExplicitShapeBoundsSpec(
       hasError = true;
       return std::nullopt;
     }
-    return std::make_pair(
-        Bound{MaybeSubscriptIntExpr{std::move(asSI)}}, (*extents)[0]);
+    return std::make_pair(Bound{MaybeSubscriptIntExpr{std::move(asSI)}},
+        std::optional<std::int64_t>{(*extents)[0]});
   };
 
   // Upper bound (required)
   auto ubResult{analyzeBound(upperBound, /*isUpper=*/true)};
 
   // Lower bound (optional)
-  std::optional<std::pair<Bound, std::int64_t>> lbResult;
+  std::optional<std::pair<Bound, std::optional<std::int64_t>>> lbResult;
   if (lowerBoundOpt) {
     lbResult = analyzeBound(*lowerBoundOpt, /*isUpper=*/false);
   }
@@ -466,20 +473,30 @@ ArraySpecAnalyzer::checkExplicitShapeBoundsSpec(
     return std::nullopt;
   }
 
-  std::int64_t ubExtent{ubResult->second};
-  std::int64_t lbExtent{lbResult ? lbResult->second : 0};
+  // A bound is rank-1 (array-valued) iff it has a concrete extent; a scalar
+  // bound (or an omitted lower bound) has none and merely broadcasts.
+  std::optional<std::int64_t> ubExtent{ubResult->second};
+  std::optional<std::int64_t> lbExtent;
+  if (lbResult) {
+    lbExtent = lbResult->second;
+  }
+  bool ubIsRank1{ubExtent.has_value()};
+  bool lbIsRank1{lbExtent.has_value()};
 
-  // Determine numDims from whichever is rank-1 (extent > 0).
-  std::int64_t numDims{std::max(ubExtent, lbExtent)};
-
-  // Size mismatch check (only when both are rank-1).
-  if (ubExtent > 0 && lbExtent > 0 && ubExtent != lbExtent) {
+  // C832: when both bounds are rank-1 arrays, they must have the same size.
+  // This must include the case where one of the sizes is zero.
+  if (ubIsRank1 && lbIsRank1 && *ubExtent != *lbExtent) {
     context_.Say(parser::FindSourceLocation(x),
         "DECLARATION bounds integer rank-1 arrays must have the same size; "
         "lower bounds has %jd elements, upper bounds has %jd elements"_err_en_US,
-        lbExtent, ubExtent);
+        *lbExtent, *ubExtent);
     return std::nullopt;
   }
+
+  // The rank of the entity is the size of whichever bound is the rank-1
+  // array (they are equal when both are).  A zero-size array yields rank 0,
+  // i.e. the entity is scalar.
+  std::int64_t numDims{ubIsRank1 ? *ubExtent : (lbIsRank1 ? *lbExtent : 0)};
 
   std::optional<Bound> lb;
   if (lbResult) {
@@ -507,6 +524,12 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
   // RankOneBoundElement that extracts element [dim] from the rank-1
   // expression.  This makes all downstream consumers see scalar bounds.
   int numDims = static_cast<int>(result->numDims);
+  if (numDims == 0) {
+    // A zero-size bounds array declares a scalar (rank 0); leave arraySpec_
+    // empty and record that the empty result is intentional.
+    zeroRankExplicitBounds_ = true;
+    return;
+  }
   for (int dim = 0; dim < numDims; ++dim) {
     // Upper bound
     MaybeSubscriptIntExpr ubExpr;

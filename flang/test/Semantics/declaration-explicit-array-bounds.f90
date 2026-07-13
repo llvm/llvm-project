@@ -142,4 +142,13 @@ program declaration_array_bounds
   !ERROR: Must be a scalar value, but is a rank-1 array
   !ERROR: Must have INTEGER type, but is REAL(4)
   integer :: test_array([1,2,3] : [2,3,4], 3, [1,2,3], 5.2)
+
+  integer :: dim0(0) = [integer::]
+  integer :: zerosize1([integer::])
+  integer :: zerosize2(dim0 : [integer::])
+  integer :: zerosize3(999 : dim0)
+  integer :: zerosize4([integer::] : 999)
+  !ERROR: DECLARATION bounds integer rank-1 arrays must have the same size; lower bounds has 0 elements, upper bounds has 2 elements
+  integer :: zerosize_n([integer::] : [1,2])
+
 end program
