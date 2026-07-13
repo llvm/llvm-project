@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection \
-// RUN:   -analyzer-constraints=z3 -verify %s
+// RUN:   -analyzer-constraints=unsupported-z3 -verify %s
 // REQUIRES: z3
 
 void clang_analyzer_eval(int);
