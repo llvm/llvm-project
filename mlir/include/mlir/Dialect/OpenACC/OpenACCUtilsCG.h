@@ -107,8 +107,7 @@ public:
   /// Reserve \p bytes, rounding the current offset up to \p alignment first.
   /// Returns false without mutating state if the reservation would exceed the
   /// cap. \p alignment must be a power of two.
-  bool tryAllocate(int64_t bytes,
-                   int64_t alignment = kDefaultAlignmentBytes);
+  bool tryAllocate(int64_t bytes, int64_t alignment = kDefaultAlignmentBytes);
   int64_t bytesUsed() const { return bytesUsed_; }
   int64_t maxTotalBytes() const { return maxTotalBytes_; }
   void setMaxTotalBytes(int64_t maxTotalBytes) {
