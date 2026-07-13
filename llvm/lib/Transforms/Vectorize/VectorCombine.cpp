@@ -132,7 +132,7 @@ private:
   bool foldExtractedCmps(Instruction &I);
   bool foldSelectsFromBitcast(Instruction &I);
   bool foldBinopOfReductions(Instruction &I);
-  bool foldInsertElementsStore(Instruction &I);
+  bool foldInsertElementsToStores(Instruction &I);
   bool scalarizeLoad(Instruction &I);
   bool scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy, Value *Ptr);
   bool scalarizeLoadBitcast(LoadInst *LI, VectorType *VecTy, Value *Ptr);
@@ -1921,15 +1921,40 @@ static Align computeAlignmentAfterScalarization(Align VectorAlignment,
   return commonAlignment(VectorAlignment, DL.getTypeStoreSize(ScalarType));
 }
 
-// Combine patterns like:
-//   %0 = load <4 x i32>, <4 x i32>* %a
-//   %1 = insertelement <4 x i32> %0, i32 %b, i32 1
-//   store <4 x i32> %1, <4 x i32>* %a
-// to:
-//   %0 = bitcast <4 x i32>* %a to i32*
-//   %1 = getelementptr inbounds i32, i32* %0, i64 0, i64 1
-//   store i32 %b, i32* %1
-bool VectorCombine::foldInsertElementsStore(Instruction &I) {
+/// Fold a vector store fed by a single-use insertelement chain into scalar
+/// stores.
+///
+/// Before:
+///
+///   %p --> vector load --> insert %x, lane 1 --> insert %y, lane 3
+///                                                      |
+///                                                      v
+///                                              vector store to %p
+///
+///   Vector lanes:        [ 0 ] [ 1 ] [ 2 ] [ 3 ]
+///   Stored value:        [ old |  x  | old |  y  ]  (one vector store)
+///
+/// After:
+///
+///                  +--> GEP(%p, lane 1) --> store %x
+///   %p -------------+
+///                  +--> GEP(%p, lane 3) --> store %y
+///
+///   Vector lanes:        [ 0 ] [ 1 ] [ 2 ] [ 3 ]
+///   Scalar stores:              x             y
+///                            store@1       store@3
+///
+///   Step 1. Gate:
+///        target supports vector-element GEP addressing
+///
+///   Step 2. Trace:
+///        vector store <-- insertelement <-- ... <-- insertelement <-- load
+///
+///   Steps 3-5. Validate:
+///        reject unprofitable full overwrites; require simple accesses, a common
+///        address/block, no memory write in between, and scalarizable indices.
+bool VectorCombine::foldInsertElementsToStores(Instruction &I) {
+  // Step 1: The target must support addressing a vector element with a GEP.
   if (!TTI.allowVectorElementIndexingUsingGEP())
     return false;
 
@@ -1937,8 +1962,9 @@ bool VectorCombine::foldInsertElementsStore(Instruction &I) {
   if (!SI->isSimple() || !isa<VectorType>(SI->getValueOperand()->getType()))
     return false;
 
+  // Step 2: Collect a single-use insertelement chain, starting at the vector
+  // store and walking back to the candidate load.
   Value *Source = SI->getValueOperand();
-  // Track back multiple inserts.
   SmallVector<std::pair<Value *, Value *>, 4> InsertElements;
   Value *Base = Source;
   while (auto *Insert = dyn_cast<InsertElementInst>(Base)) {
@@ -1953,14 +1979,16 @@ bool VectorCombine::foldInsertElementsStore(Instruction &I) {
   if (InsertElements.empty())
     return false;
 
-  // The chain is collected from the final insertelement back to the base load.
-  // Emit scalar stores in original program order to preserve semantics for
-  // duplicate or dynamically equal indices.
+  // The backwards walk collected the inserts in reverse program order. Restore
+  // it now so later scalar stores preserve writes to duplicate/equal indices.
   std::reverse(InsertElements.begin(), InsertElements.end());
   auto *Load = dyn_cast<LoadInst>(Base);
   if (!Load)
     return false;
   auto VecTy = cast<VectorType>(SI->getValueOperand()->getType());
+
+  // Step 3: Avoid replacing a complete overwrite with scalar stores when every
+  // lane receives the same value; keeping the vector operation is preferable.
   if (auto *FVT = dyn_cast<FixedVectorType>(VecTy)) {
     if (InsertElements.size() == FVT->getNumElements()) {
       Value *FirstVal = InsertElements.front().first;
@@ -1970,8 +1998,9 @@ bool VectorCombine::foldInsertElementsStore(Instruction &I) {
     }
   }
   Value *SrcAddr = Load->getPointerOperand()->stripPointerCasts();
-  // Don't optimize for atomic/volatile load or store. Ensure memory is not
-  // modified between, vector type matches store size, and index is inbounds.
+  // Step 4: Establish the load/store update is legal: both accesses are simple,
+  // have the same base address and block, have scalar-sized elements, and no
+  // intervening operation modifies the updated memory.
   if (!Load->isSimple() || Load->getParent() != SI->getParent() ||
       !DL->typeSizeEqualsStoreSize(Load->getType()->getScalarType()) ||
       SrcAddr != SI->getPointerOperand()->stripPointerCasts())
@@ -1981,6 +2010,9 @@ bool VectorCombine::foldInsertElementsStore(Instruction &I) {
                            MemoryLocation::get(SI), AA))
     return false;
 
+  // Step 5: Validate every index before changing IR. A safe-with-freeze result
+  // is recorded by ScalarizationResult, so discard it until profitability is
+  // known; otherwise a rejected candidate could leave a freeze behind.
   for (auto [InsertVal, Idx] : InsertElements) {
     auto ScalarizableIdx =
         canScalarizeAccess(VecTy, Idx, SQ.getWithInstruction(&I));
@@ -1998,6 +2030,7 @@ bool VectorCombine::foldInsertElementsStore(Instruction &I) {
     // profitability check, but also do not leave a pending ToFreeze behind.
     ScalarizableIdx.discard();
   }
+
   InstructionCost OldCost = TTI.getMemoryOpCost(
       Instruction::Store, SI->getValueOperand()->getType(), SI->getAlign(),
       SI->getPointerAddressSpace(), CostKind);
@@ -2037,7 +2070,6 @@ bool VectorCombine::foldInsertElementsStore(Instruction &I) {
   if (OldCost <= NewCost)
     return false;
 
-  // Now we know the transform is profitable. It is safe to mutate IR.
   for (auto [InsertVal, Idx] : InsertElements) {
     auto ScalarizableIdx =
         canScalarizeAccess(VecTy, Idx, SQ.getWithInstruction(Load));
@@ -2047,8 +2079,6 @@ bool VectorCombine::foldInsertElementsStore(Instruction &I) {
       ScalarizableIdx.freeze(Builder, *cast<Instruction>(Idx));
   }
 
-  // Ensure we add the load back to the worklist BEFORE its users so they can
-  // erased in the correct order.
   Worklist.push(Load);
   StoreInst *LastStore = nullptr;
   for (auto [InsertVal, Idx] : InsertElements) {
@@ -6858,7 +6888,7 @@ bool VectorCombine::run() {
       return true;
 
     if (Opcode == Instruction::Store)
-      if (foldInsertElementsStore(I))
+      if (foldInsertElementsToStores(I))
         return true;
 
     // If this is an early pipeline invocation of this pass, we are done.
