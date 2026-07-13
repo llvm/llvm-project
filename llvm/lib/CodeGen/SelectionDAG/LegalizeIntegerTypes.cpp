@@ -1752,7 +1752,10 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CLMUL(SDNode *N) {
   EVT VT = TLI.getTypeToTransformTo(*DAG.getContext(), OldVT);
 
   if (Opcode == ISD::CLMUL) {
-    if (!TLI.isOperationLegalOrCustomOrPromote(ISD::CLMUL, VT)) {
+    if (!TLI.isOperationLegalOrCustomOrPromote(ISD::CLMUL, VT) &&
+        !(getTypeAction(VT) == TargetLowering::TypeExpandInteger &&
+          TLI.isOperationLegalOrCustom(
+              ISD::CLMUL, TLI.getRegisterType(*DAG.getContext(), VT)))) {
       if (SDValue Res = TLI.expandCLMUL(N, DAG))
         return DAG.getNode(ISD::ANY_EXTEND, DL, VT, Res);
     }
