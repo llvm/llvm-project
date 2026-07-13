@@ -193,9 +193,9 @@ Error_t StreamCreate(Stream_t *Stream) {
 
 Error_t StreamCreateWithFlags(Stream_t *Stream, unsigned int Flags) {
   if (Flags == StreamCreateWithFlagsFlags::StreamDefault)
+    // FIXME: [h15] offload streams are non-blocking by default
     return StreamCreate(Stream);
   if (Flags == StreamCreateWithFlagsFlags::StreamNonBlocking) {
-    // FIXME: [h15] implement non-blocking stream creation
     return StreamCreate(Stream);
   }
   return ErrorInvalidValue;

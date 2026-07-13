@@ -114,181 +114,6 @@ Error_t DriverGetVersion(int *Version);
 
 Error_t GetDeviceProperties(DeviceProp_t *DeviceProp, int DeviceNo);
 
-template <typename UnaryFunction, class T>
-static inline Error_t OccupancyMaxPotentialBlockSizeVariableSMem(
-    int *minGridSize, int *blockSize, T func,
-    UnaryFunction blockSizeToDynamicSMemSize, int blockSizeLimit = 0) {
-  // TODO: [h15] implement
-  fprintf(stderr,
-          "OccupancyMaxPotentialBlockSizeVariableSMem is not implemented yet");
-  abort();
-}
-//   template<typename UnaryFunction, class T>
-// static __inline__ __host__ CUDART_DEVICE cudaError_t cudaOccupancyMaxPotentialBlockSizeVariableSMemWithFlags(
-//     int           *minGridSize,
-//     int           *blockSize,
-//     T              func,
-//     UnaryFunction  blockSizeToDynamicSMemSize,
-//     int            blockSizeLimit = 0,
-//     unsigned int   flags = 0)
-// {
-//     Error_t status;
-//
-//     // Device and function properties
-//     int                       device;
-//     struct cudaFuncAttributes attr;
-//
-//     // Limits
-//     int maxThreadsPerMultiProcessor;
-//     int warpSize;
-//     int devMaxThreadsPerBlock;
-//     int multiProcessorCount;
-//     int funcMaxThreadsPerBlock;
-//     int occupancyLimit;
-//     int granularity;
-//
-//     // Recorded maximum
-//     int maxBlockSize = 0;
-//     int numBlocks    = 0;
-//     int maxOccupancy = 0;
-//
-//     // Temporary
-//     int blockSizeToTryAligned;
-//     int blockSizeToTry;
-//     int blockSizeLimitAligned;
-//     int occupancyInBlocks;
-//     int occupancyInThreads;
-//     size_t dynamicSMemSize;
-//
-//     ///////////////////////////
-//     // Check user input
-//     ///////////////////////////
-//
-//     if (!minGridSize || !blockSize || !func) {
-//         return ErrorInvalidValue;
-//     }
-//
-//     //////////////////////////////////////////////
-//     // Obtain device and function properties
-//     //////////////////////////////////////////////
-//
-//     status = ::GetDevice(&device);
-//     if (status != Success) {
-//         return status;
-//     }
-//
-//     status = cudaDeviceGetAttribute(
-//         &maxThreadsPerMultiProcessor,
-//         cudaDevAttrMaxThreadsPerMultiProcessor,
-//         device);
-//     if (status != cudaSuccess) {
-//         return status;
-//     }
-//
-//     status = cudaDeviceGetAttribute(
-//         &warpSize,
-//         cudaDevAttrWarpSize,
-//         device);
-//     if (status != cudaSuccess) {
-//         return status;
-//     }
-//
-//     status = cudaDeviceGetAttribute(
-//         &devMaxThreadsPerBlock,
-//         cudaDevAttrMaxThreadsPerBlock,
-//         device);
-//     if (status != cudaSuccess) {
-//         return status;
-//     }
-//
-//     status = cudaDeviceGetAttribute(
-//         &multiProcessorCount,
-//         cudaDevAttrMultiProcessorCount,
-//         device);
-//     if (status != cudaSuccess) {
-//         return status;
-//     }
-//
-//     status = cudaFuncGetAttributes(&attr, func);
-//     if (status != cudaSuccess) {
-//         return status;
-//     }
-//
-//     funcMaxThreadsPerBlock = attr.maxThreadsPerBlock;
-//
-//     /////////////////////////////////////////////////////////////////////////////////
-//     // Try each block size, and pick the block size with maximum occupancy
-//     /////////////////////////////////////////////////////////////////////////////////
-//
-//     occupancyLimit = maxThreadsPerMultiProcessor;
-//     granularity    = warpSize;
-//
-//     if (blockSizeLimit == 0) {
-//         blockSizeLimit = devMaxThreadsPerBlock;
-//     }
-//
-//     if (devMaxThreadsPerBlock < blockSizeLimit) {
-//         blockSizeLimit = devMaxThreadsPerBlock;
-//     }
-//
-//     if (funcMaxThreadsPerBlock < blockSizeLimit) {
-//         blockSizeLimit = funcMaxThreadsPerBlock;
-//     }
-//
-//     blockSizeLimitAligned = ((blockSizeLimit + (granularity - 1)) / granularity) * granularity;
-//
-//     for (blockSizeToTryAligned = blockSizeLimitAligned; blockSizeToTryAligned > 0; blockSizeToTryAligned -= granularity) {
-//         // This is needed for the first iteration, because
-//         // blockSizeLimitAligned could be greater than blockSizeLimit
-//         //
-//         if (blockSizeLimit < blockSizeToTryAligned) {
-//             blockSizeToTry = blockSizeLimit;
-//         } else {
-//             blockSizeToTry = blockSizeToTryAligned;
-//         }
-//
-//         dynamicSMemSize = blockSizeToDynamicSMemSize(blockSizeToTry);
-//
-//         status = cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags(
-//             &occupancyInBlocks,
-//             func,
-//             blockSizeToTry,
-//             dynamicSMemSize,
-//             flags);
-//
-//         if (status != cudaSuccess) {
-//             return status;
-//         }
-//
-//         occupancyInThreads = blockSizeToTry * occupancyInBlocks;
-//
-//         if (occupancyInThreads > maxOccupancy) {
-//             maxBlockSize = blockSizeToTry;
-//             numBlocks    = occupancyInBlocks;
-//             maxOccupancy = occupancyInThreads;
-//         }
-//
-//         // Early out if we have reached the maximum
-//         //
-//         if (occupancyLimit == maxOccupancy) {
-//             break;
-//         }
-//     }
-//
-//     ///////////////////////////
-//     // Return best available
-//     ///////////////////////////
-//
-//     // Suggested min grid size to achieve a full machine launch
-//     //
-//     *minGridSize = numBlocks * multiProcessorCount;
-//     *blockSize = maxBlockSize;
-//
-//     return status;
-// }
-
-// }
-
 Error_t StreamCreate(Stream_t *stream);
 
 Error_t StreamCreateWithFlags(Stream_t *stream, unsigned int flags);
@@ -296,6 +121,22 @@ Error_t StreamCreateWithFlags(Stream_t *stream, unsigned int flags);
 Error_t StreamDestroy(Stream_t stream);
 
 Error_t StreamSynchronize(Stream_t stream);
+
+template <typename UnaryFunction, class T>
+static inline Error_t OccupancyMaxPotentialBlockSizeVariableSMem(
+    int *minGridSize, int *blockSize, T func,
+    UnaryFunction blockSizeToDynamicSMemSize, int blockSizeLimit = 0) {
+#if defined(__AMDGPU__)
+  // TODO: values taken from AMD Instinct MI250X gfx90a
+  *minGridSize = 220;
+  *blockSize = 1024;
+#elif defined(__NVPTX__)
+  // TODO: values taken from NVIDIA H100 80GB HBM3
+  *minGridSize = 264;
+  *blockSize = 1024;
+#endif
+  return Success;
+}
 
 ///
 
