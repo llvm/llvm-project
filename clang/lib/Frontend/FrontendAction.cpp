@@ -831,6 +831,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   assert(!Input.isEmpty() && "Unexpected empty filename!");
   setCurrentInput(Input);
   setCompilerInstance(&CI);
+  EndOfFileSignaled = false;
 
   bool HasBegunSourceFile = false;
   bool ReplayASTFile = Input.getKind().getFormat() == InputKind::Precompiled &&
@@ -1362,17 +1363,25 @@ llvm::Error FrontendAction::Execute() {
   return llvm::Error::success();
 }
 
+void FrontendAction::EndSourceFileForDiagnostics() {
+  CompilerInstance &CI = getCompilerInstance();
+
+  if (EndOfFileSignaled)
+    return;
+
+  // Inform the preprocessor and diagnostic client we are done with this source
+  // file. Do this in order so that end-of-file preprocessor callbacks can
+  // report diagnostics.
+  if (CI.hasPreprocessor())
+    CI.getPreprocessor().EndSourceFile();
+  CI.getDiagnosticClient().EndSourceFile();
+  EndOfFileSignaled = true;
+}
+
 void FrontendAction::EndSourceFile() {
   CompilerInstance &CI = getCompilerInstance();
 
-  // Inform the preprocessor we are done.
-  if (CI.hasPreprocessor())
-    CI.getPreprocessor().EndSourceFile();
-
-  // Inform the diagnostic client we are done with this source file.
-  // Do this after notifying the preprocessor, so that end-of-file preprocessor
-  // callbacks can report diagnostics.
-  CI.getDiagnosticClient().EndSourceFile();
+  EndSourceFileForDiagnostics();
 
   // Finalize the action.
   EndSourceFileAction();

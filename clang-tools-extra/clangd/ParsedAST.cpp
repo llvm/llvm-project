@@ -752,15 +752,12 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     CTFinder.matchAST(Clang->getASTContext());
   }
 
-  // XXX: This is messy: clang-tidy checks flush some diagnostics at EOF.
-  // However Action->EndSourceFile() would destroy the ASTContext!
-  // So just inform the preprocessor of EOF, while keeping everything alive.
-  PP.EndSourceFile();
+  // Clang-tidy checks flush some diagnostics at EOF, but we need to retain the
+  // AST until ParsedAST is destroyed.
+  Action->EndSourceFileForDiagnostics();
   // UnitDiagsConsumer is local, we can not store it in CompilerInstance that
   // has a longer lifetime.
   Clang->getDiagnostics().setClient(new IgnoreDiagnostics);
-  // CompilerInstance won't run this callback, do it directly.
-  ASTDiags.EndSourceFile();
 
   std::vector<Diag> Diags = CompilerInvocationDiags;
   // FIXME: Also skip generation of diagnostics altogether to speed up ast
@@ -787,14 +784,8 @@ ParsedAST::ParsedAST(ParsedAST &&Other) = default;
 ParsedAST &ParsedAST::operator=(ParsedAST &&Other) = default;
 
 ParsedAST::~ParsedAST() {
-  if (Action) {
-    // We already notified the PP of end-of-file earlier, so detach it first.
-    // We must keep it alive until after EndSourceFile(), Sema relies on this.
-    auto PP = Clang->getPreprocessorPtr(); // Keep PP alive for now.
-    Clang->setPreprocessor(nullptr);       // Detach so we don't send EOF again.
-    Action->EndSourceFile();               // Destroy ASTContext and Sema.
-    // Now Sema is gone, it's safe for PP to go out of scope.
-  }
+  if (Action)
+    Action->EndSourceFile(); // Destroy ASTContext and Sema.
 }
 
 ASTContext &ParsedAST::getASTContext() { return Clang->getASTContext(); }

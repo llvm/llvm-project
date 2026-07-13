@@ -38,6 +38,7 @@ class FrontendAction {
   FrontendInputFile CurrentInput;
   std::unique_ptr<ASTUnit> CurrentASTUnit;
   CompilerInstance *Instance;
+  bool EndOfFileSignaled = false;
   friend class ASTMergeAction;
   friend class WrapperFrontendAction;
 
@@ -243,6 +244,14 @@ public:
 
   /// Set the source manager's main input file, and run the action.
   llvm::Error Execute();
+
+  /// Notify the preprocessor and diagnostic client that the source file has
+  /// ended, without destroying per-file frontend state.
+  ///
+  /// This is useful for clients that need end-of-file diagnostics while
+  /// retaining the AST. The matching EndSourceFile() performs the remaining
+  /// cleanup and will not notify them a second time.
+  void EndSourceFileForDiagnostics();
 
   /// Perform any per-file post processing, deallocate per-file
   /// objects, and run statistics and output file cleanup code.
