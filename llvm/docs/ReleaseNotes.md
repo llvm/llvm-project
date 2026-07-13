@@ -420,6 +420,8 @@ Makes programs 10x faster by doing Special New Thing.
 * A new `diagnostics report` command (aliased `bugreport`) assembles a diagnostics bundle and files
   a pre-filled GitHub issue, pointing at the bundle to attach. The GitHub reporter is built by
   default and can be disabled with the `LLDB_ENABLE_GITHUB_BUG_REPORTER=OFF` CMake option.
+* LLDB now detects when the names of known DWARF sections in a PECOFF file have
+  been truncated by link.exe on Windows, and advises the user how to avoid this.
 
 #### Deprecated APIs
 
