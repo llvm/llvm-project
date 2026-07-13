@@ -73,13 +73,17 @@ static llvm::cl::opt<std::string> ProjectRoot{
         "Defaults to current directory if not specified."),
 };
 
-// Base class for index action factories that provides common symbol collection.
-class IndexActionFactoryBase : public tooling::FrontendActionFactory {
+// Tracks the content digest of the last shard written for a given file.
+// Used to avoid writing duplicate shards when multiple TUs include the same
+// header.
+struct ShardVersion {
+  FileDigest Digest{{0}};
+};
+
+// Action factory that merges all symbols into a single index (for YAML/RIFF).
+class IndexActionFactory : public tooling::FrontendActionFactory {
 public:
-  IndexActionFactoryBase()
-      : Symbols(std::make_unique<SymbolSlab::Builder>()),
-        Refs(std::make_unique<RefSlab::Builder>()),
-        Relations(std::make_unique<RelationSlab::Builder>()) {}
+  IndexActionFactory(IndexFileIn &Result) : Result(Result) {}
 
   std::unique_ptr<FrontendAction> create() override {
     SymbolCollector::Options Opts;
@@ -94,11 +98,11 @@ public:
       std::lock_guard<std::mutex> Lock(FilesMu);
       return Files.insert(*AbsPath).second; // Skip already processed files.
     };
-    return createStaticIndexingAction(Opts, [&](IndexFileIn Result) {
+    return createStaticIndexingAction(Opts, [&](IndexFileIn TUResult) {
       {
         // Merge as we go.
         std::lock_guard<std::mutex> Lock(SymbolsMu);
-        for (const auto &Sym : *Result.Symbols) {
+        for (const auto &Sym : *TUResult.Symbols) {
           if (const auto *Existing = Symbols.find(Sym.ID))
             Symbols.insert(mergeSymbol(*Existing, Sym));
           else
@@ -107,7 +111,7 @@ public:
       }
       {
         std::lock_guard<std::mutex> Lock(RefsMu);
-        for (const auto &Sym : *Result.Refs) {
+        for (const auto &Sym : *TUResult.Refs) {
           // Deduplication happens during insertion.
           for (const auto &Ref : Sym.second)
             Refs.insert(Sym.first, Ref);
@@ -115,11 +119,11 @@ public:
       }
       {
         std::lock_guard<std::mutex> Lock(RelsMu);
-        for (const auto &R : *Result.Relations) {
+        for (const auto &R : *TUResult.Relations) {
           Relations.insert(R);
         }
       }
-      // FIXME: Handle Result.Sources?
+      // FIXME: Handle TUResult.Sources?
     });
   }
 
@@ -132,85 +136,50 @@ public:
         std::move(Invocation), Files, std::move(PCHContainerOps), DiagConsumer);
   }
 
-protected:
-  std::mutex FilesMu;
-  llvm::StringSet<> Files;
-  std::mutex SymbolsMu;
-  std::unique_ptr<SymbolSlab::Builder> Symbols;
-  std::mutex RefsMu;
-  std::unique_ptr<RefSlab::Builder> Refs;
-  std::mutex RelsMu;
-  std::unique_ptr<RelationSlab::Builder> Relations;
-};
-
-// Action factory that merges all symbols into a single index (for YAML/RIFF).
-class IndexActionFactory : public IndexActionFactoryBase {
-public:
-  IndexActionFactory(IndexFileIn &Result) : Result(Result) {}
-
   // Awkward: we write the result in the destructor, because the executor
   // takes ownership so it's the easiest way to get our data back out.
   ~IndexActionFactory() {
-    Result.Symbols = std::move(*Symbols).build();
-    Result.Refs = std::move(*Refs).build();
-    Result.Relations = std::move(*Relations).build();
+    Result.Symbols = std::move(Symbols).build();
+    Result.Refs = std::move(Refs).build();
+    Result.Relations = std::move(Relations).build();
   }
 
 private:
   IndexFileIn &Result;
+  std::mutex FilesMu;
+  llvm::StringSet<> Files;
+  std::mutex SymbolsMu;
+  SymbolSlab::Builder Symbols;
+  std::mutex RefsMu;
+  RefSlab::Builder Refs;
+  std::mutex RelsMu;
+  RelationSlab::Builder Relations;
 };
 
 // Action factory that writes per-file shards (for sharded index format).
-class ShardedIndexActionFactory : public IndexActionFactoryBase {
+// Each TU's index data is sharded independently — no merging across TUs.
+// Header shards are deduplicated: if a header's content hasn't changed since
+// the last time we wrote its shard, we skip writing it again.
+class ShardedIndexActionFactory : public tooling::FrontendActionFactory {
 public:
   ShardedIndexActionFactory(BackgroundIndexStorage &Storage)
       : Storage(Storage) {}
 
   std::unique_ptr<FrontendAction> create() override {
+    // Snapshot the current shard versions so the callback can check staleness
+    // without holding the lock during indexing.
+    llvm::StringMap<ShardVersion> Snapshot;
+    {
+      std::lock_guard<std::mutex> Lock(ShardVersionsMu);
+      Snapshot = ShardVersions;
+    }
+
     SymbolCollector::Options Opts;
     Opts.CountReferences = true;
-    Opts.FileFilter = [&](const SourceManager &SM, FileID FID) {
-      const auto F = SM.getFileEntryRefForID(FID);
-      if (!F)
-        return false; // Skip invalid files.
-      auto AbsPath = getCanonicalPath(*F, SM.getFileManager());
-      if (!AbsPath)
-        return false; // Skip files without absolute path.
-      std::lock_guard<std::mutex> Lock(FilesMu);
-      return Files.insert(*AbsPath).second; // Skip already processed files.
-    };
+
     return createStaticIndexingAction(
-        Opts,
-        [&](SymbolSlab S) {
-          // Merge as we go.
-          std::lock_guard<std::mutex> Lock(SymbolsMu);
-          for (const auto &Sym : S) {
-            if (const auto *Existing = Symbols->find(Sym.ID))
-              Symbols->insert(mergeSymbol(*Existing, Sym));
-            else
-              Symbols->insert(Sym);
-          }
-        },
-        [&](RefSlab S) {
-          std::lock_guard<std::mutex> Lock(RefsMu);
-          for (const auto &Sym : S) {
-            // Deduplication happens during insertion.
-            for (const auto &Ref : Sym.second)
-              Refs->insert(Sym.first, Ref);
-          }
-        },
-        [&](RelationSlab S) {
-          std::lock_guard<std::mutex> Lock(RelsMu);
-          for (const auto &R : S) {
-            Relations->insert(R);
-          }
-        },
-        [&](IncludeGraph IG) {
-          std::lock_guard<std::mutex> Lock(SourcesMu);
-          for (auto &Entry : IG) {
-            // Merge include graphs from different TUs.
-            Sources.try_emplace(Entry.first(), Entry.second);
-          }
+        Opts, [this, Snapshot](IndexFileIn Index) {
+          writeShards(std::move(Index), Snapshot);
         });
   }
 
@@ -219,90 +188,73 @@ public:
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagConsumer) override {
     disableUnsupportedOptions(*Invocation);
-
-    // Get the main file path before running.
-    std::string MainFile;
-    if (!Invocation->getFrontendOpts().Inputs.empty())
-      MainFile = Invocation->getFrontendOpts().Inputs[0].getFile().str();
-
-    bool Success = tooling::FrontendActionFactory::runInvocation(
+    return tooling::FrontendActionFactory::runInvocation(
         std::move(Invocation), Files, std::move(PCHContainerOps), DiagConsumer);
-
-    // After processing, write shards for all files in this TU.
-    if (Success && !MainFile.empty())
-      writeShardsForTU(MainFile);
-
-    return Success;
   }
 
 private:
-  void writeShardsForTU(llvm::StringRef MainFile) {
-    // Build the complete index data for this TU.
-    IndexFileIn Data;
-    {
-      std::lock_guard<std::mutex> Lock(SymbolsMu);
-      Data.Symbols = std::move(*Symbols).build();
-      Symbols = std::make_unique<SymbolSlab::Builder>();
-    }
-    {
-      std::lock_guard<std::mutex> Lock(RefsMu);
-      Data.Refs = std::move(*Refs).build();
-      Refs = std::make_unique<RefSlab::Builder>();
-    }
-    {
-      std::lock_guard<std::mutex> Lock(RelsMu);
-      Data.Relations = std::move(*Relations).build();
-      Relations = std::make_unique<RelationSlab::Builder>();
-    }
-    {
-      std::lock_guard<std::mutex> Lock(SourcesMu);
-      Data.Sources = std::move(Sources);
-      Sources.clear();
+  void writeShards(IndexFileIn Index,
+                   const llvm::StringMap<ShardVersion> &Snapshot) {
+    if (!Index.Sources)
+      return;
+
+    // Find the URI of the main file (the TU root). Store as owned string
+    // because we move Index below, which would invalidate any StringRef into it.
+    std::string MainUri;
+    for (const auto &[Uri, Node] : *Index.Sources) {
+      if (Node.Flags & IncludeGraphNode::SourceFlag::IsTU) {
+        MainUri = Uri.str();
+        break;
+      }
     }
 
-    // Shard the index data per-file.
-    FileShardedIndex ShardedIndex(std::move(Data));
+    // Collect files that need updated shards, based on content digest.
+    // Files whose shard was already written with the same digest are skipped.
+    llvm::StringMap<std::pair<Path, FileDigest>> FilesToUpdate;
+    for (const auto &[Uri, Node] : *Index.Sources) {
+      auto AbsPath = URI::resolve(Uri, MainUri);
+      if (!AbsPath) {
+        elog("Failed to resolve URI {0}: {1}", Uri, AbsPath.takeError());
+        continue;
+      }
+      auto DigestIt = Snapshot.find(*AbsPath);
+      if (DigestIt == Snapshot.end() || DigestIt->second.Digest != Node.Digest)
+        FilesToUpdate[Uri] = {std::move(*AbsPath), Node.Digest};
+    }
 
-    // Write a shard for each file.
-    unsigned TUShardsWritten = 0;
-    for (llvm::StringRef Uri : ShardedIndex.getAllSources()) {
+    // Shard the index data by file.
+    FileShardedIndex ShardedIndex(std::move(Index));
+
+    unsigned Written = 0;
+    for (const auto &[Uri, PathAndDigest] : FilesToUpdate) {
       auto Shard = ShardedIndex.getShard(Uri);
       if (!Shard) {
         elog("Failed to get shard for {0}", Uri);
         continue;
       }
+      PathRef Path = PathAndDigest.first;
 
-      // Resolve URI to absolute path.
-      auto AbsPath = URI::resolve(Uri, MainFile);
-      if (!AbsPath) {
-        elog("Failed to resolve URI {0}: {1}", Uri, AbsPath.takeError());
-        continue;
-      }
-
-      // Only store command line for the main file.
-      if (*AbsPath != MainFile)
+      // Command line is only meaningful for the TU's main file.
+      if (Uri != MainUri)
         Shard->Cmd.reset();
 
       IndexFileOut Out(*Shard);
-      Out.Format = IndexFileFormat::RIFF; // Shards use RIFF format.
-
-      if (auto Err = Storage.storeShard(*AbsPath, Out)) {
-        elog("Failed to write shard for {0}: {1}", *AbsPath, std::move(Err));
+      Out.Format = IndexFileFormat::RIFF;
+      if (auto Err = Storage.storeShard(Path, Out)) {
+        elog("Failed to write shard for {0}: {1}", Path, std::move(Err));
       } else {
-        ++TUShardsWritten;
+        std::lock_guard<std::mutex> Lock(ShardVersionsMu);
+        ShardVersions[Path].Digest = PathAndDigest.second;
+        ++Written;
       }
     }
 
-    std::lock_guard<std::mutex> Lock(FilesMu);
-    ShardsWritten += TUShardsWritten;
-    log("Wrote {0} shards for TU {1} ({2} total)", TUShardsWritten, MainFile,
-        ShardsWritten);
+    log("Wrote {0} shards for TU {1}", Written, MainUri);
   }
 
   BackgroundIndexStorage &Storage;
-  std::mutex SourcesMu;
-  IncludeGraph Sources;
-  unsigned ShardsWritten = 0;
+  std::mutex ShardVersionsMu;
+  llvm::StringMap<ShardVersion> ShardVersions;
 };
 
 } // namespace
