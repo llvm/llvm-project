@@ -455,6 +455,16 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
     PAuthABIVersion = PAV->getZExtValue();
   }
 
+  // For LLVM_LINUX experimental platform, version value of 0 means no PAuth
+  // support. Do not emit corresponding PAuthABI GNU property note and AArch64
+  // build attributes for this case to keep Linux binaries not using PAuth
+  // unaffected.
+  if (PAuthABIPlatform == ELF::AARCH64_PAUTH_PLATFORM_LLVM_LINUX &&
+      PAuthABIVersion == 0) {
+    PAuthABIPlatform = uint64_t(-1);
+    PAuthABIVersion = uint64_t(-1);
+  }
+
   // Emit AArch64 Build Attributes
   emitAttributes(BAFlags, PAuthABIPlatform, PAuthABIVersion, TS);
   // Emit a .note.gnu.property section with the flags.

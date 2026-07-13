@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx803 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.03 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx803 -filetype=obj < %s | llvm-objdump --triple=amdgcn--amdhsa --mcpu=gfx803 -d - | FileCheck -check-prefix=DISASSEMBLY-VI %s
 
 ; Make sure we can encode and don't fail on functions which have
