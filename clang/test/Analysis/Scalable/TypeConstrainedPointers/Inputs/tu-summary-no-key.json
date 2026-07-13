@@ -5,13 +5,11 @@
         {
           "entity_id": 0,
           "entity_summary": {
-            "OperatorNewDeletePointersAnalysisResult": [
-              "not-an-object"
-            ]
+            "WrongKey": []
           }
         }
       ],
-      "summary_name": "OperatorNewDeletePointers"
+      "summary_name": "TypeConstrainedPointers"
     }
   ],
   "id_table": [

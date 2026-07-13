@@ -143,12 +143,20 @@ Breaking changes
 COFF Improvements
 -----------------
 
+* Added support for ``.obj.arm64ec`` sections to allow embedding ARM64EC object
+  files inside ARM64 object files.
+
 MinGW Improvements
 ------------------
 
 * Added ``--push-state`` and ``--pop-state``, offering the same semantics as
   when used with the ELF linker: The state of ``--Bstatic``/``--Bdynamic`` and
   ``--whole-archive`` are pushed onto a stack and popped from it.
+
+* Added the ``--native-def`` option to specify the native module-definition
+  file for ARM64X targets. If a module-definition file is passed without this
+  option, it is used for both native and EC views. ``--native-def=`` can be
+  used to prevent the native view from using the default file.
 
 MachO Improvements
 ------------------

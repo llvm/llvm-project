@@ -1,4 +1,4 @@
-//===- OperatorNewDeletePointersExtractorTest.cpp -------------------------===//
+//===- TypeConstrainedPointersExtractorTest.cpp ---------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +12,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/SSAFOptions.h"
-#include "clang/ScalableStaticAnalysis/Analyses/OperatorNewDelete/OperatorNewDeletePointers.h"
+#include "clang/ScalableStaticAnalysis/Analyses/TypeConstrainedPointers/TypeConstrainedPointers.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysis/Core/TUSummary/ExtractorRegistry.h"
 #include "clang/ScalableStaticAnalysis/Core/TUSummary/TUSummary.h"
@@ -71,7 +71,7 @@ const SummaryT *getEntitySummary(llvm::StringRef ContributorName,
   return static_cast<const SummaryT *>(EntIt->second.get());
 }
 
-class OperatorNewDeletePointersExtractorTest : public ssaf::TestFixture {
+class TypeConstrainedPointersExtractorTest : public ssaf::TestFixture {
 protected:
   SSAFOptions Opts;
   TUSummary TUSum;
@@ -79,7 +79,7 @@ protected:
   std::unique_ptr<TUSummaryExtractor> Extractor;
   std::unique_ptr<ASTUnit> AST;
 
-  OperatorNewDeletePointersExtractorTest()
+  TypeConstrainedPointersExtractorTest()
       : TUSum(llvm::Triple("arm64-apple-macosx"),
               BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")),
         Builder(TUSum, Opts), Extractor(nullptr) {}
@@ -91,22 +91,22 @@ protected:
       return false;
     }
     for (auto &E : TUSummaryExtractorRegistry::entries()) {
-      if (E.getName() == OperatorNewDeletePointersEntitySummary::Name) {
+      if (E.getName() == TypeConstrainedPointersEntitySummary::Name) {
         Extractor = E.instantiate(Builder);
         break;
       }
     }
     if (!Extractor) {
-      ADD_FAILURE() << "failed to find OperatorNewDeletePointersExtractor";
+      ADD_FAILURE() << "failed to find TypeConstrainedPointersExtractor";
       return false;
     }
     Extractor->HandleTranslationUnit(AST->getASTContext());
     return true;
   }
 
-  const OperatorNewDeletePointersEntitySummary *
+  const TypeConstrainedPointersEntitySummary *
   getEntitySummary(llvm::StringRef FnName) {
-    return ::getEntitySummary<OperatorNewDeletePointersEntitySummary>(
+    return ::getEntitySummary<TypeConstrainedPointersEntitySummary>(
         FnName, AST->getASTContext(), *Extractor, getData(TUSum));
   }
 
@@ -127,16 +127,16 @@ protected:
 // Registration sanity
 //===----------------------------------------------------------------------===//
 
-TEST(OperatorNewDeletePointersExtractorRegistration, ExtractorRegistered) {
+TEST(TypeConstrainedPointersExtractorRegistration, ExtractorRegistered) {
   EXPECT_TRUE(isTUSummaryExtractorRegistered(
-      OperatorNewDeletePointersEntitySummary::Name));
+      TypeConstrainedPointersEntitySummary::Name));
 }
 
 //===----------------------------------------------------------------------===//
 // Extractor cases
 //===----------------------------------------------------------------------===//
 
-TEST_F(OperatorNewDeletePointersExtractorTest, FreeOperatorDelete) {
+TEST_F(TypeConstrainedPointersExtractorTest, FreeOperatorDelete) {
   ASSERT_TRUE(setUpTest(R"cpp(
     void operator delete(void *ptr) noexcept;
     void operator delete(void *ptr) noexcept { (void)ptr; }
@@ -153,7 +153,7 @@ TEST_F(OperatorNewDeletePointersExtractorTest, FreeOperatorDelete) {
   EXPECT_EQ(*S, std::set<EntityId>{*PtrId});
 }
 
-TEST_F(OperatorNewDeletePointersExtractorTest, MemberOperatorDelete) {
+TEST_F(TypeConstrainedPointersExtractorTest, MemberOperatorDelete) {
   ASSERT_TRUE(setUpTest(R"cpp(
     class T {
     public:
@@ -171,7 +171,7 @@ TEST_F(OperatorNewDeletePointersExtractorTest, MemberOperatorDelete) {
   EXPECT_EQ(*S, std::set<EntityId>{*PId});
 }
 
-TEST_F(OperatorNewDeletePointersExtractorTest, OperatorDeleteArray) {
+TEST_F(TypeConstrainedPointersExtractorTest, OperatorDeleteArray) {
   ASSERT_TRUE(setUpTest(R"cpp(
     void operator delete[](void *p) noexcept;
     void operator delete[](void *p) noexcept { (void)p; }
@@ -187,7 +187,7 @@ TEST_F(OperatorNewDeletePointersExtractorTest, OperatorDeleteArray) {
   EXPECT_EQ(*S, std::set<EntityId>{*PId});
 }
 
-TEST_F(OperatorNewDeletePointersExtractorTest, OperatorNew) {
+TEST_F(TypeConstrainedPointersExtractorTest, OperatorNew) {
   ASSERT_TRUE(setUpTest(R"cpp(
     typedef unsigned long size_t;
     void *operator new(size_t size);
@@ -204,7 +204,7 @@ TEST_F(OperatorNewDeletePointersExtractorTest, OperatorNew) {
   EXPECT_EQ(*S, std::set<EntityId>{*RetId});
 }
 
-TEST_F(OperatorNewDeletePointersExtractorTest, PlacementNew) {
+TEST_F(TypeConstrainedPointersExtractorTest, PlacementNew) {
   ASSERT_TRUE(setUpTest(R"cpp(
     typedef unsigned long size_t;
     void *operator new(size_t size, void *placement) noexcept;
@@ -225,7 +225,7 @@ TEST_F(OperatorNewDeletePointersExtractorTest, PlacementNew) {
   EXPECT_EQ(*S, (std::set<EntityId>{*PlacementId, *RetId}));
 }
 
-TEST_F(OperatorNewDeletePointersExtractorTest, PlacementDelete) {
+TEST_F(TypeConstrainedPointersExtractorTest, PlacementDelete) {
   ASSERT_TRUE(setUpTest(R"cpp(
     void operator delete(void *ptr, void *placement) noexcept;
     void operator delete(void *ptr, void *placement) noexcept {
@@ -245,16 +245,61 @@ TEST_F(OperatorNewDeletePointersExtractorTest, PlacementDelete) {
   EXPECT_EQ(*S, (std::set<EntityId>{*PtrId, *PlacementId}));
 }
 
-TEST_F(OperatorNewDeletePointersExtractorTest, NoOperatorNewOrDeleteSummary) {
+TEST_F(TypeConstrainedPointersExtractorTest, NoOperatorNewOrDeleteSummary) {
   ASSERT_TRUE(setUpTest(R"cpp(
     class T { int x; };
   )cpp"));
 
   auto &TUData = getData(TUSum);
   auto TUSummariesIter =
-      TUData.find(OperatorNewDeletePointersEntitySummary::summaryName());
+      TUData.find(TypeConstrainedPointersEntitySummary::summaryName());
 
   ASSERT_EQ(TUSummariesIter, TUData.end());
+}
+
+TEST_F(TypeConstrainedPointersExtractorTest, MainPointerParams) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    int main(int argc, char **argv) { return 0; }
+  )cpp"));
+
+  const auto *S = getEntitySummary("main");
+
+  ASSERT_TRUE(S);
+
+  auto ArgvId = getEntityId("argv");
+
+  ASSERT_TRUE(ArgvId);
+  // argc is not a pointer — only argv is extracted.
+  EXPECT_EQ(*S, (std::set<EntityId>{*ArgvId}));
+}
+
+TEST_F(TypeConstrainedPointersExtractorTest, MainThreePointerParams) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    int main(int argc, char **argv, char **envp) { return 0; }
+  )cpp"));
+
+  const auto *S = getEntitySummary("main");
+
+  ASSERT_TRUE(S);
+
+  auto ArgvId = getEntityId("argv");
+  auto EnvpId = getEntityId("envp");
+
+  ASSERT_TRUE(ArgvId);
+  ASSERT_TRUE(EnvpId);
+  // argc is not a pointer — argv and envp are both extracted.
+  EXPECT_EQ(*S, (std::set<EntityId>{*ArgvId, *EnvpId}));
+}
+
+TEST_F(TypeConstrainedPointersExtractorTest, MainNoPointerParams) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    int main();
+    int main() { return 0; }
+  )cpp"));
+
+  const auto *S = getEntitySummary("main");
+
+  EXPECT_FALSE(S);
 }
 
 } // namespace
