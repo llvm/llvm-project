@@ -1866,10 +1866,12 @@ void SystemZAsmPrinter::calculatePPA1() {
   determinePrologueStackUpdateSym(MF, EndOfPrologSym, StackUpdateSym);
 
   // Save the calculated values.
-  if (MF->getFunction().hasName() &&
-      MF->getFunction().getFnAttribute("zos-ppa1-name").getValueAsString() !=
-          "none")
+  if (MF->getFunction().hasFnAttribute("zos-ppa1-name"))
+    Info.Name =
+        MF->getFunction().getFnAttribute("zos-ppa1-name").getValueAsString();
+  else if (MF->getFunction().hasName())
     Info.Name = MF->getFunction().getName();
+
   Info.PPA1 = OutContext.createTempSymbol(Twine("PPA1_").concat(N), true);
   Info.EPMarker = OutContext.createTempSymbol(Twine("EPM_").concat(N), true);
   Info.FnEnd = OutContext.createTempSymbol(Twine(N).concat("end_"));

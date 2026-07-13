@@ -833,7 +833,9 @@ void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
                                              BoundArch BA,
                                              Action::OffloadKind) const {
 
-  bool UseInitArrayDefault = getTriple().isMusl();
+  bool UseInitArrayDefault =
+      getTriple().isMusl() ||
+      GetCStdlibType(DriverArgs) == ToolChain::CST_Picolibc;
 
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
                           options::OPT_fno_use_init_array,

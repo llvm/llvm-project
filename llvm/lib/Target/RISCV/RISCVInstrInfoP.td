@@ -1870,6 +1870,10 @@ def SDT_RISCVPPairEven : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                               SDTCisSameAs<0, 1>,
                                               SDTCisSameAs<0, 2>]>;
 def riscv_ppaire : RVSDNode<"PPAIRE", SDT_RISCVPPairEven>;
+def SDT_RISCVPackedBinary : SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                                 SDTCisSameAs<0, 1>,
+                                                 SDTCisSameAs<0, 2>]>;
+def riscv_ppairoe_h : RVSDNode<"PPAIROE_H", SDT_RISCVPackedBinary>;
 
 // Averaging subtraction, (a - b) >> 2
 def riscv_asub : RVSDNode<"ASUB", SDTIntBinOp>;
@@ -2153,9 +2157,11 @@ let Predicates = [HasStdExtP] in {
   def : Pat<(XLenVecI16VT (vselect (XLenVecI16VT GPR:$mask), GPR:$true_v, GPR:$false_v)),
             (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
 
-  // 16-bit bswap patterns
+  // 16-bit permute patterns
   def : Pat<(XLenVecI16VT (bswap GPR:$rs)),
             (PPAIROE_B GPR:$rs, GPR:$rs)>;
+  def : Pat<(XLenVecI16VT (riscv_ppairoe_h GPR:$rs1, GPR:$rs2)),
+            (PPAIROE_H GPR:$rs1, GPR:$rs2)>;
 
 let append Predicates = [IsRV32] in {
   def : PatGpr<bitreverse, REV_RV32>;

@@ -5211,8 +5211,9 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   EVT SrcElementVT = SrcVT.getVectorElementType();
 
   // In the absence of FP16 support, promote f16 to f32 and saturate the result.
+  // Note that SatWidth stays unchanged.
   SDLoc DL(Op);
-  SDValue SrcVal2;
+  unsigned Opc = Op.getOpcode();
   if ((SrcElementVT == MVT::f16 &&
        (!Subtarget->hasFullFP16() || DstElementWidth > 16)) ||
       SrcElementVT == MVT::bf16) {
@@ -5220,9 +5221,13 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
     SrcVal = DAG.getNode(ISD::FP_EXTEND, DL, F32VT, SrcVal);
     // If we are extending to a v8f32, split into two v4f32 to produce legal
     // types.
-    if (F32VT.getSizeInBits() > 128) {
-      std::tie(SrcVal, SrcVal2) = DAG.SplitVector(SrcVal, DL);
-      F32VT = F32VT.getHalfNumVectorElementsVT();
+    if (F32VT == MVT::v8f32) {
+      auto [SrcValLo, SrcValHi] = DAG.SplitVector(SrcVal, DL);
+      SDValue Lo = DAG.getNode(Opc, DL, MVT::v4i32, SrcValLo, Op.getOperand(1));
+      SDValue Hi = DAG.getNode(Opc, DL, MVT::v4i32, SrcValHi, Op.getOperand(1));
+      Lo = DAG.getNode(ISD::TRUNCATE, DL, MVT::v4i16, Lo);
+      Hi = DAG.getNode(ISD::TRUNCATE, DL, MVT::v4i16, Hi);
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, Lo, Hi);
     }
     SrcVT = F32VT;
     SrcElementVT = MVT::f32;
@@ -5232,7 +5237,7 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
     return SDValue();
 
   // Expand to f64 if we are saturating to i64, to help keep the lanes the same
-  // width and produce a fcvtzu.
+  // width and produce a fcvtzu. Note that SatWidth stays unchanged.
   if (SatWidth == 64 && SrcElementWidth < 64) {
     MVT F64VT = MVT::getVectorVT(MVT::f64, SrcVT.getVectorNumElements());
     SrcVal = DAG.getNode(ISD::FP_EXTEND, DL, F64VT, SrcVal);
@@ -5241,16 +5246,9 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
     SrcElementWidth = 64;
   }
   // Cases that we can emit directly.
-  if (SrcElementWidth == DstElementWidth && SrcElementWidth == SatWidth) {
-    SDValue Res = DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal,
-                              DAG.getValueType(DstVT.getScalarType()));
-    if (SrcVal2) {
-      SDValue Res2 = DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal2,
-                                 DAG.getValueType(DstVT.getScalarType()));
-      return DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, Res, Res2);
-    }
-    return Res;
-  }
+  if (SrcElementWidth == DstElementWidth && SrcElementWidth == SatWidth)
+    return DAG.getNode(Opc, DL, DstVT, SrcVal,
+                       DAG.getValueType(DstVT.getScalarType()));
 
   // Otherwise we emit a cvt that saturates to a higher BW, and saturate the
   // result. This is only valid if the legal cvt is larger than the saturate
@@ -5259,34 +5257,25 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   if (SrcElementWidth < SatWidth || SrcElementVT == MVT::f64)
     return SDValue();
 
+  assert((SrcElementWidth > DstElementWidth) ||
+         (SrcElementWidth == DstElementWidth && SatWidth < DstElementWidth));
+
   EVT IntVT = SrcVT.changeVectorElementTypeToInteger();
-  SDValue NativeCvt = DAG.getNode(Op.getOpcode(), DL, IntVT, SrcVal,
+  SDValue NativeCvt = DAG.getNode(Opc, DL, IntVT, SrcVal,
                                   DAG.getValueType(IntVT.getScalarType()));
-  SDValue NativeCvt2 =
-      SrcVal2 ? DAG.getNode(Op.getOpcode(), DL, IntVT, SrcVal2,
-                            DAG.getValueType(IntVT.getScalarType()))
-              : SDValue();
-  SDValue Sat, Sat2;
-  if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
+  SDValue Sat;
+  if (Opc == ISD::FP_TO_SINT_SAT) {
     SDValue MinC = DAG.getConstant(
         APInt::getSignedMaxValue(SatWidth).sext(SrcElementWidth), DL, IntVT);
     SDValue Min = DAG.getNode(ISD::SMIN, DL, IntVT, NativeCvt, MinC);
-    SDValue Min2 = SrcVal2 ? DAG.getNode(ISD::SMIN, DL, IntVT, NativeCvt2, MinC) : SDValue();
     SDValue MaxC = DAG.getConstant(
         APInt::getSignedMinValue(SatWidth).sext(SrcElementWidth), DL, IntVT);
     Sat = DAG.getNode(ISD::SMAX, DL, IntVT, Min, MaxC);
-    Sat2 = SrcVal2 ? DAG.getNode(ISD::SMAX, DL, IntVT, Min2, MaxC) : SDValue();
   } else {
     SDValue MinC = DAG.getConstant(
         APInt::getAllOnes(SatWidth).zext(SrcElementWidth), DL, IntVT);
     Sat = DAG.getNode(ISD::UMIN, DL, IntVT, NativeCvt, MinC);
-    Sat2 = SrcVal2 ? DAG.getNode(ISD::UMIN, DL, IntVT, NativeCvt2, MinC) : SDValue();
   }
-
-  if (SrcVal2)
-    Sat = DAG.getNode(ISD::CONCAT_VECTORS, DL,
-                      IntVT.getDoubleNumVectorElementsVT(*DAG.getContext()),
-                      Sat, Sat2);
 
   return DAG.getNode(ISD::TRUNCATE, DL, DstVT, Sat);
 }
@@ -9716,6 +9705,20 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
     CCInfo.AllocateStack(32, Align(16));
 
   unsigned NumArgs = Outs.size();
+
+  // IsVarArg is only set on an ARM64EC_Thunk_X64 for exit thunks, so if set
+  // we know we have a vararg exit thunk where x4 and x5 must be consumed in
+  // this lowering (copying the data to the stack).
+  bool IsArm64ECVarArgExitThunk = CalleeCC == CallingConv::ARM64EC_Thunk_X64 &&
+                                  IsVarArg &&
+                                  !(CLI.CB && CLI.CB->isMustTailCall());
+  if (IsArm64ECVarArgExitThunk) {
+    if (NumArgs < 2)
+      report_fatal_error("variadic arm64ec_thunk_x64 call is missing the "
+                         "x4/x5 (pointer/length) arguments");
+    NumArgs -= 2;
+  }
+
   for (unsigned i = 0; i != NumArgs; ++i) {
     MVT ArgVT = Outs[i].VT;
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
@@ -10305,6 +10308,50 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     });
   }
 
+  auto PtrVT = getPointerTy(DAG.getDataLayout());
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  // If we have a variadic Arm64EC exit thunk, we must lower the x4/x5
+  // parameters (address and length of additional arguments) into an outgoing
+  // stack area.
+  bool IsArm64ECVarArgExitThunk = CallConv == CallingConv::ARM64EC_Thunk_X64 &&
+                                  IsVarArg &&
+                                  !(CLI.CB && CLI.CB->isMustTailCall());
+  if (IsArm64ECVarArgExitThunk) {
+    // Materialize an aligned outgoing stack area now
+    // so the args described by x4 (pointer) and x5 (length) can be copied
+    // into a real x64-style stack layout.
+    if (Outs.size() < 2)
+      report_fatal_error("variadic arm64ec_thunk_x64 call is missing the "
+                         "x4/x5 (pointer/length) arguments");
+    if (IsTailCall)
+      report_fatal_error("tail calls are not supported for variadic "
+                         "arm64ec_thunk_x64 calls");
+
+    SDValue ThunkVarArgSrc = OutVals[Outs.size() - 2];
+    SDValue ThunkVarArgSize =
+        DAG.getZExtOrTrunc(OutVals[Outs.size() - 1], DL, PtrVT);
+    SDValue RoundedThunkVarArgSize = DAG.getNode(
+        ISD::ADD, DL, PtrVT, ThunkVarArgSize, DAG.getConstant(15, DL, PtrVT));
+    RoundedThunkVarArgSize =
+        DAG.getNode(ISD::AND, DL, PtrVT, RoundedThunkVarArgSize,
+                    DAG.getSignedConstant(-16, DL, PtrVT));
+    SDValue ThunkVarArgDst = DAG.getNode(
+        ISD::DYNAMIC_STACKALLOC, DL, DAG.getVTList(PtrVT, MVT::Other),
+        {Chain, RoundedThunkVarArgSize, DAG.getConstant(0, DL, PtrVT)});
+    Chain = ThunkVarArgDst.getValue(1);
+    MFI.CreateVariableSizedObject(Align(16), nullptr);
+
+    // The x64 shadow store for the final thunk call is allocated by the normal
+    // CALLSEQ_START below. Copy the variadic stack arguments before that call
+    // sequence starts so lowering the memcpy libcall cannot create nested
+    // ADJCALLSTACKDOWN/ADJCALLSTACKUP pairs.
+    Chain = DAG.getMemcpy(
+        Chain, DL, ThunkVarArgDst, ThunkVarArgSrc, ThunkVarArgSize, Align(16),
+        Align(1), /*isVol=*/false, /*AlwaysInline=*/false,
+        /*CI=*/nullptr, std::nullopt, MachinePointerInfo::getUnknownStack(MF),
+        MachinePointerInfo());
+  }
+
   // Adjust the stack pointer for the new arguments... and mark ZA uses.
   // These operations are automatically eliminated by the prolog/epilog pass
   assert((!IsSibCall || !ZAMarkerNode) && "ZA markers require CALLSEQ_START");
@@ -10327,7 +10374,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
   SmallSet<unsigned, 8> RegsUsed;
   SmallVector<SDValue, 8> MemOpChains;
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
 
   if (IsVarArg && CLI.CB && CLI.CB->isMustTailCall()) {
     const auto &Forwards = FuncInfo->getForwardedMustTailRegParms();
@@ -10339,7 +10385,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Walk the register/memloc assignments, inserting copies/loads.
   unsigned ExtraArgLocs = 0;
-  for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
+  unsigned NumThunkVarArgOperands = IsArm64ECVarArgExitThunk ? 2 : 0;
+  for (unsigned i = 0, e = Outs.size() - NumThunkVarArgOperands; i != e; ++i) {
     CCValAssign &VA = ArgLocs[i - ExtraArgLocs];
     SDValue Arg = OutVals[i];
     ISD::ArgFlagsTy Flags = Outs[i].Flags;
@@ -10561,7 +10608,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   if (IsVarArg && Subtarget->isWindowsArm64EC() &&
-      !(CLI.CB && CLI.CB->isMustTailCall())) {
+      !(CLI.CB && CLI.CB->isMustTailCall()) && !IsArm64ECVarArgExitThunk) {
     SDValue ParamPtr = StackPtr;
     if (IsTailCall) {
       // Create a dummy object at the top of the stack that can be used to get

@@ -4792,8 +4792,8 @@ static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OmpDeclareVariantDirective &declareVariantDirective) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OmpDeclareVariantDirective");
+  // No lowering for the declarative directive itself; the recorded variants are
+  // resolved at call sites (see resolveDeclareVariantCallee in CallInterface).
 }
 
 static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
