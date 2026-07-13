@@ -9,7 +9,7 @@
 ; CHECK-DAG: [[EXT:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-DAG: [[VOID:%[0-9]+]] = OpTypeVoid
 ; CHECK-DAG: [[I32T:%[0-9]+]] = OpTypeInt 32 0
-; CHECK-DAG: [[NAME:%[0-9]+]] = OpString "localas"
+; CHECK-DAG: [[NAME:%[0-9]+]] = OpString "g"
 ; CHECK-DAG: [[STR_INT:%[0-9]+]] = OpString "int"
 ; CHECK-DAG: [[C42:%[0-9]+]] = OpConstant [[I32T]] 42
 ; CHECK-DAG: [[NONE:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugInfoNone
@@ -30,7 +30,7 @@ entry:
 !llvm.module.flags = !{!12, !13}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
-!1 = distinct !DIGlobalVariable(name: "localas", linkageName: "localas", scope: !2, file: !3, line: 42, type: !8, isLocal: false, isDefinition: true)
+!1 = distinct !DIGlobalVariable(name: "g", linkageName: "g", scope: !2, file: !3, line: 42, type: !8, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: !4, splitDebugInlining: false, nameTableKind: None)
 !3 = !DIFile(filename: "t.c", directory: "/tmp")
 !4 = !{!0}
