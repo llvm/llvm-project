@@ -37,6 +37,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "CIRGenFunctionInfo.h"
@@ -3542,19 +3543,31 @@ void CIRGenModule::setCXXSpecialMemberAttr(
 
 void CIRGenModule::setFuncIdentityAttr(cir::FuncOp funcOp,
                                        const clang::FunctionDecl *funcDecl) {
-  // Only a free std function with a plain identifier can match a known
-  // entity, so members, static members, and operators never take a tag.
-  // Inline namespaces, like the versioning namespace of libc++, count as
-  // part of std.
-  if (!funcDecl || !funcDecl->getIdentifier() || isa<CXXMethodDecl>(funcDecl) ||
-      !funcDecl->isInStdNamespace())
+  // A known entity is named by a plain identifier in std. For a member the
+  // record decides std membership. Inline namespaces, like the versioning
+  // namespace of libc++, count as part of std.
+  if (!funcDecl || !funcDecl->getIdentifier())
+    return;
+  const auto *method = dyn_cast<CXXMethodDecl>(funcDecl);
+  bool inStdNamespace = method ? method->getParent()->isInStdNamespace()
+                               : funcDecl->isInStdNamespace();
+  if (!inStdNamespace)
     return;
 
-  // The names and the tags come from CIRStdOps.td, and the recognizer
-  // checks the shape of each call.
-  if (funcDecl->getName() == cir::StdFindOp::getFunctionName())
-    funcOp.setFuncInfoAttr(cir::FuncIdentityAttr::get(
-        &getMLIRContext(), cir::StdFindOp::getFuncKind()));
+  // The names and the tags come from CIRStdOps.td, and the recognizer checks
+  // the shape of each call. Only free functions name a known entity today, so
+  // a member like char_traits::find never shares the tag of the free std::find.
+  std::optional<cir::KnownFuncKind> kind;
+  if (!method)
+    kind = llvm::StringSwitch<std::optional<cir::KnownFuncKind>>(
+               funcDecl->getName())
+               .Case(cir::StdFindOp::getFunctionName(),
+                     cir::StdFindOp::getFuncKind())
+               .Default(std::nullopt);
+  if (!kind)
+    return;
+
+  funcOp.setFuncInfoAttr(cir::FuncIdentityAttr::get(&getMLIRContext(), *kind));
 }
 
 static void setWindowsItaniumDLLImport(CIRGenModule &cgm, bool isLocal,

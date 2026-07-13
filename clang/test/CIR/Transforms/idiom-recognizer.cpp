@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -fclangir -emit-cir -mmlir --mlir-print-ir-after-all -clangir-enable-idiom-recognizer %s -o %t.cir 2>&1 | FileCheck %s -check-prefix=CIR
 // CIR: IR Dump After IdiomRecognizer: cir-idiom-recognizer
 
+// The implicit-check-not on the RAISED run makes the original std::find call an
+// error anywhere in the post-pass dump, so the test only passes if that call was
+// raised to cir.std.find rather than left in place.
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -clangir-enable-idiom-recognizer -emit-cir -mmlir --mlir-print-ir-after=cir-idiom-recognizer %s -o %t.cir 2>&1 | FileCheck %s --check-prefix=RAISED '--implicit-check-not=cir.call @_ZSt4findIPccET_S1_S1_RKT0_'
 // RUN: FileCheck %s --check-prefix=FINAL --input-file=%t.cir
 

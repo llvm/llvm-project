@@ -27,7 +27,7 @@ class CIR_StdOp<string functionName, dag args, dag res,
     static constexpr unsigned getNumArgs() {
       return }] # !size(args) # [{;
     }
-    static llvm::StringRef getFunctionName() {
+    static llvm::StringLiteral getFunctionName() {
       return "}] # functionName # [{";
     }
   }] # !if(!empty(knownKind), "", [{

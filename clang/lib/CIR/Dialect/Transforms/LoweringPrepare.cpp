@@ -98,7 +98,7 @@ struct LoweringPreparePass
   void lowerTrivialCopyCall(cir::CallOp op);
   void lowerStoreOfConstAggregate(cir::StoreOp op);
   void lowerLocalInitOp(cir::LocalInitOp op);
-  void lowerStdFindOp(cir::StdFindOp op);
+  void lowerStdOp(mlir::Operation *op);
 
   /// Return the FuncOp called by `callOp`.  Uses the cached `symbolTables`
   /// member to avoid the O(M) module-wide scan that the static
@@ -2252,24 +2252,24 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
     constOp.erase();
 }
 
-// Raised ops carry the original callee and its call attributes, so lowering
-// them back rebuilds an equivalent plain call.
-static void restoreCallAttrs(cir::CallOp call, mlir::Operation *raised) {
-  for (mlir::NamedAttribute attr : raised->getAttrs())
+// Every raised operation carries the original callee, the operands, and the
+// attributes of the call, so this one function lowers any of them back to an
+// equivalent plain call.
+void LoweringPreparePass::lowerStdOp(mlir::Operation *op) {
+  cir::CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointAfter(op);
+  mlir::Type resultType;
+  if (op->getNumResults())
+    resultType = op->getResult(0).getType();
+  cir::CallOp call = builder.createCallOp(
+      op->getLoc(), op->getAttrOfType<mlir::FlatSymbolRefAttr>("original_fn"),
+      resultType, op->getOperands());
+  for (mlir::NamedAttribute attr : op->getAttrs())
     if (attr.getName() != "original_fn")
       call->setAttr(attr.getName(), attr.getValue());
-}
 
-void LoweringPreparePass::lowerStdFindOp(cir::StdFindOp op) {
-  cir::CIRBaseBuilderTy builder(getContext());
-  builder.setInsertionPointAfter(op.getOperation());
-  cir::CallOp call = builder.createCallOp(
-      op.getLoc(), op.getOriginalFnAttr(), op.getType(),
-      mlir::ValueRange{op.getFirst(), op.getLast(), op.getPattern()});
-  restoreCallAttrs(call, op);
-
-  op.replaceAllUsesWith(call);
-  op.erase();
+  op->replaceAllUsesWith(call);
+  op->erase();
 }
 
 void LoweringPreparePass::runOnOp(mlir::Operation *op) {
@@ -2277,8 +2277,8 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerArrayCtor(arrayCtor);
   } else if (auto arrayDtor = dyn_cast<cir::ArrayDtor>(op)) {
     lowerArrayDtor(arrayDtor);
-  } else if (auto stdFind = mlir::dyn_cast<cir::StdFindOp>(op)) {
-    lowerStdFindOp(stdFind);
+  } else if (mlir::isa<cir::StdFindOp>(op)) {
+    lowerStdOp(op);
   } else if (auto cast = mlir::dyn_cast<cir::CastOp>(op)) {
     lowerCastOp(cast);
   } else if (auto complexConj = mlir::dyn_cast<cir::ComplexConjOp>(op)) {
