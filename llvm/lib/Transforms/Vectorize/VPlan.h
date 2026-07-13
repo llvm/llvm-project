@@ -382,8 +382,7 @@ private:
   const VPBlockTy SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
 protected:
-  VPBlockBase(const VPBlockTy SC, const std::string &N)
-      : Name(N), SubclassID(SC) {}
+  VPBlockBase(VPBlockTy SC, const std::string &N) : Name(N), SubclassID(SC) {}
 };
 
 /// VPRecipeBase is a base class modeling a sequence of one or more output IR
@@ -456,7 +455,7 @@ public:
     VPLastPHISC = VPReductionPHISC,
   };
 
-  VPRecipeBase(const VPRecipeTy SC, ArrayRef<VPValue *> Operands,
+  VPRecipeBase(VPRecipeTy SC, ArrayRef<VPValue *> Operands,
                DebugLoc DL = DebugLoc::getUnknown())
       : VPDef(), VPUser(Operands), DL(DL), SubclassID(SC) {}
 
@@ -604,17 +603,16 @@ LLVM_ABI Type *computeScalarTypeForInstruction(unsigned Opcode,
 class LLVM_ABI_FOR_TEST VPSingleDefRecipe : public VPRecipeBase,
                                             public VPSingleDefValue {
 public:
-  VPSingleDefRecipe(const VPRecipeTy SC, ArrayRef<VPValue *> Operands,
+  VPSingleDefRecipe(VPRecipeTy SC, ArrayRef<VPValue *> Operands,
                     DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeBase(SC, Operands, DL), VPSingleDefValue(this) {}
 
-  VPSingleDefRecipe(const VPRecipeTy SC, ArrayRef<VPValue *> Operands,
-                    Value *UV, DebugLoc DL = DebugLoc::getUnknown())
+  VPSingleDefRecipe(VPRecipeTy SC, ArrayRef<VPValue *> Operands, Value *UV,
+                    DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeBase(SC, Operands, DL), VPSingleDefValue(this, UV) {}
 
-  VPSingleDefRecipe(const VPRecipeTy SC, ArrayRef<VPValue *> Operands,
-                    Type *ResultTy, Value *UV = nullptr,
-                    DebugLoc DL = DebugLoc::getUnknown())
+  VPSingleDefRecipe(VPRecipeTy SC, ArrayRef<VPValue *> Operands, Type *ResultTy,
+                    Value *UV = nullptr, DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeBase(SC, Operands, DL), VPSingleDefValue(this, UV, ResultTy) {}
 
   static inline bool classof(const VPRecipeBase *R) {
@@ -1108,12 +1106,12 @@ static_assert(sizeof(VPIRFlags) <= 3, "VPIRFlags should not grow");
 /// A pure-virtual common base class for recipes defining a single VPValue and
 /// using IR flags.
 struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
-  VPRecipeWithIRFlags(const VPRecipeTy SC, ArrayRef<VPValue *> Operands,
+  VPRecipeWithIRFlags(VPRecipeTy SC, ArrayRef<VPValue *> Operands,
                       const VPIRFlags &Flags,
                       DebugLoc DL = DebugLoc::getUnknown())
       : VPSingleDefRecipe(SC, Operands, DL), VPIRFlags(Flags) {}
 
-  VPRecipeWithIRFlags(const VPRecipeTy SC, ArrayRef<VPValue *> Operands,
+  VPRecipeWithIRFlags(VPRecipeTy SC, ArrayRef<VPValue *> Operands,
                       Type *ResultTy, const VPIRFlags &Flags,
                       DebugLoc DL = DebugLoc::getUnknown())
       : VPSingleDefRecipe(SC, Operands, ResultTy, /*UV=*/nullptr, DL),
@@ -1929,7 +1927,7 @@ class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   bool MayHaveSideEffects;
 
 protected:
-  VPWidenIntrinsicRecipe(const VPRecipeTy SC, Intrinsic::ID VectorIntrinsicID,
+  VPWidenIntrinsicRecipe(VPRecipeTy SC, Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
                          const VPIRFlags &Flags = {},
                          const VPIRMetadata &MD = {},
@@ -2427,12 +2425,12 @@ protected:
 class LLVM_ABI_FOR_TEST VPHeaderPHIRecipe : public VPSingleDefRecipe,
                                             public VPPhiAccessors {
 protected:
-  VPHeaderPHIRecipe(const VPRecipeTy VPRecipeID, Instruction *UnderlyingInstr,
+  VPHeaderPHIRecipe(VPRecipeTy VPRecipeID, Instruction *UnderlyingInstr,
                     VPValue *Start, DebugLoc DL = DebugLoc::getUnknown())
       : VPHeaderPHIRecipe(VPRecipeID, UnderlyingInstr, Start,
                           Start->getScalarType(), DL) {}
 
-  VPHeaderPHIRecipe(const VPRecipeTy VPRecipeID, Instruction *UnderlyingInstr,
+  VPHeaderPHIRecipe(VPRecipeTy VPRecipeID, Instruction *UnderlyingInstr,
                     VPValue *Start, Type *ResultTy, DebugLoc DL)
       : VPSingleDefRecipe(VPRecipeID, Start, ResultTy, UnderlyingInstr, DL) {}
 
@@ -2503,13 +2501,13 @@ class VPWidenInductionRecipe : public VPHeaderPHIRecipe {
   InductionDescriptor IndDesc;
 
 public:
-  VPWidenInductionRecipe(const VPRecipeTy Kind, PHINode *IV, VPValue *Start,
+  VPWidenInductionRecipe(VPRecipeTy Kind, PHINode *IV, VPValue *Start,
                          VPValue *Step, const InductionDescriptor &IndDesc,
                          DebugLoc DL)
       : VPWidenInductionRecipe(Kind, IV, Start, Step, IndDesc,
                                Start->getScalarType(), DL) {}
 
-  VPWidenInductionRecipe(const VPRecipeTy Kind, PHINode *IV, VPValue *Start,
+  VPWidenInductionRecipe(VPRecipeTy Kind, PHINode *IV, VPValue *Start,
                          VPValue *Step, const InductionDescriptor &IndDesc,
                          Type *ResultTy, DebugLoc DL)
       : VPHeaderPHIRecipe(Kind, IV, Start, ResultTy, DL), IndDesc(IndDesc) {
@@ -3029,7 +3027,7 @@ class LLVM_ABI_FOR_TEST VPInterleaveBase : public VPRecipeBase,
   bool NeedsMaskForGaps = false;
 
 protected:
-  VPInterleaveBase(const VPRecipeTy SC, const InterleaveGroup<Instruction> *IG,
+  VPInterleaveBase(VPRecipeTy SC, const InterleaveGroup<Instruction> *IG,
                    ArrayRef<VPValue *> Operands,
                    ArrayRef<VPValue *> StoredValues, VPValue *Mask,
                    bool NeedsMaskForGaps, const VPIRMetadata &MD, DebugLoc DL)
@@ -3214,7 +3212,7 @@ class LLVM_ABI_FOR_TEST VPReductionRecipe : public VPRecipeWithIRFlags {
   ReductionStyle Style;
 
 protected:
-  VPReductionRecipe(const VPRecipeTy SC, RecurKind RdxKind, FastMathFlags FMFs,
+  VPReductionRecipe(VPRecipeTy SC, RecurKind RdxKind, FastMathFlags FMFs,
                     Instruction *I, ArrayRef<VPValue *> Operands,
                     VPValue *CondOp, ReductionStyle Style, DebugLoc DL)
       : VPRecipeWithIRFlags(SC, Operands, Operands[0]->getScalarType(), FMFs,
@@ -4370,7 +4368,7 @@ protected:
   /// The VPRecipes held in the order of output instructions to generate.
   RecipeListTy Recipes;
 
-  VPBasicBlock(const VPBlockTy BlockSC, const Twine &Name = "")
+  VPBasicBlock(VPBlockTy BlockSC, const Twine &Name = "")
       : VPBlockBase(BlockSC, Name.str()) {}
 
 public:
