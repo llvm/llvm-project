@@ -28,3 +28,49 @@ define i64 @ptrtoaddr_different(ptr %p, ptr %p2) {
   %sub = sub i64 %i, %j
   ret i64 %sub
 }
+
+define i64 @ptrtoaddr_reuses_dominating_ptrtoint(ptr %p) {
+; CHECK-LABEL: define i64 @ptrtoaddr_reuses_dominating_ptrtoint(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[I:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[A:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[R:%.*]] = add i64 [[I]], [[A]]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %i = ptrtoint ptr %p to i64
+  %a = ptrtoaddr ptr %p to i64
+  %r = add i64 %i, %a
+  ret i64 %r
+}
+
+define i64 @ptrtoint_not_replaced_by_dominating_ptrtoaddr(ptr %p) {
+; CHECK-LABEL: define i64 @ptrtoint_not_replaced_by_dominating_ptrtoaddr(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[I:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[R:%.*]] = add i64 [[A]], [[I]]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %a = ptrtoaddr ptr %p to i64
+  %i = ptrtoint ptr %p to i64
+  %r = add i64 %a, %i
+  ret i64 %r
+}
+
+; A ptrtoaddr to a narrower type than the dominating ptrtoint is not a
+; replacement candidate (different values).
+define i64 @ptrtoaddr_wrong_type(ptr %p) {
+; CHECK-LABEL: define i64 @ptrtoaddr_wrong_type(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[I:%.*]] = ptrtoint ptr [[P]] to i32
+; CHECK-NEXT:    [[A:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[R:%.*]] = add i64 [[Z]], [[A]]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %i = ptrtoint ptr %p to i32
+  %a = ptrtoaddr ptr %p to i64
+  %z = zext i32 %i to i64
+  %r = add i64 %z, %a
+  ret i64 %r
+}

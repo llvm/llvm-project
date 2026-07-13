@@ -237,7 +237,7 @@ void test_no_node_after_bug(FILE *fp, size_t size, size_t n, void *buf) {
 // This is one test case for the ARR38-C SEI-CERT rule.
 void ARR38_C_F(FILE *file) {
   enum { BUFFER_SIZE = 1024 };
-  wchar_t wbuf[BUFFER_SIZE]; // bugpath-note{{'wbuf' initialized here}}
+  wchar_t wbuf[BUFFER_SIZE]; // bugpath-note{{'wbuf' declared without an initial value}}
 
   const size_t size = sizeof(*wbuf);   // bugpath-note{{'size' initialized to}}
   const size_t nitems = sizeof(wbuf);  // bugpath-note{{'nitems' initialized to}}
@@ -287,7 +287,7 @@ void test_arg_constraint_on_variadic_fun(void) {
 
 int __buf_size_arg_constraint(const void *, size_t);
 void test_buf_size_concrete(void) {
-  char buf[3];                       // bugpath-note{{'buf' initialized here}}
+  char buf[3];                       // bugpath-note{{'buf' declared without an initial value}}
   __buf_size_arg_constraint(buf, 4); // \
   // report-warning{{The 1st argument to '__buf_size_arg_constraint' is a buffer with size 3 but should be a buffer with size equal to or greater than the value of the 2nd argument (which is 4)}} \
   // bugpath-warning{{The 1st argument to '__buf_size_arg_constraint' is a buffer with size 3 but should be a buffer with size equal to or greater than the value of the 2nd argument (which is 4)}} \
@@ -314,7 +314,7 @@ void test_buf_size_symbolic_and_offset(int s) {
 
 int __buf_size_arg_constraint_mul(const void *, size_t, size_t);
 void test_buf_size_concrete_with_multiplication(void) {
-  short buf[3];                                         // bugpath-note{{'buf' initialized here}}
+  short buf[3];                                         // bugpath-note{{'buf' declared without an initial value}}
   __buf_size_arg_constraint_mul(buf, 4, sizeof(short)); // \
   // report-warning{{The 1st argument to '__buf_size_arg_constraint_mul' is a buffer with size 6 but should be a buffer with size equal to or greater than the value of the 2nd argument (which is 4) times the 3rd argument (which is 2)}} \
   // bugpath-warning{{The 1st argument to '__buf_size_arg_constraint_mul' is a buffer with size 6 but should be a buffer with size equal to or greater than the value of the 2nd argument (which is 4) times the 3rd argument (which is 2)}} \
@@ -340,7 +340,7 @@ void test_buf_size_symbolic_and_offset_with_multiplication(size_t s) {
 // The minimum buffer size for this function is set to 10.
 int __buf_size_arg_constraint_concrete(const void *);
 void test_min_buf_size(void) {
-  char buf[9];// bugpath-note{{'buf' initialized here}}
+  char buf[9];// bugpath-note{{'buf' declared without an initial value}}
   __buf_size_arg_constraint_concrete(buf); // \
   // report-warning{{The 1st argument to '__buf_size_arg_constraint_concrete' is a buffer with size 9 but should be a buffer with size equal to or greater than 10}} \
   // bugpath-warning{{The 1st argument to '__buf_size_arg_constraint_concrete' is a buffer with size 9 but should be a buffer with size equal to or greater than 10}} \

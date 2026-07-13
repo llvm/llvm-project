@@ -538,24 +538,35 @@ defset list<VTypeInfoToFraction> AllFractionableVF8IntVectors = {
   def : VTypeInfoToFraction<VI64M8, VI8M1>;
 }
 
-defset list<VTypeInfoToWide> AllWidenableIntToFloatVectors = {
-  def : VTypeInfoToWide<VI8MF8, VF16MF4>;
-  def : VTypeInfoToWide<VI8MF4, VF16MF2>;
-  def : VTypeInfoToWide<VI8MF2, VF16M1>;
-  def : VTypeInfoToWide<VI8M1, VF16M2>;
-  def : VTypeInfoToWide<VI8M2, VF16M4>;
-  def : VTypeInfoToWide<VI8M4, VF16M8>;
+defset list<VTypeInfoToWide> AllWidenableIntToFloatAndBF16Vectors = {
+  defset list<VTypeInfoToWide> AllWidenableIntToFloatVectors = {
+    def : VTypeInfoToWide<VI8MF8, VF16MF4>;
+    def : VTypeInfoToWide<VI8MF4, VF16MF2>;
+    def : VTypeInfoToWide<VI8MF2, VF16M1>;
+    def : VTypeInfoToWide<VI8M1, VF16M2>;
+    def : VTypeInfoToWide<VI8M2, VF16M4>;
+    def : VTypeInfoToWide<VI8M4, VF16M8>;
 
-  def : VTypeInfoToWide<VI16MF4, VF32MF2>;
-  def : VTypeInfoToWide<VI16MF2, VF32M1>;
-  def : VTypeInfoToWide<VI16M1, VF32M2>;
-  def : VTypeInfoToWide<VI16M2, VF32M4>;
-  def : VTypeInfoToWide<VI16M4, VF32M8>;
+    def : VTypeInfoToWide<VI16MF4, VF32MF2>;
+    def : VTypeInfoToWide<VI16MF2, VF32M1>;
+    def : VTypeInfoToWide<VI16M1, VF32M2>;
+    def : VTypeInfoToWide<VI16M2, VF32M4>;
+    def : VTypeInfoToWide<VI16M4, VF32M8>;
 
-  def : VTypeInfoToWide<VI32MF2, VF64M1>;
-  def : VTypeInfoToWide<VI32M1, VF64M2>;
-  def : VTypeInfoToWide<VI32M2, VF64M4>;
-  def : VTypeInfoToWide<VI32M4, VF64M8>;
+    def : VTypeInfoToWide<VI32MF2, VF64M1>;
+    def : VTypeInfoToWide<VI32M1, VF64M2>;
+    def : VTypeInfoToWide<VI32M2, VF64M4>;
+    def : VTypeInfoToWide<VI32M4, VF64M8>;
+  }
+
+  defset list<VTypeInfoToWide> AllWidenableIntToBFloatVectors = {
+    def : VTypeInfoToWide<VI8MF8, VBF16MF4>;
+    def : VTypeInfoToWide<VI8MF4, VBF16MF2>;
+    def : VTypeInfoToWide<VI8MF2, VBF16M1>;
+    def : VTypeInfoToWide<VI8M1, VBF16M2>;
+    def : VTypeInfoToWide<VI8M2, VBF16M4>;
+    def : VTypeInfoToWide<VI8M4, VBF16M8>;
+  }
 }
 
 // This class holds the record of the RISCVVPseudoTable below.
@@ -1373,9 +1384,9 @@ class VPseudoBinaryMaskPolicy<VReg RetClass,
   let IncludeInInversePseudoTable = 0;
 }
 
-class VPseudoTernaryMaskPolicy<VReg RetClass,
-                               RegisterClass Op1Class,
-                               DAGOperand Op2Class> :
+class VPseudoReductionMaskPolicy<VReg RetClass,
+                                 VReg Op1Class,
+                                 DAGOperand Op2Class> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
                    (ins GetVRegNoV0<RetClass>.R:$passthru,
                         Op1Class:$rs2, Op2Class:$rs1,
@@ -1390,9 +1401,9 @@ class VPseudoTernaryMaskPolicy<VReg RetClass,
   let IncludeInInversePseudoTable = 0;
 }
 
-class VPseudoTernaryMaskPolicyRoundingMode<VReg RetClass,
-                                           RegisterClass Op1Class,
-                                           DAGOperand Op2Class> :
+class VPseudoReductionMaskPolicyRoundingMode<VReg RetClass,
+                                             VReg Op1Class,
+                                             DAGOperand Op2Class> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
                    (ins GetVRegNoV0<RetClass>.R:$passthru,
                         Op1Class:$rs2, Op2Class:$rs1,
@@ -3138,32 +3149,31 @@ multiclass VPseudoVNSHT_WV_WX_WI {
   }
 }
 
-multiclass VPseudoTernaryWithTailPolicy<VReg RetClass,
-                                          RegisterClass Op1Class,
+multiclass VPseudoReductionWithTailPolicy<VReg RetClass,
+                                          VReg Op1Class,
                                           DAGOperand Op2Class,
                                           LMULInfo MInfo,
                                           int sew> {
   let VLMul = MInfo.value, SEW=sew in {
     defvar mx = MInfo.MX;
     def "_" # mx # "_E" # sew : VPseudoTernaryNoMaskWithPolicy<RetClass, Op1Class, Op2Class>;
-    def "_" # mx # "_E" # sew # "_MASK" : VPseudoTernaryMaskPolicy<RetClass, Op1Class, Op2Class>,
+    def "_" # mx # "_E" # sew # "_MASK" : VPseudoReductionMaskPolicy<RetClass, Op1Class, Op2Class>,
                                           RISCVMaskedPseudo<MaskIdx=3>;
   }
 }
 
-multiclass VPseudoTernaryWithTailPolicyRoundingMode<VReg RetClass,
-                                                    RegisterClass Op1Class,
-                                                    DAGOperand Op2Class,
-                                                    LMULInfo MInfo,
-                                                    int sew> {
+multiclass VPseudoReductionWithTailPolicyRoundingMode<VReg RetClass,
+                                                      VReg Op1Class,
+                                                      DAGOperand Op2Class,
+                                                      LMULInfo MInfo,
+                                                      int sew> {
   let VLMul = MInfo.value, SEW=sew in {
     defvar mx = MInfo.MX;
     def "_" # mx # "_E" # sew
         : VPseudoTernaryNoMaskWithPolicyRoundingMode<RetClass, Op1Class,
                                                      Op2Class>;
     def "_" # mx # "_E" # sew # "_MASK"
-        : VPseudoTernaryMaskPolicyRoundingMode<RetClass, Op1Class,
-                                               Op2Class>,
+        : VPseudoReductionMaskPolicyRoundingMode<RetClass, Op1Class, Op2Class>,
           RISCVMaskedPseudo<MaskIdx=3>;
   }
 }
@@ -3432,7 +3442,7 @@ multiclass VPseudoVRED_VS {
   foreach m = MxList in {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx>.val in {
-      defm _VS : VPseudoTernaryWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
+      defm _VS : VPseudoReductionWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
                  SchedReduction<"WriteVIRedV_From", "ReadVIRedV", mx, e>;
     }
   }
@@ -3442,7 +3452,7 @@ multiclass VPseudoVREDMINMAX_VS {
   foreach m = MxList in {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx>.val in {
-      defm _VS : VPseudoTernaryWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
+      defm _VS : VPseudoReductionWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
                  SchedReduction<"WriteVIRedMinMaxV_From", "ReadVIRedV", mx, e>;
     }
   }
@@ -3452,7 +3462,7 @@ multiclass VPseudoVWRED_VS {
   foreach m = MxListWRed in {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx, isWidening=1>.val in {
-      defm _VS : VPseudoTernaryWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
+      defm _VS : VPseudoReductionWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
                  SchedReduction<"WriteVIWRedV_From", "ReadVIWRedV", mx, e>;
     }
   }
@@ -3463,7 +3473,7 @@ multiclass VPseudoVFRED_VS_RM {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx, isF=1>.val in {
       defm _VS
-          : VPseudoTernaryWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
+          : VPseudoReductionWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
                                                      V_M1.vrclass, m, e>,
             SchedReduction<"WriteVFRedV_From", "ReadVFRedV", mx, e>;
     }
@@ -3474,7 +3484,7 @@ multiclass VPseudoVFREDMINMAX_VS {
   foreach m = MxListF in {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx, isF=1>.val in {
-      defm _VS : VPseudoTernaryWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
+      defm _VS : VPseudoReductionWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
                  SchedReduction<"WriteVFRedMinMaxV_From", "ReadVFRedV", mx, e>;
     }
   }
@@ -3484,7 +3494,7 @@ multiclass VPseudoVFREDO_VS_RM {
   foreach m = MxListF in {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx, isF=1>.val in {
-      defm _VS : VPseudoTernaryWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
+      defm _VS : VPseudoReductionWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
                                                           V_M1.vrclass, m, e>,
                  SchedReduction<"WriteVFRedOV_From", "ReadVFRedOV", mx, e>;
     }
@@ -3496,7 +3506,7 @@ multiclass VPseudoVFWRED_VS_RM {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx, isF=1, isWidening=1>.val in {
       defm _VS
-          : VPseudoTernaryWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
+          : VPseudoReductionWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
                                                      V_M1.vrclass, m, e>,
             SchedReduction<"WriteVFWRedV_From", "ReadVFWRedV", mx, e>;
     }
@@ -3508,7 +3518,7 @@ multiclass VPseudoVFWREDO_VS_RM {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx, isF=1, isWidening=1>.val in {
       defm _VS
-          : VPseudoTernaryWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
+          : VPseudoReductionWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
                                                      V_M1.vrclass, m, e>,
             SchedReduction<"WriteVFWRedOV_From", "ReadVFWRedV", mx, e>;
     }
@@ -4827,9 +4837,13 @@ multiclass VPatConversionRTZ<string intrinsic,
 
 multiclass VPatBinaryV_VV<string intrinsic, string instruction,
                           list<VTypeInfo> vtilist, bit isSEWAware = 0,
-                          list<Predicate> ExtraPreds = []> {
+                          list<Predicate> ExtraPreds = [],
+                          bit requireMinimal = false> {
   foreach vti = vtilist in
-    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
+    let Predicates = !listconcat(ExtraPreds,
+                                 !if(requireMinimal,
+                                     GetVTypeMinimalPredicates<vti>.Predicates,
+                                     GetVTypePredicates<vti>.Predicates)) in
     defm : VPatBinary<intrinsic,
                       !if(isSEWAware,
                           instruction # "_VV_" # vti.LMul.MX # "_E" # vti.SEW,
@@ -4975,13 +4989,18 @@ multiclass VPatBinaryM_MM<string intrinsic, string instruction> {
 
 multiclass VPatBinaryW_VV<string intrinsic, string instruction,
                           list<VTypeInfoToWide> vtilist,
-                          list<Predicate> ExtraPreds = []> {
+                          list<Predicate> ExtraPreds = [],
+                          bit requireMinimal = false> {
   foreach VtiToWti = vtilist in {
     defvar Vti = VtiToWti.Vti;
     defvar Wti = VtiToWti.Wti;
     let Predicates = !listconcat(ExtraPreds,
-                                 GetVTypePredicates<Vti>.Predicates,
-                                 GetVTypePredicates<Wti>.Predicates) in
+                                 !if(requireMinimal,
+                                     GetVTypeMinimalPredicates<Vti>.Predicates,
+                                     GetVTypePredicates<Vti>.Predicates),
+                                 !if(requireMinimal,
+                                     GetVTypeMinimalPredicates<Wti>.Predicates,
+                                     GetVTypePredicates<Wti>.Predicates)) in
     defm : VPatBinary<intrinsic, instruction # "_VV_" # Vti.LMul.MX,
                       Wti.Vector, Vti.Vector, Vti.Vector, Vti.Mask,
                       Vti.Log2SEW, Wti.RegClass,

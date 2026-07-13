@@ -11,16 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class ThreadStateTestCase(TestBase):
-    @expectedFailureAll(
-        oslist=["linux"],
-        bugnumber="llvm.org/pr15824 thread states not properly maintained",
-    )
-    @skipIfDarwin  # llvm.org/pr15824 thread states not properly maintained and <rdar://problem/28557237>
-    @expectedFailureAll(
-        oslist=["freebsd"],
-        bugnumber="llvm.org/pr18190 thread states not properly maintained",
-    )
-    @expectedFailureNetBSD
     def test_state_after_breakpoint(self):
         """Test thread state after breakpoint."""
         self.build()
@@ -37,24 +27,20 @@ class ThreadStateTestCase(TestBase):
 
     @skipIfDarwin  # 'llvm.org/pr23669', cause Python crash randomly
     @expectedFailureDarwin("llvm.org/pr23669")
-    @expectedFailureNetBSD
     # This actually passes on Windows on Arm but it's hard to describe that
     # and xfail it everywhere else.
     @skipIfWindows
-    # thread states not properly maintained
-    @unittest.expectedFailure  # llvm.org/pr16712
     def test_state_after_expression(self):
         """Test thread state after expression."""
         self.build()
         self.thread_state_after_expression_test()
 
-    # thread states not properly maintained
-    @unittest.expectedFailure  # llvm.org/pr15824 and <rdar://problem/28557237>
+    @skipIfDarwin  # rdar://28557237
+    @skipIfLinux  # llvm.org/pr15824 process interrupt stop reason is trace instead of signal sometimes
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly",
     )
-    @skipIfDarwin  # llvm.org/pr15824 thread states not properly maintained and <rdar://problem/28557237>
     @expectedFailureNetBSD
     def test_process_state(self):
         """Test thread states (comprehensive)."""
@@ -190,7 +176,6 @@ class ThreadStateTestCase(TestBase):
         oslist=["windows"],
         bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly",
     )
-    @skipIfDarwin  # llvm.org/pr15824 thread states not properly maintained and <rdar://problem/28557237>
     @no_debug_info_test
     def test_process_interrupt(self):
         """Test process interrupt and continue."""
@@ -288,7 +273,7 @@ class ThreadStateTestCase(TestBase):
         # Stop the process
         self.runCmd("process interrupt")
 
-        self.assertStopReason(thread.GetState(), lldb.eStopReasonSignal)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonSignal)
 
         # Check the thread state
         self.assertTrue(
@@ -311,12 +296,12 @@ class ThreadStateTestCase(TestBase):
             "Thread state is 'suspended' after expression evaluation.",
         )
 
-        self.assertStopReason(thread.GetState(), lldb.eStopReasonSignal)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonSignal)
 
         # Run to breakpoint 2
         self.runCmd("continue")
 
-        self.assertStopReason(thread.GetState(), lldb.eStopReasonBreakpoint)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonBreakpoint)
 
         # Make sure both threads are stopped
         self.assertTrue(

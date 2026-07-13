@@ -150,6 +150,8 @@ static llvm::ManagedStatic<IndexErrorCategory> Category;
 static std::string getLangDescription(const LangOptions &LO) {
   if (!LO.CPlusPlus)
     return "non-C++";
+  if (LO.CPlusPlus29)
+    return "C++29";
   if (LO.CPlusPlus26)
     return "C++26";
   if (LO.CPlusPlus23)
@@ -257,7 +259,7 @@ static bool hasBodyOrInit(const FunctionDecl *D, const FunctionDecl *&DefD) {
 static bool hasBodyOrInit(const VarDecl *D, const VarDecl *&DefD) {
   return D->getAnyInitializer(DefD);
 }
-template <typename T> static bool hasBodyOrInit(const T *D) {
+template <typename T> [[maybe_unused]] static bool hasBodyOrInit(const T *D) {
   const T *Unused;
   return hasBodyOrInit(D, Unused);
 }
@@ -773,7 +775,8 @@ parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle,
 
   for (auto &NextMapping : *Mappings) {
     /// The keys should be strings, which represent a source-file path.
-    auto *Key = dyn_cast<llvm::yaml::ScalarNode>(NextMapping.getKey());
+    auto *Key =
+        dyn_cast_if_present<llvm::yaml::ScalarNode>(NextMapping.getKey());
     if (!Key)
       return WrongFormatError(NextMapping.getKey());
 
@@ -792,7 +795,8 @@ parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle,
 
     /// The values should be sequences of strings, each representing a part of
     /// the invocation.
-    auto *Args = dyn_cast<llvm::yaml::SequenceNode>(NextMapping.getValue());
+    auto *Args =
+        dyn_cast_if_present<llvm::yaml::SequenceNode>(NextMapping.getValue());
     if (!Args)
       return WrongFormatError(NextMapping.getValue());
 

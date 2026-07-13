@@ -22,8 +22,8 @@ define amdgpu_kernel void @clmem_read_simplified(ptr addrspace(1)  %buffer) {
 ; GFX8-NEXT:    s_addc_u32 s1, s1, _Z13get_global_idj@gotpcrel32@hi+12
 ; GFX8-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x24
 ; GFX8-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
-; GFX8-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GFX8-NEXT:    v_mov_b32_e32 v31, v0
+; GFX8-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GFX8-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX8-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-NEXT:    s_mov_b32 s32, 0
@@ -361,8 +361,8 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX8-NEXT:    s_addc_u32 s1, s1, _Z13get_global_idj@gotpcrel32@hi+12
 ; GFX8-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x24
 ; GFX8-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
-; GFX8-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GFX8-NEXT:    v_mov_b32_e32 v31, v0
+; GFX8-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GFX8-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX8-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-NEXT:    s_mov_b32 s32, 0
@@ -379,8 +379,8 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    s_movk_i32 s0, 0x2800
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
-; GFX8-NEXT:    v_mov_b32_e32 v6, 0
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_mov_b32_e32 v6, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v7, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v11, 0x7f
 ; GFX8-NEXT:    s_movk_i32 s1, 0x800
@@ -390,8 +390,8 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX8-NEXT:  .LBB1_1: ; %for.cond.preheader
 ; GFX8-NEXT:    ; =>This Loop Header: Depth=1
 ; GFX8-NEXT:    ; Child Loop BB1_2 Depth 2
-; GFX8-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX8-NEXT:    s_mov_b32 s5, 0
+; GFX8-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX8-NEXT:  .LBB1_2: ; %for.body
 ; GFX8-NEXT:    ; Parent Loop BB1_1 Depth=1
@@ -505,8 +505,8 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX900-NEXT:    v_add_co_u32_e32 v0, vcc, s34, v0
 ; GFX900-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX900-NEXT:    v_add_co_u32_e32 v0, vcc, 0x2800, v0
-; GFX900-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX900-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX900-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX900-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX900-NEXT:    v_mov_b32_e32 v7, 0x7f
 ; GFX900-NEXT:    s_movk_i32 s2, 0xf000
@@ -1040,8 +1040,8 @@ define amdgpu_kernel void @Address32(ptr addrspace(1) %buffer) {
 ; GFX8-NEXT:    s_addc_u32 s1, s1, _Z13get_global_idj@gotpcrel32@hi+12
 ; GFX8-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x24
 ; GFX8-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
-; GFX8-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GFX8-NEXT:    v_mov_b32_e32 v31, v0
+; GFX8-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GFX8-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX8-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-NEXT:    s_mov_b32 s32, 0
@@ -1361,8 +1361,8 @@ define amdgpu_kernel void @Offset64(ptr addrspace(1)  %buffer) {
 ; GFX8-NEXT:    s_addc_u32 s1, s1, _Z13get_global_idj@gotpcrel32@hi+12
 ; GFX8-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x24
 ; GFX8-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
-; GFX8-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GFX8-NEXT:    v_mov_b32_e32 v31, v0
+; GFX8-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GFX8-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX8-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-NEXT:    s_mov_b32 s32, 0
@@ -1587,8 +1587,8 @@ define amdgpu_kernel void @p32Offset64(ptr addrspace(1)  %buffer) {
 ; GFX8-NEXT:    s_addc_u32 s1, s1, _Z13get_global_idj@gotpcrel32@hi+12
 ; GFX8-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x24
 ; GFX8-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
-; GFX8-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GFX8-NEXT:    v_mov_b32_e32 v31, v0
+; GFX8-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GFX8-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX8-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-NEXT:    s_mov_b32 s32, 0
@@ -1796,8 +1796,8 @@ define amdgpu_kernel void @DiffBase(ptr addrspace(1) %buffer1,
 ; GFX8-NEXT:    s_addc_u32 s1, s1, _Z13get_global_idj@gotpcrel32@hi+12
 ; GFX8-NEXT:    s_load_dwordx4 s[36:39], s[4:5], 0x24
 ; GFX8-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
-; GFX8-NEXT:    s_mov_b64 s[0:1], s[48:49]
 ; GFX8-NEXT:    v_mov_b32_e32 v31, v0
+; GFX8-NEXT:    s_mov_b64 s[0:1], s[48:49]
 ; GFX8-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; GFX8-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-NEXT:    s_mov_b32 s32, 0
@@ -2072,8 +2072,8 @@ define amdgpu_kernel void @ReverseOrder(ptr addrspace(1) %buffer) {
 ; GFX8-NEXT:    s_addc_u32 s1, s1, _Z13get_global_idj@gotpcrel32@hi+12
 ; GFX8-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x24
 ; GFX8-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
-; GFX8-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GFX8-NEXT:    v_mov_b32_e32 v31, v0
+; GFX8-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GFX8-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX8-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-NEXT:    s_mov_b32 s32, 0
@@ -2414,8 +2414,8 @@ define hidden amdgpu_kernel void @negativeoffset(ptr addrspace(1) nocapture %buf
 ; GFX8-NEXT:    s_addc_u32 s1, s1, _Z13get_global_idj@gotpcrel32@hi+12
 ; GFX8-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x24
 ; GFX8-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
-; GFX8-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GFX8-NEXT:    v_mov_b32_e32 v31, v0
+; GFX8-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GFX8-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX8-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-NEXT:    s_mov_b32 s32, 0
@@ -2694,4 +2694,4 @@ end:
 }
 
 
-attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="fiji" }
+attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

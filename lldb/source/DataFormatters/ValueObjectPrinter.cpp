@@ -186,7 +186,7 @@ void ValueObjectPrinter::SetupMostSpecializedValue() {
 const char *ValueObjectPrinter::GetRootNameForDisplay() {
   const char *root_valobj_name =
       m_options.m_root_valobj_name.empty()
-          ? GetMostSpecializedValue().GetName().AsCString()
+          ? GetMostSpecializedValue().GetName().AsCString(nullptr)
           : m_options.m_root_valobj_name.c_str();
   return root_valobj_name ? root_valobj_name : "";
 }
@@ -452,7 +452,7 @@ bool ValueObjectPrinter::PrintValueAndSummaryIfNeeded(bool &value_printed,
       }
 
       error_printed = true;
-      m_stream->Printf(" <%s>\n", m_error.c_str());
+      m_stream->Printf(" <%s>", m_error.c_str());
     } else {
       // Make sure we have a value and make sure the summary didn't specify
       // that the value should not be printed - and do not print the value if

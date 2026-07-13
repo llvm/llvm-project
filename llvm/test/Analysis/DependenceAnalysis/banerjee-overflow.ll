@@ -11,8 +11,6 @@
 ;     A[i + j - 5] = 1;
 ;   }
 ;
-; FIXME: DependenceAnalysis fails to detect dependency between two stores.
-;
 ; memory accesses                     | (i,j) == (0,4611686018427387905)
 ; ------------------------------------|----------------------------------
 ; A[i - j + 9223372036854775805]      | A[4611686018427387900]
@@ -23,7 +21,7 @@ define void @banerjee_delta_ovfl(ptr %A) {
 ; CHECK-NEXT:  Src: store i8 0, ptr %arrayidx1, align 8 --> Dst: store i8 0, ptr %arrayidx1, align 8
 ; CHECK-NEXT:    da analyze - output [* *]!
 ; CHECK-NEXT:  Src: store i8 0, ptr %arrayidx1, align 8 --> Dst: store i8 0, ptr %arrayidx2, align 8
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [* *|<]!
 ; CHECK-NEXT:  Src: store i8 0, ptr %arrayidx2, align 8 --> Dst: store i8 0, ptr %arrayidx2, align 8
 ; CHECK-NEXT:    da analyze - output [* *]!
 ;

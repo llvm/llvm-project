@@ -592,14 +592,6 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   case RISCV::VABS_V:
   case RISCV::VABD_VV:
   case RISCV::VABDU_VV:
-
-  // XRivosVizip
-  case RISCV::RI_VZIPEVEN_VV:
-  case RISCV::RI_VZIPODD_VV:
-  case RISCV::RI_VZIP2A_VV:
-  case RISCV::RI_VZIP2B_VV:
-  case RISCV::RI_VUNZIP2A_VV:
-  case RISCV::RI_VUNZIP2B_VV:
     return MILog2SEW;
 
   // Vector Widening Shift Left Logical (Zvbb)
@@ -1277,8 +1269,9 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI,
     });
     if (VLMI->getParent() == MI.getParent() &&
         all_of(UsesSameBB, VLDominates) &&
-        RISCVInstrInfo::isSafeToMove(MI, *VLMI->getNextNode())) {
-      MI.moveBefore(VLMI->getNextNode());
+        RISCVInstrInfo::isSafeToMove(MI, std::next(VLMI->getIterator()))) {
+      VLMI->getParent()->splice(std::next(VLMI->getIterator()), MI.getParent(),
+                                MI.getIterator());
     } else {
       LLVM_DEBUG(dbgs() << "  Abort due to VL not dominating.\n");
       return false;

@@ -10,11 +10,11 @@ entry:
   %cmp1 = icmp sgt i32 %n, 0
   br i1 %cmp1, label %for.body.preheader, label %for.end
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %n to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %0 = trunc i64 %indvars.iv to i32
@@ -23,10 +23,10 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp ne i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.body, label %for.end.loopexit, !llvm.loop !1
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -37,11 +37,11 @@ entry:
   %cmp1 = icmp sgt i32 %n, 0
   br i1 %cmp1, label %for.body.preheader, label %for.end
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %n to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %0 = trunc i64 %indvars.iv to i32
@@ -50,10 +50,10 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp ne i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.body, label %for.end.loopexit, !llvm.loop !3
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -64,11 +64,11 @@ entry:
   %cmp1 = icmp sgt i32 %n, 0
   br i1 %cmp1, label %for.body.preheader, label %for.end
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %n to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %0 = trunc i64 %indvars.iv to i32
@@ -77,10 +77,10 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp ne i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.body, label %for.end.loopexit, !llvm.loop !6
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 

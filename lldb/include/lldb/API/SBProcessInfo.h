@@ -53,6 +53,13 @@ public:
   /// Return the target triple (arch-vendor-os) for the described process.
   const char *GetTriple();
 
+  /// Returns the number of command line arguments for the described process.
+  uint32_t GetNumArguments() const;
+
+  /// Returns the command line argument at the given index, or `nullptr` if
+  /// the index is out of range or if the process info is invalid..
+  const char *GetArgumentAtIndex(uint32_t idx) const;
+
 private:
   friend class SBProcess;
   friend class SBProcessInfoList;

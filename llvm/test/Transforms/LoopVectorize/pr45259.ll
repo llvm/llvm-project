@@ -41,7 +41,7 @@ define i8 @widget(ptr %arr, i8 %t9) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP11:%.*]] = add <4 x i8> [[VEC_IND]], splat (i8 1)
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i8> [[TMP11]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i8> [[TMP11]], i64 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i8 [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp slt <4 x i8> [[TMP11]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = zext <4 x i1> [[TMP14]] to <4 x i8>

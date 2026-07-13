@@ -9,7 +9,7 @@
 
 // CHECK-LABEL: test_int
 bool test_int(int expr) {
-  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func i1 @llvm.spv.wave.all.equal.i32(i32
+  // CHECK-SPIRV:  %[[RET:.*]] = call i1 @llvm.spv.wave.all.equal.i32(i32
   // CHECK-DXIL:  %[[RET:.*]] = call i1 @llvm.dx.wave.all.equal.i32(i32
   // CHECK:  ret i1 %[[RET]]
   return WaveActiveAllEqual(expr);
@@ -20,7 +20,7 @@ bool test_int(int expr) {
 
 // CHECK-LABEL: test_uint64_t
 bool test_uint64_t(uint64_t expr) {
-  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func i1 @llvm.spv.wave.all.equal.i64(i64 
+  // CHECK-SPIRV:  %[[RET:.*]] = call i1 @llvm.spv.wave.all.equal.i64(i64 
   // CHECK-DXIL:  %[[RET:.*]] = call i1 @llvm.dx.wave.all.equal.i64(i64
   // CHECK:  ret i1 %[[RET]]
   return WaveActiveAllEqual(expr);
@@ -33,7 +33,7 @@ bool test_uint64_t(uint64_t expr) {
 
 // CHECK-LABEL: test_floatv4
 bool4 test_floatv4(float4 expr) {
-  // CHECK-SPIRV:  %[[RET1:.*]] = call spir_func <4 x i1> @llvm.spv.wave.all.equal.v4f32(<4 x float> 
+  // CHECK-SPIRV:  %[[RET1:.*]] = call <4 x i1> @llvm.spv.wave.all.equal.v4f32(<4 x float> 
   // CHECK-DXIL:  %[[RET1:.*]] = call <4 x i1> @llvm.dx.wave.all.equal.v4f32(<4 x float> 
   // CHECK:  ret <4 x i1> %[[RET1]]
   return WaveActiveAllEqual(expr);

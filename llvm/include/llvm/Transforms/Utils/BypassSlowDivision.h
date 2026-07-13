@@ -46,14 +46,6 @@ template <> struct DenseMapInfo<DivRemMapKey> {
            Val1.Divisor == Val2.Divisor;
   }
 
-  static DivRemMapKey getEmptyKey() {
-    return DivRemMapKey(false, nullptr, nullptr);
-  }
-
-  static DivRemMapKey getTombstoneKey() {
-    return DivRemMapKey(true, nullptr, nullptr);
-  }
-
   static unsigned getHashValue(const DivRemMapKey &Val) {
     return (unsigned)(reinterpret_cast<uintptr_t>(
                           static_cast<Value *>(Val.Dividend)) ^
@@ -68,9 +60,10 @@ template <> struct DenseMapInfo<DivRemMapKey> {
 ///
 /// This optimization may add basic blocks immediately after BB; for obvious
 /// reasons, you shouldn't pass those blocks to bypassSlowDivision.
-bool bypassSlowDivision(BasicBlock *BB,
-                        const DenseMap<unsigned int, unsigned int> &BypassWidth,
-                        DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr);
+LLVM_ABI bool
+bypassSlowDivision(BasicBlock *BB,
+                   const DenseMap<unsigned int, unsigned int> &BypassWidth,
+                   DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr);
 
 } // end namespace llvm
 

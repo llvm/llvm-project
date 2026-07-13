@@ -26,11 +26,14 @@ jobs:
   build-and-push:
     runs-on: ubuntu-24.04
     if: github.repository_owner == 'llvm'
+    strategy:
+      matrix:
+        image_name: ['libcxx-linux-builder-base', 'libcxx-linux-builder', 'libcxx-android-builder']
     permissions:
       packages: write
 
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         persist-credentials: false
 
@@ -42,30 +45,20 @@ jobs:
         echo '{ "data-root": "/mnt/docker" }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker
 
-    - name: Build the base image
-      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build libcxx-linux-builder-base
-      env:
-        TAG: ${{ github.sha }}
-
-    - name: Build the Linux Github Actions image
-      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build libcxx-linux-builder
-      env:
-        TAG: ${{ github.sha }}
-
-    - name: Build the Android builder image
-      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build libcxx-android-builder
+    - name: Build the image
+      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build "${{ matrix.image_name }}"
       env:
         TAG: ${{ github.sha }}
 
     - name: Log in to GitHub Container Registry
-      uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+      uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Push the images
+    - name: Push the image
       if: github.event_name == 'push'
-      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml push libcxx-linux-builder-base libcxx-linux-builder libcxx-android-builder
+      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml push "${{ matrix.image_name }}"
       env:
         TAG: ${{ github.sha }}

@@ -176,8 +176,8 @@ bool SymbolFileCTF::ParseHeader() {
 
     if (zstr.total_out != decompressed_size) {
       LLDB_LOG(log,
-               "CTF parsing failed: decompressed size ({0}) doesn't match "
-               "expected size ([1})",
+               "CTF parsing failed: decompressed size ({}) doesn't match "
+               "expected size ({})",
                zstr.total_out, decompressed_size);
       return false;
     }
@@ -902,9 +902,10 @@ size_t SymbolFileCTF::ParseObjects(CompileUnit &comp_unit) {
 
       lldb::user_id_t variable_type_uid = m_variables.size();
       m_variables.emplace_back(std::make_shared<Variable>(
-          variable_type_uid, symbol->GetName().AsCString(),
-          symbol->GetName().AsCString(), type_sp, eValueTypeVariableGlobal,
-          m_comp_unit_sp.get(), ranges, &decl, location, symbol->IsExternal(),
+          variable_type_uid, symbol->GetName().AsCString(nullptr),
+          symbol->GetName().AsCString(nullptr), type_sp,
+          eValueTypeVariableGlobal, m_comp_unit_sp.get(), ranges, &decl,
+          location, symbol->IsExternal(),
           /*artificial=*/false,
           /*location_is_constant_data*/ false));
     }

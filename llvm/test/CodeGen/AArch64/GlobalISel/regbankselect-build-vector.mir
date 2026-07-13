@@ -15,15 +15,15 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:gpr(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(s16) = COPY [[TRUNC]](s16)
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr(s16) = COPY [[TRUNC]](s16)
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:fpr(s16) = COPY [[TRUNC]](s16)
-    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:fpr(s16) = COPY [[TRUNC]](s16)
-    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:fpr(s16) = COPY [[TRUNC]](s16)
-    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:fpr(s16) = COPY [[TRUNC]](s16)
-    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:fpr(s16) = COPY [[TRUNC]](s16)
-    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:fpr(s16) = COPY [[TRUNC]](s16)
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:fpr(<8 x s16>) = G_BUILD_VECTOR [[COPY1]](s16), [[COPY2]](s16), [[COPY3]](s16), [[COPY4]](s16), [[COPY5]](s16), [[COPY6]](s16), [[COPY7]](s16), [[COPY8]](s16)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(i16) = COPY [[TRUNC]](s16)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr(i16) = COPY [[TRUNC]](s16)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:fpr(i16) = COPY [[TRUNC]](s16)
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:fpr(i16) = COPY [[TRUNC]](s16)
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:fpr(i16) = COPY [[TRUNC]](s16)
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:fpr(i16) = COPY [[TRUNC]](s16)
+    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:fpr(i16) = COPY [[TRUNC]](s16)
+    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:fpr(i16) = COPY [[TRUNC]](s16)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:fpr(<8 x s16>) = G_BUILD_VECTOR [[COPY1]](i16), [[COPY2]](i16), [[COPY3]](i16), [[COPY4]](i16), [[COPY5]](i16), [[COPY6]](i16), [[COPY7]](i16), [[COPY8]](i16)
     ; CHECK-NEXT: $q0 = COPY [[BUILD_VECTOR]](<8 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(s32) = COPY $w0
@@ -44,24 +44,24 @@ body:             |
     ; They're all constant, so we can select it via a constant-pool load if needed
     ; and this form is more amenable to selection by patterns (without x-bank copies).
     ; CHECK-LABEL: name: g_constant_operands_on_gpr
-    ; CHECK: [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 4
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:gpr(s8) = G_TRUNC [[C]](s32)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 10
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:gpr(s8) = G_TRUNC [[C1]](s32)
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 3
-    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:gpr(s8) = G_TRUNC [[C2]](s32)
-    ; CHECK-NEXT: [[C3:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 11
-    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:gpr(s8) = G_TRUNC [[C3]](s32)
-    ; CHECK-NEXT: [[C4:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 15
-    ; CHECK-NEXT: [[TRUNC4:%[0-9]+]]:gpr(s8) = G_TRUNC [[C4]](s32)
-    ; CHECK-NEXT: [[C5:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 44
-    ; CHECK-NEXT: [[TRUNC5:%[0-9]+]]:gpr(s8) = G_TRUNC [[C5]](s32)
-    ; CHECK-NEXT: [[C6:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 22
-    ; CHECK-NEXT: [[TRUNC6:%[0-9]+]]:gpr(s8) = G_TRUNC [[C6]](s32)
-    ; CHECK-NEXT: [[C7:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 19
-    ; CHECK-NEXT: [[TRUNC7:%[0-9]+]]:gpr(s8) = G_TRUNC [[C7]](s32)
-    ; CHECK-NEXT: [[C8:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 55
-    ; CHECK-NEXT: [[TRUNC8:%[0-9]+]]:gpr(s8) = G_TRUNC [[C8]](s32)
+    ; CHECK: [[C:%[0-9]+]]:gpr(i32) = G_CONSTANT i32 4
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:gpr(s8) = G_TRUNC [[C]](i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:gpr(i32) = G_CONSTANT i32 10
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:gpr(s8) = G_TRUNC [[C1]](i32)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:gpr(i32) = G_CONSTANT i32 3
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:gpr(s8) = G_TRUNC [[C2]](i32)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:gpr(i32) = G_CONSTANT i32 11
+    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:gpr(s8) = G_TRUNC [[C3]](i32)
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:gpr(i32) = G_CONSTANT i32 15
+    ; CHECK-NEXT: [[TRUNC4:%[0-9]+]]:gpr(s8) = G_TRUNC [[C4]](i32)
+    ; CHECK-NEXT: [[C5:%[0-9]+]]:gpr(i32) = G_CONSTANT i32 44
+    ; CHECK-NEXT: [[TRUNC5:%[0-9]+]]:gpr(s8) = G_TRUNC [[C5]](i32)
+    ; CHECK-NEXT: [[C6:%[0-9]+]]:gpr(i32) = G_CONSTANT i32 22
+    ; CHECK-NEXT: [[TRUNC6:%[0-9]+]]:gpr(s8) = G_TRUNC [[C6]](i32)
+    ; CHECK-NEXT: [[C7:%[0-9]+]]:gpr(i32) = G_CONSTANT i32 19
+    ; CHECK-NEXT: [[TRUNC7:%[0-9]+]]:gpr(s8) = G_TRUNC [[C7]](i32)
+    ; CHECK-NEXT: [[C8:%[0-9]+]]:gpr(i32) = G_CONSTANT i32 55
+    ; CHECK-NEXT: [[TRUNC8:%[0-9]+]]:gpr(s8) = G_TRUNC [[C8]](i32)
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(s8) = COPY [[TRUNC]](s8)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(s8) = COPY [[TRUNC1]](s8)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr(s8) = COPY [[TRUNC2]](s8)

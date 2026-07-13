@@ -1,5 +1,5 @@
 ; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
-; RUN: mlir-translate -import-llvm -split-input-file --use-constant-int-for-fixed-length-splat --use-constant-fp-for-fixed-length-splat %s | FileCheck %s
+; RUN: mlir-translate -import-llvm -split-input-file --use-constant-int-for-fixed-length-splat %s | FileCheck %s
 
 ; CHECK-LABEL: @int_constants
 define void @int_constants(i16 %arg0, i32 %arg1, i1 %arg2) {

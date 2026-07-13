@@ -69,6 +69,15 @@ class VPPredicator {
     return EdgeMaskCache[{Src, Dst}] = Mask;
   }
 
+  /// Returns where to insert new masks in \p VPBB.
+  VPBasicBlock::iterator getMaskInsertPoint(VPBasicBlock *VPBB) {
+    if (VPValue *Mask = getBlockInMask(VPBB))
+      if (VPRecipeBase *MaskR = Mask->getDefiningRecipe())
+        if (MaskR->getParent() == VPBB) // In-mask may be the IDom's.
+          return std::next(MaskR->getIterator());
+    return VPBB->getFirstNonPhi();
+  }
+
 public:
   VPPredicator(VPlan &Plan) : VPDT(Plan), VPPDT(Plan) {}
 
@@ -225,6 +234,8 @@ void VPPredicator::createSwitchEdgeMasks(const VPInstruction *SI) {
 }
 
 void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
+  Builder.setInsertPoint(VPBB, getMaskInsertPoint(VPBB));
+
   SmallVector<VPPhi *> Phis;
   for (VPRecipeBase &R : VPBB->phis())
     Phis.push_back(cast<VPPhi>(&R));
@@ -260,6 +271,9 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
 }
 
 void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
+  // Nested loop regions (outer-loop vectorization) are not supported yet.
+  if (Plan.isOuterLoop())
+    return;
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.
@@ -273,10 +287,8 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
     // Introduce the mask for VPBB, which may introduce needed edge masks, and
     // convert all phi recipes of VPBB to blend recipes unless VPBB is the
     // header.
-    if (VPBB != Header) {
+    if (VPBB != Header)
       Predicator.createBlockInMask(VPBB);
-      Predicator.convertPhisToBlends(VPBB);
-    }
 
     VPValue *BlockMask = Predicator.getBlockInMask(VPBB);
     if (!BlockMask)
@@ -288,6 +300,10 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
         VPI->addMask(BlockMask);
     }
   }
+
+  for (VPBlockBase *VPBB : reverse(RPOT))
+    if (VPBB != Header)
+      Predicator.convertPhisToBlends(cast<VPBasicBlock>(VPBB));
 
   // Linearize the blocks of the loop into one serial chain.
   VPBlockBase *PrevVPBB = nullptr;

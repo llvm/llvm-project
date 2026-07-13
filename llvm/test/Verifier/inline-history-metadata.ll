@@ -1,6 +1,7 @@
 ; RUN: not opt -passes=verify < %s 2>&1 | FileCheck %s
 
 @x = global i32 0
+@alias = alias void (), ptr @f
 
 define void @f() {
   ret void
@@ -44,6 +45,11 @@ define void @null_metadata() {
 
 define void @function_metadata() {
   call void @f(), !inline_history !{ptr @f}
+  ret void
+}
+
+define void @alias_metadata() {
+  call void @f(), !inline_history !{ptr @alias}
   ret void
 }
 

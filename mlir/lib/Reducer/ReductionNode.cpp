@@ -45,16 +45,6 @@ LogicalResult ReductionNode::initialize(ModuleOp parentModule,
   return success();
 }
 
-LogicalResult ReductionNode::initialize(ModuleOp parentModule,
-                                        Region &targetRegion,
-                                        IRMapping &mapper) {
-  module = cast<ModuleOp>(parentModule->clone(mapper));
-  // Use the first block of targetRegion to locate the cloned region.
-  Block *block = mapper.lookup(&*targetRegion.begin());
-  region = block->getParent();
-  return success();
-}
-
 /// If we haven't explored any variants from this node, we will create N
 /// variants, N is the length of `ranges` if N > 1. Otherwise, we will split the
 /// max element in `ranges` and create 2 new variants for each call.

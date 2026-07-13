@@ -1,4 +1,4 @@
-# RUN: env PYTHONPATH=%llvm_lib_dir %python %s %S/../Inputs/input.ll %ir2vec_test_vocab_dir/dummy_3D_nonzero_opc_vocab.json | FileCheck %s
+# RUN: env PYTHONPATH=%ir2vec_python_dir %python %s %S/../Inputs/input.ll %ir2vec_test_vocab_dir/dummy_3D_nonzero_opc_vocab.json | FileCheck %s
 
 import sys
 import ir2vec
@@ -6,8 +6,9 @@ import ir2vec
 ll_file = sys.argv[1]
 vocab_path = sys.argv[2]
 
+vocab = ir2vec.loadVocab(vocab_path)
 tool = ir2vec.initEmbedding(
-    filename=ll_file, mode=ir2vec.IR2VecKind.Symbolic, vocabPath=vocab_path
+    filename=ll_file, mode=ir2vec.IR2VecKind.Symbolic, vocab=vocab
 )
 
 # Success case

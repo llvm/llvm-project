@@ -41,8 +41,6 @@
 #include "flang/Common/indirection.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/type.h"
-#include <set>
-#include <type_traits>
 
 namespace Fortran::evaluate {
 template <typename Visitor, typename Result,
@@ -223,6 +221,10 @@ public:
   }
   Result operator()(const StructureConstructor &x) const {
     return visitor_.Combine(visitor_(x.derivedTypeSpec()), CombineContents(x));
+  }
+  // Conditional expressions (Fortran 2023)
+  template <typename T> Result operator()(const ConditionalExpr<T> &x) const {
+    return Combine(x.condition(), x.thenValue(), x.elseValue());
   }
 
   // Operations and wrappers

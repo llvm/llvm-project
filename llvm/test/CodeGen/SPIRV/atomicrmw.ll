@@ -6,10 +6,11 @@
 
 ; CHECK-DAG: %[[#Int:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#Scope_CrossDevice:]] = OpConstantNull %[[#Int]]
-; CHECK-DAG: %[[#MemSem_Acquire:]] = OpConstant %[[#Int]] 2
-; CHECK-DAG: %[[#MemSem_Release:]] = OpConstant %[[#Int]] 4{{$}}
-; CHECK-DAG: %[[#MemSem_AcquireRelease:]] = OpConstant %[[#Int]] 8
-; CHECK-DAG: %[[#MemSem_SequentiallyConsistent:]] = OpConstant %[[#Int]] 16
+; CHECK-DAG: %[[#MemSem_Acquire:]] = OpConstant %[[#Int]] 514
+; CHECK-DAG: %[[#MemSem_Release:]] = OpConstant %[[#Int]] 516
+; CHECK-DAG: %[[#MemSem_AcquireRelease:]] = OpConstant %[[#Int]] 520
+; CHECK-DAG: %[[#MemSem_SequentiallyConsistent:]] = OpConstant %[[#Int]] 528
+; CHECK-DAG: %[[#MemSem_Monotonic:]] = OpConstant %[[#Int]] 512
 ; CHECK-DAG: %[[#Value:]] = OpConstant %[[#Int]] 42
 ; CHECK-DAG: %[[#Float:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#PointerType:]] = OpTypePointer CrossWorkgroup %[[#Int]]
@@ -30,7 +31,7 @@ entry:
 ; CHECK: %[[#]] = OpAtomicExchange %[[#Float]] %[[#FPPointer]] %[[#Scope_CrossDevice]] %[[#MemSem_SequentiallyConsistent]] %[[#FPValue]]
 
   %2 = atomicrmw add ptr addrspace(1) @ui, i32 42 monotonic
-; CHECK: %[[#]] = OpAtomicIAdd %[[#Int]] %[[#Pointer]] %[[#Scope_CrossDevice]] %{{.+}} %[[#Value]]
+; CHECK: %[[#]] = OpAtomicIAdd %[[#Int]] %[[#Pointer]] %[[#Scope_CrossDevice]] %[[#MemSem_Monotonic]] %[[#Value]]
 
   %3 = atomicrmw sub ptr addrspace(1) @ui, i32 42 acquire
 ; CHECK: %[[#]] = OpAtomicISub %[[#Int]] %[[#Pointer]] %[[#Scope_CrossDevice]] %[[#MemSem_Acquire]] %[[#Value]]
@@ -45,7 +46,7 @@ entry:
 ; CHECK: %[[#]] = OpAtomicAnd %[[#Int]] %[[#Pointer]] %[[#Scope_CrossDevice]] %[[#MemSem_SequentiallyConsistent]] %[[#Value]]
 
   %7 = atomicrmw max ptr addrspace(1) @ui, i32 42 monotonic
-; CHECK: %[[#]] = OpAtomicSMax %[[#Int]] %[[#Pointer]] %[[#Scope_CrossDevice]] %{{.*}} %[[#Value]]
+; CHECK: %[[#]] = OpAtomicSMax %[[#Int]] %[[#Pointer]] %[[#Scope_CrossDevice]] %[[#MemSem_Monotonic]] %[[#Value]]
 
   %8 = atomicrmw min ptr addrspace(1) @ui, i32 42 acquire
 ; CHECK: %[[#]] = OpAtomicSMin %[[#Int]] %[[#Pointer]] %[[#Scope_CrossDevice]] %[[#MemSem_Acquire]] %[[#Value]]

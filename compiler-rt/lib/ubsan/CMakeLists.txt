@@ -59,9 +59,7 @@ set(UBSAN_CXXFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_rtti_flag(ON UBSAN_CXXFLAGS)
 
 # Silence warnings in system headers with MSVC.
-if(NOT CLANG_CL)
-  append_list_if(COMPILER_RT_HAS_EXTERNAL_FLAG "/experimental:external;/external:W0;/external:anglebrackets" UBSAN_CXXFLAGS)
-endif()
+append_list_if(COMPILER_RT_HAS_EXTERNAL_FLAG "/experimental:external;/external:W0;/external:anglebrackets" UBSAN_CXXFLAGS)
 
 set(UBSAN_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
 

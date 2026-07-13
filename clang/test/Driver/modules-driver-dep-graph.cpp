@@ -2,13 +2,14 @@
 // generation are correct.
 // This test does not make use of any system inputs.
 
+// RUN: rm -rf %t
 // RUN: split-file %s %t
 
 // RUN: %clang -std=c++23 -nostdlib -fmodules \
 // RUN:   -fmodules-driver -Rmodules-driver \
 // RUN:   -fmodule-map-file=%t/module.modulemap %t/main.cpp \
 // RUN:   -fmodules-cache-path=%t/modules-cache \
-// RUN:   %t/A.cpp %t/A-B.cpp %t/A-C.cpp %t/B.cpp -### 2>&1 \
+// RUN:   %t/A.cppm %t/A-B.cppm %t/A-C.cppm %t/B.cppm -### 2>&1 \
 // RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck -DPREFIX=%/t %s
 
@@ -22,10 +23,10 @@
 // CHECK-NEXT: "direct2-[[HASH_DIRECT2:.*]]" [fillcolor=1, label="{ Module type: Clang module | Module name: direct2 | Hash: [[HASH_DIRECT2]] }"];
 // CHECK-NEXT: "root-[[HASH_ROOT:.*]]" [fillcolor=1, label="{ Module type: Clang module | Module name: root | Hash: [[HASH_ROOT]] }"];
 // CHECK-NEXT:  "[[PREFIX]]/main.cpp-[[TRIPLE:.*]]" [fillcolor=3, label="{ Filename: [[PREFIX]]/main.cpp | Triple: [[TRIPLE]] }"];
-// CHECK-NEXT: "A-[[TRIPLE]]" [fillcolor=2, label="{ Filename: [[PREFIX]]/A.cpp | Module type: Named module | Module name: A | Triple: [[TRIPLE]] }"];
-// CHECK-NEXT: "A:B-[[TRIPLE]]" [fillcolor=2, label="{ Filename: [[PREFIX]]/A-B.cpp | Module type: Named module | Module name: A:B | Triple: [[TRIPLE]] }"];
-// CHECK-NEXT: "A:C-[[TRIPLE]]" [fillcolor=2, label="{ Filename: [[PREFIX]]/A-C.cpp | Module type: Named module | Module name: A:C | Triple: [[TRIPLE]] }"];
-// CHECK-NEXT: "B-[[TRIPLE]]" [fillcolor=2, label="{ Filename: [[PREFIX]]/B.cpp | Module type: Named module | Module name: B | Triple: [[TRIPLE]] }"];
+// CHECK-NEXT: "A-[[TRIPLE]]" [fillcolor=2, label="{ Filename: [[PREFIX]]/A.cppm | Module type: Named module | Module name: A | Triple: [[TRIPLE]] }"];
+// CHECK-NEXT: "A:B-[[TRIPLE]]" [fillcolor=2, label="{ Filename: [[PREFIX]]/A-B.cppm | Module type: Named module | Module name: A:B | Triple: [[TRIPLE]] }"];
+// CHECK-NEXT: "A:C-[[TRIPLE]]" [fillcolor=2, label="{ Filename: [[PREFIX]]/A-C.cppm | Module type: Named module | Module name: A:C | Triple: [[TRIPLE]] }"];
+// CHECK-NEXT: "B-[[TRIPLE]]" [fillcolor=2, label="{ Filename: [[PREFIX]]/B.cppm | Module type: Named module | Module name: B | Triple: [[TRIPLE]] }"];
 //
 // CHECK:        "transitive1-[[HASH_TRANSITIVE1]]" -> "direct1-[[HASH_DIRECT1]]";
 // CHECK-NEXT:   "transitive1-[[HASH_TRANSITIVE1]]" -> "direct2-[[HASH_DIRECT2]]";
@@ -66,20 +67,20 @@ module transitive2 { header "transitive2.h" }
 //--- transitive2.h
 // empty
 
-//--- A.cpp
+//--- A.cppm
 export module A;
 export import :B;
 import :C;
 
-//--- A-B.cpp
+//--- A-B.cppm
 module;
 #include "direct1.h"
 export module A:B;
 
-//--- A-C.cpp
+//--- A-C.cppm
 export module A:C;
 
-//--- B.cpp
+//--- B.cppm
 module;
 #include "root.h"
 export module B;

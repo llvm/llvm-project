@@ -1458,11 +1458,13 @@ define <8 x i32> @amull2_i16(<8 x i16> %arg1, <8 x i16> %arg2) {
 ; CHECK-SVE-LABEL: amull2_i16:
 ; CHECK-SVE:       // %bb.0:
 ; CHECK-SVE-NEXT:    smull v2.4s, v0.4h, v1.4h
-; CHECK-SVE-NEXT:    smull2 v1.4s, v0.8h, v1.8h
-; CHECK-SVE-NEXT:    and z2.s, z2.s, #0xffff
+; CHECK-SVE-NEXT:    smull2 v0.4s, v0.8h, v1.8h
+; CHECK-SVE-NEXT:    movprfx z1, z0
 ; CHECK-SVE-NEXT:    and z1.s, z1.s, #0xffff
+; CHECK-SVE-NEXT:    movprfx z0, z2
+; CHECK-SVE-NEXT:    and z0.s, z0.s, #0xffff
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    // kill: def $q1 killed $q1 killed $z1
-; CHECK-SVE-NEXT:    mov v0.16b, v2.16b
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: amull2_i16:
@@ -1493,11 +1495,13 @@ define <4 x i64> @amull2_i32(<4 x i32> %arg1, <4 x i32> %arg2) {
 ; CHECK-SVE-LABEL: amull2_i32:
 ; CHECK-SVE:       // %bb.0:
 ; CHECK-SVE-NEXT:    smull v2.2d, v0.2s, v1.2s
-; CHECK-SVE-NEXT:    smull2 v1.2d, v0.4s, v1.4s
-; CHECK-SVE-NEXT:    and z2.d, z2.d, #0xffffffff
+; CHECK-SVE-NEXT:    smull2 v0.2d, v0.4s, v1.4s
+; CHECK-SVE-NEXT:    movprfx z1, z0
 ; CHECK-SVE-NEXT:    and z1.d, z1.d, #0xffffffff
+; CHECK-SVE-NEXT:    movprfx z0, z2
+; CHECK-SVE-NEXT:    and z0.d, z0.d, #0xffffffff
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    // kill: def $q1 killed $q1 killed $z1
-; CHECK-SVE-NEXT:    mov v0.16b, v2.16b
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: amull2_i32:

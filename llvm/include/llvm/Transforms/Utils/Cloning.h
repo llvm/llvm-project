@@ -18,7 +18,7 @@
 #define LLVM_TRANSFORMS_UTILS_CLONING_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -91,7 +91,7 @@ struct ClonedCodeInfo {
 
   // Cloned calls that were originally an indirect call. They may be direct or
   // indirect after cloning.
-  SmallPtrSet<const Value *, 4> OriginallyIndirectCalls;
+  SmallSetVector<const Value *, 4> OriginallyIndirectCalls;
 
   ClonedCodeInfo() = default;
 
@@ -370,6 +370,8 @@ LLVM_ABI InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 ///
 /// Updates LoopInfo and DominatorTree assuming the loop is dominated by block
 /// \p LoopDomBB.  Insert the new blocks before block specified in \p Before.
+/// The client needs to further update the CFG and DominatorTree after calling
+/// this function, to ensure the IR remains valid.
 /// Note: Only innermost loops are supported.
 LLVM_ABI Loop *cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
                                       Loop *OrigLoop, ValueToValueMapTy &VMap,

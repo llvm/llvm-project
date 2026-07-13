@@ -873,15 +873,15 @@ vstrb.16 q0, [r8]
 vldrh.u32 q0, [r8]
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:14: error: invalid operand for instruction
 vstrw.32 q5, [sp, #-64]!
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:14: error: invalid operand for instruction
 vstrw.32 q5, [sp, #-3]
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:14: error: invalid operand for instruction
 vstrw.32 q5, [sp, #512]
 
 # CHECK: vldrb.u8 q0, [r0, q1] @ encoding: [0x90,0xfc,0x02,0x0e]
@@ -1153,7 +1153,7 @@ vstrd.64 q0, [r0, q1, uxtw #3]
 vstrd.64 q0, [sp, q1, uxtw #3]
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: operand must be a register in range [q0, q7]
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:10: error: operand must be a register in range [q0, q7]
 vstrw.32 q9, [sp, q1, uxtw #2]
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
@@ -1161,23 +1161,23 @@ vstrw.32 q9, [sp, q1, uxtw #2]
 vstrh.16 q3, [pc, q1]
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:14: error: invalid operand for instruction
 vstrd.64 q0, [r0, q1, uxtw #1]
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:15: error: invalid operand for instruction
 vldrd.u64 q0, [r0, q1, uxtw #1]
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:14: error: invalid operand for instruction
 vstrd.64 q0, [r0, q1, uxtw #2]
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:15: error: invalid operand for instruction
 vldrd.u64 q0, [r0, q1, uxtw #2]
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:15: error: invalid operand for instruction
 vldrw.u32 q0, [r0, q1, uxtw #1]
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
@@ -1265,15 +1265,15 @@ vstrw.32 q7, [q1, #-508]
 vstrw.32 q7, [q1, #264]!
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: operand must be a register in range [q0, q7]
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:10: error: operand must be a register in range [q0, q7]
 vstrw.32 q8, [q1]!
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:14: error: invalid operand for instruction
 vstrw.32 q4, [q1, #3]!
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:15: error: invalid operand for instruction
 vldrw.u32 q7, [q1, #512]
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: destination vector register and vector pointer register can't be identical
@@ -1377,19 +1377,19 @@ vstrd.64 q7, [q1, #624]
 vstrd.64 q7, [q1, #264]
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: operand must be a register in range [q0, q7]
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:11: error: operand must be a register in range [q0, q7]
 vldrd.u64 q8, [q1]!
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:14: error: invalid operand for instruction
 vstrd.64 q7, [q1, #1024]
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:14: error: invalid operand for instruction
 vstrd.64 q4, [q1, #3]
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:14: error: invalid operand for instruction
 vstrd.64 q4, [q1, #4]
 
 # CHECK: vldrb.u8 q0, [r0] @ encoding: [0x90,0xed,0x00,0x1e]

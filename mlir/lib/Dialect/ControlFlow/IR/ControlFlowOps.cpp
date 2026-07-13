@@ -296,12 +296,6 @@ Block *BranchOp::getSuccessorForOperands(ArrayRef<Attribute>) {
   return getDest();
 }
 
-ValueRange BranchOp::getSuccessorForwardOperands(Block *successor) {
-  if (successor == getDest())
-    return getDestOperands();
-  return {};
-}
-
 //===----------------------------------------------------------------------===//
 // CondBranchOp
 //===----------------------------------------------------------------------===//
@@ -587,14 +581,6 @@ Block *CondBranchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
           llvm::dyn_cast_or_null<IntegerAttr>(operands.front()))
     return condAttr.getValue().isOne() ? getTrueDest() : getFalseDest();
   return nullptr;
-}
-
-ValueRange CondBranchOp::getSuccessorForwardOperands(Block *successor) {
-  if (successor == getTrueDest())
-    return getTrueOperands();
-  else if (successor == getFalseDest())
-    return getFalseOperands();
-  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -1046,16 +1032,6 @@ void SwitchOp::getCanonicalizationPatterns(RewritePatternSet &results,
       .add(&simplifySwitchFromSwitchOnSameCondition)
       .add(&simplifySwitchFromDefaultSwitchOnSameCondition)
       .add<SimplifyUniformBlockArguments>(context);
-}
-
-ValueRange SwitchOp::getSuccessorForwardOperands(Block *successor) {
-  if (successor == getDefaultDestination())
-    return getDefaultOperands();
-  SuccessorRange caseDests = getCaseDestinations();
-  auto it = llvm::find(caseDests, successor);
-  if (it == caseDests.end())
-    return {};
-  return getCaseOperands(std::distance(caseDests.begin(), it));
 }
 
 //===----------------------------------------------------------------------===//

@@ -3,7 +3,7 @@
 ...
 # CHECK-LABEL: name: waitcnt-permute{{$}}
 # CHECK: DS_BPERMUTE_B32
-# CHECK-NEXT: S_WAITCNT 127
+# CHECK-NEXT: S_WAITCNT .Lgkmcnt_0
 
 name:            waitcnt-permute
 liveins:

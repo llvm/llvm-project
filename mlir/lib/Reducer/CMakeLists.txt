@@ -9,7 +9,6 @@ add_mlir_library(MLIRReduce
    MLIRPass
    MLIRRewrite
    MLIRTransformUtils
-   MLIRControlFlowDialect
 
    DEPENDS
    MLIRReducerIncGen

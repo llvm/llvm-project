@@ -133,8 +133,7 @@ public:
     }
 
     ValueObjectSP child_sp(struct_sp->GetSyntheticChildAtOffset(
-        child_byte_offset, child_type, true,
-        ConstString(child_name.c_str(), child_name.size())));
+        child_byte_offset, child_type, true, ConstString(child_name)));
 
     return child_sp;
   }
@@ -150,7 +149,7 @@ public:
       return llvm::createStringErrorV("type has no child named '{0}'", name);
 
     const bool omit_empty_base_classes = false;
-    return m_block_struct_type.GetIndexOfChildWithName(name.AsCString(),
+    return m_block_struct_type.GetIndexOfChildWithName(name.AsCString(nullptr),
                                                        omit_empty_base_classes);
   }
 
