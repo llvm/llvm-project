@@ -1,0 +1,71 @@
+{
+  "data": [
+    {
+      "summary_data": [
+        {
+          "entity_id": 0,
+          "entity_summary": {
+            "OperatorNewDeletePointersAnalysisResult": [
+              {
+                "@": 1
+              },
+              {
+                "@": 2
+              }
+            ]
+          }
+        }
+      ],
+      "summary_name": "OperatorNewDeletePointers"
+    }
+  ],
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@operator new#vp#UL#"
+      }
+    },
+    {
+      "id": 1,
+      "name": {
+        "suffix": "0",
+        "usr": "c:@F@operator new#vp#UL#"
+      }
+    },
+    {
+      "id": 2,
+      "name": {
+        "suffix": "1",
+        "usr": "c:@F@operator new#vp#UL#vp#"
+      }
+    }
+  ],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": {
+        "type": "External"
+      }
+    },
+    {
+      "id": 1,
+      "linkage": {
+        "type": "External"
+      }
+    },
+    {
+      "id": 2,
+      "linkage": {
+        "type": "External"
+      }
+    }
+  ],
+  "target_triple": "arm64-apple-macosx",
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "test.cpp"
+  },
+  "type": "TUSummary"
+}

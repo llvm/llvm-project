@@ -1274,7 +1274,7 @@ def Divu8: SDNodeXForm<imm, [{
 def FShl32i: OutPatFrag<(ops node:$Rs, node:$Rt, node:$S),
   (HiReg (S2_asl_i_p (Combinew $Rs, $Rt), $S))>;
 def FShl32r: OutPatFrag<(ops node:$Rs, node:$Rt, node:$Ru),
-  (HiReg (S2_asl_r_p (Combinew $Rs, $Rt), $Ru))>;
+  (HiReg (S2_asl_r_p (Combinew $Rs, $Rt), (A2_andir $Ru, 31)))>;
 
 def FShl64i: OutPatFrag<(ops node:$Rs, node:$Rt, node:$S),
   (S2_lsr_i_p_or (S2_asl_i_p $Rs, $S),  $Rt, (Subi<64> $S))>;
@@ -1316,7 +1316,7 @@ def: Pat<(fshl I64:$Rs, I64:$Rt, I32:$Ru),  (FShl64r $Rs, $Rt, $Ru)>;
 def FShr32i: OutPatFrag<(ops node:$Rs, node:$Rt, node:$S),
   (LoReg (S2_lsr_i_p (Combinew $Rs, $Rt), $S))>;
 def FShr32r: OutPatFrag<(ops node:$Rs, node:$Rt, node:$Ru),
-  (LoReg (S2_lsr_r_p (Combinew $Rs, $Rt), $Ru))>;
+  (LoReg (S2_lsr_r_p (Combinew $Rs, $Rt), (A2_andir $Ru, 31)))>;
 
 def FShr64i: OutPatFrag<(ops node:$Rs, node:$Rt, node:$S),
   (S2_asl_i_p_or (S2_lsr_i_p $Rt, $S),  $Rs, (Subi<64> $S))>;
