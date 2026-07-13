@@ -312,6 +312,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   the corresponding decimal floating-point types, `_Decimal32`, `_Decimal64`, and `_Decimal128`. (#GH116962)
 - Fixed a bug with deducing qualified inferred types with `auto`. `auto` can now
   be combined with `restrict` or `_Atomic` to form a properly-qualified type. (#GH207466)
+- Fixed a bug where an enumerator following a `_BitInt`-typed enumerator kept
+  the bit-precise type and wrapped around on overflow instead of taking a
+  suitably sized standard integer type. (#GH208163)
 
 
 ### Objective-C Language Changes
