@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
@@ -75,6 +76,18 @@ inline uint32_t getDWARF5RngListLocListHeaderSize(dwarf::DwarfFormat Format) {
   return dwarf::getUnitLengthFieldByteSize(Format) + sizeof(VersionType) +
          sizeof(AddressSizeType) + sizeof(SegmentSelectorType) +
          sizeof(OffsetEntryCountType);
+}
+
+/// Write \p Value to \p OS using the offset size selected by \p Format.
+inline void
+writeDWARFOLengthOrOffset(raw_ostream &OS, dwarf::DwarfFormat Format,
+                          uint64_t Value,
+                          endianness Endian = llvm::endianness::little) {
+  if (Format == dwarf::DwarfFormat::DWARF64) {
+    support::endian::write(OS, Value, Endian);
+    return;
+  }
+  support::endian::write(OS, static_cast<uint32_t>(Value), Endian);
 }
 
 class BinaryContext;

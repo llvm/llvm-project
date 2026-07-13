@@ -19,15 +19,6 @@
 
 namespace llvm {
 namespace bolt {
-static void writeOffset(raw_ostream &OS, uint64_t Value,
-                        dwarf::DwarfFormat Format) {
-  if (Format == dwarf::DwarfFormat::DWARF64)
-    support::endian::write(OS, Value, llvm::endianness::little);
-  else
-    support::endian::write(OS, static_cast<uint32_t>(Value),
-                           llvm::endianness::little);
-}
-
 DWARF5AcceleratorTable::DWARF5AcceleratorTable(
     const bool CreateDebugNames, BinaryContext &BC,
     DebugStrWriter &MainBinaryStrWriter)
@@ -790,8 +781,9 @@ void DWARF5AcceleratorTable::emitHeader() const {
   if (Format == dwarf::DwarfFormat::DWARF64)
     support::endian::write(*FullTableStream, dwarf::DW_LENGTH_DWARF64,
                            llvm::endianness::little);
-  writeOffset(*FullTableStream,
-              HeaderSize + StrBuffer->size() + AugmentationStringSize, Format);
+  writeDWARFOLengthOrOffset(*FullTableStream, Format,
+                            HeaderSize + StrBuffer->size() +
+                                AugmentationStringSize);
   // Version
   support::endian::write(*FullTableStream, static_cast<uint16_t>(5),
                          llvm::endianness::little);
@@ -831,11 +823,11 @@ void DWARF5AcceleratorTable::emitHeader() const {
 
 void DWARF5AcceleratorTable::emitCUList() const {
   for (const uint64_t CUID : CUList)
-    writeOffset(*StrStream, CUID, Format);
+    writeDWARFOLengthOrOffset(*StrStream, Format, CUID);
 }
 void DWARF5AcceleratorTable::emitTUList() const {
   for (const uint64_t TUID : LocalTUList)
-    writeOffset(*StrStream, TUID, Format);
+    writeDWARFOLengthOrOffset(*StrStream, Format, TUID);
 
   for (const uint64_t TUID : ForeignTUList)
     support::endian::write(*StrStream, TUID, llvm::endianness::little);
@@ -858,13 +850,13 @@ void DWARF5AcceleratorTable::emitHashes() const {
 void DWARF5AcceleratorTable::emitStringOffsets() const {
   for (const auto &Bucket : getBuckets()) {
     for (const DWARF5AcceleratorTable::HashData *Hash : Bucket)
-      writeOffset(*StrStream, Hash->StrOffset, Format);
+      writeDWARFOLengthOrOffset(*StrStream, Format, Hash->StrOffset);
   }
 }
 void DWARF5AcceleratorTable::emitOffsets() const {
   for (const auto &Bucket : getBuckets()) {
     for (const DWARF5AcceleratorTable::HashData *Hash : Bucket)
-      writeOffset(*StrStream, Hash->EntryOffset, Format);
+      writeDWARFOLengthOrOffset(*StrStream, Format, Hash->EntryOffset);
   }
 }
 void DWARF5AcceleratorTable::emitAbbrevs() {
