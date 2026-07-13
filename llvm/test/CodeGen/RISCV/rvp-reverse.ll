@@ -9,22 +9,13 @@
 define <4 x i8> @test_prev_v4i8(<4 x i8> %a) {
 ; RV32-LABEL: test_prev_v4i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    mv a1, a0
-; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    srli a3, a1, 8
-; RV32-NEXT:    srli a2, a1, 24
-; RV32-NEXT:    ppaire.db a0, a2, a0
-; RV32-NEXT:    pack a0, a0, a1
+; RV32-NEXT:    rev8 a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_prev_v4i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srli a1, a0, 8
-; RV64-NEXT:    srli a2, a0, 16
-; RV64-NEXT:    srli a3, a0, 24
-; RV64-NEXT:    ppaire.b a0, a1, a0
-; RV64-NEXT:    ppaire.b a1, a3, a2
-; RV64-NEXT:    ppaire.h a0, a1, a0
+; RV64-NEXT:    rev8 a0, a0
+; RV64-NEXT:    srli a0, a0, 32
 ; RV64-NEXT:    ret
   %r = shufflevector <4 x i8> %a, <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x i8> %r
@@ -33,14 +24,12 @@ define <4 x i8> @test_prev_v4i8(<4 x i8> %a) {
 define <2 x i16> @test_prev_v2i16(<2 x i16> %a) {
 ; RV32-LABEL: test_prev_v2i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srli a1, a0, 16
-; RV32-NEXT:    pack a0, a1, a0
+; RV32-NEXT:    ppairoe.h a0, a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_prev_v2i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srli a1, a0, 16
-; RV64-NEXT:    ppaire.h a0, a1, a0
+; RV64-NEXT:    ppairoe.h a0, a0, a0
 ; RV64-NEXT:    ret
   %r = shufflevector <2 x i16> %a, <2 x i16> poison, <2 x i32> <i32 1, i32 0>
   ret <2 x i16> %r
@@ -49,36 +38,14 @@ define <2 x i16> @test_prev_v2i16(<2 x i16> %a) {
 define <8 x i8> @test_prev_v8i8(<8 x i8> %a) {
 ; RV32-LABEL: test_prev_v8i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srli a2, a0, 8
-; RV32-NEXT:    srli a3, a0, 16
-; RV32-NEXT:    srli a4, a0, 24
-; RV32-NEXT:    ppaire.b a0, a2, a0
-; RV32-NEXT:    ppaire.b a2, a4, a3
-; RV32-NEXT:    srli a3, a1, 8
-; RV32-NEXT:    srli a4, a1, 16
-; RV32-NEXT:    srli a5, a1, 24
-; RV32-NEXT:    ppaire.b a3, a3, a1
-; RV32-NEXT:    ppaire.b a4, a5, a4
-; RV32-NEXT:    pack a1, a2, a0
-; RV32-NEXT:    pack a0, a4, a3
+; RV32-NEXT:    rev8 a2, a0
+; RV32-NEXT:    rev8 a0, a1
+; RV32-NEXT:    mv a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_prev_v8i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srli a1, a0, 8
-; RV64-NEXT:    srli a2, a0, 16
-; RV64-NEXT:    srli a3, a0, 24
-; RV64-NEXT:    ppaire.b a1, a1, a0
-; RV64-NEXT:    ppaire.b a2, a3, a2
-; RV64-NEXT:    srli a3, a0, 32
-; RV64-NEXT:    srli a4, a0, 40
-; RV64-NEXT:    srli a5, a0, 48
-; RV64-NEXT:    srli a0, a0, 56
-; RV64-NEXT:    ppaire.b a3, a4, a3
-; RV64-NEXT:    ppaire.b a0, a0, a5
-; RV64-NEXT:    ppaire.h a1, a2, a1
-; RV64-NEXT:    ppaire.h a0, a0, a3
-; RV64-NEXT:    pack a0, a0, a1
+; RV64-NEXT:    rev8 a0, a0
 ; RV64-NEXT:    ret
   %r = shufflevector <8 x i8> %a, <8 x i8> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <8 x i8> %r
@@ -87,21 +54,14 @@ define <8 x i8> @test_prev_v8i8(<8 x i8> %a) {
 define <4 x i16> @test_prev_v4i16(<4 x i16> %a) {
 ; RV32-LABEL: test_prev_v4i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srli a2, a0, 16
-; RV32-NEXT:    srli a3, a1, 16
-; RV32-NEXT:    pack a2, a2, a0
-; RV32-NEXT:    pack a0, a3, a1
+; RV32-NEXT:    ppairoe.h a2, a0, a0
+; RV32-NEXT:    ppairoe.h a0, a1, a1
 ; RV32-NEXT:    mv a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_prev_v4i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srli a1, a0, 16
-; RV64-NEXT:    srli a2, a0, 32
-; RV64-NEXT:    srli a3, a0, 48
-; RV64-NEXT:    ppaire.h a0, a1, a0
-; RV64-NEXT:    ppaire.h a1, a3, a2
-; RV64-NEXT:    pack a0, a1, a0
+; RV64-NEXT:    rev16 a0, a0
 ; RV64-NEXT:    ret
   %r = shufflevector <4 x i16> %a, <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x i16> %r
@@ -117,8 +77,7 @@ define <2 x i32> @test_prev_v2i32(<2 x i32> %a) {
 ;
 ; RV64-LABEL: test_prev_v2i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srli a1, a0, 32
-; RV64-NEXT:    pack a0, a1, a0
+; RV64-NEXT:    ppairoe.w a0, a0, a0
 ; RV64-NEXT:    ret
   %r = shufflevector <2 x i32> %a, <2 x i32> poison, <2 x i32> <i32 1, i32 0>
   ret <2 x i32> %r

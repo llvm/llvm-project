@@ -1552,7 +1552,7 @@ libc_support_library(
         ":__support_file_file",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_osutil_fcntl",
+        ":__support_osutil_linux_syscall_wrappers_fcntl",
         ":__support_osutil_linux_syscall_wrappers_lseek",
         ":__support_osutil_linux_syscall_wrappers_open",
         ":__support_osutil_syscall",
@@ -1635,6 +1635,7 @@ libc_support_library(
         ":__support_common",
         ":__support_error_or",
         ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_fcntl",
         ":__support_osutil_syscall",
         ":hdr_fcntl_macros",
     ],
@@ -2804,9 +2805,8 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_osutil_fcntl",
-    srcs = ["src/__support/OSUtil/linux/fcntl.cpp"],
-    hdrs = ["src/__support/OSUtil/fcntl.h"],
+    name = "__support_osutil_linux_syscall_wrappers_fcntl",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/fcntl.h"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -2818,7 +2818,6 @@ libc_support_library(
         ":__support_osutil_syscall",
         ":hdr_errno_macros",
         ":hdr_fcntl_macros",
-        ":types_mode_t",
         ":types_off_t",
         ":types_struct_f_owner_ex",
         ":types_struct_flock",
@@ -3301,6 +3300,52 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_macros_properties_architectures",
         ":hdr_errno_macros",
+    ],
+)
+
+############################### arpa/inet targets ##############################
+
+libc_function(
+    name = "htonl",
+    srcs = ["src/arpa/inet/htonl.cpp"],
+    hdrs = ["src/arpa/inet/htonl.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":hdr_stdint_proxy",
+    ],
+)
+
+libc_function(
+    name = "htons",
+    srcs = ["src/arpa/inet/htons.cpp"],
+    hdrs = ["src/arpa/inet/htons.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":hdr_stdint_proxy",
+    ],
+)
+
+libc_function(
+    name = "ntohl",
+    srcs = ["src/arpa/inet/ntohl.cpp"],
+    hdrs = ["src/arpa/inet/ntohl.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":hdr_stdint_proxy",
+    ],
+)
+
+libc_function(
+    name = "ntohs",
+    srcs = ["src/arpa/inet/ntohs.cpp"],
+    hdrs = ["src/arpa/inet/ntohs.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":hdr_stdint_proxy",
     ],
 )
 
@@ -14258,7 +14303,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_osutil_fcntl",
+        ":__support_osutil_linux_syscall_wrappers_fcntl",
         ":errno",
     ],
 )
