@@ -57,7 +57,7 @@ define i32 @foo(ptr nocapture %A, i32 %n) {
 ; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[N:%.*]] to double
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x double> [[TMP0]], <double 7.900000e+00, double 7.700000e+00, double 7.600000e+00, double 7.400000e+00>
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> poison, double [[CONV]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> poison, double [[CONV]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x double> [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x double> [[TMP4]], <double 6.000000e+00, double 2.000000e+00, double 3.000000e+00, double 4.000000e+00>
@@ -115,8 +115,8 @@ define i32 @test2(ptr nocapture %G, i32 %k) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[G]], i64 6
 ; CHECK-NEXT:    [[TMP7:%.*]] = load double, ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul double [[TMP7]], 3.000000e+00
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> poison, double [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x double> [[TMP9]], double [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> poison, double [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x double> [[TMP9]], double [[TMP8]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP10]], <double 1.000000e+00, double 6.000000e+00>
 ; CHECK-NEXT:    store <2 x double> [[TMP11]], ptr [[G]], align 8
 ; CHECK-NEXT:    br label [[TMP20:%.*]]
@@ -125,8 +125,8 @@ define i32 @test2(ptr nocapture %G, i32 %k) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds double, ptr [[G]], i64 6
 ; CHECK-NEXT:    [[TMP15:%.*]] = load double, ptr [[TMP14]], align 8
 ; CHECK-NEXT:    [[TMP16:%.*]] = fmul double [[TMP15]], 3.000000e+00
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <2 x double> poison, double [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x double> [[TMP17]], double [[TMP16]], i32 1
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <2 x double> poison, double [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x double> [[TMP17]], double [[TMP16]], i64 1
 ; CHECK-NEXT:    [[TMP19:%.*]] = fadd <2 x double> [[TMP18]], <double 7.000000e+00, double 8.000000e+00>
 ; CHECK-NEXT:    store <2 x double> [[TMP19]], ptr [[TMP13]], align 8
 ; CHECK-NEXT:    br label [[TMP20]]
@@ -180,7 +180,7 @@ define i32 @foo4(ptr nocapture %A, i32 %n) {
 ; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[N:%.*]] to double
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x double> [[TMP0]], splat (double 7.900000e+00)
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> poison, double [[CONV]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> poison, double [[CONV]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x double> [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x double> [[TMP4]], splat (double 6.000000e+00)
@@ -228,7 +228,7 @@ define i32 @partial_mrg(ptr nocapture %A, i32 %n) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[N:%.*]] to double
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[CONV]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[CONV]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], [[TMP0]]
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[A]], align 8
@@ -239,7 +239,7 @@ define i32 @partial_mrg(ptr nocapture %A, i32 %n) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[N]], 4
 ; CHECK-NEXT:    [[CONV12:%.*]] = sitofp i32 [[ADD]] to double
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[ARRAYIDX7]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP1]], double [[CONV12]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP1]], double [[CONV12]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[TMP5]], [[TMP4]]
 ; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr [[ARRAYIDX7]], align 8
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -331,7 +331,7 @@ if.end13:                                         ; preds = %if.then12, %sw.epil
 define void @cse_for_hoisted_instructions_in_preheader(ptr %dst, i32 %a, i1 %c) {
 ; CHECK-LABEL: @cse_for_hoisted_instructions_in_preheader(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
