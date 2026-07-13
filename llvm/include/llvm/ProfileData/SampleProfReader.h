@@ -943,6 +943,12 @@ public:
       llvm::OnDiskIterableChainedHashTable<FuncOffsetHashTableInfo>;
 
   SampleProfileFuncOffsetTable() = delete;
+  SampleProfileFuncOffsetTable(const SampleProfileFuncOffsetTable &) = delete;
+  SampleProfileFuncOffsetTable &
+  operator=(const SampleProfileFuncOffsetTable &) = delete;
+  SampleProfileFuncOffsetTable(SampleProfileFuncOffsetTable &&) = delete;
+  SampleProfileFuncOffsetTable &
+  operator=(SampleProfileFuncOffsetTable &&) = delete;
 
   explicit SampleProfileFuncOffsetTable(InMemoryModeT,
                                         size_t InitialCapacity = 0) {
