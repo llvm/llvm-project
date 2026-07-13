@@ -95,12 +95,11 @@ static bool parseSize(StringRef S, uint64_t &Out) {
   if (S.empty())
     return false;
   uint64_t Mult = 1;
-  StringRef Lower = S.lower();
   static const std::pair<StringRef, uint64_t> Suffixes[] = {
       {"kib", 1024},        {"kb", 1024},        {"k", 1024},
       {"mib", 1024 * 1024}, {"mb", 1024 * 1024}, {"m", 1024 * 1024}};
   for (const auto &[Suf, M] : Suffixes) {
-    if (Lower.ends_with(Suf)) {
+    if (S.take_back(Suf.size()).equals_insensitive(Suf)) {
       Mult = M;
       S = S.drop_back(Suf.size()).rtrim();
       break;
