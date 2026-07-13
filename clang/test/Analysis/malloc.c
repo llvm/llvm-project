@@ -73,6 +73,27 @@ void t3(void) {
   free(p);
 }
 
+void t3_mul_bounded(void) {
+  size_t size = 0;
+  scanf("%zu", &size);
+  if (65536 < size)
+    return;
+  // A bounded tainted size stays bounded after multiplication by a constant,
+  // so the product cannot reach a dangerous magnitude. The 64-bit size_t
+  // product must not warn (used to be a false positive because the range of
+  // the multiplication was not inferred from its operands).
+  int *p = malloc(size * sizeof(int)); // No warning expected as the product is bound
+  free(p);
+}
+
+void t3_mul_unbounded(void) {
+  size_t size = 0;
+  scanf("%zu", &size);
+  // Without a bound the product is still attacker-controlled and can overflow.
+  int *p = malloc(size * sizeof(int)); // expected-warning{{malloc is called with a tainted (potentially attacker controlled) value}}
+  free(p);
+}
+
 void t4(void) {
   size_t size = 0;
   int *p = malloc(sizeof(int));
