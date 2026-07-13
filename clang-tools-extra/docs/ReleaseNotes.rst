@@ -131,6 +131,10 @@ Potentially Breaking Changes
                                      <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>`
   ================================== ========================================================================
 
+- Removed the :program:`clang-doc` deprecated Markdown generator. ``--format=md``
+  now uses the new Mustache-backed MD generator. It is possible that there are some
+  regressions in MD output.
+
 Improvements to clangd
 ----------------------
 
