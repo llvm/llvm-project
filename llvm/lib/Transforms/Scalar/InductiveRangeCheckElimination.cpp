@@ -67,6 +67,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -83,6 +84,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopConstrainer.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
+#include "llvm/Transforms/Utils/LoopSplitUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
@@ -125,6 +127,19 @@ static cl::opt<unsigned> MaxTypeSizeForOverflowCheck(
 static cl::opt<bool>
     PrintScaledBoundaryRangeChecks("irce-print-scaled-boundary-range-checks",
                                    cl::Hidden, cl::init(false));
+
+// When enabled, IRCE restructures the loop's pre/main/post ranges via the
+// generic LoopSplitUtils instead of the bespoke LoopConstrainer -- behaviorally
+// equivalent but structurally different IR. Default off (unchanged output).
+static cl::opt<bool> UseLoopSplitUtils(
+    "irce-use-loop-split-utils", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Drive IRCE's loop restructuring through LoopSplitUtils instead of "
+        "LoopConstrainer where possible"));
+
+// Metadata tag LoopConstrainer stamps on its clones so IRCE skips reprocessing
+// them; the LoopSplitUtils driver reuses it on the pre/post partitions.
+static const char *LoopConstrainerClonedLoopTag = "loop_constrainer.loop.clone";
 
 #define DEBUG_TYPE "irce"
 
@@ -985,6 +1000,195 @@ InductiveRangeCheckElimination::estimatedTripCount(const Loop &L) {
   return {ExitProbability.scaleByInverse(1)};
 }
 
+// Mark \p L so no further loop optimization runs on it, mirroring
+// LoopConstrainer's DisableAllLoopOptsOnLoop for the pre/post partitions.
+static void disableAllLoopOptsOnLoop(Loop &L) {
+  LLVMContext &Context = L.getHeader()->getContext();
+  MDNode *Dummy = MDNode::get(Context, {});
+  MDNode *DisableUnroll = MDNode::get(
+      Context, {MDString::get(Context, "llvm.loop.unroll.disable")});
+  Metadata *FalseVal =
+      ConstantAsMetadata::get(ConstantInt::get(Type::getInt1Ty(Context), 0));
+  MDNode *DisableVectorize = MDNode::get(
+      Context,
+      {MDString::get(Context, "llvm.loop.vectorize.enable"), FalseVal});
+  MDNode *DisableLICMVersioning = MDNode::get(
+      Context, {MDString::get(Context, "llvm.loop.licm_versioning.disable")});
+  MDNode *DisableDistribution = MDNode::get(
+      Context,
+      {MDString::get(Context, "llvm.loop.distribute.enable"), FalseVal});
+  MDNode *NewLoopID =
+      MDNode::get(Context, {Dummy, DisableUnroll, DisableVectorize,
+                            DisableLICMVersioning, DisableDistribution});
+  NewLoopID->replaceOperandWith(0, NewLoopID);
+  L.setLoopID(NewLoopID);
+}
+
+// Restructure \p L into its IRCE sub-ranges via LoopSplitUtils instead of
+// LoopConstrainer, folding eliminated checks in the main partition. The pre/
+// main/post boundaries mirror LoopConstrainer::run exactly (both directions).
+static bool constrainLoopWithLoopSplitUtils(
+    Loop *L, LoopInfo &LI, ScalarEvolution &SE, DominatorTree &DT,
+    const LoopStructure &LS, const LoopConstrainer::SubRanges &SR,
+    Type *RangeTy, function_ref<void(Loop *, bool)> LPMAddNewLoop,
+    SmallVectorImpl<InductiveRangeCheck> &RangeChecksToEliminate) {
+  // Defer a nested loop with an EH-pad side exit: cloning it per partition
+  // re-enters the enclosing loop through the pad, giving irreducible control
+  // flow. (Top-level EH exits leave to non-loop code and stay reducible.)
+  if (L->getParentLoop()) {
+    SmallVector<BasicBlock *, 4> ExitBlocks;
+    L->getExitBlocks(ExitBlocks);
+    for (BasicBlock *Exit : ExitBlocks)
+      if (Exit->isEHPad())
+        return false;
+  }
+
+  // Allow the uncomputable-trip-count fallback (stride>1 symbolic-bound loops
+  // with no computable trip count) and a truncated latch compare (gated by
+  // -irce-allow-narrow-latch, as in calculateSubRanges) so LoopSplitUtils
+  // covers the shapes IRCE constrains.
+  LoopSplitUtils LSU(L, &LI, &SE, &DT, /*AllowUncomputableTripCount=*/true,
+                     /*AllowTruncatedLatchCompare=*/AllowNarrowLatchCondition);
+  if (!LSU.isLegal())
+    return false;
+  PHINode *IndPHI = LSU.getInductionVariable();
+  auto *IndTy = dyn_cast<IntegerType>(IndPHI->getType());
+  // The induction is the wide value; require the IRCE range type to match it
+  // (a range check narrower than the latch is rejected by calculateSubRanges).
+  if (!IndTy || IndTy != RangeTy)
+    return false;
+
+  const SCEV *StartS = SE.getSCEV(LS.IndVarStart);
+  if (StartS->getType() != IndTy) {
+    // Narrow-latch: widen LoopStructure's narrower-typed start to the induction/
+    // range type (mirroring LoopConstrainer's NoopOrExtend).
+    auto *StartTy = dyn_cast<IntegerType>(StartS->getType());
+    if (!StartTy || StartTy->getBitWidth() > IndTy->getBitWidth())
+      return false;
+    StartS = NoopOrExtend(StartS, IndTy, SE, LS.IsSignedPredicate);
+  }
+  if (StartS->getType() != IndTy)
+    return false;
+  // Inclusive end of the tiled iteration space: the last counted value in exact
+  // mode; with no computable trip count the invariant bound stands in (the final
+  // partition keeps the original latch, so its end is only a placeholder).
+  const SCEV *EndIncl = LSU.isUncomputableTripCountMode()
+                            ? LSU.getInductionBound()
+                            : LSU.getInductionEnd();
+  if (!EndIncl || EndIncl->getType() != IndTy)
+    return false;
+
+  bool HasLow = SR.LowLimit.has_value();
+  bool HasHigh = SR.HighLimit.has_value();
+  if (!HasLow && !HasHigh) {
+    // Safe range covers the whole loop: every check is redundant and there is
+    // no head/tail to peel, so no split is needed -- just fold in place. With
+    // nothing to fold, the loop is unchanged.
+    if (RangeChecksToEliminate.empty())
+      return false;
+    LLVMContext &Context = L->getHeader()->getContext();
+    for (InductiveRangeCheck &IRC : RangeChecksToEliminate) {
+      Use *U = IRC.getCheckUse();
+      Value *Folded = IRC.getPassingDirection() ? ConstantInt::getTrue(Context)
+                                                : ConstantInt::getFalse(Context);
+      U->set(Folded);
+    }
+    return true;
+  }
+
+  const SCEV *One = SE.getOne(IndTy);
+  const SCEV *Low = HasLow ? *SR.LowLimit : nullptr;
+  const SCEV *High = HasHigh ? *SR.HighLimit : nullptr;
+  if ((Low && Low->getType() != IndTy) || (High && High->getType() != IndTy))
+    return false;
+
+  unsigned MainIdx;
+  if (LS.IndVarIncreasing) {
+    const SCEV *MainStart = HasLow ? Low : StartS;
+    const SCEV *MainEnd = HasHigh ? SE.getMinusSCEV(High, One) : EndIncl;
+    if (HasLow)
+      LSU.addPartition(StartS, SE.getMinusSCEV(Low, One));
+    LSU.addPartition(MainStart, MainEnd);
+    if (HasHigh)
+      LSU.addPartition(High, EndIncl);
+    MainIdx = HasLow ? 1 : 0;
+  } else {
+    // Decreasing: LoopSplitUtils carries the runtime induction value across
+    // partitions, so boundaries need not land on the grid. Require a constant
+    // step so the no-overflow reasoning below and the clamp are well defined.
+    const auto *IndAR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(IndPHI));
+    if (!IndAR)
+      return false;
+    const auto *StepC = dyn_cast<SCEVConstant>(IndAR->getStepRecurrence(SE));
+    if (!StepC)
+      return false;
+
+    // The interior boundaries HighLimit-1 / LowLimit-1 must not underflow;
+    // require the same no-overflow proof LoopConstrainer uses (see its run()).
+    if (HasHigh && !cannotBeMinInLoop(High, L, SE, LS.IsSignedPredicate))
+      return false;
+    if (HasLow && !cannotBeMinInLoop(Low, L, SE, LS.IsSignedPredicate))
+      return false;
+    const SCEV *MainStart = HasHigh ? SE.getMinusSCEV(High, One) : StartS;
+    const SCEV *MainEnd = HasLow ? Low : EndIncl;
+    if (HasHigh)
+      LSU.addPartition(StartS, High);
+    LSU.addPartition(MainStart, MainEnd);
+    if (HasLow)
+      LSU.addPartition(SE.getMinusSCEV(Low, One), EndIncl);
+    MainIdx = HasHigh ? 1 : 0;
+  }
+
+  if (LSU.getNumPartitions() < 2)
+    return false;
+  if (!LSU.split())
+    return false;
+
+  // Fold the eliminated checks in the main partition only; the pre/post
+  // partitions keep the real checks because they run the unsafe head/tail.
+  LLVMContext &Context = L->getHeader()->getContext();
+  for (InductiveRangeCheck &IRC : RangeChecksToEliminate) {
+    Use *U = IRC.getCheckUse();
+    Value *Folded = IRC.getPassingDirection() ? ConstantInt::getTrue(Context)
+                                              : ConstantInt::getFalse(Context);
+    auto *User = cast<Instruction>(U->getUser());
+    unsigned OpNo = U->getOperandNo();
+    if (MainIdx == 0) {
+      User->setOperand(OpNo, Folded);
+    } else if (auto *ClonedUser = dyn_cast_or_null<Instruction>(
+                   LSU.getPartitionValue(User, MainIdx))) {
+      ClonedUser->setOperand(OpNo, Folded);
+    }
+  }
+
+  // Match LoopConstrainer's nsw on the main-partition induction increment.
+  if (LS.IsSignedPredicate) {
+    Value *MainIndBase = MainIdx == 0
+                             ? LS.IndVarBase
+                             : LSU.getPartitionValue(LS.IndVarBase, MainIdx);
+    if (MainIndBase && isa<OverflowingBinaryOperator>(MainIndBase))
+      cast<BinaryOperator>(MainIndBase)->setHasNoSignedWrap(true);
+  }
+
+  // Give every non-main partition LoopConstrainer's pre/post treatment: disable
+  // further loop opts, tag the latch against reprocessing, register as sibling.
+  for (unsigned I = 0, E = LSU.getNumPartitions(); I != E; ++I) {
+    if (I == MainIdx)
+      continue;
+    Loop *PL = LSU.getPartitionLoop(I);
+    if (!PL)
+      continue;
+    disableAllLoopOptsOnLoop(*PL);
+    if (BasicBlock *Latch = PL->getLoopLatch())
+      Latch->getTerminator()->setMetadata(LoopConstrainerClonedLoopTag,
+                                          MDNode::get(Context, {}));
+    LPMAddNewLoop(PL, /*IsSubloop=*/false);
+  }
+
+  SE.forgetLoop(L);
+  return true;
+}
+
 bool InductiveRangeCheckElimination::run(
     Loop *L, function_ref<void(Loop *, bool)> LPMAddNewLoop) {
   if (L->getBlocks().size() >= LoopSizeCutoff) {
@@ -1079,8 +1283,23 @@ bool InductiveRangeCheckElimination::run(
     return false;
   }
 
-  LoopConstrainer LC(*L, LI, LPMAddNewLoop, LS, SE, DT,
-                     SafeIterRange->getBegin()->getType(), *MaybeSR);
+  Type *RangeTy = SafeIterRange->getBegin()->getType();
+
+  // -irce-use-loop-split-utils selects the engine: ON drives pre/main/post via
+  // LoopSplitUtils (folding checks itself; on decline the loop is left
+  // unconstrained, no fallback), OFF uses the legacy LoopConstrainer below.
+  if (UseLoopSplitUtils) {
+    if (constrainLoopWithLoopSplitUtils(L, LI, SE, DT, LS, *MaybeSR, RangeTy,
+                                        LPMAddNewLoop, RangeChecksToEliminate)) {
+      LLVM_DEBUG(dbgs() << "irce: constrained loop via LoopSplitUtils\n");
+      return true;
+    }
+    LLVM_DEBUG(dbgs() << "irce: LoopSplitUtils declined; leaving loop "
+                         "unconstrained (no LoopConstrainer fallback)\n");
+    return Changed;
+  }
+
+  LoopConstrainer LC(*L, LI, LPMAddNewLoop, LS, SE, DT, RangeTy, *MaybeSR);
 
   if (LC.run()) {
     Changed = true;
