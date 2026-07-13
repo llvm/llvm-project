@@ -49,6 +49,11 @@ inline uint64_t alignTo4(uint64_t V) { return llvm::alignTo(V, 4); }
 inline uint64_t alignTo8(uint64_t V) { return llvm::alignTo(V, 8); }
 
 struct KernelDescriptorElfOptions {
+  struct MetadataKernel {
+    std::string Name;
+    unsigned SgprCount = 0;
+  };
+
   uint16_t ElfType = llvm::ELF::ET_DYN;
   std::string KernelName = "kernel";
   uint64_t TextAddr = 0x1000;
@@ -66,6 +71,9 @@ struct KernelDescriptorElfOptions {
   std::optional<std::string> MetadataGfx1250Revision;
   bool MetadataOmitSgprCount = false;
   bool MetadataSgprCountAsString = false;
+  // When non-empty, emit these kernel metadata entries instead of the single
+  // entry described by MetadataKernelName / MetadataSgprCount.
+  std::vector<MetadataKernel> MetadataKernels;
 };
 
 struct KernelDescriptorElf {
@@ -80,23 +88,32 @@ makeAmdgpuMetadataBlob(const KernelDescriptorElfOptions &Options) {
   llvm::msgpack::Document Doc;
   llvm::msgpack::MapDocNode Root = Doc.getRoot().getMap(/*Convert=*/true);
   llvm::msgpack::ArrayDocNode Kernels = Doc.getArrayNode();
-  llvm::msgpack::MapDocNode Kernel = Doc.getMapNode();
-
-  const std::string &MetadataKernelName = Options.MetadataKernelName
-                                              ? *Options.MetadataKernelName
-                                              : Options.KernelName;
-  Kernel[".name"] = Doc.getNode(MetadataKernelName, /*Copy=*/true);
-  if (!Options.MetadataOmitSgprCount) {
-    if (Options.MetadataSgprCountAsString)
-      Kernel[".sgpr_count"] = Doc.getNode("not-an-integer", /*Copy=*/true);
-    else
-      Kernel[".sgpr_count"] =
-          static_cast<uint64_t>(Options.MetadataSgprCount.value_or(0));
+  if (!Options.MetadataKernels.empty()) {
+    for (const KernelDescriptorElfOptions::MetadataKernel &Spec :
+         Options.MetadataKernels) {
+      llvm::msgpack::MapDocNode Kernel = Doc.getMapNode();
+      Kernel[".name"] = Doc.getNode(Spec.Name, /*Copy=*/true);
+      Kernel[".sgpr_count"] = static_cast<uint64_t>(Spec.SgprCount);
+      Kernels.push_back(Kernel);
+    }
+  } else {
+    llvm::msgpack::MapDocNode Kernel = Doc.getMapNode();
+    const std::string &MetadataKernelName = Options.MetadataKernelName
+                                                ? *Options.MetadataKernelName
+                                                : Options.KernelName;
+    Kernel[".name"] = Doc.getNode(MetadataKernelName, /*Copy=*/true);
+    if (!Options.MetadataOmitSgprCount) {
+      if (Options.MetadataSgprCountAsString)
+        Kernel[".sgpr_count"] = Doc.getNode("not-an-integer", /*Copy=*/true);
+      else
+        Kernel[".sgpr_count"] =
+            static_cast<uint64_t>(Options.MetadataSgprCount.value_or(0));
+    }
+    if (Options.MetadataGfx1250Revision)
+      Kernel[".gfx1250_revision"] =
+          Doc.getNode(*Options.MetadataGfx1250Revision, /*Copy=*/true);
+    Kernels.push_back(Kernel);
   }
-  if (Options.MetadataGfx1250Revision)
-    Kernel[".gfx1250_revision"] =
-        Doc.getNode(*Options.MetadataGfx1250Revision, /*Copy=*/true);
-  Kernels.push_back(Kernel);
   Root["amdhsa.kernels"] = Kernels;
 
   std::string Blob;
@@ -163,7 +180,8 @@ makeKernelDescriptorElf(llvm::ArrayRef<uint8_t> Text,
 
   const bool HasMetadataNote =
       Options.MetadataSgprCount || Options.MetadataGfx1250Revision ||
-      Options.MetadataOmitSgprCount || Options.MetadataSgprCountAsString;
+      Options.MetadataOmitSgprCount || Options.MetadataSgprCountAsString ||
+      !Options.MetadataKernels.empty();
   std::vector<uint8_t> MetadataNote;
   if (HasMetadataNote) {
     std::string MetadataBlob = makeAmdgpuMetadataBlob(Options);

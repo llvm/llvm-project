@@ -8,6 +8,21 @@
 // RUN:   --output %t.out.elf | %FileCheck --check-prefix=API %s
 // API: RESULT: SUCCESS
 
+// COM: Exercise the large-object planning path with verbose accounting. This
+// COM: fixture contains more than 250 KiB of text and requires a deterministic
+// COM: forward branch-island chain.
+// RUN: env AMD_COMGR_EMIT_VERBOSE_LOGS=1 hotswap-rewrite %t.elf \
+// RUN:   amdgcn-amd-amdhsa--gfx1250 amdgcn-amd-amdhsa--gfx1250 \
+// RUN:   --output %t.scale.elf 2>&1 | %FileCheck --check-prefix=SCALE %s
+// SCALE: hotswap: assigned 1 forward s_branch island chain(s)
+// SCALE: hotswap: applied 1 instruction patches
+// SCALE: hotswap: growWithTrampolines: appended 1 trampoline
+
+// RUN: hotswap-rewrite %t.scale.elf \
+// RUN:   amdgcn-amd-amdhsa--gfx1250 amdgcn-amd-amdhsa--gfx1250 \
+// RUN:   --check-idempotent | %FileCheck --check-prefix=SCALE-IDEM %s
+// SCALE-IDEM: IDEMPOTENT: YES
+
 // RUN: %llvm-objdump -d %t.out.elf | %FileCheck --check-prefix=DISASM \
 // RUN:   --implicit-check-not=s_add_pc_i64 %s
 

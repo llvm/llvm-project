@@ -107,7 +107,7 @@ static bool appendCodeEndGuard(std::vector<Trampoline> &Growth,
 
 static std::optional<uint32_t>
 getMaxOriginalKernelInstPrefSize(const ElfView &Elf, const LLVMState &LS) {
-  std::vector<KernelDescriptorInfo> Descriptors = Elf.kernelDescriptors();
+  ArrayRef<KernelDescriptorInfo> Descriptors = Elf.kernelDescriptors();
   uint32_t MaxOriginalInstPrefLines = 0;
   for (const KernelDescriptorInfo &KD : Descriptors) {
     std::optional<uint32_t> OriginalInstPrefLines =
@@ -503,10 +503,47 @@ static bool instructionUsesVcc(const LLVMState &LS,
   return false;
 }
 
+static SafeSgprUsageSummary
+summarizeSafeSgprUsage(PatchContext &Ctx,
+                       ArrayRef<InternalDecodedInst> Instructions,
+                       StringRef Context) {
+  SafeSgprUsageSummary Summary;
+  for (const InternalDecodedInst &DI : Instructions) {
+    Summary.UsesVcc |= instructionUsesVcc(Ctx.LS, DI);
+    Summary.HasCall |= Ctx.LS.MIA && Ctx.LS.MIA->isCall(DI.Inst);
+    for (const MCOperand &Op : DI.Inst) {
+      if (!Op.isReg() || !Op.getReg())
+        continue;
+      if (!updateNumberedSgprHighWatermark(*Ctx.LS.MRI, MCRegister(Op.getReg()),
+                                           Ctx.Config.MaxSgprs,
+                                           Summary.HighWatermark, Context)) {
+        Summary.Valid = false;
+        return Summary;
+      }
+    }
+
+    const MCInstrDesc &Desc = Ctx.LS.MCII->get(DI.Inst.getOpcode());
+    for (MCPhysReg Reg : Desc.implicit_uses())
+      if (!updateNumberedSgprHighWatermark(*Ctx.LS.MRI, MCRegister(Reg),
+                                           Ctx.Config.MaxSgprs,
+                                           Summary.HighWatermark, Context)) {
+        Summary.Valid = false;
+        return Summary;
+      }
+    for (MCPhysReg Reg : Desc.implicit_defs())
+      if (!updateNumberedSgprHighWatermark(*Ctx.LS.MRI, MCRegister(Reg),
+                                           Ctx.Config.MaxSgprs,
+                                           Summary.HighWatermark, Context)) {
+        Summary.Valid = false;
+        return Summary;
+      }
+  }
+  return Summary;
+}
+
 std::optional<SafeSgprScratchBlock>
-findSafeSgprScratchBlock(const PatchContext &Ctx, uint64_t TextOffset,
-                         unsigned Count, unsigned Alignment,
-                         StringRef Context) {
+findSafeSgprScratchBlock(PatchContext &Ctx, uint64_t TextOffset, unsigned Count,
+                         unsigned Alignment, StringRef Context) {
   if (Count == 0 || Alignment == 0 || (Alignment & (Alignment - 1)) != 0) {
     log() << "hotswap: error: " << Context
           << ": invalid global SGPR block request (count=" << Count
@@ -519,45 +556,50 @@ findSafeSgprScratchBlock(const PatchContext &Ctx, uint64_t TextOffset,
   std::string Owner =
       Ctx.Elf.findKernelAtAddress(TextOffset + Ctx.Elf.textAddr());
   bool ScanWholeObject = Owner.empty() || !FunctionRange;
+  SafeSgprUsageSummary *Usage = nullptr;
   if (!ScanWholeObject) {
-    for (const InternalDecodedInst &DI : Ctx.Decoded) {
-      if (DI.Offset < FunctionRange->Begin || DI.Offset >= FunctionRange->End)
-        continue;
-      if (Ctx.LS.MIA && Ctx.LS.MIA->isCall(DI.Inst)) {
-        ScanWholeObject = true;
-        break;
-      }
+    using FunctionKey = std::pair<uint64_t, uint64_t>;
+    FunctionKey Key{FunctionRange->Begin, FunctionRange->End};
+    DenseMap<FunctionKey, SafeSgprUsageSummary>::iterator Cached =
+        Ctx.FunctionSgprUsage.find(Key);
+    if (Cached == Ctx.FunctionSgprUsage.end()) {
+      std::vector<InternalDecodedInst>::const_iterator Begin = std::lower_bound(
+          Ctx.Decoded.cbegin(), Ctx.Decoded.cend(), FunctionRange->Begin,
+          [](const InternalDecodedInst &DI, uint64_t Offset) {
+            return DI.Offset < Offset;
+          });
+      std::vector<InternalDecodedInst>::const_iterator End =
+          std::lower_bound(Begin, Ctx.Decoded.cend(), FunctionRange->End,
+                           [](const InternalDecodedInst &DI, uint64_t Offset) {
+                             return DI.Offset < Offset;
+                           });
+      size_t BeginIndex = Begin - Ctx.Decoded.cbegin();
+      size_t InstructionCount = End - Begin;
+      SafeSgprUsageSummary Summary =
+          summarizeSafeSgprUsage(Ctx,
+                                 ArrayRef<InternalDecodedInst>(Ctx.Decoded)
+                                     .slice(BeginIndex, InstructionCount),
+                                 Context);
+      Cached = Ctx.FunctionSgprUsage.try_emplace(Key, Summary).first;
     }
+    Usage = &Cached->second;
+    ScanWholeObject = Usage->HasCall;
   }
 
-  bool UsesVcc = false;
-  unsigned HighWatermark = 0;
-  for (const InternalDecodedInst &DI : Ctx.Decoded) {
-    if (!ScanWholeObject &&
-        (DI.Offset < FunctionRange->Begin || DI.Offset >= FunctionRange->End))
-      continue;
-    UsesVcc |= instructionUsesVcc(Ctx.LS, DI);
-    for (const MCOperand &Op : DI.Inst) {
-      if (!Op.isReg() || !Op.getReg())
-        continue;
-      if (!updateNumberedSgprHighWatermark(*Ctx.LS.MRI, MCRegister(Op.getReg()),
-                                           Ctx.Config.MaxSgprs, HighWatermark,
-                                           Context))
-        return std::nullopt;
-    }
-
-    const MCInstrDesc &Desc = Ctx.LS.MCII->get(DI.Inst.getOpcode());
-    for (MCPhysReg Reg : Desc.implicit_uses())
-      if (!updateNumberedSgprHighWatermark(*Ctx.LS.MRI, MCRegister(Reg),
-                                           Ctx.Config.MaxSgprs, HighWatermark,
-                                           Context))
-        return std::nullopt;
-    for (MCPhysReg Reg : Desc.implicit_defs())
-      if (!updateNumberedSgprHighWatermark(*Ctx.LS.MRI, MCRegister(Reg),
-                                           Ctx.Config.MaxSgprs, HighWatermark,
-                                           Context))
-        return std::nullopt;
+  if (ScanWholeObject) {
+    if (!Ctx.WholeObjectSgprUsage)
+      Ctx.WholeObjectSgprUsage = summarizeSafeSgprUsage(
+          Ctx, ArrayRef<InternalDecodedInst>(Ctx.Decoded), Context);
+    Usage = &*Ctx.WholeObjectSgprUsage;
   }
+  if (!Usage || !Usage->Valid) {
+    log() << "hotswap: error: " << Context
+          << ": cached SGPR usage analysis failed\n";
+    return std::nullopt;
+  }
+
+  bool UsesVcc = Usage->UsesVcc;
+  unsigned HighWatermark = Usage->HighWatermark;
 
   constexpr unsigned VccSgprs = 2;
   if (!Owner.empty()) {
@@ -608,7 +650,7 @@ findSafeSgprScratchBlock(const PatchContext &Ctx, uint64_t TextOffset,
 bool commitSafeSgprScratchBlock(PatchContext &Ctx, uint64_t TextOffset,
                                 const SafeSgprScratchBlock &Block,
                                 StringRef Context) {
-  std::vector<KernelDescriptorInfo> Descriptors = Ctx.Elf.kernelDescriptors();
+  ArrayRef<KernelDescriptorInfo> Descriptors = Ctx.Elf.kernelDescriptors();
   if (Descriptors.empty()) {
     log() << "hotswap: error: " << Context
           << ": code object has no kernel descriptors to charge for scratch "
@@ -692,14 +734,10 @@ bool isSBranchReachable(uint64_t From, uint64_t To) {
   // already queued -- later ones are appended behind it and cannot shift it,
   // and fixupTrampolineBranches walks the same list in the same order -- so its
   // final pool offset (relative to .text) is known exactly now.
-  uint64_t PoolStart = Ctx.PoolBaseOffset;
-  for (const Trampoline &Prev : Ctx.OutTrampolines) {
-    std::optional<uint64_t> NextPoolStart = checkedAddUint64(
-        PoolStart, Prev.Bytes.size(), "trampoline pool layout");
-    if (!NextPoolStart)
-      return false;
-    PoolStart = *NextPoolStart;
-  }
+  std::optional<uint64_t> PoolStart = checkedAddUint64(
+      Ctx.PoolBaseOffset, Ctx.QueuedTrampolineBytes, "trampoline pool layout");
+  if (!PoolStart)
+    return false;
 
   // An s_branch encodes To - From as a signed simm16 dword field, in range iff
   // (To - From - MinInstSize) / MinInstSize fits [BranchOffsetMin,
@@ -707,13 +745,24 @@ bool isSBranchReachable(uint64_t From, uint64_t To) {
   // short branch-back slot; the branch-back (pool tail -> site) is the farther
   // of the two. Go long only when a short branch cannot reach.
   std::optional<uint64_t> ShortBackFrom = checkedAddUint64(
-      PoolStart, Replacement.size(), "short trampoline return slot");
+      *PoolStart, Replacement.size(), "short trampoline return slot");
   std::optional<uint64_t> ReturnTo =
       checkedAddUint64(InstOffset, InstSize, "trampoline return target");
   if (!ShortBackFrom || !ReturnTo)
     return false;
-  const bool Far = !(isSBranchReachable(InstOffset, PoolStart) &&
+  const bool Far = !(isSBranchReachable(InstOffset, *PoolStart) &&
                      isSBranchReachable(*ShortBackFrom, *ReturnTo));
+
+  uint64_t ReturnReserve = Far ? SetPcReturnReserveBytes : MinInstSize;
+  std::optional<uint64_t> TrampolineSize = checkedAddUint64(
+      Replacement.size(), ReturnReserve, "queued trampoline size");
+  if (!TrampolineSize)
+    return false;
+  std::optional<uint64_t> QueuedBytes =
+      checkedAddUint64(Ctx.QueuedTrampolineBytes, *TrampolineSize,
+                       "queued trampoline byte count");
+  if (!QueuedBytes)
+    return false;
 
   Trampoline T;
   T.OriginalOffset = InstOffset;
@@ -742,6 +791,7 @@ bool isSBranchReachable(uint64_t From, uint64_t To) {
     T.UsesSetPCBack = true;
     T.LongBranchSgprBase = Scratch->Base;
     Ctx.OutTrampolines.emplace_back(std::move(T));
+    Ctx.QueuedTrampolineBytes = *QueuedBytes;
     return true;
   }
   {
@@ -749,6 +799,7 @@ bool isSBranchReachable(uint64_t From, uint64_t To) {
     T.Bytes.insert(T.Bytes.end(), MinInstSize, uint8_t{0});
   }
   Ctx.OutTrampolines.emplace_back(std::move(T));
+  Ctx.QueuedTrampolineBytes = *QueuedBytes;
   return true;
 }
 
@@ -1649,7 +1700,13 @@ static std::optional<uint32_t> applyGfx1250B0toA0Rules(
       return std::nullopt;
   }
 
-  for (const llvm::StringMapEntry<KernelPatchStats> &KV : KernelStats) {
+  struct ResourceCounts {
+    unsigned Vgprs;
+    unsigned Sgprs;
+  };
+  StringMap<ResourceCounts> CountsBefore;
+  StringMap<unsigned> RequiredSgprCounts;
+  for (const StringMapEntry<KernelPatchStats> &KV : KernelStats) {
     StringRef KName = KV.first();
     const KernelPatchStats &Stats = KV.second;
     if (KName.empty())
@@ -1657,6 +1714,8 @@ static std::optional<uint32_t> applyGfx1250B0toA0Rules(
     std::optional<unsigned> VgprsBefore =
         Elf.getKernelVgprCount(KName, Config.VgprGranuleSize);
     std::optional<unsigned> SgprsBefore = Elf.getKernelSgprCount(KName);
+    CountsBefore.try_emplace(KName, ResourceCounts{VgprsBefore.value_or(0),
+                                                   SgprsBefore.value_or(0)});
     if (Stats.ExtraVgprs > 0)
       Elf.updateKernelDescriptor(KName, Stats.ExtraVgprs,
                                  Config.VgprGranuleSize);
@@ -1673,20 +1732,33 @@ static std::optional<uint32_t> applyGfx1250B0toA0Rules(
         return std::nullopt;
       }
       unsigned RequiredSgprs = *SgprsBefore + Stats.ExtraSgprs;
-      if (!Elf.updateKernelDescriptorSgprCount(KName, RequiredSgprs,
-                                               /*UpdateDescriptor=*/false)) {
-        log() << "hotswap: error: failed to update SGPR count for kernel "
-              << KName << "\n";
-        return std::nullopt;
-      }
+      RequiredSgprCounts.try_emplace(KName, RequiredSgprs);
+    }
+  }
+
+  if (!Elf.updateKernelMetadataSgprCounts(RequiredSgprCounts)) {
+    log() << "hotswap: error: failed to update kernel SGPR metadata\n";
+    return std::nullopt;
+  }
+
+  for (const StringMapEntry<KernelPatchStats> &KV : KernelStats) {
+    StringRef KName = KV.first();
+    const KernelPatchStats &Stats = KV.second;
+    if (KName.empty())
+      continue;
+    StringMap<ResourceCounts>::const_iterator Before = CountsBefore.find(KName);
+    if (Before == CountsBefore.end()) {
+      log() << "hotswap: error: missing cached resource counts for kernel "
+            << KName << "\n";
+      return std::nullopt;
     }
     std::optional<unsigned> VgprsAfter =
         Elf.getKernelVgprCount(KName, Config.VgprGranuleSize);
     std::optional<unsigned> SgprsAfter = Elf.getKernelSgprCount(KName);
     log() << "hotswap: liveness: kernel " << KName
-          << ": vgprs_before=" << VgprsBefore.value_or(0)
+          << ": vgprs_before=" << Before->second.Vgprs
           << ", vgprs_after=" << VgprsAfter.value_or(0)
-          << ", sgprs_before=" << SgprsBefore.value_or(0)
+          << ", sgprs_before=" << Before->second.Sgprs
           << ", sgprs_after=" << SgprsAfter.value_or(0)
           << ", scratch_reused=" << Stats.ScratchReused
           << ", scratch_above_kd=" << Stats.ScratchAboveKd << "\n";

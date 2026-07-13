@@ -28,6 +28,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "llvm/ADT/ArrayRef.h"
@@ -292,8 +293,9 @@ public:
   uint8_t *findKernelDescriptor(llvm::StringRef KernelName);
 
   /// Enumerate kernel descriptor symbols named "<kernel>.kd" and read their
-  /// current kernel_code_entry_byte_offset values.
-  std::vector<KernelDescriptorInfo> kernelDescriptors() const;
+  /// current kernel_code_entry_byte_offset values. The returned range remains
+  /// valid until this ElfView is destroyed.
+  llvm::ArrayRef<KernelDescriptorInfo> kernelDescriptors() const;
 
   /// Return the virtual address of the kernel descriptor symbol for
   /// \p KernelName, or std::nullopt when the descriptor is not present.
@@ -310,6 +312,11 @@ public:
   bool updateKernelDescriptorSgprCount(llvm::StringRef KernelName,
                                        unsigned RequiredSgprs,
                                        bool UpdateDescriptor = true);
+
+  /// Update metadata SGPR counts for every named kernel in one parse and
+  /// serialization pass. All requested kernels must be present.
+  bool updateKernelMetadataSgprCounts(
+      const llvm::StringMap<unsigned> &RequiredSgprs);
 
   /// Retag every gfx1250 kernel in the AMDGPU metadata note with \p Revision.
   /// The revision strings used by gfx1250 ("A0" and "B0") have equal encoded
@@ -391,15 +398,35 @@ public:
                       llvm::ArrayRef<uint8_t> SNopBytes) const;
 
 private:
+  enum class KernelSgprCacheState {
+    Uninitialized,
+    Metadata,
+    NoMetadata,
+    Error,
+  };
+
   ElfView(ELFFileT File, ELFT::ShdrRange Sections,
           const ELFT::Shdr *TextSection, unsigned TextSectionIndex)
       : File(std::move(File)), Sections(Sections), TextSection(TextSection),
         TextSectionIndex(TextSectionIndex) {}
 
+  llvm::ArrayRef<FunctionTextRange> cachedFunctionTextRanges() const;
+  const FunctionTextRange *
+  findFunctionTextRangeAtAddress(uint64_t TextAddress) const;
+  void initializeKernelDescriptorCache() const;
+  void initializeKernelSgprCountCache() const;
+
   ELFFileT File;
   ELFT::ShdrRange Sections;
   const ELFT::Shdr *TextSection;
   unsigned TextSectionIndex;
+  mutable std::optional<std::vector<FunctionTextRange>> FunctionRangeCache;
+  mutable std::optional<std::vector<KernelDescriptorInfo>>
+      KernelDescriptorCache;
+  mutable llvm::StringMap<uint64_t> KernelDescriptorFileOffsetCache;
+  mutable KernelSgprCacheState SgprCacheState =
+      KernelSgprCacheState::Uninitialized;
+  mutable llvm::StringMap<std::optional<unsigned>> KernelSgprCountCache;
 };
 
 // -- Free-function ELF helpers (no ELF state required) ------------------------
@@ -728,6 +755,13 @@ struct KernelPatchStats {
   unsigned ScratchAboveKd = 0;
 };
 
+struct SafeSgprUsageSummary {
+  bool Valid = true;
+  bool UsesVcc = false;
+  bool HasCall = false;
+  unsigned HighWatermark = 0;
+};
+
 /// Mutable per-run context threaded through all patch passes. Bundles the
 /// input config, decoded instruction stream, raw .text bytes, MC state,
 /// output streams (trampolines / scratch info), and the shared ELF view +
@@ -753,6 +787,16 @@ struct PatchContext {
   // unsafe to return when the selected rewrite policy needs the patch.
   bool RequiredPatchFailed = false;
   bool RequiredPatchApplied = false;
+  // Sum of the bytes already queued in OutTrampolines. Keeping this in the
+  // per-rewrite context makes each new pool-position calculation constant
+  // time even for code objects with many thousands of patch sites.
+  uint64_t QueuedTrampolineBytes = 0;
+  // Safe far-return scratch allocation can be queried at many patch sites in
+  // one function. Cache the immutable decoded SGPR usage summaries so each
+  // function, and the whole-object fallback, is scanned at most once.
+  std::optional<SafeSgprUsageSummary> WholeObjectSgprUsage;
+  llvm::DenseMap<std::pair<uint64_t, uint64_t>, SafeSgprUsageSummary>
+      FunctionSgprUsage{0};
 };
 
 /// A block of numbered SGPRs that is not referenced in the function being
@@ -766,9 +810,8 @@ struct SafeSgprScratchBlock {
 /// Find an aligned block of unused numbered SGPRs for \p TextOffset. Returns
 /// nullopt after logging when no block fits below RewriteConfig::MaxSgprs.
 std::optional<SafeSgprScratchBlock>
-findSafeSgprScratchBlock(const PatchContext &Ctx, uint64_t TextOffset,
-                         unsigned Count, unsigned Alignment,
-                         llvm::StringRef Context);
+findSafeSgprScratchBlock(PatchContext &Ctx, uint64_t TextOffset, unsigned Count,
+                         unsigned Alignment, llvm::StringRef Context);
 
 /// Charge a previously selected global block to the kernel owning \p
 /// TextOffset. If the site is in an ordinary device function, conservatively

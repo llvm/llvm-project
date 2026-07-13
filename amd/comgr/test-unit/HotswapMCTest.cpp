@@ -964,7 +964,7 @@ TEST(KernelEntryTrampoline, ClampsInstPrefSizeAndAvoidsPrefetchGuard) {
   EXPECT_EQ(OutRsrc1, Rsrc1Before);
   EXPECT_EQ(OutView->getKernelSgprCount("kernel"), Fixups[0].RequiredSgprs);
 
-  std::vector<KernelDescriptorInfo> KDs = OutView->kernelDescriptors();
+  llvm::ArrayRef<KernelDescriptorInfo> KDs = OutView->kernelDescriptors();
   ASSERT_EQ(KDs.size(), 1u);
   std::optional<uint64_t> KdVAddr = OutView->getKernelDescriptorVAddr("kernel");
   ASSERT_TRUE(KdVAddr.has_value());

@@ -484,7 +484,7 @@ std::optional<uint32_t> appendKernelEntryTrampolines(
     const ElfView &Elf, const LLVMState &LS, unsigned MaxSgprs,
     std::vector<Trampoline> &Growth,
     std::vector<KernelEntryTrampolineFixup> &OutFixups) {
-  std::vector<KernelDescriptorInfo> Descriptors = Elf.kernelDescriptors();
+  ArrayRef<KernelDescriptorInfo> Descriptors = Elf.kernelDescriptors();
   if (Descriptors.empty())
     return 0;
 

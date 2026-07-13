@@ -138,7 +138,7 @@ TEST(ElfView, KernelDescriptorsEnumeratesAndUpdatesEntryOffset) {
   llvm::Expected<ElfView> ViewOrErr =
       ElfView::create(Obj.Bytes.data(), Obj.Bytes.size());
   ASSERT_TRUE((bool)ViewOrErr) << llvm::toString(ViewOrErr.takeError());
-  std::vector<KernelDescriptorInfo> KDs = ViewOrErr->kernelDescriptors();
+  llvm::ArrayRef<KernelDescriptorInfo> KDs = ViewOrErr->kernelDescriptors();
   ASSERT_EQ(KDs.size(), 1u);
   EXPECT_EQ(KDs[0].KernelName, "entry_kernel");
   EXPECT_EQ(KDs[0].VAddr, Obj.RodataAddr);
@@ -156,9 +156,14 @@ TEST(ElfView, KernelDescriptorsEnumeratesAndUpdatesEntryOffset) {
           offsetof(hsa::kernel_descriptor_t, kernel_code_entry_byte_offset),
       sizeof(ReadBack));
   EXPECT_EQ(ReadBack, NewOff);
+  ASSERT_EQ(ViewOrErr->kernelDescriptors().size(), 1u);
+  EXPECT_EQ(ViewOrErr->kernelDescriptors()[0].EntryOffset, NewOff);
 
+  // Prime the descriptor fallback cache before changing the encoded count.
+  EXPECT_EQ(ViewOrErr->getKernelSgprCount("entry_kernel"), 8u);
   ASSERT_TRUE(ViewOrErr->updateKernelDescriptorSgprCount("entry_kernel", 10));
   EXPECT_GE(readReservedSgprs(Obj.Bytes, Obj.KernelDescriptorOffset), 10u);
+  EXPECT_EQ(ViewOrErr->getKernelSgprCount("entry_kernel"), 16u);
 }
 
 TEST(ElfView, KernelDescriptorsSkipsKdWhenFileOffsetOverflows) {
@@ -207,7 +212,7 @@ TEST(ElfView, GrowWithTrampolinesKeepsAllocSectionSymbols) {
   llvm::Expected<ElfView> OutView =
       ElfView::create(OutData, Out->getBufferSize());
   ASSERT_TRUE((bool)OutView) << llvm::toString(OutView.takeError());
-  std::vector<KernelDescriptorInfo> KDs = OutView->kernelDescriptors();
+  llvm::ArrayRef<KernelDescriptorInfo> KDs = OutView->kernelDescriptors();
   ASSERT_EQ(KDs.size(), 1u);
   EXPECT_EQ(KDs[0].VAddr, Obj.RodataAddr);
 }
@@ -306,7 +311,7 @@ TEST(ElfView, GrowWithTrampolinesKeepsIsaReferenceConsistentWithSymbol) {
   const uint64_t IsaResolved =
       decodeReferencedVAddr(OutView->textData(), OutView->textAddr());
   // ...vs. the address the symbol table now reports for the same global.
-  std::vector<KernelDescriptorInfo> KDs = OutView->kernelDescriptors();
+  llvm::ArrayRef<KernelDescriptorInfo> KDs = OutView->kernelDescriptors();
   ASSERT_EQ(KDs.size(), 1u);
   const uint64_t SymbolVAddr = KDs[0].VAddr;
 
@@ -691,6 +696,8 @@ TEST(ElfView, UpdateKernelDescriptorSgprCountUpdatesMetadataAndDescriptor) {
       ElfView::create(Obj.Bytes.data(), Obj.Bytes.size());
   ASSERT_TRUE((bool)ViewOrErr) << llvm::toString(ViewOrErr.takeError());
 
+  // Prime the metadata cache before the in-place update.
+  EXPECT_EQ(ViewOrErr->getKernelSgprCount("entry_kernel"), 8u);
   ASSERT_TRUE(ViewOrErr->updateKernelDescriptorSgprCount("entry_kernel", 10));
   std::optional<unsigned> MetadataSgprs =
       ViewOrErr->getKernelSgprCount("entry_kernel");
@@ -739,6 +746,62 @@ TEST(ElfView, UpdateKernelDescriptorSgprCountCanUpdateMetadataOnly) {
   EXPECT_EQ(ViewOrErr->getKernelSgprCount("entry_kernel"), 10u);
   EXPECT_EQ(readReservedSgprs(Obj.Bytes, Obj.KernelDescriptorOffset),
             DescriptorSgprsBefore);
+}
+
+TEST(ElfView, UpdateKernelMetadataSgprCountsKeepsPrimedCacheCoherent) {
+  comgr_test::KernelDescriptorElfOptions Opts;
+  Opts.KernelName = "entry_kernel";
+  Opts.MetadataSgprCount = 8;
+  comgr_test::KernelDescriptorElf Obj =
+      comgr_test::makeKernelDescriptorElf(makeText(), Opts);
+
+  llvm::Expected<ElfView> ViewOrErr =
+      ElfView::create(Obj.Bytes.data(), Obj.Bytes.size());
+  ASSERT_TRUE((bool)ViewOrErr) << llvm::toString(ViewOrErr.takeError());
+  EXPECT_EQ(ViewOrErr->getKernelSgprCount("entry_kernel"), 8u);
+
+  llvm::StringMap<unsigned> RequiredSgprs;
+  RequiredSgprs.try_emplace("entry_kernel", 10u);
+  ASSERT_TRUE(ViewOrErr->updateKernelMetadataSgprCounts(RequiredSgprs));
+  EXPECT_EQ(ViewOrErr->getKernelSgprCount("entry_kernel"), 10u);
+}
+
+TEST(ElfView, UpdateKernelMetadataSgprCountsBatchesMixedRequirements) {
+  comgr_test::KernelDescriptorElfOptions Opts;
+  Opts.MetadataKernels = {{"needs_update", 8}, {"already_enough", 16}};
+  comgr_test::KernelDescriptorElf Obj =
+      comgr_test::makeKernelDescriptorElf(makeText(), Opts);
+
+  llvm::Expected<ElfView> ViewOrErr =
+      ElfView::create(Obj.Bytes.data(), Obj.Bytes.size());
+  ASSERT_TRUE((bool)ViewOrErr) << llvm::toString(ViewOrErr.takeError());
+
+  llvm::StringMap<unsigned> RequiredSgprs;
+  RequiredSgprs.try_emplace("needs_update", 10u);
+  RequiredSgprs.try_emplace("already_enough", 12u);
+  ASSERT_TRUE(ViewOrErr->updateKernelMetadataSgprCounts(RequiredSgprs));
+  EXPECT_EQ(ViewOrErr->getKernelSgprCount("needs_update"), 10u);
+  EXPECT_EQ(ViewOrErr->getKernelSgprCount("already_enough"), 16u);
+}
+
+TEST(ElfView, UpdateKernelMetadataSgprCountsRejectsAbsentKernelAtomically) {
+  comgr_test::KernelDescriptorElfOptions Opts;
+  Opts.MetadataKernels = {{"needs_update", 8}, {"already_enough", 16}};
+  comgr_test::KernelDescriptorElf Obj =
+      comgr_test::makeKernelDescriptorElf(makeText(), Opts);
+
+  llvm::Expected<ElfView> ViewOrErr =
+      ElfView::create(Obj.Bytes.data(), Obj.Bytes.size());
+  ASSERT_TRUE((bool)ViewOrErr) << llvm::toString(ViewOrErr.takeError());
+
+  llvm::StringMap<unsigned> RequiredSgprs;
+  RequiredSgprs.try_emplace("needs_update", 10u);
+  RequiredSgprs.try_emplace("already_enough", 12u);
+  RequiredSgprs.try_emplace("absent_kernel", 4u);
+  EXPECT_FALSE(ViewOrErr->updateKernelMetadataSgprCounts(RequiredSgprs));
+  EXPECT_EQ(ViewOrErr->getKernelSgprCount("needs_update"), 8u);
+  EXPECT_EQ(ViewOrErr->getKernelSgprCount("already_enough"), 16u);
+  EXPECT_EQ(ViewOrErr->getKernelSgprCount("absent_kernel"), std::nullopt);
 }
 
 TEST(ElfView, UpdateKernelDescriptorSgprCountMetadataOnlyRequiresMetadata) {
