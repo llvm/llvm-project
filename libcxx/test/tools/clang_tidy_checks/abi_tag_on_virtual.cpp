@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-tidy/ClangTidyCheck.h"
+// TODO(boomanaiden154): Remove this compatibility check when LLVM 25 branches.
 #if CLANG_VERSION_MAJOR > 23
 #  include "clang-tidy/ClangTidyModule.h"
 #else
