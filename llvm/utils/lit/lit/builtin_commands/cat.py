@@ -65,18 +65,31 @@ def run(argv, stdin, stdout, stderr, cwd):
 
     for filename in filenames:
         path = filename
-        contents = None
         if not os.path.isabs(path):
             path = os.path.join(cwd, path)
+
+        contents = None
+        is_text = False
         try:
-            with open(path, "rb") as fileToCat:
-                contents = fileToCat.read()
-        except IOError as error:
-            error.filename = filename
-            stderr.write(str(error).encode())
-            return 1
+            fileToCat = open(filename, "r")
+            contents = fileToCat.read()
+            is_text = True
+        except:
+            pass
+
+        if contents is None:
+            try:
+                with open(path, "rb") as fileToCat:
+                    contents = fileToCat.read()
+            except IOError as error:
+                error.filename = filename
+                stderr.write(str(error).encode())
+                return 1
+
         if show_nonprinting:
             contents = convertToCaretAndMNotation(contents)
+        elif is_text:
+            contents = contents.encode()
         stdout.write(contents)
     return 0
 
