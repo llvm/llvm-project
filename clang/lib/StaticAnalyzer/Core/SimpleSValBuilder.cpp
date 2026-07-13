@@ -440,7 +440,9 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
     rhs = *simplifiedRhsAsNonLoc;
 
   // Handle trivial case where left-side and right-side are the same.
-  if (lhs == rhs)
+  // Deliberately exclude floating-point values since x - x isn't necessarily 0
+  // (e.g., inf - inf), and x == x is false when x is NaN.
+  if (lhs == rhs && !lhs.getAs<nonloc::ConcreteFloat>())
     switch (op) {
       default:
         break;
@@ -525,6 +527,74 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
               return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
           }
         }
+    }
+    case nonloc::ConcreteFloatKind: {
+      // Only fold operations between concrete floats that have the same
+      // semantics; normally implicit casts are inserted in the AST so they
+      // match, but check anyway for robustness.
+      std::optional<nonloc::ConcreteFloat> RHSFloat =
+          rhs.getAs<nonloc::ConcreteFloat>();
+      if (!RHSFloat)
+        return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
+
+      const llvm::APFloat &L = *lhs.castAs<nonloc::ConcreteFloat>().getValue();
+      const llvm::APFloat &R = *RHSFloat->getValue();
+      if (&L.getSemantics() != &R.getSemantics())
+        return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
+
+      // We can model comparisons between floats since they are defined for
+      // every value regardless of rounding mode or excess precision.
+      llvm::APFloat::cmpResult Cmp = L.compare(R);
+      switch (op) {
+      case BO_EQ:
+        return makeTruthVal(Cmp == llvm::APFloat::cmpEqual, resultTy);
+      case BO_NE:
+        return makeTruthVal(Cmp != llvm::APFloat::cmpEqual, resultTy);
+      case BO_LT:
+        return makeTruthVal(Cmp == llvm::APFloat::cmpLessThan, resultTy);
+      case BO_GT:
+        return makeTruthVal(Cmp == llvm::APFloat::cmpGreaterThan, resultTy);
+      case BO_LE:
+        return makeTruthVal(Cmp == llvm::APFloat::cmpLessThan ||
+                                Cmp == llvm::APFloat::cmpEqual,
+                            resultTy);
+      case BO_GE:
+        return makeTruthVal(Cmp == llvm::APFloat::cmpGreaterThan ||
+                                Cmp == llvm::APFloat::cmpEqual,
+                            resultTy);
+      default:
+        break;
+      }
+
+      // We can model arithmetic (operators +, -, *, /) only when both operands
+      // are finite and result is exact (which needs no rounding). Inexact,
+      // non-finite, or exceptions (like overflow or div by zero) is unmodeled.
+      if (!L.isFinite() || !R.isFinite())
+        return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
+
+      llvm::APFloat Result = L;
+      llvm::APFloat::opStatus Status;
+      switch (op) {
+      case BO_Add:
+        Status = Result.add(R, llvm::APFloat::rmNearestTiesToEven);
+        break;
+      case BO_Sub:
+        Status = Result.subtract(R, llvm::APFloat::rmNearestTiesToEven);
+        break;
+      case BO_Mul:
+        Status = Result.multiply(R, llvm::APFloat::rmNearestTiesToEven);
+        break;
+      case BO_Div:
+        Status = Result.divide(R, llvm::APFloat::rmNearestTiesToEven);
+        break;
+      default:
+        return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
+      }
+
+      if (Status == llvm::APFloat::opOK)
+        return makeFloatVal(Result);
+
+      return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
     }
     case nonloc::ConcreteIntKind: {
       llvm::APSInt LHSValue = lhs.castAs<nonloc::ConcreteInt>().getValue();
