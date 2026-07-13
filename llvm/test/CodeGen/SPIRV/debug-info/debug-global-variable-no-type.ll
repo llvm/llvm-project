@@ -1,4 +1,5 @@
 ; RUN: llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | not spirv-val 2>&1 | FileCheck %s --check-prefix=VAL-ERR %}
 
 ; This is an edge case: IR that is valid but cannot be correctly encoded in SPIRV.
 
@@ -8,9 +9,11 @@
 ; DebugInfoNone because no @g carries this DIGlobalVariable and its
 ; DIGlobalVariableExpression has an empty DIExpression.
 ;
-; No spirv-val run: DebugInfoNone is not accepted as the Type operand of
-; DebugGlobalVariable by the validator, so this null-type fallback path emits
-; SPIR-V that does not pass spirv-val today.
+; spirv-val rejects DebugInfoNone as the Type operand of DebugGlobalVariable
+; (the Variable operand may use DebugInfoNone; see
+; debug-global-variable-default-address-space.ll).
+
+; VAL-ERR: DebugGlobalVariable{{.*}}expected operand Type is not a valid debug type
 
 ; CHECK-DAG: [[EXT:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-DAG: [[VOID:%[0-9]+]] = OpTypeVoid
