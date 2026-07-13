@@ -12,14 +12,15 @@
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::createHeaderPhiRecipes
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::replaceSymbolicStrides
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::finalizeSCEVPredicates
-; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::handleEarlyExits
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::addMiddleCheck
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::handleEarlyExits
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::createLoopRegions
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::introduceMasksAndLinearize
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::createInLoopReductionRecipes
 ; CHECK-BEFORE: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::makeMemOpWideningDecisions
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] lowerMemoryIdioms
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] scalarizeMemOpsWithIrregularTypes
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] widenConsecutiveMemOps
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] delegateMemOpWideningToLegacyCM
 ; CHECK-AFTER: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::makeMemOpWideningDecisions
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::makeScalarizationDecisions
@@ -59,6 +60,7 @@
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] licm
 ; CHECK-AFTER: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::optimize
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::narrowInterleaveGroups
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::materializeHeaderMask
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] printOptimizedVPlan
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::addMinimumIterationCheck
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::replaceWideCanonicalIVWithWideIV

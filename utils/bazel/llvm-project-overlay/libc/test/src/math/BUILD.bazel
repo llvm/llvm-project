@@ -623,6 +623,13 @@ math_mpfr_test(name = "tanpif16")
 
 math_mpfr_test(name = "expf16")
 
+math_mpfr_test(
+    name = "expbf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
 math_mpfr_test(name = "exp2f16")
 
 math_mpfr_test(name = "exp2m1f16")

@@ -2459,35 +2459,31 @@ static bool ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
-static bool parseShowColorsArgs(const ArgList &Args, bool DefaultColor) {
+static ShowColorsKind parseShowColorsMode(const ArgList &Args,
+                                          bool DefaultColor) {
   // Color diagnostics default to auto ("on" if terminal supports) in the driver
   // but default to off in cc1, needing an explicit OPT_fdiagnostics_color.
   // Support both clang's -f[no-]color-diagnostics and gcc's
   // -f[no-]diagnostics-colors[=never|always|auto].
-  enum {
-    Colors_On,
-    Colors_Off,
-    Colors_Auto
-  } ShowColors = DefaultColor ? Colors_Auto : Colors_Off;
+  ShowColorsKind Mode =
+      DefaultColor ? ShowColorsKind::Auto : ShowColorsKind::Off;
   for (auto *A : Args) {
     const Option &O = A->getOption();
     if (O.matches(options::OPT_fcolor_diagnostics)) {
-      ShowColors = Colors_On;
+      Mode = ShowColorsKind::On;
     } else if (O.matches(options::OPT_fno_color_diagnostics)) {
-      ShowColors = Colors_Off;
+      Mode = ShowColorsKind::Off;
     } else if (O.matches(options::OPT_fdiagnostics_color_EQ)) {
       StringRef Value(A->getValue());
       if (Value == "always")
-        ShowColors = Colors_On;
+        Mode = ShowColorsKind::On;
       else if (Value == "never")
-        ShowColors = Colors_Off;
+        Mode = ShowColorsKind::Off;
       else if (Value == "auto")
-        ShowColors = Colors_Auto;
+        Mode = ShowColorsKind::Auto;
     }
   }
-  return ShowColors == Colors_On ||
-         (ShowColors == Colors_Auto &&
-          llvm::sys::Process::StandardErrHasColors());
+  return Mode;
 }
 
 static bool checkVerifyPrefixes(const std::vector<std::string> &VerifyPrefixes,
@@ -2568,8 +2564,16 @@ void CompilerInvocationBase::GenerateDiagnosticArgs(
     GenerateArg(Consumer, OPT_diagnostic_serialized_file,
                 Opts.DiagnosticSerializationFile);
 
-  if (Opts.ShowColors)
+  switch (Opts.getShowColors()) {
+  case ShowColorsKind::On:
     GenerateArg(Consumer, OPT_fcolor_diagnostics);
+    break;
+  case ShowColorsKind::Off:
+    GenerateArg(Consumer, OPT_fno_color_diagnostics);
+    break;
+  case ShowColorsKind::Auto:
+    break;
+  }
 
   if (Opts.VerifyDiagnostics &&
       llvm::is_contained(Opts.VerifyPrefixes, "expected"))
@@ -2678,7 +2682,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   if (Arg *A =
           Args.getLastArg(OPT_diagnostic_serialized_file, OPT__serialize_diags))
     Opts.DiagnosticSerializationFile = A->getValue();
-  Opts.ShowColors = parseShowColorsArgs(Args, DefaultDiagColor);
+  Opts.setShowColors(parseShowColorsMode(Args, DefaultDiagColor));
 
   Opts.VerifyDiagnostics = Args.hasArg(OPT_verify) || Args.hasArg(OPT_verify_EQ);
   Opts.VerifyDirectives = Args.hasArg(OPT_verify_directives);
@@ -3188,6 +3192,9 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
 
   if (Args.hasArg(OPT_clangir_disable_verifier))
     Opts.ClangIRDisableCIRVerifier = true;
+
+  if (Args.hasArg(OPT_clangir_lib_opt) || Args.hasArg(OPT_clangir_lib_opt_EQ))
+    Opts.ClangIRLibOptEnabled = true;
 #endif // CLANG_ENABLE_CIR
 
   if (Args.hasArg(OPT_aux_target_cpu))
@@ -4129,6 +4136,11 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
 #include "clang/Options/Options.inc"
 #undef LANG_OPTION_WITH_MARSHALLING
+
+  // "Modules semantics" (e.g. cross-translation-unit declaration merging) are
+  // needed for both Clang (header) modules and C++20 modules, so enable them
+  // for either.
+  Opts.Modules = Opts.ClangModules || Opts.CPlusPlusModules;
 
   if (const Arg *A = Args.getLastArg(OPT_fcf_protection_EQ)) {
     StringRef Name = A->getValue();
@@ -5090,8 +5102,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   ParseMigratorArgs(Res.getMigratorOpts(), Args, Diags);
   ParseAnalyzerArgs(Res.getAnalyzerOpts(), Args, Diags);
   ParseSSAFArgs(Res.getSSAFOpts(), Args, Diags);
-  ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
-                      /*DefaultDiagColor=*/false);
+  ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags);
   ParseFrontendArgs(Res.getFrontendOpts(), Args, Diags, LangOpts.IsHeaderFile);
   // FIXME: We shouldn't have to pass the DashX option around here
   InputKind DashX = Res.getFrontendOpts().DashX;
@@ -5226,15 +5237,22 @@ std::string CompilerInvocation::computeContextHash() const {
   HBuilder.add(serialization::VERSION_MAJOR, serialization::VERSION_MINOR);
 
   // Extend the signature with the language options
-  // FIXME: Replace with C++20 `using enum LangOptions::CompatibilityKind`.
-  using CK = LangOptions::CompatibilityKind;
+  const unsigned LanguageOptionValues[] = {
+#define HASH_LANGOPT_Benign(Value)
+#define HASH_LANGOPT_Compatible(Value) Value,
+#define HASH_LANGOPT_NotCompatible(Value) Value,
 #define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
-  if constexpr (CK::Compatibility != CK::Benign)                               \
-    HBuilder.add(LangOpts->Name);
+  HASH_LANGOPT_##Compatibility(LangOpts->Name)
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
-  if constexpr (CK::Compatibility != CK::Benign)                               \
-    HBuilder.add(static_cast<unsigned>(LangOpts->get##Name()));
+  HASH_LANGOPT_##Compatibility(static_cast<unsigned>(LangOpts->get##Name()))
 #include "clang/Basic/LangOptions.def"
+  };
+#undef HASH_LANGOPT_Benign
+#undef HASH_LANGOPT_Compatible
+#undef HASH_LANGOPT_NotCompatible
+  // addRangeElements preserves the HBuilder.add sequence and excludes the
+  // LanguageOptionValues element count.
+  HBuilder.addRangeElements(LanguageOptionValues);
 
   HBuilder.addRange(getLangOpts().ModuleFeatures);
 

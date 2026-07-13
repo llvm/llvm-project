@@ -44,6 +44,7 @@ class BreakpointSite;
 class BroadcastEventSpec;
 class Broadcaster;
 class BroadcasterManager;
+class BugReporter;
 class CXXSyntheticChildren;
 struct CacheSignature;
 class CallFrameInfo;
@@ -79,6 +80,7 @@ class Disassembler;
 class DumpValueObjectOptions;
 class DynamicCheckerFunctions;
 class DynamicLoader;
+class DynamicRegisterInfo;
 class Editline;
 class EmulateInstruction;
 class Environment;
@@ -350,6 +352,8 @@ typedef std::shared_ptr<lldb_private::Disassembler> DisassemblerSP;
 typedef std::unique_ptr<lldb_private::DynamicCheckerFunctions>
     DynamicCheckerFunctionsUP;
 typedef std::unique_ptr<lldb_private::DynamicLoader> DynamicLoaderUP;
+typedef std::shared_ptr<lldb_private::DynamicRegisterInfo>
+    DynamicRegisterInfoSP;
 typedef std::shared_ptr<lldb_private::Event> EventSP;
 typedef std::shared_ptr<lldb_private::EventData> EventDataSP;
 typedef std::shared_ptr<lldb_private::EventDataStructuredData>

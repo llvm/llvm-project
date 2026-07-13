@@ -1455,10 +1455,11 @@ void Preprocessor::HandleDirective(Token &Result) {
       return HandlePragmaDirective({PIK_HashPragma, Introducer.getLocation()});
     case tok::pp_module:
     case tok::pp___preprocessed_module:
-      return HandleCXXModuleDirective(Result);
+      if (Introducer.isModuleContextualKeyword())
+        return HandleCXXModuleDirective(Result);
+      break;
     case tok::pp___preprocessed_import:
       return HandleCXXImportDirective(Result);
-    // GNU Extensions.
     case tok::pp_import:
       switch (Introducer.getKind()) {
       case tok::hash:
@@ -1470,6 +1471,8 @@ void Preprocessor::HandleDirective(Token &Result) {
       default:
         llvm_unreachable("not a valid import directive");
       }
+
+    // GNU Extensions.
     case tok::pp_include_next:
       return HandleIncludeNextDirective(Introducer.getLocation(), Result);
 
@@ -1646,7 +1649,8 @@ void Preprocessor::HandleLineDirective() {
     return;
   } else {
     // Parse and validate the string, converting it into a unique ID.
-    StringLiteralParser Literal(StrTok, *this);
+    StringLiteralParser Literal(StrTok, *this,
+                                StringLiteralEvalMethod::Unevaluated);
     assert(Literal.isOrdinary() && "Didn't allow wide strings in");
     if (Literal.hadError) {
       DiscardUntilEndOfDirective();
@@ -1797,7 +1801,8 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
     return;
   } else {
     // Parse and validate the string, converting it into a unique ID.
-    StringLiteralParser Literal(StrTok, *this);
+    StringLiteralParser Literal(StrTok, *this,
+                                StringLiteralEvalMethod::Unevaluated);
     assert(Literal.isOrdinary() && "Didn't allow wide strings in");
     if (Literal.hadError) {
       DiscardUntilEndOfDirective();

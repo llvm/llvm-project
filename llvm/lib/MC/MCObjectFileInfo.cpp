@@ -587,9 +587,9 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
       SectionKind::getMetadata(), GOFF::CLASS_WSA,
       GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
                    GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
-                   GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_1,
-                   GOFF::ESD_ALIGN_Quadword, 0},
+                   GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_1, 0},
       RootSDSection);
+  ADAEDSection->setAlignment(Align(16)); // Quadword
   ADASection = Ctx->getGOFFSection(SectionKind::getData(), "#S",
                                    GOFF::PRAttr{false, GOFF::ESD_EXE_DATA,
                                                 GOFF::ESD_LT_XPLink,
@@ -600,17 +600,17 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
       SectionKind::getText(), GOFF::CLASS_CODE,
       GOFF::EDAttr{true, GOFF::ESD_RMODE_64, GOFF::ESD_NS_NormalName,
                    GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Concatenate,
-                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0,
-                   GOFF::ESD_ALIGN_Doubleword, 0},
+                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0, 0},
       RootSDSection);
+  TextSection->setAlignment(Align(8)); // Doubleword
 
   MCSectionGOFF *PPA2ListEDSection = Ctx->getGOFFSection(
       SectionKind::getMetadata(), GOFF::CLASS_PPA2,
       GOFF::EDAttr{true, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
                    GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
-                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0,
-                   GOFF::ESD_ALIGN_Doubleword, 0},
+                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0, 0},
       RootSDSection);
+  PPA2ListEDSection->setAlignment(Align(8)); // Doubleword
   PPA2ListSection = Ctx->getGOFFSection(SectionKind::getData(), ".&ppa2",
                                         GOFF::PRAttr{true, GOFF::ESD_EXE_DATA,
                                                      GOFF::ESD_LT_OS,
@@ -621,9 +621,9 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
       SectionKind::getData(), "B_IDRL",
       GOFF::EDAttr{true, GOFF::ESD_RMODE_64, GOFF::ESD_NS_NormalName,
                    GOFF::ESD_TS_Structured, GOFF::ESD_BA_Concatenate,
-                   GOFF::ESD_LB_NoLoad, GOFF::ESD_RQ_0,
-                   GOFF::ESD_ALIGN_Doubleword, 0},
+                   GOFF::ESD_LB_NoLoad, GOFF::ESD_RQ_0, 0},
       RootSDSection);
+  IDRLSection->setAlignment(Align(8)); // Doubleword
 
   // Debug Info Sections. The ED name is the same used by the XL compiler.
   auto InitDebugSection = [this,
@@ -633,9 +633,9 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
         SectionKind::getMetadata(), EDName,
         GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
                      GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Concatenate,
-                     GOFF::ESD_LB_NoLoad, GOFF::ESD_RQ_0,
-                     GOFF::ESD_ALIGN_Doubleword, 0},
+                     GOFF::ESD_LB_NoLoad, GOFF::ESD_RQ_0, 0},
         RootSDSection);
+    ED->setAlignment(Align(8)); // Doubleword
     // At least for llc, this function is called twice! (See function
     // compileModule() in llc.cpp). Since the context is not cleared, the
     // already allocated section is returned above. We only add the begin symbol

@@ -1,4 +1,5 @@
 import getopt
+import os
 import sys
 from io import StringIO
 
@@ -26,7 +27,23 @@ def convertToCaretAndMNotation(data):
     return newdata.getvalue().encode()
 
 
-def main(argv):
+def run(argv, stdin, stdout, stderr, cwd):
+    """In-process cat.
+
+    Since it never calls sys.exit, this is safe to run inside the lit worker as well as
+    from the standalone main below.
+
+    Args:
+        argv: A list of command-line arguments. The first element is the command name,
+            followed by options or filenames.
+        stdin: Binary input stream used if no files are specified.
+        stdout: Binary output stream for the concatenated content.
+        stderr: Binary error stream for error messages.
+        cwd: The shell's current working directory, used to resolve relative file paths.
+
+    Returns:
+        An integer representing the exit code (0 for success, 1 for errors).
+    """
     arguments = argv[1:]
     short_options = "v"
     long_options = ["show-nonprinting"]
@@ -35,49 +52,38 @@ def main(argv):
     try:
         options, filenames = getopt.gnu_getopt(arguments, short_options, long_options)
     except getopt.GetoptError as err:
-        sys.stderr.write("Unsupported: 'cat':  %s\n" % str(err))
-        sys.exit(1)
+        stderr.write(b"Unsupported: 'cat':  %s\n" % str(err).encode())
+        return 1
 
     for option, value in options:
         if option == "-v" or option == "--show-nonprinting":
             show_nonprinting = True
 
-    writer = getattr(sys.stdout, "buffer", None)
-    if writer is None:
-        writer = sys.stdout
-        if sys.platform == "win32":
-            import os, msvcrt
-
-            msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
     if len(filenames) == 0:
-        sys.stdout.write(sys.stdin.read())
-        sys.exit(0)
+        stdout.write(stdin.read())
+        return 0
+
     for filename in filenames:
+        path = filename
+        contents = None
+        if not os.path.isabs(path):
+            path = os.path.join(cwd, path)
         try:
-            contents = None
-            is_text = False
-            try:
-                if sys.platform != "win32":
-                    fileToCat = open(filename, "r")
-                    contents = fileToCat.read()
-                    is_text = True
-            except:
-                pass
-
-            if contents is None:
-                fileToCat = open(filename, "rb")
+            with open(path, "rb") as fileToCat:
                 contents = fileToCat.read()
-
-            if show_nonprinting:
-                contents = convertToCaretAndMNotation(contents)
-            elif is_text:
-                contents = contents.encode()
-            writer.write(contents)
-            sys.stdout.flush()
-            fileToCat.close()
         except IOError as error:
-            sys.stderr.write(str(error))
-            sys.exit(1)
+            error.filename = filename
+            stderr.write(str(error).encode())
+            return 1
+        if show_nonprinting:
+            contents = convertToCaretAndMNotation(contents)
+        stdout.write(contents)
+    return 0
+
+
+def main(argv):
+    out = getattr(sys.stdout, "buffer", sys.stdout)
+    sys.exit(run(argv, sys.stdin.buffer, out, sys.stderr.buffer, os.getcwd()))
 
 
 if __name__ == "__main__":
