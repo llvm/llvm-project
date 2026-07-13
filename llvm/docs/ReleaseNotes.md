@@ -60,6 +60,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to TableGen
 
+* `!cond` operator short-circuits at the first `true` condition.  Subsequent
+  `condition : value` pairs, along with their corresponding side effects,
+  are left unresolved.
+
 ### Changes to Interprocedural Optimizations
 
 ### Changes to Vectorizers
