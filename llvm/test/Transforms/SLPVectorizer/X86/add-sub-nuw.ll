@@ -5,7 +5,7 @@ define void @issue209023(ptr %p) {
 ; CHECK-LABEL: @issue209023(
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw <4 x i32> [[TMP1]], <i32 3, i32 7, i32 1, i32 -5>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[TMP1]], <i32 3, i32 7, i32 1, i32 -5>
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[P0]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -48,7 +48,7 @@ define void @sub_converted_to_add_drops_nuw(ptr %p, i32 %x, i32 %y) {
 ; CHECK-LABEL: @sub_converted_to_add_drops_nuw(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[Y:%.*]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = add nuw <2 x i32> [[TMP2]], <i32 -5, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP2]], <i32 -5, i32 7>
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
