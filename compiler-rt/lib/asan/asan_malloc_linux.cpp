@@ -84,6 +84,31 @@ INTERCEPTOR(void, free_aligned_sized, void* ptr, uptr alignment, uptr size) {
 #  endif  // SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED
 
 #  if SANITIZER_AIX
+// __linux_vec_malloc, __linux_vec_calloc, and __linux_realloc are XL compiler
+// internal symbols emitted instead of the standard vec_malloc/vec_calloc/realloc
+// names. Intercept them so that ASan tracks allocations made through the XL
+// runtime.
+INTERCEPTOR(void*, __linux_vec_malloc, uptr size) {
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Allocate(size, 16);
+  GET_STACK_TRACE_MALLOC;
+  return asan_vec_malloc(size, &stack);
+}
+
+INTERCEPTOR(void*, __linux_vec_calloc, uptr nmemb, uptr size) {
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Callocate(nmemb, size, 16);
+  GET_STACK_TRACE_MALLOC;
+  return asan_vec_calloc(nmemb, size, &stack);
+}
+
+INTERCEPTOR(void*, __linux_realloc, void* ptr, uptr size) {
+  if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Realloc(ptr, size, kWordSize);
+  GET_STACK_TRACE_MALLOC;
+  return asan_vec_realloc(ptr, size, &stack);
+}
+
 // Unlike malloc, vec_malloc must return memory aligned to 16 bytes.
 INTERCEPTOR(void*, vec_malloc, uptr size) {
   if (DlsymAlloc::Use())
