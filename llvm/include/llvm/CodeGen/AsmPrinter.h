@@ -689,14 +689,14 @@ public:
 
   virtual void emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
                                       MCSymbol *LazyPointer) {
-    assert(false &&
-           "Mach-O IFunc lowering is not yet supported on this target");
+    llvm_unreachable(
+        "Mach-O IFunc lowering is not yet supported on this target");
   }
 
   virtual void emitMachOIFuncStubHelperBody(Module &M, const GlobalIFunc &GI,
                                             MCSymbol *LazyPointer) {
-    assert(false &&
-           "Mach-O IFunc lowering is not yet supported on this target");
+    llvm_unreachable(
+        "Mach-O IFunc lowering is not yet supported on this target");
   }
 
   /// Emit N NOP instructions.
