@@ -131,8 +131,8 @@ VoidTask silly_task() {
 // CIR-NEXT:     %[[CoroHandlePromiseReload:.*]] = cir.load{{.*}} %[[CoroHandlePromiseAddr]]
 // CIR-NEXT:     cir.call @_ZNSt16coroutine_handleIvEC1IN5folly4coro4TaskIvE12promise_typeEEES_IT_E(%[[CoroHandleVoidAddr]])
 // CIR-NEXT:     %[[CoroHandleVoidReload:.*]] = cir.load{{.*}} %[[CoroHandleVoidAddr]] : !cir.ptr<![[CoroHandleVoid]]>, ![[CoroHandleVoid]]
-// CIR-NEXT:     cir.call @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(%[[SuspendAlwaysAddr]])
-// CIR-NEXT:     cir.yield
+// CIR-NEXT:     cir.call @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(%[[SuspendAlwaysAddr]], %[[CoroHandleVoidReload]])
+// CIR-NEXT:     cir.coro.suspend.point
 
 // OGCG: init.suspend:
 // OGCG:   %[[Save:.*]] = call token @llvm.coro.save(ptr null)
@@ -268,8 +268,8 @@ folly::coro::Task<int> byRef(const std::string& s) {
 // CIR:       %[[CoroHandlePromiseReload:.*]] = cir.load{{.*}} %[[CoroHandlePromiseAddr]]
 // CIR:       cir.call @_ZNSt16coroutine_handleIvEC1IN5folly4coro4TaskIiE12promise_typeEEES_IT_E(%[[CoroHandleVoidAddr]])
 // CIR:       %[[CoroHandleVoidReload:.*]] = cir.load{{.*}} %[[CoroHandleVoidAddr]] : !cir.ptr<![[CoroHandleVoid]]>, ![[CoroHandleVoid]]
-// CIR:       cir.call @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(%[[SuspendAlwaysAddr]])
-// CIR:       cir.yield
+// CIR:       cir.call @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(%[[SuspendAlwaysAddr]], %[[CoroHandleVoidReload]])
+// CIR:       cir.coro.suspend.point
 // CIR:     }, resume : {
 // CIR:       cir.call @_ZNSt14suspend_always12await_resumeEv(%[[SuspendAlwaysAddr]])
 // CIR:       cir.yield
@@ -361,8 +361,8 @@ folly::coro::Task<void> yield1() {
 // CIR:     %[[PROM_RELOAD0:.*]] = cir.load{{.*}} %[[CH_PROM0]]
 // CIR:     cir.call @_ZNSt16coroutine_handleIvEC1IN5folly4coro4TaskIvE12promise_typeEEES_IT_E(%[[CH_VOID0]]){{.*}}
 // CIR:     %[[VOID_RELOAD0:.*]] = cir.load{{.*}} %[[CH_VOID0]]
-// CIR:     cir.call @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(%[[SUSP0]]){{.*}}
-// CIR:     cir.yield
+// CIR:     cir.call @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(%[[SUSP0]], %[[VOID_RELOAD0]]){{.*}}
+// CIR:     cir.coro.suspend.point
 // CIR:   }, resume : {
 // CIR:     cir.call @_ZNSt14suspend_always12await_resumeEv(%[[SUSP0]]){{.*}}
 // CIR:     cir.yield
@@ -387,8 +387,8 @@ folly::coro::Task<void> yield1() {
 // CIR:       %[[PROM_RELOAD1:.*]] = cir.load{{.*}} %[[CH_PROM1]]
 // CIR:       cir.call @_ZNSt16coroutine_handleIvEC1IN5folly4coro4TaskIvE12promise_typeEEES_IT_E(%[[CH_VOID1]]){{.*}}
 // CIR:       %[[VOID_RELOAD1:.*]] = cir.load{{.*}} %[[CH_VOID1]]
-// CIR:       cir.call @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(%[[SUSP1]]){{.*}}
-// CIR:       cir.yield
+// CIR:       cir.call @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(%[[SUSP1]], %[[VOID_RELOAD1]]){{.*}}
+// CIR:       cir.coro.suspend.point
 // CIR:     }, resume : {
 // CIR:       cir.call @_ZNSt14suspend_always12await_resumeEv(%[[SUSP1]]){{.*}}
 // CIR:       cir.yield
@@ -411,8 +411,8 @@ folly::coro::Task<void> yield1() {
 // CIR:     %[[PROM_RELOAD2:.*]] = cir.load{{.*}} %[[CH_PROM2]]
 // CIR:     cir.call @_ZNSt16coroutine_handleIvEC1IN5folly4coro4TaskIvE12promise_typeEEES_IT_E(%[[CH_VOID2]]){{.*}}
 // CIR:     %[[VOID_RELOAD2:.*]] = cir.load{{.*}} %[[CH_VOID2]]
-// CIR:     cir.call @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(%[[SUSP2]]){{.*}}
-// CIR:     cir.yield
+// CIR:     cir.call @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(%[[SUSP2]], %[[VOID_RELOAD2]]){{.*}}
+// CIR:     cir.coro.suspend.point
 // CIR:   }, resume : {
 // CIR:     cir.call @_ZNSt14suspend_always12await_resumeEv(%[[SUSP2]]){{.*}}
 // CIR:     cir.yield
@@ -550,7 +550,7 @@ folly::coro::Task<int> go4() {
 // CIR:    = cir.call @_ZN5folly4coro4TaskIiE11await_readyEv(%[[TASK_ADDR]])
 // CIR:    cir.condition(
 // CIR:  }, suspend : {
-// CIR:    cir.yield
+// CIR:    cir.coro.suspend.point
 // CIR:  }, resume : {
 // CIR:    cir.yield
 // CIR:  },)
