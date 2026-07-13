@@ -24,6 +24,9 @@ namespace {
 
 bool error_flag;
 
+// This function conforms to the constraint_handler_t signature, which is the
+// argument type for set_constraint_handler_s used below. None of the constraint
+// handler's arguments are used in this test fixture.
 void local_constraint_handler(const char *__restrict /*msg*/,
                               void *__restrict /*ptr*/, errno_t /*error*/) {
   error_flag = true;
