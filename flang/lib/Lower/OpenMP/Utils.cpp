@@ -1417,7 +1417,8 @@ resolveDeclareVariantCallee(const semantics::Symbol &base,
   collectEnclosingConstructTraits(
       converter.getFirOpBuilder().getInsertionBlock()->getParentOp(),
       constructTraits);
-  FlangOMPContext ompCtx{converter.getModuleOp(), constructTraits};
+  semantics::omp::OmpVariantMatchContext ompCtx =
+      makeVariantMatchContext(converter.getModuleOp(), constructTraits);
 
   const int bestIdx{llvm::omp::getBestVariantMatchForContext(vmis, ompCtx)};
   // Return nullptr when no variant matches the current context; the caller
