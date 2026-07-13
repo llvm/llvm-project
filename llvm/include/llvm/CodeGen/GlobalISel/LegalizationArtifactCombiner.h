@@ -1025,6 +1025,8 @@ public:
       // different type flavor, emit a G_BITCAST instead of falling through
       // to the next case which would create a degenerate single-result
       // G_UNMERGE_VALUES.
+      // TODO: Remove this once generic G_MERGE_VALUES reassembly is tightened
+      // to require an explicit G_BITCAST for same-size scalar type changes.
       //
       // %0:_(i1), %1, ... = G_UNMERGE_VALUES %UnmergeSrc:_(i32)
       // %Dst:_(f32) = G_MERGE_VALUES %0:_(i1), %1, ...
