@@ -62,10 +62,11 @@ add_lldb_library(lldbSymbol ${PLUGIN_DEPENDENCY_ARG}
     ${LLDB_INCLUDE_DIR}/lldb/Symbol
   LINK_COMPONENTS
     Support
-  LINK_LIBS
+  CLANG_LIBS
     clangAST
     clangBasic
     clangFrontend
+  LINK_LIBS
     lldbCore
     lldbExpression
     lldbHost
