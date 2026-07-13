@@ -1296,6 +1296,7 @@ bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
   auto TT = OutContext.getTargetTriple();
   if (TT.isOSzOS()) {
+    auto *ZOS = static_cast<SystemZTargetzOSStreamer *>(getTargetStreamer());
     emitADASection();
     emitIDRLSection(M);
     // On z/OS, we need to associate an external data reference with an ED
@@ -1306,8 +1307,7 @@ void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
       if (auto *GV = dyn_cast<GlobalVariable>(&GO)) {
         if (!GV->hasInitializer()) {
           MCSymbol *Sym = getSymbol(GV);
-          getTargetStreamer()->emitADA(
-              Sym, OutContext.getObjectFileInfo()->getADASection());
+          ZOS->emitADA(Sym, OutContext.getObjectFileInfo()->getADASection());
           OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
         }
       }
@@ -1322,6 +1322,7 @@ void SystemZAsmPrinter::emitADASection() {
   const unsigned PointerSize = getDataLayout().getPointerSize();
   OutStreamer->switchSection(getObjFileLowering().getADASection());
 
+  auto *ZOS = static_cast<SystemZTargetzOSStreamer *>(getTargetStreamer());
   unsigned EmittedBytes = 0;
   for (auto &Entry : ADATable.getTable()) {
     const MCSymbol *Sym;
@@ -1367,7 +1368,7 @@ void SystemZAsmPrinter::emitADASection() {
       OutStreamer->emitSymbolAttribute(Alias, MCSA_Extern);
       MCSymbolGOFF *GOFFSym =
           static_cast<llvm::MCSymbolGOFF *>(const_cast<llvm::MCSymbol *>(Sym));
-      getTargetStreamer()->emitExternalName(Alias, GOFFSym->getExternalName());
+      ZOS->emitExternalName(Alias, GOFFSym->getExternalName());
       EMIT_COMMENT("pointer to function descriptor");
       OutStreamer->emitValue(
           MCSpecifierExpr::create(MCSymbolRefExpr::create(Alias, OutContext),
@@ -1454,7 +1455,7 @@ void SystemZAsmPrinter::emitFunctionBodyEnd() {
   if (TM.getTargetTriple().isOSzOS()) {
     // Emit symbol for the end of function if the z/OS target streamer
     // is used. This is needed to calculate the size of the function.
-    auto *ZOS = static_cast<SystemZzOSStreamer *>(getTargetStreamer());
+    auto *ZOS = static_cast<SystemZTargetzOSStreamer *>(getTargetStreamer());
     OutStreamer->emitLabel(ZOS->DeferredPPA1.back().FnEnd);
   }
 }
@@ -1537,10 +1538,10 @@ static void determinePrologueStackUpdateSym(MachineFunction *MF,
 }
 
 void SystemZAsmPrinter::calculatePPA1() {
-  auto *ZOS = static_cast<SystemZzOSStreamer *>(getTargetStreamer());
+  auto *ZOS = static_cast<SystemZTargetzOSStreamer *>(getTargetStreamer());
   assert(ZOS->PPA2Sym != nullptr && "PPA2 Symbol not defined");
 
-  SystemZzOSStreamer::PPA1Info Info;
+  SystemZTargetzOSStreamer::PPA1Info Info;
 
   const TargetRegisterInfo *TRI = MF->getRegInfo().getTargetRegisterInfo();
   const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
@@ -1636,8 +1637,6 @@ void SystemZAsmPrinter::calculatePPA1() {
   Info.Fn = CurrentFnSym;
   Info.EndOfProlog = EndOfPrologSym;
   Info.StackUpdate = StackUpdateSym;
-  Info.PersonalityRoutine = PersonalityRoutine;
-  Info.GCCEH = GCCEH;
   Info.PersonalityADADisp = PersonalityADADisp;
   Info.GCCEHADADisp = GCCEHADADisp;
   Info.OffsetFPR = OffsetFPR;
@@ -1662,7 +1661,7 @@ void SystemZAsmPrinter::emitStartOfAsmFile(Module &M) {
 }
 
 void SystemZAsmPrinter::emitPPA2(Module &M) {
-  auto *ZOS = static_cast<SystemZzOSStreamer *>(getTargetStreamer());
+  auto *ZOS = static_cast<SystemZTargetzOSStreamer *>(getTargetStreamer());
   OutStreamer->pushSection();
   OutStreamer->switchSection(getObjFileLowering().getTextSection());
   MCContext &OutContext = OutStreamer->getContext();
@@ -1831,9 +1830,8 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
   const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
 
   if (Subtarget.getTargetTriple().isOSzOS()) {
+    auto *ZOS = static_cast<SystemZTargetzOSStreamer *>(getTargetStreamer());
     calculatePPA1();
-    auto &DeferredPPA1 =
-        static_cast<SystemZzOSStreamer *>(getTargetStreamer())->DeferredPPA1;
 
     // EntryPoint Marker
     const MachineFrameInfo &MFFrame = MF->getFrameInfo();
@@ -1854,14 +1852,14 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
 
     // Emit entry point marker section.
     OutStreamer->AddComment("XPLINK Routine Layout Entry");
-    OutStreamer->emitLabel(DeferredPPA1.back().EPMarker);
+    OutStreamer->emitLabel(ZOS->DeferredPPA1.back().EPMarker);
     OutStreamer->AddComment("Eyecatcher 0x00C300C500C500");
     OutStreamer->emitIntValueInHex(0x00C300C500C500, 7); // Eyecatcher.
     OutStreamer->AddComment("Mark Type C'1'");
     OutStreamer->emitInt8(0xF1); // Mark Type.
     OutStreamer->AddComment("Offset to PPA1");
-    OutStreamer->emitAbsoluteSymbolDiff(DeferredPPA1.back().PPA1,
-                                        DeferredPPA1.back().EPMarker, 4);
+    OutStreamer->emitAbsoluteSymbolDiff(ZOS->DeferredPPA1.back().PPA1,
+                                        ZOS->DeferredPPA1.back().EPMarker, 4);
     if (OutStreamer->isVerboseAsm()) {
       OutStreamer->AddComment("DSA Size 0x" + Twine::utohexstr(DSASize));
       OutStreamer->AddComment("Entry Flags");
@@ -1876,8 +1874,7 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
     }
     OutStreamer->emitInt32(DSAAndFlags);
 
-    getTargetStreamer()->emitADA(CurrentFnSym,
-                                 getObjFileLowering().getADASection());
+    ZOS->emitADA(CurrentFnSym, getObjFileLowering().getADASection());
   }
 
   AsmPrinter::emitFunctionEntryLabel();

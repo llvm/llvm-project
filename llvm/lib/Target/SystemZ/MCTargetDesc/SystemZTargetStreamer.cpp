@@ -154,7 +154,7 @@ static void emitPPA1Name(MCStreamer &OutStreamer, StringRef OutName) {
   OutStreamer.emitZeros(ExtraZeros);
 }
 
-void SystemZzOSStreamer::emitPPA1(PPA1Info &Info) {
+void SystemZTargetzOSStreamer::emitPPA1(PPA1Info &Info) {
   assert(PPA2Sym != nullptr && "PPA2 Symbol not defined");
   MCStreamer &OutStreamer = getStreamer();
   MCContext &OutContext = OutStreamer.getContext();
@@ -171,6 +171,10 @@ void SystemZzOSStreamer::emitPPA1(PPA1Info &Info) {
   //       if alloca() call causes a stack extension.
   bool HasArgAreaLength = (Info.AllocaReg != 0) || (Info.CallFrameSize > 128);
 
+  // The personality function is present if at least one of the displacements is
+  // larger than zero.
+  bool HasPersonalityFn = Info.PersonalityADADisp > 0 || Info.GCCEHADADisp > 0;
+
   // Emit PPA1 section.
   OutStreamer.AddComment("PPA1");
   OutStreamer.emitLabel(Info.PPA1);
@@ -184,9 +188,8 @@ void SystemZzOSStreamer::emitPPA1(PPA1Info &Info) {
   OutStreamer.emitAbsoluteSymbolDiff(PPA2Sym, Info.PPA1, 4);
 
   emitPPA1Flags(OutStreamer, Info.IsVarArg, Info.HasStackProtector,
-                Info.SavedFPRMask != 0, Info.SavedVRMask != 0,
-                Info.PersonalityRoutine != nullptr, HasArgAreaLength,
-                Info.Name.size() > 0);
+                Info.SavedFPRMask != 0, Info.SavedVRMask != 0, HasPersonalityFn,
+                HasArgAreaLength, Info.Name.size() > 0);
 
   OutStreamer.AddComment("Length/4 of Parms");
   OutStreamer.emitInt16(
@@ -260,7 +263,7 @@ void SystemZzOSStreamer::emitPPA1(PPA1Info &Info) {
   }
 
   // Emit C++ EH information block.
-  if (Info.PersonalityRoutine) {
+  if (HasPersonalityFn) {
     OutStreamer.AddComment("Version");
     OutStreamer.emitInt32(1);
     OutStreamer.AddComment("Flags");
@@ -272,14 +275,14 @@ void SystemZzOSStreamer::emitPPA1(PPA1Info &Info) {
   }
 
   // Emit name length and name optional section (0x01 of flags 4)
-  if (Info.Name.size())
+  if (Info.Name.size() > 0)
     emitPPA1Name(OutStreamer, Info.Name);
 
   // Emit offset to entry point optional section (0x80 of flags 4).
   OutStreamer.emitAbsoluteSymbolDiff(Info.EPMarker, Info.PPA1, 4);
 }
 
-void SystemZzOSStreamer::emitConstantPools() {
+void SystemZTargetzOSStreamer::emitConstantPools() {
   // Emit EXRL target instructions (base class prolog).
   SystemZTargetStreamer::emitConstantPools();
 

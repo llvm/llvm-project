@@ -60,19 +60,9 @@ public:
   void emitConstantPools() override;
 
   virtual void emitMachine(StringRef CPUOrCommand) {};
-
-  virtual void emitExternalName(MCSymbol *Sym, StringRef Name) {}
-  virtual void emitExternalName(MCSection *Sec, StringRef Name) {}
-
-  virtual const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
-                                           const MCSymbol *Lo) {
-    return nullptr;
-  }
-
-  virtual void emitADA(MCSymbol *Sym, MCSection *Section) {}
 };
 
-class SystemZzOSStreamer : public SystemZTargetStreamer {
+class SystemZTargetzOSStreamer : public SystemZTargetStreamer {
 public:
   /// Information about a single function needed to emit a PPA1 block.
   struct PPA1Info {
@@ -83,8 +73,6 @@ public:
     MCSymbol *EPMarker = nullptr;    // Symbol marking entry point.
     MCSymbol *EndOfProlog = nullptr; // Symbol marking the end of the prolog.
     MCSymbol *StackUpdate = nullptr; // Symbol marking the stack updating instr.
-    MCSymbol *PersonalityRoutine = nullptr;
-    MCSymbol *GCCEH = nullptr;
     int64_t OffsetFPR = 0;
     int64_t OffsetVR = 0;
     uint64_t CallFrameSize = 0;
@@ -106,36 +94,39 @@ public:
 
   MCSymbol *PPA2Sym = nullptr;
 
-  SystemZzOSStreamer(MCStreamer &S) : SystemZTargetStreamer(S) {}
+  SystemZTargetzOSStreamer(MCStreamer &S) : SystemZTargetStreamer(S) {}
 
-  virtual void emitExternalName(MCSymbol *Sym, StringRef Name) override {
+  void emitConstantPools() override;
+
+  void emitExternalName(MCSymbol *Sym, StringRef Name) {
     static_cast<MCSymbolGOFF *>(Sym)->setExternalName(Name);
   }
-  virtual void emitExternalName(MCSection *Sec, StringRef Name) override {
+  void emitExternalName(MCSection *Sec, StringRef Name) {
     static_cast<MCSectionGOFF *>(Sec)->setExternalName(Name);
   }
-  void emitADA(MCSymbol *Sym, MCSection *Section) override {
+  void emitADA(MCSymbol *Sym, MCSection *Section) {
     static_cast<MCSymbolGOFF *>(Sym)->setADA(
         static_cast<MCSectionGOFF *>(Section));
   }
 
-  void emitConstantPools() override;
   void emitPPA1(PPA1Info &Info);
+  virtual const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
+                                           const MCSymbol *Lo) = 0;
 };
 
-class SystemZTargetGOFFStreamer : public SystemZzOSStreamer {
+class SystemZTargetGOFFStreamer : public SystemZTargetzOSStreamer {
 public:
-  SystemZTargetGOFFStreamer(MCStreamer &S) : SystemZzOSStreamer(S) {}
+  SystemZTargetGOFFStreamer(MCStreamer &S) : SystemZTargetzOSStreamer(S) {}
   const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
                                    const MCSymbol *Lo) override;
 };
 
-class SystemZTargetHLASMStreamer : public SystemZzOSStreamer {
+class SystemZTargetHLASMStreamer : public SystemZTargetzOSStreamer {
   formatted_raw_ostream &OS;
 
 public:
   SystemZTargetHLASMStreamer(MCStreamer &S, formatted_raw_ostream &OS)
-      : SystemZzOSStreamer(S), OS(OS) {}
+      : SystemZTargetzOSStreamer(S), OS(OS) {}
   SystemZHLASMAsmStreamer &getHLASMStreamer();
   const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
                                    const MCSymbol *Lo) override;
