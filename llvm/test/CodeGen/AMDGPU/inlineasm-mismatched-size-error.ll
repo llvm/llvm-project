@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -mtriple=amdgpu9.00-amd-amdhsa -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
 
 ; Diagnose register constraints that are not wide enough.
 

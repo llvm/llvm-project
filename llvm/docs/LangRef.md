@@ -21334,6 +21334,11 @@ type and first argument.
   - FP6 formats: `"Float6E3M2FN"`, `"Float6E2M3FN"`
   - FP4 formats: `"Float4E2M1FN"`
 
+  The bit width of the integer return type must equal the bit width of the
+  selected format, for example `i8` for an FP8 format, `i6` for an FP6 format,
+  and `i4` for an FP4 format. For vector operands this applies to the integer
+  element type.
+
 `rounding mode`
 :   A metadata string specifying the rounding mode. The permitted strings match those
   accepted by `llvm.fptrunc.round` (for example,
@@ -21362,7 +21367,8 @@ saturation behavior. The conversion is performed in two steps: first, the value 
 rounded according to the specified rounding mode to fit the target format's precision;
 then, if the rounded result exceeds the target format's representable range, saturation
 is applied according to the `saturation` parameter. The result is returned as an
-integer (e.g., `i8` for FP8, `i6` for FP6) containing the encoded arbitrary FP bits.
+integer whose bit width equals the format's bit width (`i8` for FP8, `i6` for FP6,
+`i4` for FP4) containing the encoded arbitrary FP bits.
 
 **Handling of special values:**
 
@@ -21412,7 +21418,10 @@ overloaded on both its return type and first argument.
 ##### Arguments:
 
 `value`
-:   An integer value containing the arbitrary FP bits (e.g., `i8` for FP8, `i6` for FP6).
+:   An integer value containing the arbitrary FP bits. Its bit width must equal the
+  bit width of the format selected by `interpretation`, for example `i8` for an FP8
+  format, `i6` for an FP6 format, and `i4` for an FP4 format. For vector operands
+  this applies to the integer element type.
 
 `interpretation`
 :   A metadata string describing the source arbitrary FP format. Supported format names include:

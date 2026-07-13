@@ -1344,29 +1344,16 @@ defm MIN : SIMDBinaryFP<fminimum, "min", 232>;
 defm MAX : SIMDBinaryFP<fmaximum, "max", 233>;
 
 // Pseudo-minimum: pmin
-def pmin : PatFrags<(ops node:$lhs, node:$rhs), [
-                    (vselect (setolt $rhs, $lhs), $rhs, $lhs),
-                    (vselect (setole $rhs, $lhs), $rhs, $lhs),
-                    (vselect (setogt $lhs, $rhs), $rhs, $lhs),
-                    (vselect (setoge $lhs, $rhs), $rhs, $lhs),
-                    (vselect (setlt $lhs, $rhs), $lhs, $rhs),
-                    (vselect (setle $lhs, $rhs), $lhs, $rhs),
-                    (vselect (setgt $lhs, $rhs), $rhs, $lhs),
-                    (vselect (setge $lhs, $rhs), $rhs, $lhs)
-]>;
+// The operand order is swapped relative to the generic opcode.
+def pmin : PatFrags<(ops node:$lhs, node:$rhs),
+                    [(pseudo_fmin node:$rhs, node:$lhs)]>;
 defm PMIN : SIMDBinaryFP<pmin, "pmin", 234>;
 
+
 // Pseudo-maximum: pmax
-def pmax : PatFrags<(ops node:$lhs, node:$rhs), [
-                    (vselect (setogt $rhs, $lhs), $rhs, $lhs),
-                    (vselect (setoge $rhs, $lhs), $rhs, $lhs),
-                    (vselect (setolt $lhs, $rhs), $rhs, $lhs),
-                    (vselect (setole $lhs, $rhs), $rhs, $lhs),
-                    (vselect (setgt $lhs, $rhs), $lhs, $rhs),
-                    (vselect (setge $lhs, $rhs), $lhs, $rhs),
-                    (vselect (setlt $lhs, $rhs), $rhs, $lhs),
-                    (vselect (setle $lhs, $rhs), $rhs, $lhs)
-]>;
+// The operand order is swapped relative to the generic opcode.
+def pmax : PatFrags<(ops node:$lhs, node:$rhs),
+                    [(pseudo_fmax node:$rhs, node:$lhs)]>;
 defm PMAX : SIMDBinaryFP<pmax, "pmax", 235>;
 
 multiclass PMinMaxInt<Vec vec, NI baseMinInst, NI baseMaxInst> {

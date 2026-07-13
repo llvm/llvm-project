@@ -97,6 +97,8 @@ enum class TemplateSubstitutionKind : char {
     /// The kind of substitution described by this argument list.
     TemplateSubstitutionKind Kind = TemplateSubstitutionKind::Specialization;
 
+    bool RetainInnerDepths = false;
+
   public:
     /// Construct an empty set of template argument lists.
     MultiLevelTemplateArgumentList() = default;
@@ -107,6 +109,10 @@ enum class TemplateSubstitutionKind : char {
     }
 
     void setKind(TemplateSubstitutionKind K) { Kind = K; }
+
+    void setRetainInnerDepths() { RetainInnerDepths = true; }
+
+    bool retainInnerDepths() const { return RetainInnerDepths; }
 
     /// Determine the kind of template substitution being performed.
     TemplateSubstitutionKind getKind() const { return Kind; }

@@ -237,7 +237,8 @@ def fir_AllocMemOp : fir_Op<"allocmem", [AttrSizedOperandSegments]> {
     OptionalAttr<StrAttr>:$uniq_name,
     OptionalAttr<StrAttr>:$bindc_name,
     Variadic<AnyIntegerType>:$typeparams,
-    Variadic<AnyIntegerType>:$shape
+    Variadic<AnyIntegerType>:$shape,
+    OptionalAttr<I64Attr>:$alignment
   );
   let results = (outs Res<fir_HeapType, "", [MemAlloc<DefaultResource>]>:$res);
 

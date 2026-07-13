@@ -263,6 +263,7 @@ Makes programs 10x faster by doing Special New Thing.
   Absolute Difference) extension.
 * Adds CodeGen support for the 'Zvabd` extension.
 * `-mcpu=spacemit-a100` was added.
+* Adds assembler support for the `XSMTVDotII` (SpacemiT Vector Extension for Matrix 2.0) extension.
 * The opt-in `-riscv-enable-p-ext-simd-codegen` flag has been removed. P extension SIMD code generation is now enabled automatically if the P extension is supported.
 * `-mcpu=xt-c910v2` and `-mcpu=xt-c920v2` were added.
 * Adds experimental assembler support for the 'Zvzip` (RISC-V Vector

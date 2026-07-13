@@ -364,7 +364,14 @@ template <class ELFT> void Writer<ELFT>::run() {
     if (errCount(ctx))
       return;
 
-    if (!ctx.e.disableOutput) {
+    // With -o -, write to lld::outs() (the stdoutOS argument of
+    // link()) instead of committing the buffer, which would write to the
+    // process's stdout.
+    if (ctx.arg.outputFile == "-") {
+      ctx.e.outs() << StringRef(
+          reinterpret_cast<const char *>(buffer->getBufferStart()),
+          buffer->getBufferSize());
+    } else if (!ctx.e.disableOutput) {
       if (auto e = buffer->commit())
         Err(ctx) << "failed to write output '" << buffer->getPath()
                  << "': " << std::move(e);

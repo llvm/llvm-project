@@ -27,6 +27,8 @@
 #include <memory>
 
 namespace clang::ssaf {
+class SSAFOptions;
+
 ///\return a short descriptions of a json::Value
 std::string describeJSONValue(const llvm::json::Value &V);
 ///\return a short descriptions of a json::Array
@@ -75,8 +77,15 @@ inline void logWarningFromError(llvm::Error Err) {
 /// Find all contributors in an AST. The found contributors are organized as a
 /// map from the canonical declaration of each entity to all of its
 /// declarations.
+///
+/// \p Options controls which declarations qualify as contributors. By default
+/// the visitor preserves the original SSAF behavior of skipping block-scope
+/// (function-local) variable declarations; setting
+/// \c Options.IncludeLocalEntities to \c true also collects local variables
+/// (excluding function parameters, which are addressed via their parent
+/// function's USR).
 void findContributors(
-    ASTContext &Ctx,
+    ASTContext &Ctx, const SSAFOptions &Options,
     llvm::DenseMap<const NamedDecl *, std::vector<const NamedDecl *>>
         &Contributors);
 
@@ -107,7 +116,7 @@ void extractAndAddSummaries(TUSummaryExtractor &Extractor,
                             llvm::StringRef ExtractorName = "") {
   llvm::DenseMap<const NamedDecl *, std::vector<const NamedDecl *>>
       Contributors;
-  findContributors(Ctx, Contributors);
+  findContributors(Ctx, Extractor.getOptions(), Contributors);
   for (const auto &[Cano, Decls] : Contributors) {
     assert(!Decls.empty() &&
            "'findContributors' guarantees that 'Decls' are non-empty");

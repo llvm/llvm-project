@@ -12141,6 +12141,18 @@ bool AArch64InstrInfo::verifyInstruction(const MachineInstr &MI,
         return false;
       }
       break;
+    case AArch64::OPERAND_IMM_UINT5:
+      if (!MO.isImm() || !isUInt<5>(MO.getImm())) {
+        ErrInfo = "OPERAND_IMM_UINT5 should be in the range 0 to 31";
+        return false;
+      }
+      break;
+    case AArch64::OPERAND_IMM_UINT8:
+      if (!MO.isImm() || !isUInt<8>(MO.getImm())) {
+        ErrInfo = "OPERAND_IMM_UINT8 should be in the range 0 to 255";
+        return false;
+      }
+      break;
     default:
       break;
     }

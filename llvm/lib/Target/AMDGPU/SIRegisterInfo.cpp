@@ -3239,26 +3239,14 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                   : RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
                                                   MI, false, 0, !UseSGPR);
 
-      if ((!TmpSReg && !FrameReg) || (!TmpReg && !UseSGPR)) {
+      if (!TmpSReg || (!TmpReg && !UseSGPR)) {
+        assert(!FrameReg && "there is a frame register!");
         int SVOpcode = AMDGPU::getFlatScratchInstSVfromSS(MI->getOpcode());
         if (ST.hasFlatScratchSVSMode() && SVOpcode != -1) {
           Register TmpVGPR = RS->scavengeRegisterBackwards(
               AMDGPU::VGPR_32RegClass, MI, false, 0, /*AllowSpill=*/true);
-
-          // Materialize the frame register.
-          auto MIB =
-              BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32), TmpVGPR);
-          if (FrameReg)
-            MIB.addReg(FrameReg);
-          else
-            MIB.addImm(Offset);
-
-          // Add the offset to the frame register.
-          if (FrameReg && Offset)
-            BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ADD_U32_e32), FrameReg)
-                .addReg(FrameReg, RegState::Kill)
-                .addImm(Offset);
-
+          BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32), TmpVGPR)
+              .addImm(Offset);
           BuildMI(*MBB, MI, DL, TII->get(SVOpcode))
               .add(MI->getOperand(0)) // $vdata
               .addReg(TmpVGPR)        // $vaddr

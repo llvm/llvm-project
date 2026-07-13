@@ -18,6 +18,8 @@
 #include "flang/Optimizer/Builder/MIFCommon.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Semantics/expression.h"
+#include "mlir/IR/IRMapping.h"
 
 //===----------------------------------------------------------------------===//
 // Synchronization statements
@@ -447,6 +449,33 @@ mlir::Value Fortran::lower::genAllocateCoarray(
   mif::AllocCoarrayOp::create(builder, loc, addr, uniqName, lcobounds,
                               ucobounds, stat, errmsg);
   return stat;
+}
+
+void Fortran::lower::genAllocateNonAllocatableSaveCoarray(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const semantics::Symbol &sym, mlir::Value addr) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::ModuleOp mod = builder.getModule();
+  mlir::IRMapping mapping;
+
+  auto func = mif::getOrCreateInitFunc(builder, mod, mifSaveCoarraysAllocName);
+  bool funcIsEmpty = func.empty();
+
+  mlir::Block &entry = func.getBody().front();
+  auto returnOp = entry.getTerminator();
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPoint(returnOp);
+
+  // If the function is empty, then we add the MIF initialization operation
+  // at the beginning.
+  if (funcIsEmpty)
+    mif::InitOp::create(builder, loc);
+
+  mlir::Operation &op = *addr.getDefiningOp();
+  mlir::Operation *localAddrOp = builder.clone(op, mapping);
+  Fortran::lower::genAllocateCoarray(converter, loc, sym,
+                                     localAddrOp->getResult(0));
 }
 
 //===----------------------------------------------------------------------===//

@@ -207,6 +207,10 @@ def AddLike: PatFrags<(ops node:$A, node:$B),
     return CurDAG->isBaseWithConstantOffset(SDValue(N, 0));
 }]>;
 
+// Addressing mode for the Xqcilo large-offset load/store instructions
+// (qc.e.lw/qc.e.sw), which have a 26-bit signed offset field.
+def AddrRegImm26 : ComplexPattern<iPTR, 2, "SelectAddrRegImm26">;
+
 def SingleBitSetMaskImm12 : RISCVOp<XLenVT>, ImmLeaf<XLenVT, [{
   return isPowerOf2_32(Imm) && isInt<12>(Imm) && Imm != 1;
 }], SingleBitSetMaskToIndex>;
@@ -1511,12 +1515,12 @@ class PatGprNoX0GprNoX0<SDPatternOperator OpNode, RVInstR Inst>
           (Inst GPRNoX0:$rs1, GPRNoX0:$rs2)>;
 
 class QC48LdPat<PatFrag LoadOp, RVInst48 Inst>
-    : Pat<(i32 (LoadOp (AddLike (i32 GPR:$rs1), simm26_nosimm12:$imm26))),
-          (Inst GPR:$rs1, simm26_nosimm12:$imm26)>;
+    : Pat<(i32 (LoadOp (AddrRegImm26 (i32 GPR:$rs1), simm26:$imm26))),
+          (Inst GPR:$rs1, simm26:$imm26)>;
 
 class QC48StPat<PatFrag StoreOp, RVInst48 Inst>
-    : Pat<(StoreOp (i32 GPR:$rs2), (AddLike (i32 GPR:$rs1), simm26_nosimm12:$imm26)),
-          (Inst GPR:$rs2, GPR:$rs1, simm26_nosimm12:$imm26)>;
+    : Pat<(StoreOp (i32 GPR:$rs2), (AddrRegImm26 (i32 GPR:$rs1), simm26:$imm26)),
+          (Inst GPR:$rs2, GPR:$rs1, simm26:$imm26)>;
 
 def AddrRegRegScale7 : AddrRegRegScale<7>;
 

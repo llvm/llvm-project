@@ -132,9 +132,7 @@ class TestStatusline(PExpectTest):
         self.resize()
         self.expect("settings set show-statusline true", ["no target"])
 
-        flood = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), "statusline_flood.py"
-        )
+        flood = self.getSourcePath("statusline_flood.py")
         self.expect('command script import "{}"'.format(flood))
 
         tee = CaptureTee()

@@ -22,6 +22,7 @@
 #include "llvm/Support/VersionTuple.h"
 #include <memory>
 #include <optional>
+#include <string>
 
 namespace clang {
 namespace api_notes {
@@ -166,7 +167,7 @@ public:
   /// key, and a non-empty list uses an exact ordered parameter key.
   VersionedInfo<CXXMethodInfo>
   lookupCXXMethod(ContextID CtxID, llvm::StringRef Name,
-                  llvm::ArrayRef<llvm::StringRef> Parameters);
+                  llvm::ArrayRef<std::string> Parameters);
 
   /// Look for information regarding the given global variable.
   ///
@@ -191,7 +192,7 @@ public:
   /// key, and a non-empty list uses an exact ordered parameter key.
   VersionedInfo<GlobalFunctionInfo>
   lookupGlobalFunction(llvm::StringRef Name,
-                       llvm::ArrayRef<llvm::StringRef> Parameters,
+                       llvm::ArrayRef<std::string> Parameters,
                        std::optional<Context> Ctx = std::nullopt);
 
   /// Look for information regarding the given enumerator.
@@ -242,15 +243,17 @@ public:
 private:
   VersionedInfo<CXXMethodInfo> lookupCXXMethodImpl(ContextID CtxID,
                                                    llvm::StringRef Name);
+  template <typename ParameterT>
   VersionedInfo<CXXMethodInfo>
   lookupCXXMethodImpl(ContextID CtxID, llvm::StringRef Name,
-                      llvm::ArrayRef<llvm::StringRef> Parameters);
+                      llvm::ArrayRef<ParameterT> Parameters);
 
   VersionedInfo<GlobalFunctionInfo>
   lookupGlobalFunctionImpl(llvm::StringRef Name, std::optional<Context> Ctx);
+  template <typename ParameterT>
   VersionedInfo<GlobalFunctionInfo>
   lookupGlobalFunctionImpl(llvm::StringRef Name,
-                           llvm::ArrayRef<llvm::StringRef> Parameters,
+                           llvm::ArrayRef<ParameterT> Parameters,
                            std::optional<Context> Ctx);
 };
 

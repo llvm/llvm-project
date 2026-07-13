@@ -12,9 +12,11 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Frontend/SSAFOptions.h"
 #include "llvm/ADT/SetVector.h"
 
 using namespace clang;
+using namespace ssaf;
 
 std::string ssaf::describeJSONValue(const llvm::json::Value &V) {
   return llvm::formatv("{0:2}", V).str();
@@ -33,8 +35,9 @@ namespace {
 class ContributorFinder : public DynamicRecursiveASTVisitor {
 public:
   llvm::SetVector<const NamedDecl *> Contributors;
+  const SSAFOptions &Opts;
 
-  ContributorFinder() {
+  ContributorFinder(const SSAFOptions &Opts) : Opts(Opts) {
     ShouldVisitTemplateInstantiations = true;
     ShouldVisitImplicitCode = false;
   }
@@ -53,7 +56,23 @@ public:
     DeclContext *DC = D->getDeclContext();
 
     // Collects Decl for global variables or static data members:
-    if (DC->isFileContext() || D->isStaticDataMember())
+    if (DC->isFileContext() || D->isStaticDataMember()) {
+      Contributors.insert(D);
+      return true;
+    }
+
+    // Optionally include block-scope (function-local) variables. Parameters
+    // are intentionally skipped: they are exposed via their parent function's
+    // USR + a parameter-index suffix in getEntityName, so registering them as
+    // independent contributors would be redundant.
+    //
+    // FIXME: clang::index::generateUSRForDecl can produce non-unique or empty
+    // USRs for some local declaration shapes (e.g., locals of certain template
+    // instantiations). The current addEntity path returns std::nullopt when
+    // that happens and downstream extractors skip gracefully, so this is
+    // tolerated for now.
+    if (Opts.IncludeLocalEntities && !D->isImplicit() && !isa<ParmVarDecl>(D) &&
+        DC->isFunctionOrMethod())
       Contributors.insert(D);
     return true;
   }
@@ -125,10 +144,10 @@ public:
 } // namespace
 
 void ssaf::findContributors(
-    ASTContext &Ctx,
+    ASTContext &Ctx, const SSAFOptions &Options,
     llvm::DenseMap<const NamedDecl *, std::vector<const NamedDecl *>>
         &Contributors) {
-  ContributorFinder Finder;
+  ContributorFinder Finder{Options};
   Finder.TraverseAST(Ctx);
   for (const NamedDecl *C : Finder.Contributors)
     Contributors[cast<NamedDecl>(C->getCanonicalDecl())].push_back(C);

@@ -222,6 +222,7 @@ public:
     LLVM_ABI uint32_t lookup(Value *V, bool Verify = true) const;
     LLVM_ABI uint32_t lookupOrAddCmp(unsigned Opcode, CmpInst::Predicate Pred,
                                      Value *LHS, Value *RHS);
+    LLVM_ABI uint32_t lookupPtrToInt(Value *Ptr, Type *Ty);
     LLVM_ABI uint32_t phiTranslate(const BasicBlock *BB,
                                    const BasicBlock *PhiBlock, uint32_t Num,
                                    GVNPass &GVN);

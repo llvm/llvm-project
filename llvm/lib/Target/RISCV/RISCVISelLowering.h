@@ -202,6 +202,11 @@ public:
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
 
+  CondMergingParams
+  getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *LHS,
+                                const Value *RHS,
+                                const Function *F) const override;
+
   bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
                             bool MathUsed) const override {
     if (VT == MVT::i8 || VT == MVT::i16)

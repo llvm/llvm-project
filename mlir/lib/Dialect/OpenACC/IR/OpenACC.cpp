@@ -2234,6 +2234,10 @@ bool acc::ParallelOp::hasAnyGangWorkerVector(mlir::acc::DeviceType deviceType) {
       getVectorLength(), deviceType);
 }
 
+bool acc::ParallelOp::isEffectivelySerial() {
+  return isGangWorkerVectorAllOne(*this);
+}
+
 bool acc::ParallelOp::hasWaitOnly() {
   return hasWaitOnly(mlir::acc::DeviceType::None);
 }
@@ -3105,6 +3109,10 @@ bool acc::KernelsOp::hasAnyGangWorkerVector(mlir::acc::DeviceType deviceType) {
       getNumGangsDeviceType(), getNumGangs(), getNumGangsSegments(),
       getNumWorkersDeviceType(), getNumWorkers(), getVectorLengthDeviceType(),
       getVectorLength(), deviceType);
+}
+
+bool acc::KernelsOp::isEffectivelySerial() {
+  return isGangWorkerVectorAllOne(*this);
 }
 
 bool acc::KernelsOp::hasWaitOnly() {

@@ -143,6 +143,8 @@ static bool GetFreeBSDProcessUserAndGroup(ProcessInstanceInfo &process_info) {
   if (proc_kinfo_size == 0)
     goto error;
 
+  process_info.SetProcessGroupID(proc_kinfo.ki_pgid);
+  process_info.SetProcessSessionID(proc_kinfo.ki_sid);
   process_info.SetParentProcessID(proc_kinfo.ki_ppid);
   process_info.SetUserID(proc_kinfo.ki_ruid);
   process_info.SetGroupID(proc_kinfo.ki_rgid);
@@ -154,6 +156,8 @@ static bool GetFreeBSDProcessUserAndGroup(ProcessInstanceInfo &process_info) {
   return true;
 
 error:
+  process_info.SetProcessGroupID(LLDB_INVALID_PROCESS_ID);
+  process_info.SetProcessSessionID(LLDB_INVALID_PROCESS_ID);
   process_info.SetParentProcessID(LLDB_INVALID_PROCESS_ID);
   process_info.SetUserID(UINT32_MAX);
   process_info.SetGroupID(UINT32_MAX);
@@ -221,6 +225,8 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
 
     ProcessInstanceInfo process_info;
     process_info.SetProcessID(kinfo.ki_pid);
+    process_info.SetProcessGroupID(kinfo.ki_pgid);
+    process_info.SetProcessSessionID(kinfo.ki_sid);
     process_info.SetParentProcessID(kinfo.ki_ppid);
     process_info.SetUserID(kinfo.ki_ruid);
     process_info.SetGroupID(kinfo.ki_rgid);

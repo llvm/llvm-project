@@ -128,6 +128,18 @@ def TuneLUILoadFusion
                  CheckOpcode<[LUI]>,
                  CheckOpcode<Load>>;
 
+defvar RV32GPRLoadStore = [LB, LBU, LH, LHU, LW, SB, SH, SW];
+def TuneQCELILoadStoreFusion
+  : Fusion<"qc-e-li-load-store", "HasQCELILoadStoreFusion",
+           "Enable QC.E.LI + Load/Store macrofusion",
+           [
+             SecondFusionPredicateWithMCInstPredicate<CheckOpcode<RV32GPRLoadStore>>,
+             WildcardTrue,
+             FirstFusionPredicateWithMCInstPredicate<CheckOpcode<[QC_E_LI]>>,
+             OneUse,
+             TieReg<0, 1>,
+           ]>;
+
 // Bitfield extract fusion: similar to TuneShiftedZExtWFusion
 // but without the immediate restriction
 //   slli rd, rs1, imm12

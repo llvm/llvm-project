@@ -27,7 +27,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/MathExtras.h"
-#include <cstring>
 #include <queue>
 #include <vector>
 
@@ -147,9 +146,15 @@ StringRef getOriginalAsmConstraints(const CallBase &CB) {
 // when making string comparisons in compiler passes.
 // SPIR-V requires null-terminated UTF-8 strings padded to 32-bit alignment.
 static uint32_t convertCharsToWord(StringRef Str, unsigned i) {
-  uint32_t Word = 0u; // Padding/null bytes are zero-initialized.
-  unsigned Count = std::min(static_cast<size_t>(4), Str.size() - i);
-  std::memcpy(&Word, Str.data() + i, Count);
+  uint32_t Word = 0u; // Build up this 32-bit word from 4 8-bit chars.
+  for (unsigned WordIndex = 0; WordIndex < 4; ++WordIndex) {
+    unsigned StrIndex = i + WordIndex;
+    uint8_t CharToAdd = 0;       // Initilize char as padding/null.
+    if (StrIndex < Str.size()) { // If it's within the string, get a real char.
+      CharToAdd = Str[StrIndex];
+    }
+    Word |= (CharToAdd << (WordIndex * 8));
+  }
   return Word;
 }
 

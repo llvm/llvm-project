@@ -33,6 +33,7 @@
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
 
@@ -2582,7 +2583,7 @@ TemplateDeclInstantiator::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   // merged with the local instantiation scope for the function template
   // itself.
   LocalInstantiationScope Scope(SemaRef);
-  Sema::ConstraintEvalRAII<TemplateDeclInstantiator> RAII(*this);
+  llvm::SaveAndRestore RAII(EvaluateConstraints, false);
 
   TemplateParameterList *TempParams = D->getTemplateParameters();
   TemplateParameterList *InstParams = SubstTemplateParams(TempParams);
@@ -3612,9 +3613,11 @@ Decl *TemplateDeclInstantiator::VisitTemplateTypeParmDecl(
 
   TemplateTypeParmDecl *Inst = TemplateTypeParmDecl::Create(
       SemaRef.Context, Owner, D->getBeginLoc(), D->getLocation(),
-      D->getDepth() - TemplateArgs.getNumSubstitutedLevels(), D->getIndex(),
-      D->getIdentifier(), D->wasDeclaredWithTypename(), D->isParameterPack(),
-      D->hasTypeConstraint(), NumExpanded);
+      D->getDepth() - (TemplateArgs.retainInnerDepths()
+                           ? 0
+                           : TemplateArgs.getNumSubstitutedLevels()),
+      D->getIndex(), D->getIdentifier(), D->wasDeclaredWithTypename(),
+      D->isParameterPack(), D->hasTypeConstraint(), NumExpanded);
 
   Inst->setAccess(AS_public);
   Inst->setImplicit(D->isImplicit());
@@ -4883,6 +4886,13 @@ TemplateDeclInstantiator::SubstTemplateParams(TemplateParameterList *L) {
     return nullptr;
 
   Expr *InstRequiresClause = L->getRequiresClause();
+  if (InstRequiresClause && EvaluateConstraints) {
+    ExprResult E =
+        SemaRef.SubstConstraintExpr(InstRequiresClause, TemplateArgs);
+    if (E.isInvalid())
+      return nullptr;
+    InstRequiresClause = E.get();
+  }
 
   TemplateParameterList *InstL
     = TemplateParameterList::Create(SemaRef.Context, L->getTemplateLoc(),

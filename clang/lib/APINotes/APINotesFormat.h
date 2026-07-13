@@ -417,10 +417,10 @@ getFunctionKeyImpl(uint32_t ParentContextID, llvm::StringRef Name,
   return FunctionTableKey(ParentContextID, *NameID);
 }
 
-template <typename GetIdentifierFn>
+template <typename ParameterT, typename GetIdentifierFn>
 std::optional<FunctionTableKey>
 getFunctionKeyImpl(uint32_t ParentContextID, llvm::StringRef Name,
-                   llvm::ArrayRef<llvm::StringRef> Parameters,
+                   llvm::ArrayRef<ParameterT> Parameters,
                    GetIdentifierFn GetIdentifier) {
   std::optional<IdentifierID> NameID = GetIdentifier(Name);
   if (!NameID)
@@ -428,8 +428,9 @@ getFunctionKeyImpl(uint32_t ParentContextID, llvm::StringRef Name,
 
   llvm::SmallVector<IdentifierID, 2> ParameterTypeIDs;
   ParameterTypeIDs.reserve(Parameters.size());
-  for (llvm::StringRef Parameter : Parameters) {
-    std::optional<IdentifierID> ParameterID = GetIdentifier(Parameter);
+  for (const ParameterT &Parameter : Parameters) {
+    std::optional<IdentifierID> ParameterID =
+        GetIdentifier(llvm::StringRef(Parameter));
     if (!ParameterID)
       return std::nullopt;
     ParameterTypeIDs.push_back(*ParameterID);

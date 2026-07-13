@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx600 < %s | FileCheck -check-prefixes=GCN,GCN-PAL %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=kaveri < %s | FileCheck -check-prefixes=GCN,GCN-DEFAULT %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=kaveri < %s | FileCheck -check-prefixes=GCN,GCN-MESA %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck -check-prefixes=GCN,GCN-DEFAULT %s
+; RUN: llc -mtriple=amdgpu6.00--amdpal < %s | FileCheck -check-prefixes=GCN,GCN-PAL %s
+; RUN: llc -mtriple=amdgpu7.00-- < %s | FileCheck -check-prefixes=GCN,GCN-DEFAULT %s
+; RUN: llc -mtriple=amdgpu7.00-mesa-mesa3d < %s | FileCheck -check-prefixes=GCN,GCN-MESA %s
+; RUN: llc -mtriple=amdgpu7.00--amdhsa < %s | FileCheck -check-prefixes=GCN,GCN-DEFAULT %s
 ; RUN: llc -mtriple=r600-- -mcpu=cypress < %s | FileCheck -check-prefix=R600 %s
 
 @private1 = private unnamed_addr addrspace(4) constant [4 x float] [float 0.0, float 1.0, float 2.0, float 3.0]

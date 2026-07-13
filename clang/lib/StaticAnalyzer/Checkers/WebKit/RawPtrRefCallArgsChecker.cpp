@@ -417,7 +417,8 @@ public:
         printQuotedQualifiedName(Os, Typedef->getDecl());
       }
     } else {
-      printType(Os, CallArg->getType());
+      Os << " ";
+      printTypeName(Os, CallArg->getType());
     }
 
     bool usesDefaultArgValue = isa<CXXDefaultArgExpr>(CallArg) && Param;
@@ -447,8 +448,8 @@ public:
       Os << " to ";
       printQuotedQualifiedName(Os, Callee);
     }
-    Os << ") is a raw pointer to " << typeName();
-    printType(Os, CallArg->getType());
+    Os << ") is a raw pointer to " << typeName() << " ";
+    printTypeName(Os, CallArg->getType());
 
     PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
@@ -472,8 +473,8 @@ public:
       printQuotedQualifiedName(Os, Callee);
       Os << ")";
     }
-    Os << " is a raw pointer to " << typeName();
-    printType(Os, CallArg->getType());
+    Os << " is a raw pointer to " << typeName() << " ";
+    printTypeName(Os, CallArg->getType());
 
     PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
@@ -505,22 +506,6 @@ public:
     bool IsPtr = isa<PointerType, ObjCObjectPointerType>(T);
     Os << "raw " << (IsPtr ? "pointer" : "reference") << " to " << typeName();
     return PrintDeclKind::Pointee;
-  }
-
-  void printType(llvm::raw_svector_ostream &Os, const QualType QT) const {
-    auto *ArgType = QT.getTypePtr();
-    if (auto *CXXRD = ArgType->getPointeeCXXRecordDecl()) {
-      Os << " ";
-      printQuotedQualifiedName(Os, CXXRD);
-    } else if (auto *ObjCDecl = getObjCDeclFromObjCPtr(ArgType)) {
-      Os << " ";
-      printQuotedQualifiedName(Os, ObjCDecl);
-    } else if (!ArgType->isPointerOrReferenceType()) {
-      if (auto *RD = ArgType->getAsRecordDecl()) {
-        Os << " ";
-        printQuotedQualifiedName(Os, RD);
-      }
-    }
   }
 };
 

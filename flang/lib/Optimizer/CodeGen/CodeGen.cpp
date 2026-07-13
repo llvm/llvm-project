@@ -1325,6 +1325,70 @@ static mlir::SymbolRefAttr getMalloc(fir::AllocMemOp op,
   return getMallocInModule(mod, op, rewriter, indexType);
 }
 
+template <typename ModuleOp>
+static mlir::SymbolRefAttr
+getAlignedAllocInModule(ModuleOp mod, fir::AllocMemOp op,
+                        mlir::ConversionPatternRewriter &rewriter,
+                        mlir::Type indexType) {
+  static constexpr char alignedAllocName[] = "aligned_alloc";
+  if (auto func =
+          mod.template lookupSymbol<mlir::LLVM::LLVMFuncOp>(alignedAllocName))
+    return mlir::SymbolRefAttr::get(func);
+  if (auto userFunc =
+          mod.template lookupSymbol<mlir::func::FuncOp>(alignedAllocName))
+    return mlir::SymbolRefAttr::get(userFunc);
+
+  mlir::OpBuilder moduleBuilder(mod.getBodyRegion());
+  auto alignedDecl = mlir::LLVM::LLVMFuncOp::create(
+      moduleBuilder, op.getLoc(), alignedAllocName,
+      mlir::LLVM::LLVMFunctionType::get(getLlvmPtrType(op.getContext()),
+                                        {indexType, indexType},
+                                        /*isVarArg=*/false));
+  return mlir::SymbolRefAttr::get(alignedDecl);
+}
+
+static mlir::SymbolRefAttr
+getAlignedAlloc(fir::AllocMemOp op, mlir::ConversionPatternRewriter &rewriter,
+                mlir::Type indexType) {
+  if (auto mod = op->getParentOfType<mlir::gpu::GPUModuleOp>())
+    return getAlignedAllocInModule(mod, op, rewriter, indexType);
+  auto mod = op->getParentOfType<mlir::ModuleOp>();
+  return getAlignedAllocInModule(mod, op, rewriter, indexType);
+}
+
+template <typename ModuleOp>
+static mlir::SymbolRefAttr
+getPosixMemalignInModule(ModuleOp mod, fir::AllocMemOp op,
+                         mlir::ConversionPatternRewriter &rewriter,
+                         mlir::Type indexType) {
+  static constexpr char posixMemalignName[] = "posix_memalign";
+  if (auto func =
+          mod.template lookupSymbol<mlir::LLVM::LLVMFuncOp>(posixMemalignName))
+    return mlir::SymbolRefAttr::get(func);
+  if (auto userFunc =
+          mod.template lookupSymbol<mlir::func::FuncOp>(posixMemalignName))
+    return mlir::SymbolRefAttr::get(userFunc);
+
+  // int posix_memalign(void **memptr, size_t alignment, size_t size);
+  mlir::OpBuilder moduleBuilder(mod.getBodyRegion());
+  auto decl = mlir::LLVM::LLVMFuncOp::create(
+      moduleBuilder, op.getLoc(), posixMemalignName,
+      mlir::LLVM::LLVMFunctionType::get(
+          mlir::IntegerType::get(op.getContext(), 32),
+          {getLlvmPtrType(op.getContext()), indexType, indexType},
+          /*isVarArg=*/false));
+  return mlir::SymbolRefAttr::get(decl);
+}
+
+static mlir::SymbolRefAttr
+getPosixMemalign(fir::AllocMemOp op, mlir::ConversionPatternRewriter &rewriter,
+                 mlir::Type indexType) {
+  if (auto mod = op->getParentOfType<mlir::gpu::GPUModuleOp>())
+    return getPosixMemalignInModule(mod, op, rewriter, indexType);
+  auto mod = op->getParentOfType<mlir::ModuleOp>();
+  return getPosixMemalignInModule(mod, op, rewriter, indexType);
+}
+
 /// Return value of the stride in bytes between adjacent elements
 /// of LLVM type \p llTy. The result is returned as a value of
 /// \p idxTy integer type.
@@ -1373,6 +1437,69 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
         mlir::IntegerType::get(rewriter.getContext(), mallocTyWidth);
     if (mallocTyWidth != ity.getIntOrFloatBitWidth())
       size = integerCast(loc, rewriter, mallocTy, size);
+
+    std::optional<uint64_t> alignment = heap.getAlignment();
+    if (alignment && *alignment > 16) {
+      auto mod = heap->getParentOfType<mlir::ModuleOp>();
+      llvm::Triple triple = mod ? fir::getTargetTriple(mod) : llvm::Triple{};
+      bool isGpu = heap->getParentOfType<mlir::gpu::GPUModuleOp>() != nullptr ||
+                   triple.isNVPTX() || triple.isAMDGPU() || triple.isSPIRV();
+
+      if (!isGpu && !triple.isOSWindows()) {
+        mlir::Value alignVal = fir::genConstantIndex(
+            loc, mallocTy, rewriter, static_cast<std::int64_t>(*alignment));
+
+        if (triple.isOSDarwin()) {
+          // aligned_alloc requires macOS 10.15+, so use posix_memalign instead
+          mlir::Type ptrTy = ::getLlvmPtrType(heap.getContext());
+          mlir::Value memptr;
+          {
+            mlir::OpBuilder::InsertionGuard guard(rewriter);
+            mlir::Operation *parentOp =
+                rewriter.getInsertionBlock()->getParentOp();
+            mlir::Region *parentRegion =
+                rewriter.getInsertionBlock()->getParent();
+            mlir::Block *insertBlock =
+                getBlockForAllocaInsert(parentOp, parentRegion);
+            rewriter.setInsertionPointToStart(insertBlock);
+            mlir::Value one = fir::genConstantIndex(loc, mallocTy, rewriter, 1);
+            memptr =
+                mlir::LLVM::AllocaOp::create(rewriter, loc, ptrTy, ptrTy, one);
+          }
+          mlir::Value nullPtr =
+              mlir::LLVM::ZeroOp::create(rewriter, loc, ptrTy);
+          mlir::LLVM::StoreOp::create(rewriter, loc, nullPtr, memptr);
+          heap->setAttr("callee", getPosixMemalign(heap, rewriter, mallocTy));
+          mlir::LLVM::CallOp::create(
+              rewriter, loc,
+              mlir::TypeRange{
+                  mlir::IntegerType::get(rewriter.getContext(), 32)},
+              mlir::ValueRange{memptr, alignVal, size},
+              addLLVMOpBundleAttrs(rewriter, heap->getAttrs(), 3));
+          mlir::Value newPtr =
+              mlir::LLVM::LoadOp::create(rewriter, loc, ptrTy, memptr);
+          rewriter.replaceOp(heap, newPtr);
+          return mlir::success();
+        }
+
+        mlir::Value alignMinusOne = fir::genConstantIndex(
+            loc, mallocTy, rewriter, static_cast<std::int64_t>(*alignment - 1));
+        mlir::Value sizePlus = mlir::LLVM::AddOp::create(
+            rewriter, loc, mallocTy, size, alignMinusOne);
+        mlir::Value notAlignMinusOne =
+            fir::genConstantIndex(loc, mallocTy, rewriter,
+                                  ~static_cast<std::int64_t>(*alignment - 1));
+        mlir::Value roundedSize = mlir::LLVM::AndOp::create(
+            rewriter, loc, mallocTy, sizePlus, notAlignMinusOne);
+        heap->setAttr("callee", getAlignedAlloc(heap, rewriter, mallocTy));
+        rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+            heap, ::getLlvmPtrType(heap.getContext()),
+            mlir::ValueRange{alignVal, roundedSize},
+            addLLVMOpBundleAttrs(rewriter, heap->getAttrs(), 2));
+        return mlir::success();
+      }
+    }
+
     heap->setAttr("callee", getMalloc(heap, rewriter, mallocTy));
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
         heap, ::getLlvmPtrType(heap.getContext()), size,

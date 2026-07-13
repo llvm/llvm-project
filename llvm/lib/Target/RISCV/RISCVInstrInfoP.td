@@ -1870,6 +1870,10 @@ def SDT_RISCVPPairEven : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                               SDTCisSameAs<0, 1>,
                                               SDTCisSameAs<0, 2>]>;
 def riscv_ppaire : RVSDNode<"PPAIRE", SDT_RISCVPPairEven>;
+def SDT_RISCVPackedBinary : SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                                 SDTCisSameAs<0, 1>,
+                                                 SDTCisSameAs<0, 2>]>;
+def riscv_ppairoe_h : RVSDNode<"PPAIROE_H", SDT_RISCVPackedBinary>;
 
 // Averaging subtraction, (a - b) >> 2
 def riscv_asub : RVSDNode<"ASUB", SDTIntBinOp>;
@@ -1905,15 +1909,6 @@ def SDT_RISCVMERGE : SDTypeProfile<1, 3, [SDTCisInt<0>,
                                           SDTCisSameAs<0, 3>]>;
 def riscv_merge : RVSDNode<"MERGE", SDT_RISCVMERGE>;
 
-// (rdlo, rdhi) PPAIRE_DB (rs1plo, rs1phi, rs2plo, rs2phi)
-def SDT_RISCVPPairE_DB : SDTypeProfile<2, 4, [SDTCisVT<0, v4i8>,
-                                              SDTCisSameAs<0, 1>,
-                                              SDTCisSameAs<0, 2>,
-                                              SDTCisSameAs<0, 3>,
-                                              SDTCisSameAs<0, 4>,
-                                              SDTCisSameAs<0, 5>]>;
-def riscv_ppaire_db : RVSDNode<"PPAIRE_DB", SDT_RISCVPPairE_DB>;
-
 // signed-saturating abs of each lane; an INT_MIN lane maps to INT_MAX.
 def SDT_RISCVPackedUnary : SDTypeProfile<1, 1, [SDTCisVec<0>,
                                                 SDTCisSameAs<0, 1>]>;
@@ -1921,8 +1916,8 @@ def riscv_psabs : RVSDNode<"PSABS", SDT_RISCVPackedUnary>;
 
 // Interleave two packed vectors.
 def SDT_RISCVPZip : SDTypeProfile<1, 2, [SDTCisVec<0>,
-                                          SDTCisSameAs<0, 1>,
-                                          SDTCisSameAs<0, 2>]>;
+                                         SDTCisSameAs<0, 1>,
+                                         SDTCisSameAs<0, 2>]>;
 def riscv_pzip : RVSDNode<"PZIP", SDT_RISCVPZip>;
 
 // Deinterleave the even/odd lanes of two packed vectors.
@@ -2162,9 +2157,11 @@ let Predicates = [HasStdExtP] in {
   def : Pat<(XLenVecI16VT (vselect (XLenVecI16VT GPR:$mask), GPR:$true_v, GPR:$false_v)),
             (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
 
-  // 16-bit bswap patterns
+  // 16-bit permute patterns
   def : Pat<(XLenVecI16VT (bswap GPR:$rs)),
             (PPAIROE_B GPR:$rs, GPR:$rs)>;
+  def : Pat<(XLenVecI16VT (riscv_ppairoe_h GPR:$rs1, GPR:$rs2)),
+            (PPAIROE_H GPR:$rs1, GPR:$rs2)>;
 
 let append Predicates = [IsRV32] in {
   def : PatGpr<bitreverse, REV_RV32>;
@@ -2550,6 +2547,9 @@ let append Predicates = [IsRV32] in {
 
   def : Pat<(v2i32 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b))),
             (BuildGPRPair GPR:$a, GPR:$b)>;
+
+  def : Pat<(v8i8 (riscv_ppaire GPRPair:$rs1, GPRPair:$rs2)),
+            (PPAIRE_DB GPRPair:$rs1, GPRPair:$rs2)>;
 
   // Concat vector patterns
   def : Pat<(v8i8 (concat_vectors (v4i8 GPR:$a), (v4i8 GPR:$b))),

@@ -30,6 +30,7 @@ add_llvm_unittest(ADTTests
   EditDistanceTest.cpp
   EnumeratedArrayTest.cpp
   EquivalenceClassesTest.cpp
+  EytzingerTest.cpp
   FallibleIteratorTest.cpp
   FloatingPointMode.cpp
   FoldingSet.cpp

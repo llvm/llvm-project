@@ -491,6 +491,7 @@ public:
 class ConstraintSatisfactionChecker {
   Sema &S;
   const NamedDecl *Template;
+  const ConceptReference *TopLevelConceptId;
   SourceLocation TemplateNameLoc;
   UnsignedOrNone PackSubstitutionIndex;
   ConstraintSatisfaction &Satisfaction;
@@ -549,11 +550,13 @@ private:
 
 public:
   ConstraintSatisfactionChecker(Sema &SemaRef, const NamedDecl *Template,
+                                const ConceptReference *TopLevelConceptId,
                                 SourceLocation TemplateNameLoc,
                                 UnsignedOrNone PackSubstitutionIndex,
                                 ConstraintSatisfaction &Satisfaction,
                                 bool BuildExpression)
-      : S(SemaRef), Template(Template), TemplateNameLoc(TemplateNameLoc),
+      : S(SemaRef), Template(Template), TopLevelConceptId(TopLevelConceptId),
+        TemplateNameLoc(TemplateNameLoc),
         PackSubstitutionIndex(PackSubstitutionIndex),
         Satisfaction(Satisfaction), BuildExpression(BuildExpression) {}
 
@@ -681,6 +684,8 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
   llvm::SaveAndRestore PushTemplateArgsCache(S.CurrentCachedTemplateArgs,
                                              &CachedTemplateArgs);
 
+  // We don't want the template argument substitution into parameter
+  // mappings to preserve the outer depths.
   if (S.SubstTemplateArgumentsInParameterMapping(
           Constraint.getParameterMapping(), Constraint.getBeginLoc(), MLTAL,
           SubstArgs)) {
@@ -730,9 +735,15 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     const AtomicConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
   std::optional<EnterExpressionEvaluationContext> EvaluationContext;
-  EvaluationContext.emplace(
-      S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
-      Sema::ReuseLambdaContextDecl);
+  // The ConceptDecl as a ContextDecl ensures that, when evaluating constraints
+  // on transformed lambdas, we don't have extra outer template arguments.
+  if (ParentConcept)
+    EvaluationContext.emplace(
+        S, Sema::ExpressionEvaluationContext::ConstantEvaluated, ParentConcept);
+  else
+    EvaluationContext.emplace(
+        S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+        Sema::ReuseLambdaContextDecl);
 
   llvm::SmallVector<TemplateArgument> SubstitutedOutermost;
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
@@ -746,17 +757,8 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
   // i.e they should not have access to the current class object or its
   // non-public members.
   std::optional<Sema::ContextRAII> ConceptContext;
-  if (ParentConcept) {
+  if (ParentConcept)
     ConceptContext.emplace(S, ParentConcept->getDeclContext());
-    // FIXME: the evaluation context should learn to track template arguments
-    // separately from a Decl.
-    EvaluationContext.emplace(
-        S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
-        /*LambdaContextDecl=*/
-        ImplicitConceptSpecializationDecl::Create(
-            S.Context, ParentConcept->getDeclContext(),
-            ParentConcept->getBeginLoc(), SubstitutedOutermost));
-  }
 
   Sema::ArgPackSubstIndexRAII SubstIndex(S, PackSubstitutionIndex);
   ExprResult SubstitutedAtomicExpr = EvaluateAtomicConstraint(
@@ -915,8 +917,9 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     Satisfaction.IsSatisfied = false;
     Satisfaction.ContainsErrors = false;
     ExprResult Expr =
-        ConstraintSatisfactionChecker(S, Template, TemplateNameLoc,
-                                      UnsignedOrNone(I), Satisfaction,
+        ConstraintSatisfactionChecker(S, Template, TopLevelConceptId,
+                                      TemplateNameLoc, UnsignedOrNone(I),
+                                      Satisfaction,
                                       /*BuildExpression=*/false)
             .Evaluate(Constraint.getNormalizedPattern(), *SubstitutedArgs);
     if (BuildExpression) {
@@ -1002,8 +1005,16 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
       const_cast<NamedDecl *>(Template), Constraint.getSourceRange());
 
   TemplateArgumentListInfo OutArgs(Ori->LAngleLoc, Ori->RAngleLoc);
-  if (S.SubstTemplateArguments(Ori->arguments(), *SubstitutedArgs, OutArgs) ||
-      Trap.hasErrorOccurred()) {
+
+  // There's a concern that even with the same concept, they may not have the
+  // same ConceptReference, if they come from modules.
+  if (TopLevelConceptId &&
+      ConceptId->getNamedConcept() == TopLevelConceptId->getNamedConcept()) {
+    for (auto &A : Ori->arguments())
+      OutArgs.addArgument(A);
+  } else if (S.SubstTemplateArguments(Ori->arguments(), *SubstitutedArgs,
+                                      OutArgs) ||
+             Trap.hasErrorOccurred()) {
     Satisfaction.IsSatisfied = false;
     if (!Trap.hasErrorOccurred())
       return ExprError();
@@ -1241,11 +1252,12 @@ static bool CheckConstraintSatisfaction(
                                     Template, /*CSE=*/nullptr,
                                     S.ArgPackSubstIndex);
 
-  ExprResult Res = ConstraintSatisfactionChecker(
-                       S, Template, TemplateIDRange.getBegin(),
-                       S.ArgPackSubstIndex, Satisfaction,
-                       /*BuildExpression=*/ConvertedExpr != nullptr)
-                       .Evaluate(*C, TemplateArgsLists);
+  ExprResult Res =
+      ConstraintSatisfactionChecker(
+          S, Template, TopLevelConceptId, TemplateIDRange.getBegin(),
+          S.ArgPackSubstIndex, Satisfaction,
+          /*BuildExpression=*/ConvertedExpr != nullptr)
+          .Evaluate(*C, TemplateArgsLists);
 
   if (Res.isInvalid())
     return true;
@@ -2319,6 +2331,14 @@ bool SubstituteParameterMappings::substitute(NormalizedConstraint &N) {
     }
     assert(!ArgsAsWritten);
     const ConceptSpecializationExpr *CSE = CC.getConceptSpecializationExpr();
+    // Make sure that lambdas within template arguments live in a
+    // dependent context such that they are assured to be transformed during
+    // constraint evaluation.
+    EnterExpressionEvaluationContext EECtx(
+        SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+        /*LambdaContextDecl=*/
+        const_cast<ImplicitConceptSpecializationDecl *>(
+            CSE->getSpecializationDecl()));
     SmallVector<TemplateArgument> InnerArgs(CSE->getTemplateArguments());
     ConceptDecl *Concept = CSE->getNamedConcept();
     if (RemovePacksForFoldExpr) {
@@ -2347,6 +2367,7 @@ bool SubstituteParameterMappings::substitute(NormalizedConstraint &N) {
         /*RelativeToPrimary=*/true,
         /*Pattern=*/nullptr,
         /*ForConstraintInstantiation=*/true);
+    MLTAL.setRetainInnerDepths();
 
     return SubstituteParameterMappings(SemaRef, &MLTAL,
                                        CSE->getTemplateArgsAsWritten(),

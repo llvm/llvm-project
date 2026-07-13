@@ -264,6 +264,10 @@ bool AMDGPUPostLegalizerCombinerImpl::matchRcpSqrtToRsq(
   auto getSqrtSrc = [=](const MachineInstr &MI) -> MachineInstr * {
     if (!MI.getFlag(MachineInstr::FmContract))
       return nullptr;
+    if (auto *GI = dyn_cast<GIntrinsic>(&MI)) {
+      if (GI->is(Intrinsic::amdgcn_sqrt))
+        return MRI.getVRegDef(MI.getOperand(2).getReg());
+    }
     MachineInstr *SqrtSrcMI = nullptr;
     auto Match =
         mi_match(MI.getOperand(0).getReg(), MRI, m_GFSqrt(m_MInstr(SqrtSrcMI)));

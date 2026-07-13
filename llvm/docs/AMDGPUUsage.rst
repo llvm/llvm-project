@@ -2644,9 +2644,6 @@ The AMDGPU backend supports the following LLVM IR attributes.
 
                                                       This is only relevant on targets with AGPRs which support accum_offset (gfx90a+).
 
-     "amdgpu-sgpr-hazard-wait"                        Disabled SGPR hazard wait insertion if set to 0.
-                                                      Exists for testing performance impact of SGPR hazard waits only.
-
      "amdgpu-sgpr-hazard-boundary-cull"               Enable insertion of SGPR hazard cull sequences at function call boundaries.
                                                       Cull sequence reduces future hazard waits, but has a performance cost.
 

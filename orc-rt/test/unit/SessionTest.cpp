@@ -316,6 +316,21 @@ TEST(SessionTest, ReportError) {
     ADD_FAILURE() << "Missing error value";
 }
 
+TEST(SessionTest, ReportErrorsViaSession) {
+  Error E = Error::success();
+  cantFail(std::move(E)); // Force error into checked state.
+
+  // Check that the ReportErrorsViaSession utility works as advertised.
+  Session S(mockExecutorProcessInfo(), noDispatch,
+            [&](Error Err) { E = std::move(Err); });
+  (ReportErrorsViaSession(S))(make_error<StringError>("foo"));
+
+  if (E)
+    EXPECT_EQ(toString(std::move(E)), "foo");
+  else
+    ADD_FAILURE() << "Missing error value";
+}
+
 TEST(SessionTest, SingleService) {
   size_t OpIdx = 0;
   std::optional<size_t> DetachOpIdx;

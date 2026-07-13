@@ -2708,6 +2708,7 @@ cc_library(
         ":analysis",
         ":ast",
         ":basic",
+        ":frontend",
         ":scalable_static_analysis_core",
         "//llvm:Support",
     ],

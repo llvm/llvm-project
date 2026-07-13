@@ -34,12 +34,12 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP3]], 255
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[SCALAR_PH]], label [[VECTOR_PH2:%.*]]
-; CHECK:       vector.ph2:
+; CHECK:       vector.ph1:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[N_VEC]] to i8
 ; CHECK-NEXT:    br label [[VECTOR_BODY3:%.*]]
-; CHECK:       vector.body3:
+; CHECK:       vector.body2:
 ; CHECK-NEXT:    [[INDEX4:%.*]] = phi i32 [ 0, [[VECTOR_PH2]] ], [ [[INDEX_NEXT5:%.*]], [[VECTOR_BODY3]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = trunc i32 [[INDEX4]] to i8
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i8 [[TMP10]], 1
@@ -48,7 +48,7 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK-NEXT:    [[INDEX_NEXT5]] = add nuw i32 [[INDEX4]], 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT5]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK6:%.*]], label [[VECTOR_BODY3]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       middle.block6:
+; CHECK:       middle.block5:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT_2:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:

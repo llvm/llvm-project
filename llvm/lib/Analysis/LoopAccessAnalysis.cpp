@@ -2261,11 +2261,16 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
           DL, SE, *(PSE.getSymbolicMaxBackedgeTakenCount()), *Dist, MaxStride))
     return Dependence::NoDep;
 
-  // The rest of this function relies on ConstDist being at most 64-bits, which
-  // is checked earlier. Will assert if the calling code changes.
   const APInt *APDist = nullptr;
-  uint64_t ConstDist =
-      match(Dist, m_scev_APInt(APDist)) ? APDist->abs().getZExtValue() : 0;
+  uint64_t ConstDist = 0;
+  if (match(Dist, m_scev_APInt(APDist))) {
+    std::optional<uint64_t> Val = APDist->abs().tryZExtValue();
+    if (!Val) {
+      LLVM_DEBUG(dbgs() << "LAA: Constant distance does not fit in 64 bits.\n");
+      return Dependence::Unknown;
+    }
+    ConstDist = *Val;
+  }
 
   // Attempt to prove strided accesses independent.
   if (APDist) {
@@ -2321,7 +2326,13 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     return Dependence::Forward;
   }
 
-  int64_t MinDistance = SE.getSignedRangeMin(Dist).getSExtValue();
+  std::optional<int64_t> MinDistanceOpt =
+      SE.getSignedRangeMin(Dist).trySExtValue();
+  if (!MinDistanceOpt) {
+    LLVM_DEBUG(dbgs() << "LAA: Minimum distance does not fit in 64 bits.\n");
+    return Dependence::Unknown;
+  }
+  int64_t MinDistance = *MinDistanceOpt;
   // Below we only handle strictly positive distances.
   if (MinDistance <= 0) {
     return CheckCompletelyBeforeOrAfter() ? Dependence::NoDep

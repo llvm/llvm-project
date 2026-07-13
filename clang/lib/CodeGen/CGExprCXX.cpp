@@ -2193,9 +2193,8 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
   }
 }
 
-static llvm::Value *EmitTypeidFromVTable(CodeGenFunction &CGF, const Expr *E,
-                                         llvm::Type *StdTypeInfoPtrTy,
-                                         bool HasNullCheck) {
+static Address EmitTypeidOperand(CodeGenFunction &CGF, const Expr *E,
+                                 bool HasNullCheck) {
   // Get the vtable pointer.
   Address ThisPtr = CGF.EmitLValue(E).getAddress();
 
@@ -2225,8 +2224,7 @@ static llvm::Value *EmitTypeidFromVTable(CodeGenFunction &CGF, const Expr *E,
     CGF.EmitBlock(EndBlock);
   }
 
-  return CGF.CGM.getCXXABI().EmitTypeid(CGF, SrcRecordTy, ThisPtr,
-                                        StdTypeInfoPtrTy);
+  return ThisPtr;
 }
 
 llvm::Value *CodeGenFunction::EmitCXXTypeidExpr(const CXXTypeidExpr *E) {
@@ -2250,17 +2248,21 @@ llvm::Value *CodeGenFunction::EmitCXXTypeidExpr(const CXXTypeidExpr *E) {
     return MaybeASCast(TypeInfo);
   }
 
+  const Expr *Operand = E->getExprOperand();
+  QualType OperandTy = Operand->getType();
+
   // C++ [expr.typeid]p2:
   //   When typeid is applied to a glvalue expression whose type is a
   //   polymorphic class type, the result refers to a std::type_info object
   //   representing the type of the most derived object (that is, the dynamic
   //   type) to which the glvalue refers.
-  // If the operand is already most derived object, no need to look up vtable.
-  if (E->isPotentiallyEvaluated() && !E->isMostDerived(getContext()))
-    return EmitTypeidFromVTable(*this, E->getExprOperand(), PtrTy,
-                                E->hasNullCheck());
+  if (E->isPotentiallyEvaluated()) {
+    Address ThisPtr = EmitTypeidOperand(*this, Operand, E->hasNullCheck());
+    if (!E->isMostDerived(getContext()))
+      return CGM.getCXXABI().EmitTypeid(*this, OperandTy, ThisPtr, PtrTy);
+    // If the operand is already most derived object, no need to look up vtable.
+  }
 
-  QualType OperandTy = E->getExprOperand()->getType();
   return MaybeASCast(CGM.GetAddrOfRTTIDescriptor(OperandTy));
 }
 

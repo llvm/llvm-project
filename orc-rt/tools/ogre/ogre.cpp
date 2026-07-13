@@ -1,4 +1,4 @@
-//===- orc-executor.cpp - Placeholder implementation for orc-rt ----------===//
+//===- ogre.cpp - ORC Generic Runtime Environment -------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Placeholder implementation file for initial orc-rt checkin.
+// The ORC Generic Runtime Environment (OGRE) is intended as a canonical
+// "blank executor".
 //
 //===----------------------------------------------------------------------===//
 

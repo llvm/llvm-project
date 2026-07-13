@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -mattr=+load-store-opt < %s | FileCheck -check-prefix=SI --check-prefix=CHECK %s
-; RUN: llc -mtriple=amdgcn -mcpu=bonaire -mattr=+load-store-opt < %s | FileCheck -check-prefix=CI --check-prefix=CHECK %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -mattr=+load-store-opt,+unsafe-ds-offset-folding < %s | FileCheck -check-prefix=CI --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgpu6.00 -mattr=+load-store-opt < %s | FileCheck -check-prefix=SI --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgpu7.04 -mattr=+load-store-opt < %s | FileCheck -check-prefix=CI --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgpu6.00 -mattr=+load-store-opt,+unsafe-ds-offset-folding < %s | FileCheck -check-prefix=CI --check-prefix=CHECK %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare void @llvm.amdgcn.s.barrier() #1

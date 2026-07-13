@@ -669,7 +669,10 @@ private:
 
   LogicalResult CheckVariable(Operation *op);
   LogicalResult CheckVariableReadOrWrite(Operation *op);
-  bool isValidElementType(Type type, const bool allowUnsigned = false);
+  LogicalResult validateValidElementType(Operation *op, Type type,
+                                         bool allowUnsigned = false);
+  LogicalResult validateOperationElementTypes(Operation *op,
+                                              bool allowUnsigned = false);
 
   SmallVector<
       std::function<LogicalResult(Operation *, const tosa::TargetEnv &)>>
@@ -1468,11 +1471,13 @@ LogicalResult TosaValidation::applyFunctionSignatureCheck(func::FuncOp op) {
   return success();
 }
 
-bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
+LogicalResult TosaValidation::validateValidElementType(Operation *op, Type type,
+                                                       bool allowUnsigned) {
   if (isa<FloatType>(type)) {
-    return isa<Float32Type, Float16Type, BFloat16Type, Float8E4M3FNType,
-               Float8E5M2Type, Float4E2M1FNType, Float6E2M3FNType,
-               Float6E3M2FNType, Float8E8M0FNUType>(type);
+    if (isa<Float32Type, Float16Type, BFloat16Type, Float8E4M3FNType,
+            Float8E5M2Type, Float4E2M1FNType, Float6E2M3FNType,
+            Float6E3M2FNType, Float8E8M0FNUType>(type))
+      return success();
   } else if (auto intTy = dyn_cast<IntegerType>(type)) {
     if (intTy.isSignless()) {
       switch (intTy.getWidth()) {
@@ -1483,21 +1488,47 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
       case 32:
       case 48:
       case 64:
-        return true;
+        return success();
       }
     } else if (allowUnsigned && intTy.isUnsigned()) {
       switch (intTy.getWidth()) {
       case 8:
       case 16:
       case 32:
-        return true;
+        return success();
       }
     }
   } else if (isa<tosa::shapeType>(type))
-    return true;
+    return success();
   else if (isa<tosa::mxint8Type, tosa::BlockScaledType>(type))
-    return true;
-  return false;
+    return success();
+
+  return op->emitOpError() << "is not profile-aligned: element type " << type
+                           << " is not legal";
+}
+
+LogicalResult
+TosaValidation::validateOperationElementTypes(Operation *op,
+                                              bool allowUnsigned) {
+  for (Value operand : op->getOperands()) {
+    Type elementTy = getElementTypeOrSelf(operand);
+    if (failed(validateValidElementType(op, elementTy, allowUnsigned)))
+      return failure();
+  }
+
+  for (Type resultTy : op->getResultTypes()) {
+    Type elementTy = getElementTypeOrSelf(resultTy);
+    if (failed(validateValidElementType(op, elementTy, allowUnsigned)))
+      return failure();
+  }
+
+  if (auto variableOp = dyn_cast<tosa::VariableOp>(op)) {
+    if (failed(
+            validateValidElementType(op, variableOp.getType(), allowUnsigned)))
+      return failure();
+  }
+
+  return success();
 }
 
 void TosaValidation::runOnOperation() {
@@ -1530,22 +1561,8 @@ void TosaValidation::runOnOperation() {
     //   protect rest of code against quantized element types
     const bool allowUnsigned =
         !strictOpSpecAlignment && isa<tosa::RescaleOp>(op);
-    for (Value operand : op->getOperands()) {
-      auto elementTy = getElementTypeOrSelf(operand);
-      if (!isValidElementType(elementTy, allowUnsigned)) {
-        op->emitOpError() << "is not profile-aligned: element type "
-                          << elementTy << " is not legal";
-        return signalPassFailure();
-      }
-    }
-    for (Type resultTy : op->getResultTypes()) {
-      auto elementTy = getElementTypeOrSelf(resultTy);
-      if (!isValidElementType(elementTy, allowUnsigned)) {
-        op->emitOpError() << "is not profile-aligned: element type "
-                          << elementTy << " is not legal";
-        return signalPassFailure();
-      }
-    }
+    if (failed(validateOperationElementTypes(op, allowUnsigned)))
+      return signalPassFailure();
 
     if (strictOpSpecAlignment &&
         failed(profileComp.checkProfile(op, targetEnv)))

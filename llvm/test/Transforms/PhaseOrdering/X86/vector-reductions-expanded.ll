@@ -354,6 +354,36 @@ for.end:
   ret float %r.0
 }
 
+define float @fmaximum_v4f32(<4 x float> %arg) {
+; CHECK-LABEL: @fmaximum_v4f32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> %arg, <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x float> @llvm.maximum.v4f32(<4 x float> %arg, <4 x float> [[RDX_SHUF]])
+; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <4 x float> [[RDX_MINMAX]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[RDX_MINMAX2:%.*]] = call <4 x float> @llvm.maximum.v4f32(<4 x float> [[RDX_MINMAX]], <4 x float> [[RDX_SHUF3]])
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[RDX_MINMAX2]], i32 0
+; CHECK-NEXT:    ret float [[TMP2]]
+;
+entry:
+  %res = call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> %arg)
+  ret float %res
+}
+
+define float @fminimum_v4f32(<4 x float> %arg) {
+; CHECK-LABEL: @fminimum_v4f32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> %arg, <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x float> @llvm.minimum.v4f32(<4 x float> %arg, <4 x float> [[RDX_SHUF]])
+; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <4 x float> [[RDX_MINMAX]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[RDX_MINMAX2:%.*]] = call <4 x float> @llvm.minimum.v4f32(<4 x float> [[RDX_MINMAX]], <4 x float> [[RDX_SHUF3]])
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[RDX_MINMAX2]], i32 0
+; CHECK-NEXT:    ret float [[TMP2]]
+;
+entry:
+  %res = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> %arg)
+  ret float %res
+}
+
 define available_externally float @max(float %a, float %b) {
 entry:
   %a.addr = alloca float, align 4

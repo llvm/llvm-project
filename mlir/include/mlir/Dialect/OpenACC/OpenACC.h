@@ -238,6 +238,32 @@ struct CurrentDeviceIdResource
   bool isAddressable() const override { return false; }
 };
 
+template <typename ComputeOpT>
+static bool isGangWorkerVectorAllOne(ComputeOpT op) {
+  // Strip index_cast operations from a value before checking for a constant.
+  auto stripIndexCasts = [](Value val) -> Value {
+    while (auto castOp = val.getDefiningOp<arith::IndexCastOp>())
+      val = castOp.getIn();
+    return val;
+  };
+
+  auto numGangs = op.getNumGangsValues();
+  if (numGangs.empty())
+    return false;
+  for (Value gangSize : numGangs) {
+    if (!isConstantIntValue(stripIndexCasts(gangSize), 1))
+      return false;
+  }
+  Value numWorkers = op.getNumWorkersValue();
+  if (!numWorkers)
+    return false;
+  Value vectorLength = op.getVectorLengthValue();
+  if (!vectorLength)
+    return false;
+  return isConstantIntValue(stripIndexCasts(numWorkers), 1) &&
+         isConstantIntValue(stripIndexCasts(vectorLength), 1);
+}
+
 } // namespace acc
 } // namespace mlir
 

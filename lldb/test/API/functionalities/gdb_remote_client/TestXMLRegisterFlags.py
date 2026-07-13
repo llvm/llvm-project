@@ -195,9 +195,9 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
             "register read cpsr x0",
             substrs=[
                 "  cpsr = 0xeeee7777\n"
-                "     = (msb = 1, lsb = 1)\n"
+                "       = (msb = 1, lsb = 1)\n"
                 "    x0 = 0xeeeeeeee77777777\n"
-                "     = (msb = 1, lsb = 1)"
+                "       = (msb = 1, lsb = 1)"
             ],
         )
 
@@ -237,10 +237,10 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         self.expect(
             "register read r0 fpc",
             substrs=[
-                "      r0 = 0x77777777eeeeeeee\n"
-                "         = (msb = 0, lsb = 0)\n"
-                "     fpc = 0x7777eeee\n"
-                "         = (msb = 0, lsb = 0)\n"
+                "   r0 = 0x77777777eeeeeeee\n"
+                "      = (msb = 0, lsb = 0)\n"
+                "  fpc = 0x7777eeee\n"
+                "      = (msb = 0, lsb = 0)\n"
             ],
         )
 
@@ -267,9 +267,9 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
             "register read cpsr x0",
             substrs=[
                 "  cpsr = 0xeeee7777\n"
-                "     = (correct = 1)\n"
+                "       = (correct = 1)\n"
                 "    x0 = 0xeeeeeeee77777777\n"
-                "     = (foo = 1)"
+                "       = (foo = 1)"
             ],
         )
 
@@ -450,13 +450,13 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         self.expect(
             "register read cpsr",
             substrs=[
-                "cpsr = 0xeeee7777\n"
-                "     = {\n"
-                "         this_is_a_long_field_3 = 0\n"
-                "         this_is_a_long_field_2 = 1\n"
-                "         this_is_a_long_field_1 = 1\n"
-                "         this_is_a_long_field_0 = 1\n"
-                "       }"
+                "  cpsr = 0xeeee7777\n"
+                "       = {\n"
+                "           this_is_a_long_field_3 = 0\n"
+                "           this_is_a_long_field_2 = 1\n"
+                "           this_is_a_long_field_1 = 1\n"
+                "           this_is_a_long_field_0 = 1\n"
+                "         }"
             ],
         )
 
