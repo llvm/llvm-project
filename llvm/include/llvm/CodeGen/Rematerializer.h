@@ -368,24 +368,13 @@ public:
                    MachineBasicBlock::iterator InsertPos,
                    SmallVectorImpl<Reg::Dependency> &&Dependencies);
 
-<<<<<<< HEAD
-  /// Re-creates a previously deleted register \p RegIdx before \p InsertPos in
-  /// \p DefRegion. \p DefReg must be the original virtual register that \p
-  /// RegIdx used to define. Sets the new register's rematerializable
-  /// dependencies to \p Dependencies (these are assumed to already exist in the
-  /// MIR).
-  LLVM_ABI void recreateReg(RegisterIdx RegIdx, unsigned DefRegion,
-                            MachineBasicBlock::iterator InsertPos,
-                            Register DefReg,
-                            SmallVectorImpl<Reg::Dependency> &&Dependencies);
-=======
   /// Re-creates a previously deleted register \p RegIdx before \p InsertPos,
   /// which must be in the register's original defining region. \p DefReg must
   /// be the original virtual register that \p RegIdx used to define.
   /// Dependencies are assumed to already exist in the MIR.
-  void recreateReg(RegisterIdx RegIdx, MachineBasicBlock::iterator InsertPos,
-                   Register DefReg);
->>>>>>> d6b5e8f71674 (Change rollback method to reduce tracking need)
+  LLVM_ABI void recreateReg(RegisterIdx RegIdx,
+                            MachineBasicBlock::iterator InsertPos,
+                            Register DefReg);
 
   /// Transfers all users of register \p FromRegIdx in region \p UseRegion to \p
   /// ToRegIdx, the latter of which must be a rematerialization of the former or
@@ -522,6 +511,12 @@ private:
 /// rematerializations as soon as it is attached to the rematerializer.
 class LLVM_ABI Rollbacker : public Rematerializer::Listener {
 public:
+  /// An insertion position pointer in the MIR.
+  union InsertPosPtr {
+    MachineInstr *MI;
+    MachineBasicBlock *MBB;
+  };
+
   Rollbacker() = default;
 
   /// Re-creates all deleted registers and rolls back all rematerializations
@@ -553,7 +548,7 @@ private:
   /// An insertion position in the MIR. The pointer should be interpreted as:
   /// - a MachineInstr* if the int is 0/false (insert before the MI).
   /// - a MachineBasicBlock* if the int is 1/true (insert at the MBB's end).
-  using InsertBeforePos = PointerIntPair<void *, 1, bool>;
+  using InsertBeforePos = PointerIntPair<InsertPosPtr, 1, bool>;
 
   /// Original registers that have been deleted, in order of deletion.
   SmallVector<DeadReg> DeadRegs;
@@ -573,10 +568,14 @@ private:
   bool RollingBack = false;
 
   InsertBeforePos makePos(MachineInstr *MI) const {
-    return InsertBeforePos(MI, false);
+    InsertPosPtr Ptr;
+    Ptr.MI = MI;
+    return InsertBeforePos(Ptr, false);
   }
   InsertBeforePos makePos(MachineBasicBlock *MBB) const {
-    return InsertBeforePos(MBB, true);
+    InsertPosPtr Ptr;
+    Ptr.MBB = MBB;
+    return InsertBeforePos(Ptr, true);
   }
   InsertBeforePos makePos(MachineBasicBlock::iterator It,
                           MachineBasicBlock *MBB) const {
@@ -596,6 +595,22 @@ private:
   /// becomes known that \p MI is about to be permanently deleted from the MIR
   /// and thus becomes an invalid re-creation position.
   void invalidatePosition(MachineInstr *MI, MachineBasicBlock::iterator It);
+};
+
+/// Required to use Rollbacker::InsertPosPtr as the pointer type of
+/// PointerIntPair.
+template <> struct PointerLikeTypeTraits<Rollbacker::InsertPosPtr> {
+  static inline void *getAsVoidPointer(Rollbacker::InsertPosPtr P) {
+    return P.MI;
+  }
+  static inline Rollbacker::InsertPosPtr getFromVoidPointer(void *P) {
+    Rollbacker::InsertPosPtr Ptr;
+    Ptr.MI = static_cast<MachineInstr *>(P);
+    return Ptr;
+  }
+  static constexpr int NumLowBitsAvailable =
+      std::min(PointerLikeTypeTraits<MachineInstr *>::NumLowBitsAvailable,
+               PointerLikeTypeTraits<MachineBasicBlock *>::NumLowBitsAvailable);
 };
 
 } // namespace llvm

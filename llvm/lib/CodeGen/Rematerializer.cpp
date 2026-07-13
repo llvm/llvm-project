@@ -813,14 +813,11 @@ void Rollbacker::rollback(Rematerializer &Remater) {
 
     // Determine re-creation position for the register's definition.
     MachineBasicBlock::iterator InsertPosition;
-    const auto [Ptr, IsMBB] = Positions[--PositionIndex];
-    if (IsMBB) {
-      InsertPosition = static_cast<MachineBasicBlock *>(Ptr)->end();
-    } else {
-      MachineInstr *InsertBeforeMI = static_cast<MachineInstr *>(Ptr);
-      InsertBeforeMI = Replacements.lookup_or(InsertBeforeMI, InsertBeforeMI);
-      InsertPosition = InsertBeforeMI->getIterator();
-    }
+    auto [Ptr, IsMBB] = Positions[--PositionIndex];
+    if (IsMBB)
+      InsertPosition = Ptr.MBB->end();
+    else
+      InsertPosition = Replacements.lookup_or(Ptr.MI, Ptr.MI)->getIterator();
 
     Remater.recreateReg(Reg.Idx, InsertPosition, Reg.DefReg);
 
