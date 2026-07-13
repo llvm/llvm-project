@@ -64,6 +64,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -73,6 +74,7 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "loop-split-utils"
 
@@ -170,8 +172,9 @@ const SCEVAddRecExpr *LoopSplitUtils::analyzeInduction() {
   BasicBlock *Header = L->getHeader();
   BasicBlock *Latch = L->getLoopLatch();
 
-  // The counted exit lives in the latch (bottom-tested) or header (top-tested).
-  // Try the latch first so a single-exit loop keeps its previous classification.
+  // The counted exit lives in the latch (bottom-tested) or header (top-tested);
+  // any other exiting block is tolerated as a side exit. Try the latch first so
+  // a single-exit loop keeps its previous classification.
   SmallVector<BasicBlock *, 2> Candidates;
   Candidates.push_back(Latch);
   if (Header != Latch)
@@ -208,6 +211,17 @@ const SCEVAddRecExpr *LoopSplitUtils::analyzeInduction() {
       if (CmpOp0 == &PN || CmpOp1 == &PN)
         UsesPHI = true;
       else if (CmpOp0 == StepVal || CmpOp1 == StepVal)
+        UsesPHI = false;
+      else if (AllowTruncatedLatchCompare &&
+               (match(CmpOp0, m_Trunc(m_Specific(&PN))) ||
+                match(CmpOp1, m_Trunc(m_Specific(&PN)))))
+        // Narrow latch: the exit compares "trunc(PHI)". The wide PHI still
+        // drives the partitions; the clamp is emitted on the wide value.
+        UsesPHI = true;
+      else if (AllowTruncatedLatchCompare &&
+               (match(CmpOp0, m_Trunc(m_Specific(StepVal))) ||
+                match(CmpOp1, m_Trunc(m_Specific(StepVal)))))
+        // Narrow latch on the post-increment value: "trunc(PHI+step)".
         UsesPHI = false;
       else
         continue;
@@ -274,9 +288,50 @@ bool LoopSplitUtils::isLegal() {
   const SCEV *BTC = L->getExitingBlock() ? SE->getBackedgeTakenCount(L)
                                          : SE->getExitCount(L, ExitingBlock);
   if (isa<SCEVCouldNotCompute>(BTC)) {
-    LLVM_DEBUG(dbgs() << "LS: no computable trip count\n");
-    return false;
+    // Uncomputable-trip-count fallback (opt-in): with no exact count, drive the
+    // final partition with the original counted latch and clamp interior ones
+    // against the invariant bound (mirrors IRCE). Only for declined loops.
+    if (!AllowUncomputableTripCount) {
+      LLVM_DEBUG(dbgs() << "LS: no computable trip count\n");
+      return false;
+    }
+    // The counted compare's other operand is the loop-invariant bound; use the
+    // IR value directly (loop-invariance guarantees it dominates the guards).
+    Value *BoundVal = LatchCmp->getOperand(0) == LatchIndOperand
+                          ? LatchCmp->getOperand(1)
+                          : LatchCmp->getOperand(0);
+    if (!L->isLoopInvariant(BoundVal)) {
+      LLVM_DEBUG(dbgs() << "LS: counted bound is not loop-invariant\n");
+      return false;
+    }
+    if (BoundVal->getType() != IndAR->getStart()->getType()) {
+      LLVM_DEBUG(dbgs() << "LS: counted bound type mismatch\n");
+      return false;
+    }
+    // Normalize the predicate to read "IndOp <pred> Bound" meaning "continue",
+    // accounting for operand order and which branch successor stays in the loop.
+    ICmpInst::Predicate Raw =
+        LatchCmp->getOperand(0) == LatchIndOperand
+            ? LatchCmp->getPredicate()
+            : ICmpInst::getSwappedPredicate(LatchCmp->getPredicate());
+    auto *CountedBr = cast<BranchInst>(ExitingBlock->getTerminator());
+    bool ContinueWhenTrue = L->contains(CountedBr->getSuccessor(0));
+    ICmpInst::Predicate ContinuePred =
+        ContinueWhenTrue ? Raw : ICmpInst::getInversePredicate(Raw);
+
+    InductionBoundVal = BoundVal;
+    InductionBound = SE->getSCEV(BoundVal);
+    CountedContinuePred = static_cast<unsigned>(ContinuePred);
+    UncomputableTripCountMode = true;
+    return true;
   }
+
+  // Narrow latch: the trip count is in the narrower latch type but the induction
+  // is wider. Zero-extend the count to the induction type (a trip count is a
+  // non-negative index, so the extend is exact) for evaluateAtIteration.
+  if (AllowTruncatedLatchCompare &&
+      BTC->getType() != IndAR->getStart()->getType())
+    BTC = SE->getNoopOrZeroExtend(BTC, IndAR->getStart()->getType());
 
   // evaluateAtIteration(BTC) is the induction value at the final exit test: the
   // last value the body ran with when bottom-tested; for top-tested the body
@@ -502,6 +557,14 @@ void LoopSplitUtils::expandPartitionBounds(SplitState &S) {
 
     P.StartVal = Expander.expandCodeFor(P.StartExpr, IndTy, EntryGuardTerm);
 
+    // Uncomputable-trip-count mode: no exact end to clamp against. Interior
+    // partitions stop at their own constant end AND the original latch (in
+    // rewriteLatch); the final keeps it, so the clamp target is the part's end.
+    if (UncomputableTripCountMode) {
+      P.SelEnd = Expander.expandCodeFor(P.EndExpr, IndTy, EntryGuardTerm);
+      continue;
+    }
+
     // Clamp the end to the induction end (min ascending, max descending) so a
     // short trip count keeps the last iteration in the right partition.
     const SCEV *ClampedEndSCEV;
@@ -600,6 +663,33 @@ void LoopSplitUtils::rewriteLatch(Loop *PL, BasicBlock *ExitingBlk,
                                    : Term->getSuccessor(1);
   IRBuilder<> B(Cmp);
 
+  // Uncomputable-trip-count mode: keep the loop's counted condition so it is
+  // driven by the original latch. The final partition uses it alone; an interior
+  // one ANDs it with the clamp to its boundary to hand off to the next first.
+  if (UncomputableTripCountMode) {
+    ICmpInst::Predicate OrigPred =
+        static_cast<ICmpInst::Predicate>(CountedContinuePred);
+    Value *OrigContinue =
+        B.CreateICmp(OrigPred, IndOp, InductionBoundVal, "cnt.chk");
+    Value *Continue = OrigContinue;
+    if (!IsLastPartition) {
+      Value *Bound = SelEnd;
+      if (Bound->getType() != IndOp->getType())
+        Bound = B.CreateIntCast(Bound, IndOp->getType(), InductionIsSigned);
+      bool Inclusive = LatchUsesInductionPHI == IsTopTested;
+      ICmpInst::Predicate ClampPred = continuePredicate(
+          InductionIsSigned, InductionIsDescending, Inclusive);
+      Value *ClampCmp = B.CreateICmp(ClampPred, IndOp, Bound, "itr.chk");
+      Continue = B.CreateAnd(ClampCmp, OrigContinue, "ls.cont");
+    }
+    B.SetInsertPoint(Term);
+    B.CreateCondBr(Continue, ContinueTarget, Exit);
+    Term->eraseFromParent();
+    if (Cmp->use_empty())
+      Cmp->eraseFromParent();
+    return;
+  }
+
   Value *Bound = SelEnd;
   if (Bound->getType() != IndOp->getType())
     Bound = B.CreateIntCast(Bound, IndOp->getType(), InductionIsSigned);
@@ -622,6 +712,12 @@ void LoopSplitUtils::rewriteLatch(Loop *PL, BasicBlock *ExitingBlk,
 void LoopSplitUtils::chainPartitions(SplitState &S) {
   const ICmpInst::Predicate GuardPred =
       guardPredicate(InductionIsSigned, InductionIsDescending);
+
+  // Uncomputable-trip-count mode has no exact end for partition 0's usual guard.
+  // A bottom-tested loop always runs its first iteration, so partition 0 enters
+  // unconditionally (top-tested is conditional, so its guard is kept).
+  if (UncomputableTripCountMode && !IsTopTested && getNumPartitions() > 0)
+    Partitions[0].Guarded = false;
 
   // Emit each guard, clamp each latch, and chain partitions; a skipped
   // partition falls through to the next guard.
@@ -655,7 +751,25 @@ void LoopSplitUtils::chainPartitions(SplitState &S) {
       IRBuilder<>(GuardTerm).CreateBr(P.Preheader);
     } else {
       IRBuilder<> B(GuardTerm);
-      Value *Enter = B.CreateICmp(GuardPred, P.StartVal, P.SelEnd, "itr.chk");
+      Value *Enter;
+      if (UncomputableTripCountMode) {
+        // No exact end: enter iff the original loop runs this partition's first
+        // iteration. Map the start to the value the counted compare inspects for
+        // that iteration, then apply the original predicate against the bound.
+        int DeltaSteps =
+            (LatchUsesInductionPHI ? 0 : 1) - (IsTopTested ? 0 : 1);
+        Value *GuardVal = P.StartVal;
+        if (DeltaSteps != 0) {
+          APInt Delta = InductionStep * DeltaSteps;
+          GuardVal = B.CreateAdd(
+              P.StartVal, ConstantInt::get(P.StartVal->getType(), Delta));
+        }
+        Enter =
+            B.CreateICmp(static_cast<ICmpInst::Predicate>(CountedContinuePred),
+                         GuardVal, InductionBoundVal, "cnt.chk");
+      } else {
+        Enter = B.CreateICmp(GuardPred, P.StartVal, P.SelEnd, "itr.chk");
+      }
       B.CreateCondBr(Enter, P.Preheader, MergeAfter);
     }
     GuardTerm->eraseFromParent();

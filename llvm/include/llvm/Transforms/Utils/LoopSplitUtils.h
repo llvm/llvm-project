@@ -47,8 +47,17 @@ class Value;
 /// \endcode
 class LoopSplitUtils {
 public:
-  LoopSplitUtils(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT)
-      : L(L), LI(LI), SE(SE), DT(DT) {}
+  /// \p AllowUncomputableTripCount: also split a multi-exit loop whose counted
+  /// exit has no computable trip count (final partition keeps the original
+  /// latch). Default off.
+  /// \p AllowTruncatedLatchCompare: also split when the counted exit compares a
+  /// truncation of the wider induction (which still drives partitioning). Off.
+  LoopSplitUtils(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
+                 bool AllowUncomputableTripCount = false,
+                 bool AllowTruncatedLatchCompare = false)
+      : L(L), LI(LI), SE(SE), DT(DT),
+        AllowUncomputableTripCount(AllowUncomputableTripCount),
+        AllowTruncatedLatchCompare(AllowTruncatedLatchCompare) {}
 
   /// Analyze \p L; true if it is a counted loop we can split: LCSSA, a counted
   /// exit in the latch or header, a constant-step integer induction, and an
@@ -61,6 +70,14 @@ public:
   /// Induction value on the final counted iteration (inclusive) -- the end of
   /// the space the partitions tile. Valid only after isLegal() succeeds.
   const SCEV *getInductionEnd() const { return InductionEnd; }
+
+  /// True if isLegal() accepted the loop via the uncomputable-trip-count
+  /// fallback (no exact count; the original latch drives the final partition).
+  bool isUncomputableTripCountMode() const { return UncomputableTripCountMode; }
+
+  /// The counted exit's invariant bound, used as the final partition's end in
+  /// uncomputable-trip-count mode. Null unless isUncomputableTripCountMode().
+  const SCEV *getInductionBound() const { return InductionBound; }
 
   /// Append an inclusive partition range [Start, End] in iteration order.
   /// Partitions must tile the whole space: first Start = induction start, each
@@ -132,6 +149,8 @@ private:
   LoopInfo *LI;
   ScalarEvolution *SE;
   DominatorTree *DT;
+  bool AllowUncomputableTripCount = false; // opt-in to the fallback below.
+  bool AllowTruncatedLatchCompare = false; // opt-in to a trunc(iv) exit compare.
 
   // Induction analysis, populated by isLegal().
   PHINode *Induction = nullptr;
@@ -145,6 +164,15 @@ private:
   bool InductionIsDescending = false;  // step is negative (loop counts down).
   APInt InductionStep;                 // signed constant step, induction width.
   const SCEV *InductionEnd = nullptr;
+
+  // Uncomputable-trip-count fallback state, set by isLegal() only when there is
+  // no exact count and AllowUncomputableTripCount is set; inert by default.
+  bool UncomputableTripCountMode = false; // accepted via the fallback path.
+  const SCEV *InductionBound =
+      nullptr;                        // counted compare's invariant bound SCEV.
+  Value *InductionBoundVal = nullptr; // that bound as an IR value (invariant).
+  unsigned CountedContinuePred =
+      0; // ICmpInst pred P for "IndOp P Bound" == continue.
 
   /// One record per partition, in add order.
   SmallVector<PartitionInfo, 4> Partitions;

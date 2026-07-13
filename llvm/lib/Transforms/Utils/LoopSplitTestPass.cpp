@@ -47,11 +47,19 @@ static cl::opt<bool> PrintPartitionMap(
              "counterpart in every partition (LoopSplitUtils::getPartitionValue)"),
     cl::init(false));
 
+static cl::opt<bool> AllowUncomputableTripCount(
+    "loop-split-allow-uncomputable-trip-count",
+    cl::desc("Opt in to LoopSplitUtils' uncomputable-trip-count fallback, which "
+             "splits a multi-exit loop whose counted exit has no computable trip "
+             "count (e.g. an ascending non-unit-step loop with a symbolic bound) "
+             "by keeping the original latch on the final partition"),
+    cl::init(false));
+
 /// Build the partition list for \p L from the command-line split offsets and
 /// run the transform. Returns true if the loop was split.
 static bool splitLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
                       LoopInfo &LI) {
-  LoopSplitUtils LSU(L, &LI, &SE, &DT);
+  LoopSplitUtils LSU(L, &LI, &SE, &DT, AllowUncomputableTripCount);
   if (!LSU.isLegal()) {
     LLVM_DEBUG(dbgs() << "loop-split-test: loop is not legal for splitting\n");
     return false;
@@ -64,7 +72,10 @@ static bool splitLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
 
   const SCEV *Start = IndAR->getStart();
   // Use the utility's counted induction end (works for multi-exit loops too).
-  const SCEV *End = LSU.getInductionEnd();
+  // In the uncomputable-trip-count fallback there is no exact end, so drive the
+  // final partition with the invariant counted bound (the utility keeps latch).
+  const SCEV *End = LSU.isUncomputableTripCountMode() ? LSU.getInductionBound()
+                                                      : LSU.getInductionEnd();
   Type *Ty = Start->getType();
   if (End->getType() != Ty)
     End = SE.getTruncateExpr(End, Ty);
