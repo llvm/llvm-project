@@ -2449,9 +2449,8 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
       ResVT.getVectorElementType() != MVT::i1)
     return true;
 
-  // Only support illegal types if the result is scalable.
-  if ((ResVT.isFixedLengthVector() && (ResVT.getVectorNumElements() > 16 ||
-                                       ResVT.getVectorNumElements() == 1)))
+  // Expand 1 length fixed length vector.
+  if (ResVT.isFixedLengthVector() && ResVT.getVectorNumElements() == 1)
     return true;
 
   // 32 & 64 bit operands are supported. We can promote anything < 64 bits,
@@ -34383,11 +34382,9 @@ AArch64TargetLowering::LowerGET_ACTIVE_LANE_MASK(SDValue Op,
 
   SDLoc DL(Op);
   if (VT == MVT::nxv1i1) {
-    EVT NewMaskTy = MVT::nxv2i1;
-    SDValue Mask = DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, NewMaskTy,
+    SDValue Mask = DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, MVT::nxv2i1,
                                Op.getOperand(0), Op.getOperand(1));
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Mask,
-                       DAG.getVectorIdxConstant(0, DL));
+    return DAG.getExtractSubvector(DL, VT, Mask, 0);
   }
 
   // There are no dedicated fixed-length instructions for GET_ACTIVE_LANE_MASK,
