@@ -27,7 +27,7 @@
 #include "container_test_types.h"
 
 template <class Container>
-void testSetInsert() {
+TEST_CONSTEXPR_CXX26 void testSetInsert() {
   typedef typename Container::value_type ValueTp;
   ConstructController* cc = getConstructController();
   cc->reset();

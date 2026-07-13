@@ -284,7 +284,9 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
   const auto *TLI = cast<NVPTXTargetLowering>(STI.getTargetLowering());
 
   Type *Ty = F->getReturnType();
-  if (Ty->getTypeID() == Type::VoidTyID)
+  // A void or zero-sized return type (e.g. an empty struct) produces no return
+  // parameter.
+  if (Ty->isVoidTy() || Ty->isEmptyTy())
     return;
   O << " (";
 
@@ -325,7 +327,7 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
 
   O << "prototype_" << UniqueCallSite << " : .callprototype ";
 
-  if (RetTy->isVoidTy()) {
+  if (RetTy->isVoidTy() || RetTy->isEmptyTy()) {
     O << "()";
   } else {
     O << "(";
@@ -403,10 +405,16 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
   const FunctionType *FTy = CB.getFunctionType();
   const unsigned NumArgs = FTy->getNumParams();
 
-  interleave(seq(NumArgs), O, MakeArg, ", ");
+  // Zero-sized arguments (e.g. empty structs) are not passed and so do not
+  // appear in the prototype.
+  const auto NonEmptyArgs = make_filter_range(seq(NumArgs), [&](unsigned I) {
+    return !CB.getArgOperand(I)->getType()->isEmptyTy();
+  });
+
+  interleave(NonEmptyArgs, O, MakeArg, ", ");
 
   if (FTy->isVarArg() && CB.arg_size() > NumArgs)
-    O << (NumArgs ? "," : "") << " .param .align "
+    O << (NonEmptyArgs.empty() ? "" : ",") << " .param .align "
       << STI.getMaxRequiredAlignment() << " .b8 _[]";
 
   O << ")";
@@ -1463,16 +1471,25 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
   bool IsFirst = true;
   const bool IsKernelFunc = isKernelFunction(*F);
 
-  if (F->arg_empty() && !F->isVarArg()) {
+  // Zero-sized arguments (e.g. empty structs) do not produce a parameter.
+  // Number the emitted parameters contiguously, skipping the zero-sized ones,
+  // so that the names match those used in LowerFormalArguments and the
+  // contiguous numbering used by callers (see LowerCall).
+  const auto NonEmptyArgs =
+      make_filter_range(F->args(), [](const Argument &Arg) {
+        return !Arg.getType()->isEmptyTy();
+      });
+
+  if (NonEmptyArgs.empty() && !F->isVarArg()) {
     O << "()";
     return;
   }
 
   O << "(\n";
 
-  for (const Argument &Arg : F->args()) {
+  for (const auto &[ParamIndex, Arg] : enumerate(NonEmptyArgs)) {
     Type *Ty = Arg.getType();
-    const std::string ParamSym = TLI->getParamName(F, Arg.getArgNo());
+    const std::string ParamSym = TLI->getParamName(F, ParamIndex);
 
     if (!IsFirst)
       O << ",\n";
@@ -1646,13 +1663,13 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
 
   // Emit declaration of the virtual registers or 'physical' registers for
   // each register class
-  for (const TargetRegisterClass *RC : TRI->regclasses()) {
-    const unsigned N = VRegMapping[RC].size();
+  for (const TargetRegisterClass &RC : TRI->regclasses()) {
+    const unsigned N = VRegMapping[&RC].size();
 
     // Only declare those registers that may be used.
     if (N) {
-      const StringRef RCName = getNVPTXRegClassName(RC);
-      const StringRef RCStr = getNVPTXRegClassStr(RC);
+      const StringRef RCName = getNVPTXRegClassName(&RC);
+      const StringRef RCStr = getNVPTXRegClassStr(&RC);
       O << "\t.reg " << RCName << " \t" << RCStr << "<" << (N + 1) << ">;\n";
     }
   }

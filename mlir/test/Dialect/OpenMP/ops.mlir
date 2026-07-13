@@ -918,16 +918,23 @@ func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32, %devic
       omp.terminator
     } {omp.combined}
     // CHECK: omp.target kernel_type(spmd_no_loop) host_eval({{.*}}) {
+    // CHECK: omp.teams {
     // CHECK: omp.parallel {
+    // CHECK: omp.distribute {
     // CHECK: omp.wsloop {
     // CHECK: omp.loop_nest
     omp.target kernel_type(spmd_no_loop) host_eval(%n -> %arg0 : i32) {
-      omp.parallel {
-        omp.wsloop {
-          omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
-            omp.yield
-          }
-        }
+      omp.teams {
+        omp.parallel {
+          omp.distribute {
+            omp.wsloop {
+              omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+                omp.yield
+              }
+            } {omp.composite}
+          } {omp.composite}
+          omp.terminator
+        } {omp.composite}
         omp.terminator
       } {omp.combined}
       omp.terminator

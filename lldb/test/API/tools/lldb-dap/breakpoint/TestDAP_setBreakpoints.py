@@ -11,6 +11,7 @@ import lldbdap_testcase
 import os
 
 
+@skipIfWasm  # inferior built without exception support
 class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
     SHARED_BUILD_TESTCASE = False
 
