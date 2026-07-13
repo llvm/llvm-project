@@ -2,6 +2,9 @@
 Using ARM NEON instructions in big-endian mode
 ==============================================
 
+.. contents::
+    :local:
+
 Introduction
 ============
 

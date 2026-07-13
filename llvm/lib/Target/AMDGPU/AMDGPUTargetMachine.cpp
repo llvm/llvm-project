@@ -903,6 +903,7 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
     else if (getMCSubtargetInfo().checkFeatures("+wavefrontsize32"))
       MRI.reset(llvm::createGCNMCRegisterInfo(AMDGPUDwarfFlavour::Wave32));
   }
+  LLT::setUseExtended(true);
 }
 
 bool AMDGPUTargetMachine::EnableFunctionCalls = false;

@@ -1,5 +1,9 @@
 # MergeFunctions pass, how it works
 
+```{contents}
+:local:
+```
+
 ## Introduction
 
 Sometimes code contains equal functions, or functions that do exactly the same

@@ -1,5 +1,10 @@
 # DTLTO
 
+```{contents}
+:depth: 2
+:local:
+```
+
 ```{toctree}
 :maxdepth: 1
 ```

@@ -5850,6 +5850,9 @@ private:
               continue;
             return false;
           }
+          // Only count the occurrence matching this call's NumOps.
+          if (CurNumOps != NumOps)
+            continue;
           PotentiallyReorderedEntriesCount.try_emplace(TE, 0)
               .first->getSecond() += Inc;
         }
@@ -12831,6 +12834,13 @@ public:
       // commutative (e.g. 0 - X is not X - 0, so `sub` must be
       // excluded).
       if (IsCommutative) {
+        // IsCommutative can hold for MainOp (e.g. a Sub/FSub feeding only
+        // fabs/icmp-eq-0) without every lane sharing that property, so
+        // re-check the specific lane before swapping it.
+        auto CanSwap = [&](Value *V) {
+          return isCommutative(S.getMatchingMainOpOrAltOp(cast<Instruction>(V)),
+                               V);
+        };
         // Count (ID0, ID1) pair frequencies for operand normalization.
         // Pairs and their inverses are tracked under a canonical key
         // so that (Load, Add) and (Add, Load) contribute to the same
@@ -12891,7 +12901,7 @@ public:
           if (BestCount > 0) {
             unsigned ID0 = Operands[0][Idx]->getValueID();
             unsigned ID1 = Operands[1][Idx]->getValueID();
-            if (ID0 == MajID1 && ID1 == MajID0)
+            if (ID0 == MajID1 && ID1 == MajID0 && CanSwap(V))
               std::swap(Operands[0][Idx], Operands[1][Idx]);
           }
           ++TotalNC;
@@ -12905,7 +12915,7 @@ public:
             if (S.isCopyableElement(V) || isa<PoisonValue>(V))
               continue;
             if (!isa<LoadInst>(Operands[0][Idx]) &&
-                isa<LoadInst>(Operands[1][Idx]))
+                isa<LoadInst>(Operands[1][Idx]) && CanSwap(V))
               std::swap(Operands[0][Idx], Operands[1][Idx]);
           }
         }
@@ -22145,7 +22155,7 @@ Value *BoUpSLP::gather(
         return Vec;
       InsElt = II;
     } else {
-      Vec = Builder.CreateInsertElement(Vec, Scalar, Builder.getInt32(Pos));
+      Vec = Builder.CreateInsertElement(Vec, Scalar, Pos);
       InsElt = dyn_cast<InsertElementInst>(Vec);
       if (!InsElt)
         return Vec;
@@ -23666,24 +23676,28 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
            return !SI || isCommutative(SI);
          })))
       I->setHasNoUnsignedWrap(/*b=*/false);
-    // add nsw X, INT_MIN is not equivalent to sub nsw X, INT_MIN, because
-    // negating INT_MIN overflows. When an add/sub lane is converted to the
-    // opposite opcode its constant is negated, so nsw no longer holds and must
-    // be dropped.
+    // Interchanging add/sub negates the constant: nsw only survives if the
+    // constant isn't INT_MIN (negating it would overflow); nuw never
+    // survives a nonzero constant, since that flips the valid range from
+    // X >= C to X < C.
     if (!MinBWs.contains(E) &&
-        (Opcode == Instruction::Add || Opcode == Instruction::Sub) &&
-        any_of(UniqueInsts, [&](Value *V) {
-          auto *SI = cast<Instruction>(V);
-          if (SI->getOpcode() == Opcode ||
-              !is_contained({Instruction::Add, Instruction::Sub},
-                            SI->getOpcode()))
-            return false;
-          return any_of(SI->operands(), [](Value *Op) {
-            const auto *CI = dyn_cast<ConstantInt>(Op);
-            return CI && CI->getValue().isMinSignedValue();
-          });
-        }))
-      I->setHasNoSignedWrap(/*b=*/false);
+        (Opcode == Instruction::Add || Opcode == Instruction::Sub)) {
+      for (Value *V : UniqueInsts) {
+        auto *SI = cast<Instruction>(V);
+        if (SI->getOpcode() == Opcode ||
+            !is_contained({Instruction::Add, Instruction::Sub},
+                          SI->getOpcode()))
+          continue;
+        for (Value *Op : SI->operands()) {
+          const auto *CI = dyn_cast<ConstantInt>(Op);
+          if (!CI || CI->isZero())
+            continue;
+          I->setHasNoUnsignedWrap(/*b=*/false);
+          if (CI->getValue().isMinSignedValue())
+            I->setHasNoSignedWrap(/*b=*/false);
+        }
+      }
+    }
     // mul nsw X, INT_MIN is not equivalent to shl nsw X, BW-1, because shl nsw
     // poisons when the sign bit is shifted out of a positive value. When a mul
     // lane is converted to shl with shift amount BW-1, nsw must be dropped.
@@ -24060,18 +24074,23 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         const unsigned RBW = cast<VectorType>(R->getType())
                                  ->getElementType()
                                  ->getIntegerBitWidth();
+        // A signed comparison needs the sign bit getActiveBits() ignores.
+        const bool Signed = cast<CmpInst>(VL0)->isSigned();
+        auto GetRequiredBits = [Signed](const APInt &V) {
+          return Signed ? V.getSignificantBits() : V.getActiveBits();
+        };
         if ((LBW < RBW && (!allConstant(E->getOperand(1)) ||
                            any_of(
                                E->getOperand(1),
                                [&](Value *V) {
                                  auto *CI = dyn_cast<ConstantInt>(V);
                                  return !CI ||
-                                        CI->getValue().getActiveBits() > LBW;
+                                        GetRequiredBits(CI->getValue()) > LBW;
                                }))) ||
             (LBW > RBW && allConstant(E->getOperand(0)) &&
              all_of(E->getOperand(1), [&](Value *V) {
                auto *CI = dyn_cast<ConstantInt>(V);
-               return CI && CI->getValue().getActiveBits() <= RBW;
+               return CI && GetRequiredBits(CI->getValue()) <= RBW;
              }))) {
           Type *CastTy = R->getType();
           L = Builder.CreateIntCast(L, CastTy, GetOperandSignedness(0));
@@ -25002,7 +25021,6 @@ Value *BoUpSLP::vectorizeTree(
     Value *Vec = E->VectorizedValue;
     assert(Vec && "Can't find vectorizable value");
 
-    Value *Lane = Builder.getInt32(ExternalUse.Lane);
     auto ExtractAndExtendIfNeeded = [&](Value *Vec) {
       if (isa<InsertValueInst>(Scalar))
         return Vec;
@@ -25087,7 +25105,7 @@ Value *BoUpSLP::vectorizeTree(
                 IV->comesBefore(IVec))
               Ex = Builder.CreateExtractElement(V, ES->getIndexOperand());
             else
-              Ex = Builder.CreateExtractElement(Vec, Lane);
+              Ex = Builder.CreateExtractElement(Vec, ExternalUse.Lane);
           } else if (auto *VecTy =
                          dyn_cast<FixedVectorType>(Scalar->getType())) {
             assert(SLPReVec && "FixedVectorType is not expected.");
@@ -25131,7 +25149,7 @@ Value *BoUpSLP::vectorizeTree(
               Ex = createExtractVector(Builder, Vec, VecTyNumElements,
                                        ExternalUse.Lane * VecTyNumElements);
             } else {
-              Ex = Builder.CreateExtractElement(Vec, Lane);
+              Ex = Builder.CreateExtractElement(Vec, ExternalUse.Lane);
             }
           }
           // If necessary, sign-extend or zero-extend ScalarRoot

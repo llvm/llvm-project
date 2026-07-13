@@ -2,6 +2,9 @@
 The PDB Info Stream (aka the PDB Stream)
 ========================================
 
+.. contents::
+   :local:
+
 .. _pdb_stream_header:
 
 Stream Header

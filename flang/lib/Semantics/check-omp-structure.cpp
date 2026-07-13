@@ -205,6 +205,12 @@ void OmpStructureChecker::Enter(const parser::ModuleSubprogram &) {
 }
 
 void OmpStructureChecker::Enter(const parser::SpecificationPart &) {
+  // Clear pending metadirective loop variants at the start of a program unit.
+  // An empty partStack_ marks the unit's top-level specification part, so a
+  // nested one such as an interface body does not reset them.
+  if (partStack_.empty()) {
+    metadirectiveLoopVariants_.clear();
+  }
   partStack_.push_back(PartKind::SpecificationPart);
 }
 
@@ -217,6 +223,11 @@ void OmpStructureChecker::Enter(const parser::ExecutionPart &) {
 }
 
 void OmpStructureChecker::Leave(const parser::ExecutionPart &) {
+  if (!metadirectiveLoopVariants_.empty()) {
+    // No loop nest followed the metadirective in this execution part, so its
+    // loop-associated variants were never validated.
+    CheckMetadirectiveVariantsWithoutLoop();
+  }
   partStack_.pop_back();
 }
 
@@ -1673,6 +1684,13 @@ void OmpStructureChecker::ChecksOnOrderedAsBlock() {
       context_.Say(GetContext().directiveSource,
           "An ORDERED directive with SIMD clause must be closely nested in a "
           "SIMD or worksharing-loop SIMD region"_err_en_US);
+    } else if (CurrentDirectiveIsNested() &&
+        FindClause(llvm::omp::Clause::OMPC_simd) &&
+        FindClause(llvm::omp::Clause::OMPC_threads) && isNestedInSIMD &&
+        !isNestedInDoSIMD) {
+      context_.Say(GetContext().directiveSource,
+          "An ORDERED directive with SIMD and THREADS clauses must be closely "
+          "nested in a worksharing-loop SIMD region"_err_en_US);
     }
     if (isNestedInDo && (noOrderedClause || isOrderedClauseWithPara)) {
       context_.Say(GetContext().directiveSource,

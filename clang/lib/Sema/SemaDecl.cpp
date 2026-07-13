@@ -1385,7 +1385,8 @@ void Sema::PushDeclContext(Scope *S, DeclContext *DC) {
   assert(DC->getLexicalParent() == CurContext &&
       "The next DeclContext should be lexically contained in the current one.");
   CurContext = DC;
-  S->setEntity(DC);
+  if (S)
+    S->setEntity(DC);
 }
 
 void Sema::PopDeclContext() {
@@ -7471,7 +7472,7 @@ static bool shouldConsiderLinkage(const VarDecl *VD) {
   if (DC->getDeclKind() == Decl::HLSLBuffer)
     return false;
 
-  if (isa<RequiresExprBodyDecl>(DC))
+  if (isa<RequiresExprBodyDecl, CXXExpansionStmtDecl>(DC))
     return false;
   llvm_unreachable("Unexpected context");
 }
@@ -7481,7 +7482,7 @@ static bool shouldConsiderLinkage(const FunctionDecl *FD) {
   if (DC->isFileContext() || DC->isFunctionOrMethod() ||
       isa<OMPDeclareReductionDecl>(DC) || isa<OMPDeclareMapperDecl>(DC))
     return true;
-  if (DC->isRecord())
+  if (DC->isRecord() || isa<CXXExpansionStmtDecl>(DC))
     return false;
   llvm_unreachable("Unexpected context");
 }
@@ -8042,8 +8043,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       AddToScope = false;
     } else if (D.isDecompositionDeclarator()) {
       NewVD = DecompositionDecl::Create(Context, DC, D.getBeginLoc(),
-                                        D.getIdentifierLoc(), R, TInfo, SC,
-                                        Bindings);
+                                        D.getIdentifierLoc(), D.getEndLoc(), R,
+                                        TInfo, SC, Bindings);
     } else
       NewVD = VarDecl::Create(Context, DC, D.getBeginLoc(),
                               D.getIdentifierLoc(), II, R, TInfo, SC);
@@ -14505,7 +14506,12 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     }
     // C++1z [dcl.dcl]p1 grammar implies that an initializer is mandatory.
     if (isa<DecompositionDecl>(RealDecl)) {
-      Diag(Var->getLocation(), diag::err_decomp_decl_requires_init) << Var;
+      // Point the caret to the token immediately after the closing bracket.
+      auto NextLoc = dyn_cast<DecompositionDecl>(RealDecl)->getRSquareLoc();
+      NextLoc =
+          Lexer::findNextToken(NextLoc, PP.getSourceManager(), PP.getLangOpts())
+              ->getLocation();
+      Diag(NextLoc, diag::err_decomp_decl_requires_init) << Var;
       Var->setInvalidDecl();
       return;
     }
@@ -14819,14 +14825,15 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
   }
 }
 
-void Sema::ActOnCXXForRangeDecl(Decl *D) {
+void Sema::ActOnCXXForRangeDecl(Decl *D, bool InExpansionStmt) {
   // If there is no declaration, there was an error parsing it. Ignore it.
   if (!D)
     return;
 
   VarDecl *VD = dyn_cast<VarDecl>(D);
   if (!VD) {
-    Diag(D->getLocation(), diag::err_for_range_decl_must_be_var);
+    Diag(D->getLocation(), diag::err_for_range_decl_must_be_var)
+        << InExpansionStmt;
     D->setInvalidDecl();
     return;
   }
@@ -14868,7 +14875,7 @@ void Sema::ActOnCXXForRangeDecl(Decl *D) {
 
   if (Error != -1) {
     Diag(VD->getOuterLocStart(), diag::err_for_range_storage_class)
-        << VD << Error;
+        << InExpansionStmt << VD << Error;
     D->setInvalidDecl();
   }
 }

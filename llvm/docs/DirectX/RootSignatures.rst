@@ -2,6 +2,9 @@
 Root Signatures
 ===============
 
+.. contents::
+   :local:
+
 .. toctree::
    :hidden:
 
