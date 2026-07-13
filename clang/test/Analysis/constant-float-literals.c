@@ -36,9 +36,14 @@ void testFloatLiterals(void) {
 void testLongDoubleLiterals(void) {
   // 0.0 and 1.0 are representable exactly in all formats so only semantic name
   // differs on different targets.
-  clang_analyzer_dump_longdouble(0.0L); // x87-warning{{0 x87DoubleExtended}}
-quad-warning{{0 IEEEquad}} ldbl64-warning{{0 IEEEdouble}}
-  clang_analyzer_dump_longdouble(1.0L); // x87-warning{{1 x87DoubleExtended}} quad-warning{{1 IEEEquad}} ldbl64-warning{{1 IEEEdouble}}
+  clang_analyzer_dump_longdouble(0.0L);
+  // x87-warning@-1{{0 x87DoubleExtended}}
+  // quad-warning@-2{{0 IEEEquad}}
+  // ldbl64-warning@-3{{0 IEEEdouble}}
+  clang_analyzer_dump_longdouble(1.0L);
+  // x87-warning@-1{{1 x87DoubleExtended}}
+  // quad-warning@-2{{1 IEEEquad}}
+  // ldbl64-warning@-3{{1 IEEEdouble}}
 }
 
 //===----------------------------------------------------------------------===//
@@ -106,6 +111,37 @@ void testFloatNarrowing(void) {
 void testUnknown(float f) {
   clang_analyzer_dump_float(f);         // common-warning{{Unknown}}
   clang_analyzer_dump_float(f + 1.0f);  // common-warning{{Unknown}}
+}
+
+//===----------------------------------------------------------------------===//
+// Arithmetic between concrete floats is folded only when the result is exact.
+//===----------------------------------------------------------------------===//
+
+void testExactArithmetic(void) {
+  // All of these have exactly representable results, so they are independent
+  // of rounding mode and evaluation precision.
+  clang_analyzer_dump_float(1.0f + 2.0f);  // common-warning{{3 IEEEsingle}}
+  clang_analyzer_dump_float(5.0f - 1.5f);  // common-warning{{3.5 IEEEsingle}}
+  clang_analyzer_dump_float(1.5f * 2.0f);  // common-warning{{3 IEEEsingle}}
+  clang_analyzer_dump_float(3.0f / 4.0f);  // common-warning{{0.75 IEEEsingle}}
+  clang_analyzer_dump_double(0.5 + 0.25);  // common-warning{{0.75 IEEEdouble}}
+}
+
+void testInexactArithmetic(void) {
+  // 0.1f + 0.2f is not exactly representable in single precision; the rounded
+  // result depends on the rounding mode / evaluation precision, so we do not
+  // model it.
+  clang_analyzer_dump_float(0.1f + 0.2f);  // common-warning{{Unknown}}
+  // 1.0f / 3.0f is inexact.
+  clang_analyzer_dump_float(1.0f / 3.0f);  // common-warning{{Unknown}}
+}
+
+void testComparisons(void) {
+  clang_analyzer_eval(1.0f < 2.0f);   // common-warning{{TRUE}}
+  clang_analyzer_eval(2.0f < 1.0f);   // common-warning{{FALSE}}
+  clang_analyzer_eval(1.5 == 1.5);    // common-warning{{TRUE}}
+  clang_analyzer_eval(1.5 != 2.5);    // common-warning{{TRUE}}
+  clang_analyzer_eval(2.0f >= 2.0f);  // common-warning{{TRUE}}
 }
 
 //===----------------------------------------------------------------------===//
