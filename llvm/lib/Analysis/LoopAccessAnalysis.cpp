@@ -2182,10 +2182,12 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
     return MemoryDepChecker::Dependence::Unknown;
   }
 
+  TypeSize AStoreSz = DL.getTypeStoreSize(ATy);
+  TypeSize BStoreSz = DL.getTypeStoreSize(BTy);
   uint64_t ASz = DL.getTypeAllocSize(ATy);
   uint64_t BSz = DL.getTypeAllocSize(BTy);
 
-  // Both the source and sink sizes are neeeded in dependence checks, depending
+  // Both the source and sink sizes are needed in dependence checks, depending
   // on the use.
   std::pair<uint64_t, uint64_t> TypeByteSize(ASz, BSz);
 
@@ -2206,18 +2208,6 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   // If distance is a SCEVCouldNotCompute, return Unknown immediately.
   if (isa<SCEVCouldNotCompute>(Dist)) {
     LLVM_DEBUG(dbgs() << "LAA: Uncomputable distance.\n");
-    return Dependence::Unknown;
-  }
-
-  // When the distance is possibly zero, we're reading/writing the same memory
-  // location: if the store sizes are not equal, fail with an unknown
-  // dependence.
-  TypeSize AStoreSz = DL.getTypeStoreSize(ATy);
-  TypeSize BStoreSz = DL.getTypeStoreSize(BTy);
-  if (AStoreSz != BStoreSz && SE.isKnownNonPositive(Dist) &&
-      SE.isKnownNonNegative(Dist)) {
-    LLVM_DEBUG(dbgs() << "LAA: possibly zero dependence distance with "
-                         "different type sizes\n");
     return Dependence::Unknown;
   }
 
@@ -2287,9 +2277,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
 
   // Attempt to prove strided accesses independent.
   if (APDist) {
-    // If the distance between accesses and their strides are known constants,
-    // check whether the accesses interlace each other.
-    if (ConstDist > 0 && CommonStride && CommonStride > 1 && HasSameSize &&
+    if (ConstDist && CommonStride && CommonStride > 1 && HasSameSize &&
         areStridedAccessesIndependent(ConstDist, *CommonStride,
                                       TypeByteSize.first)) {
       LLVM_DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
@@ -2305,9 +2293,13 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // Negative distances are not plausible dependencies.
   if (SE.isKnownNonPositive(Dist)) {
     if (SE.isKnownNonNegative(Dist)) {
-      // Write to the same location with the same size.
-      assert(HasSameSize && "Accesses must have the same size");
-      return Dependence::Forward;
+      if (HasSameSize) {
+        // Write to the same location with the same size.
+        return Dependence::Forward;
+      }
+      LLVM_DEBUG(dbgs() << "LAA: possibly zero dependence difference but "
+                           "different type sizes\n");
+      return Dependence::Unknown;
     }
 
     bool IsTrueDataDependence = (AIsWrite && !BIsWrite);
