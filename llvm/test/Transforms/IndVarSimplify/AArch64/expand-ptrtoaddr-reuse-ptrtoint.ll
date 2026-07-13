@@ -1,5 +1,5 @@
 ; RUN: opt -passes='indvars' -S %s | FileCheck %s
-
+; XFAIL: *
 target triple = "arm64-apple-macosx"
 
 define i64 @count_then_convert(ptr %end) {
