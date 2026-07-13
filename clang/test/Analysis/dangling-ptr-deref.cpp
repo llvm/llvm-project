@@ -25,8 +25,8 @@ void test_case_two() {
   *ptr_two = 7; 
   // expected-warning@-2 {{Use of 'n' after its lifetime ended}}
   // expected-warning@-2 {{Use of 'm' after its lifetime ended}}
-  // expected-note@-4 {{Use of 'n' after its lifetime ended}}
-  // expected-note@-4 {{Use of 'm' after its lifetime ended}}
+  // expected-note@-4    {{Use of 'n' after its lifetime ended}}
+  // expected-note@-4    {{Use of 'm' after its lifetime ended}}
 }
 
 void escape(int *ptr);
