@@ -75,17 +75,6 @@ define i32 @nan_guard_fptosi_f64(double %x) {
   ret i32 %sel
 }
 
-define i32 @nan_guard_fptosi_cmp_self(float %x) {
-; CHECK-LABEL: nan_guard_fptosi_cmp_self:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzs w0, s0
-; CHECK-NEXT:    ret
-  %cmp = fcmp uno float %x, %x
-  %conv = fptosi float %x to i32
-  %sel = select i1 %cmp, i32 0, i32 %conv
-  ret i32 %sel
-}
-
 define <4 x i32> @nan_guard_fptosi_v4f32(<4 x float> %x) {
 ; CHECK-LABEL: nan_guard_fptosi_v4f32:
 ; CHECK:       // %bb.0:

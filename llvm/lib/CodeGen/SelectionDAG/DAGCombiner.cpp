@@ -6284,31 +6284,23 @@ static SDValue PerformUMinFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
 }
 
 // Fold a NaN-guard select of fp_to_sint/fp_to_uint into the saturating
-// variant, which returns 0 for NaN. Matches both SETUO/SETO forms and
-// optionally looks through an AND mask on the conversion result.
-static SDValue PerformNanGuardFpToSatCombine(SDNode *N, SelectionDAG &DAG) {
+// variant, which returns 0 for NaN.
+static SDValue performNanGuardFpToSatCombine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
 
-  // Match an isnan-guarded select. Require the compare to be single-use since
-  // folding does not remove it otherwise.
-  //   select (setcc X, RHS, uno), 0, guarded
-  //   select (setcc X, RHS, ord), guarded, 0
-  SDValue X, CmpRHS, GuardedVal;
-  auto NaNCheck = [&](ISD::CondCode CC) {
-    return m_OneUse(
-        m_SetCC(m_Value(X), m_Value(CmpRHS), m_SpecificCondCode(CC)));
-  };
-  if (!sd_match(N, m_SelectLike(NaNCheck(ISD::SETUO), m_Zero(),
-                                m_Value(GuardedVal))) &&
-      !sd_match(
-          N, m_SelectLike(NaNCheck(ISD::SETO), m_Value(GuardedVal), m_Zero())))
-    return SDValue();
-
-  // The compare must test X for NaN: RHS is +/-0.0 (canonical isnan) or X
-  // itself (self-compare form).
-  auto *CmpRHSC = isConstOrConstSplatFP(CmpRHS);
-  if (CmpRHS != X && !(CmpRHSC && CmpRHSC->isZero()))
+  // Match an isnan-guarded select, requiring the compare to be single-use:
+  //   select (setcc X, 0.0, uno), 0, guarded
+  //   select (setcc X, 0.0, ord), guarded, 0
+  SDValue X, GuardedVal;
+  if (!sd_match(N,
+                m_SelectLike(m_OneUse(m_SetCC(m_Value(X), m_AnyZeroFP(),
+                                              m_SpecificCondCode(ISD::SETUO))),
+                             m_Zero(), m_Value(GuardedVal))) &&
+      !sd_match(N,
+                m_SelectLike(m_OneUse(m_SetCC(m_Value(X), m_AnyZeroFP(),
+                                              m_SpecificCondCode(ISD::SETO))),
+                             m_Value(GuardedVal), m_Zero())))
     return SDValue();
 
   // Peel an optional AND mask, then require fp_to_sint/fp_to_uint of the same
@@ -13234,7 +13226,7 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
       }
     }
 
-    if (SDValue S = PerformNanGuardFpToSatCombine(N, DAG))
+    if (SDValue S = performNanGuardFpToSatCombine(N, DAG))
       return S;
 
     if (TLI.isOperationLegal(ISD::SELECT_CC, VT) ||
@@ -14246,7 +14238,7 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
       return S;
     if (SDValue S = PerformUMinFpToSatCombine(LHS, RHS, N1, N2, CC, DAG))
       return S;
-    if (SDValue S = PerformNanGuardFpToSatCombine(N, DAG))
+    if (SDValue S = performNanGuardFpToSatCombine(N, DAG))
       return S;
 
     // If this select has a condition (setcc) with narrower operands than the
