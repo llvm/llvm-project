@@ -125,7 +125,7 @@ public:
   /// @name Mangler Entry Points
   /// @{
 
-  bool shouldMangleDeclName(const NamedDecl *D);
+  bool shouldMangleDeclName(const NamedDecl *D, bool WantAsmLabel = true);
   virtual bool shouldMangleCXXName(const NamedDecl *D) = 0;
   virtual bool shouldMangleStringLiteral(const StringLiteral *SL) = 0;
 
@@ -144,7 +144,7 @@ public:
   virtual void needsUniqueInternalLinkageNames() {}
 
   // FIXME: consider replacing raw_ostream & with something like SmallString &.
-  void mangleName(GlobalDecl GD, raw_ostream &);
+  void mangleName(GlobalDecl GD, raw_ostream &, bool WantAsmLabel = true);
   virtual void mangleCXXName(GlobalDecl GD, raw_ostream &) = 0;
   virtual void mangleThunk(const CXXMethodDecl *MD, const ThunkInfo &Thunk,
                            bool ElideOverrideInfo, raw_ostream &) = 0;
