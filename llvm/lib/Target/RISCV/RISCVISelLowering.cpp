@@ -11941,10 +11941,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_psshl:
   case Intrinsic::riscv_psshlr: {
     SDValue ShAmt = Op.getOperand(2);
-    if (ShAmt.getValueType().bitsLT(XLenVT))
-      ShAmt = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, ShAmt);
-    else if (ShAmt.getValueType().bitsGT(XLenVT))
-      ShAmt = DAG.getNode(ISD::TRUNCATE, DL, XLenVT, ShAmt);
+    ShAmt = DAG.getAnyExtOrTrunc(ShAmt, DL, XLenVT);
     return DAG.getNode(getRVPShiftOpcode(IntNo), DL, Op.getValueType(),
                        Op.getOperand(1), ShAmt);
   }
@@ -16040,8 +16037,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Op0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT,
                                 N->getOperand(1), DAG.getUNDEF(VT));
       SDValue ShAmt = N->getOperand(2);
-      if (ShAmt.getValueType().bitsLT(Subtarget.getXLenVT()))
-        ShAmt = DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getXLenVT(), ShAmt);
+      ShAmt = DAG.getAnyExtOrTrunc(ShAmt, DL, Subtarget.getXLenVT());
       SDValue Res =
           DAG.getNode(getRVPShiftOpcode(IntNo), DL, WideVT, Op0, ShAmt);
       Results.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
