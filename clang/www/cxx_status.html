@@ -432,7 +432,13 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Expansion Statements</td>
   <td><a href="https://wg21.link/P1306">P1306R5</a></td>
-  <td class="none" align="center">No</td>
+  <td class="partial" align="center">
+    <details>
+      <summary>Clang 23 (Partial)</summary>
+      Iterating expansion statements currently cannot be expanded and will
+      result in a diagnostic, but other types of expansion statements work.
+    </details>
+  </td>
  </tr>
  <tr>
    <td>constexpr virtual inheritance</td>

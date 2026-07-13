@@ -1209,7 +1209,7 @@ void SBTarget::DeleteBreakpointName(const char *name) {
 
   if (TargetSP target_sp = GetSP()) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
-    target_sp->DeleteBreakpointName(ConstString(name));
+    target_sp->DeleteBreakpointName(llvm::StringRef(name));
   }
 }
 

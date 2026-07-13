@@ -254,9 +254,8 @@ private:
 // default
 class XqfPostRADiagnosis {
 public:
-  XqfPostRADiagnosis(DataFlowGraph &_G, Liveness &_L,
-                     const HexagonInstrInfo *_HII)
-      : G(&_G), L(&_L), HII(_HII) {}
+  XqfPostRADiagnosis(DataFlowGraph &G, Liveness &L, const HexagonInstrInfo *HII)
+      : G(&G), L(&L), HII(HII) {}
   // Deleting default constructor to handle misconstruction
   XqfPostRADiagnosis() = delete;
 

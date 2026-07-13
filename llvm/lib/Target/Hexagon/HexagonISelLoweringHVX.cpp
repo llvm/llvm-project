@@ -1077,7 +1077,13 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
 
   SDValue HalfV = getZero(dl, VecTy, DAG);
   if (VecHist[n] > 1) {
-    SDValue SplatV = DAG.getNode(ISD::SPLAT_VECTOR, dl, VecTy, Words[n]);
+    // Always splat at word (i32) granularity so that the SPLAT_VECTOR node
+    // is selected as PS_vsplatrw (word broadcast) rather than PS_vsplatrb
+    // (byte broadcast of the low byte only), which would corrupt multi-byte
+    // element types.
+    MVT WordVecTy = MVT::getVectorVT(MVT::i32, HwLen / 4);
+    SDValue WordSplat = DAG.getNode(ISD::SPLAT_VECTOR, dl, WordVecTy, Words[n]);
+    SDValue SplatV = DAG.getBitcast(VecTy, WordSplat);
     HalfV = DAG.getNode(HexagonISD::VALIGN, dl, VecTy,
                        {HalfV, SplatV, DAG.getConstant(HwLen/2, dl, MVT::i32)});
   }

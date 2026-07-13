@@ -6,6 +6,7 @@ add_mlir_unittest(MLIROpenACCTests
   OpenACCUtilsCGTest.cpp
   OpenACCUtilsGPUTest.cpp
   OpenACCUtilsTest.cpp
+  OpenACCUtilsTypeTest.cpp
   OpenACCUtilsTilingTest.cpp
   OpenACCUtilsLoopTest.cpp
 )

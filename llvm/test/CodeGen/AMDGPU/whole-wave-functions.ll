@@ -1273,11 +1273,10 @@ define amdgpu_gfx_whole_wave void @inreg_args(i1 %active, i32 inreg %i32, <4 x i
 ; GISEL-NEXT:    s_mov_b32 s1, s6
 ; GISEL-NEXT:    s_mov_b32 s2, s7
 ; GISEL-NEXT:    s_mov_b32 s3, s8
-; GISEL-NEXT:    v_mov_b32_e32 v4, s4
 ; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GISEL-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v1, s1
 ; GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
-; GISEL-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v2, s2
-; GISEL-NEXT:    v_mov_b32_e32 v5, s9
+; GISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v5, s9
 ; GISEL-NEXT:    scratch_store_b32 off, v4, s10
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    scratch_store_b128 off, v[0:3], s11
@@ -7856,6 +7855,8 @@ define amdgpu_cs void @call_from_entry(<8 x float> %x, ptr %p) #0 {
 ;
 ; GFX1250-DAGISEL-LABEL: call_from_entry:
 ; GFX1250-DAGISEL:       ; %bb.0:
+; GFX1250-DAGISEL-NEXT:    global_wb
+; GFX1250-DAGISEL-NEXT:    v_nop
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 s32, 0
 ; GFX1250-DAGISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-DAGISEL-NEXT:    s_mov_b64 s[0:1], callee@abs64

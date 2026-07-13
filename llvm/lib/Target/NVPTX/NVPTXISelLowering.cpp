@@ -562,6 +562,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
       IsOpSupported &= STI.getSmVersion() >= 80 && STI.getPTXVersion() >= 70;
       break;
     case ISD::FEXP2:
+    case ISD::FTANH:
       IsOpSupported &= STI.getSmVersion() >= 75 && STI.getPTXVersion() >= 70;
       break;
     }
@@ -1028,7 +1029,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // promoted to f32. v2f16 is expanded to f16, which is then promoted
   // to f32.
   for (const auto &Op :
-       {ISD::FDIV, ISD::FREM, ISD::FSQRT, ISD::FSIN, ISD::FCOS, ISD::FTANH}) {
+       {ISD::FDIV, ISD::FREM, ISD::FSQRT, ISD::FSIN, ISD::FCOS}) {
     setOperationAction(Op, MVT::f16, Promote);
     setOperationAction(Op, MVT::f32, Legal);
     // only div/rem/sqrt are legal for f64
@@ -1040,6 +1041,25 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
   setOperationAction(ISD::FREM, {MVT::f32, MVT::f64}, Custom);
+
+  // FTANH support:
+  // - f32 (sm_75+, PTX 7.0+)
+  // - f16/f16x2 (sm_75+, PTX 7.0+)
+  // - bf16/bf16x2 (sm_90+, PTX 7.8+)
+  // When f16/bf16 types aren't supported, they are promoted/expanded to f32.
+  if (STI.getSmVersion() >= 75 && STI.getPTXVersion() >= 70)
+    setOperationAction(ISD::FTANH, MVT::f32, Legal);
+  setOperationAction(ISD::FTANH, MVT::v2f32, Expand);
+
+  // Scalar f16/bf16: promote to f32 when not natively supported.
+  setFP16OperationAction(ISD::FTANH, MVT::f16, Legal, Promote);
+  setBF16OperationAction(ISD::FTANH, MVT::bf16, Legal, Promote);
+  if (getOperationAction(ISD::FTANH, MVT::bf16) == Promote)
+    AddPromotedToType(ISD::FTANH, MVT::bf16, MVT::f32);
+
+  // Vector v2f16/v2bf16: expand when not natively supported.
+  setFP16OperationAction(ISD::FTANH, MVT::v2f16, Legal, Expand);
+  setBF16OperationAction(ISD::FTANH, MVT::v2bf16, Legal, Expand);
 
   setOperationAction(ISD::FABS, {MVT::f32, MVT::f64}, Legal);
   setOperationAction(ISD::FABS, MVT::v2f32, Expand);
@@ -1121,22 +1141,23 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setMinCmpXchgSizeInBits(STI.getMinCmpXchgSizeInBits());
   setMaxAtomicSizeInBitsSupported(STI.hasAtomSwap128() ? 128 : 64);
   setMaxDivRemBitWidthSupported(64);
+  setMaxLargeFPConvertBitWidthSupported(64);
 
   // Custom lowering for tcgen05.ld vector operands
   setOperationAction(ISD::INTRINSIC_W_CHAIN,
-                     {MVT::v2i32, MVT::v4i32, MVT::v8i32, MVT::v16i32,
-                      MVT::v32i32, MVT::v64i32, MVT::v128i32, MVT::v2f32,
-                      MVT::v4f32, MVT::v8f32, MVT::v16f32, MVT::v32f32,
-                      MVT::v64f32, MVT::v128f32},
+                     {MVT::v1i32, MVT::v2i32, MVT::v4i32, MVT::v8i32,
+                      MVT::v16i32, MVT::v32i32, MVT::v64i32, MVT::v128i32,
+                      MVT::v2f32, MVT::v4f32, MVT::v8f32, MVT::v16f32,
+                      MVT::v32f32, MVT::v64f32, MVT::v128f32},
                      Custom);
 
   // Custom lowering for tcgen05.st vector operands and the st.async
   // i128 (.b128) operand. MVT::i8 is needed for the st.async.{sys,gpu} b8
   // variant.
   setOperationAction(ISD::INTRINSIC_VOID,
-                     {MVT::i8, MVT::v2i32, MVT::v4i32, MVT::v8i32, MVT::v16i32,
-                      MVT::v32i32, MVT::v64i32, MVT::v128i32, MVT::i128,
-                      MVT::Other},
+                     {MVT::i8, MVT::v1i32, MVT::v2i32, MVT::v4i32, MVT::v8i32,
+                      MVT::v16i32, MVT::v32i32, MVT::v64i32, MVT::v128i32,
+                      MVT::i128, MVT::Other},
                      Custom);
 
   // Enable custom lowering for the following:
@@ -2796,6 +2817,8 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_st_async_gpu:
   case Intrinsic::nvvm_st_async_mmio_sys:
     return lowerStAsyncRelease(Op, DAG);
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x1:
   case Intrinsic::nvvm_tcgen05_st_16x64b_x2:
   case Intrinsic::nvvm_tcgen05_st_16x64b_x4:
   case Intrinsic::nvvm_tcgen05_st_16x64b_x8:
@@ -2815,6 +2838,7 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_tcgen05_st_16x256b_x8:
   case Intrinsic::nvvm_tcgen05_st_16x256b_x16:
   case Intrinsic::nvvm_tcgen05_st_16x256b_x32:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x1:
   case Intrinsic::nvvm_tcgen05_st_32x32b_x2:
   case Intrinsic::nvvm_tcgen05_st_32x32b_x4:
   case Intrinsic::nvvm_tcgen05_st_32x32b_x8:
@@ -2824,6 +2848,7 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_tcgen05_st_32x32b_x64:
   case Intrinsic::nvvm_tcgen05_st_32x32b_x128:
     return lowerTcgen05St(Op, DAG);
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x1:
   case Intrinsic::nvvm_tcgen05_st_16x32bx2_x2:
   case Intrinsic::nvvm_tcgen05_st_16x32bx2_x4:
   case Intrinsic::nvvm_tcgen05_st_16x32bx2_x8:
@@ -5357,7 +5382,7 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_tcgen05_st_32x32b_x1:
   case Intrinsic::nvvm_tcgen05_st_16x32bx2_x1: {
     Info.opc = ISD::INTRINSIC_VOID;
-    Info.memVT = MVT::i32;
+    Info.memVT = MVT::v1i32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
@@ -7249,12 +7274,14 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
     return;
   }
 
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x1:
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x4:
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x8:
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x16:
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x32:
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x64:
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x128:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x1:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x4:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x8:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x16:
@@ -7279,6 +7306,7 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
     }
     return;
 
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x1:
   case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x4:
   case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x8:
   case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x16:

@@ -38,7 +38,6 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "flang/Parser/characters.h"
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
@@ -50,8 +49,8 @@
 #include "flang/Utils/OpenMP.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Support/StateStack.h"
-#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -835,18 +834,31 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
                              llvm::ArrayRef<mlir::Value> vars,
                              llvm::ArrayRef<mlir::BlockArgument> args) {
     llvm::SmallVector<const semantics::Symbol *> processedSyms;
+    llvm::SmallVector<const Object *> processedObjects;
     for (const Object &object : objects) {
       const semantics::Symbol *sym = object.sym();
       if (const auto *commonDet =
               sym->detailsIf<semantics::CommonBlockDetails>()) {
-        llvm::transform(commonDet->objects(), std::back_inserter(processedSyms),
-                        [&](const auto &mem) { return &*mem; });
+        for (auto &mem : commonDet->objects()) {
+          processedSyms.push_back(&*mem);
+          processedObjects.push_back(&object);
+        }
       } else {
         processedSyms.push_back(sym);
+        processedObjects.push_back(&object);
       }
     }
 
-    for (auto [sym, var, arg] : llvm::zip_equal(processedSyms, vars, args))
+    assert(processedSyms.size() == processedObjects.size());
+    for (auto [sym, var, arg, object] :
+         llvm::zip_equal(processedSyms, vars, args, processedObjects)) {
+      bool skipBind =
+          ReductionProcessor::isExpressionLoweredAsReductionObject(object) ||
+          (object && sym->Rank() > 0 &&
+           !fir::unwrapUntilSeqType(arg.getType()));
+      if (skipBind)
+        continue;
+
       converter.bindSymbol(
           *sym,
           hlfir::translateToExtendedValue(
@@ -854,6 +866,7 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
               /*contiguousHint=*/
               evaluate::IsSimplyContiguous(*sym, converter.getFoldingContext()))
               .first);
+    }
   };
 
   // Process in clause name alphabetical order to match block arguments order.
@@ -1330,13 +1343,44 @@ genLoopVars(mlir::Operation *op, lower::AbstractConverter &converter,
   // next one would result in 'hlfir.declare' operations being introduced inside
   // of a wrapper, which is illegal.
   mlir::IRMapping mapper;
+  llvm::SmallVector<std::pair<Object, mlir::Value>> mappedReductionObjects;
+  auto mapEquivalentReductionObjects =
+      [&](const ObjectEntryBlockArgsEntry &entry) {
+        for (auto [object, var] : llvm::zip(entry.objects, entry.vars)) {
+          for (auto [mappedObject, mappedValue] :
+               llvm::reverse(mappedReductionObjects)) {
+            if (object.id() == mappedObject.id()) {
+              mapper.map(var, mappedValue);
+              break;
+            }
+          }
+        }
+      };
+  auto rememberReductionObjects =
+      [&](const ObjectEntryBlockArgsEntry &entry,
+          llvm::ArrayRef<mlir::BlockArgument> args) {
+        for (auto [object, arg] : llvm::zip(entry.objects, args))
+          mappedReductionObjects.emplace_back(object, arg);
+      };
+
   for (auto [argGeneratingOp, blockArgs] : wrapperArgs) {
+    mapEquivalentReductionObjects(blockArgs.inReduction);
+    mapEquivalentReductionObjects(blockArgs.reduction);
+    mapEquivalentReductionObjects(blockArgs.taskReduction);
+
     for (mlir::OpOperand &operand : argGeneratingOp->getOpOperands())
       operand.set(mapper.lookupOrDefault(operand.get()));
 
     for (const auto [arg, var] : llvm::zip_equal(
              argGeneratingOp->getRegion(0).getArguments(), blockArgs.getVars()))
       mapper.map(var, arg);
+
+    rememberReductionObjects(blockArgs.inReduction,
+                             argGeneratingOp.getInReductionBlockArgs());
+    rememberReductionObjects(blockArgs.reduction,
+                             argGeneratingOp.getReductionBlockArgs());
+    rememberReductionObjects(blockArgs.taskReduction,
+                             argGeneratingOp.getTaskReductionBlockArgs());
   }
 
   // Bind the entry block arguments of parent wrappers to the corresponding
@@ -1609,6 +1653,186 @@ struct OpWithBodyGenInfo {
   bool privatize = true;
 };
 
+static mlir::Value getReductionOverrideValue(fir::FirOpBuilder &builder,
+                                             mlir::Location loc,
+                                             const Object *object,
+                                             mlir::BlockArgument arg) {
+  if (hlfir::isFortranEntityWithAttributes(arg))
+    return arg;
+
+  fir::FortranVariableFlagsAttr attributes;
+  llvm::SmallVector<mlir::Value> typeParams;
+  auto declareOp = hlfir::DeclareOp::create(
+      builder, loc, arg, "omp.reduction.element", nullptr, typeParams, nullptr,
+      nullptr, 0, attributes);
+  return declareOp.getBase();
+}
+
+static void
+addReductionObjectOverrides(fir::FirOpBuilder &builder, mlir::Location loc,
+                            lower::ExprToValueMap &overrides,
+                            const ObjectEntryBlockArgsEntry &entry,
+                            llvm::ArrayRef<mlir::BlockArgument> blockArgs) {
+  if (entry.objects.empty())
+    return;
+
+  for (auto pair : llvm::zip_equal(entry.objects, blockArgs)) {
+    const Object &object = std::get<0>(pair);
+    const mlir::BlockArgument &arg = std::get<1>(pair);
+    if (!ReductionProcessor::isExpressionLoweredAsReductionObject(&object))
+      continue;
+    const SomeExpr *expr = &object.ref().value();
+
+    // Evict any outer-scope entry for the same array element so the
+    // innermost scope always wins regardless of DenseMap iteration order.
+    llvm::SmallVector<const SomeExpr *> toEvict;
+    for (auto [key, value] : overrides) {
+      if (Fortran::lower::isEqual(key, expr)) {
+        toEvict.push_back(key);
+      }
+    }
+    for (const SomeExpr *key : toEvict) {
+      overrides.erase(key);
+    }
+
+    overrides[expr] = getReductionOverrideValue(builder, loc, &object, arg);
+  }
+}
+
+static const semantics::Symbol *getArrayElementSymbol(const SomeExpr &expr) {
+  std::optional<Fortran::evaluate::DataRef> dataRef =
+      Fortran::evaluate::ExtractDataRef(expr);
+  if (!dataRef)
+    return nullptr;
+
+  if (const auto *arrayRef =
+          std::get_if<Fortran::evaluate::ArrayRef>(&dataRef->u))
+    return &arrayRef->GetLastSymbol();
+
+  return nullptr;
+}
+
+static void
+addSymbolAliases(llvm::SmallVectorImpl<const semantics::Symbol *> &aliases,
+                 const semantics::Symbol *symbol) {
+  aliases.push_back(symbol);
+  aliases.push_back(&symbol->GetUltimate());
+  if (const auto *hostAssoc =
+          symbol->detailsIf<semantics::HostAssocDetails>()) {
+    aliases.push_back(&hostAssoc->symbol());
+    aliases.push_back(&hostAssoc->symbol().GetUltimate());
+  }
+}
+
+struct ArrayElementReductionUseCollector {
+  explicit ArrayElementReductionUseCollector(
+      const llvm::DenseMap<const semantics::Symbol *, const semantics::Symbol *>
+          &aliasToReductionSymbol,
+      llvm::DenseMap<const semantics::Symbol *,
+                     llvm::SmallVector<const SomeExpr *>>
+          &reductionElementExprs)
+      : aliasToReductionSymbol(aliasToReductionSymbol),
+        reductionElementExprs(reductionElementExprs) {}
+
+  const llvm::DenseMap<const semantics::Symbol *, const semantics::Symbol *>
+      &aliasToReductionSymbol;
+  llvm::DenseMap<const semantics::Symbol *, llvm::SmallVector<const SomeExpr *>>
+      &reductionElementExprs;
+  llvm::SmallPtrSet<const semantics::Symbol *, 16> seen;
+  llvm::SmallPtrSet<const semantics::Symbol *, 16> uncovered;
+
+  void classifyReductionElementUses(const SomeExpr &expr) {
+    llvm::SmallPtrSet<const semantics::Symbol *, 4> exprCandidates;
+    auto getReductionSymbol = [this](const semantics::Symbol &symbol) {
+      auto it = aliasToReductionSymbol.find(&symbol);
+      return it == aliasToReductionSymbol.end() ? nullptr : it->second;
+    };
+    for (const semantics::Symbol &symbol :
+         Fortran::evaluate::CollectSymbols(expr))
+      if (const semantics::Symbol *reductionSymbol = getReductionSymbol(symbol))
+        exprCandidates.insert(reductionSymbol);
+    if (exprCandidates.empty())
+      return;
+
+    auto isCoveredReductionUse =
+        [this](const semantics::Symbol *reductionSymbol, const SomeExpr &expr) {
+          auto it = reductionElementExprs.find(reductionSymbol);
+          return it != reductionElementExprs.end() &&
+                 llvm::any_of(it->second, [&](const SomeExpr *reductionExpr) {
+                   return Fortran::lower::isEqual(&expr, reductionExpr);
+                 });
+        };
+    llvm::SmallPtrSet<const semantics::Symbol *, 4> seenInExpr;
+    for (const SomeExpr &designator :
+         semantics::omp::GetTopLevelDesignators(expr)) {
+      const semantics::Symbol *symbol = getArrayElementSymbol(designator);
+      const semantics::Symbol *reductionSymbol =
+          symbol ? getReductionSymbol(*symbol) : nullptr;
+      if (!reductionSymbol)
+        continue;
+
+      if (isCoveredReductionUse(reductionSymbol, designator)) {
+        seen.insert(reductionSymbol);
+        seenInExpr.insert(reductionSymbol);
+      } else {
+        uncovered.insert(reductionSymbol);
+      }
+    }
+
+    for (const semantics::Symbol *symbol : exprCandidates)
+      if (!seenInExpr.contains(symbol))
+        uncovered.insert(symbol);
+  }
+
+  template <typename T>
+  bool Pre(const T &node) {
+    if constexpr (parser::HasTypedExpr<T>::value) {
+      if (const SomeExpr *expr = semantics::GetExpr(nullptr, node)) {
+        classifyReductionElementUses(*expr);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool Pre(const parser::Name &name) { return false; }
+
+  template <typename T>
+  void Post(const T &) {}
+};
+
+static llvm::SmallVector<const semantics::Symbol *>
+getSymbolsCoveredByReductionElements(lower::pft::Evaluation &eval,
+                                     llvm::ArrayRef<Object> reductionObjects) {
+  llvm::DenseMap<const semantics::Symbol *, const semantics::Symbol *>
+      aliasToReductionSymbol;
+  llvm::DenseMap<const semantics::Symbol *, llvm::SmallVector<const SomeExpr *>>
+      reductionElementExprs;
+  for (const Object &object : reductionObjects) {
+    if (!ReductionProcessor::isExpressionLoweredAsReductionObject(&object))
+      continue;
+    llvm::SmallVector<const semantics::Symbol *> aliases;
+    addSymbolAliases(aliases, object.sym());
+    for (const semantics::Symbol *alias : aliases)
+      aliasToReductionSymbol[alias] = object.sym();
+    reductionElementExprs[object.sym()].push_back(&*object.ref());
+  }
+
+  if (reductionElementExprs.empty())
+    return {};
+
+  ArrayElementReductionUseCollector collector(aliasToReductionSymbol,
+                                              reductionElementExprs);
+  eval.visit([&](const auto &node) { parser::Walk(node, collector); });
+
+  llvm::SmallVector<const semantics::Symbol *> suppressList;
+  for (auto &[symbol, exprs] : reductionElementExprs)
+    if (collector.seen.contains(symbol) &&
+        !collector.uncovered.contains(symbol))
+      suppressList.push_back(symbol);
+  return suppressList;
+}
+
 /// Create the body (block) for an OpenMP Operation.
 ///
 /// \param [in]   op  - the operation the body belongs to.
@@ -1693,6 +1917,27 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
     groupprivatizeVars(info.converter, info.eval);
 
   if (!info.genSkeletonOnly) {
+    lower::ExprToValueMap local;
+    if (auto *old = info.converter.getExprOverrides())
+      local.insert(old->begin(), old->end());
+    if (info.blockArgs) {
+      if (auto ompBlockArgOp =
+              mlir::dyn_cast<mlir::omp::BlockArgOpenMPOpInterface>(op)) {
+        addReductionObjectOverrides(firOpBuilder, info.loc, local,
+                                    info.blockArgs->inReduction,
+                                    ompBlockArgOp.getInReductionBlockArgs());
+        addReductionObjectOverrides(firOpBuilder, info.loc, local,
+                                    info.blockArgs->reduction,
+                                    ompBlockArgOp.getReductionBlockArgs());
+        addReductionObjectOverrides(firOpBuilder, info.loc, local,
+                                    info.blockArgs->taskReduction,
+                                    ompBlockArgOp.getTaskReductionBlockArgs());
+      }
+    }
+
+    auto *old = info.converter.getExprOverrides();
+    info.converter.overrideExprValues(local.empty() ? old : &local);
+
     if (ConstructQueue::const_iterator next = std::next(item);
         next != queue.end()) {
       genOMPDispatch(info.converter, info.symTable, info.semaCtx, info.eval,
@@ -1708,6 +1953,8 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
       genNestedEvaluations(info.converter, info.eval);
       temp->erase();
     }
+
+    info.converter.overrideExprValues(old);
   }
 
   // Get or create a unique exiting block from the given region, or
@@ -2529,21 +2776,40 @@ genLoopNestOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                                        const ObjectEntryBlockArgs &>>
                   wrapperArgs,
               llvm::omp::Directive directive, DataSharingProcessor &dsp) {
+  const lower::ExprToValueMap *oldOverrides = converter.getExprOverrides();
+  lower::ExprToValueMap loopNestOverrides;
   auto ivCallback = [&](mlir::Operation *op) {
     genLoopVars(op, converter, loc, iv, wrapperArgs);
+    if (oldOverrides)
+      loopNestOverrides.insert(oldOverrides->begin(), oldOverrides->end());
+    for (auto [argGeneratingOp, blockArgs] : wrapperArgs) {
+      addReductionObjectOverrides(converter.getFirOpBuilder(), loc,
+                                  loopNestOverrides, blockArgs.inReduction,
+                                  argGeneratingOp.getInReductionBlockArgs());
+      addReductionObjectOverrides(converter.getFirOpBuilder(), loc,
+                                  loopNestOverrides, blockArgs.reduction,
+                                  argGeneratingOp.getReductionBlockArgs());
+      addReductionObjectOverrides(converter.getFirOpBuilder(), loc,
+                                  loopNestOverrides, blockArgs.taskReduction,
+                                  argGeneratingOp.getTaskReductionBlockArgs());
+    }
+    converter.overrideExprValues(
+        loopNestOverrides.empty() ? oldOverrides : &loopNestOverrides);
     return llvm::SmallVector<const semantics::Symbol *>(iv);
   };
 
   uint64_t nestValue = getCollapseValue(item->clauses);
   nestValue = nestValue < iv.size() ? iv.size() : nestValue;
   auto *nestedEval = getCollapsedLoopEval(eval, nestValue);
-  return genOpWithBody<mlir::omp::LoopNestOp>(
+  auto loopNestOp = genOpWithBody<mlir::omp::LoopNestOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, *nestedEval,
                         directive)
           .setClauses(&item->clauses)
           .setDataSharingProcessor(&dsp)
           .setGenRegionEntryCb(ivCallback),
       queue, item, clauseOps);
+  converter.overrideExprValues(oldOverrides);
+  return loopNestOp;
 }
 
 static mlir::omp::LoopOp
@@ -2896,10 +3162,17 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
                         ConstructQueue::const_iterator item) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  // Clauses for unrolling not yet implemnted
   ClauseProcessor cp(converter, semaCtx, item->clauses);
-  cp.processTODO<clause::Partial, clause::Full>(
-      loc, llvm::omp::Directive::OMPD_unroll);
+
+  // The `full` clause is not yet implemented.
+  cp.processTODO<clause::Full>(loc, llvm::omp::Directive::OMPD_unroll);
+
+  // Process the `partial` clause. If present, it may carry a constant unroll
+  // factor.
+  std::optional<int64_t> partialFactor;
+  bool hasPartial = cp.processPartial(partialFactor);
+  if (hasPartial && !partialFactor.has_value())
+    TODO(loc, "PARTIAL clause on UNROLL without a constant factor");
 
   // Emit the associated loop
   llvm::SmallVector<mlir::omp::CanonicalLoopOp, 1> canonLoops;
@@ -2911,9 +3184,16 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
   for (auto &&canonLoop : canonLoops)
     applyees.push_back(canonLoop.getCli());
 
-  // Apply unrolling to it
   auto cli = llvm::getSingleElement(canonLoops).getCli();
-  mlir::omp::UnrollHeuristicOp::create(firOpBuilder, loc, cli);
+
+  if (partialFactor.has_value()) {
+    // Partially unroll the loop by the given constant factor.
+    mlir::omp::UnrollPartialOp::create(firOpBuilder, loc, cli,
+                                       static_cast<uint64_t>(*partialFactor));
+  } else {
+    // Apply heuristic unrolling to it.
+    mlir::omp::UnrollHeuristicOp::create(firOpBuilder, loc, cli);
+  }
 }
 
 static mlir::omp::MaskedOp
@@ -3576,9 +3856,14 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             .setClauses(&item->clauses),
         queue, item, clauseOps);
 
+  llvm::SmallVector<const semantics::Symbol *>
+      symbolsCoveredByReductionElements =
+          getSymbolsCoveredByReductionElements(eval, inReductionObjects);
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            lower::omp::isLastItemInQueue(item, queue),
-                           /*useDelayedPrivatization=*/true, symTable);
+                           /*useDelayedPrivatization=*/true, symTable,
+                           /*isTargetPrivatization=*/false,
+                           symbolsCoveredByReductionElements);
   dsp.processStep1(&clauseOps);
 
   ObjectEntryBlockArgs taskArgs;
@@ -3841,9 +4126,17 @@ static mlir::omp::TaskloopContextOp genStandaloneTaskloop(
 
   genTaskloopClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
                      taskloopClauseOps, reductionObjects, inReductionObjects);
+  llvm::SmallVector<Object> allReductionObjects;
+  llvm::append_range(allReductionObjects, reductionObjects);
+  llvm::append_range(allReductionObjects, inReductionObjects);
+  llvm::SmallVector<const semantics::Symbol *>
+      symbolsCoveredByReductionElements =
+          getSymbolsCoveredByReductionElements(eval, allReductionObjects);
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           enableDelayedPrivatization, symTable);
+                           enableDelayedPrivatization, symTable,
+                           /*isTargetPrivatization=*/false,
+                           symbolsCoveredByReductionElements);
   dsp.processStep1(&taskloopClauseOps);
 
   mlir::omp::LoopNestOperands loopNestClauseOps;

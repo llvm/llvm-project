@@ -9,6 +9,7 @@
 #include "flang/Lower/CallInterface.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Lower/Bridge.h"
+#include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/OpenACC.h"
 #include "flang/Lower/PFTBuilder.h"
@@ -17,7 +18,6 @@
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
@@ -1593,6 +1593,9 @@ Fortran::lower::CallInterface<T>::getProcedureAttrs(
         flags = flags | fir::FortranProcedureFlagsEnum::recursive;
     }
   }
+  if constexpr (std::is_same_v<Fortran::lower::CallerInterface, T>)
+    if (Fortran::lower::isIntrinsicModuleProcRef(side().getCallDescription()))
+      flags = flags | fir::FortranProcedureFlagsEnum::intrinsic;
   if (flags != fir::FortranProcedureFlagsEnum::none)
     return fir::FortranProcedureFlagsEnumAttr::get(mlirContext, flags);
   return nullptr;

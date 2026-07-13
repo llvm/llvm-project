@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -triple x86_64 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s
+// RUN: %clang_cc1 -triple x86_64 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx20,cxx14_20,cxx20_23 %s
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx20,cxx14_20,cxx20_23 %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -triple x86_64 -std=c++20 -fsyntax-only -verify=expected,cxx20,cxx14_20,cxx20_23 %s
+// RUN: %clang_cc1 -triple x86_64 -std=c++20 -fsyntax-only -verify=expected,cxx20,cxx14_20,cxx20_23 %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14    %s
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -triple x86_64 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14    %s
+// RUN: %clang_cc1 -triple x86_64 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
 auto f(); // expected-note {{previous}}
 int f(); // expected-error {{differ only in their return type}}
@@ -792,11 +792,3 @@ auto f() {
   return c;
 }
 }
-
-namespace TemplateRedecl1 {
-  template <class> auto f();
-  template <class T> void g() { (void)+f<T>(); };
-  template <class> auto f() { return 0; }
-  template auto f<int>();
-  template void g<int>();
-} // namespace TemplateRedecl1
