@@ -23673,24 +23673,28 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
            return !SI || isCommutative(SI);
          })))
       I->setHasNoUnsignedWrap(/*b=*/false);
-    // add nsw X, INT_MIN is not equivalent to sub nsw X, INT_MIN, because
-    // negating INT_MIN overflows. When an add/sub lane is converted to the
-    // opposite opcode its constant is negated, so nsw no longer holds and must
-    // be dropped.
+    // Interchanging add/sub negates the constant: nsw only survives if the
+    // constant isn't INT_MIN (negating it would overflow); nuw never
+    // survives a nonzero constant, since that flips the valid range from
+    // X >= C to X < C.
     if (!MinBWs.contains(E) &&
-        (Opcode == Instruction::Add || Opcode == Instruction::Sub) &&
-        any_of(UniqueInsts, [&](Value *V) {
-          auto *SI = cast<Instruction>(V);
-          if (SI->getOpcode() == Opcode ||
-              !is_contained({Instruction::Add, Instruction::Sub},
-                            SI->getOpcode()))
-            return false;
-          return any_of(SI->operands(), [](Value *Op) {
-            const auto *CI = dyn_cast<ConstantInt>(Op);
-            return CI && CI->getValue().isMinSignedValue();
-          });
-        }))
-      I->setHasNoSignedWrap(/*b=*/false);
+        (Opcode == Instruction::Add || Opcode == Instruction::Sub)) {
+      for (Value *V : UniqueInsts) {
+        auto *SI = cast<Instruction>(V);
+        if (SI->getOpcode() == Opcode ||
+            !is_contained({Instruction::Add, Instruction::Sub},
+                          SI->getOpcode()))
+          continue;
+        for (Value *Op : SI->operands()) {
+          const auto *CI = dyn_cast<ConstantInt>(Op);
+          if (!CI || CI->isZero())
+            continue;
+          I->setHasNoUnsignedWrap(/*b=*/false);
+          if (CI->getValue().isMinSignedValue())
+            I->setHasNoSignedWrap(/*b=*/false);
+        }
+      }
+    }
     // mul nsw X, INT_MIN is not equivalent to shl nsw X, BW-1, because shl nsw
     // poisons when the sign bit is shifted out of a positive value. When a mul
     // lane is converted to shl with shift amount BW-1, nsw must be dropped.
