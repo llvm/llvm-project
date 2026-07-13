@@ -1951,8 +1951,9 @@ static Align computeAlignmentAfterScalarization(Align VectorAlignment,
 ///        vector store <-- insertelement <-- ... <-- insertelement <-- load
 ///
 ///   Steps 3-5. Validate:
-///        reject unprofitable full overwrites; require simple accesses, a common
-///        address/block, no memory write in between, and scalarizable indices.
+///        reject unprofitable full overwrites; require simple accesses, a
+///        common address/block, no memory write in between, and scalarizable
+///        indices.
 bool VectorCombine::foldInsertElementsToStores(Instruction &I) {
   // Step 1: The target must support addressing a vector element with a GEP.
   if (!TTI.allowVectorElementIndexingUsingGEP())
