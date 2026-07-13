@@ -4157,11 +4157,24 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
     break;
   }
-  case ISD::FABS:
-    // fabs clears the sign bit
+  case ISD::FABS: {
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known.makeNonNegative();
+    EVT SVT = Op.getValueType().getScalarType();
+    if (SVT == MVT::ppcf128) {
+      // The sign bit position depends on endianness: ppc_fp128 is two doubles
+      // in a trenchcoat, fabs only clears the sign bit of the high-order
+      // double.
+      Known.resetAll();
+      Known.Zero.setBit(getDataLayout().isBigEndian() ? 127 : 63);
+    } else if (APFloat::hasSignBitInMSB(SVT.getFltSemantics())) {
+      // IEEE-like formats, bf16, x86_fp80: the sign bit is the integer MSB,
+      // fabs clears that sign bit.
+      Known.makeNonNegative();
+    }
+
     break;
+  }
   case ISD::FGETSIGN:
     // All bits are zero except the low bit.
     Known.Zero.setBitsFrom(1);

@@ -1528,6 +1528,11 @@ static void computeKnownBitsFromOperator(const Operator *I,
           computeKnownFPClass(V, DemandedElts, fcAllFlags, Q, Depth + 1);
       FPClassTest FPClasses = Result.KnownFPClasses;
 
+      // The position of the sign bit for ppc_fp128 is endian-dependent.
+      if (!APFloat::hasSignBitInMSB(FPType->getFltSemantics()) ||
+          FPType->isPPC_FP128Ty())
+        break;
+
       // TODO: Treat it as zero/poison if the use of I is unreachable.
       if (FPClasses == fcNone)
         break;
