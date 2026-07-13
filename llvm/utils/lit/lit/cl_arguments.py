@@ -59,7 +59,6 @@ _TIME_TESTS_OPT = "--time-tests"
 _TIME_TESTS_SLOWEST_DEFAULT = 20
 _TIME_TESTS_PREFIX = f"{_TIME_TESTS_OPT}="
 
-
 class AliasAction(argparse.Action):
     def __init__(self, option_strings, dest, nargs=None, **kwargs):
         self.expansion = kwargs.pop("alias", None)
