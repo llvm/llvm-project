@@ -58,7 +58,7 @@ gpu.module @test_module_0 {
     // CHECK: = nvvm.read.ptx.sreg.warpsize range <i32, 1, 129> : i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
     %subgroupSize = gpu.subgroup_size : index
-    // CHECK: = nvvm.read.ptx.sreg.warpid range <i32, 0, 4294967295> : i32
+    // CHECK: = nvvm.read.ptx.sreg.warpid range <i32, 0, -1> : i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
     %subgroupId = gpu.subgroup_id : index
     // CHECK: = nvvm.read.ptx.sreg.nwarpid : i32

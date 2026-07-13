@@ -104,8 +104,8 @@ static constexpr llvm::StringLiteral kNVVMNamedBarrierIdPrefix =
 static constexpr int32_t kNVVMFirstNamedBarrierId = 1;
 static constexpr int32_t kNVVMLastNamedBarrierId = 15;
 static constexpr int32_t kNVVMWarpSize = 32;
-static constexpr uint64_t kMaxDim = std::numeric_limits<uint32_t>::max();
-static constexpr uint64_t kMaxSubgroupSize = 128;
+static constexpr uint32_t kMaxDim = std::numeric_limits<uint32_t>::max();
+static constexpr uint32_t kMaxSubgroupSize = 128;
 
 // Truncate or extend the result depending on the index bitwidth specified by
 // the LLVMTypeConverter options.
@@ -308,9 +308,11 @@ struct GPUSubgroupSizeOpToNVVM
                   ConversionPatternRewriter &rewriter) const override {
     LLVM::ConstantRangeAttr bounds = nullptr;
     if (std::optional<APInt> upperBound = op.getUpperBound()) {
+      uint32_t subgroupUpperBound =
+          static_cast<uint32_t>(upperBound->getLimitedValue(kMaxDim));
       bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
           /*bitWidth=*/32, /*lower=*/1,
-          /*upper=*/llvm::SaturatingAdd(upperBound->getZExtValue(), 1ULL));
+          /*upper=*/llvm::SaturatingAdd(subgroupUpperBound, uint32_t{1}));
     } else {
       bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
           /*bitWidth=*/32, /*lower=*/1, /*upper=*/kMaxSubgroupSize + 1);
@@ -333,9 +335,9 @@ struct GPUSubgroupIdOpToNVVM : ConvertOpToLLVMPattern<gpu::SubgroupIdOp> {
   matchAndRewrite(gpu::SubgroupIdOp op, gpu::SubgroupIdOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // TODO: Derive tighter bounds from known launch dimensions when available.
-    uint64_t upperBound = kMaxDim;
+    uint32_t upperBound = kMaxDim;
     if (std::optional<APInt> specifiedBound = op.getUpperBound())
-      upperBound = specifiedBound->getZExtValue();
+      upperBound = static_cast<uint32_t>(specifiedBound->getLimitedValue(kMaxDim));
     LLVM::ConstantRangeAttr bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
         /*bitWidth=*/32, /*lower=*/0, /*upper=*/upperBound);
 
@@ -359,9 +361,11 @@ struct GPUNumSubgroupsOpToNVVM
       override {
     LLVM::ConstantRangeAttr bounds = nullptr;
     if (std::optional<APInt> upperBound = op.getUpperBound()) {
+      uint32_t numSubgroupsUpperBound =
+          static_cast<uint32_t>(upperBound->getLimitedValue(kMaxDim));
       bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
           /*bitWidth=*/32, /*lower=*/1,
-          /*upper=*/llvm::SaturatingAdd(upperBound->getZExtValue(), 1ULL));
+          /*upper=*/llvm::SaturatingAdd(numSubgroupsUpperBound, uint32_t{1}));
     }
     // Without an explicit upper bound, the target-independent default for
     // gpu.num_subgroups cannot be encoded as a finite i32 upper-exclusive range.
