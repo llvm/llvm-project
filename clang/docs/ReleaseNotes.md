@@ -933,6 +933,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed a crash when using a pack indexing type (e.g. ``Ts...[0]``) imported from another module. (#GH204479)
 - Fixed an ODR-merging error in modules, where class-scope `using enum` declarations were not recognized as matching across module
   boundaries.  (#GH207066)
+- Fixed a crash when constant evaluation accessed a base class or member of an object wrapped in `_Atomic`. (#GH203328)
 
 #### Bug Fixes to AST Handling
 
