@@ -745,6 +745,37 @@ CallInst *IRBuilderBase::CreateMaskedCompressStore(Value *Val, Value *Ptr,
   return CI;
 }
 
+/// Create a call to First-Only-Fault Load intrinsic
+/// \p Ty         - vector type to load
+/// \p Ptr       - base pointer for the load
+/// \p Alignment - alignment of the source location
+/// \p Mask      - vector of booleans which indicates what vector lanes should
+///                be accessed in memory
+/// \p EVL       - effective vector length
+/// \p Name      - name of the result variable
+CallInst *IRBuilderBase::CreateFirstFaultingLoad(Type *Ty, Value *Ptr,
+                                                 Align Alignment, Value *Mask,
+                                                 Value *EVL,
+                                                 const Twine &Name) {
+  assert(Ty->isVectorTy() && "DataTy must be a vector type");
+  assert(EVL && "It requires EVL");
+  Type *PtrTy = Ptr->getType();
+
+  if (!Mask) {
+    Type *MaskTy =
+        VectorType::get(getInt1Ty(), cast<VectorType>(Ty)->getElementCount());
+    Mask = ConstantInt::getTrue(MaskTy);
+  }
+
+  Type *OverloadedTypes[] = {Ty, PtrTy};
+  Value *Ops[] = {Ptr, Mask, EVL};
+  CallInst *CI = CreateIntrinsicWithoutFolding(Intrinsic::vp_load_ff,
+                                               OverloadedTypes, Ops, {}, Name);
+
+  CI->addParamAttr(0, Attribute::getWithAlignment(CI->getContext(), Alignment));
+  return CI;
+}
+
 template <typename T0>
 static std::vector<Value *>
 getStatepointArgs(IRBuilderBase &B, uint64_t ID, uint32_t NumPatchBytes,
