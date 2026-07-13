@@ -750,6 +750,14 @@ uint32_t GVNPass::ValueTable::lookupOrAddCmp(unsigned Opcode,
   return assignExpNewValueNum(Exp).first;
 }
 
+/// Returns the value number of ptrtoint \p Ptr to \Ty.
+uint32_t GVNPass::ValueTable::lookupPtrToInt(Value *Ptr, Type *Ty) {
+  Expression Exp(Instruction::PtrToInt);
+  Exp.Ty = Ty;
+  Exp.VarArgs.push_back(lookupOrAdd(Ptr));
+  return ExpressionNumbering.lookup(Exp);
+}
+
 /// Remove all entries from the ValueTable.
 void GVNPass::ValueTable::clear() {
   ValueNumbering.clear();
@@ -3401,25 +3409,18 @@ bool GVNPass::processInstruction(Instruction *I) {
   }
 
   // A ptrtoaddr and a ptrtoint of the same pointer compute the same value when
-  // the address width equals the pointer representation width. Reuse a
-  // dominating ptrtoint in place of a ptrtoaddr.
+  // the address width equals the pointer representation width.
   if (auto *PTA = dyn_cast<PtrToAddrInst>(I)) {
     const DataLayout &DL = I->getDataLayout();
     unsigned AS = PTA->getPointerAddressSpace();
-    Value *Ptr = PTA->getPointerOperand();
     if (DL.getAddressSizeInBits(AS) == DL.getPointerSizeInBits(AS) &&
-        !DL.hasUnstableRepresentation(AS) && Ptr->hasUseList()) {
-      unsigned Scanned = 0;
-      for (User *U : Ptr->users()) {
-        if (++Scanned >= ScanUsersLimit)
-          break;
-        auto *PTI = dyn_cast<PtrToIntInst>(U);
-        if (PTI && PTI->getType() == I->getType() && PTI != I &&
-            DT->dominates(PTI, I)) {
-          patchAndReplaceAllUsesWith(I, PTI);
-          salvageAndRemoveInstruction(I);
-          return true;
-        }
+        !DL.hasUnstableRepresentation(AS)) {
+      uint32_t PTINum =
+          VN.lookupPtrToInt(PTA->getPointerOperand(), PTA->getType());
+      if (Value *PTI = findLeader(I->getParent(), PTINum)) {
+        patchAndReplaceAllUsesWith(I, PTI);
+        salvageAndRemoveInstruction(I);
+        return true;
       }
     }
   }
