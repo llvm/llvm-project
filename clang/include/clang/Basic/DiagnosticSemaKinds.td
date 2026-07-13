@@ -1932,6 +1932,9 @@ def err_dependent_friend_not_member_of_template_spec : Error<
   "a simple-template-id naming a class template, but %0 is a non-template member">;
 def err_dependent_friend_not_member : Error<
   "friend declaration does not name a member of a class template specialization">;
+def err_dependent_friend_undeduced_params : Error<
+  "%select{template parameter|template parameters}0 of friend declaration "
+  "cannot be deduced from %1">;
 
 def err_invalid_base_in_interface : Error<
   "interface type cannot inherit from "

@@ -22,18 +22,16 @@ struct X {
     };
   };
 
-  template <class U>
-  template <class V>
-  template <class W>
-  template <class X>
+  template <class U> // expected-note {{non-deducible template parameter 'U'}}
+  template <class V> // expected-note {{non-deducible template parameter 'V'}}
+  template <class W> // expected-note {{non-deducible template parameter 'W'}}
+  template <class X> // expected-note {{non-deducible template parameter 'X'}}
   template <class Y>
   template <class Z>
-  friend void A<U>::template B<V>::template C<W>::template D<X>::template E<Y>::operator+=(Z); // #X-friend-operator-plus-eq
-  // expected-error@-1 {{no member 'operator+=' in 'X<int>'; it has not yet been instantiated}}
-  //   expected-note@#X-friend-operator-plus-eq {{not-yet-instantiated member is declared here}}
+  friend void A<U>::template B<V>::template C<W>::template D<X>::template E<Y>::operator+=(Z);
+  // expected-error@-1 {{template parameters of friend declaration cannot be deduced from 'A<U>::template B<V>::template C<W>::template D<X>::template E<Y>'}}
 };
 
 void test() {
   X<int>::A<int>::B<int>::C<int>::D<int>::E<int>() += 1.0;
-  // expected-note@-1 {{in instantiation of template class 'X<int>' requested here}}
 }

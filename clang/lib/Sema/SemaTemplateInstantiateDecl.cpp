@@ -4995,6 +4995,19 @@ bool TemplateDeclInstantiator::SubstTemplateParameterLists(
     if (!InstParams)
       return true;
 
+    if (Expr *RequiresClause = L->getRequiresClause()) {
+      ExprResult InstRequiresClause =
+          SemaRef.SubstConstraintExprWithoutSatisfaction(RequiresClause,
+                                                         TemplateArgs);
+      if (!InstRequiresClause.isUsable())
+        return true;
+
+      InstParams = TemplateParameterList::Create(
+          SemaRef.Context, InstParams->getTemplateLoc(),
+          InstParams->getLAngleLoc(), InstParams->asArray(),
+          InstParams->getRAngleLoc(), InstRequiresClause.get());
+    }
+
     InstTPL.push_back(InstParams);
   }
   return false;

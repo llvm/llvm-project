@@ -396,7 +396,7 @@ namespace cwg637 { // cwg637: 3.0
   }
 } // namespace cwg637
 
-namespace cwg638 { // cwg638: no
+namespace cwg638 { // cwg638: yes
   template<typename T> struct A {
     struct B;
     void f();

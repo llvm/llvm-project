@@ -18089,12 +18089,17 @@ static QualType IgnorePackIndexing(QualType T) {
   return T;
 }
 
-static bool IsClassTemplateSpecializationName(QualType T) {
+static const TemplateSpecializationType *
+GetClassTemplateSpecializationType(ASTContext &Context, QualType T) {
   T = IgnorePackIndexing(T);
-  if (const auto *TST = dyn_cast<TemplateSpecializationType>(T))
-    return isa_and_nonnull<ClassTemplateDecl>(
-        TST->getTemplateName().getAsTemplateDecl());
-  return isa<InjectedClassNameType>(T);
+  if (const auto *ICNT = dyn_cast<InjectedClassNameType>(T))
+    T = ICNT->getDecl()->getCanonicalTemplateSpecializationType(Context);
+
+  const auto *TST = dyn_cast<TemplateSpecializationType>(T);
+  if (TST && isa_and_nonnull<ClassTemplateDecl>(
+                 TST->getTemplateName().getAsTemplateDecl()))
+    return TST;
+  return nullptr;
 }
 
 static bool DiagnosePackIndexingInFriendNNS(Sema &S, SourceLocation Loc,
@@ -18104,31 +18109,6 @@ static bool DiagnosePackIndexingInFriendNNS(Sema &S, SourceLocation Loc,
 
   S.Diag(Loc, diag::err_computed_type_in_declarative_nns) << 0;
   return true;
-}
-
-static QualType GetEnclosingQualifierType(ASTContext &Context, QualType T) {
-  T = IgnorePackIndexing(T);
-
-  if (NestedNameSpecifier NNS = T->getPrefix())
-    if (NNS.getKind() == NestedNameSpecifier::Kind::Type)
-      return QualType(NNS.getAsType(), 0);
-
-  if (const auto *DNT = dyn_cast<DependentNameType>(T)) {
-    NestedNameSpecifier QNNS = DNT->getQualifier();
-    if (QNNS && QNNS.getKind() == NestedNameSpecifier::Kind::Type)
-      return QualType(QNNS.getAsType(), 0);
-  }
-
-  if (CXXRecordDecl *RD = T->getAsCXXRecordDecl())
-    if (TypeDecl *TD = dyn_cast<TypeDecl>(RD->getParent()))
-      return Context.getTypeDeclType(TD);
-
-  if (const auto *TST = dyn_cast<TemplateSpecializationType>(T))
-    if (TemplateDecl *TD = TST->getTemplateName().getAsTemplateDecl())
-      if (TypeDecl *DC = dyn_cast<TypeDecl>(TD->getDeclContext()))
-        return Context.getTypeDeclType(DC);
-
-  return QualType();
 }
 
 static void DiagnoseDependentFriendNotMember(Sema &S, SourceLocation Loc,
@@ -18142,45 +18122,55 @@ static void DiagnoseDependentFriendNotMember(Sema &S, SourceLocation Loc,
   }
 }
 
-bool Sema::CheckDependentFriendType(SourceLocation Loc, NestedNameSpecifier NNS,
-                                    TemplateParameterList *FPL) {
-  if (!NNS.isDependent() || !FPL || FPL->size() == 0)
+static bool
+CheckDependentFriend(Sema &S, SourceLocation Loc, NestedNameSpecifier NNS,
+                     ArrayRef<TemplateParameterList *> TemplateParameterLists) {
+  if (!NNS.isDependent())
     return false;
 
   assert(NNS.getKind() == NestedNameSpecifier::Kind::Type &&
          "dependent nested-name-specifier must be a type");
 
   QualType T(NNS.getAsType(), 0);
-  if (DiagnosePackIndexingInFriendNNS(*this, Loc, T))
+  if (DiagnosePackIndexingInFriendNNS(S, Loc, T))
     return true;
+  if (TemplateParameterLists.empty())
+    return false;
 
-  while (!T.isNull()) {
-    if (IsClassTemplateSpecializationName(T))
-      return false;
-    T = GetEnclosingQualifierType(Context, T);
+  const TemplateSpecializationType *TST =
+      GetClassTemplateSpecializationType(S.Context, T);
+  if (!TST) {
+    DiagnoseDependentFriendNotMember(S, Loc, NNS);
+    return true;
   }
 
-  DiagnoseDependentFriendNotMember(*this, Loc, NNS);
-  return true;
-}
+  SmallVector<NamedDecl *, 4> UndeducedParameters;
+  for (TemplateParameterList *TPL : TemplateParameterLists) {
+    llvm::SmallBitVector UsedParameters(TPL->size());
+    S.MarkUsedTemplateParameters(TST->template_arguments(),
+                                 /*OnlyDeduced=*/true, TPL->getDepth(),
+                                 UsedParameters);
 
-bool Sema::CheckDependentFriendFunction(SourceLocation Loc,
-                                        NestedNameSpecifier NNS,
-                                        TemplateParameterList *FPL) {
-  if (!NNS.isDependent() || !FPL || FPL->size() == 0)
+    for (unsigned I = 0, N = UsedParameters.size(); I != N; ++I)
+      if (!UsedParameters[I])
+        UndeducedParameters.push_back(TPL->getParam(I));
+  }
+
+  if (UndeducedParameters.empty())
     return false;
 
-  assert(NNS.getKind() == NestedNameSpecifier::Kind::Type &&
-         "dependent nested-name-specifier must be a type");
+  S.Diag(Loc, diag::err_dependent_friend_undeduced_params)
+      << (UndeducedParameters.size() > 1) << QualType(TST, 0);
 
-  QualType T(NNS.getAsType(), 0);
-  if (DiagnosePackIndexingInFriendNNS(*this, Loc, T))
-    return true;
+  for (NamedDecl *Param : UndeducedParameters) {
+    if (Param->getDeclName())
+      S.Diag(Param->getLocation(), diag::note_non_deducible_parameter)
+          << Param->getDeclName();
+    else
+      S.Diag(Param->getLocation(), diag::note_non_deducible_parameter)
+          << "(anonymous)";
+  }
 
-  if (IsClassTemplateSpecializationName(T))
-    return false;
-
-  DiagnoseDependentFriendNotMember(*this, Loc, NNS);
   return true;
 }
 
@@ -18194,10 +18184,11 @@ DeclResult Sema::ActOnTemplatedFriendTag(
   bool IsMemberSpecialization = false;
   bool Invalid = false;
 
-  if (TemplateParameterList *TemplateParams =
-          MatchTemplateParametersToScopeSpecifier(
-              TagLoc, NameLoc, SS, nullptr, TempParamLists, /*friend*/ true,
-              IsMemberSpecialization, Invalid)) {
+  TemplateParameterList *TemplateParams =
+      MatchTemplateParametersToScopeSpecifier(TagLoc, NameLoc, SS, nullptr,
+                                              TempParamLists, /*friend*/ true,
+                                              IsMemberSpecialization, Invalid);
+  if (TemplateParams) {
     if (TemplateParams->size() > 0) {
       if (Invalid)
         return true;
@@ -18283,7 +18274,10 @@ DeclResult Sema::ActOnTemplatedFriendTag(
   }
 
   NestedNameSpecifier NNS = SS.getScopeRep();
-  if (CheckDependentFriendType(TagLoc, NNS, TempParamLists.front()))
+  ArrayRef<TemplateParameterList *> TPL = TempParamLists;
+  if (TemplateParams)
+    TPL = TPL.drop_back();
+  if (CheckDependentFriend(*this, TagLoc, NNS, TPL))
     return true;
 
   ElaboratedTypeKeyword ETK = TypeWithKeyword::getKeywordForTagTypeKind(Kind);
@@ -18615,11 +18609,6 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
     assert(isa<CXXRecordDecl>(DC) && "friend declaration not in class?");
   }
 
-  if (TemplateParams.size() && SS.isValid() &&
-      CheckDependentFriendFunction(NameInfo.getLoc(), SS.getScopeRep(),
-                                   TemplateParams.front()))
-    return nullptr;
-
   if (!DC->isRecord()) {
     int DiagArg = -1;
     switch (D.getName().getKind()) {
@@ -18701,6 +18690,13 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
     FD = FTD->getTemplatedDecl();
   else
     FD = cast<FunctionDecl>(ND);
+
+  if (TemplateParams.size() && SS.isValid() &&
+      CheckDependentFriend(*this, NameInfo.getLoc(), SS.getScopeRep(),
+                           FD->getTemplateParameterLists())) {
+    ND->setInvalidDecl();
+    return ND;
+  }
 
   // C++ [class.friend]p6:
   //   A function may be defined in a friend declaration of a class if and

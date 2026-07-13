@@ -286,7 +286,6 @@ namespace test12 {
 namespace test13 {
   template <typename T> struct S {
     template <typename> friend class T::template X<int>::Y;
-    // expected-error@-1 {{friend declaration does not name a member of a class template specialization}}
   };
 }
 
@@ -389,4 +388,163 @@ namespace test18 {
 
   template struct B<int>::C<true>;
   // expected-note@-1 {{in instantiation of member function 'test18::B<int>::C<true>::f' requested here}}
+}
+
+namespace test19 {
+  template <class...> struct A {
+    struct B;
+    static void f();
+  };
+
+  struct X {
+    template <class T, class U> // #test19-U-type
+    friend struct A<T>::B;
+    // expected-error@-1 {{template parameter of friend declaration cannot be deduced from 'A<T>'}}
+    //   expected-note@#test19-U-type {{non-deducible template parameter 'U'}}
+
+    template <class T, class U> // #test19-U-function
+    friend void A<T>::f();
+    // expected-error@-1 {{template parameter of friend declaration cannot be deduced from 'A<T>'}}
+    //   expected-note@#test19-U-function {{non-deducible template parameter 'U'}}
+
+    template <class... Ts> // #test19-Ts
+    friend struct A<Ts..., int>::B;
+    // expected-error@-1 {{template parameter of friend declaration cannot be deduced from 'A<Ts..., int>'}}
+    //   expected-note@#test19-Ts {{non-deducible template parameter 'Ts'}}
+  };
+}
+
+namespace test20 {
+  class X;
+
+  template <class T> struct A {
+    template <class, class U> struct B {
+      struct C {
+        static void f(X &);
+      };
+      static void g(X &);
+    };
+  };
+
+  class X {
+    int n;
+
+    template <class T>
+    template <class U>
+    friend struct A<T>::B<T, U>::C;
+
+    template <class T>
+    template <class U>
+    friend void A<T>::B<T, U>::g(X &);
+  };
+
+  template <class T>
+  template <class V, class U>
+  void A<T>::B<V, U>::C::f(X &x) {
+    x.n = 0;
+  }
+
+  template <class T>
+  template <class V, class U>
+  void A<T>::B<V, U>::g(X &x) {
+    x.n = 0;
+  }
+
+  template struct A<int>::B<int, double>;
+}
+
+namespace test21 {
+  class X;
+
+  template <class T> struct A {
+    template <class U> struct B;
+  };
+
+  class X {
+    int n; // #test21-X-n
+    template <class T>
+    template <class U>
+    friend struct A<T>::B;
+  };
+
+  template <> struct A<int> {
+    template <int U> struct B {
+      static void f(X &x) {
+        x.n = 0;
+        // expected-error@-1 {{'n' is a private member of 'test21::X'}}
+        //   expected-note@#test21-X-n {{implicitly declared private here}}
+      }
+    };
+  };
+
+  template struct A<int>::B<0>;
+}
+
+namespace test22 {
+  class X;
+
+  template <class T> struct A {
+    struct B;
+  };
+
+  class X {
+    int n; // #test22-X-n
+    template <class T> friend struct A<T>::B;
+  };
+
+  template <> struct A<int> {
+    union B {
+      static void f(X &x) {
+        x.n = 0;
+        // expected-error@-1 {{'n' is a private member of 'test22::X'}}
+        //   expected-note@#test22-X-n {{implicitly declared private here}}
+      }
+    };
+  };
+}
+
+namespace test23 {
+  class X;
+
+  template <class T> struct A {
+    template <class U> static void f(X &);
+  };
+
+  class X {
+    int n; // #test23-X-n
+    template <class T>
+    template <class U>
+    friend void A<T>::f(X &);
+  };
+
+  template <> struct A<int> {
+    template <int U> static void f(X &x) {
+      x.n = 0;
+      // expected-error@-1 {{'n' is a private member of 'test23::X'}}
+      //   expected-note@#test23-X-n {{implicitly declared private here}}
+    }
+  };
+
+  template void A<int>::f<0>(X &);
+}
+
+namespace test24 {
+  class X;
+
+  template <class T> struct A {
+    static void f(X &);
+  };
+
+  class X {
+    int n; // #test24-X-n
+    template <class T> friend void A<T>::f(X &);
+  };
+
+  template <> struct A<int> {
+    static void f(X &x, ...) {
+      x.n = 0;
+      // expected-error@-1 {{'n' is a private member of 'test24::X'}}
+      //   expected-note@#test24-X-n {{implicitly declared private here}}
+    }
+  };
 }

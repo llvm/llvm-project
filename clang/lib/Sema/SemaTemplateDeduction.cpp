@@ -3225,42 +3225,12 @@ CheckDeducedArgumentConstraints(Sema &S, NamedDecl *Template,
   return TemplateDeductionResult::Success;
 }
 
-/// Complete template argument deduction.
-static TemplateDeductionResult FinishTemplateArgumentDeduction(
-    Sema &S, NamedDecl *Entity, TemplateParameterList *EntityTPL,
-    TemplateDecl *Template, bool PartialOrdering,
-    ArrayRef<TemplateArgumentLoc> Ps, ArrayRef<TemplateArgument> As,
-    SmallVectorImpl<DeducedTemplateArgument> &Deduced,
-    TemplateDeductionInfo &Info, bool CopyDeducedArgs) {
-  Sema::ContextRAII SavedContext(S, getAsDeclContextOrEnclosing(Entity));
-
-  // C++ [temp.deduct.type]p2:
-  //   [...] or if any template argument remains neither deduced nor
-  //   explicitly specified, template argument deduction fails.
-  Sema::CheckTemplateArgumentInfo CTAI(PartialOrdering);
-  if (auto Result = ConvertDeducedTemplateArguments(
-          S, Entity, EntityTPL, /*IsDeduced=*/PartialOrdering, Deduced, Info,
-          CTAI,
-          /*CurrentInstantiationScope=*/nullptr,
-          /*NumAlreadyConverted=*/0U, /*IsIncomplete=*/nullptr);
-      Result != TemplateDeductionResult::Success)
-    return Result;
-
-  if (CopyDeducedArgs) {
-    // Form the template argument list from the deduced template arguments.
-    TemplateArgumentList *SugaredDeducedArgumentList =
-        TemplateArgumentList::CreateCopy(S.Context, CTAI.SugaredConverted);
-    TemplateArgumentList *CanonicalDeducedArgumentList =
-        TemplateArgumentList::CreateCopy(S.Context, CTAI.CanonicalConverted);
-    Info.reset(SugaredDeducedArgumentList, CanonicalDeducedArgumentList);
-  }
-
+static TemplateDeductionResult CheckDeducedTemplateArgumentList(
+    Sema &S, TemplateDecl *Template, ArrayRef<TemplateArgumentLoc> Ps,
+    ArrayRef<TemplateArgument> As, const MultiLevelTemplateArgumentList &MLTAL,
+    TemplateDeductionInfo &Info) {
   TemplateParameterList *TPL = Template->getTemplateParameters();
   TemplateArgumentListInfo InstArgs(TPL->getLAngleLoc(), TPL->getRAngleLoc());
-  MultiLevelTemplateArgumentList MLTAL(Entity, CTAI.SugaredConverted,
-                                       /*Final=*/true);
-  MLTAL.addOuterRetainedLevels(TPL->getDepth());
-
   if (S.SubstTemplateArguments(Ps, MLTAL, InstArgs)) {
     unsigned ArgIdx = InstArgs.size(), ParamIdx = ArgIdx;
     if (ParamIdx >= TPL->size())
@@ -3336,6 +3306,46 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
   }
   assert(PsStack.empty());
   assert(AsStack.empty());
+  return TemplateDeductionResult::Success;
+}
+
+/// Complete template argument deduction.
+static TemplateDeductionResult FinishTemplateArgumentDeduction(
+    Sema &S, NamedDecl *Entity, TemplateParameterList *EntityTPL,
+    TemplateDecl *Template, bool PartialOrdering,
+    ArrayRef<TemplateArgumentLoc> Ps, ArrayRef<TemplateArgument> As,
+    SmallVectorImpl<DeducedTemplateArgument> &Deduced,
+    TemplateDeductionInfo &Info, bool CopyDeducedArgs) {
+  Sema::ContextRAII SavedContext(S, getAsDeclContextOrEnclosing(Entity));
+
+  // C++ [temp.deduct.type]p2:
+  //   [...] or if any template argument remains neither deduced nor
+  //   explicitly specified, template argument deduction fails.
+  Sema::CheckTemplateArgumentInfo CTAI(PartialOrdering);
+  if (auto Result = ConvertDeducedTemplateArguments(
+          S, Entity, EntityTPL, /*IsDeduced=*/PartialOrdering, Deduced, Info,
+          CTAI,
+          /*CurrentInstantiationScope=*/nullptr,
+          /*NumAlreadyConverted=*/0U, /*IsIncomplete=*/nullptr);
+      Result != TemplateDeductionResult::Success)
+    return Result;
+
+  if (CopyDeducedArgs) {
+    // Form the template argument list from the deduced template arguments.
+    TemplateArgumentList *SugaredDeducedArgumentList =
+        TemplateArgumentList::CreateCopy(S.Context, CTAI.SugaredConverted);
+    TemplateArgumentList *CanonicalDeducedArgumentList =
+        TemplateArgumentList::CreateCopy(S.Context, CTAI.CanonicalConverted);
+    Info.reset(SugaredDeducedArgumentList, CanonicalDeducedArgumentList);
+  }
+
+  MultiLevelTemplateArgumentList MLTAL(Entity, CTAI.SugaredConverted,
+                                       /*Final=*/true);
+  MLTAL.addOuterRetainedLevels(Template->getTemplateParameters()->getDepth());
+  if (auto Result =
+          CheckDeducedTemplateArgumentList(S, Template, Ps, As, MLTAL, Info);
+      Result != TemplateDeductionResult::Success)
+    return Result;
 
   if (!PartialOrdering) {
     if (auto Result = CheckDeducedArgumentConstraints(
@@ -4112,14 +4122,144 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   return TemplateDeductionResult::Success;
 }
 
-TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
-    TemplateDecl *TD, TemplateParameterList *TPL,
-    ArrayRef<TemplateArgument> PatternArgs, ArrayRef<TemplateArgument> Args,
-    SmallVectorImpl<DeducedTemplateArgument> &Deduced,
-    sema::TemplateDeductionInfo &Info, bool CopyDeducedArgs) {
-  return ::FinishTemplateArgumentDeduction(
-      *this, TD, TPL, TD, /*PartialOrdering=*/false, PatternArgs, Args, Deduced,
-      Info, CopyDeducedArgs);
+static void AddFriendTemplateDeductionCandidate(
+    Sema &S, TemplateDecl *TD, TemplateDeductionInfo &Info,
+    TemplateDeductionResult Result, TemplateSpecCandidateSet *FailedTSC) {
+  if (!FailedTSC)
+    return;
+
+  Decl *Declaration = TD->getTemplatedDecl();
+  for (TemplateSpecCandidate &Candidate : *FailedTSC) {
+    if (Candidate.Specialization &&
+        declaresSameEntity(Candidate.Specialization, Declaration))
+      return;
+  }
+
+  FailedTSC->addCandidate().set(
+      DeclAccessPair::make(TD, AS_public), Declaration,
+      MakeDeductionFailureInfo(S.Context, Result, Info));
+}
+
+bool Sema::DeduceTemplateArguments(
+    FriendTemplateDecl *FTD, ClassTemplateDecl *PatternCTD,
+    ClassTemplateDecl *CandidateCTD, ArrayRef<TemplateParameterList *> TPL,
+    ArrayRef<TemplateArgument> PatternArgs,
+    ArrayRef<TemplateArgument> CandidateArgs, SourceLocation Loc,
+    TemplateSpecCandidateSet *FailedTSC,
+    MultiLevelTemplateArgumentList &DeducedArgs) {
+  EnterExpressionEvaluationContext Unevaluated(
+      *this, ExpressionEvaluationContext::Unevaluated);
+  ContextRAII SavedContext(*this, FTD->getDeclContext());
+  LocalInstantiationScope InstantiationScope(*this);
+  InstantiatingTemplate Inst(*this, Loc, FTD);
+  if (Inst.isInvalid()) {
+    TemplateDeductionInfo Info(Loc);
+    AddFriendTemplateDeductionCandidate(
+        *this, PatternCTD, Info, TemplateDeductionResult::InstantiationDepth,
+        FailedTSC);
+    return false;
+  }
+
+  SmallVector<TemplateArgumentList *, 2> DeducedArgLists;
+  for (TemplateParameterList *Params : TPL) {
+    TemplateDeductionInfo Info(Loc, Params->getDepth());
+    SFINAETrap Trap(*this, Info);
+    SmallVector<DeducedTemplateArgument, 4> Deduced(Params->size());
+    TemplateDeductionResult Result = DeduceTemplateArguments(
+        Params, PatternArgs, CandidateArgs, Info, Deduced,
+        /*NumberOfArgumentsMustMatch=*/false);
+
+    CheckTemplateArgumentInfo CTAI;
+    bool IsIncomplete = false;
+    if (Result == TemplateDeductionResult::Success)
+      Result = ConvertDeducedTemplateArguments(
+          *this, PatternCTD, Params, /*IsDeduced=*/false, Deduced, Info, CTAI,
+          &InstantiationScope, /*NumAlreadyConverted=*/0, &IsIncomplete);
+    if (Result == TemplateDeductionResult::Success && IsIncomplete) {
+      for (unsigned I = 0, N = Deduced.size(); I != N; ++I) {
+        if (!Deduced[I].isNull())
+          continue;
+        Info.Param = makeTemplateParameter(Params->getParam(I));
+        break;
+      }
+      Info.reset(
+          TemplateArgumentList::CreateCopy(Context, CTAI.SugaredConverted),
+          TemplateArgumentList::CreateCopy(Context, CTAI.CanonicalConverted));
+      Result = TemplateDeductionResult::Incomplete;
+    }
+    if (Result == TemplateDeductionResult::Success && Trap.hasErrorOccurred())
+      Result = TemplateDeductionResult::SubstitutionFailure;
+    if (Result != TemplateDeductionResult::Success) {
+      AddFriendTemplateDeductionCandidate(*this, PatternCTD, Info, Result,
+                                          FailedTSC);
+      return false;
+    }
+
+    DeducedArgLists.push_back(
+        TemplateArgumentList::CreateCopy(Context, CTAI.SugaredConverted));
+  }
+
+  for (TemplateArgumentList *Args : llvm::reverse(DeducedArgLists))
+    DeducedArgs.addOuterTemplateArguments(FTD, Args->asArray(),
+                                          /*Final=*/true);
+  if (!TPL.empty())
+    DeducedArgs.addOuterRetainedLevels(TPL.front()->getDepth());
+
+  if (DeducedArgs.isAnyArgInstantiationDependent() &&
+      llvm::any_of(TPL, [](TemplateParameterList *Params) {
+        return Params->hasAssociatedConstraints();
+      }))
+    return false;
+
+  SmallVector<TemplateArgumentLoc, 8> PatternArgsLoc;
+  PatternArgsLoc.reserve(PatternArgs.size());
+  for (const TemplateArgument &Arg : PatternArgs)
+    PatternArgsLoc.push_back(
+        getTrivialTemplateArgumentLoc(Arg, QualType(), Loc));
+
+  {
+    TemplateDeductionInfo Info(Loc);
+    SFINAETrap Trap(*this, Info);
+    TemplateDeductionResult Result = CheckDeducedTemplateArgumentList(
+        *this, CandidateCTD, PatternArgsLoc, CandidateArgs, DeducedArgs, Info);
+    if (Result == TemplateDeductionResult::Success && Trap.hasErrorOccurred())
+      Result = TemplateDeductionResult::SubstitutionFailure;
+    if (Result != TemplateDeductionResult::Success) {
+      AddFriendTemplateDeductionCandidate(*this, PatternCTD, Info, Result,
+                                          FailedTSC);
+      return false;
+    }
+  }
+
+  for (TemplateParameterList *Params : TPL) {
+    SmallVector<AssociatedConstraint, 3> Constraints;
+    Params->getAssociatedConstraints(Constraints);
+    if (Constraints.empty())
+      continue;
+
+    TemplateDeductionInfo Info(Loc, Params->getDepth());
+    SFINAETrap Trap(*this, Info);
+    if (CheckConstraintSatisfaction(nullptr, Constraints, DeducedArgs,
+                                    SourceRange(Loc),
+                                    Info.AssociatedConstraintsSatisfaction) ||
+        !Info.AssociatedConstraintsSatisfaction.IsSatisfied ||
+        Trap.hasErrorOccurred()) {
+      SmallVector<TemplateArgument, 4> CanonicalCandidateArgs;
+      CanonicalCandidateArgs.reserve(CandidateArgs.size());
+      for (const TemplateArgument &Arg : CandidateArgs)
+        CanonicalCandidateArgs.push_back(
+            Context.getCanonicalTemplateArgument(Arg));
+      Info.reset(
+          TemplateArgumentList::CreateCopy(Context, CandidateArgs),
+          TemplateArgumentList::CreateCopy(Context, CanonicalCandidateArgs));
+      AddFriendTemplateDeductionCandidate(
+          *this, PatternCTD, Info,
+          TemplateDeductionResult::ConstraintsNotSatisfied, FailedTSC);
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /// Gets the type of a function for template-argument-deducton
@@ -7180,11 +7320,14 @@ Sema::MarkUsedTemplateParameters(const TemplateArgumentList &TemplateArgs,
 }
 
 void Sema::MarkUsedTemplateParameters(ArrayRef<TemplateArgument> TemplateArgs,
-                                      unsigned Depth,
+                                      bool OnlyDeduced, unsigned Depth,
                                       llvm::SmallBitVector &Used) {
+  if (OnlyDeduced && hasPackExpansionBeforeEnd(TemplateArgs))
+    return;
+
   for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
-    ::MarkUsedTemplateParameters(Context, TemplateArgs[I],
-                                 /*OnlyDeduced=*/false, Depth, Used);
+    ::MarkUsedTemplateParameters(Context, TemplateArgs[I], OnlyDeduced, Depth,
+                                 Used);
 }
 
 void Sema::MarkUsedTemplateParameters(

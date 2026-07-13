@@ -104,6 +104,7 @@ class X {
   static int x; // #cwg1918-X-x
   template <typename T>
   friend class A<T>::B::C;
+  // expected-error@-1 {{nested name specifier 'A<T>::B' in friend declaration must end with a simple-template-id naming a class template, but 'B' is a non-template member}}
 };
 template<> struct A<int> {
   typedef struct Q B;
@@ -111,6 +112,8 @@ template<> struct A<int> {
 struct Q {
   class C {
     int f() { return X::x; }
+    // expected-error@-1 {{'x' is a private member of 'cwg1918::X'}}
+    //   expected-note@#cwg1918-X-x {{implicitly declared private here}}
   };
 };
 } // namespace cwg1918
@@ -166,6 +169,7 @@ class X {
   static int x;
   template <typename T>
   friend class A<T>::B::C;
+  // expected-error@-1 {{nested name specifier 'A<T>::B' in friend declaration must end with a simple-template-id naming a class template, but 'B' is a non-template member}}
 };
 } // namespace cwg1945
 
