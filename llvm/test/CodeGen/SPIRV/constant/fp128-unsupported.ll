@@ -3,7 +3,7 @@
 
 ; RUN: not llc -O0 -mtriple=spirv32-unknown-unknown %s -o /dev/null 2>&1 | FileCheck %s
 
-; CHECK: error:{{.*}}fp128 is not supported in SPIR-V
+; CHECK: LLVM ERROR: fp128 is not supported in SPIR-V
 
 define fp128 @getConstantFP128() {
   ret fp128 0xL00000000000000004001000000000000

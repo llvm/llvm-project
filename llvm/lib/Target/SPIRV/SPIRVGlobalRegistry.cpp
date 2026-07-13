@@ -395,10 +395,9 @@ Register SPIRVGlobalRegistry::createConstFP(const ConstantFP *CF,
           MIB = MIRBuilder.buildInstr(SPIRV::OpConstantF)
                     .addDef(Res)
                     .addUse(getSPIRVTypeID(SpvType));
-          APInt RawBits = CF->getValueAPF().bitcastToAPInt();
-          uint64_t ImmBits =
-              RawBits.getBitWidth() <= 64 ? RawBits.getZExtValue() : 0;
-          addNumImm(APInt(BitWidth, ImmBits), MIB);
+          addNumImm(APInt(BitWidth,
+                          CF->getValueAPF().bitcastToAPInt().getZExtValue()),
+                    MIB);
         }
         const auto &ST = CurMF->getSubtarget();
         constrainSelectedInstRegOperands(*MIB, *ST.getInstrInfo(),
@@ -1205,12 +1204,8 @@ SPIRVTypeInst SPIRVGlobalRegistry::createSPIRVType(
                       : getOpTypeInt(Width, MIRBuilder, false);
   }
   if (Ty->isFloatingPointTy()) {
-    if (Ty->isFP128Ty() || Ty->isPPC_FP128Ty()) {
-      Function &F = MIRBuilder.getMF().getFunction();
-      F.getContext().diagnose(DiagnosticInfoUnsupported(
-          F, "fp128 is not supported in SPIR-V", DebugLoc(), DS_Error));
-      return getOpTypeFloat(64, MIRBuilder);
-    }
+    if (Ty->isFP128Ty() || Ty->isPPC_FP128Ty())
+      llvm::reportFatalUsageError("fp128 is not supported in SPIR-V");
     if (Ty->isBFloatTy()) {
       return getOpTypeFloat(Ty->getPrimitiveSizeInBits(), MIRBuilder,
                             SPIRV::FPEncoding::BFloat16KHR);
