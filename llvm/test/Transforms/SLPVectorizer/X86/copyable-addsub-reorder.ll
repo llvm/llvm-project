@@ -6,30 +6,32 @@ define i32 @fadd_fsub_constant_lhs_mix(float %s) {
 ; CHECK-LABEL: define i32 @fadd_fsub_constant_lhs_mix(
 ; CHECK-SAME: float [[S:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> poison, float [[S]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul <4 x float> [[TMP1]], <float 2.000000e+00, float 1.000000e+00, float 1.125000e+00, float 1.000000e+00>
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub <4 x float> <float -0.000000e+00, float 2.000000e+00, float 0.000000e+00, float -1.000000e+00>, [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.fabs.v4f32(<4 x float> [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = fcmp ueq <4 x float> [[TMP4]], splat (float +inf)
-; CHECK-NEXT:    [[CA:%.*]] = extractelement <4 x i1> [[TMP5]], i64 3
+; CHECK-NEXT:    [[A:%.*]] = fadd float [[S]], 1.000000e+00
+; CHECK-NEXT:    [[FA:%.*]] = tail call float @llvm.fabs.f32(float [[A]])
+; CHECK-NEXT:    [[CA:%.*]] = fcmp ueq float [[FA]], +inf
+; CHECK-NEXT:    [[MULB:%.*]] = fmul float [[S]], 1.125000e+00
+; CHECK-NEXT:    [[B:%.*]] = fsub float 0.000000e+00, [[MULB]]
+; CHECK-NEXT:    [[FB:%.*]] = tail call float @llvm.fabs.f32(float [[B]])
+; CHECK-NEXT:    [[CB:%.*]] = fcmp ueq float [[FB]], +inf
+; CHECK-NEXT:    [[D:%.*]] = fsub float 2.000000e+00, [[S]]
+; CHECK-NEXT:    [[FD:%.*]] = tail call float @llvm.fabs.f32(float [[D]])
+; CHECK-NEXT:    [[CD:%.*]] = fcmp ueq float [[FD]], +inf
+; CHECK-NEXT:    [[MULE:%.*]] = fmul float [[S]], 2.000000e+00
+; CHECK-NEXT:    [[E:%.*]] = fadd float [[MULE]], 0.000000e+00
+; CHECK-NEXT:    [[FE:%.*]] = tail call float @llvm.fabs.f32(float [[E]])
+; CHECK-NEXT:    [[CE:%.*]] = fcmp ueq float [[FE]], +inf
 ; CHECK-NEXT:    br i1 [[CA]], label %[[ABORT:.*]], label %[[SPLIT:.*]]
 ; CHECK:       [[SPLIT]]:
-; CHECK-NEXT:    [[CB:%.*]] = extractelement <4 x i1> [[TMP5]], i64 2
 ; CHECK-NEXT:    br i1 [[CB]], label %[[ABORT]], label %[[SPLIT2:.*]]
 ; CHECK:       [[SPLIT2]]:
-; CHECK-NEXT:    [[CD:%.*]] = extractelement <4 x i1> [[TMP5]], i64 1
 ; CHECK-NEXT:    br i1 [[CD]], label %[[ABORT]], label %[[SPLIT3:.*]]
 ; CHECK:       [[SPLIT3]]:
-; CHECK-NEXT:    [[CE:%.*]] = extractelement <4 x i1> [[TMP5]], i64 0
 ; CHECK-NEXT:    br i1 [[CE]], label %[[ABORT]], label %[[CONT:.*]]
 ; CHECK:       [[ABORT]]:
 ; CHECK-NEXT:    tail call void @abort()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[CONT]]:
-; CHECK-NEXT:    [[E:%.*]] = extractelement <4 x float> [[TMP3]], i64 0
 ; CHECK-NEXT:    [[EI:%.*]] = fptosi float [[E]] to i32
-; CHECK-NEXT:    [[B:%.*]] = extractelement <4 x float> [[TMP3]], i64 2
 ; CHECK-NEXT:    [[BI:%.*]] = fptosi float [[B]] to i32
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[EI]], [[BI]]
 ; CHECK-NEXT:    ret i32 [[SUM]]
@@ -139,10 +141,11 @@ define i32 @add_sub_constant_lhs_mix(i32 %s) {
 ; THRESH-LABEL: define i32 @add_sub_constant_lhs_mix(
 ; THRESH-SAME: i32 [[S:%.*]]) {
 ; THRESH-NEXT:  [[ENTRY:.*:]]
-; THRESH-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[S]], i64 0
-; THRESH-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
-; THRESH-NEXT:    [[TMP2:%.*]] = mul <4 x i32> [[TMP1]], <i32 2, i32 1, i32 1, i32 3>
-; THRESH-NEXT:    [[TMP4:%.*]] = sub <4 x i32> <i32 -2, i32 -1, i32 10, i32 5>, [[TMP2]]
+; THRESH-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 1, i32 1, i32 1, i32 poison>, i32 [[S]], i64 3
+; THRESH-NEXT:    [[TMP1:%.*]] = mul <4 x i32> [[TMP0]], <i32 -2, i32 -1, i32 10, i32 3>
+; THRESH-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> <i32 poison, i32 1, i32 poison, i32 poison>, <4 x i32> <i32 3, i32 3, i32 3, i32 5>
+; THRESH-NEXT:    [[TMP3:%.*]] = mul <4 x i32> <i32 2, i32 1, i32 1, i32 5>, [[TMP2]]
+; THRESH-NEXT:    [[TMP4:%.*]] = sub <4 x i32> [[TMP3]], [[TMP1]]
 ; THRESH-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i32> [[TMP4]], zeroinitializer
 ; THRESH-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i64 1
 ; THRESH-NEXT:    br i1 [[TMP6]], label %[[ABORT:.*]], label %[[SPLIT:.*]]
