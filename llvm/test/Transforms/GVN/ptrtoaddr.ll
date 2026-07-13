@@ -33,8 +33,7 @@ define i64 @ptrtoaddr_reuses_dominating_ptrtoint(ptr %p) {
 ; CHECK-LABEL: define i64 @ptrtoaddr_reuses_dominating_ptrtoint(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[I:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[A:%.*]] = ptrtoaddr ptr [[P]] to i64
-; CHECK-NEXT:    [[R:%.*]] = add i64 [[I]], [[A]]
+; CHECK-NEXT:    [[R:%.*]] = add i64 [[I]], [[I]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %i = ptrtoint ptr %p to i64

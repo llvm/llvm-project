@@ -3400,6 +3400,30 @@ bool GVNPass::processInstruction(Instruction *I) {
     return false;
   }
 
+  // A ptrtoaddr and a ptrtoint of the same pointer compute the same value when
+  // the address width equals the pointer representation width. Reuse a
+  // dominating ptrtoint in place of a ptrtoaddr.
+  if (auto *PTA = dyn_cast<PtrToAddrInst>(I)) {
+    const DataLayout &DL = I->getDataLayout();
+    unsigned AS = PTA->getPointerAddressSpace();
+    Value *Ptr = PTA->getPointerOperand();
+    if (DL.getAddressSizeInBits(AS) == DL.getPointerSizeInBits(AS) &&
+        !DL.hasUnstableRepresentation(AS) && Ptr->hasUseList()) {
+      unsigned Scanned = 0;
+      for (User *U : Ptr->users()) {
+        if (++Scanned >= ScanUsersLimit)
+          break;
+        auto *PTI = dyn_cast<PtrToIntInst>(U);
+        if (PTI && PTI->getType() == I->getType() && PTI != I &&
+            DT->dominates(PTI, I)) {
+          patchAndReplaceAllUsesWith(I, PTI);
+          salvageAndRemoveInstruction(I);
+          return true;
+        }
+      }
+    }
+  }
+
   // If the number we were assigned was a brand new VN, then we don't
   // need to do a lookup to see if the number already exists
   // somewhere in the domtree: it can't!
