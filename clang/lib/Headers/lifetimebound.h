@@ -28,6 +28,24 @@
 #define __lifetime_capture_by(X) __attribute__((lifetime_capture_by(X)))
 #endif
 
+#if __use_cpp_spelling(clang::lifetime_capture_by_this)
+#define __lifetime_capture_by_this [[clang::lifetime_capture_by_this]]
+#else
+#define __lifetime_capture_by_this __attribute__((lifetime_capture_by_this))
+#endif
+
+#if __use_cpp_spelling(clang::lifetime_capture_by_global)
+#define __lifetime_capture_by_global [[clang::lifetime_capture_by_global]]
+#else
+#define __lifetime_capture_by_global __attribute__((lifetime_capture_by_global))
+#endif
+
+#if __use_cpp_spelling(clang::lifetime_capture_by_unknown)
+#define __lifetime_capture_by_unknown [[clang::lifetime_capture_by_unknown]]
+#else
+#define __lifetime_capture_by_unknown __attribute__((lifetime_capture_by_unknown))
+#endif
+
 #if __use_cpp_spelling(clang::noescape)
 #define __noescape [[clang::noescape]]
 #else

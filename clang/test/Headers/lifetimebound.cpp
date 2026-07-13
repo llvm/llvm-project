@@ -10,8 +10,10 @@ struct has_lifetimebound_method {
 };
 
 struct has_lifetime_capture_by_method {
-  void take_ptr(char* ptr __lifetime_capture_by(this));
+  void take_ptr(char* ptr __lifetime_capture_by_this);
   void take_ptr(has_lifetimebound_method a, char* ptr __lifetime_capture_by(a));
+  void take_ptr(short* ptr __lifetime_capture_by_global);
+  void take_ptr(int* ptr __lifetime_capture_by_unknown);
 };
 
 struct has_noescape_method {
