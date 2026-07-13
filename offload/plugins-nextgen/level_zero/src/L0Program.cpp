@@ -96,7 +96,7 @@ Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
     // means the image itself could not be loaded for this device (e.g. a
     // truncated or malformed binary) rather than a generic JIT failure of an
     // otherwise valid program. Report it as INVALID_BINARY in that case (as
-    // opposed to the default mapping of ZE_RESULT_ERROR_MODULE_BUILD_FAILURE 
+    // opposed to the default mapping of ZE_RESULT_ERROR_MODULE_BUILD_FAILURE
     // to ErrorCode::COMPILE_FAILURE).
     const auto ErrCode = RC == ZE_RESULT_ERROR_MODULE_BUILD_FAILURE
                              ? ErrorCode::INVALID_BINARY

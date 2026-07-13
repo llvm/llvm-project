@@ -69,9 +69,9 @@ TEST_P(olCreateProgramTest, ZeroSizeBinary) {
 
   ol_program_handle_t Program = nullptr;
 
-  ASSERT_ERROR(OL_ERRC_INVALID_BINARY,
-               olCreateProgram(Device, DeviceBin->getBufferStart(), 0,
-                               &Program));
+  ASSERT_ERROR(
+      OL_ERRC_INVALID_BINARY,
+      olCreateProgram(Device, DeviceBin->getBufferStart(), 0, &Program));
   ASSERT_EQ(Program, nullptr);
 }
 
@@ -80,8 +80,8 @@ TEST_P(olCreateProgramTest, InvalidBinary) {
 
   ol_program_handle_t Program = nullptr;
   ASSERT_ERROR(OL_ERRC_INVALID_BINARY,
-               olCreateProgram(Device, InvalidBinary,
-                               sizeof(InvalidBinary) - 1, &Program));
+               olCreateProgram(Device, InvalidBinary, sizeof(InvalidBinary) - 1,
+                               &Program));
   ASSERT_EQ(Program, nullptr);
 }
 
@@ -101,9 +101,9 @@ TEST_P(olCreateProgramTest, WrongArchitecture) {
   // Pick a backend different from the device's own, so the loaded binary is
   // valid but built for the wrong architecture.
   ol_platform_backend_t Backend = getPlatformBackend();
-  ol_platform_backend_t ForeignBackend =
-      Backend == OL_PLATFORM_BACKEND_CUDA ? OL_PLATFORM_BACKEND_AMDGPU
-                                          : OL_PLATFORM_BACKEND_CUDA;
+  ol_platform_backend_t ForeignBackend = Backend == OL_PLATFORM_BACKEND_CUDA
+                                             ? OL_PLATFORM_BACKEND_AMDGPU
+                                             : OL_PLATFORM_BACKEND_CUDA;
 
   std::unique_ptr<llvm::MemoryBuffer> ForeignBin;
   if (!TestEnvironment::loadDeviceBinary("foo", Device, ForeignBin,
