@@ -14,7 +14,6 @@
 
 #include "llvm/CodeGen/Rematerializer.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -22,6 +21,7 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
 #define DEBUG_TYPE "rematerializer"
@@ -813,17 +813,19 @@ void Rollbacker::rollback(Rematerializer &Remater) {
 
     // Determine re-creation position for the register's definition.
     MachineBasicBlock::iterator InsertPosition;
-    auto [Ptr, IsMBB] = Positions[--PositionIndex];
-    if (IsMBB)
-      InsertPosition = Ptr.MBB->end();
-    else
-      InsertPosition = Replacements.lookup_or(Ptr.MI, Ptr.MI)->getIterator();
+    InsertBeforePos Pos = Positions[--PositionIndex];
+    if (auto *MBB = dyn_cast<MachineBasicBlock *>(Pos)) {
+      InsertPosition = MBB->end();
+    } else {
+      auto *MI = cast<MachineInstr *>(Pos);
+      InsertPosition = Replacements.lookup_or(MI, MI)->getIterator();
+    }
 
     Remater.recreateReg(Reg.Idx, InsertPosition, Reg.DefReg);
 
     const Rematerializer::Reg &RecreateReg = Remater.getReg(Reg.Idx);
-    assert(!Replacements.contains(Reg.DefMI) && "duplicate deleted MI");
-    Replacements[Reg.DefMI] = RecreateReg.DefMI;
+    if (!Replacements.insert({Reg.DefMI, RecreateReg.DefMI}).second)
+      llvm_unreachable("duplicate deleted MI");
   }
 
   // Rollback rematerializations.
@@ -863,7 +865,7 @@ bool Rollbacker::isRollbackableMI(const MachineInstr &MI,
 
 void Rollbacker::invalidatePosition(MachineInstr *MI,
                                     MachineBasicBlock::iterator It) {
-  const InsertBeforePos MIPos = makePos(MI),
+  const InsertBeforePos MIPos = InsertBeforePos(MI),
                         NewPos = makePos(It, MI->getParent());
   auto MIIndices = PosToIdx.find(MIPos);
   if (MIIndices == PosToIdx.end())

@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_REMATERIALIZER_H
 #define LLVM_CODEGEN_REMATERIALIZER_H
 
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -511,12 +512,6 @@ private:
 /// rematerializations as soon as it is attached to the rematerializer.
 class LLVM_ABI Rollbacker : public Rematerializer::Listener {
 public:
-  /// An insertion position pointer in the MIR.
-  union InsertPosPtr {
-    MachineInstr *MI;
-    MachineBasicBlock *MBB;
-  };
-
   Rollbacker() = default;
 
   /// Re-creates all deleted registers and rolls back all rematerializations
@@ -545,10 +540,9 @@ private:
           DefMI(Remater.getReg(Idx).DefMI) {}
   };
 
-  /// An insertion position in the MIR. The pointer should be interpreted as:
-  /// - a MachineInstr* if the int is 0/false (insert before the MI).
-  /// - a MachineBasicBlock* if the int is 1/true (insert at the MBB's end).
-  using InsertBeforePos = PointerIntPair<InsertPosPtr, 1, bool>;
+  /// An insertion position in the MIR, either a MachineInstr* to insert before
+  /// or a MachineBasicBlock* to insert at the end of.
+  using InsertBeforePos = PointerUnion<MachineInstr *, MachineBasicBlock *>;
 
   /// Original registers that have been deleted, in order of deletion.
   SmallVector<DeadReg> DeadRegs;
@@ -567,21 +561,11 @@ private:
   /// back.
   bool RollingBack = false;
 
-  InsertBeforePos makePos(MachineInstr *MI) const {
-    InsertPosPtr Ptr;
-    Ptr.MI = MI;
-    return InsertBeforePos(Ptr, false);
-  }
-  InsertBeforePos makePos(MachineBasicBlock *MBB) const {
-    InsertPosPtr Ptr;
-    Ptr.MBB = MBB;
-    return InsertBeforePos(Ptr, true);
-  }
   InsertBeforePos makePos(MachineBasicBlock::iterator It,
                           MachineBasicBlock *MBB) const {
     if (It == MBB->end())
-      return makePos(MBB);
-    return makePos(&*It);
+      return InsertBeforePos(MBB);
+    return InsertBeforePos(&*It);
   }
 
   /// Whether \p MI would be deleted if we were to rollback later. These are MIs
@@ -595,22 +579,6 @@ private:
   /// becomes known that \p MI is about to be permanently deleted from the MIR
   /// and thus becomes an invalid re-creation position.
   void invalidatePosition(MachineInstr *MI, MachineBasicBlock::iterator It);
-};
-
-/// Required to use Rollbacker::InsertPosPtr as the pointer type of
-/// PointerIntPair.
-template <> struct PointerLikeTypeTraits<Rollbacker::InsertPosPtr> {
-  static inline void *getAsVoidPointer(Rollbacker::InsertPosPtr P) {
-    return P.MI;
-  }
-  static inline Rollbacker::InsertPosPtr getFromVoidPointer(void *P) {
-    Rollbacker::InsertPosPtr Ptr;
-    Ptr.MI = static_cast<MachineInstr *>(P);
-    return Ptr;
-  }
-  static constexpr int NumLowBitsAvailable =
-      std::min(PointerLikeTypeTraits<MachineInstr *>::NumLowBitsAvailable,
-               PointerLikeTypeTraits<MachineBasicBlock *>::NumLowBitsAvailable);
 };
 
 } // namespace llvm
