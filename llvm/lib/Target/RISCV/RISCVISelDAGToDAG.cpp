@@ -2074,15 +2074,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // Fall through to regular ADDD selection.
     [[fallthrough]];
   case RISCVISD::SUBD:
-  case RISCVISD::PPAIRE_DB:
   case RISCVISD::WADDAU:
   case RISCVISD::WSUBAU:
   case RISCVISD::WADDA:
   case RISCVISD::WSUBA: {
-    assert(!Subtarget->is64Bit() && "Unexpected opcode");
-    assert(
-        (Node->getOpcode() != RISCVISD::PPAIRE_DB || Subtarget->hasStdExtP()) &&
-        "Unexpected opcode");
+    assert(!Subtarget->is64Bit() && Subtarget->hasStdExtP() &&
+           "Unexpected opcode");
 
     SDValue Op0Lo = Node->getOperand(0);
     SDValue Op0Hi = Node->getOperand(1);
@@ -2132,9 +2129,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         break;
       case RISCVISD::SUBD:
         Opc = RISCV::SUBD;
-        break;
-      case RISCVISD::PPAIRE_DB:
-        Opc = RISCV::PPAIRE_DB;
         break;
       }
       New = CurDAG->getMachineNode(Opc, DL, MVT::Untyped, Op0, Op1);

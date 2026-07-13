@@ -287,3 +287,23 @@ spirv.func @smod_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) "None" {
   %0 = spirv.SMod %arg0, %arg1 : vector<4xi32>
   spirv.Return
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.SNegate
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @snegate_scalar
+spirv.func @snegate_scalar(%arg0: i32) "None" {
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: llvm.sub %[[ZERO]], %{{.*}} : i32
+  %0 = spirv.SNegate %arg0 : i32
+  spirv.Return
+}
+
+// CHECK-LABEL: @snegate_vector
+spirv.func @snegate_vector(%arg0: vector<4xi32>) "None" {
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(dense<0> : vector<4xi32>) : vector<4xi32>
+  // CHECK: llvm.sub %[[ZERO]], %{{.*}} : vector<4xi32>
+  %0 = spirv.SNegate %arg0 : vector<4xi32>
+  spirv.Return
+}
