@@ -14,6 +14,22 @@
 namespace COMGR {
 namespace env {
 
+enum class LogLevel {
+  None = 0,
+  Error,
+  Warning,
+  Info,
+  Debug,
+};
+
+/// Parse @p Requested (AMD_COMGR_LOG_LEVEL, may be empty) into a threshold.
+/// When empty or not an integer, returns Debug if @p VerboseFallback is set.
+LogLevel parseLogLevel(llvm::StringRef Requested, bool VerboseFallback);
+
+/// Resolve the log level from AMD_COMGR_LOG_LEVEL, using the
+/// AMD_COMGR_EMIT_VERBOSE_LOGS back-compat fallback via parseLogLevel().
+LogLevel resolveLogLevel();
+
 /// Return whether the environment requests temps be saved.
 bool shouldSaveTemps();
 bool shouldSaveLLVMTemps();

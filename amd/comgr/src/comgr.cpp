@@ -18,12 +18,14 @@
 #include "comgr-device-libs.h"
 #include "comgr-disassembly.h"
 #include "comgr-env.h"
+#include "comgr-logger.h"
 #include "comgr-metadata.h"
 #include "comgr-signal.h"
 #include "comgr-symbol.h"
 #include "comgr-symbolizer.h"
 
 #include "clang/Basic/Version.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Constants.h"
@@ -54,6 +56,28 @@ using namespace COMGR;
 using namespace COMGR::TimeStatistics;
 
 namespace {
+// Forwards writes to both the in-memory comgr.log buffer and the redirect sink.
+// The sink write goes through Logger::writeToSink to hold the mutex vs emit().
+class TeeStream : public raw_ostream {
+public:
+  explicit TeeStream(raw_ostream &Buffer, Logger &Log)
+      : Buffer(Buffer), Log(Log) {
+    SetUnbuffered();
+  }
+
+private:
+  void write_impl(const char *Ptr, size_t Size) override {
+    Buffer.write(Ptr, Size);
+    Log.writeToSink(StringRef(Ptr, Size));
+    Pos += Size;
+  }
+  uint64_t current_pos() const override { return Pos; }
+
+  raw_ostream &Buffer;
+  Logger &Log;
+  uint64_t Pos = 0;
+};
+
 bool isLanguageValid(amd_comgr_language_t Language) {
   return Language >= AMD_COMGR_LANGUAGE_NONE &&
          Language <= AMD_COMGR_LANGUAGE_LAST;
@@ -67,7 +91,6 @@ bool isSymbolInfoValid(amd_comgr_symbol_info_t SymbolInfo) {
   return SymbolInfo >= AMD_COMGR_SYMBOL_INFO_NAME_LENGTH &&
          SymbolInfo <= AMD_COMGR_SYMBOL_INFO_LAST;
 }
-
 
 amd_comgr_status_t dispatchCompilerAction(amd_comgr_action_kind_t ActionKind,
                                           DataAction *ActionInfo,
@@ -251,7 +274,6 @@ amd_comgr_status_t COMGR::parseTargetIdentifier(StringRef IdentStr,
 
   Ident.Processor = Ident.Features[0];
   Ident.Features.erase(Ident.Features.begin());
-
 
   if (IdentStr == "spirv64-amd-amdhsa--amdgcnspirv" ||
       IdentStr == "spirv64-amd-amdhsa-unknown-amdgcnspirv") {
@@ -1397,52 +1419,54 @@ amd_comgr_status_t AMD_COMGR_API
     std::string PerfLog = "PerfStatsLog.txt";
     raw_string_ostream LogS(LogStr);
 
-    // The log stream when redirecting to a file.
-    std::unique_ptr<raw_fd_ostream> LogF;
-
     // Pointer to the currently selected log stream.
     raw_ostream *LogP = &LogS;
 
-    if (std::optional<StringRef> RedirectLogs = env::getRedirectLogs()) {
-      StringRef RedirectLog = *RedirectLogs;
-      if (RedirectLog == "stdout") {
-        LogP = &outs();
-      } else if (RedirectLog == "stderr") {
-        LogP = &errs();
-      } else {
-        std::error_code EC;
-        LogF.reset(new (std::nothrow) raw_fd_ostream(
-            RedirectLog, EC, sys::fs::OF_Text | sys::fs::OF_Append));
-        if (EC) {
-          LogF.reset();
-          *LogP << "Comgr unable to redirect log to file '" << RedirectLog
-                << "': " << EC.message() << "\n";
-        } else {
-          LogP = LogF.get();
-          PerfLog = RedirectLog.str();
-        }
+    LogCaptureScope LogCapture(LogS);
+    Logger &Log = getLogger();
+
+    // On redirect, tee the compiler-diagnostic stream to both LogS and the
+    // sink so comgr.log and the redirect destination get the same content.
+    std::optional<TeeStream> RedirectTee;
+    if (env::getRedirectLogs()) {
+      // The Logger already resolved and opened the destination (see
+      // Logger::Logger); reuse its sink. A null sink means the open failed.
+      if (Log.hasSink()) {
+        RedirectTee.emplace(LogS, Log);
+        LogP = &RedirectTee.value();
+        // Empty when the sink is a stream (stdout/stderr/"-"), so time
+        // statistics stay off in that case.
+        StringRef RedirectFile = Log.getRedirectFilename();
+        if (!RedirectFile.empty())
+          PerfLog = RedirectFile.str();
+      } else if (StringRef SinkError = Log.getSinkError(); !SinkError.empty()) {
+        // Redirect open failed: surface the diagnostic into comgr.log
+        // unconditionally (emit() would gate it behind AMD_COMGR_LOG_LEVEL).
+        LogS << "comgr: " << SinkError << '\n';
       }
     }
 
     InitTimeStatistics(PerfLog);
 
-    if (env::shouldEmitVerboseLogs()) {
-      *LogP << "amd_comgr_do_action:\n"
-            << "\t  ActionKind: " << getActionKindName(ActionKind) << '\n'
-            << "\t     IsaName: " << ActionInfoP->IsaName << '\n'
-            << "\t     Options:";
+    if (Log.isEnabled(LogLevel::Debug)) {
+      SmallString<256> HeaderStr;
+      raw_svector_ostream HeaderS(HeaderStr);
+      HeaderS << "amd_comgr_do_action:\n"
+              << "\t  ActionKind: " << getActionKindName(ActionKind) << '\n'
+              << "\t     IsaName: " << ActionInfoP->IsaName << '\n'
+              << "\t     Options:";
       for (auto &Option : ActionInfoP->getOptions()) {
-        *LogP << ' ';
-        printQuotedOption(*LogP, Option);
+        HeaderS << ' ';
+        printQuotedOption(HeaderS, Option);
       }
-      *LogP << '\n'
-            << "\t        Path: " << ActionInfoP->Path << '\n'
-            << "\t    Language: " << getLanguageName(ActionInfoP->Language)
-            << '\n'
-            << " Comgr Branch-Commit: " << xstringify(AMD_COMGR_GIT_BRANCH)
-            << '-' << xstringify(AMD_COMGR_GIT_COMMIT) << '\n'
-            << "\t LLVM Commit: " << clang::getLLVMRevision() << '\n';
-      (*LogP).flush();
+      HeaderS << '\n'
+              << "\t        Path: " << ActionInfoP->Path << '\n'
+              << "\t    Language: " << getLanguageName(ActionInfoP->Language)
+              << '\n'
+              << " Comgr Branch-Commit: " << xstringify(AMD_COMGR_GIT_BRANCH)
+              << '-' << xstringify(AMD_COMGR_GIT_COMMIT) << '\n'
+              << "\t LLVM Commit: " << clang::getLLVMRevision();
+      Log.emit(LogLevel::Debug, HeaderStr);
     }
 
     ProfilePoint ProfileAction(getActionKindName(ActionKind));
@@ -1485,9 +1509,10 @@ amd_comgr_status_t AMD_COMGR_API
       return Status;
     }
 
-    if (env::shouldEmitVerboseLogs()) {
-      *LogP << "\tReturnStatus: " << getStatusName(ActionStatus) << "\n\n";
-    }
+    Log.emit(LogLevel::Debug,
+             Twine("\tReturnStatus: ") + getStatusName(ActionStatus) + "\n");
+
+    Log.sinkFlush();
 
     if (ActionInfoP->Logging) {
       amd_comgr_data_t LogT;
@@ -1495,11 +1520,11 @@ amd_comgr_status_t AMD_COMGR_API
         return Status;
       }
       ScopedDataObjectReleaser LogSDOR(LogT);
-      DataObject *Log = DataObject::convert(LogT);
-      if (auto Status = Log->setName("comgr.log")) {
+      DataObject *LogData = DataObject::convert(LogT);
+      if (auto Status = LogData->setName("comgr.log")) {
         return Status;
       }
-      if (auto Status = Log->setData(LogS.str())) {
+      if (auto Status = LogData->setData(LogS.str())) {
         return Status;
       }
       if (auto Status = amd_comgr_data_set_add(ResultSet, LogT)) {

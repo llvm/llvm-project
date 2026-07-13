@@ -197,12 +197,39 @@ if(WIN32 AND COMGR_BUILD_SHARED_LIBS)
       $<TARGET_FILE:amd_comgr> $<TARGET_FILE_DIR:DemangleSymbolNameTest>)
 endif()
 
+# -- LoggerTests --------------------------------------------------------------
+#
+# Tests for the global COMGR::Logger (comgr-logger.cpp). Needs only llvm
+# Support for raw_ostream / file handling; comgr-env.cpp supplies the
+# environment lookups the Logger constructor consumes.
+
+add_executable(LoggerTests
+  LoggerTest.cpp
+  ../src/comgr-logger.cpp
+  ../src/comgr-env.cpp)
+
+llvm_map_components_to_libnames(COMGR_TEST_UNIT_LOGGER_LIBS Support)
+
+target_link_libraries(LoggerTests PRIVATE
+  ${COMGR_GTEST_LIBS}
+  ${COMGR_TEST_UNIT_LOGGER_LIBS}
+  ${LLVM_PTHREAD_LIB})
+
+target_include_directories(LoggerTests PRIVATE
+  ${LLVM_INCLUDE_DIRS}
+  ${CMAKE_CURRENT_SOURCE_DIR}/../src
+  ${COMGR_GTEST_INCLUDE_DIRS}
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../include>)
+
+comgr_configure_test_target(LoggerTests)
+
 # Register every test binary with the test-unit / check-comgr plumbing.
 add_custom_target(test-unit
   COMMAND $<TARGET_FILE:HotswapElfTests>
   COMMAND $<TARGET_FILE:HotswapMCTests>
   COMMAND $<TARGET_FILE:RaiserScaffoldingTests>
-  COMMAND $<TARGET_FILE:DemangleSymbolNameTest>)
+  COMMAND $<TARGET_FILE:DemangleSymbolNameTest>
+  COMMAND $<TARGET_FILE:LoggerTests>)
 add_dependencies(test-unit HotswapElfTests HotswapMCTests
-  RaiserScaffoldingTests DemangleSymbolNameTest)
+  RaiserScaffoldingTests DemangleSymbolNameTest LoggerTests)
 add_dependencies(check-comgr test-unit)

@@ -213,11 +213,33 @@ include:
   to Clang Driver invocations.
 * `AMD_COMGR_REDIRECT_LOGS`: If this is not set, or is set to "0", logs are
   returned to the caller as normal. If this is set to "stdout"/"-" or "stderr",
-  logs are instead redirected to the standard output or error stream,
+  logs are additionally copied to the standard output or error stream,
   respectively. If this is set to any other value, it is interpreted as a
-  filename which logs should be appended to.
+  filename which logs are appended to. In all cases logs are still returned to
+  the caller; this variable copies them, it does not move them.
 * `AMD_COMGR_EMIT_VERBOSE_LOGS`: If this is set, and is not "0", logs will
-  include additional Comgr-specific informational messages.
+  include additional Comgr-specific informational messages. Equivalent to
+  `AMD_COMGR_LOG_LEVEL=4`, unless `AMD_COMGR_LOG_LEVEL` is set, which takes
+  precedence.
+* `AMD_COMGR_LOG_LEVEL`: Sets the severity threshold of the Comgr logger as an
+  integer in the range [0, 4], where 0 disables Comgr's own log messages and
+  higher values are more verbose. A Comgr log message is emitted only when its
+  severity does not exceed this threshold. The levels denote:
+  * `0` (None): Comgr's own log messages are disabled; none are emitted.
+  * `1` (Error): errors only.
+  * `2` (Warning): errors and warnings.
+  * `3` (Info): errors, warnings, and informational messages.
+  * `4` (Debug): all of the above plus verbose debug diagnostics.
+
+  This threshold governs only Comgr's own log messages. Diagnostics produced by
+  the underlying compiler and tools are always returned to the caller (and
+  redirected when `AMD_COMGR_REDIRECT_LOGS` is set) regardless of this level,
+  so a level of 0 does not necessarily produce empty output.
+
+  Integers above the range are clamped to 4. Negative and non-integer values are
+  invalid and not supported. Takes precedence over `AMD_COMGR_EMIT_VERBOSE_LOGS`;
+  if unset (or invalid), defaults to 4 when `AMD_COMGR_EMIT_VERBOSE_LOGS` is
+  enabled, else 1.
 * `AMD_COMGR_TIME_STATISTICS`: If this is set, and is not "0", logs will
   include additional Comgr-specific timing information for compilation actions.
 * `AMD_COMGR_TIME_STATISTICS_GRANULARITY`: If this is set to "us" or "ns",
