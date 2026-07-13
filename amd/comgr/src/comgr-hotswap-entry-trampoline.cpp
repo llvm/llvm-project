@@ -351,6 +351,43 @@ descriptorAlreadyTargetsEntryStub(const ElfView &Elf,
   return *Target >= Elf.textAddr() && *Target < *TextEnd;
 }
 
+// True when the prologue already begins with the compile-time GFX1250
+// unclaused-VMEM workaround (llvm/llvm-project#208467): `global_wb` (cpol 0)
+// then `v_nop`. Unlike descriptorAlreadyTargetsEntryStub(), the descriptor
+// still points at the real kernel body, not a hotswap stub.
+static std::optional<bool> entryPrologueHasVmemWorkaround(
+    const ElfView &Elf, const KernelDescriptorInfo &KD, const LLVMState &LS,
+    ArrayRef<uint8_t> EntryStubPrefix) {
+  if (EntryStubPrefix.empty())
+    return false;
+
+  std::optional<uint64_t> Entry = entryVAddr(KD);
+  if (!Entry)
+    return std::nullopt;
+
+  const uint8_t *Bytes = Elf.dataAtVAddr(*Entry, EntryStubPrefix.size());
+  if (!Bytes)
+    return false;
+  ArrayRef<uint8_t> Candidate(Bytes, EntryStubPrefix.size());
+  if (!startsWithBytes(Candidate, EntryStubPrefix))
+    return false;
+
+  // Confirm the prefix decodes to global_wb (cpol 0) + v_nop, not a byte match.
+  if (!hasResolvedEntryStubState(LS, "entry prologue workaround matcher"))
+    return false;
+  std::vector<InternalDecodedInst> Decoded;
+  if (!decodeTextSection(Bytes, EntryStubPrefix.size(), LS, Decoded) ||
+      Decoded.size() < 2)
+    return false;
+  const MCInst &GlobalWb = Decoded[0].Inst;
+  const MCInst &VNop = Decoded[1].Inst;
+  return GlobalWb.getOpcode() == LS.GlobalWbOpcode &&
+         GlobalWb.getNumOperands() == 1 && GlobalWb.getOperand(0).isImm() &&
+         GlobalWb.getOperand(0).getImm() == 0 &&
+         VNop.getOpcode() == LS.VNopInst.getOpcode() &&
+         VNop.getNumOperands() == 0;
+}
+
 static std::optional<uint64_t>
 totalTrampolineBytes(ArrayRef<Trampoline> Trampolines) {
   uint64_t Total = 0;
@@ -472,6 +509,18 @@ std::optional<uint32_t> appendKernelEntryTrampolines(
       return std::nullopt;
     if (*AlreadyHasEntryStub)
       continue;
+    // Skip if the compiler already applied the workaround (#208467)
+    // in-prologue.
+    std::optional<bool> PrologueHasWorkaround =
+        entryPrologueHasVmemWorkaround(Elf, KD, LS, EntryStubPrefix);
+    if (!PrologueHasWorkaround)
+      return std::nullopt;
+    if (*PrologueHasWorkaround) {
+      log() << "hotswap: kernel '" << KD.KernelName
+            << "' prologue already carries the unclaused-VMEM workaround "
+            << "(global_wb; v_nop); skipping entry trampoline\n";
+      continue;
+    }
     std::optional<uint32_t> OriginalInstPrefLines =
         Elf.getKernelDescriptorInstPrefSize(KD.KernelName, LS.Cpu);
     if (!OriginalInstPrefLines)

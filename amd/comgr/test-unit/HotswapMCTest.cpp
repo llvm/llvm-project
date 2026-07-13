@@ -884,11 +884,14 @@ TEST(KernelEntryTrampoline, SecondPassAddsNoDuplicateStubSymbol) {
   ASSERT_TRUE(Count1.has_value());
   ASSERT_EQ(*Count1, 1u);
 
+  std::optional<uint64_t> PoolVAddr = View1->trampolinePoolVAddr();
+  ASSERT_TRUE(PoolVAddr.has_value());
+
   std::unique_ptr<llvm::WritableMemoryBuffer> Grown =
       View1->growWithTrampolines(Growth1, S.SNopBytes);
   ASSERT_NE(Grown, nullptr);
   ASSERT_TRUE(
-      rewriteKernelEntryDescriptorOffsets(*Grown, OldTextSize, S.Cpu, Fixups1));
+      rewriteKernelEntryDescriptorOffsets(*Grown, *PoolVAddr, S.Cpu, Fixups1));
   std::unique_ptr<llvm::WritableMemoryBuffer> Pass1 =
       addKernelEntryTrampolineSymbols(*Grown, TextIdx, TextAddr, OldTextSize,
                                       Fixups1);
@@ -917,6 +920,73 @@ TEST(KernelEntryTrampoline, SecondPassAddsNoDuplicateStubSymbol) {
                                       View2->textSize(), Fixups2);
   EXPECT_EQ(Pass2, nullptr);
   EXPECT_EQ(countSymtabSymbolsNamed(*Pass1, "kernel.stub"), 1u);
+}
+
+// A `global_wb; v_nop` prologue (llvm/llvm-project#208467) already satisfies
+// the workaround, so no trampoline is installed.
+TEST(KernelEntryTrampoline, SkipsWhenPrologueAlreadyHasVmemWorkaround) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  llvm::SmallVector<uint8_t> GlobalWb = assembleSingleInst("global_wb", S);
+  llvm::SmallVector<uint8_t> VNop = assembleSingleInst("v_nop", S);
+  llvm::SmallVector<uint8_t> EndPgm = assembleSingleInst("s_endpgm", S);
+  ASSERT_FALSE(GlobalWb.empty());
+  ASSERT_FALSE(VNop.empty());
+  ASSERT_EQ(EndPgm.size(), MinInstSize);
+
+  llvm::SmallVector<uint8_t> Text;
+  Text.append(GlobalWb.begin(), GlobalWb.end());
+  Text.append(VNop.begin(), VNop.end());
+  Text.append(EndPgm.begin(), EndPgm.end());
+
+  comgr_test::KernelDescriptorElf Obj =
+      comgr_test::makeKernelDescriptorElf(Text);
+  llvm::Expected<ElfView> View =
+      ElfView::create(Obj.Bytes.data(), Obj.Bytes.size());
+  ASSERT_TRUE((bool)View) << llvm::toString(View.takeError());
+
+  std::vector<Trampoline> Growth;
+  std::vector<KernelEntryTrampolineFixup> Fixups;
+  std::optional<uint32_t> Count =
+      appendKernelEntryTrampolines(*View, S, /*MaxSgprs=*/106, Growth, Fixups);
+  ASSERT_TRUE(Count.has_value());
+  EXPECT_EQ(*Count, 0u);
+  EXPECT_TRUE(Fixups.empty());
+  EXPECT_TRUE(Growth.empty());
+}
+
+// The same two instructions in the wrong order are not the workaround, so a
+// trampoline is still installed.
+TEST(KernelEntryTrampoline, InstallsWhenPrologueLacksVmemWorkaround) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  llvm::SmallVector<uint8_t> VNop = assembleSingleInst("v_nop", S);
+  llvm::SmallVector<uint8_t> GlobalWb = assembleSingleInst("global_wb", S);
+  llvm::SmallVector<uint8_t> EndPgm = assembleSingleInst("s_endpgm", S);
+  ASSERT_FALSE(VNop.empty());
+  ASSERT_FALSE(GlobalWb.empty());
+  ASSERT_EQ(EndPgm.size(), MinInstSize);
+
+  llvm::SmallVector<uint8_t> Text;
+  Text.append(VNop.begin(), VNop.end());
+  Text.append(GlobalWb.begin(), GlobalWb.end());
+  Text.append(EndPgm.begin(), EndPgm.end());
+
+  comgr_test::KernelDescriptorElf Obj =
+      comgr_test::makeKernelDescriptorElf(Text);
+  llvm::Expected<ElfView> View =
+      ElfView::create(Obj.Bytes.data(), Obj.Bytes.size());
+  ASSERT_TRUE((bool)View) << llvm::toString(View.takeError());
+
+  std::vector<Trampoline> Growth;
+  std::vector<KernelEntryTrampolineFixup> Fixups;
+  std::optional<uint32_t> Count =
+      appendKernelEntryTrampolines(*View, S, /*MaxSgprs=*/106, Growth, Fixups);
+  ASSERT_TRUE(Count.has_value());
+  EXPECT_EQ(*Count, 1u);
+  EXPECT_EQ(Fixups.size(), 1u);
 }
 
 TEST(KernelEntryTrampoline, AlignsStubByVirtualAddress) {
