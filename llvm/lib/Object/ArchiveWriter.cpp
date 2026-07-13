@@ -274,14 +274,14 @@ printZOSMemberHeader(raw_ostream &Out, StringRef Name,
     // z/OS ar stores the exact name length inline with no extra alignment
     // padding, unlike the BSD format which pads to an 8-byte boundary.
     printWithSpacePadding(AOut, Twine("#1/") + Twine(Name.size()), 16);
-    printRestOfMemberHeader(AOut, ModTime, UID, GID, Perms,
-                            Name.size() + Size);
+    printRestOfMemberHeader(AOut, ModTime, UID, GID, Perms, Name.size() + Size);
     AOut << Name;
   }
   SmallString<256> EHeader;
   if (std::error_code EC = ConverterEBCDIC::convertToEBCDIC(AHeader, EHeader))
-    report_fatal_error(Twine("failed to convert z/OS member header to EBCDIC: ") +
-                       EC.message());
+    report_fatal_error(
+        Twine("failed to convert z/OS member header to EBCDIC: ") +
+        EC.message());
   Out << EHeader.str();
 }
 
@@ -339,8 +339,8 @@ printMemberHeader(raw_ostream &Out, uint64_t Pos, raw_ostream &StringTable,
     return printBSDMemberHeader(Out, Pos, MemberName, ModTime, M.UID, M.GID,
                                 M.Perms, Size);
   if (isZOSArchive(Kind))
-    return printZOSMemberHeader(Out, MemberName, ModTime, M.UID, M.GID,
-                                M.Perms, Size);
+    return printZOSMemberHeader(Out, MemberName, ModTime, M.UID, M.GID, M.Perms,
+                                Size);
   if (!useStringTable(Thin, MemberName))
     return printGNUSmallMemberHeader(Out, MemberName, ModTime, M.UID, M.GID,
                                      M.Perms, Size);
@@ -695,8 +695,9 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
     SmallString<256> EStringTable;
     if (std::error_code EC =
             ConverterEBCDIC::convertToEBCDIC(StringTable, EStringTable))
-      report_fatal_error(Twine("failed to convert z/OS symbol table to EBCDIC: ") +
-                         EC.message());
+      report_fatal_error(
+          Twine("failed to convert z/OS symbol table to EBCDIC: ") +
+          EC.message());
     Out << EStringTable.str();
   } else {
     Out << StringTable;
