@@ -142,6 +142,8 @@ class InitializationKind;
 class InitializationSequence;
 class InitializedEntity;
 enum class LangAS : unsigned int;
+struct LateParsedAttribute;
+struct LateParsedTypeAttribute;
 class LocalInstantiationScope;
 class LookupResult;
 class MangleNumberingContext;
@@ -1359,6 +1361,11 @@ public:
     LateTemplateParser = LTP;
     OpaqueParser = P;
   }
+
+  /// Callback type to parse and consume a LateParsedTypeAttribute. Used as an
+  /// argument to ProcessLateParsedTypeAttributes.
+  typedef void ParseLateParsedTypeAttributeCB(LateParsedTypeAttribute *LTA,
+                                              ParsedAttributes *OutAttrs);
 
   /// Callback to the parser to parse a type expressed as a string.
   std::function<TypeResult(StringRef, StringRef, SourceLocation)>
@@ -4427,6 +4434,39 @@ public:
   void ActOnFields(Scope *S, SourceLocation RecLoc, Decl *TagDecl,
                    ArrayRef<Decl *> Fields, SourceLocation LBrac,
                    SourceLocation RBrac, const ParsedAttributesView &AttrList);
+
+  /// Resolve placeholders left in field types by late-parsed type
+  /// attributes, now that \p EnclosingDecl's fields are all visible and
+  /// name lookup for the attribute's argument can succeed.
+  ///
+  /// Called for each record whose scope makes a previously-deferred
+  /// argument resolvable. That is usually the same record that carries
+  /// the annotated field, e.g.
+  /// \code
+  ///   struct Flat {
+  ///     char *__counted_by(len) p;
+  ///     unsigned len;   // resolved when Flat finishes parsing
+  ///   };
+  /// \endcode
+  /// but the resolving record can also be an inner or outer record when
+  /// the count and the annotated field are separated by nested records:
+  /// \code
+  ///   struct NestedNamed {
+  ///     struct {
+  ///       char *__counted_by(len) p;
+  ///       unsigned len;   // resolved when the nested struct finishes,
+  ///     } inner;          //   since name lookup is closed at that scope
+  ///   };
+  ///
+  ///   struct NestedAnon {
+  ///     struct {
+  ///       char *__counted_by(len) p;   // len isn't in scope until
+  ///     };                              //   the anonymous struct is
+  ///     unsigned len;                   //   flattened into NestedAnon,
+  ///   };                                //   so resolved when it finishes
+  /// \endcode
+  void ProcessLateParsedTypeAttributes(RecordDecl *EnclosingDecl,
+                                       ParseLateParsedTypeAttributeCB *ParseCB);
 
   /// ActOnTagStartDefinition - Invoked when we have entered the
   /// scope of a tag's definition (e.g., for an enumeration, class,

@@ -2866,6 +2866,13 @@ public:
     return getDependence() & TypeDependence::VariablyModified;
   }
 
+  /// Whether this type contains a placeholder for a type attribute awaiting
+  /// late parsing, e.g. `int *__counted_by(count)` where `count` is a later
+  /// field of the same struct.
+  bool hasLateParsedAttr() const {
+    return getDependence() & TypeDependence::LateParsedAttr;
+  }
+
   /// Whether this type involves a variable-length array type
   /// with a definite size.
   bool hasSizedVLAType() const;
@@ -3565,7 +3572,8 @@ class LateParsedAttrType : public Type {
 
   LateParsedAttrType(QualType Wrapped, QualType Canon,
                      LateParsedTypeAttribute *Attr)
-      : Type(LateParsedAttr, Canon, Wrapped->getDependence()),
+      : Type(LateParsedAttr, Canon,
+             TypeDependence::LateParsedAttr | Wrapped->getDependence()),
         WrappedTy(Wrapped), LateParsedTypeAttr(Attr) {}
 
 public:

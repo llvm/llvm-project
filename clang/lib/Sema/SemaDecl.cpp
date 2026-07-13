@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TreeTransform.h"
 #include "TypeLocBuilder.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -17240,7 +17241,7 @@ void Sema::ActOnFinishDelayedAttribute(Scope *S, Decl *D,
   // Always attach attributes to the underlying decl.
   if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D))
     D = TD->getTemplatedDecl();
-  ProcessDeclAttributeList(S, D, Attrs);
+  ProcessDeclAttributeList(S, D, Attrs, ProcessDeclAttributeOptions());
   ProcessAPINotes(D);
 
   if (CXXMethodDecl *Method = dyn_cast_or_null<CXXMethodDecl>(D))
@@ -19981,6 +19982,205 @@ bool Sema::EntirelyFunctionPointers(const RecordDecl *Record) {
   };
 
   return llvm::all_of(Record->decls(), IsFunctionPointerOrForwardDecl);
+}
+
+static QualType handleCountedByAttrField(Sema &S, QualType T, Decl *D,
+                                         const ParsedAttr &AL) {
+  if (!AL.diagnoseLangOpts(S))
+    return QualType();
+
+  assert(isa<FieldDecl>(D));
+
+  auto *CountExpr = AL.getArgAsExpr(0);
+  if (!CountExpr)
+    return QualType();
+
+  bool CountInBytes;
+  bool OrNull;
+  switch (AL.getKind()) {
+  case ParsedAttr::AT_CountedBy:
+    CountInBytes = false;
+    OrNull = false;
+    break;
+  case ParsedAttr::AT_CountedByOrNull:
+    CountInBytes = false;
+    OrNull = true;
+    break;
+  case ParsedAttr::AT_SizedBy:
+    CountInBytes = true;
+    OrNull = false;
+    break;
+  case ParsedAttr::AT_SizedByOrNull:
+    CountInBytes = true;
+    OrNull = true;
+    break;
+  default:
+    llvm_unreachable("unexpected counted_by family attribute");
+  }
+
+  return S.BuildCountAttributedArrayOrPointerType(T, CountExpr, CountInBytes,
+                                                  OrNull);
+}
+struct RebuildTypeWithLateParsedAttr
+    : TreeTransform<RebuildTypeWithLateParsedAttr> {
+  FieldDecl *FD;
+  Sema::ParseLateParsedTypeAttributeCB *ParseCallback;
+
+  /// Non-zero while transforming under a pointer or array. Used to reject
+  /// nested counted_by (e.g. `int *__counted_by(n) *p` or
+  /// `int *__counted_by(n) arr[10]`), where the resolved CountAttributedType
+  /// would sit inside another wrapper.
+  unsigned PointerOrArrayDepth = 0;
+
+  RebuildTypeWithLateParsedAttr(Sema &SemaRef, FieldDecl *FD,
+                                Sema::ParseLateParsedTypeAttributeCB *ParseCB)
+      : TreeTransform(SemaRef), FD(FD), ParseCallback(ParseCB) {}
+
+  QualType TransformLateParsedAttrType(TypeLocBuilder &TLB,
+                                       LateParsedAttrTypeLoc TL) {
+    const LateParsedAttrType *LPA = TL.getTypePtr();
+    auto *LTA = LPA->getLateParsedAttribute();
+
+    assert(LTA && "LateParsedAttrType must have a LateParsedTypeAttribute");
+
+    AttributeFactory AF{};
+    ParsedAttributes Attrs(AF);
+
+    // Invoke the parser callback to parse and consume the cached tokens.
+    // ParseCallback is also responsible for deleting LTA.
+    assert(ParseCallback);
+    ParseCallback(LTA, &Attrs);
+
+    // Invalid argument
+    if (Attrs.empty())
+      return QualType();
+
+    assert(Attrs.size() == 1);
+    auto &AL = Attrs[0];
+
+    QualType InnerType = TransformType(TLB, TL.getInnerLoc());
+    if (InnerType.isNull()) {
+      FD->setInvalidDecl();
+      return QualType();
+    }
+
+    QualType T = handleCountedByAttrField(SemaRef, InnerType, FD, AL);
+    if (T.isNull()) {
+      AL.setInvalid();
+      FD->setInvalidDecl();
+      return QualType();
+    }
+
+    // Reject nested counted_by, e.g. `int *__counted_by(n) *p` or
+    // `int *__counted_by(n) arr[10]` — the resolved CountAttributedType
+    // must sit at the outermost level of the field's type.
+    //
+    // FIXME: In the -fbounds-safety model:
+    //   - `counted_by` / `sized_by` on nested pointers is permitted only
+    //     for function parameters, and only one level of nesting.
+    //   - `counted_by_or_null` / `sized_by_or_null` on nested pointers is
+    //     generally permitted, because it makes sense to allow such a
+    //     pointer to be valid when the top-level pointer is null (the
+    //     inner counted_by / sized_by simply doesn't need to hold in
+    //     that case).
+    // We reject unconditionally here because this slice only covers
+    // struct fields; extending coverage will need to relax this check
+    // along those lines.
+    if (PointerOrArrayDepth > 0) {
+      SemaRef.Diag(TL.getAttrNameLoc(), diag::err_counted_by_on_nested_pointer)
+          << T->getAs<CountAttributedType>()->getKind();
+      FD->setInvalidDecl();
+      return QualType();
+    }
+
+    AL.setUsedAsTypeAttr();
+
+    TLB.push<CountAttributedTypeLoc>(T);
+    return T;
+  }
+
+  // The five overrides below only track pointer/array depth so
+  // TransformLateParsedAttrType can reject nested counted_by. Recursion,
+  // rebuild, and TypeLoc pushing are delegated to the base TreeTransform.
+
+  QualType TransformPointerType(TypeLocBuilder &TLB, PointerTypeLoc TL) {
+    ++PointerOrArrayDepth;
+    QualType Result = TreeTransform::TransformPointerType(TLB, TL);
+    --PointerOrArrayDepth;
+    if (Result.isNull())
+      FD->setInvalidDecl();
+    return Result;
+  }
+
+  QualType TransformConstantArrayType(TypeLocBuilder &TLB,
+                                      ConstantArrayTypeLoc TL) {
+    ++PointerOrArrayDepth;
+    QualType Result = TreeTransform::TransformConstantArrayType(TLB, TL);
+    --PointerOrArrayDepth;
+    if (Result.isNull())
+      FD->setInvalidDecl();
+    return Result;
+  }
+
+  QualType TransformIncompleteArrayType(TypeLocBuilder &TLB,
+                                        IncompleteArrayTypeLoc TL) {
+    ++PointerOrArrayDepth;
+    QualType Result = TreeTransform::TransformIncompleteArrayType(TLB, TL);
+    --PointerOrArrayDepth;
+    if (Result.isNull())
+      FD->setInvalidDecl();
+    return Result;
+  }
+
+  QualType TransformVariableArrayType(TypeLocBuilder &TLB,
+                                      VariableArrayTypeLoc TL) {
+    ++PointerOrArrayDepth;
+    QualType Result = TreeTransform::TransformVariableArrayType(TLB, TL);
+    --PointerOrArrayDepth;
+    if (Result.isNull())
+      FD->setInvalidDecl();
+    return Result;
+  }
+
+  QualType TransformDependentSizedArrayType(TypeLocBuilder &TLB,
+                                            DependentSizedArrayTypeLoc TL) {
+    ++PointerOrArrayDepth;
+    QualType Result = TreeTransform::TransformDependentSizedArrayType(TLB, TL);
+    --PointerOrArrayDepth;
+    if (Result.isNull())
+      FD->setInvalidDecl();
+    return Result;
+  }
+};
+
+void Sema::ProcessLateParsedTypeAttributes(
+    RecordDecl *EnclosingDecl, ParseLateParsedTypeAttributeCB *ParseCB) {
+  for (auto *I : EnclosingDecl->decls()) {
+    FieldDecl *FD = dyn_cast<FieldDecl>(I);
+    IndirectFieldDecl *IFD = dyn_cast<IndirectFieldDecl>(I);
+    if (!FD && IFD) {
+      FD = IFD->getAnonField();
+    }
+    if (!FD || !FD->getType()->hasLateParsedAttr() ||
+        FD->getType()->isRecordType())
+      continue;
+
+    RebuildTypeWithLateParsedAttr RebuildFieldType(*this, FD, ParseCB);
+    auto *OldTSI = FD->getTypeSourceInfo();
+    auto *TSI = RebuildFieldType.TransformType(FD->getTypeSourceInfo());
+    if (TSI && TSI != OldTSI) {
+      FD->setTypeSourceInfo(TSI);
+      FD->setType(TSI->getType());
+      if (IFD) {
+        IFD->setType(TSI->getType());
+      }
+    }
+
+    if (auto *CAT = FD->getType()->getAs<CountAttributedType>()) {
+      CheckCountedByAttrOnField(FD, CAT->getCountExpr(), CAT->isCountInBytes(),
+                                CAT->isOrNull());
+    }
+  }
 }
 
 void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,

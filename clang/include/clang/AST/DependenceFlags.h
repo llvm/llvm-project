@@ -69,12 +69,17 @@ struct TypeDependenceScope {
     /// yields an error type.
     Error = 16,
 
+    /// Whether this type contains a placeholder for a type attribute
+    /// awaiting late parsing, e.g. `int *__counted_by(count)` where
+    /// `count` is a later field of the same struct.
+    LateParsedAttr = 32,
+
     None = 0,
-    All = 31,
+    All = 63,
 
     DependentInstantiation = Dependent | Instantiation,
 
-    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/Error)
+    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/LateParsedAttr)
   };
 };
 using TypeDependence = TypeDependenceScope::TypeDependence;
