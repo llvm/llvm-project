@@ -50,7 +50,7 @@ def common_conf(tags: Tags, markdown=Markdown.ALWAYS) -> Dict[str, Any]:
         else:
             extensions.append("myst_parser")
             source_suffix[".md"] = "markdown"
-    myst_enable_extensions = ["substitution"]
+    myst_enable_extensions = ["substitution", "colon_fence"]
     myst_heading_anchors = 6
     myst_heading_slug_func = "llvm_sphinx.make_slug"
     templates_path = ["_templates"]

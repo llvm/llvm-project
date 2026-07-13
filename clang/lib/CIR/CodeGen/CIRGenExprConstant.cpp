@@ -1415,6 +1415,11 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     const auto *fieldDecl = cast<FieldDecl>(memberDecl);
     const auto *mpt = destType->castAs<MemberPointerType>();
     const auto *destClass = mpt->getMostRecentCXXRecordDecl();
+    if (fieldDecl->hasAttr<NoUniqueAddressAttr>()) {
+      assert(!cir::MissingFeatures::noUniqueAddressLayout());
+      cgm.errorNYI("ConstExprEmitter::tryEmitPrivate: no_unique_address field");
+      return {};
+    }
     std::optional<llvm::SmallVector<int32_t>> path =
         cgm.buildMemberPath(destClass, fieldDecl);
     if (!path)

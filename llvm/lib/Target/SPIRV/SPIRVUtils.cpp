@@ -27,7 +27,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/MathExtras.h"
-#include <cstring>
 #include <queue>
 #include <vector>
 
@@ -42,14 +41,6 @@ static FunctionType *extractFunctionTypeFromMetadata(NamedMDNode *NMD,
                                                      StringRef Name) {
   if (!NMD)
     return FTy;
-
-  constexpr auto getConstInt = [](MDNode *MD, unsigned OpId) -> ConstantInt * {
-    if (MD->getNumOperands() <= OpId)
-      return nullptr;
-    if (auto *CMeta = dyn_cast<ConstantAsMetadata>(MD->getOperand(OpId)))
-      return dyn_cast<ConstantInt>(CMeta->getValue());
-    return nullptr;
-  };
 
   auto It = find_if(NMD->operands(), [Name](MDNode *N) {
     if (auto *MDS = dyn_cast_or_null<MDString>(N->getOperand(0)))
@@ -67,7 +58,7 @@ static FunctionType *extractFunctionTypeFromMetadata(NamedMDNode *NMD,
     MDNode *MD = dyn_cast<MDNode>((*It)->getOperand(I));
     assert(MD && "MDNode operand is expected");
 
-    if (auto *Const = getConstInt(MD, 0)) {
+    if (auto *Const = getMDOperandAsConstInt(MD, 0)) {
       auto *CMeta = dyn_cast<ConstantAsMetadata>(MD->getOperand(1));
       assert(CMeta && "ConstantAsMetadata operand is expected");
       int64_t Idx = Const->getSExtValue();
@@ -155,9 +146,15 @@ StringRef getOriginalAsmConstraints(const CallBase &CB) {
 // when making string comparisons in compiler passes.
 // SPIR-V requires null-terminated UTF-8 strings padded to 32-bit alignment.
 static uint32_t convertCharsToWord(StringRef Str, unsigned i) {
-  uint32_t Word = 0u; // Padding/null bytes are zero-initialized.
-  unsigned Count = std::min(static_cast<size_t>(4), Str.size() - i);
-  std::memcpy(&Word, Str.data() + i, Count);
+  uint32_t Word = 0u; // Build up this 32-bit word from 4 8-bit chars.
+  for (unsigned WordIndex = 0; WordIndex < 4; ++WordIndex) {
+    unsigned StrIndex = i + WordIndex;
+    uint8_t CharToAdd = 0;       // Initilize char as padding/null.
+    if (StrIndex < Str.size()) { // If it's within the string, get a real char.
+      CharToAdd = Str[StrIndex];
+    }
+    Word |= (CharToAdd << (WordIndex * 8));
+  }
   return Word;
 }
 
@@ -506,6 +503,14 @@ bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID) {
 Type *getMDOperandAsType(const MDNode *N, unsigned I) {
   Type *ElementTy = cast<ValueAsMetadata>(N->getOperand(I))->getType();
   return toTypedPointer(ElementTy);
+}
+
+ConstantInt *getMDOperandAsConstInt(const MDNode *N, unsigned I) {
+  if (N->getNumOperands() <= I)
+    return nullptr;
+  if (auto *CMeta = dyn_cast<ConstantAsMetadata>(N->getOperand(I)))
+    return dyn_cast<ConstantInt>(CMeta->getValue());
+  return nullptr;
 }
 
 static bool isEnqueueKernelBI(StringRef MangledName) {
