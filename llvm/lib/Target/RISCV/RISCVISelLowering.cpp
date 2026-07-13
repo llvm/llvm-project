@@ -6385,26 +6385,29 @@ static SDValue lowerVECTOR_SHUFFLEAsPUnzip(ShuffleVectorSDNode *SVN,
 // and lower it to an RV32 P narrowing shift on the original source.
 static SDValue
 lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(ShuffleVectorSDNode *SVN,
+                                         const RISCVSubtarget &Subtarget,
                                          SelectionDAG &DAG) {
   MVT VT = SVN->getSimpleValueType(0);
-  if (VT != MVT::v4i8 && VT != MVT::v2i16)
+  if (Subtarget.is64Bit() || (VT != MVT::v4i8 && VT != MVT::v2i16))
     return SDValue();
 
   SDValue V1 = SVN->getOperand(0);
   SDValue V2 = SVN->getOperand(1);
-  if (V1.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-      V2.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-      V1.getOperand(0) != V2.getOperand(0))
+
+  // The inputs should be two extract_subvectors from the same source.
+  using namespace llvm::SDPatternMatch;
+  SDValue Src;
+  int64_t V1Index, V2Index;
+  if (!sd_match(V1, m_ExtractSubvector(m_Value(Src), m_ConstInt(V1Index))) ||
+      !sd_match(V2, m_ExtractSubvector(m_Specific(Src), m_ConstInt(V2Index))))
     return SDValue();
 
-  SDValue Src = V1.getOperand(0);
-  MVT SrcVT = VT == MVT::v4i8 ? MVT::v8i8 : MVT::v4i16;
-  if (Src.getSimpleValueType() != SrcVT)
-    return SDValue();
-
+  // The source vector should be twice the size.
   unsigned NumElts = VT.getVectorNumElements();
-  unsigned V1Index = V1.getConstantOperandVal(1);
-  unsigned V2Index = V2.getConstantOperandVal(1);
+  if (Src.getValueType().getVectorNumElements() != 2 * NumElts)
+    return SDValue();
+
+  // The two extract_subvectors should be from different halves.
   if ((V1Index != 0 || V2Index != NumElts) &&
       (V1Index != NumElts || V2Index != 0))
     return SDValue();
@@ -6415,7 +6418,7 @@ lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(ShuffleVectorSDNode *SVN,
   for (auto [I, M] : enumerate(SVN->getMask())) {
     if (M < 0)
       continue;
-    unsigned Base = static_cast<unsigned>(M) < NumElts ? V1Index : V2Index;
+    int64_t Base = static_cast<unsigned>(M) < NumElts ? V1Index : V2Index;
     Indices[I] = Base + (M % NumElts);
   }
 
@@ -6515,9 +6518,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
       return V;
     if (SDValue V = lowerVECTOR_SHUFFLEAsPZip(SVN, DAG))
       return V;
-    if (!Subtarget.is64Bit())
-      if (SDValue V = lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(SVN, DAG))
-        return V;
+    if (SDValue V =
+            lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(SVN, Subtarget, DAG))
+      return V;
     return SDValue();
   }
 
