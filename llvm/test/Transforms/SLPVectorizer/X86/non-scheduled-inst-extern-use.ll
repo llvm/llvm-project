@@ -8,7 +8,7 @@ define void @test(i32 %arg) {
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[ARG]]
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, i32 [[SUB]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, i32 [[SUB]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    br i1 false, label %[[BB8:.*]], label %[[BB4:.*]]
