@@ -5272,11 +5272,13 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   }
 
   // Cases that we can emit directly.
-  if (CanHandleNatively(SrcVT))
+  if (CanHandleNatively(SrcVT)) {
+    assert(isTypeLegal(SrcVT) && "Expected SrcVT to be a legal type");
     return DAG.getNode(Opc, DL, DstVT, SrcVal,
                        DAG.getValueType(DstVT.getScalarType()));
-  else if (Expand(SrcVT))
+  } else if (Expand(SrcVT)) {
     return SDValue();
+  }
 
   assert((SrcElementWidth > DstElementWidth) ||
          (SrcElementWidth == DstElementWidth && SatWidth < DstElementWidth));
