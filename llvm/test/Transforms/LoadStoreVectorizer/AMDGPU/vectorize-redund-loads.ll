@@ -32,10 +32,10 @@ define void @test(ptr %ptr) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PTR]], align 4
-; CHECK-NEXT:    [[LD01:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[LD01:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[LD12:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <2 x i32> <i32 1, i32 2>
 ; CHECK-NEXT:    [[LD23:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[LD34:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
+; CHECK-NEXT:    [[LD34:%.*]] = extractelement <4 x i32> [[TMP1]], i64 2
 ; CHECK-NEXT:    ret void
 ;
   %ld0 = load i32, ptr %ptr, align 4
@@ -54,13 +54,13 @@ define void @test2() {
 ; CHECK-LABEL: define void @test2() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr addrspace(1) @ptr, align 4
 ; CHECK-NEXT:    [[VECINS1:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x float> [[TMP1]], i32 4
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x float> [[TMP1]], i32 5
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[TMP1]], i32 6
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x float> [[TMP1]], i32 7
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[TMP1]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x float> [[TMP1]], i64 3
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x float> [[TMP1]], i64 4
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x float> [[TMP1]], i64 5
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[TMP1]], i64 6
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x float> [[TMP1]], i64 7
 ; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <8 x float> [[VECINS1]], float [[TMP2]], i64 1
 ; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <8 x float> [[VECINS_1]], float [[TMP3]], i64 2
 ; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <8 x float> [[VECINS_2]], float [[TMP4]], i64 3
@@ -95,8 +95,8 @@ define void @vect_zext_bitcast_i8_st4_to_i32_idx(ptr addrspace(1) %arg1, i32 %ba
 ; CHECK-NEXT:    [[ZEXT1:%.*]] = zext i32 [[ADD1]] to i64
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[ARG1]], i64 [[ZEXT1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[GEP1]], align 4
-; CHECK-NEXT:    [[LOAD11:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[LOAD22:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[LOAD11:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[LOAD22:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[ADD25:%.*]] = add nuw i32 [[BASE]], 6
 ; CHECK-NEXT:    [[ZEXT25:%.*]] = zext i32 [[ADD25]] to i64
 ; CHECK-NEXT:    [[GEP25:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[ARG1]], i64 [[ZEXT25]]
@@ -105,8 +105,8 @@ define void @vect_zext_bitcast_i8_st4_to_i32_idx(ptr addrspace(1) %arg1, i32 %ba
 ; CHECK-NEXT:    [[ZEXT3:%.*]] = zext i32 [[ADD3]] to i64
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[ARG1]], i64 [[ZEXT3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr addrspace(1) [[GEP3]], align 4
-; CHECK-NEXT:    [[LOAD33:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
-; CHECK-NEXT:    [[LOAD44:%.*]] = extractelement <2 x i32> [[TMP2]], i32 1
+; CHECK-NEXT:    [[LOAD33:%.*]] = extractelement <2 x i32> [[TMP2]], i64 0
+; CHECK-NEXT:    [[LOAD44:%.*]] = extractelement <2 x i32> [[TMP2]], i64 1
 ; CHECK-NEXT:    ret void
 ;
   %add1 = add nuw i32 %base, 0
