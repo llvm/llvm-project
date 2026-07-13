@@ -579,6 +579,73 @@ TEST_F(OpenACCUtilsCGTest, collectPrivateLocalParDimsFromLaunchFallback) {
   EXPECT_TRUE(policy.isGang(parDims[0]));
 }
 
+TEST_F(OpenACCUtilsCGTest,
+       collectPrivateLocalParDimsStopsAtComputeRegionBoundary) {
+  // Parallel loops enclosing the compute region must not contribute par-dims.
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  IRRewriter rewriter(&context);
+  rewriter.setInsertionPointToStart(module->getBody());
+
+  auto c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
+  auto c1 = arith::ConstantIndexOp::create(rewriter, loc, 1);
+  auto bx = ParWidthOp::create(rewriter, loc, c1,
+                               GPUParallelDimAttr::blockXDim(&context));
+  auto tx = ParWidthOp::create(rewriter, loc, c1,
+                               GPUParallelDimAttr::threadXDim(&context));
+
+  // Outer loop outside the compute region carries block_y.
+  // This is a synthetic test only and normally this scenario would hopefully
+  // not be encountered.
+  auto outerLoop = scf::ParallelOp::create(rewriter, loc, ValueRange{c0},
+                                           ValueRange{c1}, ValueRange{c1});
+  setParDimsAttr(outerLoop,
+                 GPUParallelDimsAttr::get(
+                     &context, {GPUParallelDimAttr::blockYDim(&context)}));
+  rewriter.setInsertionPoint(outerLoop.getBody()->getTerminator());
+
+  MemRefType memTy = MemRefType::get({4}, b.getI32Type());
+  Type privateTy = PrivateType::get(&context, memTy);
+  auto privatize = PrivatizeOp::create(rewriter, loc, privateTy, ValueRange{});
+
+  Region sourceRegion;
+  Block *srcBlock = new Block();
+  sourceRegion.push_back(srcBlock);
+  BlockArgument privArg = srcBlock->addArgument(privateTy, loc);
+  OpBuilder srcBuilder(&context);
+  srcBuilder.setInsertionPointToStart(srcBlock);
+  auto c0Body = arith::ConstantIndexOp::create(srcBuilder, loc, 0);
+  auto c1Body = arith::ConstantIndexOp::create(srcBuilder, loc, 1);
+  YieldOp::create(srcBuilder, loc);
+  srcBuilder.setInsertionPoint(srcBlock->getTerminator());
+
+  // Inner vector (thread_x) loop inside the compute region.
+  auto vectorLoop =
+      scf::ParallelOp::create(srcBuilder, loc, ValueRange{c0Body},
+                              ValueRange{c1Body}, ValueRange{c1Body});
+  setParDimsAttr(vectorLoop,
+                 GPUParallelDimsAttr::get(
+                     &context, {GPUParallelDimAttr::threadXDim(&context)}));
+  srcBuilder.setInsertionPoint(vectorLoop.getBody()->getTerminator());
+  PrivateLocalOp::create(srcBuilder, loc, memTy, privArg);
+
+  IRMapping mapping;
+  auto cr = buildComputeRegion(
+      loc, ValueRange{bx.getResult(), tx.getResult()},
+      ValueRange{privatize.getResult()}, ParallelOp::getOperationName(),
+      sourceRegion, rewriter, mapping, /*output=*/{}, /*kernelFuncName=*/{},
+      /*kernelModuleName=*/{}, /*stream=*/{}, ValueRange{privArg});
+
+  PrivateLocalOp clonedLocal;
+  cr.walk([&](PrivateLocalOp op) { clonedLocal = op; });
+
+  DefaultACCToGPUMappingPolicy policy;
+  SmallVector<GPUParallelDimAttr> parDims =
+      collectPrivateLocalParDims(clonedLocal, cr);
+  ASSERT_EQ(parDims.size(), 1u);
+  EXPECT_TRUE(policy.isVector(parDims[0]));
+  EXPECT_FALSE(policy.isGang(parDims[0]));
+}
+
 TEST_F(OpenACCUtilsCGTest, collectPrivateLocalParDimsFromReductionUsers) {
   OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
   b.setInsertionPointToStart(module->getBody());
