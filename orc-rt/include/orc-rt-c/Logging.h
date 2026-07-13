@@ -117,9 +117,18 @@ int orc_rt_log_formatCheck(const char *Fmt, ...) ORC_RT_C_FORMAT_PRINTF(1, 2);
  * compiled out, to ORC_RT_LOG_DISABLED. Fmt is the first variadic argument, so
  * __VA_ARGS__ is always non-empty and no GNU comma-swallowing extension is
  * needed.
+ *
+ * The leading (void)sizeof("" __VA_ARGS__, 0) requires Fmt to be a string
+ * literal on every backend. The os_log backend needs a literal regardless (it
+ * builds format metadata at the call site), and enforcing it uniformly stops a
+ * non-literal format from compiling on the none/printf backends only to break
+ * an os_log build. It is unevaluated, so it emits no code and does not evaluate
+ * the arguments; the trailing ", 0" keeps sizeof's operand a scalar (avoiding
+ * -Wsizeof-array-decay). A non-literal Fmt produces a syntax error here.
  */
 #define ORC_RT_LOG(Level, Category, ...)                                       \
-  ORC_RT_LOG_##Level(orc_rt_log_Category_##Category, __VA_ARGS__)
+  ((void)sizeof("" __VA_ARGS__, 0),                                            \
+   ORC_RT_LOG_##Level(orc_rt_log_Category_##Category, __VA_ARGS__))
 
 #if ORC_RT_LOG_BACKEND == ORC_RT_LOG_BACKEND_NONE
 
