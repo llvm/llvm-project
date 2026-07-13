@@ -2132,10 +2132,8 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
           << RequiredAlign.getQuantity();
       return false;
     }
-    unsigned PtrOffset =
-        Ptr.isElementPastEnd() ? Ptr.getNumElems() : Ptr.getIndex();
-    CharUnits PtrAlign =
-        BaseAlignment.alignmentAtOffset(CharUnits::fromQuantity(PtrOffset));
+    CharUnits PtrOffset = Ptr.toAPValue(S.getASTContext()).getLValueOffset();
+    CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(PtrOffset);
     if (PtrAlign < RequiredAlign) {
       S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_load8_unaligned)
           << S.getASTContext().BuiltinInfo.getQuotedName(
