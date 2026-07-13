@@ -13,6 +13,13 @@ package(
 
 licenses(["notice"])
 
+genrule(
+    name = "patch_utils",
+    srcs = ["OpenMP/Utils.cpp"],
+    outs = ["OpenMP/Utils_patched.cpp"],
+    cmd = "sed -e 's/FlangOMPContext ompCtx{converter.getModuleOp(), constructTraits};/auto ompCtx = Fortran::lower::omp::makeVariantMatchContext(converter.getModuleOp(), constructTraits);/' -e 's|#include \"Utils.h\"|#include \"flang/lib/Lower/OpenMP/Utils.h\"|' -e 's|#include \"ClauseFinder.h\"|#include \"flang/lib/Lower/OpenMP/ClauseFinder.h\"|' $< > $@",
+)
+
 cc_library(
     name = "FortranLower",
     srcs = glob(
@@ -25,7 +32,8 @@ cc_library(
             "Support/*.h",
         ],
         allow_empty = True,
-    ),
+        exclude = ["OpenMP/Utils.cpp"],
+    ) + ["OpenMP/Utils_patched.cpp"],
     deps = [
         "//flang:CommonHeaders",
         "//flang:EvaluateHeaders",
