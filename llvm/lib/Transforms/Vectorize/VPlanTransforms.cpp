@@ -1262,7 +1262,7 @@ getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
             VPReplicateRecipe>(
           [](auto *I) { return std::make_pair(false, I->getOpcode()); })
       .Case([](const VPWidenPHIRecipe *I) {
-        return std::make_pair(true, Instruction::PHI);
+        return std::make_pair(false, Instruction::PHI);
       })
       .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
           [](auto *I) {
