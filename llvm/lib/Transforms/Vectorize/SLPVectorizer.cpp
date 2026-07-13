@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
+#include "SLPVectorizer/SLPUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PriorityQueue.h"
@@ -343,15 +344,6 @@ static Type *getValueType(Value *V, bool LookThroughCmp = false) {
   return V->getType();
 }
 
-/// \returns the number of elements for Ty.
-static unsigned getNumElements(Type *Ty) {
-  assert(!isa<ScalableVectorType>(Ty) &&
-         "ScalableVectorType is not supported.");
-  if (isVectorizedTy(Ty))
-    return getVectorizedTypeVF(Ty).getFixedValue();
-  return 1;
-}
-
 /// \returns the vector type of ScalarTy based on vectorization factor.
 static Type *getWidenedType(Type *ScalarTy, unsigned VF) {
   if (VF == 1 && !isVectorizedTy(ScalarTy)) {
@@ -516,47 +508,6 @@ static SmallVector<int> calculateShufflevectorMask(ArrayRef<Value *> VL) {
   return Mask;
 }
 
-/// \returns True if the value is a constant (but not globals/constant
-/// expressions).
-static bool isConstant(Value *V) {
-  return isa<Constant>(V) && !isa<ConstantExpr, GlobalValue>(V);
-}
-
-/// Checks if \p V is one of vector-like instructions, i.e. undef,
-/// insertelement/extractelement with constant indices for fixed vector type or
-/// extractvalue instruction.
-static bool isVectorLikeInstWithConstOps(Value *V) {
-  if (!isa<InsertElementInst, InsertValueInst, ExtractElementInst>(V) &&
-      !isa<ExtractValueInst, UndefValue>(V))
-    return false;
-  auto *I = dyn_cast<Instruction>(V);
-  if (!I || isa<ExtractValueInst>(I))
-    return true;
-  if (isa<ExtractElementInst>(I))
-    return isa<FixedVectorType>(I->getOperand(0)->getType()) &&
-           isConstant(I->getOperand(1));
-  if (isa<InsertElementInst>(I))
-    return isa<FixedVectorType>(I->getOperand(0)->getType()) &&
-           isConstant(I->getOperand(2));
-  assert(isa<InsertValueInst>(I) && "Expected InsertValueInst");
-  return true;
-}
-
-/// Returns power-of-2 number of elements in a single register (part), given the
-/// total number of elements \p Size and number of registers (parts) \p
-/// NumParts.
-static unsigned getPartNumElems(unsigned Size, unsigned NumParts) {
-  return std::min<unsigned>(Size, bit_ceil(divideCeil(Size, NumParts)));
-}
-
-/// Returns correct remaining number of elements, considering total amount \p
-/// Size, (power-of-2 number) of elements in a single register \p PartNumElems
-/// and current register (part) \p Part.
-static unsigned getNumElems(unsigned Size, unsigned PartNumElems,
-                            unsigned Part) {
-  return std::min<unsigned>(PartNumElems, Size - Part * PartNumElems);
-}
-
 #if !defined(NDEBUG)
 /// Print a short descriptor of the instruction bundle suitable for debug output.
 static std::string shortBundleName(ArrayRef<Value *> VL, int Idx = -1) {
@@ -568,55 +519,6 @@ static std::string shortBundleName(ArrayRef<Value *> VL, int Idx = -1) {
   return Result;
 }
 #endif
-
-/// \returns true if all of the instructions in \p VL are in the same block or
-/// false otherwise.
-static bool allSameBlock(ArrayRef<Value *> VL) {
-  auto *It = find_if(VL, IsaPred<Instruction>);
-  if (It == VL.end())
-    return false;
-  Instruction *I0 = cast<Instruction>(*It);
-  if (all_of(VL, isVectorLikeInstWithConstOps))
-    return true;
-
-  BasicBlock *BB = I0->getParent();
-  for (Value *V : iterator_range(It, VL.end())) {
-    if (isa<PoisonValue>(V))
-      continue;
-    auto *II = dyn_cast<Instruction>(V);
-    if (!II)
-      return false;
-
-    if (BB != II->getParent())
-      return false;
-  }
-  return true;
-}
-
-/// \returns True if all of the values in \p VL are constants (but not
-/// globals/constant expressions).
-static bool allConstant(ArrayRef<Value *> VL) {
-  // Constant expressions and globals can't be vectorized like normal integer/FP
-  // constants.
-  return all_of(VL, isConstant);
-}
-
-/// \returns True if all of the values in \p VL are identical or some of them
-/// are UndefValue.
-static bool isSplat(ArrayRef<Value *> VL) {
-  Value *FirstNonUndef = nullptr;
-  for (Value *V : VL) {
-    if (isa<UndefValue>(V))
-      continue;
-    if (!FirstNonUndef) {
-      FirstNonUndef = V;
-      continue;
-    }
-    if (V != FirstNonUndef)
-      return false;
-  }
-  return FirstNonUndef != nullptr;
-}
 
 /// \returns True if \p I is commutative, handles CmpInst and BinaryOperator.
 /// For BinaryOperator, it also checks if \p InstWithUses is used in specific
@@ -710,33 +612,6 @@ static unsigned getNumberOfPotentiallyCommutativeOps(Instruction *I) {
   return I->getNumOperands();
 }
 
-template <typename T>
-static std::optional<unsigned> getInsertExtractIndex(const Value *Inst,
-                                                     unsigned Offset) {
-  static_assert(std::is_same_v<T, InsertElementInst> ||
-                    std::is_same_v<T, ExtractElementInst>,
-                "unsupported T");
-  const auto *IE = dyn_cast<T>(Inst);
-  if (!IE)
-    return std::nullopt;
-  // InsertElement: result is the vector, index is op 2.
-  // ExtractElement: result is scalar, vector is op 0, index is op 1.
-  constexpr bool IsInsert = std::is_same_v<T, InsertElementInst>;
-  Type *VecTy = IsInsert ? IE->getType() : IE->getOperand(0)->getType();
-  const auto *VT = dyn_cast<FixedVectorType>(VecTy);
-  if (!VT)
-    return std::nullopt;
-  const auto *CI = dyn_cast<ConstantInt>(IE->getOperand(IsInsert ? 2 : 1));
-  if (!CI)
-    return std::nullopt;
-  if (CI->getValue().uge(VT->getNumElements()))
-    return std::nullopt;
-  unsigned Index = Offset;
-  Index *= VT->getNumElements();
-  Index += CI->getZExtValue();
-  return Index;
-}
-
 /// \returns inserting or extracting index of InsertElement, ExtractElement or
 /// InsertValue instruction, using Offset as base offset for index.
 /// \returns std::nullopt if the index is not an immediate.
@@ -767,28 +642,6 @@ static std::optional<unsigned> getElementIndex(const Value *Inst,
     Index += I;
   }
   return Index;
-}
-
-/// \returns true if all of the values in \p VL use the same opcode.
-/// For comparison instructions, also checks if predicates match.
-/// PoisonValues are considered matching.
-/// Interchangeable instructions are not considered.
-static bool allSameOpcode(ArrayRef<Value *> VL) {
-  auto *It = find_if(VL, IsaPred<Instruction>);
-  if (It == VL.end())
-    return true;
-  Instruction *MainOp = cast<Instruction>(*It);
-  unsigned Opcode = MainOp->getOpcode();
-  bool IsCmpOp = isa<CmpInst>(MainOp);
-  CmpInst::Predicate BasePred = IsCmpOp ? cast<CmpInst>(MainOp)->getPredicate()
-                                        : CmpInst::BAD_ICMP_PREDICATE;
-  return std::all_of(It, VL.end(), [&](Value *V) {
-    if (auto *CI = dyn_cast<CmpInst>(V))
-      return BasePred == CI->getPredicate();
-    if (auto *I = dyn_cast<Instruction>(V))
-      return I->getOpcode() == Opcode;
-    return isa<PoisonValue>(V);
-  });
 }
 
 namespace {
@@ -984,31 +837,6 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
   // we have permutation of 2 vectors.
   return Vec2 ? TargetTransformInfo::SK_PermuteTwoSrc
               : TargetTransformInfo::SK_PermuteSingleSrc;
-}
-
-/// \returns True if Extract{Value,Element} instruction extracts element Idx.
-static std::optional<unsigned> getExtractIndex(const Instruction *E) {
-  unsigned Opcode = E->getOpcode();
-  assert((Opcode == Instruction::ExtractElement ||
-          Opcode == Instruction::ExtractValue) &&
-         "Expected extractelement or extractvalue instruction.");
-  if (Opcode == Instruction::ExtractElement) {
-    auto *CI = dyn_cast<ConstantInt>(E->getOperand(1));
-    if (!CI)
-      return std::nullopt;
-    // Check if the index is out of bound  - we can get the source vector from
-    // operand 0
-    unsigned Idx = CI->getZExtValue();
-    auto *EE = cast<ExtractElementInst>(E);
-    const unsigned VF = ::getNumElements(EE->getVectorOperandType());
-    if (Idx >= VF)
-      return std::nullopt;
-    return Idx;
-  }
-  auto *EI = cast<ExtractValueInst>(E);
-  if (EI->getNumIndices() != 1)
-    return std::nullopt;
-  return *EI->idx_begin();
 }
 
 /// Checks if the provided value does not require scheduling. It does not
@@ -1891,13 +1719,6 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
                 }) &&
          "Invalid InstructionsState.");
   return S;
-}
-
-/// \returns true if all of the values in \p VL have the same type or false
-/// otherwise.
-static bool allSameType(ArrayRef<Value *> VL) {
-  Type *Ty = VL.consume_front()->getType();
-  return all_of(VL, [&](Value *V) { return V->getType() == Ty; });
 }
 
 /// \returns True if in-tree use also needs extract. This refers to

@@ -1597,6 +1597,7 @@ R"(All available -march extensions for RISC-V
     xsifivecdiscarddlone 1.0
     xsifivecflushdlone   1.0
     xsmtvdot             1.0
+    xsmtvdotii           1.0
     xtheadba             1.0
     xtheadbb             1.0
     xtheadbs             1.0
