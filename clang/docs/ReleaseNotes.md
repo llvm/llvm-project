@@ -1204,7 +1204,6 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed a false positive in the `alpha.unix.cstring` checkers when the buffer argument points into the middle of an array, such as `memcpy(dst, &arr[i], size)`. (#GH198346)
 - Fixed the default binding of union aggregates being overwritten when initializing array elements with union members. (#GH178694)
 - The analyzer no longer rules out the equality of a pointer to the stack and a symbolic pointer in unknown space, because a function may return a pointer to some other stack frame (for example one received as an argument). (#GH187080)
-- Fixed bad logic in `VisitArrayInitLoopExpr` that used the wrong parent node when binding the expression value. (#GH196974)
 - Fixed bad logic in `ExprEngine::evalBind` so that both the `check::Bind` and the pointer-escape checkers get a chance to run when binding to an `Unknown` or `Undefined` memory location. (#GH196313)
 - Fixed an unjustified early return in `ExprEngine::processCallExit` that could drop execution paths produced by `removeDead`. (#GH205656)
 - Fixed `CallEvent::getReturnValueUnderConstruction` to use the `LocationContext` and `CFGElementRef` stored in the `CallEvent` instead of the currently analyzed ones. (#GH187020)
