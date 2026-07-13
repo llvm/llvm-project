@@ -1205,6 +1205,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed the default binding of union aggregates being overwritten when initializing array elements with union members. (#GH178694)
 - The analyzer no longer rules out the equality of a pointer to the stack and a symbolic pointer in unknown space, because a function may return a pointer to some other stack frame (for example one received as an argument). (#GH187080)
 - Fixed the `getcwd` summary in the `unix.StdCLibraryFunctions` checker. (#GH175136)
+- Fixed invalid HTML nesting for popups at end of line. (#GH46089)
+- Fixed a false-positive in the `unix.BlockInCriticalSection` checker that reported double locking when using `std::lock_guard`/`std::unique_lock`/`std::scoped_lock`. (#GH208729)
+- Fixed a false-negative in the `unix.Malloc` checker due to a typo in the expected arguments of `if_nameindex`. It will now properly match its single expected argument. (#GH207726)
 
 #### Improvements
 
@@ -1228,6 +1231,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Added a new `check::LifetimeEnd` callback that fires for each `CFGLifetimeEnds` element, which is useful for detecting dangling pointers. (#GH201123)
 - The `unix.StdCLibraryFunctions` standard-library summaries were optimized for binary size. (#GH202662)
 - Fixed the alignment of entries printed by `clang -cc1 -analyzer-print-analyzer-options` / `-analyzer-help`. (#GH190570)
+- Improved the models of `strchr`/`strrchr`/`memchr`/`strstr`/`strpbrk`/`strchrnul`, enabling `core.StackAddressEscape` to catch dangling pointers returned by these functions. (#GH203260)
 
 #### Moved checkers
 
