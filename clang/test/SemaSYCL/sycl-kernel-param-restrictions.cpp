@@ -291,7 +291,6 @@ class C { // nonportable-note {{within field of type 'C' declared here}}
 private:
   int *ptr;
   // nonportable-warning@-1 {{pointers used in SYCL kernels must point to device-accessible memory, i.e. the USM}}
-  // TODO double-check this warning actually tells me what field is the problem
 public:
   C(int *p) : ptr(p) {}
 };
@@ -347,10 +346,5 @@ void test() {
   // expected-error@-1 {{'Derived' inherits virtual base classes and cannot be used as a SYCL kernel parameter}}
   // expected-note-re@-2 {{in instantiation of function template specialization 'vbase1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
   // expected-note@-3 {{within capture 'd' of lambda expression here}}
-
-  //kernel_single_task<class KN<30>>([](Derived d){ return d; }(d)); // not sure if this gives me what I actually want
-  // xpected-error@-1 {{'vbase1::Derived' inherits virtual base classes and cannot be used as a SYCL kernel parameter}}
-  // xpected-note-re@-2 {{in instantiation of function template specialization 'vbase1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
-  // xpected-note@-3 {{within capture 'd' of lambda expression here}}
 }
 } // namespace vbase1
