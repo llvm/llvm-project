@@ -862,7 +862,7 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
       IntrinsicID = Intrinsic::smin;
       break;
     default:
-      llvm_unreachable("not a min/max SCEV");
+      llvm_unreachable("Unexpected min/max SCEV type");
     }
     // Chain operands in reverse order matching SCEVExpander's expansion of
     // min/max expressions.
@@ -873,10 +873,11 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
         return nullptr;
       Ops.push_back(OpV);
     }
-    Type *Ty = MinMax->getType();
+    Type *ResultTy = MinMax->getType();
     VPValue *Result = Ops.front();
     for (VPValue *Op : drop_begin(Ops))
-      Result = Builder.createScalarIntrinsic(IntrinsicID, {Result, Op}, Ty, DL);
+      Result = Builder.createScalarIntrinsic(IntrinsicID, {Result, Op},
+                                             ResultTy, DL);
     return Result;
   }
   default:
