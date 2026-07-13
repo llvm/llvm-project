@@ -230,5 +230,4 @@ add_header_library(
     libc.hdr.types.constraint_handler_t
     libc.hdr.types.errno_t
     libc.src.stdlib.set_constraint_handler_s
-    libc.src.string.string_utils
 )
