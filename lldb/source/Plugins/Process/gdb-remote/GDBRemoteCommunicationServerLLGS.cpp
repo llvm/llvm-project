@@ -2971,6 +2971,13 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
 
     if (std::optional<unsigned> protection_key = region_info.GetProtectionKey())
       response.Printf("protection-key:%" PRIu32 ";", *protection_key);
+
+    // Type: stack/heap classification, when known.
+    LazyBool is_stack = region_info.IsStackMemory();
+    if (is_stack == eLazyBoolYes)
+      response.PutCString("type:stack;");
+    else if (is_stack == eLazyBoolNo)
+      response.PutCString("type:heap;");
   }
 
   return SendPacketNoLock(response.GetString());
