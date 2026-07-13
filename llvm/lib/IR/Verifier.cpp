@@ -5942,8 +5942,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
               "bits",
               Call);
         Check(OBU.Inputs.size() < 3 ||
-                  GetTypeAt(2)->isIntegerTy() &&
-                      GetTypeAt(2)->getIntegerBitWidth() <= 64,
+                  (GetTypeAt(2)->isIntegerTy() &&
+                   GetTypeAt(2)->getIntegerBitWidth() <= 64),
               "third argument should be an integer with a maximum width of 64 "
               "bits if present",
               Call);
@@ -6100,6 +6100,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(APFloatBase::isValidArbitraryFPFormat(Interp),
           "unsupported interpretation metadata string", Call);
 
+    // The integer type width must equal the arbitrary FP format width.
+    if (unsigned FormatBits =
+            APFloatBase::getArbitraryFPFormatSizeInBits(Interp))
+      Check(IntTy->getScalarSizeInBits() == FormatBits,
+            "integer type bit width must equal the arbitrary FP format width",
+            Call);
+
     // Check rounding mode metadata (argoperand 2).
     auto *RoundingMAV = dyn_cast<MetadataAsValue>(Call.getArgOperand(2));
     Check(RoundingMAV, "missing rounding mode metadata operand", Call);
@@ -6142,6 +6149,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     // Valid interpretation strings: mini-float format names.
     Check(APFloatBase::isValidArbitraryFPFormat(Interp),
           "unsupported interpretation metadata string", Call);
+
+    // The integer type width must equal the arbitrary FP format width.
+    if (unsigned FormatBits =
+            APFloatBase::getArbitraryFPFormatSizeInBits(Interp))
+      Check(IntTy->getScalarSizeInBits() == FormatBits,
+            "integer type bit width must equal the arbitrary FP format width",
+            Call);
     break;
   }
 #define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:

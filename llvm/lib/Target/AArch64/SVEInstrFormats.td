@@ -137,6 +137,8 @@ def sve_pred_enum : Operand<i32>, TImmLeaf<i32, [{
 
   let PrintMethod = "printSVEPattern";
   let ParserMatchClass = SVEPatternOperand;
+  let OperandType = "OPERAND_IMM_UINT5";
+  let OperandNamespace = "AArch64";
 }
 
 def SVEVecLenSpecifierOperand : AsmOperandClass {
