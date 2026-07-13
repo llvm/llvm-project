@@ -15,6 +15,7 @@
 #define LLVM_IR_STRUCTURALHASH_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/Compiler.h"
@@ -22,8 +23,25 @@
 
 namespace llvm {
 
+class BasicBlock;
 class Function;
 class Module;
+
+struct InstructionStructuralHashInfo {
+  const Instruction *Inst = nullptr;
+  stable_hash InstructionHash = 0;
+};
+
+struct BasicBlockStructuralHashInfo {
+  const BasicBlock *BB = nullptr;
+  stable_hash BlockHash = 0;
+  SmallVector<InstructionStructuralHashInfo, 0> Instructions;
+};
+
+struct FunctionStructuralHashInfo {
+  stable_hash FunctionHash = 0;
+  SmallVector<BasicBlockStructuralHashInfo, 0> Blocks;
+};
 
 /// Returns a hash of the function \p F.
 /// \param F The function to hash.
@@ -32,6 +50,11 @@ class Module;
 /// to true includes instruction and operand type information.
 LLVM_ABI stable_hash StructuralHash(const Function &F,
                                     bool DetailedHash = false);
+
+/// Returns structural hash details for \p F, including the function hash and
+/// the block/instruction hashes computed while building it.
+LLVM_ABI FunctionStructuralHashInfo
+StructuralHashWithDetails(const Function &F, bool DetailedHash = false);
 
 /// Returns a hash of the global variable \p G.
 LLVM_ABI stable_hash StructuralHash(const GlobalVariable &G);

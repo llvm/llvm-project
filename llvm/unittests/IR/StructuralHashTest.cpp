@@ -70,6 +70,36 @@ TEST(StructuralHashTest, BasicFunction) {
             StructuralHash(*M->getFunction("h")));
 }
 
+TEST(StructuralHashTest, FunctionHashDetails) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, "define i32 @f(i32 %x) {\n"
+                                           "entry:\n"
+                                           "  %a = add i32 %x, 1\n"
+                                           "  ret i32 %a\n"
+                                           "}\n");
+  Function &F = *M->getFunction("f");
+
+  FunctionStructuralHashInfo Info =
+      StructuralHashWithDetails(F, /*DetailedHash=*/true);
+  EXPECT_EQ(StructuralHash(F, /*DetailedHash=*/true), Info.FunctionHash);
+  ASSERT_THAT(Info.Blocks, SizeIs(1));
+  EXPECT_EQ(&F.getEntryBlock(), Info.Blocks[0].BB);
+  ASSERT_THAT(Info.Blocks[0].Instructions, SizeIs(2));
+  EXPECT_EQ(&*F.getEntryBlock().begin(), Info.Blocks[0].Instructions[0].Inst);
+  EXPECT_NE(0u, Info.Blocks[0].Instructions[0].InstructionHash);
+  EXPECT_NE(0u, Info.Blocks[0].BlockHash);
+}
+
+TEST(StructuralHashTest, FunctionHashDetailsForDeclaration) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, "declare void @f()\n");
+  Function &F = *M->getFunction("f");
+
+  FunctionStructuralHashInfo Info = StructuralHashWithDetails(F);
+  EXPECT_EQ(StructuralHash(F), Info.FunctionHash);
+  EXPECT_THAT(Info.Blocks, SizeIs(0));
+}
+
 TEST(StructuralHashTest, Declaration) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M0 = parseIR(Ctx, "");
@@ -174,6 +204,48 @@ TEST(StructuralHashTest, ComparisonInstructionPredicate) {
                                             "}\n");
   EXPECT_EQ(StructuralHash(*M1), StructuralHash(*M2));
   EXPECT_NE(StructuralHash(*M1, true), StructuralHash(*M2, true));
+}
+
+TEST(StructuralHashTest, InstructionFlags) {
+  LLVMContext Ctx;
+
+  auto FunctionHash = [&](const char *IR) {
+    return StructuralHash(*parseIR(Ctx, IR)->getFunction("f"),
+                          /*DetailedHash=*/true);
+  };
+
+  EXPECT_NE(FunctionHash("define i32 @f(i32 %a, i32 %b) {\n"
+                         "  %r = add i32 %a, %b\n"
+                         "  ret i32 %r\n"
+                         "}\n"),
+            FunctionHash("define i32 @f(i32 %a, i32 %b) {\n"
+                         "  %r = add nsw i32 %a, %b\n"
+                         "  ret i32 %r\n"
+                         "}\n"));
+  EXPECT_NE(FunctionHash("define i32 @f(i32 %a, i32 %b) {\n"
+                         "  %r = udiv i32 %a, %b\n"
+                         "  ret i32 %r\n"
+                         "}\n"),
+            FunctionHash("define i32 @f(i32 %a, i32 %b) {\n"
+                         "  %r = udiv exact i32 %a, %b\n"
+                         "  ret i32 %r\n"
+                         "}\n"));
+  EXPECT_NE(FunctionHash("define i1 @f(i32 %a, i32 %b) {\n"
+                         "  %r = icmp slt i32 %a, %b\n"
+                         "  ret i1 %r\n"
+                         "}\n"),
+            FunctionHash("define i1 @f(i32 %a, i32 %b) {\n"
+                         "  %r = icmp samesign slt i32 %a, %b\n"
+                         "  ret i1 %r\n"
+                         "}\n"));
+  EXPECT_NE(FunctionHash("define float @f(float %a, float %b) {\n"
+                         "  %r = fadd float %a, %b\n"
+                         "  ret float %r\n"
+                         "}\n"),
+            FunctionHash("define float @f(float %a, float %b) {\n"
+                         "  %r = fadd fast float %a, %b\n"
+                         "  ret float %r\n"
+                         "}\n"));
 }
 
 TEST(StructuralHashTest, IntrinsicInstruction) {
