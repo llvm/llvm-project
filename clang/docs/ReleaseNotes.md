@@ -1208,6 +1208,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### Improvements
 
+- Significantly sped up core data structures like ImmutableSet/Map, leading to up to 5.2x faster analysis in edge cases. (#GH205552, #GH207596, #GH208907)
 - The unmaintained and crash-prone Z3 constraint-manager backend selected via `-analyzer-constraints=z3` was renamed to `-analyzer-constraints=unsupported-z3` to make its unsupported status explicit. (#GH205370)
 - The conservative call-invalidation logic now invalidates the object of an opaque constructor call regardless of whether an argument refers to it. (#GH170887)
 - Improved the resolution of constant values from initializers in RegionStore, including preserving default bindings for aggregate-like cases, generalized field-initializer resolution for arbitrary nesting, and normalized sub-array indices. (#GH199271)
