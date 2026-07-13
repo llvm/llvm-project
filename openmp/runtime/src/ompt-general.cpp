@@ -60,6 +60,12 @@
 static FILE *verbose_file;
 static int verbose_init;
 
+#if defined(__GLIBC__)
+#define OMPT_GETENV secure_getenv
+#else
+#define OMPT_GETENV getenv
+#endif
+
 /*****************************************************************************
  * types
  ****************************************************************************/
@@ -281,7 +287,7 @@ ompt_try_start_tool(unsigned int omp_version, const char *runtime_version) {
 
   // Try tool-libraries-var ICV
   OMPT_VERBOSE_INIT_CONTINUED_PRINT("Failed.\n");
-  const char *tool_libs = getenv("OMP_TOOL_LIBRARIES");
+  const char *tool_libs = OMPT_GETENV("OMP_TOOL_LIBRARIES");
   if (tool_libs) {
     OMPT_VERBOSE_INIT_PRINT("Searching tool libraries...\n");
     OMPT_VERBOSE_INIT_PRINT("OMP_TOOL_LIBRARIES = %s\n", tool_libs);

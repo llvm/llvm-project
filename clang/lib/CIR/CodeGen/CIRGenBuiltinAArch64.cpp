@@ -2869,22 +2869,20 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     if (cir::isFPOrVectorOfFPType(ty))
       intrName = "aarch64.neon.fmax";
     return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
-  case NEON::BI__builtin_neon_vmaxh_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AArch64 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+  case NEON::BI__builtin_neon_vmaxh_f16: {
+    auto halfTy = builder.getFp16Ty();
+    return builder.emitIntrinsicCallOp(loc, "aarch64.neon.fmax", halfTy, ops);
+  }
   case NEON::BI__builtin_neon_vmin_v:
   case NEON::BI__builtin_neon_vminq_v:
     intrName = usgn ? "aarch64.neon.umin" : "aarch64.neon.smin";
     if (cir::isFPOrVectorOfFPType(ty))
       intrName = "aarch64.neon.fmin";
     return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
-  case NEON::BI__builtin_neon_vminh_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AArch64 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+  case NEON::BI__builtin_neon_vminh_f16: {
+    auto halfTy = builder.getFp16Ty();
+    return builder.emitIntrinsicCallOp(loc, "aarch64.neon.fmin", halfTy, ops);
+  }
   case NEON::BI__builtin_neon_vabd_v:
   case NEON::BI__builtin_neon_vabdq_v:
     intrName = usgn ? "aarch64.neon.uabd" : "aarch64.neon.sabd";
@@ -2917,16 +2915,18 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vminnmq_v:
     intrName = "aarch64.neon.fminnm";
     return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
-  case NEON::BI__builtin_neon_vminnmh_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AArch64 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+  case NEON::BI__builtin_neon_vminnmh_f16: {
+    auto halfTy = builder.getFp16Ty();
+    return builder.emitIntrinsicCallOp(loc, "aarch64.neon.fminnm", halfTy, ops);
+  }
   case NEON::BI__builtin_neon_vmaxnm_v:
   case NEON::BI__builtin_neon_vmaxnmq_v:
     intrName = "aarch64.neon.fmaxnm";
     return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
-  case NEON::BI__builtin_neon_vmaxnmh_f16:
+  case NEON::BI__builtin_neon_vmaxnmh_f16: {
+    auto halfTy = builder.getFp16Ty();
+    return builder.emitIntrinsicCallOp(loc, "aarch64.neon.fmaxnm", halfTy, ops);
+  }
   case NEON::BI__builtin_neon_vrecpss_f32:
   case NEON::BI__builtin_neon_vrecpsd_f64:
     cgm.errorNYI(expr->getSourceRange(),
@@ -3106,11 +3106,10 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vpminnmq_v:
     intrName = "aarch64.neon.fminnmp";
     return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
-  case NEON::BI__builtin_neon_vsqrth_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AArch64 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+  case NEON::BI__builtin_neon_vsqrth_f16: {
+    auto halfTy = builder.getFp16Ty();
+    return emitCallMaybeConstrainedBuiltin(builder, loc, "sqrt", {halfTy}, ops);
+  }
   case NEON::BI__builtin_neon_vsqrt_v:
   case NEON::BI__builtin_neon_vsqrtq_v:
     assert(!cir::MissingFeatures::emitConstrainedFPCall());

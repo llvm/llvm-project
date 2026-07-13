@@ -21,6 +21,8 @@
 #define ORC_RT_LOG_LEVEL_INFO    1
 #define ORC_RT_LOG_LEVEL_WARNING 2
 #define ORC_RT_LOG_LEVEL_ERROR   3
+#define ORC_RT_LOG_LEVEL_OFF     4
+#define ORC_RT_LOG_LEVEL_COUNT   (ORC_RT_LOG_LEVEL_OFF + 1)
 /* Fail loudly if CMake derived a symbol that isn't defined above. */
 #ifndef @ORC_RT_LOG_LEVEL_VALUE@
 #error "Invalid ORC_RT_LOG_LEVEL"
