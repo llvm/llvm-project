@@ -11,11 +11,12 @@ cir.func coroutine @must_have_one_coro_body(%arg0 : !cir.bool) {  // expected-er
     cir.await(user, ready : {
       cir.condition(%arg0)
     }, suspend : {
-      cir.yield
+      cir.coro.suspend.point
     }, resume : {
       cir.yield
     },)
   }
   cir.coro.body {
   }
+  cir.coro.suspend.point.dest
 }
