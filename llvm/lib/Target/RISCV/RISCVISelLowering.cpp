@@ -560,6 +560,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          {MVT::v2i16, MVT::v4i8}, Custom);
       setOperationAction(ISD::INTRINSIC_WO_CHAIN, {MVT::v2i16, MVT::v4i8},
                          Custom);
+      // Operand legalization queries the action using the illegal subvector.
+      setOperationAction(ISD::INSERT_SUBVECTOR, {MVT::v2i16, MVT::v4i8},
+                         Custom);
     } else {
       VTs = P32VecVTs;
     }
@@ -674,6 +677,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           {ISD::SETGE, ISD::SETUGT, ISD::SETUGE, ISD::SETULE, ISD::SETLE},
           P64VecVTs, Expand);
       setCondCodeAction({ISD::SETNE, ISD::SETGT}, P64VecVTs, Custom);
+      // Operation legalization queries the action using the result type.
+      setOperationAction(ISD::INSERT_SUBVECTOR, {MVT::v4i16, MVT::v8i8},
+                         Custom);
     } else {
       setOperationAction({ISD::MUL, ISD::MULHS, ISD::MULHU}, P64VecVTs, Legal);
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG,
@@ -1987,8 +1993,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
   if (Subtarget.useRVVForFixedLengthVectors() || Subtarget.hasStdExtP())
     setTargetDAGCombine(ISD::BITCAST);
-  if (Subtarget.hasStdExtP())
-    setTargetDAGCombine(ISD::INSERT_SUBVECTOR);
 
   setMaxDivRemBitWidthSupported(Subtarget.is64Bit() ? 128 : 64);
 
@@ -12796,6 +12800,9 @@ SDValue RISCVTargetLowering::lowerVPREDUCE(SDValue Op,
       DAG.getConstantFP(APFloat::getNaN(ResVT.getFltSemantics()), DL, ResVT));
 }
 
+static SDValue widenPackedVectorWithZeros(SelectionDAG &DAG, const SDLoc &DL,
+                                          SDValue V, MVT WideVT);
+
 SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
                                                    SelectionDAG &DAG) const {
   SDValue Vec = Op.getOperand(0);
@@ -12807,6 +12814,27 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
   MVT XLenVT = Subtarget.getXLenVT();
   unsigned OrigIdx = Op.getConstantOperandVal(2);
   const RISCVRegisterInfo *TRI = Subtarget.getRegisterInfo();
+
+  bool IsPExtInsert =
+      Subtarget.hasStdExtP() &&
+      ((Subtarget.is64Bit() &&
+        (SubVecVT == MVT::v2i16 || SubVecVT == MVT::v4i8)) ||
+       (!Subtarget.is64Bit() && (VecVT == MVT::v4i16 || VecVT == MVT::v8i8)));
+
+  // Fold insert of a 32-bit packed type into a zero-filled 64-bit packed vector
+  // at index 0 (a zero-extend) to avoid scalarizing it into a byte-wise repack.
+  if (IsPExtInsert) {
+    if ((VecVT != MVT::v4i16 && VecVT != MVT::v8i8) ||
+        SubVecVT.getSizeInBits() != 32 || OrigIdx != 0 ||
+        !ISD::isConstantSplatVectorAllZeros(Vec.getNode()))
+      return SDValue();
+
+    if (!Subtarget.is64Bit()) {
+      SDValue Zero = DAG.getBitcast(SubVecVT, DAG.getConstant(0, DL, MVT::i32));
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, SubVec, Zero);
+    }
+    return widenPackedVectorWithZeros(DAG, DL, SubVec, VecVT);
+  }
 
   if (OrigIdx == 0 && Vec.isUndef())
     return Op;
@@ -21101,29 +21129,6 @@ static SDValue performINSERT_VECTOR_ELTCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ConcatOps);
 }
 
-// Fold insert of a 32-bit packed type into a zero-filled 64-bit packed vector
-// at index 0 (a zero-extend) to avoid scalarizing it into a byte-wise repack.
-static SDValue performINSERT_SUBVECTORCombine(SDNode *N, SelectionDAG &DAG,
-                                              const RISCVSubtarget &Subtarget) {
-  MVT VT = N->getSimpleValueType(0);
-  SDValue Sub = N->getOperand(1);
-  // Result must be a 64-bit packed type. The subvector shares its element type
-  // (insert_subvector invariant), so a 32-bit one is exactly VT's low half.
-  if (!Subtarget.isPExtPackedType(VT) || VT.getSizeInBits() != 64 ||
-      Sub.getValueSizeInBits() != 32)
-    return SDValue();
-  if (!isNullConstant(N->getOperand(2)) ||
-      !ISD::isConstantSplatVectorAllZeros(N->getOperand(0).getNode()))
-    return SDValue();
-  SDLoc DL(N);
-  // RV32 keeps the 32-bit type in a full GPR (concat a zero half into the
-  // GPRPair); RV64 has it in a GPR's low half (a plain zext.w).
-  if (!Subtarget.is64Bit())
-    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Sub,
-                       DAG.getConstant(0, DL, Sub.getSimpleValueType()));
-  return widenPackedVectorWithZeros(DAG, DL, Sub, VT);
-}
-
 // If we're concatenating a series of vector loads like
 // concat_vectors (load v4i8, p+0), (load v4i8, p+n), (load v4i8, p+n*2) ...
 // Then we can turn this into a strided load by widening the vector elements
@@ -23121,10 +23126,6 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   }
   case ISD::BUILD_VECTOR:
     if (SDValue V = performBUILD_VECTORCombine(N, DAG, Subtarget, *this))
-      return V;
-    break;
-  case ISD::INSERT_SUBVECTOR:
-    if (SDValue V = performINSERT_SUBVECTORCombine(N, DAG, Subtarget))
       return V;
     break;
   case ISD::CONCAT_VECTORS:

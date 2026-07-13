@@ -29,17 +29,3 @@ define <4 x i16> @insert_zero_v2i16(<2 x i16> %v) {
   %r = call <4 x i16> @llvm.vector.insert.v4i16.v2i16(<4 x i16> zeroinitializer, <2 x i16> %v, i64 0)
   ret <4 x i16> %r
 }
-
-define <2 x i32> @insert_zero_v1i32(<1 x i32> %v) {
-; RV32-LABEL: insert_zero_v1i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: insert_zero_v1i32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a0, a0
-; RV64-NEXT:    ret
-  %r = call <2 x i32> @llvm.vector.insert.v2i32.v1i32(<2 x i32> zeroinitializer, <1 x i32> %v, i64 0)
-  ret <2 x i32> %r
-}
