@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -amdgpu-spill-sgpr-to-vgpr=0 -stop-after prologepilog -verify-machineinstrs %s -o - | FileCheck -check-prefix=AFTER-PEI %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -amdgpu-spill-sgpr-to-vgpr=0 -stop-after prolog-epilog -verify-machineinstrs %s -o - | FileCheck -check-prefix=AFTER-PEI %s
 
 ; Test that the ScavengeFI is serialized in the SIMachineFunctionInfo.
 

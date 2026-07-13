@@ -153,15 +153,15 @@ template <typename T> internal::Comparator<T> NE(T val) {
 }
 
 template <typename RetT = int>
-static internal::ErrnoSetterMatcher<RetT> Succeeds(RetT ExpectedReturn = 0,
-                                                   int ExpectedErrno = 0) {
+internal::ErrnoSetterMatcher<RetT> Succeeds(RetT ExpectedReturn = 0,
+                                            int ExpectedErrno = 0) {
   return internal::ErrnoSetterMatcher<RetT>(EQ(ExpectedReturn),
                                             EQ(ExpectedErrno));
 }
 
 template <typename RetT = int>
-static internal::ErrnoSetterMatcher<RetT> Fails(int ExpectedErrno,
-                                                RetT ExpectedReturn = -1) {
+internal::ErrnoSetterMatcher<RetT> Fails(int ExpectedErrno,
+                                         RetT ExpectedReturn = -1) {
   return internal::ErrnoSetterMatcher<RetT>(EQ(ExpectedReturn),
                                             EQ(ExpectedErrno));
 }
@@ -180,7 +180,7 @@ private:
 };
 
 template <typename RetT>
-static ErrnoSetterMatcherBuilder<RetT> returns(internal::Comparator<RetT> cmp) {
+ErrnoSetterMatcherBuilder<RetT> returns(internal::Comparator<RetT> cmp) {
   return ErrnoSetterMatcherBuilder<RetT>(cmp);
 }
 

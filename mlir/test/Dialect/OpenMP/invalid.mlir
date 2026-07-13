@@ -3196,9 +3196,30 @@ func.func @omp_target_spmd() {
 
 // -----
 
-func.func @omp_target_no_loop() {
+func.func @omp_target_no_loop1(%n : i32) {
+  // expected-error @below {{op spmd_no_loop kernel must contain a nested 'omp.teams' operation}}
+  omp.target kernel_type(spmd_no_loop) host_eval(%n -> %arg0 : i32) {
+    omp.parallel {
+      omp.wsloop {
+        omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+          omp.yield
+        }
+      }
+      omp.terminator
+    } {omp.combined}
+    omp.terminator
+  } {omp.combined}
+  return
+}
+
+// -----
+
+func.func @omp_target_no_loop2() {
   // expected-error @below {{op SPMD kernel must capture an 'omp.loop_nest' operation}}
   omp.target kernel_type(spmd_no_loop) {
+    omp.teams {
+      omp.terminator
+    }
     omp.terminator
   }
   return

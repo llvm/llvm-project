@@ -234,9 +234,9 @@ define amdgpu_gfx void @global_atomic_xchg_i64_noret_offset_scalar(ptr addrspace
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s34, s4, 32
 ; VI-NEXT:    s_addc_u32 s35, s5, 0
-; VI-NEXT:    v_mov_b32_e32 v2, s34
 ; VI-NEXT:    v_mov_b32_e32 v0, s6
 ; VI-NEXT:    v_mov_b32_e32 v1, s7
+; VI-NEXT:    v_mov_b32_e32 v2, s34
 ; VI-NEXT:    v_mov_b32_e32 v3, s35
 ; VI-NEXT:    flat_atomic_swap_x2 v[2:3], v[0:1]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -343,9 +343,9 @@ define amdgpu_gfx i64 @global_atomic_xchg_i64_ret_offset_scalar(ptr addrspace(1)
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s34, s4, 32
 ; VI-NEXT:    s_addc_u32 s35, s5, 0
-; VI-NEXT:    v_mov_b32_e32 v2, s34
 ; VI-NEXT:    v_mov_b32_e32 v0, s6
 ; VI-NEXT:    v_mov_b32_e32 v1, s7
+; VI-NEXT:    v_mov_b32_e32 v2, s34
 ; VI-NEXT:    v_mov_b32_e32 v3, s35
 ; VI-NEXT:    flat_atomic_swap_x2 v[0:1], v[2:3], v[0:1] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -672,9 +672,9 @@ define amdgpu_gfx void @global_atomic_xchg_f64_noret_offset_scalar(ptr addrspace
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s34, s4, 32
 ; VI-NEXT:    s_addc_u32 s35, s5, 0
-; VI-NEXT:    v_mov_b32_e32 v2, s34
 ; VI-NEXT:    v_mov_b32_e32 v0, s6
 ; VI-NEXT:    v_mov_b32_e32 v1, s7
+; VI-NEXT:    v_mov_b32_e32 v2, s34
 ; VI-NEXT:    v_mov_b32_e32 v3, s35
 ; VI-NEXT:    flat_atomic_swap_x2 v[2:3], v[0:1]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -781,9 +781,9 @@ define amdgpu_gfx double @global_atomic_xchg_f64_ret_offset_scalar(ptr addrspace
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s34, s4, 32
 ; VI-NEXT:    s_addc_u32 s35, s5, 0
-; VI-NEXT:    v_mov_b32_e32 v2, s34
 ; VI-NEXT:    v_mov_b32_e32 v0, s6
 ; VI-NEXT:    v_mov_b32_e32 v1, s7
+; VI-NEXT:    v_mov_b32_e32 v2, s34
 ; VI-NEXT:    v_mov_b32_e32 v3, s35
 ; VI-NEXT:    flat_atomic_swap_x2 v[0:1], v[2:3], v[0:1] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -1110,9 +1110,9 @@ define amdgpu_gfx void @global_atomic_add_i64_noret_offset_scalar(ptr addrspace(
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s34, s4, 32
 ; VI-NEXT:    s_addc_u32 s35, s5, 0
-; VI-NEXT:    v_mov_b32_e32 v2, s34
 ; VI-NEXT:    v_mov_b32_e32 v0, s6
 ; VI-NEXT:    v_mov_b32_e32 v1, s7
+; VI-NEXT:    v_mov_b32_e32 v2, s34
 ; VI-NEXT:    v_mov_b32_e32 v3, s35
 ; VI-NEXT:    flat_atomic_add_x2 v[2:3], v[0:1]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -1219,9 +1219,9 @@ define amdgpu_gfx i64 @global_atomic_add_i64_ret_offset_scalar(ptr addrspace(1) 
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s34, s4, 32
 ; VI-NEXT:    s_addc_u32 s35, s5, 0
-; VI-NEXT:    v_mov_b32_e32 v2, s34
 ; VI-NEXT:    v_mov_b32_e32 v0, s6
 ; VI-NEXT:    v_mov_b32_e32 v1, s7
+; VI-NEXT:    v_mov_b32_e32 v2, s34
 ; VI-NEXT:    v_mov_b32_e32 v3, s35
 ; VI-NEXT:    flat_atomic_add_x2 v[0:1], v[2:3], v[0:1] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -1536,8 +1536,8 @@ define i64 @global_atomic_sub_i64_ret(ptr addrspace(1) %ptr, i64 %in) {
 ; VI-NEXT:  .LBB32_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v7, v5
 ; VI-NEXT:    v_mov_b32_e32 v6, v4
+; VI-NEXT:    v_mov_b32_e32 v7, v5
 ; VI-NEXT:    v_sub_u32_e32 v4, vcc, v6, v2
 ; VI-NEXT:    v_subb_u32_e32 v5, vcc, v7, v3, vcc
 ; VI-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
@@ -1561,8 +1561,8 @@ define i64 @global_atomic_sub_i64_ret(ptr addrspace(1) %ptr, i64 %in) {
 ; GFX9-NEXT:  .LBB32_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX9-NEXT:    v_sub_co_u32_e32 v4, vcc, v6, v2
 ; GFX9-NEXT:    v_subb_co_u32_e32 v5, vcc, v7, v3, vcc
 ; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off glc
@@ -1629,8 +1629,8 @@ define i64 @global_atomic_sub_i64_ret_offset(ptr addrspace(1) %out, i64 %in) {
 ; VI-NEXT:  .LBB33_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v9, v1
 ; VI-NEXT:    v_mov_b32_e32 v8, v0
+; VI-NEXT:    v_mov_b32_e32 v9, v1
 ; VI-NEXT:    v_sub_u32_e32 v6, vcc, v8, v2
 ; VI-NEXT:    v_subb_u32_e32 v7, vcc, v9, v3, vcc
 ; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[6:9] glc
@@ -1652,8 +1652,8 @@ define i64 @global_atomic_sub_i64_ret_offset(ptr addrspace(1) %out, i64 %in) {
 ; GFX9-NEXT:  .LBB33_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX9-NEXT:    v_sub_co_u32_e32 v4, vcc, v6, v2
 ; GFX9-NEXT:    v_subb_co_u32_e32 v5, vcc, v7, v3, vcc
 ; GFX9-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off offset:32 glc
@@ -1725,9 +1725,9 @@ define amdgpu_gfx void @global_atomic_sub_i64_noret_scalar(ptr addrspace(1) inre
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    s_mov_b64 s[34:35], 0
 ; VI-NEXT:    v_mov_b32_e32 v6, s7
+; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    v_mov_b32_e32 v5, s5
 ; VI-NEXT:  .LBB34_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -1929,15 +1929,15 @@ define amdgpu_gfx i64 @global_atomic_sub_i64_ret_scalar(ptr addrspace(1) inreg %
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    s_mov_b64 s[34:35], 0
 ; VI-NEXT:    v_mov_b32_e32 v4, s7
+; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:  .LBB36_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v8, v1
 ; VI-NEXT:    v_mov_b32_e32 v7, v0
+; VI-NEXT:    v_mov_b32_e32 v8, v1
 ; VI-NEXT:    v_subrev_u32_e32 v5, vcc, s6, v7
 ; VI-NEXT:    v_subb_u32_e32 v6, vcc, v8, v4, vcc
 ; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[5:8] glc
@@ -1961,8 +1961,8 @@ define amdgpu_gfx i64 @global_atomic_sub_i64_ret_scalar(ptr addrspace(1) inreg %
 ; GFX9-NEXT:  .LBB36_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v7, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v0
+; GFX9-NEXT:    v_mov_b32_e32 v7, v1
 ; GFX9-NEXT:    v_subrev_co_u32_e32 v4, vcc, s6, v6
 ; GFX9-NEXT:    v_subb_co_u32_e32 v5, vcc, v7, v3, vcc
 ; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v2, v[4:7], s[4:5] glc
@@ -2037,8 +2037,8 @@ define amdgpu_gfx i64 @global_atomic_sub_i64_ret_offset_scalar(ptr addrspace(1) 
 ; VI-NEXT:  .LBB37_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v8, v1
 ; VI-NEXT:    v_mov_b32_e32 v7, v0
+; VI-NEXT:    v_mov_b32_e32 v8, v1
 ; VI-NEXT:    v_subrev_u32_e32 v5, vcc, s6, v7
 ; VI-NEXT:    v_subb_u32_e32 v6, vcc, v8, v4, vcc
 ; VI-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[5:8] glc
@@ -2062,8 +2062,8 @@ define amdgpu_gfx i64 @global_atomic_sub_i64_ret_offset_scalar(ptr addrspace(1) 
 ; GFX9-NEXT:  .LBB37_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v7, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v0
+; GFX9-NEXT:    v_mov_b32_e32 v7, v1
 ; GFX9-NEXT:    v_subrev_co_u32_e32 v4, vcc, s6, v6
 ; GFX9-NEXT:    v_subb_co_u32_e32 v5, vcc, v7, v3, vcc
 ; GFX9-NEXT:    global_atomic_cmpswap_x2 v[0:1], v2, v[4:7], s[4:5] offset:32 glc
@@ -2345,8 +2345,8 @@ define i64 @global_atomic_and_i64_ret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-NEXT:  .LBB42_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_and_b32_e32 v8, v10, v7
 ; SI-NEXT:    v_and_b32_e32 v9, v11, v6
+; SI-NEXT:    v_and_b32_e32 v8, v10, v7
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, v8
 ; SI-NEXT:    v_mov_b32_e32 v1, v9
@@ -2436,8 +2436,8 @@ define i64 @global_atomic_and_i64_ret_offset(ptr addrspace(1) %out, i64 %in) {
 ; SI-NEXT:  .LBB43_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_and_b32_e32 v8, v10, v7
 ; SI-NEXT:    v_and_b32_e32 v9, v11, v6
+; SI-NEXT:    v_and_b32_e32 v8, v10, v7
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, v8
 ; SI-NEXT:    v_mov_b32_e32 v1, v9
@@ -2562,8 +2562,8 @@ define amdgpu_gfx void @global_atomic_and_i64_noret_scalar(ptr addrspace(1) inre
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    v_mov_b32_e32 v5, s5
 ; VI-NEXT:  .LBB44_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2760,8 +2760,8 @@ define amdgpu_gfx i64 @global_atomic_and_i64_ret_scalar(ptr addrspace(1) inreg %
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:  .LBB46_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -3183,10 +3183,10 @@ define i64 @global_atomic_nand_i64_ret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-NEXT:  .LBB52_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
-; SI-NEXT:    v_and_b32_e32 v1, v10, v7
 ; SI-NEXT:    v_and_b32_e32 v0, v11, v6
-; SI-NEXT:    v_not_b32_e32 v8, v1
+; SI-NEXT:    v_and_b32_e32 v1, v10, v7
 ; SI-NEXT:    v_not_b32_e32 v9, v0
+; SI-NEXT:    v_not_b32_e32 v8, v1
 ; SI-NEXT:    v_mov_b32_e32 v0, v8
 ; SI-NEXT:    v_mov_b32_e32 v1, v9
 ; SI-NEXT:    v_mov_b32_e32 v2, v10
@@ -3279,10 +3279,10 @@ define i64 @global_atomic_nand_i64_ret_offset(ptr addrspace(1) %out, i64 %in) {
 ; SI-NEXT:  .LBB53_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
-; SI-NEXT:    v_and_b32_e32 v1, v10, v7
 ; SI-NEXT:    v_and_b32_e32 v0, v11, v6
-; SI-NEXT:    v_not_b32_e32 v8, v1
+; SI-NEXT:    v_and_b32_e32 v1, v10, v7
 ; SI-NEXT:    v_not_b32_e32 v9, v0
+; SI-NEXT:    v_not_b32_e32 v8, v1
 ; SI-NEXT:    v_mov_b32_e32 v0, v8
 ; SI-NEXT:    v_mov_b32_e32 v1, v9
 ; SI-NEXT:    v_mov_b32_e32 v2, v10
@@ -3412,8 +3412,8 @@ define amdgpu_gfx void @global_atomic_nand_i64_noret_scalar(ptr addrspace(1) inr
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    v_mov_b32_e32 v5, s5
 ; VI-NEXT:  .LBB54_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -3622,8 +3622,8 @@ define amdgpu_gfx i64 @global_atomic_nand_i64_ret_scalar(ptr addrspace(1) inreg 
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:  .LBB56_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -3888,10 +3888,10 @@ define i64 @global_atomic_nand_i64_ret_offset__amdgpu_no_remote_memory(ptr addrs
 ; SI-NEXT:  .LBB59_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
-; SI-NEXT:    v_and_b32_e32 v1, v10, v7
 ; SI-NEXT:    v_and_b32_e32 v0, v11, v6
-; SI-NEXT:    v_not_b32_e32 v8, v1
+; SI-NEXT:    v_and_b32_e32 v1, v10, v7
 ; SI-NEXT:    v_not_b32_e32 v9, v0
+; SI-NEXT:    v_not_b32_e32 v8, v1
 ; SI-NEXT:    v_mov_b32_e32 v0, v8
 ; SI-NEXT:    v_mov_b32_e32 v1, v9
 ; SI-NEXT:    v_mov_b32_e32 v2, v10
@@ -4158,8 +4158,8 @@ define i64 @global_atomic_or_i64_ret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-NEXT:  .LBB62_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_or_b32_e32 v8, v10, v7
 ; SI-NEXT:    v_or_b32_e32 v9, v11, v6
+; SI-NEXT:    v_or_b32_e32 v8, v10, v7
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, v8
 ; SI-NEXT:    v_mov_b32_e32 v1, v9
@@ -4249,8 +4249,8 @@ define i64 @global_atomic_or_i64_ret_offset(ptr addrspace(1) %out, i64 %in) {
 ; SI-NEXT:  .LBB63_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_or_b32_e32 v8, v10, v7
 ; SI-NEXT:    v_or_b32_e32 v9, v11, v6
+; SI-NEXT:    v_or_b32_e32 v8, v10, v7
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, v8
 ; SI-NEXT:    v_mov_b32_e32 v1, v9
@@ -4375,8 +4375,8 @@ define amdgpu_gfx void @global_atomic_or_i64_noret_scalar(ptr addrspace(1) inreg
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    v_mov_b32_e32 v5, s5
 ; VI-NEXT:  .LBB64_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -4573,8 +4573,8 @@ define amdgpu_gfx i64 @global_atomic_or_i64_ret_scalar(ptr addrspace(1) inreg %p
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:  .LBB66_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -4984,8 +4984,8 @@ define i64 @global_atomic_xor_i64_ret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-NEXT:  .LBB72_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_xor_b32_e32 v8, v10, v7
 ; SI-NEXT:    v_xor_b32_e32 v9, v11, v6
+; SI-NEXT:    v_xor_b32_e32 v8, v10, v7
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, v8
 ; SI-NEXT:    v_mov_b32_e32 v1, v9
@@ -5075,8 +5075,8 @@ define i64 @global_atomic_xor_i64_ret_offset(ptr addrspace(1) %out, i64 %in) {
 ; SI-NEXT:  .LBB73_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_xor_b32_e32 v8, v10, v7
 ; SI-NEXT:    v_xor_b32_e32 v9, v11, v6
+; SI-NEXT:    v_xor_b32_e32 v8, v10, v7
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, v8
 ; SI-NEXT:    v_mov_b32_e32 v1, v9
@@ -5201,8 +5201,8 @@ define amdgpu_gfx void @global_atomic_xor_i64_noret_scalar(ptr addrspace(1) inre
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    v_mov_b32_e32 v5, s5
 ; VI-NEXT:  .LBB74_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -5399,8 +5399,8 @@ define amdgpu_gfx i64 @global_atomic_xor_i64_ret_scalar(ptr addrspace(1) inreg %
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:  .LBB76_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -5817,8 +5817,8 @@ define i64 @global_atomic_max_i64_ret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cmp_gt_i64_e32 vcc, v[10:11], v[4:5]
-; SI-NEXT:    v_cndmask_b32_e32 v8, v4, v10, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v9, v5, v11, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v8, v4, v10, vcc
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, v8
 ; SI-NEXT:    v_mov_b32_e32 v1, v9
@@ -5911,8 +5911,8 @@ define i64 @global_atomic_max_i64_ret_offset(ptr addrspace(1) %out, i64 %in) {
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cmp_gt_i64_e32 vcc, v[10:11], v[4:5]
-; SI-NEXT:    v_cndmask_b32_e32 v8, v4, v10, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v9, v5, v11, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v8, v4, v10, vcc
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, v8
 ; SI-NEXT:    v_mov_b32_e32 v1, v9
@@ -6042,10 +6042,10 @@ define amdgpu_gfx void @global_atomic_max_i64_noret_scalar(ptr addrspace(1) inre
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    s_mov_b64 s[34:35], 0
 ; VI-NEXT:    v_mov_b32_e32 v6, s7
 ; VI-NEXT:    v_mov_b32_e32 v7, s6
+; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    v_mov_b32_e32 v5, s5
 ; VI-NEXT:  .LBB84_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -6259,10 +6259,10 @@ define amdgpu_gfx i64 @global_atomic_max_i64_ret_scalar(ptr addrspace(1) inreg %
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    s_mov_b64 s[34:35], 0
 ; VI-NEXT:    v_mov_b32_e32 v4, s7
 ; VI-NEXT:    v_mov_b32_e32 v5, s6
+; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:  .LBB86_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -6474,12 +6474,12 @@ define amdgpu_kernel void @atomic_max_i64_addr64_offset(ptr addrspace(1) %out, i
 ; VI-NEXT:    s_load_dwordx2 s[6:7], s[0:1], 0x20
 ; VI-NEXT:    s_add_u32 s0, s0, 32
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
-; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_mov_b32_e32 v6, s3
+; VI-NEXT:    v_mov_b32_e32 v7, s2
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, s6
-; VI-NEXT:    v_mov_b32_e32 v7, s2
 ; VI-NEXT:    v_mov_b32_e32 v3, s7
+; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_mov_b32_e32 v4, s0
 ; VI-NEXT:  .LBB88_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -6593,12 +6593,12 @@ define amdgpu_kernel void @atomic_max_i64_ret_addr64_offset(ptr addrspace(1) %ou
 ; VI-NEXT:    s_load_dwordx2 s[6:7], s[0:1], 0x20
 ; VI-NEXT:    s_add_u32 s0, s0, 32
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v4, s5
+; VI-NEXT:    v_mov_b32_e32 v5, s4
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, s6
-; VI-NEXT:    v_mov_b32_e32 v5, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, s7
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:  .LBB89_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -6712,10 +6712,10 @@ define amdgpu_kernel void @atomic_max_i64_addr64(ptr addrspace(1) %out, i64 %in,
 ; VI-NEXT:    s_add_u32 s4, s0, s4
 ; VI-NEXT:    s_addc_u32 s5, s1, s5
 ; VI-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
-; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    s_mov_b64 s[0:1], 0
 ; VI-NEXT:    v_mov_b32_e32 v6, s3
 ; VI-NEXT:    v_mov_b32_e32 v7, s2
+; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, s6
 ; VI-NEXT:    v_mov_b32_e32 v3, s7
@@ -6828,10 +6828,10 @@ define amdgpu_kernel void @atomic_max_i64_ret_addr64(ptr addrspace(1) %out, ptr 
 ; VI-NEXT:    s_add_u32 s6, s0, s6
 ; VI-NEXT:    s_addc_u32 s7, s1, s7
 ; VI-NEXT:    s_load_dwordx2 s[8:9], s[6:7], 0x0
-; VI-NEXT:    v_mov_b32_e32 v0, s6
 ; VI-NEXT:    s_mov_b64 s[0:1], 0
 ; VI-NEXT:    v_mov_b32_e32 v4, s5
 ; VI-NEXT:    v_mov_b32_e32 v5, s4
+; VI-NEXT:    v_mov_b32_e32 v0, s6
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, s8
 ; VI-NEXT:    v_mov_b32_e32 v3, s9
@@ -7169,8 +7169,8 @@ define i64 @global_atomic_umax_i64_ret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cmp_gt_u64_e32 vcc, v[10:11], v[4:5]
-; SI-NEXT:    v_cndmask_b32_e32 v8, v4, v10, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v9, v5, v11, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v8, v4, v10, vcc
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, v8
 ; SI-NEXT:    v_mov_b32_e32 v1, v9
@@ -7263,8 +7263,8 @@ define i64 @global_atomic_umax_i64_ret_offset(ptr addrspace(1) %out, i64 %in) {
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cmp_gt_u64_e32 vcc, v[10:11], v[4:5]
-; SI-NEXT:    v_cndmask_b32_e32 v8, v4, v10, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v9, v5, v11, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v8, v4, v10, vcc
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, v8
 ; SI-NEXT:    v_mov_b32_e32 v1, v9
@@ -7394,10 +7394,10 @@ define amdgpu_gfx void @global_atomic_umax_i64_noret_scalar(ptr addrspace(1) inr
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    s_mov_b64 s[34:35], 0
 ; VI-NEXT:    v_mov_b32_e32 v6, s7
 ; VI-NEXT:    v_mov_b32_e32 v7, s6
+; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    v_mov_b32_e32 v5, s5
 ; VI-NEXT:  .LBB98_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -7611,10 +7611,10 @@ define amdgpu_gfx i64 @global_atomic_umax_i64_ret_scalar(ptr addrspace(1) inreg 
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    s_mov_b64 s[34:35], 0
 ; VI-NEXT:    v_mov_b32_e32 v4, s7
 ; VI-NEXT:    v_mov_b32_e32 v5, s6
+; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:  .LBB100_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -7826,12 +7826,12 @@ define amdgpu_kernel void @atomic_umax_i64_addr64_offset(ptr addrspace(1) %out, 
 ; VI-NEXT:    s_load_dwordx2 s[6:7], s[0:1], 0x20
 ; VI-NEXT:    s_add_u32 s0, s0, 32
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
-; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_mov_b32_e32 v6, s3
+; VI-NEXT:    v_mov_b32_e32 v7, s2
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, s6
-; VI-NEXT:    v_mov_b32_e32 v7, s2
 ; VI-NEXT:    v_mov_b32_e32 v3, s7
+; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_mov_b32_e32 v4, s0
 ; VI-NEXT:  .LBB102_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -7945,12 +7945,12 @@ define amdgpu_kernel void @atomic_umax_i64_ret_addr64_offset(ptr addrspace(1) %o
 ; VI-NEXT:    s_load_dwordx2 s[6:7], s[0:1], 0x20
 ; VI-NEXT:    s_add_u32 s0, s0, 32
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v4, s5
+; VI-NEXT:    v_mov_b32_e32 v5, s4
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, s6
-; VI-NEXT:    v_mov_b32_e32 v5, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, s7
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:  .LBB103_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -8068,10 +8068,10 @@ define amdgpu_kernel void @atomic_umax_i64_ret_addr64(ptr addrspace(1) %out, ptr
 ; VI-NEXT:    s_add_u32 s6, s0, s6
 ; VI-NEXT:    s_addc_u32 s7, s1, s7
 ; VI-NEXT:    s_load_dwordx2 s[8:9], s[6:7], 0x0
-; VI-NEXT:    v_mov_b32_e32 v0, s6
 ; VI-NEXT:    s_mov_b64 s[0:1], 0
 ; VI-NEXT:    v_mov_b32_e32 v4, s5
 ; VI-NEXT:    v_mov_b32_e32 v5, s4
+; VI-NEXT:    v_mov_b32_e32 v0, s6
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, s8
 ; VI-NEXT:    v_mov_b32_e32 v3, s9
@@ -8409,8 +8409,8 @@ define i64 @global_atomic_umin_i64_ret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cmp_le_u64_e32 vcc, v[10:11], v[4:5]
-; SI-NEXT:    v_cndmask_b32_e32 v8, v4, v10, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v9, v5, v11, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v8, v4, v10, vcc
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, v8
 ; SI-NEXT:    v_mov_b32_e32 v1, v9
@@ -8503,8 +8503,8 @@ define i64 @global_atomic_umin_i64_ret_offset(ptr addrspace(1) %out, i64 %in) {
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cmp_le_u64_e32 vcc, v[10:11], v[4:5]
-; SI-NEXT:    v_cndmask_b32_e32 v8, v4, v10, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v9, v5, v11, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v8, v4, v10, vcc
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, v8
 ; SI-NEXT:    v_mov_b32_e32 v1, v9
@@ -8634,10 +8634,10 @@ define amdgpu_gfx void @global_atomic_umin_i64_noret_scalar(ptr addrspace(1) inr
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    s_mov_b64 s[34:35], 0
 ; VI-NEXT:    v_mov_b32_e32 v6, s7
 ; VI-NEXT:    v_mov_b32_e32 v7, s6
+; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    v_mov_b32_e32 v5, s5
 ; VI-NEXT:  .LBB111_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -8851,10 +8851,10 @@ define amdgpu_gfx i64 @global_atomic_umin_i64_ret_scalar(ptr addrspace(1) inreg 
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    s_mov_b64 s[34:35], 0
 ; VI-NEXT:    v_mov_b32_e32 v4, s7
 ; VI-NEXT:    v_mov_b32_e32 v5, s6
+; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:  .LBB113_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -9285,8 +9285,8 @@ define i64 @global_atomic_min_i64_ret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cmp_le_i64_e32 vcc, v[10:11], v[4:5]
-; SI-NEXT:    v_cndmask_b32_e32 v8, v4, v10, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v9, v5, v11, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v8, v4, v10, vcc
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, v8
 ; SI-NEXT:    v_mov_b32_e32 v1, v9
@@ -9379,8 +9379,8 @@ define i64 @global_atomic_min_i64_ret_offset(ptr addrspace(1) %out, i64 %in) {
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cmp_le_i64_e32 vcc, v[10:11], v[4:5]
-; SI-NEXT:    v_cndmask_b32_e32 v8, v4, v10, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v9, v5, v11, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v8, v4, v10, vcc
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, v8
 ; SI-NEXT:    v_mov_b32_e32 v1, v9
@@ -9510,10 +9510,10 @@ define amdgpu_gfx void @global_atomic_min_i64_noret_scalar(ptr addrspace(1) inre
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    s_mov_b64 s[34:35], 0
 ; VI-NEXT:    v_mov_b32_e32 v6, s7
 ; VI-NEXT:    v_mov_b32_e32 v7, s6
+; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    v_mov_b32_e32 v5, s5
 ; VI-NEXT:  .LBB121_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -9727,10 +9727,10 @@ define amdgpu_gfx i64 @global_atomic_min_i64_ret_scalar(ptr addrspace(1) inreg %
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    s_mov_b64 s[34:35], 0
 ; VI-NEXT:    v_mov_b32_e32 v4, s7
 ; VI-NEXT:    v_mov_b32_e32 v5, s6
+; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:  .LBB123_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -9942,12 +9942,12 @@ define amdgpu_kernel void @atomic_min_i64_addr64_offset(ptr addrspace(1) %out, i
 ; VI-NEXT:    s_load_dwordx2 s[6:7], s[0:1], 0x20
 ; VI-NEXT:    s_add_u32 s0, s0, 32
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
-; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_mov_b32_e32 v6, s3
+; VI-NEXT:    v_mov_b32_e32 v7, s2
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, s6
-; VI-NEXT:    v_mov_b32_e32 v7, s2
 ; VI-NEXT:    v_mov_b32_e32 v3, s7
+; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_mov_b32_e32 v4, s0
 ; VI-NEXT:  .LBB125_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -10061,12 +10061,12 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64_offset(ptr addrspace(1) %ou
 ; VI-NEXT:    s_load_dwordx2 s[6:7], s[0:1], 0x20
 ; VI-NEXT:    s_add_u32 s0, s0, 32
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v4, s5
+; VI-NEXT:    v_mov_b32_e32 v5, s4
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, s6
-; VI-NEXT:    v_mov_b32_e32 v5, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, s7
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:  .LBB126_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -10175,9 +10175,9 @@ define amdgpu_kernel void @atomic_min_i64(ptr addrspace(1) %out, i64 %in) {
 ; VI-NEXT:    s_mov_b64 s[4:5], 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_load_dwordx2 s[6:7], s[0:1], 0x0
-; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_mov_b32_e32 v6, s3
 ; VI-NEXT:    v_mov_b32_e32 v7, s2
+; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_mov_b32_e32 v4, s0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, s6
@@ -10285,10 +10285,10 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64(ptr addrspace(1) %out, ptr 
 ; VI-NEXT:    s_add_u32 s6, s0, s6
 ; VI-NEXT:    s_addc_u32 s7, s1, s7
 ; VI-NEXT:    s_load_dwordx2 s[8:9], s[6:7], 0x0
-; VI-NEXT:    v_mov_b32_e32 v0, s6
 ; VI-NEXT:    s_mov_b64 s[0:1], 0
 ; VI-NEXT:    v_mov_b32_e32 v4, s5
 ; VI-NEXT:    v_mov_b32_e32 v5, s4
+; VI-NEXT:    v_mov_b32_e32 v0, s6
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, s8
 ; VI-NEXT:    v_mov_b32_e32 v3, s9
@@ -10640,8 +10640,8 @@ define i64 @global_atomic_uinc_wrap_i64_ret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, 1, v10
 ; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v11, vcc
 ; SI-NEXT:    v_cmp_lt_u64_e32 vcc, v[10:11], v[4:5]
-; SI-NEXT:    v_cndmask_b32_e32 v8, 0, v0, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v9, 0, v1, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v8, 0, v0, vcc
 ; SI-NEXT:    v_mov_b32_e32 v0, v8
 ; SI-NEXT:    v_mov_b32_e32 v1, v9
 ; SI-NEXT:    v_mov_b32_e32 v2, v10
@@ -10668,8 +10668,8 @@ define i64 @global_atomic_uinc_wrap_i64_ret(ptr addrspace(1) %ptr, i64 %in) {
 ; VI-NEXT:  .LBB133_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v7, v5
 ; VI-NEXT:    v_mov_b32_e32 v6, v4
+; VI-NEXT:    v_mov_b32_e32 v7, v5
 ; VI-NEXT:    v_add_u32_e32 v4, vcc, 1, v6
 ; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v7, vcc
 ; VI-NEXT:    v_cmp_lt_u64_e32 vcc, v[6:7], v[2:3]
@@ -10696,8 +10696,8 @@ define i64 @global_atomic_uinc_wrap_i64_ret(ptr addrspace(1) %ptr, i64 %in) {
 ; GFX9-NEXT:  .LBB133_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX9-NEXT:    v_add_co_u32_e32 v4, vcc, 1, v6
 ; GFX9-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v7, vcc
 ; GFX9-NEXT:    v_cmp_lt_u64_e32 vcc, v[6:7], v[2:3]
@@ -10739,8 +10739,8 @@ define i64 @global_atomic_uinc_wrap_i64_ret_offset(ptr addrspace(1) %out, i64 %i
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, 1, v10
 ; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v11, vcc
 ; SI-NEXT:    v_cmp_lt_u64_e32 vcc, v[10:11], v[4:5]
-; SI-NEXT:    v_cndmask_b32_e32 v8, 0, v0, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v9, 0, v1, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v8, 0, v0, vcc
 ; SI-NEXT:    v_mov_b32_e32 v0, v8
 ; SI-NEXT:    v_mov_b32_e32 v1, v9
 ; SI-NEXT:    v_mov_b32_e32 v2, v10
@@ -10769,8 +10769,8 @@ define i64 @global_atomic_uinc_wrap_i64_ret_offset(ptr addrspace(1) %out, i64 %i
 ; VI-NEXT:  .LBB134_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v9, v1
 ; VI-NEXT:    v_mov_b32_e32 v8, v0
+; VI-NEXT:    v_mov_b32_e32 v9, v1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 1, v8
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v9, vcc
 ; VI-NEXT:    v_cmp_lt_u64_e32 vcc, v[8:9], v[2:3]
@@ -10795,8 +10795,8 @@ define i64 @global_atomic_uinc_wrap_i64_ret_offset(ptr addrspace(1) %out, i64 %i
 ; GFX9-NEXT:  .LBB134_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX9-NEXT:    v_add_co_u32_e32 v4, vcc, 1, v6
 ; GFX9-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v7, vcc
 ; GFX9-NEXT:    v_cmp_lt_u64_e32 vcc, v[6:7], v[2:3]
@@ -10873,8 +10873,8 @@ define amdgpu_gfx void @global_atomic_uinc_wrap_i64_noret_scalar(ptr addrspace(1
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    v_mov_b32_e32 v5, s5
 ; VI-NEXT:  .LBB135_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -11089,14 +11089,14 @@ define amdgpu_gfx i64 @global_atomic_uinc_wrap_i64_ret_scalar(ptr addrspace(1) i
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    s_mov_b64 s[34:35], 0
+; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:  .LBB137_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v7, v1
 ; VI-NEXT:    v_mov_b32_e32 v6, v0
+; VI-NEXT:    v_mov_b32_e32 v7, v1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 1, v6
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v7, vcc
 ; VI-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[6:7]
@@ -11122,8 +11122,8 @@ define amdgpu_gfx i64 @global_atomic_uinc_wrap_i64_ret_scalar(ptr addrspace(1) i
 ; GFX9-NEXT:  .LBB137_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v6, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v0
+; GFX9-NEXT:    v_mov_b32_e32 v6, v1
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 1, v5
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v6, vcc
 ; GFX9-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[5:6]
@@ -11202,8 +11202,8 @@ define amdgpu_gfx i64 @global_atomic_uinc_wrap_i64_ret_offset_scalar(ptr addrspa
 ; VI-NEXT:  .LBB138_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v7, v1
 ; VI-NEXT:    v_mov_b32_e32 v6, v0
+; VI-NEXT:    v_mov_b32_e32 v7, v1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 1, v6
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v7, vcc
 ; VI-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[6:7]
@@ -11229,8 +11229,8 @@ define amdgpu_gfx i64 @global_atomic_uinc_wrap_i64_ret_offset_scalar(ptr addrspa
 ; GFX9-NEXT:  .LBB138_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v6, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v0
+; GFX9-NEXT:    v_mov_b32_e32 v6, v1
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 1, v5
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v6, vcc
 ; GFX9-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[5:6]
@@ -11544,8 +11544,8 @@ define i64 @global_atomic_udec_wrap_i64_ret(ptr addrspace(1) %ptr, i64 %in) {
 ; SI-NEXT:    v_subrev_i32_e64 v0, s[4:5], 1, v10
 ; SI-NEXT:    v_subbrev_u32_e64 v1, s[4:5], 0, v11, s[4:5]
 ; SI-NEXT:    s_or_b64 vcc, s[4:5], vcc
-; SI-NEXT:    v_cndmask_b32_e32 v8, v0, v4, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v9, v1, v5, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v8, v0, v4, vcc
 ; SI-NEXT:    v_mov_b32_e32 v0, v8
 ; SI-NEXT:    v_mov_b32_e32 v1, v9
 ; SI-NEXT:    v_mov_b32_e32 v2, v10
@@ -11647,8 +11647,8 @@ define i64 @global_atomic_udec_wrap_i64_ret_offset(ptr addrspace(1) %out, i64 %i
 ; SI-NEXT:    v_subrev_i32_e64 v0, s[4:5], 1, v10
 ; SI-NEXT:    v_subbrev_u32_e64 v1, s[4:5], 0, v11, s[4:5]
 ; SI-NEXT:    s_or_b64 vcc, s[4:5], vcc
-; SI-NEXT:    v_cndmask_b32_e32 v8, v0, v4, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v9, v1, v5, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v8, v0, v4, vcc
 ; SI-NEXT:    v_mov_b32_e32 v0, v8
 ; SI-NEXT:    v_mov_b32_e32 v1, v9
 ; SI-NEXT:    v_mov_b32_e32 v2, v10
@@ -11786,10 +11786,10 @@ define amdgpu_gfx void @global_atomic_udec_wrap_i64_noret_scalar(ptr addrspace(1
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    s_mov_b64 s[36:37], 0
 ; VI-NEXT:    v_mov_b32_e32 v6, s7
 ; VI-NEXT:    v_mov_b32_e32 v7, s6
+; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    v_mov_b32_e32 v5, s5
 ; VI-NEXT:  .LBB145_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -12021,10 +12021,10 @@ define amdgpu_gfx i64 @global_atomic_udec_wrap_i64_ret_scalar(ptr addrspace(1) i
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    s_mov_b64 s[36:37], 0
 ; VI-NEXT:    v_mov_b32_e32 v4, s7
 ; VI-NEXT:    v_mov_b32_e32 v5, s6
+; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:  .LBB147_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1

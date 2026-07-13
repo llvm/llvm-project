@@ -198,11 +198,10 @@ public:
   static void Register(llvm::StringRef name, Channel &channel);
   static void Unregister(llvm::StringRef name);
 
-  static bool
+  static llvm::Error
   EnableLogChannel(const std::shared_ptr<LogHandler> &log_handler_sp,
                    uint32_t log_options, llvm::StringRef channel,
-                   llvm::ArrayRef<const char *> categories,
-                   llvm::raw_ostream &error_stream);
+                   llvm::ArrayRef<const char *> categories);
 
   static bool DisableLogChannel(llvm::StringRef channel,
                                 llvm::ArrayRef<const char *> categories,
@@ -319,11 +318,11 @@ private:
                              const ChannelMap::value_type &entry);
 
   /// Convert an array of category names into a set of category flags.
-  /// Returns a bitmask of categories, or an empty optional in the case that
+  /// Returns a bitmask of categories, or an error message in the case that
   /// at least one category name was not recognised. All unknown category names
-  /// are reported as errors in the provided stream.
-  static std::optional<Log::MaskType>
-  GetFlags(llvm::raw_ostream &stream, const ChannelMap::value_type &entry,
+  /// are included in the error.
+  static llvm::Expected<Log::MaskType>
+  GetFlags(const ChannelMap::value_type &entry,
            llvm::ArrayRef<const char *> categories);
 
   Log(const Log &) = delete;

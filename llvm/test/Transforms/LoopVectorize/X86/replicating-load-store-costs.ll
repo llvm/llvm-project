@@ -463,19 +463,19 @@ define double @test_load_used_by_other_load_scev(ptr %ptr.a, ptr %ptr.b, ptr %pt
 ; I64-NEXT:    [[COND:%.*]] = call i1 @cond()
 ; I64-NEXT:    br i1 [[COND]], label %[[INNER_LOOP_PREHEADER:.*]], [[EXIT:label %.*]]
 ; I64:       [[INNER_LOOP_PREHEADER]]:
-; I64-NEXT:    br label %[[VECTOR_PH:.*]]
-; I64:       [[VECTOR_PH]]:
 ; I64-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; I64:       [[VECTOR_BODY]]:
-; I64-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; I64-NEXT:    [[TMP0:%.*]] = load double, ptr [[PTR_A]], align 8
 ; I64-NEXT:    [[TMP1:%.*]] = fadd double [[TMP0]], 0.000000e+00
 ; I64-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i64 0
 ; I64-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
 ; I64-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[BROADCAST_SPLAT]], zeroinitializer
+; I64-NEXT:    br label %[[VECTOR_BODY1:.*]]
+; I64:       [[VECTOR_BODY1]]:
+; I64-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_BODY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY1]] ]
 ; I64-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; I64-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; I64-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; I64-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY1]], !llvm.loop [[LOOP8:![0-9]+]]
 ; I64:       [[MIDDLE_BLOCK]]:
 ; I64-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
 ; I64-NEXT:    br label %[[SCALAR_PH:.*]]
@@ -555,36 +555,52 @@ define double @test_load_used_by_other_load_scev_low_trip_count(ptr %ptr.a, ptr 
 ; I64-NEXT:  [[ENTRY:.*]]:
 ; I64-NEXT:    br label %[[OUTER_LOOP:.*]]
 ; I64:       [[OUTER_LOOP_LOOPEXIT:.*]]:
-; I64-NEXT:    [[RESULT_LCSSA:%.*]] = phi double [ [[RESULT:%.*]], %[[INNER_LOOP:.*]] ]
 ; I64-NEXT:    br label %[[OUTER_LOOP]]
 ; I64:       [[OUTER_LOOP]]:
-; I64-NEXT:    [[ACCUM:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[RESULT_LCSSA]], %[[OUTER_LOOP_LOOPEXIT]] ]
+; I64-NEXT:    [[ACCUM:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[TMP28:%.*]], %[[OUTER_LOOP_LOOPEXIT]] ]
+; I64-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x double> poison, double [[ACCUM]], i64 0
+; I64-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; I64-NEXT:    [[COND:%.*]] = call i1 @cond()
 ; I64-NEXT:    br i1 [[COND]], label %[[INNER_LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; I64:       [[INNER_LOOP_PREHEADER]]:
-; I64-NEXT:    br label %[[INNER_LOOP]]
+; I64-NEXT:    br label %[[INNER_LOOP:.*]]
 ; I64:       [[INNER_LOOP]]:
-; I64-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[INNER_LOOP]] ], [ 0, %[[INNER_LOOP_PREHEADER]] ]
-; I64-NEXT:    [[ACCUM_INNER:%.*]] = phi double [ [[MUL1:%.*]], %[[INNER_LOOP]] ], [ [[ACCUM]], %[[INNER_LOOP_PREHEADER]] ]
-; I64-NEXT:    [[IDX_PLUS1:%.*]] = add i64 [[IV]], 1
+; I64-NEXT:    [[TMP0:%.*]] = load double, ptr [[PTR_A]], align 8
+; I64-NEXT:    [[TMP1:%.*]] = fadd double [[TMP0]], 0.000000e+00
+; I64-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i64 0
+; I64-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
+; I64-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[BROADCAST_SPLAT]], zeroinitializer
+; I64-NEXT:    br label %[[VECTOR_BODY:.*]]
+; I64:       [[VECTOR_BODY]]:
+; I64-NEXT:    [[IDX_PLUS1:%.*]] = add i64 1, 1
+; I64-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[PTR_C]], i64 1
 ; I64-NEXT:    [[GEP_C:%.*]] = getelementptr i8, ptr [[PTR_C]], i64 [[IDX_PLUS1]]
+; I64-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[PTR_A]], i64 1
 ; I64-NEXT:    [[GEP_A_I64:%.*]] = getelementptr i64, ptr [[PTR_A]], i64 [[IDX_PLUS1]]
-; I64-NEXT:    [[LOAD_IDX:%.*]] = load i64, ptr [[GEP_A_I64]], align 8
+; I64-NEXT:    [[LOAD_IDX:%.*]] = load i64, ptr [[TMP6]], align 8
+; I64-NEXT:    [[TMP9:%.*]] = load i64, ptr [[GEP_A_I64]], align 8
 ; I64-NEXT:    [[GEP_B:%.*]] = getelementptr double, ptr [[PTR_B]], i64 [[LOAD_IDX]]
-; I64-NEXT:    [[LOAD_A:%.*]] = load double, ptr [[PTR_A]], align 8
-; I64-NEXT:    [[ADD1:%.*]] = fadd double [[LOAD_A]], 0.000000e+00
-; I64-NEXT:    [[GEP_C_OFFSET:%.*]] = getelementptr i8, ptr [[GEP_C]], i64 8
+; I64-NEXT:    [[TMP11:%.*]] = getelementptr double, ptr [[PTR_B]], i64 [[TMP9]]
+; I64-NEXT:    [[GEP_C_OFFSET:%.*]] = getelementptr i8, ptr [[TMP4]], i64 8
+; I64-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[GEP_C]], i64 8
 ; I64-NEXT:    [[LOAD_C:%.*]] = load double, ptr [[GEP_C_OFFSET]], align 8
-; I64-NEXT:    [[MUL1]] = fmul double [[ADD1]], 0.000000e+00
-; I64-NEXT:    [[MUL2:%.*]] = fmul double [[LOAD_C]], 0.000000e+00
-; I64-NEXT:    [[ADD2:%.*]] = fadd double [[MUL2]], 0.000000e+00
-; I64-NEXT:    [[ADD3:%.*]] = fadd double [[ADD2]], 1.000000e+00
+; I64-NEXT:    [[TMP15:%.*]] = load double, ptr [[TMP13]], align 8
+; I64-NEXT:    [[TMP16:%.*]] = insertelement <2 x double> poison, double [[LOAD_C]], i32 0
+; I64-NEXT:    [[TMP17:%.*]] = insertelement <2 x double> [[TMP16]], double [[TMP15]], i32 1
 ; I64-NEXT:    [[LOAD_B:%.*]] = load double, ptr [[GEP_B]], align 8
-; I64-NEXT:    [[DIV:%.*]] = fdiv double [[LOAD_B]], [[ADD3]]
-; I64-NEXT:    [[RESULT]] = fsub double [[ACCUM_INNER]], [[DIV]]
-; I64-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; I64-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 1
-; I64-NEXT:    br i1 [[EXITCOND]], label %[[OUTER_LOOP_LOOPEXIT]], label %[[INNER_LOOP]]
+; I64-NEXT:    [[TMP19:%.*]] = load double, ptr [[TMP11]], align 8
+; I64-NEXT:    [[TMP20:%.*]] = insertelement <2 x double> poison, double [[LOAD_B]], i32 0
+; I64-NEXT:    [[TMP21:%.*]] = insertelement <2 x double> [[TMP20]], double [[TMP19]], i32 1
+; I64-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; I64:       [[MIDDLE_BLOCK]]:
+; I64-NEXT:    [[TMP22:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLAT2]], <2 x double> [[TMP2]], <2 x i32> <i32 1, i32 2>
+; I64-NEXT:    [[TMP23:%.*]] = fmul <2 x double> [[TMP17]], zeroinitializer
+; I64-NEXT:    [[TMP24:%.*]] = fadd <2 x double> [[TMP23]], zeroinitializer
+; I64-NEXT:    [[TMP25:%.*]] = fadd <2 x double> [[TMP24]], splat (double 1.000000e+00)
+; I64-NEXT:    [[TMP26:%.*]] = fdiv <2 x double> [[TMP21]], [[TMP25]]
+; I64-NEXT:    [[TMP27:%.*]] = fsub <2 x double> [[TMP22]], [[TMP26]]
+; I64-NEXT:    [[TMP28]] = extractelement <2 x double> [[TMP27]], i64 1
+; I64-NEXT:    br label %[[OUTER_LOOP_LOOPEXIT]]
 ; I64:       [[EXIT]]:
 ; I64-NEXT:    ret double [[ACCUM]]
 ;

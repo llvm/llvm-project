@@ -602,7 +602,7 @@ bool lldb_private::formatters::LibStdcppSourceLocationSummaryProvider(
     return false;
 
   const char *file = file_sp->GetSummaryAsCString();
-  stream.Printf("%s:%lu:%lu", file ? file : "<unknown>", line, column);
+  stream.Format("{0}:{1}:{2}", file ? file : "<unknown>", line, column);
 
   if (const char *function = function_sp->GetSummaryAsCString())
     stream.Printf(" (%s)", function);
