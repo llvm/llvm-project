@@ -21,13 +21,22 @@ TEST_P(olMemAllocAlignedTest, SuccessAllocMany) {
   std::vector<void *> Allocs;
   Allocs.reserve(1000);
 
-  constexpr ol_alloc_type_t TYPES[3] = {
-      OL_ALLOC_TYPE_DEVICE, OL_ALLOC_TYPE_MANAGED, OL_ALLOC_TYPE_HOST};
-
   for (size_t I = 1; I < TestAllocsNum; I++) {
     void *Alloc = nullptr;
-    ASSERT_SUCCESS(olMemAllocAligned(Device, TYPES[I % 3], 1024 * I,
-                                     DefaultAlignment, &Alloc));
+    switch (I % 3) {
+    case 0:
+      ASSERT_SUCCESS(
+          olMemAllocAlignedDevice(Device, 1024 * I, DefaultAlignment, &Alloc));
+      break;
+    case 1:
+      ASSERT_SUCCESS(
+          olMemAllocAlignedManaged(Device, 1024 * I, DefaultAlignment, &Alloc));
+      break;
+    case 2:
+      ASSERT_SUCCESS(
+          olMemAllocAlignedHost(Device, 1024 * I, DefaultAlignment, &Alloc));
+      break;
+    }
     ASSERT_NE(Alloc, nullptr);
 
     Allocs.push_back(Alloc);
@@ -40,31 +49,29 @@ TEST_P(olMemAllocAlignedTest, SuccessAllocMany) {
 
 TEST_P(olMemAllocAlignedTest, InvalidNullDevice) {
   void *Alloc = nullptr;
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
-               olMemAllocAligned(nullptr, OL_ALLOC_TYPE_DEVICE, 1024,
-                                 DefaultAlignment, &Alloc));
+  ASSERT_ERROR(
+      OL_ERRC_INVALID_NULL_HANDLE,
+      olMemAllocAlignedDevice(nullptr, 1024, DefaultAlignment, &Alloc));
 }
 
 TEST_P(olMemAllocAlignedTest, InvalidNullOutPtr) {
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
-               olMemAllocAligned(Device, OL_ALLOC_TYPE_DEVICE, 1024,
-                                 DefaultAlignment, nullptr));
+  ASSERT_ERROR(
+      OL_ERRC_INVALID_NULL_POINTER,
+      olMemAllocAlignedDevice(Device, 1024, DefaultAlignment, nullptr));
 }
 
 TEST_P(olMemAllocAlignedTest, InvalidAlignmentZero) {
   void *Alloc = nullptr;
 
-  ASSERT_ERROR(
-      OL_ERRC_INVALID_ARGUMENT,
-      olMemAllocAligned(Device, OL_ALLOC_TYPE_DEVICE, 1024, 0, &Alloc));
+  ASSERT_ERROR(OL_ERRC_INVALID_ARGUMENT,
+               olMemAllocAlignedDevice(Device, 1024, 0, &Alloc));
 }
 
 TEST_P(olMemAllocAlignedTest, InvalidAlignmentNotAPowerOfTwo) {
   void *Alloc = nullptr;
 
-  ASSERT_ERROR(
-      OL_ERRC_INVALID_ARGUMENT,
-      olMemAllocAligned(Device, OL_ALLOC_TYPE_DEVICE, 1024, 3, &Alloc));
+  ASSERT_ERROR(OL_ERRC_INVALID_ARGUMENT,
+               olMemAllocAlignedDevice(Device, 1024, 3, &Alloc));
 }
 
 TEST_P(olMemAllocAlignedTest, CudaExceedDefaultAlignment) {
@@ -75,8 +82,7 @@ TEST_P(olMemAllocAlignedTest, CudaExceedDefaultAlignment) {
   void *Alloc = nullptr;
   // The default page size for cuda is 64 KB.
   ASSERT_ERROR(OL_ERRC_UNSUPPORTED,
-               olMemAllocAligned(Device, OL_ALLOC_TYPE_DEVICE, 1024,
-                                 1024 * 64 * 64, &Alloc));
+               olMemAllocAlignedDevice(Device, 1024, 1024 * 64 * 64, &Alloc));
   ASSERT_EQ(Alloc, nullptr);
 }
 
@@ -89,8 +95,7 @@ TEST_P(olMemAllocAlignedTest, SuccessAllocManagedDifferentAlignments) {
   for (size_t i = 0; i < NumAlignments; i++) {
     Alignment = Alignments[i];
     SCOPED_TRACE("alignment: " + std::to_string(Alignment));
-    ASSERT_SUCCESS(olMemAllocAligned(Device, OL_ALLOC_TYPE_MANAGED, 1024,
-                                     Alignment, &Alloc));
+    ASSERT_SUCCESS(olMemAllocAlignedManaged(Device, 1024, Alignment, &Alloc));
     ASSERT_NE(Alloc, nullptr);
     olMemFree(Alloc);
   }
@@ -105,8 +110,7 @@ TEST_P(olMemAllocAlignedTest, SuccessAllocHostDifferentAlignments) {
   for (size_t i = 0; i < NumAlignments; i++) {
     Alignment = Alignments[i];
     SCOPED_TRACE("alignment: " + std::to_string(Alignment));
-    ASSERT_SUCCESS(
-        olMemAllocAligned(Device, OL_ALLOC_TYPE_HOST, 1024, Alignment, &Alloc));
+    ASSERT_SUCCESS(olMemAllocAlignedHost(Device, 1024, Alignment, &Alloc));
     ASSERT_NE(Alloc, nullptr);
     olMemFree(Alloc);
   }
@@ -121,8 +125,7 @@ TEST_P(olMemAllocAlignedTest, SuccessAllocDeviceDifferentAlignments) {
   for (size_t i = 0; i < NumAlignments; i++) {
     Alignment = Alignments[i];
     SCOPED_TRACE("alignment: " + std::to_string(Alignment));
-    ASSERT_SUCCESS(olMemAllocAligned(Device, OL_ALLOC_TYPE_DEVICE, 1024,
-                                     Alignment, &Alloc));
+    ASSERT_SUCCESS(olMemAllocAlignedDevice(Device, 1024, Alignment, &Alloc));
     ASSERT_NE(Alloc, nullptr);
 
     olMemFree(Alloc);
@@ -142,8 +145,7 @@ TEST_P(olMemAllocAlignedTest, SuccessMemcpyManagedDiferentAlignments) {
     Alignment = Alignments[i];
     SCOPED_TRACE("alignment: " + std::to_string(Alignment));
 
-    ASSERT_SUCCESS(olMemAllocAligned(Device, OL_ALLOC_TYPE_MANAGED, Size,
-                                     Alignment, &Alloc));
+    ASSERT_SUCCESS(olMemAllocAlignedManaged(Device, Size, Alignment, &Alloc));
     // memcpy is synchronous when queue is unspecified.
     ASSERT_SUCCESS(olMemcpy(nullptr, Alloc, Device, Input.data(), Host, Size));
     ASSERT_SUCCESS(olMemcpy(nullptr, Output.data(), Host, Alloc, Device, Size));
@@ -169,8 +171,7 @@ TEST_P(olMemAllocAlignedTest, SuccessMemcpyDeviceDiferentAlignments) {
     Alignment = Alignments[i];
     SCOPED_TRACE("alignment: " + std::to_string(Alignment));
 
-    ASSERT_SUCCESS(olMemAllocAligned(Device, OL_ALLOC_TYPE_DEVICE, Size,
-                                     Alignment, &Alloc));
+    ASSERT_SUCCESS(olMemAllocAlignedDevice(Device, Size, Alignment, &Alloc));
     // memcpy is synchronous when queue is unspecified.
     ASSERT_SUCCESS(olMemcpy(nullptr, Alloc, Device, Input.data(), Host, Size));
     ASSERT_SUCCESS(olMemcpy(nullptr, Output.data(), Host, Alloc, Device, Size));
@@ -196,8 +197,7 @@ TEST_P(olMemAllocAlignedTest, SuccessMemcpyHostDiferentAlignments) {
     Alignment = Alignments[i];
     SCOPED_TRACE("alignment: " + std::to_string(Alignment));
 
-    ASSERT_SUCCESS(
-        olMemAllocAligned(Device, OL_ALLOC_TYPE_HOST, Size, Alignment, &Alloc));
+    ASSERT_SUCCESS(olMemAllocAlignedHost(Device, Size, Alignment, &Alloc));
     // memcpy is synchronous when queue is unspecified.
     ASSERT_SUCCESS(olMemcpy(nullptr, Alloc, Device, Input.data(), Host, Size));
     ASSERT_SUCCESS(olMemcpy(nullptr, Output.data(), Host, Alloc, Device, Size));

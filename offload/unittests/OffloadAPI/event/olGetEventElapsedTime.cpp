@@ -28,8 +28,8 @@ struct olGetEventElapsedTimeTest : OffloadQueueTest {
     LaunchArgs.NumGroups = {1, 1, 1};
     LaunchArgs.DynSharedMemory = 0;
 
-    ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
-                              LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
+    ASSERT_SUCCESS(olMemAllocManaged(
+        Device, LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
   }
 
   void TearDown() override {

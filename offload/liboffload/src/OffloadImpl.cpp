@@ -654,16 +654,40 @@ Error olMemAllocImplHelper(ol_device_handle_t Device, ol_alloc_type_t Type,
                             "failed to allocate non-overlapping memory");
 }
 
-Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
-                      size_t Size, void **AllocationOut) {
-  return olMemAllocImplHelper(Device, Type, Size, /*Alignment=*/0,
+Error olMemAllocHost_impl(ol_device_handle_t Device, size_t Size,
+                          void **AllocationOut) {
+  return olMemAllocImplHelper(Device, OL_ALLOC_TYPE_HOST, Size,
+                              /*Alignment=*/0, AllocationOut);
+}
+
+Error olMemAllocManaged_impl(ol_device_handle_t Device, size_t Size,
+                             void **AllocationOut) {
+  return olMemAllocImplHelper(Device, OL_ALLOC_TYPE_MANAGED, Size,
+                              /*Alignment=*/0, AllocationOut);
+}
+
+Error olMemAllocDevice_impl(ol_device_handle_t Device, size_t Size,
+                            void **AllocationOut) {
+  return olMemAllocImplHelper(Device, OL_ALLOC_TYPE_DEVICE, Size,
+                              /*Alignment=*/0, AllocationOut);
+}
+
+Error olMemAllocAlignedHost_impl(ol_device_handle_t Device, size_t Size,
+                                 size_t Alignment, void **AllocationOut) {
+  return olMemAllocImplHelper(Device, OL_ALLOC_TYPE_HOST, Size, Alignment,
                               AllocationOut);
 }
 
-Error olMemAllocAligned_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
-                             size_t Size, size_t Alignment,
-                             void **AllocationOut) {
-  return olMemAllocImplHelper(Device, Type, Size, Alignment, AllocationOut);
+Error olMemAllocAlignedManaged_impl(ol_device_handle_t Device, size_t Size,
+                                    size_t Alignment, void **AllocationOut) {
+  return olMemAllocImplHelper(Device, OL_ALLOC_TYPE_MANAGED, Size, Alignment,
+                              AllocationOut);
+}
+
+Error olMemAllocAlignedDevice_impl(ol_device_handle_t Device, size_t Size,
+                                   size_t Alignment, void **AllocationOut) {
+  return olMemAllocImplHelper(Device, OL_ALLOC_TYPE_DEVICE, Size, Alignment,
+                              AllocationOut);
 }
 
 Error olMemFree_impl(void *Address) {

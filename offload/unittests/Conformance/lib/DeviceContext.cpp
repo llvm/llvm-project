@@ -157,8 +157,7 @@ const llvm::SetVector<llvm::StringRef> &mathtest::getPlatforms() {
 void detail::allocManagedMemory(ol_device_handle_t DeviceHandle,
                                 std::size_t Size,
                                 void **AllocationOut) noexcept {
-  OL_CHECK(
-      olMemAlloc(DeviceHandle, OL_ALLOC_TYPE_MANAGED, Size, AllocationOut));
+  OL_CHECK(olMemAllocManaged(DeviceHandle, Size, AllocationOut));
 }
 
 //===----------------------------------------------------------------------===//

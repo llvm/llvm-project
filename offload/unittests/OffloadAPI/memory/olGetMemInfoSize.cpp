@@ -15,7 +15,7 @@ struct olGetMemInfoSizeTest : OffloadDeviceTest {
 
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::SetUp());
-    ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, 0x1024, &Ptr));
+    ASSERT_SUCCESS(olMemAllocDevice(Device, 0x1024, &Ptr));
   }
 
   void TearDown() override {

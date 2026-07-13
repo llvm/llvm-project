@@ -58,8 +58,8 @@ TEST_P(olLaunchHostFunctionKernelTest, SuccessBlocking) {
   ASSERT_SUCCESS(olCreateQueue(Device, &Queue));
 
   void *Mem;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
-                            LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
+  ASSERT_SUCCESS(olMemAllocManaged(
+      Device, LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
 
   uint32_t *Data = (uint32_t *)Mem;
   for (uint32_t i = 0; i < 64; i++) {
