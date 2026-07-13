@@ -62,6 +62,8 @@ static SourceLocation GetFactLoc(CausingFactType F) {
       return ReturnEsc->getReturnExpr()->getExprLoc();
     if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF))
       return FieldEsc->getFieldDecl()->getLocation();
+    if (auto *GlobalEsc = dyn_cast<GlobalEscapeFact>(OEF))
+      return GlobalEsc->getGlobal()->getLocation();
   }
   llvm_unreachable("unhandled causing fact in PointerUnion");
 }
@@ -159,9 +161,30 @@ public:
   /// An OriginFlow kills the liveness of the destination origin if `KillDest`
   /// is true. Otherwise, it propagates liveness from destination to source.
   Lattice transfer(Lattice In, const OriginFlowFact &OF) {
-    if (!OF.getKillDest())
-      return In;
-    return Lattice(Factory.remove(In.LiveOrigins, OF.getDestOriginID()));
+    Lattice Out = In;
+    OriginID Dest = OF.getDestOriginID();
+    OriginID Src = OF.getSrcOriginID();
+    // If the destination of the flow is live, the source of the flow must also
+    // be marked live before this point as its value will flow into the
+    // destination.
+    if (In.LiveOrigins.contains(Dest)) {
+      const LivenessInfo *DestInfo = In.LiveOrigins.lookup(Dest);
+      assert(DestInfo);
+      Out = Lattice(Factory.add(Out.LiveOrigins, Src, *DestInfo));
+    }
+    if (OF.getKillDest())
+      Out = Lattice(Factory.remove(Out.LiveOrigins, Dest));
+    return Out;
+  }
+
+  Lattice transfer(Lattice In, const KillOriginFact &F) {
+    return Lattice(Factory.remove(In.LiveOrigins, F.getKilledOrigin()));
+  }
+
+  Lattice transfer(Lattice In, const ExpireFact &F) {
+    if (auto OID = F.getOriginID())
+      return Lattice(Factory.remove(In.LiveOrigins, *OID));
+    return In;
   }
 
   LivenessMap getLiveOriginsAt(ProgramPoint P) const {

@@ -507,6 +507,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_HEXAGON_MACH_V87, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_MACH_V89, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_MACH_V91, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V93, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_ISA_V2, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V3, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V4, EF_HEXAGON_ISA);
@@ -531,6 +532,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_HEXAGON_ISA_V87, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V89, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V91, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V93, EF_HEXAGON_ISA);
     break;
   case ELF::EM_AVR:
     BCaseMask(EF_AVR_ARCH_AVR1, EF_AVR_ARCH_MASK);
@@ -590,78 +592,9 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     break;
   case ELF::EM_AMDGPU:
     BCaseMask(EF_AMDGPU_MACH_NONE, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_R600_R600, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_R600_R630, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_R600_RS880, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_R600_RV670, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_R600_RV710, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_R600_RV730, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_R600_RV770, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_R600_CEDAR, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_R600_CYPRESS, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_R600_JUNIPER, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_R600_REDWOOD, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_R600_SUMO, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_R600_BARTS, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_R600_CAICOS, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_R600_CAYMAN, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_R600_TURKS, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX600, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX601, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX602, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX700, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX701, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX702, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX703, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX704, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX705, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX801, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX802, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX803, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX805, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX810, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX900, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX902, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX904, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX906, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX908, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX909, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX90A, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX90C, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX942, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX950, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1010, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1011, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1012, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1013, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1030, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1031, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1032, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1033, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1034, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1035, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1036, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1100, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1101, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1102, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1103, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1150, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1151, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1152, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1153, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1170, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1200, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1201, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1250, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1251, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1310, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC, EF_AMDGPU_MACH);
+#define X(NUM, ENUM, NAME) BCaseMask(ENUM, EF_AMDGPU_MACH);
+    AMDGPU_MACH_LIST(X)
+#undef X
     switch (Object->Header.ABIVersion) {
     default:
       // ELFOSABI_AMDGPU_PAL, ELFOSABI_AMDGPU_MESA3D support *_V3 flags.
@@ -1882,57 +1815,6 @@ void MappingTraits<ELFYAML::StackSizeEntry>::mapping(
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapOptional("Address", E.Address, Hex64(0));
   IO.mapRequired("Size", E.Size);
-}
-
-void MappingTraits<ELFYAML::BBAddrMapEntry>::mapping(
-    IO &IO, ELFYAML::BBAddrMapEntry &E) {
-  assert(IO.getContext() && "The IO context is not initialized");
-  IO.mapRequired("Version", E.Version);
-  IO.mapOptional("Feature", E.Feature, Hex16(0));
-  IO.mapOptional("NumBBRanges", E.NumBBRanges);
-  IO.mapOptional("BBRanges", E.BBRanges);
-}
-
-void MappingTraits<ELFYAML::BBAddrMapEntry::BBRangeEntry>::mapping(
-    IO &IO, ELFYAML::BBAddrMapEntry::BBRangeEntry &E) {
-  IO.mapOptional("BaseAddress", E.BaseAddress, Hex64(0));
-  IO.mapOptional("NumBlocks", E.NumBlocks);
-  IO.mapOptional("BBEntries", E.BBEntries);
-}
-
-void MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry>::mapping(
-    IO &IO, ELFYAML::BBAddrMapEntry::BBEntry &E) {
-  assert(IO.getContext() && "The IO context is not initialized");
-  IO.mapOptional("ID", E.ID);
-  IO.mapRequired("AddressOffset", E.AddressOffset);
-  IO.mapRequired("Size", E.Size);
-  IO.mapRequired("Metadata", E.Metadata);
-  IO.mapOptional("CallsiteEndOffsets", E.CallsiteEndOffsets);
-  IO.mapOptional("Hash", E.Hash);
-}
-
-void MappingTraits<ELFYAML::PGOAnalysisMapEntry>::mapping(
-    IO &IO, ELFYAML::PGOAnalysisMapEntry &E) {
-  assert(IO.getContext() && "The IO context is not initialized");
-  IO.mapOptional("FuncEntryCount", E.FuncEntryCount);
-  IO.mapOptional("PGOBBEntries", E.PGOBBEntries);
-}
-
-void MappingTraits<ELFYAML::PGOAnalysisMapEntry::PGOBBEntry>::mapping(
-    IO &IO, ELFYAML::PGOAnalysisMapEntry::PGOBBEntry &E) {
-  assert(IO.getContext() && "The IO context is not initialized");
-  IO.mapOptional("BBFreq", E.BBFreq);
-  IO.mapOptional("PostLinkBBFreq", E.PostLinkBBFreq);
-  IO.mapOptional("Successors", E.Successors);
-}
-
-void MappingTraits<ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry>::
-    mapping(IO &IO,
-            ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry &E) {
-  assert(IO.getContext() && "The IO context is not initialized");
-  IO.mapRequired("ID", E.ID);
-  IO.mapRequired("BrProb", E.BrProb);
-  IO.mapOptional("PostLinkBrFreq", E.PostLinkBrFreq);
 }
 
 void MappingTraits<ELFYAML::GnuHashHeader>::mapping(IO &IO,

@@ -16,6 +16,7 @@
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
+#include "flang/Optimizer/Passes/Pipelines.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 
@@ -37,11 +38,7 @@ void registerTestOpenACC();
 
 int main(int argc, char **argv) {
   fir::support::registerMLIRPassesForFortranTools();
-  fir::registerOptCodeGenPasses();
-  fir::registerOptTransformPasses();
-  hlfir::registerHLFIRPasses();
-  flangomp::registerFlangOpenMPPasses();
-  fir::acc::registerFIROpenACCPasses();
+  fir::registerFlangPipelinePasses();
 #ifdef FLANG_INCLUDE_TESTS
   fir::test::registerTestFIRAliasAnalysisPass();
   fir::test::registerTestFIROpenACCInterfacesPass();
@@ -52,6 +49,6 @@ int main(int argc, char **argv) {
   fir::support::registerDialects(registry);
   registry.insert<mlir::memref::MemRefDialect>();
   fir::support::addFIRExtensions(registry);
-  return failed(MlirOptMain(argc, argv, "FIR modular optimizer driver\n",
-      registry));
+  return failed(
+      MlirOptMain(argc, argv, "FIR modular optimizer driver\n", registry));
 }

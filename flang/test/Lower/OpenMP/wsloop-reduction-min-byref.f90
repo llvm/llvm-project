@@ -58,8 +58,7 @@
 ! CHECK-DAG:                 %[[VAL_17:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_16]])  : (!fir.box<!fir.array<?xi32>>, i64) -> !fir.ref<i32>
 ! CHECK-DAG:                 %[[VAL_18:.*]] = fir.load %[[VAL_14]]#0 : !fir.ref<i32>
 ! CHECK-DAG:                 %[[VAL_19:.*]] = fir.load %[[VAL_17]] : !fir.ref<i32>
-! CHECK:                 %[[VAL_20:.*]] = arith.cmpi slt, %[[VAL_18]], %[[VAL_19]] : i32
-! CHECK:                 %[[VAL_21:.*]] = arith.select %[[VAL_20]], %[[VAL_18]], %[[VAL_19]] : i32
+! CHECK:                 %[[VAL_21:.*]] = arith.minsi %[[VAL_18]], %[[VAL_19]] : i32
 ! CHECK:                 hlfir.assign %[[VAL_21]] to %[[VAL_14]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 omp.yield
 ! CHECK:             omp.terminator

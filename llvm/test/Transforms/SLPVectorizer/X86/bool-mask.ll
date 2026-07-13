@@ -258,44 +258,12 @@ entry:
 define i64 @bitmask_8xi64(ptr nocapture noundef readonly %src) {
 ; SSE2-LABEL: @bitmask_8xi64(
 ; SSE2-NEXT:  entry:
-; SSE2-NEXT:    [[TMP0:%.*]] = load i64, ptr [[SRC:%.*]], align 8
-; SSE2-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ne i64 [[TMP0]], 0
-; SSE2-NEXT:    [[OR:%.*]] = zext i1 [[TOBOOL_NOT]] to i64
-; SSE2-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 1
-; SSE2-NEXT:    [[TMP1:%.*]] = load i64, ptr [[ARRAYIDX_1]], align 8
-; SSE2-NEXT:    [[TOBOOL_NOT_1:%.*]] = icmp eq i64 [[TMP1]], 0
-; SSE2-NEXT:    [[OR_1:%.*]] = select i1 [[TOBOOL_NOT_1]], i64 0, i64 2
-; SSE2-NEXT:    [[MASK_1_1:%.*]] = or i64 [[OR_1]], [[OR]]
-; SSE2-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 2
-; SSE2-NEXT:    [[TMP2:%.*]] = load i64, ptr [[ARRAYIDX_2]], align 8
-; SSE2-NEXT:    [[TOBOOL_NOT_2:%.*]] = icmp eq i64 [[TMP2]], 0
-; SSE2-NEXT:    [[OR_2:%.*]] = select i1 [[TOBOOL_NOT_2]], i64 0, i64 4
-; SSE2-NEXT:    [[MASK_1_2:%.*]] = or i64 [[OR_2]], [[MASK_1_1]]
-; SSE2-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 3
-; SSE2-NEXT:    [[TMP3:%.*]] = load i64, ptr [[ARRAYIDX_3]], align 8
-; SSE2-NEXT:    [[TOBOOL_NOT_3:%.*]] = icmp eq i64 [[TMP3]], 0
-; SSE2-NEXT:    [[OR_3:%.*]] = select i1 [[TOBOOL_NOT_3]], i64 0, i64 8
-; SSE2-NEXT:    [[MASK_1_3:%.*]] = or i64 [[OR_3]], [[MASK_1_2]]
-; SSE2-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 4
-; SSE2-NEXT:    [[TMP4:%.*]] = load i64, ptr [[ARRAYIDX_4]], align 8
-; SSE2-NEXT:    [[TOBOOL_NOT_4:%.*]] = icmp eq i64 [[TMP4]], 0
-; SSE2-NEXT:    [[OR_4:%.*]] = select i1 [[TOBOOL_NOT_4]], i64 0, i64 16
-; SSE2-NEXT:    [[MASK_1_4:%.*]] = or i64 [[OR_4]], [[MASK_1_3]]
-; SSE2-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 5
-; SSE2-NEXT:    [[TMP5:%.*]] = load i64, ptr [[ARRAYIDX_5]], align 8
-; SSE2-NEXT:    [[TOBOOL_NOT_5:%.*]] = icmp eq i64 [[TMP5]], 0
-; SSE2-NEXT:    [[OR_5:%.*]] = select i1 [[TOBOOL_NOT_5]], i64 0, i64 32
-; SSE2-NEXT:    [[MASK_1_5:%.*]] = or i64 [[OR_5]], [[MASK_1_4]]
-; SSE2-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 6
-; SSE2-NEXT:    [[TMP6:%.*]] = load i64, ptr [[ARRAYIDX_6]], align 8
-; SSE2-NEXT:    [[TOBOOL_NOT_6:%.*]] = icmp eq i64 [[TMP6]], 0
-; SSE2-NEXT:    [[OR_6:%.*]] = select i1 [[TOBOOL_NOT_6]], i64 0, i64 64
-; SSE2-NEXT:    [[MASK_1_6:%.*]] = or i64 [[OR_6]], [[MASK_1_5]]
-; SSE2-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 7
-; SSE2-NEXT:    [[TMP7:%.*]] = load i64, ptr [[ARRAYIDX_7]], align 8
-; SSE2-NEXT:    [[TOBOOL_NOT_7:%.*]] = icmp eq i64 [[TMP7]], 0
-; SSE2-NEXT:    [[OR_7:%.*]] = select i1 [[TOBOOL_NOT_7]], i64 0, i64 128
-; SSE2-NEXT:    [[MASK_1_7:%.*]] = or i64 [[OR_7]], [[MASK_1_6]]
+; SSE2-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[SRC:%.*]], align 8
+; SSE2-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i64> [[TMP0]], zeroinitializer
+; SSE2-NEXT:    [[TMP2:%.*]] = icmp eq <8 x i64> [[TMP0]], zeroinitializer
+; SSE2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i1> [[TMP1]], <8 x i1> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; SSE2-NEXT:    [[TMP4:%.*]] = select <8 x i1> [[TMP3]], <8 x i64> <i64 1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>, <8 x i64> <i64 0, i64 2, i64 4, i64 8, i64 16, i64 32, i64 64, i64 128>
+; SSE2-NEXT:    [[MASK_1_7:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP4]])
 ; SSE2-NEXT:    ret i64 [[MASK_1_7]]
 ;
 ; SSE4-LABEL: @bitmask_8xi64(
@@ -367,64 +335,13 @@ entry:
 define i64 @combined(ptr nocapture noundef readonly %src) {
 ; SSE2-LABEL: @combined(
 ; SSE2-NEXT:  entry:
-; SSE2-NEXT:    [[TMP0:%.*]] = load i64, ptr [[SRC:%.*]], align 2
-; SSE2-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ne i64 [[TMP0]], 0
-; SSE2-NEXT:    [[OR:%.*]] = zext i1 [[TOBOOL_NOT]] to i64
-; SSE2-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 1
-; SSE2-NEXT:    [[TMP1:%.*]] = load i64, ptr [[ARRAYIDX_1]], align 2
-; SSE2-NEXT:    [[TOBOOL_NOT_1:%.*]] = icmp eq i64 [[TMP1]], 0
-; SSE2-NEXT:    [[OR_1:%.*]] = select i1 [[TOBOOL_NOT_1]], i64 0, i64 2
-; SSE2-NEXT:    [[MASK_1_1:%.*]] = or i64 [[OR_1]], [[OR]]
-; SSE2-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 2
-; SSE2-NEXT:    [[TMP2:%.*]] = load i64, ptr [[ARRAYIDX_2]], align 2
-; SSE2-NEXT:    [[TOBOOL_NOT_2:%.*]] = icmp eq i64 [[TMP2]], 0
-; SSE2-NEXT:    [[OR_2:%.*]] = select i1 [[TOBOOL_NOT_2]], i64 0, i64 4
-; SSE2-NEXT:    [[MASK_1_2:%.*]] = or i64 [[OR_2]], [[MASK_1_1]]
-; SSE2-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 3
-; SSE2-NEXT:    [[TMP3:%.*]] = load i64, ptr [[ARRAYIDX_3]], align 2
-; SSE2-NEXT:    [[TOBOOL_NOT_3:%.*]] = icmp eq i64 [[TMP3]], 0
-; SSE2-NEXT:    [[OR_3:%.*]] = select i1 [[TOBOOL_NOT_3]], i64 0, i64 8
-; SSE2-NEXT:    [[MASK_1_3:%.*]] = or i64 [[OR_3]], [[MASK_1_2]]
-; SSE2-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 4
-; SSE2-NEXT:    [[TMP4:%.*]] = load i64, ptr [[ARRAYIDX_4]], align 2
-; SSE2-NEXT:    [[TOBOOL_NOT_4:%.*]] = icmp eq i64 [[TMP4]], 0
-; SSE2-NEXT:    [[OR_4:%.*]] = select i1 [[TOBOOL_NOT_4]], i64 0, i64 16
-; SSE2-NEXT:    [[MASK_1_4:%.*]] = or i64 [[OR_4]], [[MASK_1_3]]
-; SSE2-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 5
-; SSE2-NEXT:    [[TMP5:%.*]] = load i64, ptr [[ARRAYIDX_5]], align 2
-; SSE2-NEXT:    [[TOBOOL_NOT_5:%.*]] = icmp eq i64 [[TMP5]], 0
-; SSE2-NEXT:    [[OR_5:%.*]] = select i1 [[TOBOOL_NOT_5]], i64 0, i64 32
-; SSE2-NEXT:    [[MASK_1_5:%.*]] = or i64 [[OR_5]], [[MASK_1_4]]
-; SSE2-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 6
-; SSE2-NEXT:    [[TMP6:%.*]] = load i64, ptr [[ARRAYIDX_6]], align 2
-; SSE2-NEXT:    [[TOBOOL_NOT_6:%.*]] = icmp eq i64 [[TMP6]], 0
-; SSE2-NEXT:    [[OR_6:%.*]] = select i1 [[TOBOOL_NOT_6]], i64 0, i64 64
-; SSE2-NEXT:    [[MASK_1_6:%.*]] = or i64 [[OR_6]], [[MASK_1_5]]
-; SSE2-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 7
-; SSE2-NEXT:    [[TMP7:%.*]] = load i64, ptr [[ARRAYIDX_7]], align 2
-; SSE2-NEXT:    [[TOBOOL_NOT_7:%.*]] = icmp eq i64 [[TMP7]], 0
-; SSE2-NEXT:    [[OR_7:%.*]] = select i1 [[TOBOOL_NOT_7]], i64 0, i64 128
-; SSE2-NEXT:    [[MASK_1_7:%.*]] = or i64 [[OR_7]], [[MASK_1_6]]
-; SSE2-NEXT:    [[ARRAYIDX_8:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 8
-; SSE2-NEXT:    [[TMP8:%.*]] = load i64, ptr [[ARRAYIDX_8]], align 2
-; SSE2-NEXT:    [[TOBOOL_NOT_8:%.*]] = icmp eq i64 [[TMP8]], 0
-; SSE2-NEXT:    [[OR_8:%.*]] = select i1 [[TOBOOL_NOT_8]], i64 0, i64 [[TMP8]]
-; SSE2-NEXT:    [[MASK_1_8:%.*]] = or i64 [[OR_8]], [[MASK_1_7]]
-; SSE2-NEXT:    [[ARRAYIDX_9:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 9
-; SSE2-NEXT:    [[TMP9:%.*]] = load i64, ptr [[ARRAYIDX_9]], align 2
-; SSE2-NEXT:    [[TOBOOL_NOT_9:%.*]] = icmp eq i64 [[TMP9]], 0
-; SSE2-NEXT:    [[OR_9:%.*]] = select i1 [[TOBOOL_NOT_9]], i64 0, i64 [[TMP9]]
-; SSE2-NEXT:    [[MASK_1_9:%.*]] = or i64 [[OR_9]], [[MASK_1_8]]
-; SSE2-NEXT:    [[ARRAYIDX_10:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 10
-; SSE2-NEXT:    [[TMP10:%.*]] = load i64, ptr [[ARRAYIDX_10]], align 2
-; SSE2-NEXT:    [[TOBOOL_NOT_10:%.*]] = icmp eq i64 [[TMP10]], 0
-; SSE2-NEXT:    [[OR_10:%.*]] = select i1 [[TOBOOL_NOT_10]], i64 0, i64 [[TMP10]]
-; SSE2-NEXT:    [[MASK_1_10:%.*]] = or i64 [[OR_10]], [[MASK_1_9]]
-; SSE2-NEXT:    [[ARRAYIDX_11:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 11
-; SSE2-NEXT:    [[TMP11:%.*]] = load i64, ptr [[ARRAYIDX_11]], align 2
-; SSE2-NEXT:    [[TOBOOL_NOT_11:%.*]] = icmp eq i64 [[TMP11]], 0
-; SSE2-NEXT:    [[OR_11:%.*]] = select i1 [[TOBOOL_NOT_11]], i64 0, i64 [[TMP10]]
-; SSE2-NEXT:    [[MASK_1_11:%.*]] = or i64 [[OR_11]], [[MASK_1_10]]
+; SSE2-NEXT:    [[TMP0:%.*]] = load <12 x i64>, ptr [[SRC:%.*]], align 2
+; SSE2-NEXT:    [[TMP1:%.*]] = icmp ne <12 x i64> [[TMP0]], zeroinitializer
+; SSE2-NEXT:    [[TMP2:%.*]] = icmp eq <12 x i64> [[TMP0]], zeroinitializer
+; SSE2-NEXT:    [[TMP3:%.*]] = shufflevector <12 x i1> [[TMP1]], <12 x i1> [[TMP2]], <12 x i32> <i32 0, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+; SSE2-NEXT:    [[TMP4:%.*]] = shufflevector <12 x i64> [[TMP0]], <12 x i64> <i64 0, i64 2, i64 4, i64 8, i64 16, i64 32, i64 64, i64 128, i64 poison, i64 poison, i64 poison, i64 poison>, <12 x i32> <i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 8, i32 9, i32 10, i32 10>
+; SSE2-NEXT:    [[TMP5:%.*]] = select <12 x i1> [[TMP3]], <12 x i64> <i64 1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>, <12 x i64> [[TMP4]]
+; SSE2-NEXT:    [[MASK_1_11:%.*]] = call i64 @llvm.vector.reduce.or.v12i64(<12 x i64> [[TMP5]])
 ; SSE2-NEXT:    ret i64 [[MASK_1_11]]
 ;
 ; SSE4-LABEL: @combined(

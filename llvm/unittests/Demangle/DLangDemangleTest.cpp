@@ -48,28 +48,53 @@ INSTANTIATE_TEST_SUITE_P(
                        "ModuleInfo for demangle.test"),
         std::make_pair("_D8demangle4__S14testZ", "demangle.test"),
         std::make_pair("_D8demangle4__Sd4testZ", "demangle.__Sd.test"),
-        std::make_pair("_D8demangle3fooi", "demangle.foo"),
+        std::make_pair("_D8demangle3fooi", "int demangle.foo"),
+        std::make_pair("_D8demangle3foov", "void demangle.foo"),
         std::make_pair("_D8demangle3foo",
                        nullptr), // symbol without a type sequence.
         std::make_pair("_D8demangle3fooinvalidtypeseq",
                        nullptr), // invalid type sequence.
         std::make_pair(
             "_D8demangle3ABCQe1ai",
-            "demangle.ABC.ABC.a"), // symbol back reference: `Qe` is a back
-                                   // reference for position 5, counting from e
-                                   // char, so decoding it points to `3`. Since
-                                   // `3` is a number, 3 chars get read and it
-                                   // succeeded.
+            "int demangle.ABC.ABC.a"), // symbol back reference: `Qe` is a back
         std::make_pair("_D8demangle3ABCQa1ai",
                        nullptr), // invalid symbol back reference (recursive).
         std::make_pair("_D8demangleQDXXXXXXXXXXXXx",
                        nullptr), // overflow back reference position.
-        std::make_pair(
-            "_D8demangle4ABCi1aQd",
-            "demangle.ABCi.a"), // type back reference: `Qd` is a back reference
-                                // for position 4, counting from `d` char, so
-                                // decoding it points to `i`.
+        std::make_pair("_D8demangle4ABCi1aQd",
+                       "int demangle.ABCi.a"), // type back reference: `Qd` is a
+                                               // back reference
         std::make_pair("_D8demangle3fooQXXXx",
                        nullptr), // invalid type back reference position.
         std::make_pair("_D8demangle5recurQa",
-                       nullptr))); // invalid type back reference (recursive).
+                       nullptr), // invalid type back reference (recursive).
+        // Basic types.
+        std::make_pair("_D8demangle3fooa", "char demangle.foo"),
+        std::make_pair("_D8demangle3foob", "bool demangle.foo"),
+        std::make_pair("_D8demangle3fooc", "creal demangle.foo"),
+        std::make_pair("_D8demangle3food", "double demangle.foo"),
+        std::make_pair("_D8demangle3fooe", "real demangle.foo"),
+        std::make_pair("_D8demangle3foof", "float demangle.foo"),
+        std::make_pair("_D8demangle3foog", "byte demangle.foo"),
+        std::make_pair("_D8demangle3fooh", "ubyte demangle.foo"),
+        std::make_pair("_D8demangle3fooj", "ireal demangle.foo"),
+        std::make_pair("_D8demangle3fook", "uint demangle.foo"),
+        std::make_pair("_D8demangle3fool", "long demangle.foo"),
+        std::make_pair("_D8demangle3foom", "ulong demangle.foo"),
+        std::make_pair("_D8demangle3foon", "demangle.foo"),
+        std::make_pair("_D8demangle3fooo", "ifloat demangle.foo"),
+        std::make_pair("_D8demangle3foop", "idouble demangle.foo"),
+        std::make_pair("_D8demangle3fooq", "cfloat demangle.foo"),
+        std::make_pair("_D8demangle3foor", "cdouble demangle.foo"),
+        std::make_pair("_D8demangle3foos", "short demangle.foo"),
+        std::make_pair("_D8demangle3foot", "ushort demangle.foo"),
+        std::make_pair("_D8demangle3foou", "wchar demangle.foo"),
+        std::make_pair("_D8demangle3foow", "dchar demangle.foo"),
+        std::make_pair("_D8demangle3foozi", "cent demangle.foo"),
+        std::make_pair("_D8demangle3foozk", "ucent demangle.foo"),
+        std::make_pair("_D8demangle3fooNn", "noreturn demangle.foo"),
+        // Garbage suffix failures.
+        std::make_pair("_D8demangle3fooiabc", nullptr),
+        std::make_pair("_D8demangle3foovxxx", nullptr),
+        std::make_pair("_D8demangle3fooza", nullptr),
+        std::make_pair("_D8demangle3fooNx", nullptr)));

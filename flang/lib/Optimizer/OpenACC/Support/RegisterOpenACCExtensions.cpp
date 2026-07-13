@@ -53,6 +53,8 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
         PartialEntityAccessModel<fir::CoordinateOp>>(*ctx);
     fir::DeclareOp::attachInterface<PartialEntityAccessModel<fir::DeclareOp>>(
         *ctx);
+    fir::DeclareOp::attachInterface<
+        OutlineIdentityOperandDeclareModel<fir::DeclareOp>>(*ctx);
 
     fir::AddrOfOp::attachInterface<AddressOfGlobalModel>(*ctx);
     fir::GlobalOp::attachInterface<GlobalVariableModel>(*ctx);
@@ -65,6 +67,8 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
         *ctx);
     fir::TypeDescOp::attachInterface<
         IndirectGlobalAccessModel<fir::TypeDescOp>>(*ctx);
+    fir::UseStmtOp::attachInterface<IndirectGlobalAccessModel<fir::UseStmtOp>>(
+        *ctx);
 
     // Attach OutlineRematerializationOpInterface to FIR operations that
     // produce synthetic types (shapes, field indices) which cannot be passed
@@ -77,6 +81,12 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
         *ctx);
     fir::FieldIndexOp::attachInterface<
         OutlineRematerializationModel<fir::FieldIndexOp>>(*ctx);
+    fir::ConvertOp::attachInterface<
+        OutlineRematerializationModel<fir::ConvertOp>>(*ctx);
+    fir::UndefOp::attachInterface<OutlineRematerializationModel<fir::UndefOp>>(
+        *ctx);
+    fir::SliceOp::attachInterface<OutlineRematerializationModel<fir::SliceOp>>(
+        *ctx);
   });
 
   // Register HLFIR operation interfaces
@@ -86,6 +96,8 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
             PartialEntityAccessModel<hlfir::DesignateOp>>(*ctx);
         hlfir::DeclareOp::attachInterface<
             PartialEntityAccessModel<hlfir::DeclareOp>>(*ctx);
+        hlfir::DeclareOp::attachInterface<
+            OutlineIdentityOperandDeclareModel<hlfir::DeclareOp>>(*ctx);
       });
 
   // Register CUF operation interfaces
@@ -98,6 +110,16 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
                             mlir::acc::OpenACCDialect *dialect) {
     mlir::acc::LoopOp::attachInterface<OperationMoveModel<mlir::acc::LoopOp>>(
         *ctx);
+    mlir::acc::KernelsOp::attachInterface<
+        OperationMoveModel<mlir::acc::KernelsOp>>(*ctx);
+    mlir::acc::ParallelOp::attachInterface<
+        OperationMoveModel<mlir::acc::ParallelOp>>(*ctx);
+    mlir::acc::SerialOp::attachInterface<
+        OperationMoveModel<mlir::acc::SerialOp>>(*ctx);
+    mlir::acc::ReductionInitOp::attachInterface<
+        fir::acc::AccFortranObjectViewModel<mlir::acc::ReductionInitOp>>(*ctx);
+    mlir::acc::UnwrapPrivateOp::attachInterface<
+        fir::acc::AccFortranObjectViewModel<mlir::acc::UnwrapPrivateOp>>(*ctx);
   });
 
   registerAttrsExtensions(registry);

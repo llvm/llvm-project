@@ -250,6 +250,9 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
     Option<"isOptimized", "is-optimized",
            "bool", /*default=*/"false",
            "is optimized.">,
+    Option<"debugInfoForProfiling", "debug-info-for-profiling", "bool",
+           /*default=*/"false",
+            "Emit extra debug info to make sample profile more accurate">,
     Option<"inputFilename", "file-name",
            "std::string",
            /*default=*/"std::string{}",
@@ -260,8 +263,13 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
            "dwarf version">,
     Option<"splitDwarfFile", "split-dwarf-file",
            "std::string", /*default=*/"std::string{}",
-           "Name of the split dwarf file">
-
+           "Name of the split dwarf file">,
+    Option<"dwarfDebugFlags", "dwarf-debug-flags",
+           "std::string", /*default=*/"std::string{}",
+           "Command-line flags to append to DWARF producer">,
+    Option<"emitFakeUseForDebugVars", "emit-fake-use-for-debug-vars",
+           "bool", /*default=*/"false",
+           "Emit fake use for debug variables to extend their lifetime">
   ];
 }
 
@@ -440,7 +448,7 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
        Option<"noInfsFPMath", "no-infs-fp-math", "bool", /*default=*/"false",
               "Set the ninf flag on instructions in the module.">,
        Option<"noNaNsFPMath", "no-nans-fp-math", "bool", /*default=*/"false",
-              "Set the no-nans-fp-math attribute on functions in the module.">,
+              "Set the nnan flag on instructions in the module.">,
        Option<"approxFuncFPMath", "approx-func-fp-math", "bool",
               /*default=*/"false",
               "Set the afn flag on instructions in the module.">,
@@ -456,6 +464,10 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
        Option<"preferVectorWidth", "prefer-vector-width", "std::string",
               /*default=*/"",
               "Set the prefer-vector-width attribute on functions in the "
+              "module.">,
+       Option<"UseSampleProfile", "use-sample-profile", "bool",
+              /*default=*/"false",
+              "Set the use-sample-profile attribute on functions in the "
               "module.">,
        Option<"tuneCPU", "tune-cpu", "std::string", /*default=*/"",
               "Set the tune-cpu attribute on functions in the module.">,
@@ -480,6 +492,17 @@ def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
   ];
 }
 
+def CUFAllocDelay : Pass<"cuf-alloc-delay", "::mlir::func::FuncOp"> {
+  let summary = "Delay cuf.alloc of descriptor types to just before first use";
+  let description = [{
+    Moves cuf.alloc operations for allocatable/pointer descriptors (box types)
+    from function entry to just before their first use. This defers
+    cudaMallocManaged calls so that users can call cudaSetDevice before any
+    CUDA context is created.
+  }];
+  let dependentDialects = ["fir::FIROpsDialect", "cuf::CUFDialect"];
+}
+
 def CUFAllocationConversion : Pass<"cuf-allocation-convert", "mlir::ModuleOp"> {
   let summary = "Convert allocation related CUF operations to runtime calls";
   let dependentDialects = ["fir::FIROpsDialect"];
@@ -502,12 +525,30 @@ def CUFDeviceGlobal :
   let dependentDialects = [
     "cuf::CUFDialect", "mlir::gpu::GPUDialect", "mlir::NVVM::NVVMDialect"
   ];
+  let options = [
+    Option<"skipDeadDeclares", "skip-dead-declares", "bool",
+           /*default=*/"true",
+           "Skip globals whose only use is a dead fir.declare">,
+    Option<"cudaUnified", "cuda-unified", "bool", /*default=*/"false",
+           "Treat host module globals as unified memory (-gpu=mem:unified): "
+           "clone them into the GPU module as external declarations so PTX "
+           "emits `.extern .global ...`. The CUDA runtime maps the device "
+           "extern to the host pointer via __cudaRegisterHostVar.">
+  ];
 }
 
 def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
   let summary = "Add constructor to register CUDA Fortran allocators";
   let dependentDialects = [
     "cuf::CUFDialect", "mlir::func::FuncDialect", "mlir::DLTIDialect"
+  ];
+  let options = [
+    Option<"cudaUnified", "cuda-unified", "bool", /*default=*/"false",
+           "Treat host module globals as unified memory (-gpu=mem:unified): "
+           "register every plain host module global that is mirrored in the "
+           "GPU module via CUFRegisterExternalVariable, so the CUDA driver "
+           "maps the device-side symbol to the host pointer at module-load "
+           "time and HMM/ATS handles migration.">
   ];
 }
 
@@ -547,6 +588,13 @@ def CUFDeviceFuncTransform
 def CUFFunctionRewrite : Pass<"cuf-function-rewrite", ""> {
   let summary = "Convert some CUDA Fortran specific call";
   let dependentDialects = ["fir::FIROpsDialect"];
+  let options = [Option<
+      "deferAccRoutines", "defer-acc-routines", "bool", /*default=*/"false",
+      "Do not fold device-detection intrinsics located in the host copy of an "
+      "OpenACC routine. Such a routine is later cloned to build its device "
+      "counterpart, so folding it to the host value here would bake that value "
+      "into the device clone. Deferred calls are folded by a later run that "
+      "executes after device specialization.">];
 }
 
 def CUFLaunchAttachAttr : Pass<"cuf-launch-attach-attr", ""> {
@@ -639,6 +687,12 @@ def OptimizeArrayRepacking
 
 def MIFOpConversion : Pass<"mif-convert", "mlir::ModuleOp"> {
   let summary = "Convert some MIF operations to runtime calls";
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect",
+                           "mlir::cf::ControlFlowDialect", "mlir::DLTIDialect"];
+}
+
+def EmitMIFGlobalCtors : Pass<"emit-mif-global-ctors", "mlir::ModuleOp"> {
+  let summary = "Generate GlobalCtorOp to init MIF and allocate coarrays.";
   let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect"];
 }
 
@@ -651,6 +705,19 @@ def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {
     The pass only moves existing operations, so there are no dependent
     dialects.
   }];
+  let options = [Option<"hoistFromNestedRegions", "hoist-from-nested-regions",
+                        "::fir::LICMNestedHoistingMode",
+                        /*default=*/"::fir::LICMNestedHoistingMode::Cheap",
+                        "Control hoisting of invariant ops from nested regions "
+                        "(e.g. scf.if within loops)",
+                        [{::llvm::cl::values(
+            clEnumValN(::fir::LICMNestedHoistingMode::None,
+                       "none", "Do not hoist from nested regions"),
+            clEnumValN(::fir::LICMNestedHoistingMode::Cheap,
+                       "cheap", "Only hoist cheap ops like fir.convert"),
+            clEnumValN(::fir::LICMNestedHoistingMode::Aggressive,
+                       "aggressive", "Hoist all safe invariant ops")
+           )}]>];
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

@@ -5,15 +5,17 @@
 typedef int    v4i   __attribute__((ext_vector_type(4)));
 typedef int    v8i   __attribute__((ext_vector_type(8)));
 
+typedef unsigned int v4u   __attribute__((ext_vector_type(4)));
+
 static v4i v4i_zeros = (v4i){0,0,0,0};
 static v8i v8i_zeros = (v8i){0,0,0,0,0,0,0,0};
 
-// CHECK-GFX1250-LABEL: @test_amdgcn_tensor_load_to_lds(
+// CHECK-GFX1250-LABEL: @test_amdgcn_tensor_load_to_lds_d4(
 // CHECK-GFX1250-NEXT:  entry:
 // CHECK-GFX1250-NEXT:    tail call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[SG0:%.*]], <8 x i32> [[SG1:%.*]], <4 x i32> [[SG2:%.*]], <4 x i32> [[SG3:%.*]], <8 x i32> zeroinitializer, i32 0)
 // CHECK-GFX1250-NEXT:    ret void
 //
-void test_amdgcn_tensor_load_to_lds(v4i sg0, v8i sg1, v4i sg2, v4i sg3)
+void test_amdgcn_tensor_load_to_lds_d4(v4u sg0, v8i sg1, v4i sg2, v4i sg3)
 {
   __builtin_amdgcn_tensor_load_to_lds(sg0, sg1, sg2, sg3, v8i_zeros, 0);
 }
@@ -23,17 +25,17 @@ void test_amdgcn_tensor_load_to_lds(v4i sg0, v8i sg1, v4i sg2, v4i sg3)
 // CHECK-GFX1250-NEXT:    tail call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[SG0:%.*]], <8 x i32> [[SG1:%.*]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 27)
 // CHECK-GFX1250-NEXT:    ret void
 //
-void test_amdgcn_tensor_load_to_lds_d2(v4i sg0, v8i sg1)
+void test_amdgcn_tensor_load_to_lds_d2(v4u sg0, v8i sg1)
 {
   __builtin_amdgcn_tensor_load_to_lds(sg0, sg1, v4i_zeros, v4i_zeros, v8i_zeros, 27);
 }
 
-// CHECK-GFX1250-LABEL: @test_amdgcn_tensor_store_from_lds(
+// CHECK-GFX1250-LABEL: @test_amdgcn_tensor_store_from_lds_d4(
 // CHECK-GFX1250-NEXT:  entry:
 // CHECK-GFX1250-NEXT:    tail call void @llvm.amdgcn.tensor.store.from.lds(<4 x i32> [[SG0:%.*]], <8 x i32> [[SG1:%.*]], <4 x i32> [[SG2:%.*]], <4 x i32> [[SG3:%.*]], <8 x i32> zeroinitializer, i32 22)
 // CHECK-GFX1250-NEXT:    ret void
 //
-void test_amdgcn_tensor_store_from_lds(v4i sg0, v8i sg1, v4i sg2, v4i sg3)
+void test_amdgcn_tensor_store_from_lds_d4(v4u sg0, v8i sg1, v4i sg2, v4i sg3)
 {
   __builtin_amdgcn_tensor_store_from_lds(sg0, sg1, sg2, sg3, v8i_zeros, 22);
 }
@@ -43,7 +45,7 @@ void test_amdgcn_tensor_store_from_lds(v4i sg0, v8i sg1, v4i sg2, v4i sg3)
 // CHECK-GFX1250-NEXT:    tail call void @llvm.amdgcn.tensor.store.from.lds(<4 x i32> [[SG0:%.*]], <8 x i32> [[SG1:%.*]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
 // CHECK-GFX1250-NEXT:    ret void
 //
-void test_amdgcn_tensor_store_from_lds_d2(v4i sg0, v8i sg1)
+void test_amdgcn_tensor_store_from_lds_d2(v4u sg0, v8i sg1)
 {
   __builtin_amdgcn_tensor_store_from_lds(sg0, sg1, v4i_zeros, v4i_zeros, v8i_zeros, 0);
 }
@@ -60,7 +62,7 @@ void test_amdgcn_tensor_store_from_lds_d2(v4i sg0, v8i sg1)
 // CHECK-GFX1250-NEXT:    tail call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[SG0:%.*]], <8 x i32> [[SG1:%.*]], <4 x i32> [[SG2:%.*]], <4 x i32> [[SG3:%.*]], <8 x i32> [[SG4:%.*]], i32 0)
 // CHECK-GFX1250-NEXT:    ret void
 //
-void test_amdgcn_tensor_load_to_lds_d5(v4i sg0, v8i sg1, v4i sg2, v4i sg3, v8i sg4)
+void test_amdgcn_tensor_load_to_lds_d5(v4u sg0, v8i sg1, v4i sg2, v4i sg3, v8i sg4)
 {
   __builtin_amdgcn_tensor_load_to_lds(sg0, sg1, sg2, sg3, sg4, 0);
 }
@@ -70,7 +72,7 @@ void test_amdgcn_tensor_load_to_lds_d5(v4i sg0, v8i sg1, v4i sg2, v4i sg3, v8i s
 // CHECK-GFX1250-NEXT:    tail call void @llvm.amdgcn.tensor.store.from.lds(<4 x i32> [[SG0:%.*]], <8 x i32> [[SG1:%.*]], <4 x i32> [[SG2:%.*]], <4 x i32> [[SG3:%.*]], <8 x i32> [[SG4:%.*]], i32 0)
 // CHECK-GFX1250-NEXT:    ret void
 //
-void test_amdgcn_tensor_store_from_lds_d5(v4i sg0, v8i sg1, v4i sg2, v4i sg3, v8i sg4)
+void test_amdgcn_tensor_store_from_lds_d5(v4u sg0, v8i sg1, v4i sg2, v4i sg3, v8i sg4)
 {
   __builtin_amdgcn_tensor_store_from_lds(sg0, sg1, sg2, sg3, sg4, 0);
 }

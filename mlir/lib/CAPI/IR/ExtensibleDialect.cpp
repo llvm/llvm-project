@@ -42,8 +42,16 @@ MlirDynamicOpTrait mlirDynamicOpTraitIsTerminatorCreate() {
   return wrap(new DynamicOpTraits::IsTerminator());
 }
 
+MlirTypeID mlirDynamicOpTraitIsTerminatorGetTypeID() {
+  return wrap(DynamicOpTraits::IsTerminator::getStaticTypeID());
+}
+
 MlirDynamicOpTrait mlirDynamicOpTraitNoTerminatorCreate() {
   return wrap(new DynamicOpTraits::NoTerminator());
+}
+
+MlirTypeID mlirDynamicOpTraitNoTerminatorGetTypeID() {
+  return wrap(DynamicOpTraits::NoTerminator::getStaticTypeID());
 }
 
 void mlirDynamicOpTraitDestroy(MlirDynamicOpTrait dynamicOpTrait) {

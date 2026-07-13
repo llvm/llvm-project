@@ -1,439 +1,178 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2D -o - %s | FileCheck %s --check-prefixes=CHECK,SRV -DTEXTURE=Texture2D -DSZ=2 -DKIND=SRV
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2DArray -o - %s | FileCheck %s --check-prefixes=CHECK,SRV,SRV-ARR -DTEXTURE=Texture2DArray -DSZ=3 -DKIND=SRV
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=RWTexture2D -DRW=1 -o - %s | FileCheck %s --check-prefixes=CHECK,UAV,UAV-STORE,UAV-TRUNC -DTEXTURE=RWTexture2D -DSZ=2 -DKIND=UAV
 
-// CHECK: CXXRecordDecl {{.*}} SamplerState definition
-// CHECK: FinalAttr {{.*}} Implicit final
-// CHECK-NEXT: FieldDecl {{.*}} implicit {{.*}} __handle '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
-
-// CHECK: CXXRecordDecl {{.*}} SamplerComparisonState definition
-// CHECK: FinalAttr {{.*}} Implicit final
-// CHECK-NEXT: FieldDecl {{.*}} implicit {{.*}} __handle '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
-
-// CHECK: ClassTemplateDecl {{.*}} Texture2D
+// CHECK: ClassTemplateDecl {{.*}} [[TEXTURE]]
 // CHECK: TemplateTypeParmDecl {{.*}} element_type
-// CHECK: CXXRecordDecl {{.*}} Texture2D definition
+// CHECK: CXXRecordDecl {{.*}} [[TEXTURE]] definition
 // CHECK: FinalAttr {{.*}} Implicit final
 // CHECK-NEXT: FieldDecl {{.*}} implicit __handle '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// SRV-ARR-SAME{LITERAL}: [[hlsl::is_array]]
+// UAV-ARR-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
 
-// CHECK: CXXMethodDecl {{.*}} Sample 'element_type (hlsl::SamplerState, vector<float, 2>)'
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
+// SRV: CXXMethodDecl {{.*}} operator[] 'const hlsl_device element_type &(vector<unsigned int, [[SZ]]>) const' inline
+// SRV-NEXT: ParmVarDecl {{.*}} Index 'vector<unsigned int, [[SZ]]>'
+// SRV-NEXT: CompoundStmt
+// SRV-NEXT: ReturnStmt
+// SRV-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' lvalue prefix '*' cannot overflow
+// SRV-NEXT: CStyleCastExpr {{.*}} 'hlsl_device element_type *' <Dependent>
+// SRV-NEXT: CallExpr {{.*}} '<dependent type>'
+// SRV-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
+// SRV-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// SRV-ARR-SAME{LITERAL}: [[hlsl::is_array]]
+// SRV-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// SRV-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// SRV-SAME: ' lvalue .__handle
+// SRV-NEXT: CXXThisExpr {{.*}} 'const hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
+// SRV-NEXT: DeclRefExpr {{.*}} 'vector<unsigned int, [[SZ]]>' lvalue ParmVar {{.*}} 'Index' 'vector<unsigned int, [[SZ]]>'
+// SRV-NEXT: AlwaysInlineAttr
+
+// UAV: CXXMethodDecl {{.*}} operator[] 'hlsl_device element_type &(vector<unsigned int, [[SZ]]>) const' inline
+// UAV-NEXT: ParmVarDecl {{.*}} Index 'vector<unsigned int, [[SZ]]>'
+// UAV-NEXT: CompoundStmt
+// UAV-NEXT: ReturnStmt
+// UAV-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' lvalue prefix '*' cannot overflow
+// UAV-NEXT: CStyleCastExpr {{.*}} 'hlsl_device element_type *' <Dependent>
+// UAV-NEXT: CallExpr {{.*}} '<dependent type>'
+// UAV-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
+// UAV-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// UAV-ARR-SAME{LITERAL}: [[hlsl::is_array]]
+// UAV-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// UAV-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// UAV-SAME: ' lvalue .__handle
+// UAV-NEXT: CXXThisExpr {{.*}} 'const hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
+// UAV-NEXT: DeclRefExpr {{.*}} 'vector<unsigned int, [[SZ]]>' lvalue ParmVar {{.*}} 'Index' 'vector<unsigned int, [[SZ]]>'
+// UAV-NEXT: AlwaysInlineAttr
+
+// CHECK: CXXMethodDecl {{.*}} GetDimensions 'void (out unsigned int, out unsigned int)'
+// CHECK-NEXT: ParmVarDecl {{.*}} width 'unsigned int &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
+// CHECK-NEXT: ParmVarDecl {{.*}} height 'unsigned int &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
 // CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample' 'void (...) noexcept'
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_xy' 'void (__hlsl_resource_t, unsigned int &, unsigned int &) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// SRV-ARR-SAME{LITERAL}: [[hlsl::is_array]]
+// UAV-ARR-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
 // CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<element_type>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
+// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'width' 'unsigned int &__restrict'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'height' 'unsigned int &__restrict'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} Sample 'element_type (hlsl::SamplerState, vector<float, 2>, vector<int, 2>)'
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, 2>'
+// CHECK: CXXMethodDecl {{.*}} GetDimensions 'void (unsigned int, out unsigned int, out unsigned int, out unsigned int)'
+// CHECK-NEXT: ParmVarDecl {{.*}} mipLevel 'unsigned int'
+// CHECK-NEXT: ParmVarDecl {{.*}} width 'unsigned int &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
+// CHECK-NEXT: ParmVarDecl {{.*}} height 'unsigned int &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
+// CHECK-NEXT: ParmVarDecl {{.*}} numberOfLevels 'unsigned int &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
 // CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample' 'void (...) noexcept'
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_levels_xy' 'void (__hlsl_resource_t, unsigned int, unsigned int &, unsigned int &, unsigned int &) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// SRV-ARR-SAME{LITERAL}: [[hlsl::is_array]]
+// UAV-ARR-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
 // CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<element_type>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
+// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'mipLevel' 'unsigned int'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'width' 'unsigned int &__restrict'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'height' 'unsigned int &__restrict'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'numberOfLevels' 'unsigned int &__restrict'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} Sample 'element_type (hlsl::SamplerState, vector<float, 2>, vector<int, 2>, float)'
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} Clamp 'float'
+// CHECK: CXXMethodDecl {{.*}} GetDimensions 'void (out float, out float)'
+// CHECK-NEXT: ParmVarDecl {{.*}} width 'float &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
+// CHECK-NEXT: ParmVarDecl {{.*}} height 'float &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
 // CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample' 'void (...) noexcept'
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_xy_float' 'void (__hlsl_resource_t, float &, float &) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// SRV-ARR-SAME{LITERAL}: [[hlsl::is_array]]
+// UAV-ARR-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
 // CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<element_type>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'Clamp' 'float'
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
+// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'width' 'float &__restrict'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'height' 'float &__restrict'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} SampleBias 'element_type (hlsl::SamplerState, vector<float, 2>, float)'
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} Bias 'float'
+// CHECK: CXXMethodDecl {{.*}} GetDimensions 'void (unsigned int, out float, out float, out float)'
+// CHECK-NEXT: ParmVarDecl {{.*}} mipLevel 'unsigned int'
+// CHECK-NEXT: ParmVarDecl {{.*}} width 'float &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
+// CHECK-NEXT: ParmVarDecl {{.*}} height 'float &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
+// CHECK-NEXT: ParmVarDecl {{.*}} numberOfLevels 'float &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
 // CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_bias' 'void (...) noexcept'
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_levels_xy_float' 'void (__hlsl_resource_t, unsigned int, float &, float &, float &) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// SRV-ARR-SAME{LITERAL}: [[hlsl::is_array]]
+// UAV-ARR-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
 // CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<element_type>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'Bias' 'float'
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
+// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'mipLevel' 'unsigned int'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'width' 'float &__restrict'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'height' 'float &__restrict'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'numberOfLevels' 'float &__restrict'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} SampleBias 'element_type (hlsl::SamplerState, vector<float, 2>, float, vector<int, 2>)'
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} Bias 'float'
-// CHECK-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, 2>'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_bias' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<element_type>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'Bias' 'float'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
-// CHECK-NEXT: AlwaysInlineAttr
+// CHECK: ClassTemplatePartialSpecializationDecl {{.*}} class [[TEXTURE]] explicit_specialization
+// CHECK: TemplateTypeParmDecl {{.*}} element_type
+// CHECK: NonTypeTemplateParmDecl {{.*}} element_count
 
-// CHECK: CXXMethodDecl {{.*}} SampleBias 'element_type (hlsl::SamplerState, vector<float, 2>, float, vector<int, 2>, float)'
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} Bias 'float'
-// CHECK-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} Clamp 'float'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_bias' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<element_type>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'Bias' 'float'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'Clamp' 'float'
-// CHECK-NEXT: AlwaysInlineAttr
+// SRV-NOT: BinaryOperator {{.*}} 'hlsl_device float' lvalue '='
 
-// CHECK: CXXMethodDecl {{.*}} SampleGrad 'element_type (hlsl::SamplerState, vector<float, 2>, vector<float, 2>, vector<float, 2>)'
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} DDX 'vector<float, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} DDY 'vector<float, 2>'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_grad' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<element_type>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'DDX' 'vector<float, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'DDY' 'vector<float, 2>'
-// CHECK-NEXT: AlwaysInlineAttr
+// UAV-STORE-LABEL: FunctionDecl {{.*}} main 'void ()'
+// UAV-STORE: BinaryOperator {{.*}} 'hlsl_device float' lvalue '='
+// UAV-STORE-NEXT: CXXOperatorCallExpr {{.*}} 'hlsl_device float' lvalue '[]'
+// UAV-STORE-NEXT: ImplicitCastExpr {{.*}} 'hlsl_device float &(*)(vector<unsigned int, [[SZ]]>) const' <FunctionToPointerDecay>
+// UAV-STORE-NEXT: DeclRefExpr {{.*}} 'hlsl_device float &(vector<unsigned int, [[SZ]]>) const' lvalue CXXMethod {{.*}} 'operator[]' 'hlsl_device float &(vector<unsigned int, [[SZ]]>) const'
+// UAV-STORE-NEXT: ImplicitCastExpr {{.*}} 'const hlsl::[[TEXTURE]]<float>' lvalue <NoOp>
+// UAV-STORE-NEXT: DeclRefExpr {{.*}} '[[TEXTURE]]<float>':'hlsl::[[TEXTURE]]<float>' lvalue Var {{.*}} 't' '[[TEXTURE]]<float>':'hlsl::[[TEXTURE]]<float>'
+// UAV-TRUNC-NEXT: ImplicitCastExpr {{.*}} 'vector<uint, 2>' <HLSLVectorTruncation>
+// UAV-TRUNC-NEXT: ImplicitCastExpr {{.*}} 'uint3':'vector<uint, 3>' <LValueToRValue>
+// UAV-TRUNC-NEXT: DeclRefExpr {{.*}} 'uint3':'vector<uint, 3>' lvalue Var {{.*}} 'i' 'uint3':'vector<uint, 3>'
+// UAV-NOTRUNC-NEXT: ImplicitCastExpr {{.*}} 'uint3':'vector<uint, 3>' <LValueToRValue>
+// UAV-NOTRUNC-NEXT: DeclRefExpr {{.*}} 'uint3':'vector<uint, 3>' lvalue Var {{.*}} 'i' 'uint3':'vector<uint, 3>'
+// UAV-STORE-NEXT: FloatingLiteral {{.*}} 'float' {{.*}}
 
-// CHECK: CXXMethodDecl {{.*}} SampleGrad 'element_type (hlsl::SamplerState, vector<float, 2>, vector<float, 2>, vector<float, 2>, vector<int, 2>)'
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} DDX 'vector<float, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} DDY 'vector<float, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, 2>'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_grad' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<element_type>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'DDX' 'vector<float, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'DDY' 'vector<float, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
-// CHECK-NEXT: AlwaysInlineAttr
+TEXTURE<float> t;
 
-// CHECK: CXXMethodDecl {{.*}} SampleGrad 'element_type (hlsl::SamplerState, vector<float, 2>, vector<float, 2>, vector<float, 2>, vector<int, 2>, float)'
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} DDX 'vector<float, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} DDY 'vector<float, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} Clamp 'float'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_grad' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<element_type>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'DDX' 'vector<float, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'DDY' 'vector<float, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'Clamp' 'float'
-// CHECK-NEXT: AlwaysInlineAttr
-
-// CHECK: CXXMethodDecl {{.*}} SampleLevel 'element_type (hlsl::SamplerState, vector<float, 2>, float)'
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} LOD 'float'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_level' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<element_type>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'LOD' 'float'
-// CHECK-NEXT: AlwaysInlineAttr
-
-// CHECK: CXXMethodDecl {{.*}} SampleLevel 'element_type (hlsl::SamplerState, vector<float, 2>, float, vector<int, 2>)'
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} LOD 'float'
-// CHECK-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, 2>'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_level' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<element_type>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'LOD' 'float'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
-// CHECK-NEXT: AlwaysInlineAttr
-
-// CHECK: CXXMethodDecl {{.*}} SampleCmp 'float (hlsl::SamplerComparisonState, vector<float, 2>, float)'
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<element_type>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
-// CHECK-NEXT: AlwaysInlineAttr
-
-// CHECK: CXXMethodDecl {{.*}} SampleCmp 'float (hlsl::SamplerComparisonState, vector<float, 2>, float, vector<int, 2>)'
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
-// CHECK-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, 2>'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<element_type>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
-// CHECK-NEXT: AlwaysInlineAttr
-
-// CHECK: CXXMethodDecl {{.*}} SampleCmp 'float (hlsl::SamplerComparisonState, vector<float, 2>, float, vector<int, 2>, float)'
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
-// CHECK-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} Clamp 'float'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<element_type>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'Clamp' 'float'
-// CHECK-NEXT: AlwaysInlineAttr
-
-// CHECK: CXXMethodDecl {{.*}} SampleCmpLevelZero 'float (hlsl::SamplerComparisonState, vector<float, 2>, float)'
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp_level_zero' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<element_type>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
-// CHECK-NEXT: AlwaysInlineAttr
-
-// CHECK: CXXMethodDecl {{.*}} SampleCmpLevelZero 'float (hlsl::SamplerComparisonState, vector<float, 2>, float, vector<int, 2>)'
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, 2>'
-// CHECK-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
-// CHECK-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, 2>'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp_level_zero' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::Texture2D<element_type>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 2>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, 2>'
-// CHECK-NEXT: AlwaysInlineAttr
-
-Texture2D<float4> t;
-SamplerState s;
-SamplerComparisonState scs;
-
-void main(float2 loc, float cmp) {
-  t.Sample(s, loc);
-  t.Sample(s, loc, int2(1, 2));
-  t.Sample(s, loc, int2(1, 2), 1.0);
-  t.SampleBias(s, loc, 0.0);
-  t.SampleBias(s, loc, 0.0, int2(1, 2));
-  t.SampleBias(s, loc, 0.0, int2(1, 2), 1.0);
-  t.SampleGrad(s, loc, float2(0,0), float2(0,0));
-  t.SampleGrad(s, loc, float2(0,0), float2(0,0), int2(1, 2));
-  t.SampleGrad(s, loc, float2(0,0), float2(0,0), int2(1, 2), 1.0);
-  t.SampleLevel(s, loc, 0.0);
-  t.SampleLevel(s, loc, 0.0, int2(1, 2));
-  t.SampleCmp(scs, loc, cmp);
-  t.SampleCmp(scs, loc, cmp, int2(1, 2));
-  t.SampleCmp(scs, loc, cmp, int2(1, 2), 1.0f);
-  t.SampleCmpLevelZero(scs, loc, cmp);
-  t.SampleCmpLevelZero(scs, loc, cmp, int2(1, 2));
+void main() {
+  uint3 i = uint3(0, 0, 0);
+#if RW
+  t[i] = 1.0f;
+#endif
+  float x = t[i];
+  (void)x;
+  uint w, h;
+  t.GetDimensions(w, h);
 }

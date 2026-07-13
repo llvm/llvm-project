@@ -102,9 +102,6 @@ quit
 # CHECK-NEXT:         _b = 8
 # CHECK-NEXT:         _c = 12
 # CHECK-NEXT:       }
-# CHECK-NEXT:       A = {
-# CHECK-NEXT:         _u = (_u1 = '\x02', _u2 = 2, _u3 = 2)
-# CHECK-NEXT:       }
 # CHECK-NEXT:       B<0> = {
 # CHECK-NEXT:         A = {
 # CHECK-NEXT:           _u = (_u1 = '\x02', _u2 = 2, _u3 = 2)

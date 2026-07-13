@@ -28,15 +28,15 @@ define void @multiply_noalias_4x4(ptr noalias %A, ptr noalias %B, ptr noalias %C
 ; CHECK:       inner.body:
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = shl i64 [[INNER_IV]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[DOTIDX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[TMP0]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [8 x i8], ptr [[TMP0]], i64 [[ROWS_IV]]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 32
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[DOTIDX17:%.*]] = shl i64 [[COLS_IV]], 5
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[DOTIDX17]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[TMP2]], i64 [[INNER_IV]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [8 x i8], ptr [[TMP2]], i64 [[INNER_IV]]
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[TMP3]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr i8, ptr [[TMP3]], i64 32
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x double> [[COL_LOAD2]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD]], <2 x double> [[SPLAT_SPLAT]], <2 x double> [[RESULT_VEC_0]])
@@ -56,9 +56,9 @@ define void @multiply_noalias_4x4(ptr noalias %A, ptr noalias %B, ptr noalias %C
 ; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_STEP]], 4
 ; CHECK-NEXT:    [[DOTIDX18:%.*]] = shl i64 [[COLS_IV]], 5
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 [[DOTIDX18]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr double, ptr [[TMP8]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr [8 x i8], ptr [[TMP8]], i64 [[ROWS_IV]]
 ; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[TMP9]], align 8
-; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr i8, ptr [[TMP9]], i64 32
+; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP9]], i64 32
 ; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[VEC_GEP16]], align 8
 ; CHECK-NEXT:    br i1 [[ROWS_COND_NOT]], label [[COLS_LATCH]], label [[ROWS_HEADER]], !prof [[PROF0]]
 ; CHECK:       cols.latch:
@@ -104,15 +104,15 @@ define void @multiply_noalias_2x4(ptr noalias %A, ptr noalias %B, ptr noalias %C
 ; CHECK:       inner.body:
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = shl i64 [[INNER_IV]], 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[DOTIDX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[TMP0]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [8 x i8], ptr [[TMP0]], i64 [[ROWS_IV]]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 16
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x i64>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[DOTIDX17:%.*]] = shl i64 [[COLS_IV]], 5
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[DOTIDX17]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[TMP2]], i64 [[INNER_IV]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [8 x i8], ptr [[TMP2]], i64 [[INNER_IV]]
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x i64>, ptr [[TMP3]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr i8, ptr [[TMP3]], i64 32
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x i64>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x i64> [[COL_LOAD2]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <2 x i64> [[COL_LOAD]], [[SPLAT_SPLAT]]
@@ -136,9 +136,9 @@ define void @multiply_noalias_2x4(ptr noalias %A, ptr noalias %B, ptr noalias %C
 ; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_IV]], 0
 ; CHECK-NEXT:    [[DOTIDX18:%.*]] = shl i64 [[COLS_IV]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 [[DOTIDX18]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[TMP12]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr [8 x i8], ptr [[TMP12]], i64 [[ROWS_IV]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP13]], align 8
-; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr i8, ptr [[TMP13]], i64 16
+; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP13]], i64 16
 ; CHECK-NEXT:    store <2 x i64> [[TMP11]], ptr [[VEC_GEP16]], align 8
 ; CHECK-NEXT:    br i1 [[ROWS_COND_NOT]], label [[COLS_LATCH]], label [[ROWS_HEADER]], !prof [[PROF4:![0-9]+]]
 ; CHECK:       cols.latch:
@@ -190,15 +190,15 @@ define void @multiply_noalias_4x2_2x8(ptr noalias %A, ptr noalias %B, ptr noalia
 ; CHECK:       inner.body:
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = shl i64 [[INNER_IV]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[DOTIDX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[TMP0]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [8 x i8], ptr [[TMP0]], i64 [[ROWS_IV]]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 32
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x i64>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[DOTIDX17:%.*]] = shl i64 [[COLS_IV]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[DOTIDX17]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[TMP2]], i64 [[INNER_IV]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [8 x i8], ptr [[TMP2]], i64 [[INNER_IV]]
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x i64>, ptr [[TMP3]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr i8, ptr [[TMP3]], i64 16
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x i64>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x i64> [[COL_LOAD2]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <2 x i64> [[COL_LOAD]], [[SPLAT_SPLAT]]
@@ -222,9 +222,9 @@ define void @multiply_noalias_4x2_2x8(ptr noalias %A, ptr noalias %B, ptr noalia
 ; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_STEP]], 4
 ; CHECK-NEXT:    [[DOTIDX18:%.*]] = shl i64 [[COLS_IV]], 5
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 [[DOTIDX18]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[TMP12]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr [8 x i8], ptr [[TMP12]], i64 [[ROWS_IV]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP13]], align 8
-; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr i8, ptr [[TMP13]], i64 32
+; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP13]], i64 32
 ; CHECK-NEXT:    store <2 x i64> [[TMP11]], ptr [[VEC_GEP16]], align 8
 ; CHECK-NEXT:    br i1 [[ROWS_COND_NOT]], label [[COLS_LATCH]], label [[ROWS_HEADER]], !prof [[PROF0]]
 ; CHECK:       cols.latch:
@@ -258,15 +258,17 @@ declare <32 x i64> @llvm.matrix.multiply.v32i64.v8i64.v16i64(<8 x i64>, <16 x i6
 define void @multiply_alias_2x2(ptr %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: @multiply_alias_2x2(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP6:%.*]] = alloca [4 x float], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca [4 x float], align 4
 ; CHECK-NEXT:    [[STORE_END:%.*]] = getelementptr inbounds nuw i8, ptr [[C:%.*]], i64 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[A:%.*]], [[STORE_END]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]]
 ; CHECK:       alias_cont:
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    [[LOAD_END:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[C]], [[LOAD_END]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca [4 x float], align 4
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(16) [[TMP2]], ptr noundef nonnull align 8 dereferenceable(16) [[A]], i64 16, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
@@ -275,11 +277,11 @@ define void @multiply_alias_2x2(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult ptr [[B:%.*]], [[STORE_END4]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[ALIAS_CONT1:%.*]], label [[NO_ALIAS3:%.*]]
 ; CHECK:       alias_cont1:
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP6]])
 ; CHECK-NEXT:    [[LOAD_END5:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult ptr [[C]], [[LOAD_END5]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[COPY2:%.*]], label [[NO_ALIAS3]]
 ; CHECK:       copy2:
-; CHECK-NEXT:    [[TMP6:%.*]] = alloca [4 x float], align 4
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(16) [[TMP6]], ptr noundef nonnull align 8 dereferenceable(16) [[B]], i64 16, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS3]]
 ; CHECK:       no_alias3:
@@ -303,15 +305,15 @@ define void @multiply_alias_2x2(ptr %A, ptr %B, ptr %C) {
 ; CHECK:       inner.body:
 ; CHECK-NEXT:    [[DOTIDX1:%.*]] = shl i64 [[INNER_IV]], 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[DOTIDX1]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr float, ptr [[TMP8]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr [4 x i8], ptr [[TMP8]], i64 [[ROWS_IV]]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x float>, ptr [[TMP10]], align 4
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i8, ptr [[TMP10]], i64 8
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP10]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <2 x float>, ptr [[VEC_GEP]], align 4
 ; CHECK-NEXT:    [[DOTIDX24:%.*]] = shl i64 [[COLS_IV]], 3
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP7]], i64 [[DOTIDX24]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr float, ptr [[TMP11]], i64 [[INNER_IV]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr [4 x i8], ptr [[TMP11]], i64 [[INNER_IV]]
 ; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <2 x float>, ptr [[TMP13]], align 4
-; CHECK-NEXT:    [[VEC_GEP10:%.*]] = getelementptr i8, ptr [[TMP13]], i64 8
+; CHECK-NEXT:    [[VEC_GEP10:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP13]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD11:%.*]] = load <2 x float>, ptr [[VEC_GEP10]], align 4
 ; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x float> [[COL_LOAD9]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = call contract <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[COL_LOAD]], <2 x float> [[SPLAT_SPLAT]], <2 x float> [[RESULT_VEC_0]])
@@ -331,9 +333,9 @@ define void @multiply_alias_2x2(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_IV]], 0
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = shl i64 [[COLS_IV]], 3
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[C]], i64 [[DOTIDX]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr float, ptr [[TMP18]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr [4 x i8], ptr [[TMP18]], i64 [[ROWS_IV]]
 ; CHECK-NEXT:    store <2 x float> [[TMP15]], ptr [[TMP19]], align 8
-; CHECK-NEXT:    [[VEC_GEP23:%.*]] = getelementptr i8, ptr [[TMP19]], i64 8
+; CHECK-NEXT:    [[VEC_GEP23:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP19]], i64 8
 ; CHECK-NEXT:    store <2 x float> [[TMP17]], ptr [[VEC_GEP23]], align 8
 ; CHECK-NEXT:    br i1 [[ROWS_COND_NOT]], label [[COLS_LATCH]], label [[ROWS_HEADER]], !prof [[PROF4]]
 ; CHECK:       cols.latch:
@@ -341,6 +343,8 @@ define void @multiply_alias_2x2(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[COLS_COND_NOT:%.*]] = icmp eq i64 [[COLS_IV]], 0
 ; CHECK-NEXT:    br i1 [[COLS_COND_NOT]], label [[CONTINUE:%.*]], label [[COLS_HEADER]], !prof [[PROF4]]
 ; CHECK:       continue:
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP2]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP6]])
 ; CHECK-NEXT:    ret void
 ;
 

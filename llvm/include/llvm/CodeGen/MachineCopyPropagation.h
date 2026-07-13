@@ -14,15 +14,15 @@
 namespace llvm {
 
 class MachineCopyPropagationPass
-    : public PassInfoMixin<MachineCopyPropagationPass> {
+    : public OptionalPassInfoMixin<MachineCopyPropagationPass> {
   bool UseCopyInstr;
 
 public:
   MachineCopyPropagationPass(bool UseCopyInstr = false)
       : UseCopyInstr(UseCopyInstr) {}
 
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 
   MachineFunctionProperties getRequiredProperties() const {
     return MachineFunctionProperties().setNoVRegs();

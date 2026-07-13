@@ -39,6 +39,16 @@ using namespace llvm::object;
 using namespace lld;
 using namespace lld::coff;
 
+static AddBufferFn
+createAddBufferFn(std::vector<std::unique_ptr<MemoryBuffer>> &files,
+                  std::vector<std::string> &filenames) {
+  return [&files, &filenames](unsigned task, const Twine &moduleName,
+                              std::unique_ptr<MemoryBuffer> mb) {
+    files[task] = std::move(mb);
+    filenames[task] = moduleName.str();
+  };
+}
+
 std::string BitcodeCompiler::getThinLTOOutputFile(StringRef path) {
   return lto::getThinLTOOutputFile(path, ctx.config.thinLTOPrefixReplaceOld,
                                    ctx.config.thinLTOPrefixReplaceNew);
@@ -116,16 +126,7 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
 
   // Initialize ltoObj.
   lto::ThinBackend backend;
-  if (!ctx.config.dtltoDistributor.empty()) {
-    backend = lto::createOutOfProcessThinBackend(
-        llvm::hardware_concurrency(ctx.config.thinLTOJobs),
-        /*OnWrite=*/nullptr,
-        /*ShouldEmitIndexFiles=*/false,
-        /*ShouldEmitImportFiles=*/false, ctx.config.outputFile,
-        ctx.config.dtltoDistributor, ctx.config.dtltoDistributorArgs,
-        ctx.config.dtltoCompiler, ctx.config.dtltoCompilerPrependArgs,
-        ctx.config.dtltoCompilerArgs, !ctx.config.saveTempsArgs.empty());
-  } else if (ctx.config.thinLTOIndexOnly) {
+  if (ctx.config.thinLTOIndexOnly) {
     auto OnIndexWrite = [&](StringRef S) { thinIndices.erase(S); };
     backend = lto::createWriteIndexesThinBackend(
         llvm::hardware_concurrency(ctx.config.thinLTOJobs),
@@ -143,8 +144,13 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
                                         ctx.config.ltoPartitions);
   else
     ltoObj = std::make_unique<lto::DTLTO>(
-        createConfig(), backend, ctx.config.ltoPartitions,
-        llvm::lto::LTO::LTOKind::LTOK_Default, ctx.config.outputFile,
+        createConfig(), ctx.config.ltoPartitions,
+        llvm::lto::LTO::LTOKind::LTOK_Default, nullptr,
+        ctx.config.thinLTOEmitImportsFiles, ctx.config.thinLTOIndexOnly,
+        ctx.config.outputFile, ctx.config.dtltoDistributor,
+        ctx.config.dtltoDistributorArgs, ctx.config.dtltoCompiler,
+        ctx.config.dtltoCompilerPrependArgs, ctx.config.dtltoCompilerArgs,
+        createAddBufferFn(files, file_names),
         !ctx.config.saveTempsArgs.empty());
 }
 
@@ -200,11 +206,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   FileCache cache;
   if (!ctx.config.ltoCache.empty())
     cache = check(localCache("ThinLTO", "Thin", ctx.config.ltoCache,
-                             [&](size_t task, const Twine &moduleName,
-                                 std::unique_ptr<MemoryBuffer> mb) {
-                               files[task] = std::move(mb);
-                               file_names[task] = moduleName.str();
-                             }));
+                             createAddBufferFn(files, file_names)));
 
   checkError(ltoObj->run(
       [&](size_t task, const Twine &moduleName) {
@@ -234,16 +236,17 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   }
 
   if (!ctx.config.ltoCache.empty())
-    pruneCache(ctx.config.ltoCache, ctx.config.ltoCachePolicy, files);
+    check(pruneCache(ctx.config.ltoCache, ctx.config.ltoCachePolicy, files));
 
   std::vector<InputFile *> ret;
   bool emitASM = ctx.config.emit == EmitKind::ASM;
   const char *Ext = emitASM ? ".s" : ".obj";
   for (unsigned i = 0; i != maxTasks; ++i) {
     StringRef bitcodeFilePath;
-    // Get the native object contents either from the cache or from memory.  Do
-    // not use the cached MemoryBuffer directly, or the PDB will not be
-    // deterministic.
+    // Get the native object contents either from a MemoryBuffer, for example
+    // from the cache or an external DTLTO backend compilation, or by reading
+    // from memory. Do not use the provided MemoryBuffer directly, or the PDB
+    // will not be deterministic.
     StringRef objBuf;
     if (files[i]) {
       objBuf = files[i]->getBuffer();
@@ -279,4 +282,8 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   }
 
   return ret;
+}
+
+void BitcodeCompiler::setBitcodeLibFuncs(ArrayRef<StringRef> bitcodeLibFuncs) {
+  ltoObj->setBitcodeLibFuncs(bitcodeLibFuncs);
 }

@@ -23,7 +23,7 @@ DEFAULT_PLUGINS = [
     "ArchitecturePPC64",
     "ClangREPL",
     "CPlusPlusLanguage",
-    "CXXItaniumABI",
+    "CPPRuntime",
     "DisassemblerLLVMC",
     "HighlighterClang",
     "HighlighterDefault",
@@ -85,6 +85,7 @@ DEFAULT_PLUGINS = [
     "SymbolFileSymtab",
     "SymbolLocatorDebuginfod",
     "SymbolLocatorDefault",
+    "SymbolLocatorSymStore",
     "SymbolVendorELF",
     "SymbolVendorPECOFF",
     "SymbolVendorWasm",
@@ -103,4 +104,5 @@ OBJCPP_COPTS = [
     "-std=c++{}".format(CMAKE_CXX_STANDARD),
     "-fno-objc-exceptions",
     "-Wno-shorten-64-to-32",
+    "-Wno-vla-cxx-extension",
 ]

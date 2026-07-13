@@ -19,20 +19,6 @@ namespace llvm::omp::target::plugin {
 
 class L0DeviceTy;
 
-/// Program data to be initialized by plugin.
-struct ProgramDataTy {
-  int Initialized = 0;
-  int NumDevices = 0;
-  int DeviceNum = -1;
-  uint32_t TotalEUs = 0;
-  uint32_t HWThreadsPerEU = 0;
-  uintptr_t DynamicMemoryLB = 0;
-  uintptr_t DynamicMemoryUB = 0;
-  int DeviceType = 0;
-  void *DynamicMemPool = nullptr;
-  int TeamsThreadLimit = 0;
-};
-
 class L0ProgramBuilderTy {
   L0DeviceTy &Device;
   std::unique_ptr<MemoryBuffer> Image;
@@ -119,8 +105,10 @@ public:
   /// specified global variable name.
   Error writeGlobalVariable(const char *Name, size_t Size, const void *HostPtr);
 
-  /// Looks up a device global symbol with the given \p Name in the device.
-  Expected<void *> getSymbolDeviceAddr(const char *Name) const;
+  /// Looks up a device global symbol with the given \p Name in the device and
+  /// returns its address and size in \p Addr and \p SizePtr respectively.
+  Error getSymbolMetadata(const char *Name, void **AddrPtr,
+                          size_t *SizePtr) const;
 
   /// Returns the handle of a module that contains a given Kernel name.
   ze_module_handle_t findModuleFromKernelName(const char *KernelName) const {

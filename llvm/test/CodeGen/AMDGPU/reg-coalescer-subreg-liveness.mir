@@ -18,7 +18,7 @@ body:             |
   ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_128 = S_MOV_B32 1
   ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]].sub2:sgpr_128 = S_MOV_B32 0
   ; CHECK-NEXT:   undef [[S_MOV_B32_1:%[0-9]+]].sub0:sgpr_256 = S_MOV_B32 0
-  ; CHECK-NEXT:   TENSOR_LOAD_TO_LDS_D2 [[S_MOV_B32_]], [[S_MOV_B32_1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+  ; CHECK-NEXT:   TENSOR_LOAD_TO_LDS_d2 [[S_MOV_B32_]], [[S_MOV_B32_1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
   ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]].sub0:sgpr_128 = S_MOV_B32 1
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub1:sgpr_128 = COPY [[S_MOV_B32_]].sub0
   ; CHECK-NEXT: {{  $}}
@@ -27,8 +27,8 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub2:sgpr_128 = COPY [[S_MOV_B32_]].sub0
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub3:sgpr_128 = COPY [[S_MOV_B32_]].sub0
-  ; CHECK-NEXT:   TENSOR_LOAD_TO_LDS_D2 [[S_MOV_B32_]], [[S_MOV_B32_1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-  ; CHECK-NEXT:   TENSOR_LOAD_TO_LDS_D2 [[S_LOAD_DWORD_IMM]], [[S_MOV_B32_1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+  ; CHECK-NEXT:   TENSOR_LOAD_TO_LDS_d2 [[S_MOV_B32_]], [[S_MOV_B32_1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+  ; CHECK-NEXT:   TENSOR_LOAD_TO_LDS_d2 [[S_LOAD_DWORD_IMM]], [[S_MOV_B32_1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
   ; CHECK-NEXT:   $vcc_lo = COPY $exec_lo
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub1:sgpr_128 = S_MOV_B32 0
   ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]].sub2:sgpr_128 = S_MOV_B32 1
@@ -47,7 +47,7 @@ body:             |
     undef %3.sub0:sgpr_128 = COPY %2
     %4:sreg_32 = S_MOV_B32 0
     undef %5.sub0:sgpr_256 = COPY %4
-    TENSOR_LOAD_TO_LDS_D2 %3, %5, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2 %3, %5, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
     %6:sgpr_128 = COPY killed %3
     %6.sub1:sgpr_128 = COPY killed %1
     %7:sreg_32 = COPY $exec_lo
@@ -62,11 +62,11 @@ body:             |
     %11.sub1:sgpr_128 = COPY killed %10
     %11.sub2:sgpr_128 = COPY %2
     %11.sub3:sgpr_128 = COPY %2
-    TENSOR_LOAD_TO_LDS_D2 killed %11, %5, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2 killed %11, %5, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
     %12:sreg_32 = COPY killed %9
     %13:sgpr_128 = COPY %6
     %13.sub2:sgpr_128 = COPY killed %12
-    TENSOR_LOAD_TO_LDS_D2 killed %13, %5, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2 killed %13, %5, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
     $vcc_lo = COPY %7
     %8:sreg_32 = COPY %4
     %9:sreg_32 = COPY %2

@@ -33,7 +33,7 @@ define void @inner_loop_reduction(ptr noalias nocapture readonly %a.in, ptr noal
 ; CHECK-NEXT: %[[REDUCTION_NEXT]] = fadd <4 x double> %[[MASKED_GATHER2]], %[[REDUCTION]]
 ; CHECK-NEXT: %[[FOR2_INDEX_NEXT]] = add nuw nsw <4 x i32> %[[FOR2_INDEX]], splat (i32 1)
 ; CHECK-NEXT: %[[VEC_PTR:.*]] = icmp eq <4 x i32> %[[FOR2_INDEX_NEXT]], splat (i32 10000)
-; CHECK-NEXT: %[[EXIT_COND:.*]] = extractelement <4 x i1> %[[VEC_PTR]], i32 0
+; CHECK-NEXT: %[[EXIT_COND:.*]] = extractelement <4 x i1> %[[VEC_PTR]], i64 0
 ; CHECK-NEXT: br i1 %[[EXIT_COND]], label %[[FOR1_LATCH:.*]], label %{{.*}}
 
 ; CHECK: [[FOR1_LATCH]]:
@@ -47,7 +47,7 @@ define void @inner_loop_reduction(ptr noalias nocapture readonly %a.in, ptr noal
 entry:
   br label %for1.header
 
-for1.header:                                              ; preds = %entry
+for1.header:
   %indvar1 = phi i64 [ 0, %entry ], [ %indvar11, %for1.latch ]
   %a.ptr = getelementptr inbounds double, ptr %a.in, i64 %indvar1
   %a = load double, ptr %a.ptr, align 8
@@ -55,7 +55,7 @@ for1.header:                                              ; preds = %entry
   %b = load double, ptr %b.ptr, align 8
   br label %for2.header
 
-for2.header:                                              ; preds = %for1.header, %for2.header
+for2.header:
   %indvar2 = phi i32 [ 0, %for1.header ], [ %indvar21, %for2.header ]
   %a.reduction = phi double [ %a, %for1.header ], [ %a.reduction1, %for2.header ]
   %a.reduction1 = fadd double %b, %a.reduction
@@ -63,14 +63,14 @@ for2.header:                                              ; preds = %for1.header
   %for2.cond = icmp eq i32 %indvar21, 10000
   br i1 %for2.cond, label %for1.latch, label %for2.header
 
-for1.latch:                                               ; preds = %for2.header
+for1.latch:
   %c.ptr = getelementptr inbounds double, ptr %c.out, i64 %indvar1
   store double %a.reduction1, ptr %c.ptr, align 8
   %indvar11 = add nuw nsw i64 %indvar1, 1
   %for1.cond = icmp eq i64 %indvar11, 1000
   br i1 %for1.cond, label %exit, label %for1.header, !llvm.loop !0
 
-exit:                                                    ; preds = %for1.latch
+exit:
   ret void
 }
 

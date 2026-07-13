@@ -16,9 +16,6 @@
 ; when +nomadd attribute is specified.
 ; Output for mips32 and mips64r6 reused since aforementioned instructions are
 ; not generated in those cases.
-; RUN: llc < %s -mtriple=mipsel   -mcpu=mips32r2            -enable-no-nans-fp-math -mattr=+nomadd4 | FileCheck %s -check-prefixes=ALL,32-NOMADD
-; RUN: llc < %s -mtriple=mips64el -mcpu=mips64   -target-abi=n64 -enable-no-nans-fp-math -mattr=+nomadd4 | FileCheck %s -check-prefixes=ALL,64R6-NOMADD
-; RUN: llc < %s -mtriple=mips64el -mcpu=mips64r2 -target-abi=n64 -enable-no-nans-fp-math -mattr=+nomadd4 | FileCheck %s -check-prefixes=ALL,64R6-NOMADD
 ; RUN: llc < %s -mtriple=mipsel   -mcpu=mips32r2            -mattr=+nomadd4 | FileCheck %s -check-prefixes=ALL,32-NOMADD
 ; RUN: llc < %s -mtriple=mips64el -mcpu=mips64   -target-abi=n64 -mattr=+nomadd4 | FileCheck %s -check-prefixes=ALL,64R6-NOMADD
 ; RUN: llc < %s -mtriple=mips64el -mcpu=mips64r2 -target-abi=n64 -mattr=+nomadd4 | FileCheck %s -check-prefixes=ALL,64R6-NOMADD

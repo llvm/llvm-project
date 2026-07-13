@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hdr/stdio_macros.h" // For stdin/out/err
 #include "hdr/types/FILE.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/attributes.h"
+#include "src/stdio/stderr.h"
+#include "src/stdio/stdout.h"
+#include "src/stdio/stdin.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace file {

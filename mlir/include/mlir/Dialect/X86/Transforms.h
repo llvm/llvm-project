@@ -104,6 +104,12 @@ void populateSinkVectorProducerOpsPatterns(RewritePatternSet &patterns);
 // grouped with respect to odd/even packed index.
 void populateShuffleVectorFMAOpsPatterns(RewritePatternSet &patterns);
 
+// A set of patterns for lowering 32-bit packed vector contraction operations
+// to their corresponding packed-type tiled dot-product operations, using
+// AMX ultimately targeting the relevant x86 LLVM intrinsics (e.g., BF16 and
+// Int8).
+void populateVectorContractToAMXDotProductPatterns(RewritePatternSet &patterns);
+
 //===----------------------------------------------------------------------===//
 /// Helpers extracted from:
 ///   - clang/lib/Headers/avxintrin.h
@@ -200,12 +206,15 @@ void populateSpecializedTransposeLoweringPatterns(
 
 /// Collect a set of patterns to lower X86 ops to ops that map to LLVM
 /// intrinsics.
-void populateX86LegalizeForLLVMExportPatterns(
-    const LLVMTypeConverter &converter, RewritePatternSet &patterns);
+void populateX86LegalizeForLLVMExportPatterns(LLVMTypeConverter &converter,
+                                              RewritePatternSet &patterns);
 
 /// Configure the target to support lowering X86 ops to ops that map to
 /// LLVM intrinsics.
 void configureX86LegalizeForExportTarget(LLVMConversionTarget &target);
+
+/// Register LLVM conversion interface for X86 dialect.
+void registerConvertX86ToLLVMInterface(DialectRegistry &registry);
 
 } // namespace mlir
 

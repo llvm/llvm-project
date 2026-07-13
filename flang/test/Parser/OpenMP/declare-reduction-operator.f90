@@ -19,7 +19,7 @@ subroutine reduce_1 ( n, tts )
 !CHECK: !$OMP DECLARE REDUCTION(+:tt: omp_out = tt(omp_out%x - omp_in%x , omp_out%y - &
 !CHECK: !$OMP&omp_in%y)) INITIALIZER(omp_priv = tt(0,0))
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareReductionDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
@@ -80,7 +80,7 @@ subroutine reduce_1 ( n, tts )
 !CHECK: !$OMP DECLARE REDUCTION(+:tt2: omp_out = tt2(omp_out%x - omp_in%x , omp_out%y &
 !CHECK: !$OMP&- omp_in%y)) INITIALIZER(omp_priv = tt2(0,0))
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareReductionDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add

@@ -412,6 +412,16 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
 
   LogicalResult matchAndRewrite(scf::ParallelOp parallelOp,
                                 PatternRewriter &rewriter) const override {
+    // Bail out early if any reduction init value has a type that is not
+    // compatible with LLVM (e.g. index), since we cannot allocate a reduction
+    // variable for such types.
+    for (Value init : parallelOp.getInitVals()) {
+      if (!LLVM::isCompatibleType(init.getType()) &&
+          !isa<LLVM::PointerElementTypeInterface>(init.getType()))
+        return rewriter.notifyMatchFailure(
+            parallelOp, "reduction init type is not an LLVM-compatible type");
+    }
+
     // Declare reductions.
     // TODO: consider checking it here is already a compatible reduction
     // declaration and use it instead of redeclaring.
@@ -437,10 +447,6 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
     reductionVariables.reserve(parallelOp.getNumReductions());
     auto ptrType = LLVM::LLVMPointerType::get(parallelOp.getContext());
     for (Value init : parallelOp.getInitVals()) {
-      assert((LLVM::isCompatibleType(init.getType()) ||
-              isa<LLVM::PointerElementTypeInterface>(init.getType())) &&
-             "cannot create a reduction variable if the type is not an LLVM "
-             "pointer element");
       Value storage = LLVM::AllocaOp::create(rewriter, loc, ptrType,
                                              init.getType(), one, 0);
       LLVM::StoreOp::create(rewriter, loc, init, storage);

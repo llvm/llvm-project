@@ -65,6 +65,7 @@ extern llvm::cl::opt<bool> disableDebugInfo;
 extern llvm::cl::opt<bool> disableFirToLlvmIr;
 extern llvm::cl::opt<bool> disableLlvmIrToLlvm;
 extern llvm::cl::opt<bool> disableBoxedProcedureRewrite;
+extern llvm::cl::opt<bool> enableSafeTrampoline;
 
 extern llvm::cl::opt<bool> disableExternalNameConversion;
 extern llvm::cl::opt<bool> enableConstantArgumentGlobalisation;

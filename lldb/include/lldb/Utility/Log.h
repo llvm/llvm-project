@@ -31,6 +31,9 @@
 
 namespace llvm {
 class raw_ostream;
+namespace json {
+class Object;
+}
 }
 // Logging Options
 #define LLDB_LOG_OPTION_VERBOSE (1u << 1)
@@ -41,6 +44,7 @@ class raw_ostream;
 #define LLDB_LOG_OPTION_BACKTRACE (1U << 7)
 #define LLDB_LOG_OPTION_APPEND (1U << 8)
 #define LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION (1U << 9)
+#define LLDB_LOG_OPTION_JSON (1U << 10)
 
 // Logging Functions
 namespace lldb_private {
@@ -194,11 +198,10 @@ public:
   static void Register(llvm::StringRef name, Channel &channel);
   static void Unregister(llvm::StringRef name);
 
-  static bool
+  static llvm::Error
   EnableLogChannel(const std::shared_ptr<LogHandler> &log_handler_sp,
                    uint32_t log_options, llvm::StringRef channel,
-                   llvm::ArrayRef<const char *> categories,
-                   llvm::raw_ostream &error_stream);
+                   llvm::ArrayRef<const char *> categories);
 
   static bool DisableLogChannel(llvm::StringRef channel,
                                 llvm::ArrayRef<const char *> categories,
@@ -255,11 +258,7 @@ public:
   /// Prefer using LLDB_LOGF whenever possible.
   void Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
 
-  void Error(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
-
   void Verbose(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
-
-  void Warning(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
   const Flags GetOptions() const;
 
@@ -268,7 +267,6 @@ public:
   bool GetVerbose() const;
 
   void VAPrintf(const char *format, va_list args);
-  void VAError(const char *format, va_list args);
   void VAFormatf(llvm::StringRef file, llvm::StringRef function,
                  const char *format, va_list args);
 
@@ -293,7 +291,11 @@ private:
 
   void WriteHeader(llvm::raw_ostream &OS, llvm::StringRef file,
                    llvm::StringRef function);
+  void WriteJSONHeader(llvm::json::Object &obj, llvm::StringRef file,
+                       llvm::StringRef function);
   void WriteMessage(llvm::StringRef message);
+  void EmitJSONMessage(llvm::StringRef file, llvm::StringRef function,
+                       llvm::StringRef message);
 
   void Format(llvm::StringRef file, llvm::StringRef function,
               const llvm::formatv_object_base &payload);
@@ -314,9 +316,14 @@ private:
 
   static void ListCategories(llvm::raw_ostream &stream,
                              const ChannelMap::value_type &entry);
-  static Log::MaskType GetFlags(llvm::raw_ostream &stream,
-                                const ChannelMap::value_type &entry,
-                                llvm::ArrayRef<const char *> categories);
+
+  /// Convert an array of category names into a set of category flags.
+  /// Returns a bitmask of categories, or an error message in the case that
+  /// at least one category name was not recognised. All unknown category names
+  /// are included in the error.
+  static llvm::Expected<Log::MaskType>
+  GetFlags(const ChannelMap::value_type &entry,
+           llvm::ArrayRef<const char *> categories);
 
   Log(const Log &) = delete;
   void operator=(const Log &) = delete;
@@ -373,6 +380,13 @@ Log *GetLLDBErrorLog();
       log_private->Format(__FILE__, __func__, __VA_ARGS__);                    \
   } while (0)
 
+#define LLDB_LOG_VERBOSE(log, ...)                                             \
+  do {                                                                         \
+    ::lldb_private::Log *log_private = (log);                                  \
+    if (log_private && log_private->GetVerbose())                              \
+      log_private->Format(__FILE__, __func__, __VA_ARGS__);                    \
+  } while (0)
+
 #define LLDB_LOGF(log, ...)                                                    \
   do {                                                                         \
     ::lldb_private::Log *log_private = (log);                                  \
@@ -380,11 +394,11 @@ Log *GetLLDBErrorLog();
       log_private->Formatf(__FILE__, __func__, __VA_ARGS__);                   \
   } while (0)
 
-#define LLDB_LOGV(log, ...)                                                    \
+#define LLDB_LOGF_VERBOSE(log, ...)                                            \
   do {                                                                         \
     ::lldb_private::Log *log_private = (log);                                  \
     if (log_private && log_private->GetVerbose())                              \
-      log_private->Format(__FILE__, __func__, __VA_ARGS__);                    \
+      log_private->Formatf(__FILE__, __func__, __VA_ARGS__);                   \
   } while (0)
 
 // Write message to log, if error is set. In the log message refer to the error

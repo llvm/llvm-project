@@ -463,7 +463,7 @@ func.func @matmul_mixed_signedness_int8(%arg0: memref<16x32xi8>, %arg1: memref<1
 
 // CHECK-LABEL: func @cast_f16_to_f32_write
 //       CHECK:    %[[COMPUTE:.+]] = gpu.subgroup_mma_compute
-//       CHECK:    %[[EXT:.+]] = gpu.subgroup_mma_elementwise  extf %[[COMPUTE]] : (!gpu.mma_matrix<16x16xf16, "COp">) -> !gpu.mma_matrix<16x16xf32, "COp">
+//       CHECK:    %[[EXT:.+]] = gpu.subgroup_mma_elementwise extf %[[COMPUTE]] : (!gpu.mma_matrix<16x16xf16, "COp">) -> !gpu.mma_matrix<16x16xf32, "COp">
 //       CHECK:    gpu.subgroup_mma_store_matrix %[[EXT]]
 func.func @cast_f16_to_f32_write(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<16x16xf16>, %arg3: memref<16x16xf32>) {
   %c0 = arith.constant 0 : index
@@ -485,7 +485,7 @@ func.func @cast_f16_to_f32_write(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf
 
 // CHECK-LABEL: func @cast_f32_to_f16_write
 //       CHECK:    %[[COMPUTE:.+]] = gpu.subgroup_mma_compute
-//       CHECK:    %[[EXT:.+]] = gpu.subgroup_mma_elementwise  truncf %[[COMPUTE]] : (!gpu.mma_matrix<16x16xf32, "COp">) -> !gpu.mma_matrix<16x16xf16, "COp">
+//       CHECK:    %[[EXT:.+]] = gpu.subgroup_mma_elementwise truncf %[[COMPUTE]] : (!gpu.mma_matrix<16x16xf32, "COp">) -> !gpu.mma_matrix<16x16xf16, "COp">
 //       CHECK:    gpu.subgroup_mma_store_matrix %[[EXT]]
 func.func @cast_f32_to_f16_write(%arg0: memref<16x16xf32>, %arg1: memref<16x16xf32>, %arg2: memref<16x16xf32>, %arg3: memref<16x16xf16>) {
   %c0 = arith.constant 0 : index
@@ -536,10 +536,10 @@ func.func @fold_transpose_into_transfer_read(%alloc: memref<64x128xf16>, %vector
 // CHECK-LABEL: func @cast_f16_to_f32_read
 //       CHECK:    %[[A:.+]] = gpu.subgroup_mma_load_matrix {{.+}} {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
 //       CHECK:    %[[C:.+]] = gpu.subgroup_mma_load_matrix {{.+}} {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
-//       CHECK:    %[[AE:.+]] = gpu.subgroup_mma_elementwise  extf %[[A]] : (!gpu.mma_matrix<16x16xf16, "AOp">) -> !gpu.mma_matrix<16x16xf32, "AOp">
-//       CHECK:    %[[CE:.+]] = gpu.subgroup_mma_elementwise  extf %[[C]] : (!gpu.mma_matrix<16x16xf16, "COp">) -> !gpu.mma_matrix<16x16xf32, "COp">
+//       CHECK:    %[[AE:.+]] = gpu.subgroup_mma_elementwise extf %[[A]] : (!gpu.mma_matrix<16x16xf16, "AOp">) -> !gpu.mma_matrix<16x16xf32, "AOp">
+//       CHECK:    %[[CE:.+]] = gpu.subgroup_mma_elementwise extf %[[C]] : (!gpu.mma_matrix<16x16xf16, "COp">) -> !gpu.mma_matrix<16x16xf32, "COp">
 //       CHECK:    %[[B:.+]] = gpu.subgroup_mma_load_matrix {{.+}} {leadDimension = 16 : index, transpose} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
-//       CHECK:    %[[BE:.+]] = gpu.subgroup_mma_elementwise  extf %[[B]] : (!gpu.mma_matrix<16x16xf16, "BOp">) -> !gpu.mma_matrix<16x16xf32, "BOp">
+//       CHECK:    %[[BE:.+]] = gpu.subgroup_mma_elementwise extf %[[B]] : (!gpu.mma_matrix<16x16xf16, "BOp">) -> !gpu.mma_matrix<16x16xf32, "BOp">
 //       CHECK:    gpu.subgroup_mma_compute %[[AE]], %[[BE]], %[[CE]]
 func.func @cast_f16_to_f32_read(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<16x16xf16>, %arg3: memref<16x16xf32>) {
   %c0 = arith.constant 0 : index
@@ -582,7 +582,7 @@ func.func @test_unsupported(%arg0: vector<4x4xi32>, %arg1: vector<4x4xi32>, %arg
 // CHECK-LABEL: func @addf
 //       CHECK:   %[[A:.+]] = gpu.subgroup_mma_load_matrix {{.+}} {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
 //       CHECK:   %[[B:.+]] = gpu.subgroup_mma_load_matrix {{.+}} {leadDimension = 16 : index, transpose} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
-//       CHECK:   %[[C:.+]] = gpu.subgroup_mma_elementwise  addf %[[A]], %[[B]] : (!gpu.mma_matrix<16x16xf16, "COp">, !gpu.mma_matrix<16x16xf16, "COp">) -> !gpu.mma_matrix<16x16xf16, "COp">
+//       CHECK:   %[[C:.+]] = gpu.subgroup_mma_elementwise addf %[[A]], %[[B]] : (!gpu.mma_matrix<16x16xf16, "COp">, !gpu.mma_matrix<16x16xf16, "COp">) -> !gpu.mma_matrix<16x16xf16, "COp">
 //       CHECK:   gpu.subgroup_mma_store_matrix %[[C]]
 func.func @addf(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<16x16xf16>) {
   %c0 = arith.constant 0 : index

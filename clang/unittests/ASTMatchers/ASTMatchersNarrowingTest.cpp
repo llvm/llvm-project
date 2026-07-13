@@ -4049,6 +4049,12 @@ TEST_P(ASTMatchersTest, NullPointerConstant) {
   EXPECT_TRUE(matches("char *cp = (char *)0;", expr(nullPointerConstant())));
   EXPECT_TRUE(matches("int *ip = 0;", expr(nullPointerConstant())));
   EXPECT_FALSE(matches("int i = 0;", expr(nullPointerConstant())));
+  EXPECT_FALSE(
+      matches("void f(){int *p[1]; (void)p[0];}", expr(nullPointerConstant())));
+  EXPECT_TRUE(matches("void f(){int index; (void)index[(int*)0];}",
+                      expr(nullPointerConstant())));
+  EXPECT_FALSE(matches("void f(){int* ptr; (void)(ptr + 0);}",
+                       expr(nullPointerConstant())));
 }
 
 TEST_P(ASTMatchersTest, NullPointerConstant_GNUNull) {
@@ -5166,6 +5172,94 @@ TEST_P(ASTMatchersTest, OMPFromClause_DoesNotMatchMapClause) {
     }
   )";
   EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
+}
+
+TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_ArraySection_CountExpression) {
+  StringRef Source0 = R"(
+    void foo() {
+      int count = 8;
+      int arr[100];
+      #pragma omp target update from(arr[0:count:2])
+      ;
+    }
+  )";
+
+  auto astUnit =
+      tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp=libomp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPFromClause *FromClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((FromClause = dyn_cast<OMPFromClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(FromClause);
+
+  for (const auto *VarExpr : FromClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    // Verify length expression exists and is not a constant
+    const Expr *Length = ArraySection->getLength();
+    ASSERT_TRUE(Length);
+    EXPECT_FALSE(isa<IntegerLiteral>(Length))
+        << "Expected length to be a variable expression (count)";
+  }
+}
+
+TEST_P(ASTMatchersTest,
+       OMPTargetUpdateDirective_ArraySection_ComplexCountExpression) {
+  StringRef Source0 = R"(
+    void foo() {
+      int len = 16;
+      int count = 8;
+      int arr[100];
+      #pragma omp target update from(arr[0:(len+count)/2:2])
+      ;
+    }
+  )";
+
+  auto astUnit =
+      tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp=libomp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPFromClause *FromClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((FromClause = dyn_cast<OMPFromClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(FromClause);
+
+  for (const auto *VarExpr : FromClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    // Verify length is a complex expression, not a constant
+    const Expr *Length = ArraySection->getLength();
+    ASSERT_TRUE(Length);
+    EXPECT_FALSE(isa<IntegerLiteral>(Length))
+        << "Expected length to be a complex expression ((len+count)/2)";
+  }
 }
 
 TEST_P(ASTMatchersTest, HasAnyBase_DirectBase) {

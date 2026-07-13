@@ -20,6 +20,7 @@
 #include "HexagonTargetTransformInfo.h"
 #include "HexagonVectorLoopCarriedReuse.h"
 #include "TargetInfo/HexagonTargetInfo.h"
+#include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/VLIWMachineScheduler.h"
@@ -38,6 +39,10 @@ static cl::opt<bool>
 
 static cl::opt<bool> EnableRDFOpt("rdf-opt", cl::Hidden, cl::init(true),
                                   cl::desc("Enable RDF-based optimizations"));
+
+static cl::opt<bool> EnablePostRAHandleQFP(
+    "hexagon-handle-qfloat", cl::init(true), cl::Hidden,
+    cl::desc("Fix up QFloat spills and reloads after register allocation"));
 
 cl::opt<unsigned> RDFFuncBlockLimit(
     "rdf-bb-limit", cl::Hidden, cl::init(1000),
@@ -88,7 +93,7 @@ static cl::opt<bool> EnableEarlyIf("hexagon-eif", cl::init(true), cl::Hidden,
                                    cl::desc("Enable early if-conversion"));
 
 static cl::opt<bool> EnableCopyHoist("hexagon-copy-hoist", cl::init(true),
-                                     cl::Hidden, cl::ZeroOrMore,
+                                     cl::Hidden,
                                      cl::desc("Enable Hexagon copy hoisting"));
 
 static cl::opt<bool>
@@ -155,6 +160,19 @@ static cl::opt<bool> EnableInstSimplify("hexagon-instsimplify", cl::Hidden,
                                         cl::init(true),
                                         cl::desc("Enable instsimplify"));
 
+cl::opt<QFloatMode> QFloatModeValue(
+    "hexagon-qfloat-mode", cl::desc("Specify the qfloat mode to operate on."),
+    cl::Hidden, cl::init(QFloatMode::Legacy),
+    cl::values(
+        clEnumValN(QFloatMode::StrictIEEE, "strict-ieee",
+                   "Enable code generation for qfloat strict IEEE-754 mode"),
+        clEnumValN(QFloatMode::IEEE, "ieee",
+                   "Enable code generation for qfloat IEEE-754 mode"),
+        clEnumValN(QFloatMode::Lossy, "lossy",
+                   "Enable code generation for qfloat lossy-subnormals mode"),
+        clEnumValN(QFloatMode::Legacy, "legacy",
+                   "Enable code generation for qfloat legacy mode")));
+
 /// HexagonTargetMachineModule - Note that this is used on hosts that
 /// cannot link in a library unless there are references into the
 /// library.  In particular, it seems that it is not possible to get
@@ -198,6 +216,7 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonGlobalSchedulerPass(PR);
   initializeHexagonLiveVariablesPass(PR);
   initializeHexagonHardwareLoopsPass(PR);
+  initializeHexagonHVXSaveRemarkPass(PR);
   initializeHexagonLoopIdiomRecognizeLegacyPassPass(PR);
   initializeHexagonNewValueJumpPass(PR);
   initializeHexagonOptAddrModePass(PR);
@@ -229,6 +248,8 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonSplitConst32AndConst64Pass(PR);
   initializeHexagonVectorPrintPass(PR);
   initializeHexagonQFPOptimizerPass(PR);
+  initializeHexagonXQFloatGeneratorPass(PR);
+  initializeHexagonPostRAHandleQFPPass(PR);
 }
 
 HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
@@ -261,13 +282,8 @@ HexagonTargetMachine::getSubtargetImpl(const Function &F) const {
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
 
   auto &I = SubtargetMap[CPU + FS];
-  if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
+  if (!I)
     I = std::make_unique<HexagonSubtarget>(TargetTriple, CPU, FS, *this);
-  }
   return I.get();
 }
 
@@ -297,6 +313,41 @@ MachineFunctionInfo *HexagonTargetMachine::createMachineFunctionInfo(
     const TargetSubtargetInfo *STI) const {
   return HexagonMachineFunctionInfo::create<HexagonMachineFunctionInfo>(
       Allocator, F, STI);
+}
+
+yaml::MachineFunctionInfo *
+HexagonTargetMachine::createDefaultFuncInfoYAML() const {
+  return new yaml::HexagonFunctionInfo();
+}
+
+yaml::MachineFunctionInfo *
+HexagonTargetMachine::convertFuncInfoToYAML(const MachineFunction &MF) const {
+  const auto *MFI = MF.getInfo<HexagonMachineFunctionInfo>();
+  const auto &TRI = *MF.getSubtarget().getRegisterInfo();
+  return new yaml::HexagonFunctionInfo(*MFI, TRI);
+}
+
+bool HexagonTargetMachine::parseMachineFunctionInfo(
+    const yaml::MachineFunctionInfo &MFI_, PerFunctionMIParsingState &PFS,
+    SMDiagnostic &Error, SMRange &SourceRange) const {
+  const auto &YamlMFI = static_cast<const yaml::HexagonFunctionInfo &>(MFI_);
+  MachineFunction &MF = PFS.MF;
+  HexagonMachineFunctionInfo *MFI = MF.getInfo<HexagonMachineFunctionInfo>();
+
+  MFI->initializeBaseYamlFields(YamlMFI);
+
+  // Parse StackAlignBaseReg register name
+  if (!YamlMFI.StackAlignBaseReg.Value.empty()) {
+    Register Reg;
+    if (parseNamedRegisterReference(PFS, Reg, YamlMFI.StackAlignBaseReg.Value,
+                                    Error)) {
+      SourceRange = YamlMFI.StackAlignBaseReg.SourceRange;
+      return true;
+    }
+    MFI->setStackAlignBaseReg(Reg);
+  }
+
+  return false;
 }
 
 HexagonTargetMachine::~HexagonTargetMachine() = default;
@@ -366,12 +417,17 @@ void HexagonPassConfig::addIRPasses() {
 
 bool HexagonPassConfig::addInstSelector() {
   HexagonTargetMachine &TM = getHexagonTargetMachine();
+  const HexagonSubtarget *HST = TM.getHexagonSubtarget();
   bool NoOpt = (getOptLevel() == CodeGenOptLevel::None);
 
   if (!NoOpt)
     addPass(createHexagonOptimizeSZextends());
 
   addPass(createHexagonISelDag(TM, getOptLevel()));
+  // Run the QFloat mode code generation pass only if v79 or greater.
+  // Do not run this pass, if legacy mode is passed on command line.
+  if (HST->useHVXV79Ops() && (QFloatModeValue != QFloatMode::Legacy))
+    addPass(createHexagonXQFloatGenerator());
 
   if (!NoOpt) {
     if (EnableVExtractOpt)
@@ -398,7 +454,10 @@ bool HexagonPassConfig::addInstSelector() {
       addPass(createHexagonGenInsert());
     if (EnableEarlyIf)
       addPass(createHexagonEarlyIfConversion());
-    addPass(createHexagonQFPOptimizer());
+    // For v75 or below, or if legacy mode is requested, run QFPOptizer pass
+    // to preserve backward compatibility.
+    if (!HST->useHVXV79Ops() || (QFloatModeValue == QFloatMode::Legacy))
+      addPass(createHexagonQFPOptimizer());
   }
 
   return false;
@@ -432,9 +491,16 @@ void HexagonPassConfig::addPreRegAlloc() {
   }
   if (TM->getOptLevel() >= CodeGenOptLevel::Default)
     addPass(&MachinePipelinerID);
+  addPass(createHexagonHVXSaveRemark());
 }
 
 void HexagonPassConfig::addPostRegAlloc() {
+  HexagonTargetMachine &HTM = getHexagonTargetMachine();
+  const HexagonSubtarget *HST = HTM.getHexagonSubtarget();
+  // Run PostRAQFP on v79 and above.
+  if (EnablePostRAHandleQFP && HST->useHVXV79Ops())
+    addPass(createHexagonPostRAHandleQFP());
+
   if (getOptLevel() != CodeGenOptLevel::None) {
     if (EnableRDFOpt)
       addPass(createHexagonRDFOpt());
@@ -476,6 +542,10 @@ void HexagonPassConfig::addPreEmitPass() {
     if (!DisableHexagonLiveVars)
       addPass(&HexagonLiveVariablesID);
   }
+
+  // Emit KCFI checks for indirect calls. Must run before packetization so
+  // the check and call can be bundled together into a VLIW packet.
+  addPass(createKCFIPass());
 
   // Packetization is mandatory: it handles gather/scatter at all opt levels.
   addPass(createHexagonPacketizer(NoOpt));

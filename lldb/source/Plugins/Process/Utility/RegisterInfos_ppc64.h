@@ -334,6 +334,48 @@ typedef struct _GPR_PPC64 {
   uint64_t pad[3];
 } GPR_PPC64;
 
+typedef struct _GPR_PPC {
+  uint32_t r0;
+  uint32_t r1;
+  uint32_t r2;
+  uint32_t r3;
+  uint32_t r4;
+  uint32_t r5;
+  uint32_t r6;
+  uint32_t r7;
+  uint32_t r8;
+  uint32_t r9;
+  uint32_t r10;
+  uint32_t r11;
+  uint32_t r12;
+  uint32_t r13;
+  uint32_t r14;
+  uint32_t r15;
+  uint32_t r16;
+  uint32_t r17;
+  uint32_t r18;
+  uint32_t r19;
+  uint32_t r20;
+  uint32_t r21;
+  uint32_t r22;
+  uint32_t r23;
+  uint32_t r24;
+  uint32_t r25;
+  uint32_t r26;
+  uint32_t r27;
+  uint32_t r28;
+  uint32_t r29;
+  uint32_t r30;
+  uint32_t r31;
+  uint32_t cr;
+  uint32_t msr;
+  uint32_t xer;
+  uint32_t lr;
+  uint32_t ctr;
+  uint32_t pc;
+  uint32_t pad[3];
+} GPR_PPC;
+
 typedef struct _FPR_PPC64 {
   uint64_t f0;
   uint64_t f1;
@@ -480,6 +522,16 @@ static lldb_private::RegisterInfo g_register_infos_ppc64[] = {PPC64_REGS};
 static_assert((sizeof(g_register_infos_ppc64) /
                sizeof(g_register_infos_ppc64[0])) == k_num_registers_ppc64,
               "g_register_infos_powerpc64 has wrong number of register infos");
+
+static lldb_private::RegisterInfo g_register_infos_ppc[] = {
+#define GPR_PPC64 GPR_PPC
+    PPC64_REGS
+#undef GPR_PPC64
+};
+
+static_assert((sizeof(g_register_infos_ppc) /
+               sizeof(g_register_infos_ppc[0])) == k_num_registers_ppc64,
+              "g_register_infos_powerpc has wrong number of register infos");
 
 #undef DEFINE_FPR_PPC64
 #undef DEFINE_GPR_PPC64

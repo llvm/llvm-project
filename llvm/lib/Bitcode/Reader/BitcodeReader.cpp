@@ -73,6 +73,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -580,6 +581,7 @@ public:
 class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   LLVMContext &Context;
   Module *TheModule = nullptr;
+  Triple BitcodeTargetTriple;
   // Next offset to start scanning for lazy parsing of function bodies.
   uint64_t NextUnreadBit = 0;
   // Last function offset found in the VST.
@@ -641,8 +643,7 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
 
   // When intrinsic functions are encountered which require upgrading they are
   // stored here with their replacement function.
-  using UpdatedIntrinsicMap = DenseMap<Function *, Function *>;
-  UpdatedIntrinsicMap UpgradedIntrinsics;
+  DenseMap<Function *, Function *> UpgradedIntrinsics;
 
   // Several operations happen after the module header has been read, but
   // before function bodies are processed. This keeps track of whether
@@ -696,9 +697,19 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
 
   std::optional<ValueTypeCallbackTy> ValueTypeCallback;
 
+  /// A list of GUIDs defined by this module. Indexed by ValueID.
+  std::vector<GlobalValue::GUID> GUIDList;
+
+  /// Mirrors ParserCallbacks::SkipDebugIntrinsicUpgrade. When set, debug
+  /// intrinsic calls (llvm.dbg.*) are not auto-upgraded to non-instruction
+  /// debug records by globalCleanup(); the caller is expected to perform the
+  /// upgrade manually after any custom processing.
+  bool SkipDebugIntrinsicUpgrade = false;
+
 public:
   BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
-                StringRef ProducerIdentification, LLVMContext &Context);
+                StringRef ProducerIdentification, LLVMContext &Context,
+                Triple BitcodeTargetTriple);
 
   Error materializeForwardReferencedFunctions();
 
@@ -974,9 +985,12 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
 
   /// Callback to ask whether a symbol is the prevailing copy when invoked
   /// during combined index building.
-  std::function<bool(GlobalValue::GUID)> IsPrevailing;
+  std::function<bool(StringRef)> IsPrevailing = nullptr;
 
-  /// Saves the stack ids from the STACK_IDS record to consult when adding stack
+  /// Callback invoked whenever a new ValueInfo is generated.
+  std::function<void(ValueInfo)> OnValueInfo = nullptr;
+
+  /// Saves the stack ids from the STACK_IDS record to consult when adding
   /// ids from the lists in the callsite and alloc entries to the index.
   std::vector<uint64_t> StackIds;
 
@@ -985,15 +999,19 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   std::vector<uint64_t> RadixArray;
 
   /// Map from the module's stack id index to the index in the
-  /// ModuleSummaryIndex's StackIds vector. Populated when the STACK_IDS record
-  /// is processed and used to avoid repeated hash lookups.
+  /// ModuleSummaryIndex's StackIds vector. Populated lazily from the StackIds
+  /// list and used to avoid repeated hash lookups.
   std::vector<unsigned> StackIdToIndex;
+
+  /// A list of GUIDs defined by this module. Indexed by ValueID.
+  std::vector<uint64_t> DefinedGUIDs;
 
 public:
   ModuleSummaryIndexBitcodeReader(
       BitstreamCursor Stream, StringRef Strtab, ModuleSummaryIndex &TheIndex,
       StringRef ModulePath,
-      std::function<bool(GlobalValue::GUID)> IsPrevailing = nullptr);
+      std::function<bool(StringRef)> IsPrevailing = nullptr,
+      std::function<void(ValueInfo)> OnValueInfo = nullptr);
 
   Error parseModule();
 
@@ -1017,6 +1035,19 @@ private:
   parseParamAccesses(ArrayRef<uint64_t> Record);
   SmallVector<unsigned> parseAllocInfoContext(ArrayRef<uint64_t> Record,
                                               unsigned &I);
+
+  // Mark uninitialized stack ID mappings for lazy population.
+  static constexpr unsigned UninitializedStackIdIndex =
+      std::numeric_limits<unsigned>::max();
+
+  unsigned getStackIdIndex(unsigned LocalIndex) {
+    unsigned &Index = StackIdToIndex[LocalIndex];
+    // Add the stack id to the ModuleSummaryIndex map only when first requested
+    // and cache the result in the local StackIdToIndex map.
+    if (Index == UninitializedStackIdIndex)
+      Index = TheIndex.addOrGetStackIdIndex(StackIds[LocalIndex]);
+    return Index;
+  }
 
   template <bool AllowNullValueInfo = false>
   std::pair<ValueInfo, GlobalValue::GUID>
@@ -1043,8 +1074,9 @@ std::error_code llvm::errorToErrorCodeAndEmitErrors(LLVMContext &Ctx,
 
 BitcodeReader::BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
                              StringRef ProducerIdentification,
-                             LLVMContext &Context)
+                             LLVMContext &Context, Triple TTriple)
     : BitcodeReaderBase(std::move(Stream), Strtab), Context(Context),
+      BitcodeTargetTriple(TTriple),
       ValueList(this->Stream.SizeInBytes(),
                 [this](unsigned ValID, BasicBlock *InsertBB) {
                   return materializeValue(ValID, InsertBB);
@@ -1175,6 +1207,7 @@ static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
   auto Linkage = GlobalValue::LinkageTypes(RawFlags & 0xF); // 4 bits
   auto Visibility = GlobalValue::VisibilityTypes((RawFlags >> 8) & 3); // 2 bits
   auto IK = GlobalValueSummary::ImportKind((RawFlags >> 10) & 1);      // 1 bit
+  bool NoRenameOnPromotion = ((RawFlags >> 11) & 1);                   // 1 bit
   RawFlags = RawFlags >> 4;
   bool NotEligibleToImport = (RawFlags & 0x1) || Version < 3;
   // The Live flag wasn't introduced until version 3. For dead stripping
@@ -1185,7 +1218,8 @@ static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
   bool AutoHide = (RawFlags & 0x8);
 
   return GlobalValueSummary::GVFlags(Linkage, Visibility, NotEligibleToImport,
-                                     Live, Local, AutoHide, IK);
+                                     Live, Local, AutoHide, IK,
+                                     NoRenameOnPromotion);
 }
 
 // Decode the flags for GlobalVariable in the summary
@@ -1349,8 +1383,10 @@ static int getDecodedBinaryOpcode(unsigned Val, Type *Ty) {
   }
 }
 
-static AtomicRMWInst::BinOp getDecodedRMWOperation(unsigned Val) {
-  switch (Val) {
+static AtomicRMWInst::BinOp getDecodedRMWOperation(unsigned Val,
+                                                   bool &IsElementwise) {
+  IsElementwise = Val & bitc::RMW_ELEMENTWISE_FLAG;
+  switch (Val & ~bitc::RMW_ELEMENTWISE_FLAG) {
   default: return AtomicRMWInst::BAD_BINOP;
   case bitc::RMW_XCHG: return AtomicRMWInst::Xchg;
   case bitc::RMW_ADD: return AtomicRMWInst::Add;
@@ -1371,6 +1407,10 @@ static AtomicRMWInst::BinOp getDecodedRMWOperation(unsigned Val) {
     return AtomicRMWInst::FMaximum;
   case bitc::RMW_FMINIMUM:
     return AtomicRMWInst::FMinimum;
+  case bitc::RMW_FMAXIMUMNUM:
+    return AtomicRMWInst::FMaximumNum;
+  case bitc::RMW_FMINIMUMNUM:
+    return AtomicRMWInst::FMinimumNum;
   case bitc::RMW_UINC_WRAP:
     return AtomicRMWInst::UIncWrap;
   case bitc::RMW_UDEC_WRAP:
@@ -2094,6 +2134,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::ElementType;
   case bitc::ATTR_KIND_FNRETTHUNK_EXTERN:
     return Attribute::FnRetThunkExtern;
+  case bitc::ATTR_KIND_FLATTEN:
+    return Attribute::Flatten;
   case bitc::ATTR_KIND_INLINE_HINT:
     return Attribute::InlineHint;
   case bitc::ATTR_KIND_IN_REG:
@@ -2278,6 +2320,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::DenormalFPEnv;
   case bitc::ATTR_KIND_NOOUTLINE:
     return Attribute::NoOutline;
+  case bitc::ATTR_KIND_NOIPA:
+    return Attribute::NoIPA;
   }
 }
 
@@ -2439,12 +2483,29 @@ Error BitcodeReader::parseAttributeGroupBlock() {
                         MemoryEffects::argMemOnly(ArgMem) |
                         MemoryEffects::errnoMemOnly(OtherMem) |
                         MemoryEffects::otherMemOnly(OtherMem);
+              // Old versions dont have target memory location.
+              // It was represented as Inaccessible memory for AArch64.
+              if (BitcodeTargetTriple.isAArch64())
+                ME = ME.getWithModRef(IRMemLocation::TargetMem0,
+                                      InaccessibleMem) |
+                     ME.getWithModRef(IRMemLocation::TargetMem1,
+                                      InaccessibleMem);
               B.addMemoryAttr(ME);
             } else {
               // Construct the memory attribute directly from the encoded base
               // on newer versions.
-              B.addMemoryAttr(MemoryEffects::createFromIntValue(
-                  EncodedME & 0x00FFFFFFFFFFFFFFULL));
+              auto ME = MemoryEffects::createFromIntValue(
+                  EncodedME & 0x00FFFFFFFFFFFFFFULL);
+              // Only from Version=2 onwards target memory location exist.
+              // It was represented as Inaccessible memory for AArch64.
+              if (Version == 1 && BitcodeTargetTriple.isAArch64())
+                ME = ME.getWithModRef(
+                         IRMemLocation::TargetMem0,
+                         ME.getModRef(IRMemLocation::InaccessibleMem)) |
+                     ME.getWithModRef(
+                         IRMemLocation::TargetMem1,
+                         ME.getModRef(IRMemLocation::InaccessibleMem));
+              B.addMemoryAttr(ME);
             }
           } else if (Kind == Attribute::Captures)
             B.addCapturesAttr(CaptureInfo::createFromIntValue(Record[++i]));
@@ -2634,6 +2695,17 @@ Error BitcodeReader::parseTypeTableBody() {
     case bitc::TYPE_CODE_TOKEN:     // TOKEN
       ResultTy = Type::getTokenTy(Context);
       break;
+    case bitc::TYPE_CODE_BYTE: { // BYTE: [width]
+      if (Record.empty())
+        return error("Invalid record");
+
+      uint64_t NumBits = Record[0];
+      if (NumBits < ByteType::MIN_BYTE_BITS ||
+          NumBits > ByteType::MAX_BYTE_BITS)
+        return error("Bitwidth for byte type out of range");
+      ResultTy = ByteType::get(Context, NumBits);
+      break;
+    }
     case bitc::TYPE_CODE_INTEGER: { // INTEGER: [width]
       if (Record.empty())
         return error("Invalid integer record");
@@ -3332,6 +3404,21 @@ Error BitcodeReader::parseConstants() {
       V = ConstantInt::get(CurTy, VInt);
       break;
     }
+    case bitc::CST_CODE_BYTE: // BYTE: [byteval]
+      if (!CurTy->isByteOrByteVectorTy() || Record.empty())
+        return error("Invalid byte const record");
+      V = ConstantByte::get(CurTy, decodeSignRotatedValue(Record[0]),
+                            /*isSigned=*/true);
+      break;
+    case bitc::CST_CODE_WIDE_BYTE: { // WIDE_BYTE: [n x byteval]
+      if (!CurTy->isByteOrByteVectorTy() || Record.empty())
+        return error("Invalid wide byte const record");
+
+      auto *ScalarTy = cast<ByteType>(CurTy->getScalarType());
+      APInt VByte = readWideAPInt(Record, ScalarTy->getBitWidth());
+      V = ConstantByte::get(CurTy, VByte);
+      break;
+    }
     case bitc::CST_CODE_FLOAT: {    // FLOAT: [fpval]
       if (Record.empty())
         return error("Invalid float const record");
@@ -3394,70 +3481,32 @@ Error BitcodeReader::parseConstants() {
         return error("Invalid string record");
 
       SmallString<16> Elts(Record.begin(), Record.end());
-      V = ConstantDataArray::getString(Context, Elts,
-                                       BitCode == bitc::CST_CODE_CSTRING);
+      V = ConstantDataArray::getString(
+          Context, Elts, BitCode == bitc::CST_CODE_CSTRING,
+          cast<ArrayType>(CurTy)->getElementType()->isByteTy());
       break;
     }
     case bitc::CST_CODE_DATA: {// DATA: [n x value]
       if (Record.empty())
         return error("Invalid data record");
 
-      Type *EltTy;
-      if (auto *Array = dyn_cast<ArrayType>(CurTy))
-        EltTy = Array->getElementType();
-      else
-        EltTy = cast<VectorType>(CurTy)->getElementType();
-      if (EltTy->isIntegerTy(8)) {
-        SmallVector<uint8_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::get(Context, Elts);
-        else
-          V = ConstantDataArray::get(Context, Elts);
-      } else if (EltTy->isIntegerTy(16)) {
-        SmallVector<uint16_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::get(Context, Elts);
-        else
-          V = ConstantDataArray::get(Context, Elts);
-      } else if (EltTy->isIntegerTy(32)) {
-        SmallVector<uint32_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::get(Context, Elts);
-        else
-          V = ConstantDataArray::get(Context, Elts);
-      } else if (EltTy->isIntegerTy(64)) {
-        SmallVector<uint64_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::get(Context, Elts);
-        else
-          V = ConstantDataArray::get(Context, Elts);
-      } else if (EltTy->isHalfTy()) {
-        SmallVector<uint16_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::getFP(EltTy, Elts);
-        else
-          V = ConstantDataArray::getFP(EltTy, Elts);
-      } else if (EltTy->isBFloatTy()) {
-        SmallVector<uint16_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::getFP(EltTy, Elts);
-        else
-          V = ConstantDataArray::getFP(EltTy, Elts);
-      } else if (EltTy->isFloatTy()) {
-        SmallVector<uint32_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::getFP(EltTy, Elts);
-        else
-          V = ConstantDataArray::getFP(EltTy, Elts);
-      } else if (EltTy->isDoubleTy()) {
-        SmallVector<uint64_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::getFP(EltTy, Elts);
-        else
-          V = ConstantDataArray::getFP(EltTy, Elts);
-      } else {
+      Type *EltTy = CurTy->getContainedType(0);
+      if (!ConstantDataSequential::isElementTypeCompatible(EltTy))
         return error("Invalid type for value");
+
+      const unsigned EltBytes = EltTy->getScalarSizeInBits() / 8;
+      SmallString<128> RawData;
+      RawData.reserve(Record.size() * EltBytes);
+      for (uint64_t Val : Record) {
+        const char *Src = reinterpret_cast<const char *>(&Val);
+        if constexpr (sys::IsBigEndianHost)
+          Src += sizeof(uint64_t) - EltBytes;
+        RawData.append(Src, Src + EltBytes);
       }
+
+      V = isa<VectorType>(CurTy)
+              ? ConstantDataVector::getRaw(RawData.str(), Record.size(), EltTy)
+              : ConstantDataArray::getRaw(RawData.str(), Record.size(), EltTy);
       break;
     }
     case bitc::CST_CODE_CE_UNOP: {  // CE_UNOP: [opcode, opval]
@@ -3968,6 +4017,8 @@ Error BitcodeReader::materializeMetadata() {
     }
   }
 
+  UpgradeCFIFunctionsMetadata(*TheModule);
+
   DeferredMetadataInfo.clear();
   return Error::success();
 }
@@ -4009,7 +4060,9 @@ Error BitcodeReader::globalCleanup() {
   for (Function &F : *TheModule) {
     MDLoader->upgradeDebugIntrinsics(F);
     Function *NewFn;
-    if (UpgradeIntrinsicFunction(&F, NewFn))
+    if (UpgradeIntrinsicFunction(&F,
+                                 NewFn, /*CanUpgradeDebugIntrinsicsToRecords=*/
+                                 !SkipDebugIntrinsicUpgrade))
       UpgradedIntrinsics[&F] = NewFn;
     // Look for functions that rely on old function attribute behavior.
     UpgradeFunctionAttributes(F);
@@ -4023,6 +4076,15 @@ Error BitcodeReader::globalCleanup() {
   for (auto &Pair : UpgradedVariables) {
     Pair.first->eraseFromParent();
     TheModule->insertGlobalVariable(Pair.second);
+  }
+
+  for (size_t ValueID = 0; ValueID < GUIDList.size(); ValueID++) {
+    const auto GUID = GUIDList[ValueID];
+    if (GUID == 0)
+      continue;
+
+    const auto *Value = ValueList[ValueID];
+    TheModule->insertGUID(Value, GUID);
   }
 
   // Force deallocation of memory for these vectors to favor the client that
@@ -4557,6 +4619,9 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
   // Initialize to the current module's layout string in case none is specified.
   std::string TentativeDataLayoutStr = TheModule->getDataLayoutStr();
 
+  // Apply to the following module asm.
+  Module::GlobalAsmProperties Props;
+
   auto ResolveDataLayout = [&]() -> Error {
     if (ResolvedDataLayout)
       return Error::success();
@@ -4765,11 +4830,23 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
         return error("Invalid data layout record");
       break;
     }
+    case bitc::MODULE_CODE_ASM_PROPERTY: {
+      std::string Str;
+      if (convertToString(Record, 0, Str))
+        return error("Invalid module asm record");
+      size_t SepPos = Str.find('\0');
+      if (SepPos == std::string::npos)
+        return error("Invalid module asm record");
+      if (!Props.set(StringRef(Str.data(), SepPos), Str.substr(SepPos + 1)))
+        return error("Unknown module asm property");
+      break;
+    }
     case bitc::MODULE_CODE_ASM: {  // ASM: [strchr x N]
       std::string S;
       if (convertToString(Record, 0, S))
         return error("Invalid asm record");
-      TheModule->setModuleInlineAsm(S);
+      TheModule->appendModuleInlineAsm(Module::GlobalAsmFragment(S, Props));
+      Props = {};
       break;
     }
     case bitc::MODULE_CODE_DEPLIB: {  // DEPLIB: [strchr x N]
@@ -4828,6 +4905,13 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
       // historically always the start of the regular bitcode header.
       VSTOffset = Record[0] - 1;
       break;
+    // MODULE_CODE_GUIDLIST: [i64 x N]
+    case bitc::MODULE_CODE_GUIDLIST:
+      assert(Record.size() % 2 == 0);
+      GUIDList.reserve(GUIDList.size() + Record.size() / 2);
+      for (size_t i = 0; i < Record.size(); i += 2)
+        GUIDList.push_back(Record[i] << 32 | Record[i + 1]);
+      break;
     /// MODULE_CODE_SOURCE_FILENAME: [namechar x N]
     case bitc::MODULE_CODE_SOURCE_FILENAME:
       SmallString<128> ValueName;
@@ -4838,6 +4922,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
     }
     Record.clear();
   }
+
   this->ValueTypeCallback = std::nullopt;
   return Error::success();
 }
@@ -4853,6 +4938,7 @@ Error BitcodeReader::parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata,
   };
   MDCallbacks.MDType = Callbacks.MDType;
   MDLoader = MetadataLoader(Stream, *M, ValueList, IsImporting, MDCallbacks);
+  SkipDebugIntrinsicUpgrade = Callbacks.SkipDebugIntrinsicUpgrade;
   return parseModule(0, ShouldLazyLoadMetadata, Callbacks);
 }
 
@@ -5270,7 +5356,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
             cast<TruncInst>(I)->setHasNoSignedWrap(true);
         }
         if (isa<FPMathOperator>(I)) {
-          FastMathFlags FMF = getDecodedFastMathFlags(Record[OpNum]);
+          uint64_t Flags = Record[OpNum];
+          if (isa<UIToFPInst>(I))
+            Flags >>= 1;
+          FastMathFlags FMF = getDecodedFastMathFlags(Flags);
           if (FMF.any())
             I->setFastMathFlags(FMF);
         }
@@ -5638,7 +5727,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return error("Invalid br record");
 
       if (Record.size() == 1) {
-        I = BranchInst::Create(TrueDest);
+        I = UncondBrInst::Create(TrueDest);
         InstructionList.push_back(I);
       }
       else {
@@ -5648,7 +5737,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
                                getVirtualTypeID(CondType), CurBB);
         if (!FalseDest || !Cond)
           return error("Invalid br record");
-        I = BranchInst::Create(TrueDest, FalseDest, Cond);
+        I = CondBrInst::Create(Cond, TrueDest, FalseDest);
         InstructionList.push_back(I);
       }
       break;
@@ -6638,8 +6727,9 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (!(NumRecords == (OpNum + 4) || NumRecords == (OpNum + 5)))
         return error("Invalid atomicrmw record");
 
+      bool IsElementwise = false;
       const AtomicRMWInst::BinOp Operation =
-          getDecodedRMWOperation(Record[OpNum]);
+          getDecodedRMWOperation(Record[OpNum], IsElementwise);
       if (Operation < AtomicRMWInst::FIRST_BINOP ||
           Operation > AtomicRMWInst::LAST_BINOP)
         return error("Invalid atomicrmw record");
@@ -6664,7 +6754,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         Alignment =
             Align(TheModule->getDataLayout().getTypeStoreSize(Val->getType()));
 
-      I = new AtomicRMWInst(Operation, Ptr, Val, *Alignment, Ordering, SSID);
+      I = new AtomicRMWInst(Operation, Ptr, Val, *Alignment, Ordering, SSID,
+                            IsElementwise);
       ResTypeID = ValTypeID;
       cast<AtomicRMWInst>(I)->setVolatile(IsVol);
 
@@ -6996,7 +7087,7 @@ OutOfRecordLoop:
     BasicBlock *From = Pair.first.first;
     BasicBlock *To = Pair.first.second;
     BasicBlock *EdgeBB = Pair.second;
-    BranchInst::Create(To, EdgeBB);
+    UncondBrInst::Create(To, EdgeBB);
     From->getTerminator()->replaceSuccessorWith(To, EdgeBB);
     To->replacePhiUsesWith(From, EdgeBB);
     EdgeBB->moveBefore(To);
@@ -7045,7 +7136,7 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   if (!F || !F->isMaterializable())
     return Error::success();
 
-  DenseMap<Function*, uint64_t>::iterator DFII = DeferredFunctionInfo.find(F);
+  auto DFII = DeferredFunctionInfo.find(F);
   assert(DFII != DeferredFunctionInfo.end() && "Deferred function not found!");
   // If its position is recorded as 0, its body is somewhere in the stream
   // but we haven't seen it yet.
@@ -7098,8 +7189,8 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         if (ProfName != MDProfLabels::BranchWeights)
           continue;
         unsigned ExpectedNumOperands = 0;
-        if (BranchInst *BI = dyn_cast<BranchInst>(&I))
-          ExpectedNumOperands = BI->getNumSuccessors();
+        if (isa<CondBrInst>(&I))
+          ExpectedNumOperands = 2;
         else if (SwitchInst *SI = dyn_cast<SwitchInst>(&I))
           ExpectedNumOperands = SI->getNumSuccessors();
         else if (isa<CallInst>(&I))
@@ -7134,6 +7225,17 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         auto It = UpgradedIntrinsics.find(OldFn);
         if (It != UpgradedIntrinsics.end())
           UpgradeIntrinsicCall(CI, It->second);
+      }
+    } else if (auto *BC = dyn_cast<BitCastInst>(&I);
+               BC && BC->getSrcTy() == BC->getDestTy() &&
+               isa_and_nonnull<ReturnInst>(BC->getNextNode())) {
+      // Old bitcode allowed an optional bitcast between a musttail call and its
+      // return. Under opaque pointers that cast is always a no-op, and the
+      // verifier no longer accepts it, so drop it.
+      if (auto *CI = dyn_cast<CallInst>(BC->getOperand(0));
+          CI && CI->isMustTailCall() && CI->getNextNode() == BC) {
+        BC->replaceAllUsesWith(CI);
+        BC->eraseFromParent();
       }
     }
   }
@@ -7177,15 +7279,15 @@ Error BitcodeReader::materializeModule() {
   // delete the old functions to clean up. We can't do this unless the entire
   // module is materialized because there could always be another function body
   // with calls to the old function.
-  for (auto &I : UpgradedIntrinsics) {
-    for (auto *U : I.first->users()) {
-      if (CallInst *CI = dyn_cast<CallInst>(U))
-        UpgradeIntrinsicCall(CI, I.second);
+  for (auto &[OldFn, NewFn] : UpgradedIntrinsics) {
+    for (User *U : OldFn->users()) {
+      if (auto *CI = dyn_cast<CallInst>(U))
+        UpgradeIntrinsicCall(CI, NewFn);
     }
-    if (I.first != I.second) {
-      if (!I.first->use_empty())
-        I.first->replaceAllUsesWith(I.second);
-      I.first->eraseFromParent();
+    if (OldFn != NewFn) {
+      if (!OldFn->use_empty())
+        OldFn->replaceAllUsesWith(NewFn);
+      OldFn->eraseFromParent();
     }
   }
   UpgradedIntrinsics.clear();
@@ -7209,9 +7311,11 @@ std::vector<StructType *> BitcodeReader::getIdentifiedStructTypes() const {
 
 ModuleSummaryIndexBitcodeReader::ModuleSummaryIndexBitcodeReader(
     BitstreamCursor Cursor, StringRef Strtab, ModuleSummaryIndex &TheIndex,
-    StringRef ModulePath, std::function<bool(GlobalValue::GUID)> IsPrevailing)
+    StringRef ModulePath, std::function<bool(StringRef)> IsPrevailing,
+    std::function<void(ValueInfo)> OnValueInfo)
     : BitcodeReaderBase(std::move(Cursor), Strtab), TheIndex(TheIndex),
-      ModulePath(ModulePath), IsPrevailing(IsPrevailing) {}
+      ModulePath(ModulePath), IsPrevailing(IsPrevailing),
+      OnValueInfo(OnValueInfo) {}
 
 void ModuleSummaryIndexBitcodeReader::addThisModule() {
   TheIndex.addModule(ModulePath);
@@ -7239,9 +7343,15 @@ ModuleSummaryIndexBitcodeReader::getValueInfoFromValueId(unsigned ValueId) {
 void ModuleSummaryIndexBitcodeReader::setValueGUID(
     uint64_t ValueID, StringRef ValueName, GlobalValue::LinkageTypes Linkage,
     StringRef SourceFileName) {
-  std::string GlobalId =
-      GlobalValue::getGlobalIdentifier(ValueName, Linkage, SourceFileName);
-  auto ValueGUID = GlobalValue::getGUIDAssumingExternalLinkage(GlobalId);
+  GlobalValue::GUID ValueGUID = 0;
+  if (ValueID < DefinedGUIDs.size())
+    ValueGUID = DefinedGUIDs[ValueID];
+  if (ValueGUID == 0)
+    // DefinedGUIDs is a sparse array and can contain zero entries, so this
+    // can't just be an `else`.
+    ValueGUID = GlobalValue::getGUIDAssumingExternalLinkage(
+        GlobalValue::getGlobalIdentifier(ValueName, Linkage, SourceFileName));
+
   auto OriginalNameID = ValueGUID;
   if (GlobalValue::isLocalLinkage(Linkage))
     OriginalNameID = GlobalValue::getGUIDAssumingExternalLinkage(ValueName);
@@ -7252,10 +7362,11 @@ void ModuleSummaryIndexBitcodeReader::setValueGUID(
   // UseStrtab is false for legacy summary formats and value names are
   // created on stack. In that case we save the name in a string saver in
   // the index so that the value name can be recorded.
-  ValueIdToValueInfoMap[ValueID] = std::make_pair(
-      TheIndex.getOrInsertValueInfo(
-          ValueGUID, UseStrtab ? ValueName : TheIndex.saveString(ValueName)),
-      OriginalNameID);
+  auto VI = TheIndex.getOrInsertValueInfo(
+      ValueGUID, UseStrtab ? ValueName : TheIndex.saveString(ValueName));
+  ValueIdToValueInfoMap[ValueID] = std::make_pair(VI, OriginalNameID);
+  if (OnValueInfo)
+    OnValueInfo(VI);
 }
 
 // Specialized value symbol table parser used when reading module index
@@ -7446,7 +7557,7 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
         /// MODULE_CODE_HASH: [5*i32]
         case bitc::MODULE_CODE_HASH: {
           if (Record.size() != 5)
-            return error("Invalid hash length " + Twine(Record.size()).str());
+            return error("Invalid hash length " + Twine(Record.size()));
           auto &Hash = getThisModule()->second;
           int Pos = 0;
           for (auto &Val : Record) {
@@ -7463,6 +7574,13 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
           // word before the start of the identification or module block, which
           // was historically always the start of the regular bitcode header.
           VSTOffset = Record[0] - 1;
+          break;
+        // MODULE_CODE_GUIDLIST: [i64 x N]
+        case bitc::MODULE_CODE_GUIDLIST:
+          assert(Record.size() % 2 == 0);
+          DefinedGUIDs.reserve(DefinedGUIDs.size() + Record.size() / 2);
+          for (size_t i = 0; i < Record.size(); i += 2)
+            DefinedGUIDs.push_back(Record[i] << 32 | Record[i + 1]);
           break;
         // v1 GLOBALVAR: [pointer type, isconst,     initid,       linkage, ...]
         // v1 FUNCTION:  [type,         callingconv, isproto,      linkage, ...]
@@ -7648,7 +7766,7 @@ SmallVector<unsigned> ModuleSummaryIndexBitcodeReader::parseAllocInfoContext(
     StackIdList.reserve(NumStackEntries);
     for (unsigned J = 0; J < NumStackEntries; J++) {
       assert(Record[I] < StackIds.size());
-      StackIdList.push_back(StackIdToIndex[Record[I++]]);
+      StackIdList.push_back(getStackIdIndex(Record[I++]));
     }
   } else {
     unsigned RadixIndex = Record[I++];
@@ -7671,7 +7789,7 @@ SmallVector<unsigned> ModuleSummaryIndexBitcodeReader::parseAllocInfoContext(
         assert(static_cast<std::make_signed_t<unsigned>>(Elem) >= 0);
       }
       RadixIndex++;
-      StackIdList.push_back(StackIdToIndex[Elem]);
+      StackIdList.push_back(getStackIdIndex(Elem));
     }
   }
   return StackIdList;
@@ -7713,17 +7831,28 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
   }
   const uint64_t Version = Record[0];
   const bool IsOldProfileFormat = Version == 1;
+  // Starting with bitcode summary version 13, MemProf records follow the
+  // corresponding function summary.
+  const bool MemProfAfterFunctionSummary = Version >= 13;
   if (Version < 1 || Version > ModuleSummaryIndex::BitcodeSummaryVersion)
-    return error("Invalid summary version " + Twine(Version) +
-                 ". Version should be in the range [1-" +
-                 Twine(ModuleSummaryIndex::BitcodeSummaryVersion) +
-                 "].");
+    return error("Invalid summary version " + Twine(Version) + " in module '" +
+                 ModulePath + "'. Version should be in the range [1-" +
+                 Twine(ModuleSummaryIndex::BitcodeSummaryVersion) + "].");
   Record.clear();
 
   // Keep around the last seen summary to be used when we see an optional
   // "OriginalName" attachement.
   GlobalValueSummary *LastSeenSummary = nullptr;
   GlobalValue::GUID LastSeenGUID = 0;
+
+  // Track the most recent function summary if it was prevailing, and while we
+  // are not done processing any subsequent memprof records. Starting with
+  // summary version 13 (tracked by MemProfAfterFunctionSummary), MemProf
+  // records follow the function summary and we skip processing them when the
+  // summary is not prevailing. Note that when reading a combined index we don't
+  // know what is prevailing so this should always be set in the new format when
+  // we encounter MemProf records.
+  FunctionSummary *CurrentPrevailingFS = nullptr;
 
   // We can expect to see any number of type ID information records before
   // each function summary records; these variables store the information
@@ -7767,7 +7896,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     Expected<unsigned> MaybeBitCode = Stream.readRecord(Entry.ID, Record);
     if (!MaybeBitCode)
       return MaybeBitCode.takeError();
-    switch (unsigned BitCode = MaybeBitCode.get()) {
+    unsigned BitCode = MaybeBitCode.get();
+
+    switch (BitCode) {
     default: // Default behavior: ignore.
       break;
     case bitc::FS_FLAGS: {  // [flags]
@@ -7839,16 +7970,26 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
           IsOldProfileFormat, HasProfile, HasRelBF);
       setSpecialRefs(Refs, NumRORefs, NumWORefs);
-      auto VIAndOriginalGUID = getValueInfoFromValueId(ValueID);
-      // In order to save memory, only record the memprof summaries if this is
-      // the prevailing copy of a symbol. The linker doesn't resolve local
-      // linkage values so don't check whether those are prevailing.
+      auto [VI, GUID] = getValueInfoFromValueId(ValueID);
+
+      // The linker doesn't resolve local linkage values so don't check whether
+      // those are prevailing (set IsPrevailingSym so they are always processed
+      // and kept).
       auto LT = (GlobalValue::LinkageTypes)Flags.Linkage;
-      if (IsPrevailing && !GlobalValue::isLocalLinkage(LT) &&
-          !IsPrevailing(VIAndOriginalGUID.first.getGUID())) {
+      bool IsPrevailingSym = !IsPrevailing || GlobalValue::isLocalLinkage(LT) ||
+                             IsPrevailing(VI.name());
+
+      // If this is not the prevailing copy, and the records are in the "old"
+      // order (preceding), clear them now. They should already be empty in
+      // the new order (following), as they are processed or skipped immediately
+      // when they follow the summary.
+      assert(!MemProfAfterFunctionSummary ||
+             (PendingCallsites.empty() && PendingAllocs.empty()));
+      if (!IsPrevailingSym && !MemProfAfterFunctionSummary) {
         PendingCallsites.clear();
         PendingAllocs.clear();
       }
+
       auto FS = std::make_unique<FunctionSummary>(
           Flags, InstCount, getDecodedFFlags(RawFunFlags), std::move(Refs),
           std::move(Calls), std::move(PendingTypeTests),
@@ -7859,9 +8000,16 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           std::move(PendingParamAccesses), std::move(PendingCallsites),
           std::move(PendingAllocs));
       FS->setModulePath(getThisModule()->first());
-      FS->setOriginalName(std::get<1>(VIAndOriginalGUID));
-      TheIndex.addGlobalValueSummary(std::get<0>(VIAndOriginalGUID),
-                                     std::move(FS));
+      FS->setOriginalName(GUID);
+      // Set CurrentPrevailingFS only if prevailing, so subsequent MemProf
+      // records are attached (new order) or skipped.
+      if (MemProfAfterFunctionSummary) {
+        if (IsPrevailingSym)
+          CurrentPrevailingFS = FS.get();
+        else
+          CurrentPrevailingFS = nullptr;
+      }
+      TheIndex.addGlobalValueSummary(VI, std::move(FS));
       break;
     }
     // FS_ALIAS: [valueid, flags, valueid]
@@ -8003,6 +8151,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           std::move(PendingParamAccesses), std::move(PendingCallsites),
           std::move(PendingAllocs));
       LastSeenSummary = FS.get();
+      if (MemProfAfterFunctionSummary)
+        CurrentPrevailingFS = FS.get();
       LastSeenGUID = VI.getGUID();
       FS->setModulePath(ModuleIdMap[ModuleId]);
       TheIndex.addGlobalValueSummary(VI, std::move(FS));
@@ -8100,17 +8250,43 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
 
     case bitc::FS_CFI_FUNCTION_DEFS: {
       auto &CfiFunctionDefs = TheIndex.cfiFunctionDefs();
-      for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDefs.emplace(Strtab.data() + Record[I],
-                                static_cast<size_t>(Record[I + 1]));
+      if (Version < 14) {
+        for (unsigned I = 0; I != Record.size(); I += 2) {
+          StringRef Name(Strtab.data() + Record[I],
+                         static_cast<size_t>(Record[I + 1]));
+          GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+              GlobalValue::dropLLVMManglingEscape(Name));
+          CfiFunctionDefs.addSymbolWithThinLTOGUID(Name, GUID);
+        }
+      } else {
+        for (unsigned I = 0; I != Record.size(); I += 3) {
+          GlobalValue::GUID ThinLTOGUID = Record[I];
+          StringRef Name(Strtab.data() + Record[I + 1],
+                         static_cast<size_t>(Record[I + 2]));
+          CfiFunctionDefs.addSymbolWithThinLTOGUID(Name, ThinLTOGUID);
+        }
+      }
       break;
     }
 
     case bitc::FS_CFI_FUNCTION_DECLS: {
       auto &CfiFunctionDecls = TheIndex.cfiFunctionDecls();
-      for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDecls.emplace(Strtab.data() + Record[I],
-                                 static_cast<size_t>(Record[I + 1]));
+      if (Version < 14) {
+        for (unsigned I = 0; I != Record.size(); I += 2) {
+          StringRef Name(Strtab.data() + Record[I],
+                         static_cast<size_t>(Record[I + 1]));
+          GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+              GlobalValue::dropLLVMManglingEscape(Name));
+          CfiFunctionDecls.addSymbolWithThinLTOGUID(Name, GUID);
+        }
+      } else {
+        for (unsigned I = 0; I != Record.size(); I += 3) {
+          GlobalValue::GUID ThinLTOGUID = Record[I];
+          StringRef Name(Strtab.data() + Record[I + 1],
+                         static_cast<size_t>(Record[I + 2]));
+          CfiFunctionDecls.addSymbolWithThinLTOGUID(Name, ThinLTOGUID);
+        }
+      }
       break;
     }
 
@@ -8147,9 +8323,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           StackIds.push_back(*R << 32 | *(R + 1));
       }
       assert(StackIdToIndex.empty());
-      StackIdToIndex.reserve(StackIds.size());
-      for (uint64_t StackId : StackIds)
-        StackIdToIndex.push_back(TheIndex.addOrGetStackIdIndex(StackId));
+      // Initialize with a marker to support lazy population.
+      StackIdToIndex.resize(StackIds.size(), UninitializedStackIdIndex);
       break;
     }
 
@@ -8159,18 +8334,29 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     }
 
     case bitc::FS_PERMODULE_CALLSITE_INFO: {
+      // If they are in the new order (following), they are skipped when they
+      // follow a non-prevailing summary (CurrentPrevailingFS will be null).
+      if (MemProfAfterFunctionSummary && !CurrentPrevailingFS)
+        break;
       unsigned ValueID = Record[0];
       SmallVector<unsigned> StackIdList;
       for (uint64_t R : drop_begin(Record)) {
         assert(R < StackIds.size());
-        StackIdList.push_back(StackIdToIndex[R]);
+        StackIdList.push_back(getStackIdIndex(R));
       }
       ValueInfo VI = std::get<0>(getValueInfoFromValueId(ValueID));
-      PendingCallsites.push_back(CallsiteInfo({VI, std::move(StackIdList)}));
+      if (MemProfAfterFunctionSummary)
+        CurrentPrevailingFS->addCallsite(
+            CallsiteInfo({VI, std::move(StackIdList)}));
+      else
+        PendingCallsites.push_back(CallsiteInfo({VI, std::move(StackIdList)}));
       break;
     }
 
     case bitc::FS_COMBINED_CALLSITE_INFO: {
+      // In the combined index case we don't have a prevailing check,
+      // so we should always have a CurrentPrevailingFS.
+      assert(!MemProfAfterFunctionSummary || CurrentPrevailingFS);
       auto RecordIter = Record.begin();
       unsigned ValueID = *RecordIter++;
       unsigned NumStackIds = *RecordIter++;
@@ -8179,19 +8365,27 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       SmallVector<unsigned> StackIdList;
       for (unsigned J = 0; J < NumStackIds; J++) {
         assert(*RecordIter < StackIds.size());
-        StackIdList.push_back(StackIdToIndex[*RecordIter++]);
+        StackIdList.push_back(getStackIdIndex(*RecordIter++));
       }
       SmallVector<unsigned> Versions;
       for (unsigned J = 0; J < NumVersions; J++)
         Versions.push_back(*RecordIter++);
       ValueInfo VI = std::get<0>(
           getValueInfoFromValueId</*AllowNullValueInfo*/ true>(ValueID));
-      PendingCallsites.push_back(
-          CallsiteInfo({VI, std::move(Versions), std::move(StackIdList)}));
+      if (MemProfAfterFunctionSummary)
+        CurrentPrevailingFS->addCallsite(
+            CallsiteInfo({VI, std::move(Versions), std::move(StackIdList)}));
+      else
+        PendingCallsites.push_back(
+            CallsiteInfo({VI, std::move(Versions), std::move(StackIdList)}));
       break;
     }
 
     case bitc::FS_ALLOC_CONTEXT_IDS: {
+      // If they are in the new order (following), they are skipped when they
+      // follow a non-prevailing summary (CurrentPrevailingFS will be null).
+      if (MemProfAfterFunctionSummary && !CurrentPrevailingFS)
+        break;
       // This is an array of 32-bit fixed-width values, holding each 64-bit
       // context id as a pair of adjacent (most significant first) 32-bit words.
       assert(Record.size() % 2 == 0);
@@ -8202,6 +8396,12 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     }
 
     case bitc::FS_PERMODULE_ALLOC_INFO: {
+      // If they are in the new order (following), they are skipped when they
+      // follow a non-prevailing summary (CurrentPrevailingFS will be null).
+      if (MemProfAfterFunctionSummary && !CurrentPrevailingFS) {
+        PendingContextIds.clear();
+        break;
+      }
       unsigned I = 0;
       std::vector<MIBInfo> MIBs;
       unsigned NumMIBs = 0;
@@ -8254,16 +8454,24 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
         }
         PendingContextIds.clear();
       }
-      PendingAllocs.push_back(AllocInfo(std::move(MIBs)));
+      AllocInfo AI(std::move(MIBs));
       if (!AllContextSizes.empty()) {
-        assert(PendingAllocs.back().MIBs.size() == AllContextSizes.size());
-        PendingAllocs.back().ContextSizeInfos = std::move(AllContextSizes);
+        assert(AI.MIBs.size() == AllContextSizes.size());
+        AI.ContextSizeInfos = std::move(AllContextSizes);
       }
+
+      if (MemProfAfterFunctionSummary)
+        CurrentPrevailingFS->addAlloc(std::move(AI));
+      else
+        PendingAllocs.push_back(std::move(AI));
       break;
     }
 
     case bitc::FS_COMBINED_ALLOC_INFO:
     case bitc::FS_COMBINED_ALLOC_INFO_NO_CONTEXT: {
+      // In the combined index case we don't have a prevailing check,
+      // so we should always have a CurrentPrevailingFS.
+      assert(!MemProfAfterFunctionSummary || CurrentPrevailingFS);
       unsigned I = 0;
       std::vector<MIBInfo> MIBs;
       unsigned NumMIBs = Record[I++];
@@ -8282,7 +8490,11 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       for (unsigned J = 0; J < NumVersions; J++)
         Versions.push_back(Record[I++]);
       assert(I == Record.size());
-      PendingAllocs.push_back(AllocInfo(std::move(Versions), std::move(MIBs)));
+      AllocInfo AI(std::move(Versions), std::move(MIBs));
+      if (MemProfAfterFunctionSummary)
+        CurrentPrevailingFS->addAlloc(std::move(AI));
+      else
+        PendingAllocs.push_back(std::move(AI));
       break;
     }
     }
@@ -8341,7 +8553,7 @@ Error ModuleSummaryIndexBitcodeReader::parseModuleStringTable() {
     /// MST_CODE_HASH: [5*i32]
     case bitc::MST_CODE_HASH: {
       if (Record.size() != 5)
-        return error("Invalid hash length " + Twine(Record.size()).str());
+        return error("Invalid hash length " + Twine(Record.size()));
       if (!LastSeenModule)
         return error("Invalid hash that does not follow a module path");
       int Pos = 0;
@@ -8567,10 +8779,20 @@ BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
       return std::move(E);
   }
 
+  // Cache target triple early for target-memory attribute upgrading.
+  // Suppress target parser diagnostics during this early parse,
+  // because attribute parsing runs before target parsing.
+  Triple BitcodeTargetTriple;
+  BitstreamCursor TripleStream(Buffer);
+  if (Expected<std::string> TripleStr = readTriple(TripleStream))
+    BitcodeTargetTriple = Triple(*TripleStr);
+  else
+    consumeError(TripleStr.takeError());
+
   if (Error JumpFailed = Stream.JumpToBit(ModuleBit))
     return std::move(JumpFailed);
   auto *R = new BitcodeReader(std::move(Stream), Strtab, ProducerIdentification,
-                              Context);
+                              Context, BitcodeTargetTriple);
 
   std::unique_ptr<Module> M =
       std::make_unique<Module>(ModuleIdentifier, Context);
@@ -8605,15 +8827,16 @@ BitcodeModule::getLazyModule(LLVMContext &Context, bool ShouldLazyLoadMetadata,
 // We don't use ModuleIdentifier here because the client may need to control the
 // module path used in the combined summary (e.g. when reading summaries for
 // regular LTO modules).
-Error BitcodeModule::readSummary(
-    ModuleSummaryIndex &CombinedIndex, StringRef ModulePath,
-    std::function<bool(GlobalValue::GUID)> IsPrevailing) {
+Error BitcodeModule::readSummary(ModuleSummaryIndex &CombinedIndex,
+                                 StringRef ModulePath,
+                                 std::function<bool(StringRef)> IsPrevailing,
+                                 std::function<void(ValueInfo)> OnValueInfo) {
   BitstreamCursor Stream(Buffer);
   if (Error JumpFailed = Stream.JumpToBit(ModuleBit))
     return JumpFailed;
 
   ModuleSummaryIndexBitcodeReader R(std::move(Stream), Strtab, CombinedIndex,
-                                    ModulePath, IsPrevailing);
+                                    ModulePath, IsPrevailing, OnValueInfo);
   return R.parseModule();
 }
 

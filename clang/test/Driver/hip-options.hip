@@ -88,6 +88,16 @@
 // HIPTHINLTO-NOT: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-flto-unit"
 // HIPTHINLTO: clang-linker-wrapper{{.*}} "--device-compiler=amdgcn-amd-amdhsa=-flto=thin"
 
+// Check -no-canonical-prefixes is propagated correctly.
+
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --cuda-gpu-arch=gfx906 -foffload-lto=thin -fwhole-program-vtables -no-canonical-prefixes %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=HIPTHINLTO-NO-CANON-PREFIXES %s
+
+// Ensure that we invoke clang-linker-wrapper with --no-canonical-prefixes and
+// pass -no-canonical-prefixes as a device compiler flag.
+// HIPTHINLTO-NO-CANON-PREFIXES: clang-linker-wrapper{{.*}} "--device-compiler=amdgcn-amd-amdhsa=-no-canonical-prefixes" {{.*}} "--no-canonical-prefixes"
+
 // Check that -flto=thin is handled correctly, particularly with -fwhole-program-vtables.
 //
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
@@ -250,4 +260,29 @@
 // RUN:   --offload-arch=gfx1100 --offload-new-driver --offload-jobs=jobserver %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=JOBSV %s
 // JOBSV: clang-linker-wrapper{{.*}} "--wrapper-jobs=jobserver"
+
+// Check that -fcoverage-mapping and related flags are forwarded to the device compiler.
+
+// RUN: %clang -### -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:   --offload-arch=gfx1100 --offload-new-driver \
+// RUN:   -fprofile-instr-generate -fcoverage-mapping %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=COV %s
+// COV: clang-linker-wrapper{{.*}} "--device-compiler=amdgcn-amd-amdhsa=-fprofile-instr-generate" "--device-compiler=amdgcn-amd-amdhsa=-fcoverage-mapping"
+
+// RUN: %clang -### -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:   --offload-arch=gfx1100 --offload-new-driver \
+// RUN:   -fprofile-instr-generate -fcoverage-mapping \
+// RUN:   -fcoverage-compilation-dir=/src %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=COV-DIR %s
+// COV-DIR: clang-linker-wrapper{{.*}} "--device-compiler=amdgcn-amd-amdhsa=-fcoverage-compilation-dir=/src"
+
+// RUN: %clang -### -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   -resource-dir=%S/Inputs/resource_dir \
+// RUN:   --offload-arch=gfx1100 --offload-new-driver \
+// RUN:   -fprofile-instr-generate -fcoverage-mapping %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=NO-COV %s
+// NO-COV-NOT: --device-compiler=amdgcn-amd-amdhsa=-fprofile-instr-generate
+// NO-COV-NOT: --device-compiler=amdgcn-amd-amdhsa=-fcoverage-mapping
 

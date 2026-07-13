@@ -19,7 +19,7 @@ public:
   DynamicLoaderWasmDYLD(Process *process);
 
   static void Initialize();
-  static void Terminate() {}
+  static void Terminate();
 
   static llvm::StringRef GetPluginNameStatic() { return "wasm-dyld"; }
   static llvm::StringRef GetPluginDescriptionStatic();

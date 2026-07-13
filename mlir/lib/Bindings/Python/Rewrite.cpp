@@ -27,6 +27,36 @@ namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
+// Convert the Python object to a boolean.
+// If it evaluates to False, treat it as success;
+// otherwise, treat it as failure.
+// Note that None is considered success.
+static MlirLogicalResult logicalResultFromObject(const nb::object &obj) {
+  if (obj.is_none())
+    return mlirLogicalResultSuccess();
+
+  return nb::cast<bool>(obj) ? mlirLogicalResultFailure()
+                             : mlirLogicalResultSuccess();
+}
+
+static std::string operationNameFromObject(nb::handle root) {
+  if (root.is_type())
+    return nb::cast<std::string>(root.attr("OPERATION_NAME"));
+  if (nb::isinstance<nb::str>(root))
+    return nb::cast<std::string>(root);
+
+  throw nb::type_error("the root argument must be a type or a string");
+}
+
+static std::string dialectNameFromObject(nb::handle root) {
+  if (root.is_type())
+    return nb::cast<std::string>(root.attr("DIALECT_NAMESPACE"));
+  if (nb::isinstance<nb::str>(root))
+    return nb::cast<std::string>(root);
+
+  throw nb::type_error("the root argument must be a type or a string");
+}
+
 class PyPatternRewriter : public PyRewriterBase<PyPatternRewriter> {
 public:
   static constexpr const char *pyClassName = "PatternRewriter";
@@ -35,11 +65,71 @@ public:
       : PyRewriterBase(mlirPatternRewriterAsBase(rewriter)) {}
 };
 
-class PyConversionPatternRewriter : PyPatternRewriter {
+//===----------------------------------------------------------------------===//
+// PyRewritePatternSet
+//===----------------------------------------------------------------------===//
+
+PyRewritePatternSet::PyRewritePatternSet(MlirContext ctx)
+    : patterns(mlirRewritePatternSetCreate(ctx)), owned(true) {}
+
+PyRewritePatternSet::PyRewritePatternSet(MlirRewritePatternSet patterns)
+    : patterns(patterns), owned(false) {}
+
+PyRewritePatternSet::~PyRewritePatternSet() {
+  if (owned && patterns.ptr)
+    mlirRewritePatternSetDestroy(patterns);
+}
+
+MlirRewritePatternSet PyRewritePatternSet::get() const { return patterns; }
+
+bool PyRewritePatternSet::isOwned() const { return owned; }
+
+void PyRewritePatternSet::add(nb::handle root,
+                              const nb::callable &matchAndRewrite,
+                              unsigned benefit) {
+  std::string opName = operationNameFromObject(root);
+  MlirStringRef rootName = mlirStringRefCreate(opName.data(), opName.size());
+
+  MlirRewritePatternCallbacks callbacks;
+  callbacks.construct = [](void *userData) {
+    nb::handle(static_cast<PyObject *>(userData)).inc_ref();
+  };
+  callbacks.destruct = [](void *userData) {
+    nb::handle(static_cast<PyObject *>(userData)).dec_ref();
+  };
+  callbacks.matchAndRewrite = [](MlirRewritePattern, MlirOperation op,
+                                 MlirPatternRewriter rewriter,
+                                 void *userData) -> MlirLogicalResult {
+    nb::handle f(static_cast<PyObject *>(userData));
+
+    PyMlirContextRef context =
+        PyMlirContext::forContext(mlirOperationGetContext(op));
+    nb::object opView = PyOperation::forOperation(context, op)->createOpView();
+
+    nb::object res = f(opView, PyPatternRewriter(rewriter));
+    return logicalResultFromObject(res);
+  };
+
+  MlirRewritePattern pattern = mlirOpRewritePatternCreate(
+      rootName, benefit, mlirRewritePatternSetGetContext(patterns), callbacks,
+      matchAndRewrite.ptr(),
+      /* nGeneratedNames */ 0,
+      /* generatedNames */ nullptr);
+  mlirRewritePatternSetAdd(patterns, pattern);
+}
+
+//===----------------------------------------------------------------------===//
+// PyConversionPatternRewriter
+//===----------------------------------------------------------------------===//
+
+class PyConversionPatternRewriter : public PyPatternRewriter {
 public:
   PyConversionPatternRewriter(MlirConversionPatternRewriter rewriter)
       : PyPatternRewriter(
-            mlirConversionPatternRewriterAsPatternRewriter(rewriter)) {}
+            mlirConversionPatternRewriterAsPatternRewriter(rewriter)),
+        rewriter(rewriter) {}
+
+  MlirConversionPatternRewriter rewriter;
 };
 
 class PyConversionTarget {
@@ -129,6 +219,53 @@ private:
   MlirConversionPattern pattern;
 };
 
+void PyRewritePatternSet::addConversion(nb::handle root,
+                                        const nb::callable &matchAndRewrite,
+                                        PyTypeConverter &typeConverter,
+                                        unsigned benefit) {
+  std::string opName = operationNameFromObject(root);
+  MlirStringRef rootName = mlirStringRefCreate(opName.data(), opName.size());
+
+  MlirConversionPatternCallbacks callbacks;
+  callbacks.construct = [](void *userData) {
+    nb::handle(static_cast<PyObject *>(userData)).inc_ref();
+  };
+  callbacks.destruct = [](void *userData) {
+    nb::handle(static_cast<PyObject *>(userData)).dec_ref();
+  };
+  callbacks.matchAndRewrite =
+      [](MlirConversionPattern pattern, MlirOperation op, intptr_t nOperands,
+         MlirValue *operands, MlirConversionPatternRewriter rewriter,
+         void *userData) -> MlirLogicalResult {
+    nb::handle f(static_cast<PyObject *>(userData));
+
+    PyMlirContextRef ctx =
+        PyMlirContext::forContext(mlirOperationGetContext(op));
+    nb::object opView = PyOperation::forOperation(ctx, op)->createOpView();
+
+    std::vector<MlirValue> operandsVec(operands, operands + nOperands);
+    nb::object adaptorCls =
+        PyGlobals::get()
+            .lookupOpAdaptorClass([&] {
+              MlirStringRef ref = mlirIdentifierStr(mlirOperationGetName(op));
+              return std::string_view(ref.data, ref.length);
+            }())
+            .value_or(nb::borrow(nb::type<PyOpAdaptor>()));
+
+    nb::object res = f(opView, adaptorCls(operandsVec, opView),
+                       PyConversionPattern(pattern).getTypeConverter(),
+                       PyConversionPatternRewriter(rewriter));
+    return logicalResultFromObject(res);
+  };
+  MlirConversionPattern pattern = mlirOpConversionPatternCreate(
+      rootName, benefit, mlirRewritePatternSetGetContext(patterns),
+      typeConverter.get(), callbacks, matchAndRewrite.ptr(),
+      /* nGeneratedNames */ 0,
+      /* generatedNames */ nullptr);
+  mlirRewritePatternSetAdd(patterns,
+                           mlirConversionPatternAsRewritePattern(pattern));
+}
+
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 struct PyMlirPDLResultList : MlirPDLResultList {};
 
@@ -152,18 +289,6 @@ static std::vector<nb::object> objectsFromPDLValues(size_t nValues,
   for (size_t i = 0; i < nValues; ++i)
     args.push_back(objectFromPDLValue(values[i]));
   return args;
-}
-
-// Convert the Python object to a boolean.
-// If it evaluates to False, treat it as success;
-// otherwise, treat it as failure.
-// Note that None is considered success.
-static MlirLogicalResult logicalResultFromObject(const nb::object &obj) {
-  if (obj.is_none())
-    return mlirLogicalResultSuccess();
-
-  return nb::cast<bool>(obj) ? mlirLogicalResultFailure()
-                             : mlirLogicalResultSuccess();
 }
 
 /// Owning Wrapper around a PDLPatternModule.
@@ -246,96 +371,55 @@ private:
   MlirFrozenRewritePatternSet set;
 };
 
-class PyRewritePatternSet {
-public:
-  PyRewritePatternSet(MlirContext ctx)
-      : set(mlirRewritePatternSetCreate(ctx)), ctx(ctx) {}
-  ~PyRewritePatternSet() {
-    if (set.ptr)
-      mlirRewritePatternSetDestroy(set);
-  }
+void PyRewritePatternSet::bind(nb::module_ &m) {
+  nb::class_<PyRewritePatternSet>(m, "RewritePatternSet")
+      .def(
+          "__init__",
+          [](PyRewritePatternSet &self, DefaultingPyMlirContext context) {
+            new (&self) PyRewritePatternSet(context.get()->get());
+          },
+          "context"_a = nb::none())
+      .def("add", &PyRewritePatternSet::add, nb::arg("root"), nb::arg("fn"),
+           nb::arg("benefit") = 1,
+           R"(Add a new rewrite pattern on the specified root operation, using
+              the provided callable for matching and rewriting, and assign it
+              the given benefit.
 
-  void add(MlirStringRef rootName, unsigned benefit,
-           const nb::callable &matchAndRewrite) {
-    MlirRewritePatternCallbacks callbacks;
-    callbacks.construct = [](void *userData) {
-      nb::handle(static_cast<PyObject *>(userData)).inc_ref();
-    };
-    callbacks.destruct = [](void *userData) {
-      nb::handle(static_cast<PyObject *>(userData)).dec_ref();
-    };
-    callbacks.matchAndRewrite = [](MlirRewritePattern, MlirOperation op,
-                                   MlirPatternRewriter rewriter,
-                                   void *userData) -> MlirLogicalResult {
-      nb::handle f(static_cast<PyObject *>(userData));
+              Args:
+                root: The root operation to which this pattern applies. This may
+                      be either an OpView subclass or an operation name.
+                fn: The callable to use for matching and rewriting, which takes
+                    an operation and a pattern rewriter. The match is considered
+                    successful iff the callable returns a falsy value.
+                benefit: The benefit of the pattern, defaulting to 1.)")
+      .def("add_conversion", &PyRewritePatternSet::addConversion,
+           nb::arg("root"), nb::arg("fn"), nb::arg("type_converter"),
+           nb::arg("benefit") = 1,
+           R"(
+            Add a new conversion pattern on the specified root operation,
+            using the provided callable for matching and rewriting,
+            and assign it the given benefit.
 
-      PyMlirContextRef ctx =
-          PyMlirContext::forContext(mlirOperationGetContext(op));
-      nb::object opView = PyOperation::forOperation(ctx, op)->createOpView();
-
-      nb::object res = f(opView, PyPatternRewriter(rewriter));
-      return logicalResultFromObject(res);
-    };
-    MlirRewritePattern pattern = mlirOpRewritePatternCreate(
-        rootName, benefit, ctx, callbacks, matchAndRewrite.ptr(),
-        /* nGeneratedNames */ 0,
-        /* generatedNames */ nullptr);
-    mlirRewritePatternSetAdd(set, pattern);
-  }
-
-  void addConversion(MlirStringRef rootName, unsigned benefit,
-                     const nb::callable &matchAndRewrite,
-                     PyTypeConverter &typeConverter) {
-    MlirConversionPatternCallbacks callbacks;
-    callbacks.construct = [](void *userData) {
-      nb::handle(static_cast<PyObject *>(userData)).inc_ref();
-    };
-    callbacks.destruct = [](void *userData) {
-      nb::handle(static_cast<PyObject *>(userData)).dec_ref();
-    };
-    callbacks.matchAndRewrite =
-        [](MlirConversionPattern pattern, MlirOperation op, intptr_t nOperands,
-           MlirValue *operands, MlirConversionPatternRewriter rewriter,
-           void *userData) -> MlirLogicalResult {
-      nb::handle f(static_cast<PyObject *>(userData));
-
-      PyMlirContextRef ctx =
-          PyMlirContext::forContext(mlirOperationGetContext(op));
-      nb::object opView = PyOperation::forOperation(ctx, op)->createOpView();
-
-      std::vector<MlirValue> operandsVec(operands, operands + nOperands);
-      nb::object adaptorCls =
-          PyGlobals::get()
-              .lookupOpAdaptorClass([&] {
-                MlirStringRef ref = mlirIdentifierStr(mlirOperationGetName(op));
-                return std::string_view(ref.data, ref.length);
-              }())
-              .value_or(nb::borrow(nb::type<PyOpAdaptor>()));
-
-      nb::object res = f(opView, adaptorCls(operandsVec, opView),
-                         PyConversionPattern(pattern).getTypeConverter(),
-                         PyConversionPatternRewriter(rewriter));
-      return logicalResultFromObject(res);
-    };
-    MlirConversionPattern pattern = mlirOpConversionPatternCreate(
-        rootName, benefit, ctx, typeConverter.get(), callbacks,
-        matchAndRewrite.ptr(),
-        /* nGeneratedNames */ 0,
-        /* generatedNames */ nullptr);
-    mlirRewritePatternSetAdd(set,
-                             mlirConversionPatternAsRewritePattern(pattern));
-  }
-
-  PyFrozenRewritePatternSet freeze() {
-    MlirRewritePatternSet s = set;
-    set.ptr = nullptr;
-    return mlirFreezeRewritePattern(s);
-  }
-
-private:
-  MlirRewritePatternSet set;
-  MlirContext ctx;
-};
+            Args:
+              root: The root operation to which this pattern applies.
+                    This may be either an OpView subclass or an operation name.
+              fn: The callable to use for matching and rewriting, which takes an
+                  operation, its adaptor, the type converter and a pattern
+                  rewriter. The match is considered successful iff the callable
+                  returns a falsy value.
+              type_converter: The type converter to convert types in the IR.
+              benefit: The benefit of the pattern, defaulting to 1.)")
+      .def(
+          "freeze",
+          [](PyRewritePatternSet &self) {
+            if (!self.isOwned())
+              throw std::runtime_error(
+                  "cannot freeze a non-owning pattern set");
+            MlirRewritePatternSet s = self.get();
+            return PyFrozenRewritePatternSet(mlirFreezeRewritePattern(s));
+          },
+          "Freeze the pattern set into a frozen one.");
+}
 
 enum class PyGreedyRewriteStrictness : std::underlying_type_t<
     MlirGreedyRewriteStrictness> {
@@ -502,82 +586,16 @@ void populateRewriteSubmodule(nb::module_ &m) {
   //----------------------------------------------------------------------------
   // Mapping of the RewritePatternSet
   //----------------------------------------------------------------------------
-  nb::class_<PyRewritePatternSet>(m, "RewritePatternSet")
-      .def(
-          "__init__",
-          [](PyRewritePatternSet &self, DefaultingPyMlirContext context) {
-            new (&self) PyRewritePatternSet(context.get()->get());
-          },
-          "context"_a = nb::none())
-      .def(
-          "add",
-          [](PyRewritePatternSet &self, nb::handle root, const nb::callable &fn,
-             unsigned benefit) {
-            std::string opName;
-            if (root.is_type()) {
-              opName = nb::cast<std::string>(root.attr("OPERATION_NAME"));
-            } else if (nb::isinstance<nb::str>(root)) {
-              opName = nb::cast<std::string>(root);
-            } else {
-              throw nb::type_error(
-                  "the root argument must be a type or a string");
-            }
-            self.add(mlirStringRefCreate(opName.data(), opName.size()), benefit,
-                     fn);
-          },
-          "root"_a, "fn"_a, "benefit"_a = 1,
-          // clang-format off
-          nb::sig("def add(self, root: type | str, fn: typing.Callable[[" MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ", PatternRewriter], typing.Any], benefit: int = 1) -> None"),
-          // clang-format on
-          R"(
-            Add a new rewrite pattern on the specified root operation, using the provided callable
-            for matching and rewriting, and assign it the given benefit.
-
-            Args:
-              root: The root operation to which this pattern applies.
-                    This may be either an OpView subclass (e.g., ``arith.AddIOp``) or
-                    an operation name string (e.g., ``"arith.addi"``).
-              fn: The callable to use for matching and rewriting,
-                  which takes an operation and a pattern rewriter as arguments.
-                  The match is considered successful iff the callable returns
-                  a value where ``bool(value)`` is ``False`` (e.g. ``None``).
-                  If possible, the operation is cast to its corresponding OpView subclass
-                  before being passed to the callable.
-              benefit: The benefit of the pattern, defaulting to 1.)")
-      .def(
-          "add_conversion",
-          [](PyRewritePatternSet &self, nb::handle root, const nb::callable &fn,
-             PyTypeConverter &typeConverter, unsigned benefit) {
-            std::string opName =
-                nb::cast<std::string>(root.attr("OPERATION_NAME"));
-            self.addConversion(
-                mlirStringRefCreate(opName.data(), opName.size()), benefit, fn,
-                typeConverter);
-          },
-          "root"_a, "fn"_a, "type_converter"_a, "benefit"_a = 1,
-          R"(
-            Add a new conversion pattern on the specified root operation,
-            using the provided callable for matching and rewriting,
-            and assign it the given benefit.
-
-            Args:
-              root: The root operation to which this pattern applies.
-                    This may be either an OpView subclass (e.g., ``arith.AddIOp``) or
-                    an operation name string (e.g., ``"arith.addi"``).
-              fn: The callable to use for matching and rewriting,
-                  which takes an operation, its adaptor,
-                  the type converter and a pattern rewriter as arguments.
-                  The match is considered successful iff the callable returns
-                  a value where ``bool(value)`` is ``False`` (e.g. ``None``).
-                  If possible, the operation is cast to its corresponding OpView subclass
-                  before being passed to the callable.
-              type_converter: The type converter to convert types in the IR.
-              benefit: The benefit of the pattern, defaulting to 1.)")
-      .def("freeze", &PyRewritePatternSet::freeze,
-           "Freeze the pattern set into a frozen one.");
+  PyRewritePatternSet::bind(m);
 
   nb::class_<PyConversionPatternRewriter, PyPatternRewriter>(
-      m, "ConversionPatternRewriter");
+      m, "ConversionPatternRewriter")
+      .def("convert_region_types",
+           [](PyConversionPatternRewriter &self, PyRegion &region,
+              PyTypeConverter &typeConverter) {
+             mlirConversionPatternRewriterConvertRegionTypes(
+                 self.rewriter, region.get(), typeConverter.get());
+           });
 
   nb::class_<PyConversionTarget>(m, "ConversionTarget")
       .def(
@@ -590,9 +608,7 @@ void populateRewriteSubmodule(nb::module_ &m) {
           "add_legal_op",
           [](PyConversionTarget &self, const nb::args &ops) {
             for (auto op : ops) {
-              std::string opName =
-                  nb::cast<std::string>(op.attr("OPERATION_NAME"));
-              self.addLegalOp(opName);
+              self.addLegalOp(operationNameFromObject(op));
             }
           },
           "ops"_a, "Mark the given operations as legal.")
@@ -600,9 +616,7 @@ void populateRewriteSubmodule(nb::module_ &m) {
           "add_illegal_op",
           [](PyConversionTarget &self, const nb::args &ops) {
             for (auto op : ops) {
-              std::string opName =
-                  nb::cast<std::string>(op.attr("OPERATION_NAME"));
-              self.addIllegalOp(opName);
+              self.addIllegalOp(operationNameFromObject(op));
             }
           },
           "ops"_a, "Mark the given operations as illegal.")
@@ -610,9 +624,7 @@ void populateRewriteSubmodule(nb::module_ &m) {
           "add_legal_dialect",
           [](PyConversionTarget &self, const nb::args &dialects) {
             for (auto dialect : dialects) {
-              std::string dialectName =
-                  nb::cast<std::string>(dialect.attr("DIALECT_NAMESPACE"));
-              self.addLegalDialect(dialectName);
+              self.addLegalDialect(dialectNameFromObject(dialect));
             }
           },
           "dialects"_a, "Mark the given dialects as legal.")
@@ -620,9 +632,7 @@ void populateRewriteSubmodule(nb::module_ &m) {
           "add_illegal_dialect",
           [](PyConversionTarget &self, const nb::args &dialects) {
             for (auto dialect : dialects) {
-              std::string dialectName =
-                  nb::cast<std::string>(dialect.attr("DIALECT_NAMESPACE"));
-              self.addIllegalDialect(dialectName);
+              self.addIllegalDialect(dialectNameFromObject(dialect));
             }
           },
           "dialects"_a, "Mark the given dialect as illegal.");

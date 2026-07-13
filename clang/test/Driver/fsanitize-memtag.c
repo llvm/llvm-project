@@ -12,7 +12,7 @@
 // CHECK-SANMT-MT: "-target-feature" "+mte"
 // CHECK-SANMT-MT-SAME: "-fsanitize=memtag-stack,memtag-heap,memtag-globals"
 
-// RUN: not %clang --target=aarch64-linux -fsanitize=memtag -Xclang -target-feature -Xclang +mte %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-MT
+// RUN: %clang --target=aarch64-linux -fsanitize=memtag -Xclang -target-feature -Xclang +mte %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-MT
 
 // RUN: not %clang --target=aarch64-linux -fsanitize=memtag %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-NOMT-0
 // CHECK-SANMT-NOMT-0: '-fsanitize=memtag-stack' requires hardware support (+memtag)

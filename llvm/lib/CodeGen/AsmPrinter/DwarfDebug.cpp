@@ -50,6 +50,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
@@ -352,7 +353,7 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
     DebuggerTuning = DebuggerKind::GDB;
 
   if (DwarfInlinedStrings == Default)
-    UseInlineStrings = TT.isNVPTX() || tuneForDBX();
+    UseInlineStrings = tuneForDBX();
   else
     UseInlineStrings = DwarfInlinedStrings == Enable;
 
@@ -373,9 +374,8 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   unsigned DwarfVersionNumber = Asm->TM.Options.MCOptions.DwarfVersion;
   unsigned DwarfVersion = DwarfVersionNumber ? DwarfVersionNumber
                                     : MMI->getModule()->getDwarfVersion();
-  // Use dwarf 4 by default if nothing is requested. For NVPTX, use dwarf 2.
-  DwarfVersion =
-      TT.isNVPTX() ? 2 : (DwarfVersion ? DwarfVersion : dwarf::DWARF_VERSION);
+  if (!DwarfVersion)
+    DwarfVersion = dwarf::DWARF_VERSION;
 
   bool Dwarf64 = DwarfVersion >= 3 && // DWARF64 was introduced in DWARFv3.
                  TT.isArch64Bit();    // DWARF64 requires 64-bit relocations.
@@ -393,12 +393,9 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   if (!Dwarf64 && TT.isArch64Bit() && TT.isOSBinFormatXCOFF())
     report_fatal_error("XCOFF requires DWARF64 for 64-bit mode!");
 
-  UseRangesSection = !NoDwarfRangesSection && !TT.isNVPTX();
+  UseRangesSection = !NoDwarfRangesSection;
 
-  // Use sections as references. Force for NVPTX.
-  if (DwarfSectionsAsReferences == Default)
-    UseSectionsAsReferences = TT.isNVPTX();
-  else
+  if (DwarfSectionsAsReferences != Default)
     UseSectionsAsReferences = DwarfSectionsAsReferences == Enable;
 
   // Don't generate type units for unsupported object file formats.
@@ -588,7 +585,7 @@ struct FwdRegParamInfo {
 };
 
 /// Register worklist for finding call site values.
-using FwdRegWorklist = MapVector<uint64_t, SmallVector<FwdRegParamInfo, 2>>;
+using FwdRegWorklist = MapVector<Register, SmallVector<FwdRegParamInfo, 2>>;
 /// Container for the set of register units known to be clobbered on the path
 /// to a call site.
 using ClobberedRegUnitSet = SmallSet<MCRegUnit, 16>;
@@ -1123,6 +1120,9 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
   }
 
   NewCU.addString(Die, dwarf::DW_AT_name, FN);
+
+  finishTargetUnitAttributes(*DIUnit, NewCU);
+
   StringRef SysRoot = DIUnit->getSysRoot();
   if (!SysRoot.empty())
     NewCU.addString(Die, dwarf::DW_AT_LLVM_sysroot, SysRoot);
@@ -1170,20 +1170,27 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
     }
   }
 }
+
+DwarfCompileUnit *DwarfDebug::getDwarfCompileUnit(const DICompileUnit *DIUnit) {
+  if (auto *CU = CUMap.lookup(DIUnit))
+    return CU;
+
+  if (useSplitDwarf() && !shareAcrossDWOCUs() &&
+      (!DIUnit->getSplitDebugInlining() ||
+       DIUnit->getEmissionKind() == DICompileUnit::FullDebug) &&
+      !CUMap.empty())
+    return CUMap.begin()->second;
+
+  return nullptr;
+}
+
 // Create new DwarfCompileUnit for the given metadata node with tag
 // DW_TAG_compile_unit.
 DwarfCompileUnit &
 DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
-  if (auto *CU = CUMap.lookup(DIUnit))
+  if (auto *CU = getDwarfCompileUnit(DIUnit))
     return *CU;
 
-  if (useSplitDwarf() &&
-      !shareAcrossDWOCUs() &&
-      (!DIUnit->getSplitDebugInlining() ||
-       DIUnit->getEmissionKind() == DICompileUnit::FullDebug) &&
-      !CUMap.empty()) {
-    return *CUMap.begin()->second;
-  }
   CompilationDir = DIUnit->getDirectory();
 
   auto OwnedUnit = std::make_unique<DwarfCompileUnit>(
@@ -1256,14 +1263,6 @@ void DwarfDebug::beginModule(Module *M) {
 
   assert(NumDebugCUs > 0 && "Asm unexpectedly initialized");
   SingleCU = NumDebugCUs == 1;
-  DenseMap<DIGlobalVariable *, SmallVector<DwarfCompileUnit::GlobalExpr, 1>>
-      GVMap;
-  for (const GlobalVariable &Global : M->globals()) {
-    SmallVector<DIGlobalVariableExpression *, 1> GVs;
-    Global.getDebugInfo(GVs);
-    for (auto *GVE : GVs)
-      GVMap[GVE->getVariable()].push_back({&Global, GVE->getExpression()});
-  }
 
   // Create the symbol that designates the start of the unit's contribution
   // to the string offsets table. In a split DWARF scenario, only the skeleton
@@ -1297,24 +1296,6 @@ void DwarfDebug::beginModule(Module *M) {
       continue;
 
     DwarfCompileUnit &CU = getOrCreateDwarfCompileUnit(CUNode);
-
-    // Global Variables.
-    for (auto *GVE : CUNode->getGlobalVariables()) {
-      // Don't bother adding DIGlobalVariableExpressions listed in the CU if we
-      // already know about the variable and it isn't adding a constant
-      // expression.
-      auto &GVMapEntry = GVMap[GVE->getVariable()];
-      auto *Expr = GVE->getExpression();
-      if (!GVMapEntry.size() || (Expr && Expr->isConstant()))
-        GVMapEntry.push_back({nullptr, Expr});
-    }
-
-    DenseSet<DIGlobalVariable *> Processed;
-    for (auto *GVE : CUNode->getGlobalVariables()) {
-      DIGlobalVariable *GV = GVE->getVariable();
-      if (Processed.insert(GV).second)
-        CU.getOrCreateGlobalVariableDIE(GV, sortGlobalExprs(GVMap[GV]));
-    }
 
     for (auto *Ty : CUNode->getEnumTypes()) {
       assert(!isa_and_nonnull<DILocalScope>(Ty->getScope()) &&
@@ -1425,11 +1406,7 @@ void DwarfDebug::finalizeModuleInfo() {
     DwarfCompileUnit &U = SkCU ? *SkCU : TheCU;
 
     if (unsigned NumRanges = TheCU.getRanges().size()) {
-      // PTX does not support subtracting labels from the code section in the
-      // debug_loc section.  To work around this, the NVPTX backend needs the
-      // compile unit to have no low_pc in order to have a zero base_address
-      // when handling debug_loc in cuda-gdb.
-      if (!(Asm->TM.getTargetTriple().isNVPTX() && tuneForGDB())) {
+      if (shouldAttachCompileUnitRanges()) {
         if (NumRanges > 1 && useRangesSection())
           // A DW_AT_low_pc attribute may also be specified in combination with
           // DW_AT_ranges to specify the default base address for use in
@@ -1513,9 +1490,43 @@ void DwarfDebug::endModule() {
   assert(CurFn == nullptr);
   assert(CurMI == nullptr);
 
-  for (const auto &P : CUMap) {
-    const auto *CUNode = cast<DICompileUnit>(P.first);
-    DwarfCompileUnit *CU = &*P.second;
+  const Module *M = MMI->getModule();
+
+  // Collect global variables info.
+  DenseMap<DIGlobalVariable *, SmallVector<DwarfCompileUnit::GlobalExpr, 1>>
+      GVMap;
+  for (const GlobalVariable &Global : M->globals()) {
+    SmallVector<DIGlobalVariableExpression *, 1> GVs;
+    Global.getDebugInfo(GVs);
+    for (auto *GVE : GVs)
+      GVMap[GVE->getVariable()].push_back({&Global, GVE->getExpression()});
+  }
+
+  for (DICompileUnit *CUNode : M->debug_compile_units()) {
+    DwarfCompileUnit *CU = getDwarfCompileUnit(CUNode);
+
+    // If the CU hasn't been emitted yet, it must be empty. Skip it.
+    if (!CU)
+      continue;
+
+    // Emit Global Variables.
+    for (auto *GVE : CUNode->getGlobalVariables()) {
+      // Don't bother adding DIGlobalVariableExpressions listed in the CU if we
+      // already know about the variable and it isn't adding a constant
+      // expression.
+      auto &GVMapEntry = GVMap[GVE->getVariable()];
+      auto *Expr = GVE->getExpression();
+      if (!GVMapEntry.size() || (Expr && Expr->isConstant()))
+        GVMapEntry.push_back({nullptr, Expr});
+    }
+    DenseSet<DIGlobalVariable *> Processed;
+    for (auto *GVE : CUNode->getGlobalVariables()) {
+      DIGlobalVariable *GV = GVE->getVariable();
+      assert(!isa_and_nonnull<DILocalScope>(GV->getScope()) &&
+             "Unexpected function-local entity in 'globals' CU field.");
+      if (Processed.insert(GV).second)
+        CU->getOrCreateGlobalVariableDIE(GV, sortGlobalExprs(GVMap[GV]));
+    }
 
     // Emit imported entities.
     for (auto *IE : CUNode->getImportedEntities()) {
@@ -1525,14 +1536,20 @@ void DwarfDebug::endModule() {
     }
 
     // Emit function-local entities.
-    for (const auto *D : CU->getDeferredLocalDecls()) {
-      if (auto *IE = dyn_cast<DIImportedEntity>(D))
-        CU->getOrCreateImportedEntityDIE(IE);
-      else if (auto *Ty = dyn_cast<DIType>(D))
-        CU->getOrCreateTypeDIE(Ty);
-      else
-        llvm_unreachable("Unexpected local retained node!");
-    }
+    const auto Unexpected = [](const Metadata *N) {
+      llvm_unreachable("Unexpected local retained node!");
+    };
+    for (const auto *D : CU->getDeferredLocalDecls())
+      DISubprogram::visitRetainedNode<void>(
+          D, Unexpected, Unexpected,
+          [CU](const auto *IE) { CU->getOrCreateImportedEntityDIE(IE); },
+          [CU](const auto *Ty) { CU->getOrCreateTypeDIE(Ty); },
+          [&](const auto *GVE) {
+            DIGlobalVariable *GV = GVE->getVariable();
+            if (Processed.insert(GV).second)
+              CU->getOrCreateGlobalVariableDIE(GV, sortGlobalExprs(GVMap[GV]));
+          },
+          Unexpected);
 
     // Emit base types.
     CU->createBaseTypeDIEs();
@@ -2079,16 +2096,17 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
   }
 
   // Collect info for retained nodes.
-  for (const DINode *DN : SP->getRetainedNodes()) {
-    const auto *LS = getRetainedNodeScope(DN);
-    if (isa<DILocalVariable>(DN) || isa<DILabel>(DN)) {
+  for (const MDNode *N : SP->getRetainedNodes()) {
+    const auto *LS = getRetainedNodeScope(N);
+    if (isa<DILocalVariable>(N) || isa<DILabel>(N)) {
+      auto *DN = cast<DINode>(N);
       if (!Processed.insert(InlinedEntity(DN, nullptr)).second)
         continue;
       LexicalScope *LexS = LScopes.findLexicalScope(LS);
       if (LexS)
         createConcreteEntity(TheCU, *LexS, DN, nullptr);
     } else {
-      LocalDeclsPerLS[LS].insert(DN);
+      LocalDeclsPerLS[LS].insert(N);
     }
   }
 }
@@ -2888,12 +2906,13 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
 #endif
   for (LexicalScope *AScope : LScopes.getAbstractScopesList()) {
     const auto *SP = cast<DISubprogram>(AScope->getScopeNode());
-    for (const DINode *DN : SP->getRetainedNodes()) {
-      const auto *LS = getRetainedNodeScope(DN);
+    for (const MDNode *N : SP->getRetainedNodes()) {
+      const auto *LS = getRetainedNodeScope(N);
       // Ensure LexicalScope is created for the scope of this node.
       auto *LexS = LScopes.getOrCreateAbstractScope(LS);
       assert(LexS && "Expected the LexicalScope to be created.");
-      if (isa<DILocalVariable>(DN) || isa<DILabel>(DN)) {
+      if (isa<DILocalVariable>(N) || isa<DILabel>(N)) {
+        auto *DN = cast<DINode>(N);
         // Collect info for variables/labels that were optimized out.
         if (!Processed.insert(InlinedEntity(DN, nullptr)).second ||
             TheCU.getExistingAbstractEntity(DN))
@@ -2901,7 +2920,7 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
         TheCU.createAbstractEntity(DN, LexS);
       } else {
         // Remember the node if this is a local declarations.
-        LocalDeclsPerLS[LS].insert(DN);
+        LocalDeclsPerLS[LS].insert(N);
       }
       assert(
           LScopes.getAbstractScopesList().size() == NumAbstractSubprograms &&
@@ -3181,7 +3200,7 @@ void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer,
   // need to reference a base_type DIE the offset of that DIE is not yet known.
   // To deal with this we instead insert a placeholder early and then extract
   // it here and replace it with the real reference.
-  unsigned PtrSize = Asm->MAI->getCodePointerSize();
+  unsigned PtrSize = Asm->MAI.getCodePointerSize();
   DWARFDataExtractor Data(StringRef(DebugLocs.getBytes(Entry).data(),
                                     DebugLocs.getBytes(Entry).size()),
                           Asm->getDataLayout().isLittleEndian(), PtrSize);
@@ -3243,10 +3262,40 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
                             &AP](const DbgValueLocEntry &Entry,
                                  DIExpressionCursor &Cursor) -> bool {
     if (Entry.isInt()) {
-      if (BT && (BT->getEncoding() == dwarf::DW_ATE_boolean))
+      if (BT && (BT->getEncoding() == dwarf::DW_ATE_boolean)) {
         DwarfExpr.addBooleanConstant(Entry.getInt());
-      else if (BT && (BT->getEncoding() == dwarf::DW_ATE_signed ||
-                      BT->getEncoding() == dwarf::DW_ATE_signed_char))
+        return true;
+      }
+
+      bool IsSigned = BT && (BT->getEncoding() == dwarf::DW_ATE_signed ||
+                             BT->getEncoding() == dwarf::DW_ATE_signed_char);
+      if (BT && AP.getDwarfVersion() >= 4 &&
+          !AP.getDwarfDebug()->tuneForSCE() && !Cursor) {
+        // DW_OP_const* pushes a generic, address-sized value. For a wider
+        // source integer value that cannot fit in the generic type, use
+        // DW_OP_implicit_value to preserve the source bytes instead. Keep this
+        // limited to complete constant values: SCE tuning already avoids
+        // DW_OP_implicit_value for compatibility, and expressions with
+        // remaining operations may need a scalar stack value rather than an
+        // implicit value block.
+        unsigned GenericBitSize = AP.MAI.getCodePointerSize() * 8;
+        uint64_t TypeBitSize = BT->getSizeInBits();
+        bool IsByteSized = TypeBitSize % 8 == 0;
+        bool IsOutOfRange =
+            IsSigned ? !isIntN(GenericBitSize, Entry.getInt())
+                     : !isUIntN(GenericBitSize,
+                                static_cast<uint64_t>(Entry.getInt()));
+        if (TypeBitSize > GenericBitSize && IsByteSized && IsOutOfRange) {
+          DwarfExpr.addImplicitValue(
+              APInt(static_cast<unsigned>(TypeBitSize),
+                    static_cast<uint64_t>(Entry.getInt()), IsSigned,
+                    /*implicitTrunc=*/true),
+              AP);
+          return true;
+        }
+      }
+
+      if (IsSigned)
         DwarfExpr.addSignedConstant(Entry.getInt());
       else
         DwarfExpr.addUnsignedConstant(Entry.getInt());
@@ -3404,7 +3453,7 @@ emitRangeList(DwarfDebug &DD, AsmPrinter *Asm, MCSymbol *Sym, const Ranges &R,
               unsigned OffsetPair, unsigned StartxLength, unsigned StartxEndx,
               unsigned EndOfList, StringRef (*StringifyEnum)(unsigned),
               bool ShouldUseBaseAddress, PayloadEmitter EmitPayload) {
-  auto Size = Asm->MAI->getCodePointerSize();
+  auto Size = Asm->MAI.getCodePointerSize();
   bool UseDwarf5 = DD.getDwarfVersion() >= 5;
 
   // Emit our symbol so we can find the beginning of the range.
@@ -3422,15 +3471,8 @@ emitRangeList(DwarfDebug &DD, AsmPrinter *Asm, MCSymbol *Sym, const Ranges &R,
   bool BaseIsSet = false;
   for (const auto &P : SectionRanges) {
     auto *Base = CUBase;
-    if ((Asm->TM.getTargetTriple().isNVPTX() && DD.tuneForGDB()) ||
+    if (DD.shouldResetBaseAddress(*P.first) ||
         (DD.useSplitDwarf() && UseDwarf5 && P.first->isLinkerRelaxable())) {
-      // PTX does not support subtracting labels from the code section in the
-      // debug_loc section.  To work around this, the NVPTX backend needs the
-      // compile unit to have no low_pc in order to have a zero base_address
-      // when handling debug_loc in cuda-gdb.  Additionally, cuda-gdb doesn't
-      // seem to handle setting a per-variable base to zero.  To make cuda-gdb
-      // happy, just emit labels with no base while having no compile unit
-      // low_pc.
       BaseIsSet = false;
       Base = nullptr;
     } else if (!Base && ShouldUseBaseAddress) {
@@ -3662,7 +3704,7 @@ void DwarfDebug::emitDebugARanges() {
   Asm->OutStreamer->switchSection(
       Asm->getObjFileLowering().getDwarfARangesSection());
 
-  unsigned PtrSize = Asm->MAI->getCodePointerSize();
+  unsigned PtrSize = Asm->MAI.getCodePointerSize();
 
   // Build a list of CUs used.
   std::vector<DwarfCompileUnit *> CUs;

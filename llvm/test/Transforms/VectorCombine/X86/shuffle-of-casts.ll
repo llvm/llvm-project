@@ -428,33 +428,12 @@ define <4 x i16> @unary_shuffle_sext_v8i8_v4i16_multiuse(<8 x i8> %a0, ptr %a1) 
 ; PR165813 - icmp
 
 define <8 x i32> @unary_shuffle_sext_icmp_comparison(<8 x i32> %a0, <8 x i32> %a1) {
-; SSE2-LABEL: define <8 x i32> @unary_shuffle_sext_icmp_comparison(
-; SSE2-SAME: <8 x i32> [[A0:%.*]], <8 x i32> [[A1:%.*]]) #[[ATTR0]] {
-; SSE2-NEXT:    [[CMP:%.*]] = icmp eq <8 x i32> [[A0]], [[A1]]
-; SSE2-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-; SSE2-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[SEXT]], <8 x i32> poison, <8 x i32> <i32 3, i32 3, i32 2, i32 3, i32 7, i32 7, i32 6, i32 7>
-; SSE2-NEXT:    ret <8 x i32> [[SHUFFLE]]
-;
-; SSE4-LABEL: define <8 x i32> @unary_shuffle_sext_icmp_comparison(
-; SSE4-SAME: <8 x i32> [[A0:%.*]], <8 x i32> [[A1:%.*]]) #[[ATTR0]] {
-; SSE4-NEXT:    [[CMP:%.*]] = icmp eq <8 x i32> [[A0]], [[A1]]
-; SSE4-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i1> [[CMP]], <8 x i1> poison, <8 x i32> <i32 3, i32 3, i32 2, i32 3, i32 7, i32 7, i32 6, i32 7>
-; SSE4-NEXT:    [[SHUFFLE:%.*]] = sext <8 x i1> [[TMP1]] to <8 x i32>
-; SSE4-NEXT:    ret <8 x i32> [[SHUFFLE]]
-;
-; AVX2-LABEL: define <8 x i32> @unary_shuffle_sext_icmp_comparison(
-; AVX2-SAME: <8 x i32> [[A0:%.*]], <8 x i32> [[A1:%.*]]) #[[ATTR0]] {
-; AVX2-NEXT:    [[CMP:%.*]] = icmp eq <8 x i32> [[A0]], [[A1]]
-; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i1> [[CMP]], <8 x i1> poison, <8 x i32> <i32 3, i32 3, i32 2, i32 3, i32 7, i32 7, i32 6, i32 7>
-; AVX2-NEXT:    [[SHUFFLE:%.*]] = sext <8 x i1> [[TMP1]] to <8 x i32>
-; AVX2-NEXT:    ret <8 x i32> [[SHUFFLE]]
-;
-; AVX512-LABEL: define <8 x i32> @unary_shuffle_sext_icmp_comparison(
-; AVX512-SAME: <8 x i32> [[A0:%.*]], <8 x i32> [[A1:%.*]]) #[[ATTR0]] {
-; AVX512-NEXT:    [[CMP:%.*]] = icmp eq <8 x i32> [[A0]], [[A1]]
-; AVX512-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-; AVX512-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[SEXT]], <8 x i32> poison, <8 x i32> <i32 3, i32 3, i32 2, i32 3, i32 7, i32 7, i32 6, i32 7>
-; AVX512-NEXT:    ret <8 x i32> [[SHUFFLE]]
+; CHECK-LABEL: define <8 x i32> @unary_shuffle_sext_icmp_comparison(
+; CHECK-SAME: <8 x i32> [[A0:%.*]], <8 x i32> [[A1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <8 x i32> [[A0]], [[A1]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[SEXT]], <8 x i32> poison, <8 x i32> <i32 3, i32 3, i32 2, i32 3, i32 7, i32 7, i32 6, i32 7>
+; CHECK-NEXT:    ret <8 x i32> [[SHUFFLE]]
 ;
   %cmp = icmp eq <8 x i32> %a0, %a1
   %sext = sext <8 x i1> %cmp to <8 x i32>
@@ -465,33 +444,12 @@ define <8 x i32> @unary_shuffle_sext_icmp_comparison(<8 x i32> %a0, <8 x i32> %a
 ; PR165813 - fcmp
 
 define <16 x i32> @unary_shuffle_sext_fcmp_comparison(<16 x float> %a0, <16 x float> %a1) {
-; SSE2-LABEL: define <16 x i32> @unary_shuffle_sext_fcmp_comparison(
-; SSE2-SAME: <16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]]) #[[ATTR0]] {
-; SSE2-NEXT:    [[CMP:%.*]] = fcmp oeq <16 x float> [[A0]], [[A1]]
-; SSE2-NEXT:    [[SEXT:%.*]] = sext <16 x i1> [[CMP]] to <16 x i32>
-; SSE2-NEXT:    [[SHUFFLE:%.*]] = shufflevector <16 x i32> [[SEXT]], <16 x i32> poison, <16 x i32> <i32 3, i32 3, i32 2, i32 3, i32 7, i32 7, i32 6, i32 7, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
-; SSE2-NEXT:    ret <16 x i32> [[SHUFFLE]]
-;
-; SSE4-LABEL: define <16 x i32> @unary_shuffle_sext_fcmp_comparison(
-; SSE4-SAME: <16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]]) #[[ATTR0]] {
-; SSE4-NEXT:    [[CMP:%.*]] = fcmp oeq <16 x float> [[A0]], [[A1]]
-; SSE4-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i1> [[CMP]], <16 x i1> poison, <16 x i32> <i32 3, i32 3, i32 2, i32 3, i32 7, i32 7, i32 6, i32 7, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
-; SSE4-NEXT:    [[SHUFFLE:%.*]] = sext <16 x i1> [[TMP1]] to <16 x i32>
-; SSE4-NEXT:    ret <16 x i32> [[SHUFFLE]]
-;
-; AVX2-LABEL: define <16 x i32> @unary_shuffle_sext_fcmp_comparison(
-; AVX2-SAME: <16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]]) #[[ATTR0]] {
-; AVX2-NEXT:    [[CMP:%.*]] = fcmp oeq <16 x float> [[A0]], [[A1]]
-; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i1> [[CMP]], <16 x i1> poison, <16 x i32> <i32 3, i32 3, i32 2, i32 3, i32 7, i32 7, i32 6, i32 7, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
-; AVX2-NEXT:    [[SHUFFLE:%.*]] = sext <16 x i1> [[TMP1]] to <16 x i32>
-; AVX2-NEXT:    ret <16 x i32> [[SHUFFLE]]
-;
-; AVX512-LABEL: define <16 x i32> @unary_shuffle_sext_fcmp_comparison(
-; AVX512-SAME: <16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]]) #[[ATTR0]] {
-; AVX512-NEXT:    [[CMP:%.*]] = fcmp oeq <16 x float> [[A0]], [[A1]]
-; AVX512-NEXT:    [[SEXT:%.*]] = sext <16 x i1> [[CMP]] to <16 x i32>
-; AVX512-NEXT:    [[SHUFFLE:%.*]] = shufflevector <16 x i32> [[SEXT]], <16 x i32> poison, <16 x i32> <i32 3, i32 3, i32 2, i32 3, i32 7, i32 7, i32 6, i32 7, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
-; AVX512-NEXT:    ret <16 x i32> [[SHUFFLE]]
+; CHECK-LABEL: define <16 x i32> @unary_shuffle_sext_fcmp_comparison(
+; CHECK-SAME: <16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <16 x float> [[A0]], [[A1]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <16 x i1> [[CMP]] to <16 x i32>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <16 x i32> [[SEXT]], <16 x i32> poison, <16 x i32> <i32 3, i32 3, i32 2, i32 3, i32 7, i32 7, i32 6, i32 7, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
+; CHECK-NEXT:    ret <16 x i32> [[SHUFFLE]]
 ;
   %cmp = fcmp oeq <16 x float> %a0, %a1
   %sext = sext <16 x i1> %cmp to <16 x i32>

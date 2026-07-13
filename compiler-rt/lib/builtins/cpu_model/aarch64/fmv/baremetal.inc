@@ -1,19 +1,19 @@
-// For baremetal platforms, we don't really initialise '__aarch64_cpu_features',
-// with exception of FEAT_SME that we can get from '__aarch64_sme_accessible'.
+#include <stdint.h>
 
-#if defined(COMPILER_RT_SHARED_LIB)
-__attribute__((weak))
-#endif
-extern _Bool
-__aarch64_sme_accessible(void);
+// The libc/runtime for baremetal targets should provide an implementation of
+// __arm_sme_state. LLVM's compiler-rt does not provide this function for
+// baremetal as checking CPU features is implementation defined.
+//
+// See:
+// https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#811__arm_sme_state
+extern struct {
+  uint64_t x0;
+  uint64_t x1;
+} __arm_sme_state(void);
 
-static _Bool has_sme(void) {
-#if defined(COMPILER_RT_SHARED_LIB)
-  if (!__aarch64_sme_accessible)
-    return 0;
-#endif
-  return __aarch64_sme_accessible();
-}
+// __arm_sme_state:
+// Bit 63 of X0 is set to one iff the current thread has access to SME.
+#define SME_STATE_HAS_SME_BIT_X0 (1ULL << 63)
 
 void __init_cpu_features_resolver(unsigned long hwcap,
                                   const __ifunc_arg_t *arg) {}
@@ -23,8 +23,13 @@ void CONSTRUCTOR_ATTRIBUTE __init_cpu_features(void) {
   if (__atomic_load_n(&__aarch64_cpu_features.features, __ATOMIC_RELAXED))
     return;
 
-  unsigned long long feat = 0;
-  if (has_sme())
+  // For baremetal platforms, we don't really initialise
+  // '__aarch64_cpu_features', with exception of FEAT_SME that we can get from
+  // '__arm_sme_state'.
+  _Bool has_sme = (__arm_sme_state().x0 & SME_STATE_HAS_SME_BIT_X0) != 0;
+
+  uint64_t feat = 0;
+  if (has_sme)
     feat |= 1ULL << FEAT_SME;
 
   __atomic_store_n(&__aarch64_cpu_features.features, feat, __ATOMIC_RELAXED);

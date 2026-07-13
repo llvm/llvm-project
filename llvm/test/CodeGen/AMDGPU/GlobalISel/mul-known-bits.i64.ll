@@ -354,8 +354,8 @@ define amdgpu_kernel void @v_mul_i64_masked_src0(ptr addrspace(1) %out, ptr addr
 ; GFX11-LABEL: v_mul_i64_masked_src0:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -443,8 +443,8 @@ define amdgpu_kernel void @v_mul64_masked_before_branch(ptr addrspace(1) %out, p
 ; GFX11-LABEL: v_mul64_masked_before_branch:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm

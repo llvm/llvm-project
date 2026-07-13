@@ -44,7 +44,7 @@ static const char BuiltinMemCmp[] = "::std::memcmp;"
                                     "::std::strcmp;"
                                     "::strcmp;"
                                     "::strncmp;";
-static constexpr llvm::StringRef ComparisonOperators[] = {
+static constexpr StringRef ComparisonOperators[] = {
     "operator==", "operator!=", "operator<",
     "operator>",  "operator<=", "operator>="};
 

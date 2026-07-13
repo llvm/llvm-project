@@ -132,6 +132,7 @@ void ilist_callback_traits<MachineBasicBlock>::addNodeToList(
     MachineBasicBlock *N) {
   MachineFunction &MF = *N->getParent();
   N->Number = MF.addToMBBNumbering(N);
+  N->AnalysisNumber = MF.assignAnalysisNumber();
 
   // Make sure the instructions have their operands in the reginfo lists.
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
@@ -143,6 +144,7 @@ void ilist_callback_traits<MachineBasicBlock>::removeNodeFromList(
     MachineBasicBlock *N) {
   N->getParent()->removeFromMBBNumbering(N->Number);
   N->Number = -1;
+  N->AnalysisNumber = -1;
 }
 
 /// When we add an instruction to a basic block list, we update its parent
@@ -934,9 +936,12 @@ void MachineBasicBlock::addPredecessor(MachineBasicBlock *Pred) {
 }
 
 void MachineBasicBlock::removePredecessor(MachineBasicBlock *Pred) {
-  pred_iterator I = find(Predecessors, Pred);
-  assert(I != Predecessors.end() && "Pred is not a predecessor of this block!");
-  Predecessors.erase(I);
+  // This is often called on many predecessors in reverse order.
+  // Do a reverse search and removal to avoid quadratic behavior in such cases.
+  auto RI = llvm::find(reverse(Predecessors), Pred);
+  assert(RI != Predecessors.rend() &&
+         "Pred is not a predecessor of this block!");
+  Predecessors.erase(std::prev(RI.base()));
 }
 
 void MachineBasicBlock::transferSuccessors(MachineBasicBlock *FromMBB) {

@@ -169,6 +169,7 @@ class PPC64 final : public TargetInfo {
 public:
   PPC64(Ctx &);
   uint32_t calcEFlags() const override;
+  void initTargetSpecificSections() override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -179,8 +180,8 @@ public:
   void writeIplt(uint8_t *buf, const Symbol &sym,
                  uint64_t pltEntryAddr) const override;
   template <class ELFT, class RelTy>
-  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
-  void scanSection(InputSectionBase &) override;
+  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>, unsigned shard);
+  void scanSection(InputSectionBase &, unsigned shard) override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
   void writeGotHeader(uint8_t *buf) const override;
@@ -969,6 +970,12 @@ void PPC64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   }
 }
 
+void PPC64::initTargetSpecificSections() {
+  ctx.in.ppc64LongBranchTarget =
+      std::make_unique<PPC64LongBranchTargetSection>(ctx);
+  ctx.inputSections.push_back(ctx.in.ppc64LongBranchTarget.get());
+}
+
 // Only needed to support relocations used by relocateNonAlloc and relocateEh.
 RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
                           const uint8_t *loc) const {
@@ -1107,8 +1114,9 @@ static bool missingTlsGdLdMarker(InputSectionBase &sec, Relocs<RelTy> rels) {
 }
 
 template <class ELFT, class RelTy>
-void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
+void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                            unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
   sec.relocations.reserve(rels.size());
   bool optimizeTlsGdLd =
       !missingTlsGdLdMarker<RelTy>(sec, rels) && !ctx.arg.shared;
@@ -1189,8 +1197,10 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     case R_PPC64_TOC16_LO:
       // Record the TOC entry (.toc + addend) as not relaxable.
       if (sym.isSection() && isa<Defined>(sym) &&
-          cast<Defined>(sym).section->name == ".toc")
+          cast<Defined>(sym).section->name == ".toc") {
+        std::lock_guard<std::mutex> lock(ctx.relocMutex);
         ctx.ppc64noTocRelax.insert({&sym, addend});
+      }
       expr = R_GOTREL;
       break;
     case R_PPC64_TOC16_HA:
@@ -1343,11 +1353,11 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   }
 }
 
-void PPC64::scanSection(InputSectionBase &sec) {
+void PPC64::scanSection(InputSectionBase &sec, unsigned shard) {
   if (ctx.arg.isLE)
-    elf::scanSection1<PPC64, ELF64LE>(*this, sec);
+    elf::scanSection1<PPC64, ELF64LE>(*this, sec, shard);
   else
-    elf::scanSection1<PPC64, ELF64BE>(*this, sec);
+    elf::scanSection1<PPC64, ELF64BE>(*this, sec, shard);
 
   // Sort relocations by offset for .toc sections. This is needed so that
   // sections addressed with small code model relocations come first.

@@ -201,6 +201,19 @@ private:
     Show(op.right());
     Outdent();
   }
+  template <typename T> void Show(const evaluate::ConditionalExpr<T> &x) {
+    Indent("conditional expr "s + std::string(TypeOf<T>::name));
+    Indent("condition");
+    Show(x.condition());
+    Outdent();
+    Indent("then");
+    Show(x.thenValue());
+    Outdent();
+    Indent("else");
+    Show(x.elseValue());
+    Outdent();
+    Outdent();
+  }
   void Show(const evaluate::Relational<evaluate::SomeType> &x);
   template <typename T> void Show(const evaluate::Expr<T> &x) {
     Indent("expr <"s + std::string(TypeOf<T>::name) + ">"s);

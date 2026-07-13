@@ -29,6 +29,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 #include <optional>
 
@@ -247,7 +248,7 @@ static Address ApplyNonVirtualAndVirtualOffset(
   if (!nonVirtualOffset.isZero()) {
     llvm::Type *OffsetType =
         (CGF.CGM.getTarget().getCXXABI().isItaniumFamily() &&
-         CGF.CGM.getItaniumVTableContext().isRelativeLayout())
+         CGF.CGM.getLangOpts().RelativeCXXABIVTables)
             ? CGF.Int32Ty
             : CGF.PtrDiffTy;
     baseOffset =
@@ -570,32 +571,6 @@ static void EmitBaseInitializer(CodeGenFunction &CGF,
                                           isBaseVirtual);
 }
 
-static bool isMemcpyEquivalentSpecialMember(CodeGenModule &CGM,
-                                            const CXXMethodDecl *D) {
-  auto *CD = dyn_cast<CXXConstructorDecl>(D);
-  if (!(CD && CD->isCopyOrMoveConstructor()) &&
-      !D->isCopyAssignmentOperator() && !D->isMoveAssignmentOperator())
-    return false;
-
-  // Non-trivially-copyable fields with pointer field protection need to be
-  // copied one by one.
-  ASTContext &Ctx = CGM.getContext();
-  const CXXRecordDecl *Parent = D->getParent();
-  if (!Ctx.arePFPFieldsTriviallyCopyable(Parent) &&
-      Ctx.hasPFPFields(Ctx.getCanonicalTagType(Parent)))
-    return false;
-
-  // We can emit a memcpy for a trivial copy or move constructor/assignment.
-  if (D->isTrivial() && !D->getParent()->mayInsertExtraPadding())
-    return true;
-
-  // We *must* emit a memcpy for a defaulted union copy or move op.
-  if (D->getParent()->isUnion() && D->isDefaulted())
-    return true;
-
-  return false;
-}
-
 static void EmitLValueForAnyFieldInitialization(CodeGenFunction &CGF,
                                                 CXXCtorInitializer *MemberInit,
                                                 LValue &LHS) {
@@ -650,8 +625,8 @@ static void EmitMemberInitializer(CodeGenFunction &CGF,
     QualType BaseElementTy = CGF.getContext().getBaseElementType(Array);
     CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(MemberInit->getInit());
     if (BaseElementTy.isPODType(CGF.getContext()) ||
-        (CE &&
-         isMemcpyEquivalentSpecialMember(CGF.CGM, CE->getConstructor()))) {
+        (CE && CE->getConstructor()->isMemcpyEquivalentSpecialMember(
+                   CGF.getContext()))) {
       unsigned SrcArgIndex =
           CGF.CGM.getCXXABI().getSrcArgforCopyCtor(Constructor, Args);
       llvm::Value *SrcPtr =
@@ -1059,8 +1034,8 @@ private:
     CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(MemberInit->getInit());
 
     // Bail out on non-memcpyable, not-trivially-copyable members.
-    if (!(CE &&
-          isMemcpyEquivalentSpecialMember(CGF.CGM, CE->getConstructor())) &&
+    if (!(CE && CE->getConstructor()->isMemcpyEquivalentSpecialMember(
+                    CGF.getContext())) &&
         !(FieldType.isTriviallyCopyableType(CGF.getContext()) ||
           FieldType->isReferenceType()))
       return false;
@@ -1169,7 +1144,7 @@ private:
       return nullptr;
     } else if (CXXMemberCallExpr *MCE = dyn_cast<CXXMemberCallExpr>(S)) {
       CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(MCE->getCalleeDecl());
-      if (!(MD && isMemcpyEquivalentSpecialMember(CGF.CGM, MD)))
+      if (!(MD && MD->isMemcpyEquivalentSpecialMember(CGF.getContext())))
         return nullptr;
       MemberExpr *IOA = dyn_cast<MemberExpr>(MCE->getImplicitObjectArgument());
       if (!IOA)
@@ -1435,6 +1410,112 @@ static bool CanSkipVTablePointerInitialization(CodeGenFunction &CGF,
   return true;
 }
 
+/// Get or create the MSVC-compatible __global_delete wrapper function.
+///
+/// Destructor helpers call __global_delete instead of ::operator delete
+/// directly. If this TU contains a ::delete expression (or a dllexport class
+/// whose deleting destructor takes the global-delete path), a real forwarding
+/// body is emitted at end-of-file. If ::delete is never used anywhere in the
+/// program, then no definition will exist and the `/ALTERNATENAME` linker
+/// directive will cause the linker to use __empty_global_delete as the
+/// definition. __empty_global_delete is never expected to actually be called,
+/// hence it is a trap function (a deliberate deviation from MSVC, whose empty
+/// is a no-op).
+///
+/// Array delete[] uses a parallel __global_array_delete wrapper, matching
+/// MSVC. The scalar and array wrappers of a given signature share a single
+/// __empty_global_delete fallback.
+static llvm::Constant *
+getOrCreateMSVCGlobalDeleteWrapper(CodeGenModule &CGM,
+                                   const FunctionDecl *GlobOD) {
+  assert(CGM.getTarget().getCXXABI().isMicrosoft() &&
+         "__global_delete wrapper is only used with the Microsoft ABI");
+  llvm::Module &M = CGM.getModule();
+  llvm::LLVMContext &LLVMCtx = M.getContext();
+
+  llvm::Constant *GlobDeleteCallee = CGM.GetAddrOfFunction(GlobOD);
+  auto *GlobDeleteFn = cast<llvm::Function>(GlobDeleteCallee);
+  llvm::FunctionType *FnTy = GlobDeleteFn->getFunctionType();
+
+  // Derive the wrapper and empty-fallback mangled names. MSVC uses distinct
+  // wrapper names for scalar vs array global delete, but a single shared empty
+  // fallback per signature:
+  //   Global ::operator delete   mangling: ??3@<signature>
+  //     -> wrapper ?__global_delete@@<signature>
+  //   Global ::operator delete[] mangling: ??_V@<signature>
+  //     -> wrapper ?__global_array_delete@@<signature>
+  //   shared fallback: ?__empty_global_delete@@<signature>
+  StringRef GlobDeleteMangledName = GlobDeleteFn->getName();
+  StringRef Signature;
+  const char *WrapperBase;
+  if (GlobDeleteMangledName.starts_with("??3@")) {
+    Signature = GlobDeleteMangledName.substr(4);
+    WrapperBase = "?__global_delete@@";
+  } else if (GlobDeleteMangledName.starts_with("??_V@")) {
+    Signature = GlobDeleteMangledName.substr(5);
+    WrapperBase = "?__global_array_delete@@";
+  } else {
+    llvm_unreachable("unexpected global operator delete mangling");
+  }
+
+  std::string GlobalDeleteName = (WrapperBase + Signature).str();
+  std::string EmptyGlobalDeleteName =
+      ("?__empty_global_delete@@" + Signature).str();
+
+  // Only set up the wrapper once per module.
+  if (llvm::Function *Existing = M.getFunction(GlobalDeleteName))
+    return Existing;
+
+  // Create the shared __empty_global_delete fallback if it doesn't already
+  // exist. The scalar and array wrappers of a given signature share one empty
+  // (matching MSVC, whose weak externals both point at a single
+  // __empty_global_delete). The body traps: this path is unreachable at
+  // runtime when ::delete is never used (a deliberate deviation from MSVC,
+  // whose empty is a no-op; see the doc comment above).
+  llvm::Function *EmptyFn = M.getFunction(EmptyGlobalDeleteName);
+  if (!EmptyFn) {
+    EmptyFn = llvm::Function::Create(
+        FnTy, llvm::GlobalValue::LinkOnceODRLinkage, EmptyGlobalDeleteName, &M);
+    EmptyFn->setComdat(M.getOrInsertComdat(EmptyGlobalDeleteName));
+    EmptyFn->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+    CGM.SetLLVMFunctionAttributes(
+        GlobalDecl(GlobOD),
+        CGM.getTypes().arrangeGlobalDeclaration(GlobalDecl(GlobOD)), EmptyFn,
+        /*IsThunk=*/false);
+    CGM.SetLLVMFunctionAttributesForDefinition(GlobOD, EmptyFn);
+    CGM.getTargetCodeGenInfo().setTargetAttributes(GlobOD, EmptyFn, CGM);
+    auto *BB = llvm::BasicBlock::Create(LLVMCtx, "", EmptyFn);
+    llvm::Function *TrapFn =
+        llvm::Intrinsic::getOrInsertDeclaration(&M, llvm::Intrinsic::trap);
+    auto *TrapCall = llvm::CallInst::Create(TrapFn, {}, "", BB);
+    TrapCall->setDoesNotReturn();
+    TrapCall->setDoesNotThrow();
+    new llvm::UnreachableInst(LLVMCtx, BB);
+
+    // Nothing directly uses the empty other than the /alternatename directive,
+    // so explicitly mark it as used.
+    appendToUsed(M, {EmptyFn});
+  }
+
+  // Emit /ALTERNATENAME linker directive: if this wrapper isn't provided,
+  // fall back to the trapping __empty_global_delete.
+  std::string AltOption =
+      "/alternatename:" + GlobalDeleteName + "=" + EmptyGlobalDeleteName;
+  auto *AltMD =
+      llvm::MDNode::get(LLVMCtx, {llvm::MDString::get(LLVMCtx, AltOption)});
+  M.getOrInsertNamedMetadata("llvm.linker.options")->addOperand(AltMD);
+
+  // Return the __global_delete wrapper function to call.
+  auto GlobalDeleteCallee = M.getOrInsertFunction(GlobalDeleteName, FnTy);
+  auto *GlobalDeleteFn = cast<llvm::Function>(GlobalDeleteCallee.getCallee());
+
+  // Register this variant so we can emit a real forwarding body at end-of-TU
+  // if this TU contains any direct use of global ::operator delete.
+  CGM.addPendingGlobalDelete(GlobalDeleteFn, GlobOD);
+
+  return GlobalDeleteFn;
+}
+
 static void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
                                          CodeGenFunction &CGF,
                                          llvm::Value *ShouldDeleteCondition) {
@@ -1518,9 +1599,18 @@ static void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
       CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
 
       CGF.EmitBlock(GlobDelete);
+      // Use __global_delete wrapper instead of directly calling
+      // ::operator delete to match MSVC's behavior. See the doc comment on
+      // getOrCreateMSVCGlobalDeleteWrapper for details.
+      llvm::Constant *GlobalDeleteWrapper = getOrCreateMSVCGlobalDeleteWrapper(
+          CGF.CGM, Dtor->getGlobalArrayOperatorDelete());
+      // For dllexport classes, emit forwarding bodies since the dtor is
+      // exported and another TU may not provide the forwarding body.
+      if (Dtor->hasAttr<DLLExportAttr>())
+        CGF.CGM.noteDirectGlobalDelete();
       CGF.EmitDeleteCall(Dtor->getGlobalArrayOperatorDelete(), allocatedPtr,
                          CGF.getContext().getCanonicalTagType(ClassDecl),
-                         numElements, cookieSize);
+                         numElements, cookieSize, GlobalDeleteWrapper);
     }
   } else {
     // No operators delete[] were found, so emit a trap.
@@ -1747,9 +1837,12 @@ void EmitConditionalDtorDeleteCall(CodeGenFunction &CGF,
   CGF.Builder.CreateCondBr(ShouldCallDelete, continueBB, callDeleteBB);
 
   CGF.EmitBlock(callDeleteBB);
-  auto EmitDeleteAndGoToEnd = [&](const FunctionDecl *DeleteOp) {
+  auto EmitDeleteAndGoToEnd = [&](const FunctionDecl *DeleteOp,
+                                  llvm::Constant *CalleeOverride = nullptr) {
     CGF.EmitDeleteCall(DeleteOp, LoadThisForDtorDelete(CGF, Dtor),
-                       Context.getCanonicalTagType(ClassDecl));
+                       Context.getCanonicalTagType(ClassDecl),
+                       /*NumElements=*/nullptr, /*CookieSize=*/CharUnits(),
+                       CalleeOverride);
     if (ReturnAfterDelete)
       CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
     else
@@ -1773,7 +1866,16 @@ void EmitConditionalDtorDeleteCall(CodeGenFunction &CGF,
     CGF.Builder.CreateCondBr(ShouldCallGlobDelete, ClassDelete, GlobDelete);
     CGF.EmitBlock(GlobDelete);
 
-    EmitDeleteAndGoToEnd(GlobOD);
+    // Use __global_delete wrapper instead of directly calling
+    // ::operator delete to match MSVC's behavior. See the doc comment on
+    // getOrCreateMSVCGlobalDeleteWrapper for details.
+    llvm::Constant *GlobalDeleteWrapper =
+        getOrCreateMSVCGlobalDeleteWrapper(CGF.CGM, GlobOD);
+    // For dllexport classes, emit forwarding bodies since the dtor is
+    // exported and another TU may not provide the forwarding body.
+    if (Dtor->hasAttr<DLLExportAttr>())
+      CGF.CGM.noteDirectGlobalDelete();
+    EmitDeleteAndGoToEnd(GlobOD, GlobalDeleteWrapper);
     CGF.EmitBlock(ClassDelete);
   }
   EmitDeleteAndGoToEnd(OD);
@@ -1822,7 +1924,7 @@ public:
 
 class DeclAsInlineDebugLocation {
   CGDebugInfo *DI;
-  llvm::MDNode *InlinedAt;
+  llvm::DILocation *InlinedAt;
   std::optional<ApplyDebugLocation> Location;
 
 public:
@@ -2174,7 +2276,7 @@ void CodeGenFunction::EmitCXXAggrConstructorCall(
   // because of GCC extensions that permit zero-length arrays.  There
   // are probably legitimate places where we could assume that this
   // doesn't happen, but it's not clear that it's worth it.
-  llvm::BranchInst *zeroCheckBranch = nullptr;
+  llvm::CondBrInst *zeroCheckBranch = nullptr;
 
   // Optimize for a constant count.
   llvm::ConstantInt *constantCount = dyn_cast<llvm::ConstantInt>(numElements);
@@ -2304,11 +2406,11 @@ void CodeGenFunction::EmitCXXConstructorCall(
   // If this is a trivial constructor, emit a memcpy now before we lose
   // the alignment information on the argument.
   // FIXME: It would be better to preserve alignment information into CallArg.
-  if (isMemcpyEquivalentSpecialMember(CGM, D)) {
+  if (D->isMemcpyEquivalentSpecialMember(getContext())) {
     assert(E->getNumArgs() == 1 && "unexpected argcount for trivial ctor");
 
     const Expr *Arg = E->getArg(0);
-    LValue Src = EmitLValue(Arg);
+    LValue Src = EmitCheckedLValue(Arg, TCK_Load);
     CanQualType DestTy = getContext().getCanonicalTagType(D->getParent());
     LValue Dest = MakeAddrLValue(This, DestTy);
     EmitAggregateCopyCtor(Dest, Src, ThisAVS.mayOverlap());
@@ -2372,7 +2474,7 @@ void CodeGenFunction::EmitCXXConstructorCall(
   // If this is a trivial constructor, just emit what's needed. If this is a
   // union copy constructor, we must emit a memcpy, because the AST does not
   // model that copy.
-  if (isMemcpyEquivalentSpecialMember(CGM, D)) {
+  if (D->isMemcpyEquivalentSpecialMember(getContext())) {
     assert(Args.size() == 2 && "unexpected argcount for trivial ctor");
     QualType SrcTy = D->getParamDecl(0)->getType().getNonReferenceType();
     Address Src = makeNaturalAddressForPointer(
@@ -3107,7 +3209,7 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
   llvm::Metadata *MD = CGM.CreateMetadataIdentifierForType(T);
   llvm::Value *TypeId = llvm::MetadataAsValue::get(CGM.getLLVMContext(), MD);
 
-  auto CheckedLoadIntrinsic = CGM.getVTables().useRelativeLayout()
+  auto CheckedLoadIntrinsic = CGM.getLangOpts().RelativeCXXABIVTables
                                   ? llvm::Intrinsic::type_checked_load_relative
                                   : llvm::Intrinsic::type_checked_load;
   llvm::Value *CheckedLoad = Builder.CreateCall(
@@ -3216,7 +3318,7 @@ void CodeGenFunction::EmitLambdaStaticInvokeBody(const CXXMethodDecl *MD) {
 
   CanQualType LambdaType = getContext().getCanonicalTagType(Lambda);
   CanQualType ThisType = getContext().getPointerType(LambdaType);
-  Address ThisPtr = CreateMemTemp(LambdaType, "unused.capture");
+  Address ThisPtr = CreateMemTempWithoutCast(LambdaType, "unused.capture");
   CallArgs.add(RValue::get(ThisPtr.emitRawPointer(*this)), ThisType);
 
   EmitLambdaDelegatingInvokeBody(MD, CallArgs);

@@ -8,24 +8,24 @@
 
 !RUN: %flang_fc1 -emit-llvm -fopenmp %s -o - | FileCheck %s
 
-!CHECK-DAG: define internal void @_copy_box_Uxi32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
-!CHECK-DAG: define internal void @_copy_box_10xi32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
-!CHECK-DAG: define internal void @_copy_i64(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
-!CHECK-DAG: define internal void @_copy_box_Uxi64(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
-!CHECK-DAG: define internal void @_copy_f32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
-!CHECK-DAG: define internal void @_copy_box_2x3xf32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
-!CHECK-DAG: define internal void @_copy_z32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
-!CHECK-DAG: define internal void @_copy_box_10xz32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
-!CHECK-DAG: define internal void @_copy_l32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
-!CHECK-DAG: define internal void @_copy_box_5xl32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
-!CHECK-DAG: define internal void @_copy_c8x8(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
-!CHECK-DAG: define internal void @_copy_box_10xc8x8(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
-!CHECK-DAG: define internal void @_copy_c16x5(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
-!CHECK-DAG: define internal void @_copy_rec__QFtest_typesTdt(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
-!CHECK-DAG: define internal void @_copy_box_heap_Uxi32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
-!CHECK-DAG: define internal void @_copy_box_ptr_Uxc8x9(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_ref_box_Uxi32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_ref_box_10xi32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_ref_i64(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_ref_box_Uxi64(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_ref_f32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_ref_box_2x3xf32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_ref_z32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_ref_box_10xz32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_ref_l32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_ref_box_5xl32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_ref_c8x8(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_ref_box_10xc8x8(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_ref_c16x5(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_ref_rec__QFtest_typesTdt(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_ref_box_heap_Uxi32(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
+!CHECK-DAG: define internal void @_copy_ref_box_ptr_Uxc8x9(ptr {{[^%]*}}%{{.*}}, ptr {{[^%]*}}%{{.*}})
 
-!CHECK-LABEL: define internal void @_copy_i32(
+!CHECK-LABEL: define internal void @_copy_ref_i32(
 !CHECK-SAME:                         ptr {{[^%]*}}%[[DST:.*]], ptr {{[^%]*}}%[[SRC:.*]]){{.*}} {
 !CHECK-NEXT:    %[[SRC_VAL:.*]] = load i32, ptr %[[SRC]]
 !CHECK-NEXT:    store i32 %[[SRC_VAL]], ptr %[[DST]]
@@ -49,10 +49,10 @@
 !CHECK:       [[OMP_REGION_END]]:
 !CHECK:         %[[THREAD_NUM2:.*]] = call i32 @__kmpc_global_thread_num(ptr @[[LOC:.*]])
 !CHECK:         %[[DID_IT_VAL:.*]] = load i32, ptr %[[DID_IT]]
-!CHECK:         call void @__kmpc_copyprivate(ptr @[[LOC]], i32 %[[THREAD_NUM2]], i64 0, ptr %[[I]], ptr @_copy_i32, i32 %[[DID_IT_VAL]])
+!CHECK:         call void @__kmpc_copyprivate(ptr @[[LOC]], i32 %[[THREAD_NUM2]], i64 0, ptr %[[I]], ptr @_copy_ref_i32, i32 %[[DID_IT_VAL]])
 !CHECK:         %[[THREAD_NUM3:.*]] = call i32 @__kmpc_global_thread_num(ptr @[[LOC]])
 !CHECK:         %[[DID_IT_VAL2:.*]] = load i32, ptr %[[DID_IT]]
-!CHECK:         call void @__kmpc_copyprivate(ptr @[[LOC]], i32 %[[THREAD_NUM3]], i64 0, ptr %[[J]], ptr @_copy_i32, i32 %[[DID_IT_VAL2]])
+!CHECK:         call void @__kmpc_copyprivate(ptr @[[LOC]], i32 %[[THREAD_NUM3]], i64 0, ptr %[[J]], ptr @_copy_ref_i32, i32 %[[DID_IT_VAL2]])
 
 !CHECK:       [[OMP_REGION_BODY]]:
 !CHECK:         br label %[[OMP_SINGLE_REGION:.*]]

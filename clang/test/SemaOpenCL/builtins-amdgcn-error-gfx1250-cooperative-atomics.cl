@@ -48,7 +48,7 @@ v4i test_amdgcn_cooperative_atomic_load_8x16B_acq_rel(global v4i* gaddr)
 
 void test_amdgcn_cooperative_atomic_store_32x4B__sharedptr(local int* addr, int val)
 {
-  __builtin_amdgcn_cooperative_atomic_store_32x4B(addr, val, __ATOMIC_RELAXED,  ""); // expected-error {{cooperative atomic requires a global or generic pointer}}
+  __builtin_amdgcn_cooperative_atomic_store_32x4B(addr, val, __ATOMIC_RELAXED,  ""); // expected-error {{builtin requires a global or generic pointer}}
 }
 
 void test_amdgcn_cooperative_atomic_store_32x4B__ordering_not_imm(local int* addr, int ord, int val)

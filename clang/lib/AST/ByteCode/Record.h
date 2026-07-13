@@ -32,6 +32,10 @@ public:
 
     bool isBitField() const { return Decl->isBitField(); }
     bool isUnnamedBitField() const { return Decl->isUnnamedBitField(); }
+    unsigned bitWidth() const {
+      assert(isBitField());
+      return Decl->getBitWidthValue();
+    }
 
     Field(const FieldDecl *D, const Descriptor *Desc, unsigned Offset)
         : Decl(D), Desc(Desc), Offset(Offset) {}
@@ -75,6 +79,8 @@ public:
       return CXXDecl->getDestructor();
     return nullptr;
   }
+  /// If this record (or any of its bases) contains a field of type PT_Ptr.
+  bool hasPtrField() const { return HasPtrField; }
 
   /// Returns true for anonymous unions and records
   /// with no destructor or for those with a trivial destructor.
@@ -125,7 +131,7 @@ private:
   /// Constructor used by Program to create record descriptors.
   Record(const RecordDecl *, BaseList &&Bases, FieldList &&Fields,
          VirtualBaseList &&VirtualBases, unsigned VirtualSize,
-         unsigned BaseSize);
+         unsigned BaseSize, bool HasPtrField = true);
 
 private:
   friend class Program;
@@ -151,6 +157,8 @@ private:
   bool IsUnion;
   /// If this is an anonymous union.
   bool IsAnonymousUnion;
+  /// If any of the fields are pointers (or references).
+  bool HasPtrField = false;
 };
 
 } // namespace interp

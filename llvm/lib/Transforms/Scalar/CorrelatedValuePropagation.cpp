@@ -333,10 +333,17 @@ static bool constantFoldCmp(CmpInst *Cmp, LazyValueInfo *LVI) {
   if (!Res)
     return false;
 
-  ++NumCmps;
-  Cmp->replaceAllUsesWith(Res);
-  Cmp->eraseFromParent();
-  return true;
+  bool Changed = Cmp->replaceUsesWithIf(
+      Res, [](Use &U) { return !isa<AssumeInst>(U.getUser()); });
+  if (Cmp->use_empty()) {
+    Cmp->eraseFromParent();
+    Changed = true;
+  }
+
+  if (Changed)
+    ++NumCmps;
+
+  return Changed;
 }
 
 static bool processCmp(CmpInst *Cmp, LazyValueInfo *LVI) {
@@ -668,8 +675,7 @@ static bool processSaturatingInst(SaturatingInst *SI, LazyValueInfo *LVI) {
   ++NumSaturating;
 
   // See if we can infer the other no-wrap too.
-  if (auto *BO = dyn_cast<BinaryOperator>(BinOp))
-    processBinOp(BO, LVI);
+  processBinOp(BinOp, LVI);
 
   return true;
 }

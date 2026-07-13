@@ -111,6 +111,18 @@ define void @fp_atomics(ptr %x) {
   ; CHECK: atomicrmw volatile fminimum ptr %x, float 1.000000e+00 seq_cst
   atomicrmw volatile fminimum ptr %x, float 1.0 seq_cst
 
+  ; CHECK: atomicrmw fmaximumnum ptr %x, float 1.000000e+00 seq_cst
+  atomicrmw fmaximumnum ptr %x, float 1.0 seq_cst
+
+  ; CHECK: atomicrmw volatile fmaximumnum ptr %x, float 1.000000e+00 seq_cst
+  atomicrmw volatile fmaximumnum ptr %x, float 1.0 seq_cst
+
+  ; CHECK: atomicrmw fminimumnum ptr %x, float 1.000000e+00 seq_cst
+  atomicrmw fminimumnum ptr %x, float 1.0 seq_cst
+
+  ; CHECK: atomicrmw volatile fminimumnum ptr %x, float 1.000000e+00 seq_cst
+  atomicrmw volatile fminimumnum ptr %x, float 1.0 seq_cst
+
   ret void
 }
 
@@ -132,6 +144,64 @@ define void @fp_vector_atomicrmw(ptr %x, <2 x half> %val) {
 
   ; CHECK: %atomic.fminimum = atomicrmw fminimum ptr %x, <2 x half> %val seq_cst
   %atomic.fminimum = atomicrmw fminimum ptr %x, <2 x half> %val seq_cst
+
+  ; CHECK: %atomic.fmaximumnum = atomicrmw fmaximumnum ptr %x, <2 x half> %val seq_cst
+  %atomic.fmaximumnum = atomicrmw fmaximumnum ptr %x, <2 x half> %val seq_cst
+
+  ; CHECK: %atomic.fminimumnum = atomicrmw fminimumnum ptr %x, <2 x half> %val seq_cst
+  %atomic.fminimumnum = atomicrmw fminimumnum ptr %x, <2 x half> %val seq_cst
+
+  ; CHECK: %atomic.elem.fadd = atomicrmw elementwise fadd ptr %x, <2 x half> %val monotonic
+  %atomic.elem.fadd = atomicrmw elementwise fadd ptr %x, <2 x half> %val monotonic
+
+  ; CHECK: %atomic.elem.fadd.vol = atomicrmw volatile elementwise fadd ptr %x, <2 x half> %val seq_cst
+  %atomic.elem.fadd.vol = atomicrmw volatile elementwise fadd ptr %x, <2 x half> %val seq_cst
+
+  ret void
+}
+
+define void @int_vector_atomicrmw(ptr %x, <2 x i16> %val) {
+  ; CHECK: %atomic.add = atomicrmw add ptr %x, <2 x i16> %val seq_cst
+  %atomic.add = atomicrmw add ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.sub = atomicrmw sub ptr %x, <2 x i16> %val seq_cst
+  %atomic.sub = atomicrmw sub ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.and = atomicrmw and ptr %x, <2 x i16> %val seq_cst
+  %atomic.and = atomicrmw and ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.nand = atomicrmw nand ptr %x, <2 x i16> %val seq_cst
+  %atomic.nand = atomicrmw nand ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.or = atomicrmw or ptr %x, <2 x i16> %val seq_cst
+  %atomic.or = atomicrmw or ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.xor = atomicrmw xor ptr %x, <2 x i16> %val seq_cst
+  %atomic.xor = atomicrmw xor ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.max = atomicrmw max ptr %x, <2 x i16> %val seq_cst
+  %atomic.max = atomicrmw max ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.min = atomicrmw min ptr %x, <2 x i16> %val seq_cst
+  %atomic.min = atomicrmw min ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.umax = atomicrmw umax ptr %x, <2 x i16> %val seq_cst
+  %atomic.umax = atomicrmw umax ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.umin = atomicrmw umin ptr %x, <2 x i16> %val seq_cst
+  %atomic.umin = atomicrmw umin ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.uinc_wrap = atomicrmw uinc_wrap ptr %x, <2 x i16> %val seq_cst
+  %atomic.uinc_wrap = atomicrmw uinc_wrap ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.udec_wrap = atomicrmw udec_wrap ptr %x, <2 x i16> %val seq_cst
+  %atomic.udec_wrap = atomicrmw udec_wrap ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.usub_cond = atomicrmw usub_cond ptr %x, <2 x i16> %val seq_cst
+  %atomic.usub_cond = atomicrmw usub_cond ptr %x, <2 x i16> %val seq_cst
+
+  ; CHECK: %atomic.usub_sat = atomicrmw usub_sat ptr %x, <2 x i16> %val seq_cst
+  %atomic.usub_sat = atomicrmw usub_sat ptr %x, <2 x i16> %val seq_cst
 
   ret void
 }

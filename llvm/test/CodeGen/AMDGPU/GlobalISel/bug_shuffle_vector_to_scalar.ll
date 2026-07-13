@@ -8,16 +8,21 @@ define amdgpu_gs <4 x float> @_amdgpu_gs_main() {
 ; CHECK-LABEL: _amdgpu_gs_main:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 16
-; CHECK-NEXT:    ds_read2_b32 v[0:1], v0 offset1:1
+; CHECK-NEXT:    ds_read2_b32 v[3:4], v0 offset1:1
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    s_mov_b32 s1, s0
 ; CHECK-NEXT:    s_mov_b32 s2, s0
 ; CHECK-NEXT:    s_mov_b32 s3, s0
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v2, s[0:3], 0 idxen
+; CHECK-NEXT:    v_readfirstlane_b32 s4, v3
+; CHECK-NEXT:    v_mov_b32_e32 v0, s4
+; CHECK-NEXT:    v_mov_b32_e32 v1, s5
+; CHECK-NEXT:    v_mov_b32_e32 v2, s6
+; CHECK-NEXT:    v_mov_b32_e32 v3, s7
+; CHECK-NEXT:    v_mov_b32_e32 v5, 0
+; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v5, s[0:3], 0 idxen
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    v_mov_b32_e32 v0, v1
+; CHECK-NEXT:    v_mov_b32_e32 v0, v4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
 bb:

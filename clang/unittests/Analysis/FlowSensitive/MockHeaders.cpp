@@ -607,10 +607,25 @@ struct __optional_destruct_base {
 template <class _Tp>
 struct __optional_storage_base : __optional_destruct_base<_Tp> {
   constexpr bool has_value() const noexcept;
+
+  const _Tp& operator*() const&;
+  _Tp& operator*() &;
+  const _Tp&& operator*() const&&;
+  _Tp&& operator*() &&;
+
+  const _Tp* operator->() const;
+  _Tp* operator->();
+
+  const _Tp& value() const&;
+  _Tp& value() &;
+  const _Tp&& value() const&&;
+  _Tp&& value() &&;
 };
 
+// Note: the inheritance may or may not be private:
+// https://github.com/llvm/llvm-project/issues/187788
 template <typename _Tp>
-class optional : private __optional_storage_base<_Tp> {
+class optional : public __optional_storage_base<_Tp> {
   using __base = __optional_storage_base<_Tp>;
 
  public:
@@ -744,19 +759,6 @@ class optional : private __optional_storage_base<_Tp> {
                                      template __enable_assign<_Up>(),
                                  int> = 0>
   constexpr optional& operator=(optional<_Up>&& __v);
-
-  const _Tp& operator*() const&;
-  _Tp& operator*() &;
-  const _Tp&& operator*() const&&;
-  _Tp&& operator*() &&;
-
-  const _Tp* operator->() const;
-  _Tp* operator->();
-
-  const _Tp& value() const&;
-  _Tp& value() &;
-  const _Tp&& value() const&&;
-  _Tp&& value() &&;
 
   template <typename U>
   constexpr _Tp value_or(U&& v) const&;
@@ -1715,7 +1717,48 @@ bool operator==(const StatusOr<T> &lhs, const StatusOr<T> &rhs);
 template <typename T>
 bool operator!=(const StatusOr<T> &lhs, const StatusOr<T> &rhs);
 
+using StatusBuilder = Status;
+namespace status_macro_internal {
+class ReturnIfErrorAdaptor {
+ public:
+  explicit ReturnIfErrorAdaptor(
+      const absl::Status& status,
+      absl::SourceLocation loc = absl::SourceLocation::current());
+
+  explicit ReturnIfErrorAdaptor(
+      absl::Status&& status,
+      absl::SourceLocation loc = absl::SourceLocation::current());
+
+  ~ReturnIfErrorAdaptor();
+
+  explicit operator bool() const;
+  StatusBuilder Consume();
+};
+
+ReturnIfErrorAdaptor MacroAdaptor(const absl::Status& s,
+                                         absl::SourceLocation loc);
+ReturnIfErrorAdaptor MacroAdaptor(absl::Status&& s,
+                                         absl::SourceLocation loc);
+}
+
 } // namespace absl
+
+#define ABSL_INTERNAL_STATUS_MACROS_IMPL_ELSE_BLOCKER_ \
+  switch (0)                                           \
+  case 0:                                              \
+  default:  // NOLINT
+
+#define ABSL_INTERNAL_STATUS_MACROS_RETURN_IF_ERROR_IMPL_(return_keyword, \
+                                                          expr)           \
+  ABSL_INTERNAL_STATUS_MACROS_IMPL_ELSE_BLOCKER_                          \
+  if (auto status_macro_internal_adaptor =                                \
+          absl::status_macro_internal::MacroAdaptor(                      \
+              (expr), absl::SourceLocation::current())) {                 \
+  } else /* NOLINT */                                                     \
+    return_keyword status_macro_internal_adaptor.Consume()
+
+#define ABSL_RETURN_IF_ERROR(expr) \
+  ABSL_INTERNAL_STATUS_MACROS_RETURN_IF_ERROR_IMPL_(return, expr)
 
 #endif // STATUSOR_H_
 )cc";

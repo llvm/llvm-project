@@ -34,6 +34,8 @@ if (MSVC)
   set_source_files_properties(ConstantFolding.cpp PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   set_source_files_properties(ConstantFolding.cpp PROPERTIES COMPILE_OPTIONS "-ftrapping-math")
+  # Clang's -ftrapping-math may conflict with precompiled headers too, #183643.
+  set_source_files_properties(ConstantFolding.cpp PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 endif()
 
 add_llvm_component_library(LLVMAnalysis

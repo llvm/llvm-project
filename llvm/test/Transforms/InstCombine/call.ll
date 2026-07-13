@@ -247,7 +247,7 @@ define ptr @test11_mixed_as() {
 ; Return type that's a vector of pointers
 define <2 x ptr> @test12a() {
 ; CHECK-LABEL: define <2 x ptr> @test12a() {
-; CHECK-NEXT:    ret <2 x ptr> zeroinitializer
+; CHECK-NEXT:    ret <2 x ptr> splat (ptr null)
 ;
   ret <2 x ptr> zeroinitializer
 }
@@ -263,7 +263,7 @@ define <2 x ptr> @test12() {
 
 define <2 x ptr addrspace(1)> @test12a_mixed_as() {
 ; CHECK-LABEL: define <2 x ptr addrspace(1)> @test12a_mixed_as() {
-; CHECK-NEXT:    ret <2 x ptr addrspace(1)> zeroinitializer
+; CHECK-NEXT:    ret <2 x ptr addrspace(1)> splat (ptr addrspace(1) null)
 ;
   ret <2 x ptr addrspace(1)> zeroinitializer
 }

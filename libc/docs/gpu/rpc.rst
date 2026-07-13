@@ -4,10 +4,6 @@
 Remote Procedure Calls
 ======================
 
-.. contents:: Table of Contents
-  :depth: 4
-  :local:
-
 Remote Procedure Call Implementation
 ====================================
 
@@ -181,7 +177,7 @@ than submitting asynchronously.
 
   // Client-side dispatch.
   double fn(int x, long y, char c, double d) {
-    return rpc::dispatch<OPCODE>(client, fn, x, y, c, d);
+    return rpc::dispatch<OPCODE, fn>(client, x, y, c, d);
   }
 
   // Server-side handling.

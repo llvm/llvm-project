@@ -25,6 +25,7 @@ class MCInst;
 class MCSubtargetInfo;
 class MCStreamer;
 class MCSymbol;
+class Twine;
 
 class MCLFIRewriter {
 private:
@@ -40,7 +41,8 @@ public:
                 std::unique_ptr<MCInstrInfo> &&II)
       : Ctx(Ctx), InstInfo(std::move(II)), RegInfo(std::move(RI)) {}
 
-  LLVM_ABI void error(const MCInst &Inst, const char Msg[]);
+  LLVM_ABI void error(const MCInst &Inst, const Twine &Msg);
+  LLVM_ABI void warning(const MCInst &Inst, const Twine &Msg);
 
   void disable() { Enabled = false; }
   void enable() { Enabled = true; }
@@ -54,6 +56,8 @@ public:
   LLVM_ABI bool mayStore(const MCInst &Inst) const;
 
   LLVM_ABI bool mayModifyRegister(const MCInst &Inst, MCRegister Reg) const;
+  LLVM_ABI bool explicitlyModifiesRegister(const MCInst &Inst,
+                                           MCRegister Reg) const;
 
   virtual ~MCLFIRewriter() = default;
   virtual bool rewriteInst(const MCInst &Inst, MCStreamer &Out,

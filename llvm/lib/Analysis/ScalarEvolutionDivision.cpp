@@ -149,7 +149,7 @@ void SCEVDivision::visitAddRecExpr(const SCEVAddRecExpr *Numerator) {
 }
 
 void SCEVDivision::visitAddExpr(const SCEVAddExpr *Numerator) {
-  SmallVector<const SCEV *, 2> Qs, Rs;
+  SmallVector<SCEVUse, 2> Qs, Rs;
   Type *Ty = Denominator->getType();
 
   for (const SCEV *Op : Numerator->operands()) {
@@ -175,7 +175,7 @@ void SCEVDivision::visitAddExpr(const SCEVAddExpr *Numerator) {
 }
 
 void SCEVDivision::visitMulExpr(const SCEVMulExpr *Numerator) {
-  SmallVector<const SCEV *, 2> Qs;
+  SmallVector<SCEVUse, 2> Qs;
   Type *Ty = Denominator->getType();
 
   bool FoundDenominatorTerm = false;

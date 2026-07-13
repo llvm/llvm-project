@@ -10,9 +10,9 @@ define <2 x float> @v_repeat_divisor_f32_x2(float %x, float %y, float %D) #0 {
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_div_scale_f32 v3, s[4:5], v2, v2, v0
 ; GFX6-NEXT:    v_rcp_f32_e32 v4, v3
-; GFX6-NEXT:    v_fma_f32 v5, -v3, v4, 1.0
-; GFX6-NEXT:    v_fma_f32 v4, v5, v4, v4
 ; GFX6-NEXT:    v_div_scale_f32 v5, vcc, v0, v2, v0
+; GFX6-NEXT:    v_fma_f32 v6, -v3, v4, 1.0
+; GFX6-NEXT:    v_fma_f32 v4, v6, v4, v4
 ; GFX6-NEXT:    v_mul_f32_e32 v6, v5, v4
 ; GFX6-NEXT:    v_fma_f32 v7, -v3, v6, v5
 ; GFX6-NEXT:    v_fma_f32 v6, v7, v4, v6
@@ -42,8 +42,8 @@ define <2 x float> @v_repeat_divisor_f32_x2(float %x, float %y, float %D) #0 {
 ; GFX9-NEXT:    v_rcp_f32_e32 v7, v3
 ; GFX9-NEXT:    v_rcp_f32_e32 v8, v4
 ; GFX9-NEXT:    v_fma_f32 v9, -v3, v7, 1.0
-; GFX9-NEXT:    v_fma_f32 v7, v9, v7, v7
 ; GFX9-NEXT:    v_fma_f32 v10, -v4, v8, 1.0
+; GFX9-NEXT:    v_fma_f32 v7, v9, v7, v7
 ; GFX9-NEXT:    v_fma_f32 v8, v10, v8, v8
 ; GFX9-NEXT:    v_mul_f32_e32 v9, v5, v7
 ; GFX9-NEXT:    v_mul_f32_e32 v10, v6, v8
@@ -108,9 +108,9 @@ define <2 x float> @v_repeat_divisor_f32_x2_arcp(float %x, float %y, float %D) #
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_div_scale_f32 v3, s[4:5], v2, v2, 1.0
 ; GFX6-NEXT:    v_rcp_f32_e32 v4, v3
-; GFX6-NEXT:    v_fma_f32 v5, -v3, v4, 1.0
-; GFX6-NEXT:    v_fma_f32 v4, v5, v4, v4
 ; GFX6-NEXT:    v_div_scale_f32 v5, vcc, 1.0, v2, 1.0
+; GFX6-NEXT:    v_fma_f32 v6, -v3, v4, 1.0
+; GFX6-NEXT:    v_fma_f32 v4, v6, v4, v4
 ; GFX6-NEXT:    v_mul_f32_e32 v6, v5, v4
 ; GFX6-NEXT:    v_fma_f32 v7, -v3, v6, v5
 ; GFX6-NEXT:    v_fma_f32 v6, v7, v4, v6
@@ -310,15 +310,15 @@ define <2 x double> @v_repeat_divisor_f64_x2_arcp(double %x, double %y, double %
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_div_scale_f64 v[6:7], s[4:5], v[4:5], v[4:5], 1.0
+; GFX6-NEXT:    s_mov_b32 s6, 0x3ff00000
 ; GFX6-NEXT:    v_rcp_f64_e32 v[8:9], v[6:7]
 ; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v7
 ; GFX6-NEXT:    v_fma_f64 v[10:11], -v[6:7], v[8:9], 1.0
 ; GFX6-NEXT:    v_fma_f64 v[8:9], v[8:9], v[10:11], v[8:9]
 ; GFX6-NEXT:    v_div_scale_f64 v[10:11], s[4:5], 1.0, v[4:5], 1.0
 ; GFX6-NEXT:    v_fma_f64 v[12:13], -v[6:7], v[8:9], 1.0
-; GFX6-NEXT:    s_mov_b32 s4, 0x3ff00000
 ; GFX6-NEXT:    v_fma_f64 v[8:9], v[8:9], v[12:13], v[8:9]
-; GFX6-NEXT:    v_cmp_eq_u32_e64 s[4:5], s4, v11
+; GFX6-NEXT:    v_cmp_eq_u32_e64 s[4:5], s6, v11
 ; GFX6-NEXT:    v_mul_f64 v[12:13], v[10:11], v[8:9]
 ; GFX6-NEXT:    s_xor_b64 vcc, s[4:5], vcc
 ; GFX6-NEXT:    v_fma_f64 v[6:7], -v[6:7], v[12:13], v[10:11]
@@ -638,24 +638,24 @@ define <4 x float> @v_repeat_divisor_v2f32_x2(<2 x float> %x, <2 x float> %y, <2
 ; GFX9-NEXT:    v_rcp_f32_e32 v10, v6
 ; GFX9-NEXT:    v_rcp_f32_e32 v11, v7
 ; GFX9-NEXT:    v_fma_f32 v12, -v6, v10, 1.0
-; GFX9-NEXT:    v_fma_f32 v10, v12, v10, v10
 ; GFX9-NEXT:    v_fma_f32 v13, -v7, v11, 1.0
+; GFX9-NEXT:    v_fma_f32 v10, v12, v10, v10
 ; GFX9-NEXT:    v_fma_f32 v11, v13, v11, v11
 ; GFX9-NEXT:    v_mul_f32_e32 v12, v8, v10
 ; GFX9-NEXT:    v_mul_f32_e32 v13, v9, v11
 ; GFX9-NEXT:    v_fma_f32 v14, -v6, v12, v8
 ; GFX9-NEXT:    v_fma_f32 v15, -v7, v13, v9
 ; GFX9-NEXT:    v_fma_f32 v12, v14, v10, v12
+; GFX9-NEXT:    v_fma_f32 v13, v15, v11, v13
 ; GFX9-NEXT:    v_fma_f32 v6, -v6, v12, v8
-; GFX9-NEXT:    v_fma_f32 v8, v15, v11, v13
+; GFX9-NEXT:    v_fma_f32 v7, -v7, v13, v9
 ; GFX9-NEXT:    v_div_fmas_f32 v6, v6, v10, v12
-; GFX9-NEXT:    v_fma_f32 v7, -v7, v8, v9
 ; GFX9-NEXT:    s_mov_b64 vcc, s[4:5]
-; GFX9-NEXT:    v_div_fmas_f32 v7, v7, v11, v8
+; GFX9-NEXT:    v_div_fmas_f32 v7, v7, v11, v13
 ; GFX9-NEXT:    v_div_fixup_f32 v4, v6, v4, 1.0
 ; GFX9-NEXT:    v_mul_f32_e32 v0, v0, v4
-; GFX9-NEXT:    v_mul_f32_e32 v2, v2, v4
 ; GFX9-NEXT:    v_div_fixup_f32 v5, v7, v5, 1.0
+; GFX9-NEXT:    v_mul_f32_e32 v2, v2, v4
 ; GFX9-NEXT:    v_mul_f32_e32 v1, v1, v5
 ; GFX9-NEXT:    v_mul_f32_e32 v3, v3, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -791,47 +791,47 @@ define <4 x half> @v_repeat_divisor_v2f16_x2(<2 x half> %x, <2 x half> %y, <2 x 
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX6-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v6, v6
-; GFX6-NEXT:    v_div_scale_f32 v4, s[4:5], v3, v3, 1.0
-; GFX6-NEXT:    v_rcp_f32_e32 v5, v4
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-NEXT:    v_fma_f32 v7, -v4, v5, 1.0
-; GFX6-NEXT:    v_fma_f32 v5, v7, v5, v5
+; GFX6-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v4, v4
+; GFX6-NEXT:    v_div_scale_f32 v5, s[4:5], v3, v3, 1.0
+; GFX6-NEXT:    v_rcp_f32_e32 v6, v5
 ; GFX6-NEXT:    v_div_scale_f32 v7, vcc, 1.0, v3, 1.0
-; GFX6-NEXT:    v_mul_f32_e32 v8, v7, v5
-; GFX6-NEXT:    v_fma_f32 v9, -v4, v8, v7
-; GFX6-NEXT:    v_fma_f32 v8, v9, v5, v8
-; GFX6-NEXT:    v_fma_f32 v4, -v4, v8, v7
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX6-NEXT:    v_fma_f32 v8, -v5, v6, 1.0
+; GFX6-NEXT:    v_fma_f32 v6, v8, v6, v6
+; GFX6-NEXT:    v_mul_f32_e32 v8, v7, v6
+; GFX6-NEXT:    v_fma_f32 v9, -v5, v8, v7
+; GFX6-NEXT:    v_fma_f32 v8, v9, v6, v8
+; GFX6-NEXT:    v_fma_f32 v5, -v5, v8, v7
 ; GFX6-NEXT:    v_div_scale_f32 v7, s[4:5], v2, v2, 1.0
 ; GFX6-NEXT:    v_rcp_f32_e32 v9, v7
-; GFX6-NEXT:    v_div_fmas_f32 v4, v4, v5, v8
-; GFX6-NEXT:    v_div_fixup_f32 v3, v4, v3, 1.0
-; GFX6-NEXT:    v_div_scale_f32 v5, vcc, 1.0, v2, 1.0
-; GFX6-NEXT:    v_fma_f32 v4, -v7, v9, 1.0
-; GFX6-NEXT:    v_fma_f32 v4, v4, v9, v9
-; GFX6-NEXT:    v_mul_f32_e32 v8, v5, v4
-; GFX6-NEXT:    v_fma_f32 v9, -v7, v8, v5
-; GFX6-NEXT:    v_fma_f32 v8, v9, v4, v8
-; GFX6-NEXT:    v_fma_f32 v5, -v7, v8, v5
-; GFX6-NEXT:    v_div_fmas_f32 v4, v5, v4, v8
+; GFX6-NEXT:    v_div_fmas_f32 v5, v5, v6, v8
+; GFX6-NEXT:    v_div_fixup_f32 v3, v5, v3, 1.0
+; GFX6-NEXT:    v_div_scale_f32 v6, vcc, 1.0, v2, 1.0
+; GFX6-NEXT:    v_fma_f32 v5, -v7, v9, 1.0
+; GFX6-NEXT:    v_fma_f32 v5, v5, v9, v9
+; GFX6-NEXT:    v_mul_f32_e32 v8, v6, v5
+; GFX6-NEXT:    v_fma_f32 v9, -v7, v8, v6
+; GFX6-NEXT:    v_fma_f32 v8, v9, v5, v8
+; GFX6-NEXT:    v_fma_f32 v6, -v7, v8, v6
+; GFX6-NEXT:    v_div_fmas_f32 v5, v6, v5, v8
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX6-NEXT:    v_div_fixup_f32 v2, v4, v2, 1.0
+; GFX6-NEXT:    v_div_fixup_f32 v2, v5, v2, 1.0
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX6-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
+; GFX6-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v4, v4
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v5, v5
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX6-NEXT:    v_mul_f32_e32 v5, v6, v3
-; GFX6-NEXT:    v_cvt_f16_f32_e32 v5, v5
+; GFX6-NEXT:    v_mul_f32_e32 v4, v4, v3
+; GFX6-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; GFX6-NEXT:    v_mul_f32_e32 v0, v0, v2
-; GFX6-NEXT:    v_mul_f32_e32 v3, v4, v3
+; GFX6-NEXT:    v_mul_f32_e32 v3, v5, v3
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; GFX6-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; GFX6-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX6-NEXT:    v_lshlrev_b32_e32 v2, 16, v5
+; GFX6-NEXT:    v_lshlrev_b32_e32 v2, 16, v4
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
 ; GFX6-NEXT:    v_or_b32_e32 v1, v1, v2
@@ -886,10 +886,10 @@ define <6 x half> @v_repeat_divisor_v3f16_x2(<3 x half> %x, <3 x half> %y, <3 x 
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-NEXT:    v_div_scale_f32 v7, s[4:5], v6, v6, 1.0
 ; GFX6-NEXT:    v_rcp_f32_e32 v8, v7
-; GFX6-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX6-NEXT:    v_fma_f32 v9, -v7, v8, 1.0
-; GFX6-NEXT:    v_fma_f32 v8, v9, v8, v8
 ; GFX6-NEXT:    v_div_scale_f32 v9, vcc, 1.0, v6, 1.0
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; GFX6-NEXT:    v_fma_f32 v10, -v7, v8, 1.0
+; GFX6-NEXT:    v_fma_f32 v8, v10, v8, v8
 ; GFX6-NEXT:    v_mul_f32_e32 v10, v9, v8
 ; GFX6-NEXT:    v_fma_f32 v11, -v7, v10, v9
 ; GFX6-NEXT:    v_fma_f32 v10, v11, v8, v10

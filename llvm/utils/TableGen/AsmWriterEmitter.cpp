@@ -402,7 +402,7 @@ void AsmWriterEmitter::EmitGetMnemonic(
 
     // If we don't have enough bits for this operand, don't include it.
     if (NumBits > BitsLeft) {
-      LLVM_DEBUG(errs() << "Not enough bits to densely encode " << NumBits
+      LLVM_DEBUG(dbgs() << "Not enough bits to densely encode " << NumBits
                         << " more bits\n");
       break;
     }

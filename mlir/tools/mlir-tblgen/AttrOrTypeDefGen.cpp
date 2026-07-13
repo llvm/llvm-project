@@ -1039,6 +1039,38 @@ static const char *const dialectDynamicTypePrinterDispatch = R"(
     return;
 )";
 
+/// Checks whether a declarative assembly format string needs a leading space
+/// between the mnemonic and the format body in the generated printer.
+///
+/// Returns false for formats starting with punctuation or a space-eraser
+/// directive that should attach directly to the mnemonic (e.g., `<`, `(`,
+/// ``).
+///
+/// This inspects the raw format string rather than parsing it into a DefFormat.
+/// Parsing would require access to the format element types (which are local to
+/// `AttrOrTypeFormatGen.cpp`) and would re-parse every format string just to
+/// check its first token -- an overkill for a simple spacing heuristic.
+/// The only case this cannot distinguish structurally is an optional group
+/// whose then-branch starts with punctuation, but parsing has the same
+/// limitation since the group's anchor is not known at codegen time.
+static bool needsLeadingSpace(const AttrOrTypeDef &def) {
+  StringRef fmtStr = def.getAssemblyFormat()->trim();
+  if (fmtStr.empty())
+    return false;
+
+  // '(' starts an optional group.
+  if (fmtStr.front() == '(')
+    return false;
+
+  if (fmtStr.front() != '`' || fmtStr.size() < 2)
+    return true;
+
+  // Backtick-quoted literals (e.g., `<`, `{`, `[`) or space-eraser (``) -- no
+  // leading space. Bare '<', '{', '[' cannot appear at position 0 of a valid
+  // format.
+  return !llvm::is_contained("<{([`", fmtStr[1]);
+}
+
 /// Emit the dialect printer/parser dispatcher. User's code should call these
 /// functions from their dialect's print/parse methods.
 void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
@@ -1083,9 +1115,10 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
       return ::mlir::success();
     })
 )";
-  for (auto &def : defs) {
+  for (const AttrOrTypeDef &def : defs) {
     if (!def.getMnemonic())
       continue;
+
     bool hasParserPrinterDecl =
         def.hasCustomAssemblyFormat() || def.getAssemblyFormat();
     std::string defClass = strfmt(
@@ -1099,9 +1132,24 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
     parse.body() << llvm::formatv(getValueForMnemonic, defClass, parseOrGet);
 
     // If the def has no parameters and no printer, just print the mnemonic.
-    StringRef printDef = "";
-    if (hasParserPrinterDecl)
-      printDef = "\nt.print(printer);";
+    if (!hasParserPrinterDecl) {
+      printer.body() << llvm::formatv(printValue, defClass, "");
+      continue;
+    }
+
+    // Custom format: `print()` controls its own spacing.
+    if (def.hasCustomAssemblyFormat()) {
+      printer.body() << llvm::formatv(printValue, defClass,
+                                      "\nt.print(printer);");
+      continue;
+    }
+
+    // Declarative format: because `print()` doesn't emit a leading space,
+    // add one here unless the format starts with punctuation or a
+    // space-eraser directive that should attach directly to the mnemonic.
+    StringRef printDef = needsLeadingSpace(def)
+                             ? "\nprinter << ' ';\nt.print(printer);"
+                             : "\nt.print(printer);";
     printer.body() << llvm::formatv(printValue, defClass, printDef);
   }
   parse.body() << "    .Default([&](llvm::StringRef keyword, llvm::SMLoc) {\n"

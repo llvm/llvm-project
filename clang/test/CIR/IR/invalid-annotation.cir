@@ -1,0 +1,15 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+
+// expected-error @below {{annotation args must be StringAttr or IntegerAttr}}
+cir.func @bad_type_arg() attributes {a = #cir.annotation<"x", [!s32i]>} {
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+// expected-error @below {{annotation args must be StringAttr or IntegerAttr}}
+cir.global external @g = #cir.int<0> : !s32i [#cir.annotation<"x", [#cir.int<1> : !s32i]>]

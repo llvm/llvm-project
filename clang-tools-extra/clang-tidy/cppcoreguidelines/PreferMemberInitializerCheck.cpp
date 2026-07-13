@@ -251,12 +251,12 @@ void PreferMemberInitializerCheck::check(
           // comma.
           InsertPrefix = ", ";
         } else {
-          InsertPos = Lexer::getLocForEndOfToken(
-              Ctor->getTypeSourceInfo()
-                  ->getTypeLoc()
-                  .getAs<clang::FunctionTypeLoc>()
-                  .getLocalRangeEnd(),
-              0, *Result.SourceManager, getLangOpts());
+          InsertPos = Lexer::getLocForEndOfToken(Ctor->getTypeSourceInfo()
+                                                     ->getTypeLoc()
+                                                     .getAs<FunctionTypeLoc>()
+                                                     .getLocalRangeEnd(),
+                                                 0, *Result.SourceManager,
+                                                 getLangOpts());
 
           // If this is first time in the loop, there are no initializers so
           // `:` declares member initialization list. If this is a

@@ -66,7 +66,7 @@ template <typename ThisT, typename ParentT> class RTTIExtends;
 /// type comparisons.
 class RTTIRoot {
 public:
-  virtual ~RTTIRoot() = default;
+  virtual ~RTTIRoot() noexcept = default;
 
   /// Returns the class ID for this type.
   static const void *classID() noexcept { return &ID; }
@@ -87,7 +87,7 @@ public:
   static bool classof(const RTTIRoot *R) noexcept { return R->isA<RTTIRoot>(); }
 
 private:
-  virtual void anchor();
+  virtual void anchor() noexcept;
 
   static char ID;
 };
@@ -129,7 +129,7 @@ public:
     return ClassID == classID() || ParentT::isA(ClassID);
   }
 
-  static bool classof(const RTTIRoot *R) { return R->isA<ThisT>(); }
+  static bool classof(const RTTIRoot *R) noexcept { return R->isA<ThisT>(); }
 };
 
 template <typename ThisT, typename ParentT>

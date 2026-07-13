@@ -52,7 +52,7 @@ void StructPackAlignCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // Get sizing info for the struct.
-  llvm::SmallVector<std::pair<unsigned int, unsigned int>, 10> FieldSizes;
+  SmallVector<std::pair<unsigned int, unsigned int>, 10> FieldSizes;
   unsigned int TotalBitSize = 0;
   for (const FieldDecl *StructField : Struct->fields()) {
     // For each StructField, record how big it is (in bits).
@@ -73,7 +73,7 @@ void StructPackAlignCheck::check(const MatchFinder::MatchResult &Result) {
   const CharUnits CurrSize =
       Result.Context->getASTRecordLayout(Struct).getSize();
   const CharUnits MinByteSize =
-      CharUnits::fromQuantity(std::max<clang::CharUnits::QuantityType>(
+      CharUnits::fromQuantity(std::max<CharUnits::QuantityType>(
           std::ceil(static_cast<float>(TotalBitSize) / CharSize), 1));
   const CharUnits MaxAlign = CharUnits::fromQuantity(
       std::ceil(static_cast<float>(Struct->getMaxAlignment()) / CharSize));

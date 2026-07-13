@@ -164,13 +164,14 @@ namespace llvm {
     Invalid = 2, ///< Not used.
   };
 
-  enum class WinX64EHUnwindV2Mode {
-    // Don't use unwind v2 (i.e., use v1).
-    Disabled = 0,
-    // Use unwind v2 here possible, otherwise fallback to v1.
-    BestEffort = 1,
-    // Use unwind v2 everywhere, otherwise raise an error.
-    Required = 2,
+  enum class WinX64EHUnwindMode {
+    Default = 4, // Toolchain default/auto.
+                 // Using '4' to avoid renumbering the existing values.
+
+    V1 = 0,           // V1 unwind info.
+    V2BestEffort = 1, // V2 where possible, fall back to V1.
+    V2Required = 2,   // V2 required — error if a function cannot use V2.
+    V3 = 3,           // V3 unwind info.
   };
 
   enum class ControlFlowGuardMode {
@@ -181,6 +182,13 @@ namespace llvm {
     TableOnly = 1,
     // Enable Control Flow Guard checks and emit the tables.
     Enabled = 2,
+  };
+
+  enum class ControlFlowGuardMechanism {
+    // Choose the mechanism automatically based on the target.
+    Automatic = 0,
+    Check = 1,
+    Dispatch = 2,
   };
 
   } // namespace llvm

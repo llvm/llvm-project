@@ -100,8 +100,9 @@ static inline UnsignedOrNone getStackIndexOfNearestEnclosingCaptureReadyLambda(
     // innermost nested lambda are dependent (otherwise we wouldn't have
     // arrived here) - so we don't yet have a lambda that can capture the
     // variable.
-    if (IsCapturingVariable &&
-        VarToCapture->getDeclContext()->Equals(EnclosingDC))
+    if (IsCapturingVariable && VarToCapture->getDeclContext()
+                                   ->getEnclosingNonExpansionStatementContext()
+                                   ->Equals(EnclosingDC))
       return NoLambdaIsCaptureReady;
 
     // For an enclosing lambda to be capture ready for an entity, all
@@ -126,7 +127,8 @@ static inline UnsignedOrNone getStackIndexOfNearestEnclosingCaptureReadyLambda(
       if (IsCapturingThis && !LSI->isCXXThisCaptured())
         return NoLambdaIsCaptureReady;
     }
-    EnclosingDC = getLambdaAwareParentOfDeclContext(EnclosingDC);
+    EnclosingDC = getLambdaAwareParentOfDeclContext(EnclosingDC)
+                      ->getEnclosingNonExpansionStatementContext();
 
     assert(CurScopeIndex);
     --CurScopeIndex;
@@ -190,11 +192,6 @@ UnsignedOrNone clang::getStackIndexOfNearestEnclosingCaptureCapableLambda(
     return NoLambdaIsCaptureCapable;
 
   const unsigned IndexOfCaptureReadyLambda = *OptionalStackIndex;
-  assert(((IndexOfCaptureReadyLambda != (FunctionScopes.size() - 1)) ||
-          S.getCurGenericLambda()) &&
-         "The capture ready lambda for a potential capture can only be the "
-         "current lambda if it is a generic lambda");
-
   const sema::LambdaScopeInfo *const CaptureReadyLambdaLSI =
       cast<sema::LambdaScopeInfo>(FunctionScopes[IndexOfCaptureReadyLambda]);
 
@@ -248,7 +245,7 @@ CXXRecordDecl *
 Sema::createLambdaClosureType(SourceRange IntroducerRange, TypeSourceInfo *Info,
                               unsigned LambdaDependencyKind,
                               LambdaCaptureDefault CaptureDefault) {
-  DeclContext *DC = CurContext;
+  DeclContext *DC = CurContext->getEnclosingNonExpansionStatementContext();
 
   bool IsGenericLambda =
       Info && getGenericLambdaTemplateParameterList(getCurLambda(), *this);
@@ -327,7 +324,8 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
       }
     } else if (isa<FieldDecl>(ManglingContextDecl)) {
       return DataMember;
-    } else if (isa<ImplicitConceptSpecializationDecl>(ManglingContextDecl)) {
+    } else if (isa<ImplicitConceptSpecializationDecl, ConceptDecl>(
+                   ManglingContextDecl)) {
       return Concept;
     }
 
@@ -491,11 +489,6 @@ bool Sema::DiagnoseInvalidExplicitObjectParameterInLambda(
 void Sema::handleLambdaNumbering(
     CXXRecordDecl *Class, CXXMethodDecl *Method,
     std::optional<CXXRecordDecl::LambdaNumbering> NumberingOverride) {
-  if (NumberingOverride) {
-    Class->setLambdaNumbering(*NumberingOverride);
-    return;
-  }
-
   ContextRAII ManglingContext(*this, Class->getDeclContext());
 
   auto getMangleNumberingContext =
@@ -512,10 +505,23 @@ void Sema::handleLambdaNumbering(
     return &Context.getManglingNumberContext(DC);
   };
 
-  CXXRecordDecl::LambdaNumbering Numbering;
   MangleNumberingContext *MCtx;
-  std::tie(MCtx, Numbering.ContextDecl) =
+  Decl *ContextDecl;
+  std::tie(MCtx, ContextDecl) =
       getCurrentMangleNumberContext(Class->getDeclContext());
+  // getManglingNumber(Method) below may trigger mangling of dependent types
+  // that reference init-captures. Publish the lambda context declaration early
+  // so such mangling can resolve the surrounding context without recursing
+  // through the lambda call operator. This avoids publishing provisional
+  // numbering state before final numbering is assigned below.
+  if (ContextDecl)
+    Class->setLambdaContextDecl(ContextDecl);
+  if (NumberingOverride) {
+    Class->setLambdaNumbering(*NumberingOverride);
+    return;
+  }
+
+  CXXRecordDecl::LambdaNumbering Numbering;
   if (!MCtx && (getLangOpts().CUDA || getLangOpts().SYCLIsDevice ||
                 getLangOpts().SYCLIsHost)) {
     // Force lambda numbering in CUDA/HIP as we need to name lambdas following
@@ -525,7 +531,7 @@ void Sema::handleLambdaNumbering(
     // Also force for SYCL, since we need this for the
     // __builtin_sycl_unique_stable_name implementation, which depends on lambda
     // mangling.
-    MCtx = getMangleNumberingContext(Class, Numbering.ContextDecl);
+    MCtx = getMangleNumberingContext(Class, ContextDecl);
     assert(MCtx && "Retrieving mangle numbering context failed!");
     Numbering.HasKnownInternalLinkage = true;
   }
@@ -1395,7 +1401,9 @@ void Sema::ActOnLambdaClosureQualifiers(LambdaIntroducer &Intro,
   // odr-use 'this' (in particular, in a default initializer for a non-static
   // data member).
   if (Intro.Default != LCD_None &&
-      !LSI->Lambda->getParent()->isFunctionOrMethod() &&
+      !LSI->Lambda->getParent()
+           ->getEnclosingNonExpansionStatementContext()
+           ->isFunctionOrMethod() &&
       (getCurrentThisType().isNull() ||
        CheckCXXThisCapture(SourceLocation(), /*Explicit=*/true,
                            /*BuildAndDiagnose=*/false)))
@@ -2543,9 +2551,12 @@ Sema::LambdaScopeForCallOperatorInstantiationRAII::
   while (FDPattern && FD) {
     InstantiationAndPatterns.emplace_back(FDPattern, FD);
 
-    FDPattern =
-        dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FDPattern));
-    FD = dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FD));
+    FDPattern = dyn_cast<FunctionDecl>(
+        getLambdaAwareParentOfDeclContext(FDPattern)
+            ->getEnclosingNonExpansionStatementContext());
+    FD = dyn_cast<FunctionDecl>(
+        getLambdaAwareParentOfDeclContext(FD)
+            ->getEnclosingNonExpansionStatementContext());
   }
 
   // Add instantiated parameters and local vars to scopes, starting from the

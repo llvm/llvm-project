@@ -15,6 +15,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h"
 #include "src/__support/str_to_integer.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_config.h"
@@ -34,19 +35,25 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
-template <typename T> struct int_type_of {
+template <typename T, typename U = void> struct int_type_of {
   using type = T;
 };
-template <> struct int_type_of<double> {
-  using type = fputil::FPBits<double>::StorageType;
-};
-template <> struct int_type_of<long double> {
-  using type = fputil::FPBits<long double>::StorageType;
+
+template <typename T>
+struct int_type_of<T, cpp::enable_if_t<cpp::is_same_v<T, double>
+#if !defined(LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE)
+                                       || cpp::is_same_v<T, long double>
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+#if defined(LIBC_TYPES_HAS_FLOAT128)
+                                       || cpp::is_same_v<T, float128>
+#endif // LIBC_TYPES_HAS_FLOAT128
+                                       >> {
+  using type = typename fputil::FPBits<T>::StorageType;
 };
 
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
 template <typename T>
-struct int_type_of<cpp::enable_if<cpp::is_fixed_point_v<T>, T>> {
+struct int_type_of<T, cpp::enable_if<cpp::is_fixed_point_v<T>>> {
   using type = typename fixed_point::FXRep<T>::StorageType;
 };
 #endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
@@ -240,6 +247,11 @@ public:
           }
           break;
 #endif // LIBC_COPT_PRINTF_DISABLE_BITINT
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+        case (LengthModifier::Q):
+          section.has_conv = false;
+          break;
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
         }
         break;
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
@@ -251,10 +263,20 @@ public:
       case ('A'):
       case ('g'):
       case ('G'):
-        if (lm != LengthModifier::L) {
-          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, double, conv_index);
-        } else {
+        switch (lm) {
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+        case (LengthModifier::Q):
+          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, float128, conv_index);
+          break;
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+        case (LengthModifier::L):
           WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long double, conv_index);
+          break;
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+        default:
+          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, double, conv_index);
+          break;
         }
         break;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
@@ -292,7 +314,7 @@ public:
         WRITE_ARG_VAL_SIMPLEST(section.conv_val_ptr, void *, conv_index);
         break;
       case ('s'):
-        WRITE_ARG_VAL_SIMPLEST(section.conv_val_ptr, char *, conv_index);
+        WRITE_ARG_VAL_SIMPLEST(section.conv_val_ptr, void *, conv_index);
         break;
       default:
         // if the conversion is undefined, change this to a raw section.
@@ -391,6 +413,11 @@ private:
     case ('L'):
       ++*local_pos;
       return {LengthModifier::L, 0};
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+    case ('Q'):
+      ++*local_pos;
+      return {LengthModifier::Q, 0};
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
     case ('j'):
       ++*local_pos;
       return {LengthModifier::j, 0};
@@ -493,8 +520,10 @@ private:
       // Floating point numbers are stored separately from the other arguments.
       else if (cur_type_desc == type_desc_from_type<double>())
         args_cur.template next_var<double>();
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
       else if (cur_type_desc == type_desc_from_type<long double>())
         args_cur.template next_var<long double>();
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
       // Floating point numbers may be stored separately from the other
@@ -647,6 +676,11 @@ private:
             }
             break;
 #endif // LIBC_COPT_PRINTF_DISABLE_BITINT
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+          case (LengthModifier::Q):
+            conv_size = type_desc_from_type<void>();
+            break;
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
           }
           break;
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
@@ -658,10 +692,21 @@ private:
         case ('A'):
         case ('g'):
         case ('G'):
-          if (lm != LengthModifier::L)
-            conv_size = type_desc_from_type<double>();
-          else
+          switch (lm) {
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+          case LengthModifier::Q:
+            conv_size = type_desc_from_type<float128>();
+            break;
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+          case LengthModifier::L:
             conv_size = type_desc_from_type<long double>();
+            break;
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+          default:
+            conv_size = type_desc_from_type<double>();
+            break;
+          }
           break;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT

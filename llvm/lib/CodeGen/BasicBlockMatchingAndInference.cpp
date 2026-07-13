@@ -19,12 +19,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/BasicBlockMatchingAndInference.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/MachineBlockHashInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/InitializePasses.h"
 #include <llvm/Support/CommandLine.h>
-#include <unordered_map>
 
 using namespace llvm;
 
@@ -70,7 +70,7 @@ public:
 
 private:
   using HashBlockPairType = std::pair<BlendedBlockHash, MachineBasicBlock *>;
-  std::unordered_map<uint16_t, std::vector<HashBlockPairType>> OpHashToBlocks;
+  DenseMap<uint16_t, std::vector<HashBlockPairType>> OpHashToBlocks;
 };
 
 INITIALIZE_PASS_BEGIN(BasicBlockMatchingAndInference,

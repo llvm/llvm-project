@@ -32,6 +32,7 @@ typedef lldb::ABISP (*ABICreateInstance)(lldb::ProcessSP process_sp,
                                          const ArchSpec &arch);
 typedef std::unique_ptr<Architecture> (*ArchitectureCreateInstance)(
     const ArchSpec &arch);
+typedef std::unique_ptr<BugReporter> (*BugReporterCreateInstance)();
 typedef lldb::DisassemblerSP (*DisassemblerCreateInstance)(
     const ArchSpec &arch, const char *flavor, const char *cpu,
     const char *features);
@@ -46,10 +47,9 @@ typedef ObjectContainer *(*ObjectContainerCreateInstance)(
 typedef ObjectContainer *(*ObjectContainerCreateMemoryInstance)(
     const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
     const lldb::ProcessSP &process_sp, lldb::addr_t offset);
-typedef size_t (*ObjectFileGetModuleSpecifications)(
+typedef ModuleSpecList (*ObjectFileGetModuleSpecifications)(
     const FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t length, ModuleSpecList &module_specs);
+    lldb::offset_t file_offset, lldb::offset_t length);
 typedef ObjectFile *(*ObjectFileCreateInstance)(
     const lldb::ModuleSP &module_sp, lldb::DataExtractorSP extractor_sp,
     lldb::offset_t data_offset, const FileSpec *file,

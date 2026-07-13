@@ -44,6 +44,7 @@ class BreakpointSite;
 class BroadcastEventSpec;
 class Broadcaster;
 class BroadcasterManager;
+class BugReporter;
 class CXXSyntheticChildren;
 struct CacheSignature;
 class CallFrameInfo;
@@ -79,6 +80,7 @@ class Disassembler;
 class DumpValueObjectOptions;
 class DynamicCheckerFunctions;
 class DynamicLoader;
+class DynamicRegisterInfo;
 class Editline;
 class EmulateInstruction;
 class Environment;
@@ -191,6 +193,7 @@ class ScriptedFrameInterface;
 class ScriptedFrameProviderInterface;
 class ScriptedMetadata;
 class ScriptedBreakpointInterface;
+class ScriptedHookInterface;
 class ScriptedPlatformInterface;
 class ScriptedProcessInterface;
 class ScriptedStopHookInterface;
@@ -349,6 +352,8 @@ typedef std::shared_ptr<lldb_private::Disassembler> DisassemblerSP;
 typedef std::unique_ptr<lldb_private::DynamicCheckerFunctions>
     DynamicCheckerFunctionsUP;
 typedef std::unique_ptr<lldb_private::DynamicLoader> DynamicLoaderUP;
+typedef std::shared_ptr<lldb_private::DynamicRegisterInfo>
+    DynamicRegisterInfoSP;
 typedef std::shared_ptr<lldb_private::Event> EventSP;
 typedef std::shared_ptr<lldb_private::EventData> EventDataSP;
 typedef std::shared_ptr<lldb_private::EventDataStructuredData>
@@ -425,6 +430,8 @@ typedef std::unique_ptr<lldb_private::ScriptedProcessInterface>
     ScriptedProcessInterfaceUP;
 typedef std::shared_ptr<lldb_private::ScriptedStopHookInterface>
     ScriptedStopHookInterfaceSP;
+typedef std::shared_ptr<lldb_private::ScriptedHookInterface>
+    ScriptedHookInterfaceSP;
 typedef std::shared_ptr<lldb_private::ScriptedThreadInterface>
     ScriptedThreadInterfaceSP;
 typedef std::shared_ptr<lldb_private::ScriptedThreadPlanInterface>

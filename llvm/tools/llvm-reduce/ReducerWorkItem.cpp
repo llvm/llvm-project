@@ -852,12 +852,15 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
       if (TheTriple.getTriple().empty())
         TheTriple.setTriple(sys::getDefaultTargetTriple());
       ExitOnError ExitOnErr(std::string(ToolName) + ": error: ");
-      TM = ExitOnErr(codegen::createTargetMachineForTriple(TheTriple.str()));
+      TM = ExitOnErr(codegen::createTargetMachineForTriple(TheTriple));
 
       return TM->createDataLayout().getStringRepresentation();
     };
 
     std::unique_ptr<Module> M = MParser->parseIRModule(SetDataLayout);
+
+    if (!TheTriple.empty())
+      M->setTargetTriple(TheTriple);
 
     MMM->MMI = std::make_unique<MachineModuleInfo>(TM.get());
     MParser->parseMachineFunctions(*M, *MMM->MMI);

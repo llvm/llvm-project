@@ -361,7 +361,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
 
   if (item_format == eFormatPointer) {
     if (item_byte_size != 4 && item_byte_size != 8)
-      item_byte_size = s->GetAddressByteSize();
+      item_byte_size = DE.GetAddressByteSize();
   }
 
   offset_t offset = start_offset;

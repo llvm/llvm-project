@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mod-file.h"
+#include "resolve-names-utils.h"
 #include "resolve-names.h"
 #include "flang/Common/restorer.h"
 #include "flang/Evaluate/tools.h"
@@ -17,17 +18,16 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <fstream>
 #include <set>
 #include <string_view>
 #include <type_traits>
 #include <variant>
-#include <vector>
 
 namespace Fortran::semantics {
 
@@ -362,37 +362,68 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
   }
 }
 
-static void PutOpenMPRequirements(llvm::raw_ostream &os, const Symbol &symbol) {
-  using RequiresClauses = WithOmpDeclarative::RequiresClauses;
-  using OmpMemoryOrderType = common::OmpMemoryOrderType;
-
-  const auto [reqs, order]{common::visit(
-      [&](auto &&details)
-          -> std::pair<const RequiresClauses *, const OmpMemoryOrderType *> {
-        if constexpr (std::is_convertible_v<decltype(details),
-                          const WithOmpDeclarative &>) {
-          return {details.ompRequires(), details.ompAtomicDefaultMemOrder()};
+static const WithOmpDeclarative *GetOmpDeclarative(const Symbol &symbol) {
+  return common::visit(
+      [&](auto &&details) -> const WithOmpDeclarative * {
+        using TypeD = llvm::remove_cvref_t<decltype(details)>;
+        if constexpr (std::is_base_of_v<WithOmpDeclarative, TypeD>) {
+          return &static_cast<const WithOmpDeclarative &>(details);
         } else {
-          return {nullptr, nullptr};
+          return nullptr;
         }
       },
-      symbol.details())};
+      symbol.details());
+}
 
-  if (order) {
-    llvm::omp::Clause admo{llvm::omp::Clause::OMPC_atomic_default_mem_order};
-    os << "!$omp requires "
-       << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(admo))
-       << '(' << parser::ToLowerCaseLetters(EnumToString(*order)) << ")\n";
+static void PutOpenMPRequirements(
+    llvm::raw_ostream &os, const Symbol &symbol, SemanticsContext &semaCtx) {
+  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
+  unsigned version{semaCtx.langOptions().OpenMPVersion};
+
+  if (const auto *decls{GetOmpDeclarative(symbol)}) {
+    if (const OmpClauseSet &reqs{decls->ompRequires()}; reqs.count()) {
+      os << "!$omp "
+         << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                llvm::omp::Directive::OMPD_requires, version));
+      decls->printClauseSet(os, reqs, llvm::omp::Directive::OMPD_requires);
+      os << "\n";
+    }
   }
-  if (reqs) {
-    os << "!$omp requires";
-    reqs->IterateOverMembers([&](llvm::omp::Clause f) {
-      if (f != llvm::omp::Clause::OMPC_atomic_default_mem_order) {
-        os << ' '
-           << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(f));
+}
+
+static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
+    const SymbolVector &symbols, SemanticsContext &semaCtx) {
+  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
+  unsigned version{semaCtx.langOptions().OpenMPVersion};
+
+  for (const Symbol &symbol : symbols) {
+    if (const auto *decls{GetOmpDeclarative(symbol)}) {
+      if (const OmpClauseSet &dtgt{decls->ompDeclTarget()}; dtgt.count()) {
+        os << "!$omp "
+           << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                  llvm::omp::Directive::OMPD_declare_target, version))
+           << " ";
+        decls->printClauseSet(
+            os, dtgt, llvm::omp::Directive::OMPD_declare_target, symbol.name());
+        os << "\n";
       }
-    });
-    os << "\n";
+      // Re-emit `!$omp groupprivate` (and its device_type) so a TU that `use`s
+      // this module recovers the directive from the .mod file. Common-block
+      // names must be wrapped in slashes when reparsed.
+      if (const OmpClauseSet &gp{decls->ompGroupprivate()}; gp.count()) {
+        os << "!$omp "
+           << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                  llvm::omp::Directive::OMPD_groupprivate, version))
+           << "(";
+        if (symbol.detailsIf<CommonBlockDetails>())
+          os << '/' << symbol.name() << '/';
+        else
+          os << symbol.name();
+        os << ") ";
+        decls->printClauseSet(os, gp, llvm::omp::Directive::OMPD_groupprivate);
+        os << "\n";
+      }
+    }
   }
 }
 
@@ -433,7 +464,9 @@ void ModFileWriter::PutSymbols(
   for (const Symbol &symbol : uses) {
     PutUse(symbol);
   }
-  PutOpenMPRequirements(decls_, DEREF(scope.symbol()));
+  PutOpenMPRequirements(decls_, DEREF(scope.symbol()), context_);
+  PutOpenMPDeclarativeDirectives(decls_, sorted, context_);
+
   for (const auto &set : scope.equivalenceSets()) {
     if (!set.empty() &&
         !set.front().symbol.test(Symbol::Flag::CompilerCreated)) {
@@ -664,7 +697,8 @@ void ModFileWriter::PutDECStructure(
 
 // Attributes that may be in a subprogram prefix
 static const Attrs subprogramPrefixAttrs{Attr::ELEMENTAL, Attr::IMPURE,
-    Attr::MODULE, Attr::NON_RECURSIVE, Attr::PURE, Attr::RECURSIVE};
+    Attr::MODULE, Attr::NON_RECURSIVE, Attr::PURE, Attr::SIMPLE,
+    Attr::RECURSIVE};
 
 static void PutOpenACCDeviceTypeRoutineInfo(
     llvm::raw_ostream &os, const OpenACCRoutineDeviceTypeInfo &info) {
@@ -853,6 +887,29 @@ void ModFileWriter::PutGeneric(const Symbol &symbol) {
 }
 
 void ModFileWriter::PutUse(const Symbol &symbol) {
+  // A declare reduction named by an operator has an internal mangled symbol
+  // name
+  // ("op.remote.", "op.+") that is not valid Fortran and cannot be emitted as a
+  // "use,only:" item (that module file could not be re-parsed, and reading it
+  // crashed, both for a plain re-export and for an embedded module in a
+  // hermetic module file). Its operator is itself re-exported as a valid item,
+  // and the resolver recovers the reduction through it (FindUserReductionSymbol
+  // / SearchOperatorReduction), keeping one shared reduction symbol, so skip
+  // the reduction's own use item. This covers a defined operator (which always
+  // has a mandatory "interface operator(.x.)") and an intrinsic operator with a
+  // user "interface operator(+)". A reduction named by a plain identifier
+  // ("myred") has a valid name and is emitted normally below. An operator-less
+  // reduction (a special function, or an intrinsic operator on an intrinsic
+  // type) has no operator to recover through and is left to the normal path.
+  const Symbol &ultimate{symbol.GetUltimate()};
+  if (ultimate.has<UserReductionDetails>()) {
+    std::string opId{GetReductionFortranId(ultimate.name())};
+    const Symbol *opSym{
+        opId.empty() ? nullptr : ultimate.owner().FindSymbol(opId)};
+    if (opSym && opSym->GetUltimate().has<GenericDetails>()) {
+      return;
+    }
+  }
   auto &details{symbol.get<UseDetails>()};
   auto &use{details.symbol()};
   const Symbol &module{GetUsedModule(details)};
@@ -1042,10 +1099,6 @@ void ModFileWriter::PutObjectEntity(
     });
     os << ") " << symbol.name() << '\n';
   }
-  if (auto attr{details.cudaDataAttr()}) {
-    PutLower(os << "attributes(", common::EnumToString(*attr))
-        << ") " << symbol.name() << '\n';
-  }
   if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointer)) {
     for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
       if (pointer == symbol) {
@@ -1122,6 +1175,25 @@ void ModFileWriter::PutUserReduction(
   for (const auto *decl : details.GetDeclList()) {
     Unparse(os, *decl, context_.langOptions());
   }
+  // Emit a Fortran accessibility statement for the reduction identifier
+  // so that PRIVATE survives module file round-trips.  Only needed when
+  // there is no corresponding generic interface that already carries
+  // PRIVATE (PutGeneric handles that case).
+  if (!isSubmodule_ && symbol.attrs().test(Attr::PRIVATE)) {
+    std::string fortranId{GetReductionFortranId(symbol.name())};
+    if (!fortranId.empty()) {
+      bool alreadyEmitted{false};
+      parser::CharBlock cb{fortranId};
+      auto it{symbol.owner().find(cb)};
+      if (it != symbol.owner().end() &&
+          it->second->detailsIf<GenericDetails>()) {
+        alreadyEmitted = it->second->attrs().test(Attr::PRIVATE);
+      }
+      if (!alreadyEmitted) {
+        os << "private::" << fortranId << '\n';
+      }
+    }
+  }
 }
 
 static void PutMapper(
@@ -1168,6 +1240,11 @@ void ModFileWriter::PutEntity(llvm::raw_ostream &os, const Symbol &symbol,
     std::function<void()> writeType, Attrs attrs) {
   writeType();
   PutAttrs(os, attrs, symbol.GetBindName(), symbol.GetIsExplicitBindName());
+  if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (auto attr{details->cudaDataAttr()}) {
+      PutLower(os << ',', common::EnumToString(*attr));
+    }
+  }
   if (symbol.owner().kind() == Scope::Kind::DerivedType &&
       context_.IsTempName(symbol.name().ToString())) {
     os << "::%FILL";
@@ -1449,8 +1526,19 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     }
     ancestorName = ancestor->GetName().value().ToString();
   }
-  auto requiredHash{context_.moduleDependences().GetRequiredHash(
-      name.ToString(), isIntrinsic.value_or(false))};
+
+  // When offloading modules files are created for the host, but when compiling
+  // device-side code the builtin modules are exchanged with device-specific
+  // versions. They contain matching declarations, but have different checksums.
+  bool ignoreChecksumMismatch{
+      context_.langOptions().OffloadDevice && isIntrinsic.value_or(false)};
+
+  std::optional<size_t> requiredHash;
+  if (!ignoreChecksumMismatch) {
+    requiredHash = context_.moduleDependences().GetRequiredHash(
+        name.ToString(), isIntrinsic.value_or(false));
+  }
+
   if (!isIntrinsic.value_or(false) && !ancestor) {
     // Already present in the symbol table as a usable non-intrinsic module?
     if (Scope * hermeticScope{context_.currentHermeticModuleFileScope()}) {
@@ -1534,7 +1622,7 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     for (const auto &dir : context_.intrinsicModuleDirectories()) {
       options.searchDirectories.push_back(dir);
     }
-    if (!requiredHash) {
+    if (!requiredHash && !ignoreChecksumMismatch) {
       requiredHash =
           context_.moduleDependences().GetRequiredHash(name.ToString(), true);
     }
@@ -1659,7 +1747,12 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   // within the module file.
   Scope *previousHermetic{context_.currentHermeticModuleFileScope()};
   if (parseTree.v.size() > 1) {
-    parser::Program hermeticModules{std::move(parseTree.v)};
+    // Retain the embedded modules' parse tree for the lifetime of the
+    // SemanticsContext: symbols resolved from it (e.g. UserReductionDetails and
+    // MapperDetails, which hold raw parse-tree pointers) outlive this function
+    // and are dereferenced later, including at lowering time.
+    parser::Program &hermeticModules{
+        context_.SaveParseTree(parser::Program{std::move(parseTree.v)})};
     parseTree.v.emplace_back(std::move(hermeticModules.v.front()));
     hermeticModules.v.pop_front();
     Scope &hermeticScope{topScope.MakeScope(Scope::Kind::Global)};

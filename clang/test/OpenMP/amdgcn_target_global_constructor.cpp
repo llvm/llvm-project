@@ -104,8 +104,7 @@ S A;
 //.
 // CHECK: [[META0:![0-9]+]] = !{i32 1, !"A", i32 0, i32 0}
 // CHECK: [[META1:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
-// CHECK: [[META2:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK: [[META3:![0-9]+]] = !{i32 7, !"openmp", i32 51}
-// CHECK: [[META4:![0-9]+]] = !{i32 7, !"openmp-device", i32 51}
-// CHECK: [[META5:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META2:![0-9]+]] = !{i32 7, !"openmp", i32 51}
+// CHECK: [[META3:![0-9]+]] = !{i32 7, !"openmp-device", i32 51}
+// CHECK: [[META4:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

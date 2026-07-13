@@ -408,7 +408,7 @@ define void @simplify_before_foldAndOfICmps2(ptr %p, ptr %A8) "instcombine-no-ve
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[L7]], -1
 ; CHECK-NEXT:    [[B11:%.*]] = zext i1 [[TMP1]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i64
-; CHECK-NEXT:    [[G4:%.*]] = getelementptr i16, ptr [[A8]], i64 [[TMP2]]
+; CHECK-NEXT:    [[G4:%.*]] = getelementptr [2 x i8], ptr [[A8]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[L2:%.*]] = load i16, ptr [[G4]], align 2
 ; CHECK-NEXT:    [[L4:%.*]] = load i16, ptr [[A8]], align 2
 ; CHECK-NEXT:    [[B21:%.*]] = sdiv i16 [[L7]], [[L4]]
@@ -429,7 +429,7 @@ define void @simplify_before_foldAndOfICmps2(ptr %p, ptr %A8) "instcombine-no-ve
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i1 [[C11]], true
 ; CHECK-NEXT:    [[C18:%.*]] = or i1 [[C10]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[C4]] to i64
-; CHECK-NEXT:    [[G26:%.*]] = getelementptr i1, ptr null, i64 [[TMP3]]
+; CHECK-NEXT:    [[G26:%.*]] = getelementptr i8, ptr null, i64 [[TMP3]]
 ; CHECK-NEXT:    store i16 [[B33]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    store i1 [[C18]], ptr [[P]], align 1
 ; CHECK-NEXT:    store ptr [[G26]], ptr [[P]], align 8
@@ -2661,12 +2661,12 @@ define i64 @icmp_slt_0_or_icmp_sgt_0_i64_fail0(i64 %x) {
   ret i64 %E
 }
 
-define i64 @icmp_slt_0_or_icmp_sgt_0_i64_fail1(i64 %x) {
-; CHECK-LABEL: @icmp_slt_0_or_icmp_sgt_0_i64_fail1(
-; CHECK-NEXT:    [[B:%.*]] = icmp sgt i64 [[X:%.*]], 0
-; CHECK-NEXT:    [[C:%.*]] = ashr i64 [[X]], 63
-; CHECK-NEXT:    [[D:%.*]] = zext i1 [[B]] to i64
-; CHECK-NEXT:    [[E:%.*]] = or i64 [[C]], [[D]]
+; ashr (instead of icmp slt 0) on the LHS: not the icmp-or-icmp shape, but
+; this is the signum idiom and folds to scmp.
+
+define i64 @icmp_slt_0_or_icmp_sgt_0_i64_signum(i64 %x) {
+; CHECK-LABEL: @icmp_slt_0_or_icmp_sgt_0_i64_signum(
+; CHECK-NEXT:    [[E:%.*]] = call i64 @llvm.scmp.i64.i64(i64 [[X:%.*]], i64 0)
 ; CHECK-NEXT:    ret i64 [[E]]
 ;
   %B = icmp sgt i64 %x, 0
