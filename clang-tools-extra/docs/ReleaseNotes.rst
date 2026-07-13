@@ -836,6 +836,9 @@ Changes in existing checks
   - Fixed a crash in dependent base lookup when
     `AggressiveDependentMemberLookup` option is enabled.
 
+  - Fixed a false positive from naming style lookup for declarations inside macro
+    arguments.
+
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check:
 
