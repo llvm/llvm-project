@@ -113,11 +113,11 @@ config.substitutions.append(
     )
 )
 
-if platform.system() in ["Windows"]:
-    # Rewrite LF to CRLF
-    config.substitutions.append(("%{to-crlf}", rf"{sed_cmd} -e 's|\r||g' -e 's|$|\r|'"))
-    # Filtering command for testing for carriage return
-    config.substitutions.append(("%{reveal-cr}", rf"{sed_cmd} -e 's|\r|<CR>|g'"))
+cr = "\r" if platform.system() == "Darwin" else r"\r"
+# Rewrite LF to CRLF
+config.substitutions.append(("%{to-crlf}", f"{sed_cmd} -e 's|{cr}||g' -e 's|$|{cr}|'"))
+# Filtering command for testing for carriage return
+config.substitutions.append(("%{reveal-cr}", f"{sed_cmd} -e 's|{cr}|<CR>|g'"))
 
 # For each occurrence of a clang tool name, replace it with the full path to
 # the build directory holding that tool.  We explicitly specify the directories
