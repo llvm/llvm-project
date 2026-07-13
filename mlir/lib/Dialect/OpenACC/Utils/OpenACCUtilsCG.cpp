@@ -267,8 +267,11 @@ SmallVector<GPUParallelDimAttr>
 collectPrivateLocalParDims(PrivateLocalOp privateLocal,
                            ComputeRegionOp computeRegion) {
   SmallVector<GPUParallelDimAttr> parDims;
+  // Walk the enclosing scf.parallel loops, but stop at the compute region
+  // boundary: loops outside the compute region do not contribute parallel
+  // dimensions to this privatization.
   auto parentLoop = privateLocal->getParentOfType<scf::ParallelOp>();
-  while (parentLoop) {
+  while (parentLoop && computeRegion->isProperAncestor(parentLoop)) {
     if (GPUParallelDimsAttr parDimsAttr = getParDimsAttr(parentLoop))
       for (GPUParallelDimAttr parDim : parDimsAttr.getArray())
         insertParDim(parDims, parDim);
