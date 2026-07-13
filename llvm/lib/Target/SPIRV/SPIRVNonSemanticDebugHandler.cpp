@@ -255,8 +255,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
       SubprogramDeclarations.push_back(SP);
   }
 
-  // Walk LLVM globals to map each DIGlobalVariable (returned by DIFinder) to
-  // its llvm::GlobalVariable.
+  // Walk LLVM globals to map each DIGlobalVariable to its llvm::GlobalVariable.
   DenseMap<const DIGlobalVariable *, const GlobalVariable *> DIGVToLLVMGV;
   for (const GlobalVariable &G : M->globals()) {
     SmallVector<DIGlobalVariableExpression *> GVEs;
