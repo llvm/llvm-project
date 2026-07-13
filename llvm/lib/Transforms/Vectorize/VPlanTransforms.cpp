@@ -69,6 +69,11 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
 
       Instruction *Inst = cast<Instruction>(VPV->getUnderlyingValue());
 
+      // Atomic accesses and fences have ordering/atomicity semantics that
+      // cannot be preserved by lane-wise widening.
+      if (isa<AtomicRMWInst, AtomicCmpXchgInst, FenceInst>(Inst))
+        return false;
+
       VPRecipeBase *NewRecipe = nullptr;
       if (auto *PhiR = dyn_cast<VPPhi>(&Ingredient)) {
         auto *Phi = cast<PHINode>(PhiR->getUnderlyingValue());
