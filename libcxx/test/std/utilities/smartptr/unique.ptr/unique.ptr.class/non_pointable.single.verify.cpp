@@ -10,9 +10,8 @@
 
 // unique_ptr
 
+// [unique.ptr.single.general]/1 (added by LWG4144)
 // A program that instantiates the definition of unique_ptr<T, D> is ill-formed if T* is an invalid type.
-
-// LWG 4144
 
 // XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
@@ -24,17 +23,12 @@ struct Deleter {
   void operator()(pointer) const;
 };
 
-typedef void Function();
 typedef void AbominableFunction() const;
 
-void pointable_function_type() { (void)sizeof(std::unique_ptr<Function, Deleter>); }
-
-void reference_type() {
+void test() {
   // expected-error-re@*:* {{static assertion failed {{.*}}unique_ptr<T, D> requires T* to be a valid type}}
   (void)sizeof(std::unique_ptr<int&, Deleter>);
-}
 
-void abominable_function_type() {
   // expected-error-re@*:* {{static assertion failed {{.*}}unique_ptr<T, D> requires T* to be a valid type}}
   (void)sizeof(std::unique_ptr<AbominableFunction, Deleter>);
 }
