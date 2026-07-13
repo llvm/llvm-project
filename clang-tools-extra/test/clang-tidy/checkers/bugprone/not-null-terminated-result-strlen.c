@@ -62,30 +62,61 @@ void good_strerror_s(int errno) {
   strerror_s(dst, strlen(strerror(errno)) + 1, errno);
 }
 
-int bad_strncmp_1(char *str0, const char *str1) {
+int good_strncmp_1(char *str0, const char *str1) {
   return strncmp(str0, str1, (strlen(str0) + 1));
-  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
-  // CHECK-FIXES: return strncmp(str0, str1, (strlen(str0)));
 }
 
-int bad_strncmp_2(char *str2, const char *str3) {
+int good_strncmp_2(char *str2, const char *str3) {
   return strncmp(str2, str3, 1 + strlen(str2));
-  // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
-  // CHECK-FIXES: return strncmp(str2, str3, strlen(str2));
 }
 
-int good_strncmp_1_2(char *str4, const char *str5) {
+int good_strncmp_3(char *str4, const char *str5) {
   return strncmp(str4, str5, strlen(str4));
 }
 
-int bad_strncmp_3(char *str6) {
+int good_strncmp_4(char *str6) {
   return strncmp(str6, "string", 7);
-  // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
-  // CHECK-FIXES: return strncmp(str6, "string", 6);
 }
 
-int good_strncmp_3(char *str7) {
+int good_strncmp_5(char *str7) {
   return strncmp(str7, "string", 6);
+}
+
+int good_strncmp_6(void) {
+  char blah[8] = "blah";
+  return strncmp(blah, "1234567", 8);
+}
+
+int bad_strncmp_1(char *str9) {
+  // FIXME: This should warn. strncmp stops comparing at the embedded null.
+  return strncmp(str9, "foo\0bar", 8);
+}
+
+int bad_strncmp_2(char *str6) {
+  return strncmp(str6, "string", 8);
+  // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
+  // CHECK-FIXES: return strncmp(str6, "string", 7);
+}
+
+int bad_strncmp_3(char *str8) {
+  const char *literal = "string";
+  return strncmp(str8, literal, 8);
+  // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
+  // CHECK-FIXES: return strncmp(str8, literal, 7);
+}
+
+int bad_strncmp_4(void) {
+  char buf[8] = "blah";
+  return strncmp(buf, "1234567", 9);
+  // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
+  // CHECK-FIXES: return strncmp(buf, "1234567", 8);
+}
+
+int bad_strncmp_5(char *str9) {
+  // FIXME: This should suggest 4. strncmp stops comparing at the embedded null.
+  return strncmp(str9, "foo\0bar", 9);
+  // CHECK-MESSAGES: :[[@LINE-1]]:36: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
+  // CHECK-FIXES: return strncmp(str9, "foo\0bar", 8);
 }
 
 void bad_strxfrm_1(const char *long_source_name) {
