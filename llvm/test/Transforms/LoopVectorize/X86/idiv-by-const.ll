@@ -4,7 +4,7 @@
 ; RUN: opt -passes=loop-vectorize -S < %s -mtriple=x86_64-- -mcpu=x86-64-v3 | FileCheck %s --check-prefix=AVX2
 ; RUN: opt -passes=loop-vectorize -S < %s -mtriple=x86_64-- -mattr=+avx512f | FileCheck %s --check-prefix=AVX512F
 ; RUN: opt -passes=loop-vectorize -S < %s -mtriple=x86_64-- -mattr=+avx512f,+avx512dq | FileCheck %s --check-prefix=AVX512DQ
-; RUN: opt -passes=loop-vectorize -S < %s -mtriple=x86_64-- -mcpu=icelake-server | FileCheck %s --check-prefix=AVX512DQ256
+; RUN: opt -passes=loop-vectorize -S < %s -mtriple=x86_64-- -mattr=+avx512f,+avx512dq,+avx512vl,+prefer-256-bit | FileCheck %s --check-prefix=AVX512DQ256
 
 ; Division of i64 by a loop-invariant constant becomes a magic multiply-high
 ; sequence, so these loops should vectorize exactly where that sequence is

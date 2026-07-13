@@ -4,7 +4,7 @@
 ; RUN: opt -passes=slp-vectorizer -S < %s -mtriple=x86_64-- -mcpu=x86-64-v3 | FileCheck %s --check-prefix=AVX2
 ; RUN: opt -passes=slp-vectorizer -S < %s -mtriple=x86_64-- -mattr=+avx512f | FileCheck %s --check-prefix=AVX512F
 ; RUN: opt -passes=slp-vectorizer -S < %s -mtriple=x86_64-- -mattr=+avx512f,+avx512dq | FileCheck %s --check-prefix=AVX512DQ
-; RUN: opt -passes=slp-vectorizer -S < %s -mtriple=x86_64-- -mcpu=icelake-server | FileCheck %s --check-prefix=AVX512DQ256
+; RUN: opt -passes=slp-vectorizer -S < %s -mtriple=x86_64-- -mattr=+avx512f,+avx512dq,+avx512vl,+prefer-256-bit | FileCheck %s --check-prefix=AVX512DQ256
 
 ; Straight-line division/remainder of consecutive elements by a constant, as
 ; produced by fully unrolling a small trip-count loop. These should vectorize
