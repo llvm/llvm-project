@@ -79,7 +79,8 @@ if lit_config.params.get("run-os-log-tests"):
     else:
         lit_config.warning(
             "run-os-log-tests was requested, but the 'log' tool was not found; "
-            "the os_log delivery tests will be skipped")
+            "the os_log delivery tests will be skipped"
+        )
 
 # Give logging tests a deterministic baseline: clear any logging environment
 # inherited from the developer's shell. Tests opt in with `env ORC_RT_LOG=...`.
