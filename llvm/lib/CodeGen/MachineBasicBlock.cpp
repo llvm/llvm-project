@@ -1349,10 +1349,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
                  "PHI sources should be live out of their predecessors.");
           LI.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
           for (auto &SR : LI.subranges()) {
-            // Use the subrange's own value number; reusing the parent range's
-            // VNInfo overlaps the subrange's existing value with a foreign valno
-            // when the register is live through the split block. Mirrors the
-            // live-through update loop below.
+            // New segment VNI must be from the subrange.
             if (VNInfo *SubVNI = SR.getVNInfoAt(PrevIndex))
               SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, SubVNI));
           }
