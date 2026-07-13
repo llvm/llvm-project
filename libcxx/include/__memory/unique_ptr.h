@@ -102,10 +102,10 @@ template <class _Tp>
 inline const bool __can_dereference<_Tp, decltype((void)*std::declval<_Tp>())> = true;
 
 template <class _Tp, class = void>
-inline const bool __is_pointable = false;
+inline const bool __can_add_pointer = false;
 
 template <class _Tp>
-inline const bool __is_pointable<_Tp, __void_t<_Tp*> > = true;
+inline const bool __can_add_pointer<_Tp, __void_t<_Tp*> > = true;
 
 #if defined(_LIBCPP_ABI_ENABLE_UNIQUE_PTR_TRIVIAL_ABI)
 #  define _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI __attribute__((__trivial_abi__))
@@ -115,7 +115,7 @@ inline const bool __is_pointable<_Tp, __void_t<_Tp*> > = true;
 
 template <class _Tp, class _Dp = default_delete<_Tp> >
 class _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI unique_ptr {
-  static_assert(__is_pointable<_Tp>, "unique_ptr<T, D> requires T* to be a valid type");
+  static_assert(__can_add_pointer<_Tp>, "unique_ptr<T, D> requires T* to be a valid type");
   static_assert(!is_rvalue_reference<_Dp>::value, "the specified deleter type cannot be an rvalue reference");
 
 public:
