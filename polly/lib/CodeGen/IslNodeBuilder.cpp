@@ -803,6 +803,14 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
                                      Stmt->getParent()->getContext().release());
       SchedDom = isl_set_intersect_params(
           SchedDom, Stmt->getParent()->getContext().release());
+      // Restrict to defined behavior context to match DeLICM's contract:
+      // new read accesses are only required to cover the defined-behavior
+      // subset of the domain.
+      auto *DefinedBehavior =
+          Stmt->getParent()->getBestKnownDefinedBehaviorContext().release();
+      SchedDom =
+          isl_set_intersect_params(SchedDom, isl_set_copy(DefinedBehavior));
+      Dom = isl_set_intersect_params(Dom, DefinedBehavior);
       assert(isl_set_is_subset(SchedDom, AccDom) &&
              "Access relation not defined on full schedule domain");
       assert(isl_set_is_subset(Dom, AccDom) &&
