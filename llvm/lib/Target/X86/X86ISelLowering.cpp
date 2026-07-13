@@ -1364,7 +1364,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FDIV,        MVT::v2f64, Legal);
   }
 
-  if (!Subtarget.useSoftFloat() && (Subtarget.hasGFNI() || Subtarget.hasBMM())) {
+  if (!Subtarget.useSoftFloat() &&
+      (Subtarget.hasGFNI() || Subtarget.hasBMM())) {
     setOperationAction(ISD::BITREVERSE, MVT::i8, Custom);
     setOperationAction(ISD::BITREVERSE, MVT::i16, Custom);
     setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
