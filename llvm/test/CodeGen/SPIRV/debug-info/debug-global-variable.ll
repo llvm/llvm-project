@@ -9,7 +9,7 @@
 ; CHECK-DAG: [[VOID:%[0-9]+]] = OpTypeVoid
 ; CHECK-DAG: [[I32T:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-DAG: [[PATH:%[0-9]+]] = OpString "{{[/\\]}}AAAAAAAAAA{{[/\\]}}BBBBBBBB{{[/\\]}}CCCCCCCCC{{[/\\]}}debug-global-variable.c"
-; CHECK-DAG: [[NAME:%[0-9]+]] = OpString "counter"
+; CHECK-DAG: [[NAME:%[0-9]+]] = OpString "g_value"
 ; CHECK-DAG: [[STR_INT:%[0-9]+]] = OpString "int"
 ; CHECK-DAG: [[C100:%[0-9]+]] = OpConstant [[I32T]] 100
 ; CHECK-DAG: [[C5:%[0-9]+]] = OpConstant [[I32T]] 5
@@ -37,7 +37,7 @@ entry:
 !llvm.module.flags = !{!12, !13, !14, !15}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
-!1 = distinct !DIGlobalVariable(name: "counter", linkageName: "counter", scope: !2, file: !3, line: 42, type: !8, isLocal: false, isDefinition: true)
+!1 = distinct !DIGlobalVariable(name: "g_value", linkageName: "g_value", scope: !2, file: !3, line: 42, type: !8, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version XX.X", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: !4, splitDebugInlining: false, nameTableKind: None)
 !3 = !DIFile(filename: "debug-global-variable.c", directory: "/AAAAAAAAAA/BBBBBBBB/CCCCCCCCC", checksumkind: CSK_MD5, checksum: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
 !4 = !{!0}
