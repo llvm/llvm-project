@@ -9,6 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LanguageRuntime.h"
+#include <cassert>
 
 #ifndef LANGUAGE
 #error This file should be included, or used, with a LANGUAGE macro set.
@@ -118,15 +119,22 @@ const char *GetErrorString(Error_t Error) {
   return "";
 }
 
+Error_t GetDevice(int *DeviceNo) {
+  ol_device_handle_t Device = olKGetDevice(DeviceNo);
+  if (!Device)
+    return ErrorInvalidValue;
+  return Success;
+}
+
 Error_t GetDeviceCount(int *Count) {
-  // TODO:
-  *Count = 1;
+  *Count = olKGetDeviceCount();
   return Success;
 }
 
 Error_t SetDevice(int DeviceNo) {
-  // TODO:
-  return Success;
+  ol_device_handle_t Device = olKSetDefaultDevice(DeviceNo);
+  assert(Device == olKGetDefaultDevice() && "Set Device is not Default Device");
+  return Device ? Success : ErrorInvalidValue;
 }
 
 Error_t HostAlloc(void **Ptr, size_t Size, unsigned int Flags) {
@@ -166,6 +174,8 @@ Error_t GetDeviceProperties(DeviceProp_t *DeviceProp, int DeviceNo) {
   DeviceProp->minor = 11;
   return Success;
 }
+
+// Error_t GetDeviceAttribute()
 
 static Error_t getQueueFromStream(Stream_t Stream, ol_queue_handle_t *Queue) {
   if (!Stream)

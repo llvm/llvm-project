@@ -29,6 +29,7 @@
 #define PeekAtLastError COMBINE(LANGUAGE, PeekAtLastError)
 #define GetErrorName COMBINE(LANGUAGE, GetErrorName)
 #define GetErrorString COMBINE(LANGUAGE, GetErrorString)
+#define GetDevice COMBINE(LANGUAGE, GetDevice)
 #define GetDeviceCount COMBINE(LANGUAGE, GetDeviceCount)
 #define SetDevice COMBINE(LANGUAGE, SetDevice)
 #define HostAlloc COMBINE(LANGUAGE, HostAlloc)

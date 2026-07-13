@@ -14,6 +14,7 @@
 #include "Types.h"
 
 #include "OffloadAPI.h"
+#include "llvm/ADT/ArrayRef.h"
 
 #include <cstdio>
 #include <stdint.h>
@@ -31,6 +32,33 @@ ol_device_handle_t olKGetDefaultDevice() {
 ol_device_handle_t olKGetHostDevice() {
   ol_device_handle_t HostDevice = StateTy::getHostDevice();
   return HostDevice;
+}
+
+int olKGetDeviceCount() {
+  int DeviceCount = StateTy::get().getDevices().size();
+  return DeviceCount;
+}
+
+ol_device_handle_t olKGetDevice(int* DeviceNo) {
+  ol_device_handle_t DefaultDevice = ThreadStateTy::getDefaultDevice();
+  int DeviceCount = StateTy::get().getDevices().size();
+  ArrayRef<ol_device_handle_t> Devices = StateTy::get().getDevices();
+  for (int i = 0; i < DeviceCount; i++){
+    if (Devices[i] == DefaultDevice){
+      *DeviceNo = i;
+      return Devices[i];
+    }
+  }
+  return nullptr;
+}
+
+ol_device_handle_t olKSetDefaultDevice(int DeviceNo) {
+  ArrayRef<ol_device_handle_t> Devices = StateTy::get().getDevices();
+  if (DeviceNo < 0 || DeviceNo >= static_cast<int>(Devices.size()))
+    return nullptr;
+  ol_device_handle_t Device = Devices[DeviceNo];
+  ThreadStateTy::get().setDefaultDevice(Device);
+  return Device;
 }
 
 ol_queue_handle_t olKGetDefaultQueue() {

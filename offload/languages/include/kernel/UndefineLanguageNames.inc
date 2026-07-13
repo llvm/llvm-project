@@ -26,6 +26,7 @@
 #undef PeekAtLastError
 #undef GetErrorName
 #undef GetErrorString
+#undef GetDevice
 #undef GetDeviceCount
 #undef SetDevice
 #undef HostAlloc

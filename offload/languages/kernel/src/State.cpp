@@ -78,7 +78,9 @@ ThreadStateTy &ThreadStateTy::get() {
 }
 
 ol_device_handle_t ThreadStateTy::getDefaultDevice() {
-  ol_device_handle_t DD = nullptr;
+  ol_device_handle_t DD = ThreadStateTy::get().DefaultDevice;
+  if (DD)
+    return DD;
   for (ol_device_handle_t Device : StateTy::get().getDevices()) {
     DD = Device;
     break;
@@ -90,6 +92,7 @@ ol_device_handle_t ThreadStateTy::getDefaultDevice() {
   }
   return DD;
 }
+
 
 ol_queue_handle_t ThreadStateTy::getDefaultQueue() {
   if (!PerThreadQueue) [[likely]]

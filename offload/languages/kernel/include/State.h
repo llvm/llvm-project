@@ -30,9 +30,9 @@ struct ThreadStateTy {
   static ol_queue_handle_t getDefaultQueue();
   static ol_device_handle_t getDefaultDevice();
   static CallConfigurationTy &getCallConfiguration();
+  void setDefaultDevice(ol_device_handle_t Device);
 
 private:
-  void setDefaultDevice(ol_device_handle_t Device);
   void createDefaultQueue(ol_device_handle_t Device);
 
   ol_device_handle_t DefaultDevice = nullptr;

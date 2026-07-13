@@ -17,6 +17,12 @@ extern "C" {
 
   ol_device_handle_t olKGetHostDevice();
 
+  int olKGetDeviceCount();
+
+  ol_device_handle_t olKGetDevice(int *DeviceNo);
+
+  ol_device_handle_t olKSetDefaultDevice(int DeviceNo);
+
   ol_queue_handle_t olKGetDefaultQueue();
 
   CallConfigurationTy *olKGetCallConfiguration();
