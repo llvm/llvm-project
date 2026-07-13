@@ -895,6 +895,8 @@ Changes in existing checks
   - Fixed a bug where clients that apply fix-its without :program:`clang-tidy`'s
     cleanup could produce invalid code by joining adjacent tokens.
 
+  - Added support for parentheses around subscript operators (``(E1[E2])`` -> ``E1[E2]``).
+
 - Improved :doc:`readability-redundant-preprocessor
   <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a
   false positive for nested ``#if`` directives using different builtin
