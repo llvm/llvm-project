@@ -21,7 +21,6 @@
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRVModuleAnalysis.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -77,20 +76,12 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // in beginModule() for DebugFunctionDeclaration emission.
   SmallVector<const DISubprogram *> SubprogramDeclarations;
 
-  // DIGlobalVariable nodes for DebugGlobalVariable emission; SmallSetVector
-  // dedupes (see beginModule()).
-  SmallSetVector<const DIGlobalVariable *, 8> GlobalVariables;
-
-  // Maps a DIGlobalVariable to the llvm::GlobalVariable it describes, when the
-  // module has one with matching debug info. Used to fill the Variable operand
-  // of DebugGlobalVariable with the global's SPIR-V result id. Absent
-  // entries fall back to DebugInfoNone.
-  DenseMap<const DIGlobalVariable *, const GlobalVariable *> DIGVToLLVMGV;
-
-  // First non-empty DIExpression per DIGV from the CU global list (finder
-  // order). For Variable operand of DebugExpression type in
-  // DebugGlobalVariable, when supported.
-  DenseMap<const DIGlobalVariable *, const DIExpression *> DIGVToInitExpr;
+  struct GlobalVariableDebugInfo {
+    const DIExpression *Expr = nullptr;
+    const GlobalVariable *LLVMGV = nullptr;
+  };
+  DenseMap<const DIGlobalVariable *, GlobalVariableDebugInfo>
+      GlobalVariableDebugInfoMap;
 
   // DebugFunctionDeclaration result id per emitted declaration DISubprogram
   // (only entries where emission succeeded).
@@ -302,10 +293,10 @@ private:
   /// \p GV has a static data member declaration that was not emitted in
   /// \c DebugTypeRegs, or \c resolveGlobalVariableParent returns no id for the
   /// \c Parent operand.
-  std::optional<MCRegister>
-  emitDebugGlobalVariable(const DIGlobalVariable *GV, MCRegister VoidTypeReg,
-                          MCRegister I32TypeReg, MCRegister ExtInstSetReg,
-                          SPIRV::ModuleAnalysisInfo &MAI);
+  std::optional<MCRegister> emitDebugGlobalVariable(
+      const DIGlobalVariable *GV, const GlobalVariableDebugInfo &Info,
+      MCRegister VoidTypeReg, MCRegister I32TypeReg, MCRegister ExtInstSetReg,
+      SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Resolve the \c Parent operand for \c DebugGlobalVariable.
   std::optional<MCRegister>

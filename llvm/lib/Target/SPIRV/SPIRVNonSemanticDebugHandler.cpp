@@ -195,9 +195,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   SubroutineTypes.clear();
   VectorTypes.clear();
   SubprogramDeclarations.clear();
-  GlobalVariables.clear();
-  DIGVToLLVMGV.clear();
-  DIGVToInitExpr.clear();
+  GlobalVariableDebugInfoMap.clear();
   DebugFunctionDeclarationRegs.clear();
   ScopeToPathOpStringReg.clear();
   CUToCompilationUnitDbgReg.clear();
@@ -257,25 +255,27 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
       SubprogramDeclarations.push_back(SP);
   }
 
-  // Map DIGlobalVariable -> llvm::GlobalVariable for globals that attach !dbg.
-  // The link lives on the IR global (via DIGlobalVariableExpression); DIGV
-  // metadata has no back-reference to its @g.
+  // SPIR-V supports at most one DIGlobalVariableExpression per DIGlobalVariable
+  // (see DebugGlobalVariable opcode). Walk LLVM globals to map each
+  // DIGlobalVariable (returned by DIFinder) to its llvm::GlobalVariable,
+  // keeping only the first expression attached to each LLVM global.
+  DenseMap<const DIGlobalVariable *, const GlobalVariable *> DIGVToLLVMGV;
   for (const GlobalVariable &G : M->globals()) {
-    SmallVector<DIGlobalVariableExpression *, 4> GVEs;
+    SmallVector<DIGlobalVariableExpression *> GVEs;
     G.getDebugInfo(GVEs);
-    for (DIGlobalVariableExpression *GVE : GVEs)
-      DIGVToLLVMGV.try_emplace(GVE->getVariable(), &G);
+    for (DIGlobalVariableExpression *GVE : GVEs) {
+      if (const DIGlobalVariable *GV = GVE->getVariable()) {
+        DIGVToLLVMGV.try_emplace(GV, &G);
+        break;
+      }
+    }
   }
 
-  // DebugInfoFinder deduplicates expressions but not by their pointed
-  // variables. We use a SmallSetVector to deduplicate them.
   for (const DIGlobalVariableExpression *GVE : Finder.global_variables()) {
-    GlobalVariables.insert(GVE->getVariable());
     const DIGlobalVariable *GV = GVE->getVariable();
     const DIExpression *Expr = GVE->getExpression();
-    // For Variable operand of DebugExpression type in DebugGlobalVariable.
-    if (GV && Expr && Expr->getNumElements())
-      DIGVToInitExpr.try_emplace(GV, Expr);
+    GlobalVariableDebugInfoMap.try_emplace(
+        GV, GlobalVariableDebugInfo{Expr, DIGVToLLVMGV.lookup(GV)});
   }
 }
 
@@ -617,8 +617,9 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugExpression(
 }
 
 std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugGlobalVariable(
-    const DIGlobalVariable *GV, MCRegister VoidTypeReg, MCRegister I32TypeReg,
-    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
+    const DIGlobalVariable *GV, const GlobalVariableDebugInfo &Info,
+    MCRegister VoidTypeReg, MCRegister I32TypeReg, MCRegister ExtInstSetReg,
+    SPIRV::ModuleAnalysisInfo &MAI) {
   assert(GV && "GV must not be null in emitDebugGlobalVariable");
 
   auto ParentRegOpt = resolveGlobalVariableParent(GV);
@@ -661,13 +662,13 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugGlobalVariable(
   // Variable: @g OpVariable id when !dbg matches; else a DebugExpression for
   // the GVE init value when no @g exists; else DebugInfoNone.
   MCRegister VariableReg = CachedDebugInfoNoneReg;
-  if (const GlobalVariable *LLVMGV = DIGVToLLVMGV.lookup(GV)) {
+  if (const GlobalVariable *LLVMGV = Info.LLVMGV) {
     MCRegister GVReg = MAI.getGlobalObjReg(LLVMGV);
     if (GVReg.isValid())
       VariableReg = GVReg;
-  } else if (const DIExpression *InitExpr = DIGVToInitExpr.lookup(GV)) {
+  } else if (Info.Expr) {
     if (auto ExprReg =
-            emitDebugExpression(InitExpr, VoidTypeReg, ExtInstSetReg, MAI))
+            emitDebugExpression(Info.Expr, VoidTypeReg, ExtInstSetReg, MAI))
       VariableReg = *ExprReg;
   }
 
@@ -742,7 +743,7 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
     ScopeToPathOpStringReg[SP] = emitOpStringIfNew(getDebugFullPath(SP), MAI);
   }
 
-  for (const DIGlobalVariable *GV : GlobalVariables) {
+  for (const auto &[GV, _] : GlobalVariableDebugInfoMap) {
     emitOpStringIfNew(GV->getName(), MAI);
     emitOpStringIfNew(GV->getLinkageName(), MAI);
     SmallString<128> Path = getDebugFullPath(GV->getFile());
@@ -892,8 +893,9 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   }
 
   // Emit DebugGlobalVariable for each collected DIGlobalVariable.
-  for (const DIGlobalVariable *GV : GlobalVariables)
-    emitDebugGlobalVariable(GV, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
+  for (const auto &[GV, Info] : GlobalVariableDebugInfoMap)
+    emitDebugGlobalVariable(GV, Info, VoidTypeReg, I32TypeReg, ExtInstSetReg,
+                            MAI);
 }
 
 SmallString<128>
