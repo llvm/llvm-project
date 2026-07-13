@@ -14,6 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -569,6 +570,40 @@ ComputeRegionOp::wireHoistedValueThroughIns(Value value) {
   BlockArgument arg = appendInputArg(value);
   replaceAllUsesInRegionWith(value, arg, region);
   return arg;
+}
+
+/// Strip index_cast operations from a value before checking for a constant.
+static Value stripIndexCasts(Value val) {
+  while (auto castOp = val.getDefiningOp<arith::IndexCastOp>())
+    val = castOp.getIn();
+  return val;
+}
+
+template <typename ComputeOpT>
+static bool isGangWorkerVectorAllOne(ComputeOpT op) {
+  auto numGangs = op.getNumGangsValues();
+  if (numGangs.empty())
+    return false;
+  for (Value gangSize : numGangs) {
+    if (!isConstantIntValue(stripIndexCasts(gangSize), 1))
+      return false;
+  }
+  Value numWorkers = op.getNumWorkersValue();
+  if (!numWorkers)
+    return false;
+  Value vectorLength = op.getVectorLengthValue();
+  if (!vectorLength)
+    return false;
+  return isConstantIntValue(stripIndexCasts(numWorkers), 1) &&
+         isConstantIntValue(stripIndexCasts(vectorLength), 1);
+}
+
+bool ParallelOp::isEffectivelySerial() {
+  return isGangWorkerVectorAllOne(*this);
+}
+
+bool KernelsOp::isEffectivelySerial() {
+  return isGangWorkerVectorAllOne(*this);
 }
 
 bool ComputeRegionOp::isEffectivelySerial() {
