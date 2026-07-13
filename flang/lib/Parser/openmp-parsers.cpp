@@ -1133,6 +1133,20 @@ TYPE_PARSER(construct<OmpAdjustArgsClause::OmpAdjustOp>(
     "NEED_DEVICE_PTR" >>
         pure(OmpAdjustArgsClause::OmpAdjustOp::Value::Need_Device_Ptr)))
 
+TYPE_PARSER(construct<OmpApplyClause::Modifier>(Parser<OmpLoopModifier>{}))
+
+TYPE_PARSER(sourced(construct<OmpLoopModifier>(
+    "FUSED" >> pure(llvm::omp::LoopModifier::OMPLM_fused) ||
+        "GRID" >> pure(llvm::omp::LoopModifier::OMPLM_grid) ||
+        "IDENTITY" >> pure(llvm::omp::LoopModifier::OMPLM_identity) ||
+        "INTERCHANGED" >> pure(llvm::omp::LoopModifier::OMPLM_interchanged) ||
+        "INTRATILE" >> pure(llvm::omp::LoopModifier::OMPLM_intratile) ||
+        "OFFSETS" >> pure(llvm::omp::LoopModifier::OMPLM_offsets) ||
+        "REVERSED" >> pure(llvm::omp::LoopModifier::OMPLM_reversed) ||
+        "SPLIT" >> pure(llvm::omp::LoopModifier::OMPLM_split) ||
+        "UNROLLED" >> pure(llvm::omp::LoopModifier::OMPLM_unrolled),
+    maybe(parenthesized(nonemptyList(scalarIntConstantExpr))))))
+
 // --- Parsers for clauses --------------------------------------------
 
 // Declaration of the ODS parser. This type must be complete for some of
@@ -1174,6 +1188,10 @@ TYPE_PARSER(construct<OmpAdjustArgsClause>(
 TYPE_PARSER(construct<OmpAffinityClause>(
     maybe(nonemptyList(Parser<OmpAffinityClause::Modifier>{}) / ":"),
     Parser<OmpObjectList>{}))
+
+TYPE_PARSER(construct<OmpApplyClause>(
+    maybe(nonemptyList(Parser<OmpApplyClause::Modifier>{} / ":")),
+    nonemptyList(OmpDirectiveSpecificationParser(/*allowCommas=*/false))))
 
 // 2.4 Requires construct [OpenMP 5.0]
 //        atomic-default-mem-order-clause ->
@@ -1483,6 +1501,8 @@ TYPE_PARSER( //
                       parenthesized(Parser<OmpAllocateClause>{}))) ||
     "APPEND_ARGS" >> construct<OmpClause>(construct<OmpClause::AppendArgs>(
                          parenthesized(Parser<OmpAppendArgsClause>{}))) ||
+    "APPLY" >> construct<OmpClause>(construct<OmpClause::Apply>(
+                   parenthesized(Parser<OmpApplyClause>{}))) ||
     "ALLOCATOR" >> construct<OmpClause>(construct<OmpClause::Allocator>(
                        parenthesized(scalarIntExpr))) ||
     "AT" >> construct<OmpClause>(construct<OmpClause::At>(
@@ -2603,48 +2623,21 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
 
 static constexpr DirectiveSet GetLoopDirectives() {
   using Directive = llvm::omp::Directive;
-  constexpr DirectiveSet loopDirectives{
-      unsigned(Directive::OMPD_distribute),
-      unsigned(Directive::OMPD_distribute_parallel_do),
-      unsigned(Directive::OMPD_distribute_parallel_do_simd),
-      unsigned(Directive::OMPD_distribute_simd),
-      unsigned(Directive::OMPD_do),
-      unsigned(Directive::OMPD_do_simd),
-      unsigned(Directive::OMPD_loop),
-      unsigned(Directive::OMPD_masked_taskloop),
-      unsigned(Directive::OMPD_masked_taskloop_simd),
-      unsigned(Directive::OMPD_master_taskloop),
-      unsigned(Directive::OMPD_master_taskloop_simd),
-      unsigned(Directive::OMPD_parallel_do),
-      unsigned(Directive::OMPD_parallel_do_simd),
-      unsigned(Directive::OMPD_parallel_loop),
-      unsigned(Directive::OMPD_parallel_masked_taskloop),
-      unsigned(Directive::OMPD_parallel_masked_taskloop_simd),
-      unsigned(Directive::OMPD_parallel_master_taskloop),
-      unsigned(Directive::OMPD_parallel_master_taskloop_simd),
-      unsigned(Directive::OMPD_simd),
-      unsigned(Directive::OMPD_target_loop),
-      unsigned(Directive::OMPD_target_parallel_do),
-      unsigned(Directive::OMPD_target_parallel_do_simd),
-      unsigned(Directive::OMPD_target_parallel_loop),
-      unsigned(Directive::OMPD_target_simd),
-      unsigned(Directive::OMPD_target_teams_distribute),
-      unsigned(Directive::OMPD_target_teams_distribute_parallel_do),
-      unsigned(Directive::OMPD_target_teams_distribute_parallel_do_simd),
-      unsigned(Directive::OMPD_target_teams_distribute_simd),
-      unsigned(Directive::OMPD_target_teams_loop),
-      unsigned(Directive::OMPD_taskloop),
-      unsigned(Directive::OMPD_taskloop_simd),
-      unsigned(Directive::OMPD_teams_distribute),
-      unsigned(Directive::OMPD_teams_distribute_parallel_do),
-      unsigned(Directive::OMPD_teams_distribute_parallel_do_simd),
-      unsigned(Directive::OMPD_teams_distribute_simd),
-      unsigned(Directive::OMPD_teams_loop),
-      unsigned(Directive::OMPD_fuse),
-      unsigned(Directive::OMPD_tile),
-      unsigned(Directive::OMPD_unroll),
-      unsigned(Directive::OMPD_interchange),
-  };
+  using SourceLanguage = llvm::omp::SourceLanguage;
+  DirectiveSet loopDirectives;
+
+  for (auto dirVal{llvm::to_underlying(Directive::First_)};
+      dirVal != llvm::to_underlying(Directive::Last_) + 1; ++dirVal) {
+    auto dirId{static_cast<Directive>(dirVal)};
+    auto assoc{getDirectiveAssociation(dirId)};
+    if (assoc == llvm::omp::Association::LoopNest ||
+        assoc == llvm::omp::Association::LoopSeq) {
+      auto langs{getDirectiveLanguages(dirId)};
+      if (llvm::to_underlying(langs & SourceLanguage::Fortran) != 0) {
+        loopDirectives.set(dirVal);
+      }
+    }
+  }
   return loopDirectives;
 }
 

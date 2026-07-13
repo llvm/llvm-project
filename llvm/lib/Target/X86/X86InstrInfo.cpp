@@ -7640,10 +7640,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
         return NewMI;
 
       Register NewSrc = MI.getOperand(0).getReg();
-      if (MRI.isSSA()) {
-        const TargetRegisterClass &RC = *MF.getRegInfo().getRegClass(SrcReg);
-        NewSrc = MRI.createVirtualRegister(&RC);
-      }
+      if (MRI.isSSA())
+        NewSrc = MRI.createVirtualRegister(getRegClass(NewMI->getDesc(), 1));
 
       CopyMI = BuildMI(*NewMI->getParent(), *NewMI, MI.getDebugLoc(),
                        get(TargetOpcode::COPY))
@@ -10400,7 +10398,7 @@ X86InstrInfo::describeLoadedValue(const MachineInstr &MI, Register Reg) const {
     if (Reg == MI.getOperand(0).getReg())
       Expr = DIExpression::appendExt(Expr, 32, 64, true);
     else
-      assert(X86MCRegisterClasses[X86::GR32RegClassID].contains(Reg) &&
+      assert(getX86MCRegisterClass(X86::GR32RegClassID).contains(Reg) &&
              "Unhandled sub-register case for MOVSX64rr32");
 
     return ParamLoadedValue(MI.getOperand(1), Expr);

@@ -233,8 +233,7 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
     // requested.
     PluginDir::LoadPolicy *policy = (PluginDir::LoadPolicy *)baton;
     if (*policy == PluginDir::LoadOnlyWithLLDBPrefix &&
-        !plugin_file_spec.GetFilename().GetStringRef().starts_with(
-            g_plugin_prefix))
+        !plugin_file_spec.GetFilename().starts_with(g_plugin_prefix))
       return FileSystem::eEnumerateDirectoryResultNext;
 
     // Don't try to load an already loaded plugin again.

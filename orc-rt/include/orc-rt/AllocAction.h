@@ -74,7 +74,7 @@ struct AllocActionPair {
 ///
 /// Both finalize and dealloc actions are permitted to be null (i.e. have a
 /// null action function) in which case they are ignored.
-[[nodiscard]] Expected<std::vector<AllocAction>>
+Expected<std::vector<AllocAction>>
 runFinalizeActions(std::vector<AllocActionPair> AAPs);
 
 /// Run the given deallocation actions in revwerse order.

@@ -443,7 +443,7 @@ DIE *DIEBuilder::constructDIEFast(DWARFDie &DDie, DWARFUnit &U,
 
   using AttrSpec = DWARFAbbreviationDeclaration::AttributeSpec;
   for (const AttrSpec &AttrSpec : Abbrev->attributes()) {
-    DWARFFormValue Val(AttrSpec.Form);
+    DWARFFormValue Val = AttrSpec.getFormValue();
     Val.extractValue(Data, &AttrOffset, U.getFormParams(), &U);
     cloneAttribute(*DieInfo.Die, DDie, U, Val, AttrSpec);
   }
@@ -1009,7 +1009,7 @@ void DIEBuilder::assignAbbrev(DIEAbbrev &Abbrev) {
     Abbreviations.push_back(
         std::make_unique<DIEAbbrev>(Abbrev.getTag(), Abbrev.hasChildren()));
     for (const auto &Attr : Abbrev.getData())
-      Abbreviations.back()->AddAttribute(Attr.getAttribute(), Attr.getForm());
+      Abbreviations.back()->AddAttribute(Attr);
     AbbreviationsSet.InsertNode(Abbreviations.back().get(), InsertToken);
     // Assign the unique abbreviation number.
     Abbrev.setNumber(Abbreviations.size());

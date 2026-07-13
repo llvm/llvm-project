@@ -607,10 +607,9 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
         process_info.GetExecutableFile().SetFile(cstr, FileSpec::Style::native);
 
         if (match_info_ptr == NULL ||
-            NameMatches(
-                process_info.GetExecutableFile().GetFilename().GetCString(),
-                match_info_ptr->GetNameMatchType(),
-                match_info_ptr->GetProcessInfo().GetName())) {
+            NameMatches(process_info.GetExecutableFile().GetFilename(),
+                        match_info_ptr->GetNameMatchType(),
+                        match_info_ptr->GetProcessInfo().GetName())) {
           // Skip NULLs
           while (true) {
             const uint8_t *p = data.PeekData(offset, 1);
