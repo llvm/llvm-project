@@ -4,7 +4,7 @@
 //===----------------------------------------------------------------------===//
 // Scalar (0D) copy
 //
-// No varying RC result dimensions =>
+// All RC result dimensions are unit (1) =>
 //   RC result strides do not affect copy destination address and are ignored.
 //===----------------------------------------------------------------------===//
 
@@ -262,7 +262,7 @@ func.func private @negative_copy_scalar_into_2D_strided_dynamic_offset(
 // Non-scalar (ND) copy
 //===----------------------------------------------------------------------===//
 
-/// No non-unit dimension collapsed
+/// The result of collapsing dimensions is not a unit dimension.
 // CHECK-LABEL: func.func private @negative_copy_1D_into_1D_strided(
 func.func private @negative_copy_1D_into_1D_strided(
   %src : memref<4xf32>, %dst : memref<108xf32>) {
