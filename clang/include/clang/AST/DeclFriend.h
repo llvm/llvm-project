@@ -117,6 +117,7 @@ public:
     return K >= firstFriend && K <= lastFriend;
   }
 };
+
 /// An iterator over the friend declarations of a class.
 class CXXRecordDecl::friend_iterator {
   friend class CXXRecordDecl;

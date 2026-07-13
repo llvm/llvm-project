@@ -2479,12 +2479,15 @@ private:
       : FriendDecl(Decl::FriendTemplate, DC, Loc, Friend, FriendLoc,
                    EllipsisLoc),
         NumTPLists(FriendTypeTPLists.size()), Template(Template) {
+    assert(!FriendTypeTPLists.empty());
     llvm::copy(FriendTypeTPLists, getTrailingObjects());
   }
 
   FriendTemplateDecl(EmptyShell Empty, unsigned NumFriendTypeTPLists)
       : FriendDecl(Decl::FriendTemplate, Empty),
-        NumTPLists(NumFriendTypeTPLists) {}
+        NumTPLists(NumFriendTypeTPLists) {
+    assert(NumFriendTypeTPLists != 0);
+  }
 
 public:
   friend class ASTDeclReader;
@@ -2494,13 +2497,13 @@ public:
   static FriendTemplateDecl *
   Create(ASTContext &Context, DeclContext *DC, SourceLocation Loc,
          FriendUnion Friend, SourceLocation FriendLoc,
-         ArrayRef<TemplateParameterList *> FriendTypeTPLists = {},
+         ArrayRef<TemplateParameterList *> FriendTypeTPLists,
          SourceLocation EllipsisLoc = {});
 
   static FriendTemplateDecl *
   Create(ASTContext &Context, DeclContext *DC, SourceLocation Loc,
          TemplateName Template, SourceLocation FriendLoc,
-         ArrayRef<TemplateParameterList *> FriendTypeTPLists = {},
+         ArrayRef<TemplateParameterList *> FriendTypeTPLists,
          SourceLocation EllipsisLoc = {});
 
   static FriendTemplateDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,

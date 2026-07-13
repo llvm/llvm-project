@@ -4690,6 +4690,11 @@ ExpectedDecl ASTNodeImporter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
       NamedDecl *ToFriendD;
       if (Error Err = importInto(ToFriendD, FriendD))
         return std::move(Err);
+
+      if (FriendD->getFriendObjectKind() != Decl::FOK_None &&
+          !FriendD->isInIdentifierNamespace(Decl::IDNS_NonMemberOperator))
+        ToFriendD->setObjectOfFriendDecl(false);
+
       ToFU = ToFriendD;
     } else {
       if (auto TSIOrErr = import(D->getFriendType()))

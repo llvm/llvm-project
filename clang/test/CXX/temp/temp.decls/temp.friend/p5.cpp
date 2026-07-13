@@ -548,3 +548,24 @@ namespace test24 {
     }
   };
 }
+
+namespace test25 {
+  class X;
+
+  template <class... Ts> struct A {
+    struct B {
+      static void f(X &);
+    };
+  };
+
+  class X {
+    int n;
+    template <class... Ts> friend struct A<Ts...>::B;
+  };
+
+  template <class... Ts> void A<Ts...>::B::f(X &x) {
+    x.n = 0;
+  }
+
+  template void A<int, double>::B::f(X &);
+}

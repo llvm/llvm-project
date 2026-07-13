@@ -2445,6 +2445,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      FriendTemplateDecl *FTD1,
                                      FriendTemplateDecl *FTD2) {
+  if (FTD1->isPackExpansion() != FTD2->isPackExpansion())
+    return false;
+
   ArrayRef<TemplateParameterList *> TPL1 =
       FTD1->getFriendTypeTemplateParameterLists();
   ArrayRef<TemplateParameterList *> TPL2 =
@@ -2818,23 +2821,6 @@ bool StructuralEquivalenceContext::CheckCommonEquivalence(Decl *D1, Decl *D2) {
   // FIXME: Move check for identifier names into this function.
 
   return true;
-}
-
-bool StructuralEquivalenceContext::IsEquivalent(TemplateParameterList *TPL1,
-                                                TemplateParameterList *TPL2) {
-  assert(DeclsToCheck.empty());
-  assert(VisitedDecls.empty());
-
-  if (TPL1 == TPL2)
-    return true;
-
-  if (!TPL1 || !TPL2)
-    return false;
-
-  if (!::IsStructurallyEquivalent(*this, TPL1, TPL2))
-    return false;
-
-  return !Finish();
 }
 
 bool StructuralEquivalenceContext::CheckKindSpecificEquivalence(

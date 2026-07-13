@@ -189,6 +189,10 @@ struct A {
   template<typename U>
   friend struct Ts...[0]::C;
   // since-cxx26-error@-1 {{a pack indexing specifier cannot be used in a declarative nested name specifier}}
+
+  template<typename U>
+  friend struct Ts...[0]::template B<U>::C;
+  // since-cxx26-error@-1 {{a pack indexing specifier cannot be used in a declarative nested name specifier}}
 };
 
 #endif

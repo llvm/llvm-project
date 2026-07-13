@@ -18103,12 +18103,17 @@ GetClassTemplateSpecializationType(ASTContext &Context, QualType T) {
 }
 
 static bool DiagnosePackIndexingInFriendNNS(Sema &S, SourceLocation Loc,
-                                            QualType T) {
-  if (!isa<PackIndexingType>(T))
-    return false;
+                                            NestedNameSpecifierLoc NNSLoc) {
+  for (TypeLoc TL = NNSLoc.getAsTypeLoc(); TL;
+       TL = TL.getPrefix().getAsTypeLoc()) {
+    if (TL.getTypeLocClass() != TypeLoc::PackIndexing)
+      continue;
 
-  S.Diag(Loc, diag::err_computed_type_in_declarative_nns) << 0;
-  return true;
+    S.Diag(Loc, diag::err_computed_type_in_declarative_nns)
+        << 0 << TL.getSourceRange();
+    return true;
+  }
+  return false;
 }
 
 static void DiagnoseDependentFriendNotMember(Sema &S, SourceLocation Loc,
@@ -18123,8 +18128,9 @@ static void DiagnoseDependentFriendNotMember(Sema &S, SourceLocation Loc,
 }
 
 static bool
-CheckDependentFriend(Sema &S, SourceLocation Loc, NestedNameSpecifier NNS,
+CheckDependentFriend(Sema &S, SourceLocation Loc, NestedNameSpecifierLoc NNSLoc,
                      ArrayRef<TemplateParameterList *> TemplateParameterLists) {
+  NestedNameSpecifier NNS = NNSLoc.getNestedNameSpecifier();
   if (!NNS.isDependent())
     return false;
 
@@ -18132,7 +18138,7 @@ CheckDependentFriend(Sema &S, SourceLocation Loc, NestedNameSpecifier NNS,
          "dependent nested-name-specifier must be a type");
 
   QualType T(NNS.getAsType(), 0);
-  if (DiagnosePackIndexingInFriendNNS(S, Loc, T))
+  if (DiagnosePackIndexingInFriendNNS(S, Loc, NNSLoc))
     return true;
   if (TemplateParameterLists.empty())
     return false;
@@ -18277,7 +18283,7 @@ DeclResult Sema::ActOnTemplatedFriendTag(
   ArrayRef<TemplateParameterList *> TPL = TempParamLists;
   if (TemplateParams)
     TPL = TPL.drop_back();
-  if (CheckDependentFriend(*this, TagLoc, NNS, TPL))
+  if (CheckDependentFriend(*this, TagLoc, QualifierLoc, TPL))
     return true;
 
   ElaboratedTypeKeyword ETK = TypeWithKeyword::getKeywordForTagTypeKind(Kind);
@@ -18692,7 +18698,8 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
     FD = cast<FunctionDecl>(ND);
 
   if (TemplateParams.size() && SS.isValid() &&
-      CheckDependentFriend(*this, NameInfo.getLoc(), SS.getScopeRep(),
+      CheckDependentFriend(*this, NameInfo.getLoc(),
+                           SS.getWithLocInContext(Context),
                            FD->getTemplateParameterLists())) {
     ND->setInvalidDecl();
     return ND;
