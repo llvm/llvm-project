@@ -779,4 +779,4 @@ for.cond.cleanup:
 attributes #0 = { "target-features"="+sve" }
 
 !0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.enable"}

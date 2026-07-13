@@ -7519,10 +7519,8 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
 
   // Use the above access group metadata to create loop level
   // metadata, which should be distinct for each loop.
-  ConstantAsMetadata *BoolConst =
-      ConstantAsMetadata::get(ConstantInt::getTrue(Type::getInt1Ty(Ctx)));
-  LoopMDList.push_back(MDNode::get(
-      Ctx, {MDString::get(Ctx, "llvm.loop.vectorize.enable"), BoolConst}));
+  LoopMDList.push_back(
+      MDNode::get(Ctx, {MDString::get(Ctx, "llvm.loop.vectorize.enable")}));
 
   if (Simdlen || Safelen) {
     // If both simdlen and safelen clauses are specified, the value of the

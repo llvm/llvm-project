@@ -103,7 +103,7 @@ void test9(int *List, int Length) {
 
 // CHECK:      ![[LOOP0]] = distinct !{![[LOOP0]], [[MP:![0-9]+]], [[GEN3:![0-9]+]]}
 // CHECK:      [[MP]] = !{!"llvm.loop.mustprogress"}
-// CHECK-NEXT: [[GEN3]] = !{!"llvm.loop.vectorize.enable", i1 true}
+// CHECK-NEXT: [[GEN3]] = !{!"llvm.loop.vectorize.enable"}
 
 // CHECK-NEXT: ![[LOOP1]] = distinct !{![[LOOP1]], [[MP]], [[GEN6:![0-9]+]], [[GEN3]]}
 // CHECK-NEXT: [[GEN6]] = !{!"llvm.loop.vectorize.predicate.enable", i1 true}

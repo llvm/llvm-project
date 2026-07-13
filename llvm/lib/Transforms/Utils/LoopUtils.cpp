@@ -405,11 +405,11 @@ TransformationMode llvm::hasUnrollAndJamTransformation(const Loop *L) {
 }
 
 TransformationMode llvm::hasVectorizeTransformation(const Loop *L) {
+  if (getBooleanLoopAttribute(L, "llvm.loop.vectorize.disable"))
+    return TM_SuppressedByUser;
+
   std::optional<bool> Enable =
       getOptionalBoolLoopAttribute(L, "llvm.loop.vectorize.enable");
-
-  if (Enable == false)
-    return TM_SuppressedByUser;
 
   std::optional<ElementCount> VectorizeWidth =
       getOptionalElementCountLoopAttribute(L);

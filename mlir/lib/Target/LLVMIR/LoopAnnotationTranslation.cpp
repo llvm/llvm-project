@@ -103,7 +103,12 @@ void LoopAnnotationConversion::convertFollowupNode(StringRef name,
 }
 
 void LoopAnnotationConversion::convertLoopOptions(LoopVectorizeAttr options) {
-  convertBoolNode("llvm.loop.vectorize.enable", options.getDisable(), true);
+  if (auto disable = options.getDisable()) {
+    if (disable.getValue())
+      addUnitNode("llvm.loop.vectorize.disable");
+    else
+      addUnitNode("llvm.loop.vectorize.enable");
+  }
   convertBoolNode("llvm.loop.vectorize.predicate.enable",
                   options.getPredicateEnable());
   convertBoolNode("llvm.loop.vectorize.scalable.enable",
