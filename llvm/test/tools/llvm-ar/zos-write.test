@@ -1,6 +1,6 @@
 ## Test writing a z/OS archive.
 
-# RUN: rm -rf %t.dir && mkdir -p %t.dir
+# RUN: rm -rf %t.dir %t.a %t.odd.a %t.long.a %t.sym.a %t.blank-sym.a && mkdir -p %t.dir
 # RUN: split-file %s %t.dir
 
 ## Create a z/OS archive from a plain text file with symbol table writing disabled.
