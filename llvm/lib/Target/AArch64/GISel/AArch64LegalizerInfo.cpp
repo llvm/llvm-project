@@ -252,6 +252,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           {v4i32, v4i32},
           {v2i64, v2i64},
       })
+      .widenScalarToNextPow2(1)
       .widenScalarToNextPow2(0)
       .clampScalar(1, s32, s64)
       .clampScalar(0, s32, s64)
