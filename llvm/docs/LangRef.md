@@ -861,10 +861,10 @@ may affect how optimizations are performed and/or what target
 instructions are used to access the variable. The default address space
 is zero. The address space qualifier must precede any other attributes.
 
-LLVM allows an explicit section to be specified for globals. If the
-target supports it, it will emit globals to the section specified.
-Additionally, the global can be placed in a comdat if the target has the necessary
-support.
+LLVM allows an explicit {ref}`section <langref_sections>` to be specified for
+globals. If the target supports it, it will emit globals to the section
+specified. Additionally, the global can be placed in a
+{ref}`comdat <langref_comdats>` if the target has the necessary support.
 
 External declarations may have an explicit section specified. Section
 information is retained in LLVM IR for targets that make use of this
@@ -985,7 +985,9 @@ an optional `unnamed_addr` attribute, a return type, an optional
 {ref}`parameter attribute <paramattrs>` for the return type, a function
 name, a (possibly empty) argument list (each with optional {ref}`parameter
 attributes <paramattrs>`), optional {ref}`function attributes <fnattrs>`,
-an optional address space, an optional section, an optional partition,
+an optional address space,
+an optional {ref}`section <langref_sections>`,
+an optional partition,
 an optional minimum alignment,
 an optional preferred alignment,
 an optional {ref}`comdat <langref_comdats>`,
@@ -1157,6 +1159,103 @@ Syntax:
 ```
 @<Name> = [Linkage] [PreemptionSpecifier] [Visibility] ifunc <IFuncTy>, <ResolverTy>* @<Resolver>
           [, partition "name"] (, !name !N)*
+```
+
+(langref_sections)=
+
+### Sections
+
+The supported format in the `section` attribute is target-specific and varies
+depending on the object file format. On most targets, the section name is
+forwarded to and interpreted by the linker.
+
+#### Section Mach-O format
+
+In Mach-O, the section is parsed by the assembler as a string with five fields:
+the segment name, the section name, the section type, the section attributes
+and the stub size. The fields are separated by `,`. Whitespace is ignored.
+
+Segment name
+:   Sections are grouped together in segments. The segment name is limited to
+    16 characters. Common segment names include `__DATA` and `__TEXT`.
+
+Section name
+:   The segment name and section name together identifies the section. All
+    symbols in the binary with a given segment/section pair must have the same
+    type and attributes. The section name is limited to 16 characters.
+
+Section type
+:   The valid section type names are:
+    - `regular`
+    - `zerofill`
+    - `cstring_literals`
+    - `4byte_literals`
+    - `8byte_literals`
+    - `literal_pointers`
+    - `non_lazy_symbol_pointers`
+    - `lazy_symbol_pointers`
+    - `mod_init_funcs`
+    - `mod_term_funcs`
+    - `coalesced`
+    - `interposing`
+    - `16byte_literals`
+    - `thread_local_regular`
+    - `thread_local_zerofill`
+    - `thread_local_variables`
+    - `thread_local_variable_pointers`
+    - `thread_local_init_function_pointers`
+    - `symbol_stubs`
+
+    The section type is optional, and will default to `regular` if not set.
+
+    Most of these are documented further in [the Mac OS X Assembler Reference](https://leopard-adc.pepas.com/documentation/DeveloperTools/Reference/Assembler/040-Assembler_Directives/asm_directives.html#//apple_ref/doc/uid/TP30000823-TPXREF105).
+
+Section attributes
+:   The valid section attribute names are:
+    - `pure_instructions`
+    - `no_toc`
+    - `strip_static_syms`
+    - `no_dead_strip`
+    - `live_support`
+    - `self_modifying_code`
+    - `debug`
+
+    Multiple section attributes can be set, these are separated by `+`.
+
+    Most of these are documented further in [the Mac OS X Assembler Reference](https://leopard-adc.pepas.com/documentation/DeveloperTools/Reference/Assembler/040-Assembler_Directives/asm_directives.html#//apple_ref/doc/uid/TP30000823-TPXREF117).
+
+Section stub size
+:   The stub size must be specified if the `symbol_stubs` section type is used.
+    It is an error to specify otherwise.
+
+Here is an example of using a Mach-O section specifier to implement a
+{ref}`global constructor <gv_llvmglobalctors>`.
+
+```llvm
+define void @constructor() section "__DATA,__mod_init_func,mod_init_funcs" {
+  ret void
+}
+```
+
+And here is an example of using a Mach-O section specifier to tell the dynamic
+linker to replace the external symbol `foo` with the locally defined
+`replacement_foo`.
+
+```llvm
+declare void @foo()
+
+define void @replacement_foo() {
+  ret void
+}
+
+@interposers = global [2 x ptr] [
+  ptr @replacement_foo,
+  ptr @foo
+], section "__DATA, __interpose", align 8
+
+@llvm.used = appending global [1 x ptr] [
+  ptr @interposers
+], section "llvm.metadata"
 ```
 
 (langref_comdats)=
@@ -13520,7 +13619,7 @@ This instruction requires several arguments:
    ```llvm
    declare void @take_byval(ptr byval(i64))
    declare void @take_ptr(ptr)
-   
+
    ; Invalid (assuming @take_ptr dereferences the pointer), because %local
    ; may be de-allocated before the call to @take_ptr.
    define void @invalid_alloca() {
@@ -13529,7 +13628,7 @@ This instruction requires several arguments:
      tail call void @take_ptr(ptr %local)
      ret void
    }
-   
+
    ; Valid, the byval attribute causes the memory allocated by %local to be
    ; copied into @take_byval's stack frame.
    define void @byval_alloca() {
@@ -13538,7 +13637,7 @@ This instruction requires several arguments:
      tail call void @take_byval(ptr byval(i64) %local)
      ret void
    }
-   
+
    ; Invalid, because @use_global_va_list uses the variadic arguments from
    ; @invalid_va_list.
    %struct.va_list = type { ptr }
@@ -13554,14 +13653,14 @@ This instruction requires several arguments:
      tail call void @use_global_va_list()
      ret void
    }
-   
+
    ; Valid, byval argument forwarded to tail call as another byval argument.
    define void @forward_byval(ptr byval(i64) %x) {
    entry:
      tail call void @take_byval(ptr byval(i64) %x)
      ret void
    }
-   
+
    ; Invalid (assuming @take_ptr dereferences the pointer), byval argument
    ; passed to tail callee as non-byval ptr.
    define void @invalid_byval(ptr byval(i64) %x) {

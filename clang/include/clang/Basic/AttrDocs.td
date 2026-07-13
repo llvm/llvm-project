@@ -51,8 +51,19 @@ This page lists the attributes currently supported by Clang.
 def SectionDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
-The ``section`` attribute allows you to specify a specific section a
-global variable or function should be in after translation.
+The ``section`` attribute allows you to specify a specific section a global
+variable or function should be in after translation.
+
+The format of the attribute is target-specific, see `LLVM documentation
+<https://llvm.org/docs/LangRef.html#sections>`_.
+
+Example usage:
+
+.. code-block:: c
+
+  __attribute__((section("foo")))
+  void bar(void) {}
+
   }];
   let Heading = "section, __declspec(allocate)";
 }
