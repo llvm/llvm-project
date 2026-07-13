@@ -373,11 +373,10 @@ struct ConvertFOpLowering : public ConvertOpToLLVMPattern<arith::ConvertFOp> {
   }
 
 private:
-  static Value emitConversion(ConversionPatternRewriter &rewriter, Location loc,
-                              Value input, Type targetType,
-                              LLVM::RoundingModeAttr roundingModeAttr,
-                              LLVM::FPExceptionBehaviorAttr
-                                  exceptionBehaviorAttr) {
+  static Value
+  emitConversion(ConversionPatternRewriter &rewriter, Location loc, Value input,
+                 Type targetType, LLVM::RoundingModeAttr roundingModeAttr,
+                 LLVM::FPExceptionBehaviorAttr exceptionBehaviorAttr) {
     Type f32Scalar = Float32Type::get(rewriter.getContext());
     Type f32Ty = f32Scalar;
     if (auto vecTy = dyn_cast<VectorType>(targetType))
@@ -386,10 +385,10 @@ private:
     // A constrained floating-point environment was requested: emit the
     // constrained intrinsics carrying the rounding mode and exception behavior.
     if (exceptionBehaviorAttr) {
-      Value ext = LLVM::ConstrainedFPExtIntr::create(rewriter, loc, f32Ty, input,
-                                                     exceptionBehaviorAttr);
-      return LLVM::ConstrainedFPTruncIntr::create(rewriter, loc, targetType, ext,
-                                                  roundingModeAttr,
+      Value ext = LLVM::ConstrainedFPExtIntr::create(
+          rewriter, loc, f32Ty, input, exceptionBehaviorAttr);
+      return LLVM::ConstrainedFPTruncIntr::create(rewriter, loc, targetType,
+                                                  ext, roundingModeAttr,
                                                   exceptionBehaviorAttr);
     }
 

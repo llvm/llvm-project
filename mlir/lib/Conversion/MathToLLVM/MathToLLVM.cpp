@@ -80,7 +80,8 @@ struct ConstrainedVectorConvertToLLVMPattern
 template <typename SourceOp, typename TargetOp>
 using ConvertUnconstrainedMathToLLVMPattern =
     ConstrainedVectorConvertToLLVMPattern<SourceOp, TargetOp,
-                                          /*IsConstrained=*/false, ConvertFastMath,
+                                          /*IsConstrained=*/false,
+                                          ConvertFastMath,
                                           /*FailOnUnsupportedFP=*/true>;
 
 // Convenience alias for the pattern that lowers a math op carrying a
@@ -98,7 +99,8 @@ using AbsFOpLowering =
 using CeilOpLowering =
     ConvertUnconstrainedMathToLLVMPattern<math::CeilOp, LLVM::FCeilOp>;
 using ConstrainedCeilOpLowering =
-    ConvertConstrainedMathToLLVMPattern<math::CeilOp, LLVM::ConstrainedCeilIntr>;
+    ConvertConstrainedMathToLLVMPattern<math::CeilOp,
+                                        LLVM::ConstrainedCeilIntr>;
 using CopySignOpLowering =
     ConvertFMFMathToLLVMPattern<math::CopySignOp, LLVM::CopySignOp>;
 using CosOpLowering =
@@ -108,11 +110,13 @@ using ConstrainedCosOpLowering =
 using CoshOpLowering =
     ConvertUnconstrainedMathToLLVMPattern<math::CoshOp, LLVM::CoshOp>;
 using ConstrainedCoshOpLowering =
-    ConvertConstrainedMathToLLVMPattern<math::CoshOp, LLVM::ConstrainedCoshIntr>;
+    ConvertConstrainedMathToLLVMPattern<math::CoshOp,
+                                        LLVM::ConstrainedCoshIntr>;
 using AcosOpLowering =
     ConvertUnconstrainedMathToLLVMPattern<math::AcosOp, LLVM::ACosOp>;
 using ConstrainedAcosOpLowering =
-    ConvertConstrainedMathToLLVMPattern<math::AcosOp, LLVM::ConstrainedACosIntr>;
+    ConvertConstrainedMathToLLVMPattern<math::AcosOp,
+                                        LLVM::ConstrainedACosIntr>;
 using CtPopFOpLowering =
     VectorConvertToLLVMPattern<math::CtPopOp, LLVM::CtPopOp,
                                AttrConvertPassThrough,
@@ -120,7 +124,8 @@ using CtPopFOpLowering =
 using Exp2OpLowering =
     ConvertUnconstrainedMathToLLVMPattern<math::Exp2Op, LLVM::Exp2Op>;
 using ConstrainedExp2OpLowering =
-    ConvertConstrainedMathToLLVMPattern<math::Exp2Op, LLVM::ConstrainedExp2Intr>;
+    ConvertConstrainedMathToLLVMPattern<math::Exp2Op,
+                                        LLVM::ConstrainedExp2Intr>;
 using ExpOpLowering =
     ConvertUnconstrainedMathToLLVMPattern<math::ExpOp, LLVM::ExpOp>;
 using ConstrainedExpOpLowering =
@@ -146,7 +151,8 @@ using ConstrainedLog10OpLowering =
 using Log2OpLowering =
     ConvertUnconstrainedMathToLLVMPattern<math::Log2Op, LLVM::Log2Op>;
 using ConstrainedLog2OpLowering =
-    ConvertConstrainedMathToLLVMPattern<math::Log2Op, LLVM::ConstrainedLog2Intr>;
+    ConvertConstrainedMathToLLVMPattern<math::Log2Op,
+                                        LLVM::ConstrainedLog2Intr>;
 using LogOpLowering =
     ConvertUnconstrainedMathToLLVMPattern<math::LogOp, LLVM::LogOp>;
 using ConstrainedLogOpLowering =
@@ -174,15 +180,18 @@ using ConstrainedSinOpLowering =
 using SinhOpLowering =
     ConvertUnconstrainedMathToLLVMPattern<math::SinhOp, LLVM::SinhOp>;
 using ConstrainedSinhOpLowering =
-    ConvertConstrainedMathToLLVMPattern<math::SinhOp, LLVM::ConstrainedSinhIntr>;
+    ConvertConstrainedMathToLLVMPattern<math::SinhOp,
+                                        LLVM::ConstrainedSinhIntr>;
 using ASinOpLowering =
     ConvertUnconstrainedMathToLLVMPattern<math::AsinOp, LLVM::ASinOp>;
 using ConstrainedASinOpLowering =
-    ConvertConstrainedMathToLLVMPattern<math::AsinOp, LLVM::ConstrainedASinIntr>;
+    ConvertConstrainedMathToLLVMPattern<math::AsinOp,
+                                        LLVM::ConstrainedASinIntr>;
 using SqrtOpLowering =
     ConvertUnconstrainedMathToLLVMPattern<math::SqrtOp, LLVM::SqrtOp>;
 using ConstrainedSqrtOpLowering =
-    ConvertConstrainedMathToLLVMPattern<math::SqrtOp, LLVM::ConstrainedSqrtIntr>;
+    ConvertConstrainedMathToLLVMPattern<math::SqrtOp,
+                                        LLVM::ConstrainedSqrtIntr>;
 using FTruncOpLowering =
     ConvertUnconstrainedMathToLLVMPattern<math::TruncOp, LLVM::FTruncOp>;
 using ConstrainedFTruncOpLowering =
@@ -195,11 +204,13 @@ using ConstrainedTanOpLowering =
 using TanhOpLowering =
     ConvertUnconstrainedMathToLLVMPattern<math::TanhOp, LLVM::TanhOp>;
 using ConstrainedTanhOpLowering =
-    ConvertConstrainedMathToLLVMPattern<math::TanhOp, LLVM::ConstrainedTanhIntr>;
+    ConvertConstrainedMathToLLVMPattern<math::TanhOp,
+                                        LLVM::ConstrainedTanhIntr>;
 using ATanOpLowering =
     ConvertUnconstrainedMathToLLVMPattern<math::AtanOp, LLVM::ATanOp>;
 using ConstrainedATanOpLowering =
-    ConvertConstrainedMathToLLVMPattern<math::AtanOp, LLVM::ConstrainedATanIntr>;
+    ConvertConstrainedMathToLLVMPattern<math::AtanOp,
+                                        LLVM::ConstrainedATanIntr>;
 using ATan2OpLowering =
     ConvertUnconstrainedMathToLLVMPattern<math::Atan2Op, LLVM::ATan2Op>;
 using ConstrainedATan2OpLowering =

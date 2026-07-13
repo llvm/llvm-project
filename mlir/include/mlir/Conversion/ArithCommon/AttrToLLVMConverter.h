@@ -184,10 +184,9 @@ public:
 
     if constexpr (TargetOp::template hasTrait<
                       LLVM::RoundingModeOpInterface::Trait>()) {
-      convertedAttr.set(
-          TargetOp::getRoundingModeAttrName(),
-          LLVM::RoundingModeAttr::get(
-              ctx, convertArithRoundingModeToLLVM(roundingMode)));
+      convertedAttr.set(TargetOp::getRoundingModeAttrName(),
+                        LLVM::RoundingModeAttr::get(
+                            ctx, convertArithRoundingModeToLLVM(roundingMode)));
     }
     // Constrained intrinsics (llvm.intr.experimental.constrained.*) do not
     // support fastmath flags. Remove the arith fastmath attribute if present.
