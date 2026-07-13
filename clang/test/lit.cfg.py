@@ -112,6 +112,13 @@ config.substitutions.append(
         ),
     )
 )
+
+# Rewrite LF to CRLF
+config.substitutions.append(("%{to-crlf}", f"{sed_cmd} -e 's/\r//g' -e 's/$/\r/'"))
+
+# Filtering command for testing for carriage return
+config.substitutions.append(("%{reveal-cr}", f"{sed_cmd} -e 's/\r/<CR>/g'"))
+
 # For each occurrence of a clang tool name, replace it with the full path to
 # the build directory holding that tool.  We explicitly specify the directories
 # to search to ensure that we get the tools just built and not some random
