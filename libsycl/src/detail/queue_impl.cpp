@@ -106,8 +106,7 @@ void QueueImpl::setKernelParameters(std::vector<EventImplPtr> &&Events,
   MCurrentSubmitInfo.DepEvents.clear();
   MCurrentSubmitInfo.Range = {};
 
-  MCurrentSubmitInfo.DepEvents =
-      std::forward<std::vector<EventImplPtr>>(Events);
+  MCurrentSubmitInfo.DepEvents = std::move(Events);
   setKernelLaunchArgs(Range, MCurrentSubmitInfo.Range);
 }
 
