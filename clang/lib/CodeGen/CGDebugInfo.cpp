@@ -1142,13 +1142,8 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   }
 #include "clang/Basic/AMDGPUTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId)                                      \
-  case BuiltinType::Id: {                                                      \
-    if (!SingletonId)                                                          \
-      SingletonId =                                                            \
-          DBuilder.createForwardDecl(llvm::dwarf::DW_TAG_structure_type, Name, \
-                                     TheCU, TheCU->getFile(), 0);              \
-    return SingletonId;                                                        \
-  }
+  case BuiltinType::Id:                                                        \
+    return getOrCreateStructPtrType(Name, SingletonId);
 #include "clang/Basic/SPIRVTypes.def"
   case BuiltinType::UChar:
   case BuiltinType::Char_U:

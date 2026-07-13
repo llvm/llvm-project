@@ -38,7 +38,8 @@ void test(__spirv_event_t e) {
 // CHECK: declare spir_func target("spirv.Event") @_Z8getEventv()
 // CHECK: declare spir_func void @_Z12consumeEventu15__spirv_event_t(target("spirv.Event"))
 
-// DEBUG: ![[TD:[0-9]+]] = !DIDerivedType(tag: DW_TAG_typedef, name: "__spirv_event_t", {{.*}} baseType: ![[BT:[0-9]+]])
+// DEBUG: ![[TD:[0-9]+]] = !DIDerivedType(tag: DW_TAG_typedef, name: "__spirv_event_t", {{.*}} baseType: ![[PTR:[0-9]+]])
+// DEBUG: ![[PTR]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[BT:[0-9]+]]
 // DEBUG: ![[BT]] = !DICompositeType(tag: DW_TAG_structure_type, name: "__spirv_event_t", {{.*}} flags: DIFlagFwdDecl)
 // DEBUG-DAG: !DILocalVariable(name: "e", {{.*}} type: ![[TD]])
 // DEBUG-DAG: !DILocalVariable(name: "copyConstructed", {{.*}} type: ![[TD]])
