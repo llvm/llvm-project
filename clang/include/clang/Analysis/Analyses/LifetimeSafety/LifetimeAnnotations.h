@@ -62,9 +62,14 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 using LifetimeBoundParamInfo =
     llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
 
-/// Returns the arguments corresponding to Call, including the implicit object
-/// argument as argument 0 for instance member calls.
-llvm::SmallVector<const Expr *, 4> getLifetimeSafetyCallArgs(const Expr *Call);
+struct LifetimeSafetyCallInfo {
+  const FunctionDecl *FD = nullptr;
+  llvm::SmallVector<const Expr *, 4> Args;
+};
+
+/// Returns the callee and arguments corresponding to Call. For instance member
+/// calls, Args includes the implicit object argument as argument 0.
+LifetimeSafetyCallInfo getLifetimeSafetyCallInfo(const Expr *Call);
 
 /// Returns the lifetimebound parameter corresponding to argument I.
 /// For instance methods, argument 0 is the implicit object argument.

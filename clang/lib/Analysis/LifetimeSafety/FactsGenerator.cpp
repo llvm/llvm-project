@@ -232,7 +232,8 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
       return;
     }
   }
-  handleFunctionCall(CCE, CCE->getConstructor(), getLifetimeSafetyCallArgs(CCE),
+  LifetimeSafetyCallInfo CallInfo = getLifetimeSafetyCallInfo(CCE);
+  handleFunctionCall(CCE, CallInfo.FD, CallInfo.Args,
                      /*IsGslConstruction=*/false);
 }
 
@@ -255,13 +256,14 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
       isa_and_present<CXXConversionDecl>(MCE->getCalleeDecl()) &&
       isGslOwnerType(MCE->getImplicitObjectArgument()->getType())) {
     // The argument is the implicit object itself.
-    handleFunctionCall(MCE, MCE->getMethodDecl(),
-                       getLifetimeSafetyCallArgs(MCE),
+    LifetimeSafetyCallInfo CallInfo = getLifetimeSafetyCallInfo(MCE);
+    handleFunctionCall(MCE, CallInfo.FD, CallInfo.Args,
                        /*IsGslConstruction=*/true);
     return;
   }
-  if (const CXXMethodDecl *Method = MCE->getMethodDecl()) {
-    handleFunctionCall(MCE, Method, getLifetimeSafetyCallArgs(MCE),
+  if (MCE->getMethodDecl()) {
+    LifetimeSafetyCallInfo CallInfo = getLifetimeSafetyCallInfo(MCE);
+    handleFunctionCall(MCE, CallInfo.FD, CallInfo.Args,
                        /*IsGslConstruction=*/false);
   }
 }
@@ -283,7 +285,8 @@ void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
 }
 
 void FactsGenerator::VisitCallExpr(const CallExpr *CE) {
-  handleFunctionCall(CE, CE->getDirectCallee(), getLifetimeSafetyCallArgs(CE));
+  LifetimeSafetyCallInfo CallInfo = getLifetimeSafetyCallInfo(CE);
+  handleFunctionCall(CE, CallInfo.FD, CallInfo.Args);
 }
 
 void FactsGenerator::VisitCXXNullPtrLiteralExpr(
@@ -630,8 +633,8 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     }
   }
 
-  handleFunctionCall(OCE, OCE->getDirectCallee(),
-                     getLifetimeSafetyCallArgs(OCE));
+  LifetimeSafetyCallInfo CallInfo = getLifetimeSafetyCallInfo(OCE);
+  handleFunctionCall(OCE, CallInfo.FD, CallInfo.Args);
 }
 
 void FactsGenerator::VisitCXXFunctionalCastExpr(
@@ -887,8 +890,8 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
   } else {
     // This could be a new borrow.
     // TODO: Add code example here.
-    handleFunctionCall(CCE, CCE->getConstructor(),
-                       getLifetimeSafetyCallArgs(CCE),
+    LifetimeSafetyCallInfo CallInfo = getLifetimeSafetyCallInfo(CCE);
+    handleFunctionCall(CCE, CallInfo.FD, CallInfo.Args,
                        /*IsGslConstruction=*/true);
   }
 }

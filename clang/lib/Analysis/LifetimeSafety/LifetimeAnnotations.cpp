@@ -149,27 +149,30 @@ static bool isExprInCallArg(const Expr *Arg, const Expr *Source) {
   return false;
 }
 
-llvm::SmallVector<const Expr *, 4> getLifetimeSafetyCallArgs(const Expr *Call) {
-  llvm::SmallVector<const Expr *, 4> Args;
+LifetimeSafetyCallInfo getLifetimeSafetyCallInfo(const Expr *Call) {
+  LifetimeSafetyCallInfo Info;
   if (!Call)
-    return Args;
+    return Info;
 
   Call = Call->IgnoreParenImpCasts();
   if (const auto *CCE = dyn_cast<CXXConstructExpr>(Call)) {
-    Args.append(CCE->getArgs(), CCE->getArgs() + CCE->getNumArgs());
+    Info.FD = CCE->getConstructor();
+    Info.Args.append(CCE->getArgs(), CCE->getArgs() + CCE->getNumArgs());
   } else if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(Call)) {
-    Args.push_back(MCE->getImplicitObjectArgument());
-    Args.append(MCE->getArgs(), MCE->getArgs() + MCE->getNumArgs());
+    Info.FD = MCE->getMethodDecl();
+    Info.Args.push_back(MCE->getImplicitObjectArgument());
+    Info.Args.append(MCE->getArgs(), MCE->getArgs() + MCE->getNumArgs());
   } else if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(Call)) {
-    Args.append(OCE->getArgs(), OCE->getArgs() + OCE->getNumArgs());
-    if (const FunctionDecl *FD = OCE->getDirectCallee();
-        FD && OCE->getOperator() == OO_Call && FD->isStatic())
-      Args.erase(Args.begin());
+    Info.FD = OCE->getDirectCallee();
+    Info.Args.append(OCE->getArgs(), OCE->getArgs() + OCE->getNumArgs());
+    if (Info.FD && OCE->getOperator() == OO_Call && Info.FD->isStatic())
+      Info.Args.erase(Info.Args.begin());
   } else if (const auto *CE = dyn_cast<CallExpr>(Call)) {
-    Args.append(CE->getArgs(), CE->getArgs() + CE->getNumArgs());
+    Info.FD = CE->getDirectCallee();
+    Info.Args.append(CE->getArgs(), CE->getArgs() + CE->getNumArgs());
   }
 
-  return Args;
+  return Info;
 }
 
 std::optional<LifetimeBoundParamInfo>
@@ -177,29 +180,15 @@ getLifetimeBoundParamInfoForCallArg(const Expr *Call, const Expr *Source) {
   if (!Call || !Source)
     return std::nullopt;
 
-  Call = Call->IgnoreParenImpCasts();
-
-  const FunctionDecl *FD = nullptr;
-
-  if (const auto *CCE = dyn_cast<CXXConstructExpr>(Call)) {
-    FD = CCE->getConstructor();
-  } else if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(Call)) {
-    FD = MCE->getMethodDecl();
-  } else if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(Call)) {
-    FD = OCE->getDirectCallee();
-  } else if (const auto *CE = dyn_cast<CallExpr>(Call)) {
-    FD = CE->getDirectCallee();
-  }
-
-  if (!FD)
+  LifetimeSafetyCallInfo Info = getLifetimeSafetyCallInfo(Call);
+  if (!Info.FD)
     return std::nullopt;
 
-  llvm::SmallVector<const Expr *, 4> Args = getLifetimeSafetyCallArgs(Call);
-  for (unsigned I = 0; I < Args.size(); ++I)
-    if (isExprInCallArg(Args[I], Source))
-      if (std::optional<LifetimeBoundParamInfo> Info =
-              getLifetimeBoundParamInfo(FD, I))
-        return Info;
+  for (unsigned I = 0; I < Info.Args.size(); ++I)
+    if (isExprInCallArg(Info.Args[I], Source))
+      if (std::optional<LifetimeBoundParamInfo> ParamInfo =
+              getLifetimeBoundParamInfo(Info.FD, I))
+        return ParamInfo;
 
   return std::nullopt;
 }
