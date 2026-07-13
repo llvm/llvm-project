@@ -12,11 +12,12 @@
 
 #include "orc-rt-c/Logging.h"
 
+#include "Environment.h"
+
 #include <algorithm>
 #include <cstdarg>
 #include <cstddef>
 #include <cstdio>
-#include <cstdlib>
 
 namespace {
 
@@ -24,8 +25,7 @@ namespace {
 // names a file that can be opened for appending.
 FILE *sink() {
   static FILE *Sink = []() -> FILE * {
-    // TODO: Use a setuid/setgid-safe secure getenv (ORC runtime utility, TBD).
-    const char *Path = std::getenv("ORC_RT_LOG_OUTPUT");
+    const char *Path = orc_rt::secureGetenv("ORC_RT_LOG_OUTPUT");
     if (!Path || !*Path)
       return stderr;
     FILE *F = std::fopen(Path, "a");
@@ -52,8 +52,7 @@ FILE *sink() {
 // but never more verbose than INFO.
 orc_rt_log_Level runtimeLevel() {
   static orc_rt_log_Level Level = []() -> orc_rt_log_Level {
-    // TODO: Use a setuid/setgid-safe secure getenv (ORC runtime utility, TBD).
-    const char *S = std::getenv("ORC_RT_LOG");
+    const char *S = orc_rt::secureGetenv("ORC_RT_LOG");
     if (!S || !*S)
       return ORC_RT_LOG_LEVEL_WARNING;
     orc_rt_log_Level L = orc_rt_log_Level_parse(S);
