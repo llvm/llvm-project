@@ -5596,6 +5596,66 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlidedown(const SDLoc &DL, MVT VT,
       DL, VT, convertFromScalableVector(SrcVT, Slidedown, DAG, Subtarget), 0);
 }
 
+// vector_shuffle v8:v8i8, v9:v8i8 <9, 10, 2, 3, 4, 5, 6, 7>
+// ->
+// vsetvli zero, 2, e8, mf2, tu, ma
+// vslideup.v1 v8, v9, 1
+static SDValue lowerVECTOR_SHUFFLEAsPrefixVSlidedown(
+    const SDLoc &DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<SDValue> MaskVals,
+    const std::array<std::pair<int, int>, 2> &SrcInfo, MVT ContainerVT,
+    const RISCVSubtarget &Subtarget, SelectionDAG &DAG) {
+  if (V1.isUndef() || V2.isUndef() || MaskVals.empty())
+    return SDValue();
+
+  const unsigned NumElts = VT.getVectorNumElements();
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  int SlideAmt = SrcInfo[1].second;
+  // The first is not slide, the second is slidedown.
+  if (SrcInfo[0].second != 0 || SlideAmt >= 0)
+    return SDValue();
+
+  if (static_cast<unsigned>(-SlideAmt) >= NumElts)
+    return SDValue();
+
+  // Count the number of 1s in MaskVals,
+  // and ensure all 1s are at the beginning.
+  unsigned NumOnes = 0;
+  for (SDValue V : MaskVals) {
+    if (V.isUndef())
+      continue;
+    auto *C = dyn_cast<ConstantSDNode>(V);
+    if (!C)
+      return SDValue();
+    if (!C->isZero())
+      ++NumOnes;
+  }
+
+  if (NumOnes == 0 || NumOnes == NumElts || NumOnes > NumElts + SlideAmt)
+    return SDValue();
+
+  for (unsigned I = 0; I != NumOnes; ++I) {
+    auto *C = dyn_cast<ConstantSDNode>(MaskVals[I]);
+    if (!C || C->isZero())
+      return SDValue();
+  }
+
+  SDValue Src1 = SrcInfo[0].first == 0 ? V1 : V2;
+  SDValue Src2 = SrcInfo[1].first == 0 ? V1 : V2;
+
+  if (!Src1.hasOneUse())
+    return SDValue();
+
+  unsigned Policy =
+      RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED | RISCVVType::MASK_AGNOSTIC;
+  auto TrueMask = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).first;
+  SDValue VL = DAG.getConstant(NumOnes, DL, XLenVT);
+  SDValue Slidedown = getVSlidedown(DAG, Subtarget, DL, ContainerVT, Src1, Src2,
+                                    DAG.getConstant(-SlideAmt, DL, XLenVT),
+                                    TrueMask, VL, Policy);
+  return convertFromScalableVector(VT, Slidedown, DAG, Subtarget);
+}
+
 // Because vslideup leaves the destination elements at the start intact, we can
 // use it to perform shuffles that insert subvectors:
 //
@@ -6949,6 +7009,11 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
       MaskVals.push_back(DAG.getConstant(C, DL, XLenVT));
     }
     assert(MaskVals.size() == NumElts && "Unexpected select-like shuffle");
+
+    if (SDValue V = lowerVECTOR_SHUFFLEAsPrefixVSlidedown(
+            DL, VT, V1, V2, MaskVals, SrcInfo, ContainerVT, Subtarget, DAG))
+      return V;
+
     MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
     SDValue SelectMask = convertToScalableVector(
         ContainerVT.changeVectorElementType(MVT::i1),
