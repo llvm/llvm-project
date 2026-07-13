@@ -612,7 +612,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setCondCodeAction({ISD::SETNE, ISD::SETGT}, VTs, Custom);
 
     if (!Subtarget.is64Bit())
-      setOperationAction(ISD::BUILD_VECTOR, MVT::v4i8, Custom);
+      setOperationAction(ISD::BUILD_VECTOR, {MVT::v2i16, MVT::v4i8}, Custom);
 
     // P extension vector comparisons produce all 1s for true, all 0s for false
     setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
@@ -4680,6 +4680,49 @@ static SDValue lowerBuildVectorViaPacking(SDValue Op, SelectionDAG &DAG,
                      DAG.getBuildVector(WideVecVT, DL, NewOperands));
 }
 
+static SDValue lowerBuildVectorAsRV32PNarrowingShift(SDValue Op,
+                                                     SelectionDAG &DAG) {
+  // Match a legalized single-source deinterleave shuffle:
+  //   BUILD_VECTOR extractelt(src, 0), extractelt(src, 2), ...
+  //   BUILD_VECTOR extractelt(src, 1), extractelt(src, 3), ...
+  // and lower it to an RV32 P narrowing shift.
+  MVT VT = Op.getSimpleValueType();
+  if (VT != MVT::v4i8 && VT != MVT::v2i16)
+    return SDValue();
+
+  using namespace SDPatternMatch;
+  MVT SrcVT = VT == MVT::v4i8 ? MVT::v8i8 : MVT::v4i16;
+  unsigned EltBits = VT.getVectorElementType().getSizeInBits();
+  SDValue Src;
+  SmallVector<int, 4> ExtractIndices;
+  for (SDValue Lane : Op->op_values()) {
+    if (Lane.isUndef()) {
+      ExtractIndices.push_back(-1);
+      continue;
+    }
+
+    SDValue LaneSrc;
+    int64_t Idx;
+    if (!sd_match(Lane, m_ExtractElt(m_Value(LaneSrc), m_ConstInt(Idx))))
+      return SDValue();
+
+    if (LaneSrc.getSimpleValueType() != SrcVT || (Src && Src != LaneSrc))
+      return SDValue();
+
+    Src = LaneSrc;
+    ExtractIndices.push_back(Idx);
+  }
+
+  unsigned Index = 0;
+  if (!Src ||
+      !ShuffleVectorInst::isDeInterleaveMaskOfFactor(ExtractIndices, 2, Index))
+    return SDValue();
+
+  SDLoc DL(Op);
+  return DAG.getNode(RISCVISD::PNSRL, DL, VT, Src,
+                     DAG.getConstant(Index * EltBits, DL, MVT::i32));
+}
+
 static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
@@ -4691,30 +4734,42 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   SDLoc DL(Op);
 
   if (Subtarget.isRV32() && Subtarget.hasStdExtP()) {
-    if (VT != MVT::v4i8)
-      return SDValue();
+    if (SDValue V = lowerBuildVectorAsRV32PNarrowingShift(Op, DAG))
+      return V;
 
-    // <4 x i8> BUILD_VECTOR a, b, c, d -> PACK(PPACK.DH pair(a, c), pair(b, d))
-    SDValue Val0 =
-        DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(0));
-    SDValue Val1 =
-        DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(1));
-    SDValue Val2 =
-        DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(2));
-    SDValue Val3 =
-        DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(3));
-    SDValue PPairDB =
-        DAG.getNode(RISCVISD::PPAIRE_DB, DL, {MVT::v4i8, MVT::v4i8},
-                    {Val0, Val2, Val1, Val3});
+    if (VT == MVT::v2i16) {
+      SDValue Lo = DAG.getBitcast(
+          MVT::v2i16,
+          DAG.getAnyExtOrTrunc(Op->getOperand(0), DL, MVT::i32));
+      SDValue Hi = DAG.getBitcast(
+          MVT::v2i16,
+          DAG.getAnyExtOrTrunc(Op->getOperand(1), DL, MVT::i32));
+      return DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v2i16, Lo, Hi);
+    }
 
-    return DAG.getNode(
-        ISD::BITCAST, DL, MVT::v4i8,
-        SDValue(
-            DAG.getMachineNode(
-                RISCV::PACK, DL, MVT::i32,
-                {DAG.getNode(ISD::BITCAST, DL, MVT::i32, PPairDB.getValue(0)),
-                 DAG.getNode(ISD::BITCAST, DL, MVT::i32, PPairDB.getValue(1))}),
-            0));
+    if (VT == MVT::v4i8) {
+      // <4 x i8> BUILD_VECTOR a, b, c, d -> PACK(PPACK.DH pair(a, c), pair(b,
+      // d))
+      SDValue Val0 =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(0));
+      SDValue Val1 =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(1));
+      SDValue Val2 =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(2));
+      SDValue Val3 =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(3));
+      SDValue PPairDB =
+          DAG.getNode(RISCVISD::PPAIRE_DB, DL, {MVT::v4i8, MVT::v4i8},
+                      {Val0, Val2, Val1, Val3});
+
+      return DAG.getBitcast(
+          MVT::v4i8,
+          DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v2i16,
+                      DAG.getBitcast(MVT::v2i16, PPairDB.getValue(0)),
+                      DAG.getBitcast(MVT::v2i16, PPairDB.getValue(1))));
+    }
+
+    llvm_unreachable("Unexpected RV32 P BUILD_VECTOR type");
   }
 
   // Proper support for f16 requires Zvfh. bf16 always requires special
@@ -6342,6 +6397,28 @@ static SDValue lowerVECTOR_SHUFFLEAsPZip(ShuffleVectorSDNode *SVN,
   return SDValue();
 }
 
+// Match a deinterleave shuffle that forms a P-extension packed unzip:
+//   <a0, a2, ..., b0, b2, ...> -> unzip*p
+//   <a1, a3, ..., b1, b3, ...> -> unzip*hp
+static SDValue lowerVECTOR_SHUFFLEAsPUnzip(ShuffleVectorSDNode *SVN,
+                                           SelectionDAG &DAG, bool IsRV64) {
+  MVT VT = SVN->getSimpleValueType(0);
+  if (!IsRV64 || (VT != MVT::v8i8 && VT != MVT::v4i16))
+    return SDValue();
+
+  SDValue V1 = SVN->getOperand(0);
+  SDValue V2 = SVN->getOperand(1);
+  SDLoc DL(SVN);
+  ArrayRef<int> Mask = SVN->getMask();
+
+  unsigned Index = 0;
+  if (!ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 2, Index))
+    return SDValue();
+
+  unsigned Opc = Index == 0 ? RISCVISD::PUNZIPE : RISCVISD::PUNZIPO;
+  return DAG.getNode(Opc, DL, VT, V1, V2);
+}
+
 SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDValue V1 = Op.getOperand(0);
@@ -6424,6 +6501,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
       return DAG.getBitcast(VT, Srl);
     }
 
+    if (SDValue V = lowerVECTOR_SHUFFLEAsPUnzip(SVN, DAG, Subtarget.is64Bit()))
+      return V;
     if (SDValue V = lowerVECTOR_SHUFFLEAsPZip(SVN, DAG))
       return V;
     return SDValue();

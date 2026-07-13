@@ -11,9 +11,9 @@ define i16 @srl_bitcast_buildvector_extract_last(<2 x i16> %v, ptr %p) {
 ; CHECK-RV32-NEXT:    srai a3, a0, 16
 ; CHECK-RV32-NEXT:    div a3, a2, a3
 ; CHECK-RV32-NEXT:    sext.h a0, a0
-; CHECK-RV32-NEXT:    div a2, a2, a0
-; CHECK-RV32-NEXT:    zext.h a0, a3
-; CHECK-RV32-NEXT:    pack a2, a2, a3
+; CHECK-RV32-NEXT:    div a0, a2, a0
+; CHECK-RV32-NEXT:    pack a2, a0, a3
+; CHECK-RV32-NEXT:    srli a0, a2, 16
 ; CHECK-RV32-NEXT:    sw a2, 0(a1)
 ; CHECK-RV32-NEXT:    ret
 ;
