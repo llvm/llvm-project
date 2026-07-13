@@ -972,6 +972,11 @@ static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
   struct LevelInfo {
     llvm::SmallVector<lower::pft::Evaluation *> before;
     llvm::SmallVector<lower::pft::Evaluation *> after;
+
+    // Whether this level carries intervening code (i.e. imperfect nesting).
+    bool hasInterveningCode() const {
+      return !before.empty() || !after.empty();
+    }
   };
   llvm::SmallVector<LevelInfo> levels;
 
@@ -993,7 +998,8 @@ static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
       // labeled statement (alongside the EndDoStmt). Skip it so it isn't
       // misclassified as intervening code.
       if (e.getIf<parser::NonLabelDoStmt>() || e.getIf<parser::EndDoStmt>() ||
-          e.getIf<parser::ContinueStmt>())
+          e.getIf<parser::ContinueStmt>() ||
+          e.getIf<parser::CompilerDirective>())
         continue;
       // Semantics guarantees the only DoConstruct here is the next associated
       // loop (non-associated DO loops are rejected as intervening code).
@@ -1023,6 +1029,29 @@ static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
   const auto lbs = loopNestOp.getLoopLowerBounds();
   const auto ubs = loopNestOp.getLoopUpperBounds();
   const auto steps = loopNestOp.getLoopSteps();
+
+  // The intervening-code guards and terminal-value restoration do arithmetic
+  // on the collapsed loop bounds. If those bounds are host_eval block arguments
+  // of an enclosing omp.target region, such uses are illegal, so diagnose
+  // instead of emitting IR the omp.target verifier rejects.
+  const bool hasInterveningCode = llvm::any_of(
+      levels, [](const LevelInfo &l) { return l.hasInterveningCode(); });
+  if (hasInterveningCode) {
+    auto isHostEvalValue = [](mlir::Value v) {
+      auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(v);
+      if (!blockArg)
+        return false;
+      auto iface = mlir::dyn_cast<mlir::omp::BlockArgOpenMPOpInterface>(
+          blockArg.getOwner()->getParentOp());
+      return iface &&
+             llvm::is_contained(iface.getHostEvalBlockArgs(), blockArg);
+    };
+    if (llvm::any_of(lbs, isHostEvalValue) ||
+        llvm::any_of(ubs, isHostEvalValue) ||
+        llvm::any_of(steps, isHostEvalValue))
+      TODO(loc, "collapsed loop nest with intervening code whose loop bounds "
+                "are evaluated on the host for an enclosing 'target' region");
+  }
 
   // Last value the induction variable at \p lvl actually takes:
   // lb + ((ub - lb) / step) * step. For unit steps this is exactly ub.
