@@ -34,16 +34,16 @@ define void @test1(ptr noalias nocapture %points, ptr noalias nocapture readonly
 ; ENABLED_MASKED_STRIDED-LABEL: 'test1'
 ; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: %i2 = load i16, ptr %arrayidx2, align 2
 ; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: %i4 = load i16, ptr %arrayidx7, align 2
-; ENABLED_MASKED_STRIDED:  Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 4 at %i2, ir<%arrayidx2>
+; ENABLED_MASKED_STRIDED:  Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%arrayidx2>
 ; ENABLED_MASKED_STRIDED:    ir<%i2> = load from index 0
 ; ENABLED_MASKED_STRIDED:    ir<%i4> = load from index 1
-; ENABLED_MASKED_STRIDED:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 4 at %i2, ir<%arrayidx2>
+; ENABLED_MASKED_STRIDED:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx2>
 ; ENABLED_MASKED_STRIDED:    ir<%i2> = load from index 0
 ; ENABLED_MASKED_STRIDED:    ir<%i4> = load from index 1
-; ENABLED_MASKED_STRIDED:  Cost of 11 for VF 8: INTERLEAVE-GROUP with factor 4 at %i2, ir<%arrayidx2>
+; ENABLED_MASKED_STRIDED:  Cost of 11 for VF 8: INTERLEAVE-GROUP with factor 4, ir<%arrayidx2>
 ; ENABLED_MASKED_STRIDED:    ir<%i2> = load from index 0
 ; ENABLED_MASKED_STRIDED:    ir<%i4> = load from index 1
-; ENABLED_MASKED_STRIDED:  Cost of 17 for VF 16: INTERLEAVE-GROUP with factor 4 at %i2, ir<%arrayidx2>
+; ENABLED_MASKED_STRIDED:  Cost of 17 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%arrayidx2>
 ; ENABLED_MASKED_STRIDED:    ir<%i2> = load from index 0
 ; ENABLED_MASKED_STRIDED:    ir<%i4> = load from index 1
 ;
@@ -95,16 +95,16 @@ define void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr noalias no
 ; ENABLED_MASKED_STRIDED-LABEL: 'test2'
 ; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: %i2 = load i16, ptr %arrayidx2, align 2
 ; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: %i4 = load i16, ptr %arrayidx7, align 2
-; ENABLED_MASKED_STRIDED:  Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 4 at %i2, ir<%arrayidx2>, vp<[[VP8:%[0-9]+]]>
+; ENABLED_MASKED_STRIDED:  Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%arrayidx2>, vp<[[VP8:%[0-9]+]]>
 ; ENABLED_MASKED_STRIDED:    ir<%i2> = load from index 0
 ; ENABLED_MASKED_STRIDED:    ir<%i4> = load from index 1
-; ENABLED_MASKED_STRIDED:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 4 at %i2, ir<%arrayidx2>, vp<[[VP8]]>
+; ENABLED_MASKED_STRIDED:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx2>, vp<[[VP8]]>
 ; ENABLED_MASKED_STRIDED:    ir<%i2> = load from index 0
 ; ENABLED_MASKED_STRIDED:    ir<%i4> = load from index 1
-; ENABLED_MASKED_STRIDED:  Cost of 11 for VF 8: INTERLEAVE-GROUP with factor 4 at %i2, ir<%arrayidx2>, vp<[[VP8]]>
+; ENABLED_MASKED_STRIDED:  Cost of 11 for VF 8: INTERLEAVE-GROUP with factor 4, ir<%arrayidx2>, vp<[[VP8]]>
 ; ENABLED_MASKED_STRIDED:    ir<%i2> = load from index 0
 ; ENABLED_MASKED_STRIDED:    ir<%i4> = load from index 1
-; ENABLED_MASKED_STRIDED:  Cost of 17 for VF 16: INTERLEAVE-GROUP with factor 4 at %i2, ir<%arrayidx2>, vp<[[VP8]]>
+; ENABLED_MASKED_STRIDED:  Cost of 17 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%arrayidx2>, vp<[[VP8]]>
 ; ENABLED_MASKED_STRIDED:    ir<%i2> = load from index 0
 ; ENABLED_MASKED_STRIDED:    ir<%i4> = load from index 1
 ;
@@ -162,13 +162,13 @@ define void @test(ptr noalias nocapture %points, ptr noalias nocapture readonly 
 ; ENABLED_MASKED_STRIDED-LABEL: 'test'
 ; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: %i2 = load i16, ptr %arrayidx, align 2
 ; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: %i4 = load i16, ptr %arrayidx6, align 2
-; ENABLED_MASKED_STRIDED:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 3 at %i4, ir<%arrayidx6>, ir<%cmp1>
+; ENABLED_MASKED_STRIDED:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 3, ir<%arrayidx6>, ir<%cmp1>
 ; ENABLED_MASKED_STRIDED:    ir<%i4> = load from index 0
-; ENABLED_MASKED_STRIDED:  Cost of 9 for VF 4: INTERLEAVE-GROUP with factor 3 at %i4, ir<%arrayidx6>, ir<%cmp1>
+; ENABLED_MASKED_STRIDED:  Cost of 9 for VF 4: INTERLEAVE-GROUP with factor 3, ir<%arrayidx6>, ir<%cmp1>
 ; ENABLED_MASKED_STRIDED:    ir<%i4> = load from index 0
-; ENABLED_MASKED_STRIDED:  Cost of 9 for VF 8: INTERLEAVE-GROUP with factor 3 at %i4, ir<%arrayidx6>, ir<%cmp1>
+; ENABLED_MASKED_STRIDED:  Cost of 9 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%arrayidx6>, ir<%cmp1>
 ; ENABLED_MASKED_STRIDED:    ir<%i4> = load from index 0
-; ENABLED_MASKED_STRIDED:  Cost of 14 for VF 16: INTERLEAVE-GROUP with factor 3 at %i4, ir<%arrayidx6>, ir<%cmp1>
+; ENABLED_MASKED_STRIDED:  Cost of 14 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%arrayidx6>, ir<%cmp1>
 ; ENABLED_MASKED_STRIDED:    ir<%i4> = load from index 0
 ;
 entry:

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-- < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx600 < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
 
 ; How the replacement of i64 stores with v2i32 stores resulted in

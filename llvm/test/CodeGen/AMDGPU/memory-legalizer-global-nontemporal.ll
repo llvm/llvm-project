@@ -5,9 +5,9 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1010 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX10-CU %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -O0 -mcpu=gfx700 -amdgcn-skip-cache-invalidations < %s | FileCheck --check-prefixes=SKIP-CACHE-INV %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx90a < %s | FileCheck -check-prefixes=GFX90A-NOTTGSPLIT %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx90a -mattr=+tgsplit < %s | FileCheck -check-prefixes=GFX90A-TGSPLIT %s
+; RUN: sed 's/attributes #0 = { nounwind }/attributes #0 = { nounwind "amdgpu-tg-split" }/' %s | llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx90a | FileCheck -check-prefixes=GFX90A-TGSPLIT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx942 < %s | FileCheck -check-prefixes=GFX942-NOTTGSPLIT %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx942 -mattr=+tgsplit < %s | FileCheck -check-prefixes=GFX942-TGSPLIT %s
+; RUN: sed 's/attributes #0 = { nounwind }/attributes #0 = { nounwind "amdgpu-tg-split" }/' %s | llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx942 | FileCheck -check-prefixes=GFX942-TGSPLIT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1100 < %s | FileCheck --check-prefixes=GFX11-WGP %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1100 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX11-CU %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GFX12-WGP %s
@@ -246,7 +246,7 @@ define amdgpu_kernel void @global_nontemporal_load_0(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %in, ptr addrspace(1) %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 entry:
   %val = load i32, ptr addrspace(1) %in, align 4, !nontemporal !0
   store i32 %val, ptr addrspace(1) %out
@@ -676,7 +676,7 @@ define amdgpu_kernel void @global_nontemporal_load_1(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %in, ptr addrspace(1) %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %val.gep = getelementptr inbounds i32, ptr addrspace(1) %in, i32 %tid
@@ -917,7 +917,7 @@ define amdgpu_kernel void @global_nontemporal_store_0(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1] th:TH_STORE_NT
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %in, ptr addrspace(1) %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 entry:
   %val = load i32, ptr addrspace(1) %in, align 4
   store i32 %val, ptr addrspace(1) %out, !nontemporal !0
@@ -1317,7 +1317,7 @@ define amdgpu_kernel void @global_nontemporal_store_1(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset th:TH_STORE_NT
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %in, ptr addrspace(1) %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %val = load i32, ptr addrspace(1) %in, align 4
@@ -1565,7 +1565,7 @@ define amdgpu_kernel void @global_nontemporal_volatile_load(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %in, ptr addrspace(1) %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 entry:
   %val = load volatile i32, ptr addrspace(1) %in, align 4, !nontemporal !0
   store i32 %val, ptr addrspace(1) %out
@@ -1574,3 +1574,5 @@ entry:
 
 !0 = !{i32 1}
 declare i32 @llvm.amdgcn.workitem.id.x()
+
+attributes #0 = { nounwind }

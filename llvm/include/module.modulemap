@@ -274,6 +274,7 @@ module LLVM_IR {
   extern module LLVM_Extern_IR_Intrinsics_Enum "module.extern.modulemap"
 
   // These are intended for (repeated) textual inclusion.
+  textual header "llvm/IR/BundleAttributes.def"
   textual header "llvm/IR/ConstrainedOps.def"
   textual header "llvm/IR/DebugInfoFlags.def"
   textual header "llvm/IR/FunctionProperties.def"
@@ -313,6 +314,8 @@ module LLVM_Object {
   requires cplusplus
   umbrella "llvm/Object"
   module * { export * }
+
+  textual header "llvm/Object/BBAddrMap.def"
 }
 
 module LLVM_Option {

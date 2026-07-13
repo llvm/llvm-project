@@ -12,21 +12,26 @@ define amdgpu_kernel void @phi5_rotate(
 ; GFX950-LABEL: define amdgpu_kernel void @phi5_rotate(
 ; GFX950-SAME: ptr addrspace(1) captures(none) [[OUT:%.*]], i32 [[N:%.*]], i32 [[S0:%.*]], i32 [[S1:%.*]], i32 [[S2:%.*]], i32 [[S3:%.*]], i32 [[S4:%.*]]) #[[ATTR0:[0-9]+]] {
 ; GFX950-NEXT:  [[ENTRY:.*]]:
+; GFX950-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[S0]], i32 0
+; GFX950-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[S1]], i32 1
+; GFX950-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[S4]], i32 0
+; GFX950-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[S0]], i32 1
+; GFX950-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[S3]], i32 0
+; GFX950-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP4]], i32 [[S4]], i32 1
+; GFX950-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[S2]], i32 0
+; GFX950-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> [[TMP6]], i32 [[S3]], i32 1
 ; GFX950-NEXT:    br label %[[LOOP:.*]]
 ; GFX950:       [[LOOP]]:
-; GFX950-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
-; GFX950-NEXT:    [[X0:%.*]] = phi i32 [ [[S0]], %[[ENTRY]] ], [ [[X4:%.*]], %[[LOOP]] ]
-; GFX950-NEXT:    [[X1:%.*]] = phi i32 [ [[S1]], %[[ENTRY]] ], [ [[X0]], %[[LOOP]] ]
-; GFX950-NEXT:    [[X2:%.*]] = phi i32 [ [[S2]], %[[ENTRY]] ], [ [[X1]], %[[LOOP]] ]
-; GFX950-NEXT:    [[X3:%.*]] = phi i32 [ [[S3]], %[[ENTRY]] ], [ [[X2]], %[[LOOP]] ]
-; GFX950-NEXT:    [[X4]] = phi i32 [ [[S4]], %[[ENTRY]] ], [ [[X3]], %[[LOOP]] ]
-; GFX950-NEXT:    [[GEP0:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i32 [[I]]
-; GFX950-NEXT:    store i32 [[X0]], ptr addrspace(1) [[GEP0]], align 4
-; GFX950-NEXT:    [[I1:%.*]] = or disjoint i32 [[I]], 1
+; GFX950-NEXT:    [[I1:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; GFX950-NEXT:    [[TMP8:%.*]] = phi <2 x i32> [ [[TMP1]], %[[ENTRY]] ], [ [[TMP9:%.*]], %[[LOOP]] ]
+; GFX950-NEXT:    [[TMP9]] = phi <2 x i32> [ [[TMP3]], %[[ENTRY]] ], [ [[TMP10:%.*]], %[[LOOP]] ]
+; GFX950-NEXT:    [[TMP10]] = phi <2 x i32> [ [[TMP5]], %[[ENTRY]] ], [ [[TMP11:%.*]], %[[LOOP]] ]
+; GFX950-NEXT:    [[TMP11]] = phi <2 x i32> [ [[TMP7]], %[[ENTRY]] ], [ [[TMP12:%.*]], %[[LOOP]] ]
 ; GFX950-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i32 [[I1]]
-; GFX950-NEXT:    store i32 [[X1]], ptr addrspace(1) [[GEP1]], align 4
-; GFX950-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 2
+; GFX950-NEXT:    store <2 x i32> [[TMP8]], ptr addrspace(1) [[GEP1]], align 4
+; GFX950-NEXT:    [[I_NEXT]] = add nuw i32 [[I1]], 2
 ; GFX950-NEXT:    [[CMP:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; GFX950-NEXT:    [[TMP12]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> [[TMP11]], <2 x i32> <i32 1, i32 2>
 ; GFX950-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; GFX950:       [[EXIT]]:
 ; GFX950-NEXT:    ret void
@@ -34,21 +39,26 @@ define amdgpu_kernel void @phi5_rotate(
 ; GFX942-LABEL: define amdgpu_kernel void @phi5_rotate(
 ; GFX942-SAME: ptr addrspace(1) captures(none) [[OUT:%.*]], i32 [[N:%.*]], i32 [[S0:%.*]], i32 [[S1:%.*]], i32 [[S2:%.*]], i32 [[S3:%.*]], i32 [[S4:%.*]]) #[[ATTR0:[0-9]+]] {
 ; GFX942-NEXT:  [[ENTRY:.*]]:
+; GFX942-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[S0]], i32 0
+; GFX942-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[S1]], i32 1
+; GFX942-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[S4]], i32 0
+; GFX942-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[S0]], i32 1
+; GFX942-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[S3]], i32 0
+; GFX942-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP4]], i32 [[S4]], i32 1
+; GFX942-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[S2]], i32 0
+; GFX942-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> [[TMP6]], i32 [[S3]], i32 1
 ; GFX942-NEXT:    br label %[[LOOP:.*]]
 ; GFX942:       [[LOOP]]:
-; GFX942-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
-; GFX942-NEXT:    [[X0:%.*]] = phi i32 [ [[S0]], %[[ENTRY]] ], [ [[X4:%.*]], %[[LOOP]] ]
-; GFX942-NEXT:    [[X1:%.*]] = phi i32 [ [[S1]], %[[ENTRY]] ], [ [[X0]], %[[LOOP]] ]
-; GFX942-NEXT:    [[X2:%.*]] = phi i32 [ [[S2]], %[[ENTRY]] ], [ [[X1]], %[[LOOP]] ]
-; GFX942-NEXT:    [[X3:%.*]] = phi i32 [ [[S3]], %[[ENTRY]] ], [ [[X2]], %[[LOOP]] ]
-; GFX942-NEXT:    [[X4]] = phi i32 [ [[S4]], %[[ENTRY]] ], [ [[X3]], %[[LOOP]] ]
-; GFX942-NEXT:    [[GEP0:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i32 [[I]]
-; GFX942-NEXT:    store i32 [[X0]], ptr addrspace(1) [[GEP0]], align 4
-; GFX942-NEXT:    [[I1:%.*]] = or disjoint i32 [[I]], 1
+; GFX942-NEXT:    [[I1:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; GFX942-NEXT:    [[TMP8:%.*]] = phi <2 x i32> [ [[TMP1]], %[[ENTRY]] ], [ [[TMP9:%.*]], %[[LOOP]] ]
+; GFX942-NEXT:    [[TMP9]] = phi <2 x i32> [ [[TMP3]], %[[ENTRY]] ], [ [[TMP10:%.*]], %[[LOOP]] ]
+; GFX942-NEXT:    [[TMP10]] = phi <2 x i32> [ [[TMP5]], %[[ENTRY]] ], [ [[TMP11:%.*]], %[[LOOP]] ]
+; GFX942-NEXT:    [[TMP11]] = phi <2 x i32> [ [[TMP7]], %[[ENTRY]] ], [ [[TMP12:%.*]], %[[LOOP]] ]
 ; GFX942-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i32 [[I1]]
-; GFX942-NEXT:    store i32 [[X1]], ptr addrspace(1) [[GEP1]], align 4
-; GFX942-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 2
+; GFX942-NEXT:    store <2 x i32> [[TMP8]], ptr addrspace(1) [[GEP1]], align 4
+; GFX942-NEXT:    [[I_NEXT]] = add nuw i32 [[I1]], 2
 ; GFX942-NEXT:    [[CMP:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; GFX942-NEXT:    [[TMP12]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> [[TMP11]], <2 x i32> <i32 1, i32 2>
 ; GFX942-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; GFX942:       [[EXIT]]:
 ; GFX942-NEXT:    ret void

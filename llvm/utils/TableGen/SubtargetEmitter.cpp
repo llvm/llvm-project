@@ -78,16 +78,22 @@ class SubtargetEmitter : TargetFeaturesEmitter {
 
   FeatureMapTy emitEnums(raw_ostream &OS);
   void emitSubtargetInfoMacroCalls(raw_ostream &OS);
-  std::tuple<unsigned, unsigned, unsigned>
-  emitMCDesc(raw_ostream &OS, const FeatureMapTy &FeatureMap);
+
+  struct MCDescInfo {
+    unsigned NumFeatures;
+    unsigned FeatureStrTabSize;
+    unsigned NumProcs;
+    unsigned SubTypeStrTabSize;
+  };
+  MCDescInfo emitMCDesc(raw_ostream &OS, const FeatureMapTy &FeatureMap);
   void emitTargetDesc(raw_ostream &OS);
   void emitHeader(raw_ostream &OS);
-  void emitCtor(raw_ostream &OS, unsigned NumNames, unsigned NumFeatures,
-                unsigned NumProcs);
+  void emitCtor(raw_ostream &OS, MCDescInfo DescInfo);
 
-  unsigned featureKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap);
-  unsigned cpuKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap);
-  unsigned cpuNames(raw_ostream &OS);
+  std::pair<unsigned, unsigned>
+  featureKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap);
+  std::pair<unsigned, unsigned> cpuKeyValues(raw_ostream &OS,
+                                             const FeatureMapTy &FeatureMap);
   void formItineraryStageString(const std::string &Names,
                                 const Record *ItinData, std::string &ItinString,
                                 unsigned &NStages);
@@ -136,6 +142,8 @@ class SubtargetEmitter : TargetFeaturesEmitter {
   void emitGetMacroFusions(const std::string &ClassName, raw_ostream &OS);
   void emitHwModeCheck(const std::string &ClassName, raw_ostream &OS,
                        bool IsMC);
+  void emitInlineFeatures(const std::string &ClassName, raw_ostream &OS,
+                          StringRef Behavior);
   void parseFeaturesFunction(raw_ostream &OS);
 
 public:
@@ -184,8 +192,9 @@ void SubtargetEmitter::emitSubtargetInfoMacroCalls(raw_ostream &OS) {
 // FeatureKeyValues - Emit data of all the subtarget features.  Used by the
 // command line.
 //
-unsigned SubtargetEmitter::featureKeyValues(raw_ostream &OS,
-                                            const FeatureMapTy &FeatureMap) {
+std::pair<unsigned, unsigned>
+SubtargetEmitter::featureKeyValues(raw_ostream &OS,
+                                   const FeatureMapTy &FeatureMap) {
   std::vector<const Record *> FeatureList =
       Records.getAllDerivedDefinitions("SubtargetFeature");
 
@@ -194,73 +203,54 @@ unsigned SubtargetEmitter::featureKeyValues(raw_ostream &OS,
     return Rec->getValueAsString("Name").empty();
   });
   if (FeatureList.empty())
-    return 0;
+    return {0, 0};
 
   // Sort and check duplicate Feature name.
   sortAndReportDuplicates(FeatureList, "Feature");
 
+  StringToOffsetTable StrTab;
+  // Offsets of CommandLineName and Desc in StrTab.
+  SmallVector<std::pair<unsigned, unsigned>> StrOffs;
+  for (const Record *Feature : FeatureList) {
+    unsigned NameOff =
+        StrTab.GetOrAddStringOffset(Feature->getValueAsString("Name"));
+    unsigned DescOff =
+        StrTab.GetOrAddStringOffset(Feature->getValueAsString("Desc"));
+    StrOffs.emplace_back(NameOff, DescOff);
+  }
+
   // Begin feature table.
   OS << "// Sorted (by key) array of values for CPU features.\n"
-     << "extern const llvm::SubtargetFeatureKV " << Target
-     << "FeatureKV[] = {\n";
+     << "extern const llvm::SubtargetFeatureKVStorage< " << FeatureList.size()
+     << ", " << (StrTab.size() + 1) << "> " << Target
+     << "FeatureKVStorage = {\n  {\n";
 
-  for (const Record *Feature : FeatureList) {
+  for (auto [Idx, Feature] : enumerate(FeatureList)) {
     // Next feature
     StringRef Name = Feature->getName();
-    StringRef CommandLineName = Feature->getValueAsString("Name");
-    StringRef Desc = Feature->getValueAsString("Desc");
 
     // Emit as { "feature", "description", { featureEnum }, { i1 , i2 , ... , in
     // } }
-    OS << "  { "
-       << "\"" << CommandLineName << "\", "
-       << "\"" << Desc << "\", " << Target << "::" << Name << ", ";
+    auto StrOff =
+        "sizeof(SubtargetFeatureKV) * " + Twine(FeatureList.size() - Idx);
+    OS << "    { " << StrOff << " + " << StrOffs[Idx].first << ", " << StrOff
+       << " + " << StrOffs[Idx].second << ", " << Target << "::" << Name
+       << ", ";
 
     ConstRecVec ImpliesList = Feature->getValueAsListOfDefs("Implies");
 
     printFeatureMask(OS, ImpliesList, FeatureMap);
 
-    OS << " },\n";
+    OS << "   },\n";
   }
+
+  OS << "  },\n";
+  StrTab.EmitString(OS);
 
   // End feature table.
   OS << "};\n";
 
-  return FeatureList.size();
-}
-
-unsigned SubtargetEmitter::cpuNames(raw_ostream &OS) {
-  // Begin processor name table.
-  OS << "// Sorted array of names of CPU subtypes, including aliases.\n"
-     << "extern const llvm::StringRef " << Target << "Names[] = {\n";
-
-  std::vector<const Record *> ProcessorList =
-      Records.getAllDerivedDefinitions("Processor");
-
-  std::vector<const Record *> ProcessorAliasList =
-      Records.getAllDerivedDefinitionsIfDefined("ProcessorAlias");
-
-  SmallVector<StringRef> Names;
-  Names.reserve(ProcessorList.size() + ProcessorAliasList.size());
-
-  for (const Record *Processor : ProcessorList) {
-    StringRef Name = Processor->getValueAsString("Name");
-    Names.push_back(Name);
-  }
-
-  for (const Record *Rec : ProcessorAliasList) {
-    auto Name = Rec->getValueAsString("Name");
-    Names.push_back(Name);
-  }
-
-  llvm::sort(Names);
-  llvm::interleave(
-      Names, OS, [&](StringRef Name) { OS << '"' << Name << '"'; }, ",\n");
-
-  // End processor name table.
-  OS << "};\n";
-
-  return Names.size();
+  return {FeatureList.size(), StrTab.size() + 1};
 }
 
 static void checkDuplicateCPUFeatures(StringRef CPUName,
@@ -291,12 +281,28 @@ static void checkDuplicateCPUFeatures(StringRef CPUName,
 // CPUKeyValues - Emit data of all the subtarget processors.  Used by command
 // line.
 //
-unsigned SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
-                                        const FeatureMapTy &FeatureMap) {
+std::pair<unsigned, unsigned>
+SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
+                               const FeatureMapTy &FeatureMap) {
   // Gather and sort processor information
   std::vector<const Record *> ProcessorList =
       Records.getAllDerivedDefinitions("Processor");
   llvm::sort(ProcessorList, LessRecordFieldName());
+
+  // In the string table, include the aliases as well.
+  std::vector<const Record *> ProcessorAliasList =
+      Records.getAllDerivedDefinitionsIfDefined("ProcessorAlias");
+  SmallVector<StringRef> Names;
+  Names.reserve(ProcessorList.size() + ProcessorAliasList.size());
+  for (const Record *Processor : ProcessorList)
+    Names.push_back(Processor->getValueAsString("Name"));
+  for (const Record *Rec : ProcessorAliasList)
+    Names.push_back(Rec->getValueAsString("Name"));
+  llvm::sort(Names);
+
+  StringToOffsetTable StrTab;
+  for (StringRef Name : Names)
+    StrTab.GetOrAddStringOffset(Name);
 
   // Note that unlike `FeatureKeyValues`, here we do not need to check for
   // duplicate processors, since that is already done when the SubtargetEmitter
@@ -305,10 +311,11 @@ unsigned SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
 
   // Begin processor table.
   OS << "// Sorted (by key) array of values for CPU subtype.\n"
-     << "extern const llvm::SubtargetSubTypeKV " << Target
-     << "SubTypeKV[] = {\n";
+     << "extern const llvm::SubtargetSubTypeKVStorage< " << ProcessorList.size()
+     << ", " << (StrTab.size() + 1) << "> " << Target
+     << "SubTypeKVStorage = {\n  {\n";
 
-  for (const Record *Processor : ProcessorList) {
+  for (const auto &[Idx, Processor] : enumerate(ProcessorList)) {
     StringRef Name = Processor->getValueAsString("Name");
     ConstRecVec FeatureList = Processor->getValueAsListOfDefs("Features");
     ConstRecVec TuneFeatureList =
@@ -318,24 +325,24 @@ unsigned SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
     // features.
     checkDuplicateCPUFeatures(Name, FeatureList, TuneFeatureList);
 
-    // Emit as "{ "cpu", "description", 0, { f1 , f2 , ... fn } },".
-    OS << " { "
-       << "\"" << Name << "\", ";
+    OS << "   { sizeof(SubtargetSubTypeKV) * " << (ProcessorList.size() - Idx)
+       << " + " << StrTab.GetOrAddStringOffset(Name) << ", ";
 
     printFeatureMask(OS, FeatureList, FeatureMap);
     OS << ", ";
     printFeatureMask(OS, TuneFeatureList, FeatureMap);
 
-    // Emit the scheduler model pointer.
-    const std::string &ProcModelName =
-        SchedModels.getModelForProc(Processor).ModelName;
-    OS << ", &" << ProcModelName << " },\n";
+    // Emit the scheduler model index.
+    OS << ", " << SchedModels.getModelIndexForProc(Processor) << " },\n";
   }
+
+  OS << "  },\n";
+  StrTab.EmitString(OS);
 
   // End processor table.
   OS << "};\n";
 
-  return ProcessorList.size();
+  return {ProcessorList.size(), StrTab.size() + 1};
 }
 
 //
@@ -1446,10 +1453,13 @@ void SubtargetEmitter::emitProcessorModels(raw_ostream &OS) {
       PrintFatalError(PM.ModelDef->getLoc(),
                       "SchedMachineModel defines "
                       "ProcResources without defining WriteRes SchedWriteRes");
+  }
 
+  OS << "\n";
+  OS << "extern const llvm::MCSchedModel " << Target << "SchedModels[] = {\n";
+  for (const CodeGenProcModel &PM : SchedModels.procModels()) {
     // Begin processor itinerary properties
-    OS << "\n";
-    OS << "static const llvm::MCSchedModel " << PM.ModelName << " = {\n";
+    OS << "{ // " << PM.ModelName << "\n";
     emitProcessorProp(OS, PM.ModelDef, "IssueWidth", ',');
     emitProcessorProp(OS, PM.ModelDef, "MicroOpBufferSize", ',');
     emitProcessorProp(OS, PM.ModelDef, "LoopMicroOpBufferSize", ',');
@@ -1494,8 +1504,9 @@ void SubtargetEmitter::emitProcessorModels(raw_ostream &OS) {
       OS << "  &" << PM.ModelName << "ExtraInfo,\n";
     else
       OS << "  nullptr // No extra processor descriptor\n";
-    OS << "};\n";
+    OS << "  },\n";
   }
+  OS << "};\n";
 }
 
 //
@@ -1990,6 +2001,25 @@ void SubtargetEmitter::parseFeaturesFunction(raw_ostream &OS) {
   OS << "}\n";
 }
 
+void SubtargetEmitter::emitInlineFeatures(const std::string &ClassName,
+                                          raw_ostream &OS, StringRef Behavior) {
+  std::vector<const Record *> FeatureList =
+      Records.getAllDerivedDefinitions("SubtargetFeature");
+  llvm::sort(FeatureList, LessRecordFieldFieldName());
+
+  OS << "const FeatureBitset &" << ClassName << "::get" << Behavior
+     << "Features() const {\n"
+     << "  static constexpr FeatureBitset Features = {\n";
+
+  for (const Record *Feature : FeatureList)
+    if (Behavior == Feature->getValueAsDef("InlineBehavior")->getName())
+      OS << Target << "::" << Feature->getName() << ",\n";
+
+  OS << "  };\n"
+     << "  return Features;\n"
+     << "}\n\n";
+}
+
 void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
   {
     NamespaceEmitter NS(OS, (Target + Twine("_MC")).str());
@@ -2004,14 +2034,15 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
      << "GenMCSubtargetInfo : public MCSubtargetInfo {\n";
   OS << "  " << Target << "GenMCSubtargetInfo(const Triple &TT,\n"
      << "    StringRef CPU, StringRef TuneCPU, StringRef FS,\n"
-     << "    ArrayRef<StringRef> PN,\n"
+     << "    StringTable PN,\n"
      << "    ArrayRef<SubtargetFeatureKV> PF,\n"
      << "    ArrayRef<SubtargetSubTypeKV> PD,\n"
+     << "    const MCSchedModel *PSM,\n"
      << "    const MCWriteProcResEntry *WPR,\n"
      << "    const MCWriteLatencyEntry *WL,\n"
      << "    const MCReadAdvanceEntry *RA, const InstrStage *IS,\n"
      << "    const unsigned *OC, const unsigned *FP) :\n"
-     << "      MCSubtargetInfo(TT, CPU, TuneCPU, FS, PN, PF, PD,\n"
+     << "      MCSubtargetInfo(TT, CPU, TuneCPU, FS, PN, PF, PD, PSM,\n"
      << "                      WPR, WL, RA, IS, OC, FP) { }\n\n"
      << "  unsigned resolveVariantSchedClass(unsigned SchedClass,\n"
      << "      const MCInst *MI, const MCInstrInfo *MCII,\n"
@@ -2058,20 +2089,23 @@ FeatureMapTy SubtargetEmitter::emitEnums(raw_ostream &OS) {
   return enumeration(OS);
 }
 
-std::tuple<unsigned, unsigned, unsigned>
+SubtargetEmitter::MCDescInfo
 SubtargetEmitter::emitMCDesc(raw_ostream &OS, const FeatureMapTy &FeatureMap) {
   IfDefEmitter IfDef(OS, "GET_SUBTARGETINFO_MC_DESC");
   if (Target == "AArch64")
     OS << "#include \"llvm/TargetParser/AArch64TargetParser.h\"\n\n";
   NamespaceEmitter LlvmNS(OS, "llvm");
 
-  unsigned NumFeatures = featureKeyValues(OS, FeatureMap);
+  MCDescInfo Res;
+  auto [NumFeatures, FeatureStrTabSize] = featureKeyValues(OS, FeatureMap);
+  Res.NumFeatures = NumFeatures;
+  Res.FeatureStrTabSize = FeatureStrTabSize;
   OS << "\n";
   emitSchedModel(OS);
   OS << "\n";
-  unsigned NumProcs = cpuKeyValues(OS, FeatureMap);
-  OS << "\n";
-  unsigned NumNames = cpuNames(OS);
+  auto [NumProcs, SubTypeStrTabSize] = cpuKeyValues(OS, FeatureMap);
+  Res.NumProcs = NumProcs;
+  Res.SubTypeStrTabSize = SubTypeStrTabSize;
   OS << "\n";
 
   // MCInstrInfo initialization routine.
@@ -2085,18 +2119,15 @@ SubtargetEmitter::emitMCDesc(raw_ostream &OS, const FeatureMapTy &FeatureMap) {
        << "  TuneCPU = AArch64::resolveCPUAlias(TuneCPU);\n";
   OS << "  return new " << Target
      << "GenMCSubtargetInfo(TT, CPU, TuneCPU, FS, ";
-  if (NumNames)
-    OS << Target << "Names, ";
+  OS << "StringTable(" << Target << "SubTypeKVStorage.Strings), ";
+  if (Res.NumFeatures)
+    OS << Target << "FeatureKVStorage.Features, ";
   else
     OS << "{}, ";
-  if (NumFeatures)
-    OS << Target << "FeatureKV, ";
+  if (Res.NumProcs)
+    OS << Target << "SubTypeKVStorage.SubTypes, " << Target << "SchedModels, ";
   else
-    OS << "{}, ";
-  if (NumProcs)
-    OS << Target << "SubTypeKV, ";
-  else
-    OS << "{}, ";
+    OS << "{}, nullptr, ";
   OS << '\n';
   OS.indent(22);
   OS << Target << "WriteProcResTable, " << Target << "WriteLatencyTable, "
@@ -2110,7 +2141,7 @@ SubtargetEmitter::emitMCDesc(raw_ostream &OS, const FeatureMapTy &FeatureMap) {
     OS << "nullptr, nullptr, nullptr";
   }
   OS << ");\n}\n\n";
-  return {NumNames, NumFeatures, NumProcs};
+  return Res;
 }
 
 void SubtargetEmitter::emitTargetDesc(raw_ostream &OS) {
@@ -2177,6 +2208,10 @@ void SubtargetEmitter::emitHeader(raw_ostream &OS) {
     OS << "  std::vector<MacroFusionPredTy> getMacroFusions() const "
           "final;\n";
 
+  OS << "  const FeatureBitset &getInlineIgnoreFeatures() const override;\n";
+  OS << "  const FeatureBitset &getInlineInverseFeatures() const override;\n";
+  OS << "  const FeatureBitset &getInlineMustMatchFeatures() const override;\n";
+
   STIPredicateExpander PE(Target);
   PE.setByRef(false);
   for (const STIPredicateFunction &Fn : SchedModels.getSTIPredicates())
@@ -2184,15 +2219,21 @@ void SubtargetEmitter::emitHeader(raw_ostream &OS) {
   OS << "};\n";
 }
 
-void SubtargetEmitter::emitCtor(raw_ostream &OS, unsigned NumNames,
-                                unsigned NumFeatures, unsigned NumProcs) {
+void SubtargetEmitter::emitCtor(raw_ostream &OS, MCDescInfo DescInfo) {
   IfDefEmitter IfDef(OS, "GET_SUBTARGETINFO_CTOR");
   OS << "#include \"llvm/CodeGen/TargetSchedule.h\"\n\n";
 
   NamespaceEmitter LLVMNS(OS, "llvm");
   OS << "extern const llvm::StringRef " << Target << "Names[];\n";
-  OS << "extern const llvm::SubtargetFeatureKV " << Target << "FeatureKV[];\n";
-  OS << "extern const llvm::SubtargetSubTypeKV " << Target << "SubTypeKV[];\n";
+  if (DescInfo.NumFeatures) {
+    OS << "extern const llvm::SubtargetFeatureKVStorage<"
+       << DescInfo.NumFeatures << ", " << DescInfo.FeatureStrTabSize << "> "
+       << Target << "FeatureKVStorage;\n";
+  }
+  OS << "extern const llvm::SubtargetSubTypeKVStorage<" << DescInfo.NumProcs
+     << ", " << DescInfo.SubTypeStrTabSize << "> " << Target
+     << "SubTypeKVStorage;\n";
+  OS << "extern const llvm::MCSchedModel " << Target << "SchedModels[];\n";
   OS << "extern const llvm::MCWriteProcResEntry " << Target
      << "WriteProcResTable[];\n";
   OS << "extern const llvm::MCWriteLatencyEntry " << Target
@@ -2215,18 +2256,17 @@ void SubtargetEmitter::emitCtor(raw_ostream &OS, unsigned NumNames,
        << "                        AArch64::resolveCPUAlias(TuneCPU), FS, ";
   else
     OS << "  : TargetSubtargetInfo(TT, CPU, TuneCPU, FS, ";
-  if (NumNames)
-    OS << "ArrayRef(" << Target << "Names, " << NumNames << "), ";
+  OS << "StringTable(" << Target << "SubTypeKVStorage.Strings), ";
+  if (DescInfo.NumFeatures)
+    OS << "ArrayRef(" << Target << "FeatureKVStorage.Features), ";
   else
     OS << "{}, ";
-  if (NumFeatures)
-    OS << "ArrayRef(" << Target << "FeatureKV, " << NumFeatures << "), ";
-  else
-    OS << "{}, ";
-  if (NumProcs)
-    OS << "ArrayRef(" << Target << "SubTypeKV, " << NumProcs << "), ";
-  else
-    OS << "{}, ";
+  if (DescInfo.NumProcs) {
+    OS << "ArrayRef(" << Target << "SubTypeKVStorage.SubTypes), " << Target
+       << "SchedModels, ";
+  } else {
+    OS << "{}, nullptr, ";
+  }
   OS << '\n';
   OS.indent(24);
   OS << Target << "WriteProcResTable, " << Target << "WriteLatencyTable, "
@@ -2244,6 +2284,9 @@ void SubtargetEmitter::emitCtor(raw_ostream &OS, unsigned NumNames,
   emitSchedModelHelpers(ClassName, OS);
   emitHwModeCheck(ClassName, OS, /*IsMC=*/false);
   emitGetMacroFusions(ClassName, OS);
+  emitInlineFeatures(ClassName, OS, "InlineIgnore");
+  emitInlineFeatures(ClassName, OS, "InlineInverse");
+  emitInlineFeatures(ClassName, OS, "InlineMustMatch");
 }
 
 //
@@ -2254,10 +2297,10 @@ void SubtargetEmitter::run(raw_ostream &OS) {
 
   auto FeatureMap = emitEnums(OS);
   emitSubtargetInfoMacroCalls(OS);
-  auto [NumNames, NumFeatures, NumProcs] = emitMCDesc(OS, FeatureMap);
+  MCDescInfo DescInfo = emitMCDesc(OS, FeatureMap);
   emitTargetDesc(OS);
   emitHeader(OS);
-  emitCtor(OS, NumNames, NumFeatures, NumProcs);
+  emitCtor(OS, DescInfo);
   emitMcInstrAnalysisPredicateFunctions(OS);
 }
 

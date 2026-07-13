@@ -44,7 +44,6 @@
 #include <cstdint>
 #include <set>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -167,7 +166,7 @@ namespace {
 // In the inner map, the key represents address point offsets and the value is a
 // constant for this address point.
 using VTableAddressPointOffsetValMap =
-    SmallDenseMap<const GlobalVariable *, std::unordered_map<int, Constant *>>;
+    SmallDenseMap<const GlobalVariable *, DenseMap<int, Constant *>>;
 
 // A struct to collect type information for a virtual call site.
 struct VirtualCallSiteInfo {

@@ -13,82 +13,90 @@
 
 TEST(ScudoReportDeathTest, Check) {
   CHECK_LT(-1, 1);
-  EXPECT_DEATH(CHECK_GT(-1, 1),
-               "\\(-1\\) > \\(1\\) \\(\\(u64\\)op1=18446744073709551615, "
-               "\\(u64\\)op2=1");
+  SCUDO_EXPECT_DEATH(CHECK_GT(-1, 1),
+                     "\\(-1\\) > \\(1\\) \\(\\(u64\\)op1=18446744073709551615, "
+                     "\\(u64\\)op2=1");
 }
 
 TEST(ScudoReportDeathTest, Generic) {
   // Potentially unused if EXPECT_DEATH isn't defined.
   UNUSED void *P = reinterpret_cast<void *>(0x42424242U);
   UNUSED scudo::Chunk::PackedHeader Header = {};
-  EXPECT_DEATH(scudo::reportError("TEST123"), "Scudo ERROR.*TEST123");
-  EXPECT_DEATH(scudo::reportInvalidFlag("ABC", "DEF"), "Scudo ERROR.*ABC.*DEF");
-  EXPECT_DEATH(scudo::reportHeaderCorruption(&Header, P),
-               "Scudo ERROR.*42424242");
-  EXPECT_DEATH(scudo::reportSanityCheckError("XYZ"), "Scudo ERROR.*XYZ");
-  EXPECT_DEATH(scudo::reportAlignmentTooBig(123, 456), "Scudo ERROR.*123.*456");
-  EXPECT_DEATH(scudo::reportAllocationSizeTooBig(123, 456, 789),
-               "Scudo ERROR.*123.*456.*789");
-  EXPECT_DEATH(scudo::reportOutOfMemory(4242), "Scudo ERROR.*4242");
-  EXPECT_DEATH(
+  SCUDO_EXPECT_DEATH(scudo::reportError("TEST123"), "Scudo ERROR.*TEST123");
+  SCUDO_EXPECT_DEATH(scudo::reportInvalidFlag("ABC", "DEF"),
+                     "Scudo ERROR.*ABC.*DEF");
+  SCUDO_EXPECT_DEATH(scudo::reportHeaderCorruption(&Header, P),
+                     "Scudo ERROR.*42424242");
+  SCUDO_EXPECT_DEATH(scudo::reportSanityCheckError("XYZ"), "Scudo ERROR.*XYZ");
+  SCUDO_EXPECT_DEATH(scudo::reportAlignmentTooBig(123, 456),
+                     "Scudo ERROR.*123.*456");
+  SCUDO_EXPECT_DEATH(scudo::reportAllocationSizeTooBig(123, 456, 789),
+                     "Scudo ERROR.*123.*456.*789");
+  SCUDO_EXPECT_DEATH(scudo::reportOutOfMemory(4242), "Scudo ERROR.*4242");
+  SCUDO_EXPECT_DEATH(
       scudo::reportInvalidChunkState(scudo::AllocatorAction::Recycling, P),
       "Scudo ERROR.*recycling.*42424242");
-  EXPECT_DEATH(
+  SCUDO_EXPECT_DEATH(
       scudo::reportInvalidChunkState(scudo::AllocatorAction::Sizing, P),
       "Scudo ERROR.*sizing.*42424242");
-  EXPECT_DEATH(
+  SCUDO_EXPECT_DEATH(
       scudo::reportMisalignedPointer(scudo::AllocatorAction::Deallocating, P),
       "Scudo ERROR.*deallocating.*42424242");
-  EXPECT_DEATH(
+  SCUDO_EXPECT_DEATH(
       scudo::reportDeallocTypeMismatch(scudo::AllocatorAction::Reallocating, P,
                                        scudo::Chunk::Origin::New,
                                        scudo::Chunk::Origin::Memalign),
       "Scudo ERROR.*reallocating.*42424242.*\\(new vs aligned malloc\\)");
-  EXPECT_DEATH(scudo::reportDeallocTypeMismatch(
-                   scudo::AllocatorAction::Deallocating, P,
-                   scudo::Chunk::Origin::Memalign, scudo::Chunk::Origin::New),
-               "Scudo ERROR.*deallocating.*\\(aligned malloc vs new\\)");
-  EXPECT_DEATH(scudo::reportDeallocTypeMismatch(
-                   scudo::AllocatorAction::Deallocating, P,
-                   scudo::Chunk::Origin::Malloc | scudo::Chunk::Origin::Size,
-                   scudo::Chunk::Origin::NewArray | scudo::Chunk::Origin::Size |
-                       scudo::Chunk::Origin::Align),
-               "Scudo ERROR.*deallocating.*\\(sized malloc vs sized aligned "
-               "new\\[\\]\\)");
-  EXPECT_DEATH(scudo::reportDeleteSizeMismatch(P, 123, 456),
-               "Scudo ERROR.*42424242.*\\(123 vs 456\\)");
-  EXPECT_DEATH(scudo::reportDeleteSizeMismatch(P, 123, 456, 789),
-               "Scudo ERROR.*42424242.*\\(123 vs 456 or 789\\)");
-  EXPECT_DEATH(
+  SCUDO_EXPECT_DEATH(
+      scudo::reportDeallocTypeMismatch(scudo::AllocatorAction::Deallocating, P,
+                                       scudo::Chunk::Origin::Memalign,
+                                       scudo::Chunk::Origin::New),
+      "Scudo ERROR.*deallocating.*\\(aligned malloc vs new\\)");
+  SCUDO_EXPECT_DEATH(
+      scudo::reportDeallocTypeMismatch(
+          scudo::AllocatorAction::Deallocating, P,
+          scudo::Chunk::Origin::Malloc | scudo::Chunk::Origin::Size,
+          scudo::Chunk::Origin::NewArray | scudo::Chunk::Origin::Size |
+              scudo::Chunk::Origin::Align),
+      "Scudo ERROR.*deallocating.*\\(sized malloc vs sized aligned "
+      "new\\[\\]\\)");
+  SCUDO_EXPECT_DEATH(scudo::reportDeleteSizeMismatch(P, 123, 456),
+                     "Scudo ERROR.*42424242.*\\(123 vs 456\\)");
+  SCUDO_EXPECT_DEATH(scudo::reportDeleteSizeMismatch(P, 123, 456, 789),
+                     "Scudo ERROR.*42424242.*\\(123 vs 456 or 789\\)");
+  SCUDO_EXPECT_DEATH(
       scudo::reportDeleteAlignmentMismatch(reinterpret_cast<void *>(0x80),
                                            0x100),
       "Scudo ERROR.*invalid aligned delete.*\\(7 bit align vs 8 bit align\\)");
 }
 
 TEST(ScudoReportDeathTest, CSpecific) {
-  EXPECT_DEATH(scudo::reportAlignmentNotPowerOfTwo(123), "Scudo ERROR.*123");
-  EXPECT_DEATH(scudo::reportCallocOverflow(123, 456), "Scudo ERROR.*123.*456");
-  EXPECT_DEATH(scudo::reportReallocarrayOverflow(123, 456),
-               "Scudo ERROR.*reallocarray parameters.*123.*456");
-  EXPECT_DEATH(scudo::reportInvalidPosixMemalignAlignment(789),
-               "Scudo ERROR.*789");
-  EXPECT_DEATH(scudo::reportPvallocOverflow(123), "Scudo ERROR.*123");
-  EXPECT_DEATH(scudo::reportInvalidAlignedAllocAlignment(123, 456),
-               "Scudo ERROR.*123.*456");
+  SCUDO_EXPECT_DEATH(scudo::reportAlignmentNotPowerOfTwo(123),
+                     "Scudo ERROR.*123");
+  SCUDO_EXPECT_DEATH(scudo::reportCallocOverflow(123, 456),
+                     "Scudo ERROR.*123.*456");
+  SCUDO_EXPECT_DEATH(scudo::reportReallocarrayOverflow(123, 456),
+                     "Scudo ERROR.*reallocarray parameters.*123.*456");
+  SCUDO_EXPECT_DEATH(scudo::reportInvalidPosixMemalignAlignment(789),
+                     "Scudo ERROR.*789");
+  SCUDO_EXPECT_DEATH(scudo::reportPvallocOverflow(123), "Scudo ERROR.*123");
+  SCUDO_EXPECT_DEATH(scudo::reportInvalidAlignedAllocAlignment(123, 456),
+                     "Scudo ERROR.*123.*456");
 }
 
 TEST(ScudoReportDeathTest, HeaderCorruption) {
   UNUSED void *P = reinterpret_cast<void *>(0x42424242U);
   UNUSED scudo::Chunk::PackedHeader Header = {};
-  EXPECT_DEATH(scudo::reportHeaderCorruption(&Header, P),
-               "Scudo ERROR.*corrupted chunk header at address 0x.*42424242: "
-               "chunk header is zero and might indicate memory "
-               "corruption or a double free");
+  SCUDO_EXPECT_DEATH(
+      scudo::reportHeaderCorruption(&Header, P),
+      "Scudo ERROR.*corrupted chunk header at address 0x.*42424242: "
+      "chunk header is zero and might indicate memory "
+      "corruption or a double free");
   Header = 10U;
-  EXPECT_DEATH(scudo::reportHeaderCorruption(&Header, P),
-               "Scudo ERROR.*corrupted chunk header at address 0x.*42424242: "
-               "most likely due to memory corruption");
+  SCUDO_EXPECT_DEATH(
+      scudo::reportHeaderCorruption(&Header, P),
+      "Scudo ERROR.*corrupted chunk header at address 0x.*42424242: "
+      "most likely due to memory corruption");
 }
 
 #if SCUDO_LINUX || SCUDO_TRUSTY || SCUDO_ANDROID
@@ -99,19 +107,24 @@ TEST(ScudoReportDeathTest, HeaderCorruption) {
 
 TEST(ScudoReportDeathTest, Linux) {
   errno = ENOMEM;
-  EXPECT_DEATH(scudo::reportMapError(),
-               "Scudo ERROR:.*internal map failure \\(error desc=.*\\)");
+  SCUDO_EXPECT_DEATH(scudo::reportMapError(),
+                     "Scudo ERROR:.*internal map failure \\(error desc=.*\\)");
   errno = ENOMEM;
-  EXPECT_DEATH(scudo::reportMapError(1024U),
-               "Scudo ERROR:.*internal map failure \\(error desc=.*\\) "
-               "requesting 1KB");
+  SCUDO_EXPECT_DEATH(scudo::reportMapError(1024U),
+                     "Scudo ERROR:.*internal map failure \\(error desc=.*\\) "
+                     "requesting 1KB");
+  SCUDO_EXPECT_DEATH(scudo::reportMapFixedError(0x1000U, 0x2000U),
+                     "Scudo ERROR:.*internal map failure using fixed address "
+                     "\\(expected: 0x1000 requested: 0x2000\\)");
   errno = ENOMEM;
-  EXPECT_DEATH(scudo::reportUnmapError(0x1000U, 100U),
-               "Scudo ERROR:.*internal unmap failure \\(error desc=.*\\) Addr "
-               "0x1000 Size 100");
+  SCUDO_EXPECT_DEATH(
+      scudo::reportUnmapError(0x1000U, 100U),
+      "Scudo ERROR:.*internal unmap failure \\(error desc=.*\\) Addr "
+      "0x1000 Size 100");
   errno = ENOMEM;
-  EXPECT_DEATH(scudo::reportProtectError(0x1000U, 100U, PROT_READ),
-               "Scudo ERROR:.*internal protect failure \\(error desc=.*\\) "
-               "Addr 0x1000 Size 100 Prot 1");
+  SCUDO_EXPECT_DEATH(
+      scudo::reportProtectError(0x1000U, 100U, PROT_READ),
+      "Scudo ERROR:.*internal protect failure \\(error desc=.*\\) "
+      "Addr 0x1000 Size 100 Prot 1");
 }
 #endif

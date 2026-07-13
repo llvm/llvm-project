@@ -63,8 +63,8 @@ static auto getStringTypeMatcher(StringRef CharType) {
   return hasCanonicalType(hasDeclaration(cxxRecordDecl(hasName(CharType))));
 }
 
-static void fixReturns(const FunctionDecl *FuncDecl, DiagnosticBuilder &Diag,
-                       ASTContext &Context) {
+static void fixReturns(const FunctionDecl *FuncDecl,
+                       const DiagnosticBuilder &Diag, ASTContext &Context) {
   auto Matches = match(
       findAll(returnStmt(hasReturnValue(ignoringParenImpCasts(
           cxxTemporaryObjectExpr(argumentCountIs(0)).bind("temp_obj_expr"))))),

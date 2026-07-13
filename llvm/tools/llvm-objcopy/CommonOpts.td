@@ -122,6 +122,11 @@ def regex
     : Flag<["--"], "regex">,
       HelpText<"Permit regular expressions in name comparison">;
 
+def verbose : Flag<["--"], "verbose">,
+              HelpText<"Print the paths of files that are copied">;
+def v : Flag<["-"], "v">, Alias<verbose>,
+        HelpText<"Alias for --verbose">;
+
 def version : Flag<["--"], "version">,
               HelpText<"Print the version and exit.">;
 def V : Flag<["-"], "V">,

@@ -31,13 +31,13 @@ define void @main(float %arg) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[DEF]], %bb.0, [[V_FMAC_F32_e64_1]], %bb.1
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[DEF]], %bb.0, [[V_ADD_F32_e64_]], %bb.1
-  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_1]], %bb.0, [[S_MOV_B32_2]], %bb.1
-  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[PHI2]], implicit $exec
+  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:sreg_32 = PHI [[S_MOV_B32_1]], %bb.0, [[S_MOV_B32_2]], %bb.1
+  ; CHECK-NEXT:   $scc = COPY [[PHI2]]
+  ; CHECK-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
   ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[V_CNDMASK_B32_e64_]]
-  ; CHECK-NEXT:   S_CMP_LG_U32 killed [[COPY1]], killed [[S_MOV_B32_3]], implicit-def $scc
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $scc
-  ; CHECK-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32 = S_AND_B32 $exec_lo, killed [[COPY2]], implicit-def dead $scc
+  ; CHECK-NEXT:   S_CMP_LG_U32 killed [[S_CSELECT_B32_]], killed [[S_MOV_B32_3]], implicit-def $scc
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $scc
+  ; CHECK-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32 = S_AND_B32 $exec_lo, killed [[COPY1]], implicit-def dead $scc
   ; CHECK-NEXT:   $vcc_lo = COPY [[S_AND_B32_1]]
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.4, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.3

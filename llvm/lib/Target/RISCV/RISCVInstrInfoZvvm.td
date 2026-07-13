@@ -16,6 +16,22 @@
 // Instructions
 //===----------------------------------------------------------------------===//
 
+def TileLambdaAsmOperand : AsmOperandClass {
+  let Name = "TileLambda";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parseTileLambda";
+  let DiagnosticType = "InvalidTileLambda";
+  let DiagnosticString = "operand must be L1, L2, L4, L8, L16, L32, or L64";
+}
+
+def TileLambdaOp : RISCVOp {
+  let ParserMatchClass = TileLambdaAsmOperand;
+  let PrintMethod = "printTileLambda";
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeUImmOperand<3>";
+  let OperandType = "OPERAND_UIMM3";
+}
+
 def VScaleAsmOperand : AsmOperandClass {
   let Name = "RVVScaleRegOpOperand";
   let RenderMethod = "addRegOperands";
@@ -34,14 +50,78 @@ def VScaleOp : RegisterOperand<VMV0> {
   let DecoderMethod = "decodeVMaskReg";
 }
 
+class VTileLoadBase<bits<2> mop, dag ins, string opcodestr, string argstr>
+    : RVInst<(outs VR:$vd),
+             ins, opcodestr, argstr, [], InstFormatR> {
+  bits<5> vd;
+  bits<5> rs1;
+  bits<5> rs2;
+  bit vm;
+  bits<3> vlambda;
+
+  let Inst{31-29} = vlambda;
+  let Inst{28} = 1;
+  let Inst{27-26} = mop;
+  let Inst{25} = vm;
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = 0b111;
+  let Inst{11-7} = vd;
+  let Inst{6-0} = OPC_LOAD_FP.Value;
+
+  let mayLoad = true;
+  let mayStore = false;
+  let hasSideEffects = false;
+  let Uses = [VL, VTYPE];
+  let VMConstraint = true;
+  let UseNamedOperandTable = true;
+}
+
+class VTileStoreBase<bits<2> mop, dag ins, string opcodestr, string argstr>
+    : RVInst<(outs), ins, opcodestr, argstr, [], InstFormatR> {
+  bits<5> vs3;
+  bits<5> rs1;
+  bits<5> rs2;
+  bit vm;
+  bits<3> vlambda;
+
+  let Inst{31-29} = vlambda;
+  let Inst{28} = 1;
+  let Inst{27-26} = mop;
+  let Inst{25} = vm;
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = 0b111;
+  let Inst{11-7} = vs3;
+  let Inst{6-0} = OPC_STORE_FP.Value;
+
+  let mayLoad = false;
+  let mayStore = true;
+  let hasSideEffects = false;
+  let Uses = [VL, VTYPE];
+  let UseNamedOperandTable = true;
+}
+
+class VTileLoad<bits<2> mop, string opcodestr>
+    : VTileLoadBase<mop, (ins GPRMemZeroOffset:$rs1, GPR:$rs2,
+                              TileLambdaOp:$vlambda, VMaskOp:$vm),
+                    opcodestr, "$vd, $rs1, $rs2$vlambda$vm">;
+
+class VTileStore<bits<2> mop, string opcodestr>
+    : VTileStoreBase<mop,
+                     (ins VR:$vs3, GPRMemZeroOffset:$rs1, GPR:$rs2,
+                          TileLambdaOp:$vlambda, VMaskOp:$vm),
+                     opcodestr, "$vs3, $rs1, $rs2$vlambda$vm">;
+
 class VIMEMACVV<bits<6> funct6, string opcodestr>
     : RVInstVV<funct6, OPIVV, (outs VR:$vd_wb),
                (ins VR:$vd, VR:$vs1, VR:$vs2), opcodestr,
                "$vd, $vs1, $vs2"> {
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
+  let mayLoad = false;
+  let mayStore = false;
+  let hasSideEffects = false;
   let Constraints = "$vd = $vd_wb";
+  let Uses = [VL, VTYPE];
   let vm = 1;
   let VMConstraint = false;
 }
@@ -50,9 +130,9 @@ class VFMEMACVV<bits<6> funct6, string opcodestr>
     : RVInstVV<funct6, OPFVV, (outs VR:$vd_wb),
                (ins VR:$vd, VR:$vs1, VR:$vs2), opcodestr,
                "$vd, $vs1, $vs2"> {
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
+  let mayLoad = false;
+  let mayStore = false;
+  let hasSideEffects = false;
   let Constraints = "$vd = $vd_wb";
   let Uses = [FRM, VL, VTYPE];
   let mayRaiseFPException = true;
@@ -64,9 +144,9 @@ class VFMEMACScaleVV<bits<6> funct6, string opcodestr>
     : RVInstVV<funct6, OPFVV, (outs VR:$vd_wb),
                (ins VR:$vd, VR:$vs1, VR:$vs2, VScaleOp:$vm), opcodestr,
                "$vd, $vs1, $vs2$vm"> {
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
+  let mayLoad = false;
+  let mayStore = false;
+  let hasSideEffects = false;
   let Constraints = "$vd = $vd_wb";
   let Uses = [FRM, VL, VTYPE];
   let mayRaiseFPException = true;
@@ -78,9 +158,9 @@ class VIFMEMACScaleVV<bits<6> funct6, string opcodestr>
     : RVInstVV<funct6, OPIVV, (outs VR:$vd_wb),
                (ins VR:$vd, VR:$vs1, VR:$vs2, VScaleOp:$vm), opcodestr,
                "$vd, $vs1, $vs2$vm"> {
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
+  let mayLoad = false;
+  let mayStore = false;
+  let hasSideEffects = false;
   let Constraints = "$vd = $vd_wb";
   let Uses = [FRM, VL, VTYPE];
   let mayRaiseFPException = true;
@@ -111,3 +191,25 @@ let Predicates = [HasStdExtZvvfmm] in {
   def VFQIMMACC_VV : VIFMEMACScaleVV<0b111010, "vfqimmacc.vv">;
   def VF8WIMMACC_VV : VIFMEMACScaleVV<0b111011, "vf8wimmacc.vv">;
 } // Predicates = [HasStdExtZvvfmm]
+
+let Predicates = [HasStdExtZvvmtls] in {
+  def VMTL_V : VTileLoad<0b00, "vmtl.v">;
+  def VMTS_V : VTileStore<0b00, "vmts.v">;
+  def : InstAlias<"vmtl.v $vd, $rs1, $rs2$vm",
+                  (VMTL_V VR:$vd, GPRMemZeroOffset:$rs1, GPR:$rs2, 0,
+                          VMaskOp:$vm), 0>;
+  def : InstAlias<"vmts.v $vs3, $rs1, $rs2$vm",
+                  (VMTS_V VR:$vs3, GPRMemZeroOffset:$rs1, GPR:$rs2, 0,
+                          VMaskOp:$vm), 0>;
+} // Predicates = [HasStdExtZvvmtls]
+
+let Predicates = [HasStdExtZvvmttls] in {
+  def VMTTL_V : VTileLoad<0b01, "vmttl.v">;
+  def VMTTS_V : VTileStore<0b01, "vmtts.v">;
+  def : InstAlias<"vmttl.v $vd, $rs1, $rs2$vm",
+                  (VMTTL_V VR:$vd, GPRMemZeroOffset:$rs1, GPR:$rs2, 0,
+                           VMaskOp:$vm), 0>;
+  def : InstAlias<"vmtts.v $vs3, $rs1, $rs2$vm",
+                  (VMTTS_V VR:$vs3, GPRMemZeroOffset:$rs1, GPR:$rs2, 0,
+                           VMaskOp:$vm), 0>;
+} // Predicates = [HasStdExtZvvmttls]

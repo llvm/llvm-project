@@ -1372,7 +1372,7 @@ void ASTStmtReader::VisitVAArgExpr(VAArgExpr *E) {
   E->setWrittenTypeInfo(readTypeSourceInfo());
   E->setBuiltinLoc(readSourceLocation());
   E->setRParenLoc(readSourceLocation());
-  E->setIsMicrosoftABI(Record.readInt());
+  E->setVarargABI(static_cast<clang::VAArgExpr::VarArgKind>(Record.readInt()));
 }
 
 void ASTStmtReader::VisitSourceLocExpr(SourceLocExpr *E) {
@@ -2286,11 +2286,11 @@ void ASTStmtReader::VisitPackIndexingExpr(PackIndexingExpr *E) {
 void ASTStmtReader::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);
-  E->AssociatedDeclAndRef.setPointer(readDeclAs<Decl>());
-  E->AssociatedDeclAndRef.setInt(CurrentUnpackingBits->getNextBit());
+  E->AssociatedDeclAndFinal.setPointer(readDeclAs<Decl>());
+  E->AssociatedDeclAndFinal.setInt(CurrentUnpackingBits->getNextBit());
   E->Index = CurrentUnpackingBits->getNextBits(/*Width=*/12);
   E->PackIndex = Record.readUnsignedOrNone().toInternalRepresentation();
-  E->Final = CurrentUnpackingBits->getNextBit();
+  E->ParamType = Record.readType();
   E->SubstNonTypeTemplateParmExprBits.NameLoc = readSourceLocation();
   E->Replacement = Record.readSubExpr();
 }

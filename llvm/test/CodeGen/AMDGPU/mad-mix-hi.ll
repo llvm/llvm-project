@@ -6,11 +6,11 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=hawaii < %s | FileCheck -check-prefixes=SDAG-CI %s
 
 ; FIXME-TRUE16. fix gisel
-; XUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11,GISEL-GFX11,GISEL-GFX11-TRUE16 %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX11,GISEL-GFX11,GISEL-GFX11-FAKE16 %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GISEL-GFX9 %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=VI,GISEL-VI %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=hawaii < %s | FileCheck -check-prefixes=GISEL-CI %s
+; XUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11,GISEL-GFX11,GISEL-GFX11-TRUE16 %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX11,GISEL-GFX11,GISEL-GFX11-FAKE16 %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GISEL-GFX9 %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=VI,GISEL-VI %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=hawaii < %s | FileCheck -check-prefixes=GISEL-CI %s
 
 define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo(half %src0, half %src1, half %src2) #0 {
 ; GFX11-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo:

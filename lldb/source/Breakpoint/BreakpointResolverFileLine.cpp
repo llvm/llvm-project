@@ -238,9 +238,8 @@ void BreakpointResolverFileLine::DeduceSourceMapping(
     if (FileSpec::Equal(sc_file, request_file, /*full*/ true))
       continue;
 
-    llvm::StringRef sc_file_dir = sc_file.GetDirectory().GetStringRef();
-    llvm::StringRef request_file_dir =
-        request_file.GetDirectory().GetStringRef();
+    llvm::StringRef sc_file_dir = sc_file.GetDirectory();
+    llvm::StringRef request_file_dir = request_file.GetDirectory();
 
     llvm::StringRef new_mapping_from;
     llvm::SmallString<256> new_mapping_to;
@@ -323,8 +322,8 @@ Searcher::CallbackReturn BreakpointResolverFileLine::SearchCallback(
   DeduceSourceMapping(sc_list);
 
   StreamString s;
-  s.Printf("for %s:%d ",
-           m_location_spec.GetFileSpec().GetFilename().AsCString("<Unknown>"),
+  s.Format("for {0}:{1} ",
+           m_location_spec.GetFileSpec().GetFilename().nonEmptyOr("<Unknown>"),
            line);
 
   SetSCMatchesByLine(filter, sc_list, m_skip_prologue, s.GetString(), line,

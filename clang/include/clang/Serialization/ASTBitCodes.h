@@ -44,7 +44,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 38;
+const unsigned VERSION_MAJOR = 39;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -133,14 +133,6 @@ static_assert(alignof(TypeIdx) == 4);
 /// DenseMap.  This uses the standard pointer hash function.
 struct UnsafeQualTypeDenseMapInfo {
   static bool isEqual(QualType A, QualType B) { return A == B; }
-
-  static QualType getEmptyKey() {
-    return QualType::getFromOpaquePtr((void *)1);
-  }
-
-  static QualType getTombstoneKey() {
-    return QualType::getFromOpaquePtr((void *)2);
-  }
 
   static unsigned getHashValue(QualType T) {
     assert(!T.getLocalFastQualifiers() &&
@@ -2214,14 +2206,6 @@ public:
 namespace llvm {
 
 template <> struct DenseMapInfo<clang::serialization::DeclarationNameKey> {
-  static clang::serialization::DeclarationNameKey getEmptyKey() {
-    return clang::serialization::DeclarationNameKey(-1, 1);
-  }
-
-  static clang::serialization::DeclarationNameKey getTombstoneKey() {
-    return clang::serialization::DeclarationNameKey(-1, 2);
-  }
-
   static unsigned
   getHashValue(const clang::serialization::DeclarationNameKey &Key) {
     return Key.getHash();

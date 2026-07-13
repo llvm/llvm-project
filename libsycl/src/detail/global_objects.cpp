@@ -8,6 +8,7 @@
 
 #include <detail/global_objects.hpp>
 #include <detail/platform_impl.hpp>
+#include <detail/program_manager.hpp>
 
 #ifdef _WIN32
 #  include <windows.h>
@@ -31,6 +32,7 @@ struct StaticVarShutdownHandler {
   StaticVarShutdownHandler &
   operator=(const StaticVarShutdownHandler &) = delete;
   ~StaticVarShutdownHandler() {
+    ProgramAndKernelManager::getInstance().releaseResources();
     // No error reporting in shutdown
     std::ignore = olShutDown();
   }
@@ -40,9 +42,10 @@ void registerStaticVarShutdownHandler() {
   static StaticVarShutdownHandler handler{};
 }
 
-std::vector<detail::OffloadTopology> &getOffloadTopologies() {
-  static std::vector<detail::OffloadTopology> Topologies(
-      OL_PLATFORM_BACKEND_LAST);
+std::array<detail::OffloadTopology, OL_PLATFORM_BACKEND_LAST> &
+getOffloadTopologies() {
+  static std::array<detail::OffloadTopology, OL_PLATFORM_BACKEND_LAST>
+      Topologies{};
   return Topologies;
 }
 

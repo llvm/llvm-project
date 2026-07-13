@@ -73,13 +73,14 @@ struct SLPVectorizerPass : public OptionalPassInfoMixin<SLPVectorizerPass> {
   const DataLayout *DL = nullptr;
 
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   // Glue for old PM.
-  bool runImpl(Function &F, ScalarEvolution *SE_, TargetTransformInfo *TTI_,
-               TargetLibraryInfo *TLI_, AAResults *AA_, LoopInfo *LI_,
-               DominatorTree *DT_, AssumptionCache *AC_, DemandedBits *DB_,
-               OptimizationRemarkEmitter *ORE_);
+  LLVM_ABI bool runImpl(Function &F, ScalarEvolution *SE_,
+                        TargetTransformInfo *TTI_, TargetLibraryInfo *TLI_,
+                        AAResults *AA_, LoopInfo *LI_, DominatorTree *DT_,
+                        AssumptionCache *AC_, DemandedBits *DB_,
+                        OptimizationRemarkEmitter *ORE_);
 
 private:
   /// Collect store and getelementptr instructions and organize them
@@ -95,7 +96,8 @@ private:
   /// \param MaxVFOnly Vectorize only using maximal allowed register size.
   /// \returns true if a value was vectorized.
   bool tryToVectorizeList(ArrayRef<Value *> VL, slpvectorizer::BoUpSLP &R,
-                          bool MaxVFOnly = false);
+                          bool MaxVFOnly = false,
+                          bool LimitToRegisterVF = false);
 
   /// Try to vectorize a chain that may start at the operands of \p I.
   bool tryToVectorize(Instruction *I, slpvectorizer::BoUpSLP &R,
@@ -173,7 +175,8 @@ private:
   bool vectorizeStores(
       ArrayRef<StoreInst *> Stores, slpvectorizer::BoUpSLP &R,
       DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
-          &Visited);
+          &Visited,
+      bool AllowMaskedStores = true);
 
   /// The store instructions in a basic block organized by base pointer.
   StoreListMap Stores;

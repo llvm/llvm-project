@@ -30,8 +30,7 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   static const char *const GCCRegNames[];
 
-  static const LangASMap AMDGPUDefIsGenMap;
-  static const LangASMap AMDGPUDefIsPrivMap;
+  static const LangASMap AMDGPUAddrSpaceMap;
 
   llvm::AMDGPU::GPUKind GPUKind;
   unsigned GPUFeatures;
@@ -96,8 +95,6 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
 public:
   AMDGPUTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
-
-  void setAddressSpaceMap(bool DefaultIsPrivate);
 
   void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
               const TargetInfo *Aux) override;
@@ -266,8 +263,6 @@ public:
 
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
-  bool useFP16ConversionIntrinsics() const override { return false; }
-
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
@@ -283,7 +278,7 @@ public:
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     if (getTriple().isAMDGCN()) {
       GPUKind = llvm::AMDGPU::parseArchAMDGCN(Name);
       GPUFeatures = llvm::AMDGPU::getArchAttrAMDGCN(GPUKind);
@@ -488,15 +483,11 @@ public:
     return true;
   }
 
-  std::optional<std::string> getTargetID() const override {
-    if (!getTriple().isAMDGCN())
-      return std::nullopt;
-    // When -target-cpu is not set, we assume generic code that it is valid
-    // for all GPU and use an empty string as target ID to represent that.
-    if (GPUKind == llvm::AMDGPU::GK_NONE)
-      return std::string("");
-    return getCanonicalTargetID(getArchNameAMDGCN(GPUKind),
-                                OffloadArchFeatures);
+  bool isProcessorName(StringRef Name) const override {
+    llvm::AMDGPU::GPUKind NameKind = getTriple().isAMDGCN()
+                                         ? llvm::AMDGPU::parseArchAMDGCN(Name)
+                                         : llvm::AMDGPU::parseArchR600(Name);
+    return NameKind == GPUKind;
   }
 
   bool hasHIPImageSupport() const override { return HasImage; }

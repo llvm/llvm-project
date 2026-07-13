@@ -226,9 +226,13 @@ void measure(size_t threadcount, PerfCounterValues* before,
   // threadpool.
   auto counters =
       PerfCounters::Create({kGenericPerfEvent1, kGenericPerfEvent2});
-  for (auto& t : threads) t = std::thread(work);
+  for (auto& t : threads) {
+    t = std::thread(work);
+  }
   counters.Snapshot(before);
-  for (auto& t : threads) t.join();
+  for (auto& t : threads) {
+    t.join();
+  }
   counters.Snapshot(after);
 }
 

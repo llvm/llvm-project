@@ -340,6 +340,19 @@ bool fromJSON(const json::Value &V, ServerCapabilities &C, json::Path P) {
   if (O->find("tools") != O->end())
     C.supportsToolsList = true;
 
+  if (const json::Object *resources = O->getObject("resources")) {
+    C.supportsResourcesList =
+        resources->getBoolean("listChanged").value_or(false);
+    C.supportsResourcesSubscribe =
+        resources->getBoolean("subscribe").value_or(false);
+  }
+
+  if (O->find("completions") != O->end())
+    C.supportsCompletions = true;
+
+  if (O->find("logging") != O->end())
+    C.supportsLogging = true;
+
   return true;
 }
 

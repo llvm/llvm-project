@@ -3,11 +3,11 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii < %s | FileCheck -check-prefixes=CI,CI-SDAG %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX9-SDAG %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-SDAG %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii < %s | FileCheck -check-prefixes=CI,CI-GISEL %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX9-GISEL %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX10,GFX10-GISEL %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GFX11,GFX11-GISEL %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii < %s | FileCheck -check-prefixes=CI,CI-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX9-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX10,GFX10-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GFX11,GFX11-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL %s
 
 define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; SI-LABEL: is_private_vgpr:
@@ -139,9 +139,9 @@ define amdgpu_kernel void @is_private_sgpr(ptr %ptr) {
 ; SI-NEXT:    s_load_dword s1, s[8:9], 0x32
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_cmp_eq_u32 s0, s1
-; SI-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; SI-NEXT:    s_andn2_b64 vcc, exec, s[0:1]
-; SI-NEXT:    s_cbranch_vccnz .LBB1_2
+; SI-NEXT:    s_cselect_b32 s0, 1, 0
+; SI-NEXT:    s_cmp_lg_u32 s0, 1
+; SI-NEXT:    s_cbranch_scc1 .LBB1_2
 ; SI-NEXT:  ; %bb.1: ; %bb0
 ; SI-NEXT:    s_mov_b32 s3, 0x100f000
 ; SI-NEXT:    s_mov_b32 s2, -1
@@ -160,9 +160,9 @@ define amdgpu_kernel void @is_private_sgpr(ptr %ptr) {
 ; CI-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-SDAG-NEXT:    s_cmp_eq_u32 s0, s1
-; CI-SDAG-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CI-SDAG-NEXT:    s_andn2_b64 vcc, exec, s[0:1]
-; CI-SDAG-NEXT:    s_cbranch_vccnz .LBB1_2
+; CI-SDAG-NEXT:    s_cselect_b32 s0, 1, 0
+; CI-SDAG-NEXT:    s_cmp_lg_u32 s0, 1
+; CI-SDAG-NEXT:    s_cbranch_scc1 .LBB1_2
 ; CI-SDAG-NEXT:  ; %bb.1: ; %bb0
 ; CI-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; CI-SDAG-NEXT:    flat_store_dword v[0:1], v0
@@ -176,9 +176,9 @@ define amdgpu_kernel void @is_private_sgpr(ptr %ptr) {
 ; GFX9-SDAG-NEXT:    s_load_dword s0, s[8:9], 0x4
 ; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    s_cmp_eq_u32 s0, s1
-; GFX9-SDAG-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; GFX9-SDAG-NEXT:    s_andn2_b64 vcc, exec, s[0:1]
-; GFX9-SDAG-NEXT:    s_cbranch_vccnz .LBB1_2
+; GFX9-SDAG-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX9-SDAG-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX9-SDAG-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX9-SDAG-NEXT:  ; %bb.1: ; %bb0
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-SDAG-NEXT:    global_store_dword v[0:1], v0, off
@@ -194,9 +194,9 @@ define amdgpu_kernel void @is_private_sgpr(ptr %ptr) {
 ; GFX1250-SDAG-NEXT:    s_xor_b32 s0, s0, src_flat_scratch_base_hi
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cmp_lt_u32 s0, 0x4000000
-; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, -1, 0
-; GFX1250-SDAG-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
-; GFX1250-SDAG-NEXT:    s_cbranch_vccnz .LBB1_2
+; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX1250-SDAG-NEXT:  ; %bb.1: ; %bb0
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-SDAG-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS

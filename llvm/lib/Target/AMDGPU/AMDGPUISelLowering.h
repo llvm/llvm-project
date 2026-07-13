@@ -92,6 +92,7 @@ protected:
 
   SDValue LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerINT_TO_FP16(SDValue Op, SelectionDAG &DAG, EVT FP16Ty) const;
   SDValue LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG, bool Signed) const;
   SDValue LowerINT_TO_FP64(SDValue Op, SelectionDAG &DAG, bool Signed) const;
   SDValue LowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
@@ -148,6 +149,8 @@ protected:
 
   virtual SDValue LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI, SDValue Op,
                                      SelectionDAG &DAG) const;
+
+  SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
 
   /// Return 64-bit value Op as two 32-bit integers.
   std::pair<SDValue, SDValue> split64BitValue(SDValue Op,

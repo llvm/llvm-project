@@ -47,6 +47,10 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::find(std::execution::par, std::begin(a), std::end(a), 1);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::find_first_of(std::execution::par, std::begin(a), std::end(a), std::begin(b), std::end(b));
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::find_first_of(std::execution::par, std::begin(a), std::end(a), std::begin(b), std::end(b), pred2);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::is_partitioned(std::execution::par, std::begin(a), std::end(a), pred);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::is_sorted(std::execution::par, std::begin(a), std::end(a));

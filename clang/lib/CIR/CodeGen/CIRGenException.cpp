@@ -539,7 +539,9 @@ CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s,
         if (bodyCallback(*this).failed())
           tryRes = mlir::failure();
         tryBodyCleanups.forceCleanup();
-        cir::YieldOp::create(builder, loc);
+        if (!builder.getBlock()->mightHaveTerminator() ||
+            !builder.getBlock()->getTerminator())
+          cir::YieldOp::create(builder, loc);
       },
       /*handlersBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc,

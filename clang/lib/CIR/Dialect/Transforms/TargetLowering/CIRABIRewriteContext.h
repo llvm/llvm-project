@@ -11,9 +11,9 @@
 // rewrites a cir.func signature, the function body, and call sites to match
 // the ABI-lowered shape.
 //
-// This file currently handles only Direct (pass-through) and Ignore.  Other
-// ArgKind handlers (Extend, Direct-with-coercion, Indirect, Expand) are
-// added by subsequent PRs in the calling-convention-lowering split series.
+// This file handles Direct (pass-through and coerce-in-registers), Extend,
+// Ignore, Indirect (sret return, byval and byref arguments), and Expand
+// (struct flattening into scalar fields).
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,6 +22,7 @@
 
 #include "mlir/ABI/ABIRewriteContext.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 namespace cir {
@@ -31,9 +32,13 @@ namespace cir {
 /// The driver pass (CallConvLoweringPass) computes a FunctionClassification
 /// for each cir.func / cir.call and dispatches to this class to perform the
 /// actual IR rewriting using cir dialect operations.
+///
+/// Holds a reference to the module's DataLayout for coercion alignment
+/// queries.  The DataLayout must outlive the rewrite context.
 class CIRABIRewriteContext : public mlir::abi::ABIRewriteContext {
 public:
-  explicit CIRABIRewriteContext(mlir::ModuleOp module) : module(module) {}
+  CIRABIRewriteContext(mlir::ModuleOp module, const mlir::DataLayout &dl)
+      : module(module), dl(dl) {}
 
   mlir::LogicalResult
   rewriteFunctionDefinition(mlir::FunctionOpInterface funcOp,
@@ -49,6 +54,7 @@ public:
 
 private:
   mlir::ModuleOp module;
+  const mlir::DataLayout &dl;
 };
 
 } // namespace cir

@@ -1759,7 +1759,8 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc,
   // while, for, and switch statements are local to the if, while, for, or
   // switch statement (including the controlled statement).
   //
-  unsigned ScopeFlags = Scope::ControlScope | (C99orCXX ? Scope::DeclScope : 0);
+  unsigned ScopeFlags =
+      Scope::ControlScope | (C99orCXX ? Scope::DeclScope : Scope::NoScope);
   ParseScope WhileScope(this, ScopeFlags);
 
   // Parse the condition.
@@ -1812,7 +1813,7 @@ StmtResult Parser::ParseDoStatement(LabelDecl *PrecedingLabel) {
 
   // C99 6.8.5p5 - In C99, the do statement is a block.  This is not
   // the case for C90.  Start the loop scope.
-  unsigned ScopeFlags = getLangOpts().C99 ? Scope::DeclScope : 0;
+  unsigned ScopeFlags = getLangOpts().C99 ? Scope::DeclScope : Scope::NoScope;
   ParseScope DoScope(this, ScopeFlags);
 
   // OpenACC Restricts a do-while-loop inside of certain construct/clause
@@ -1939,8 +1940,8 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   // doesn't cause declarations to bind to this scope. We use this to avoid
   // diagnosing a comma operator in e.g. the third part of a for loop when
   // '-Wcomma' is enabled.
-  unsigned ScopeFlags =
-      Scope::ControlScope | (C99orCXXorObjC ? Scope::DeclScope : 0);
+  unsigned ScopeFlags = Scope::ControlScope |
+                        (C99orCXXorObjC ? Scope::DeclScope : Scope::NoScope);
   ParseScope ForScope(this, ScopeFlags);
 
   BalancedDelimiterTracker T(*this, tok::l_paren);

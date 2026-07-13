@@ -898,6 +898,8 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
       if (DeletedMessage)
         Record.AddStmt(DeletedMessage);
 
+      Record.push_back(FDI->getFPFeatures().getAsOpaqueInt());
+
       Record.push_back(FDI->getUnqualifiedLookups().size());
       for (DeclAccessPair P : FDI->getUnqualifiedLookups()) {
         Record.AddDeclRef(P.getDecl());
@@ -1773,6 +1775,12 @@ void ASTDeclWriter::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
     Record.AddDeclRef(Inherited.getShadowDecl());
     Record.AddDeclRef(Inherited.getConstructor());
   }
+
+  ArrayRef<CXXDefaultArgExpr *> CtorClosureDefaultArgs =
+      D->getCtorClosureDefaultArgs();
+  Record.push_back((unsigned)CtorClosureDefaultArgs.size());
+  for (CXXDefaultArgExpr *Arg : CtorClosureDefaultArgs)
+    Record.writeStmtRef(Arg);
 
   VisitCXXMethodDecl(D);
   Code = serialization::DECL_CXX_CONSTRUCTOR;

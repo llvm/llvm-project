@@ -5,9 +5,9 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1010 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX10-CU %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -O0 -mcpu=gfx700 -amdgcn-skip-cache-invalidations < %s | FileCheck --check-prefixes=SKIP-CACHE-INV %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx90a < %s | FileCheck -check-prefixes=GFX90A-NOTTGSPLIT %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx90a -mattr=+tgsplit < %s | FileCheck -check-prefixes=GFX90A-TGSPLIT %s
+; RUN: sed 's/attributes #0 = { nounwind }/attributes #0 = { nounwind "amdgpu-tg-split" }/' %s | llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx90a | FileCheck -check-prefixes=GFX90A-TGSPLIT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx942 < %s | FileCheck -check-prefixes=GFX942-NOTTGSPLIT %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx942 -mattr=+tgsplit < %s | FileCheck -check-prefixes=GFX942-TGSPLIT %s
+; RUN: sed 's/attributes #0 = { nounwind }/attributes #0 = { nounwind "amdgpu-tg-split" }/' %s | llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx942 | FileCheck -check-prefixes=GFX942-TGSPLIT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1100 < %s | FileCheck --check-prefixes=GFX11-WGP %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1100 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX11-CU %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GFX12-WGP %s
@@ -260,7 +260,7 @@ define amdgpu_kernel void @private_system_unordered_load(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %in, ptr addrspace(5) %out) {
+    ptr addrspace(5) %in, ptr addrspace(5) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(5) %in unordered, align 4
   store i32 %val, ptr addrspace(5) %out
@@ -513,7 +513,7 @@ define amdgpu_kernel void @private_system_monotonic_load(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %in, ptr addrspace(5) %out) {
+    ptr addrspace(5) %in, ptr addrspace(5) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(5) %in monotonic, align 4
   store i32 %val, ptr addrspace(5) %out
@@ -768,7 +768,7 @@ define amdgpu_kernel void @private_system_acquire_load(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %in, ptr addrspace(5) %out) {
+    ptr addrspace(5) %in, ptr addrspace(5) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(5) %in acquire, align 4
   store i32 %val, ptr addrspace(5) %out
@@ -1025,7 +1025,7 @@ define amdgpu_kernel void @private_system_seq_cst_load(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %in, ptr addrspace(5) %out) {
+    ptr addrspace(5) %in, ptr addrspace(5) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(5) %in seq_cst, align 4
   store i32 %val, ptr addrspace(5) %out
@@ -1261,7 +1261,7 @@ define amdgpu_kernel void @private_system_unordered_store(
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(5) %out) {
+    i32 %in, ptr addrspace(5) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(5) %out unordered, align 4
   ret void
@@ -1496,7 +1496,7 @@ define amdgpu_kernel void @private_system_monotonic_store(
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(5) %out) {
+    i32 %in, ptr addrspace(5) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(5) %out monotonic, align 4
   ret void
@@ -1736,7 +1736,7 @@ define amdgpu_kernel void @private_system_release_store(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(5) %out) {
+    i32 %in, ptr addrspace(5) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(5) %out release, align 4
   ret void
@@ -1976,7 +1976,7 @@ define amdgpu_kernel void @private_system_seq_cst_store(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(5) %out) {
+    i32 %in, ptr addrspace(5) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(5) %out seq_cst, align 4
   ret void
@@ -2245,7 +2245,7 @@ define amdgpu_kernel void @private_system_monotonic_atomicrmw(
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v[0:1], v2 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in) {
+    ptr addrspace(5) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(5) %out, i32 %in monotonic
   ret void
@@ -2517,7 +2517,7 @@ define amdgpu_kernel void @private_system_acquire_atomicrmw(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in) {
+    ptr addrspace(5) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(5) %out, i32 %in acquire
   ret void
@@ -2791,7 +2791,7 @@ define amdgpu_kernel void @private_system_release_atomicrmw(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v[0:1], v2 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in) {
+    ptr addrspace(5) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(5) %out, i32 %in release
   ret void
@@ -3068,7 +3068,7 @@ define amdgpu_kernel void @private_system_acq_rel_atomicrmw(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in) {
+    ptr addrspace(5) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(5) %out, i32 %in acq_rel
   ret void
@@ -3345,7 +3345,7 @@ define amdgpu_kernel void @private_system_seq_cst_atomicrmw(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in) {
+    ptr addrspace(5) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(5) %out, i32 %in seq_cst
   ret void
@@ -3638,7 +3638,7 @@ define amdgpu_kernel void @private_system_acquire_ret_atomicrmw(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in) {
+    ptr addrspace(5) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(5) %out, i32 %in acquire
   store i32 %val, ptr addrspace(5) %out, align 4
@@ -3937,7 +3937,7 @@ define amdgpu_kernel void @private_system_acq_rel_ret_atomicrmw(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in) {
+    ptr addrspace(5) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(5) %out, i32 %in acq_rel
   store i32 %val, ptr addrspace(5) %out, align 4
@@ -4236,7 +4236,7 @@ define amdgpu_kernel void @private_system_seq_cst_ret_atomicrmw(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in) {
+    ptr addrspace(5) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(5) %out, i32 %in seq_cst
   store i32 %val, ptr addrspace(5) %out, align 4
@@ -4591,7 +4591,7 @@ define amdgpu_kernel void @private_system_monotonic_monotonic_cmpxchg(
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in monotonic monotonic
@@ -4949,7 +4949,7 @@ define amdgpu_kernel void @private_system_acquire_monotonic_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in acquire monotonic
@@ -5309,7 +5309,7 @@ define amdgpu_kernel void @private_system_release_monotonic_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in release monotonic
@@ -5672,7 +5672,7 @@ define amdgpu_kernel void @private_system_acq_rel_monotonic_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in acq_rel monotonic
@@ -6035,7 +6035,7 @@ define amdgpu_kernel void @private_system_seq_cst_monotonic_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in seq_cst monotonic
@@ -6393,7 +6393,7 @@ define amdgpu_kernel void @private_system_monotonic_acquire_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in monotonic acquire
@@ -6751,7 +6751,7 @@ define amdgpu_kernel void @private_system_acquire_acquire_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in acquire acquire
@@ -7114,7 +7114,7 @@ define amdgpu_kernel void @private_system_release_acquire_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in release acquire
@@ -7477,7 +7477,7 @@ define amdgpu_kernel void @private_system_acq_rel_acquire_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in acq_rel acquire
@@ -7840,7 +7840,7 @@ define amdgpu_kernel void @private_system_seq_cst_acquire_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in seq_cst acquire
@@ -8203,7 +8203,7 @@ define amdgpu_kernel void @private_system_seq_cst_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in seq_cst seq_cst
@@ -8587,7 +8587,7 @@ define amdgpu_kernel void @private_system_monotonic_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in monotonic monotonic
@@ -8975,7 +8975,7 @@ define amdgpu_kernel void @private_system_acquire_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in acquire monotonic
@@ -9368,7 +9368,7 @@ define amdgpu_kernel void @private_system_acq_rel_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in acq_rel monotonic
@@ -9761,7 +9761,7 @@ define amdgpu_kernel void @private_system_seq_cst_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in seq_cst monotonic
@@ -10149,7 +10149,7 @@ define amdgpu_kernel void @private_system_monotonic_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in monotonic acquire
@@ -10537,7 +10537,7 @@ define amdgpu_kernel void @private_system_acquire_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in acquire acquire
@@ -10930,7 +10930,7 @@ define amdgpu_kernel void @private_system_release_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in release acquire
@@ -11323,7 +11323,7 @@ define amdgpu_kernel void @private_system_acq_rel_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in acq_rel acquire
@@ -11716,7 +11716,7 @@ define amdgpu_kernel void @private_system_seq_cst_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in seq_cst acquire
@@ -12109,7 +12109,7 @@ define amdgpu_kernel void @private_system_monotonic_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in monotonic seq_cst
@@ -12502,7 +12502,7 @@ define amdgpu_kernel void @private_system_acquire_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in acquire seq_cst
@@ -12895,7 +12895,7 @@ define amdgpu_kernel void @private_system_relese_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in release seq_cst
@@ -13288,7 +13288,7 @@ define amdgpu_kernel void @private_system_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in acq_rel seq_cst
@@ -13681,7 +13681,7 @@ define amdgpu_kernel void @private_system_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in seq_cst seq_cst
@@ -13936,7 +13936,7 @@ define amdgpu_kernel void @private_system_one_as_unordered_load(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %in, ptr addrspace(5) %out) {
+    ptr addrspace(5) %in, ptr addrspace(5) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(5) %in syncscope("one-as") unordered, align 4
   store i32 %val, ptr addrspace(5) %out
@@ -14189,7 +14189,7 @@ define amdgpu_kernel void @private_system_one_as_monotonic_load(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %in, ptr addrspace(5) %out) {
+    ptr addrspace(5) %in, ptr addrspace(5) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(5) %in syncscope("one-as") monotonic, align 4
   store i32 %val, ptr addrspace(5) %out
@@ -14444,7 +14444,7 @@ define amdgpu_kernel void @private_system_one_as_acquire_load(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %in, ptr addrspace(5) %out) {
+    ptr addrspace(5) %in, ptr addrspace(5) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(5) %in syncscope("one-as") acquire, align 4
   store i32 %val, ptr addrspace(5) %out
@@ -14701,7 +14701,7 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_load(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %in, ptr addrspace(5) %out) {
+    ptr addrspace(5) %in, ptr addrspace(5) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(5) %in syncscope("one-as") seq_cst, align 4
   store i32 %val, ptr addrspace(5) %out
@@ -14937,7 +14937,7 @@ define amdgpu_kernel void @private_system_one_as_unordered_store(
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(5) %out) {
+    i32 %in, ptr addrspace(5) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(5) %out syncscope("one-as") unordered, align 4
   ret void
@@ -15172,7 +15172,7 @@ define amdgpu_kernel void @private_system_one_as_monotonic_store(
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(5) %out) {
+    i32 %in, ptr addrspace(5) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(5) %out syncscope("one-as") monotonic, align 4
   ret void
@@ -15412,7 +15412,7 @@ define amdgpu_kernel void @private_system_one_as_release_store(
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(5) %out) {
+    i32 %in, ptr addrspace(5) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(5) %out syncscope("one-as") release, align 4
   ret void
@@ -15652,7 +15652,7 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_store(
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(5) %out) {
+    i32 %in, ptr addrspace(5) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(5) %out syncscope("one-as") seq_cst, align 4
   ret void
@@ -15921,7 +15921,7 @@ define amdgpu_kernel void @private_system_one_as_monotonic_atomicrmw(
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v[0:1], v2 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in) {
+    ptr addrspace(5) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(5) %out, i32 %in syncscope("one-as") monotonic
   ret void
@@ -16193,7 +16193,7 @@ define amdgpu_kernel void @private_system_one_as_acquire_atomicrmw(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in) {
+    ptr addrspace(5) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(5) %out, i32 %in syncscope("one-as") acquire
   ret void
@@ -16467,7 +16467,7 @@ define amdgpu_kernel void @private_system_one_as_release_atomicrmw(
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v[0:1], v2 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in) {
+    ptr addrspace(5) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(5) %out, i32 %in syncscope("one-as") release
   ret void
@@ -16744,7 +16744,7 @@ define amdgpu_kernel void @private_system_one_as_acq_rel_atomicrmw(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in) {
+    ptr addrspace(5) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(5) %out, i32 %in syncscope("one-as") acq_rel
   ret void
@@ -17021,7 +17021,7 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_atomicrmw(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in) {
+    ptr addrspace(5) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(5) %out, i32 %in syncscope("one-as") seq_cst
   ret void
@@ -17314,7 +17314,7 @@ define amdgpu_kernel void @private_system_one_as_acquire_ret_atomicrmw(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in) {
+    ptr addrspace(5) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(5) %out, i32 %in syncscope("one-as") acquire
   store i32 %val, ptr addrspace(5) %out, align 4
@@ -17613,7 +17613,7 @@ define amdgpu_kernel void @private_system_one_as_acq_rel_ret_atomicrmw(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in) {
+    ptr addrspace(5) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(5) %out, i32 %in syncscope("one-as") acq_rel
   store i32 %val, ptr addrspace(5) %out, align 4
@@ -17912,7 +17912,7 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_ret_atomicrmw(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in) {
+    ptr addrspace(5) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(5) %out, i32 %in syncscope("one-as") seq_cst
   store i32 %val, ptr addrspace(5) %out, align 4
@@ -18267,7 +18267,7 @@ define amdgpu_kernel void @private_system_one_as_monotonic_monotonic_cmpxchg(
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") monotonic monotonic
@@ -18625,7 +18625,7 @@ define amdgpu_kernel void @private_system_one_as_acquire_monotonic_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") acquire monotonic
@@ -18985,7 +18985,7 @@ define amdgpu_kernel void @private_system_one_as_release_monotonic_cmpxchg(
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") release monotonic
@@ -19348,7 +19348,7 @@ define amdgpu_kernel void @private_system_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") acq_rel monotonic
@@ -19711,7 +19711,7 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") seq_cst monotonic
@@ -20069,7 +20069,7 @@ define amdgpu_kernel void @private_system_one_as_monotonic_acquire_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") monotonic acquire
@@ -20427,7 +20427,7 @@ define amdgpu_kernel void @private_system_one_as_acquire_acquire_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") acquire acquire
@@ -20790,7 +20790,7 @@ define amdgpu_kernel void @private_system_one_as_release_acquire_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") release acquire
@@ -21153,7 +21153,7 @@ define amdgpu_kernel void @private_system_one_as_acq_rel_acquire_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") acq_rel acquire
@@ -21516,7 +21516,7 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_acquire_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") seq_cst acquire
@@ -21879,7 +21879,7 @@ define amdgpu_kernel void @private_system_one_as_monotonic_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") monotonic seq_cst
@@ -22242,7 +22242,7 @@ define amdgpu_kernel void @private_system_one_as_acquire_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") acquire seq_cst
@@ -22605,7 +22605,7 @@ define amdgpu_kernel void @private_system_one_as_release_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") release seq_cst
@@ -22968,7 +22968,7 @@ define amdgpu_kernel void @private_system_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") acq_rel seq_cst
@@ -23331,7 +23331,7 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") seq_cst seq_cst
@@ -23715,7 +23715,7 @@ define amdgpu_kernel void @private_system_one_as_monotonic_monotonic_ret_cmpxchg
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") monotonic monotonic
@@ -24103,7 +24103,7 @@ define amdgpu_kernel void @private_system_one_as_acquire_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") acquire monotonic
@@ -24494,7 +24494,7 @@ define amdgpu_kernel void @private_system_one_as_release_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") release monotonic
@@ -24887,7 +24887,7 @@ define amdgpu_kernel void @private_system_one_as_acq_rel_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") acq_rel monotonic
@@ -25280,7 +25280,7 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") seq_cst monotonic
@@ -25668,7 +25668,7 @@ define amdgpu_kernel void @private_system_one_as_monotonic_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") monotonic acquire
@@ -26056,7 +26056,7 @@ define amdgpu_kernel void @private_system_one_as_acquire_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") acquire acquire
@@ -26449,7 +26449,7 @@ define amdgpu_kernel void @private_system_one_as_release_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") release acquire
@@ -26842,7 +26842,7 @@ define amdgpu_kernel void @private_system_one_as_acq_rel_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") acq_rel acquire
@@ -27235,7 +27235,7 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") seq_cst acquire
@@ -27628,7 +27628,7 @@ define amdgpu_kernel void @private_system_one_as_monotonic_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") monotonic seq_cst
@@ -28021,7 +28021,7 @@ define amdgpu_kernel void @private_system_one_as_acquire_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") acquire seq_cst
@@ -28414,7 +28414,7 @@ define amdgpu_kernel void @private_system_one_as_release_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") release seq_cst
@@ -28807,7 +28807,7 @@ define amdgpu_kernel void @private_system_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") acq_rel seq_cst
@@ -29200,7 +29200,7 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(5) %out, i32 %in, i32 %old) {
+    ptr addrspace(5) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(5) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(5) %gep, i32 %old, i32 %in syncscope("one-as") seq_cst seq_cst
@@ -29208,3 +29208,5 @@ entry:
   store i32 %val0, ptr addrspace(5) %out, align 4
   ret void
 }
+
+attributes #0 = { nounwind }

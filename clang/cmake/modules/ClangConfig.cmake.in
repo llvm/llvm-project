@@ -13,7 +13,10 @@ set(CLANG_LINK_CLANG_DYLIB "@CLANG_LINK_CLANG_DYLIB@")
 set(CLANG_DEFAULT_LINKER "@CLANG_DEFAULT_LINKER@")
 
 # Provide all our library targets to users.
-@CLANG_CONFIG_INCLUDE_EXPORTS@
+# Skip when cross-compiling, as host library targets are not usable.
+if(NOT CMAKE_CROSSCOMPILING)
+  @CLANG_CONFIG_INCLUDE_EXPORTS@
+endif()
 
 # By creating clang-tablegen-targets here, subprojects that depend on Clang's
 # tablegen-generated headers can always depend on this target whether building

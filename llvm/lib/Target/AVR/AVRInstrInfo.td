@@ -1736,3 +1736,14 @@ def : Pat<(AVRtst i8 : $rd), (ANDRdRr GPR8 : $rd, GPR8 : $rd)>;
 // Lowering of 'lsl' node to 'LSL' instruction.
 // LSL is an alias of 'ADD Rd, Rd'
 def : Pat<(AVRlsl i8 : $rd), (ADDRdRr GPR8 : $rd, GPR8 : $rd)>;
+
+//===----------------------------------------------------------------------===//
+// Builtin lowering
+//===----------------------------------------------------------------------===//
+
+def : Pat<(int_avr_nop), (NOP)>;
+def : Pat<(int_avr_sleep), (SLEEP)>;
+def : Pat<(int_avr_wdr), (WDR)>;
+def : Pat<(int_avr_sei), (BSETs 7)>;
+def : Pat<(int_avr_cli), (BCLRs 7)>;
+def : Pat<(int_avr_swap i8:$src), (SWAPRd GPR8:$src)>;

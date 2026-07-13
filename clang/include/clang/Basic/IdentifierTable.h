@@ -74,15 +74,14 @@ enum TokenKey : unsigned {
   KEYSYCL = 0x800000,
   KEYCUDA = 0x1000000,
   KEYZOS = 0x2000000,
-  KEYNOZOS = 0x4000000,
-  KEYHLSL = 0x8000000,
-  KEYFIXEDPOINT = 0x10000000,
-  KEYDEFERTS = 0x20000000,
-  KEYNOHLSL = 0x40000000,
+  KEYHLSL = 0x4000000,
+  KEYFIXEDPOINT = 0x8000000,
+  KEYDEFERTS = 0x10000000,
+  KEYNOHLSL = 0x20000000,
   KEYMAX = KEYNOHLSL, // The maximum key
   KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX20,
-  KEYALL = (KEYMAX | (KEYMAX - 1)) & ~KEYNOMS18 & ~KEYNOOPENCL & ~KEYNOZOS &
-           ~KEYNOHLSL // KEYNOMS18, KEYNOOPENCL, KEYNOZOS, KEYNOHLSL excluded.
+  KEYALL = (KEYMAX | (KEYMAX - 1)) & ~KEYNOMS18 & ~KEYNOOPENCL &
+           ~KEYNOHLSL // KEYNOMS18, KEYNOOPENCL, KEYNOHLSL excluded.
 };
 
 /// How a keyword is treated in the selected standard. This enum is ordered
@@ -1185,14 +1184,6 @@ public:
     return getStringFormatFamilyImpl(*this);
   }
 
-  static Selector getEmptyMarker() {
-    return Selector(uintptr_t(-1));
-  }
-
-  static Selector getTombstoneMarker() {
-    return Selector(uintptr_t(-2));
-  }
-
   static ObjCInstanceTypeFamily getInstTypeMethodFamily(Selector sel);
 };
 
@@ -1273,14 +1264,6 @@ namespace llvm {
 /// DenseSets.
 template <>
 struct DenseMapInfo<clang::Selector> {
-  static clang::Selector getEmptyKey() {
-    return clang::Selector::getEmptyMarker();
-  }
-
-  static clang::Selector getTombstoneKey() {
-    return clang::Selector::getTombstoneMarker();
-  }
-
   static unsigned getHashValue(clang::Selector S);
 
   static bool isEqual(clang::Selector LHS, clang::Selector RHS) {

@@ -79,15 +79,22 @@ define fp128 @add(fp128 %x, fp128 %y) nounwind strictfp {
 ;
 ; WIN-LABEL: add:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $72, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
-; WIN-NEXT:    movaps (%rdx), %xmm1
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $80, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
+; WIN-NEXT:    movaps (%r8), %xmm1
 ; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
 ; WIN-NEXT:    callq __addtf3
-; WIN-NEXT:    addq $72, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $80, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: add:
@@ -201,15 +208,22 @@ define fp128 @sub(fp128 %x, fp128 %y) nounwind strictfp {
 ;
 ; WIN-LABEL: sub:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $72, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
-; WIN-NEXT:    movaps (%rdx), %xmm1
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $80, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
+; WIN-NEXT:    movaps (%r8), %xmm1
 ; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
 ; WIN-NEXT:    callq __subtf3
-; WIN-NEXT:    addq $72, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $80, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: sub:
@@ -323,15 +337,22 @@ define fp128 @mul(fp128 %x, fp128 %y) nounwind strictfp {
 ;
 ; WIN-LABEL: mul:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $72, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
-; WIN-NEXT:    movaps (%rdx), %xmm1
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $80, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
+; WIN-NEXT:    movaps (%r8), %xmm1
 ; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
 ; WIN-NEXT:    callq __multf3
-; WIN-NEXT:    addq $72, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $80, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: mul:
@@ -445,15 +466,22 @@ define fp128 @div(fp128 %x, fp128 %y) nounwind strictfp {
 ;
 ; WIN-LABEL: div:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $72, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
-; WIN-NEXT:    movaps (%rdx), %xmm1
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $80, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
+; WIN-NEXT:    movaps (%r8), %xmm1
 ; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
 ; WIN-NEXT:    callq __divtf3
-; WIN-NEXT:    addq $72, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $80, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: div:
@@ -568,18 +596,25 @@ define fp128 @fma(fp128 %x, fp128 %y, fp128 %z) nounwind strictfp {
 ;
 ; WIN-LABEL: fma:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $88, %rsp
-; WIN-NEXT:    movaps (%r8), %xmm0
-; WIN-NEXT:    movaps (%rcx), %xmm1
-; WIN-NEXT:    movaps (%rdx), %xmm2
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $96, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%r9), %xmm0
+; WIN-NEXT:    movaps (%rdx), %xmm1
+; WIN-NEXT:    movaps (%r8), %xmm2
 ; WIN-NEXT:    movaps %xmm2, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r9
 ; WIN-NEXT:    callq fmal
-; WIN-NEXT:    addq $88, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $96, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: fma:
@@ -694,15 +729,22 @@ define fp128 @frem(fp128 %x, fp128 %y) nounwind strictfp {
 ;
 ; WIN-LABEL: frem:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $72, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
-; WIN-NEXT:    movaps (%rdx), %xmm1
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $80, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
+; WIN-NEXT:    movaps (%r8), %xmm1
 ; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
 ; WIN-NEXT:    callq fmodl
-; WIN-NEXT:    addq $72, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $80, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: frem:
@@ -797,12 +839,19 @@ define fp128 @ceil(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: ceil:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq ceill
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: ceil:
@@ -887,12 +936,19 @@ define fp128 @acos(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: acos:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq acosl
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: acos:
@@ -977,12 +1033,19 @@ define fp128 @cos(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: cos:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq cosl
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: cos:
@@ -1067,12 +1130,19 @@ define fp128 @cosh(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: cosh:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq coshl
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: cosh:
@@ -1157,12 +1227,19 @@ define fp128 @exp(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: exp:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq expl
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: exp:
@@ -1247,12 +1324,19 @@ define fp128 @exp2(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: exp2:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq exp2l
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: exp2:
@@ -1337,12 +1421,19 @@ define fp128 @floor(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: floor:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq floorl
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: floor:
@@ -1427,12 +1518,19 @@ define fp128 @log(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: log:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq logl
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: log:
@@ -1517,12 +1615,19 @@ define fp128 @log10(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: log10:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq log10l
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: log10:
@@ -1607,12 +1712,19 @@ define fp128 @log2(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: log2:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq log2l
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: log2:
@@ -1709,15 +1821,22 @@ define fp128 @maxnum(fp128 %x, fp128 %y) nounwind strictfp {
 ;
 ; WIN-LABEL: maxnum:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $72, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
-; WIN-NEXT:    movaps (%rdx), %xmm1
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $80, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
+; WIN-NEXT:    movaps (%r8), %xmm1
 ; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
 ; WIN-NEXT:    callq fmaxl
-; WIN-NEXT:    addq $72, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $80, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: maxnum:
@@ -1824,15 +1943,22 @@ define fp128 @minnum(fp128 %x, fp128 %y) nounwind strictfp {
 ;
 ; WIN-LABEL: minnum:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $72, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
-; WIN-NEXT:    movaps (%rdx), %xmm1
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $80, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
+; WIN-NEXT:    movaps (%r8), %xmm1
 ; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
 ; WIN-NEXT:    callq fminl
-; WIN-NEXT:    addq $72, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $80, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: minnum:
@@ -1927,12 +2053,19 @@ define fp128 @nearbyint(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: nearbyint:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq nearbyintl
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: nearbyint:
@@ -2029,15 +2162,22 @@ define fp128 @pow(fp128 %x, fp128 %y) nounwind strictfp {
 ;
 ; WIN-LABEL: pow:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $72, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
-; WIN-NEXT:    movaps (%rdx), %xmm1
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $80, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
+; WIN-NEXT:    movaps (%r8), %xmm1
 ; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
 ; WIN-NEXT:    callq powl
-; WIN-NEXT:    addq $72, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $80, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: pow:
@@ -2143,12 +2283,19 @@ define fp128 @powi(fp128 %x, i32 %y) nounwind strictfp {
 ;
 ; WIN-LABEL: powi:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq __powitf2
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: powi:
@@ -2237,12 +2384,19 @@ define fp128 @rint(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: rint:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq rintl
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: rint:
@@ -2327,12 +2481,19 @@ define fp128 @round(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: round:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq roundl
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: round:
@@ -2417,12 +2578,19 @@ define fp128 @roundeven(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: roundeven:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq roundevenl
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: roundeven:
@@ -2507,12 +2675,19 @@ define fp128 @asin(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: asin:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq asinl
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: asin:
@@ -2597,12 +2772,19 @@ define fp128 @sin(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: sin:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq sinl
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: sin:
@@ -2687,12 +2869,19 @@ define fp128 @sinh(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: sinh:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq sinhl
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: sinh:
@@ -2777,12 +2966,19 @@ define fp128 @sqrt(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: sqrt:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq sqrtl
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: sqrt:
@@ -2867,12 +3063,19 @@ define fp128 @atan(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: atan:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq atanl
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: atan:
@@ -2969,15 +3172,22 @@ define fp128 @atan2(fp128 %x, fp128 %y) nounwind strictfp {
 ;
 ; WIN-LABEL: atan2:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $72, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
-; WIN-NEXT:    movaps (%rdx), %xmm1
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $80, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
+; WIN-NEXT:    movaps (%r8), %xmm1
 ; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
 ; WIN-NEXT:    callq atan2l
-; WIN-NEXT:    addq $72, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $80, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: atan2:
@@ -3072,12 +3282,19 @@ define fp128 @tan(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: tan:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq tanl
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: tan:
@@ -3162,12 +3379,19 @@ define fp128 @tanh(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: tanh:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq tanhl
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: tanh:
@@ -3252,12 +3476,19 @@ define fp128 @trunc(fp128 %x) nounwind strictfp {
 ;
 ; WIN-LABEL: trunc:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $56, %rsp
-; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    pushq %rsi
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    movq %rcx, %rsi
+; WIN-NEXT:    movaps (%rdx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq truncl
-; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, (%rsi)
+; WIN-NEXT:    movq %rsi, %rax
+; WIN-NEXT:    addq $64, %rsp
+; WIN-NEXT:    popq %rsi
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: trunc:

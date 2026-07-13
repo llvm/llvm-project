@@ -113,3 +113,24 @@ main_body:
   %res = load float, ptr addrspace(3) %lds
   ret float %res
 }
+
+; Test divergent LDS pointer - exercises SgprB32_M0 VGPR to SGPR via readfirstlane path
+define float @struct.ptr.buffer.load.vgpr.lds(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) %lds) {
+; CHECK-LABEL: struct.ptr.buffer.load.vgpr.lds:
+; CHECK:       ; %bb.0: ; %main_body
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_readfirstlane_b32 s4, v0
+; CHECK-NEXT:    v_mov_b32_e32 v1, 8
+; CHECK-NEXT:    s_mov_b32 m0, s4
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    buffer_load_dword v1, s[16:19], 0 idxen lds
+; CHECK-NEXT:    ; asyncmark
+; CHECK-NEXT:    ds_read_b32 v0, v0
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+main_body:
+  call void @llvm.amdgcn.struct.ptr.buffer.load.async.lds(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds, i32 4, i32 8, i32 0, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.asyncmark()
+  %res = load float, ptr addrspace(3) %lds
+  ret float %res
+}

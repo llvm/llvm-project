@@ -42,13 +42,14 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID,
              << "first" << FirstArgType << Arg0->getSourceRange();
     TheCall->setArg(0, FirstArg.get());
 
-    ExprResult SecArg = SemaRef.DefaultLvalueConversion(Arg1);
+    InitializedEntity Entity = InitializedEntity::InitializeParameter(
+        Context, Context.getIntTypeForBitwidth(64, /*Signed=*/false),
+        /*Consumed=*/false);
+    ExprResult SecArg =
+        SemaRef.PerformCopyInitialization(Entity,
+                                          /*EqualLoc=*/SourceLocation(), Arg1);
     if (SecArg.isInvalid())
       return true;
-    QualType SecArgType = SecArg.get()->getType();
-    if (!SecArgType->isIntegerType())
-      return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_integer)
-             << "second" << SecArgType << Arg1->getSourceRange();
     TheCall->setArg(1, SecArg.get());
 
     // Derive the return type from the pointer argument.
@@ -92,13 +93,14 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID,
              << "first" << FirstArgType << Arg0->getSourceRange();
     TheCall->setArg(0, FirstArg.get());
 
-    ExprResult SecArg = SemaRef.DefaultLvalueConversion(Arg1);
+    InitializedEntity Entity = InitializedEntity::InitializeParameter(
+        Context, Context.getIntTypeForBitwidth(64, /*Signed=*/false),
+        /*Consumed=*/false);
+    ExprResult SecArg =
+        SemaRef.PerformCopyInitialization(Entity,
+                                          /*EqualLoc=*/SourceLocation(), Arg1);
     if (SecArg.isInvalid())
       return true;
-    QualType SecArgType = SecArg.get()->getType();
-    if (!SecArgType->isIntegerType())
-      return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_integer)
-             << "second" << SecArgType << Arg1->getSourceRange();
     TheCall->setArg(1, SecArg.get());
 
     return false;
@@ -1174,8 +1176,12 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   if (BuiltinID == AArch64::BI__sys)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0x3fff);
 
-  if (BuiltinID == AArch64::BI__getReg)
+  if (BuiltinID == AArch64::BI__getReg || BuiltinID == AArch64::BI__setReg ||
+      BuiltinID == AArch64::BI__getRegFp || BuiltinID == AArch64::BI__setRegFp)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 31);
+
+  if (BuiltinID == AArch64::BI__prefetch2)
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 31);
 
   if (BuiltinID == AArch64::BI__break)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0xffff);

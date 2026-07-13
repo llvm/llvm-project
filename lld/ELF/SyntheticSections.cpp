@@ -602,10 +602,6 @@ MipsGotSection::MipsGotSection(Ctx &ctx)
     : SyntheticSection(ctx, ".got", SHT_PROGBITS,
                        SHF_ALLOC | SHF_WRITE | SHF_MIPS_GPREL, 16) {}
 
-void MipsGotSection::addConstant(const Relocation &r) {
-  relocations.push_back(r);
-}
-
 void MipsGotSection::addEntry(InputFile &file, Symbol &sym, int64_t addend,
                               RelExpr expr) {
   FileGot &g = getGot(file);

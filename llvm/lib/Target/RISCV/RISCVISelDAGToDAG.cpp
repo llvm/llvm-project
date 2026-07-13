@@ -30,6 +30,8 @@ using namespace llvm;
 #define DEBUG_TYPE "riscv-isel"
 #define PASS_NAME "RISC-V DAG->DAG Pattern Instruction Selection"
 
+extern cl::opt<uint32_t> PreferredLandingPadLabel;
+
 static cl::opt<bool> UsePseudoMovImm(
     "riscv-use-rematerializable-movimm", cl::Hidden,
     cl::desc("Use a rematerializable pseudoinstruction for 2 instruction "
@@ -2074,7 +2076,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case RISCVISD::SUBD:
   case RISCVISD::PPAIRE_DB:
   case RISCVISD::WADDAU:
-  case RISCVISD::WSUBAU: {
+  case RISCVISD::WSUBAU:
+  case RISCVISD::WADDA:
+  case RISCVISD::WSUBA: {
     assert(!Subtarget->is64Bit() && "Unexpected opcode");
     assert(
         (Node->getOpcode() != RISCVISD::PPAIRE_DB || Subtarget->hasStdExtP()) &&
@@ -2094,10 +2098,27 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     SDValue Op1Hi = Node->getOperand(3);
 
     MachineSDNode *New;
-    if (Opcode == RISCVISD::WADDAU || Opcode == RISCVISD::WSUBAU) {
-      // WADDAU/WSUBAU: Op0 is the accumulator (GPRPair), Op1Lo and Op1Hi are
-      // the two 32-bit values.
-      unsigned Opc = Opcode == RISCVISD::WADDAU ? RISCV::WADDAU : RISCV::WSUBAU;
+    if (Opcode == RISCVISD::WADDAU || Opcode == RISCVISD::WSUBAU ||
+        Opcode == RISCVISD::WADDA || Opcode == RISCVISD::WSUBA) {
+      // Widening accumulate: Op0 is the accumulator (GPRPair), Op1Lo and Op1Hi
+      // are the two 32-bit values.
+      unsigned Opc;
+      switch (Opcode) {
+      default:
+        llvm_unreachable("Unexpected opcode");
+      case RISCVISD::WADDAU:
+        Opc = RISCV::WADDAU;
+        break;
+      case RISCVISD::WSUBAU:
+        Opc = RISCV::WSUBAU;
+        break;
+      case RISCVISD::WADDA:
+        Opc = RISCV::WADDA;
+        break;
+      case RISCVISD::WSUBA:
+        Opc = RISCV::WSUBA;
+        break;
+      }
       New = CurDAG->getMachineNode(Opc, DL, MVT::Untyped, Op0, Op1Lo, Op1Hi);
     } else {
       SDValue Op1 = buildGPRPair(CurDAG, DL, MVT::Untyped, Op1Lo, Op1Hi);
@@ -3009,57 +3030,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       }
     }
 
-    // Use buildGPRPair for v2i32 on RV32.
-    if (!Subtarget->is64Bit() && VT == MVT::v2i32) {
-      SDValue Pair = buildGPRPair(CurDAG, DL, VT, Node->getOperand(0),
-                                  Node->getOperand(0));
-      ReplaceNode(Node, Pair.getNode());
-      return;
-    }
-
-    break;
-  }
-  case ISD::BUILD_VECTOR: {
-    if (Subtarget->hasStdExtP() && !Subtarget->is64Bit() && VT == MVT::v2i32) {
-      SDValue Pair = buildGPRPair(CurDAG, DL, VT, Node->getOperand(0),
-                                  Node->getOperand(1));
-      ReplaceNode(Node, Pair.getNode());
-      return;
-    }
-    break;
-  }
-  case ISD::CONCAT_VECTORS: {
-    if (Subtarget->hasStdExtP() && !Subtarget->is64Bit() &&
-        (VT == MVT::v4i16 || VT == MVT::v8i8)) {
-      assert(Node->getNumOperands() == 2);
-      SDValue Lo = Node->getOperand(0);
-      SDValue Hi = Node->getOperand(1);
-      SDValue Pair = buildGPRPair(CurDAG, DL, VT, Lo, Hi);
-      ReplaceNode(Node, Pair.getNode());
-      return;
-    }
-    break;
-  }
-  case ISD::EXTRACT_VECTOR_ELT: {
-    if (Subtarget->hasStdExtP() && !Subtarget->is64Bit()) {
-      MVT SrcVT = Node->getOperand(0).getSimpleValueType();
-      if (VT == MVT::i32 && SrcVT == MVT::v2i32) {
-        auto *IdxC = dyn_cast<ConstantSDNode>(Node->getOperand(1));
-        if (!IdxC)
-          break;
-        unsigned Idx = IdxC->getZExtValue();
-        if (Idx > 1)
-          break;
-
-        unsigned SubRegIdx =
-            Idx == 0 ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
-        SDValue Src = Node->getOperand(0);
-        SDValue Extract =
-            CurDAG->getTargetExtractSubreg(SubRegIdx, DL, VT, Src);
-        ReplaceNode(Node, Extract.getNode());
-        return;
-      }
-    }
     break;
   }
   case ISD::SCALAR_TO_VECTOR:
@@ -3268,6 +3238,31 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     CurDAG->setNodeMemRefs(Load, {Ld->getMemOperand()});
     // Replace the splat with the vlse.
     ReplaceNode(Node, Load);
+    return;
+  }
+  case RISCVISD::LPAD_CALL:
+  case RISCVISD::LPAD_CALL_INDIRECT: {
+    bool IsIndirect = Opcode == RISCVISD::LPAD_CALL_INDIRECT;
+    unsigned PseudoOpc = IsIndirect ? RISCV::PseudoCALLIndirectLpadAlign
+                                    : RISCV::PseudoCALLLpadAlign;
+
+    uint32_t LpadLabel = 0;
+    if (PreferredLandingPadLabel.getNumOccurrences() > 0) {
+      if (!isUInt<20>(PreferredLandingPadLabel))
+        report_fatal_error("riscv-landing-pad-label=<val>, <val> needs to fit "
+                           "in unsigned 20-bits");
+      LpadLabel = PreferredLandingPadLabel;
+    }
+
+    SmallVector<SDValue, 4> Ops;
+    Ops.push_back(Node->getOperand(1));
+    Ops.push_back(CurDAG->getTargetConstant(LpadLabel, DL, XLenVT));
+    Ops.push_back(Node->getOperand(0));
+    if (Node->getGluedNode())
+      Ops.push_back(Node->getOperand(Node->getNumOperands() - 1));
+
+    ReplaceNode(Node,
+                CurDAG->getMachineNode(PseudoOpc, DL, Node->getVTList(), Ops));
     return;
   }
   case ISD::PREFETCH:
