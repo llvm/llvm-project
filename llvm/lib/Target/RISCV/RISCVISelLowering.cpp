@@ -4758,15 +4758,20 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
           DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(2));
       SDValue Val3 =
           DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(3));
-      SDValue PPairDB =
-          DAG.getNode(RISCVISD::PPAIRE_DB, DL, {MVT::v4i8, MVT::v4i8},
-                      {Val0, Val2, Val1, Val3});
+      SDValue Concat1 =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8, Val0, Val2);
+      SDValue Concat2 =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8, Val1, Val3);
+      SDValue PPairE =
+          DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v8i8, Concat1, Concat2);
 
-      return DAG.getBitcast(
-          MVT::v4i8,
-          DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v2i16,
-                      DAG.getBitcast(MVT::v2i16, PPairDB.getValue(0)),
-                      DAG.getBitcast(MVT::v2i16, PPairDB.getValue(1))));
+      SDValue Lo = DAG.getExtractSubvector(DL, MVT::v4i8, PPairE, 0);
+      SDValue Hi = DAG.getExtractSubvector(DL, MVT::v4i8, PPairE, 4);
+
+      return DAG.getBitcast(MVT::v4i8,
+                            DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v2i16,
+                                        DAG.getBitcast(MVT::v2i16, Lo),
+                                        DAG.getBitcast(MVT::v2i16, Hi)));
     }
 
     llvm_unreachable("Unexpected RV32 P BUILD_VECTOR type");

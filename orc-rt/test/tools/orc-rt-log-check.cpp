@@ -65,12 +65,17 @@ int main(int argc, char *argv[]) {
   bool PrintBackend = false;
   bool PrintEnabledLevels = false;
   bool PrintHelp = false;
+  int UID = -1;
 
   {
     orc_rt::CommandLineParser P;
     P.addFlag("print-backend", "Print log backend", false, PrintBackend)
         .addFlag("print-enabled-levels", "Print enabled log levels", false,
                  PrintEnabledLevels)
+        .addValue("uid",
+                  "Emit one marker record carrying this id (for os_log "
+                  "delivery tests)",
+                  -1, UID)
         .addFlag("help", "Print help", false, PrintHelp);
 
     if (auto Err = P.parse(argc, argv)) {
@@ -98,6 +103,14 @@ int main(int argc, char *argv[]) {
 
   if (PrintBackend || PrintEnabledLevels)
     return 0;
+
+  if (UID != -1) {
+    // Emit one record whose payload carries the caller-supplied id, so a
+    // delivery test can match exactly its own record and not a stale one. The
+    // id is an integer (a %d scalar), which os_log shows unredacted.
+    ORC_RT_LOG(Error, General, "delivery marker uid=%d", UID);
+    return 0;
+  }
 
   emitAllLevels();
 
