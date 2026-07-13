@@ -270,7 +270,7 @@ TEST_F(TypeConstrainedPointersExtractorTest, MainPointerParams) {
 
   ASSERT_TRUE(ArgvId);
   // argc is not a pointer — only argv and envp are extracted.
-  EXPECT_EQ(*S, (std::set{*ArgvId}));
+  EXPECT_EQ(*S, (std::set<EntityId>{*ArgvId}));
 }
 
 TEST_F(TypeConstrainedPointersExtractorTest, MainNoPointerParams) {
