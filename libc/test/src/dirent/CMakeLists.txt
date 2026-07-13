@@ -17,3 +17,25 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
+add_libc_unittest(
+  fdopendir_test
+  SUITE
+    libc_dirent_unittests
+  SRCS
+    fdopendir_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.string_view
+    libc.src.dirent.fdopendir
+    libc.src.dirent.closedir
+    libc.src.dirent.readdir
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.fcntl.fcntl
+    libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+    libc.hdr.types.DIR
+    libc.hdr.types.struct_dirent
+)
+
+

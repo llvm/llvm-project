@@ -1899,7 +1899,7 @@ static bool generateCastToPtrInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
-static bool generateDotOrFMulInst(const StringRef DemangledCall,
+static bool generateDotOrFMulInst(StringRef DemangledCall,
                                   const SPIRV::IncomingCall *Call,
                                   MachineIRBuilder &MIRBuilder,
                                   SPIRVGlobalRegistry *GR) {
@@ -2311,7 +2311,7 @@ getSamplerFilterModeFromBitmask(unsigned Bitmask) {
   return SPIRV::SamplerFilterMode::Nearest;
 }
 
-static bool generateReadImageInst(const StringRef DemangledCall,
+static bool generateReadImageInst(StringRef DemangledCall,
                                   const SPIRV::IncomingCall *Call,
                                   MachineIRBuilder &MIRBuilder,
                                   SPIRVGlobalRegistry *GR) {
@@ -2406,7 +2406,7 @@ static bool generateWriteImageInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
-static bool generateSampleImageInst(const StringRef DemangledCall,
+static bool generateSampleImageInst(StringRef DemangledCall,
                                     const SPIRV::IncomingCall *Call,
                                     MachineIRBuilder &MIRBuilder,
                                     SPIRVGlobalRegistry *GR) {
@@ -3175,7 +3175,7 @@ static bool generateAsyncCopy(const SPIRV::IncomingCall *Call,
   }
 }
 
-static bool generateConvertInst(const StringRef DemangledCall,
+static bool generateConvertInst(StringRef DemangledCall,
                                 const SPIRV::IncomingCall *Call,
                                 MachineIRBuilder &MIRBuilder,
                                 SPIRVGlobalRegistry *GR) {
@@ -3412,7 +3412,7 @@ namespace SPIRV {
 // TODO: consider a major rework of mapping demangled calls into a builtin
 // functions to unify search and decrease number of individual cases.
 std::tuple<int, unsigned, unsigned>
-mapBuiltinToOpcode(const StringRef DemangledCall,
+mapBuiltinToOpcode(StringRef DemangledCall,
                    SPIRV::InstructionSet::InstructionSet Set) {
   Register Reg;
   SmallVector<Register> Args;
@@ -3485,7 +3485,7 @@ mapBuiltinToOpcode(const StringRef DemangledCall,
   return std::make_tuple(-1, 0, 0);
 }
 
-std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
+std::optional<bool> lowerBuiltin(StringRef DemangledCall,
                                  SPIRV::InstructionSet::InstructionSet Set,
                                  MachineIRBuilder &MIRBuilder,
                                  const Register OrigRet, const Type *OrigRetTy,
@@ -3655,7 +3655,7 @@ Type *parseBuiltinCallArgumentType(StringRef TypeStr, LLVMContext &Ctx) {
 }
 
 bool parseBuiltinTypeStr(SmallVector<StringRef, 10> &BuiltinArgsTypeStrs,
-                         const StringRef DemangledCall, LLVMContext &Ctx) {
+                         StringRef DemangledCall, LLVMContext &Ctx) {
   auto Pos1 = DemangledCall.find('(');
   if (Pos1 == StringRef::npos)
     return false;
@@ -3667,8 +3667,8 @@ bool parseBuiltinTypeStr(SmallVector<StringRef, 10> &BuiltinArgsTypeStrs,
   return true;
 }
 
-Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
-                                       unsigned ArgIdx, LLVMContext &Ctx) {
+Type *parseBuiltinCallArgumentBaseType(StringRef DemangledCall, unsigned ArgIdx,
+                                       LLVMContext &Ctx) {
   SmallVector<StringRef, 10> BuiltinArgsTypeStrs;
   parseBuiltinTypeStr(BuiltinArgsTypeStrs, DemangledCall, Ctx);
   if (ArgIdx >= BuiltinArgsTypeStrs.size())
@@ -3700,7 +3700,7 @@ struct OpenCLType {
 // Misc functions for parsing builtin types.
 //===----------------------------------------------------------------------===//
 
-static Type *parseTypeString(const StringRef Name, LLVMContext &Context) {
+static Type *parseTypeString(StringRef Name, LLVMContext &Context) {
   if (Name.starts_with("void"))
     return Type::getVoidTy(Context);
   else if (Name.starts_with("int") || Name.starts_with("uint"))
@@ -3925,7 +3925,7 @@ lowerBuiltinType(const Type *OpaqueType,
 
   unsigned NumStartingVRegs = MIRBuilder.getMRI()->getNumVirtRegs();
 
-  const StringRef Name = BuiltinType->getName();
+  StringRef Name = BuiltinType->getName();
   LLVM_DEBUG(dbgs() << "Lowering builtin type: " << Name << "\n");
 
   SPIRVTypeInst TargetType = nullptr;

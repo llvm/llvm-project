@@ -326,6 +326,14 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM,
                         MDB.createRange(Range.getLower(), Range.getUpper()));
     }
 
+    if (Arg.hasAttribute(Attribute::NoFPClass) && AdjustedArgTy == ArgTy) {
+      FPClassTest Mask = Arg.getNoFPClass();
+      Load->setMetadata(
+          LLVMContext::MD_nofpclass,
+          MDNode::get(Ctx, ConstantAsMetadata::get(
+                               ConstantInt::get(Type::getInt32Ty(Ctx), Mask))));
+    }
+
     if (isa<PointerType>(ArgTy)) {
       if (Arg.hasNonNullAttr())
         Load->setMetadata(LLVMContext::MD_nonnull, MDNode::get(Ctx, {}));

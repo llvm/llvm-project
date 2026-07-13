@@ -5754,3 +5754,95 @@ define <2 x i32> @test_pmerge_mvmn_i32x2(<2 x i32> %rs2, <2 x i32> %rs1, <2 x i3
   %res = call <2 x i32> @llvm.riscv.pmerge.v2i32(<2 x i32> %rs1, <2 x i32> %rs2, <2 x i32> %rd)
   ret <2 x i32> %res
 }
+
+; Packed absolute difference sum
+define i32 @test_pabdsumu_u8x8_u32(<8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_pabdsumu_u8x8_u32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pabdsumu.b a0, a0, a2
+; RV32-NEXT:    pabdsumau.b a0, a1, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pabdsumu_u8x8_u32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pabdsumu.b a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.pabdsumu.i32.v8i8(<8 x i8> %a, <8 x i8> %b)
+  ret i32 %res
+}
+
+define i64 @test_pabdsumu_u8x8_u64(<8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_pabdsumu_u8x8_u64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pabdsumu.b a1, a1, a3
+; RV32-NEXT:    pabdsumu.b a0, a0, a2
+; RV32-NEXT:    waddu a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pabdsumu_u8x8_u64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pabdsumu.b a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i64 @llvm.riscv.pabdsumu.i64.v8i8(<8 x i8> %a, <8 x i8> %b)
+  ret i64 %res
+}
+
+define i32 @test_pabdsumau_u8x8_u32(i32 %rd, <8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_pabdsumau_u8x8_u32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pabdsumau.b a0, a1, a3
+; RV32-NEXT:    pabdsumau.b a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pabdsumau_u8x8_u32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pabdsumau.b a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.pabdsumau.i32.v8i8(i32 %rd, <8 x i8> %a, <8 x i8> %b)
+  ret i32 %res
+}
+
+define i64 @test_pabdsumau_u8x8_u64(i64 %rd, <8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_pabdsumau_u8x8_u64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pabdsumu.b a3, a3, a5
+; RV32-NEXT:    pabdsumu.b a2, a2, a4
+; RV32-NEXT:    waddau a0, a2, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pabdsumau_u8x8_u64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pabdsumau.b a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call i64 @llvm.riscv.pabdsumau.i64.v8i8(i64 %rd, <8 x i8> %a, <8 x i8> %b)
+  ret i64 %res
+}
+
+; Packed Saturating Absolute Value
+define <8 x i8> @test_psabs_v8i8(<8 x i8> %a) {
+; RV32-LABEL: test_psabs_v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    psabs.db a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_psabs_v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psabs.b a0, a0
+; RV64-NEXT:    ret
+  %res = call <8 x i8> @llvm.riscv.psabs.v8i8(<8 x i8> %a)
+  ret <8 x i8> %res
+}
+
+define <4 x i16> @test_psabs_v4i16(<4 x i16> %a) {
+; RV32-LABEL: test_psabs_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    psabs.dh a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_psabs_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psabs.h a0, a0
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.psabs.v4i16(<4 x i16> %a)
+  ret <4 x i16> %res
+}

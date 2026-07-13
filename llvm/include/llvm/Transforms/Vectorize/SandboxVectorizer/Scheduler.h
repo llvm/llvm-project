@@ -230,7 +230,8 @@ private:
   SchedDirection Dir = SchedDirection::BottomUp;
 
 public:
-  Scheduler(AAResults &AA, Context &Ctx) : DAG(AA, Ctx), Ctx(Ctx) {
+  Scheduler(AAResults &AA, Context &Ctx, SchedDirection Dir)
+      : DAG(AA, Ctx), Ctx(Ctx), Dir(Dir) {
     // NOTE: The scheduler's callback depends on the DAG's callback running
     // before it and updating the DAG accordingly.
     CreateInstrCB = Ctx.registerCreateInstrCallback(
@@ -239,12 +240,6 @@ public:
   ~Scheduler() {
     if (CreateInstrCB)
       Ctx.unregisterCreateInstrCallback(*CreateInstrCB);
-  }
-  void setDirection(SchedDirection NewDir) {
-    assert(Bndls.empty() && DAG.empty() && ReadyList.empty() &&
-           !ScheduleTopItOpt && ScheduledBB == nullptr &&
-           "We can't change the direction during scheduling!");
-    Dir = NewDir;
   }
   /// Tries to build a schedule that includes all of \p Instrs scheduled at the
   /// same scheduling cycle. This essentially checks that there are no

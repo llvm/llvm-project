@@ -1328,8 +1328,8 @@ define amdgpu_kernel void @uaddo_carry_of_add_carryout_used(ptr addrspace(1) %ou
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
 ; VI-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s0, 1, 0
-; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s0
+; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
