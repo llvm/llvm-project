@@ -1,4 +1,4 @@
-//===- OpenACCUtilsReduction.cpp - OpenACC reduction utilities ----------===//
+//===- OpenACCUtilsReduction.cpp - OpenACC reduction utilities ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -145,9 +145,8 @@ static TypedAttr getReductionIdentityValueAttr(arith::AtomicRMWKind kind,
   if (type.isIntOrIndexOrFloat()) {
     TypedAttr attr = arith::getIdentityValueAttr(kind, type, builder, loc,
                                                  useOnlyFiniteValue);
-    if (!attr) {
+    if (!attr)
       emitError(loc) << "reduction identity: operator not supported " << kind;
-    }
     return attr;
   }
   if (auto complexTy = dyn_cast<ComplexType>(type)) {
