@@ -1408,17 +1408,20 @@ Instruction *InstCombinerImpl::transformZExtICmp(ICmpInst *Cmp,
       }
     }
 
-    ConstantRange CR = computeConstantRange(Cmp->getOperand(0), false, SQ);
+    // zext (X != CST) --> X - CST  if X in {CST, CST + 1}
 
-    if (Cmp->isEquality() && !CR.isSizeLargerThan(2) && CR.contains(*Op1CV)) {
+    if (Cmp->getPredicate() == ICmpInst::ICMP_NE) {
 
-      Value *In = Cmp->getOperand(0);
-      bool SkipTransform = In->getType() != Zext.getType() && !Cmp->hasOneUse();
+      Value *LHS = Cmp->getOperand(0);
+      ConstantRange CR = computeConstantRange(LHS, false, SQ);
+      bool SkipTransform =
+          LHS->getType() != Zext.getType() && !Cmp->hasOneUse();
 
-      if (CR.getLower().eq(*Op1CV) &&
-          Cmp->getPredicate() == ICmpInst::ICMP_NE && !SkipTransform) {
+      if (!CR.isSizeLargerThan(2) && CR.contains(*Op1CV) &&
+          CR.getLower().eq(*Op1CV) && !SkipTransform) {
 
-        In = Builder.CreateSub(In, ConstantInt::get(In->getType(), *Op1CV));
+        Value *In =
+            Builder.CreateSub(LHS, ConstantInt::get(LHS->getType(), *Op1CV));
 
         if (In->getType() == Zext.getType())
           return replaceInstUsesWith(Zext, In);
