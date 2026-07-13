@@ -151,4 +151,10 @@ program declaration_array_bounds
   !ERROR: DECLARATION bounds integer rank-1 arrays must have the same size; lower bounds has 0 elements, upper bounds has 2 elements
   integer :: zerosize_n([integer::] : [1,2])
 
+  ! Test that maximum supported rank error fires. At the time of writing this test,
+  ! that is 15. See flang/include/flang/Common/Fortran-consts.h.
+  integer :: maxrank([(1,i=1,15)])
+  !ERROR: 'maxrank_n' has rank 16, which is greater than the maximum supported rank 15
+  integer :: maxrank_n([(1,i=1,16)])
+
 end program

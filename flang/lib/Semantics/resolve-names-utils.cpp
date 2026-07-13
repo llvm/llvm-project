@@ -222,7 +222,7 @@ private:
     std::optional<Bound> lbound;
     std::int64_t numDims;
   };
-  std::optional<ExplicitShapeBoundsResult> checkExplicitShapeBoundsSpec(
+  std::optional<ExplicitShapeBoundsResult> CheckExplicitShapeBoundsSpec(
       const parser::ExplicitShapeBoundsSpec &x);
 };
 
@@ -409,7 +409,7 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeSpec &x) {
 }
 
 std::optional<ArraySpecAnalyzer::ExplicitShapeBoundsResult>
-ArraySpecAnalyzer::checkExplicitShapeBoundsSpec(
+ArraySpecAnalyzer::CheckExplicitShapeBoundsSpec(
     const parser::ExplicitShapeBoundsSpec &x) {
   const auto &lowerBoundOpt{std::get<0>(x.t)};
   const auto &upperBound{std::get<1>(x.t)};
@@ -423,6 +423,9 @@ ArraySpecAnalyzer::checkExplicitShapeBoundsSpec(
       [&](const auto &parseBound, bool isUpper)
       -> std::optional<std::pair<Bound, std::optional<std::int64_t>>> {
     MaybeExpr expr{AnalyzeExpr(context_, parseBound.thing)};
+    // expr should never be invalid since it was analyzed as part
+    // of the rewrite to ExplicitShapeBoundsSpec
+    CHECK(expr);
     if (expr->Rank() > 1) {
       context_.Say(parser::FindSourceLocation(parseBound),
           "Integer array used as %s bounds in DECLARATION must be rank-1 "
@@ -507,7 +510,7 @@ ArraySpecAnalyzer::checkExplicitShapeBoundsSpec(
 }
 
 void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
-  auto result{checkExplicitShapeBoundsSpec(x)};
+  auto result{CheckExplicitShapeBoundsSpec(x)};
   // Every path that results in result being false emits an error. In the event
   // that we bail early without emitting an error, we silently pass the fallback
   // Bound{1} WITHOUT failing. This check ensures that if we failed, we emitted
