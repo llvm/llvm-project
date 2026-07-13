@@ -413,3 +413,138 @@ define i32 @select_eq_imm0(i32 %a, i32 %b, i32 %c) {
   %ret = select i1 %tst, i32 %b, i32 %c
   ret i32 %ret
 }
+
+; minsize: confirm SelectZibiSFB takes priority over Select_GPR_Using_CC_Imm5_Zibi
+define i32 @select_eq_minsize(i32 %a, i32 %b, i32 %c) minsize {
+; RV32-LABEL: select_eq_minsize:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a3, a0
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    beqi a3, 5, .LBB9_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:  .LBB9_2:
+; RV32-NEXT:    ret
+;
+; RV32-SFB-LABEL: select_eq_minsize:
+; RV32-SFB:       # %bb.0:
+; RV32-SFB-NEXT:    beqi a0, 5, .LBB9_2
+; RV32-SFB-NEXT:  # %bb.1:
+; RV32-SFB-NEXT:    mv a1, a2
+; RV32-SFB-NEXT:  .LBB9_2:
+; RV32-SFB-NEXT:    mv a0, a1
+; RV32-SFB-NEXT:    ret
+;
+; RV64-LABEL: select_eq_minsize:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.w a3, a0
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    beqi a3, 5, .LBB9_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB9_2:
+; RV64-NEXT:    ret
+;
+; RV64-SFB-LABEL: select_eq_minsize:
+; RV64-SFB:       # %bb.0:
+; RV64-SFB-NEXT:    sext.w a0, a0
+; RV64-SFB-NEXT:    beqi a0, 5, .LBB9_2
+; RV64-SFB-NEXT:  # %bb.1:
+; RV64-SFB-NEXT:    mv a1, a2
+; RV64-SFB-NEXT:  .LBB9_2:
+; RV64-SFB-NEXT:    mv a0, a1
+; RV64-SFB-NEXT:    ret
+  %tst = icmp eq i32 %a, 5
+  %ret = select i1 %tst, i32 %b, i32 %c
+  ret i32 %ret
+}
+
+define i32 @select_ne_minsize(i32 %a, i32 %b, i32 %c) minsize {
+; RV32-LABEL: select_ne_minsize:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a3, a0
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    bnei a3, 5, .LBB10_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:  .LBB10_2:
+; RV32-NEXT:    ret
+;
+; RV32-SFB-LABEL: select_ne_minsize:
+; RV32-SFB:       # %bb.0:
+; RV32-SFB-NEXT:    bnei a0, 5, .LBB10_2
+; RV32-SFB-NEXT:  # %bb.1:
+; RV32-SFB-NEXT:    mv a1, a2
+; RV32-SFB-NEXT:  .LBB10_2:
+; RV32-SFB-NEXT:    mv a0, a1
+; RV32-SFB-NEXT:    ret
+;
+; RV64-LABEL: select_ne_minsize:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.w a3, a0
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    bnei a3, 5, .LBB10_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB10_2:
+; RV64-NEXT:    ret
+;
+; RV64-SFB-LABEL: select_ne_minsize:
+; RV64-SFB:       # %bb.0:
+; RV64-SFB-NEXT:    sext.w a0, a0
+; RV64-SFB-NEXT:    bnei a0, 5, .LBB10_2
+; RV64-SFB-NEXT:  # %bb.1:
+; RV64-SFB-NEXT:    mv a1, a2
+; RV64-SFB-NEXT:  .LBB10_2:
+; RV64-SFB-NEXT:    mv a0, a1
+; RV64-SFB-NEXT:    ret
+  %tst = icmp ne i32 %a, 5
+  %ret = select i1 %tst, i32 %b, i32 %c
+  ret i32 %ret
+}
+
+; confirming SelectZibiSFB still takes priority over
+; Select_GPR_Using_CC_Imm5_Zibi for ALU ops.
+; Without SFB, falls back to branchless sequence.
+define i32 @select_eq_xor_minsize(i32 %a, i32 %b, i32 %c) minsize {
+; RV32-LABEL: select_eq_xor_minsize:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi a0, a0, -5
+; RV32-NEXT:    snez a0, a0
+; RV32-NEXT:    addi a0, a0, -1
+; RV32-NEXT:    and a0, a0, a2
+; RV32-NEXT:    xor a0, a1, a0
+; RV32-NEXT:    ret
+;
+; RV32-SFB-LABEL: select_eq_xor_minsize:
+; RV32-SFB:       # %bb.0:
+; RV32-SFB-NEXT:    bnei a0, 5, .LBB11_2
+; RV32-SFB-NEXT:  # %bb.1:
+; RV32-SFB-NEXT:    xor a1, a1, a2
+; RV32-SFB-NEXT:  .LBB11_2:
+; RV32-SFB-NEXT:    mv a0, a1
+; RV32-SFB-NEXT:    ret
+;
+; RV64-LABEL: select_eq_xor_minsize:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addiw a0, a0, -5
+; RV64-NEXT:    snez a0, a0
+; RV64-NEXT:    addi a0, a0, -1
+; RV64-NEXT:    and a0, a0, a2
+; RV64-NEXT:    xor a0, a1, a0
+; RV64-NEXT:    ret
+;
+; RV64-SFB-LABEL: select_eq_xor_minsize:
+; RV64-SFB:       # %bb.0:
+; RV64-SFB-NEXT:    sext.w a0, a0
+; RV64-SFB-NEXT:    bnei a0, 5, .LBB11_2
+; RV64-SFB-NEXT:  # %bb.1:
+; RV64-SFB-NEXT:    xor a1, a1, a2
+; RV64-SFB-NEXT:  .LBB11_2:
+; RV64-SFB-NEXT:    mv a0, a1
+; RV64-SFB-NEXT:    ret
+  %tst = icmp eq i32 %a, 5
+  %xor = xor i32 %b, %c
+  %ret = select i1 %tst, i32 %xor, i32 %b
+  ret i32 %ret
+}
