@@ -247,7 +247,6 @@ module @transforms attributes { transform.with_named_sequence } {
     // HANDLE MMT4D
     //==========================================================================
     %mmt4d = transform.collect_matching @match_mmt4d in %module : (!transform.any_op) -> (!transform.any_op)
-    %mmt4d_func = transform.get_parent_op %mmt4d {isolated_from_above} : (!transform.any_op) -> !transform.op<"func.func">
 
     // Step 1: Tile
     // Tile parallel dims (note, the M, N dims are scalable!)
