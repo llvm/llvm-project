@@ -283,12 +283,10 @@ public:
       : SPIRTargetInfo(Triple, Opts) {
     assert(Triple.getArch() == llvm::Triple::spir &&
            "Invalid architecture for 32-bit SPIR.");
-    if (!HostTarget) {
-      PointerWidth = PointerAlign = 32;
+    PointerWidth = PointerAlign = 32;
+    if (!HostTarget || HostTarget->getPointerWidth(LangAS::Default) != 32) {
       SizeType = TargetInfo::UnsignedInt;
       PtrDiffType = IntPtrType = TargetInfo::SignedInt;
-    } else {
-      assert(PointerWidth == 32 && "32-bit SPIR target requires a 32-bit host");
     }
     // SPIR32 has support for atomic ops if atomic extension is enabled.
     // Take the maximum because it's possible the Host supports wider types.
@@ -307,12 +305,10 @@ public:
       : SPIRTargetInfo(Triple, Opts) {
     assert(Triple.getArch() == llvm::Triple::spir64 &&
            "Invalid architecture for 64-bit SPIR.");
-    if (!HostTarget) {
-      PointerWidth = PointerAlign = 64;
+    PointerWidth = PointerAlign = 64;
+    if (!HostTarget || HostTarget->getPointerWidth(LangAS::Default) != 64) {
       SizeType = TargetInfo::UnsignedLong;
       PtrDiffType = IntPtrType = TargetInfo::SignedLong;
-    } else {
-      assert(PointerWidth == 64 && "64-bit SPIR target requires a 64-bit host");
     }
     // SPIR64 has support for atomic ops if atomic extension is enabled.
     // Take the maximum because it's possible the Host supports wider types.
@@ -401,13 +397,10 @@ public:
            "32-bit SPIR-V target must use unknown, chipstar, or vulkan OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
            "32-bit SPIR-V target must use unknown environment type");
-    if (!HostTarget) {
-      PointerWidth = PointerAlign = 32;
+    PointerWidth = PointerAlign = 32;
+    if (!HostTarget || HostTarget->getPointerWidth(LangAS::Default) != 32) {
       SizeType = TargetInfo::UnsignedInt;
       PtrDiffType = IntPtrType = TargetInfo::SignedInt;
-    } else {
-      assert(PointerWidth == 32 &&
-             "32-bit SPIR-V target requires a 32-bit host");
     }
     MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
     resetDataLayout();
@@ -429,13 +422,10 @@ public:
            "64-bit SPIR-V target must use unknown, chipstar, or vulkan OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
            "64-bit SPIR-V target must use unknown environment type");
-    if (!HostTarget) {
-      PointerWidth = PointerAlign = 64;
+    PointerWidth = PointerAlign = 64;
+    if (!HostTarget || HostTarget->getPointerWidth(LangAS::Default) != 64) {
       SizeType = TargetInfo::UnsignedLong;
       PtrDiffType = IntPtrType = TargetInfo::SignedLong;
-    } else {
-      assert(PointerWidth == 64 &&
-             "64-bit SPIR-V target requires a 64-bit host");
     }
     MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
     resetDataLayout();
