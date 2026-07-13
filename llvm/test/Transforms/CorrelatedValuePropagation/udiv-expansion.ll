@@ -382,3 +382,93 @@ define i8 @known_uge(i8 noundef %x) {
   %div = udiv i8 %x, 3
   ret i8 %div
 }
+
+; MaxQ == 2: boundary tests
+
+define i8 @constant.divisor.v8(i8 %x) {
+; CHECK-LABEL: @constant.divisor.v8(
+; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X:%.*]], 8
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], 3
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %cmp.x.upper = icmp ult i8 %x, 8
+  call void @llvm.assume(i1 %cmp.x.upper)
+  %div = udiv i8 %x, 3
+  ret i8 %div
+}
+
+define i8 @constant.divisor.v9(i8 %x) {
+; CHECK-LABEL: @constant.divisor.v9(
+; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X:%.*]], 9
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], 3
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %cmp.x.upper = icmp ult i8 %x, 9
+  call void @llvm.assume(i1 %cmp.x.upper)
+  %div = udiv i8 %x, 3
+  ret i8 %div
+}
+
+; MaxQ == 3: should NOT expand
+define i8 @constant.divisor.v10(i8 %x) {
+; CHECK-LABEL: @constant.divisor.v10(
+; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X:%.*]], 10
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], 3
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %cmp.x.upper = icmp ult i8 %x, 10
+  call void @llvm.assume(i1 %cmp.x.upper)
+  %div = udiv i8 %x, 3
+  ret i8 %div
+}
+
+; MaxQ == 2: variable divisor, wider range
+define i8 @variable.v8(i8 %x, i8 %y) {
+; CHECK-LABEL: @variable.v8(
+; CHECK-NEXT:    [[CMP_X:%.*]] = icmp ult i8 [[X:%.*]], 8
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X]])
+; CHECK-NEXT:    [[CMP_Y_LOWER:%.*]] = icmp samesign uge i8 [[Y:%.*]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_Y_LOWER]])
+; CHECK-NEXT:    [[CMP_Y_UPPER:%.*]] = icmp ule i8 [[Y]], 4
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_Y_UPPER]])
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], [[Y]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %cmp.x = icmp ult i8 %x, 8
+  call void @llvm.assume(i1 %cmp.x)
+  %cmp.y.lower = icmp uge i8 %y, 3
+  call void @llvm.assume(i1 %cmp.y.lower)
+  %cmp.y.upper = icmp ule i8 %y, 4
+  call void @llvm.assume(i1 %cmp.y.upper)
+  %div = udiv i8 %x, %y
+  ret i8 %div
+}
+
+; MaxQ == 2: INT_MAX divisor (full i32 range, MaxQ == 2)
+define i32 @large.constant.divisor.intmax(i32 %x) {
+; CHECK-LABEL: @large.constant.divisor.intmax(
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[X:%.*]], 2147483647
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %div = udiv i32 %x, 2147483647
+  ret i32 %div
+}
+
+define i8 @test_maxq_0(i8 %x, i8 %y) {
+; CHECK-LABEL: @test_maxq_0(
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[X:%.*]], 10
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C1]])
+; CHECK-NEXT:    [[C2:%.*]] = icmp uge i8 [[Y:%.*]], 20
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C2]])
+; CHECK-NEXT:    ret i8 0
+;
+  %c1 = icmp ult i8 %x, 10
+  call void @llvm.assume(i1 %c1)
+  %c2 = icmp uge i8 %y, 20
+  call void @llvm.assume(i1 %c2)
+  %r = udiv i8 %x, %y
+  ret i8 %r
+}
