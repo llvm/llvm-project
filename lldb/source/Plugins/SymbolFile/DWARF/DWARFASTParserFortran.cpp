@@ -235,22 +235,22 @@ lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(const SymbolContext &sc,
           CompilerType array_element_type =
               element_type->GetForwardCompilerType();
           uint64_t total_array_size = 0;
-          uint64_t total_elements = 0;
+          uint64_t total_elements = 1;
           if (array_element_type.GetCompleteType()) {
             FortranArrayInfo array_info = ParseArray(die, nullptr);
             // We need to calculate the total array size, if it is known
             // at compile time
             if (array_info.size_known) {
               for (int idx = 0; idx < array_info.byte_stride.size(); idx++) {
-                total_elements += *array_info.elements_per_dimension[idx];
-                if (array_info.byte_stride[idx])
-                  total_array_size +=
-                      (*array_info.elements_per_dimension[idx]) *
-                      (*array_info.byte_stride[idx]);
-                else
-                  total_array_size +=
-                      (*array_info.elements_per_dimension[idx]) *
-                      *array_element_type.GetByteSize(nullptr);
+                total_elements *= *array_info.elements_per_dimension[idx];
+              }
+
+              // Total size is just total elements * the size of one element
+              auto byte_size_or_err = array_element_type.GetByteSize(nullptr);
+              if (byte_size_or_err) {
+                total_array_size = total_elements * (*byte_size_or_err);
+              } else {
+                total_array_size = 0;
               }
             }
 
