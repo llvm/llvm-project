@@ -1011,52 +1011,41 @@ def StdcMemReverse8Typed : LibBuiltin<"stdbit.h", "C2Y_LANG">, MemReverse8Templa
   let Prototype = "T(T)";
 }
 
-def StdcLoad8LeU : LibBuiltin<"stdbit.h", "C2Y_LANG">, Load8UnsignedTemplate {
+class Load8Common : LibBuiltin<"stdbit.h", "C2Y_LANG"> {
+  let Attributes = [NoThrow, Pure, Constexpr, NonNull<NonOptimizing, [0]>];
+  let Prototype = "T(unsigned char const*)";
+}
+
+def StdcLoad8LeU : Load8Common, Load8UnsignedTemplate {
   let Spellings = ["stdc_load8_leu"];
-  let Attributes = [NoThrow, Pure, Constexpr, NonNull<NonOptimizing, [0]>];
-  let Prototype = "T(unsigned char const*)";
 }
 
-def StdcLoad8BeU : LibBuiltin<"stdbit.h", "C2Y_LANG">, Load8UnsignedTemplate {
+def StdcLoad8BeU : Load8Common, Load8UnsignedTemplate {
   let Spellings = ["stdc_load8_beu"];
-  let Attributes = [NoThrow, Pure, Constexpr, NonNull<NonOptimizing, [0]>];
-  let Prototype = "T(unsigned char const*)";
 }
 
-def StdcLoad8AlignedLeU : LibBuiltin<"stdbit.h", "C2Y_LANG">, Load8UnsignedTemplate {
+def StdcLoad8AlignedLeU : Load8Common, Load8UnsignedTemplate {
   let Spellings = ["stdc_load8_aligned_leu"];
-  let Attributes = [NoThrow, Pure, Constexpr, NonNull<NonOptimizing, [0]>];
-  let Prototype = "T(unsigned char const*)";
 }
 
-def StdcLoad8AlignedBeU : LibBuiltin<"stdbit.h", "C2Y_LANG">, Load8UnsignedTemplate {
+def StdcLoad8AlignedBeU : Load8Common, Load8UnsignedTemplate {
   let Spellings = ["stdc_load8_aligned_beu"];
-  let Attributes = [NoThrow, Pure, Constexpr, NonNull<NonOptimizing, [0]>];
-  let Prototype = "T(unsigned char const*)";
 }
 
-def StdcLoad8LeS : LibBuiltin<"stdbit.h", "C2Y_LANG">, Load8SignedTemplate {
+def StdcLoad8LeS : Load8Common, Load8SignedTemplate {
   let Spellings = ["stdc_load8_les"];
-  let Attributes = [NoThrow, Pure, Constexpr, NonNull<NonOptimizing, [0]>];
-  let Prototype = "T(unsigned char const*)";
 }
 
-def StdcLoad8BeS : LibBuiltin<"stdbit.h", "C2Y_LANG">, Load8SignedTemplate {
+def StdcLoad8BeS : Load8Common, Load8SignedTemplate {
   let Spellings = ["stdc_load8_bes"];
-  let Attributes = [NoThrow, Pure, Constexpr, NonNull<NonOptimizing, [0]>];
-  let Prototype = "T(unsigned char const*)";
 }
 
-def StdcLoad8AlignedLeS : LibBuiltin<"stdbit.h", "C2Y_LANG">, Load8SignedTemplate {
+def StdcLoad8AlignedLeS : Load8Common, Load8SignedTemplate {
   let Spellings = ["stdc_load8_aligned_les"];
-  let Attributes = [NoThrow, Pure, Constexpr, NonNull<NonOptimizing, [0]>];
-  let Prototype = "T(unsigned char const*)";
 }
 
-def StdcLoad8AlignedBeS : LibBuiltin<"stdbit.h", "C2Y_LANG">, Load8SignedTemplate {
+def StdcLoad8AlignedBeS : Load8Common, Load8SignedTemplate {
   let Spellings = ["stdc_load8_aligned_bes"];
-  let Attributes = [NoThrow, Pure, Constexpr, NonNull<NonOptimizing, [0]>];
-  let Prototype = "T(unsigned char const*)";
 }
 
 
