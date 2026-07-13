@@ -13,24 +13,20 @@ class ReportDanglingPtrDeref : public Checker<check::Location> {
 public:
   void checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
                      CheckerContext &C) const;
-  void reportUseAfterScope(const MemRegion *Region, SVal Val, ExplodedNode *N,
+  void reportUseAfterScope(const MemRegion *Region, ExplodedNode *N,
                            CheckerContext &C) const;
   const BugType BugMsg{this, "ReportDanglingPtrDeref", "LifetimeBound"};
 };
 
 class ReportDanglingPtrDerefBRVisitor : public BugReporterVisitor {
-  SVal BoundRegion;
   const MemRegion *SourceRegion;
 
 public:
-  ReportDanglingPtrDerefBRVisitor(SVal Region, const MemRegion *Source)
-      : BoundRegion(Region), SourceRegion(Source) {}
+  ReportDanglingPtrDerefBRVisitor(const MemRegion *Source)
+      : SourceRegion(Source) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
-    static int X = 0;
-    ID.AddPointer(&X);
-    BoundRegion.Profile(ID);
-    SourceRegion->Profile(ID);
+    ID.AddPointer(SourceRegion);
   }
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
@@ -47,20 +43,20 @@ void ReportDanglingPtrDeref::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
   if (const MemRegion *LocRegion = Loc.getAsRegion()) {
     if (lifetime_modeling::isDeallocated(State, LocRegion)) {
       if (ExplodedNode *N = C.generateNonFatalErrorNode(State))
-        reportUseAfterScope(LocRegion, Loc, N, C);
+        reportUseAfterScope(LocRegion, N, C);
     }
   }
 }
 
 void ReportDanglingPtrDeref::reportUseAfterScope(const MemRegion *Region,
-                                                 SVal Val, ExplodedNode *N,
+                                                 ExplodedNode *N,
                                                  CheckerContext &C) const {
   auto BR = std::make_unique<PathSensitiveBugReport>(
       BugMsg,
       (llvm::Twine("Use of '") + Region->getString() +
        "' after its lifetime ended."),
       N);
-  BR->addVisitor<ReportDanglingPtrDerefBRVisitor>(Val, Region);
+  BR->addVisitor<ReportDanglingPtrDerefBRVisitor>(Region);
   C.emitReport(std::move(BR));
 }
 
@@ -68,13 +64,13 @@ PathDiagnosticPieceRef
 ReportDanglingPtrDerefBRVisitor::VisitNode(const ExplodedNode *N,
                                            BugReporterContext &BRC,
                                            PathSensitiveBugReport &BR) {
-  using lifetime_modeling::isBoundToLifetimeSourceSet;
+  using lifetime_modeling::isDeallocated;
   const ExplodedNode *Pred = N->getFirstPred();
   if (!Pred)
     return nullptr;
 
-  if (!isBoundToLifetimeSourceSet(N->getState(), BoundRegion) ||
-      isBoundToLifetimeSourceSet(Pred->getState(), BoundRegion))
+  if (!isDeallocated(N->getState(), SourceRegion) ||
+      isDeallocated(Pred->getState(), SourceRegion))
     return nullptr;
 
   const Stmt *S = N->getStmtForDiagnostics();
