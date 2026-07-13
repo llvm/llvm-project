@@ -857,19 +857,29 @@ bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
 bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
   assert(!B->isExtern());
   const auto &Desc = *reinterpret_cast<const InlineDescriptor *>(B->rawData());
+  const Descriptor *BlockDesc = B->getDescriptor();
   if (!CheckLifetime(S, OpPC, Desc.LifeState, B, AK_Read))
     return false;
   if (!Desc.IsInitialized)
     return DiagnoseUninitialized(S, OpPC, /*Extern=*/false, B, AK_Read);
-  if (B->getDescriptor()->IsVolatile) {
+  if (BlockDesc->IsVolatile) {
     if (!S.getLangOpts().CPlusPlus)
       return Invalid(S, OpPC);
 
-    const ValueDecl *D = B->getDescriptor()->asValueDecl();
+    const ValueDecl *D = BlockDesc->asValueDecl();
     S.FFDiag(S.Current->getLocation(OpPC),
              diag::note_constexpr_access_volatile_obj, 1)
         << AK_Read << 1 << D;
     S.Note(D->getLocation(), diag::note_constexpr_volatile_here) << 1;
+    return false;
+  }
+
+  // A non-const local variable while we don't have a parent frame. This must be
+  // a local variable in a statement expression.
+  if (S.Current->isBottomFrame() && !BlockDesc->IsConst &&
+      !BlockDesc->IsTemporary && !S.checkingPotentialConstantExpression()) {
+    if (const ValueDecl *VD = BlockDesc->asValueDecl())
+      diagnoseNonConstVariable(S, OpPC, VD);
     return false;
   }
   return true;
