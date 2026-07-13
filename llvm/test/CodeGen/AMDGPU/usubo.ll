@@ -1265,8 +1265,8 @@ define amdgpu_kernel void @usubo_carry_of_sub_borrowout_used(ptr addrspace(1) %o
 ; VI-NEXT:    v_sub_u32_e32 v1, vcc, s3, v1
 ; VI-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s0, 1, 0
-; VI-NEXT:    v_mov_b32_e32 v3, s4
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    v_mov_b32_e32 v3, s4
 ; VI-NEXT:    v_mov_b32_e32 v4, s5
 ; VI-NEXT:    flat_store_dwordx3 v[3:4], v[0:2]
 ; VI-NEXT:    s_endpgm

@@ -65,7 +65,7 @@ entry:
 
 ; 64-CMOV:      daddiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got_disp(d)
 ; 64-CMOV:      daddiu $[[R0:[0-9]+]], ${{[0-9]+}}, %got_disp(c)
-; 64-CMOV:      movn  $[[R1]], $[[R0]], $4
+; 64-CMOV:      movn  $[[R1]], $[[R0]], $2
 
 ; 64-CMP-DAG:   daddiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got_disp(d)
 ; 64-CMP-DAG:   daddiu $[[R0:[0-9]+]], ${{[0-9]+}}, %got_disp(c)

@@ -29,6 +29,7 @@ using namespace llvm;
 
 STATISTIC(NumTailCalls, "Number of tail calls");
 
+#define GET_CALLING_CONV_IMPL
 #include "CSKYGenCallingConv.inc"
 
 static const MCPhysReg GPRArgRegs[] = {CSKY::R0, CSKY::R1, CSKY::R2, CSKY::R3};

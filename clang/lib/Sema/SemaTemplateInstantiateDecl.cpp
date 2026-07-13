@@ -33,6 +33,7 @@
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
 
@@ -1766,9 +1767,9 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
   // Build the instantiated declaration.
   VarDecl *Var;
   if (Bindings)
-    Var = DecompositionDecl::Create(SemaRef.Context, DC, D->getInnerLocStart(),
-                                    D->getLocation(), TSI->getType(), TSI,
-                                    D->getStorageClass(), *Bindings);
+    Var = DecompositionDecl::Create(
+        SemaRef.Context, DC, D->getInnerLocStart(), D->getLocation(),
+        D->getEndLoc(), TSI->getType(), TSI, D->getStorageClass(), *Bindings);
   else
     Var = VarDecl::Create(SemaRef.Context, DC, D->getInnerLocStart(),
                           D->getLocation(), D->getIdentifier(), TSI->getType(),
@@ -2101,6 +2102,41 @@ Decl *TemplateDeclInstantiator::VisitExplicitInstantiationDecl(
   // ExplicitInstantiationDecl is a source-info-only node and should not
   // appear inside a template pattern. Nothing to instantiate.
   llvm_unreachable("ExplicitInstantiationDecl should not be instantiated");
+}
+
+Decl *TemplateDeclInstantiator::VisitCXXExpansionStmtDecl(
+    CXXExpansionStmtDecl *OldESD) {
+  Decl *Index = VisitNonTypeTemplateParmDecl(OldESD->getIndexTemplateParm());
+  CXXExpansionStmtDecl *NewESD = SemaRef.BuildCXXExpansionStmtDecl(
+      Owner, OldESD->getBeginLoc(), cast<NonTypeTemplateParmDecl>(Index));
+  SemaRef.CurrentInstantiationScope->InstantiatedLocal(OldESD, NewESD);
+
+  // If this was already expanded, only instantiate the expansion and
+  // don't touch the unexpanded expansion statement.
+  if (CXXExpansionStmtInstantiation *OldInst = OldESD->getInstantiations()) {
+    StmtResult NewInst = SemaRef.SubstStmt(OldInst, TemplateArgs);
+    if (NewInst.isInvalid())
+      return nullptr;
+
+    NewESD->setInstantiations(NewInst.getAs<CXXExpansionStmtInstantiation>());
+    NewESD->setExpansionPattern(OldESD->getExpansionPattern());
+    return NewESD;
+  }
+
+  // Enter the scope of this expansion statement; don't do this if we've
+  // already expanded it, as in that case we no longer want to treat its
+  // content as dependent.
+  Sema::ContextRAII Context(SemaRef, NewESD, /*NewThis=*/false);
+
+  StmtResult Expansion =
+      SemaRef.SubstStmt(OldESD->getExpansionPattern(), TemplateArgs);
+  if (Expansion.isInvalid())
+    return nullptr;
+
+  // The code that handles CXXExpansionStmtPattern takes care of calling
+  // setInstantiation() on the ESD if there was an expansion.
+  NewESD->setExpansionPattern(cast<CXXExpansionStmtPattern>(Expansion.get()));
+  return NewESD;
 }
 
 Decl *TemplateDeclInstantiator::VisitEnumDecl(EnumDecl *D) {
@@ -2547,7 +2583,7 @@ TemplateDeclInstantiator::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   // merged with the local instantiation scope for the function template
   // itself.
   LocalInstantiationScope Scope(SemaRef);
-  Sema::ConstraintEvalRAII<TemplateDeclInstantiator> RAII(*this);
+  llvm::SaveAndRestore RAII(EvaluateConstraints, false);
 
   TemplateParameterList *TempParams = D->getTemplateParameters();
   TemplateParameterList *InstParams = SubstTemplateParams(TempParams);
@@ -3577,9 +3613,11 @@ Decl *TemplateDeclInstantiator::VisitTemplateTypeParmDecl(
 
   TemplateTypeParmDecl *Inst = TemplateTypeParmDecl::Create(
       SemaRef.Context, Owner, D->getBeginLoc(), D->getLocation(),
-      D->getDepth() - TemplateArgs.getNumSubstitutedLevels(), D->getIndex(),
-      D->getIdentifier(), D->wasDeclaredWithTypename(), D->isParameterPack(),
-      D->hasTypeConstraint(), NumExpanded);
+      D->getDepth() - (TemplateArgs.retainInnerDepths()
+                           ? 0
+                           : TemplateArgs.getNumSubstitutedLevels()),
+      D->getIndex(), D->getIdentifier(), D->wasDeclaredWithTypename(),
+      D->isParameterPack(), D->hasTypeConstraint(), NumExpanded);
 
   Inst->setAccess(AS_public);
   Inst->setImplicit(D->isImplicit());
@@ -4848,6 +4886,13 @@ TemplateDeclInstantiator::SubstTemplateParams(TemplateParameterList *L) {
     return nullptr;
 
   Expr *InstRequiresClause = L->getRequiresClause();
+  if (InstRequiresClause && EvaluateConstraints) {
+    ExprResult E =
+        SemaRef.SubstConstraintExpr(InstRequiresClause, TemplateArgs);
+    if (E.isInvalid())
+      return nullptr;
+    InstRequiresClause = E.get();
+  }
 
   TemplateParameterList *InstL
     = TemplateParameterList::Create(SemaRef.Context, L->getTemplateLoc(),
@@ -5515,11 +5560,10 @@ bool TemplateDeclInstantiator::SubstDefaultedFunction(FunctionDecl *New,
       Lookups.push_back(DeclAccessPair::make(D, DA.getAccess()));
     }
 
-    // It's unlikely that substitution will change any declarations. Don't
-    // store an unnecessary copy in that case.
     New->setDefaultedOrDeletedInfo(
         AnyChanged ? FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
-                         SemaRef.Context, Lookups)
+                         SemaRef.Context, Lookups, DFI->getFPFeatures(),
+                         DFI->getDeletedMessage())
                    : DFI);
   }
 
@@ -7103,6 +7147,12 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
 
     // Fall through to deal with other dependent record types (e.g.,
     // anonymous unions in class templates).
+  }
+
+  if (CurrentInstantiationScope) {
+    if (auto Found = CurrentInstantiationScope->getInstantiationOfIfExists(D))
+      if (auto *FD = dyn_cast<NamedDecl>(cast<Decl *>(*Found)))
+        return FD;
   }
 
   if (!ParentDependsOnArgs)

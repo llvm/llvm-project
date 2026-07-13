@@ -2600,6 +2600,41 @@ CXXMethodDecl *CXXMethodDecl::getDevirtualizedMethod(const Expr *Base,
     }
   }
 
+  // By CWG1504 / C++11 [expr.add]p6, pointer arithmetic on a base pointer into
+  // an array of derived objects is undefined behavior when the element type and
+  // pointee type are not similar. This means we can devirtualize calls on
+  // objects accessed through array subscripts or pointer arithmetic with
+  // non-zero offsets, since the dynamic type must match the static type.
+  //
+  // A single object is considered to be an array of one element, so p[0]
+  // could still be a derived object, but p[N] for N != 0 cannot.
+  const Expr *Inner = Base->IgnoreParenImpCasts();
+  if (const auto *UO = dyn_cast<UnaryOperator>(Inner))
+    if (UO->getOpcode() == UO_Deref)
+      Inner = UO->getSubExpr()->IgnoreParenImpCasts();
+
+  // Handle p[N].f() (dot syntax with array subscript).
+  if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Inner)) {
+    Expr::EvalResult Result;
+    if (ASE->getIdx()->EvaluateAsInt(Result, getASTContext()) &&
+        !Result.Val.getInt().isZero())
+      return DevirtualizedMethod;
+  }
+
+  // Handle (p + N)->f() (arrow syntax with pointer arithmetic).
+  if (const auto *BO = dyn_cast<BinaryOperator>(Inner)) {
+    if (BO->getOpcode() == BO_Add || BO->getOpcode() == BO_Sub) {
+      // Identify the integer operand (the offset).
+      const Expr *IdxExpr = BO->getLHS()->getType()->isPointerType()
+                                ? BO->getRHS()
+                                : BO->getLHS();
+      Expr::EvalResult Result;
+      if (IdxExpr->EvaluateAsInt(Result, getASTContext()) &&
+          !Result.Val.getInt().isZero())
+        return DevirtualizedMethod;
+    }
+  }
+
   // We can't devirtualize the call.
   return nullptr;
 }
@@ -2625,7 +2660,7 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
     if (!PrimaryTemplate)
       return true;
 
-    // A template instance is is only a usual deallocation function if it has a
+    // A template instance is only a usual deallocation function if it has a
     // type-identity parameter, the type-identity parameter is a dependent type
     // (i.e. the type-identity parameter is of type std::type_identity<U> where
     // U shall be a dependent type), and the type-identity parameter is the only
@@ -2645,7 +2680,7 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
   //   A template instance is never a usual deallocation function,
   //   regardless of its signature.
   // Post-P2719 adoption:
-  //   A template instance is is only a usual deallocation function if it has a
+  //   A template instance is only a usual deallocation function if it has a
   //   type-identity parameter
   if (getPrimaryTemplate())
     return false;
@@ -3737,24 +3772,22 @@ ArrayRef<BindingDecl *> BindingDecl::getBindingPackDecls() const {
 
 void DecompositionDecl::anchor() {}
 
-DecompositionDecl *DecompositionDecl::Create(ASTContext &C, DeclContext *DC,
-                                             SourceLocation StartLoc,
-                                             SourceLocation LSquareLoc,
-                                             QualType T, TypeSourceInfo *TInfo,
-                                             StorageClass SC,
-                                             ArrayRef<BindingDecl *> Bindings) {
+DecompositionDecl *DecompositionDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
+    SourceLocation LSquareLoc, SourceLocation RSquareLoc, QualType T,
+    TypeSourceInfo *TInfo, StorageClass SC, ArrayRef<BindingDecl *> Bindings) {
   size_t Extra = additionalSizeToAlloc<BindingDecl *>(Bindings.size());
-  return new (C, DC, Extra)
-      DecompositionDecl(C, DC, StartLoc, LSquareLoc, T, TInfo, SC, Bindings);
+  return new (C, DC, Extra) DecompositionDecl(
+      C, DC, StartLoc, LSquareLoc, RSquareLoc, T, TInfo, SC, Bindings);
 }
 
 DecompositionDecl *DecompositionDecl::CreateDeserialized(ASTContext &C,
                                                          GlobalDeclID ID,
                                                          unsigned NumBindings) {
   size_t Extra = additionalSizeToAlloc<BindingDecl *>(NumBindings);
-  auto *Result = new (C, ID, Extra)
-      DecompositionDecl(C, nullptr, SourceLocation(), SourceLocation(),
-                        QualType(), nullptr, StorageClass(), {});
+  auto *Result = new (C, ID, Extra) DecompositionDecl(
+      C, nullptr, SourceLocation(), SourceLocation(), SourceLocation(),
+      QualType(), nullptr, StorageClass(), {});
   // Set up and clean out the bindings array.
   Result->NumBindings = NumBindings;
   auto *Trail = Result->getTrailingObjects();

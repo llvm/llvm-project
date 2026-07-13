@@ -437,6 +437,7 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
 
   llvm::Function *Fn = llvm::Function::Create(
       LTy, llvm::GlobalValue::InternalLinkage, FuncName, &CGM.getModule());
+  CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
 
   Fn->addParamAttr(0, llvm::Attribute::AttrKind::NonNull);
   Fn->addParamAttr(0, llvm::Attribute::AttrKind::NoUndef);
@@ -444,6 +445,7 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
   Fn->addParamAttr(1, llvm::Attribute::AttrKind::NoUndef);
 
   Fn->setMustProgress();
+  Fn->removeFnAttr(llvm::Attribute::AttrKind::NoInline);
   Fn->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
   Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
 

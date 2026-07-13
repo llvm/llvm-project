@@ -527,6 +527,17 @@ private:
   NotificationService &Notifiers;
 };
 
+/// Helper function object to report errors via the given Session's
+/// reportError method.
+class ReportErrorsViaSession {
+public:
+  explicit ReportErrorsViaSession(Session &S) : S(S) {}
+  void operator()(Error Err) const { S.reportError(std::move(Err)); }
+
+private:
+  Session &S;
+};
+
 } // namespace orc_rt
 
 #endif // ORC_RT_SESSION_H

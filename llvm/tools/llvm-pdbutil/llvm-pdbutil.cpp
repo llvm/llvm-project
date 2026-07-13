@@ -81,6 +81,7 @@
 #include "llvm/Support/COM.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -663,7 +664,12 @@ cl::opt<std::string>
 cl::opt<std::string> InputFilename(cl::Positional,
                                    cl::desc("<input YAML file>"), cl::Required,
                                    cl::sub(YamlToPdbSubcommand));
-}
+
+cl::opt<unsigned>
+    DocNum("docnum", cl::init(1),
+           cl::desc("Read specified document from input (default = 1)"),
+           cl::sub(YamlToPdbSubcommand));
+} // namespace yaml2pdb
 
 namespace pdb2yaml {
 cl::opt<bool> All("all",
@@ -797,7 +803,7 @@ cl::opt<bool> DXContainer("dxcontainer",
 
 static ExitOnError ExitOnErr;
 
-static void yamlToPdb(StringRef Path) {
+static void yamlToPdb(StringRef Path, unsigned DocNum) {
   BumpPtrAllocator Allocator;
   ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorOrBuffer =
       MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/false,
@@ -807,9 +813,19 @@ static void yamlToPdb(StringRef Path) {
     ExitOnErr(createFileError(Path, errorCodeToError(ErrorOrBuffer.getError())));
   }
 
+  if (DocNum == 0)
+    ExitOnErr(createStringError(
+        "document numbers are 1-based, there is no 0th document"));
+
   std::unique_ptr<MemoryBuffer> &Buffer = ErrorOrBuffer.get();
 
   llvm::yaml::Input In(Buffer->getBuffer());
+  for (unsigned CurrentDoc = 1; CurrentDoc < DocNum; ++CurrentDoc) {
+    if (!In.nextDocument())
+      ExitOnErr(createFileError(
+          Path, createStringErrorV("cannot find the {0}{1} document", DocNum,
+                                   getOrdinalSuffix(DocNum))));
+  }
   pdb::yaml::PdbObject YamlObj(Allocator);
   In >> YamlObj;
 
@@ -1713,7 +1729,7 @@ int main(int Argc, const char **Argv) {
       sys::path::replace_extension(OutputFilename, ".pdb");
       opts::yaml2pdb::YamlPdbOutputFile = std::string(OutputFilename);
     }
-    yamlToPdb(opts::yaml2pdb::InputFilename);
+    yamlToPdb(opts::yaml2pdb::InputFilename, opts::yaml2pdb::DocNum);
   } else if (opts::DiaDumpSubcommand) {
     llvm::for_each(opts::diadump::InputFilenames, dumpDia);
   } else if (opts::PrettySubcommand) {

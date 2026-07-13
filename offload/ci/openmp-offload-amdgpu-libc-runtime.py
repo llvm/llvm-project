@@ -55,16 +55,16 @@ with worker.run(
             ["check-lld"], add_env={"HSA_ENABLE_SDMA": "0"}, builddir=llvmbuilddir
         )
 
-    with w.step("run check-libc-amdgcn-amd-amdhsa"):
+    with w.step("run check-libc-amdgpu-amd-amdhsa"):
         w.run_ninja(
-            ["check-libc-amdgcn-amd-amdhsa"],
+            ["check-libc-amdgpu-amd-amdhsa"],
             add_env={"HSA_ENABLE_SDMA": "0"},
             builddir=llvmbuilddir,
         )
 
-    with w.step("run check-compiler-rt-amdgcn-amd-amdhsa"):
+    with w.step("run check-compiler-rt-amdgpu-amd-amdhsa"):
         w.run_ninja(
-            ["check-compiler-rt-amdgcn-amd-amdhsa"],
+            ["check-compiler-rt-amdgpu-amd-amdhsa"],
             add_env={"HSA_ENABLE_SDMA": "0"},
             builddir=llvmbuilddir,
         )

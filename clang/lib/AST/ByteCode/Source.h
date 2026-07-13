@@ -36,6 +36,8 @@ public:
     return *this;
   }
 
+  CodePtr operator+(int32_t Offset) { return CodePtr(Ptr + Offset); }
+
   int32_t operator-(const CodePtr &RHS) const {
     assert(Ptr != nullptr && RHS.Ptr != nullptr && "Invalid code pointer");
     return Ptr - RHS.Ptr;

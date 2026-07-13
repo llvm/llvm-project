@@ -2582,7 +2582,10 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
     setSimple(false);
   }
 
-  clearList(ExternallyReferencedOffsets);
+  // Clear externally referenced offsets only if there are no relocations
+  // targeting internal references (from indirect goto).
+  if (InternalRefDataRelocations.empty())
+    clearList(ExternallyReferencedOffsets);
   clearList(UnknownIndirectBranchOffsets);
 
   return Error::success();
@@ -3289,7 +3292,8 @@ bool BinaryFunction::requiresAddressMap() const {
   if (isInjected())
     return false;
 
-  return isMultiEntry() || requiresPreciseAddressMap();
+  return isMultiEntry() || !getInternalRefDataRelocations().empty() ||
+         requiresPreciseAddressMap();
 }
 
 uint64_t BinaryFunction::getInstructionCount() const {
@@ -4139,6 +4143,7 @@ BinaryFunction::iterator BinaryFunction::insertBasicBlocks(
 void BinaryFunction::updateBBIndices(const unsigned StartIndex) {
   for (unsigned I = StartIndex; I < BasicBlocks.size(); ++I)
     BasicBlocks[I]->Index = I;
+  ++BlockNumberEpoch;
 }
 
 void BinaryFunction::updateCFIState(BinaryBasicBlock *Start,
