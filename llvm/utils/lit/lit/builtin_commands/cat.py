@@ -71,9 +71,9 @@ def run(argv, stdin, stdout, stderr, cwd):
         contents = None
         is_text = False
         try:
-            fileToCat = open(filename, "r")
-            contents = fileToCat.read()
-            is_text = True
+            with open(path, "r") as fileToCat:
+                contents = fileToCat.read()
+                is_text = True
         except:
             pass
 
