@@ -78,9 +78,7 @@ constexpr bool test() {
   }
 
   { // bidi second range that is not common-arg -- not bidirectional
-    using NonCommonBidiView = BidiNonCommonView;
-    static_assert(!std::ranges::__cartesian_product_common_arg<NonCommonBidiView>);
-    std::ranges::cartesian_product_view v(BidiCommonView{a}, NonCommonBidiView{b});
+    std::ranges::cartesian_product_view v(BidiCommonView{a}, BidiNonCommonView{b});
     using Iter = std::ranges::iterator_t<decltype(v)>;
     static_assert(!CanDecrement<Iter>);
   }

@@ -78,7 +78,6 @@ constexpr bool test() {
     assert(&y == &buffer[0]);
 
     using View = decltype(v);
-    static_assert(std::ranges::__simple_view<SimpleCommon>);
     static_assert(HasOnlyConstBegin<View>);
     static_assert(!HasOnlyNonConstBegin<View>);
     static_assert(!HasConstAndNonConstBegin<View>);

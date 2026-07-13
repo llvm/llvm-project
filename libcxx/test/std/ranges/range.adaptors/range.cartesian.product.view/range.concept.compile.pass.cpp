@@ -24,9 +24,10 @@
 
 #include "../range_adaptor_types.h"
 
-void testConceptPair() {
+void test() {
   int b1[2] = {1, 2};
   int b2[3] = {1, 2, 3};
+  int b3[4] = {1, 2, 3, 4};
 
   {
     std::ranges::cartesian_product_view v{ContiguousCommonView{b1}, ContiguousCommonView{b2}};
@@ -129,12 +130,6 @@ void testConceptPair() {
     static_assert(!std::ranges::common_range<View>);
     static_assert(!std::ranges::sized_range<View>);
   }
-}
-
-void testConceptTuple() {
-  int b1[2] = {1, 2};
-  int b2[3] = {1, 2, 3};
-  int b3[4] = {1, 2, 3, 4};
 
   {
     std::ranges::cartesian_product_view v{ContiguousCommonView{b1}, ContiguousCommonView{b2}, ContiguousCommonView{b3}};

@@ -10,9 +10,9 @@
 
 // friend constexpr bool operator==(const iterator& x, default_sentinel_t);
 //
-// The sentinel for cartesian_product_view is `default_sentinel_t`. Equality is decided
-// via __at_end(), which returns true if ANY underlying iterator equals its range's end.
-// (For an empty inner range, that condition is met from begin() onward.)
+// The sentinel for cartesian_product_view is `default_sentinel_t`. The iterator compares
+// equal to it once any underlying iterator reaches its range's end. (For an empty inner
+// range, that holds from begin() onward.)
 
 #include <array>
 #include <cassert>

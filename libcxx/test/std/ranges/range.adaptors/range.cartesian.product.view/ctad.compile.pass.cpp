@@ -23,7 +23,7 @@ struct View : std::ranges::view_base {
   int* end() const;
 };
 
-void testCTAD() {
+void test() {
   // single Container -> owning_view<Container>
   static_assert(std::is_same_v<decltype(std::ranges::cartesian_product_view(Container{})),
                                std::ranges::cartesian_product_view<std::ranges::owning_view<Container>>>);
