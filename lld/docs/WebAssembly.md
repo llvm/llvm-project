@@ -19,155 +19,116 @@ The WebAssembly version of lld is installed as **wasm-ld**. It shared many
 common linker flags with **ld.lld** but also includes several
 WebAssembly-specific options:
 
-```{eval-rst}
-.. option:: --no-entry
+:::{option} --no-entry
+Don't search for the entry point symbol (by default `_start`).
+:::
 
-  Don't search for the entry point symbol (by default ``_start``).
-```
+:::{option} --export-table
+Export the function table to the environment.
+:::
 
-```{eval-rst}
-.. option:: --export-table
+:::{option} --import-table
+Import the function table from the environment.
+:::
 
-  Export the function table to the environment.
-```
+:::{option} --export-all
+Export all symbols (normally combined with --no-gc-sections)
 
-```{eval-rst}
-.. option:: --import-table
+Note that this will not export linker-generated mutable globals unless
+the resulting binaryen already includes the 'mutable-globals' features
+since that would otherwise create and invalid binaryen.
+:::
 
-  Import the function table from the environment.
-```
+:::{option} --export-dynamic
+When building an executable, export any non-hidden symbols.  By default only
+the entry point and any symbols marked as exports (either via the command line
+or via the `export-name` source attribute) are exported.
+:::
 
-```{eval-rst}
-.. option:: --export-all
+:::{option} --global-base=<value>
+Address at which to place global data.
+:::
 
-  Export all symbols (normally combined with --no-gc-sections)
+:::{option} --no-merge-data-segments
+Disable merging of data segments.
+:::
 
-  Note that this will not export linker-generated mutable globals unless
-  the resulting binaryen already includes the 'mutable-globals' features
-  since that would otherwise create and invalid binaryen.
-```
+:::{option} --stack-first
+Place stack at start of linear memory rather than after data.
+:::
 
-```{eval-rst}
-.. option:: --export-dynamic
+:::{option} --compress-relocations
+Relocation targets in the code section are 5-bytes wide in order to
+potentially accommodate the largest LEB128 value.  This option will cause the
+linker to shrink the code section to remove any padding from the final
+output.  However because it affects code offset, this option is not
+compatible with outputting debug information.
+:::
 
-  When building an executable, export any non-hidden symbols.  By default only
-  the entry point and any symbols marked as exports (either via the command line
-  or via the `export-name` source attribute) are exported.
-```
+:::{option} --allow-undefined
+Allow undefined symbols in linked binary.  This is the legacy
+flag which corresponds to `--unresolve-symbols=ignore` +
+`--import-undefined`.
+:::
 
-```{eval-rst}
-.. option:: --global-base=<value>
+:::{option} --allow-undefined-file=<filename>
+Like `--allow-undefined`, but the filename specified a flat list of
+symbols, one per line, which are allowed to be undefined.
+:::
 
-  Address at which to place global data.
-```
+:::{option} --unresolved-symbols=<method>
+This is a more full featured version of `--allow-undefined`.
+The semantics of the different methods are as follows:
 
-```{eval-rst}
-.. option:: --no-merge-data-segments
+`report-all`
+: Report all unresolved symbols.  This is the default.  Normally the linker
+  will generate an error message for each reported unresolved symbol but the
+  option `--warn-unresolved-symbols` can change this to a warning.
 
-  Disable merging of data segments.
-```
+`ignore-all`
+: Resolve all undefined symbols to zero.  For data and function addresses
+  this is trivial.  For direct function calls, the linker will generate a
+  trapping stub function in place of the undefined function.
 
-```{eval-rst}
-.. option:: --stack-first
+`import-dynamic`
+: Undefined symbols generate WebAssembly imports, including undefined data
+  symbols.  This is somewhat similar to the --import-undefined option but
+  works all symbol types.  This options puts limitations on the type of
+  relocations that are allowed for imported data symbols.  Relocations that
+  require absolute data addresses (i.e. All R_WASM_MEMORY_ADDR_I32) will
+  generate an error if they cannot be resolved statically.  For clang/llvm
+  this means inputs should be compiled with `-fPIC` (i.e. `pic` or
+  `dynamic-no-pic` relocation models).  This options is useful for linking
+  binaries that are themselves static (non-relocatable) but whose undefined
+  symbols are resolved by a dynamic linker.
+:::
 
-  Place stack at start of linear memory rather than after data.
-```
+:::{option} --import-memory
+Import memory from the environment.
+:::
 
-```{eval-rst}
-.. option:: --compress-relocations
+:::{option} --import-undefined
+Generate WebAssembly imports for undefined symbols, where possible.  For
+example, for function symbols this is always possible, but in general this
+is not possible for undefined data symbols.  Undefined data symbols will
+still be reported as normal (in accordance with `--unresolved-symbols`).
+:::
 
-  Relocation targets in the code section are 5-bytes wide in order to
-  potentially accommodate the largest LEB128 value.  This option will cause the
-  linker to shrink the code section to remove any padding from the final
-  output.  However because it affects code offset, this option is not
-  compatible with outputting debug information.
-```
+:::{option} --initial-heap=<value>
+Initial size of the heap. Default: zero.
+:::
 
-```{eval-rst}
-.. option:: --allow-undefined
+:::{option} --initial-memory=<value>
+Initial size of the linear memory. Default: the sum of stack, static data and heap sizes.
+:::
 
-  Allow undefined symbols in linked binary.  This is the legacy
-  flag which corresponds to ``--unresolve-symbols=ignore`` +
-  ``--import-undefined``.
-```
+:::{option} --max-memory=<value>
+Maximum size of the linear memory. Default: unlimited.
+:::
 
-```{eval-rst}
-.. option:: --allow-undefined-file=<filename>
-
-  Like ``--allow-undefined``, but the filename specified a flat list of
-  symbols, one per line, which are allowed to be undefined.
-```
-
-```{eval-rst}
-.. option:: --unresolved-symbols=<method>
-
-  This is a more full featured version of ``--allow-undefined``.
-  The semantics of the different methods are as follows:
-
-  report-all:
-
-     Report all unresolved symbols.  This is the default.  Normally the linker
-     will generate an error message for each reported unresolved symbol but the
-     option ``--warn-unresolved-symbols`` can change this to a warning.
-
-  ignore-all:
-
-     Resolve all undefined symbols to zero.  For data and function addresses
-     this is trivial.  For direct function calls, the linker will generate a
-     trapping stub function in place of the undefined function.
-
-  import-dynamic:
-
-     Undefined symbols generate WebAssembly imports, including undefined data
-     symbols.  This is somewhat similar to the --import-undefined option but
-     works all symbol types.  This options puts limitations on the type of
-     relocations that are allowed for imported data symbols.  Relocations that
-     require absolute data addresses (i.e. All R_WASM_MEMORY_ADDR_I32) will
-     generate an error if they cannot be resolved statically.  For clang/llvm
-     this means inputs should be compiled with `-fPIC` (i.e. `pic` or
-     `dynamic-no-pic` relocation models).  This options is useful for linking
-     binaries that are themselves static (non-relocatable) but whose undefined
-     symbols are resolved by a dynamic linker.
-```
-
-```{eval-rst}
-.. option:: --import-memory
-
-  Import memory from the environment.
-```
-
-```{eval-rst}
-.. option:: --import-undefined
-
-   Generate WebAssembly imports for undefined symbols, where possible.  For
-   example, for function symbols this is always possible, but in general this
-   is not possible for undefined data symbols.  Undefined data symbols will
-   still be reported as normal (in accordance with ``--unresolved-symbols``).
-```
-
-```{eval-rst}
-.. option:: --initial-heap=<value>
-
-  Initial size of the heap. Default: zero.
-```
-
-```{eval-rst}
-.. option:: --initial-memory=<value>
-
-  Initial size of the linear memory. Default: the sum of stack, static data and heap sizes.
-```
-
-```{eval-rst}
-.. option:: --max-memory=<value>
-
-  Maximum size of the linear memory. Default: unlimited.
-```
-
-```{eval-rst}
-.. option:: --no-growable-memory
-
-  Set maximum size of the linear memory to its initial size, disallowing memory growth.
-```
+:::{option} --no-growable-memory
+Set maximum size of the linear memory to its initial size, disallowing memory growth.
+:::
 
 By default the function table is neither imported nor exported, but defined
 for internal use only.
@@ -288,4 +249,3 @@ on `unreachable` inside and linker-generated function called
   <https://github.com/WebAssembly/tool-conventions/blob/main/DynamicLinking.md>
 
 [linking]: https://github.com/WebAssembly/tool-conventions/blob/main/Linking.md
-

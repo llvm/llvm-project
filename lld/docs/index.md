@@ -53,22 +53,19 @@ E5-2680 2.80 GHz machine with an SSD drive. We ran gold and lld with
 or without multi-threading support. To disable multi-threading, we
 added `-no-threads` to the command lines.
 
-```{eval-rst}
-============  ===========  ============  ====================  ==================  ===============  =============
-Program       Output size  GNU ld        GNU gold w/o threads  GNU gold w/threads  lld w/o threads  lld w/threads
-ffmpeg dbg    92 MiB       1.72s         1.16s                 1.01s               0.60s            0.35s
-mysqld dbg    154 MiB      8.50s         2.96s                 2.68s               1.06s            0.68s
-clang dbg     1.67 GiB     104.03s       34.18s                23.49s              14.82s           5.28s
-chromium dbg  1.14 GiB     209.05s [1]_  64.70s                60.82s              27.60s           16.70s
-============  ===========  ============  ====================  ==================  ===============  =============
-```
+| Program | Output size | GNU ld | GNU gold w/o threads | GNU gold w/threads | lld w/o threads | lld w/threads |
+| --- | --- | --- | --- | --- | --- | --- |
+| ffmpeg dbg | 92 MiB | 1.72s | 1.16s | 1.01s | 0.60s | 0.35s |
+| mysqld dbg | 154 MiB | 8.50s | 2.96s | 2.68s | 1.06s | 0.68s |
+| clang dbg | 1.67 GiB | 104.03s | 34.18s | 23.49s | 14.82s | 5.28s |
+| chromium dbg | 1.14 GiB | 209.05s[^1] | 64.70s | 60.82s | 27.60s | 16.70s |
 
 As you can see, lld is significantly faster than GNU linkers.
 Note that this is just a benchmark result of our environment.
 Depending on number of available cores, available amount of memory or
 disk latency/throughput, your results may vary.
 
-[^footnote-1]: Since GNU ld doesn't support the `-icf=all` and
+[^1]: Since GNU ld doesn't support the `-icf=all` and
     `-gdb-index` options, we removed them from the command line
     for GNU ld. GNU ld would have been slower than this if it had
     these options.
@@ -135,4 +132,3 @@ ELF/warn_backrefs
 MachO/index
 DTLTO
 ```
-

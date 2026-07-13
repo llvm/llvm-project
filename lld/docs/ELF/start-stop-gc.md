@@ -2,9 +2,11 @@
 
 If your `-Wl,--gc-sections` build fail with a linker error like this:
 
-> error: undefined symbol: \_\_start_meta
-> \>>> referenced by {{.\*}}
-> \>>> the encapsulation symbol needs to be retained under --gc-sections properly; consider -z nostart-stop-gc (see <https://lld.llvm.org/start-stop-gc>)
+```
+error: undefined symbol: __start_meta
+>>> referenced by {{.*}}
+>>> the encapsulation symbol needs to be retained under --gc-sections properly; consider -z nostart-stop-gc (see https://lld.llvm.org/start-stop-gc)
+```
 
 it is likely your C identifier name sections are not properly annotated to
 suffice under `--gc-sections`.
@@ -60,6 +62,5 @@ _Pragma("GCC diagnostic pop")
 ```
 
 If you use the `SECTIONS` command in a linker script, use
-``` the ``KEEP` ``` keyword \<<https://sourceware.org/binutils/docs/ld/Input-Section-Keep.html>>\`\_, e.g.
+[the `KEEP` keyword](https://sourceware.org/binutils/docs/ld/Input-Section-Keep.html), e.g.
 `meta : { KEEP(*(meta)) }`
-

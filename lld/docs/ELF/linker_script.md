@@ -104,7 +104,7 @@ When an *OutputSection* *S* has `address`, LLD will set sh_addr to `address`.
 
 The ELF specification says:
 
-\> The value of sh_addr must be congruent to 0, modulo the value of sh_addralign.
+> The value of sh_addr must be congruent to 0, modulo the value of sh_addralign.
 
 The presence of `address` can cause the condition unsatisfied. LLD will warn.
 GNU ld from Binutils 2.35 onwards will reduce sh_addralign so that
@@ -128,8 +128,8 @@ When an *OutputSection* *S* has `(type)`, LLD will set `sh_type` or
 - `NOLOAD`: set `sh_type` to `SHT_NOBITS`.
 - `COPY`, `INFO`, `OVERLAY`: clear the `SHF_ALLOC` bit in `sh_flags`.
 - `TYPE=<value>`: set `sh_type` to the specified value. `<value>` must be
-  an integer or one of `SHT_PROGBITS, SHT_NOTE, SHT_NOBITS, SHT_INIT_ARRAY,
-  SHT_FINI_ARRAY, SHT_PREINIT_ARRAY`.
+  an integer or one of `SHT_PROGBITS`, `SHT_NOTE`, `SHT_NOBITS`,
+  `SHT_INIT_ARRAY`, `SHT_FINI_ARRAY`, `SHT_PREINIT_ARRAY`.
 
 When `sh_type` is specified, it is an error if an input section in *S* has a
 different type.
@@ -253,4 +253,3 @@ sections (i.e., the flag does not affect it). Also, if a section fails to fit
 at any of its matches, the link fails instead of discarding the section.
 Accordingly, the GNU flag `--enable-non-contiguous-regions-warnings` is not
 implemented, as it exists to warn about such occurrences.
-
