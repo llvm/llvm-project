@@ -572,15 +572,15 @@ ComputeRegionOp::wireHoistedValueThroughIns(Value value) {
   return arg;
 }
 
-/// Strip index_cast operations from a value before checking for a constant.
-static Value stripIndexCasts(Value val) {
-  while (auto castOp = val.getDefiningOp<arith::IndexCastOp>())
-    val = castOp.getIn();
-  return val;
-}
-
 template <typename ComputeOpT>
 static bool isGangWorkerVectorAllOne(ComputeOpT op) {
+  // Strip index_cast operations from a value before checking for a constant.
+  auto stripIndexCasts = [](Value val) -> Value {
+    while (auto castOp = val.getDefiningOp<arith::IndexCastOp>())
+      val = castOp.getIn();
+    return val;
+  };
+
   auto numGangs = op.getNumGangsValues();
   if (numGangs.empty())
     return false;
