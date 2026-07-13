@@ -906,23 +906,38 @@ void AMDGPUEarlyRegisterSpilling::classifyUses(
 
   MachineBasicBlock *CurMBB = CurMI->getParent();
 
+  std::set<MachineInstr *> Visited;
   for (MachineInstr &U : MRI->use_nodbg_instructions(CandidateReg)) {
+    if (!Visited.insert(&U).second)
+      continue;
+
     if (U.isPHI()) {
-      for (auto *PhiOpMBB : getPhiBlocksOfSpillReg(&U, CandidateReg)) {
+      SmallVector<MachineBasicBlock *> PhiBlocks =
+          getPhiBlocksOfSpillReg(&U, CandidateReg);
+      if (PhiBlocks.empty()) {
+        // All incoming edges may be undef; treat as unreachable from
+        // SpillBlock.
+        UnreachableUses.insert(&U);
+        continue;
+      }
+      int Inserts = 0;
+      for (auto *PhiOpMBB : PhiBlocks) {
         MachineBasicBlock *UseMBB = U.getParent();
         // The uses which are before the high register pressure point are
         // unreachable.
         if (((CurMBB != UseMBB) && NUA->isReachable(UseMBB, CurMBB)) ||
             ((CurMBB == UseMBB) && DT->dominates(&U, CurMI))) {
-          UnreachableUses.insert(&U);
+          Inserts += UnreachableUses.insert(&U);
         } else if (DT->dominates(SpillBlock, PhiOpMBB)) {
-          DominatedUses.insert(&U);
+          Inserts += DominatedUses.insert(&U);
         } else if (NUA->isReachable(SpillBlock, PhiOpMBB)) {
-          NonDominatedReachableUses.insert(&U);
+          Inserts += NonDominatedReachableUses.insert(&U);
         } else {
-          UnreachableUses.insert(&U);
+          Inserts += UnreachableUses.insert(&U);
         }
       }
+      assert(Inserts == 1 &&
+             "PHI has multiple uses with varying classifications");
     } else {
       MachineBasicBlock *UseMBB = U.getParent();
       // The uses which are before the high register pressure point are
@@ -939,6 +954,10 @@ void AMDGPUEarlyRegisterSpilling::classifyUses(
       }
     }
   }
+  assert((Visited.size() ==
+          (DominatedUses.size() + NonDominatedReachableUses.size() +
+           UnreachableUses.size())) &&
+         "Instruction not classified or has multiple classifications");
 }
 
 // Find the common dominator of the reachable uses and the block that we
@@ -1308,9 +1327,6 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
 
       if (NonDominatedReachableUses.empty() && DominatedUses.empty() &&
           !UnreachableUses.empty()) {
-        assert(UnreachableUses.size() ==
-                   llvm::range_size(MRI->use_nodbg_operands(CandidateReg)) &&
-               "Missing uses\n");
         continue;
       }
 
