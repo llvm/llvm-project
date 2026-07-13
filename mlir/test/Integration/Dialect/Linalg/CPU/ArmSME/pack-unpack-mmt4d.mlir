@@ -258,7 +258,7 @@ module @transforms attributes { transform.with_named_sequence } {
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">)
 
     // Step 2: Vectorize linalg.mmt4d (note, the M, N dims are scalable!)
-    transform.structured.vectorize %tiled_mmt4d vector_sizes  [1, 1, 1, [8], [8], 1] {create_named_contraction}
+    transform.structured.vectorize %tiled_mmt4d vector_sizes  [1, 1, 1, [8], [8], 1] {assume_dynamic_dims_match_vec_sizes, create_named_contraction}
       : !transform.any_op
 
     // Step 3: Lower vector.mask %mask { vector.transfer_* } to vector.transfer_* %mask
