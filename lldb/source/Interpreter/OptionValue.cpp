@@ -467,7 +467,7 @@ std::optional<ArchSpec> OptionValue::GetArchSpecValue() const {
 }
 
 bool OptionValue::SetArchSpecValue(ArchSpec arch_spec) {
-    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (OptionValueArch *option_value = GetAsArch()) {
     option_value->SetCurrentValue(arch_spec, false);
     return true;
