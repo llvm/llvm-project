@@ -385,6 +385,7 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
   // referenced by .eh_frame sections, so we scan them for that here.
   for (EhInputSection *eh : ctx.ehInputSections)
     scanEhFrameSection(*eh);
+  bool markUsed = ctx.arg.copyRelocs && ctx.arg.discard != DiscardPolicy::None;
   for (InputSectionBase *sec : ctx.inputSections) {
     if (sec->flags & SHF_GNU_RETAIN) {
       enqueue(sec, /*offset=*/0, /*sym=*/nullptr, {std::nullopt, "retained"});
@@ -420,6 +421,10 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
         sec->markLive();
         for (InputSection *isec : sec->dependentSections)
           isec->markLive();
+        // If -r or --emit-relocs, ensure referenced local symbols are
+        // preserved by --discard-{locals,all} (see shouldKeepInSymtab).
+        if (markUsed)
+          markUsedLocalSymbols<ELFT>(*sec);
       }
     }
 
