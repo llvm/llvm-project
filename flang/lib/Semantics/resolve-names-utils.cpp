@@ -419,8 +419,7 @@ ArraySpecAnalyzer::CheckExplicitShapeBoundsSpec(
   // for a scalar bound (which broadcasts to every dimension) or, for a
   // rank-1 array bound, its constant extent (which may be zero).
   bool hasError{false};
-  auto analyzeBound =
-      [&](const auto &parseBound, bool isUpper)
+  auto analyzeBound = [&](const auto &parseBound, bool isUpper)
       -> std::optional<std::pair<Bound, std::optional<std::int64_t>>> {
     MaybeExpr expr{AnalyzeExpr(context_, parseBound.thing)};
     // expr should never be invalid since it was analyzed as part
