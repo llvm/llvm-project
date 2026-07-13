@@ -64,7 +64,10 @@ static cl::opt<std::string> ModelSelector("ml-inliner-model-selector",
 static cl::opt<bool> StopImmediatelyForTest("ml-inliner-stop-immediately",
                                             cl::Hidden);
 
-#if defined(LLVM_HAVE_TF_AOT_INLINERSIZEMODEL)
+#if defined(LLVM_HAVE_EMITC_INLINERSIZEMODEL)
+#include "llvm/Analysis/EmitCInlinerSizeModel.h"
+using CompiledModelType = llvm::EmitCInlinerSizeModel;
+#elif defined(LLVM_HAVE_TF_AOT_INLINERSIZEMODEL)
 // codegen-ed file
 #include "InlinerSizeModel.h" // NOLINT
 using CompiledModelType = llvm::InlinerSizeModel;

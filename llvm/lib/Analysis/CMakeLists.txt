@@ -1,26 +1,31 @@
-if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
+option(LLVM_USE_EMITC_INLINER_MODEL
+  "Use the in-tree EmitC inliner model instead of TensorFlow AOT"
+  OFF)
+
+if (LLVM_HAVE_TFLITE)
+  list(APPEND MLLinkDeps
+    tensorflow-lite::tensorflow-lite)
+endif()
+
+if (LLVM_USE_EMITC_INLINER_MODEL)
+  list(APPEND LLVM_COMPILE_DEFINITIONS
+    LLVM_HAVE_EMITC_INLINERSIZEMODEL)
+elseif (DEFINED LLVM_HAVE_TF_AOT)
   include(TensorFlowCompile)
   set(LLVM_INLINER_MODEL_PATH_DEFAULT "models/inliner-Oz")
+  set(LLVM_INLINER_MODEL_CURRENT_URL "<UNSPECIFIED>" CACHE STRING
+      "URL to download the LLVM inliner model")
 
-  set(LLVM_INLINER_MODEL_CURRENT_URL "<UNSPECIFIED>" CACHE STRING "URL to download the LLVM inliner model")
-
-  if (DEFINED LLVM_HAVE_TF_AOT)
-    tf_find_and_compile(
-      ${LLVM_INLINER_MODEL_PATH}
-      ${LLVM_INLINER_MODEL_CURRENT_URL}
-      ${LLVM_INLINER_MODEL_PATH_DEFAULT}
-      "models/gen-inline-oz-test-model.py"
-      serve
-      action
-      InlinerSizeModel
-      llvm::InlinerSizeModel
-    )
-  endif()
-
-  if (LLVM_HAVE_TFLITE)
-    list(APPEND MLLinkDeps
-      tensorflow-lite::tensorflow-lite)
-  endif()
+  tf_find_and_compile(
+    ${LLVM_INLINER_MODEL_PATH}
+    ${LLVM_INLINER_MODEL_CURRENT_URL}
+    ${LLVM_INLINER_MODEL_PATH_DEFAULT}
+    "models/gen-inline-oz-test-model.py"
+    serve
+    action
+    InlinerSizeModel
+    llvm::InlinerSizeModel
+  )
 endif()
 
 # The implementation of ConstantFolding.cpp relies on the use of math functions
@@ -77,6 +82,7 @@ add_llvm_component_library(LLVMAnalysis
   DominanceFrontier.cpp
   DXILResource.cpp
   DXILMetadataAnalysis.cpp
+  EmitCInlinerSizeModel.cpp
   EphemeralValuesCache.cpp
   FloatingPointPredicateUtils.cpp
   FunctionPropertiesAnalysis.cpp
@@ -186,6 +192,11 @@ add_llvm_component_library(LLVMAnalysis
   Support
   TargetParser
   )
+
+if (LLVM_USE_EMITC_INLINER_MODEL)
+  target_compile_definitions(LLVMAnalysis
+    PRIVATE LLVM_HAVE_EMITC_INLINERSIZEMODEL)
+endif()
 
 include(CheckCXXSymbolExists)
 check_cxx_symbol_exists(logf128 math.h HAS_LOGF128)

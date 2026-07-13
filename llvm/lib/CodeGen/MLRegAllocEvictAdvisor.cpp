@@ -47,8 +47,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ml-regalloc"
 
-// Generated header in release (AOT) mode
-#if defined(LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL)
+// Generated header in release (AOT / EmitC) mode
+#if defined(LLVM_HAVE_EMITC_REGALLOCEVICTMODEL)
+#include "llvm/CodeGen/EmitCRegAllocEvictModel.h"
+using CompiledModelType = llvm::EmitCRegAllocEvictModel;
+#elif defined(LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL)
 #include "RegAllocEvictModel.h"
 using CompiledModelType = RegAllocEvictModel;
 #else

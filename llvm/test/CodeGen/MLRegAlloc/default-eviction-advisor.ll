@@ -2,6 +2,7 @@
 ; trying to use ML-driven advisor.
 ; REQUIRES: !have_tf_aot
 ; REQUIRES: !have_tflite
+; REQUIRES: !have_emitc_raevict_model
 ; REQUIRES: default_triple
 ; RUN: not llc -O2 -regalloc-enable-advisor=development < %s 2>&1 | FileCheck %s
 ; RUN: not llc -O2 -regalloc-enable-advisor=release < %s 2>&1 | FileCheck %s

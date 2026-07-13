@@ -1,10 +1,19 @@
+option(LLVM_USE_EMITC_REGALLOC_EVICT_MODEL
+  "Use the in-tree EmitC regalloc eviction model instead of TensorFlow AOT"
+  OFF)
+
+if (LLVM_USE_EMITC_REGALLOC_EVICT_MODEL)
+  list(APPEND LLVM_COMPILE_DEFINITIONS
+    LLVM_HAVE_EMITC_REGALLOCEVICTMODEL)
+endif()
+
 if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   include(TensorFlowCompile)
   set(LLVM_RAEVICT_MODEL_PATH_DEFAULT "models/regalloc-eviction")
 
   set(LLVM_RAEVICT_MODEL_CURRENT_URL "<UNSPECIFIED>" CACHE STRING "URL to download the LLVM register allocator eviction model")
 
-  if (DEFINED LLVM_HAVE_TF_AOT)
+  if (DEFINED LLVM_HAVE_TF_AOT AND NOT LLVM_USE_EMITC_REGALLOC_EVICT_MODEL)
     tf_find_and_compile(
       ${LLVM_RAEVICT_MODEL_PATH}
       ${LLVM_RAEVICT_MODEL_CURRENT_URL}
@@ -53,6 +62,7 @@ add_llvm_component_library(LLVMCodeGen
   DroppedVariableStatsMIR.cpp
   DwarfEHPrepare.cpp
   EarlyIfConversion.cpp
+  EmitCRegAllocEvictModel.cpp
   EdgeBundles.cpp
   EHContGuardTargets.cpp
   ExecutionDomainFix.cpp
@@ -294,6 +304,11 @@ add_llvm_component_library(LLVMCodeGen
   TargetParser
   TransformUtils
   )
+
+if (LLVM_USE_EMITC_REGALLOC_EVICT_MODEL)
+  target_compile_definitions(LLVMCodeGen
+    PRIVATE LLVM_HAVE_EMITC_REGALLOCEVICTMODEL)
+endif()
 
 add_subdirectory(SelectionDAG)
 add_subdirectory(AsmPrinter)
