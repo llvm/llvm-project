@@ -33,14 +33,8 @@ ManagedEventThread::~ManagedEventThread() {
 }
 
 DAPSessionManager &DAPSessionManager::GetInstance() {
-  static std::once_flag initialized;
-  static DAPSessionManager *instance =
-      nullptr; // NOTE: intentional leak to avoid issues with C++ destructor
-               // chain
-
-  std::call_once(initialized, []() { instance = new DAPSessionManager(); });
-
-  return *instance;
+  static DAPSessionManager instance;
+  return instance;
 }
 
 void DAPSessionManager::RegisterSession(lldb_private::MainLoop *loop,
