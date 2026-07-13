@@ -7130,6 +7130,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::CTPOP:
   case ISD::CTLS:
   case ISD::VECREDUCE_ADD:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN:
   case ISD::STEP_VECTOR: {
     SDValue Ops = {N1};
     if (SDValue Fold = FoldConstantArithmetic(Opcode, DL, VT, Ops))
@@ -7802,19 +7806,26 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     if (Opcode == ISD::BITCAST)
       return SDValue();
 
-    // Constant fold VECREDUCE_ADD with a BUILD_VECTOR of integer constants.
-    if (Opcode == ISD::VECREDUCE_ADD && ISD::isBuildVectorOfConstantSDNodes(N1.getNode())) {
+    // Constant fold integer vector reductions with constant BUILD_VECTORs.
+    if ((Opcode == ISD::VECREDUCE_ADD || Opcode == ISD::VECREDUCE_SMAX ||
+         Opcode == ISD::VECREDUCE_SMIN || Opcode == ISD::VECREDUCE_UMAX ||
+         Opcode == ISD::VECREDUCE_UMIN) &&
+        ISD::isBuildVectorOfConstantSDNodes(N1.getNode())) {
       unsigned EltBits = N1.getValueType().getScalarSizeInBits();
-      APInt Acc = APInt::getZero(EltBits);
+      std::optional<APInt> Acc;
+      unsigned BaseOpcode = ISD::getVecReduceBaseOpcode(Opcode);
       for (SDValue Elt : N1->op_values()) {
         if (Elt.getOpcode() == ISD::POISON)
           return getPOISON(VT);
         if (Elt.isUndef() || cast<ConstantSDNode>(Elt)->isOpaque())
           return SDValue();
-        Acc += cast<ConstantSDNode>(Elt)->getAPIntValue().trunc(EltBits);
+        APInt Value = cast<ConstantSDNode>(Elt)->getAPIntValue().trunc(EltBits);
+        Acc = Acc ? FoldValue(BaseOpcode, *Acc, Value) : Value;
+        assert(Acc && "Unexpected vector reduction opcode");
       }
+      assert(Acc && "Expected non-empty BUILD_VECTOR");
       EVT EltVT = N1.getValueType().getScalarType();
-      return getAnyExtOrTrunc(getConstant(Acc, DL, EltVT), DL, VT);
+      return getAnyExtOrTrunc(getConstant(*Acc, DL, EltVT), DL, VT);
     }
   }
 
