@@ -10,7 +10,7 @@ func.func @alloca() {
 
 // -----
 
-func.func @alloca_zero_rank() {
+func.func @alloca_rank0() {
   // CHECK: %[[LVALUE:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<f32>
   // CHECK: %[[PTR:.*]] = emitc.address_of %[[LVALUE]] : !emitc.lvalue<f32>
   %0 = memref.alloca() : memref<f32>

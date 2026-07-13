@@ -74,9 +74,9 @@ func.func @memref_load_store(%buff0: memref<2xf32>,
 }
 
 /// Rank-0 alloc-backed load/store lower through pointer subscript at index 0.
-// CHECK-LABEL: emitc.func private @memref_rank0_alloc_store(
+// CHECK-LABEL: emitc.func private @memref_alloc_store_rank0(
 // CHECK-SAME:  %[[VAL:.*]]: i32)
-func.func private @memref_rank0_alloc_store(%v : i32) {
+func.func private @memref_alloc_store_rank0(%v : i32) {
   // CHECK:     %[[SIZEOF_I32:.*]] = call_opaque "sizeof"() <{args = [i32]}> : () -> !emitc.size_t
   // CHECK:     %[[NUM_ELEMS:.*]] = "emitc.constant"() <{value = 1 : index}> : () -> index
   // CHECK:     %[[TOTAL_BYTES:.*]] = mul %[[SIZEOF_I32]], %[[NUM_ELEMS]] : (!emitc.size_t, index) -> !emitc.size_t
@@ -90,8 +90,8 @@ func.func private @memref_rank0_alloc_store(%v : i32) {
   return
 }
 
-// CHECK-LABEL: emitc.func private @memref_rank0_alloc_load() -> i32
-func.func private @memref_rank0_alloc_load() -> i32 {
+// CHECK-LABEL: emitc.func private @memref_alloc_load_rank0() -> i32
+func.func private @memref_alloc_load_rank0() -> i32 {
   // CHECK:     %[[SIZEOF_I32:.*]] = call_opaque "sizeof"() <{args = [i32]}> : () -> !emitc.size_t
   // CHECK:     %[[NUM_ELEMS:.*]] = "emitc.constant"() <{value = 1 : index}> : () -> index
   // CHECK:     %[[TOTAL_BYTES:.*]] = mul %[[SIZEOF_I32]], %[[NUM_ELEMS]] : (!emitc.size_t, index) -> !emitc.size_t
@@ -106,10 +106,10 @@ func.func private @memref_rank0_alloc_load() -> i32 {
   return %v : i32
 }
 
-// CHECK-LABEL: emitc.func @memref_rank0_load_store(
+// CHECK-LABEL: emitc.func @memref_load_store_rank0(
 // CHECK-SAME:  %[[SRC:.*]]: !emitc.ptr<i32>,
 // CHECK-SAME:  %[[DST:.*]]: !emitc.ptr<i32>)
-func.func @memref_rank0_load_store(%src: memref<i32>, %dst: memref<i32>) {
+func.func @memref_load_store_rank0(%src: memref<i32>, %dst: memref<i32>) {
   // CHECK:     %[[LOAD_ZERO:.*]] = "emitc.constant"() <{value = 0 : index}> : () -> index
   // CHECK:     %[[SRC_LVALUE:.*]] = subscript %[[SRC]]{{\[}}%[[LOAD_ZERO]]] : (!emitc.ptr<i32>, index) -> !emitc.lvalue<i32>
   // CHECK:     %[[VAL:.*]] = load %[[SRC_LVALUE]] : <i32>

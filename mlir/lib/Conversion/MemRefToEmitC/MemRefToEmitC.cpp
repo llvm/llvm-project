@@ -304,17 +304,16 @@ struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
 
       Value zeroIndex = emitc::ConstantOp::create(
           rewriter, loc, rewriter.getIndexType(), rewriter.getIndexAttr(0));
-      auto srcLValue = emitc::SubscriptOp::create(
+      Value srcLValue = emitc::SubscriptOp::create(
           rewriter, loc, cast<TypedValue<emitc::PointerType>>(srcPtr),
           zeroIndex);
-      auto value = emitc::LoadOp::create(rewriter, loc, elementType,
-                                         srcLValue.getResult());
+      Value value =
+          emitc::LoadOp::create(rewriter, loc, elementType, srcLValue);
 
-      auto targetLValue = emitc::SubscriptOp::create(
+      Value targetLValue = emitc::SubscriptOp::create(
           rewriter, loc, cast<TypedValue<emitc::PointerType>>(targetPtr),
           zeroIndex);
-      rewriter.replaceOpWithNewOp<emitc::AssignOp>(
-          copyOp, targetLValue.getResult(), value.getResult());
+      rewriter.replaceOpWithNewOp<emitc::AssignOp>(copyOp, targetLValue, value);
       return success();
     }
 
