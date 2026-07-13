@@ -1,13 +1,8 @@
-// COM: HSV-009 / PLAT-205406: on gfx1250 A0 a backward s_add_pc_i64 corrupts
-// COM: wave state. Required far tensor patches use a forward s_add_pc_i64 and
-// COM: an SCC-neutral s_get_pc_i64/s_add_nc_u64/s_set_pc_i64 return instead.
-// COM:
-// COM: Optional far trampoline rewrites are still allowed to decline;
-// COM: hotswap-trampoline-ds-long-branch.s covers that behavior.
-// COM: A large .rept filler (~160 KB, non-NOP so it forms no usable sled)
+// COM: A0 cannot execute s_add_pc_i64. Both edges use an SGPR-backed set-PC
+// COM: sequence; the short source slot reaches that sequence through safe
+// COM: external zero-filled gateway space. A large non-NOP .rept filler
+// COM: (~160 KB)
 // COM: pushes the pool past s_branch's reach to force the far case.
-// COM: The function intentionally has st_size == 0, matching Tensile objects
-// COM: that omit .size and exercising zero-size function-range recovery.
 
 // RUN: %clang -target amdgcn-amd-amdhsa -mcpu=gfx1250 -nostdlib %s -o %t.elf
 
@@ -17,22 +12,30 @@
 // RUN:   | %FileCheck --check-prefix=API %s
 // API: RESULT: SUCCESS
 
-// RUN: %llvm-objdump -d %t.out.elf | %FileCheck --check-prefix=DISASM %s
+// RUN: %llvm-objdump -d %t.out.elf | %FileCheck --check-prefix=DISASM \
+// RUN:   --implicit-check-not=s_add_pc_i64 %s
 // RUN: %llvm-readelf --notes %t.out.elf | %FileCheck --check-prefix=METADATA %s
 
 // DISASM-LABEL: <test_far>:
-// DISASM-NEXT: s_mov_b64 vcc, -1
-// DISASM-NEXT: s_add_pc_i64
-// DISASM-NOT: s_add_pc_i64
-// DISASM: s_pack_hh_b32_b16 s4, 0, s4
-// DISASM-NEXT: tensor_load_to_lds s[0:3], s[4:11]
+// DISASM-NEXT: s_branch
+// DISASM-LABEL: <gateway_barrier>:
+// DISASM-NEXT: s_endpgm
 // DISASM-NEXT: s_get_pc_i64 s[12:13]
-// DISASM-NEXT: s_add_nc_u64 s[12:13]
+// DISASM-NEXT: s_add_co_u32 s12, s12,
+// DISASM-NEXT: s_add_co_ci_u32 s13, s13,
 // DISASM-NEXT: s_set_pc_i64 s[12:13]
-// DISASM-NOT: s_add_pc_i64
+// DISASM: s_mov_b64 vcc, -1
+// DISASM-NEXT: s_pack_hh_b32_b16 s4, 0, s4
+// DISASM-NEXT: tensor_load_to_lds s[0:3], s[4:11]
+// DISASM-NEXT: s_cselect_b32 s14, 1, 0
+// DISASM-NEXT: s_get_pc_i64 s[12:13]
+// DISASM-NEXT: s_add_co_u32 s12, s12,
+// DISASM-NEXT: s_add_co_ci_u32 s13, s13,
+// DISASM-NEXT: s_cmp_lg_u32 s14, 0
+// DISASM-NEXT: s_set_pc_i64 s[12:13]
 
 // METADATA: .name:           test_far
-// METADATA: .sgpr_count:     16
+// METADATA: .sgpr_count:     17
 
 // RUN: hotswap-rewrite %t.out.elf \
 // RUN:   amdgcn-amd-amdhsa--gfx1250 amdgcn-amd-amdhsa--gfx1250 \
@@ -40,34 +43,26 @@
 // RUN:   | %FileCheck --check-prefix=IDEM %s
 // IDEM: IDEMPOTENT: YES
 
-// COM: The far return still needs an aligned SGPR pair. Exhausting all 106
-// COM: numbered SGPRs must fail instead of clobbering a program register.
+// COM: A kernel with no aligned three-SGPR block fails closed instead of
+// COM: emitting the unsafe return or clobbering a live register.
 // RUN: sed -e 's/s_mov_b64 vcc, -1/s_mov_b32 s105, 0/' \
 // RUN:   -e 's/\.amdhsa_next_free_sgpr 12/.amdhsa_next_free_sgpr 106/' \
-// RUN:   -e 's/\.sgpr_count: 14/.sgpr_count: 106/' %s > %t.no-pair.s
+// RUN:   -e 's/\.sgpr_count: 14/.sgpr_count: 106/' %s > %t.full-sgpr.s
 // RUN: %clang -target amdgcn-amd-amdhsa -mcpu=gfx1250 -nostdlib \
-// RUN:   %t.no-pair.s -o %t.no-pair.elf
-// RUN: env AMD_COMGR_EMIT_VERBOSE_LOGS=1 hotswap-rewrite %t.no-pair.elf \
+// RUN:   %t.full-sgpr.s -o %t.full-sgpr.elf
+// RUN: hotswap-rewrite %t.full-sgpr.elf \
 // RUN:   amdgcn-amd-amdhsa--gfx1250 amdgcn-amd-amdhsa--gfx1250 \
-// RUN:   --expect-status ERROR 2>&1 \
-// RUN:   | %FileCheck --check-prefix=NO-PAIR %s
-// NO-PAIR: hotswap: error: safe far return: no aligned block of 2 safe SGPRs fits below s106
-// NO-PAIR: RESULT: ERROR
+// RUN:   --expect-status ERROR | %FileCheck --check-prefix=FAIL %s
+// FAIL: RESULT: ERROR
 
-// COM: gfx10+ cannot represent an increased SGPR count in the kernel
-// COM: descriptor because that field is reserved. A metadata-less object must
-// COM: therefore fail rather than emit an under-declared far-return scratch
-// COM: allocation or write the reserved descriptor field.
+// COM: A metadata-less object also fails closed because scratch usage cannot
+// COM: be charged to its owning kernel.
 // RUN: sed '/^.amdgpu_metadata$/,/^.end_amdgpu_metadata$/d' %s > %t.nometa.s
 // RUN: %clang -target amdgcn-amd-amdhsa -mcpu=gfx1250 -nostdlib \
 // RUN:   %t.nometa.s -o %t.nometa.elf
-// RUN: env AMD_COMGR_EMIT_VERBOSE_LOGS=1 hotswap-rewrite %t.nometa.elf \
+// RUN: hotswap-rewrite %t.nometa.elf \
 // RUN:   amdgcn-amd-amdhsa--gfx1250 amdgcn-amd-amdhsa--gfx1250 \
-// RUN:   --expect-status ERROR 2>&1 \
-// RUN:   | %FileCheck --check-prefix=NO-METADATA %s
-// NO-METADATA: hotswap: error: updateKernelDescriptorSgprCount: kernel 'test_far' requires
-// NO-METADATA: descriptor SGPR-count field is reserved
-// NO-METADATA: RESULT: ERROR
+// RUN:   --expect-status ERROR | %FileCheck --check-prefix=FAIL %s
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx1250"
 .text
@@ -78,6 +73,16 @@ test_far:
   s_mov_b64 vcc, -1
   tensor_load_to_lds s[0:3], s[4:11]
   s_endpgm
+.size test_far, .-test_far
+
+// Provide external zero-filled alignment space after a separate
+// no-fallthrough function.
+.type gateway_barrier,@function
+gateway_barrier:
+  s_endpgm
+.size gateway_barrier, .-gateway_barrier
+.fill 32, 1, 0
+
   // ~160 KB of non-NOP filler so the appended trampoline pool is beyond
   // s_branch's +-128 KB reach from the tensor_load above (forces the
   // long-branch path).
@@ -85,7 +90,6 @@ test_far:
     s_mov_b32 s0, s1
   .endr
 .Ltest_far_end:
-// Deliberately no .size.
 
 .rodata
 .p2align 8

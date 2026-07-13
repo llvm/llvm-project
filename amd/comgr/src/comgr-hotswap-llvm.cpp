@@ -340,6 +340,60 @@ LLVMState initLLVM(const TargetIdentifier &TI) {
   if (!resolveRequiredOpcodeViaParse("s_set_pc_i64 s[0:1]", "s_set_pc_i64", S,
                                      S.SSetPcI64Opcode))
     return S;
+  if (!resolveRequiredOpcodeViaParse("s_clause 0", "s_clause", S,
+                                     S.SClauseOpcode))
+    return S;
+  if (!resolveRequiredOpcodeViaParse("s_delay_alu instid0(VALU_DEP_1)",
+                                     "s_delay_alu", S, S.SDelayAluOpcode))
+    return S;
+  if (!resolveRequiredOpcodeViaParse("s_endpgm", "s_endpgm", S,
+                                     S.SEndPgmOpcode))
+    return S;
+  if (!resolveRequiredOpcodeViaParse("s_endpgm_saved", "s_endpgm_saved", S,
+                                     S.SEndPgmSavedOpcode))
+    return S;
+  if (!resolveRequiredOpcodeViaParse("s_add_pc_i64 0", "s_add_pc_i64", S,
+                                     S.SAddPcI64Opcode))
+    return S;
+  if (!resolveRequiredOpcodeViaParse("s_call_i64 s[0:1], 0", "s_call_i64", S,
+                                     S.SCallI64Opcode))
+    return S;
+  if (!resolveRequiredOpcodeViaParse("s_swap_pc_i64 s[0:1], s[2:3]",
+                                     "s_swap_pc_i64", S, S.SSwapPcI64Opcode))
+    return S;
+  if (!resolveRequiredOpcodeViaParse("s_prefetch_inst_pc_rel 100, s10, 7",
+                                     "s_prefetch_inst_pc_rel", S,
+                                     S.SPrefetchInstPcRelOpcode))
+    return S;
+  if (!resolveRequiredOpcodeViaParse("s_prefetch_data_pc_rel 100, s10, 7",
+                                     "s_prefetch_data_pc_rel", S,
+                                     S.SPrefetchDataPcRelOpcode))
+    return S;
+
+  SmallVector<MCInst, 2> SccDefInsts =
+      parseAsmToMCInsts("s_cmp_eq_u32 s0, s0", S);
+  if (SccDefInsts.size() != 1) {
+    log() << "hotswap: error: initLLVM: failed to parse an SCC-defining "
+             "scalar compare for CPU '"
+          << S.Cpu << "'.\n";
+    return S;
+  }
+  const MCInstrDesc &SccDefDesc = S.MCII->get(SccDefInsts.front().getOpcode());
+  for (MCPhysReg Reg : SccDefDesc.implicit_defs()) {
+    if (S.SCCRegister.isValid()) {
+      log() << "hotswap: error: initLLVM: scalar compare has multiple "
+               "implicit definitions for CPU '"
+            << S.Cpu << "'.\n";
+      return S;
+    }
+    S.SCCRegister = MCRegister(Reg);
+  }
+  if (!S.SCCRegister.isValid()) {
+    log() << "hotswap: error: initLLVM: scalar compare has no implicit SCC "
+             "definition for CPU '"
+          << S.Cpu << "'.\n";
+    return S;
+  }
 
   S.Valid = true;
   return S;
@@ -407,6 +461,7 @@ bool decodeTextSection(const uint8_t *Text, uint64_t TextSize,
       DI.Size = MinInstSize;
       DI.Mnemonic = UnknownMnemonic.str();
     } else {
+      DI.DecodeSucceeded = true;
       DI.Size = static_cast<uint32_t>(InstSize);
       // MCInstPrinter::getMnemonic returns a pointer into the generated AsmStrs
       // table. Storage is process-lifetime static; the trailing whitespace

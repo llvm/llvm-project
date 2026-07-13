@@ -87,6 +87,16 @@ TEST(InitLLVM, ValidGfx1250) {
   EXPECT_NE(S.Target, nullptr);
   ASSERT_NE(S.MCII, nullptr);
   EXPECT_LT(S.SBranchOpcode, S.MCII->getNumOpcodes());
+  EXPECT_LT(S.SClauseOpcode, S.MCII->getNumOpcodes());
+  EXPECT_LT(S.SDelayAluOpcode, S.MCII->getNumOpcodes());
+  EXPECT_LT(S.SEndPgmOpcode, S.MCII->getNumOpcodes());
+  EXPECT_LT(S.SEndPgmSavedOpcode, S.MCII->getNumOpcodes());
+  EXPECT_LT(S.SAddPcI64Opcode, S.MCII->getNumOpcodes());
+  EXPECT_LT(S.SCallI64Opcode, S.MCII->getNumOpcodes());
+  EXPECT_LT(S.SSwapPcI64Opcode, S.MCII->getNumOpcodes());
+  EXPECT_LT(S.SPrefetchInstPcRelOpcode, S.MCII->getNumOpcodes());
+  EXPECT_LT(S.SPrefetchDataPcRelOpcode, S.MCII->getNumOpcodes());
+  EXPECT_TRUE(S.SCCRegister.isValid());
   EXPECT_EQ(S.SNopBytes.size(), MinInstSize);
 }
 
@@ -182,130 +192,113 @@ TEST(EncodeSBranch, FailsOnInvalidState) {
   EXPECT_TRUE(S.encodeSBranch(0, 8).empty());
 }
 
-// -- encodeLongBranch (s_add_pc_i64) -----------------------------------------
-//
-// The long branch reaches anywhere via s_add_pc_i64, which adds a signed
-// literal to the PC of the next instruction: landing PC == From + size + imm.
-// A positive (forward) offset fits a 32-bit literal (8 bytes); a negative
-// (backward) offset needs a 64-bit literal (12 bytes). These verify the offset
-// math and encoding structurally rather than pinning exact bytes.
+// -- encodeSetPCLongBranch ---------------------------------------------------
 
-// Read the signed literal that follows the 4-byte opcode dword.
-static int64_t longBranchLiteral(llvm::ArrayRef<uint8_t> Out) {
-  if (Out.size() == LongBranchFwdBytes)
-    return static_cast<int32_t>(readDword(Out.data() + MinInstSize));
-  int64_t V = 0;
-  std::memcpy(&V, Out.data() + MinInstSize, sizeof(V));
-  return V;
-}
-
-TEST(EncodeLongBranch, ForwardLandsOnTarget) {
-  LLVMState S = initLLVM(makeGfx1250Ident());
-  ASSERT_TRUE(S.Valid);
-  // ~512 KB forward -- well beyond s_branch's +-128 KB reach.
-  const uint64_t From = 0x1000, To = 0x81000;
-  llvm::SmallVector<uint8_t> Out = encodeLongBranch(S, From, To);
-  ASSERT_EQ(Out.size(), LongBranchFwdBytes);
-  EXPECT_EQ(From + Out.size() + longBranchLiteral(Out), To);
-
-  std::vector<InternalDecodedInst> Dec;
-  ASSERT_TRUE(decodeTextSection(Out.data(), Out.size(), S, Dec));
-  ASSERT_EQ(Dec.size(), 1u);
-  EXPECT_EQ(Dec[0].Mnemonic, "s_add_pc_i64");
-}
-
-TEST(EncodeLongBranch, BackwardUsesWideLiteralAndLandsOnTarget) {
-  LLVMState S = initLLVM(makeGfx1250Ident());
-  ASSERT_TRUE(S.Valid);
-  // Backward jump (trampoline tail -> earlier return point).
-  const uint64_t From = 0x81000, To = 0x1004;
-  llvm::SmallVector<uint8_t> Out = encodeLongBranch(S, From, To);
-  ASSERT_EQ(Out.size(), LongBranchMaxBytes);
-  EXPECT_EQ(static_cast<int64_t>(From) + static_cast<int64_t>(Out.size()) +
-                longBranchLiteral(Out),
-            static_cast<int64_t>(To));
-
-  std::vector<InternalDecodedInst> Dec;
-  ASSERT_TRUE(decodeTextSection(Out.data(), Out.size(), S, Dec));
-  ASSERT_EQ(Dec.size(), 1u);
-  EXPECT_EQ(Dec[0].Mnemonic, "s_add_pc_i64");
-}
-
-TEST(EncodeLongBranch, ReachesBeyondSBranchRange) {
-  LLVMState S = initLLVM(makeGfx1250Ident());
-  ASSERT_TRUE(S.Valid);
-  // 4 MB: s_branch rejects it, the long branch encodes it.
-  const uint64_t From = 0, To = 0x400000;
-  EXPECT_TRUE(S.encodeSBranch(From, To).empty());
-  llvm::SmallVector<uint8_t> Out = encodeLongBranch(S, From, To);
-  ASSERT_FALSE(Out.empty());
-  EXPECT_EQ(From + Out.size() + longBranchLiteral(Out), To);
-}
-
-// -- encodeSccNeutralLongBranch ----------------------------------------------
-
-static uint64_t
-decodeSccNeutralLongBranchTarget(uint64_t From,
-                                 llvm::ArrayRef<InternalDecodedInst> Decoded) {
-  const uint64_t PcBase = From + Decoded[0].Size;
-  const uint64_t Delta =
-      static_cast<uint64_t>(Decoded[1].Inst.getOperand(2).getImm());
-  return PcBase + Delta;
-}
-
-TEST(EncodeSccNeutralLongBranch, BackwardLandsOnTargetWithoutDefiningScc) {
+TEST(EncodeSetPCLongBranch, UsesSccPreservingSequenceWithoutAddPc) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
 
-  constexpr uint64_t From = 0x81000;
-  constexpr uint64_t To = 0x1008;
+  const uint64_t From = 0x81000;
+  const uint64_t To = 0x1004;
   std::optional<llvm::SmallVector<uint8_t>> Out =
-      encodeSccNeutralLongBranch(S, From, To, /*SgprBase=*/12);
+      encodeSetPCLongBranch(S, From, To, /*SgprBase=*/12);
   ASSERT_TRUE(Out);
 
-  std::vector<InternalDecodedInst> Decoded;
-  ASSERT_TRUE(decodeTextSection(Out->data(), Out->size(), S, Decoded));
-  ASSERT_EQ(Decoded.size(), 3u);
-  EXPECT_EQ(Decoded[0].Mnemonic, "s_get_pc_i64");
-  EXPECT_EQ(Decoded[1].Mnemonic, "s_add_nc_u64");
-  EXPECT_EQ(Decoded[2].Mnemonic, "s_set_pc_i64");
-  EXPECT_EQ(decodeSccNeutralLongBranchTarget(From, Decoded), To);
+  std::vector<InternalDecodedInst> Dec;
+  ASSERT_TRUE(decodeTextSection(Out->data(), Out->size(), S, Dec));
+  ASSERT_EQ(Dec.size(), 6u);
+  EXPECT_EQ(Dec[0].Mnemonic, "s_cselect_b32");
+  EXPECT_EQ(Dec[1].Mnemonic, "s_get_pc_i64");
+  EXPECT_EQ(Dec[2].Mnemonic, "s_add_co_u32");
+  EXPECT_EQ(Dec[3].Mnemonic, "s_add_co_ci_u32");
+  EXPECT_EQ(Dec[4].Mnemonic, "s_cmp_lg_u32");
+  EXPECT_EQ(Dec[5].Mnemonic, "s_set_pc_i64");
+  for (const InternalDecodedInst &DI : Dec)
+    EXPECT_NE(DI.Mnemonic, "s_add_pc_i64");
 
-  const llvm::MCRegister Pair = Decoded[0].Inst.getOperand(0).getReg();
-  EXPECT_EQ(Decoded[1].Inst.getOperand(0).getReg(), Pair);
-  EXPECT_EQ(Decoded[1].Inst.getOperand(1).getReg(), Pair);
-  EXPECT_EQ(Decoded[2].Inst.getOperand(0).getReg(), Pair);
-  for (const InternalDecodedInst &DI : Decoded) {
-    const llvm::MCInstrDesc &Desc = S.MCII->get(DI.Inst.getOpcode());
-    for (llvm::MCPhysReg Reg : Desc.implicit_defs())
-      EXPECT_NE(llvm::StringRef(S.MRI->getName(Reg)), "SCC");
-  }
+  // s_get_pc_i64 is the second dword and captures From + 8. The two add
+  // immediates materialize this exact two's-complement displacement.
+  uint64_t Delta = To - (From + 2 * MinInstSize);
+  EXPECT_EQ(static_cast<uint32_t>(Delta), 0xFFF7FFFCu);
+  EXPECT_EQ(static_cast<uint32_t>(Delta >> 32), 0xFFFFFFFFu);
 }
 
-TEST(EncodeSccNeutralLongBranch, ForwardLandsOnTarget) {
+TEST(EncodeSetPCLongBranch, ForwardLandsOnTarget) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
 
   constexpr uint64_t From = 0x1000;
   constexpr uint64_t To = 0x81000;
   std::optional<llvm::SmallVector<uint8_t>> Out =
-      encodeSccNeutralLongBranch(S, From, To, /*SgprBase=*/12);
+      encodeSetPCLongBranch(S, From, To, /*SgprBase=*/12);
   ASSERT_TRUE(Out);
 
   std::vector<InternalDecodedInst> Decoded;
   ASSERT_TRUE(decodeTextSection(Out->data(), Out->size(), S, Decoded));
-  ASSERT_EQ(Decoded.size(), 3u);
-  EXPECT_EQ(decodeSccNeutralLongBranchTarget(From, Decoded), To);
+  ASSERT_EQ(Decoded.size(), 6u);
+  ASSERT_TRUE(Decoded[2].Inst.getOperand(2).isImm());
+  ASSERT_TRUE(Decoded[3].Inst.getOperand(2).isImm());
+  uint64_t Lo = static_cast<uint32_t>(Decoded[2].Inst.getOperand(2).getImm());
+  uint64_t Hi = static_cast<uint32_t>(Decoded[3].Inst.getOperand(2).getImm());
+  uint64_t Delta = Lo | (Hi << 32);
+  EXPECT_EQ(From + 2 * MinInstSize + Delta, To);
 }
 
-TEST(EncodeSccNeutralLongBranch, RejectsUnalignedPairAndPcOverflow) {
+TEST(EncodeSetPCLongBranch, RejectsPcBaseOverflow) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
+  EXPECT_FALSE(encodeSetPCLongBranch(
+      S, std::numeric_limits<uint64_t>::max() - MinInstSize, 0,
+      /*SgprBase=*/12));
+}
 
-  EXPECT_FALSE(encodeSccNeutralLongBranch(S, 0x1000, 0x2000,
-                                          /*SgprBase=*/13));
-  EXPECT_FALSE(encodeSccNeutralLongBranch(
-      S, std::numeric_limits<uint64_t>::max() - 1, 0, /*SgprBase=*/12));
+TEST(EncodeSetPCLongBranch, RejectsMisalignedScratchPair) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  EXPECT_FALSE(encodeSetPCLongBranch(S, 0, 0x1000, /*SgprBase=*/3));
+}
+
+TEST(IsSBranchReachable, CoversBoundariesAlignmentAndPcOverflow) {
+  constexpr uint64_t PositiveLimit =
+      static_cast<uint64_t>(BranchOffsetMax + 1) * MinInstSize;
+  EXPECT_TRUE(isSBranchReachable(/*From=*/0, PositiveLimit));
+  EXPECT_FALSE(isSBranchReachable(/*From=*/0, PositiveLimit + MinInstSize));
+  EXPECT_FALSE(isSBranchReachable(/*From=*/0, /*To=*/7));
+
+  constexpr uint64_t NegativeFrom =
+      static_cast<uint64_t>(-(BranchOffsetMin + 1)) * MinInstSize;
+  EXPECT_TRUE(isSBranchReachable(NegativeFrom, /*To=*/0));
+  EXPECT_FALSE(isSBranchReachable(NegativeFrom + MinInstSize, /*To=*/0));
+  EXPECT_FALSE(isSBranchReachable(std::numeric_limits<uint64_t>::max() - 1,
+                                  /*To=*/0));
+}
+
+TEST(EvaluateDirectControlFlowTarget, EvaluatesImmediateBranch) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Bytes = assembleSingleInst("s_branch 1", S);
+  ASSERT_FALSE(Bytes.empty());
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 1u);
+  Decoded[0].Offset = 0x100;
+  EXPECT_EQ(evaluateDirectControlFlowTarget(Decoded[0], S), 0x108u);
+}
+
+TEST(EvaluateDirectControlFlowTarget, EvaluatesGfx1250CallOperandFallback) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleSingleInst("s_call_i64 s[0:1], 2", S);
+  ASSERT_FALSE(Bytes.empty());
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 1u);
+  Decoded[0].Offset = 0x200;
+  EXPECT_EQ(evaluateDirectControlFlowTarget(Decoded[0], S),
+            0x200u + Decoded[0].Size + 2 * MinInstSize);
 }
 
 TEST(SafeSgprScratchBlock, RejectsRegisterBeyondAddressableLimit) {
@@ -389,8 +382,7 @@ TEST(SafeSgprScratchBlock, CommitRejectsObjectWithoutKernelDescriptor) {
 }
 
 TEST(FindNearestSled, RejectsOverflowingHeadroom) {
-  std::vector<NopSled> Sleds = {{0, 64, 60, 0, 64},
-                                {100, 128, 100, 100, 128}};
+  std::vector<NopSled> Sleds = {{0, 64, 60, 0, 64}, {100, 128, 100, 100, 128}};
   EXPECT_EQ(findNearestSled(Sleds, 0, std::numeric_limits<uint64_t>::max()),
             nullptr);
 }
@@ -424,6 +416,7 @@ TEST(AssembleDecode, SNopRoundTrip) {
   std::vector<InternalDecodedInst> Decoded;
   ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
   ASSERT_EQ(Decoded.size(), 1u);
+  EXPECT_TRUE(Decoded[0].DecodeSucceeded);
   EXPECT_EQ(Decoded[0].Size, MinInstSize);
   EXPECT_EQ(Decoded[0].Mnemonic, "s_nop");
 }
@@ -800,10 +793,9 @@ TEST(BuildKernelEntryTrampoline, PrefixPrefiltersHipblasltSmokeEntryBytes) {
   // idempotency path should reject this by raw prefix before classifying it as
   // a possible appended entry stub.
   const uint8_t EntryBytes[] = {
-      0x1a, 0x08, 0x80, 0xb9, 0x02, 0x00, 0x00, 0x00,
-      0x1a, 0x08, 0x80, 0xb9, 0x02, 0x00, 0x00, 0x00,
-      0xff, 0x02, 0x3f, 0x8b, 0xff, 0xff, 0xff, 0x3f,
-      0x02, 0x9e, 0x40, 0x85, 0x03, 0x00, 0xc1, 0xbe,
+      0x1a, 0x08, 0x80, 0xb9, 0x02, 0x00, 0x00, 0x00, 0x1a, 0x08, 0x80,
+      0xb9, 0x02, 0x00, 0x00, 0x00, 0xff, 0x02, 0x3f, 0x8b, 0xff, 0xff,
+      0xff, 0x3f, 0x02, 0x9e, 0x40, 0x85, 0x03, 0x00, 0xc1, 0xbe,
   };
 
   llvm::SmallVector<uint8_t> Candidate;
@@ -813,8 +805,8 @@ TEST(BuildKernelEntryTrampoline, PrefixPrefiltersHipblasltSmokeEntryBytes) {
   ASSERT_EQ(Candidate.size(), KernelEntryStubStride);
 
   std::vector<InternalDecodedInst> Decoded;
-  ASSERT_TRUE(decodeTextSection(Candidate.data(), sizeof(EntryBytes), S,
-                                Decoded));
+  ASSERT_TRUE(
+      decodeTextSection(Candidate.data(), sizeof(EntryBytes), S, Decoded));
   ASSERT_GE(Decoded.size(), 5u);
   EXPECT_EQ(Decoded[0].Mnemonic, "s_setreg_imm32_b32");
   EXPECT_EQ(Decoded[1].Mnemonic, "s_setreg_imm32_b32");
@@ -987,9 +979,9 @@ static unsigned countSymtabSymbolsNamed(llvm::WritableMemoryBuffer &Buf,
                                         llvm::StringRef Name) {
   using ELFT = llvm::object::ELF64LE;
   llvm::Expected<llvm::object::ELFFile<ELFT>> FileOrErr =
-      llvm::object::ELFFile<ELFT>::create(llvm::StringRef(
-          reinterpret_cast<const char *>(Buf.getBufferStart()),
-          Buf.getBufferSize()));
+      llvm::object::ELFFile<ELFT>::create(
+          llvm::StringRef(reinterpret_cast<const char *>(Buf.getBufferStart()),
+                          Buf.getBufferSize()));
   if (!FileOrErr) {
     llvm::consumeError(FileOrErr.takeError());
     return ~0u;
