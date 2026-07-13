@@ -741,6 +741,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - Added a clearer diagnostic for uninitialized decomposition declarations. (#GH90107)
 
+- Fixed missing sentinel attribute diagnostic discrepancy with explicit object
+  parameters in variadic functions. (#GH200007)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
