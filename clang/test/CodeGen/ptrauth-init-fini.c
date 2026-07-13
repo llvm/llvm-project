@@ -18,8 +18,6 @@
 // COMMON: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @foo, ptr null }]
 // COMMON: @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @bar, ptr null }]
 
-// The below checks assume no other module flags happens to be set.
-
 // COMMON: !llvm.module.flags = !{
 // COMMON-SAME: !1
 // COMMON-SAME: !2
