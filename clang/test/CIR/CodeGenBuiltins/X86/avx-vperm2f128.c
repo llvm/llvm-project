@@ -12,16 +12,16 @@ typedef float __m256 __attribute__((__vector_size__(32)));
 typedef int __m256i __attribute__((__vector_size__(32)));
 typedef double __m256d __attribute__((__vector_size__(32)));
 
-//First operand sources half lane(64 bits)
-#define A_LOW 0x00
-#define A_HIGH 0x01
-
-//Second operand sources half lane(64 bits)
-#define B_LOW 0x02
-#define B_HIGH 0x03
-
-//Zero overwritte bit
-#define ZERO_BIT 0x08
+enum VPerm2F128LaneControl {
+    //First operand 128 bits lane
+    A_LOW= 0x00,
+    A_HIGH = 0x01,
+    //Second operand 128 bits lane
+    B_LOW = 0x02,
+    B_HIGH = 0x03,
+    //Zero overwritte bit
+    ZERO_BIT = 0x08,
+};
 
 //Macro helpers to set control bits 
 #define LANES(low, high) (((low) | ((high) << 4)))
