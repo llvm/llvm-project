@@ -56,11 +56,11 @@ float64x1_t test_vfma_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
 
 // LLVM-SAME: <1 x double> {{.*}} [[A:%.*]], <1 x double> {{.*}} [[B:%.*]], <1 x double> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:      [[A_I:%.*]] = bitcast <1 x double> [[A]] to i64
-// LLVM-NEXT: [[A_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[A_I]], i32 0
+// LLVM-NEXT: [[A_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[A_I]], i64 0
 // LLVM-NEXT: [[B_I:%.*]] = bitcast <1 x double> [[B]] to i64
-// LLVM-NEXT: [[B_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[B_I]], i32 0
+// LLVM-NEXT: [[B_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[B_I]], i64 0
 // LLVM-NEXT: [[C_I:%.*]] = bitcast <1 x double> [[C]] to i64
-// LLVM-NEXT: [[C_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[C_I]], i32 0
+// LLVM-NEXT: [[C_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[C_I]], i64 0
 // LLVM-NEXT: [[A_BYTES:%.*]] = bitcast <1 x i64> [[A_INSERT]] to <8 x i8>
 // LLVM-NEXT: [[B_BYTES:%.*]] = bitcast <1 x i64> [[B_INSERT]] to <8 x i8>
 // LLVM-NEXT: [[C_BYTES:%.*]] = bitcast <1 x i64> [[C_INSERT]] to <8 x i8>
@@ -140,11 +140,11 @@ float64x1_t test_vfma_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
 
 // LLVM-SAME: <1 x double> {{.*}} [[A:%.*]], <1 x double> {{.*}} [[B:%.*]], <1 x double> {{.*}} [[V:%.*]]) {{.*}} {
 // LLVM:      [[A_I:%.*]] = bitcast <1 x double> [[A]] to i64
-// LLVM-NEXT: [[A_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[A_I]], i32 0
+// LLVM-NEXT: [[A_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[A_I]], i64 0
 // LLVM-NEXT: [[B_I:%.*]] = bitcast <1 x double> [[B]] to i64
-// LLVM-NEXT: [[B_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[B_I]], i32 0
+// LLVM-NEXT: [[B_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[B_I]], i64 0
 // LLVM-NEXT: [[V_I:%.*]] = bitcast <1 x double> [[V]] to i64
-// LLVM-NEXT: [[V_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[V_I]], i32 0
+// LLVM-NEXT: [[V_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[V_I]], i64 0
 // LLVM-NEXT: [[A_BYTES:%.*]] = bitcast <1 x i64> [[A_INSERT]] to <8 x i8>
 // LLVM-NEXT: [[B_BYTES:%.*]] = bitcast <1 x i64> [[B_INSERT]] to <8 x i8>
 // LLVM-NEXT: [[V_BYTES:%.*]] = bitcast <1 x i64> [[V_INSERT]] to <8 x i8>
@@ -187,7 +187,7 @@ float64x2_t test_vfmaq_lane_f64(float64x2_t a, float64x2_t b, float64x1_t v) {
 // LLVM:      [[A_I:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
 // LLVM-NEXT: [[B_I:%.*]] = bitcast <2 x double> [[B]] to <2 x i64>
 // LLVM-NEXT: [[V_I:%.*]] = bitcast <1 x double> [[V]] to i64
-// LLVM-NEXT: [[V_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[V_I]], i32 0
+// LLVM-NEXT: [[V_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[V_I]], i64 0
 // LLVM-NEXT: [[A_BYTES:%.*]] = bitcast <2 x i64> [[A_I]] to <16 x i8>
 // LLVM-NEXT: [[B_BYTES:%.*]] = bitcast <2 x i64> [[B_I]] to <16 x i8>
 // LLVM-NEXT: [[V_BYTES:%.*]] = bitcast <1 x i64> [[V_INSERT]] to <8 x i8>
@@ -229,9 +229,9 @@ float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b,
 
 // LLVM-SAME: <1 x double> {{.*}} [[A:%.*]], <1 x double> {{.*}} [[B:%.*]], <2 x double> {{.*}} [[V:%.*]]) {{.*}} {
 // LLVM:      [[A_I:%.*]] = bitcast <1 x double> [[A]] to i64
-// LLVM-NEXT: [[A_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[A_I]], i32 0
+// LLVM-NEXT: [[A_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[A_I]], i64 0
 // LLVM-NEXT: [[B_I:%.*]] = bitcast <1 x double> [[B]] to i64
-// LLVM-NEXT: [[B_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[B_I]], i32 0
+// LLVM-NEXT: [[B_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[B_I]], i64 0
 // LLVM-NEXT: [[V_I:%.*]] = bitcast <2 x double> [[V]] to <2 x i64>
 // LLVM-NEXT: [[A_BYTES:%.*]] = bitcast <1 x i64> [[A_INSERT]] to <8 x i8>
 // LLVM-NEXT: [[B_BYTES:%.*]] = bitcast <1 x i64> [[B_INSERT]] to <8 x i8>
@@ -439,11 +439,11 @@ float64x1_t test_vfms_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
 // LLVM-SAME: <1 x double> {{.*}} [[A:%.*]], <1 x double> {{.*}} [[B:%.*]], <1 x double> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:      [[NEG:%.*]] = fneg <1 x double> [[B]]
 // LLVM-NEXT: [[A_I:%.*]] = bitcast <1 x double> [[A]] to i64
-// LLVM-NEXT: [[A_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[A_I]], i32 0
+// LLVM-NEXT: [[A_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[A_I]], i64 0
 // LLVM-NEXT: [[B_I:%.*]] = bitcast <1 x double> [[NEG]] to i64
-// LLVM-NEXT: [[B_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[B_I]], i32 0
+// LLVM-NEXT: [[B_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[B_I]], i64 0
 // LLVM-NEXT: [[C_I:%.*]] = bitcast <1 x double> [[C]] to i64
-// LLVM-NEXT: [[C_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[C_I]], i32 0
+// LLVM-NEXT: [[C_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[C_I]], i64 0
 // LLVM-NEXT: [[A_BYTES:%.*]] = bitcast <1 x i64> [[A_INSERT]] to <8 x i8>
 // LLVM-NEXT: [[B_BYTES:%.*]] = bitcast <1 x i64> [[B_INSERT]] to <8 x i8>
 // LLVM-NEXT: [[C_BYTES:%.*]] = bitcast <1 x i64> [[C_INSERT]] to <8 x i8>
@@ -530,12 +530,12 @@ float64x1_t test_vfms_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
 
 // LLVM-SAME: <1 x double> {{.*}} [[A:%.*]], <1 x double> {{.*}} [[B:%.*]], <1 x double> {{.*}} [[V:%.*]]) {{.*}} {
 // LLVM:      [[A_I:%.*]] = bitcast <1 x double> [[A]] to i64
-// LLVM-NEXT: [[A_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[A_I]], i32 0
+// LLVM-NEXT: [[A_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[A_I]], i64 0
 // LLVM-NEXT: [[NEG:%.*]] = fneg <1 x double> [[B]]
 // LLVM-NEXT: [[B_I:%.*]] = bitcast <1 x double> [[NEG]] to i64
-// LLVM-NEXT: [[B_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[B_I]], i32 0
+// LLVM-NEXT: [[B_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[B_I]], i64 0
 // LLVM-NEXT: [[V_I:%.*]] = bitcast <1 x double> [[V]] to i64
-// LLVM-NEXT: [[V_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[V_I]], i32 0
+// LLVM-NEXT: [[V_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[V_I]], i64 0
 // LLVM-NEXT: [[A_BYTES:%.*]] = bitcast <1 x i64> [[A_INSERT]] to <8 x i8>
 // LLVM-NEXT: [[B_BYTES:%.*]] = bitcast <1 x i64> [[B_INSERT]] to <8 x i8>
 // LLVM-NEXT: [[V_BYTES:%.*]] = bitcast <1 x i64> [[V_INSERT]] to <8 x i8>
@@ -608,7 +608,7 @@ float64x2_t test_vfmsq_lane_f64(float64x2_t a, float64x2_t b,
 // LLVM-NEXT: [[NEG:%.*]] = fneg <2 x double> [[B]]
 // LLVM-NEXT: [[B_I:%.*]] = bitcast <2 x double> [[NEG]] to <2 x i64>
 // LLVM-NEXT: [[V_I:%.*]] = bitcast <1 x double> [[V]] to i64
-// LLVM-NEXT: [[V_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[V_I]], i32 0
+// LLVM-NEXT: [[V_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[V_I]], i64 0
 // LLVM-NEXT: [[A_BYTES:%.*]] = bitcast <2 x i64> [[A_I]] to <16 x i8>
 // LLVM-NEXT: [[B_BYTES:%.*]] = bitcast <2 x i64> [[B_I]] to <16 x i8>
 // LLVM-NEXT: [[V_BYTES:%.*]] = bitcast <1 x i64> [[V_INSERT]] to <8 x i8>
@@ -678,10 +678,10 @@ float64x1_t test_vfms_laneq_f64(float64x1_t a, float64x1_t b,
 
 // LLVM-SAME: <1 x double> {{.*}} [[A:%.*]], <1 x double> {{.*}} [[B:%.*]], <2 x double> {{.*}} [[V:%.*]]) {{.*}} {
 // LLVM:      [[A_I:%.*]] = bitcast <1 x double> [[A]] to i64
-// LLVM-NEXT: [[A_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[A_I]], i32 0
+// LLVM-NEXT: [[A_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[A_I]], i64 0
 // LLVM-NEXT: [[NEG:%.*]] = fneg <1 x double> [[B]]
 // LLVM-NEXT: [[B_I:%.*]] = bitcast <1 x double> [[NEG]] to i64
-// LLVM-NEXT: [[B_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[B_I]], i32 0
+// LLVM-NEXT: [[B_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[B_I]], i64 0
 // LLVM-NEXT: [[V_I:%.*]] = bitcast <2 x double> [[V]] to <2 x i64>
 // LLVM-NEXT: [[A_BYTES:%.*]] = bitcast <1 x i64> [[A_INSERT]] to <8 x i8>
 // LLVM-NEXT: [[B_BYTES:%.*]] = bitcast <1 x i64> [[B_INSERT]] to <8 x i8>

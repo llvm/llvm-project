@@ -20,6 +20,7 @@ add_orc_rt_unittest(CoreTests
   SimpleSymbolTableTest.cpp
   EndianTest.cpp
   ErrorCAPITest.cpp
+  CommandLineTest.cpp
   ErrorTest.cpp
   ErrorExceptionInteropTest.cpp
   ExecutorAddressTest.cpp

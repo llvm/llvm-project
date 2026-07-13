@@ -110,9 +110,9 @@ void extractAndAddSummaries(TUSummaryExtractor &Extractor,
   findContributors(Ctx, Contributors);
   for (const auto &[Cano, Decls] : Contributors) {
     assert(!Decls.empty() &&
-           "'findContributors' guarantess that 'Decls' are non-empty");
+           "'findContributors' guarantees that 'Decls' are non-empty");
     assert(!Decls[0]->isImplicit() &&
-           "'findContributors' guarantess that 'Decls' are non-implicit");
+           "'findContributors' guarantees that 'Decls' are non-implicit");
 
     // Templates are skipped, but their instantiations are handled. The idea
     // is that we can conclude facts about a template through all of its

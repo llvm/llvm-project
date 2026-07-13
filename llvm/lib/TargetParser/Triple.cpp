@@ -422,37 +422,10 @@ StringRef Triple::getVendorTypeName(VendorType Kind) {
   switch (Kind) {
   case UnknownVendor:
     return "unknown";
-
-  case AMD:
-    return "amd";
-  case Apple:
-    return "apple";
-  case CSR:
-    return "csr";
-  case Freescale:
-    return "fsl";
-  case IBM:
-    return "ibm";
-  case ImaginationTechnologies:
-    return "img";
-  case Intel:
-    return "intel";
-  case Mesa:
-    return "mesa";
-  case MipsTechnologies:
-    return "mti";
-  case NVIDIA:
-    return "nvidia";
-  case OpenEmbedded:
-    return "oe";
-  case PC:
-    return "pc";
-  case SCEI:
-    return "scei";
-  case SUSE:
-    return "suse";
-  case Meta:
-    return "meta";
+#define TRIPLE_VENDOR(Enum, Name)                                              \
+  case Enum:                                                                   \
+    return Name;
+#include "llvm/TargetParser/TripleName.def"
   }
 
   llvm_unreachable("Invalid VendorType!");
@@ -462,105 +435,10 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   switch (Kind) {
   case UnknownOS:
     return "unknown";
-
-  case AIX:
-    return "aix";
-  case AMDHSA:
-    return "amdhsa";
-  case AMDPAL:
-    return "amdpal";
-  case BridgeOS:
-    return "bridgeos";
-  case CUDA:
-    return "cuda";
-  case Darwin:
-    return "darwin";
-  case DragonFly:
-    return "dragonfly";
-  case DriverKit:
-    return "driverkit";
-  case ELFIAMCU:
-    return "elfiamcu";
-  case Emscripten:
-    return "emscripten";
-  case FreeBSD:
-    return "freebsd";
-  case Fuchsia:
-    return "fuchsia";
-  case Haiku:
-    return "haiku";
-  case HermitCore:
-    return "hermit";
-  case Hurd:
-    return "hurd";
-  case IOS:
-    return "ios";
-  case KFreeBSD:
-    return "kfreebsd";
-  case Linux:
-    return "linux";
-  case Lv2:
-    return "lv2";
-  case MacOSX:
-    return "macosx";
-  case Managarm:
-    return "managarm";
-  case Mesa3D:
-    return "mesa3d";
-  case NVCL:
-    return "nvcl";
-  case NetBSD:
-    return "netbsd";
-  case OpenBSD:
-    return "openbsd";
-  case PS4:
-    return "ps4";
-  case PS5:
-    return "ps5";
-  case RTEMS:
-    return "rtems";
-  case Solaris:
-    return "solaris";
-  case Serenity:
-    return "serenity";
-  case TvOS:
-    return "tvos";
-  case UEFI:
-    return "uefi";
-  case WASI:
-    return "wasi";
-  case WASIp1:
-    return "wasip1";
-  case WASIp2:
-    return "wasip2";
-  case WASIp3:
-    return "wasip3";
-  case WatchOS:
-    return "watchos";
-  case Win32:
-    return "windows";
-  case ZOS:
-    return "zos";
-  case ShaderModel:
-    return "shadermodel";
-  case LiteOS:
-    return "liteos";
-  case XROS:
-    return "xros";
-  case Vulkan:
-    return "vulkan";
-  case CheriotRTOS:
-    return "cheriotrtos";
-  case OpenCL:
-    return "opencl";
-  case ChipStar:
-    return "chipstar";
-  case Firmware:
-    return "firmware";
-  case QURT:
-    return "qurt";
-  case H2:
-    return "h2";
+#define TRIPLE_OS(Enum, Name)                                                  \
+  case Enum:                                                                   \
+    return Name;
+#include "llvm/TargetParser/TripleName.def"
   }
 
   llvm_unreachable("Invalid OSType");
@@ -570,112 +448,10 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   switch (Kind) {
   case UnknownEnvironment:
     return "unknown";
-  case Android:
-    return "android";
-  case CODE16:
-    return "code16";
-  case CoreCLR:
-    return "coreclr";
-  case Cygnus:
-    return "cygnus";
-  case EABI:
-    return "eabi";
-  case EABIHF:
-    return "eabihf";
-  case GNU:
-    return "gnu";
-  case GNUT64:
-    return "gnut64";
-  case GNUABI64:
-    return "gnuabi64";
-  case GNUABIN32:
-    return "gnuabin32";
-  case GNUEABI:
-    return "gnueabi";
-  case GNUEABIT64:
-    return "gnueabit64";
-  case GNUEABIHF:
-    return "gnueabihf";
-  case GNUEABIHFT64:
-    return "gnueabihft64";
-  case GNUF32:
-    return "gnuf32";
-  case GNUF64:
-    return "gnuf64";
-  case GNUSF:
-    return "gnusf";
-  case GNUX32:
-    return "gnux32";
-  case GNUILP32:
-    return "gnu_ilp32";
-  case Itanium:
-    return "itanium";
-  case MSVC:
-    return "msvc";
-  case MacABI:
-    return "macabi";
-  case Musl:
-    return "musl";
-  case MuslABIN32:
-    return "muslabin32";
-  case MuslABI64:
-    return "muslabi64";
-  case MuslEABI:
-    return "musleabi";
-  case MuslEABIHF:
-    return "musleabihf";
-  case MuslF32:
-    return "muslf32";
-  case MuslSF:
-    return "muslsf";
-  case MuslX32:
-    return "muslx32";
-  case MuslWALI:
-    return "muslwali";
-  case Simulator:
-    return "simulator";
-  case Pixel:
-    return "pixel";
-  case Vertex:
-    return "vertex";
-  case Geometry:
-    return "geometry";
-  case Hull:
-    return "hull";
-  case Domain:
-    return "domain";
-  case Compute:
-    return "compute";
-  case Library:
-    return "library";
-  case RayGeneration:
-    return "raygeneration";
-  case Intersection:
-    return "intersection";
-  case AnyHit:
-    return "anyhit";
-  case ClosestHit:
-    return "closesthit";
-  case Miss:
-    return "miss";
-  case Callable:
-    return "callable";
-  case Mesh:
-    return "mesh";
-  case Amplification:
-    return "amplification";
-  case RootSignature:
-    return "rootsignature";
-  case OpenHOS:
-    return "ohos";
-  case PAuthTest:
-    return "pauthtest";
-  case MTIA:
-    return "mtia";
-  case LLVM:
-    return "llvm";
-  case Mlibc:
-    return "mlibc";
+#define TRIPLE_ENV(Enum, Name)                                                 \
+  case Enum:                                                                   \
+    return Name;
+#include "llvm/TargetParser/TripleName.def"
   }
 
   llvm_unreachable("Invalid EnvironmentType!");
@@ -962,136 +738,24 @@ Triple::ArchType Triple::parseArch(StringRef ArchName) {
 
 static Triple::VendorType parseVendor(StringRef VendorName) {
   return StringSwitch<Triple::VendorType>(VendorName)
-      .Case("apple", Triple::Apple)
-      .Case("pc", Triple::PC)
-      .Case("scei", Triple::SCEI)
-      .Case("sie", Triple::SCEI)
-      .Case("fsl", Triple::Freescale)
-      .Case("ibm", Triple::IBM)
-      .Case("img", Triple::ImaginationTechnologies)
-      .Case("mti", Triple::MipsTechnologies)
-      .Case("nvidia", Triple::NVIDIA)
-      .Case("csr", Triple::CSR)
-      .Case("amd", Triple::AMD)
-      .Case("mesa", Triple::Mesa)
-      .Case("suse", Triple::SUSE)
-      .Case("oe", Triple::OpenEmbedded)
-      .Case("intel", Triple::Intel)
-      .Case("meta", Triple::Meta)
+#define TRIPLE_VENDOR(Enum, Name) .Case(Name, Triple::Enum)
+#define TRIPLE_VENDOR_ALIAS(Enum, AliasName) .Case(AliasName, Triple::Enum)
+#include "llvm/TargetParser/TripleName.def"
       .Default(Triple::UnknownVendor);
 }
 
 static Triple::OSType parseOS(StringRef OSName) {
   return StringSwitch<Triple::OSType>(OSName)
-      .StartsWith("darwin", Triple::Darwin)
-      .StartsWith("dragonfly", Triple::DragonFly)
-      .StartsWith("freebsd", Triple::FreeBSD)
-      .StartsWith("fuchsia", Triple::Fuchsia)
-      .StartsWith("ios", Triple::IOS)
-      .StartsWith("kfreebsd", Triple::KFreeBSD)
-      .StartsWith("linux", Triple::Linux)
-      .StartsWith("lv2", Triple::Lv2)
-      .StartsWith("macos", Triple::MacOSX)
-      .StartsWith("managarm", Triple::Managarm)
-      .StartsWith("netbsd", Triple::NetBSD)
-      .StartsWith("openbsd", Triple::OpenBSD)
-      .StartsWith("solaris", Triple::Solaris)
-      .StartsWith("uefi", Triple::UEFI)
-      .StartsWith("win32", Triple::Win32)
-      .StartsWith("windows", Triple::Win32)
-      .StartsWith("zos", Triple::ZOS)
-      .StartsWith("haiku", Triple::Haiku)
-      .StartsWith("rtems", Triple::RTEMS)
-      .StartsWith("aix", Triple::AIX)
-      .StartsWith("cuda", Triple::CUDA)
-      .StartsWith("nvcl", Triple::NVCL)
-      .StartsWith("amdhsa", Triple::AMDHSA)
-      .StartsWith("ps4", Triple::PS4)
-      .StartsWith("ps5", Triple::PS5)
-      .StartsWith("elfiamcu", Triple::ELFIAMCU)
-      .StartsWith("tvos", Triple::TvOS)
-      .StartsWith("watchos", Triple::WatchOS)
-      .StartsWith("bridgeos", Triple::BridgeOS)
-      .StartsWith("driverkit", Triple::DriverKit)
-      .StartsWith("xros", Triple::XROS)
-      .StartsWith("visionos", Triple::XROS)
-      .StartsWith("mesa3d", Triple::Mesa3D)
-      .StartsWith("amdpal", Triple::AMDPAL)
-      .StartsWith("hermit", Triple::HermitCore)
-      .StartsWith("hurd", Triple::Hurd)
-      .StartsWith("wasip1", Triple::WASIp1)
-      .StartsWith("wasip2", Triple::WASIp2)
-      .StartsWith("wasip3", Triple::WASIp3)
-      .StartsWith("wasi", Triple::WASI)
-      .StartsWith("emscripten", Triple::Emscripten)
-      .StartsWith("shadermodel", Triple::ShaderModel)
-      .StartsWith("liteos", Triple::LiteOS)
-      .StartsWith("serenity", Triple::Serenity)
-      .StartsWith("vulkan", Triple::Vulkan)
-      .StartsWith("cheriotrtos", Triple::CheriotRTOS)
-      .StartsWith("opencl", Triple::OpenCL)
-      .StartsWith("chipstar", Triple::ChipStar)
-      .StartsWith("firmware", Triple::Firmware)
-      .StartsWith("qurt", Triple::QURT)
-      .StartsWith("h2", Triple::H2)
+#define TRIPLE_OS(Enum, Name) .StartsWith(Name, Triple::Enum)
+#define TRIPLE_OS_ALIAS(Enum, AliasName) .StartsWith(AliasName, Triple::Enum)
+#include "llvm/TargetParser/TripleName.def"
       .Default(Triple::UnknownOS);
 }
 
 static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
   return StringSwitch<Triple::EnvironmentType>(EnvironmentName)
-      .StartsWith("eabihf", Triple::EABIHF)
-      .StartsWith("eabi", Triple::EABI)
-      .StartsWith("gnuabin32", Triple::GNUABIN32)
-      .StartsWith("gnuabi64", Triple::GNUABI64)
-      .StartsWith("gnueabihft64", Triple::GNUEABIHFT64)
-      .StartsWith("gnueabihf", Triple::GNUEABIHF)
-      .StartsWith("gnueabit64", Triple::GNUEABIT64)
-      .StartsWith("gnueabi", Triple::GNUEABI)
-      .StartsWith("gnuf32", Triple::GNUF32)
-      .StartsWith("gnuf64", Triple::GNUF64)
-      .StartsWith("gnusf", Triple::GNUSF)
-      .StartsWith("gnux32", Triple::GNUX32)
-      .StartsWith("gnu_ilp32", Triple::GNUILP32)
-      .StartsWith("code16", Triple::CODE16)
-      .StartsWith("gnut64", Triple::GNUT64)
-      .StartsWith("gnu", Triple::GNU)
-      .StartsWith("android", Triple::Android)
-      .StartsWith("muslabin32", Triple::MuslABIN32)
-      .StartsWith("muslabi64", Triple::MuslABI64)
-      .StartsWith("musleabihf", Triple::MuslEABIHF)
-      .StartsWith("musleabi", Triple::MuslEABI)
-      .StartsWith("muslf32", Triple::MuslF32)
-      .StartsWith("muslsf", Triple::MuslSF)
-      .StartsWith("muslx32", Triple::MuslX32)
-      .StartsWith("muslwali", Triple::MuslWALI)
-      .StartsWith("musl", Triple::Musl)
-      .StartsWith("msvc", Triple::MSVC)
-      .StartsWith("itanium", Triple::Itanium)
-      .StartsWith("cygnus", Triple::Cygnus)
-      .StartsWith("coreclr", Triple::CoreCLR)
-      .StartsWith("simulator", Triple::Simulator)
-      .StartsWith("macabi", Triple::MacABI)
-      .StartsWith("pixel", Triple::Pixel)
-      .StartsWith("vertex", Triple::Vertex)
-      .StartsWith("geometry", Triple::Geometry)
-      .StartsWith("hull", Triple::Hull)
-      .StartsWith("domain", Triple::Domain)
-      .StartsWith("compute", Triple::Compute)
-      .StartsWith("library", Triple::Library)
-      .StartsWith("raygeneration", Triple::RayGeneration)
-      .StartsWith("intersection", Triple::Intersection)
-      .StartsWith("anyhit", Triple::AnyHit)
-      .StartsWith("closesthit", Triple::ClosestHit)
-      .StartsWith("miss", Triple::Miss)
-      .StartsWith("callable", Triple::Callable)
-      .StartsWith("mesh", Triple::Mesh)
-      .StartsWith("amplification", Triple::Amplification)
-      .StartsWith("rootsignature", Triple::RootSignature)
-      .StartsWith("ohos", Triple::OpenHOS)
-      .StartsWith("pauthtest", Triple::PAuthTest)
-      .StartsWith("llvm", Triple::LLVM)
-      .StartsWith("mlibc", Triple::Mlibc)
-      .StartsWith("mtia", Triple::MTIA)
+#define TRIPLE_ENV(Enum, Name) .StartsWith(Name, Triple::Enum)
+#include "llvm/TargetParser/TripleName.def"
       .Default(Triple::UnknownEnvironment);
 }
 

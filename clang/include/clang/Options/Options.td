@@ -6093,6 +6093,12 @@ defm backchain : BoolMOption<"backchain",
   PosFlag<SetTrue, [], [ClangOption], "Link stack frames through backchain on System Z">,
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
 
+defm zos_ppa1_name : BoolMOption<"zos-ppa1-name",
+  CodeGenOpts<"ZOSPPA1Name">, DefaultTrue,
+  PosFlag<SetTrue, [], [], "Emit the function name in PPA1 on z/OS">,
+  NegFlag<SetFalse, [], [], "Do not emit the function name in PPA1 on z/OS">,
+  BothFlags<[TargetSpecific], [ClangOption, CC1Option]>>;
+
 def mno_warn_nonportable_cfstrings : Flag<["-"], "mno-warn-nonportable-cfstrings">, Group<m_Group>;
 def mno_omit_leaf_frame_pointer : Flag<["-"], "mno-omit-leaf-frame-pointer">, Group<m_Group>;
 def momit_leaf_frame_pointer : Flag<["-"], "momit-leaf-frame-pointer">, Group<m_Group>,
@@ -7217,6 +7223,8 @@ def mavx512bf16 : Flag<["-"], "mavx512bf16">, Group<m_x86_Features_Group>;
 def mno_avx512bf16 : Flag<["-"], "mno-avx512bf16">, Group<m_x86_Features_Group>;
 def mavx512bitalg : Flag<["-"], "mavx512bitalg">, Group<m_x86_Features_Group>;
 def mno_avx512bitalg : Flag<["-"], "mno-avx512bitalg">, Group<m_x86_Features_Group>;
+def mavx512bmm : Flag<["-"], "mavx512bmm">, Group<m_x86_Features_Group>;
+def mno_avx512bmm : Flag<["-"], "mno-avx512bmm">, Group<m_x86_Features_Group>;
 def mavx512bw : Flag<["-"], "mavx512bw">, Group<m_x86_Features_Group>;
 def mno_avx512bw : Flag<["-"], "mno-avx512bw">, Group<m_x86_Features_Group>;
 def mavx512cd : Flag<["-"], "mavx512cd">, Group<m_x86_Features_Group>;
