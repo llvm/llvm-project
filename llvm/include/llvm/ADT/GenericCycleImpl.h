@@ -314,11 +314,10 @@ void GenericCycleInfo<ContextT>::moveTopLevelCycleToNewParent(CycleT *NewParent,
   Child->TopLevelCycle = NewParent;
   for (CycleT *Cycle : depth_first(Child))
     Cycle->TopLevelCycle = NewParent;
-
-  // Blocks are not stored per cycle during construction; the shared layout is
-  // built once at the end of run(), so only the tree links change here.
-  NewParent->clearCache();
-  Child->clearCache();
+  // This only relinks the cycle tree and does NOT touch BlockLayout, so it
+  // leaves every cycle's [IdxBegin, IdxEnd) range stale, i.e. BlockLayout is
+  // left invalid. The caller must call layoutBlocks() before any
+  // range-dependent query is used.
 }
 
 template <typename ContextT>
@@ -347,7 +346,7 @@ void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleT *Cycle) {
   // Insert Block at Pos (end of Cycle's slice) and shift every later cycle's
   // range right, keyed on IdxBegin so a nested cycle sharing end == Pos is
   // left alone; Cycle and its ancestors then grow to contain it, below.
-  // FixMe: appended at the slice end, not the traversal-order middle.
+  // FIXME: appended at the slice end, not the traversal-order middle.
   unsigned Pos = Cycle->IdxEnd;
   BlockLayout.insert(BlockLayout.begin() + Pos, Block);
   for (CycleT *TLC : toplevel_cycles())
@@ -571,6 +570,8 @@ void GenericCycleInfoCompute<ContextT>::dfs(FunctionT *F, BlockT *EntryBlock) {
         Next = Succ;
         break;
       }
+      LLVM_DEBUG(errs() << "  already visited successor: "
+                        << Info.Context.print(Succ) << "\n");
     }
     if (Next) {
       open(Next);
@@ -578,9 +579,18 @@ void GenericCycleInfoCompute<ContextT>::dfs(FunctionT *F, BlockT *EntryBlock) {
       // Top's subtree is complete. Its end counter is the largest preorder
       // number in the subtree.
       getOrInsertDFSInfo(Top.Block).End = Counter;
+      LLVM_DEBUG(errs() << "DFS block " << Info.Context.print(Top.Block)
+                        << " ended at " << Counter << "\n");
       Stack.pop_back();
     }
   }
+
+  LLVM_DEBUG({
+    errs() << "Preorder:\n";
+    for (int I = 0, E = BlockPreorder.size(); I != E; ++I)
+      errs() << "  " << Info.Context.print(BlockPreorder[I]) << ": " << I
+             << "\n";
+  });
 }
 
 /// \brief Reset the object to its initial state.
