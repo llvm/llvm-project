@@ -1,5 +1,10 @@
 // RUN: mlir-translate -no-implicit-module -split-input-file -test-spirv-roundtrip %s | FileCheck %s
 
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
 // Single loop
 
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
@@ -62,16 +67,16 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
 
 // Single loop with block arguments
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]> {
   spirv.GlobalVariable @GV1 bind(0, 0) : !spirv.ptr<!spirv.struct<(!spirv.array<10 x f32, stride=4> [0])>, StorageBuffer>
   spirv.GlobalVariable @GV2 bind(0, 1) : !spirv.ptr<!spirv.struct<(!spirv.array<10 x f32, stride=4> [0])>, StorageBuffer>
 // CHECK-LABEL: @loop_kernel
   spirv.func @loop_kernel() "None" {
     %0 = spirv.mlir.addressof @GV1 : !spirv.ptr<!spirv.struct<(!spirv.array<10 x f32, stride=4> [0])>, StorageBuffer>
     %1 = spirv.Constant 0 : i32
-    %2 = spirv.AccessChain %0[%1] : !spirv.ptr<!spirv.struct<(!spirv.array<10 x f32, stride=4> [0])>, StorageBuffer>, i32
+    %2 = spirv.AccessChain %0[%1] : !spirv.ptr<!spirv.struct<(!spirv.array<10 x f32, stride=4> [0])>, StorageBuffer>, i32 -> !spirv.ptr<!spirv.array<10 x f32, stride=4>, StorageBuffer>
     %3 = spirv.mlir.addressof @GV2 : !spirv.ptr<!spirv.struct<(!spirv.array<10 x f32, stride=4> [0])>, StorageBuffer>
-    %5 = spirv.AccessChain %3[%1] : !spirv.ptr<!spirv.struct<(!spirv.array<10 x f32, stride=4> [0])>, StorageBuffer>, i32
+    %5 = spirv.AccessChain %3[%1] : !spirv.ptr<!spirv.struct<(!spirv.array<10 x f32, stride=4> [0])>, StorageBuffer>, i32 -> !spirv.ptr<!spirv.array<10 x f32, stride=4>, StorageBuffer>
     %6 = spirv.Constant 4 : i32
     %7 = spirv.Constant 42 : i32
     %8 = spirv.Constant 2 : i32
@@ -88,9 +93,9 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
       spirv.BranchConditional %10, ^body, ^merge
 // CHECK-NEXT:   ^bb2:     // pred: ^bb1
     ^body:
-      %11 = spirv.AccessChain %2[%9] : !spirv.ptr<!spirv.array<10 x f32, stride=4>, StorageBuffer>, i32
+      %11 = spirv.AccessChain %2[%9] : !spirv.ptr<!spirv.array<10 x f32, stride=4>, StorageBuffer>, i32 -> !spirv.ptr<f32, StorageBuffer>
       %12 = spirv.Load "StorageBuffer" %11 : f32
-      %13 = spirv.AccessChain %5[%9] : !spirv.ptr<!spirv.array<10 x f32, stride=4>, StorageBuffer>, i32
+      %13 = spirv.AccessChain %5[%9] : !spirv.ptr<!spirv.array<10 x f32, stride=4>, StorageBuffer>, i32 -> !spirv.ptr<f32, StorageBuffer>
       spirv.Store "StorageBuffer" %13, %12 : f32
 // CHECK:          %[[ADD:.*]] = spirv.IAdd
       %14 = spirv.IAdd %9, %8 : i32
@@ -285,6 +290,53 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Linkage, Addre
 // CHECK-NEXT:     }
     }
 // CHECK-NEXT:     spirv.Return
+    spirv.Return
+  }
+}
+
+// -----
+
+// Loop yielding values
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
+  spirv.func @loop_yield(%count : i32) -> () "None" {
+    %zero = spirv.Constant 0: i32
+    %one = spirv.Constant 1: i32
+    %var = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+
+// CHECK: {{%.*}} = spirv.mlir.loop -> i32 {
+    %final_i = spirv.mlir.loop -> i32 {
+// CHECK-NEXT: spirv.Branch ^[[HEADER:.+]]({{%.*}}: i32)
+      spirv.Branch ^header(%zero: i32)
+
+// CHECK-NEXT: ^[[HEADER:.+]]({{%.*}}: i32):
+    ^header(%i : i32):
+      %cmp = spirv.SLessThan %i, %count : i32
+// CHECK: spirv.BranchConditional %{{.*}}, ^[[BODY:.+]], ^[[MERGE:.+]]
+      spirv.BranchConditional %cmp, ^body, ^merge
+
+// CHECK-NEXT: ^[[BODY:.+]]:
+    ^body:
+// CHECK-NEXT: spirv.Branch ^[[CONTINUE:.+]]
+      spirv.Branch ^continue
+
+// CHECK-NEXT: ^[[CONTINUE:.+]]:
+    ^continue:
+      %new_i = spirv.IAdd %i, %one : i32
+// CHECK: spirv.Branch ^[[HEADER:.+]]({{%.*}}: i32)
+      spirv.Branch ^header(%new_i: i32)
+
+// CHECK-NEXT: ^[[MERGE:.+]]:
+    ^merge:
+// CHECK-NEXT: spirv.mlir.merge {{%.*}} : i32
+      spirv.mlir.merge %i : i32
+// CHECK-NEXT: }
+    }
+
+// CHECK-NEXT: spirv.Store "Function" {{%.*}}, {{%.*}} : i32
+    spirv.Store "Function" %var, %final_i : i32
+
+// CHECK-NEXT: spirv.Return
     spirv.Return
   }
 }

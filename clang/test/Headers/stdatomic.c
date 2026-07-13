@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -std=c11 -E %s | FileCheck %s
 // RUN: %clang_cc1 -std=c11 -fms-compatibility -E %s | FileCheck %s
+// RUN: %clang_cc1 -std=c11 %s -verify
+// RUN: %clang_cc1 -x c++ -std=c++11 %s -verify
+// expected-no-diagnostics
 #include <stdatomic.h>
 
 int bool_lock_free = ATOMIC_BOOL_LOCK_FREE;
@@ -31,3 +34,5 @@ int llong_lock_free = ATOMIC_LLONG_LOCK_FREE;
 
 int pointer_lock_free = ATOMIC_POINTER_LOCK_FREE;
 // CHECK: pointer_lock_free = {{ *[012] *;}}
+
+atomic_flag f = ATOMIC_FLAG_INIT;

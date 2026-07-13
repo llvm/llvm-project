@@ -11,6 +11,7 @@
 #include "WebAssemblyDisassemblerEmitter.h"
 #include "X86DisassemblerTables.h"
 #include "X86RecognizableInstr.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -40,12 +41,13 @@ using namespace llvm::X86Disassembler;
 ///   all cases as a 64-bit instruction with only OPSIZE set.  (The XS prefix
 ///   may have effects on its execution, but does not change the instruction
 ///   returned.)  This allows considerable space savings in other tables.
-/// - Six tables (ONEBYTE_SYM, TWOBYTE_SYM, THREEBYTE38_SYM, THREEBYTE3A_SYM,
-///   THREEBYTEA6_SYM, and THREEBYTEA7_SYM contain the hierarchy that the
-///   decoder traverses while decoding an instruction.  At the lowest level of
-///   this hierarchy are instruction UIDs, 16-bit integers that can be used to
-///   uniquely identify the instruction and correspond exactly to its position
-///   in the list of CodeGenInstructions for the target.
+/// - The common opcode maps use direct context tables. The remaining sparse
+///   maps share unique rows in SPARSE_OPCODE_DECISIONS_SYM, with
+///   SPARSE_OPCODE_DECISION_INDICES_SYM mapping each sparse map and instruction
+///   context to a row. At the lowest level of this hierarchy are instruction
+///   UIDs, 16-bit integers that can be used to uniquely identify the
+///   instruction and correspond exactly to its position in the list of
+///   CodeGenInstructions for the target.
 /// - One table (INSTRUCTIONS_SYM) contains information about the operands of
 ///   each instruction and how to decode them.
 ///
@@ -94,19 +96,16 @@ using namespace llvm::X86Disassembler;
 /// X86RecognizableInstr.cpp contains the implementation for a single
 ///   instruction.
 
-static void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
-  CodeGenTarget Target(Records);
+static void emitDisassembler(const RecordKeeper &Records, raw_ostream &OS) {
+  const CodeGenTarget Target(Records);
   emitSourceFileHeader(" * " + Target.getName().str() + " Disassembler", OS);
 
   // X86 uses a custom disassembler.
   if (Target.getName() == "X86") {
     DisassemblerTables Tables;
 
-    ArrayRef<const CodeGenInstruction *> numberedInstructions =
-        Target.getInstructionsByEnumValue();
-
-    for (unsigned i = 0, e = numberedInstructions.size(); i != e; ++i)
-      RecognizableInstr::processInstr(Tables, *numberedInstructions[i], i);
+    for (const auto &[Idx, NumberedInst] : enumerate(Target.getInstructions()))
+      RecognizableInstr::processInstr(Tables, *NumberedInst, Idx);
 
     if (Tables.hasConflicts()) {
       PrintError(Target.getTargetRecord()->getLoc(), "Primary decode conflict");
@@ -121,17 +120,14 @@ static void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
   // below (which depends on a Size table-gen Record), and also uses a custom
   // disassembler.
   if (Target.getName() == "WebAssembly") {
-    emitWebAssemblyDisassemblerTables(OS, Target.getInstructionsByEnumValue());
+    emitWebAssemblyDisassemblerTables(OS, Target.getInstructions());
     return;
   }
 
-  std::string PredicateNamespace = std::string(Target.getName());
-  if (PredicateNamespace == "Thumb")
-    PredicateNamespace = "ARM";
-  EmitDecoder(Records, OS, PredicateNamespace);
+  EmitDecoder(Records, OS);
 }
 
 cl::OptionCategory DisassemblerEmitterCat("Options for -gen-disassembler");
 
-static TableGen::Emitter::Opt X("gen-disassembler", EmitDisassembler,
+static TableGen::Emitter::Opt X("gen-disassembler", emitDisassembler,
                                 "Generate disassembler");

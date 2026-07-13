@@ -102,7 +102,8 @@ struct FunctionTypeStorage : public TypeStorage {
 /// A type representing a collection of other types.
 struct TupleTypeStorage final
     : public TypeStorage,
-      public llvm::TrailingObjects<TupleTypeStorage, Type> {
+      private llvm::TrailingObjects<TupleTypeStorage, Type> {
+  friend llvm::TrailingObjects<TupleTypeStorage, Type>;
   using KeyTy = TypeRange;
 
   TupleTypeStorage(unsigned numTypes) : numElements(numTypes) {}
@@ -116,8 +117,7 @@ struct TupleTypeStorage final
     auto *result = ::new (rawMem) TupleTypeStorage(key.size());
 
     // Copy in the element types into the trailing storage.
-    std::uninitialized_copy(key.begin(), key.end(),
-                            result->getTrailingObjects<Type>());
+    llvm::uninitialized_copy(key, result->getTrailingObjects());
     return result;
   }
 
@@ -127,9 +127,7 @@ struct TupleTypeStorage final
   unsigned size() const { return numElements; }
 
   /// Return the held types.
-  ArrayRef<Type> getTypes() const {
-    return {getTrailingObjects<Type>(), size()};
-  }
+  ArrayRef<Type> getTypes() const { return getTrailingObjects(size()); }
 
   KeyTy getAsKey() const { return getTypes(); }
 

@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel < %s | FileCheck %s
 
 @foo12.d4 = internal unnamed_addr global double 0.000000e+00, align 8
 

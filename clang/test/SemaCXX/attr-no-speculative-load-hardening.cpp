@@ -16,19 +16,19 @@ struct A {
   static void mf2() __attribute__((no_speculative_load_hardening));
 };
 
-int ci [[clang::no_speculative_load_hardening]]; // expected-error {{'no_speculative_load_hardening' attribute only applies to functions}}
+int ci [[clang::no_speculative_load_hardening]]; // expected-error {{'clang::no_speculative_load_hardening' attribute only applies to functions}}
 
 [[clang::no_speculative_load_hardening]] void cf1();
-[[clang::no_speculative_load_hardening(1)]] void cf2(); // expected-error {{'no_speculative_load_hardening' attribute takes no arguments}}
+[[clang::no_speculative_load_hardening(1)]] void cf2(); // expected-error {{'clang::no_speculative_load_hardening' attribute takes no arguments}}
 
 template <typename T>
 [[clang::no_speculative_load_hardening]]
 void ctf1();
 
-int cf3(int c[[clang::no_speculative_load_hardening]], int); // expected-error {{'no_speculative_load_hardening' attribute only applies to functions}}
+int cf3(int c[[clang::no_speculative_load_hardening]], int); // expected-error {{'clang::no_speculative_load_hardening' attribute only applies to functions}}
 
 struct CA {
-  int f [[clang::no_speculative_load_hardening]];  // expected-error {{'no_speculative_load_hardening' attribute only applies to functions}}
+  int f [[clang::no_speculative_load_hardening]];  // expected-error {{'clang::no_speculative_load_hardening' attribute only applies to functions}}
   [[clang::no_speculative_load_hardening]] void mf1();
   [[clang::no_speculative_load_hardening]] static void mf2();
 };

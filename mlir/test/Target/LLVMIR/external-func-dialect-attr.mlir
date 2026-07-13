@@ -6,6 +6,6 @@
 
 module {
   llvm.func external @f() attributes { nvvm.minctasm = 10 : i32 }
-  // CHECK: !nvvm.annotations = !{![[NVVM:[0-9]+]]}
-  // CHECK: ![[NVVM]] = !{ptr @f, !"minctasm", i32 10}
+  // CHECK: declare void @f() #[[ATTRS:[0-9]+]]
+  // CHECK: attributes #[[ATTRS]] = { "nvvm.minctasm"="10" }
 }

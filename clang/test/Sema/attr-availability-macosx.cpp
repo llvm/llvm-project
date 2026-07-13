@@ -15,3 +15,16 @@ int main() {
   try_acquire_for(1); // expected-warning{{'try_acquire_for<int>' is only available on macOS 11 or newer}}
   // expected-note@-1{{enclose 'try_acquire_for<int>' in a __builtin_available check to silence this warning}}
 }
+
+namespace typename_template {
+  struct [[clang::availability(macos, introduced = 16)]] A {};
+
+  template<class T> struct B { using type = T; };
+  template <class T> struct C {
+    typename B<T>::type v;
+  };
+
+  struct [[clang::availability(macos, introduced = 16)]] D {
+    C<A> c;
+  };
+} // namespace typename_template

@@ -26,6 +26,12 @@ namespace fir::runtime {
 void genDerivedTypeInitialize(fir::FirOpBuilder &builder, mlir::Location loc,
                               mlir::Value box);
 
+/// Generate call to derived type clone initialization runtime routine to
+/// initialize \p newBox from \p box.
+void genDerivedTypeInitializeClone(fir::FirOpBuilder &builder,
+                                   mlir::Location loc, mlir::Value newBox,
+                                   mlir::Value box);
+
 /// Generate call to derived type destruction runtime routine to
 /// destroy \p box.
 void genDerivedTypeDestroy(fir::FirOpBuilder &builder, mlir::Location loc,

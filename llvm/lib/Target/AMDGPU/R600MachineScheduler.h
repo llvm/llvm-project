@@ -17,8 +17,6 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include <vector>
 
-using namespace llvm;
-
 namespace llvm {
 
 class R600InstrInfo;

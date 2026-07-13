@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Host.h"
 #include "gtest/gtest.h"
 #include <climits>
@@ -375,7 +376,6 @@ TEST_P(DumpValueFixture, Test) {
   Opts.ShowAddresses = true;
 
   Form.dump(OS, Opts);
-  OS.flush();
 
   EXPECT_EQ(Output, ExpectedResult);
 }

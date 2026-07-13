@@ -15,7 +15,7 @@ define float @select_maybe_nan_fadd(i1 %cond, float %A, float %B) {
 define float @select_fpclass_fadd(i1 %cond, float nofpclass(nan) %A, float %B) {
 ; CHECK-LABEL: @select_fpclass_fadd(
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[COND:%.*]], float [[B:%.*]], float -0.000000e+00
-; CHECK-NEXT:    [[D:%.*]] = fadd float [[C]], [[A:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = fadd float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
   %C = fadd float %A, %B
@@ -23,10 +23,54 @@ define float @select_fpclass_fadd(i1 %cond, float nofpclass(nan) %A, float %B) {
   ret float %D
 }
 
+define float @select_fpclass_fadd_ninf1(i1 %cond, float nofpclass(nan) %A, float %B) {
+; CHECK-LABEL: @select_fpclass_fadd_ninf1(
+; CHECK-NEXT:    [[C:%.*]] = select ninf i1 [[COND:%.*]], float [[B:%.*]], float -0.000000e+00
+; CHECK-NEXT:    [[D:%.*]] = fadd float [[A:%.*]], [[C]]
+; CHECK-NEXT:    ret float [[D]]
+;
+  %C = fadd ninf float %A, %B
+  %D = select i1 %cond, float %C, float %A
+  ret float %D
+}
+
+define float @select_fpclass_fadd_ninf2(i1 %cond, float nofpclass(nan) %A, float %B) {
+; CHECK-LABEL: @select_fpclass_fadd_ninf2(
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[COND:%.*]], float [[B:%.*]], float -0.000000e+00
+; CHECK-NEXT:    [[D:%.*]] = fadd float [[A:%.*]], [[C]]
+; CHECK-NEXT:    ret float [[D]]
+;
+  %C = fadd float %A, %B
+  %D = select ninf i1 %cond, float %C, float %A
+  ret float %D
+}
+
+define float @select_fpclass_fadd_ninf3(i1 %cond, float nofpclass(nan) %A, float %B) {
+; CHECK-LABEL: @select_fpclass_fadd_ninf3(
+; CHECK-NEXT:    [[C:%.*]] = select ninf i1 [[COND:%.*]], float [[B:%.*]], float -0.000000e+00
+; CHECK-NEXT:    [[D:%.*]] = fadd ninf float [[A:%.*]], [[C]]
+; CHECK-NEXT:    ret float [[D]]
+;
+  %C = fadd ninf float %A, %B
+  %D = select ninf i1 %cond, float %C, float %A
+  ret float %D
+}
+
+define float @select_fpclass_fadd_nnan_ninf(i1 %cond, float nofpclass(nan) %A, float %B) {
+; CHECK-LABEL: @select_fpclass_fadd_nnan_ninf(
+; CHECK-NEXT:    [[C:%.*]] = select nnan ninf i1 [[COND:%.*]], float [[B:%.*]], float -0.000000e+00
+; CHECK-NEXT:    [[D:%.*]] = fadd float [[A:%.*]], [[C]]
+; CHECK-NEXT:    ret float [[D]]
+;
+  %C = fadd float %A, %B
+  %D = select nnan ninf i1 %cond, float %C, float %A
+  ret float %D
+}
+
 define float @select_nnan_fadd(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_nnan_fadd(
 ; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float [[B:%.*]], float -0.000000e+00
-; CHECK-NEXT:    [[D:%.*]] = fadd float [[C]], [[A:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = fadd float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
   %C = fadd float %A, %B
@@ -37,7 +81,7 @@ define float @select_nnan_fadd(i1 %cond, float %A, float %B) {
 define float @select_nnan_fadd_swapped(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_nnan_fadd_swapped(
 ; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float -0.000000e+00, float [[B:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = fadd float [[C]], [[A:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = fadd float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
   %C = fadd float %A, %B
@@ -47,8 +91,8 @@ define float @select_nnan_fadd_swapped(i1 %cond, float %A, float %B) {
 
 define float @select_nnan_fadd_fast_math(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_nnan_fadd_fast_math(
-; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float [[B:%.*]], float -0.000000e+00
-; CHECK-NEXT:    [[D:%.*]] = fadd fast float [[C]], [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select nnan ninf i1 [[COND:%.*]], float [[B:%.*]], float -0.000000e+00
+; CHECK-NEXT:    [[D:%.*]] = fadd reassoc nnan arcp contract afn float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
   %C = fadd fast float %A, %B
@@ -58,8 +102,8 @@ define float @select_nnan_fadd_fast_math(i1 %cond, float %A, float %B) {
 
 define float @select_nnan_fadd_swapped_fast_math(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_nnan_fadd_swapped_fast_math(
-; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float -0.000000e+00, float [[B:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = fadd fast float [[C]], [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select nnan ninf i1 [[COND:%.*]], float -0.000000e+00, float [[B:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = fadd reassoc nnan arcp contract afn float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
   %C = fadd fast float %A, %B
@@ -70,7 +114,7 @@ define float @select_nnan_fadd_swapped_fast_math(i1 %cond, float %A, float %B) {
 define <4 x float> @select_nnan_nsz_fadd_v4f32(<4 x i1> %cond, <4 x float> %A, <4 x float> %B) {
 ; CHECK-LABEL: @select_nnan_nsz_fadd_v4f32(
 ; CHECK-NEXT:    [[C:%.*]] = select nnan nsz <4 x i1> [[COND:%.*]], <4 x float> [[B:%.*]], <4 x float> zeroinitializer
-; CHECK-NEXT:    [[D:%.*]] = fadd nnan nsz <4 x float> [[C]], [[A:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = fadd nnan nsz <4 x float> [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret <4 x float> [[D]]
 ;
   %C = fadd nsz nnan <4 x float> %A, %B
@@ -81,7 +125,7 @@ define <4 x float> @select_nnan_nsz_fadd_v4f32(<4 x i1> %cond, <4 x float> %A, <
 define <vscale x 4 x float> @select_nnan_nsz_fadd_nxv4f32(<vscale x 4 x i1> %cond, <vscale x 4 x float> %A, <vscale x 4 x float> %B) {
 ; CHECK-LABEL: @select_nnan_nsz_fadd_nxv4f32(
 ; CHECK-NEXT:    [[C:%.*]] = select nnan nsz <vscale x 4 x i1> [[COND:%.*]], <vscale x 4 x float> [[B:%.*]], <vscale x 4 x float> zeroinitializer
-; CHECK-NEXT:    [[D:%.*]] = fadd nnan nsz <vscale x 4 x float> [[C]], [[A:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = fadd nnan nsz <vscale x 4 x float> [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[D]]
 ;
   %C = fadd nnan nsz <vscale x 4 x float> %A, %B
@@ -92,7 +136,7 @@ define <vscale x 4 x float> @select_nnan_nsz_fadd_nxv4f32(<vscale x 4 x i1> %con
 define <vscale x 4 x float> @select_nnan_nsz_fadd_nxv4f32_swapops(<vscale x 4 x i1> %cond, <vscale x 4 x float> %A, <vscale x 4 x float> %B) {
 ; CHECK-LABEL: @select_nnan_nsz_fadd_nxv4f32_swapops(
 ; CHECK-NEXT:    [[C:%.*]] = select fast <vscale x 4 x i1> [[COND:%.*]], <vscale x 4 x float> zeroinitializer, <vscale x 4 x float> [[B:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = fadd fast <vscale x 4 x float> [[C]], [[A:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = fadd fast <vscale x 4 x float> [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[D]]
 ;
   %C = fadd fast <vscale x 4 x float> %A, %B
@@ -103,7 +147,7 @@ define <vscale x 4 x float> @select_nnan_nsz_fadd_nxv4f32_swapops(<vscale x 4 x 
 define float @select_nnan_fmul(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_nnan_fmul(
 ; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float [[B:%.*]], float 1.000000e+00
-; CHECK-NEXT:    [[D:%.*]] = fmul float [[C]], [[A:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = fmul float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
   %C = fmul float %A, %B
@@ -114,7 +158,7 @@ define float @select_nnan_fmul(i1 %cond, float %A, float %B) {
 define float @select_nnan_fmul_swapped(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_nnan_fmul_swapped(
 ; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float 1.000000e+00, float [[B:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = fmul float [[C]], [[A:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = fmul float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
   %C = fmul float %A, %B
@@ -124,8 +168,8 @@ define float @select_nnan_fmul_swapped(i1 %cond, float %A, float %B) {
 
 define float @select_nnan_fmul_fast_math(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_nnan_fmul_fast_math(
-; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float [[B:%.*]], float 1.000000e+00
-; CHECK-NEXT:    [[D:%.*]] = fmul fast float [[C]], [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select nnan ninf i1 [[COND:%.*]], float [[B:%.*]], float 1.000000e+00
+; CHECK-NEXT:    [[D:%.*]] = fmul reassoc nnan arcp contract afn float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
   %C = fmul fast float %A, %B
@@ -135,12 +179,56 @@ define float @select_nnan_fmul_fast_math(i1 %cond, float %A, float %B) {
 
 define float @select_nnan_fmul_swapped_fast_math(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_nnan_fmul_swapped_fast_math(
-; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float 1.000000e+00, float [[B:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = fmul fast float [[C]], [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select nnan ninf i1 [[COND:%.*]], float 1.000000e+00, float [[B:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = fmul reassoc nnan arcp contract afn float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
   %C = fmul fast float %A, %B
   %D = select nnan i1 %cond, float %A, float %C
+  ret float %D
+}
+
+define float @select_fpclass_fmul_ninf1(i1 %cond, float nofpclass(nan) %A, float %B) {
+; CHECK-LABEL: @select_fpclass_fmul_ninf1(
+; CHECK-NEXT:    [[C:%.*]] = select ninf i1 [[COND:%.*]], float [[B:%.*]], float 1.000000e+00
+; CHECK-NEXT:    [[D:%.*]] = fmul float [[A:%.*]], [[C]]
+; CHECK-NEXT:    ret float [[D]]
+;
+  %C = fmul ninf float %A, %B
+  %D = select i1 %cond, float %C, float %A
+  ret float %D
+}
+
+define float @select_fpclass_fmul_ninf2(i1 %cond, float nofpclass(nan) %A, float %B) {
+; CHECK-LABEL: @select_fpclass_fmul_ninf2(
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[COND:%.*]], float [[B:%.*]], float 1.000000e+00
+; CHECK-NEXT:    [[D:%.*]] = fmul float [[A:%.*]], [[C]]
+; CHECK-NEXT:    ret float [[D]]
+;
+  %C = fmul float %A, %B
+  %D = select ninf i1 %cond, float %C, float %A
+  ret float %D
+}
+
+define float @select_fpclass_fmul_ninf3(i1 %cond, float nofpclass(nan) %A, float %B) {
+; CHECK-LABEL: @select_fpclass_fmul_ninf3(
+; CHECK-NEXT:    [[C:%.*]] = select ninf i1 [[COND:%.*]], float [[B:%.*]], float 1.000000e+00
+; CHECK-NEXT:    [[D:%.*]] = fmul ninf float [[A:%.*]], [[C]]
+; CHECK-NEXT:    ret float [[D]]
+;
+  %C = fmul ninf float %A, %B
+  %D = select ninf i1 %cond, float %C, float %A
+  ret float %D
+}
+
+define float @select_fpclass_fmul_nnan_ninf(i1 %cond, float nofpclass(nan) %A, float %B) {
+; CHECK-LABEL: @select_fpclass_fmul_nnan_ninf(
+; CHECK-NEXT:    [[C:%.*]] = select nnan ninf i1 [[COND:%.*]], float [[B:%.*]], float 1.000000e+00
+; CHECK-NEXT:    [[D:%.*]] = fmul float [[A:%.*]], [[C]]
+; CHECK-NEXT:    ret float [[D]]
+;
+  %C = fmul float %A, %B
+  %D = select nnan ninf i1 %cond, float %C, float %A
   ret float %D
 }
 
@@ -168,8 +256,8 @@ define float @select_nnan_fsub_swapped(i1 %cond, float %A, float %B) {
 
 define float @select_nnan_fsub_fast_math(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_nnan_fsub_fast_math(
-; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float [[B:%.*]], float 0.000000e+00
-; CHECK-NEXT:    [[D:%.*]] = fsub fast float [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[C:%.*]] = select nnan ninf i1 [[COND:%.*]], float [[B:%.*]], float 0.000000e+00
+; CHECK-NEXT:    [[D:%.*]] = fsub reassoc nnan arcp contract afn float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
   %C = fsub fast float %A, %B
@@ -179,12 +267,56 @@ define float @select_nnan_fsub_fast_math(i1 %cond, float %A, float %B) {
 
 define float @select_nnan_fsub_swapped_fast_math(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_nnan_fsub_swapped_fast_math(
-; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float 0.000000e+00, float [[B:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = fsub fast float [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[C:%.*]] = select nnan ninf i1 [[COND:%.*]], float 0.000000e+00, float [[B:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = fsub reassoc nnan arcp contract afn float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
   %C = fsub fast float %A, %B
   %D = select nnan i1 %cond, float %A, float %C
+  ret float %D
+}
+
+define float @select_fpclass_fsub_ninf1(i1 %cond, float nofpclass(nan) %A, float %B) {
+; CHECK-LABEL: @select_fpclass_fsub_ninf1(
+; CHECK-NEXT:    [[C:%.*]] = select ninf i1 [[COND:%.*]], float [[B:%.*]], float 0.000000e+00
+; CHECK-NEXT:    [[D:%.*]] = fsub float [[A:%.*]], [[C]]
+; CHECK-NEXT:    ret float [[D]]
+;
+  %C = fsub ninf float %A, %B
+  %D = select i1 %cond, float %C, float %A
+  ret float %D
+}
+
+define float @select_fpclass_fsub_ninf2(i1 %cond, float nofpclass(nan) %A, float %B) {
+; CHECK-LABEL: @select_fpclass_fsub_ninf2(
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[COND:%.*]], float [[B:%.*]], float 0.000000e+00
+; CHECK-NEXT:    [[D:%.*]] = fsub float [[A:%.*]], [[C]]
+; CHECK-NEXT:    ret float [[D]]
+;
+  %C = fsub float %A, %B
+  %D = select ninf i1 %cond, float %C, float %A
+  ret float %D
+}
+
+define float @select_fpclass_fsub_ninf3(i1 %cond, float nofpclass(nan) %A, float %B) {
+; CHECK-LABEL: @select_fpclass_fsub_ninf3(
+; CHECK-NEXT:    [[C:%.*]] = select ninf i1 [[COND:%.*]], float [[B:%.*]], float 0.000000e+00
+; CHECK-NEXT:    [[D:%.*]] = fsub ninf float [[A:%.*]], [[C]]
+; CHECK-NEXT:    ret float [[D]]
+;
+  %C = fsub ninf float %A, %B
+  %D = select ninf i1 %cond, float %C, float %A
+  ret float %D
+}
+
+define float @select_fpclass_fsub_nnan_ninf(i1 %cond, float nofpclass(nan) %A, float %B) {
+; CHECK-LABEL: @select_fpclass_fsub_nnan_ninf(
+; CHECK-NEXT:    [[C:%.*]] = select nnan ninf i1 [[COND:%.*]], float [[B:%.*]], float 0.000000e+00
+; CHECK-NEXT:    [[D:%.*]] = fsub float [[A:%.*]], [[C]]
+; CHECK-NEXT:    ret float [[D]]
+;
+  %C = fsub float %A, %B
+  %D = select nnan ninf i1 %cond, float %C, float %A
   ret float %D
 }
 
@@ -246,8 +378,8 @@ define float @select_nnan_fdiv_swapped(i1 %cond, float %A, float %B) {
 
 define float @select_nnan_fdiv_fast_math(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_nnan_fdiv_fast_math(
-; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float [[B:%.*]], float 1.000000e+00
-; CHECK-NEXT:    [[D:%.*]] = fdiv fast float [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[C:%.*]] = select nnan ninf i1 [[COND:%.*]], float [[B:%.*]], float 1.000000e+00
+; CHECK-NEXT:    [[D:%.*]] = fdiv reassoc nnan arcp contract afn float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
   %C = fdiv fast float %A, %B
@@ -257,8 +389,8 @@ define float @select_nnan_fdiv_fast_math(i1 %cond, float %A, float %B) {
 
 define float @select_nnan_fdiv_swapped_fast_math(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_nnan_fdiv_swapped_fast_math(
-; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float 1.000000e+00, float [[B:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = fdiv fast float [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[C:%.*]] = select nnan ninf i1 [[COND:%.*]], float 1.000000e+00, float [[B:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = fdiv reassoc nnan arcp contract afn float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
   %C = fdiv fast float %A, %B
@@ -275,5 +407,16 @@ define float @select_nnan_fdiv_invalid(i1 %cond, float %A, float %B) {
 ;
   %C = fdiv float %B, %A
   %D = select nnan i1 %cond, float %C, float %A
+  ret float %D
+}
+
+define float @select_fpclass_fdiv_nnan_ninf(i1 %cond, float %A, float %B) {
+; CHECK-LABEL: @select_fpclass_fdiv_nnan_ninf(
+; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float [[B:%.*]], float 1.000000e+00
+; CHECK-NEXT:    [[D:%.*]] = fdiv float [[A:%.*]], [[C]]
+; CHECK-NEXT:    ret float [[D]]
+;
+  %C = fdiv float %A, %B
+  %D = select ninf nnan i1 %cond, float %C, float %A
   ret float %D
 }

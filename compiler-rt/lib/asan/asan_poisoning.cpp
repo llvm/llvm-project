@@ -18,11 +18,60 @@
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_interface_internal.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#include "sanitizer_common/sanitizer_ring_buffer.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 
 namespace __asan {
 
+using PoisonRecordRingBuffer = RingBuffer<PoisonRecord>;
+
 static atomic_uint8_t can_poison_memory;
+
+static Mutex poison_records_mutex;
+static PoisonRecordRingBuffer *poison_records
+    SANITIZER_GUARDED_BY(poison_records_mutex) = nullptr;
+
+void AddPoisonRecord(const PoisonRecord &new_record) {
+  if (flags()->poison_history_size <= 0)
+    return;
+
+  GenericScopedLock<Mutex> l(&poison_records_mutex);
+
+  if (poison_records == nullptr)
+    poison_records = PoisonRecordRingBuffer::New(flags()->poison_history_size);
+
+  poison_records->push(new_record);
+}
+
+bool FindPoisonRecord(uptr addr, PoisonRecord& match, bool& is_full) {
+  if (flags()->poison_history_size <= 0)
+    return false;
+
+  GenericScopedLock<Mutex> l(&poison_records_mutex);
+
+  const uptr records_count = poison_records ? poison_records->size() : 0;
+  is_full = records_count >= static_cast<uptr>(flags()->poison_history_size);
+
+  for (uptr i = 0; i < records_count; i++) {
+    PoisonRecord record = (*poison_records)[i];
+    if (record.begin <= addr && addr < record.end) {
+      internal_memcpy(&match, &record, sizeof(record));
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void SANITIZER_ACQUIRE(poison_records_mutex) AcquirePoisonRecords() {
+  poison_records_mutex.Lock();
+}
+
+void SANITIZER_RELEASE(poison_records_mutex) ReleasePoisonRecords() {
+  poison_records_mutex.Unlock();
+}
 
 void SetCanPoisonMemory(bool value) {
   atomic_store(&can_poison_memory, value, memory_order_release);
@@ -90,6 +139,22 @@ void AsanPoisonOrUnpoisonIntraObjectRedzone(uptr ptr, uptr size, bool poison) {
 // ---------------------- Interface ---------------- {{{1
 using namespace __asan;
 
+static void RecordPoison(uptr beg_addr, uptr end_addr) {
+  if (LIKELY(beg_addr >= end_addr || flags()->poison_history_size == 0))
+    return;
+  GET_STACK_TRACE(/*max_size=*/16, /*fast=*/false);
+  u32 current_tid = GetCurrentTidOrInvalid();
+
+  u32 stack_id = StackDepotPut(stack);
+
+  PoisonRecord record;
+  record.stack_id = stack_id;
+  record.thread_id = current_tid;
+  record.begin = beg_addr;
+  record.end = end_addr;
+  AddPoisonRecord(record);
+}
+
 // Current implementation of __asan_(un)poison_memory_region doesn't check
 // that user program (un)poisons the memory it owns. It poisons memory
 // conservatively, and unpoisons progressively to make sure asan shadow
@@ -106,6 +171,9 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
   uptr end_addr = beg_addr + size;
   VPrintf(3, "Trying to poison memory region [%p, %p)\n", (void *)beg_addr,
           (void *)end_addr);
+
+  RecordPoison(beg_addr, end_addr);
+
   ShadowSegmentEndpoint beg(beg_addr);
   ShadowSegmentEndpoint end(end_addr);
   if (beg.chunk == end.chunk) {
@@ -146,6 +214,11 @@ void __asan_unpoison_memory_region(void const volatile *addr, uptr size) {
   uptr end_addr = beg_addr + size;
   VPrintf(3, "Trying to unpoison memory region [%p, %p)\n", (void *)beg_addr,
           (void *)end_addr);
+
+  // Note: we don't need to update the poison tracking here. Since the shadow
+  // memory will be unpoisoned, the poison tracking ring buffer entries will be
+  // ignored.
+
   ShadowSegmentEndpoint beg(beg_addr);
   ShadowSegmentEndpoint end(end_addr);
   if (beg.chunk == end.chunk) {
@@ -173,27 +246,31 @@ int __asan_address_is_poisoned(void const volatile *addr) {
 uptr __asan_region_is_poisoned(uptr beg, uptr size) {
   if (!size)
     return 0;
-  uptr end = beg + size;
+  uptr last = beg + size - 1;
   if (!AddrIsInMem(beg))
     return beg;
-  if (!AddrIsInMem(end))
-    return end;
-  CHECK_LT(beg, end);
-  uptr aligned_b = RoundUpTo(beg, ASAN_SHADOW_GRANULARITY);
-  uptr aligned_e = RoundDownTo(end, ASAN_SHADOW_GRANULARITY);
-  uptr shadow_beg = MemToShadow(aligned_b);
-  uptr shadow_end = MemToShadow(aligned_e);
-  // First check the first and the last application bytes,
-  // then check the ASAN_SHADOW_GRANULARITY-aligned region by calling
-  // mem_is_zero on the corresponding shadow.
-  if (!__asan::AddressIsPoisoned(beg) && !__asan::AddressIsPoisoned(end - 1) &&
-      (shadow_end <= shadow_beg ||
-       __sanitizer::mem_is_zero((const char *)shadow_beg,
-                                shadow_end - shadow_beg)))
-    return 0;
+  if (!AddrIsInMem(last))
+    return last;
+  CHECK_LE(beg, last);
+  // First check the last application byte, i.e. last granule, then check
+  // the ASAN_SHADOW_GRANULARITY-aligned region by calling mem_is_zero
+  // on the corresponding shadow (first granule is fully checked).
+  if (!__asan::AddressIsPoisoned(last)) {
+    uptr aligned_b = RoundDownTo(beg, ASAN_SHADOW_GRANULARITY);
+    uptr aligned_e = RoundDownTo(last, ASAN_SHADOW_GRANULARITY);
+    if (aligned_b == aligned_e)  // one granule case => last check is enough.
+      return 0;
+    CHECK_LT(aligned_b, aligned_e);
+    uptr shadow_beg = MemToShadow(aligned_b);
+    uptr shadow_end = MemToShadow(aligned_e);
+    CHECK_LT(shadow_beg, shadow_end);
+    if (__sanitizer::mem_is_zero((const char*)shadow_beg,
+                                 shadow_end - shadow_beg))
+      return 0;
+  }
   // The fast check failed, so we have a poisoned byte somewhere.
   // Find it slowly.
-  for (; beg < end; beg++)
+  for (; beg <= last; beg++)
     if (__asan::AddressIsPoisoned(beg))
       return beg;
   UNREACHABLE("mem_is_zero returned false, but poisoned byte was not found");
@@ -410,7 +487,7 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
                                                const void *new_mid_p) {
   if (!flags()->detect_container_overflow)
     return;
-  VPrintf(2, "contiguous_container: %p %p %p %p\n", beg_p, end_p, old_mid_p,
+  VPrintf(3, "contiguous_container: %p %p %p %p\n", beg_p, end_p, old_mid_p,
           new_mid_p);
   uptr storage_beg = reinterpret_cast<uptr>(beg_p);
   uptr storage_end = reinterpret_cast<uptr>(end_p);
@@ -430,6 +507,8 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
 
   if (old_end == new_end)
     return;  // Nothing to do here.
+
+  RecordPoison(new_end, old_end);
 
   FixUnalignedStorage(storage_beg, storage_end, old_beg, old_end, new_beg,
                       new_end);
@@ -479,7 +558,7 @@ void __sanitizer_annotate_double_ended_contiguous_container(
   if (!flags()->detect_container_overflow)
     return;
 
-  VPrintf(2, "contiguous_container: %p %p %p %p %p %p\n", storage_beg_p,
+  VPrintf(3, "contiguous_container: %p %p %p %p %p %p\n", storage_beg_p,
           storage_end_p, old_container_beg_p, old_container_end_p,
           new_container_beg_p, new_container_end_p);
 
@@ -505,6 +584,9 @@ void __sanitizer_annotate_double_ended_contiguous_container(
   if ((old_beg == old_end && new_beg == new_end) ||
       (old_beg == new_beg && old_end == new_end))
     return;  // Nothing to do here.
+
+  RecordPoison(old_beg, new_beg);
+  RecordPoison(new_end, old_end);
 
   FixUnalignedStorage(storage_beg, storage_end, old_beg, old_end, new_beg,
                       new_end);

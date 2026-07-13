@@ -36,6 +36,8 @@ public:
 
   const char *GetMangledName() const;
 
+  const char *GetBaseName() const;
+
   lldb::SBInstructionList GetInstructions(lldb::SBTarget target);
 
   lldb::SBInstructionList GetInstructions(lldb::SBTarget target,
@@ -43,6 +45,8 @@ public:
 
   lldb::SBAddress GetStartAddress();
 
+  LLDB_DEPRECATED_FIXME("Not compatible with discontinuous functions.",
+                        "GetRanges()")
   lldb::SBAddress GetEndAddress();
 
   lldb::SBAddressRangeList GetRanges();

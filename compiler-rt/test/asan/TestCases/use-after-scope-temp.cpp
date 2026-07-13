@@ -1,14 +1,14 @@
-// RUN: %clangxx_asan -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan %if MSVC %{ /Od %} %else %{ -O1 %} \
+// RUN:     %s -o %t && not %run %t 2>&1 | FileCheck %s
 
+#include "defines.h"
 struct IntHolder {
   int val;
 };
 
 const IntHolder *saved;
 
-__attribute__((noinline)) void save(const IntHolder &holder) {
-  saved = &holder;
-}
+ATTRIBUTE_NOINLINE void save(const IntHolder &holder) { saved = &holder; }
 
 int main(int argc, char *argv[]) {
   save({argc});

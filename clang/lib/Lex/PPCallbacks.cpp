@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Lex/PPCallbacks.h"
-#include "clang/Basic/FileManager.h"
 
 using namespace clang;
 

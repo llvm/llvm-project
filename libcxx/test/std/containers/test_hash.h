@@ -13,17 +13,15 @@
 #include <utility>
 
 template <class T>
-class test_hash
-{
-    int data_;
+class test_hash {
+  int data_;
+
 public:
-    explicit test_hash(int data = 0) : data_(data) {}
+  explicit test_hash(int data = 0) : data_(data) {}
 
-    std::size_t operator()(const T& x) const
-        {return std::hash<T>()(x);}
+  std::size_t operator()(const T& x) const { return std::hash<T>()(x); }
 
-    bool operator==(const test_hash& c) const
-        {return data_ == c.data_;}
+  bool operator==(const test_hash& c) const { return data_ == c.data_; }
 };
 
 #endif // TEST_HASH_H

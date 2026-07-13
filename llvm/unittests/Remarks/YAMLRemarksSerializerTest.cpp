@@ -23,23 +23,23 @@
 using namespace llvm;
 
 static void check(remarks::Format SerializerFormat,
-                  remarks::SerializerMode Mode, ArrayRef<remarks::Remark> Rs,
-                  StringRef ExpectedR, std::optional<StringRef> ExpectedMeta,
+                  ArrayRef<remarks::Remark> Rs, StringRef ExpectedR,
+                  std::optional<StringRef> ExpectedMeta,
                   std::optional<remarks::StringTable> StrTab = std::nullopt) {
   std::string Buf;
   raw_string_ostream OS(Buf);
   Expected<std::unique_ptr<remarks::RemarkSerializer>> MaybeS = [&] {
     if (StrTab)
-      return createRemarkSerializer(SerializerFormat, Mode, OS,
-                                    std::move(*StrTab));
+      return createRemarkSerializer(SerializerFormat, OS, std::move(*StrTab));
     else
-      return createRemarkSerializer(SerializerFormat, Mode, OS);
+      return createRemarkSerializer(SerializerFormat, OS);
   }();
   EXPECT_FALSE(errorToBool(MaybeS.takeError()));
   std::unique_ptr<remarks::RemarkSerializer> S = std::move(*MaybeS);
 
   for (const remarks::Remark &R : Rs)
     S->emit(R);
+  S->finalize();
   EXPECT_EQ(OS.str(), ExpectedR);
 
   if (ExpectedMeta) {
@@ -54,8 +54,7 @@ static void check(remarks::Format SerializerFormat,
 static void check(remarks::Format SerializerFormat, const remarks::Remark &R,
                   StringRef ExpectedR, StringRef ExpectedMeta,
                   std::optional<remarks::StringTable> StrTab = std::nullopt) {
-  return check(SerializerFormat, remarks::SerializerMode::Separate,
-               ArrayRef(&R, &R + 1), ExpectedR, ExpectedMeta,
+  return check(SerializerFormat, ArrayRef(&R, &R + 1), ExpectedR, ExpectedMeta,
                std::move(StrTab));
 }
 
@@ -63,8 +62,7 @@ static void
 checkStandalone(remarks::Format SerializerFormat, const remarks::Remark &R,
                 StringRef ExpectedR,
                 std::optional<remarks::StringTable> StrTab = std::nullopt) {
-  return check(SerializerFormat, remarks::SerializerMode::Standalone,
-               ArrayRef(&R, &R + 1), ExpectedR,
+  return check(SerializerFormat, ArrayRef(&R, &R + 1), ExpectedR,
                /*ExpectedMeta=*/std::nullopt, std::move(StrTab));
 }
 
@@ -131,78 +129,6 @@ TEST(YAMLRemarks, SerializerRemarkStandalone) {
                 "...\n"));
 }
 
-TEST(YAMLRemarks, SerializerRemarkStrTab) {
-  remarks::Remark R;
-  R.RemarkType = remarks::Type::Missed;
-  R.PassName = "pass";
-  R.RemarkName = "name";
-  R.FunctionName = "func";
-  R.Loc = remarks::RemarkLocation{"path", 3, 4};
-  R.Hotness = 5;
-  R.Args.emplace_back();
-  R.Args.back().Key = "key";
-  R.Args.back().Val = "value";
-  R.Args.emplace_back();
-  R.Args.back().Key = "keydebug";
-  R.Args.back().Val = "valuedebug";
-  R.Args.back().Loc = remarks::RemarkLocation{"argpath", 6, 7};
-  check(remarks::Format::YAMLStrTab, R,
-        "--- !Missed\n"
-        "Pass:            0\n"
-        "Name:            1\n"
-        "DebugLoc:        { File: 3, Line: 3, Column: 4 }\n"
-        "Function:        2\n"
-        "Hotness:         5\n"
-        "Args:\n"
-        "  - key:             4\n"
-        "  - keydebug:        5\n"
-        "    DebugLoc:        { File: 6, Line: 6, Column: 7 }\n"
-        "...\n",
-        StringRef("REMARKS\0"
-                  "\0\0\0\0\0\0\0\0"
-                  "\x2d\0\0\0\0\0\0\0"
-                  "pass\0name\0func\0path\0value\0valuedebug\0argpath"
-                  "\0" EXTERNALFILETESTPATH "\0",
-                  83));
-}
-
-TEST(YAMLRemarks, SerializerRemarkParsedStrTab) {
-  StringRef StrTab("pass\0name\0func\0path\0value\0valuedebug\0argpath\0", 45);
-  remarks::Remark R;
-  R.RemarkType = remarks::Type::Missed;
-  R.PassName = "pass";
-  R.RemarkName = "name";
-  R.FunctionName = "func";
-  R.Loc = remarks::RemarkLocation{"path", 3, 4};
-  R.Hotness = 5;
-  R.Args.emplace_back();
-  R.Args.back().Key = "key";
-  R.Args.back().Val = "value";
-  R.Args.emplace_back();
-  R.Args.back().Key = "keydebug";
-  R.Args.back().Val = "valuedebug";
-  R.Args.back().Loc = remarks::RemarkLocation{"argpath", 6, 7};
-  check(remarks::Format::YAMLStrTab, R,
-        "--- !Missed\n"
-        "Pass:            0\n"
-        "Name:            1\n"
-        "DebugLoc:        { File: 3, Line: 3, Column: 4 }\n"
-        "Function:        2\n"
-        "Hotness:         5\n"
-        "Args:\n"
-        "  - key:             4\n"
-        "  - keydebug:        5\n"
-        "    DebugLoc:        { File: 6, Line: 6, Column: 7 }\n"
-        "...\n",
-        StringRef("REMARKS\0"
-                  "\0\0\0\0\0\0\0\0"
-                  "\x2d\0\0\0\0\0\0\0"
-                  "pass\0name\0func\0path\0value\0valuedebug\0argpath"
-                  "\0" EXTERNALFILETESTPATH "\0",
-                  83),
-        remarks::StringTable(remarks::ParsedStringTable(StrTab)));
-}
-
 TEST(YAMLRemarks, SerializerRemarkParsedStrTabStandaloneNoStrTab) {
   // Check that we don't use the string table even if it was provided.
   StringRef StrTab("pass\0name\0func\0path\0value\0valuedebug\0argpath\0", 45);
@@ -238,93 +164,32 @@ TEST(YAMLRemarks, SerializerRemarkParsedStrTabStandaloneNoStrTab) {
       std::move(PreFilledStrTab));
 }
 
-TEST(YAMLRemarks, SerializerRemarkParsedStrTabStandalone) {
-  StringRef StrTab("pass\0name\0func\0path\0value\0valuedebug\0argpath\0", 45);
-  remarks::ParsedStringTable ParsedStrTab(StrTab);
-  remarks::StringTable PreFilledStrTab(ParsedStrTab);
+TEST(YAMLRemarks, SerializerRemarkStringRefOOBRead) {
   remarks::Remark R;
   R.RemarkType = remarks::Type::Missed;
-  R.PassName = "pass";
-  R.RemarkName = "name";
-  R.FunctionName = "func";
-  R.Loc = remarks::RemarkLocation{"path", 3, 4};
+  R.PassName = StringRef("passAAAA", 4);
+  R.RemarkName = StringRef("nameAAAA", 4);
+  R.FunctionName = StringRef("funcAAAA", 4);
+  R.Loc = remarks::RemarkLocation{StringRef("pathAAAA", 4), 3, 4};
   R.Hotness = 5;
   R.Args.emplace_back();
-  R.Args.back().Key = "key";
-  R.Args.back().Val = "value";
+  R.Args.back().Key = StringRef("keyAAAA", 3);
+  R.Args.back().Val = StringRef("valueAAAA", 5);
   R.Args.emplace_back();
-  R.Args.back().Key = "keydebug";
-  R.Args.back().Val = "valuedebug";
-  R.Args.back().Loc = remarks::RemarkLocation{"argpath", 6, 7};
-  checkStandalone(
-      remarks::Format::YAMLStrTab, R,
-      StringRef("REMARKS\0"
-                "\0\0\0\0\0\0\0\0"
-                "\x2d\0\0\0\0\0\0\0"
-                "pass\0name\0func\0path\0value\0valuedebug\0argpath\0"
-                "--- !Missed\n"
-                "Pass:            0\n"
-                "Name:            1\n"
-                "DebugLoc:        { File: 3, Line: 3, Column: 4 }\n"
-                "Function:        2\n"
-                "Hotness:         5\n"
-                "Args:\n"
-                "  - key:             4\n"
-                "  - keydebug:        5\n"
-                "    DebugLoc:        { File: 6, Line: 6, Column: 7 }\n"
-                "...\n",
-                315),
-      std::move(PreFilledStrTab));
-}
-
-TEST(YAMLRemarks, SerializerRemarkParsedStrTabStandaloneMultipleRemarks) {
-  StringRef StrTab("pass\0name\0func\0path\0value\0valuedebug\0argpath\0", 45);
-  remarks::ParsedStringTable ParsedStrTab(StrTab);
-  remarks::StringTable PreFilledStrTab(ParsedStrTab);
-  SmallVector<remarks::Remark, 2> Rs;
-  remarks::Remark R;
-  R.RemarkType = remarks::Type::Missed;
-  R.PassName = "pass";
-  R.RemarkName = "name";
-  R.FunctionName = "func";
-  R.Loc = remarks::RemarkLocation{"path", 3, 4};
-  R.Hotness = 5;
-  R.Args.emplace_back();
-  R.Args.back().Key = "key";
-  R.Args.back().Val = "value";
-  R.Args.emplace_back();
-  R.Args.back().Key = "keydebug";
-  R.Args.back().Val = "valuedebug";
-  R.Args.back().Loc = remarks::RemarkLocation{"argpath", 6, 7};
-  Rs.emplace_back(R.clone());
-  Rs.emplace_back(std::move(R));
-  check(remarks::Format::YAMLStrTab, remarks::SerializerMode::Standalone, Rs,
-        StringRef("REMARKS\0"
-                  "\0\0\0\0\0\0\0\0"
-                  "\x2d\0\0\0\0\0\0\0"
-                  "pass\0name\0func\0path\0value\0valuedebug\0argpath\0"
+  R.Args.back().Key = StringRef("keydebugAAAA", 8);
+  R.Args.back().Val = StringRef("valuedebugAAAA", 10);
+  R.Args.back().Loc =
+      remarks::RemarkLocation{StringRef("argpathAAAA", 7), 6, 7};
+  checkStandalone(remarks::Format::YAML, R,
                   "--- !Missed\n"
-                  "Pass:            0\n"
-                  "Name:            1\n"
-                  "DebugLoc:        { File: 3, Line: 3, Column: 4 }\n"
-                  "Function:        2\n"
+                  "Pass:            pass\n"
+                  "Name:            name\n"
+                  "DebugLoc:        { File: path, Line: 3, Column: 4 }\n"
+                  "Function:        func\n"
                   "Hotness:         5\n"
                   "Args:\n"
-                  "  - key:             4\n"
-                  "  - keydebug:        5\n"
-                  "    DebugLoc:        { File: 6, Line: 6, Column: 7 }\n"
-                  "...\n"
-                  "--- !Missed\n"
-                  "Pass:            0\n"
-                  "Name:            1\n"
-                  "DebugLoc:        { File: 3, Line: 3, Column: 4 }\n"
-                  "Function:        2\n"
-                  "Hotness:         5\n"
-                  "Args:\n"
-                  "  - key:             4\n"
-                  "  - keydebug:        5\n"
-                  "    DebugLoc:        { File: 6, Line: 6, Column: 7 }\n"
-                  "...\n",
-                  561),
-        /*ExpectedMeta=*/std::nullopt, std::move(PreFilledStrTab));
+                  "  - key:             value\n"
+                  "  - keydebug:        valuedebug\n"
+                  "    DebugLoc:        { File: argpath, Line: 6, Column: 7 }\n"
+                  "...\n");
 }

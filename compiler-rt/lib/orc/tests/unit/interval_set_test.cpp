@@ -13,7 +13,7 @@
 #include "interval_set.h"
 #include "gtest/gtest.h"
 
-using namespace __orc_rt;
+using namespace orc_rt;
 
 TEST(IntervalSetTest, DefaultConstructed) {
   // Check that a default-constructed IntervalSet behaves as expected.

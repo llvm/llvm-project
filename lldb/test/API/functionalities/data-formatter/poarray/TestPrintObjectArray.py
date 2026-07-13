@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 
 class PrintObjectArrayTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @skipUnlessDarwin
     def test_print_array(self):
         """Test that expr -O -Z works"""
@@ -20,13 +22,13 @@ class PrintObjectArrayTestCase(TestBase):
     def test_print_array_no_const(self):
         """Test that expr -O -Z works"""
         disable_constant_classes = {
-            "CC": "xcrun clang",  # FIXME: Remove when flags are available upstream.
             "USE_SYSTEM_STDLIB": "1",  # See above.
             "CFLAGS_EXTRAS": "-fno-constant-nsnumber-literals "
             + "-fno-constant-nsarray-literals "
             + "-fno-constant-nsdictionary-literals",
         }
-        self.build(dictionary=disable_constant_classes)
+        # FIXME: Remove compiler when flags are available upstream.
+        self.build(dictionary=disable_constant_classes, compiler="xcrun clang")
         self.printarray_data_formatter_commands()
 
     def setUp(self):

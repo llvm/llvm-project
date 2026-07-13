@@ -11,12 +11,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-extern "C" void *registers_thread_func(void *arg) {
-  int *sync = reinterpret_cast<int *>(arg);
+int sync = 0;
+
+extern "C" void *registers_thread_func(void *) {
   void *p = malloc(1337);
   print_address("Test alloc: ", 1, p);
   fflush(stderr);
 
+  while(true) {
   // To store the pointer, choose a register which is unlikely to be reused by
   // a function call.
 #if defined(__i386__) || defined(__i686__)
@@ -60,15 +62,13 @@ extern "C" void *registers_thread_func(void *arg) {
 #else
 #error "Test is not supported on this architecture."
 #endif
-  __sync_fetch_and_xor(sync, 1);
-  while (true)
-    sched_yield();
+  __sync_fetch_and_xor(&sync, 1);
+  }
 }
 
 int main() {
-  int sync = 0;
   pthread_t thread_id;
-  int res = pthread_create(&thread_id, 0, registers_thread_func, &sync);
+  int res = pthread_create(&thread_id, 0, registers_thread_func, nullptr);
   assert(res == 0);
   while (!__sync_fetch_and_xor(&sync, 0))
     sched_yield();

@@ -323,3 +323,41 @@ func.func @iter_arg_memrefs(%in: memref<10xf32>) {
   }
   return
 }
+
+// Test affine analysis machinery to ensure it generates valid IR and doesn't
+// crash on this combination of ops.
+
+// CHECK-LABEL: @test_add_inv_or_terminal_symbol
+func.func @test_add_inv_or_terminal_symbol(%arg0: memref<9x9xi32>, %arg1: i1) {
+  %idx0 = index.constant 1
+  %29 = tensor.empty() : tensor<10xf16>
+  memref.alloca_scope {
+    %dim_30 = tensor.dim %29, %idx0 : tensor<10xf16>
+    %alloc_31 = memref.alloc(%idx0, %idx0) {alignment = 64 : i64} : memref<?x?xf16>
+    affine.for %arg3 = 0 to %dim_30 {
+      %207 = affine.load %alloc_31[%idx0, %idx0] : memref<?x?xf16>
+      affine.store %207, %alloc_31[%idx0, %idx0] : memref<?x?xf16>
+    }
+  }
+  return
+}
+
+// Ensure that outer parallel loops are taken into account when computing the
+// loop depth in dependency analysis during parallelization. With correct
+// depth, the analysis should see the inner loop as sequential due to reads and
+// writes to the same address indexed by the outer (parallel) loop.
+//
+// CHECK-LABEL: @explicit_parallel
+func.func @explicit_parallel(%arg0: memref<1x123x194xf64>, %arg5: memref<34x99x194xf64>) {
+  // CHECK: affine.parallel
+  affine.parallel (%arg7, %arg8) = (0, 0) to (85, 180) {
+    // CHECK: affine.for
+    affine.for %arg9 = 0 to 18 {
+      %0 = affine.load %arg0[0, %arg7 + 19, %arg8 + 7] : memref<1x123x194xf64>
+      %1 = affine.load %arg5[%arg9 + 8, %arg7 + 7, %arg8 + 7] : memref<34x99x194xf64>
+      %2 = arith.addf %0, %1 {fastmathFlags = #llvm.fastmath<none>} : f64
+      affine.store %1, %arg0[0, %arg7 + 19, %arg8 + 7] : memref<1x123x194xf64>
+    }
+  }
+  return
+}

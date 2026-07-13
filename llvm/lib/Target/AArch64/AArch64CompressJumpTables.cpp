@@ -19,9 +19,7 @@
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/MC/MCContext.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
@@ -32,9 +30,9 @@ STATISTIC(NumJT16, "Number of jump-tables with 2-byte entries");
 STATISTIC(NumJT32, "Number of jump-tables with 4-byte entries");
 
 namespace {
-class AArch64CompressJumpTables : public MachineFunctionPass {
-  const TargetInstrInfo *TII;
-  MachineFunction *MF;
+class AArch64CompressJumpTablesImpl {
+  const TargetInstrInfo *TII = nullptr;
+  MachineFunction *MF = nullptr;
   SmallVector<int, 8> BlockInfo;
 
   /// Returns the size of instructions in the block \p MBB, or std::nullopt if
@@ -48,29 +46,31 @@ class AArch64CompressJumpTables : public MachineFunctionPass {
   bool compressJumpTable(MachineInstr &MI, int Offset);
 
 public:
+  bool run(MachineFunction &MF);
+};
+
+class AArch64CompressJumpTablesLegacy : public MachineFunctionPass {
+public:
   static char ID;
-  AArch64CompressJumpTables() : MachineFunctionPass(ID) {
-    initializeAArch64CompressJumpTablesPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64CompressJumpTablesLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
   StringRef getPassName() const override {
     return "AArch64 Compress Jump Tables";
   }
 };
-char AArch64CompressJumpTables::ID = 0;
+char AArch64CompressJumpTablesLegacy::ID = 0;
 } // namespace
 
-INITIALIZE_PASS(AArch64CompressJumpTables, DEBUG_TYPE,
+INITIALIZE_PASS(AArch64CompressJumpTablesLegacy, DEBUG_TYPE,
                 "AArch64 compress jump tables pass", false, false)
 
 std::optional<int>
-AArch64CompressJumpTables::computeBlockSize(MachineBasicBlock &MBB) {
+AArch64CompressJumpTablesImpl::computeBlockSize(MachineBasicBlock &MBB) {
   int Size = 0;
   for (const MachineInstr &MI : MBB) {
     // Inline asm may contain some directives like .bytes which we don't
@@ -84,7 +84,7 @@ AArch64CompressJumpTables::computeBlockSize(MachineBasicBlock &MBB) {
   return Size;
 }
 
-bool AArch64CompressJumpTables::scanFunction() {
+bool AArch64CompressJumpTablesImpl::scanFunction() {
   BlockInfo.clear();
   BlockInfo.resize(MF->getNumBlockIDs());
 
@@ -106,8 +106,8 @@ bool AArch64CompressJumpTables::scanFunction() {
   return true;
 }
 
-bool AArch64CompressJumpTables::compressJumpTable(MachineInstr &MI,
-                                                  int Offset) {
+bool AArch64CompressJumpTablesImpl::compressJumpTable(MachineInstr &MI,
+                                                      int Offset) {
   if (MI.getOpcode() != AArch64::JumpTableDest32)
     return false;
 
@@ -160,7 +160,7 @@ bool AArch64CompressJumpTables::compressJumpTable(MachineInstr &MI,
   return false;
 }
 
-bool AArch64CompressJumpTables::runOnMachineFunction(MachineFunction &MFIn) {
+bool AArch64CompressJumpTablesImpl::run(MachineFunction &MFIn) {
   bool Changed = false;
   MF = &MFIn;
 
@@ -184,6 +184,22 @@ bool AArch64CompressJumpTables::runOnMachineFunction(MachineFunction &MFIn) {
   return Changed;
 }
 
+bool AArch64CompressJumpTablesLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return AArch64CompressJumpTablesImpl().run(MF);
+}
+
+PreservedAnalyses
+AArch64CompressJumpTablesPass::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
+  const bool Changed = AArch64CompressJumpTablesImpl().run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
 FunctionPass *llvm::createAArch64CompressJumpTablesPass() {
-  return new AArch64CompressJumpTables();
+  return new AArch64CompressJumpTablesLegacy();
 }

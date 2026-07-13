@@ -12,18 +12,19 @@
 
 // class set
 
-// set(initializer_list<value_type> il, const key_compare& comp, const allocator_type& a);
-// set(initializer_list<value_type> il, const allocator_type& a);
+// constexpr set(initializer_list<value_type> il, const key_compare& comp, const allocator_type& a); // constexpr since C++26
+// constexpr set(initializer_list<value_type> il, const allocator_type& a); // constexpr since C++26
 
 #include <set>
 #include <cassert>
+#include <iterator>
+
 #include "test_macros.h"
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-int main(int, char**)
-{
-    {
+TEST_CONSTEXPR_CXX26 bool test() {
+  {
     typedef test_less<int> Cmp;
     typedef test_allocator<int> A;
     typedef std::set<int, Cmp, A> C;
@@ -40,8 +41,8 @@ int main(int, char**)
     assert(*++i == V(6));
     assert(m.key_comp() == Cmp(10));
     assert(m.get_allocator() == A(4));
-    }
-    {
+  }
+  {
     typedef test_less<int> Cmp;
     typedef test_allocator<int> A;
     typedef std::set<int, Cmp, A> C;
@@ -57,7 +58,15 @@ int main(int, char**)
     assert(*++i == V(5));
     assert(*++i == V(6));
     assert(m.get_allocator() == A(4));
-    }
+  }
 
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

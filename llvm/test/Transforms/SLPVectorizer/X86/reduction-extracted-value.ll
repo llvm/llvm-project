@@ -4,19 +4,15 @@
 define i32 @foo() {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i32> zeroinitializer, i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i32> zeroinitializer, zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP4]])
+; CHECK-NEXT:    [[RDX_OP:%.*]] = mul <4 x i32> [[TMP4]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[RDX_OP]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = mul i32 0, [[TMP5]]
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = mul i32 [[OP_RDX]], 0
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = mul i32 [[TMP0]], [[TMP0]]
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = mul i32 [[TMP0]], [[TMP0]]
-; CHECK-NEXT:    [[OP_RDX4:%.*]] = mul i32 [[OP_RDX1]], [[OP_RDX2]]
-; CHECK-NEXT:    [[OP_RDX5:%.*]] = mul i32 [[OP_RDX3]], [[TMP2]]
-; CHECK-NEXT:    [[OP_RDX6:%.*]] = mul i32 [[OP_RDX4]], [[OP_RDX5]]
+; CHECK-NEXT:    [[OP_RDX6:%.*]] = mul i32 [[OP_RDX1]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[OP_RDX6]]
 ;
 bb:

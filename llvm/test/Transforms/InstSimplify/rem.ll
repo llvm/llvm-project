@@ -29,7 +29,7 @@ define <2 x i32> @zero_dividend_vector_poison_elt(<2 x i32> %A) {
 
 define <2 x i8> @srem_zero_elt_vec_constfold(<2 x i8> %x) {
 ; CHECK-LABEL: @srem_zero_elt_vec_constfold(
-; CHECK-NEXT:    ret <2 x i8> poison
+; CHECK-NEXT:    ret <2 x i8> <i8 poison, i8 2>
 ;
   %rem = srem <2 x i8> <i8 1, i8 2>, <i8 0, i8 -42>
   ret <2 x i8> %rem
@@ -37,7 +37,7 @@ define <2 x i8> @srem_zero_elt_vec_constfold(<2 x i8> %x) {
 
 define <2 x i8> @urem_zero_elt_vec_constfold(<2 x i8> %x) {
 ; CHECK-LABEL: @urem_zero_elt_vec_constfold(
-; CHECK-NEXT:    ret <2 x i8> poison
+; CHECK-NEXT:    ret <2 x i8> <i8 1, i8 poison>
 ;
   %rem = urem <2 x i8> <i8 1, i8 2>, <i8 42, i8 0>
   ret <2 x i8> %rem
@@ -45,7 +45,8 @@ define <2 x i8> @urem_zero_elt_vec_constfold(<2 x i8> %x) {
 
 define <2 x i8> @srem_zero_elt_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @srem_zero_elt_vec(
-; CHECK-NEXT:    ret <2 x i8> poison
+; CHECK-NEXT:    [[REM:%.*]] = srem <2 x i8> [[X:%.*]], <i8 -42, i8 0>
+; CHECK-NEXT:    ret <2 x i8> [[REM]]
 ;
   %rem = srem <2 x i8> %x, <i8 -42, i8 0>
   ret <2 x i8> %rem
@@ -53,7 +54,8 @@ define <2 x i8> @srem_zero_elt_vec(<2 x i8> %x) {
 
 define <2 x i8> @urem_zero_elt_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @urem_zero_elt_vec(
-; CHECK-NEXT:    ret <2 x i8> poison
+; CHECK-NEXT:    [[REM:%.*]] = urem <2 x i8> [[X:%.*]], <i8 0, i8 42>
+; CHECK-NEXT:    ret <2 x i8> [[REM]]
 ;
   %rem = urem <2 x i8> %x, <i8 0, i8 42>
   ret <2 x i8> %rem
@@ -61,7 +63,8 @@ define <2 x i8> @urem_zero_elt_vec(<2 x i8> %x) {
 
 define <2 x i8> @srem_undef_elt_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @srem_undef_elt_vec(
-; CHECK-NEXT:    ret <2 x i8> poison
+; CHECK-NEXT:    [[REM:%.*]] = srem <2 x i8> [[X:%.*]], <i8 -42, i8 undef>
+; CHECK-NEXT:    ret <2 x i8> [[REM]]
 ;
   %rem = srem <2 x i8> %x, <i8 -42, i8 undef>
   ret <2 x i8> %rem
@@ -69,7 +72,8 @@ define <2 x i8> @srem_undef_elt_vec(<2 x i8> %x) {
 
 define <2 x i8> @urem_undef_elt_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @urem_undef_elt_vec(
-; CHECK-NEXT:    ret <2 x i8> poison
+; CHECK-NEXT:    [[REM:%.*]] = urem <2 x i8> [[X:%.*]], <i8 undef, i8 42>
+; CHECK-NEXT:    ret <2 x i8> [[REM]]
 ;
   %rem = urem <2 x i8> %x, <i8 undef, i8 42>
   ret <2 x i8> %rem
@@ -501,7 +505,7 @@ define <2 x i8> @simplfy_srem_of_mul(<2 x i8> %x) {
 define <2 x i8> @simplfy_srem_of_mul_fail_bad_mod(<2 x i8> %x) {
 ; CHECK-LABEL: @simplfy_srem_of_mul_fail_bad_mod(
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw <2 x i8> [[X:%.*]], <i8 20, i8 11>
-; CHECK-NEXT:    [[R:%.*]] = srem <2 x i8> [[MUL]], <i8 5, i8 5>
+; CHECK-NEXT:    [[R:%.*]] = srem <2 x i8> [[MUL]], splat (i8 5)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %mul = mul nsw <2 x i8> %x, <i8 20, i8 11>

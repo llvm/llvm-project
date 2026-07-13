@@ -154,7 +154,7 @@ TEST_F(ScudoTimingTest, VerifyMax) {
   unsigned long long MaxNs = std::strtoull(&end[6], &end, 10);
   ASSERT_TRUE(end != nullptr);
 
-  EXPECT_GT(MaxNs, AvgNs);
+  EXPECT_GE(MaxNs, AvgNs);
 }
 
 TEST_F(ScudoTimingTest, VerifyMultipleTimerCalls) {

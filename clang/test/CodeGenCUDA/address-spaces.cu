@@ -9,7 +9,7 @@
 // CHECK: @i ={{.*}} addrspace(1) externally_initialized global
 __device__ int i;
 
-// CHECK: @j ={{.*}} addrspace(4) externally_initialized global
+// CHECK: @j ={{.*}} addrspace(4) externally_initialized constant
 __constant__ int j;
 
 // CHECK: @k ={{.*}} addrspace(3) global
@@ -68,7 +68,7 @@ __device__ void func2() {
   *ap = 1.0f;
 }
 // CHECK: define{{.*}} void @_Z5func2v()
-// CHECK: store ptr getelementptr inbounds ([256 x float], ptr addrspacecast (ptr addrspace(3) @_ZZ5func2vE1a to ptr), i{{32|64}} 0, i{{32|64}} 128), ptr %{{.*}}
+// CHECK: store ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZZ5func2vE1a to ptr), i{{32|64}} 512), ptr %{{.*}}
 
 __device__ void func3() {
   __shared__ float a;

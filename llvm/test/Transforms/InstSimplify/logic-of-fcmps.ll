@@ -426,3 +426,68 @@ define i1 @olt_implies_olt_fail(float %x, float %y) {
   %ret = and i1 %olt, %olt2
   ret i1 %ret
 }
+
+define i1 @and_ord_olt_abs(float %x, float %y) {
+; CHECK-LABEL: @and_ord_olt_abs(
+; CHECK-NEXT:    [[ABSX:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[ABSX]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %cmp1 = fcmp ord float %x, 0.000000e+00
+  %absx = call float @llvm.fabs.f32(float %x)
+  %cmp2 = fcmp olt float %absx, %y
+  %and = and i1 %cmp1, %cmp2
+  ret i1 %and
+}
+
+define i1 @and_ord_olt_abs_commuted1(float %x, float %y) {
+; CHECK-LABEL: @and_ord_olt_abs_commuted1(
+; CHECK-NEXT:    [[ABSX:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[Y:%.*]], [[ABSX]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %cmp1 = fcmp ord float %x, 0.000000e+00
+  %absx = call float @llvm.fabs.f32(float %x)
+  %cmp2 = fcmp olt float %y, %absx
+  %and = and i1 %cmp1, %cmp2
+  ret i1 %and
+}
+
+define i1 @and_ord_olt_abs_commuted2(float %x, float %y) {
+; CHECK-LABEL: @and_ord_olt_abs_commuted2(
+; CHECK-NEXT:    [[ABSX:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[ABSX]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %cmp1 = fcmp ord float %x, 0.000000e+00
+  %absx = call float @llvm.fabs.f32(float %x)
+  %cmp2 = fcmp olt float %absx, %y
+  %and = and i1 %cmp2, %cmp1
+  ret i1 %and
+}
+
+define i1 @or_ord_ult_abs(float %x, float %y) {
+; CHECK-LABEL: @or_ord_ult_abs(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp1 = fcmp ord float %x, 0.000000e+00
+  %absx = call float @llvm.fabs.f32(float %x)
+  %cmp2 = fcmp ult float %absx, %y
+  %or = or i1 %cmp1, %cmp2
+  ret i1 %or
+}
+
+define i1 @and_ord_olt_absz(float %x, float %y, float %z) {
+; CHECK-LABEL: @and_ord_olt_absz(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[ABSZ:%.*]] = call float @llvm.fabs.f32(float [[Z:%.*]])
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[ABSZ]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %cmp1 = fcmp ord float %x, 0.000000e+00
+  %absz = call float @llvm.fabs.f32(float %z)
+  %cmp2 = fcmp olt float %absz, %y
+  %and = and i1 %cmp1, %cmp2
+  ret i1 %and
+}

@@ -369,76 +369,63 @@ define i64 @func5(i64 %x, i64 %y) {
 ; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 20
-; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 32
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 28
 ; X86-NEXT:    .cfi_offset %esi, -20
 ; X86-NEXT:    .cfi_offset %edi, -16
 ; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    .cfi_offset %ebp, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    sarl $31, %edx
-; X86-NEXT:    movl %esi, %ebx
-; X86-NEXT:    movl %esi, %ebp
-; X86-NEXT:    imull %edx, %ebx
-; X86-NEXT:    mull %edx
-; X86-NEXT:    movl %edx, %esi
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    addl %eax, %esi
-; X86-NEXT:    addl %ebx, %esi
-; X86-NEXT:    movl %ebp, %eax
-; X86-NEXT:    sarl $31, %eax
-; X86-NEXT:    movl %eax, %ebp
-; X86-NEXT:    imull %ecx, %ebp
-; X86-NEXT:    mull {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %edx, %ebx
-; X86-NEXT:    addl %ebp, %ebx
-; X86-NEXT:    addl %eax, %ebx
-; X86-NEXT:    addl %edi, %eax
-; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    adcl %esi, %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    movl %ebp, %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %esi
+; X86-NEXT:    sarl $31, %esi
+; X86-NEXT:    imull %edi, %esi
 ; X86-NEXT:    mull %edi
-; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    movl %edx, %ebx
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    mull %edi
-; X86-NEXT:    movl %edx, %edi
-; X86-NEXT:    addl %eax, %esi
-; X86-NEXT:    adcl $0, %edi
-; X86-NEXT:    movl %ebp, %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    mull %edx
 ; X86-NEXT:    movl %edx, %ebp
-; X86-NEXT:    addl %eax, %esi
-; X86-NEXT:    adcl %edi, %ebp
-; X86-NEXT:    setb {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
+; X86-NEXT:    addl %eax, %ebx
+; X86-NEXT:    movl %ebx, (%esp) # 4-byte Spill
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    adcl %esi, %ebp
+; X86-NEXT:    movl %ebp, %edi
+; X86-NEXT:    sarl $31, %edi
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    sarl $31, %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    imull %eax, %esi
+; X86-NEXT:    mull %edx
+; X86-NEXT:    movl %edx, %ebx
+; X86-NEXT:    addl %eax, (%esp) # 4-byte Folded Spill
+; X86-NEXT:    adcl %esi, %ebx
+; X86-NEXT:    movl %ebx, %esi
+; X86-NEXT:    sarl $31, %esi
+; X86-NEXT:    addl %ebp, %ebx
+; X86-NEXT:    adcl %edi, %esi
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    mull {{[0-9]+}}(%esp)
-; X86-NEXT:    addl %ebp, %eax
-; X86-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 1-byte Folded Reload
-; X86-NEXT:    adcl %edi, %edx
-; X86-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
-; X86-NEXT:    adcl %ebx, %edx
-; X86-NEXT:    movl %esi, %ebx
-; X86-NEXT:    sarl $31, %ebx
-; X86-NEXT:    xorl %ebx, %edx
-; X86-NEXT:    xorl %eax, %ebx
-; X86-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-NEXT:    imull %ebp
+; X86-NEXT:    addl %ebx, %eax
+; X86-NEXT:    adcl %esi, %edx
+; X86-NEXT:    movl (%esp), %edi # 4-byte Reload
+; X86-NEXT:    movl %edi, %esi
+; X86-NEXT:    sarl $31, %esi
+; X86-NEXT:    xorl %esi, %edx
+; X86-NEXT:    xorl %eax, %esi
+; X86-NEXT:    xorl %ebp, %ecx
 ; X86-NEXT:    sarl $31, %ecx
-; X86-NEXT:    movl %ecx, %edi
-; X86-NEXT:    xorl $2147483647, %edi # imm = 0x7FFFFFFF
-; X86-NEXT:    orl %edx, %ebx
+; X86-NEXT:    movl %ecx, %ebx
+; X86-NEXT:    xorl $2147483647, %ebx # imm = 0x7FFFFFFF
+; X86-NEXT:    orl %edx, %esi
 ; X86-NEXT:    notl %ecx
 ; X86-NEXT:    cmovel {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
-; X86-NEXT:    cmovel %esi, %edi
+; X86-NEXT:    cmovel %edi, %ebx
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    movl %edi, %edx
-; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    movl %ebx, %edx
+; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 20
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 16

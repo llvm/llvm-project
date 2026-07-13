@@ -56,6 +56,29 @@ define i32 @constraint_r_zero(i32 %a) nounwind {
   ret i32 %2
 }
 
+define i32 @constraint_cr(i32 %a) nounwind {
+; RV32I-LABEL: constraint_cr:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, %hi(gi)
+; RV32I-NEXT:    lw a1, %lo(gi)(a1)
+; RV32I-NEXT:    #APP
+; RV32I-NEXT:    c.add a0, a0, a1
+; RV32I-NEXT:    #NO_APP
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: constraint_cr:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, %hi(gi)
+; RV64I-NEXT:    lw a1, %lo(gi)(a1)
+; RV64I-NEXT:    #APP
+; RV64I-NEXT:    c.add a0, a0, a1
+; RV64I-NEXT:    #NO_APP
+; RV64I-NEXT:    ret
+  %1 = load i32, ptr @gi
+  %2 = tail call i32 asm "c.add $0, $1, $2", "=^cr,0,^cr"(i32 %a, i32 %1)
+  ret i32 %2
+}
+
 define i32 @constraint_i(i32 %a) nounwind {
 ; RV32I-LABEL: constraint_i:
 ; RV32I:       # %bb.0:
@@ -212,6 +235,49 @@ define i32 @modifier_i_reg(i32 %a, i32 %b) nounwind {
 ; RV64I-NEXT:    #NO_APP
 ; RV64I-NEXT:    ret
   %1 = tail call i32 asm "add${2:i} $0, $1, $2", "=r,r,ri"(i32 %a, i32 %b)
+  ret i32 %1
+}
+
+;; `.insn 0x4, 0x33 | (${0:N} << 7) | (${1:N} << 15) | (${2:N} << 20)` is the
+;; raw encoding of `add`
+
+define i32 @modifier_N_reg(i32 %a, i32 %b) nounwind {
+; RV32I-LABEL: modifier_N_reg:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    #APP
+; RV32I-NEXT:    .insn 0x4, 0x33 | (10 << 7) | (10 << 15) | (11 << 20)
+; RV32I-NEXT:    #NO_APP
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: modifier_N_reg:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    #APP
+; RV64I-NEXT:    .insn 0x4, 0x33 | (10 << 7) | (10 << 15) | (11 << 20)
+; RV64I-NEXT:    #NO_APP
+; RV64I-NEXT:    ret
+  %1 = tail call i32 asm ".insn 0x4, 0x33 | (${0:N} << 7) | (${1:N} << 15) | (${2:N} << 20)", "=r,r,r"(i32 %a, i32 %b)
+  ret i32 %1
+}
+
+;; `.insn 0x2, 0x9422 | (${0:N} << 7) | (${2:N} << 2)` is the raw encoding of
+;; `c.add` (note the constraint that the first input should be the same as the
+;; output).
+
+define i32 @modifier_N_with_cr_reg(i32 %a, i32 %b) nounwind {
+; RV32I-LABEL: modifier_N_with_cr_reg:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    #APP
+; RV32I-NEXT:    .insn 0x2, 0x9422 | (10 << 7) | (11 << 2)
+; RV32I-NEXT:    #NO_APP
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: modifier_N_with_cr_reg:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    #APP
+; RV64I-NEXT:    .insn 0x2, 0x9422 | (10 << 7) | (11 << 2)
+; RV64I-NEXT:    #NO_APP
+; RV64I-NEXT:    ret
+  %1 = tail call i32 asm ".insn 0x2, 0x9422 | (${0:N} << 7) | (${2:N} << 2)", "=^cr,0,^cr"(i32 %a, i32 %b)
   ret i32 %1
 }
 

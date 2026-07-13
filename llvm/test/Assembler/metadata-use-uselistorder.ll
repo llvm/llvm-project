@@ -7,6 +7,11 @@
 ; correctly preserved due to the uses in the dbg.value contant expressions not
 ; being considered, since they are wrapped in metadata.
 
+; With debug records (i.e., not with intrinsics) there's less chance of
+; debug-info affecting use-list order as it exists outside of the Value
+; hierachy. However, debug records still use ValueAsMetadata nodes, so this
+; test remains worthwhile.
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -16,20 +21,18 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @foo() local_unnamed_addr !dbg !6 {
 entry:
   %0 = load i64, ptr getelementptr inbounds ([10 x i64], ptr @global_arr, i64 0, i64 4), align 16
-  call void @llvm.dbg.value(metadata ptr getelementptr inbounds ([10 x i64], ptr @global_arr, i64 0, i64 5), metadata !10, metadata !DIExpression()), !dbg !13
+    #dbg_value(ptr getelementptr inbounds ([10 x i64], ptr @global_arr, i64 0, i64 5), !10, !DIExpression(), !13)
   %1 = load i64, ptr getelementptr inbounds ([10 x i64], ptr @global_arr, i64 0, i64 6), align 16
-  call void @llvm.dbg.value(metadata ptr getelementptr inbounds ([10 x i64], ptr @global_arr, i64 0, i64 6), metadata !10, metadata !DIExpression()), !dbg !14
+    #dbg_value(ptr getelementptr inbounds ([10 x i64], ptr @global_arr, i64 0, i64 6), !10, !DIExpression(), !14)
+    #dbg_assign(i32 0, !10, !DIExpression(), !19, ptr getelementptr inbounds ([10 x i64], ptr @global_arr, i64 0, i64 6), !DIExpression(), !14)
   ret void
 }
 
 define void @bar() local_unnamed_addr !dbg !15 {
 entry:
-  call void @llvm.dbg.value(metadata ptr getelementptr inbounds ([10 x i64], ptr @global_arr, i64 0, i64 7), metadata !17, metadata !DIExpression()), !dbg !18
+    #dbg_value(ptr getelementptr inbounds ([10 x i64], ptr @global_arr, i64 0, i64 7), !17, !DIExpression(), !18)
   ret void
 }
-
-; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
 attributes #0 = { nounwind readnone speculatable }
 
@@ -56,3 +59,4 @@ attributes #0 = { nounwind readnone speculatable }
 !16 = !{!17}
 !17 = !DILocalVariable(name: "local2", scope: !15, file: !1, line: 13, type: !11)
 !18 = !DILocation(line: 14, column: 1, scope: !15)
+!19 = distinct !DIAssignID()

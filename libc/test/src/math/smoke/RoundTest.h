@@ -59,8 +59,10 @@ public:
     EXPECT_FP_EQ(T(-10.0), func(T(-10.32)));
     EXPECT_FP_EQ(T(11.0), func(T(10.65)));
     EXPECT_FP_EQ(T(-11.0), func(T(-10.65)));
-    EXPECT_FP_EQ(T(123.0), func(T(123.38)));
-    EXPECT_FP_EQ(T(-123.0), func(T(-123.38)));
+    EXPECT_FP_EQ(T(50.0), func(T(49.63)));
+    EXPECT_FP_EQ(T(-50.0), func(T(-50.31)));
+    EXPECT_FP_EQ(T(124.0), func(T(123.5)));
+    EXPECT_FP_EQ(T(-124.0), func(T(-123.5)));
     EXPECT_FP_EQ(T(124.0), func(T(123.96)));
     EXPECT_FP_EQ(T(-124.0), func(T(-123.96)));
   }

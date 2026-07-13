@@ -18,7 +18,7 @@
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GISelWorkList.h"
 #include "llvm/CodeGen/GlobalISel/LegalizationArtifactCombiner.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
@@ -27,7 +27,6 @@
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 
@@ -74,9 +73,10 @@ char Legalizer::ID = 0;
 INITIALIZE_PASS_BEGIN(Legalizer, DEBUG_TYPE,
                       "Legalize the Machine IR a function's Machine IR", false,
                       false)
+INITIALIZE_PASS_DEPENDENCY(LibcallLoweringInfoWrapper)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
+INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_END(Legalizer, DEBUG_TYPE,
                     "Legalize the Machine IR a function's Machine IR", false,
                     false)
@@ -84,11 +84,12 @@ INITIALIZE_PASS_END(Legalizer, DEBUG_TYPE,
 Legalizer::Legalizer() : MachineFunctionPass(ID) { }
 
 void Legalizer::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<LibcallLoweringInfoWrapper>();
   AU.addRequired<TargetPassConfig>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
   AU.addPreserved<GISelCSEAnalysisWrapperPass>();
-  AU.addRequired<GISelKnownBitsAnalysis>();
-  AU.addPreserved<GISelKnownBitsAnalysis>();
+  AU.addRequired<GISelValueTrackingAnalysisLegacy>();
+  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   getSelectionDAGFallbackAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -173,12 +174,11 @@ public:
 };
 } // namespace
 
-Legalizer::MFResult
-Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
-                                   ArrayRef<GISelChangeObserver *> AuxObservers,
-                                   LostDebugLocObserver &LocObserver,
-                                   MachineIRBuilder &MIRBuilder,
-                                   GISelKnownBits *KB) {
+Legalizer::MFResult Legalizer::legalizeMachineFunction(
+    MachineFunction &MF, const LegalizerInfo &LI,
+    ArrayRef<GISelChangeObserver *> AuxObservers,
+    LostDebugLocObserver &LocObserver, MachineIRBuilder &MIRBuilder,
+    const LibcallLoweringInfo *Libcalls, GISelValueTracking *VT) {
   MIRBuilder.setMF(MF);
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
@@ -217,8 +217,8 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
   // Now install the observer as the delegate to MF.
   // This will keep all the observers notified about new insertions/deletions.
   RAIIMFObsDelInstaller Installer(MF, WrapperObserver);
-  LegalizerHelper Helper(MF, LI, WrapperObserver, MIRBuilder, KB);
-  LegalizationArtifactCombiner ArtCombiner(MIRBuilder, MRI, LI, KB);
+  LegalizerHelper Helper(MF, LI, WrapperObserver, MIRBuilder, Libcalls, VT);
+  LegalizationArtifactCombiner ArtCombiner(MIRBuilder, MRI, LI, VT);
   bool Changed = false;
   SmallVector<MachineInstr *, 128> RetryList;
   do {
@@ -309,8 +309,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
 
 bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   // If the ISel pipeline failed, do not bother running that pass.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
   LLVM_DEBUG(dbgs() << "Legalize Machine IR for: " << MF.getName() << '\n');
   init(MF);
@@ -341,15 +340,22 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   if (VerifyDebugLocs > DebugLocVerifyLevel::None)
     AuxObservers.push_back(&LocObserver);
 
-  // This allows Known Bits Analysis in the legalizer.
-  GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
+  const TargetSubtargetInfo &Subtarget = MF.getSubtarget();
 
-  const LegalizerInfo &LI = *MF.getSubtarget().getLegalizerInfo();
+  const LibcallLoweringInfo &Libcalls =
+      getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
+          *MF.getFunction().getParent(), Subtarget);
+
+  // This allows Known Bits Analysis in the legalizer.
+  GISelValueTracking *VT =
+      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
+
+  const LegalizerInfo &LI = *Subtarget.getLegalizerInfo();
   MFResult Result = legalizeMachineFunction(MF, LI, AuxObservers, LocObserver,
-                                            *MIRBuilder, KB);
+                                            *MIRBuilder, &Libcalls, VT);
 
   if (Result.FailedOn) {
-    reportGISelFailure(MF, TPC, MORE, "gisel-legalize",
+    reportGISelFailure(MF, MORE, "gisel-legalize",
                        "unable to legalize instruction", *Result.FailedOn);
     return false;
   }
@@ -361,7 +367,7 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
     R << "lost "
       << ore::NV("NumLostDebugLocs", LocObserver.getNumLostDebugLocs())
       << " debug locations during pass";
-    reportGISelWarning(MF, TPC, MORE, R);
+    reportGISelWarning(MF, MORE, R);
     // Example remark:
     // --- !Missed
     // Pass:            gisel-legalize

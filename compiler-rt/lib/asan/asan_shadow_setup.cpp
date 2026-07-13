@@ -89,11 +89,19 @@ void InitializeShadowMemory() {
     // mmap the low shadow plus at least one page at the left.
     if (kLowShadowBeg)
       ReserveShadowMemoryRange(shadow_start, kLowShadowEnd, "low shadow");
-    // mmap the high shadow.
-    ReserveShadowMemoryRange(kHighShadowBeg, kHighShadowEnd, "high shadow");
-    // protect the gap.
-    ProtectGap(kShadowGapBeg, kShadowGapEnd - kShadowGapBeg + 1);
-    CHECK_EQ(kShadowGapEnd, kHighShadowBeg - 1);
+    // mmap the high shadow and protect the gap.
+    // On targets where the shadow offset sits above all addressable memory
+    // (e.g. Alpha's 42-bit user VAS with offset 0x70000000000), the shadow of
+    // the highest address exceeds the highest address itself, so there is no
+    // high memory region.  Skip both the high-shadow reservation and the gap
+    // protect.
+    if (MEM_TO_SHADOW(GetMaxUserVirtualAddress()) <
+        GetMaxUserVirtualAddress()) {
+      DCHECK_LE(kHighMemBeg, kHighMemEnd);
+      ReserveShadowMemoryRange(kHighShadowBeg, kHighShadowEnd, "high shadow");
+      ProtectGap(kShadowGapBeg, kShadowGapEnd - kShadowGapBeg + 1);
+      CHECK_EQ(kShadowGapEnd, kHighShadowBeg - 1);
+    }
   } else if (kMidMemBeg &&
              MemoryRangeIsAvailable(shadow_start, kMidMemBeg - 1) &&
              MemoryRangeIsAvailable(kMidMemEnd + 1, kHighShadowEnd)) {
@@ -109,6 +117,15 @@ void InitializeShadowMemory() {
     ProtectGap(kShadowGap2Beg, kShadowGap2End - kShadowGap2Beg + 1);
     ProtectGap(kShadowGap3Beg, kShadowGap3End - kShadowGap3Beg + 1);
   } else {
+    // ASan's mappings can usually shadow the entire address space, even with
+    // maximum ASLR entropy. However:
+    // - On 32-bit systems, the maximum ASLR entropy (currently up to 16-bits
+    //   == 256MB) is a significant chunk of the address space; reclaiming it
+    //   by disabling ASLR might allow chonky binaries to run.
+    // - On 64-bit systems, some settings (e.g., for Linux, unlimited stack
+    //   size plus 31+ bits of entropy) can lead to an incompatible layout.
+    TryReExecWithoutASLR();
+
     Report(
         "Shadow memory range interleaves with an existing memory mapping. "
         "ASan cannot proceed correctly. ABORTING.\n");

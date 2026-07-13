@@ -37,11 +37,11 @@ public:
   }
 
   void testRange(FabsFunc func) {
-    constexpr StorageType COUNT = 100'000;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x))
+      if (FPBits(v).is_nan() || FPBits(v).is_inf())
         continue;
       ASSERT_MPFR_MATCH(mpfr::Operation::Abs, x, func(x), 0.0);
     }

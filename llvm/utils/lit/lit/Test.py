@@ -1,3 +1,4 @@
+import abc
 import itertools
 import os
 from json import JSONEncoder
@@ -8,7 +9,7 @@ from lit.TestTimes import read_test_times
 # Test result codes.
 
 
-class ResultCode(object):
+class ResultCode:
     """Test result codes."""
 
     # All result codes (including user-defined ones) in declaration order
@@ -25,7 +26,7 @@ class ResultCode(object):
     def __new__(cls, name, label, isFailure):
         res = cls._instances.get(name)
         if res is None:
-            cls._instances[name] = res = super(ResultCode, cls).__new__(cls)
+            cls._instances[name] = res = super().__new__(cls)
         return res
 
     def __getnewargs__(self):
@@ -47,6 +48,7 @@ SKIPPED = ResultCode("SKIPPED", "Skipped", False)
 UNSUPPORTED = ResultCode("UNSUPPORTED", "Unsupported", False)
 PASS = ResultCode("PASS", "Passed", False)
 FLAKYPASS = ResultCode("FLAKYPASS", "Passed With Retry", False)
+FIXED = ResultCode("FIXED", "Passed After Update", False)
 XFAIL = ResultCode("XFAIL", "Expectedly Failed", False)
 # Failures
 UNRESOLVED = ResultCode("UNRESOLVED", "Unresolved", True)
@@ -58,7 +60,8 @@ XPASS = ResultCode("XPASS", "Unexpectedly Passed", True)
 # Test metric values.
 
 
-class MetricValue(object):
+class MetricValue(abc.ABC):
+    @abc.abstractmethod
     def format(self):
         """
         format() -> str
@@ -66,8 +69,8 @@ class MetricValue(object):
         Convert this metric to a string suitable for displaying as part of the
         console output.
         """
-        raise RuntimeError("abstract method")
 
+    @abc.abstractmethod
     def todata(self):
         """
         todata() -> json-serializable data
@@ -75,7 +78,6 @@ class MetricValue(object):
         Convert this metric to content suitable for serializing in the JSON test
         output.
         """
-        raise RuntimeError("abstract method")
 
 
 class IntMetricValue(MetricValue):
@@ -148,10 +150,18 @@ def toMetricValue(value):
 # Test results.
 
 
-class Result(object):
+class Result:
     """Wrapper for the results of executing an individual test."""
 
-    def __init__(self, code, output="", elapsed=None):
+    def __init__(
+        self,
+        code,
+        output="",
+        elapsed=None,
+        attempts=1,
+        max_allowed_attempts=None,
+        test_updater_outputs=[],
+    ):
         # The result code.
         self.code = code
         # The test output.
@@ -164,6 +174,12 @@ class Result(object):
         self.metrics = {}
         # The micro-test results reported by this test.
         self.microResults = {}
+        # How often was the test run?
+        self.attempts = attempts
+        # How many attempts were allowed for this test
+        self.max_allowed_attempts = max_allowed_attempts
+        # Outputs from test updaters. One entry per attempt, or empty if disabled.
+        self.test_updater_outputs = test_updater_outputs
 
     def addMetric(self, name, value):
         """
@@ -207,14 +223,14 @@ class TestSuite:
     A test suite groups together a set of logically related tests.
     """
 
-    def __init__(self, name, source_root, exec_root, config):
+    def __init__(self, name, source_root, exec_root, config, lit_config=None):
         self.name = name
         self.source_root = source_root
         self.exec_root = exec_root
         # The test suite configuration.
         self.config = config
 
-        self.test_times = read_test_times(self)
+        self.test_times = read_test_times(self, lit_config)
 
     def getSourcePath(self, components):
         return os.path.join(self.source_root, *components)
@@ -241,8 +257,14 @@ class Test:
         # and will be honored when the test result is supplied.
         self.xfails = []
 
+        # Exclude this test if it's xfail.
+        self.exclude_xfail = False
+
         # If true, ignore all items in self.xfails.
         self.xfail_not = False
+
+        # If true, ignore all items in self.unsupported.
+        self.unsupported_not = False
 
         # A list of conditions that must be satisfied before running the test.
         # Each condition is a boolean expression of features. All of them
@@ -297,6 +319,11 @@ class Test:
 
     def getFullName(self):
         return self.suite.config.name + " :: " + "/".join(self.path_in_suite)
+
+    def getSummaryName(self, printPathRelativeCWD):
+        if printPathRelativeCWD:
+            return os.path.relpath(self.getFilePath())
+        return self.getFullName()
 
     def getFilePath(self):
         if self.file_path:
@@ -399,6 +426,9 @@ class Test:
         in the test configuration's features.
         Throws ValueError if an UNSUPPORTED line has a syntax error.
         """
+
+        if self.unsupported_not:
+            return []
 
         features = self.config.available_features
 

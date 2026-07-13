@@ -22,7 +22,7 @@ void fir::runtime::genAssign(fir::FirOpBuilder &builder, mlir::Location loc,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
   auto args = fir::runtime::createArguments(builder, loc, fTy, destBox,
                                             sourceBox, sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 void fir::runtime::genAssignPolymorphic(fir::FirOpBuilder &builder,
@@ -36,7 +36,7 @@ void fir::runtime::genAssignPolymorphic(fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
   auto args = fir::runtime::createArguments(builder, loc, fTy, destBox,
                                             sourceBox, sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 void fir::runtime::genAssignExplicitLengthCharacter(fir::FirOpBuilder &builder,
@@ -52,7 +52,7 @@ void fir::runtime::genAssignExplicitLengthCharacter(fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
   auto args = fir::runtime::createArguments(builder, loc, fTy, destBox,
                                             sourceBox, sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 void fir::runtime::genAssignTemporary(fir::FirOpBuilder &builder,
@@ -66,7 +66,7 @@ void fir::runtime::genAssignTemporary(fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
   auto args = fir::runtime::createArguments(builder, loc, fTy, destBox,
                                             sourceBox, sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 void fir::runtime::genCopyInAssign(fir::FirOpBuilder &builder,
@@ -79,7 +79,7 @@ void fir::runtime::genCopyInAssign(fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
   auto args = fir::runtime::createArguments(builder, loc, fTy, destBox,
                                             sourceBox, sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 void fir::runtime::genCopyOutAssign(fir::FirOpBuilder &builder,
@@ -93,5 +93,5 @@ void fir::runtime::genCopyOutAssign(fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
   auto args = fir::runtime::createArguments(builder, loc, fTy, destBox,
                                             sourceBox, sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }

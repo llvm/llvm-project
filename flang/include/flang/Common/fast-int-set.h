@@ -24,7 +24,7 @@
 #ifndef FORTRAN_COMMON_FAST_INT_SET_H_
 #define FORTRAN_COMMON_FAST_INT_SET_H_
 
-#include <optional>
+#include "optional.h"
 
 namespace Fortran::common {
 
@@ -83,9 +83,9 @@ public:
     }
   }
 
-  std::optional<int> PopValue() {
+  optional<int> PopValue() {
     if (IsEmpty()) {
-      return std::nullopt;
+      return nullopt;
     } else {
       return value_[--size_];
     }

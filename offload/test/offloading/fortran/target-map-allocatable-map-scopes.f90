@@ -1,5 +1,5 @@
-! Offloading test checking interaction of allocatables
-! with target in different scopes
+! Offloading test checking interaction of allocatables with target in different
+! scopes
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic

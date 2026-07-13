@@ -5,8 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: no-threads
 
 // <mutex>
 
@@ -14,36 +12,31 @@
 
 // mutex_type* release() noexcept;
 
-#include <mutex>
 #include <cassert>
+#include <memory>
+#include <mutex>
 
+#include "checking_mutex.h"
 #include "test_macros.h"
 
-struct mutex
-{
-    static int lock_count;
-    static int unlock_count;
-    void lock() {++lock_count;}
-    void unlock() {++unlock_count;}
-};
+#if TEST_STD_VER >= 11
+static_assert(noexcept(std::declval<std::unique_lock<checking_mutex>&>().release()), "");
+#endif
 
-int mutex::lock_count = 0;
-int mutex::unlock_count = 0;
+int main(int, char**) {
+  checking_mutex mux;
+  std::unique_lock<checking_mutex> lock(mux);
+  assert(lock.mutex() == std::addressof(mux));
+  assert(lock.owns_lock());
 
-mutex m;
+  assert(mux.current_state == checking_mutex::locked_via_lock);
 
-int main(int, char**)
-{
-    std::unique_lock<mutex> lk(m);
-    assert(lk.mutex() == &m);
-    assert(lk.owns_lock() == true);
-    assert(mutex::lock_count == 1);
-    assert(mutex::unlock_count == 0);
-    assert(lk.release() == &m);
-    assert(lk.mutex() == nullptr);
-    assert(lk.owns_lock() == false);
-    assert(mutex::lock_count == 1);
-    assert(mutex::unlock_count == 0);
+  assert(lock.release() == std::addressof(mux));
+  assert(lock.mutex() == nullptr);
+  assert(!lock.owns_lock());
+  assert(mux.last_try == checking_mutex::locked_via_lock);
+  assert(mux.current_state == checking_mutex::locked_via_lock);
+  mux.unlock();
 
   return 0;
 }

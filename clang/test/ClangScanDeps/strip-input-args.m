@@ -11,11 +11,6 @@
 
 // CHECK:        "modules": [
 // CHECK-NEXT:     {
-// CHECK:            "command-line": [
-// CHECK-NOT:          "-arcmt-action=check"
-// CHECK-NOT:          "-objcmt-migrate-literals"
-// CHECK-NOT:          "-mt-migrate-directory"
-// CHECK:            ]
 // CHECK:            "name": "A"
 // CHECK:          }
 // CHECK-NOT:        "name": "A"
@@ -25,12 +20,12 @@
 [
   {
     "directory": "DIR",
-    "command": "clang -Imodules/A -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-modules -fimplicit-module-maps -ccc-arcmt-check -fsyntax-only DIR/t1.m",
+    "command": "clang -Imodules/A -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-modules -fimplicit-module-maps -fsyntax-only DIR/t1.m",
     "file": "DIR/t1.m"
   },
   {
     "directory": "DIR",
-    "command": "clang -Imodules/A -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-modules -fimplicit-module-maps -ccc-objcmt-migrate bob -fsyntax-only DIR/t2.m",
+    "command": "clang -Imodules/A -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-modules -fimplicit-module-maps -fsyntax-only DIR/t2.m",
     "file": "DIR/t2.m"
   }
 ]

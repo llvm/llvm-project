@@ -5,9 +5,9 @@ target triple = "x86_64-apple-macosx10.14.0"
 
 ; CHECK-LABEL: define {{.*}}@fun
 ; CHECK: call {{.*}}@fun.cold.1(
-define void @fun() {
+define void @fun(i1 %arg) {
 entry:
-  br i1 undef, label %if.then, label %if.else
+  br i1 %arg, label %if.then, label %if.else
 
 if.then:
   ; This will be marked by the inverse DFS on sink-predecesors.
@@ -17,7 +17,7 @@ sink:
   call void @sink()
 
   ; Do not allow the forward-DFS on sink-successors to mark the block again.
-  br i1 undef, label %if.then, label %if.then.exit
+  br i1 %arg, label %if.then, label %if.then.exit
 
 if.then.exit:
   ret void

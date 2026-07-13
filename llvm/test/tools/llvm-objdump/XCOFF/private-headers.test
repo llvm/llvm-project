@@ -1,0 +1,52 @@
+## Test the --private-headers option for XCOFF object files.
+
+# RUN: yaml2obj -DMAGIC=0x1DF --docnum=1 %s -o %t_xcoff32.o
+# RUN: yaml2obj -DMAGIC=0x1F7 --docnum=1 %s -o %t_xcoff64.o
+# RUN: llvm-objdump --private-headers %t_xcoff32.o | \
+# RUN:   FileCheck %s --check-prefixes=CHECK32 --match-full-lines --strict-whitespace
+# RUN: llvm-objdump --private-headers %t_xcoff64.o | \
+# RUN:   FileCheck %s --check-prefixes=CHECK64 --match-full-lines --strict-whitespace
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       [[MAGIC]]
+  CreationTime:      1234
+Sections:
+  - Name:            .text
+    Flags:           [ STYP_TEXT ]
+    SectionData:     "9061FFF880820000"
+  - Name:            .data
+    Flags:           [ STYP_DATA ]
+    SectionData:     "0000000000000FC0"
+
+#      CHECK32:---File Header:
+# CHECK32-NEXT:Magic:              0x1df
+# CHECK32-NEXT:NumberOfSections:   2
+# CHECK32-NEXT:Timestamp:          1970-01-01 00:20:34 (1234)
+# CHECK32-NEXT:SymbolTableOffset:  0x0
+# CHECK32-NEXT:SymbolTableEntries: 0
+# CHECK32-NEXT:OptionalHeaderSize: 0x0
+# CHECK32-NEXT:Flags:              0x0
+
+#      CHECK64:---File Header:
+# CHECK64-NEXT:Magic:              0x1f7
+# CHECK64-NEXT:NumberOfSections:   2
+# CHECK64-NEXT:Timestamp:          1970-01-01 00:20:34 (1234)
+# CHECK64-NEXT:SymbolTableOffset:  0x0
+# CHECK64-NEXT:SymbolTableEntries: 0
+# CHECK64-NEXT:OptionalHeaderSize: 0x0
+# CHECK64-NEXT:Flags:              0x0
+
+## Test if the creation time of XCOFF is zero and the number of symbols is negative.
+# RUN: yaml2obj -DMAGIC=0x1DF --docnum=2 %s -o %t_xcoff_timestamp.o
+# RUN: llvm-objdump --private-headers %t_xcoff_timestamp.o | \
+# RUN:   FileCheck %s --match-full-lines
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:          0x1DF
+  CreationTime:         0
+  EntriesInSymbolTable: -1
+
+# CHECK: Timestamp:          None (0)
+# CHECK: SymbolTableEntries: Reserved Value (-1)

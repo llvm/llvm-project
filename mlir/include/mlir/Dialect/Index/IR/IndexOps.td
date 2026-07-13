@@ -56,6 +56,8 @@ def Index_AddOp : IndexBinaryOp<"add", [Commutative, Pure]> {
     %c = index.add %a, %b
     ```
   }];
+
+  let hasCanonicalizeMethod = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -93,6 +95,8 @@ def Index_MulOp : IndexBinaryOp<"mul", [Commutative, Pure]> {
     %c = index.mul %a, %b
     ```
   }];
+
+  let hasCanonicalizeMethod = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -261,6 +265,8 @@ def Index_MaxSOp : IndexBinaryOp<"maxs", [Commutative, Pure]> {
     %c = index.maxs %a, %b
     ```
   }];
+
+  let hasCanonicalizeMethod = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -281,6 +287,8 @@ def Index_MaxUOp : IndexBinaryOp<"maxu", [Commutative, Pure]> {
     %c = index.maxu %a, %b
     ```
   }];
+
+  let hasCanonicalizeMethod = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -300,6 +308,8 @@ def Index_MinSOp : IndexBinaryOp<"mins", [Commutative, Pure]> {
     %c = index.mins %a, %b
     ```
   }];
+
+  let hasCanonicalizeMethod = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -320,6 +330,8 @@ def Index_MinUOp : IndexBinaryOp<"minu", [Commutative, Pure]> {
     %c = index.minu %a, %b
     ```
   }];
+
+  let hasCanonicalizeMethod = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -402,6 +414,8 @@ def Index_AndOp : IndexBinaryOp<"and", [Commutative, Pure]> {
     %c = index.and %a, %b
     ```
   }];
+
+  let hasCanonicalizeMethod = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -421,6 +435,8 @@ def Index_OrOp : IndexBinaryOp<"or", [Commutative, Pure]> {
     %c = index.or %a, %b
     ```
   }];
+
+  let hasCanonicalizeMethod = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -440,6 +456,8 @@ def Index_XOrOp : IndexBinaryOp<"xor", [Commutative, Pure]> {
     %c = index.xor %a, %b
     ```
   }];
+
+  let hasCanonicalizeMethod = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -542,7 +560,7 @@ def Index_CmpOp : IndexOp<"cmp", [Pure]> {
 
   let arguments = (ins IndexCmpPredicateAttr:$pred, Index:$lhs, Index:$rhs);
   let results = (outs I1:$result);
-  let assemblyFormat = "`` $pred `(` $lhs `,` $rhs `)` attr-dict";
+  let assemblyFormat = "$pred `(` $lhs `,` $rhs `)` attr-dict";
   let hasFolder = 1;
   let hasCanonicalizeMethod = 1;
 }

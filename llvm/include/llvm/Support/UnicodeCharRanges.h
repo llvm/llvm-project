@@ -12,7 +12,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 
 #define DEBUG_TYPE "unicode"
 
@@ -37,7 +36,7 @@ inline bool operator<(UnicodeCharRange Range, uint32_t Value) {
 /// array.
 class UnicodeCharSet {
 public:
-  typedef ArrayRef<UnicodeCharRange> CharRanges;
+  using CharRanges = ArrayRef<UnicodeCharRange>;
 
   /// Constructs a UnicodeCharSet instance from an array of
   /// UnicodeCharRanges.
@@ -61,9 +60,7 @@ public:
 
   /// Returns true if the character set contains the Unicode code point
   /// \p C.
-  bool contains(uint32_t C) const {
-    return std::binary_search(Ranges.begin(), Ranges.end(), C);
-  }
+  bool contains(uint32_t C) const { return llvm::binary_search(Ranges, C); }
 
 private:
   /// Returns true if each of the ranges is a proper closed range

@@ -10,10 +10,10 @@
 #ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_COCOA_H
 #define LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_COCOA_H
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 

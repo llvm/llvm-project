@@ -11,7 +11,7 @@ int S::(*e;  // expected-error{{expected unqualified-id}}
 int S::*f;
 int g = S::(a);  // expected-error {{expected unqualified-id}} expected-error {{use of undeclared identifier 'a'}}
 int h = S::(b;  // expected-error {{expected unqualified-id}} expected-error {{use of undeclared identifier 'b'}}
-            );
+            );  // expected-error {{expected unqualified-id}}
 int i = S::c;
 
 void foo() {

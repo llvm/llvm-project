@@ -12,10 +12,12 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Mangle.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Basic/ABI.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TargetInfo.h"
@@ -74,7 +76,6 @@ TEST(Decl, AsmLabelAttr) {
   StringRef Code = R"(
     struct S {
       void f() {}
-      void g() {}
     };
   )";
   auto AST =
@@ -87,25 +88,138 @@ TEST(Decl, AsmLabelAttr) {
   const auto *DeclS =
       selectFirst<CXXRecordDecl>("d", match(cxxRecordDecl().bind("d"), Ctx));
   NamedDecl *DeclF = *DeclS->method_begin();
-  NamedDecl *DeclG = *(++DeclS->method_begin());
 
-  // Attach asm labels to the decls: one literal, and one not.
-  DeclF->addAttr(AsmLabelAttr::Create(Ctx, "foo", /*LiteralLabel=*/true));
-  DeclG->addAttr(AsmLabelAttr::Create(Ctx, "goo", /*LiteralLabel=*/false));
+  DeclF->addAttr(AsmLabelAttr::Create(Ctx, "foo"));
 
   // Mangle the decl names.
-  std::string MangleF, MangleG;
+  std::string MangleF;
   std::unique_ptr<ItaniumMangleContext> MC(
       ItaniumMangleContext::create(Ctx, Diags));
   {
     llvm::raw_string_ostream OS_F(MangleF);
-    llvm::raw_string_ostream OS_G(MangleG);
     MC->mangleName(DeclF, OS_F);
-    MC->mangleName(DeclG, OS_G);
   }
 
-  ASSERT_TRUE(0 == MangleF.compare("\x01" "foo"));
-  ASSERT_TRUE(0 == MangleG.compare("goo"));
+  ASSERT_EQ(MangleF, "\x01"
+                     "foo");
+}
+
+TEST(Decl, AsmLabelAttr_LLDB) {
+  StringRef Code = R"(
+    struct S {
+      void f() {}
+      S() = default;
+      ~S() = default;
+    };
+  )";
+  auto AST =
+      tooling::buildASTFromCodeWithArgs(Code, {"-target", "i386-apple-darwin"});
+  ASTContext &Ctx = AST->getASTContext();
+  assert(Ctx.getTargetInfo().getUserLabelPrefix() == StringRef("_") &&
+         "Expected target to have a global prefix");
+  DiagnosticsEngine &Diags = AST->getDiagnostics();
+
+  const auto *DeclS =
+      selectFirst<CXXRecordDecl>("d", match(cxxRecordDecl().bind("d"), Ctx));
+
+  auto *DeclF = *DeclS->method_begin();
+  auto *Ctor = *DeclS->ctor_begin();
+  auto *Dtor = DeclS->getDestructor();
+
+  ASSERT_TRUE(DeclF);
+  ASSERT_TRUE(Ctor);
+  ASSERT_TRUE(Dtor);
+
+  DeclF->addAttr(AsmLabelAttr::Create(Ctx, "$__lldb_func::123:123:_Z1fv"));
+  Ctor->addAttr(AsmLabelAttr::Create(Ctx, "$__lldb_func::123:123:S"));
+  Dtor->addAttr(AsmLabelAttr::Create(Ctx, "$__lldb_func::123:123:~S"));
+
+  std::unique_ptr<ItaniumMangleContext> MC(
+      ItaniumMangleContext::create(Ctx, Diags));
+
+  {
+    std::string Mangled;
+    llvm::raw_string_ostream OS_Mangled(Mangled);
+    MC->mangleName(DeclF, OS_Mangled);
+
+    ASSERT_EQ(Mangled, "\x01$__lldb_func::123:123:_Z1fv");
+  };
+
+  {
+    std::string Mangled;
+    llvm::raw_string_ostream OS_Mangled(Mangled);
+    MC->mangleName(GlobalDecl(Ctor, CXXCtorType::Ctor_Complete), OS_Mangled);
+
+    ASSERT_EQ(Mangled, "\x01$__lldb_func:C0:123:123:S");
+  };
+
+  {
+    std::string Mangled;
+    llvm::raw_string_ostream OS_Mangled(Mangled);
+    MC->mangleName(GlobalDecl(Ctor, CXXCtorType::Ctor_Base), OS_Mangled);
+
+    ASSERT_EQ(Mangled, "\x01$__lldb_func:C1:123:123:S");
+  };
+
+  {
+    std::string Mangled;
+    llvm::raw_string_ostream OS_Mangled(Mangled);
+    MC->mangleName(GlobalDecl(Dtor, CXXDtorType::Dtor_Deleting), OS_Mangled);
+
+    ASSERT_EQ(Mangled, "\x01$__lldb_func:D0:123:123:~S");
+  };
+
+  {
+    std::string Mangled;
+    llvm::raw_string_ostream OS_Mangled(Mangled);
+    MC->mangleName(GlobalDecl(Dtor, CXXDtorType::Dtor_Base), OS_Mangled);
+
+    ASSERT_EQ(Mangled, "\x01$__lldb_func:D2:123:123:~S");
+  };
+}
+
+TEST(Decl, AsmLabelAttr_LLDB_Inherit) {
+  StringRef Code = R"(
+    struct Base {
+      Base(int x) {}
+    };
+
+    struct Derived : Base {
+      using Base::Base;
+    } d(5);
+  )";
+  auto AST =
+      tooling::buildASTFromCodeWithArgs(Code, {"-target", "i386-apple-darwin"});
+  ASTContext &Ctx = AST->getASTContext();
+  assert(Ctx.getTargetInfo().getUserLabelPrefix() == StringRef("_") &&
+         "Expected target to have a global prefix");
+  DiagnosticsEngine &Diags = AST->getDiagnostics();
+
+  const auto *Ctor = selectFirst<CXXConstructorDecl>(
+      "ctor",
+      match(cxxConstructorDecl(isInheritingConstructor()).bind("ctor"), Ctx));
+
+  const_cast<CXXConstructorDecl *>(Ctor)->addAttr(
+      AsmLabelAttr::Create(Ctx, "$__lldb_func::123:123:Derived"));
+
+  std::unique_ptr<ItaniumMangleContext> MC(
+      ItaniumMangleContext::create(Ctx, Diags));
+
+  {
+    std::string Mangled;
+    llvm::raw_string_ostream OS_Mangled(Mangled);
+    MC->mangleName(GlobalDecl(Ctor, CXXCtorType::Ctor_Complete), OS_Mangled);
+
+    ASSERT_EQ(Mangled, "\x01$__lldb_func:CI0:123:123:Derived");
+  };
+
+  {
+    std::string Mangled;
+    llvm::raw_string_ostream OS_Mangled(Mangled);
+    MC->mangleName(GlobalDecl(Ctor, CXXCtorType::Ctor_Base), OS_Mangled);
+
+    ASSERT_EQ(Mangled, "\x01$__lldb_func:CI1:123:123:Derived");
+  };
 }
 
 TEST(Decl, MangleDependentSizedArray) {
@@ -138,8 +252,8 @@ TEST(Decl, MangleDependentSizedArray) {
   MC->mangleCanonicalTypeName(DeclA->getType(), OS_A);
   MC->mangleCanonicalTypeName(DeclB->getType(), OS_B);
 
-  ASSERT_TRUE(0 == MangleA.compare("_ZTSA_i"));
-  ASSERT_TRUE(0 == MangleB.compare("_ZTSAT0__T_"));
+  ASSERT_EQ(MangleA, "_ZTSA_i");
+  ASSERT_EQ(MangleB, "_ZTSAT0__T_");
 }
 
 TEST(Decl, ConceptDecl) {
@@ -575,4 +689,39 @@ void instantiate_template() {
   EXPECT_EQ(GetNameInfoRange(Matches[0]), "<input.cc:3:3, col:4>");
   EXPECT_EQ(GetNameInfoRange(Matches[1]), "<input.cc:6:14, col:15>");
   EXPECT_EQ(GetNameInfoRange(Matches[2]), "<input.cc:6:14, col:15>");
+}
+
+TEST(Decl, getQualifiedNameAsString) {
+  llvm::Annotations Code(R"cpp(
+namespace x::y {
+  template <class T> class Foo { Foo() {} };
+}
+)cpp");
+
+  auto AST = tooling::buildASTFromCode(Code.code());
+  ASTContext &Ctx = AST->getASTContext();
+
+  auto const *FD = selectFirst<CXXConstructorDecl>(
+      "ctor", match(cxxConstructorDecl().bind("ctor"), Ctx));
+  ASSERT_NE(FD, nullptr);
+  ASSERT_EQ(FD->getQualifiedNameAsString(), "x::y::Foo::Foo<T>");
+}
+
+TEST(Decl, NoWrittenArgsInImplicitlyInstantiatedVarSpec) {
+  const char *Code = R"cpp(
+    template <typename>
+    int VarTpl;
+
+    void fn() {
+      (void)VarTpl<char>;
+    }
+  )cpp";
+
+  auto AST = tooling::buildASTFromCode(Code);
+  ASTContext &Ctx = AST->getASTContext();
+
+  const auto *VTSD = selectFirst<VarTemplateSpecializationDecl>(
+      "id", match(varDecl(isTemplateInstantiation()).bind("id"), Ctx));
+  ASSERT_NE(VTSD, nullptr);
+  EXPECT_EQ(VTSD->getTemplateArgsAsWritten(), nullptr);
 }

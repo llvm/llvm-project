@@ -12,18 +12,18 @@
 
 #include <__compare/ordering.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__functional/hash.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 17
 
-struct _LIBCPP_TEMPLATE_VIS monostate {};
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+struct monostate {};
 
 _LIBCPP_HIDE_FROM_ABI inline constexpr bool operator==(monostate, monostate) noexcept { return true; }
 
@@ -48,17 +48,19 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr bool operator>=(monostate, monostate) noe
 #  endif // _LIBCPP_STD_VER >= 20
 
 template <>
-struct _LIBCPP_TEMPLATE_VIS hash<monostate> {
-  using argument_type = monostate;
-  using result_type   = size_t;
+struct hash<monostate> {
+#  if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+  using argument_type _LIBCPP_DEPRECATED_IN_CXX17 = monostate;
+  using result_type _LIBCPP_DEPRECATED_IN_CXX17   = size_t;
+#  endif
 
-  inline _LIBCPP_HIDE_FROM_ABI result_type operator()(const argument_type&) const _NOEXCEPT {
+  inline _LIBCPP_HIDE_FROM_ABI size_t operator()(const monostate&) const noexcept {
     return 66740831; // return a fundamentally attractive random value.
   }
 };
 
-#endif // _LIBCPP_STD_VER >= 17
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___VARIANT_MONOSTATE_H

@@ -73,7 +73,7 @@ public:
 
 protected:
   InputFile(Kind k, MemoryBufferRef m)
-      : mb(m), fileKind(k), live(!config->gcSections) {}
+      : mb(m), fileKind(k), live(!ctx.arg.gcSections) {}
 
   void checkArch(llvm::Triple::ArchType arch) const;
 
@@ -194,6 +194,8 @@ InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName = "",
 
 // Opens a given file.
 std::optional<MemoryBufferRef> readFile(StringRef path);
+
+std::string replaceThinLTOSuffix(StringRef path);
 
 } // namespace wasm
 

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-vector-to-llvm="enable-arm-sve" -convert-func-to-llvm -cse -reconcile-unrealized-casts -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -convert-vector-to-llvm="enable-arm-sve" -convert-func-to-llvm -convert-arith-to-llvm -cse -reconcile-unrealized-casts -split-input-file %s | FileCheck %s
 
 func.func @arm_sve_sdot(%a: vector<[16]xi8>,
                    %b: vector<[16]xi8>,
@@ -42,6 +42,18 @@ func.func @arm_sve_ummla(%a: vector<[16]xi8>,
     -> vector<[4]xi32> {
   // CHECK: arm_sve.intr.ummla
   %0 = arm_sve.ummla %c, %a, %b :
+               vector<[16]xi8> to vector<[4]xi32>
+  return %0 : vector<[4]xi32>
+}
+
+// -----
+
+func.func @arm_sve_usmmla(%a: vector<[16]xi8>,
+                    %b: vector<[16]xi8>,
+                    %c: vector<[4]xi32>)
+    -> vector<[4]xi32> {
+  // CHECK: arm_sve.intr.usmmla
+  %0 = arm_sve.usmmla %c, %a, %b :
                vector<[16]xi8> to vector<[4]xi32>
   return %0 : vector<[4]xi32>
 }
@@ -270,4 +282,45 @@ func.func @arm_sve_psel_mixed_predicate_types(%p0: vector<[8]xi1>, %p1: vector<[
   // CHECK-NEXT: %[[RES:.*]] = "arm_sve.intr.convert.from.svbool"(%[[PSEL]]) : (vector<[16]xi1>) -> vector<[8]xi1>
   %0 = arm_sve.psel %p0, %p1[%index] : vector<[8]xi1>, vector<[16]xi1>
   return %0 : vector<[8]xi1>
+}
+
+// -----
+
+// CHECK-LABEL: @arm_sve_dupq_lane(
+// CHECK-SAME:                     %[[A0:[a-z0-9]+]]: vector<[16]xi8>
+// CHECK-SAME:                     %[[A1:[a-z0-9]+]]: vector<[8]xi16>
+// CHECK-SAME:                     %[[A2:[a-z0-9]+]]: vector<[8]xf16>
+// CHECK-SAME:                     %[[A3:[a-z0-9]+]]: vector<[8]xbf16>
+// CHECK-SAME:                     %[[A4:[a-z0-9]+]]: vector<[4]xi32>
+// CHECK-SAME:                     %[[A5:[a-z0-9]+]]: vector<[4]xf32>
+// CHECK-SAME:                     %[[A6:[a-z0-9]+]]: vector<[2]xi64>
+// CHECK-SAME:                     %[[A7:[a-z0-9]+]]: vector<[2]xf64>
+// CHECK-SAME: -> !llvm.struct<(vector<[16]xi8>, vector<[8]xi16>, vector<[8]xf16>, vector<[8]xbf16>, vector<[4]xi32>, vector<[4]xf32>, vector<[2]xi64>, vector<[2]xf64>)> {
+func.func @arm_sve_dupq_lane(
+  %v16i8: vector<[16]xi8>, %v8i16: vector<[8]xi16>,
+  %v8f16: vector<[8]xf16>, %v8bf16: vector<[8]xbf16>,
+  %v4i32: vector<[4]xi32>, %v4f32: vector<[4]xf32>,
+  %v2i64: vector<[2]xi64>, %v2f64: vector<[2]xf64>)
+  -> (vector<[16]xi8>, vector<[8]xi16>, vector<[8]xf16>, vector<[8]xbf16>,
+      vector<[4]xi32>, vector<[4]xf32>, vector<[2]xi64>, vector<[2]xf64>) {
+// CHECK: "arm_sve.intr.dupq_lane"(%[[A0]]) <{lane = 0 : i64}> : (vector<[16]xi8>) -> vector<[16]xi8>
+  %0 = arm_sve.dupq_lane %v16i8[0]  : vector<[16]xi8>
+// CHECK: "arm_sve.intr.dupq_lane"(%[[A1]]) <{lane = 1 : i64}> : (vector<[8]xi16>) -> vector<[8]xi16>
+  %1 = arm_sve.dupq_lane %v8i16[1]  : vector<[8]xi16>
+// CHECK: "arm_sve.intr.dupq_lane"(%[[A2]]) <{lane = 2 : i64}> : (vector<[8]xf16>) -> vector<[8]xf16>
+  %2 = arm_sve.dupq_lane %v8f16[2]  : vector<[8]xf16>
+// CHECK: "arm_sve.intr.dupq_lane"(%[[A3]]) <{lane = 3 : i64}> : (vector<[8]xbf16>) -> vector<[8]xbf16>
+  %3 = arm_sve.dupq_lane %v8bf16[3] : vector<[8]xbf16>
+// CHECK: "arm_sve.intr.dupq_lane"(%[[A4]]) <{lane = 4 : i64}> : (vector<[4]xi32>) -> vector<[4]xi32>
+  %4 = arm_sve.dupq_lane %v4i32[4]  : vector<[4]xi32>
+// CHECK: "arm_sve.intr.dupq_lane"(%[[A5]]) <{lane = 5 : i64}> : (vector<[4]xf32>) -> vector<[4]xf32>
+  %5 = arm_sve.dupq_lane %v4f32[5]  : vector<[4]xf32>
+// CHECK: "arm_sve.intr.dupq_lane"(%[[A6]]) <{lane = 6 : i64}> : (vector<[2]xi64>) -> vector<[2]xi64>
+  %6 = arm_sve.dupq_lane %v2i64[6]  : vector<[2]xi64>
+// CHECK: "arm_sve.intr.dupq_lane"(%[[A7]]) <{lane = 7 : i64}> : (vector<[2]xf64>) -> vector<[2]xf64>
+  %7 = arm_sve.dupq_lane %v2f64[7]  : vector<[2]xf64>
+
+  return %0, %1, %2, %3, %4, %5, %6, %7
+    : vector<[16]xi8>, vector<[8]xi16>, vector<[8]xf16>, vector<[8]xbf16>,
+      vector<[4]xi32>, vector<[4]xf32>, vector<[2]xi64>, vector<[2]xf64>
 }

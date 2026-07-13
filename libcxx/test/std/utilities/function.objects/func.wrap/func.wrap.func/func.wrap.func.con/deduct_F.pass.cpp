@@ -13,8 +13,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
+#include <cstddef>
 #include <functional>
-#include <type_traits>
 #include <utility>
 
 #include "test_macros.h"
@@ -153,4 +153,3 @@ struct invalid_c_vararg { R operator()(int, ...) { return {}; } };
 static_assert(!can_deduce<invalid_rvalue_ref>);
 static_assert(!can_deduce<invalid_c_vararg>);
 static_assert(!can_deduce<std::nullptr_t>);
-

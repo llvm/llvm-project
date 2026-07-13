@@ -52,7 +52,7 @@ body:             |
   bb.0:
     liveins: $lr
 
-    BLR_RVMARKER @attachedcall, @cb1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
+    BLR_RVMARKER @attachedcall, 1, @cb1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
     $w12 = ORRWri $wzr, 1
     $w12 = ORRWri $wzr, 1
     $w12 = ORRWri $wzr, 1
@@ -71,7 +71,7 @@ body:             |
   bb.0:
     liveins: $lr, $x19, $x20, $lr
 
-    BLR_RVMARKER @attachedcall, @cb2, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
+    BLR_RVMARKER @attachedcall, 1, @cb2, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
     $w12 = ORRWri $wzr, 1
     $w12 = ORRWri $wzr, 1
     $w12 = ORRWri $wzr, 1

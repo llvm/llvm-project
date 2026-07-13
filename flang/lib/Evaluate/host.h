@@ -18,7 +18,7 @@
 // to safely refer to this hardware type.
 
 #if HAS_QUADMATHLIB
-#include "quadmath.h"
+#include "quadmath_wrapper.h"
 #include "flang/Common/float128.h"
 #endif
 #include "flang/Evaluate/type.h"
@@ -26,7 +26,6 @@
 #include <complex>
 #include <cstdint>
 #include <limits>
-#include <string>
 #include <type_traits>
 
 namespace Fortran::evaluate {

@@ -84,7 +84,7 @@ define i1 @cmpeq_xor_cst1_multiuse(i32 %a, i32 %b) {
 define i1 @cmpeq_xor_cst1_commuted(i32 %a, i32 %b) {
 ; CHECK-LABEL: @cmpeq_xor_cst1_commuted(
 ; CHECK-NEXT:    [[B2:%.*]] = mul i32 [[B:%.*]], [[B]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[B2]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], [[B2]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 10
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -136,8 +136,7 @@ define i1 @foo2(i32 %x, i32 %y) {
 define <2 x i1> @foo3(<2 x i8> %x) {
 ; CHECK-LABEL: @foo3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[X:%.*]], <i8 -2, i8 -1>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[XOR]], <i8 9, i8 79>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[X:%.*]], <i8 -9, i8 -80>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
 entry:

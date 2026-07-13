@@ -11,9 +11,11 @@
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/algorithm.h" // max
+#include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h"
 #include "src/__support/str_to_integer.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_config.h"
@@ -23,23 +25,35 @@
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
 #include "src/__support/fixed_point/fx_rep.h"
 #endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+#ifndef LIBC_COPT_PRINTF_DISABLE_STRERROR
+#include "src/__support/libc_errno.h"
+#endif // LIBC_COPT_PRINTF_DISABLE_STRERROR
+#ifndef LIBC_COPT_PRINTF_DISABLE_WIDE
+#include "hdr/types/wint_t.h"
+#endif // LIBC_COPT_PRINTF_DISABLE_WIDE
 
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
-template <typename T> struct int_type_of {
+template <typename T, typename U = void> struct int_type_of {
   using type = T;
 };
-template <> struct int_type_of<double> {
-  using type = fputil::FPBits<double>::StorageType;
-};
-template <> struct int_type_of<long double> {
-  using type = fputil::FPBits<long double>::StorageType;
+
+template <typename T>
+struct int_type_of<T, cpp::enable_if_t<cpp::is_same_v<T, double>
+#if !defined(LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE)
+                                       || cpp::is_same_v<T, long double>
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+#if defined(LIBC_TYPES_HAS_FLOAT128)
+                                       || cpp::is_same_v<T, float128>
+#endif // LIBC_TYPES_HAS_FLOAT128
+                                       >> {
+  using type = typename fputil::FPBits<T>::StorageType;
 };
 
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
 template <typename T>
-struct int_type_of<cpp::enable_if<cpp::is_fixed_point_v<T>, T>> {
+struct int_type_of<T, cpp::enable_if<cpp::is_fixed_point_v<T>>> {
   using type = typename fixed_point::FXRep<T>::StorageType;
 };
 #endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
@@ -53,7 +67,8 @@ template <typename T> using int_type_of_v = typename int_type_of<T>::type;
     if (!temp.has_value()) {                                                   \
       section.has_conv = false;                                                \
     } else {                                                                   \
-      dst = cpp::bit_cast<int_type_of_v<arg_type>>(temp.value());              \
+      dst = static_cast<decltype(dst)>(                                        \
+          cpp::bit_cast<int_type_of_v<arg_type>>(temp.value()));               \
     }                                                                          \
   }
 #else
@@ -68,9 +83,9 @@ template <typename ArgProvider> class Parser {
   ArgProvider args_cur;
 
 #ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
-  // args_start stores the start of the va_args, which is allows getting the
-  // value of arguments that have already been passed. args_index is tracked so
-  // that we know which argument args_cur is on.
+  // args_start stores the start of the va_args, which helps in getting the
+  // number of arguments that have already been passed. args_index is tracked
+  // so that we know which argument args_cur is on.
   ArgProvider args_start;
   size_t args_index = 1;
 
@@ -126,10 +141,11 @@ public:
       } else if (internal::isdigit(str[cur_pos])) {
         auto result = internal::strtointeger<int>(str + cur_pos, 10);
         section.min_width = result.value;
-        cur_pos = cur_pos + result.parsed_len;
+        cur_pos = cur_pos + static_cast<size_t>(result.parsed_len);
       }
       if (section.min_width < 0) {
-        section.min_width = -section.min_width;
+        section.min_width =
+            (section.min_width == INT_MIN) ? INT_MAX : -section.min_width;
         section.flags = static_cast<FormatFlags>(section.flags |
                                                  FormatFlags::LEFT_JUSTIFIED);
       }
@@ -148,7 +164,7 @@ public:
         } else if (internal::isdigit(str[cur_pos])) {
           auto result = internal::strtointeger<int>(str + cur_pos, 10);
           section.precision = result.value;
-          cur_pos = cur_pos + result.parsed_len;
+          cur_pos = cur_pos + static_cast<size_t>(result.parsed_len);
         }
       }
 
@@ -167,7 +183,17 @@ public:
         section.has_conv = true;
         break;
       case ('c'):
-        WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, int, conv_index);
+        if (section.length_modifier == LengthModifier::l) {
+#ifdef LIBC_COPT_PRINTF_DISABLE_WIDE
+          using WideCharArgType = int;
+#else
+          using WideCharArgType = wint_t;
+#endif // LIBC_COPT_PRINTF_DISABLE_WIDE
+          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, WideCharArgType,
+                                 conv_index);
+        } else {
+          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, int, conv_index);
+        }
         break;
       case ('d'):
       case ('i'):
@@ -205,20 +231,27 @@ public:
           WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, ptrdiff_t, conv_index);
           break;
 
+#ifndef LIBC_COPT_PRINTF_DISABLE_BITINT
         case (LengthModifier::w):
         case (LengthModifier::wf):
           if (bw == 0) {
             section.has_conv = false;
-          } else if (bw <= INT_WIDTH) {
+          } else if (bw <= cpp::numeric_limits<unsigned int>::digits) {
             WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, int, conv_index);
-          } else if (bw <= LONG_WIDTH) {
+          } else if (bw <= cpp::numeric_limits<unsigned long>::digits) {
             WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long, conv_index);
-          } else if (bw <= LLONG_WIDTH) {
+          } else if (bw <= cpp::numeric_limits<unsigned long long>::digits) {
             WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long long, conv_index);
           } else {
             WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, intmax_t, conv_index);
           }
           break;
+#endif // LIBC_COPT_PRINTF_DISABLE_BITINT
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+        case (LengthModifier::Q):
+          section.has_conv = false;
+          break;
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
         }
         break;
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
@@ -230,10 +263,20 @@ public:
       case ('A'):
       case ('g'):
       case ('G'):
-        if (lm != LengthModifier::L) {
-          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, double, conv_index);
-        } else {
+        switch (lm) {
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+        case (LengthModifier::Q):
+          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, float128, conv_index);
+          break;
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+        case (LengthModifier::L):
           WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long double, conv_index);
+          break;
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+        default:
+          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, double, conv_index);
+          break;
         }
         break;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
@@ -256,14 +299,22 @@ public:
         }
         break;
 #endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+#ifndef LIBC_COPT_PRINTF_DISABLE_STRERROR
+      case ('m'):
+        // %m is an odd conversion in that it doesn't consume an argument, it
+        // just takes the current value of errno as its argument.
+        section.conv_val_raw =
+            static_cast<fputil::FPBits<double>::StorageType>(libc_errno);
+        break;
+#endif // LIBC_COPT_PRINTF_DISABLE_STRERROR
 #ifndef LIBC_COPT_PRINTF_DISABLE_WRITE_INT
-      case ('n'):
-#endif // LIBC_COPT_PRINTF_DISABLE_WRITE_INT
+      case ('n'): // Intentional fallthrough
+#endif            // LIBC_COPT_PRINTF_DISABLE_WRITE_INT
       case ('p'):
         WRITE_ARG_VAL_SIMPLEST(section.conv_val_ptr, void *, conv_index);
         break;
       case ('s'):
-        WRITE_ARG_VAL_SIMPLEST(section.conv_val_ptr, char *, conv_index);
+        WRITE_ARG_VAL_SIMPLEST(section.conv_val_ptr, void *, conv_index);
         break;
       default:
         // if the conversion is undefined, change this to a raw section.
@@ -333,6 +384,7 @@ private:
         ++*local_pos;
         return {LengthModifier::l, 0};
       }
+#ifndef LIBC_COPT_PRINTF_DISABLE_BITINT
     case ('w'): {
       LengthModifier lm;
       if (str[*local_pos + 1] == 'f') {
@@ -344,11 +396,12 @@ private:
       }
       if (internal::isdigit(str[*local_pos])) {
         const auto result = internal::strtointeger<int>(str + *local_pos, 10);
-        *local_pos += result.parsed_len;
+        *local_pos += static_cast<size_t>(result.parsed_len);
         return {lm, static_cast<size_t>(cpp::max(0, result.value))};
       }
       return {lm, 0};
     }
+#endif // LIBC_COPT_PRINTF_DISABLE_BITINT
     case ('h'):
       if (str[*local_pos + 1] == 'h') {
         *local_pos += 2;
@@ -360,6 +413,11 @@ private:
     case ('L'):
       ++*local_pos;
       return {LengthModifier::L, 0};
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+    case ('Q'):
+      ++*local_pos;
+      return {LengthModifier::Q, 0};
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
     case ('j'):
       ++*local_pos;
       return {LengthModifier::j, 0};
@@ -393,10 +451,10 @@ private:
   LIBC_INLINE size_t parse_index(size_t *local_pos) {
     if (internal::isdigit(str[*local_pos])) {
       auto result = internal::strtointeger<int>(str + *local_pos, 10);
-      size_t index = result.value;
-      if (str[*local_pos + result.parsed_len] != '$')
+      size_t index = static_cast<size_t>(result.value);
+      if (str[*local_pos + static_cast<size_t>(result.parsed_len)] != '$')
         return 0;
-      *local_pos = 1 + result.parsed_len + *local_pos;
+      *local_pos = static_cast<size_t>(1 + result.parsed_len) + *local_pos;
       return index;
     }
     return 0;
@@ -462,8 +520,10 @@ private:
       // Floating point numbers are stored separately from the other arguments.
       else if (cur_type_desc == type_desc_from_type<double>())
         args_cur.template next_var<double>();
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
       else if (cur_type_desc == type_desc_from_type<long double>())
         args_cur.template next_var<long double>();
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
       // Floating point numbers may be stored separately from the other
@@ -560,7 +620,16 @@ private:
           conv_size = type_desc_from_type<void>();
           break;
         case ('c'):
-          conv_size = type_desc_from_type<int>();
+          if (lm == LengthModifier::l) {
+#ifdef LIBC_COPT_PRINTF_DISABLE_WIDE
+            using WideCharArgType = int;
+#else
+            using WideCharArgType = wint_t;
+#endif // LIBC_COPT_PRINTF_DISABLE_WIDE
+            conv_size = type_desc_from_type<WideCharArgType>();
+          } else {
+            conv_size = type_desc_from_type<int>();
+          }
           break;
         case ('d'):
         case ('i'):
@@ -593,18 +662,25 @@ private:
           case (LengthModifier::t):
             conv_size = type_desc_from_type<ptrdiff_t>();
             break;
+#ifndef LIBC_COPT_PRINTF_DISABLE_BITINT
           case (LengthModifier::w):
           case (LengthModifier::wf):
-            if (bw <= INT_WIDTH) {
+            if (bw <= cpp::numeric_limits<unsigned int>::digits) {
               conv_size = type_desc_from_type<int>();
-            } else if (bw <= LONG_WIDTH) {
+            } else if (bw <= cpp::numeric_limits<unsigned long>::digits) {
               conv_size = type_desc_from_type<long>();
-            } else if (bw <= LLONG_WIDTH) {
+            } else if (bw <= cpp::numeric_limits<unsigned long long>::digits) {
               conv_size = type_desc_from_type<long long>();
             } else {
               conv_size = type_desc_from_type<intmax_t>();
             }
             break;
+#endif // LIBC_COPT_PRINTF_DISABLE_BITINT
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+          case (LengthModifier::Q):
+            conv_size = type_desc_from_type<void>();
+            break;
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
           }
           break;
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
@@ -616,10 +692,21 @@ private:
         case ('A'):
         case ('g'):
         case ('G'):
-          if (lm != LengthModifier::L)
-            conv_size = type_desc_from_type<double>();
-          else
+          switch (lm) {
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+          case LengthModifier::Q:
+            conv_size = type_desc_from_type<float128>();
+            break;
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+          case LengthModifier::L:
             conv_size = type_desc_from_type<long double>();
+            break;
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+          default:
+            conv_size = type_desc_from_type<double>();
+            break;
+          }
           break;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT

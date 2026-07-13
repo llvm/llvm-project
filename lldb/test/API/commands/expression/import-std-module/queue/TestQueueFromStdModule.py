@@ -15,6 +15,11 @@ class TestQueue(TestBase):
         compiler_version=[">", "16.0"],
         bugnumber="https://github.com/llvm/llvm-project/issues/68968",
     )
+    @skipIf(
+        compiler="clang",
+        compiler_version=["<", "17.0"],
+    )
+    @skipIf(macos_sdk_version=["<", "16.0"])
     def test(self):
         self.build()
 

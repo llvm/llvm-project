@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-suspicious-call-argument %t -- -- -std=c++11
+// RUN: %check_clang_tidy %s readability-suspicious-call-argument %t -- -- -std=c++11-or-later
 
 void foo_1(int aaaaaa, int bbbbbb) {}
 
@@ -382,7 +382,7 @@ enum opcode { Foo,
               Bar };
 static value *SimplifyRightShift(
     opcode Opcode, value *Op0, value *Op1, bool isExact,
-    const type1 &Q, unsigned MaxRecurse) {}
+    const type1 &Q, unsigned MaxRecurse) { return nullptr; }
 static value *SimplifyLShrInst(value *Op0, value *Op1, bool isExact,
                                const type1 &Q, unsigned MaxRecurse) {
   if (value *V = SimplifyRightShift(Foo, Op0, Op1, isExact, Q, MaxRecurse))

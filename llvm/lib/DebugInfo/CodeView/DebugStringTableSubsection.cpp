@@ -12,7 +12,6 @@
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Error.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 
@@ -23,7 +22,7 @@ DebugStringTableSubsectionRef::DebugStringTableSubsectionRef()
     : DebugSubsectionRef(DebugSubsectionKind::StringTable) {}
 
 Error DebugStringTableSubsectionRef::initialize(BinaryStreamRef Contents) {
-  Stream = Contents;
+  Stream = std::move(Contents);
   return Error::success();
 }
 

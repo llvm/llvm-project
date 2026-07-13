@@ -9,9 +9,8 @@ target triple = "aarch64-unknown-linux-gnu"
 ; here, only that this case no longer causes said crash.
 define dso_local i32 @dupext_crashtest(i32 %e) local_unnamed_addr {
 ; CHECK-LABEL: dupext_crashtest:
-; CHECK:       // %bb.0: // %for.body.lr.ph
-; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    dup v0.2s, w8
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    dup v0.2s, w0
 ; CHECK-NEXT:  .LBB0_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr d1, [x8]
@@ -19,7 +18,7 @@ define dso_local i32 @dupext_crashtest(i32 %e) local_unnamed_addr {
 ; CHECK-NEXT:    xtn v1.2s, v1.2d
 ; CHECK-NEXT:    str d1, [x8]
 ; CHECK-NEXT:    b .LBB0_1
-for.body.lr.ph:
+entry:
   %conv314 = zext i32 %e to i64
   br label %vector.memcheck
 
@@ -40,4 +39,70 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %4 = bitcast ptr undef to ptr
   store <2 x i32> %3, ptr %4, align 4
   br label %vector.body
+}
+
+; This test got stuck in a loop hoisting the and to the load, and sinking it back to the mull
+define i32 @dup_and_load(ptr %p, i1 %c) {
+; CHECK-LABEL: dup_and_load:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    ldrb w0, [x0]
+; CHECK-NEXT:    tbz w1, #0, .LBB1_3
+; CHECK-NEXT:  // %bb.1: // %ph
+; CHECK-NEXT:    dup v0.8h, w0
+; CHECK-NEXT:    mov w9, wzr
+; CHECK-NEXT:  .LBB1_2: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr d1, [x8]
+; CHECK-NEXT:    add w9, w9, #1
+; CHECK-NEXT:    cmp w9, #100
+; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    umull2 v2.4s, v0.8h, v1.8h
+; CHECK-NEXT:    umull v1.4s, v0.4h, v1.4h
+; CHECK-NEXT:    stp q1, q2, [x8]
+; CHECK-NEXT:    b.lt .LBB1_2
+; CHECK-NEXT:  .LBB1_3: // %end
+; CHECK-NEXT:    ret
+entry:
+  %l = load i32, ptr %p
+  %and255 = and i32 %l, 255
+  br i1 %c, label %ph, label %end
+
+ph:
+  %broadcast.splatinsert = insertelement <8 x i32> poison, i32 %and255, i32 0
+  %broadcast.splat = shufflevector <8 x i32> %broadcast.splatinsert, <8 x i32> poison, <8 x i32> zeroinitializer
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %vector.ph
+  %iv = phi i32 [ 0, %ph ], [ %iv.next, %vector.body ]
+  %wide.load = load <8 x i8>, ptr %p, align 4
+  %0 = zext <8 x i8> %wide.load to <8 x i32>
+  %1 = mul <8 x i32> %broadcast.splat, %0
+  store <8 x i32> %1, ptr %p, align 4
+  %iv.next = add i32 %iv, 1
+  %e = icmp slt i32 %iv.next, 100
+  br i1 %e, label %vector.body, label %end
+
+end:
+  ret i32 %and255
+}
+
+define <4 x i32> @backsmith_pure_4(<4 x i32> %0, <4 x i16> %conv.i) {
+; CHECK-LABEL: backsmith_pure_4:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    shl v2.4s, v0.4s, #16
+; CHECK-NEXT:    dup v1.4h, v1.h[2]
+; CHECK-NEXT:    sshr v2.4s, v2.4s, #16
+; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
+; CHECK-NEXT:    trn2 v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    mul v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+entry:
+  %conv.i19 = trunc <4 x i32> %0 to <4 x i16>
+  %shuffle11 = shufflevector <4 x i16> %conv.i19, <4 x i16> %conv.i, <32 x i32> <i32 5, i32 2, i32 5, i32 3, i32 1, i32 6, i32 5, i32 6, i32 5, i32 6, i32 4, i32 6, i32 0, i32 3, i32 5, i32 1, i32 6, i32 7, i32 2, i32 6, i32 3, i32 1, i32 0, i32 4, i32 4, i32 1, i32 2, i32 7, i32 2, i32 2, i32 1, i32 2>
+  %conv12 = sext <32 x i16> %shuffle11 to <32 x i32>
+  %shuffle14 = shufflevector <32 x i32> %conv12, <32 x i32> zeroinitializer, <4 x i32> <i32 9, i32 25, i32 poison, i32 poison>
+  %mul = mul <4 x i32> %0, %shuffle14
+  ret <4 x i32> %mul
 }

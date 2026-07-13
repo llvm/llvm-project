@@ -17,6 +17,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-defines.h"
@@ -61,6 +62,8 @@ public:
     eDumpOptionDescription = (1u << 3),
     eDumpOptionRaw = (1u << 4),
     eDumpOptionCommand = (1u << 5),
+    eDumpOptionDefaultValue = (1u << 6),
+    eDumpOptionOnlyChanged = (1u << 7),
     eDumpGroupValue = (eDumpOptionName | eDumpOptionType | eDumpOptionValue),
     eDumpGroupHelp =
         (eDumpOptionName | eDumpOptionType | eDumpOptionDescription),
@@ -72,7 +75,7 @@ public:
   virtual ~OptionValue() = default;
 
   OptionValue(const OptionValue &other);
-  
+
   OptionValue& operator=(const OptionValue &other);
 
   // Subclasses should override these functions
@@ -93,15 +96,7 @@ public:
   virtual void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                          uint32_t dump_mask) = 0;
 
-  // TODO: make this function pure virtual after implementing it in all
-  // child classes.
-  virtual llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) {
-    // Return nullptr which will create a llvm::json::Value() that is a NULL
-    // value. No setting should ever really have a NULL value in JSON. This
-    // indicates an error occurred and if/when we add a FromJSON() it will know
-    // to fail if someone tries to set it with a NULL JSON value.
-    return nullptr;
-  }
+  virtual llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) const = 0;
 
   virtual Status
   SetValueFromString(llvm::StringRef value,
@@ -119,7 +114,8 @@ public:
   virtual lldb::OptionValueSP GetSubValue(const ExecutionContext *exe_ctx,
                                           llvm::StringRef name,
                                           Status &error) const {
-    error.SetErrorStringWithFormatv("'{0}' is not a valid subvalue", name);
+    error = Status::FromErrorStringWithFormatv("'{0}' is not a valid subvalue",
+                                               name);
     return lldb::OptionValueSP();
   }
 
@@ -131,7 +127,9 @@ public:
 
   virtual llvm::StringRef GetName() const { return llvm::StringRef(); }
 
-  virtual bool DumpQualifiedName(Stream &strm) const;
+  virtual bool DumpQualifiedName(
+      Stream &strm,
+      std::optional<Stream::HighlightSettings> highlight = std::nullopt) const;
 
   // Subclasses should NOT override these functions as they use the above
   // functions to implement functionality
@@ -254,6 +252,13 @@ public:
 
   void SetOptionWasSet() { m_value_was_set = true; }
 
+  /// Return true if the current value equals the default value.
+  ///
+  /// Subclasses that store a default value should override this to compare
+  /// against it. The base implementation falls back to `OptionWasSet()`, which
+  /// is a reasonable approximation for types without an explicit default.
+  virtual bool IsDefault() const { return !OptionWasSet(); }
+
   void SetParent(const lldb::OptionValueSP &parent_sp) {
     m_parent_wp = parent_sp;
   }
@@ -291,6 +296,8 @@ public:
       return GetStringValue();
     if constexpr (std::is_same_v<T, ArchSpec>)
       return GetArchSpecValue();
+    if constexpr (std::is_same_v<T, FormatEntity::Entry>)
+      return GetFormatEntityValue();
     if constexpr (std::is_enum_v<T>)
       if (std::optional<int64_t> value = GetEnumerationValue())
         return static_cast<T>(*value);
@@ -302,11 +309,9 @@ public:
                 typename std::remove_pointer<T>::type>::type,
             std::enable_if_t<std::is_pointer_v<T>, bool> = true>
   T GetValueAs() const {
-    if constexpr (std::is_same_v<U, FormatEntity::Entry>)
-      return GetFormatEntity();
-    if constexpr (std::is_same_v<U, RegularExpression>)
-      return GetRegexValue();
-    return {};
+    static_assert(std::is_same_v<U, RegularExpression>,
+                  "only for RegularExpression");
+    return GetRegexValue();
   }
 
   bool SetValueAs(bool v) { return SetBooleanValue(v); }
@@ -329,6 +334,10 @@ public:
 
   bool SetValueAs(ArchSpec v) { return SetArchSpecValue(v); }
 
+  bool SetValueAs(const FormatEntity::Entry &v) {
+    return SetFormatEntityValue(v);
+  }
+
   template <typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
   bool SetValueAs(T t) {
     return SetEnumerationValue(t);
@@ -340,6 +349,20 @@ protected:
   // Must be overriden by a derived class for correct downcasting the result of
   // DeepCopy to it. Inherit from Cloneable to avoid doing this manually.
   virtual lldb::OptionValueSP Clone() const = 0;
+
+  class DefaultValueFormat {
+  public:
+    DefaultValueFormat(Stream &stream) : stream(stream) {
+      stream.PutCString(" (default: ");
+    }
+    ~DefaultValueFormat() { stream.PutChar(')'); }
+
+    DefaultValueFormat(const DefaultValueFormat &) = delete;
+    DefaultValueFormat &operator=(const DefaultValueFormat &) = delete;
+
+  private:
+    Stream &stream;
+  };
 
   lldb::OptionValueWP m_parent_wp;
   std::function<void()> m_callback;
@@ -385,9 +408,11 @@ private:
   std::optional<UUID> GetUUIDValue() const;
   bool SetUUIDValue(const UUID &uuid);
 
-  const FormatEntity::Entry *GetFormatEntity() const;
+  FormatEntity::Entry GetFormatEntityValue() const;
+  bool SetFormatEntityValue(const FormatEntity::Entry &entry);
+
   const RegularExpression *GetRegexValue() const;
-  
+
   mutable std::mutex m_mutex;
 };
 

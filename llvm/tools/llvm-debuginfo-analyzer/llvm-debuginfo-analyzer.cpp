@@ -34,7 +34,7 @@ static void error(std::error_code EC, char const *Fmt, const Ts &...Vals) {
   std::string Buffer;
   raw_string_ostream Stream(Buffer);
   Stream << format(Fmt, Vals...);
-  WithColor::error(errs(), ToolName) << Stream.str() << "\n";
+  WithColor::error(errs(), ToolName) << Buffer << "\n";
   exit(1);
 }
 
@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
   std::vector<std::string> Objects;
   for (const std::string &Filename : InputFilenames) {
     std::vector<std::string> Objs = expandBundle(Filename);
-    Objects.insert(Objects.end(), Objs.begin(), Objs.end());
+    llvm::append_range(Objects, Objs);
   }
 
   propagateOptions();

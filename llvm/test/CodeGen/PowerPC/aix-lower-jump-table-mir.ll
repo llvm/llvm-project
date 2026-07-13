@@ -31,33 +31,33 @@ define i32 @jump_table(i32 %a) {
   ; 32SMALL-MIR-NEXT: {{  $}}
   ; 32SMALL-MIR-NEXT:   renamable $r3 = RLWINM killed renamable $r3, 2, 0, 29
   ; 32SMALL-MIR-NEXT:   renamable $r4 = LWZtoc %jump-table.0, $r2 :: (load (s32) from got)
-  ; 32SMALL-MIR-NEXT:   renamable $r3 = LWZX killed renamable $r3, renamable $r4 :: (load (s32) from jump-table)
-  ; 32SMALL-MIR-NEXT:   renamable $r3 = ADD4 killed renamable $r3, killed renamable $r4
+  ; 32SMALL-MIR-NEXT:   renamable $r3 = LWZX renamable $r4, killed renamable $r3 :: (load (s32) from jump-table)
+  ; 32SMALL-MIR-NEXT:   renamable $r3 = ADD4 killed renamable $r4, killed renamable $r3
   ; 32SMALL-MIR-NEXT:   MTCTR killed renamable $r3, implicit-def $ctr
   ; 32SMALL-MIR-NEXT:   BCTR implicit $ctr
   ; 32SMALL-MIR-NEXT: {{  $}}
   ; 32SMALL-MIR-NEXT: bb.2.sw.bb:
   ; 32SMALL-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 32SMALL-MIR-NEXT: {{  $}}
-  ; 32SMALL-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 32SMALL-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 32SMALL-MIR-NEXT:   B %bb.6
   ; 32SMALL-MIR-NEXT: {{  $}}
   ; 32SMALL-MIR-NEXT: bb.3.sw.bb1:
   ; 32SMALL-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 32SMALL-MIR-NEXT: {{  $}}
-  ; 32SMALL-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 32SMALL-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 32SMALL-MIR-NEXT:   B %bb.6
   ; 32SMALL-MIR-NEXT: {{  $}}
   ; 32SMALL-MIR-NEXT: bb.4.sw.bb2:
   ; 32SMALL-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 32SMALL-MIR-NEXT: {{  $}}
-  ; 32SMALL-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 32SMALL-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 32SMALL-MIR-NEXT:   B %bb.6
   ; 32SMALL-MIR-NEXT: {{  $}}
   ; 32SMALL-MIR-NEXT: bb.5.sw.bb3:
   ; 32SMALL-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 32SMALL-MIR-NEXT: {{  $}}
-  ; 32SMALL-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 32SMALL-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 32SMALL-MIR-NEXT: {{  $}}
   ; 32SMALL-MIR-NEXT: bb.6.sw.epilog:
   ; 32SMALL-MIR-NEXT:   $r3 = LI 0
@@ -79,33 +79,33 @@ define i32 @jump_table(i32 %a) {
   ; 32LARGE-MIR-NEXT:   renamable $r3 = RLWINM killed renamable $r3, 2, 0, 29
   ; 32LARGE-MIR-NEXT:   renamable $r4 = ADDIStocHA $r2, %jump-table.0
   ; 32LARGE-MIR-NEXT:   renamable $r4 = LWZtocL %jump-table.0, killed renamable $r4, implicit $r2 :: (load (s32) from got)
-  ; 32LARGE-MIR-NEXT:   renamable $r3 = LWZX killed renamable $r3, renamable $r4 :: (load (s32) from jump-table)
-  ; 32LARGE-MIR-NEXT:   renamable $r3 = ADD4 killed renamable $r3, killed renamable $r4
+  ; 32LARGE-MIR-NEXT:   renamable $r3 = LWZX renamable $r4, killed renamable $r3 :: (load (s32) from jump-table)
+  ; 32LARGE-MIR-NEXT:   renamable $r3 = ADD4 killed renamable $r4, killed renamable $r3
   ; 32LARGE-MIR-NEXT:   MTCTR killed renamable $r3, implicit-def $ctr
   ; 32LARGE-MIR-NEXT:   BCTR implicit $ctr
   ; 32LARGE-MIR-NEXT: {{  $}}
   ; 32LARGE-MIR-NEXT: bb.2.sw.bb:
   ; 32LARGE-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 32LARGE-MIR-NEXT: {{  $}}
-  ; 32LARGE-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 32LARGE-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 32LARGE-MIR-NEXT:   B %bb.6
   ; 32LARGE-MIR-NEXT: {{  $}}
   ; 32LARGE-MIR-NEXT: bb.3.sw.bb1:
   ; 32LARGE-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 32LARGE-MIR-NEXT: {{  $}}
-  ; 32LARGE-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 32LARGE-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 32LARGE-MIR-NEXT:   B %bb.6
   ; 32LARGE-MIR-NEXT: {{  $}}
   ; 32LARGE-MIR-NEXT: bb.4.sw.bb2:
   ; 32LARGE-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 32LARGE-MIR-NEXT: {{  $}}
-  ; 32LARGE-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 32LARGE-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 32LARGE-MIR-NEXT:   B %bb.6
   ; 32LARGE-MIR-NEXT: {{  $}}
   ; 32LARGE-MIR-NEXT: bb.5.sw.bb3:
   ; 32LARGE-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 32LARGE-MIR-NEXT: {{  $}}
-  ; 32LARGE-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 32LARGE-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 32LARGE-MIR-NEXT: {{  $}}
   ; 32LARGE-MIR-NEXT: bb.6.sw.epilog:
   ; 32LARGE-MIR-NEXT:   $r3 = LI 0
@@ -126,33 +126,33 @@ define i32 @jump_table(i32 %a) {
   ; 64SMALL-MIR-NEXT: {{  $}}
   ; 64SMALL-MIR-NEXT:   renamable $x3 = RLDIC killed renamable $x3, 2, 30
   ; 64SMALL-MIR-NEXT:   renamable $x4 = LDtocJTI %jump-table.0, $x2 :: (load (s64) from got)
-  ; 64SMALL-MIR-NEXT:   renamable $x3 = LWAX killed renamable $x3, renamable $x4 :: (load (s32) from jump-table)
-  ; 64SMALL-MIR-NEXT:   renamable $x3 = ADD8 killed renamable $x3, killed renamable $x4
+  ; 64SMALL-MIR-NEXT:   renamable $x3 = LWAX renamable $x4, killed renamable $x3 :: (load (s32) from jump-table)
+  ; 64SMALL-MIR-NEXT:   renamable $x3 = ADD8 killed renamable $x4, killed renamable $x3
   ; 64SMALL-MIR-NEXT:   MTCTR8 killed renamable $x3, implicit-def $ctr8
   ; 64SMALL-MIR-NEXT:   BCTR8 implicit $ctr8
   ; 64SMALL-MIR-NEXT: {{  $}}
   ; 64SMALL-MIR-NEXT: bb.2.sw.bb:
   ; 64SMALL-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 64SMALL-MIR-NEXT: {{  $}}
-  ; 64SMALL-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 64SMALL-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 64SMALL-MIR-NEXT:   B %bb.6
   ; 64SMALL-MIR-NEXT: {{  $}}
   ; 64SMALL-MIR-NEXT: bb.3.sw.bb1:
   ; 64SMALL-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 64SMALL-MIR-NEXT: {{  $}}
-  ; 64SMALL-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 64SMALL-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 64SMALL-MIR-NEXT:   B %bb.6
   ; 64SMALL-MIR-NEXT: {{  $}}
   ; 64SMALL-MIR-NEXT: bb.4.sw.bb2:
   ; 64SMALL-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 64SMALL-MIR-NEXT: {{  $}}
-  ; 64SMALL-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 64SMALL-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 64SMALL-MIR-NEXT:   B %bb.6
   ; 64SMALL-MIR-NEXT: {{  $}}
   ; 64SMALL-MIR-NEXT: bb.5.sw.bb3:
   ; 64SMALL-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 64SMALL-MIR-NEXT: {{  $}}
-  ; 64SMALL-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 64SMALL-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 64SMALL-MIR-NEXT: {{  $}}
   ; 64SMALL-MIR-NEXT: bb.6.sw.epilog:
   ; 64SMALL-MIR-NEXT:   $x3 = LI8 0
@@ -174,33 +174,33 @@ define i32 @jump_table(i32 %a) {
   ; 64LARGE-MIR-NEXT:   renamable $x3 = RLDIC killed renamable $x3, 2, 30
   ; 64LARGE-MIR-NEXT:   renamable $x4 = ADDIStocHA8 $x2, %jump-table.0
   ; 64LARGE-MIR-NEXT:   renamable $x4 = LDtocL %jump-table.0, killed renamable $x4, implicit $x2 :: (load (s64) from got)
-  ; 64LARGE-MIR-NEXT:   renamable $x3 = LWAX killed renamable $x3, renamable $x4 :: (load (s32) from jump-table)
-  ; 64LARGE-MIR-NEXT:   renamable $x3 = ADD8 killed renamable $x3, killed renamable $x4
+  ; 64LARGE-MIR-NEXT:   renamable $x3 = LWAX renamable $x4, killed renamable $x3 :: (load (s32) from jump-table)
+  ; 64LARGE-MIR-NEXT:   renamable $x3 = ADD8 killed renamable $x4, killed renamable $x3
   ; 64LARGE-MIR-NEXT:   MTCTR8 killed renamable $x3, implicit-def $ctr8
   ; 64LARGE-MIR-NEXT:   BCTR8 implicit $ctr8
   ; 64LARGE-MIR-NEXT: {{  $}}
   ; 64LARGE-MIR-NEXT: bb.2.sw.bb:
   ; 64LARGE-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 64LARGE-MIR-NEXT: {{  $}}
-  ; 64LARGE-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 64LARGE-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 64LARGE-MIR-NEXT:   B %bb.6
   ; 64LARGE-MIR-NEXT: {{  $}}
   ; 64LARGE-MIR-NEXT: bb.3.sw.bb1:
   ; 64LARGE-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 64LARGE-MIR-NEXT: {{  $}}
-  ; 64LARGE-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 64LARGE-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 64LARGE-MIR-NEXT:   B %bb.6
   ; 64LARGE-MIR-NEXT: {{  $}}
   ; 64LARGE-MIR-NEXT: bb.4.sw.bb2:
   ; 64LARGE-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 64LARGE-MIR-NEXT: {{  $}}
-  ; 64LARGE-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 64LARGE-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 64LARGE-MIR-NEXT:   B %bb.6
   ; 64LARGE-MIR-NEXT: {{  $}}
   ; 64LARGE-MIR-NEXT: bb.5.sw.bb3:
   ; 64LARGE-MIR-NEXT:   successors: %bb.6(0x80000000)
   ; 64LARGE-MIR-NEXT: {{  $}}
-  ; 64LARGE-MIR-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; 64LARGE-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 64LARGE-MIR-NEXT: {{  $}}
   ; 64LARGE-MIR-NEXT: bb.6.sw.epilog:
   ; 64LARGE-MIR-NEXT:   $x3 = LI8 0

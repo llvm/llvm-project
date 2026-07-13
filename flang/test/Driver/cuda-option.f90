@@ -8,8 +8,8 @@ program main
   integer, device :: dvar
 end program
 
-! CHECK-LABEL: PROGRAM main
+! CHECK-LABEL: PROGRAM MAIN
 ! CHECK: INTEGER :: var = 1
 ! CHECK: INTEGER, DEVICE :: dvar
 
-! ERROR: cuda-option.f90:8:19: error: expected end of statement
+! ERROR: cuda-option.f90:{{.*}}:{{.*}}: error: expected end of statement

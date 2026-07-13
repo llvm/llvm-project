@@ -16,7 +16,7 @@ define i32 @foo(i32 %x, i32 %y) {
 define i1 @bar(i64 %x, i64 %y) {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:    [[Y1:%.*]] = xor i64 [[X:%.*]], -1
-; CHECK-NEXT:    [[B:%.*]] = and i64 [[Y1]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = and i64 [[Y:%.*]], [[Y1]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i64 [[B]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;

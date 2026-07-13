@@ -20,7 +20,6 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/type.h"
 #include "llvm/Support/raw_ostream.h"
-#include <forward_list>
 
 namespace Fortran::parser {
 class CharBlock;
@@ -50,11 +49,6 @@ parser::MessageFixedText WithSeverity(
 
 bool IsIntrinsicOperator(const SemanticsContext &, const SourceName &);
 bool IsLogicalConstant(const SemanticsContext &, const SourceName &);
-
-// Some intrinsic operators have more than one name (e.g. `operator(.eq.)` and
-// `operator(==)`). GetAllNames() returns them all, including symbolName.
-std::forward_list<std::string> GetAllNames(
-    const SemanticsContext &, const SourceName &);
 
 template <typename T>
 MaybeIntExpr EvaluateIntExpr(SemanticsContext &context, const T &expr) {
@@ -150,6 +144,18 @@ private:
 struct SymbolAndTypeMappings;
 void MapSubprogramToNewSymbols(const Symbol &oldSymbol, Symbol &newSymbol,
     Scope &newScope, SymbolAndTypeMappings * = nullptr);
+
+parser::CharBlock MakeNameFromOperator(
+    const parser::DefinedOperator::IntrinsicOperator &op,
+    SemanticsContext &context);
+parser::CharBlock MangleSpecialFunctions(const parser::CharBlock &name);
+std::string MangleDefinedOperator(const parser::CharBlock &name);
+
+// Map a mangled declare reduction name (e.g., "op.+", "op.combine.",
+// "op.max") back to the Fortran identifier used as the scope key for the
+// corresponding operator or procedure (e.g., "operator(+)", ".combine.",
+// "max"). Non-mangled names (procedure designators) are returned as-is.
+std::string GetReductionFortranId(const parser::CharBlock &mangledName);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_RESOLVE_NAMES_H_

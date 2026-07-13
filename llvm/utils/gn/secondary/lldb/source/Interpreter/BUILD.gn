@@ -15,12 +15,14 @@ static_library("Interpreter") {
   deps = [
     ":InterpreterProperties",
     ":InterpreterPropertiesEnum",
+    "Interfaces",
     "//lldb/source/Commands",
     "//lldb/source/Core",
     "//lldb/source/DataFormatters",
     "//lldb/source/Host",
 
-    #"//lldb/source/Target", # FIXME: 2-hop dependency cyle (Interpreter->Target->Expression->Interpreter)
+    # #"//lldb/source/Target", FIXME: 2-hop dependency cyle
+    # (Interpreter->Target->Expression->Interpreter)
     "//lldb/source/Utility",
     "//llvm/lib/Support",
   ]

@@ -20,7 +20,7 @@ using namespace lldb_private::instrumentation;
 // Whether we're currently across the API boundary.
 static thread_local bool g_global_boundary = false;
 
-// Instrument SB API calls with singposts when supported.
+// Instrument SB API calls with signposts when supported.
 static llvm::ManagedStatic<llvm::SignpostEmitter> g_api_signposts;
 
 Instrumenter::Instrumenter(llvm::StringRef pretty_func,

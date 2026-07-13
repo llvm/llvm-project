@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=hexagon -disable-lsr | FileCheck %s
+; RUN: llc < %s -mtriple=hexagon -disable-lsr | FileCheck %s
 
 ; CHECK:     loop0(
 ; CHECK-NOT: add({{r[0-9]*}}, #

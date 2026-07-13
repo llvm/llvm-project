@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "config/linux/app.h"
+#include "config/app.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {

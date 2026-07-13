@@ -16,9 +16,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <string>
@@ -166,7 +164,7 @@ FullSourceLoc FullSourceLoc::getExpansionLoc() const {
   return FullSourceLoc(SrcMgr->getExpansionLoc(*this), *SrcMgr);
 }
 
-std::pair<FileID, unsigned> FullSourceLoc::getDecomposedExpansionLoc() const {
+FileIDAndOffset FullSourceLoc::getDecomposedExpansionLoc() const {
   return SrcMgr->getDecomposedExpansionLoc(*this);
 }
 
@@ -276,6 +274,6 @@ StringRef FullSourceLoc::getBufferData(bool *Invalid) const {
   return SrcMgr->getBufferData(SrcMgr->getFileID(*this), Invalid);
 }
 
-std::pair<FileID, unsigned> FullSourceLoc::getDecomposedLoc() const {
+FileIDAndOffset FullSourceLoc::getDecomposedLoc() const {
   return SrcMgr->getDecomposedLoc(*this);
 }

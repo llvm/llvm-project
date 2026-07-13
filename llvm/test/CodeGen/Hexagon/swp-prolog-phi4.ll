@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -verify-machineinstrs < %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 -verify-machineinstrs < %s
 
 ; Test that the name rewriter code doesn't chase the Phi operands for
 ; Phis that do not occur in the loop that is being pipelined.
@@ -62,4 +62,4 @@ for.end:
   br label %for.body
 }
 
-attributes #0 = { norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv5" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv5" "use-soft-float"="false" }

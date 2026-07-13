@@ -133,7 +133,7 @@ namespace PR9323 {
   }
   void f(const Uncopyable&) {}
   void test() {
-    f(Uncopyable()); 
+    f(Uncopyable());
 #if __cplusplus <= 199711L // C++03 or earlier modes
     // expected-warning@-2 {{C++98 requires an accessible copy constructor}}
 #else
@@ -209,7 +209,9 @@ namespace OverloadUse {
     t<f>(&n, &n); // expected-note {{used here}}
 #if __cplusplus < 201103L
     // expected-warning@-3 {{non-type template argument referring to function 'f' with internal linkage}}
-    // expected-warning@-3 {{non-type template argument referring to function 'f' with internal linkage}}
+    // expected-note@-4 {{while substituting explicitly-specified template arguments}}
+    // expected-warning@-4 {{non-type template argument referring to function 'f' with internal linkage}}
+    // expected-note@-5 {{while substituting explicitly-specified template arguments}}
 #endif
   }
 }
@@ -225,7 +227,7 @@ namespace test7 {
 
 namespace test8 {
   typedef struct {
-    void bar(); // expected-warning {{function 'test8::(anonymous struct)::bar' has internal linkage but is not defined}}
+    void bar(); // expected-warning {{function 'test8::(unnamed struct)::bar' has internal linkage but is not defined}}
     void foo() {
       bar(); // expected-note {{used here}}
     }

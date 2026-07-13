@@ -1,14 +1,20 @@
 # RUN: yaml2obj %p/Inputs/include1a.yaml -o %t1.obj
 # RUN: yaml2obj %p/Inputs/include1b.yaml -o %t2.obj
 # RUN: yaml2obj %p/Inputs/include1c.yaml -o %t3.obj
-# RUN: rm -f %t2.lib %t3.lib
+# RUN: yaml2obj %p/Inputs/include1d.yaml -o %t4.obj
+# RUN: rm -f %t2.lib %t3.lib %t4.lib
 # RUN: llvm-ar cru %t2.lib %t2.obj
 # RUN: llvm-ar cru %t3.lib %t3.obj
-# RUN: lld-link /out:%t.exe /entry:main %t1.obj %t2.lib %t3.lib /verbose >& %t.log
+# RUN: llvm-ar cru %t4.lib %t4.obj
+# RUN: lld-link /out:%t.exe /entry:main %t1.obj %t2.lib %t3.lib %t4.lib /verbose >& %t.log
 # RUN: FileCheck %s < %t.log
+# RUN: lld-link /out:%t.exe /entry:main %t1.obj %t2.lib %t3.lib %t4.lib /includeglob:baz /verbose >& %t.glob.log
+# RUN: FileCheck -check-prefix=GLOB %s < %t.glob.log
 
 CHECK: include2.test.tmp1.obj
 CHECK: include2.test.tmp2.lib
 CHECK: include2.test.tmp2.lib(include2.test.tmp2.obj) for foo
 CHECK: include2.test.tmp3.lib
 CHECK: include2.test.tmp3.lib(include2.test.tmp3.obj) for bar
+CHECK-NOT: include2.test.tmp4.lib(include2.test.tmp4.obj) for baz
+GLOB: include2.test.tmp4.lib(include2.test.tmp4.obj) for baz

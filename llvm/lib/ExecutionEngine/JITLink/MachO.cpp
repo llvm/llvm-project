@@ -16,8 +16,6 @@
 #include "llvm/ExecutionEngine/JITLink/MachO_arm64.h"
 #include "llvm/ExecutionEngine/JITLink/MachO_x86_64.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SwapByteOrder.h"
 
 using namespace llvm;
 
@@ -27,7 +25,8 @@ namespace llvm {
 namespace jitlink {
 
 Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromMachOObject(MemoryBufferRef ObjectBuffer) {
+createLinkGraphFromMachOObject(MemoryBufferRef ObjectBuffer,
+                               std::shared_ptr<orc::SymbolStringPool> SSP) {
   StringRef Data = ObjectBuffer.getBuffer();
   if (Data.size() < 4)
     return make_error<JITLinkError>("Truncated MachO buffer \"" +
@@ -63,9 +62,10 @@ createLinkGraphFromMachOObject(MemoryBufferRef ObjectBuffer) {
 
     switch (CPUType) {
     case MachO::CPU_TYPE_ARM64:
-      return createLinkGraphFromMachOObject_arm64(ObjectBuffer);
+      return createLinkGraphFromMachOObject_arm64(ObjectBuffer, std::move(SSP));
     case MachO::CPU_TYPE_X86_64:
-      return createLinkGraphFromMachOObject_x86_64(ObjectBuffer);
+      return createLinkGraphFromMachOObject_x86_64(ObjectBuffer,
+                                                   std::move(SSP));
     }
     return make_error<JITLinkError>("MachO-64 CPU type not valid");
   } else
@@ -84,6 +84,68 @@ void link_MachO(std::unique_ptr<LinkGraph> G,
     Ctx->notifyFailed(make_error<JITLinkError>("MachO-64 CPU type not valid"));
     return;
   }
+}
+
+template <typename MachOHeaderType>
+static Expected<Block &> createLocalHeaderBlock(LinkGraph &G, Section &Sec) {
+  auto &B = G.createMutableContentBlock(Sec, sizeof(MachOHeaderType),
+                                        orc::ExecutorAddr(), 8, 0, true);
+  MachOHeaderType Hdr;
+  Hdr.magic = G.getPointerSize() == 4 ? MachO::MH_MAGIC : MachO::MH_MAGIC_64;
+  if (auto CPUType = MachO::getCPUType(G.getTargetTriple()))
+    Hdr.cputype = *CPUType;
+  else
+    return CPUType.takeError();
+  if (auto CPUSubType = MachO::getCPUSubType(G.getTargetTriple()))
+    Hdr.cpusubtype = *CPUSubType;
+  else
+    return CPUSubType.takeError();
+  Hdr.filetype = MachO::MH_OBJECT;
+
+  if (G.getEndianness() != endianness::native)
+    MachO::swapStruct(Hdr);
+
+  memcpy(B.getAlreadyMutableContent().data(), &Hdr, sizeof(Hdr));
+
+  return B;
+}
+
+Expected<Symbol &> getOrCreateLocalMachOHeader(LinkGraph &G) {
+  StringRef LocalHeaderSectionName("__TEXT,__lcl_macho_hdr");
+  Section *Sec = G.findSectionByName(LocalHeaderSectionName);
+  if (Sec) {
+    assert(Sec->blocks_size() == 1 && "Unexpected number of blocks");
+    assert(Sec->symbols_size() == 1 && "Unexpected number of symbols");
+    auto &Sym = **Sec->symbols().begin();
+    assert(Sym.getOffset() == 0 && "Symbol not at start of header block");
+    return Sym;
+  }
+
+  // Create the local header section, move all other sections up in the
+  // section ordering to ensure that it's laid out first.
+  for (auto &Sec : G.sections())
+    Sec.setOrdinal(Sec.getOrdinal() + 1);
+
+  Sec = &G.createSection(LocalHeaderSectionName, orc::MemProt::Read);
+
+  Sec->setOrdinal(0);
+
+  Block *B = nullptr;
+  switch (G.getTargetTriple().getArch()) {
+  case Triple::aarch64:
+  case Triple::x86_64:
+    if (auto BOrErr = createLocalHeaderBlock<MachO::mach_header_64>(G, *Sec))
+      B = &*BOrErr;
+    else
+      return BOrErr.takeError();
+    break;
+  default:
+    return make_error<JITLinkError>("Cannot create local Mach-O header for " +
+                                    G.getName() + ": unsupported triple " +
+                                    G.getTargetTriple().str());
+  }
+
+  return G.addAnonymousSymbol(*B, 0, B->getSize(), false, false);
 }
 
 } // end namespace jitlink

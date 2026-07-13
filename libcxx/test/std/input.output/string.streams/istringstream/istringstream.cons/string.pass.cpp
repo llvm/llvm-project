@@ -18,12 +18,13 @@
 #include <cassert>
 
 #include "test_macros.h"
+#include "operator_hijacker.h"
 
 int main(int, char**)
 {
     {
         std::istringstream ss(" 123 456");
-        assert(ss.rdbuf() != 0);
+        assert(ss.rdbuf() != nullptr);
         assert(ss.good());
         assert(ss.str() == " 123 456");
         int i = 0;
@@ -33,8 +34,19 @@ int main(int, char**)
         assert(i == 456);
     }
     {
+      std::basic_istringstream<char, std::char_traits<char>, operator_hijacker_allocator<char> > ss(" 123 456");
+      assert(ss.rdbuf() != nullptr);
+      assert(ss.good());
+      assert(ss.str() == " 123 456");
+      int i = 0;
+      ss >> i;
+      assert(i == 123);
+      ss >> i;
+      assert(i == 456);
+    }
+    {
         std::istringstream ss(" 123 456", std::ios_base::out);
-        assert(ss.rdbuf() != 0);
+        assert(ss.rdbuf() != nullptr);
         assert(ss.good());
         assert(ss.str() == " 123 456");
         int i = 0;
@@ -42,11 +54,23 @@ int main(int, char**)
         assert(i == 123);
         ss >> i;
         assert(i == 456);
+    }
+    {
+      std::basic_istringstream<char, std::char_traits<char>, operator_hijacker_allocator<char> > ss(
+          " 123 456", std::ios_base::out);
+      assert(ss.rdbuf() != nullptr);
+      assert(ss.good());
+      assert(ss.str() == " 123 456");
+      int i = 0;
+      ss >> i;
+      assert(i == 123);
+      ss >> i;
+      assert(i == 456);
     }
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wistringstream ss(L" 123 456");
-        assert(ss.rdbuf() != 0);
+        assert(ss.rdbuf() != nullptr);
         assert(ss.good());
         assert(ss.str() == L" 123 456");
         int i = 0;
@@ -56,8 +80,20 @@ int main(int, char**)
         assert(i == 456);
     }
     {
+      std::basic_istringstream<wchar_t, std::char_traits<wchar_t>, operator_hijacker_allocator<wchar_t> > ss(
+          L" 123 456");
+      assert(ss.rdbuf() != nullptr);
+      assert(ss.good());
+      assert(ss.str() == L" 123 456");
+      int i = 0;
+      ss >> i;
+      assert(i == 123);
+      ss >> i;
+      assert(i == 456);
+    }
+    {
         std::wistringstream ss(L" 123 456", std::ios_base::out);
-        assert(ss.rdbuf() != 0);
+        assert(ss.rdbuf() != nullptr);
         assert(ss.good());
         assert(ss.str() == L" 123 456");
         int i = 0;
@@ -65,6 +101,18 @@ int main(int, char**)
         assert(i == 123);
         ss >> i;
         assert(i == 456);
+    }
+    {
+      std::basic_istringstream<wchar_t, std::char_traits<wchar_t>, operator_hijacker_allocator<wchar_t> > ss(
+          L" 123 456", std::ios_base::out);
+      assert(ss.rdbuf() != nullptr);
+      assert(ss.good());
+      assert(ss.str() == L" 123 456");
+      int i = 0;
+      ss >> i;
+      assert(i == 123);
+      ss >> i;
+      assert(i == 456);
     }
 #endif
 

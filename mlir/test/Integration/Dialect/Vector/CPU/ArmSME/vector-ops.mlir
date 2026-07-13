@@ -3,7 +3,7 @@
 // DEFINE: %{run} = %mcr_aarch64_cmd \
 // DEFINE:  -march=aarch64 -mattr=+sve,+sme \
 // DEFINE:  -e %{entry_point} -entry-point-result=i32 \
-// DEFINE:  -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%arm_sme_abi_shlib
+// DEFINE:  -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_arm_sme_abi_shlib
 
 // RUN: %{compile} | %{run} | FileCheck %s
 
@@ -36,7 +36,7 @@ func.func @entry() -> i32 {
     %row = vector.load %za_b[%vnum, %c0] : memref<?x?xi8>, vector<[16]xi8>
 
     %inner_mul_reduce = scf.for %offset = %c0 to %svl_b step %c1_index iter_args(%inner_iter = %init_1) -> (i64) {
-      %t = vector.extractelement %row[%offset : index] : vector<[16]xi8>
+      %t = vector.extract %row[%offset] : i8 from vector<[16]xi8>
       %t_i64 = arith.extui %t : i8 to i64
       %inner_mul_reduce_next = arith.muli %inner_iter, %t_i64 : i64
       scf.yield %inner_mul_reduce_next : i64
@@ -64,7 +64,7 @@ func.func @entry() -> i32 {
     %row = vector.load %za_b[%vnum, %c0] : memref<?x?xi8>, vector<[16]xi8>
 
     %inner_mul_reduce = scf.for %offset = %c0 to %svl_b step %c1_index iter_args(%inner_iter = %init_1) -> (i64) {
-      %t = vector.extractelement %row[%offset : index] : vector<[16]xi8>
+      %t = vector.extract %row[%offset] : i8 from vector<[16]xi8>
       %t_i64 = arith.extui %t : i8 to i64
       %inner_mul_reduce_next = arith.muli %inner_iter, %t_i64 : i64
       scf.yield %inner_mul_reduce_next : i64

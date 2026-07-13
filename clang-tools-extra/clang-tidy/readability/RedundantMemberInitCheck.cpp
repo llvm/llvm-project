@@ -1,4 +1,4 @@
-//===--- RedundantMemberInitCheck.cpp - clang-tidy-------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +12,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
-#include <algorithm>
 
 using namespace clang::ast_matchers;
 using namespace clang::tidy::matchers;
@@ -22,21 +21,42 @@ namespace clang::tidy::readability {
 static SourceRange
 getFullInitRangeInclWhitespaces(SourceRange Range, const SourceManager &SM,
                                 const LangOptions &LangOpts) {
-  const Token PrevToken =
+  const std::optional<Token> PrevToken =
       utils::lexer::getPreviousToken(Range.getBegin(), SM, LangOpts, false);
-  if (PrevToken.is(tok::unknown))
+  if (!PrevToken)
     return Range;
 
-  if (PrevToken.isNot(tok::equal))
-    return {PrevToken.getEndLoc(), Range.getEnd()};
+  if (PrevToken->isNot(tok::equal))
+    return {PrevToken->getEndLoc(), Range.getEnd()};
 
   return getFullInitRangeInclWhitespaces(
-      {PrevToken.getLocation(), Range.getEnd()}, SM, LangOpts);
+      {PrevToken->getLocation(), Range.getEnd()}, SM, LangOpts);
 }
+
+namespace {
+// Matches a ``CXXConstructExpr`` whose written argument list (i.e. the
+// source text between the parentheses or braces) involves a macro.
+AST_MATCHER(CXXConstructExpr, initListContainsMacro) {
+  const SourceRange InitRange = Node.getParenOrBraceRange();
+  if (InitRange.isInvalid())
+    return false;
+  if (InitRange.getBegin().isMacroID() || InitRange.getEnd().isMacroID())
+    return true;
+  const ASTContext &Context = Finder->getASTContext();
+  const std::optional<Token> NextTok =
+      utils::lexer::findNextTokenSkippingComments(InitRange.getBegin(),
+                                                  Context.getSourceManager(),
+                                                  Context.getLangOpts());
+  if (!NextTok)
+    return true;
+  return NextTok->getLocation() != InitRange.getEnd();
+}
+} // namespace
 
 void RedundantMemberInitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreBaseInCopyConstructors",
                 IgnoreBaseInCopyConstructors);
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
 
 void RedundantMemberInitCheck::registerMatchers(MatchFinder *Finder) {
@@ -45,7 +65,11 @@ void RedundantMemberInitCheck::registerMatchers(MatchFinder *Finder) {
           argumentCountIs(0),
           hasDeclaration(cxxConstructorDecl(
               ofClass(cxxRecordDecl(unless(isTriviallyDefaultConstructible()))
-                          .bind("class")))))
+                          .bind("class")))),
+          IgnoreMacros
+              ? unless(initListContainsMacro())
+              : static_cast<ast_matchers::internal::Matcher<CXXConstructExpr>>(
+                    anything()))
           .bind("construct");
 
   auto HasUnionAsParent = hasParent(recordDecl(isUnion()));
@@ -79,10 +103,12 @@ void RedundantMemberInitCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (const auto *Field = Result.Nodes.getNodeAs<FieldDecl>("field")) {
     const Expr *Init = Field->getInClassInitializer();
-    diag(Construct->getExprLoc(), "initializer for member %0 is redundant")
-        << Field
-        << FixItHint::CreateRemoval(getFullInitRangeInclWhitespaces(
-               Init->getSourceRange(), *Result.SourceManager, getLangOpts()));
+    auto Diag =
+        diag(Construct->getExprLoc(), "initializer for member %0 is redundant")
+        << Field;
+    if (!Init->getBeginLoc().isMacroID() && !Init->getEndLoc().isMacroID())
+      Diag << FixItHint::CreateRemoval(getFullInitRangeInclWhitespaces(
+          Init->getSourceRange(), *Result.SourceManager, getLangOpts()));
     return;
   }
 

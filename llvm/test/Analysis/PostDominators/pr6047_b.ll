@@ -1,10 +1,10 @@
 ; RUN: opt < %s -passes='print<postdomtree>' 2>&1 | FileCheck %s
-define internal void @f() {
+define internal void @f(i1 %arg) {
 entry:
-  br i1 undef, label %a, label %bb3.i
+  br i1 %arg, label %a, label %bb3.i
 
 a:
-  br i1 undef, label %bb35, label %bb3.i
+  br i1 %arg, label %bb35, label %bb3.i
 
 bb3.i:
   br label %bb3.i

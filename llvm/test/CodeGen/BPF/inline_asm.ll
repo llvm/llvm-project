@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=bpfel -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -march=bpfeb -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=bpfel -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=bpfeb -verify-machineinstrs | FileCheck %s
 
 ; Source code:
 ; int g[2];

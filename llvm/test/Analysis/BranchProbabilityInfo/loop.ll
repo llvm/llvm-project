@@ -523,7 +523,7 @@ declare void @cold() cold
 
 ; If loop has single exit and it leads to 'cold' block then edge leading to loop enter
 ; should be considered 'cold' as well.
-define void @test13() {
+define void @test13(i1 %arg) {
 ; CHECK: edge %entry -> %loop probability is 0x078780e3 / 0x80000000 = 5.88%
 ; CHECK: edge %entry -> %exit probability is 0x78787f1d / 0x80000000 = 94.12% [HOT edge]
 ; CHECK: edge %loop -> %loop probability is 0x7fbe1203 / 0x80000000 = 99.80% [HOT edge]
@@ -531,12 +531,12 @@ define void @test13() {
 ; CHECK: edge %cold -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 entry:
-  br i1 undef, label %loop, label %exit
+  br i1 %arg, label %loop, label %exit
 
 loop:
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %loop ]
   %inc = add nsw i32 %i.0, 1
-  br i1 undef, label %loop, label %cold
+  br i1 %arg, label %loop, label %cold
 
 cold:
   call void @cold()
@@ -547,7 +547,7 @@ exit:
 }
 
 ; This is the same case as test13 but with additional loop 'preheader' block.
-define void @test14() {
+define void @test14(i1 %arg) {
 ; CHECK: edge %entry -> %preheader probability is 0x078780e3 / 0x80000000 = 5.88%
 ; CHECK: edge %entry -> %exit probability is 0x78787f1d / 0x80000000 = 94.12% [HOT edge]
 ; CHECK: edge %preheader -> %loop probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
@@ -556,7 +556,7 @@ define void @test14() {
 ; CHECK: edge %cold -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 entry:
-  br i1 undef, label %preheader, label %exit
+  br i1 %arg, label %preheader, label %exit
 
 preheader:
   br label %loop
@@ -564,7 +564,7 @@ preheader:
 loop:
   %i.0 = phi i32 [ 0, %preheader ], [ %inc, %loop ]
   %inc = add nsw i32 %i.0, 1
-  br i1 undef, label %loop, label %cold
+  br i1 %arg, label %loop, label %cold
 
 cold:
   call void @cold()
@@ -576,7 +576,7 @@ exit:
 
 ; If loop has multiple low probability exits then edge leading to loop enter
 ; should be considered low probable as well.
-define void @test15() {
+define void @test15(i1 %arg) {
 ; CHECK: edge %entry -> %loop probability is 0x078780e3 / 0x80000000 = 5.88%
 ; CHECK: edge %entry -> %exit probability is 0x78787f1d / 0x80000000 = 94.12% [HOT edge]
 ; CHECK: edge %loop -> %cont probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
@@ -586,15 +586,15 @@ define void @test15() {
 ; CHECK: edge %cold -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 entry:
-  br i1 undef, label %loop, label %exit
+  br i1 %arg, label %loop, label %exit
 
 loop:
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %cont ]
   %inc = add nsw i32 %i.0, 1
-  br i1 undef, label %cont, label %unreached
+  br i1 %arg, label %cont, label %unreached
 
 cont:
-  br i1 undef, label %loop, label %cold
+  br i1 %arg, label %loop, label %cold
 
 unreached:
   unreachable
@@ -609,7 +609,7 @@ exit:
 }
 
 ; This is the same case as test15 but with additional loop 'preheader' block.
-define void @test16() {
+define void @test16(i1 %arg) {
 ; CHECK: edge %entry -> %preheader probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ; CHECK: edge %preheader -> %loop probability is 0x078780e3 / 0x80000000 = 5.88%
 ; CHECK: edge %preheader -> %exit probability is 0x78787f1d / 0x80000000 = 94.12% [HOT edge]
@@ -623,15 +623,15 @@ entry:
   br label %preheader
 
 preheader:
-  br i1 undef, label %loop, label %exit
+  br i1 %arg, label %loop, label %exit
 
 loop:
   %i.0 = phi i32 [ 0, %preheader ], [ %inc, %cont ]
   %inc = add nsw i32 %i.0, 1
-  br i1 undef, label %cont, label %unreached
+  br i1 %arg, label %cont, label %unreached
 
 cont:
-  br i1 undef, label %loop, label %cold
+  br i1 %arg, label %loop, label %cold
 
 unreached:
   unreachable
@@ -649,7 +649,7 @@ declare void @abort() noreturn
 
 ; Check that 'preheader' has 50/50 probability since there is one 'normal' exit.
 ; Check that exit to 'cold' and 'noreturn' has lower probability than 'normal' exit.
-define void @test17() {
+define void @test17(i1 %arg) {
 ; CHECK: edge %entry -> %preheader probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ; CHECK: edge %preheader -> %loop probability is 0x40000000 / 0x80000000 = 50.00%
 ; CHECK: edge %preheader -> %exit probability is 0x40000000 / 0x80000000 = 50.00%
@@ -664,18 +664,18 @@ entry:
   br label %preheader
 
 preheader:
-  br i1 undef, label %loop, label %exit
+  br i1 %arg, label %loop, label %exit
 
 loop:
   %i.0 = phi i32 [ 0, %preheader ], [ %inc, %cont2 ]
   %inc = add nsw i32 %i.0, 1
-  br i1 undef, label %cont, label %noreturn
+  br i1 %arg, label %cont, label %noreturn
 
 cont:
-  br i1 undef, label %cont2, label %cold
+  br i1 %arg, label %cont2, label %cold
 
 cont2:
-  br i1 undef, label %loop, label %exit
+  br i1 %arg, label %loop, label %exit
 
 noreturn:
   call void @abort()
@@ -692,7 +692,7 @@ exit:
 
 ; This is case with two loops where one nested into another. Nested loop has
 ; low probable exit what encreases robability to take exit in the top level loop.
-define void @test18() {
+define void @test18(i1 %arg) {
 ; CHECK: edge %entry -> %top.loop probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ; CHECK: edge %top.loop -> %loop probability is 0x546cd4b7 / 0x80000000 = 65.96%
 ; CHECK: edge %top.loop -> %exit probability is 0x2b932b49 / 0x80000000 = 34.04%
@@ -705,12 +705,12 @@ entry:
 
 top.loop:
   %j.0 = phi i32 [ 0, %entry ], [ %j.inc, %cold ]
-  br i1 undef, label %loop, label %exit
+  br i1 %arg, label %loop, label %exit
 
 loop:
   %i.0 = phi i32 [ %j.0, %top.loop ], [ %inc, %loop ]
   %inc = add nsw i32 %i.0, 1
-  br i1 undef, label %loop, label %cold
+  br i1 %arg, label %loop, label %cold
 
 cold:
   call void @cold()

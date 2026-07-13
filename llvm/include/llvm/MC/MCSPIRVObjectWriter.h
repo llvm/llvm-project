@@ -18,9 +18,6 @@
 namespace llvm {
 
 class MCSPIRVObjectTargetWriter : public MCObjectTargetWriter {
-protected:
-  explicit MCSPIRVObjectTargetWriter() {}
-
 public:
   Triple::ObjectFormatType getFormat() const override { return Triple::SPIRV; }
   static bool classof(const MCObjectTargetWriter *W) {
@@ -28,7 +25,7 @@ public:
   }
 };
 
-class SPIRVObjectWriter final : public MCObjectWriter {
+class LLVM_ABI SPIRVObjectWriter final : public MCObjectWriter {
   support::endian::Writer W;
   std::unique_ptr<MCSPIRVObjectTargetWriter> TargetObjectWriter;
 
@@ -46,11 +43,7 @@ public:
   void setBuildVersion(unsigned Major, unsigned Minor, unsigned Bound);
 
 private:
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override {}
-
-  uint64_t writeObject(MCAssembler &Asm) override;
+  uint64_t writeObject() override;
   void writeHeader(const MCAssembler &Asm);
 };
 
@@ -59,7 +52,7 @@ private:
 /// \param MOTW - The target specific SPIR-V writer subclass.
 /// \param OS - The stream to write to.
 /// \returns The constructed object writer.
-std::unique_ptr<MCObjectWriter>
+LLVM_ABI std::unique_ptr<MCObjectWriter>
 createSPIRVObjectWriter(std::unique_ptr<MCSPIRVObjectTargetWriter> MOTW,
                         raw_pwrite_stream &OS);
 

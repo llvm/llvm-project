@@ -63,23 +63,23 @@ vpshufbitqmb    (%rdi), %zmm17, %k2 {%k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 4.00    -     2.67   2.67    -     16.00   -      -      -      -      -     2.67    -
+# CHECK-NEXT: 4.00    -     2.67   2.67    -     16.00   -      -      -      -     2.67    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpopcntb	%zmm1, %zmm0
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpopcntb	(%rdi), %zmm0
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpopcntb	(%rdi), %zmm0
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpopcntb	%zmm1, %zmm0 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpopcntb	(%rdi), %zmm0 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpopcntb	(%rdi), %zmm0 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpopcntb	%zmm1, %zmm0 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpopcntb	(%rdi), %zmm0 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpopcntb	(%rdi), %zmm0 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpopcntw	%zmm1, %zmm0
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpopcntw	(%rdi), %zmm0
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpopcntw	(%rdi), %zmm0
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpopcntw	%zmm1, %zmm0 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpopcntw	(%rdi), %zmm0 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpopcntw	(%rdi), %zmm0 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpopcntw	%zmm1, %zmm0 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpopcntw	(%rdi), %zmm0 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpopcntw	(%rdi), %zmm0 {%k1} {z}
 # CHECK-NEXT: 1.00    -      -      -      -     1.00    -      -      -      -      -      -      -     vpshufbitqmb	%zmm16, %zmm17, %k2
-# CHECK-NEXT: 1.00    -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpshufbitqmb	(%rdi), %zmm17, %k2
+# CHECK-NEXT: 1.00    -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpshufbitqmb	(%rdi), %zmm17, %k2
 # CHECK-NEXT: 1.00    -      -      -      -     1.00    -      -      -      -      -      -      -     vpshufbitqmb	%zmm16, %zmm17, %k2 {%k1}
-# CHECK-NEXT: 1.00    -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpshufbitqmb	(%rdi), %zmm17, %k2 {%k1}
+# CHECK-NEXT: 1.00    -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpshufbitqmb	(%rdi), %zmm17, %k2 {%k1}

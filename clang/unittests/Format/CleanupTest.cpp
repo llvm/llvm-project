@@ -423,7 +423,7 @@ TEST_F(CleanUpReplacementsTest, InsertMultipleIncludesGoogleStyle) {
   tooling::Replacements Replaces =
       toReplacements({createInsertion("#include <list>"),
                       createInsertion("#include \"x/x.h\"")});
-  Style = format::getGoogleStyle(format::FormatStyle::LanguageKind::LK_Cpp);
+  Style = getGoogleStyle(FormatStyle::LK_Cpp);
   EXPECT_EQ(Expected, apply(Code, Replaces));
 }
 
@@ -460,7 +460,7 @@ TEST_F(CleanUpReplacementsTest, InsertMultipleNewHeadersAndSortGoogle) {
        createInsertion("#include \"b.h\""),
        createInsertion("#include <vector>"), createInsertion("#include <list>"),
        createInsertion("#include \"fix.h\"")});
-  Style = format::getGoogleStyle(format::FormatStyle::LanguageKind::LK_Cpp);
+  Style = getGoogleStyle(FormatStyle::LK_Cpp);
   EXPECT_EQ(Expected, formatAndApply(Code, Replaces));
 }
 

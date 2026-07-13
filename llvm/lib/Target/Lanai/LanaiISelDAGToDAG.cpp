@@ -11,25 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "LanaiAluCode.h"
-#include "LanaiMachineFunctionInfo.h"
-#include "LanaiRegisterInfo.h"
-#include "LanaiSubtarget.h"
 #include "LanaiTargetMachine.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
-#include "llvm/IR/CFG.h"
-#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -364,8 +355,11 @@ void LanaiDAGToDAGISel::selectFrameIndex(SDNode *Node) {
   ReplaceNode(Node, CurDAG->getMachineNode(Opc, DL, VT, TFI, Imm));
 }
 
+LanaiISelDAGToDAGPass::LanaiISelDAGToDAGPass(LanaiTargetMachine &TM)
+    : SelectionDAGISelPass(std::make_unique<LanaiDAGToDAGISel>(TM)) {}
+
 // createLanaiISelDag - This pass converts a legalized DAG into a
 // Lanai-specific DAG, ready for instruction scheduling.
-FunctionPass *llvm::createLanaiISelDag(LanaiTargetMachine &TM) {
+FunctionPass *llvm::createLanaiISelDagLegacyPass(LanaiTargetMachine &TM) {
   return new LanaiDAGToDAGISelLegacy(TM);
 }

@@ -565,6 +565,28 @@ TEST_F(StencilTest, DescribeAnonNamespaceType) {
                        HasValue(std::string(Expected)));
 }
 
+TEST_F(StencilTest, DescribeFunction) {
+  std::string Snippet = "int F(); F();";
+  std::string Expected = "F";
+  auto StmtMatch = matchStmt(Snippet, callExpr(callee(namedDecl().bind("fn"))));
+  ASSERT_TRUE(StmtMatch);
+  EXPECT_THAT_EXPECTED(describe("fn")->eval(StmtMatch->Result),
+                       HasValue(std::string(Expected)));
+}
+
+TEST_F(StencilTest, DescribeImplicitOperator) {
+  std::string Snippet = "struct Tag {}; [](Tag){};";
+  std::string Expected = "operator()";
+  auto StmtMatch = matchStmt(
+      Snippet,
+      stmt(hasDescendant(
+          cxxMethodDecl(hasParameter(0, hasType(namedDecl(hasName("Tag")))))
+              .bind("fn"))));
+  ASSERT_TRUE(StmtMatch);
+  EXPECT_THAT_EXPECTED(describe("fn")->eval(StmtMatch->Result),
+                       HasValue(std::string(Expected)));
+}
+
 TEST_F(StencilTest, RunOp) {
   StringRef Id = "id";
   auto SimpleFn = [Id](const MatchResult &R) {

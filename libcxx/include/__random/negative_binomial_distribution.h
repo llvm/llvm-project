@@ -28,14 +28,14 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _IntType = int>
-class _LIBCPP_TEMPLATE_VIS negative_binomial_distribution {
+class negative_binomial_distribution {
   static_assert(__libcpp_random_is_valid_inttype<_IntType>::value, "IntType must be a supported integer type");
 
 public:
   // types
   typedef _IntType result_type;
 
-  class _LIBCPP_TEMPLATE_VIS param_type {
+  class param_type {
     result_type __k_;
     double __p_;
 
@@ -44,8 +44,8 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI explicit param_type(result_type __k = 1, double __p = 0.5) : __k_(__k), __p_(__p) {}
 
-    _LIBCPP_HIDE_FROM_ABI result_type k() const { return __k_; }
-    _LIBCPP_HIDE_FROM_ABI double p() const { return __p_; }
+    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type k() const { return __k_; }
+    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI double p() const { return __p_; }
 
     friend _LIBCPP_HIDE_FROM_ABI bool operator==(const param_type& __x, const param_type& __y) {
       return __x.__k_ == __y.__k_ && __x.__p_ == __y.__p_;
@@ -70,21 +70,21 @@ public:
 
   // generating functions
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
     return (*this)(__g, __p_);
   }
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
 
   // property functions
-  _LIBCPP_HIDE_FROM_ABI result_type k() const { return __p_.k(); }
-  _LIBCPP_HIDE_FROM_ABI double p() const { return __p_.p(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type k() const { return __p_.k(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI double p() const { return __p_.p(); }
 
-  _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
   _LIBCPP_HIDE_FROM_ABI void param(const param_type& __p) { __p_ = __p; }
 
-  _LIBCPP_HIDE_FROM_ABI result_type min() const { return 0; }
-  _LIBCPP_HIDE_FROM_ABI result_type max() const { return numeric_limits<result_type>::max(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type min() const { return 0; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type max() const { return numeric_limits<result_type>::max(); }
 
   friend _LIBCPP_HIDE_FROM_ABI bool
   operator==(const negative_binomial_distribution& __x, const negative_binomial_distribution& __y) {

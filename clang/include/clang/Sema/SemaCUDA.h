@@ -13,24 +13,34 @@
 #ifndef LLVM_CLANG_SEMA_SEMACUDA_H
 #define LLVM_CLANG_SEMA_SEMACUDA_H
 
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclCXX.h"
+#include "clang/AST/ASTFwd.h"
+#include "clang/AST/DeclAccessPair.h"
 #include "clang/AST/Redeclarable.h"
 #include "clang/Basic/Cuda.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
-#include "clang/Sema/ParsedAttr.h"
-#include "clang/Sema/Scope.h"
-#include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
 #include <string>
+#include <utility>
 
 namespace clang {
+namespace sema {
+class Capture;
+} // namespace sema
 
+class ASTReader;
+class ASTWriter;
 enum class CUDAFunctionTarget;
+enum class CXXSpecialMemberKind;
+class ParsedAttributesView;
+class Scope;
 
 class SemaCUDA : public SemaBase {
 public:
@@ -62,13 +72,14 @@ public:
   /// same deferred diag twice.
   llvm::DenseSet<FunctionDeclAndLoc> LocsWithCUDACallDiags;
 
-  /// An inverse call graph, mapping known-emitted functions to one of their
+  /// An inverse call graph, mapping known-emitted functions to their
   /// known-emitted callers (plus the location of the call).
   ///
   /// Functions that we can tell a priori must be emitted aren't added to this
-  /// map.
+  /// map. A function may have multiple callers that force it into device
+  /// context, so we store all of them to produce complete diagnostics.
   llvm::DenseMap</* Callee = */ CanonicalDeclPtr<const FunctionDecl>,
-                 /* Caller = */ FunctionDeclAndLoc>
+                 /* Callers = */ llvm::SmallVector<FunctionDeclAndLoc, 1>>
       DeviceKnownEmittedFns;
 
   /// Creates a SemaDiagnosticBuilder that emits the diagnostic if the current
@@ -263,6 +274,18 @@ public:
   /// of the function that will be called to configure kernel call, with the
   /// parameters specified via <<<>>>.
   std::string getConfigureFuncName() const;
+  /// Return the name of the parameter buffer allocation function for the
+  /// device kernel launch.
+  std::string getGetParameterBufferFuncName() const;
+  /// Return the name of the device kernel launch function.
+  std::string getLaunchDeviceFuncName() const;
+
+  /// Record variables that are potentially ODR-used in CUDA/HIP.
+  void recordPotentialODRUsedVariable(MultiExprArg Args,
+                                      OverloadCandidateSet &CandidateSet);
+
+  /// Null-tolerant wrapper for FunctionDecl::isImplicitHDExplicitInstantiation.
+  static bool isImplicitHDExplicitInstantiation(const FunctionDecl *FD);
 
 private:
   unsigned ForceHostDeviceDepth = 0;
@@ -280,14 +303,6 @@ template <> struct DenseMapInfo<clang::SemaCUDA::FunctionDeclAndLoc> {
   using FunctionDeclAndLoc = clang::SemaCUDA::FunctionDeclAndLoc;
   using FDBaseInfo =
       DenseMapInfo<clang::CanonicalDeclPtr<const clang::FunctionDecl>>;
-
-  static FunctionDeclAndLoc getEmptyKey() {
-    return {FDBaseInfo::getEmptyKey(), clang::SourceLocation()};
-  }
-
-  static FunctionDeclAndLoc getTombstoneKey() {
-    return {FDBaseInfo::getTombstoneKey(), clang::SourceLocation()};
-  }
 
   static unsigned getHashValue(const FunctionDeclAndLoc &FDL) {
     return hash_combine(FDBaseInfo::getHashValue(FDL.FD),

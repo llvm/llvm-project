@@ -92,14 +92,14 @@ constexpr void test_iterator_classes() {
     {
       std::array<int, 0> a = {};
 
-      auto ret = std::ranges::find_last_if(it(a.data()), sent(it(a.data())), [](auto&&) { return true; }).begin();
-      assert(ret == it(a.data()));
+      auto ret = std::ranges::find_last_if(it(a.begin()), sent(it(a.end())), [](auto&&) { return true; }).begin();
+      assert(ret == it(a.end()));
     }
     {
       std::array<int, 0> a = {};
 
       auto ret = std::ranges::find_last_if(make_range<it, sent>(a), [](auto&&) { return true; }).begin();
-      assert(ret == it(a.begin()));
+      assert(ret == it(a.end()));
     }
   }
 
@@ -183,8 +183,17 @@ struct NonConstComparable {
   friend constexpr bool operator==(NonConstComparable&, const NonConstComparable&) { return true; }
 };
 
+// TODO: this should really use `std::const_iterator`
 template <class T>
-using add_const_to_ptr_t = std::add_pointer_t<std::add_const_t<std::remove_pointer_t<T>>>;
+struct add_const_to_ptr {
+  using type = T;
+};
+template <class T>
+struct add_const_to_ptr<T*> {
+  using type = const T*;
+};
+template <class T>
+using add_const_to_ptr_t = typename add_const_to_ptr<T>::type;
 
 constexpr bool test() {
   test_iterator_classes<std::type_identity_t, std::type_identity_t>();

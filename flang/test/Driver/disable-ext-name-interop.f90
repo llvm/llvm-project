@@ -1,4 +1,4 @@
-! Test that we can disable the ExternalNameConversion pass in flang-new.
+! Test that we can disable the ExternalNameConversion pass in flang.
 
 ! RUN: %flang_fc1 -S %s -o - 2>&1 | FileCheck %s --check-prefix=EXTNAMES
 ! RUN: %flang_fc1 -S -mmlir -disable-external-name-interop %s -o - 2>&1 | FileCheck %s --check-prefix=INTNAMES

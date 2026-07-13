@@ -3,7 +3,7 @@
 
 define <4 x i32> @test_v4i32_splatconst_pow2(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_splatconst_pow2(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[A0:%.*]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[A0:%.*]], splat (i32 1)
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = urem <4 x i32> %a0, <i32 2, i32 2, i32 2, i32 2>
@@ -29,7 +29,7 @@ define <4 x i32> @test_v4i32_const_pow2_poison(<4 x i32> %a0) {
 
 define <4 x i32> @test_v4i32_one(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_one(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[A0:%.*]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[A0:%.*]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
@@ -39,7 +39,7 @@ define <4 x i32> @test_v4i32_one(<4 x i32> %a0) {
 
 define <4 x i32> @test_v4i32_one_poison(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_one_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[A0:%.*]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[A0:%.*]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
@@ -50,8 +50,8 @@ define <4 x i32> @test_v4i32_one_poison(<4 x i32> %a0) {
 define <4 x i32> @test_v4i32_negconstsplat(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_negconstsplat(
 ; CHECK-NEXT:    [[A0_FR:%.*]] = freeze <4 x i32> [[A0:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i32> [[A0_FR]], <i32 -3, i32 -3, i32 -3, i32 -3>
-; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[A0_FR]], <i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i32> [[A0_FR]], splat (i32 -3)
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[A0_FR]], splat (i32 3)
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[A0_FR]], <4 x i32> [[TMP2]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 ;

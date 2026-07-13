@@ -48,7 +48,7 @@ guarded1:                                         ; preds = %guarded
 }
 
 ; Same as @f_0, but with using a more general notion of postdominance.
-define void @f_1(i1 %cond_0, i1 %cond_1) {
+define void @f_1(i1 %cond_0, i1 %cond_1, i1 %arg) {
 ; CHECK-LABEL: @f_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND_1_GW_FR:%.*]] = freeze i1 [[COND_1:%.*]]
@@ -60,7 +60,7 @@ define void @f_1(i1 %cond_0, i1 %cond_1) {
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded:
-; CHECK-NEXT:    br i1 undef, label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       right:
@@ -85,7 +85,7 @@ deopt:                                            ; preds = %entry
   ret void
 
 guarded:                                          ; preds = %entry
-  br i1 undef, label %left, label %right
+  br i1 %arg, label %left, label %right
 
 left:                                             ; preds = %guarded
   br label %merge
@@ -108,7 +108,7 @@ guarded1:                                         ; preds = %merge
 
 ; Like @f_1, but we have some code we need to hoist before we can
 ; widen a dominanting check.
-define void @f_2(i32 %a, i32 %b) {
+define void @f_2(i32 %a, i32 %b, i1 %arg) {
 ; CHECK-LABEL: @f_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B_GW_FR:%.*]] = freeze i32 [[B:%.*]]
@@ -122,7 +122,7 @@ define void @f_2(i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded:
-; CHECK-NEXT:    br i1 undef, label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       right:
@@ -148,7 +148,7 @@ deopt:                                            ; preds = %entry
   ret void
 
 guarded:                                          ; preds = %entry
-  br i1 undef, label %left, label %right
+  br i1 %arg, label %left, label %right
 
 left:                                             ; preds = %guarded
   br label %merge
@@ -172,7 +172,7 @@ guarded1:                                         ; preds = %merge
 
 ; Negative test: don't hoist stuff out of control flow
 ; indiscriminately, since that can make us do more work than needed.
-define void @f_3(i32 %a, i32 %b) {
+define void @f_3(i32 %a, i32 %b, i1 %arg) {
 ; CHECK-LABEL: @f_3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND_0:%.*]] = icmp ult i32 [[A:%.*]], 10
@@ -183,7 +183,7 @@ define void @f_3(i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded:
-; CHECK-NEXT:    br i1 undef, label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp ult i32 [[B:%.*]], 10
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
@@ -208,7 +208,7 @@ deopt:                                            ; preds = %entry
   ret void
 
 guarded:                                          ; preds = %entry
-  br i1 undef, label %left, label %right
+  br i1 %arg, label %left, label %right
 
 left:                                             ; preds = %guarded
   %cond_1 = icmp ult i32 %b, 10
@@ -230,7 +230,7 @@ right:                                            ; preds = %guarded
 ; But hoisting out of control flow is fine if it makes a loop computed
 ; condition loop invariant.  This behavior may require some tuning in
 ; the future.
-define void @f_4(i32 %a, i32 %b) {
+define void @f_4(i32 %a, i32 %b, i1 %arg) {
 ; CHECK-LABEL: @f_4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B_GW_FR:%.*]] = freeze i32 [[B:%.*]]
@@ -244,7 +244,7 @@ define void @f_4(i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded:
-; CHECK-NEXT:    br i1 undef, label [[LOOP:%.*]], label [[LEAVE:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LOOP:%.*]], label [[LEAVE:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 [[COND_1]], [[WIDENABLE_COND3]]
@@ -253,7 +253,7 @@ define void @f_4(i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded1:
-; CHECK-NEXT:    br i1 undef, label [[LOOP]], label [[LEAVE]]
+; CHECK-NEXT:    br i1 %arg, label [[LOOP]], label [[LEAVE]]
 ; CHECK:       leave:
 ; CHECK-NEXT:    ret void
 ;
@@ -268,7 +268,7 @@ deopt:                                            ; preds = %entry
   ret void
 
 guarded:                                          ; preds = %entry
-  br i1 undef, label %loop, label %leave
+  br i1 %arg, label %loop, label %leave
 
 loop:                                             ; preds = %guarded1, %guarded
   %cond_1 = icmp ult i32 %b, 10
@@ -281,7 +281,7 @@ deopt2:                                           ; preds = %loop
   ret void
 
 guarded1:                                         ; preds = %loop
-  br i1 undef, label %loop, label %leave
+  br i1 %arg, label %loop, label %leave
 
 leave:                                            ; preds = %guarded1, %guarded
   ret void
@@ -289,7 +289,7 @@ leave:                                            ; preds = %guarded1, %guarded
 
 ; Hoisting out of control flow is also fine if we can widen the
 ; dominating check without doing any extra work.
-define void @f_5(i32 %a) {
+define void @f_5(i32 %a, i1 %arg) {
 ; CHECK-LABEL: @f_5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND_0:%.*]] = icmp ugt i32 [[A:%.*]], 7
@@ -301,7 +301,7 @@ define void @f_5(i32 %a) {
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded:
-; CHECK-NEXT:    br i1 undef, label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp ugt i32 [[A]], 10
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
@@ -326,7 +326,7 @@ deopt:                                            ; preds = %entry
   ret void
 
 guarded:                                          ; preds = %entry
-  br i1 undef, label %left, label %right
+  br i1 %arg, label %left, label %right
 
 left:                                             ; preds = %guarded
   %cond_1 = icmp ugt i32 %a, 10
@@ -397,7 +397,7 @@ guarded1:                                         ; preds = %guarded
 
 ; All else equal, we try to widen the earliest guard we can.  This
 ; heuristic can use some tuning.
-define void @f_7(i32 %a, ptr %cond_buf) {
+define void @f_7(i32 %a, ptr %cond_buf, i1 %arg) {
 ; CHECK-LABEL: @f_7(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_GW_FR:%.*]] = freeze i32 [[A:%.*]]
@@ -419,7 +419,7 @@ define void @f_7(i32 %a, ptr %cond_buf) {
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded1:
-; CHECK-NEXT:    br i1 undef, label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
 ; CHECK-NEXT:    [[WIDENABLE_COND7:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND8:%.*]] = and i1 [[COND_3]], [[WIDENABLE_COND7]]
@@ -453,7 +453,7 @@ deopt2:                                           ; preds = %guarded
   ret void
 
 guarded1:                                         ; preds = %guarded
-  br i1 undef, label %left, label %right
+  br i1 %arg, label %left, label %right
 
 left:                                             ; preds = %guarded5, %guarded1
   %cond_3 = icmp ult i32 %a, 7
@@ -475,7 +475,7 @@ right:                                            ; preds = %guarded1
 ; In this case the earliest dominating guard is in a loop, and we
 ; don't want to put extra work in there.  This heuristic can use some
 ; tuning.
-define void @f_8(i32 %a, i1 %cond_1, i1 %cond_2) {
+define void @f_8(i32 %a, i1 %cond_1, i1 %cond_2, i1 %arg) {
 ; CHECK-LABEL: @f_8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_GW_FR:%.*]] = freeze i32 [[A:%.*]]
@@ -488,7 +488,7 @@ define void @f_8(i32 %a, i1 %cond_1, i1 %cond_2) {
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded:
-; CHECK-NEXT:    br i1 undef, label [[LOOP]], label [[LEAVE:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LOOP]], label [[LEAVE:%.*]]
 ; CHECK:       leave:
 ; CHECK-NEXT:    [[COND_3:%.*]] = icmp ult i32 [[A_GW_FR]], 7
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_2:%.*]], [[COND_3]]
@@ -499,7 +499,7 @@ define void @f_8(i32 %a, i1 %cond_1, i1 %cond_2) {
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded1:
-; CHECK-NEXT:    br i1 undef, label [[LOOP2:%.*]], label [[LEAVE2:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LOOP2:%.*]], label [[LEAVE2:%.*]]
 ; CHECK:       loop2:
 ; CHECK-NEXT:    [[WIDENABLE_COND7:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND8:%.*]] = and i1 [[COND_3]], [[WIDENABLE_COND7]]
@@ -525,7 +525,7 @@ deopt:                                            ; preds = %loop
   ret void
 
 guarded:                                          ; preds = %loop
-  br i1 undef, label %loop, label %leave
+  br i1 %arg, label %loop, label %leave
 
 leave:                                            ; preds = %guarded
   %widenable_cond3 = call i1 @llvm.experimental.widenable.condition()
@@ -537,7 +537,7 @@ deopt2:                                           ; preds = %leave
   ret void
 
 guarded1:                                         ; preds = %leave
-  br i1 undef, label %loop2, label %leave2
+  br i1 %arg, label %loop2, label %leave2
 
 loop2:                                            ; preds = %guarded5, %guarded1
   %cond_3 = icmp ult i32 %a, 7
@@ -558,7 +558,7 @@ leave2:                                           ; preds = %guarded1
 
 ; In cases like these where there isn't any "obviously profitable"
 ; widening sites, we refuse to do anything.
-define void @f_9(i32 %a, i1 %cond_0, i1 %cond_1) {
+define void @f_9(i32 %a, i1 %cond_0, i1 %cond_1, i1 %arg) {
 ; CHECK-LABEL: @f_9(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FIRST_LOOP:%.*]]
@@ -570,7 +570,7 @@ define void @f_9(i32 %a, i1 %cond_0, i1 %cond_1) {
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded:
-; CHECK-NEXT:    br i1 undef, label [[FIRST_LOOP]], label [[SECOND_LOOP:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[FIRST_LOOP]], label [[SECOND_LOOP:%.*]]
 ; CHECK:       second_loop:
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 [[COND_1:%.*]], [[WIDENABLE_COND3]]
@@ -594,7 +594,7 @@ deopt:                                            ; preds = %first_loop
   ret void
 
 guarded:                                          ; preds = %first_loop
-  br i1 undef, label %first_loop, label %second_loop
+  br i1 %arg, label %first_loop, label %second_loop
 
 second_loop:                                      ; preds = %guarded1, %guarded
   %widenable_cond3 = call i1 @llvm.experimental.widenable.condition()
@@ -611,7 +611,7 @@ guarded1:                                         ; preds = %second_loop
 
 ; Same situation as in @f_9: no "obviously profitable" widening sites,
 ; so we refuse to do anything.
-define void @f_10(i32 %a, i1 %cond_0, i1 %cond_1) {
+define void @f_10(i32 %a, i1 %cond_0, i1 %cond_1, i1 %arg) {
 ; CHECK-LABEL: @f_10(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -623,7 +623,7 @@ define void @f_10(i32 %a, i1 %cond_0, i1 %cond_1) {
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded:
-; CHECK-NEXT:    br i1 undef, label [[LOOP]], label [[NO_LOOP:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LOOP]], label [[NO_LOOP:%.*]]
 ; CHECK:       no_loop:
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 [[COND_1:%.*]], [[WIDENABLE_COND3]]
@@ -647,7 +647,7 @@ deopt:                                            ; preds = %loop
   ret void
 
 guarded:                                          ; preds = %loop
-  br i1 undef, label %loop, label %no_loop
+  br i1 %arg, label %loop, label %no_loop
 
 no_loop:                                          ; preds = %guarded
   %widenable_cond3 = call i1 @llvm.experimental.widenable.condition()
@@ -664,7 +664,7 @@ guarded1:                                         ; preds = %no_loop
 
 ; With guards in loops, we're okay hoisting out the guard into the
 ; containing loop.
-define void @f_11(i32 %a, i1 %cond_0, i1 %cond_1) {
+define void @f_11(i32 %a, i1 %cond_0, i1 %cond_1, i1 %arg) {
 ; CHECK-LABEL: @f_11(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND_1_GW_FR:%.*]] = freeze i1 [[COND_1:%.*]]
@@ -687,9 +687,9 @@ define void @f_11(i32 %a, i1 %cond_0, i1 %cond_1) {
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded1:
-; CHECK-NEXT:    br i1 undef, label [[INNER]], label [[OUTER_LATCH:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[INNER]], label [[OUTER_LATCH:%.*]]
 ; CHECK:       outer_latch:
-; CHECK-NEXT:    br i1 undef, label [[OUTER_HEADER]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[OUTER_HEADER]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -718,10 +718,10 @@ deopt2:                                           ; preds = %inner
   ret void
 
 guarded1:                                         ; preds = %inner
-  br i1 undef, label %inner, label %outer_latch
+  br i1 %arg, label %inner, label %outer_latch
 
 outer_latch:                                      ; preds = %guarded1
-  br i1 undef, label %outer_header, label %exit
+  br i1 %arg, label %outer_header, label %exit
 
 exit:                                             ; preds = %outer_latch
   ret void
@@ -834,7 +834,7 @@ guarded1:                                         ; preds = %guarded
   ret void
 }
 
-define void @f_13(i32 %a) {
+define void @f_13(i32 %a, i1 %arg) {
 ; CHECK-LABEL: @f_13(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND_0:%.*]] = icmp ult i32 [[A:%.*]], 14
@@ -846,7 +846,7 @@ define void @f_13(i32 %a) {
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded:
-; CHECK-NEXT:    br i1 undef, label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp slt i32 [[A]], 10
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
@@ -871,7 +871,7 @@ deopt:                                            ; preds = %entry
   ret void
 
 guarded:                                          ; preds = %entry
-  br i1 undef, label %left, label %right
+  br i1 %arg, label %left, label %right
 
 left:                                             ; preds = %guarded
   %cond_1 = icmp slt i32 %a, 10
@@ -890,7 +890,7 @@ right:                                            ; preds = %guarded
   ret void
 }
 
-define void @f_14(i32 %a) {
+define void @f_14(i32 %a, i1 %arg) {
 ; CHECK-LABEL: @f_14(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND_0:%.*]] = icmp ult i32 [[A:%.*]], 14
@@ -901,7 +901,7 @@ define void @f_14(i32 %a) {
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded:
-; CHECK-NEXT:    br i1 undef, label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp sgt i32 [[A]], 10
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
@@ -926,7 +926,7 @@ deopt:                                            ; preds = %entry
   ret void
 
 guarded:                                          ; preds = %entry
-  br i1 undef, label %left, label %right
+  br i1 %arg, label %left, label %right
 
 left:                                             ; preds = %guarded
   %cond_1 = icmp sgt i32 %a, 10

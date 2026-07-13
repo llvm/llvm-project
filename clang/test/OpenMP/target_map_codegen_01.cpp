@@ -37,13 +37,13 @@
 
 // CK2-LABEL: @.__omp_offloading_{{.*}}implicit_maps_reference{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
-// CK2: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 4]
+// CK2: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 4, i64 0]
 // Map types: OMP_MAP_PRIVATE_VAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
-// CK2: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 800]
+// CK2: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 800, i64 288]
 // CK2-LABEL: @.__omp_offloading_{{.*}}implicit_maps_reference{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK2: [[SIZES2:@.+]] = {{.+}}constant [1 x i64] zeroinitializer
+// CK2: [[SIZES2:@.+]] = {{.+}}constant [2 x i64] zeroinitializer
 // Map types: OMP_MAP_IS_PTR | OMP_MAP_IMPLICIT = 544
-// CK2: [[TYPES2:@.+]] = {{.+}}constant [1 x i64] [i64 544]
+// CK2: [[TYPES2:@.+]] = {{.+}}constant [2 x i64] [i64 544, i64 288]
 
 // CK2-LABEL: implicit_maps_reference{{.*}}(
 void implicit_maps_reference (int a, int *b){
@@ -62,7 +62,7 @@ void implicit_maps_reference (int a, int *b){
 // CK2-DAG: [[VAL]] = load i[[sz]], ptr [[ADDR:%.+]],
 // CK2-64-DAG: store i32 {{.+}}, ptr [[ADDR]],
 
-// CK2: call void [[KERNEL:@.+]](i[[sz]] [[VAL]])
+// CK2: call void [[KERNEL:@.+]](i[[sz]] [[VAL]], ptr null)
 #pragma omp target
   {
    ++i;
@@ -83,15 +83,16 @@ void implicit_maps_reference (int a, int *b){
 // CK2-DAG: [[VAL]] = load ptr, ptr [[ADDR:%.+]],
 // CK2-DAG: [[ADDR]] = load ptr, ptr [[ADDR2:%.+]],
 
-// CK2: call void [[KERNEL2:@.+]](ptr [[VAL]])
+// CK2: call void [[KERNEL2:@.+]](ptr [[VAL]], ptr null)
 #pragma omp target
   {
    ++p;
   }
 }
 
-// CK2: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]])
+// CK2: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]], ptr {{[^)]*}})
 // CK2: [[ADDR:%.+]] = alloca i[[sz]],
+// CK2: alloca ptr,
 // CK2: [[REF:%.+]] = alloca ptr,
 // CK2: store i[[sz]] [[ARG]], ptr [[ADDR]],
 // CK2-64: store ptr [[ADDR]], ptr [[REF]],
@@ -101,13 +102,14 @@ void implicit_maps_reference (int a, int *b){
 // CK2-32: [[RVAL:%.+]] = load ptr, ptr [[REF]],
 // CK2-32: {{.+}} = load i32, ptr [[RVAL]],
 
-// CK2: define internal void [[KERNEL2]](ptr noundef [[ARG:%.+]])
+// CK2: define internal void [[KERNEL2]](ptr noundef [[ARG:%.+]], ptr {{[^)]*}})
 // CK2: [[ADDR:%.+]] = alloca ptr,
+// CK2: alloca ptr,
 // CK2: [[REF:%.+]] = alloca ptr,
 // CK2: store ptr [[ARG]], ptr [[ADDR]],
 // CK2: store ptr [[ADDR]], ptr [[REF]],
 // CK2: [[T:%.+]] = load ptr, ptr [[REF]],
 // CK2: [[TT:%.+]] = load ptr, ptr [[T]],
-// CK2: getelementptr inbounds i32, ptr [[TT]], i32 1
+// CK2: getelementptr inbounds nuw i32, ptr [[TT]], i32 1
 #endif // CK2
 #endif

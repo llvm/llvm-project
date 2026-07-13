@@ -17,6 +17,7 @@
 #define LLVM_IR_LEGACYPASSMANAGER_H
 
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -28,7 +29,7 @@ namespace legacy {
 
 // Whether or not -debug-pass has been specified. For use to check if it's
 // specified alongside the new PM.
-bool debugPassSpecified();
+LLVM_ABI bool debugPassSpecified();
 
 class PassManagerImpl;
 class FunctionPassManagerImpl;
@@ -36,7 +37,7 @@ class FunctionPassManagerImpl;
 /// PassManagerBase - An abstract interface to allow code to add passes to
 /// a pass manager without having to hard-code what kind of pass manager
 /// it is.
-class PassManagerBase {
+class LLVM_ABI PassManagerBase {
 public:
   virtual ~PassManagerBase();
 
@@ -49,7 +50,7 @@ public:
 };
 
 /// PassManager manages ModulePassManagers
-class PassManager : public PassManagerBase {
+class LLVM_ABI PassManager : public PassManagerBase {
 public:
 
   PassManager();
@@ -68,7 +69,7 @@ private:
 };
 
 /// FunctionPassManager manages FunctionPasses.
-class FunctionPassManager : public PassManagerBase {
+class LLVM_ABI FunctionPassManager : public PassManagerBase {
 public:
   /// FunctionPassManager ctor - This initializes the pass manager.  It needs,
   /// but does not take ownership of, the specified Module.

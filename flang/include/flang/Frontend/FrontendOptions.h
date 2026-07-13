@@ -13,10 +13,10 @@
 #ifndef FORTRAN_FRONTEND_FRONTENDOPTIONS_H
 #define FORTRAN_FRONTEND_FRONTENDOPTIONS_H
 
-#include "flang/Common/Fortran-features.h"
 #include "flang/Lower/EnvironmentDefault.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/unparse.h"
+#include "flang/Support/Fortran-features.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cstdint>
@@ -236,7 +236,8 @@ public:
 struct FrontendOptions {
   FrontendOptions()
       : showHelp(false), showVersion(false), instrumentedParse(false),
-        showColors(false), needProvenanceRangeToCharBlockMappings(false) {}
+        showColors(false), printSupportedCPUs(false),
+        needProvenanceRangeToCharBlockMappings(false) {}
 
   /// Show the -help text.
   unsigned showHelp : 1;
@@ -249,6 +250,9 @@ struct FrontendOptions {
 
   /// Enable color diagnostics.
   unsigned showColors : 1;
+
+  /// Print the supported cpus for the current target
+  unsigned printSupportedCPUs : 1;
 
   /// Enable Provenance to character-stream mapping. Allows e.g. IDEs to find
   /// symbols based on source-code location. This is not needed in regular

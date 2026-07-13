@@ -26,7 +26,7 @@ tls_sym:
   .int8 11
   .ascii  "bulk-memory"
 
-# RUN: wasm-ld --experimental-pic -pie -no-gc-sections --shared-memory --no-entry -o %t.wasm %t.o
+# RUN: wasm-ld -pie -no-gc-sections --shared-memory --no-entry -o %t.wasm %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 # RUN: llvm-objdump -d --no-show-raw-insn --no-leading-addr %t.wasm | FileCheck --check-prefix=ASM %s --
 
@@ -66,7 +66,7 @@ tls_sym:
 # ASM-NEXT:                 i32.const 16
 # ASM-NEXT:                 memory.init 0, 0
 # call to __wasm_apply_tls_relocs
-# ASM-NEXT:                 call  4
+# ASM-NEXT:                 call  3
 # ASM-NEXT:                 end
 
 # ASM: <__wasm_apply_tls_relocs>:

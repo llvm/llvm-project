@@ -31,14 +31,14 @@ void test() {
 
 void test() {
   {
-    using I = std::unordered_set<operator_hijacker>::iterator;
+    using I  = std::unordered_set<operator_hijacker>::iterator;
     using CI = std::unordered_set<operator_hijacker>::const_iterator;
     test<I, I>();
     test<CI, I>();
     test<CI, CI>();
   }
   {
-    using IL = std::unordered_set<operator_hijacker>::local_iterator;
+    using IL  = std::unordered_set<operator_hijacker>::local_iterator;
     using CIL = std::unordered_set<operator_hijacker>::const_local_iterator;
     test<IL, IL>();
     test<CIL, IL>();

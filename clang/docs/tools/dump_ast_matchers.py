@@ -5,20 +5,33 @@
 
 import collections
 import re
+import sys
+from pathlib import Path
 
-try:
-    from urllib.request import urlopen
-except ImportError:
-    from urllib2 import urlopen
+CURRENT_DIR = Path(__file__).resolve().parent
+CLANG_AST_DIR = CURRENT_DIR / ".." / ".." / "include" / "clang" / "AST"
+MATCHERS_FILE = (
+    CURRENT_DIR / ".." / ".." / "include" / "clang" / "ASTMatchers" / "ASTMatchers.h"
+)
+HTML_FILE = CURRENT_DIR / ".." / "LibASTMatchersReference.html"
 
-CLASS_INDEX_PAGE_URL = "https://clang.llvm.org/doxygen/classes.html"
-try:
-    CLASS_INDEX_PAGE = urlopen(CLASS_INDEX_PAGE_URL).read().decode("utf-8")
-except Exception as e:
-    CLASS_INDEX_PAGE = None
-    print("Unable to get %s: %s" % (CLASS_INDEX_PAGE_URL, e))
+DOXYGEN_URL = "https://clang.llvm.org/doxygen"
 
-MATCHERS_FILE = "../../include/clang/ASTMatchers/ASTMatchers.h"
+
+def _build_local_class_set():
+    """Return the set of class names declared in clang/include/clang/AST/."""
+    class_re = re.compile(
+        r"\b(?:class|struct)\s+"
+        r"(?:alignas\s*\([^)]*\)\s+)?"
+        r"([A-Z][a-zA-Z0-9_]+)\b"
+    )
+    classes = set()
+    for header in sorted(CLANG_AST_DIR.glob("*.h")):
+        classes.update(class_re.findall(header.read_text(encoding="utf-8")))
+    return classes
+
+
+CLANG_CLASSES = _build_local_class_set()
 
 # Each matcher is documented in one row of the form:
 #   result | name | argA
@@ -39,10 +52,6 @@ traversal_matchers = {}
 # pop-up. ids[name] keeps track of those ids.
 ids = collections.defaultdict(int)
 
-# Cache for doxygen urls we have already verified.
-doxygen_probes = {}
-
-
 def esc(text):
     """Escape any html in the given text."""
     text = re.sub(r"&", "&amp;", text)
@@ -50,25 +59,16 @@ def esc(text):
     text = re.sub(r">", "&gt;", text)
 
     def link_if_exists(m):
-        """Wrap a likely AST node name in a link to its clang docs.
+        """Wrap an AST node name in a link to its Doxygen page.
 
-        We want to do this only if the page exists, in which case it will be
-        referenced from the class index page.
+        Existence is determined by scanning local clang headers.
         """
         name = m.group(1)
-        url = "https://clang.llvm.org/doxygen/classclang_1_1%s.html" % name
-        if url not in doxygen_probes:
-            search_str = 'href="classclang_1_1%s.html"' % name
-            if CLASS_INDEX_PAGE is not None:
-                doxygen_probes[url] = search_str in CLASS_INDEX_PAGE
-            else:
-                doxygen_probes[url] = True
-            if not doxygen_probes[url]:
-                print("Did not find %s in class index page" % name)
-        if doxygen_probes[url]:
-            return r'Matcher&lt;<a href="%s">%s</a>&gt;' % (url, name)
-        else:
+        if name not in CLANG_CLASSES:
+            print(f"Did not find {name} in clang headers")
             return m.group(0)
+        url = f"{DOXYGEN_URL}/classclang_1_1{name}.html"
+        return rf'Matcher&lt;<a href="{url}">{name}</a>&gt;'
 
     text = re.sub(r"Matcher&lt;([^\*&]+)&gt;", link_if_exists, text)
     return text
@@ -101,7 +101,7 @@ def extract_result_types(comment):
 
 
 def strip_doxygen(comment):
-    """Returns the given comment without \-escaped words."""
+    """Returns the given comment without -escaped words."""
     # If there is only a doxygen keyword in the line, delete the whole line.
     comment = re.sub(r"^\\[^\s]+\n", r"", comment, flags=re.M)
 
@@ -236,7 +236,7 @@ def act_on_decl(declaration, comment, allowed_types):
 
         # Parse the various matcher definition macros.
         m = re.match(
-            """.*AST_TYPE(LOC)?_TRAVERSE_MATCHER(?:_DECL)?\(
+            r""".*AST_TYPE(LOC)?_TRAVERSE_MATCHER(?:_DECL)?\(
                        \s*([^\s,]+\s*),
                        \s*(?:[^\s,]+\s*),
                        \s*AST_POLYMORPHIC_SUPPORTED_TYPES\(([^)]*)\)
@@ -519,7 +519,10 @@ Flags can be combined with '|' example \"IgnoreCase | BasicRegex\"
             if not result_types:
                 if not comment:
                     # Only overloads don't have their own doxygen comments; ignore those.
-                    print('Ignoring "%s"' % name)
+                    # Warn if this name was never successfully documented.
+                    # Overloads of an already-documented matcher are expected.
+                    if ids[name] == 0:
+                        print('Ignoring "%s"' % name)
                 else:
                     print('Cannot determine result type for "%s"' % name)
             else:
@@ -555,7 +558,7 @@ comment = ""
 declaration = ""
 allowed_types = []
 body = False
-for line in open(MATCHERS_FILE).read().splitlines():
+for line in MATCHERS_FILE.read_text().splitlines():
     if body:
         if line.strip() and line[0] == "}":
             if declaration:
@@ -590,7 +593,7 @@ node_matcher_table = sort_table("DECL", node_matchers)
 narrowing_matcher_table = sort_table("NARROWING", narrowing_matchers)
 traversal_matcher_table = sort_table("TRAVERSAL", traversal_matchers)
 
-reference = open("../LibASTMatchersReference.html").read()
+reference = HTML_FILE.read_text()
 reference = re.sub(
     r"<!-- START_DECL_MATCHERS.*END_DECL_MATCHERS -->",
     node_matcher_table,
@@ -610,5 +613,7 @@ reference = re.sub(
     flags=re.S,
 )
 
-with open("../LibASTMatchersReference.html", "w", newline="\n") as output:
+output_file = sys.argv[1] if len(sys.argv) == 2 else HTML_FILE
+
+with open(output_file, "w", newline="\n") as output:
     output.write(reference)

@@ -18,7 +18,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @foo() #0 {
 entry:
-  call void asm sideeffect ".p2align        4, 0x90", "~{dirflag},~{fpsr},~{flags}"()
+  call void asm sideeffect ".p2align        4", "~{dirflag},~{fpsr},~{flags}"()
   ret void
 }
 

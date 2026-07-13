@@ -1,6 +1,10 @@
+// Ignore these during inlining, as they are just aliases for specific sets
+// of features. The inlining compatibility check will be performed on the
+// implied features.
 class Architecture<string fname, string aname, list<SubtargetFeature> features>
   : SubtargetFeature<fname, "ARMArch", aname,
-                     !strconcat(aname, " architecture"), features>;
+                     !strconcat(aname, " architecture"), features,
+                     InlineIgnore>;
 
 //===----------------------------------------------------------------------===//
 // ARM architectures
@@ -285,7 +289,30 @@ def ARMv95a   : Architecture<"armv9.5-a", "ARMv95a",  [HasV9_5aOps,
                                                        FeatureCRC,
                                                        FeatureRAS,
                                                        FeatureDotProd]>;
-
+def ARMv96a   : Architecture<"armv9.6-a", "ARMv96a",  [HasV9_6aOps,
+                                                       FeatureAClass,
+                                                       FeatureDB,
+                                                       FeatureFPARMv8,
+                                                       FeatureNEON,
+                                                       FeatureDSP,
+                                                       FeatureTrustZone,
+                                                       FeatureMP,
+                                                       FeatureVirtualization,
+                                                       FeatureCRC,
+                                                       FeatureRAS,
+                                                       FeatureDotProd]>;
+def ARMv97a   : Architecture<"armv9.7-a", "ARMv97a",  [HasV9_7aOps,
+                                                       FeatureAClass,
+                                                       FeatureDB,
+                                                       FeatureFPARMv8,
+                                                       FeatureNEON,
+                                                       FeatureDSP,
+                                                       FeatureTrustZone,
+                                                       FeatureMP,
+                                                       FeatureVirtualization,
+                                                       FeatureCRC,
+                                                       FeatureRAS,
+                                                       FeatureDotProd]>;
 def ARMv8r    : Architecture<"armv8-r",   "ARMv8r",   [HasV8Ops,
                                                        FeatureRClass,
                                                        FeatureDB,

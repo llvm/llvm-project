@@ -20,7 +20,7 @@
 namespace clang {
 
 class TypeLocBuilder {
-  enum { InlineCapacity = 8 * sizeof(SourceLocation) };
+  static constexpr int InlineCapacity = 8 * sizeof(SourceLocation);
 
   /// The underlying location-data buffer.  Data grows from the end
   /// of the buffer backwards.
@@ -38,7 +38,7 @@ class TypeLocBuilder {
 #endif
 
   /// The inline buffer.
-  enum { BufferMaxAlignment = alignof(void *) };
+  static constexpr int BufferMaxAlignment = alignof(void *);
   alignas(BufferMaxAlignment) char InlineBuffer[InlineCapacity];
   unsigned NumBytesAtAlign4;
   bool AtAlign8;
@@ -113,9 +113,9 @@ public:
 #endif
 
     size_t FullDataSize = Capacity - Index;
-    TypeSourceInfo *DI = Context.CreateTypeSourceInfo(T, FullDataSize);
-    memcpy(DI->getTypeLoc().getOpaqueData(), &Buffer[Index], FullDataSize);
-    return DI;
+    TypeSourceInfo *TSI = Context.CreateTypeSourceInfo(T, FullDataSize);
+    memcpy(TSI->getTypeLoc().getOpaqueData(), &Buffer[Index], FullDataSize);
+    return TSI;
   }
 
   /// Copies the type-location information to the given AST context and

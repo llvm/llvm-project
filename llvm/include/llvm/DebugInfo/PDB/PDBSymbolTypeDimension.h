@@ -16,7 +16,7 @@ namespace llvm {
 
 namespace pdb {
 
-class PDBSymbolTypeDimension : public PDBSymbol {
+class LLVM_ABI PDBSymbolTypeDimension : public PDBSymbol {
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::Dimension)
 public:
   void dump(PDBSymDumper &Dumper) const override;

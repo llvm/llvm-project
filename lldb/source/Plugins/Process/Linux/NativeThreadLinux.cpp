@@ -82,6 +82,9 @@ void LogThreadStopInfo(Log &log, const ThreadStopInfo &stop_info,
   case eStopReasonProcessorTrace:
     log.Printf("%s: %s processor trace", __FUNCTION__, header);
     return;
+  case eStopReasonHistoryBoundary:
+    log.Printf("%s: %s history boundary", __FUNCTION__, header);
+    return;
   default:
     log.Printf("%s: %s invalid stop reason %" PRIu32, __FUNCTION__, header,
                static_cast<uint32_t>(stop_info.reason));
@@ -92,11 +95,9 @@ void LogThreadStopInfo(Log &log, const ThreadStopInfo &stop_info,
 NativeThreadLinux::NativeThreadLinux(NativeProcessLinux &process,
                                      lldb::tid_t tid)
     : NativeThreadProtocol(process, tid), m_state(StateType::eStateInvalid),
-      m_stop_info(),
       m_reg_context_up(
           NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
-              process.GetArchitecture(), *this)),
-      m_stop_description() {}
+              process.GetArchitecture(), *this)) {}
 
 std::string NativeThreadLinux::GetName() {
   NativeProcessLinux &process = GetProcess();
@@ -137,12 +138,10 @@ bool NativeThreadLinux::GetStopReason(ThreadStopInfo &stop_info,
   case eStateRunning:
   case eStateStepping:
   case eStateDetached:
-    if (log) {
-      LLDB_LOGF(log,
-                "NativeThreadLinux::%s tid %" PRIu64
-                " in state %s cannot answer stop reason",
-                __FUNCTION__, GetID(), StateAsCString(m_state));
-    }
+    LLDB_LOGF(log,
+              "NativeThreadLinux::%s tid %" PRIu64
+              " in state %s cannot answer stop reason",
+              __FUNCTION__, GetID(), StateAsCString(m_state));
     return false;
   }
   llvm_unreachable("unhandled StateType!");
@@ -151,7 +150,7 @@ bool NativeThreadLinux::GetStopReason(ThreadStopInfo &stop_info,
 Status NativeThreadLinux::SetWatchpoint(lldb::addr_t addr, size_t size,
                                         uint32_t watch_flags, bool hardware) {
   if (!hardware)
-    return Status("not implemented");
+    return Status::FromErrorString("not implemented");
   if (m_state == eStateLaunching)
     return Status();
   Status error = RemoveWatchpoint(addr);
@@ -160,7 +159,7 @@ Status NativeThreadLinux::SetWatchpoint(lldb::addr_t addr, size_t size,
   uint32_t wp_index =
       m_reg_context_up->SetHardwareWatchpoint(addr, size, watch_flags);
   if (wp_index == LLDB_INVALID_INDEX32)
-    return Status("Setting hardware watchpoint failed.");
+    return Status::FromErrorString("Setting hardware watchpoint failed.");
   m_watchpoint_index_map.insert({addr, wp_index});
   return Status();
 }
@@ -173,7 +172,7 @@ Status NativeThreadLinux::RemoveWatchpoint(lldb::addr_t addr) {
   m_watchpoint_index_map.erase(wp);
   if (m_reg_context_up->ClearHardwareWatchpoint(wp_index))
     return Status();
-  return Status("Clearing hardware watchpoint failed.");
+  return Status::FromErrorString("Clearing hardware watchpoint failed.");
 }
 
 Status NativeThreadLinux::SetHardwareBreakpoint(lldb::addr_t addr,
@@ -188,7 +187,7 @@ Status NativeThreadLinux::SetHardwareBreakpoint(lldb::addr_t addr,
   uint32_t bp_index = m_reg_context_up->SetHardwareBreakpoint(addr, size);
 
   if (bp_index == LLDB_INVALID_INDEX32)
-    return Status("Setting hardware breakpoint failed.");
+    return Status::FromErrorString("Setting hardware breakpoint failed.");
 
   m_hw_break_index_map.insert({addr, bp_index});
   return Status();
@@ -205,7 +204,7 @@ Status NativeThreadLinux::RemoveHardwareBreakpoint(lldb::addr_t addr) {
     return Status();
   }
 
-  return Status("Clearing hardware breakpoint failed.");
+  return Status::FromErrorString("Clearing hardware breakpoint failed.");
 }
 
 Status NativeThreadLinux::Resume(uint32_t signo) {
@@ -213,8 +212,7 @@ Status NativeThreadLinux::Resume(uint32_t signo) {
   MaybeLogStateChange(new_state);
   m_state = new_state;
 
-  m_stop_info.reason = StopReason::eStopReasonNone;
-  m_stop_description.clear();
+  ClearStopInfo();
 
   // If watchpoints have been set, but none on this thread, then this is a new
   // thread. So set all existing watchpoints.
@@ -254,7 +252,7 @@ Status NativeThreadLinux::SingleStep(uint32_t signo) {
   const StateType new_state = StateType::eStateStepping;
   MaybeLogStateChange(new_state);
   m_state = new_state;
-  m_stop_info.reason = StopReason::eStopReasonNone;
+  ClearStopInfo();
 
   if(!m_step_workaround) {
     // If we already hava a workaround inplace, don't reset it. Otherwise, the
@@ -326,14 +324,14 @@ void NativeThreadLinux::AnnotateSyncTagCheckFault(lldb::addr_t fault_addr) {
   }
 
   // We assume that the stop description is currently:
-  // signal SIGSEGV: sync tag check fault (fault address: <addr>)
+  // signal SIGSEGV: sync tag check fault (fault address=<addr>)
   // Remove the closing )
   m_stop_description.pop_back();
 
   std::stringstream ss;
   std::unique_ptr<MemoryTagManager> manager(std::move(details->manager));
 
-  ss << " logical tag: 0x" << std::hex << manager->GetLogicalTag(fault_addr);
+  ss << " logical tag=0x" << std::hex << manager->GetLogicalTag(fault_addr);
 
   std::vector<uint8_t> allocation_tag_data;
   // The fault address may not be granule aligned. ReadMemoryTags will granule
@@ -347,7 +345,7 @@ void NativeThreadLinux::AnnotateSyncTagCheckFault(lldb::addr_t fault_addr) {
     llvm::Expected<std::vector<lldb::addr_t>> allocation_tag =
         manager->UnpackTagsData(allocation_tag_data, 1);
     if (allocation_tag) {
-      ss << " allocation tag: 0x" << std::hex << allocation_tag->front() << ")";
+      ss << " allocation tag=0x" << std::hex << allocation_tag->front() << ")";
     } else {
       llvm::consumeError(allocation_tag.takeError());
       ss << ")";
@@ -508,7 +506,7 @@ Status NativeThreadLinux::RequestStop() {
   Status err;
   errno = 0;
   if (::tgkill(pid, tid, SIGSTOP) != 0) {
-    err.SetErrorToErrno();
+    err = Status::FromErrno();
     LLDB_LOGF(log,
               "NativeThreadLinux::%s tgkill(%" PRIu64 ", %" PRIu64
               ", SIGSTOP) failed: %s",

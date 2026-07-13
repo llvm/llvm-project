@@ -26,7 +26,7 @@ func.func @affine_vector_store(%arg0 : index) {
 // CHECK:       %[[buf:.*]] = memref.alloc
 // CHECK:       %[[val:.*]] = arith.constant dense
 // CHECK:       %[[c_1:.*]] = arith.constant -1 : index
-// CHECK-NEXT:  %[[a:.*]] = arith.muli %arg0, %[[c_1]] : index
+// CHECK-NEXT:  %[[a:.*]] = arith.muli %arg0, %[[c_1]] overflow<nsw> : index
 // CHECK-NEXT:  %[[b:.*]] = arith.addi %{{.*}}, %[[a]] : index
 // CHECK-NEXT:  %[[c7:.*]] = arith.constant 7 : index
 // CHECK-NEXT:  %[[c:.*]] = arith.addi %[[b]], %[[c7]] : index

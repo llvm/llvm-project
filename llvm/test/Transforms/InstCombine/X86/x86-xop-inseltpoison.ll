@@ -199,7 +199,7 @@ define <8 x i16> @cmp_une_v8i16(<8 x i16> %a, <8 x i16> %b) {
 
 define <16 x i8> @cmp_strue_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: @cmp_strue_v16i8(
-; CHECK-NEXT:    ret <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    ret <16 x i8> splat (i8 -1)
 ;
   %1 = tail call <16 x i8> @llvm.x86.xop.vpcomtrueb(<16 x i8> %a, <16 x i8> %b)
   ret <16 x i8> %1
@@ -207,7 +207,7 @@ define <16 x i8> @cmp_strue_v16i8(<16 x i8> %a, <16 x i8> %b) {
 
 define <16 x i8> @cmp_utrue_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: @cmp_utrue_v16i8(
-; CHECK-NEXT:    ret <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    ret <16 x i8> splat (i8 -1)
 ;
   %1 = tail call <16 x i8> @llvm.x86.xop.vpcomtrueub(<16 x i8> %a, <16 x i8> %b)
   ret <16 x i8> %1

@@ -171,7 +171,7 @@ public:
 template<typename T>
 void dependentColonColonCompletion() {
   Template<T>::staticFn();
-// CHECK-CC7: function : [#void#]function()
+// CHECK-CC7: function : [#void#]function[#(#][#)#]
 // CHECK-CC7: Nested : Nested
 // CHECK-CC7: o1 : [#BaseTemplate<int>#]o1
 // CHECK-CC7: o2 : [#BaseTemplate<T>#]o2
@@ -352,7 +352,7 @@ namespace function_can_be_call {
     &S::f
   }
   // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:352:9 %s -o - | FileCheck -check-prefix=CHECK_FUNCTION_CAN_BE_CALL %s
-  // CHECK_FUNCTION_CAN_BE_CALL: COMPLETION: foo : [#T#]foo<<#typename T#>, <#typename U#>>(<#U#>, <#V#>)
+  // CHECK_FUNCTION_CAN_BE_CALL: COMPLETION: foo : [#T#]foo<<#typename T#>, <#typename U#>>[#(#][#U#][#, #][#V#][#)#]
 }
 
 namespace deref_dependent_this {
@@ -383,4 +383,57 @@ void Foo() {
 }
 // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:382:5 %s -o - | FileCheck -check-prefix=CHECK-DEREF-DEPENDENT %s
 // CHECK-DEREF-DEPENDENT: [#void#]Add()
+}
+
+namespace dependent_smart_pointer {
+template <typename T>
+struct smart_pointer {
+  T* operator->();
+};
+
+template <typename T>
+struct node {
+  smart_pointer<node<T>> next;
+  void foo() {
+    next->next;
+    // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:398:11 %s -o - | FileCheck -check-prefix=CHECK-DEPENDENT-SMARTPTR %s
+    // CHECK-DEPENDENT-SMARTPTR: [#smart_pointer<node<T>>#]next
+  }
+};
+}
+
+namespace dependent_nested_class {
+template <typename T>
+struct Foo {
+  struct Bar {
+    int field;
+  };
+};
+template <typename T>
+void f() {
+  typename Foo<T>::Bar bar;
+  bar.field;
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:415:7 %s -o - | FileCheck -check-prefix=CHECK-DEPENDENT-NESTEDCLASS %s
+  // CHECK-DEPENDENT-NESTEDCLASS: [#int#]field
+}
+}
+
+namespace template_alias {
+struct A {
+  int b;
+};
+template <typename T>
+struct S {
+  A a;
+};
+template <typename T>
+using Alias = S<T>;
+template <typename T>
+void f(Alias<T> s) {
+  s.a.b;
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:433:5 %s -o - | FileCheck -check-prefix=CHECK-TEMPLATE-ALIAS %s
+  // CHECK-TEMPLATE-ALIAS: [#A#]a
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:433:7 %s -o - | FileCheck -check-prefix=CHECK-TEMPLATE-ALIAS-NESTED %s
+  // CHECK-TEMPLATE-ALIAS-NESTED: [#int#]b
+}
 }

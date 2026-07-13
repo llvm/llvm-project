@@ -39,14 +39,6 @@ struct MLProgramInlinerInterface : public DialectInlinerInterface {
 
 struct MLProgramOpAsmDialectInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;
-
-  AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
-    if (llvm::isa<ExternAttr>(attr)) {
-      os << "extern";
-      return AliasResult::OverridableAlias;
-    }
-    return AliasResult::NoAlias;
-  }
 };
 } // namespace
 

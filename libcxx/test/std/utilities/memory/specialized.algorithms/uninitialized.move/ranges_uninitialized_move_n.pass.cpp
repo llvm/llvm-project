@@ -26,6 +26,7 @@
 #include "../counted.h"
 #include "../overload_compare_iterator.h"
 #include "MoveOnly.h"
+#include "copy_move_types.h"
 #include "test_iterators.h"
 #include "test_macros.h"
 
@@ -39,6 +40,41 @@ static_assert(std::is_invocable_v<decltype(std::ranges::uninitialized_move_n), i
 struct NotConvertibleFromInt {};
 static_assert(!std::is_invocable_v<decltype(std::ranges::uninitialized_move_n), int*, std::size_t, NotConvertibleFromInt*,
                                    NotConvertibleFromInt*>);
+
+TEST_CONSTEXPR_CXX26 bool test() {
+  constexpr int n = 3;
+  std::allocator<MutableMove> alloc;
+
+  {
+    MutableMove in[n] = {MutableMove(1), MutableMove(2), MutableMove(3)};
+    MutableMove* out  = alloc.allocate(n);
+    auto result       = std::ranges::uninitialized_move_n(in, n, out, out + n);
+    assert(result.in == in + n);
+    assert(result.out == out + n);
+    for (int i = 0; i != n; ++i)
+      assert(out[i].val == i + 1);
+
+    std::destroy(out, out + n);
+    alloc.deallocate(out, n);
+  }
+
+  // Destination range is shorter than the source range.
+  {
+    constexpr int m   = 2;
+    MutableMove in[n] = {MutableMove(1), MutableMove(2), MutableMove(3)};
+    MutableMove* out  = alloc.allocate(m);
+    auto result       = std::ranges::uninitialized_move_n(in, n, out, out + m);
+    assert(result.in == in + m);
+    assert(result.out == out + m);
+    for (int i = 0; i != m; ++i)
+      assert(out[i].val == i + 1);
+
+    std::destroy(out, out + m);
+    alloc.deallocate(out, m);
+  }
+
+  return true;
+}
 
 int main(int, char**) {
   // An empty range -- no default constructors should be invoked.
@@ -104,22 +140,6 @@ int main(int, char**) {
   Counted::reset();
 
 #endif // TEST_HAS_NO_EXCEPTIONS
-
-  // Works with const iterators.
-  {
-    constexpr int N = 5;
-    Counted in[N] = {Counted(1), Counted(2), Counted(3), Counted(4), Counted(5)};
-    Buffer<Counted, N> out;
-    Counted::reset();
-
-    std::ranges::uninitialized_move_n(in, N, out.cbegin(), out.cend());
-    assert(Counted::current_objects == N);
-    assert(Counted::total_objects == N);
-    assert(std::equal(in, in + N, out.begin(), out.end()));
-
-    std::destroy(out.begin(), out.end());
-  }
-  Counted::reset();
 
   // Conversions.
   {
@@ -222,6 +242,11 @@ int main(int, char**) {
       }
     }
   }
+
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

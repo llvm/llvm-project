@@ -17,13 +17,13 @@ define float @uint8ToFloat(i8 %int8) {
 ; CHECK-NO_FP16-LABEL: uint8ToFloat:
 ; CHECK-NO_FP16:       # %bb.0:
 ; CHECK-NO_FP16-NEXT:    movzbl %dil, %eax
-; CHECK-NO_FP16-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; CHECK-NO_FP16-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; CHECK-NO_FP16-NEXT:    retq
 ;
 ; CHECK-WITH_FP16-LABEL: uint8ToFloat:
 ; CHECK-WITH_FP16:       # %bb.0:
 ; CHECK-WITH_FP16-NEXT:    movzbl %dil, %eax
-; CHECK-WITH_FP16-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; CHECK-WITH_FP16-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; CHECK-WITH_FP16-NEXT:    retq
     %fp32 = uitofp i8 %int8 to float
     ret float %fp32
@@ -62,16 +62,14 @@ define half @uint8ToHalf(i8 %int8) {
 ; CHECK-NO_FP16-LABEL: uint8ToHalf:
 ; CHECK-NO_FP16:       # %bb.0:
 ; CHECK-NO_FP16-NEXT:    movzbl %dil, %eax
-; CHECK-NO_FP16-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; CHECK-NO_FP16-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; CHECK-NO_FP16-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-NO_FP16-NEXT:    vmovd %xmm0, %eax
-; CHECK-NO_FP16-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; CHECK-NO_FP16-NEXT:    retq
 ;
 ; CHECK-WITH_FP16-LABEL: uint8ToHalf:
 ; CHECK-WITH_FP16:       # %bb.0:
 ; CHECK-WITH_FP16-NEXT:    movzbl %dil, %eax
-; CHECK-WITH_FP16-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; CHECK-WITH_FP16-NEXT:    vcvtsi2sh %eax, %xmm31, %xmm0
 ; CHECK-WITH_FP16-NEXT:    retq
     %fp32 = uitofp i8 %int8 to half
     ret half %fp32
@@ -113,13 +111,13 @@ define float @sint8ToFloat(i8 %int8) {
 ; CHECK-NO_FP16-LABEL: sint8ToFloat:
 ; CHECK-NO_FP16:       # %bb.0:
 ; CHECK-NO_FP16-NEXT:    movsbl %dil, %eax
-; CHECK-NO_FP16-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; CHECK-NO_FP16-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; CHECK-NO_FP16-NEXT:    retq
 ;
 ; CHECK-WITH_FP16-LABEL: sint8ToFloat:
 ; CHECK-WITH_FP16:       # %bb.0:
 ; CHECK-WITH_FP16-NEXT:    movsbl %dil, %eax
-; CHECK-WITH_FP16-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; CHECK-WITH_FP16-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; CHECK-WITH_FP16-NEXT:    retq
     %fp32 = sitofp i8 %int8 to float
     ret float %fp32
@@ -145,16 +143,14 @@ define half @sint8ToHalf(i8 %int8) {
 ; CHECK-NO_FP16-LABEL: sint8ToHalf:
 ; CHECK-NO_FP16:       # %bb.0:
 ; CHECK-NO_FP16-NEXT:    movsbl %dil, %eax
-; CHECK-NO_FP16-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; CHECK-NO_FP16-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; CHECK-NO_FP16-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-NO_FP16-NEXT:    vmovd %xmm0, %eax
-; CHECK-NO_FP16-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; CHECK-NO_FP16-NEXT:    retq
 ;
 ; CHECK-WITH_FP16-LABEL: sint8ToHalf:
 ; CHECK-WITH_FP16:       # %bb.0:
 ; CHECK-WITH_FP16-NEXT:    movsbl %dil, %eax
-; CHECK-WITH_FP16-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; CHECK-WITH_FP16-NEXT:    vcvtsi2sh %eax, %xmm31, %xmm0
 ; CHECK-WITH_FP16-NEXT:    retq
     %fp32 = sitofp i8 %int8 to half
     ret half %fp32
@@ -188,13 +184,13 @@ define float @uint16ToFloat(i16 %int16) {
 ; CHECK-NO_FP16-LABEL: uint16ToFloat:
 ; CHECK-NO_FP16:       # %bb.0:
 ; CHECK-NO_FP16-NEXT:    movzwl %di, %eax
-; CHECK-NO_FP16-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; CHECK-NO_FP16-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; CHECK-NO_FP16-NEXT:    retq
 ;
 ; CHECK-WITH_FP16-LABEL: uint16ToFloat:
 ; CHECK-WITH_FP16:       # %bb.0:
 ; CHECK-WITH_FP16-NEXT:    movzwl %di, %eax
-; CHECK-WITH_FP16-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; CHECK-WITH_FP16-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; CHECK-WITH_FP16-NEXT:    retq
     %fp32 = uitofp i16 %int16 to float
     ret float %fp32
@@ -220,16 +216,14 @@ define half @uint16ToHalf(i16 %int16) {
 ; CHECK-NO_FP16-LABEL: uint16ToHalf:
 ; CHECK-NO_FP16:       # %bb.0:
 ; CHECK-NO_FP16-NEXT:    movzwl %di, %eax
-; CHECK-NO_FP16-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; CHECK-NO_FP16-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; CHECK-NO_FP16-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-NO_FP16-NEXT:    vmovd %xmm0, %eax
-; CHECK-NO_FP16-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; CHECK-NO_FP16-NEXT:    retq
 ;
 ; CHECK-WITH_FP16-LABEL: uint16ToHalf:
 ; CHECK-WITH_FP16:       # %bb.0:
 ; CHECK-WITH_FP16-NEXT:    movzwl %di, %eax
-; CHECK-WITH_FP16-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; CHECK-WITH_FP16-NEXT:    vcvtsi2sh %eax, %xmm31, %xmm0
 ; CHECK-WITH_FP16-NEXT:    retq
     %fp32 = uitofp i16 %int16 to half
     ret half %fp32
@@ -255,13 +249,13 @@ define float @sint16ToFloat(i16 %int16) {
 ; CHECK-NO_FP16-LABEL: sint16ToFloat:
 ; CHECK-NO_FP16:       # %bb.0:
 ; CHECK-NO_FP16-NEXT:    movswl %di, %eax
-; CHECK-NO_FP16-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; CHECK-NO_FP16-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; CHECK-NO_FP16-NEXT:    retq
 ;
 ; CHECK-WITH_FP16-LABEL: sint16ToFloat:
 ; CHECK-WITH_FP16:       # %bb.0:
 ; CHECK-WITH_FP16-NEXT:    movswl %di, %eax
-; CHECK-WITH_FP16-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; CHECK-WITH_FP16-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; CHECK-WITH_FP16-NEXT:    retq
     %fp32 = sitofp i16 %int16 to float
     ret float %fp32
@@ -287,16 +281,14 @@ define half @sint16ToHalf(i16 %int16) {
 ; CHECK-NO_FP16-LABEL: sint16ToHalf:
 ; CHECK-NO_FP16:       # %bb.0:
 ; CHECK-NO_FP16-NEXT:    movswl %di, %eax
-; CHECK-NO_FP16-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; CHECK-NO_FP16-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; CHECK-NO_FP16-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-NO_FP16-NEXT:    vmovd %xmm0, %eax
-; CHECK-NO_FP16-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; CHECK-NO_FP16-NEXT:    retq
 ;
 ; CHECK-WITH_FP16-LABEL: sint16ToHalf:
 ; CHECK-WITH_FP16:       # %bb.0:
 ; CHECK-WITH_FP16-NEXT:    movswl %di, %eax
-; CHECK-WITH_FP16-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; CHECK-WITH_FP16-NEXT:    vcvtsi2sh %eax, %xmm31, %xmm0
 ; CHECK-WITH_FP16-NEXT:    retq
     %fp32 = sitofp i16 %int16 to half
     ret half %fp32

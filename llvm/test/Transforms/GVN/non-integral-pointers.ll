@@ -2,7 +2,6 @@
 ; RUN: opt -passes=gvn -S < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128-ni:4:5"
-target triple = "x86_64-unknown-linux-gnu"
 
 define void @f0(i1 %alwaysFalse, i64 %val, ptr %loc) {
 ; CHECK-LABEL: @f0(
@@ -287,7 +286,7 @@ declare void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) nocapture, ptr nocapture, i
 define ptr addrspace(4) @neg_store_clobber(ptr addrspace(4) %loc) {
 ; CHECK-LABEL: @neg_store_clobber(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <2 x i64> <i64 4, i64 4>, ptr addrspace(4) [[LOC:%.*]], align 16
+; CHECK-NEXT:    store <2 x i64> splat (i64 4), ptr addrspace(4) [[LOC:%.*]], align 16
 ; CHECK-NEXT:    [[LOC_OFF:%.*]] = getelementptr ptr addrspace(4), ptr addrspace(4) [[LOC]], i64 1
 ; CHECK-NEXT:    [[REF:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[LOC_OFF]], align 8
 ; CHECK-NEXT:    ret ptr addrspace(4) [[REF]]

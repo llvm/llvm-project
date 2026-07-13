@@ -28,7 +28,9 @@ module third {}
 
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full > %t/result.json
-// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
+// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=clang-modulemap-file,command-line,context-hash,file-deps,link-libraries,name,clang-context-hash,clang-module-deps,input-file \
+// RUN:   | FileCheck %s -DPREFIX=%/t
 
 // CHECK:       {
 // CHECK-NEXT:   "modules": [
@@ -49,8 +51,8 @@ module third {}
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/first/first/first.h",
 // CHECK-NEXT:         "[[PREFIX]]/first/first/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/first/first/first.h",
 // CHECK-NEXT:         "[[PREFIX]]/second/second/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/second/second/sub.modulemap"
 // CHECK-NEXT:       ],
@@ -73,8 +75,8 @@ module third {}
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/second/second/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/second/second/sub.h",
 // CHECK-NEXT:         "[[PREFIX]]/second/second/sub.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/second/second/sub.h",
 // CHECK-NEXT:         "[[PREFIX]]/third/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
@@ -112,8 +114,7 @@ module third {}
 // CHECK:                  "-fmodule-map-file=[[PREFIX]]/first/first/module.modulemap",
 // CHECK:                  "-fmodule-file=first=[[PREFIX]]/cache/{{.*}}/first-{{.*}}.pcm",
 // CHECK:                ],
-// CHECK-NEXT:           "executable": "clang",
-// CHECK-NEXT:           "file-deps": [
+// CHECK:                "file-deps": [
 // CHECK-NEXT:             "[[PREFIX]]/tu.m"
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/tu.c"

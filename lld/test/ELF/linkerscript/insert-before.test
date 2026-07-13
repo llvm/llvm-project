@@ -50,4 +50,4 @@ SECTIONS { .byte : { BYTE(0) } } INSERT BEFORE .data;
 SECTIONS { .foo.data : { *(.foo.data) } } INSERT BEFORE .data;
 
 ## The input section .foo.text is an orphan. It will be placed in .foo.text
-SECTIONS { .foo.text : { x0 = .; } } INSERT BEFORE .text;
+SECTIONS { .foo.text : { x0 = .; } } INSERT BEFORE ".text";

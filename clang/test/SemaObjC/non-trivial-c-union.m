@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -fblocks -fobjc-arc -fobjc-runtime-has-weak -I %S/Inputs -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fblocks -fobjc-arc -fobjc-runtime-has-weak -I %S/Inputs -verify -fexperimental-new-constant-interpreter %s
 
 #include "non-trivial-c-union.h"
 
@@ -86,3 +87,10 @@ void testVolatileLValueToRValue(volatile U0 *a) {
 void unionInSystemHeader0(U0_SystemHeader);
 
 void unionInSystemHeader1(U1_SystemHeader); // expected-error {{cannot use type 'U1_SystemHeader' for a function/method parameter since it is a union that is non-trivial to destruct}} expected-error {{cannot use type 'U1_SystemHeader' for a function/method parameter since it is a union that is non-trivial to copy}}
+
+void testAddressof(void) {
+  extern volatile U0 t0;
+  // These don't dereference so they shouldn't cause an error.
+  (void)&t0;
+  (void)__builtin_addressof(t0);
+}

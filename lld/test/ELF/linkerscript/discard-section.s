@@ -4,8 +4,8 @@
 # RUN: rm -rf %t && split-file %s %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 b.s -o b.o
-# RUN: not ld.lld --threads=1 -T a.lds a.o b.o -z undefs -o /dev/null 2>&1 | FileCheck %s --check-prefix=LOCAL --implicit-check-not=error:
-# RUN: not ld.lld --threads=1 -T a.lds a.o b.o -o /dev/null 2>&1 | FileCheck %s --check-prefixes=LOCAL,NONLOCAL --implicit-check-not=error:
+# RUN: not ld.lld --threads=1 -T a.lds a.o b.o -z undefs 2>&1 | FileCheck %s --check-prefix=LOCAL --implicit-check-not=error:
+# RUN: not ld.lld --threads=1 -T a.lds a.o b.o 2>&1 | FileCheck %s --check-prefixes=LOCAL,NONLOCAL --implicit-check-not=error:
 # RUN: ld.lld -r -T a.lds a.o b.o -o a.ro 2>&1 | FileCheck %s --check-prefix=WARNING --implicit-check-not=warning:
 # RUN: llvm-readelf -r -s a.ro | FileCheck %s --check-prefix=RELOC
 

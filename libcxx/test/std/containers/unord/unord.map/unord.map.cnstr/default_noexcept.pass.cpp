@@ -27,51 +27,55 @@
 #include "../../../test_hash.h"
 
 template <class T>
-struct some_comp
-{
-    typedef T value_type;
-    some_comp();
-    some_comp(const some_comp&);
-    bool operator()(const T&, const T&) const { return false; }
+struct some_comp {
+  typedef T value_type;
+  some_comp();
+  some_comp(const some_comp&);
+  bool operator()(const T&, const T&) const { return false; }
 };
 
 template <class T>
-struct some_hash
-{
-    typedef T value_type;
-    some_hash();
-    some_hash(const some_hash&);
+struct some_hash {
+  typedef T value_type;
+  some_hash();
+  some_hash(const some_hash&);
 
-    std::size_t operator()(T const&) const;
+  std::size_t operator()(T const&) const;
 };
 
-int main(int, char**)
-{
+int main(int, char**) {
 #if defined(_LIBCPP_VERSION)
-    {
-        typedef std::unordered_map<MoveOnly, MoveOnly> C;
-        static_assert(std::is_nothrow_default_constructible<C>::value, "");
-    }
-    {
-        typedef std::unordered_map<MoveOnly, MoveOnly, std::hash<MoveOnly>,
-                           std::equal_to<MoveOnly>, test_allocator<std::pair<const MoveOnly, MoveOnly>>> C;
-        static_assert(std::is_nothrow_default_constructible<C>::value, "");
-    }
+  {
+    typedef std::unordered_map<MoveOnly, MoveOnly> C;
+    static_assert(std::is_nothrow_default_constructible<C>::value, "");
+  }
+  {
+    typedef std::unordered_map<MoveOnly,
+                               MoveOnly,
+                               std::hash<MoveOnly>,
+                               std::equal_to<MoveOnly>,
+                               test_allocator<std::pair<const MoveOnly, MoveOnly>>>
+        C;
+    static_assert(std::is_nothrow_default_constructible<C>::value, "");
+  }
 #endif // _LIBCPP_VERSION
-    {
-        typedef std::unordered_map<MoveOnly, MoveOnly, std::hash<MoveOnly>,
-                          std::equal_to<MoveOnly>, other_allocator<std::pair<const MoveOnly, MoveOnly>>> C;
-        static_assert(!std::is_nothrow_default_constructible<C>::value, "");
-    }
-    {
-        typedef std::unordered_map<MoveOnly, MoveOnly, some_hash<MoveOnly>> C;
-        static_assert(!std::is_nothrow_default_constructible<C>::value, "");
-    }
-    {
-        typedef std::unordered_map<MoveOnly, MoveOnly, std::hash<MoveOnly>,
-                                                         some_comp<MoveOnly>> C;
-        static_assert(!std::is_nothrow_default_constructible<C>::value, "");
-    }
+  {
+    typedef std::unordered_map<MoveOnly,
+                               MoveOnly,
+                               std::hash<MoveOnly>,
+                               std::equal_to<MoveOnly>,
+                               other_allocator<std::pair<const MoveOnly, MoveOnly>>>
+        C;
+    static_assert(!std::is_nothrow_default_constructible<C>::value, "");
+  }
+  {
+    typedef std::unordered_map<MoveOnly, MoveOnly, some_hash<MoveOnly>> C;
+    static_assert(!std::is_nothrow_default_constructible<C>::value, "");
+  }
+  {
+    typedef std::unordered_map<MoveOnly, MoveOnly, std::hash<MoveOnly>, some_comp<MoveOnly>> C;
+    static_assert(!std::is_nothrow_default_constructible<C>::value, "");
+  }
 
   return 0;
 }

@@ -1,4 +1,4 @@
-;RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s -check-prefix=CHECK
+;RUN: llc < %s -mtriple=amdgcn -mcpu=tonga | FileCheck %s -check-prefix=CHECK
 
 ;CHECK-LABEL: {{^}}raw_buffer_store_format_immoffs_x3:
 ;CHECK-NOT: s_waitcnt

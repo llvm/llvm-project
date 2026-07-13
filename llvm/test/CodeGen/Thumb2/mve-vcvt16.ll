@@ -327,11 +327,12 @@ define arm_aapcs_vfpcc <4 x float> @load_ext_4(ptr %src) {
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    ldrd r0, r1, [r0]
 ; CHECK-MVE-NEXT:    vmov.32 q0[0], r0
-; CHECK-MVE-NEXT:    vmov.32 q0[1], r1
-; CHECK-MVE-NEXT:    vcvtt.f32.f16 s3, s1
-; CHECK-MVE-NEXT:    vcvtb.f32.f16 s2, s1
+; CHECK-MVE-NEXT:    vmov q1, q0
 ; CHECK-MVE-NEXT:    vcvtt.f32.f16 s1, s0
+; CHECK-MVE-NEXT:    vmov.32 q1[1], r1
 ; CHECK-MVE-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-MVE-NEXT:    vcvtt.f32.f16 s3, s5
+; CHECK-MVE-NEXT:    vcvtb.f32.f16 s2, s5
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: load_ext_4:

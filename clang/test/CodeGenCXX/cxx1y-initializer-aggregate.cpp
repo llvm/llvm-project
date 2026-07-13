@@ -50,14 +50,14 @@ C n{};
 // Initialization of 'a':
 
 // CHECK: store i32 0, ptr @a
-// CHECK: store ptr @[[STR_A]], ptr getelementptr inbounds ({{.*}} @a, i32 0, i32 1)
-// CHECK: load ptr, ptr getelementptr inbounds ({{.*}} @a, i32 0, i32 1)
+// CHECK: store ptr @[[STR_A]], ptr getelementptr inbounds nuw (i8, ptr @a, i64 8)
+// CHECK: load ptr, ptr getelementptr inbounds nuw (i8, ptr @a, i64 8)
 // CHECK: load i32, ptr @a
 // CHECK: getelementptr inbounds i8, ptr %{{.*}}, {{.*}} %{{.*}}
-// CHECK: store i8 %{{.*}}, ptr getelementptr inbounds ({{.*}} @a, i32 0, i32 2)
+// CHECK: store i8 %{{.*}}, ptr getelementptr inbounds nuw (i8, ptr @a, i64 16)
 // CHECK: call noundef i32 @_ZN1A1fEv({{.*}} @a)
-// CHECK: store i32 %{{.*}}, ptr getelementptr inbounds ({{.*}}, ptr @a, i32 0, i32 3)
-// CHECK: store double 1.000000e+00, ptr getelementptr inbounds ({{.*}} @a, i32 0, i32 4)
+// CHECK: store i32 %{{.*}}, ptr getelementptr inbounds nuw (i8, ptr @a, i64 20)
+// CHECK: store double 1.000000e+00, ptr getelementptr inbounds nuw (i8, ptr @a, i64 24)
 
 // No dynamic initialization of 'b':
 
@@ -66,13 +66,13 @@ C n{};
 // Initialization of 'c':
 
 // CHECK: store i32 1, ptr @c
-// CHECK: store ptr null, ptr getelementptr inbounds ({{.*}} @c, i32 0, i32 1)
+// CHECK: store ptr null, ptr getelementptr inbounds nuw (i8, ptr @c, i64 8)
 // CHECK-NOT: load
-// CHECK: store i8 65, ptr getelementptr inbounds ({{.*}} @c, i32 0, i32 2)
+// CHECK: store i8 65, ptr getelementptr inbounds nuw (i8, ptr @c, i64 16)
 // CHECK: call noundef i32 @_Z1fv()
-// CHECK: store i32 %{{.*}}, ptr getelementptr inbounds ({{.*}}, ptr @c, i32 0, i32 3)
+// CHECK: store i32 %{{.*}}, ptr getelementptr inbounds nuw (i8, ptr @c, i64 20)
 // CHECK-NOT: C1Ev
-// CHECK: store i8 3, ptr {{.*}} @c, i32 0, i32 4)
+// CHECK: store i8 3, ptr getelementptr inbounds nuw (i8, ptr @c, i64 24)
 
 // CHECK: call void @_ZN1BC1Ev({{.*}} @x)
 

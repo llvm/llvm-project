@@ -16,8 +16,10 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/VersionTuple.h"
 #include <cstdint>
@@ -29,7 +31,7 @@ namespace llvm {
 
 class MachObjectWriter;
 
-class MCMachObjectTargetWriter : public MCObjectTargetWriter {
+class LLVM_ABI MCMachObjectTargetWriter : public MCObjectTargetWriter {
   const unsigned Is64Bit : 1;
   const uint32_t CPUType;
 protected:
@@ -46,7 +48,7 @@ protected:
   }
 
 public:
-  virtual ~MCMachObjectTargetWriter();
+  ~MCMachObjectTargetWriter() override;
 
   Triple::ObjectFormatType getFormat() const override { return Triple::MachO; }
   static bool classof(const MCObjectTargetWriter *W) {
@@ -83,7 +85,7 @@ public:
   /// @}
 };
 
-class MachObjectWriter : public MCObjectWriter {
+class LLVM_ABI MachObjectWriter final : public MCObjectWriter {
 public:
   struct DataRegionData {
     MachO::DataRegionType Kind;
@@ -109,16 +111,16 @@ public:
 private:
   /// Helper struct for containing some precomputed information on symbols.
   struct MachSymbolData {
-    const MCSymbol *Symbol;
+    const MCSymbolMachO *Symbol;
     uint64_t StringIndex;
     uint8_t SectionIndex;
 
     // Support lexicographic sorting.
-    bool operator<(const MachSymbolData &RHS) const;
+    LLVM_ABI bool operator<(const MachSymbolData &RHS) const;
   };
 
   struct IndirectSymbolData {
-    MCSymbol *Symbol;
+    MCSymbolMachO *Symbol;
     MCSection *Section;
   };
 
@@ -141,7 +143,7 @@ private:
 
   std::vector<DataRegionData> DataRegions;
 
-  SectionAddrMap SectionAddress;
+  DenseMap<const MCSection *, uint64_t> SectionAddress;
 
   // List of sections in layout order. Virtual sections are after non-virtual
   // sections.
@@ -164,6 +166,9 @@ private:
   VersionInfoType VersionInfo{};
   VersionInfoType TargetVariantVersionInfo{};
 
+  // The list of linker options for LC_LINKER_OPTION.
+  std::vector<std::vector<std::string>> LinkerOptions;
+
   MachSymbolData *findSymbolData(const MCSymbol &Sym);
 
   void writeWithPadding(StringRef Str, uint64_t Size);
@@ -181,17 +186,11 @@ public:
 
   const MCSymbol &findAliasedSymbol(const MCSymbol &Sym) const;
 
-  /// \name Lifetime management Methods
-  /// @{
-
   void reset() override;
-
-  /// @}
+  void setAssembler(MCAssembler *Asm) override;
 
   /// \name Utility Methods
   /// @{
-
-  bool isFixupKindPCRel(const MCAssembler &Asm, unsigned Kind);
 
   std::vector<IndirectSymbolData> &getIndirectSymbols() {
     return IndirectSymbols;
@@ -200,13 +199,12 @@ public:
   const llvm::SmallVectorImpl<MCSection *> &getSectionOrder() const {
     return SectionOrder;
   }
-  SectionAddrMap &getSectionAddressMap() { return SectionAddress; }
   MCLOHContainer &getLOHContainer() { return LOHContainer; }
 
   uint64_t getSectionAddress(const MCSection *Sec) const {
     return SectionAddress.lookup(Sec);
   }
-  uint64_t getSymbolAddress(const MCSymbol &S, const MCAssembler &Asm) const;
+  uint64_t getSymbolAddress(const MCSymbol &S) const;
 
   uint64_t getFragmentAddress(const MCAssembler &Asm,
                               const MCFragment *Fragment) const;
@@ -249,6 +247,10 @@ public:
     TargetVariantVersionInfo.SDKVersion = SDKVersion;
   }
 
+  std::vector<std::vector<std::string>> &getLinkerOptions() {
+    return LinkerOptions;
+  }
+
   /// @}
 
   /// \name Target Writer Proxy Accessors
@@ -275,7 +277,7 @@ public:
                                uint64_t SectionDataSize, uint32_t MaxProt,
                                uint32_t InitProt);
 
-  void writeSection(const MCAssembler &Asm, const MCSection &Sec,
+  void writeSection(const MCAssembler &Asm, const MCSectionMachO &Sec,
                     uint64_t VMAddr, uint64_t FileOffset, unsigned Flags,
                     uint64_t RelocationsStart, unsigned NumRelocations);
 
@@ -321,9 +323,8 @@ public:
     Relocations[Sec].push_back(P);
   }
 
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override;
+  void recordRelocation(const MCFragment &F, const MCFixup &Fixup,
+                        MCValue Target, uint64_t &FixedValue) override;
 
   void bindIndirectSymbols(MCAssembler &Asm);
 
@@ -335,29 +336,16 @@ public:
 
   void computeSectionAddresses(const MCAssembler &Asm);
 
-  void executePostLayoutBinding(MCAssembler &Asm) override;
+  void executePostLayoutBinding() override;
 
-  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                              const MCSymbol &SymA,
+  bool isSymbolRefDifferenceFullyResolvedImpl(const MCSymbol &SymA,
                                               const MCFragment &FB, bool InSet,
                                               bool IsPCRel) const override;
 
   void populateAddrSigSection(MCAssembler &Asm);
 
-  uint64_t writeObject(MCAssembler &Asm) override;
+  uint64_t writeObject() override;
 };
-
-/// Construct a new Mach-O writer instance.
-///
-/// This routine takes ownership of the target writer subclass.
-///
-/// \param MOTW - The target specific Mach-O writer subclass.
-/// \param OS - The stream to write to.
-/// \returns The constructed object writer.
-std::unique_ptr<MCObjectWriter>
-createMachObjectWriter(std::unique_ptr<MCMachObjectTargetWriter> MOTW,
-                       raw_pwrite_stream &OS, bool IsLittleEndian);
-
 } // end namespace llvm
 
 #endif // LLVM_MC_MCMACHOBJECTWRITER_H

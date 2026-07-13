@@ -39,6 +39,8 @@ combined with other commands:
 
 .. option:: --disassemble-symbols=<symbol1[,symbol2,...]>
 
+.. option:: --disassemble=symbol1 --disassemble=symbol2 ...
+
   Disassemble only the specified symbols. Takes demangled symbol names when
   :option:`--demangle` is specified, otherwise takes mangled symbol names.
   Implies :option:`--disassemble`.
@@ -140,23 +142,29 @@ OPTIONS
   debug information for stripped binaries. Multiple instances of this argument
   are searched in the order given.
 
+.. option:: --debug-indent=<width>
+
+  Distance to indent the source-level variable or inlined function display,
+  relative to the start of the disassembly. Defaults to 52 characters.
+
+.. option:: --debug-inlined-funcs[=<format>]
+
+  Print the locations of inlined functions alongside disassembly.
+  ``format`` may be ``ascii``, ``limits-only``, or ``unicode``, defaulting to
+  ``unicode`` if omitted.
+
+.. option:: --debug-vars[=<format>]
+
+  Print the locations (in registers or memory) of source-level variables
+  alongside disassembly. ``format`` may be ``ascii`` or ``unicode``, defaulting
+  to ``unicode`` if omitted.
+
 .. option:: --debuginfod, --no-debuginfod
 
   Whether or not to try debuginfod lookups for debug binaries. Unless specified,
   debuginfod is only enabled if libcurl was compiled in (``LLVM_ENABLE_CURL``)
   and at least one server URL was provided by the environment variable
   ``DEBUGINFOD_URLS``.
-
-.. option:: --debug-vars=<format>
-
-  Print the locations (in registers or memory) of source-level variables
-  alongside disassembly. ``format`` may be ``unicode`` or ``ascii``, defaulting
-  to ``unicode`` if omitted.
-
-.. option:: --debug-vars-indent=<width>
-
-  Distance to indent the source-level variable display, relative to the start
-  of the disassembly. Defaults to 52 characters.
 
 .. option:: -j, --section=<section1[,section2,...]>
 
@@ -217,7 +225,7 @@ OPTIONS
 
 .. option:: --offloading
 
-  Display the content of the LLVM offloading section.
+  Display the content of the LLVM offloading sections and HIP offload bundles.
 
 .. option:: --prefix=<prefix>
 
@@ -229,6 +237,25 @@ OPTIONS
   When disassembling with the :option:`--source` option, strip out ``level``
   initial directories from absolute paths. This option has no effect without
   :option:`--prefix`.
+
+.. option:: --source-dir <dir>
+
+  When disassembling with the :option:`--source` option, add ``dir`` to the
+  front of the source search path when looking up source files. For each source
+  file, llvm-objdump tries the path from the debug info, then each search
+  directory with the full path appended, then each search directory with only
+  the file name.
+  This option may be specified multiple times; each ``--source-dir`` adds one
+  directory. Options on the command line are searched in first to last order.
+  
+.. option:: --substitute-path <from> <to>
+
+  When disassembling with the :option:`--source` option, replace ``from`` with
+  ``to`` at the start of the directory part of source file paths when looking up
+  sources. A rule is applied only if ``from`` ends at a directory separator in
+  the path. This option may be specified multiple times; rules are evaluated in
+  the order given and the first matching rule is used, as in GDB
+  ``set substitute-path``.
 
 .. option:: --print-imm-hex
 
@@ -265,20 +292,21 @@ OPTIONS
 
   When printing symbols, only print symbols with a value up to ``address``.
 
-.. option:: --symbolize-operands
+.. option:: --symbolize-operands, --no-symbolize-operands
 
   When disassembling, symbolize a branch target operand to print a label instead of a real address.
 
   When printing a PC-relative global symbol reference, print it as an offset from the leading symbol.
 
   When a bb-address-map section is present (i.e., the object file is built with
-  ``-fbasic-block-sections=labels``), labels are retrieved from that section
+  ``-fbasic-block-address-map``), labels are retrieved from that section
   instead. If a pgo-analysis-map is present alongside the bb-address-map, any
   available analyses are printed after the relevant block label. By default,
   any analysis with a special representation (i.e. BlockFrequency,
   BranchProbability, etc) are printed as raw hex values.
 
-  Only works with PowerPC objects or X86 linked images.
+  Only supported for AArch64, BPF, PowerPC, RISC-V, and X86. Enabled by default
+  for BPF; use ``--no-symbolize-operands`` to disable.
 
   Example:
     A non-symbolized branch instruction with a local target and pc-relative memory access like

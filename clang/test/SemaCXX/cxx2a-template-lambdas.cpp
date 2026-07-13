@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -std=c++03 -verify -Dstatic_assert=_Static_assert -Wno-c++11-extensions -Wno-c++14-extensions -Wno-c++17-extensions -Wno-c++20-extensions %s
 // RUN: %clang_cc1 -std=c++11 -verify=expected,cxx11,cxx11-cxx14 -Wno-c++20-extensions -Wno-c++17-extensions -Wno-c++14-extensions  %s
 // RUN: %clang_cc1 -std=c++14 -verify=expected,cxx11-cxx14,cxx14 -Wno-c++20-extensions -Wno-c++17-extensions %s
-// RUN: %clang_cc1 -std=c++17 -verify -Wno-c++20-extensions %s
-// RUN: %clang_cc1 -std=c++20 -verify %s
+// RUN: %clang_cc1 -std=c++17 -verify=expected,cxx17,cxx17-cxx20 -Wno-c++20-extensions %s
+// RUN: %clang_cc1 -std=c++20 -verify=expected,cxx20,cxx17-cxx20 %s
 
 template<typename, typename>
 inline const bool is_same = false;
@@ -45,8 +45,9 @@ template<typename T>
 constexpr T outer() {
   // FIXME: The C++11 error seems wrong
   return []<T x>() { return x; }.template operator()<123>(); // expected-error {{no matching member function}}  \
-                                                                expected-note {{candidate template ignored}}    \
         cxx11-note {{non-literal type '<dependent type>' cannot be used in a constant expression}} \
+        cxx11-cxx14-note {{non-type template argument does not refer to any declaration}} \
+        cxx17-cxx20-note {{value of type 'int' is not implicitly convertible to 'int *'}} \
         cxx14-note {{non-literal type}}
 }
 static_assert(outer<int>() == 123); // cxx11-cxx14-error {{not an integral constant expression}} cxx11-cxx14-note {{in call}}
@@ -95,5 +96,39 @@ void foo() {
   {return {};}(1);
 }
 
+}
+#endif
+
+#if __cplusplus >= 202002L
+namespace {
+struct S {};
+constexpr S gs;
+void f() {
+  constexpr int x{};
+  const int y{};
+  auto b = []<int=x, int=y>{};
+  using A = decltype([]<int=x>{});
+
+  int z; // expected-note {{'z' declared here}}
+  auto c = []<int t=z>{
+    // expected-error@-1 {{no matching function for call to object of type}} \
+    // expected-error@-1 {{variable 'z' cannot be implicitly captured in a lambda with no capture-default specified}} \
+    // expected-note@-1 {{lambda expression begins here}} \
+    // expected-note@-1 4{{capture}} \
+    // expected-note@-1 {{candidate template ignored: substitution failure: reference to local variable 'z' declared in enclosing function}}
+    return t;
+  }();
+
+  auto class_type_global = []<S=gs>{};
+
+  static constexpr S static_s;
+  auto class_type_static = []<S=static_s>{};
+
+  constexpr S s;  // expected-note {{'s' declared here}}
+  auto class_type = []<S=s>{};
+  // expected-error@-1 {{variable 's' cannot be implicitly captured in a lambda with no capture-default specified}} \
+  // expected-note@-1 {{lambda expression begins here}} \
+  // expected-note@-1 4{{capture}}
+}
 }
 #endif

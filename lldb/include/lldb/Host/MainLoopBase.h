@@ -13,8 +13,13 @@
 #include "lldb/Utility/Status.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <chrono>
+#include <cstdint>
 #include <functional>
 #include <mutex>
+#include <queue>
+#include <tuple>
+#include <vector>
 
 namespace lldb_private {
 
@@ -38,6 +43,9 @@ private:
   class ReadHandle;
 
 public:
+  using TimePoint = std::chrono::time_point<std::chrono::steady_clock,
+                                            std::chrono::nanoseconds>;
+
   MainLoopBase() : m_terminate_request(false) {}
   virtual ~MainLoopBase() = default;
 
@@ -52,7 +60,23 @@ public:
   // Add a pending callback that will be executed once after all the pending
   // events are processed. The callback will be executed even if termination
   // was requested.
-  void AddPendingCallback(const Callback &callback);
+  // Returns false if an interrupt was needed to get the loop to act on the new
+  // callback, but the interrupt failed, true otherwise.  Mostly used when the
+  // pending callback is a RequestTermination, since if the interrupt fails for
+  // that callback, waiting for the MainLoop thread to terminate could stall.
+  bool AddPendingCallback(const Callback &callback) {
+    return AddCallback(callback, std::chrono::steady_clock::time_point());
+  }
+
+  // Add a callback that will be executed after a certain amount of time has
+  // passed.  See AddPendingCallback comment for the return value.
+  bool AddCallback(const Callback &callback, std::chrono::nanoseconds delay) {
+    return AddCallback(callback, std::chrono::steady_clock::now() + delay);
+  }
+
+  // Add a callback that will be executed after a given point in time.
+  // See AddPendingCallback comment for the return value.
+  bool AddCallback(const Callback &callback, TimePoint point);
 
   // Waits for registered events and invoke the proper callbacks. Returns when
   // all callbacks deregister themselves or when someone requests termination.
@@ -69,15 +93,36 @@ protected:
 
   virtual void UnregisterReadObject(IOObject::WaitableHandle handle) = 0;
 
-  // Interrupt the loop that is currently waiting for events and execute
-  // the current pending callbacks immediately.
-  virtual void TriggerPendingCallbacks() = 0;
+  /// Interrupt the loop that is currently waiting for events.  Return true if
+  /// the interrupt succeeded, false if it failed.
+  virtual bool Interrupt() = 0;
 
-  void ProcessPendingCallbacks();
+  void ProcessCallbacks();
+
+  std::optional<TimePoint> GetNextWakeupTime();
 
   std::mutex m_callback_mutex;
-  std::vector<Callback> m_pending_callbacks;
-  bool m_terminate_request : 1;
+
+  struct CallbackEntry {
+    TimePoint time_point;
+    Callback callback;
+
+    CallbackEntry(TimePoint tp, Callback cb, uint64_t seq)
+        : time_point(std::move(tp)), callback(std::move(cb)), sequence(seq) {}
+
+    /// Sort using the `>`(!) operator to create a min-priority queue.
+    bool operator<(const CallbackEntry &other) const {
+      return std::tie(time_point, sequence) > // > for Min-priority queue
+             std::tie(other.time_point, other.sequence);
+    }
+
+  private:
+    uint64_t sequence;
+  };
+
+  std::priority_queue<CallbackEntry> m_callbacks;
+  uint64_t m_callback_sequence = 0;
+  bool m_terminate_request = false;
 
 private:
   class ReadHandle {

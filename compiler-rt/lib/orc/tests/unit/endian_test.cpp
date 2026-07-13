@@ -15,7 +15,7 @@
 #include "endianness.h"
 #include "gtest/gtest.h"
 
-using namespace __orc_rt;
+using namespace orc_rt;
 
 TEST(Endian, ByteSwap_32) {
   EXPECT_EQ(0x44332211u, ByteSwap_32(0x11223344));

@@ -4,6 +4,8 @@
 // RUN: printf "\0" > %t/null_byte.bin
 // RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%t -verify=expected,cxx -Wno-c23-extensions
 // RUN: %clang_cc1 -x c -std=c23 %s -fsyntax-only --embed-dir=%t -verify=expected,c
+// RUN: %clang_cc1 %s -fsyntax-only -fexperimental-new-constant-interpreter --embed-dir=%t -verify=expected,cxx -Wno-c23-extensions
+// RUN: %clang_cc1 -x c -std=c23 %s -fsyntax-only -fexperimental-new-constant-interpreter --embed-dir=%t -verify=expected,c
 #embed <media/empty>
 ;
 
@@ -134,3 +136,43 @@ constexpr struct HasChar c = {
                                 c-error {{constexpr initializer evaluates to 255 which is not exactly representable in type 'signed char'}}
 
 };
+
+#if __cplusplus
+namespace std {
+typedef decltype(sizeof(int)) size_t;
+
+template <class _E> class initializer_list {
+  const _E *__begin_;
+  size_t __size_;
+
+  constexpr initializer_list(const _E *__b, size_t __s)
+      : __begin_(__b), __size_(__s) {}
+
+public:
+  constexpr initializer_list() : __begin_(nullptr), __size_(0) {}
+};
+} // namespace std
+
+class S2 {
+public:
+  constexpr S2(std::initializer_list<char>)  { // cxx-error {{constexpr constructor never produces a constant expression}}
+    1/0; // cxx-warning {{division by zero is undefined}}
+         // cxx-warning@-1 {{unused}}
+         // cxx-note@-2 4{{division by zero}}
+  }
+};
+
+
+constexpr S2 s2 { // cxx-error {{must be initialized by a constant expression}}
+                  // cxx-note-re@-1 {{in call to 'S2{{.*}} #embed <jk.txt>}}
+#embed <jk.txt> prefix(0x2c, 0x20, )limit(5)
+};
+constexpr S2 s3 {1, // cxx-error {{must be initialized by a constant expression}}
+                    // cxx-note-re@-1 {{in call to 'S2{{.*}} #embed "jk.txt"}}
+#embed "jk.txt"
+};
+constexpr S2 s4 { // cxx-error {{must be initialized by a constant expression}}
+                  // cxx-note-re@-1 {{in call to 'S2{{.*}}"jk"}}
+#embed "jk.txt"
+};
+#endif

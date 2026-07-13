@@ -12,32 +12,32 @@
 ;;     }
 ;; }
 
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; XFAIL: *
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-%struct.Node = type { %struct.Node.0 addrspace(1)* }
+%struct.Node = type { ptr addrspace(1) }
 %struct.Node.0 = type opaque
 
-define spir_kernel void @verify_linked_lists(%struct.Node addrspace(1)* %pNodes) {
+define spir_kernel void @verify_linked_lists(ptr addrspace(1) %pNodes) {
 entry:
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
-  %pNode.0 = phi %struct.Node addrspace(1)* [ %pNodes, %entry ], [ %1, %for.inc ]
+  %pNode.0 = phi ptr addrspace(1) [ %pNodes, %entry ], [ %1, %for.inc ]
   %j.0 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
-; CHECK-SPIRV:      %[[#]] = OpPhi %[[#]] %[[#]] %[[#]] %[[#BitcastResultId:]] %[[#]]
-; CHECK-SPIRV-NEXT: OpPhi
+; CHECK:      %[[#]] = OpPhi %[[#]] %[[#]] %[[#]] %[[#BitcastResultId:]] %[[#]]
+; CHECK-NEXT: OpPhi
 
   %cmp = icmp slt i32 %j.0, 10
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %pNext = getelementptr inbounds %struct.Node, %struct.Node addrspace(1)* %pNode.0, i32 0, i32 0
+  %pNext = getelementptr inbounds %struct.Node, ptr addrspace(1) %pNode.0, i32 0, i32 0
 
-  %0 = load %struct.Node.0 addrspace(1)*, %struct.Node.0 addrspace(1)* addrspace(1)* %pNext, align 4
-  %1 = bitcast %struct.Node.0 addrspace(1)* %0 to %struct.Node addrspace(1)*
-; CHECK-SPIRV: %[[#LoadResultId:]] = OpLoad %[[#]]
-; CHECK-SPIRV: %[[#BitcastResultId]] = OpBitcast %[[#]] %[[#LoadResultId]]
+  %0 = load ptr addrspace(1), ptr addrspace(1) %pNext, align 4
+  %1 = bitcast ptr addrspace(1) %0 to ptr addrspace(1)
+; CHECK: %[[#LoadResultId:]] = OpLoad %[[#]]
+; CHECK: %[[#BitcastResultId]] = OpBitcast %[[#]] %[[#LoadResultId]]
 
   br label %for.inc
 

@@ -3,14 +3,6 @@
 Core Pipeline
 =============
 
-.. toctree::
-  :hidden:
-
-  IRTranslator
-  Legalizer
-  RegBankSelect
-  InstructionSelect
-
 The core pipeline of GlobalISel is:
 
 .. image:: pipeline-overview.png
@@ -80,7 +72,7 @@ Combiner
   alternatives but Combiners can also focus on code size or other metrics.
 
 Additional passes such as these can be inserted to support higher optimization
-levels or target specific needs. A likely pipeline is:
+levels or target-specific needs. A likely pipeline is:
 
 .. image:: pipeline-overview-with-combiners.png
 

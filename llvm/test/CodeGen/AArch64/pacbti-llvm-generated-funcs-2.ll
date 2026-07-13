@@ -35,8 +35,7 @@ entry:
 ;; CHECK-LABEL: __llvm_gcov_writeout:
 ;; CHECK:       .cfi_b_key_frame
 ;; CHECK-NEXT:  pacibsp
-;; CHECK:       .cfi_negate_ra_state
-;; CHECK-NEXT:  .cfi_def_cfa_offset
+;; CHECK-NEXT:  .cfi_negate_ra_state
 
 define internal void @__llvm_gcov_reset() unnamed_addr #2 {
 entry:

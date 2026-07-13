@@ -35,7 +35,7 @@ void testSmartPointer() {
     SmartPointer Deleter(mem);
     // destructor called here
   }
-  *mem = 0; // expected-warning{{Use of memory after it is freed}}
+  *mem = 0; // expected-warning{{Use of memory after it is released}}
 }
 
 
@@ -48,7 +48,7 @@ void testSmartPointer2() {
     doSomething();
     // destructor called here
   }
-  *mem = 0; // expected-warning{{Use of memory after it is freed}}
+  *mem = 0; // expected-warning{{Use of memory after it is released}}
 }
 
 
@@ -65,7 +65,7 @@ void testSubclassSmartPointer() {
     doSomething();
     // destructor called here
   }
-  *mem = 0; // expected-warning{{Use of memory after it is freed}}
+  *mem = 0; // expected-warning{{Use of memory after it is released}}
 }
 
 
@@ -82,7 +82,7 @@ void testMultipleInheritance1() {
     doSomething();
     // destructor called here
   }
-  *mem = 0; // expected-warning{{Use of memory after it is freed}}
+  *mem = 0; // expected-warning{{Use of memory after it is released}}
 }
 
 void testMultipleInheritance2() {
@@ -93,7 +93,7 @@ void testMultipleInheritance2() {
     doSomething();
     // destructor called here
   }
-  *mem = 0; // expected-warning{{Use of memory after it is freed}}
+  *mem = 0; // expected-warning{{Use of memory after it is released}}
 }
 
 void testMultipleInheritance3() {
@@ -103,7 +103,7 @@ void testMultipleInheritance3() {
     // Remove dead bindings...
     doSomething();
     // destructor called here
-    // expected-warning@28 {{Attempt to free released memory}}
+    // expected-warning@28 {{Attempt to release already released memory}}
   }
 }
 
@@ -122,7 +122,7 @@ void testSmartPointerMember() {
     doSomething();
     // destructor called here
   }
-  *mem = 0; // expected-warning{{Use of memory after it is freed}}
+  *mem = 0; // expected-warning{{Use of memory after it is release}}
 }
 
 
@@ -524,7 +524,7 @@ struct NonTrivial {
     return *this;
   }
   ~NonTrivial() {
-    delete[] p; // expected-warning {{free released memory}}
+    delete[] p; // expected-warning {{release already released memory}}
   }
 };
 
@@ -593,5 +593,5 @@ void overrideLeak() {
 void overrideDoubleDelete() {
   auto *a = new CustomOperators();
   delete a;
-  delete a; // expected-warning@577 {{Attempt to free released memory}}
+  delete a; // expected-warning@577 {{Attempt to release already released memory}}
 }

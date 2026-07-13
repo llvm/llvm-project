@@ -1,7 +1,7 @@
-; RUN: not llvm-as < %s 2>&1 | FileCheck %s
+; RUN: not llvm-as --disable-output %s 2>&1 | FileCheck -DFILE=%s %s
 
-; CHECK: clause argument must be a constant
 
 define void @test(i32 %in) personality ptr null {
+; CHECK: [[FILE]]:[[@LINE+1]]:24: error: 'filter' clause has an invalid type
   landingpad {} filter i32 %in
 }

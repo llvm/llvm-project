@@ -1,19 +1,19 @@
-; RUN: llc -march=mips -mattr=-long-calls %s -o - \
+; RUN: llc -mtriple=mips -mattr=-long-calls %s -o - \
 ; RUN:   | FileCheck -check-prefix=OFF %s
-; RUN: llc -march=mips -mattr=+long-calls,+noabicalls %s -o - \
+; RUN: llc -mtriple=mips -mattr=+long-calls,+noabicalls %s -o - \
 ; RUN:   | FileCheck -check-prefix=ON32 %s
 
-; RUN: llc -march=mips -mattr=+long-calls,-noabicalls %s -o - \
+; RUN: llc -mtriple=mips -mattr=+long-calls,-noabicalls %s -o - \
 ; RUN:   | FileCheck -check-prefix=OFF %s
 
-; RUN: llc -march=mips64 -target-abi n32 -mattr=-long-calls %s -o - \
+; RUN: llc -mtriple=mips64 -target-abi n32 -mattr=-long-calls %s -o - \
 ; RUN:   | FileCheck -check-prefix=OFF %s
-; RUN: llc -march=mips64 -target-abi n32 -mattr=+long-calls,+noabicalls %s -o - \
+; RUN: llc -mtriple=mips64 -target-abi n32 -mattr=+long-calls,+noabicalls %s -o - \
 ; RUN:   | FileCheck -check-prefix=ON32 %s
 
-; RUN: llc -march=mips64 -target-abi n64 -mattr=-long-calls %s -o - \
+; RUN: llc -mtriple=mips64 -target-abi n64 -mattr=-long-calls %s -o - \
 ; RUN:   | FileCheck -check-prefix=OFF %s
-; RUN: llc -march=mips64 -target-abi n64 -mattr=+long-calls,+noabicalls %s -o - \
+; RUN: llc -mtriple=mips64 -target-abi n64 -mattr=+long-calls,+noabicalls %s -o - \
 ; RUN:   | FileCheck -check-prefix=ON64 %s
 
 declare void @callee()

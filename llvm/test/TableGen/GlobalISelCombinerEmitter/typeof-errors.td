@@ -21,7 +21,7 @@ def UnknownOperand : GICombineRule<
   (match (G_ZEXT $dst, $src)),
   (apply (G_ANYEXT $dst, (GITypeOf<"$unknown"> 0)))>;
 
-// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: GISpecialType is not supported in 'match' patterns
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: GITypeOf is not supported in 'match' patterns
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: note: operand 1 of '__UseInMatch_match_0' has type 'GITypeOf<$dst>'
 def UseInMatch : GICombineRule<
   (defs root:$dst),
@@ -41,7 +41,7 @@ def UseInPF: GICombineRule<
   (match (PFWithTypeOF $dst)),
   (apply (G_ANYEXT $dst, (i32 0)))>;
 
-// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: GISpecialType is not supported in 'match' patterns
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: GITypeOf is not supported in 'match' patterns
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: note: operand 1 of '__InferredUseInMatch_match_0' has type 'GITypeOf<$dst>'
 def InferredUseInMatch : GICombineRule<
   (defs root:$dst),
@@ -63,6 +63,13 @@ def TypeOfApplyTmp : GICombineRule<
   (apply (G_ANYEXT $dst, i32:$tmp),
          (G_ANYEXT $tmp, (GITypeOf<"$tmp"> 0)))>;
 
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: type 'GITypeOf<$src>' is ill-formed: 'src' is a variadic pack operand
+def TypeOfVariadic : GICombineRule<
+  (defs root:$dst),
+  (match (G_BUILD_VECTOR $dst,  $x, GIVariadic<>:$src)),
+  (apply (G_ANYEXT GITypeOf<"$src">:$tmp, $x),
+         (G_ANYEXT $dst, $tmp))>;
+
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse one or more rules
 def MyCombiner: GICombiner<"GenMyCombiner", [
   NoDollarSign,
@@ -71,5 +78,6 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   UseInPF,
   InferredUseInMatch,
   InferenceConflict,
-  TypeOfApplyTmp
+  TypeOfApplyTmp,
+  TypeOfVariadic
 ]>;

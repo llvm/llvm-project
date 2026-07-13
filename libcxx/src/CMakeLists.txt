@@ -1,5 +1,3 @@
-set(LIBCXX_LIB_CMAKEFILES_DIR "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}"  PARENT_SCOPE)
-
 # Get sources
 set(LIBCXX_SOURCES
   algorithm.cpp
@@ -17,7 +15,6 @@ set(LIBCXX_SOURCES
   filesystem/path.cpp
   functional.cpp
   hash.cpp
-  include/apple_availability.h
   include/atomic_support.h
   include/config_elast.h
   include/refstring.h
@@ -31,7 +28,7 @@ set(LIBCXX_SOURCES
   include/ryu/f2s.h
   include/ryu/ryu.h
   include/to_chars_floating_point.h
-  legacy_pointer_safety.cpp
+  include/from_chars_floating_point.h
   memory.cpp
   memory_resource.cpp
   new_handler.cpp
@@ -94,6 +91,7 @@ if (LIBCXX_ENABLE_LOCALIZATION)
     ostream.cpp
     regex.cpp
     strstream.cpp
+    text_encoding.cpp
     )
 endif()
 
@@ -143,29 +141,6 @@ if (LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
     )
 endif()
 
-# Add all the headers to the project for IDEs.
-if (LIBCXX_CONFIGURE_IDE)
-  file(GLOB_RECURSE LIBCXX_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../include/*)
-  if(WIN32)
-    file( GLOB LIBCXX_WIN32_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../include/__support/win32/*.h)
-    list(APPEND LIBCXX_HEADERS ${LIBCXX_WIN32_HEADERS})
-  endif()
-  # Force them all into the headers dir on MSVC, otherwise they end up at
-  # project scope because they don't have extensions.
-  if (MSVC_IDE)
-    source_group("Header Files" FILES ${LIBCXX_HEADERS})
-  endif()
-endif()
-
-if(NOT LIBCXX_INSTALL_LIBRARY)
-  set(exclude_from_all EXCLUDE_FROM_ALL)
-endif()
-
-if (LIBCXX_GENERATE_COVERAGE AND NOT LIBCXX_COVERAGE_LIBRARY)
-  find_compiler_rt_library(profile LIBCXX_COVERAGE_LIBRARY)
-endif()
-add_library_flags_if(LIBCXX_COVERAGE_LIBRARY "${LIBCXX_COVERAGE_LIBRARY}")
-
 if (APPLE AND LLVM_USE_SANITIZER)
   if (("${LLVM_USE_SANITIZER}" STREQUAL "Address") OR
       ("${LLVM_USE_SANITIZER}" STREQUAL "Address;Undefined") OR
@@ -176,13 +151,13 @@ if (APPLE AND LLVM_USE_SANITIZER)
   elseif("${LLVM_USE_SANITIZER}" STREQUAL "Thread")
     set(LIBFILE "libclang_rt.tsan_osx_dynamic.dylib")
   else()
-    message(WARNING "LLVM_USE_SANITIZER=${LLVM_USE_SANITIZER} is not supported on OS X")
+    message(WARNING "LLVM_USE_SANITIZER=${LLVM_USE_SANITIZER} is not supported on macOS")
   endif()
   if (LIBFILE)
     find_compiler_rt_library(builtins LIBCXX_BUILTINS_LIBRARY)
     get_filename_component(LIBDIR "${LIBCXX_BUILTINS_LIBRARY}" DIRECTORY)
     if (NOT IS_DIRECTORY "${LIBDIR}")
-      message(FATAL_ERROR "Cannot find compiler-rt directory on OS X required for LLVM_USE_SANITIZER")
+      message(FATAL_ERROR "Cannot find compiler-rt directory on macOS required for LLVM_USE_SANITIZER")
     endif()
     set(LIBCXX_SANITIZER_LIBRARY "${LIBDIR}/${LIBFILE}")
     set(LIBCXX_SANITIZER_LIBRARY "${LIBCXX_SANITIZER_LIBRARY}" PARENT_SCOPE)
@@ -195,14 +170,18 @@ endif()
 split_list(LIBCXX_COMPILE_FLAGS)
 split_list(LIBCXX_LINK_FLAGS)
 
+include(FindLibcCommonUtils)
+
 # Build the shared library.
-if (LIBCXX_ENABLE_SHARED)
-  add_library(cxx_shared SHARED ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
+if (LIBCXX_SUPPORTS_SHARED_LIBRARY)
+  add_library(cxx_shared SHARED ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
   target_include_directories(cxx_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-  target_link_libraries(cxx_shared PUBLIC cxx-headers libcxx-libc-shared
-                                   PRIVATE ${LIBCXX_LIBRARIES})
+  target_link_libraries(cxx_shared PUBLIC cxx-headers runtimes-libc-shared
+                                   PRIVATE ${LIBCXX_LIBRARIES}
+                                   PRIVATE llvm-libc-common-utilities)
   set_target_properties(cxx_shared
     PROPERTIES
+      EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBCXX_ENABLE_SHARED}>,FALSE,TRUE>"
       COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
       OUTPUT_NAME   "${LIBCXX_SHARED_OUTPUT_NAME}"
@@ -229,16 +208,11 @@ if (LIBCXX_ENABLE_SHARED)
     target_link_libraries(cxx_shared PUBLIC libcxx-abi-shared)
   endif()
 
-  # Maybe re-export symbols from libc++abi
-  # In particular, we don't re-export the symbols if libc++abi is merged statically
-  # into libc++ because in that case there's no dylib to re-export from.
+  # Maybe force some symbols to be weak, not weak or not exported.
+  # TODO: This shouldn't depend on the platform, and ideally it should be done in the sources.
   if (APPLE AND LIBCXX_CXX_ABI MATCHES "libcxxabi$"
             AND NOT LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
-    target_link_libraries(cxx_shared PRIVATE cxxabi-reexports)
-
-    # TODO: These exports controls should not be tied to whether we re-export libc++abi symbols
     target_link_libraries(cxx_shared PRIVATE
-      "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++unexp.exp"
       "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/notweak.exp"
       "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/weak.exp")
   endif()
@@ -271,7 +245,6 @@ if (LIBCXX_ENABLE_SHARED)
     )
   endif()
 
-  list(APPEND LIBCXX_BUILD_TARGETS "cxx_shared")
   if(WIN32 AND NOT MINGW AND NOT "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows")
     # Since we most likely do not have a mt.exe replacement, disable the
     # manifest bundling.  This allows a normal cmake invocation to pass which
@@ -284,54 +257,51 @@ if (LIBCXX_ENABLE_SHARED)
                             APPEND_STRING PROPERTY LINK_FLAGS " -Xlinker /MANIFEST:NO")
     endif()
   endif()
-endif()
+endif(LIBCXX_SUPPORTS_SHARED_LIBRARY)
 
 set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
 
 # Build the static library.
-if (LIBCXX_ENABLE_STATIC)
-  add_library(cxx_static STATIC ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
-  target_include_directories(cxx_static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-  target_link_libraries(cxx_static PUBLIC cxx-headers libcxx-libc-static
-                                   PRIVATE ${LIBCXX_LIBRARIES}
-                                   PRIVATE libcxx-abi-static)
-  set_target_properties(cxx_static
-    PROPERTIES
-      COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
-      LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
-      OUTPUT_NAME   "${LIBCXX_STATIC_OUTPUT_NAME}"
-  )
-  cxx_add_common_build_flags(cxx_static)
+add_library(cxx_static STATIC ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
+target_include_directories(cxx_static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(cxx_static PUBLIC cxx-headers runtimes-libc-static
+                                  PRIVATE ${LIBCXX_LIBRARIES}
+                                  PRIVATE libcxx-abi-static
+                                  PRIVATE llvm-libc-common-utilities)
+set_target_properties(cxx_static
+  PROPERTIES
+    EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBCXX_ENABLE_STATIC}>,FALSE,TRUE>"
+    COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
+    LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
+    OUTPUT_NAME   "${LIBCXX_STATIC_OUTPUT_NAME}"
+)
+cxx_add_common_build_flags(cxx_static)
 
-  if (LIBCXX_HERMETIC_STATIC_LIBRARY)
-    # If the hermetic library doesn't define the operator new/delete functions
-    # then its code shouldn't declare them with hidden visibility.  They might
-    # actually be provided by a shared library at link time.
-    if (LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
-      append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete=force-hidden)
-      if (NOT CXX_SUPPORTS_FVISIBILITY_GLOBAL_NEW_DELETE_EQ_FORCE_HIDDEN_FLAG)
-        append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete-hidden)
-      endif()
+if (LIBCXX_HERMETIC_STATIC_LIBRARY)
+  # If the hermetic library doesn't define the operator new/delete functions
+  # then its code shouldn't declare them with hidden visibility.  They might
+  # actually be provided by a shared library at link time.
+  if (LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
+    append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete=force-hidden)
+    if (NOT CXX_SUPPORTS_FVISIBILITY_GLOBAL_NEW_DELETE_EQ_FORCE_HIDDEN_FLAG)
+      append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete-hidden)
     endif()
-    target_compile_options(cxx_static PRIVATE ${CXX_STATIC_LIBRARY_FLAGS})
-    # _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS can be defined in __config_site
-    # too. Define it in the same way here, to avoid redefinition conflicts.
-    target_compile_definitions(cxx_static PRIVATE _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
   endif()
-
-  list(APPEND LIBCXX_BUILD_TARGETS "cxx_static")
-  # Attempt to merge the libc++.a archive and the ABI library archive into one.
-  if (LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY)
-    target_link_libraries(cxx_static PRIVATE libcxx-abi-static-objects)
-  endif()
+  target_compile_options(cxx_static PRIVATE ${CXX_STATIC_LIBRARY_FLAGS})
+  # _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS can be defined in __config_site
+  # too. Define it in the same way here, to avoid redefinition conflicts.
+  target_compile_definitions(cxx_static PRIVATE _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
 endif()
 
-# Add a meta-target for both libraries.
-add_custom_target(cxx DEPENDS ${LIBCXX_BUILD_TARGETS})
-add_dependencies(cxx-test-depends cxx)
+# Attempt to merge the libc++.a archive and the ABI library archive into one.
+if (LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY)
+  target_link_libraries(cxx_static PRIVATE libcxx-abi-static-objects)
+endif()
 
+# Build the experimental static library
 set(LIBCXX_EXPERIMENTAL_SOURCES
   experimental/keep.cpp
+  experimental/log_hardening_failure.cpp
   )
 
 if (LIBCXX_PSTL_BACKEND STREQUAL "libdispatch")
@@ -357,7 +327,7 @@ endif()
 
 add_library(cxx_experimental STATIC ${LIBCXX_EXPERIMENTAL_SOURCES})
 target_link_libraries(cxx_experimental PUBLIC cxx-headers)
-if (LIBCXX_ENABLE_SHARED)
+if (LIBCXX_ENABLE_SHARED AND TARGET cxx_shared)
   target_link_libraries(cxx_experimental PRIVATE cxx_shared)
 else()
   target_link_libraries(cxx_experimental PRIVATE cxx_static)
@@ -376,9 +346,17 @@ set_target_properties(cxx_experimental
 )
 cxx_add_common_build_flags(cxx_experimental)
 target_compile_options(cxx_experimental PUBLIC -D_LIBCPP_ENABLE_EXPERIMENTAL)
-add_dependencies(cxx-test-depends cxx_experimental)
 
-if (LIBCXX_INSTALL_SHARED_LIBRARY)
+# Add a meta-target for both libraries and the experimental library.
+add_custom_target(cxx DEPENDS cxx_experimental)
+if (LIBCXX_ENABLE_SHARED AND TARGET cxx_shared)
+  add_dependencies(cxx cxx_shared)
+endif()
+if (LIBCXX_ENABLE_STATIC)
+  add_dependencies(cxx cxx_static)
+endif()
+
+if (LIBCXX_INSTALL_SHARED_LIBRARY AND TARGET cxx_shared)
   install(TARGETS cxx_shared
     ARCHIVE DESTINATION ${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
     LIBRARY DESTINATION ${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
@@ -401,37 +379,30 @@ endif()
 
 # NOTE: This install command must go after the cxx install command otherwise
 # it will not be executed after the library symlinks are installed.
-if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
+if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT AND TARGET cxx_shared)
   install(FILES "$<TARGET_LINKER_FILE:cxx_shared>"
     DESTINATION ${LIBCXX_INSTALL_LIBRARY_DIR}
-    COMPONENT libcxx)
+    COMPONENT cxx)
 endif()
 
 if (NOT CMAKE_CONFIGURATION_TYPES)
-    if(LIBCXX_INSTALL_LIBRARY)
-      set(lib_install_target "cxx;cxx_experimental")
-    endif()
-    if(LIBCXX_INSTALL_HEADERS)
-      set(header_install_target install-cxx-headers)
-    endif()
-    if(LIBCXX_INSTALL_MODULES)
-      set(module_install_target install-cxx-modules)
-    endif()
-    add_custom_target(install-cxx
-                      DEPENDS ${lib_install_target}
-                              cxx_experimental
-                              ${header_install_target}
-                              ${module_install_target}
-                      COMMAND "${CMAKE_COMMAND}"
-                      -DCMAKE_INSTALL_COMPONENT=cxx
-                      -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")
-    add_custom_target(install-cxx-stripped
-                      DEPENDS ${lib_install_target}
-                              cxx_experimental
-                              ${header_install_target}
-                              ${module_install_target}
-                      COMMAND "${CMAKE_COMMAND}"
-                      -DCMAKE_INSTALL_COMPONENT=cxx
-                      -DCMAKE_INSTALL_DO_STRIP=1
-                      -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")
+  add_custom_target(install-cxx
+    COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component cxx)
+  add_custom_target(install-cxx-stripped
+    COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component cxx --strip)
+
+  if (LIBCXX_INSTALL_LIBRARY)
+    add_dependencies(install-cxx cxx)
+    add_dependencies(install-cxx-stripped cxx)
+  endif()
+
+  if(LIBCXX_INSTALL_HEADERS)
+    add_dependencies(install-cxx install-cxx-headers)
+    add_dependencies(install-cxx-stripped install-cxx-headers-stripped)
+  endif()
+
+  if(LIBCXX_INSTALL_MODULES)
+    add_dependencies(install-cxx install-cxx-modules)
+    add_dependencies(install-cxx-stripped install-cxx-modules-stripped)
+  endif()
 endif()

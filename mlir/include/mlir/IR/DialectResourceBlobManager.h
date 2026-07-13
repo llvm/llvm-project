@@ -93,9 +93,14 @@ public:
     return HandleT(&entry, dialect);
   }
 
+  /// Provide access to all the registered blobs via a callable. During access
+  /// the blob map is guaranteed to remain unchanged.
+  void getBlobMap(llvm::function_ref<void(const llvm::StringMap<BlobEntry> &)>
+                      accessor) const;
+
 private:
   /// A mutex to protect access to the blob map.
-  llvm::sys::SmartRWMutex<true> blobMapLock;
+  mutable llvm::sys::SmartRWMutex<true> blobMapLock;
 
   /// The internal map of tracked blobs. StringMap stores entries in distinct
   /// allocations, so we can freely take references to the data without fear of

@@ -6,7 +6,7 @@
 ; Check that TBAA handles access tags with aggregate final access types
 ; correctly.
 
-%A = type { i32 }  ; struct A { int i; };
+%A = type { i32, i32 }  ; struct A { int i, j; };
 %B = type { %A }   ; struct B { A a; };
 %C = type { %B }   ; struct C { B b; };
 %D = type { i16 }  ; struct D { short s; };
@@ -105,13 +105,32 @@ entry:
   ret i32 %0
 }
 
+; A vs. A::j  =>  MayAlias.
+; This differs from A vs. A::i case in that the offsets of the final
+; accessed objects in A do not match.
+define i32 @f7(ptr %i, ptr %a) {
+entry:
+; CHECK-LABEL: f7
+; CHECK: MayAlias: store i32 7, {{.*}} <-> store i32 5,
+; OPT-LABEL: f7
+; OPT: store i32 5,
+; OPT: store i32 7,
+; OPT: %[[RET:.*]] = load i32,
+; OPT: ret i32 %[[RET]]
+  store i32 5, ptr %i, align 4, !tbaa !10  ; TAG_A
+  store i32 7, ptr %a, align 4, !tbaa !16  ; TAG_A_j
+  %0 = load i32, ptr %i, align 4, !tbaa !10  ; TAG_A
+  ret i32 %0
+}
+
 !0 = !{!"root"}
 !1 = !{!0, i64 1, !"char"}
 !2 = !{!1, i64 4, !"int"}
 !3 = !{!2, !2, i64 0, i64 4}  ; TAG_int
 
-!4 = !{!1, i64 4, !"A", !2, i64 0, i64 4}
+!4 = !{!1, i64 4, !"A", !2, i64 0, i64 4, !2, i64 4, i64 4}
 !5 = !{!4, !2, i64 0, i64 4}  ; TAG_A_i
+!16 = !{!4, !2, i64 4, i64 4}  ; TAG_A_j
 
 !6 = !{!1, i64 4, !"B", !4, i64 0, i64 4}
 !7 = !{!6, !4, i64 0, i64 4}  ; TAG_B_a

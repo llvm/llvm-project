@@ -69,11 +69,11 @@ cond.true.i:                                      ; preds = %for.cond
 do.body.i.i.do.body.i.i_crit_edge:                ; preds = %do.body.i.i.do.body.i.i_crit_edge, %cond.true.i
   %pgocount711 = phi i64 [ %0, %do.body.i.i.do.body.i.i_crit_edge ], [ 0, %cond.true.i ]
   %0 = add nuw nsw i64 %pgocount711, 1
-  br i1 undef, label %do.body.i.i.rdrand_int.exit.i_crit_edge, label %do.body.i.i.do.body.i.i_crit_edge
+  br i1 true, label %do.body.i.i.rdrand_int.exit.i_crit_edge, label %do.body.i.i.do.body.i.i_crit_edge
 
 do.body.i.i.rdrand_int.exit.i_crit_edge:          ; preds = %do.body.i.i.do.body.i.i_crit_edge
   %1 = add i64 %0, undef
-  br i1 undef, label %for.end, label %for.inc
+  br i1 true, label %for.end, label %for.inc
 
 for.inc:                                          ; preds = %do.body.i.i.rdrand_int.exit.i_crit_edge
   br label %for.cond

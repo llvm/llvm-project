@@ -55,7 +55,7 @@ void transpose_struct_member(struct Foo *F) {
   // COMMON-NEXT:    [[M_T:%.*]] = call <6 x i32> @llvm.matrix.transpose.v6i32(<6 x i32> [[M]], i32 1, i32 6)
   // CHECK32-NEXT:   [[F_ADDR:%.*]] = load ptr, ptr %F.addr, align 4
   // CHECK64-NEXT:   [[F_ADDR:%.*]] = load ptr, ptr %F.addr, align 8
-  // COMMON-NEXT:    [[OUT_PTR:%.*]] = getelementptr inbounds %struct.Foo, ptr [[F_ADDR]], i32 0, i32 1
+  // COMMON-NEXT:    [[OUT_PTR:%.*]] = getelementptr inbounds nuw %struct.Foo, ptr [[F_ADDR]], i32 0, i32 1
   // COMMON-NEXT:    store <6 x i32> [[M_T]], ptr [[OUT_PTR]], align 4
 
   F->out = __builtin_matrix_transpose(F->in);
@@ -68,7 +68,7 @@ void transpose_transpose_struct_member(struct Foo *F) {
   // COMMON-NEXT:    [[M_T2:%.*]] = call <6 x i32> @llvm.matrix.transpose.v6i32(<6 x i32> [[M_T]], i32 6, i32 1)
   // CHECK32-NEXT:   [[F_ADDR:%.*]] = load ptr, ptr %F.addr, align 4
   // CHECK64-NEXT:   [[F_ADDR:%.*]] = load ptr, ptr %F.addr, align 8
-  // COMMON-NEXT:    [[IN_PTR:%.*]] = getelementptr inbounds %struct.Foo, ptr [[F_ADDR]], i32 0, i32 0
+  // COMMON-NEXT:    [[IN_PTR:%.*]] = getelementptr inbounds nuw %struct.Foo, ptr [[F_ADDR]], i32 0, i32 0
   // COMMON-NEXT:    store <6 x i32> [[M_T2]], ptr [[IN_PTR]], align 4
 
   F->in = __builtin_matrix_transpose(__builtin_matrix_transpose(F->in));

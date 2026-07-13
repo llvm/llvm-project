@@ -1,9 +1,9 @@
 ; RUN: opt -safepoint-ir-verifier-print-only -verify-safepoint-ir -S %s 2>&1 | FileCheck %s
 
-define ptr addrspace(1) @test.not.ok.0(ptr addrspace(1) %arg) gc "statepoint-example" {
+define ptr addrspace(1) @test.not.ok.0(ptr addrspace(1) %arg, i1 %new_arg) gc "statepoint-example" {
 ; CHECK-LABEL: Verifying gc pointers in function: test.not.ok.0
  bci_0:
-  br i1 undef, label %left, label %right
+  br i1 %new_arg, label %left, label %right
 
  left:
   %safepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0)
@@ -20,10 +20,10 @@ define ptr addrspace(1) @test.not.ok.0(ptr addrspace(1) %arg) gc "statepoint-exa
   ret ptr addrspace(1) %val
 }
 
-define ptr addrspace(1) @test.not.ok.1(ptr addrspace(1) %arg) gc "statepoint-example" {
+define ptr addrspace(1) @test.not.ok.1(ptr addrspace(1) %arg, i1 %new_arg) gc "statepoint-example" {
 ; CHECK-LABEL: Verifying gc pointers in function: test.not.ok.1
  bci_0:
-  br i1 undef, label %left, label %right
+  br i1 %new_arg, label %left, label %right
 
  left:
   %safepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0)
@@ -40,10 +40,10 @@ define ptr addrspace(1) @test.not.ok.1(ptr addrspace(1) %arg) gc "statepoint-exa
   ret ptr addrspace(1) %val
 }
 
-define ptr addrspace(1) @test.ok.0(ptr addrspace(1) %arg) gc "statepoint-example" {
+define ptr addrspace(1) @test.ok.0(ptr addrspace(1) %arg, i1 %new_arg) gc "statepoint-example" {
 ; CHECK: No illegal uses found by SafepointIRVerifier in: test.ok.0
  bci_0:
-  br i1 undef, label %left, label %right
+  br i1 %new_arg, label %left, label %right
 
  left:
   %safepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0)
@@ -57,10 +57,10 @@ define ptr addrspace(1) @test.ok.0(ptr addrspace(1) %arg) gc "statepoint-example
   ret ptr addrspace(1) %val
 }
 
-define ptr addrspace(1) @test.ok.1(ptr addrspace(1) %arg) gc "statepoint-example" {
+define ptr addrspace(1) @test.ok.1(ptr addrspace(1) %arg, i1 %new_arg) gc "statepoint-example" {
 ; CHECK: No illegal uses found by SafepointIRVerifier in: test.ok.1
  bci_0:
-  br i1 undef, label %left, label %right
+  br i1 %new_arg, label %left, label %right
 
  left:
   call void @not_statepoint()
@@ -75,10 +75,10 @@ define ptr addrspace(1) @test.ok.1(ptr addrspace(1) %arg) gc "statepoint-example
 }
 
 ; It should be allowed to compare poisoned ptr with null.
-define void @test.poisoned.cmp.ok(ptr addrspace(1) %arg) gc "statepoint-example" {
+define void @test.poisoned.cmp.ok(ptr addrspace(1) %arg, i1 %new_arg) gc "statepoint-example" {
 ; CHECK-LABEL: Verifying gc pointers in function: test.poisoned.cmp.ok
  bci_0:
-  br i1 undef, label %left, label %right
+  br i1 %new_arg, label %left, label %right
 
  left:
   %safepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0) ["gc-live"(ptr addrspace(1) %arg)]
@@ -97,10 +97,10 @@ define void @test.poisoned.cmp.ok(ptr addrspace(1) %arg) gc "statepoint-example"
 }
 
 ; It is illegal to compare poisoned ptr and relocated.
-define void @test.poisoned.cmp.fail.0(ptr addrspace(1) %arg) gc "statepoint-example" {
+define void @test.poisoned.cmp.fail.0(ptr addrspace(1) %arg, i1 %new_arg) gc "statepoint-example" {
 ; CHECK-LABEL: Verifying gc pointers in function: test.poisoned.cmp.fail.0
  bci_0:
-  br i1 undef, label %left, label %right
+  br i1 %new_arg, label %left, label %right
 
  left:
   %safepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0) ["gc-live"(ptr addrspace(1) %arg)]
@@ -123,10 +123,10 @@ define void @test.poisoned.cmp.fail.0(ptr addrspace(1) %arg) gc "statepoint-exam
 }
 
 ; It is illegal to compare poisoned ptr and unrelocated.
-define void @test.poisoned.cmp.fail.1(ptr addrspace(1) %arg) gc "statepoint-example" {
+define void @test.poisoned.cmp.fail.1(ptr addrspace(1) %arg, i1 %new_arg) gc "statepoint-example" {
 ; CHECK-LABEL: Verifying gc pointers in function: test.poisoned.cmp.fail.1
  bci_0:
-  br i1 undef, label %left, label %right
+  br i1 %new_arg, label %left, label %right
 
  left:
   %safepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0) ["gc-live"(ptr addrspace(1) %arg)]
@@ -148,10 +148,10 @@ define void @test.poisoned.cmp.fail.1(ptr addrspace(1) %arg) gc "statepoint-exam
 }
 
 ; It should be allowed to compare unrelocated phi with unrelocated value.
-define void @test.unrelocated-phi.cmp.ok(ptr addrspace(1) %arg) gc "statepoint-example" {
+define void @test.unrelocated-phi.cmp.ok(ptr addrspace(1) %arg, i1 %new_arg) gc "statepoint-example" {
 ; CHECK-LABEL: Verifying gc pointers in function: test.unrelocated-phi.cmp.ok
  bci_0:
-  br i1 undef, label %left, label %right
+  br i1 %new_arg, label %left, label %right
 
  left:
   %safepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0)

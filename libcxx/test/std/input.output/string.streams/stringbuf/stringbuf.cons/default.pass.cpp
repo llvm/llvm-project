@@ -29,12 +29,18 @@ struct testbuf
 {
     void check()
     {
-        assert(this->eback() == NULL);
-        assert(this->gptr() == NULL);
-        assert(this->egptr() == NULL);
-        assert(this->pbase() == NULL);
-        assert(this->pptr() == NULL);
-        assert(this->epptr() == NULL);
+      // LWG2995
+      //   It is implementation-defined whether the sequence pointers (eback(),
+      //   gptr(), egptr(), pbase(), pptr(), epptr()) are initialized to null
+      //   pointers.
+      // This tests the libc++ specific implementation.
+      LIBCPP_ASSERT(this->eback() != nullptr);
+      LIBCPP_ASSERT(this->gptr() != nullptr);
+      LIBCPP_ASSERT(this->egptr() != nullptr);
+      LIBCPP_ASSERT(this->pbase() != nullptr);
+      LIBCPP_ASSERT(this->pptr() != nullptr);
+      LIBCPP_ASSERT(this->epptr() != nullptr);
+      assert(this->str().empty());
     }
 };
 

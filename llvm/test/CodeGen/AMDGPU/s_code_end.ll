@@ -33,7 +33,7 @@ define amdgpu_kernel void @a_kernel2() #0 {
 }
 
 ; GCN-ASM:                .globl  a_function
-; GCN-ASM-NEXT:           .p2align        2
+; GCN-ASM-NEXT:           .p2align        {{[67]}}
 ; GCN-ASM-NEXT:           .type   a_function,@function
 
 ; GCN-NEXT:       a_function{{>?}}:
@@ -55,11 +55,11 @@ define amdgpu_kernel void @a_kernel2() #0 {
 ; GFX11END-OBJ-NEXT:      s_code_end
 ; GFX90AEND-OBJ-NEXT:     s_nop 0
 
-; GFX10END-OBJ:           s_code_end // 000000000140:
+; GFX10END-OBJ:           s_code_end // {{[0-9A-F]+}}:
 ; GFX10END-OBJ-COUNT-47:  s_code_end
-; GFX11END-OBJ:           s_code_end // 000000000140:
+; GFX11END-OBJ:           s_code_end // {{[0-9A-F]+}}:
 ; GFX11END-OBJ-COUNT-47:  s_code_end
-; GFX90AEND-OBJ:           s_nop 0 // 000000000140:
+; GFX90AEND-OBJ:           s_nop 0 // {{[0-9A-F]+}}:
 ; GFX90AEND-OBJ-COUNT-255: s_nop 0
 
 define void @a_function() #0 {

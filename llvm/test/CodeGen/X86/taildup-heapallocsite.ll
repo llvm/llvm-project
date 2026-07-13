@@ -37,9 +37,11 @@ cond.end:                                         ; preds = %entry, %cond.true
 ; CHECK: testq
 ; CHECK: je
 ; CHECK: callq alloc
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[L1:.Ltmp[0-9]+]]
 ; CHECK: jmp f2 # TAILCALL
 ; CHECK: callq alloc
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[L3:.Ltmp[0-9]+]]
 ; CHECK: jmp f2 # TAILCALL
 

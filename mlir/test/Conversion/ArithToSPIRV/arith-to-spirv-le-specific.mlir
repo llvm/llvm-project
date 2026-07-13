@@ -1,4 +1,5 @@
 // RUN: mlir-opt -split-input-file -convert-arith-to-spirv -verify-diagnostics %s | FileCheck %s
+// XFAIL: system-aix
 
 
 //===----------------------------------------------------------------------===//
@@ -10,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: target=s390x-{{.*}}
+// XFAIL: target={{(s390x|sparc.*)-.*}}
 
 module attributes {
   spirv.target_env = #spirv.target_env<

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -verify-machineinstrs -stop-after=amdgpu-isel -o - %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -stop-after=amdgpu-isel -o - %s | FileCheck -check-prefix=GCN %s
 define void @test(i1 %c0) #1 {
   ; Clean up the unreachable blocks introduced with LowerSwitch pass.
   ; This test ensures that, in the pass flow, UnreachableBlockElim pass
@@ -47,8 +47,8 @@ define void @test(i1 %c0) #1 {
     br label %unreach.blk
 
   unreach.blk:                                      ; preds = %preheader.blk, %pre.false.blk
-    %phi.val = phi i32 [ %call.pre.false, %pre.false.blk ], [ undef, %preheader.blk ]
-    store i32 %phi.val, ptr undef
+    %phi.val = phi i32 [ %call.pre.false, %pre.false.blk ], [ poison, %preheader.blk ]
+    store i32 %phi.val, ptr poison
     unreachable
 
   exit:                                             ; preds = %switch.blk

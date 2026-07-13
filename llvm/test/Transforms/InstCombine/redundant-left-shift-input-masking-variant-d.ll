@@ -67,10 +67,10 @@ declare void @use3xi32(<3 x i32>)
 
 define <3 x i32> @t2_vec_splat(<3 x i32> %x, <3 x i32> %nbits) {
 ; CHECK-LABEL: @t2_vec_splat(
-; CHECK-NEXT:    [[T0:%.*]] = shl nsw <3 x i32> <i32 -1, i32 -1, i32 -1>, [[NBITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = lshr <3 x i32> <i32 -1, i32 -1, i32 -1>, [[NBITS]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nsw <3 x i32> splat (i32 -1), [[NBITS:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = lshr <3 x i32> splat (i32 -1), [[NBITS]]
 ; CHECK-NEXT:    [[T2:%.*]] = and <3 x i32> [[T1]], [[X:%.*]]
-; CHECK-NEXT:    [[T3:%.*]] = add <3 x i32> [[NBITS]], <i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[T3:%.*]] = add <3 x i32> [[NBITS]], splat (i32 1)
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T0]])
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T1]])
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T2]])
@@ -92,8 +92,8 @@ define <3 x i32> @t2_vec_splat(<3 x i32> %x, <3 x i32> %nbits) {
 
 define <3 x i32> @t3_vec_nonsplat(<3 x i32> %x, <3 x i32> %nbits) {
 ; CHECK-LABEL: @t3_vec_nonsplat(
-; CHECK-NEXT:    [[T0:%.*]] = shl nsw <3 x i32> <i32 -1, i32 -1, i32 -1>, [[NBITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = lshr <3 x i32> <i32 -1, i32 -1, i32 -1>, [[NBITS]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nsw <3 x i32> splat (i32 -1), [[NBITS:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = lshr <3 x i32> splat (i32 -1), [[NBITS]]
 ; CHECK-NEXT:    [[T2:%.*]] = and <3 x i32> [[T1]], [[X:%.*]]
 ; CHECK-NEXT:    [[T3:%.*]] = add <3 x i32> [[NBITS]], <i32 1, i32 0, i32 2>
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T0]])
@@ -118,7 +118,7 @@ define <3 x i32> @t3_vec_nonsplat(<3 x i32> %x, <3 x i32> %nbits) {
 define <3 x i32> @t4_vec_poison(<3 x i32> %x, <3 x i32> %nbits) {
 ; CHECK-LABEL: @t4_vec_poison(
 ; CHECK-NEXT:    [[T0:%.*]] = shl nsw <3 x i32> <i32 -1, i32 poison, i32 -1>, [[NBITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = lshr <3 x i32> <i32 -1, i32 -1, i32 -1>, [[NBITS]]
+; CHECK-NEXT:    [[T1:%.*]] = lshr <3 x i32> splat (i32 -1), [[NBITS]]
 ; CHECK-NEXT:    [[T2:%.*]] = and <3 x i32> [[T1]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T0]])
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T1]])

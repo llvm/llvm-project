@@ -8,8 +8,8 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_LLDIV_H
 #define LLVM_LIBC_SRC_STDLIB_LLDIV_H
 
+#include "hdr/types/lldiv_t.h"
 #include "src/__support/macros/config.h"
-#include <stdlib.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

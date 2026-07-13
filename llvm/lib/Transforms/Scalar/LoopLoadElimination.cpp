@@ -42,7 +42,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -50,8 +49,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
@@ -91,8 +90,8 @@ struct StoreToLoadForwardingCandidate {
   /// Return true if the dependence from the store to the load has an
   /// absolute distance of one.
   /// E.g. A[i+1] = A[i] (or A[i-1] = A[i] for descending loop)
-  bool isDependenceDistanceOfOne(PredicatedScalarEvolution &PSE,
-                                 Loop *L) const {
+  bool isDependenceDistanceOfOne(PredicatedScalarEvolution &PSE, Loop *L,
+                                 const DominatorTree &DT) const {
     Value *LoadPtr = Load->getPointerOperand();
     Value *StorePtr = Store->getPointerOperand();
     Type *LoadType = getLoadStoreType(Load);
@@ -104,8 +103,10 @@ struct StoreToLoadForwardingCandidate {
                DL.getTypeSizeInBits(getLoadStoreType(Store)) &&
            "Should be a known dependence");
 
-    int64_t StrideLoad = getPtrStride(PSE, LoadType, LoadPtr, L).value_or(0);
-    int64_t StrideStore = getPtrStride(PSE, LoadType, StorePtr, L).value_or(0);
+    int64_t StrideLoad =
+        getPtrStride(PSE, LoadType, LoadPtr, L, DT).value_or(0);
+    int64_t StrideStore =
+        getPtrStride(PSE, LoadType, StorePtr, L, DT).value_or(0);
     if (!StrideLoad || !StrideStore || StrideLoad != StrideStore)
       return false;
 
@@ -119,7 +120,7 @@ struct StoreToLoadForwardingCandidate {
     if (std::abs(StrideLoad) != 1)
       return false;
 
-    unsigned TypeByteSize = DL.getTypeAllocSize(const_cast<Type *>(LoadType));
+    unsigned TypeByteSize = DL.getTypeAllocSize(LoadType);
 
     auto *LoadPtrSCEV = cast<SCEVAddRecExpr>(PSE.getSCEV(LoadPtr));
     auto *StorePtrSCEV = cast<SCEVAddRecExpr>(PSE.getSCEV(StorePtr));
@@ -192,18 +193,19 @@ public:
     // forward and backward dependences qualify.  Disqualify loads that have
     // other unknown dependences.
 
-    SmallPtrSet<Instruction *, 4> LoadsWithUnknownDepedence;
+    SmallPtrSet<Instruction *, 4> LoadsWithUnknownDependence;
 
     for (const auto &Dep : *Deps) {
       Instruction *Source = Dep.getSource(DepChecker);
       Instruction *Destination = Dep.getDestination(DepChecker);
 
       if (Dep.Type == MemoryDepChecker::Dependence::Unknown ||
-          Dep.Type == MemoryDepChecker::Dependence::IndirectUnsafe) {
+          Dep.Type == MemoryDepChecker::Dependence::IndirectUnsafe ||
+          Dep.Type == MemoryDepChecker::Dependence::InvariantUnsafe) {
         if (isa<LoadInst>(Source))
-          LoadsWithUnknownDepedence.insert(Source);
+          LoadsWithUnknownDependence.insert(Source);
         if (isa<LoadInst>(Destination))
-          LoadsWithUnknownDepedence.insert(Destination);
+          LoadsWithUnknownDependence.insert(Destination);
         continue;
       }
 
@@ -231,9 +233,9 @@ public:
       Candidates.emplace_front(Load, Store);
     }
 
-    if (!LoadsWithUnknownDepedence.empty())
+    if (!LoadsWithUnknownDependence.empty())
       Candidates.remove_if([&](const StoreToLoadForwardingCandidate &C) {
-        return LoadsWithUnknownDepedence.count(C.Load);
+        return LoadsWithUnknownDependence.count(C.Load);
       });
 
     return Candidates;
@@ -289,8 +291,8 @@ public:
         // so deciding which one forwards is easy.  The later one forwards as
         // long as they both have a dependence distance of one to the load.
         if (Cand.Store->getParent() == OtherCand->Store->getParent() &&
-            Cand.isDependenceDistanceOfOne(PSE, L) &&
-            OtherCand->isDependenceDistanceOfOne(PSE, L)) {
+            Cand.isDependenceDistanceOfOne(PSE, L, *DT) &&
+            OtherCand->isDependenceDistanceOfOne(PSE, L, *DT)) {
           // They are in the same block, the later one will forward to the load.
           if (getInstrIndex(OtherCand->Store) < getInstrIndex(Cand.Store))
             OtherCand = &Cand;
@@ -444,7 +446,7 @@ public:
     assert(PH && "Preheader should exist!");
     Value *InitialPtr = SEE.expandCodeFor(PtrSCEV->getStart(), Ptr->getType(),
                                           PH->getTerminator());
-    Value *Initial =
+    Instruction *Initial =
         new LoadInst(Cand.Load->getType(), InitialPtr, "load_initial",
                      /* isVolatile */ false, Cand.Load->getAlign(),
                      PH->getTerminator()->getIterator());
@@ -452,6 +454,7 @@ public:
     // into the loop's preheader. A debug location inside the loop will cause
     // a misleading stepping when debugging. The test update-debugloc-store
     // -forwarded.ll checks this.
+    Initial->setDebugLoc(DebugLoc::getDropped());
 
     PHINode *PHI = PHINode::Create(Initial->getType(), 2, "store_forwarded");
     PHI->insertBefore(L->getHeader()->begin());
@@ -539,7 +542,7 @@ public:
 
       // Check whether the SCEV difference is the same as the induction step,
       // thus we load the value in the next iteration.
-      if (!Cand.isDependenceDistanceOfOne(PSE, L))
+      if (!Cand.isDependenceDistanceOfOne(PSE, L, *DT))
         continue;
 
       assert(isa<SCEVAddRecExpr>(PSE.getSCEV(Cand.Load->getPointerOperand())) &&
@@ -586,11 +589,8 @@ public:
       }
 
       auto *HeaderBB = L->getHeader();
-      auto *F = HeaderBB->getParent();
-      bool OptForSize = F->hasOptSize() ||
-                        llvm::shouldOptimizeForSize(HeaderBB, PSI, BFI,
-                                                    PGSOQueryType::IRPass);
-      if (OptForSize) {
+      if (llvm::shouldOptimizeForSize(HeaderBB, PSI, BFI,
+                                      PGSOQueryType::IRPass)) {
         LLVM_DEBUG(
             dbgs() << "Versioning is needed but not allowed when optimizing "
                       "for size.\n");
@@ -599,6 +599,10 @@ public:
 
       // Point of no-return, start the transformation.  First, version the loop
       // if necessary.
+
+      // Forming LCSSA is a precondition of versioning.
+      if (!L->isRecursivelyLCSSAForm(*DT, *LI))
+        formLCSSARecursively(*L, *DT, LI, PSE.getSE());
 
       LoopVersioning LV(LAI, Checks, L, LI, DT, PSE.getSE());
       LV.versionLoop();
@@ -617,8 +621,7 @@ public:
 
     // Next, propagate the value stored by the store to the users of the load.
     // Also for the first iteration, generate the initial value of the load.
-    SCEVExpander SEE(*PSE.getSE(), L->getHeader()->getDataLayout(),
-                     "storeforward");
+    SCEVExpander SEE(*PSE.getSE(), "storeforward");
     for (const auto &Cand : Candidates)
       propagateStoredValueToLoadUsers(Cand, SEE);
     NumLoopLoadEliminted += Candidates.size();

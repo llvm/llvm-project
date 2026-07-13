@@ -42,3 +42,11 @@ Additionally, it is recommended that developers thoroughly check and verify the
 safety of the conversion before using an explicit cast. This extra level of
 caution can help catch potential issues early on in the development process,
 improving the overall reliability and maintainability of the code.
+
+Options
+-------
+
+.. option:: EnableInC
+
+   If `true`, enables the check in C code (it is always enabled in C++ code).
+   Default is `true`.

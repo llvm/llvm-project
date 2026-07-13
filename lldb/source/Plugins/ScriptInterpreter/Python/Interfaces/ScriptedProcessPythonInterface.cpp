@@ -6,22 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
-#if LLDB_ENABLE_PYTHON
-// LLDB Python header must be included first
 #include "../lldb-python.h"
-#endif
+
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
 
-#if LLDB_ENABLE_PYTHON
-
 #include "../SWIGPythonBridge.h"
 #include "../ScriptInterpreterPythonImpl.h"
-#include "ScriptedProcessPythonInterface.h"
 #include "ScriptedThreadPythonInterface.h"
+#include "ScriptedProcessPythonInterface.h"
+
 #include <optional>
 
 using namespace lldb;
@@ -35,13 +32,13 @@ ScriptedProcessPythonInterface::ScriptedProcessPythonInterface(
 
 llvm::Expected<StructuredData::GenericSP>
 ScriptedProcessPythonInterface::CreatePluginObject(
-    llvm::StringRef class_name, ExecutionContext &exe_ctx,
-    StructuredData::DictionarySP args_sp, StructuredData::Generic *script_obj) {
+    const ScriptedMetadata &scripted_metadata, ExecutionContext &exe_ctx,
+    StructuredData::Generic *script_obj) {
   ExecutionContextRefSP exe_ctx_ref_sp =
       std::make_shared<ExecutionContextRef>(exe_ctx);
-  StructuredDataImpl sd_impl(args_sp);
-  return ScriptedPythonInterface::CreatePluginObject(class_name, script_obj,
-                                                     exe_ctx_ref_sp, sd_impl);
+  return ScriptedPythonInterface::CreatePluginObject(
+      scripted_metadata, script_obj, exe_ctx_ref_sp,
+      scripted_metadata.GetArgsSP());
 }
 
 StructuredData::DictionarySP ScriptedProcessPythonInterface::GetCapabilities() {
@@ -106,7 +103,7 @@ bool ScriptedProcessPythonInterface::CreateBreakpoint(lldb::addr_t addr,
 
   // If there was an error on the python call, surface it to the user.
   if (py_error.Fail())
-    error = py_error;
+    error = std::move(py_error);
 
   if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
                                                     error))
@@ -123,7 +120,7 @@ lldb::DataExtractorSP ScriptedProcessPythonInterface::ReadMemoryAtAddress(
 
   // If there was an error on the python call, surface it to the user.
   if (py_error.Fail())
-    error = py_error;
+    error = std::move(py_error);
 
   return data_sp;
 }
@@ -140,7 +137,7 @@ lldb::offset_t ScriptedProcessPythonInterface::WriteMemoryAtAddress(
 
   // If there was an error on the python call, surface it to the user.
   if (py_error.Fail())
-    error = py_error;
+    error = std::move(py_error);
 
   return obj->GetUnsignedIntegerValue(LLDB_INVALID_OFFSET);
 }
@@ -208,4 +205,22 @@ StructuredData::DictionarySP ScriptedProcessPythonInterface::GetMetadata() {
   return dict;
 }
 
-#endif
+void ScriptedProcessPythonInterface::Initialize() {
+  const std::vector<llvm::StringRef> ci_usages = {
+      "process attach -C <script-name> [-k key -v value ...]",
+      "process launch -C <script-name> [-k key -v value ...]"};
+  const std::vector<llvm::StringRef> api_usages = {
+      "SBAttachInfo.SetScriptedProcessClassName",
+      "SBAttachInfo.SetScriptedProcessDictionary",
+      "SBTarget.Attach",
+      "SBLaunchInfo.SetScriptedProcessClassName",
+      "SBLaunchInfo.SetScriptedProcessDictionary",
+      "SBTarget.Launch"};
+  PluginManager::RegisterPlugin(
+      GetPluginNameStatic(), llvm::StringRef("Mock process state"),
+      CreateInstance, eScriptLanguagePython, {ci_usages, api_usages});
+}
+
+void ScriptedProcessPythonInterface::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
+}

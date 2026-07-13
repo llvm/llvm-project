@@ -217,9 +217,9 @@ _Complex float pragma_default_div(_Complex float a, _Complex float b) {
   // PRMTD: load float, ptr {{.*}}
   // PRMTD: fpext float {{.*}} to double
   // PRMTD-NEXT: fpext float {{.*}} to double
-  // PRMTD-NEXT: getelementptr inbounds { float, float }, ptr {{.*}}, i32 0, i32 0
+  // PRMTD-NEXT: getelementptr inbounds nuw { float, float }, ptr {{.*}}, i32 0, i32 0
   // PRMTD-NEXT: load float, ptr {{.*}}
-  // PRMTD-NEXT: getelementptr inbounds { float, float }, ptr {{.*}}, i32 0, i32 1
+  // PRMTD-NEXT: getelementptr inbounds nuw { float, float }, ptr {{.*}}, i32 0, i32 1
   // PRMTD-NEXT: load float, ptr {{.*}}
   // PRMTD-NEXT: fpext float {{.*}} to double
   // PRMTD-NEXT: fpext float {{.*}} to double

@@ -10,12 +10,14 @@ tablegen(LLVM LanaiGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM LanaiGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM LanaiGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM LanaiGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM LanaiGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM LanaiGenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(LanaiCommonTableGen)
 
 add_llvm_target(LanaiCodeGen
   LanaiAsmPrinter.cpp
+  LanaiCodeGenPassBuilder.cpp
   LanaiDelaySlotFiller.cpp
   LanaiFrameLowering.cpp
   LanaiInstrInfo.cpp
@@ -36,10 +38,13 @@ add_llvm_target(LanaiCodeGen
   CodeGen
   CodeGenTypes
   Core
+  IRPrinter
   LanaiAsmParser
   LanaiDesc
   LanaiInfo
   MC
+  ObjCARC
+  Scalar
   SelectionDAG
   Support
   Target

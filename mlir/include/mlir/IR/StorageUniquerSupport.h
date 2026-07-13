@@ -176,8 +176,8 @@ public:
   template <typename... Args>
   static ConcreteT get(MLIRContext *ctx, Args &&...args) {
     // Ensure that the invariants are correct for construction.
-    assert(
-        succeeded(ConcreteT::verify(getDefaultDiagnosticEmitFn(ctx), args...)));
+    assert(succeeded(
+        ConcreteT::verifyInvariants(getDefaultDiagnosticEmitFn(ctx), args...)));
     return UniquerT::template get<ConcreteT>(ctx, std::forward<Args>(args)...);
   }
 
@@ -194,13 +194,20 @@ public:
   /// Get or create a new ConcreteT instance within the ctx. If the arguments
   /// provided are invalid, errors are emitted using the provided `emitError`
   /// and a null object is returned.
-  template <typename... Args>
+  ///
+  /// Workaround: We use Arg1 && instead of MLIRContext * in the parameter list
+  /// to work around a bug in Clang 21.1.8 where Clang segfaults during SFINAE
+  /// overload resolution when attempting to match non-pointer arguments
+  /// against an unconstrained MLIRContext * parameter.
+  template <typename Arg1, typename... Args,
+            typename = std::enable_if_t<std::is_convertible_v<
+                llvm::remove_cvref_t<Arg1>, MLIRContext *>>>
   static ConcreteT getChecked(function_ref<InFlightDiagnostic()> emitErrorFn,
-                              MLIRContext *ctx, Args... args) {
+                              Arg1 &&ctx, Args... args) {
     // If the construction invariants fail then we return a null attribute.
-    if (failed(ConcreteT::verify(emitErrorFn, args...)))
+    if (failed(ConcreteT::verifyInvariants(emitErrorFn, args...)))
       return ConcreteT();
-    return UniquerT::template get<ConcreteT>(ctx, args...);
+    return UniquerT::template get<ConcreteT>(ctx, std::forward<Args>(args)...);
   }
 
   /// Get an instance of the concrete type from a void pointer.
@@ -226,7 +233,7 @@ protected:
 
   /// Default implementation that just returns success.
   template <typename... Args>
-  static LogicalResult verify(Args... args) {
+  static LogicalResult verifyInvariants(Args... args) {
     return success();
   }
 

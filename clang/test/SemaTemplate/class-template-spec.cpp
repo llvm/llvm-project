@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++26 %s
+
 template<typename T, typename U = int> struct A; // expected-note {{template is declared here}} \
                                                  // expected-note{{explicitly specialized}}
 
@@ -229,3 +231,24 @@ namespace DefaultArgVsPartialSpec {
   > struct S;
   template<typename T> struct S<T> {}; // expected-error {{non-type template argument specializes a template parameter with dependent type 'T'}}
 }
+
+namespace LateDefined {
+  template <class> struct A;
+  struct B {
+    typedef A<B> X;
+  };
+  template <> struct A<B> {
+    void f();
+  };
+  void A<B>::f() {}
+}
+
+#if __cplusplus >= 201402L
+namespace VarTemplateMismatch {
+  template<class> struct A {
+    template<bool> static const int x; // expected-note {{previous}}
+  };
+  template<> template<int> const int A<short>::x = 0;
+  // expected-error@-1 {{template non-type parameter has a different type 'int' in template redeclaration}}
+} // namespace VarTemplateMismatch
+#endif

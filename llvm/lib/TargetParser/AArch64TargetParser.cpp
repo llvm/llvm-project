@@ -38,22 +38,68 @@ const AArch64::ArchInfo *AArch64::getArchForCpu(StringRef CPU) {
   std::optional<CpuInfo> Cpu = parseCpu(CPU);
   if (!Cpu)
     return nullptr;
-  return &Cpu->Arch;
+  return &ArchInfos[Cpu->ArchIdx];
 }
 
 std::optional<AArch64::ArchInfo> AArch64::ArchInfo::findBySubArch(StringRef SubArch) {
-  for (const auto *A : AArch64::ArchInfos)
-    if (A->getSubArch() == SubArch)
-      return *A;
+  for (const auto &A : AArch64::ArchInfos)
+    if (A.getSubArch() == SubArch)
+      return A;
   return {};
 }
 
-uint64_t AArch64::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
-  uint64_t FeaturesMask = 0;
-  for (const StringRef &FeatureStr : FeatureStrs) {
-    if (auto Ext = parseFMVExtension(FeatureStr))
-      FeaturesMask |= (1ULL << Ext->Bit);
+std::optional<AArch64::FMVInfo> lookupFMVByID(AArch64::ArchExtKind ExtID) {
+  for (const AArch64::FMVInfo &Info : AArch64::getFMVInfo())
+    if (Info.ID == ExtID)
+      return Info;
+  return {};
+}
+
+std::optional<AArch64::FMVInfo> getFMVInfoFrom(StringRef Feature) {
+  std::optional<AArch64::FMVInfo> FMV = AArch64::parseFMVExtension(Feature);
+  if (!FMV && Feature.starts_with('+'))
+    if (std::optional<AArch64::ExtensionInfo> Ext =
+            AArch64::targetFeatureToExtension(Feature))
+      FMV = lookupFMVByID(Ext->ID);
+  return FMV;
+}
+
+APInt AArch64::getFMVPriority(ArrayRef<StringRef> Features) {
+  // Transitively enable the Arch Extensions which correspond to each feature.
+  ExtensionSet FeatureBits;
+  APInt PriorityMask = APInt::getZero(128);
+  for (const StringRef Feature : Features) {
+    if (std::optional<FMVInfo> FMV = getFMVInfoFrom(Feature)) {
+      // FMV feature without a corresponding Arch Extension may affect priority
+      if (FMV->ID)
+        FeatureBits.enable(*FMV->ID);
+      else
+        PriorityMask.setBit(FMV->PriorityBit);
+    }
   }
+
+  // Construct a bitmask for all the transitively enabled Arch Extensions.
+  for (const FMVInfo &Info : getFMVInfo())
+    if (Info.ID && FeatureBits.Enabled.test(*Info.ID))
+      PriorityMask.setBit(Info.PriorityBit);
+
+  return PriorityMask;
+}
+
+APInt AArch64::getCpuSupportsMask(ArrayRef<StringRef> Features) {
+  // Transitively enable the Arch Extensions which correspond to each feature.
+  ExtensionSet FeatureBits;
+  for (const StringRef Feature : Features)
+    if (std::optional<FMVInfo> FMV = getFMVInfoFrom(Feature))
+      if (FMV->ID)
+        FeatureBits.enable(*FMV->ID);
+
+  // Construct a bitmask for all the transitively enabled Arch Extensions.
+  APInt FeaturesMask = APInt::getZero(128);
+  for (const FMVInfo &Info : getFMVInfo())
+    if (Info.ID && FeatureBits.Enabled.test(*Info.ID))
+      FeaturesMask.setBit(*Info.FeatureBit);
+
   return FeaturesMask;
 }
 
@@ -62,16 +108,16 @@ bool AArch64::getExtensionFeatures(
     std::vector<StringRef> &Features) {
   for (const auto &E : Extensions)
     /* INVALID and NONE have no feature name. */
-    if (InputExts.test(E.ID) && !E.PosTargetFeature.empty())
-      Features.push_back(E.PosTargetFeature);
+    if (InputExts.test(E.ID))
+      Features.push_back(StrTab[E.PosTargetFeature]);
 
   return true;
 }
 
 StringRef AArch64::resolveCPUAlias(StringRef Name) {
   for (const auto &A : CpuAliases)
-    if (A.AltName == Name)
-      return A.Name;
+    if (StrTab[A.AltName] == Name)
+      return StrTab[A.Name];
   return Name;
 }
 
@@ -79,22 +125,19 @@ StringRef AArch64::getArchExtFeature(StringRef ArchExt) {
   bool IsNegated = ArchExt.starts_with("no");
   StringRef ArchExtBase = IsNegated ? ArchExt.drop_front(2) : ArchExt;
 
-  if (auto AE = parseArchExtension(ArchExtBase)) {
-    assert(!(AE.has_value() && AE->NegTargetFeature.empty()));
-    return IsNegated ? AE->NegTargetFeature : AE->PosTargetFeature;
-  }
-
+  if (auto AE = parseArchExtension(ArchExtBase))
+    return StrTab[IsNegated ? AE->NegTargetFeature : AE->PosTargetFeature];
   return StringRef();
 }
 
 void AArch64::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
   for (const auto &C : CpuInfos)
-    Values.push_back(C.Name);
+    Values.push_back(StrTab[C.Name]);
 
   for (const auto &Alias : CpuAliases)
     // The apple-latest alias is backend only, do not expose it to clang's -mcpu.
-    if (Alias.AltName != "apple-latest")
-      Values.push_back(Alias.AltName);
+    if (StrTab[Alias.AltName] != "apple-latest")
+      Values.push_back(StrTab[Alias.AltName]);
 
   llvm::sort(Values);
 }
@@ -111,9 +154,9 @@ const AArch64::ArchInfo *AArch64::parseArch(StringRef Arch) {
     return {};
 
   StringRef Syn = llvm::ARM::getArchSynonym(Arch);
-  for (const auto *A : ArchInfos) {
-    if (A->Name.ends_with(Syn))
-      return A;
+  for (const auto &A : ArchInfos) {
+    if (StrTab[A.Name].ends_with(Syn))
+      return &A;
   }
   return {};
 }
@@ -123,7 +166,7 @@ AArch64::parseArchExtension(StringRef ArchExt) {
   if (ArchExt.empty())
     return {};
   for (const auto &A : Extensions) {
-    if (ArchExt == A.UserVisibleName || ArchExt == A.Alias)
+    if (ArchExt == StrTab[A.UserVisibleName] || ArchExt == StrTab[A.Alias])
       return A;
   }
   return {};
@@ -144,7 +187,8 @@ std::optional<AArch64::FMVInfo> AArch64::parseFMVExtension(StringRef FMVExt) {
 std::optional<AArch64::ExtensionInfo>
 AArch64::targetFeatureToExtension(StringRef TargetFeature) {
   for (const auto &E : Extensions)
-    if (TargetFeature == E.PosTargetFeature)
+    if (TargetFeature == StrTab[E.PosTargetFeature] ||
+        TargetFeature == StrTab[E.NegTargetFeature])
       return E;
   return {};
 }
@@ -155,7 +199,7 @@ std::optional<AArch64::CpuInfo> AArch64::parseCpu(StringRef Name) {
 
   // Then find the CPU name.
   for (const auto &C : CpuInfos)
-    if (Name == C.Name)
+    if (Name == StrTab[C.Name])
       return C;
 
   return {};
@@ -168,12 +212,15 @@ void AArch64::PrintSupportedExtensions() {
          << "Description\n";
   for (const auto &Ext : Extensions) {
     // Extensions without a feature cannot be used with -march.
-    if (!Ext.UserVisibleName.empty() && !Ext.PosTargetFeature.empty()) {
+    if (Ext.UserVisibleName.value() && Ext.PosTargetFeature.value()) {
+      // NB: StringTable strings are null-terminated, so the StringRef can be
+      // used as C string without further conversion.
       outs() << "    "
-             << format(Ext.Description.empty() ? "%-20s%s\n" : "%-20s%-55s%s\n",
-                       Ext.UserVisibleName.str().c_str(),
-                       Ext.ArchFeatureName.str().c_str(),
-                       Ext.Description.str().c_str());
+             << format(!Ext.Description.value() ? "%-20s%s\n"
+                                                : "%-20s%-55s%s\n",
+                       StrTab[Ext.UserVisibleName].data(),
+                       StrTab[Ext.ArchFeatureName].data(),
+                       StrTab[Ext.Description].data());
     }
   }
 }
@@ -192,14 +239,15 @@ AArch64::printEnabledExtensions(const std::set<StringRef> &EnabledFeatureNames) 
 
   std::sort(EnabledExtensionsInfo.begin(), EnabledExtensionsInfo.end(),
             [](const ExtensionInfo &Lhs, const ExtensionInfo &Rhs) {
-              return Lhs.ArchFeatureName < Rhs.ArchFeatureName;
+              return StrTab[Lhs.ArchFeatureName] < StrTab[Rhs.ArchFeatureName];
             });
 
   for (const auto &Ext : EnabledExtensionsInfo) {
+    // NB: StringTable strings are null-terminated, so the StringRef can be used
+    // as C string without further conversion.
     outs() << "    "
-           << format("%-55s%s\n",
-                     Ext.ArchFeatureName.str().c_str(),
-                     Ext.Description.str().c_str());
+           << format("%-55s%s\n", StrTab[Ext.ArchFeatureName].data(),
+                     StrTab[Ext.Description].data());
   }
 }
 
@@ -215,7 +263,9 @@ void AArch64::ExtensionSet::enable(ArchExtKind E) {
   if (Enabled.test(E))
     return;
 
-  LLVM_DEBUG(llvm::dbgs() << "Enable " << lookupExtensionByID(E).UserVisibleName << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "Enable "
+                          << StrTab[lookupExtensionByID(E).UserVisibleName]
+                          << "\n");
 
   Touched.set(E);
   Enabled.set(E);
@@ -253,10 +303,38 @@ void AArch64::ExtensionSet::disable(ArchExtKind E) {
     disable(AEK_SM4);
   }
 
+  // sve2-aes was historically associated with both FEAT_SVE2 and FEAT_SVE_AES,
+  // the latter is now associated with sve-aes and sve2-aes has become shorthand
+  // for +sve2+sve-aes. For backwards compatibility, when we disable sve2-aes we
+  // must also disable sve-aes.
+  if (E == AEK_SVE2AES)
+    disable(AEK_SVEAES);
+
+  // sve2-sm4 was historically associated with both FEAT_SVE2 and
+  // FEAT_SVE_SM4, the latter is now associated with sve-sm4 and sve2-sm4 has
+  // become shorthand for +sve2+sve-sm4. For backwards compatibility, when we
+  // disable sve2-sm4 we must also disable sve-sm4.
+  if (E == AEK_SVE2SM4)
+    disable(AEK_SVESM4);
+
+  // sve2-sha3 was historically associated with both FEAT_SVE2 and
+  // FEAT_SVE_SHA3, the latter is now associated with sve-sha3 and sve2-sha3 has
+  // become shorthand for +sve2+sve-sha3. For backwards compatibility, when we
+  // disable sve2-sha3 we must also disable sve-sha3.
+  if (E == AEK_SVE2SHA3)
+    disable(AEK_SVESHA3);
+
+  if (E == AEK_SVE2BITPERM){
+    disable(AEK_SVEBITPERM);
+    disable(AEK_SVE2);
+  }
+
   if (!Enabled.test(E))
     return;
 
-  LLVM_DEBUG(llvm::dbgs() << "Disable " << lookupExtensionByID(E).UserVisibleName << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "Disable "
+                          << StrTab[lookupExtensionByID(E).UserVisibleName]
+                          << "\n");
 
   Touched.set(E);
   Enabled.reset(E);
@@ -268,17 +346,16 @@ void AArch64::ExtensionSet::disable(ArchExtKind E) {
 }
 
 void AArch64::ExtensionSet::addCPUDefaults(const CpuInfo &CPU) {
-  LLVM_DEBUG(llvm::dbgs() << "addCPUDefaults(" << CPU.Name << ")\n");
-  BaseArch = &CPU.Arch;
+  LLVM_DEBUG(llvm::dbgs() << "addCPUDefaults(" << StrTab[CPU.Name] << ")\n");
+  BaseArch = &ArchInfos[CPU.ArchIdx];
 
-  AArch64::ExtensionBitset CPUExtensions = CPU.getImpliedExtensions();
   for (const auto &E : Extensions)
-    if (CPUExtensions.test(E.ID))
+    if (CPU.DefaultExtensions.test(E.ID))
       enable(E.ID);
 }
 
 void AArch64::ExtensionSet::addArchDefaults(const ArchInfo &Arch) {
-  LLVM_DEBUG(llvm::dbgs() << "addArchDefaults(" << Arch.Name << ")\n");
+  LLVM_DEBUG(llvm::dbgs() << "addArchDefaults(" << StrTab[Arch.Name] << ")\n");
   BaseArch = &Arch;
 
   for (const auto &E : Extensions)
@@ -300,8 +377,6 @@ bool AArch64::ExtensionSet::parseModifier(StringRef Modifier,
   StringRef ArchExt = Modifier.drop_front(NChars);
 
   if (auto AE = parseArchExtension(ArchExt)) {
-    if (AE->PosTargetFeature.empty() || AE->NegTargetFeature.empty())
-      return false;
     if (IsNegated)
       disable(AE->ID);
     else

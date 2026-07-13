@@ -25,8 +25,30 @@ enum class VerificationMode {
   Pedantic,
 };
 
-using LibAttrs = llvm::StringMap<ArchitectureSet>;
 using ReexportedInterfaces = llvm::SmallVector<llvm::MachO::InterfaceFile, 8>;
+
+/// Represents dynamic library specific attributes that are tied to
+/// architecture slices. It is commonly used for comparing options
+/// passed on the command line to installapi and what exists in dylib load
+/// commands.
+class LibAttrs {
+public:
+  using Entry = std::pair<std::string, ArchitectureSet>;
+  using AttrsToArchs = llvm::SmallVector<Entry, 10>;
+
+  // Mutable access to architecture set tied to the input attribute.
+  ArchitectureSet &getArchSet(StringRef Attr);
+  // Get entry based on the attribute.
+  std::optional<Entry> find(StringRef Attr) const;
+  // Immutable access to underlying container.
+  const AttrsToArchs &get() const { return LibraryAttributes; };
+  // Mutable access to underlying container.
+  AttrsToArchs &get() { return LibraryAttributes; };
+  bool operator==(const LibAttrs &Other) const { return Other.get() == get(); };
+
+private:
+  AttrsToArchs LibraryAttributes;
+};
 
 // Pointers to information about a zippered declaration used for
 // querying and reporting violations against different

@@ -184,13 +184,6 @@ enum {
    sizeof(RegisterContextDarwin_arm::EXC))
 
 static RegisterInfo g_register_infos[] = {
-    // General purpose registers
-    //  NAME        ALT     SZ  OFFSET              ENCODING        FORMAT
-    //  EH_FRAME                DWARF               GENERIC
-    //  PROCESS PLUGIN          LLDB NATIVE
-    //  ======      ======= ==  =============       =============   ============
-    //  ===============         ===============     =========================
-    //  =====================   =============
     {"r0",
      nullptr,
      4,

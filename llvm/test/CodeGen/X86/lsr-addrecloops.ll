@@ -16,7 +16,7 @@ define void @in4dob_(ptr nocapture writeonly %0, ptr nocapture readonly %1, ptr 
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    jmp .LBB0_1
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_20: # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    incq %r10
 ; CHECK-NEXT:    addq %r9, %rax
@@ -46,7 +46,7 @@ define void @in4dob_(ptr nocapture writeonly %0, ptr nocapture readonly %1, ptr 
 ; CHECK-NEXT:    andq $-8, %r10
 ; CHECK-NEXT:    xorl %r9d, %r9d
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_6: # %vector.body807
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    leaq (%rdi,%r9), %r11
@@ -68,7 +68,7 @@ define void @in4dob_(ptr nocapture writeonly %0, ptr nocapture readonly %1, ptr 
 ; CHECK-NEXT:    addq %rdi, %r9
 ; CHECK-NEXT:    xorl %r10d, %r10d
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_9: # %vector.body807.epil
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    leaq (%r9,%r10), %r11
@@ -95,7 +95,7 @@ define void @in4dob_(ptr nocapture writeonly %0, ptr nocapture readonly %1, ptr 
 ; CHECK-NEXT:    andq $-8, %rdx
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_14: # %vector.body847
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    leaq (%rdi,%rcx), %r8
@@ -117,7 +117,7 @@ define void @in4dob_(ptr nocapture writeonly %0, ptr nocapture readonly %1, ptr 
 ; CHECK-NEXT:    leaq 96(%rcx,%rdi), %rcx
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_17: # %vector.body847.epil
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    leaq (%rcx,%rdx), %rdi

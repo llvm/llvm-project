@@ -47,7 +47,7 @@ entry:
 ; Function Attrs: noinline nounwind uwtable
 define dso_local void @positive_malloc_1(ptr noundef %val) #0 {
 ; CHECK-LABEL: define dso_local void @positive_malloc_1
-; CHECK-SAME: (ptr nocapture nofree noundef readonly [[VAL:%.*]]) {
+; CHECK-SAME: (ptr nofree noundef readonly captures(none) [[VAL:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_ADDR:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    [[F:%.*]] = alloca ptr, align 8
@@ -84,7 +84,7 @@ entry:
 ; Function Attrs: noinline nounwind uwtable
 define dso_local void @positive_malloc_2(ptr noundef %val) #0 {
 ; CHECK-LABEL: define dso_local void @positive_malloc_2
-; CHECK-SAME: (ptr nocapture nofree noundef readonly [[VAL:%.*]]) {
+; CHECK-SAME: (ptr nofree noundef readonly captures(none) [[VAL:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_ADDR:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    [[F:%.*]] = alloca ptr, align 8
@@ -229,7 +229,7 @@ entry:
 ; Should the optimization reduce the allocation size regardless? Based on AAPointerInfo.
 define dso_local void @baz(ptr noundef %val, i32 noundef %arrayLength) #0 {
 ; CHECK-LABEL: define dso_local void @baz
-; CHECK-SAME: (ptr nocapture nofree noundef readonly [[VAL:%.*]], i32 noundef [[ARRAYLENGTH:%.*]]) {
+; CHECK-SAME: (ptr nofree noundef readonly captures(none) [[VAL:%.*]], i32 noundef [[ARRAYLENGTH:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_ADDR:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    [[ARRAYLENGTH_ADDR:%.*]] = alloca i32, align 4
@@ -425,21 +425,21 @@ define dso_local void @pthread_test(){
 ; TUNIT-LABEL: define dso_local void @pthread_test() {
 ; TUNIT-NEXT:    [[ARG1:%.*]] = alloca i8, align 8
 ; TUNIT-NEXT:    [[THREAD:%.*]] = alloca i64, align 8
-; TUNIT-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @pthread_allocation_should_remain_same, ptr noundef nonnull align 8 dereferenceable(1) [[ARG1]])
+; TUNIT-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef null, ptr noundef nonnull @pthread_allocation_should_remain_same, ptr noundef nonnull align 8 dereferenceable(1) [[ARG1]])
 ; TUNIT-NEXT:    [[F1:%.*]] = alloca i8, i32 4, align 4
-; TUNIT-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @pthread_allocation_should_be_reduced, ptr noalias nocapture nofree nonnull readnone align 4 dereferenceable(12) undef)
+; TUNIT-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef null, ptr noundef nonnull @pthread_allocation_should_be_reduced, ptr noalias nofree nonnull readnone align 4 captures(none) dereferenceable(12) undef)
 ; TUNIT-NEXT:    [[F2:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
-; TUNIT-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @pthread_check_captured_pointer, ptr noundef nonnull align 4 dereferenceable(12) [[F2]])
+; TUNIT-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef null, ptr noundef nonnull @pthread_check_captured_pointer, ptr noundef nonnull align 4 dereferenceable(12) [[F2]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define dso_local void @pthread_test() {
 ; CGSCC-NEXT:    [[ARG1:%.*]] = alloca i8, align 8
 ; CGSCC-NEXT:    [[THREAD:%.*]] = alloca i64, align 8
-; CGSCC-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @pthread_allocation_should_remain_same, ptr noundef nonnull align 8 dereferenceable(1) [[ARG1]])
+; CGSCC-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef null, ptr noundef nonnull @pthread_allocation_should_remain_same, ptr noundef nonnull align 8 dereferenceable(1) [[ARG1]])
 ; CGSCC-NEXT:    [[F:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
-; CGSCC-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @pthread_allocation_should_be_reduced, ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(12) [[F]])
+; CGSCC-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef null, ptr noundef nonnull @pthread_allocation_should_be_reduced, ptr noalias nofree noundef nonnull readonly align 4 captures(none) dereferenceable(12) [[F]])
 ; CGSCC-NEXT:    [[F2:%.*]] = alloca [[STRUCT_FOO]], align 4
-; CGSCC-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @pthread_check_captured_pointer, ptr noundef nonnull align 4 dereferenceable(12) [[F2]])
+; CGSCC-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef null, ptr noundef nonnull @pthread_check_captured_pointer, ptr noundef nonnull align 4 dereferenceable(12) [[F2]])
 ; CGSCC-NEXT:    ret void
 ;
   %arg1 = alloca i8, align 8
@@ -467,13 +467,13 @@ entry:
 define internal void @pthread_allocation_should_be_reduced(ptr %arg) {
 ;
 ; TUNIT-LABEL: define internal void @pthread_allocation_should_be_reduced
-; TUNIT-SAME: (ptr noalias nocapture nofree nonnull readnone align 4 dereferenceable(12) [[ARG:%.*]]) {
+; TUNIT-SAME: (ptr noalias nofree nonnull readnone align 4 captures(none) dereferenceable(12) [[ARG:%.*]]) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[CALL:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 undef)
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define internal void @pthread_allocation_should_be_reduced
-; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(12) [[ARG:%.*]]) {
+; CGSCC-SAME: (ptr noalias nofree noundef nonnull readonly align 4 captures(none) dereferenceable(12) [[ARG:%.*]]) {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARG]], align 4
 ; CGSCC-NEXT:    [[CALL:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[TMP0]])

@@ -38,8 +38,8 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 20
-; X86-NEXT:    subl $24, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 44
+; X86-NEXT:    subl $28, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 48
 ; X86-NEXT:    .cfi_offset %esi, -20
 ; X86-NEXT:    .cfi_offset %edi, -16
 ; X86-NEXT:    .cfi_offset %ebx, -12
@@ -47,10 +47,9 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    mull %ecx
-; X86-NEXT:    movl %ecx, %ebx
+; X86-NEXT:    mull %ebx
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    seto {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
 ; X86-NEXT:    movl %esi, %eax
@@ -148,7 +147,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; X86-NEXT:    andb $1, %al
 ; X86-NEXT:    movb %al, 16(%ecx)
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    addl $24, %esp
+; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 20
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 16

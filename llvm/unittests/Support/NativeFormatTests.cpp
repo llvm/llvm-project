@@ -10,8 +10,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
-#include <type_traits>
-
 using namespace llvm;
 
 namespace {
@@ -20,7 +18,6 @@ template <typename T> std::string format_number(T N, IntegerStyle Style) {
   std::string S;
   llvm::raw_string_ostream Str(S);
   write_integer(Str, N, 0, Style);
-  Str.flush();
   return S;
 }
 
@@ -29,7 +26,6 @@ std::string format_number(uint64_t N, HexPrintStyle Style,
   std::string S;
   llvm::raw_string_ostream Str(S);
   write_hex(Str, N, Style, Width);
-  Str.flush();
   return S;
 }
 
@@ -38,7 +34,6 @@ std::string format_number(double D, FloatStyle Style,
   std::string S;
   llvm::raw_string_ostream Str(S);
   write_double(Str, D, Style, Precision);
-  Str.flush();
   return S;
 }
 

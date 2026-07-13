@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++23 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++23 %s -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s
 
 void should_be_used_1();
 void should_be_used_2();

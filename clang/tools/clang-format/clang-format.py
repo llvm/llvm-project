@@ -78,7 +78,7 @@ def main():
 
     # Determine range to format.
     if vim.eval('exists("l:lines")') == "1":
-        lines = ["-lines", vim.eval("l:lines")]
+        lines = ["--lines", vim.eval("l:lines")]
     elif vim.eval('exists("l:formatdiff")') == "1" and os.path.exists(
         vim.current.buffer.name
     ):
@@ -88,12 +88,12 @@ def main():
         lines = []
         for op in reversed(sequence.get_opcodes()):
             if op[0] not in ["equal", "delete"]:
-                lines += ["-lines", "%s:%s" % (op[3] + 1, op[4])]
+                lines += ["--lines", "%s:%s" % (op[3] + 1, op[4])]
         if lines == []:
             return
     else:
         lines = [
-            "-lines",
+            "--lines",
             "%s:%s" % (vim.current.range.start + 1, vim.current.range.end + 1),
         ]
 
@@ -116,15 +116,15 @@ def main():
         startupinfo.wShowWindow = subprocess.SW_HIDE
 
     # Call formatter.
-    command = [binary, "-cursor", str(cursor_byte)]
-    if lines != ["-lines", "all"]:
+    command = [binary, "--cursor", str(cursor_byte)]
+    if lines != ["--lines", "all"]:
         command += lines
     if style:
-        command.extend(["-style", style])
+        command.extend(["--style", style])
     if fallback_style:
-        command.extend(["-fallback-style", fallback_style])
+        command.extend(["--fallback-style", fallback_style])
     if vim.current.buffer.name:
-        command.extend(["-assume-filename", vim.current.buffer.name])
+        command.extend(["--assume-filename", vim.current.buffer.name])
     p = subprocess.Popen(
         command,
         stdout=subprocess.PIPE,

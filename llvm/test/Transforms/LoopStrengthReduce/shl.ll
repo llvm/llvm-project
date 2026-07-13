@@ -6,7 +6,7 @@ target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 ; LoopStrengthReduce should reuse %mul as the stride.
 define void @_Z3fooPfll(ptr nocapture readonly %input, i64 %n, i64 %s) {
 ; CHECK-LABEL: define void @_Z3fooPfll
-; CHECK-SAME: (ptr nocapture readonly [[INPUT:%.*]], i64 [[N:%.*]], i64 [[S:%.*]]) {
+; CHECK-SAME: (ptr readonly captures(none) [[INPUT:%.*]], i64 [[N:%.*]], i64 [[S:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MUL:%.*]] = shl i64 [[S]], 2
 ; CHECK-NEXT:    tail call void @_Z3bazl(i64 [[MUL]])

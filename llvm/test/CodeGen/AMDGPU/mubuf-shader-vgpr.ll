@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s -check-prefix=CHECK
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga | FileCheck %s -check-prefix=CHECK
 
 ; Test that buffer_load_format with VGPR resource descriptor is properly
 ; legalized.
@@ -19,7 +19,7 @@ define amdgpu_vs float @test_idxen(ptr addrspace(4) inreg %base, i32 %i) {
 main_body:
   %ptr = getelementptr ptr addrspace(8), ptr addrspace(4) %base, i32 %i
   %tmp2 = load ptr addrspace(8), ptr addrspace(4) %ptr, align 32
-  %tmp7 = call float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8) %tmp2, i32 undef, i32 0, i32 0, i32 0)
+  %tmp7 = call float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8) %tmp2, i32 poison, i32 0, i32 0, i32 0)
   ret float %tmp7
 }
 
@@ -29,7 +29,7 @@ define amdgpu_vs float @test_offen(ptr addrspace(4) inreg %base, i32 %i) {
 main_body:
   %ptr = getelementptr ptr addrspace(8), ptr addrspace(4) %base, i32 %i
   %tmp2 = load ptr addrspace(8), ptr addrspace(4) %ptr, align 32
-  %tmp7 = call float @llvm.amdgcn.raw.ptr.buffer.load.format.f32(ptr addrspace(8) %tmp2, i32 undef, i32 0, i32 0)
+  %tmp7 = call float @llvm.amdgcn.raw.ptr.buffer.load.format.f32(ptr addrspace(8) %tmp2, i32 poison, i32 0, i32 0)
   ret float %tmp7
 }
 
@@ -39,7 +39,7 @@ define amdgpu_vs float @test_both(ptr addrspace(4) inreg %base, i32 %i) {
 main_body:
   %ptr = getelementptr ptr addrspace(8), ptr addrspace(4) %base, i32 %i
   %tmp2 = load ptr addrspace(8), ptr addrspace(4) %ptr, align 32
-  %tmp7 = call float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8) %tmp2, i32 undef, i32 undef, i32 0, i32 0)
+  %tmp7 = call float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8) %tmp2, i32 poison, i32 poison, i32 0, i32 0)
   ret float %tmp7
 }
 

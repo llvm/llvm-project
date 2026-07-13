@@ -1,11 +1,20 @@
-/******************************************************************************/
-/*   (c) 2020 Qualcomm Innovation Center, Inc. All rights reserved.           */
-/*                                                                            */
-/******************************************************************************/
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef HEXAGON_TYPES_H
 #define HEXAGON_TYPES_H
 
 #include <hexagon_protos.h>
+
+// Save and undefine B0 to avoid conflicts with POSIX termios.h which
+// defines B0 as a macro for baud rate 0.
+#pragma push_macro("B0")
+#undef B0
 
 /* Hexagon names */
 #define HEXAGON_Vect HEXAGON_Vect64
@@ -693,9 +702,8 @@ public:
   };
 
   // Extract byte methods
-  signed char B0(void) {
-    return HEXAGON_V64_GET_B0(data);
-  };
+  signed char b0(void) { return HEXAGON_V64_GET_B0(data); };
+  signed char B0(void) { return b0(); };
   signed char B1(void) {
     return HEXAGON_V64_GET_B1(data);
   };
@@ -772,9 +780,10 @@ public:
   };
 
   // Set byte methods
-  HEXAGON_Vect64C B0(signed char b) {
+  HEXAGON_Vect64C b0(signed char b) {
     return HEXAGON_Vect64C(HEXAGON_V64_PUT_B0(data, b));
   };
+  HEXAGON_Vect64C B0(signed char b) { return b0(b); };
   HEXAGON_Vect64C B1(signed char b) {
     return HEXAGON_Vect64C(HEXAGON_V64_PUT_B1(data, b));
   };
@@ -1117,9 +1126,8 @@ public:
   };
 
   // Extract byte methods
-  signed char B0(void) {
-    return HEXAGON_V32_GET_B0(data);
-  };
+  signed char b0(void) { return HEXAGON_V32_GET_B0(data); };
+  signed char B0(void) { return b0(); };
   signed char B1(void) {
     return HEXAGON_V32_GET_B1(data);
   };
@@ -1158,9 +1166,10 @@ public:
   };
 
   // Set byte methods
-  HEXAGON_Vect32C B0(signed char b) {
+  HEXAGON_Vect32C b0(signed char b) {
     return HEXAGON_Vect32C(HEXAGON_V32_PUT_B0(data, b));
   };
+  HEXAGON_Vect32C B0(signed char b) { return b0(b); };
   HEXAGON_Vect32C B1(signed char b) {
     return HEXAGON_Vect32C(HEXAGON_V32_PUT_B1(data, b));
   };
@@ -1920,9 +1929,8 @@ public:
   };
 
   // Extract byte methods
-  signed char B0(void) {
-    return Q6V64_GET_B0(data);
-  };
+  signed char b0(void) { return Q6V64_GET_B0(data); };
+  signed char B0(void) { return b0(); };
   signed char B1(void) {
     return Q6V64_GET_B1(data);
   };
@@ -1999,9 +2007,8 @@ public:
   };
 
   // Set byte methods
-  Q6Vect64C B0(signed char b) {
-    return Q6Vect64C(Q6V64_PUT_B0(data, b));
-  };
+  Q6Vect64C b0(signed char b) { return Q6Vect64C(Q6V64_PUT_B0(data, b)); };
+  Q6Vect64C B0(signed char b) { return b0(b); };
   Q6Vect64C B1(signed char b) {
     return Q6Vect64C(Q6V64_PUT_B1(data, b));
   };
@@ -2344,9 +2351,8 @@ public:
   };
 
   // Extract byte methods
-  signed char B0(void) {
-    return Q6V32_GET_B0(data);
-  };
+  signed char b0(void) { return Q6V32_GET_B0(data); };
+  signed char B0(void) { return b0(); };
   signed char B1(void) {
     return Q6V32_GET_B1(data);
   };
@@ -2385,9 +2391,8 @@ public:
   };
 
   // Set byte methods
-  Q6Vect32C B0(signed char b) {
-    return Q6Vect32C(Q6V32_PUT_B0(data, b));
-  };
+  Q6Vect32C b0(signed char b) { return Q6Vect32C(Q6V32_PUT_B0(data, b)); };
+  Q6Vect32C B0(signed char b) { return b0(b); };
   Q6Vect32C B1(signed char b) {
     return Q6Vect32C(Q6V32_PUT_B1(data, b));
   };
@@ -2617,5 +2622,7 @@ typedef struct hexagon_udma_descriptor_type1_s
     unsigned int srcwidthoffset:16;
     unsigned int dstwidthoffset:16;
 } hexagon_udma_descriptor_type1_t;
+
+#pragma pop_macro("B0")
 
 #endif /* !HEXAGON_TYPES_H */

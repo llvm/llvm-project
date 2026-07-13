@@ -28,7 +28,7 @@ Violating the naming rules above results in undefined behavior.
   int _g(); // disallowed in global namespace only
 
 The check can also be inverted, i.e. it can be configured to flag any
-identifier that is _not_ a reserved identifier. This mode is for use by e.g.
+identifier that is *not* a reserved identifier. This mode is for use by e.g.
 standard library implementors, to ensure they don't infringe on the user
 namespace.
 
@@ -38,10 +38,10 @@ standards, e.g. C++ 'zombie names' and C future library directions.
 
 This check corresponds to CERT C Coding Standard rule `DCL37-C. Do not declare
 or define a reserved identifier
-<https://wiki.sei.cmu.edu/confluence/display/c/DCL37-C.+Do+not+declare+or+define+a+reserved+identifier>`_
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/declarations-and-initialization-dcl/dcl37-c/>`_
 as well as its C++ counterpart, `DCL51-CPP. Do not declare or define a reserved
 identifier
-<https://wiki.sei.cmu.edu/confluence/display/cplusplus/DCL51-CPP.+Do+not+declare+or+define+a+reserved+identifier>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/declarations-and-initialization-dcl/dcl51-cpp/>`_.
 
 Options
 -------

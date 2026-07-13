@@ -15,22 +15,17 @@
 #ifndef LLVM_PASSES_OPTIMIZATIONLEVEL_H
 #define LLVM_PASSES_OPTIMIZATIONLEVEL_H
 
+#include "llvm/Support/Compiler.h"
 #include <assert.h>
 
 namespace llvm {
 
 class OptimizationLevel final {
   unsigned SpeedLevel = 2;
-  unsigned SizeLevel = 0;
-  OptimizationLevel(unsigned SpeedLevel, unsigned SizeLevel)
-      : SpeedLevel(SpeedLevel), SizeLevel(SizeLevel) {
-    // Check that only valid combinations are passed.
+  OptimizationLevel(unsigned SpeedLevel) : SpeedLevel(SpeedLevel) {
+    // Check that only valid values are passed.
     assert(SpeedLevel <= 3 &&
            "Optimization level for speed should be 0, 1, 2, or 3");
-    assert(SizeLevel <= 2 &&
-           "Optimization level for size should be 0, 1, or 2");
-    assert((SizeLevel == 0 || SpeedLevel == 2) &&
-           "Optimize for size should be encoded with speedup level == 2");
   }
 
 public:
@@ -38,7 +33,7 @@ public:
   /// Disable as many optimizations as possible. This doesn't completely
   /// disable the optimizer in all cases, for example always_inline functions
   /// can be required to be inlined for correctness.
-  static const OptimizationLevel O0;
+  LLVM_ABI static const OptimizationLevel O0;
 
   /// Optimize quickly without destroying debuggability.
   ///
@@ -54,7 +49,7 @@ public:
   /// vectorization, or fusion don't make sense here due to the degree to
   /// which the executed code differs from the source code, and the compile
   /// time cost.
-  static const OptimizationLevel O1;
+  LLVM_ABI static const OptimizationLevel O1;
   /// Optimize for fast execution as much as possible without triggering
   /// significant incremental compile time or code size growth.
   ///
@@ -71,7 +66,7 @@ public:
   ///
   /// This is expected to be a good default optimization level for the vast
   /// majority of users.
-  static const OptimizationLevel O2;
+  LLVM_ABI static const OptimizationLevel O2;
   /// Optimize for fast execution as much as possible.
   ///
   /// This mode is significantly more aggressive in trading off compile time
@@ -86,41 +81,18 @@ public:
   /// order to make even significantly slower compile times at least scale
   /// reasonably. This does not preclude very substantial constant factor
   /// costs though.
-  static const OptimizationLevel O3;
-  /// Similar to \c O2 but tries to optimize for small code size instead of
-  /// fast execution without triggering significant incremental execution
-  /// time slowdowns.
-  ///
-  /// The logic here is exactly the same as \c O2, but with code size and
-  /// execution time metrics swapped.
-  ///
-  /// A consequence of the different core goal is that this should in general
-  /// produce substantially smaller executables that still run in
-  /// a reasonable amount of time.
-  static const OptimizationLevel Os;
-  /// A very specialized mode that will optimize for code size at any and all
-  /// costs.
-  ///
-  /// This is useful primarily when there are absolute size limitations and
-  /// any effort taken to reduce the size is worth it regardless of the
-  /// execution time impact. You should expect this level to produce rather
-  /// slow, but very small, code.
-  static const OptimizationLevel Oz;
+  LLVM_ABI static const OptimizationLevel O3;
 
-  bool isOptimizingForSpeed() const { return SizeLevel == 0 && SpeedLevel > 0; }
-
-  bool isOptimizingForSize() const { return SizeLevel > 0; }
+  bool isOptimizingForSpeed() const { return SpeedLevel > 0; }
 
   bool operator==(const OptimizationLevel &Other) const {
-    return SizeLevel == Other.SizeLevel && SpeedLevel == Other.SpeedLevel;
+    return SpeedLevel == Other.SpeedLevel;
   }
   bool operator!=(const OptimizationLevel &Other) const {
-    return SizeLevel != Other.SizeLevel || SpeedLevel != Other.SpeedLevel;
+    return SpeedLevel != Other.SpeedLevel;
   }
 
   unsigned getSpeedupLevel() const { return SpeedLevel; }
-
-  unsigned getSizeLevel() const { return SizeLevel; }
 };
 } // namespace llvm
 

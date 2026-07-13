@@ -100,10 +100,10 @@ block_6:
 ; CHECK-NEXT:    [[B2:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    br label [[BLOCK_2]]
 ; CHECK:       block_2:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[DIFF_CE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DIFF_CE_LOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_0(ptr [[A]], ptr [[B]], ptr [[OUTPUT]], ptr [[RESULT]], ptr [[DIFF_CE_LOC]])
 ; CHECK-NEXT:    [[DIFF_CE_RELOAD:%.*]] = load i32, ptr [[DIFF_CE_LOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[DIFF_CE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DIFF_CE_LOC]])
 ; CHECK-NEXT:    br label [[BLOCK_6:%.*]]
 ; CHECK: dummy:
 ; CHECK-NEXT:  ret void
@@ -127,10 +127,10 @@ block_6:
 ; CHECK-NEXT:    [[B2:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    br label [[BLOCK_2]]
 ; CHECK:       block_2:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[DIFF_CE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DIFF_CE_LOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_0(ptr [[A]], ptr [[B]], ptr [[OUTPUT]], ptr [[RESULT]], ptr [[DIFF_CE_LOC]])
 ; CHECK-NEXT:    [[DIFF_CE_RELOAD:%.*]] = load i32, ptr [[DIFF_CE_LOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[DIFF_CE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DIFF_CE_LOC]])
 ; CHECK-NEXT:    br label [[BLOCK_6:%.*]]
 ; CHECK: dummy:
 ; CHECK-NEXT:  ret void

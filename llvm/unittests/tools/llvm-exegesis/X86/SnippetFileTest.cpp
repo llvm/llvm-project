@@ -23,9 +23,6 @@
 
 namespace llvm {
 namespace exegesis {
-
-void InitializeX86ExegesisTarget();
-
 namespace {
 
 using testing::ElementsAre;
@@ -70,18 +67,19 @@ MATCHER_P2(RegisterInitialValueIs, Reg, Val, "") {
 
 MATCHER_P3(MemoryDefinitionIs, Name, Value, Size, "") {
   if (arg.second.Value.getLimitedValue() == static_cast<uint64_t>(Value) &&
-      arg.second.SizeBytes == static_cast<size_t>(Size) && arg.first == Name)
+      arg.second.SizeBytes == static_cast<size_t>(Size) && arg.first() == Name)
     return true;
   *result_listener << "expected: {" << Name << ", " << Value << ", " << Size
                    << "} ";
-  *result_listener << "actual: {" << arg.first << ", "
+  *result_listener << "actual: {" << arg.first().str() << ", "
                    << arg.second.Value.getLimitedValue() << ", "
                    << arg.second.SizeBytes << "}";
   return false;
 }
 
 MATCHER_P2(MemoryMappingIs, Address, Name, "") {
-  if (arg.Address == Address && arg.MemoryValueName == Name)
+  if (arg.Address == static_cast<uintptr_t>(Address) &&
+      arg.MemoryValueName == Name)
     return true;
   *result_listener << "expected: {" << Address << ", " << Name << "} ";
   *result_listener << "actual: {" << arg.Address << ", " << arg.MemoryValueName
@@ -216,7 +214,7 @@ TEST_F(X86SnippetFileTest, SnippetAddress) {
   ASSERT_TRUE(static_cast<bool>(Snippets));
   EXPECT_THAT(*Snippets, SizeIs(1));
   const auto &Snippet = (*Snippets)[0];
-  EXPECT_EQ(Snippet.Key.SnippetAddress, 0x10000);
+  EXPECT_EQ(Snippet.Key.SnippetAddress, static_cast<uintptr_t>(0x10000));
 }
 
 TEST_F(X86SnippetFileTest, LoopRegister) {

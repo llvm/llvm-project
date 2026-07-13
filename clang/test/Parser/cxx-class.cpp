@@ -100,9 +100,10 @@ class F {
 #endif
 
 namespace ctor_error {
-  class Foo {};
+  class Foo {}; // #defined-here
   // By [class.qual]p2, this is a constructor declaration.
   Foo::Foo (F) = F(); // expected-error{{does not match any declaration in 'ctor_error::Foo'}}
+                      // expected-note@#defined-here{{defined here}}
 
   class Ctor { // expected-note{{not complete until the closing '}'}}
     Ctor(f)(int); // ok

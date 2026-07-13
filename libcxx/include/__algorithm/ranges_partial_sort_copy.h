@@ -42,9 +42,7 @@ namespace ranges {
 template <class _InIter, class _OutIter>
 using partial_sort_copy_result = in_out_result<_InIter, _OutIter>;
 
-namespace __partial_sort_copy {
-
-struct __fn {
+struct __partial_sort_copy {
   template <input_iterator _Iter1,
             sentinel_for<_Iter1> _Sent1,
             random_access_iterator _Iter2,
@@ -62,7 +60,7 @@ struct __fn {
       _Comp __comp   = {},
       _Proj1 __proj1 = {},
       _Proj2 __proj2 = {}) const {
-    auto __result = std::__partial_sort_copy<_RangeAlgPolicy>(
+    return std::__partial_sort_copy<_RangeAlgPolicy>(
         std::move(__first),
         std::move(__last),
         std::move(__result_first),
@@ -70,7 +68,6 @@ struct __fn {
         __comp,
         __proj1,
         __proj2);
-    return {std::move(__result.first), std::move(__result.second)};
   }
 
   template <input_range _Range1,
@@ -86,7 +83,7 @@ struct __fn {
   _LIBCPP_HIDE_FROM_ABI constexpr partial_sort_copy_result<borrowed_iterator_t<_Range1>, borrowed_iterator_t<_Range2>>
   operator()(
       _Range1&& __range, _Range2&& __result_range, _Comp __comp = {}, _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) const {
-    auto __result = std::__partial_sort_copy<_RangeAlgPolicy>(
+    return std::__partial_sort_copy<_RangeAlgPolicy>(
         ranges::begin(__range),
         ranges::end(__range),
         ranges::begin(__result_range),
@@ -94,14 +91,11 @@ struct __fn {
         __comp,
         __proj1,
         __proj2);
-    return {std::move(__result.first), std::move(__result.second)};
   }
 };
 
-} // namespace __partial_sort_copy
-
 inline namespace __cpo {
-inline constexpr auto partial_sort_copy = __partial_sort_copy::__fn{};
+inline constexpr auto partial_sort_copy = __partial_sort_copy{};
 } // namespace __cpo
 } // namespace ranges
 

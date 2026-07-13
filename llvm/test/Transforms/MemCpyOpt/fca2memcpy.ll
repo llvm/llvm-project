@@ -51,8 +51,8 @@ define void @destroysrc(ptr %src, ptr %dst) {
 
 define void @destroynoaliassrc(ptr noalias %src, ptr %dst) {
 ; CHECK-LABEL: @destroynoaliassrc(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST:%.*]], ptr align 8 [[SRC]], i64 16, i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[SRC:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST:%.*]], ptr align 8 [[SRC:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[SRC]], i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %1 = load %S, ptr %src
@@ -79,9 +79,9 @@ define void @copyalias(ptr %src, ptr %dst) {
 ; sure we lift the computation as well if needed and possible.
 define void @addrproducer(ptr %src, ptr %dst) {
 ; CHECK-LABEL: @addrproducer(
-; CHECK-NEXT:    [[DST2:%.*]] = getelementptr [[S:%.*]], ptr [[DST]], i64 1
+; CHECK-NEXT:    [[DST2:%.*]] = getelementptr [[S:%.*]], ptr [[DST:%.*]], i64 1
 ; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 8 [[DST2]], ptr align 8 [[SRC:%.*]], i64 16, i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[DST:%.*]], i8 undef, i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[DST]], i8 undef, i64 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %1 = load %S, ptr %src
@@ -113,8 +113,8 @@ define void @noaliasaddrproducer(ptr %src, ptr noalias %dst, ptr noalias %dstidp
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DSTIDPTR:%.*]], align 4
 ; CHECK-NEXT:    [[DSTINDEX:%.*]] = or i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[DST2:%.*]] = getelementptr [[S:%.*]], ptr [[DST:%.*]], i32 [[DSTINDEX]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST2]], ptr align 8 [[SRC]], i64 16, i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[SRC:%.*]], i8 undef, i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST2]], ptr align 8 [[SRC:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[SRC]], i8 undef, i64 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %1 = load %S, ptr %src
@@ -130,7 +130,7 @@ define void @throwing_call(ptr noalias %src, ptr %dst) {
 ; CHECK-LABEL: @throwing_call(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load [[S:%.*]], ptr [[SRC:%.*]], align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[SRC]], i8 0, i64 16, i1 false)
-; CHECK-NEXT:    call void @call() [[ATTR2:#.*]]
+; CHECK-NEXT:    call void @call() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    store [[S]] [[TMP1]], ptr [[DST:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -138,6 +138,47 @@ define void @throwing_call(ptr noalias %src, ptr %dst) {
   store %S zeroinitializer, ptr %src
   call void @call() readnone
   store %S %1, ptr %dst
+  ret void
+}
+
+define void @loop_memoryphi(ptr %a, ptr %b) {
+; CHECK-LABEL: @loop_memoryphi(
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 8 [[B:%.*]], ptr align 8 [[A:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    br label [[LOOP]]
+;
+  br label %loop
+
+loop:
+  %v = load { i64, i64 }, ptr %a
+  store { i64, i64 } %v, ptr %b
+  br label %loop
+}
+
+; There are multiple instructions that can clobber the source memory here.
+; We can move the dest write past the store to %ptr.24, but not the memcpy.
+; Make sure we don't perform fca2memcpy conversion in this case.
+define void @multiple_clobbering(ptr %ptr, ptr %ptr.copy) {
+; CHECK-LABEL: @multiple_clobbering(
+; CHECK-NEXT:    [[PTR_8:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR:%.*]], i64 8
+; CHECK-NEXT:    [[PTR_24:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 24
+; CHECK-NEXT:    [[PTR_32:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 32
+; CHECK-NEXT:    [[PTR_COPY_8:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR_COPY:%.*]], i64 8
+; CHECK-NEXT:    [[STRUCT:%.*]] = load { i32, i64 }, ptr [[PTR_COPY_8]], align 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[PTR_8]], ptr [[PTR_32]], i64 12, i1 false)
+; CHECK-NEXT:    store i64 1, ptr [[PTR_24]], align 8
+; CHECK-NEXT:    store { i32, i64 } [[STRUCT]], ptr [[PTR_32]], align 8
+; CHECK-NEXT:    ret void
+;
+  %ptr.8 = getelementptr inbounds nuw i8, ptr %ptr, i64 8
+  %ptr.24 = getelementptr inbounds nuw i8, ptr %ptr, i64 24
+  %ptr.32 = getelementptr inbounds nuw i8, ptr %ptr, i64 32
+  %ptr.copy.8 = getelementptr inbounds nuw i8, ptr %ptr.copy, i64 8
+  %struct = load { i32, i64 }, ptr %ptr.copy.8, align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr %ptr.8, ptr %ptr.32, i64 12, i1 false)
+  store i64 1, ptr %ptr.24, align 8
+  store { i32, i64 } %struct, ptr %ptr.32, align 8
   ret void
 }
 

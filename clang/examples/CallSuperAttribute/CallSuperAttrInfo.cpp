@@ -168,8 +168,9 @@ struct CallSuperAttrInfo : public ParsedAttrInfo {
                             const Decl *D) const override {
     const auto *TheMethod = dyn_cast_or_null<CXXMethodDecl>(D);
     if (!TheMethod || !TheMethod->isVirtual()) {
-      S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type_str)
-          << Attr << Attr.isRegularKeywordAttribute() << "virtual functions";
+      S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type)
+          << Attr << Attr.isRegularKeywordAttribute()
+          << ExpectedVirtualFunction;
       return false;
     }
     MarkedMethods.insert(TheMethod);

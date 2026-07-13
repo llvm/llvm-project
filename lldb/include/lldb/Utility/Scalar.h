@@ -84,11 +84,15 @@ public:
   /// Store the binary representation of this value into the given storage.
   /// Exactly GetByteSize() bytes will be stored, and the buffer must be large
   /// enough to hold this data.
+  void GetBytes(uint8_t *storage, size_t length) const;
   void GetBytes(llvm::MutableArrayRef<uint8_t> storage) const;
 
   size_t GetByteSize() const;
 
-  bool GetData(DataExtractor &data, size_t limit_byte_size = UINT32_MAX) const;
+  /// Get data with a byte size of GetByteSize().
+  bool GetData(DataExtractor &data) const;
+  /// Get data with a byte size forced to \p result_byte_size.
+  bool GetData(DataExtractor &data, size_t result_byte_size) const;
 
   size_t GetAsMemoryData(void *dst, size_t dst_len,
                          lldb::ByteOrder dst_byte_order, Status &error) const;
@@ -210,6 +214,7 @@ protected:
   static PromotionKey GetFloatPromoKey(const llvm::fltSemantics &semantics);
 
 private:
+  friend llvm::APFloat::cmpResult compare(Scalar lhs, Scalar rhs);
   friend const Scalar operator+(const Scalar &lhs, const Scalar &rhs);
   friend const Scalar operator-(Scalar lhs, Scalar rhs);
   friend const Scalar operator/(Scalar lhs, Scalar rhs);
@@ -220,9 +225,9 @@ private:
   friend const Scalar operator^(Scalar lhs, Scalar rhs);
   friend const Scalar operator<<(const Scalar &lhs, const Scalar &rhs);
   friend const Scalar operator>>(const Scalar &lhs, const Scalar &rhs);
-  friend bool operator==(Scalar lhs, Scalar rhs);
+  friend bool operator==(const Scalar &lhs, const Scalar &rhs);
   friend bool operator!=(const Scalar &lhs, const Scalar &rhs);
-  friend bool operator<(Scalar lhs, Scalar rhs);
+  friend bool operator<(const Scalar &lhs, const Scalar &rhs);
   friend bool operator<=(const Scalar &lhs, const Scalar &rhs);
   friend bool operator>(const Scalar &lhs, const Scalar &rhs);
   friend bool operator>=(const Scalar &lhs, const Scalar &rhs);
@@ -241,6 +246,7 @@ private:
 //  Item 19 of "Effective C++ Second Edition" by Scott Meyers
 //  Differentiate among members functions, non-member functions, and
 //  friend functions
+llvm::APFloat::cmpResult compare(Scalar lhs, Scalar rhs);
 const Scalar operator+(const Scalar &lhs, const Scalar &rhs);
 const Scalar operator-(Scalar lhs, Scalar rhs);
 const Scalar operator/(Scalar lhs, Scalar rhs);
@@ -251,9 +257,9 @@ const Scalar operator%(Scalar lhs, Scalar rhs);
 const Scalar operator^(Scalar lhs, Scalar rhs);
 const Scalar operator<<(const Scalar &lhs, const Scalar &rhs);
 const Scalar operator>>(const Scalar &lhs, const Scalar &rhs);
-bool operator==(Scalar lhs, Scalar rhs);
+bool operator==(const Scalar &lhs, const Scalar &rhs);
 bool operator!=(const Scalar &lhs, const Scalar &rhs);
-bool operator<(Scalar lhs, Scalar rhs);
+bool operator<(const Scalar &lhs, const Scalar &rhs);
 bool operator<=(const Scalar &lhs, const Scalar &rhs);
 bool operator>(const Scalar &lhs, const Scalar &rhs);
 bool operator>=(const Scalar &lhs, const Scalar &rhs);

@@ -20,7 +20,6 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TimeProfiler.h"
-#include <algorithm>
 #include <cstdint>
 #include <numeric>
 
@@ -55,8 +54,7 @@ void TpiStreamBuilder::updateTypeIndexOffsets(ArrayRef<uint16_t> Sizes) {
   }
 }
 
-void TpiStreamBuilder::addTypeRecord(ArrayRef<uint8_t> Record,
-                                     std::optional<uint32_t> Hash) {
+void TpiStreamBuilder::addTypeRecord(ArrayRef<uint8_t> Record, uint32_t Hash) {
   assert(((Record.size() & 3) == 0) &&
          "The type record's size is not a multiple of 4 bytes which will "
          "cause misalignment in the output TPI stream!");
@@ -65,9 +63,7 @@ void TpiStreamBuilder::addTypeRecord(ArrayRef<uint8_t> Record,
   updateTypeIndexOffsets(ArrayRef(&OneSize, 1));
 
   TypeRecBuffers.push_back(Record);
-  // FIXME: Require it.
-  if (Hash)
-    TypeHashes.push_back(*Hash);
+  TypeHashes.push_back(Hash);
 }
 
 void TpiStreamBuilder::addTypeRecords(ArrayRef<uint8_t> Types,

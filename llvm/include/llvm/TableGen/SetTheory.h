@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements the SetTheory class that computes ordered sets of
-// Records from DAG expressions.  Operators for standard set operations are
+// Records from DAG expressions. Operators for standard set operations are
 // predefined, and it is possible to add special purpose set operators as well.
 //
 // The user may define named sets as Records of predefined classes. Set
@@ -64,11 +64,11 @@ class Record;
 
 class SetTheory {
 public:
-  using RecVec = std::vector<Record *>;
-  using RecSet = SmallSetVector<Record *, 16>;
+  using RecVec = std::vector<const Record *>;
+  using RecSet = SmallSetVector<const Record *, 16>;
 
   /// Operator - A callback representing a DAG operator.
-  class Operator {
+  class LLVM_ABI Operator {
     virtual void anchor();
 
   public:
@@ -76,26 +76,26 @@ public:
 
     /// apply - Apply this operator to Expr's arguments and insert the result
     /// in Elts.
-    virtual void apply(SetTheory&, DagInit *Expr, RecSet &Elts,
+    virtual void apply(SetTheory &, const DagInit *Expr, RecSet &Elts,
                        ArrayRef<SMLoc> Loc) = 0;
   };
 
   /// Expander - A callback function that can transform a Record representing a
   /// set into a fully expanded list of elements. Expanders provide a way for
   /// users to define named sets that can be used in DAG expressions.
-  class Expander {
+  class LLVM_ABI Expander {
     virtual void anchor();
 
   public:
     virtual ~Expander() = default;
 
-    virtual void expand(SetTheory&, Record*, RecSet &Elts) = 0;
+    virtual void expand(SetTheory &, const Record *, RecSet &Elts) = 0;
   };
 
 private:
   // Map set defs to their fully expanded contents. This serves as a memoization
   // cache and it makes it possible to return const references on queries.
-  using ExpandMap = std::map<Record *, RecVec>;
+  using ExpandMap = std::map<const Record *, RecVec>;
   ExpandMap Expansions;
 
   // Known DAG operators by name.
@@ -106,26 +106,26 @@ private:
 
 public:
   /// Create a SetTheory instance with only the standard operators.
-  SetTheory();
+  LLVM_ABI SetTheory();
 
   /// addExpander - Add an expander for Records with the named super class.
-  void addExpander(StringRef ClassName, std::unique_ptr<Expander>);
+  LLVM_ABI void addExpander(StringRef ClassName, std::unique_ptr<Expander>);
 
   /// addFieldExpander - Add an expander for ClassName that simply evaluates
-  /// FieldName in the Record to get the set elements.  That is all that is
+  /// FieldName in the Record to get the set elements. That is all that is
   /// needed for a class like:
   ///
   ///   class Set<dag d> {
   ///     dag Elts = d;
   ///   }
   ///
-  void addFieldExpander(StringRef ClassName, StringRef FieldName);
+  LLVM_ABI void addFieldExpander(StringRef ClassName, StringRef FieldName);
 
   /// addOperator - Add a DAG operator.
-  void addOperator(StringRef Name, std::unique_ptr<Operator>);
+  LLVM_ABI void addOperator(StringRef Name, std::unique_ptr<Operator>);
 
   /// evaluate - Evaluate Expr and append the resulting set to Elts.
-  void evaluate(Init *Expr, RecSet &Elts, ArrayRef<SMLoc> Loc);
+  LLVM_ABI void evaluate(const Init *Expr, RecSet &Elts, ArrayRef<SMLoc> Loc);
 
   /// evaluate - Evaluate a sequence of Inits and append to Elts.
   template<typename Iter>
@@ -134,10 +134,10 @@ public:
       evaluate(*begin++, Elts, Loc);
   }
 
-  /// expand - Expand a record into a set of elements if possible.  Return a
+  /// expand - Expand a record into a set of elements if possible. Return a
   /// pointer to the expanded elements, or NULL if Set cannot be expanded
   /// further.
-  const RecVec *expand(Record *Set);
+  LLVM_ABI const RecVec *expand(const Record *Set);
 };
 
 } // end namespace llvm

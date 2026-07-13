@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; This used to ICE in selecting shuffle. Make sure it compiles successfully.
 ; Valign is a likely instruction to be generated here, so check for that.

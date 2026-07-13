@@ -5,7 +5,7 @@
 // Modules:
 // RUN: %clang_cc1 -x objective-c -debug-info-kind=limited -dwarf-ext-refs -fmodules \
 // RUN:     -fmodule-format=obj -fimplicit-module-maps -DMODULES \
-// RUN:     -fmodules-cache-path=%t %s -I %S/Inputs -I %t -emit-llvm -o %t-mod.ll
+// RUN:     -fmodules-cache-path=%t/cache %s -I %S/Inputs -I %t -emit-llvm -o %t-mod.ll
 // RUN: cat %t-mod.ll |  FileCheck %s
 // RUN: cat %t-mod.ll |  FileCheck %s --check-prefix=DWOID
 
@@ -75,7 +75,8 @@ int foo(ObjCClass *c) {
 
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "ObjCClass",
 // CHECK-SAME:             scope: ![[MOD]],
-// CHECK-SAME:             flags: DIFlagFwdDecl)
+// CHECK-SAME:             flags: DIFlagFwdDecl,
+// CHECK-SAME:             runtimeLang: DW_LANG_ObjC)
 
 // CHECK-NOT: !DICompositeType(tag: DW_TAG_structure_type,
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type,

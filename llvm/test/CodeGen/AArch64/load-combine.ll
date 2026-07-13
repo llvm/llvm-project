@@ -713,3 +713,182 @@ define void @short_vector_to_i64(ptr %in, ptr %out, ptr %p) {
   store i64 %i3, ptr %out
   ret void
 }
+
+; x1 = x0
+define void @scalable_vector_to_i32(ptr %in, ptr %out, ptr %p) #0 {
+; CHECK-LABEL: scalable_vector_to_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    str w8, [x1]
+; CHECK-NEXT:    ret
+  %ld = load <vscale x 4 x i8>, ptr %in, align 4
+
+  %e1 = extractelement <vscale x 4 x i8> %ld, i32 0
+  %e2 = extractelement <vscale x 4 x i8> %ld, i32 1
+  %e3 = extractelement <vscale x 4 x i8> %ld, i32 2
+  %e4 = extractelement <vscale x 4 x i8> %ld, i32 3
+
+  %z0 = zext i8 %e1 to i32
+  %z1 = zext i8 %e2 to i32
+  %z2 = zext i8 %e3 to i32
+  %z3 = zext i8 %e4 to i32
+
+  %s1 = shl nuw nsw i32 %z1, 8
+  %s2 = shl nuw nsw i32 %z2, 16
+  %s3 = shl nuw i32 %z3, 24
+
+  %i1 = or i32 %s1, %z0
+  %i2 = or i32 %i1, %s2
+  %i3 = or i32 %i2, %s3
+
+  store i32 %i3, ptr %out
+  ret void
+}
+
+define void @scalable_vector_to_i32_unused_low_i8(ptr %in, ptr %out, ptr %p) #0 {
+; CHECK-LABEL: scalable_vector_to_i32_unused_low_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    mov w8, v0.s[1]
+; CHECK-NEXT:    mov w9, v0.s[2]
+; CHECK-NEXT:    mov w10, v0.s[3]
+; CHECK-NEXT:    lsl w8, w8, #8
+; CHECK-NEXT:    orr w8, w8, w9, lsl #16
+; CHECK-NEXT:    orr w8, w8, w10, lsl #24
+; CHECK-NEXT:    str w8, [x1]
+; CHECK-NEXT:    ret
+  %ld = load <vscale x 4 x i8>, ptr %in, align 4
+
+  %e2 = extractelement <vscale x 4 x i8> %ld, i32 1
+  %e3 = extractelement <vscale x 4 x i8> %ld, i32 2
+  %e4 = extractelement <vscale x 4 x i8> %ld, i32 3
+
+  %z1 = zext i8 %e2 to i32
+  %z2 = zext i8 %e3 to i32
+  %z3 = zext i8 %e4 to i32
+
+  %s1 = shl nuw nsw i32 %z1, 8
+  %s2 = shl nuw nsw i32 %z2, 16
+  %s3 = shl nuw i32 %z3, 24
+
+  %i2 = or i32 %s1, %s2
+  %i3 = or i32 %i2, %s3
+
+  store i32 %i3, ptr %out
+  ret void
+}
+
+define void @scalable_vector_to_i32_unused_high_i8(ptr %in, ptr %out, ptr %p) #0 {
+; CHECK-LABEL: scalable_vector_to_i32_unused_high_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ldrh w9, [x0]
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    mov w8, v0.s[2]
+; CHECK-NEXT:    orr w8, w9, w8, lsl #16
+; CHECK-NEXT:    str w8, [x1]
+; CHECK-NEXT:    ret
+  %ld = load <vscale x 4 x i8>, ptr %in, align 4
+
+  %e1 = extractelement <vscale x 4 x i8> %ld, i32 0
+  %e2 = extractelement <vscale x 4 x i8> %ld, i32 1
+  %e3 = extractelement <vscale x 4 x i8> %ld, i32 2
+
+  %z0 = zext i8 %e1 to i32
+  %z1 = zext i8 %e2 to i32
+  %z2 = zext i8 %e3 to i32
+
+  %s1 = shl nuw nsw i32 %z1, 8
+  %s2 = shl nuw nsw i32 %z2, 16
+
+  %i1 = or i32 %s1, %z0
+  %i2 = or i32 %i1, %s2
+
+  store i32 %i2, ptr %out
+  ret void
+}
+
+define void @scalable_vector_to_i32_unused_low_i16(ptr %in, ptr %out, ptr %p) #0 {
+; CHECK-LABEL: scalable_vector_to_i32_unused_low_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    mov w8, v0.s[2]
+; CHECK-NEXT:    mov w9, v0.s[3]
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    orr w8, w8, w9, lsl #24
+; CHECK-NEXT:    str w8, [x1]
+; CHECK-NEXT:    ret
+  %ld = load <vscale x 4 x i8>, ptr %in, align 4
+
+  %e3 = extractelement <vscale x 4 x i8> %ld, i32 2
+  %e4 = extractelement <vscale x 4 x i8> %ld, i32 3
+
+  %z2 = zext i8 %e3 to i32
+  %z3 = zext i8 %e4 to i32
+
+  %s2 = shl nuw nsw i32 %z2, 16
+  %s3 = shl nuw i32 %z3, 24
+
+  %i3 = or i32 %s2, %s3
+
+  store i32 %i3, ptr %out
+  ret void
+}
+
+; x1 = x0[0:1]
+define void @scalable_vector_to_i32_unused_high_i16(ptr %in, ptr %out, ptr %p) #0 {
+; CHECK-LABEL: scalable_vector_to_i32_unused_high_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldrh w8, [x0]
+; CHECK-NEXT:    str w8, [x1]
+; CHECK-NEXT:    ret
+  %ld = load <vscale x 4 x i8>, ptr %in, align 4
+
+  %e1 = extractelement <vscale x 4 x i8> %ld, i32 0
+  %e2 = extractelement <vscale x 4 x i8> %ld, i32 1
+
+  %z0 = zext i8 %e1 to i32
+  %z1 = zext i8 %e2 to i32
+
+  %s1 = shl nuw nsw i32 %z1, 8
+
+  %i1 = or i32 %s1, %z0
+
+  store i32 %i1, ptr %out
+  ret void
+}
+
+; x1 = x0
+define void @scalable_vector_to_i64(ptr %in, ptr %out, ptr %p) #0 {
+; CHECK-LABEL: scalable_vector_to_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    str x8, [x1]
+; CHECK-NEXT:    ret
+  %ld = load <vscale x 4 x i8>, ptr %in, align 4
+
+  %e1 = extractelement <vscale x 4 x i8> %ld, i32 0
+  %e2 = extractelement <vscale x 4 x i8> %ld, i32 1
+  %e3 = extractelement <vscale x 4 x i8> %ld, i32 2
+  %e4 = extractelement <vscale x 4 x i8> %ld, i32 3
+
+  %z0 = zext i8 %e1 to i64
+  %z1 = zext i8 %e2 to i64
+  %z2 = zext i8 %e3 to i64
+  %z3 = zext i8 %e4 to i64
+
+  %s1 = shl nuw nsw i64 %z1, 8
+  %s2 = shl nuw nsw i64 %z2, 16
+  %s3 = shl nuw i64 %z3, 24
+
+  %i1 = or i64 %s1, %z0
+  %i2 = or i64 %i1, %s2
+  %i3 = or i64 %i2, %s3
+
+  store i64 %i3, ptr %out
+  ret void
+}
+
+attributes #0 = { "target-features"="+sve" }

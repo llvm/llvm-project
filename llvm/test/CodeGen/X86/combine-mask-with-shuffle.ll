@@ -67,11 +67,9 @@ define <16 x i32> @combine_mask_with_abs(<16 x i32> %v0) {
 define <16 x i32> @combine_mask_with_umin(<16 x i32> %v0) {
 ; CHECK-LABEL: combine_mask_with_umin:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufd {{.*#+}} zmm1 = zmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
-; CHECK-NEXT:    movw $-21846, %ax # imm = 0xAAAA
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpblendmd %zmm1, %zmm0, %zmm2 {%k1}
-; CHECK-NEXT:    vpminud %zmm2, %zmm1, %zmm1
+; CHECK-NEXT:    vpshufd {{.*#+}} zmm1 = zmm0[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
+; CHECK-NEXT:    vpshufd {{.*#+}} zmm2 = zmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
+; CHECK-NEXT:    vpminud %zmm1, %zmm2, %zmm1
 ; CHECK-NEXT:    movw $-3856, %ax # imm = 0xF0F0
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    vpopcntd %zmm0, %zmm1 {%k1}
@@ -88,11 +86,9 @@ define <16 x i32> @combine_mask_with_umin(<16 x i32> %v0) {
 define <16 x i32> @combine_mask_with_umax(<16 x i32> %v0) {
 ; CHECK-LABEL: combine_mask_with_umax:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufd {{.*#+}} zmm1 = zmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
-; CHECK-NEXT:    movw $-21846, %ax # imm = 0xAAAA
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpblendmd %zmm1, %zmm0, %zmm2 {%k1}
-; CHECK-NEXT:    vpmaxud %zmm2, %zmm1, %zmm1
+; CHECK-NEXT:    vpshufd {{.*#+}} zmm1 = zmm0[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
+; CHECK-NEXT:    vpshufd {{.*#+}} zmm2 = zmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
+; CHECK-NEXT:    vpmaxud %zmm1, %zmm2, %zmm1
 ; CHECK-NEXT:    movw $-3856, %ax # imm = 0xF0F0
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    vpopcntd %zmm0, %zmm1 {%k1}
@@ -109,11 +105,9 @@ define <16 x i32> @combine_mask_with_umax(<16 x i32> %v0) {
 define <16 x i32> @combine_mask_with_smin(<16 x i32> %v0) {
 ; CHECK-LABEL: combine_mask_with_smin:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufd {{.*#+}} zmm1 = zmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
-; CHECK-NEXT:    movw $-21846, %ax # imm = 0xAAAA
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpblendmd %zmm1, %zmm0, %zmm2 {%k1}
-; CHECK-NEXT:    vpminsd %zmm2, %zmm1, %zmm1
+; CHECK-NEXT:    vpshufd {{.*#+}} zmm1 = zmm0[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
+; CHECK-NEXT:    vpshufd {{.*#+}} zmm2 = zmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
+; CHECK-NEXT:    vpminsd %zmm1, %zmm2, %zmm1
 ; CHECK-NEXT:    movw $-3856, %ax # imm = 0xF0F0
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    vpopcntd %zmm0, %zmm1 {%k1}
@@ -130,11 +124,9 @@ define <16 x i32> @combine_mask_with_smin(<16 x i32> %v0) {
 define <16 x i32> @combine_mask_with_smax(<16 x i32> %v0) {
 ; CHECK-LABEL: combine_mask_with_smax:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufd {{.*#+}} zmm1 = zmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
-; CHECK-NEXT:    movw $-21846, %ax # imm = 0xAAAA
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpblendmd %zmm1, %zmm0, %zmm2 {%k1}
-; CHECK-NEXT:    vpmaxsd %zmm2, %zmm1, %zmm1
+; CHECK-NEXT:    vpshufd {{.*#+}} zmm1 = zmm0[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
+; CHECK-NEXT:    vpshufd {{.*#+}} zmm2 = zmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
+; CHECK-NEXT:    vpmaxsd %zmm1, %zmm2, %zmm1
 ; CHECK-NEXT:    movw $-3856, %ax # imm = 0xF0F0
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    vpopcntd %zmm0, %zmm1 {%k1}

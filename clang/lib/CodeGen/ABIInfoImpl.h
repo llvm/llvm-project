@@ -33,23 +33,6 @@ public:
                    AggValueSlot Slot) const override;
 };
 
-// Helper for coercing an aggregate argument or return value into an integer
-// array of the same size (including padding) and alignment.  This alternate
-// coercion happens only for the RenderScript ABI and can be removed after
-// runtimes that rely on it are no longer supported.
-//
-// RenderScript assumes that the size of the argument / return value in the IR
-// is the same as the size of the corresponding qualified type. This helper
-// coerces the aggregate type into an array of the same size (including
-// padding).  This coercion is used in lieu of expansion of struct members or
-// other canonical coercions that return a coerced-type of larger size.
-//
-// Ty          - The argument / return value type
-// Context     - The associated ASTContext
-// LLVMContext - The associated LLVMContext
-ABIArgInfo coerceToIntArray(QualType Ty, ASTContext &Context,
-                            llvm::LLVMContext &LLVMContext);
-
 void AssignToArrayRange(CodeGen::CGBuilderTy &Builder, llvm::Value *Array,
                         llvm::Value *Value, unsigned FirstIndex,
                         unsigned LastIndex);

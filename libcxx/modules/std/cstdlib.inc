@@ -45,7 +45,7 @@ export namespace std {
 
   // [c.mb.wcs], multibyte / wide string and character conversion functions
   using std::mblen _LIBCPP_USING_IF_EXISTS;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::mbstowcs _LIBCPP_USING_IF_EXISTS;
   using std::mbtowc _LIBCPP_USING_IF_EXISTS;
   using std::wcstombs _LIBCPP_USING_IF_EXISTS;

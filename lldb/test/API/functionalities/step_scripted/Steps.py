@@ -45,6 +45,26 @@ class StepScripted(StepWithChild):
         return self.thread_plan.QueueThreadPlanForStepScripted("Steps.StepOut")
 
 
+class StepSingleInstruction(StepWithChild):
+    def __init__(self, thread_plan, dict):
+        super().__init__(thread_plan)
+
+    def queue_child_thread_plan(self):
+        return self.thread_plan.QueueThreadPlanForStepSingleInstruction(
+            False, lldb.SBError()
+        )
+
+
+class StepSingleInstructionWithStepOver(StepWithChild):
+    def __init__(self, thread_plan, dict):
+        super().__init__(thread_plan)
+
+    def queue_child_thread_plan(self):
+        return self.thread_plan.QueueThreadPlanForStepSingleInstruction(
+            True, lldb.SBError()
+        )
+
+
 # This plan does a step-over until a variable changes value.
 class StepUntil(StepWithChild):
     def __init__(self, thread_plan, args_data):

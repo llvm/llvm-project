@@ -1,21 +1,17 @@
-#include <stdio.h>
-
+#include "attach.h"
 #include <chrono>
 #include <thread>
 
 volatile int g_val = 12345;
 
 int main(int argc, char const *argv[]) {
-    int temp;
-    lldb_enable_attach();
+  lldb_enable_attach();
 
-    // Waiting to be attached by the debugger.
-    temp = 0;
+  // This provides a breakpoint we hit every 50ms that the tests can hit.
+  std::chrono::milliseconds poll_time(50);
+  unsigned total_wait_in_sec = 60;
+  unsigned total_wait_time = total_wait_in_sec * (1000 / poll_time.count());
 
-    while (temp < 30) {
-        std::this_thread::sleep_for(std::chrono::seconds(2)); // Waiting to be attached...
-        temp++;
-    }
-
-    printf("Exiting now\n");
+  for (unsigned wait = 0; wait < total_wait_time; wait++)
+    std::this_thread::sleep_for(poll_time); // Waiting to be attached...
 }

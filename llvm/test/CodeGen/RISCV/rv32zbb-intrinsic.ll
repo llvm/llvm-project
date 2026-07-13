@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+zbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32ZBB
 
-declare i32 @llvm.riscv.orc.b.i32(i32)
-
 define i32 @orcb(i32 %a) nounwind {
 ; RV32ZBB-LABEL: orcb:
 ; RV32ZBB:       # %bb.0:
@@ -13,16 +11,17 @@ define i32 @orcb(i32 %a) nounwind {
   ret i32 %tmp
 }
 
-; Second and+or are redundant with the first, make sure we remove it.
+; Second and+or are redundant with the first, make sure we remove one of the
+; ands and one of the ors.
 define i32 @orcb_knownbits(i32 %a) nounwind {
 ; RV32ZBB-LABEL: orcb_knownbits:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    lui a1, 1044480
 ; RV32ZBB-NEXT:    and a0, a0, a1
-; RV32ZBB-NEXT:    lui a1, 2048
-; RV32ZBB-NEXT:    addi a1, a1, 1
-; RV32ZBB-NEXT:    or a0, a0, a1
+; RV32ZBB-NEXT:    lui a1, 4080
 ; RV32ZBB-NEXT:    orc.b a0, a0
+; RV32ZBB-NEXT:    addi a1, a1, 255
+; RV32ZBB-NEXT:    or a0, a0, a1
 ; RV32ZBB-NEXT:    ret
   %tmp = and i32 %a, 4278190080 ; 0xFF000000
   %tmp2 = or i32 %tmp, 8388609 ; 0x800001

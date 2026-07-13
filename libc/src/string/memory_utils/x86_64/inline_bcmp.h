@@ -9,7 +9,7 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_BCMP_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
-#include "src/__support/macros/config.h"
+#include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
 #include "src/string/memory_utils/op_generic.h"
 #include "src/string/memory_utils/op_x86.h"
 #include "src/string/memory_utils/utils.h" // Ptr, CPtr

@@ -27,7 +27,9 @@ module second { header "second.h" }
 
 // RUN: clang-scan-deps -format experimental-full -o %t/result.json \
 // RUN:   -- %clang -fmodules -fmodules-cache-path=%t/cache -I %t/zeroth -I %t/first -I %t/second -c %t/tu.m -o %t/tu.o
-// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
+// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=clang-modulemap-file,command-line,context-hash,file-deps,link-libraries,name,clang-context-hash,clang-module-deps,executable,input-file \
+// RUN:   | FileCheck %s -DPREFIX=%/t
 
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
@@ -50,8 +52,8 @@ module second { header "second.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/first/first_other.h",
-// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/first/first_other.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "first_other"
@@ -69,9 +71,9 @@ module second { header "second.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/second/second.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/second/second.h",
-// CHECK-NEXT:         "[[PREFIX]]/second/second.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "second"
@@ -93,10 +95,10 @@ module second { header "second.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/second/second.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/zeroth/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/zeroth/zeroth.h"
+// CHECK-NEXT:         "[[PREFIX]]/zeroth/zeroth.h",
+// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/second/second.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "zeroth"

@@ -8,7 +8,7 @@ define void @basecase(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: @basecase(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x ptr>, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    store ptr null, ptr [[A]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, <2 x ptr> [[TMP1]], <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, <2 x ptr> [[TMP1]], <2 x i32> splat (i32 1)
 ; CHECK-NEXT:    store <2 x ptr> [[TMP2]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -32,9 +32,9 @@ define void @allocas(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: @allocas(
 ; CHECK-NEXT:    [[V1:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[V2:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[V1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[V2]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <2 x ptr> [[TMP2]], <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[V1]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[V2]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <2 x ptr> [[TMP2]], <2 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[V1]], i32 1
 ; CHECK-NEXT:    store ptr [[TMP4]], ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    store <2 x ptr> [[TMP3]], ptr [[B:%.*]], align 8
@@ -124,9 +124,9 @@ define void @stacksave2(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[V1:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[STACK:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    [[V2:%.*]] = alloca inalloca i8, align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[V1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[V2]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <2 x ptr> [[TMP2]], <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[V1]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[V2]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <2 x ptr> [[TMP2]], <2 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[V1]], i32 1
 ; CHECK-NEXT:    store ptr [[TMP4]], ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    call void @use(ptr inalloca(i8) [[V2]]) #[[ATTR5:[0-9]+]]
@@ -159,9 +159,9 @@ define void @stacksave3(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[V2:%.*]] = alloca inalloca i8, align 1
 ; CHECK-NEXT:    call void @use(ptr inalloca(i8) [[V2]]) #[[ATTR4]]
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[STACK]])
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[V1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[V2]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <2 x ptr> [[TMP2]], <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[V1]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[V2]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <2 x ptr> [[TMP2]], <2 x i32> splat (i32 1)
 ; CHECK-NEXT:    store <2 x ptr> [[TMP3]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -188,7 +188,7 @@ define void @stacksave3(ptr %a, ptr %b, ptr %c) {
 define void @stacksave4(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: @stacksave4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x ptr>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, <2 x ptr> [[TMP1]], <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, <2 x ptr> [[TMP1]], <2 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[STACK:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    [[X:%.*]] = alloca inalloca i8, align 1
 ; CHECK-NEXT:    call void @use(ptr inalloca(i8) [[X]]) #[[ATTR4]]
@@ -218,7 +218,7 @@ define void @stacksave4(ptr %a, ptr %b, ptr %c) {
 define void @stacksave5(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: @stacksave5(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x ptr>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, <2 x ptr> [[TMP1]], <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, <2 x ptr> [[TMP1]], <2 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[STACK:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    [[X:%.*]] = alloca inalloca i8, align 1
 ; CHECK-NEXT:    call void @use(ptr inalloca(i8) [[X]]) #[[ATTR4]]
@@ -256,9 +256,9 @@ define void @stackrestore1(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[STACK]])
 ; CHECK-NEXT:    [[V2:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    store i8 0, ptr [[V2]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[V1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[V2]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <2 x ptr> [[TMP2]], <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[V1]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[V2]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <2 x ptr> [[TMP2]], <2 x i32> splat (i32 1)
 ; CHECK-NEXT:    store <2 x ptr> [[TMP3]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -302,11 +302,11 @@ define void @ham() #1 {
 ; CHECK-NEXT:    [[VAR24:%.*]] = alloca inalloca i32, align 4
 ; CHECK-NEXT:    call void @quux(ptr inalloca(i32) [[VAR24]])
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[VAR23]])
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x ptr> poison, ptr [[VAR4]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x ptr> poison, ptr [[VAR4]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x ptr> [[TMP1]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    store <4 x ptr> [[TMP2]], ptr [[VAR12]], align 8
 ; CHECK-NEXT:    [[VAR36:%.*]] = getelementptr inbounds [12 x ptr], ptr [[VAR12]], i32 0, i32 4
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x ptr> [[TMP1]], ptr [[VAR5]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x ptr> [[TMP1]], ptr [[VAR5]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x ptr> [[TMP3]], <4 x ptr> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    store <4 x ptr> [[TMP4]], ptr [[VAR36]], align 8
 ; CHECK-NEXT:    ret void
@@ -347,8 +347,8 @@ define void @spam() #1 {
 ; CHECK-NEXT:    [[VAR5:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[VAR12:%.*]] = alloca [12 x ptr], align 8
 ; CHECK-NEXT:    [[VAR36:%.*]] = getelementptr inbounds [12 x ptr], ptr [[VAR12]], i32 0, i32 4
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x ptr> poison, ptr [[VAR4]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x ptr> [[TMP1]], ptr [[VAR5]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x ptr> poison, ptr [[VAR4]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x ptr> [[TMP1]], ptr [[VAR5]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x ptr> [[TMP2]], <4 x ptr> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    store <4 x ptr> [[TMP3]], ptr [[VAR36]], align 8
 ; CHECK-NEXT:    ret void

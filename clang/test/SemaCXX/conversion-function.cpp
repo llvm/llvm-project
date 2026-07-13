@@ -458,7 +458,7 @@ namespace PR18234 {
 #endif
   } a;
   A::S s = a; // expected-error {{no viable conversion from 'struct A' to 'A::S'}}
-  A::E e = a;
+  A::E e = a; // expected-note {{'e' declared here}}
   bool k1 = e == A::e; // expected-error {{no member named 'e'}}
   bool k2 = e.n == 0;
 }
@@ -494,3 +494,10 @@ using Result = B<int>::Lookup<int>;
 using Result = int (A2<int>::*)();
 }
 #endif
+
+namespace GH121706 {
+struct S {
+  *operator int();   // expected-error {{cannot specify any part of a return type in the declaration of a conversion function; put the complete type after 'operator'}}
+  **operator char(); // expected-error {{cannot specify any part of a return type in the declaration of a conversion function; put the complete type after 'operator'}}
+};
+}

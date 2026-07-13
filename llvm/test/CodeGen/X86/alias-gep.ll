@@ -3,17 +3,17 @@
 
 ;MACHO: .globl _offsetSym0
 ;MACHO-NOT: .alt_entry
-;MACHO: .set _offsetSym0, _s
+;MACHO: _offsetSym0 = _s
 ;MACHO: .globl _offsetSym1
 ;MACHO: .alt_entry _offsetSym1
-;MACHO: .set _offsetSym1, _s+8
+;MACHO: _offsetSym1 = _s+8
 
 ;ELF: .globl offsetSym0
 ;ELF-NOT: .alt_entry
-;ELF: .set offsetSym0, s
+;ELF: offsetSym0 = s
 ;ELF: .globl offsetSym1
 ;ELF-NOT: .alt_entry
-;ELF: .set offsetSym1, s+8
+;ELF: offsetSym1 = s+8
 
 %struct.S1 = type { i32, i32, i32 }
 

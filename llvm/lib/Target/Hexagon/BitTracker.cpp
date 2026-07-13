@@ -60,13 +60,8 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
-#include <cassert>
-#include <cstdint>
-#include <iterator>
 
 using namespace llvm;
 
@@ -84,7 +79,7 @@ namespace {
 
   raw_ostream &operator<< (raw_ostream &OS, const printv &PV) {
     if (PV.R)
-      OS << 'v' << Register::virtReg2Index(PV.R);
+      OS << 'v' << Register(PV.R).virtRegIndex();
     else
       OS << 's';
     return OS;
@@ -749,7 +744,7 @@ bool BT::MachineEvaluator::evaluate(const MachineInstr &MI,
       assert(WD >= WS);
       RegisterCell Src = getCell(RS, Inputs);
       RegisterCell Res(WD);
-      Res.insert(Src, BitMask(0, WS-1));
+      Res.insert(Src, BitMask(0, WS - 1));
       Res.fill(WS, WD, BitValue::Zero);
       putCell(RD, Res, Outputs);
       break;
@@ -947,7 +942,7 @@ void BT::visitBranchesFrom(const MachineInstr &BI) {
         else
           dbgs() << "\n  does not fall through\n";
       }
-      Targets.insert(BTs.begin(), BTs.end());
+      Targets.insert_range(BTs);
     }
     ++It;
   } while (FallsThrough && It != End);
@@ -970,8 +965,7 @@ void BT::visitBranchesFrom(const MachineInstr &BI) {
         Targets.insert(&*Next);
     }
   } else {
-    for (const MachineBasicBlock *SB : B.successors())
-      Targets.insert(SB);
+    Targets.insert_range(B.successors());
   }
 
   for (const MachineBasicBlock *TB : Targets)

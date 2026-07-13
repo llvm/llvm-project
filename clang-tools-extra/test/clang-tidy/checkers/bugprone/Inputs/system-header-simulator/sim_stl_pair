@@ -1,0 +1,32 @@
+#ifndef _SIM_STL_PAIR
+#define _SIM_STL_PAIR
+
+#pragma clang system_header
+
+#include "sim_type_traits"
+
+namespace std {
+
+template <class T1, class T2>
+struct pair {
+  T1 first;
+  T2 second;
+
+  pair() : first(), second() {}
+  pair(const T1 &a, const T2 &b) : first(a), second(b) {}
+
+  template<class U1, class U2>
+  pair(const pair<U1, U2> &other) : first(other.first),
+                                      second(other.second) {}
+};
+
+template <typename T1, typename T2>
+pair<typename remove_reference<T1>::type, typename remove_reference<T2>::type>
+make_pair(T1 &&, T2 &&) {
+  return {};
+};
+
+} // namespace std
+
+#endif // _SIM_STL_PAIR
+

@@ -41,6 +41,9 @@ Namespaces:
             Methods:
               - Name: methodInNestedNamespace
                 SwiftName: swiftMethodInNestedNamespace()
+            Tags:
+              - Name: inner_char_box
+                SwiftName: InnerCharBox
         Namespaces:
           - Name: Namespace1
             Tags:

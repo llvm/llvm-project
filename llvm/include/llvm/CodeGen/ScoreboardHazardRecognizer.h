@@ -15,6 +15,7 @@
 #ifndef LLVM_CODEGEN_SCOREBOARDHAZARDRECOGNIZER_H
 #define LLVM_CODEGEN_SCOREBOARDHAZARDRECOGNIZER_H
 
+#include "llvm/ADT/bit.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include <cassert>
@@ -26,7 +27,7 @@ namespace llvm {
 class ScheduleDAG;
 class SUnit;
 
-class ScoreboardHazardRecognizer : public ScheduleHazardRecognizer {
+class LLVM_ABI ScoreboardHazardRecognizer : public ScheduleHazardRecognizer {
   // Scoreboard to track function unit usage. Scoreboard[0] is a
   // mask of the FUs in use in the cycle currently being
   // schedule. Scoreboard[1] is a mask for the next cycle. The
@@ -59,7 +60,7 @@ class ScoreboardHazardRecognizer : public ScheduleHazardRecognizer {
 
     InstrStage::FuncUnits& operator[](size_t idx) const {
       // Depth is expected to be a power-of-2.
-      assert(Depth && !(Depth & (Depth - 1)) &&
+      assert(llvm::has_single_bit(Depth) &&
              "Scoreboard was not initialized properly!");
 
       return Data[(Head + idx) & (Depth-1)];
@@ -84,7 +85,7 @@ class ScoreboardHazardRecognizer : public ScheduleHazardRecognizer {
     }
 
     // Print the scoreboard.
-    void dump() const;
+    LLVM_ABI void dump() const;
   };
 
   // Support for tracing ScoreboardHazardRecognizer as a component within

@@ -12,8 +12,8 @@ define void @foo(ptr %p) nounwind {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[WHILE_BODY_I:%.*]]
 ; CHECK:       while.body.i:
-; CHECK-NEXT:    [[VWORKEXPONENT_I_033:%.*]] = phi <4 x i32> [ [[SUB_I_I:%.*]], [[WHILE_BODY_I]] ], [ <i32 939524096, i32 939524096, i32 939524096, i32 939524096>, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[SUB_I_I]] = add <4 x i32> [[VWORKEXPONENT_I_033]], <i32 -8388608, i32 -8388608, i32 -8388608, i32 -8388608>
+; CHECK-NEXT:    [[VWORKEXPONENT_I_033:%.*]] = phi <4 x i32> [ [[SUB_I_I:%.*]], [[WHILE_BODY_I]] ], [ splat (i32 939524096), [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SUB_I_I]] = add <4 x i32> [[VWORKEXPONENT_I_033]], splat (i32 -8388608)
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[SUB_I_I]] to <2 x i64>
 ; CHECK-NEXT:    store volatile <2 x i64> zeroinitializer, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    br label [[WHILE_BODY_I]]

@@ -10,10 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "kmp_utils.h"
+
 /*****************************************************************************
  * system include files
  ****************************************************************************/
-
 #include <assert.h>
 
 #include <stdint.h>
@@ -58,6 +59,12 @@
 
 static FILE *verbose_file;
 static int verbose_init;
+
+#if defined(__GLIBC__)
+#define OMPT_GETENV secure_getenv
+#else
+#define OMPT_GETENV getenv
+#endif
 
 /*****************************************************************************
  * types
@@ -104,9 +111,11 @@ static ompt_start_tool_result_t *ompt_start_tool_result = NULL;
 
 #if KMP_OS_WINDOWS
 static HMODULE ompt_tool_module = NULL;
+static HMODULE ompt_archer_module = NULL;
 #define OMPT_DLCLOSE(Lib) FreeLibrary(Lib)
 #else
 static void *ompt_tool_module = NULL;
+static void *ompt_archer_module = NULL;
 #define OMPT_DLCLOSE(Lib) dlclose(Lib)
 #endif
 
@@ -278,7 +287,7 @@ ompt_try_start_tool(unsigned int omp_version, const char *runtime_version) {
 
   // Try tool-libraries-var ICV
   OMPT_VERBOSE_INIT_CONTINUED_PRINT("Failed.\n");
-  const char *tool_libs = getenv("OMP_TOOL_LIBRARIES");
+  const char *tool_libs = OMPT_GETENV("OMP_TOOL_LIBRARIES");
   if (tool_libs) {
     OMPT_VERBOSE_INIT_PRINT("Searching tool libraries...\n");
     OMPT_VERBOSE_INIT_PRINT("OMP_TOOL_LIBRARIES = %s\n", tool_libs);
@@ -374,6 +383,7 @@ ompt_try_start_tool(unsigned int omp_version, const char *runtime_version) {
               "Tool was started and is using the OMPT interface.\n");
           OMPT_VERBOSE_INIT_PRINT(
               "----- END LOGGING OF TOOL REGISTRATION -----\n");
+          ompt_archer_module = h;
           return ret;
         }
         OMPT_VERBOSE_INIT_CONTINUED_PRINT(
@@ -381,6 +391,7 @@ ompt_try_start_tool(unsigned int omp_version, const char *runtime_version) {
       } else {
         OMPT_VERBOSE_INIT_CONTINUED_PRINT("Failed: %s\n", dlerror());
       }
+      OMPT_DLCLOSE(h);
     }
   }
 #endif
@@ -463,7 +474,7 @@ void ompt_pre_init() {
 #endif
 }
 
-extern "C" int omp_get_initial_device(void);
+#define omp_initial_device -1 /* see omp.h.var */
 
 void ompt_post_init() {
   //--------------------------------------------------
@@ -481,7 +492,7 @@ void ompt_post_init() {
   //--------------------------------------------------
   if (ompt_start_tool_result) {
     ompt_enabled.enabled = !!ompt_start_tool_result->initialize(
-        ompt_fn_lookup, omp_get_initial_device(),
+        ompt_fn_lookup, omp_initial_device,
         &(ompt_start_tool_result->tool_data));
 
     if (!ompt_enabled.enabled) {
@@ -493,6 +504,7 @@ void ompt_post_init() {
     kmp_info_t *root_thread = ompt_get_thread();
 
     ompt_set_thread_state(root_thread, ompt_state_overhead);
+    __ompt_task_init(root_thread->th.th_current_task, 0);
 
     if (ompt_enabled.ompt_callback_thread_begin) {
       ompt_callbacks.ompt_callback(ompt_callback_thread_begin)(
@@ -521,6 +533,8 @@ void ompt_fini() {
     }
   }
 
+  if (ompt_archer_module)
+    OMPT_DLCLOSE(ompt_archer_module);
   if (ompt_tool_module)
     OMPT_DLCLOSE(ompt_tool_module);
   memset(&ompt_enabled, 0, sizeof(ompt_enabled));
@@ -702,7 +716,7 @@ OMPT_API_ROUTINE int ompt_get_place_proc_ids(int place_num, int ids_size,
   return 0;
 #else
   int i, count;
-  int tmp_ids[ids_size];
+  SimpleVLA<int> tmp_ids(ids_size);
   for (int j = 0; j < ids_size; j++)
     tmp_ids[j] = 0;
   if (!KMP_AFFINITY_CAPABLE())
@@ -856,8 +870,10 @@ OMPT_API_ROUTINE int ompt_get_target_info(uint64_t *device_num,
   return 0; // thread is not in a target region
 }
 
+extern "C" int omp_get_num_devices(void);
+
 OMPT_API_ROUTINE int ompt_get_num_devices(void) {
-  return 1; // only one device (the current device) is available
+  return omp_get_num_devices();
 }
 
 /*****************************************************************************
@@ -921,7 +937,8 @@ _OMP_EXTERN void ompt_libomp_connect(ompt_start_tool_result_t *result) {
     // functions can be extracted and assigned to the callbacks in
     // libomptarget
     result->initialize(ompt_libomp_target_fn_lookup,
-                       /* initial_device_num */ 0, /* tool_data */ nullptr);
+                       /* initial_device_num */ omp_initial_device,
+                       /* tool_data */ nullptr);
     // Track the object provided by libomptarget so that the finalizer can be
     // called during OMPT finalization
     libomptarget_ompt_result = result;

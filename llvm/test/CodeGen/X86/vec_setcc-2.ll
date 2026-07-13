@@ -13,7 +13,7 @@ define void @loop_no_const_reload(ptr  %in, ptr %out, i32 %n) {
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [25,25,25,25,25,25,25,25]
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    .p2align 4, 0x90
+; SSE2-NEXT:    .p2align 4
 ; SSE2-NEXT:  LBB0_2: ## %for.body
 ; SSE2-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    movdqa (%rdi,%rax), %xmm2
@@ -33,7 +33,7 @@ define void @loop_no_const_reload(ptr  %in, ptr %out, i32 %n) {
 ; SSE41-NEXT:  ## %bb.1: ## %for.body.preheader
 ; SSE41-NEXT:    xorl %eax, %eax
 ; SSE41-NEXT:    pmovsxbw {{.*#+}} xmm0 = [25,25,25,25,25,25,25,25]
-; SSE41-NEXT:    .p2align 4, 0x90
+; SSE41-NEXT:    .p2align 4
 ; SSE41-NEXT:  LBB0_2: ## %for.body
 ; SSE41-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; SSE41-NEXT:    movdqa (%rdi,%rax), %xmm1
@@ -80,7 +80,7 @@ define void @loop_const_folding_underflow(ptr  %in, ptr %out, i32 %n) {
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [32768,32768,32768,32768,32768,32768,32768,32768]
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [32768,32794,32794,32794,32794,32794,32794,32794]
-; SSE2-NEXT:    .p2align 4, 0x90
+; SSE2-NEXT:    .p2align 4
 ; SSE2-NEXT:  LBB1_2: ## %for.body
 ; SSE2-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    movdqa (%rdi,%rax), %xmm2
@@ -102,7 +102,7 @@ define void @loop_const_folding_underflow(ptr  %in, ptr %out, i32 %n) {
 ; SSE41-NEXT:    xorl %eax, %eax
 ; SSE41-NEXT:    pmovsxbw {{.*#+}} xmm0 = [0,26,26,26,26,26,26,26]
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    .p2align 4, 0x90
+; SSE41-NEXT:    .p2align 4
 ; SSE41-NEXT:  LBB1_2: ## %for.body
 ; SSE41-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; SSE41-NEXT:    movdqa (%rdi,%rax), %xmm2

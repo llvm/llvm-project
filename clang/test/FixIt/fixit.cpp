@@ -211,7 +211,7 @@ public:
 template<class T> struct Mystery;
 template<class T> typedef Mystery<T>::type getMysteriousThing() { // \
   expected-error {{function definition declared 'typedef'}} \
-  expected-warning {{implicit 'typename' is a C++20 extension}}
+  expected-warning {{missing 'typename' prior to dependent type name 'Mystery<T>::type' is a C++20 extension}}
   return Mystery<T>::get();
 }
 

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -pedantic -fsyntax-only %s -verify -fblocks
+// RUN: %clang_cc1 -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -pedantic -fsyntax-only %s -verify -fblocks -fexperimental-new-constant-interpreter
 
 extern int printf(const char *, ...);
 
@@ -125,7 +126,7 @@ void foo7(void)
   int (^JJ) (void)  = ^{ return j; }; // OK
   int (^KK) (void)  = ^{ return j+1; }; // OK
 
-  __block const int k;
+  __block const int k = 0;
   const int cint = 100;
 
   int (^MM) (void)  = ^{ return k; };

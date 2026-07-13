@@ -11,6 +11,7 @@
 #define _LIBCPP___FUNCTIONAL_PERFECT_FORWARD_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_constructible.h>
@@ -27,9 +28,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Op, class _Indices, class... _BoundArgs>
 struct __perfect_forward_impl;
@@ -93,11 +94,11 @@ public:
 
 // __perfect_forward implements a perfect-forwarding call wrapper as explained in [func.require].
 template <class _Op, class... _Args>
-using __perfect_forward = __perfect_forward_impl<_Op, index_sequence_for<_Args...>, _Args...>;
-
-#endif // _LIBCPP_STD_VER >= 17
+using __perfect_forward _LIBCPP_NODEBUG = __perfect_forward_impl<_Op, index_sequence_for<_Args...>, _Args...>;
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
 

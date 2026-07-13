@@ -134,6 +134,7 @@ static void MaybeDieIfNoTaggingAbi(const char *message) {
 #  define PR_SET_TAGGED_ADDR_CTRL 55
 #  define PR_GET_TAGGED_ADDR_CTRL 56
 #  define PR_TAGGED_ADDR_ENABLE (1UL << 0)
+#  define PR_PMLEN_SHIFT 24
 #  define ARCH_GET_UNTAG_MASK 0x4001
 #  define ARCH_ENABLE_TAGGED_ADDR 0x4002
 #  define ARCH_GET_MAX_TAG_BITS 0x4003
@@ -182,7 +183,7 @@ static bool EnableTaggingAbi() {
   if (mask & kAddressTagMask)
     return false;
   return true;
-#  else
+#  elif defined(__aarch64__)
   // Enable ARM TBI tagging for the process. If for some reason tagging is not
   // supported, prctl(PR_SET_TAGGED_ADDR_CTRL, PR_TAGGED_ADDR_ENABLE) returns
   // -EINVAL.
@@ -194,7 +195,18 @@ static bool EnableTaggingAbi() {
       PR_TAGGED_ADDR_ENABLE)
     return false;
   return true;
-#  endif // __x86_64__
+#  elif SANITIZER_RISCV64
+  // Enable RISC-V address tagging via pointer masking.
+  uptr req = kTagBits << PR_PMLEN_SHIFT | PR_TAGGED_ADDR_ENABLE;
+  if (internal_iserror(internal_prctl(PR_SET_TAGGED_ADDR_CTRL, req, 0, 0, 0)))
+    return false;
+  uptr rsp = internal_prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0);
+  if (internal_iserror(rsp))
+    return false;
+  return rsp & PR_TAGGED_ADDR_ENABLE;
+#  else
+#    error Architecture not supported
+#  endif  // __x86_64__
 }
 
 void InitializeOsSupport() {
@@ -499,12 +511,8 @@ void HwasanOnDeadlySignal(int signo, void *info, void *context) {
 }
 
 void Thread::InitStackAndTls(const InitState *) {
-  uptr tls_size;
-  uptr stack_size;
-  GetThreadStackAndTls(IsMainThread(), &stack_bottom_, &stack_size, &tls_begin_,
-                       &tls_size);
-  stack_top_ = stack_bottom_ + stack_size;
-  tls_end_ = tls_begin_ + tls_size;
+  GetThreadStackAndTls(IsMainThread(), &stack_bottom_, &stack_top_, &tls_begin_,
+                       &tls_end_);
 }
 
 uptr TagMemoryAligned(uptr p, uptr size, tag_t tag) {
@@ -532,6 +540,7 @@ uptr TagMemoryAligned(uptr p, uptr size, tag_t tag) {
 }
 
 static void BeforeFork() {
+  VReport(2, "BeforeFork tid: %llu\n", GetTid());
   if (CAN_SANITIZE_LEAKS) {
     __lsan::LockGlobal();
   }
@@ -551,6 +560,7 @@ static void AfterFork(bool fork_child) {
   if (CAN_SANITIZE_LEAKS) {
     __lsan::UnlockGlobal();
   }
+  VReport(2, "AfterFork tid: %llu\n", GetTid());
 }
 
 void HwasanInstallAtForkHandler() {

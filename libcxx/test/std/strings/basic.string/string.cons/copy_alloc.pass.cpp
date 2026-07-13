@@ -65,16 +65,6 @@ template <typename T, typename U>
 bool operator!=(const poca_alloc<T>& lhs, const poca_alloc<U>& rhs) {
   return lhs.imp != rhs.imp;
 }
-
-template <class S>
-TEST_CONSTEXPR_CXX20 void test_assign(S& s1, const S& s2) {
-  try {
-    s1 = s2;
-  } catch (std::bad_alloc&) {
-    return;
-  }
-  assert(false);
-}
 #endif
 
 template <class S>
@@ -122,7 +112,11 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(s2 == p2);
 
     imp2.deactivate();
-    test_assign(s1, s2);
+    try {
+      s1 = s2;
+      assert(false);
+    } catch (std::bad_alloc&) {
+    }
     assert(s1 == p1);
     assert(s2 == p2);
   }

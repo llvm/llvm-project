@@ -83,15 +83,15 @@ __try.cont:                                       ; preds = %__except, %invoke.c
 ; CHECK-NEXT: .long (.Llsda_end0-.Llsda_begin0)/16
 ; CHECK-NEXT: .Llsda_begin0:
 ; CHECK-NEXT: .long .Ltmp0@IMGREL
-; CHECK-NEXT: .long .Ltmp1@IMGREL+1
+; CHECK-NEXT: .long .Ltmp1@IMGREL
 ; CHECK-NEXT: .long "?dtor$2@?0?use_both@4HA"@IMGREL
 ; CHECK-NEXT: .long 0
 ; CHECK-NEXT: .long .Ltmp0@IMGREL
-; CHECK-NEXT: .long .Ltmp1@IMGREL+1
+; CHECK-NEXT: .long .Ltmp1@IMGREL
 ; CHECK-NEXT: .long "?filt$0@0@use_both@@"@IMGREL
 ; CHECK-NEXT: .long .LBB0_{{[0-9]+}}@IMGREL
 ; CHECK-NEXT: .long .Ltmp4@IMGREL
-; CHECK-NEXT: .long .Ltmp5@IMGREL+1
+; CHECK-NEXT: .long .Ltmp5@IMGREL
 ; CHECK-NEXT: .long "?filt$0@0@use_both@@"@IMGREL
 ; CHECK-NEXT: .long .LBB0_{{[0-9]+}}@IMGREL
 ; CHECK-NEXT: .Llsda_end0:
@@ -136,10 +136,10 @@ declare ptr @llvm.localaddress() #4
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.eh.typeid.for(ptr) #4
 
-attributes #0 = { noinline nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { noinline nounwind "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { noinline nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "use-soft-float"="false" }
+attributes #1 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "use-soft-float"="false" }
+attributes #2 = { noinline nounwind "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "use-soft-float"="false" }
+attributes #3 = { "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "use-soft-float"="false" }
 attributes #4 = { nounwind readnone }
 attributes #5 = { noinline }
 attributes #6 = { nounwind }

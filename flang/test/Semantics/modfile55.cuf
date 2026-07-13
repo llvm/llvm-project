@@ -5,6 +5,9 @@ module m
   real, managed, allocatable :: md
   real, pinned, allocatable :: mp
   attributes(constant) cd
+  type dt
+    real, device, pointer :: dp
+  end type
  contains
   attributes(global) subroutine globsub(x,y,z)
     real, value :: x
@@ -14,28 +17,32 @@ module m
   attributes(host,device) real function foo(x)
     foo = x + 1.
   end function
+  attributes(host) subroutine hostsub(a)
+    integer, intent(out) :: a(14)
+    a = 99
+  end subroutine
 end
 
 !Expect: m.mod
 !module m
-!real(4)::dd
-!attributes(device) dd
-!real(4),allocatable::md
-!attributes(managed) md
-!real(4),allocatable::mp
-!attributes(pinned) mp
-!real(4)::cd
-!attributes(constant) cd
+!real(4),device::dd
+!real(4),allocatable,managed::md
+!real(4),allocatable,pinned::mp
+!real(4),constant::cd
+!type::dt
+!real(4),pointer,device::dp
+!end type
 !contains
 !attributes(global) subroutine globsub(x,y,z)
 !real(4),value::x
-!real(4)::y
-!attributes(device) y
-!real(4)::z
-!attributes(managed) z
+!real(4),device::y
+!real(4),managed::z
 !end
 !attributes(host,device) function foo(x)
 !real(4)::x
 !real(4)::foo
+!end
+!attributes(host)subroutinehostsub(a)
+!integer(4),intent(out)::a(1_8:14_8)
 !end
 !end

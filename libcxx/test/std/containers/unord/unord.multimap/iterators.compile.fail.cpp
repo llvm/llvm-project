@@ -25,48 +25,45 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    {
-        typedef std::unordered_multimap<int, std::string> C;
-        typedef std::pair<int, std::string> P;
-        P a[] =
-        {
-            P(1, "one"),
-            P(2, "two"),
-            P(3, "three"),
-            P(4, "four"),
-            P(1, "four"),
-            P(2, "four"),
-        };
-        C c(a, a + sizeof(a)/sizeof(a[0]));
-        LIBCPP_ASSERT(c.bucket_count() == 7);
-        assert(c.size() == 6);
-        assert(std::distance(c.begin(), c.end()) == c.size());
-        assert(std::distance(c.cbegin(), c.cend()) == c.size());
-        C::iterator i = c.begin();
-        i->second = "ONE";
-        assert(i->second == "ONE");
-        i->first = 2;
-    }
-    {
-        typedef std::unordered_multimap<int, std::string> C;
-        typedef std::pair<int, std::string> P;
-        P a[] =
-        {
-            P(1, "one"),
-            P(2, "two"),
-            P(3, "three"),
-            P(4, "four"),
-            P(1, "four"),
-            P(2, "four"),
-        };
-        const C c(a, a + sizeof(a)/sizeof(a[0]));
-        LIBCPP_ASSERT(c.bucket_count() == 7);
-        assert(c.size() == 6);
-        assert(std::distance(c.begin(), c.end()) == c.size());
-        assert(std::distance(c.cbegin(), c.cend()) == c.size());
-    }
+int main(int, char**) {
+  {
+    typedef std::unordered_multimap<int, std::string> C;
+    typedef std::pair<int, std::string> P;
+    P a[] = {
+        P(1, "one"),
+        P(2, "two"),
+        P(3, "three"),
+        P(4, "four"),
+        P(1, "four"),
+        P(2, "four"),
+    };
+    C c(a, a + sizeof(a) / sizeof(a[0]));
+    LIBCPP_ASSERT(c.bucket_count() == 7);
+    assert(c.size() == 6);
+    assert(std::distance(c.begin(), c.end()) == c.size());
+    assert(std::distance(c.cbegin(), c.cend()) == c.size());
+    C::iterator i = c.begin();
+    i->second     = "ONE";
+    assert(i->second == "ONE");
+    i->first = 2;
+  }
+  {
+    typedef std::unordered_multimap<int, std::string> C;
+    typedef std::pair<int, std::string> P;
+    P a[] = {
+        P(1, "one"),
+        P(2, "two"),
+        P(3, "three"),
+        P(4, "four"),
+        P(1, "four"),
+        P(2, "four"),
+    };
+    const C c(a, a + sizeof(a) / sizeof(a[0]));
+    LIBCPP_ASSERT(c.bucket_count() == 7);
+    assert(c.size() == 6);
+    assert(std::distance(c.begin(), c.end()) == c.size());
+    assert(std::distance(c.cbegin(), c.cend()) == c.size());
+  }
 
   return 0;
 }

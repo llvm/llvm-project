@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include <deque>
 #include <map>
 #include <vector>
 
@@ -25,7 +26,6 @@ namespace llvm {
 class MCAssembler;
 class MCCVDefRangeFragment;
 class MCCVInlineLineTableFragment;
-class MCDataFragment;
 class MCFragment;
 class MCSection;
 class MCSymbol;
@@ -144,83 +144,85 @@ struct MCCVFunctionInfo {
 class CodeViewContext {
 public:
   CodeViewContext(MCContext *MCCtx) : MCCtx(MCCtx) {}
-  ~CodeViewContext();
 
   CodeViewContext &operator=(const CodeViewContext &other) = delete;
   CodeViewContext(const CodeViewContext &other) = delete;
 
-  bool isValidFileNumber(unsigned FileNumber) const;
-  bool addFile(MCStreamer &OS, unsigned FileNumber, StringRef Filename,
-               ArrayRef<uint8_t> ChecksumBytes, uint8_t ChecksumKind);
+  LLVM_ABI void finish();
+
+  LLVM_ABI bool isValidFileNumber(unsigned FileNumber) const;
+  LLVM_ABI bool addFile(MCStreamer &OS, unsigned FileNumber, StringRef Filename,
+                        ArrayRef<uint8_t> ChecksumBytes, uint8_t ChecksumKind);
 
   /// Records the function id of a normal function. Returns false if the
   /// function id has already been used, and true otherwise.
-  bool recordFunctionId(unsigned FuncId);
+  LLVM_ABI bool recordFunctionId(unsigned FuncId);
 
   /// Records the function id of an inlined call site. Records the "inlined at"
   /// location info of the call site, including what function or inlined call
   /// site it was inlined into. Returns false if the function id has already
   /// been used, and true otherwise.
-  bool recordInlinedCallSiteId(unsigned FuncId, unsigned IAFunc,
-                               unsigned IAFile, unsigned IALine,
-                               unsigned IACol);
+  LLVM_ABI bool recordInlinedCallSiteId(unsigned FuncId, unsigned IAFunc,
+                                        unsigned IAFile, unsigned IALine,
+                                        unsigned IACol);
 
   /// Retreive the function info if this is a valid function id, or nullptr.
-  MCCVFunctionInfo *getCVFunctionInfo(unsigned FuncId);
+  LLVM_ABI MCCVFunctionInfo *getCVFunctionInfo(unsigned FuncId);
 
   /// Saves the information from the currently parsed .cv_loc directive
   /// and sets CVLocSeen.  When the next instruction is assembled an entry
   /// in the line number table with this information and the address of the
   /// instruction will be created.
-  void recordCVLoc(MCContext &Ctx, const MCSymbol *Label, unsigned FunctionId,
-                   unsigned FileNo, unsigned Line, unsigned Column,
-                   bool PrologueEnd, bool IsStmt);
+  LLVM_ABI void recordCVLoc(MCContext &Ctx, const MCSymbol *Label,
+                            unsigned FunctionId, unsigned FileNo, unsigned Line,
+                            unsigned Column, bool PrologueEnd, bool IsStmt);
 
   /// Add a line entry.
-  void addLineEntry(const MCCVLoc &LineEntry);
+  LLVM_ABI void addLineEntry(const MCCVLoc &LineEntry);
 
-  std::vector<MCCVLoc> getFunctionLineEntries(unsigned FuncId);
+  LLVM_ABI std::vector<MCCVLoc> getFunctionLineEntries(unsigned FuncId);
 
-  std::pair<size_t, size_t> getLineExtent(unsigned FuncId);
-  std::pair<size_t, size_t> getLineExtentIncludingInlinees(unsigned FuncId);
+  LLVM_ABI std::pair<size_t, size_t> getLineExtent(unsigned FuncId);
+  LLVM_ABI std::pair<size_t, size_t>
+  getLineExtentIncludingInlinees(unsigned FuncId);
 
-  ArrayRef<MCCVLoc> getLinesForExtent(size_t L, size_t R);
+  LLVM_ABI ArrayRef<MCCVLoc> getLinesForExtent(size_t L, size_t R);
 
   /// Emits a line table substream.
-  void emitLineTableForFunction(MCObjectStreamer &OS, unsigned FuncId,
-                                const MCSymbol *FuncBegin,
-                                const MCSymbol *FuncEnd);
+  LLVM_ABI void emitLineTableForFunction(MCObjectStreamer &OS, unsigned FuncId,
+                                         const MCSymbol *FuncBegin,
+                                         const MCSymbol *FuncEnd);
 
-  void emitInlineLineTableForFunction(MCObjectStreamer &OS,
-                                      unsigned PrimaryFunctionId,
-                                      unsigned SourceFileId,
-                                      unsigned SourceLineNum,
-                                      const MCSymbol *FnStartSym,
-                                      const MCSymbol *FnEndSym);
+  LLVM_ABI void emitInlineLineTableForFunction(MCObjectStreamer &OS,
+                                               unsigned PrimaryFunctionId,
+                                               unsigned SourceFileId,
+                                               unsigned SourceLineNum,
+                                               const MCSymbol *FnStartSym,
+                                               const MCSymbol *FnEndSym);
 
   /// Encodes the binary annotations once we have a layout.
-  void encodeInlineLineTable(const MCAssembler &Asm,
-                             MCCVInlineLineTableFragment &F);
+  LLVM_ABI void encodeInlineLineTable(const MCAssembler &Asm,
+                                      MCCVInlineLineTableFragment &F);
 
-  MCFragment *
+  LLVM_ABI void
   emitDefRange(MCObjectStreamer &OS,
                ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
                StringRef FixedSizePortion);
 
-  void encodeDefRange(const MCAssembler &Asm, MCCVDefRangeFragment &F);
+  LLVM_ABI void encodeDefRange(const MCAssembler &Asm, MCCVDefRangeFragment &F);
 
   /// Emits the string table substream.
-  void emitStringTable(MCObjectStreamer &OS);
+  LLVM_ABI void emitStringTable(MCObjectStreamer &OS);
 
   /// Emits the file checksum substream.
-  void emitFileChecksums(MCObjectStreamer &OS);
+  LLVM_ABI void emitFileChecksums(MCObjectStreamer &OS);
 
   /// Emits the offset into the checksum table of the given file number.
-  void emitFileChecksumOffset(MCObjectStreamer &OS, unsigned FileNo);
+  LLVM_ABI void emitFileChecksumOffset(MCObjectStreamer &OS, unsigned FileNo);
 
   /// Add something to the string table.  Returns the final string as well as
   /// offset into the string table.
-  std::pair<StringRef, unsigned> addToStringTable(StringRef S);
+  LLVM_ABI std::pair<StringRef, unsigned> addToStringTable(StringRef S);
 
 private:
   MCContext *MCCtx;
@@ -229,10 +231,8 @@ private:
   StringMap<unsigned> StringTable;
 
   /// The fragment that ultimately holds our strings.
-  MCDataFragment *StrTabFragment = nullptr;
-  bool InsertedStrTabFragment = false;
-
-  MCDataFragment *getStringTableFragment();
+  MCFragment *StrTabFragment = nullptr;
+  SmallVector<char, 0> StrTab = {'\0'};
 
   /// Get a string table offset.
   unsigned getStringTableOffset(StringRef S);
@@ -269,6 +269,10 @@ private:
   /// Indicate whether we have already laid out the checksum table addresses or
   /// not.
   bool ChecksumOffsetsAssigned = false;
+
+  /// Append-only storage of MCCVDefRangeFragment::Ranges.
+  std::deque<SmallVector<std::pair<const MCSymbol *, const MCSymbol *>, 0>>
+      DefRangeStorage;
 };
 
 } // end namespace llvm

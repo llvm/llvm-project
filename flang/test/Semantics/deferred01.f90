@@ -1,6 +1,7 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Werror
 ! Deferred TBPs must be overridden, but when they are private, those
-! overrides must appear in the same module.
+! overrides are required to appear in the same module.  We allow overrides
+! elsewhere as an extension.
 module m1
   type, abstract :: absBase
    contains
@@ -18,7 +19,7 @@ module m2
   use m1
   type, extends(absBase) :: ext
    contains
-    !ERROR: Override of PRIVATE DEFERRED 'deferredtbp' must appear in its module
+    !WARNING: Override of PRIVATE DEFERRED 'deferredtbp' should appear in its module [-Winaccessible-deferred-override]
     procedure :: deferredTbp => implTbp
   end type
  contains

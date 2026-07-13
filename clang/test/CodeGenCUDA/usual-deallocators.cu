@@ -109,7 +109,7 @@ __host__ __device__ void tests_hd(void *t) {
 }
 
 // Make sure that we've generated the kernel used by A::~A.
-// DEVICE-LABEL: define void @_Z1fIiEvT_
+// DEVICE-LABEL: define ptx_kernel void @_Z1fIiEvT_
 
 // Make sure we've picked deallocator for the correct side of compilation.
 
@@ -147,5 +147,3 @@ __host__ __device__ void tests_hd(void *t) {
 // COMMON-LABEL: define  linkonce_odr void @_ZN8H1H2D1D2dlEPv(ptr noundef %0)
 // DEVICE: call void @dev_fn()
 // HOST: call void @host_fn()
-
-// DEVICE: !0 = !{ptr @_Z1fIiEvT_, !"kernel", i32 1}

@@ -1,5 +1,5 @@
-# RUN: llc -march=hexagon -run-pass hexagon-copy-combine -o - %s -disable-const64=0 | FileCheck --check-prefix CHECK64 %s
-# RUN: llc -march=hexagon -run-pass hexagon-copy-combine -o - %s -disable-const64=1 | FileCheck --check-prefix CHECKNO64 %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-copy-combine -o - %s -disable-const64=0 | FileCheck --check-prefix CHECK64 %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-copy-combine -o - %s -disable-const64=1 | FileCheck --check-prefix CHECKNO64 %s
 
 # CHECK64: CONST64
 # CHECKNO64-NOT: CONST64

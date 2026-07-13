@@ -6,7 +6,7 @@
 ; RUN:   -mtriple=powerpc64le-linux-gnu -mcpu=pwr9 < %s | FileCheck \
 ; RUN:   -check-prefix=CHECK-P9-LE %s
 ; RUN: llc -ppc-asm-full-reg-names -verify-machineinstrs \
-; RUN:   -mtriple=powerpc64-linux-gnu < %s | FileCheck \
+; RUN:   -mtriple=powerpc64-linux-gnu -mcpu=ppc < %s | FileCheck \
 ; RUN:   -check-prefix=CHECK-BE %s
 ; RUN: llc -ppc-asm-full-reg-names -verify-machineinstrs \
 ; RUN:   -mtriple=powerpc-linux-gnu < %s | FileCheck \

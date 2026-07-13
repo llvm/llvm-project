@@ -6,11 +6,11 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-SPIRV: %[[#type_int32:]] = OpTypeInt 32 0
-; CHECK-SPIRV: %[[#const1:]] = OpConstant %[[#type_int32]] 1
-; CHECK-SPIRV: OpTypeArray %[[#]] %[[#const1:]]
-; CHECK-SPIRV: %[[#const0:]] = OpConstant %[[#type_int32]] 0
-; CHECK-SPIRV: OpConstantComposite %[[#]] %[[#const0]] %[[#const1]]
+; CHECK-SPIRV-DAG: %[[#type_int32:]] = OpTypeInt 32 0
+; CHECK-SPIRV-DAG: %[[#const1:]] = OpConstant %[[#type_int32]] 1{{$}}
+; CHECK-SPIRV-DAG: OpTypeArray %[[#]] %[[#const1:]]
+; CHECK-SPIRV-DAG: %[[#const0:]] = OpConstantNull %[[#type_int32]]
+; CHECK-SPIRV-DAG: OpConstantComposite %[[#]] %[[#const0]] %[[#const1]]
 
 %struct = type { [1 x i64] }
 

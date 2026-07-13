@@ -82,7 +82,8 @@ void named(void) {
 
   char b  = '\N{DOLLAR SIGN}'; // ext-warning {{extension}} cxx23-warning {{C++23}}
   char b_ = '\N{ DOL-LAR _SIGN }'; // expected-error {{' DOL-LAR _SIGN ' is not a valid Unicode character name}} \
-                               // expected-note {{characters names in Unicode escape sequences are sensitive to case and whitespaces}}
+                               // expected-note {{character names in Unicode escape sequences are sensitive to case and whitespaces}} \
+                               // expected-note {{character '_' cannot appear in a Unicode character name}}
 
   char c = '\N{NOTATHING}'; // expected-error {{'NOTATHING' is not a valid Unicode character name}} \
                             // expected-note 5{{did you mean}}
@@ -100,9 +101,12 @@ void named(void) {
   unsigned k = u'\N{LOTUS';                       // expected-error {{incomplete universal character name}}
 
   const char* emoji = "\N{🤡}"; // expected-error {{'🤡' is not a valid Unicode character name}} \
-                                // expected-note 5{{did you mean}}
+                                // expected-note {{character '🤡' U+1F921 cannot appear in a Unicode character name}}
   const char* nested = "\N{\N{SPARKLE}}"; // expected-error {{'\N{SPARKLE' is not a valid Unicode character name}} \
-                                          // expected-note 5{{did you mean}}
+                                          // expected-note {{cannot appear in a Unicode character name}}
+  const char* line_feed = "\N{LINE FEE}"; // expected-error {{'LINE FEE' is not a valid Unicode character name}} \
+                                          // expected-note {{did you mean LINE FEED (U+000A)}} \
+                                          // expected-note 4{{did you mean}}
 }
 
 void separators(void) {
@@ -123,3 +127,16 @@ void separators(void) {
 static_assert('\N??<DOLLAR SIGN??>' == '$'); // expected-warning 2{{trigraph converted}} \
                                              // ext-warning {{extension}} cxx23-warning {{C++23}}
 #endif
+
+void GH102218(void) {
+  // The format specifier checking code runs the lexer with diagnostics
+  // disabled. This used to crash Clang for malformed \o and \x because the
+  // lexer missed a null pointer check for the diagnostics engine in that case.
+  extern int printf(const char *, ...);
+  printf("\o{}"); // expected-error {{delimited escape sequence cannot be empty}}
+  printf("\x{}"); // expected-error {{delimited escape sequence cannot be empty}}
+
+  // These cases always worked but are here for completeness.
+  printf("\u{}"); // expected-error {{delimited escape sequence cannot be empty}}
+  printf("\N{}"); // expected-error {{delimited escape sequence cannot be empty}}
+}

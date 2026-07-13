@@ -12,6 +12,17 @@ func.func @mask(%t0: tensor<?xf32>, %val: vector<16xf32>, %idx: index, %m0: vect
   return %0 : tensor<?xf32>
 }
 
+// CHECK-LABEL: func @mask_scalable(
+//  CHECK-SAME:     %[[t0:.*]]: memref<?xf32, strided<[?], offset: ?>>
+func.func @mask_scalable(%t0: tensor<?xf32>, %val: vector<[16]xf32>, %idx: index, %m0: vector<[16]xi1>) -> tensor<?xf32> {
+  // CHECK-NOT: alloc
+  // CHECK-NOT: copy
+  //     CHECK: vector.mask %{{.*}} { vector.transfer_write %{{.*}}, %[[t0]][%{{.*}}] : vector<[16]xf32>, memref<?xf32, strided<[?], offset: ?>> } : vector<[16]xi1>
+  %0 = vector.mask %m0 { vector.transfer_write %val, %t0[%idx] : vector<[16]xf32>, tensor<?xf32> } : vector<[16]xi1> -> tensor<?xf32>
+  //     CHECK: return %[[t0]]
+  return %0 : tensor<?xf32>
+}
+
 // -----
 
 // CHECK-ANALYSIS-LABEL: func @non_reading_xfer_write(

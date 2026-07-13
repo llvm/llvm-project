@@ -236,8 +236,7 @@ public:
 //===----------------------------------------------------------------------===//
 // Helper class template that is used by the IntervalTree to ensure that one
 // does instantiate using only fundamental and/or pointer types.
-template <typename T>
-using PointTypeIsValid = std::bool_constant<std::is_fundamental<T>::value>;
+template <typename T> using PointTypeIsValid = std::is_fundamental<T>;
 
 template <typename T>
 using ValueTypeIsValid = std::bool_constant<std::is_fundamental<T>::value ||

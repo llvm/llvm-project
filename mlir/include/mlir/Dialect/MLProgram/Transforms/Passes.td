@@ -11,7 +11,8 @@
 
 include "mlir/Pass/PassBase.td"
 
-def MLProgramPipelineGlobals : Pass<"mlprogram-pipeline-globals", "ModuleOp"> {
+def MLProgramPipelineGlobalsPass
+    : Pass<"mlprogram-pipeline-globals", "ModuleOp"> {
   let summary = "Optimize `ml_program` global operations for read and store";
   let description = [{
     `ml_program`'s load and store operations can be optimized for
@@ -21,7 +22,6 @@ def MLProgramPipelineGlobals : Pass<"mlprogram-pipeline-globals", "ModuleOp"> {
     The pass is designed to handle both nested regions and function calls
     safely.
   }];
-  let constructor = "mlir::ml_program::createMLProgramPipelineGlobalsPass()";
 }
 
 #endif // MLIR_DIALECT_MLPROGRAM_TRANSFORMS_PASSES

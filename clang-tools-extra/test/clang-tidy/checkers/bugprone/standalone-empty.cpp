@@ -176,14 +176,14 @@ bool test_member_empty() {
     std::vector_with_clear<int> v;
     v.empty();
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'empty()'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  v.clear();{{$}}
+    // CHECK-FIXES: v.clear();
   }
 
   {
     std::vector_with_int_empty<int> v;
     v.empty();
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'empty()'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  v.clear();{{$}}
+    // CHECK-FIXES: v.clear();
   }
 
   {
@@ -214,14 +214,14 @@ bool test_member_empty() {
     absl::string_with_clear s;
     s.empty();
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'empty()'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  s.clear();{{$}}
+    // CHECK-FIXES: s.clear();
   }
 
   {
     absl::string_with_int_empty s;
     s.empty();
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'empty()'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  s.clear();{{$}}
+    // CHECK-FIXES: s.clear();
   }
 
   {
@@ -302,11 +302,11 @@ bool test_qualified_empty() {
     absl::string_with_clear v;
     std::empty(v);
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'std::empty'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  v.clear();{{$}}
+    // CHECK-FIXES: v.clear();
 
     absl::empty(v);
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'absl::empty'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  v.clear();{{$}}
+    // CHECK-FIXES: v.clear();
 
     test::empty(v);
     // no-warning
@@ -361,21 +361,21 @@ bool test_unqualified_empty() {
     std::vector_with_void_empty<int> v;
     empty(v);
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'std::empty'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  v.clear();{{$}}
+    // CHECK-FIXES: v.clear();
   }
 
   {
     std::vector_with_clear<int> v;
     empty(v);
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'std::empty'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  v.clear();{{$}}
+    // CHECK-FIXES: v.clear();
   }
 
   {
     std::vector_with_int_empty<int> v;
     empty(v);
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'std::empty'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  v.clear();{{$}}
+    // CHECK-FIXES: v.clear();
   }
 
   {
@@ -400,21 +400,21 @@ bool test_unqualified_empty() {
     absl::string_with_void_empty s;
     empty(s);
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'absl::empty'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  s.clear();{{$}}
+    // CHECK-FIXES: s.clear();
   }
 
   {
     absl::string_with_clear s;
     empty(s);
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'absl::empty'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  s.clear();{{$}}
+    // CHECK-FIXES: s.clear();
   }
 
   {
     absl::string_with_int_empty s;
     empty(s);
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'absl::empty'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  s.clear();{{$}}
+    // CHECK-FIXES: s.clear();
   }
 
   {
@@ -441,7 +441,7 @@ bool test_unqualified_empty() {
     using std::empty;
     empty(v);
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'std::empty'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  v.clear();{{$}}
+    // CHECK-FIXES: v.clear();
   }
 
   {
@@ -456,7 +456,7 @@ bool test_unqualified_empty() {
     using absl::empty;
     empty(s);
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'absl::empty'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  s.clear();{{$}}
+    // CHECK-FIXES: s.clear();
   }
 
   {
@@ -637,14 +637,14 @@ bool test_clear_in_base_class() {
     base::vector<int> v;
     v.empty();
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'empty()'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  v.clear();{{$}}
+    // CHECK-FIXES: v.clear();
   }
 
   {
     base::vector_non_dependent<int> v;
     v.empty();
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'empty()'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  v.clear();{{$}}
+    // CHECK-FIXES: v.clear();
   }
 
   {
@@ -663,14 +663,14 @@ bool test_clear_in_base_class() {
     base::vector<int> v;
     empty(v);
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'base::empty'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  v.clear();{{$}}
+    // CHECK-FIXES: v.clear();
   }
 
   {
     base::vector_non_dependent<int> v;
     empty(v);
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'base::empty'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  v.clear();{{$}}
+    // CHECK-FIXES: v.clear();
   }
 
   {
@@ -775,14 +775,14 @@ bool test_clear_with_qualifiers() {
     qualifiers::vector_with_volatile_clear<int> v;
     v.empty();
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'empty()'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  v.clear();{{$}}
+    // CHECK-FIXES: v.clear();
   }
 
   {
     volatile qualifiers::vector_with_volatile_clear<int> v;
     v.empty();
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'empty()'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  v.clear();{{$}}
+    // CHECK-FIXES: v.clear();
   }
 
   {
@@ -795,14 +795,14 @@ bool test_clear_with_qualifiers() {
     qualifiers::vector_with_volatile_clear<int> v;
     empty(v);
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'qualifiers::empty'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  v.clear();{{$}}
+    // CHECK-FIXES: v.clear();
   }
 
   {
     volatile qualifiers::vector_with_volatile_clear<int> v;
     empty(v);
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'qualifiers::empty'; did you mean 'clear()'? [bugprone-standalone-empty]
-    // CHECK-FIXES: {{^  }}  v.clear();{{$}}
+    // CHECK-FIXES: v.clear();
   }
 
   {

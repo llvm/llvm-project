@@ -14,6 +14,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstddef>
 #include <cstdint>
@@ -107,6 +108,15 @@ public:
     eRISCVSubType_riscv64,
   };
 
+  enum LoongArcheflags {
+    eLoongArch_abi_soft_float = 0x00000000, /// soft float
+    eLoongArch_abi_single_float =
+        0x00000001, /// single precision floating point, +f
+    eLoongArch_abi_double_float =
+        0x00000002, /// double precision floating point, +d
+    eLoongArch_abi_mask = 0x00000003,
+  };
+
   enum LoongArchSubType {
     eLoongArchSubType_unknown,
     eLoongArchSubType_loongarch32,
@@ -123,12 +133,16 @@ public:
     eCore_arm_armv6,
     eCore_arm_armv6m,
     eCore_arm_armv7,
+    eCore_arm_armv7a,
     eCore_arm_armv7l,
     eCore_arm_armv7f,
     eCore_arm_armv7s,
     eCore_arm_armv7k,
     eCore_arm_armv7m,
     eCore_arm_armv7em,
+    eCore_arm_armv8m_base,
+    eCore_arm_armv8m_main,
+    eCore_arm_armv8_1m_main,
     eCore_arm_xscale,
 
     eCore_thumb,
@@ -145,6 +159,7 @@ public:
     eCore_thumbv7em,
     eCore_arm_arm64,
     eCore_arm_armv8,
+    eCore_arm_armv8a,
     eCore_arm_armv8l,
     eCore_arm_arm64e,
     eCore_arm_arm64_32,
@@ -204,6 +219,8 @@ public:
 
     eCore_x86_64_x86_64,
     eCore_x86_64_x86_64h, // Haswell enabled x86_64
+    eCore_x86_64_amd64,
+
     eCore_hexagon_generic,
     eCore_hexagon_hexagonv4,
     eCore_hexagon_hexagonv5,
@@ -222,6 +239,85 @@ public:
     eCore_avr,
 
     eCore_wasm32,
+
+    eCore_amd_gpu_r600_R600,
+    eCore_amd_gpu_r600_R630,
+    eCore_amd_gpu_r600_RS880,
+    eCore_amd_gpu_r600_RV670,
+    eCore_amd_gpu_r600_RV710,
+    eCore_amd_gpu_r600_RV730,
+    eCore_amd_gpu_r600_RV770,
+    eCore_amd_gpu_r600_CEDAR,
+    eCore_amd_gpu_r600_CYPRESS,
+    eCore_amd_gpu_r600_JUNIPER,
+    eCore_amd_gpu_r600_REDWOOD,
+    eCore_amd_gpu_r600_SUMO,
+    eCore_amd_gpu_r600_BARTS,
+    eCore_amd_gpu_r600_CAICOS,
+    eCore_amd_gpu_r600_CAYMAN,
+    eCore_amd_gpu_r600_TURKS,
+    eCore_amd_gpu_gcn_GFX600,
+    eCore_amd_gpu_gcn_GFX601,
+    eCore_amd_gpu_gcn_GFX602,
+    eCore_amd_gpu_gcn_GFX700,
+    eCore_amd_gpu_gcn_GFX701,
+    eCore_amd_gpu_gcn_GFX702,
+    eCore_amd_gpu_gcn_GFX703,
+    eCore_amd_gpu_gcn_GFX704,
+    eCore_amd_gpu_gcn_GFX705,
+    eCore_amd_gpu_gcn_GFX801,
+    eCore_amd_gpu_gcn_GFX802,
+    eCore_amd_gpu_gcn_GFX803,
+    eCore_amd_gpu_gcn_GFX805,
+    eCore_amd_gpu_gcn_GFX810,
+    eCore_amd_gpu_gcn_GFX900,
+    eCore_amd_gpu_gcn_GFX902,
+    eCore_amd_gpu_gcn_GFX904,
+    eCore_amd_gpu_gcn_GFX906,
+    eCore_amd_gpu_gcn_GFX908,
+    eCore_amd_gpu_gcn_GFX909,
+    eCore_amd_gpu_gcn_GFX90A,
+    eCore_amd_gpu_gcn_GFX90C,
+    eCore_amd_gpu_gcn_GFX942,
+    eCore_amd_gpu_gcn_GFX950,
+    eCore_amd_gpu_gcn_GFX1010,
+    eCore_amd_gpu_gcn_GFX1011,
+    eCore_amd_gpu_gcn_GFX1012,
+    eCore_amd_gpu_gcn_GFX1013,
+    eCore_amd_gpu_gcn_GFX1030,
+    eCore_amd_gpu_gcn_GFX1031,
+    eCore_amd_gpu_gcn_GFX1032,
+    eCore_amd_gpu_gcn_GFX1033,
+    eCore_amd_gpu_gcn_GFX1034,
+    eCore_amd_gpu_gcn_GFX1035,
+    eCore_amd_gpu_gcn_GFX1036,
+    eCore_amd_gpu_gcn_GFX1100,
+    eCore_amd_gpu_gcn_GFX1101,
+    eCore_amd_gpu_gcn_GFX1102,
+    eCore_amd_gpu_gcn_GFX1103,
+    eCore_amd_gpu_gcn_GFX1150,
+    eCore_amd_gpu_gcn_GFX1151,
+    eCore_amd_gpu_gcn_GFX1152,
+    eCore_amd_gpu_gcn_GFX1153,
+    eCore_amd_gpu_gcn_GFX1154,
+    eCore_amd_gpu_gcn_GFX1170,
+    eCore_amd_gpu_gcn_GFX1171,
+    eCore_amd_gpu_gcn_GFX1172,
+    eCore_amd_gpu_gcn_GFX1200,
+    eCore_amd_gpu_gcn_GFX1201,
+    eCore_amd_gpu_gcn_GFX1250,
+    eCore_amd_gpu_gcn_GFX1251,
+    eCore_amd_gpu_gcn_GFX1310,
+    eCore_amd_gpu_gcn_GFX9_GENERIC,
+    eCore_amd_gpu_gcn_GFX9_4_GENERIC,
+    eCore_amd_gpu_gcn_GFX10_1_GENERIC,
+    eCore_amd_gpu_gcn_GFX10_3_GENERIC,
+    eCore_amd_gpu_gcn_GFX11_GENERIC,
+    eCore_amd_gpu_gcn_GFX12_GENERIC,
+    eCore_amd_gpu_gcn_GFX12_5_GENERIC,
+    eCore_amd_gpu_gcn_GFX11_7_GENERIC,
+    eCore_amd_gpu_gcn_GFX13_GENERIC,
+    eCore_amd_gpu_unknown,
 
     kNumCores,
 
@@ -269,7 +365,10 @@ public:
     kCore_mips64el_last = eCore_mips64r6el,
 
     kCore_mips_first = eCore_mips32,
-    kCore_mips_last = eCore_mips64r6el
+    kCore_mips_last = eCore_mips64r6el,
+
+    kCore_amd_gpu_first = eCore_amd_gpu_r600_R600,
+    kCore_amd_gpu_last = eCore_amd_gpu_unknown
 
   };
 
@@ -313,6 +412,11 @@ public:
   ///
   ///  \return a boolean value.
   bool IsMIPS() const;
+
+  /// If NVPTX architecture return true.
+  ///
+  ///  \return a boolean value.
+  bool IsNVPTX() const;
 
   /// Returns a string representing current architecture as a target CPU for
   /// tools like compiler, disassembler etc.
@@ -432,17 +536,7 @@ public:
 
   uint32_t GetMachOCPUSubType() const;
 
-  /// Architecture data byte width accessor
-  ///
-  /// \return the size in 8-bit (host) bytes of a minimum addressable unit
-  /// from the Architecture's data bus
-  uint32_t GetDataByteSize() const;
-
-  /// Architecture code byte width accessor
-  ///
-  /// \return the size in 8-bit (host) bytes of a minimum addressable unit
-  /// from the Architecture's code bus
-  uint32_t GetCodeByteSize() const;
+  uint32_t GetElfCPUSubType() const;
 
   /// Architecture triple accessor.
   ///
@@ -524,6 +618,14 @@ public:
 
   void SetFlags(const std::string &elf_abi);
 
+  const llvm::SubtargetFeatures &GetSubtargetFeatures() const {
+    return m_subtarget_features;
+  }
+
+  void SetSubtargetFeatures(llvm::SubtargetFeatures &&subtarget_features) {
+    m_subtarget_features = std::move(subtarget_features);
+  }
+
 protected:
   void UpdateCore();
 
@@ -534,6 +636,8 @@ protected:
   // Additional arch flags which we cannot get from triple and core For MIPS
   // these are application specific extensions like micromips, mips16 etc.
   uint32_t m_flags = 0;
+
+  llvm::SubtargetFeatures m_subtarget_features;
 
   // Called when m_def or m_entry are changed.  Fills in all remaining members
   // with default values.
@@ -551,6 +655,7 @@ protected:
 /// \return true if \a lhs is less than \a rhs
 bool operator<(const ArchSpec &lhs, const ArchSpec &rhs);
 bool operator==(const ArchSpec &lhs, const ArchSpec &rhs);
+bool operator!=(const ArchSpec &lhs, const ArchSpec &rhs);
 
 bool ParseMachCPUDashSubtypeTriple(llvm::StringRef triple_str, ArchSpec &arch);
 

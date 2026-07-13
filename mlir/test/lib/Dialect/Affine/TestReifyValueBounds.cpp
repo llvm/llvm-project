@@ -11,12 +11,14 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/IR/ScalableValueBoundsConstraintSet.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Pass/Pass.h"
 
@@ -24,13 +26,13 @@
 
 using namespace mlir;
 using namespace mlir::affine;
-using mlir::presburger::BoundType;
 
 namespace {
 
 /// This pass applies the permutation on the first maximal perfect nest.
 struct TestReifyValueBounds
-    : public PassWrapper<TestReifyValueBounds, OperationPass<func::FuncOp>> {
+    : public PassWrapper<TestReifyValueBounds,
+                         InterfacePass<FunctionOpInterface>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestReifyValueBounds)
 
   StringRef getArgument() const final { return PASS_NAME; }
@@ -74,7 +76,7 @@ invertComparisonOperator(ValueBoundsConstraintSet::ComparisonOperator cmp) {
 
 /// Look for "test.reify_bound" ops in the input and replace their results with
 /// the reified values.
-static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
+static LogicalResult testReifyValueBounds(FunctionOpInterface funcOp,
                                           bool reifyToFuncArgs,
                                           bool useArithOps) {
   IRRewriter rewriter(funcOp.getContext());
@@ -82,8 +84,31 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
     auto boundType = op.getBoundType();
     Value value = op.getVar();
     std::optional<int64_t> dim = op.getDim();
+    auto shapedType = dyn_cast<ShapedType>(value.getType());
+    if (!shapedType && dim.has_value()) {
+      op->emitOpError("dim specified for non-shaped type");
+      return WalkResult::interrupt();
+    }
+    if (shapedType && !dim.has_value()) {
+      op->emitOpError("dim not specified for shaped type");
+      return WalkResult::interrupt();
+    }
+    if (shapedType && shapedType.hasRank() && dim.has_value()) {
+      if (dim.value() < 0) {
+        op->emitOpError("dim must be non-negative");
+        return WalkResult::interrupt();
+      }
+
+      if (dim.value() >= shapedType.getRank()) {
+        op->emitOpError("invalid dim for shaped type rank");
+        return WalkResult::interrupt();
+      }
+    }
+
     bool constant = op.getConstant();
     bool scalable = op.getScalable();
+    ValueBoundsOptions options;
+    options.allowIntegerType = op.getAllowIntegerType();
 
     // Prepare stop condition. By default, reify in terms of the op's
     // operands. No stop condition is used when a constant was requested.
@@ -110,31 +135,34 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
     FailureOr<OpFoldResult> reified = failure();
     if (constant) {
       auto reifiedConst = ValueBoundsConstraintSet::computeConstantBound(
-          boundType, {value, dim}, /*stopCondition=*/nullptr);
+          boundType, {value, dim}, /*stopCondition=*/nullptr, options);
       if (succeeded(reifiedConst))
         reified = FailureOr<OpFoldResult>(rewriter.getIndexAttr(*reifiedConst));
     } else if (scalable) {
       auto loc = op->getLoc();
+      options.closedUB = true;
       auto reifiedScalable =
           vector::ScalableValueBoundsConstraintSet::computeScalableBound(
-              value, dim, *op.getVscaleMin(), *op.getVscaleMax(), boundType);
+              value, dim, *op.getVscaleMin(), *op.getVscaleMax(), boundType,
+              options);
       if (succeeded(reifiedScalable)) {
         SmallVector<std::pair<Value, std::optional<int64_t>>, 1> vscaleOperand;
         if (reifiedScalable->map.getNumInputs() == 1) {
           // The only possible input to the bound is vscale.
           vscaleOperand.push_back(std::make_pair(
-              rewriter.create<vector::VectorScaleOp>(loc), std::nullopt));
+              vector::VectorScaleOp::create(rewriter, loc), std::nullopt));
         }
         reified = affine::materializeComputedBound(
             rewriter, loc, reifiedScalable->map, vscaleOperand);
       }
     } else {
       if (useArithOps) {
-        reified = arith::reifyValueBound(rewriter, op->getLoc(), boundType,
-                                         op.getVariable(), stopCondition);
+        reified =
+            arith::reifyValueBound(rewriter, op->getLoc(), boundType,
+                                   op.getVariable(), stopCondition, options);
       } else {
         reified = reifyValueBound(rewriter, op->getLoc(), boundType,
-                                  op.getVariable(), stopCondition);
+                                  op.getVariable(), stopCondition, options);
       }
     }
     if (failed(reified)) {
@@ -147,8 +175,10 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
       rewriter.replaceOp(op, val);
       return WalkResult::skip();
     }
-    Value constOp = rewriter.create<arith::ConstantIndexOp>(
-        op->getLoc(), cast<IntegerAttr>(reified->get<Attribute>()).getInt());
+    auto attr = cast<IntegerAttr>(cast<Attribute>(*reified));
+    Value constOp = arith::ConstantOp::create(
+        rewriter, op->getLoc(),
+        rewriter.getIntegerAttr(op.getResult().getType(), attr.getInt()));
     rewriter.replaceOp(op, constOp);
     return WalkResult::skip();
   });
@@ -156,7 +186,7 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
 }
 
 /// Look for "test.compare" ops and emit errors/remarks.
-static LogicalResult testEquality(func::FuncOp funcOp) {
+static LogicalResult testEquality(FunctionOpInterface funcOp) {
   IRRewriter rewriter(funcOp.getContext());
   WalkResult result = funcOp.walk([&](test::CompareOp op) {
     auto cmpType = op.getComparisonOperator();

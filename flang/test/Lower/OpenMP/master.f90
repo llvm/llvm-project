@@ -91,7 +91,7 @@ subroutine omp_master_parallel()
         !CHECK: hlfir.assign %{{.*}} to %{{.*}}#0 : i32, !fir.ref<i32>
         beta = alpha + gama
     end if
-    !CHECK: else
+    !CHECK: }
 
 !CHECK: omp.terminator
 !$omp end master

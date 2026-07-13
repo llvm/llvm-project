@@ -19,7 +19,7 @@ namespace __dsan {
 static Context *ctx;
 
 static u32 CurrentStackTrace(Thread *thr, uptr skip) {
-  BufferedStackTrace stack;
+  UNINITIALIZED BufferedStackTrace stack;
   thr->ignore_interceptors = true;
   stack.Unwind(1000, 0, 0, 0, 0, 0, false);
   thr->ignore_interceptors = false;

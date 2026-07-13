@@ -1,4 +1,4 @@
-//===--- BufferDerefCheck.cpp - clang-tidy---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -83,7 +83,7 @@ void BufferDerefCheck::checkBuffers(ArrayRef<const Type *> BufferTypes,
   for (size_t I = 0; I < BufferTypes.size(); ++I) {
     unsigned IndirectionCount = 0;
     const Type *BufferType = BufferTypes[I];
-    llvm::SmallVector<IndirectionType, 1> Indirections;
+    SmallVector<IndirectionType, 1> Indirections;
 
     // Capture the depth and types of indirections for the passed buffer.
     while (true) {
@@ -112,11 +112,10 @@ void BufferDerefCheck::checkBuffers(ArrayRef<const Type *> BufferTypes,
       for (auto It = Indirections.rbegin(); It != Indirections.rend(); ++It) {
         if (!IndirectionDesc.empty())
           IndirectionDesc += "->";
-        if (*It == IndirectionType::Pointer) {
+        if (*It == IndirectionType::Pointer)
           IndirectionDesc += "pointer";
-        } else {
+        else
           IndirectionDesc += "array";
-        }
       }
 
       const auto Loc = BufferExprs[I]->getSourceRange().getBegin();

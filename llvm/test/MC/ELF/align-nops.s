@@ -4,14 +4,14 @@
     .text
 f0:
     .long 0
-    .align  8, 0x00000090
+    .align  8
     .long 0
     .align  8
 
 // But not in another section
     .data
     .long 0
-    .align  8, 0x00000090
+    .align  8, 0x90
     .long 0
     .align  8
 

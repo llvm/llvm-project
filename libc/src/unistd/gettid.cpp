@@ -8,10 +8,10 @@
 
 #include "src/unistd/gettid.h"
 #include "src/__support/common.h"
-#include "src/__support/threads/tid.h"
+#include "src/__support/threads/identifier.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(pid_t, gettid, (void)) { return gettid_inline(); }
+LLVM_LIBC_FUNCTION(pid_t, gettid, ()) { return internal::gettid(); }
 
 } // namespace LIBC_NAMESPACE_DECL

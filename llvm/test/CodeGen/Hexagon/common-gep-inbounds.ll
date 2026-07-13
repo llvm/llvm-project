@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -debug-only=commgep 2>&1 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -debug-only=commgep 2>&1 < %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; We should generate new GEPs with "inbounds" flag.

@@ -16,6 +16,7 @@
 #include <fibersapi.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 static_assert(sizeof(__libcpp_mutex_t) == sizeof(SRWLOCK), "");
 static_assert(alignof(__libcpp_mutex_t) == alignof(SRWLOCK), "");
@@ -129,7 +130,7 @@ __libcpp_init_once_execute_once_thunk(PINIT_ONCE __init_once, PVOID __parameter,
 
 int __libcpp_execute_once(__libcpp_exec_once_flag* __flag, void (*__init_routine)(void)) {
   if (!InitOnceExecuteOnce(
-          (PINIT_ONCE)__flag, __libcpp_init_once_execute_once_thunk, reinterpret_cast<void*>(__init_routine), NULL))
+          (PINIT_ONCE)__flag, __libcpp_init_once_execute_once_thunk, reinterpret_cast<void*>(__init_routine), nullptr))
     return GetLastError();
   return 0;
 }
@@ -211,4 +212,5 @@ int __libcpp_tls_set(__libcpp_tls_key __key, void* __p) {
   return 0;
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

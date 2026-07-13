@@ -23,11 +23,11 @@ Parts:
       MaximumWaveLaneCount: 4294967295
       ResourceStride:       16
       Resources:
-        - Type:            1
+        - Type:            Sampler
           Space:           2
           LowerBound:      3
           UpperBound:      4
-        - Type:            128
+        - Type:            Invalid
           Space:           32768
           LowerBound:      8388608
           UpperBound:      2147483648
@@ -56,11 +56,11 @@ Parts:
 # CHECK-NEXT: MaximumWaveLaneCount: 4294967295
 # CHECK-NEXT: ResourceStride: 16
 # CHECK-NEXT: Resources:
-# CHECK-NEXT: - Type:            1
+# CHECK-NEXT: - Type:            Sampler
 # CHECK-NEXT: Space:           2
 # CHECK-NEXT: LowerBound:      3
 # CHECK-NEXT: UpperBound:      4
-# CHECK-NEXT: - Type:            128
+# CHECK-NEXT: - Type:            Invalid
 # CHECK-NEXT: Space:           32768
 # CHECK-NEXT: LowerBound:      8388608
 # CHECK-NEXT: UpperBound:      2147483648

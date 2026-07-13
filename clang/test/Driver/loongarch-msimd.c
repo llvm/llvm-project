@@ -75,9 +75,9 @@
 // RUN:   FileCheck %s --check-prefixes=LSX,LASX
 
 // RUN: %clang --target=loongarch64 -mlasx -mno-lasx -msimd=lasx -fsyntax-only %s -### 2>&1 | \
-// RUN:   FileCheck %s --check-prefixes=NOLSX,NOLASX
+// RUN:   FileCheck %s --check-prefixes=LSX,NOLASX
 // RUN: %clang --target=loongarch64 -mno-lasx -msimd=lasx -fsyntax-only %s -### 2>&1 | \
-// RUN:   FileCheck %s --check-prefixes=NOLSX,NOLASX
+// RUN:   FileCheck %s --check-prefixes=LSX,NOLASX
 
 // RUN: %clang --target=loongarch64 -mlasx -mno-lasx -mlsx -msimd=lasx -fsyntax-only %s -### 2>&1 | \
 // RUN:   FileCheck %s --check-prefixes=LSX,NOLASX

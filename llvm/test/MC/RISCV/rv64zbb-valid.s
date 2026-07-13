@@ -1,5 +1,5 @@
 # With Bitmanip base extension:
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+zbb -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+zbb -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+zbb < %s \
 # RUN:     | llvm-objdump --mattr=+zbb -M no-aliases --no-print-imm-hex -d -r - \

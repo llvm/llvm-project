@@ -70,6 +70,86 @@ define <2 x i64> @freeze_zext_vec(<2 x i16> %a0) nounwind {
   ret <2 x i64> %z
 }
 
+define i32 @freeze_abs(i32 %a0) nounwind {
+; X86-LABEL: freeze_abs:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    cmovsl %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_abs:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    cmovsl %edi, %eax
+; X64-NEXT:    retq
+  %x = call i32 @llvm.abs.i32(i32 %a0, i1 0)
+  %f = freeze i32 %x
+  %r = call i32 @llvm.abs.i32(i32 %f, i1 0)
+  ret i32 %r
+}
+
+define <4 x i32> @freeze_abs_vec(<4 x i32> %a0) nounwind {
+; X86-LABEL: freeze_abs_vec:
+; X86:       # %bb.0:
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrad $31, %xmm1
+; X86-NEXT:    pxor %xmm1, %xmm0
+; X86-NEXT:    psubd %xmm1, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_abs_vec:
+; X64:       # %bb.0:
+; X64-NEXT:    pabsd %xmm0, %xmm0
+; X64-NEXT:    retq
+  %x = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a0, i1 0)
+  %f = freeze <4 x i32> %x
+  %r = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %f, i1 0)
+  ret <4 x i32> %r
+}
+
+define i32 @freeze_abs_poison(i32 %a0) nounwind {
+; X86-LABEL: freeze_abs_poison:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    cmovsl %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_abs_poison:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    cmovsl %edi, %eax
+; X64-NEXT:    retq
+  %x = call i32 @llvm.abs.i32(i32 %a0, i1 -1)
+  %f = freeze i32 %x
+  %r = call i32 @llvm.abs.i32(i32 %f, i1 -1)
+  ret i32 %r
+}
+
+define <4 x i32> @freeze_abs_poison_vec(<4 x i32> %a0) nounwind {
+; X86-LABEL: freeze_abs_poison_vec:
+; X86:       # %bb.0:
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrad $31, %xmm1
+; X86-NEXT:    pxor %xmm1, %xmm0
+; X86-NEXT:    psubd %xmm1, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_abs_poison_vec:
+; X64:       # %bb.0:
+; X64-NEXT:    pabsd %xmm0, %xmm0
+; X64-NEXT:    retq
+  %x = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a0, i1 -1)
+  %f = freeze <4 x i32> %x
+  %r = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %f, i1 -1)
+  ret <4 x i32> %r
+}
+
 define i32 @freeze_bswap(i32 %a0) nounwind {
 ; X86-LABEL: freeze_bswap:
 ; X86:       # %bb.0:
@@ -125,6 +205,139 @@ define <4 x i32> @freeze_bitreverse_vec(<4 x i32> %a0) nounwind {
   ret <4 x i32> %z
 }
 declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>)
+
+define i32 @freeze_ctlz(i32 %a0) nounwind {
+; X86-LABEL: freeze_ctlz:
+; X86:       # %bb.0:
+; X86-NEXT:    bsrl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl $63, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    xorl $31, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_ctlz:
+; X64:       # %bb.0:
+; X64-NEXT:    movl $63, %eax
+; X64-NEXT:    bsrl %edi, %eax
+; X64-NEXT:    xorl $31, %eax
+; X64-NEXT:    retq
+  %x = call i32 @llvm.ctlz.i32(i32 %a0, i1 0)
+  %f = freeze i32 %x
+  %c = icmp eq i32 %a0, 0
+  %r = select i1 %c, i32 32, i32 %f
+  ret i32 %r
+}
+
+define i32 @freeze_ctlz_poison(i32 %a0) nounwind {
+; X86-LABEL: freeze_ctlz_poison:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    bsrl %eax, %ecx
+; X86-NEXT:    xorl $31, %ecx
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_ctlz_poison:
+; X64:       # %bb.0:
+; X64-NEXT:    bsrl %edi, %ecx
+; X64-NEXT:    xorl $31, %ecx
+; X64-NEXT:    testl %edi, %edi
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    cmovnel %ecx, %eax
+; X64-NEXT:    retq
+  %x = call i32 @llvm.ctlz.i32(i32 %a0, i1 -1)
+  %f = freeze i32 %x
+  %c = icmp eq i32 %a0, 0
+  %r = select i1 %c, i32 32, i32 %f
+  ret i32 %r
+}
+
+define i32 @freeze_ctlz_poison_nonzero(i32 %a0) nounwind {
+; X86-LABEL: freeze_ctlz_poison_nonzero:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl $1, %eax
+; X86-NEXT:    bsrl %eax, %eax
+; X86-NEXT:    xorl $31, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_ctlz_poison_nonzero:
+; X64:       # %bb.0:
+; X64-NEXT:    orl $1, %edi
+; X64-NEXT:    bsrl %edi, %eax
+; X64-NEXT:    xorl $31, %eax
+; X64-NEXT:    retq
+  %y = or i32 %a0, 1
+  %x = call i32 @llvm.ctlz.i32(i32 %y, i1 -1)
+  %f = freeze i32 %x
+  %c = icmp eq i32 %y, 0
+  %r = select i1 %c, i32 32, i32 %f
+  ret i32 %r
+}
+
+define i32 @freeze_cttz(i32 %a0) nounwind {
+; X86-LABEL: freeze_cttz:
+; X86:       # %bb.0:
+; X86-NEXT:    bsfl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_cttz:
+; X64:       # %bb.0:
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    rep bsfl %edi, %eax
+; X64-NEXT:    retq
+  %x = call i32 @llvm.cttz.i32(i32 %a0, i1 0)
+  %f = freeze i32 %x
+  %c = icmp eq i32 %a0, 0
+  %r = select i1 %c, i32 32, i32 %f
+  ret i32 %r
+}
+
+define i32 @freeze_cttz_poison(i32 %a0) nounwind {
+; X86-LABEL: freeze_cttz_poison:
+; X86:       # %bb.0:
+; X86-NEXT:    bsfl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_cttz_poison:
+; X64:       # %bb.0:
+; X64-NEXT:    bsfl %edi, %ecx
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    cmovnel %ecx, %eax
+; X64-NEXT:    retq
+  %x = call i32 @llvm.cttz.i32(i32 %a0, i1 -1)
+  %f = freeze i32 %x
+  %c = icmp eq i32 %a0, 0
+  %r = select i1 %c, i32 32, i32 %f
+  ret i32 %r
+}
+
+define i32 @freeze_cttz_poison_nonzero(i32 %a0) nounwind {
+; X86-LABEL: freeze_cttz_poison_nonzero:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl $1, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_cttz_poison_nonzero:
+; X64:       # %bb.0:
+; X64-NEXT:    orl $1, %edi
+; X64-NEXT:    rep bsfl %edi, %eax
+; X64-NEXT:    retq
+  %y = or i32 %a0, 1
+  %x = call i32 @llvm.cttz.i32(i32 %y, i1 -1)
+  %f = freeze i32 %x
+  %c = icmp eq i32 %y, 0
+  %r = select i1 %c, i32 32, i32 %f
+  ret i32 %r
+}
 
 ; split parity pattern
 define i8 @freeze_ctpop(i8 %a0) nounwind {
@@ -246,4 +459,149 @@ define <16 x i8> @freeze_parity_vec(<16 x i8> %a0) nounwind {
   %z = freeze <16 x i8> %y
   %w = and <16 x i8> %z, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   ret <16 x i8> %z
+}
+
+define float @ftrunc_freeze_fnearbyint(float %a0) nounwind {
+; X86-LABEL: ftrunc_freeze_fnearbyint:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll nearbyintf
+; X86-NEXT:    popl %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: ftrunc_freeze_fnearbyint:
+; X64:       # %bb.0:
+; X64-NEXT:    roundss $12, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %f0 = call float @llvm.nearbyint.f32(float %a0)
+  %fr = freeze float %f0
+  %ft = call float @llvm.trunc.f32(float %fr)
+  ret float %ft
+}
+
+define float @ftrunc_freeze_fround(float %a0) nounwind {
+; X86-LABEL: ftrunc_freeze_fround:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll roundf
+; X86-NEXT:    popl %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: ftrunc_freeze_fround:
+; X64:       # %bb.0:
+; X64-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-NEXT:    andps %xmm0, %xmm1
+; X64-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    addss %xmm0, %xmm1
+; X64-NEXT:    xorps %xmm0, %xmm0
+; X64-NEXT:    roundss $11, %xmm1, %xmm0
+; X64-NEXT:    retq
+  %f0 = call float @llvm.round.f32(float %a0)
+  %fr = freeze float %f0
+  %ft = call float @llvm.trunc.f32(float %fr)
+  ret float %ft
+}
+
+define float @ftrunc_freeze_froundeven(float %a0) nounwind {
+; X86-LABEL: ftrunc_freeze_froundeven:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll roundevenf
+; X86-NEXT:    popl %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: ftrunc_freeze_froundeven:
+; X64:       # %bb.0:
+; X64-NEXT:    roundss $8, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %f0 = call float @llvm.roundeven.f32(float %a0)
+  %fr = freeze float %f0
+  %ft = call float @llvm.trunc.f32(float %fr)
+  ret float %ft
+}
+
+define float @ftrunc_freeze_frint(float %a0) nounwind {
+; X86-LABEL: ftrunc_freeze_frint:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll rintf
+; X86-NEXT:    popl %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: ftrunc_freeze_frint:
+; X64:       # %bb.0:
+; X64-NEXT:    roundss $4, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %f0 = call float @llvm.rint.f32(float %a0)
+  %fr = freeze float %f0
+  %ft = call float @llvm.trunc.f32(float %fr)
+  ret float %ft
+}
+
+define float @ftrunc_freeze_ftrunc(float %a0) nounwind {
+; X86-LABEL: ftrunc_freeze_ftrunc:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll truncf
+; X86-NEXT:    popl %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: ftrunc_freeze_ftrunc:
+; X64:       # %bb.0:
+; X64-NEXT:    roundss $11, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %f0 = call float @llvm.trunc.f32(float %a0)
+  %fr = freeze float %f0
+  %ft = call float @llvm.trunc.f32(float %fr)
+  ret float %ft
+}
+
+define float @ftrunc_freeze_ffloor(float %a0) nounwind {
+; X86-LABEL: ftrunc_freeze_ffloor:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll floorf
+; X86-NEXT:    popl %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: ftrunc_freeze_ffloor:
+; X64:       # %bb.0:
+; X64-NEXT:    roundss $9, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %f0 = call float @llvm.floor.f32(float %a0)
+  %fr = freeze float %f0
+  %ft = call float @llvm.trunc.f32(float %fr)
+  ret float %ft
+}
+
+define float @ftrunc_freeze_fceil(float %a0) nounwind {
+; X86-LABEL: ftrunc_freeze_fceil:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll ceilf
+; X86-NEXT:    popl %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: ftrunc_freeze_fceil:
+; X64:       # %bb.0:
+; X64-NEXT:    roundss $10, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %f0 = call float @llvm.ceil.f32(float %a0)
+  %fr = freeze float %f0
+  %ft = call float @llvm.trunc.f32(float %fr)
+  ret float %ft
 }

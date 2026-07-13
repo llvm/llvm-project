@@ -1,34 +1,26 @@
 if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   return()
 endif()
-
 add_subdirectory(${LIBC_TARGET_OS})
+
 set(target_os_util libc.src.__support.OSUtil.${LIBC_TARGET_OS}.${LIBC_TARGET_OS}_util)
-if(NOT TARGET ${target_os_util})
-  return()
-endif()
-
-add_object_library(
-  osutil
-  ALIAS
-    ${target_os_util}
-  DEPENDS
-    ${target_os_util}
-)
-
-if (LIBC_CONF_ENABLE_PID_CACHE)
-  set(libc_copt_enable_pid_cache 1)
-else()
-  set(libc_copt_enable_pid_cache 0)
-endif()
-
-if(TARGET libc.src.__support.OSUtil.${LIBC_TARGET_OS}.pid)
+if(TARGET ${target_os_util})
   add_object_library(
-    pid
+    osutil
     ALIAS
+      ${target_os_util}
     DEPENDS
-      .${LIBC_TARGET_OS}.pid
-    COMPILE_OPTIONS
-      -DLIBC_COPT_ENABLE_PID_CACHE=${libc_copt_enable_pid_cache}
+      ${target_os_util}
+  )
+endif()
+
+set(target_path libc.src.__support.OSUtil.${LIBC_TARGET_OS}.path)
+if(TARGET ${target_path})
+  add_header_library(
+    path
+    HDRS
+      path.h
+    DEPENDS
+      ${target_path}
   )
 endif()

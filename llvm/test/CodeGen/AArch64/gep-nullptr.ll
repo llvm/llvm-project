@@ -6,9 +6,9 @@ target triple = "aarch64--linux-gnu"
 %unionMV = type { i32 }
 
 ; Function Attrs: nounwind
-define void @test(ptr %mi_block) {
+define void @test(ptr %mi_block, i1 %arg) {
 entry:
-  br i1 undef, label %for.body13.us, label %if.else
+  br i1 %arg, label %for.body13.us, label %if.else
 
 ; Just make sure we don't get a compiler ICE due to dereferncing a nullptr.
 ; CHECK-LABEL: test

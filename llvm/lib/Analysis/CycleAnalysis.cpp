@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CycleAnalysis.h"
-#include "llvm/ADT/GenericCycleImpl.h"
 #include "llvm/IR/CFG.h" // for successors found by ADL in GenericCycleImpl.h
 #include "llvm/InitializePasses.h"
 
@@ -23,6 +22,15 @@ CycleInfo CycleAnalysis::run(Function &F, FunctionAnalysisManager &) {
   return CI;
 }
 
+bool CycleAnalysis::invalidate(Function &F, const PreservedAnalyses &PA,
+                               FunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on functions, or the function's
+  // CFG have been preserved.
+  auto PAC = PA.getChecker<CycleAnalysis>();
+  return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>() ||
+           PAC.preservedSet<CFGAnalyses>());
+}
+
 AnalysisKey CycleAnalysis::Key;
 
 CycleInfoPrinterPass::CycleInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
@@ -32,6 +40,13 @@ PreservedAnalyses CycleInfoPrinterPass::run(Function &F,
   OS << "CycleInfo for function: " << F.getName() << "\n";
   AM.getResult<CycleAnalysis>(F).print(OS);
 
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses CycleInfoVerifierPass::run(Function &F,
+                                             FunctionAnalysisManager &AM) {
+  CycleInfo &CI = AM.getResult<CycleAnalysis>(F);
+  CI.verify();
   return PreservedAnalyses::all();
 }
 
@@ -46,9 +61,7 @@ PreservedAnalyses CycleInfoPrinterPass::run(Function &F,
 
 char CycleInfoWrapperPass::ID = 0;
 
-CycleInfoWrapperPass::CycleInfoWrapperPass() : FunctionPass(ID) {
-  initializeCycleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+CycleInfoWrapperPass::CycleInfoWrapperPass() : FunctionPass(ID) {}
 
 INITIALIZE_PASS_BEGIN(CycleInfoWrapperPass, "cycles", "Cycle Info Analysis",
                       true, true)

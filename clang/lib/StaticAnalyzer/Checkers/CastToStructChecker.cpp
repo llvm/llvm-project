@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -23,7 +23,7 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class CastToStructVisitor : public RecursiveASTVisitor<CastToStructVisitor> {
+class CastToStructVisitor : public DynamicRecursiveASTVisitor {
   BugReporter &BR;
   const CheckerBase *Checker;
   AnalysisDeclContext *AC;
@@ -32,11 +32,11 @@ public:
   explicit CastToStructVisitor(BugReporter &B, const CheckerBase *Checker,
                                AnalysisDeclContext *A)
       : BR(B), Checker(Checker), AC(A) {}
-  bool VisitCastExpr(const CastExpr *CE);
+  bool VisitCastExpr(CastExpr *CE) override;
 };
 }
 
-bool CastToStructVisitor::VisitCastExpr(const CastExpr *CE) {
+bool CastToStructVisitor::VisitCastExpr(CastExpr *CE) {
   const Expr *E = CE->getSubExpr();
   ASTContext &Ctx = AC->getASTContext();
   QualType OrigTy = Ctx.getCanonicalType(E->getType());

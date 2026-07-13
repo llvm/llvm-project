@@ -10,7 +10,7 @@
 
 #include "polly/RegisterPasses.h"
 #include "llvm/PassRegistry.h"
-#include "llvm/Passes/PassPlugin.h"
+#include "llvm/Plugins/PassPlugin.h"
 
 // Pass Plugin Entrypoints
 

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s | mlir-opt -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s | mlir-opt -verify-diagnostics | FileCheck %s --strict-whitespace
 
 //////////////
 // Tests the types in the 'Test' dialect, not the ones in 'typedefs.mlir'
@@ -40,5 +40,15 @@ func.func @testInt(%A : !test.int<s, 8>, %B : !test.int<unsigned, 2>, %C : !test
 
 // CHECK: @structTest(%arg0: !test.struct<{field1,!test.smpla}, {field2,!test.int<none, 3>}>)
 func.func @structTest (%A : !test.struct< {field1, !test.smpla}, {field2, !test.int<none, 3>} > ) {
+  return
+}
+
+// CHECK-LABEL: @newlineAndIndent
+// CHECK-SAME:  !test.newline_and_indent<
+// CHECK-NEXT:  {{^    }}indented_content
+// CHECK-NEXT:  {{^  }}>
+func.func @newlineAndIndent(%A : !test.newline_and_indent<
+  indented_content
+>) {
   return
 }

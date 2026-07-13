@@ -1,4 +1,4 @@
-// RUN: %clangxx -O1 %s -o %t && TSAN_OPTIONS="flush_memory_ms=1 memory_limit_mb=1" %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx -O1 %s -o %t && env TSAN_OPTIONS="flush_memory_ms=1 memory_limit_mb=1" %run %t 2>&1 | FileCheck %s
 
 // JVM uses SEGV to preempt threads. All threads do a load from a known address
 // periodically. When runtime needs to preempt threads, it unmaps the page.

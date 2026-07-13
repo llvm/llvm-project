@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Bitstream/BitCodes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
@@ -512,7 +513,7 @@ public:
   }
 
   /// Having read the ENTER_SUBBLOCK abbrevid, and enter the block.
-  Error EnterSubBlock(unsigned BlockID, unsigned *NumWordsP = nullptr);
+  LLVM_ABI Error EnterSubBlock(unsigned BlockID, unsigned *NumWordsP = nullptr);
 
   bool ReadBlockEnd() {
     if (BlockScope.empty()) return true;
@@ -548,23 +549,23 @@ public:
   }
 
   /// Read the current record and discard it, returning the code for the record.
-  Expected<unsigned> skipRecord(unsigned AbbrevID);
+  LLVM_ABI Expected<unsigned> skipRecord(unsigned AbbrevID);
 
-  Expected<unsigned> readRecord(unsigned AbbrevID,
-                                SmallVectorImpl<uint64_t> &Vals,
-                                StringRef *Blob = nullptr);
+  LLVM_ABI Expected<unsigned> readRecord(unsigned AbbrevID,
+                                         SmallVectorImpl<uint64_t> &Vals,
+                                         StringRef *Blob = nullptr);
 
   //===--------------------------------------------------------------------===//
   // Abbrev Processing
   //===--------------------------------------------------------------------===//
-  Error ReadAbbrevRecord();
+  LLVM_ABI Error ReadAbbrevRecord();
 
   /// Read and return a block info block from the bitstream. If an error was
   /// encountered, return std::nullopt.
   ///
   /// \param ReadBlockInfoNames Whether to read block/record name information in
   /// the BlockInfo block. Only llvm-bcanalyzer uses this.
-  Expected<std::optional<BitstreamBlockInfo>>
+  LLVM_ABI Expected<std::optional<BitstreamBlockInfo>>
   ReadBlockInfoBlock(bool ReadBlockInfoNames = false);
 
   /// Set the block info to be used by this BitstreamCursor to interpret

@@ -7,14 +7,14 @@ declare void @use.i32(i32)
 ; Test cases from PR35074, where the simplification dependencies need to be
 ; tracked for phi-of-ops root instructions.
 
-define void @test1() {
+define void @test1(i1 %arg) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[Y_0:%.*]], [[FOR_INC6:%.*]] ]
 ; CHECK-NEXT:    [[Y_0]] = phi i32 [ 1, [[ENTRY]] ], [ [[INC7:%.*]], [[FOR_INC6]] ]
-; CHECK-NEXT:    br i1 undef, label [[FOR_INC6]], label [[FOR_BODY_LR_PH:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_INC6]], label [[FOR_BODY_LR_PH:%.*]]
 ; CHECK:       for.body.lr.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
 ; CHECK:       for.body4:
@@ -35,7 +35,7 @@ entry:
 
 for.cond:                                         ; preds = %for.inc6, %entry
   %y.0 = phi i32 [ 1, %entry ], [ %inc7, %for.inc6 ]
-  br i1 undef, label %for.inc6, label %for.body.lr.ph
+  br i1 %arg, label %for.inc6, label %for.body.lr.ph
 
 for.body.lr.ph:                                   ; preds = %for.cond
   %sub = add nsw i32 %y.0, -1

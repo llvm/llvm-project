@@ -95,7 +95,7 @@ define i1 @sle_smax2(i32 %x, i32 %y) {
 define i1 @sle_smax3(i32 %a, i32 %y) {
 ; CHECK-LABEL: @sle_smax3(
 ; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -110,7 +110,7 @@ define i1 @sle_smax3(i32 %a, i32 %y) {
 define i1 @sle_smax4(i32 %a, i32 %y) {
 ; CHECK-LABEL: @sle_smax4(
 ; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -207,7 +207,7 @@ define i1 @sgt_smax2(i32 %x, i32 %y) {
 define i1 @sgt_smax3(i32 %a, i32 %y) {
 ; CHECK-LABEL: @sgt_smax3(
 ; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -222,7 +222,7 @@ define i1 @sgt_smax3(i32 %a, i32 %y) {
 define i1 @sgt_smax4(i32 %a, i32 %y) {
 ; CHECK-LABEL: @sgt_smax4(
 ; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -844,5 +844,15 @@ entry:
   ret i1 %cmp
 }
 
+define i32 @select_signed_min_smax(i32 %pos, i32 %len) {
+; CHECK-LABEL: @select_signed_min_smax(
+; CHECK-NEXT:    [[CLAMPED:%.*]] = call i32 @llvm.smax.i32(i32 [[POS:%.*]], i32 [[LEN:%.*]])
+; CHECK-NEXT:    ret i32 [[CLAMPED]]
+;
+  %is_smin = icmp eq i32 %pos, -2147483648
+  %clamped = call i32 @llvm.smax.i32(i32 %pos, i32 %len)
+  %out = select i1 %is_smin, i32 %len, i32 %clamped
+  ret i32 %out
+}
 
 declare i32 @llvm.smax.i32(i32, i32)

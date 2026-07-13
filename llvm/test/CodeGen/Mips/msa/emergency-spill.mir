@@ -1,4 +1,4 @@
-# RUN: llc %s -start-after=shrink-wrap -march=mips64 -mcpu=mips64r6 -mattr=+fp64,+msa -o /dev/null
+# RUN: llc %s -start-after=shrink-wrap -mtriple=mips64 -mcpu=mips64r6 -mattr=+fp64,+msa -o /dev/null
 
 # Test that estimated size of the stack leads to the creation of an emergency
 # spill when MSA is in use. Previously, this test case would fail during
@@ -97,8 +97,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
   - { id: 0, name: retval, type: default, offset: 0, size: 16, alignment: 16,

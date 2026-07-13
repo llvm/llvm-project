@@ -9,6 +9,6 @@
 #ifndef LLVM_LIBC_TYPES_SSIZE_T_H
 #define LLVM_LIBC_TYPES_SSIZE_T_H
 
-typedef __INT64_TYPE__ ssize_t;
+typedef __PTRDIFF_TYPE__ ssize_t;
 
 #endif // LLVM_LIBC_TYPES_SSIZE_T_H

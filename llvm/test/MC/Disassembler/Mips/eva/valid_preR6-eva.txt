@@ -4,7 +4,6 @@
 # RUN: llvm-mc --disassemble %s -triple=mips64-unknown-linux -mcpu=mips64r2 -mattr=eva | FileCheck %s
 # RUN: llvm-mc --disassemble %s -triple=mips64-unknown-linux -mcpu=mips64r3 -mattr=eva | FileCheck %s
 # RUN: llvm-mc --disassemble %s -triple=mips64-unknown-linux -mcpu=mips64r5 -mattr=eva | FileCheck %s
-# CHECK: .text
 0x7c 0xff 0x7f 0x9b # CHECK: cachee 31, 255($7)
 0x7c 0x80 0x80 0x1b # CHECK: cachee 0, -256($4)
 0x7c 0x85 0xba 0x1b # CHECK: cachee 5, -140($4)

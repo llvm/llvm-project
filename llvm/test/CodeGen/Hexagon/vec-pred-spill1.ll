@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv60 -O2 -mattr=+hvxv60,hvx-length64b < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv60 -O2 -mattr=+hvxv60,hvx-length64b < %s | FileCheck %s
 
 ; CHECK: vmem(r{{[0-9]+}}+#3) = v{{[0-9]+}}
 ; CHECK: call puts
@@ -73,8 +73,8 @@ declare void @print_vecpred(i32, ptr) #1
 ; Function Attrs: nounwind
 declare i32 @puts(ptr nocapture readonly) #3
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
+attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #2 = { nounwind readnone }
 attributes #3 = { nounwind }
 

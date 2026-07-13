@@ -16,6 +16,7 @@
 
 namespace mlir {
 namespace detail {
+
 //===----------------------------------------------------------------------===//
 // Parser
 //===----------------------------------------------------------------------===//
@@ -130,10 +131,14 @@ public:
     consumeToken();
   }
 
-  /// Reset the parser to the given lexer position.
+  /// Reset the parser to the given lexer position. Resetting the parser/lexer
+  /// position does not update 'state.lastToken'. 'state.lastToken' is the
+  /// last parsed token, and is used to provide the scope end location for
+  /// OperationDefinitions. To ensure the correctness of the end location, the
+  /// last consumed token of an OperationDefinition needs to be the last token
+  /// belonging to it.
   void resetToken(const char *tokPos) {
     state.lex.resetPointer(tokPos);
-    state.lastToken = state.curToken;
     state.curToken = state.lex.lexToken();
   }
 
@@ -141,14 +146,24 @@ public:
   /// output a diagnostic and return failure.
   ParseResult parseToken(Token::Kind expectedToken, const Twine &message);
 
+  /// Parses a quoted string token if present.
+  ParseResult parseOptionalString(std::string *string);
+
   /// Parse an optional integer value from the stream.
   OptionalParseResult parseOptionalInteger(APInt &result);
+
+  /// Parse an optional integer value only in decimal format from the stream.
+  OptionalParseResult parseOptionalDecimalInteger(APInt &result);
+
+  /// Parse a floating point value from a literal.
+  ParseResult parseFloatFromLiteral(std::optional<APFloat> &result,
+                                    const Token &tok, bool isNegative,
+                                    const llvm::fltSemantics &semantics);
 
   /// Parse a floating point value from an integer literal token.
   ParseResult parseFloatFromIntegerLiteral(std::optional<APFloat> &result,
                                            const Token &tok, bool isNegative,
-                                           const llvm::fltSemantics &semantics,
-                                           size_t typeSizeInBits);
+                                           const llvm::fltSemantics &semantics);
 
   /// Returns true if the current token corresponds to a keyword.
   bool isCurrentTokenAKeyword() const {
@@ -159,13 +174,16 @@ public:
   /// Parse a keyword, if present, into 'keyword'.
   ParseResult parseOptionalKeyword(StringRef *keyword);
 
+  /// Parse an optional keyword or string and set instance into 'result'.`
+  ParseResult parseOptionalKeywordOrString(std::string *result);
+
   //===--------------------------------------------------------------------===//
   // Resource Parsing
   //===--------------------------------------------------------------------===//
 
   /// Parse a handle to a dialect resource within the assembly format.
   FailureOr<AsmDialectResourceHandle>
-  parseResourceHandle(const OpAsmDialectInterface *dialect, StringRef &name);
+  parseResourceHandle(const OpAsmDialectInterface *dialect, std::string &name);
   FailureOr<AsmDialectResourceHandle> parseResourceHandle(Dialect *dialect);
 
   //===--------------------------------------------------------------------===//
@@ -270,7 +288,7 @@ public:
 
   /// Parse a dense elements attribute.
   Attribute parseDenseElementsAttr(Type attrType);
-  ShapedType parseElementsLiteralType(Type type);
+  ShapedType parseElementsLiteralType(SMLoc loc, Type type);
 
   /// Parse a dense resource elements attribute.
   Attribute parseDenseResourceElementsAttr(Type attrType);
@@ -298,7 +316,7 @@ public:
   ParseResult parseFusedLocation(LocationAttr &loc);
 
   /// Parse a name or FileLineCol location instance.
-  ParseResult parseNameOrFileLineColLocation(LocationAttr &loc);
+  ParseResult parseNameOrFileLineColRange(LocationAttr &loc);
 
   //===--------------------------------------------------------------------===//
   // Affine Parsing

@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatAdapters.h"
 
 using namespace lldb;
 using namespace lldb_private::lldb_server;
@@ -27,11 +28,13 @@ public:
       : m_stream_sp(stream_sp) {}
 
   void Emit(llvm::StringRef message) override {
+    std::lock_guard<std::mutex> guard(m_mutex);
     (*m_stream_sp) << message;
     m_stream_sp->flush();
   }
 
 private:
+  std::mutex m_mutex;
   std::shared_ptr<raw_ostream> m_stream_sp;
 };
 
@@ -60,18 +63,16 @@ bool LLDBServerUtilities::SetupLogging(const std::string &log_file,
   SmallVector<StringRef, 32> channel_array;
   log_channels.split(channel_array, ":", /*MaxSplit*/ -1, /*KeepEmpty*/ false);
   for (auto channel_with_categories : channel_array) {
-    std::string error;
-    llvm::raw_string_ostream error_stream(error);
     Args channel_then_categories(channel_with_categories);
     std::string channel(channel_then_categories.GetArgumentAtIndex(0));
     channel_then_categories.Shift(); // Shift off the channel
 
-    bool success = Log::EnableLogChannel(
-        log_stream_sp, log_options, channel,
-        channel_then_categories.GetArgumentArrayRef(), error_stream);
-    if (!success) {
+    llvm::Error error =
+        Log::EnableLogChannel(log_stream_sp, log_options, channel,
+                              channel_then_categories.GetArgumentArrayRef());
+    if (error) {
       errs() << formatv("Unable to setup logging for channel \"{0}\": {1}",
-                        channel, error_stream.str());
+                        channel, fmt_consume(std::move(error)));
       return false;
     }
   }

@@ -125,6 +125,7 @@ private:
   void CheckForDefinableVariable(const A &var, const std::string &s) const;
 
   void CheckForPureSubprogram() const;
+  void CheckForUselessIomsg() const;
 
   parser::Message *CheckForBadIoType(const evaluate::DynamicType &,
       common::DefinedIo, parser::CharBlock) const;
@@ -132,6 +133,7 @@ private:
       const SomeExpr &, common::DefinedIo, parser::CharBlock) const;
   parser::Message *CheckForBadIoType(
       const Symbol &, common::DefinedIo, parser::CharBlock) const;
+  void CheckForAssumedRank(const Symbol *, parser::CharBlock) const;
 
   void CheckNamelist(
       const Symbol &, common::DefinedIo, parser::CharBlock) const;

@@ -1,0 +1,262 @@
+{{! 
+    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+    See https://llvm.org/LICENSE.txt for license information.
+    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+    
+    This file defines the template for classes/struct
+}}
+<!DOCTYPE html>
+<html lang="en-US">
+{{>HeadPartial}}
+<body>
+    <header>
+        {{>NavbarPartial}}
+    </header>
+    <main>
+        <div class="container">
+            <div class="sidebar">
+                <h2>{{TagType}} {{Name}}</h2>
+                <ul>
+                    {{#HasPublicMembers}}
+                    <li>
+                        <details open>
+                            <summary class="sidebar-section">
+                              <a class="sidebar-item" href="#PublicMembers">Public Members</a>
+                            </summary>
+                            <ul>
+                                {{#PublicMembers}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{Name}}">{{Name}}</a>
+                                </li>
+                                {{/PublicMembers}}
+                            </ul>
+                        </details>
+                    </li>
+                    {{/HasPublicMembers}}
+                    {{#HasProtectedMembers}}
+                    <li>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#ProtectedMembers">Protected Members</a>
+                            </summary>
+                            <ul>
+                                {{#ProtectedMembers}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{Name}}">{{Name}}</a>
+                                </li>
+                                {{/ProtectedMembers}}
+                            </ul>
+                        </details>
+                    </li>
+                    {{/HasProtectedMembers}}
+                    {{#HasPublicMethods}}
+                    <li>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#PublicMethods">Public Methods</a>
+                            </summary>
+                            <ul>
+                                {{#PublicMethods}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/PublicMethods}}
+                            </ul>
+                        </details>
+                    </li>
+                    {{/HasPublicMethods}}
+                    {{#HasProtectedMethods}}
+                    <li>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#ProtectedMethods">Protected Methods</a>
+                            </summary>
+                            <ul>
+                                {{#ProtectedMethods}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/ProtectedMethods}}
+                            </ul>
+                        </details>
+                    </li>
+                    {{/HasProtectedMethods}}
+                    {{#HasEnums}}
+                    <li>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Enums">Enums</a>
+                            </summary>
+                            <ul>
+                                {{#Enums}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Enums}}
+                            </ul>
+                        </details>
+                    </li>
+                    {{/HasEnums}}
+                    {{#HasTypedefs}}
+                    <li>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Typedefs">Typedefs</a>
+                            </summary>
+                            <ul>
+                                {{#Typedefs}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Typedefs}}
+                            </ul>
+                        </details>
+                    </li>
+                    {{/HasTypedefs}}
+                    {{#HasRecords}}
+                    <li>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Records">Records</a>
+                            </summary>
+                            <ul>
+                                {{#Records}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Records}}
+                            </ul>
+                        </details>
+                    </li>
+                    {{/HasRecords}}
+                    {{#HasFriends}}
+                    <li>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Friends">Friends</a>
+                            </summary>
+                            <ul>
+                                {{#Friends}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{Reference.USR}}">{{Reference.Name}}</a>
+                                </li>
+                                {{/Friends}}
+                            </ul>
+                        </details>
+                    </li>
+                    {{/HasFriends}}
+                </ul>
+            </div>
+            <div class="resizer" id="resizer"></div>
+            <div class="content">
+                <section class="hero section-container">
+                    {{#Template}}
+                    <pre><code class="language-cpp code-clang-doc">template &lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;</code></pre>
+                    {{/Template}}
+                    <div class="hero__title">
+                        <h1 class="hero__title-large">{{TagType}} {{Name}}</h1>
+                        {{#Location}}
+                        <p>Defined at line {{LineNumber}} of file {{^FileURL}}{{Filename}}{{/FileURL}}{{#FileURL}}<a href="{{FileURL}}">{{Filename}}</a>{{/FileURL}}</p>
+                        {{/Location}}
+                        {{#Description}}
+                        <div class="doc-card">
+                            {{>Comments}}
+                        </div>
+                        {{/Description}}
+                    </div>
+                </section>
+                {{#HasPublicMembers}}
+                <section id="PublicMembers" class="section-container">
+                    <h2>Public Members</h2>
+                    <div>
+                        {{#PublicMembers}}
+                        <div id="{{Name}}" class="delimiter-container">
+                            <pre><code class="language-cpp code-clang-doc" >{{#IsStatic}}static {{/IsStatic}}{{Type}} {{Name}}</code></pre>
+                        </div>
+                        {{/PublicMembers}}
+                    </div>
+                </section>
+                {{/HasPublicMembers}}
+                {{#HasProtectedMembers}}
+                <section id="ProtectedMembers" class="section-container">
+                    <h2>Protected Members</h2>
+                    <div>
+                        {{#ProtectedMembers}}
+                        <div id="{{Name}}" class="delimiter-container">
+                            <pre><code class="language-cpp code-clang-doc" >{{#IsStatic}}static {{/IsStatic}}{{Type}} {{Name}}</code></pre>
+                        </div>
+                        {{/ProtectedMembers}}
+                    </div>
+                </section>
+                {{/HasProtectedMembers}}
+                {{#HasPublicMethods}}
+                <section id="PublicMethods" class="section-container">
+                    <h2>Public Methods</h2>
+                    {{#PublicMethods}}
+                    {{>FunctionPartial}}
+                    {{/PublicMethods}}
+                </section>
+                {{/HasPublicMethods}}
+                {{#HasProtectedMethods}}
+                <section id="ProtectedMethods" class="section-container">
+                    <h2>Protected Methods</h2>
+                    <div>
+                        {{#ProtectedMethods}}
+                        {{>FunctionPartial}}
+                        {{/ProtectedMethods}}
+                    </div>
+                </section>
+                {{/HasProtectedMethods}}
+                {{#HasEnums}}
+                <section id="Enums" class="section-container">
+                    <h2>Enumerations</h2>
+                    {{#Enums}}
+                    {{>EnumPartial}}
+                    {{/Enums}}
+                </section>
+                {{/HasEnums}}
+                {{#HasRecords}}
+                <section id="Records" class="section-container">
+                    <h2>Records</h2>
+                    <ul class="class-container">
+                        {{#Records}}
+                        <li id="{{USR}}" style="max-height: 40px;">
+                            <a href="{{PathStem}}/{{DocumentationFileName}}.html">
+                                <pre><code class="language-cpp code-clang-doc">class {{Name}}</code></pre>
+                            </a>
+                        </li>
+                        {{/Records}}
+                    </ul>
+                </section>
+                {{/HasRecords}}
+                {{#HasTypedefs}}
+                <section id="Typedefs" class="section-container">
+                    <h2>Typedefs</h2>
+                    {{#Typedefs}}
+                    {{>AliasPartial}}
+                    {{/Typedefs}}
+                </section>
+                {{/HasTypedefs}}
+                {{#HasFriends}}
+                <section id="Friends" class="section-container">
+                    <h2>Friends</h2>
+                    {{#Friends}}
+                    <div id="{{Reference.USR}}" class="delimiter-container">
+                        {{#Template}}
+                        <pre><code class="language-cpp code-clang-doc">template &lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;</code></pre>
+                        {{/Template}}
+                        {{#IsClass}}
+                        <pre><code class="language-cpp code-clang-doc">class {{Reference.Name}}</code></pre>
+                        {{/IsClass}}
+                        {{^IsClass}}
+                        <pre><code class="language-cpp code-clang-doc">{{ReturnType.Name}} {{Name}}{{#Template}}{{#Specialization}}&lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;{{/Specialization}}{{/Template}} ({{#Params}}{{Type.QualName}} {{Name}}{{^End}}, {{/End}}{{/Params}})</code></pre>
+                        {{/IsClass}}
+                    </div>
+                    {{/Friends}}
+                </section>
+                {{/HasFriends}}
+            </div>
+        </div>
+    </main>
+</body>
+</html>

@@ -20,14 +20,15 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/MC/MachineLocation.h"
 
 using namespace llvm;
 
 NVPTXFrameLowering::NVPTXFrameLowering()
     : TargetFrameLowering(TargetFrameLowering::StackGrowsUp, Align(8), 0) {}
 
-bool NVPTXFrameLowering::hasFP(const MachineFunction &MF) const { return true; }
+bool NVPTXFrameLowering::hasFPImpl(const MachineFunction &MF) const {
+  return true;
+}
 
 void NVPTXFrameLowering::emitPrologue(MachineFunction &MF,
                                       MachineBasicBlock &MBB) const {
@@ -93,5 +94,8 @@ MachineBasicBlock::iterator NVPTXFrameLowering::eliminateCallFramePseudoInstr(
 
 TargetFrameLowering::DwarfFrameBase
 NVPTXFrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
-  return {DwarfFrameBase::CFA, {0}};
+  DwarfFrameBase FrameBase;
+  FrameBase.Kind = DwarfFrameBase::CFA;
+  FrameBase.Location.Offset = 0;
+  return FrameBase;
 }

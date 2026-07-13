@@ -53,10 +53,14 @@
 // DISASM-NEXT:    20214:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DISASM-NEXT:    20218:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DISASM-NEXT:    2021c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DISASM-EMPTY:
+// DISASM-NEXT:  <bar2@plt>:
 // DISASM-NEXT:    20220:       add     r12, pc, #0, #12
 // DISASM-NEXT:    20224:       add     r12, r12, #32
 // DISASM-NEXT:    20228:       ldr     pc, [r12, #212]!
 // DISASM-NEXT:    2022c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DISASM-EMPTY:
+// DISASM-NEXT:  <zed2@plt>:
 // DISASM-NEXT:    20230:       add     r12, pc, #0, #12
 // DISASM-NEXT:    20234:       add     r12, r12, #32
 // DISASM-NEXT:    20238:       ldr     pc, [r12, #200]!

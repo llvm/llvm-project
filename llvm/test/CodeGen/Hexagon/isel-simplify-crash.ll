@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-instsimplify=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-instsimplify=0 < %s | FileCheck %s
 
 ; This used to crash in SimplifyDemandedBits due to a type mismatch
 ; caused by a missing bitcast in vectorizing mul.

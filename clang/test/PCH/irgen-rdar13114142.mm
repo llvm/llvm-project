@@ -20,11 +20,13 @@ class OOPattern {
 public:
     OOArray matchAll(const OOString &)const {
         __attribute__((__blocks__(byref))) OOArray out;
+        return {};
     }
 };
 
 OOArray operator & (const OOPattern & pattern) {
     pattern.matchAll(0);
+    return {};
 }
 OOArray operator & (OOString, OOString);
 

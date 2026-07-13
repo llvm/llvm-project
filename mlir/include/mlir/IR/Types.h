@@ -34,7 +34,7 @@ class AsmState;
 /// Derived type classes are expected to implement several required
 /// implementation hooks:
 ///  * Optional:
-///    - static LogicalResult verify(
+///    - static LogicalResult verifyInvariants(
 ///                                function_ref<InFlightDiagnostic()> emitError,
 ///                                Args... args)
 ///      * This method is invoked when calling the 'TypeBase::get/getChecked'
@@ -96,22 +96,6 @@ public:
 
   bool operator!() const { return impl == nullptr; }
 
-  template <typename... Tys>
-  [[deprecated("Use mlir::isa<U>() instead")]]
-  bool isa() const;
-  template <typename... Tys>
-  [[deprecated("Use mlir::isa_and_nonnull<U>() instead")]]
-  bool isa_and_nonnull() const;
-  template <typename U>
-  [[deprecated("Use mlir::dyn_cast<U>() instead")]]
-  U dyn_cast() const;
-  template <typename U>
-  [[deprecated("Use mlir::dyn_cast_or_null<U>() instead")]]
-  U dyn_cast_or_null() const;
-  template <typename U>
-  [[deprecated("Use mlir::cast<U>() instead")]]
-  U cast() const;
-
   /// Return a unique identifier for the concrete type. This is used to support
   /// dynamic type casting.
   TypeID getTypeID() { return impl->getAbstractType().getTypeID(); }
@@ -125,11 +109,6 @@ public:
   // Convenience predicates.  This is only for floating point types,
   // derived types should use isa/dyn_cast.
   bool isIndex() const;
-  bool isFloat8E5M2() const;
-  bool isFloat8E4M3FN() const;
-  bool isFloat8E5M2FNUZ() const;
-  bool isFloat8E4M3FNUZ() const;
-  bool isFloat8E4M3B11FNUZ() const;
   bool isBF16() const;
   bool isF16() const;
   bool isTF32() const;
@@ -137,6 +116,12 @@ public:
   bool isF64() const;
   bool isF80() const;
   bool isF128() const;
+  bool isF8E4M3FN() const;
+  bool isF8E5M2() const;
+
+  /// Return true if this is an float type (with the specified width).
+  bool isFloat() const;
+  bool isFloat(unsigned width) const;
 
   /// Return true if this is an integer type (with the specified width).
   bool isInteger() const;
@@ -321,31 +306,6 @@ inline ::llvm::hash_code hash_value(Type arg) {
   return DenseMapInfo<const Type::ImplType *>::getHashValue(arg.impl);
 }
 
-template <typename... Tys>
-bool Type::isa() const {
-  return llvm::isa<Tys...>(*this);
-}
-
-template <typename... Tys>
-bool Type::isa_and_nonnull() const {
-  return llvm::isa_and_present<Tys...>(*this);
-}
-
-template <typename U>
-U Type::dyn_cast() const {
-  return llvm::dyn_cast<U>(*this);
-}
-
-template <typename U>
-U Type::dyn_cast_or_null() const {
-  return llvm::dyn_cast_or_null<U>(*this);
-}
-
-template <typename U>
-U Type::cast() const {
-  return llvm::cast<U>(*this);
-}
-
 } // namespace mlir
 
 namespace llvm {
@@ -353,14 +313,6 @@ namespace llvm {
 // Type hash just like pointers.
 template <>
 struct DenseMapInfo<mlir::Type> {
-  static mlir::Type getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::Type(static_cast<mlir::Type::ImplType *>(pointer));
-  }
-  static mlir::Type getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::Type(static_cast<mlir::Type::ImplType *>(pointer));
-  }
   static unsigned getHashValue(mlir::Type val) { return mlir::hash_value(val); }
   static bool isEqual(mlir::Type LHS, mlir::Type RHS) { return LHS == RHS; }
 };
@@ -368,14 +320,6 @@ template <typename T>
 struct DenseMapInfo<T, std::enable_if_t<std::is_base_of<mlir::Type, T>::value &&
                                         !mlir::detail::IsInterface<T>::value>>
     : public DenseMapInfo<mlir::Type> {
-  static T getEmptyKey() {
-    const void *pointer = llvm::DenseMapInfo<const void *>::getEmptyKey();
-    return T::getFromOpaquePointer(pointer);
-  }
-  static T getTombstoneKey() {
-    const void *pointer = llvm::DenseMapInfo<const void *>::getTombstoneKey();
-    return T::getFromOpaquePointer(pointer);
-  }
 };
 
 /// We align TypeStorage by 8, so allow LLVM to steal the low bits.

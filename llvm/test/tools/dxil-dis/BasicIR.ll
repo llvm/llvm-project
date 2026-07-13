@@ -17,7 +17,7 @@
 
 target triple = "dxil-unknown-shadermodel6.7-library"
 
-define i32 @foo(i32 %X, i32 %Y) {
+define i32 @foo(i32 %X, i32 %Y) "hlsl.export" {
   %Z = sub i32 %X, %Y
   %Q = add i32 %Z, %Y
   ret i32 %Q

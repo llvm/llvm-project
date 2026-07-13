@@ -11,12 +11,12 @@
 
 #include <__algorithm/iterator_operations.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__iterator/iterator_traits.h>
 #include <__random/uniform_int_distribution.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
-#include <cstddef>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -28,6 +28,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 class _LIBCPP_EXPORTED_FROM_ABI __libcpp_debug_randomizer {
 public:
   _LIBCPP_HIDE_FROM_ABI __libcpp_debug_randomizer() {
@@ -160,6 +161,7 @@ shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last, _UniformRan
       std::move(__first), std::move(__last), std::forward<_UniformRandomNumberGenerator>(__g));
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

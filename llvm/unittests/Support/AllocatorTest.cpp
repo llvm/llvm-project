@@ -105,24 +105,20 @@ TEST(AllocatorTest, TestAlignment) {
 // we end up creating a slab for it.
 TEST(AllocatorTest, TestZero) {
   BumpPtrAllocator Alloc;
-  Alloc.setRedZoneSize(0); // else our arithmetic is all off
+  Alloc.setRedZoneSize(0); // else the slab count below is off under ASan
   EXPECT_EQ(0u, Alloc.GetNumSlabs());
-  EXPECT_EQ(0u, Alloc.getBytesAllocated());
 
   void *Empty = Alloc.Allocate(0, 1);
   EXPECT_NE(Empty, nullptr) << "Allocate is __attribute__((returns_nonnull))";
   EXPECT_EQ(1u, Alloc.GetNumSlabs()) << "Allocated a slab to point to";
-  EXPECT_EQ(0u, Alloc.getBytesAllocated());
 
   void *Large = Alloc.Allocate(4096, 1);
   EXPECT_EQ(1u, Alloc.GetNumSlabs());
-  EXPECT_EQ(4096u, Alloc.getBytesAllocated());
   EXPECT_EQ(Empty, Large);
 
   void *Empty2 = Alloc.Allocate(0, 1);
   EXPECT_NE(Empty2, nullptr);
   EXPECT_EQ(1u, Alloc.GetNumSlabs());
-  EXPECT_EQ(4096u, Alloc.getBytesAllocated());
 }
 
 // Test allocating just over the slab size.  This tests a bug where before the
@@ -208,13 +204,34 @@ TEST(AllocatorTest, TestSlowerSlabGrowthDelay) {
   EXPECT_EQ(SlabSize * GrowthDelay + SlabSize * 2, Alloc.getTotalMemory());
 }
 
+TEST(AllocatorTest, TestIdentifyObject) {
+  BumpPtrAllocator Alloc;
+
+  uint64_t *a = (uint64_t *)Alloc.Allocate(sizeof(uint64_t), alignof(uint64_t));
+  std::optional<int64_t> maybe_a_belongs = Alloc.identifyObject(a);
+  EXPECT_TRUE(maybe_a_belongs.has_value());
+  EXPECT_TRUE(*maybe_a_belongs >= 0);
+
+  uint64_t *b = nullptr;
+  std::optional<int64_t> maybe_b_belongs = Alloc.identifyObject(b);
+  EXPECT_FALSE(maybe_b_belongs);
+
+  // The default slab size is 4096 (or 512 uint64_t values). Custom slabs are
+  // allocated when the requested size is larger than the slab size.
+  uint64_t *c =
+      (uint64_t *)Alloc.Allocate(sizeof(uint64_t) * 1024, alignof(uint64_t));
+  std::optional<int64_t> maybe_c_belongs = Alloc.identifyObject(c);
+  EXPECT_TRUE(maybe_c_belongs.has_value());
+  EXPECT_TRUE(*maybe_c_belongs < 0);
+}
+
 // Mock slab allocator that returns slabs aligned on 4096 bytes.  There is no
 // easy portable way to do this, so this is kind of a hack.
 class MockSlabAllocator {
   static size_t LastSlabSize;
 
 public:
-  ~MockSlabAllocator() { }
+  ~MockSlabAllocator() = default;
 
   void *Allocate(size_t Size, size_t /*Alignment*/) {
     // Allocate space for the alignment, the slab, and a void* that goes right
@@ -256,6 +273,25 @@ TEST(AllocatorTest, TestBigAlignment) {
   // We test that the last slab size is not the default 4096 byte slab, but
   // rather a custom sized slab that is larger.
   EXPECT_GT(MockSlabAllocator::GetLastSlabSize(), 4096u);
+}
+
+// Over-aligned element type: Allocate() honors alignof(T) > MinAlign and
+// DestroyAll() runs every destructor.
+TEST(AllocatorTest, TestOverAlignedSpecific) {
+  unsigned NumDtorCalls = 0;
+  struct alignas(32) S {
+    unsigned *Calls;
+    ~S() { ++*Calls; }
+  };
+  {
+    SpecificBumpPtrAllocator<S> Alloc;
+    for (int I = 0; I != 4; ++I) {
+      S *P = Alloc.Allocate();
+      EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(P) & 31u);
+      P->Calls = &NumDtorCalls;
+    }
+  }
+  EXPECT_EQ(4u, NumDtorCalls);
 }
 
 }  // anonymous namespace

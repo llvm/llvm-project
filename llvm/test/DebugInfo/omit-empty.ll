@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf %s -filetype=obj -o - | llvm-objdump -h - | FileCheck %s
+; RUN: %llc_dwarf %s -filetype=obj -generate-arange-section -o - | llvm-objdump -h - | FileCheck %s
 ; REQUIRES: object-emission
 
 ; CHECK-NOT: .debug_

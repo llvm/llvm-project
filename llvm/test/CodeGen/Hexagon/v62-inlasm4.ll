@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 ; CHECK: q{{[0-3]}} = vsetq2(r{{[0-9]+}})
 
 target triple = "hexagon"

@@ -8,14 +8,14 @@
 
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/DumpDataExtractor.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
-#include "lldb/Target/RegisterFlags.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/RegisterFlags.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/lldb-private-types.h"
 #include "llvm/ADT/bit.h"
 
@@ -156,7 +156,9 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
   while (fields_str.size()) {
     std::pair<llvm::StringRef, llvm::StringRef> split = fields_str.split('\n');
     fields_str = split.second;
-    // Indent as far as the register name did.
+    // Indent as much as the stream does.
+    s.Indent();
+    // Indent further to match where the register name finishes.
     s.Printf(fmt.c_str(), "");
 
     // Lines after the first won't have " = " so compensate for that.

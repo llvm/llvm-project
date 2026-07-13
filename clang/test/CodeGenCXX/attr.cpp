@@ -4,7 +4,7 @@
 
 // CHECK: define{{.*}} i32 @_Z3foov() [[NUW:#[0-9]+]] align 1024
 int foo() __attribute__((aligned(1024)));
-int foo() { }
+int foo() { return 0; }
 
 class C {
   virtual void bar1() __attribute__((aligned(1)));

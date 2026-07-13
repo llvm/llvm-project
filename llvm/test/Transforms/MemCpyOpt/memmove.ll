@@ -12,13 +12,16 @@ declare void @llvm.memmove.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) noun
 define ptr @test1(ptr nocapture %src) nounwind {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MALLOCCALL:%.*]] = tail call ptr @malloc(i32 trunc (i64 mul nuw (i64 ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64), i64 13) to i32))
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i64 ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64), 13
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[MUL]] to i32
+; CHECK-NEXT:    [[MALLOCCALL:%.*]] = tail call ptr @malloc(i32 [[TRUNC]])
 ; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[MALLOCCALL]], ptr [[SRC:%.*]], i64 13, i1 false)
 ; CHECK-NEXT:    ret ptr [[MALLOCCALL]]
 ;
 entry:
-
-  %malloccall = tail call ptr @malloc(i32 trunc (i64 mul nuw (i64 ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64), i64 13) to i32))
+  %mul = mul nuw i64 ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64), 13
+  %trunc = trunc i64 %mul to i32
+  %malloccall = tail call ptr @malloc(i32 %trunc)
   tail call void @llvm.memmove.p0.p0.i64(ptr %malloccall, ptr %src, i64 13, i1 false)
   ret ptr %malloccall
 }

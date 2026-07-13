@@ -242,6 +242,9 @@ public:
               std::unique_ptr<ParsingCallbacks> ASTCallbacks = nullptr);
   ~TUScheduler();
 
+  TUScheduler(const TUScheduler &other) = delete;
+  TUScheduler &operator=(const TUScheduler &other) = delete;
+
   struct FileStats {
     std::size_t UsedBytesAST = 0;
     std::size_t UsedBytesPreamble = 0;

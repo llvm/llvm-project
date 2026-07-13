@@ -12,8 +12,8 @@
 // RUN: %clang -S -emit-llvm -maltivec -mabi=vec-default -mcpu=pwr8 --target=powerpc64-unknown-aix -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BE
 // Check initialization
 
-vector int test0 = (vector int)(1);       // CHECK: @test0 ={{.*}} global <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-vector float test1 = (vector float)(1.0); // CHECK: @test1 ={{.*}} global <4 x float> <float 1.000000e+{{0+}}, float 1.000000e+{{0+}}, float 1.000000e+{{0+}}, float 1.000000e+{{0+}}>
+vector int test0 = (vector int)(1);       // CHECK: @test0 ={{.*}} global <4 x i32> splat (i32 1)
+vector float test1 = (vector float)(1.0); // CHECK: @test1 ={{.*}} global <4 x float> splat (float 1.000000e+{{0+}})
 
 // CHECK-BE: @v1 ={{.*}} global <16 x i8> <i8 0, i8 0, i8 0, i8 1, i8 0, i8 0, i8 0, i8 2, i8 0, i8 0, i8 0, i8 3, i8 0, i8 0, i8 0, i8 4>
 // CHECK-LE: @v1 ={{.*}} global <16 x i8> <i8 1, i8 0, i8 0, i8 0, i8 2, i8 0, i8 0, i8 0, i8 3, i8 0, i8 0, i8 0, i8 4, i8 0, i8 0, i8 0>
@@ -32,8 +32,8 @@ void test2(void)
 {
   vector int vi;
   vector float vf;
-  vi = (vector int)(1);             // CHECK: <i32 1, i32 1, i32 1, i32 1>
-  vf = (vector float)(1.0);         // CHECK: <float 1.000000e+{{0+}}, float 1.000000e+{{0+}}, float 1.000000e+{{0+}}, float 1.000000e+{{0+}}>
+  vi = (vector int)(1);             // CHECK: splat (i32 1)
+  vf = (vector float)(1.0);         // CHECK: splat (float 1.000000e+{{0+}})
   vi = (vector int)(1, 2, 3, 4);    // CHECK: <i32 1, i32 2, i32 3, i32 4>
   vi = (vector int)(1, 2, 3, 4, 5); // CHECK: <i32 1, i32 2, i32 3, i32 4>
 
@@ -46,9 +46,9 @@ void test2(void)
 // Check pre/post increment/decrement
 void test3(void) {
   vector int vi;
-  vi++;                                    // CHECK: add <4 x i32> {{.*}} <i32 1, i32 1, i32 1, i32 1>
+  vi++;                                    // CHECK: add <4 x i32> {{.*}} splat (i32 1)
   vector unsigned int vui;
-  --vui;                                   // CHECK: add <4 x i32> {{.*}} <i32 -1, i32 -1, i32 -1, i32 -1>
+  --vui;                                   // CHECK: add <4 x i32> {{.*}} splat (i32 -1)
   vector float vf;
-  vf++;                                    // CHECK: fadd <4 x float> {{.*}} <float 1.000000e+{{0+}}, float 1.000000e+{{0+}}, float 1.000000e+{{0+}}, float 1.000000e+{{0+}}>
+  vf++;                                    // CHECK: fadd <4 x float> {{.*}} splat (float 1.000000e+{{0+}})
 }

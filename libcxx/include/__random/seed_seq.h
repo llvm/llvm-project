@@ -14,10 +14,12 @@
 #include <__algorithm/max.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_integral.h>
 #include <__type_traits/is_unsigned.h>
+#include <__vector/vector.h>
 #include <cstdint>
 #include <initializer_list>
-#include <vector>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -28,7 +30,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-class _LIBCPP_TEMPLATE_VIS seed_seq {
+class seed_seq {
 public:
   // types
   typedef uint32_t result_type;
@@ -54,7 +56,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void generate(_RandomAccessIterator __first, _RandomAccessIterator __last);
 
   // property functions
-  _LIBCPP_HIDE_FROM_ABI size_t size() const _NOEXCEPT { return __v_.size(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t size() const _NOEXCEPT { return __v_.size(); }
   template <class _OutputIterator>
   _LIBCPP_HIDE_FROM_ABI void param(_OutputIterator __dest) const {
     std::copy(__v_.begin(), __v_.end(), __dest);
@@ -63,7 +65,7 @@ public:
   seed_seq(const seed_seq&)       = delete;
   void operator=(const seed_seq&) = delete;
 
-  _LIBCPP_HIDE_FROM_ABI static result_type _Tp(result_type __x) { return __x ^ (__x >> 27); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static result_type _Tp(result_type __x) { return __x ^ (__x >> 27); }
 
 private:
   template <class _InputIterator>

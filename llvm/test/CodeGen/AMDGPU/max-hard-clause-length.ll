@@ -10,7 +10,7 @@
 define amdgpu_kernel void @long_store_chain(ptr addrspace(1) %p) {
 ; GFX10-LABEL: long_store_chain:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x24
+; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
 ; GFX10-NEXT:    s_mov_b32 s0, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX10-NEXT:    s_mov_b32 s1, s0
@@ -91,14 +91,14 @@ define amdgpu_kernel void @long_store_chain(ptr addrspace(1) %p) {
 ;
 ; GFX11-LABEL: long_store_chain:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[4:5], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
 ; GFX11-NEXT:    s_mov_b32 s0, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_mov_b32 s1, s0
 ; GFX11-NEXT:    s_mov_b32 s2, s0
 ; GFX11-NEXT:    s_mov_b32 s3, s0
-; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
 ; GFX11-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
 ; GFX11-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x1f
@@ -170,20 +170,18 @@ define amdgpu_kernel void @long_store_chain(ptr addrspace(1) %p) {
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:1024
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:1040
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: long_store_chain:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b64 s[4:5], s[2:3], 0x24
+; GFX12-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
 ; GFX12-NEXT:    s_mov_b32 s0, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_mov_b32 s1, s0
 ; GFX12-NEXT:    s_mov_b32 s2, s0
 ; GFX12-NEXT:    s_mov_b32 s3, s0
-; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
 ; GFX12-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v1, s1
+; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
 ; GFX12-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_clause 0x1f
@@ -255,8 +253,6 @@ define amdgpu_kernel void @long_store_chain(ptr addrspace(1) %p) {
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:1024
 ; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:1040
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   store <4 x i32> zeroinitializer, ptr addrspace(1) %p
   %ptr1 = getelementptr <4 x i32>, ptr addrspace(1) %p, i64 1
@@ -397,7 +393,7 @@ define amdgpu_kernel void @long_store_chain(ptr addrspace(1) %p) {
 define amdgpu_kernel void @long_load_chain(ptr addrspace(1) %p) {
 ; GFX10-LABEL: long_load_chain:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_clause 0x3e
 ; GFX10-NEXT:    s_load_dword s2, s[0:1], 0x0
@@ -670,7 +666,7 @@ define amdgpu_kernel void @long_load_chain(ptr addrspace(1) %p) {
 ;
 ; GFX11-LABEL: long_load_chain:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x1f
 ; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x0
@@ -944,7 +940,7 @@ define amdgpu_kernel void @long_load_chain(ptr addrspace(1) %p) {
 ;
 ; GFX12-LABEL: long_load_chain:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_clause 0x1f
 ; GFX12-NEXT:    s_load_b32 s2, s[0:1], 0x0

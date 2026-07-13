@@ -10,8 +10,6 @@
 #include "src/__support/macros/config.h"
 #include "src/setjmp/setjmp_impl.h"
 
-#include <setjmp.h>
-
 #if !defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #error "Invalid file include"
 #endif
@@ -29,7 +27,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
+LLVM_LIBC_FUNCTION(int, setjmp, (jmp_buf buf)) {
   STORE(ra, buf->__pc);
   STORE(s0, buf->__regs[0]);
   STORE(s1, buf->__regs[1]);

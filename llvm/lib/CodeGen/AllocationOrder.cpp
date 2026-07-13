@@ -26,7 +26,7 @@ using namespace llvm;
 #define DEBUG_TYPE "regalloc"
 
 // Compare VirtRegMap::getRegAllocPref().
-AllocationOrder AllocationOrder::create(unsigned VirtReg, const VirtRegMap &VRM,
+AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
                                         const RegisterClassInfo &RegClassInfo,
                                         const LiveRegMatrix *Matrix) {
   const MachineFunction &MF = VRM.getMachineFunction();

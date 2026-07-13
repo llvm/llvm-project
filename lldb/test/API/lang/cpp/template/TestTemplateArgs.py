@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 
 
 class TemplateArgsTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     def prepareProcess(self):
         self.build()
 
@@ -82,7 +83,6 @@ class TemplateArgsTestCase(TestBase):
             'expr_result.GetType().GetName() == "int"',
         )
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489")
     def test_template_template_args(self):
         frame = self.prepareProcess()
 

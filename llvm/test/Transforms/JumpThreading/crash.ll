@@ -239,7 +239,7 @@ return:
 }
 
 ; PR6119
-define i32 @test8(i32 %action) nounwind {
+define i32 @test8(i32 %action, i1 %arg) nounwind {
 entry:
   switch i32 %action, label %lor.rhs [
     i32 1, label %if.then
@@ -257,14 +257,14 @@ lor.end:                                          ; preds = %lor.rhs, %entry
   br i1 %cmp103, label %for.cond, label %if.then
 
 for.cond:                                         ; preds = %for.body, %lor.end
-  br i1 undef, label %if.then, label %for.body
+  br i1 %arg, label %if.then, label %for.body
 
 for.body:                                         ; preds = %for.cond
   br label %for.cond
 }
 
 ; PR6119
-define i32 @test9(i32 %action) nounwind {
+define i32 @test9(i32 %action, i1 %arg) nounwind {
 entry:
   switch i32 %action, label %lor.rhs [
     i32 1, label %if.then
@@ -283,14 +283,14 @@ lor.end:                                          ; preds = %lor.rhs, %entry
   br i1 %cmp103, label %for.cond, label %if.then
 
 for.cond:                                         ; preds = %for.body, %lor.end
-  br i1 undef, label %if.then, label %for.body
+  br i1 %arg, label %if.then, label %for.body
 
 for.body:                                         ; preds = %for.cond
   br label %for.cond
 }
 
 ; PR6119
-define i32 @test10(i32 %action, i32 %type) nounwind {
+define i32 @test10(i32 %action, i32 %type, i1 %arg) nounwind {
 entry:
   %cmp2 = icmp eq i32 %type, 0                    ; <i1> [#uses=1]
   switch i32 %action, label %lor.rhs [
@@ -311,7 +311,7 @@ lor.end:                                          ; preds = %lor.rhs, %entry
   br i1 %cmp103, label %for.cond, label %if.then
 
 for.cond:                                         ; preds = %for.body, %lor.end
-  br i1 undef, label %if.then, label %for.body
+  br i1 %arg, label %if.then, label %for.body
 
 for.body:                                         ; preds = %for.cond
   br label %for.cond
@@ -391,7 +391,7 @@ if.end:                                           ; preds = %land.end69
 }
 
 ; PR7647
-define void @test15() nounwind {
+define void @test15(i1 %arg) nounwind {
 entry:
   ret void
 
@@ -420,7 +420,7 @@ lbl_709:
   br label %if.end949
 
 for.cond603:                                      ; preds = %for.body607, %if.end336
-  br i1 undef, label %for.cond603, label %if.end949
+  br i1 %arg, label %for.cond603, label %if.end949
 
 if.end949:                                        ; preds = %for.cond603, %lbl_709, %for.cond111
   %l_678.2 = phi i64 [ %l_678.5, %for.cond111 ], [ undef, %lbl_709 ], [ 5, %for.cond603 ] ; <i64> [#uses=1]
@@ -430,7 +430,7 @@ for.body1016:                                     ; preds = %for.cond1012
   br label %for.body1016
 
 for.cond1035:                                     ; preds = %for.inc1055, %if.then1026
-  br i1 undef, label %for.cond1040, label %lbl_664
+  br i1 %arg, label %for.cond1040, label %lbl_664
 
 for.cond1040:                                     ; preds = %for.body1044, %for.cond1035
   ret void
@@ -461,9 +461,9 @@ if.end:
   ret void
 }
 
-define void @test17() {
+define void @test17(i1 %arg) {
 entry:
-  br i1 undef, label %bb269.us.us, label %bb269.us.us.us
+  br i1 %arg, label %bb269.us.us, label %bb269.us.us.us
 
 bb269.us.us.us:
   %indvar = phi i64 [ %indvar.next, %bb287.us.us.us ], [ 0, %entry ]

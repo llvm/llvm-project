@@ -6,6 +6,7 @@ static_library("AsmPrinter") {
     "//llvm/lib/CodeGen",
     "//llvm/lib/DebugInfo/CodeView",
     "//llvm/lib/DebugInfo/DWARF",
+    "//llvm/lib/DebugInfo/DWARF/LowLevel",
     "//llvm/lib/DebugInfo/MSF",
     "//llvm/lib/IR",
     "//llvm/lib/MC",

@@ -11,7 +11,7 @@ target triple = "x86_64-unknown-unknown"
 define void @exact(ptr %x) {
 ; CHECK-LABEL: @exact(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr exact <4 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr exact <4 x i32> [[TMP2]], splat (i32 1)
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -40,7 +40,7 @@ define void @exact(ptr %x) {
 define void @not_exact(ptr %x) {
 ; CHECK-LABEL: @not_exact(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr <4 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr <4 x i32> [[TMP2]], splat (i32 1)
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -69,7 +69,7 @@ define void @not_exact(ptr %x) {
 define void @nsw(ptr %x) {
 ; CHECK-LABEL: @nsw(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[TMP2]], splat (i32 1)
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -98,7 +98,7 @@ define void @nsw(ptr %x) {
 define void @not_nsw(ptr %x) {
 ; CHECK-LABEL: @not_nsw(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[TMP2]], splat (i32 1)
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -127,7 +127,7 @@ define void @not_nsw(ptr %x) {
 define void @nuw(ptr %x) {
 ; CHECK-LABEL: @nuw(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = add nuw <4 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw <4 x i32> [[TMP2]], splat (i32 1)
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -156,7 +156,7 @@ define void @nuw(ptr %x) {
 define void @not_nuw(ptr %x) {
 ; CHECK-LABEL: @not_nuw(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[TMP2]], splat (i32 1)
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -185,7 +185,7 @@ define void @not_nuw(ptr %x) {
 define void @not_nsw_but_nuw(ptr %x) {
 ; CHECK-LABEL: @not_nsw_but_nuw(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = add nuw <4 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw <4 x i32> [[TMP2]], splat (i32 1)
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -214,7 +214,7 @@ define void @not_nsw_but_nuw(ptr %x) {
 define void @nnan(ptr %x) {
 ; CHECK-LABEL: @nnan(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd nnan <4 x float> [[TMP2]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd nnan <4 x float> [[TMP2]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -243,7 +243,7 @@ define void @nnan(ptr %x) {
 define void @not_nnan(ptr %x) {
 ; CHECK-LABEL: @not_nnan(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x float> [[TMP2]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x float> [[TMP2]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -272,7 +272,7 @@ define void @not_nnan(ptr %x) {
 define void @only_fast(ptr %x) {
 ; CHECK-LABEL: @only_fast(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast <4 x float> [[TMP2]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast <4 x float> [[TMP2]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -301,7 +301,7 @@ define void @only_fast(ptr %x) {
 define void @only_arcp(ptr %x) {
 ; CHECK-LABEL: @only_arcp(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd arcp <4 x float> [[TMP2]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd arcp <4 x float> [[TMP2]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -330,9 +330,7 @@ define void @only_arcp(ptr %x) {
 define void @addsub_all_nsw(ptr %x) {
 ; CHECK-LABEL: @addsub_all_nsw(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = sub nsw <4 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw <4 x i32> [[TMP2]], <i32 -1, i32 1, i32 -1, i32 1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -361,9 +359,7 @@ define void @addsub_all_nsw(ptr %x) {
 define void @addsub_some_nsw(ptr %x) {
 ; CHECK-LABEL: @addsub_some_nsw(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = sub <4 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = sub <4 x i32> [[TMP2]], <i32 -1, i32 1, i32 -1, i32 1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -392,9 +388,7 @@ define void @addsub_some_nsw(ptr %x) {
 define void @addsub_no_nsw(ptr %x) {
 ; CHECK-LABEL: @addsub_no_nsw(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = sub <4 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = sub <4 x i32> [[TMP2]], <i32 -1, i32 1, i32 -1, i32 1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -424,7 +418,7 @@ define void @fcmp_fast(ptr %x) #1 {
 ; CHECK-LABEL: @fcmp_fast(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[X:%.*]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp fast oge <2 x double> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = fsub fast <2 x double> <double -0.000000e+00, double -0.000000e+00>, [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub fast <2 x double> splat (double -0.000000e+00), [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP3]], <2 x double> [[TMP2]], <2 x double> [[TMP4]]
 ; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[X]], align 8
 ; CHECK-NEXT:    ret void
@@ -482,7 +476,7 @@ define void @fcmp_no_fast(ptr %x) #1 {
 ; CHECK-LABEL: @fcmp_no_fast(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[X:%.*]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp oge <2 x double> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> splat (double -0.000000e+00), [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP3]], <2 x double> [[TMP2]], <2 x double> [[TMP4]]
 ; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[X]], align 8
 ; CHECK-NEXT:    ret void
@@ -577,6 +571,76 @@ define void @call_no_fast(ptr %x) {
   store double %call1, ptr %x, align 8
   store double %call2, ptr %idx2, align 8
 
+  ret void
+}
+
+; All lanes have 'nnan', so the vectorized select must keep it.
+define void @select_nnan(ptr %d, <4 x i1> %m, <4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: @select_nnan(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr float, ptr [[D:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[M:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]]
+; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[P1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %e1 = extractelement <4 x i1> %m, i32 0
+  %x1 = extractelement <4 x float> %x, i32 0
+  %y1 = extractelement <4 x float> %y, i32 0
+  %s1 = select nnan i1 %e1, float %x1, float %y1
+  %p1 = getelementptr float, ptr %d, i32 0
+  store float %s1, ptr %p1, align 4
+  %e2 = extractelement <4 x i1> %m, i32 1
+  %x2 = extractelement <4 x float> %x, i32 1
+  %y2 = extractelement <4 x float> %y, i32 1
+  %s2 = select nnan i1 %e2, float %x2, float %y2
+  %p2 = getelementptr float, ptr %d, i32 1
+  store float %s2, ptr %p2, align 4
+  %e3 = extractelement <4 x i1> %m, i32 2
+  %x3 = extractelement <4 x float> %x, i32 2
+  %y3 = extractelement <4 x float> %y, i32 2
+  %s3 = select nnan i1 %e3, float %x3, float %y3
+  %p3 = getelementptr float, ptr %d, i32 2
+  store float %s3, ptr %p3, align 4
+  %e4 = extractelement <4 x i1> %m, i32 3
+  %x4 = extractelement <4 x float> %x, i32 3
+  %y4 = extractelement <4 x float> %y, i32 3
+  %s4 = select nnan i1 %e4, float %x4, float %y4
+  %p4 = getelementptr float, ptr %d, i32 3
+  store float %s4, ptr %p4, align 4
+  ret void
+}
+
+; One lane lacks 'nnan', so the vectorized select must NOT have it.
+define void @select_not_all_nnan(ptr %d, <4 x i1> %m, <4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: @select_not_all_nnan(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr float, ptr [[D:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[M:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]]
+; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[P1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %e1 = extractelement <4 x i1> %m, i32 0
+  %x1 = extractelement <4 x float> %x, i32 0
+  %y1 = extractelement <4 x float> %y, i32 0
+  %s1 = select nnan i1 %e1, float %x1, float %y1
+  %p1 = getelementptr float, ptr %d, i32 0
+  store float %s1, ptr %p1, align 4
+  %e2 = extractelement <4 x i1> %m, i32 1
+  %x2 = extractelement <4 x float> %x, i32 1
+  %y2 = extractelement <4 x float> %y, i32 1
+  %s2 = select nnan i1 %e2, float %x2, float %y2
+  %p2 = getelementptr float, ptr %d, i32 1
+  store float %s2, ptr %p2, align 4
+  %e3 = extractelement <4 x i1> %m, i32 2
+  %x3 = extractelement <4 x float> %x, i32 2
+  %y3 = extractelement <4 x float> %y, i32 2
+  %s3 = select nnan i1 %e3, float %x3, float %y3
+  %p3 = getelementptr float, ptr %d, i32 2
+  store float %s3, ptr %p3, align 4
+  %e4 = extractelement <4 x i1> %m, i32 3
+  %x4 = extractelement <4 x float> %x, i32 3
+  %y4 = extractelement <4 x float> %y, i32 3
+  %s4 = select i1 %e4, float %x4, float %y4
+  %p4 = getelementptr float, ptr %d, i32 3
+  store float %s4, ptr %p4, align 4
   ret void
 }
 

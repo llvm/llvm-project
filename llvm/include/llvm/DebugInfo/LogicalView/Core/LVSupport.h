@@ -13,22 +13,24 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVSUPPORT_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVSUPPORT_H
 
-#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVStringPool.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <bitset>
 #include <cctype>
 #include <map>
 #include <sstream>
+#include <type_traits>
 
 namespace llvm {
 namespace logicalview {
 
 // Returns the unique string pool instance.
-LVStringPool &getStringPool();
+LLVM_ABI LVStringPool &getStringPool();
 
 using LVStringRefs = std::vector<StringRef>;
 using LVLexicalComponent = std::tuple<StringRef, StringRef>;
@@ -37,14 +39,32 @@ using LVLexicalIndex =
 
 // Used to record specific characteristics about the objects.
 template <typename T> class LVProperties {
-  SmallBitVector Bits = SmallBitVector(static_cast<unsigned>(T::LastEntry) + 1);
+  static constexpr unsigned N_PROPS = static_cast<unsigned>(T::LastEntry);
+  // Use uint32_t as the underlying type if the `T` enum has at most 32
+  // enumerators; otherwise, fallback to the generic `std::bitset` case.
+  std::conditional_t<(N_PROPS > 32), std::bitset<N_PROPS>, uint32_t> Bits{};
 
 public:
   LVProperties() = default;
 
-  void set(T Idx) { Bits[static_cast<unsigned>(Idx)] = 1; }
-  void reset(T Idx) { Bits[static_cast<unsigned>(Idx)] = 0; }
-  bool get(T Idx) const { return Bits[static_cast<unsigned>(Idx)]; }
+  void set(T Idx) {
+    if constexpr (std::is_same_v<decltype(Bits), uint32_t>)
+      Bits |= 1 << static_cast<unsigned>(Idx);
+    else
+      Bits.set(static_cast<unsigned>(Idx));
+  }
+  void reset(T Idx) {
+    if constexpr (std::is_same_v<decltype(Bits), uint32_t>)
+      Bits &= ~(1 << static_cast<unsigned>(Idx));
+    else
+      Bits.reset(static_cast<unsigned>(Idx));
+  }
+  bool get(T Idx) const {
+    if constexpr (std::is_same_v<decltype(Bits), uint32_t>)
+      return Bits & (1 << static_cast<unsigned>(Idx));
+    else
+      return Bits[static_cast<unsigned>(Idx)];
+  }
 };
 
 // Generate get, set and reset 'bool' functions for LVProperties instances.
@@ -99,7 +119,20 @@ public:
 #define KIND_3(ENUM, FIELD, F1, F2, F3)                                        \
   BOOL_BIT_3(Kinds, ENUM, FIELD, F1, F2, F3)
 
-const int HEX_WIDTH = 12;
+static constexpr int DEC_WIDTH = 8;
+inline FormattedNumber decValue(uint64_t N, unsigned Width = DEC_WIDTH) {
+  return format_decimal(N, Width);
+}
+
+// Output the decimal representation of 'Value'.
+inline std::string decString(uint64_t Value, size_t Width = DEC_WIDTH) {
+  std::string String;
+  raw_string_ostream Stream(String);
+  Stream << decValue(Value, Width);
+  return String;
+}
+
+static constexpr int HEX_WIDTH = 12;
 inline FormattedNumber hexValue(uint64_t N, unsigned Width = HEX_WIDTH,
                                 bool Upper = false) {
   return format_hex(N, Width, Upper);
@@ -210,8 +243,8 @@ public:
 };
 
 // Unified and flattened pathnames.
-std::string transformPath(StringRef Path);
-std::string flattenedFilePath(StringRef Path);
+LLVM_ABI std::string transformPath(StringRef Path);
+LLVM_ABI std::string flattenedFilePath(StringRef Path);
 
 inline std::string formattedKind(StringRef Kind) {
   return (Twine("{") + Twine(Kind) + Twine("}")).str();
@@ -229,10 +262,10 @@ inline std::string formattedNames(StringRef Name1, StringRef Name2) {
 // scopes, such as: name, name<..>, scope::name, scope::..::name, etc.
 // The string can have multiple references to template instantiations.
 // It returns the inner most component.
-LVLexicalComponent getInnerComponent(StringRef Name);
-LVStringRefs getAllLexicalComponents(StringRef Name);
-std::string getScopedName(const LVStringRefs &Components,
-                          StringRef BaseName = {});
+LLVM_ABI LVLexicalComponent getInnerComponent(StringRef Name);
+LLVM_ABI LVStringRefs getAllLexicalComponents(StringRef Name);
+LLVM_ABI std::string getScopedName(const LVStringRefs &Components,
+                                   StringRef BaseName = {});
 
 // These are the values assigned to the debug location record IDs.
 // See DebugInfo/CodeView/CodeViewSymbols.def.
@@ -243,6 +276,7 @@ std::string getScopedName(const LVStringRefs &Components,
 // S_DEFRANGE_SUBFIELD_REGISTER             0x1143
 // S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE   0x1144
 // S_DEFRANGE_REGISTER_REL                  0x1145
+// S_DEFRANGE_REGISTER_REL_INDIR            0x1177
 // When recording CodeView debug location, the above values are truncated
 // to a uint8_t value in order to fit the 'OpCode' used for the logical
 // debug location operations.

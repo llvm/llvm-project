@@ -15,28 +15,36 @@
 // Functions to unpoison memory
 //-----------------------------------------------------------------------------
 
+#if LIBC_HAS_FEATURE(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+#define LIBC_HAS_ADDRESS_SANITIZER
+#endif
+
 #if LIBC_HAS_FEATURE(memory_sanitizer)
+#define LIBC_HAS_MEMORY_SANITIZER
+#endif
+
+#ifdef LIBC_HAS_MEMORY_SANITIZER
 // Only perform MSAN unpoison in non-constexpr context.
 #include <sanitizer/msan_interface.h>
-#define MSAN_UNPOISON(addr, size)                                              \
+#define LIBC_MSAN_UNPOISON(addr, size)                                         \
   do {                                                                         \
     if (!__builtin_is_constant_evaluated())                                    \
       __msan_unpoison(addr, size);                                             \
   } while (0)
 #else
-#define MSAN_UNPOISON(ptr, size)
+#define LIBC_MSAN_UNPOISON(ptr, size)
 #endif
 
-#if LIBC_HAS_FEATURE(address_sanitizer)
-#define LIBC_HAVE_ADDRESS_SANITIZER
+#ifdef LIBC_HAS_ADDRESS_SANITIZER
 #include <sanitizer/asan_interface.h>
-#define ASAN_POISON_MEMORY_REGION(addr, size)                                  \
+#define LIBC_ASAN_POISON_MEMORY_REGION(addr, size)                             \
   __asan_poison_memory_region((addr), (size))
-#define ASAN_UNPOISON_MEMORY_REGION(addr, size)                                \
+#define LIBC_ASAN_UNPOISON_MEMORY_REGION(addr, size)                           \
   __asan_unpoison_memory_region((addr), (size))
 #else
-#define ASAN_POISON_MEMORY_REGION(addr, size) ((void)(addr), (void)(size))
-#define ASAN_UNPOISON_MEMORY_REGION(addr, size) ((void)(addr), (void)(size))
+#define LIBC_ASAN_POISON_MEMORY_REGION(addr, size) ((void)(addr), (void)(size))
+#define LIBC_ASAN_UNPOISON_MEMORY_REGION(addr, size)                           \
+  ((void)(addr), (void)(size))
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_SANITIZER_H

@@ -105,7 +105,7 @@ void ModuleCacheTest::TryGetAndPut(const FileSpec &cache_dir,
         return Status();
       },
       [](const ModuleSP &module_sp, const FileSpec &tmp_download_file_spec) {
-        return Status("Not supported.");
+        return Status::FromErrorString("Not supported.");
       },
       module_sp, &did_create);
   EXPECT_EQ(expect_download, download_called);
@@ -138,7 +138,7 @@ TEST_F(ModuleCacheTest, GetAndPutUuidExists) {
 
   FileSpec uuid_view = GetUuidView(test_cache_dir);
   std::error_code ec =
-      llvm::sys::fs::create_directories(uuid_view.GetDirectory().GetCString());
+      llvm::sys::fs::create_directories(uuid_view.GetDirectory());
   ASSERT_FALSE(ec);
   ec = llvm::sys::fs::copy_file(s_test_executable, uuid_view.GetPath().c_str());
   ASSERT_FALSE(ec);

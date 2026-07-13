@@ -54,7 +54,6 @@ static llvm::SmallString<128> canonicalize(llvm::StringRef Path) {
   return Result;
 }
 
-constexpr const unsigned FileDistance::Unreachable;
 const llvm::hash_code FileDistance::RootHash =
     llvm::hash_value(llvm::StringRef("/"));
 

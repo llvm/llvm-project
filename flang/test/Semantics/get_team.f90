@@ -10,6 +10,8 @@ program get_team_test
   type(team_type) :: result_team
   logical wrong_result_type, non_integer
 
+  result_team = team_type()
+
   !___ standard-conforming statement with no optional arguments present ___
   result_team = get_team()
 
@@ -49,7 +51,7 @@ program get_team_test
   !ERROR: repeated keyword argument to intrinsic 'get_team'
   result_team = get_team(level=initial_team, level=parent_team)
 
-  !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches operand types LOGICAL(4) and TYPE(__builtin_team_type)
+  !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches operand types LOGICAL(4) and TYPE(team_type)
   wrong_result_type = get_team()
 
 end program get_team_test

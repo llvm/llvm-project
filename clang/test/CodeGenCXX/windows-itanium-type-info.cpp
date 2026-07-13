@@ -29,12 +29,12 @@ void f() {
 
 // CHECK-DAG: @_ZTI7derived = dso_local dllexport constant
 // CHECK-DAG: @_ZTS7derived = dso_local dllexport constant
-// CHECK-DAG: @_ZTV7derived = dso_local dllexport unnamed_addr constant
+// CHECK-DAG: @_ZTV7derived = dso_local dllexport constant
 
 // CHECK-DAG: @_ZTI4base = external dllimport constant
 
-// CHECK-EH-IMPORT: @_ZTS4base = linkonce_odr dso_local constant
 // CHECK-EH-IMPORT: @_ZTI4base = linkonce_odr dso_local constant
+// CHECK-EH-IMPORT: @_ZTS4base = linkonce_odr dso_local constant
 
 struct __declspec(dllimport) gatekeeper {};
 struct zuul : gatekeeper {

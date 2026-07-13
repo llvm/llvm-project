@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS
   FrontendOpenMP
   )
 
-add_clang_library(clangTidyAbseilModule
+add_clang_library(clangTidyAbseilModule STATIC
   AbseilTidyModule.cpp
   CleanupCtadCheck.cpp
   DurationAdditionCheck.cpp
@@ -25,6 +25,7 @@ add_clang_library(clangTidyAbseilModule
   TimeComparisonCheck.cpp
   TimeSubtractionCheck.cpp
   UpgradeDurationConversionsCheck.cpp
+  UncheckedStatusOrAccessCheck.cpp
 
   LINK_LIBS
   clangTidy
@@ -37,6 +38,8 @@ add_clang_library(clangTidyAbseilModule
 
 clang_target_link_libraries(clangTidyAbseilModule
   PRIVATE
+  clangAnalysisFlowSensitive
+  clangAnalysisFlowSensitiveModels
   clangAST
   clangASTMatchers
   clangBasic

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 
 set -e
 
@@ -24,5 +24,5 @@ build_image() {
 
 cd "${THIS_DIR}"
 
-build_image 21-def-x86
+build_image 23-def-x86
 build_image 33-goog-x86_64

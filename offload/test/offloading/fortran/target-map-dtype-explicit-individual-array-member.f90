@@ -1,9 +1,9 @@
-! Offloading test checking interaction of an
-! explicit derived type member mapping of
-! an array when mapped to target
+! Offloading test checking interaction of an explicit derived type member
+! mapping of an array when mapped to target
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
+! XFAIL: intelgpu
 program main
 type :: scalar_array
     real(4) :: break_0

@@ -66,12 +66,15 @@ CHECK-NEXT:    -Wuninitialized
 CHECK-NEXT:      -Wsometimes-uninitialized
 CHECK-NEXT:      -Wstatic-self-init
 CHECK-NEXT:      -Wuninitialized-const-reference
+CHECK-NEXT:      -Wuninitialized-const-pointer
 CHECK-NEXT:    -Wunknown-pragmas
 CHECK-NEXT:    -Wunused
 CHECK-NEXT:      -Wunused-argument
 CHECK-NEXT:      -Wunused-function
 CHECK-NEXT:        -Wunneeded-internal-declaration
 CHECK-NEXT:      -Wunused-label
+CHECK-NEXT:      -Wunused-template
+CHECK-NEXT:        -Wunneeded-internal-declaration
 CHECK-NEXT:      -Wunused-private-field
 CHECK-NEXT:      -Wunused-lambda-capture
 CHECK-NEXT:      -Wunused-local-typedef
@@ -83,6 +86,7 @@ CHECK-NEXT:          -Wpotentially-evaluated-expression
 CHECK-NEXT:      -Wunused-variable
 CHECK-NEXT:        -Wunused-const-variable
 CHECK-NEXT:      -Wunused-but-set-variable
+CHECK-NEXT:        -Wunused-but-set-global
 CHECK-NEXT:      -Wunused-property-ivar
 CHECK-NEXT:    -Wvolatile-register-var
 CHECK-NEXT:    -Wobjc-missing-super-calls

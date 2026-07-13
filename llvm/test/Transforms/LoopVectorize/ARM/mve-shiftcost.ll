@@ -8,15 +8,15 @@ target triple = "thumbv8.1m.main-none-none-eabi"
 ; CHECK-LABEL: test
 ; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %and515 = shl i32 %l41, 3
 ; CHECK-COST: LV: Found an estimated cost of 1 for VF 1 For instruction:   %l45 = and i32 %and515, 131072
-; CHECK-COST: LV: Found an estimated cost of 2 for VF 4 For instruction:   %and515 = shl i32 %l41, 3
-; CHECK-COST: LV: Found an estimated cost of 2 for VF 4 For instruction:   %l45 = and i32 %and515, 131072
+; CHECK-COST: Cost of 2 for VF 4: WIDEN ir<%and515> = shl ir<%l41>, ir<3>
+; CHECK-COST: Cost of 2 for VF 4: WIDEN ir<%l45> = and ir<%and515>, ir<131072>
 ; CHECK-NOT: vector.body
 
 define void @test(ptr %src, i32 %N) #0 {
 entry:
   br label %for.body386
 
-for.body386:                                      ; preds = %entry, %l77
+for.body386:
   %add387 = phi i32 [ %inc532, %l77 ], [ 0, %entry ]
   %arrayidx388 = getelementptr inbounds [101 x i32], ptr %src, i32 0, i32 %add387
   %l41 = load i32, ptr %arrayidx388, align 4
@@ -24,7 +24,7 @@ for.body386:                                      ; preds = %entry, %l77
   %l43 = icmp eq i32 %l42, 0
   br i1 %l43, label %l77, label %l44
 
-l44:                                               ; preds = %for.body386
+l44:
   %and515 = shl i32 %l41, 3
   %l45 = and i32 %and515, 131072
   %and506 = shl i32 %l41, 5
@@ -75,7 +75,7 @@ l44:                                               ; preds = %for.body386
   store i32 %l76, ptr %arrayidx388, align 4
   br label %l77
 
-l77:                                               ; preds = %for.body386, %l44
+l77:
   %inc532 = add nuw nsw i32 %add387, 1
   %exitcond649 = icmp eq i32 %inc532, %N
   br i1 %exitcond649, label %exit, label %for.body386

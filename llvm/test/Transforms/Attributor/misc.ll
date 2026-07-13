@@ -11,7 +11,7 @@ define internal void @internal(ptr %fp) {
 ; TUNIT-SAME: (ptr nonnull [[FP:%.*]]) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    call void @foo(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1:[0-9]+]]
+; TUNIT-NEXT:    call void @foo(ptr nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[A]]) #[[ATTR1:[0-9]+]]
 ; TUNIT-NEXT:    call void [[FP]](ptr nonnull @foo)
 ; TUNIT-NEXT:    call void @callback1(ptr noundef nonnull @foo)
 ; TUNIT-NEXT:    call void @callback2(ptr noundef nonnull @foo)
@@ -23,7 +23,7 @@ define internal void @internal(ptr %fp) {
 ; CGSCC-SAME: (ptr noundef nonnull [[FP:%.*]]) {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    call void @foo(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1:[0-9]+]]
+; CGSCC-NEXT:    call void @foo(ptr nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[A]]) #[[ATTR1:[0-9]+]]
 ; CGSCC-NEXT:    call void [[FP]](ptr nonnull @foo)
 ; CGSCC-NEXT:    call void @callback1(ptr noundef nonnull @foo)
 ; CGSCC-NEXT:    call void @callback2(ptr noundef nonnull @foo)
@@ -49,7 +49,7 @@ define void @external(ptr %fp) {
 ; TUNIT-SAME: (ptr [[FP:%.*]]) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    call void @foo(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1]]
+; TUNIT-NEXT:    call void @foo(ptr nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[A]]) #[[ATTR1]]
 ; TUNIT-NEXT:    call void @callback1(ptr noundef nonnull @foo)
 ; TUNIT-NEXT:    call void @callback2(ptr noundef nonnull @foo)
 ; TUNIT-NEXT:    call void @callback2(ptr [[FP]])
@@ -62,7 +62,7 @@ define void @external(ptr %fp) {
 ; CGSCC-SAME: (ptr [[FP:%.*]]) {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    call void @foo(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1]]
+; CGSCC-NEXT:    call void @foo(ptr nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[A]]) #[[ATTR1]]
 ; CGSCC-NEXT:    call void @callback1(ptr noundef nonnull @foo)
 ; CGSCC-NEXT:    call void @callback2(ptr noundef nonnull @foo)
 ; CGSCC-NEXT:    call void @callback2(ptr [[FP]])
@@ -87,7 +87,7 @@ define internal void @foo(ptr %a) {
 ;
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@foo
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK-NEXT:    ret void

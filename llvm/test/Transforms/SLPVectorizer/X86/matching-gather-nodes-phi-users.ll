@@ -8,9 +8,9 @@
 ; YAML: Function:        test
 ; YAML: Args:
 ; YAML:   - String:          'Stores SLP vectorized with cost '
-; YAML:   - Cost:            '-6'
+; YAML:   - Cost:            '-9'
 ; YAML:   - String:          ' and with tree size '
-; YAML:   - TreeSize:        '14'
+; YAML:   - TreeSize:        '16'
 ; YAML: ...
 
 ; Test that SLP cost modeling is able to match gathering tree
@@ -24,7 +24,7 @@ define void @test(ptr %dst, float %a, float %b, float %c, float %d) {
 ; CHECK-NEXT:  Entry:
 ; CHECK-NEXT:    br i1 poison, label [[LOOP0:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop0:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x float> [ <float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01>, [[ENTRY:%.*]] ], [ [[TMP7:%.*]], [[USERBLOCK1:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x float> [ splat (float 5.000000e-01), [[ENTRY:%.*]] ], [ [[TMP7:%.*]], [[USERBLOCK1:%.*]] ]
 ; CHECK-NEXT:    br i1 poison, label [[USERBLOCK0:%.*]], label [[BLKX:%.*]]
 ; CHECK:       UserBlock0:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <4 x float> [ zeroinitializer, [[LOOP0]] ], [ [[TMP5:%.*]], [[BLKX]] ]
@@ -34,10 +34,10 @@ define void @test(ptr %dst, float %a, float %b, float %c, float %d) {
 ; CHECK-NEXT:    [[CALL1:%.*]] = call fast float @foo(float [[B]])
 ; CHECK-NEXT:    [[CALL2:%.*]] = call fast float @foo(float [[C]])
 ; CHECK-NEXT:    [[CALL3:%.*]] = call fast float @foo(float [[D]])
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[CALL0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[CALL1]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[CALL2]], i32 2
-; CHECK-NEXT:    [[TMP5]] = insertelement <4 x float> [[TMP4]], float [[CALL3]], i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[CALL0]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[CALL1]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[CALL2]], i64 2
+; CHECK-NEXT:    [[TMP5]] = insertelement <4 x float> [[TMP4]], float [[CALL3]], i64 3
 ; CHECK-NEXT:    br i1 poison, label [[USERBLOCK0]], label [[USERBLOCK1]]
 ; CHECK:       UserBlock1:
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x float> [ [[TMP5]], [[BLKX]] ], [ [[TMP9:%.*]], [[LOOP_INNER]] ]
@@ -48,7 +48,7 @@ define void @test(ptr %dst, float %a, float %b, float %c, float %d) {
 ; CHECK-NEXT:    [[TMP9]] = fadd fast <4 x float> [[TMP8]], poison
 ; CHECK-NEXT:    br i1 poison, label [[USERBLOCK1]], label [[LOOP_INNER]]
 ; CHECK:       Exit:
-; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x float> [ <float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01>, [[ENTRY]] ], [ [[TMP7]], [[USERBLOCK1]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x float> [ splat (float 5.000000e-01), [[ENTRY]] ], [ [[TMP7]], [[USERBLOCK1]] ]
 ; CHECK-NEXT:    [[IDX0:%.*]] = add i64 0, poison
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IDX0]]
 ; CHECK-NEXT:    store <4 x float> [[TMP10]], ptr [[GEP0]], align 4

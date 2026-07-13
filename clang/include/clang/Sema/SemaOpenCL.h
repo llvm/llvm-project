@@ -13,10 +13,10 @@
 #ifndef LLVM_CLANG_SEMA_SEMAOPENCL_H
 #define LLVM_CLANG_SEMA_SEMAOPENCL_H
 
+#include "clang/AST/ASTFwd.h"
 #include "clang/Sema/SemaBase.h"
 
 namespace clang {
-class Decl;
 class ParsedAttr;
 
 class SemaOpenCL : public SemaBase {
@@ -100,6 +100,8 @@ public:
   bool checkBuiltinKernelWorkGroupSize(CallExpr *TheCall);
 
   bool checkBuiltinNDRangeAndBlock(CallExpr *TheCall);
+
+  void checkBuiltinReadImage(FunctionDecl *FDecl, CallExpr *Call);
 };
 
 } // namespace clang

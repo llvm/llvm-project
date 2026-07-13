@@ -76,7 +76,6 @@
 #cmakedefine01 PPC_LINUX_DEFAULT_IEEELONGDOUBLE
 
 /* Enable each functionality of modules */
-#cmakedefine01 CLANG_ENABLE_ARCMT
 #cmakedefine01 CLANG_ENABLE_OBJC_REWRITER
 #cmakedefine01 CLANG_ENABLE_STATIC_ANALYZER
 
@@ -85,5 +84,15 @@
 
 /* Whether CIR is built into Clang */
 #cmakedefine01 CLANG_ENABLE_CIR
+
+/* Whether to use xcselect to find the macOS SDK */
+#cmakedefine CLANG_USE_XCSELECT
+
+/* Policy to use for xcselect */
+#cmakedefine CLANG_XCSELECT_HOST_SDK_POLICY ${CLANG_XCSELECT_HOST_SDK_POLICY}
+
+
+/* Enable the experimental new constant interpreter by default */
+#cmakedefine01 CLANG_USE_EXPERIMENTAL_CONST_INTERP
 
 #endif

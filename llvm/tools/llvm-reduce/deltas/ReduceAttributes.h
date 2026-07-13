@@ -14,9 +14,10 @@
 #ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEATTRIBUTES_H
 #define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEATTRIBUTES_H
 
+#include "Delta.h"
+
 namespace llvm {
-class TestRunner;
-void reduceAttributesDeltaPass(TestRunner &Test);
+void reduceAttributesDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
 } // namespace llvm
 
 #endif

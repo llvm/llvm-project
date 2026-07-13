@@ -16,9 +16,11 @@
 #include "X86BaseInfo.h"
 #include "X86MCTargetDesc.h"
 #include "X86ShuffleDecode.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/raw_ostream.h"
+#include <string_view>
 
 using namespace llvm;
 
@@ -38,6 +40,36 @@ using namespace llvm;
   CASE_AVX_INS_COMMON(Inst, Suffix, src)          \
   CASE_MASK_INS_COMMON(Inst, Suffix, src)         \
   CASE_MASKZ_INS_COMMON(Inst, Suffix, src)
+
+#define CASE_MASK_INS_COMMON_INT(Inst, Suffix, src) \
+  case X86::V##Inst##Suffix##src##k_Int:
+
+#define CASE_MASKZ_INS_COMMON_INT(Inst, Suffix, src) \
+  case X86::V##Inst##Suffix##src##kz_Int:
+
+#define CASE_AVX512_INS_COMMON_INT(Inst, Suffix, src) \
+  CASE_AVX_INS_COMMON(Inst, Suffix, src##_Int)        \
+  CASE_MASK_INS_COMMON_INT(Inst, Suffix, src)         \
+  CASE_MASKZ_INS_COMMON_INT(Inst, Suffix, src)
+
+#define CASE_FPCLASS_PACKED(Inst, src)    \
+  CASE_AVX_INS_COMMON(Inst, Z, src##i)    \
+  CASE_AVX_INS_COMMON(Inst, Z256, src##i) \
+  CASE_AVX_INS_COMMON(Inst, Z128, src##i) \
+  CASE_MASK_INS_COMMON(Inst, Z, src##i)
+
+#define CASE_FPCLASS_PACKED_MEM(Inst) \
+  CASE_FPCLASS_PACKED(Inst, m)        \
+  CASE_FPCLASS_PACKED(Inst, mb)
+
+#define CASE_FPCLASS_SCALAR(Inst, src)  \
+  CASE_AVX_INS_COMMON(Inst, Z, src##i)  \
+  CASE_MASK_INS_COMMON(Inst, Z, src##i)
+
+#define CASE_PTERNLOG(Inst, src)                                               \
+  CASE_AVX512_INS_COMMON(Inst, Z, r##src##i)                                   \
+  CASE_AVX512_INS_COMMON(Inst, Z256, r##src##i)                                \
+  CASE_AVX512_INS_COMMON(Inst, Z128, r##src##i)
 
 #define CASE_MOVDUP(Inst, src)                    \
   CASE_AVX512_INS_COMMON(Inst, Z, r##src)         \
@@ -176,8 +208,8 @@ using namespace llvm;
   CASE_AVX_INS_COMMON(Inst##SS, , r_Int)          \
   CASE_AVX_INS_COMMON(Inst##SD, Z, r)             \
   CASE_AVX_INS_COMMON(Inst##SS, Z, r)             \
-  CASE_AVX512_INS_COMMON(Inst##SD, Z, r_Int)      \
-  CASE_AVX512_INS_COMMON(Inst##SS, Z, r_Int)
+  CASE_AVX512_INS_COMMON_INT(Inst##SD, Z, r)      \
+  CASE_AVX512_INS_COMMON_INT(Inst##SS, Z, r)
 
 #define CASE_FMA_SCALAR_MEM(Inst)                 \
   CASE_AVX_INS_COMMON(Inst##SD, , m)              \
@@ -186,8 +218,8 @@ using namespace llvm;
   CASE_AVX_INS_COMMON(Inst##SS, , m_Int)          \
   CASE_AVX_INS_COMMON(Inst##SD, Z, m)             \
   CASE_AVX_INS_COMMON(Inst##SS, Z, m)             \
-  CASE_AVX512_INS_COMMON(Inst##SD, Z, m_Int)      \
-  CASE_AVX512_INS_COMMON(Inst##SS, Z, m_Int)
+  CASE_AVX512_INS_COMMON_INT(Inst##SD, Z, m)      \
+  CASE_AVX512_INS_COMMON_INT(Inst##SS, Z, m)
 
 #define CASE_FMA4(Inst, suf)                      \
   CASE_AVX_INS_COMMON(Inst, 4, suf)               \
@@ -223,14 +255,14 @@ using namespace llvm;
   CASE_AVX_INS_COMMON(Inst##SD4, , mr_Int)        \
   CASE_AVX_INS_COMMON(Inst##SS4, , mr_Int)
 
-static unsigned getVectorRegSize(unsigned RegNo) {
-  if (X86II::isZMMReg(RegNo))
+static unsigned getVectorRegSize(MCRegister Reg) {
+  if (X86II::isZMMReg(Reg))
     return 512;
-  if (X86II::isYMMReg(RegNo))
+  if (X86II::isYMMReg(Reg))
     return 256;
-  if (X86II::isXMMReg(RegNo))
+  if (X86II::isXMMReg(Reg))
     return 128;
-  if (X86::MM0 <= RegNo && RegNo <= X86::MM7)
+  if (Reg >= X86::MM0 && Reg <= X86::MM7)
     return 64;
 
   llvm_unreachable("Unknown vector reg!");
@@ -238,7 +270,7 @@ static unsigned getVectorRegSize(unsigned RegNo) {
 
 static unsigned getRegOperandNumElts(const MCInst *MI, unsigned ScalarSize,
                                      unsigned OperandIndex) {
-  unsigned OpReg = MI->getOperand(OperandIndex).getReg();
+  MCRegister OpReg = MI->getOperand(OperandIndex).getReg();
   return getVectorRegSize(OpReg) / ScalarSize;
 }
 
@@ -617,6 +649,417 @@ static bool printFMAComments(const MCInst *MI, raw_ostream &OS,
   return true;
 }
 
+// This table is indexed by the imm8 binary function specified in a
+// vpternlog{d,q} instruction. The symbols {a,b,c} correspond to the three
+// inputs to the binary function. This table was taken from
+// https://gist.github.com/dougallj/81a80cd381988466c4e1c4889ecac95b#file-2-x86-base-txt
+// with slight massaging.
+constexpr EnumStringDef<uint8_t> TernlogFunctionDefs[] = {
+    {{"0"}, 0},
+    {{"~(a | b | c)"}, 1},
+    {{"c & ~(a | b)"}, 2},
+    {{"~(a | b)"}, 3},
+    {{"b & ~(a | c)"}, 4},
+    {{"~(a | c)"}, 5},
+    {{"~a & (b ^ c)"}, 6},
+    {{"~(a | (b & c))"}, 7},
+    {{"b & c & ~a"}, 8},
+    {{"~(a | (b ^ c))"}, 9},
+    {{"c & ~a"}, 10},
+    {{"~a & (c | ~b)"}, 11},
+    {{"b & ~a"}, 12},
+    {{"~a & (b | ~c)"}, 13},
+    {{"~a & (b | c)"}, 14},
+    {{"~a"}, 15},
+    {{"a & ~(b | c)"}, 16},
+    {{"~(b | c)"}, 17},
+    {{"~b & (a ^ c)"}, 18},
+    {{"~((a & c) | b)"}, 19},
+    {{"~c & (a ^ b)"}, 20},
+    {{"~((a & b) | c)"}, 21},
+    {{"a ^ ((a & b) | (b ^ c))"}, 22},
+    {{"(a & (b ^ c)) ^ ~(b & c)"}, 23},
+    {{"(a ^ b) & (a ^ c)"}, 24},
+    {{"~((a & b) | (b ^ c))"}, 25},
+    {{"a ^ ((a & b) | c)"}, 26},
+    {{"(a & c) ^ (c | ~b)"}, 27},
+    {{"a ^ ((a & c) | b)"}, 28},
+    {{"(a & b) ^ (b | ~c)"}, 29},
+    {{"a ^ (b | c)"}, 30},
+    {{"~(a & (b | c))"}, 31},
+    {{"a & c & ~b"}, 32},
+    {{"~(b | (a ^ c))"}, 33},
+    {{"c & ~b"}, 34},
+    {{"~b & (c | ~a)"}, 35},
+    {{"(a ^ b) & (b ^ c)"}, 36},
+    {{"~((a & b) | (a ^ c))"}, 37},
+    {{"b ^ ((a & b) | c)"}, 38},
+    {{"(b & c) ^ (c | ~a)"}, 39},
+    {{"c & (a ^ b)"}, 40},
+    {{"(a | b) ^ ((a & b) | ~c)"}, 41},
+    {{"c & ~(a & b)"}, 42},
+    {{"(c & (a ^ b)) | ~(a | b)"}, 43},
+    {{"(b | c) & (a ^ b)"}, 44},
+    {{"a ^ (b | ~c)"}, 45},
+    {{"(a & b) ^ (b | c)"}, 46},
+    {{"(c & ~b) | ~a"}, 47},
+    {{"a & ~b"}, 48},
+    {{"~b & (a | ~c)"}, 49},
+    {{"~b & (a | c)"}, 50},
+    {{"~b"}, 51},
+    {{"b ^ (a | (b & c))"}, 52},
+    {{"(a & b) ^ (a | ~c)"}, 53},
+    {{"b ^ (a | c)"}, 54},
+    {{"~(b & (a | c))"}, 55},
+    {{"(a | c) & (a ^ b)"}, 56},
+    {{"b ^ (a | ~c)"}, 57},
+    {{"(a & b) ^ (a | c)"}, 58},
+    {{"(c & ~a) | ~b"}, 59},
+    {{"a ^ b"}, 60},
+    {{"~(a | c) | (a ^ b)"}, 61},
+    {{"(c & ~a) | (a ^ b)"}, 62},
+    {{"~(a & b)"}, 63},
+    {{"a & b & ~c"}, 64},
+    {{"~(c | (a ^ b))"}, 65},
+    {{"(a ^ c) & (b ^ c)"}, 66},
+    {{"~((a & c) | (a ^ b))"}, 67},
+    {{"b & ~c"}, 68},
+    {{"~c & (b | ~a)"}, 69},
+    {{"c ^ ((a & c) | b)"}, 70},
+    {{"(b & c) ^ (b | ~a)"}, 71},
+    {{"b & (a ^ c)"}, 72},
+    {{"(a | c) ^ ((a & c) | ~b)"}, 73},
+    {{"(b | c) & (a ^ c)"}, 74},
+    {{"a ^ (c | ~b)"}, 75},
+    {{"b & ~(a & c)"}, 76},
+    {{"(b & (a ^ c)) | ~(a | c)"}, 77},
+    {{"(a & c) ^ (b | c)"}, 78},
+    {{"(b & ~c) | ~a"}, 79},
+    {{"a & ~c"}, 80},
+    {{"~c & (a | ~b)"}, 81},
+    {{"c ^ (a | (b & c))"}, 82},
+    {{"(a & c) ^ (a | ~b)"}, 83},
+    {{"~c & (a | b)"}, 84},
+    {{"~c"}, 85},
+    {{"c ^ (a | b)"}, 86},
+    {{"~(c & (a | b))"}, 87},
+    {{"(a | b) & (a ^ c)"}, 88},
+    {{"c ^ (a | ~b)"}, 89},
+    {{"a ^ c"}, 90},
+    {{"~(a | b) | (a ^ c)"}, 91},
+    {{"(a & c) ^ (a | b)"}, 92},
+    {{"(b & ~a) | ~c"}, 93},
+    {{"(b & ~a) | (a ^ c)"}, 94},
+    {{"~(a & c)"}, 95},
+    {{"a & (b ^ c)"}, 96},
+    {{"~(b ^ c) ^ (a | (b & c))"}, 97},
+    {{"(a | c) & (b ^ c)"}, 98},
+    {{"b ^ (c | ~a)"}, 99},
+    {{"(a | b) & (b ^ c)"}, 100},
+    {{"c ^ (b | ~a)"}, 101},
+    {{"b ^ c"}, 102},
+    {{"~(a | b) | (b ^ c)"}, 103},
+    {{"(a | b) & (c ^ (a & b))"}, 104},
+    {{"b ^ c ^ ~a"}, 105},
+    {{"c ^ (a & b)"}, 106},
+    {{"~(a | b) | (c ^ (a & b))"}, 107},
+    {{"b ^ (a & c)"}, 108},
+    {{"~(a | c) | (b ^ (a & c))"}, 109},
+    {{"(b & ~a) | (b ^ c)"}, 110},
+    {{"~a | (b ^ c)"}, 111},
+    {{"a & ~(b & c)"}, 112},
+    {{"(a & (b ^ c)) | ~(b | c)"}, 113},
+    {{"(b & c) ^ (a | c)"}, 114},
+    {{"(a & ~c) | ~b"}, 115},
+    {{"(b & c) ^ (a | b)"}, 116},
+    {{"(a & ~b) | ~c"}, 117},
+    {{"(a & ~b) | (b ^ c)"}, 118},
+    {{"~(b & c)"}, 119},
+    {{"a ^ (b & c)"}, 120},
+    {{"~(b | c) | (a ^ (b & c))"}, 121},
+    {{"(a & ~b) | (a ^ c)"}, 122},
+    {{"~b | (a ^ c)"}, 123},
+    {{"(a & ~c) | (a ^ b)"}, 124},
+    {{"~c | (a ^ b)"}, 125},
+    {{"(a ^ b) | (a ^ c)"}, 126},
+    {{"~(a & b & c)"}, 127},
+    {{"a & b & c"}, 128},
+    {{"~((a ^ b) | (a ^ c))"}, 129},
+    {{"c & ~(a ^ b)"}, 130},
+    {{"~(a ^ b) & (c | ~a)"}, 131},
+    {{"b & ~(a ^ c)"}, 132},
+    {{"~(a ^ c) & (b | ~a)"}, 133},
+    {{"(b | c) & (a ^ b ^ c)"}, 134},
+    {{"(b & c) ^ ~a"}, 135},
+    {{"b & c"}, 136},
+    {{"~(b ^ c) & (b | ~a)"}, 137},
+    {{"c & (b | ~a)"}, 138},
+    {{"~((b & c) ^ (a | b))"}, 139},
+    {{"b & (c | ~a)"}, 140},
+    {{"~((b & c) ^ (a | c))"}, 141},
+    {{"a ^ ((a ^ b) | (a ^ c))"}, 142},
+    {{"(b & c) | ~a"}, 143},
+    {{"a & ~(b ^ c)"}, 144},
+    {{"~(b ^ c) & (a | ~b)"}, 145},
+    {{"(a | c) & (a ^ b ^ c)"}, 146},
+    {{"(a & c) ^ ~b"}, 147},
+    {{"(a | b) & (a ^ b ^ c)"}, 148},
+    {{"(a & b) ^ ~c"}, 149},
+    {{"a ^ b ^ c"}, 150},
+    {{"~(a | b) | (a ^ b ^ c)"}, 151},
+    {{"~(b ^ c) & (a | b)"}, 152},
+    {{"~(b ^ c)"}, 153},
+    {{"c ^ (a & ~b)"}, 154},
+    {{"~((a | b) & (b ^ c))"}, 155},
+    {{"b ^ (a & ~c)"}, 156},
+    {{"~((a | c) & (b ^ c))"}, 157},
+    {{"(b & c) | (a ^ (b | c))"}, 158},
+    {{"~(a & (b ^ c))"}, 159},
+    {{"a & c"}, 160},
+    {{"~(a ^ c) & (a | ~b)"}, 161},
+    {{"c & (a | ~b)"}, 162},
+    {{"~((a & c) ^ (a | b))"}, 163},
+    {{"~(a ^ c) & (a | b)"}, 164},
+    {{"~(a ^ c)"}, 165},
+    {{"c ^ (b & ~a)"}, 166},
+    {{"~((a | b) & (a ^ c))"}, 167},
+    {{"c & (a | b)"}, 168},
+    {{"~c ^ (a | b)"}, 169},
+    {{"c"}, 170},
+    {{"c | ~(a | b)"}, 171},
+    {{"b ^ (a & (b ^ c))"}, 172},
+    {{"(b & c) | ~(a ^ c)"}, 173},
+    {{"(b & ~a) | c"}, 174},
+    {{"c | ~a"}, 175},
+    {{"a & (c | ~b)"}, 176},
+    {{"~((a & c) ^ (b | c))"}, 177},
+    {{"a ^ ((a ^ c) & (b ^ c))"}, 178},
+    {{"(a & c) | ~b"}, 179},
+    {{"a ^ (b & ~c)"}, 180},
+    {{"~((b | c) & (a ^ c))"}, 181},
+    {{"(a & c) | (a ^ b ^ c)"}, 182},
+    {{"~(b & (a ^ c))"}, 183},
+    {{"a ^ (b & (a ^ c))"}, 184},
+    {{"(a & c) | ~(b ^ c)"}, 185},
+    {{"(a & ~b) | c"}, 186},
+    {{"c | ~b"}, 187},
+    {{"(a & c) | (a ^ b)"}, 188},
+    {{"~((a ^ c) & (b ^ c))"}, 189},
+    {{"c | (a ^ b)"}, 190},
+    {{"c | ~(a & b)"}, 191},
+    {{"a & b"}, 192},
+    {{"~(a ^ b) & (a | ~c)"}, 193},
+    {{"~(a ^ b) & (a | c)"}, 194},
+    {{"~(a ^ b)"}, 195},
+    {{"b & (a | ~c)"}, 196},
+    {{"~((a & b) ^ (a | c))"}, 197},
+    {{"b ^ (c & ~a)"}, 198},
+    {{"~((a | c) & (a ^ b))"}, 199},
+    {{"b & (a | c)"}, 200},
+    {{"~b ^ (a | c)"}, 201},
+    {{"c ^ (a & (b ^ c))"}, 202},
+    {{"(b & c) | ~(a ^ b)"}, 203},
+    {{"b"}, 204},
+    {{"b | ~(a | c)"}, 205},
+    {{"(c & ~a) | b"}, 206},
+    {{"b | ~a"}, 207},
+    {{"a & (b | ~c)"}, 208},
+    {{"~((a & b) ^ (b | c))"}, 209},
+    {{"a ^ (c & ~b)"}, 210},
+    {{"~((b | c) & (a ^ b))"}, 211},
+    {{"a ^ ((a ^ b) & (b ^ c))"}, 212},
+    {{"(a & b) | ~c"}, 213},
+    {{"(a & b) | (a ^ b ^ c)"}, 214},
+    {{"~(c & (a ^ b))"}, 215},
+    {{"a ^ (c & (a ^ b))"}, 216},
+    {{"(a & b) | ~(b ^ c)"}, 217},
+    {{"(a & b) | (a ^ c)"}, 218},
+    {{"~((a ^ b) & (b ^ c))"}, 219},
+    {{"(a & ~c) | b"}, 220},
+    {{"b | ~c"}, 221},
+    {{"b | (a ^ c)"}, 222},
+    {{"b | ~(a & c)"}, 223},
+    {{"a & (b | c)"}, 224},
+    {{"~a ^ (b | c)"}, 225},
+    {{"c ^ (b & (a ^ c))"}, 226},
+    {{"(a & c) | ~(a ^ b)"}, 227},
+    {{"b ^ (c & (a ^ b))"}, 228},
+    {{"(a & b) | ~(a ^ c)"}, 229},
+    {{"(a & b) | (b ^ c)"}, 230},
+    {{"~((a ^ b) & (a ^ c))"}, 231},
+    {{"(a | b) & ((a & b) | c)"}, 232},
+    {{"(a & b) | (b ^ c ^ ~a)"}, 233},
+    {{"(a & b) | c"}, 234},
+    {{"c | ~(a ^ b)"}, 235},
+    {{"(a & c) | b"}, 236},
+    {{"b | ~(a ^ c)"}, 237},
+    {{"b | c"}, 238},
+    {{"~a | b | c"}, 239},
+    {{"a"}, 240},
+    {{"a | ~(b | c)"}, 241},
+    {{"a | (c & ~b)"}, 242},
+    {{"a | ~b"}, 243},
+    {{"a | (b & ~c)"}, 244},
+    {{"a | ~c"}, 245},
+    {{"a | (b ^ c)"}, 246},
+    {{"a | ~(b & c)"}, 247},
+    {{"a | (b & c)"}, 248},
+    {{"a | ~(b ^ c)"}, 249},
+    {{"a | c"}, 250},
+    {{"~b | a | c"}, 251},
+    {{"a | b"}, 252},
+    {{"~c | a | b"}, 253},
+    {{"a | b | c"}, 254},
+    {{"-1"}, 255},
+};
+constexpr auto TernlogFunctions = BUILD_ENUM_STRINGS(TernlogFunctionDefs);
+
+static bool printPTERNLOGComments(const MCInst *MI, raw_ostream &OS,
+                                  const MCInstrInfo &MCII) {
+  unsigned NumOperands = MI->getNumOperands();
+
+  int Src2Idx;
+  int Src3Idx;
+  switch (MI->getOpcode()) {
+    // dest, src1, src2, src3, tbl
+    // dest, src1, mask, src2, src3, tbl
+    CASE_PTERNLOG(PTERNLOGD, r)
+    CASE_PTERNLOG(PTERNLOGQ, r)
+    Src2Idx = NumOperands - 3;
+    Src3Idx = NumOperands - 2;
+    break;
+
+    // dest, src1, src2, memory, tbl
+    // dest, src1, mask, src2, memory, tbl
+    CASE_PTERNLOG(PTERNLOGD, m)
+    CASE_PTERNLOG(PTERNLOGQ, m)
+    Src2Idx = NumOperands - 7;
+    Src3Idx = -1;
+    break;
+
+    CASE_PTERNLOG(PTERNLOGD, mb)
+    Src2Idx = NumOperands - 7;
+    Src3Idx = -2;
+    break;
+
+    CASE_PTERNLOG(PTERNLOGQ, mb)
+    Src2Idx = NumOperands - 7;
+    Src3Idx = -3;
+    break;
+
+  default:
+    return false;
+  }
+  StringRef DestName = getRegName(MI->getOperand(0).getReg());
+  StringRef Src1Name = getRegName(MI->getOperand(1).getReg());
+  StringRef Src2Name = getRegName(MI->getOperand(Src2Idx).getReg());
+  StringRef Src3Name;
+  switch (Src3Idx) {
+  case -1:
+    Src3Name = "mem";
+    break;
+  case -2:
+    Src3Name = "m32bcst";
+    break;
+  case -3:
+    Src3Name = "m64bcst";
+    break;
+  default:
+    Src3Name = getRegName(MI->getOperand(Src3Idx).getReg());
+    break;
+  }
+  uint8_t TruthTable = MI->getOperand(NumOperands - 1).getImm();
+
+  StringRef SrcNames[] = {Src1Name, Src2Name, Src3Name};
+
+  OS << DestName;
+  printMasking(OS, MI, MCII);
+  OS << " = ";
+
+  static_assert(std::size(TernlogFunctions) == 256);
+  std::string_view BooleanFunction = TernlogFunctions[TruthTable].name();
+
+  while (!BooleanFunction.empty()) {
+    // Print the expression up to the next symbol.
+    size_t SymbolOffset = BooleanFunction.find_first_of("abc");
+    OS << BooleanFunction.substr(0, SymbolOffset);
+    if (SymbolOffset == std::string_view::npos) {
+      // No more symbols, that means we just printed everything.
+      break;
+    }
+    // Let's replace {a,b,c} with Src{1,2,3}Name.
+    char Symbol = BooleanFunction[SymbolOffset];
+    OS << SrcNames[Symbol - 'a'];
+    // Consume the part of the expression we handled.
+    BooleanFunction.remove_prefix(SymbolOffset + 1);
+  }
+  OS << '\n';
+  return true;
+}
+
+static bool printFPCLASSComments(const MCInst *MI, raw_ostream &OS,
+                                 const MCInstrInfo &MCII) {
+  unsigned NumOperands = MI->getNumOperands();
+  int SrcIdx;
+  switch (MI->getOpcode()) {
+    CASE_FPCLASS_PACKED(FPCLASSBF16, r)
+    CASE_FPCLASS_PACKED(FPCLASSPH, r)
+    CASE_FPCLASS_PACKED(FPCLASSPS, r)
+    CASE_FPCLASS_PACKED(FPCLASSPD, r)
+    CASE_FPCLASS_SCALAR(FPCLASSSH, r)
+    CASE_FPCLASS_SCALAR(FPCLASSSS, r)
+    CASE_FPCLASS_SCALAR(FPCLASSSD, r) {
+      SrcIdx = NumOperands - 2;
+      break;
+    }
+    CASE_FPCLASS_PACKED_MEM(FPCLASSBF16)
+    CASE_FPCLASS_PACKED_MEM(FPCLASSPH)
+    CASE_FPCLASS_PACKED_MEM(FPCLASSPS)
+    CASE_FPCLASS_PACKED_MEM(FPCLASSPD)
+    CASE_FPCLASS_SCALAR(FPCLASSSH, m)
+    CASE_FPCLASS_SCALAR(FPCLASSSS, m)
+    CASE_FPCLASS_SCALAR(FPCLASSSD, m) {
+      SrcIdx = -1;
+      break;
+    }
+  default:
+    return false;
+  }
+  StringRef DestName = getRegName(MI->getOperand(0).getReg());
+  StringRef SrcName =
+      SrcIdx != -1 ? getRegName(MI->getOperand(SrcIdx).getReg()) : "mem";
+
+  OS << DestName;
+  printMasking(OS, MI, MCII);
+  OS << " = ";
+
+  uint8_t Categories = MI->getOperand(NumOperands - 1).getImm();
+  if (Categories == 0) {
+    OS << "false";
+  } else {
+    static constexpr StringLiteral CategoryNames[] = {
+      "QuietNaN",
+      "PositiveZero",
+      "NegativeZero",
+      "PositiveInfinity",
+      "NegativeInfinity",
+      "Subnormal",
+      "Negative",
+      "SignalingNaN",
+    };
+    bool Conjoin = false;
+    for (size_t I = 0, E = std::size(CategoryNames); I != E; ++I) {
+      if (Categories & (1 << I)) {
+        if (Conjoin)
+          OS << " | ";
+        Conjoin = true;
+        OS << "is" << CategoryNames[I] << '(' << SrcName << ')';
+      }
+    }
+  }
+  OS << '\n';
+  return true;
+}
 
 //===----------------------------------------------------------------------===//
 // Top Level Entrypoint
@@ -634,6 +1077,12 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   bool RegForm = false;
 
   if (printFMAComments(MI, OS, MCII))
+    return true;
+
+  if (printPTERNLOGComments(MI, OS, MCII))
+    return true;
+
+  if (printFPCLASSComments(MI, OS, MCII))
     return true;
 
   switch (MI->getOpcode()) {
@@ -703,19 +1152,25 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
 
-  case X86::INSERTPSrr:
-  case X86::VINSERTPSrr:
-  case X86::VINSERTPSZrr:
+  case X86::INSERTPSrri:
+  case X86::VINSERTPSrri:
+  case X86::VINSERTPSZrri:
     Src2Name = getRegName(MI->getOperand(2).getReg());
-    [[fallthrough]];
-  case X86::INSERTPSrm:
-  case X86::VINSERTPSrm:
-  case X86::VINSERTPSZrm:
     DestName = getRegName(MI->getOperand(0).getReg());
     Src1Name = getRegName(MI->getOperand(1).getReg());
     if (MI->getOperand(NumOperands - 1).isImm())
-      DecodeINSERTPSMask(MI->getOperand(NumOperands - 1).getImm(),
-                         ShuffleMask);
+      DecodeINSERTPSMask(MI->getOperand(NumOperands - 1).getImm(), ShuffleMask,
+                         /*SrcIsMem=*/false);
+    break;
+
+  case X86::INSERTPSrmi:
+  case X86::VINSERTPSrmi:
+  case X86::VINSERTPSZrmi:
+    DestName = getRegName(MI->getOperand(0).getReg());
+    Src1Name = getRegName(MI->getOperand(1).getReg());
+    if (MI->getOperand(NumOperands - 1).isImm())
+      DecodeINSERTPSMask(MI->getOperand(NumOperands - 1).getImm(), ShuffleMask,
+                         /*SrcIsMem=*/true);
     break;
 
   case X86::MOVLHPSrr:
@@ -1158,13 +1613,13 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
 
-  case X86::VPERM2F128rr:
-  case X86::VPERM2I128rr:
+  case X86::VPERM2F128rri:
+  case X86::VPERM2I128rri:
     Src2Name = getRegName(MI->getOperand(2).getReg());
     [[fallthrough]];
 
-  case X86::VPERM2F128rm:
-  case X86::VPERM2I128rm:
+  case X86::VPERM2F128rmi:
+  case X86::VPERM2I128rmi:
     // For instruction comments purpose, assume the 256-bit vector is v4i64.
     if (MI->getOperand(NumOperands - 1).isImm())
       DecodeVPERM2X128Mask(4, MI->getOperand(NumOperands - 1).getImm(),
@@ -1215,6 +1670,13 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
 
+  case X86::VMOVSHZrr:
+    Src2Name = getRegName(MI->getOperand(2).getReg());
+    Src1Name = getRegName(MI->getOperand(1).getReg());
+    DecodeScalarMoveMask(8, false, ShuffleMask);
+    DestName = getRegName(MI->getOperand(0).getReg());
+    break;
+
   case X86::MOVPQI2QIrr:
   case X86::MOVZPQILo2PQIrr:
   case X86::VMOVPQI2QIrr:
@@ -1249,18 +1711,18 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
 
   case X86::VBROADCASTF128rm:
   case X86::VBROADCASTI128rm:
-  CASE_AVX512_INS_COMMON(BROADCASTF64X2, Z128, rm)
-  CASE_AVX512_INS_COMMON(BROADCASTI64X2, Z128, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTF64X2, Z256, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI64X2, Z256, rm)
     DecodeSubVectorBroadcast(4, 2, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
-  CASE_AVX512_INS_COMMON(BROADCASTF64X2, , rm)
-  CASE_AVX512_INS_COMMON(BROADCASTI64X2, , rm)
+  CASE_AVX512_INS_COMMON(BROADCASTF64X2, Z, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI64X2, Z, rm)
     DecodeSubVectorBroadcast(8, 2, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
-  CASE_AVX512_INS_COMMON(BROADCASTF64X4, , rm)
-  CASE_AVX512_INS_COMMON(BROADCASTI64X4, , rm)
+  CASE_AVX512_INS_COMMON(BROADCASTF64X4, Z, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI64X4, Z, rm)
     DecodeSubVectorBroadcast(8, 4, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
@@ -1269,13 +1731,13 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     DecodeSubVectorBroadcast(8, 4, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
-  CASE_AVX512_INS_COMMON(BROADCASTF32X4, , rm)
-  CASE_AVX512_INS_COMMON(BROADCASTI32X4, , rm)
+  CASE_AVX512_INS_COMMON(BROADCASTF32X4, Z, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI32X4, Z, rm)
     DecodeSubVectorBroadcast(16, 4, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
-  CASE_AVX512_INS_COMMON(BROADCASTF32X8, , rm)
-  CASE_AVX512_INS_COMMON(BROADCASTI32X8, , rm)
+  CASE_AVX512_INS_COMMON(BROADCASTF32X8, Z, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI32X8, Z, rm)
     DecodeSubVectorBroadcast(16, 8, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;

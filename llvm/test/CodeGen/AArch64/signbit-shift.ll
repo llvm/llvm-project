@@ -43,8 +43,8 @@ define i32 @sel_ifpos_tval_bigger(i32 %x) {
 ; CHECK-LABEL: sel_ifpos_tval_bigger:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #41 // =0x29
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    cinc w0, w8, ge
+; CHECK-NEXT:    cmn w0, #1
+; CHECK-NEXT:    cinc w0, w8, gt
 ; CHECK-NEXT:    ret
   %c = icmp sgt i32 %x, -1
   %r = select i1 %c, i32 42, i32 41
@@ -91,8 +91,8 @@ define i32 @sel_ifpos_fval_bigger(i32 %x) {
 ; CHECK-LABEL: sel_ifpos_fval_bigger:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #41 // =0x29
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    cinc w0, w8, lt
+; CHECK-NEXT:    cmn w0, #1
+; CHECK-NEXT:    cinc w0, w8, le
 ; CHECK-NEXT:    ret
   %c = icmp sgt i32 %x, -1
   %r = select i1 %c, i32 41, i32 42
@@ -128,7 +128,7 @@ define i32 @sel_ifneg_tval_bigger(i32 %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #41 // =0x29
 ; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    cinc w0, w8, lt
+; CHECK-NEXT:    cinc w0, w8, mi
 ; CHECK-NEXT:    ret
   %c = icmp slt i32 %x, 0
   %r = select i1 %c, i32 42, i32 41
@@ -162,7 +162,7 @@ define i32 @sel_ifneg_fval_bigger(i32 %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #41 // =0x29
 ; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    cinc w0, w8, ge
+; CHECK-NEXT:    cinc w0, w8, pl
 ; CHECK-NEXT:    ret
   %c = icmp slt i32 %x, 0
   %r = select i1 %c, i32 41, i32 42

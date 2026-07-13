@@ -62,16 +62,14 @@ attributes #1 = { "target-features"="+sve" vscale_range(1,1) }
 define void @func_vscale2_2(ptr %a, ptr %b) #2 {
 ; CHECK-LABEL: func_vscale2_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    mov x8, #8 // =0x8
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1, x8, lsl #2]
-; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0]
-; CHECK-NEXT:    ld1w { z3.s }, p0/z, [x1]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x1]
+; CHECK-NEXT:    ldr z2, [x0, #1, mul vl]
+; CHECK-NEXT:    ldr z3, [x1, #1, mul vl]
 ; CHECK-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-NEXT:    add z1.s, z2.s, z3.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
-; CHECK-NEXT:    st1w { z1.s }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
+; CHECK-NEXT:    str z1, [x0, #1, mul vl]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i32>, ptr %a
   %op2 = load <16 x i32>, ptr %b
@@ -108,11 +106,10 @@ attributes #3 = { "target-features"="+sve" vscale_range(2,4) }
 define void @func_vscale4_4(ptr %a, ptr %b) #4 {
 ; CHECK-LABEL: func_vscale4_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x1]
 ; CHECK-NEXT:    add z0.s, z0.s, z1.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i32>, ptr %a
   %op2 = load <16 x i32>, ptr %b

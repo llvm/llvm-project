@@ -7,19 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/expression.h"
-#include "int-power.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/variable.h"
-#include "flang/Parser/char-block.h"
 #include "flang/Parser/message.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
 #include "llvm/Support/raw_ostream.h"
-#include <string>
 #include <type_traits>
 
 using namespace Fortran::parser::literals;
@@ -60,6 +57,16 @@ Expr<Type<TypeCategory::Character, KIND>>::LEN() const {
               if (auto rlen{c.right().LEN()}) {
                 return Expr<SubscriptInteger>{Extremum<SubscriptInteger>{
                     Ordering::Greater, *std::move(llen), *std::move(rlen)}};
+              }
+            }
+            return std::nullopt;
+          },
+          [](const ConditionalExpr<Result> &x) -> T {
+            if (auto tlen{x.thenValue().LEN()}) {
+              if (auto elen{x.elseValue().LEN()}) {
+                if (*tlen == *elen) {
+                  return tlen;
+                }
               }
             }
             return std::nullopt;
@@ -113,6 +120,18 @@ template <typename A> int ExpressionBase<A>::Rank() const {
       derived().u);
 }
 
+template <typename A> int ExpressionBase<A>::Corank() const {
+  return common::visit(
+      [](const auto &x) {
+        if constexpr (common::HasMember<decltype(x), TypelessExpression>) {
+          return 0;
+        } else {
+          return x.Corank();
+        }
+      },
+      derived().u);
+}
+
 DynamicType Parentheses<SomeDerived>::GetType() const {
   return left().GetType().value();
 }
@@ -124,6 +143,30 @@ template <typename A> LLVM_DUMP_METHOD void ExpressionBase<A>::dump() const {
 #endif
 
 // Equality testing
+
+template <typename A> bool Extremum<A>::operator==(const Extremum &that) const {
+  return ordering == that.ordering && Base::operator==(that);
+}
+
+template <typename A>
+bool ConditionalExpr<A>::operator==(const ConditionalExpr &that) const {
+  return condition_ == that.condition_ && thenValue_ == that.thenValue_ &&
+      elseValue_ == that.elseValue_;
+}
+
+template <int KIND>
+bool LogicalOperation<KIND>::operator==(const LogicalOperation &that) const {
+  return logicalOperator == that.logicalOperator && Base::operator==(that);
+}
+
+template <typename A>
+bool Relational<A>::operator==(const Relational &that) const {
+  return opr == that.opr && Base::operator==(that);
+}
+
+bool Relational<SomeType>::operator==(const Relational &that) const {
+  return u == that.u;
+}
 
 bool ImpliedDoIndex::operator==(const ImpliedDoIndex &that) const {
   return name == that.name;
@@ -181,10 +224,6 @@ bool StructureConstructor::operator==(const StructureConstructor &that) const {
   return result_ == that.result_ && values_ == that.values_;
 }
 
-bool Relational<SomeType>::operator==(const Relational<SomeType> &that) const {
-  return u == that.u;
-}
-
 template <int KIND>
 bool Expr<Type<TypeCategory::Integer, KIND>>::operator==(
     const Expr<Type<TypeCategory::Integer, KIND>> &that) const {
@@ -212,6 +251,12 @@ bool Expr<Type<TypeCategory::Logical, KIND>>::operator==(
 template <int KIND>
 bool Expr<Type<TypeCategory::Character, KIND>>::operator==(
     const Expr<Type<TypeCategory::Character, KIND>> &that) const {
+  return u == that.u;
+}
+
+template <int KIND>
+bool Expr<Type<TypeCategory::Unsigned, KIND>>::operator==(
+    const Expr<Type<TypeCategory::Unsigned, KIND>> &that) const {
   return u == that.u;
 }
 

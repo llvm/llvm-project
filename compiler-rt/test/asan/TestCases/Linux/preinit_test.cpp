@@ -1,6 +1,7 @@
+// RUN: mkdir -p %t.dir && cd %t.dir
 // RUN: %clangxx -DFUNC=zzzz %s -shared -o %dynamiclib -fPIC
-// RUN: %clangxx_asan -DFUNC=main %s -o %t %ld_flags_rpath_exe
-// RUN: %run %t
+// RUN: %clangxx_asan -DFUNC=main %s -o %t.dir/EXE %ld_flags_rpath_exe
+// RUN: %run %t.dir/EXE
 
 // GNU driver doesn't handle .so files properly.
 // REQUIRES: Clang

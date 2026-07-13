@@ -14,7 +14,7 @@ declare ptr addrspace(1) @generate_obj2() #1
 declare ptr addrspace(1) @generate_obj3() #1
 
 ; Function Attrs: nounwind
-define  void @test(ptr addrspace(1), ptr addrspace(1), i32) #3 gc "statepoint-example" {
+define  void @test(ptr addrspace(1), ptr addrspace(1), i32, i1 %new_arg) #3 gc "statepoint-example" {
 bci_0:
   %result608 = call ptr addrspace(1) @generate_obj3()
   br label %bci_37-aload
@@ -24,7 +24,7 @@ bci_37-aload:                                     ; preds = %not_zero179, %bci_0
   %base_phi2 = phi ptr addrspace(1) [ %base_phi3, %not_zero179 ], [ %result608, %bci_0 ], !is_base_value !0
   %relocated8 = phi ptr addrspace(1) [ %relocated7.relocated, %not_zero179 ], [ %result608, %bci_0 ]
   %tmp3 = getelementptr inbounds %jObject, ptr addrspace(1) %relocated8, i64 0, i32 0, i64 32
-  br i1 undef, label %not_zero179, label %not_zero146
+  br i1 %new_arg, label %not_zero179, label %not_zero146
 
 not_zero146:                                      ; preds = %bci_37-aload
   %addr98.relocated = call ptr addrspace(1) @generate_obj2() #1

@@ -54,6 +54,11 @@ TEST_F(HostInfoTest, GetHostname) {
   EXPECT_TRUE(HostInfo::GetHostname(s));
 }
 
+TEST_F(HostInfoTest, GetProgramFileSpec) {
+  FileSpec filespec = HostInfo::GetProgramFileSpec();
+  EXPECT_TRUE(FileSystem::Instance().Exists(filespec));
+}
+
 #if defined(__APPLE__)
 TEST_F(HostInfoTest, GetXcodeSDK) {
   auto get_sdk = [](std::string sdk, bool error = false) -> llvm::StringRef {
@@ -104,3 +109,26 @@ TEST(HostInfoTestInitialization, InitTwice) {
     EXPECT_EQ(Version, HostInfo::GetOSVersion());
   }
 }
+
+#ifdef __APPLE__
+struct HostInfoTester : public HostInfoMacOSX {
+public:
+  using HostInfoMacOSX::FindComponentInPath;
+};
+
+TEST_F(HostInfoTest, FindComponentInPath) {
+  EXPECT_EQ("/path/to/foo",
+            HostInfoTester::FindComponentInPath("/path/to/foo/", "foo"));
+
+  EXPECT_EQ("/path/to/foo",
+            HostInfoTester::FindComponentInPath("/path/to/foo", "foo"));
+
+  EXPECT_EQ("/path/to/foobar",
+            HostInfoTester::FindComponentInPath("/path/to/foobar", "foo"));
+
+  EXPECT_EQ("/path/to/foobar",
+            HostInfoTester::FindComponentInPath("/path/to/foobar", "bar"));
+
+  EXPECT_EQ("", HostInfoTester::FindComponentInPath("/path/to/foo", "bar"));
+}
+#endif

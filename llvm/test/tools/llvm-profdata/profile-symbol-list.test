@@ -7,3 +7,12 @@
 ; RUN: llvm-profdata show -sample -show-sec-info-only %t.5.output  | FileCheck %s -check-prefix=NOSYMLIST
 
 ; NOSYMLIST: ProfileSymbolListSection {{.*}} Size: 0
+
+;; Generate two SampleFDO binary profiles and merge them.
+;; Tests that the vtable counters in the merged profile are the aggregated
+;; result from both sources.
+; RUN: llvm-profdata merge -sample -extbinary -extbinary-write-vtable-type-prof -prof-sym-list=%S/Inputs/profile-symbol-list-1.text %S/Inputs/sample-profile-ext.proftext -o %t.1.output
+; RUN: llvm-profdata merge -sample -extbinary -extbinary-write-vtable-type-prof -prof-sym-list=%S/Inputs/profile-symbol-list-2.text %S/Inputs/sample-profile-ext.proftext -o %t.2.output
+; RUN: llvm-profdata merge -sample -extbinary -extbinary-write-vtable-type-prof %t.1.output %t.2.output -o %t.3.output
+; RUN: llvm-profdata show -sample -show-prof-sym-list %t.3.output > %t.4.output
+; RUN: diff -b %S/Inputs/profile-symbol-list-ext.expected %t.4.output

@@ -9,8 +9,8 @@ typedef void (*FuncPointer)(void);
 void testNoCfCheck(){}; //  expected-error {{conflicting types for 'testNoCfCheck'}}
 
 // No variable or parameter declaration
-int [[gnu::nocf_check]] i;                              // expected-error {{'nocf_check' attribute cannot be applied to types}}
-void testNoCfCheckImpl(double i [[gnu::nocf_check]]) {} // expected-warning {{'nocf_check' attribute only applies to functions and function pointers}}
+int [[gnu::nocf_check]] i;                              // expected-error {{'gnu::nocf_check' attribute cannot be applied to types}}
+void testNoCfCheckImpl(double i [[gnu::nocf_check]]) {} // expected-warning {{'gnu::nocf_check' attribute only applies to functions and function pointers}}
 
 // Allow attributed function pointers as well as casting between attributed
 // and non-attributed function pointers.
@@ -20,4 +20,4 @@ void testNoCfCheckMismatch(FuncPointer f) {
 }
 
 // 'nocf_check' Attribute has no parameters.
-[[gnu::nocf_check(1)]] int testNoCfCheckParams(); // expected-error {{'nocf_check' attribute takes no arguments}}
+[[gnu::nocf_check(1)]] int testNoCfCheckParams(); // expected-error {{'gnu::nocf_check' attribute takes no arguments}}

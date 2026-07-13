@@ -4,9 +4,9 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare i32 @__gxx_personality_v0(...)
 
-define fastcc void @_ZN11__sanitizerL12TestRegistryEPNS_14ThreadRegistryEb() #0 personality ptr @__gxx_personality_v0 {
+define fastcc void @_ZN11__sanitizerL12TestRegistryEPNS_14ThreadRegistryEb(i1 %arg) #0 personality ptr @__gxx_personality_v0 {
 entry:
-  br i1 undef, label %if.else, label %entry.if.end_crit_edge
+  br i1 %arg, label %if.else, label %entry.if.end_crit_edge
 
 if.else:
   ret void

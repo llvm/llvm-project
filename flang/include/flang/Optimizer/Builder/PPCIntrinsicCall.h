@@ -182,7 +182,7 @@ struct VecTypeInfo {
 static inline VecTypeInfo getVecTypeFromFirType(mlir::Type firTy) {
   assert(mlir::isa<fir::VectorType>(firTy));
   VecTypeInfo vecTyInfo;
-  vecTyInfo.eleTy = mlir::dyn_cast<fir::VectorType>(firTy).getEleTy();
+  vecTyInfo.eleTy = mlir::dyn_cast<fir::VectorType>(firTy).getElementType();
   vecTyInfo.len = mlir::dyn_cast<fir::VectorType>(firTy).getLen();
   return vecTyInfo;
 }
@@ -320,7 +320,8 @@ struct PPCIntrinsicLibrary : IntrinsicLibrary {
                                 llvm::ArrayRef<fir::ExtendedValue> args);
 };
 
-const IntrinsicHandler *findPPCIntrinsicHandler(llvm::StringRef name);
+const IntrinsicHandler *findPPCIntrinsicHandler(llvm::StringRef name,
+                                                bool isBindcCall = false);
 
 std::pair<const MathOperation *, const MathOperation *>
 checkPPCMathOperationsRange(llvm::StringRef name);

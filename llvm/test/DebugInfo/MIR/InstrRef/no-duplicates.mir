@@ -1,4 +1,4 @@
-# RUN: not --crash llc %s -march=x86-64 -run-pass=machineverifier -o - 2>&1 | FileCheck %s
+# RUN: not --crash llc %s -mtriple=x86_64 -run-pass=machineverifier -o - 2>&1 | FileCheck %s
 #
 # REQUIRES: x86-registered-target
 #

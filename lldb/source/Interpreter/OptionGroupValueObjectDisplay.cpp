@@ -90,7 +90,7 @@ Status OptionGroupValueObjectDisplay::SetOptionValue(
     flat_output = true;
     break;
   case 'O':
-    use_objc = true;
+    use_object_desc = true;
     break;
   case 'R':
     be_raw = true;
@@ -102,8 +102,8 @@ Status OptionGroupValueObjectDisplay::SetOptionValue(
   case 'D':
     if (option_arg.getAsInteger(0, max_depth)) {
       max_depth = UINT32_MAX;
-      error.SetErrorStringWithFormat("invalid max depth '%s'",
-                                     option_arg.str().c_str());
+      error = Status::FromErrorStringWithFormat("invalid max depth '%s'",
+                                                option_arg.str().c_str());
     } else {
       max_depth_is_default = false;
     }
@@ -112,16 +112,16 @@ Status OptionGroupValueObjectDisplay::SetOptionValue(
   case 'Z':
     if (option_arg.getAsInteger(0, elem_count)) {
       elem_count = UINT32_MAX;
-      error.SetErrorStringWithFormat("invalid element count '%s'",
-                                     option_arg.str().c_str());
+      error = Status::FromErrorStringWithFormat("invalid element count '%s'",
+                                                option_arg.str().c_str());
     }
     break;
 
   case 'P':
     if (option_arg.getAsInteger(0, ptr_depth)) {
       ptr_depth = 0;
-      error.SetErrorStringWithFormat("invalid pointer depth '%s'",
-                                     option_arg.str().c_str());
+      error = Status::FromErrorStringWithFormat("invalid pointer depth '%s'",
+                                                option_arg.str().c_str());
     }
     break;
 
@@ -130,23 +130,23 @@ Status OptionGroupValueObjectDisplay::SetOptionValue(
       no_summary_depth = 1;
     else if (option_arg.getAsInteger(0, no_summary_depth)) {
       no_summary_depth = 0;
-      error.SetErrorStringWithFormat("invalid pointer depth '%s'",
-                                     option_arg.str().c_str());
+      error = Status::FromErrorStringWithFormat("invalid pointer depth '%s'",
+                                                option_arg.str().c_str());
     }
     break;
 
   case 'S':
     use_synth = OptionArgParser::ToBoolean(option_arg, true, &success);
     if (!success)
-      error.SetErrorStringWithFormat("invalid synthetic-type '%s'",
-                                     option_arg.str().c_str());
+      error = Status::FromErrorStringWithFormat("invalid synthetic-type '%s'",
+                                                option_arg.str().c_str());
     break;
 
   case 'V':
     run_validator = OptionArgParser::ToBoolean(option_arg, true, &success);
     if (!success)
-      error.SetErrorStringWithFormat("invalid validate '%s'",
-                                     option_arg.str().c_str());
+      error = Status::FromErrorStringWithFormat("invalid validate '%s'",
+                                                option_arg.str().c_str());
     break;
 
   default:
@@ -163,7 +163,7 @@ void OptionGroupValueObjectDisplay::OptionParsingStarting(
   no_summary_depth = 0;
   show_location = false;
   flat_output = false;
-  use_objc = false;
+  use_object_desc = false;
   max_depth = UINT32_MAX;
   max_depth_is_default = true;
   ptr_depth = 0;
@@ -190,16 +190,15 @@ DumpValueObjectOptions OptionGroupValueObjectDisplay::GetAsDumpOptions(
     LanguageRuntimeDescriptionDisplayVerbosity lang_descr_verbosity,
     lldb::Format format, lldb::TypeSummaryImplSP summary_sp) {
   DumpValueObjectOptions options;
-  options.SetMaximumPointerDepth(
-      {DumpValueObjectOptions::PointerDepth::Mode::Always, ptr_depth});
-  if (use_objc)
+  options.SetMaximumPointerDepth(ptr_depth);
+  if (use_object_desc)
     options.SetShowSummary(false);
   else
     options.SetOmitSummaryDepth(no_summary_depth);
   options.SetMaximumDepth(max_depth, max_depth_is_default)
       .SetShowTypes(show_types)
       .SetShowLocation(show_location)
-      .SetUseObjectiveC(use_objc)
+      .SetUseObjectDescription(use_object_desc)
       .SetUseDynamicType(use_dynamic)
       .SetUseSyntheticValue(use_synth)
       .SetFlatOutput(flat_output)
@@ -209,8 +208,9 @@ DumpValueObjectOptions OptionGroupValueObjectDisplay::GetAsDumpOptions(
 
   if (lang_descr_verbosity ==
       eLanguageRuntimeDescriptionDisplayVerbosityCompact)
-    options.SetHideRootType(use_objc).SetHideName(use_objc).SetHideValue(
-        use_objc);
+    options.SetHideRootType(use_object_desc)
+        .SetHideName(use_object_desc)
+        .SetHideValue(use_object_desc);
 
   if (be_raw)
     options.SetRawDisplay();

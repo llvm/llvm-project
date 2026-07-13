@@ -49,8 +49,8 @@ constexpr void testOne() {
     std::ranges::split_view sv{std::move(range), 1};
     auto it         = sv.begin();
     auto firstRange = *it;
-    assert(firstRange.begin() == range.begin());
-    assert(firstRange.end() == range.end());
+    assert(firstRange.begin() == Iter(a.data()));
+    assert(firstRange.end() == Sent(Iter(a.data())));
   }
 
   // empty pattern
@@ -60,8 +60,8 @@ constexpr void testOne() {
     std::ranges::split_view sv{std::move(range), std::views::empty<int>};
     auto it         = sv.begin();
     auto firstRange = *it;
-    assert(firstRange.begin() == range.begin());
-    assert(firstRange.end() == std::next(range.begin()));
+    assert(firstRange.begin() == Iter(buffer));
+    assert(firstRange.end() == Sent(Iter(buffer + 1)));
   }
 
   // empty view and empty pattern
@@ -71,8 +71,8 @@ constexpr void testOne() {
     std::ranges::split_view sv{std::move(range), std::views::empty<int>};
     auto it         = sv.begin();
     auto firstRange = *it;
-    assert(firstRange.begin() == range.begin());
-    assert(firstRange.end() == range.end());
+    assert(firstRange.begin() == Iter(a.data()));
+    assert(firstRange.end() == Sent(Iter(a.data())));
   }
 
   // pattern found at the beginning
@@ -84,8 +84,8 @@ constexpr void testOne() {
 
     auto it         = sv.begin();
     auto firstRange = *it;
-    assert(firstRange.begin() == range.begin());
-    assert(firstRange.end() == range.begin());
+    assert(firstRange.begin() == Iter(buffer));
+    assert(firstRange.end() == Sent(Iter(buffer)));
   }
 
   // pattern found in the middle
@@ -97,8 +97,8 @@ constexpr void testOne() {
 
     auto it         = sv.begin();
     auto firstRange = *it;
-    assert(firstRange.begin() == range.begin());
-    assert(firstRange.end() == std::next(range.begin()));
+    assert(firstRange.begin() == Iter(buffer));
+    assert(firstRange.end() == Sent(Iter(buffer + 1)));
   }
 
   // pattern found at the end
@@ -110,8 +110,8 @@ constexpr void testOne() {
 
     auto it         = sv.begin();
     auto firstRange = *it;
-    assert(firstRange.begin() == range.begin());
-    assert(firstRange.end() == std::next(range.begin()));
+    assert(firstRange.begin() == Iter(buffer));
+    assert(firstRange.end() == Sent(Iter(buffer + 1)));
   }
 
   // pattern not found
@@ -123,8 +123,8 @@ constexpr void testOne() {
 
     auto it         = sv.begin();
     auto firstRange = *it;
-    assert(firstRange.begin() == range.begin());
-    assert(firstRange.end() == range.end());
+    assert(firstRange.begin() == Iter(buffer));
+    assert(firstRange.end() == Sent(Iter(buffer + 3)));
   }
 
   // Make sure that we cache the result of begin() on subsequent calls

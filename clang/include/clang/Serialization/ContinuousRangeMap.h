@@ -119,8 +119,8 @@ public:
     ~Builder() {
       llvm::sort(Self.Rep, Compare());
       Self.Rep.erase(
-          std::unique(
-              Self.Rep.begin(), Self.Rep.end(),
+          llvm::unique(
+              Self.Rep,
               [](const_reference A, const_reference B) {
                 // FIXME: we should not allow any duplicate keys, but there are
                 // a lot of duplicate 0 -> 0 mappings to remove first.

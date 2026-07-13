@@ -20,6 +20,7 @@
 #include <__config>
 #include <__format/buffer.h>
 #include <__format/concepts.h>
+#include <__format/fmt_pair_like.h>
 #include <__format/format_context.h>
 #include <__format/format_error.h>
 #include <__format/formatter.h>
@@ -33,13 +34,13 @@
 #include <__type_traits/remove_cvref.h>
 #include <string_view>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _CharT = char>
   requires same_as<remove_cvref_t<_Tp>, _Tp> && formattable<_Tp, _CharT>
-struct _LIBCPP_TEMPLATE_VIS range_formatter {
+struct range_formatter {
   _LIBCPP_HIDE_FROM_ABI constexpr void set_separator(basic_string_view<_CharT> __separator) noexcept {
     __separator_ = __separator;
   }
@@ -214,6 +215,8 @@ private:
     switch (*__begin) {
     case _CharT('m'):
       if constexpr (__fmt_pair_like<_Tp>) {
+        __underlying_.set_separator(_LIBCPP_STATICALLY_WIDEN(_CharT, ": "));
+        __underlying_.set_brackets({}, {});
         set_brackets(_LIBCPP_STATICALLY_WIDEN(_CharT, "{"), _LIBCPP_STATICALLY_WIDEN(_CharT, "}"));
         set_separator(_LIBCPP_STATICALLY_WIDEN(_CharT, ", "));
         ++__begin;
@@ -257,8 +260,8 @@ private:
   basic_string_view<_CharT> __closing_bracket_ = _LIBCPP_STATICALLY_WIDEN(_CharT, "]");
 };
 
-#endif //_LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 #endif // _LIBCPP___FORMAT_RANGE_FORMATTER_H

@@ -9,6 +9,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/Format.h"
@@ -27,21 +28,30 @@ static const T *Find(StringRef S, ArrayRef<T> A) {
   // Binary search the array
   auto F = llvm::lower_bound(A, S);
   // If not found then return NULL
-  if (F == A.end() || StringRef(F->Key) != S) return nullptr;
+  if (F == A.end() || StringRef(F->key()) != S)
+    return nullptr;
   // Return the found array item
   return F;
 }
 
 /// For each feature that is (transitively) implied by this feature, set it.
-static
-void SetImpliedBits(FeatureBitset &Bits, const FeatureBitset &Implies,
-                    ArrayRef<SubtargetFeatureKV> FeatureTable) {
-  // OR the Implies bits in outside the loop. This allows the Implies for CPUs
-  // which might imply features not in FeatureTable to use this.
-  Bits |= Implies;
-  for (const SubtargetFeatureKV &FE : FeatureTable)
-    if (Implies.test(FE.Value))
-      SetImpliedBits(Bits, FE.Implies.getAsBitset(), FeatureTable);
+static void SetImpliedBits(FeatureBitset &Bits, FeatureBitset Implies,
+                           ArrayRef<SubtargetFeatureKV> FeatureTable) {
+  // Transitively set all features implied. We don't assume that the features in
+  // Bits have already had their implied features set.
+  FeatureBitset NewBits = Implies;
+  while (Implies.any()) {
+    FeatureBitset Implied;
+    for (const SubtargetFeatureKV &FE : FeatureTable) {
+      if (Implies.test(FE.Value))
+        Implied |= FE.Implies.getAsBitset();
+    }
+
+    // Only continue for bits that haven't been set yet.
+    Implies = Implied & ~NewBits;
+    NewBits |= Implies;
+  }
+  Bits |= NewBits;
 }
 
 /// For each feature that (transitively) implies this feature, clear it.
@@ -85,17 +95,22 @@ static void ApplyFeatureFlag(FeatureBitset &Bits, StringRef Feature,
 }
 
 /// Return the length of the longest entry in the table.
-template <typename T>
-static size_t getLongestEntryLength(ArrayRef<T> Table) {
+static size_t getLongestEntryLength(ArrayRef<SubtargetFeatureKV> Table) {
   size_t MaxLen = 0;
   for (auto &I : Table)
-    MaxLen = std::max(MaxLen, std::strlen(I.Key));
+    MaxLen = std::max(MaxLen, std::strlen(I.key()));
+  return MaxLen;
+}
+
+static size_t getLongestEntryLength(StringTable Table) {
+  size_t MaxLen = 0;
+  for (StringRef I : Table)
+    MaxLen = std::max(MaxLen, I.size());
   return MaxLen;
 }
 
 /// Display help for feature and mcpu choices.
-static void Help(ArrayRef<SubtargetSubTypeKV> CPUTable,
-                 ArrayRef<SubtargetFeatureKV> FeatTable) {
+static void Help(StringTable CPUNames, ArrayRef<SubtargetFeatureKV> FeatTable) {
   // the static variable ensures that the help information only gets
   // printed once even though a target machine creates multiple subtargets
   static bool PrintOnce = false;
@@ -104,20 +119,27 @@ static void Help(ArrayRef<SubtargetSubTypeKV> CPUTable,
   }
 
   // Determine the length of the longest CPU and Feature entries.
-  unsigned MaxCPULen  = getLongestEntryLength(CPUTable);
+  unsigned MaxCPULen = getLongestEntryLength(CPUNames);
   unsigned MaxFeatLen = getLongestEntryLength(FeatTable);
 
   // Print the CPU table.
   errs() << "Available CPUs for this target:\n\n";
-  for (auto &CPU : CPUTable)
-    errs() << format("  %-*s - Select the %s processor.\n", MaxCPULen, CPU.Key,
-                     CPU.Key);
+  for (auto &CPUName : drop_begin(CPUNames)) {
+    // Skip apple-latest, as that's only meant to be used in
+    // disassemblers/debuggers, and we don't want normal code to be built with
+    // it as an -mcpu=
+    if (CPUName == "apple-latest")
+      continue;
+    errs() << format("  %-*s - Select the %s processor.\n", MaxCPULen,
+                     CPUName.str().c_str(), CPUName.str().c_str());
+  }
   errs() << '\n';
 
   // Print the Feature table.
   errs() << "Available features for this target:\n\n";
   for (auto &Feature : FeatTable)
-    errs() << format("  %-*s - %s.\n", MaxFeatLen, Feature.Key, Feature.Desc);
+    errs() << format("  %-*s - %s.\n", MaxFeatLen, Feature.key(),
+                     Feature.desc());
   errs() << '\n';
 
   errs() << "Use +feature to enable a feature, or -feature to disable it.\n"
@@ -127,7 +149,7 @@ static void Help(ArrayRef<SubtargetSubTypeKV> CPUTable,
 }
 
 /// Display help for mcpu choices only
-static void cpuHelp(ArrayRef<SubtargetSubTypeKV> CPUTable) {
+static void cpuHelp(StringTable CPUNames) {
   // the static variable ensures that the help information only gets
   // printed once even though a target machine creates multiple subtargets
   static bool PrintOnce = false;
@@ -137,8 +159,14 @@ static void cpuHelp(ArrayRef<SubtargetSubTypeKV> CPUTable) {
 
   // Print the CPU table.
   errs() << "Available CPUs for this target:\n\n";
-  for (auto &CPU : CPUTable)
-    errs() << "\t" << CPU.Key << "\n";
+  for (auto &CPU : llvm::drop_begin(CPUNames)) {
+    // Skip apple-latest, as that's only meant to be used in
+    // disassemblers/debuggers, and we don't want normal code to be built with
+    // it as an -mcpu=
+    if (CPU == "apple-latest")
+      continue;
+    errs() << "\t" << CPU << "\n";
+  }
   errs() << '\n';
 
   errs() << "Use -mcpu or -mtune to specify the target's processor.\n"
@@ -148,7 +176,9 @@ static void cpuHelp(ArrayRef<SubtargetSubTypeKV> CPUTable) {
   PrintOnce = true;
 }
 
-static FeatureBitset getFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS,
+static FeatureBitset getFeatures(MCSubtargetInfo &STI, StringRef CPU,
+                                 StringRef TuneCPU, StringRef FS,
+                                 StringTable ProcNames,
                                  ArrayRef<SubtargetSubTypeKV> ProcDesc,
                                  ArrayRef<SubtargetFeatureKV> ProcFeatures) {
   SubtargetFeatures Features(FS);
@@ -163,7 +193,7 @@ static FeatureBitset getFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS,
 
   // Check if help is needed
   if (CPU == "help")
-    Help(ProcDesc, ProcFeatures);
+    Help(ProcNames, ProcFeatures);
 
   // Find CPU entry if CPU name is specified.
   else if (!CPU.empty()) {
@@ -196,9 +226,9 @@ static FeatureBitset getFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS,
   for (const std::string &Feature : Features.getFeatures()) {
     // Check for help
     if (Feature == "+help")
-      Help(ProcDesc, ProcFeatures);
+      Help(ProcNames, ProcFeatures);
     else if (Feature == "+cpuhelp")
-      cpuHelp(ProcDesc);
+      cpuHelp(ProcNames);
     else
       ApplyFeatureFlag(Bits, Feature, ProcFeatures);
   }
@@ -208,7 +238,8 @@ static FeatureBitset getFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS,
 
 void MCSubtargetInfo::InitMCProcessorInfo(StringRef CPU, StringRef TuneCPU,
                                           StringRef FS) {
-  FeatureBits = getFeatures(CPU, TuneCPU, FS, ProcDesc, ProcFeatures);
+  FeatureBits =
+      getFeatures(*this, CPU, TuneCPU, FS, ProcNames, ProcDesc, ProcFeatures);
   FeatureString = std::string(FS);
 
   if (!TuneCPU.empty())
@@ -219,43 +250,42 @@ void MCSubtargetInfo::InitMCProcessorInfo(StringRef CPU, StringRef TuneCPU,
 
 void MCSubtargetInfo::setDefaultFeatures(StringRef CPU, StringRef TuneCPU,
                                          StringRef FS) {
-  FeatureBits = getFeatures(CPU, TuneCPU, FS, ProcDesc, ProcFeatures);
+  FeatureBits =
+      getFeatures(*this, CPU, TuneCPU, FS, ProcNames, ProcDesc, ProcFeatures);
   FeatureString = std::string(FS);
 }
 
-MCSubtargetInfo::MCSubtargetInfo(const Triple &TT, StringRef C, StringRef TC,
-                                 StringRef FS, ArrayRef<SubtargetFeatureKV> PF,
-                                 ArrayRef<SubtargetSubTypeKV> PD,
-                                 const MCWriteProcResEntry *WPR,
-                                 const MCWriteLatencyEntry *WL,
-                                 const MCReadAdvanceEntry *RA,
-                                 const InstrStage *IS, const unsigned *OC,
-                                 const unsigned *FP)
+MCSubtargetInfo::MCSubtargetInfo(
+    const Triple &TT, StringRef C, StringRef TC, StringRef FS, StringTable PN,
+    ArrayRef<SubtargetFeatureKV> PF, ArrayRef<SubtargetSubTypeKV> PD,
+    const MCSchedModel *PSM, const MCWriteProcResEntry *WPR,
+    const MCWriteLatencyEntry *WL, const MCReadAdvanceEntry *RA,
+    const InstrStage *IS, const unsigned *OC, const unsigned *FP)
     : TargetTriple(TT), CPU(std::string(C)), TuneCPU(std::string(TC)),
-      ProcFeatures(PF), ProcDesc(PD), WriteProcResTable(WPR),
-      WriteLatencyTable(WL), ReadAdvanceTable(RA), Stages(IS),
-      OperandCycles(OC), ForwardingPaths(FP) {
+      ProcNames(PN), ProcFeatures(PF), ProcDesc(PD), ProcSchedModels(PSM),
+      WriteProcResTable(WPR), WriteLatencyTable(WL), ReadAdvanceTable(RA),
+      Stages(IS), OperandCycles(OC), ForwardingPaths(FP) {
   InitMCProcessorInfo(CPU, TuneCPU, FS);
 }
 
-FeatureBitset MCSubtargetInfo::ToggleFeature(uint64_t FB) {
+const FeatureBitset &MCSubtargetInfo::ToggleFeature(uint64_t FB) {
   FeatureBits.flip(FB);
   return FeatureBits;
 }
 
-FeatureBitset MCSubtargetInfo::ToggleFeature(const FeatureBitset &FB) {
+const FeatureBitset &MCSubtargetInfo::ToggleFeature(const FeatureBitset &FB) {
   FeatureBits ^= FB;
   return FeatureBits;
 }
 
-FeatureBitset MCSubtargetInfo::SetFeatureBitsTransitively(
-  const FeatureBitset &FB) {
+const FeatureBitset &
+MCSubtargetInfo::SetFeatureBitsTransitively(const FeatureBitset &FB) {
   SetImpliedBits(FeatureBits, FB, ProcFeatures);
   return FeatureBits;
 }
 
-FeatureBitset MCSubtargetInfo::ClearFeatureBitsTransitively(
-  const FeatureBitset &FB) {
+const FeatureBitset &
+MCSubtargetInfo::ClearFeatureBitsTransitively(const FeatureBitset &FB) {
   for (unsigned I = 0, E = FB.size(); I < E; I++) {
     if (FB[I]) {
       FeatureBits.reset(I);
@@ -265,7 +295,7 @@ FeatureBitset MCSubtargetInfo::ClearFeatureBitsTransitively(
   return FeatureBits;
 }
 
-FeatureBitset MCSubtargetInfo::ToggleFeature(StringRef Feature) {
+const FeatureBitset &MCSubtargetInfo::ToggleFeature(StringRef Feature) {
   // Find feature in table.
   const SubtargetFeatureKV *FeatureEntry =
       Find(SubtargetFeatures::StripFlag(Feature), ProcFeatures);
@@ -290,21 +320,118 @@ FeatureBitset MCSubtargetInfo::ToggleFeature(StringRef Feature) {
   return FeatureBits;
 }
 
-FeatureBitset MCSubtargetInfo::ApplyFeatureFlag(StringRef FS) {
+const FeatureBitset &MCSubtargetInfo::ApplyFeatureFlag(StringRef FS) {
   ::ApplyFeatureFlag(FeatureBits, FS, ProcFeatures);
   return FeatureBits;
 }
 
 bool MCSubtargetInfo::checkFeatures(StringRef FS) const {
   SubtargetFeatures T(FS);
-  FeatureBitset Set, All;
-  for (std::string F : T.getFeatures()) {
-    ::ApplyFeatureFlag(Set, F, ProcFeatures);
-    if (F[0] == '-')
-      F[0] = '+';
-    ::ApplyFeatureFlag(All, F, ProcFeatures);
+  return all_of(T.getFeatures(), [this](const std::string &F) {
+    assert(SubtargetFeatures::hasFlag(F) &&
+           "Feature flags should start with '+' or '-'");
+    const SubtargetFeatureKV *FeatureEntry =
+        Find(SubtargetFeatures::StripFlag(F), ProcFeatures);
+    if (!FeatureEntry) {
+      reportFatalInternalError(Twine("'") + F +
+                               "' is not a recognized feature for this target");
+    }
+
+    return FeatureBits.test(FeatureEntry->Value) ==
+           SubtargetFeatures::isEnabled(F);
+  });
+}
+
+static bool hasFeature(StringRef Feature, const FeatureBitset &FeatureBits,
+                       ArrayRef<SubtargetFeatureKV> ProcFeatures) {
+  bool ShouldBeEnabled = true;
+  if (!Feature.consume_front("+") && Feature.consume_front("-"))
+    ShouldBeEnabled = false;
+
+  const SubtargetFeatureKV *FeatureEntry = Find(Feature, ProcFeatures);
+  if (!FeatureEntry) {
+    reportFatalInternalError(Twine("'") + Feature +
+                             "' is not a recognized feature for this target");
   }
-  return (FeatureBits & All) == Set;
+
+  return FeatureBits.test(FeatureEntry->Value) == ShouldBeEnabled;
+}
+
+namespace {
+class FeatureExpressionParser {
+  StringRef Expr;
+  const FeatureBitset &FeatureBits;
+  ArrayRef<SubtargetFeatureKV> ProcFeatures;
+  size_t Pos = 0;
+
+public:
+  FeatureExpressionParser(StringRef Expr, const FeatureBitset &FeatureBits,
+                          ArrayRef<SubtargetFeatureKV> ProcFeatures)
+      : Expr(Expr), FeatureBits(FeatureBits), ProcFeatures(ProcFeatures) {}
+
+  bool parse() {
+    bool Result = parseOr();
+    if (Pos != Expr.size())
+      reportFatalInternalError("malformed target feature expression");
+    return Result;
+  }
+
+private:
+  bool consume(char C) {
+    if (Pos == Expr.size() || Expr[Pos] != C)
+      return false;
+    ++Pos;
+    return true;
+  }
+
+  bool parseOr() {
+    bool Result = parseAnd();
+    while (consume('|')) {
+      bool RHS = parseAnd();
+      Result |= RHS;
+    }
+    return Result;
+  }
+
+  bool parseAnd() {
+    bool Result = parsePrimary();
+    while (consume(',')) {
+      bool RHS = parsePrimary();
+      Result &= RHS;
+    }
+    return Result;
+  }
+
+  bool parsePrimary() {
+    if (consume('(')) {
+      bool Result = parseOr();
+      if (!consume(')'))
+        reportFatalInternalError("malformed target feature expression");
+      return Result;
+    }
+
+    size_t Start = Pos;
+    Pos = Expr.find_first_of(",|()", Pos);
+    if (Pos == StringRef::npos)
+      Pos = Expr.size();
+
+    if (Start == Pos)
+      reportFatalInternalError("malformed target feature expression");
+
+    return hasFeature(Expr.slice(Start, Pos), FeatureBits, ProcFeatures);
+  }
+};
+} // namespace
+
+bool MCSubtargetInfo::checkFeatureExpression(StringRef FeatureExpr) const {
+  if (FeatureExpr.empty())
+    return true;
+  if (FeatureExpr.contains(' ')) {
+    reportFatalInternalError(
+        "spaces are not allowed in target feature expressions");
+  }
+  FeatureExpressionParser Parser(FeatureExpr, FeatureBits, ProcFeatures);
+  return Parser.parse();
 }
 
 const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {
@@ -321,8 +448,7 @@ const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {
              << " (ignoring processor)\n";
     return MCSchedModel::Default;
   }
-  assert(CPUEntry->SchedModel && "Missing processor SchedModel value");
-  return *CPUEntry->SchedModel;
+  return ProcSchedModels[CPUEntry->SchedModelIdx];
 }
 
 InstrItineraryData
@@ -336,13 +462,12 @@ void MCSubtargetInfo::initInstrItins(InstrItineraryData &InstrItins) const {
                                   ForwardingPaths);
 }
 
-std::vector<SubtargetFeatureKV>
+std::vector<const SubtargetFeatureKV *>
 MCSubtargetInfo::getEnabledProcessorFeatures() const {
-  std::vector<SubtargetFeatureKV> EnabledFeatures;
-  auto IsEnabled = [&](const SubtargetFeatureKV &FeatureKV) {
-    return FeatureBits.test(FeatureKV.Value);
-  };
-  llvm::copy_if(ProcFeatures, std::back_inserter(EnabledFeatures), IsEnabled);
+  std::vector<const SubtargetFeatureKV *> EnabledFeatures;
+  for (const SubtargetFeatureKV &FeatureKV : ProcFeatures)
+    if (FeatureBits.test(FeatureKV.Value))
+      EnabledFeatures.push_back(&FeatureKV);
   return EnabledFeatures;
 }
 

@@ -24,11 +24,10 @@ lor.rhs:                                          ; preds = %entry
   br label %lor.end, !dbg !10
 
 lor.end:                                          ; preds = %lor.rhs, %entry
-  %cmp103 = xor i1 undef, undef, !dbg !11
-  br i1 %cmp103, label %for.cond, label %if.then, !dbg !12
+  br i1 false, label %for.cond, label %if.then, !dbg !12
 
 for.cond:                                         ; preds = %for.body, %lor.end
-  br i1 undef, label %if.then, label %for.body, !dbg !13
+  br i1 false, label %if.then, label %for.body, !dbg !13
 
 for.body:                                         ; preds = %for.cond
   br label %for.cond, !dbg !14

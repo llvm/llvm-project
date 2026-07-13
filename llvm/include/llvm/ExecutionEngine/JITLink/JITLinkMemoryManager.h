@@ -19,12 +19,16 @@
 #include "llvm/ExecutionEngine/Orc/Shared/AllocationActions.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
+#include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/RecyclingAllocator.h"
+#include "llvm/TargetParser/Triple.h"
 
+#include <cassert>
 #include <cstdint>
 #include <future>
 #include <mutex>
@@ -40,7 +44,7 @@ class Section;
 ///
 /// Instances of this class may be accessed concurrently from multiple threads
 /// and their implemetations should include any necessary synchronization.
-class JITLinkMemoryManager {
+class LLVM_ABI JITLinkMemoryManager {
 public:
 
   /// Represents a finalized allocation.
@@ -115,7 +119,7 @@ public:
   ///
   /// If abandon is called then working memory and executor memory should both
   /// be freed.
-  class InFlightAlloc {
+  class LLVM_ABI InFlightAlloc {
   public:
     using OnFinalizedFunction = unique_function<void(Expected<FinalizedAlloc>)>;
     using OnAbandonedFunction = unique_function<void(Error)>;
@@ -221,17 +225,15 @@ public:
     friend class BasicLayout;
 
   public:
-    Segment()
-        : ContentSize(0), ZeroFillSize(0), Addr(0), WorkingMem(nullptr),
-          NextWorkingMemOffset(0) {}
+    Segment() = default;
     Align Alignment;
-    size_t ContentSize;
-    uint64_t ZeroFillSize;
+    size_t ContentSize = 0;
+    uint64_t ZeroFillSize = 0;
     orc::ExecutorAddr Addr;
     char *WorkingMem = nullptr;
 
   private:
-    size_t NextWorkingMemOffset;
+    size_t NextWorkingMemOffset = 0;
     std::vector<Block *> ContentBlocks, ZeroFillBlocks;
   };
 
@@ -249,7 +251,7 @@ private:
   using SegmentMap = orc::AllocGroupSmallMap<Segment>;
 
 public:
-  BasicLayout(LinkGraph &G);
+  LLVM_ABI BasicLayout(LinkGraph &G);
 
   /// Return a reference to the graph this allocation was created from.
   LinkGraph &getGraph() { return G; }
@@ -263,7 +265,7 @@ public:
   ///
   /// This function will return an error if any segment has an alignment that
   /// is higher than a page.
-  Expected<ContiguousPageBasedLayoutSizes>
+  LLVM_ABI Expected<ContiguousPageBasedLayoutSizes>
   getContiguousPageBasedLayoutSizes(uint64_t PageSize);
 
   /// Returns an iterator over the segments of the layout.
@@ -272,12 +274,12 @@ public:
   }
 
   /// Apply the layout to the graph.
-  Error apply();
+  LLVM_ABI Error apply();
 
   /// Returns a reference to the AllocActions in the graph.
   /// This convenience function saves callers from having to #include
   /// LinkGraph.h if all they need are allocation actions.
-  orc::shared::AllocActions &graphAllocActions();
+  LLVM_ABI orc::shared::AllocActions &graphAllocActions();
 
 private:
   LinkGraph &G;
@@ -319,19 +321,24 @@ public:
   using OnFinalizedFunction =
       JITLinkMemoryManager::InFlightAlloc::OnFinalizedFunction;
 
-  static void Create(JITLinkMemoryManager &MemMgr, const JITLinkDylib *JD,
-                     SegmentMap Segments, OnCreatedFunction OnCreated);
+  using OnAbandonedFunction = unique_function<void(Error)>;
 
-  static Expected<SimpleSegmentAlloc> Create(JITLinkMemoryManager &MemMgr,
-                                             const JITLinkDylib *JD,
-                                             SegmentMap Segments);
+  LLVM_ABI static void Create(JITLinkMemoryManager &MemMgr,
+                              std::shared_ptr<orc::SymbolStringPool> SSP,
+                              Triple TT, const JITLinkDylib *JD,
+                              SegmentMap Segments, OnCreatedFunction OnCreated);
 
-  SimpleSegmentAlloc(SimpleSegmentAlloc &&);
-  SimpleSegmentAlloc &operator=(SimpleSegmentAlloc &&);
-  ~SimpleSegmentAlloc();
+  LLVM_ABI static Expected<SimpleSegmentAlloc>
+  Create(JITLinkMemoryManager &MemMgr,
+         std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
+         const JITLinkDylib *JD, SegmentMap Segments);
+
+  LLVM_ABI SimpleSegmentAlloc(SimpleSegmentAlloc &&);
+  LLVM_ABI SimpleSegmentAlloc &operator=(SimpleSegmentAlloc &&);
+  LLVM_ABI ~SimpleSegmentAlloc();
 
   /// Returns the SegmentInfo for the given group.
-  SegmentInfo getSegInfo(orc::AllocGroup AG);
+  LLVM_ABI SegmentInfo getSegInfo(orc::AllocGroup AG);
 
   /// Finalize all groups (async version).
   void finalize(OnFinalizedFunction OnFinalized) {
@@ -341,6 +348,11 @@ public:
   /// Finalize all groups.
   Expected<JITLinkMemoryManager::FinalizedAlloc> finalize() {
     return Alloc->finalize();
+  }
+
+  /// Free allocated memory if finalize won't be called.
+  void abandon(OnAbandonedFunction OnAbandoned) {
+    Alloc->abandon(std::move(OnAbandoned));
   }
 
 private:
@@ -355,7 +367,7 @@ private:
 };
 
 /// A JITLinkMemoryManager that allocates in-process memory.
-class InProcessMemoryManager : public JITLinkMemoryManager {
+class LLVM_ABI InProcessMemoryManager : public JITLinkMemoryManager {
 public:
   class IPInFlightAlloc;
 
@@ -363,7 +375,9 @@ public:
   static Expected<std::unique_ptr<InProcessMemoryManager>> Create();
 
   /// Create an instance using the given page size.
-  InProcessMemoryManager(uint64_t PageSize) : PageSize(PageSize) {}
+  InProcessMemoryManager(uint64_t PageSize) : PageSize(PageSize) {
+    assert(isPowerOf2_64(PageSize) && "PageSize must be a power of 2");
+  }
 
   void allocate(const JITLinkDylib *JD, LinkGraph &G,
                 OnAllocatedFunction OnAllocated) override;

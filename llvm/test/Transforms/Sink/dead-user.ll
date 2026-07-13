@@ -2,27 +2,26 @@
 ; Compiler should not be broken with a dead user.
 ; RUN: opt -passes=sink -S < %s | FileCheck %s
 
-define void @test(i16 %p1) {
-; CHECK-LABEL: define void @test(
-; CHECK-SAME: i16 [[P1:%.*]]) {
+define void @test(i16 %p1, i1 %arg) {
+; CHECK-LABEL: define void @test(i16 %p1, i1 %arg) {
 ; CHECK-NEXT:  bb.0:
-; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[P1]] to i32
-; CHECK-NEXT:    br i1 undef, label [[BB_1:%.*]], label [[BB_3:%.*]]
+; CHECK-NEXT:    %conv = sext i16 %p1 to i32
+; CHECK-NEXT:    br i1 %arg, label %bb.1, label %bb.3
 ; CHECK:       bb.1:
-; CHECK-NEXT:    br label [[BB_2:%.*]]
+; CHECK-NEXT:    br label %bb.2
 ; CHECK:       bb.2:
-; CHECK-NEXT:    [[AND_2:%.*]] = and i32 undef, [[CONV]]
-; CHECK-NEXT:    br label [[BB_2]]
+; CHECK-NEXT:    %and.2 = and i32 undef, %conv
+; CHECK-NEXT:    br label %bb.2
 ; CHECK:       bb.3:
-; CHECK-NEXT:    [[AND_3:%.*]] = and i32 undef, [[CONV]]
-; CHECK-NEXT:    br label [[BB_3]]
+; CHECK-NEXT:    %and.3 = and i32 undef, %conv
+; CHECK-NEXT:    br label %bb.3
 ; CHECK:       dead:
-; CHECK-NEXT:    [[AND_DEAD:%.*]] = and i32 undef, [[CONV]]
-; CHECK-NEXT:    br label [[DEAD:%.*]]
+; CHECK-NEXT:    %and.dead = and i32 undef, %conv
+; CHECK-NEXT:    br label %dead
 ;
 bb.0:
   %conv = sext i16 %p1 to i32
-  br i1 undef, label %bb.1, label %bb.3
+  br i1 %arg, label %bb.1, label %bb.3
 
 bb.1:                                             ; preds = %bb.0
   br label %bb.2

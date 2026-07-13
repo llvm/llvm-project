@@ -24,6 +24,7 @@
 #include "test_allocator.h"
 #include "test_macros.h"
 #include "asan_testing.h"
+#include "operator_hijacker.h"
 
 #define STR(string) MAKE_CSTRING(typename S::value_type, string)
 
@@ -212,6 +213,8 @@ constexpr void test_allocators() {
   test_string<std::basic_string<CharT, CharTraits, std::allocator<CharT>>>(std::allocator<CharT>{});
   test_string<std::basic_string<CharT, CharTraits, min_allocator<CharT>>>(min_allocator<CharT>{});
   test_string<std::basic_string<CharT, CharTraits, test_allocator<CharT>>>(test_allocator<CharT>{42});
+  test_string<std::basic_string<CharT, CharTraits, operator_hijacker_allocator<CharT>>>(
+      operator_hijacker_allocator<CharT>{});
 }
 
 template <class CharT>

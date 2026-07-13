@@ -10,8 +10,17 @@ link_flags = []
 if @LIBUNWIND_ENABLE_THREADS@:
     link_flags.append('-lpthread')
 
+if @HAVE_GETAUXVAL@:
+    compile_flags.append('-D_LIBUNWIND_HAVE_GETAUXVAL')
+
+if @HAVE_ELF_AUX_INFO@:
+    compile_flags.append('-D_LIBUNWIND_HAVE_ELF_AUX_INFO')
+
 if @LIBUNWIND_ENABLE_CET@:
     compile_flags.append('-fcf-protection=full')
+
+if @LIBUNWIND_ENABLE_GCS@:
+    compile_flags.append('-mbranch-protection=standard')
 
 # On ELF platforms, link tests with -Wl,--export-dynamic if supported by the linker.
 if len('@CMAKE_EXE_EXPORTS_CXX_FLAG@'):
@@ -34,7 +43,7 @@ config.substitutions.append(('%{link_flags}',
     '%{{lib}}/libunwind.a {}'.format(' '.join(link_flags))
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T -- '
+    '%{executor} --execdir %{temp} -- '
 ))
 
 import os, site

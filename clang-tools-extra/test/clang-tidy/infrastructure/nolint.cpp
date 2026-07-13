@@ -125,10 +125,10 @@ class D5 { D5(int x); }; // NOLINT(google*,-google*)
 class D6 { D6(int x); }; // NOLINT(*,-google*)
 
 int array1[10];
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: do not declare C-style arrays, use std::array<> instead [cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays]
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: do not declare C-style arrays, use 'std::array' instead [cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays]
 
 int array2[10];  // NOLINT(cppcoreguidelines-avoid-c-arrays)
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: do not declare C-style arrays, use std::array<> instead [modernize-avoid-c-arrays]
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
 
 int array3[10];  // NOLINT(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 int array4[10];  // NOLINT(*-avoid-c-arrays)

@@ -115,11 +115,10 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; ARM5-LABEL: test_srem_even:
 ; ARM5:       @ %bb.0:
 ; ARM5-NEXT:    lsl r1, r0, #28
-; ARM5-NEXT:    mov r2, #1
 ; ARM5-NEXT:    asr r1, r1, #28
 ; ARM5-NEXT:    add r1, r1, r1, lsl #1
-; ARM5-NEXT:    and r2, r2, r1, lsr #7
-; ARM5-NEXT:    add r1, r2, r1, lsr #4
+; ARM5-NEXT:    lsr r2, r1, #4
+; ARM5-NEXT:    add r1, r2, r1, lsr #31
 ; ARM5-NEXT:    add r1, r1, r1, lsl #1
 ; ARM5-NEXT:    sub r0, r0, r1, lsl #1
 ; ARM5-NEXT:    and r0, r0, #15
@@ -131,11 +130,10 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; ARM6-LABEL: test_srem_even:
 ; ARM6:       @ %bb.0:
 ; ARM6-NEXT:    lsl r1, r0, #28
-; ARM6-NEXT:    mov r2, #1
 ; ARM6-NEXT:    asr r1, r1, #28
 ; ARM6-NEXT:    add r1, r1, r1, lsl #1
-; ARM6-NEXT:    and r2, r2, r1, lsr #7
-; ARM6-NEXT:    add r1, r2, r1, lsr #4
+; ARM6-NEXT:    lsr r2, r1, #4
+; ARM6-NEXT:    add r1, r2, r1, lsr #31
 ; ARM6-NEXT:    add r1, r1, r1, lsl #1
 ; ARM6-NEXT:    sub r0, r0, r1, lsl #1
 ; ARM6-NEXT:    and r0, r0, #15
@@ -148,8 +146,8 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; ARM7:       @ %bb.0:
 ; ARM7-NEXT:    sbfx r1, r0, #0, #4
 ; ARM7-NEXT:    add r1, r1, r1, lsl #1
-; ARM7-NEXT:    ubfx r2, r1, #7, #1
-; ARM7-NEXT:    add r1, r2, r1, lsr #4
+; ARM7-NEXT:    lsr r2, r1, #4
+; ARM7-NEXT:    add r1, r2, r1, lsr #31
 ; ARM7-NEXT:    add r1, r1, r1, lsl #1
 ; ARM7-NEXT:    sub r0, r0, r1, lsl #1
 ; ARM7-NEXT:    and r0, r0, #15
@@ -162,8 +160,8 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; ARM8:       @ %bb.0:
 ; ARM8-NEXT:    sbfx r1, r0, #0, #4
 ; ARM8-NEXT:    add r1, r1, r1, lsl #1
-; ARM8-NEXT:    ubfx r2, r1, #7, #1
-; ARM8-NEXT:    add r1, r2, r1, lsr #4
+; ARM8-NEXT:    lsr r2, r1, #4
+; ARM8-NEXT:    add r1, r2, r1, lsr #31
 ; ARM8-NEXT:    add r1, r1, r1, lsl #1
 ; ARM8-NEXT:    sub r0, r0, r1, lsl #1
 ; ARM8-NEXT:    and r0, r0, #15
@@ -176,8 +174,8 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; NEON7:       @ %bb.0:
 ; NEON7-NEXT:    sbfx r1, r0, #0, #4
 ; NEON7-NEXT:    add r1, r1, r1, lsl #1
-; NEON7-NEXT:    ubfx r2, r1, #7, #1
-; NEON7-NEXT:    add r1, r2, r1, lsr #4
+; NEON7-NEXT:    lsr r2, r1, #4
+; NEON7-NEXT:    add r1, r2, r1, lsr #31
 ; NEON7-NEXT:    add r1, r1, r1, lsl #1
 ; NEON7-NEXT:    sub r0, r0, r1, lsl #1
 ; NEON7-NEXT:    and r0, r0, #15
@@ -190,8 +188,8 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; NEON8:       @ %bb.0:
 ; NEON8-NEXT:    sbfx r1, r0, #0, #4
 ; NEON8-NEXT:    add r1, r1, r1, lsl #1
-; NEON8-NEXT:    ubfx r2, r1, #7, #1
-; NEON8-NEXT:    add r1, r2, r1, lsr #4
+; NEON8-NEXT:    lsr r2, r1, #4
+; NEON8-NEXT:    add r1, r2, r1, lsr #31
 ; NEON8-NEXT:    add r1, r1, r1, lsl #1
 ; NEON8-NEXT:    sub r0, r0, r1, lsl #1
 ; NEON8-NEXT:    and r0, r0, #15
@@ -209,8 +207,7 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; ARM5:       @ %bb.0:
 ; ARM5-NEXT:    lsl r1, r0, #26
 ; ARM5-NEXT:    mov r2, #3
-; ARM5-NEXT:    asr r1, r1, #26
-; ARM5-NEXT:    and r1, r2, r1, lsr #9
+; ARM5-NEXT:    and r1, r2, r1, asr #31
 ; ARM5-NEXT:    add r1, r0, r1
 ; ARM5-NEXT:    and r1, r1, #60
 ; ARM5-NEXT:    sub r0, r0, r1
@@ -222,8 +219,7 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; ARM6:       @ %bb.0:
 ; ARM6-NEXT:    lsl r1, r0, #26
 ; ARM6-NEXT:    mov r2, #3
-; ARM6-NEXT:    asr r1, r1, #26
-; ARM6-NEXT:    and r1, r2, r1, lsr #9
+; ARM6-NEXT:    and r1, r2, r1, asr #31
 ; ARM6-NEXT:    add r1, r0, r1
 ; ARM6-NEXT:    and r1, r1, #60
 ; ARM6-NEXT:    sub r0, r0, r1
@@ -233,8 +229,9 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ;
 ; ARM7-LABEL: test_srem_pow2_setne:
 ; ARM7:       @ %bb.0:
-; ARM7-NEXT:    sbfx r1, r0, #0, #6
-; ARM7-NEXT:    ubfx r1, r1, #9, #2
+; ARM7-NEXT:    lsl r1, r0, #26
+; ARM7-NEXT:    mov r2, #3
+; ARM7-NEXT:    and r1, r2, r1, asr #31
 ; ARM7-NEXT:    add r1, r0, r1
 ; ARM7-NEXT:    and r1, r1, #60
 ; ARM7-NEXT:    sub r0, r0, r1
@@ -244,8 +241,9 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ;
 ; ARM8-LABEL: test_srem_pow2_setne:
 ; ARM8:       @ %bb.0:
-; ARM8-NEXT:    sbfx r1, r0, #0, #6
-; ARM8-NEXT:    ubfx r1, r1, #9, #2
+; ARM8-NEXT:    lsl r1, r0, #26
+; ARM8-NEXT:    mov r2, #3
+; ARM8-NEXT:    and r1, r2, r1, asr #31
 ; ARM8-NEXT:    add r1, r0, r1
 ; ARM8-NEXT:    and r1, r1, #60
 ; ARM8-NEXT:    sub r0, r0, r1
@@ -255,8 +253,9 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ;
 ; NEON7-LABEL: test_srem_pow2_setne:
 ; NEON7:       @ %bb.0:
-; NEON7-NEXT:    sbfx r1, r0, #0, #6
-; NEON7-NEXT:    ubfx r1, r1, #9, #2
+; NEON7-NEXT:    lsl r1, r0, #26
+; NEON7-NEXT:    mov r2, #3
+; NEON7-NEXT:    and r1, r2, r1, asr #31
 ; NEON7-NEXT:    add r1, r0, r1
 ; NEON7-NEXT:    and r1, r1, #60
 ; NEON7-NEXT:    sub r0, r0, r1
@@ -266,8 +265,9 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ;
 ; NEON8-LABEL: test_srem_pow2_setne:
 ; NEON8:       @ %bb.0:
-; NEON8-NEXT:    sbfx r1, r0, #0, #6
-; NEON8-NEXT:    ubfx r1, r1, #9, #2
+; NEON8-NEXT:    lsl r1, r0, #26
+; NEON8-NEXT:    mov r2, #3
+; NEON8-NEXT:    and r1, r2, r1, asr #31
 ; NEON8-NEXT:    add r1, r0, r1
 ; NEON8-NEXT:    and r1, r1, #60
 ; NEON8-NEXT:    sub r0, r0, r1
@@ -362,11 +362,10 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; ARM7:       @ %bb.0:
 ; ARM7-NEXT:    push {r4, r5, r6, r7, r11, lr}
 ; ARM7-NEXT:    vpush {d8, d9}
-; ARM7-NEXT:    mov r6, r0
-; ARM7-NEXT:    and r0, r3, #1
-; ARM7-NEXT:    mov r5, r1
-; ARM7-NEXT:    rsb r1, r0, #0
-; ARM7-NEXT:    mov r0, r2
+; ARM7-NEXT:    and r1, r1, #1
+; ARM7-NEXT:    mov r5, r3
+; ARM7-NEXT:    rsb r1, r1, #0
+; ARM7-NEXT:    mov r6, r2
 ; ARM7-NEXT:    mov r2, #9
 ; ARM7-NEXT:    mov r3, #0
 ; ARM7-NEXT:    bl __moddi3
@@ -378,24 +377,24 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; ARM7-NEXT:    mov r2, #9
 ; ARM7-NEXT:    mov r3, #0
 ; ARM7-NEXT:    bl __moddi3
-; ARM7-NEXT:    vmov.32 d8[0], r0
+; ARM7-NEXT:    vmov.32 d9[0], r0
 ; ARM7-NEXT:    ldr r0, [sp, #44]
 ; ARM7-NEXT:    ldr r2, [sp, #40]
 ; ARM7-NEXT:    mov r5, r1
 ; ARM7-NEXT:    and r0, r0, #1
 ; ARM7-NEXT:    mvn r3, #0
 ; ARM7-NEXT:    rsb r1, r0, #0
-; ARM7-NEXT:    vmov.32 d9[0], r7
+; ARM7-NEXT:    vmov.32 d8[0], r7
 ; ARM7-NEXT:    mov r0, r2
 ; ARM7-NEXT:    mvn r2, #8
 ; ARM7-NEXT:    bl __moddi3
 ; ARM7-NEXT:    vmov.32 d16[0], r0
 ; ARM7-NEXT:    adr r0, .LCPI3_0
-; ARM7-NEXT:    vmov.32 d9[1], r4
+; ARM7-NEXT:    vmov.32 d8[1], r4
 ; ARM7-NEXT:    vld1.64 {d18, d19}, [r0:128]
 ; ARM7-NEXT:    adr r0, .LCPI3_1
 ; ARM7-NEXT:    vmov.32 d16[1], r1
-; ARM7-NEXT:    vmov.32 d8[1], r5
+; ARM7-NEXT:    vmov.32 d9[1], r5
 ; ARM7-NEXT:    vand q8, q8, q9
 ; ARM7-NEXT:    vld1.64 {d20, d21}, [r0:128]
 ; ARM7-NEXT:    adr r0, .LCPI3_2
@@ -438,11 +437,10 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; ARM8:       @ %bb.0:
 ; ARM8-NEXT:    push {r4, r5, r6, r7, r11, lr}
 ; ARM8-NEXT:    vpush {d8, d9}
-; ARM8-NEXT:    mov r6, r0
-; ARM8-NEXT:    and r0, r3, #1
-; ARM8-NEXT:    mov r5, r1
-; ARM8-NEXT:    rsb r1, r0, #0
-; ARM8-NEXT:    mov r0, r2
+; ARM8-NEXT:    and r1, r1, #1
+; ARM8-NEXT:    mov r5, r3
+; ARM8-NEXT:    rsb r1, r1, #0
+; ARM8-NEXT:    mov r6, r2
 ; ARM8-NEXT:    mov r2, #9
 ; ARM8-NEXT:    mov r3, #0
 ; ARM8-NEXT:    bl __moddi3
@@ -454,24 +452,24 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; ARM8-NEXT:    mov r2, #9
 ; ARM8-NEXT:    mov r3, #0
 ; ARM8-NEXT:    bl __moddi3
-; ARM8-NEXT:    vmov.32 d8[0], r0
+; ARM8-NEXT:    vmov.32 d9[0], r0
 ; ARM8-NEXT:    ldr r0, [sp, #44]
 ; ARM8-NEXT:    ldr r2, [sp, #40]
 ; ARM8-NEXT:    mov r5, r1
 ; ARM8-NEXT:    and r0, r0, #1
 ; ARM8-NEXT:    mvn r3, #0
 ; ARM8-NEXT:    rsb r1, r0, #0
-; ARM8-NEXT:    vmov.32 d9[0], r7
+; ARM8-NEXT:    vmov.32 d8[0], r7
 ; ARM8-NEXT:    mov r0, r2
 ; ARM8-NEXT:    mvn r2, #8
 ; ARM8-NEXT:    bl __moddi3
 ; ARM8-NEXT:    vmov.32 d16[0], r0
 ; ARM8-NEXT:    adr r0, .LCPI3_0
-; ARM8-NEXT:    vmov.32 d9[1], r4
+; ARM8-NEXT:    vmov.32 d8[1], r4
 ; ARM8-NEXT:    vld1.64 {d18, d19}, [r0:128]
 ; ARM8-NEXT:    adr r0, .LCPI3_1
 ; ARM8-NEXT:    vmov.32 d16[1], r1
-; ARM8-NEXT:    vmov.32 d8[1], r5
+; ARM8-NEXT:    vmov.32 d9[1], r5
 ; ARM8-NEXT:    vand q8, q8, q9
 ; ARM8-NEXT:    vld1.64 {d20, d21}, [r0:128]
 ; ARM8-NEXT:    adr r0, .LCPI3_2
@@ -514,11 +512,10 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; NEON7:       @ %bb.0:
 ; NEON7-NEXT:    push {r4, r5, r6, r7, r11, lr}
 ; NEON7-NEXT:    vpush {d8, d9}
-; NEON7-NEXT:    mov r6, r0
-; NEON7-NEXT:    and r0, r3, #1
-; NEON7-NEXT:    mov r5, r1
-; NEON7-NEXT:    rsb r1, r0, #0
-; NEON7-NEXT:    mov r0, r2
+; NEON7-NEXT:    and r1, r1, #1
+; NEON7-NEXT:    mov r5, r3
+; NEON7-NEXT:    rsb r1, r1, #0
+; NEON7-NEXT:    mov r6, r2
 ; NEON7-NEXT:    mov r2, #9
 ; NEON7-NEXT:    mov r3, #0
 ; NEON7-NEXT:    bl __moddi3
@@ -530,24 +527,24 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; NEON7-NEXT:    mov r2, #9
 ; NEON7-NEXT:    mov r3, #0
 ; NEON7-NEXT:    bl __moddi3
-; NEON7-NEXT:    vmov.32 d8[0], r0
+; NEON7-NEXT:    vmov.32 d9[0], r0
 ; NEON7-NEXT:    ldr r0, [sp, #44]
 ; NEON7-NEXT:    ldr r2, [sp, #40]
 ; NEON7-NEXT:    mov r5, r1
 ; NEON7-NEXT:    and r0, r0, #1
 ; NEON7-NEXT:    mvn r3, #0
 ; NEON7-NEXT:    rsb r1, r0, #0
-; NEON7-NEXT:    vmov.32 d9[0], r7
+; NEON7-NEXT:    vmov.32 d8[0], r7
 ; NEON7-NEXT:    mov r0, r2
 ; NEON7-NEXT:    mvn r2, #8
 ; NEON7-NEXT:    bl __moddi3
 ; NEON7-NEXT:    vmov.32 d16[0], r0
 ; NEON7-NEXT:    adr r0, .LCPI3_0
-; NEON7-NEXT:    vmov.32 d9[1], r4
+; NEON7-NEXT:    vmov.32 d8[1], r4
 ; NEON7-NEXT:    vld1.64 {d18, d19}, [r0:128]
 ; NEON7-NEXT:    adr r0, .LCPI3_1
 ; NEON7-NEXT:    vmov.32 d16[1], r1
-; NEON7-NEXT:    vmov.32 d8[1], r5
+; NEON7-NEXT:    vmov.32 d9[1], r5
 ; NEON7-NEXT:    vand q8, q8, q9
 ; NEON7-NEXT:    vld1.64 {d20, d21}, [r0:128]
 ; NEON7-NEXT:    adr r0, .LCPI3_2
@@ -590,11 +587,10 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; NEON8:       @ %bb.0:
 ; NEON8-NEXT:    push {r4, r5, r6, r7, r11, lr}
 ; NEON8-NEXT:    vpush {d8, d9}
-; NEON8-NEXT:    mov r6, r0
-; NEON8-NEXT:    and r0, r3, #1
-; NEON8-NEXT:    mov r5, r1
-; NEON8-NEXT:    rsb r1, r0, #0
-; NEON8-NEXT:    mov r0, r2
+; NEON8-NEXT:    and r1, r1, #1
+; NEON8-NEXT:    mov r5, r3
+; NEON8-NEXT:    rsb r1, r1, #0
+; NEON8-NEXT:    mov r6, r2
 ; NEON8-NEXT:    mov r2, #9
 ; NEON8-NEXT:    mov r3, #0
 ; NEON8-NEXT:    bl __moddi3
@@ -606,24 +602,24 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; NEON8-NEXT:    mov r2, #9
 ; NEON8-NEXT:    mov r3, #0
 ; NEON8-NEXT:    bl __moddi3
-; NEON8-NEXT:    vmov.32 d8[0], r0
+; NEON8-NEXT:    vmov.32 d9[0], r0
 ; NEON8-NEXT:    ldr r0, [sp, #44]
 ; NEON8-NEXT:    ldr r2, [sp, #40]
 ; NEON8-NEXT:    mov r5, r1
 ; NEON8-NEXT:    and r0, r0, #1
 ; NEON8-NEXT:    mvn r3, #0
 ; NEON8-NEXT:    rsb r1, r0, #0
-; NEON8-NEXT:    vmov.32 d9[0], r7
+; NEON8-NEXT:    vmov.32 d8[0], r7
 ; NEON8-NEXT:    mov r0, r2
 ; NEON8-NEXT:    mvn r2, #8
 ; NEON8-NEXT:    bl __moddi3
 ; NEON8-NEXT:    vmov.32 d16[0], r0
 ; NEON8-NEXT:    adr r0, .LCPI3_0
-; NEON8-NEXT:    vmov.32 d9[1], r4
+; NEON8-NEXT:    vmov.32 d8[1], r4
 ; NEON8-NEXT:    vld1.64 {d18, d19}, [r0:128]
 ; NEON8-NEXT:    adr r0, .LCPI3_1
 ; NEON8-NEXT:    vmov.32 d16[1], r1
-; NEON8-NEXT:    vmov.32 d8[1], r5
+; NEON8-NEXT:    vmov.32 d9[1], r5
 ; NEON8-NEXT:    vand q8, q8, q9
 ; NEON8-NEXT:    vld1.64 {d20, d21}, [r0:128]
 ; NEON8-NEXT:    adr r0, .LCPI3_2

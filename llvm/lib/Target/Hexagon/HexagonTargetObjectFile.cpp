@@ -316,6 +316,7 @@ unsigned HexagonTargetObjectFile::getSmallestAddressableSize(const Type *Ty,
   case Type::HalfTyID:
   case Type::FloatTyID:
   case Type::DoubleTyID:
+  case Type::ByteTyID:
   case Type::IntegerTyID: {
     const DataLayout &DL = GV->getDataLayout();
     // It is unfortunate that DL's function take non-const Type*.
@@ -329,7 +330,6 @@ unsigned HexagonTargetObjectFile::getSmallestAddressableSize(const Type *Ty,
   case Type::PPC_FP128TyID:
   case Type::LabelTyID:
   case Type::MetadataTyID:
-  case Type::X86_MMXTyID:
   case Type::X86_AMXTyID:
   case Type::TokenTyID:
   case Type::TypedPointerTyID:

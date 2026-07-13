@@ -16,20 +16,16 @@ from __future__ import unicode_literals
 
 import argparse
 import glob
+import hashlib
 import html
 import json
 import mmap
 import os
+import pathlib
 import re
 import struct
 import subprocess
 import sys
-
-if sys.version_info.major < 3:
-  # Simulate Python 3.x behaviour of defaulting to UTF-8 for print. This is
-  # important in case any symbols are non-ASCII.
-  import codecs
-  sys.stdout = codecs.getwriter("utf-8")(sys.stdout)
 
 # Below, a parser for a subset of ELF. It only supports 64 bit, little-endian,
 # and only parses what is necessary to find the build ids. It uses a memoryview
@@ -37,8 +33,9 @@ if sys.version_info.major < 3:
 Ehdr_size = 64
 e_shnum_offset = 60
 e_shoff_offset = 40
-
+e_shstrndx_offset = 62
 Shdr_size = 64
+sh_name_offset = 0
 sh_type_offset = 4
 sh_offset_offset = 24
 sh_size_offset = 32
@@ -62,13 +59,32 @@ def handle_Nhdr(mv, sh_size):
     offset += Nhdr_size + align_up(n_namesz, 4) + align_up(n_descsz, 4)
   return None
 
-def handle_Shdr(mv):
+def handle_shstrtab(mv, e_shoff):
+  e_shstrndx, = struct.unpack_from('<H', buffer=mv, offset=e_shstrndx_offset)
+  
+  start_shstrndx = e_shoff + e_shstrndx * Shdr_size
+  shstrndx_sh = mv[start_shstrndx: start_shstrndx + Shdr_size]
+  _, shstrndx_sh_offset, shstrndx_sh_size = handle_Shdr(shstrndx_sh)
+  return mv[shstrndx_sh_offset:shstrndx_sh_offset + shstrndx_sh_size]
+
+def read_string(mv):
+  name = ""
+  for byte in mv:
+    char = chr(byte)
+    if char == '\x00':
+      break
+    name += char
+  return name
+
+def unpack_sh_type(mv):
   sh_type, = struct.unpack_from('<I', buffer=mv, offset=sh_type_offset)
-  if sh_type != SHT_NOTE:
-    return None, None
+  return sh_type
+
+def handle_Shdr(mv):
+  name_offset, = struct.unpack_from('<I', buffer=mv, offset=sh_name_offset)
   sh_offset, = struct.unpack_from('<Q', buffer=mv, offset=sh_offset_offset)
   sh_size, = struct.unpack_from('<Q', buffer=mv, offset=sh_size_offset)
-  return sh_offset, sh_size
+  return name_offset, sh_offset, sh_size
 
 def handle_elf(mv):
   # \x02 is ELFCLASS64, \x01 is ELFDATA2LSB. HWASan currently only works on
@@ -76,19 +92,37 @@ def handle_elf(mv):
   # have to extend the parsing code.
   if mv[:6] != b'\x7fELF\x02\x01':
     return None
+  found_symbols = False
+  bid = None
   e_shnum, = struct.unpack_from('<H', buffer=mv, offset=e_shnum_offset)
   e_shoff, = struct.unpack_from('<Q', buffer=mv, offset=e_shoff_offset)
+
+  # Section where all the section header names are stored.
+  shstr = handle_shstrtab(mv, e_shoff)
+
   for i in range(0, e_shnum):
     start = e_shoff + i * Shdr_size
-    sh_offset, sh_size = handle_Shdr(mv[start: start + Shdr_size])
-    if sh_offset is None:
-      continue
-    note_hdr = mv[sh_offset: sh_offset + sh_size]
-    result = handle_Nhdr(note_hdr, sh_size)
-    if result is not None:
-      return result
+    sh = mv[start: start + Shdr_size]
+    sh_name_offset, sh_offset, sh_size = handle_Shdr(sh)
+    sh_name = read_string(shstr[sh_name_offset:])
+    sh_type = unpack_sh_type(sh)
 
-def get_buildid(filename):
+    if sh_name == ".debug_info":
+      found_symbols = True
+    if sh_type == SHT_NOTE:
+      if sh_offset is None:
+        continue
+      note_hdr = mv[sh_offset: sh_offset + sh_size]
+      result = handle_Nhdr(note_hdr, sh_size)
+      if result is not None:
+        bid = result
+
+  if found_symbols:
+    return bid
+  else:
+    return None
+
+def read_elf(filename):
   with open(filename, "r") as fd:
     if os.fstat(fd.fileno()).st_size < Ehdr_size:
       return None
@@ -109,6 +143,10 @@ class Symbolizer:
     self.__html = False
     self.__last_access_address = None
     self.__last_access_tag = None
+    self.__tag_dump = []
+    self.__tag_dump_match_idx = None
+    self.__matched_stack_uas = False
+    self.__offsets = []
 
   def enable_html(self, enable):
     self.__html = enable
@@ -196,7 +234,7 @@ class Symbolizer:
       if os.path.exists(full_path):
         return full_path
     if name not in self.__warnings:
-      print("Could not find symbols for", name, file=sys.stderr)
+      print("Could not find symbols for {} (Build ID: {})".format(name, buildid), file=sys.stderr)
       self.__warnings.add(name)
     return None
 
@@ -264,13 +302,30 @@ class Symbolizer:
         for fn in fnames:
           filename = os.path.join(dname, fn)
           try:
-            bid = get_buildid(filename)
+            bid = read_elf(filename)
           except FileNotFoundError:
             continue
           except Exception as e:
             print("Failed to parse {}: {}".format(filename, e), file=sys.stderr)
             continue
-          if bid is not None:
+          if bid is None:
+            continue
+
+          if bid in self.__index:
+            index_filename = self.__index[bid]
+
+            if os.path.samefile(index_filename, filename):
+              continue
+
+            with open(filename, "rb") as f:
+              file_hash = hashlib.file_digest(f, "sha256")
+
+            with open(index_filename, "rb") as f:
+              index_file_hash = hashlib.file_digest(f, "sha256")
+
+            if index_file_hash.digest() != file_hash.digest():
+              print("Build ID collision! Files share the same BuildId ({}) but their contents differ. Files {} and {} ".format(bid, filename, index_filename), file=sys.stderr)
+          else:
             self.__index[bid] = filename
 
   def symbolize_line(self, line):
@@ -311,6 +366,34 @@ class Symbolizer:
     if match:
       self.__last_access_tag = int(match.group(2), 16)
 
+  def process_tag_dump_line(self, line, ignore_tags=False):
+    m = re.match(r'.*?(0x[0-9a-f]+):' + r'([ ]*[\[ ][0-9a-f][0-9a-f]\]?)' * 16, line)
+    if m is None:
+      return False
+    addr = m.group(1)
+    tags = m.group(*range(2, 18))
+    fault = [i for i, x in enumerate(tags) if '[' in x]
+    if fault:
+      self.__tag_dump_match_idx = len(self.__tag_dump) + fault[0]
+    self.__tag_dump.extend(int(x.strip(' [').rstrip('] '), 16) for x in tags)
+    return True
+
+  def finish_tag_dump(self):
+    if self.__matched_stack_uas or self.__tag_dump_match_idx is None:
+      return
+    for offset, size, local in sorted(self.__offsets, key=lambda x: abs(x[0])):
+      idx = self.__tag_dump_match_idx - offset // 16
+      if idx < 0 or idx > len(self.__tag_dump):
+        continue
+      if self.__tag_dump[idx] == self.__last_access_tag:
+        self.print('')
+        self.print('Potentially referenced stack object:')
+        if offset > 0:
+          self.print('  %d bytes after a variable "%s" in stack frame of function "%s"' % (offset - size, local[2], local[0]))
+        if offset < 0:
+          self.print('  %d bytes before a variable "%s" in stack frame of function "%s"' % (-offset, local[2], local[0]))
+        self.print('  at %s' % (local[1],))
+
   def process_stack_history(self, line, ignore_tags=False):
     if self.__last_access_address is None or self.__last_access_tag is None:
       return
@@ -336,16 +419,18 @@ class Symbolizer:
         size = local[4]
         if frame_offset is None or size is None:
           continue
-        obj_offset = (self.__last_access_address - fp - frame_offset) & fp_mask
-        if obj_offset >= size:
-          continue
+        obj_offset = (self.__last_access_address & fp_mask) - ((fp & fp_mask) + frame_offset)
         tag_offset = local[5]
         if not ignore_tags and (tag_offset is None or base_tag ^ tag_offset != self.__last_access_tag):
+          continue
+        if obj_offset < 0 or obj_offset >= size:
+          self.__offsets.append((obj_offset, size, local))
           continue
         self.print('')
         self.print('Potentially referenced stack object:')
         self.print('  %d bytes inside a variable "%s" in stack frame of function "%s"' % (obj_offset, local[2], local[0]))
         self.print('  at %s' % (local[1],))
+        self.__matched_stack_uas = True
       return True
     return False
 
@@ -386,7 +471,7 @@ def main():
   # Source location.
   paths_to_cut = args.source or []
   if not paths_to_cut:
-    paths_to_cut.append(os.getcwd() + '/')
+    paths_to_cut.append(pathlib.Path.cwd().as_posix() + '/')
     if 'ANDROID_BUILD_TOP' in os.environ:
       paths_to_cut.append(os.environ['ANDROID_BUILD_TOP'] + '/')
 
@@ -456,9 +541,18 @@ def main():
       sys.exit(1)
     symbolizer.read_linkify(args.linkify)
 
+  tag_dump = False
   for line in sys.stdin:
     if sys.version_info.major < 3:
       line = line.decode('utf-8')
+    if tag_dump:
+      tag_dump = symbolizer.process_tag_dump_line(line)
+      if tag_dump:
+        continue
+      symbolizer.finish_tag_dump()
+    if 'Memory tags around the buggy address' in line:
+      tag_dump = True
+
     symbolizer.save_access_address(line)
     if symbolizer.process_stack_history(line, ignore_tags=args.ignore_tags):
       continue

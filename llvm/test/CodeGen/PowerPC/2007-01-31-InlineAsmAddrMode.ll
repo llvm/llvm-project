@@ -11,7 +11,7 @@ define void @test1() {
 entry:
 	%Out = alloca %struct.A, align 4		; <ptr> [#uses=1]
 	%tmp2 = getelementptr %struct.A, ptr %Out, i32 0, i32 1
-	%tmp5 = call i32 asm "lwbrx $0, $1", "=r,m"(ptr %tmp2 )
+	%tmp5 = call i32 asm "lbz $0, $1", "=r,m"(ptr %tmp2 )
 	ret void
 }
 

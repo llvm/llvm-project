@@ -109,6 +109,14 @@ template<template<typename> class T> struct shadow8 { // expected-note{{template
   template<template<typename> class T> struct inner; // expected-error{{declaration of 'T' shadows template parameter}}
 };
 
+template<class>
+class shadow9_;
+
+template<class T> // expected-note{{template parameter is declared here}}
+class shadow9 : public shadow9_<T> {
+  using typename shadow9_<T>::T; // expected-error{{declaration of 'T' shadows template parameter}}
+};
+
 // Non-type template parameters in scope
 template<int Size>
 void f(int& i) {
@@ -296,4 +304,8 @@ namespace PR46231 {
   template int; // expected-error {{declaration does not declare anything}}
   template<> int; // expected-error {{declaration does not declare anything}}
   template<int> int; // expected-error {{declaration does not declare anything}}
+}
+
+namespace PR99933 {
+  void foo() { template <typename> int i; } // expected-error {{templates can only be declared in namespace or class scope}}
 }

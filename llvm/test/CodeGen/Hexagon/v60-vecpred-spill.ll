@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s -verify-machineinstrs | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s -verify-machineinstrs | FileCheck %s
 ; CHECK-NOT: vmem(r30+#-1){{ *} = v{{[0-9]+}}
 ; CHECK-NOT: v{{[0-9]+}} = vmem(r30+#-1)
 ; CHECK: v{{[0-9]+}} = vmux

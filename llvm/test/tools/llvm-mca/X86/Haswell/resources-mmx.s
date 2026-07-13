@@ -173,11 +173,11 @@ pxor        (%rax), %mm2
 # CHECK-NEXT:  1      5     0.50    *                   movq	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        movq	%mm0, %rcx
 # CHECK-NEXT:  2      1     1.00           *            movq	%mm0, (%rax)
-# CHECK-NEXT:  3      3     2.00                        packsswb	%mm0, %mm2
+# CHECK-NEXT:  2      3     2.00                        packsswb	%mm0, %mm2
 # CHECK-NEXT:  3      7     2.00    *                   packsswb	(%rax), %mm2
-# CHECK-NEXT:  3      3     2.00                        packssdw	%mm0, %mm2
+# CHECK-NEXT:  2      3     2.00                        packssdw	%mm0, %mm2
 # CHECK-NEXT:  3      7     2.00    *                   packssdw	(%rax), %mm2
-# CHECK-NEXT:  3      3     2.00                        packuswb	%mm0, %mm2
+# CHECK-NEXT:  2      3     2.00                        packuswb	%mm0, %mm2
 # CHECK-NEXT:  3      7     2.00    *                   packuswb	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        paddb	%mm0, %mm2
 # CHECK-NEXT:  2      6     0.50    *                   paddb	(%rax), %mm2
@@ -284,7 +284,7 @@ pxor        (%rax), %mm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -      -     46.67  35.17  23.67  23.67  2.00   57.17  1.00   0.67
+# CHECK-NEXT:  -      -     45.92  34.42  23.67  23.67  2.00   56.42  0.25   0.67
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -297,11 +297,11 @@ pxor        (%rax), %mm2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     movq	(%rax), %mm2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     movq	%mm0, %rcx
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33   movq	%mm0, (%rax)
-# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     2.25   0.25    -     packsswb	%mm0, %mm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -     packsswb	%mm0, %mm2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     2.00    -      -     packsswb	(%rax), %mm2
-# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     2.25   0.25    -     packssdw	%mm0, %mm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -     packssdw	%mm0, %mm2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     2.00    -      -     packssdw	(%rax), %mm2
-# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     2.25   0.25    -     packuswb	%mm0, %mm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -     packuswb	%mm0, %mm2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     2.00    -      -     packuswb	(%rax), %mm2
 # CHECK-NEXT:  -      -      -     0.50    -      -      -     0.50    -      -     paddb	%mm0, %mm2
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50    -     0.50    -      -     paddb	(%rax), %mm2

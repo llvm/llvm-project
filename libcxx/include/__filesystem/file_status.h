@@ -22,7 +22,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-class _LIBCPP_EXPORTED_FROM_ABI file_status {
+class file_status {
 public:
   // constructors
   _LIBCPP_HIDE_FROM_ABI file_status() noexcept : file_status(file_type::none) {}
@@ -38,9 +38,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI file_status& operator=(file_status&&) noexcept      = default;
 
   // observers
-  _LIBCPP_HIDE_FROM_ABI file_type type() const noexcept { return __ft_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI file_type type() const noexcept { return __ft_; }
 
-  _LIBCPP_HIDE_FROM_ABI perms permissions() const noexcept { return __prms_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI perms permissions() const noexcept { return __prms_; }
 
   // modifiers
   _LIBCPP_HIDE_FROM_ABI void type(file_type __ft) noexcept { __ft_ = __ft; }

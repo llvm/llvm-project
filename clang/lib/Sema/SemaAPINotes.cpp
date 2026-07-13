@@ -10,12 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TypeLocBuilder.h"
 #include "clang/APINotes/APINotesReader.h"
+#include "clang/APINotes/Types.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/TypeLoc.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaSwift.h"
 #include <stack>
@@ -49,63 +53,58 @@ static bool isIndirectPointerType(QualType Type) {
          Pointee->isMemberPointerType();
 }
 
-/// Apply nullability to the given declaration.
-static void applyNullability(Sema &S, Decl *D, NullabilityKind Nullability,
-                             VersionedInfoMetadata Metadata) {
-  if (!Metadata.IsActive)
+static void applyAPINotesType(Sema &S, Decl *decl, StringRef typeString,
+                              VersionedInfoMetadata metadata) {
+  if (typeString.empty())
+
     return;
 
-  auto GetModified =
-      [&](Decl *D, QualType QT,
-          NullabilityKind Nullability) -> std::optional<QualType> {
-    QualType Original = QT;
-    S.CheckImplicitNullabilityTypeSpecifier(QT, Nullability, D->getLocation(),
-                                            isa<ParmVarDecl>(D),
-                                            /*OverrideExisting=*/true);
-    return (QT.getTypePtr() != Original.getTypePtr()) ? std::optional(QT)
-                                                      : std::nullopt;
-  };
+  // Version-independent APINotes add "type" annotations
+  // with a versioned attribute for the client to select and apply.
+  if (S.captureSwiftVersionIndependentAPINotes()) {
+    auto *typeAttr = SwiftTypeAttr::CreateImplicit(S.Context, typeString);
+    auto *versioned = SwiftVersionedAdditionAttr::CreateImplicit(
+        S.Context, metadata.Version, typeAttr, metadata.IsReplacement);
+    decl->addAttr(versioned);
+  } else {
+    if (!metadata.IsActive)
+      return;
+    S.ApplyAPINotesType(decl, typeString);
+  }
+}
 
-  if (auto Function = dyn_cast<FunctionDecl>(D)) {
-    if (auto Modified =
-            GetModified(D, Function->getReturnType(), Nullability)) {
-      const FunctionType *FnType = Function->getType()->castAs<FunctionType>();
-      if (const FunctionProtoType *proto = dyn_cast<FunctionProtoType>(FnType))
-        Function->setType(S.Context.getFunctionType(
-            *Modified, proto->getParamTypes(), proto->getExtProtoInfo()));
-      else
-        Function->setType(
-            S.Context.getFunctionNoProtoType(*Modified, FnType->getExtInfo()));
+/// Apply nullability to the given declaration.
+static void applyNullability(Sema &S, Decl *decl, NullabilityKind nullability,
+                             VersionedInfoMetadata metadata) {
+  // Version-independent APINotes add "nullability" annotations
+  // with a versioned attribute for the client to select and apply.
+  if (S.captureSwiftVersionIndependentAPINotes()) {
+    SwiftNullabilityAttr::Kind attrNullabilityKind;
+    switch (nullability) {
+    case NullabilityKind::NonNull:
+      attrNullabilityKind = SwiftNullabilityAttr::Kind::NonNull;
+      break;
+    case NullabilityKind::Nullable:
+      attrNullabilityKind = SwiftNullabilityAttr::Kind::Nullable;
+      break;
+    case NullabilityKind::Unspecified:
+      attrNullabilityKind = SwiftNullabilityAttr::Kind::Unspecified;
+      break;
+    case NullabilityKind::NullableResult:
+      attrNullabilityKind = SwiftNullabilityAttr::Kind::NullableResult;
+      break;
     }
-  } else if (auto Method = dyn_cast<ObjCMethodDecl>(D)) {
-    if (auto Modified = GetModified(D, Method->getReturnType(), Nullability)) {
-      Method->setReturnType(*Modified);
+    auto *nullabilityAttr =
+        SwiftNullabilityAttr::CreateImplicit(S.Context, attrNullabilityKind);
+    auto *versioned = SwiftVersionedAdditionAttr::CreateImplicit(
+        S.Context, metadata.Version, nullabilityAttr, metadata.IsReplacement);
+    decl->addAttr(versioned);
+    return;
+  } else {
+    if (!metadata.IsActive)
+      return;
 
-      // Make it a context-sensitive keyword if we can.
-      if (!isIndirectPointerType(*Modified))
-        Method->setObjCDeclQualifier(Decl::ObjCDeclQualifier(
-            Method->getObjCDeclQualifier() | Decl::OBJC_TQ_CSNullability));
-    }
-  } else if (auto Value = dyn_cast<ValueDecl>(D)) {
-    if (auto Modified = GetModified(D, Value->getType(), Nullability)) {
-      Value->setType(*Modified);
-
-      // Make it a context-sensitive keyword if we can.
-      if (auto Parm = dyn_cast<ParmVarDecl>(D)) {
-        if (Parm->isObjCMethodParameter() && !isIndirectPointerType(*Modified))
-          Parm->setObjCDeclQualifier(Decl::ObjCDeclQualifier(
-              Parm->getObjCDeclQualifier() | Decl::OBJC_TQ_CSNullability));
-      }
-    }
-  } else if (auto Property = dyn_cast<ObjCPropertyDecl>(D)) {
-    if (auto Modified = GetModified(D, Property->getType(), Nullability)) {
-      Property->setType(*Modified, Property->getTypeSourceInfo());
-
-      // Make it a property attribute if we can.
-      if (!isIndirectPointerType(*Modified))
-        Property->setPropertyAttributes(
-            ObjCPropertyAttribute::kind_null_resettable);
-    }
+    S.ApplyNullability(decl, nullability);
   }
 }
 
@@ -293,6 +292,29 @@ static void ProcessAPINotes(Sema &S, Decl *D,
         });
   }
 
+  // swift_safety
+  if (auto SafetyKind = Info.getSwiftSafety()) {
+    bool Addition = *SafetyKind != api_notes::SwiftSafetyKind::Unspecified;
+    handleAPINotedAttribute<SwiftAttrAttr>(
+        S, D, Addition, Metadata,
+        [&] {
+          return SwiftAttrAttr::Create(
+              S.Context, *SafetyKind == api_notes::SwiftSafetyKind::Safe
+                             ? "safe"
+                             : "unsafe");
+        },
+        [](const Decl *D) {
+          return llvm::find_if(D->attrs(), [](const Attr *attr) {
+            if (const auto *swiftAttr = dyn_cast<SwiftAttrAttr>(attr)) {
+              if (swiftAttr->getAttribute() == "safe" ||
+                  swiftAttr->getAttribute() == "unsafe")
+                return true;
+            }
+            return false;
+          });
+        });
+  }
+
   // swift_name
   if (!Info.SwiftName.empty()) {
     handleAPINotedAttribute<SwiftNameAttr>(
@@ -300,10 +322,9 @@ static void ProcessAPINotes(Sema &S, Decl *D,
           AttributeFactory AF{};
           AttributePool AP{AF};
           auto &C = S.getASTContext();
-          ParsedAttr *SNA =
-              AP.create(&C.Idents.get("swift_name"), SourceRange(), nullptr,
-                        SourceLocation(), nullptr, nullptr, nullptr,
-                        ParsedAttr::Form::GNU());
+          ParsedAttr *SNA = AP.create(
+              &C.Idents.get("swift_name"), SourceRange(), AttributeScopeInfo(),
+              nullptr, nullptr, nullptr, ParsedAttr::Form::GNU());
 
           if (!S.Swift().DiagnoseName(D, Info.SwiftName, D->getLocation(), *SNA,
                                       /*IsAsync=*/false))
@@ -339,6 +360,10 @@ static void ProcessAPINotes(Sema &S, Decl *D,
         });
   }
 
+  if (auto ConformsTo = Info.getSwiftConformance())
+    D->addAttr(
+        SwiftAttrAttr::Create(S.Context, "conforms_to:" + ConformsTo.value()));
+
   ProcessAPINotes(S, D, static_cast<const api_notes::CommonEntityInfo &>(Info),
                   Metadata);
 }
@@ -359,42 +384,105 @@ static bool checkAPINotesReplacementType(Sema &S, SourceLocation Loc,
   return false;
 }
 
+void Sema::ApplyAPINotesType(Decl *D, StringRef TypeString) {
+  if (!TypeString.empty() && ParseTypeFromStringCallback) {
+    auto ParsedType = ParseTypeFromStringCallback(TypeString, "<API Notes>",
+                                                  D->getLocation());
+    if (ParsedType.isUsable()) {
+      QualType Type = Sema::GetTypeFromParser(ParsedType.get());
+      auto TypeInfo = Context.getTrivialTypeSourceInfo(Type, D->getLocation());
+      if (auto Var = dyn_cast<VarDecl>(D)) {
+        // Make adjustments to parameter types.
+        if (isa<ParmVarDecl>(Var)) {
+          Type = ObjC().AdjustParameterTypeForObjCAutoRefCount(
+              Type, D->getLocation(), TypeInfo);
+          Type = Context.getAdjustedParameterType(Type);
+        }
+
+        if (!checkAPINotesReplacementType(*this, Var->getLocation(),
+                                          Var->getType(), Type)) {
+          Var->setType(Type);
+          Var->setTypeSourceInfo(TypeInfo);
+        }
+      } else if (auto property = dyn_cast<ObjCPropertyDecl>(D)) {
+        if (!checkAPINotesReplacementType(*this, property->getLocation(),
+                                          property->getType(), Type)) {
+          property->setType(Type, TypeInfo);
+        }
+      } else if (auto field = dyn_cast<FieldDecl>(D)) {
+        if (!checkAPINotesReplacementType(*this, field->getLocation(),
+                                          field->getType(), Type)) {
+          field->setType(Type);
+          field->setTypeSourceInfo(TypeInfo);
+        }
+      } else {
+        llvm_unreachable("API notes allowed a type on an unknown declaration");
+      }
+    }
+  }
+}
+
+void Sema::ApplyNullability(Decl *D, NullabilityKind Nullability) {
+  auto GetModified =
+      [&](class Decl *D, QualType QT,
+          NullabilityKind Nullability) -> std::optional<QualType> {
+    QualType Original = QT;
+    CheckImplicitNullabilityTypeSpecifier(QT, Nullability, D->getLocation(),
+                                          isa<ParmVarDecl>(D),
+                                          /*OverrideExisting=*/true);
+    return (QT.getTypePtr() != Original.getTypePtr()) ? std::optional(QT)
+                                                      : std::nullopt;
+  };
+
+  if (auto Function = dyn_cast<FunctionDecl>(D)) {
+    if (auto Modified =
+            GetModified(D, Function->getReturnType(), Nullability)) {
+      const FunctionType *FnType = Function->getType()->castAs<FunctionType>();
+      if (const FunctionProtoType *proto = dyn_cast<FunctionProtoType>(FnType))
+        Function->setType(Context.getFunctionType(
+            *Modified, proto->getParamTypes(), proto->getExtProtoInfo()));
+      else
+        Function->setType(
+            Context.getFunctionNoProtoType(*Modified, FnType->getExtInfo()));
+    }
+  } else if (auto Method = dyn_cast<ObjCMethodDecl>(D)) {
+    if (auto Modified = GetModified(D, Method->getReturnType(), Nullability)) {
+      Method->setReturnType(*Modified);
+
+      // Make it a context-sensitive keyword if we can.
+      if (!isIndirectPointerType(*Modified))
+        Method->setObjCDeclQualifier(Decl::ObjCDeclQualifier(
+            Method->getObjCDeclQualifier() | Decl::OBJC_TQ_CSNullability));
+    }
+  } else if (auto Value = dyn_cast<ValueDecl>(D)) {
+    if (auto Modified = GetModified(D, Value->getType(), Nullability)) {
+      Value->setType(*Modified);
+
+      // Make it a context-sensitive keyword if we can.
+      if (auto Parm = dyn_cast<ParmVarDecl>(D)) {
+        if (Parm->isObjCMethodParameter() && !isIndirectPointerType(*Modified))
+          Parm->setObjCDeclQualifier(Decl::ObjCDeclQualifier(
+              Parm->getObjCDeclQualifier() | Decl::OBJC_TQ_CSNullability));
+      }
+    }
+  } else if (auto Property = dyn_cast<ObjCPropertyDecl>(D)) {
+    if (auto Modified = GetModified(D, Property->getType(), Nullability)) {
+      Property->setType(*Modified, Property->getTypeSourceInfo());
+
+      // Make it a property attribute if we can.
+      if (!isIndirectPointerType(*Modified))
+        Property->setPropertyAttributes(
+            ObjCPropertyAttribute::kind_null_resettable);
+    }
+  }
+}
+
 /// Process API notes for a variable or property.
 static void ProcessAPINotes(Sema &S, Decl *D,
                             const api_notes::VariableInfo &Info,
                             VersionedInfoMetadata Metadata) {
   // Type override.
-  if (Metadata.IsActive && !Info.getType().empty() &&
-      S.ParseTypeFromStringCallback) {
-    auto ParsedType = S.ParseTypeFromStringCallback(
-        Info.getType(), "<API Notes>", D->getLocation());
-    if (ParsedType.isUsable()) {
-      QualType Type = Sema::GetTypeFromParser(ParsedType.get());
-      auto TypeInfo =
-          S.Context.getTrivialTypeSourceInfo(Type, D->getLocation());
-
-      if (auto Var = dyn_cast<VarDecl>(D)) {
-        // Make adjustments to parameter types.
-        if (isa<ParmVarDecl>(Var)) {
-          Type = S.ObjC().AdjustParameterTypeForObjCAutoRefCount(
-              Type, D->getLocation(), TypeInfo);
-          Type = S.Context.getAdjustedParameterType(Type);
-        }
-
-        if (!checkAPINotesReplacementType(S, Var->getLocation(), Var->getType(),
-                                          Type)) {
-          Var->setType(Type);
-          Var->setTypeSourceInfo(TypeInfo);
-        }
-      } else if (auto Property = dyn_cast<ObjCPropertyDecl>(D)) {
-        if (!checkAPINotesReplacementType(S, Property->getLocation(),
-                                          Property->getType(), Type))
-          Property->setType(Type, TypeInfo);
-
-      } else
-        llvm_unreachable("API notes allowed a type on an unknown declaration");
-    }
-  }
+  applyAPINotesType(S, D, Info.getType(), Metadata);
 
   // Nullability.
   if (auto Nullability = Info.getNullability())
@@ -415,6 +503,13 @@ static void ProcessAPINotes(Sema &S, ParmVarDecl *D,
       return new (S.Context) NoEscapeAttr(S.Context, getPlaceholderAttrInfo());
     });
 
+  if (auto Lifetimebound = Info.isLifetimebound())
+    handleAPINotedAttribute<LifetimeBoundAttr>(
+        S, D, *Lifetimebound, Metadata, [&] {
+          return new (S.Context)
+              LifetimeBoundAttr(S.Context, getPlaceholderAttrInfo());
+        });
+
   // Retain count convention
   handleAPINotedRetainCountConvention(S, D, Metadata,
                                       Info.getRetainCountConvention());
@@ -427,6 +522,15 @@ static void ProcessAPINotes(Sema &S, ParmVarDecl *D,
 /// Process API notes for a global variable.
 static void ProcessAPINotes(Sema &S, VarDecl *D,
                             const api_notes::GlobalVariableInfo &Info,
+                            VersionedInfoMetadata metadata) {
+  // Handle common entity information.
+  ProcessAPINotes(S, D, static_cast<const api_notes::VariableInfo &>(Info),
+                  metadata);
+}
+
+/// Process API notes for a C field.
+static void ProcessAPINotes(Sema &S, FieldDecl *D,
+                            const api_notes::FieldInfo &Info,
                             VersionedInfoMetadata metadata) {
   // Handle common entity information.
   ProcessAPINotes(S, D, static_cast<const api_notes::VariableInfo &>(Info),
@@ -459,11 +563,11 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
                             const api_notes::FunctionInfo &Info,
                             VersionedInfoMetadata Metadata) {
   // Find the declaration itself.
-  FunctionDecl *FD = AnyFunc.dyn_cast<FunctionDecl *>();
+  FunctionDecl *FD = dyn_cast<FunctionDecl *>(AnyFunc);
   Decl *D = FD;
   ObjCMethodDecl *MD = nullptr;
   if (!D) {
-    MD = AnyFunc.get<ObjCMethodDecl *>();
+    MD = cast<ObjCMethodDecl *>(AnyFunc);
     D = MD;
   }
 
@@ -472,6 +576,14 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
   // Nullability of return type.
   if (Info.NullabilityAudited)
     applyNullability(S, D, Info.getReturnTypeInfo(), Metadata);
+
+  // Add [[clang::unsafe_buffer_usage]]
+  if (Info.UnsafeBufferUsage && !D->getAttr<UnsafeBufferUsageAttr>()) {
+    handleAPINotedAttribute<UnsafeBufferUsageAttr>(S, D, true, Metadata, [&]() {
+      return UnsafeBufferUsageAttr::Create(S.getASTContext(),
+                                           getPlaceholderAttrInfo());
+    });
+  }
 
   // Parameters.
   unsigned NumParams = FD ? FD->getNumParams() : MD->param_size();
@@ -491,6 +603,11 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
     if (ParamTypeBefore.getAsOpaquePtr() != Param->getType().getAsOpaquePtr())
       AnyTypeChanged = true;
   }
+
+  // returns_(un)retained
+  if (!Info.SwiftReturnOwnership.empty())
+    D->addAttr(SwiftAttrAttr::Create(S.Context,
+                                     "returns_" + Info.SwiftReturnOwnership));
 
   // Result type override.
   QualType OverriddenResultType;
@@ -550,6 +667,21 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
 static void ProcessAPINotes(Sema &S, CXXMethodDecl *Method,
                             const api_notes::CXXMethodInfo &Info,
                             VersionedInfoMetadata Metadata) {
+  if (Info.This && Info.This->isLifetimebound() &&
+      !lifetimes::implicitObjectParamIsLifetimeBound(Method)) {
+    auto MethodType = Method->getType();
+    auto *attr = ::new (S.Context)
+        LifetimeBoundAttr(S.Context, getPlaceholderAttrInfo());
+    QualType AttributedType =
+        S.Context.getAttributedType(attr, MethodType, MethodType);
+    TypeLocBuilder TLB;
+    TLB.pushFullCopy(Method->getTypeSourceInfo()->getTypeLoc());
+    AttributedTypeLoc TyLoc = TLB.push<AttributedTypeLoc>(AttributedType);
+    TyLoc.setAttr(attr);
+    Method->setType(AttributedType);
+    Method->setTypeSourceInfo(TLB.getTypeSourceInfo(S.Context, AttributedType));
+  }
+
   ProcessAPINotes(S, (FunctionOrMethod)Method, Info, Metadata);
 }
 
@@ -604,10 +736,21 @@ static void ProcessAPINotes(Sema &S, TagDecl *D, const api_notes::TagInfo &Info,
   if (auto ReleaseOp = Info.SwiftReleaseOp)
     D->addAttr(
         SwiftAttrAttr::Create(S.Context, "release:" + ReleaseOp.value()));
+  if (auto DestroyOp = Info.SwiftDestroyOp)
+    D->addAttr(
+        SwiftAttrAttr::Create(S.Context, "destroy:" + DestroyOp.value()));
+  if (auto DefaultOwnership = Info.SwiftDefaultOwnership)
+    D->addAttr(SwiftAttrAttr::Create(
+        S.Context, "returned_as_" + DefaultOwnership.value() + "_by_default"));
 
   if (auto Copyable = Info.isSwiftCopyable()) {
     if (!*Copyable)
       D->addAttr(SwiftAttrAttr::Create(S.Context, "~Copyable"));
+  }
+
+  if (auto Escapable = Info.isSwiftEscapable()) {
+    D->addAttr(SwiftAttrAttr::Create(S.Context,
+                                     *Escapable ? "Escapable" : "~Escapable"));
   }
 
   if (auto Extensibility = Info.EnumExtensibility) {
@@ -764,7 +907,8 @@ static void ProcessVersionedAPINotes(
     Sema &S, SpecificDecl *D,
     const api_notes::APINotesReader::VersionedInfo<SpecificInfo> Info) {
 
-  maybeAttachUnversionedSwiftName(S, D, Info);
+  if (!S.captureSwiftVersionIndependentAPINotes())
+    maybeAttachUnversionedSwiftName(S, D, Info);
 
   unsigned Selected = Info.getSelected().value_or(Info.size());
 
@@ -774,13 +918,184 @@ static void ProcessVersionedAPINotes(
     std::tie(Version, InfoSlice) = Info[i];
     auto Active = (i == Selected) ? IsActive_t::Active : IsActive_t::Inactive;
     auto Replacement = IsSubstitution_t::Original;
-    if (Active == IsActive_t::Inactive && Version.empty()) {
+
+    // When collecting all APINotes as version-independent,
+    // capture all as inactive and defer to the client to select the
+    // right one.
+    if (S.captureSwiftVersionIndependentAPINotes()) {
+      Active = IsActive_t::Inactive;
+      Replacement = IsSubstitution_t::Original;
+    } else if (Active == IsActive_t::Inactive && Version.empty()) {
       Replacement = IsSubstitution_t::Replacement;
       Version = Info[Selected].first;
     }
+
     ProcessAPINotes(S, D, InfoSlice,
                     VersionedInfoMetadata(Version, Active, Replacement));
   }
+}
+
+static std::optional<api_notes::Context>
+UnwindNamespaceContext(DeclContext *DC, api_notes::APINotesManager &APINotes) {
+  if (auto NamespaceContext = dyn_cast<NamespaceDecl>(DC)) {
+    for (auto Reader : APINotes.findAPINotes(NamespaceContext->getLocation())) {
+      // Retrieve the context ID for the parent namespace of the decl.
+      std::stack<NamespaceDecl *> NamespaceStack;
+      {
+        for (auto CurrentNamespace = NamespaceContext; CurrentNamespace;
+             CurrentNamespace =
+                 dyn_cast<NamespaceDecl>(CurrentNamespace->getParent())) {
+          if (!CurrentNamespace->isInlineNamespace())
+            NamespaceStack.push(CurrentNamespace);
+        }
+      }
+      std::optional<api_notes::ContextID> NamespaceID;
+      while (!NamespaceStack.empty()) {
+        auto CurrentNamespace = NamespaceStack.top();
+        NamespaceStack.pop();
+        NamespaceID =
+            Reader->lookupNamespaceID(CurrentNamespace->getName(), NamespaceID);
+        if (!NamespaceID)
+          return std::nullopt;
+      }
+      if (NamespaceID)
+        return api_notes::Context(*NamespaceID,
+                                  api_notes::ContextKind::Namespace);
+    }
+  }
+  return std::nullopt;
+}
+
+static std::optional<api_notes::Context>
+UnwindTagContext(TagDecl *DC, api_notes::APINotesManager &APINotes) {
+  assert(DC && "tag context must not be null");
+  for (auto Reader : APINotes.findAPINotes(DC->getLocation())) {
+    // Retrieve the context ID for the parent tag of the decl.
+    std::stack<TagDecl *> TagStack;
+    {
+      for (auto CurrentTag = DC; CurrentTag;
+           CurrentTag = dyn_cast<TagDecl>(CurrentTag->getParent()))
+        TagStack.push(CurrentTag);
+    }
+    assert(!TagStack.empty());
+    std::optional<api_notes::Context> Ctx =
+        UnwindNamespaceContext(TagStack.top()->getDeclContext(), APINotes);
+    while (!TagStack.empty()) {
+      auto CurrentTag = TagStack.top();
+      TagStack.pop();
+      auto CtxID = Reader->lookupTagID(CurrentTag->getName(), Ctx);
+      if (!CtxID)
+        return std::nullopt;
+      Ctx = api_notes::Context(*CtxID, api_notes::ContextKind::Tag);
+    }
+    return Ctx;
+  }
+  return std::nullopt;
+}
+
+static void stripAPINotesParameterNullability(QualType &ParamType) {
+  while (true) {
+    if (!AttributedType::stripOuterNullability(ParamType))
+      return;
+  }
+}
+
+struct APINotesParameterSelector {
+  SmallVector<std::string, 4> Parameters;
+
+  bool operator==(const APINotesParameterSelector &Other) const {
+    return Parameters == Other.Parameters;
+  }
+
+  bool operator!=(const APINotesParameterSelector &Other) const {
+    return !(*this == Other);
+  }
+};
+
+struct APINotesParameterSelectorCandidates {
+  APINotesParameterSelector Source;
+  std::optional<APINotesParameterSelector> Desugared;
+};
+
+static PrintingPolicy
+getAPINotesParameterSelectorPrintingPolicy(const ASTContext &Context) {
+  PrintingPolicy Policy(Context.getLangOpts());
+  Policy.PrintAsCanonical = false;
+  Policy.FullyQualifiedName = false;
+  Policy.SuppressScope = false;
+  Policy.UsePreferredNames = false;
+  Policy.MSVCFormatting = false;
+  Policy.SplitTemplateClosers = false;
+  Policy.IncludeNewlines = false;
+  return Policy;
+}
+
+// Print the APINotes selector spelling for one parameter. The source-spelled
+// selector is tried first. The desugared spelling is only a permissive
+// fallback.
+static std::string getAPINotesParameterSelectorSpelling(
+    QualType ParamType, const ASTContext &Context, const PrintingPolicy &Policy,
+    bool Desugar) {
+  if (Desugar)
+    ParamType = ParamType.getDesugaredType(Context);
+
+  ParamType.removeLocalConst();
+  stripAPINotesParameterNullability(ParamType);
+
+  return ParamType.getAsString(Policy);
+}
+
+static std::optional<APINotesParameterSelectorCandidates>
+getAPINotesParameterSelectorCandidates(const Sema &S, const FunctionDecl *FD) {
+  const auto *FPT = FD->getType()->getAs<FunctionProtoType>();
+  if (!FPT)
+    return std::nullopt;
+
+  APINotesParameterSelectorCandidates Candidates;
+  APINotesParameterSelector Desugared;
+  Candidates.Source.Parameters.reserve(FPT->getNumParams());
+  Desugared.Parameters.reserve(FPT->getNumParams());
+
+  const PrintingPolicy Policy =
+      getAPINotesParameterSelectorPrintingPolicy(S.Context);
+  for (QualType ParamType : FPT->param_types()) {
+    Candidates.Source.Parameters.push_back(
+        getAPINotesParameterSelectorSpelling(ParamType, S.Context, Policy,
+                                             /*Desugar=*/false));
+    Desugared.Parameters.push_back(getAPINotesParameterSelectorSpelling(
+        ParamType, S.Context, Policy, /*Desugar=*/true));
+  }
+
+  if (Candidates.Source != Desugared)
+    Candidates.Desugared = std::move(Desugared);
+
+  return Candidates;
+}
+
+// Apply the first exact selector entry found. This preserves source-spelling
+// precedence over the desugared fallback and avoids applying multiple exact
+// entries for the same declaration.
+template <typename SpecificInfo, typename SpecificDecl>
+static void processExactAPINotes(
+    Sema &S, SpecificDecl *D,
+    const APINotesParameterSelectorCandidates &ParameterSelectorCandidates,
+    llvm::function_ref<api_notes::APINotesReader::VersionedInfo<SpecificInfo>(
+        ArrayRef<std::string>)>
+        LookupExact) {
+  auto ProcessSelector = [&](const APINotesParameterSelector &Selector) {
+    auto Info = LookupExact(Selector.Parameters);
+    if (Info.size() == 0)
+      return false;
+
+    ProcessVersionedAPINotes(S, D, Info);
+    return true;
+  };
+
+  if (ProcessSelector(ParameterSelectorCandidates.Source))
+    return;
+
+  if (ParameterSelectorCandidates.Desugared)
+    ProcessSelector(*ParameterSelectorCandidates.Desugared);
 }
 
 /// Process API notes that are associated with this declaration, mapping them
@@ -788,49 +1103,21 @@ static void ProcessVersionedAPINotes(
 void Sema::ProcessAPINotes(Decl *D) {
   if (!D)
     return;
+  if (!APINotes.hasAPINotes())
+    return;
+  auto Readers = APINotes.findAPINotes(D->getLocation());
+  if (Readers.empty())
+    return;
 
-  auto GetNamespaceContext =
-      [&](DeclContext *DC) -> std::optional<api_notes::Context> {
-    if (auto NamespaceContext = dyn_cast<NamespaceDecl>(DC)) {
-      for (auto Reader :
-           APINotes.findAPINotes(NamespaceContext->getLocation())) {
-        // Retrieve the context ID for the parent namespace of the decl.
-        std::stack<NamespaceDecl *> NamespaceStack;
-        {
-          for (auto CurrentNamespace = NamespaceContext; CurrentNamespace;
-               CurrentNamespace =
-                   dyn_cast<NamespaceDecl>(CurrentNamespace->getParent())) {
-            if (!CurrentNamespace->isInlineNamespace())
-              NamespaceStack.push(CurrentNamespace);
-          }
-        }
-        std::optional<api_notes::ContextID> NamespaceID;
-        while (!NamespaceStack.empty()) {
-          auto CurrentNamespace = NamespaceStack.top();
-          NamespaceStack.pop();
-          NamespaceID = Reader->lookupNamespaceID(CurrentNamespace->getName(),
-                                                  NamespaceID);
-          if (!NamespaceID)
-            break;
-        }
-        if (NamespaceID)
-          return api_notes::Context(*NamespaceID,
-                                    api_notes::ContextKind::Namespace);
-      }
-    }
-    return std::nullopt;
-  };
-
+  auto *DC = D->getDeclContext();
   // Globals.
-  if (D->getDeclContext()->isFileContext() ||
-      D->getDeclContext()->isNamespace() ||
-      D->getDeclContext()->isExternCContext() ||
-      D->getDeclContext()->isExternCXXContext()) {
+  if (DC->isFileContext() || DC->isNamespace() ||
+      DC->getDeclKind() == Decl::LinkageSpec) {
     std::optional<api_notes::Context> APINotesContext =
-        GetNamespaceContext(D->getDeclContext());
+        UnwindNamespaceContext(DC, APINotes);
     // Global variables.
     if (auto VD = dyn_cast<VarDecl>(D)) {
-      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : Readers) {
         auto Info =
             Reader->lookupGlobalVariable(VD->getName(), APINotesContext);
         ProcessVersionedAPINotes(*this, VD, Info);
@@ -842,10 +1129,20 @@ void Sema::ProcessAPINotes(Decl *D) {
     // Global functions.
     if (auto FD = dyn_cast<FunctionDecl>(D)) {
       if (FD->getDeclName().isIdentifier()) {
-        for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+        auto ParameterSelectorCandidates =
+            getAPINotesParameterSelectorCandidates(*this, FD);
+        for (auto Reader : Readers) {
           auto Info =
               Reader->lookupGlobalFunction(FD->getName(), APINotesContext);
           ProcessVersionedAPINotes(*this, FD, Info);
+
+          if (ParameterSelectorCandidates)
+            processExactAPINotes<api_notes::GlobalFunctionInfo>(
+                *this, FD, *ParameterSelectorCandidates,
+                [&](ArrayRef<std::string> Parameters) {
+                  return Reader->lookupGlobalFunction(FD->getName(), Parameters,
+                                                      APINotesContext);
+                });
         }
       }
 
@@ -854,7 +1151,7 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Objective-C classes.
     if (auto Class = dyn_cast<ObjCInterfaceDecl>(D)) {
-      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : Readers) {
         auto Info = Reader->lookupObjCClassInfo(Class->getName());
         ProcessVersionedAPINotes(*this, Class, Info);
       }
@@ -864,7 +1161,7 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Objective-C protocols.
     if (auto Protocol = dyn_cast<ObjCProtocolDecl>(D)) {
-      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : Readers) {
         auto Info = Reader->lookupObjCProtocolInfo(Protocol->getName());
         ProcessVersionedAPINotes(*this, Protocol, Info);
       }
@@ -874,7 +1171,15 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Tags
     if (auto Tag = dyn_cast<TagDecl>(D)) {
-      std::string LookupName = Tag->getName().str();
+      // Determine the name of the entity to search for. If this is an
+      // anonymous tag that gets its linked name from a typedef, look for the
+      // typedef name. This allows tag-specific information to be added
+      // to the declaration.
+      std::string LookupName;
+      if (auto typedefName = Tag->getTypedefNameForAnonDecl())
+        LookupName = typedefName->getName().str();
+      else
+        LookupName = Tag->getName().str();
 
       // Use the source location to discern if this Tag is an OPTIONS macro.
       // For now we would like to limit this trick of looking up the APINote tag
@@ -898,7 +1203,9 @@ void Sema::ProcessAPINotes(Decl *D) {
             T.split(), getASTContext().getPrintingPolicy());
       }
 
-      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : Readers) {
+        if (auto ParentTag = dyn_cast<TagDecl>(Tag->getDeclContext()))
+          APINotesContext = UnwindTagContext(ParentTag, APINotes);
         auto Info = Reader->lookupTag(LookupName, APINotesContext);
         ProcessVersionedAPINotes(*this, Tag, Info);
       }
@@ -908,7 +1215,7 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Typedefs
     if (auto Typedef = dyn_cast<TypedefNameDecl>(D)) {
-      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : Readers) {
         auto Info = Reader->lookupTypedef(Typedef->getName(), APINotesContext);
         ProcessVersionedAPINotes(*this, Typedef, Info);
       }
@@ -918,10 +1225,10 @@ void Sema::ProcessAPINotes(Decl *D) {
   }
 
   // Enumerators.
-  if (D->getDeclContext()->getRedeclContext()->isFileContext() ||
-      D->getDeclContext()->getRedeclContext()->isExternCContext()) {
+  if (DC->getRedeclContext()->isFileContext() ||
+      DC->getRedeclContext()->isExternCContext()) {
     if (auto EnumConstant = dyn_cast<EnumConstantDecl>(D)) {
-      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : Readers) {
         auto Info = Reader->lookupEnumConstant(EnumConstant->getName());
         ProcessVersionedAPINotes(*this, EnumConstant, Info);
       }
@@ -930,7 +1237,7 @@ void Sema::ProcessAPINotes(Decl *D) {
     }
   }
 
-  if (auto ObjCContainer = dyn_cast<ObjCContainerDecl>(D->getDeclContext())) {
+  if (auto ObjCContainer = dyn_cast<ObjCContainerDecl>(DC)) {
     // Location function that looks up an Objective-C context.
     auto GetContext = [&](api_notes::APINotesReader *Reader)
         -> std::optional<api_notes::ContextID> {
@@ -974,7 +1281,7 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Objective-C methods.
     if (auto Method = dyn_cast<ObjCMethodDecl>(D)) {
-      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : Readers) {
         if (auto Context = GetContext(Reader)) {
           // Map the selector.
           Selector Sel = Method->getSelector();
@@ -1014,21 +1321,54 @@ void Sema::ProcessAPINotes(Decl *D) {
     }
   }
 
-  if (auto CXXRecord = dyn_cast<CXXRecordDecl>(D->getDeclContext())) {
-    auto GetRecordContext = [&](api_notes::APINotesReader *Reader)
-        -> std::optional<api_notes::ContextID> {
-      auto ParentContext = GetNamespaceContext(CXXRecord->getDeclContext());
-      if (auto Found = Reader->lookupTagID(CXXRecord->getName(), ParentContext))
-        return *Found;
-
-      return std::nullopt;
-    };
-
+  if (auto TagContext = dyn_cast<TagDecl>(DC)) {
     if (auto CXXMethod = dyn_cast<CXXMethodDecl>(D)) {
-      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
-        if (auto Context = GetRecordContext(Reader)) {
-          auto Info = Reader->lookupCXXMethod(*Context, CXXMethod->getName());
-          ProcessVersionedAPINotes(*this, CXXMethod, Info);
+      if (!isa<CXXConstructorDecl>(CXXMethod) &&
+          !isa<CXXDestructorDecl>(CXXMethod) &&
+          !isa<CXXConversionDecl>(CXXMethod)) {
+        auto ParameterSelectorCandidates =
+            getAPINotesParameterSelectorCandidates(*this, CXXMethod);
+        for (auto Reader : Readers) {
+          if (auto Context = UnwindTagContext(TagContext, APINotes)) {
+            std::string MethodName;
+            if (CXXMethod->isOverloadedOperator())
+              MethodName =
+                  std::string("operator") +
+                  getOperatorSpelling(CXXMethod->getOverloadedOperator());
+            else
+              MethodName = CXXMethod->getName();
+
+            auto Info = Reader->lookupCXXMethod(Context->id, MethodName);
+            ProcessVersionedAPINotes(*this, CXXMethod, Info);
+
+            if (ParameterSelectorCandidates)
+              processExactAPINotes<api_notes::CXXMethodInfo>(
+                  *this, CXXMethod, *ParameterSelectorCandidates,
+                  [&](ArrayRef<std::string> Parameters) {
+                    return Reader->lookupCXXMethod(Context->id, MethodName,
+                                                   Parameters);
+                  });
+          }
+        }
+      }
+    }
+
+    if (auto Field = dyn_cast<FieldDecl>(D)) {
+      if (!Field->isUnnamedBitField() && !Field->isAnonymousStructOrUnion()) {
+        for (auto Reader : Readers) {
+          if (auto Context = UnwindTagContext(TagContext, APINotes)) {
+            auto Info = Reader->lookupField(Context->id, Field->getName());
+            ProcessVersionedAPINotes(*this, Field, Info);
+          }
+        }
+      }
+    }
+
+    if (auto Tag = dyn_cast<TagDecl>(D)) {
+      for (auto Reader : Readers) {
+        if (auto Context = UnwindTagContext(TagContext, APINotes)) {
+          auto Info = Reader->lookupTag(Tag->getName(), Context);
+          ProcessVersionedAPINotes(*this, Tag, Info);
         }
       }
     }

@@ -34,7 +34,9 @@ framework module FW_Private {
 
 // RUN: sed -e "s|DIR|%/t|g" %t/from_tu.cdb.json.template > %t/from_tu.cdb.json
 // RUN: clang-scan-deps -compilation-database %t/from_tu.cdb.json -format experimental-full > %t/from_tu_result.json
-// RUN: cat %t/from_tu_result.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t --check-prefixes=CHECK_TU
+// RUN: cat %t/from_tu_result.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=clang-module-deps,clang-modulemap-file,command-line,context-hash,file-deps,link-libraries,name,clang-context-hash,input-file \
+// RUN:   | FileCheck %s -DPREFIX=%/t --check-prefixes=CHECK_TU
 // CHECK_TU:      {
 // CHECK_TU-NEXT:   "modules": [
 // CHECK_TU-NEXT:     {
@@ -44,8 +46,8 @@ framework module FW_Private {
 // CHECK_TU:            ],
 // CHECK_TU-NEXT:       "context-hash": "{{.*}}",
 // CHECK_TU-NEXT:       "file-deps": [
-// CHECK_TU-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h",
-// CHECK_TU-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap"
+// CHECK_TU-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap",
+// CHECK_TU-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h"
 // CHECK_TU-NEXT:       ],
 // CHECK_TU-NEXT:       "link-libraries": [
 // CHECK_TU-NEXT:         {
@@ -124,7 +126,9 @@ module Mod { header "Mod.h" }
 
 // RUN: sed -e "s|DIR|%/t|g" %t/from_module.cdb.json.template > %t/from_module.cdb.json
 // RUN: clang-scan-deps -compilation-database %t/from_module.cdb.json -format experimental-full > %t/from_module_result.json
-// RUN: cat %t/from_module_result.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t --check-prefixes=CHECK_MODULE
+// RUN: cat %t/from_module_result.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=clang-module-deps,clang-modulemap-file,command-line,context-hash,file-deps,link-libraries,name,clang-context-hash,input-file \
+// RUN:   | FileCheck %s -DPREFIX=%/t --check-prefixes=CHECK_MODULE
 // CHECK_MODULE:      {
 // CHECK_MODULE-NEXT:   "modules": [
 // CHECK_MODULE-NEXT:     {
@@ -134,8 +138,8 @@ module Mod { header "Mod.h" }
 // CHECK_MODULE:            ],
 // CHECK_MODULE-NEXT:       "context-hash": "{{.*}}",
 // CHECK_MODULE-NEXT:       "file-deps": [
-// CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h",
-// CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap"
+// CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap",
+// CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h"
 // CHECK_MODULE-NEXT:       ],
 // CHECK_MODULE-NEXT:       "link-libraries": [
 // CHECK_MODULE-NEXT:         {
@@ -182,11 +186,11 @@ module Mod { header "Mod.h" }
 // CHECK_MODULE:            ],
 // CHECK_MODULE-NEXT:       "context-hash": "{{.*}}",
 // CHECK_MODULE-NEXT:       "file-deps": [
-// CHECK_MODULE-NEXT:         "[[PREFIX]]/Mod.h"
+// CHECK_MODULE-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK_MODULE-NEXT:         "[[PREFIX]]/Mod.h",
 // CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap",
 // CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.private.modulemap",
-// CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/PrivateHeaders/Two.h",
-// CHECK_MODULE-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/PrivateHeaders/Two.h"
 // CHECK_MODULE-NEXT:       ],
 // CHECK_MODULE-NEXT:       "link-libraries": [],
 // CHECK_MODULE-NEXT:       "name": "Mod"

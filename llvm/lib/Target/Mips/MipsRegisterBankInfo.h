@@ -32,9 +32,6 @@ class MipsRegisterBankInfo final : public MipsGenRegisterBankInfo {
 public:
   MipsRegisterBankInfo(const TargetRegisterInfo &TRI);
 
-  const RegisterBank &getRegBankFromRegClass(const TargetRegisterClass &RC,
-                                             LLT) const override;
-
   const InstructionMapping &
   getInstrMapping(const MachineInstr &MI) const override;
 
@@ -114,6 +111,10 @@ private:
     if (InstTy == InstType::Integer && OpSize == 32)
       return true;
     return false;
+  }
+
+  bool isInteger_64(InstType InstTy, unsigned OpSize) const {
+    return InstTy == InstType::Integer && OpSize == 64;
   }
 
   /// Some generic instructions have operands that can be mapped to either fprb

@@ -19,6 +19,7 @@
 #include <__iterator/next.h>
 #include <__type_traits/is_same.h>
 #include <__utility/exchange.h>
+#include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
 
@@ -84,7 +85,7 @@ template <class _AlgPolicy,
           class _InForwardIter2,
           class _Sent2,
           class _OutIter>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR_SINCE_CXX20 __set_intersection_result<_InForwardIter1, _InForwardIter2, _OutIter>
 __set_intersection(
     _InForwardIter1 __first1,
@@ -95,12 +96,10 @@ __set_intersection(
     _Compare&& __comp,
     std::forward_iterator_tag,
     std::forward_iterator_tag) {
-  _LIBCPP_CONSTEXPR std::__identity __proj;
   bool __prev_may_be_equal = false;
 
   while (__first2 != __last2) {
-    _InForwardIter1 __first1_next =
-        std::__lower_bound_onesided<_AlgPolicy>(__first1, __last1, *__first2, __comp, __proj);
+    _InForwardIter1 __first1_next = std::__lower_bound_onesided<_AlgPolicy>(__first1, __last1, *__first2, __comp);
     std::swap(__first1_next, __first1);
     // keeping in mind that a==b iff !(a<b) && !(b<a):
     // if we can't advance __first1, that means !(*__first1 < *_first2), therefore __may_be_equal==true
@@ -109,8 +108,7 @@ __set_intersection(
     if (__first1 == __last1)
       break;
 
-    _InForwardIter2 __first2_next =
-        std::__lower_bound_onesided<_AlgPolicy>(__first2, __last2, *__first1, __comp, __proj);
+    _InForwardIter2 __first2_next = std::__lower_bound_onesided<_AlgPolicy>(__first2, __last2, *__first1, __comp);
     std::swap(__first2_next, __first2);
     std::__set_intersection_add_output_if_equal(
         __first2 == __first2_next, __first1, __first2, __result, __prev_may_be_equal);
@@ -129,7 +127,7 @@ template <class _AlgPolicy,
           class _InInputIter2,
           class _Sent2,
           class _OutIter>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR_SINCE_CXX20 __set_intersection_result<_InInputIter1, _InInputIter2, _OutIter>
 __set_intersection(
     _InInputIter1 __first1,
@@ -160,7 +158,7 @@ __set_intersection(
 }
 
 template <class _AlgPolicy, class _Compare, class _InIter1, class _Sent1, class _InIter2, class _Sent2, class _OutIter>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR_SINCE_CXX20 __set_intersection_result<_InIter1, _InIter2, _OutIter>
 __set_intersection(
     _InIter1 __first1, _Sent1 __last1, _InIter2 __first2, _Sent2 __last2, _OutIter __result, _Compare&& __comp) {

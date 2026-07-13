@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class CppDataFormatterTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
@@ -62,23 +63,23 @@ class CppDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable",
             patterns=[
-                "\(Speed\) SPILookHex = 0x[0-9a-f]+"  # Speed should look hex-ish now.
+                r"\(Speed\) SPILookHex = 0x[0-9a-f]+"  # Speed should look hex-ish now.
             ],
         )
 
         # gcc4.2 on Mac OS X skips typedef chains in the DWARF output
-        if self.getCompiler() in ["clang", "llvm-gcc"]:
+        if self.getCompiler() in ["clang"]:
             self.expect(
                 "frame variable",
                 patterns=[
-                    "\(SignalMask\) SMILookHex = 0x[0-9a-f]+"  # SignalMask should look hex-ish now.
+                    r"\(SignalMask\) SMILookHex = 0x[0-9a-f]+"  # SignalMask should look hex-ish now.
                 ],
             )
             self.expect(
                 "frame variable",
                 matching=False,
                 patterns=[
-                    "\(Type4\) T4ILookChar = 0x[0-9a-f]+"  # Type4 should NOT look hex-ish now.
+                    r"\(Type4\) T4ILookChar = 0x[0-9a-f]+"  # Type4 should NOT look hex-ish now.
                 ],
             )
 
@@ -317,14 +318,14 @@ class CppDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable member_func_ptr",
             patterns=["member_func_ptr = 0x[0-9a-z]+"],
-            substrs=["(a.out`IUseCharStar::member_func(int) at main.cpp:61)"],
+            substrs=["a.out`IUseCharStar::member_func(int) at main.cpp:61)"],
         )
         self.expect(
             "frame variable ref_to_member_func_ptr",
             patterns=["ref_to_member_func_ptr = 0x[0-9a-z]+"],
-            substrs=["(a.out`IUseCharStar::member_func(int) at main.cpp:61)"],
+            substrs=["a.out`IUseCharStar::member_func(int) at main.cpp:61)"],
         )
         self.expect(
             "frame variable virt_member_func_ptr",
-            patterns=["virt_member_func_ptr = 0x[0-9a-z]+$"],
+            patterns=["virt_member_func_ptr = 0x[0-9a-z]+"],
         )

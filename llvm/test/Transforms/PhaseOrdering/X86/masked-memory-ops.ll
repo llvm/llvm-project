@@ -15,7 +15,7 @@ declare void @llvm.masked.store.v8f32.p0(<8 x float>, ptr, i32, <8 x i1>)
 define void @PR11210_v8f32_maskstore_maskstore(ptr %ptr, <8 x float> %x, <8 x float> %y, <8 x i32> %src) {
 ; CHECK-LABEL: @PR11210_v8f32_maskstore_maskstore(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <8 x i32> [[SRC:%.*]], zeroinitializer
-; CHECK-NEXT:    tail call void @llvm.masked.store.v8f32.p0(<8 x float> [[Y:%.*]], ptr [[PTR:%.*]], i32 1, <8 x i1> [[CMP]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.v8f32.p0(<8 x float> [[Y:%.*]], ptr align 1 [[PTR:%.*]], <8 x i1> [[CMP]])
 ; CHECK-NEXT:    ret void
 ;
   %cmp = icmp sgt <8 x i32> %src, zeroinitializer
@@ -41,7 +41,7 @@ define void @PR11210_v8f32_maskstore_maskstore_raw_mask(ptr %ptr, <8 x float> %x
 define void @PR11210_v8f32_mstore_maskstore(ptr %ptr, <8 x float> %x, <8 x float> %y, <8 x i32> %src) {
 ; CHECK-LABEL: @PR11210_v8f32_mstore_maskstore(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <8 x i32> [[SRC:%.*]], zeroinitializer
-; CHECK-NEXT:    tail call void @llvm.masked.store.v8f32.p0(<8 x float> [[Y:%.*]], ptr [[PTR:%.*]], i32 1, <8 x i1> [[CMP]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.v8f32.p0(<8 x float> [[Y:%.*]], ptr align 1 [[PTR:%.*]], <8 x i1> [[CMP]])
 ; CHECK-NEXT:    ret void
 ;
   %cmp = icmp sgt <8 x i32> %src, zeroinitializer

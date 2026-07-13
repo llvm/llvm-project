@@ -3,7 +3,7 @@
 
 ; Check that the X86 domain reassignment pass doesn't introduce an illegal
 ; test instruction. See PR37396
-define void @japi1_foo2_34617() {
+define void @japi1_foo2_34617(i1 %arg) {
 pass2:
   br label %if5
 
@@ -27,7 +27,7 @@ if5:
   %tmp120 = and i1 %tmp118, %tmp119
   %tmp121 = zext i1 %tmp120 to i8
   %tmp122 = and i8 %b.055, %tmp121
-  br i1 undef, label %L174, label %if5
+  br i1 %arg, label %L174, label %if5
 
 L188:
   unreachable

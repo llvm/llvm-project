@@ -9,6 +9,12 @@
 #ifndef LLVM_LIBC_MACROS_FLOAT_MACROS_H
 #define LLVM_LIBC_MACROS_FLOAT_MACROS_H
 
+// __has_builtin is a Clang extension; GCC < 10 doesn't define it, which
+// turns a bare `#if __has_builtin(...)` into a preprocessor syntax error.
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+
 #ifndef FLT_RADIX
 #define FLT_RADIX __FLT_RADIX__
 #endif // FLT_RADIX
@@ -160,6 +166,18 @@
 #ifndef LDBL_MAX_10_EXP
 #define LDBL_MAX_10_EXP __LDBL_MAX_10_EXP__
 #endif // LDBL_MAX_10_EXP
+
+#ifndef FLT_HAS_SUBNORM
+#define FLT_HAS_SUBNORM __FLT_HAS_DENORM__
+#endif // FLT_HAS_SUBNORM
+
+#ifndef DBL_HAS_SUBNORM
+#define DBL_HAS_SUBNORM __DBL_HAS_DENORM__
+#endif // DBL_HAS_SUBNORM
+
+#ifndef LDBL_HAS_SUBNORM
+#define LDBL_HAS_SUBNORM __LDBL_HAS_DENORM__
+#endif // LDBL_HAS_SUBNORM
 
 // TODO: Add FLT16 and FLT128 constants.
 

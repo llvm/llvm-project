@@ -7,11 +7,11 @@
 # RUN: %clang %cflags -nostdlib %t.o -o %t.exe \
 # RUN:   -Wl,--image-base=0xffffffff80000000,--no-dynamic-linker,--no-eh-frame-hdr,--no-pie
 # RUN: llvm-bolt %t.exe --print-normalized --keep-nops=0 --bolt-info=0 -o %t.out \
-# RUN:   |& FileCheck %s
+# RUN:   2>&1 | FileCheck %s
 
 ## Check the output of BOLT with NOPs removed.
 
-# RUN: llvm-bolt %t.out -o %t.out.1 --print-normalized |& FileCheck %s
+# RUN: llvm-bolt %t.out -o %t.out.1 --print-normalized 2>&1 | FileCheck %s
 
 # CHECK:      BOLT-INFO: Linux kernel binary detected
 # CHECK:      BOLT-INFO: parsed 2 SMP lock entries
@@ -34,6 +34,15 @@ _start:
   .section .smp_locks,"a",@progbits
   .long .L0 - .
   .long .L1 - .
+
+## Linux kernel version
+  .rodata
+  .align 16
+  .globl linux_banner
+  .type  linux_banner, @object
+linux_banner:
+  .string  "Linux version 6.6.61\n"
+  .size  linux_banner, . - linux_banner
 
 ## Fake Linux Kernel sections.
   .section __ksymtab,"a",@progbits

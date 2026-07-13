@@ -121,7 +121,7 @@ class ResumeFeatureTest(unittest.TestCase):
             self.assertEqual(5, self.count_entries(result))
 
 
-class ResultFormatingTest(unittest.TestCase):
+class ResultFormattingTest(unittest.TestCase):
     @staticmethod
     def run_intercept(tmpdir, command):
         result = os.path.join(tmpdir, "cdb.json")

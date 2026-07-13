@@ -36,9 +36,9 @@
 //        is-mapping-of<layout_stride, LayoutStrideMapping>))
 
 #include <mdspan>
-#include <type_traits>
 #include <cassert>
 #include <limits>
+#include <type_traits>
 
 #include "test_macros.h"
 

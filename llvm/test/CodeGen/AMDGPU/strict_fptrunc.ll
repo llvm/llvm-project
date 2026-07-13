@@ -2,16 +2,15 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,SI %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx803 < %s | FileCheck -check-prefixes=GCN,GFX89,GFX8 %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX89,GFX9 %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN,GFX1011,GFX10 %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GCN,GFX1011,GFX11 %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN,GFX10 %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GCN,GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GCN,GFX11-FAKE16 %s
 
 define half @v_constrained_fptrunc_f32_to_f16_fpexcept_strict(float %arg) #0 {
 ; SI-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX89-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict:
@@ -20,11 +19,23 @@ define half @v_constrained_fptrunc_f32_to_f16_fpexcept_strict(float %arg) #0 {
 ; GFX89-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1011-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict:
-; GFX1011:       ; %bb.0:
-; GFX1011-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1011-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX1011-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %val = call half @llvm.experimental.constrained.fptrunc.f16.f32(float %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret half %val
 }
@@ -35,10 +46,9 @@ define <2 x half> @v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict(<2 x flo
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict:
@@ -58,13 +68,29 @@ define <2 x half> @v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict(<2 x flo
 ; GFX9-NEXT:    v_perm_b32 v0, v1, v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1011-LABEL: v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict:
-; GFX1011:       ; %bb.0:
-; GFX1011-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1011-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX1011-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX1011-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
-; GFX1011-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-LABEL: v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX10-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX10-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.h, v1
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v0
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %val = call <2 x half> @llvm.experimental.constrained.fptrunc.v2f16.v2f32(<2 x float> %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <2 x half> %val
 }
@@ -74,14 +100,12 @@ define <3 x half> @v_constrained_fptrunc_v3f32_to_v3f16_fpexcept_strict(<3 x flo
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v3, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v2
+; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SI-NEXT:    v_or_b32_e32 v0, v0, v2
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_constrained_fptrunc_v3f32_to_v3f16_fpexcept_strict:
@@ -103,14 +127,32 @@ define <3 x half> @v_constrained_fptrunc_v3f32_to_v3f16_fpexcept_strict(<3 x flo
 ; GFX9-NEXT:    v_perm_b32 v0, v3, v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1011-LABEL: v_constrained_fptrunc_v3f32_to_v3f16_fpexcept_strict:
-; GFX1011:       ; %bb.0:
-; GFX1011-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1011-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX1011-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX1011-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
-; GFX1011-NEXT:    v_cvt_f16_f32_e32 v1, v2
-; GFX1011-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-LABEL: v_constrained_fptrunc_v3f32_to_v3f16_fpexcept_strict:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX10-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX10-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX10-NEXT:    v_cvt_f16_f32_e32 v1, v2
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: v_constrained_fptrunc_v3f32_to_v3f16_fpexcept_strict:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v3.h, v1
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v3.l, v0
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v2
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v3
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_constrained_fptrunc_v3f32_to_v3f16_fpexcept_strict:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e32 v1, v2
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %val = call <3 x half> @llvm.experimental.constrained.fptrunc.v3f16.v3f32(<3 x float> %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <3 x half> %val
 }
@@ -169,9 +211,7 @@ define half @v_constrained_fneg_fptrunc_f32_to_f16_fpexcept_strict(float %arg) #
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; SI-NEXT:    v_xor_b32_e32 v0, 0xffff8000, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX89-LABEL: v_constrained_fneg_fptrunc_f32_to_f16_fpexcept_strict:
@@ -181,12 +221,26 @@ define half @v_constrained_fneg_fptrunc_f32_to_f16_fpexcept_strict(float %arg) #
 ; GFX89-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1011-LABEL: v_constrained_fneg_fptrunc_f32_to_f16_fpexcept_strict:
-; GFX1011:       ; %bb.0:
-; GFX1011-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1011-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX1011-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
-; GFX1011-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-LABEL: v_constrained_fneg_fptrunc_f32_to_f16_fpexcept_strict:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX10-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: v_constrained_fneg_fptrunc_f32_to_f16_fpexcept_strict:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
+; GFX11-TRUE16-NEXT:    v_xor_b16 v0.l, 0x8000, v0.l
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_constrained_fneg_fptrunc_f32_to_f16_fpexcept_strict:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX11-FAKE16-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %val = call half @llvm.experimental.constrained.fptrunc.f16.f32(float %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
   %neg.val = fneg half %val
   ret half %neg.val
@@ -197,8 +251,6 @@ define half @v_constrained_fptrunc_fneg_f32_to_f16_fpexcept_strict(float %arg) #
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_cvt_f16_f32_e64 v0, -v0
-; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX89-LABEL: v_constrained_fptrunc_fneg_f32_to_f16_fpexcept_strict:
@@ -207,11 +259,23 @@ define half @v_constrained_fptrunc_fneg_f32_to_f16_fpexcept_strict(float %arg) #
 ; GFX89-NEXT:    v_cvt_f16_f32_e64 v0, -v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1011-LABEL: v_constrained_fptrunc_fneg_f32_to_f16_fpexcept_strict:
-; GFX1011:       ; %bb.0:
-; GFX1011-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1011-NEXT:    v_cvt_f16_f32_e64 v0, -v0
-; GFX1011-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-LABEL: v_constrained_fptrunc_fneg_f32_to_f16_fpexcept_strict:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cvt_f16_f32_e64 v0, -v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: v_constrained_fptrunc_fneg_f32_to_f16_fpexcept_strict:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e64 v0.l, -v0
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_constrained_fptrunc_fneg_f32_to_f16_fpexcept_strict:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e64 v0, -v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %neg.arg = fneg float %arg
   %val = call half @llvm.experimental.constrained.fptrunc.f16.f32(float %neg.arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret half %val
@@ -245,8 +309,6 @@ define void @v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi(float %arg, 
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX89-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi:
@@ -255,11 +317,23 @@ define void @v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi(float %arg, 
 ; GFX89-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1011-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi:
-; GFX1011:       ; %bb.0:
-; GFX1011-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1011-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX1011-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %result = call half @llvm.experimental.constrained.fptrunc.f16.f32(float %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -272,15 +346,10 @@ define void @v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict_noabi(<2 x flo
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    s_mov_b32 s4, s6
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; SI-NEXT:    s_mov_b32 s4, s6
+; SI-NEXT:    s_mov_b32 s5, s6
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    buffer_store_dword v0, v[2:3], s[4:7], 0 addr64
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
@@ -316,14 +385,22 @@ define void @v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict_noabi(<2 x flo
 ; GFX10-NEXT:    global_store_dword v[2:3], v0, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict_noabi:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX11-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
-; GFX11-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict_noabi:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.h, v1
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v0
+; GFX11-TRUE16-NEXT:    global_store_b32 v[2:3], v1, off
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict_noabi:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX11-FAKE16-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %result = call <2 x half> @llvm.experimental.constrained.fptrunc.v2f16.v2f32(<2 x float> %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
   store <2 x half> %result, ptr addrspace(1) %ptr
   ret void
@@ -334,8 +411,6 @@ define void @v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fneg(float %
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_cvt_f16_f32_e64 v0, -v0
-; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX89-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fneg:
@@ -344,11 +419,23 @@ define void @v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fneg(float %
 ; GFX89-NEXT:    v_cvt_f16_f32_e64 v0, -v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1011-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fneg:
-; GFX1011:       ; %bb.0:
-; GFX1011-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1011-NEXT:    v_cvt_f16_f32_e64 v0, -v0
-; GFX1011-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fneg:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cvt_f16_f32_e64 v0, -v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fneg:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e64 v0.l, -v0
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fneg:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e64 v0, -v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %neg.arg = fneg float %arg
   %result = call half @llvm.experimental.constrained.fptrunc.f16.f32(float %neg.arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
@@ -359,8 +446,6 @@ define void @v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fabs(float %
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_cvt_f16_f32_e64 v0, |v0|
-; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX89-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fabs:
@@ -369,11 +454,23 @@ define void @v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fabs(float %
 ; GFX89-NEXT:    v_cvt_f16_f32_e64 v0, |v0|
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1011-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fabs:
-; GFX1011:       ; %bb.0:
-; GFX1011-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1011-NEXT:    v_cvt_f16_f32_e64 v0, |v0|
-; GFX1011-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fabs:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cvt_f16_f32_e64 v0, |v0|
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fabs:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e64 v0.l, |v0|
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fabs:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e64 v0, |v0|
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %abs.arg = call float @llvm.fabs.f32(float %arg) #0
   %result = call half @llvm.experimental.constrained.fptrunc.f16.f32(float %abs.arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void

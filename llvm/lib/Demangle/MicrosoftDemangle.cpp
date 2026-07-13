@@ -21,9 +21,9 @@
 #include "llvm/Demangle/StringViewExtras.h"
 #include "llvm/Demangle/Utility.h"
 
-#include <array>
 #include <cctype>
 #include <cstdio>
+#include <optional>
 #include <string_view>
 #include <tuple>
 
@@ -65,7 +65,7 @@ static bool startsWith(std::string_view S, std::string_view PrefixA,
   return llvm::itanium_demangle::starts_with(S, Prefix);
 }
 
-static bool isMemberPointer(std::string_view MangledName, bool &Error) {
+bool Demangler::isMemberPointer(std::string_view MangledName, bool &Error) {
   Error = false;
   const char F = MangledName.front();
   MangledName.remove_prefix(1);
@@ -106,6 +106,7 @@ static bool isMemberPointer(std::string_view MangledName, bool &Error) {
   consumeFront(MangledName, 'E'); // 64-bit
   consumeFront(MangledName, 'I'); // restrict
   consumeFront(MangledName, 'F'); // unaligned
+  demanglePointerAuthQualifier(MangledName);
 
   if (MangledName.empty()) {
     Error = true;
@@ -275,6 +276,18 @@ demanglePointerCVQualifiers(std::string_view &MangledName) {
   DEMANGLE_UNREACHABLE;
 }
 
+static NodeArrayNode *nodeListToNodeArray(ArenaAllocator &Arena, NodeList *Head,
+                                          size_t Count) {
+  NodeArrayNode *N = Arena.alloc<NodeArrayNode>();
+  N->Count = Count;
+  N->Nodes = Arena.allocArray<Node *>(Count);
+  for (size_t I = 0; I < Count; ++I) {
+    N->Nodes[I] = Head->N;
+    Head = Head->Next;
+  }
+  return N;
+}
+
 std::string_view Demangler::copyString(std::string_view Borrowed) {
   char *Stable = Arena.allocUnalignedBuffer(Borrowed.size());
   // This is not a micro-optimization, it avoids UB, should Borrowed be an null
@@ -321,8 +334,30 @@ Demangler::demangleSpecialTableSymbolNode(std::string_view &MangledName,
   }
 
   std::tie(STSN->Quals, IsMember) = demangleQualifiers(MangledName);
-  if (!consumeFront(MangledName, '@'))
-    STSN->TargetName = demangleFullyQualifiedTypeName(MangledName);
+
+  NodeList *TargetCurrent = nullptr;
+  NodeList *TargetHead = nullptr;
+  size_t Count = 0;
+  while (!consumeFront(MangledName, '@')) {
+    ++Count;
+
+    NodeList *Next = Arena.alloc<NodeList>();
+    if (TargetCurrent)
+      TargetCurrent->Next = Next;
+    else
+      TargetHead = Next;
+
+    TargetCurrent = Next;
+    QualifiedNameNode *QN = demangleFullyQualifiedTypeName(MangledName);
+    if (Error)
+      return nullptr;
+    assert(QN);
+    TargetCurrent->N = QN;
+  }
+
+  if (Count > 0)
+    STSN->TargetNames = nodeListToNodeArray(Arena, TargetHead, Count);
+
   return STSN;
 }
 
@@ -374,12 +409,11 @@ static QualifiedNameNode *synthesizeQualifiedName(ArenaAllocator &Arena,
   return synthesizeQualifiedName(Arena, Id);
 }
 
-static VariableSymbolNode *synthesizeVariable(ArenaAllocator &Arena,
-                                              TypeNode *Type,
-                                              std::string_view VariableName) {
-  VariableSymbolNode *VSN = Arena.alloc<VariableSymbolNode>();
+static VariableSymbolNode *synthesizeType(ArenaAllocator &Arena, TypeNode *Type,
+                                          std::string_view Description) {
+  TypeSymbolNode *VSN = Arena.alloc<TypeSymbolNode>();
   VSN->Type = Type;
-  VSN->Name = synthesizeQualifiedName(Arena, VariableName);
+  VSN->Name = synthesizeQualifiedName(Arena, Description);
   return VSN;
 }
 
@@ -493,7 +527,7 @@ SymbolNode *Demangler::demangleSpecialIntrinsic(std::string_view &MangledName) {
       break;
     if (!MangledName.empty())
       break;
-    return synthesizeVariable(Arena, T, "`RTTI Type Descriptor'");
+    return synthesizeType(Arena, T, "`RTTI Type Descriptor'");
   }
   case SpecialIntrinsicKind::RttiBaseClassArray:
     return demangleUntypedVariable(Arena, MangledName,
@@ -838,7 +872,7 @@ SymbolNode *Demangler::demangleTypeinfoName(std::string_view &MangledName) {
     Error = true;
     return nullptr;
   }
-  return synthesizeVariable(Arena, T, "`RTTI Type Descriptor Name'");
+  return synthesizeType(Arena, T, "`RTTI Type Descriptor Name'");
 }
 
 // Parser entry point.
@@ -1373,6 +1407,11 @@ Demangler::demangleStringLiteral(std::string_view &MangledName) {
       Result->IsTruncated = true;
 
     while (!consumeFront(MangledName, '@')) {
+      // For a wide string StringByteSize has to have an even length.
+      if (StringByteSize % 2 != 0)
+        goto StringLiteralError;
+      if (StringByteSize == 0)
+        goto StringLiteralError;
       if (MangledName.size() < 2)
         goto StringLiteralError;
       wchar_t W = demangleWcharLiteral(MangledName);
@@ -1596,18 +1635,6 @@ Demangler::demangleNameScopePiece(std::string_view &MangledName) {
     return demangleLocallyScopedNamePiece(MangledName);
 
   return demangleSimpleName(MangledName, /*Memorize=*/true);
-}
-
-static NodeArrayNode *nodeListToNodeArray(ArenaAllocator &Arena, NodeList *Head,
-                                          size_t Count) {
-  NodeArrayNode *N = Arena.alloc<NodeArrayNode>();
-  N->Count = Count;
-  N->Nodes = Arena.allocArray<Node *>(Count);
-  for (size_t I = 0; I < Count; ++I) {
-    N->Nodes[I] = Head->N;
-    Head = Head->Next;
-  }
-  return N;
 }
 
 QualifiedNameNode *
@@ -2035,6 +2062,10 @@ Demangler::demanglePrimitiveType(std::string_view &MangledName) {
       return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Char16);
     case 'U':
       return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Char32);
+    case 'P':
+      return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Auto);
+    case 'T':
+      return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::DecltypeAuto);
     }
     break;
   }
@@ -2089,6 +2120,8 @@ PointerTypeNode *Demangler::demanglePointerType(std::string_view &MangledName) {
   Qualifiers ExtQuals = demanglePointerExtQualifiers(MangledName);
   Pointer->Quals = Qualifiers(Pointer->Quals | ExtQuals);
 
+  Pointer->PointerAuthQualifier = createPointerAuthQualifier(MangledName);
+
   Pointer->Pointee = demangleType(MangledName, QualifierMangleMode::Mangle);
   return Pointer;
 }
@@ -2135,6 +2168,49 @@ Demangler::demanglePointerExtQualifiers(std::string_view &MangledName) {
     Quals = Qualifiers(Quals | Q_Unaligned);
 
   return Quals;
+}
+
+std::optional<PointerAuthQualifierNode::ArgArray>
+Demangler::demanglePointerAuthQualifier(std::string_view &MangledName) {
+  if (!consumeFront(MangledName, "__ptrauth"))
+    return std::nullopt;
+
+  constexpr unsigned NumArgs = PointerAuthQualifierNode::NumArgs;
+  PointerAuthQualifierNode::ArgArray Array;
+
+  for (unsigned I = 0; I < NumArgs; ++I) {
+    bool IsNegative = false;
+    uint64_t Value = 0;
+    std::tie(Value, IsNegative) = demangleNumber(MangledName);
+    if (IsNegative)
+      return std::nullopt;
+
+    Array[I] = Value;
+  }
+
+  return Array;
+}
+
+PointerAuthQualifierNode *
+Demangler::createPointerAuthQualifier(std::string_view &MangledName) {
+  constexpr unsigned NumArgs = PointerAuthQualifierNode::NumArgs;
+  std::optional<PointerAuthQualifierNode::ArgArray> Vals =
+      demanglePointerAuthQualifier(MangledName);
+
+  if (!Vals)
+    return nullptr;
+
+  PointerAuthQualifierNode *PtrAuthQual =
+      Arena.alloc<PointerAuthQualifierNode>();
+  NodeArrayNode *Array = Arena.alloc<NodeArrayNode>();
+  PtrAuthQual->Components = Array;
+  Array->Count = NumArgs;
+  Array->Nodes = Arena.allocArray<Node *>(NumArgs);
+
+  for (unsigned I = 0; I < NumArgs; ++I)
+    Array->Nodes[I] = Arena.alloc<IntegerLiteralNode>((*Vals)[I], false);
+
+  return PtrAuthQual;
 }
 
 ArrayTypeNode *Demangler::demangleArrayType(std::string_view &MangledName) {
@@ -2424,6 +2500,24 @@ void Demangler::dumpBackReferences() {
     std::printf("\n");
 }
 
+std::optional<size_t>
+llvm::getArm64ECInsertionPointInMangledName(std::string_view MangledName) {
+  std::string_view ProcessedName{MangledName};
+
+  // We only support this for MSVC-style C++ symbols.
+  if (!consumeFront(ProcessedName, '?'))
+    return std::nullopt;
+
+  // The insertion point is just after the name of the symbol, so parse that to
+  // remove it from the processed name.
+  Demangler D;
+  D.demangleFullyQualifiedSymbolName(ProcessedName);
+  if (D.Error)
+    return std::nullopt;
+
+  return MangledName.length() - ProcessedName.length();
+}
+
 char *llvm::microsoftDemangle(std::string_view MangledName, size_t *NMangled,
                               int *Status, MSDemangleFlags Flags) {
   Demangler D;
@@ -2447,6 +2541,12 @@ char *llvm::microsoftDemangle(std::string_view MangledName, size_t *NMangled,
     OF = OutputFlags(OF | OF_NoMemberType);
   if (Flags & MSDF_NoVariableType)
     OF = OutputFlags(OF | OF_NoVariableType);
+  if (Flags & MSDF_NoTagSpecifier)
+    OF = OutputFlags(OF | OF_NoTagSpecifier);
+  if (Flags & MSDF_NoVoidParameter)
+    OF = OutputFlags(OF | OF_NoVoidParameter);
+  if (Flags & MSDF_NoDecorativeRTTITypeDescriptor)
+    OF = OutputFlags(OF | OF_NoDecorativeRTTITypeDescriptor);
 
   int InternalStatus = demangle_success;
   char *Buf;

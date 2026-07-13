@@ -8,6 +8,8 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class ForwardDeclarationTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def do_test(self, dictionary=None):
         """Display *bar_ptr when stopped on a function with forward declaration of struct bar."""
         self.build(dictionary=dictionary)
@@ -53,7 +55,6 @@ class ForwardDeclarationTestCase(TestBase):
     @skipIfDarwin
     @skipIf(compiler=no_match("clang"))
     @skipIf(compiler_version=["<", "8.0"])
-    @expectedFailureAll(oslist=["windows"])
     def test_debug_names(self):
         """Test that we are able to find complete types when using DWARF v5
         accelerator tables"""

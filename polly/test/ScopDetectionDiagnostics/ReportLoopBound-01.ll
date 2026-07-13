@@ -1,16 +1,6 @@
-; RUN: opt %loadNPMPolly \
-; RUN:     -pass-remarks-missed="polly-detect" -polly-detect-track-failures \
-; RUN:     -polly-allow-nonaffine-loops=false '-passes=print<polly-detect>' -disable-output \
-; RUN:     < %s 2>&1| FileCheck %s --check-prefix=REJECTNONAFFINELOOPS
-; RUN: opt %loadNPMPolly \
-; RUN:     -pass-remarks-missed="polly-detect" -polly-detect-track-failures \
-; RUN:     -polly-allow-nonaffine-loops=true '-passes=print<polly-detect>' -disable-output \
-; RUN:     < %s 2>&1| FileCheck %s --check-prefix=ALLOWNONAFFINELOOPS
-; RUN: opt %loadNPMPolly -pass-remarks-missed="polly-detect" \
-; RUN:     -polly-process-unprofitable=false \
-; RUN:     -polly-detect-track-failures -polly-allow-nonaffine-loops=true \
-; RUN:     -polly-allow-nonaffine '-passes=print<polly-detect>' -disable-output < %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=ALLOWNONAFFINEALL
+; RUN: opt %loadNPMPolly -pass-remarks-missed=polly-detect -polly-detect-track-failures -polly-allow-nonaffine-loops=false '-passes=polly-custom<detect>' -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s --check-prefix=REJECTNONAFFINELOOPS
+; RUN: opt %loadNPMPolly -pass-remarks-missed=polly-detect -polly-detect-track-failures -polly-allow-nonaffine-loops=true '-passes=polly-custom<detect>' -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPS
+; RUN: opt %loadNPMPolly -pass-remarks-missed=polly-detect -polly-process-unprofitable=false -polly-detect-track-failures -polly-allow-nonaffine-loops=true -polly-allow-nonaffine '-passes=polly-custom<detect>' -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ALLOWNONAFFINEALL
 
 ; void f(int A[], int n) {
 ;   for (int i = 0; i < A[n+i]; i++)
@@ -78,9 +68,6 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
-
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!10, !11}

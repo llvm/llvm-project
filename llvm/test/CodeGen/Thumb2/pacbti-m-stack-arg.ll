@@ -19,17 +19,14 @@ define i32 @test_non_leaf(i32 %arg0, i32 %arg1, i32 %arg2, i32 %arg3, i32 %x) "s
 ; CHECK-LABEL: test_non_leaf:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    pac r12, lr, sp
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .save {ra_auth_code}
-; CHECK-NEXT:    str r12, [sp, #-4]!
+; CHECK-NEXT:    .save {r7, ra_auth_code, lr}
+; CHECK-NEXT:    push.w {r7, r12, lr}
 ; CHECK-NEXT:    .pad #4
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    bl otherfn
 ; CHECK-NEXT:    ldr r0, [sp, #16]
 ; CHECK-NEXT:    add sp, #4
-; CHECK-NEXT:    ldr r12, [sp], #4
-; CHECK-NEXT:    pop.w {r7, lr}
+; CHECK-NEXT:    pop.w {r7, r12, lr}
 ; CHECK-NEXT:    aut r12, lr, sp
 ; CHECK-NEXT:    bx lr
 entry:

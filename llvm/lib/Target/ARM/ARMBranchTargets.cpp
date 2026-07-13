@@ -77,7 +77,8 @@ bool ARMBranchTargets::runOnMachineFunction(MachineFunction &MF) {
     // modes. These modes do not support PACBTI. As a result, BTI instructions
     // are not added in the destination blocks.
 
-    if (IsFirstBB || MBB.hasAddressTaken() || MBB.isEHPad()) {
+    if (IsFirstBB || MBB.isMachineBlockAddressTaken() ||
+        MBB.isIRBlockAddressTaken() || MBB.isEHPad()) {
       addBTI(TII, MBB, IsFirstBB);
       MadeChange = true;
     }

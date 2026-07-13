@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}phi1:
 ; CHECK: s_buffer_load_dword [[DST:s[0-9]]], {{s\[[0-9]+:[0-9]+\]}}, 0x0
@@ -206,14 +206,13 @@ ENDIF:                                            ; preds = %LOOP
 ; an assertion failure.
 
 ; CHECK-LABEL: {{^}}sample_v3:
-; CHECK: v_mov_b32_e32 v[[SAMPLE_LO:[0-9]+]], 5
-; CHECK: v_mov_b32_e32 v[[SAMPLE_HI:[0-9]+]], 7
+; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_LO:[0-9]+]], 5
+; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_HI:[0-9]+]], 7
+; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v[[[SAMPLE_LO]]:[[SAMPLE_HI]]]
 ; CHECK: s_cbranch
 
-; CHECK: BB{{[0-9]+_[0-9]+}}:
 ; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_LO:[0-9]+]], 11
 ; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_HI:[0-9]+]], 13
-
 ; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v[[[SAMPLE_LO]]:[[SAMPLE_HI]]]
 ; CHECK: exp
 ; CHECK: s_endpgm
@@ -256,7 +255,7 @@ endif:                                            ; preds = %else, %if
 define amdgpu_kernel void @copy1(ptr addrspace(1) %out, ptr addrspace(1) %in0) {
 entry:
   %tmp = load float, ptr addrspace(1) %in0
-  %tmp1 = fcmp oeq float %tmp, 0.000000e+00
+  %tmp1 = fcmp one float %tmp, 0.000000e+00
   br i1 %tmp1, label %if0, label %endif
 
 if0:                                              ; preds = %entry
@@ -307,15 +306,14 @@ ENDIF69:                                          ; preds = %LOOP68
 ; CHECK-LABEL:{{^}}sample_rsrc
 
 ; CHECK: s_cmp_eq_u32
-; CHECK: s_cbranch_scc1 [[END:.LBB[0-9]+_[0-9]+]]
+; CHECK: s_cbranch_scc1
+
+; CHECK: v_add_{{[iu]}}32_e32 v[[ADD:[0-9]+]], vcc, 1, v{{[0-9]+}}
+; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+}}:[[ADD]]]
+; CHECK: s_cbranch_scc1
 
 ; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}
 ; CHECK: s_endpgm
-
-; [[END]]:
-; CHECK: v_add_{{[iu]}}32_e32 v[[ADD:[0-9]+]], vcc, 1, v{{[0-9]+}}
-; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+}}:[[ADD]]]
-; CHECK: s_branch
 define amdgpu_ps void @sample_rsrc(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, ptr addrspace(4) inreg %arg3, float inreg %arg4, i32 inreg %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <3 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, i32 %arg19, float %arg20, float %arg21) #0 {
 bb:
   %tmp22 = load <4 x i32>, ptr addrspace(4) %arg1, !tbaa !3
@@ -368,10 +366,10 @@ bb:
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
   %tmp7 = getelementptr [34 x <8 x i32>], ptr addrspace(4) %arg, i32 0, i32 %tid
   %tmp8 = load <8 x i32>, ptr addrspace(4) %tmp7, align 32, !tbaa !0
-  %tmp = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float 7.500000e-01, float 2.500000e-01, <8 x i32> %tmp8, <4 x i32> undef, i1 0, i32 0, i32 0)
+  %tmp = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float 7.500000e-01, float 2.500000e-01, <8 x i32> %tmp8, <4 x i32> poison, i1 0, i32 0, i32 0)
   %tmp10 = extractelement <4 x float> %tmp, i32 0
-  %tmp12 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float undef, float %tmp10)
-  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %tmp12, <2 x half> undef, i1 true, i1 true) #0
+  %tmp12 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float poison, float %tmp10)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %tmp12, <2 x half> poison, i1 true, i1 true) #0
   ret void
 }
 
@@ -383,10 +381,10 @@ bb:
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
   %tmp7 = getelementptr [17 x <4 x i32>], ptr addrspace(4) %arg, i32 0, i32 %tid
   %tmp8 = load <4 x i32>, ptr addrspace(4) %tmp7, align 16, !tbaa !0
-  %tmp = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float 7.500000e-01, float 2.500000e-01, <8 x i32> undef, <4 x i32> %tmp8, i1 0, i32 0, i32 0)
+  %tmp = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float 7.500000e-01, float 2.500000e-01, <8 x i32> poison, <4 x i32> %tmp8, i1 0, i32 0, i32 0)
   %tmp10 = extractelement <4 x float> %tmp, i32 0
-  %tmp12 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %tmp10, float undef)
-  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %tmp12, <2 x half> undef, i1 true, i1 true) #0
+  %tmp12 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %tmp10, float poison)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %tmp12, <2 x half> poison, i1 true, i1 true) #0
   ret void
 }
 

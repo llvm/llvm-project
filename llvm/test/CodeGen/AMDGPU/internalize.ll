@@ -1,14 +1,14 @@
-; RUN: opt -O0 -S -mtriple=amdgcn-unknown-amdhsa -amdgpu-internalize-symbols < %s | FileCheck -check-prefix=ALL -check-prefix=OPTNONE %s
-; RUN: opt -passes='default<O0>' -S -mtriple=amdgcn-unknown-amdhsa -amdgpu-internalize-symbols < %s | FileCheck -check-prefix=ALL -check-prefix=OPTNONE %s
-; RUN: opt -O1 -S -mtriple=amdgcn-unknown-amdhsa -amdgpu-internalize-symbols < %s | FileCheck -check-prefix=ALL -check-prefix=OPT %s
-; RUN: opt -passes='default<O1>' -S -mtriple=amdgcn-unknown-amdhsa -amdgpu-internalize-symbols < %s | FileCheck -check-prefix=ALL -check-prefix=OPT %s
+; RUN: opt -O0 -S -mtriple=amdgpu-unknown-amdhsa -amdgpu-internalize-symbols < %s | FileCheck -check-prefix=ALL -check-prefix=OPTNONE %s
+; RUN: opt -passes='default<O0>' -S -mtriple=amdgpu-unknown-amdhsa -amdgpu-internalize-symbols < %s | FileCheck -check-prefix=ALL -check-prefix=OPTNONE %s
+; RUN: opt -O1 -S -mtriple=amdgpu-unknown-amdhsa -amdgpu-internalize-symbols < %s | FileCheck -check-prefix=ALL -check-prefix=OPT %s
+; RUN: opt -passes='default<O1>' -S -mtriple=amdgpu-unknown-amdhsa -amdgpu-internalize-symbols < %s | FileCheck -check-prefix=ALL -check-prefix=OPT %s
 
 ; OPT-NOT: gvar_unused
 ; OPTNONE: gvar_unused
-@gvar_unused = addrspace(1) global i32 undef, align 4
+@gvar_unused = addrspace(1) global i32 poison, align 4
 
 ; ALL: gvar_used
-@gvar_used = addrspace(1) global i32 undef, align 4
+@gvar_used = addrspace(1) global i32 poison, align 4
 
 ; OPT: define internal fastcc void @func_used_noinline(
 ; OPT-NONE: define fastcc void @func_used_noinline(

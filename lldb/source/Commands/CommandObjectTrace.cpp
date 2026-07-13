@@ -205,7 +205,7 @@ protected:
 
     if (!trace_or_err) {
       result.AppendErrorWithFormat(
-          "%s\n", llvm::toString(trace_or_err.takeError()).c_str());
+          "%s", llvm::toString(trace_or_err.takeError()).c_str());
       return;
     }
 
@@ -277,7 +277,7 @@ protected:
     if (error.Success()) {
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
-      result.AppendErrorWithFormat("%s\n", error.AsCString());
+      result.AppendErrorWithFormat("%s", error.AsCString());
     }
   }
 
@@ -361,13 +361,13 @@ protected:
               Trace::FindPluginSchema(plugin_name))
         result.AppendMessage(*schemaOrErr);
       else
-        error = schemaOrErr.takeError();
+        error = Status::FromError(schemaOrErr.takeError());
     }
 
     if (error.Success()) {
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
-      result.AppendErrorWithFormat("%s\n", error.AsCString());
+      result.AppendErrorWithFormat("%s", error.AsCString());
     }
   }
 

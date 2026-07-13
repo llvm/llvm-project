@@ -16,8 +16,8 @@ define void @foo() nounwind {
 ; CHECK-LABEL: foo:
 entry:
   call void @consume(i32 ptrtoint (ptr @func to i32))
-; CHECK: adrp x[[ADDRHI:[0-9]+]], :got:func
-; CHECK: ldr {{x[0-9]+}}, [x[[ADDRHI]], {{#?}}:got_lo12:func]
+; CHECK:      adrp x[[ADDRHI:[0-9]+]], :got:func
+; CHECK-NEXT: ldr {{x[0-9]+}}, [x[[ADDRHI]], {{#?}}:got_lo12:func]
   ret void
 }
 

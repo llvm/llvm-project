@@ -1,4 +1,3 @@
-
 //===-- Unittests for user defined integer literals -----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -150,7 +149,7 @@ TEST(LlvmLibcIntegerLiteralTest, parse_bigint) {
 
 TEST(LlvmLibcIntegerLiteralTest, parse_bigint_invalid) {
   using T = LIBC_NAMESPACE::Int<128>;
-  const T expected; // default construction
+  const T expected{}; // default construction
   EXPECT_EQ(LIBC_NAMESPACE::parse_bigint<T>(nullptr), expected);
   EXPECT_EQ(LIBC_NAMESPACE::parse_bigint<T>(""), expected);
 }

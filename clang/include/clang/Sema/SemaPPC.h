@@ -13,13 +13,14 @@
 #ifndef LLVM_CLANG_SEMA_SEMAPPC_H
 #define LLVM_CLANG_SEMA_SEMAPPC_H
 
-#include "clang/AST/Expr.h"
+#include "clang/AST/ASTFwd.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/SemaBase.h"
 
 namespace clang {
+class TargetInfo;
+
 class SemaPPC : public SemaBase {
 public:
   SemaPPC(Sema &S);
@@ -52,6 +53,11 @@ public:
   // vector double vec_xxpermdi(vector double, vector double, int);
   // vector short vec_xxsldwi(vector short, vector short, int);
   bool BuiltinVSX(CallExpr *TheCall);
+
+  bool checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
+                             const SmallVectorImpl<SourceLocation> &Locs,
+                             SmallVectorImpl<SmallString<64>> &NewParams,
+                             SourceLocation AttrLoc);
 };
 } // namespace clang
 

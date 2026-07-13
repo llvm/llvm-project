@@ -33,9 +33,9 @@ define dso_local i32 @main() #0 {
 ; V6M-LABEL: main:
 ; V6M:       @ %bb.0: @ %entry
 ; V6M-NEXT:    push {r7, lr}
-; V6M-NEXT:    sub sp, #
+; V6M-NEXT:    sub sp, #24
 ; V6M-NEXT:    movs r0, #0
-; V6M-NEXT:    str r0, [sp, #
+; V6M-NEXT:    str r0, [sp, #4]
 ; V6M-NEXT:    mrs r12, apsr
 ; V6M-NEXT:    movs r0, :upper8_15:__stack_chk_guard
 ; V6M-NEXT:    lsls r0, r0, #8
@@ -46,10 +46,10 @@ define dso_local i32 @main() #0 {
 ; V6M-NEXT:    adds r0, :lower0_7:__stack_chk_guard
 ; V6M-NEXT:    msr apsr, r12
 ; V6M-NEXT:    ldr r0, [r0]
-; V6M-NEXT:    str r0, [sp, #
-; V6M-NEXT:    add r0, sp, #
+; V6M-NEXT:    str r0, [sp, #20]
+; V6M-NEXT:    add r0, sp, #8
 ; V6M-NEXT:    ldrb r0, [r0]
-; V6M-NEXT:    ldr r1, [sp, #
+; V6M-NEXT:    ldr r1, [sp, #20]
 ; V6M-NEXT:    mrs r12, apsr
 ; V6M-NEXT:    movs r2, :upper8_15:__stack_chk_guard
 ; V6M-NEXT:    lsls r2, r2, #8
@@ -63,7 +63,7 @@ define dso_local i32 @main() #0 {
 ; V6M-NEXT:    cmp r2, r1
 ; V6M-NEXT:    bne .LBB0_2
 ; V6M-NEXT:  @ %bb.1: @ %entry
-; V6M-NEXT:    add sp, #
+; V6M-NEXT:    add sp, #24
 ; V6M-NEXT:    pop {r7, pc}
 ; V6M-NEXT:  .LBB0_2: @ %entry
 ; V6M-NEXT:    bl __stack_chk_fail
@@ -105,77 +105,177 @@ entry:
 @bb = hidden local_unnamed_addr global i64 0, align 8
 
 define dso_local i64 @cc() local_unnamed_addr #1 {
+; CHECK-LABEL: cc:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    push {r4, r5, r7, lr}
+; CHECK-NEXT:    sub sp, #8
+; CHECK-NEXT:    movs r0, #1
+; CHECK-NEXT:    lsls r3, r0, #31
+; CHECK-NEXT:    ldr r0, .LCPI1_0
+; CHECK-NEXT:    ldr r2, [r0]
+; CHECK-NEXT:    asrs r4, r2, #31
+; CHECK-NEXT:    eors r3, r4
+; CHECK-NEXT:    ldr r0, .LCPI1_1
+; CHECK-NEXT:    ldm r0!, {r1, r5}
+; CHECK-NEXT:    subs r0, r2, r1
+; CHECK-NEXT:    sbcs r3, r5
+; CHECK-NEXT:    subs r0, r2, r1
+; CHECK-NEXT:    ldr r1, .LCPI1_2
+; CHECK-NEXT:    ldr r1, [r1]
+; CHECK-NEXT:    str r1, [sp, #4]
+; CHECK-NEXT:    mov r1, r4
+; CHECK-NEXT:    sbcs r1, r5
+; CHECK-NEXT:    ands r3, r4
+; CHECK-NEXT:    ands r2, r0
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    orrs r4, r3
+; CHECK-NEXT:    cmp r4, #0
+; CHECK-NEXT:    beq .LBB1_2
+; CHECK-NEXT:  @ %bb.1: @ %entry
+; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:  .LBB1_2: @ %entry
+; CHECK-NEXT:    beq .LBB1_4
+; CHECK-NEXT:  @ %bb.3: @ %entry
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:  .LBB1_4: @ %entry
+; CHECK-NEXT:    ldr r2, [sp, #4]
+; CHECK-NEXT:    ldr r3, .LCPI1_2
+; CHECK-NEXT:    ldr r3, [r3]
+; CHECK-NEXT:    cmp r3, r2
+; CHECK-NEXT:    bne .LBB1_6
+; CHECK-NEXT:  @ %bb.5: @ %entry
+; CHECK-NEXT:    add sp, #8
+; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:  .LBB1_6: @ %entry
+; CHECK-NEXT:    bl __stack_chk_fail
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.7:
+; CHECK-NEXT:  .LCPI1_0:
+; CHECK-NEXT:    .long aa
+; CHECK-NEXT:  .LCPI1_1:
+; CHECK-NEXT:    .long bb
+; CHECK-NEXT:  .LCPI1_2:
+; CHECK-NEXT:    .long __stack_chk_guard
+;
 ; V6M-LABEL: cc:
 ; V6M:       @ %bb.0: @ %entry
-; V6M-NEXT:	push	{r4, r5, r7, lr}
-; V6M-NEXT:	sub	sp, #8
-; V6M-NEXT:	movs	r0, #1
-; V6M-NEXT:	lsls	r3, r0, #31
-; V6M-NEXT:	movs	r0, :upper8_15:aa
-; V6M-NEXT:	lsls	r0, r0, #8
-; V6M-NEXT:	adds	r0, :upper0_7:aa
-; V6M-NEXT:	lsls	r0, r0, #8
-; V6M-NEXT:	adds	r0, :lower8_15:aa
-; V6M-NEXT:	lsls	r0, r0, #8
-; V6M-NEXT:	adds	r0, :lower0_7:aa
-; V6M-NEXT:	ldr	r2, [r0]
-; V6M-NEXT:	asrs	r4, r2, #31
-; V6M-NEXT:	eors	r3, r4
-; V6M-NEXT:	movs	r0, :upper8_15:bb
-; V6M-NEXT:	lsls	r0, r0, #8
-; V6M-NEXT:	adds	r0, :upper0_7:bb
-; V6M-NEXT:	lsls	r0, r0, #8
-; V6M-NEXT:	adds	r0, :lower8_15:bb
-; V6M-NEXT:	lsls	r0, r0, #8
-; V6M-NEXT:	adds	r0, :lower0_7:bb
-; V6M-NEXT:	ldm	r0!, {r1, r5}
-; V6M-NEXT:	subs	r0, r2, r1
-; V6M-NEXT:	sbcs	r3, r5
-; V6M-NEXT:	subs	r0, r2, r1
-; V6M-NEXT:	mrs	r12, apsr
-; V6M-NEXT:	movs	r1, :upper8_15:__stack_chk_guard
-; V6M-NEXT:	lsls	r1, r1, #8
-; V6M-NEXT:	adds	r1, :upper0_7:__stack_chk_guard
-; V6M-NEXT:	lsls	r1, r1, #8
-; V6M-NEXT:	adds	r1, :lower8_15:__stack_chk_guard
-; V6M-NEXT:	lsls	r1, r1, #8
-; V6M-NEXT:	adds	r1, :lower0_7:__stack_chk_guard
-; V6M-NEXT:	msr	apsr, r12
-; V6M-NEXT:	ldr	r1, [r1]
-; V6M-NEXT:	str	r1, [sp, #4]
-; V6M-NEXT:	mov	r1, r4
-; V6M-NEXT:	sbcs	r1, r5
-; V6M-NEXT:	ands	r3, r4
-; V6M-NEXT:	ands	r2, r0
-; V6M-NEXT:	mov	r4, r2
-; V6M-NEXT:	orrs	r4, r3
-; V6M-NEXT:	beq	.LBB1_2
-; V6M-NEXT:   @ %bb.1:                                @ %entry
-; V6M-NEXT:	mov	r1, r3
-; V6M-NEXT:   .LBB1_2:                                @ %entry
-; V6M-NEXT:	cmp	r4, #0
-; V6M-NEXT:	beq	.LBB1_4
-; V6M-NEXT:   @ %bb.3:                                @ %entry
-; V6M-NEXT:	mov	r0, r2
-; V6M-NEXT:   .LBB1_4:                                @ %entry
-; V6M-NEXT:	ldr	r2, [sp, #4]
-; V6M-NEXT:	mrs	r12, apsr
-; V6M-NEXT:	movs	r3, :upper8_15:__stack_chk_guard
-; V6M-NEXT:	lsls	r3, r3, #8
-; V6M-NEXT:	adds	r3, :upper0_7:__stack_chk_guard
-; V6M-NEXT:	lsls	r3, r3, #8
-; V6M-NEXT:	adds	r3, :lower8_15:__stack_chk_guard
-; V6M-NEXT:	lsls	r3, r3, #8
-; V6M-NEXT:	adds	r3, :lower0_7:__stack_chk_guard
-; V6M-NEXT:	msr	apsr, r12
-; V6M-NEXT:	ldr	r3, [r3]
-; V6M-NEXT:	cmp	r3, r2
-; V6M-NEXT:	bne	.LBB1_6
-; V6M-NEXT:   @ %bb.5:                                @ %entry
-; V6M-NEXT:	add	sp, #8
-; V6M-NEXT:	pop	{r4, r5, r7, pc}
-; V6M-NEXT:   .LBB1_6:                                @ %entry
-; V6M-NEXT:	bl	__stack_chk_fail
+; V6M-NEXT:    push {r4, r5, r7, lr}
+; V6M-NEXT:    sub sp, #8
+; V6M-NEXT:    movs r0, #1
+; V6M-NEXT:    lsls r3, r0, #31
+; V6M-NEXT:    movs r0, :upper8_15:aa
+; V6M-NEXT:    lsls r0, r0, #8
+; V6M-NEXT:    adds r0, :upper0_7:aa
+; V6M-NEXT:    lsls r0, r0, #8
+; V6M-NEXT:    adds r0, :lower8_15:aa
+; V6M-NEXT:    lsls r0, r0, #8
+; V6M-NEXT:    adds r0, :lower0_7:aa
+; V6M-NEXT:    ldr r2, [r0]
+; V6M-NEXT:    asrs r4, r2, #31
+; V6M-NEXT:    eors r3, r4
+; V6M-NEXT:    movs r0, :upper8_15:bb
+; V6M-NEXT:    lsls r0, r0, #8
+; V6M-NEXT:    adds r0, :upper0_7:bb
+; V6M-NEXT:    lsls r0, r0, #8
+; V6M-NEXT:    adds r0, :lower8_15:bb
+; V6M-NEXT:    lsls r0, r0, #8
+; V6M-NEXT:    adds r0, :lower0_7:bb
+; V6M-NEXT:    ldm r0!, {r1, r5}
+; V6M-NEXT:    subs r0, r2, r1
+; V6M-NEXT:    sbcs r3, r5
+; V6M-NEXT:    subs r0, r2, r1
+; V6M-NEXT:    mrs r12, apsr
+; V6M-NEXT:    movs r1, :upper8_15:__stack_chk_guard
+; V6M-NEXT:    lsls r1, r1, #8
+; V6M-NEXT:    adds r1, :upper0_7:__stack_chk_guard
+; V6M-NEXT:    lsls r1, r1, #8
+; V6M-NEXT:    adds r1, :lower8_15:__stack_chk_guard
+; V6M-NEXT:    lsls r1, r1, #8
+; V6M-NEXT:    adds r1, :lower0_7:__stack_chk_guard
+; V6M-NEXT:    msr apsr, r12
+; V6M-NEXT:    ldr r1, [r1]
+; V6M-NEXT:    str r1, [sp, #4]
+; V6M-NEXT:    mov r1, r4
+; V6M-NEXT:    sbcs r1, r5
+; V6M-NEXT:    ands r3, r4
+; V6M-NEXT:    ands r2, r0
+; V6M-NEXT:    mov r4, r2
+; V6M-NEXT:    orrs r4, r3
+; V6M-NEXT:    cmp r4, #0
+; V6M-NEXT:    beq .LBB1_2
+; V6M-NEXT:  @ %bb.1: @ %entry
+; V6M-NEXT:    mov r1, r3
+; V6M-NEXT:  .LBB1_2: @ %entry
+; V6M-NEXT:    beq .LBB1_4
+; V6M-NEXT:  @ %bb.3: @ %entry
+; V6M-NEXT:    mov r0, r2
+; V6M-NEXT:  .LBB1_4: @ %entry
+; V6M-NEXT:    ldr r2, [sp, #4]
+; V6M-NEXT:    mrs r12, apsr
+; V6M-NEXT:    movs r3, :upper8_15:__stack_chk_guard
+; V6M-NEXT:    lsls r3, r3, #8
+; V6M-NEXT:    adds r3, :upper0_7:__stack_chk_guard
+; V6M-NEXT:    lsls r3, r3, #8
+; V6M-NEXT:    adds r3, :lower8_15:__stack_chk_guard
+; V6M-NEXT:    lsls r3, r3, #8
+; V6M-NEXT:    adds r3, :lower0_7:__stack_chk_guard
+; V6M-NEXT:    msr apsr, r12
+; V6M-NEXT:    ldr r3, [r3]
+; V6M-NEXT:    cmp r3, r2
+; V6M-NEXT:    bne .LBB1_6
+; V6M-NEXT:  @ %bb.5: @ %entry
+; V6M-NEXT:    add sp, #8
+; V6M-NEXT:    pop {r4, r5, r7, pc}
+; V6M-NEXT:  .LBB1_6: @ %entry
+; V6M-NEXT:    bl __stack_chk_fail
+;
+; V8MBASE-LABEL: cc:
+; V8MBASE:       @ %bb.0: @ %entry
+; V8MBASE-NEXT:    push {r4, r5, r7, lr}
+; V8MBASE-NEXT:    sub sp, #8
+; V8MBASE-NEXT:    movs r0, #1
+; V8MBASE-NEXT:    lsls r3, r0, #31
+; V8MBASE-NEXT:    movw r0, :lower16:aa
+; V8MBASE-NEXT:    movt r0, :upper16:aa
+; V8MBASE-NEXT:    ldr r2, [r0]
+; V8MBASE-NEXT:    asrs r4, r2, #31
+; V8MBASE-NEXT:    eors r3, r4
+; V8MBASE-NEXT:    movw r0, :lower16:bb
+; V8MBASE-NEXT:    movt r0, :upper16:bb
+; V8MBASE-NEXT:    ldm r0!, {r1, r5}
+; V8MBASE-NEXT:    subs r0, r2, r1
+; V8MBASE-NEXT:    sbcs r3, r5
+; V8MBASE-NEXT:    subs r0, r2, r1
+; V8MBASE-NEXT:    movw r1, :lower16:__stack_chk_guard
+; V8MBASE-NEXT:    movt r1, :upper16:__stack_chk_guard
+; V8MBASE-NEXT:    ldr r1, [r1]
+; V8MBASE-NEXT:    str r1, [sp, #4]
+; V8MBASE-NEXT:    mov r1, r4
+; V8MBASE-NEXT:    sbcs r1, r5
+; V8MBASE-NEXT:    ands r3, r4
+; V8MBASE-NEXT:    ands r2, r0
+; V8MBASE-NEXT:    mov r4, r2
+; V8MBASE-NEXT:    orrs r4, r3
+; V8MBASE-NEXT:    cmp r4, #0
+; V8MBASE-NEXT:    beq .LBB1_2
+; V8MBASE-NEXT:  @ %bb.1: @ %entry
+; V8MBASE-NEXT:    mov r1, r3
+; V8MBASE-NEXT:  .LBB1_2: @ %entry
+; V8MBASE-NEXT:    beq .LBB1_4
+; V8MBASE-NEXT:  @ %bb.3: @ %entry
+; V8MBASE-NEXT:    mov r0, r2
+; V8MBASE-NEXT:  .LBB1_4: @ %entry
+; V8MBASE-NEXT:    ldr r2, [sp, #4]
+; V8MBASE-NEXT:    movw r3, :lower16:__stack_chk_guard
+; V8MBASE-NEXT:    movt r3, :upper16:__stack_chk_guard
+; V8MBASE-NEXT:    ldr r3, [r3]
+; V8MBASE-NEXT:    cmp r3, r2
+; V8MBASE-NEXT:    bne .LBB1_6
+; V8MBASE-NEXT:  @ %bb.5: @ %entry
+; V8MBASE-NEXT:    add sp, #8
+; V8MBASE-NEXT:    pop {r4, r5, r7, pc}
+; V8MBASE-NEXT:  .LBB1_6: @ %entry
+; V8MBASE-NEXT:    bl __stack_chk_fail
 
 entry:
   %0 = load i32, ptr @aa, align 4

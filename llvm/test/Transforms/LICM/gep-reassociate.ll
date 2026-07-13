@@ -39,11 +39,13 @@ exit:
   ret void
 }
 
-define void @both_inbounds_one_neg(ptr %ptr, i1 %c) {
+define void @both_inbounds_one_neg(ptr %ptr, i1 %c, i64 %neg) {
 ; CHECK-LABEL: define void @both_inbounds_one_neg
-; CHECK-SAME: (ptr [[PTR:%.*]], i1 [[C:%.*]]) {
+; CHECK-SAME: (ptr [[PTR:%.*]], i1 [[C:%.*]], i64 [[NEG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[PTR]], i64 -1
+; CHECK-NEXT:    [[IS_NEG:%.*]] = icmp slt i64 [[NEG]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_NEG]])
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[NEG]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @get.i32()
@@ -55,13 +57,15 @@ define void @both_inbounds_one_neg(ptr %ptr, i1 %c) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  %is.neg = icmp slt i64 %neg, 0
+  call void @llvm.assume(i1 %is.neg)
   br label %loop
 
 loop:
   %val = call i32 @get.i32()
   %val.ext = zext i32 %val to i64
   %ptr2 = getelementptr inbounds i8, ptr %ptr, i64 %val.ext
-  %ptr3 = getelementptr i8, ptr %ptr2, i64 -1
+  %ptr3 = getelementptr i8, ptr %ptr2, i64 %neg
   call void @use(ptr %ptr3)
   br i1 %c, label %loop, label %exit
 
@@ -69,11 +73,13 @@ exit:
   ret void
 }
 
-define void @both_inbounds_pos(ptr %ptr, i1 %c) {
+define void @both_inbounds_pos(ptr %ptr, i1 %c, i64 %nonneg) {
 ; CHECK-LABEL: define void @both_inbounds_pos
-; CHECK-SAME: (ptr [[PTR:%.*]], i1 [[C:%.*]]) {
+; CHECK-SAME: (ptr [[PTR:%.*]], i1 [[C:%.*]], i64 [[NONNEG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 1
+; CHECK-NEXT:    [[IS_NONNEG:%.*]] = icmp sge i64 [[NONNEG]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_NONNEG]])
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[NONNEG]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @get.i32()
@@ -85,13 +91,15 @@ define void @both_inbounds_pos(ptr %ptr, i1 %c) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  %is.nonneg = icmp sge i64 %nonneg, 0
+  call void @llvm.assume(i1 %is.nonneg)
   br label %loop
 
 loop:
   %val = call i32 @get.i32()
   %val.ext = zext i32 %val to i64
   %ptr2 = getelementptr inbounds i8, ptr %ptr, i64 %val.ext
-  %ptr3 = getelementptr inbounds i8, ptr %ptr2, i64 1
+  %ptr3 = getelementptr inbounds i8, ptr %ptr2, i64 %nonneg
   call void @use(ptr %ptr3)
   br i1 %c, label %loop, label %exit
 
@@ -435,6 +443,35 @@ if:
   br label %latch
 
 latch:
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Do not reassociate constant offset GEP.
+define void @constant_offset(ptr %ptr, i1 %c) {
+; CHECK-LABEL: define void @constant_offset
+; CHECK-SAME: (ptr [[PTR:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[VAL:%.*]] = call i64 @get.i64()
+; CHECK-NEXT:    [[GEP_BASE:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[VAL]]
+; CHECK-NEXT:    [[GEP_OFF:%.*]] = getelementptr i8, ptr [[GEP_BASE]], i64 1
+; CHECK-NEXT:    call void @use(ptr [[GEP_OFF]])
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %val = call i64 @get.i64()
+  %gep.base = getelementptr i8, ptr %ptr, i64 %val
+  %gep.off = getelementptr i8, ptr %gep.base, i64 1
+  call void @use(ptr %gep.off)
   br i1 %c, label %loop, label %exit
 
 exit:

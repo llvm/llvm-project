@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -mcpu=mips32 < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel -mcpu=mips32 < %s | FileCheck %s
 
 declare void @llvm.trap()
 

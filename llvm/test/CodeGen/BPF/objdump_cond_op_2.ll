@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=bpfel -filetype=obj -o - %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
+; RUN: llc -mtriple=bpfel -mcpu=v1 -filetype=obj < %s | llvm-objdump --no-print-imm-hex --no-symbolize-operands -d - | FileCheck %s
 
 ; Source Code:
 ; int test(int a, int b) {

@@ -12,6 +12,7 @@
 // struct iterator_traits<const T*>
 
 #include <iterator>
+#include <cstddef>
 #include <type_traits>
 
 #include "test_macros.h"

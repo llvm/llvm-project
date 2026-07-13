@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=arm64_32-apple-ios7.0 %s -filetype=obj -o - -disable-post-ra -frame-pointer=non-leaf | \
 ; RUN:     llvm-objdump --private-headers - | \
 ; RUN:     FileCheck %s --check-prefix=CHECK-MACHO
-; RUN: llc -mtriple=arm64_32-apple-ios7.0 %s -o - -aarch64-enable-atomic-cfg-tidy=0 -disable-post-ra -frame-pointer=non-leaf | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-OPT
+; RUN: llc -mtriple=arm64_32-apple-ios7.0 %s -o - -aarch64-enable-atomic-cfg-tidy=0 -disable-post-ra -frame-pointer=non-leaf -aarch64-br-merging-base-cost=-1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-OPT
 ; RUN: llc -mtriple=arm64_32-apple-ios7.0 %s -o - -fast-isel -aarch64-enable-atomic-cfg-tidy=0 -disable-post-ra -frame-pointer=non-leaf | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FAST
 
 ; CHECK-MACHO: Mach header
@@ -677,7 +677,7 @@ declare i64 @get_int()
 
 define i1 @test_icmp_ptr(ptr %in) {
 ; CHECK-LABEL: test_icmp_ptr
-; CHECK: ubfx x0, x0, #31, #1
+; CHECK: lsr w0, w0, #31
   %res = icmp slt ptr %in, null
   ret i1 %res
 }

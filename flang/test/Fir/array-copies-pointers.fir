@@ -202,7 +202,7 @@ func.func @derived_whose_component_may_be_aliased(%arg0: !fir.box<!fir.array<4x!
 // ALL: %[[ALLOC:.*]] = fir.allocmem !fir.array<?xf32>
 // ALL-COUNT-3: fir.do_loop
 // ALL: fir.freemem %[[ALLOC]] : !fir.heap<!fir.array<?xf32>>
-func.func @complex_real_aliasing(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, %arg1: !fir.ref<!fir.array<4x!fir.complex<4>>> {fir.target}) {
+func.func @complex_real_aliasing(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, %arg1: !fir.ref<!fir.array<4xcomplex<f32>>> {fir.target}) {
   %c4 = arith.constant 4 : index
   %0 = fir.load %arg0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   %c0 = arith.constant 0 : index
@@ -213,7 +213,7 @@ func.func @complex_real_aliasing(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x
   %4 = fir.shape %c4 : (index) -> !fir.shape<1>
   %c1 = arith.constant 1 : index
   %5 = fir.slice %c1, %c4, %c1 path %c0_i32 : (index, index, index, i32) -> !fir.slice<1>
-  %6 = fir.array_load %arg1(%4) [%5] : (!fir.ref<!fir.array<4x!fir.complex<4>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.array<4xf32>
+  %6 = fir.array_load %arg1(%4) [%5] : (!fir.ref<!fir.array<4xcomplex<f32>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.array<4xf32>
   %7 = arith.subi %c4, %c1 : index
   %8 = fir.do_loop %arg2 = %c0 to %7 step %c1 unordered iter_args(%arg3 = %3) -> (!fir.array<?xf32>) {
     %9 = fir.array_fetch %6, %arg2 : (!fir.array<4xf32>, index) -> f32

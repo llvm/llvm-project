@@ -15,6 +15,7 @@
 #include <__concepts/same_as.h>
 #include <__concepts/semiregular.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/unreachable_sentinel.h>
@@ -39,9 +40,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
@@ -51,16 +52,16 @@ concept __integer_like_with_usable_difference_type =
 
 template <class _Tp>
 struct __repeat_view_iterator_difference {
-  using type = _IotaDiffT<_Tp>;
+  using type _LIBCPP_NODEBUG = _IotaDiffT<_Tp>;
 };
 
 template <__signed_integer_like _Tp>
 struct __repeat_view_iterator_difference<_Tp> {
-  using type = _Tp;
+  using type _LIBCPP_NODEBUG = _Tp;
 };
 
 template <class _Tp>
-using __repeat_view_iterator_difference_t = typename __repeat_view_iterator_difference<_Tp>::type;
+using __repeat_view_iterator_difference_t _LIBCPP_NODEBUG = typename __repeat_view_iterator_difference<_Tp>::type;
 
 namespace views::__drop {
 struct __fn;
@@ -73,7 +74,7 @@ struct __fn;
 template <move_constructible _Tp, semiregular _Bound = unreachable_sentinel_t>
   requires(is_object_v<_Tp> && same_as<_Tp, remove_cv_t<_Tp>> &&
            (__integer_like_with_usable_difference_type<_Bound> || same_as<_Bound, unreachable_sentinel_t>))
-class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS repeat_view : public view_interface<repeat_view<_Tp, _Bound>> {
+class _LIBCPP_LLVM18_NO_UNIQUE_ADDRESS_ABI_TAG repeat_view : public view_interface<repeat_view<_Tp, _Bound>> {
   friend struct views::__take::__fn;
   friend struct views::__drop::__fn;
   class __iterator;
@@ -107,17 +108,21 @@ public:
           __bound_ >= 0, "The behavior is undefined if Bound is not unreachable_sentinel_t and bound is negative");
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() const { return __iterator(std::addressof(*__value_)); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() const {
+    return __iterator(std::addressof(*__value_));
+  }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator end() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator end() const
     requires(!same_as<_Bound, unreachable_sentinel_t>)
   {
     return __iterator(std::addressof(*__value_), __bound_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr unreachable_sentinel_t end() const noexcept { return unreachable_sentinel; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr unreachable_sentinel_t end() const noexcept {
+    return unreachable_sentinel;
+  }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires(!same_as<_Bound, unreachable_sentinel_t>)
   {
     return std::__to_unsigned_like(__bound_);
@@ -138,7 +143,7 @@ template <move_constructible _Tp, semiregular _Bound>
 class repeat_view<_Tp, _Bound>::__iterator {
   friend class repeat_view;
 
-  using _IndexT = conditional_t<same_as<_Bound, unreachable_sentinel_t>, ptrdiff_t, _Bound>;
+  using _IndexT _LIBCPP_NODEBUG = conditional_t<same_as<_Bound, unreachable_sentinel_t>, ptrdiff_t, _Bound>;
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(const _Tp* __value, _IndexT __bound_sentinel = _IndexT())
       : __value_(__value), __current_(__bound_sentinel) {}
@@ -151,7 +156,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __iterator() = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator*() const noexcept { return *__value_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator*() const noexcept { return *__value_; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
     ++__current_;
@@ -191,7 +196,9 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator[](difference_type __n) const noexcept { return *(*this + __n); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator[](difference_type __n) const noexcept {
+    return *(*this + __n);
+  }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y) {
     return __x.__current_ == __y.__current_;
@@ -201,22 +208,23 @@ public:
     return __x.__current_ <=> __y.__current_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(__iterator __i, difference_type __n) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(__iterator __i, difference_type __n) {
     __i += __n;
     return __i;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(difference_type __n, __iterator __i) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(difference_type __n, __iterator __i) {
     __i += __n;
     return __i;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(__iterator __i, difference_type __n) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(__iterator __i, difference_type __n) {
     __i -= __n;
     return __i;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type operator-(const __iterator& __x, const __iterator& __y) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
+  operator-(const __iterator& __x, const __iterator& __y) {
     return static_cast<difference_type>(__x.__current_) - static_cast<difference_type>(__y.__current_);
   }
 
@@ -257,9 +265,9 @@ inline constexpr bool __is_repeat_specialization<repeat_view<_Tp, _Bound>> = tru
 
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_POP_MACROS
 

@@ -35,32 +35,8 @@
 ; CHECK-NEXT:       x86_64-apple-ios-simulator
 ; CHECK-NEXT:                < _symB
 ; CHECK-NEXT:Inlined Reexported Frameworks/Libraries
-; CHECK-NEXT:        Alpine.framework/Alpine
-; CHECK-NEXT:                Current Version
-; CHECK-NEXT:                        <  1.2.3
-; CHECK-NEXT:                Compatibility Version
-; CHECK-NEXT:                        <  0
-; CHECK-NEXT:                Swift ABI Version
-; CHECK-NEXT:                        <  5
-; CHECK-NEXT:                Two Level Namespace
-; CHECK-NEXT:                        <  true
-; CHECK-NEXT:                Application Extension Safe
-; CHECK-NEXT:                        <  true
-; CHECK-NEXT:                Allowable Clients
-; CHECK-NEXT:                        i386-apple-macos
-; CHECK-NEXT:                               < ClientD
-; CHECK-NEXT:                Parent Umbrellas
-; CHECK-NEXT:                        i386-apple-macos
-; CHECK-NEXT:                               < System
-; CHECK-NEXT:                       x86_64-apple-ios-simulator
-; CHECK-NEXT:                               < System
-; CHECK-NEXT:                Symbols
-; CHECK-NEXT:                        i386-apple-macos
-; CHECK-NEXT:                                <  _symA
-; CHECK-NEXT:                                <  .objc_class_name_Class1
-; CHECK-NEXT:                                <  _symC - Weak-Defined
-; CHECK-NEXT:                       x86_64-apple-ios-simulator
-; CHECK-NEXT:                                <  _symB
+; CHECK-NEXT: Install Name
+; CHECK-NEXT:        < Alpine.framework/Alpine
 
 ; CHECK-NOT: error:
 ; CHECK-NOT: warning:

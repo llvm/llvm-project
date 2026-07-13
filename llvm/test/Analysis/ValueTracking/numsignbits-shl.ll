@@ -124,16 +124,16 @@ define void @numsignbits_shl_zext_all_bits_shifted_out(i8 %x) {
 define void @numsignbits_shl_zext_vector(<2 x i8> %x) {
 ; CHECK-LABEL: define void @numsignbits_shl_zext_vector(
 ; CHECK-SAME: <2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i8> [[X]], <i8 5, i8 5>
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i8> [[X]], splat (i8 5)
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[ASHR]] to <2 x i16>
-; CHECK-NEXT:    [[NSB4:%.*]] = shl <2 x i16> [[ZEXT]], <i16 10, i16 10>
-; CHECK-NEXT:    [[ADD14:%.*]] = and <2 x i16> [[NSB4]], <i16 15360, i16 15360>
+; CHECK-NEXT:    [[NSB4:%.*]] = shl <2 x i16> [[ZEXT]], splat (i16 10)
+; CHECK-NEXT:    [[ADD14:%.*]] = and <2 x i16> [[NSB4]], splat (i16 15360)
 ; CHECK-NEXT:    call void @escape2(<2 x i16> [[ADD14]])
-; CHECK-NEXT:    [[ADD13:%.*]] = and <2 x i16> [[NSB4]], <i16 7168, i16 7168>
+; CHECK-NEXT:    [[ADD13:%.*]] = and <2 x i16> [[NSB4]], splat (i16 7168)
 ; CHECK-NEXT:    call void @escape2(<2 x i16> [[ADD13]])
-; CHECK-NEXT:    [[ADD12:%.*]] = and <2 x i16> [[NSB4]], <i16 3072, i16 3072>
+; CHECK-NEXT:    [[ADD12:%.*]] = and <2 x i16> [[NSB4]], splat (i16 3072)
 ; CHECK-NEXT:    call void @escape2(<2 x i16> [[ADD12]])
-; CHECK-NEXT:    [[AND11:%.*]] = and <2 x i16> [[NSB4]], <i16 2048, i16 2048>
+; CHECK-NEXT:    [[AND11:%.*]] = and <2 x i16> [[NSB4]], splat (i16 2048)
 ; CHECK-NEXT:    [[ADD11:%.*]] = add nsw <2 x i16> [[AND11]], [[NSB4]]
 ; CHECK-NEXT:    call void @escape2(<2 x i16> [[ADD11]])
 ; CHECK-NEXT:    ret void

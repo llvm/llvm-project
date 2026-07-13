@@ -19,14 +19,14 @@ char **load_from_ac_struct(struct ac_struct *x) {
   // CHECK-NEXT:                        %[[STRUCT_AC_STRUCT_ADDR:.*]] = alloca ptr, align 8
   // CHECK-NEXT:                        store ptr %[[X]], ptr %[[STRUCT_AC_STRUCT_ADDR]], align 8
   // CHECK-NEXT:                        %[[X_RELOADED:.*]] = load ptr, ptr %[[STRUCT_AC_STRUCT_ADDR]], align 8
-  // CHECK:                             %[[A_ADDR:.*]] = getelementptr inbounds %[[STRUCT_AC_STRUCT]], ptr %[[X_RELOADED]], i32 0, i32 0
+  // CHECK:                             %[[A_ADDR:.*]] = getelementptr inbounds nuw %[[STRUCT_AC_STRUCT]], ptr %[[X_RELOADED]], i32 0, i32 0
   // CHECK:                             %[[A:.*]] = load ptr, ptr %[[A_ADDR]], align 8
   // CHECK-SANITIZE-NEXT:               %[[PTRINT:.*]] = ptrtoint ptr %[[A]] to i64
   // CHECK-SANITIZE-NEXT:               %[[MASKEDPTR:.*]] = and i64 %[[PTRINT]], 4294967295
   // CHECK-SANITIZE-NEXT:               %[[MASKCOND:.*]] = icmp eq i64 %[[MASKEDPTR]], 0
-  // CHECK-SANITIZE-NEXT:               %[[PTRINT_DUP:.*]] = ptrtoint ptr %[[A]] to i64, !nosanitize
   // CHECK-SANITIZE-NEXT:               br i1 %[[MASKCOND]], label %[[CONT:.*]], label %[[HANDLER_ALIGNMENT_ASSUMPTION:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE:                  [[HANDLER_ALIGNMENT_ASSUMPTION]]:
+  // CHECK-SANITIZE-ANYRECOVER-NEXT:    %[[PTRINT_DUP:.*]] = ptrtoint ptr %[[A]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_alignment_assumption_abort(ptr @[[LINE_100_ALIGNMENT_ASSUMPTION]], i64 %[[PTRINT_DUP]], i64 4294967296, i64 0){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT:       call void @__ubsan_handle_alignment_assumption(ptr @[[LINE_100_ALIGNMENT_ASSUMPTION]], i64 %[[PTRINT_DUP]], i64 4294967296, i64 0){{.*}}, !nosanitize
   // CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.ubsantrap(i8 23){{.*}}, !nosanitize

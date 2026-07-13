@@ -218,27 +218,6 @@ AllocatorCache *GetAllocatorCache(MemprofThreadLocalMallocStorage *ms) {
   return &ms->allocator_cache;
 }
 
-// Accumulates the access count from the shadow for the given pointer and size.
-u64 GetShadowCount(uptr p, u32 size) {
-  u64 *shadow = (u64 *)MEM_TO_SHADOW(p);
-  u64 *shadow_end = (u64 *)MEM_TO_SHADOW(p + size);
-  u64 count = 0;
-  for (; shadow <= shadow_end; shadow++)
-    count += *shadow;
-  return count;
-}
-
-// Accumulates the access count from the shadow for the given pointer and size.
-// See memprof_mapping.h for an overview on histogram counters.
-u64 GetShadowCountHistogram(uptr p, u32 size) {
-  u8 *shadow = (u8 *)HISTOGRAM_MEM_TO_SHADOW(p);
-  u8 *shadow_end = (u8 *)HISTOGRAM_MEM_TO_SHADOW(p + size);
-  u64 count = 0;
-  for (; shadow <= shadow_end; shadow++)
-    count += *shadow;
-  return count;
-}
-
 // Clears the shadow counters (when memory is allocated).
 void ClearShadow(uptr addr, uptr size) {
   CHECK(AddrIsAlignedByGranularity(addr));
@@ -291,17 +270,17 @@ struct Allocator {
 
   atomic_uint8_t destructing;
   atomic_uint8_t constructed;
-  bool print_text;
 
   // ------------------- Initialization ------------------------
-  explicit Allocator(LinkerInitialized) : print_text(flags()->print_text) {
+  explicit Allocator(LinkerInitialized) {
     atomic_store_relaxed(&destructing, 0);
     atomic_store_relaxed(&constructed, 1);
   }
 
   ~Allocator() {
     atomic_store_relaxed(&destructing, 1);
-    FinishAndWrite();
+    if (flags()->dump_at_exit)
+      FinishAndWrite();
   }
 
   static void PrintCallback(const uptr Key, LockedMemInfoBlock *const &Value,
@@ -349,13 +328,13 @@ struct Allocator {
   }
 
   void FinishAndWrite() {
-    if (print_text && common_flags()->print_module_map)
+    if (flags()->print_text && common_flags()->print_module_map)
       DumpProcessMap();
 
     allocator.ForceLock();
 
     InsertLiveBlocks();
-    if (print_text) {
+    if (flags()->print_text) {
       if (!flags()->print_terse)
         Printf("Recorded MIBs (incl. live on exit):\n");
       MIBMap.ForEach(PrintCallback,

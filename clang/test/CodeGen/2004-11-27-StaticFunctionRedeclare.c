@@ -14,4 +14,4 @@ void bar(void) {
   int func(void);
   foo(func);
 }
-static int func(char** A, char ** B) {}
+static int func(char** A, char ** B) { return 0; }

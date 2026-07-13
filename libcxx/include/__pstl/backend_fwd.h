@@ -39,6 +39,8 @@ _LIBCPP_PUSH_MACROS
 // the user.
 //
 
+#if _LIBCPP_STD_VER >= 17
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl {
 
@@ -50,18 +52,20 @@ struct __libdispatch_backend_tag;
 struct __serial_backend_tag;
 struct __std_thread_backend_tag;
 
-#if defined(_LIBCPP_PSTL_BACKEND_SERIAL)
-using __current_configuration = __backend_configuration<__serial_backend_tag, __default_backend_tag>;
-#elif defined(_LIBCPP_PSTL_BACKEND_STD_THREAD)
-using __current_configuration = __backend_configuration<__std_thread_backend_tag, __default_backend_tag>;
-#elif defined(_LIBCPP_PSTL_BACKEND_LIBDISPATCH)
-using __current_configuration = __backend_configuration<__libdispatch_backend_tag, __default_backend_tag>;
-#else
+#  if defined(_LIBCPP_PSTL_BACKEND_SERIAL)
+using __current_configuration _LIBCPP_NODEBUG = __backend_configuration<__serial_backend_tag, __default_backend_tag>;
+#  elif defined(_LIBCPP_PSTL_BACKEND_STD_THREAD)
+using __current_configuration _LIBCPP_NODEBUG =
+    __backend_configuration<__std_thread_backend_tag, __default_backend_tag>;
+#  elif defined(_LIBCPP_PSTL_BACKEND_LIBDISPATCH)
+using __current_configuration _LIBCPP_NODEBUG =
+    __backend_configuration<__libdispatch_backend_tag, __default_backend_tag>;
+#  else
 
 // ...New vendors can add parallel backends here...
 
-#  error "Invalid PSTL backend configuration"
-#endif
+#    error "Invalid PSTL backend configuration"
+#  endif
 
 template <class _Backend, class _ExecutionPolicy>
 struct __find_if;
@@ -104,6 +108,13 @@ struct __is_partitioned;
 // template <class _Policy, class _ForwardIterator, class _Predicate>
 // optional<bool>
 // operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __find_first_of;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Predicate>
+// optional<_ForwardIterator1>
+// operator()(_Policy&&, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
+//                       _ForwardIterator2 __first2, _ForwardIterator2 __last2, _Predicate __pred) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
 struct __for_each;
@@ -154,6 +165,13 @@ struct __generate_n;
 // template <class _Policy, class _ForwardIterator, class _Size, class _Generator>
 // optional<__empty>
 // operator()(_Policy&&, _ForwardIterator __first, _Size __n, _Generator __gen) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __reverse_copy;
+// template <class _Policy, class _BidirectionalIterator, class _ForwardIterator>
+// optional<_ForwardIterator>
+// operator()(_Policy&&, _BidirectionalIterator __first, _BidirectionalIterator __last,
+//                       _ForwardIterator __result) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
 struct __merge;
@@ -293,8 +311,16 @@ struct __reduce;
 // operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last,
 //                       _Tp __init, _BinaryOperation __op) const noexcept;
 
+template <class _Backend, class _ExecutionPolicy>
+struct __is_sorted;
+// template <class _Policy, class _ForwardIterator, class _Comp>
+// optional<bool>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept;
+
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
 

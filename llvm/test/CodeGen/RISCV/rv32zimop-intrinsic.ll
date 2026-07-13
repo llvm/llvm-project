@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+zimop -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32ZIMOP
 
-declare i32 @llvm.riscv.mopr.i32(i32 %a, i32 %b)
-
 define i32 @mopr0_32(i32 %a) nounwind {
 ; RV32ZIMOP-LABEL: mopr0_32:
 ; RV32ZIMOP:       # %bb.0:
@@ -21,8 +19,6 @@ define i32 @mopr31_32(i32 %a) nounwind {
   %tmp = call i32 @llvm.riscv.mopr.i32(i32 %a, i32 31)
   ret i32 %tmp
 }
-
-declare i32 @llvm.riscv.moprr.i32(i32 %a, i32 %b, i32 %c)
 
 define i32 @moprr0_32(i32 %a, i32 %b) nounwind {
 ; RV32ZIMOP-LABEL: moprr0_32:

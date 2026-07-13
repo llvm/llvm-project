@@ -47,7 +47,7 @@ define <4 x i16> @range_from_and_nuw_vec(<4 x i32> %a) {
 ; CHECK-LABEL: define <4 x i16> @range_from_and_nuw_vec(
 ; CHECK-SAME: <4 x i32> [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[AND1:%.*]] = and <4 x i32> [[A]], <i32 65535, i32 65535, i32 65535, i32 65535>
+; CHECK-NEXT:    [[AND1:%.*]] = and <4 x i32> [[A]], splat (i32 65535)
 ; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc nuw <4 x i32> [[AND1]] to <4 x i16>
 ; CHECK-NEXT:    ret <4 x i16> [[TRUNC1]]
 ;

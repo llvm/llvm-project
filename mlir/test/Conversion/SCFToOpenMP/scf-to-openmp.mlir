@@ -6,7 +6,7 @@ func.func @parallel(%arg0: index, %arg1: index, %arg2: index,
   // CHECK: %[[FOUR:.+]] = llvm.mlir.constant(4 : i32) : i32
   // CHECK: omp.parallel num_threads(%[[FOUR]] : i32) {
   // CHECK: omp.wsloop {
-  // CHECK: omp.loop_nest (%[[LVAR1:.*]], %[[LVAR2:.*]]) : index = (%arg0, %arg1) to (%arg2, %arg3) step (%arg4, %arg5) {
+  // CHECK: omp.loop_nest (%[[LVAR1:.*]], %[[LVAR2:.*]]) : index = (%arg0, %arg1) to (%arg2, %arg3) step (%arg4, %arg5) collapse(2) {
   // CHECK: memref.alloca_scope
   scf.parallel (%i, %j) = (%arg0, %arg1) to (%arg2, %arg3) step (%arg4, %arg5) {
     // CHECK: "test.payload"(%[[LVAR1]], %[[LVAR2]]) : (index, index) -> ()
@@ -14,7 +14,6 @@ func.func @parallel(%arg0: index, %arg1: index, %arg2: index,
     // CHECK:   omp.yield
     // CHECK: }
   }
-  // CHECK:     omp.terminator
   // CHECK:   }
   // CHECK:   omp.terminator
   // CHECK: }
@@ -41,10 +40,8 @@ func.func @nested_loops(%arg0: index, %arg1: index, %arg2: index,
     }
     // CHECK:     omp.yield
     // CHECK:   }
-    // CHECK:   omp.terminator
     // CHECK: }
   }
-  // CHECK:     omp.terminator
   // CHECK:   }
   // CHECK:   omp.terminator
   // CHECK: }
@@ -65,7 +62,6 @@ func.func @adjacent_loops(%arg0: index, %arg1: index, %arg2: index,
     // CHECK:   omp.yield
     // CHECK: }
   }
-  // CHECK:     omp.terminator
   // CHECK:   }
   // CHECK:   omp.terminator
   // CHECK: }
@@ -81,7 +77,6 @@ func.func @adjacent_loops(%arg0: index, %arg1: index, %arg2: index,
     // CHECK:   omp.yield
     // CHECK: }
   }
-  // CHECK:     omp.terminator
   // CHECK:   }
   // CHECK:   omp.terminator
   // CHECK: }

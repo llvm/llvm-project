@@ -18,12 +18,10 @@
 #include "clang/Analysis/AnyCall.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "llvm/ADT/StringExtras.h"
 
 using namespace clang;
 using namespace ento;
@@ -149,7 +147,8 @@ void NonNullParamChecker::checkPreCall(const CallEvent &Call,
 
       QualType T = ArgE->getType();
       const RecordType *UT = T->getAsUnionType();
-      if (!UT || !UT->getDecl()->hasAttr<TransparentUnionAttr>())
+      if (!UT ||
+          !UT->getDecl()->getMostRecentDecl()->hasAttr<TransparentUnionAttr>())
         continue;
 
       auto CSV = DV->getAs<nonloc::CompoundVal>();
@@ -239,9 +238,9 @@ void NonNullParamChecker::checkBeginFunction(CheckerContext &Context) const {
   if (!Context.inTopFrame())
     return;
 
-  const LocationContext *LocContext = Context.getLocationContext();
+  const StackFrame *SF = Context.getStackFrame();
 
-  const Decl *FD = LocContext->getDecl();
+  const Decl *FD = SF->getDecl();
   // AnyCall helps us here to avoid checking for FunctionDecl and ObjCMethodDecl
   // separately and aggregates interfaces of these classes.
   auto AbstractCall = AnyCall::forDecl(FD);
@@ -262,7 +261,7 @@ void NonNullParamChecker::checkBeginFunction(CheckerContext &Context) const {
     if (!Parameter->getType()->isPointerType())
       continue;
 
-    Loc ParameterLoc = State->getLValue(Parameter, LocContext);
+    Loc ParameterLoc = State->getLValue(Parameter, SF);
     // We never consider top-level function parameters undefined.
     auto StoredVal =
         State->getSVal(ParameterLoc).castAs<DefinedOrUnknownSVal>();
@@ -280,14 +279,11 @@ std::unique_ptr<PathSensitiveBugReport>
 NonNullParamChecker::genReportNullAttrNonNull(const ExplodedNode *ErrorNode,
                                               const Expr *ArgE,
                                               unsigned IdxOfArg) const {
-  llvm::SmallString<256> SBuf;
-  llvm::raw_svector_ostream OS(SBuf);
-  OS << "Null pointer passed to "
-     << IdxOfArg << llvm::getOrdinalSuffix(IdxOfArg)
-     << " parameter expecting 'nonnull'";
-
-  auto R =
-      std::make_unique<PathSensitiveBugReport>(BTAttrNonNull, SBuf, ErrorNode);
+  auto R = std::make_unique<PathSensitiveBugReport>(
+      BTAttrNonNull,
+      "Null pointer passed to " + Twine(IdxOfArg) +
+          llvm::getOrdinalSuffix(IdxOfArg) + " parameter expecting 'nonnull'",
+      ErrorNode);
   if (ArgE)
     bugreporter::trackExpressionValue(ErrorNode, ArgE, *R);
 

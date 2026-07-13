@@ -7,20 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/rintf16.h"
-#include "src/__support/FPUtil/NearestIntegerOperations.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/architectures.h"
+#include "src/__support/math/rintf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float16, rintf16, (float16 x)) {
-#if defined(__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC) &&                       \
-    defined(LIBC_TARGET_ARCH_IS_AARCH64)
-  return static_cast<float16>(__builtin_rintf(x));
-#else
-  return fputil::round_using_current_rounding_mode(x);
-#endif
-}
+LLVM_LIBC_FUNCTION(float16, rintf16, (float16 x)) { return math::rintf16(x); }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -51,7 +51,23 @@ add_libc_unittest(
     libc.src.signal.sigaddset
     libc.src.signal.sigemptyset
     libc.src.signal.sigprocmask
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  pthread_sigmask_test
+  SUITE
+    libc_signal_unittests
+  SRCS
+    pthread_sigmask_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.signal.pthread_sigmask
+    libc.src.signal.raise
+    libc.src.signal.sigaddset
+    libc.src.signal.sigemptyset
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_unittest(
@@ -61,8 +77,8 @@ add_libc_unittest(
   SRCS
     sigaddset_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.signal
+    libc.src.errno.errno
     libc.src.signal.sigaddset
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -74,10 +90,10 @@ add_libc_unittest(
   SRCS
     signal_test.cpp
   DEPENDS
-    libc.include.signal
     libc.src.errno.errno
     libc.src.signal.raise
     libc.src.signal.signal
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -88,8 +104,8 @@ add_libc_unittest(
   SRCS
     sigfillset_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.signal
+    libc.src.errno.errno
     libc.src.signal.raise
     libc.src.signal.sigfillset
     libc.src.signal.sigprocmask
@@ -103,8 +119,8 @@ add_libc_unittest(
   SRCS
     sigdelset_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.signal
+    libc.src.errno.errno
     libc.src.signal.raise
     libc.src.signal.sigdelset
     libc.src.signal.sigfillset
@@ -120,9 +136,11 @@ add_libc_unittest(
     sigaltstack_test.cpp
   DEPENDS
     libc.hdr.signal_macros
+    libc.hdr.stdint_proxy
     libc.src.errno.errno
     libc.src.signal.raise
     libc.src.signal.sigaltstack
     libc.src.signal.sigaction
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

@@ -15,7 +15,7 @@ breakpoint set -n bar
 process launch
 # CHECK: stop reason = breakpoint 1.1
 
-thread backtrace
+thread backtrace -u
 # CHECK: frame #0: {{.*}}`bar
 # CHECK: frame #1: {{.*}}`tramp
 # CHECK: frame #2: {{.*}}`main

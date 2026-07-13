@@ -16,7 +16,7 @@ entry:
 @global_ifunc = ifunc i32 (i32), ptr @the_resolver
 ; ELF:             .globl global_ifunc
 ; ELF-NEXT:        .type global_ifunc,@gnu_indirect_function
-; ELF-NEXT:        .set global_ifunc, the_resolver
+; ELF-NEXT:        global_ifunc = the_resolver
 
 ; MACHO:           .section __DATA,__data
 ; MACHO-NEXT:      .p2align 3, 0x0

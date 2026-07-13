@@ -1,0 +1,42 @@
+# RUN: yaml2obj %s | llvm-objdump -d - | FileCheck %s
+
+#      CHECK: 00000310 <printf@plt>:
+# CHECK-NEXT:      310:       36 40 00 00     00004036 {      immext(#0xd80)
+# CHECK-NEXT:      314:       0e de 49 6a     6a49de0e        r14 = add(pc,##0xdbc) }
+# CHECK-NEXT:      318:       1c c0 8e 91     918ec01c {      r28 = memw(r14+#0x0) }
+# CHECK-NEXT:      31c:       00 c0 9c 52     529cc000 {      jumpr r28 }
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_HEXAGON
+Sections:
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC ]
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x10CC
+        Symbol:          printf
+        Type:            R_HEX_JMP_SLOT
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x2B0
+    Content:         384000001CC0496A0E429CE24F409C913CC09C910E420E8C00C09C520000000000000000000000000000000000000000374000000ED0496A1CC08E9100C09C52374000000ECA496A1CC08E9100C09C52374000000EC4496A1CC08E9100C09C52364000000EDE496A1CC08E9100C09C52
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x320
+    Content:         0240096AC97FFF0F01C6007802C221F3FF7FFF0F80C7007800C002F300C0809100C0007500C05F5300C0096ADAFFFF5901C09DA082FFFEBF00C0423C0140000000D4496AD6FFFF5B00C000781EC01E96
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x10B0
+    Content:         00000000000000000000000000000000B0020000B0020000B0020000B0020000
+Symbols:
+  - Name:            printf
+    Binding:         STB_GLOBAL
+...

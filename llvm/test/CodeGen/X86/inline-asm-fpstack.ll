@@ -29,12 +29,10 @@ define double @test2() nounwind {
 define void @test3(x86_fp80 %X) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    frob
 ; CHECK-NEXT:    ## InlineAsm End
-; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
   call void asm sideeffect "frob ", "{st(0)},~{st},~{dirflag},~{fpsr},~{flags}"( x86_fp80 %X)
   ret void
@@ -248,14 +246,12 @@ entry:
 define void @fist1(x86_fp80 %x, ptr %p) nounwind ssp {
 ; CHECK-LABEL: fist1:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    fistl (%eax)
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 entry:
   tail call void asm sideeffect "fistl $1", "{st},*m,~{memory},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %x, ptr elementtype(i32) %p) nounwind
@@ -273,13 +269,11 @@ entry:
 define x86_fp80 @fist2(x86_fp80 %x, ptr %p) nounwind ssp {
 ; CHECK-LABEL: fist2:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    fistl (%eax)
 ; CHECK-NEXT:    ## InlineAsm End
-; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 entry:
   %0 = tail call x86_fp80 asm "fistl $2", "=&{st},0,*m,~{memory},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %x, ptr elementtype(i32) %p) nounwind
@@ -294,7 +288,6 @@ entry:
 define void @fucomp1(x86_fp80 %x, x86_fp80 %y) nounwind ssp {
 ; CHECK-LABEL: fucomp1:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fxch %st(1)
@@ -302,7 +295,6 @@ define void @fucomp1(x86_fp80 %x, x86_fp80 %y) nounwind ssp {
 ; CHECK-NEXT:    fucomp %st(1)
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 entry:
   tail call void asm sideeffect "fucomp $1", "{st},f,~{st},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %x, x86_fp80 %y) nounwind
@@ -322,7 +314,6 @@ entry:
 define void @fucomp2(x86_fp80 %x, x86_fp80 %y) nounwind ssp {
 ; CHECK-LABEL: fucomp2:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fxch %st(1)
@@ -330,7 +321,6 @@ define void @fucomp2(x86_fp80 %x, x86_fp80 %y) nounwind ssp {
 ; CHECK-NEXT:    fucomp %st(1)
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 entry:
   tail call void asm sideeffect "fucomp $1", "{st},{st(1)},~{st},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %x, x86_fp80 %y) nounwind
@@ -340,14 +330,12 @@ entry:
 define void @fucomp3(x86_fp80 %x, x86_fp80 %y) nounwind ssp {
 ; CHECK-LABEL: fucomp3:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    fucompp %st(1)
 ; CHECK-NEXT:    ## InlineAsm End
-; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 entry:
   tail call void asm sideeffect "fucompp $1", "{st},{st(1)},~{st},~{st(1)},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %x, x86_fp80 %y) nounwind

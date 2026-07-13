@@ -8,9 +8,11 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-
+from lldbsuite.test import lldbplatformutil
 
 class NamespaceLookupTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -98,6 +100,7 @@ class NamespaceLookupTestCase(TestBase):
         self.expect_expr("::func()", result_type="int", result_value="1")
 
     @skipIfWindows  # This is flakey on Windows: llvm.org/pr38373
+    @skipIfWasm  # no expression evaluation
     def test_scope_lookup_with_run_command(self):
         """Test scope lookup of functions in lldb."""
         self.build()
@@ -167,7 +170,10 @@ class NamespaceLookupTestCase(TestBase):
         self.runToBkpt("continue")
         # FIXME: In DWARF 5 with dsyms, the ordering of functions is slightly
         # different, which also hits the same issues mentioned previously.
-        if configuration.dwarf_version <= 4 or self.getDebugInfo() == "dwarf":
+        if (
+            int(lldbplatformutil.getDwarfVersion()) <= 4
+            or self.getDebugInfo() == "dwarf"
+        ):
             self.expect_expr("func()", result_type="int", result_value="2")
 
         # Continue to BP_ns_scope at ns scope
@@ -253,6 +259,7 @@ class NamespaceLookupTestCase(TestBase):
     # NOTE: this test may fail on older systems that don't emit import
     # entries in DWARF - may need to add checks for compiler versions here.
     @skipIf(compiler="gcc", oslist=["linux"], debug_info=["dwo"])  # Skip to avoid crash
+    @skipIfWasm  # no expression evaluation
     def test_scope_after_using_directive_lookup_with_run_command(self):
         """Test scope lookup after using directive in lldb."""
         self.build()
@@ -316,6 +323,7 @@ class NamespaceLookupTestCase(TestBase):
         # the same type.
         self.expect("expr -- func()", startstr="error")
 
+    @skipIfWasm  # no expression evaluation
     def test_scope_lookup_shadowed_by_using_with_run_command(self):
         """Test scope lookup shadowed by using in lldb."""
         self.build()

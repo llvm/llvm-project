@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -std=c++2c -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++2c -verify %s
 
 struct NotAPack;
 template <typename T, auto V, template<typename> typename Tp>
 void not_pack() {
     int i = 0;
-    i...[0]; // expected-error {{i does not refer to the name of a parameter pack}}
-    V...[0]; // expected-error {{V does not refer to the name of a parameter pack}}
+    i...[0]; // expected-error {{'i' does not refer to the name of a parameter pack}}
+    V...[0]; // expected-error {{'V' does not refer to the name of a parameter pack}}
     NotAPack...[0] a; // expected-error{{'NotAPack' does not refer to the name of a parameter pack}}
     T...[0] b;   // expected-error{{'T' does not refer to the name of a parameter pack}}
     Tp...[0] c; // expected-error{{'Tp' does not refer to the name of a parameter pack}}
@@ -42,16 +42,18 @@ int test_types() {
 
 void test() {
     params<0>();   // expected-note{{here}} \
-                   // expected-error@#error-param-size {{invalid index 0 for pack p of size 0}}
+                   // expected-error@#error-param-size {{invalid index 0 for pack 'p' of size 0}}
     params<1>(0);  // expected-note{{here}} \
-                   // expected-error@#error-param-size {{invalid index 1 for pack p of size 1}}
+                   // expected-error@#error-param-size {{invalid index 1 for pack 'p' of size 1}}
     params<-1>(0); // expected-note{{here}} \
-                   // expected-error@#error-param-size {{invalid index -1 for pack p of size 1}}
+                   // expected-error@#error-param-size {{evaluates to -1, which cannot be narrowed to type '__size_t' (aka 'unsigned long')}}
 
     test_types<-1>(); //expected-note {{in instantiation}} \
-                      // expected-error@#error-type-size {{invalid index -1 for pack 'T' of size 0}}
-    test_types<-1, int>(); //expected-note {{in instantiation}} \
-                      // expected-error@#error-type-size {{invalid index -1 for pack 'T' of size 1}}
+                      // expected-error@#error-type-size {{evaluates to -1, which cannot be narrowed to type '__size_t' (aka 'unsigned long')}}
+
+    test_types<-1, int>(); // expected-note {{in instantiation}} \
+                           // expected-error@#error-type-size {{evaluates to -1, which cannot be narrowed to type '__size_t' (aka 'unsigned long')}}
+
     test_types<0>(); //expected-note {{in instantiation}} \
                     // expected-error@#error-type-size {{invalid index 0 for pack 'T' of size 0}}
     test_types<1, int>(); //expected-note {{in instantiation}}  \
@@ -59,7 +61,7 @@ void test() {
 }
 
 void invalid_indexes(auto... p) {
-    p...[non_constant_index()]; // expected-error {{array size is not a constant expression}}\
+    p...[non_constant_index()]; // expected-error {{pack index is not a constant expression}}\
                                 // expected-note {{cannot be used in a constant expression}}
 
     const char* no_index = "";
@@ -68,9 +70,10 @@ void invalid_indexes(auto... p) {
 
 void invalid_index_types() {
     []<typename... T> {
-        T...[non_constant_index()] a;  // expected-error {{array size is not a constant expression}}\
-                                       // expected-note {{cannot be used in a constant expression}}
-    }(); //expected-note {{in instantiation}}
+        T...[non_constant_index()] a;  // expected-error {{pack index is not a constant expression}}\
+                                       // expected-note {{cannot be used in a constant expression}} \
+                                       // expected-error {{use of undeclared identifier 'a'}}
+    }();
 }
 
 }
@@ -190,7 +193,7 @@ void h() {
 
   static_assert(__is_same(decltype(g<foo{}, bar{}, baz{}>(sequence<0, 2, 1>())), W<foo{}, baz{}, bar{}>));
   g<foo{}>(sequence<4>());
-  // expected-error@#nttp-use {{invalid index 4 for pack args of size 1}}
+  // expected-error@#nttp-use {{invalid index 4 for pack 'args' of size 1}}
   // expected-note-re@-2 {{function template specialization '{{.*}}' requested here}}
 }
 }
@@ -214,7 +217,7 @@ void f( ) {
   test(1);
   test2<1>();
   test2();
-  // expected-error@#test2-R {{invalid index 0 for pack args of size 0}}
+  // expected-error@#test2-R {{invalid index 0 for pack 'args' of size 0}}
   // expected-note@#test2-call {{requested here}}
   // expected-note@-3 {{requested here}}
 }
@@ -231,3 +234,147 @@ struct type_info {
 namespace GH93650 {
 auto func(auto... inputArgs) { return typeid(inputArgs...[0]); }
 } // namespace GH93650
+
+
+namespace GH105900 {
+
+template <typename... opts>
+struct types  {
+    template <unsigned idx>
+    static constexpr __SIZE_TYPE__ get_index() { return idx; }
+
+    template <unsigned s>
+    static auto x() -> opts...[get_index<s>()] {}
+};
+
+template <auto... opts>
+struct vars  {
+    template <unsigned idx>
+    static constexpr __SIZE_TYPE__ get_index() { return idx; }
+
+    template <unsigned s>
+    static auto x() -> decltype(opts...[get_index<s>()]) {return 0;}
+};
+
+void f() {
+    types<void>::x<0>();
+    vars<0>::x<0>();
+}
+
+} // namespace GH105900
+
+namespace GH105903 {
+
+template <typename... opts> struct temp {
+  template <unsigned s> static auto x() -> opts... [s] {} // expected-note {{invalid index 0 for pack 'opts' of size 0}}
+};
+
+void f() {
+  temp<>::x<0>(); // expected-error {{no matching}}
+}
+
+} // namespace GH105903
+
+namespace GH116105 {
+
+template <unsigned long Np, class... Ts> using pack_type = Ts...[Np];
+
+template <unsigned long Np, auto... Ts> using pack_expr = decltype(Ts...[Np]);
+
+template <class...> struct types;
+
+template <class, long... Is> struct indices;
+
+template <class> struct repack;
+
+template <long... Idx> struct repack<indices<long, Idx...>> {
+  template <class... Ts>
+  using pack_type_alias = types<pack_type<Idx, Ts...>...>;
+
+  template <class... Ts>
+  using pack_expr_alias = types<pack_expr<Idx, Ts{}...>...>;
+};
+
+template <class... Args> struct mdispatch_ {
+  using Idx = __make_integer_seq<indices, long, sizeof...(Args)>;
+
+  static_assert(__is_same(
+      typename repack<Idx>::template pack_type_alias<Args...>, types<Args...>));
+
+  static_assert(__is_same(
+      typename repack<Idx>::template pack_expr_alias<Args...>, types<Args...>));
+};
+
+mdispatch_<int, int> d;
+
+} // namespace GH116105
+
+namespace GH121242 {
+    // Non-dependent type pack access
+    template <int...x>
+    int y = x...[0];
+
+    struct X {};
+
+    template <X...x>
+    X z = x...[0];
+
+    void foo() {
+        (void)y<0>;
+        (void)z<X{}>;
+    }
+} // namespace GH121242
+
+namespace GH123033 {
+  template <class... Types>
+  requires __is_same_as(Types...[0], int)
+  void print(double d);
+
+  template <class... Types>
+  requires  __is_same_as(Types...[0], int)
+  void print(double d);
+
+  template <class... Types>
+  Types...[0] convert(double d);
+
+  template <class... Types>
+  Types...[0] convert(double d) {
+      return static_cast<Types...[0]>(d);
+  }
+
+  void f() {
+      print<int, int>(12.34);
+      convert<int, int>(12.34);
+  }
+}
+
+namespace PackIndexExprEquivalency1 {
+  template <int... Ts, int... Us>
+    requires (Ts...[0] != 0)
+    void f() {}
+
+  template <int... Ts, int... Us>
+    requires (Us...[0] != 0)
+    void f() {}
+} // namespace PackIndexExprEquivalency1
+
+
+namespace GH205650 {
+template <typename...T>
+void foo(auto...x){
+    (void)x...[(__int128)18446744073709551615U+1];
+    // expected-warning@-1 3{{implicit conversion from '__int128' to '__size_t'}}
+    // expected-error@-2 2{{evaluates to 18446744073709551616, which cannot be narrowed to type '__size_t' (aka 'unsigned long')}}
+
+    (void)x...[4294967296];
+    //expected-error@-1 {{invalid index 4294967296 for pack 'x' of size 1}}
+
+    using T1 = T...[(__int128)18446744073709551615U+1];
+    // expected-warning@-1 3{{implicit conversion from '__int128' to '__size_t'}}
+    // expected-error@-2   2{{evaluates to 18446744073709551616, which cannot be narrowed to type '__size_t' (aka 'unsigned long')}}
+}
+int test(){
+    (void)foo<int>(0); // expected-note {{in instantiation of function template specialization 'GH205650::foo<int, int>' requested here}}
+
+}
+}

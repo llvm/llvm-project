@@ -69,7 +69,7 @@ Interpreter::~Interpreter() {
 
 void Interpreter::runAtExitHandlers () {
   while (!AtExitHandlers.empty()) {
-    callFunction(AtExitHandlers.back(), std::nullopt);
+    callFunction(AtExitHandlers.back(), {});
     AtExitHandlers.pop_back();
     run();
   }

@@ -334,7 +334,6 @@ static __inline fp_t __divXf3__(fp_t a, fp_t b) {
   // Suppose 1/b - P * 2^-W < x < 1/b + P * 2^-W
   x_UQ0 -= RECIPROCAL_PRECISION;
   // Now 1/b - (2*P) * 2^-W < x < 1/b
-  // FIXME Is x_UQ0 still >= 0.5?
 
   rep_t quotient_UQ1, dummy;
   wideMultiply(x_UQ0, aSignificand << 1, &quotient_UQ1, &dummy);
@@ -344,6 +343,12 @@ static __inline fp_t __divXf3__(fp_t a, fp_t b) {
   // adjust it to be in [1.0, 2.0) as UQ1.SB.
   rep_t residualLo;
   if (quotient_UQ1 < (implicitBit << 1)) {
+    if (quotient_UQ1 < implicitBit) {
+      // In a rare case where quotient is < 0.5, we can adjust the quotient and
+      // the written exponent, and then treat them the same way as in [0.5, 1.0)
+      quotient_UQ1 <<= 1;
+      writtenExponent -= 1;
+    }
     // Highest bit is 0, so just reinterpret quotient_UQ1 as UQ1.SB,
     // effectively doubling its value as well as its error estimation.
     residualLo = (aSignificand << (significandBits + 1)) - quotient_UQ1 * bSignificand;

@@ -12,8 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ExpandReductions.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -26,13 +28,15 @@ using namespace llvm;
 
 namespace {
 
-bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
+bool expandReductions(Function &F, const TargetTransformInfo *TTI,
+                      DominatorTree *DT, LoopInfo *LI) {
   bool Changed = false;
   SmallVector<IntrinsicInst *, 4> Worklist;
   for (auto &I : instructions(F)) {
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
       switch (II->getIntrinsicID()) {
-      default: break;
+      default:
+        break;
       case Intrinsic::vector_reduce_fadd:
       case Intrinsic::vector_reduce_fmul:
       case Intrinsic::vector_reduce_add:
@@ -46,17 +50,19 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
       case Intrinsic::vector_reduce_umin:
       case Intrinsic::vector_reduce_fmax:
       case Intrinsic::vector_reduce_fmin:
+      case Intrinsic::vector_reduce_fmaximum:
+      case Intrinsic::vector_reduce_fminimum: {
+        // Only expand if the target doesn't support this operation natively.
         if (TTI->shouldExpandReduction(II))
           Worklist.push_back(II);
-
         break;
+      }
       }
     }
   }
 
   for (auto *II : Worklist) {
-    FastMathFlags FMF =
-        isa<FPMathOperator>(II) ? II->getFastMathFlags() : FastMathFlags{};
+    FastMathFlags FMF = II->getFastMathFlagsOrNone();
     Intrinsic::ID ID = II->getIntrinsicID();
     RecurKind RK = getMinMaxReductionRecurKind(ID);
     TargetTransformInfo::ReductionShuffle RS =
@@ -67,7 +73,8 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
     IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
     Builder.setFastMathFlags(FMF);
     switch (ID) {
-    default: llvm_unreachable("Unexpected intrinsic!");
+    default:
+      llvm_unreachable("Unexpected intrinsic!");
     case Intrinsic::vector_reduce_fadd:
     case Intrinsic::vector_reduce_fmul: {
       // FMFs must be attached to the call, otherwise it's an ordered reduction
@@ -75,6 +82,10 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
       Value *Acc = II->getArgOperand(0);
       Value *Vec = II->getArgOperand(1);
       unsigned RdxOpcode = getArithmeticReductionInstruction(ID);
+      if (isa<ScalableVectorType>(Vec->getType())) {
+        Rdx = expandReductionViaLoop(Builder, Vec, RdxOpcode, Acc, DT, LI);
+        break;
+      }
       if (!FMF.allowReassoc())
         Rdx = getOrderedReduction(Builder, Acc, Vec, RdxOpcode, RK);
       else {
@@ -125,10 +136,16 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
     case Intrinsic::vector_reduce_umax:
     case Intrinsic::vector_reduce_umin: {
       Value *Vec = II->getArgOperand(0);
+      unsigned RdxOpcode = getArithmeticReductionInstruction(ID);
+      if (isa<ScalableVectorType>(Vec->getType())) {
+        Type *EltTy = Vec->getType()->getScalarType();
+        Value *Ident = getReductionIdentity(ID, EltTy, FMF);
+        Rdx = expandReductionViaLoop(Builder, Vec, RdxOpcode, Ident, DT, LI);
+        break;
+      }
       if (!isPowerOf2_32(
               cast<FixedVectorType>(Vec->getType())->getNumElements()))
         continue;
-      unsigned RdxOpcode = getArithmeticReductionInstruction(ID);
       Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RS, RK);
       break;
     }
@@ -145,6 +162,16 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
       Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RS, RK);
       break;
     }
+    case Intrinsic::vector_reduce_fmaximum:
+    case Intrinsic::vector_reduce_fminimum: {
+      Value *Vec = II->getArgOperand(0);
+      if (!isPowerOf2_32(
+              cast<FixedVectorType>(Vec->getType())->getNumElements()))
+        continue;
+      unsigned RdxOpcode = getArithmeticReductionInstruction(ID);
+      Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RS, RK);
+      break;
+    }
     }
     II->replaceAllUsesWith(Rdx);
     II->eraseFromParent();
@@ -156,18 +183,21 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
 class ExpandReductions : public FunctionPass {
 public:
   static char ID;
-  ExpandReductions() : FunctionPass(ID) {
-    initializeExpandReductionsPass(*PassRegistry::getPassRegistry());
-  }
+  ExpandReductions() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
     const auto *TTI =&getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    return expandReductions(F, TTI);
+    auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+    auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
+    auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
+    auto *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
+    return expandReductions(F, TTI, DT, LI);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.setPreservesCFG();
+    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addPreserved<LoopInfoWrapperPass>();
   }
 };
 }
@@ -186,9 +216,12 @@ FunctionPass *llvm::createExpandReductionsPass() {
 PreservedAnalyses ExpandReductionsPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   const auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-  if (!expandReductions(F, &TTI))
+  auto *DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
+  auto *LI = AM.getCachedResult<LoopAnalysis>(F);
+  if (!expandReductions(F, &TTI, DT, LI))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<LoopAnalysis>();
   return PA;
 }

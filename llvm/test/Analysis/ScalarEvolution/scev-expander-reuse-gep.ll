@@ -3,7 +3,7 @@
 ; RUN: opt -mtriple=i386-apple-macosx10.12.0 < %s -loop-reduce -S | FileCheck %s
 
 ; CHECK: %ptr4.ptr1 = select i1 %cmp.i, ptr %ptr4, ptr %ptr1
-; CHECK-NEXT: %scevgep = getelementptr i8, ptr %ptr4.ptr1, i32 1
+; CHECK-NEXT: %scevgep = getelementptr nuw i8, ptr %ptr4.ptr1, i32 1
 ; CHECK-NEXT: br label %while.cond.i
 
 target datalayout = "e-m:o-p:32:32-f64:32:64-f80:128-n8:16:32-S128"

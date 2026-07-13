@@ -94,7 +94,7 @@ PROVIDE(unused = g1);
 PROVIDE_HIDDEN(another_unused = g1);
 
 #--- chain_with_cycle.t
-PROVIDE(f1 = f2 + f3);
+PROVIDE("f1" = f2 + f3);
 PROVIDE(f2 = f3 + f4);
 PROVIDE(f3 = f4);
 PROVIDE(f4 = f1);

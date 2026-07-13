@@ -40,16 +40,16 @@ struct RepConstConvertibleLWG3050 {
   operator long() = delete;
   operator long() const { return 2; }
 };
-namespace std {
+
 template <>
-struct common_type<RepConstConvertibleLWG3050, int> {
+struct std::common_type<RepConstConvertibleLWG3050, int> {
   using type = long;
 };
 template <>
-struct common_type<int, RepConstConvertibleLWG3050> {
+struct std::common_type<int, RepConstConvertibleLWG3050> {
   using type = long;
 };
-} // namespace std
+
 #endif // TEST_STD_VER >= 11
 
 // std::chrono:::duration has only '*', '/' and '%' taking a "Rep" parameter

@@ -14,6 +14,7 @@
 #define MLIR_BYTECODE_BYTECODEWRITER_H
 
 #include "mlir/IR/AsmState.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_VERSION_STRING
 
 namespace mlir {
 class DialectBytecodeWriter;
@@ -81,6 +82,7 @@ public:
   /// printers for the fallback resources within the map.
   BytecodeWriterConfig(FallbackAsmResourceMap &map,
                        StringRef producer = "MLIR" LLVM_VERSION_STRING);
+  BytecodeWriterConfig(BytecodeWriterConfig &&);
   ~BytecodeWriterConfig();
 
   /// An internal implementation class that contains the state of the
@@ -174,6 +176,12 @@ public:
     for (auto &printer : map.getPrinters())
       attachResourcePrinter(std::move(printer));
   }
+
+  /// Set a boolean flag to skip emission of unique locations into the bytecode
+  /// file. When enabled, all locations are mapped to UnknownLoc during
+  /// numbering.
+  void setElideLocations(bool shouldElideLocations = true);
+  bool shouldElideLocations() const;
 
 private:
   /// A pointer to allocated storage for the impl state.

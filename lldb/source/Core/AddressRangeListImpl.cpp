@@ -13,14 +13,6 @@ using namespace lldb_private;
 
 AddressRangeListImpl::AddressRangeListImpl() : m_ranges() {}
 
-AddressRangeListImpl &
-AddressRangeListImpl::operator=(const AddressRangeListImpl &rhs) {
-  if (this == &rhs)
-    return *this;
-  m_ranges = rhs.m_ranges;
-  return *this;
-}
-
 size_t AddressRangeListImpl::GetSize() const { return m_ranges.size(); }
 
 void AddressRangeListImpl::Reserve(size_t capacity) {

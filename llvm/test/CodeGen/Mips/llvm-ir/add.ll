@@ -1,32 +1,32 @@
-; RUN: llc < %s -march=mips -mcpu=mips2 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips-elf -mcpu=mips2 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,NOT-R2-R6,GP32,PRE4
-; RUN: llc < %s -march=mips -mcpu=mips32 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips-elf -mcpu=mips32 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,NOT-R2-R6,GP32,GP32-CMOV
-; RUN: llc < %s -march=mips -mcpu=mips32r2 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips-elf -mcpu=mips32r2 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,R2-R6,GP32,GP32-CMOV
-; RUN: llc < %s -march=mips -mcpu=mips32r3 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips-elf -mcpu=mips32r3 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,R2-R6,GP32,GP32-CMOV
-; RUN: llc < %s -march=mips -mcpu=mips32r5 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips-elf -mcpu=mips32r5 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,R2-R6,GP32,GP32-CMOV
-; RUN: llc < %s -march=mips -mcpu=mips32r6 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips-elf -mcpu=mips32r6 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,R2-R6,GP32
-; RUN: llc < %s -march=mips64 -mcpu=mips3 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips64-elf -mcpu=mips3 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,NOT-R2-R6,GP64,GP64-NOT-R2-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips4 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips64-elf -mcpu=mips4 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,NOT-R2-R6,GP64,GP64-NOT-R2-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips64-elf -mcpu=mips64 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,NOT-R2-R6,GP64,GP64-NOT-R2-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64r2 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips64-elf -mcpu=mips64r2 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,R2-R6,GP64,GP64-R2-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64r3 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips64-elf -mcpu=mips64r3 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,R2-R6,GP64,GP64-R2-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64r5 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips64-elf -mcpu=mips64r5 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,R2-R6,GP64,GP64-R2-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64r6 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips64-elf -mcpu=mips64r6 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,R2-R6,GP64,GP64-R2-R6
-; RUN: llc < %s -march=mips -mcpu=mips32r3 -mattr=+micromips -O2 -verify-machineinstrs | FileCheck %s \
+; RUN: llc < %s -mtriple=mips-elf -mcpu=mips32r3 -mattr=+micromips -O2 -verify-machineinstrs | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,MMR3,MM32
-; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips -O2 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips-elf -mcpu=mips32r6 -mattr=+micromips -O2 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,MMR6,MM32
 
 
@@ -38,18 +38,11 @@ define signext i1 @add_i1(i1 signext %a, i1 signext %b) {
 entry:
 ; ALL-LABEL: add_i1:
 
-  ; NOT-R2-R6:  addu   $[[T0:[0-9]+]], $4, $5
-  ; NOT-R2-R6:  andi   $[[T0]], $[[T0]], 1
-  ; NOT-R2-R6:  negu   $2, $[[T0]]
+  ; NOT-R2-R6:  xor    $[[T0:[0-9]+]], $4, $5
 
-  ; R2-R6:      addu   $[[T0:[0-9]+]], $4, $5
-  ; R2-R6:      andi   $[[T0]], $[[T0]], 1
-  ; R2-R6:      negu   $2, $[[T0]]
+  ; R2-R6:      xor    $[[T0:[0-9]+]], $4, $5
 
-  ; MMR6:       addu16  $[[T0:[0-9]+]], $4, $5
-  ; MMR6:       andi16  $[[T0]], $[[T0]], 1
-  ; MMR6:       li16    $[[T1:[0-9]+]], 0
-  ; MMR6:       subu16  $[[T0]], $[[T1]], $[[T0]]
+  ; MMR6:       xor    $[[T0:[0-9]+]], $4, $5
 
   %r = add i1 %a, %b
   ret i1 %r
@@ -368,18 +361,11 @@ define signext i128 @add_i128_4(i128 signext %a) {
 
 define signext i1 @add_i1_3(i1 signext %a) {
 ; ALL-LABEL: add_i1_3:
-  ; GP32:        addiu  $[[T0:[0-9]+]], $4, 1
-  ; GP32:        andi   $[[T0]], $[[T0]], 1
-  ; GP32:        negu   $2, $[[T0]]
+  ; GP32:        not    $[[T0:[0-9]+]], $4
 
-  ; GP64:        addiu  $[[T0:[0-9]+]], $4, 1
-  ; GP64:        andi   $[[T0]], $[[T0]], 1
-  ; GP64:        negu   $2, $[[T0]]
+  ; GP64:        not    $[[T0:[0-9]+]], $4
 
-  ; MMR6:        addiur2 $[[T0:[0-9]+]], $4, 1
-  ; MMR6:        andi16  $[[T0]], $[[T0]], 1
-  ; MMR6:        li16    $[[T1:[0-9]+]], 0
-  ; MMR6:        subu16  $2, $[[T1]], $[[T0]]
+  ; MMR6:        not16  $[[T0:[0-9]+]], $4
 
   %r = add i1 3, %a
   ret i1 %r

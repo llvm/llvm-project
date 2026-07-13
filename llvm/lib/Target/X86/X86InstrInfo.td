@@ -18,14 +18,14 @@ include "X86InstrFragments.td"
 include "X86InstrFragmentsSIMD.td"
 
 //===----------------------------------------------------------------------===//
-// X86 Operand Definitions.
-//
-include "X86InstrOperands.td"
-
-//===----------------------------------------------------------------------===//
 // X86 Predicate Definitions.
 //
 include "X86InstrPredicates.td"
+
+//===----------------------------------------------------------------------===//
+// X86 Operand Definitions.
+//
+include "X86InstrOperands.td"
 
 //===----------------------------------------------------------------------===//
 // X86 Instruction Format Definitions.
@@ -36,6 +36,11 @@ include "X86InstrFormats.td"
 // X86 Instruction utilities.
 //
 include "X86InstrUtils.td"
+
+//===----------------------------------------------------------------------===//
+// Global ISel
+//
+include "X86InstrGISel.td"
 
 //===----------------------------------------------------------------------===//
 // Subsystems.
@@ -63,6 +68,7 @@ include "X86InstrXOP.td"
 // SSE, MMX and 3DNow! vector support.
 include "X86InstrSSE.td"
 include "X86InstrAVX512.td"
+include "X86InstrAVX10.td"
 include "X86InstrMMX.td"
 include "X86Instr3DNow.td"
 

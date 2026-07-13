@@ -139,10 +139,10 @@ struct parse_t {
 int parse(parse_t *p) {
   unsigned copy = p->bits2;
   clang_analyzer_dump(copy);
-  // expected-warning@-1 {{reg_$1<unsigned int Element{SymRegion{reg_$0<parse_t * p>},0 S64b,struct Bug_55934::parse_t}.bits2>}}
+  // expected-warning@-1 {{reg_$2<unsigned int Element{SymRegion{reg_$0<parse_t * p>},0 S64b,struct Bug_55934::parse_t}.bits2>}}
   header *bits = (header *)&copy;
   clang_analyzer_dump(bits->b);
-  // expected-warning@-1 {{derived_$2{reg_$1<unsigned int Element{SymRegion{reg_$0<parse_t * p>},0 S64b,struct Bug_55934::parse_t}.bits2>,Element{copy,0 S64b,struct Bug_55934::header}.b}}}
+  // expected-warning@-1 {{derived_$4{reg_$2<unsigned int Element{SymRegion{reg_$0<parse_t * p>},0 S64b,struct Bug_55934::parse_t}.bits2>,Element{copy,0 S64b,struct Bug_55934::header}.b}}}
   return bits->b; // no-warning
 }
 } // namespace Bug_55934
@@ -164,4 +164,114 @@ void LValueToRValueBitCast_dumps(void *p, char (*array)[8]) {
 
 unsigned long ptr_arithmetic(void *p) {
   return __builtin_bit_cast(unsigned long, p) + 1; // no-crash
+}
+
+struct AllocOpaqueFlag {};
+
+void *operator new(unsigned long, void *ptr) noexcept { return ptr; }
+void *operator new(unsigned long, void *ptr, AllocOpaqueFlag const &) noexcept;
+
+void *operator new[](unsigned long, void *ptr) noexcept { return ptr; }
+void *operator new[](unsigned long, void *ptr,
+                     AllocOpaqueFlag const &) noexcept;
+
+struct Buffer {
+  char buf[100];
+  int padding;
+};
+
+void checkPlacementNewArryInObject() {
+  Buffer buffer;
+  int *array = new (&buffer) int[10];
+  ++array; // no warning
+  (void)*array;
+}
+
+void checkPlacementNewArrayInObjectOpaque() {
+  Buffer buffer;
+  int *array = new (&buffer, AllocOpaqueFlag{}) int[10];
+  ++array; // no warning
+  (void)*array;
+}
+
+void checkPlacementNewArrayInArray() {
+  char buffer[100];
+  int *array = new (buffer) int[10];
+  ++array; // no warning
+  (void)*array;
+}
+
+void checkPlacementNewArrayInArrayOpaque() {
+  char buffer[100];
+  int *array = new (buffer, AllocOpaqueFlag{}) int;
+  ++array; // no warning
+  (void)*array;
+}
+
+void checkPlacementNewObjectInObject() {
+  Buffer buffer;
+  int *array = new (&buffer) int;
+  ++array; // expected-warning{{Pointer arithmetic on non-array variables relies on memory layout, which is dangerous}}
+  (void)*array;
+}
+
+void checkPlacementNewObjectInObjectOpaque() {
+  Buffer buffer;
+  int *array = new (&buffer, AllocOpaqueFlag{}) int;
+  ++array; // no warning (allocator is opaque)
+  (void)*array;
+}
+
+void checkPlacementNewObjectInArray() {
+  char buffer[sizeof(int)];
+  int *array = new (buffer) int;
+  ++array; // no warning (FN)
+  (void)*array;
+}
+
+void checkPlacementNewObjectInArrayOpaque() {
+  char buffer[sizeof(int)];
+  int *array = new (buffer, AllocOpaqueFlag{}) int;
+  ++array; // no warning (FN)
+  (void)*array;
+}
+
+void checkPlacementNewSlices() {
+  const int N = 10;
+  char buffer[sizeof(int) * N] = {0};
+  int *start = new (buffer) int{0};
+  for (int i = 1; i < N; i++) {
+    auto *ptr = new int(buffer[i * sizeof(int)]);
+    *ptr = i;
+  }
+  ++start; // no warning
+  (void *)start;
+}
+
+class BumpAlloc {
+  char *buffer;
+  char *offset;
+
+public:
+  BumpAlloc(int n) : buffer(new char[n]), offset{buffer} {}
+  ~BumpAlloc() { delete[] buffer; }
+
+  void *alloc(unsigned long size) {
+    auto *ptr = offset;
+    offset += size;
+    return ptr;
+  }
+};
+
+void *operator new(unsigned long size, BumpAlloc &ba) { return ba.alloc(size); }
+
+void checkPlacementSlab() {
+  BumpAlloc bump{10};
+
+  int *ptr = new (bump) int{0};
+  ++ptr; // no warning
+  (void)*ptr;
+
+  BumpAlloc *why = &bump;
+  ++why; // expected-warning {{Pointer arithmetic on non-array variables relies on memory layout, which is dangerous [alpha.core.PointerArithm]}}
 }

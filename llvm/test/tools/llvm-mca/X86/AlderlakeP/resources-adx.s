@@ -46,15 +46,15 @@ adox        (%rbx), %rcx
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 4.00    -     1.33   1.33    -      -     4.00    -      -      -      -     1.33    -
+# CHECK-NEXT: 4.00    -     1.33   1.33    -      -     4.00    -      -      -     1.33    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
 # CHECK-NEXT: 0.50    -      -      -      -      -     0.50    -      -      -      -      -      -     adcxl	%ebx, %ecx
-# CHECK-NEXT: 0.50    -     0.33   0.33    -      -     0.50    -      -      -      -     0.33    -     adcxl	(%rbx), %ecx
+# CHECK-NEXT: 0.50    -     0.33   0.33    -      -     0.50    -      -      -     0.33    -      -     adcxl	(%rbx), %ecx
 # CHECK-NEXT: 0.50    -      -      -      -      -     0.50    -      -      -      -      -      -     adcxq	%rbx, %rcx
-# CHECK-NEXT: 0.50    -     0.33   0.33    -      -     0.50    -      -      -      -     0.33    -     adcxq	(%rbx), %rcx
+# CHECK-NEXT: 0.50    -     0.33   0.33    -      -     0.50    -      -      -     0.33    -      -     adcxq	(%rbx), %rcx
 # CHECK-NEXT: 0.50    -      -      -      -      -     0.50    -      -      -      -      -      -     adoxl	%ebx, %ecx
-# CHECK-NEXT: 0.50    -     0.33   0.33    -      -     0.50    -      -      -      -     0.33    -     adoxl	(%rbx), %ecx
+# CHECK-NEXT: 0.50    -     0.33   0.33    -      -     0.50    -      -      -     0.33    -      -     adoxl	(%rbx), %ecx
 # CHECK-NEXT: 0.50    -      -      -      -      -     0.50    -      -      -      -      -      -     adoxq	%rbx, %rcx
-# CHECK-NEXT: 0.50    -     0.33   0.33    -      -     0.50    -      -      -      -     0.33    -     adoxq	(%rbx), %rcx
+# CHECK-NEXT: 0.50    -     0.33   0.33    -      -     0.50    -      -      -     0.33    -      -     adoxq	(%rbx), %rcx

@@ -16,10 +16,11 @@
 #ifndef LLVM_LIB_TARGET_ARM_UTILS_ARMBASEINFO_H
 #define LLVM_LIB_TARGET_ARM_UTILS_ARMBASEINFO_H
 
+#include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
-#include "MCTargetDesc/ARMMCTargetDesc.h"
 
 namespace llvm {
 
@@ -189,7 +190,7 @@ inline static unsigned ARMCondCodeFromString(StringRef CC) {
 // System Registers
 namespace ARMSysReg {
   struct MClassSysReg {
-    const char *Name;
+    StringTable::Offset Name;
     uint16_t M1Encoding12;
     uint16_t M2M3Encoding8;
     uint16_t Encoding;
@@ -206,8 +207,8 @@ namespace ARMSysReg {
     }
   };
 
-  #define GET_MCLASSSYSREG_DECL
-  #include "ARMGenSystemRegister.inc"
+#define GET_MClassSysRegsList_DECL
+#include "ARMGenSystemRegister.inc"
 
   // lookup system register using 12-bit SYSm value.
   // Note: the search is uniqued using M1 mask
@@ -225,11 +226,11 @@ namespace ARMSysReg {
 // Banked Registers
 namespace ARMBankedReg {
   struct BankedReg {
-    const char *Name;
+    StringTable::Offset Name;
     uint16_t Encoding;
   };
-  #define GET_BANKEDREG_DECL
-  #include "ARMGenSystemRegister.inc"
+#define GET_BankedRegsList_DECL
+#include "ARMGenSystemRegister.inc"
 } // end namespace ARMBankedReg
 
 } // end namespace llvm

@@ -37,8 +37,9 @@
 // template<class T>
 //     strong_ordering operator<=>(shared_ptr<T> const& x, nullptr_t) noexcept;   // C++20
 
-#include <memory>
 #include <cassert>
+#include <cstddef>
+#include <memory>
 
 #include "test_macros.h"
 #include "test_comparisons.h"

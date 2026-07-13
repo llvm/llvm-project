@@ -50,7 +50,7 @@ func.func @_QPall2(%arg0: !fir.box<!fir.array<?x?x!fir.logical<4>>> {fir.bindc_n
 // CHECK-DAG:     %[[RET_ARG:.*]] = fir.convert %[[RET_BOX]]
 // CHECK-DAG:     %[[MASK_ARG:.*]] = fir.convert %[[MASK]]#1
 
-// CHECK:         %[[NONE:.*]] = fir.call @_FortranAAllDim(%[[RET_ARG]], %[[MASK_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+// CHECK:         fir.call @_FortranAAllDim(%[[RET_ARG]], %[[MASK_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
 // CHECK:         %[[RET:.*]] = fir.load %[[RET_BOX]]
 // CHECK:         %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[RET]]
 // CHECK-NEXT:    %[[ADDR:.*]] = fir.box_addr %[[RET]]
@@ -90,13 +90,13 @@ func.func @_QPall3(%arg0: !fir.ref<!fir.array<2x!fir.logical<4>>> {fir.bindc_nam
 
 // CHECK-DAG:     %[[MASK_ADDR:.*]] = fir.address_of
 // CHECK-DAG:     %[[MASK_VAR:.*]]:2 = hlfir.declare %[[MASK_ADDR]](%[[MASK_SHAPE:.*]])
-// CHECK-DAG:     %[[MASK_BOX:.*]] = fir.embox %[[MASK_VAR]]#1(%[[MASK_SHAPE:.*]])
+// CHECK-DAG:     %[[MASK_BOX:.*]] = fir.embox %[[MASK_VAR]]#0(%[[MASK_SHAPE:.*]])
 
 // CHECK-DAG:     %[[DIM:.*]] = arith.constant 1 : i32
 
 // CHECK-DAG:     %[[RET_ARG:.*]] = fir.convert %[[RET_BOX]]
 // CHECK-DAG:     %[[MASK_ARG:.*]] = fir.convert %[[MASK_BOX]] : (!fir.box<!fir.array<2x2x!fir.logical<4>>>) -> !fir.box<none>
-// CHECK:         %[[NONE:.*]] = fir.call @_FortranAAllDim(%[[RET_ARG]], %[[MASK_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]])
+// CHECK:         fir.call @_FortranAAllDim(%[[RET_ARG]], %[[MASK_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]])
 // CHECK:         %[[RET:.*]] = fir.load %[[RET_BOX]]
 // CHECK:         %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[RET]]
 // CHECK-NEXT:    %[[ADDR:.*]] = fir.box_addr %[[RET]]
@@ -144,7 +144,7 @@ func.func @_QPall4(%arg0: !fir.box<!fir.array<?x?x!fir.logical<4>>> {fir.bindc_n
 // CHECK-DAG:     %[[RET_ARG:.*]] = fir.convert %[[RET_BOX]]
 // CHECK-DAG:     %[[MASK_ARG:.*]] = fir.convert %[[MASK]]#1
 
-// CHECK:         %[[NONE:.*]] = fir.call @_FortranAAllDim(%[[RET_ARG]], %[[MASK_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+// CHECK:         fir.call @_FortranAAllDim(%[[RET_ARG]], %[[MASK_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
 // CHECK:         %[[RET:.*]] = fir.load %[[RET_BOX]]
 // CHECK:         %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[RET]]
 // CHECK-NEXT:    %[[ADDR:.*]] = fir.box_addr %[[RET]]

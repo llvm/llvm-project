@@ -5,8 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: no-threads
 
 // <mutex>
 
@@ -14,21 +12,26 @@
 
 // bool owns_lock() const;
 
-#include <mutex>
 #include <cassert>
+#include <mutex>
 
+#include "checking_mutex.h"
 #include "test_macros.h"
 
-std::mutex m;
+#if TEST_STD_VER >= 11
+static_assert(noexcept(std::declval<std::unique_lock<checking_mutex>&>().owns_lock()), "");
+#endif
 
-int main(int, char**)
-{
-    std::unique_lock<std::mutex> lk0;
-    assert(lk0.owns_lock() == false);
-    std::unique_lock<std::mutex> lk1(m);
-    assert(lk1.owns_lock() == true);
-    lk1.unlock();
-    assert(lk1.owns_lock() == false);
+int main(int, char**) {
+  {
+    checking_mutex mux;
+    const std::unique_lock<checking_mutex> lock0; // Make sure `owns_lock()` is `const`
+    assert(!lock0.owns_lock());
+    std::unique_lock<checking_mutex> lock1(mux);
+    assert(lock1.owns_lock());
+    lock1.unlock();
+    assert(!lock1.owns_lock());
+  }
 
   return 0;
 }

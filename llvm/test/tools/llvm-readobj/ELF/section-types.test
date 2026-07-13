@@ -63,6 +63,10 @@
 # LLVM: Type: SHT_LLVM_PART_PHDR
 # LLVM: Name: .llvm.lto
 # LLVM: Type: SHT_LLVM_LTO
+# LLVM: Name: .llvm.callgraph
+# LLVM: Type: SHT_LLVM_CALL_GRAPH
+# LLVM: Name: gnu_sframe
+# LLVM: Type: SHT_GNU_SFRAME
 # LLVM: Name: gnu_attributes
 # LLVM: Type: SHT_GNU_ATTRIBUTES
 # LLVM: Name: gnu_hash
@@ -125,20 +129,22 @@
 # GNU-NEXT: part1                   LLVM_PART_EHDR
 # GNU-NEXT: .phdrs                  LLVM_PART_PHDR
 # GNU-NEXT: .llvm.lto               LLVM_LTO
+# GNU-NEXT: .llvm.callgraph         LLVM_CALL_GRAPH
+# GNU-NEXT: gnu_sframe              SFRAME
 # GNU-NEXT: gnu_attributes          ATTRIBUTES
 # GNU-NEXT: gnu_hash                GNU_HASH
 # GNU-NEXT: gnu_verdef              VERDEF
 # GNU-NEXT: gnu_verneed             VERNEED
 # GNU-NEXT: unknown                 0x1000: <unknown>
 # GNU-NEXT: loos                    LOOS+0x0
-# GNU-NEXT: fooos                   LOOS+0xF00
+# GNU-NEXT: fooos                   LOOS+0xf00
 # GNU-NEXT: hios                    VERSYM
 # GNU-NEXT: loproc                  LOPROC+0x0
-# GNU-NEXT: fooproc                 LOPROC+0xF00
-# GNU-NEXT: hiproc                  LOPROC+0xFFFFFFF
+# GNU-NEXT: fooproc                 LOPROC+0xf00
+# GNU-NEXT: hiproc                  LOPROC+0xfffffff
 # GNU-NEXT: louser                  LOUSER+0x0
-# GNU-NEXT: foouser                 LOUSER+0xF00
-# GNU-NEXT: hiuser                  LOUSER+0x7FFFFFFF
+# GNU-NEXT: foouser                 LOUSER+0xf00
+# GNU-NEXT: hiuser                  LOUSER+0x7fffffff
 # GNU-NEXT: .symtab                 SYMTAB
 # GNU-NEXT: .strtab                 STRTAB
 
@@ -215,6 +221,10 @@ Sections:
     Type: SHT_LLVM_PART_PHDR
   - Name: .llvm.lto
     Type: SHT_LLVM_LTO
+  - Name: .llvm.callgraph
+    Type: SHT_LLVM_CALL_GRAPH
+  - Name: gnu_sframe
+    Type: SHT_GNU_SFRAME
   - Name: gnu_attributes
     Type: SHT_GNU_ATTRIBUTES
   - Name: gnu_hash

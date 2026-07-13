@@ -9,7 +9,7 @@
 
 // Negative checks go under prefix "CHECK2" to avoid interference with CHECK and CHECK-DAG.
 // CHECK2-NOT: @_ZN7PR100014kBarE = external global i32
-// CHECK2-NOT: @_ZTVN5test118stdio_sync_filebufIwEE ={{.*}} constant
+// CHECK2-NOT: @_ZTVN5test118stdio_sync_filebufIwEE ={{.*}}constant
 // CHECK2-NOT: _ZTVN5test315basic_fstreamXXIcEE
 // CHECK2-NOT: @_ZTVN5test018stdio_sync_filebufIA1_iEE
 // CHECK2-NOT: @_ZTVN5test018stdio_sync_filebufIA2_iEE
@@ -17,6 +17,7 @@
 
 // CHECK2-NOT: _ZTVN5test31SIiEE
 // CHECK2-NOT: _ZTSN5test31SIiEE
+// CHECK2:  !{!"p1 _ZTSN5test31SIiEE",
 
 // CHECK-LABEL: define linkonce_odr void @_ZN5test21CIiEC1Ev(ptr {{[^,]*}} %this) unnamed_addr
 // CHECK-LABEL: define linkonce_odr void @_ZN5test21CIiE6foobarIdEEvT_(
@@ -139,7 +140,7 @@ namespace test4 {
     B b;
   }
 
-  unsigned test() {
+  void test() {
     A<int>::foo();
   }
 }

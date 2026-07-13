@@ -34,7 +34,7 @@ public:
   void printInstruction(const MCInst *MI, uint64_t Address, raw_ostream &O);
   static const char *getRegisterName(MCRegister Reg);
 
-  void printRegName(raw_ostream &OS, MCRegister Reg) const override;
+  void printRegName(raw_ostream &OS, MCRegister Reg) override;
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &O) override;
 
@@ -42,7 +42,8 @@ public:
   void printCustomAliasOperand(const MCInst *MI, unsigned OpIdx,
                                unsigned PrintMethodIdx, raw_ostream &O);
 
-  std::pair<const char *, uint64_t> getMnemonic(const MCInst *MI) override;
+  std::pair<const char *, uint64_t>
+  getMnemonic(const MCInst &MI) const override;
 
 private:
   void printOperand(const MCInst *MI, unsigned opNum, raw_ostream &O);
@@ -52,6 +53,7 @@ private:
   /// Print register mask for MOVEM instruction in order A7-A0,D7-D0
   void printMoveMaskR(const MCInst *MI, unsigned opNum, raw_ostream &O);
   void printDisp(const MCInst *MI, unsigned opNum, raw_ostream &O);
+  void printScale(const MCInst *MI, unsigned opNum, raw_ostream &O);
   void printAbsMem(const MCInst *MI, unsigned opNum, raw_ostream &O);
 
   //===----------------------------------------------------------------------===//
@@ -157,6 +159,15 @@ private:
   void printPCI32Mem(const MCInst *MI, uint64_t Address, unsigned opNum,
                      raw_ostream &O) {
     printPCIMem(MI, Address, opNum, O);
+  }
+
+  void printPCIBD16Mem(const MCInst *MI, uint64_t Address, unsigned opNum,
+                       raw_ostream &O) {
+    printPCIBDMem<16>(MI, Address, opNum, O);
+  }
+  void printPCIBD32Mem(const MCInst *MI, uint64_t Address, unsigned opNum,
+                       raw_ostream &O) {
+    printPCIBDMem<32>(MI, Address, opNum, O);
   }
 };
 } // end namespace llvm

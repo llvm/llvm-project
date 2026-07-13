@@ -36,7 +36,9 @@ static_assert(
 static_assert(static_cast<int>(MLIR_SPARSE_PROPERTY_NON_ORDERED) ==
                       static_cast<int>(LevelPropNonDefault::Nonordered) &&
                   static_cast<int>(MLIR_SPARSE_PROPERTY_NON_UNIQUE) ==
-                      static_cast<int>(LevelPropNonDefault::Nonunique),
+                      static_cast<int>(LevelPropNonDefault::Nonunique) &&
+                  static_cast<int>(MLIR_SPARSE_PROPERTY_SOA) ==
+                      static_cast<int>(LevelPropNonDefault::SoA),
               "MlirSparseTensorLevelProperty (C-API) and "
               "LevelPropertyNondefault (C++) mismatch");
 
@@ -58,6 +60,10 @@ MlirAttribute mlirSparseTensorEncodingAttrGet(
   return wrap(SparseTensorEncodingAttr::get(
       unwrap(ctx), cppLvlTypes, unwrap(dimToLvl), unwrap(lvlToDim), posWidth,
       crdWidth, unwrap(explicitVal), unwrap(implicitVal)));
+}
+
+MlirStringRef mlirSparseTensorEncodingAttrGetName(void) {
+  return wrap(SparseTensorEncodingAttr::name);
 }
 
 MlirAffineMap mlirSparseTensorEncodingAttrGetDimToLvl(MlirAttribute attr) {
@@ -107,6 +113,7 @@ MlirSparseTensorLevelType mlirSparseTensorEncodingAttrBuildLvlType(
     unsigned size, unsigned n, unsigned m) {
 
   std::vector<LevelPropNonDefault> props;
+  props.reserve(size);
   for (unsigned i = 0; i < size; i++)
     props.push_back(static_cast<LevelPropNonDefault>(properties[i]));
 

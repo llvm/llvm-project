@@ -1,4 +1,4 @@
-add_clang_library(clangdRemoteMarshalling
+add_clang_library(clangdRemoteMarshalling STATIC
   Marshalling.cpp
 
   LINK_LIBS
@@ -8,4 +8,7 @@ add_clang_library(clangdRemoteMarshalling
 
   DEPENDS
   clangdRemoteIndexProto
+
+  # Disable PCH, gRPC adds -pthread.
+  DISABLE_PCH_REUSE
   )

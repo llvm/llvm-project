@@ -1,4 +1,4 @@
-//===--- NamedParameterCheck.h - clang-tidy ---------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,13 +26,16 @@ namespace clang::tidy::readability {
 /// Corresponding cpplint.py check name: 'readability/function'.
 class NamedParameterCheck : public ClangTidyCheck {
 public:
-  NamedParameterCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  NamedParameterCheck(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
+
+private:
+  const bool InsertPlainNamesInForwardDecls;
 };
 
 } // namespace clang::tidy::readability

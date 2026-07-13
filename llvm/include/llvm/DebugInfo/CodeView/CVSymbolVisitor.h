@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_CODEVIEW_CVSYMBOLVISITOR_H
 
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -24,14 +25,15 @@ public:
     std::optional<uint32_t> ChildRecursiveDepth;
   };
 
-  CVSymbolVisitor(SymbolVisitorCallbacks &Callbacks);
+  LLVM_ABI CVSymbolVisitor(SymbolVisitorCallbacks &Callbacks);
 
-  Error visitSymbolRecord(CVSymbol &Record);
-  Error visitSymbolRecord(CVSymbol &Record, uint32_t Offset);
-  Error visitSymbolStream(const CVSymbolArray &Symbols);
-  Error visitSymbolStream(const CVSymbolArray &Symbols, uint32_t InitialOffset);
-  Error visitSymbolStreamFiltered(const CVSymbolArray &Symbols,
-                                  const FilterOptions &Filter);
+  LLVM_ABI Error visitSymbolRecord(CVSymbol &Record);
+  LLVM_ABI Error visitSymbolRecord(CVSymbol &Record, uint32_t Offset);
+  LLVM_ABI Error visitSymbolStream(const CVSymbolArray &Symbols);
+  LLVM_ABI Error visitSymbolStream(const CVSymbolArray &Symbols,
+                                   uint32_t InitialOffset);
+  LLVM_ABI Error visitSymbolStreamFiltered(const CVSymbolArray &Symbols,
+                                           const FilterOptions &Filter);
 
 private:
   SymbolVisitorCallbacks &Callbacks;

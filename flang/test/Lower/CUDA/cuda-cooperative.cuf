@@ -1,0 +1,99 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Test CUDA Fortran procedures available in cooperative_groups module.
+
+attributes(grid_global) subroutine g1()
+  use cooperative_groups
+  type(grid_group) :: gg
+  gg = this_grid()
+end subroutine
+
+! CHECK: %{{.*}} = fir.alloca !fir.type<_QMcooperative_groupsTgrid_group{_QMcooperative_groupsTgrid_group.handle:!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>,size:i32,rank:i32}>
+! CHECK: %[[RES:.*]] = fir.alloca !fir.type<_QMcooperative_groupsTgrid_group{_QMcooperative_groupsTgrid_group.handle:!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>,size:i32,rank:i32}>
+! CHECK: %[[THREAD_ID_X:.*]] = nvvm.read.ptx.sreg.tid.x : i32
+! CHECK: %[[THREAD_ID_Y:.*]] = nvvm.read.ptx.sreg.tid.y : i32
+! CHECK: %[[THREAD_ID_Z:.*]] = nvvm.read.ptx.sreg.tid.z : i32
+! CHECK: %[[BLOCK_ID_X:.*]] = nvvm.read.ptx.sreg.ctaid.x : i32
+! CHECK: %[[BLOCK_ID_Y:.*]] = nvvm.read.ptx.sreg.ctaid.y : i32
+! CHECK: %[[BLOCK_ID_Z:.*]] = nvvm.read.ptx.sreg.ctaid.z : i32
+! CHECK: %[[BLOCK_DIM_X:.*]] = nvvm.read.ptx.sreg.ntid.x : i32
+! CHECK: %[[BLOCK_DIM_Y:.*]] = nvvm.read.ptx.sreg.ntid.y : i32
+! CHECK: %[[BLOCK_DIM_Z:.*]] = nvvm.read.ptx.sreg.ntid.z : i32
+! CHECK: %[[GRID_DIM_X:.*]] = nvvm.read.ptx.sreg.nctaid.x : i32
+! CHECK: %[[GRID_DIM_Y:.*]] = nvvm.read.ptx.sreg.nctaid.y : i32
+! CHECK: %[[GRID_DIM_Z:.*]] = nvvm.read.ptx.sreg.nctaid.z : i32
+
+! CHECK: %[[R1:.*]] = arith.muli %[[BLOCK_DIM_Z]], %[[GRID_DIM_Z]] : i32
+! CHECK: %[[R2:.*]] = arith.muli %[[BLOCK_DIM_Y]], %[[GRID_DIM_Y]] : i32
+! CHECK: %[[R3:.*]] = arith.muli %[[BLOCK_DIM_X]], %[[GRID_DIM_X]] : i32
+! CHECK: %[[R4:.*]] = arith.muli %[[R1]], %[[R2]] : i32
+! CHECK: %[[SIZE:.*]] = arith.muli %[[R4]], %[[R3]] : i32
+
+! CHECK: %[[R1:.*]] = arith.muli %[[BLOCK_ID_Z]], %[[GRID_DIM_Y]] : i32
+! CHECK: %[[R2:.*]] = arith.muli %[[R1]], %[[GRID_DIM_X]] : i32
+! CHECK: %[[R3:.*]] = arith.muli %[[BLOCK_ID_Y]], %[[GRID_DIM_X]] : i32
+! CHECK: %[[R4:.*]] = arith.addi %[[R2]], %[[R3]] : i32
+! CHECK: %[[TMP:.*]] = arith.addi %[[R4]], %[[BLOCK_ID_X]] : i32
+
+! CHECK: %[[R1:.*]] = arith.muli %[[BLOCK_DIM_X]], %[[BLOCK_DIM_Y]] : i32
+! CHECK: %[[R2:.*]] = arith.muli %[[R1]], %[[BLOCK_DIM_Z]] : i32
+! CHECK: %[[R3:.*]] = arith.muli %[[THREAD_ID_Z]], %[[BLOCK_DIM_Y]] : i32
+! CHECK: %[[R4:.*]] = arith.muli %[[R3]], %[[BLOCK_DIM_X]] : i32
+! CHECK: %[[R5:.*]] = arith.muli %[[THREAD_ID_Y]], %[[BLOCK_DIM_X]] : i32
+! CHECK: %[[RES0:.*]] = arith.muli %[[TMP]], %[[R2]] : i32
+! CHECK: %[[RES1:.*]] = arith.addi %[[RES0]], %[[R4]] : i32
+! CHECK: %[[RES2:.*]] = arith.addi %[[RES1]], %[[R5]] : i32
+! CHECK: %[[RES3:.*]] = arith.addi %[[RES2]], %[[THREAD_ID_X]] : i32
+! CHECK: %[[ONE:.*]] = arith.constant 1 : i32
+! CHECK: %[[RANK:.*]] = arith.addi %[[RES3]], %[[ONE]] : i32
+! CHECK: %[[COORD_SIZE:.*]] = fir.coordinate_of %[[RES]], size : (!fir.ref<!fir.type<_QMcooperative_groupsTgrid_group{_QMcooperative_groupsTgrid_group.handle:!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>,size:i32,rank:i32}>>) -> !fir.ref<i32>
+! CHECK: fir.store %[[SIZE]] to %[[COORD_SIZE]] : !fir.ref<i32>
+! CHECK: %[[COORD_RANK:.*]] = fir.coordinate_of %[[RES]], rank : (!fir.ref<!fir.type<_QMcooperative_groupsTgrid_group{_QMcooperative_groupsTgrid_group.handle:!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>,size:i32,rank:i32}>>) -> !fir.ref<i32>
+! CHECK: fir.store %[[RANK]] to %[[COORD_RANK]] : !fir.ref<i32>
+
+attributes(grid_global) subroutine w1()
+  use cooperative_groups
+  type(coalesced_group) :: gg
+  gg = this_warp()
+end subroutine
+
+! CHECK: %[[WARPSIZE:.*]] = fir.alloca i32 {bindc_name = "__builtin_warpsize", uniq_name = "_QM__fortran_builtinsEC__builtin_warpsize"}
+! CHECK: %[[WARPSIZE_DECL:.*]]:2 = hlfir.declare %[[WARPSIZE]] {uniq_name = "_QM__fortran_builtinsEC__builtin_warpsize"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[COALESCED_GROUP:.*]] = fir.alloca !fir.type<_QMcooperative_groupsTcoalesced_group{_QMcooperative_groupsTcoalesced_group.handle:!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>,size:i32,rank:i32}>
+! CHECK: %[[C32:.*]] = arith.constant 32 : i32
+! CHECK: %[[SIZE_COORD:.*]] = fir.coordinate_of %[[COALESCED_GROUP]], size : (!fir.ref<!fir.type<_QMcooperative_groupsTcoalesced_group{_QMcooperative_groupsTcoalesced_group.handle:!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>,size:i32,rank:i32}>>) -> !fir.ref<i32>
+! CHECK: fir.store %[[C32]] to %[[SIZE_COORD]] : !fir.ref<i32>
+
+! CHECK: %[[THREAD_ID:.*]] = nvvm.read.ptx.sreg.tid.x : i32
+! CHECK: %[[C31:.*]] = arith.constant 31 : i32
+! CHECK: %[[C1:.*]] = arith.constant 1 : i32
+! CHECK: %[[AND:.*]] = arith.andi %[[THREAD_ID]], %[[C31]] : i32
+! CHECK: %[[RANK:.*]] = arith.addi %[[AND]], %[[C1]] : i32
+! CHECK: %[[RANK_COORD:.*]] = fir.coordinate_of %{{.*}}, rank : (!fir.ref<!fir.type<_QMcooperative_groupsTcoalesced_group{_QMcooperative_groupsTcoalesced_group.handle:!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>,size:i32,rank:i32}>>) -> !fir.ref<i32>
+
+attributes(grid_global) subroutine t1()
+  use cooperative_groups
+  type(thread_group) :: gg
+  gg = this_thread_block()
+end subroutine
+! CHECK: %{{.*}} = fir.alloca !fir.type<_QMcooperative_groupsTthread_group{_QMcooperative_groupsTthread_group.handle:!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>,size:i32,rank:i32}>
+! CHECK: %[[THREAD_GROUP:.*]] = fir.alloca !fir.type<_QMcooperative_groupsTthread_group{_QMcooperative_groupsTthread_group.handle:!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>,size:i32,rank:i32}>
+! CHECK: %[[NTID_X:.*]] = nvvm.read.ptx.sreg.ntid.x : i32
+! CHECK: %[[NTID_Y:.*]] = nvvm.read.ptx.sreg.ntid.y : i32
+! CHECK: %[[NTID_Z:.*]] = nvvm.read.ptx.sreg.ntid.z : i32
+! CHECK: %[[SIZE_ZY:.*]] = arith.muli %[[NTID_Z]], %[[NTID_Y]] : i32
+! CHECK: %[[SIZE:.*]] = arith.muli %[[SIZE_ZY]], %[[NTID_X]] : i32
+! CHECK: %[[TID_X:.*]] = nvvm.read.ptx.sreg.tid.x : i32
+! CHECK: %[[TID_Y:.*]] = nvvm.read.ptx.sreg.tid.y : i32
+! CHECK: %[[TID_Z:.*]] = nvvm.read.ptx.sreg.tid.z : i32
+! CHECK: %[[RANK_ZY:.*]] = arith.muli %[[TID_Z]], %[[NTID_Y]] : i32
+! CHECK: %[[RANK_ZYX:.*]] = arith.muli %[[RANK_ZY]], %[[NTID_X]] : i32
+! CHECK: %[[RANK_YX:.*]] = arith.muli %[[TID_Y]], %[[NTID_X]] : i32
+! CHECK: %[[RANK_SUM1:.*]] = arith.addi %[[RANK_ZYX]], %[[RANK_YX]] : i32
+! CHECK: %[[RANK_SUM2:.*]] = arith.addi %[[RANK_SUM1]], %[[TID_X]] : i32
+! CHECK: %[[C1:.*]] = arith.constant 1 : i32
+! CHECK: %[[RANK:.*]] = arith.addi %[[RANK_SUM2]], %[[C1]] : i32
+! CHECK: %[[SIZE_COORD:.*]] = fir.coordinate_of %[[THREAD_GROUP]], size : (!fir.ref<!fir.type<_QMcooperative_groupsTthread_group{_QMcooperative_groupsTthread_group.handle:!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>,size:i32,rank:i32}>>) -> !fir.ref<i32>
+! CHECK: fir.store %[[SIZE]] to %[[SIZE_COORD]] : !fir.ref<i32>
+! CHECK: %[[RANK_COORD:.*]] = fir.coordinate_of %[[THREAD_GROUP]], rank : (!fir.ref<!fir.type<_QMcooperative_groupsTthread_group{_QMcooperative_groupsTthread_group.handle:!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>,size:i32,rank:i32}>>) -> !fir.ref<i32>
+! CHECK: fir.store %[[RANK]] to %[[RANK_COORD]] : !fir.ref<i32>

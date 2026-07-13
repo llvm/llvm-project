@@ -27,3 +27,11 @@ end subroutine
 subroutine foo3(x)
   real, optional, contiguous :: x(:)
 end subroutine
+
+! CHECK-LABEL: func @_QPfoo4
+! CHECK-SAME: %arg0: !fir.ref<f32> {fir.bindc_name = "x", fir.target}
+! CHECK-SAME: %arg1: !fir.ref<f32> {fir.asynchronous, fir.bindc_name = "y"}
+subroutine foo4(x, y)
+  real, target :: x
+  real, asynchronous :: y
+end subroutine

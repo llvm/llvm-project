@@ -206,7 +206,7 @@ public:
 
   /// Return the desired result type of the function, or eResultTypeAny if
   /// indifferent.
-  ResultType DesiredResultType() override { return m_desired_type; }
+  ResultType DesiredResultType() const override { return m_desired_type; }
 
   /// Return true if validation code should be inserted into the expression.
   bool NeedsValidation() override { return true; }
@@ -240,11 +240,9 @@ public:
   ///     definitions to be included when the expression is parsed.
   ///
   /// \param[in,out] result_valobj_sp
-  ///      If execution is successful, the result valobj is placed here.
-  ///
-  /// \param[out] error
-  ///     Filled in with an error in case the expression evaluation
-  ///     fails to parse, run, or evaluated.
+  ///      If execution is successful, the result valobj is placed
+  ///      here. Otherwise its Error will contain an ExpressionError
+  ///      with details about the failure mode.
   ///
   /// \param[out] fixed_expression
   ///     If non-nullptr, the fixed expression is copied into the provided
@@ -266,7 +264,7 @@ public:
   static lldb::ExpressionResults
   Evaluate(ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options,
            llvm::StringRef expr_cstr, llvm::StringRef expr_prefix,
-           lldb::ValueObjectSP &result_valobj_sp, Status &error,
+           lldb::ValueObjectSP &result_valobj_sp,
            std::string *fixed_expression = nullptr,
            ValueObject *ctx_obj = nullptr);
 
@@ -314,6 +312,16 @@ protected:
   bool LockAndCheckContext(ExecutionContext &exe_ctx, lldb::TargetSP &target_sp,
                            lldb::ProcessSP &process_sp,
                            lldb::StackFrameSP &frame_sp);
+
+  /// Called by expression evaluator when a parse error occurs. Gives this
+  /// UserExpression object a chance to inspect and adjust the error diagnostics
+  /// contained in the specified \c diagnostic_manager.
+  ///
+  /// \param[in,out] diagnostic_manager DiagnosticManager manager holding the
+  /// parse error diagnostics. This function may mutate the diagnostics.
+  ///
+  virtual void
+  FixupParseErrorDiagnostics(DiagnosticManager &diagnostic_manager) const {}
 
   /// The address the process is stopped in.
   Address m_address;

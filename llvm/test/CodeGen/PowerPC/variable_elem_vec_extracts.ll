@@ -122,7 +122,6 @@ define double @getd(<2 x double> %a, i32 zeroext %b) {
 ; CHECK-NEXT:    lvsl 3, 0, 3
 ; CHECK-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-NEXT:    xxlor 1, 34, 34
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: getd:
@@ -132,7 +131,6 @@ define double @getd(<2 x double> %a, i32 zeroext %b) {
 ; CHECK-BE-NEXT:    lvsl 3, 0, 3
 ; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    xxlor 1, 34, 34
-; CHECK-BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-P7-LABEL: getd:
@@ -142,7 +140,6 @@ define double @getd(<2 x double> %a, i32 zeroext %b) {
 ; CHECK-P7-NEXT:    lvsl 3, 0, 3
 ; CHECK-P7-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-P7-NEXT:    xxlor 1, 34, 34
-; CHECK-P7-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-P7-NEXT:    blr
 entry:
   %vecext = extractelement <2 x double> %a, i32 %b

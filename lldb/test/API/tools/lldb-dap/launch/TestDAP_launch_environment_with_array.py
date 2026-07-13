@@ -1,0 +1,42 @@
+"""
+Test lldb-dap launch request.
+"""
+
+from lldbsuite.test.decorators import skipIfWindows
+from lldbsuite.test.tools.lldb_dap.dap_types import LaunchArgs
+from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
+
+
+class TestDAP_launch_environment_with_array(DAPTestCaseBase):
+    """
+    Tests launch of a simple program with environment variables
+    """
+
+    @skipIfWindows
+    def test(self):
+        program = self.getBuildArtifact("a.out")
+        expected_env = [
+            "NO_VALUE",
+            "WITH_VALUE=BAR",
+            "EMPTY_VALUE=",
+            "SPACE=Hello World",
+        ]
+
+        session = self.build_and_create_session()
+        process_event = session.launch(LaunchArgs(program=program, env=expected_env))
+        session.verify_process_exited(after=process_event)
+
+        # Now get the STDOUT and verify our arguments got passed correctly.
+        output = session.get_stdout()
+        self.assertTrue(output, "expect program output")
+
+        # Collect environment lines.
+        env_output = "\n".join(l for l in output.splitlines() if l.startswith("env["))
+        # Make sure each environment variable in "expected_env" is actually set in the
+        # program environment and contains the right value.
+        for expected_str in expected_env:
+            self.assertIn(
+                expected_str,
+                env_output,
+                f"\n{expected_str} must exist in program's environment \n{env_output}",
+            )

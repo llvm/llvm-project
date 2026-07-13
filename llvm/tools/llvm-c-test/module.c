@@ -24,7 +24,7 @@ static void diagnosticHandler(LLVMDiagnosticInfoRef DI, void *C) {
   exit(1);
 }
 
-LLVMModuleRef llvm_load_module(bool Lazy, bool New) {
+LLVMModuleRef llvm_load_module(LLVMContextRef C, bool Lazy, bool New) {
   LLVMMemoryBufferRef MB;
   LLVMModuleRef M;
   char *msg = NULL;
@@ -36,17 +36,16 @@ LLVMModuleRef llvm_load_module(bool Lazy, bool New) {
 
   LLVMBool Ret;
   if (New) {
-    LLVMContextRef C = LLVMGetGlobalContext();
     LLVMContextSetDiagnosticHandler(C, diagnosticHandler, NULL);
     if (Lazy)
-      Ret = LLVMGetBitcodeModule2(MB, &M);
+      Ret = LLVMGetBitcodeModuleInContext2(C, MB, &M);
     else
-      Ret = LLVMParseBitcode2(MB, &M);
+      Ret = LLVMParseBitcodeInContext2(C, MB, &M);
   } else {
     if (Lazy)
-      Ret = LLVMGetBitcodeModule(MB, &M, &msg);
+      Ret = LLVMGetBitcodeModuleInContext(C, MB, &M, &msg);
     else
-      Ret = LLVMParseBitcode(MB, &M, &msg);
+      Ret = LLVMParseBitcodeInContext(C, MB, &M, &msg);
   }
 
   if (Ret) {
@@ -62,19 +61,22 @@ LLVMModuleRef llvm_load_module(bool Lazy, bool New) {
 }
 
 int llvm_module_dump(bool Lazy, bool New) {
-  LLVMModuleRef M = llvm_load_module(Lazy, New);
+  LLVMContextRef C = LLVMContextCreate();
+  LLVMModuleRef M = llvm_load_module(C, Lazy, New);
 
   char *irstr = LLVMPrintModuleToString(M);
   puts(irstr);
   LLVMDisposeMessage(irstr);
 
   LLVMDisposeModule(M);
+  LLVMContextDispose(C);
 
   return 0;
 }
 
 int llvm_module_list_functions(void) {
-  LLVMModuleRef M = llvm_load_module(false, false);
+  LLVMContextRef C = LLVMContextCreate();
+  LLVMModuleRef M = llvm_load_module(C, false, false);
   LLVMValueRef f;
 
   f = LLVMGetFirstFunction(M);
@@ -110,12 +112,14 @@ int llvm_module_list_functions(void) {
   }
 
   LLVMDisposeModule(M);
+  LLVMContextDispose(C);
 
   return 0;
 }
 
 int llvm_module_list_globals(void) {
-  LLVMModuleRef M = llvm_load_module(false, false);
+  LLVMContextRef C = LLVMContextCreate();
+  LLVMModuleRef M = llvm_load_module(C, false, false);
   LLVMValueRef g;
 
   g = LLVMGetFirstGlobal(M);
@@ -133,6 +137,7 @@ int llvm_module_list_globals(void) {
   }
 
   LLVMDisposeModule(M);
+  LLVMContextDispose(C);
 
   return 0;
 }

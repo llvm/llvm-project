@@ -124,7 +124,9 @@ VersionTuple mapToSupportedOSVersion(const Triple &Triple) {
   const VersionTuple MinSupportedOS = Triple.getMinimumSupportedOSVersion();
   if (MinSupportedOS > Triple.getOSVersion())
     return MinSupportedOS;
-  return Triple.getOSVersion();
+  return Triple::getCanonicalVersionForOS(
+      Triple.getOS(), Triple.getOSVersion(),
+      Triple::isValidVersionForOS(Triple.getOS(), Triple.getOSVersion()));
 }
 
 } // end namespace MachO.

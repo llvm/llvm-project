@@ -28,8 +28,7 @@ TEST_CONSTEXPR_CXX20 void test0(S s, U val, S expected, std::size_t expected_era
 }
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void test()
-{
+TEST_CONSTEXPR_CXX20 void test() {
   test0(S(), 1, S(), 0);
 
   test0(S({1}), 1, S(), 1);
@@ -63,21 +62,19 @@ TEST_CONSTEXPR_CXX20 void test()
   test0(S({1, 2, 1}), opt(3), S({1, 2, 1}), 0);
 }
 
-TEST_CONSTEXPR_CXX20 bool tests()
-{
-    test<std::vector<int>>();
-    test<std::vector<int, min_allocator<int>>> ();
-    test<std::vector<int, test_allocator<int>>> ();
-    test<std::vector<int, safe_allocator<int>>>();
+TEST_CONSTEXPR_CXX20 bool tests() {
+  test<std::vector<int>>();
+  test<std::vector<int, min_allocator<int>>>();
+  test<std::vector<int, test_allocator<int>>>();
+  test<std::vector<int, safe_allocator<int>>>();
 
-    test<std::vector<long>>();
-    test<std::vector<double>>();
+  test<std::vector<long>>();
+  test<std::vector<double>>();
 
-    return true;
+  return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   tests();
 #if TEST_STD_VER > 17
   static_assert(tests());

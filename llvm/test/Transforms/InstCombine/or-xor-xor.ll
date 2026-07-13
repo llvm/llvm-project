@@ -98,7 +98,7 @@ define i3 @or_xor_xor_normal_multiple_uses_and(i3 %a, i3 %b) {
 define i32 @or_xor_xor_negative_multiple_uses_xor1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @or_xor_xor_negative_multiple_uses_xor1(
 ; CHECK-NEXT:    [[AND1:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[XOR1:%.*]] = and i32 [[AND1]], [[B:%.*]]
+; CHECK-NEXT:    [[XOR1:%.*]] = and i32 [[B:%.*]], [[AND1]]
 ; CHECK-NEXT:    call void @use.i32(i32 [[XOR1]])
 ; CHECK-NEXT:    [[OR:%.*]] = xor i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[OR]]
@@ -114,7 +114,7 @@ define i32 @or_xor_xor_negative_multiple_uses_xor1(i32 %a, i32 %b) {
 define i5 @or_xor_xor_negative_multiple_uses_xor2(i5 %a, i5 %b) {
 ; CHECK-LABEL: @or_xor_xor_negative_multiple_uses_xor2(
 ; CHECK-NEXT:    [[A1:%.*]] = xor i5 [[B:%.*]], -1
-; CHECK-NEXT:    [[XOR2:%.*]] = and i5 [[A1]], [[A:%.*]]
+; CHECK-NEXT:    [[XOR2:%.*]] = and i5 [[A:%.*]], [[A1]]
 ; CHECK-NEXT:    call void @use.i5(i5 [[XOR2]])
 ; CHECK-NEXT:    [[OR:%.*]] = xor i5 [[A]], [[B]]
 ; CHECK-NEXT:    ret i5 [[OR]]

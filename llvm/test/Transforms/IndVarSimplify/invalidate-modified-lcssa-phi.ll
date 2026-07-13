@@ -48,13 +48,14 @@ define i8 @test_pr52023(i1 %c.1, i1 %c.2) {
 ; CHECK-NEXT:    br label [[LOOP_1:%.*]]
 ; CHECK:       loop.1:
 ; CHECK-NEXT:    [[INC79:%.*]] = phi i8 [ [[TMP0:%.*]], [[LOOP_1_LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP0]] = add i8 [[INC79]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[INC79]], 1
 ; CHECK-NEXT:    br label [[LOOP_2:%.*]]
 ; CHECK:       loop.2:
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[LOOP_2_LATCH:%.*]], label [[LOOP_1_LATCH]]
 ; CHECK:       loop.2.latch:
 ; CHECK-NEXT:    br label [[LOOP_1_LATCH]]
 ; CHECK:       loop.1.latch:
+; CHECK-NEXT:    [[TMP0]] = phi i8 [ [[TMP1]], [[LOOP_2_LATCH]] ], [ undef, [[LOOP_2]] ]
 ; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[EXIT:%.*]], label [[LOOP_1]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[INC_LCSSA_LCSSA:%.*]] = phi i8 [ [[TMP0]], [[LOOP_1_LATCH]] ]
@@ -132,7 +133,7 @@ define i16 @test_pr58515_invalidate_loop_disposition(ptr %a) {
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i16 [ 0, [[ENTRY]] ], [ [[SUM_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i16 [[SEL]], [[SUM]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i16 [[IV]], 1
-; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i16 [[IV]], 9
+; CHECK-NEXT:    [[C_2:%.*]] = icmp samesign ult i16 [[IV]], 9
 ; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[LCSSA:%.*]] = phi i16 [ [[SUM_NEXT]], [[LOOP]] ]

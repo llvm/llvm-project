@@ -1,12 +1,12 @@
 # RUN: not llvm-mc -triple riscv32 -mattr=+c < %s 2>&1 | FileCheck %s
 
 # Too many operands
-.insn ci  1, 0, a0, 13, 14 # CHECK: :[[#@LINE]]:25: error: invalid operand for instruction
-.insn cr  2, 9, a0, a1, a2 # CHECK: :[[#@LINE]]:25: error: invalid operand for instruction
+.insn ci  1, 0, a0, 13, 14 # CHECK: :[[#@LINE]]:25: error: unexpected extra operand for instruction
+.insn cr  2, 9, a0, a1, a2 # CHECK: :[[#@LINE]]:25: error: unexpected extra operand for instruction
 
 ## Too few operands
-.insn ci  1, 0, a0 # CHECK: :[[#@LINE]]:1: error: too few operands for instruction
-.insn cr  2, 9, a0 # CHECK: :[[#@LINE]]:1: error: too few operands for instruction
+.insn ci  1, 0, a0 # CHECK: :[[#@LINE]]:19: error: too few operands for instruction
+.insn cr  2, 9, a0 # CHECK: :[[#@LINE]]:19: error: too few operands for instruction
 
 .insn cr  2, 9, a0, 13 # CHECK: :[[#@LINE]]:21: error: invalid operand for instruction
 .insn ci  1, 0, a0, a1 # CHECK: :[[#@LINE]]:21: error: immediate must be an integer in the range [-32, 31]
@@ -24,4 +24,4 @@
 ## Make fake mnemonics we use to match these in the tablegened asm match table isn't exposed.
 .insn_cr  2, 9, a0, a1 # CHECK: :[[#@LINE]]:1: error: unknown directive
 
-.insn 0xfffffff0 # CHECK: :[[@LINE]]:7: error: invalid operand for instruction
+.insn 0xfffffff0 # CHECK: :[[@LINE]]:7: error: encoding value does not fit into instruction

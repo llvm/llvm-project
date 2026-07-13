@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -mtriple=hexagon -enable-pipeliner < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; A test that the Phi rewrite logic is correct.
 

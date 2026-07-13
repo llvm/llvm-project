@@ -726,7 +726,9 @@ define i8 @test_int_x86_avx512_fpclass_pd_512(<8 x double> %x0) {
 ; CHECK-LABEL: test_int_x86_avx512_fpclass_pd_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfpclasspd $2, %zmm0, %k1 # encoding: [0x62,0xf3,0xfd,0x48,0x66,0xc8,0x02]
+; CHECK-NEXT:    # k1 = isPositiveZero(zmm0)
 ; CHECK-NEXT:    vfpclasspd $4, %zmm0, %k0 {%k1} # encoding: [0x62,0xf3,0xfd,0x49,0x66,0xc0,0x04]
+; CHECK-NEXT:    # k0 {%k1} = isNegativeZero(zmm0)
 ; CHECK-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
@@ -743,7 +745,9 @@ define i16@test_int_x86_avx512_fpclass_ps_512(<16 x float> %x0) {
 ; CHECK-LABEL: test_int_x86_avx512_fpclass_ps_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfpclassps $2, %zmm0, %k1 # encoding: [0x62,0xf3,0x7d,0x48,0x66,0xc8,0x02]
+; CHECK-NEXT:    # k1 = isPositiveZero(zmm0)
 ; CHECK-NEXT:    vfpclassps $4, %zmm0, %k0 {%k1} # encoding: [0x62,0xf3,0x7d,0x49,0x66,0xc0,0x04]
+; CHECK-NEXT:    # k0 {%k1} = isNegativeZero(zmm0)
 ; CHECK-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
@@ -761,7 +765,9 @@ define i8 @test_int_x86_avx512_mask_fpclass_sd(<2 x double> %x0) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_fpclass_sd:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfpclasssd $4, %xmm0, %k1 # encoding: [0x62,0xf3,0xfd,0x08,0x67,0xc8,0x04]
+; CHECK-NEXT:    # k1 = isNegativeZero(xmm0)
 ; CHECK-NEXT:    vfpclasssd $2, %xmm0, %k0 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0x67,0xc0,0x02]
+; CHECK-NEXT:    # k0 {%k1} = isPositiveZero(xmm0)
 ; CHECK-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
@@ -775,6 +781,7 @@ define i8 @test_int_x86_avx512_mask_fpclass_sd_load(ptr %x0ptr) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vfpclasssd $4, (%eax), %k0 # encoding: [0x62,0xf3,0xfd,0x08,0x67,0x00,0x04]
+; X86-NEXT:    # k0 = isNegativeZero(mem)
 ; X86-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -782,6 +789,7 @@ define i8 @test_int_x86_avx512_mask_fpclass_sd_load(ptr %x0ptr) {
 ; X64-LABEL: test_int_x86_avx512_mask_fpclass_sd_load:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vfpclasssd $4, (%rdi), %k0 # encoding: [0x62,0xf3,0xfd,0x08,0x67,0x07,0x04]
+; X64-NEXT:    # k0 = isNegativeZero(mem)
 ; X64-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq # encoding: [0xc3]
@@ -796,7 +804,9 @@ define i8 @test_int_x86_avx512_mask_fpclass_ss(<4 x float> %x0) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_fpclass_ss:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfpclassss $4, %xmm0, %k1 # encoding: [0x62,0xf3,0x7d,0x08,0x67,0xc8,0x04]
+; CHECK-NEXT:    # k1 = isNegativeZero(xmm0)
 ; CHECK-NEXT:    vfpclassss $2, %xmm0, %k0 {%k1} # encoding: [0x62,0xf3,0x7d,0x09,0x67,0xc0,0x02]
+; CHECK-NEXT:    # k0 {%k1} = isPositiveZero(xmm0)
 ; CHECK-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
@@ -810,6 +820,7 @@ define i8 @test_int_x86_avx512_mask_fpclass_ss_load(ptr %x0ptr, i8 %x1) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vfpclassss $4, (%eax), %k0 # encoding: [0x62,0xf3,0x7d,0x08,0x67,0x00,0x04]
+; X86-NEXT:    # k0 = isNegativeZero(mem)
 ; X86-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -817,6 +828,7 @@ define i8 @test_int_x86_avx512_mask_fpclass_ss_load(ptr %x0ptr, i8 %x1) {
 ; X64-LABEL: test_int_x86_avx512_mask_fpclass_ss_load:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vfpclassss $4, (%rdi), %k0 # encoding: [0x62,0xf3,0x7d,0x08,0x67,0x07,0x04]
+; X64-NEXT:    # k0 = isNegativeZero(mem)
 ; X64-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq # encoding: [0xc3]

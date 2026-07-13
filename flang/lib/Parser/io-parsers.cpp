@@ -23,11 +23,16 @@ namespace Fortran::parser {
 // R905 char-variable -> variable
 // "char-variable" is attempted first since it's not type constrained but
 // syntactically ambiguous with "file-unit-number", which is constrained.
+// Note, "file-unit-number" is replaced by "expr" to allow for better
+// error messages.
 TYPE_PARSER(construct<IoUnit>(variable / lookAhead(space / ",);\n"_ch)) ||
-    construct<IoUnit>(fileUnitNumber) || construct<IoUnit>(star))
+    construct<IoUnit>(
+        indirect(expr) / (lookAhead(space >> ",)"_ch) || atEndOfStmt)) ||
+    construct<IoUnit>(star))
 
 // R1202 file-unit-number -> scalar-int-expr
-TYPE_PARSER(construct<FileUnitNumber>(scalarIntExpr / !"="_tok))
+TYPE_PARSER(construct<FileUnitNumber>(
+    scalarIntExpr / (lookAhead(space >> ",)"_ch) || atEndOfStmt)))
 
 // R1204 open-stmt -> OPEN ( connect-spec-list )
 TYPE_CONTEXT_PARSER("OPEN statement"_en_US,
@@ -91,6 +96,9 @@ TYPE_PARSER(first(construct<ConnectSpec>(maybe("UNIT ="_tok) >> fileUnitNumber),
         scalarDefaultCharExpr)),
     construct<ConnectSpec>("IOMSG =" >> msgVariable),
     construct<ConnectSpec>("IOSTAT =" >> statVariable),
+    construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
+        "LEADING_ZERO =" >> pure(ConnectSpec::CharExpr::Kind::Leading_Zero),
+        scalarDefaultCharExpr)),
     construct<ConnectSpec>(construct<ConnectSpec::Newunit>(
         "NEWUNIT =" >> scalar(integer(variable)))),
     construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
@@ -212,6 +220,10 @@ TYPE_PARSER(first(construct<IoControlSpec>("UNIT =" >> ioUnit),
     construct<IoControlSpec>("ID =" >> idVariable),
     construct<IoControlSpec>("IOMSG = " >> msgVariable),
     construct<IoControlSpec>("IOSTAT = " >> statVariable),
+    construct<IoControlSpec>("LEADING_ZERO =" >>
+        construct<IoControlSpec::CharExpr>(
+            pure(IoControlSpec::CharExpr::Kind::Leading_Zero),
+            scalarDefaultCharExpr)),
     construct<IoControlSpec>("PAD =" >>
         construct<IoControlSpec::CharExpr>(
             pure(IoControlSpec::CharExpr::Kind::Pad), scalarDefaultCharExpr)),
@@ -226,7 +238,12 @@ TYPE_PARSER(first(construct<IoControlSpec>("UNIT =" >> ioUnit),
         construct<IoControlSpec::CharExpr>(
             pure(IoControlSpec::CharExpr::Kind::Sign), scalarDefaultCharExpr)),
     construct<IoControlSpec>(
-        "SIZE =" >> construct<IoControlSpec::Size>(scalarIntVariable))))
+        "SIZE =" >> construct<IoControlSpec::Size>(scalarIntVariable)),
+    lookAhead(keyword) >>
+        construct<IoControlSpec>(recovery(
+            fail<ErrorRecovery>(
+                "invalid or unknown I/O control specification"_err_en_US),
+            keyword >> "="_tok >> expr >> construct<ErrorRecovery>()))))
 
 // R1211 write-stmt -> WRITE ( io-control-spec-list ) [output-item-list]
 constexpr auto outputItemList{
@@ -420,6 +437,10 @@ TYPE_PARSER(first(construct<InquireSpec>(maybe("UNIT ="_tok) >> fileUnitNumber),
     construct<InquireSpec>("IOSTAT =" >>
         construct<InquireSpec::IntVar>(pure(InquireSpec::IntVar::Kind::Iostat),
             scalar(integer(variable)))),
+    construct<InquireSpec>(
+        "LEADING_ZERO =" >> construct<InquireSpec::CharVar>(
+                                pure(InquireSpec::CharVar::Kind::Leading_Zero),
+                                scalarDefaultCharVariable)),
     construct<InquireSpec>("NAME =" >>
         construct<InquireSpec::CharVar>(
             pure(InquireSpec::CharVar::Kind::Name), scalarDefaultCharVariable)),
@@ -542,6 +563,11 @@ TYPE_PARSER(construct<format::FormatItem>(
     construct<format::FormatItem>(
         maybe(repeat), Parser<format::DerivedTypeDataEditDesc>{}) ||
     construct<format::FormatItem>(Parser<format::ControlEditDesc>{}) ||
+    // Error recovery: accept [r] before control-edit-desc so that the
+    // format validator can diagnose a repeat specifier before descriptors
+    // like SS, SP, S, BN, BZ, etc., rather than failing the parse entirely.
+    construct<format::FormatItem>(
+        maybe(repeat), Parser<format::ControlEditDesc>{}) ||
     construct<format::FormatItem>(charStringEditDesc) ||
     construct<format::FormatItem>(maybe(repeat), parenthesized(formatItems)))
 
@@ -571,7 +597,7 @@ constexpr auto mandatoryDigits{construct<std::optional<int>>("." >> width)};
 // R1307 data-edit-desc ->
 //         I w [. m] | B w [. m] | O w [. m] | Z w [. m] | F w . d |
 //         E w . d [E e] | EN w . d [E e] | ES w . d [E e] | EX w . d [E e] |
-//         G w [. d [E e]] | L w | A [w] | D w . d |
+//         G w [. d [E e]] | L w | A [w] | AT | D w . d |
 //         DT [char-literal-constant] [( v-list )]
 // (part 1 of 2)
 TYPE_PARSER(construct<format::IntrinsicTypeDataEditDesc>(
@@ -598,6 +624,9 @@ TYPE_PARSER(construct<format::IntrinsicTypeDataEditDesc>(
             "L " >> pure(format::IntrinsicTypeDataEditDesc::Kind::L),
         mandatoryWidth, noInt, noInt) ||
     construct<format::IntrinsicTypeDataEditDesc>(
+        "A " >> ("T " >> pure(format::IntrinsicTypeDataEditDesc::Kind::AT)),
+        maybe(width), maybe("." >> digits), noInt) ||
+    construct<format::IntrinsicTypeDataEditDesc>(
         "A " >> pure(format::IntrinsicTypeDataEditDesc::Kind::A), maybe(width),
         noInt, noInt) ||
     // PGI/Intel extension: omitting width (and all else that follows)
@@ -619,7 +648,8 @@ TYPE_PARSER(construct<format::IntrinsicTypeDataEditDesc>(
                     "X " >> pure(format::IntrinsicTypeDataEditDesc::Kind::EX) ||
                     pure(format::IntrinsicTypeDataEditDesc::Kind::E)) ||
             "G " >> pure(format::IntrinsicTypeDataEditDesc::Kind::G) ||
-            "L " >> pure(format::IntrinsicTypeDataEditDesc::Kind::L),
+            ("L "_tok / !letter /* don't occlude LZ, LZS, & LZP */) >>
+                pure(format::IntrinsicTypeDataEditDesc::Kind::L),
         noInt, noInt, noInt)))
 
 // R1307 data-edit-desc (part 2 of 2)
@@ -667,6 +697,12 @@ TYPE_PARSER(construct<format::ControlEditDesc>(
                          pure(format::ControlEditDesc::Kind::BN)) ||
                 "Z " >> construct<format::ControlEditDesc>(
                             pure(format::ControlEditDesc::Kind::BZ))) ||
+    "L " >> ("Z " >> ("S " >> construct<format::ControlEditDesc>(
+                                  pure(format::ControlEditDesc::Kind::LZS)) ||
+                         "P " >> construct<format::ControlEditDesc>(pure(
+                                     format::ControlEditDesc::Kind::LZP)) ||
+                         construct<format::ControlEditDesc>(
+                             pure(format::ControlEditDesc::Kind::LZ)))) ||
     "R " >> ("U " >> construct<format::ControlEditDesc>(
                          pure(format::ControlEditDesc::Kind::RU)) ||
                 "D " >> construct<format::ControlEditDesc>(

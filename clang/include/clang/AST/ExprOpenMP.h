@@ -78,12 +78,12 @@ public:
 
   /// Fetches the dimensions for array shaping expression.
   ArrayRef<Expr *> getDimensions() const {
-    return llvm::ArrayRef(getTrailingObjects<Expr *>(), NumDims);
+    return getTrailingObjects<Expr *>(NumDims);
   }
 
   /// Fetches source ranges for the brackets os the array shaping expression.
   ArrayRef<SourceRange> getBracketsRanges() const {
-    return llvm::ArrayRef(getTrailingObjects<SourceRange>(), NumDims);
+    return getTrailingObjects<SourceRange>(NumDims);
   }
 
   /// Fetches base expression of array shaping expression.

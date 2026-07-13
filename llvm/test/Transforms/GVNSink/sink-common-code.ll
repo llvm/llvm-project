@@ -762,13 +762,13 @@ if.end:
 ; CHECK-LABEL: test_pr36954
 ; CHECK-NOT: xor
 ; PR36954 reproducer containing self referencing instruction shouldn't crash GVNSink pass.
-define void @test_pr36954() {
+define void @test_pr36954(i1 %arg) {
 bb1:
   %i2 = trunc i32 undef to i8
   br label %bb2
 
 bb2:
-  br i1 undef, label %bb2, label %exit
+  br i1 %arg, label %bb2, label %exit
 
 bb4.critedge:
   %i6 = sub i8 %i2, undef

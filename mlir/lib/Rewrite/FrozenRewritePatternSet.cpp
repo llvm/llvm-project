@@ -9,7 +9,6 @@
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "ByteCode.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include <optional>
 
@@ -19,6 +18,7 @@ using namespace mlir;
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 #include "mlir/Conversion/PDLToPDLInterp/PDLToPDLInterp.h"
 #include "mlir/Dialect/PDL/IR/PDLOps.h"
+#include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 
 static LogicalResult
 convertPDLToPDLInterp(ModuleOp pdlModule,
@@ -43,7 +43,7 @@ convertPDLToPDLInterp(ModuleOp pdlModule,
   // mode.
   pdlPipeline.enableVerifier(false);
 #endif
-  pdlPipeline.addPass(createPDLToPDLInterpPass(configMap));
+  pdlPipeline.addPass(createConvertPDLToPDLInterpPass(configMap));
   if (failed(pdlPipeline.run(pdlModule)))
     return failure();
 
@@ -65,10 +65,8 @@ FrozenRewritePatternSet::FrozenRewritePatternSet(
     ArrayRef<std::string> enabledPatternLabels)
     : impl(std::make_shared<Impl>()) {
   DenseSet<StringRef> disabledPatterns, enabledPatterns;
-  disabledPatterns.insert(disabledPatternLabels.begin(),
-                          disabledPatternLabels.end());
-  enabledPatterns.insert(enabledPatternLabels.begin(),
-                         enabledPatternLabels.end());
+  disabledPatterns.insert_range(disabledPatternLabels);
+  enabledPatterns.insert_range(enabledPatternLabels);
 
   // Functor used to walk all of the operations registered in the context. This
   // is useful for patterns that get applied to multiple operations, such as
@@ -136,6 +134,15 @@ FrozenRewritePatternSet::FrozenRewritePatternSet(
   if (failed(convertPDLToPDLInterp(pdlModule, configMap)))
     llvm::report_fatal_error(
         "failed to lower PDL pattern module to the PDL Interpreter");
+
+  // Verify that the PDL module was actually lowered to the interpreter
+  // dialect. If the lowering pass was skipped (e.g., by a debug counter
+  // via --mlir-debug-counter), the matcher function will not be present and
+  // we skip bytecode construction. PDL patterns will not be applied in this
+  // case.
+  if (!pdlModule.lookupSymbol(
+          pdl_interp::PDLInterpDialect::getMatcherFunctionName()))
+    return;
 
   // Generate the pdl bytecode.
   impl->pdlByteCode = std::make_unique<detail::PDLByteCode>(

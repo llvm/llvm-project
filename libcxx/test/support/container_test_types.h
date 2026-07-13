@@ -349,7 +349,7 @@ typedef std::allocator_traits<A2> A2T;
 
 static_assert(std::is_same<A1T::rebind_traits<float>, A2T>::value, "");
 static_assert(std::is_same<A2T::rebind_traits<int>, A1T>::value, "");
-} // end namespace test_detail
+} // namespace test_detail
 
 //===----------------------------------------------------------------------===//
 //  'CopyInsertable', 'MoveInsertable' and 'EmplaceConstructible' test types
@@ -491,6 +491,6 @@ template <class Value = CopyInsertable<1> >
 using multiset =
     std::multiset<Value, std::less<Value>, ContainerTestAllocator<Value, Value> >;
 
-} // end namespace TCT
+} // namespace TCT
 
 #endif // SUPPORT_CONTAINER_TEST_TYPES_H

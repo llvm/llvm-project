@@ -13,16 +13,14 @@
 #include <__type_traits/is_floating_point.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_signed.h>
-#include <__type_traits/is_signed_integer.h>
-#include <__type_traits/is_unsigned_integer.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // [concepts.arithmetic], arithmetic concepts
 
@@ -38,19 +36,8 @@ concept unsigned_integral = integral<_Tp> && !signed_integral<_Tp>;
 template <class _Tp>
 concept floating_point = is_floating_point_v<_Tp>;
 
-// Concept helpers for the internal type traits for the fundamental types.
-
-template <class _Tp>
-concept __libcpp_unsigned_integer = __libcpp_is_unsigned_integer<_Tp>::value;
-
-template <class _Tp>
-concept __libcpp_signed_integer = __libcpp_is_signed_integer<_Tp>::value;
-
-template <class _Tp>
-concept __libcpp_integer = __libcpp_unsigned_integer<_Tp> || __libcpp_signed_integer<_Tp>;
+_LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
-
-_LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CONCEPTS_ARITHMETIC_H

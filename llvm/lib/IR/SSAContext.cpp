@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/SSAContext.h"
-#include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -67,6 +66,10 @@ bool SSAContext::isConstantOrUndefValuePhi(const Instruction &Instr) {
   if (auto *Phi = dyn_cast<PHINode>(&Instr))
     return Phi->hasConstantOrUndefValue();
   return false;
+}
+
+template <> bool SSAContext::isAlwaysUniform(const Value *V) {
+  return !isa<Instruction>(V) && !isa<Argument>(V);
 }
 
 template <> Intrinsic::ID SSAContext::getIntrinsicID(const Instruction &I) {

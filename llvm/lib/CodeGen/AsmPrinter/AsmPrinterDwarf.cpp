@@ -15,7 +15,6 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCSection.h"
@@ -108,7 +107,7 @@ unsigned AsmPrinter::GetSizeOfEncodedValue(unsigned Encoding) const {
   default:
     llvm_unreachable("Invalid encoded value.");
   case dwarf::DW_EH_PE_absptr:
-    return MAI->getCodePointerSize();
+    return MAI.getCodePointerSize();
   case dwarf::DW_EH_PE_udata2:
     return 2;
   case dwarf::DW_EH_PE_udata4:
@@ -133,7 +132,7 @@ void AsmPrinter::emitDwarfSymbolReference(const MCSymbol *Label,
                                           bool ForceOffset) const {
   if (!ForceOffset) {
     // On COFF targets, we have to emit the special .secrel32 directive.
-    if (MAI->needsDwarfSectionOffsetDirective()) {
+    if (MAI.needsDwarfSectionOffsetDirective()) {
       assert(!isDwarf64() &&
              "emitting DWARF64 is not implemented for COFF targets");
       OutStreamer->emitCOFFSecRel32(Label, /*Offset=*/0);
@@ -236,6 +235,9 @@ void AsmPrinter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
   case MCCFIInstruction::OpNegateRAState:
     OutStreamer->emitCFINegateRAState(Loc);
     break;
+  case MCCFIInstruction::OpNegateRAStateWithPC:
+    OutStreamer->emitCFINegateRAStateWithPC(Loc);
+    break;
   case MCCFIInstruction::OpSameValue:
     OutStreamer->emitCFISameValue(Inst.getRegister(), Loc);
     break;
@@ -257,6 +259,42 @@ void AsmPrinter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
     break;
   case MCCFIInstruction::OpRestoreState:
     OutStreamer->emitCFIRestoreState(Loc);
+    break;
+  case MCCFIInstruction::OpLLVMRegisterPair: {
+    const auto &Fields =
+        Inst.getExtraFields<MCCFIInstruction::RegisterPairFields>();
+    OutStreamer->emitCFILLVMRegisterPair(Fields.Register, Fields.Reg1,
+                                         Fields.Reg1SizeInBits, Fields.Reg2,
+                                         Fields.Reg2SizeInBits, Loc);
+    break;
+  }
+  case MCCFIInstruction::OpLLVMVectorRegisters: {
+    const auto &Fields =
+        Inst.getExtraFields<MCCFIInstruction::VectorRegistersFields>();
+    OutStreamer->emitCFILLVMVectorRegisters(Fields.Register,
+                                            Fields.VectorRegisters, Loc);
+    break;
+  }
+  case MCCFIInstruction::OpLLVMVectorOffset: {
+    const auto &Fields =
+        Inst.getExtraFields<MCCFIInstruction::VectorOffsetFields>();
+    OutStreamer->emitCFILLVMVectorOffset(
+        Fields.Register, Fields.RegisterSizeInBits, Fields.MaskRegister,
+        Fields.MaskRegisterSizeInBits, Fields.Offset, Loc);
+    break;
+  }
+  case MCCFIInstruction::OpLLVMVectorRegisterMask: {
+    const auto &Fields =
+        Inst.getExtraFields<MCCFIInstruction::VectorRegisterMaskFields>();
+    OutStreamer->emitCFILLVMVectorRegisterMask(
+        Fields.Register, Fields.SpillRegister,
+        Fields.SpillRegisterLaneSizeInBits, Fields.MaskRegister,
+        Fields.MaskRegisterSizeInBits);
+    break;
+  }
+
+  case MCCFIInstruction::OpValOffset:
+    OutStreamer->emitCFIValOffset(Inst.getRegister(), Inst.getOffset(), Loc);
     break;
   }
 }

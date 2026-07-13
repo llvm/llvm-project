@@ -58,8 +58,7 @@ ProcessElementList(StringTableBuilder &StrTabBuilder,
     size_t Idx = FindSequence(IndexBuffer, El.Indices);
     if (Idx == npos) {
       FinalElement.IndicesOffset = static_cast<uint32_t>(IndexBuffer.size());
-      IndexBuffer.insert(IndexBuffer.end(), El.Indices.begin(),
-                         El.Indices.end());
+      llvm::append_range(IndexBuffer, El.Indices);
     } else
       FinalElement.IndicesOffset = static_cast<uint32_t>(Idx);
     FinalElements.push_back(FinalElement);
@@ -147,7 +146,7 @@ void PSVRuntimeInfo::write(raw_ostream &OS, uint32_t Version) const {
                                llvm::endianness::little);
 }
 
-void PSVRuntimeInfo::finalize(Triple::EnvironmentType Stage) {
+void PSVRuntimeInfo::finalize(Triple::EnvironmentType Stage, uint32_t Version) {
   IsFinalized = true;
   BaseData.SigInputElements = static_cast<uint32_t>(InputElements.size());
   BaseData.SigOutputElements = static_cast<uint32_t>(OutputElements.size());
@@ -165,7 +164,8 @@ void PSVRuntimeInfo::finalize(Triple::EnvironmentType Stage) {
   ProcessElementList(DXConStrTabBuilder, IndexBuffer, SignatureElements,
                      SemanticNames, PatchOrPrimElements);
 
-  DXConStrTabBuilder.add(EntryName);
+  if (Version >= 3 && !EntryName.empty())
+    DXConStrTabBuilder.add(EntryName);
 
   DXConStrTabBuilder.finalize();
   for (auto ElAndName : zip(SignatureElements, SemanticNames)) {
@@ -176,8 +176,9 @@ void PSVRuntimeInfo::finalize(Triple::EnvironmentType Stage) {
       El.swapBytes();
   }
 
-  BaseData.EntryNameOffset =
-      static_cast<uint32_t>(DXConStrTabBuilder.getOffset(EntryName));
+  if (Version >= 3 && !EntryName.empty())
+    BaseData.EntryNameOffset =
+        static_cast<uint32_t>(DXConStrTabBuilder.getOffset(EntryName));
 
   if (!sys::IsBigEndianHost)
     return;

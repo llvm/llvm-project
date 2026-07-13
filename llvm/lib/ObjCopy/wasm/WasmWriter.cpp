@@ -9,7 +9,6 @@
 #include "WasmWriter.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -32,8 +31,7 @@ Writer::SectionHeader Writer::createSectionHeader(const Section &S,
   // If we read this section from an object file, use its original size for the
   // padding of the LEB value to avoid changing the file size. Otherwise, pad
   // out to 5 bytes to make it predictable, and match the behavior of clang.
-  unsigned HeaderSecSizeEncodingLen =
-      S.HeaderSecSizeEncodingLen ? *S.HeaderSecSizeEncodingLen : 5;
+  unsigned HeaderSecSizeEncodingLen = S.HeaderSecSizeEncodingLen.value_or(5);
   encodeULEB128(SectionSize, OS, HeaderSecSizeEncodingLen);
   if (HasName) {
     encodeULEB128(S.Name.size(), OS);

@@ -16,6 +16,3 @@ Examples:
   int NestInConditional = (condition1 ? true1 : false1) ? true2 : false2;
   int NestInTrue = condition1 ? (condition2 ? true1 : false1) : false2;
   int NestInFalse = condition1 ? true1 : condition2 ? true2 : false1;
-
-This check implements part of `AUTOSAR C++14 Rule A5-16-1
-<https://www.autosar.org/fileadmin/standards/R22-11/AP/AUTOSAR_RS_CPP14Guidelines.pdf>`_.

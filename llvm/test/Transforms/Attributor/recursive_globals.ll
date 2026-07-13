@@ -27,7 +27,7 @@ define internal void @fnc2() {
 
 define dso_local void @indr_caller(ptr %0) {
 ; CHECK-LABEL: define dso_local void @indr_caller(
-; CHECK-SAME: ptr nocapture nofree noundef nonnull [[TMP0:%.*]]) {
+; CHECK-SAME: ptr nofree noundef nonnull captures(none) [[TMP0:%.*]]) {
 ; CHECK-NEXT:    call void [[TMP0]]()
 ; CHECK-NEXT:    ret void
 ;
@@ -37,8 +37,8 @@ define dso_local void @indr_caller(ptr %0) {
 
 define void @main() {
 ; CHECK-LABEL: define void @main() {
-; CHECK-NEXT:    call void @indr_caller(ptr nocapture nofree noundef nonnull @fnc1)
-; CHECK-NEXT:    call void @indr_caller(ptr nocapture nofree noundef nonnull @fnc2)
+; CHECK-NEXT:    call void @indr_caller(ptr nofree noundef nonnull captures(none) @fnc1)
+; CHECK-NEXT:    call void @indr_caller(ptr nofree noundef nonnull captures(none) @fnc2)
 ; CHECK-NEXT:    ret void
 ;
   call void @indr_caller(ptr @fnc1)

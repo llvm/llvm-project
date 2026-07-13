@@ -86,7 +86,7 @@ SBError SBWatchpoint::GetError() {
   SBError sb_error;
   lldb::WatchpointSP watchpoint_sp(GetSP());
   if (watchpoint_sp) {
-    sb_error.SetError(watchpoint_sp->GetError());
+    sb_error.SetError(watchpoint_sp->GetError().Clone());
   }
   return sb_error;
 }
@@ -326,7 +326,7 @@ const char *SBWatchpoint::GetWatchSpec() {
   // so that the C string we return has a sufficiently long
   // lifetime. Note this a memory leak but should be fairly
   // low impact.
-  return ConstString(watchpoint_sp->GetWatchSpec()).AsCString();
+  return ConstString(watchpoint_sp->GetWatchSpec()).AsCString(nullptr);
 }
 
 bool SBWatchpoint::IsWatchingReads() {

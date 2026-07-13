@@ -30,7 +30,7 @@ define <2 x float> @exp2_v2f32_sitofp_v2i8(<2 x i8> %x) {
 ; CHECK-LABEL: define <2 x float> @exp2_v2f32_sitofp_v2i8(
 ; CHECK-SAME: <2 x i8> [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext <2 x i8> [[X]] to <2 x i32>
-; CHECK-NEXT:    [[EXP2:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x i32> [[TMP1]])
+; CHECK-NEXT:    [[EXP2:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> splat (float 1.000000e+00), <2 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x float> [[EXP2]]
 ;
   %itofp = sitofp <2 x i8> %x to <2 x float>
@@ -54,7 +54,7 @@ define half @exp2_f16_sitofp_i8(i8 %x) {
 ; CHECK-LABEL: define half @exp2_f16_sitofp_i8(
 ; CHECK-SAME: i8 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[X]] to i32
-; CHECK-NEXT:    [[EXP2:%.*]] = call half @llvm.ldexp.f16.i32(half 0xH3C00, i32 [[TMP1]])
+; CHECK-NEXT:    [[EXP2:%.*]] = call half @llvm.ldexp.f16.i32(half 1.000000e+00, i32 [[TMP1]])
 ; CHECK-NEXT:    ret half [[EXP2]]
 ;
   %itofp = sitofp i8 %x to half
@@ -78,7 +78,7 @@ define fp128 @exp2_fp128_sitofp_i8(i8 %x) {
 ; CHECK-LABEL: define fp128 @exp2_fp128_sitofp_i8(
 ; CHECK-SAME: i8 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[X]] to i32
-; CHECK-NEXT:    [[EXP2:%.*]] = call fp128 @llvm.ldexp.f128.i32(fp128 0xL00000000000000003FFF000000000000, i32 [[TMP1]])
+; CHECK-NEXT:    [[EXP2:%.*]] = call fp128 @llvm.ldexp.f128.i32(fp128 1.000000e+00, i32 [[TMP1]])
 ; CHECK-NEXT:    ret fp128 [[EXP2]]
 ;
   %itofp = sitofp i8 %x to fp128
@@ -90,7 +90,7 @@ define <vscale x 4 x float> @exp2_nxv4f32_sitofp_i8(<vscale x 4 x i8> %x) {
 ; CHECK-LABEL: define <vscale x 4 x float> @exp2_nxv4f32_sitofp_i8(
 ; CHECK-SAME: <vscale x 4 x i8> [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext <vscale x 4 x i8> [[X]] to <vscale x 4 x i32>
-; CHECK-NEXT:    [[EXP2:%.*]] = call <vscale x 4 x float> @llvm.ldexp.nxv4f32.nxv4i32(<vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[EXP2:%.*]] = call <vscale x 4 x float> @llvm.ldexp.nxv4f32.nxv4i32(<vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[EXP2]]
 ;
   %itofp = sitofp <vscale x 4 x i8> %x to <vscale x 4 x float>

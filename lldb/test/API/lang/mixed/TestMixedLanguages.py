@@ -22,12 +22,12 @@ class MixedLanguagesTestCase(TestBase):
 
         self.addTearDownHook(cleanup)
         self.runCmd("settings show frame-format")
-        m = re.match('^frame-format \(format-string\) = "(.*)"$', self.res.GetOutput())
+        m = re.match(r'^frame-format \(format-string\) = "(.*)"$', self.res.GetOutput())
         self.assertTrue(m, "Bad settings string")
         self.format_string = m.group(1)
 
         # Change the default format to print the language.
-        format_string = "frame #${frame.index}: ${frame.pc}{ ${module.file.basename}\`${function.name}{${function.pc-offset}}}{, lang=${language}}\n"
+        format_string = "frame #${frame.index}: ${frame.pc}{ ${module.file.basename}\\`${function.name}{${function.pc-offset}}}{, lang=${language}}\n"
         self.runCmd("settings set frame-format %s" % format_string)
         self.expect(
             "settings show frame-format",
@@ -40,7 +40,7 @@ class MixedLanguagesTestCase(TestBase):
         self.runCmd("run")
         self.expect("thread backtrace", substrs=["`main", "lang=c"])
         # Make sure evaluation of C++11 fails.
-        self.expect("expr foo != nullptr", error=True, startstr="error")
+        self.expect("expr foo != nullptr", error=True, substrs=["error"])
 
         # Run to BP at foo (in foo.cpp) and test that the language is C++.
         self.runCmd("breakpoint set -n foo")

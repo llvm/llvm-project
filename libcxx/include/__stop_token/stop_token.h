@@ -18,11 +18,11 @@
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && !defined(_LIBCPP_HAS_NO_THREADS)
-
-class _LIBCPP_AVAILABILITY_SYNC stop_token {
+class stop_token {
 public:
   _LIBCPP_HIDE_FROM_ABI stop_token() noexcept = default;
 
@@ -56,8 +56,8 @@ private:
   _LIBCPP_HIDE_FROM_ABI explicit stop_token(const __intrusive_shared_ptr<__stop_state>& __state) : __state_(__state) {}
 };
 
-#endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && !defined(_LIBCPP_HAS_NO_THREADS)
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
 
 #endif // _LIBCPP___STOP_TOKEN_STOP_TOKEN_H

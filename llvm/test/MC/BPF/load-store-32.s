@@ -1,6 +1,6 @@
 # RUN: llvm-mc -triple bpfel -filetype=obj -o %t %s
 # RUN: llvm-objdump --no-print-imm-hex --mattr=+alu32 -d -r %t | FileCheck --check-prefix=CHECK-32 %s
-# RUN: llvm-objdump --no-print-imm-hex -d -r %t | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex --mcpu=v1 -d -r %t | FileCheck %s
 
 // ======== BPF_LDX Class ========
   w5 = *(u8 *)(r0 + 0)   // BPF_LDX | BPF_B

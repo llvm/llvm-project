@@ -172,6 +172,8 @@ public:
   }
   void setShowColors(bool showColors) { showColors_ = showColors; }
   bool getShowColors() const { return showColors_; }
+  std::optional<ProvenanceRange> GetInclusionInfo(
+      const std::optional<ProvenanceRange> &) const;
   void EmitMessage(llvm::raw_ostream &, const std::optional<ProvenanceRange> &,
       const std::string &message, const std::string &prefix,
       llvm::raw_ostream::Colors color, bool echoSourceLine = false) const;

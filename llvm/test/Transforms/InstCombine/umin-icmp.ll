@@ -95,7 +95,7 @@ define i1 @uge_umin2(i32 %x, i32 %y) {
 define i1 @uge_umin3(i32 %a, i32 %y) {
 ; CHECK-LABEL: @uge_umin3(
 ; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ule i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i32 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -110,7 +110,7 @@ define i1 @uge_umin3(i32 %a, i32 %y) {
 define i1 @uge_umin4(i32 %a, i32 %y) {
 ; CHECK-LABEL: @uge_umin4(
 ; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ule i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i32 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -207,7 +207,7 @@ define i1 @ult_umin2(i32 %x, i32 %y) {
 define i1 @ult_umin3(i32 %a, i32 %y) {
 ; CHECK-LABEL: @ult_umin3(
 ; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -222,7 +222,7 @@ define i1 @ult_umin3(i32 %a, i32 %y) {
 define i1 @ult_umin4(i32 %a, i32 %y) {
 ; CHECK-LABEL: @ult_umin4(
 ; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -802,6 +802,63 @@ if:
   ret void
 end:
   ret void
+}
+
+define i32 @select_npos_umin(i32 %pos, i32 %len) {
+; CHECK-LABEL: @select_npos_umin(
+; CHECK-NEXT:    [[CLAMPED:%.*]] = call i32 @llvm.umin.i32(i32 [[POS:%.*]], i32 [[LEN:%.*]])
+; CHECK-NEXT:    ret i32 [[CLAMPED]]
+;
+  %is_npos = icmp eq i32 %pos, -1
+  %clamped = call i32 @llvm.umin.i32(i32 %pos, i32 %len)
+  %out = select i1 %is_npos, i32 %len, i32 %clamped
+  ret i32 %out
+}
+
+define i32 @select_not_npos_umin(i32 %pos, i32 %len) {
+; CHECK-LABEL: @select_not_npos_umin(
+; CHECK-NEXT:    [[CLAMPED:%.*]] = call i32 @llvm.umin.i32(i32 [[POS:%.*]], i32 [[LEN:%.*]])
+; CHECK-NEXT:    ret i32 [[CLAMPED]]
+;
+  %is_not_npos = icmp ne i32 %pos, -1
+  %clamped = call i32 @llvm.umin.i32(i32 %pos, i32 %len)
+  %out = select i1 %is_not_npos, i32 %clamped, i32 %len
+  ret i32 %out
+}
+
+define i32 @select_npos_umin_commuted(i32 %pos, i32 %len) {
+; CHECK-LABEL: @select_npos_umin_commuted(
+; CHECK-NEXT:    [[CLAMPED:%.*]] = call i32 @llvm.umin.i32(i32 [[LEN:%.*]], i32 [[POS:%.*]])
+; CHECK-NEXT:    ret i32 [[CLAMPED]]
+;
+  %is_npos = icmp eq i32 %pos, -1
+  %clamped = call i32 @llvm.umin.i32(i32 %len, i32 %pos)
+  %out = select i1 %is_npos, i32 %len, i32 %clamped
+  ret i32 %out
+}
+
+define i32 @select_npos_wrong_bound_negative(i32 %pos, i32 %len, i32 %other) {
+; CHECK-LABEL: @select_npos_wrong_bound_negative(
+; CHECK-NEXT:    [[IS_NPOS:%.*]] = icmp eq i32 [[POS:%.*]], -1
+; CHECK-NEXT:    [[CLAMPED:%.*]] = call i32 @llvm.umin.i32(i32 [[POS]], i32 [[LEN:%.*]])
+; CHECK-NEXT:    [[OUT:%.*]] = select i1 [[IS_NPOS]], i32 [[OTHER:%.*]], i32 [[CLAMPED]]
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %is_npos = icmp eq i32 %pos, -1
+  %clamped = call i32 @llvm.umin.i32(i32 %pos, i32 %len)
+  %out = select i1 %is_npos, i32 %other, i32 %clamped
+  ret i32 %out
+}
+
+define i32 @select_npos_umin_drop_range(i32 %pos, i32 %len) {
+; CHECK-LABEL: @select_npos_umin_drop_range(
+; CHECK-NEXT:    [[CLAMPED:%.*]] = call i32 @llvm.umin.i32(i32 [[POS:%.*]], i32 [[LEN:%.*]])
+; CHECK-NEXT:    ret i32 [[CLAMPED]]
+;
+  %is_npos = icmp eq i32 %pos, -1
+  %clamped = call range(i32 0, 10) i32 @llvm.umin.i32(i32 %pos, i32 %len)
+  %out = select i1 %is_npos, i32 %len, i32 %clamped
+  ret i32 %out
 }
 
 declare i32 @llvm.umin.i32(i32, i32)

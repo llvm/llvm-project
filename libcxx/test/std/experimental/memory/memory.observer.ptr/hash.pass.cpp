@@ -17,6 +17,7 @@
 
 #include <experimental/memory>
 #include <cassert>
+#include <functional>
 
 #include "poisoned_hash_helper.h"
 
@@ -33,7 +34,7 @@ void test_hash() {
     assert(h == std::hash<T*>()(&obj));
   }
 
-  test_hash_enabled_for_type<std::experimental::observer_ptr<T>>();
+  test_hash_enabled<std::experimental::observer_ptr<T>>();
 }
 
 struct Bar {};

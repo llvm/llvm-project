@@ -39,9 +39,9 @@ extern "C" void workshareloop_unsigned_auto(float *a, float *b, float *c, float 
 // CHECK-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
 // CHECK-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 8
 // CHECK-NEXT:    store i32 33, ptr [[I]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[I]], ptr [[TMP0]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], ptr [[AGG_CAPTURED1]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_0]], ptr [[AGG_CAPTURED1]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP1]], align 4
 // CHECK-NEXT:    call void @__captured_stmt(ptr [[DOTCOUNT_ADDR]], ptr [[AGG_CAPTURED]])
@@ -51,8 +51,8 @@ extern "C" void workshareloop_unsigned_auto(float *a, float *b, float *c, float 
 // CHECK-NEXT:    store i32 1, ptr [[P_LOWERBOUND]], align 4
 // CHECK-NEXT:    store i32 [[DOTCOUNT]], ptr [[P_UPPERBOUND]], align 4
 // CHECK-NEXT:    store i32 1, ptr [[P_STRIDE]], align 4
-// CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
-// CHECK-NEXT:    call void @__kmpc_dispatch_init_4u(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]], i32 1073741862, i32 1, i32 [[DOTCOUNT]], i32 1, i32 1)
+// CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2:[0-9]+]])
+// CHECK-NEXT:    call void @__kmpc_dispatch_init_4u(ptr @[[GLOB1:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM]], i32 1073741862, i32 1, i32 [[DOTCOUNT]], i32 1, i32 1)
 // CHECK-NEXT:    br label [[OMP_LOOP_PREHEADER_OUTER_COND:%.*]]
 // CHECK:       omp_loop.header:
 // CHECK-NEXT:    [[OMP_LOOP_IV:%.*]] = phi i32 [ [[LB:%.*]], [[OMP_LOOP_PREHEADER_OUTER_COND]] ], [ [[OMP_LOOP_NEXT:%.*]], [[OMP_LOOP_INC:%.*]] ]
@@ -66,32 +66,32 @@ extern "C" void workshareloop_unsigned_auto(float *a, float *b, float *c, float 
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[TMP4]] to i64
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i64 [[IDXPROM]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[TMP3]], i64 [[IDXPROM]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[C_ADDR]], align 8
 // CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-NEXT:    [[IDXPROM2:%.*]] = zext i32 [[TMP7]] to i64
-// CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, ptr [[TMP6]], i64 [[IDXPROM2]]
+// CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw float, ptr [[TMP6]], i64 [[IDXPROM2]]
 // CHECK-NEXT:    [[TMP8:%.*]] = load float, ptr [[ARRAYIDX3]], align 4
 // CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP5]], [[TMP8]]
 // CHECK-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-NEXT:    [[IDXPROM4:%.*]] = zext i32 [[TMP10]] to i64
-// CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 [[IDXPROM4]]
+// CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw float, ptr [[TMP9]], i64 [[IDXPROM4]]
 // CHECK-NEXT:    [[TMP11:%.*]] = load float, ptr [[ARRAYIDX5]], align 4
 // CHECK-NEXT:    [[MUL6:%.*]] = fmul float [[MUL]], [[TMP11]]
 // CHECK-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-NEXT:    [[IDXPROM7:%.*]] = zext i32 [[TMP13]] to i64
-// CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i64 [[IDXPROM7]]
+// CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw float, ptr [[TMP12]], i64 [[IDXPROM7]]
 // CHECK-NEXT:    store float [[MUL6]], ptr [[ARRAYIDX8]], align 4
 // CHECK-NEXT:    br label [[OMP_LOOP_INC]]
 // CHECK:       omp_loop.inc:
 // CHECK-NEXT:    [[OMP_LOOP_NEXT]] = add nuw i32 [[OMP_LOOP_IV]], 1
 // CHECK-NEXT:    br label [[OMP_LOOP_HEADER:%.*]]
 // CHECK:       omp_loop.exit:
-// CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM9:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM9]])
+// CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM9:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
+// CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM9]])
 // CHECK-NEXT:    br label [[OMP_LOOP_AFTER:%.*]]
 // CHECK:       omp_loop.after:
 // CHECK-NEXT:    ret void
@@ -114,8 +114,8 @@ extern "C" void workshareloop_unsigned_auto(float *a, float *b, float *c, float 
 // CHECK-NEXT:    store ptr [[DISTANCE]], ptr [[DISTANCE_ADDR]], align 8
 // CHECK-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], ptr [[TMP0]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON:%.*]], ptr [[TMP0]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
 // CHECK-NEXT:    store i32 [[TMP3]], ptr [[DOTSTART]], align 4
 // CHECK-NEXT:    store i32 32000000, ptr [[DOTSTOP]], align 4
@@ -138,7 +138,7 @@ extern "C" void workshareloop_unsigned_auto(float *a, float *b, float *c, float 
 // CHECK-NEXT:    br label [[COND_END]]
 // CHECK:       cond.end:
 // CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[DIV]], [[COND_TRUE]] ], [ 0, [[COND_FALSE]] ]
-// CHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[DISTANCE_ADDR]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[DISTANCE_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // CHECK-NEXT:    store i32 [[COND]], ptr [[TMP10]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -153,12 +153,12 @@ extern "C" void workshareloop_unsigned_auto(float *a, float *b, float *c, float 
 // CHECK-NEXT:    store i32 [[LOGICAL]], ptr [[LOGICAL_ADDR]], align 4
 // CHECK-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_0:%.*]], ptr [[TMP0]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_0:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[LOGICAL_ADDR]], align 4
 // CHECK-NEXT:    [[MUL:%.*]] = mul i32 7, [[TMP3]]
 // CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP2]], [[MUL]]
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[LOOPVAR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[LOOPVAR_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // CHECK-NEXT:    store i32 [[ADD]], ptr [[TMP4]], align 4
 // CHECK-NEXT:    ret void
 //

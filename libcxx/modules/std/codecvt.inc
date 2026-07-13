@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#if _LIBCPP_HAS_LOCALIZATION
 #  if _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT)
   using std::codecvt_mode;
 
@@ -16,5 +16,5 @@ export namespace std {
   using std::codecvt_utf8;
   using std::codecvt_utf8_utf16;
 #  endif // _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT)
-#endif // _LIBCPP_HAS_NO_LOCALIZATION
+#endif   // _LIBCPP_HAS_LOCALIZATION
 } // namespace std

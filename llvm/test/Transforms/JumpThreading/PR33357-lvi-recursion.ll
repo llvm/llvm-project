@@ -12,7 +12,7 @@
 define void @f(i32 %p1) {
 bb0:
   %0 = icmp eq i32 %p1, 0
-  br i1 undef, label %bb6, label %bb1
+  br i1 true, label %bb6, label %bb1
 
 bb1:
   br label %bb2

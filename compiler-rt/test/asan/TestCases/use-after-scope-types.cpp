@@ -11,6 +11,7 @@
 // RUN: not %run %t 9 2>&1 | FileCheck %s
 // RUN: not %run %t 10 2>&1 | FileCheck %s
 
+#include "defines.h"
 #include <stdlib.h>
 #include <string>
 #include <vector>
@@ -32,7 +33,7 @@ template <class T, size_t N> struct Ptr<T[N]> {
   T *t;
 };
 
-template <class T> __attribute__((noinline)) void test() {
+template <class T> ATTRIBUTE_NOINLINE void test() {
   Ptr<T> ptr;
   {
     T x;

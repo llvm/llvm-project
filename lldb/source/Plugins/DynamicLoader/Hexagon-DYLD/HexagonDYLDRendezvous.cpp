@@ -7,16 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/Module.h"
+#include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
-
-#include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Target/Process.h"
-#include "lldb/Target/Target.h"
 
 #include "HexagonDYLDRendezvous.h"
 
@@ -151,7 +148,6 @@ bool HexagonDYLDRendezvous::UpdateSOEntries() {
 
 bool HexagonDYLDRendezvous::UpdateSOEntriesForAddition() {
   SOEntry entry;
-  iterator pos;
 
   assert(m_previous.state == eAdd);
 
@@ -179,7 +175,6 @@ bool HexagonDYLDRendezvous::UpdateSOEntriesForAddition() {
 
 bool HexagonDYLDRendezvous::UpdateSOEntriesForDeletion() {
   SOEntryList entry_list;
-  iterator pos;
 
   assert(m_previous.state == eDelete);
 

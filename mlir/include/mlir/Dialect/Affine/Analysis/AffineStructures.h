@@ -106,11 +106,14 @@ public:
 
   /// Add the specified values as a dim or symbol var depending on its nature,
   /// if it already doesn't exist in the system. `val` has to be either a
-  /// terminal symbol or a loop IV, i.e., it cannot be the result affine.apply
-  /// of any symbols or loop IVs. The variable is added to the end of the
-  /// existing dims or symbols. Additional information on the variable is
-  /// extracted from the IR and added to the constraint system.
-  void addInductionVarOrTerminalSymbol(Value val);
+  /// terminal symbol or a loop IV, i.e., it cannot be the result of an
+  /// affine.apply of any symbols or loop IVs. Return failure if the addition
+  /// wasn't possible due to the above conditions not being met. This method can
+  /// also fail if the addition of the domain of an affine IV fails. The
+  /// variable is added to the end of the existing dims or symbols. Additional
+  /// information on the variable is extracted from the IR and added to the
+  /// constraint system.
+  LogicalResult addInductionVarOrTerminalSymbol(Value val);
 
   /// Adds slice lower bounds represented by lower bounds in `lbMaps` and upper
   /// bounds in `ubMaps` to each variable in the constraint system which has

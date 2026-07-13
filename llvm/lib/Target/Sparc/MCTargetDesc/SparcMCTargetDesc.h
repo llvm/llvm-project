@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_SPARC_MCTARGETDESC_SPARCMCTARGETDESC_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/Support/DataTypes.h"
 
 #include <memory>
@@ -28,6 +29,7 @@ class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCTargetOptions;
 class Target;
+class Triple;
 
 MCCodeEmitter *createSparcMCCodeEmitter(const MCInstrInfo &MCII,
                                         MCContext &Ctx);
@@ -35,13 +37,13 @@ MCAsmBackend *createSparcAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                     const MCRegisterInfo &MRI,
                                     const MCTargetOptions &Options);
 std::unique_ptr<MCObjectTargetWriter>
-createSparcELFObjectWriter(bool Is64Bit, bool HasV9, uint8_t OSABI);
+createSparcELFObjectWriter(bool Is64Bit, bool IsV8Plus, uint8_t OSABI);
 
 // Defines symbolic names for Sparc v9 ASI tag names.
 namespace SparcASITag {
 struct ASITag {
-  const char *Name;
-  const char *AltName;
+  StringTable::Offset Name;
+  StringTable::Offset AltName;
   unsigned Encoding;
 };
 
@@ -52,7 +54,7 @@ struct ASITag {
 // Defines symbolic names for Sparc v9 prefetch tag names.
 namespace SparcPrefetchTag {
 struct PrefetchTag {
-  const char *Name;
+  StringTable::Offset Name;
   unsigned Encoding;
 };
 

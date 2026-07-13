@@ -20,6 +20,10 @@ RUN: not lld-link %S/Inputs/precomp-a.obj %t.ldcfg.obj /out:%t.exe /nodefaultlib
 RUN: not lld-link %S/Inputs/precomp-a.obj %t.ldcfg.obj /out:%t.exe /nodefaultlib /force /dependentloadflag:zz 2>&1 | FileCheck %s --check-prefix FAIL
 RUN: not lld-link %S/Inputs/precomp-a.obj %t.ldcfg.obj /out:%t.exe /nodefaultlib /force /dependentloadflag:0xf0000 2>&1 | FileCheck %s --check-prefix FAIL-RANGE
 
+// ---- Warn if _load_config_used is missing
+RUN: llvm-lib %t.ldcfg.obj /out:%t.lib
+RUN: lld-link %S/Inputs/precomp-a.obj /out:%t.exe /nodefaultlib /force /dependentloadflag:0x800 2>&1 | FileCheck %s --check-prefix WARN-NOBASE
+RUN: lld-link %S/Inputs/precomp-a.obj %t.lib /out:%t.exe /nodefaultlib /force /dependentloadflag:0x800 2>&1 | FileCheck %s --allow-empty --check-prefix NO-WARN
 
 BASE: DependentLoadFlags: 0x0
 FLAGS-800: DependentLoadFlags: 0x800
@@ -29,3 +33,5 @@ FAIL: lld-link: error: /dependentloadflag: invalid argument: zz
 FAIL-RANGE: lld-link: error: /dependentloadflag: invalid argument: 0xf0000
 FAIL-NOARG: lld-link: error: /dependentloadflag: no argument specified
 
+WARN-NOBASE: lld-link: warning: _load_config_used not found, /dependentloadflag will have no effect
+NO-WARN-NOT: lld-link: warning: _load_config_used not found, /dependentloadflag will have no effect

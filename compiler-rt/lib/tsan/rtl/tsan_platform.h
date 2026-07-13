@@ -404,7 +404,7 @@ struct MappingRiscv64_39 {
   static const uptr kHeapMemBeg = 0x2c00000000ull;
   static const uptr kHeapMemEnd = 0x2c00000000ull;
   static const uptr kHiAppMemBeg = 0x3c00000000ull;
-  static const uptr kHiAppMemEnd = 0x3fffffffffull;
+  static const uptr kHiAppMemEnd = 0x4000000000ull;
   static const uptr kShadowMsk = 0x3800000000ull;
   static const uptr kShadowXor = 0x0800000000ull;
   static const uptr kShadowAdd = 0x0000000000ull;
@@ -434,7 +434,7 @@ struct MappingRiscv64_48 {
   static const uptr kHeapMemBeg = 0x5a0000000000ull;
   static const uptr kHeapMemEnd = 0x5a0000000000ull;
   static const uptr kHiAppMemBeg = 0x7a0000000000ull;
-  static const uptr kHiAppMemEnd = 0x7fffffffffffull;
+  static const uptr kHiAppMemEnd = 0x800000000000ull;
   static const uptr kShadowMsk = 0x700000000000ull;
   static const uptr kShadowXor = 0x100000000000ull;
   static const uptr kShadowAdd = 0x000000000000ull;
@@ -681,17 +681,73 @@ struct MappingGoMips64_47 {
   static const uptr kShadowAdd = 0x200000000000ull;
 };
 
+/* Go on linux/riscv64 (39-bit VMA)
+0000 0001 0000 - 000f 0000 0000: executable and heap (60 GiB)
+000f 0000 0000 - 0010 0000 0000: -
+0010 0000 0000 - 0030 0000 0000: shadow - 128 GiB ( ~ 2 * app)
+0030 0000 0000 - 0038 0000 0000: metainfo - 32 GiB ( ~ 0.5 * app)
+0038 0000 0000 - 0040 0000 0000: -
+*/
+struct MappingGoRiscv64_39 {
+  static const uptr kMetaShadowBeg = 0x003000000000ull;
+  static const uptr kMetaShadowEnd = 0x003800000000ull;
+  static const uptr kShadowBeg = 0x001000000000ull;
+  static const uptr kShadowEnd = 0x003000000000ull;
+  static const uptr kLoAppMemBeg = 0x000000010000ull;
+  static const uptr kLoAppMemEnd = 0x000f00000000ull;
+  static const uptr kMidAppMemBeg = 0;
+  static const uptr kMidAppMemEnd = 0;
+  static const uptr kHiAppMemBeg = 0;
+  static const uptr kHiAppMemEnd = 0;
+  static const uptr kHeapMemBeg = 0;
+  static const uptr kHeapMemEnd = 0;
+  static const uptr kVdsoBeg = 0;
+  static const uptr kShadowMsk = 0;
+  static const uptr kShadowXor = 0;
+  static const uptr kShadowAdd = 0x001000000000ull;
+};
+
+/* Go on linux/riscv64 (48-bit VMA)
+0000 0001 0000 - 00e0 0000 0000: executable and heap (896 GiB)
+00e0 0000 0000 - 2000 0000 0000: -
+2000 0000 0000 - 2400 0000 0000: shadow - 4 TiB ( ~ 4 * app)
+2400 0000 0000 - 3000 0000 0000: -
+3000 0000 0000 - 3100 0000 0000: metainfo - 1 TiB ( ~ 1 * app)
+3100 0000 0000 - 8000 0000 0000: -
+*/
+struct MappingGoRiscv64_48 {
+  static const uptr kMetaShadowBeg = 0x300000000000ull;
+  static const uptr kMetaShadowEnd = 0x310000000000ull;
+  static const uptr kShadowBeg = 0x200000000000ull;
+  static const uptr kShadowEnd = 0x240000000000ull;
+  static const uptr kLoAppMemBeg = 0x000000010000ull;
+  static const uptr kLoAppMemEnd = 0x00e000000000ull;
+  static const uptr kMidAppMemBeg = 0;
+  static const uptr kMidAppMemEnd = 0;
+  static const uptr kHiAppMemBeg = 0;
+  static const uptr kHiAppMemEnd = 0;
+  static const uptr kHeapMemBeg = 0;
+  static const uptr kHeapMemEnd = 0;
+  static const uptr kVdsoBeg = 0;
+  static const uptr kShadowMsk = 0;
+  static const uptr kShadowXor = 0;
+  static const uptr kShadowAdd = 0x200000000000ull;
+};
+
 /*
 Go on linux/s390x
 0000 0000 1000 - 1000 0000 0000: executable and heap - 16 TiB
 1000 0000 0000 - 4000 0000 0000: -
-4000 0000 0000 - 6000 0000 0000: shadow - 64TiB (4 * app)
-6000 0000 0000 - 9000 0000 0000: -
-9000 0000 0000 - 9800 0000 0000: metainfo - 8TiB (0.5 * app)
+4000 0000 0000 - 6000 0000 0000: shadow - 32 TiB (2 * app)
+6000 0000 0000 - 7000 0000 0000: -
+7000 0000 0000 - 7800 0000 0000: metainfo - 8 TiB (0.5 * app)
+7800 0000 0000 - 8000 0000 0000: -
 */
 struct MappingGoS390x {
-  static const uptr kMetaShadowBeg = 0x900000000000ull;
-  static const uptr kMetaShadowEnd = 0x980000000000ull;
+  // Keep the mapping below 2^47 for QEMU linux-user on x86-64 hosts with
+  // four-level page tables.
+  static const uptr kMetaShadowBeg = 0x700000000000ull;
+  static const uptr kMetaShadowEnd = 0x780000000000ull;
   static const uptr kShadowBeg     = 0x400000000000ull;
   static const uptr kShadowEnd = 0x600000000000ull;
   static const uptr kLoAppMemBeg = 0x000000001000ull;
@@ -728,6 +784,13 @@ ALWAYS_INLINE auto SelectMapping(Arg arg) {
   return Func::template Apply<MappingGoAarch64>(arg);
 #  elif defined(__loongarch_lp64)
   return Func::template Apply<MappingGoLoongArch64_47>(arg);
+#  elif SANITIZER_RISCV64
+  switch (vmaSize) {
+    case 39:
+      return Func::template Apply<MappingGoRiscv64_39>(arg);
+    case 48:
+      return Func::template Apply<MappingGoRiscv64_48>(arg);
+  }
 #  elif SANITIZER_WINDOWS
   return Func::template Apply<MappingGoWindows>(arg);
 #  else
@@ -798,6 +861,8 @@ void ForEachMapping() {
   Func::template Apply<MappingGoAarch64>();
   Func::template Apply<MappingGoLoongArch64_47>();
   Func::template Apply<MappingGoMips64_47>();
+  Func::template Apply<MappingGoRiscv64_39>();
+  Func::template Apply<MappingGoRiscv64_48>();
   Func::template Apply<MappingGoS390x>();
 }
 
@@ -896,12 +961,14 @@ struct IsAppMemImpl {
 };
 
 ALWAYS_INLINE
-bool IsAppMem(uptr mem) { return SelectMapping<IsAppMemImpl>(mem); }
+bool IsAppMem(uptr mem) {
+  return SelectMapping<IsAppMemImpl>(STRIP_MTE_TAG(mem));
+}
 
 struct IsShadowMemImpl {
   template <typename Mapping>
   static bool Apply(uptr mem) {
-    return mem >= Mapping::kShadowBeg && mem <= Mapping::kShadowEnd;
+    return mem >= Mapping::kShadowBeg && mem < Mapping::kShadowEnd;
   }
 };
 
@@ -913,7 +980,7 @@ bool IsShadowMem(RawShadow *p) {
 struct IsMetaMemImpl {
   template <typename Mapping>
   static bool Apply(uptr mem) {
-    return mem >= Mapping::kMetaShadowBeg && mem <= Mapping::kMetaShadowEnd;
+    return mem >= Mapping::kMetaShadowBeg && mem < Mapping::kMetaShadowEnd;
   }
 };
 
@@ -935,7 +1002,8 @@ struct MemToShadowImpl {
 
 ALWAYS_INLINE
 RawShadow *MemToShadow(uptr x) {
-  return reinterpret_cast<RawShadow *>(SelectMapping<MemToShadowImpl>(x));
+  return reinterpret_cast<RawShadow*>(
+      SelectMapping<MemToShadowImpl>(STRIP_MTE_TAG(x)));
 }
 
 struct MemToMetaImpl {
@@ -949,7 +1017,9 @@ struct MemToMetaImpl {
 };
 
 ALWAYS_INLINE
-u32 *MemToMeta(uptr x) { return SelectMapping<MemToMetaImpl>(x); }
+u32* MemToMeta(uptr x) {
+  return SelectMapping<MemToMetaImpl>(STRIP_MTE_TAG(x));
+}
 
 struct ShadowToMemImpl {
   template <typename Mapping>

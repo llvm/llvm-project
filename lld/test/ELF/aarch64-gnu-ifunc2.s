@@ -1,5 +1,5 @@
 # REQUIRES: aarch64
-# RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux-gnu %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t | FileCheck %s
 # RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=SEC

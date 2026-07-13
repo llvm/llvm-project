@@ -6,9 +6,10 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-
+from lldbsuite.test import lldbplatformutil
 
 class TypeAndTypeListTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -110,6 +111,16 @@ class TypeAndTypeListTestCase(TestBase):
             )
         # a second Task make be scared up by the Objective-C runtime
         self.assertGreaterEqual(len(type_list), 1)
+        self.assertEqual(
+            type_list[0].GetName(),
+            type_list.GetTypeAtIndex(0).GetName(),
+            "subscript [0] matches GetTypeAtIndex(0)",
+        )
+        self.assertEqual(
+            type_list[-1].GetName(),
+            type_list.GetTypeAtIndex(type_list.GetSize() - 1).GetName(),
+            "subscript [-1] matches last item",
+        )
         for type in type_list:
             self.assertTrue(type)
             self.DebugSBType(type)
@@ -248,7 +259,7 @@ class TypeAndTypeListTestCase(TestBase):
         self.assertEqual(myint_arr_element_type, myint_type)
 
         # Test enum methods. Requires DW_AT_enum_class which was added in Dwarf 4.
-        if configuration.dwarf_version >= 4:
+        if int(lldbplatformutil.getDwarfVersion()) >= 4:
             enum_type = target.FindFirstType("EnumType")
             self.assertTrue(enum_type)
             self.DebugSBType(enum_type)
@@ -288,6 +299,34 @@ class TypeAndTypeListTestCase(TestBase):
         the_typedef = with_nested_typedef.FindDirectNestedType("TheTypedef")
         self.assertTrue(the_typedef)
         self.assertEqual(the_typedef.GetTypedefedType().GetName(), "int")
+
+    @expectedFailureWindows  # Dynamic type resolution not implemented
+    def test_dynamic_values(self):
+        """Test FindDirectNestedType on dynamic values"""
+
+        self.build()
+        lldbutil.run_to_line_breakpoint(self, lldb.SBFileSpec(self.source), self.line)
+        polymorphic = (
+            self.frame()
+            .FindVariable("polymorphic")
+            .GetDynamicValue(lldb.eDynamicDontRunTarget)
+        )
+        self.DebugSBValue(polymorphic)
+        polymorphic_type = polymorphic.GetType().GetPointeeType()
+        self.DebugSBType(polymorphic_type)
+        nested = polymorphic_type.FindDirectNestedType("Nested")
+        self.DebugSBType(nested)
+        self.assertEqual(nested.GetName(), "PolymorphicDerived::Nested")
+        self.assertEqual(nested.GetTypedefedType().GetName(), "float")
+
+        static = polymorphic.GetStaticValue()
+        self.DebugSBValue(static)
+        static_type = static.GetType().GetPointeeType()
+        self.DebugSBType(static_type)
+        nested = static_type.FindDirectNestedType("Nested")
+        self.DebugSBType(nested)
+        self.assertEqual(nested.GetName(), "PolymorphicBase::Nested")
+        self.assertEqual(nested.GetTypedefedType().GetName(), "int")
 
     def test_GetByteAlign(self):
         """Exercise SBType::GetByteAlign"""

@@ -1,4 +1,4 @@
-//===--- ConstReturnTypeCheck.cpp - clang-tidy ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,13 +32,13 @@ findConstToRemove(const FunctionDecl *Def,
   // written in the source (for out-of-line declarations). A FunctionDecl's
   // "location" is the start of its name, so, when the name is unqualified, we
   // use `getLocation()`.
-  SourceLocation NameBeginLoc = Def->getQualifier()
-                                    ? Def->getQualifierLoc().getBeginLoc()
-                                    : Def->getLocation();
+  const SourceLocation NameBeginLoc = Def->getQualifier()
+                                          ? Def->getQualifierLoc().getBeginLoc()
+                                          : Def->getLocation();
   // Since either of the locs can be in a macro, use `makeFileCharRange` to be
   // sure that we have a consistent `CharSourceRange`, located entirely in the
   // source file.
-  CharSourceRange FileRange = Lexer::makeFileCharRange(
+  const CharSourceRange FileRange = Lexer::makeFileCharRange(
       CharSourceRange::getCharRange(Def->getBeginLoc(), NameBeginLoc),
       *Result.SourceManager, Result.Context->getLangOpts());
 
@@ -60,16 +60,16 @@ struct CheckResult {
   CharSourceRange ConstRange;
 
   // FixItHints associated with the definition being checked.
-  llvm::SmallVector<clang::FixItHint, 4> Hints;
+  SmallVector<FixItHint, 4> Hints;
 
   // Locations of any declarations that could not be fixed.
-  llvm::SmallVector<clang::SourceLocation, 4> DeclLocs;
+  SmallVector<SourceLocation, 4> DeclLocs;
 };
 
 } // namespace
 
 // Does the actual work of the check.
-static CheckResult checkDef(const clang::FunctionDecl *Def,
+static CheckResult checkDef(const FunctionDecl *Def,
                             const MatchFinder::MatchResult &MatchResult) {
   CheckResult Result;
   std::optional<Token> Tok = findConstToRemove(Def, MatchResult);
@@ -118,12 +118,12 @@ void ConstReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
       (Def->getBeginLoc().isMacroID() || Def->getEndLoc().isMacroID()))
     return;
 
-  CheckResult CR = checkDef(Def, Result);
+  const CheckResult CR = checkDef(Def, Result);
   {
     // Clang only supports one in-flight diagnostic at a time. So, delimit the
     // scope of `Diagnostic` to allow further diagnostics after the scope.  We
     // use `getInnerLocStart` to get the start of the return type.
-    DiagnosticBuilder Diagnostic =
+    const DiagnosticBuilder Diagnostic =
         diag(Def->getInnerLocStart(),
              "return type %0 is 'const'-qualified at the top level, which may "
              "reduce code readability without improving const correctness")

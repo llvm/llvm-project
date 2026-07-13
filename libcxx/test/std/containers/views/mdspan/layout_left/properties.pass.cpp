@@ -26,10 +26,10 @@
 //   };
 // }
 
-#include <mdspan>
-#include <type_traits>
-#include <concepts>
 #include <cassert>
+#include <cstddef>
+#include <mdspan>
+#include <utility>
 
 #include "test_macros.h"
 

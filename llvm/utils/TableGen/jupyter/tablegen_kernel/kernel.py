@@ -308,7 +308,7 @@ class TableGenKernel(Kernel):
         except TableGenKernelException as e:
             return self.send_stderr(str(e))
 
-        # If we cannot find llvm-tblgen, propogate the error to the notebook.
+        # If we cannot find llvm-tblgen, propagate the error to the notebook.
         # (in case the user is not able to see the output from the Jupyter server)
         try:
             executable = self.get_executable()

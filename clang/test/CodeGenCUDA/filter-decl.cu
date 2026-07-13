@@ -5,12 +5,13 @@
 
 // This has to be at the top of the file as that's where file-scope
 // asm ends up.
-// CHECK-HOST: module asm "file scope asm is host only"
-// CHECK-DEVICE-NOT: module asm "file scope asm is host only"
+// CHECK-HOST: module asm
+// CHECK-HOST-NEXT: "file scope asm is host only"
+// CHECK-DEVICE-NOT: "file scope asm is host only"
 __asm__("file scope asm is host only");
 
 // CHECK-HOST: constantdata = internal global
-// CHECK-DEVICE: constantdata = {{(dso_local )?}}externally_initialized global
+// CHECK-DEVICE: constantdata = {{(dso_local )?}}externally_initialized constant
 __constant__ char constantdata[256];
 
 // CHECK-HOST: devicedata = internal global

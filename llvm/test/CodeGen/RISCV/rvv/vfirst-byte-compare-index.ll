@@ -10,8 +10,8 @@ define i32 @compare_bytes_simple(ptr %a, ptr %b, i32 signext %len, i32 signext %
 ; CHECK-NEXT:    bltu a3, a4, .LBB0_7
 ; CHECK-NEXT:  # %bb.1: # %mismatch_mem_check
 ; CHECK-NEXT:    slli a2, a4, 32
-; CHECK-NEXT:    srli a2, a2, 32
 ; CHECK-NEXT:    slli a5, a3, 32
+; CHECK-NEXT:    srli a2, a2, 32
 ; CHECK-NEXT:    srli a5, a5, 32
 ; CHECK-NEXT:    add a6, a0, a2
 ; CHECK-NEXT:    add a7, a0, a5
@@ -27,8 +27,8 @@ define i32 @compare_bytes_simple(ptr %a, ptr %b, i32 signext %len, i32 signext %
 ; CHECK-NEXT:  .LBB0_3: # %mismatch_vec_loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub a4, a5, a2
-; CHECK-NEXT:    vsetvli a4, a4, e8, m2, ta, ma
 ; CHECK-NEXT:    add a6, a0, a2
+; CHECK-NEXT:    vsetvli a4, a4, e8, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a6)
 ; CHECK-NEXT:    add a6, a1, a2
 ; CHECK-NEXT:    vle8.v v10, (a6)
@@ -53,8 +53,8 @@ define i32 @compare_bytes_simple(ptr %a, ptr %b, i32 signext %len, i32 signext %
 ; CHECK-NEXT:    slli a2, a4, 32
 ; CHECK-NEXT:    srli a2, a2, 32
 ; CHECK-NEXT:    add a5, a0, a2
-; CHECK-NEXT:    lbu a5, 0(a5)
 ; CHECK-NEXT:    add a2, a1, a2
+; CHECK-NEXT:    lbu a5, 0(a5)
 ; CHECK-NEXT:    lbu a2, 0(a2)
 ; CHECK-NEXT:    bne a5, a2, .LBB0_10
 ; CHECK-NEXT:  # %bb.8: # %mismatch_loop_inc
@@ -111,7 +111,7 @@ mismatch_vec_loop:                                ; preds = %mismatch_vec_loop_i
   %lhs.load = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr %20, <vscale x 16 x i1> shufflevector (<vscale x 16 x i1> insertelement (<vscale x 16 x i1> poison, i1 true, i64 0), <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer), i32 %19)
   %21 = getelementptr inbounds i8, ptr %b, i64 %mismatch_vector_index
   %rhs.load = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr %21, <vscale x 16 x i1> shufflevector (<vscale x 16 x i1> insertelement (<vscale x 16 x i1> poison, i1 true, i64 0), <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer), i32 %19)
-  %mismatch.cmp = call <vscale x 16 x i1> @llvm.vp.icmp.nxv16i8(<vscale x 16 x i8> %lhs.load, <vscale x 16 x i8> %rhs.load, metadata !"ne", <vscale x 16 x i1> shufflevector (<vscale x 16 x i1> insertelement (<vscale x 16 x i1> poison, i1 true, i64 0), <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer), i32 %19)
+  %mismatch.cmp = icmp ne <vscale x 16 x i8> %lhs.load, %rhs.load
   %22 = call i32 @llvm.vp.cttz.elts.i32.nxv16i1(<vscale x 16 x i1> %mismatch.cmp, i1 false, <vscale x 16 x i1> shufflevector (<vscale x 16 x i1> insertelement (<vscale x 16 x i1> poison, i1 true, i64 0), <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer), i32 %19)
   %23 = icmp ne i32 %22, %19
   br i1 %23, label %mismatch_vec_loop_found, label %mismatch_vec_loop_inc

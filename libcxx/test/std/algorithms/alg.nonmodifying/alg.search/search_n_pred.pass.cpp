@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iterator>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -32,12 +33,13 @@ TEST_CONSTEXPR bool test_constexpr() {
     }
 #endif
 
-struct count_equal
-{
-    static unsigned count;
-    template <class T>
-    bool operator()(const T& x, const T& y)
-        {++count; return x == y;}
+struct count_equal {
+  static unsigned count;
+  template <class T>
+  bool operator()(const T& x, const T& y) const {
+    ++count;
+    return x == y;
+  }
 };
 
 unsigned count_equal::count = 0;

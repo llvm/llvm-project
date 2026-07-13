@@ -59,6 +59,18 @@ TEST(StringExtrasTest, isUpper) {
   EXPECT_FALSE(isUpper('\?'));
 }
 
+TEST(StringExtrasTest, isPunct) {
+  EXPECT_FALSE(isPunct('a'));
+  EXPECT_FALSE(isPunct('b'));
+  EXPECT_FALSE(isPunct('z'));
+  EXPECT_TRUE(isPunct('-'));
+  EXPECT_TRUE(isPunct(';'));
+  EXPECT_TRUE(isPunct('@'));
+  EXPECT_FALSE(isPunct('0'));
+  EXPECT_FALSE(isPunct('1'));
+  EXPECT_FALSE(isPunct('x'));
+}
+
 template <class ContainerT> void testJoin() {
   ContainerT Items;
   EXPECT_EQ("", join(Items.begin(), Items.end(), " <sep> "));
@@ -132,6 +144,7 @@ TEST(StringExtrasTest, ToAndFromHex) {
 }
 
 TEST(StringExtrasTest, UINT64ToHex) {
+  EXPECT_EQ(utohexstr(0x0u, false, 2), "00");
   EXPECT_EQ(utohexstr(0xA0u), "A0");
   EXPECT_EQ(utohexstr(0xA0u, false, 4), "00A0");
   EXPECT_EQ(utohexstr(0xA0u, false, 8), "000000A0");
@@ -174,6 +187,27 @@ TEST(StringExtrasTest, printHTMLEscaped) {
   raw_string_ostream OS(str);
   printHTMLEscaped("ABCdef123&<>\"'", OS);
   EXPECT_EQ("ABCdef123&amp;&lt;&gt;&quot;&apos;", OS.str());
+}
+
+TEST(StringExtrasTest, printPercentEncoded) {
+  auto encode = [](StringRef In) {
+    std::string Str;
+    raw_string_ostream OS(Str);
+    printPercentEncoded(In, OS);
+    return Str;
+  };
+
+  // Unreserved characters pass through unchanged.
+  EXPECT_EQ("AZaz09-_.~", encode("AZaz09-_.~"));
+  // Reserved characters are percent-encoded with uppercase hex.
+  EXPECT_EQ("a%20b%26c%3Dd", encode("a b&c=d"));
+  EXPECT_EQ("%2F%3F%23", encode("/?#"));
+  // Multi-byte UTF-8 is encoded byte by byte.
+  EXPECT_EQ("%C3%A9", encode("\xC3\xA9"));
+  // High bytes must not sign-extend into an over-long escape.
+  EXPECT_EQ("%80", encode("\x80"));
+  // The empty string maps to the empty string.
+  EXPECT_EQ("", encode(""));
 }
 
 TEST(StringExtrasTest, ConvertToSnakeFromCamelCase) {
@@ -277,6 +311,12 @@ TEST(StringExtrasTest, ListSeparator) {
   EXPECT_EQ(S, "");
   S = LS2;
   EXPECT_EQ(S, " ");
+
+  ListSeparator LS3(",", "{");
+  S = LS3;
+  EXPECT_EQ(S, "{");
+  S = LS3;
+  EXPECT_EQ(S, ",");
 }
 
 TEST(StringExtrasTest, toStringAPInt) {
@@ -296,11 +336,11 @@ TEST(StringExtrasTest, toStringAPInt) {
   EXPECT_EQ(toString(APInt(8, 255, isSigned), 36, isSigned, false), "73");
 
   isSigned = true;
-  EXPECT_EQ(toString(APInt(8, 255, isSigned), 2, isSigned, true), "-0b1");
-  EXPECT_EQ(toString(APInt(8, 255, isSigned), 8, isSigned, true), "-01");
-  EXPECT_EQ(toString(APInt(8, 255, isSigned), 10, isSigned, true), "-1");
-  EXPECT_EQ(toString(APInt(8, 255, isSigned), 16, isSigned, true), "-0x1");
-  EXPECT_EQ(toString(APInt(8, 255, isSigned), 36, isSigned, false), "-1");
+  EXPECT_EQ(toString(APInt(8, -1, isSigned), 2, isSigned, true), "-0b1");
+  EXPECT_EQ(toString(APInt(8, -1, isSigned), 8, isSigned, true), "-01");
+  EXPECT_EQ(toString(APInt(8, -1, isSigned), 10, isSigned, true), "-1");
+  EXPECT_EQ(toString(APInt(8, -1, isSigned), 16, isSigned, true), "-0x1");
+  EXPECT_EQ(toString(APInt(8, -1, isSigned), 36, isSigned, false), "-1");
 }
 
 TEST(StringExtrasTest, toStringAPSInt) {

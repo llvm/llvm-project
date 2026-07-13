@@ -16,7 +16,7 @@ define ptr @large_loop_switch(ptr %p) {
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    jmp ccc@PLT # TAILCALL
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %sw.bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -26,7 +26,7 @@ define ptr @large_loop_switch(ptr %p) {
 ; CHECK-NEXT:    decl %ebx
 ; CHECK-NEXT:    movl %ebx, %ecx
 ; CHECK-NEXT:    jmpq *.LJTI0_0(,%rcx,8)
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_3: # %sw.bb3
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl $532, %edi # imm = 0x214
@@ -35,7 +35,7 @@ define ptr @large_loop_switch(ptr %p) {
 ; CHECK-NEXT:    decl %ebx
 ; CHECK-NEXT:    movl %ebx, %ecx
 ; CHECK-NEXT:    jmpq *.LJTI0_0(,%rcx,8)
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_4: # %sw.bb5
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl $533, %edi # imm = 0x215
@@ -44,7 +44,7 @@ define ptr @large_loop_switch(ptr %p) {
 ; CHECK-NEXT:    decl %ebx
 ; CHECK-NEXT:    movl %ebx, %ecx
 ; CHECK-NEXT:    jmpq *.LJTI0_0(,%rcx,8)
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_5: # %sw.bb7
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl $535, %edi # imm = 0x217
@@ -53,7 +53,7 @@ define ptr @large_loop_switch(ptr %p) {
 ; CHECK-NEXT:    decl %ebx
 ; CHECK-NEXT:    movl %ebx, %ecx
 ; CHECK-NEXT:    jmpq *.LJTI0_0(,%rcx,8)
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_6: # %sw.bb9
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl $536, %edi # imm = 0x218
@@ -62,7 +62,7 @@ define ptr @large_loop_switch(ptr %p) {
 ; CHECK-NEXT:    decl %ebx
 ; CHECK-NEXT:    movl %ebx, %ecx
 ; CHECK-NEXT:    jmpq *.LJTI0_0(,%rcx,8)
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_7: # %sw.bb11
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl $658, %edi # imm = 0x292
@@ -136,7 +136,7 @@ define i32 @interp_switch(ptr nocapture readonly %0, i32 %1) {
 ; CHECK-NEXT:  .LBB1_7: # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    addl $7, %eax
 ; CHECK-NEXT:    incq %rdi
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movzbl (%rdi), %ecx
 ; CHECK-NEXT:    decl %ecx

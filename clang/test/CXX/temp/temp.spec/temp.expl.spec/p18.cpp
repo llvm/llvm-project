@@ -7,13 +7,14 @@ template<class T1> class A {
 }; 
 
 template<> template<class X>
-class A<long>::B { }; 
+class A<long>::B { }; // #defined-here
 
 template<> template<> template<class T>
   void A<int>::B<double>::mf1(T t) { } 
 
 template<> template<> template<class T>
 void A<long>::B<double>::mf1(T t) { } // expected-error{{does not match}}
+                                      // expected-note@#defined-here{{defined here}}
 
 // FIXME: This diagnostic could probably be better.
 template<class Y> template<>

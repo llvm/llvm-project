@@ -12,6 +12,7 @@
 #include "FPBits.h"
 #include "NearestIntegerOperations.h"
 #include "NormalFloat.h"
+#include "cast.h"
 #include "dyadic_float.h"
 #include "rounding_mode.h"
 
@@ -28,10 +29,18 @@ namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T frexp(T x, int &exp) {
+LIBC_INLINE constexpr T frexp(T x, int &exp) {
   FPBits<T> bits(x);
-  if (bits.is_inf_or_nan())
+  if (bits.is_inf_or_nan()) {
+#ifdef LIBC_FREXP_INF_NAN_EXPONENT
+    // The value written back to the second parameter when calling
+    // frexp/frexpf/frexpl` with `+/-Inf`/`NaN` is unspecified in the standard.
+    // Set the exp value for Inf/NaN inputs explicitly to
+    // LIBC_FREXP_INF_NAN_EXPONENT if it is defined.
+    exp = LIBC_FREXP_INF_NAN_EXPONENT;
+#endif // LIBC_FREXP_INF_NAN_EXPONENT
     return x;
+  }
   if (bits.is_zero()) {
     exp = 0;
     return x;
@@ -44,7 +53,7 @@ LIBC_INLINE T frexp(T x, int &exp) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T modf(T x, T &iptr) {
+LIBC_INLINE constexpr T modf(T x, T &iptr) {
   FPBits<T> bits(x);
   if (bits.is_zero() || bits.is_nan()) {
     iptr = x;
@@ -65,7 +74,7 @@ LIBC_INLINE T modf(T x, T &iptr) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T copysign(T x, T y) {
+LIBC_INLINE constexpr T copysign(T x, T y) {
   FPBits<T> xbits(x);
   xbits.set_sign(FPBits<T>(y).sign());
   return xbits.get_val();
@@ -161,14 +170,17 @@ ldexp(T x, U exp) {
       FPBits<T>::MAX_BIASED_EXPONENT + FPBits<T>::FRACTION_LEN + 1;
   // Make sure that we can safely cast exp to int when not returning early.
   static_assert(EXP_LIMIT <= INT_MAX && -EXP_LIMIT >= INT_MIN);
+
   if (LIBC_UNLIKELY(exp > EXP_LIMIT)) {
-    int rounding_mode = quick_get_round();
     Sign sign = bits.sign();
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+    int rounding_mode = quick_get_round();
 
     if ((sign == Sign::POS && rounding_mode == FE_DOWNWARD) ||
         (sign == Sign::NEG && rounding_mode == FE_UPWARD) ||
         (rounding_mode == FE_TOWARDZERO))
       return FPBits<T>::max_normal(sign).get_val();
+#endif
 
     set_errno_if_required(ERANGE);
     raise_except_if_required(FE_OVERFLOW);
@@ -177,12 +189,13 @@ ldexp(T x, U exp) {
 
   // Similarly on the negative side we return zero early if |exp| is too small.
   if (LIBC_UNLIKELY(exp < -EXP_LIMIT)) {
-    int rounding_mode = quick_get_round();
     Sign sign = bits.sign();
-
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+    int rounding_mode = quick_get_round();
     if ((sign == Sign::POS && rounding_mode == FE_UPWARD) ||
         (sign == Sign::NEG && rounding_mode == FE_DOWNWARD))
       return FPBits<T>::min_subnormal(sign).get_val();
+#endif
 
     set_errno_if_required(ERANGE);
     raise_except_if_required(FE_UNDERFLOW);
@@ -192,7 +205,8 @@ ldexp(T x, U exp) {
   // For all other values, NormalFloat to T conversion handles it the right way.
   DyadicFloat<FPBits<T>::STORAGE_LEN> normal(bits.get_val());
   normal.exponent += static_cast<int>(exp);
-  return static_cast<T>(normal);
+  // TODO: Add tests for exceptions.
+  return normal.template as<T, /*ShouldRaiseExceptions=*/true>();
 }
 
 template <typename T, typename U,
@@ -200,24 +214,24 @@ template <typename T, typename U,
                                cpp::is_floating_point_v<U> &&
                                (sizeof(T) <= sizeof(U)),
                            int> = 0>
-LIBC_INLINE T nextafter(T from, U to) {
+LIBC_INLINE constexpr T nextafter(T from, U to) {
   FPBits<T> from_bits(from);
   if (from_bits.is_nan())
     return from;
 
   FPBits<U> to_bits(to);
   if (to_bits.is_nan())
-    return static_cast<T>(to);
+    return cast<T>(to);
 
   // NOTE: This would work only if `U` has a greater or equal precision than
   // `T`. Otherwise `from` could loose its precision and the following statement
   // could incorrectly evaluate to `true`.
-  if (static_cast<U>(from) == to)
-    return static_cast<T>(to);
+  if (cast<U>(from) == to)
+    return cast<T>(to);
 
   using StorageType = typename FPBits<T>::StorageType;
   if (from != T(0)) {
-    if ((static_cast<U>(from) < to) == (from > T(0))) {
+    if ((cast<U>(from) < to) == (from > T(0))) {
       from_bits = FPBits<T>(StorageType(from_bits.uintval() + 1));
     } else {
       from_bits = FPBits<T>(StorageType(from_bits.uintval() - 1));

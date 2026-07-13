@@ -20,7 +20,7 @@
 %struct.BSS1 = type <{ [12 x i8] }>
 
 ;CHECK: @.BSS1.0 = internal unnamed_addr global i32 0, align 32, !dbg ![[GVE1:.*]]
-;CHECK: @.BSS1.1 = internal unnamed_addr global i32 0, align 32, !dbg ![[GVE2:.*]], !dbg ![[GVE4:.*]]
+;CHECK: @.BSS1.1 = internal unnamed_addr global i32 0, align 4, !dbg ![[GVE2:.*]], !dbg ![[GVE4:.*]]
 ;CHECK: @.BSS1.2 = internal unnamed_addr global i32 0, align 8, !dbg ![[GVE3:.*]]
 
 @.BSS1 = internal global %struct.BSS1 zeroinitializer, align 32, !dbg !0, !dbg !7, !dbg !10, !dbg !27, !dbg !29
@@ -90,9 +90,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "nodea", scope: !2, file: !3, line: 3, type: !9, isLocal: true, isDefinition: true)
-!2 = distinct !DISubprogram(name: "sub", scope: !4, file: !3, line: 1, type: !12, scopeLine: 1, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition, unit: !4)
+!2 = distinct !DISubprogram(name: "sub", scope: !4, file: !3, line: 1, type: !12, scopeLine: 1, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition, unit: !4, retainedNodes: !6)
 !3 = !DIFile(filename: "global-sra-struct-fit-segment.f90", directory: "/tmp")
-!4 = distinct !DICompileUnit(language: DW_LANG_Fortran90, file: !3, producer: " F90 Flang - 1.5 2017-05-01", isOptimized: false, flags: "'+flang -g -O0 -S -emit-llvm'", runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !5, globals: !6, imports: !5, nameTableKind: None)
+!4 = distinct !DICompileUnit(language: DW_LANG_Fortran90, file: !3, producer: " F90 Flang - 1.5 2017-05-01", isOptimized: false, flags: "'+flang -g -O0 -S -emit-llvm'", runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !5, globals: !5, imports: !5, nameTableKind: None)
 !5 = !{}
 !6 = !{!0, !7, !10, !29}
 !7 = !DIGlobalVariableExpression(var: !8, expr: !DIExpression(DW_OP_plus_uconst, 4))

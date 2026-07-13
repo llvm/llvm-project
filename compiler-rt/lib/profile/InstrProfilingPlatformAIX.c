@@ -181,7 +181,7 @@ void __llvm_profile_register_names_function(void *NamesStart,
 // reference symbols from the profile library (for example when no files were
 // compiled with -fprofile-generate). That's because these symbols are kept
 // alive through references in constructor functions that are always live in the
-// default linking model on AIX (-bcdtors:all). The __start_SECNAME and
+// `-bcdtors:all` linking model on AIX. The __start_SECNAME and
 // __stop_SECNAME symbols are only resolved by the linker when the SECNAME
 // section exists. So for the scenario where the user objects have no such
 // section (i.e. when they are compiled with -fno-profile-generate), we always
@@ -196,12 +196,12 @@ static const int dummy_name[0] COMPILER_RT_SECTION(
     COMPILER_RT_SEG INSTR_PROF_NAME_SECT_NAME);
 static int dummy_vnds[0] COMPILER_RT_SECTION(
     COMPILER_RT_SEG INSTR_PROF_VNODES_SECT_NAME);
-static int dummy_orderfile[0] COMPILER_RT_SECTION(
-    COMPILER_RT_SEG INSTR_PROF_ORDERFILE_SECT_NAME);
 static int dummy_vname[0] COMPILER_RT_SECTION(
     COMPILER_RT_SEG INSTR_PROF_VNAME_SECT_NAME);
 static int dummy_vtab[0] COMPILER_RT_SECTION(
     COMPILER_RT_SEG INSTR_PROF_VTAB_SECT_NAME);
+static int dummy_covinit_funcs[0] COMPILER_RT_SECTION(
+    COMPILER_RT_SEG INSTR_PROF_COVINIT_SECT_NAME);
 
 // To avoid GC'ing of the dummy variables by the linker, reference them in an
 // array and reference the array in the runtime registration code
@@ -211,10 +211,10 @@ static int dummy_vtab[0] COMPILER_RT_SECTION(
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #endif
 COMPILER_RT_VISIBILITY
-void *__llvm_profile_keep[] = {(void *)&dummy_cnts,  (void *)&dummy_bits,
-                               (void *)&dummy_data,  (void *)&dummy_name,
-                               (void *)&dummy_vnds,  (void *)&dummy_orderfile,
-                               (void *)&dummy_vname, (void *)&dummy_vtab};
+void *__llvm_profile_keep[] = {
+    (void *)&dummy_cnts, (void *)&dummy_bits,         (void *)&dummy_data,
+    (void *)&dummy_name, (void *)&dummy_vnds,         (void *)&dummy_vname,
+    (void *)&dummy_vtab, (void *)&dummy_covinit_funcs};
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif

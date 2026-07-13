@@ -4,11 +4,9 @@
 define <8 x i1> @ham(i64 %arg) {
 ; CHECK-LABEL: ham:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    movl $255, %ecx
-; CHECK-NEXT:    cmovel %eax, %ecx
-; CHECK-NEXT:    kmovd %ecx, %k0
+; CHECK-NEXT:    andb $1, %dil
+; CHECK-NEXT:    negb %dil
+; CHECK-NEXT:    kmovd %edi, %k0
 ; CHECK-NEXT:    vpmovm2w %k0, %xmm0
 ; CHECK-NEXT:    retq
   %tmp = trunc i64 %arg to i1

@@ -31,6 +31,7 @@ static_library("DWARF") {
     "//lldb/source/Symbol",
     "//lldb/source/Target",
     "//lldb/source/Utility",
+    "//lldb/source/ValueObject",
 
     #"//lldb/source/Plugins/TypeSystem/Clang", # Dependency cycle.
     "//llvm/lib/DebugInfo/DWARF",
@@ -50,12 +51,10 @@ static_library("DWARF") {
     "DWARFContext.cpp",
     "DWARFDIE.cpp",
     "DWARFDataExtractor.cpp",
-    "DWARFDebugArangeSet.cpp",
     "DWARFDebugAranges.cpp",
     "DWARFDebugInfo.cpp",
     "DWARFDebugInfoEntry.cpp",
     "DWARFDebugMacro.cpp",
-    "DWARFDebugRanges.cpp",
     "DWARFDeclContext.cpp",
     "DWARFDefines.cpp",
     "DWARFFormValue.cpp",
@@ -65,10 +64,12 @@ static_library("DWARF") {
     "DebugNamesDWARFIndex.cpp",
     "LogChannelDWARF.cpp",
     "ManualDWARFIndex.cpp",
+    "ManualDWARFIndexSet.cpp",
     "NameToDIE.cpp",
     "SymbolFileDWARF.cpp",
     "SymbolFileDWARFDebugMap.cpp",
     "SymbolFileDWARFDwo.cpp",
+    "SymbolFileWasm.cpp",
     "UniqueDWARFASTType.cpp",
   ]
 }

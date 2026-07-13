@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64-pc-win32 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64-uefi %s
 
 void __attribute__((ms_abi)) foo(void);
 void (*pfoo)(void) = foo;

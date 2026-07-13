@@ -48,7 +48,6 @@ public:
 
   private:
     std::string CurMessage;
-    LocIter ErrorLoc, FileEnd;
   };
 
   explicit RCParser(std::vector<RCToken> TokenList);
@@ -88,6 +87,7 @@ private:
   // Helper integer expression parsing methods.
   Expected<IntWithNotMask> parseIntExpr1();
   Expected<IntWithNotMask> parseIntExpr2();
+  Expected<IntWithNotMask> parseIntExpr3();
 
   // Advance the state by one, discarding the current token.
   // If the discarded token had an incorrect type, fail.

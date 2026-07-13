@@ -14,12 +14,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include <cassert>
-#include <cstdint>
 #include <map>
 #include <queue>
 #include <set>
-#include <utility>
 
 namespace llvm {
 
@@ -29,7 +26,8 @@ class MachineRegisterInfo;
 class MachineBasicBlock;
 class MachineFunction;
 class raw_ostream;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 struct BitTracker {
@@ -100,9 +98,9 @@ private:
       bool operator()(const MachineInstr *MI, const MachineInstr *MJ) const;
       DenseMap<const MachineInstr*,unsigned> &Dist;
     };
-    std::priority_queue<MachineInstr*, std::vector<MachineInstr*>, Cmp> Uses;
     DenseSet<const MachineInstr*> Set; // Set to avoid adding duplicate entries.
     DenseMap<const MachineInstr*,unsigned> Dist;
+    std::priority_queue<MachineInstr *, std::vector<MachineInstr *>, Cmp> Uses;
   };
 
   void reset();

@@ -17,8 +17,8 @@
 #include "Delta.h"
 
 namespace llvm {
-void reduceAliasesDeltaPass(TestRunner &Test);
-void reduceIFuncsDeltaPass(TestRunner &Test);
+void reduceAliasesDeltaPass(Oracle &O, ReducerWorkItem &Program);
+void reduceIFuncsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
 } // namespace llvm
 
 #endif

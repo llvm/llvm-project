@@ -1,11 +1,11 @@
-; RUN: llc < %s -march=mipsel -mcpu=mips32r2 -mattr=+micromips | FileCheck %s
-; RUN: llc < %s -march=mips -mcpu=mips32r2 -mattr=+micromips | FileCheck %s
-; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips | FileCheck %s
-; RUN: llc -march=mips -mcpu=mips32                           -asm-show-inst < %s | FileCheck %s --check-prefix=MIPS32
-; RUN: llc -march=mips -mcpu=mips32r2 -mattr=+fp64            -asm-show-inst < %s | FileCheck %s --check-prefix=MIPS32FP64
-; RUN: llc -march=mips -mcpu=mips32r3 -mattr=+micromips       -asm-show-inst < %s | FileCheck %s --check-prefix=MM
-; RUN: llc -march=mips -mcpu=mips32r3 -mattr=+micromips,+fp64 -asm-show-inst < %s | FileCheck %s --check-prefix=MMFP64
-; RUN: llc -march=mips -mcpu=mips32r6 -mattr=+micromips       -asm-show-inst < %s | FileCheck %s --check-prefix=MMR6
+; RUN: llc < %s -mtriple=mipsel -mcpu=mips32r2 -mattr=+micromips | FileCheck %s
+; RUN: llc < %s -mtriple=mips -mcpu=mips32r2 -mattr=+micromips | FileCheck %s
+; RUN: llc < %s -mtriple=mips -mcpu=mips32r6 -mattr=+micromips | FileCheck %s
+; RUN: llc -mtriple=mips -mcpu=mips32                           -asm-show-inst < %s | FileCheck %s --check-prefix=MIPS32
+; RUN: llc -mtriple=mips -mcpu=mips32r2 -mattr=+fp64            -asm-show-inst < %s | FileCheck %s --check-prefix=MIPS32FP64
+; RUN: llc -mtriple=mips -mcpu=mips32r3 -mattr=+micromips       -asm-show-inst < %s | FileCheck %s --check-prefix=MM
+; RUN: llc -mtriple=mips -mcpu=mips32r3 -mattr=+micromips,+fp64 -asm-show-inst < %s | FileCheck %s --check-prefix=MMFP64
+; RUN: llc -mtriple=mips -mcpu=mips32r6 -mattr=+micromips       -asm-show-inst < %s | FileCheck %s --check-prefix=MMR6
 
 define float @sqrt_fn(float %value) #0 {
 entry:

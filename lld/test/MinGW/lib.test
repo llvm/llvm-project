@@ -5,6 +5,7 @@ LIB1: unable to find library -lfoo
 
 RUN: echo > %t/lib/libfoo.dll.a
 RUN: ld.lld -### -m i386pep -lfoo -L%t/lib 2>&1 | FileCheck -check-prefix=LIB2 %s
+RUN: ld.lld -### -m i386pep -lfoo --dll-search-prefix=cyg -L%t/lib 2>&1 | FileCheck -check-prefix=LIB2 %s
 LIB2: libfoo.dll.a
 
 RUN: not ld.lld -### -m i386pep -l:barefilename -L%t/lib 2>&1 | FileCheck -check-prefix=LIB-LITERAL-FAIL %s
@@ -22,6 +23,7 @@ LIB3: unable to find library -lfoo
 
 RUN: echo > %t/lib/libfoo.a
 RUN: ld.lld -### -m i386pep -Bstatic -lfoo -L%t/lib 2>&1 | FileCheck -check-prefix=LIB4 %s
+RUN: ld.lld -### -m i386pep -Bstatic -lfoo --dll-search-prefix=cyg -L%t/lib 2>&1 | FileCheck -check-prefix=LIB4 %s
 LIB4: libfoo.a
 
 RUN: echo > %t/lib/libbar.dll.a
@@ -46,12 +48,17 @@ MSVCSTYLE: msvcstyle.lib
 
 RUN: echo > %t/lib/libnoimplib.dll
 RUN: echo > %t/lib/noprefix_noimplib.dll
+RUN: echo > %t/lib/cygnoimplib2.dll
 RUN: ld.lld -### -m i386pep -L%t/lib -lnoimplib 2>&1 | FileCheck -check-prefix=DLL1 %s
 RUN: ld.lld -### -m i386pep -L%t/lib -lnoprefix_noimplib 2>&1 | FileCheck -check-prefix=DLL2 %s
+RUN: ld.lld -### -m i386pep -L%t/lib -lnoimplib2 --dll-search-prefix=cyg 2>&1 | FileCheck -check-prefix=DLL3 %s
 DLL1: libnoimplib.dll
 DLL2: noprefix_noimplib.dll
+DLL3: cygnoimplib2.dll
 
 RUN: not ld.lld -### -m i386pep -L%t/lib -static -lnoimplib 2>&1 | FileCheck -check-prefix=ERROR-NOIMPLIB %s
 RUN: not ld.lld -### -m i386pep -L%t/lib -static -lnoprefix_noimplib 2>&1 | FileCheck -check-prefix=ERROR-NOPREFIX-NOIMPLIB %s
+RUN: not ld.lld -### -m i386pep -L%t/lib -static -lnoimplib2 --dll-search-prefix=cyg 2>&1 | FileCheck -check-prefix=ERROR-CYG-NOIMPLIB %s
 ERROR-NOIMPLIB: unable to find library -lnoimplib
 ERROR-NOPREFIX-NOIMPLIB: unable to find library -lnoprefix_noimplib
+ERROR-CYG-NOIMPLIB: unable to find library -lnoimplib2

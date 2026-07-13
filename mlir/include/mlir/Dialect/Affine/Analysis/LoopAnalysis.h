@@ -41,6 +41,7 @@ void getTripCountMapAndOperands(AffineForOp forOp, AffineMap *map,
 /// Returns the trip count of the loop if it's a constant, std::nullopt
 /// otherwise. This uses affine expression analysis and is able to determine
 /// constant trip count in non-trivial cases.
+[[deprecated("use AffineForOp::getStaticTripCount instead")]]
 std::optional<uint64_t> getConstantTripCount(AffineForOp forOp);
 
 /// Returns the greatest known integral divisor of the trip count. Affine
@@ -118,6 +119,14 @@ bool isOpwiseShiftValid(AffineForOp forOp, ArrayRef<uint64_t> shifts);
 /// order on the vector of loop indices. This function will return failure when
 /// any dependence component is negative along any of `loops`.
 bool isTilingValid(ArrayRef<AffineForOp> loops);
+
+/// Returns true if the affine nest rooted at `root` has a cyclic dependence
+/// among its affine memory accesses. The dependence could be through any
+/// dependences carried by loops contained in `root` (inclusive of `root`) and
+/// those carried by loop bodies (blocks) contained. Dependences carried by
+/// loops outer to `root` aren't relevant. This method doesn't consider/account
+/// for aliases.
+bool hasCyclicDependence(AffineForOp root);
 
 } // namespace affine
 } // namespace mlir

@@ -1,7 +1,7 @@
 // clang-format off
 
 // RUN: %build -o %t.exe -- %s
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
+// RUN: %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/lookup-by-types.lldbinit 2>&1 | FileCheck %s
 
 class B;
@@ -34,13 +34,11 @@ int main(int argc, char **argv) {
 // CHECK-NEXT:     static const A constA;
 // CHECK-NEXT:     static A a;
 // CHECK-NEXT:     static B b;
-// CHECK-NEXT: public:
 // CHECK-NEXT:     int val;
 // CHECK-NEXT: }"
 // CHECK:      image lookup -type B
 // CHECK-NEXT: 1 match found in {{.*}}.exe
 // CHECK-NEXT:  compiler_type = "class B {
 // CHECK-NEXT:     static A a;
-// CHECK-NEXT: public:
 // CHECK-NEXT:     int val;
 // CHECK-NEXT: }"

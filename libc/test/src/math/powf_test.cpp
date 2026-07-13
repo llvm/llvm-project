@@ -7,14 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/powf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <errno.h>
-#include <stdint.h>
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcPowfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 using LIBC_NAMESPACE::testing::tlog;
@@ -43,7 +48,7 @@ TEST_F(LlvmLibcPowfTest, TrickyInputs) {
     float x = INPUTS[i].x;
     float y = INPUTS[i].y;
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Pow, INPUTS[i],
-                                   LIBC_NAMESPACE::powf(x, y), 0.5);
+                                   LIBC_NAMESPACE::powf(x, y), TOLERANCE + 0.5);
   }
 }
 
@@ -71,25 +76,26 @@ TEST_F(LlvmLibcPowfTest, InFloatRange) {
 
     for (uint32_t i = 0, v = X_START; i <= X_COUNT; ++i, v += X_STEP) {
       float x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x) || x < 0.0)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x < 0.0)
         continue;
 
       for (uint32_t j = 0, w = Y_START; j <= Y_COUNT; ++j, w += Y_STEP) {
         float y = FPBits(w).get_val();
-        if (isnan(y) || isinf(y))
+        if (FPBits(w).is_nan() || FPBits(w).is_inf())
           continue;
 
-        LIBC_NAMESPACE::libc_errno = 0;
+        libc_errno = 0;
         float result = LIBC_NAMESPACE::powf(x, y);
         ++cc;
-        if (isnan(result) || isinf(result))
+        if (FPBits(result).is_nan() || FPBits(result).is_inf())
           continue;
 
         ++count;
         mpfr::BinaryInput<float> inputs{x, y};
 
         if (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Pow, inputs,
-                                               result, 0.5, rounding_mode)) {
+                                               result, TOLERANCE + 0.5,
+                                               rounding_mode)) {
           ++fails;
           while (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(
               mpfr::Operation::Pow, inputs, result, tol, rounding_mode)) {

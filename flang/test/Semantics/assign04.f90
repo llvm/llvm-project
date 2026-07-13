@@ -99,12 +99,15 @@ end
 
 subroutine s6(x)
   integer :: x(*)
+  integer, allocatable :: ja(:)
   x(1:3) = [1, 2, 3]
   x(:3) = [1, 2, 3]
   !ERROR: Assumed-size array 'x' must have explicit final subscript upper bound value
   x(:) = [1, 2, 3]
   !ERROR: Whole assumed-size array 'x' may not appear here without subscripts
   x = [1, 2, 3]
+  !ERROR: Whole assumed-size array 'x' may not appear here without subscripts
+  ja = x
   associate (y => x) ! ok
     !ERROR: Whole assumed-size array 'y' may not appear here without subscripts
     y = [1, 2, 3]

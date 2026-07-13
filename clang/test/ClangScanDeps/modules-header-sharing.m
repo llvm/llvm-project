@@ -67,7 +67,9 @@ framework module B_Private { umbrella header "B_Private.h" }
 // RUN: sed -e "s|DIR|%/t|g" %t/overlay.json.template > %t/overlay.json
 
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full > %t/result.json
-// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
+// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=translation-units.commands.command-line,translation-units.commands.file-deps,translation-units.commands.input-file \
+// RUN:   | FileCheck %s -DPREFIX=%/t
 // CHECK:      {
 // CHECK:        "translation-units": [
 // CHECK-NEXT:     {
@@ -77,10 +79,11 @@ framework module B_Private { umbrella header "B_Private.h" }
 // CHECK:                  "-fmodule-map-file=[[PREFIX]]/frameworks/A.framework/Modules/module.modulemap",
 // CHECK:                  "-fmodule-name=A",
 // CHECK:                ],
-// CHECK-NEXT:           "executable": "clang",
-// CHECK-NEXT:           "file-deps": [
+// CHECK:                "file-deps": [
 // CHECK-NEXT:             "[[PREFIX]]/tu.m",
-// CHECK-NEXT:             "[[PREFIX]]/shared/H.h"
+// CHECK-NEXT:             "[[PREFIX]]/shared/H.h",
+// CHECK-NEXT:             "[[PREFIX]]/overlay.json",
+// CHECK-NEXT:             "[[PREFIX]]/frameworks/A.framework/Modules/module.modulemap"
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/tu.m"
 // CHECK-NEXT:         }

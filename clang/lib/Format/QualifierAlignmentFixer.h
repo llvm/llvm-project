@@ -38,9 +38,6 @@ bool isConfiguredQualifierOrType(const FormatToken *Tok,
                                  const std::vector<tok::TokenKind> &Qualifiers,
                                  const LangOptions &LangOpts);
 
-// Is the Token likely a Macro
-bool isPossibleMacro(const FormatToken *Tok);
-
 class LeftRightQualifierAlignmentFixer : public TokenAnalyzer {
   std::string Qualifier;
   bool RightAlign;

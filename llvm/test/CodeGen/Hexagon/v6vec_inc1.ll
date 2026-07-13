@@ -1,5 +1,5 @@
-; RUN: llc -march=hexagon -O2 -enable-pipeliner=false < %s | FileCheck %s
-; RUN: llc -march=hexagon -O2 -debug-only=pipeliner < %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-SWP
+; RUN: llc -mtriple=hexagon -O2 -enable-pipeliner=false < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 -debug-only=pipeliner < %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-SWP
 ; REQUIRES: asserts
 
 ; CHECK: {

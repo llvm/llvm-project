@@ -1,0 +1,55 @@
+RUN: rm -rf %t && split-file %s %t && cd %t
+RUN: %clang foo.c -c --coverage
+RUN: %clang foo2.c -c --coverage
+RUN: %clang -shared foo.o -o shr.o --coverage
+RUN: ar -X32_64 r libfoo.a shr.o
+RUN: %clang -shared foo2.o -o shr.o --coverage
+RUN: ar -X32_64 r libfoo2.a shr.o
+
+RUN: %clang common.c -c --coverage
+
+RUN: %clang test1.c common.o  --coverage
+RUN: ./a.out
+
+//--- foo.c
+void foo() {}
+
+//--- foo2.c
+void foo2() {}
+
+//--- common.c
+#include <dlfcn.h>
+#include <stdio.h>
+#include <stdlib.h>
+typedef void (*FN_PTR)();
+int open_close_libs() {
+  void *handle, *handle2;
+  FN_PTR foo, foo2;
+
+#define OPEN_AND_RUN(HANDLE, SUF)                                            \
+  HANDLE = dlopen("./lib" #SUF ".a(shr.o)",RTLD_NOW|RTLD_MEMBER);            \
+  SUF = (void (*)())dlsym(HANDLE, #SUF);                                     \
+  if (SUF == NULL) {                                                         \
+    fprintf(stderr, "unable to lookup symbol '%s': %s\n", #SUF, dlerror());  \
+    return EXIT_FAILURE;                                                     \
+  }                                                                          \
+  SUF();
+
+#define CLOSE_AND_CHECK(HANDLE, SUF)                                         \
+  dlclose(HANDLE);                                                           \
+  system("ls " #SUF ".gc*");
+
+  OPEN_AND_RUN(handle, foo)
+  CLOSE_AND_CHECK(handle, foo)
+
+  OPEN_AND_RUN(handle2, foo2)
+  OPEN_AND_RUN(handle, foo)
+  CLOSE_AND_CHECK(handle2, foo2)
+  CLOSE_AND_CHECK(handle, foo)
+  return EXIT_SUCCESS;
+}
+//--- test1.c
+int open_close_libs();
+int main() {
+  open_close_libs();
+}

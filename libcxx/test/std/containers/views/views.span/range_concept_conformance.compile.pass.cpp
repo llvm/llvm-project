@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: std-at-least-c++20
 
-// span
+// <span>
 
 #include <span>
 
@@ -16,7 +16,6 @@
 #include <ranges>
 
 using range = std::span<int>;
-
 
 static_assert(std::same_as<std::ranges::iterator_t<range>, range::iterator>);
 static_assert(std::ranges::common_range<range>);

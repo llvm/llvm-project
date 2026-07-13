@@ -11,7 +11,6 @@
 
 #ifdef LIBC_FULL_BUILD
 
-#include "include/llvm-libc-macros/math-function-macros.h"
 #include "include/llvm-libc-macros/math-macros.h"
 
 #else // Overlay mode
@@ -44,6 +43,6 @@
 #define FP_INT_TONEAREST 4
 #endif // FP_INT_TONEAREST
 
-#endif // LLVM_LIBC_FULL_BUILD
+#endif // LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_MATH_MACROS_H

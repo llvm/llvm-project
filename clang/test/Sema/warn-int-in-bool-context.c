@@ -25,8 +25,8 @@ enum num {
 
 int test(int a, unsigned b, enum num n) {
   boolean r;
-  r = a << a;    // expected-warning {{converting the result of '<<' to a boolean; did you mean '(a << a) != 0'?}}
-  r = MM;        // expected-warning {{converting the result of '<<' to a boolean; did you mean '(a << a) != 0'?}}
+  r = a << a;    // expected-warning {{converting the result of '<<' to a boolean}}
+  r = MM;        // expected-warning {{converting the result of '<<' to a boolean}}
   r = (1 << 7);  // expected-warning {{converting the result of '<<' to a boolean always evaluates to true}}
   r = 2UL << 2;  // expected-warning {{converting the result of '<<' to a boolean always evaluates to true}}
   r = 0 << a;    // expected-warning {{converting the result of '<<' to a boolean always evaluates to false}}
@@ -34,23 +34,23 @@ int test(int a, unsigned b, enum num n) {
   r = 1 << 0;    // expected-warning {{converting the result of '<<' to a boolean always evaluates to true}}
   r = 1 << 2;    // expected-warning {{converting the result of '<<' to a boolean always evaluates to true}}
   r = 1ULL << 2; // expected-warning {{converting the result of '<<' to a boolean always evaluates to true}}
-  r = 2 << b;    // expected-warning {{converting the result of '<<' to a boolean; did you mean '(2 << b) != 0'?}}
+  r = 2 << b;    // expected-warning {{converting the result of '<<' to a boolean}}
   r = (unsigned)(2 << b);
   r = b << 7;
-  r = (1 << a); // expected-warning {{converting the result of '<<' to a boolean; did you mean '(1 << a) != 0'?}}
-  r = TWO << a; // expected-warning {{converting the result of '<<' to a boolean; did you mean '(2 << a) != 0'?}}
-  r = a << 7;   // expected-warning {{converting the result of '<<' to a boolean; did you mean '(a << 7) != 0'?}}
-  r = ONE << a; // expected-warning {{converting the result of '<<' to a boolean; did you mean '(1 << a) != 0'?}}
-  if (TWO << a) // expected-warning {{converting the result of '<<' to a boolean; did you mean '(2 << a) != 0'?}}
+  r = (1 << a); // expected-warning {{converting the result of '<<' to a boolean}}
+  r = TWO << a; // expected-warning {{converting the result of '<<' to a boolean}}
+  r = a << 7;   // expected-warning {{converting the result of '<<' to a boolean}}
+  r = ONE << a; // expected-warning {{converting the result of '<<' to a boolean}}
+  if (TWO << a) // expected-warning {{converting the result of '<<' to a boolean}}
     return a;
-  
-  a = 1 << 2 ? 0: 1; // expected-warning {{converting the result of '<<' to a boolean always evaluates to true}}
-  a = 1 << a ? 0: 1; // expected-warning {{converting the result of '<<' to a boolean; did you mean '(1 << a) != 0'?}}
 
-  for (a = 0; 1 << a; a++) // expected-warning {{converting the result of '<<' to a boolean; did you mean '(1 << a) != 0'?}}
+  a = 1 << 2 ? 0: 1; // expected-warning {{converting the result of '<<' to a boolean always evaluates to true}}
+  a = 1 << a ? 0: 1; // expected-warning {{converting the result of '<<' to a boolean}}
+
+  for (a = 0; 1 << a; a++) // expected-warning {{converting the result of '<<' to a boolean}}
     ;
 
-  if (a << TWO) // expected-warning {{converting the result of '<<' to a boolean; did you mean '(a << 2) != 0'?}}
+  if (a << TWO) // expected-warning {{converting the result of '<<' to a boolean}}
     return a;
 
   if (n || two)

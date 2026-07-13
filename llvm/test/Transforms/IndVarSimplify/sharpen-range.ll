@@ -87,7 +87,7 @@ loop.begin:
 ; CHECK: loop.begin:
   %i.01 = phi i64 [ 2, %entry ], [ %add, %loop.end ]
   %cmp = icmp ugt i64 %i.01, 1
-; CHECK: %cmp = icmp ugt i64 %i.01, 1
+; CHECK: %cmp = icmp samesign ugt i64 %i.01, 1
   br i1 %cmp, label %loop, label %loop.end
 
 loop:

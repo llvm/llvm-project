@@ -18,6 +18,7 @@ add_lldb_unittest(ProcessUtilityTests
   LinuxProcMapsTest.cpp
   MemoryTagManagerAArch64MTETest.cpp
   RegisterContextTest.cpp
+  CoreFileMemoryRangesTest.cpp
   ${PLATFORM_SOURCES}
 
   LINK_LIBS

@@ -1,8 +1,12 @@
-;; Tagged symbols are only available on aarch64-linux-android.
-; RUN: not llc -filetype=null %s -mtriple=aarch64-unknown-linux 2>&1 | FileCheck %s --check-prefix=ERR
+;; Tagged symbols are only available on AArch64.
 ; RUN: %if x86-registered-target %{ not llc -filetype=null %s -mtriple=x86_64-unknown-linux 2>&1 | FileCheck %s --check-prefix=ERR %}
 
-; ERR: error: tagged symbols (-fsanitize=memtag-globals) are only supported on AArch64 Android
+; ERR: error: tagged symbols (-fsanitize=memtag-globals) are only supported on AArch64
+
+; RUN: llc %s -mtriple=aarch64-unknown-linux -o %t.linux.S
+; RUN: FileCheck %s --input-file=%t.linux.S --check-prefix=CHECK-ASM
+; RUN: llvm-mc -filetype=obj %t.linux.S -triple=aarch64-unknown-linux -o %t.linux.o
+; RUN: llvm-readelf -r %t.linux.o | FileCheck %s --check-prefix=CHECK-RELOCS
 
 ; RUN: llc %s -mtriple=aarch64-linux-android31 -o %t.S
 ; RUN: FileCheck %s --input-file=%t.S --check-prefix=CHECK-ASM
@@ -11,7 +15,6 @@
 
 ; RUN: obj2yaml %t.o -o %t.yaml
 ; RUN: FileCheck %s --input-file=%t.yaml --check-prefix=CHECK-YAML
-; RUN: yaml2obj %t.yaml -o %t.o
 ; RUN: llvm-readelf -r %t.o | FileCheck %s --check-prefix=CHECK-RELOCS
 
 ;; Check we don't create relocations referencing a section symbol for sanitize_memtag globals.
@@ -43,9 +46,17 @@
 ; CHECK-YAML-NEXT: -
 
 ; CHECK-ASM: .memtag internal_four
+; CHECK-ASM .p2align        4
+; CHECK-ASM: .size   internal_four, 16
 ; CHECK-ASM: .memtag four
+; CHECK-ASM .p2align        4
+; CHECK-ASM: .size   four, 16
 ; CHECK-ASM: .memtag sixteen
+; CHECK-ASM .p2align        4
+; CHECK-ASM: .size   sixteen, 16
 ; CHECK-ASM: .memtag huge
+; CHECK-ASM .p2align        4
+; CHECK-ASM: .size   huge, 16777232
 ; CHECK-ASM-NOT: .memtag specialcaselisted
 
 @internal_four = internal global i32 1, sanitize_memtag

@@ -11,16 +11,16 @@
 
 #include <__compare/ordering.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__type_traits/is_same.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __comp_detail {
 
@@ -55,7 +55,7 @@ __compute_comp_type(const _ClassifyCompCategory (&__types)[_Size]) {
 template <class... _Ts, bool _False = false>
 _LIBCPP_HIDE_FROM_ABI constexpr auto __get_comp_type() {
   using _CCC                    = _ClassifyCompCategory;
-  constexpr _CCC __type_kinds[] = {_StrongOrd, __type_to_enum<_Ts>()...};
+  constexpr _CCC __type_kinds[] = {_StrongOrd, __comp_detail::__type_to_enum<_Ts>()...};
   constexpr _CCC __cat          = __comp_detail::__compute_comp_type(__type_kinds);
   if constexpr (__cat == _None)
     return void();
@@ -72,15 +72,15 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __get_comp_type() {
 
 // [cmp.common], common comparison category type
 template <class... _Ts>
-struct _LIBCPP_TEMPLATE_VIS common_comparison_category {
-  using type = decltype(__comp_detail::__get_comp_type<_Ts...>());
+struct common_comparison_category {
+  using type _LIBCPP_NODEBUG = decltype(__comp_detail::__get_comp_type<_Ts...>());
 };
 
 template <class... _Ts>
 using common_comparison_category_t = typename common_comparison_category<_Ts...>::type;
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___COMPARE_COMMON_COMPARISON_CATEGORY_H

@@ -1,7 +1,5 @@
 ; RUN: opt -passes=inline %s -S -o - \
 ; RUN: | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators -passes=inline %s -S -o - \
-; RUN: | FileCheck %s
 
 ;; $ cat test.cpp
 ;; __attribute__((always_inline))

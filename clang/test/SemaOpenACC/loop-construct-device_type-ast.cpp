@@ -19,71 +19,107 @@ void NormalUses() {
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl{{.*}} SomeVar 'bool'
 
-#pragma acc loop device_type(SomeS) dtype(SomeImpl)
-  for(;;){}
+#pragma acc loop device_type(default) dtype(nvidia)
+  for(int i = 0; i < 5; ++i){}
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}
-  // CHECK-NEXT: device_type(SomeS)
-  // CHECK-NEXT: dtype(SomeImpl)
+  // CHECK-NEXT: device_type(default)
+  // CHECK-NEXT: dtype(nvidia)
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: CompoundStmt
-#pragma acc loop device_type(SomeVar) dtype(int)
-  for(;;){}
+#pragma acc loop device_type(acc_device_nvidia) dtype(radeon)
+  for(int i = 0; i < 5; ++i){}
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}
-  // CHECK-NEXT: device_type(SomeVar)
-  // CHECK-NEXT: dtype(int)
+  // CHECK-NEXT: device_type(acc_device_nvidia)
+  // CHECK-NEXT: dtype(radeon)
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: CompoundStmt
-#pragma acc loop device_type(private) dtype(struct)
-  for(;;){}
+#pragma acc loop device_type(host) dtype(multicore)
+  for(int i = 0; i < 5; ++i){}
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}
-  // CHECK-NEXT: device_type(private)
-  // CHECK-NEXT: dtype(struct)
+  // CHECK-NEXT: device_type(host)
+  // CHECK-NEXT: dtype(multicore)
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: CompoundStmt
-#pragma acc loop device_type(private) dtype(class)
-  for(;;){}
+#pragma acc loop device_type(default) dtype(*)
+  for(int i = 0; i < 5; ++i){}
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}
-  // CHECK-NEXT: device_type(private)
-  // CHECK-NEXT: dtype(class)
-  // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: CompoundStmt
-#pragma acc loop device_type(float) dtype(*)
-  for(;;){}
-  // CHECK-NEXT: OpenACCLoopConstruct{{.*}}
-  // CHECK-NEXT: device_type(float)
+  // CHECK-NEXT: device_type(default)
   // CHECK-NEXT: dtype(*)
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: CompoundStmt
-#pragma acc loop device_type(float, int) dtype(*)
-  for(;;){}
+#pragma acc loop device_type(nvidia) dtype(*)
+  for(int i = 0; i < 5; ++i){}
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}
-  // CHECK-NEXT: device_type(float, int)
+  // CHECK-NEXT: device_type(nvidia)
   // CHECK-NEXT: dtype(*)
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: CompoundStmt
+#pragma acc loop device_type(radeon, host) dtype(*)
+  for(int i = 0; i < 5; ++i){}
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}}
+  // CHECK-NEXT: device_type(radeon, host)
+  // CHECK-NEXT: dtype(*)
+  // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: CompoundStmt
 }
 
@@ -93,16 +129,22 @@ void TemplUses() {
   // CHECK-NEXT: TemplateTypeParmDecl{{.*}}T
   // CHECK-NEXT: FunctionDecl{{.*}}TemplUses
   // CHECK-NEXT: CompoundStmt
-#pragma acc loop device_type(T) dtype(T)
-  for(;;){}
+#pragma acc loop device_type(default) dtype(multicore)
+  for(int i = 0; i < 5; ++i){}
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}
-  // CHECK-NEXT: device_type(T)
-  // CHECK-NEXT: dtype(T)
+  // CHECK-NEXT: device_type(default)
+  // CHECK-NEXT: dtype(multicore)
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: CompoundStmt
 
 
@@ -113,13 +155,19 @@ void TemplUses() {
   // CHECK-NEXT: CompoundStmt
 
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}
-  // CHECK-NEXT: device_type(T)
-  // CHECK-NEXT: dtype(T)
+  // CHECK-NEXT: device_type(default)
+  // CHECK-NEXT: dtype(multicore)
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: CompoundStmt
 }
 

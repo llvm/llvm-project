@@ -68,8 +68,8 @@ Nesting level
 ^^^^^^^^^^^^^
 
 While by itself the nesting level does not change the function's Cognitive
-Complexity metric, it is tracked, and is used by the next, third building block.
-The following structures increase the nesting level (by `1`):
+Complexity metric, it is tracked, and is used by the next, third building
+block. The following structures increase the nesting level (by `1`):
 
 * Conditional operators:
 
@@ -153,6 +153,7 @@ In the last example, the check will flag `function3` if the option Threshold is
 set to `2` or smaller. If the option DescribeBasicIncrements is set to `true`,
 it will additionally flag the two `if` statements with the amounts by which they
 increase to the complexity of the function and the current nesting level.
+
 
 Limitations
 -----------
