@@ -454,12 +454,9 @@ static bool tryDividePair(std::optional<int64_t> &Val1,
   return true;
 }
 
-static Messages getNonTaintMsgs(const ASTContext &ACtx,
-                                const MemSpaceRegion *Space,
-                                const SubRegion *Region, NonLoc Offset,
-                                std::optional<NonLoc> Extent, SVal Location,
-                                BadOffsetKind Problem) {
-  std::string RegName = getRegionName(Space, Region);
+static Messages getNonTaintMsgs(const ASTContext &ACtx, StringRef RegName,
+                                NonLoc Offset, std::optional<NonLoc> Extent,
+                                SVal Location, BadOffsetKind Problem) {
   const auto *EReg = Location.getAsRegion()->getAs<ElementRegion>();
   assert(EReg && "this checker only handles element access");
   QualType ElemType = EReg->getElementType();
@@ -511,10 +508,8 @@ static Messages getNonTaintMsgs(const ASTContext &ACtx,
           std::string(Buf)};
 }
 
-static Messages getTaintMsgs(const MemSpaceRegion *Space,
-                             const SubRegion *Region, const char *OffsetName,
+static Messages getTaintMsgs(StringRef RegName, const char *OffsetName,
                              bool AlsoMentionUnderflow) {
-  std::string RegName = getRegionName(Space, Region);
   return {formatv("Potential out of bound access to {0} with tainted {1}",
                   RegName, OffsetName),
           formatv("Access of {0} with a tainted {1} that may be {2}too large",
@@ -645,7 +640,8 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
       } else {
         if (!WithinLowerBound) {
           // ...and it cannot be valid (>= 0), so report an error.
-          Messages Msgs = getNonTaintMsgs(C.getASTContext(), Space, Reg,
+          std::string RegName = getRegionName(Space, Reg);
+          Messages Msgs = getNonTaintMsgs(C.getASTContext(), RegName,
                                           ByteOffset, /*Extent=*/std::nullopt,
                                           Location, BadOffsetKind::Negative);
           reportOOB(C, PrecedesLowerBound, Msgs, ByteOffset, std::nullopt);
@@ -693,9 +689,9 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
         BadOffsetKind Problem = AlsoMentionUnderflow
                                     ? BadOffsetKind::Indeterminate
                                     : BadOffsetKind::Overflowing;
-        Messages Msgs =
-            getNonTaintMsgs(C.getASTContext(), Space, Reg, ByteOffset,
-                            *KnownSize, Location, Problem);
+        std::string RegName = getRegionName(Space, Reg);
+        Messages Msgs = getNonTaintMsgs(C.getASTContext(), RegName, ByteOffset,
+                                        *KnownSize, Location, Problem);
         reportOOB(C, ExceedsUpperBound, Msgs, ByteOffset, KnownSize);
         return;
       }
@@ -711,8 +707,8 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
           if (isTainted(State, ASE->getIdx(), C.getStackFrame()))
             OffsetName = "index";
 
-        Messages Msgs =
-            getTaintMsgs(Space, Reg, OffsetName, AlsoMentionUnderflow);
+        std::string RegName = getRegionName(Space, Reg);
+        Messages Msgs = getTaintMsgs(RegName, OffsetName, AlsoMentionUnderflow);
         reportOOB(C, ExceedsUpperBound, Msgs, ByteOffset, KnownSize,
                   /*IsTaintBug=*/true);
         return;
