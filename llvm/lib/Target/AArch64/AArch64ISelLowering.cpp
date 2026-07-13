@@ -27538,6 +27538,38 @@ static SDValue getNarrowMaskForInterleavedOps(SelectionDAG &DAG, SDLoc &DL,
                      WideMask->getOperand(0));
 }
 
+static bool isSupportedSVEInterleavedMemSubvectorType(EVT VT,
+                                                      SelectionDAG &DAG) {
+  return VT.isScalableVector() &&
+         (VT.getSizeInBits().getKnownMinValue() == 128 ||
+          (VT.isVectorOf(MVT::i1) && VT != MVT::nxv1i1)) &&
+         DAG.getTargetLoweringInfo().isTypeLegal(VT);
+}
+
+static EVT getSVEInterleavedMemContainerType(EVT VT) {
+  return VT.isVectorOf(MVT::i1) ? getPromotedVTForPredicate(VT) : VT;
+}
+
+static SDValue convertToSVEInterleavedMemContainer(SDValue Value, SDLoc DL,
+                                                   SelectionDAG &DAG) {
+  EVT ContainerVT = getSVEInterleavedMemContainerType(Value.getValueType());
+  if (Value.getValueType() == ContainerVT)
+    return Value;
+  return DAG.getNode(ISD::ZERO_EXTEND, DL, ContainerVT, Value);
+}
+
+static SDValue convertFromSVEInterleavedMemContainer(SDValue Value, EVT VT,
+                                                     SDLoc DL,
+                                                     SelectionDAG &DAG) {
+  if (Value.getValueType() == VT)
+    return Value;
+  assert(VT.isVectorOf(MVT::i1) &&
+         Value.getValueType() == getPromotedVTForPredicate(VT) &&
+         "Unexpected SVE interleaved memory container conversion");
+  return DAG.getSetCC(DL, VT, Value,
+                      DAG.getConstant(0, DL, Value.getValueType()), ISD::SETNE);
+}
+
 static SDValue performInterleavedMaskedStoreCombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
   if (!DCI.isBeforeLegalize())
@@ -27565,9 +27597,7 @@ static SDValue performInterleavedMaskedStoreCombine(
   // At the moment we're unlikely to see a fixed-width vector interleave as
   // we usually generate shuffles instead.
   EVT SubVecTy = ValueInterleaveOps[0].getValueType();
-  if (!SubVecTy.isScalableVT() ||
-      SubVecTy.getSizeInBits().getKnownMinValue() != 128 ||
-      !DAG.getTargetLoweringInfo().isTypeLegal(SubVecTy))
+  if (!isSupportedSVEInterleavedMemSubvectorType(SubVecTy, DAG))
     return SDValue();
 
   SDLoc DL(N);
@@ -27575,6 +27605,9 @@ static SDValue performInterleavedMaskedStoreCombine(
       getNarrowMaskForInterleavedOps(DAG, DL, MST->getMask(), NumParts);
   if (!NarrowMask)
     return SDValue();
+
+  for (SDValue &Value : ValueInterleaveOps)
+    Value = convertToSVEInterleavedMemContainer(Value, DL, DAG);
 
   const Intrinsic::ID IID =
       NumParts == 2 ? Intrinsic::aarch64_sve_st2 : Intrinsic::aarch64_sve_st4;
@@ -30473,9 +30506,7 @@ static SDValue performVectorDeinterleaveCombine(
   // At the moment we're unlikely to see a fixed-width vector deinterleave as
   // we usually generate shuffles instead.
   unsigned MinNumElements = SubVecTy.getVectorMinNumElements();
-  if (!SubVecTy.isScalableVector() ||
-      SubVecTy.getSizeInBits().getKnownMinValue() != 128 ||
-      !DAG.getTargetLoweringInfo().isTypeLegal(SubVecTy))
+  if (!isSupportedSVEInterleavedMemSubvectorType(SubVecTy, DAG))
     return SDValue();
 
   // Make sure each input operand is the correct extract_subvector of the same
@@ -30511,6 +30542,8 @@ static SDValue performVectorDeinterleaveCombine(
   if (!NarrowMask)
     return SDValue();
 
+  EVT LoadVT = getSVEInterleavedMemContainerType(SubVecTy);
+
   const Intrinsic::ID IID = NumParts == 2 ? Intrinsic::aarch64_sve_ld2_sret
                                           : Intrinsic::aarch64_sve_ld4_sret;
   SDValue NewLdOps[] = {MaskedLoad->getChain(),
@@ -30518,17 +30551,17 @@ static SDValue performVectorDeinterleaveCombine(
                         MaskedLoad->getBasePtr()};
   SDValue Res;
   if (NumParts == 2)
-    Res = DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL,
-                      {SubVecTy, SubVecTy, MVT::Other}, NewLdOps);
+    Res = DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, {LoadVT, LoadVT, MVT::Other},
+                      NewLdOps);
   else
     Res = DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL,
-                      {SubVecTy, SubVecTy, SubVecTy, SubVecTy, MVT::Other},
-                      NewLdOps);
+                      {LoadVT, LoadVT, LoadVT, LoadVT, MVT::Other}, NewLdOps);
 
   // We can now generate a structured load!
   SmallVector<SDValue, 4> ResOps(NumParts);
   for (unsigned Idx = 0; Idx < NumParts; Idx++)
-    ResOps[Idx] = SDValue(Res.getNode(), Idx);
+    ResOps[Idx] = convertFromSVEInterleavedMemContainer(
+        SDValue(Res.getNode(), Idx), SubVecTy, DL, DAG);
 
   // Replace uses of the original chain result with the new chain result.
   DAG.ReplaceAllUsesOfValueWith(SDValue(MaskedLoad, 1),
