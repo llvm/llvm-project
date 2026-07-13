@@ -9,7 +9,7 @@ from lldbsuite.test.decorators import *
 class TestSwiftForwardInteropSteppingHeaderOnly(TestBase):
 
     @swiftTest
-    @skipIfWindows
+    @skipEmbeddedSwiftOnWindows
     def test_step_into_call_operator(self):
         """ Test that stepping into a C++ call operator works"""
         self.build()
@@ -21,13 +21,13 @@ class TestSwiftForwardInteropSteppingHeaderOnly(TestBase):
         self.assertIn('testCallOperator', name)
         thread.StepInto()
         name = thread.frames[0].GetFunctionName()
-        self.assertIn('ClassWithCallOperator::operator()()', name)
+        self.assertIn('ClassWithCallOperator::operator()', name)
         thread.StepOut()
         name = thread.frames[0].GetFunctionName()
         self.assertIn('testCallOperator', name)
 
     @swiftTest
-    @skipIfWindows
+    @skipEmbeddedSwiftOnWindows
     def test_step_over_call_operator(self):
         """ Test that stepping over a C++ call operator works"""
         self.build()

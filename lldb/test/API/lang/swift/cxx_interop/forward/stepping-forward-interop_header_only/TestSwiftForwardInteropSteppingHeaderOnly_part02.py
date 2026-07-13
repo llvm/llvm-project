@@ -9,7 +9,7 @@ from lldbsuite.test.decorators import *
 class TestSwiftForwardInteropSteppingHeaderOnly(TestBase):
 
     @swiftTest
-    @skipIfWindows
+    @skipEmbeddedSwiftOnWindows
     def test_step_into_constructor(self):
         """ Test that stepping into a simple C++ constructor works"""
         self.build()
@@ -30,7 +30,7 @@ class TestSwiftForwardInteropSteppingHeaderOnly(TestBase):
         self.assertIn('testContructor', name)
 
     @swiftTest
-    @skipIfWindows
+    @skipEmbeddedSwiftOnWindows
     def test_step_over_constructor(self):
         """ Test that stepping over a simple C++ constructor works"""
         self.build()
@@ -49,7 +49,7 @@ class TestSwiftForwardInteropSteppingHeaderOnly(TestBase):
 
     @skipEmbeddedSwift
     @swiftTest
-    @skipIfWindows
+    @skipEmbeddedSwiftOnWindows
     def test_step_into_extension(self):
         """ Test that stepping into a C++ function defined in an extension works"""
         self.build()
@@ -67,7 +67,7 @@ class TestSwiftForwardInteropSteppingHeaderOnly(TestBase):
         self.assertIn('testClassWithExtension', name)
 
     @swiftTest
-    @skipIfWindows
+    @skipEmbeddedSwiftOnWindows
     def test_step_over_extension(self):
         """ Test that stepping over a C++ function defined in an extension works"""
         self.build()
