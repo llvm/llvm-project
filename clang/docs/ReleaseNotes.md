@@ -1184,33 +1184,78 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Static Analyzer
 
-- The `-analyzer-constraints` option `z3` was renamed to `unsupported-z3`
-  because the Z3-based (constraint) solver was known for crashing for years now.
-  Didn't receive support, so it was marked unsupported.
+% comment:
+% This is for the Static Analyzer.
+% Subsections (using `####`), in this order, only when they have content:
+%   - New checkers and features
+%   - Crash and bug fixes
+%   - Improvements
+%   - Moved checkers
+%   - Removed checkers
+%   - Diagnostic changes
+
+#### New checkers and features
+
+- Introduced the experimental `alpha.cplusplus.UseAfterLifetimeEnd` checker to detect dangling pointers and references bound to local variables that go out of scope, using the `[[clang::lifetimebound]]` annotation. (#GH205521)
+- Introduced the `optin.core.UnconditionalVAArg` checker to report variadic functions that unconditionally use `va_arg()`, which is undefined behavior when the function is called without any variadic arguments (SEI-CERT EXP47-C). (#GH175602)
+- The `unix.DynamicMemoryModeling` modeling gained a new option to create branches where a memory allocation fails and returns a null pointer. It is disabled by default. (#GH205371)
+- The `security.insecureAPI.DeprecatedOrUnsafeBufferHandling` checker gained a new `ReportInC99AndEarlier` option. When enabled, deprecated buffer-handling functions (`memcpy`, `memset`, `memmove`, etc.) are also reported when not compiling for C11 or later. It is disabled by default. (#GH168704, #GH177379)
+- The `optin.taint.TaintPropagation` checker gained a new `EnableDefaultConfig` option, which makes it possible to disable the built-in taint configuration and use a fully custom configuration instead. (#GH176185)
 
 #### Crash and bug fixes
 
-- Fixed `security.VAList` checker producing false positives when analyzing
-  C23 code where `va_start` expands to `__builtin_c23_va_start`.
-- Fixed a compiler crash when combining `_Atomic` and `__auto_type`
-  in C, for example `_Atomic __auto_type x = expr`. (#GH118058)
+- Fixed the `security.VAList` checker producing false positives when analyzing C23 code where `va_start` expands to `__builtin_c23_va_start`. (#GH192024)
+- Fixed a crash when copying uninitialized data in a function named `swap`. (#GH178797)
+- Fixed a compiler crash when combining `_Atomic` and `__auto_type` in C, for example `_Atomic __auto_type x = expr`. (#GH118058)
+- Fixed a crash in the `unix.Malloc` checker when a function is annotated with both `ownership_returns` and `ownership_takes` (or `ownership_holds`). (#GH183344)
+- Fixed a crash in the `alpha.unix.cstring` checkers on zero-size element types (for example an empty struct in C). (#GH190457)
+- Fixed a use-after-free in `CheckerContext::getMacroNameOrSpelling`. (#GH194174)
+- Fixed a false positive in the `alpha.unix.cstring` checkers when the buffer argument points into the middle of an array, such as `memcpy(dst, &arr[i], size)`. (#GH198346)
+- Fixed the default binding of union aggregates being overwritten when initializing array elements with union members. (#GH178694)
+- The analyzer no longer rules out the equality of a pointer to the stack and a symbolic pointer in unknown space, because a function may return a pointer to some other stack frame (for example one received as an argument). (#GH187080)
+- Fixed the `getcwd` summary in the `unix.StdCLibraryFunctions` checker. (#GH175136)
+- Fixed invalid HTML nesting for popups at end of line. (#GH46089)
+- Fixed a false-positive in the `unix.BlockInCriticalSection` checker that reported double locking when using `std::lock_guard`/`std::unique_lock`/`std::scoped_lock`. (#GH208729)
+- Fixed a false-negative in the `unix.Malloc` checker due to a typo in the expected arguments of `if_nameindex`. It will now properly match its single expected argument. (#GH207726)
+- Fixed a crash in the Z3-solver-based (unsupported) constraint manager involving unary/binary operators. (#GH205037)
 
 #### Improvements
 
-- `alpha.unix.PthreadLock` now emits path notes on lock, unlock, destroy,
-  and init operations.
-
-% comment:
-% This is for the Static Analyzer.
-% Using the caret `^^^` underlining for subsections:
-%   - Crash and bug fixes
-%   - New checkers and features
-%   - Improvements
-%   - Moved checkers
+- Significantly sped up core data structures like ImmutableSet/Map, leading to up to 5.2x faster analysis in edge cases. (#GH205552, #GH207596, #GH208907)
+- The unmaintained and crash-prone Z3 constraint-manager backend selected via `-analyzer-constraints=z3` was renamed to `-analyzer-constraints=unsupported-z3` to make its unsupported status explicit. (#GH205370)
+- The conservative call-invalidation logic now invalidates the object of an opaque constructor call regardless of whether an argument refers to it. (#GH170887)
+- Improved the resolution of constant values from initializers in RegionStore, including preserving default bindings for aggregate-like cases, generalized field-initializer resolution for arbitrary nesting, and normalized sub-array indices. (#GH199271)
+- The analyzer now conservatively evaluates `std::sort`, `std::stable_sort`, and `std::inplace_merge` to prevent false positives caused by complex STL internals that cannot be modeled adequately by the engine. (#GH178910)
+- The `optin.cplusplus.VirtualCall` checker no longer reports virtual method calls during construction/destruction when the call site is in a system header. (#GH184178)
+- Reduced false positives of the `unix.MallocSizeof` checker for layout-compatible types, such as `malloc(sizeof(std::atomic<int32_t>))` assigned to an `int32_t *`. (#GH200253)
+- The `optin.core.FixedAddressDereference` checker no longer reports dereferences of a fixed address when the pointee is `volatile`. (#GH181644)
+- Improved `[[clang::suppress]]` handling for tricky template specializations, nested templates, and friend function templates that are forward-declared at namespace scope. (#GH182659, #GH178441, #GH183727, #GH187043)
+- The `unix.BlockInCriticalSection` checker now understands `std::scoped_lock` in addition to `std::lock_guard` and `std::unique_lock`. (#GH176134)
+- The `alpha.unix.cstring` sub-checkers were untangled so that each one models and reports independently instead of relying on another sub-checker being enabled. (#GH186802)
+- The analyzer now detects reads of uninitialized dynamically-allocated objects. (#GH193001)
+- The `cplusplus.Move` checker can now detect a use-after-move for the three-argument `std::move` on containers (when `alpha.cplusplus.IteratorModeling` is also enabled). (#GH137157)
+- The condition of a `switch` statement now triggers the `check::BranchCondition` callback, so checkers like `core.uninitialized.Branch` can report an undefined `switch` condition. (#GH182058)
+- Improved handling of multiple `[[assume]]` attributes on a single statement. (#GH198618)
+- When the execution environment is untrusted, the `argv`, `argc`, and `envp` parameters of `main` are now treated as taint sources. (#GH178054)
+- The `alpha.unix.PthreadLock` checker now emits path notes on lock, unlock, destroy, and init operations. (#GH202473)
+- Added a new `check::LifetimeEnd` callback that fires for each `CFGLifetimeEnds` element, which is useful for detecting dangling pointers. (#GH201123)
+- The `unix.StdCLibraryFunctions` standard-library summaries were optimized for binary size. (#GH202662)
+- Fixed the alignment of entries printed by `clang -cc1 -analyzer-print-analyzer-options` / `-analyzer-help`. (#GH190570)
+- Improved the models of `strchr`/`strrchr`/`memchr`/`strstr`/`strpbrk`/`strchrnul`, enabling `core.StackAddressEscape` to catch dangling pointers returned by these functions. (#GH203260)
+- Improved the modeling of symbolic ranges in the engine when calculating the largest and smallest possible values for range sets involving the `+`, `-`, and `*` binary operators. (#GH173113)
 
 #### Moved checkers
 
-- The checker `unix.cstring.UninitializedRead` is now out of alpha.
+- The checker `unix.cstring.UninitializedRead` is now out of alpha. (#GH196292)
+
+#### Removed checkers
+
+- The `alpha.core.FixedAddr` checker was removed. It was overly simplistic and is largely superseded by the `optin.core.FixedAddressDereference` checker. (#GH182033)
+
+#### Diagnostic changes
+
+- Cross Translation Unit (CTU) import failures are now reported at the location where the imported symbol would be used, making it easier to understand why a cross-TU bug was missed. (#GH188795)
+- Uninitialized-value diagnostics no longer emit a misleading "initialized here" note for a variable that was declared without an initializer; the note now reads "declared without an initial value". (#GH198345)
 
 (release-notes-sanitizers)=
 
