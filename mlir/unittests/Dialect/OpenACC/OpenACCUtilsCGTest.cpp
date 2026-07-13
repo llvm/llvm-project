@@ -504,10 +504,11 @@ TEST_F(OpenACCUtilsCGTest, collectPrivateLocalParDimsFromParentLoops) {
   srcBuilder.setInsertionPoint(srcBlock->getTerminator());
 
   // Outer gang (block_x) loop containing an inner vector (thread_x) loop.
-  auto gangLoop = scf::ParallelOp::create(srcBuilder, loc, ValueRange{c0},
-                                          ValueRange{c1Body}, ValueRange{c1Body});
-  setParDimsAttr(gangLoop, GPUParallelDimsAttr::get(
-                               &context, {GPUParallelDimAttr::blockXDim(&context)}));
+  auto gangLoop = scf::ParallelOp::create(
+      srcBuilder, loc, ValueRange{c0}, ValueRange{c1Body}, ValueRange{c1Body});
+  setParDimsAttr(gangLoop,
+                 GPUParallelDimsAttr::get(
+                     &context, {GPUParallelDimAttr::blockXDim(&context)}));
   srcBuilder.setInsertionPoint(gangLoop.getBody()->getTerminator());
   auto vectorLoop = scf::ParallelOp::create(
       srcBuilder, loc, ValueRange{c0}, ValueRange{c1Body}, ValueRange{c1Body});

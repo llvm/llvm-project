@@ -302,11 +302,9 @@ collectPrivateLocalParDims(PrivateLocalOp privateLocal,
   return parDims;
 }
 
-static FailureOr<std::optional<int64_t>>
-getWorkerPrivateSharedMemoryNumCopies(PrivateLocalOp privateLocal,
-                                      ComputeRegionOp computeRegion,
-                                      bool isWorkerPrivate, bool isGangPrivate,
-                                      OpenACCSupport *support) {
+static FailureOr<std::optional<int64_t>> getWorkerPrivateSharedMemoryNumCopies(
+    PrivateLocalOp privateLocal, ComputeRegionOp computeRegion,
+    bool isWorkerPrivate, bool isGangPrivate, OpenACCSupport *support) {
   if (!isWorkerPrivate || isGangPrivate)
     return std::optional<int64_t>(1);
 
@@ -334,12 +332,9 @@ static bool isInsideACCSpecializedRoutine(Operation *op) {
   return funcOp && isSpecializedAccRoutine(funcOp);
 }
 
-FailureOr<bool>
-isPrivateLocalSharedMemoryCandidate(PrivateLocalOp privateLocal,
-                                    ComputeRegionOp computeRegion,
-                                    ModuleOp module,
-                                    const ACCToGPUMappingPolicy &policy,
-                                    OpenACCSupport *support) {
+FailureOr<bool> isPrivateLocalSharedMemoryCandidate(
+    PrivateLocalOp privateLocal, ComputeRegionOp computeRegion, ModuleOp module,
+    const ACCToGPUMappingPolicy &policy, OpenACCSupport *support) {
   if (isInsideACCSpecializedRoutine(computeRegion))
     return false;
 
@@ -384,9 +379,8 @@ isPrivateLocalSharedMemoryCandidate(PrivateLocalOp privateLocal,
     return false;
 
   FailureOr<std::optional<int64_t>> numCopies =
-      getWorkerPrivateSharedMemoryNumCopies(privateLocal, computeRegion,
-                                            isWorkerPrivate, isGangPrivate,
-                                            support);
+      getWorkerPrivateSharedMemoryNumCopies(
+          privateLocal, computeRegion, isWorkerPrivate, isGangPrivate, support);
   if (failed(numCopies))
     return failure();
   return numCopies->has_value();
@@ -408,9 +402,9 @@ std::optional<int64_t> getPrivateLocalSharedMemoryUpperBoundBytes(
       parDims, [&](auto parDim) { return policy.isWorker(parDim); });
 
   FailureOr<std::optional<int64_t>> numCopies =
-      getWorkerPrivateSharedMemoryNumCopies(
-          privateLocal, computeRegion, isWorkerPrivate, isGangPrivate,
-          /*support=*/nullptr);
+      getWorkerPrivateSharedMemoryNumCopies(privateLocal, computeRegion,
+                                            isWorkerPrivate, isGangPrivate,
+                                            /*support=*/nullptr);
   if (failed(numCopies) || !numCopies->has_value())
     return std::nullopt;
 
