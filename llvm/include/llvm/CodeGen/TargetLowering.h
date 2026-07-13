@@ -659,9 +659,10 @@ public:
   // Arg0: The binary op joining the two conditions (and/or).
   // Arg1: The first condition (cond1)
   // Arg2: The second condition (cond2)
+  // Arg3: The containing function.
   virtual CondMergingParams
   getJumpConditionMergingParams(Instruction::BinaryOps, const Value *,
-                                const Value *) const {
+                                const Value *, const Function *) const {
     // -1 will always result in splitting.
     return {-1, -1, -1};
   }
