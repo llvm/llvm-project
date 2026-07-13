@@ -10630,23 +10630,38 @@ void ResolveNamesVisitor::FinishSpecificationPart(
     if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
       if ((IsAllocatable(symbol) || IsPointer(symbol)) &&
           !object->cudaDataAttr()) {
+        const bool cudaEnabled{context().languageFeatures().IsEnabled(
+            common::LanguageFeature::CUDA)};
+        const bool cudaManaged{context().languageFeatures().IsEnabled(
+            common::LanguageFeature::CudaManaged)};
+        const bool cudaUnified{context().languageFeatures().IsEnabled(
+            common::LanguageFeature::CudaUnified)};
         // Implicitly treat allocatable/pointer arrays as managed when feature
         // is enabled. This is done after all explicit CUDA attributes have
         // been processed. Only applies when CUDA Fortran is enabled; otherwise
         // -gpu=mem:managed on a non-CUDA-Fortran translation unit (e.g. pure
         // OpenACC) would incorrectly route every allocatable through the CUDA
-        // Fortran managed descriptor pipeline.
-        if (context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CudaManaged) &&
+        // Fortran managed descriptor pipeline. Under -gpu=mem:unified prefer
+        // the Unified attribute where it is legal (host subprogram, main
+        // program, or component) so generic resolution still selects the
+        // unified specific; fall back to Managed elsewhere (module scope,
+        // device subprograms), which uses the same allocator.
+        if (cudaEnabled && (cudaManaged || cudaUnified)) {
+          const Scope &owner{symbol.owner()};
+          const bool unifiedAllowed{!IsCUDADeviceContext(&owner) &&
+              (owner.IsDerivedType() ||
+                  owner.kind() == Scope::Kind::MainProgram ||
+                  owner.kind() == Scope::Kind::Subprogram)};
+          object->set_cudaDataAttr(cudaUnified && unifiedAllowed
+                  ? common::CUDADataAttr::Unified
+                  : common::CUDADataAttr::Managed);
+          // Implicitly treat allocatable arrays as pinned when feature is
+          // enabled.
+        } else if (IsAllocatable(symbol) &&
             context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CUDA))
-          object->set_cudaDataAttr(common::CUDADataAttr::Managed);
-        // Implicitly treat allocatable arrays as pinned when feature is
-        // enabled.
-        else if (IsAllocatable(symbol) &&
-            context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CudaPinned))
+                common::LanguageFeature::CudaPinned)) {
           object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+        }
       }
     }
   }

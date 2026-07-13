@@ -1,0 +1,41 @@
+! RUN: bbc -emit-hlfir -fcuda -gpu=unified %s -o - | FileCheck %s --check-prefix=UNI
+! RUN: bbc -emit-hlfir -fcuda -gpu=managed %s -o - | FileCheck %s --check-prefix=MAN
+
+! Under -gpu=unified and -gpu=managed, allocatables and pointers with no
+! explicit CUDA data attribute are implicitly attributed. -gpu=unified prefers
+! the Unified attribute where ATTRIBUTES(UNIFIED) is legal (host subprogram /
+! main program); module-scope objects fall back to Managed, which carries no
+! such scope restriction.
+
+module m
+  real, allocatable :: mod_arr(:)
+  real, pointer :: mod_ptr(:)
+contains
+  subroutine mod_sub()
+    real, allocatable :: loc_arr(:)
+    real, pointer :: loc_ptr(:)
+  end subroutine
+end module
+
+program p
+  real, allocatable :: prog_arr(:)
+end program
+
+! Host-subprogram locals: Unified under -gpu=unified, Managed under
+! -gpu=managed.
+! UNI: hlfir.declare {{.*}} {data_attr = #cuf.cuda<unified>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmFmod_subEloc_arr"}
+! UNI: hlfir.declare {{.*}} {data_attr = #cuf.cuda<unified>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFmod_subEloc_ptr"}
+! MAN: hlfir.declare {{.*}} {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmFmod_subEloc_arr"}
+! MAN: hlfir.declare {{.*}} {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFmod_subEloc_ptr"}
+
+! Main-program local: Unified under -gpu=unified, Managed under
+! -gpu=managed.
+! UNI: hlfir.declare {{.*}} {data_attr = #cuf.cuda<unified>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEprog_arr"}
+! MAN: hlfir.declare {{.*}} {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEprog_arr"}
+
+! Module-scope globals: Managed in both modes (ATTRIBUTES(UNIFIED) is not legal
+! at module scope, so the Unified case falls back to Managed).
+! UNI: fir.global @_QMmEmod_arr {data_attr = #cuf.cuda<managed>}
+! UNI: fir.global @_QMmEmod_ptr {data_attr = #cuf.cuda<managed>}
+! MAN: fir.global @_QMmEmod_arr {data_attr = #cuf.cuda<managed>}
+! MAN: fir.global @_QMmEmod_ptr {data_attr = #cuf.cuda<managed>}
