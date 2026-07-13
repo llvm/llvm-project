@@ -155,12 +155,20 @@ void testandeq(void)
 // CHECK: testaddeq_fp
 void testaddeq_fp(void)
 {
-  // CHECK:      [[TMP0:%.*]] = atomicrmw add ptr @i, i32 0 seq_cst, align 4
-  // CHECK-NEXT: add i32 [[TMP0]], 0
+  // CHECK:      [[CONV:%.*]] = uitofp i32 [[TMP0:%.*]] to double
+  // CHECK-NEXT: [[FADD:%.*]] = fadd double [[CONV]], -5.000000e-01
+  // CHECK-NEXT: [[CONV1:%.*]] = fptosi double [[FADD]] to i32
+  // CHECK-NEXT: store i32 [[TMP0]], ptr {{%.*}}, align 4
+  // CHECK-NEXT: store i32 [[CONV1]], ptr {{%.*}}, align 4
+  // CHECK-NEXT: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 noundef 4, ptr noundef @i, ptr noundef {{%.*}}, ptr noundef {{%.*}}, i32 noundef 5, i32 noundef 5)
   i += -0.5;
 
-  // CHECK:      [[TMP1:%.*]] = atomicrmw add ptr @i, i32 poison seq_cst, align 4
-  // CHECK-NEXT: add i32 [[TMP1]], poison
+  // CHECK:      [[CONV2:%.*]] = uitofp i32 [[TMP1:%.*]] to double
+  // CHECK-NEXT: [[FADD1:%.*]] = fadd double [[CONV2]], -2.500000e+00
+  // CHECK-NEXT: [[CONV3:%.*]] = fptosi double [[FADD1]] to i32
+  // CHECK-NEXT: store i32 [[TMP1]], ptr {{%.*}}, align 4
+  // CHECK-NEXT: store i32 [[CONV3]], ptr {{%.*}}, align 4
+  // CHECK-NEXT: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 noundef 4, ptr noundef @i, ptr noundef {{%.*}}, ptr noundef {{%.*}}, i32 noundef 5, i32 noundef 5)
   i += -2.5;
 }
 
