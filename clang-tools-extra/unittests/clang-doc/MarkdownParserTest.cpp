@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "support/Markdown.h"
+#include "markdown/Markdown.h"
 #include "gtest/gtest.h"
 
 using namespace clang::doc::markdown;

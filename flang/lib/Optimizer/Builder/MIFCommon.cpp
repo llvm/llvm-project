@@ -7,11 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/MIFCommon.h"
-#include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Dialect/MIF/MIFOps.h"
-#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 std::string mif::getFullUniqName(mlir::Value addr) {

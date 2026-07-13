@@ -20,7 +20,6 @@
 #include <cstdint>
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/Debug/Options.h"

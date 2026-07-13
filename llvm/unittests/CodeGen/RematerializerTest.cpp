@@ -102,7 +102,7 @@ public:
 #endif
   }
 
-  void SetUp() override { setUpImpl("amdgcn--", "gfx950", ""); }
+  void SetUp() override { setUpImpl("amdgpu9.50--", "", ""); }
 
   using RematerializerTestFn = std::function<void(RematerializerWrapper &RW)>;
 
