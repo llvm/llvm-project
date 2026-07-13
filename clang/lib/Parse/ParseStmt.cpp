@@ -2329,6 +2329,10 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   // the other parts.
   getCurScope()->EnterLoopBody(PrecedingLabel);
 
+  bool BodyIsCompoundStmt = Tok.is(tok::l_brace);
+  // attribute-specifier without attribute (`[[]]`) isn't in AST.
+  SourceLocation BodyBeginLoc = Tok.getLocation();
+
   // C99 6.8.5p5 - In C99, the body of the for statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause.  We only do this
   // if the body isn't a compound statement to avoid push/pop in common cases.
@@ -2341,7 +2345,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   // for-init-statement/condition and a new scope for substatement in C++.
   //
   ParseScope InnerScope(this, Scope::DeclScope, C99orCXXorObjC,
-                        Tok.is(tok::l_brace));
+                        BodyIsCompoundStmt);
 
   // The body of the for loop has the same local mangling number as the
   // for-init-statement.
@@ -2378,6 +2382,9 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
       Diag(ForLoc, diag::err_expansion_stmt_requires_range);
       return StmtError();
     }
+
+    if (!BodyIsCompoundStmt)
+      Diag(BodyBeginLoc, diag::ext_expansion_stmt_requires_braced_body);
 
     return Actions.FinishCXXExpansionStmt(ForRangeStmt.get(), Body.get());
   }
