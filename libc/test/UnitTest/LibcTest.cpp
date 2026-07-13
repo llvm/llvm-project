@@ -45,7 +45,7 @@ cpp::enable_if_t<(cpp::is_integral_v<T> && (sizeof(T) > sizeof(uint64_t))) ||
                  cpp::string>
 describeValue(T Value) {
   const IntegerToString<T, radix::Hex::WithPrefix> buffer(Value);
-  return buffer.view();
+  return cpp::string(buffer.view());
 }
 
 // When the value is of a standard integral type, just display it as normal.

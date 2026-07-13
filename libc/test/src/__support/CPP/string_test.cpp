@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/func/free.h"
+#include "hdr/signal_macros.h"
 #include "src/__support/CPP/string.h"
 #include "test/UnitTest/Test.h"
 
@@ -259,3 +260,15 @@ TEST(LlvmLibcStringTest, ToString) {
     }
   }
 }
+
+#if !defined(NDEBUG) && defined(ENABLE_SUBPROCESS_TESTS)
+TEST(LlvmLibcStringTest, SelfAssignDebugDeathTest) {
+  string s("abc");
+  ASSERT_DEATH([&]() { s = string_view(s).substr(2); }, WITH_SIGNAL(SIGABRT));
+}
+
+TEST(LlvmLibcStringTest, SelfAppendDebugDeathTest) {
+  string s("abc");
+  ASSERT_DEATH([&]() { s += string_view(s).substr(2); }, WITH_SIGNAL(SIGABRT));
+}
+#endif

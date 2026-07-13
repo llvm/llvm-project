@@ -12,8 +12,10 @@
 #include "hdr/func/free.h"
 #include "hdr/func/malloc.h"
 #include "hdr/func/realloc.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/integer_to_string.h" // IntegerToString
+#include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
 #include "src/string/memory_utils/inline_memcpy.h"
@@ -61,6 +63,15 @@ private:
       buffer_[size_] = NULL_CHARACTER;
   }
 
+  // Whether ptr lies within this string's buffer.
+  LIBC_INLINE bool addr_in_string_bounds(const char *ptr) {
+    uintptr_t addr = reinterpret_cast<uintptr_t>(ptr);
+    uintptr_t start = reinterpret_cast<uintptr_t>(data());
+    uintptr_t end = start + capacity_;
+
+    return start <= addr && addr < end;
+  }
+
 public:
   LIBC_INLINE constexpr string() {}
   LIBC_INLINE string(const string &other) { this->operator+=(other); }
@@ -72,7 +83,7 @@ public:
     resize(count);
     inline_memcpy(buffer_, cstr, count);
   }
-  LIBC_INLINE string(const string_view &view)
+  LIBC_INLINE explicit string(const string_view &view)
       : string(view.data(), view.size()) {}
   LIBC_INLINE string(const char *cstr)
       : string(cstr, ::LIBC_NAMESPACE::internal::string_length(cstr)) {}
@@ -83,13 +94,11 @@ public:
   }
 
   LIBC_INLINE string &operator=(const string &other) {
-    resize(0);
-    return (*this) += other;
+    return (*this) = string_view(other);
   }
 
   LIBC_INLINE string &operator=(char other) {
-    resize(0);
-    return (*this) += other;
+    return (*this) = string_view(&other, 1);
   }
 
   LIBC_INLINE string &operator=(string &&other) {
@@ -103,8 +112,11 @@ public:
     return *this;
   }
 
-  LIBC_INLINE string &operator=(const string_view &view) {
-    return *this = string(view);
+  LIBC_INLINE string &operator=(string_view view) {
+    LIBC_ASSERT(!addr_in_string_bounds(view.data()));
+
+    resize(0);
+    return (*this) += view;
   }
 
   LIBC_INLINE ~string() {
@@ -189,7 +201,9 @@ public:
     return res;
   }
 
-  LIBC_INLINE string &operator+=(const string &rhs) {
+  LIBC_INLINE string &operator+=(string_view rhs) {
+    LIBC_ASSERT(!addr_in_string_bounds(rhs.data()));
+
     const size_t new_size = size_ + rhs.size();
     reserve(new_size);
     inline_memcpy(buffer_ + size_, rhs.data(), rhs.size());
@@ -198,11 +212,7 @@ public:
   }
 
   LIBC_INLINE string &operator+=(const char c) {
-    const size_t new_size = size_ + 1;
-    reserve(new_size);
-    buffer_[size_] = c;
-    set_size_and_add_null_character(new_size);
-    return *this;
+    return *this += string_view(&c, 1);
   }
 };
 
@@ -239,7 +249,7 @@ LIBC_INLINE string operator+(const char *lhs, const string &rhs) {
 namespace internal {
 template <typename T> string to_dec_string(T value) {
   const IntegerToString<T> buffer(value);
-  return buffer.view();
+  return string(buffer.view());
 }
 } // namespace internal
 
