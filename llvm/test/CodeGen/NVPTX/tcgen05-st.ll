@@ -11,7 +11,7 @@
 ; RUN: %if ptxas-sm_110f && ptxas-isa-9.0 %{ llc < %s -march=nvptx64 -mcpu=sm_110f -mattr=+ptx90 | %ptxas-verify -arch=sm_110f %}
 
 ; CHECK-LABEL: nvvm_tcgen05_st_16x64b
-define void @nvvm_tcgen05_st_16x64b(ptr addrspace(6) %taddr, i32 %stv1, <2 x i32> %stv2, <4 x i32> %stv4, <8 x i32> %stv8, <16 x i32> %stv16, <32 x i32> %stv32, <64 x i32> %stv64, <128 x i32> %stv128) {
+define void @nvvm_tcgen05_st_16x64b(ptr addrspace(6) %taddr, <1 x i32> %stv1, <2 x i32> %stv2, <4 x i32> %stv4, <8 x i32> %stv8, <16 x i32> %stv16, <32 x i32> %stv32, <64 x i32> %stv64, <128 x i32> %stv128) {
 ; CHECK-LABEL: nvvm_tcgen05_st_16x64b(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<257>;
@@ -92,7 +92,7 @@ define void @nvvm_tcgen05_st_16x64b(ptr addrspace(6) %taddr, i32 %stv1, <2 x i32
 ; CHECK-NEXT:    ld.param.v4.b32 {%r253, %r254, %r255, %r256}, [nvvm_tcgen05_st_16x64b_param_8];
 ; CHECK-NEXT:    tcgen05.st.sync.aligned.16x64b.x128.b32 [%r1], {%r253, %r254, %r255, %r256, %r249, %r250, %r251, %r252, %r245, %r246, %r247, %r248, %r241, %r242, %r243, %r244, %r237, %r238, %r239, %r240, %r233, %r234, %r235, %r236, %r229, %r230, %r231, %r232, %r225, %r226, %r227, %r228, %r221, %r222, %r223, %r224, %r217, %r218, %r219, %r220, %r213, %r214, %r215, %r216, %r209, %r210, %r211, %r212, %r205, %r206, %r207, %r208, %r201, %r202, %r203, %r204, %r197, %r198, %r199, %r200, %r193, %r194, %r195, %r196, %r189, %r190, %r191, %r192, %r185, %r186, %r187, %r188, %r181, %r182, %r183, %r184, %r177, %r178, %r179, %r180, %r173, %r174, %r175, %r176, %r169, %r170, %r171, %r172, %r165, %r166, %r167, %r168, %r161, %r162, %r163, %r164, %r157, %r158, %r159, %r160, %r153, %r154, %r155, %r156, %r149, %r150, %r151, %r152, %r145, %r146, %r147, %r148, %r141, %r142, %r143, %r144, %r137, %r138, %r139, %r140, %r133, %r134, %r135, %r136, %r129, %r130, %r131, %r132};
 ; CHECK-NEXT:    ret;
-  tail call void @llvm.nvvm.tcgen05.st.16x64b.x1(ptr addrspace(6) %taddr, i32 %stv1, i1 0)
+  tail call void @llvm.nvvm.tcgen05.st.16x64b.x1(ptr addrspace(6) %taddr, <1 x i32> %stv1, i1 0)
 
   tail call void @llvm.nvvm.tcgen05.st.16x64b.x2(ptr addrspace(6) %taddr, <2 x i32> %stv2, i1 0)
 
@@ -111,7 +111,7 @@ define void @nvvm_tcgen05_st_16x64b(ptr addrspace(6) %taddr, i32 %stv1, <2 x i32
 }
 
 ; CHECK-LABEL: nvvm_tcgen05_st_16x64b_unpack
-define void @nvvm_tcgen05_st_16x64b_unpack(ptr addrspace(6) %taddr, i32 %stv1, <2 x i32> %stv2, <4 x i32> %stv4, <8 x i32> %stv8, <16 x i32> %stv16, <32 x i32> %stv32, <64 x i32> %stv64, <128 x i32> %stv128) {
+define void @nvvm_tcgen05_st_16x64b_unpack(ptr addrspace(6) %taddr, <1 x i32> %stv1, <2 x i32> %stv2, <4 x i32> %stv4, <8 x i32> %stv8, <16 x i32> %stv16, <32 x i32> %stv32, <64 x i32> %stv64, <128 x i32> %stv128) {
 ; CHECK-LABEL: nvvm_tcgen05_st_16x64b_unpack(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<257>;
@@ -192,7 +192,7 @@ define void @nvvm_tcgen05_st_16x64b_unpack(ptr addrspace(6) %taddr, i32 %stv1, <
 ; CHECK-NEXT:    ld.param.v4.b32 {%r253, %r254, %r255, %r256}, [nvvm_tcgen05_st_16x64b_unpack_param_8];
 ; CHECK-NEXT:    tcgen05.st.sync.aligned.16x64b.x128.unpack::16b.b32 [%r1], {%r253, %r254, %r255, %r256, %r249, %r250, %r251, %r252, %r245, %r246, %r247, %r248, %r241, %r242, %r243, %r244, %r237, %r238, %r239, %r240, %r233, %r234, %r235, %r236, %r229, %r230, %r231, %r232, %r225, %r226, %r227, %r228, %r221, %r222, %r223, %r224, %r217, %r218, %r219, %r220, %r213, %r214, %r215, %r216, %r209, %r210, %r211, %r212, %r205, %r206, %r207, %r208, %r201, %r202, %r203, %r204, %r197, %r198, %r199, %r200, %r193, %r194, %r195, %r196, %r189, %r190, %r191, %r192, %r185, %r186, %r187, %r188, %r181, %r182, %r183, %r184, %r177, %r178, %r179, %r180, %r173, %r174, %r175, %r176, %r169, %r170, %r171, %r172, %r165, %r166, %r167, %r168, %r161, %r162, %r163, %r164, %r157, %r158, %r159, %r160, %r153, %r154, %r155, %r156, %r149, %r150, %r151, %r152, %r145, %r146, %r147, %r148, %r141, %r142, %r143, %r144, %r137, %r138, %r139, %r140, %r133, %r134, %r135, %r136, %r129, %r130, %r131, %r132};
 ; CHECK-NEXT:    ret;
-  tail call void @llvm.nvvm.tcgen05.st.16x64b.x1(ptr addrspace(6) %taddr, i32 %stv1, i1 1)
+  tail call void @llvm.nvvm.tcgen05.st.16x64b.x1(ptr addrspace(6) %taddr, <1 x i32> %stv1, i1 1)
 
   tail call void @llvm.nvvm.tcgen05.st.16x64b.x2(ptr addrspace(6) %taddr, <2 x i32> %stv2, i1 1)
 
@@ -211,7 +211,7 @@ define void @nvvm_tcgen05_st_16x64b_unpack(ptr addrspace(6) %taddr, i32 %stv1, <
 }
 
 ; CHECK-LABEL: nvvm_tcgen05_st_16x128b
-define void @nvvm_tcgen05_st_16x128b(ptr addrspace(6) %taddr, i32 %stv1, <2 x i32> %stv2, <4 x i32> %stv4, <8 x i32> %stv8, <16 x i32> %stv16, <32 x i32> %stv32, <64 x i32> %stv64, <128 x i32> %stv128) {
+define void @nvvm_tcgen05_st_16x128b(ptr addrspace(6) %taddr, <1 x i32> %stv1, <2 x i32> %stv2, <4 x i32> %stv4, <8 x i32> %stv8, <16 x i32> %stv16, <32 x i32> %stv32, <64 x i32> %stv64, <128 x i32> %stv128) {
 ; CHECK-LABEL: nvvm_tcgen05_st_16x128b(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<256>;
@@ -307,7 +307,7 @@ define void @nvvm_tcgen05_st_16x128b(ptr addrspace(6) %taddr, i32 %stv1, <2 x i3
 }
 
 ; CHECK-LABEL: nvvm_tcgen05_st_16x128b_unpack
-define void @nvvm_tcgen05_st_16x128b_unpack(ptr addrspace(6) %taddr, i32 %stv1, <2 x i32> %stv2, <4 x i32> %stv4, <8 x i32> %stv8, <16 x i32> %stv16, <32 x i32> %stv32, <64 x i32> %stv64, <128 x i32> %stv128) {
+define void @nvvm_tcgen05_st_16x128b_unpack(ptr addrspace(6) %taddr, <1 x i32> %stv1, <2 x i32> %stv2, <4 x i32> %stv4, <8 x i32> %stv8, <16 x i32> %stv16, <32 x i32> %stv32, <64 x i32> %stv64, <128 x i32> %stv128) {
 ; CHECK-LABEL: nvvm_tcgen05_st_16x128b_unpack(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<256>;
@@ -403,7 +403,7 @@ define void @nvvm_tcgen05_st_16x128b_unpack(ptr addrspace(6) %taddr, i32 %stv1, 
 }
 
 ; CHECK-LABEL: nvvm_tcgen05_st_16x256b
-define void @nvvm_tcgen05_st_16x256b(ptr addrspace(6) %taddr, i32 %stv1, <2 x i32> %stv2, <4 x i32> %stv4, <8 x i32> %stv8, <16 x i32> %stv16, <32 x i32> %stv32, <64 x i32> %stv64, <128 x i32> %stv128) {
+define void @nvvm_tcgen05_st_16x256b(ptr addrspace(6) %taddr, <1 x i32> %stv1, <2 x i32> %stv2, <4 x i32> %stv4, <8 x i32> %stv8, <16 x i32> %stv16, <32 x i32> %stv32, <64 x i32> %stv64, <128 x i32> %stv128) {
 ; CHECK-LABEL: nvvm_tcgen05_st_16x256b(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<254>;
@@ -495,7 +495,7 @@ define void @nvvm_tcgen05_st_16x256b(ptr addrspace(6) %taddr, i32 %stv1, <2 x i3
 }
 
 ; CHECK-LABEL: nvvm_tcgen05_st_16x256b_unpack
-define void @nvvm_tcgen05_st_16x256b_unpack(ptr addrspace(6) %taddr, i32 %stv1, <2 x i32> %stv2, <4 x i32> %stv4, <8 x i32> %stv8, <16 x i32> %stv16, <32 x i32> %stv32, <64 x i32> %stv64, <128 x i32> %stv128) {
+define void @nvvm_tcgen05_st_16x256b_unpack(ptr addrspace(6) %taddr, <1 x i32> %stv1, <2 x i32> %stv2, <4 x i32> %stv4, <8 x i32> %stv8, <16 x i32> %stv16, <32 x i32> %stv32, <64 x i32> %stv64, <128 x i32> %stv128) {
 ; CHECK-LABEL: nvvm_tcgen05_st_16x256b_unpack(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<254>;
@@ -587,7 +587,7 @@ define void @nvvm_tcgen05_st_16x256b_unpack(ptr addrspace(6) %taddr, i32 %stv1, 
 }
 
 ; CHECK-LABEL: nvvm_tcgen05_st_32x32b
-define void @nvvm_tcgen05_st_32x32b(ptr addrspace(6) %taddr, i32 %stv1, <2 x i32> %stv2, <4 x i32> %stv4, <8 x i32> %stv8, <16 x i32> %stv16, <32 x i32> %stv32, <64 x i32> %stv64, <128 x i32> %stv128) {
+define void @nvvm_tcgen05_st_32x32b(ptr addrspace(6) %taddr, <1 x i32> %stv1, <2 x i32> %stv2, <4 x i32> %stv4, <8 x i32> %stv8, <16 x i32> %stv16, <32 x i32> %stv32, <64 x i32> %stv64, <128 x i32> %stv128) {
 ; CHECK-LABEL: nvvm_tcgen05_st_32x32b(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<257>;
@@ -668,7 +668,7 @@ define void @nvvm_tcgen05_st_32x32b(ptr addrspace(6) %taddr, i32 %stv1, <2 x i32
 ; CHECK-NEXT:    ld.param.v4.b32 {%r253, %r254, %r255, %r256}, [nvvm_tcgen05_st_32x32b_param_8];
 ; CHECK-NEXT:    tcgen05.st.sync.aligned.32x32b.x128.b32 [%r1], {%r253, %r254, %r255, %r256, %r249, %r250, %r251, %r252, %r245, %r246, %r247, %r248, %r241, %r242, %r243, %r244, %r237, %r238, %r239, %r240, %r233, %r234, %r235, %r236, %r229, %r230, %r231, %r232, %r225, %r226, %r227, %r228, %r221, %r222, %r223, %r224, %r217, %r218, %r219, %r220, %r213, %r214, %r215, %r216, %r209, %r210, %r211, %r212, %r205, %r206, %r207, %r208, %r201, %r202, %r203, %r204, %r197, %r198, %r199, %r200, %r193, %r194, %r195, %r196, %r189, %r190, %r191, %r192, %r185, %r186, %r187, %r188, %r181, %r182, %r183, %r184, %r177, %r178, %r179, %r180, %r173, %r174, %r175, %r176, %r169, %r170, %r171, %r172, %r165, %r166, %r167, %r168, %r161, %r162, %r163, %r164, %r157, %r158, %r159, %r160, %r153, %r154, %r155, %r156, %r149, %r150, %r151, %r152, %r145, %r146, %r147, %r148, %r141, %r142, %r143, %r144, %r137, %r138, %r139, %r140, %r133, %r134, %r135, %r136, %r129, %r130, %r131, %r132};
 ; CHECK-NEXT:    ret;
-  tail call void @llvm.nvvm.tcgen05.st.32x32b.x1(ptr addrspace(6) %taddr, i32 %stv1, i1 0)
+  tail call void @llvm.nvvm.tcgen05.st.32x32b.x1(ptr addrspace(6) %taddr, <1 x i32> %stv1, i1 0)
 
   tail call void @llvm.nvvm.tcgen05.st.32x32b.x2(ptr addrspace(6) %taddr, <2 x i32> %stv2, i1 0)
 
@@ -687,7 +687,7 @@ define void @nvvm_tcgen05_st_32x32b(ptr addrspace(6) %taddr, i32 %stv1, <2 x i32
 }
 
 ; CHECK-LABEL: nvvm_tcgen05_st_32x32b_unpack
-define void @nvvm_tcgen05_st_32x32b_unpack(ptr addrspace(6) %taddr, i32 %stv1, <2 x i32> %stv2, <4 x i32> %stv4, <8 x i32> %stv8, <16 x i32> %stv16, <32 x i32> %stv32, <64 x i32> %stv64, <128 x i32> %stv128) {
+define void @nvvm_tcgen05_st_32x32b_unpack(ptr addrspace(6) %taddr, <1 x i32> %stv1, <2 x i32> %stv2, <4 x i32> %stv4, <8 x i32> %stv8, <16 x i32> %stv16, <32 x i32> %stv32, <64 x i32> %stv64, <128 x i32> %stv128) {
 ; CHECK-LABEL: nvvm_tcgen05_st_32x32b_unpack(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<257>;
@@ -768,7 +768,7 @@ define void @nvvm_tcgen05_st_32x32b_unpack(ptr addrspace(6) %taddr, i32 %stv1, <
 ; CHECK-NEXT:    ld.param.v4.b32 {%r253, %r254, %r255, %r256}, [nvvm_tcgen05_st_32x32b_unpack_param_8];
 ; CHECK-NEXT:    tcgen05.st.sync.aligned.32x32b.x128.unpack::16b.b32 [%r1], {%r253, %r254, %r255, %r256, %r249, %r250, %r251, %r252, %r245, %r246, %r247, %r248, %r241, %r242, %r243, %r244, %r237, %r238, %r239, %r240, %r233, %r234, %r235, %r236, %r229, %r230, %r231, %r232, %r225, %r226, %r227, %r228, %r221, %r222, %r223, %r224, %r217, %r218, %r219, %r220, %r213, %r214, %r215, %r216, %r209, %r210, %r211, %r212, %r205, %r206, %r207, %r208, %r201, %r202, %r203, %r204, %r197, %r198, %r199, %r200, %r193, %r194, %r195, %r196, %r189, %r190, %r191, %r192, %r185, %r186, %r187, %r188, %r181, %r182, %r183, %r184, %r177, %r178, %r179, %r180, %r173, %r174, %r175, %r176, %r169, %r170, %r171, %r172, %r165, %r166, %r167, %r168, %r161, %r162, %r163, %r164, %r157, %r158, %r159, %r160, %r153, %r154, %r155, %r156, %r149, %r150, %r151, %r152, %r145, %r146, %r147, %r148, %r141, %r142, %r143, %r144, %r137, %r138, %r139, %r140, %r133, %r134, %r135, %r136, %r129, %r130, %r131, %r132};
 ; CHECK-NEXT:    ret;
-  tail call void @llvm.nvvm.tcgen05.st.32x32b.x1(ptr addrspace(6) %taddr, i32 %stv1, i1 1)
+  tail call void @llvm.nvvm.tcgen05.st.32x32b.x1(ptr addrspace(6) %taddr, <1 x i32> %stv1, i1 1)
 
   tail call void @llvm.nvvm.tcgen05.st.32x32b.x2(ptr addrspace(6) %taddr, <2 x i32> %stv2, i1 1)
 
@@ -787,7 +787,7 @@ define void @nvvm_tcgen05_st_32x32b_unpack(ptr addrspace(6) %taddr, i32 %stv1, <
 }
 
 ; CHECK-LABEL: nvvm_tcgen05_st_16x32bx2
-define void @nvvm_tcgen05_st_16x32bx2(ptr addrspace(6) %taddr, i32 %stv1, <2 x i32> %stv2, <4 x i32> %stv4, <8 x i32> %stv8, <16 x i32> %stv16, <32 x i32> %stv32, <64 x i32> %stv64, <128 x i32> %stv128) {
+define void @nvvm_tcgen05_st_16x32bx2(ptr addrspace(6) %taddr, <1 x i32> %stv1, <2 x i32> %stv2, <4 x i32> %stv4, <8 x i32> %stv8, <16 x i32> %stv16, <32 x i32> %stv32, <64 x i32> %stv64, <128 x i32> %stv128) {
 ; CHECK-LABEL: nvvm_tcgen05_st_16x32bx2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<257>;
@@ -868,7 +868,7 @@ define void @nvvm_tcgen05_st_16x32bx2(ptr addrspace(6) %taddr, i32 %stv1, <2 x i
 ; CHECK-NEXT:    ld.param.v4.b32 {%r253, %r254, %r255, %r256}, [nvvm_tcgen05_st_16x32bx2_param_8];
 ; CHECK-NEXT:    tcgen05.st.sync.aligned.16x32bx2.x128.b32 [%r1], 2, {%r253, %r254, %r255, %r256, %r249, %r250, %r251, %r252, %r245, %r246, %r247, %r248, %r241, %r242, %r243, %r244, %r237, %r238, %r239, %r240, %r233, %r234, %r235, %r236, %r229, %r230, %r231, %r232, %r225, %r226, %r227, %r228, %r221, %r222, %r223, %r224, %r217, %r218, %r219, %r220, %r213, %r214, %r215, %r216, %r209, %r210, %r211, %r212, %r205, %r206, %r207, %r208, %r201, %r202, %r203, %r204, %r197, %r198, %r199, %r200, %r193, %r194, %r195, %r196, %r189, %r190, %r191, %r192, %r185, %r186, %r187, %r188, %r181, %r182, %r183, %r184, %r177, %r178, %r179, %r180, %r173, %r174, %r175, %r176, %r169, %r170, %r171, %r172, %r165, %r166, %r167, %r168, %r161, %r162, %r163, %r164, %r157, %r158, %r159, %r160, %r153, %r154, %r155, %r156, %r149, %r150, %r151, %r152, %r145, %r146, %r147, %r148, %r141, %r142, %r143, %r144, %r137, %r138, %r139, %r140, %r133, %r134, %r135, %r136, %r129, %r130, %r131, %r132};
 ; CHECK-NEXT:    ret;
-  tail call void @llvm.nvvm.tcgen05.st.16x32bx2.x1(ptr addrspace(6) %taddr, i64 2, i32 %stv1, i1 0)
+  tail call void @llvm.nvvm.tcgen05.st.16x32bx2.x1(ptr addrspace(6) %taddr, i64 2, <1 x i32> %stv1, i1 0)
 
   tail call void @llvm.nvvm.tcgen05.st.16x32bx2.x2(ptr addrspace(6) %taddr, i64 2, <2 x i32> %stv2, i1 0)
 
@@ -887,7 +887,7 @@ define void @nvvm_tcgen05_st_16x32bx2(ptr addrspace(6) %taddr, i32 %stv1, <2 x i
 }
 
 ; CHECK-LABEL: nvvm_tcgen05_st_16x32bx2_unpack
-define void @nvvm_tcgen05_st_16x32bx2_unpack(ptr addrspace(6) %taddr, i32 %stv1, <2 x i32> %stv2, <4 x i32> %stv4, <8 x i32> %stv8, <16 x i32> %stv16, <32 x i32> %stv32, <64 x i32> %stv64, <128 x i32> %stv128) {
+define void @nvvm_tcgen05_st_16x32bx2_unpack(ptr addrspace(6) %taddr, <1 x i32> %stv1, <2 x i32> %stv2, <4 x i32> %stv4, <8 x i32> %stv8, <16 x i32> %stv16, <32 x i32> %stv32, <64 x i32> %stv64, <128 x i32> %stv128) {
 ; CHECK-LABEL: nvvm_tcgen05_st_16x32bx2_unpack(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<257>;
@@ -968,7 +968,7 @@ define void @nvvm_tcgen05_st_16x32bx2_unpack(ptr addrspace(6) %taddr, i32 %stv1,
 ; CHECK-NEXT:    ld.param.v4.b32 {%r253, %r254, %r255, %r256}, [nvvm_tcgen05_st_16x32bx2_unpack_param_8];
 ; CHECK-NEXT:    tcgen05.st.sync.aligned.16x32bx2.x128.unpack::16b.b32 [%r1], 2, {%r253, %r254, %r255, %r256, %r249, %r250, %r251, %r252, %r245, %r246, %r247, %r248, %r241, %r242, %r243, %r244, %r237, %r238, %r239, %r240, %r233, %r234, %r235, %r236, %r229, %r230, %r231, %r232, %r225, %r226, %r227, %r228, %r221, %r222, %r223, %r224, %r217, %r218, %r219, %r220, %r213, %r214, %r215, %r216, %r209, %r210, %r211, %r212, %r205, %r206, %r207, %r208, %r201, %r202, %r203, %r204, %r197, %r198, %r199, %r200, %r193, %r194, %r195, %r196, %r189, %r190, %r191, %r192, %r185, %r186, %r187, %r188, %r181, %r182, %r183, %r184, %r177, %r178, %r179, %r180, %r173, %r174, %r175, %r176, %r169, %r170, %r171, %r172, %r165, %r166, %r167, %r168, %r161, %r162, %r163, %r164, %r157, %r158, %r159, %r160, %r153, %r154, %r155, %r156, %r149, %r150, %r151, %r152, %r145, %r146, %r147, %r148, %r141, %r142, %r143, %r144, %r137, %r138, %r139, %r140, %r133, %r134, %r135, %r136, %r129, %r130, %r131, %r132};
 ; CHECK-NEXT:    ret;
-  tail call void @llvm.nvvm.tcgen05.st.16x32bx2.x1(ptr addrspace(6) %taddr, i64 2, i32 %stv1, i1 1)
+  tail call void @llvm.nvvm.tcgen05.st.16x32bx2.x1(ptr addrspace(6) %taddr, i64 2, <1 x i32> %stv1, i1 1)
 
   tail call void @llvm.nvvm.tcgen05.st.16x32bx2.x2(ptr addrspace(6) %taddr, i64 2, <2 x i32> %stv2, i1 1)
 

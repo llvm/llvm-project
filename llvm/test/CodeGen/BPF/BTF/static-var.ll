@@ -99,14 +99,14 @@ define dso_local i32 @foo() local_unnamed_addr !dbg !2 {
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "b", scope: !2, file: !3, line: 3, type: !14, isLocal: true, isDefinition: true)
-!2 = distinct !DISubprogram(name: "foo", scope: !3, file: !3, line: 2, type: !4, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: true, unit: !7, retainedNodes: !8)
+!2 = distinct !DISubprogram(name: "foo", scope: !3, file: !3, line: 2, type: !4, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: true, unit: !7, retainedNodes: !29)
 !3 = !DIFile(filename: "test.c", directory: "/home/yhs/work/tests/llvm/bug")
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6}
 !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !7 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 8.0.20181009 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !8, globals: !9, nameTableKind: None)
 !8 = !{}
-!9 = !{!0, !10}
+!9 = !{!10}
 !10 = !DIGlobalVariableExpression(var: !11, expr: !DIExpression())
 !11 = distinct !DIGlobalVariable(name: "a", scope: !7, file: !3, line: 1, type: !12, isLocal: true, isDefinition: true)
 !12 = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: !13)
@@ -126,3 +126,4 @@ define dso_local i32 @foo() local_unnamed_addr !dbg !2 {
 !26 = !{!"short", !22, i64 0}
 !27 = !DILocation(line: 4, column: 12, scope: !2)
 !28 = !DILocation(line: 4, column: 3, scope: !2)
+!29 = !{!0}

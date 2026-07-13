@@ -5983,9 +5983,23 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGCNTarget() {
   std::optional<AMDGPU::TargetID> MaybeParsed =
       AMDGPU::TargetID::parseTargetIDString(TargetIDDirective);
   if (!MaybeParsed)
-    return getParser().Error(TargetStart, "malformed target ID");
+    return getParser().Error(TargetStart,
+                             "malformed target id '" + TargetIDDirective + "'");
 
   const AMDGPU::TargetID &ParsedTargetID = *MaybeParsed;
+  const Triple &TT = getSTI().getTargetTriple();
+
+  // The processor named in the target id must be covered by the triple's
+  // subarch.
+  if (!AMDGPU::isCPUValidForSubArch(TT.getSubArch(),
+                                    ParsedTargetID.getGPUKind())) {
+    return getParser().Error(
+        TargetStart, "target id '" + TargetIDDirective +
+                         "' specifies a processor that is not valid for "
+                         "subarch '" +
+                         TT.getArchName() + "'");
+  }
+
   const std::optional<AMDGPU::TargetID> &CurrentTargetID =
       getTargetStreamer().getTargetID();
 
@@ -6695,9 +6709,22 @@ bool AMDGPUAsmParser::ParseDirectiveISAVersion() {
   std::optional<AMDGPU::TargetID> MaybeParsed =
       AMDGPU::TargetID::parseTargetIDString(TargetIDDirective);
   if (!MaybeParsed)
-    return Error(getParser().getTok().getLoc(), "malformed target id");
+    return Error(getParser().getTok().getLoc(),
+                 "malformed target id '" + TargetIDDirective + "'");
 
   const AMDGPU::TargetID &ParsedTargetID = *MaybeParsed;
+  const Triple &TT = getSTI().getTargetTriple();
+
+  // The processor named in the target id must be covered by the triple's
+  // subarch.
+  if (!AMDGPU::isCPUValidForSubArch(TT.getSubArch(),
+                                    ParsedTargetID.getGPUKind())) {
+    return Error(getParser().getTok().getLoc(),
+                 "target id '" + TargetIDDirective +
+                     "' specifies a processor that is not valid for subarch '" +
+                     TT.getArchName() + "'");
+  }
+
   const std::optional<AMDGPU::TargetID> &CurrentTargetID =
       getTargetStreamer().getTargetID();
 
@@ -8269,7 +8296,7 @@ bool AMDGPUAsmParser::parseDepCtr(int64_t &DepCtr, unsigned &UsedOprMask) {
     }
   }
 
-  unsigned CntValMask = PrevOprMask ^ UsedOprMask;
+  int64_t CntValMask = PrevOprMask ^ UsedOprMask;
   DepCtr = (DepCtr & ~CntValMask) | CntVal;
   return true;
 }
@@ -9964,6 +9991,11 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
     if (ModIdx == -1)
       continue;
 
+    // For MAC instructions, src2 is tied to vdst and its op_sel bit
+    // is not encoded.
+    if (AMDGPU::isMAC(Opc) && ModOps[J] == AMDGPU::OpName::src2_modifiers)
+      continue;
+
     uint32_t ModVal = 0;
 
     const MCOperand &SrcOp = Inst.getOperand(OpIdx);
@@ -10727,6 +10759,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAMDGPUAsmParser() {
   RegisterMCAsmParser<AMDGPUAsmParser> A(getTheR600Target());
   RegisterMCAsmParser<AMDGPUAsmParser> B(getTheGCNTarget());
+  RegisterMCAsmParser<AMDGPUAsmParser> C(getTheGCNLegacyTarget());
 }
 
 #define GET_MATCHER_IMPLEMENTATION

@@ -350,7 +350,7 @@ const inline ARMNeonVectorIntrinsicInfo AArch64SIMDIntrinsicMap [] = {
   NEONMAP2(vrsqrteq_v, aarch64_neon_frsqrte, aarch64_neon_ursqrte, 0),
   NEONMAP1(vrsqrts_v, aarch64_neon_frsqrts, Add1ArgType),
   NEONMAP1(vrsqrtsq_v, aarch64_neon_frsqrts, Add1ArgType),
-  NEONMAP1(vrsubhn_v, aarch64_neon_rsubhn, Add1ArgType),
+  NEONMAP1(vrsubhn_v, aarch64_neon_rsubhn, Add1ArgType | WidenArgs),
   NEONMAP1(vsha1su0q_u32, aarch64_crypto_sha1su0, 0),
   NEONMAP1(vsha1su1q_u32, aarch64_crypto_sha1su1, 0),
   NEONMAP1(vsha256h2q_u32, aarch64_crypto_sha256h2, 0),

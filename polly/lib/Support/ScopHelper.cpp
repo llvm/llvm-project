@@ -445,6 +445,10 @@ private:
     // FIXME: This emits a SCEV for GenSE (since GenLRepl will refer to the
     // induction variable of a generated loop), so we should not use SCEVVisitor
     // with it. However, it still contains references to the SCoP region.
+    //
+    // Insert in the cache to cut recursive cycles:
+    // visitUnknown follow VMap and GenSE.getSCEV() back to E.
+    SCEVCache[E] = Evaluated;
     return visit(Evaluated);
   }
   ///}

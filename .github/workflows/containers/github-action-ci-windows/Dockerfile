@@ -93,7 +93,7 @@ RUN powershell -Command \
     New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" \
     -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
 
-ARG RUNNER_VERSION=2.335.0
+ARG RUNNER_VERSION=2.335.1
 ENV RUNNER_VERSION=$RUNNER_VERSION
 
 RUN powershell -Command \
