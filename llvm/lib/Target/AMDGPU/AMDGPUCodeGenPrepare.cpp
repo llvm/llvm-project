@@ -1082,10 +1082,10 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloatImpl(
   // (0x7FF8F5/0x007EFB) would erroneously produce 258 instead of 257.
   //
   // Thus, we conservatively restrict expandDivRemToFloatImpl to
-  // [-0x40000,0x3FFFFF] for IsSigned
-  // [0x000000,0x3FFFFF] for !IsSigned.
+  // [-0x400000,0x3FFFFF] for IsSigned
+  // [ 0x000000,0x3FFFFF] for !IsSigned.
   assert(0 < DivBits && DivBits <= (IsSigned ? 23 : 22) &&
-         "abs(Num) must be <= than 0x40000 for expandDivRemToFloatImpl to work "
+         "abs(Num) must be <= 0x400000 for expandDivRemToFloatImpl to work "
          "correctly");
 
   Type *I32Ty = Builder.getInt32Ty();
@@ -1116,30 +1116,17 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloatImpl(
   //   fq = fa*recip(fb)
   // may be too small due to the 1ulp accuracy in the recip
   // operation and rounding issues.  Since fq is truncated to produce
-  // an integer value it may be too small by one.  This
-  // can be dealt with in one of two ways.
-  //
-  // 1. If fabs(fa) <= 0x200000 increment fa by 1ulp:
-  //      fq = (fa+1ulp)*recip(fb)
-  //    This method is preferred since it only requires one
-  //    integer +1 operation on the floating-point encoding of fa.
-  //    This will increase fa's magnitude by at most 0.25
-  //    (i.e. when fabs(fa)==0x200000 the LSB of the mantissa represents 0.25).
-  //    Thus, this method is safe since fa must be incremented by at least 1.0
-  //    for quotient to increase by one.  Note that setting the boundary to
-  //    fabs(fa) <= 0x400000 and incrementing fa's magnitude by at most 0.5 is
-  //    unsafe because recip(fb) can have a 1 ulp error.
-  //
-  // 2. A. Calculate fr = fa - fq*fb
-  //    B. If fabs(fr) >= fabs(fb) increment the quotient by 1.
+  // an integer value it may be too small by one.  This is
+  // dealt with by incrementing fa by 1ulp:
+  //   fq = (fa+1ulp)*recip(fb)
+  // This will increase fa's magnitude by at most 0.5
+  // (i.e. when fabs(fa)==0x400000 the LSB of the mantissa represents 0.5).
+  // Thus, this method is safe since fa must be incremented by at least 1.0
+  // for the quotient to increase by one.
 
-  bool IncrementFA = (DivBits < (IsSigned ? 23 : 22));
-
-  if (IncrementFA) {
-    Value *FABits = Builder.CreateBitCast(FA, I32Ty);
-    Value *FABitsInc = Builder.CreateAdd(FABits, One);
-    FA = Builder.CreateBitCast(FABitsInc, F32Ty);
-  }
+  Value *FABits = Builder.CreateBitCast(FA, I32Ty);
+  Value *FABitsInc = Builder.CreateAdd(FABits, One);
+  FA = Builder.CreateBitCast(FABitsInc, F32Ty);
 
   Value *FQM = Builder.CreateFMul(FA, RCP);
 
@@ -1150,56 +1137,10 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloatImpl(
   Value *IQ = IsSigned ? Builder.CreateFPToSI(FQ, I32Ty)
                        : Builder.CreateFPToUI(FQ, I32Ty);
 
-  Value *Div;
-  if (IncrementFA) {
-    Div = IQ;
-  } else {
-    Value *JQ = One;
-    auto *FQI = dyn_cast<Instruction>(FQ);
-    if (FQI)
-      FQI->copyFastMathFlags(Builder.getFastMathFlags());
-
-    if (IsSigned) {
-      // char|short jq = ia ^ ib;
-      JQ = Builder.CreateXor(Num, Den);
-
-      // jq = jq >> (bitsize - 2)
-      JQ = Builder.CreateAShr(JQ, Builder.getInt32(30));
-
-      // jq = jq | 0x1
-      JQ = Builder.CreateOr(JQ, One);
-    }
-
-    // float fqneg = -fq;
-    Value *FQNeg = Builder.CreateFNeg(FQ);
-
-    // float fr = mad(fqneg, fb, fa);
-    auto FMAD = !ST.hasMadMacF32Insts()
-                    ? Intrinsic::fma
-                    : (Intrinsic::ID)Intrinsic::amdgcn_fmad_ftz;
-    Value *FR =
-        Builder.CreateIntrinsic(FMAD, {FQNeg->getType()}, {FQNeg, FB, FA}, FQI);
-
-    // fr = fabs(fr);
-    FR = Builder.CreateFAbs(FR, FQI);
-
-    // fb = fabs(fb);
-    FB = Builder.CreateFAbs(FB, FQI);
-
-    // int cv = fr >= fb;
-    Value *CV = Builder.CreateFCmpOGE(FR, FB);
-
-    // jq = (cv ? jq : 0);
-    JQ = Builder.CreateSelect(CV, JQ, Builder.getInt32(0));
-
-    // dst = iq + jq;
-    Div = Builder.CreateAdd(IQ, JQ);
-  }
-
-  Value *Res = Div;
+  Value *Res = IQ;
   if (!IsDiv) {
     // Rem needs compensation, it's easier to recompute it
-    Value *Rem = Builder.CreateMul(Div, Den);
+    Value *Rem = Builder.CreateMul(IQ, Den);
     Res = Builder.CreateSub(Num, Rem);
   }
 
