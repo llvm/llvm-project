@@ -949,6 +949,7 @@ set(files
   __utility/cmp.h
   __utility/constant_wrapper.h
   __utility/convert_to_integral.h
+  __utility/cpo.h
   __utility/declval.h
   __utility/default_three_way_comparator.h
   __utility/element_count.h
