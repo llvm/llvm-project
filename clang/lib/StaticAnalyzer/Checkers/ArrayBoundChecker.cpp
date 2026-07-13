@@ -94,36 +94,53 @@ public:
 };
 
 class CheckResult {
-  /// Offset of the accessed location, measured from the start of the region.
-  /// As of now, the offset and the extent are always measured in bytes, but it
-  /// may be necessary to change this in the future.
-  const NonLoc Offset;
-
-  /// Updated to true when we detect that underflow is feasible.
-  bool MayUnderflow = false;
-
-  /// Updated to store the extent of the accessed buffer when we notice that
-  /// problematic overflow was feasible and therefore we either need to create
-  /// an overflow bug report, or need to note that we are assuming that there
-  /// is no overflow.  Otherwise (when overflow was infeasible or this is an
-  /// '&array[size]' expression that idiomatically creates a past-the-end
-  /// pointer) this data member is std::nullopt. In these cases we do not need
-  /// to know the extent and its value should be ignored so it is comfortable
-  /// to avoid storing it.
-  std::optional<NonLoc> MayOverflowExtent = std::nullopt;
-
 public:
-  CheckResult(NonLoc Offs) : Offset(Offs) {}
+  /// When true, the bounds check noticed that the value of an unsigned
+  /// expression is constrained to negative values (because the analyzer
+  /// skipped the modeling of a cast expression). This execution path must be
+  /// discarded because it does not represent a real possibility.
+  /// FIXME: This hack is currently needed to filter out many ugly false
+  /// positives; but it should be removed when we fix cast modeling.
+  bool isCorruptedState() const { return IsCorruptedState; }
 
-  void recordMayUnderflow() { MayUnderflow = true; }
-  void recordMayOverflowExtent(NonLoc Extent) { MayOverflowExtent = Extent; }
+  /// When true, the checked offset may be in bounds.
+  bool mayBeValid() const { return static_cast<bool>(ValidState); }
 
+  /// When true, the checked offset may be negative.
   bool mayUnderflow() const { return MayUnderflow; }
-
+  /// When true, the checked offset may be >= the extent of the region.
+  bool mayOverflow() const { return MayOverflowExtent.has_value(); }
+  /// When true, the checked offset may be out of bounds.
   bool mayBeInvalid() const { return MayUnderflow || MayOverflowExtent; }
 
+  /// Returns the program state that should be used for continuing the analysis
+  /// after this bounds check. This returns null if mayBeValid() is false, in
+  /// that case use the state before the check as the state of the error node.
+  ProgramStateRef getValidState() const { return ValidState; }
+
+  /// When the access was ambiguous (that is, mayBeValid() && mayBeInvalid()),
+  /// returns the note "assuming in bounds" note that is relevant for the bug
+  /// report \p BR. When the access wasn't ambiguous or the the assumption is
+  /// irrelevant for \p BR, this returns the empty string (which signifies "do
+  /// not emit a note tag" when returned by a note tag callback).
   std::string getMessage(PathSensitiveBugReport &BR, StringRef RegName,
                          SizeUnit SU) const;
+
+private:
+  // Offset of the accessed location, measured from the start of the region.
+  // As of now, the offset and the extent are always measured in bytes, but it
+  // may be necessary to change this in the future.
+  const NonLoc Offset;
+
+public:
+  // FIXME: The following members should be private and they will become
+  // private soon in a follow-up commit.
+  explicit CheckResult(NonLoc Offs) : Offset(Offs) {}
+
+  bool IsCorruptedState = false;
+  bool MayUnderflow = false;
+  std::optional<NonLoc> MayOverflowExtent = std::nullopt;
+  ProgramStateRef ValidState = nullptr;
 };
 
 struct Messages {
@@ -592,12 +609,13 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
 
   auto [Reg, ByteOffset] = *RawOffset;
 
+  const MemSpaceRegion *Space = Reg->getMemorySpace(State);
+  DefinedOrUnknownSVal Extent = getDynamicExtent(State, Reg, SVB);
   // The state updates will be reported as a single note tag, which will be
   // composed by this helper class.
   CheckResult Res(ByteOffset);
 
   // CHECK LOWER BOUND
-  const MemSpaceRegion *Space = Reg->getMemorySpace(State);
   if (!(isa<SymbolicRegion>(Reg) && isa<UnknownSpaceRegion>(Space))) {
     // A symbolic region in unknown space represents an unknown pointer that
     // may point into the middle of an array, so we don't look for underflows.
@@ -649,7 +667,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
         }
         // ...but it can be valid as well, so the checker will (optimistically)
         // assume that it's valid and mention this in the note tag.
-        Res.recordMayUnderflow();
+        Res.MayUnderflow = true;
       }
     }
 
@@ -661,8 +679,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   }
 
   // CHECK UPPER BOUND
-  DefinedOrUnknownSVal Size = getDynamicExtent(State, Reg, SVB);
-  if (auto KnownSize = Size.getAs<NonLoc>()) {
+  if (auto KnownSize = Extent.getAs<NonLoc>()) {
     // In a situation where both underflow and overflow are possible (but the
     // index is either tainted or known to be invalid), the logic of this
     // checker will first assume that the offset is non-negative, and then
@@ -715,7 +732,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
       }
       // ...and it isn't tainted, so the checker will (optimistically) assume
       // that the offset is in bounds and mention this in the note tag.
-      Res.recordMayOverflowExtent(*KnownSize);
+      Res.MayOverflowExtent = *KnownSize;
     }
 
     // Actually update the state. The "if" only fails in the extremely unlikely
