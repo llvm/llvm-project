@@ -388,7 +388,7 @@ bool vputils::isElementwise(const VPValue *V) {
                             [](auto *R) { return R->getOpcode(); })
                         .Default([](auto *) { return 0; });
   // TODO: Handle more opcodes and recipes.
-  return Instruction::isBinaryOp(Opcode);
+  return Instruction::isUnaryOp(Opcode) || Instruction::isBinaryOp(Opcode);
 }
 
 bool vputils::isSingleScalar(const VPValue *VPV) {
