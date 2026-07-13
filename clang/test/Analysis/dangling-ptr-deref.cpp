@@ -29,6 +29,8 @@ void test_case_two() {
   // expected-note@-4 {{Use of 'm' after its lifetime ended}}
 }
 
+void escape(int *ptr);
+
 void test_case_three() {
   int num = 5;
   int *ptr = &num;
@@ -49,3 +51,31 @@ void test_case_four() {
   i += i;
 }
 
+void test_case_five() {
+  int *ptr = nullptr;
+  for(int i = 0; i < 10; ++i) {
+    ptr = &i;
+  }
+  escape(ptr); // no-warning
+}
+
+void test_case_six() {
+  for(int i = 0; i < 10; ++i) {
+    int *ptr = &i;
+    escape(ptr); // no-warning
+  }
+}
+
+void test_case_seven() {
+  int *ptr = nullptr;
+  for (int i = 0; i < 10; ++i) {
+    ptr = &i;
+    escape(ptr);
+  }
+  *ptr = 6;
+  // expected-warning@-1 {{Use of 'i' after its lifetime ended}}
+  // expected-note@-2 {{Use of 'i' after its lifetime ended}}
+  // expected-note@-7 {{Loop condition is true.  Entering loop body}}
+  // expected-note@-8 {{Assuming 'i' is >= 10}}
+  // expected-note@-9 {{Loop condition is false. Execution continues on line 71}}
+}
