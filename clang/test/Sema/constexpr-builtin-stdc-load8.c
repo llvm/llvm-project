@@ -194,3 +194,15 @@ constexpr __UINT_LEAST32_TYPE__ onepastend_aligned = stdc_load8_aligned_leu32(on
 
 alignas(8) constexpr unsigned char onepastend_misaligned_buf[5] = {0, 0x78, 0x56, 0x34, 0x12};
 constexpr __UINT_LEAST32_TYPE__ onepastend_misaligned = stdc_load8_aligned_leu32(onepastend_misaligned_buf + 5); // expected-error{{must be initialized by a constant expression}} expected-note{{'stdc_load8_aligned_leu32' requires a pointer aligned to 4 bytes, but the given pointer is only aligned to 1 byte}}
+
+struct FieldOffset { unsigned char pad; unsigned char data[8]; };
+alignas(8) constexpr struct FieldOffset field_s = {0, {0x78, 0x56, 0x34, 0x12}};
+constexpr __UINT_LEAST32_TYPE__ field_fail = stdc_load8_aligned_leu32(field_s.data); // expected-error{{must be initialized by a constant expression}} expected-note{{'stdc_load8_aligned_leu32' requires a pointer aligned to 4 bytes, but the given pointer is only aligned to 1 byte}}
+
+alignas(8) constexpr struct FieldOffset field_arr[2] = {{0}, {0, {0x78, 0x56, 0x34, 0x12}}};
+constexpr __UINT_LEAST32_TYPE__ field_arr_fail = stdc_load8_aligned_leu32(field_arr[1].data); // expected-error{{must be initialized by a constant expression}} expected-note{{'stdc_load8_aligned_leu32' requires a pointer aligned to 4 bytes, but the given pointer is only aligned to 2 bytes}}
+
+union FieldUnion { unsigned char c; unsigned char data[8]; };
+alignas(8) constexpr union FieldUnion field_u = {.data = {0x78, 0x56, 0x34, 0x12}};
+constexpr __UINT_LEAST32_TYPE__ union_ok = stdc_load8_aligned_leu32(field_u.data);
+static_assert(union_ok == 0x12345678U, "");
