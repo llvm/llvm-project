@@ -14,32 +14,41 @@
 #include <utility>
 #include <vector>
 
+struct View : std::ranges::view_interface<View> {
+  int* begin();
+  const int* begin() const;
+  volatile int* end();
+  const volatile int* end() const;
+};
+static_assert(!std::ranges::common_range<View>);
+static_assert(!std::same_as<std::ranges::iterator_t<View>, std::ranges::iterator_t<const View>>);
+static_assert(!std::same_as<std::ranges::sentinel_t<View>, std::ranges::sentinel_t<const View>>);
+
 void test() {
-  std::vector<int> range;
-  std::ranges::enumerate_view ev{range};
+  auto v  = View{} | std::views::enumerate;
 
   // [range.enumerate.view]
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  ev.begin();
+  v.begin();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::as_const(ev).begin();
+  std::as_const(v).begin();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  ev.end();
+  v.end();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::as_const(ev).end();
+  std::as_const(v).end();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  ev.size();
+  v.size();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::as_const(ev).size();
+  std::as_const(v).size();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  ev.base();
+  v.base();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::move(ev).base();
+  std::move(v).base();
 
   // [range.enumerate.iterator]
 
-  auto it = ev.begin();
+  auto it = v.begin();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::as_const(it).base();
@@ -64,8 +73,7 @@ void test() {
 
   // [range.enumerate.sentinel]
 
-  auto st   = ev.end();
-  auto c_it = std::as_const(ev).begin();
+  auto st = v.end();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::as_const(st).base();
@@ -75,12 +83,16 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   st - it;
 
+  auto c_it = std::as_const(v).begin();
+
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   st - c_it;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   c_it - st;
 
   // [range.enumerate.overview]
+
+  std::vector<int> range { 1, 2, 3 };
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::enumerate(range);
