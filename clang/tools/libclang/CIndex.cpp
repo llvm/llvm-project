@@ -1312,6 +1312,15 @@ bool CursorVisitor::VisitFriendDecl(FriendDecl *D) {
   return false;
 }
 
+bool CursorVisitor::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
+  if (D->getFriendType() || !D->getFriendTemplateName().isNull())
+    for (TemplateParameterList *TPL : D->getFriendTypeTemplateParameterLists())
+      if (VisitTemplateParameters(TPL))
+        return true;
+
+  return VisitFriendDecl(D);
+}
+
 bool CursorVisitor::VisitDecompositionDecl(DecompositionDecl *D) {
   for (auto *B : D->bindings()) {
     if (Visit(MakeCXCursor(B, TU, RegionOfInterest)))
