@@ -94,8 +94,8 @@ SPIRVGlobalRegistry::SPIRVGlobalRegistry(DataLayout DL)
 void SPIRVGlobalRegistry::constrainSelectedInstRegOperands(
     MachineInstrBuilder &MIB) const {
   const auto &ST = CurMF->getSubtarget();
-  ::constrainSelectedInstRegOperands(
-      *MIB, *ST.getInstrInfo(), *ST.getRegisterInfo(), *ST.getRegBankInfo());
+  MIB.constrainAllUses(*ST.getInstrInfo(), *ST.getRegisterInfo(),
+                       *ST.getRegBankInfo());
 }
 
 SPIRVTypeInst
