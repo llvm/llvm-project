@@ -89,6 +89,23 @@ static std::optional<StringRef> bareExtension(StringRef Path) {
   return Ext;
 }
 
+/// Companion flags required by `--ssaf-source-transformation=`. Values must
+/// match the `%select` branch order in `warn_ssaf_source_transformation_requires`.
+enum SourceTransformationCompanion {
+  STCompanion_WPAFile,           // --ssaf-global-scope-analysis-result=
+  STCompanion_EditFile,          // --ssaf-src-edit-file=
+  STCompanion_ReportFile,        // --ssaf-transformation-report-file=
+  STCompanion_CompilationUnitId, // --ssaf-compilation-unit-id=
+};
+
+/// Flags that depend on `--ssaf-source-transformation=` being set. Values must
+/// match the `%select` branch order in
+/// `warn_ssaf_flag_requires_source_transformation`.
+enum SourceTransformationDependent {
+  STDependent_EditFile,   // --ssaf-src-edit-file=
+  STDependent_ReportFile, // --ssaf-transformation-report-file=
+};
+
 /// Returns `true` if any orphan-flag warning was reported. Every missing
 /// companion flag fires its own diagnostic in a single pass so the user
 /// sees the full list of CLI mistakes at once.
@@ -98,30 +115,34 @@ static bool reportOrphanFlagMisuse(DiagnosticsEngine &Diags,
 
   if (!Opts.SourceTransformation.empty()) {
     if (Opts.GlobalScopeAnalysisResult.empty()) {
-      Diags.Report(diag::warn_ssaf_source_transformation_requires_wpa_file);
+      Diags.Report(diag::warn_ssaf_source_transformation_requires)
+          << STCompanion_WPAFile;
       Reported = true;
     }
     if (Opts.SrcEditFile.empty()) {
-      Diags.Report(diag::warn_ssaf_source_transformation_requires_edit_file);
+      Diags.Report(diag::warn_ssaf_source_transformation_requires)
+          << STCompanion_EditFile;
       Reported = true;
     }
     if (Opts.TransformationReportFile.empty()) {
-      Diags.Report(diag::warn_ssaf_source_transformation_requires_report_file);
+      Diags.Report(diag::warn_ssaf_source_transformation_requires)
+          << STCompanion_ReportFile;
       Reported = true;
     }
     if (Opts.CompilationUnitId.empty()) {
-      Diags.Report(
-          diag::warn_ssaf_source_transformation_requires_compilation_unit_id);
+      Diags.Report(diag::warn_ssaf_source_transformation_requires)
+          << STCompanion_CompilationUnitId;
       Reported = true;
     }
   } else {
     if (!Opts.SrcEditFile.empty()) {
-      Diags.Report(diag::warn_ssaf_src_edit_file_requires_transformation);
+      Diags.Report(diag::warn_ssaf_flag_requires_source_transformation)
+          << STDependent_EditFile;
       Reported = true;
     }
     if (!Opts.TransformationReportFile.empty()) {
-      Diags.Report(
-          diag::warn_ssaf_transformation_report_file_requires_transformation);
+      Diags.Report(diag::warn_ssaf_flag_requires_source_transformation)
+          << STDependent_ReportFile;
       Reported = true;
     }
   }
