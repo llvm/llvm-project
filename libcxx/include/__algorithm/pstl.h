@@ -164,6 +164,24 @@ mismatch(_ExecutionPolicy&& __policy,
 template <class _ExecutionPolicy,
           class _ForwardIterator1,
           class _ForwardIterator2,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI pair<_ForwardIterator1, _ForwardIterator2> mismatch(
+    _ExecutionPolicy&& __policy, _ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "mismatch requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "mismatch requires ForwardIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__mismatch_3leg, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first1),
+      std::move(__last1),
+      std::move(__first2),
+      equal_to{});
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator1,
+          class _ForwardIterator2,
           class _Pred,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>

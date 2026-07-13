@@ -16,6 +16,14 @@
 //   pair<ForwardIterator1, ForwardIterator2> mismatch(ExecutionPolicy&& exec,
 //                                                     ForwardIterator1 first1,
 //                                                     ForwardIterator1 last1,
+//                                                     ForwardIterator2 first2);
+//
+// template <class ExecutionPolicy,
+//           class ForwardIterator1,
+//           class ForwardIterator2>
+//   pair<ForwardIterator1, ForwardIterator2> mismatch(ExecutionPolicy&& exec,
+//                                                     ForwardIterator1 first1,
+//                                                     ForwardIterator1 last1,
 //                                                     ForwardIterator2 first2,
 //                                                     ForwardIterator2 last2);
 
@@ -61,6 +69,8 @@ struct Test {
       // empty ranges
       std::array<int, 1> lhs = {0};
       std::array<int, 1> rhs = {0};
+      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.begin()), Iter2(rhs.begin())) ==
+             std::make_pair(Iter1(lhs.begin()), Iter2(rhs.begin())));
       assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.begin()), Iter2(rhs.begin()), Iter2(rhs.begin())) ==
              std::make_pair(Iter1(lhs.begin()), Iter2(rhs.begin())));
     }
@@ -68,18 +78,24 @@ struct Test {
       // single element only
       std::array<int, 1> lhs = {0};
       std::array<int, 1> rhs = {0};
+      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin())) ==
+             std::make_pair(Iter1(lhs.end()), Iter2(rhs.end())));
       assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin()), Iter2(rhs.end())) ==
              std::make_pair(Iter1(lhs.end()), Iter2(rhs.end())));
     }
     { // same range without mismatch
       std::array<int, 8> lhs = {0, 1, 2, 3, 0, 1, 2, 3};
       std::array<int, 8> rhs = {0, 1, 2, 3, 0, 1, 2, 3};
+      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin())) ==
+             std::make_pair(Iter1(lhs.end()), Iter2(rhs.end())));
       assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin()), Iter2(rhs.end())) ==
              std::make_pair(Iter1(lhs.end()), Iter2(rhs.end())));
     }
     { // same range with mismatch
       std::array<int, 8> lhs = {0, 1, 2, 2, 0, 1, 2, 3};
       std::array<int, 8> rhs = {0, 1, 2, 3, 0, 1, 2, 3};
+      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin())) ==
+             std::make_pair(Iter1(lhs.begin() + 3), Iter2(rhs.begin() + 3)));
       assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin()), Iter2(rhs.end())) ==
              std::make_pair(Iter1(lhs.begin() + 3), Iter2(rhs.begin() + 3)));
     }
@@ -102,10 +118,14 @@ struct Test {
       rhs = lhs;
       runway_sample(lhs.size(), [&](size_t i) {
         lhs[i] = -1;
+        assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin())) ==
+               std::make_pair(Iter1(lhs.begin() + i), Iter2(rhs.begin() + i)));
         assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin()), Iter2(rhs.end())) ==
                std::make_pair(Iter1(lhs.begin() + i), Iter2(rhs.begin() + i)));
         lhs[i] = i;
       });
+      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin())) ==
+             std::make_pair(Iter1(lhs.end()), Iter2(rhs.end())));
       assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin()), Iter2(rhs.end())) ==
              std::make_pair(Iter1(lhs.end()), Iter2(rhs.end())));
     }
