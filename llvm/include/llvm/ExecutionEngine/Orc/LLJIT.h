@@ -296,6 +296,8 @@ public:
     IPLayer->setPartitionFunction(std::move(Partition));
   }
 
+  LLVM_ABI ~LLLazyJIT();
+
   /// Returns a reference to the on-demand layer.
   CompileOnDemandLayer &getCompileOnDemandLayer() { return *CODLayer; }
 
