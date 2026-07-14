@@ -33,7 +33,7 @@ cv.lb t0, (t2)
 # CHECK-ERROR: :[[@LINE-1]]:15: error: too few operands for instruction
 
 cv.lb t0, (t1), t2, t3
-# CHECK-ERROR: :[[@LINE-1]]:21: error: invalid operand for instruction
+# CHECK-ERROR: :[[@LINE-1]]:21: error: unexpected extra operand for instruction
 
 cv.lbu t0, (0), 0
 # CHECK-ERROR: :[[@LINE-1]]:12: error: invalid operand for instruction
@@ -67,7 +67,7 @@ cv.lbu t0, (t2)
 # CHECK-ERROR: :[[@LINE-1]]:16: error: too few operands for instruction
 
 cv.lbu t0, (t1), t2, t3 
-# CHECK-ERROR: :[[@LINE-1]]:22: error: invalid operand for instruction
+# CHECK-ERROR: :[[@LINE-1]]:22: error: unexpected extra operand for instruction
 
 cv.lh t0, (0), 0
 # CHECK-ERROR: :[[@LINE-1]]:11: error: invalid operand for instruction
@@ -104,7 +104,7 @@ cv.lh t0, (t1)
 # CHECK-ERROR: :[[@LINE-1]]:15: error: too few operands for instruction
 
 cv.lh t0, (t1), t2, t3
-# CHECK-ERROR: :[[@LINE-1]]:21: error: invalid operand for instruction
+# CHECK-ERROR: :[[@LINE-1]]:21: error: unexpected extra operand for instruction
 
 cv.lhu t0, (0), 0
 # CHECK-ERROR: :[[@LINE-1]]:12: error: invalid operand for instruction
@@ -141,7 +141,7 @@ cv.lhu t0, (t1)
 # CHECK-ERROR: :[[@LINE-1]]:16: error: too few operands for instruction
 
 cv.lhu t0, (t1), t2, t3
-# CHECK-ERROR: :[[@LINE-1]]:22: error: invalid operand for instruction
+# CHECK-ERROR: :[[@LINE-1]]:22: error: unexpected extra operand for instruction
 
 cv.lw t0, (0), 0
 # CHECK-ERROR: :[[@LINE-1]]:11: error: invalid operand for instruction
@@ -178,7 +178,7 @@ cv.lw t0, (t1)
 # CHECK-ERROR: :[[@LINE-1]]:15: error: too few operands for instruction
 
 cv.lw t0, (t1), t2, t3
-# CHECK-ERROR: :[[@LINE-1]]:21: error: invalid operand for instruction
+# CHECK-ERROR: :[[@LINE-1]]:21: error: unexpected extra operand for instruction
 
 cv.sb t0, (0), 0
 # CHECK-ERROR: :[[@LINE-1]]:11: error: invalid operand for instruction
