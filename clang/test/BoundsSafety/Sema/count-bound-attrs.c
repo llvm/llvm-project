@@ -28,7 +28,7 @@ void Test(void) {
     int *__counted_by(len12) __unsafe_indexable countUnsafe;
 
     int len13;
-    void *__counted_by(len13) countVoid; // expected-error{{cannot apply '__counted_by' attribute to 'void *' because 'void' has unknown size; did you mean to use '__sized_by' instead?}}
+    void *__counted_by(len13) countVoid; // expected-error{{'counted_by' cannot be applied to a pointer with pointee of unknown size because 'void' is an incomplete type}}
     int len14;
     void *__sized_by(len14) byteCountVoid;
 }

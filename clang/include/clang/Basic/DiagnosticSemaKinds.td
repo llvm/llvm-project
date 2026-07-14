@@ -7275,8 +7275,10 @@ def err_count_attr_refer_to_union : Error<
   "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' argument cannot refer to a union member">;
 def note_flexible_array_counted_by_attr_field : Note<
   "field %0 declared here">;
+/* TO_UPSTREAM(BoundsSafety) ON */
+// `ended_by` in %select is downstream only
 def err_counted_by_attr_pointee_unknown_size : Error<
-  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}4' %select{cannot|should not}3 be applied to %select{"
+  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null|ended_by}4' %select{cannot|should not}3 be applied to %select{"
     "a pointer with pointee|" // pointer
     "an array with element}0" // array
   " of unknown size because %1 is %select{"
@@ -7288,6 +7290,7 @@ def err_counted_by_attr_pointee_unknown_size : Error<
     "%select{|. This will be an error in a future compiler version}3"
     ""
   "}2">;
+/* TO_UPSTREAM(BoundsSafety) OFF */
 def err_counted_by_on_incomplete_type_on_assign : Error <
   "cannot %select{"
     "assign to %select{object|'%1'}2 with|" // AA_Assigning,
@@ -13781,9 +13784,6 @@ def err_bounds_safety_flexible_array_member_record_pointer_arithmetic : Error<
   "member">;
 def err_bounds_safety_member_reference_null_base : Error<
   "base of member reference is a null pointer">;
-def err_bounds_safety_counted_by_without_size : Error<
-  "cannot apply '__counted_by%select{|_or_null}2' attribute to %0 because %1 has unknown size"
-  "%select{|; did you mean to use '__sized_by%select{|_or_null}2' instead?}3">;
 def err_bounds_safety_counted_by_on_incomplete_type_on_use : Error <
   "cannot %select{"
     "use '%1'|" // Generic expr

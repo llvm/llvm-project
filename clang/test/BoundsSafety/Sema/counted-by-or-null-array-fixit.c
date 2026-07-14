@@ -18,9 +18,8 @@ struct constant_sized_inner_arr_2d_struct {
     int fam[__counted_by_or_null(len)][10]; // expected-error{{flexible array members cannot be null; did you mean __counted_by instead?}}
 };
 
-// expected-error@+3{{'__counted_by_or_null' attribute on nested pointer type is only allowed on indirect parameters}}
-// expected-error@+2{{cannot apply '__counted_by_or_null' attribute to 'int (*)[][size]' because 'int[][size]' has unknown size; did you mean to use '__sized_by_or_null' instead?}}
-// CHECK: fix-it:{{.*}}:{[[@LINE+1]]:52-[[@LINE+1]]:72}:"__sized_by_or_null"
+// expected-error@+2{{'__counted_by_or_null' attribute on nested pointer type is only allowed on indirect parameters}}
+// expected-error@+1{{'counted_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'int[][size]' is an incomplete type}}
 void counted_nested_unsized_array(int size, int (* __counted_by_or_null(size) param)[__counted_by_or_null(10)][size]);
 
 void local_array() {

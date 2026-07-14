@@ -63,7 +63,7 @@ flex_t *bar(flex_t *__bidi_indexable flex) {
     (void) (flex - 1); // expected-error{{-fbounds-safety forbids arithmetic on pointers to types with a flexible array member}}
 }
 
-void baz(flex_t *__counted_by(1) flex); // expected-error{{cannot apply '__counted_by' attribute to 'flex_t *' (aka 'struct flexible *') because 'flex_t' (aka 'struct flexible') has unknown size; did you mean to use '__sized_by' instead?}}
+void baz(flex_t *__counted_by(1) flex); // expected-error{{'counted_by' cannot be applied to a pointer with pointee of unknown size because 'flex_t' (aka 'struct flexible') is a struct type with a flexible array member}}
 void qux(flex_t *__sized_by(siz) flex, unsigned siz);
 
 void quux(flex_t *flex, char *__bidi_indexable buf) {

@@ -6518,7 +6518,7 @@ public:
   // - err_bounds_safety_complete_array_with_count
   // - err_bounds_safety_sized_by_array
   // - err_multiple_coupled_decls_in_bounds_safety_dynamic_count
-  // - err_bounds_safety_counted_by_without_size
+  // - err_counted_by_attr_pointee_unknown_size
   bool diagnoseCountAttributedTypeShape(QualType DeclTy, bool &CountInBytes,
                                         bool OrNull, bool AllowRedecl) {
     const Type *T = DeclTy.getTypePtr();

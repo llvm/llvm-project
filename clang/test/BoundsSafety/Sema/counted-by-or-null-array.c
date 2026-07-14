@@ -42,7 +42,7 @@ void pointers_to_array_params(int size, int (* __sized_by_or_null(size) param)[_
 void counted_unsized_array(int size, int (*param)[__counted_by_or_null(10)][__counted_by_or_null(size)]); // expected-error{{array has incomplete element type 'int[]'}}
 
 // expected-error@+2{{'__counted_by_or_null' attribute on nested pointer type is only allowed on indirect parameters}}
-// expected-error@+1{{cannot apply '__counted_by_or_null' attribute to 'int (*)[][size]' because 'int[][size]' has unknown size; did you mean to use '__sized_by_or_null' instead?}}
+// expected-error@+1{{'counted_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'int[][size]' is an incomplete type}}
 void counted_nested_unsized_array(int size, int (* __counted_by_or_null(size) param)[__counted_by_or_null(10)][size]);
 
 void counted_decayed_nested(int len, int arr[__counted_by_or_null(11)][__counted_by_or_null(len)]); // expected-error{{array has incomplete element type 'int[]'}}

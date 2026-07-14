@@ -10,7 +10,7 @@
 
 
 extern int external_arr_len;
-// expected-error@+1{{cannot apply '__counted_by' attribute to 'char (*)[]' because 'char[]' has unknown size; did you mean to use '__sized_by' instead?}}
+// expected-error@+1{{'counted_by' cannot be applied to a pointer with pointee of unknown size because 'char[]' is an incomplete type}}
 extern char (* __counted_by(external_arr_len) incompleteArrayPtr)[]; // expected-note{{'incompleteArrayPtr' declared here}}
 void use_incompleteArrayPtr_when_incomplete(void) {
     // expected-error@+1{{subscript of pointer to incomplete type 'char[]'}}
@@ -34,9 +34,9 @@ char (* __counted_by(external_arr_len2) CompleteArrayPtr)[4]; // OK
 //==============================================================================
 
 int global_arr_len;
-// expected-error@+1{{cannot apply '__counted_by' attribute to 'char (*)[]' because 'char[]' has unknown size; did you mean to use '__sized_by' instead?}}
+// expected-error@+1{{'counted_by' cannot be applied to a pointer with pointee of unknown size because 'char[]' is an incomplete type}}
 char (* __counted_by(global_arr_len) GlobalCBIncompleteArrayPtr)[];
-// expected-error@+1{{cannot apply '__counted_by_or_null' attribute to 'char (*)[]' because 'char[]' has unknown size; did you mean to use '__sized_by_or_null' instead?}}
+// expected-error@+1{{'counted_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'char[]' is an incomplete type}}
 char (* __counted_by_or_null(global_arr_len) GlobalCBONIncompleteArrayPtr)[];
 
 char (* __counted_by(global_arr_len) GlobalCBCompleteArrayPtr)[2]; // OK
@@ -52,27 +52,27 @@ char (* __counted_by(1) GlobalCBCompleteArrayPtrOneCount)[2];
 
 void local_cb(void) {
   int size = 0;
-  // expected-error@+1{{cannot apply '__counted_by' attribute to 'char (*)[]' because 'char[]' has unknown size; did you mean to use '__sized_by' instead?}}
+  // expected-error@+1{{'counted_by' cannot be applied to a pointer with pointee of unknown size because 'char[]' is an incomplete type}}
   char (* __counted_by(size) local_implicit_init)[];
 
   // expected-error@+1{{subscript of pointer to incomplete type 'char[]'}}
   local_implicit_init[0];
 
   int size2 = 0;
-  // expected-error@+1{{cannot apply '__counted_by' attribute to 'char (*)[]' because 'char[]' has unknown size; did you mean to use '__sized_by' instead?}}
+  // expected-error@+1{{'counted_by' cannot be applied to a pointer with pointee of unknown size because 'char[]' is an incomplete type}}
   char (* __counted_by(size2) local_explicit_init)[] = 0x0;
 }
 
 void local_cbon(void) {
   int size = 0;
-  // expected-error@+1{{cannot apply '__counted_by_or_null' attribute to 'char (*)[]' because 'char[]' has unknown size; did you mean to use '__sized_by_or_null' instead?}}
+  // expected-error@+1{{'counted_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'char[]' is an incomplete type}}
   char (* __counted_by_or_null(size) local_implicit_init)[];
 
   // expected-error@+1{{subscript of pointer to incomplete type 'char[]'}}
   local_implicit_init[0];
 
   int size2 = 0;
-  // expected-error@+1{{cannot apply '__counted_by_or_null' attribute to 'char (*)[]' because 'char[]' has unknown size; did you mean to use '__sized_by_or_null' instead?}}
+  // expected-error@+1{{'counted_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'char[]' is an incomplete type}}
   char (* __counted_by_or_null(size2) local_explicit_init)[] = 0x0;
 }
 
@@ -80,12 +80,12 @@ void local_cbon(void) {
 // Parameters
 //==============================================================================
 
-// expected-error@+1{{cannot apply '__counted_by' attribute to 'char (*)[]' because 'char[]' has unknown size; did you mean to use '__sized_by' instead?}}
+// expected-error@+1{{'counted_by' cannot be applied to a pointer with pointee of unknown size because 'char[]' is an incomplete type}}
 void decl_param_cb(char (* __counted_by(size) p)[], int size) {}
-// expected-error@+1{{cannot apply '__counted_by_or_null' attribute to 'char (*)[]' because 'char[]' has unknown size; did you mean to use '__sized_by_or_null' instead?}}
+// expected-error@+1{{'counted_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'char[]' is an incomplete type}}
 void decl_param_cbon(char (* __counted_by_or_null(size) p)[], int size) {}
 
-// expected-error@+1{{cannot apply '__counted_by' attribute to 'char (*)[]' because 'char[]' has unknown size; did you mean to use '__sized_by' instead?}}
+// expected-error@+1{{'counted_by' cannot be applied to a pointer with pointee of unknown size because 'char[]' is an incomplete type}}
 void access_param_cb(char (* __counted_by(size) p)[], int size) {
   void* local = p;
 
@@ -101,7 +101,7 @@ void access_param_cb(char (* __counted_by(size) p)[], int size) {
   size = 0; // OK
 }
 
-// expected-error@+1{{cannot apply '__counted_by_or_null' attribute to 'char (*)[]' because 'char[]' has unknown size; did you mean to use '__sized_by_or_null' instead?}}
+// expected-error@+1{{'counted_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'char[]' is an incomplete type}}
 void access_param_cbon(char (* __counted_by_or_null(size) p)[], int size) {
   // This doesn't show up as an error because error recovery for treats `p` as
   // having type `char (*__single __sized_by_or_null(size))[]`
