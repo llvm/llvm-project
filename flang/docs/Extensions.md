@@ -203,6 +203,10 @@ end
 ## Extensions, deletions, and legacy features supported by default
 
 * Tabs in source
+* A bare carriage return (CR, 0x0d) in the interior of a source line -- e.g.
+  from a file with Windows line endings that has been mishandled -- is treated
+  as a blank, except within a character or Hollerith literal where it is
+  retained.
 * `<>` as synonym for `.NE.` and `/=`
 * `$` and `@` as legal characters in names
 * Initialization in type declaration statements using `/values/`

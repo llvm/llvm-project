@@ -227,6 +227,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/ProfileSummary.h"
@@ -345,27 +346,107 @@ private:
 /// is useful for debugging and testing, while the binary format is more
 /// compact and I/O efficient. They can both be used interchangeably.
 
-/// NameTableIterator is a lightweight, self-contained input iterator designed
-/// to stream FunctionId symbols from an eagerly populated contiguous buffer
-/// of FunctionId objects.
-class NameTableIterator
-    : public llvm::iterator_facade_base<
-          NameTableIterator, std::input_iterator_tag, FunctionId,
-          std::ptrdiff_t, const FunctionId *, FunctionId> {
-  const FunctionId *Ptr = nullptr;
+/// Manages the sample profile name table, supporting both an eagerly loaded
+/// std::vector of FunctionId objects and lazy-loaded MD5 hashes read directly
+/// from the memory-mapped buffer. It enforces the exclusivity of these
+/// two formats and provides a unified read-only container interface.
+class SampleProfileNameTable {
+  const uint8_t *Start = nullptr;
+  size_t Size = 0;
+  std::vector<FunctionId> Vec;
 
-public:
-  NameTableIterator() = default;
-  NameTableIterator(const FunctionId *P) : Ptr(P) {}
-
-  bool operator==(const NameTableIterator &RHS) const { return Ptr == RHS.Ptr; }
-
-  NameTableIterator &operator++() {
-    ++Ptr;
-    return *this;
+  /// Helper function to read a FunctionId (MD5 hash) from a raw buffer.
+  static FunctionId readFunctionIdFromMD5(const uint8_t *Ptr) {
+    using namespace support;
+    return FunctionId(
+        endian::read<uint64_t, unaligned>(Ptr, endianness::little));
   }
 
-  FunctionId operator*() const { return *Ptr; }
+public:
+  /// iterator is a lightweight, self-contained input iterator designed
+  /// to stream FunctionId symbols from either the memory-mapped
+  /// file buffer (lazy loading from the FixedMD5 layout) or from an eagerly
+  /// loaded vector of FunctionId objects (fallback).
+  class iterator
+      : public llvm::iterator_facade_base<iterator, std::input_iterator_tag,
+                                          FunctionId, std::ptrdiff_t,
+                                          const FunctionId *, FunctionId> {
+  public:
+    // Tag type to indicate the lazy name table layout.
+    struct UseLazy_t {};
+    static constexpr UseLazy_t UseLazy{};
+    iterator() = default;
+
+    // Constructor for lazy loading.
+    iterator(const uint8_t *P, UseLazy_t) : Ptr(P), IsLazy(true) {}
+
+    // Constructor for eagerly loaded name table.
+    iterator(const FunctionId *P)
+        : Ptr(reinterpret_cast<const uint8_t *>(P)), IsLazy(false) {}
+
+    bool operator==(const iterator &RHS) const { return Ptr == RHS.Ptr; }
+
+    iterator &operator++() {
+      Ptr += IsLazy ? sizeof(uint64_t) : sizeof(FunctionId);
+      return *this;
+    }
+
+    FunctionId operator*() const {
+      return IsLazy ? readFunctionIdFromMD5(Ptr)
+                    : *reinterpret_cast<const FunctionId *>(Ptr);
+    }
+
+  private:
+    const uint8_t *Ptr = nullptr;
+    bool IsLazy = false;
+  };
+
+  using const_iterator = iterator;
+
+  SampleProfileNameTable() = default;
+
+  void clear() {
+    Start = nullptr;
+    Size = 0;
+    Vec.clear();
+  }
+
+  /// Transitions the table to lazy-loading mode, pointing directly to a
+  /// contiguous buffer of little-endian 64-bit MD5 hashes.
+  void setLazy(const uint8_t *S, size_t Sz) {
+    clear();
+    Start = S;
+    Size = Sz;
+  }
+
+  /// Transitions the table to eager-loading mode by clearing previous state and
+  /// returning a mutable reference to the underlying vector for population.
+  std::vector<FunctionId> &setToEager() {
+    clear();
+    return Vec;
+  }
+
+  size_t size() const { return Start ? Size : Vec.size(); }
+  bool empty() const { return size() == 0; }
+
+  FunctionId operator[](size_t Idx) const {
+    assert(Idx < size());
+    if (Start)
+      return readFunctionIdFromMD5(Start + Idx * sizeof(uint64_t));
+    return Vec[Idx];
+  }
+
+  iterator begin() const {
+    if (Start)
+      return {Start, iterator::UseLazy};
+    return {Vec.data()};
+  }
+
+  iterator end() const {
+    if (Start)
+      return {Start + Size * sizeof(uint64_t), iterator::UseLazy};
+    return {Vec.data() + Vec.size()};
+  }
 };
 
 class SampleProfileReader {
@@ -434,6 +515,9 @@ public:
 
   /// Print all the profiles on stream \p OS in the JSON format.
   LLVM_ABI void dumpJson(raw_ostream &OS = dbgs());
+
+  /// Return the format version of the profile. For tests only.
+  uint64_t getFormatVersion() const { return FormatVersion; }
 
   /// Return the samples collected for function \p F.
   FunctionSamples *getSamplesFor(const Function &F) {
@@ -521,8 +605,10 @@ public:
 
   /// It includes all the names that have samples either in outline instance
   /// or inline instance.
-  virtual llvm::iterator_range<NameTableIterator> getNameTable() const {
-    return {NameTableIterator(), NameTableIterator()};
+  virtual llvm::iterator_range<SampleProfileNameTable::iterator>
+  getNameTable() const {
+    return {SampleProfileNameTable::iterator(),
+            SampleProfileNameTable::iterator()};
   }
   virtual bool dumpSectionInfo(raw_ostream &OS = dbgs()) { return false; };
 
@@ -615,6 +701,9 @@ protected:
   /// Whether the function profiles use FS discriminators.
   bool ProfileIsFS = false;
 
+  /// Format version of the profile.
+  uint64_t FormatVersion = 0;
+
   /// If true, the profile has vtable profiles and reader should decode them
   /// to parse profiles correctly.
   bool ReadVTableProf = false;
@@ -677,9 +766,9 @@ public:
 
   /// It includes all the names that have samples either in outline instance
   /// or inline instance.
-  llvm::iterator_range<NameTableIterator> getNameTable() const override {
-    return {NameTableIterator(NameTable.data()),
-            NameTableIterator(NameTable.data() + NameTable.size())};
+  llvm::iterator_range<SampleProfileNameTable::iterator>
+  getNameTable() const override {
+    return {NameTable.begin(), NameTable.end()};
   }
 
 protected:
@@ -749,7 +838,7 @@ protected:
   const uint8_t *End = nullptr;
 
   /// Function name table.
-  std::vector<FunctionId> NameTable;
+  SampleProfileNameTable NameTable;
 
   /// CSNameTable is used to save full context vectors. It is the backing buffer
   /// for SampleContextFrames.
@@ -826,6 +915,80 @@ public:
   }
 };
 
+/// Tags to select the initialization mode of SampleProfileFuncOffsetTable.
+struct InMemoryModeT {};
+struct OnDiskModeT {};
+inline constexpr InMemoryModeT InMemoryMode{};
+inline constexpr OnDiskModeT OnDiskMode{};
+
+/// A unified wrapper representing the function offset table.
+///
+/// This class abstracts away the physical representation of the offset table,
+/// which can either be:
+///
+/// - An llvm::DenseMap mapping function GUIDs (or context hashes) to their
+///   profile offsets, populated when reading the array of offsets in
+///   context-sensitive (CS) profiles or version 103 profiles.
+///
+/// - An OnDiskIterableChainedHashTable providing the same mapping directly from
+///   the file in (non-context-sensitive) version 104 profiles.
+///
+/// It exposes a single, type-agnostic lookup interface, shielding the reader
+/// from the underlying container types. To prevent hybrid-state corruption, the
+/// table's mode is locked at construction time, and assertions prevent
+/// modification in on-disk mode.
+class SampleProfileFuncOffsetTable {
+public:
+  using OnDiskTableType =
+      llvm::OnDiskIterableChainedHashTable<FuncOffsetHashTableInfo>;
+
+  SampleProfileFuncOffsetTable() = delete;
+  SampleProfileFuncOffsetTable(const SampleProfileFuncOffsetTable &) = delete;
+  SampleProfileFuncOffsetTable &
+  operator=(const SampleProfileFuncOffsetTable &) = delete;
+  SampleProfileFuncOffsetTable(SampleProfileFuncOffsetTable &&) = delete;
+  SampleProfileFuncOffsetTable &
+  operator=(SampleProfileFuncOffsetTable &&) = delete;
+
+  explicit SampleProfileFuncOffsetTable(InMemoryModeT,
+                                        size_t InitialCapacity = 0) {
+    InMemoryTable.reserve(InitialCapacity);
+  }
+
+  /// Insert a function GUID and its profile offset into the in-memory map.
+  /// Enforces that the on-disk table must not have been set first.
+  void insert(uint64_t GUID, uint64_t Offset) {
+    assert(!OnDiskTable &&
+           "Cannot insert in-memory elements after on-disk table has been set");
+    InMemoryTable[GUID] = Offset;
+  }
+
+  /// Instantiate the on-disk chained hash table using raw stream pointers.
+  SampleProfileFuncOffsetTable(OnDiskModeT, const uint8_t *Buckets,
+                               const uint8_t *Payload, const uint8_t *Base) {
+    OnDiskTable.reset(OnDiskTableType::Create(Buckets, Payload, Base));
+  }
+
+  /// Query the offset table for the profile offset associated with the given
+  /// GUID. Returns the offset if found, or std::nullopt if the key is missing.
+  std::optional<uint64_t> lookup(uint64_t GUID) const {
+    if (OnDiskTable) {
+      auto Iter = OnDiskTable->find(GUID);
+      if (Iter != OnDiskTable->end())
+        return *Iter;
+    } else {
+      auto Iter = InMemoryTable.find(GUID);
+      if (Iter != InMemoryTable.end())
+        return Iter->second;
+    }
+    return std::nullopt;
+  }
+
+private:
+  llvm::DenseMap<hash_code, uint64_t> InMemoryTable;
+  std::unique_ptr<OnDiskTableType> OnDiskTable;
+};
+
 /// SampleProfileReaderExtBinaryBase/SampleProfileWriterExtBinaryBase defines
 /// the basic structure of the extensible binary format.
 /// The format is organized in sections except the magic and version number
@@ -889,7 +1052,7 @@ protected:
   /// The table mapping from a function context's MD5 to the offset of its
   /// FunctionSample towards file start.
   /// At most one of FuncOffsetTable and FuncOffsetList is populated.
-  DenseMap<hash_code, uint64_t> FuncOffsetTable;
+  std::optional<SampleProfileFuncOffsetTable> FuncOffsetTable;
 
   /// The list version of FuncOffsetTable. This is used if every entry is
   /// being accessed.
@@ -901,7 +1064,9 @@ protected:
 public:
   SampleProfileReaderExtBinaryBase(std::unique_ptr<MemoryBuffer> B,
                                    LLVMContext &C, SampleProfileFormat Format)
-      : SampleProfileReaderBinary(std::move(B), C, Format) {}
+      : SampleProfileReaderBinary(std::move(B), C, Format) {
+    FuncOffsetTable.emplace(InMemoryMode);
+  }
 
   /// Read sample profiles in extensible format from the associated file.
   std::error_code readImpl() override;
@@ -999,6 +1164,23 @@ protected:
   /// GCOV tags used to separate sections in the profile file.
   static const uint32_t GCOVTagAFDOFileNames = 0xaa000000;
   static const uint32_t GCOVTagAFDOFunction = 0xac000000;
+};
+
+/// A helper class that wraps a local set of string names from NameTable.
+class SampleProfileNameSet {
+  const SampleProfileReader &Reader;
+  StringSet<> NamesInProfile;
+
+public:
+  explicit SampleProfileNameSet(const SampleProfileReader &R) : Reader(R) {
+    for (FunctionId Name : Reader.getNameTable())
+      NamesInProfile.insert(Name.stringRef());
+  }
+
+  /// Check if a canonical function name exists in the profile name table.
+  bool contains(StringRef CanonName) const {
+    return NamesInProfile.contains(CanonName);
+  }
 };
 
 } // end namespace sampleprof

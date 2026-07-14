@@ -16,7 +16,6 @@ body:            |
     ;
     ; GFX1310-LABEL: name: trans_writes_valu_reads_hazard
     ; GFX1310: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
-    ; GFX1310-NEXT: V_NOP_e32 implicit $exec
     ; GFX1310-NEXT: $vgpr3 = V_ADD_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
     ;
     ; GFX1200-LABEL: name: trans_writes_valu_reads_hazard
@@ -52,7 +51,6 @@ body:            |
     ; GFX1310-LABEL: name: trans_writes_salu_valu_reads_hazard
     ; GFX1310: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GFX1310-NEXT: $sgpr2 = S_ADD_U32 $sgpr0, $sgpr1, implicit-def $scc
-    ; GFX1310-NEXT: V_NOP_e32 implicit $exec
     ; GFX1310-NEXT: $vgpr4 = V_ADD_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
     ;
     ; GFX1200-LABEL: name: trans_writes_salu_valu_reads_hazard
@@ -86,7 +84,6 @@ body:            |
     ;
     ; GFX1310-LABEL: name: trans_reads_valu_writes_hazard
     ; GFX1310: $vgpr1 = V_COS_F32_e32 $vgpr0, implicit $mode, implicit $exec
-    ; GFX1310-NEXT: V_NOP_e32 implicit $exec
     ; GFX1310-NEXT: $vgpr0 = V_ADD_F32_e32 $vgpr2, $vgpr3, implicit $mode, implicit $exec
     ;
     ; GFX1200-LABEL: name: trans_reads_valu_writes_hazard
@@ -122,7 +119,6 @@ body:            |
     ; GFX1310-LABEL: name: trans_reads__salu_valu_writes_hazard
     ; GFX1310: $vgpr1 = V_COS_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GFX1310-NEXT: $sgpr2 = S_ADD_U32 $sgpr0, $sgpr1, implicit-def $scc
-    ; GFX1310-NEXT: V_NOP_e32 implicit $exec
     ; GFX1310-NEXT: $vgpr0 = V_ADD_F32_e32 $vgpr4, $vgpr2, implicit $mode, implicit $exec
     ;
     ; GFX1200-LABEL: name: trans_reads__salu_valu_writes_hazard

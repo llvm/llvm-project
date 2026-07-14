@@ -10,14 +10,14 @@ define void @clmul_scalable() {
 ; SVE-LABEL: 'clmul_scalable'
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %c8 = call <vscale x 16 x i8> @llvm.clmul.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %c16 = call <vscale x 8 x i16> @llvm.clmul.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
-; SVE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %c32 = call <vscale x 4 x i32> @llvm.clmul.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+; SVE-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %c32 = call <vscale x 4 x i32> @llvm.clmul.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %c64 = call <vscale x 2 x i64> @llvm.clmul.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SVE-AES-LABEL: 'clmul_scalable'
 ; SVE-AES-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %c8 = call <vscale x 16 x i8> @llvm.clmul.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
 ; SVE-AES-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %c16 = call <vscale x 8 x i16> @llvm.clmul.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
-; SVE-AES-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %c32 = call <vscale x 4 x i32> @llvm.clmul.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+; SVE-AES-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %c32 = call <vscale x 4 x i32> @llvm.clmul.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
 ; SVE-AES-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %c64 = call <vscale x 2 x i64> @llvm.clmul.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
 ; SVE-AES-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;

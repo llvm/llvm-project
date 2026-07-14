@@ -1,4 +1,4 @@
-; RUN: llc -mtriple amdgcn-amd-amdhsa -filetype=obj <%s \
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -filetype=obj <%s \
 ; RUN:   | llvm-readobj --symbols - | FileCheck %s
 
 ; CHECK: Name: func1

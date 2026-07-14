@@ -21,6 +21,9 @@ build --guard_against_concurrent_changes
 # Automatically enable --config=(linux|macos|windows) based on the host
 build --enable_platform_specific_config
 
+# Don't require a system python to run py_binary targets
+common --@rules_python//python/config_settings:bootstrap_impl=script
+
 # In opt mode, bazel by default builds both PIC and non-PIC object files for
 # tests vs binaries. We don't need this feature and it slows down opt builds
 # considerably.

@@ -162,7 +162,8 @@ bool VFSelectionContext::isLegalGatherOrScatter(Value *V,
 }
 
 bool VFSelectionContext::supportsScalableVectors() const {
-  return TTI.supportsScalableVectors() || ForceTargetSupportsScalableVectors;
+  return TTI.supportsScalableVectors() || ForceTargetSupportsScalableVectors ||
+         VectorizerParams::VectorizationFactor.isScalable();
 }
 
 bool VFSelectionContext::useMaxBandwidth(bool IsScalable) const {
@@ -807,7 +808,10 @@ VFSelectionContext::computeVPlanOuterloopVF(ElementCount UserVF) {
                        : TargetTransformInfo::RGK_FixedWidthVector;
 
     TypeSize RegSize = TTI.getRegisterBitWidth(RegKind);
-    unsigned N = RegSize.getKnownMinValue() / WidestType;
+    // The widest type may be wider than the register width and WidestType may
+    // not be a power of two; round the element count down to a power of two.
+    unsigned N = std::max<uint64_t>(
+        1, llvm::bit_floor(RegSize.getKnownMinValue() / WidestType));
     VF = ElementCount::get(N, RegSize.isScalable());
     LLVM_DEBUG(dbgs() << "LV: VPlan computed VF " << VF << ".\n");
 

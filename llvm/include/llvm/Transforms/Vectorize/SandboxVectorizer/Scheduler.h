@@ -103,6 +103,14 @@ public:
 #endif // NDEBUG
 };
 
+enum class SchedDirection {
+  BottomUp,
+  TopDown,
+};
+#ifndef NDEBUG
+StringLiteral schedDirectionToStr(SchedDirection Dir);
+#endif
+
 /// The nodes that need to be scheduled back-to-back in a single scheduling
 /// cycle form a SchedBundle.
 class SchedBundle {
@@ -150,8 +158,11 @@ public:
   /// Move all bundle instructions to \p Where back-to-back.
   LLVM_ABI void cluster(BasicBlock::iterator Where);
   /// \Returns true if all nodes in the bundle are ready.
-  bool ready() const {
-    return all_of(Nodes, [](const auto *N) { return N->readyBottomUp(); });
+  bool ready(SchedDirection Dir) const {
+    return all_of(Nodes, [Dir](const auto *N) {
+      return Dir == SchedDirection::BottomUp ? N->readyBottomUp()
+                                             : N->readyTopDown();
+    });
   }
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const;
@@ -215,8 +226,12 @@ class Scheduler {
   Scheduler(const Scheduler &) = delete;
   Scheduler &operator=(const Scheduler &) = delete;
 
+private:
+  SchedDirection Dir = SchedDirection::BottomUp;
+
 public:
-  Scheduler(AAResults &AA, Context &Ctx) : DAG(AA, Ctx), Ctx(Ctx) {
+  Scheduler(AAResults &AA, Context &Ctx, SchedDirection Dir)
+      : DAG(AA, Ctx), Ctx(Ctx), Dir(Dir) {
     // NOTE: The scheduler's callback depends on the DAG's callback running
     // before it and updating the DAG accordingly.
     CreateInstrCB = Ctx.registerCreateInstrCallback(

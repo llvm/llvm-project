@@ -52,8 +52,8 @@ body:             |
     ; CHECK-NEXT: [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[SUBREG_TO_REG]], 0, 15
     ; CHECK-NEXT: $x0 = COPY [[UBFMXri]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:gpr(s16) = G_IMPLICIT_DEF
-    %3:gpr(i64) = G_ZEXT %0(s16)
+    %0:gpr(i16) = G_IMPLICIT_DEF
+    %3:gpr(i64) = G_ZEXT %0(i16)
     $x0 = COPY %3(i64)
     RET_ReallyLR implicit $x0
 
@@ -104,7 +104,7 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY %zext
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %copy:gpr(i32) = COPY $w0
-    %bitcast0:gpr(<4 x s8>) = G_BITCAST %copy(i32)
+    %bitcast0:gpr(<4 x i8>) = G_BITCAST %copy(i32)
     %bitcast1:gpr(i32) = G_BITCAST %bitcast0
     %zext:gpr(i64) = G_ZEXT %bitcast1(i32)
     $x0 = COPY %zext(i64)

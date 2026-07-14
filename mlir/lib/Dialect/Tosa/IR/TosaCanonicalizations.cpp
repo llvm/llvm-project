@@ -20,8 +20,10 @@
 #include "mlir/Dialect/Traits.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/APFloat.h"
@@ -271,6 +273,48 @@ struct AvgPool2dAdaptiveToAvgPool2d
   }
 };
 
+struct AvgPool2dIsNoOp : public OpRewritePattern<tosa::AvgPool2dOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::AvgPool2dOp op,
+                                PatternRewriter &rewriter) const override {
+    // Prevent canonicalization if input/output shapes don't align
+    if (op.getInput().getType() != op.getOutput().getType())
+      return rewriter.notifyMatchFailure(
+          op, "expected input and output types to match");
+
+    const auto inputType = llvm::cast<ShapedType>(op.getInput().getType());
+    if (!llvm::isa<FloatType>(inputType.getElementType()))
+      return rewriter.notifyMatchFailure(op,
+                                         "expected floating-point input type");
+
+    // For statically known zero points, the verifier ensures zero points are
+    // zero for floating-point types
+    if (!matchPattern(op.getInputZp(), m_Constant()) ||
+        !matchPattern(op.getOutputZp(), m_Constant()))
+      return rewriter.notifyMatchFailure(
+          op,
+          "expected input and output zero points to be statically verifiable");
+
+    if (!llvm::all_of(op.getKernel(), [](int64_t val) { return val == 1; }))
+      return rewriter.notifyMatchFailure(op, "expected unit kernel");
+
+    if (!llvm::all_of(op.getStride(), [](int64_t val) { return val == 1; }))
+      return rewriter.notifyMatchFailure(op, "expected unit stride");
+
+    if (!llvm::all_of(op.getPad(), [](int64_t val) { return val == 0; }))
+      return rewriter.notifyMatchFailure(op, "expected zero padding");
+
+    rewriter.replaceOp(op, op.getInput());
+    return success();
+  }
+};
+
+void AvgPool2dOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                              MLIRContext *context) {
+  results.add<AvgPool2dIsNoOp>(context);
+}
+
 void AvgPool2dAdaptiveOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
   results.add<AvgPool2dAdaptiveToAvgPool2d>(context);
@@ -285,6 +329,15 @@ struct MaxPool2dIsNoOp : public OpRewritePattern<tosa::MaxPool2dOp> {
     Value output = op.getOutput();
     ShapedType inputType = llvm::cast<ShapedType>(input.getType());
     ShapedType outputType = llvm::cast<ShapedType>(output.getType());
+
+    if (input.getType() == output.getType() &&
+        llvm::all_of(op.getKernel(), [](int64_t val) { return val == 1; }) &&
+        llvm::all_of(op.getStride(), [](int64_t val) { return val == 1; }) &&
+        llvm::all_of(op.getPad(), [](int64_t val) { return val == 0; }) &&
+        op.getNanMode() == tosa::NanPropagationMode::PROPAGATE) {
+      rewriter.replaceOp(op, input);
+      return success();
+    }
 
     if (!inputType.hasStaticShape() || !outputType.hasStaticShape()) {
       return failure();
@@ -1184,12 +1237,50 @@ struct NonNarrowingCastsOptimization : public OpRewritePattern<tosa::CastOp> {
   }
 };
 
+struct CancellingBlockScaledCastsOptimization
+    : public OpRewritePattern<tosa::CastOp> {
+  using OpRewritePattern<tosa::CastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::CastOp castOp,
+                                PatternRewriter &rewriter) const override {
+    const Value outerInput = castOp.getInput();
+    auto innerCastOp = outerInput.getDefiningOp<tosa::CastOp>();
+    if (!innerCastOp)
+      return rewriter.notifyMatchFailure(castOp,
+                                         "input must be a cast operation");
+
+    const Value innerInput = innerCastOp.getInput();
+    const auto innerInputTy = llvm::cast<ShapedType>(innerInput.getType());
+    const auto innerOutputTy = llvm::cast<ShapedType>(innerCastOp.getType());
+    const auto outerOutputTy = llvm::cast<ShapedType>(castOp.getType());
+
+    if (!llvm::isa<tosa::BlockScaledType>(innerInputTy.getElementType()))
+      return rewriter.notifyMatchFailure(
+          castOp, "inner cast input must have block scaled element type");
+
+    if (innerInputTy != outerOutputTy)
+      return rewriter.notifyMatchFailure(
+          castOp, "inner input type must match outer output type");
+
+    const Type innerOutputElemType = innerOutputTy.getElementType();
+    const bool isLosslessCast = isa<Float32Type>(innerOutputElemType);
+    if (!isLosslessCast)
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid cancelling casts that should be lossy");
+
+    rewriter.replaceOp(castOp, innerInput);
+
+    return success();
+  }
+};
+
 void CastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.add<NonNarrowingCastsOptimization>(context);
+  results.add<NonNarrowingCastsOptimization,
+              CancellingBlockScaledCastsOptimization>(context);
 }
 
-struct CancellingBlockScaledCastsOptimization
+struct CancellingCastToFromBlockScaledOptimization
     : public OpRewritePattern<tosa::CastToBlockScaledOp> {
   using OpRewritePattern<tosa::CastToBlockScaledOp>::OpRewritePattern;
 
@@ -1235,7 +1326,7 @@ struct CancellingBlockScaledCastsOptimization
 
 void CastToBlockScaledOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<CancellingBlockScaledCastsOptimization>(context);
+  results.add<CancellingCastToFromBlockScaledOptimization>(context);
 }
 
 struct RowGatherToGather : public OpRewritePattern<tosa::RowGatherOp> {
@@ -2235,6 +2326,82 @@ OpFoldResult tosa::SelectOp::fold(FoldAdaptor adaptor) {
   if (predicateValue == false && onFalseTy == resultTy && isBroadcastable)
     return onFalse;
   return {};
+}
+
+static LogicalResult verifyTileIsBroadcast(tosa::TileOp tileOp) {
+  const auto inputType =
+      dyn_cast<RankedTensorType>(tileOp.getInput1().getType());
+  const auto outputType = dyn_cast<RankedTensorType>(tileOp.getType());
+  if (!inputType || !outputType)
+    return failure();
+
+  SmallVector<int64_t> multiples;
+  if (failed(tileOp.getConstantMultiples(multiples)))
+    return failure();
+
+  for (const auto [index, multiple] : llvm::enumerate(multiples)) {
+    if (multiple == 1)
+      continue;
+    if (outputType.isDynamicDim(index))
+      return failure();
+    if (inputType.getDimSize(index) != 1)
+      return failure();
+  }
+
+  return success();
+}
+
+struct RemoveBroadcastTileFromBinaryElementwise
+    : public OpRewritePattern<tosa::TileOp> {
+  using OpRewritePattern<tosa::TileOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::TileOp tileOp,
+                                PatternRewriter &rewriter) const override {
+    Value tileOutput = tileOp.getOutput();
+    if (!tileOutput.hasOneUse())
+      return rewriter.notifyMatchFailure(tileOp,
+                                         "tile output must have one use");
+
+    Operation *user = *tileOutput.user_begin();
+    const bool isBinaryElementwise =
+        user->getNumOperands() == 2 &&
+        user->hasTrait<OpTrait::tosa::TosaElementwiseOperator>();
+    if (!isBinaryElementwise && !isa<tosa::MulOp>(user))
+      return rewriter.notifyMatchFailure(
+          tileOp, "consumer must be binary broadcastable");
+
+    if (failed(verifyTileIsBroadcast(tileOp)))
+      return rewriter.notifyMatchFailure(
+          tileOp, "tile must only expand statically-known singleton dims");
+
+    Value lhsOperand = user->getOperand(0);
+    Value rhsOperand = user->getOperand(1);
+    Value otherOperand = lhsOperand == tileOutput ? rhsOperand : lhsOperand;
+    Value tileInput = tileOp.getInput1();
+
+    const ShapedType newOtherType = cast<ShapedType>(otherOperand.getType());
+    const ShapedType newTileType = cast<ShapedType>(tileInput.getType());
+    SmallVector<int64_t> broadcastedShape;
+    OpTrait::util::getBroadcastedShape(
+        newOtherType.getShape(), newTileType.getShape(), broadcastedShape);
+
+    const ShapedType outputType = cast<ShapedType>(user->getResultTypes()[0]);
+    if (!llvm::equal(broadcastedShape, outputType.getShape()))
+      return rewriter.notifyMatchFailure(
+          tileOp, "tile output must be broadcastable to consumer operands");
+
+    rewriter.setInsertionPoint(user);
+    IRMapping mapper;
+    mapper.map(tileOutput, tileOp.getInput1());
+    Operation *newUser = rewriter.clone(*user, mapper);
+    rewriter.replaceOp(user, newUser->getResults());
+    return success();
+  }
+};
+
+void TileOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                         MLIRContext *context) {
+  results.add<RemoveBroadcastTileFromBinaryElementwise>(context);
 }
 
 OpFoldResult TileOp::fold(FoldAdaptor adaptor) {

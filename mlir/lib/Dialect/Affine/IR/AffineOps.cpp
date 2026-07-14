@@ -2826,6 +2826,61 @@ std::optional<SmallVector<OpFoldResult>> AffineForOp::getLoopUpperBounds() {
       OpFoldResult(b.getI64IntegerAttr(getConstantUpperBound()))};
 }
 
+std::optional<APInt> AffineForOp::getStaticTripCount() {
+  MLIRContext *context = getContext();
+  int64_t step = getStepAsInt();
+  if (step <= 0)
+    return std::nullopt;
+
+  if (hasConstantBounds()) {
+    int64_t lb = getConstantLowerBound();
+    int64_t ub = getConstantUpperBound();
+    int64_t loopSpan = ub - lb;
+    if (loopSpan < 0)
+      loopSpan = 0;
+    return APInt(64, llvm::divideCeilSigned(loopSpan, step));
+  }
+
+  auto lbMap = getLowerBoundMap();
+  auto ubMap = getUpperBoundMap();
+  if (lbMap.getNumResults() != 1)
+    return std::nullopt;
+
+  // Difference of each upper bound expression from the single lower bound
+  // expression (divided by the step) provides the expressions for the trip
+  // count map.
+  AffineValueMap ubValueMap(ubMap, getUpperBoundOperands());
+
+  SmallVector<AffineExpr, 4> lbSplatExpr(ubValueMap.getNumResults(),
+                                         lbMap.getResult(0));
+  auto lbMapSplat = AffineMap::get(lbMap.getNumDims(), lbMap.getNumSymbols(),
+                                   lbSplatExpr, context);
+  AffineValueMap lbSplatValueMap(lbMapSplat, getLowerBoundOperands());
+
+  AffineValueMap tripCountValueMap;
+  AffineValueMap::difference(ubValueMap, lbSplatValueMap, &tripCountValueMap);
+
+  // Take the min if all trip counts are constant.
+  std::optional<uint64_t> tripCount;
+  for (unsigned i = 0, e = tripCountValueMap.getNumResults(); i < e; ++i) {
+    AffineExpr expr = tripCountValueMap.getResult(i).ceilDiv(step);
+    if (auto constExpr = llvm::dyn_cast<AffineConstantExpr>(expr)) {
+      uint64_t value = constExpr.getValue();
+      if (tripCount.has_value())
+        tripCount = std::min(*tripCount, value);
+      else
+        tripCount = value;
+    } else {
+      return std::nullopt;
+    }
+  }
+
+  if (tripCount.has_value())
+    return APInt(64, *tripCount);
+
+  return std::nullopt;
+}
+
 FailureOr<LoopLikeOpInterface> AffineForOp::replaceWithAdditionalYields(
     RewriterBase &rewriter, ValueRange newInitOperands,
     bool replaceInitOperandUsesInLoop,

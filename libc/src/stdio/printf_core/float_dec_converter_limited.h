@@ -78,7 +78,8 @@ struct DigitsInput {
   // Constructor which accepts a mantissa direct from a floating-point format,
   // and shifts it up to the top of the UInt128 so that a function consuming
   // this struct afterwards doesn't have to remember which format it came from.
-  DigitsInput(int32_t fraction_len, UInt128 mantissa_, int exponent_, Sign sign)
+  DigitsInput(int32_t fraction_len, AnyFloatStorageType mantissa_,
+              int exponent_, Sign sign)
       : mantissa(UInt128(mantissa_) << (127 - fraction_len)),
         exponent(exponent_), sign(sign) {
     if (!(mantissa & (UInt128(1) << 127)) && mantissa != 0) {
@@ -374,10 +375,11 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
 }
 
 template <WriteMode write_mode>
-LIBC_INLINE int
-convert_float_inner(Writer<write_mode> *writer, const FormatSection &to_conv,
-                    int32_t fraction_len, int exponent, UInt128 mantissa,
-                    Sign sign, ConversionType ctype) {
+LIBC_INLINE int convert_float_inner(Writer<write_mode> *writer,
+                                    const FormatSection &to_conv,
+                                    int32_t fraction_len, int exponent,
+                                    AnyFloatStorageType mantissa, Sign sign,
+                                    ConversionType ctype) {
   constexpr char DECIMAL_POINT = '.';
   // If to_conv doesn't specify a precision, the precision defaults to 6.
   unsigned precision = to_conv.precision < 0 ? 6 : to_conv.precision;
@@ -631,10 +633,21 @@ template <WriteMode write_mode>
 LIBC_INLINE int convert_float_outer(Writer<write_mode> *writer,
                                     const FormatSection &to_conv,
                                     ConversionType ctype) {
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+  if (to_conv.length_modifier == LengthModifier::Q) {
+    fputil::FPBits<float128> float_bits(
+        static_cast<fputil::FPBits<float128>::StorageType>(
+            to_conv.conv_val_raw));
+    if (!float_bits.is_inf_or_nan()) {
+      return convert_float_typed<float128>(writer, to_conv, float_bits, ctype);
+    }
+  } else
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
 #ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
-  if (to_conv.length_modifier == LengthModifier::L) {
-    fputil::FPBits<long double>::StorageType float_raw = to_conv.conv_val_raw;
-    fputil::FPBits<long double> float_bits(float_raw);
+      if (to_conv.length_modifier == LengthModifier::L) {
+    fputil::FPBits<long double> float_bits(
+        static_cast<fputil::FPBits<long double>::StorageType>(
+            to_conv.conv_val_raw));
     if (!float_bits.is_inf_or_nan()) {
       return convert_float_typed<long double>(writer, to_conv, float_bits,
                                               ctype);

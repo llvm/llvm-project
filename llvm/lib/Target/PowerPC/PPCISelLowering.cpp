@@ -604,14 +604,10 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
 
   // Custom handling for PowerPC ucmp instruction
-  if (isPPC64) {
-    // UCMP involves using carries, which only works in 64-bit
-    setOperationAction(ISD::UCMP, MVT::i32, Promote);
-    setOperationAction(ISD::UCMP, MVT::i64, Custom);
-  } else {
-    setOperationAction(ISD::UCMP, MVT::i32, Custom);
-    setOperationAction(ISD::UCMP, MVT::i64, Expand);
-  }
+  setOperationAction(ISD::UCMP, MVT::i32, Custom);
+  setOperationAction(ISD::UCMP, MVT::i64, isPPC64 ? Custom : Expand);
+  setOperationAction(ISD::ABDU, MVT::i32, Custom);
+  setOperationAction(ISD::ABDU, MVT::i64, isPPC64 ? Custom : Expand);
 
   // NOTE: EH_SJLJ_SETJMP/_LONGJMP supported here is NOT intended to support
   // SjLj exception handling but a light-weight setjmp/longjmp replacement to
@@ -12794,6 +12790,69 @@ SDValue PPCTargetLowering::LowerSADDO(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getMergeValues({Sum, OverflowTrunc}, dl);
 }
 
+/// Lower ABDU with negation pattern using branchless carry arithmetic.
+/// Recognizes: abdu(a, sub(0, x)) and transforms to:
+///   a - (0 - x) = a + x (mod 2^n)
+/// Uses SUBC to compute result without branches.
+SDValue PPCTargetLowering::LowerABDU(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  EVT OpVT = LHS.getValueType();
+  EVT VT = Op.getValueType();
+  bool IsNonNegative = DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS);
+
+  // If the subtract doesn't overflow then just use abs(sub()).
+  if (DAG.willNotOverflowSub(IsNonNegative, LHS, RHS))
+    return DAG.getNode(ISD::ABS, DL, VT,
+                       DAG.getNode(ISD::SUB, DL, VT, LHS, RHS));
+
+  if (DAG.willNotOverflowSub(IsNonNegative, RHS, LHS))
+    return DAG.getNode(ISD::ABS, DL, VT,
+                       DAG.getNode(ISD::SUB, DL, VT, RHS, LHS));
+
+  // General path: use SUBC (or ADDC when RHS is 0-X) to get
+  // subtract-with-flags, then CMOV to select a-b or b-a. ADDC/SUBC produce the
+  // flags we need.
+  unsigned Opcode = PPCISD::SUBC;
+
+  // Check if RHS is a negation (0 - X). If so, we can use ADDC instead of SUBC:
+  //   a - (0 - x) = a + x (mod 2^n)
+  // Same semantics as in LowerCMP; apply same safety checks.
+  if (RHS.getOpcode() == ISD::SUB) {
+    SDValue SubLHS = RHS.getOperand(0);
+    SDValue SubRHS = RHS.getOperand(1);
+
+    if (isNullConstant(SubLHS) && DAG.isKnownNeverZero(SubRHS)) {
+      Opcode = PPCISD::ADDC;
+      RHS = SubRHS;
+    }
+  }
+
+  // On PPC64, carry ops use the full 64-bit register. Operands are type-legal
+  // i32 here; widen only for the carry path (fast abs(sub) stays at VT).
+  if (Subtarget.isPPC64() && OpVT != MVT::i64) {
+    LHS = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, LHS);
+    RHS = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, RHS);
+    OpVT = MVT::i64;
+  }
+
+  // Calculate LHS - RHS and capture the carry (CA)
+  SDVTList VTs = DAG.getVTList(OpVT, MVT::i32);
+  SDValue Res = DAG.getNode(Opcode, DL, VTs, LHS, RHS);
+  SDValue CA0 = Res.getValue(1);
+
+  // t2 = A - B + CA0 using SUBE.
+  SDValue ZeroOrNeg1 = DAG.getNode(PPCISD::SUBE, DL, VTs, Res, Res, CA0);
+
+  SDValue Xor = DAG.getNode(ISD::XOR, DL, OpVT, Res, ZeroOrNeg1);
+
+  Res = DAG.getNode(ISD::SUB, DL, OpVT, Xor, ZeroOrNeg1);
+
+  Res = DAG.getNode(ISD::TRUNCATE, DL, VT, Res);
+  return Res;
+}
+
 // Lower unsigned 3-way compare producing -1/0/1.
 SDValue PPCTargetLowering::LowerUCMP(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -12801,6 +12860,15 @@ SDValue PPCTargetLowering::LowerUCMP(SDValue Op, SelectionDAG &DAG) const {
   SDValue B = DAG.getFreeze(Op.getOperand(1));
   EVT OpVT = A.getValueType();
   EVT ResVT = Op.getValueType();
+
+  // On PPC64, i32 carries are affected by the upper 32 bits of the registers.
+  // We must zero-extend to i64 to ensure the carry reflects the 32-bit unsigned
+  // comparison.
+  if (Subtarget.isPPC64() && OpVT != MVT::i64) {
+    A = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, A);
+    B = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, B);
+    OpVT = MVT::i64;
+  }
 
   // First compute diff = A - B.
   SDValue Diff = DAG.getNode(ISD::SUB, DL, OpVT, A, B);
@@ -12931,6 +12999,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerADDSUBO_CARRY(Op, DAG);
   case ISD::UCMP:
     return LowerUCMP(Op, DAG);
+  case ISD::ABDU:
+    return LowerABDU(Op, DAG);
   case ISD::STRICT_LRINT:
   case ISD::STRICT_LLRINT:
   case ISD::STRICT_LROUND:
@@ -16094,7 +16164,7 @@ SDValue PPCTargetLowering::combineSignExtendSetCC(SDNode *N,
     return SDValue();
 
   EVT VT = N->getValueType(0);
-  if (VT != MVT::i32 && VT != MVT::i64)
+  if (VT != MVT::i32 && (VT != MVT::i64 || !Subtarget.isPPC64()))
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
@@ -16114,17 +16184,14 @@ SDValue PPCTargetLowering::combineSignExtendSetCC(SDNode *N,
   SDValue X = isNullConstant(LHS) ? RHS : LHS;
   EVT XVT = X.getValueType(); // The type of x in the setcc x, 0, eq.
 
-  if ((XVT == MVT::i64 || VT == MVT::i64) && !Subtarget.isPPC64())
+  // The type that ADDC/SUBE operate on. Reject larger types and zero-extend
+  // smaller ones.
+  MVT OpVT = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
+  if (XVT.bitsGT(OpVT))
     return SDValue();
 
-  // On PPC64, i32 carry operations use the full 64-bit XER register,
-  // so we must use i64 operations to avoid incorrect results.
-  // Use i64 operations and truncate the result if needed.
-  if (XVT != MVT::i64 && Subtarget.isPPC64())
-    // Zero-extend if input type is not 64bits.
-    X = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, X);
-
-  EVT OpVT = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
+  if (XVT.bitsLT(OpVT))
+    X = DAG.getNode(ISD::ZERO_EXTEND, dl, OpVT, X);
 
   // Generate: SUBFE(ADDC(X, -1)).
   SDValue MinusOne = DAG.getAllOnesConstant(dl, OpVT);
@@ -17515,6 +17582,28 @@ static SDValue DAGCombineAddc(SDNode *N,
   return SDValue();
 }
 
+static SDValue DAGCombineSube(SDNode *N,
+                              llvm::PPCTargetLowering::DAGCombinerInfo &DCI) {
+  if (N->getOpcode() == PPCISD::SUBE) {
+    SDValue LHS = N->getOperand(0);
+    SDValue RHS = N->getOperand(1);
+    SDValue Carry = N->getOperand(2);
+
+    // SUBE(ADDC(ADDE(0, 0, C), -1), same, C) -> ADDC(ADDE(0, 0, C), -1)
+    if (LHS == RHS && LHS.getOpcode() == PPCISD::ADDC) {
+      SDValue AddcLHS = LHS.getOperand(0);
+      SDValue AddcRHS = LHS.getOperand(1);
+      if (AddcLHS.getOpcode() == PPCISD::ADDE &&
+          isNullConstant(AddcLHS.getOperand(0)) &&
+          isNullConstant(AddcLHS.getOperand(1)) && isAllOnesConstant(AddcRHS) &&
+          Carry == AddcLHS.getOperand(2)) {
+        return LHS;
+      }
+    }
+  }
+  return SDValue();
+}
+
 /// Optimize the bitfloor(X) pattern for PowerPC.
 /// Transforms: select_cc X, 0, 0, (srl MinSignedValue, (ctlz X)), seteq
 /// Into: srl MinSignedValue, (ctlz X)
@@ -18555,6 +18644,8 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     return DAGCombineBuildVector(N, DCI);
   case PPCISD::ADDC:
     return DAGCombineAddc(N, DCI);
+  case PPCISD::SUBE:
+    return DAGCombineSube(N, DCI);
 
   case ISD::BITCAST:
     return DAGCombineBitcast(N, DCI);

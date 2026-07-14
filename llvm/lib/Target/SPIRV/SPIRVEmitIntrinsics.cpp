@@ -260,8 +260,9 @@ class SPIRVEmitIntrinsics
                            bool IsPostprocessing = false);
 
   void preprocessCompositeConstants(IRBuilder<> &B);
-  void preprocessUndefs(IRBuilder<> &B);
-  void preprocessPoisons(IRBuilder<> &B);
+  Value *lowerUndefOrPoison(Value *Op, IRBuilder<> &B, bool HasPoisonExt);
+  void preprocessUndefsAndPoisons(IRBuilder<> &B);
+  void insertCompositeAggregateArms(Instruction *I, IRBuilder<> &B);
   void simplifyNullAddrSpaceCasts();
 
   Type *reconstructType(Value *Op, bool UnknownElemTypeI8,
@@ -283,6 +284,7 @@ class SPIRVEmitIntrinsics
   void insertSpirvDecorations(Instruction *I, IRBuilder<> &B);
   void insertConstantsForFPFastMathDefault(Module &M);
   Value *buildSpvUndefComposite(Type *AggrTy, IRBuilder<> &B);
+  void reconstructAggregateReturns(Function &Func, IRBuilder<> &B);
   void processGlobalValue(GlobalVariable &GV, IRBuilder<> &B);
   void processParamTypes(Function *F, IRBuilder<> &B);
   void processParamTypesByFunHeader(Function *F, IRBuilder<> &B);
@@ -1623,76 +1625,71 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
   Old->eraseFromParent();
 }
 
-void SPIRVEmitIntrinsics::preprocessUndefs(IRBuilder<> &B) {
+// Lower a poison or undef Op to its placeholder intrinsic.
+Value *SPIRVEmitIntrinsics::lowerUndefOrPoison(Value *Op, IRBuilder<> &B,
+                                               bool HasPoisonExt) {
+  auto *UV = dyn_cast<UndefValue>(Op);
+  if (!UV)
+    return nullptr;
+
+  bool AsPoison = HasPoisonExt && isa<PoisonValue>(UV);
+  if (isa<PoisonValue>(UV) && !HasPoisonExt)
+    LLVM_DEBUG(dbgs() << "SPV_KHR_poison_freeze is not enabled. Poison is "
+                         "lowered as undef\n");
+
+  Intrinsic::ID IID = AsPoison ? Intrinsic::spv_poison : Intrinsic::spv_undef;
+  Type *Ty = UV->getType();
+
+  // Aggregates use an i32-result placeholder with the real type kept in
+  // AggrConstTypes and scalar poison uses a type-overloaded one.
+  if (Ty->isAggregateType()) {
+    auto *Call =
+        AsPoison ? B.CreateIntrinsicWithoutFolding(IID, {B.getInt32Ty()}, {})
+                 : B.CreateIntrinsicWithoutFolding(IID, {});
+    AggrConsts[Call] = UV;
+    AggrConstTypes[Call] = Ty;
+    return Call;
+  }
+
+  if (AsPoison)
+    return B.CreateIntrinsic(IID, {Ty}, {});
+  return nullptr;
+}
+
+// Replace aggregate undef or poison operands and extension-enabled scalar
+// poison operands with placeholder intrinsics. Scalar undef is left as is. See
+// lowerUndefOrPoison.
+void SPIRVEmitIntrinsics::preprocessUndefsAndPoisons(IRBuilder<> &B) {
   const SPIRVSubtarget *STI = TM.getSubtargetImpl(*CurrF);
   bool HasPoisonExt =
       STI->canUseExtension(SPIRV::Extension::SPV_KHR_poison_freeze);
+
   SmallVector<Instruction *, 16> Insts;
   for (auto &I : instructions(CurrF))
     Insts.push_back(&I);
 
   for (Instruction *I : Insts) {
     bool BPrepared = false;
-    for (auto &Op : I->operands()) {
-      auto *AggrUndef = dyn_cast<UndefValue>(Op);
-      if (!AggrUndef || !Op->getType()->isAggregateType())
+    auto *Phi = dyn_cast<PHINode>(I);
+    for (unsigned Idx = 0; Idx < I->getNumOperands(); ++Idx) {
+      Value *Op = I->getOperand(Idx);
+      if (!isa<UndefValue>(Op) || Op->getType()->isMetadataTy())
         continue;
-      if (HasPoisonExt && isa<PoisonValue>(AggrUndef))
+      bool IsScalar = !Op->getType()->isAggregateType();
+      bool AsPoison = HasPoisonExt && isa<PoisonValue>(Op);
+      // Scalar undef or extensionless scalar poison is directly translatable.
+      if (IsScalar && !AsPoison)
         continue;
-      if (isa<PoisonValue>(AggrUndef))
-        LLVM_DEBUG(dbgs() << "SPV_KHR_poison_freeze is not enabled. Poison is "
-                             "lowered as undef\n");
-
-      if (!BPrepared) {
+      // Scalar poison in a phi materializes in the incoming block. Everything
+      // else materializes right before I.
+      if (IsScalar && Phi)
+        B.SetInsertPoint(Phi->getIncomingBlock(Idx)->getTerminator());
+      else if (!BPrepared) {
         setInsertPointSkippingPhis(B, I);
         BPrepared = true;
       }
-      CallInst *IntrUndef =
-          B.CreateIntrinsicWithoutFolding(Intrinsic::spv_undef, {});
-      I->replaceUsesOfWith(Op, IntrUndef);
-      AggrConsts[IntrUndef] = AggrUndef;
-      AggrConstTypes[IntrUndef] = AggrUndef->getType();
-    }
-  }
-}
-
-void SPIRVEmitIntrinsics::preprocessPoisons(IRBuilder<> &B) {
-  const SPIRVSubtarget *STI = TM.getSubtargetImpl(*CurrF);
-  if (!STI->canUseExtension(SPIRV::Extension::SPV_KHR_poison_freeze))
-    return;
-
-  for (Instruction &I : instructions(CurrF)) {
-    bool BPrepared = false;
-    auto *Phi = dyn_cast<PHINode>(&I);
-
-    for (unsigned Idx = 0; Idx < I.getNumOperands(); ++Idx) {
-      Value *Op = I.getOperand(Idx);
-      auto *Poison = dyn_cast<PoisonValue>(Op);
-      if (!Poison || Op->getType()->isMetadataTy())
-        continue;
-
-      Type *OpTy = Op->getType();
-      Value *Replacement = nullptr;
-      if (OpTy->isAggregateType()) {
-        if (!BPrepared) {
-          setInsertPointSkippingPhis(B, &I);
-          BPrepared = true;
-        }
-        CallInst *Call = B.CreateIntrinsicWithoutFolding(Intrinsic::spv_poison,
-                                                         {B.getInt32Ty()}, {});
-        AggrConsts[Call] = Poison;
-        AggrConstTypes[Call] = OpTy;
-        Replacement = Call;
-      } else {
-        if (Phi)
-          B.SetInsertPoint(Phi->getIncomingBlock(Idx)->getTerminator());
-        else if (!BPrepared) {
-          setInsertPointSkippingPhis(B, &I);
-          BPrepared = true;
-        }
-        Replacement = B.CreateIntrinsic(Intrinsic::spv_poison, {OpTy}, {});
-      }
-      I.setOperand(Idx, Replacement);
+      if (Value *Repl = lowerUndefOrPoison(Op, B, HasPoisonExt))
+        I->setOperand(Idx, Repl);
     }
   }
 }
@@ -1709,6 +1706,48 @@ void SPIRVEmitIntrinsics::simplifyNullAddrSpaceCasts() {
             ConstantPointerNull::get(cast<PointerType>(ASC->getType())));
         ASC->eraseFromParent();
       }
+}
+
+// True for an aggregate value the legalizer splits into a multi-result op
+// (with.overflow -> G_UADDO, frexp/sincos/modf -> G_FFREXP/...). These keep a
+// genuine multi-register result; all other aggregates become a single value-id.
+static bool isMultiRegisterAggregate(Value *V) {
+  if (!V->getType()->isAggregateType())
+    return false;
+  return isa<IntrinsicInst>(V) && !isSpvIntrinsic(V);
+}
+
+// True for an aggregate PHI/select/freeze, which is lowered to a single
+// value-id.
+static bool isAggregateValueIdInstr(const Instruction &I) {
+  return (isa<PHINode>(I) || isa<SelectInst>(I) || isa<FreezeInst>(I)) &&
+         I.getType()->isAggregateType();
+}
+
+// Give each multi-register aggregate arm of an aggregate PHI/select/freeze a
+// single value-id by reassembling it with extractvalue + insertvalue, so the
+// arm matches the result once it is mutated to a value-id.
+void SPIRVEmitIntrinsics::insertCompositeAggregateArms(Instruction *I,
+                                                       IRBuilder<> &B) {
+  auto *Phi = dyn_cast<PHINode>(I);
+  for (Use &U : I->operands()) {
+    Value *Op = U.get();
+    if (!isMultiRegisterAggregate(Op))
+      continue;
+    // A PHI arm materializes in its incoming block, everything else after the
+    // producer.
+    if (Phi)
+      B.SetInsertPoint(Phi->getIncomingBlock(U)->getTerminator());
+    else
+      setInsertPointAfterDef(B, cast<Instruction>(Op));
+    auto *AggrTy = cast<StructType>(Op->getType());
+    Value *Composite = PoisonValue::get(AggrTy);
+    for (unsigned Idx = 0, E = AggrTy->getNumElements(); Idx != E; ++Idx) {
+      Value *Field = B.CreateExtractValue(Op, Idx);
+      Composite = B.CreateInsertValue(Composite, Field, Idx);
+    }
+    U.set(Composite);
+  }
 }
 
 void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
@@ -1763,18 +1802,14 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
                 CE && CE->getOpcode() == Instruction::AddrSpaceCast &&
                 isa<ConstantPointerNull>(CE->getOperand(0)))
               Op = ConstantPointerNull::get(cast<PointerType>(CE->getType()));
-            if (HasPoisonExt && isa<PoisonValue>(Op)) {
+            // Undef or poison nested in a constant aggregate is not a direct
+            // instruction operand, so preprocessUndefsAndPoisons() misses it.
+            // An unlowered aggregate one would reach IRTranslator as an
+            // untranslatable spv_const_composite operand.
+            if (isa<UndefValue>(Op)) {
               PrepareInsert();
-              Type *PoisonTy = Op->getType();
-              if (PoisonTy->isAggregateType()) {
-                CallInst *Call = B.CreateIntrinsicWithoutFolding(
-                    Intrinsic::spv_poison, {B.getInt32Ty()}, {});
-                AggrConsts[Call] = cast<PoisonValue>(Op);
-                AggrConstTypes[Call] = PoisonTy;
-                Op = Call;
-              } else {
-                Op = B.CreateIntrinsic(Intrinsic::spv_poison, {PoisonTy}, {});
-              }
+              if (Value *Repl = lowerUndefOrPoison(Op, B, HasPoisonExt))
+                Op = Repl;
             }
             Args.push_back(Op);
           }
@@ -2686,6 +2721,37 @@ Value *SPIRVEmitIntrinsics::buildSpvUndefComposite(Type *AggrTy,
   AggrConsts[Composite] = PoisonValue::get(AggrTy);
   AggrConstTypes[Composite] = AggrTy;
   return Composite;
+}
+
+// If a function directly returns an aggregate-typed call result,
+// the ReturnInst carries an aggregate while the function signature
+// was rewritten to i32 by SPIRVPrepareFunctions. Rebuild the return value
+// via extractvalue/insertvalue so the regular spv_extractv/spv_insertv
+// lowering produces a valid OpReturnValue.
+void SPIRVEmitIntrinsics::reconstructAggregateReturns(Function &Func,
+                                                      IRBuilder<> &B) {
+  Type *OrigRetTy = GR->findMutated(&Func);
+  if (!OrigRetTy || !OrigRetTy->isAggregateType())
+    return;
+  for (BasicBlock &BB : Func) {
+    auto *RI = dyn_cast<ReturnInst>(BB.getTerminator());
+    if (!RI)
+      continue;
+    Value *RetVal = RI->getReturnValue();
+    if (!RetVal || RetVal->getType() != OrigRetTy || !isa<CallBase>(RetVal))
+      continue;
+    Type *AggrTy = RetVal->getType();
+    uint64_t NumElts = isa<StructType>(AggrTy)
+                           ? cast<StructType>(AggrTy)->getNumElements()
+                           : cast<ArrayType>(AggrTy)->getNumElements();
+    B.SetInsertPoint(RI);
+    Value *Rebuilt = PoisonValue::get(AggrTy);
+    for (uint64_t I = 0; I < NumElts; ++I) {
+      Value *Elt = B.CreateExtractValue(RetVal, I);
+      Rebuilt = B.CreateInsertValue(Rebuilt, Elt, I);
+    }
+    RI->setOperand(0, Rebuilt);
+  }
 }
 
 void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
@@ -3608,8 +3674,8 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   for (auto &GV : Func.getParent()->globals())
     processGlobalValue(GV, B);
 
-  preprocessUndefs(B);
-  preprocessPoisons(B);
+  reconstructAggregateReturns(Func, B);
+  preprocessUndefsAndPoisons(B);
   simplifyNullAddrSpaceCasts();
   preprocessCompositeConstants(B);
 
@@ -3621,10 +3687,10 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   // users are lowered to spv_extractv.
   Type *I32Ty = B.getInt32Ty();
   for (Instruction &I : instructions(Func)) {
-    if (!isa<PHINode>(I) && !isa<SelectInst>(I) && !isa<FreezeInst>(I))
+    if (!isAggregateValueIdInstr(I))
       continue;
-    if (!I.getType()->isAggregateType())
-      continue;
+    // Give multi-register arms a value-id first, before the result is mutated.
+    insertCompositeAggregateArms(&I, B);
     AggrConstTypes[&I] = I.getType();
     I.mutateType(I32Ty);
   }
