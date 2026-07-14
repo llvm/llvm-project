@@ -31,6 +31,11 @@ LIBC_INLINE_VAR constexpr double PI = 0x1.921fb54442d18p+1;
 LIBC_INLINE_VAR constexpr double LOG_SQRT_2_PI = 0x1.d67f1c864beb5p-1;
 
 // Paul Godfrey's exact Lanczos approximation coefficients (g=7, n=9)
+// Reference: "A note on the computation of the convergent Lanczos complex Gamma
+// approximation" by Paul Godfrey (2001).
+// Original:
+// https://web.archive.org/web/20060915161115/http://my.fit.edu/~gabdo/gamma.txt
+// Mirror: http://www.mrob.com/pub/ries/lanczos-gamma.html
 LIBC_INLINE_VAR constexpr double LANCZOS_COEFFS[9] = {
     0x1.ffffffffff950p-1,  0x1.52429b6c30b05p+9,  -0x1.3ac8e8ed4171bp+10,
     0x1.81a9661d3b4d8p+9,  -0x1.613ae51a32f5dp+7, 0x1.903c27f8b9c81p+3,
