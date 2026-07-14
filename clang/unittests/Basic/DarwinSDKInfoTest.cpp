@@ -223,6 +223,24 @@ TEST(DarwinSDKInfoTest, ParseAndTestMappingIOSDerived) {
       VersionTuple(15, 0, 99));
 }
 
+TEST(DarwinSDKInfoTest, IgnoreNonObjectIOSDerivedMapping) {
+  llvm::json::Object Obj;
+  Obj["CanonicalName"] = "appletvos15.0";
+  Obj["Version"] = "15.0";
+  Obj["MaximumDeploymentTarget"] = "15.0.99";
+  llvm::json::Object IOSToTvOS;
+  IOSToTvOS["iOS_tvOS"] = "not a mapping object";
+  Obj["VersionMap"] = std::move(IOSToTvOS);
+
+  auto SDKInfo = DarwinSDKInfo::parseDarwinSDKSettingsJSON("", &Obj);
+  ASSERT_TRUE(SDKInfo);
+  EXPECT_EQ(SDKInfo->getVersion(), VersionTuple(15, 0));
+  EXPECT_EQ(SDKInfo->getVersionMapping(DarwinSDKInfo::OSEnvPair(
+                llvm::Triple::IOS, llvm::Triple::UnknownEnvironment,
+                llvm::Triple::TvOS, llvm::Triple::UnknownEnvironment)),
+            nullptr);
+}
+
 TEST(DarwinSDKInfoTest, MissingKeys) {
   llvm::json::Object Obj;
   ASSERT_FALSE(DarwinSDKInfo::parseDarwinSDKSettingsJSON("", &Obj));
