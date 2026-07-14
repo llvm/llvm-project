@@ -48,6 +48,10 @@
   entry:
     unreachable
   }
+  define void @test_src2_exclusion_fixpoint() #0 {
+  entry:
+    unreachable
+  }
   attributes #0 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" }
 ...
 
@@ -817,6 +821,99 @@ body: |
 
   bb.6:
     %res:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %acc:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+    KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7, %p8
+    S_ENDPGM 0
+...
+
+---
+#
+# Exclusion is a fixpoint: excluding one candidate re-classifies another's src2.
+#
+#   bb.0
+#   /   \
+# bb.1  bb.2   %rA.subN = V_MOV (non-AGPR-form partial def, fragments %rA)
+#   \   /
+#   bb.3   %resA = MFMA(.., %rA)      candidate A, src2=%rA
+#   /   \
+# bb.4  bb.5   %acc.subN = COPY %rA.subN (partial subreg def; source = A's src2)
+#   \   /
+#   bb.6   %resB = MFMA(.., %acc)     candidate B, src2=%acc
+#
+# A is excluded (non-dominating partial defs fragment %rA), so %rA stays VGPR and
+# the COPYs feeding %acc lose AGPR-form -- B must be excluded too.  A single pass
+# misses B and rewrites it, splitting %acc's live interval; the fixpoint
+# re-classification catches B, keeping both MFMAs in vgprcd (VGPR) form.
+#
+# CHECK-LABEL: name: test_src2_exclusion_fixpoint
+# CHECK: %resA:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64
+# CHECK: %resB:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64
+# CHECK-NOT: areg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_e64
+name:            test_src2_exclusion_fixpoint
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $vgpr0, $sgpr4_sgpr5, $sgpr6
+
+    %p0:vreg_1024 = IMPLICIT_DEF
+    %p1:vreg_1024 = IMPLICIT_DEF
+    %p2:vreg_1024 = IMPLICIT_DEF
+    %p3:vreg_1024 = IMPLICIT_DEF
+    %p4:vreg_1024 = IMPLICIT_DEF
+    %p5:vreg_1024 = IMPLICIT_DEF
+    %p6:vreg_1024 = IMPLICIT_DEF
+    %p7:vreg_1024 = IMPLICIT_DEF
+    %p8:vreg_1024 = IMPLICIT_DEF
+
+    %srca:vgpr_32 = IMPLICIT_DEF
+    %srcb:vgpr_32 = IMPLICIT_DEF
+    %cond:sgpr_32 = COPY $sgpr6
+
+    S_CMP_EQ_U32 %cond:sgpr_32, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+
+  bb.1:
+    successors: %bb.3(0x80000000)
+    undef %rA.sub0:vreg_128_align2 = V_MOV_B32_e32 0, implicit $exec
+    %rA.sub1:vreg_128_align2 = V_MOV_B32_e32 0, implicit $exec
+    %rA.sub2:vreg_128_align2 = V_MOV_B32_e32 0, implicit $exec
+    %rA.sub3:vreg_128_align2 = V_MOV_B32_e32 0, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3(0x80000000)
+    undef %rA.sub0:vreg_128_align2 = V_MOV_B32_e32 0, implicit $exec
+    %rA.sub1:vreg_128_align2 = V_MOV_B32_e32 0, implicit $exec
+    %rA.sub2:vreg_128_align2 = V_MOV_B32_e32 0, implicit $exec
+    %rA.sub3:vreg_128_align2 = V_MOV_B32_e32 0, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.3:
+    successors: %bb.4(0x40000000), %bb.5(0x40000000)
+    %resA:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %rA:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+
+    S_CMP_EQ_U32 %cond:sgpr_32, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.5, implicit $scc
+
+  bb.4:
+    successors: %bb.6(0x80000000)
+    undef %acc.sub0:vreg_128_align2 = COPY %rA.sub0:vreg_128_align2
+    %acc.sub1:vreg_128_align2 = COPY %rA.sub1:vreg_128_align2
+    %acc.sub2:vreg_128_align2 = COPY %rA.sub2:vreg_128_align2
+    %acc.sub3:vreg_128_align2 = COPY %rA.sub3:vreg_128_align2
+    S_BRANCH %bb.6
+
+  bb.5:
+    successors: %bb.6(0x80000000)
+    undef %acc.sub0:vreg_128_align2 = COPY %rA.sub0:vreg_128_align2
+    %acc.sub1:vreg_128_align2 = COPY %rA.sub1:vreg_128_align2
+    %acc.sub2:vreg_128_align2 = COPY %rA.sub2:vreg_128_align2
+    %acc.sub3:vreg_128_align2 = COPY %rA.sub3:vreg_128_align2
+    S_BRANCH %bb.6
+
+  bb.6:
+    %resB:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %acc:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+
     KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7, %p8
     S_ENDPGM 0
 ...
