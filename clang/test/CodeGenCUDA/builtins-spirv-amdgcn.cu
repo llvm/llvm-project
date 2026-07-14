@@ -275,9 +275,10 @@ __global__ void endpgm() {
 // CHECK-NEXT:    store i64 [[B:%.*]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(4) [[B_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = call addrspace(4) i64 @llvm.amdgcn.icmp.i64.i64(i64 [[TMP0]], i64 [[TMP1]], i32 35)
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    store i64 [[TMP2]], ptr addrspace(4) [[TMP3]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[TMP0]], [[TMP1]]
+// CHECK-NEXT:    [[TMP3:%.*]] = call addrspace(4) i64 @llvm.amdgcn.ballot.i64(i1 [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i64 [[TMP3]], ptr addrspace(4) [[TMP4]], align 8
 // CHECK-NEXT:    ret void
 //
 // AMDGCNSPIRV-LABEL: @_Z14test_uicmp_i64Pyyy(
@@ -296,9 +297,10 @@ __global__ void endpgm() {
 // AMDGCNSPIRV-NEXT:    store i64 [[B:%.*]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i64, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(4) [[B_ADDR_ASCAST]], align 8
-// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = call addrspace(4) i64 @llvm.amdgcn.icmp.i64.i64(i64 [[TMP0]], i64 [[TMP1]], i32 35)
-// AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
-// AMDGCNSPIRV-NEXT:    store i64 [[TMP2]], ptr addrspace(4) [[TMP3]], align 8
+// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[TMP0]], [[TMP1]]
+// AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = call addrspace(4) i64 @llvm.amdgcn.ballot.i64(i1 [[TMP2]])
+// AMDGCNSPIRV-NEXT:    [[TMP4:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
+// AMDGCNSPIRV-NEXT:    store i64 [[TMP3]], ptr addrspace(4) [[TMP4]], align 8
 // AMDGCNSPIRV-NEXT:    ret void
 //
 __global__ void test_uicmp_i64(unsigned long long *out, unsigned long long a, unsigned long long b)

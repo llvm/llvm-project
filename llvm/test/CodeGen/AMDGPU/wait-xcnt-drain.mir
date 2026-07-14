@@ -12,6 +12,8 @@ body: |
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $scc
   ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   GLOBAL_WB 0, implicit $exec
+  ; GCN-NEXT:   V_NOP_e32 implicit $exec
   ; GCN-NEXT:   GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
   ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
   ; GCN-NEXT: {{  $}}
@@ -75,6 +77,8 @@ body: |
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr0_sgpr1
   ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   GLOBAL_WB 0, implicit $exec
+  ; GCN-NEXT:   V_NOP_e32 implicit $exec
   ; GCN-NEXT:   GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
   ; GCN-NEXT:   S_SETPC_B64 $sgpr0_sgpr1
   ; GCN-NEXT: {{  $}}
@@ -106,6 +110,8 @@ body: |
     ; GCN-LABEL: name: drain_trap
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: GLOBAL_WB 0, implicit $exec
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_TRAP 0
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
@@ -127,6 +133,8 @@ body: |
     ; GCN-LABEL: name: drain_getreg
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: GLOBAL_WB 0, implicit $exec
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: $sgpr0 = S_GETREG_B32 1, implicit $mode
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
@@ -148,6 +156,8 @@ body: |
     ; GCN-LABEL: name: drain_setreg
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr0
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: GLOBAL_WB 0, implicit $exec
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_SETREG_B32 $sgpr0, 1, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
@@ -169,6 +179,8 @@ body: |
     ; GCN-LABEL: name: drain_setreg_mode
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr0
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: GLOBAL_WB 0, implicit $exec
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_SETREG_B32_mode $sgpr0, 1, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
@@ -190,6 +202,8 @@ body: |
     ; GCN-LABEL: name: drain_setreg_imm32
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: GLOBAL_WB 0, implicit $exec
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 1, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
@@ -211,6 +225,8 @@ body: |
     ; GCN-LABEL: name: drain_setreg_imm32_mode
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: GLOBAL_WB 0, implicit $exec
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_SETREG_IMM32_B32_mode 0, 1, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
@@ -232,6 +248,8 @@ body: |
     ; GCN-LABEL: name: drain_sendmsg
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $m0
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: GLOBAL_WB 0, implicit $exec
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_SENDMSG 1, implicit $exec, implicit $m0
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
@@ -253,6 +271,8 @@ body: |
     ; GCN-LABEL: name: drain_sendmsg_halt
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $m0
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: GLOBAL_WB 0, implicit $exec
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_SENDMSGHALT 1, implicit $exec, implicit $m0
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
@@ -274,6 +294,8 @@ body: |
     ; GCN-LABEL: name: drain_sendmsg_rtn_b32
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: GLOBAL_WB 0, implicit $exec
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: $sgpr0 = S_SENDMSG_RTN_B32 1
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
@@ -295,6 +317,8 @@ body: |
     ; GCN-LABEL: name: drain_sendmsg_rtn_b64
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: GLOBAL_WB 0, implicit $exec
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: $sgpr0_sgpr1 = S_SENDMSG_RTN_B64 1
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
@@ -316,6 +340,8 @@ body: |
     ; GCN-LABEL: name: drain_barrier_wait
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: GLOBAL_WB 0, implicit $exec
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_BARRIER_WAIT 1
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
@@ -337,6 +363,8 @@ body: |
     ; GCN-LABEL: name: drain_barrier_signal_m0
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $m0
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: GLOBAL_WB 0, implicit $exec
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_BARRIER_SIGNAL_M0 implicit $m0
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
@@ -358,6 +386,8 @@ body: |
     ; GCN-LABEL: name: drain_barrier_signal
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: GLOBAL_WB 0, implicit $exec
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_BARRIER_SIGNAL_IMM 1
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
@@ -379,6 +409,8 @@ body: |
     ; GCN-LABEL: name: drain_barrier_signal_isfirst_m0
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $m0, $scc
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: GLOBAL_WB 0, implicit $exec
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_BARRIER_SIGNAL_ISFIRST_M0 implicit $m0, implicit-def $scc, implicit $scc
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
@@ -400,6 +432,8 @@ body: |
     ; GCN-LABEL: name: drain_barrier_signal_isfirst
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $scc
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: GLOBAL_WB 0, implicit $exec
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_BARRIER_SIGNAL_ISFIRST_IMM 1, implicit-def $scc, implicit $scc
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec

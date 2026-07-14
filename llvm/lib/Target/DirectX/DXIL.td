@@ -59,6 +59,7 @@ def SplitDoubleTy : DXILOpParamType;
 def BinaryWithCarryTy : DXILOpParamType;
 def DimensionsTy : DXILOpParamType;
 def Fouri32s : DXILOpParamType;
+def TwoI32Ty : DXILOpParamType;
 
 class DXILOpClass;
 
@@ -796,6 +797,28 @@ def Fma : DXILOp<47, tertiary> {
   let arguments = [OverloadTy, OverloadTy, OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [DoubleTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def IMul : DXILOp<41, binaryWithTwoOuts> {
+  let Doc = "Signed integer multiply returning the high and low halves of the "
+            "full-width product.";
+  let intrinsics = [IntrinSelect<int_dx_imul>];
+  let arguments = [OverloadTy, OverloadTy];
+  let result = TwoI32Ty;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def UMul : DXILOp<42, binaryWithTwoOuts> {
+  let Doc = "Unsigned integer multiply returning the high and low halves of the "
+            "full-width product.";
+  let intrinsics = [IntrinSelect<int_dx_umul>];
+  let arguments = [OverloadTy, OverloadTy];
+  let result = TwoI32Ty;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }

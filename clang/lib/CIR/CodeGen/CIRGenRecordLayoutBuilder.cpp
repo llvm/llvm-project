@@ -578,9 +578,19 @@ void CIRRecordLowering::accumulateFields() {
       field = accumulateBitFields(field, fieldEnd);
       assert((field == fieldEnd || !field->isBitField()) &&
              "Failed to accumulate all the bitfields");
-    } else if (isEmptyFieldForLayout(astContext, *field)) {
-      // TODO(cir): do we want to do anything special about zero size members?
-      assert(!cir::MissingFeatures::zeroSizeRecordMembers());
+    } else if (isEmptyFieldForLayout(astContext, *field) &&
+               field->isPotentiallyOverlapping()) {
+      // We lay out normal empty fields, as they are required for GEPs/getting
+      // function pointers. However 'no-unique-address' lends some additional
+      // complexity. These fields take up no real space, but would also have to
+      // be the correct 'GEP' offset to work here, but then mess with the
+      // layout.  We likely need to come up with a new 'type' to support these,
+      // then figure out some way to lower these to the correct offset, likely
+      // by calculating the correct offset into the struct, and forming a
+      // replacement by-byte GEP in LowerToLLVM.  However, this is only a
+      // problem with taking the address of one of these, so it is in practice
+      // not a horrifyingly problematic issue.
+      assert(!cir::MissingFeatures::noUniqueAddressLayout());
       ++field;
     } else {
       // Use base subobject layout for potentially-overlapping fields,
