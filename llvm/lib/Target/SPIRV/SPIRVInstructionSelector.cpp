@@ -2094,6 +2094,16 @@ bool SPIRVInstructionSelector::selectStore(MachineInstr &I) const {
       return selectAtomicStore(I);
   }
 
+  // Stores into a read-only storage class produce invalid SPIR-V. Reject such
+  // input with a diagnostic rather than silently emitting an OpStore that
+  // validation rejects.
+  SPIRV::StorageClass::StorageClass PtrSC = GR.getPointerStorageClass(Ptr);
+  if (PtrSC == SPIRV::StorageClass::UniformConstant ||
+      PtrSC == SPIRV::StorageClass::Input ||
+      PtrSC == SPIRV::StorageClass::PushConstant)
+    return diagnoseUnsupported(
+        I, "store into a read-only SPIR-V storage class is not allowed");
+
   MachineIRBuilder MIRBuilder(I);
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpStore).addUse(Ptr).addUse(StoreVal);
   if (!I.getNumMemOperands()) {
@@ -2432,6 +2442,71 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
     if (!selectOpWithSrcs(TmpReg, ResType, I, {ValueReg}, NegateOpcode))
       return false;
     ValueReg = TmpReg;
+  }
+
+  if (ResType.isTypePtr()) {
+    if (NewOpcode != SPIRV::OpAtomicExchange)
+      return diagnoseUnsupported(
+          I, "Lowering to SPIR-V of this atomic operation is not "
+             "allowed for pointer types");
+    if (!STI.isPhysicalSPIRV())
+      return diagnoseUnsupported(
+          I, "Lowering to SPIR-V of atomic exchange is only "
+             "allowed for pointer types for physical addressing model");
+    // If the exchanged value is a pointer type we convert the value operand to
+    // an integer type of the same size as the pointer size using
+    // OpConvertPtrToU, bitcast the Ptr parameter to pointer to integer type and
+    // then generate OpAtomicExchange on integers. The integer result is
+    // converted back to a pointer type using OpConvertUToPtr, similar to atomic
+    // load and store.
+    MachineIRBuilder MIRBuilder(I);
+    unsigned PtrSize = GR.getPointerSize();
+    SPIRVTypeInst PtrAsIntSpirvType =
+        GR.getOrCreateSPIRVIntegerType(PtrSize, MIRBuilder);
+
+    Register ValueAsIntReg =
+        MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
+    MRI->setRegClass(ValueAsIntReg, GR.getRegClass(PtrAsIntSpirvType));
+    GR.assignSPIRVTypeToVReg(PtrAsIntSpirvType, ValueAsIntReg,
+                             MIRBuilder.getMF());
+    MIRBuilder.buildInstr(SPIRV::OpConvertPtrToU)
+        .addDef(ValueAsIntReg)
+        .addUse(GR.getSPIRVTypeID(PtrAsIntSpirvType)) // Result type
+        .addUse(ValueReg)                             // Pointer operand
+        .constrainAllUses(TII, TRI, RBI);
+
+    SPIRVTypeInst PtrType = GR.getOrCreateSPIRVPointerType(
+        PtrAsIntSpirvType, MIRBuilder, GR.getPointerStorageClass(Ptr));
+    Register PtrCastedToMatchValReg =
+        MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
+    MRI->setRegClass(PtrCastedToMatchValReg, GR.getRegClass(PtrType));
+    GR.assignSPIRVTypeToVReg(PtrType, PtrCastedToMatchValReg,
+                             MIRBuilder.getMF());
+    MIRBuilder.buildInstr(SPIRV::OpBitcast)
+        .addDef(PtrCastedToMatchValReg)
+        .addUse(GR.getSPIRVTypeID(PtrType))
+        .addUse(Ptr)
+        .constrainAllUses(TII, TRI, RBI);
+
+    Register ExchangeResReg =
+        MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
+    MRI->setRegClass(ExchangeResReg, GR.getRegClass(PtrAsIntSpirvType));
+    GR.assignSPIRVTypeToVReg(PtrAsIntSpirvType, ExchangeResReg,
+                             MIRBuilder.getMF());
+    MIRBuilder.buildInstr(SPIRV::OpAtomicExchange)
+        .addDef(ExchangeResReg)
+        .addUse(GR.getSPIRVTypeID(PtrAsIntSpirvType))
+        .addUse(PtrCastedToMatchValReg)
+        .addUse(ScopeReg)
+        .addUse(MemSemReg)
+        .addUse(ValueAsIntReg)
+        .constrainAllUses(TII, TRI, RBI);
+    MIRBuilder.buildInstr(SPIRV::OpConvertUToPtr)
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(ExchangeResReg)
+        .constrainAllUses(TII, TRI, RBI);
+    return true;
   }
 
   BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(NewOpcode))

@@ -512,6 +512,13 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
                                       SPIRV::OpTypeBool))
           MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalNotEqual));
         break;
+      // multiplication of bool operands is equivalent to a logical AND
+      case SPIRV::OpIMulS:
+      case SPIRV::OpIMulV:
+        if (GR.isScalarOrVectorOfType(MI.getOperand(1).getReg(),
+                                      SPIRV::OpTypeBool))
+          MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalAnd));
+        break;
 
       // ensure that LLVM IR bitwise instructions result in logical SPIR-V
       // instructions when applied to bool type
