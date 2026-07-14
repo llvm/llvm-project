@@ -982,6 +982,14 @@ def _ssaf_compilation_unit_id :
     "produced SSAF TU summary. Required when '--ssaf-tu-summary-file=' is "
     "set.">,
   MarshallingInfoString<SSAFOpts<"CompilationUnitId">>;
+def _ssaf_include_local_entities :
+  Flag<["--"], "ssaf-include-local-entities">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Include block-scope (function-local) declarations in extracted SSAF "
+    "summaries. By default they are omitted.">,
+  MarshallingInfoFlag<SSAFOpts<"IncludeLocalEntities">>;
 def Xarch__
     : JoinedAndSeparate<["-"], "Xarch_">,
       Flags<[NoXarchOption]>,

@@ -25,6 +25,7 @@
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/Timer.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 using namespace llvm::object;
