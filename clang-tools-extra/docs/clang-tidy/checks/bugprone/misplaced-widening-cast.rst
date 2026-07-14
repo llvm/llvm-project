@@ -57,9 +57,51 @@ written for this code:
         return (double)(x * 10.0f);
     }
 
+Constexpr operands
+------------------
+
+If :option:`IgnoreConstexprOverflowProven` is set to `true` and the calculation
+operand is a ``constexpr`` variable, the check evaluates its compile-time value.
+If the value provably does not overflow the narrower type and is non-negative,
+no warning is issued, since the cast is then not actually masking any loss of
+precision:
+
+.. code-block:: c++
+
+    void bar(std::size_t);
+
+    void f() {
+        constexpr int x = 256;
+        bar(static_cast<std::size_t>(x * 2)); // No warning: x * 2 == 512,
+                                               // which safely fits in int.
+    }
+
+A plain ``const`` (not ``constexpr``) variable does not get this exception,
+since the check does not evaluate non-``constexpr`` values as compile-time
+constants.
+
+A ``constexpr`` value that results in a negative value or signed integer
+overflow will still be diagnosed:
+
+.. code-block:: c++
+
+    void bar(std::size_t);
+
+    void f() {
+        constexpr int x = 2147483647;         // INT_MAX
+        bar(static_cast<std::size_t>(x * 2)); // Still warns: calculation overflows int.
+    }
+
 Options
 -------
 
 .. option:: CheckImplicitCasts
 
    If `true`, enables detection of implicit casts. Default is `false`.
+
+.. option:: IgnoreConstexprOverflowProven
+
+   When set to `true`, the check evaluates the compile-time value of ``constexpr``
+   calculation operands. If the value provably does not overflow the narrower
+   type and is non-negative, the warning is suppressed because the widening cast
+   is not masking an unintended truncation. Default is `false`.

@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy %s bugprone-misplaced-widening-cast %t -- -config="{CheckOptions: {bugprone-misplaced-widening-cast.CheckImplicitCasts: false}}" --
+// RUN: %check_clang_tidy -check-suffix=DEFAULT %s bugprone-misplaced-widening-cast %t -- -config="{CheckOptions: {bugprone-misplaced-widening-cast.CheckImplicitCasts: false}}" --
+// RUN: %check_clang_tidy -check-suffix=APPROVED %s bugprone-misplaced-widening-cast %t -- -config="{CheckOptions: {bugprone-misplaced-widening-cast.CheckImplicitCasts: false, bugprone-misplaced-widening-cast.IgnoreConstexprOverflowProven: true}}" --
 
 void func(long arg) {}
 
@@ -79,4 +80,26 @@ void nextDay(DaysEnum day) {
     day = (DaysEnum)(day + 1);
   if (day < SUN)
     day = static_cast<DaysEnum>(day + 1);
+}
+
+// Constexpr values that are provably non-overflowing should not warn
+// when IgnoreConstexprOverflowProven is true.
+void constexprNoOverflow() {
+  constexpr int x = 256;
+  long l = static_cast<long>(x * 2);
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:12: warning: either cast from 'int' to 'long' is ineffective, or there is loss of precision before the conversion [bugprone-misplaced-widening-cast]
+}
+
+// A non-constexpr const does NOT get this exception.
+void constNotConstexprStillWarns() {
+  const int x = 256;
+  long l = static_cast<long>(x * 2);
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: either cast from 'int' to 'long'
+}
+
+// A constexpr value that DOES overflow the narrow type must still warn.
+void constexprOverflowStillWarns() {
+  constexpr int x = -1;
+  long l = static_cast<long>(x * 2);
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: either cast from 'int' to 'long'
 }

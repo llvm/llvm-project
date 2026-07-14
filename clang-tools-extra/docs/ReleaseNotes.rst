@@ -424,6 +424,14 @@ Changes in existing checks
   positive on bit field assignments when the `CheckImplicitCasts` option is
   enabled. The check now uses the actual bit field width instead of the
   declared type to determine if widening occurs.
+  
+- Improved :doc:`bugprone-misplaced-widening-cast
+  <clang-tidy/checks/bugprone/misplaced-widening-cast>` check by adding the
+  :option:`IgnoreConstexprOverflowProven` option to suppress false positives
+  when the calculation operand is a ``constexpr`` variable whose compile-time
+  value provably fits inside the narrower type without overflow. The check
+  still warns when the operand is a non-``constexpr`` ``const``, or when the
+  ``constexpr`` value is negative or overflows.
 
 - Improved :doc:`bugprone-move-forwarding-reference
   <clang-tidy/checks/bugprone/move-forwarding-reference>` check by fixing some
