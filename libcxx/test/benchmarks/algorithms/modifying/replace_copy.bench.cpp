@@ -24,15 +24,7 @@ int main(int argc, char** argv) {
     return std::replace_copy(first, last, out, old_value, new_value);
   };
   auto std_replace_copy_if = [](auto first, auto last, auto out, auto const& old_value, auto const& new_value) {
-    return std::replace_copy_if(
-        first,
-        last,
-        out,
-        [&](auto element) {
-          benchmark::DoNotOptimize(element);
-          return element == old_value;
-        },
-        new_value);
+    return std::replace_copy_if(first, last, out, [&](auto element) { return element == old_value; }, new_value);
   };
 
   // Benchmark {std,ranges}::{replace_copy,replace_copy_if} on a sequence of the form xxxxxxxxxxyyyyyyyyyy
@@ -53,7 +45,7 @@ int main(int argc, char** argv) {
 
             std::vector<ValueType> out(size);
 
-            for ([[maybe_unused]] auto _ : st) {
+            for (auto _ : st) {
               benchmark::DoNotOptimize(c);
               benchmark::DoNotOptimize(out);
               benchmark::DoNotOptimize(x);
@@ -97,7 +89,7 @@ int main(int argc, char** argv) {
 
             std::vector<ValueType> out(size);
 
-            for ([[maybe_unused]] auto _ : st) {
+            for (auto _ : st) {
               benchmark::DoNotOptimize(c);
               benchmark::DoNotOptimize(out);
               benchmark::DoNotOptimize(x);
