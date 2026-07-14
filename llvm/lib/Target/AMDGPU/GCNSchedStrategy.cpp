@@ -2472,11 +2472,9 @@ bool RewriteMFMAFormStage::hasSrc2BridgeConflict(
   if (NonMAIMIs.empty())
     return false; // All reaching defs are MAI; no bridge copies needed.
 
-  // Check 1: MAI def dominates non-MAI def (partial subreg overwrite).
-  // The MFMA first writes all lanes (AGPR), then a non-MAI instruction
-  // partially overwrites some lanes.  A bridge copy at the non-MAI def
-  // would read an already-AGPR register and must partially update it —
-  // a read-modify-write that the bridge-copy mechanism cannot implement.
+  // Check 1: MAI def dominates non-MAI def.  The MFMA writes all lanes (AGPR),
+  // then a non-MAI def partially overwrites some; a bridge copy there would be
+  // a read-modify-write on AGPR, which the bridge mechanism cannot implement.
   bool SkipCheck2 = false;
   if (!MAIMIs.empty()) {
     for (MachineInstr *M : MAIMIs)
@@ -2510,12 +2508,11 @@ bool RewriteMFMAFormStage::hasSrc2BridgeConflict(
   }
 
   // Check 2: every entry->use path of Src2Reg must hit a bridge block (a
-  // non-MAI def block where rewrite() inserts the bridge copy; the use block
-  // itself counts), else %MappedReg is undefined on the bypassing path.  Bridge
-  // blocks must *jointly* cover every path -- one may not dominate the use, so
-  // a dominance test is too strict; a backward walk stopping at bridge blocks
-  // that reaches entry means an uncovered path exists.  Every use counts (a
-  // plain COPY of Src2Reg also reads %MappedReg).  BridgeBlocks: see
+  // non-MAI def block where rewrite() inserts the bridge copy, or the use block
+  // itself), else %MappedReg is undefined on the bypassing path.  Bridge blocks
+  // must *jointly* cover every path (dominance is too strict), so a backward
+  // walk that reaches entry without crossing one proves an uncovered path.
+  // Every use counts, incl. a plain COPY.  BridgeBlocks: see
   // computeExclusionSet.
   auto CoveredByBridgeSet = [&](const MachineBasicBlock *UseBlock) {
     if (BridgeBlocks.contains(UseBlock))
@@ -2545,11 +2542,10 @@ bool RewriteMFMAFormStage::hasSrc2BridgeConflict(
   }
 
   // Check 3: original-register connectivity.  rewrite() redirects Src2Reg's
-  // uses to %MappedReg, so if non-AGPR-form partial subreg defs sit in >=2
-  // blocks with none dominating all uses, Src2Reg's live interval splits into
-  // disconnected fragments.  AGPR-form defs are excluded from
-  // RedefPartialBlocks (skipped by Case1), preserving the diamond
-  // joint-coverage case.
+  // uses to %MappedReg, so non-AGPR-form partial subreg defs in >=2 blocks with
+  // none dominating all uses split Src2Reg's live interval into disconnected
+  // fragments.  AGPR-form defs are absent from RedefPartialBlocks (skipped by
+  // Case1), preserving the diamond joint-coverage case.
   if (RedefPartialBlocks.size() >= 2) {
     bool SingleDominator = false;
     for (const MachineBasicBlock *B : RedefPartialBlocks) {
@@ -2599,12 +2595,9 @@ void RewriteMFMAFormStage::propagateExclusionForward(
   }
 }
 
-// rewrite()'s design principle: reclassify DstReg from VGPR to AGPR class so
-// that the MFMA emits its result directly into AGPR, eliminating the need for
-// a post-MFMA VGPR→AGPR copy.  For this reclassification to be legal, every
-// def and every use of DstReg throughout its live range must support
-// AGPR-class operands.  hasDstSubregConflict checks this before rewriting:
-//
+// rewrite() reclassifies DstReg to AGPR so the MFMA writes its result directly
+// into AGPR (no post-MFMA copy).  That is legal only if every def and use of
+// DstReg across its live range supports AGPR-class operands; check that here.
 bool RewriteMFMAFormStage::hasDstSubregConflict(Register DstReg,
                                                 MachineInstr *MFMA) {
   SmallVector<MachineOperand *, 8> DstReachingUses;
@@ -2653,16 +2646,10 @@ bool RewriteMFMAFormStage::hasDstSubregConflict(Register DstReg,
 
 SmallPtrSet<MachineInstr *, 16> RewriteMFMAFormStage::computeExclusionSet(
     const SmallSetVector<MachineInstr *, 16> &RewriteSet) {
-  // Per-MI checks run cheapest-first:
-  //   1. hasSrc2BridgeConflict: bridge COPY after non-MAI src2 def would be
-  //      a read-modify-write on AGPR (MAI def dominates non-MAI def), the
-  //      bridge value is absent on some CFG path to a src2 use, or the
-  //      redirected original register splits into disconnected fragments.
-  //   2. hasDstSubregConflict: DstReg has non-MAI subreg writers that cannot
-  //      be reclassified to AGPR.  Skipped when check 1 already forces
-  //      exclusion (!HasConflict &&).
-  // Exclusion propagates forward (dst→src2 chain via propagateExclusionForward)
-  // and backward (MAI reaching-defs of a conflicted src2).
+  // Per-MI checks, cheapest-first: (1) hasSrc2BridgeConflict, then
+  // (2) hasDstSubregConflict (skipped when 1 already excludes).  Exclusion
+  // propagates forward (dst->src2 via propagateExclusionForward) and backward
+  // (MAI reaching-defs of a conflicted src2).
   SmallPtrSet<MachineInstr *, 16> ExcludedMFMAs;
 
   // Per src2 register, union reaching-def blocks across all candidates (one
@@ -2673,75 +2660,107 @@ SmallPtrSet<MachineInstr *, 16> RewriteMFMAFormStage::computeExclusionSet(
       Src2BridgeBlocks;
   DenseMap<Register, SmallPtrSet<const MachineBasicBlock *, 8>>
       Src2RedefPartialBlocks;
-  DenseSet<Register> CandSrc2Regs;
-  for (MachineInstr *MI : RewriteSet) {
-    MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
-    if (Src2 && Src2->isReg())
-      CandSrc2Regs.insert(Src2->getReg());
-  }
-  for (MachineInstr *MI : RewriteSet) {
-    MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
-    if (!Src2 || !Src2->isReg())
-      continue;
-    Register Src2Reg = Src2->getReg();
-    auto &Blocks = Src2BridgeBlocks[Src2Reg];
-    auto &RedefBlocks = Src2RedefPartialBlocks[Src2Reg];
-    SmallVector<SlotIndex, 8> Src2Defs;
-    findReachingDefs(*Src2, DAG.LIS, Src2Defs);
-    for (SlotIndex SI : Src2Defs) {
-      MachineInstr *RD = DAG.LIS->getInstructionFromIndex(SI);
-      if (!RD || TII->isMFMA(*RD))
+
+  // Rebuild the block maps from the still-live candidates \p Active: excluding
+  // a candidate makes its src2/MAI def non-AGPR-form (isReachingDefAGPRForm
+  // reads Active), which can add new Check 3 redef sources -- so the full
+  // pre-exclusion set would miss them.
+  auto recomputeBlocks = [&](const SmallSetVector<MachineInstr *, 16> &Active) {
+    Src2BridgeBlocks.clear();
+    Src2RedefPartialBlocks.clear();
+    DenseSet<Register> CandSrc2Regs;
+    for (MachineInstr *MI : Active) {
+      MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
+      if (Src2 && Src2->isReg())
+        CandSrc2Regs.insert(Src2->getReg());
+    }
+    for (MachineInstr *MI : Active) {
+      MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
+      if (!Src2 || !Src2->isReg())
         continue;
-      Blocks.insert(RD->getParent());
-      // Check 3 fragmentation source: non-AGPR-form partial-subreg defs only
-      // (AGPR-form skipped by Case1; full-width defs stay connected).
-      if (!isReachingDefAGPRForm(RD, RewriteSet, CandSrc2Regs, *TII) &&
-          getDefSubReg(*RD, Src2Reg) != AMDGPU::NoSubRegister)
-        RedefBlocks.insert(RD->getParent());
-    }
-  }
-
-  for (MachineInstr *MI : RewriteSet) {
-    MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
-    Register DstReg = MI->getOperand(0).getReg();
-
-    bool HasConflict = false;
-    SmallVector<SlotIndex, 8> Src2Defs;
-    if (Src2->isReg()) {
+      Register Src2Reg = Src2->getReg();
+      auto &Blocks = Src2BridgeBlocks[Src2Reg];
+      auto &RedefBlocks = Src2RedefPartialBlocks[Src2Reg];
+      SmallVector<SlotIndex, 8> Src2Defs;
       findReachingDefs(*Src2, DAG.LIS, Src2Defs);
-      HasConflict = hasSrc2BridgeConflict(
-          Src2Defs, Src2->getReg(), Src2BridgeBlocks[Src2->getReg()],
-          Src2RedefPartialBlocks[Src2->getReg()]);
-    }
-    bool HasDstSubregDef = !HasConflict && hasDstSubregConflict(DstReg, MI);
-
-    if (!HasConflict && !HasDstSubregDef)
-      continue;
-
-    if (ExcludedMFMAs.insert(MI).second) {
-      LLVM_DEBUG(
-          dbgs() << "[computeExclusionSet] exclude MFMA ("
-                 << (HasConflict ? "src2 dominance conflict" : "")
-                 << (HasConflict && HasDstSubregDef ? " + " : "")
-                 << (HasDstSubregDef ? "dst non-MAI subreg overwrite" : "")
-                 << "): " << *MI);
-      propagateExclusionForward(MI, ExcludedMFMAs);
-    }
-
-    // Backward: exclude MAI reaching-defs that are themselves candidates.
-    if (HasConflict) {
       for (SlotIndex SI : Src2Defs) {
-        MachineInstr *DefMI = DAG.LIS->getInstructionFromIndex(SI);
-        if (TII->isMFMA(*DefMI) && isRewriteCandidate(DefMI) &&
-            ExcludedMFMAs.insert(DefMI).second) {
-          LLVM_DEBUG(dbgs() << "[computeExclusionSet] exclude MAI def "
-                               "(backward from src2 dominance conflict): "
-                            << *DefMI);
-          propagateExclusionForward(DefMI, ExcludedMFMAs);
-        }
+        MachineInstr *RD = DAG.LIS->getInstructionFromIndex(SI);
+        if (!RD || TII->isMFMA(*RD))
+          continue;
+        Blocks.insert(RD->getParent());
+        // Check 3 fragmentation source: non-AGPR-form partial-subreg defs only
+        // (AGPR-form skipped by Case1; full-width defs stay connected).
+        if (!isReachingDefAGPRForm(RD, Active, CandSrc2Regs, *TII) &&
+            getDefSubReg(*RD, Src2Reg) != AMDGPU::NoSubRegister)
+          RedefBlocks.insert(RD->getParent());
       }
     }
-  }
+  };
+
+  // Fixpoint: each exclusion can expose new conflicts in others (see
+  // recomputeBlocks).  Iterate to convergence; exclusions only grow over a
+  // finite candidate set, so this terminates.
+  bool Changed;
+  do {
+    Changed = false;
+
+    SmallSetVector<MachineInstr *, 16> Active;
+    for (MachineInstr *MI : RewriteSet)
+      if (!ExcludedMFMAs.count(MI))
+        Active.insert(MI);
+
+    recomputeBlocks(Active);
+
+    for (MachineInstr *MI : Active) {
+      // May have been excluded by forward/backward propagation earlier this
+      // round.
+      if (ExcludedMFMAs.count(MI))
+        continue;
+
+      MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
+      Register DstReg = MI->getOperand(0).getReg();
+
+      bool HasConflict = false;
+      SmallVector<SlotIndex, 8> Src2Defs;
+      if (Src2->isReg()) {
+        findReachingDefs(*Src2, DAG.LIS, Src2Defs);
+        HasConflict = hasSrc2BridgeConflict(
+            Src2Defs, Src2->getReg(), Src2BridgeBlocks[Src2->getReg()],
+            Src2RedefPartialBlocks[Src2->getReg()]);
+      }
+      bool HasDstSubregDef = !HasConflict && hasDstSubregConflict(DstReg, MI);
+
+      if (!HasConflict && !HasDstSubregDef)
+        continue;
+
+      if (ExcludedMFMAs.insert(MI).second) {
+        LLVM_DEBUG(
+            dbgs() << "[computeExclusionSet] exclude MFMA ("
+                   << (HasConflict ? "src2 dominance conflict" : "")
+                   << (HasConflict && HasDstSubregDef ? " + " : "")
+                   << (HasDstSubregDef ? "dst non-MAI subreg overwrite" : "")
+                   << "): " << *MI);
+        propagateExclusionForward(MI, ExcludedMFMAs);
+        Changed = true;
+      }
+
+      // Backward: exclude MAI reaching-defs that are themselves candidates.
+      if (!HasConflict)
+        continue;
+      for (SlotIndex SI : Src2Defs) {
+        MachineInstr *DefMI = DAG.LIS->getInstructionFromIndex(SI);
+        if (!TII->isMFMA(*DefMI) || !isRewriteCandidate(DefMI) ||
+            !ExcludedMFMAs.insert(DefMI).second)
+          continue;
+        LLVM_DEBUG(dbgs() << "[computeExclusionSet] exclude MAI def "
+                             "(backward from src2 dominance conflict): "
+                          << *DefMI);
+        propagateExclusionForward(DefMI, ExcludedMFMAs);
+        Changed = true;
+      }
+    }
+  } while (Changed);
+
   return ExcludedMFMAs;
 }
 
