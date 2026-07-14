@@ -26,6 +26,11 @@ TEST(LoggingTest, CompilesAtEveryLevel) {
   ORC_RT_LOG(Warning, General, "one arg: %d", 42);
   ORC_RT_LOG(Info, General, "two args: %s = %d", "answer", 42);
   ORC_RT_LOG(Debug, General, "wide arg: %llu", (unsigned long long)1 << 40);
+
+  // ORC_RT_LOG_PUB_S must concatenate into the literal format and type-check as
+  // a "%s" conversion against a runtime string on every backend.
+  const char *RuntimeStr = "runtime";
+  ORC_RT_LOG(Info, General, "public string: " ORC_RT_LOG_PUB_S, RuntimeStr);
   SUCCEED();
 }
 
