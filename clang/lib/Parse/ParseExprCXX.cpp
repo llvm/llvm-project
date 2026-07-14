@@ -1881,7 +1881,7 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
   }
 
   if (Tok.is(tok::kw___extension__)) {
-    // In C, the first clause of a condition may be a declaration used as an
+    // The first clause of a condition may be a declaration used as an
     // init-statement (C2y), and that declaration may be prefixed by one or more
     // __extension__ markers. Consume them up front -- mirroring block-statement
     // parsing -- so the disambiguation below sees the real start of the
