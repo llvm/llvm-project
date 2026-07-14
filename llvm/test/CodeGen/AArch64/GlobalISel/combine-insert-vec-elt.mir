@@ -313,16 +313,9 @@ body:             |
 ...
 ---
 name:            test_inlineasm_base
-alignment:       4
-legalized:       false
-regBankSelected: false
-selected:        false
 tracksRegLiveness: true
 body:             |
   bb.0:
-    ; Regression test for CombinerHelper::matchCombineInsertVecElts.
-    ; The base vector of G_INSERT_VECTOR_ELT is defined by INLINEASM. The combiner
-    ; must stop at INLINEASM and not assume that operand 0 is a register.
     ; CHECK-LABEL: name: test_inlineasm_base
     ; CHECK: %idx:_(s64) = G_CONSTANT i64 0
     ; CHECK-NEXT: %elt:_(s32) = G_CONSTANT i32 42
