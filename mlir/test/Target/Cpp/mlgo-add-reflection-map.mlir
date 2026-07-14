@@ -2,7 +2,7 @@
 
 /// Test that a reflection map and lookup function are generated in the class.
 
-emitc.class @actionClass {
+emitc.class @foo {
   emitc.field @fieldName0 : !emitc.array<1xf32>  {emitc.field_ref = ["another_feature"]}
   emitc.field @fieldName1 : !emitc.array<1xf32>  {emitc.field_ref = ["some_feature"]}
   emitc.func @"operator()"() {
@@ -13,7 +13,7 @@ emitc.class @actionClass {
 
 // CHECK:       #include <map>
 // CHECK-NEXT:  #include <string>
-// CHECK-NEXT:  class actionClass {
+// CHECK-NEXT:  class foo {
 // CHECK-NEXT:   public:
 // CHECK-NEXT:    float fieldName0[1];
 // CHECK-NEXT:    float fieldName1[1];
@@ -32,7 +32,7 @@ emitc.class @actionClass {
 
 /// Test that fields with excluded attributes are ignored.
 
-emitc.class @actionClassExcluded {
+emitc.class @fooExcluded {
   emitc.field @fieldName0 : !emitc.array<1xf32>  {emitc.field_ref = ["another_feature"]}
   emitc.field @fieldName1 : !emitc.array<1xf32>  {emitc.other_field = ["some_feature"]}
   emitc.func @"operator()"() {
@@ -43,7 +43,7 @@ emitc.class @actionClassExcluded {
 
 // CHECK:       #include <map>
 // CHECK-NEXT:  #include <string>
-// CHECK-NEXT:  class actionClassExcluded {
+// CHECK-NEXT:  class fooExcluded {
 // CHECK-NEXT:   public:
 // CHECK-NEXT:    float fieldName0[1];
 // CHECK-NEXT:    float fieldName1[1];
@@ -61,7 +61,7 @@ emitc.class @actionClassExcluded {
 
 /// Test that translation doesn't add headers if the class does not match the pass.
 
-emitc.class @actionClassNoAttrs {
+emitc.class @fooNoAttrs {
   emitc.field @fieldName0 : !emitc.array<1xf32>
   emitc.func @"operator()"() {
     return
@@ -70,7 +70,7 @@ emitc.class @actionClassNoAttrs {
 
 // CHECK-NOT:   #include <map>
 // CHECK-NOT:   #include <string>
-// CHECK:       class actionClassNoAttrs {
+// CHECK:       class fooNoAttrs {
 // CHECK-NEXT:   public:
 // CHECK-NEXT:    float fieldName0[1];
 // CHECK-NEXT:    void operator()() {
