@@ -5692,6 +5692,8 @@ bool Parser::isTypeSpecifierQualifier(const Token &Tok) {
 
     if (TryAnnotateTypeOrScopeToken())
       return true;
+    if (getCurToken().is(tok::coloncolon))
+      return false;
     return isTypeSpecifierQualifier(getCurToken());
 
     // GNU attributes support.
