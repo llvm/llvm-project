@@ -1017,16 +1017,19 @@ void ARMAsmPrinter::emitMachineConstantPoolValue(
         TM.getTargetTriple().isOSBinFormatMachO() ? ARMII::MO_NONLAZY : 0;
     MCSym = GetARMGVSymbol(GV, TF);
 
-    // For dso_local weak symbols in ELF PIC mode, the assembler would eagerly
-    // resolve a PC-relative expression like sym-(LPC+8) when the symbol and
-    // reference are in the same section, preventing the linker from overriding
-    // a weak definition with a non-weak definition from another section. Use a
-    // .reloc directive rather than a fixup to force the generation of a
-    // relocation (R_ARM_REL32) so the linker can perform the override. This is
-    // restricted to dso_local symbols: a preemptible/external weak symbol
-    // (e.g. an extern_weak reference) must use the GOT, as R_ARM_REL32 against
-    // an external symbol cannot be used when making a shared object.
-    if (GV->isWeakForLinker() && GV->isDSOLocal() &&
+    // For weak symbols referenced directly (not via the GOT) in ELF PIC mode,
+    // the assembler would eagerly resolve a PC-relative expression like
+    // sym-(LPC+8) when the symbol and reference are in the same section,
+    // preventing the linker from overriding a weak definition with a non-weak
+    // definition from another section. Use a .reloc directive rather than a
+    // fixup to force the generation of a relocation (R_ARM_REL32) so the
+    // linker can perform the override. This only applies to non-GOT entries:
+    // a weak symbol that goes through the GOT (preemptible/external, including
+    // default-visibility weak symbols even when dso_local) must keep its
+    // R_ARM_GOT_PREL, as R_ARM_REL32 against an external symbol cannot be used
+    // when making a shared object.
+    if (GV->isWeakForLinker() &&
+        !MF->getSubtarget<ARMSubtarget>().isGVInGOT(GV) &&
         TM.getTargetTriple().isOSBinFormatELF() && TM.isPositionIndependent() &&
         ACPV->getPCAdjustment() != 0) {
       MCSymbol *CPILabel = OutContext.createTempSymbol();

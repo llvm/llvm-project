@@ -397,7 +397,15 @@ bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
 }
 
 bool ARMSubtarget::isGVInGOT(const GlobalValue *GV) const {
-  return isTargetELF() && TM.isPositionIndependent() && !GV->isDSOLocal();
+  // Default-visibility weak symbols stay exported and preemptible in a shared
+  // object even when LLVM treats them as dso_local (e.g. compiled with
+  // -fno-semantic-interposition), so they must go through the GOT: a static
+  // PC-relative R_ARM_REL32 against an external symbol cannot be used when
+  // making a shared object. Hidden/protected weak symbols are non-preemptible
+  // and may be referenced directly.
+  return isTargetELF() && TM.isPositionIndependent() &&
+         (!GV->isDSOLocal() ||
+          (GV->isWeakForLinker() && GV->hasDefaultVisibility()));
 }
 
 unsigned ARMSubtarget::getMispredictionPenalty() const {

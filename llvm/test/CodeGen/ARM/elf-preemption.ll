@@ -47,6 +47,9 @@ define ptr @get_dsolocal_var() nounwind {
   ret ptr @dsolocal_var
 }
 
+;; A default-visibility dso_local weak symbol is still exported and preemptible,
+;; so in PIC mode it must go through the GOT: R_ARM_REL32 against an external
+;; symbol cannot be used when making a shared object.
 @weak_dsolocal_var = weak dso_local global i32 42
 define ptr @get_weak_dsolocal_var() nounwind {
 ; STATIC-LABEL: get_weak_dsolocal_var:
@@ -59,14 +62,13 @@ define ptr @get_weak_dsolocal_var() nounwind {
 ; PIC:       @ %bb.0:
 ; PIC-NEXT:    ldr r0, .LCPI2_0
 ; PIC-NEXT:  .LPC2_0:
-; PIC-NEXT:    add r0, pc, r0
+; PIC-NEXT:    ldr r0, [pc, r0]
 ; PIC-NEXT:    bx lr
 ; PIC-NEXT:    .p2align 2
 ; PIC-NEXT:  @ %bb.1:
 ; PIC-NEXT:  .LCPI2_0:
 ; PIC-NEXT:  .Ltmp1:
-; PIC-NEXT:    .long .Ltmp1-(.LPC2_0+8)
-; PIC-NEXT:    .reloc .Ltmp1, R_ARM_REL32, weak_dsolocal_var
+; PIC-NEXT:    .long weak_dsolocal_var(GOT_PREL)-(.LPC2_0+8-.Ltmp1)
   ret ptr @weak_dsolocal_var
 }
 
@@ -164,14 +166,13 @@ define weak dso_local ptr @weak_dsolocal_func() nounwind {
 ; PIC:       @ %bb.0:
 ; PIC-NEXT:    ldr r0, .LCPI7_0
 ; PIC-NEXT:  .LPC7_0:
-; PIC-NEXT:    add r0, pc, r0
+; PIC-NEXT:    ldr r0, [pc, r0]
 ; PIC-NEXT:    bx lr
 ; PIC-NEXT:    .p2align 2
 ; PIC-NEXT:  @ %bb.1:
 ; PIC-NEXT:  .LCPI7_0:
 ; PIC-NEXT:  .Ltmp3:
-; PIC-NEXT:    .long .Ltmp3-(.LPC7_0+8)
-; PIC-NEXT:    .reloc .Ltmp3, R_ARM_REL32, weak_dsolocal_func
+; PIC-NEXT:    .long weak_dsolocal_func(GOT_PREL)-(.LPC7_0+8-.Ltmp3)
   ret ptr @weak_dsolocal_func
 }
 
@@ -241,4 +242,54 @@ define ptr @get_extern_weak_func() nounwind {
 ; PIC-NEXT:  .Ltmp5:
 ; PIC-NEXT:    .long extern_weak_func(GOT_PREL)-(.LPC10_0+8-.Ltmp5)
   ret ptr @extern_weak_func
+}
+
+;; A default-visibility dso_local weak symbol is still exported and preemptible,
+;; so in PIC mode it must go through the GOT (see get_weak_dsolocal_var above).
+;; A hidden (or protected) dso_local weak symbol is non-preemptible and may be
+;; referenced directly: a .reloc/R_ARM_REL32 lets the linker override the weak
+;; definition with a non-weak one, and is valid in a shared object.
+@weak_dsolocal_hidden_var = weak dso_local hidden global i32 42
+define ptr @get_weak_dsolocal_hidden_var() nounwind {
+; STATIC-LABEL: get_weak_dsolocal_hidden_var:
+; STATIC:       @ %bb.0:
+; STATIC-NEXT:    movw r0, :lower16:weak_dsolocal_hidden_var
+; STATIC-NEXT:    movt r0, :upper16:weak_dsolocal_hidden_var
+; STATIC-NEXT:    bx lr
+;
+; PIC-LABEL: get_weak_dsolocal_hidden_var:
+; PIC:       @ %bb.0:
+; PIC-NEXT:    ldr r0, .LCPI11_0
+; PIC-NEXT:  .LPC11_0:
+; PIC-NEXT:    add r0, pc, r0
+; PIC-NEXT:    bx lr
+; PIC-NEXT:    .p2align 2
+; PIC-NEXT:  @ %bb.1:
+; PIC-NEXT:  .LCPI11_0:
+; PIC-NEXT:  .Ltmp6:
+; PIC-NEXT:    .long .Ltmp6-(.LPC11_0+8)
+; PIC-NEXT:    .reloc .Ltmp6, R_ARM_REL32, weak_dsolocal_hidden_var
+  ret ptr @weak_dsolocal_hidden_var
+}
+
+define weak dso_local hidden ptr @weak_dsolocal_hidden_func() nounwind {
+; STATIC-LABEL: weak_dsolocal_hidden_func:
+; STATIC:       @ %bb.0:
+; STATIC-NEXT:    movw r0, :lower16:weak_dsolocal_hidden_func
+; STATIC-NEXT:    movt r0, :upper16:weak_dsolocal_hidden_func
+; STATIC-NEXT:    bx lr
+;
+; PIC-LABEL: weak_dsolocal_hidden_func:
+; PIC:       @ %bb.0:
+; PIC-NEXT:    ldr r0, .LCPI12_0
+; PIC-NEXT:  .LPC12_0:
+; PIC-NEXT:    add r0, pc, r0
+; PIC-NEXT:    bx lr
+; PIC-NEXT:    .p2align 2
+; PIC-NEXT:  @ %bb.1:
+; PIC-NEXT:  .LCPI12_0:
+; PIC-NEXT:  .Ltmp7:
+; PIC-NEXT:    .long .Ltmp7-(.LPC12_0+8)
+; PIC-NEXT:    .reloc .Ltmp7, R_ARM_REL32, weak_dsolocal_hidden_func
+  ret ptr @weak_dsolocal_hidden_func
 }
