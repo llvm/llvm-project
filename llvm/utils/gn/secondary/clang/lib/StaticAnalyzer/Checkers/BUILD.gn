@@ -64,6 +64,7 @@ static_library("Checkers") {
     "IteratorRangeChecker.cpp",
     "IvarInvalidationChecker.cpp",
     "LLVMConventionsChecker.cpp",
+    "LifetimeModeling.cpp",
     "LocalizationChecker.cpp",
     "MIGChecker.cpp",
     "MPI-Checker/MPIBugReporter.cpp",

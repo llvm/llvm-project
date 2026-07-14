@@ -252,7 +252,5 @@ void Generator::addInfoToIndex(Index &Idx, const doc::Info *Info) {
 [[maybe_unused]] static int MDGeneratorAnchorDest = MDGeneratorAnchorSource;
 [[maybe_unused]] static int HTMLGeneratorAnchorDest = HTMLGeneratorAnchorSource;
 [[maybe_unused]] static int JSONGeneratorAnchorDest = JSONGeneratorAnchorSource;
-[[maybe_unused]] static int MDMustacheGeneratorAnchorDest =
-    MDMustacheGeneratorAnchorSource;
 } // namespace doc
 } // namespace clang

@@ -96,14 +96,45 @@ end subroutine
 
 ! When the base name is omitted, the enclosing procedure is the base
 
-subroutine incompatible_omitted_base(x)
-  integer :: x
-!ERROR: The variant procedure 'vsub' is not compatible with the base procedure 'incompatible_omitted_base': distinct numbers of dummy arguments
-  !$omp declare variant (vsub) match (construct={parallel})
+module omitted_base
 contains
+  subroutine incompatible_omitted_base(x)
+    integer :: x
+!ERROR: The variant procedure 'vsub' is not compatible with the base procedure 'incompatible_omitted_base': distinct numbers of dummy arguments
+    !$omp declare variant (vsub) match (construct={parallel})
+  end subroutine
   subroutine vsub(x, y)
     integer :: x, y
   end subroutine
+end module
+
+! A variant is substituted at every reference to the base, so it must be
+! accessible there. An internal procedure is only accessible within its host, so
+! it cannot be a variant of a base that is visible more widely. Here the base is
+! an external procedure but the variant is internal to it.
+
+subroutine external_base_internal_variant
+!ERROR: The variant procedure 'vsub' is an internal procedure and is not accessible at every reference to the base procedure 'external_base_internal_variant'
+  !$omp declare variant (vsub) match (construct={parallel})
+contains
+  subroutine vsub
+  end subroutine
+end subroutine
+
+! A module procedure may be the variant of an external base: it is accessible
+! anywhere the module is used.
+
+module module_variant_of_external
+contains
+  subroutine mvar(x)
+    integer :: x
+  end subroutine
+end module
+
+subroutine external_base_module_variant(x)
+  use module_variant_of_external
+  integer :: x
+  !$omp declare variant (external_base_module_variant:mvar) match (construct={parallel})
 end subroutine
 
 ! Differing dummy argument names are fine; only characteristics matter.

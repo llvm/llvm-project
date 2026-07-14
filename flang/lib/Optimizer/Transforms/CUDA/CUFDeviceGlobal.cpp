@@ -8,14 +8,9 @@
 
 #include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "flang/Runtime/CUDA/common.h"
-#include "flang/Runtime/allocatable.h"
-#include "flang/Support/Fortran.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
@@ -183,10 +178,12 @@ public:
         clonedGlobal.removeInitValAttr();
         clonedGlobal.removeLinkNameAttr();
       }
-      // Registered CUDA globals must have a visible device symbol so runtime
-      // lookups (cudaGetSymbolAddress) can resolve them. Drop explicit linkage
-      // from the GPU clone so it uses default external linkage.
-      if (cuf::isRegisteredDeviceGlobal(globalOp))
+      // Registered CUDA globals with internal linkage must have a visible
+      // device symbol so runtime lookups (cudaGetSymbolAddress) can resolve
+      // them. Drop internal linkage from the GPU clone so it uses default
+      // external linkage.
+      if (cuf::isRegisteredDeviceGlobal(globalOp) &&
+          globalOp.getLinkName() == "internal")
         clonedGlobal.removeLinkNameAttr();
       gpuSymTable.insert(cloned);
     }
