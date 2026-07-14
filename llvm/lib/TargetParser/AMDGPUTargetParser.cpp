@@ -1000,25 +1000,37 @@ bool TargetID::operator==(const TargetID &Other) const {
          TargetTripleString == Other.TargetTripleString;
 }
 
-static bool areFeatureSettingsCompatible(TargetIDSetting A, TargetIDSetting B) {
-  return A == TargetIDSetting::Any || B == TargetIDSetting::Any || A == B;
+static bool featureProvidesFor(TargetIDSetting Provided,
+                               TargetIDSetting Requested) {
+  return Provided == TargetIDSetting::Any ||
+         Provided == TargetIDSetting::Unsupported || Provided == Requested;
 }
 
-bool TargetID::isCompatibleWith(const TargetID &Other) const {
-  // The triples must be compatible.
-  if (!Triple(getTargetTripleString())
-           .isCompatibleWith(Triple(Other.getTargetTripleString())))
+bool TargetID::isEquivalent(const TargetID &Other) const {
+  // The processor and feature settings must match exactly
+  if (Arch != Other.Arch || XnackSetting != Other.XnackSetting ||
+      SramEccSetting != Other.SramEccSetting)
     return false;
 
-  // The processors must be compatible. A generic/major-family image (its
-  // subarch is the major-family subarch, or the GPU is unknown) acts as a
-  // wildcard that merges into a specific image group.
-  Triple::SubArchType SubA = getSubArch(Arch);
-  Triple::SubArchType SubB = getSubArch(Other.Arch);
-  if (!isSubArchCompatible(SubA, SubB))
+  return Triple(getTargetTripleString())
+      .isCompatibleWith(Triple(Other.getTargetTripleString()));
+}
+
+bool TargetID::providesFor(const TargetID &Other) const {
+  // A major-family/generic processor (e.g. amdgpu9) provides for a specific
+  // member of its family (e.g. gfx900), but not the reverse. Otherwise the
+  // processors must match.
+  if (Arch != Other.Arch && Arch != GK_NONE && Other.Arch != GK_NONE) {
+    Triple::SubArchType ThisSubArch = getSubArch(Arch);
+    if (ThisSubArch != getMajorSubArch(ThisSubArch) ||
+        ThisSubArch != getMajorSubArch(getSubArch(Other.Arch)))
+      return false;
+  }
+
+  if (!featureProvidesFor(XnackSetting, Other.XnackSetting) ||
+      !featureProvidesFor(SramEccSetting, Other.SramEccSetting))
     return false;
 
-  // The xnack/sramecc settings must not conflict.
-  return areFeatureSettingsCompatible(XnackSetting, Other.XnackSetting) &&
-         areFeatureSettingsCompatible(SramEccSetting, Other.SramEccSetting);
+  return Triple(getTargetTripleString())
+      .isCompatibleWith(Triple(Other.getTargetTripleString()));
 }
