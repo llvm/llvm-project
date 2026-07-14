@@ -71,22 +71,22 @@ void runway_sample(size_t size, Callable callable) {
 
 struct X {
   X() = delete;
-  X(int i) : i(i) {}
+  X(int i) : i_(i) {}
   X(const X&) = delete;
-  int value() const { return i; }
+  int value() const { return i_; }
 
 private:
-  int i;
+  int i_;
 };
 
 struct Y {
   Y() = delete;
-  Y(int i) : i(i) {}
+  Y(int i) : i_(i) {}
   Y(const Y&) = delete;
-  int value() const { return i; }
+  int value() const { return i_; }
 
 private:
-  int i;
+  int i_;
 };
 
 struct Pred {
