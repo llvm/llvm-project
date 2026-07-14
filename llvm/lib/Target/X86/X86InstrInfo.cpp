@@ -4993,6 +4993,18 @@ bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
     }
     return FlagI.isIdenticalTo(OI);
   }
+  case X86::LZCNT16rr:
+  case X86::LZCNT32rr:
+  case X86::LZCNT64rr:
+  case X86::TZCNT16rr:
+  case X86::TZCNT32rr:
+  case X86::TZCNT64rr: {
+    if (ImmMask != 0 && !SrcReg2.isValid() && ImmValue == 1 &&
+        OI.getOperand(1).isReg() && SrcReg == OI.getOperand(1).getReg()) {
+      return true;
+    }
+    return false;
+  }
   default:
     return false;
   }
@@ -6755,6 +6767,62 @@ static bool hasPartialRegUpdate(unsigned Opcode, const X86Subtarget &Subtarget,
   case X86::VPMULLQZrr:
   case X86::VPMULLQZrrkz:
     return Subtarget.hasMULLQFalseDeps();
+  case X86::VPCOMPRESSBZ128rrkz:
+  case X86::VPCOMPRESSBZ256rrkz:
+  case X86::VPCOMPRESSBZrrkz:
+  case X86::VPCOMPRESSWZ128rrkz:
+  case X86::VPCOMPRESSWZ256rrkz:
+  case X86::VPCOMPRESSWZrrkz:
+  case X86::VPCOMPRESSDZ128rrkz:
+  case X86::VPCOMPRESSDZ256rrkz:
+  case X86::VPCOMPRESSDZrrkz:
+  case X86::VPCOMPRESSQZ128rrkz:
+  case X86::VPCOMPRESSQZ256rrkz:
+  case X86::VPCOMPRESSQZrrkz:
+  case X86::VCOMPRESSPSZ128rrkz:
+  case X86::VCOMPRESSPSZ256rrkz:
+  case X86::VCOMPRESSPSZrrkz:
+  case X86::VCOMPRESSPDZ128rrkz:
+  case X86::VCOMPRESSPDZ256rrkz:
+  case X86::VCOMPRESSPDZrrkz:
+    return Subtarget.hasCOMPRESSFalseDeps();
+  case X86::VPEXPANDBZ128rmkz:
+  case X86::VPEXPANDBZ128rrkz:
+  case X86::VPEXPANDBZ256rmkz:
+  case X86::VPEXPANDBZ256rrkz:
+  case X86::VPEXPANDBZrmkz:
+  case X86::VPEXPANDBZrrkz:
+  case X86::VPEXPANDWZ128rmkz:
+  case X86::VPEXPANDWZ128rrkz:
+  case X86::VPEXPANDWZ256rmkz:
+  case X86::VPEXPANDWZ256rrkz:
+  case X86::VPEXPANDWZrmkz:
+  case X86::VPEXPANDWZrrkz:
+  case X86::VPEXPANDDZ128rmkz:
+  case X86::VPEXPANDDZ128rrkz:
+  case X86::VPEXPANDDZ256rmkz:
+  case X86::VPEXPANDDZ256rrkz:
+  case X86::VPEXPANDDZrmkz:
+  case X86::VPEXPANDDZrrkz:
+  case X86::VPEXPANDQZ128rmkz:
+  case X86::VPEXPANDQZ128rrkz:
+  case X86::VPEXPANDQZ256rmkz:
+  case X86::VPEXPANDQZ256rrkz:
+  case X86::VPEXPANDQZrmkz:
+  case X86::VPEXPANDQZrrkz:
+  case X86::VEXPANDPSZ128rmkz:
+  case X86::VEXPANDPSZ128rrkz:
+  case X86::VEXPANDPSZ256rmkz:
+  case X86::VEXPANDPSZ256rrkz:
+  case X86::VEXPANDPSZrmkz:
+  case X86::VEXPANDPSZrrkz:
+  case X86::VEXPANDPDZ128rmkz:
+  case X86::VEXPANDPDZ128rrkz:
+  case X86::VEXPANDPDZ256rmkz:
+  case X86::VEXPANDPDZ256rrkz:
+  case X86::VEXPANDPDZrmkz:
+  case X86::VEXPANDPDZrrkz:
+    return Subtarget.hasEXPANDFalseDeps();
   // GPR
   case X86::POPCNT32rm:
   case X86::POPCNT32rr:
@@ -6765,11 +6833,25 @@ static bool hasPartialRegUpdate(unsigned Opcode, const X86Subtarget &Subtarget,
   case X86::LZCNT32rr:
   case X86::LZCNT64rm:
   case X86::LZCNT64rr:
+    return Subtarget.hasLZCNTFalseDeps();
   case X86::TZCNT32rm:
   case X86::TZCNT32rr:
   case X86::TZCNT64rm:
   case X86::TZCNT64rr:
-    return Subtarget.hasLZCNTFalseDeps();
+    return Subtarget.hasTZCNTFalseDeps();
+  case X86::BLSR32rr:
+  case X86::BLSR32rm:
+  case X86::BLSR64rr:
+  case X86::BLSR64rm:
+  case X86::BLSI32rr:
+  case X86::BLSI32rm:
+  case X86::BLSI64rr:
+  case X86::BLSI64rm:
+  case X86::BLSMSK32rr:
+  case X86::BLSMSK32rm:
+  case X86::BLSMSK64rr:
+  case X86::BLSMSK64rm:
+    return Subtarget.hasBLSFalseDeps() && !ForLoadFold; // Preserve load folding
   }
 
   return false;
@@ -7640,10 +7722,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
         return NewMI;
 
       Register NewSrc = MI.getOperand(0).getReg();
-      if (MRI.isSSA()) {
-        const TargetRegisterClass &RC = *MF.getRegInfo().getRegClass(SrcReg);
-        NewSrc = MRI.createVirtualRegister(&RC);
-      }
+      if (MRI.isSSA())
+        NewSrc = MRI.createVirtualRegister(getRegClass(NewMI->getDesc(), 1));
 
       CopyMI = BuildMI(*NewMI->getParent(), *NewMI, MI.getDebugLoc(),
                        get(TargetOpcode::COPY))

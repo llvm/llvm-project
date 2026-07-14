@@ -80,9 +80,9 @@ define amdgpu_kernel void @s_sext_i1_to_i64(ptr addrspace(1) %out, i32 %a, i32 %
 ; SI-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; SI-NEXT:    s_cmp_eq_u32 s4, s5
 ; SI-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    v_mov_b32_e32 v1, s5
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -94,9 +94,9 @@ define amdgpu_kernel void @s_sext_i1_to_i64(ptr addrspace(1) %out, i32 %a, i32 %
 ; VI-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; VI-NEXT:    s_cmp_eq_u32 s4, s5
 ; VI-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm

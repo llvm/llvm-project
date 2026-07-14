@@ -539,6 +539,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_ifreq
+  HDRS
+    struct_ifreq.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_ifreq
+    libc.include.net_if
+)
+
+add_proxy_header_library(
   struct_sockaddr
   HDRS
     struct_sockaddr.h
@@ -592,6 +601,14 @@ add_proxy_header_library(
     libc.include.netinet_udp
 )
 
+add_proxy_header_library(
+  sa_family_t
+  HDRS
+    sa_family_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.sa_family_t
+    libc.include.sys_socket
+)
 
 add_proxy_header_library(
   socklen_t

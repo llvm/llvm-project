@@ -825,12 +825,17 @@ public:
   Symbol &AddGenericUse(GenericDetails &, const SourceName &, const Symbol &);
   void AddAndCheckModuleUse(SourceName, bool isIntrinsic);
   void CollectUseRenames(const parser::UseStmt &);
+  void AddImplicitUseModules();
   void ClearUseRenames() { useRenames_.clear(); }
   void ClearUseOnly() { useOnly_.clear(); }
   void ClearModuleUses() {
     intrinsicUses_.clear();
     nonIntrinsicUses_.clear();
   }
+
+protected:
+  std::optional<std::string> implicitUseModuleBeingResolved_;
+  std::set<std::string> implicitUseModulesInCurrentProgram_;
 
 private:
   // The location of the last AccessStmt without access-ids, if any.
@@ -855,6 +860,8 @@ private:
   // Record a use from useModuleScope_ of use Name/Symbol as local Name/Symbol
   SymbolRename AddUse(const SourceName &localName, const SourceName &useName);
   SymbolRename AddUse(const SourceName &, const SourceName &, Symbol *);
+  void AddUseForPublicSymbols(SourceName, const std::set<SourceName> &);
+  void AddUseForCommonBlocks();
   void DoAddUse(
       SourceName, SourceName, Symbol &localSymbol, const Symbol &useSymbol);
   void AddUse(const GenericSpecInfo &);
@@ -1117,6 +1124,7 @@ public:
 protected:
   bool BeginDecl();
   void EndDecl();
+  void SetImplicitCUDADataAttr(Symbol &);
   Symbol &DeclareObjectEntity(const parser::Name &, Attrs = Attrs{});
   // Make sure that there's an entity in an enclosing scope called Name
   Symbol &FindOrDeclareEnclosingEntity(const parser::Name &);
@@ -3862,30 +3870,40 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
                     },
           rename.u);
     }
-    for (const auto &[name, symbol] : *useModuleScope_) {
-      // Default USE imports public names, excluding intrinsic-only and most
-      // miscellaneous details. Allow OpenMP mapper identifiers represented
-      // as MapperDetails, and also legacy MiscDetails::ConstructName.
-      bool isMapper{symbol->has<MapperDetails>()};
-      if (!isMapper) {
-        if (const auto *misc{symbol->detailsIf<MiscDetails>()}) {
-          isMapper = misc->kind() == MiscDetails::Kind::ConstructName;
-        }
+    AddUseForPublicSymbols(x.moduleName.source, useNames);
+  }
+  AddUseForCommonBlocks();
+
+  useModuleScope_ = nullptr;
+}
+
+void ModuleVisitor::AddUseForPublicSymbols(
+    SourceName location, const std::set<SourceName> &useNames) {
+  for (const auto &[name, symbol] : *useModuleScope_) {
+    // Default USE imports public names, excluding intrinsic-only and most
+    // miscellaneous details. Allow OpenMP mapper identifiers represented
+    // as MapperDetails, and also legacy MiscDetails::ConstructName.
+    bool isMapper{symbol->has<MapperDetails>()};
+    if (!isMapper) {
+      if (const auto *misc{symbol->detailsIf<MiscDetails>()}) {
+        isMapper = misc->kind() == MiscDetails::Kind::ConstructName;
       }
-      if (symbol->attrs().test(Attr::PUBLIC) && !IsUseRenamed(symbol->name()) &&
-          (!symbol->implicitAttrs().test(Attr::INTRINSIC) ||
-              symbol->has<UseDetails>()) &&
-          (!symbol->has<MiscDetails>() || isMapper) &&
-          useNames.count(name) == 0) {
-        SourceName location{x.moduleName.source};
-        if (auto *localSymbol{FindInScope(name)}) {
-          DoAddUse(location, localSymbol->name(), *localSymbol, *symbol);
-        } else {
-          DoAddUse(location, location, CopySymbol(name, *symbol), *symbol);
-        }
+    }
+    if (symbol->attrs().test(Attr::PUBLIC) && !IsUseRenamed(symbol->name()) &&
+        (!symbol->implicitAttrs().test(Attr::INTRINSIC) ||
+            symbol->has<UseDetails>()) &&
+        (!symbol->has<MiscDetails>() || isMapper) &&
+        useNames.count(name) == 0) {
+      if (auto *localSymbol{FindInScope(name)}) {
+        DoAddUse(location, localSymbol->name(), *localSymbol, *symbol);
+      } else {
+        DoAddUse(location, location, CopySymbol(name, *symbol), *symbol);
       }
     }
   }
+}
+
+void ModuleVisitor::AddUseForCommonBlocks() {
   // Go through the list of COMMON block symbols in the module scope and add
   // their USE association to the current scope's USE-associated COMMON blocks.
   for (const auto &[name, symbol] : useModuleScope_->commonBlocks()) {
@@ -3900,8 +3918,76 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
   for (const auto &[name, symbol] : useModuleScope_->commonBlockUses()) {
     currScope().AddCommonBlockUse(name, symbol->attrs(), symbol->GetUltimate());
   }
+}
 
-  useModuleScope_ = nullptr;
+void ModuleVisitor::AddImplicitUseModules() {
+  if (InModuleFile() || currScope().kind() != Scope::Kind::Subprogram) {
+    return;
+  }
+  if (const Symbol *symbol{currScope().symbol()}) {
+    if (const auto *details{symbol->detailsIf<SubprogramDetails>()}) {
+      if (auto attrs{details->cudaSubprogramAttrs()}) {
+        if (*attrs == common::CUDASubprogramAttrs::Device ||
+            *attrs == common::CUDASubprogramAttrs::Global ||
+            *attrs == common::CUDASubprogramAttrs::Grid_Global) {
+          return;
+        }
+      }
+    }
+  }
+  for (const std::string &module : context().implicitUseModules()) {
+    if (module.empty()) {
+      continue;
+    }
+    SourceName moduleName{module};
+    if (implicitUseModulesInCurrentProgram_.count(module) != 0) {
+      continue;
+    }
+    if (implicitUseModuleBeingResolved_ &&
+        *implicitUseModuleBeingResolved_ == module) {
+      continue;
+    }
+    bool isContainedInImplicitModule{false};
+    for (const Scope *scope{&currScope()}; !scope->IsTopLevel();
+        scope = &scope->parent()) {
+      if (scope->kind() == Scope::Kind::Module) {
+        if (std::optional<SourceName> scopeName{scope->GetName()};
+            scopeName && scopeName->ToString() == module) {
+          // Do not implicitly USE a module while resolving anything contained
+          // in that module; doing so would be a self USE.
+          isContainedInImplicitModule = true;
+          break;
+        }
+      }
+    }
+    if (isContainedInImplicitModule) {
+      continue;
+    }
+    if (auto it{context().globalScope().find(moduleName)};
+        it != context().globalScope().end()) {
+      if (Scope *scope{it->second->scope()};
+          scope && DoesScopeContain(scope, currScope())) {
+        continue;
+      }
+    }
+    parser::Name name{moduleName};
+    std::optional<bool> isIntrinsic;
+    if (currScope().IsModule() && currScope().symbol() &&
+        currScope().symbol()->attrs().test(Attr::INTRINSIC)) {
+      // Intrinsic modules USE only other intrinsic modules.
+      isIntrinsic = true;
+    }
+    useModuleScope_ = FindModule(name, isIntrinsic);
+    if (!useModuleScope_) {
+      continue;
+    }
+    AddAndCheckModuleUse(moduleName,
+        useModuleScope_->parent().kind() == Scope::Kind::IntrinsicModules);
+    useModuleScope_->symbol()->ReplaceName(moduleName);
+    AddUseForPublicSymbols(moduleName, {});
+    AddUseForCommonBlocks();
+    useModuleScope_ = nullptr;
+  }
 }
 
 ModuleVisitor::SymbolRename ModuleVisitor::AddUse(
@@ -7040,6 +7126,11 @@ bool DeclarationVisitor::Pre(const parser::DerivedTypeDef &x) {
   const auto &componentDefs{
       std::get<std::list<parser::Statement<parser::ComponentDefStmt>>>(x.t)};
   Walk(componentDefs);
+  // Components live in the derived type's own scope, which is not visited when
+  // the enclosing specification part is finished, so attribute them here.
+  for (auto &pair : scope) {
+    SetImplicitCUDADataAttr(*pair.second);
+  }
   if (derivedTypeInfo_.sequence) {
     details.set_sequence(true);
     if (componentDefs.empty()) {
@@ -10297,6 +10388,7 @@ bool ResolveNamesVisitor::Pre(const parser::SpecificationPart &x) {
     CollectUseRenames(useStmt.statement.value());
   }
   Walk(useStmts);
+  AddImplicitUseModules();
   UseCUDABuiltinNames();
   ClearUseRenames();
   ClearUseOnly();
@@ -10498,6 +10590,49 @@ void ResolveNamesVisitor::CreateGeneric(const parser::GenericSpec &x) {
   info.Resolve(&MakeSymbol(symbolName, Attrs{}, std::move(genericDetails)));
 }
 
+// Applies the implicit CUDA data attribute (managed/unified/pinned) to an
+// allocatable or pointer object entity when the matching -gpu=mem: mode is
+// enabled. Used for locals and module variables as well as derived-type
+// components.
+void DeclarationVisitor::SetImplicitCUDADataAttr(Symbol &symbol) {
+  auto *object{symbol.detailsIf<ObjectEntityDetails>()};
+  if (!object || object->cudaDataAttr() ||
+      !(IsAllocatable(symbol) || IsPointer(symbol))) {
+    return;
+  }
+  const bool cudaEnabled{
+      context().languageFeatures().IsEnabled(common::LanguageFeature::CUDA)};
+  const bool cudaManaged{context().languageFeatures().IsEnabled(
+      common::LanguageFeature::CudaManaged)};
+  const bool cudaUnified{context().languageFeatures().IsEnabled(
+      common::LanguageFeature::CudaUnified)};
+  // Implicitly treat allocatable/pointer arrays as managed when feature
+  // is enabled. This is done after all explicit CUDA attributes have
+  // been processed. Only applies when CUDA Fortran is enabled; otherwise
+  // -gpu=mem:managed on a non-CUDA-Fortran translation unit (e.g. pure
+  // OpenACC) would incorrectly route every allocatable through the CUDA
+  // Fortran managed descriptor pipeline. Under -gpu=mem:unified prefer
+  // the Unified attribute where it is legal (host subprogram, main
+  // program, or component) so generic resolution still selects the
+  // unified specific; fall back to Managed elsewhere (module scope,
+  // device subprograms), which uses the same allocator.
+  if (cudaEnabled && (cudaManaged || cudaUnified)) {
+    const Scope &owner{symbol.owner()};
+    const bool unifiedAllowed{!IsCUDADeviceContext(&owner) &&
+        (owner.IsDerivedType() || owner.kind() == Scope::Kind::MainProgram ||
+            owner.kind() == Scope::Kind::Subprogram)};
+    object->set_cudaDataAttr(cudaUnified && unifiedAllowed
+            ? common::CUDADataAttr::Unified
+            : common::CUDADataAttr::Managed);
+    // Implicitly treat allocatable arrays as pinned when feature is
+    // enabled.
+  } else if (IsAllocatable(symbol) &&
+      context().languageFeatures().IsEnabled(
+          common::LanguageFeature::CudaPinned)) {
+    object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+  }
+}
+
 void ResolveNamesVisitor::FinishSpecificationPart(
     const std::list<parser::DeclarationConstruct> &decls) {
   misparsedStmtFuncFound_ = false;
@@ -10541,28 +10676,7 @@ void ResolveNamesVisitor::FinishSpecificationPart(
       }
     }
 
-    if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-      if ((IsAllocatable(symbol) || IsPointer(symbol)) &&
-          !object->cudaDataAttr()) {
-        // Implicitly treat allocatable/pointer arrays as managed when feature
-        // is enabled. This is done after all explicit CUDA attributes have
-        // been processed. Only applies when CUDA Fortran is enabled; otherwise
-        // -gpu=mem:managed on a non-CUDA-Fortran translation unit (e.g. pure
-        // OpenACC) would incorrectly route every allocatable through the CUDA
-        // Fortran managed descriptor pipeline.
-        if (context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CudaManaged) &&
-            context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CUDA))
-          object->set_cudaDataAttr(common::CUDADataAttr::Managed);
-        // Implicitly treat allocatable arrays as pinned when feature is
-        // enabled.
-        else if (IsAllocatable(symbol) &&
-            context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CudaPinned))
-          object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
-      }
-    }
+    SetImplicitCUDADataAttr(symbol);
   }
   currScope().InstantiateDerivedTypes();
   for (const auto &decl : decls) {
@@ -10964,6 +11078,10 @@ bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
     return false;
   }
   ProgramTree &root{ProgramTree::Build(x, context())};
+  auto implicitUseModuleBeingResolvedRestorer{
+      common::ScopedSet(implicitUseModuleBeingResolved_,
+          root.IsModule() ? std::optional<std::string>{root.name().ToString()}
+                          : implicitUseModuleBeingResolved_)};
   SetScope(topScope_);
   ResolveSpecificationParts(root);
   FinishSpecificationParts(root);
@@ -11005,6 +11123,7 @@ bool ResolveNamesVisitor::Pre(const parser::Program &x) {
     ImplicitRulesVisitor::BeginScope(*hermetic);
   }
   std::map<SourceName, const parser::ProgramUnit *> modules;
+  std::set<std::string> moduleNamesInCurrentProgram;
   std::set<SourceName> uses;
   bool disordered{false};
   for (const auto &progUnit : x.v) {
@@ -11014,6 +11133,7 @@ bool ResolveNamesVisitor::Pre(const parser::Program &x) {
       const auto &moduleStmt{
           std::get<parser::Statement<parser::ModuleStmt>>(mod.t)};
       const SourceName &name{moduleStmt.statement.v.source};
+      moduleNamesInCurrentProgram.insert(name.ToString());
       if (auto iter{modules.find(name)}; iter != modules.end()) {
         Say(name,
             "Module '%s' appears multiple times in a compilation unit"_err_en_US)
@@ -11037,6 +11157,7 @@ bool ResolveNamesVisitor::Pre(const parser::Program &x) {
       uses.insert(used);
     }
   }
+  implicitUseModulesInCurrentProgram_ = std::move(moduleNamesInCurrentProgram);
   if (!disordered) {
     return true;
   }
@@ -11131,6 +11252,10 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
   if (node.isSpecificationPartResolved()) {
     return; // been here already
   }
+  auto implicitUseModuleBeingResolvedRestorer{
+      common::ScopedSet(implicitUseModuleBeingResolved_,
+          node.IsModule() ? std::optional<std::string>{node.name().ToString()}
+                          : implicitUseModuleBeingResolved_)};
   node.set_isSpecificationPartResolved();
   if (!BeginScopeForNode(node)) {
     return; // an error prevented scope from being created

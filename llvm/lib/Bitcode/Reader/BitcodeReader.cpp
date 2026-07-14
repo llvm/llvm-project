@@ -581,7 +581,7 @@ public:
 class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   LLVMContext &Context;
   Module *TheModule = nullptr;
-  Triple BitcodeTargetTriple;
+  std::optional<Triple> TargetTriple;
   // Next offset to start scanning for lazy parsing of function bodies.
   uint64_t NextUnreadBit = 0;
   // Last function offset found in the VST.
@@ -697,6 +697,9 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
 
   std::optional<ValueTypeCallbackTy> ValueTypeCallback;
 
+  /// A list of GUIDs defined by this module. Indexed by ValueID.
+  std::vector<GlobalValue::GUID> GUIDList;
+
   /// Mirrors ParserCallbacks::SkipDebugIntrinsicUpgrade. When set, debug
   /// intrinsic calls (llvm.dbg.*) are not auto-upgraded to non-instruction
   /// debug records by globalCleanup(); the caller is expected to perform the
@@ -705,8 +708,7 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
 
 public:
   BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
-                StringRef ProducerIdentification, LLVMContext &Context,
-                Triple BitcodeTargetTriple);
+                StringRef ProducerIdentification, LLVMContext &Context);
 
   Error materializeForwardReferencedFunctions();
 
@@ -890,6 +892,20 @@ private:
     return readConstantRange(Record, OpNum, BitWidth);
   }
 
+  /// Cache target triple for for upgrading AArch64 memory effects.
+  const Triple &getTargetTriple() {
+    if (!TargetTriple) {
+      BitstreamCursor TripleStream(Stream.getBitcodeBytes());
+      if (Expected<std::string> TripleStr = readTriple(TripleStream))
+        TargetTriple.emplace(std::move(*TripleStr));
+      else {
+        consumeError(TripleStr.takeError());
+        TargetTriple.emplace();
+      }
+    }
+    return *TargetTriple;
+  }
+
   /// Upgrades old-style typeless byval/sret/inalloca attributes by adding the
   /// corresponding argument's pointee type. Also upgrades intrinsics that now
   /// require an elementtype attribute.
@@ -982,9 +998,12 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
 
   /// Callback to ask whether a symbol is the prevailing copy when invoked
   /// during combined index building.
-  std::function<bool(GlobalValue::GUID)> IsPrevailing;
+  std::function<bool(StringRef)> IsPrevailing = nullptr;
 
-  /// Saves the stack ids from the STACK_IDS record to consult when adding stack
+  /// Callback invoked whenever a new ValueInfo is generated.
+  std::function<void(ValueInfo)> OnValueInfo = nullptr;
+
+  /// Saves the stack ids from the STACK_IDS record to consult when adding
   /// ids from the lists in the callsite and alloc entries to the index.
   std::vector<uint64_t> StackIds;
 
@@ -997,11 +1016,15 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   /// list and used to avoid repeated hash lookups.
   std::vector<unsigned> StackIdToIndex;
 
+  /// A list of GUIDs defined by this module. Indexed by ValueID.
+  std::vector<uint64_t> DefinedGUIDs;
+
 public:
   ModuleSummaryIndexBitcodeReader(
       BitstreamCursor Stream, StringRef Strtab, ModuleSummaryIndex &TheIndex,
       StringRef ModulePath,
-      std::function<bool(GlobalValue::GUID)> IsPrevailing = nullptr);
+      std::function<bool(StringRef)> IsPrevailing = nullptr,
+      std::function<void(ValueInfo)> OnValueInfo = nullptr);
 
   Error parseModule();
 
@@ -1064,9 +1087,8 @@ std::error_code llvm::errorToErrorCodeAndEmitErrors(LLVMContext &Ctx,
 
 BitcodeReader::BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
                              StringRef ProducerIdentification,
-                             LLVMContext &Context, Triple TTriple)
+                             LLVMContext &Context)
     : BitcodeReaderBase(std::move(Stream), Strtab), Context(Context),
-      BitcodeTargetTriple(TTriple),
       ValueList(this->Stream.SizeInBytes(),
                 [this](unsigned ValID, BasicBlock *InsertBB) {
                   return materializeValue(ValID, InsertBB);
@@ -2473,9 +2495,9 @@ Error BitcodeReader::parseAttributeGroupBlock() {
                         MemoryEffects::argMemOnly(ArgMem) |
                         MemoryEffects::errnoMemOnly(OtherMem) |
                         MemoryEffects::otherMemOnly(OtherMem);
-              // Old versions dont have target memory location.
-              // It was represented as Inaccessible memory for AArch64.
-              if (BitcodeTargetTriple.isAArch64())
+              // Old bitcode encoded AArch64 state as inaccessible memory.
+              // Upgrade those effects to target-specific memory locations.
+              if (getTargetTriple().isAArch64())
                 ME = ME.getWithModRef(IRMemLocation::TargetMem0,
                                       InaccessibleMem) |
                      ME.getWithModRef(IRMemLocation::TargetMem1,
@@ -2486,9 +2508,9 @@ Error BitcodeReader::parseAttributeGroupBlock() {
               // on newer versions.
               auto ME = MemoryEffects::createFromIntValue(
                   EncodedME & 0x00FFFFFFFFFFFFFFULL);
-              // Only from Version=2 onwards target memory location exist.
-              // It was represented as Inaccessible memory for AArch64.
-              if (Version == 1 && BitcodeTargetTriple.isAArch64())
+              // Upgrade to target-specific memory locations introduced in
+              // version 2.
+              if (Version == 1 && getTargetTriple().isAArch64())
                 ME = ME.getWithModRef(
                          IRMemLocation::TargetMem0,
                          ME.getModRef(IRMemLocation::InaccessibleMem)) |
@@ -4068,6 +4090,15 @@ Error BitcodeReader::globalCleanup() {
     TheModule->insertGlobalVariable(Pair.second);
   }
 
+  for (size_t ValueID = 0; ValueID < GUIDList.size(); ValueID++) {
+    const auto GUID = GUIDList[ValueID];
+    if (GUID == 0)
+      continue;
+
+    const auto *Value = ValueList[ValueID];
+    TheModule->insertGUID(Value, GUID);
+  }
+
   // Force deallocation of memory for these vectors to favor the client that
   // want lazy deserialization.
   std::vector<std::pair<GlobalVariable *, unsigned>>().swap(GlobalInits);
@@ -4886,6 +4917,13 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
       // historically always the start of the regular bitcode header.
       VSTOffset = Record[0] - 1;
       break;
+    // MODULE_CODE_GUIDLIST: [i64 x N]
+    case bitc::MODULE_CODE_GUIDLIST:
+      assert(Record.size() % 2 == 0);
+      GUIDList.reserve(GUIDList.size() + Record.size() / 2);
+      for (size_t i = 0; i < Record.size(); i += 2)
+        GUIDList.push_back(Record[i] << 32 | Record[i + 1]);
+      break;
     /// MODULE_CODE_SOURCE_FILENAME: [namechar x N]
     case bitc::MODULE_CODE_SOURCE_FILENAME:
       SmallString<128> ValueName;
@@ -4896,6 +4934,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
     }
     Record.clear();
   }
+
   this->ValueTypeCallback = std::nullopt;
   return Error::success();
 }
@@ -7284,9 +7323,11 @@ std::vector<StructType *> BitcodeReader::getIdentifiedStructTypes() const {
 
 ModuleSummaryIndexBitcodeReader::ModuleSummaryIndexBitcodeReader(
     BitstreamCursor Cursor, StringRef Strtab, ModuleSummaryIndex &TheIndex,
-    StringRef ModulePath, std::function<bool(GlobalValue::GUID)> IsPrevailing)
+    StringRef ModulePath, std::function<bool(StringRef)> IsPrevailing,
+    std::function<void(ValueInfo)> OnValueInfo)
     : BitcodeReaderBase(std::move(Cursor), Strtab), TheIndex(TheIndex),
-      ModulePath(ModulePath), IsPrevailing(IsPrevailing) {}
+      ModulePath(ModulePath), IsPrevailing(IsPrevailing),
+      OnValueInfo(OnValueInfo) {}
 
 void ModuleSummaryIndexBitcodeReader::addThisModule() {
   TheIndex.addModule(ModulePath);
@@ -7314,9 +7355,15 @@ ModuleSummaryIndexBitcodeReader::getValueInfoFromValueId(unsigned ValueId) {
 void ModuleSummaryIndexBitcodeReader::setValueGUID(
     uint64_t ValueID, StringRef ValueName, GlobalValue::LinkageTypes Linkage,
     StringRef SourceFileName) {
-  std::string GlobalId =
-      GlobalValue::getGlobalIdentifier(ValueName, Linkage, SourceFileName);
-  auto ValueGUID = GlobalValue::getGUIDAssumingExternalLinkage(GlobalId);
+  GlobalValue::GUID ValueGUID = 0;
+  if (ValueID < DefinedGUIDs.size())
+    ValueGUID = DefinedGUIDs[ValueID];
+  if (ValueGUID == 0)
+    // DefinedGUIDs is a sparse array and can contain zero entries, so this
+    // can't just be an `else`.
+    ValueGUID = GlobalValue::getGUIDAssumingExternalLinkage(
+        GlobalValue::getGlobalIdentifier(ValueName, Linkage, SourceFileName));
+
   auto OriginalNameID = ValueGUID;
   if (GlobalValue::isLocalLinkage(Linkage))
     OriginalNameID = GlobalValue::getGUIDAssumingExternalLinkage(ValueName);
@@ -7327,10 +7374,11 @@ void ModuleSummaryIndexBitcodeReader::setValueGUID(
   // UseStrtab is false for legacy summary formats and value names are
   // created on stack. In that case we save the name in a string saver in
   // the index so that the value name can be recorded.
-  ValueIdToValueInfoMap[ValueID] = std::make_pair(
-      TheIndex.getOrInsertValueInfo(
-          ValueGUID, UseStrtab ? ValueName : TheIndex.saveString(ValueName)),
-      OriginalNameID);
+  auto VI = TheIndex.getOrInsertValueInfo(
+      ValueGUID, UseStrtab ? ValueName : TheIndex.saveString(ValueName));
+  ValueIdToValueInfoMap[ValueID] = std::make_pair(VI, OriginalNameID);
+  if (OnValueInfo)
+    OnValueInfo(VI);
 }
 
 // Specialized value symbol table parser used when reading module index
@@ -7538,6 +7586,13 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
           // word before the start of the identification or module block, which
           // was historically always the start of the regular bitcode header.
           VSTOffset = Record[0] - 1;
+          break;
+        // MODULE_CODE_GUIDLIST: [i64 x N]
+        case bitc::MODULE_CODE_GUIDLIST:
+          assert(Record.size() % 2 == 0);
+          DefinedGUIDs.reserve(DefinedGUIDs.size() + Record.size() / 2);
+          for (size_t i = 0; i < Record.size(); i += 2)
+            DefinedGUIDs.push_back(Record[i] << 32 | Record[i + 1]);
           break;
         // v1 GLOBALVAR: [pointer type, isconst,     initid,       linkage, ...]
         // v1 FUNCTION:  [type,         callingconv, isproto,      linkage, ...]
@@ -7934,7 +7989,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       // and kept).
       auto LT = (GlobalValue::LinkageTypes)Flags.Linkage;
       bool IsPrevailingSym = !IsPrevailing || GlobalValue::isLocalLinkage(LT) ||
-                             IsPrevailing(VI.getGUID());
+                             IsPrevailing(VI.name());
 
       // If this is not the prevailing copy, and the records are in the "old"
       // order (preceding), clear them now. They should already be empty in
@@ -8736,20 +8791,10 @@ BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
       return std::move(E);
   }
 
-  // Cache target triple early for target-memory attribute upgrading.
-  // Suppress target parser diagnostics during this early parse,
-  // because attribute parsing runs before target parsing.
-  Triple BitcodeTargetTriple;
-  BitstreamCursor TripleStream(Buffer);
-  if (Expected<std::string> TripleStr = readTriple(TripleStream))
-    BitcodeTargetTriple = Triple(*TripleStr);
-  else
-    consumeError(TripleStr.takeError());
-
   if (Error JumpFailed = Stream.JumpToBit(ModuleBit))
     return std::move(JumpFailed);
   auto *R = new BitcodeReader(std::move(Stream), Strtab, ProducerIdentification,
-                              Context, BitcodeTargetTriple);
+                              Context);
 
   std::unique_ptr<Module> M =
       std::make_unique<Module>(ModuleIdentifier, Context);
@@ -8784,15 +8829,16 @@ BitcodeModule::getLazyModule(LLVMContext &Context, bool ShouldLazyLoadMetadata,
 // We don't use ModuleIdentifier here because the client may need to control the
 // module path used in the combined summary (e.g. when reading summaries for
 // regular LTO modules).
-Error BitcodeModule::readSummary(
-    ModuleSummaryIndex &CombinedIndex, StringRef ModulePath,
-    std::function<bool(GlobalValue::GUID)> IsPrevailing) {
+Error BitcodeModule::readSummary(ModuleSummaryIndex &CombinedIndex,
+                                 StringRef ModulePath,
+                                 std::function<bool(StringRef)> IsPrevailing,
+                                 std::function<void(ValueInfo)> OnValueInfo) {
   BitstreamCursor Stream(Buffer);
   if (Error JumpFailed = Stream.JumpToBit(ModuleBit))
     return JumpFailed;
 
   ModuleSummaryIndexBitcodeReader R(std::move(Stream), Strtab, CombinedIndex,
-                                    ModulePath, IsPrevailing);
+                                    ModulePath, IsPrevailing, OnValueInfo);
   return R.parseModule();
 }
 

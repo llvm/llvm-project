@@ -1558,7 +1558,7 @@ namespace {
         return;
       }
       if (checkSubobject(Info, E, CSK_ArrayToPointer)) {
-        assert(getType(Base).getNonReferenceType()->isPointerType() ||
+        assert(!Base || getType(Base).getNonReferenceType()->isPointerType() ||
                getType(Base).getNonReferenceType()->isArrayType());
         Designator.FirstEntryIsAnUnsizedArray = true;
         Designator.addUnsizedArrayUnchecked(ElemTy);
@@ -4254,6 +4254,13 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
     }
 
     LastField = nullptr;
+
+    // The value of an atomic object is represented like a value of the
+    // underlying type, so look through the _Atomic wrapper.
+    if (const AtomicType *AT = ObjType->getAs<AtomicType>())
+      ObjType = Info.Ctx.getQualifiedType(AT->getValueType(),
+                                          ObjType.getQualifiers());
+
     if (ObjType->isArrayType()) {
       // Next subobject is an array element.
       const ArrayType *AT = Info.Ctx.getAsArrayType(ObjType);
@@ -5969,6 +5976,12 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
       const VarDecl *VD = dyn_cast_or_null<VarDecl>(D);
       if (VD && !CheckLocalVariableDeclaration(Info, VD))
         return ESR_Failed;
+
+      if (const auto *ESD = dyn_cast<CXXExpansionStmtDecl>(D)) {
+        assert(ESD->getInstantiations() && "not expanded?");
+        return EvaluateStmt(Result, Info, ESD->getInstantiations(), Case);
+      }
+
       // Each declaration initialization is its own full-expression.
       FullExpressionRAII Scope(Info);
       if (!EvaluateDecl(Info, D, /*EvaluateConditionDecl=*/true) &&
@@ -6239,6 +6252,40 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
     }
 
     return Scope.destroy() ? ESR_Succeeded : ESR_Failed;
+  }
+
+  case Stmt::CXXExpansionStmtInstantiationClass: {
+    BlockScopeRAII Scope(Info);
+    const auto *Expansion = cast<CXXExpansionStmtInstantiation>(S);
+    for (const Stmt *PreambleStmt : Expansion->getPreambleStmts()) {
+      EvalStmtResult ESR = EvaluateStmt(Result, Info, PreambleStmt);
+      if (ESR != ESR_Succeeded) {
+        if (ESR != ESR_Failed && !Scope.destroy())
+          return ESR_Failed;
+        return ESR;
+      }
+    }
+
+    // No need to push an extra scope for these since they're already
+    // CompoundStmts.
+    EvalStmtResult ESR = ESR_Succeeded;
+    for (const Stmt *Instantiation : Expansion->getInstantiations()) {
+      ESR = EvaluateStmt(Result, Info, Instantiation);
+      if (ESR == ESR_Failed ||
+          ShouldPropagateBreakContinue(Info, Expansion, &Scope, ESR))
+        return ESR;
+      if (ESR != ESR_Continue) {
+        // Succeeded here actually means we encountered a 'break'.
+        assert(ESR == ESR_Succeeded || ESR == ESR_Returned);
+        break;
+      }
+    }
+
+    // Map Continue back to Succeeded if we fell off the end of the loop.
+    if (ESR == ESR_Continue)
+      ESR = ESR_Succeeded;
+
+    return Scope.destroy() ? ESR : ESR_Failed;
   }
 
   case Stmt::SwitchStmtClass:
@@ -10913,6 +10960,13 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
 
     AllocType = Info.Ctx.getConstantArrayType(AllocType, ArrayBound, nullptr,
                                               ArraySizeModifier::Normal, 0);
+  } else if (E->isArray()) {
+    // We have an array new-expression whose array size could not be
+    // determined, e.g. 'new int[]()', where the bound is neither given nor
+    // deducible from the initializer. This is ill-formed and already
+    // diagnosed, so bail out rather than mis-evaluating a scalar allocation
+    // as an array (which would later crash the evaluator).
+    return false;
   } else {
     assert(!AllocType->isArrayType() &&
            "array allocation with non-array new");
@@ -10943,15 +10997,7 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
           return false;
         // FIXME: Reject the cases where [basic.life]p8 would not permit the
         // old name of the object to be used to name the new object.
-        unsigned SubobjectSize = 1;
-        unsigned AllocSize = 1;
-        if (auto *CAT = dyn_cast<ConstantArrayType>(AllocType))
-          AllocSize = CAT->getZExtSize();
-        if (auto *CAT = dyn_cast<ConstantArrayType>(SubobjType))
-          SubobjectSize = CAT->getZExtSize();
-        if (SubobjectSize < AllocSize ||
-            !Info.Ctx.hasSimilarType(Info.Ctx.getBaseElementType(SubobjType),
-                                     Info.Ctx.getBaseElementType(AllocType))) {
+        if (!Info.Ctx.hasSimilarType(SubobjType, AllocType)) {
           Info.FFDiag(E, diag::note_constexpr_placement_new_wrong_type)
               << SubobjType << AllocType;
           return false;
@@ -10968,6 +11014,22 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
         return false;
       }
     } Handler = {Info, E, AllocType, AK, nullptr};
+
+    if (AllocType->isArrayType() &&
+        Result.Designator.MostDerivedIsArrayElement &&
+        Result.Designator.Entries.back().getAsArrayIndex() == 0) {
+      // The destination of placement new is pointing to the first element
+      // of an array.  There's a special case in [expr.const]: "[...] if T is an
+      // array type, to the first element of such an object [...]".  Handle
+      // that case here by dropping the last entry in the designator list.
+      QualType AllocElementType =
+          Info.Ctx.getAsArrayType(AllocType)->getElementType();
+      if (Info.Ctx.hasSimilarType(AllocElementType,
+                                  Result.Designator.MostDerivedType)) {
+        Result.Designator.truncate(Info.Ctx, Result.Base,
+                                   Result.Designator.MostDerivedPathLength - 1);
+      }
+    }
 
     CompleteObject Obj = findCompleteObject(Info, E, AK, Result, AllocType);
     if (!Obj || !findSubobject(Info, E, Obj, Result.Designator, Handler))
@@ -22135,6 +22197,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::SYCLUniqueStableNameExprClass:
   case Expr::CXXParenListInitExprClass:
   case Expr::HLSLOutArgExprClass:
+  case Expr::CXXExpansionSelectExprClass:
     return ICEDiag(IK_NotICE, E->getBeginLoc());
 
   case Expr::MemberExprClass: {
