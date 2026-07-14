@@ -608,48 +608,25 @@ void CodeMetaDataInputSection::finalizeContents() {
   const uint8_t *Buf = RelocatedData.data();
   const uint8_t *End = Buf + RelocatedData.size();
 
-  const char *Success = nullptr;
-  unsigned NumFunctionsEncodingSize;
-  const unsigned NumFunctions =
-      decodeULEB128(Buf, &NumFunctionsEncodingSize, End, &Success);
-  if (Success != nullptr) {
-    fatal("Failed to decode number of functions in " + name + ": " + Success);
-  }
-  Buf += NumFunctionsEncodingSize;
+  auto readULEB = [&](StringRef Desc) {
+    const char *Err = nullptr;
+    uint32_t Val = decodeULEB128AndInc(Buf, End, &Err);
+    if (Err)
+      fatal("Failed to decode " + Desc + " in " + name + ": " + Err);
+    return Val;
+  };
+
+  const unsigned NumFunctions = readULEB("number of functions");
 
   for (unsigned i = 0; i < NumFunctions; ++i) {
     const uint8_t *FunctionStartOffset = Buf;
 
-    unsigned FuncIdxEncodingSize;
-    const unsigned FuncIndex =
-        decodeULEB128(Buf, &FuncIdxEncodingSize, End, &Success);
-    if (Success != nullptr) {
-      fatal("Failed to decode function index in " + name + ": " + Success);
-    }
-    Buf += FuncIdxEncodingSize;
+    const unsigned FuncIndex = readULEB("function index");
+    const unsigned NumHints = readULEB("hint size");
 
-    unsigned NumHintsEncodingSize;
-    const unsigned NumHints =
-        decodeULEB128(Buf, &NumHintsEncodingSize, End, &Success);
-    if (Success != nullptr) {
-      fatal("Failed to decode hint size in " + name + ": " + Success);
-    }
-    Buf += NumHintsEncodingSize;
     for (unsigned j = 0; j < NumHints; ++j) {
-      unsigned OffsetEncodingSize;
-      decodeULEB128(Buf, &OffsetEncodingSize, End, &Success);
-      if (Success != nullptr) {
-        fatal("Failed to decode hint opcode in " + name + ": " + Success);
-      }
-      Buf += OffsetEncodingSize;
-
-      unsigned HintSizeEncodingSize;
-      const unsigned HintSize =
-          decodeULEB128(Buf, &HintSizeEncodingSize, End, &Success);
-      if (Success != nullptr) {
-        fatal("Failed to decode hint operand in " + name + ": " + Success);
-      }
-      Buf += HintSizeEncodingSize;
+      readULEB("hint opcode");
+      const unsigned HintSize = readULEB("hint operand");
       Buf += HintSize;
     }
     // skip entries for removed functions
