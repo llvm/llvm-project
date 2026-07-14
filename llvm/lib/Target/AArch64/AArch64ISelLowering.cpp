@@ -27362,11 +27362,12 @@ static SDValue performSTORECombine(SDNode *N,
   // We purposefully don't care about legality of the nodes here as we know
   // they can be split down into something legal.
   if (DCI.isBeforeLegalizeOps() && Value.getOpcode() == ISD::FP_ROUND &&
-      Value.getNode()->hasOneUse() && ST->isUnindexed() &&
+      Value->hasOneUse() && ST->isUnindexed() &&
       Subtarget->useSVEForFixedLengthVectors() &&
       ValueVT.isFixedLengthVector() &&
       ValueVT.getFixedSizeInBits() >= Subtarget->getMinSVEVectorSizeInBits() &&
-      hasValidElementTypeForFPTruncStore(Value.getOperand(0).getValueType()))
+      hasValidElementTypeForFPTruncStore(Value.getOperand(0).getValueType()) &&
+      Value.getValueType().getScalarType() != MVT::bf16)
     return DAG.getTruncStore(Chain, DL, Value.getOperand(0), Ptr, MemVT,
                              ST->getMemOperand());
 
@@ -33985,11 +33986,9 @@ AArch64TargetLowering::LowerFixedLengthFPRoundToSVE(SDValue Op,
   EVT ContainerSrcVT = getContainerForFixedLengthVector(DAG, SrcVT);
   EVT RoundVT = ContainerSrcVT.changeVectorElementType(
       *DAG.getContext(), VT.getVectorElementType());
-  SDValue Pg = getPredicateForVector(DAG, DL, RoundVT);
 
   Val = convertToScalableVector(DAG, ContainerSrcVT, Val);
-  Val = DAG.getNode(AArch64ISD::FP_ROUND_MERGE_PASSTHRU, DL, RoundVT, Pg, Val,
-                    Op.getOperand(1), DAG.getPOISON(RoundVT));
+  Val = DAG.getNode(Op.getOpcode(), DL, RoundVT, Val, Op.getOperand(1));
   Val = getSVESafeBitCast(ContainerSrcVT.changeTypeToInteger(), Val, DAG);
   Val = convertFromScalableVector(DAG, SrcVT.changeTypeToInteger(), Val);
 
