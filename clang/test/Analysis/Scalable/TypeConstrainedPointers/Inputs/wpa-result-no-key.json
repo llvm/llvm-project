@@ -2,7 +2,7 @@
   "id_table": [],
   "results": [
     {
-      "analysis_name": "OperatorNewDeletePointersAnalysisResult",
+      "analysis_name": "TypeConstrainedPointersAnalysisResult",
       "result": {
         "WrongKey": []
       }

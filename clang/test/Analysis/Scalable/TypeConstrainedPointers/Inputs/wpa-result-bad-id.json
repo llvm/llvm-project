@@ -2,9 +2,9 @@
   "id_table": [],
   "results": [
     {
-      "analysis_name": "OperatorNewDeletePointersAnalysisResult",
+      "analysis_name": "TypeConstrainedPointersAnalysisResult",
       "result": {
-        "OperatorNewDeletePointersAnalysisResult": [
+        "TypeConstrainedPointersAnalysisResult": [
           "not-an-object"
         ]
       }

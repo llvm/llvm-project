@@ -476,6 +476,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   "1". The previous functionality remains unchanged.
 - The `-fms-kernel` flag will now implicitly add `-fno-delete-null-pointer-checks`.
   Still `-fdelete-null-pointer-checks` can be used to override this behavior.
+- Extended the `-marm64x` flag to support compiling to object files. When used
+  in this mode, separate compilation jobs are run for ARM64 and ARM64EC object
+  files, which are then merged into a single file using a new `.obj.arm64ec`
+  section. Consumers must support this extension. Currently, this requires
+  LLD for linking or `llvm-ar`/`llvm-lib` for archiving.
 
 ### Removed Compiler Flags
 
@@ -827,6 +832,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   would only use the first one). A new warning that diagnoses such declarations has been added to `-Wignored-attributes`.
   (#GH191829)
 - Fixed a crash in the constant evaluator when an ill-formed array new-expression whose bound could not be determined (e.g. `new int[]()`) was used in a constant expression. (#GH200139)
+- Fixed a case where function effect analysis (`nonblocking` etc.) did not visit a destructor invoked from a `delete` expression. (#GH184460)
 - Clang now defines the GCC-compatible predefined macros `__WCHAR_MIN__`, `__WINT_MIN__`, and `__SIG_ATOMIC_MIN__`. (#GH199678)
 - Fix a crash in addUnsizedArray due assert not verifying we have a Base before doing checks on it. (#GH44212)
 
@@ -932,6 +938,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed a crash when using a pack indexing type (e.g. ``Ts...[0]``) imported from another module. (#GH204479)
 - Fixed an ODR-merging error in modules, where class-scope `using enum` declarations were not recognized as matching across module
   boundaries.  (#GH207066)
+- Fixed a crash when constant evaluation accessed a base class or member of an object wrapped in `_Atomic`. (#GH203328)
 
 #### Bug Fixes to AST Handling
 
