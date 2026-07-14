@@ -14,6 +14,9 @@
 
 #include "gtest/gtest.h"
 
+#include <string>
+#include <unordered_set>
+
 namespace {
 
 // Every level and category must compile and be usable as a plain statement,
@@ -68,10 +71,20 @@ TEST(LoggingTest, LevelParseGetNameRoundTrip) {
   }
 }
 
-TEST(LoggingTest, CategoryGetName) {
-  EXPECT_STREQ("General",
-               orc_rt_log_Category_getName(orc_rt_log_Category_General));
+TEST(LoggingTest, CategoryNamesAreUniqueAndNonNull) {
+  // Check that every category has a unique, non-null name.
+  std::unordered_set<std::string> Seen;
+  for (int C = orc_rt_log_Category_General; C != orc_rt_log_Category_Count;
+       ++C) {
+    const char *Name =
+        orc_rt_log_Category_getName(static_cast<orc_rt_log_Category>(C));
+    ASSERT_NE(Name, nullptr) << "category " << C << " has no name";
+    EXPECT_TRUE(Seen.insert(Name).second)
+        << "category " << C << " has a duplicate name: " << Name;
+  }
+}
 
+TEST(LoggingTest, OutOfRangeCategoryNamesAreNull) {
   // The Count sentinel is not a real category, and out-of-range values have no
   // name.
   EXPECT_EQ(nullptr, orc_rt_log_Category_getName(orc_rt_log_Category_Count));

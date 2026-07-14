@@ -1,5 +1,4 @@
 set(files
-  AllocAction.cpp
   BootstrapInfo.cpp
   SimpleSymbolTable.cpp
   Environment.cpp
@@ -26,6 +25,8 @@ set(files
 # is header-only and the os_log backend is not yet implemented.
 if(ORC_RT_LOG_BACKEND STREQUAL "printf")
   list(APPEND files Logging_printf.cpp)
+elseif(ORC_RT_LOG_BACKEND STREQUAL "os_log")
+  list(APPEND files Logging_oslog.cpp)
 endif()
 
 add_library(orc-rt-executor STATIC ${files})

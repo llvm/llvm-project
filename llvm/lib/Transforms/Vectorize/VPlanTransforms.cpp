@@ -1262,7 +1262,7 @@ getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
             VPReplicateRecipe>(
           [](auto *I) { return std::make_pair(false, I->getOpcode()); })
       .Case([](const VPWidenPHIRecipe *I) {
-        return std::make_pair(true, Instruction::PHI);
+        return std::make_pair(false, Instruction::PHI);
       })
       .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
           [](auto *I) {
@@ -3827,27 +3827,29 @@ void VPlanTransforms::createInterleaveGroups(
   // single VPInterleaveRecipe at its insertion point.
   VPDominatorTree VPDT(Plan);
   for (const auto *IG : InterleaveGroups) {
-    // Skip interleave groups where members don't have recipes. This can happen
-    // when removeDeadRecipes removes recipes that are part of interleave groups
-    // but have no users.
-    if (llvm::any_of(IG->members(), [&IRMemberToRecipe](Instruction *Member) {
-          return !IRMemberToRecipe.contains(Member);
-        }))
+    VPWidenMemoryRecipe *Start = nullptr;
+    Instruction *StartMember = nullptr;
+    for (auto *Member : IG->members())
+      if (VPWidenMemoryRecipe *R = IRMemberToRecipe.lookup(Member)) {
+        StartMember = Member;
+        Start = R;
+        break;
+      }
+    if (!StartMember) // All member recipes are dead, so the group is dead.
       continue;
-
-    auto *Start = IRMemberToRecipe.lookup(IG->getMember(0));
     VPIRMetadata InterleaveMD(*Start);
     SmallVector<VPValue *, 4> StoredValues;
-    if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(Start->getAsRecipe()))
-      StoredValues.push_back(StoreR->getStoredValue());
-    for (unsigned I = 1; I < IG->getFactor(); ++I) {
+    for (unsigned I = 0; I < IG->getFactor(); ++I) {
       Instruction *MemberI = IG->getMember(I);
       if (!MemberI)
         continue;
-      VPWidenMemoryRecipe *MemoryR = IRMemberToRecipe.lookup(MemberI);
-      if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(MemoryR->getAsRecipe()))
-        StoredValues.push_back(StoreR->getStoredValue());
-      InterleaveMD.intersect(*MemoryR);
+      if (VPWidenMemoryRecipe *MemoryR = IRMemberToRecipe.lookup(MemberI)) {
+        if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(MemoryR->getAsRecipe()))
+          StoredValues.push_back(StoreR->getStoredValue());
+        InterleaveMD.intersect(*MemoryR);
+      } else {
+        InterleaveMD.intersect(VPIRMetadata(*MemberI));
+      }
     }
 
     bool NeedsMaskForGaps =
@@ -3856,6 +3858,18 @@ void VPlanTransforms::createInterleaveGroups(
 
     Instruction *IRInsertPos = IG->getInsertPos();
     auto *InsertPos = IRMemberToRecipe.lookup(IRInsertPos);
+    if (!InsertPos) {
+      // InsertPos member is dead: find a new member that is alive.
+      assert(isa<VPWidenLoadRecipe>(Start->getAsRecipe()) &&
+             "Dead member in non-load group?");
+      InsertPos = Start;
+      for (Instruction *Member : IG->members())
+        if (VPWidenMemoryRecipe *MemberR = IRMemberToRecipe.lookup(Member))
+          if (VPDT.properlyDominates(MemberR->getAsRecipe(),
+                                     InsertPos->getAsRecipe()))
+            InsertPos = MemberR;
+      IRInsertPos = &InsertPos->getIngredient();
+    }
     VPRecipeBase *InsertPosR = InsertPos->getAsRecipe();
 
     GEPNoWrapFlags NW = GEPNoWrapFlags::none();
@@ -3866,11 +3880,12 @@ void VPlanTransforms::createInterleaveGroups(
     // Get or create the start address for the interleave group.
     VPValue *Addr = Start->getAddr();
     VPRecipeBase *AddrDef = Addr->getDefiningRecipe();
-    if (AddrDef && !VPDT.properlyDominates(AddrDef, InsertPosR)) {
-      // We cannot re-use the address of member zero because it does not
-      // dominate the insert position. Instead, use the address of the insert
-      // position and create a PtrAdd adjusting it to the address of member
-      // zero.
+    if (IG->getIndex(StartMember) != 0 ||
+        (AddrDef && !VPDT.properlyDominates(AddrDef, InsertPosR))) {
+      // Either member zero's recipe is dead, or we cannot re-use the address of
+      // member zero because it does not dominate the insert position. Instead,
+      // use the address of the insert position and create a PtrAdd adjusting it
+      // to the address of member zero.
       // TODO: Hoist Addr's defining recipe (and any operands as needed) to
       // InsertPos or sink loads above zero members to join it.
       assert(IG->getIndex(IRInsertPos) != 0 &&
@@ -3903,13 +3918,16 @@ void VPlanTransforms::createInterleaveGroups(
     unsigned J = 0;
     for (unsigned i = 0; i < IG->getFactor(); ++i)
       if (Instruction *Member = IG->getMember(i)) {
-        VPRecipeBase *MemberR = IRMemberToRecipe.lookup(Member)->getAsRecipe();
+        VPWidenMemoryRecipe *MemberR = IRMemberToRecipe.lookup(Member);
         if (!Member->getType()->isVoidTy()) {
-          VPValue *OriginalV = MemberR->getVPSingleValue();
-          OriginalV->replaceAllUsesWith(VPIG->getVPValue(J));
+          if (MemberR) {
+            VPValue *OriginalV = MemberR->getAsRecipe()->getVPSingleValue();
+            OriginalV->replaceAllUsesWith(VPIG->getVPValue(J));
+          }
           J++;
         }
-        MemberR->eraseFromParent();
+        if (MemberR)
+          MemberR->getAsRecipe()->eraseFromParent();
       }
   }
 }

@@ -131,6 +131,13 @@ Potentially Breaking Changes
                                      <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>`
   ================================== ========================================================================
 
+- Removed the :program:`clang-doc` deprecated Markdown generator. ``--format=md``
+  now uses the new Mustache-backed MD generator. It is possible that there are some
+  regressions in MD output.
+
+- Removed the :program:`clang-doc` YAML generator. Prefer the JSON generator to
+  get documentation information in a reusable format.
+
 Improvements to clangd
 ----------------------
 
@@ -596,8 +603,13 @@ Changes in existing checks
   virtual inheritance causes concrete bases to be counted more than once.
 
 - Improved :doc:`misc-redundant-expression
-  <clang-tidy/checks/misc/redundant-expression>` check by fixing a crash when
-  evaluating bitwise comparisons against integer constants wider than 64 bits.
+  <clang-tidy/checks/misc/redundant-expression>` check:
+
+  - Fixed a crash when evaluating bitwise comparisons against integer constants
+    wider than 64 bits.
+
+  - Avoided false positives when comparing expressions that are structurally
+    identical but use different type aliases.
 
 - Improved :doc:`misc-throw-by-value-catch-by-reference
   <clang-tidy/checks/misc/throw-by-value-catch-by-reference>` check:
