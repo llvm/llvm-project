@@ -605,8 +605,11 @@ Changes in existing checks
   - Fixed a crash when evaluating bitwise comparisons against integer constants
     wider than 64 bits.
 
-  - Avoided false positives when comparing expressions that are structurally
+  - Fixed false positives when comparing expressions that are structurally
     identical but use different type aliases.
+
+  - Fixed false positives in nested expressions involving different macros or
+    a mix of macro and non-macro operands.
 
 - Improved :doc:`misc-throw-by-value-catch-by-reference
   <clang-tidy/checks/misc/throw-by-value-catch-by-reference>` check:
