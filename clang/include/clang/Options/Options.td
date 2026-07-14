@@ -5307,8 +5307,10 @@ def gmodules : Flag <["-"], "gmodules">, Group<gN_Group>,
            " or precompiled headers">;
 def gno_modules : Flag <["-"], "gno-modules">, Group<g_flags_Group>;
 def gz_EQ : Joined<["-"], "gz=">, Group<g_flags_Group>,
+    Visibility<[ClangOption, FlangOption]>,
     HelpText<"DWARF debug sections compression type">;
-def gz : Flag<["-"], "gz">, Alias<gz_EQ>, AliasArgs<["zlib"]>, Group<g_flags_Group>;
+def gz : Flag<["-"], "gz">, Alias<gz_EQ>, AliasArgs<["zlib"]>,
+    Visibility<[ClangOption, FlangOption]>, Group<g_flags_Group>;
 def gembed_source : Flag<["-"], "gembed-source">, Group<g_flags_Group>,
   Visibility<[ClangOption, CC1Option]>,
     HelpText<"Embed source text in DWARF debug sections">,
@@ -7969,12 +7971,25 @@ def debugger_tuning_EQ : Joined<["-"], "debugger-tuning=">,
   Values<"gdb,lldb,sce,dbx">,
   NormalizedValuesScope<"llvm::DebuggerKind">, NormalizedValues<["GDB", "LLDB", "SCE", "DBX"]>,
   MarshallingInfoEnum<CodeGenOpts<"DebuggerTuning">, "Default">;
+} // let Visibility = [CC1Option, CC1AsOption]
+
+// FC1Option: flang accepts --compress-debug-sections= but does not use
+// MarshallingInfoEnum for parsing. Flang hand-parses this option in
+// flang/lib/Frontend/CompilerInvocation.cpp (parseDebugArgs). The marshalling
+// metadata below is only used by clang's cc1 auto-generated parsing.
+let Visibility = [CC1Option, CC1AsOption, FC1Option] in {
+
 def compress_debug_sections_EQ : Joined<["-", "--"], "compress-debug-sections=">,
     HelpText<"DWARF debug sections compression type">, Values<"none,zlib,zstd">,
     NormalizedValuesScope<"llvm::DebugCompressionType">, NormalizedValues<["None", "Zlib", "Zstd"]>,
     MarshallingInfoEnum<CodeGenOpts<"CompressDebugSections">, "None">;
 def compress_debug_sections : Flag<["-", "--"], "compress-debug-sections">,
   Alias<compress_debug_sections_EQ>, AliasArgs<["zlib"]>;
+
+} // let Visibility = [CC1Option, CC1AsOption, FC1Option]
+
+let Visibility = [CC1Option, CC1AsOption] in {
+
 def mno_exec_stack : Flag<["-"], "mnoexecstack">,
   HelpText<"Mark the file as not needing an executable stack">,
   MarshallingInfoFlag<CodeGenOpts<"NoExecStack">>;
