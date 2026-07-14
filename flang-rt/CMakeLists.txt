@@ -127,6 +127,8 @@ elseif (NOT FLANG_RT_FORTRAN_MODULES)
   set(FLANG_RT_INCLUDE_TESTS_default OFF)
 elseif (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
   set(FLANG_RT_INCLUDE_TESTS_default OFF)
+# NonGTestTesting uses LINK_TO_LLVM, pulling in host dependencies
+# (e.g. ZLIB::ZLIB) that break cross-compilation.
 elseif (CMAKE_CROSSCOMPILING)
   set(FLANG_RT_INCLUDE_TESTS_default OFF)
 endif()
