@@ -7186,6 +7186,27 @@ AMDGPUInstructionSelector::selectSMRDBufferSgprImm(MachineOperand &Root) const {
            [=](MachineInstrBuilder &MIB) { MIB.addImm(*EncodedOffset); }}};
 }
 
+static Register createVOP3PSrc32FromLo16(Register Src, MachineInstr *MI,
+                                         MachineRegisterInfo &MRI,
+                                         const SIInstrInfo &TII,
+                                         const AMDGPUSubtarget &ST) {
+  MachineIRBuilder B(*MI);
+
+  // Create an vgpr_16 for the hi16 part using IMPLICIT_DEF
+  Register ImpdefReg = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
+  B.buildInstr(TargetOpcode::IMPLICIT_DEF).addDef(ImpdefReg);
+
+  Register DstReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  B.buildInstr(AMDGPU::REG_SEQUENCE)
+      .addDef(DstReg)
+      .addReg(Src)
+      .addImm(AMDGPU::lo16)
+      .addReg(ImpdefReg)
+      .addImm(AMDGPU::hi16);
+
+  return DstReg;
+}
+
 std::pair<Register, unsigned>
 AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
                                                      bool &Matched) const {
@@ -7231,13 +7252,10 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
       Mods |= SISrcMods::OP_SEL_0;
       CheckAbsNeg();
     }
-    // Since we looked through FPEXT and removed it, we must also remove
-    // G_TRUNC. G_TRUNC to 16-bits would have a destination in RC VGPR_16, which
-    // is not compatible with MadMix instructions
-    Register PeekSrc = Src;
-    if (Subtarget->useRealTrue16Insts() &&
-        mi_match(PeekSrc, *MRI, m_GTrunc(m_Reg(PeekSrc))))
-      Src = PeekSrc;
+
+    if (Subtarget->useRealTrue16Insts())
+      Src = createVOP3PSrc32FromLo16(Src, Root.getParent(), *MRI, TII,
+                                     *Subtarget);
 
     Matched = true;
   }
