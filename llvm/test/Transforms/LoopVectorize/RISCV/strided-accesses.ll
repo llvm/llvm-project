@@ -2137,9 +2137,10 @@ exit:
   ret void
 }
 
-; The routine for creating strided accesses depends on SCEV expansion.
-define void @scev_expander(ptr %p, ptr noalias %q) {
-; CHECK-LABEL: define void @scev_expander(
+; The routine for creating strided accesses depends on SCEV expansion,
+; and we specifically test the case of IV-start being an AddRec.
+define void @iv_start_is_addrec(ptr %p, ptr noalias %q) {
+; CHECK-LABEL: define void @iv_start_is_addrec(
 ; CHECK-SAME: ptr [[P:%.*]], ptr noalias [[Q:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[PH:.*]]
@@ -2171,7 +2172,7 @@ define void @scev_expander(ptr %p, ptr noalias %q) {
 ; CHECK-NEXT:    [[IND_INCOMING_NEXT]] = add i64 [[IND_INCOMING]], 1
 ; CHECK-NEXT:    br label %[[PH]]
 ;
-; CHECK-UF2-LABEL: define void @scev_expander(
+; CHECK-UF2-LABEL: define void @iv_start_is_addrec(
 ; CHECK-UF2-SAME: ptr [[P:%.*]], ptr noalias [[Q:%.*]]) #[[ATTR0]] {
 ; CHECK-UF2-NEXT:  [[ENTRY:.*]]:
 ; CHECK-UF2-NEXT:    br label %[[PH:.*]]
