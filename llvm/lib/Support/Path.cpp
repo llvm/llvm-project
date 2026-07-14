@@ -1016,26 +1016,24 @@ std::error_code create_directories(const Twine &Path, bool IgnoreExisting,
 
 static std::error_code copy_file_internal(int ReadFD, int WriteFD) {
   const size_t BufSize = 4096;
-  char *Buf = new char[BufSize];
-  int BytesRead = 0, BytesWritten = 0;
+  auto Buf = std::make_unique<char[]>(BufSize);
   for (;;) {
-    BytesRead = read(ReadFD, Buf, BufSize);
-    if (BytesRead <= 0)
-      break;
-    while (BytesRead) {
-      BytesWritten = write(WriteFD, Buf, BytesRead);
-      if (BytesWritten < 0)
-        break;
-      BytesRead -= BytesWritten;
-    }
-    if (BytesWritten < 0)
-      break;
-  }
-  delete[] Buf;
+    int BytesRead = read(ReadFD, Buf.get(), BufSize);
+    if (BytesRead < 0)
+      return errnoAsErrorCode();
+    if (BytesRead == 0)
+      return std::error_code();
 
-  if (BytesRead < 0 || BytesWritten < 0)
-    return errnoAsErrorCode();
-  return std::error_code();
+    int Offset = 0;
+    while (Offset < BytesRead) {
+      int BytesWritten = write(WriteFD, Buf.get() + Offset, BytesRead - Offset);
+      if (BytesWritten < 0)
+        return errnoAsErrorCode();
+      if (BytesWritten == 0)
+        return make_error_code(errc::io_error);
+      Offset += BytesWritten;
+    }
+  }
 }
 
 #ifndef __APPLE__
