@@ -3891,7 +3891,7 @@ void Verifier::visitCallBase(CallBase &Call) {
 
   Check(!Attrs.hasFnAttr(Attribute::StrictFP) ||
             Call.getFunction()->isStrictFP(),
-        "strictfp attribute must propagate from the call site to the caller",
+        "call site marked strictfp without caller function marked strictfp",
         Call);
 
   // Verify call attributes.

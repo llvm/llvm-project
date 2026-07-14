@@ -2794,9 +2794,8 @@ fn -> other_fn -> other_fn ; fn is norecurse
     optimizations that require assumptions about the floating-point rounding
     mode or that might alter the state of floating-point status flags that
     might otherwise be set or cleared by calling this function. LLVM will
-    not introduce any new floating-point instructions that may trap. The
-    attribute propagates from callee to caller, and all function definitions
-    that contain strictfp calls must be marked strictfp.
+    not introduce any new floating-point instructions that may trap. All
+    function definitions that contain strictfp calls must be marked strictfp.
 
 (denormal_fpenv)=
 
