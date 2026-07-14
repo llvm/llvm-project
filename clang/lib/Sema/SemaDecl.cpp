@@ -8409,7 +8409,12 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
   if (IsMemberSpecialization) {
     if (NewTemplate && NewVD->getPreviousDecl()) {
-      NewTemplate->setMemberSpecialization();
+      // In valid code, this should always hold, but in the case where a
+      // previous declaration was invalid/didn't have an instantiated-from
+      // field, this will not have been set, so skip setting
+      // MemberSpecialization if we don't have an instantiated-from.
+      if (NewTemplate->getInstantiatedFromMemberTemplate())
+        NewTemplate->setMemberSpecialization();
     } else if (IsPartialSpecialization) {
       cast<VarTemplatePartialSpecializationDecl>(NewVD)
           ->setMemberSpecialization();
