@@ -3061,6 +3061,22 @@ add_header_library(
 )
 
 add_header_library(
+  expf_integer_eval
+  HDRS
+    expf_integer_eval.h
+  DEPENDS
+    # TODO: strip the below deps down if able to
+    .exp_constants
+    .exp_integer_utils
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.frac128
+)
+
+add_header_library(
   expf
   HDRS
     expf.h
@@ -4097,6 +4113,21 @@ add_header_library(
     libc.src.__support.FPUtil.triple_double
     libc.src.__support.integer_literals
     libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  exp_integer_utils
+  HDRS
+    exp_integer_utils.h
+  DEPENDS
+    # TODO: strip the below deps down if able to
+    .exp_constants
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.frac128
 )
 
 add_header_library(

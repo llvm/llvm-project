@@ -1227,6 +1227,7 @@ add_entrypoint_object(
     ../expf.h
   DEPENDS
     libc.src.__support.math.expf
+    libc.src.__support.math.expf_integer_eval
     libc.src.errno.errno
 )
 
