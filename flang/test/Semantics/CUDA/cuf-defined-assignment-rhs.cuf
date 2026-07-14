@@ -42,6 +42,11 @@ subroutine test_defined_assignment
 
   ! CHECK: CALL assign_device(lhs,dev)
   lhs = dev
+
+  ! A source-parenthesized DEVICE variable is an expression, so it does not
+  ! trigger the DEVICE-variable RHS exception.
+  ! CHECK: CALL assign_host(lhs,(dev))
+  lhs = (dev)
 end subroutine
 
 module issue_reproducer
