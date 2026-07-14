@@ -17,11 +17,12 @@ add_orc_rt_unittest(CoreTests
   BootstrapInfoTest.cpp
   CallSPSCITest.cpp
   CallableTraitsHelperTest.cpp
-  SimpleSymbolTableTest.cpp
+  CommandLineTest.cpp
+  CompilerTest.cpp
   EndianTest.cpp
   ErrorCAPITest.cpp
-  ErrorTest.cpp
   ErrorExceptionInteropTest.cpp
+  ErrorTest.cpp
   ExecutorAddressTest.cpp
   ExecutorProcessInfoTest.cpp
   InProcessControllerAccessTest.cpp
@@ -33,18 +34,19 @@ add_orc_rt_unittest(CoreTests
   MathTest.cpp
   MemoryAccessSPSCITest.cpp
   MemoryFlagsTest.cpp
-  NativeDylibManagerTest.cpp
   NativeDylibManagerSPSCITest.cpp
+  NativeDylibManagerTest.cpp
   QueueingRunnerTest.cpp
   RTTITest.cpp
-  SessionTest.cpp
-  SimpleNativeMemoryMapTest.cpp
-  SimpleNativeMemoryMapSPSCITest.cpp
-  SimplePackedSerializationTest.cpp
   SPSAllocActionTest.cpp
   SPSMemoryFlagsTest.cpp
-  SPSWrapperFunctionTest.cpp
   SPSWrapperFunctionBufferTest.cpp
+  SPSWrapperFunctionTest.cpp
+  SessionTest.cpp
+  SimpleNativeMemoryMapSPSCITest.cpp
+  SimpleNativeMemoryMapTest.cpp
+  SimplePackedSerializationTest.cpp
+  SimpleSymbolTableTest.cpp
   StandaloneMachOUnwindInfoRegistrarTest.cpp
   TaskGroupTest.cpp
   ThreadPoolRunnerTest.cpp

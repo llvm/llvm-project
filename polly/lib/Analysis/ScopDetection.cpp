@@ -872,7 +872,9 @@ ScopDetection::getDelinearizationTerms(DetectionContext &Context,
     std::vector<const SCEV *> MaxTerms;
     SCEVRemoveMax::rewrite(Pair.second, SE, &MaxTerms);
     if (!MaxTerms.empty()) {
-      Terms.insert(Terms.begin(), MaxTerms.begin(), MaxTerms.end());
+      for (const SCEV *Max : MaxTerms)
+        Terms.push_back(
+            SE.getTruncateOrSignExtend(Max, Pair.second->getType()));
       continue;
     }
     // In case the outermost expression is a plain add, we check if any of its

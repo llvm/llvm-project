@@ -276,7 +276,8 @@ namespace llvm {
 
     CondMergingParams
     getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *Lhs,
-                                  const Value *Rhs) const override;
+                                  const Value *Rhs,
+                                  const Function *F) const override;
 
     bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;
 
