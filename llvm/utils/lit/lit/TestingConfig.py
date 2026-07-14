@@ -241,17 +241,8 @@ class TestingConfig:
             # files. Should we distinguish them?
             self.test_exec_root = str(self.test_exec_root)
         # Optionally relocate this suite's writable output tree under a
-        # caller-specified root, so %t/%T/Output and .lit_test_times.txt resolve
-        # under <root>/<suite-name> instead of the build tree. This lets output
-        # live outside the build dir, and lets multiple lit runs use the same
-        # tests concurrently against one build tree without clobbering each
-        # other; reusing a root reuses the tree (preserving .lit_test_times.txt).
-        # Applied even when test_exec_root is None, since the point is to force
-        # the output location. The per-suite <suite-name> component keeps
-        # multiple suites in one run from colliding under a shared root. The
-        # guard makes this idempotent: local configs are deep-copied from their
-        # parent (already relocated) and finish()ed again, which must not relocate
-        # a second time.
+        # caller-specified root, so %t/Output/.lit_test_times.txt/etc. resolve
+        # under <root>/<suite-name> instead of the build tree.
         if litConfig.test_output_root and not getattr(
             self, "_test_output_root_applied", False
         ):

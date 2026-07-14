@@ -1,27 +1,22 @@
 # Check that --test-output-root relocates each suite's writable output tree to
-# <root>/<suite-name>, so %t/%T/Output resolve under the given root directory
-# instead of the suite's build test_exec_root. This lets test output live
-# outside the build tree and lets multiple lit runs share one build tree without
-# clobbering each other; reusing a root reuses the tree.
+# <root>/<suite-name>, so %t/Output/etc. resolve under the given root directory
+# instead of the suite's build test_exec_root.
 #
-# The passed exec root uses a distinctive "execroot" directory name (rather than
-# "build") so the ROOTED-NOT check below can't be fooled by an ambient "/build/"
-# segment in %t (e.g. when the lit test tree itself lives under a build dir).
+# Both cases capture the outer lit's %t as TESTDIR and match the inner temp path
+# against it exactly, so each check fully pins where the output landed.
 
 # With the option, the temp path is under <root>/<suite-name>, not the exec root.
 # RUN: rm -rf %t && mkdir -p %t/execroot %t/out
 # RUN: %{lit} -a --test-output-root %t/out -Dexec_root=%t/execroot \
 # RUN:     %{inputs}/test-output-root | \
-# RUN:   FileCheck --check-prefix=ROOTED %s
+# RUN:   FileCheck --check-prefix=ROOTED %s -DTESTDIR=%t
 
 # Without the option, the temp path stays under the exec root.
 # RUN: rm -rf %t && mkdir -p %t/execroot
 # RUN: %{lit} -a -Dexec_root=%t/execroot \
 # RUN:     %{inputs}/test-output-root | \
-# RUN:   FileCheck --check-prefix=DEFAULT %s
+# RUN:   FileCheck --check-prefix=DEFAULT %s -DTESTDIR=%t
 
-# ROOTED: TEMP_PATH={{.*}}/out/output-root-suite/{{.*}}Output
-# ROOTED-NOT: TEMP_PATH={{.*}}/execroot/
+# ROOTED: TEMP_PATH=[[TESTDIR]]/out/output-root-suite/{{.*}}Output
 
-# DEFAULT: TEMP_PATH={{.*}}/execroot/{{.*}}Output
-# DEFAULT-NOT: output-root-suite
+# DEFAULT: TEMP_PATH=[[TESTDIR]]/execroot/{{.*}}Output
