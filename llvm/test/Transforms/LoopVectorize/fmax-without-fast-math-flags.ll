@@ -819,7 +819,7 @@ define float @fmaxnum_constant_trip_count_tailfold(ptr %src) #0 {
 ; CHECK-NEXT:    [[TMP25:%.*]] = fcmp uno <4 x float> [[TMP23]], [[TMP23]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = freeze <4 x i1> [[TMP25]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP26]])
-; CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT]], 28
+; CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
 ; CHECK-NEXT:    [[TMP29:%.*]] = or i1 [[TMP27]], [[TMP28]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i8> [[VEC_IND]], splat (i8 4)
 ; CHECK-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
