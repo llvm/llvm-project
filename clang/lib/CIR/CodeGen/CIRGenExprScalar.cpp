@@ -2929,9 +2929,19 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
       yieldTy = branch.getType();
       cir::YieldOp::create(b, loc, branch);
     } else {
-      // If LHS or RHS is a throw or void expression we need to patch
-      // arms as to properly match yield types.
-      insertPoints.push_back(b.saveInsertionPoint());
+      // The branch produced no value. This happens both for void expressions
+      // (which fall through and still need a yield) and for expressions that
+      // don't fall through, such as a throw or a call to a [[noreturn]]
+      // function. A diverging arm leaves the insertion point in an empty,
+      // unreachable block that the enclosing lexical scope will erase as dead
+      // code; such an arm is already terminated and needs no yield. Recording
+      // its insertion point would leave a dangling reference to the erased
+      // block, which the patch-up loop below would later dereference. So only
+      // defer a yield for arms that actually fall through, mirroring the
+      // dead-block condition in LexicalScope::cleanup().
+      mlir::Block *curBlock = b.getInsertionBlock();
+      if (curBlock && (curBlock->isEntryBlock() || !curBlock->empty()))
+        insertPoints.push_back(b.saveInsertionPoint());
     }
   };
 
