@@ -5700,6 +5700,8 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc(
       }
     }
     const Symbol *rhsFirstSymbol{evaluate::GetFirstSymbol(*rhsExpr)};
+    // TODO: This DEVICE exception may need to be limited to device-to-host
+    // transfers or to RHS references that appear in unambiguous host code.
     const bool preserveActualReference{
         (rhsDataAttr && *rhsDataAttr == common::CUDADataAttr::Device) ||
         (rhsFirstSymbol && IsValue(*rhsFirstSymbol))};
