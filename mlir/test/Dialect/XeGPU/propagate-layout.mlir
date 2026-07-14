@@ -808,7 +808,7 @@ gpu.module @test {
 // CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [2]>} dense<true> : vector<256xi1>
 // CHECK: %[[STEP:.*]] = vector.step {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [2]>} : vector<256xindex>
 // CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[STEP]]], %[[CST]] <{layout = #xegpu.layout<lane_layout = [16], lane_data = [2]>}> : memref<256xf16>, vector<256xindex>, vector<256xi1> -> vector<256xf16>
-// CHECK: %[[CAST_0:.*]] = vector.shape_cast %[[LOAD]] {layout_result_0 = #xegpu.layout<lane_layout = [2, 4, 2], lane_data = [1, 1, 2]>} : vector<256xf16> to vector<2x4x32xf16>
+// CHECK: %[[CAST_0:.*]] = vector.shape_cast %[[LOAD]] {layout_result_0 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 2]>} : vector<256xf16> to vector<2x4x32xf16>
 // CHECK: %[[CAST_1:.*]] = vector.shape_cast %[[CAST_0]] {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>} : vector<2x4x32xf16> to vector<1x256xf16>
 // CHECK: %[[CAST_2:.*]] = vector.shape_cast %[[CAST_1]] {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [2]>} : vector<1x256xf16> to vector<256xf16>
 // CHECK: xegpu.store %[[CAST_2]], %arg1[%[[STEP]]], %[[CST]] <{layout = #xegpu.layout<lane_layout = [16], lane_data = [2]>}> : vector<256xf16>, memref<256xf16>, vector<256xindex>, vector<256xi1>
@@ -1097,6 +1097,33 @@ func.func @vector_deinterleave_f16(%arg0: memref<8x32xf16>, %arg1: memref<8x16xf
   %4 = xegpu.create_nd_tdesc %arg2 : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
   xegpu.store_nd %2#0, %3[0, 0]  : vector<8x16xf16>, !xegpu.tensor_desc<8x16xf16>
   xegpu.store_nd %2#1, %4[0, 0]  : vector<8x16xf16>, !xegpu.tensor_desc<8x16xf16>
+  return
+}
+}
+
+// -----
+// completeScatterLoadLaneLayoutFromInstData: user supplies only inst_data on a
+// scatter load; with no usable consumer lane info, the scatter default is used.
+// inst_data=[1,16] -> lane_layout=[1,16], lane_data=[1,1].
+gpu.module @test {
+// CHECK-LABEL: func.func @broadcast_slice_expanded_dim(
+// CHECK-DAG: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [8, 4], lane_data = [2, 1], order = [0, 1]>} dense<5.000000e-01> : vector<16x4xf4E2M1FN>
+// CHECK-DAG: %[[CST0:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 8, 4], lane_data = [1, 1, 1], order = [1, 0, 2]>, dims = [1]>} dense<1.000000e+00> : vector<1x4xf8E8M0FNU>
+// CHECK-DAG: %[[BCAST:.*]] = vector.broadcast %[[CST0]] {layout_result_0 = #xegpu.layout<lane_layout = [1, 8, 4], lane_data = [1, 2, 1], order = [1, 0, 2]>} : vector<1x4xf8E8M0FNU> to vector<1x16x4xf8E8M0FNU>
+// CHECK-DAG: %[[SCAST:.*]] = vector.shape_cast %[[BCAST]] {layout_result_0 = #xegpu.layout<lane_layout = [8, 4], lane_data = [2, 1], order = [0, 1]>} : vector<1x16x4xf8E8M0FNU> to vector<16x4xf8E8M0FNU>
+// CHECK-DAG: %[[EXT:.*]] = arith.scaling_extf %[[CST]], %[[SCAST]] {layout_result_0 = #xegpu.layout<lane_layout = [8, 4], lane_data = [2, 1], order = [0, 1]>} : vector<16x4xf4E2M1FN>, vector<16x4xf8E8M0FNU> to vector<16x4xbf16>
+// CHECK: xegpu.store_matrix %[[EXT]], %{{.*}}[0, 0] <{layout = #xegpu.layout<lane_layout = [8, 4], lane_data = [2, 1], order = [0, 1]>}>: vector<16x4xbf16>, !xegpu.mem_desc<16x4xbf16>
+func.func @broadcast_slice_expanded_dim(%dst: !xegpu.mem_desc<16x4xbf16>) {
+  %data = arith.constant dense<0.5> : vector<16x4xf4E2M1FN>
+  %loaded = arith.constant dense<1.> : vector<1x4xf8E8M0FNU>
+  %bcasted = vector.broadcast %loaded : vector<1x4xf8E8M0FNU> to vector<1x16x4xf8E8M0FNU>
+  %bcasted_shape_casted = vector.shape_cast %bcasted : vector<1x16x4xf8E8M0FNU> to vector<16x4xf8E8M0FNU>
+
+  %scaled = arith.scaling_extf %data, %bcasted_shape_casted {
+    layout_result_0 = #xegpu.layout<lane_layout = [8, 4], lane_data = [2, 1], order = [0, 1]>
+  } : vector<16x4xf4E2M1FN>, vector<16x4xf8E8M0FNU> to vector<16x4xbf16>
+
+  xegpu.store_matrix %scaled, %dst[0, 0] <{layout = #xegpu.layout<lane_layout = [8, 4], lane_data = [2, 1], order = [0, 1]>}> : vector<16x4xbf16>, !xegpu.mem_desc<16x4xbf16>
   return
 }
 }

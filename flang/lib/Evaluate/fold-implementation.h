@@ -20,7 +20,6 @@
 #include "flang/Evaluate/constant.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
-#include "flang/Evaluate/formatting.h"
 #include "flang/Evaluate/intrinsics-library.h"
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/shape.h"
@@ -33,7 +32,6 @@
 #include "flang/Semantics/tools.h"
 #include <algorithm>
 #include <cmath>
-#include <complex>
 #include <cstdio>
 #include <optional>
 #include <type_traits>

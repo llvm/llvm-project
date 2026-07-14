@@ -19,13 +19,16 @@ namespace clang::tidy::readability {
 /// https://clang.llvm.org/extra/clang-tidy/checks/readability/trivial-switch.html
 class TrivialSwitchCheck : public ClangTidyCheck {
 public:
-  TrivialSwitchCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  TrivialSwitchCheck(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
+
+private:
+  const bool IgnoreMacros;
 };
 
 } // namespace clang::tidy::readability

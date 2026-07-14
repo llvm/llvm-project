@@ -312,15 +312,7 @@ void SymbolTable::scanVersionScript() {
   bool asteriskReported = false;
   auto assignAsterisk = [&](SymbolVersion &pat, VersionDefinition *ver,
                             bool isLocal) {
-    // Avoid issuing a warning if both '--retain-symbol-file' and a version
-    // script with `global: *` are used.
-    //
-    // '--retain-symbol-file' adds a "*" pattern to
-    // 'versionDefinitions[VER_NDX_LOCAL].nonLocalPatterns', see
-    // 'readConfigs()' in 'Driver.cpp'. Note that it is not '.localPatterns',
-    // and may seem counterintuitive, but still works as expected. Here we can
-    // exploit that and skip analyzing the pattern added for this option.
-    if (!asteriskReported && (isLocal || ver->id > VER_NDX_LOCAL)) {
+    if (!asteriskReported) {
       if ((isLocal && globalAsteriskFound) ||
           (!isLocal && localAsteriskFound)) {
         Warn(ctx)
