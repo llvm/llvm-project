@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPF.h"
+#include "BPFAsmPrinter.h"
 #include "BPFSubtarget.h"
 #include "BPFTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
@@ -39,6 +40,9 @@ public:
   Error addInstSelector(PassManagerWrapper &PMW) const;
   void addMachineSSAOptimization(PassManagerWrapper &PMW) const;
   void addPreEmitPass(PassManagerWrapper &PMW) const;
+  void addAsmPrinterBegin(PassManagerWrapper &PMW) const;
+  void addAsmPrinter(PassManagerWrapper &PMW) const;
+  void addAsmPrinterEnd(PassManagerWrapper &PMW) const;
 };
 
 void BPFCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
@@ -75,6 +79,18 @@ void BPFCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
   }
 }
 
+void BPFCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) const {
+  addModulePass(BPFAsmPrinterBeginPass(), PMW, /*Force=*/true);
+}
+
+void BPFCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) const {
+  addMachineFunctionPass(BPFAsmPrinterPass(), PMW);
+}
+
+void BPFCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) const {
+  addModulePass(BPFAsmPrinterEndPass(), PMW);
+}
+
 } // namespace
 
 static Expected<bool> parseBPFPreserveStaticOffsetOptions(StringRef Params) {
@@ -85,6 +101,15 @@ static Expected<bool> parseBPFPreserveStaticOffsetOptions(StringRef Params) {
 void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "BPFPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
+  // TODO(boomanaiden154): Move this into the base CodeGenPassBuilder once all
+  // targets that currently implement it have a ported asm-printer pass.
+  if (PIC) {
+    PIC->addClassToPassName(BPFAsmPrinterBeginPass::name(),
+                            "bpf-asm-printer-begin");
+    PIC->addClassToPassName(BPFAsmPrinterPass::name(), "bpf-asmprinter");
+    PIC->addClassToPassName(BPFAsmPrinterEndPass::name(),
+                            "bpf-asm-printer-end");
+  }
 
   PB.registerPipelineStartEPCallback(
       [=](ModulePassManager &MPM, OptimizationLevel) {
