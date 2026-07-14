@@ -2923,6 +2923,7 @@ public:
   using MapNamesArrayTy = SmallVector<Constant *, 4>;
   using MapDimArrayTy = SmallVector<uint64_t, 4>;
   using MapNonContiguousArrayTy = SmallVector<MapValuesArrayTy, 4>;
+  using MapHasAttachPtrArrayTy = SmallVector<bool, 4>;
 
   /// This structure contains combined information generated for mappable
   /// clauses, including base pointers, pointers, sizes, map types, user-defined
@@ -2941,6 +2942,9 @@ public:
     MapValuesArrayTy Sizes;
     MapFlagsArrayTy Types;
     MapNamesArrayTy Names;
+    /// True for entries that have an attach ptr, and thus an accompanying
+    /// ATTACH entry linking that ptr to its ptee.
+    MapHasAttachPtrArrayTy HasAttachPtr;
     StructNonContiguousInfo NonContigInfo;
 
     /// Append arrays in \a CurInfo.
@@ -2953,6 +2957,8 @@ public:
       Sizes.append(CurInfo.Sizes.begin(), CurInfo.Sizes.end());
       Types.append(CurInfo.Types.begin(), CurInfo.Types.end());
       Names.append(CurInfo.Names.begin(), CurInfo.Names.end());
+      HasAttachPtr.append(CurInfo.HasAttachPtr.begin(),
+                          CurInfo.HasAttachPtr.end());
       NonContigInfo.Dims.append(CurInfo.NonContigInfo.Dims.begin(),
                                 CurInfo.NonContigInfo.Dims.end());
       NonContigInfo.Offsets.append(CurInfo.NonContigInfo.Offsets.begin(),
