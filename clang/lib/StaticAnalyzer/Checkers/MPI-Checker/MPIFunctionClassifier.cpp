@@ -175,11 +175,6 @@ void MPIFunctionClassifier::initCollectiveIdentifiers(ASTContext &ASTCtx) {
   MPIType.push_back(IdentInfo_MPI_Ialltoall);
   assert(IdentInfo_MPI_Ialltoall);
 
-  // Register the remaining standard collectives. These are not referenced by
-  // any of the individual is<Kind>Type() predicates, so they don't need a
-  // dedicated IdentifierInfo member; the checker only relies on them being
-  // classified as collective / nonblocking. All nonblocking (MPI_I...)
-  // variants take an MPI_Request as their last argument.
   auto AddCollective = [&](StringRef Name) {
     IdentifierInfo *II = &ASTCtx.Idents.get(Name);
     MPICollectiveTypes.push_back(II);
