@@ -25,9 +25,12 @@ int main() {
     a[16] = 'A';
   free(a);
 
-  // Reuse the chunk without touching the tail; its bucket must read 0.
+  // The stale-tail bug only manifests on a recycled chunk (a fresh chunk's
+  // shadow is already zero). memprof has no quarantine, so with no intervening
+  // same-size-class allocation the allocator returns the just-freed chunk;
+  // require the reuse so the test can't pass vacuously. Its bucket must read 0.
   char *b = alloc_second();
-  if (!b)
+  if (b != a)
     return 1;
   for (int i = 0; i < 5; ++i)
     b[0] = 'B';
@@ -40,5 +43,4 @@ int main() {
 }
 
 // CHECK: AccessCountHistogram[3]: 5 7 0
-// CHECK-NOT: AccessCountHistogram[3]: 5 7 42
 // CHECK: Test completed successfully
