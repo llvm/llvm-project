@@ -101,6 +101,39 @@ the git integration can be run from
 `clang/tools/clang-format/git-clang-format`.
 ```
 
+If you are using [Jujutsu (jj)](https://jj-vcs.dev) instead of Git, you can
+use the built-in `jj fix` command for formatting. Add the following to your
+jj config, such as run `jj config edit --user` to open the config file,
+adjusting the path to point to the `clang-format` binary in your build
+directory:
+
+```toml
+[fix.tools.clang-format]
+command = ["/path/to/your/build/bin/clang-format", "--assume-filename=$path"]
+patterns = [
+    "glob:'**/*.c'",
+    "glob:'**/*.cc'",
+    "glob:'**/*.cpp'",
+    "glob:'**/*.h'",
+    "glob:'**/*.hpp'",
+    "glob:'**/*.inc'",
+    "glob:'**/*.td'",
+]
+line-range-arg = "--lines=$first:$last"
+```
+
+Then you can format only the changed lines in the current commit with:
+
+```console
+% jj fix -s @
+```
+
+Or format all mutable commits at once with:
+
+```console
+% jj fix
+```
+
 The LLVM project has migrated to GitHub Pull Requests as its review process.
 For more information about the workflow of using GitHub Pull Requests see our
 {ref}`GitHub <github-reviews>` documentation. We still have a read-only
