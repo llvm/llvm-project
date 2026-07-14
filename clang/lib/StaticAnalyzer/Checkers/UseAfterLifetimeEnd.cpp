@@ -65,6 +65,12 @@ void UseAfterLifetimeEnd::checkEndFunction(const ReturnStmt *RS,
   }
 }
 
+static SourceRange getRegionDeclRange(const MemRegion *Source) {
+  if (const auto *VR = dyn_cast<VarRegion>(Source))
+    return VR->getDecl()->getSourceRange();
+  return SourceRange();
+}
+
 void UseAfterLifetimeEnd::reportDanglingSource(const MemRegion *Source,
                                                SVal Val, ExplodedNode *N,
                                                CheckerContext &C) const {
@@ -73,6 +79,10 @@ void UseAfterLifetimeEnd::reportDanglingSource(const MemRegion *Source,
       (llvm::Twine("Returning value bound to '") + Source->getString() +
        "' that will go out of scope"),
       N);
+
+  if (SourceRange Range = getRegionDeclRange(Source); Range.isValid())
+    BR->addRange(Range);
+
   BR->addVisitor<UseAfterLifetimeEndBRVisitor>(Val, Source);
   C.emitReport(std::move(BR));
 }
@@ -94,11 +104,16 @@ UseAfterLifetimeEndBRVisitor::VisitNode(const ExplodedNode *N,
     return nullptr;
 
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
-  return std::make_shared<PathDiagnosticEventPiece>(
+  auto Piece = std::make_shared<PathDiagnosticEventPiece>(
       Pos,
       (llvm::Twine("Value bound to '") + SourceRegion->getString() + "' here")
           .str(),
       true);
+
+  if (SourceRange Range = getRegionDeclRange(SourceRegion); Range.isValid())
+    Piece->addRange(Range);
+
+  return Piece;
 }
 
 PathDiagnosticPieceRef
@@ -110,12 +125,17 @@ UseAfterLifetimeEndBRVisitor::getEndPath(BugReporterContext &BRC,
     return nullptr;
 
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
-  return std::make_shared<PathDiagnosticEventPiece>(
+  auto Piece = std::make_shared<PathDiagnosticEventPiece>(
       Pos,
       llvm::Twine(("Lifetime of '") + SourceRegion->getString() +
                   "' ended here")
           .str(),
       true);
+
+  if (SourceRange Range = getRegionDeclRange(SourceRegion); Range.isValid())
+    Piece->addRange(Range);
+
+  return Piece;
 }
 
 void ento::registerUseAfterLifetimeEnd(CheckerManager &Mgr) {
