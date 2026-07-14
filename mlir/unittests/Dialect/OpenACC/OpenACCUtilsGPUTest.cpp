@@ -27,9 +27,15 @@ protected:
     context.loadDialect<arith::ArithDialect, gpu::GPUDialect>();
   }
 
+  void SetUp() override {
+    module = ModuleOp::create(b, loc);
+    b.setInsertionPointToStart(module->getBody());
+  }
+
   MLIRContext context;
   OpBuilder b;
   Location loc;
+  OwningOpRef<ModuleOp> module;
 };
 
 //===----------------------------------------------------------------------===//

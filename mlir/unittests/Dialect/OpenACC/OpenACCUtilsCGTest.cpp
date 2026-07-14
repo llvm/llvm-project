@@ -458,6 +458,7 @@ TEST_F(OpenACCUtilsCGTest, getPrivatizeOpFromHandle) {
 
 TEST_F(OpenACCUtilsCGTest, getPrivatizeOpFromComputeRegionBlockArg) {
   OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  b.setInsertionPointToStart(module->getBody());
   GPUParallelDimsAttr gangDims = GPUParallelDimsAttr::get(
       &context, {GPUParallelDimAttr::blockXDim(&context)});
   auto c1 = arith::ConstantIndexOp::create(b, loc, 1);
@@ -540,6 +541,7 @@ TEST_F(OpenACCUtilsCGTest, collectPrivateLocalParDimsFromLaunchFallback) {
   // With no enclosing parallel loops, collectPrivateLocalParDims falls back to
   // the block-level launch dimensions.
   OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  b.setInsertionPointToStart(module->getBody());
   GPUParallelDimsAttr gangDims = GPUParallelDimsAttr::get(
       &context, {GPUParallelDimAttr::blockXDim(&context)});
   auto c1 = arith::ConstantIndexOp::create(b, loc, 1);
@@ -678,6 +680,7 @@ TEST_F(OpenACCUtilsCGTest, collectPrivateLocalParDimsFromReductionUsers) {
 
 TEST_F(OpenACCUtilsCGTest, isPrivateLocalSharedMemoryCandidateGangPrivate) {
   OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  b.setInsertionPointToStart(module->getBody());
   GPUParallelDimsAttr gangDims = GPUParallelDimsAttr::get(
       &context, {GPUParallelDimAttr::blockXDim(&context)});
   auto c1 = arith::ConstantIndexOp::create(b, loc, 1);
@@ -699,6 +702,7 @@ TEST_F(OpenACCUtilsCGTest, isPrivateLocalSharedMemoryCandidateGangPrivate) {
 
 TEST_F(OpenACCUtilsCGTest, isPrivateLocalSharedMemoryCandidateThreadXPrivate) {
   OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  b.setInsertionPointToStart(module->getBody());
   GPUParallelDimsAttr vectorDims = GPUParallelDimsAttr::get(
       &context, {GPUParallelDimAttr::threadXDim(&context)});
   auto c1 = arith::ConstantIndexOp::create(b, loc, 1);
@@ -721,6 +725,7 @@ TEST_F(OpenACCUtilsCGTest, isPrivateLocalSharedMemoryCandidateThreadXPrivate) {
 TEST_F(OpenACCUtilsCGTest,
        isPrivateLocalSharedMemoryCandidateWorkerPrivateConstant) {
   OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  b.setInsertionPointToStart(module->getBody());
   GPUParallelDimsAttr workerDims = GPUParallelDimsAttr::get(
       &context, {GPUParallelDimAttr::threadYDim(&context)});
   auto c1 = arith::ConstantIndexOp::create(b, loc, 1);
@@ -746,6 +751,7 @@ TEST_F(OpenACCUtilsCGTest,
 TEST_F(OpenACCUtilsCGTest,
        isPrivateLocalSharedMemoryCandidateWorkerPrivateDynamicFails) {
   OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  b.setInsertionPointToStart(module->getBody());
   GPUParallelDimsAttr workerDims = GPUParallelDimsAttr::get(
       &context, {GPUParallelDimAttr::threadYDim(&context)});
   auto c1 = arith::ConstantIndexOp::create(b, loc, 1);
@@ -777,6 +783,7 @@ TEST_F(OpenACCUtilsCGTest,
 
 TEST_F(OpenACCUtilsCGTest, getPrivateLocalSharedMemoryUpperBoundBytes) {
   OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  b.setInsertionPointToStart(module->getBody());
   GPUParallelDimsAttr gangDims = GPUParallelDimsAttr::get(
       &context, {GPUParallelDimAttr::blockXDim(&context)});
   auto c1 = arith::ConstantIndexOp::create(b, loc, 1);

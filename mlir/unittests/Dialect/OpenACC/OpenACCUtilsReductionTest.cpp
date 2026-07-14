@@ -32,9 +32,15 @@ protected:
                         complex::ComplexDialect, memref::MemRefDialect>();
   }
 
+  void SetUp() override {
+    module = ModuleOp::create(b, loc);
+    b.setInsertionPointToStart(module->getBody());
+  }
+
   MLIRContext context;
   OpBuilder b;
   Location loc;
+  OwningOpRef<ModuleOp> module;
 };
 
 //===----------------------------------------------------------------------===//
