@@ -74,10 +74,9 @@ define amdgpu_kernel void @rsq_f32(ptr addrspace(1) noalias %out, ptr addrspace(
 define amdgpu_kernel void @rsq_f32_sgpr(ptr addrspace(1) noalias %out, float %val) {
 ; GCN-DAZ-LABEL: rsq_f32_sgpr:
 ; GCN-DAZ:       ; %bb.0:
-; GCN-DAZ-NEXT:    s_load_dword s2, s[4:5], 0xb
-; GCN-DAZ-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GCN-DAZ-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-DAZ-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GCN-DAZ-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-DAZ-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-DAZ-NEXT:    v_rsq_f32_e32 v0, s2
 ; GCN-DAZ-NEXT:    s_mov_b32 s2, -1
 ; GCN-DAZ-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -85,10 +84,9 @@ define amdgpu_kernel void @rsq_f32_sgpr(ptr addrspace(1) noalias %out, float %va
 ;
 ; GCN-IEEE-LABEL: rsq_f32_sgpr:
 ; GCN-IEEE:       ; %bb.0:
-; GCN-IEEE-NEXT:    s_load_dword s2, s[4:5], 0xb
-; GCN-IEEE-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GCN-IEEE-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-IEEE-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GCN-IEEE-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-IEEE-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-IEEE-NEXT:    v_rsq_f32_e32 v0, s2
 ; GCN-IEEE-NEXT:    s_mov_b32 s2, -1
 ; GCN-IEEE-NEXT:    buffer_store_dword v0, off, s[0:3], 0

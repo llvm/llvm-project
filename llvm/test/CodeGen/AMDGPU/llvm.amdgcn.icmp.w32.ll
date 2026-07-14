@@ -13,9 +13,7 @@ declare i32 @llvm.amdgcn.icmp.i1(i1, i1, i32) #0
 define amdgpu_kernel void @v_icmp_i32_eq(ptr addrspace(1) %out, i32 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i32_eq:
 ; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_cmp_eq_u32_e64 s2, 0x64, s2
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -25,9 +23,7 @@ define amdgpu_kernel void @v_icmp_i32_eq(ptr addrspace(1) %out, i32 %src) {
 ;
 ; SDAG-GFX10-LABEL: v_icmp_i32_eq:
 ; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX10-NEXT:    v_cmp_eq_u32_e64 s2, 0x64, s2
@@ -96,9 +92,7 @@ define amdgpu_kernel void @v_icmp_i32(ptr addrspace(1) %out, i32 %src) {
 define amdgpu_kernel void @v_icmp_i32_ne(ptr addrspace(1) %out, i32 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i32_ne:
 ; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_cmp_ne_u32_e64 s2, 0x64, s2
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -108,9 +102,7 @@ define amdgpu_kernel void @v_icmp_i32_ne(ptr addrspace(1) %out, i32 %src) {
 ;
 ; SDAG-GFX10-LABEL: v_icmp_i32_ne:
 ; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX10-NEXT:    v_cmp_ne_u32_e64 s2, 0x64, s2
@@ -150,9 +142,7 @@ define amdgpu_kernel void @v_icmp_i32_ne(ptr addrspace(1) %out, i32 %src) {
 define amdgpu_kernel void @v_icmp_i32_ugt(ptr addrspace(1) %out, i32 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i32_ugt:
 ; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_cmp_lt_u32_e64 s2, 0x64, s2
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -162,9 +152,7 @@ define amdgpu_kernel void @v_icmp_i32_ugt(ptr addrspace(1) %out, i32 %src) {
 ;
 ; SDAG-GFX10-LABEL: v_icmp_i32_ugt:
 ; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX10-NEXT:    v_cmp_lt_u32_e64 s2, 0x64, s2
@@ -204,9 +192,7 @@ define amdgpu_kernel void @v_icmp_i32_ugt(ptr addrspace(1) %out, i32 %src) {
 define amdgpu_kernel void @v_icmp_i32_uge(ptr addrspace(1) %out, i32 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i32_uge:
 ; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_cmp_le_u32_e64 s2, 0x64, s2
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -216,9 +202,7 @@ define amdgpu_kernel void @v_icmp_i32_uge(ptr addrspace(1) %out, i32 %src) {
 ;
 ; SDAG-GFX10-LABEL: v_icmp_i32_uge:
 ; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX10-NEXT:    v_cmp_le_u32_e64 s2, 0x64, s2
@@ -258,9 +242,7 @@ define amdgpu_kernel void @v_icmp_i32_uge(ptr addrspace(1) %out, i32 %src) {
 define amdgpu_kernel void @v_icmp_i32_ult(ptr addrspace(1) %out, i32 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i32_ult:
 ; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_cmp_gt_u32_e64 s2, 0x64, s2
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -270,9 +252,7 @@ define amdgpu_kernel void @v_icmp_i32_ult(ptr addrspace(1) %out, i32 %src) {
 ;
 ; SDAG-GFX10-LABEL: v_icmp_i32_ult:
 ; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX10-NEXT:    v_cmp_gt_u32_e64 s2, 0x64, s2
@@ -312,9 +292,7 @@ define amdgpu_kernel void @v_icmp_i32_ult(ptr addrspace(1) %out, i32 %src) {
 define amdgpu_kernel void @v_icmp_i32_ule(ptr addrspace(1) %out, i32 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i32_ule:
 ; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_cmp_ge_u32_e64 s2, 0x64, s2
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -324,9 +302,7 @@ define amdgpu_kernel void @v_icmp_i32_ule(ptr addrspace(1) %out, i32 %src) {
 ;
 ; SDAG-GFX10-LABEL: v_icmp_i32_ule:
 ; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX10-NEXT:    v_cmp_ge_u32_e64 s2, 0x64, s2
@@ -366,9 +342,7 @@ define amdgpu_kernel void @v_icmp_i32_ule(ptr addrspace(1) %out, i32 %src) {
 define amdgpu_kernel void @v_icmp_i32_sgt(ptr addrspace(1) %out, i32 %src) #1 {
 ; SDAG-GFX11-LABEL: v_icmp_i32_sgt:
 ; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_cmp_lt_i32_e64 s2, 0x64, s2
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -378,9 +352,7 @@ define amdgpu_kernel void @v_icmp_i32_sgt(ptr addrspace(1) %out, i32 %src) #1 {
 ;
 ; SDAG-GFX10-LABEL: v_icmp_i32_sgt:
 ; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX10-NEXT:    v_cmp_lt_i32_e64 s2, 0x64, s2
@@ -420,9 +392,7 @@ define amdgpu_kernel void @v_icmp_i32_sgt(ptr addrspace(1) %out, i32 %src) #1 {
 define amdgpu_kernel void @v_icmp_i32_sge(ptr addrspace(1) %out, i32 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i32_sge:
 ; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_cmp_le_i32_e64 s2, 0x64, s2
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -432,9 +402,7 @@ define amdgpu_kernel void @v_icmp_i32_sge(ptr addrspace(1) %out, i32 %src) {
 ;
 ; SDAG-GFX10-LABEL: v_icmp_i32_sge:
 ; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX10-NEXT:    v_cmp_le_i32_e64 s2, 0x64, s2
@@ -474,9 +442,7 @@ define amdgpu_kernel void @v_icmp_i32_sge(ptr addrspace(1) %out, i32 %src) {
 define amdgpu_kernel void @v_icmp_i32_slt(ptr addrspace(1) %out, i32 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i32_slt:
 ; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_cmp_gt_i32_e64 s2, 0x64, s2
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -486,9 +452,7 @@ define amdgpu_kernel void @v_icmp_i32_slt(ptr addrspace(1) %out, i32 %src) {
 ;
 ; SDAG-GFX10-LABEL: v_icmp_i32_slt:
 ; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX10-NEXT:    v_cmp_gt_i32_e64 s2, 0x64, s2
@@ -528,9 +492,7 @@ define amdgpu_kernel void @v_icmp_i32_slt(ptr addrspace(1) %out, i32 %src) {
 define amdgpu_kernel void @v_icmp_i32_sle(ptr addrspace(1) %out, i32 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i32_sle:
 ; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_cmp_ge_i32_e64 s2, 0x64, s2
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -540,9 +502,7 @@ define amdgpu_kernel void @v_icmp_i32_sle(ptr addrspace(1) %out, i32 %src) {
 ;
 ; SDAG-GFX10-LABEL: v_icmp_i32_sle:
 ; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX10-NEXT:    v_cmp_ge_i32_e64 s2, 0x64, s2
@@ -1042,9 +1002,7 @@ define amdgpu_kernel void @v_icmp_i64_sle(ptr addrspace(1) %out, i64 %src) {
 define amdgpu_kernel void @v_icmp_i16_eq(ptr addrspace(1) %out, i16 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i16_eq:
 ; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_cmp_eq_u16_e64 s2, 0x64, s2
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1054,9 +1012,7 @@ define amdgpu_kernel void @v_icmp_i16_eq(ptr addrspace(1) %out, i16 %src) {
 ;
 ; SDAG-GFX10-LABEL: v_icmp_i16_eq:
 ; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX10-NEXT:    v_cmp_eq_u16_e64 s2, 0x64, s2
@@ -1125,9 +1081,7 @@ define amdgpu_kernel void @v_icmp_i16(ptr addrspace(1) %out, i16 %src) {
 define amdgpu_kernel void @v_icmp_i16_ne(ptr addrspace(1) %out, i16 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i16_ne:
 ; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_cmp_ne_u16_e64 s2, 0x64, s2
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1137,9 +1091,7 @@ define amdgpu_kernel void @v_icmp_i16_ne(ptr addrspace(1) %out, i16 %src) {
 ;
 ; SDAG-GFX10-LABEL: v_icmp_i16_ne:
 ; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX10-NEXT:    v_cmp_ne_u16_e64 s2, 0x64, s2
@@ -1179,9 +1131,7 @@ define amdgpu_kernel void @v_icmp_i16_ne(ptr addrspace(1) %out, i16 %src) {
 define amdgpu_kernel void @v_icmp_i16_ugt(ptr addrspace(1) %out, i16 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i16_ugt:
 ; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_cmp_lt_u16_e64 s2, 0x64, s2
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1191,9 +1141,7 @@ define amdgpu_kernel void @v_icmp_i16_ugt(ptr addrspace(1) %out, i16 %src) {
 ;
 ; SDAG-GFX10-LABEL: v_icmp_i16_ugt:
 ; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX10-NEXT:    v_cmp_lt_u16_e64 s2, 0x64, s2
@@ -1233,9 +1181,7 @@ define amdgpu_kernel void @v_icmp_i16_ugt(ptr addrspace(1) %out, i16 %src) {
 define amdgpu_kernel void @v_icmp_i16_uge(ptr addrspace(1) %out, i16 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i16_uge:
 ; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_cmp_le_u16_e64 s2, 0x64, s2
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1245,9 +1191,7 @@ define amdgpu_kernel void @v_icmp_i16_uge(ptr addrspace(1) %out, i16 %src) {
 ;
 ; SDAG-GFX10-LABEL: v_icmp_i16_uge:
 ; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX10-NEXT:    v_cmp_le_u16_e64 s2, 0x64, s2
@@ -1287,9 +1231,7 @@ define amdgpu_kernel void @v_icmp_i16_uge(ptr addrspace(1) %out, i16 %src) {
 define amdgpu_kernel void @v_icmp_i16_ult(ptr addrspace(1) %out, i16 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i16_ult:
 ; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_cmp_gt_u16_e64 s2, 0x64, s2
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1299,9 +1241,7 @@ define amdgpu_kernel void @v_icmp_i16_ult(ptr addrspace(1) %out, i16 %src) {
 ;
 ; SDAG-GFX10-LABEL: v_icmp_i16_ult:
 ; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX10-NEXT:    v_cmp_gt_u16_e64 s2, 0x64, s2
@@ -1341,9 +1281,7 @@ define amdgpu_kernel void @v_icmp_i16_ult(ptr addrspace(1) %out, i16 %src) {
 define amdgpu_kernel void @v_icmp_i16_ule(ptr addrspace(1) %out, i16 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i16_ule:
 ; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_cmp_ge_u16_e64 s2, 0x64, s2
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1353,9 +1291,7 @@ define amdgpu_kernel void @v_icmp_i16_ule(ptr addrspace(1) %out, i16 %src) {
 ;
 ; SDAG-GFX10-LABEL: v_icmp_i16_ule:
 ; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX10-NEXT:    v_cmp_ge_u16_e64 s2, 0x64, s2
@@ -1395,9 +1331,7 @@ define amdgpu_kernel void @v_icmp_i16_ule(ptr addrspace(1) %out, i16 %src) {
 define amdgpu_kernel void @v_icmp_i16_sgt(ptr addrspace(1) %out, i16 %src) #1 {
 ; SDAG-GFX11-LABEL: v_icmp_i16_sgt:
 ; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_cmp_lt_i16_e64 s2, 0x64, s2
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1407,9 +1341,7 @@ define amdgpu_kernel void @v_icmp_i16_sgt(ptr addrspace(1) %out, i16 %src) #1 {
 ;
 ; SDAG-GFX10-LABEL: v_icmp_i16_sgt:
 ; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX10-NEXT:    v_cmp_lt_i16_e64 s2, 0x64, s2
@@ -1449,9 +1381,7 @@ define amdgpu_kernel void @v_icmp_i16_sgt(ptr addrspace(1) %out, i16 %src) #1 {
 define amdgpu_kernel void @v_icmp_i16_sge(ptr addrspace(1) %out, i16 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i16_sge:
 ; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_cmp_le_i16_e64 s2, 0x64, s2
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1461,9 +1391,7 @@ define amdgpu_kernel void @v_icmp_i16_sge(ptr addrspace(1) %out, i16 %src) {
 ;
 ; SDAG-GFX10-LABEL: v_icmp_i16_sge:
 ; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX10-NEXT:    v_cmp_le_i16_e64 s2, 0x64, s2
@@ -1503,9 +1431,7 @@ define amdgpu_kernel void @v_icmp_i16_sge(ptr addrspace(1) %out, i16 %src) {
 define amdgpu_kernel void @v_icmp_i16_slt(ptr addrspace(1) %out, i16 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i16_slt:
 ; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_cmp_gt_i16_e64 s2, 0x64, s2
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1515,9 +1441,7 @@ define amdgpu_kernel void @v_icmp_i16_slt(ptr addrspace(1) %out, i16 %src) {
 ;
 ; SDAG-GFX10-LABEL: v_icmp_i16_slt:
 ; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX10-NEXT:    v_cmp_gt_i16_e64 s2, 0x64, s2
@@ -1557,9 +1481,7 @@ define amdgpu_kernel void @v_icmp_i16_slt(ptr addrspace(1) %out, i16 %src) {
 define amdgpu_kernel void @v_icmp_i16_sle(ptr addrspace(1) %out, i16 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i16_sle:
 ; SDAG-GFX11:       ; %bb.0:
-; SDAG-GFX11-NEXT:    s_clause 0x1
-; SDAG-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; SDAG-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_cmp_ge_i16_e64 s2, 0x64, s2
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1569,9 +1491,7 @@ define amdgpu_kernel void @v_icmp_i16_sle(ptr addrspace(1) %out, i16 %src) {
 ;
 ; SDAG-GFX10-LABEL: v_icmp_i16_sle:
 ; SDAG-GFX10:       ; %bb.0:
-; SDAG-GFX10-NEXT:    s_clause 0x1
-; SDAG-GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; SDAG-GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX10-NEXT:    v_cmp_ge_i16_e64 s2, 0x64, s2

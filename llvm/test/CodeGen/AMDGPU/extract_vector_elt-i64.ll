@@ -81,8 +81,6 @@ define amdgpu_kernel void @dyn_extract_vector_elt_v3i64(ptr addrspace(1) %out, <
 ; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 ; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 ; GCN-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 3
-; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
-; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 ; GCN: store_dwordx2 v[{{[0-9:]+}}]
 define amdgpu_kernel void @dyn_extract_vector_elt_v4i64(ptr addrspace(1) %out, <4 x i64> %foo, i32 %elt) #0 {
   %dynelt = extractelement <4 x i64> %foo, i32 %elt
