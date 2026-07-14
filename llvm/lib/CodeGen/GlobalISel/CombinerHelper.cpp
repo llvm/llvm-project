@@ -7037,7 +7037,7 @@ bool CombinerHelper::matchRepeatedFPDivisor(
     return false;
 
   auto IsOne = [this](Register X) {
-    auto N0CFP = isConstantOrConstantSplatVectorFP(*MRI.getVRegDef(X), MRI);
+    auto N0CFP = isConstantOrConstantSplatVectorFP(X, MRI);
     return N0CFP && (N0CFP->isOne() || N0CFP->isMinusOne());
   };
 
