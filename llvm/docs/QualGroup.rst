@@ -251,7 +251,8 @@ Meeting agendas, minutes, and supportig materials are published to ensure transp
 Upcoming and past meeting agendas, and meeting minutes are published in a dedicated thread
 on the LLVM Discourse forum: `Meeting Agendas and Minutes <https://discourse.llvm.org/t/llvm-qualification-wg-sync-ups-meeting-minutes/87148>`_ 
 
-Slides used to support discussions during sync-up meetings are stored in a dedicated Google Drive folder: `Link <https://drive.google.com/drive/u/1/folders/1nu3JAanE0gqQDll0S9ofVy4FOFezc6Mm>`_.
+Slides used to support discussions during sync-up meetings are stored in a
+`dedicated Google Drive folder <https://drive.google.com/drive/u/1/folders/1nu3JAanE0gqQDll0S9ofVy4FOFezc6Mm>`_.
 Note that the naming convention for these slides is *YYYYMM*\_llvm_qual_wg.
 
 While Discourse is our active communication channel for agendas and announcements,
@@ -259,9 +260,8 @@ the `llvm-wgs` repository is our durable, central location for both WG artifacts
 The `meeting directory in the llvm-wgs repository <https://github.com/llvm/llvm-wgs/tree/main/fusa-qual-wg/meetings>`_
 provides the long-term archive of the working group's meeting records. It contains:
 
-* `meeting materials <https://github.com/llvm/llvm-wgs/tree/main/fusa-qual-wg/meetings/materials>`_,
-  including slides and other content used to support meeting discussions; and
-* `meeting agendas and minutes <https://github.com/llvm/llvm-wgs/tree/main/fusa-qual-wg/meetings/minutes>`_.
+* `archived meeting materials <https://github.com/llvm/llvm-wgs/tree/main/fusa-qual-wg/meetings/materials>`_, and
+* `archived meeting agendas and minutes <https://github.com/llvm/llvm-wgs/tree/main/fusa-qual-wg/meetings/minutes>`_.
 
 AI Transcription Policy
 =======================
