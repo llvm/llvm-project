@@ -1,208 +1,443 @@
 // RUN: mlir-opt %s -arith-expand="include-bf16=true include-f8e8m0=true include-f4e2m1=true" -verify-diagnostics -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -arith-expand -split-input-file -verify-diagnostics | FileCheck %s --check-prefix=SCHECK
+// RUN: mlir-opt %s -arith-expand="include-bf16=true include-f8e8m0=true include-f4e2m1=true" -canonicalize -verify-diagnostics -split-input-file | FileCheck %s --check-prefix=VALUES
 
-// Test ceil divide with signed integer
-// CHECK-LABEL:       func @ceildivi
-// CHECK-SAME:     ([[ARG0:%.+]]: i32, [[ARG1:%.+]]: i32) -> i32 {
-func.func @ceildivi(%arg0: i32, %arg1: i32) -> (i32) {
-  %res = arith.ceildivsi %arg0, %arg1 : i32
-  return %res : i32
-
-// CHECK:           [[ZERO:%.+]] = arith.constant 0 : i32
-// CHECK:           [[ONE:%.+]] = arith.constant 1 : i32
-// CHECK:           [[DIV:%.+]] = arith.divsi %arg0, %arg1 : i32
-// CHECK:           [[MUL:%.+]] = arith.muli [[DIV]], %arg1 : i32
-// CHECK:           [[NEXACT:%.+]] = arith.cmpi ne, %arg0, [[MUL]] : i32
-// CHECK:           [[NNEG:%.+]] = arith.cmpi slt, %arg0, [[ZERO]] : i32
-// CHECK:           [[MNEG:%.+]] = arith.cmpi slt, %arg1, [[ZERO]] : i32
-// CHECK:           [[SAMESIGN:%.+]] = arith.cmpi eq, [[NNEG]], [[MNEG]] : i1
-// CHECK:           [[SHOULDROUND:%.+]] = arith.andi [[NEXACT]], [[SAMESIGN]] : i1
-// CHECK:           [[CEIL:%.+]] = arith.addi [[DIV]], [[ONE]] : i32
-// CHECK:           [[RES:%.+]] = arith.select [[SHOULDROUND]], [[CEIL]], [[DIV]] : i32
-}
-
-// -----
-
-// Test ceil divide with index type
-// CHECK-LABEL:       func @ceildivi_index
-// CHECK-SAME:     ([[ARG0:%.+]]: index, [[ARG1:%.+]]: index) -> index {
-func.func @ceildivi_index(%arg0: index, %arg1: index) -> (index) {
-  %res = arith.ceildivsi %arg0, %arg1 : index
-  return %res : index
-
-// CHECK:           [[ZERO:%.+]] = arith.constant 0 : index
-// CHECK:           [[ONE:%.+]] = arith.constant 1 : index
-// CHECK:           [[DIV:%.+]] = arith.divsi %arg0, %arg1 : index
-// CHECK:           [[MUL:%.+]] = arith.muli [[DIV]], %arg1 : index
-// CHECK:           [[NEXACT:%.+]] = arith.cmpi ne, %arg0, [[MUL]] : index
-// CHECK:           [[NNEG:%.+]] = arith.cmpi slt, %arg0, [[ZERO]] : index
-// CHECK:           [[MNEG:%.+]] = arith.cmpi slt, %arg1, [[ZERO]] : index
-// CHECK:           [[SAMESIGN:%.+]] = arith.cmpi eq, [[NNEG]], [[MNEG]] : i1
-// CHECK:           [[SHOULDROUND:%.+]] = arith.andi [[NEXACT]], [[SAMESIGN]] : i1
-// CHECK:           [[CEIL:%.+]] = arith.addi [[DIV]], [[ONE]] : index
-// CHECK:           [[RES:%.+]] = arith.select [[SHOULDROUND]], [[CEIL]], [[DIV]] : index
-
-}
-
-// -----
-
-// Test floor divide with signed integer
-// CHECK-LABEL:       func @floordivi
-// CHECK-SAME:     ([[ARG0:%.+]]: i32, [[ARG1:%.+]]: i32) -> i32 {
-func.func @floordivi(%arg0: i32, %arg1: i32) -> (i32) {
-  %res = arith.floordivsi %arg0, %arg1 : i32
-  return %res : i32
-// CHECK:   %[[QUOTIENT:.*]] = arith.divsi %arg0, %arg1 : i32
-// CHECK:   %[[PRODUCT:.*]] = arith.muli %[[QUOTIENT]], %arg1 : i32
-// CHECK:   %[[NOT_EQ_PRODUCT:.*]] = arith.cmpi ne, %arg0, %[[PRODUCT]] : i32
-// CHECK-DAG:   %[[ZERO:.*]] = arith.constant 0 : i32
-// CHECK:   %[[NEG_DIVISOR:.*]] = arith.cmpi slt, %arg0, %[[ZERO]] : i32
-// CHECK:   %[[NEG_DIVIDEND:.*]] = arith.cmpi slt, %arg1, %[[ZERO]] : i32
-// CHECK:   %[[OPPOSITE_SIGN:.*]] = arith.cmpi ne, %[[NEG_DIVISOR]], %[[NEG_DIVIDEND]] : i1
-// CHECK:   %[[CONDITION:.*]] = arith.andi %[[NOT_EQ_PRODUCT]], %[[OPPOSITE_SIGN]] : i1
-// CHECK-DAG:   %[[NEG_ONE:.*]] = arith.constant -1 : i32
-// CHECK:   %[[MINUS_ONE:.*]] = arith.addi %[[QUOTIENT]], %[[NEG_ONE]] : i32
-// CHECK:   %[[RES:.*]] = arith.select %[[CONDITION]], %[[MINUS_ONE]], %[[QUOTIENT]] : i32
-}
-
-// -----
-
-// Test floor divide with index type
-// CHECK-LABEL:       func @floordivi_index
-// CHECK-SAME:     ([[ARG0:%.+]]: index, [[ARG1:%.+]]: index) -> index {
-func.func @floordivi_index(%arg0: index, %arg1: index) -> (index) {
-  %res = arith.floordivsi %arg0, %arg1 : index
-  return %res : index
-// CHECK:   %[[QUOTIENT:.*]] = arith.divsi %arg0, %arg1 : index
-// CHECK:   %[[PRODUCT:.*]] = arith.muli %[[QUOTIENT]], %arg1 : index
-// CHECK:   %[[NOT_EQ_PRODUCT:.*]] = arith.cmpi ne, %arg0, %[[PRODUCT]] : index
-// CHECK-DAG:   %[[ZERO:.*]] = arith.constant 0 : index
-// CHECK:   %[[NEG_DIVISOR:.*]] = arith.cmpi slt, %arg0, %[[ZERO]] : index
-// CHECK:   %[[NEG_DIVIDEND:.*]] = arith.cmpi slt, %arg1, %[[ZERO]] : index
-// CHECK:   %[[OPPOSITE_SIGN:.*]] = arith.cmpi ne, %[[NEG_DIVISOR]], %[[NEG_DIVIDEND]] : i1
-// CHECK:   %[[CONDITION:.*]] = arith.andi %[[NOT_EQ_PRODUCT]], %[[OPPOSITE_SIGN]] : i1
-// CHECK:   %[[NEG_ONE:.*]] = arith.constant -1 : index
-// CHECK-DAG:   %[[MINUS_ONE:.*]] = arith.addi %[[QUOTIENT]], %[[NEG_ONE]] : index
-// CHECK:   %[[RES:.*]] = arith.select %[[CONDITION]], %[[MINUS_ONE]], %[[QUOTIENT]] : index
-}
-
-// -----
-
-// Test floor divide with vector
-// CHECK-LABEL:   func.func @floordivi_vec(
-// CHECK-SAME:                             %[[VAL_0:.*]]: vector<4xi32>,
-// CHECK-SAME:                             %[[VAL_1:.*]]: vector<4xi32>) -> vector<4xi32> {
-func.func @floordivi_vec(%arg0: vector<4xi32>, %arg1: vector<4xi32>) -> (vector<4xi32>) {
-  %res = arith.floordivsi %arg0, %arg1 : vector<4xi32>
-  return %res : vector<4xi32>
-// CHECK:   %[[QUOTIENT:.*]] = arith.divsi %arg0, %arg1 : vector<4xi32>
-// CHECK:   %[[PRODUCT:.*]] = arith.muli %[[QUOTIENT]], %arg1 : vector<4xi32>
-// CHECK:   %[[NOT_EQ_PRODUCT:.*]] = arith.cmpi ne, %arg0, %[[PRODUCT]] : vector<4xi32>
-// CHECK-DAG:   %[[ZERO:.*]] = arith.constant dense<0> : vector<4xi32>
-// CHECK:   %[[NEG_DIVISOR:.*]] = arith.cmpi slt, %arg0, %[[ZERO]] : vector<4xi32>
-// CHECK:   %[[NEG_DIVIDEND:.*]] = arith.cmpi slt, %arg1, %[[ZERO]] : vector<4xi32>
-// CHECK:   %[[OPPOSITE_SIGN:.*]] = arith.cmpi ne, %[[NEG_DIVISOR]], %[[NEG_DIVIDEND]] : vector<4xi1>
-// CHECK:   %[[CONDITION:.*]] = arith.andi %[[NOT_EQ_PRODUCT]], %[[OPPOSITE_SIGN]] : vector<4xi1>
-// CHECK-DAG:   %[[NEG_ONE:.*]] = arith.constant dense<-1> : vector<4xi32>
-// CHECK:   %[[MINUS_ONE:.*]] = arith.addi %[[QUOTIENT]], %[[NEG_ONE]] : vector<4xi32>
-// CHECK:   %[[RES:.*]] = arith.select %[[CONDITION]], %[[MINUS_ONE]], %[[QUOTIENT]] : vector<4xi1>, vector<4xi32>
-}
-
-// -----
-
-// Test ceil divide with unsigned integer
-// CHECK-LABEL:       func @ceildivui
-// CHECK-SAME:     ([[ARG0:%.+]]: i32, [[ARG1:%.+]]: i32) -> i32 {
-func.func @ceildivui(%arg0: i32, %arg1: i32) -> (i32) {
+// CHECK-LABEL: func.func @ceildivui(
+// CHECK-SAME: %[[LHS:.*]]: i32, %[[RHS:.*]]: i32) -> i32 {
+// CHECK-NOT: arith.ceildivui
+// CHECK-NOT: arith.constant
+// CHECK-NOT: tensor.
+// CHECK-NOT: arith.index_castui
+// CHECK-NEXT: %[[Q:.*]] = arith.divui %[[LHS]], %[[RHS]] : i32
+// CHECK-NEXT: %[[PRODUCT:.*]] = arith.muli %[[Q]], %[[RHS]] : i32
+// CHECK-NEXT: %[[INEXACT:.*]] = arith.cmpi ne, %[[PRODUCT]], %[[LHS]] : i32
+// CHECK-NEXT: %[[ADJUSTMENT:.*]] = arith.extui %[[INEXACT]] : i1 to i32
+// CHECK-NEXT: %[[RESULT:.*]] = arith.addi %[[Q]], %[[ADJUSTMENT]] : i32
+// CHECK-NEXT: return %[[RESULT]] : i32
+func.func @ceildivui(%arg0: i32, %arg1: i32) -> i32 {
   %res = arith.ceildivui %arg0, %arg1 : i32
   return %res : i32
-// CHECK:           [[ZERO:%.+]] = arith.constant 0 : i32
-// CHECK:           [[ISZERO:%.+]] = arith.cmpi eq, %arg0, [[ZERO]] : i32
-// CHECK:           [[ONE:%.+]] = arith.constant 1 : i32
-// CHECK:           [[SUB:%.+]] = arith.subi %arg0, [[ONE]] : i32
-// CHECK:           [[DIV:%.+]] = arith.divui [[SUB]], %arg1 : i32
-// CHECK:           [[REM:%.+]] = arith.addi [[DIV]], [[ONE]] : i32
-// CHECK:           [[RES:%.+]] = arith.select [[ISZERO]], [[ZERO]], [[REM]] : i32
 }
 
 // -----
 
-// Test unsigned ceil divide with index
-// CHECK-LABEL:       func @ceildivui_index
-// CHECK-SAME:     ([[ARG0:%.+]]: index, [[ARG1:%.+]]: index) -> index {
-func.func @ceildivui_index(%arg0: index, %arg1: index) -> (index) {
+// CHECK-LABEL: func.func @ceildivui_index(
+// CHECK-SAME: %[[LHS:.*]]: index, %[[RHS:.*]]: index) -> index {
+// CHECK-NOT: arith.ceildivui
+// CHECK-NOT: arith.constant
+// CHECK-NOT: tensor.
+// CHECK-NOT: arith.extui
+// CHECK-NEXT: %[[Q:.*]] = arith.divui %[[LHS]], %[[RHS]] : index
+// CHECK-NEXT: %[[PRODUCT:.*]] = arith.muli %[[Q]], %[[RHS]] : index
+// CHECK-NEXT: %[[INEXACT:.*]] = arith.cmpi ne, %[[PRODUCT]], %[[LHS]] : index
+// CHECK-NEXT: %[[ADJUSTMENT:.*]] = arith.index_castui %[[INEXACT]] : i1 to index
+// CHECK-NEXT: %[[RESULT:.*]] = arith.addi %[[Q]], %[[ADJUSTMENT]] : index
+// CHECK-NEXT: return %[[RESULT]] : index
+func.func @ceildivui_index(%arg0: index, %arg1: index) -> index {
   %res = arith.ceildivui %arg0, %arg1 : index
   return %res : index
-// CHECK:           [[ZERO:%.+]] = arith.constant 0 : index
-// CHECK:           [[ISZERO:%.+]] = arith.cmpi eq, %arg0, [[ZERO]] : index
-// CHECK:           [[ONE:%.+]] = arith.constant 1 : index
-// CHECK:           [[SUB:%.+]] = arith.subi %arg0, [[ONE]] : index
-// CHECK:           [[DIV:%.+]] = arith.divui [[SUB]], %arg1 : index
-// CHECK:           [[REM:%.+]] = arith.addi [[DIV]], [[ONE]] : index
-// CHECK:           [[RES:%.+]] = arith.select [[ISZERO]], [[ZERO]], [[REM]] : index
 }
 
 // -----
 
-// CHECK-LABEL:   func.func @ceildivui_dynamic_tensor(
-// CHECK-SAME:                                      %[[ARG0:.*]]: tensor<8x4x?xi64>,
-// CHECK-SAME:                                      %[[ARG1:.*]]: tensor<8x4x?xi64>) -> tensor<8x4x?xi64> {
+// CHECK-LABEL: func.func @ceildivui_vec(
+// CHECK-SAME: %[[LHS:.*]]: vector<4xi32>, %[[RHS:.*]]: vector<4xi32>) -> vector<4xi32> {
+// CHECK-NOT: arith.ceildivui
+// CHECK-NOT: arith.constant
+// CHECK-NOT: tensor.
+// CHECK-NOT: arith.index_castui
+// CHECK-NEXT: %[[Q:.*]] = arith.divui %[[LHS]], %[[RHS]] : vector<4xi32>
+// CHECK-NEXT: %[[PRODUCT:.*]] = arith.muli %[[Q]], %[[RHS]] : vector<4xi32>
+// CHECK-NEXT: %[[INEXACT:.*]] = arith.cmpi ne, %[[PRODUCT]], %[[LHS]] : vector<4xi32>
+// CHECK-NEXT: %[[ADJUSTMENT:.*]] = arith.extui %[[INEXACT]] : vector<4xi1> to vector<4xi32>
+// CHECK-NEXT: %[[RESULT:.*]] = arith.addi %[[Q]], %[[ADJUSTMENT]] : vector<4xi32>
+// CHECK-NEXT: return %[[RESULT]] : vector<4xi32>
+func.func @ceildivui_vec(%arg0: vector<4xi32>, %arg1: vector<4xi32>) -> vector<4xi32> {
+  %res = arith.ceildivui %arg0, %arg1 : vector<4xi32>
+  return %res : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @ceildivui_static_tensor(
+// CHECK-SAME: %[[LHS:.*]]: tensor<2x3xi32>, %[[RHS:.*]]: tensor<2x3xi32>) -> tensor<2x3xi32> {
+// CHECK-NOT: arith.ceildivui
+// CHECK-NOT: arith.constant
+// CHECK-NOT: tensor.
+// CHECK-NOT: arith.index_castui
+// CHECK-NEXT: %[[Q:.*]] = arith.divui %[[LHS]], %[[RHS]] : tensor<2x3xi32>
+// CHECK-NEXT: %[[PRODUCT:.*]] = arith.muli %[[Q]], %[[RHS]] : tensor<2x3xi32>
+// CHECK-NEXT: %[[INEXACT:.*]] = arith.cmpi ne, %[[PRODUCT]], %[[LHS]] : tensor<2x3xi32>
+// CHECK-NEXT: %[[ADJUSTMENT:.*]] = arith.extui %[[INEXACT]] : tensor<2x3xi1> to tensor<2x3xi32>
+// CHECK-NEXT: %[[RESULT:.*]] = arith.addi %[[Q]], %[[ADJUSTMENT]] : tensor<2x3xi32>
+// CHECK-NEXT: return %[[RESULT]] : tensor<2x3xi32>
+func.func @ceildivui_static_tensor(%arg0: tensor<2x3xi32>, %arg1: tensor<2x3xi32>) -> tensor<2x3xi32> {
+  %res = arith.ceildivui %arg0, %arg1 : tensor<2x3xi32>
+  return %res : tensor<2x3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @ceildivui_dynamic_tensor(
+// CHECK-SAME: %[[LHS:.*]]: tensor<8x4x?xi64>, %[[RHS:.*]]: tensor<8x4x?xi64>) -> tensor<8x4x?xi64> {
+// CHECK-NOT: arith.ceildivui
+// CHECK-NOT: arith.constant
+// CHECK-NOT: tensor.
+// CHECK-NOT: arith.index_castui
+// CHECK-NEXT: %[[Q:.*]] = arith.divui %[[LHS]], %[[RHS]] : tensor<8x4x?xi64>
+// CHECK-NEXT: %[[PRODUCT:.*]] = arith.muli %[[Q]], %[[RHS]] : tensor<8x4x?xi64>
+// CHECK-NEXT: %[[INEXACT:.*]] = arith.cmpi ne, %[[PRODUCT]], %[[LHS]] : tensor<8x4x?xi64>
+// CHECK-NEXT: %[[ADJUSTMENT:.*]] = arith.extui %[[INEXACT]] : tensor<8x4x?xi1> to tensor<8x4x?xi64>
+// CHECK-NEXT: %[[RESULT:.*]] = arith.addi %[[Q]], %[[ADJUSTMENT]] : tensor<8x4x?xi64>
+// CHECK-NEXT: return %[[RESULT]] : tensor<8x4x?xi64>
 func.func @ceildivui_dynamic_tensor(%arg0: tensor<8x4x?xi64>, %arg1: tensor<8x4x?xi64>) -> tensor<8x4x?xi64> {
   %res = arith.ceildivui %arg0, %arg1 : tensor<8x4x?xi64>
   return %res : tensor<8x4x?xi64>
-// CHECK:       %[[ZERO_SCALAR:.*]] = arith.constant 0 : i64
-// CHECK:       %[[C2_IDX:.*]] = arith.constant 2 : index
-// CHECK:       %[[ZERO_DIM:.*]] = tensor.dim %[[ARG0]], %[[C2_IDX]] : tensor<8x4x?xi64>
-// CHECK:       %[[ZERO:.*]] = tensor.splat %[[ZERO_SCALAR]]{{\[}}%[[ZERO_DIM]]] : tensor<8x4x?xi64>
-// CHECK:       %[[ISZERO:.*]] = arith.cmpi eq, %[[ARG0]], %[[ZERO]] : tensor<8x4x?xi64>
-// CHECK:       %[[ONE_SCALAR:.*]] = arith.constant 1 : i64
-// CHECK:       %[[C2_IDX_1:.*]] = arith.constant 2 : index
-// CHECK:       %[[ONE_DIM:.*]] = tensor.dim %[[ARG0]], %[[C2_IDX_1]] : tensor<8x4x?xi64>
-// CHECK:       %[[ONE:.*]] = tensor.splat %[[ONE_SCALAR]]{{\[}}%[[ONE_DIM]]] : tensor<8x4x?xi64>
-// CHECK:       %[[SUB:.*]] = arith.subi %[[ARG0]], %[[ONE]] : tensor<8x4x?xi64>
-// CHECK:       %[[DIV:.*]] = arith.divui %[[SUB]], %[[ARG1]] : tensor<8x4x?xi64>
-// CHECK:       %[[ADD:.*]] = arith.addi %[[DIV]], %[[ONE]] : tensor<8x4x?xi64>
-// CHECK:       %[[RES:.*]] = arith.select %[[ISZERO]], %[[ZERO]], %[[ADD]] : tensor<8x4x?xi1>, tensor<8x4x?xi64>
 }
 
 // -----
 
-// CHECK-LABEL:   func.func @ceildivsi_dynamic_tensor(
-// CHECK-SAME:                                      %[[ARG0:.*]]: tensor<8x?xi64>,
-// CHECK-SAME:                                      %[[ARG1:.*]]: tensor<8x?xi64>) -> tensor<8x?xi64> {
+// CHECK-LABEL: func.func @ceildivui_i1(
+// CHECK-SAME: %[[LHS:.*]]: i1, %[[RHS:.*]]: i1) -> i1 {
+// CHECK-NOT: arith.ceildivui
+// CHECK-NOT: arith.constant
+// CHECK-NOT: tensor.
+// CHECK-NOT: arith.extui
+// CHECK-NOT: arith.index_castui
+// CHECK-NEXT: %[[Q:.*]] = arith.divui %[[LHS]], %[[RHS]] : i1
+// CHECK-NEXT: %[[PRODUCT:.*]] = arith.muli %[[Q]], %[[RHS]] : i1
+// CHECK-NEXT: %[[INEXACT:.*]] = arith.cmpi ne, %[[PRODUCT]], %[[LHS]] : i1
+// CHECK-NEXT: %[[RESULT:.*]] = arith.addi %[[Q]], %[[INEXACT]] : i1
+// CHECK-NEXT: return %[[RESULT]] : i1
+func.func @ceildivui_i1(%arg0: i1, %arg1: i1) -> i1 {
+  %res = arith.ceildivui %arg0, %arg1 : i1
+  return %res : i1
+}
+
+// -----
+
+// CHECK-LABEL: func.func @ceildivi(
+// CHECK-SAME: %[[LHS:.*]]: i32, %[[RHS:.*]]: i32) -> i32 {
+// CHECK-NOT: arith.ceildivsi
+// CHECK-NOT: arith.constant
+// CHECK-NOT: tensor.
+// CHECK-NOT: arith.index_castui
+// CHECK-NEXT: %[[Q:.*]] = arith.divsi %[[LHS]], %[[RHS]] : i32
+// CHECK-NEXT: %[[PRODUCT:.*]] = arith.muli %[[Q]], %[[RHS]] : i32
+// CHECK-NEXT: %[[INEXACT:.*]] = arith.cmpi ne, %[[PRODUCT]], %[[LHS]] : i32
+// CHECK-NEXT: %[[SIGNED_LT:.*]] = arith.cmpi slt, %[[LHS]], %[[RHS]] : i32
+// CHECK-NEXT: %[[UNSIGNED_LT:.*]] = arith.cmpi ult, %[[LHS]], %[[RHS]] : i32
+// CHECK-NEXT: %[[SAME_SIGN:.*]] = arith.cmpi eq, %[[SIGNED_LT]], %[[UNSIGNED_LT]] : i1
+// CHECK-NEXT: %[[ROUND:.*]] = arith.andi %[[INEXACT]], %[[SAME_SIGN]] : i1
+// CHECK-NEXT: %[[ADJUSTMENT:.*]] = arith.extui %[[ROUND]] : i1 to i32
+// CHECK-NEXT: %[[RESULT:.*]] = arith.addi %[[Q]], %[[ADJUSTMENT]] : i32
+// CHECK-NEXT: return %[[RESULT]] : i32
+func.func @ceildivi(%arg0: i32, %arg1: i32) -> i32 {
+  %res = arith.ceildivsi %arg0, %arg1 : i32
+  return %res : i32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @ceildivi_index(
+// CHECK-SAME: %[[LHS:.*]]: index, %[[RHS:.*]]: index) -> index {
+// CHECK-NOT: arith.ceildivsi
+// CHECK-NOT: arith.constant
+// CHECK-NOT: tensor.
+// CHECK-NOT: arith.extui
+// CHECK-NEXT: %[[Q:.*]] = arith.divsi %[[LHS]], %[[RHS]] : index
+// CHECK-NEXT: %[[PRODUCT:.*]] = arith.muli %[[Q]], %[[RHS]] : index
+// CHECK-NEXT: %[[INEXACT:.*]] = arith.cmpi ne, %[[PRODUCT]], %[[LHS]] : index
+// CHECK-NEXT: %[[SIGNED_LT:.*]] = arith.cmpi slt, %[[LHS]], %[[RHS]] : index
+// CHECK-NEXT: %[[UNSIGNED_LT:.*]] = arith.cmpi ult, %[[LHS]], %[[RHS]] : index
+// CHECK-NEXT: %[[SAME_SIGN:.*]] = arith.cmpi eq, %[[SIGNED_LT]], %[[UNSIGNED_LT]] : i1
+// CHECK-NEXT: %[[ROUND:.*]] = arith.andi %[[INEXACT]], %[[SAME_SIGN]] : i1
+// CHECK-NEXT: %[[ADJUSTMENT:.*]] = arith.index_castui %[[ROUND]] : i1 to index
+// CHECK-NEXT: %[[RESULT:.*]] = arith.addi %[[Q]], %[[ADJUSTMENT]] : index
+// CHECK-NEXT: return %[[RESULT]] : index
+func.func @ceildivi_index(%arg0: index, %arg1: index) -> index {
+  %res = arith.ceildivsi %arg0, %arg1 : index
+  return %res : index
+}
+
+// -----
+
+// CHECK-LABEL: func.func @ceildivsi_vec(
+// CHECK-SAME: %[[LHS:.*]]: vector<4xi32>, %[[RHS:.*]]: vector<4xi32>) -> vector<4xi32> {
+// CHECK-NOT: arith.ceildivsi
+// CHECK-NOT: arith.constant
+// CHECK-NOT: tensor.
+// CHECK-NOT: arith.index_castui
+// CHECK-NEXT: %[[Q:.*]] = arith.divsi %[[LHS]], %[[RHS]] : vector<4xi32>
+// CHECK-NEXT: %[[PRODUCT:.*]] = arith.muli %[[Q]], %[[RHS]] : vector<4xi32>
+// CHECK-NEXT: %[[INEXACT:.*]] = arith.cmpi ne, %[[PRODUCT]], %[[LHS]] : vector<4xi32>
+// CHECK-NEXT: %[[SIGNED_LT:.*]] = arith.cmpi slt, %[[LHS]], %[[RHS]] : vector<4xi32>
+// CHECK-NEXT: %[[UNSIGNED_LT:.*]] = arith.cmpi ult, %[[LHS]], %[[RHS]] : vector<4xi32>
+// CHECK-NEXT: %[[SAME_SIGN:.*]] = arith.cmpi eq, %[[SIGNED_LT]], %[[UNSIGNED_LT]] : vector<4xi1>
+// CHECK-NEXT: %[[ROUND:.*]] = arith.andi %[[INEXACT]], %[[SAME_SIGN]] : vector<4xi1>
+// CHECK-NEXT: %[[ADJUSTMENT:.*]] = arith.extui %[[ROUND]] : vector<4xi1> to vector<4xi32>
+// CHECK-NEXT: %[[RESULT:.*]] = arith.addi %[[Q]], %[[ADJUSTMENT]] : vector<4xi32>
+// CHECK-NEXT: return %[[RESULT]] : vector<4xi32>
+func.func @ceildivsi_vec(%arg0: vector<4xi32>, %arg1: vector<4xi32>) -> vector<4xi32> {
+  %res = arith.ceildivsi %arg0, %arg1 : vector<4xi32>
+  return %res : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @ceildivsi_static_tensor(
+// CHECK-SAME: %[[LHS:.*]]: tensor<2x3xi32>, %[[RHS:.*]]: tensor<2x3xi32>) -> tensor<2x3xi32> {
+// CHECK-NOT: arith.ceildivsi
+// CHECK-NOT: arith.constant
+// CHECK-NOT: tensor.
+// CHECK-NOT: arith.index_castui
+// CHECK-NEXT: %[[Q:.*]] = arith.divsi %[[LHS]], %[[RHS]] : tensor<2x3xi32>
+// CHECK-NEXT: %[[PRODUCT:.*]] = arith.muli %[[Q]], %[[RHS]] : tensor<2x3xi32>
+// CHECK-NEXT: %[[INEXACT:.*]] = arith.cmpi ne, %[[PRODUCT]], %[[LHS]] : tensor<2x3xi32>
+// CHECK-NEXT: %[[SIGNED_LT:.*]] = arith.cmpi slt, %[[LHS]], %[[RHS]] : tensor<2x3xi32>
+// CHECK-NEXT: %[[UNSIGNED_LT:.*]] = arith.cmpi ult, %[[LHS]], %[[RHS]] : tensor<2x3xi32>
+// CHECK-NEXT: %[[SAME_SIGN:.*]] = arith.cmpi eq, %[[SIGNED_LT]], %[[UNSIGNED_LT]] : tensor<2x3xi1>
+// CHECK-NEXT: %[[ROUND:.*]] = arith.andi %[[INEXACT]], %[[SAME_SIGN]] : tensor<2x3xi1>
+// CHECK-NEXT: %[[ADJUSTMENT:.*]] = arith.extui %[[ROUND]] : tensor<2x3xi1> to tensor<2x3xi32>
+// CHECK-NEXT: %[[RESULT:.*]] = arith.addi %[[Q]], %[[ADJUSTMENT]] : tensor<2x3xi32>
+// CHECK-NEXT: return %[[RESULT]] : tensor<2x3xi32>
+func.func @ceildivsi_static_tensor(%arg0: tensor<2x3xi32>, %arg1: tensor<2x3xi32>) -> tensor<2x3xi32> {
+  %res = arith.ceildivsi %arg0, %arg1 : tensor<2x3xi32>
+  return %res : tensor<2x3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @ceildivsi_dynamic_tensor(
+// CHECK-SAME: %[[LHS:.*]]: tensor<8x?xi64>, %[[RHS:.*]]: tensor<8x?xi64>) -> tensor<8x?xi64> {
+// CHECK-NOT: arith.ceildivsi
+// CHECK-NOT: arith.constant
+// CHECK-NOT: tensor.
+// CHECK-NOT: arith.index_castui
+// CHECK-NEXT: %[[Q:.*]] = arith.divsi %[[LHS]], %[[RHS]] : tensor<8x?xi64>
+// CHECK-NEXT: %[[PRODUCT:.*]] = arith.muli %[[Q]], %[[RHS]] : tensor<8x?xi64>
+// CHECK-NEXT: %[[INEXACT:.*]] = arith.cmpi ne, %[[PRODUCT]], %[[LHS]] : tensor<8x?xi64>
+// CHECK-NEXT: %[[SIGNED_LT:.*]] = arith.cmpi slt, %[[LHS]], %[[RHS]] : tensor<8x?xi64>
+// CHECK-NEXT: %[[UNSIGNED_LT:.*]] = arith.cmpi ult, %[[LHS]], %[[RHS]] : tensor<8x?xi64>
+// CHECK-NEXT: %[[SAME_SIGN:.*]] = arith.cmpi eq, %[[SIGNED_LT]], %[[UNSIGNED_LT]] : tensor<8x?xi1>
+// CHECK-NEXT: %[[ROUND:.*]] = arith.andi %[[INEXACT]], %[[SAME_SIGN]] : tensor<8x?xi1>
+// CHECK-NEXT: %[[ADJUSTMENT:.*]] = arith.extui %[[ROUND]] : tensor<8x?xi1> to tensor<8x?xi64>
+// CHECK-NEXT: %[[RESULT:.*]] = arith.addi %[[Q]], %[[ADJUSTMENT]] : tensor<8x?xi64>
+// CHECK-NEXT: return %[[RESULT]] : tensor<8x?xi64>
 func.func @ceildivsi_dynamic_tensor(%arg0: tensor<8x?xi64>, %arg1: tensor<8x?xi64>) -> tensor<8x?xi64> {
   %res = arith.ceildivsi %arg0, %arg1 : tensor<8x?xi64>
   return %res : tensor<8x?xi64>
-// CHECK:       %[[ZERO_SCALAR:.*]] = arith.constant 0 : i64
-// CHECK:       %[[C1_IDX:.*]] = arith.constant 1 : index
-// CHECK:       %[[ZERO_DIM:.*]] = tensor.dim %[[ARG0]], %[[C1_IDX]] : tensor<8x?xi64>
-// CHECK:       %[[ZERO:.*]] = tensor.splat %[[ZERO_SCALAR]]{{\[}}%[[ZERO_DIM]]] : tensor<8x?xi64>
-// CHECK:       %[[ONE_SCALAR:.*]] = arith.constant 1 : i64
-// CHECK:       %[[C1_IDX_1:.*]] = arith.constant 1 : index
-// CHECK:       %[[ONE_DIM:.*]] = tensor.dim %[[ARG0]], %[[C1_IDX_1]] : tensor<8x?xi64>
-// CHECK:       %[[ONE:.*]] = tensor.splat %[[ONE_SCALAR]]{{\[}}%[[ONE_DIM]]] : tensor<8x?xi64>
-// CHECK:       %[[DIV:.*]] = arith.divsi %[[ARG0]], %[[ARG1]] : tensor<8x?xi64>
-// CHECK:       %[[ADD:.*]] = arith.addi %[[DIV]], %[[ONE]] : tensor<8x?xi64>
 }
 
 // -----
 
-// CHECK-LABEL:   func.func @floordivsi_dynamic_tensor(
-// CHECK-SAME:                                       %[[ARG0:.*]]: tensor<?x4xi64>,
-// CHECK-SAME:                                       %[[ARG1:.*]]: tensor<?x4xi64>) -> tensor<?x4xi64> {
+// CHECK-LABEL: func.func @ceildivsi_i1(
+// CHECK-SAME: %[[LHS:.*]]: i1, %[[RHS:.*]]: i1) -> i1 {
+// CHECK-NOT: arith.ceildivsi
+// CHECK-NOT: arith.constant
+// CHECK-NOT: tensor.
+// CHECK-NOT: arith.extui
+// CHECK-NOT: arith.index_castui
+// CHECK-NEXT: %[[Q:.*]] = arith.divsi %[[LHS]], %[[RHS]] : i1
+// CHECK-NEXT: %[[PRODUCT:.*]] = arith.muli %[[Q]], %[[RHS]] : i1
+// CHECK-NEXT: %[[INEXACT:.*]] = arith.cmpi ne, %[[PRODUCT]], %[[LHS]] : i1
+// CHECK-NEXT: %[[SIGNED_LT:.*]] = arith.cmpi slt, %[[LHS]], %[[RHS]] : i1
+// CHECK-NEXT: %[[UNSIGNED_LT:.*]] = arith.cmpi ult, %[[LHS]], %[[RHS]] : i1
+// CHECK-NEXT: %[[SAME_SIGN:.*]] = arith.cmpi eq, %[[SIGNED_LT]], %[[UNSIGNED_LT]] : i1
+// CHECK-NEXT: %[[ROUND:.*]] = arith.andi %[[INEXACT]], %[[SAME_SIGN]] : i1
+// CHECK-NEXT: %[[RESULT:.*]] = arith.addi %[[Q]], %[[ROUND]] : i1
+// CHECK-NEXT: return %[[RESULT]] : i1
+func.func @ceildivsi_i1(%arg0: i1, %arg1: i1) -> i1 {
+  %res = arith.ceildivsi %arg0, %arg1 : i1
+  return %res : i1
+}
+
+// -----
+
+// CHECK-LABEL: func.func @floordivi(
+// CHECK-SAME: %[[LHS:.*]]: i32, %[[RHS:.*]]: i32) -> i32 {
+// CHECK-NOT: arith.floordivsi
+// CHECK-NOT: arith.constant
+// CHECK-NOT: tensor.
+// CHECK-NOT: arith.index_castui
+// CHECK-NEXT: %[[Q:.*]] = arith.divsi %[[LHS]], %[[RHS]] : i32
+// CHECK-NEXT: %[[PRODUCT:.*]] = arith.muli %[[Q]], %[[RHS]] : i32
+// CHECK-NEXT: %[[INEXACT:.*]] = arith.cmpi ne, %[[PRODUCT]], %[[LHS]] : i32
+// CHECK-NEXT: %[[SIGNED_LT:.*]] = arith.cmpi slt, %[[LHS]], %[[RHS]] : i32
+// CHECK-NEXT: %[[UNSIGNED_LT:.*]] = arith.cmpi ult, %[[LHS]], %[[RHS]] : i32
+// CHECK-NEXT: %[[OPPOSITE_SIGN:.*]] = arith.cmpi ne, %[[SIGNED_LT]], %[[UNSIGNED_LT]] : i1
+// CHECK-NEXT: %[[ROUND:.*]] = arith.andi %[[INEXACT]], %[[OPPOSITE_SIGN]] : i1
+// CHECK-NEXT: %[[ADJUSTMENT:.*]] = arith.extui %[[ROUND]] : i1 to i32
+// CHECK-NEXT: %[[RESULT:.*]] = arith.subi %[[Q]], %[[ADJUSTMENT]] : i32
+// CHECK-NEXT: return %[[RESULT]] : i32
+func.func @floordivi(%arg0: i32, %arg1: i32) -> i32 {
+  %res = arith.floordivsi %arg0, %arg1 : i32
+  return %res : i32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @floordivi_index(
+// CHECK-SAME: %[[LHS:.*]]: index, %[[RHS:.*]]: index) -> index {
+// CHECK-NOT: arith.floordivsi
+// CHECK-NOT: arith.constant
+// CHECK-NOT: tensor.
+// CHECK-NOT: arith.extui
+// CHECK-NEXT: %[[Q:.*]] = arith.divsi %[[LHS]], %[[RHS]] : index
+// CHECK-NEXT: %[[PRODUCT:.*]] = arith.muli %[[Q]], %[[RHS]] : index
+// CHECK-NEXT: %[[INEXACT:.*]] = arith.cmpi ne, %[[PRODUCT]], %[[LHS]] : index
+// CHECK-NEXT: %[[SIGNED_LT:.*]] = arith.cmpi slt, %[[LHS]], %[[RHS]] : index
+// CHECK-NEXT: %[[UNSIGNED_LT:.*]] = arith.cmpi ult, %[[LHS]], %[[RHS]] : index
+// CHECK-NEXT: %[[OPPOSITE_SIGN:.*]] = arith.cmpi ne, %[[SIGNED_LT]], %[[UNSIGNED_LT]] : i1
+// CHECK-NEXT: %[[ROUND:.*]] = arith.andi %[[INEXACT]], %[[OPPOSITE_SIGN]] : i1
+// CHECK-NEXT: %[[ADJUSTMENT:.*]] = arith.index_castui %[[ROUND]] : i1 to index
+// CHECK-NEXT: %[[RESULT:.*]] = arith.subi %[[Q]], %[[ADJUSTMENT]] : index
+// CHECK-NEXT: return %[[RESULT]] : index
+func.func @floordivi_index(%arg0: index, %arg1: index) -> index {
+  %res = arith.floordivsi %arg0, %arg1 : index
+  return %res : index
+}
+
+// -----
+
+// CHECK-LABEL: func.func @floordivi_vec(
+// CHECK-SAME: %[[LHS:.*]]: vector<4xi32>, %[[RHS:.*]]: vector<4xi32>) -> vector<4xi32> {
+// CHECK-NOT: arith.floordivsi
+// CHECK-NOT: arith.constant
+// CHECK-NOT: tensor.
+// CHECK-NOT: arith.index_castui
+// CHECK-NEXT: %[[Q:.*]] = arith.divsi %[[LHS]], %[[RHS]] : vector<4xi32>
+// CHECK-NEXT: %[[PRODUCT:.*]] = arith.muli %[[Q]], %[[RHS]] : vector<4xi32>
+// CHECK-NEXT: %[[INEXACT:.*]] = arith.cmpi ne, %[[PRODUCT]], %[[LHS]] : vector<4xi32>
+// CHECK-NEXT: %[[SIGNED_LT:.*]] = arith.cmpi slt, %[[LHS]], %[[RHS]] : vector<4xi32>
+// CHECK-NEXT: %[[UNSIGNED_LT:.*]] = arith.cmpi ult, %[[LHS]], %[[RHS]] : vector<4xi32>
+// CHECK-NEXT: %[[OPPOSITE_SIGN:.*]] = arith.cmpi ne, %[[SIGNED_LT]], %[[UNSIGNED_LT]] : vector<4xi1>
+// CHECK-NEXT: %[[ROUND:.*]] = arith.andi %[[INEXACT]], %[[OPPOSITE_SIGN]] : vector<4xi1>
+// CHECK-NEXT: %[[ADJUSTMENT:.*]] = arith.extui %[[ROUND]] : vector<4xi1> to vector<4xi32>
+// CHECK-NEXT: %[[RESULT:.*]] = arith.subi %[[Q]], %[[ADJUSTMENT]] : vector<4xi32>
+// CHECK-NEXT: return %[[RESULT]] : vector<4xi32>
+func.func @floordivi_vec(%arg0: vector<4xi32>, %arg1: vector<4xi32>) -> vector<4xi32> {
+  %res = arith.floordivsi %arg0, %arg1 : vector<4xi32>
+  return %res : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @floordivsi_static_tensor(
+// CHECK-SAME: %[[LHS:.*]]: tensor<2x3xi32>, %[[RHS:.*]]: tensor<2x3xi32>) -> tensor<2x3xi32> {
+// CHECK-NOT: arith.floordivsi
+// CHECK-NOT: arith.constant
+// CHECK-NOT: tensor.
+// CHECK-NOT: arith.index_castui
+// CHECK-NEXT: %[[Q:.*]] = arith.divsi %[[LHS]], %[[RHS]] : tensor<2x3xi32>
+// CHECK-NEXT: %[[PRODUCT:.*]] = arith.muli %[[Q]], %[[RHS]] : tensor<2x3xi32>
+// CHECK-NEXT: %[[INEXACT:.*]] = arith.cmpi ne, %[[PRODUCT]], %[[LHS]] : tensor<2x3xi32>
+// CHECK-NEXT: %[[SIGNED_LT:.*]] = arith.cmpi slt, %[[LHS]], %[[RHS]] : tensor<2x3xi32>
+// CHECK-NEXT: %[[UNSIGNED_LT:.*]] = arith.cmpi ult, %[[LHS]], %[[RHS]] : tensor<2x3xi32>
+// CHECK-NEXT: %[[OPPOSITE_SIGN:.*]] = arith.cmpi ne, %[[SIGNED_LT]], %[[UNSIGNED_LT]] : tensor<2x3xi1>
+// CHECK-NEXT: %[[ROUND:.*]] = arith.andi %[[INEXACT]], %[[OPPOSITE_SIGN]] : tensor<2x3xi1>
+// CHECK-NEXT: %[[ADJUSTMENT:.*]] = arith.extui %[[ROUND]] : tensor<2x3xi1> to tensor<2x3xi32>
+// CHECK-NEXT: %[[RESULT:.*]] = arith.subi %[[Q]], %[[ADJUSTMENT]] : tensor<2x3xi32>
+// CHECK-NEXT: return %[[RESULT]] : tensor<2x3xi32>
+func.func @floordivsi_static_tensor(%arg0: tensor<2x3xi32>, %arg1: tensor<2x3xi32>) -> tensor<2x3xi32> {
+  %res = arith.floordivsi %arg0, %arg1 : tensor<2x3xi32>
+  return %res : tensor<2x3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @floordivsi_dynamic_tensor(
+// CHECK-SAME: %[[LHS:.*]]: tensor<?x4xi64>, %[[RHS:.*]]: tensor<?x4xi64>) -> tensor<?x4xi64> {
+// CHECK-NOT: arith.floordivsi
+// CHECK-NOT: arith.constant
+// CHECK-NOT: tensor.
+// CHECK-NOT: arith.index_castui
+// CHECK-NEXT: %[[Q:.*]] = arith.divsi %[[LHS]], %[[RHS]] : tensor<?x4xi64>
+// CHECK-NEXT: %[[PRODUCT:.*]] = arith.muli %[[Q]], %[[RHS]] : tensor<?x4xi64>
+// CHECK-NEXT: %[[INEXACT:.*]] = arith.cmpi ne, %[[PRODUCT]], %[[LHS]] : tensor<?x4xi64>
+// CHECK-NEXT: %[[SIGNED_LT:.*]] = arith.cmpi slt, %[[LHS]], %[[RHS]] : tensor<?x4xi64>
+// CHECK-NEXT: %[[UNSIGNED_LT:.*]] = arith.cmpi ult, %[[LHS]], %[[RHS]] : tensor<?x4xi64>
+// CHECK-NEXT: %[[OPPOSITE_SIGN:.*]] = arith.cmpi ne, %[[SIGNED_LT]], %[[UNSIGNED_LT]] : tensor<?x4xi1>
+// CHECK-NEXT: %[[ROUND:.*]] = arith.andi %[[INEXACT]], %[[OPPOSITE_SIGN]] : tensor<?x4xi1>
+// CHECK-NEXT: %[[ADJUSTMENT:.*]] = arith.extui %[[ROUND]] : tensor<?x4xi1> to tensor<?x4xi64>
+// CHECK-NEXT: %[[RESULT:.*]] = arith.subi %[[Q]], %[[ADJUSTMENT]] : tensor<?x4xi64>
+// CHECK-NEXT: return %[[RESULT]] : tensor<?x4xi64>
 func.func @floordivsi_dynamic_tensor(%arg0: tensor<?x4xi64>, %arg1: tensor<?x4xi64>) -> tensor<?x4xi64> {
   %res = arith.floordivsi %arg0, %arg1 : tensor<?x4xi64>
   return %res : tensor<?x4xi64>
-// CHECK:       %[[DIV:.*]] = arith.divsi %[[ARG0]], %[[ARG1]] : tensor<?x4xi64>
-// CHECK:       %[[ZERO_SCALAR:.*]] = arith.constant 0 : i64
-// CHECK:       %[[C0_IDX:.*]] = arith.constant 0 : index
-// CHECK:       %[[ZERO_DIM:.*]] = tensor.dim %[[ARG0]], %[[C0_IDX]] : tensor<?x4xi64>
-// CHECK:       %[[ZERO:.*]] = tensor.splat %[[ZERO_SCALAR]]{{\[}}%[[ZERO_DIM]]] : tensor<?x4xi64>
-// CHECK:       %[[NEG_ONE_SCALAR:.*]] = arith.constant -1 : i64
-// CHECK:       %[[C0_IDX_1:.*]] = arith.constant 0 : index
-// CHECK:       %[[NEG_ONE_DIM:.*]] = tensor.dim %[[ARG0]], %[[C0_IDX_1]] : tensor<?x4xi64>
-// CHECK:       %[[NEG_ONE:.*]] = tensor.splat %[[NEG_ONE_SCALAR]]{{\[}}%[[NEG_ONE_DIM]]] : tensor<?x4xi64>
-// CHECK:       %[[SUB_ONE:.*]] = arith.addi %[[DIV]], %[[NEG_ONE]] : tensor<?x4xi64>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @floordivsi_i1(
+// CHECK-SAME: %[[LHS:.*]]: i1, %[[RHS:.*]]: i1) -> i1 {
+// CHECK-NOT: arith.floordivsi
+// CHECK-NOT: arith.constant
+// CHECK-NOT: tensor.
+// CHECK-NOT: arith.extui
+// CHECK-NOT: arith.index_castui
+// CHECK-NEXT: %[[Q:.*]] = arith.divsi %[[LHS]], %[[RHS]] : i1
+// CHECK-NEXT: %[[PRODUCT:.*]] = arith.muli %[[Q]], %[[RHS]] : i1
+// CHECK-NEXT: %[[INEXACT:.*]] = arith.cmpi ne, %[[PRODUCT]], %[[LHS]] : i1
+// CHECK-NEXT: %[[SIGNED_LT:.*]] = arith.cmpi slt, %[[LHS]], %[[RHS]] : i1
+// CHECK-NEXT: %[[UNSIGNED_LT:.*]] = arith.cmpi ult, %[[LHS]], %[[RHS]] : i1
+// CHECK-NEXT: %[[OPPOSITE_SIGN:.*]] = arith.cmpi ne, %[[SIGNED_LT]], %[[UNSIGNED_LT]] : i1
+// CHECK-NEXT: %[[ROUND:.*]] = arith.andi %[[INEXACT]], %[[OPPOSITE_SIGN]] : i1
+// CHECK-NEXT: %[[RESULT:.*]] = arith.subi %[[Q]], %[[ROUND]] : i1
+// CHECK-NEXT: return %[[RESULT]] : i1
+func.func @floordivsi_i1(%arg0: i1, %arg1: i1) -> i1 {
+  %res = arith.floordivsi %arg0, %arg1 : i1
+  return %res : i1
+}
+
+// -----
+
+// VALUES-LABEL: func.func @ceildivui_values()
+// VALUES-DAG: %[[THREE:.*]] = arith.constant 3 : i8
+// VALUES-DAG: %[[TWO:.*]] = arith.constant 2 : i8
+// VALUES-DAG: %[[ZERO:.*]] = arith.constant 0 : i8
+// VALUES: return %[[THREE]], %[[TWO]], %[[ZERO]] : i8, i8, i8
+func.func @ceildivui_values() -> (i8, i8, i8) {
+  %zero = arith.constant 0 : i8
+  %two = arith.constant 2 : i8
+  %four = arith.constant 4 : i8
+  %five = arith.constant 5 : i8
+  %inexact = arith.ceildivui %five, %two : i8
+  %exact = arith.ceildivui %four, %two : i8
+  %zeroDividend = arith.ceildivui %zero, %two : i8
+  return %inexact, %exact, %zeroDividend : i8, i8, i8
+}
+
+// VALUES-LABEL: func.func @ceildivsi_values()
+// VALUES-DAG: %[[THREE:.*]] = arith.constant 3 : i8
+// VALUES-DAG: %[[NEG_TWO:.*]] = arith.constant -2 : i8
+// VALUES: return %[[THREE]], %[[NEG_TWO]], %[[NEG_TWO]], %[[THREE]] : i8, i8, i8, i8
+func.func @ceildivsi_values() -> (i8, i8, i8, i8) {
+  %negFive = arith.constant -5 : i8
+  %negTwo = arith.constant -2 : i8
+  %two = arith.constant 2 : i8
+  %five = arith.constant 5 : i8
+  %posPos = arith.ceildivsi %five, %two : i8
+  %negPos = arith.ceildivsi %negFive, %two : i8
+  %posNeg = arith.ceildivsi %five, %negTwo : i8
+  %negNeg = arith.ceildivsi %negFive, %negTwo : i8
+  return %posPos, %negPos, %posNeg, %negNeg : i8, i8, i8, i8
+}
+
+// VALUES-LABEL: func.func @floordivsi_values()
+// VALUES-DAG: %[[TWO:.*]] = arith.constant 2 : i8
+// VALUES-DAG: %[[NEG_THREE:.*]] = arith.constant -3 : i8
+// VALUES: return %[[TWO]], %[[NEG_THREE]], %[[NEG_THREE]], %[[TWO]] : i8, i8, i8, i8
+func.func @floordivsi_values() -> (i8, i8, i8, i8) {
+  %negFive = arith.constant -5 : i8
+  %negTwo = arith.constant -2 : i8
+  %two = arith.constant 2 : i8
+  %five = arith.constant 5 : i8
+  %posPos = arith.floordivsi %five, %two : i8
+  %negPos = arith.floordivsi %negFive, %two : i8
+  %posNeg = arith.floordivsi %five, %negTwo : i8
+  %negNeg = arith.floordivsi %negFive, %negTwo : i8
+  return %posPos, %negPos, %posNeg, %negNeg : i8, i8, i8, i8
 }
 
 // -----
