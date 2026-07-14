@@ -12,18 +12,23 @@ define <4 x i1> @test_unsigned_v4i1_v4f32(<4 x float> %f) nounwind {
 ; SSE-LABEL: test_unsigned_v4i1_v4f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    xorps %xmm1, %xmm1
-; SSE-NEXT:    maxps %xmm1, %xmm0
-; SSE-NEXT:    minps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    cvttps2dq %xmm0, %xmm0
+; SSE-NEXT:    movaps %xmm0, %xmm2
+; SSE-NEXT:    maxps %xmm1, %xmm2
+; SSE-NEXT:    minps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    cvttps2dq %xmm2, %xmm1
+; SSE-NEXT:    cmpunordps %xmm0, %xmm0
+; SSE-NEXT:    andnps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: test_unsigned_v4i1_v4f32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; AVX2-NEXT:    vminps %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vcvttps2dq %xmm0, %xmm0
+; AVX2-NEXT:    vmaxps %xmm1, %xmm0, %xmm1
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX2-NEXT:    vminps %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vcvttps2dq %xmm1, %xmm1
+; AVX2-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vandnps %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_unsigned_v4i1_v4f32:
@@ -61,18 +66,23 @@ define <4 x i1> @test_freeze_unsigned_v4i1_v4f32(<4 x float> %f) nounwind {
 ; SSE-LABEL: test_freeze_unsigned_v4i1_v4f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    xorps %xmm1, %xmm1
-; SSE-NEXT:    maxps %xmm1, %xmm0
-; SSE-NEXT:    minps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    cvttps2dq %xmm0, %xmm0
+; SSE-NEXT:    movaps %xmm0, %xmm2
+; SSE-NEXT:    maxps %xmm1, %xmm2
+; SSE-NEXT:    minps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    cvttps2dq %xmm2, %xmm1
+; SSE-NEXT:    cmpunordps %xmm0, %xmm0
+; SSE-NEXT:    andnps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: test_freeze_unsigned_v4i1_v4f32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; AVX2-NEXT:    vminps %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vcvttps2dq %xmm0, %xmm0
+; AVX2-NEXT:    vmaxps %xmm1, %xmm0, %xmm1
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX2-NEXT:    vminps %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vcvttps2dq %xmm1, %xmm1
+; AVX2-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vandnps %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_freeze_unsigned_v4i1_v4f32:
@@ -308,50 +318,56 @@ define <4 x i32> @test_unsigned_v4i32_v4f32(<4 x float> %f) nounwind {
 ; SSE2-LABEL: test_unsigned_v4i32_v4f32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    xorps %xmm1, %xmm1
-; SSE2-NEXT:    maxps %xmm1, %xmm0
-; SSE2-NEXT:    cvttps2dq %xmm0, %xmm2
-; SSE2-NEXT:    movaps {{.*#+}} xmm1 = [4.2949673E+9,4.2949673E+9,4.2949673E+9,4.2949673E+9]
-; SSE2-NEXT:    cmpleps %xmm0, %xmm1
-; SSE2-NEXT:    orps %xmm2, %xmm1
-; SSE2-NEXT:    psrad $31, %xmm2
-; SSE2-NEXT:    subps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    cvttps2dq %xmm0, %xmm0
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    orps %xmm0, %xmm1
-; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    movaps %xmm0, %xmm2
+; SSE2-NEXT:    maxps %xmm1, %xmm2
+; SSE2-NEXT:    cvttps2dq %xmm2, %xmm1
+; SSE2-NEXT:    movaps {{.*#+}} xmm3 = [4.2949673E+9,4.2949673E+9,4.2949673E+9,4.2949673E+9]
+; SSE2-NEXT:    cmpleps %xmm2, %xmm3
+; SSE2-NEXT:    orps %xmm1, %xmm3
+; SSE2-NEXT:    psrad $31, %xmm1
+; SSE2-NEXT:    subps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    cvttps2dq %xmm2, %xmm2
+; SSE2-NEXT:    pand %xmm1, %xmm2
+; SSE2-NEXT:    orps %xmm2, %xmm3
+; SSE2-NEXT:    cmpunordps %xmm0, %xmm0
+; SSE2-NEXT:    andnps %xmm3, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: test_unsigned_v4i32_v4f32:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    xorps %xmm1, %xmm1
-; SSE42-NEXT:    maxps %xmm1, %xmm0
-; SSE42-NEXT:    cvttps2dq %xmm0, %xmm2
-; SSE42-NEXT:    movdqa %xmm2, %xmm3
+; SSE42-NEXT:    movaps %xmm0, %xmm2
+; SSE42-NEXT:    maxps %xmm1, %xmm2
+; SSE42-NEXT:    cvttps2dq %xmm2, %xmm1
+; SSE42-NEXT:    movdqa %xmm1, %xmm3
+; SSE42-NEXT:    movaps {{.*#+}} xmm4 = [4.2949673E+9,4.2949673E+9,4.2949673E+9,4.2949673E+9]
+; SSE42-NEXT:    cmpleps %xmm2, %xmm4
+; SSE42-NEXT:    subps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE42-NEXT:    psrad $31, %xmm3
-; SSE42-NEXT:    movaps {{.*#+}} xmm1 = [4.2949673E+9,4.2949673E+9,4.2949673E+9,4.2949673E+9]
-; SSE42-NEXT:    cmpleps %xmm0, %xmm1
-; SSE42-NEXT:    subps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE42-NEXT:    cvttps2dq %xmm0, %xmm0
-; SSE42-NEXT:    pand %xmm3, %xmm0
-; SSE42-NEXT:    por %xmm2, %xmm0
-; SSE42-NEXT:    orps %xmm0, %xmm1
-; SSE42-NEXT:    movaps %xmm1, %xmm0
+; SSE42-NEXT:    cvttps2dq %xmm2, %xmm2
+; SSE42-NEXT:    pand %xmm3, %xmm2
+; SSE42-NEXT:    por %xmm1, %xmm2
+; SSE42-NEXT:    orps %xmm2, %xmm4
+; SSE42-NEXT:    cmpunordps %xmm0, %xmm0
+; SSE42-NEXT:    andnps %xmm4, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: test_unsigned_v4i32_v4f32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vcvttps2dq %xmm0, %xmm1
-; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm2
-; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm3 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
-; AVX2-NEXT:    vsubps %xmm3, %xmm0, %xmm3
-; AVX2-NEXT:    vcvttps2dq %xmm3, %xmm3
-; AVX2-NEXT:    vpand %xmm2, %xmm3, %xmm2
-; AVX2-NEXT:    vpor %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm2 = [4.2949673E+9,4.2949673E+9,4.2949673E+9,4.2949673E+9]
-; AVX2-NEXT:    vcmpleps %xmm0, %xmm2, %xmm0
-; AVX2-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmaxps %xmm1, %xmm0, %xmm1
+; AVX2-NEXT:    vcvttps2dq %xmm1, %xmm2
+; AVX2-NEXT:    vpsrad $31, %xmm2, %xmm3
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm4 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
+; AVX2-NEXT:    vsubps %xmm4, %xmm1, %xmm4
+; AVX2-NEXT:    vcvttps2dq %xmm4, %xmm4
+; AVX2-NEXT:    vpand %xmm3, %xmm4, %xmm3
+; AVX2-NEXT:    vpor %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm3 = [4.2949673E+9,4.2949673E+9,4.2949673E+9,4.2949673E+9]
+; AVX2-NEXT:    vcmpleps %xmm1, %xmm3, %xmm1
+; AVX2-NEXT:    vorps %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vandnps %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_unsigned_v4i32_v4f32:
@@ -360,12 +376,15 @@ define <4 x i32> @test_unsigned_v4i32_v4f32(<4 x float> %f) nounwind {
 ; AVX512-NEXT:    vmaxps %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vcvttps2dq %xmm1, %xmm2
 ; AVX512-NEXT:    vpsrad $31, %xmm2, %xmm3
-; AVX512-NEXT:    vsubps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm0
-; AVX512-NEXT:    vcvttps2dq %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = (xmm0 & xmm3) | xmm2
+; AVX512-NEXT:    vsubps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm4
+; AVX512-NEXT:    vcvttps2dq %xmm4, %xmm4
 ; AVX512-NEXT:    vcmpgeps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %k1
+; AVX512-NEXT:    vpternlogd {{.*#+}} xmm4 = (xmm4 & xmm3) | xmm2
 ; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1}
+; AVX512-NEXT:    vmovdqa32 %xmm1, %xmm4 {%k1}
+; AVX512-NEXT:    vcmpunordps %xmm0, %xmm0, %k0
+; AVX512-NEXT:    knotw %k0, %k1
+; AVX512-NEXT:    vmovdqa32 %xmm4, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %x = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> %f)
   ret <4 x i32> %x

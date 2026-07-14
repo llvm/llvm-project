@@ -322,14 +322,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v4i32, Custom);
     setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v4i32, Custom);
   }
-  if (Subtarget.hasAVX()) {
-    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v8i32, Custom);
-    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v8i32, Custom);
-  }
-  if (Subtarget.hasAVX512()) {
-    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v16i32, Custom);
-    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v16i32, Custom);
-  }
+
   if (Subtarget.hasAVX10_2()) {
     for (MVT VT : {MVT::v8i8, MVT::v16i8, MVT::v32i8}) {
       setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
@@ -1555,6 +1548,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationPromotedToType(ISD::STRICT_FP_TO_UINT, MVT::v8i16, MVT::v8i32);
     setOperationAction(ISD::FP_TO_SINT,                MVT::v8i32, Custom);
     setOperationAction(ISD::FP_TO_UINT,                MVT::v8i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT_SAT,            MVT::v8i32, Custom);
+    setOperationAction(ISD::FP_TO_UINT_SAT,            MVT::v8i32, Custom);
     setOperationAction(ISD::STRICT_FP_TO_SINT,         MVT::v8i32, Custom);
 
     setOperationAction(ISD::SINT_TO_FP,         MVT::v8i32, Custom);
@@ -1954,6 +1949,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Custom);
       setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Custom);
     }
+
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v16i32, Custom);
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v16i32, Custom);
 
     setOperationAction(ISD::SINT_TO_FP,        MVT::v16i32, Custom);
     setOperationAction(ISD::UINT_TO_FP,        MVT::v16i32, Custom);
@@ -22504,7 +22502,13 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
           Cvt = expandFP_TO_UINT_SSE(DstVT.getSimpleVT(), Clamped, dl, DAG,
                                      Subtarget);
         SDValue UintMax = DAG.getConstant(APInt::getMaxValue(32), dl, DstVT);
-        return DAG.getSelect(dl, DstVT, IsOvf, UintMax, Cvt);
+        SDValue Result = DAG.getSelect(dl, DstVT, IsOvf, UintMax, Cvt);
+        
+        SDValue Zero = DAG.getConstant(0, dl, DstVT);
+        SDValue IsNaN = DAG.getSetCC(dl, CCVT, Src, Src, ISD::SETUO);
+        if (CCVT != SelCCVT)
+          IsNaN = DAG.getSExtOrTrunc(IsNaN, dl, SelCCVT);
+        return DAG.getSelect(dl, DstVT, IsNaN, Zero, Result);
       }
     }
 
@@ -22542,22 +22546,18 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
     // legalization and guarantee the out-of-range behavior.
     SDValue Result = DAG.getNode(X86ISD::CVTTP2SI, dl, DstVT, ClampedTop);
 
-    // For signed saturation, NaN was mapped to MinC, so FP_TO_SINT produces
-    // INT_MIN. ISD::FP_TO_SINT_SAT requires NaN -> 0; fix with a zero-select.
-    // For unsigned saturation, MinC == 0.0, so NaN -> 0.0 -> 0: already
-    // correct.
-    if (IsSigned) {
-      SDValue Zero = DAG.getConstant(0, dl, DstVT);
-      EVT CCVT =
-          getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
-      SDValue IsNaN = DAG.getSetCC(dl, CCVT, Src, Src, ISD::SETUO);
-      EVT SelCCVT =
-          getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
-      if (CCVT != SelCCVT)
-        IsNaN = DAG.getNode(ISD::TRUNCATE, dl, SelCCVT, IsNaN);
-      return DAG.getSelect(dl, DstVT, IsNaN, Zero, Result);
-    }
-    return Result;
+    // For saturation, FMAX and FMIN might pass NaN through (since they return
+    // the second operand if either is NaN).
+    // Fix up NaN by selecting 0 explicitly.
+    SDValue Zero = DAG.getConstant(0, dl, DstVT);
+    EVT CCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
+    SDValue IsNaN = DAG.getSetCC(dl, CCVT, Src, Src, ISD::SETUO);
+    EVT SelCCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
+    if (CCVT != SelCCVT)
+      IsNaN = DAG.getNode(ISD::TRUNCATE, dl, SelCCVT, IsNaN);
+    return DAG.getSelect(dl, DstVT, IsNaN, Zero, Result);
   }
   // This code is only for floats and doubles. Fall back to generic code for
   // anything else.
