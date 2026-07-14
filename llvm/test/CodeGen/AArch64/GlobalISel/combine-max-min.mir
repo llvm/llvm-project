@@ -242,7 +242,6 @@ body:             |
   bb.0:
     liveins: $x0
 
-
     ; CHECK-LABEL: name: ASubUMin
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
