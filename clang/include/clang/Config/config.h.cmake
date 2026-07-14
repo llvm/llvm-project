@@ -75,6 +75,9 @@
 /* Enable IEEE binary128 as default long double format on PowerPC Linux. */
 #cmakedefine01 PPC_LINUX_DEFAULT_IEEELONGDOUBLE
 
+/* Set IBM-1047 as the default input encoding */
+#cmakedefine01 CLANG_DEFAULT_INPUT_ENCODING_IBM1047
+
 /* Enable each functionality of modules */
 #cmakedefine01 CLANG_ENABLE_OBJC_REWRITER
 #cmakedefine01 CLANG_ENABLE_STATIC_ANALYZER
