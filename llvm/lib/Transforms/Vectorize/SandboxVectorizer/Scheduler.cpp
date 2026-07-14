@@ -297,26 +297,24 @@ void Scheduler::trimSchedule(ArrayRef<Instruction *> Instrs) {
   Instruction *LowestI = Dir == SchedDirection::BottomUp
                              ? VecUtils::getLowest(Instrs)
                              : &*ScheduleTopItOpt.value();
-
-  // Destroy the singleton schedule bundles from LowestI all the way to the top.
-  for (auto *I = LowestI, *E = TopI->getPrevNode(); I != E;
-       I = I->getPrevNode()) {
-    auto *N = DAG.getNode(I);
+  Interval<Instruction> ResetIntvl(TopI, LowestI);
+  // The DAG Nodes contain state like the number of UnscheduledSuccs and the
+  // Scheduled flag. We need to reset their state. We need to do this for all
+  // nodes in ResetIntvl. Also destroy the singleton schedule bundles from
+  // LowestI all the way to the top.
+  for (auto &I : ResetIntvl) {
+    auto *N = DAG.getNode(&I);
     if (N == nullptr)
       continue;
     auto *SB = N->getSchedBundle();
     if (SB->isSingleton())
       eraseBundle(SB);
+    N->resetScheduleState();
   }
-  // The DAG Nodes contain state like the number of UnscheduledSuccs and the
-  // Scheduled flag. We need to reset their state. We need to do this for all
-  // nodes from LowestI to the top of the schedule. DAG Nodes that are above the
-  // top of schedule that depend on nodes that got reset need to have their
-  // UnscheduledSuccs adjusted.
-  Interval<Instruction> ResetIntvl(TopI, LowestI);
+  // Nodes that depend on the nodes in ResetIntvl also need to have their
+  // UnscheduledSuccs/UnscheduledPreds adjusted.
   for (Instruction &I : ResetIntvl) {
     auto *N = DAG.getNode(&I);
-    N->resetScheduleState();
     if (Dir == SchedDirection::BottomUp) {
       // Recompute UnscheduledSuccs for nodes not only in ResetIntvl but even
       // for nodes above the top of schedule.

@@ -202,10 +202,6 @@ define void @no_signed_wrap_iv_via_btc(ptr %dst, i32 %N) mustprogress {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[N]], -100
 ; CHECK-NEXT:    [[SUB4:%.*]] = add i32 [[N]], -99
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[SUB4]], i32 [[TMP0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[SMAX]], 100
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], [[N]]
 ; CHECK-NEXT:    br label %[[OUTER:.*]]
 ; CHECK:       [[OUTER_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[OUTER]]
@@ -213,6 +209,10 @@ define void @no_signed_wrap_iv_via_btc(ptr %dst, i32 %N) mustprogress {
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_PREHEADER:.*]], [[EXIT:label %.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[SUB4]], i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[SMAX]], [[N]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP7]], 100
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
