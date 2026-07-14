@@ -573,7 +573,7 @@ static void expandLdexp(IntrinsicInst *II) {
 
   Constant *DoubleMaxExp = ConstantInt::getSigned(ExpVT, 2 * MaxExpVal);
 
-  const APFloat One(FltSem, "1.0");
+  const APFloat One = APFloat::getOne(FltSem);
   APFloat ScaleUpK = scalbn(One, MaxExpVal, APFloat::rmNearestTiesToEven);
 
   // Offset by precision to avoid denormal range.
