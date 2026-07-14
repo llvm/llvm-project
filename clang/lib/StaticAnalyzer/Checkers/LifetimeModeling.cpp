@@ -66,11 +66,6 @@ bool lifetime_modeling::isDeallocated(ProgramStateRef State,
   return State->contains<DeallocatedSourceSet>(Region);
 }
 
-bool lifetime_modeling::isBoundToLifetimeSourceSet(ProgramStateRef State,
-                                                   SVal Val) {
-  return State->get<LifetimeBoundMap>(Val) != nullptr;
-}
-
 static ProgramStateRef bindSource(ProgramStateRef State, SVal RetVal,
                                   const MemRegion *Source) {
   LifetimeSourceSet::Factory &F = State->get_context<LifetimeSourceSet>();
@@ -116,8 +111,6 @@ void LifetimeModeling::checkPostCall(const CallEvent &Call,
 void LifetimeModeling::checkLifetimeEnd(const VarDecl *VD,
                                         CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  if (!VD)
-    return;
 
   SVal SourceVal = State->getLValue(VD, C.getStackFrame());
   if (const MemRegion *SourceValRegion = SourceVal.getAsRegion()) {

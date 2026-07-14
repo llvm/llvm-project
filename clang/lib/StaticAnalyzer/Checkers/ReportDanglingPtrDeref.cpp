@@ -77,7 +77,8 @@ ReportDanglingPtrDerefBRVisitor::VisitNode(const ExplodedNode *N,
   if (!S)
     return nullptr;
 
-  PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
+  PathDiagnosticLocation Pos = PathDiagnosticLocation::createEnd(
+      S, BRC.getSourceManager(), N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(
       Pos,
       (llvm::Twine("'") + SourceRegion->getString() + "' is destroyed here")
