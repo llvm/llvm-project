@@ -1353,19 +1353,31 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
         MachineInstr *InstrOfCandidateReg =
             MRI->getOneDef(CandidateReg)->getParent();
         MachineBasicBlock *DefBlock = InstrOfCandidateReg->getParent();
-        if (DefBlock == SpillBlock &&
+        if (DefBlock == SpillBlock && !InstrOfCandidateReg->isPHI() &&
             // Try to avoid to spill after an instruction that uses hardware
             // wait counters.
-            (!TII->isVMEM(*InstrOfCandidateReg) ||
-             !TII->isSMRD(*InstrOfCandidateReg) ||
-             !TII->isDS(*InstrOfCandidateReg) ||
-             !TII->isEXP(*InstrOfCandidateReg) ||
-             (TII->isFLAT(*InstrOfCandidateReg) &&
-              (!TII->mayAccessVMEMThroughFlat(*InstrOfCandidateReg) ||
+            (!TII->isVMEM(*InstrOfCandidateReg) &&
+             !TII->isSMRD(*InstrOfCandidateReg) &&
+             !TII->isDS(*InstrOfCandidateReg) &&
+             !TII->isEXP(*InstrOfCandidateReg) &&
+             (!TII->isFLAT(*InstrOfCandidateReg) ||
+              (!TII->mayAccessVMEMThroughFlat(*InstrOfCandidateReg) &&
                !TII->mayAccessLDSThroughFlat(*InstrOfCandidateReg))))) {
           WhereToSpill = InstrOfCandidateReg->getNextNode()->getIterator();
           if (WhereToSpill == SpillBlock->end())
             WhereToSpill = SpillBlock->instr_end();
+        }
+        if (!SpillBlock->empty() && SpillBlock->front().isPHI()) {
+          auto FirstNonPHI = SpillBlock->getFirstNonPHI();
+          if (FirstNonPHI != SpillBlock->end() &&
+              WhereToSpill != SpillBlock->end()) {
+            for (auto It = SpillBlock->begin(); It != FirstNonPHI; ++It) {
+              if (It == WhereToSpill) {
+                WhereToSpill = FirstNonPHI;
+                break;
+              }
+            }
+          }
         }
       }
 
