@@ -1269,6 +1269,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - Cross Translation Unit (CTU) import failures are now reported at the location where the imported symbol would be used, making it easier to understand why a cross-TU bug was missed. (#GH188795)
 - Uninitialized-value diagnostics no longer emit a misleading "initialized here" note for a variable that was declared without an initializer; the note now reads "declared without an initial value". (#GH198345)
+- For self-assignments during initialization (`T v = v;`), `core.uninitialized.Assign` will not report them as uninitialized accesses (except C++ reference types), and the checks will be delayed until the first accesses of these variables; `deadcode.DeadStores` will not report them as dead stores. (#GH187530)
 
 (release-notes-sanitizers)=
 
