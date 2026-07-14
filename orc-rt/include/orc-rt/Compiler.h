@@ -39,22 +39,6 @@
 #endif
 #endif
 
-// Use the 'nodiscard' attribute in C++17 or newer mode.
-#if defined(__cplusplus) && __cplusplus > 201402L &&                           \
-    ORC_RT_HAS_CPP_ATTRIBUTE(nodiscard)
-#define ORC_RT_NODISCARD [[nodiscard]]
-#elif ORC_RT_HAS_CPP_ATTRIBUTE(clang::warn_unused_result)
-#define ORC_RT_NODISCARD [[clang::warn_unused_result]]
-// Clang in C++14 mode claims that it has the 'nodiscard' attribute, but also
-// warns in the pedantic mode that 'nodiscard' is a C++17 extension (PR33518).
-// Use the 'nodiscard' attribute in C++14 mode only with GCC.
-// TODO: remove this workaround when PR33518 is resolved.
-#elif defined(__GNUC__) && ORC_RT_HAS_CPP_ATTRIBUTE(nodiscard)
-#define ORC_RT_NODISCARD [[nodiscard]]
-#else
-#define ORC_RT_NODISCARD
-#endif
-
 #if __has_builtin(__builtin_expect)
 #define ORC_RT_LIKELY(EXPR) __builtin_expect((bool)(EXPR), true)
 #define ORC_RT_UNLIKELY(EXPR) __builtin_expect((bool)(EXPR), false)

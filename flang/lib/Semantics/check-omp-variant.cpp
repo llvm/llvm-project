@@ -20,6 +20,7 @@
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Semantics/omp-declare-variant.h"
 #include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/symbol.h"
@@ -824,6 +825,10 @@ void OmpStructureChecker::CheckDeclareVariantUserConditions(
   }
 }
 
+static bool IsProcedureOrFunction(const Symbol &symbol) {
+  return IsProcedure(symbol) || IsFunction(symbol);
+}
+
 // OpenMP 6.0, 9.6 (declare_variant), Fortran restriction: "The characteristic
 // of the function variant must be compatible with the characteristic of the
 // base function after the implementation defined transformation for its OpenMP
@@ -848,6 +853,29 @@ static void CheckDeclareVariantInterface(SemanticsContext &context,
         "The variant procedure '%s' is not compatible with the base procedure '%s': %s"_err_en_US,
         variant.name(), base.name(), whyNot);
   }
+}
+
+// A declare-variant call is rewritten to the variant at every reference to the
+// base, so the variant must be accessible at each of those references. The name
+// of an internal procedure is only visible within its host, so it may only be a
+// variant of a procedure that is internal to the same host; otherwise a
+// reference to the base from elsewhere could not name the variant. OpenMP does
+// not clearly specify this; Flang restricts it to avoid resolving a call to an
+// internal procedure that is not accessible there. Returns true if the pairing
+// is allowed.
+static bool CheckVariantAccessibility(SemanticsContext &context,
+    const Symbol &base, const Symbol &variant, parser::CharBlock source) {
+  if (ClassifyProcedure(variant) != ProcedureDefinitionClass::Internal) {
+    return true;
+  }
+  if (ClassifyProcedure(base) == ProcedureDefinitionClass::Internal &&
+      &base.owner() == &variant.owner()) {
+    return true;
+  }
+  context.Say(source,
+      "The variant procedure '%s' is an internal procedure and is not accessible at every reference to the base procedure '%s'"_err_en_US,
+      variant.name(), base.name());
+  return false;
 }
 
 void OmpStructureChecker::CheckOmpDeclareVariantDirective(
@@ -881,7 +909,7 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
 
   auto CheckProcedureSymbol{[&](const Symbol *sym, parser::CharBlock source) {
     if (sym) {
-      if (!IsProcedure(*sym) && !IsFunction(*sym)) {
+      if (!IsProcedureOrFunction(*sym)) {
         auto &msg{context_.Say(source,
             "The name '%s' should refer to a procedure"_err_en_US,
             sym->name())};
@@ -919,7 +947,19 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
       },
       arg.u);
 
-  if (base && variant) {
+  const parser::traits::OmpContextSelectorSpecification *matchSelector{
+      getMatchClauseContextSelector(spec)};
+  if (!matchSelector) {
+    context_.Say(x.source,
+        "DECLARE_VARIANT directive requires a MATCH clause"_err_en_US);
+    return;
+  }
+
+  // Only validate and record the pairing when both names resolve to procedures.
+  // Otherwise a diagnostic was already issued (see CheckProcedureSymbol), and
+  // proceeding would emit spurious follow-on errors.
+  if (base && variant && IsProcedureOrFunction(*base) &&
+      IsProcedureOrFunction(*variant)) {
     base = &base->GetUltimate();
     variant = &variant->GetUltimate();
     if (base == variant) {
@@ -929,20 +969,21 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
       context_.Say(arg.source,
           "Variant '%s' was already specified for '%s' in another DECLARE VARIANT directive"_err_en_US,
           variant->name(), base->name());
-    } else if (!hasArgModifiers) {
-      // adjust_args/append_args perform the "transformation for its OpenMP
-      // context", so the variant interface intentionally differs from the
-      // base; skip the same-interface check until they are supported.
-      CheckDeclareVariantInterface(context_, *base, *variant, arg.source);
+    } else if (CheckVariantAccessibility(
+                   context_, *base, *variant, arg.source)) {
+      if (!hasArgModifiers) {
+        // adjust_args/append_args perform the "transformation for its OpenMP
+        // context", so the variant interface intentionally differs from the
+        // base; skip the same-interface check until they are supported.
+        CheckDeclareVariantInterface(context_, *base, *variant, arg.source);
+      }
+      // Record the variant on its base procedure.
+      if (base->has<SubprogramDetails>()) {
+        auto &details{const_cast<Symbol &>(*base).get<SubprogramDetails>()};
+        details.addOmpDeclareVariant(
+            OmpDeclareVariantEntry{*variant, matchSelector});
+      }
     }
-  }
-
-  const parser::traits::OmpContextSelectorSpecification *matchSelector{
-      getMatchClauseContextSelector(spec)};
-  if (!matchSelector) {
-    context_.Say(x.source,
-        "DECLARE_VARIANT directive requires a MATCH clause"_err_en_US);
-    return;
   }
 
   EnterDirectiveNest(ContextSelectorNest);

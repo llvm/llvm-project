@@ -10,6 +10,7 @@
 /// common to flang and the test tools.
 
 #include "flang/Optimizer/Passes/Pipelines.h"
+#include "flang/Optimizer/Builder/MIFCommon.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
 #include "mlir/Conversion/Passes.h"
@@ -446,13 +447,14 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   // function specialization is fixed.
   bool setNoAlias = forceNoAlias;
   bool setNoCapture = config.OptLevel.isOptimizingForSpeed();
+  bool setReadOnly = config.OptLevel.isOptimizingForSpeed();
 
   pm.addPass(fir::createFunctionAttr(
       {framePointerKind, config.InstrumentFunctionEntry,
        config.InstrumentFunctionExit, config.NoInfsFPMath, config.NoNaNsFPMath,
        config.ApproxFuncFPMath, config.NoSignedZerosFPMath, config.UnsafeFPMath,
        config.Reciprocals, config.PreferVectorWidth, config.UseSampleProfile,
-       /*tuneCPU=*/"", setNoCapture, setNoAlias}));
+       /*tuneCPU=*/"", setNoCapture, setNoAlias, setReadOnly}));
 
   if (config.EnableOpenMP) {
     pm.addNestedPass<mlir::func::FuncOp>(
@@ -460,6 +462,7 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   }
 
   fir::addFIRToLLVMPass(pm, config);
+  pm.addPass(fir::createEmitMIFGlobalCtors());
 
   if (config.EnableOpenMP && !config.EnableOpenMPSimd) {
     // Remove all non target-related operations from host functions still

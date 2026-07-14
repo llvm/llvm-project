@@ -18,22 +18,22 @@ void callAsync(const WTF::Function<void()>&);
 void raw_ptr() {
   CheckedObj* checked_ptr_capable = make_obj();
   auto foo1 = [checked_ptr_capable](){
-    // expected-warning@-1{{Captured variable 'checked_ptr_capable' is a raw pointer to CheckedPtr capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Captured variable 'checked_ptr_capable' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
     checked_ptr_capable->method();
   };
   auto foo2 = [&checked_ptr_capable](){
-    // expected-warning@-1{{Captured variable 'checked_ptr_capable' is a raw pointer to CheckedPtr capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Captured variable 'checked_ptr_capable' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
     checked_ptr_capable->method();
   };
   auto foo3 = [&](){
     checked_ptr_capable->method();
-    // expected-warning@-1{{Implicitly captured variable 'checked_ptr_capable' is a raw pointer to CheckedPtr capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'checked_ptr_capable' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
     checked_ptr_capable = nullptr;
   };
 
   auto foo4 = [=](){
     checked_ptr_capable->method();
-    // expected-warning@-1{{Implicitly captured variable 'checked_ptr_capable' is a raw pointer to CheckedPtr capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'checked_ptr_capable' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
   };
 
   call(foo1);
@@ -53,9 +53,9 @@ void references() {
   CheckedObj& checked_ptr_capable_ref = automatic;
   auto foo1 = [checked_ptr_capable_ref](){ checked_ptr_capable_ref.constMethod(); };
   auto foo2 = [&checked_ptr_capable_ref](){ checked_ptr_capable_ref.method(); };
-  // expected-warning@-1{{Captured variable 'checked_ptr_capable_ref' is a raw reference to CheckedPtr capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+  // expected-warning@-1{{Captured variable 'checked_ptr_capable_ref' is a raw reference to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
   auto foo3 = [&](){ checked_ptr_capable_ref.method(); };
-  // expected-warning@-1{{Implicitly captured variable 'checked_ptr_capable_ref' is a raw reference to CheckedPtr capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+  // expected-warning@-1{{Implicitly captured variable 'checked_ptr_capable_ref' is a raw reference to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
   auto foo4 = [=](){ checked_ptr_capable_ref.constMethod(); };
 
   call(foo1);
@@ -109,7 +109,7 @@ void noescape_lambda() {
     otherObj->method();
   }, [&](CheckedObj& obj) {
     otherObj->method();
-    // expected-warning@-1{{Implicitly captured variable 'otherObj' is a raw pointer to CheckedPtr capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'otherObj' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
   });
   ([&] {
     someObj->method();
@@ -139,7 +139,7 @@ struct CheckedObjWithLambdaCapturingThis {
   void method_captures_this_unsafe() {
     auto lambda = [&]() {
       nonTrivial();
-      // expected-warning@-1{{Implicitly captured variable 'this' is a raw pointer to CheckedPtr capable type 'CheckedObjWithLambdaCapturingThis' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+      // expected-warning@-1{{Implicitly captured variable 'this' is a raw pointer to CheckedPtr-capable type 'CheckedObjWithLambdaCapturingThis' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
     };
     call(lambda);
   }
@@ -147,7 +147,7 @@ struct CheckedObjWithLambdaCapturingThis {
   void method_captures_this_unsafe_capture_local_var_explicitly() {
     CheckedObj* x = make_obj();
     call([this, protectedThis = CheckedPtr { this }, x]() {
-      // expected-warning@-1{{Captured variable 'x' is a raw pointer to CheckedPtr capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+      // expected-warning@-1{{Captured variable 'x' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
       nonTrivial();
       x->method();
     });
@@ -156,7 +156,7 @@ struct CheckedObjWithLambdaCapturingThis {
   void method_captures_this_with_other_protected_var() {
     CheckedObj* x = make_obj();
     call([this, protectedX = CheckedPtr { x }]() {
-      // expected-warning@-1{{Captured variable 'this' is a raw pointer to CheckedPtr capable type 'CheckedObjWithLambdaCapturingThis' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+      // expected-warning@-1{{Captured variable 'this' is a raw pointer to CheckedPtr-capable type 'CheckedObjWithLambdaCapturingThis' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
       nonTrivial();
       protectedX->method();
     });
@@ -165,7 +165,7 @@ struct CheckedObjWithLambdaCapturingThis {
   void method_captures_this_unsafe_capture_local_var_explicitly_with_deref() {
     CheckedObj* x = make_obj();
     call([this, protectedThis = CheckedRef { *this }, x]() {
-      // expected-warning@-1{{Captured variable 'x' is a raw pointer to CheckedPtr capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+      // expected-warning@-1{{Captured variable 'x' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
       nonTrivial();
       x->method();
     });
@@ -174,7 +174,7 @@ struct CheckedObjWithLambdaCapturingThis {
   void method_captures_this_unsafe_local_var_via_vardecl() {
     CheckedObj* x = make_obj();
     auto lambda = [this, protectedThis = CheckedRef { *this }, x]() {
-      // expected-warning@-1{{Captured variable 'x' is a raw pointer to CheckedPtr capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+      // expected-warning@-1{{Captured variable 'x' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
       nonTrivial();
       x->method();
     };
@@ -252,7 +252,7 @@ struct CheckedObjWithLambdaCapturingThis {
   void method_nested_lambda3() {
     callAsync([this, protectedThis = CheckedPtr { this }] {
       callAsync([this] {
-        // expected-warning@-1{{Captured variable 'this' is a raw pointer to CheckedPtr capable type 'CheckedObjWithLambdaCapturingThis' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+        // expected-warning@-1{{Captured variable 'this' is a raw pointer to CheckedPtr-capable type 'CheckedObjWithLambdaCapturingThis' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
         nonTrivial();
       });
     });
@@ -321,11 +321,11 @@ void lambda_converted_to_function(CheckedObj* obj)
 {
   callFunction([&]() {
     obj->method();
-    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to CheckedPtr capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
   });
   callFunctionOpaque([&]() {
     obj->method();
-    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to CheckedPtr capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
   });
 }
 
@@ -335,7 +335,7 @@ void capture_copy_in_lambda(CheckedObj& checked) {
   });
   auto* ptr = &checked;
   callFunctionOpaque([ptr]() mutable {
-    // expected-warning@-1{{Captured variable 'ptr' is a raw pointer to CheckedPtr capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Captured variable 'ptr' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
     ptr->method();
   });
 }
@@ -436,7 +436,7 @@ void doWhateverWith(WTF::ScopeExit& obj);
 void scope_exit_with_side_effect(CheckedObj* obj) {
   auto scope = WTF::makeScopeExit([&] {
     obj->method();
-    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to CheckedPtr capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
   });
   doWhateverWith(scope);
 }
@@ -444,14 +444,14 @@ void scope_exit_with_side_effect(CheckedObj* obj) {
 void scope_exit_static(CheckedObj* obj) {
   static auto scope = WTF::makeScopeExit([&] {
     obj->method();
-    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to CheckedPtr capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
   });
 }
 
 WTF::Function<void()> scope_exit_take_lambda(CheckedObj* obj) {
   auto scope = WTF::makeScopeExit([&] {
     obj->method();
-    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to CheckedPtr capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
   });
   return scope.take();
 }
@@ -460,7 +460,7 @@ WTF::Function<void()> scope_exit_take_lambda(CheckedObj* obj) {
 void scope_exit_release(CheckedObj* obj) {
   auto scope = WTF::makeScopeExit([&] {
     obj->method();
-    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to CheckedPtr capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
   });
   scope.release();
 }
@@ -486,7 +486,7 @@ void bad_visit(Visitor&, ObjectType*) {
 void static_visitor(CheckedObj* obj) {
   static auto visitor = WTF::makeVisitor([&] {
     obj->method();
-    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to CheckedPtr capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
   });
 }
 
@@ -494,10 +494,10 @@ void make_visitor_with_multiple_lambdas(CheckedObj* obj) {
   auto* otherObj = make_obj();
   auto visitor = WTF::makeVisitor([&] {
     obj->method();
-    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to CheckedPtr capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
   }, [&] {
     otherObj->method();
-    // expected-warning@-1{{Implicitly captured variable 'otherObj' is a raw pointer to CheckedPtr capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'otherObj' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
   });
   bad_visit(visitor, obj);
 }
@@ -505,7 +505,7 @@ void make_visitor_with_multiple_lambdas(CheckedObj* obj) {
 void bad_use_visitor(CheckedObj* obj) {
   auto visitor = WTF::makeVisitor([&] {
     obj->method();
-    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to CheckedPtr capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
   });
   bad_visit(visitor, obj);
 }
@@ -514,14 +514,14 @@ class LambdaInConstructorDestructor {
 public:
   LambdaInConstructorDestructor() {
     call([this]() {
-      // expected-warning@-1{{Captured variable 'this' is a raw pointer to CheckedPtr capable type 'LambdaInConstructorDestructor' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+      // expected-warning@-1{{Captured variable 'this' is a raw pointer to CheckedPtr-capable type 'LambdaInConstructorDestructor' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
       doWork();
     });
   }
 
   ~LambdaInConstructorDestructor() {
     call([this]() {
-      // expected-warning@-1{{Captured variable 'this' is a raw pointer to CheckedPtr capable type 'LambdaInConstructorDestructor' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
+      // expected-warning@-1{{Captured variable 'this' is a raw pointer to CheckedPtr-capable type 'LambdaInConstructorDestructor' [alpha.webkit.UncheckedLambdaCapturesChecker]}}
       doWork();
     });
   }
