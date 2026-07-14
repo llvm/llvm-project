@@ -675,7 +675,7 @@ struct ShRSIBoolPattern final : public OpConversionPattern<arith::ShRSIOp> {
 
 /// Converts an op whose i1 (or vector of i1) source selects between one and
 /// zero of the destination type, i.e. spirv.Select(src, one, zero). Shared by
-/// arith.uitofp, arith.extui, and arith.index_cast on boolean sources.
+/// arith.uitofp, arith.extui, and index casts on boolean sources.
 template <typename ArithOp>
 struct BoolToValuePattern final : public OpConversionPattern<ArithOp> {
   using OpConversionPattern<ArithOp>::OpConversionPattern;
@@ -1508,6 +1508,7 @@ void mlir::arith::populateArithToSPIRVPatterns(
     TypeCastingOpPattern<arith::IndexCastOp, spirv::SConvertOp>,
     IndexCastIndexI1Pattern, BoolToValuePattern<arith::IndexCastOp>,
     TypeCastingOpPattern<arith::IndexCastUIOp, spirv::UConvertOp>,
+    BoolToValuePattern<arith::IndexCastUIOp>,
     TypeCastingOpPattern<arith::BitcastOp, spirv::BitcastOp>,
     CmpIOpBooleanPattern, CmpIOpPattern,
     CmpFOpNanNonePattern, CmpFOpPattern,
