@@ -168,10 +168,10 @@ DebuggerCreateTool::Call(const lldb_protocol::mcp::ToolArguments &) {
   // async output can't corrupt an MCP stream sharing the host's stdout. Command
   // results flow through CommandReturnObject and are unaffected. Open the null
   // files first so a failure can't leave a created debugger on the real stdio.
+  // The single write-only null file backs both stdout and stderr.
   lldb::FileSP in = openNull(File::eOpenOptionReadOnly);
   lldb::FileSP out = openNull(File::eOpenOptionWriteOnly);
-  lldb::FileSP err = openNull(File::eOpenOptionWriteOnly);
-  if (!in || !out || !err)
+  if (!in || !out)
     return createStringError(
         "failed to open the null device for debugger stdio");
 
@@ -181,7 +181,7 @@ DebuggerCreateTool::Call(const lldb_protocol::mcp::ToolArguments &) {
 
   debugger_sp->SetInputFile(in);
   debugger_sp->SetOutputFile(out);
-  debugger_sp->SetErrorFile(err);
+  debugger_sp->SetErrorFile(out);
 
   return createTextResult(to_uri(debugger_sp));
 }

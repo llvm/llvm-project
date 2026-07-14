@@ -387,6 +387,10 @@ TEST_F(MCPPluginTest, DebuggerCreateTool) {
   EXPECT_NE(created->GetOutputFileSP()->GetDescriptor(), fileno(stdout));
   EXPECT_NE(created->GetErrorFileSP()->GetDescriptor(), fileno(stderr));
 
+  // stdout and stderr are backed by the same write-only null file.
+  EXPECT_EQ(created->GetOutputFileSP()->GetDescriptor(),
+            created->GetErrorFileSP()->GetDescriptor());
+
   Debugger::Destroy(created); // Don't leak into other tests.
 }
 
