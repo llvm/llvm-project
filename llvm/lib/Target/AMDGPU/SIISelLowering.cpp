@@ -241,8 +241,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       // Turn fsub into fadd(x, fneg y) so it reuses the packed v_pk_add_bf16
       // path instead of promoting to f32.
       setOperationAction(ISD::FSUB, MVT::bf16, Expand);
-      // Use v_pk_add_bf16 for scalar fadd.
-      setOperationAction(ISD::FADD, MVT::bf16, Legal);
+      // Widen scalar fadd to a v2bf16 operation with an unused high lane.
+      setOperationAction(ISD::FADD, MVT::bf16, Custom);
     }
 
     setOperationAction(ISD::FP_ROUND, MVT::bf16, Expand);
@@ -7663,7 +7663,6 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
-  case ISD::FADD:
   case ISD::FMUL:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
@@ -7671,6 +7670,10 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::USUBSAT:
   case ISD::SADDSAT:
   case ISD::SSUBSAT:
+    return splitBinaryVectorOp(Op, DAG);
+  case ISD::FADD:
+    if (Op.getValueType() == MVT::bf16)
+      return lowerScalarBF16FAdd(Op, DAG);
     return splitBinaryVectorOp(Op, DAG);
   case ISD::FCOPYSIGN:
     return lowerFCOPYSIGN(Op, DAG);
@@ -8705,6 +8708,31 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   }
   return DAG.getNode(ISD::FP_ROUND, DL, DstVT, Rod,
                      DAG.getTargetConstant(0, DL, MVT::i32));
+}
+
+SDValue SITargetLowering::lowerScalarBF16FAdd(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  assert(Subtarget->hasBF16PackedInsts());
+
+  SDLoc DL(Op);
+
+  auto WidenOperand = [&](SDValue Src) {
+    if (Src.getOpcode() == ISD::FNEG) {
+      SDValue WideSrc = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2bf16,
+                                    Src.getOperand(0));
+      return DAG.getNode(ISD::FNEG, DL, MVT::v2bf16, WideSrc, Src->getFlags());
+    }
+
+    return DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2bf16, Src);
+  };
+
+  SDValue LHS = WidenOperand(Op.getOperand(0));
+  SDValue RHS = WidenOperand(Op.getOperand(1));
+  SDValue Add =
+      DAG.getNode(ISD::FADD, DL, MVT::v2bf16, LHS, RHS, Op->getFlags());
+
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::bf16, Add,
+                     DAG.getConstant(0, DL, MVT::i32));
 }
 
 SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
