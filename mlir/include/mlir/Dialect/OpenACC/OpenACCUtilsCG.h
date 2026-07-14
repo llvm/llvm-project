@@ -15,13 +15,18 @@
 #define MLIR_DIALECT_OPENACC_OPENACCUTILSCG_H_
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACCParMapping.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
 
 namespace mlir {
 namespace acc {
+
+class OpenACCSupport;
 
 /// Get the data layout for an operation.
 ///
@@ -89,6 +94,78 @@ void updateParDimsAttr(Operation *op, GPUParallelDimsAttr attr);
 
 /// Copy parallel dimensions from \p from to \p to.
 void copyParDimsAttr(Operation *from, Operation *to);
+
+/// Create a gang dim 1 GPUParallelDimsAttr based on the mapping policy.
+inline GPUParallelDimsAttr
+getGangDim1ParDimsAttr(MLIRContext *ctx, ACCToGPUMappingPolicy &policy) {
+  return GPUParallelDimsAttr::get(
+      ctx, {policy.gangDim(ctx, acc::ParLevel::gang_dim1)});
+}
+
+/// Create a sequential GPUParallelDimsAttr based on the mapping policy.
+inline GPUParallelDimsAttr getSeqParDimsAttr(MLIRContext *ctx,
+                                             ACCToGPUMappingPolicy &policy) {
+  return GPUParallelDimsAttr::get(ctx, {policy.seqDim(ctx)});
+}
+
+/// Tracks aligned byte consumption against a configurable shared memory cap.
+class SharedMemoryBudget {
+public:
+  /// Default allocation alignment (bytes).
+  static constexpr int64_t kDefaultAlignmentBytes = 16;
+
+  SharedMemoryBudget(int64_t maxTotalBytes, int64_t initialBytesUsed = 0)
+      : bytesUsed_(initialBytesUsed), maxTotalBytes_(maxTotalBytes) {}
+
+  /// Reserve \p bytes, rounding the current offset up to \p alignment first.
+  /// Returns false without mutating state if the reservation would exceed the
+  /// cap. \p alignment must be a power of two.
+  bool tryAllocate(int64_t bytes, int64_t alignment = kDefaultAlignmentBytes);
+  int64_t bytesUsed() const { return bytesUsed_; }
+  int64_t maxTotalBytes() const { return maxTotalBytes_; }
+  void setMaxTotalBytes(int64_t maxTotalBytes) {
+    maxTotalBytes_ = maxTotalBytes;
+  }
+
+  /// Round \p offset up to the next multiple of \p alignment, which must be a
+  /// power of two.
+  static int64_t alignOffset(int64_t offset,
+                             int64_t alignment = kDefaultAlignmentBytes);
+
+private:
+  int64_t bytesUsed_ = 0;
+  int64_t maxTotalBytes_ = 0;
+};
+
+/// Sum aligned static_upper_bound_bytes for all acc.gpu_shared_memory in \p
+/// region.
+int64_t sumExistingSharedMemoryBytes(Region &region);
+
+/// Resolve the acc.privatize operation associated with a private local.
+PrivatizeOp getPrivatizeOp(PrivateLocalOp privateLocal,
+                           ComputeRegionOp computeRegion);
+
+/// Returns the ranked MemRef type used to allocate privatized storage.
+///
+/// \p baseTy is the `baseTy` parameter of `acc.private_type` (the privatized
+/// variable's type).
+MemRefType getPrivateBaseMemRefType(Type baseTy, ModuleOp module);
+
+/// Collect parallel dimensions that govern privatization of \p privateLocal.
+SmallVector<GPUParallelDimAttr>
+collectPrivateLocalParDims(PrivateLocalOp privateLocal,
+                           ComputeRegionOp computeRegion);
+
+/// True when \p privateLocal may be placed in shared memory.
+FailureOr<bool> isPrivateLocalSharedMemoryCandidate(
+    PrivateLocalOp privateLocal, ComputeRegionOp computeRegion, ModuleOp module,
+    const ACCToGPUMappingPolicy &policy, OpenACCSupport *support = nullptr);
+
+/// Upper-bound byte size for a shared-memory private_local candidate, or
+/// std::nullopt when not eligible or not statically computable.
+std::optional<int64_t> getPrivateLocalSharedMemoryUpperBoundBytes(
+    PrivateLocalOp privateLocal, ComputeRegionOp computeRegion, ModuleOp module,
+    const ACCToGPUMappingPolicy &policy, OpenACCSupport *support = nullptr);
 
 } // namespace acc
 } // namespace mlir

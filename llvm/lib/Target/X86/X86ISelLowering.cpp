@@ -2375,6 +2375,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     if (Subtarget.hasBMM()) {
+      setOperationAction(ISD::BITREVERSE, MVT::i8, Custom);
+      setOperationAction(ISD::BITREVERSE, MVT::i16, Custom);
+      setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
+      setOperationAction(ISD::BITREVERSE, MVT::i64, Custom);
+
       for (auto VT : {MVT::v16i8, MVT::v32i8, MVT::v64i8})
         setOperationAction(ISD::BITREVERSE, VT, Legal);
     }
@@ -3832,7 +3837,8 @@ unsigned X86TargetLowering::preferedOpcodeForCmpEqPiecesOfOperand(
 TargetLoweringBase::CondMergingParams
 X86TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
                                                  const Value *Lhs,
-                                                 const Value *Rhs) const {
+                                                 const Value *Rhs,
+                                                 const Function *) const {
   using namespace llvm::PatternMatch;
   int BaseCost = BrMergingBaseCostThresh.getValue();
   // With CCMP, branches can be merged in a more efficient way.
@@ -8061,102 +8067,6 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
           }
           return DAG.getBitcast(VT, Broadcast);
         }
-      }
-    }
-  }
-
-  // STRIDED - element loads at a uniform byte stride larger than the element
-  // size are folded into wide load(s) + vector truncation.
-  // Depth 1 lets the REVERSE block below recurse into us to catch reverse
-  // strides.
-  if (Depth <= 1 && Subtarget.hasAVX2() && !IsConsecutiveLoad &&
-      LoadMask.isAllOnes() && isPowerOf2_32(NumElems) && BaseSizeInBits <= 32 &&
-      VT.getSizeInBits() >= 128) {
-    unsigned WideEltBits = 0;
-    for (unsigned Trial : {16u, 32u, 64u}) {
-      if (Trial <= BaseSizeInBits || Trial % BaseSizeInBits != 0)
-        continue;
-      unsigned LaneStride = Trial / BaseSizeInBits;
-      bool AllMatch = true;
-      for (unsigned K = 1; K < NumElems && AllMatch; ++K) {
-        AllMatch = AllMatch && ByteOffsets[K] == 0 &&
-                   DAG.areNonVolatileConsecutiveLoads(
-                       Loads[K], LDBase, BaseSizeInBytes, K * LaneStride);
-      }
-      if (AllMatch) {
-        WideEltBits = Trial;
-        break;
-      }
-    }
-    if (WideEltBits != 0) {
-      MVT WideEltVT = MVT::getIntegerVT(WideEltBits);
-      MVT SrcEltVT = MVT::getIntegerVT(BaseSizeInBits);
-      // VTRUNC writes the truncated values to the low lanes of an xmm with
-      // zero padding above.
-      MVT TruncDstVT = MVT::getVectorVT(SrcEltVT, 128 / BaseSizeInBits);
-      unsigned TruncDstLanes = TruncDstVT.getVectorNumElements();
-      MVT ConcatVT = MVT::getVectorVT(SrcEltVT, NumElems);
-      if (NumElems > TruncDstLanes && !TLI.isTypeLegal(ConcatVT))
-        return SDValue();
-      // Try wider register sizes first.
-      for (unsigned WideRegBits : {512u, 256u, 128u}) {
-        unsigned LanesPerWideLoad = WideRegBits / WideEltBits;
-        if (LanesPerWideLoad < 2 || NumElems % LanesPerWideLoad != 0)
-          continue;
-        if (LanesPerWideLoad > TruncDstLanes)
-          continue; // VTRUNC dest must hold all good lanes of one piece.
-        MVT WideVT = MVT::getVectorVT(WideEltVT, LanesPerWideLoad);
-        if (!TLI.isTypeLegal(WideVT) || !TLI.isTypeLegal(TruncDstVT))
-          continue;
-        unsigned NumWideLoads = NumElems / LanesPerWideLoad;
-        // VTRUNC has no non-AVX-512 lowering so the i16 to i8 form needs BWI.
-        bool Partial = LanesPerWideLoad != TruncDstLanes;
-        if (Partial && (!Subtarget.hasAVX512() ||
-                        (WideEltBits == 16 && !Subtarget.hasBWI())))
-          continue;
-        unsigned BytesPerWideLoad = WideRegBits / 8;
-        auto MMOFlags = LDBase->getMemOperand()->getFlags();
-        SDValue BasePtr = LDBase->getBasePtr();
-        SmallVector<SDValue, 8> Pieces;
-        for (unsigned K = 0; K != NumWideLoads; ++K) {
-          unsigned Offset = K * BytesPerWideLoad;
-          SDValue Ptr = K == 0 ? BasePtr
-                               : DAG.getMemBasePlusOffset(
-                                     BasePtr, TypeSize::getFixed(Offset), DL);
-          SDValue Ld =
-              DAG.getLoad(WideVT, DL, LDBase->getChain(), Ptr,
-                          LDBase->getPointerInfo().getWithOffset(Offset),
-                          K == 0 ? LDBase->getBaseAlign() : Align(1), MMOFlags);
-          for (auto *LD : Loads)
-            if (LD)
-              DAG.makeEquivalentMemoryOrdering(LD, Ld);
-          unsigned TruncOp = Partial ? X86ISD::VTRUNC : ISD::TRUNCATE;
-          Pieces.push_back(DAG.getNode(TruncOp, DL, TruncDstVT, Ld));
-        }
-        // Pairwise shuffle the low halves until each piece is full.
-        if (Partial) {
-          unsigned GoodLanes = LanesPerWideLoad;
-          while (Pieces.size() > 1 && GoodLanes < TruncDstLanes) {
-            assert((TruncDstLanes % GoodLanes) == 0 &&
-                   "Illegal VTRUNC packing");
-            SmallVector<SDValue, 8> Next;
-            SmallVector<int, 16> Mask(TruncDstLanes, -1);
-            for (unsigned I = 0; I != GoodLanes; ++I) {
-              Mask[I] = I;
-              Mask[GoodLanes + I] = TruncDstLanes + I;
-            }
-            for (unsigned J = 0, E = Pieces.size() - 1; J < E; J += 2)
-              Next.push_back(DAG.getVectorShuffle(TruncDstVT, DL, Pieces[J],
-                                                  Pieces[J + 1], Mask));
-            Pieces = std::move(Next);
-            GoodLanes *= 2;
-          }
-        }
-        if (Pieces.size() == 1)
-          return DAG.getBitcast(VT, Pieces[0]);
-
-        SDValue Result = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Pieces);
-        return DAG.getBitcast(VT, Result);
       }
     }
   }
@@ -33595,8 +33505,8 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
   if (Subtarget.hasXOP() && !VT.is512BitVector())
     return LowerBITREVERSE_XOP(Op, DAG);
 
-  assert((Subtarget.hasSSSE3() || Subtarget.hasGFNI()) &&
-         "SSSE3 or GFNI required for BITREVERSE");
+  assert((Subtarget.hasSSSE3() || Subtarget.hasGFNI() || Subtarget.hasBMM()) &&
+         "SSSE3, GFNI, or BMM required for BITREVERSE");
 
   SDValue In = Op.getOperand(0);
   SDLoc DL(Op);

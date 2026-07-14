@@ -20,6 +20,7 @@
 #include <flang/Lower/AbstractConverter.h>
 #include <flang/Lower/ConvertType.h>
 #include <flang/Lower/DirectivesCommon.h>
+#include <flang/Lower/OpenMP.h>
 #include <flang/Lower/OpenMP/Clauses.h>
 #include <flang/Lower/PFTBuilder.h>
 #include <flang/Lower/Support/PrivateReductionUtils.h>
@@ -29,7 +30,10 @@
 #include <flang/Parser/openmp-utils.h>
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
+#include <flang/Semantics/omp-declare-variant.h>
 #include <flang/Semantics/openmp-utils.h>
+#include <flang/Semantics/scope.h>
+#include <flang/Semantics/symbol.h>
 #include <flang/Semantics/tools.h>
 #include <flang/Semantics/type.h>
 #include <flang/Utils/OpenMP.h>
@@ -1367,6 +1371,61 @@ void collectEnclosingConstructTraits(
           llvm::omp::TraitProperty::construct_target_target);
   }
   std::reverse(constructTraits.begin(), constructTraits.end());
+}
+
+const semantics::Symbol *
+resolveDeclareVariantCallee(const semantics::Symbol &base,
+                            AbstractConverter &converter) {
+  const semantics::Symbol &ultimate{base.GetUltimate()};
+
+  const auto *details{ultimate.detailsIf<semantics::SubprogramDetails>()};
+  assert(details && !details->ompDeclareVariants().empty() &&
+         "resolveDeclareVariantCallee called on symbol with no variants");
+
+  semantics::SemanticsContext &semaCtx{ultimate.owner().context()};
+  llvm::SmallVector<llvm::omp::VariantMatchInfo, 4> vmis;
+  llvm::SmallVector<const semantics::Symbol *, 4> variants;
+  for (const semantics::OmpDeclareVariantEntry &entry :
+       details->ompDeclareVariants()) {
+    // Variant selection cannot yet honour some selector features that the
+    // parser/semantics otherwise accept; reject them before building the match
+    // info (MakeVariantMatchInfo asserts none are present). This mirrors how
+    // METADIRECTIVE lowering rejects the same features.
+    if (entry.matchSelector) {
+      switch (semantics::omp::FindUnsupportedSelectorFeature(
+          *entry.matchSelector, semaCtx)) {
+      case semantics::omp::UnsupportedSelectorFeature::TargetDevice:
+        TODO(converter.getCurrentLocation(),
+             "target_device selector in DECLARE VARIANT");
+        break;
+      case semantics::omp::UnsupportedSelectorFeature::
+          ClauseOrExtensionProperty:
+        TODO(converter.getCurrentLocation(),
+             "clause or extension trait matching in DECLARE VARIANT");
+        break;
+      case semantics::omp::UnsupportedSelectorFeature::None:
+        break;
+      }
+    }
+    llvm::omp::VariantMatchInfo &vmi{vmis.emplace_back()};
+    if (entry.matchSelector)
+      semantics::omp::MakeVariantMatchInfo(vmi, *entry.matchSelector, semaCtx);
+    variants.push_back(&entry.variant.get());
+  }
+
+  llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits;
+  collectEnclosingConstructTraits(
+      converter.getFirOpBuilder().getInsertionBlock()->getParentOp(),
+      constructTraits);
+  semantics::omp::OmpVariantMatchContext ompCtx =
+      makeVariantMatchContext(converter.getModuleOp(), constructTraits);
+
+  const int bestIdx{llvm::omp::getBestVariantMatchForContext(vmis, ompCtx)};
+  // Return nullptr when no variant matches the current context; the caller
+  // will fall back to the base symbol.
+  if (bestIdx < 0)
+    return nullptr;
+  return variants[bestIdx];
 }
 
 } // namespace omp
