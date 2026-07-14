@@ -39,12 +39,6 @@ namespace llvm::RISCVTuneInfoTable {
 #include "RISCVGenSearchableTables.inc"
 } // namespace llvm::RISCVTuneInfoTable
 
-static cl::opt<unsigned> RVVVectorLMULMax(
-    "riscv-v-fixed-length-vector-lmul-max",
-    cl::desc("The maximum LMUL value to use for fixed length vectors. "
-             "Fractional LMUL values are not supported."),
-    cl::init(8), cl::Hidden);
-
 static cl::opt<bool> RISCVDisableUsingConstantPoolForLargeInts(
     "riscv-disable-using-constant-pool-for-large-ints",
     cl::desc("Disable using constant pool for large integers."),
@@ -229,10 +223,7 @@ unsigned RISCVSubtarget::getMinRVVVectorSizeInBits() const {
 unsigned RISCVSubtarget::getMaxLMULForFixedLengthVectors() const {
   assert(hasVInstructions() &&
          "Tried to get vector length without Zve or V extension support!");
-  assert(RVVVectorLMULMax <= 8 &&
-         llvm::has_single_bit<uint32_t>(RVVVectorLMULMax) &&
-         "V extension requires a LMUL to be at most 8 and a power of 2!");
-  return llvm::bit_floor(std::clamp<unsigned>(RVVVectorLMULMax, 1, 8));
+  return 8;
 }
 
 bool RISCVSubtarget::useRVVForFixedLengthVectors() const {

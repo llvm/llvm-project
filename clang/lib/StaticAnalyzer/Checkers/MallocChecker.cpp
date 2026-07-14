@@ -547,7 +547,7 @@ private:
       {{CDM::CLibrary, {"strdup"}, 1}, &MallocChecker::checkStrdup},
       {{CDM::CLibrary, {"_strdup"}, 1}, &MallocChecker::checkStrdup},
       {{CDM::CLibrary, {"kmalloc"}, 2}, &MallocChecker::checkKernelMalloc},
-      {{CDM::CLibrary, {"if_nameindex"}, 1}, &MallocChecker::checkIfNameIndex},
+      {{CDM::CLibrary, {"if_nameindex"}, 0}, &MallocChecker::checkIfNameIndex},
       {{CDM::CLibrary, {"wcsdup"}, 1}, &MallocChecker::checkStrdup},
       {{CDM::CLibrary, {"_wcsdup"}, 1}, &MallocChecker::checkStrdup},
       {{CDM::CLibrary, {"g_malloc"}, 1}, &MallocChecker::checkBasicAlloc},

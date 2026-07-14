@@ -189,11 +189,11 @@ TEST_P(ArchSpecAMDGPUTest, SetTriple) {
   const AMDGPUModel &model = GetParam();
   bool is_gcn = llvm::StringRef(model.name).starts_with("gfx");
   std::string triple =
-      (is_gcn ? "amdgcn" : "r600") + std::string("-amd-amdhsa--") + model.name;
+      (is_gcn ? "amdgpu" : "r600") + std::string("-amd-amdhsa--") + model.name;
 
   ArchSpec AS;
   EXPECT_TRUE(AS.SetTriple(triple));
-  EXPECT_EQ(is_gcn ? llvm::Triple::amdgcn : llvm::Triple::r600,
+  EXPECT_EQ(is_gcn ? llvm::Triple::amdgpu : llvm::Triple::r600,
             AS.GetTriple().getArch());
   EXPECT_NE(ArchSpec::eCore_amd_gpu_unknown, AS.GetCore());
   EXPECT_EQ(model.name, AS.GetClangTargetCPU());
@@ -208,7 +208,7 @@ TEST_P(ArchSpecAMDGPUTest, SetArchitectureFromELF) {
   ArchSpec AS;
   EXPECT_TRUE(AS.SetArchitecture(eArchTypeELF, llvm::ELF::EM_AMDGPU, model.mach,
                                  llvm::ELF::ELFOSABI_AMDGPU_HSA));
-  EXPECT_EQ(is_gcn ? llvm::Triple::amdgcn : llvm::Triple::r600,
+  EXPECT_EQ(is_gcn ? llvm::Triple::amdgpu : llvm::Triple::r600,
             AS.GetTriple().getArch());
   EXPECT_EQ(llvm::Triple::AMD, AS.GetTriple().getVendor());
   EXPECT_EQ(llvm::Triple::AMDHSA, AS.GetTriple().getOS());

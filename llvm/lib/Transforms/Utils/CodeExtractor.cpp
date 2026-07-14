@@ -246,7 +246,7 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
 /// for specified target preserves original alignment
 static bool isAlignmentPreservedForAddrCast(const Triple &TargetTriple) {
   switch (TargetTriple.getArch()) {
-  case Triple::ArchType::amdgcn:
+  case Triple::ArchType::amdgpu:
   case Triple::ArchType::r600:
     return true;
   // TODO: Add other architectures for which we are certain that alignment

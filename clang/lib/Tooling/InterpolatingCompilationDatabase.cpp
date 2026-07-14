@@ -279,6 +279,8 @@ struct TransferableCommand {
       if (ClangCLMode) {
         if (Std == LangStandard::lang_cxx23)
           Spelling = "c++23preview";
+        else if (Std == LangStandard::lang_cxx26)
+          Spelling = "c++26preview";
         else if (Std == latestLangStandardC())
           Spelling = "clatest";
         else if (Std == latestLangStandardCXX())
@@ -350,6 +352,8 @@ private:
         // Keep in sync with OPT__SLASH_std handling in Clang::ConstructJob().
         if (StringRef(Arg.getValue()) == "c++23preview")
           return LangStandard::lang_cxx23;
+        if (StringRef(Arg.getValue()) == "c++26preview")
+          return LangStandard::lang_cxx26;
         if (StringRef(Arg.getValue()) == "clatest")
           return latestLangStandardC();
         if (StringRef(Arg.getValue()) == "c++latest")

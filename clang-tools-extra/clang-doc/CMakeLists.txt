@@ -17,7 +17,6 @@ add_clang_library(clangDoc STATIC
   Serialize.cpp
   YAMLGenerator.cpp
   JSONGenerator.cpp
-  MDMustacheGenerator.cpp
 
   DEPENDS
   omp_gen
