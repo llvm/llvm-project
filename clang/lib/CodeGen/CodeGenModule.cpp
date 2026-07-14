@@ -6925,6 +6925,16 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   if (getTriple().isOSAIX() && D->isTargetClonesMultiVersion())
     Fn->setLinkage(llvm::GlobalValue::InternalLinkage);
 
+  // When Targeting SPIR-V, make Non-entry, non-exported HLSL functions have
+  // internal linkage because they are always inlined and are never referenced
+  // from outside the module. once inlined if definitions are dead they can be
+  // removed by DCE. SPIR-V shader targets required this for correctness since a
+  // leftover definition may retain an illegal signature. DirectX runs its own
+  // DCE pass, so it doesn't need this.
+  if (getLangOpts().HLSL && getTriple().isSPIRV() && Fn->hasExternalLinkage() &&
+      !D->hasAttr<HLSLShaderAttr>() && !D->isInExportDeclContext())
+    Fn->setLinkage(llvm::GlobalValue::InternalLinkage);
+
   // FIXME: this is redundant with part of setFunctionDefinitionAttributes
   setGVProperties(Fn, GD);
 
