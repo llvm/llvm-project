@@ -456,6 +456,7 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   case NEON::BI__builtin_neon_vpmaxqd_f64:
   case NEON::BI__builtin_neon_vpmaxnms_f32:
   case NEON::BI__builtin_neon_vpmaxnmqd_f64:
+  case NEON::BI__builtin_neon_vmulxh_f16:
     break;
   }
 
