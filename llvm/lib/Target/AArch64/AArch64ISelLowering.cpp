@@ -5197,8 +5197,8 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   const EVT DstElementVT = DstVT.getVectorElementType();
   const EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
 
+  [[maybe_unused]] const uint64_t DstElementWidth = DstVT.getScalarSizeInBits();
   const uint64_t SrcElementWidth = SrcVT.getScalarSizeInBits();
-  const uint64_t DstElementWidth = DstVT.getScalarSizeInBits();
   const uint64_t SatWidth = SatVT.getScalarSizeInBits();
   assert(SatWidth <= DstElementWidth &&
          "Saturation width cannot exceed result width");
