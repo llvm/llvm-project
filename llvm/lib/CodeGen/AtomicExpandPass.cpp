@@ -595,7 +595,8 @@ AtomicExpandImpl::convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI) {
   copyMetadataForAtomic(*NewRMWI, *RMWI);
   LLVM_DEBUG(dbgs() << "Replaced " << *RMWI << " with " << *NewRMWI << "\n");
 
-  Value *NewRVal = Builder.CreateBitPreservingCastChain(*DL, NewRMWI, RMWI->getType());
+  Value *NewRVal =
+      Builder.CreateBitPreservingCastChain(*DL, NewRMWI, RMWI->getType());
   RMWI->replaceAllUsesWith(NewRVal);
   RMWI->eraseFromParent();
   return NewRMWI;
