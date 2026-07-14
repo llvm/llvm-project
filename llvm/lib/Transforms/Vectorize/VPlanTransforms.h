@@ -292,12 +292,11 @@ struct VPlanTransforms {
   /// regions until no improvements are remaining.
   static void createAndOptimizeReplicateRegions(VPlan &Plan);
 
-  /// Replace (ICMP_ULE, wide canonical IV, backedge-taken-count) checks with an
-  /// (active-lane-mask recipe, wide canonical IV, trip-count). If \p
-  /// UseActiveLaneMaskForControlFlow is true, introduce an
-  /// VPActiveLaneMaskPHIRecipe.
-  static void addActiveLaneMask(VPlan &Plan,
-                                bool UseActiveLaneMaskForControlFlow);
+  /// Materialize the abstract header mask of the loop region into concrete
+  /// recipes: an active-lane-mask if \p UseActiveLaneMask (with a PHI if \p
+  /// UseActiveLaneMaskForControlFlow), else (WideCanonicalIV icmp ule BTC).
+  static void materializeHeaderMask(VPlan &Plan, bool UseActiveLaneMask,
+                                    bool UseActiveLaneMaskForControlFlow);
 
   /// Insert truncates and extends for any truncated recipe. Redundant casts
   /// will be folded later.
@@ -417,8 +416,7 @@ struct VPlanTransforms {
   /// IV values by feeding them precomputed end values instead, possibly taken
   /// one step backwards.
   static void optimizeInductionLiveOutUsers(VPlan &Plan,
-                                            PredicatedScalarEvolution &PSE,
-                                            bool FoldTail);
+                                            PredicatedScalarEvolution &PSE);
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);

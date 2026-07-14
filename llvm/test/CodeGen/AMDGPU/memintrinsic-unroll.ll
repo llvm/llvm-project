@@ -6851,8 +6851,8 @@ define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0
 ; UNROLL3-NEXT:    s_cbranch_execz .LBB5_4
 ; UNROLL3-NEXT:  ; %bb.1: ; %memmove_fwd_loop.preheader
 ; UNROLL3-NEXT:    v_mov_b32_e32 v5, v3
-; UNROLL3-NEXT:    v_mov_b32_e32 v7, v1
 ; UNROLL3-NEXT:    v_mov_b32_e32 v4, v2
+; UNROLL3-NEXT:    v_mov_b32_e32 v7, v1
 ; UNROLL3-NEXT:    v_mov_b32_e32 v6, v0
 ; UNROLL3-NEXT:    s_mov_b64 s[4:5], 0x7e0
 ; UNROLL3-NEXT:    .p2align 6
@@ -8367,8 +8367,8 @@ define void @memmove_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1
 ; UNROLL3-NEXT:    s_cbranch_execz .LBB6_4
 ; UNROLL3-NEXT:  ; %bb.1: ; %memmove_fwd_loop.preheader
 ; UNROLL3-NEXT:    v_mov_b32_e32 v5, v3
-; UNROLL3-NEXT:    v_mov_b32_e32 v7, v1
 ; UNROLL3-NEXT:    v_mov_b32_e32 v4, v2
+; UNROLL3-NEXT:    v_mov_b32_e32 v7, v1
 ; UNROLL3-NEXT:    v_mov_b32_e32 v6, v0
 ; UNROLL3-NEXT:    s_mov_b64 s[4:5], 0x7e0
 ; UNROLL3-NEXT:    .p2align 6
@@ -9609,8 +9609,8 @@ define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4
 ; UNROLL3-NEXT:    s_cbranch_execz .LBB7_4
 ; UNROLL3-NEXT:  ; %bb.1: ; %memmove_fwd_loop.preheader
 ; UNROLL3-NEXT:    v_mov_b32_e32 v5, v3
-; UNROLL3-NEXT:    v_mov_b32_e32 v7, v1
 ; UNROLL3-NEXT:    v_mov_b32_e32 v4, v2
+; UNROLL3-NEXT:    v_mov_b32_e32 v7, v1
 ; UNROLL3-NEXT:    v_mov_b32_e32 v6, v0
 ; UNROLL3-NEXT:    s_mov_b64 s[4:5], 0x7e0
 ; UNROLL3-NEXT:    .p2align 6

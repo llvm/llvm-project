@@ -1,4 +1,5 @@
 CodeGen/ARM/sjljeh-swifterror.ll
+CodeGen/BPF/sink-min-max.ll
 CodeGen/WinEH/wineh-comdat.ll
 CodeGen/WinEH/wineh-scope-statenumbering.ll
 CodeGen/WinEH/wineh-setjmp.ll

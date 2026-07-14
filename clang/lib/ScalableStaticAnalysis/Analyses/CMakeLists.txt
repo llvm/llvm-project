@@ -13,6 +13,7 @@ add_clang_library(clangScalableStaticAnalysisAnalyses
   PointerFlow/PointerFlowExtractor.cpp
   PointerFlow/PointerFlowFormat.cpp
   SSAFAnalysesCommon.cpp
+  TypeConstrainedPointers/TypeConstrainedPointers.cpp
   UnsafeBufferUsage/UnsafeBufferUsage.cpp
   UnsafeBufferUsage/UnsafeBufferUsageAnalysis.cpp
   UnsafeBufferUsage/UnsafeBufferUsageExtractor.cpp

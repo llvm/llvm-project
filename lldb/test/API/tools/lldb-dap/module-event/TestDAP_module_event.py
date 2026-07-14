@@ -1,57 +1,56 @@
-import dap_server
-from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-import lldbdap_testcase
-import re
+from lldbsuite.test.decorators import (
+    skipIfTargetDoesNotSupportSharedLibraries,
+    skipIfWindows,
+)
+from lldbsuite.test.lldbtest import line_number
+from lldbsuite.test.tools.lldb_dap.dap_types import LaunchArgs, StoppedReason
+from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
 
 
 @skipIfTargetDoesNotSupportSharedLibraries()
-class TestDAP_module_event(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_module_event(DAPTestCaseBase):
     @skipIfWindows
     def test_module_event(self):
+        session = self.build_and_create_session()
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
 
         source = "main.cpp"
-        breakpoint1_line = line_number(source, "// breakpoint 1")
-        breakpoint2_line = line_number(source, "// breakpoint 2")
-        breakpoint3_line = line_number(source, "// breakpoint 3")
+        bp1_line = line_number(source, "// breakpoint 1")
+        bp2_line = line_number(source, "// breakpoint 2")
+        bp3_line = line_number(source, "// breakpoint 3")
 
-        breakpoint_ids = self.set_source_breakpoints(
-            source, [breakpoint1_line, breakpoint2_line, breakpoint3_line]
+        with session.configure(LaunchArgs(program=program)) as ctx:
+            [bp1, bp2, bp3] = session.resolve_source_breakpoints(
+                source, [bp1_line, bp2_line, bp3_line]
+            )
+        # Wait for the breakpoint before dlopen.
+        before_dlopen_event = session.verify_stopped_on_breakpoint(
+            bp1, after=ctx.process_event
         )
-        self.continue_to_breakpoints(breakpoint_ids)
-
-        # We're now stopped at breakpoint 1 before the dlopen. Flush all the module events.
-        self.dap_server.wait_for_module_events()
 
         # Continue to the second breakpoint, before the dlclose.
-        self.continue_to_breakpoints(breakpoint_ids)
+        session.continue_to_breakpoint(bp2)
 
         # Make sure we got a module event for libother.
-        event = self.dap_server.wait_for_event(["module"])
-        self.assertIsNotNone(event, "didn't get a module event")
-        module_name = event["body"]["module"]["name"]
-        module_id = event["body"]["module"]["id"]
-        self.assertEqual(event["body"]["reason"], "new")
-        self.assertIn("libother", module_name)
+        new_module_event = session.verify_next_module_event(after=before_dlopen_event)
+        module_id = new_module_event.body.module.id
+        self.assertEqual(new_module_event.body.reason, "new")
+        self.assertIn("libother", new_module_event.body.module.name)
 
         # Continue to the third breakpoint, after the dlclose.
-        self.continue_to_breakpoints(breakpoint_ids)
+        session.continue_to_breakpoint(bp3)
 
         # Make sure we got a module event for libother.
-        event = self.dap_server.wait_for_event(["module"])
-        self.assertIsNotNone(event, "didn't get a module event")
-        reason = event["body"]["reason"]
+        removed_module_event = session.verify_next_module_event(after=new_module_event)
+        reason = removed_module_event.body.reason
         self.assertEqual(reason, "removed")
-        self.assertEqual(event["body"]["module"]["id"], module_id)
+        self.assertEqual(removed_module_event.body.module.id, module_id)
 
         # The removed module event should omit everything but the module id and name
         # as they are required fields.
-        module_data = event["body"]["module"]
-        required_keys = ["id", "name"]
-        self.assertListEqual(list(module_data.keys()), required_keys)
-        self.assertEqual(module_data["name"], "", "expects empty name.")
+        removed_module = removed_module_event.body.module
+        self.assertIsNotNone(removed_module.id)
+        self.assertIsNotNone(removed_module.name)
+        self.assertEqual(removed_module.name, "", "expects empty name.")
 
-        self.continue_to_exit()
+        session.continue_to_exit()
