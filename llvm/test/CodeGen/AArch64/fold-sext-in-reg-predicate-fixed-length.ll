@@ -21,9 +21,8 @@ entry:
 define void @active_lane_mask_mstore_vscaleX2(ptr %p, i64 %n) vscale_range(2,2) {
 ; CHECK-LABEL: active_lane_mask_mstore_vscaleX2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    whilelo p0.b, xzr, x1
 ; CHECK-NEXT:    mov z0.h, #123 // =0x7b
-; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    whilelo p0.h, xzr, x1
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
@@ -35,10 +34,8 @@ entry:
 define void @active_lane_mask_mstore_vscaleX4(ptr %p, i64 %n) vscale_range(4,4) {
 ; CHECK-LABEL: active_lane_mask_mstore_vscaleX4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilelo p0.b, xzr, x1
 ; CHECK-NEXT:    mov z0.s, #123 // =0x7b
-; CHECK-NEXT:    punpklo p0.h, p0.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    whilelo p0.s, xzr, x1
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %mask =  call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 0, i64 %n)
