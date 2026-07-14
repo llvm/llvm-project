@@ -132,14 +132,24 @@ EXCLUDE_DEPENDENTS_WINDOWS = {
 
 EXCLUDE_MAC = {
     "bolt",
+    "CIR",  # Depends on mlir, which is excluded below.
     "cross-project-tests",
     "flang",
+    "flang-rt",
     "libc",
+    "mlir",
     "openmp",
     "polly",
     "libcxx",
     "libcxxabi",
     "offload",
+}
+
+# These projects are still built on the self-hosted macOS runners, but their
+# tests are temporarily skipped there.
+EXCLUDE_CHECK_TARGETS_MAC = {
+    "lldb",
+    "libclc",
 }
 
 PROJECT_CHECK_TARGETS = {
@@ -259,6 +269,8 @@ def _compute_project_check_targets(
 ) -> Set[str]:
     check_targets = set()
     for project_to_test in projects_to_test:
+        if platform == "Darwin" and project_to_test in EXCLUDE_CHECK_TARGETS_MAC:
+            continue
         if project_to_test in PROJECT_CHECK_TARGETS:
             check_targets.add(PROJECT_CHECK_TARGETS[project_to_test])
     return check_targets

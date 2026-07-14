@@ -246,16 +246,6 @@ jobs:
           python3 .ci/compute_projects.py Darwin < /tmp/changed_files.txt > /tmp/env_vars.sh
           source /tmp/env_vars.sh
 
-          # The self-hosted macOS runners aren't set up to build/test mlir,
-          # flang (flang-rt depends on flang), or CIR (depends on mlir), so
-          # drop them here rather than in compute_projects.py, which is
-          # shared with the macos-14 GitHub-hosted runner job above.
-          # check-lldb and check-libclc are temporarily skipped as well.
-          excluded_projects="mlir|flang|flang-rt|CIR"
-          excluded_check_targets="check-mlir|check-flang|check-flang-rt|check-clang-cir|check-lldb|check-libclc"
-          projects_to_build=$(echo "${projects_to_build}" | tr ';' '\n' | grep -v -E "^(${excluded_projects})$" | paste -sd ';' -)
-          project_check_targets=$(echo "${project_check_targets}" | tr ' ' '\n' | grep -v -E "^(${excluded_check_targets})$" | paste -sd ' ' -)
-
           echo "Building projects: ${projects_to_build}"
           echo "Running project checks targets: ${project_check_targets}"
           echo "Building runtimes: ${runtimes_to_build}"
