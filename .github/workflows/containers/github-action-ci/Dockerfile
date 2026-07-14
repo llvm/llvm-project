@@ -46,13 +46,17 @@ COPY --from=stage1-toolchain $LLVM_SYSROOT $LLVM_SYSROOT
 # Need perl-modules for clang analyzer tests.
 # Need git for SPIRV-Tools tests.
 # Need binutils-dev instead of binutils to build the linker LTO plugin.
+# Need libedit, libxml2 and lzma for LLDB.
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
     binutils-dev \
     cmake \
     curl \
     git \
+    libedit-dev \
+    liblzma-dev \
     libstdc++-11-dev \
+    libxml2-dev \
     ninja-build \
     nodejs \
     perl-modules \
