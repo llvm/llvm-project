@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
             int const key = static_cast<int>(size / 2);
 
             Container c(data.begin(), data.end());
-            for ([[maybe_unused]] auto _ : st) {
+            for (auto _ : st) {
               benchmark::DoNotOptimize(c);
               auto result = equal_range(c.begin(), c.end(), key);
               benchmark::DoNotOptimize(result);
@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
                         key); // [0, 1, 2, 3, 3, 3, 3, ..., 8, 9]
 
             Container c(data.begin(), data.end());
-            for ([[maybe_unused]] auto _ : st) {
+            for (auto _ : st) {
               benchmark::DoNotOptimize(c);
               auto result = equal_range(c.begin(), c.end(), key);
               benchmark::DoNotOptimize(result);
@@ -106,7 +106,7 @@ int main(int argc, char** argv) {
             int const key = static_cast<int>(size); // one past the last element
 
             Container c(data.begin(), data.end());
-            for ([[maybe_unused]] auto _ : st) {
+            for (auto _ : st) {
               benchmark::DoNotOptimize(c);
               auto result = equal_range(c.begin(), c.end(), key);
               benchmark::DoNotOptimize(result);

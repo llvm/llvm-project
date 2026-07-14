@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
 
             Container c(data.begin(), data.end());
             std::size_t pos = 0;
-            for ([[maybe_unused]] auto _ : st) {
+            for (auto _ : st) {
               benchmark::DoNotOptimize(c);
               bool result = binary_search(c.begin(), c.end(), keys[pos]);
               benchmark::DoNotOptimize(result);
@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
               absent = Generate<ValueType>::random();
 
             Container c(data.begin(), data.end());
-            for ([[maybe_unused]] auto _ : st) {
+            for (auto _ : st) {
               benchmark::DoNotOptimize(c);
               bool result = binary_search(c.begin(), c.end(), absent);
               benchmark::DoNotOptimize(result);
