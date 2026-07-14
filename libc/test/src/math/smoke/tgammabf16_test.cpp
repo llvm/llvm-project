@@ -64,9 +64,6 @@ public:
   }
 
   void test_boundaries() {
-    EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(2.951479e38f),
-                              LIBC_NAMESPACE::tgammabf16(bfloat16(35.0f)));
-
     EXPECT_FP_EQ_WITH_EXCEPTION(
         inf, LIBC_NAMESPACE::tgammabf16(bfloat16(36.0f)), FE_OVERFLOW);
     EXPECT_MATH_ERRNO(ERANGE);

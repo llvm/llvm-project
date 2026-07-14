@@ -32,18 +32,9 @@ LIBC_INLINE_VAR constexpr double LOG_SQRT_2_PI = 0x1.d67f1c864beb5p-1;
 
 // Paul Godfrey's exact Lanczos approximation coefficients (g=7, n=9)
 LIBC_INLINE_VAR constexpr double LANCZOS_COEFFS[9] = {
-    0.99999999999980993,  676.5203681218851,     -1259.1392167224028,
-    771.32342877765313,   -176.61502916214059,   12.507343278224757,
-    -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7};
-
-LIBC_INLINE bool is_negative_integer(double x) {
-  if (x > -1.0)
-    return false;
-  if (x <= -128.0)
-    return true;
-  int n = static_cast<int>(x);
-  return x == static_cast<double>(n);
-}
+    0x1.ffffffffff950p-1,  0x1.52429b6c30b05p+9,  -0x1.3ac8e8ed4171bp+10,
+    0x1.81a9661d3b4d8p+9,  -0x1.613ae51a32f5dp+7, 0x1.903c27f8b9c81p+3,
+    -0x1.1bcb2992b2855p-3, 0x1.4f0514e4e324fp-17, 0x1.435508f3faeefp-23};
 
 } // namespace tgammabf16_internal
 
@@ -75,17 +66,28 @@ LIBC_INLINE bfloat16 tgammabf16(bfloat16 x) {
     return FPBits::inf(xbits.sign()).get_val();
   }
 
-  double xd = static_cast<double>(static_cast<float>(x));
-  if (LIBC_UNLIKELY(is_negative_integer(xd))) {
-    fputil::set_errno_if_required(EDOM);
-    fputil::raise_except_if_required(FE_INVALID);
-    return FPBits::quiet_nan().get_val();
+  if (LIBC_UNLIKELY(xbits.is_neg())) {
+    uint16_t x_abs = xbits.uintval() & 0x7fffU;
+    int biased_exp = x_abs >> FPBits::FRACTION_LEN;
+    if (biased_exp >= FPBits::EXP_BIAS) {
+      int e = biased_exp - FPBits::EXP_BIAS;
+      if (e >= FPBits::FRACTION_LEN ||
+          (xbits.get_mantissa() &
+           static_cast<uint16_t>((1U << (FPBits::FRACTION_LEN - e)) - 1U)) ==
+              0U) {
+        fputil::set_errno_if_required(EDOM);
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
+    }
   }
 
+  float xf = static_cast<float>(x);
+
   // Fast path for exact positive integers
-  if (xd > 0.0 && xd <= 35.0) {
-    int n = static_cast<int>(xd);
-    if (xd == static_cast<double>(n)) {
+  if (xf > 0.0f && xf <= 35.0f) {
+    int n = static_cast<int>(xf);
+    if (xf == static_cast<float>(n)) {
       double res = 1.0;
       for (int i = 1; i < n; ++i)
         res *= i;
@@ -93,20 +95,21 @@ LIBC_INLINE bfloat16 tgammabf16(bfloat16 x) {
     }
   }
 
-  bool reflection = false;
+  bool reflection = xbits.is_neg();
   bool divide_by_x = false;
+
+  double xd = static_cast<double>(xf);
   double x_eval = xd;
   double res;
 
   // Fast path for tiny positive inputs to prevent exact-boundary overshoots
   // For tiny x, Gamma(x) ~= 1/x - gamma
-  if (LIBC_UNLIKELY(xd > 0.0 && xd < 0x1.0p-8)) {
-    res = (1.0 / xd) - 0.577215664901532860606;
+  if (LIBC_UNLIKELY(xf > 0.0f && xf < 0x1.0p-8f)) {
+    res = (1.0 / xd) - 0x1.2788cfc6fb619p-1;
   } else {
-    if (xd < 0.0) {
-      reflection = true;
+    if (reflection) {
       x_eval = 1.0 - xd;
-    } else if (xd < 1.0) {
+    } else if (xf < 1.0f) {
       divide_by_x = true;
       x_eval = xd + 1.0;
     }
