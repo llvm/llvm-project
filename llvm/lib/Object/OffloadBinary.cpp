@@ -22,7 +22,6 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -454,25 +453,31 @@ bool object::areTargetsCompatible(const OffloadFile::TargetID &LHS,
   if (LHS == RHS)
     return false;
 
-  llvm::Triple LHSTT(LHS.first);
-  llvm::Triple RHSTT(RHS.first);
-
-  // The AMDGPU target requires target-id aware checks (base processor plus
-  // xnack/sramecc features), which also handle the generic wildcard and the
-  // legacy "amdgcn"/"amdgpu" triple spellings.
-  if (LHSTT.isAMDGPU()) {
-    AMDGPU::TargetID LTID(LHSTT, LHS.second);
-    AMDGPU::TargetID RTID(RHSTT, RHS.second);
-    return LTID.isCompatibleWith(RTID);
-  }
-
-  // For other targets the triples must be compatible.
-  if (!LHSTT.isCompatibleWith(RHSTT))
+  // The triples must match at all times.
+  if (LHS.first != RHS.first)
     return false;
 
-  // If the architecture is "generic" we assume it is always compatible.
+  // If the architecture is "all" we assume it is always compatible.
   if (LHS.second == "generic" || RHS.second == "generic")
     return true;
 
-  return LHS.second == RHS.second;
+  // Only The AMDGPU target requires additional checks.
+  llvm::Triple T(LHS.first);
+  if (!T.isAMDGPU())
+    return false;
+
+  // The base processor must always match.
+  if (LHS.second.split(":").first != RHS.second.split(":").first)
+    return false;
+
+  // Check combintions of on / off features that must match.
+  if (LHS.second.contains("xnack+") && RHS.second.contains("xnack-"))
+    return false;
+  if (LHS.second.contains("xnack-") && RHS.second.contains("xnack+"))
+    return false;
+  if (LHS.second.contains("sramecc-") && RHS.second.contains("sramecc+"))
+    return false;
+  if (LHS.second.contains("sramecc+") && RHS.second.contains("sramecc-"))
+    return false;
+  return true;
 }

@@ -1539,9 +1539,18 @@ void CodeGenModule::Release() {
                                 "sign-return-address-with-bkey", 2);
   }
   if (T.isAArch64()) {
-    if (getTriple().isOSBinFormatELF())
+    if (getTriple().isOSBinFormatELF()) {
       getModule().addModuleFlag(llvm::Module::Error, "ptrauth-elf-got",
                                 LangOpts.PointerAuthELFGOT);
+
+      getModule().addModuleFlag(llvm::Module::Error, "ptrauth-init-fini",
+                                LangOpts.PointerAuthCalls &&
+                                    LangOpts.PointerAuthInitFini);
+      getModule().addModuleFlag(
+          llvm::Module::Error, "ptrauth-init-fini-address-discrimination",
+          LangOpts.PointerAuthCalls && LangOpts.PointerAuthInitFini &&
+              LangOpts.PointerAuthInitFiniAddressDiscrimination);
+    }
 
     if (getTriple().isOSLinux()) {
       getModule().addModuleFlag(llvm::Module::Error, "ptrauth-sign-personality",
@@ -2621,9 +2630,6 @@ void CodeGenModule::AddGlobalDtor(llvm::Function *Dtor, int Priority,
 void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
   if (Fns.empty()) return;
 
-  const PointerAuthSchema &InitFiniAuthSchema =
-      getCodeGenOpts().PointerAuth.InitFiniPointers;
-
   // Ctor function type is ptr.
   llvm::PointerType *PtrTy = llvm::PointerType::get(
       getLLVMContext(), TheModule.getDataLayout().getProgramAddressSpace());
@@ -2637,23 +2643,7 @@ void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
   for (const auto &I : Fns) {
     auto Ctor = Ctors.beginStruct(CtorStructTy);
     Ctor.addInt(Int32Ty, I.Priority);
-    if (InitFiniAuthSchema) {
-      llvm::Constant *StorageAddress =
-          (InitFiniAuthSchema.isAddressDiscriminated()
-               ? llvm::ConstantExpr::getIntToPtr(
-                     llvm::ConstantInt::get(
-                         IntPtrTy,
-                         llvm::ConstantPtrAuth::AddrDiscriminator_CtorsDtors),
-                     PtrTy)
-               : nullptr);
-      llvm::Constant *SignedCtorPtr = getConstantSignedPointer(
-          I.Initializer, InitFiniAuthSchema.getKey(), StorageAddress,
-          llvm::ConstantInt::get(
-              SizeTy, InitFiniAuthSchema.getConstantDiscrimination()));
-      Ctor.add(SignedCtorPtr);
-    } else {
-      Ctor.add(I.Initializer);
-    }
+    Ctor.add(I.Initializer);
     if (I.AssociatedData)
       Ctor.add(I.AssociatedData);
     else
