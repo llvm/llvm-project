@@ -254,7 +254,7 @@ jobs:
     if: >-
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       contents: read
       pull-requests: read
@@ -355,14 +355,6 @@ jobs:
                 -DCMAKE_C_COMPILER_LAUNCHER=sccache \
                 -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
-          echo "::group::Build $PROJECTS"
-          ninja -C build
-          echo "::endgroup::"
-
-          for target in ${CHECK_TARGETS}; do
-            echo "::group::Running $target"
-            ninja -C build "$target"
-            echo "::endgroup::"
-          done
+          ninja -C build ${CHECK_TARGETS}
 
           sccache --show-stats
