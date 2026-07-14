@@ -82,6 +82,7 @@ protected:
   std::vector<DomGroup> GroupsOfUses;
   int64_t RestoreCost = 0;
   NextUseDistance Dist;
+  int64_t NormalizedRestoreCost = 0;
   int64_t NormalizedCost = 0;
   CodeGenPlan Plan;
   const SIRegisterInfo *TRI;
@@ -122,10 +123,11 @@ public:
   LaneBitmask getMask() const { return Mask; }
   void addGroup(DomGroup DG) { GroupsOfUses.push_back(DG); }
   auto groups() { return make_range(GroupsOfUses.begin(), GroupsOfUses.end()); }
-  void setRestoreCost(int64_t RC) { RestoreCost = RC; }
   int64_t getRestoreCost() const { return RestoreCost; }
   void setNextUseDistance(NextUseDistance NUD) { Dist = NUD; }
   NextUseDistance getNextUseDistance() const { return Dist; }
+  void setNormalizedRestoreCost(int64_t NRC) { NormalizedRestoreCost = NRC; }
+  int64_t getNormalizedRestoreCost() const { return NormalizedRestoreCost; }
   void setNormalizedCost(int64_t NC) { NormalizedCost = NC; }
   int64_t getNormalizedCost() const { return NormalizedCost; }
   void calculateRestoreCost();
@@ -1146,7 +1148,7 @@ static void normalizeCosts(
     // if (IsRestoreCostOutlier)
     //   NormalizedRestoreCost += OutlierBonus;
 
-    C->setRestoreCost(NormalizedRestoreCost);
+    C->setNormalizedRestoreCost(NormalizedRestoreCost);
 
     // Combined cost: prefer high next-use distance, low restore cost.
     int64_t NormalizedCost =
@@ -1389,7 +1391,8 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
     int64_t Cost1 = Candidate1->getNormalizedCost();
     int64_t Cost2 = Candidate2->getNormalizedCost();
     if (Cost1 == Cost2)
-      return Candidate1->getRestoreCost() < Candidate2->getRestoreCost();
+      return Candidate1->getNormalizedRestoreCost() <
+             Candidate2->getNormalizedRestoreCost();
     return Cost1 > Cost2;
   });
 
