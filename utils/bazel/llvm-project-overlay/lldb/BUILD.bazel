@@ -1234,6 +1234,7 @@ cc_binary(
         "//lldb:APIHeaders",
         "//lldb:Headers",
         "//lldb:Host",
+        "//lldb:ProtocolHeaders",
         "//lldb:ProtocolMCP",
         "//lldb:Utility",
         "//lldb:liblldb.wrapper",
