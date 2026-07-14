@@ -103,7 +103,7 @@ def plain_text_comparison(data, metric, baseline_name=None, candidate_name=None)
     """
     # Show a confidence interval on the % difference, but only when the inputs contain more
     # than one sample per benchmark (otherwise there's no dispersion to estimate it from).
-    # This flags low-confidence rows without altering the common single-sample output.
+    # This flags statistically significant rows without altering the common single-sample output.
     show_ci = max(data['samples_0'].max(), data['samples_1'].max()) > 1
 
     # Compute the geomean and report on their difference (before NaNs are replaced below)
@@ -117,19 +117,20 @@ def plain_text_comparison(data, metric, baseline_name=None, candidate_name=None)
     colalign = None
     if show_ci:
         # Render the interval as an explicit [low, high] range, and mark rows whose interval
-        # spans zero: for those we can't even be confident about the direction of the change.
+        # excludes zero: those are statistically significant changes we can be confident are real.
         def render(row):
             (low, high) = (row['ci_low'], row['ci_high'])
             if any(x is None or not math.isfinite(x) for x in (low, high)):
                 return ('', '')
-            return (f'[{low:+.1%}, {high:+.1%}]', 'x' if low < 0 < high else '')
+            significant = not (low < 0 < high) # the confidence interval excludes zero
+            return (f'[{low:+.1%}, {high:+.1%}]', 'x' if significant else '')
         rendered = data.apply(render, axis=1, result_type='expand')
         data = data.assign(ci_range=rendered[0], ci_flag=rendered[1])
-        headers += ['95% Confidence interval of %diff', 'Low confidence?']
+        headers += ['95% Confidence interval of %diff', 'Significant?']
         fmt += [None, None]
         columns += ['ci_range', 'ci_flag']
         geomean_row += ['', '']
-        # Center the low-confidence marker; keep the benchmark name and interval left-aligned
+        # Center the significance marker; keep the benchmark name and interval left-aligned
         # and every numeric column right-aligned (matching `numalign` above).
         def alignment(column):
             if column == 'ci_flag':
