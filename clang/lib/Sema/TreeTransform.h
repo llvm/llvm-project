@@ -837,6 +837,8 @@ public:
         LSI->Lambda->getLambdaDependencyKind());
   }
 
+  ExprResult TransformLambdaConstraint(Expr *AC) { return AC; }
+
   QualType TransformReferenceType(TypeLocBuilder &TLB, ReferenceTypeLoc TL);
 
   StmtResult TransformCompoundStmt(CompoundStmt *S, bool IsStmtExpr);
@@ -16295,11 +16297,13 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   assert(FPTL && "Not a FunctionProtoType?");
 
   AssociatedConstraint TRC = E->getCallOperator()->getTrailingRequiresClause();
-  // If the concept refers to any outer parameter packs, we track the SubstIndex
-  // for evaluation.
-  if (TRC && TRC.ConstraintExpr->containsUnexpandedParameterPack() &&
-      !TRC.ArgPackSubstIndex)
-    TRC.ArgPackSubstIndex = SemaRef.ArgPackSubstIndex;
+  if (TRC) {
+    ExprResult E = getDerived().TransformLambdaConstraint(
+        const_cast<Expr *>(TRC.ConstraintExpr));
+    if (E.isInvalid())
+      return E;
+    TRC.ConstraintExpr = E.get();
+  }
 
   getSema().CompleteLambdaCallOperator(
       NewCallOperator, E->getCallOperator()->getLocation(),

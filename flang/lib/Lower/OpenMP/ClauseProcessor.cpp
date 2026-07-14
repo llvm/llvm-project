@@ -818,6 +818,15 @@ bool ClauseProcessor::processOrdered(
   return false;
 }
 
+bool ClauseProcessor::processPartial(std::optional<int64_t> &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Partial>()) {
+    if (clause->v.has_value())
+      result = evaluate::ToInt64(*clause->v);
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processPriority(
     lower::StatementContext &stmtCtx,
     mlir::omp::PriorityClauseOps &result) const {
