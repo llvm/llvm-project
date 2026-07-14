@@ -86,6 +86,7 @@
 #include "StringLiteralWithEmbeddedNulCheck.h"
 #include "StringviewNullptrCheck.h"
 #include "SuspiciousEnumUsageCheck.h"
+#include "SuspiciousFreadFwriteReturnCheck.h"
 #include "SuspiciousIncludeCheck.h"
 #include "SuspiciousMemoryComparisonCheck.h"
 #include "SuspiciousMemsetUsageCheck.h"
@@ -184,6 +185,8 @@ public:
         "bugprone-incorrect-enable-if");
     CheckFactories.registerCheck<IncorrectEnableSharedFromThisCheck>(
         "bugprone-incorrect-enable-shared-from-this");
+    CheckFactories.registerCheck<SuspiciousFreadFwriteReturnCheck>(
+        "bugprone-suspicious-fread-fwrite-return");
     CheckFactories.registerCheck<UnintendedCharOstreamOutputCheck>(
         "bugprone-unintended-char-ostream-output");
     CheckFactories.registerCheck<ReturnConstRefFromParameterCheck>(
