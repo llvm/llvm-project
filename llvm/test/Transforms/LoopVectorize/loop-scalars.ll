@@ -73,11 +73,12 @@ define void @scalar_store(ptr %a, ptr %b, i64 %n) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [4 x i8], ptr [[B:%.*]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [4 x i8], ptr [[B]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr [4 x i8], ptr [[B]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP10]], i64 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [8 x i8], ptr [[A:%.*]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [8 x i8], ptr [[A]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr [8 x i8], ptr [[A]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP9]], i64 16
 ; CHECK-NEXT:    store ptr [[TMP4]], ptr [[TMP6]], align 8
 ; CHECK-NEXT:    store ptr [[TMP5]], ptr [[TMP7]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -133,12 +134,13 @@ define void @expansion(ptr %a, ptr %b, i64 %n) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[OFFSET_IDX]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [8 x i8], ptr [[B:%.*]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [8 x i8], ptr [[B]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [8 x i8], ptr [[A:%.*]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [8 x i8], ptr [[A]], i64 [[TMP3]]
-; CHECK-NEXT:    store ptr [[TMP4]], ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr [8 x i8], ptr [[A]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP10]], i64 16
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [8 x i8], ptr [[A1:%.*]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr [8 x i8], ptr [[A1]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP9]], i64 16
+; CHECK-NEXT:    store ptr [[TMP6]], ptr [[TMP11]], align 8
 ; CHECK-NEXT:    store ptr [[TMP5]], ptr [[TMP7]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -151,8 +153,8 @@ define void @expansion(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[VAR0:%.*]] = getelementptr inbounds [8 x i8], ptr [[B]], i64 [[I]]
-; CHECK-NEXT:    [[VAR3:%.*]] = getelementptr inbounds [8 x i8], ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    [[VAR0:%.*]] = getelementptr inbounds [8 x i8], ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    [[VAR3:%.*]] = getelementptr inbounds [8 x i8], ptr [[A1]], i64 [[I]]
 ; CHECK-NEXT:    store ptr [[VAR0]], ptr [[VAR3]], align 8
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 2
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]

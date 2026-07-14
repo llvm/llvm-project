@@ -33,10 +33,11 @@ define void @s172(i32 noundef %xa, i32 noundef %xb, ptr noundef %a, ptr noundef 
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP13]], [[UMIN]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = shl i64 [[TMP15]], 2
-; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[TMP16]], 4
-; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP17]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP16]]
+; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[TMP17]], i64 4
 ; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP9]]
-; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP17]]
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP16]]
+; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[TMP18]], i64 4
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP6]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SCEVGEP5]], [[SCEVGEP4]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]

@@ -34,20 +34,22 @@ define i32 @unroll(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 %N)
 ; CHECK-NEXT:    [[EPIL_ITER_CMP_NOT:%.*]] = icmp eq i64 [[XTRAITER]], 1
 ; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT_EPILOG_LCSSA:%.*]], label [[FOR_BODY_EPIL_1:%.*]]
 ; CHECK:       for.body.epil.1:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_EPIL:%.*]] = add nuw nsw i64 [[INDVARS_IV_EPIL_INIT]], 1
-; CHECK-NEXT:    [[ARRAYIDX_EPIL_1:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[INDVARS_IV_NEXT_EPIL]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr [4 x i8], ptr [[A]], i64 [[INDVARS_IV_EPIL_INIT]]
+; CHECK-NEXT:    [[ARRAYIDX_EPIL_1:%.*]] = getelementptr i8, ptr [[TMP16]], i64 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX_EPIL_1]], align 4
-; CHECK-NEXT:    [[ARRAYIDX2_EPIL_1:%.*]] = getelementptr inbounds [4 x i8], ptr [[B]], i64 [[INDVARS_IV_NEXT_EPIL]]
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr [4 x i8], ptr [[B]], i64 [[INDVARS_IV_EPIL_INIT]]
+; CHECK-NEXT:    [[ARRAYIDX2_EPIL_1:%.*]] = getelementptr i8, ptr [[TMP18]], i64 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX2_EPIL_1]], align 4
 ; CHECK-NEXT:    [[MUL_EPIL_1:%.*]] = mul nsw i32 [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    [[ADD_EPIL_1:%.*]] = add nsw i32 [[MUL_EPIL_1]], [[ADD_EPIL]]
 ; CHECK-NEXT:    [[EPIL_ITER_CMP_1_NOT:%.*]] = icmp eq i64 [[XTRAITER]], 2
 ; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP_1_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT_EPILOG_LCSSA]], label [[FOR_BODY_EPIL_2:%.*]]
 ; CHECK:       for.body.epil.2:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_EPIL_1:%.*]] = add nuw nsw i64 [[INDVARS_IV_EPIL_INIT]], 2
-; CHECK-NEXT:    [[ARRAYIDX_EPIL_2:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[INDVARS_IV_NEXT_EPIL_1]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr [4 x i8], ptr [[A]], i64 [[INDVARS_IV_EPIL_INIT]]
+; CHECK-NEXT:    [[ARRAYIDX_EPIL_2:%.*]] = getelementptr i8, ptr [[TMP20]], i64 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX_EPIL_2]], align 4
-; CHECK-NEXT:    [[ARRAYIDX2_EPIL_2:%.*]] = getelementptr inbounds [4 x i8], ptr [[B]], i64 [[INDVARS_IV_NEXT_EPIL_1]]
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr [4 x i8], ptr [[B]], i64 [[INDVARS_IV_EPIL_INIT]]
+; CHECK-NEXT:    [[ARRAYIDX2_EPIL_2:%.*]] = getelementptr i8, ptr [[TMP22]], i64 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX2_EPIL_2]], align 4
 ; CHECK-NEXT:    [[MUL_EPIL_2:%.*]] = mul nsw i32 [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    [[ADD_EPIL_2:%.*]] = add nsw i32 [[MUL_EPIL_2]], [[ADD_EPIL_1]]
@@ -71,24 +73,27 @@ define i32 @unroll(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 %N)
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[MUL]], [[C_010]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = or disjoint i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP24]], i64 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX_1]], align 4
-; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP15]], i64 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX2_1]], align 4
 ; CHECK-NEXT:    [[MUL_1:%.*]] = mul nsw i32 [[TMP10]], [[TMP9]]
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add nsw i32 [[MUL_1]], [[ADD]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_1:%.*]] = or disjoint i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[INDVARS_IV_NEXT_1]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP17]], i64 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[ARRAYIDX_2]], align 4
-; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[INDVARS_IV_NEXT_1]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP19]], i64 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX2_2]], align 4
 ; CHECK-NEXT:    [[MUL_2:%.*]] = mul nsw i32 [[TMP12]], [[TMP11]]
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nsw i32 [[MUL_2]], [[ADD_1]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_2:%.*]] = or disjoint i64 [[INDVARS_IV]], 3
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[INDVARS_IV_NEXT_2]]
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP21]], i64 12
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[ARRAYIDX_3]], align 4
-; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[INDVARS_IV_NEXT_2]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP23]], i64 12
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[ARRAYIDX2_3]], align 4
 ; CHECK-NEXT:    [[MUL_3:%.*]] = mul nsw i32 [[TMP14]], [[TMP13]]
 ; CHECK-NEXT:    [[ADD_3]] = add nsw i32 [[MUL_3]], [[ADD_2]]

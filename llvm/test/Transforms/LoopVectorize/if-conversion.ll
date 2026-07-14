@@ -39,10 +39,11 @@ define void @function0(ptr nocapture %a, ptr nocapture %b, i32 %start, i32 %end)
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
 ; CHECK-NEXT:    [[TMP9:%.*]] = add nsw i64 [[TMP0]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = shl nsw i64 [[TMP9]], 2
-; CHECK-NEXT:    [[TMP11:%.*]] = add nsw i64 [[TMP10]], 4
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP10]]
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TMP11]], i64 4
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP5]]
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP10]]
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[TMP21]], i64 4
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP3]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SCEVGEP2]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]

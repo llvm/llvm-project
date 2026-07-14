@@ -867,34 +867,34 @@ define void @PR27626_0(ptr %p, i32 %z, i64 %n) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [8 x i8], ptr [[P:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[TMP4]]
-; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT]], i64 4
-; CHECK-NEXT:    [[DOTSPLIT1:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT1]], i64 4
-; CHECK-NEXT:    [[DOTSPLIT2:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT2]], i64 4
-; CHECK-NEXT:    [[DOTSPLIT3:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [8 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP3]], i64 8
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr [8 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP9]], i64 16
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr [8 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP18]], i64 24
+; CHECK-NEXT:    [[DOTSPLIT3:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT3]], i64 4
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr [8 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP19]], i64 12
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr [8 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP20]], i64 20
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr [8 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[TMP21]], i64 28
 ; CHECK-NEXT:    store i32 [[Z:%.*]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    store i32 [[Z]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    store i32 [[Z]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    store i32 [[Z]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <8 x i32> [[WIDE_VEC]], i64 0
-; CHECK-NEXT:    store i32 [[TMP13]], ptr [[TMP9]], align 4
+; CHECK-NEXT:    store i32 [[TMP13]], ptr [[TMP12]], align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <8 x i32> [[WIDE_VEC]], i64 2
 ; CHECK-NEXT:    store i32 [[TMP14]], ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <8 x i32> [[WIDE_VEC]], i64 4
 ; CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <8 x i32> [[WIDE_VEC]], i64 6
-; CHECK-NEXT:    store i32 [[TMP16]], ptr [[TMP12]], align 4
+; CHECK-NEXT:    store i32 [[TMP16]], ptr [[TMP22]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
@@ -1051,35 +1051,35 @@ define void @PR27626_2(ptr %p, i64 %n, i32 %z) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [8 x i8], ptr [[P:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [8 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP3]], i64 8
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr [8 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP10]], i64 16
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr [8 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP20]], i64 24
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 -8
-; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT]], i64 4
-; CHECK-NEXT:    [[DOTSPLIT1:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT1]], i64 4
-; CHECK-NEXT:    [[DOTSPLIT2:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT2]], i64 4
-; CHECK-NEXT:    [[DOTSPLIT3:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[TMP4]]
+; CHECK-NEXT:    [[DOTSPLIT3:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT3]], i64 4
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr [8 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP21]], i64 12
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr [8 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP22]], i64 20
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr [8 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP23]], i64 28
 ; CHECK-NEXT:    store i32 [[Z:%.*]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    store i32 [[Z]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    store i32 [[Z]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    store i32 [[Z]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <8 x i32> [[WIDE_VEC]], i64 0
-; CHECK-NEXT:    store i32 [[TMP14]], ptr [[TMP10]], align 4
+; CHECK-NEXT:    store i32 [[TMP14]], ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <8 x i32> [[WIDE_VEC]], i64 2
 ; CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <8 x i32> [[WIDE_VEC]], i64 4
 ; CHECK-NEXT:    store i32 [[TMP16]], ptr [[TMP12]], align 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <8 x i32> [[WIDE_VEC]], i64 6
-; CHECK-NEXT:    store i32 [[TMP17]], ptr [[TMP13]], align 4
+; CHECK-NEXT:    store i32 [[TMP17]], ptr [[TMP24]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
@@ -1506,7 +1506,8 @@ define void @PR34743(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP18]], i64 2
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load i16, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[CONV1:%.*]] = sext i16 [[LOAD1]] to i32
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [2 x i8], ptr [[A]], i64 [[IV2]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr [2 x i8], ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[TMP20]], i64 4
 ; CHECK-NEXT:    [[LOAD2]] = load i16, ptr [[GEP2]], align 4
 ; CHECK-NEXT:    [[CONV2:%.*]] = sext i16 [[LOAD2]] to i32
 ; CHECK-NEXT:    [[MUL01:%.*]] = mul nsw i32 [[CONV]], [[CONV1]]

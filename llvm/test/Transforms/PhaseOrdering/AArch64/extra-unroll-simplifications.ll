@@ -26,10 +26,11 @@ define void @partial_unroll_forced(i32 %N, ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[DST_IDX:%.*]] = getelementptr [16 x i8], ptr [[DST]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd <8 x half> [[L]], [[L]]
 ; CHECK-NEXT:    store <8 x half> [[ADD]], ptr [[DST_IDX]], align 16
-; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = or disjoint i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[SRC_IDX_1:%.*]] = getelementptr [16 x i8], ptr [[SRC]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [16 x i8], ptr [[SRC]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[SRC_IDX_1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 16
 ; CHECK-NEXT:    [[L_1:%.*]] = load <8 x half>, ptr [[SRC_IDX_1]], align 16
-; CHECK-NEXT:    [[DST_IDX_1:%.*]] = getelementptr [16 x i8], ptr [[DST]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [16 x i8], ptr [[DST]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[DST_IDX_1:%.*]] = getelementptr i8, ptr [[TMP2]], i64 16
 ; CHECK-NEXT:    [[ADD_1:%.*]] = fadd <8 x half> [[L_1]], [[L_1]]
 ; CHECK-NEXT:    store <8 x half> [[ADD_1]], ptr [[DST_IDX_1]], align 16
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_1]] = add nuw nsw i64 [[INDVARS_IV]], 2
@@ -100,11 +101,12 @@ define void @cse_matching_load_from_previous_unrolled_iteration(i32 %N, ptr %src
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i32> [[L_4]], [[L_12]]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr [8 x i8], ptr [[DST]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store <2 x i32> [[MUL]], ptr [[GEP_DST]], align 8
-; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = or disjoint i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[GEP_SRC_12_1:%.*]] = getelementptr [8 x i8], ptr [[SRC_12]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [8 x i8], ptr [[SRC_12]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[GEP_SRC_12_1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 8
 ; CHECK-NEXT:    [[L_12_1:%.*]] = load <2 x i32>, ptr [[GEP_SRC_12_1]], align 8
 ; CHECK-NEXT:    [[MUL_1:%.*]] = mul <2 x i32> [[L_12]], [[L_12_1]]
-; CHECK-NEXT:    [[GEP_DST_1:%.*]] = getelementptr [8 x i8], ptr [[DST]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [8 x i8], ptr [[DST]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[GEP_DST_1:%.*]] = getelementptr i8, ptr [[TMP2]], i64 8
 ; CHECK-NEXT:    store <2 x i32> [[MUL_1]], ptr [[GEP_DST_1]], align 8
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_1]] = add nuw nsw i64 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
