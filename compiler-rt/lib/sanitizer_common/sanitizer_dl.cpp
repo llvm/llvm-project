@@ -23,6 +23,7 @@ namespace __sanitizer {
 extern const char *SanitizerToolName;
 
 const char *DladdrSelfFName(void) {
+  // go-tsan can't link libdl before it was merged into glibc 2.34.
 #if SANITIZER_GLIBC && !SANITIZER_GO
   Dl_info info;
   int ret = dladdr((void *)&SanitizerToolName, &info);
@@ -35,6 +36,7 @@ const char *DladdrSelfFName(void) {
 }
 
 char* DladdrElfHeaderBase(void* ld, char* addr) {
+  // go-tsan can't link libdl before it was merged into glibc 2.34.
 #if SANITIZER_GLIBC && !SANITIZER_GO
   Dl_info info;
   if (dladdr(ld, &info) && info.dli_fbase)
