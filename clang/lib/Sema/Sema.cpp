@@ -1192,11 +1192,26 @@ static bool IsRecordFullyDefined(const CXXRecordDecl *RD,
   return Complete;
 }
 
+SmallVector<const TypedefNameDecl *, 4>
+Sema::getSortedUnusedLocalTypedefNameCandidates() const {
+  // The candidates are collected while iterating a Scope's SmallPtrSet, so sort
+  // by source location for a deterministic order.
+  SmallVector<const TypedefNameDecl *, 4> Sorted(
+      UnusedLocalTypedefNameCandidates.begin(),
+      UnusedLocalTypedefNameCandidates.end());
+  llvm::sort(Sorted, [](const TypedefNameDecl *LHS, const TypedefNameDecl *RHS) {
+    return LHS->getLocation().getRawEncoding() <
+           RHS->getLocation().getRawEncoding();
+  });
+  return Sorted;
+}
+
 void Sema::emitAndClearUnusedLocalTypedefWarnings() {
   if (ExternalSource)
     ExternalSource->ReadUnusedLocalTypedefNameCandidates(
         UnusedLocalTypedefNameCandidates);
-  for (const TypedefNameDecl *TD : UnusedLocalTypedefNameCandidates) {
+  for (const TypedefNameDecl *TD :
+       getSortedUnusedLocalTypedefNameCandidates()) {
     if (TD->isReferenced())
       continue;
     Diag(TD->getLocation(), diag::warn_unused_local_typedef)

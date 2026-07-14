@@ -5796,8 +5796,10 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
     for (unsigned I = 0, N = SemaRef.VTableUses.size(); I != N; ++I)
       GetDeclRef(SemaRef.VTableUses[I].first);
 
-  // Writing all of the UnusedLocalTypedefNameCandidates.
-  for (const TypedefNameDecl *TD : SemaRef.UnusedLocalTypedefNameCandidates)
+  // Writing all of the UnusedLocalTypedefNameCandidates in a deterministic
+  // order.
+  for (const TypedefNameDecl *TD :
+       SemaRef.getSortedUnusedLocalTypedefNameCandidates())
     GetDeclRef(TD);
 
   // Writing all of pending implicit instantiations.
@@ -5924,9 +5926,11 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
     Stream.EmitRecord(VTABLE_USES, VTableUses);
   }
 
-  // Write the record containing potentially unused local typedefs.
+  // Write the record containing potentially unused local typedefs, in a
+  // deterministic order.
   RecordData UnusedLocalTypedefNameCandidates;
-  for (const TypedefNameDecl *TD : SemaRef.UnusedLocalTypedefNameCandidates)
+  for (const TypedefNameDecl *TD :
+       SemaRef.getSortedUnusedLocalTypedefNameCandidates())
     AddEmittedDeclRef(TD, UnusedLocalTypedefNameCandidates);
   if (!UnusedLocalTypedefNameCandidates.empty())
     Stream.EmitRecord(UNUSED_LOCAL_TYPEDEF_NAME_CANDIDATES,
