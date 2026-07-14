@@ -150,5 +150,5 @@ void test() {
 
 void testInvalidSlocCxxConstructExpr() {
   __builtin_va_list __args;
-  // __builtin_va_list has no defination in any source file
+  // __builtin_va_list has no definition in any source file
 } 

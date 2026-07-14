@@ -1,4 +1,4 @@
-//===-- Traits.td - Trait definations file ------------------*- tablegen -*-===//
+//===-- Traits.td - Trait definitions file ------------------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains definations for traits.
+// This file contains definitions for traits.
 //
 //===----------------------------------------------------------------------===//
 

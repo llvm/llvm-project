@@ -1,4 +1,4 @@
-// Tests defination of get-return-object-invocation [dcl.fct.def.coroutine] (and CWG2563)
+// Tests definition of get-return-object-invocation [dcl.fct.def.coroutine] (and CWG2563)
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
 
 #include "Inputs/coroutine.h"
