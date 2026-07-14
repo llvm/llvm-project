@@ -60,6 +60,7 @@ ORC_RT_C_EXTERN_C_BEGIN
  */
 typedef enum {
   orc_rt_log_Category_General,
+  orc_rt_log_Category_ControllerAccess,
 
   /*
    * Count is the number of defined categories; it is not itself a valid
