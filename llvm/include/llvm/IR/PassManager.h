@@ -222,7 +222,7 @@ public:
         detail::PassModel<IRUnitT, PassT, AnalysisManagerT, ExtraArgTs...>;
     // Do not use make_unique or emplace_back, they cause too many template
     // instantiations, causing terrible compile times.
-    Passes.push_back(std::unique_ptr<PassConceptT>(
+    Passes.push_back(typename PassConceptT::unique_ptr(
         new PassModelT(std::forward<PassT>(Pass))));
   }
 
@@ -245,7 +245,7 @@ protected:
   using PassConceptT =
       detail::PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...>;
 
-  std::vector<std::unique_ptr<PassConceptT>> Passes;
+  std::vector<typename PassConceptT::unique_ptr> Passes;
 };
 
 template <typename IRUnitT>
@@ -875,7 +875,7 @@ class ModuleToFunctionPassAdaptor
 public:
   using PassConceptT = detail::PassConcept<Function, FunctionAnalysisManager>;
 
-  explicit ModuleToFunctionPassAdaptor(std::unique_ptr<PassConceptT> Pass,
+  explicit ModuleToFunctionPassAdaptor(PassConceptT::unique_ptr Pass,
                                        bool EagerlyInvalidate)
       : Pass(std::move(Pass)), EagerlyInvalidate(EagerlyInvalidate) {}
 
@@ -886,7 +886,7 @@ public:
                 function_ref<StringRef(StringRef)> MapClassName2PassName);
 
 private:
-  std::unique_ptr<PassConceptT> Pass;
+  PassConceptT::unique_ptr Pass;
   bool EagerlyInvalidate;
 };
 
@@ -901,7 +901,7 @@ createModuleToFunctionPassAdaptor(FunctionPassT &&Pass,
   // Do not use make_unique, it causes too many template instantiations,
   // causing terrible compile times.
   return ModuleToFunctionPassAdaptor(
-      std::unique_ptr<ModuleToFunctionPassAdaptor::PassConceptT>(
+      ModuleToFunctionPassAdaptor::PassConceptT::unique_ptr(
           new PassModelT(std::forward<FunctionPassT>(Pass))),
       EagerlyInvalidate);
 }

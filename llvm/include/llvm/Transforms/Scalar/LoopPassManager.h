@@ -113,7 +113,7 @@ public:
       IsLoopNestPass.push_back(false);
       // Do not use make_unique or emplace_back, they cause too many template
       // instantiations, causing terrible compile times.
-      LoopPasses.push_back(std::unique_ptr<LoopPassConceptT>(
+      LoopPasses.push_back(LoopPassConceptT::unique_ptr(
           new LoopPassModelT(std::forward<PassT>(Pass))));
     } else {
       using LoopNestPassModelT =
@@ -122,7 +122,7 @@ public:
       IsLoopNestPass.push_back(true);
       // Do not use make_unique or emplace_back, they cause too many template
       // instantiations, causing terrible compile times.
-      LoopNestPasses.push_back(std::unique_ptr<LoopNestPassConceptT>(
+      LoopNestPasses.push_back(LoopNestPassConceptT::unique_ptr(
           new LoopNestPassModelT(std::forward<PassT>(Pass))));
     }
   }
@@ -143,8 +143,8 @@ protected:
   // BitVector that identifies whether the passes are loop passes or loop-nest
   // passes (true for loop-nest passes).
   BitVector IsLoopNestPass;
-  std::vector<std::unique_ptr<LoopPassConceptT>> LoopPasses;
-  std::vector<std::unique_ptr<LoopNestPassConceptT>> LoopNestPasses;
+  std::vector<LoopPassConceptT::unique_ptr> LoopPasses;
+  std::vector<LoopNestPassConceptT::unique_ptr> LoopNestPasses;
 
   /// Run either a loop pass or a loop-nest pass. Returns `std::nullopt` if
   /// PassInstrumentation's BeforePass returns false. Otherwise, returns the
@@ -400,7 +400,7 @@ public:
       detail::PassConcept<Loop, LoopAnalysisManager,
                           LoopStandardAnalysisResults &, LPMUpdater &>;
 
-  explicit FunctionToLoopPassAdaptor(std::unique_ptr<PassConceptT> Pass,
+  explicit FunctionToLoopPassAdaptor(PassConceptT::unique_ptr Pass,
                                      bool UseMemorySSA = false,
                                      bool LoopNestMode = false)
       : Pass(std::move(Pass)), UseMemorySSA(UseMemorySSA),
@@ -418,7 +418,7 @@ public:
   bool isLoopNestMode() const { return LoopNestMode; }
 
 private:
-  std::unique_ptr<PassConceptT> Pass;
+  PassConceptT::unique_ptr Pass;
 
   FunctionPassManager LoopCanonicalizationFPM;
 
@@ -443,7 +443,7 @@ createFunctionToLoopPassAdaptor(LoopPassT &&Pass, bool UseMemorySSA = false) {
     // Do not use make_unique, it causes too many template instantiations,
     // causing terrible compile times.
     return FunctionToLoopPassAdaptor(
-        std::unique_ptr<FunctionToLoopPassAdaptor::PassConceptT>(
+        FunctionToLoopPassAdaptor::PassConceptT::unique_ptr(
             new PassModelT(std::forward<LoopPassT>(Pass))),
         UseMemorySSA, false);
   } else {
@@ -455,7 +455,7 @@ createFunctionToLoopPassAdaptor(LoopPassT &&Pass, bool UseMemorySSA = false) {
     // Do not use make_unique, it causes too many template instantiations,
     // causing terrible compile times.
     return FunctionToLoopPassAdaptor(
-        std::unique_ptr<FunctionToLoopPassAdaptor::PassConceptT>(
+        FunctionToLoopPassAdaptor::PassConceptT::unique_ptr(
             new PassModelT(std::move(LPM))),
         UseMemorySSA, true);
   }
@@ -476,7 +476,7 @@ createFunctionToLoopPassAdaptor<LoopPassManager>(LoopPassManager &&LPM,
   // Do not use make_unique, it causes too many template instantiations,
   // causing terrible compile times.
   return FunctionToLoopPassAdaptor(
-      std::unique_ptr<FunctionToLoopPassAdaptor::PassConceptT>(
+      FunctionToLoopPassAdaptor::PassConceptT::unique_ptr(
           new PassModelT(std::move(LPM))),
       UseMemorySSA, LoopNestMode);
 }
