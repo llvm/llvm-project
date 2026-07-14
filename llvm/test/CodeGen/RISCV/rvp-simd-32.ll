@@ -2664,3 +2664,22 @@ define i32 @test_pabdsumau_u8x4_u32(i32 %rd, <4 x i8> %a, <4 x i8> %b) {
   %res = call i32 @llvm.riscv.pabdsumau.i32.v4i8(i32 %rd, <4 x i8> %a, <4 x i8> %b)
   ret i32 %res
 }
+
+; Packed Saturating Absolute Value
+define <4 x i8> @test_psabs_v4i8(<4 x i8> %a) {
+; CHECK-LABEL: test_psabs_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psabs.b a0, a0
+; CHECK-NEXT:    ret
+  %res = call <4 x i8> @llvm.riscv.psabs.v4i8(<4 x i8> %a)
+  ret <4 x i8> %res
+}
+
+define <2 x i16> @test_psabs_v2i16(<2 x i16> %a) {
+; CHECK-LABEL: test_psabs_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psabs.h a0, a0
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psabs.v2i16(<2 x i16> %a)
+  ret <2 x i16> %res
+}

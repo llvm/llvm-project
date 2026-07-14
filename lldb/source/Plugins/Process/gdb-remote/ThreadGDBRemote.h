@@ -109,7 +109,7 @@ protected:
       m_queue_serial_number; // Queue info from stop reply/stop info for thread
   lldb_private::LazyBool m_associated_with_libdispatch_queue;
 
-  GDBRemoteDynamicRegisterInfoSP m_reg_info_sp;
+  lldb::DynamicRegisterInfoSP m_reg_info_sp;
 
   std::vector<lldb::addr_t> m_added_binaries;
   lldb_private::StructuredData::ObjectSP m_detailed_binaries_info;
