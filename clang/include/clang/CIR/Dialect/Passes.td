@@ -240,11 +240,13 @@ def CallConvLowering : Pass<"cir-call-conv-lowering", "mlir::ModuleOp"> {
   let dependentDialects = ["cir::CIRDialect"];
   let options = [
     Option<"target", "target", "std::string", /*default=*/"\"\"",
-           "Target whose ABI rules drive classification (currently: test)">,
+           "Target whose ABI rules drive classification (test, x86_64)">,
     Option<"classificationAttr", "classification-attr", "std::string",
            /*default=*/"\"\"",
            "Function attribute name carrying a pre-built FunctionClassification "
            "DictionaryAttr (alternative to target=, used by tests)">,
+    Option<"x86AvxAbiLevel", "x86-avx-abi-level", "unsigned", /*default=*/"0",
+           "AVX ABI level for the x86_64 target (0=None, 1=AVX, 2=AVX512)">,
   ];
 }
 
