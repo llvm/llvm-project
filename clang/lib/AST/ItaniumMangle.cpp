@@ -45,7 +45,7 @@ namespace UnsupportedItaniumManglingKind =
 namespace {
 
 static bool isLocalContainerContext(const DeclContext *DC) {
-  return isa<FunctionDecl>(DC) || isa<ObjCMethodDecl>(DC) || isa<BlockDecl>(DC);
+  return isa<FunctionDecl, ObjCMethodDecl, BlockDecl, CXXExpansionStmtDecl>(DC);
 }
 
 static const FunctionDecl *getStructor(const FunctionDecl *fn) {
@@ -530,7 +530,8 @@ private:
                         ArrayRef<TemplateArgument> Args);
   void mangleNestedNameWithClosurePrefix(GlobalDecl GD,
                                          const NamedDecl *PrefixND,
-                                         ArrayRef<StringRef> AdditionalAbiTags);
+                                         ArrayRef<StringRef> AdditionalAbiTags,
+                                         bool NoFunction = false);
   void manglePrefix(NestedNameSpecifier Qualifier);
   void manglePrefix(const DeclContext *DC, bool NoFunction=false);
   void manglePrefix(QualType type);
@@ -1067,10 +1068,10 @@ void CXXNameMangler::mangleNameWithAbiTags(
   //         ::= <local-name>
   //
   const DeclContext *DC = Context.getEffectiveDeclContext(ND);
-  bool IsLambda = isLambda(ND);
 
   if (GetLocalClassDecl(ND) &&
-      (!IsLambda || isCompatibleWith(LangOptions::ClangABI::Ver18))) {
+      (!isLambda(ND) || isCompatibleWith(LangOptions::ClangABI::Ver18) ||
+       !isCompatibleWith(LangOptions::ClangABI::Ver22))) {
     mangleLocalName(GD, AdditionalAbiTags);
     return;
   }
@@ -1845,7 +1846,7 @@ void CXXNameMangler::mangleNestedName(const TemplateDecl *TD,
 
 void CXXNameMangler::mangleNestedNameWithClosurePrefix(
     GlobalDecl GD, const NamedDecl *PrefixND,
-    ArrayRef<StringRef> AdditionalAbiTags) {
+    ArrayRef<StringRef> AdditionalAbiTags, bool NoFunction) {
   // A <closure-prefix> represents a variable or field, not a regular
   // DeclContext, so needs special handling. In this case we're mangling a
   // limited form of <nested-name>:
@@ -1854,7 +1855,7 @@ void CXXNameMangler::mangleNestedNameWithClosurePrefix(
 
   Out << 'N';
 
-  mangleClosurePrefix(PrefixND);
+  mangleClosurePrefix(PrefixND, NoFunction);
   mangleUnqualifiedName(GD, nullptr, AdditionalAbiTags);
 
   Out << 'E';
@@ -1870,6 +1871,8 @@ static GlobalDecl getParentOfLocalEntity(const DeclContext *DC) {
     GD = GlobalDecl(CD, Ctor_Complete);
   else if (auto *DD = dyn_cast<CXXDestructorDecl>(DC))
     GD = GlobalDecl(DD, Dtor_Complete);
+  else if (DC->isExpansionStmt())
+    GD = getParentOfLocalEntity(DC->getEnclosingNonExpansionStatementContext());
   else
     GD = GlobalDecl(cast<FunctionDecl>(DC));
   return GD;
@@ -1945,8 +1948,13 @@ void CXXNameMangler::mangleLocalName(GlobalDecl GD,
       mangleUnqualifiedBlock(BD);
     } else {
       const NamedDecl *ND = cast<NamedDecl>(D);
-      mangleNestedName(GD, Context.getEffectiveDeclContext(ND),
-                       AdditionalAbiTags, true /*NoFunction*/);
+      const NamedDecl *PrefixND = getClosurePrefix(ND);
+      if (PrefixND && !isCompatibleWith(LangOptions::ClangABI::Ver18))
+        mangleNestedNameWithClosurePrefix(GD, PrefixND, AdditionalAbiTags,
+                                          /*NoFunction=*/true);
+      else
+        mangleNestedName(GD, Context.getEffectiveDeclContext(ND),
+                         AdditionalAbiTags, /*NoFunction=*/true);
     }
   } else if (const BlockDecl *BD = dyn_cast<BlockDecl>(D)) {
     // Mangle a block in a default parameter; see above explanation for
@@ -2209,6 +2217,9 @@ void CXXNameMangler::manglePrefix(const DeclContext *DC, bool NoFunction) {
     return;
 
   if (NoFunction && isLocalContainerContext(DC))
+    return;
+
+  if (DC->isExpansionStmt())
     return;
 
   const NamedDecl *ND = cast<NamedDecl>(DC);
@@ -4996,6 +5007,7 @@ recurse:
   case Expr::OMPIteratorExprClass:
   case Expr::CXXInheritedCtorInitExprClass:
   case Expr::CXXParenListInitExprClass:
+  case Expr::CXXExpansionSelectExprClass:
     llvm_unreachable("unexpected statement kind");
 
   case Expr::ConstantExprClass:

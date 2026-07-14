@@ -1220,3 +1220,14 @@ spirv.module Logical GLSL450 {
     spirv.Return
   }
 }
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0: i32) -> () "None" {
+    // expected-error @+1 {{invalid operand, must be defined by a constant operation}}
+    %0 = spirv.SpecConstantOperation wraps "spirv.IAdd"(%arg0, %arg0) : (i32, i32) -> i32
+
+    spirv.Return
+  }
+}

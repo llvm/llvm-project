@@ -131,7 +131,7 @@ C 1
                        // expected-error {{macro name must be an identifier}}
 #define \NN            // expected-warning {{incomplete universal character name; treating as '\' followed by identifier}} expected-error {{macro name must be an identifier}}
 #define \N{GREEK_SMALL-LETTERALPHA}  // expected-error {{'GREEK_SMALL-LETTERALPHA' is not a valid Unicode character name}} \
-                                     // expected-note {{characters names in Unicode escape sequences are sensitive to case and whitespaces}}
+                                     // expected-note {{character names in Unicode escape sequences are sensitive to case and whitespaces}}
 #define \N{🤡}  // expected-error {{'🤡' is not a valid Unicode character name}} \
                 // expected-error {{macro name must be an identifier}}
 

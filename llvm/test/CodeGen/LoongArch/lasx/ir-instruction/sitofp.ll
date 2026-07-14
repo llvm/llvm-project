@@ -32,9 +32,8 @@ define void @sitofp_v4i64_v4f32(ptr %res, ptr %in){
 ; CHECK-LABEL: sitofp_v4i64_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvffint.d.l $xr0, $xr0
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 238
-; CHECK-NEXT:    xvfcvt.s.d $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvffint.s.l $xr0, $xr0, $xr0
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 8
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i64>, ptr %in

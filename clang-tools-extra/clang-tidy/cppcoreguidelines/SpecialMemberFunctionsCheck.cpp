@@ -224,10 +224,19 @@ void SpecialMemberFunctionsCheck::checkForMissingMembers(
                    SpecialMemberFunctionKind::CopyAssignment);
   }
 
+  const bool CopyImplicitlyDeleted =
+      HasImplicitDeletedMember(SpecialMemberFunctionKind::CopyConstructor) &&
+      HasImplicitDeletedMember(SpecialMemberFunctionKind::CopyAssignment);
+  const bool MoveMissing =
+      !HasMember(SpecialMemberFunctionKind::MoveConstructor) &&
+      !HasMember(SpecialMemberFunctionKind::MoveAssignment);
+
   if (RequireFive &&
       !(AllowMissingMoveFunctionsWhenCopyIsDeleted &&
         (IsDeleted(SpecialMemberFunctionKind::CopyConstructor) &&
-         IsDeleted(SpecialMemberFunctionKind::CopyAssignment)))) {
+         IsDeleted(SpecialMemberFunctionKind::CopyAssignment))) &&
+      !(AllowImplicitlyDeletedCopyOrMove && CopyImplicitlyDeleted &&
+        MoveMissing)) {
     assert(RequireThree);
     RequireMembers(SpecialMemberFunctionKind::MoveConstructor,
                    SpecialMemberFunctionKind::MoveAssignment);

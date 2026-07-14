@@ -28,6 +28,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <functional>
@@ -82,7 +83,7 @@ class CStringChecker
     : public CheckerFamily<eval::Call, check::PreStmt<DeclStmt>,
                            check::LiveSymbols, check::DeadSymbols,
                            check::RegionChanges> {
-  mutable const char *CurrentFunctionDescription = nullptr;
+  mutable StringRef CurrentFunctionDescription;
 
 public:
   // FIXME: The bug types emitted by this checker family have confused garbage
@@ -162,6 +163,24 @@ public:
       {{CDM::CLibrary, {"strncasecmp"}, 3}, &CStringChecker::evalStrncasecmp},
       {{CDM::CLibrary, {"strsep"}, 2}, &CStringChecker::evalStrsep},
       {{CDM::CLibrary, {"strxfrm"}, 3}, &CStringChecker::evalStrxfrm},
+      {{CDM::CLibraryMaybeHardened, {"strchr"}, 2},
+       llvm::bind_back(&CStringChecker::evalStrchrCommon, "strchr()",
+                       /*CanReturnNull=*/true)},
+      {{CDM::CLibraryMaybeHardened, {"strrchr"}, 2},
+       llvm::bind_back(&CStringChecker::evalStrchrCommon, "strrchr()",
+                       /*CanReturnNull=*/true)},
+      {{CDM::CLibraryMaybeHardened, {"memchr"}, 3},
+       llvm::bind_back(&CStringChecker::evalStrchrCommon, "memchr()",
+                       /*CanReturnNull=*/true)},
+      {{CDM::CLibrary, {"strstr"}, 2},
+       llvm::bind_back(&CStringChecker::evalStrchrCommon, "strstr()",
+                       /*CanReturnNull=*/true)},
+      {{CDM::CLibrary, {"strpbrk"}, 2},
+       llvm::bind_back(&CStringChecker::evalStrchrCommon, "strpbrk()",
+                       /*CanReturnNull=*/true)},
+      {{CDM::CLibrary, {"strchrnul"}, 2},
+       llvm::bind_back(&CStringChecker::evalStrchrCommon, "strchrnul()",
+                       /*CanReturnNull=*/false)},
       {{CDM::CLibrary, {"bcopy"}, 3}, &CStringChecker::evalBcopy},
       {{CDM::CLibrary, {"bcmp"}, 3},
        std::bind(&CStringChecker::evalMemcmp, _1, _2, _3, CK_Regular)},
@@ -224,6 +243,9 @@ public:
                         bool IsBounded = false, bool IgnoreCase = false) const;
 
   void evalStrsep(CheckerContext &C, const CallEvent &Call) const;
+
+  void evalStrchrCommon(CheckerContext &C, const CallEvent &Call,
+                        StringRef FnName, bool CanReturnNull) const;
 
   void evalStdCopy(CheckerContext &C, const CallEvent &Call) const;
   void evalStdCopyBackward(CheckerContext &C, const CallEvent &Call) const;
@@ -380,7 +402,7 @@ ProgramStateRef CStringChecker::checkNonNull(CheckerContext &C,
     if (NullArg.isEnabled()) {
       SmallString<80> buf;
       llvm::raw_svector_ostream OS(buf);
-      assert(CurrentFunctionDescription);
+      assert(!CurrentFunctionDescription.empty());
       OS << "Null pointer passed as " << (Arg.ArgumentIndex + 1)
          << llvm::getOrdinalSuffix(Arg.ArgumentIndex + 1) << " argument to "
          << CurrentFunctionDescription;
@@ -1045,7 +1067,7 @@ SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
       if (NotNullTerm.isEnabled()) {
         SmallString<120> buf;
         llvm::raw_svector_ostream os(buf);
-        assert(CurrentFunctionDescription);
+        assert(!CurrentFunctionDescription.empty());
         os << "Argument to " << CurrentFunctionDescription
            << " is the address of the label '" << Label->getLabel()->getName()
            << "', which is not a null-terminated string";
@@ -1115,7 +1137,7 @@ SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
       SmallString<120> buf;
       llvm::raw_svector_ostream os(buf);
 
-      assert(CurrentFunctionDescription);
+      assert(!CurrentFunctionDescription.empty());
       os << "Argument to " << CurrentFunctionDescription << " is ";
 
       if (SummarizeRegion(os, C.getASTContext(), MR))
@@ -2614,6 +2636,59 @@ void CStringChecker::evalStrsep(CheckerContext &C,
 
   // Set the return value, and finish.
   State = State->BindExpr(Call.getOriginExpr(), SF, Result);
+  C.addTransition(State);
+}
+
+void CStringChecker::evalStrchrCommon(CheckerContext &C, const CallEvent &Call,
+                                      StringRef FnName,
+                                      bool CanReturnNull) const {
+  CurrentFunctionDescription = FnName;
+  const Expr *CE = Call.getOriginExpr();
+  assert(CE);
+
+  // These functions always return a pointer.
+  if (!CE->getType()->isPointerType())
+    return;
+
+  ProgramStateRef State = C.getState();
+  const StackFrame *SF = C.getStackFrame();
+  SValBuilder &SVB = C.getSValBuilder();
+  ASTContext &Ctx = C.getASTContext();
+
+  // The first argument must be non-null for all functions in this family.
+  SourceArgExpr Src = {{Call.getArgExpr(0), 0}};
+  SVal SrcVal = State->getSVal(Src.Expression, SF);
+  State = checkNonNull(C, State, Src, SrcVal);
+  if (!State)
+    return;
+
+  // NULL (no-match) branch.
+  if (CanReturnNull) {
+    ProgramStateRef NullState =
+        State->BindExpr(CE, SF, SVB.makeNullWithType(CE->getType()));
+    C.addTransition(NullState);
+  }
+
+  // Found branch: a pointer within the source; needs a Loc for the arithmetic.
+  std::optional<Loc> SrcLoc = SrcVal.getAs<Loc>();
+  if (!SrcLoc) {
+    SVal Result = SVB.conjureSymbolVal(Call, C.blockCount());
+    State = State->BindExpr(CE, SF, Result);
+    C.addTransition(State);
+    return;
+  }
+
+  // The result is: Src + SymOffset
+  auto RemainingExtentBytes =
+      getDynamicExtentWithOffset(State, *SrcLoc).castAs<DefinedOrUnknownSVal>();
+  NonLoc SymOffset =
+      SVB.conjureSymbolVal(Call, Ctx.getSizeType(), C.blockCount())
+          .castAs<NonLoc>();
+  State = State->assumeInBound(SymOffset, RemainingExtentBytes, true);
+
+  SVal Result = SVB.evalBinOpLN(State, BO_Add, *SrcLoc, SymOffset,
+                                Src.Expression->getType());
+  State = State->BindExpr(CE, SF, Result);
   C.addTransition(State);
 }
 

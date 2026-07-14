@@ -220,10 +220,7 @@ public:
   addPass(PassT &&Pass) {
     using PassModelT =
         detail::PassModel<IRUnitT, PassT, AnalysisManagerT, ExtraArgTs...>;
-    // Do not use make_unique or emplace_back, they cause too many template
-    // instantiations, causing terrible compile times.
-    Passes.push_back(std::unique_ptr<PassConceptT>(
-        new PassModelT(std::forward<PassT>(Pass))));
+    Passes.push_back(PassModelT::create(std::move(Pass)));
   }
 
   /// When adding a pass manager pass that has the same type as this pass
@@ -245,7 +242,7 @@ protected:
   using PassConceptT =
       detail::PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...>;
 
-  std::vector<std::unique_ptr<PassConceptT>> Passes;
+  std::vector<typename PassConceptT::unique_ptr> Passes;
 };
 
 template <typename IRUnitT>
@@ -875,7 +872,7 @@ class ModuleToFunctionPassAdaptor
 public:
   using PassConceptT = detail::PassConcept<Function, FunctionAnalysisManager>;
 
-  explicit ModuleToFunctionPassAdaptor(std::unique_ptr<PassConceptT> Pass,
+  explicit ModuleToFunctionPassAdaptor(PassConceptT::unique_ptr Pass,
                                        bool EagerlyInvalidate)
       : Pass(std::move(Pass)), EagerlyInvalidate(EagerlyInvalidate) {}
 
@@ -886,7 +883,7 @@ public:
                 function_ref<StringRef(StringRef)> MapClassName2PassName);
 
 private:
-  std::unique_ptr<PassConceptT> Pass;
+  PassConceptT::unique_ptr Pass;
   bool EagerlyInvalidate;
 };
 
@@ -898,12 +895,8 @@ createModuleToFunctionPassAdaptor(FunctionPassT &&Pass,
                                   bool EagerlyInvalidate = false) {
   using PassModelT =
       detail::PassModel<Function, FunctionPassT, FunctionAnalysisManager>;
-  // Do not use make_unique, it causes too many template instantiations,
-  // causing terrible compile times.
-  return ModuleToFunctionPassAdaptor(
-      std::unique_ptr<ModuleToFunctionPassAdaptor::PassConceptT>(
-          new PassModelT(std::forward<FunctionPassT>(Pass))),
-      EagerlyInvalidate);
+  return ModuleToFunctionPassAdaptor(PassModelT::create(std::move(Pass)),
+                                     EagerlyInvalidate);
 }
 
 /// A utility pass template to force an analysis result to be available.

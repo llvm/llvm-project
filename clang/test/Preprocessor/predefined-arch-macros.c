@@ -1839,7 +1839,6 @@
 // CHECK_DMR_M32: #define __AMX_FP8__ 1
 // CHECK_GNR_M32: #define __AMX_INT8__ 1
 // CHECK_DMR_M32: #define __AMX_MOVRS__ 1
-// CHECK_DMR_M32: #define __AMX_TF32__ 1
 // CHECK_GNR_M32: #define __AMX_TILE__ 1
 // CHECK_DMR_M32: #define __AVX10_2_512__ 1
 // CHECK_DMR_M32: #define __AVX10_2__ 1
@@ -1945,7 +1944,6 @@
 // CHECK_DMR_M64: #define __AMX_FP8__ 1
 // CHECK_GNR_M64: #define __AMX_INT8__ 1
 // CHECK_DMR_M64: #define __AMX_MOVRS__ 1
-// CHECK_DMR_M64: #define __AMX_TF32__ 1
 // CHECK_GNR_M64: #define __AMX_TILE__ 1
 // CHECK_DMR_M64: #define __AVX10_2_512__ 1
 // CHECK_DMR_M64: #define __AVX10_2__ 1
@@ -4147,6 +4145,7 @@
 // CHECK_ZNVER6_M32: #define __AVX2__ 1
 // CHECK_ZNVER6_M32: #define __AVX512BF16__ 1
 // CHECK_ZNVER6_M32: #define __AVX512BITALG__ 1
+// CHECK_ZNVER6_M32: #define __AVX512BMM__ 1
 // CHECK_ZNVER6_M32: #define __AVX512BW__ 1
 // CHECK_ZNVER6_M32: #define __AVX512CD__ 1
 // CHECK_ZNVER6_M32: #define __AVX512DQ__ 1
@@ -4220,6 +4219,7 @@
 // CHECK_ZNVER6_M64: #define __AVX2__ 1
 // CHECK_ZNVER6_M64: #define __AVX512BF16__ 1
 // CHECK_ZNVER6_M64: #define __AVX512BITALG__ 1
+// CHECK_ZNVER6_M64: #define __AVX512BMM__ 1
 // CHECK_ZNVER6_M64: #define __AVX512BW__ 1
 // CHECK_ZNVER6_M64: #define __AVX512CD__ 1
 // CHECK_ZNVER6_M64: #define __AVX512DQ__ 1
