@@ -1229,7 +1229,7 @@ bool SIFoldOperandsImpl::foldOperand(
     return Changed;
 
   if (isTemporallyDivergentUse(OpToFold, *UseMI))
-    return;
+    return Changed;
 
   // FIXME: Fold operands with subregs.
   if (UseOp->isReg() && OpToFold.isReg()) {
