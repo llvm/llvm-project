@@ -223,6 +223,7 @@ static bool RetCC_Sparc64_Half(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
                                  State);
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "SparcGenCallingConv.inc"
 
 // The calling conventions in SparcCallingConv.td are described in terms of the
@@ -3033,7 +3034,8 @@ SDValue SparcTargetLowering::LowerBSWAP(SDValue Op, SelectionDAG &DAG) const {
   SDValue ST = DAG.getMemIntrinsicNode(
       IsLittleEndian ? SPISD::STORE_BIG : SPISD::STORE_LITTLE, DL,
       DAG.getVTList(MVT::Other), Ops, VT,
-      MachinePointerInfo::getFixedStack(MF, TmpFI));
+      MachinePointerInfo::getFixedStack(MF, TmpFI), std::nullopt,
+      MachineMemOperand::MOStore);
   return DAG.getLoad(VT, DL, ST, TmpPtr,
                      MachinePointerInfo::getFixedStack(MF, TmpFI));
 }
@@ -3264,11 +3266,14 @@ SDValue SparcTargetLowering::PerformBSWAPCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDValue Op = N->getOperand(0);
   EVT VT = N->getValueType(0);
-  bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
+  auto *LN = dyn_cast<LoadSDNode>(Op.getNode());
 
-  // Turn BSWAP (LOAD) -> ld*a #ASI_P(_L) on V9.
-  if (Subtarget->isV9() && ISD::isNormalLoad(Op.getNode()) &&
-      Op.getNode()->hasOneUse() &&
+  bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
+  bool IsAlignedLoad = LN && ISD::isNormalLoad(Op.getNode()) &&
+                       LN->getAlign() >= VT.getScalarStoreSize();
+
+  // Turn BSWAP (aligned-LOAD) -> ld*a #ASI_P(_L) on V9.
+  if (Subtarget->isV9() && IsAlignedLoad && Op.getNode()->hasOneUse() &&
       (VT == MVT::i16 || VT == MVT::i32 ||
        (Subtarget->is64Bit() && VT == MVT::i64))) {
     SDValue Load = Op;
@@ -3299,17 +3304,21 @@ SDValue SparcTargetLowering::PerformSTORECombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDValue Op = N->getOperand(1);
   EVT VT = Op.getValueType();
+  EVT MemVT = cast<StoreSDNode>(N)->getMemoryVT();
   unsigned Opcode = Op.getOpcode();
-  bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
+  auto *SN = dyn_cast<StoreSDNode>(N);
 
-  // Turn STORE (BSWAP) -> st*a #ASI_P(_L) on V9.
+  bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
+  bool IsAlignedStore = SN && SN->getAlign() >= MemVT.getScalarStoreSize();
+
+  // Turn aligned-STORE (BSWAP) -> st*a #ASI_P(_L) on V9.
   if (Subtarget->isV9() && Opcode == ISD::BSWAP && Op.getNode()->hasOneUse() &&
+      IsAlignedStore &&
       (VT == MVT::i16 || VT == MVT::i32 ||
        (Subtarget->is64Bit() && VT == MVT::i64))) {
 
     // st*a can only handle simple types and it makes no sense to store less
     // than two bytes in byte-reversed order.
-    EVT MemVT = cast<StoreSDNode>(N)->getMemoryVT();
     if (MemVT.getSizeInBits() < 16)
       return SDValue();
 

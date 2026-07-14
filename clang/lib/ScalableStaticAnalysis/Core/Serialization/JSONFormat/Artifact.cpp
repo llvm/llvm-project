@@ -155,11 +155,32 @@ JSONFormat::readArtifactEncoding(llvm::StringRef Path) {
     return ArtifactEncoding{std::move(*ExpectedStaticLibrary)};
   }
 
-  return ErrorBuilder::create(std::errc::invalid_argument,
-                              ErrorMessages::UnknownArtifactEncodingType,
-                              *ExpectedType, JSONTypeKey,
-                              JSONTypeValueTUSummary, JSONTypeValueLUSummary,
-                              JSONTypeValueStaticLibrary)
+  if (*ExpectedType == JSONTypeValueMultiArchStaticLibrary) {
+    auto ExpectedM = readMultiArchStaticLibraryFromObject(*RootObjectPtr);
+    if (!ExpectedM) {
+      return ErrorBuilder::wrap(ExpectedM.takeError())
+          .context(ErrorMessages::ReadingFromFile, "ArtifactEncoding", Path)
+          .build();
+    }
+    return ArtifactEncoding{std::move(*ExpectedM)};
+  }
+
+  if (*ExpectedType == JSONTypeValueMultiArchSharedLibrary) {
+    auto ExpectedM = readMultiArchSharedLibraryFromObject(*RootObjectPtr);
+    if (!ExpectedM) {
+      return ErrorBuilder::wrap(ExpectedM.takeError())
+          .context(ErrorMessages::ReadingFromFile, "ArtifactEncoding", Path)
+          .build();
+    }
+    return ArtifactEncoding{std::move(*ExpectedM)};
+  }
+
+  return ErrorBuilder::create(
+             std::errc::invalid_argument,
+             ErrorMessages::UnknownArtifactEncodingType, *ExpectedType,
+             JSONTypeKey, JSONTypeValueTUSummary, JSONTypeValueLUSummary,
+             JSONTypeValueStaticLibrary, JSONTypeValueMultiArchStaticLibrary,
+             JSONTypeValueMultiArchSharedLibrary)
       .context(ErrorMessages::ReadingFromFile, "ArtifactEncoding", Path)
       .build();
 }
@@ -173,11 +194,15 @@ llvm::Error JSONFormat::writeArtifactEncoding(const ArtifactEncoding &E,
           return writeTUSummaryEncoding(Enc, Path);
         } else if constexpr (std::is_same_v<T, LUSummaryEncoding>) {
           return writeLUSummaryEncoding(Enc, Path);
+        } else if constexpr (std::is_same_v<T, StaticLibrary>) {
+          return writeStaticLibrary(Enc, Path);
+        } else if constexpr (std::is_same_v<T, MultiArchStaticLibrary>) {
+          return writeMultiArchStaticLibrary(Enc, Path);
         } else {
           static_assert(
-              std::is_same_v<T, StaticLibrary>,
+              std::is_same_v<T, MultiArchSharedLibrary>,
               "ArtifactEncoding visitor must cover all variant alternatives");
-          return writeStaticLibrary(Enc, Path);
+          return writeMultiArchSharedLibrary(Enc, Path);
         }
       },
       E);

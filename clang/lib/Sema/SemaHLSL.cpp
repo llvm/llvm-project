@@ -4540,7 +4540,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyExpr);
     break;
   }
-  case Builtin::BI__builtin_hlsl_interlocked_add: {
+  case Builtin::BI__builtin_hlsl_interlocked_add:
+  case Builtin::BI__builtin_hlsl_interlocked_or: {
     // The builtin's prototype in Builtins.td is `void (...)`, so direct calls
     // to `__builtin_hlsl_interlocked_add` bypass argument checking entirely.
     // When reached via the synthesized `InterlockedAdd` overload set in

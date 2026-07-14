@@ -111,3 +111,49 @@ body:             |
     S_ENDPGM 0
 
 ...
+---
+# Test that multi-MMO atomics with incomparable sync scopes (agent-one-as and
+# workgroup) produce agent-scope cache ops regardless of MMO order. The merged
+# scope of agent-one-as and workgroup is agent (cross-AS). Before the fix, the
+# result was MMO-order dependent.
+name: merge_agent_one_as_and_workgroup
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; GCN-LABEL: name: merge_agent_one_as_and_workgroup
+    ; GCN: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: renamable $vgpr0_vgpr1 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: renamable $vgpr2 = COPY $sgpr2
+    ; GCN-NEXT: S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+    ; GCN-NEXT: FLAT_ATOMIC_ADD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("agent-one-as") seq_cst (s32) on `ptr addrspace(1) poison`, addrspace 1), (load store syncscope("workgroup") seq_cst (s32) on `ptr addrspace(1) poison`, addrspace 1)
+    ; GCN-NEXT: S_WAITCNT_soft .Vmcnt_0
+    ; GCN-NEXT: BUFFER_WBINVL1_VOL implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0
+    renamable $vgpr0_vgpr1 = COPY $sgpr0_sgpr1
+    renamable $vgpr2 = COPY $sgpr2
+    FLAT_ATOMIC_ADD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("agent-one-as") seq_cst (s32) on `ptr addrspace(1) poison`), (load store syncscope("workgroup") seq_cst (s32) on `ptr addrspace(1) poison`)
+    S_ENDPGM 0
+...
+---
+name: merge_agent_one_as_and_workgroup_reversed
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; GCN-LABEL: name: merge_agent_one_as_and_workgroup_reversed
+    ; GCN: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: renamable $vgpr0_vgpr1 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: renamable $vgpr2 = COPY $sgpr2
+    ; GCN-NEXT: S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+    ; GCN-NEXT: FLAT_ATOMIC_ADD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("workgroup") seq_cst (s32) on `ptr addrspace(1) poison`, addrspace 1), (load store syncscope("agent-one-as") seq_cst (s32) on `ptr addrspace(1) poison`, addrspace 1)
+    ; GCN-NEXT: S_WAITCNT_soft .Vmcnt_0
+    ; GCN-NEXT: BUFFER_WBINVL1_VOL implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0
+    renamable $vgpr0_vgpr1 = COPY $sgpr0_sgpr1
+    renamable $vgpr2 = COPY $sgpr2
+    FLAT_ATOMIC_ADD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("workgroup") seq_cst (s32) on `ptr addrspace(1) poison`), (load store syncscope("agent-one-as") seq_cst (s32) on `ptr addrspace(1) poison`)
+    S_ENDPGM 0
+...
