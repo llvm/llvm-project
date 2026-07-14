@@ -21,61 +21,61 @@ void callAsync(const WTF::Function<void()>&);
 void raw_ptr() {
   SomeObj* obj = make_obj();
   auto foo1 = [obj](){
-    // expected-warning@-1{{Captured variable 'obj' is a raw pointer to retainable type 'SomeObj' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Captured variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     [obj doWork];
   };
   call(foo1);
 
   auto foo2 = [&obj](){
-    // expected-warning@-1{{Captured variable 'obj' is a raw pointer to retainable type 'SomeObj' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Captured variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     [obj doWork];
   };
   auto foo3 = [&](){
     [obj doWork];
-    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to retainable type 'SomeObj' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     obj = nullptr;
   };
   auto foo4 = [=](){
     [obj doWork];
-    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to retainable type 'SomeObj' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
   };
   
   auto cf = make_cf();
   auto bar1 = [cf](){
-    // expected-warning@-1{{Captured variable 'cf' is a retainable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Captured variable 'cf' is a RetainPtr-capable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     CFArrayAppendValue(cf, nullptr);
   };
   auto bar2 = [&cf](){
-    // expected-warning@-1{{Captured variable 'cf' is a retainable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Captured variable 'cf' is a RetainPtr-capable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     CFArrayAppendValue(cf, nullptr);
   };
   auto bar3 = [&](){
     CFArrayAppendValue(cf, nullptr);
-    // expected-warning@-1{{Implicitly captured variable 'cf' is a retainable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'cf' is a RetainPtr-capable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     cf = nullptr;
   };
   auto bar4 = [=](){
     CFArrayAppendValue(cf, nullptr);
-    // expected-warning@-1{{Implicitly captured variable 'cf' is a retainable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'cf' is a RetainPtr-capable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
   };
 
   auto os = make_os();
   auto baz1 = [os](){
-    // expected-warning@-1{{Captured variable 'os' is a retainable type 'dispatch_queue_t' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Captured variable 'os' is a RetainPtr-capable type 'dispatch_queue_t' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     dispatch_queue_get_label(os);
   };
   auto baz2 = [&os](){
-    // expected-warning@-1{{Captured variable 'os' is a retainable type 'dispatch_queue_t' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Captured variable 'os' is a RetainPtr-capable type 'dispatch_queue_t' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     dispatch_queue_get_label(os);
   };
   auto baz3 = [&](){
     dispatch_queue_get_label(os);
-    // expected-warning@-1{{Implicitly captured variable 'os' is a retainable type 'dispatch_queue_t' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'os' is a RetainPtr-capable type 'dispatch_queue_t' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     os = nullptr;
   };
   auto baz4 = [=](){
     dispatch_queue_get_label(os);
-    // expected-warning@-1{{Implicitly captured variable 'os' is a retainable type 'dispatch_queue_t' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'os' is a RetainPtr-capable type 'dispatch_queue_t' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
   };
 
   call(foo1);
@@ -177,7 +177,7 @@ void noescape_lambda() {
     [otherObj doWork];
   }, [&](SomeObj *obj) {
     [otherObj doWork];
-    // expected-warning@-1{{Implicitly captured variable 'otherObj' is a raw pointer to retainable type 'SomeObj' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'otherObj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
   });
   ([&] {
     [someObj doWork];
@@ -188,7 +188,7 @@ void noescape_lambda() {
     CFArrayAppendValue(someCF, nullptr);
   }, [&](CFIndex count) {
     CFArrayAppendValue(someCF, nullptr);
-    // expected-warning@-1{{Implicitly captured variable 'someCF' is a retainable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'someCF' is a RetainPtr-capable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
   });
 
   dispatch_queue_t someOS = make_os();
@@ -196,7 +196,7 @@ void noescape_lambda() {
     dispatch_queue_get_label(someOS);
   }, [&](const char* label) {
     dispatch_queue_get_label(someOS);
-    // expected-warning@-1{{Implicitly captured variable 'someOS' is a retainable type 'dispatch_queue_t' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'someOS' is a RetainPtr-capable type 'dispatch_queue_t' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
   });
 }
 
@@ -210,19 +210,19 @@ void lambda_converted_to_function(SomeObj* obj, CFMutableArrayRef cf, dispatch_q
 {
   callFunction([&]() {
     [obj doWork];
-    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to retainable type 'SomeObj' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     CFArrayAppendValue(cf, nullptr);
-    // expected-warning@-1{{Implicitly captured variable 'cf' is a retainable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'cf' is a RetainPtr-capable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     dispatch_queue_get_label(os);
-    // expected-warning@-1{{Implicitly captured variable 'os' is a retainable type 'dispatch_queue_t' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'os' is a RetainPtr-capable type 'dispatch_queue_t' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
   });
   callFunctionOpaque([&]() {
     [obj doWork];
-    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to retainable type 'SomeObj' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     CFArrayAppendValue(cf, nullptr);
-    // expected-warning@-1{{Implicitly captured variable 'cf' is a retainable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'cf' is a RetainPtr-capable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     dispatch_queue_get_label(os);
-    // expected-warning@-1{{Implicitly captured variable 'os' is a retainable type 'dispatch_queue_t' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'os' is a RetainPtr-capable type 'dispatch_queue_t' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
   });
 }
 
@@ -238,12 +238,12 @@ void lambda_converted_to_function(SomeObj* obj, CFMutableArrayRef cf, dispatch_q
 @implementation ObjWithSelf
 -(void)doWork {
   auto doWork = [&] {
-    // expected-warning@-1{{Implicitly captured variable 'self' is a raw pointer to retainable type 'ObjWithSelf' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'self' is a raw pointer to RetainPtr-capable type 'ObjWithSelf' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     someFunction();
     [delegate doWork];
   };
   auto doMoreWork = [=] {
-    // expected-warning@-1{{Implicitly captured variable 'self' is a raw pointer to retainable type 'ObjWithSelf' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'self' is a raw pointer to RetainPtr-capable type 'ObjWithSelf' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     someFunction();
     [delegate doWork];
   };
@@ -255,7 +255,7 @@ void lambda_converted_to_function(SomeObj* obj, CFMutableArrayRef cf, dispatch_q
   auto doAdditionalWork = [&] {
     someFunction();
     dispatch_queue_get_label(queuePtr);
-    // expected-warning@-1{{Implicitly captured variable 'queuePtr' is a retainable type 'OS_dispatch_queue' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'queuePtr' is a RetainPtr-capable type 'OS_dispatch_queue' [alpha.webkit.UnretainedLambdaCapturesChecker]}}
   };
   callFunctionOpaque(doWork);
   callFunctionOpaque(doMoreWork);

@@ -5192,13 +5192,14 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   // AArch64 FP-to-int conversions saturate to the destination element size, so
   // we can lower common saturating conversions to simple instructions.
   SDValue SrcVal = Op.getOperand(0);
-  EVT SrcVT = SrcVal.getValueType();
-  EVT DstVT = Op.getValueType();
-  EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
+  const EVT SrcVT = SrcVal.getValueType();
+  const EVT DstVT = Op.getValueType();
+  const EVT DstElementVT = DstVT.getVectorElementType();
+  const EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
 
-  uint64_t SrcElementWidth = SrcVT.getScalarSizeInBits();
-  uint64_t DstElementWidth = DstVT.getScalarSizeInBits();
-  uint64_t SatWidth = SatVT.getScalarSizeInBits();
+  [[maybe_unused]] const uint64_t DstElementWidth = DstVT.getScalarSizeInBits();
+  const uint64_t SrcElementWidth = SrcVT.getScalarSizeInBits();
+  const uint64_t SatWidth = SatVT.getScalarSizeInBits();
   assert(SatWidth <= DstElementWidth &&
          "Saturation width cannot exceed result width");
 
@@ -5208,54 +5209,76 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   if (DstVT.isScalableVector())
     return SDValue();
 
-  EVT SrcElementVT = SrcVT.getVectorElementType();
+  const EVT SrcElementVT = SrcVT.getVectorElementType();
+  if (SrcElementVT != MVT::f64 && SrcElementVT != MVT::f32 &&
+      SrcElementVT != MVT::f16 && SrcElementVT != MVT::bf16)
+    return SDValue();
 
-  // In the absence of FP16 support, promote f16 to f32 and saturate the result.
-  // Note that SatWidth stays unchanged.
+  // Returns true if the operation can be matched by an isel pattern directly.
+  auto CanHandleNatively = [&DstVT, &SatWidth](EVT SrcVT) -> bool {
+    return SrcVT.getScalarSizeInBits() == DstVT.getScalarSizeInBits() &&
+           SrcVT.getScalarSizeInBits() == SatWidth;
+  };
+
+  // Returns true if the operation is best expanded.
+  auto Expand = [&SatWidth, &CanHandleNatively](EVT SrcVT) -> bool {
+    return !CanHandleNatively(SrcVT) &&
+           (SrcVT.getScalarSizeInBits() < SatWidth ||
+            // NEON has no vector MIN/MAX for i64, so it's simpler to scalarize
+            // (at least until sqxtn is selected).
+            SrcVT.getVectorElementType() == MVT::f64);
+  };
+
+  // Try to promote the operation to a wider type if SrcVT < DstVT,
+  // or if type is bf16 or if the target has no +fullfp16.
+  std::optional<EVT> PromVT;
+  switch (SrcElementVT.getSimpleVT().SimpleTy) {
+  case MVT::f16:
+  case MVT::bf16:
+    if (DstElementVT == MVT::i32 || SrcElementVT == MVT::bf16 ||
+        !Subtarget->hasFullFP16()) {
+      PromVT = MVT::getVectorVT(MVT::f32, SrcVT.getVectorElementCount());
+      break;
+    }
+    [[fallthrough]];
+  case MVT::f32:
+    // Promote to f64
+    if (DstElementVT == MVT::i64) {
+      PromVT = MVT::getVectorVT(MVT::f64, SrcVT.getVectorElementCount());
+      break;
+    }
+    [[fallthrough]];
+  default:
+    break;
+  }
+
   SDLoc DL(Op);
   unsigned Opc = Op.getOpcode();
-  if ((SrcElementVT == MVT::f16 &&
-       (!Subtarget->hasFullFP16() || DstElementWidth > 16)) ||
-      SrcElementVT == MVT::bf16) {
-    MVT F32VT = MVT::getVectorVT(MVT::f32, SrcVT.getVectorNumElements());
-    SrcVal = DAG.getNode(ISD::FP_EXTEND, DL, F32VT, SrcVal);
-    // If we are extending to a v8f32, split into two v4f32 to produce legal
-    // types.
-    if (F32VT == MVT::v8f32) {
-      auto [SrcValLo, SrcValHi] = DAG.SplitVector(SrcVal, DL);
-      SDValue Lo = DAG.getNode(Opc, DL, MVT::v4i32, SrcValLo, Op.getOperand(1));
-      SDValue Hi = DAG.getNode(Opc, DL, MVT::v4i32, SrcValHi, Op.getOperand(1));
-      Lo = DAG.getNode(ISD::TRUNCATE, DL, MVT::v4i16, Lo);
-      Hi = DAG.getNode(ISD::TRUNCATE, DL, MVT::v4i16, Hi);
-      return DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, Lo, Hi);
-    }
-    SrcVT = F32VT;
-    SrcElementVT = MVT::f32;
-    SrcElementWidth = 32;
-  } else if (SrcElementVT != MVT::f64 && SrcElementVT != MVT::f32 &&
-             SrcElementVT != MVT::f16 && SrcElementVT != MVT::bf16)
-    return SDValue();
+  if (PromVT && !Expand(*PromVT)) {
+    // When promoting the input type, SatWidth stays unchanged.
+    SrcVal = DAG.getNode(ISD::FP_EXTEND, DL, *PromVT, SrcVal);
+    if (*PromVT != MVT::v8f32)
+      return DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal, Op.getOperand(1));
 
-  // Expand to f64 if we are saturating to i64, to help keep the lanes the same
-  // width and produce a fcvtzu. Note that SatWidth stays unchanged.
-  if (SatWidth == 64 && SrcElementWidth < 64) {
-    MVT F64VT = MVT::getVectorVT(MVT::f64, SrcVT.getVectorNumElements());
-    SrcVal = DAG.getNode(ISD::FP_EXTEND, DL, F64VT, SrcVal);
-    SrcVT = F64VT;
-    SrcElementVT = MVT::f64;
-    SrcElementWidth = 64;
+    // If we are extending to a wider type (e.g. v8f16 -> v8f32) due to lack
+    // of fp16 support, then it's more efficient to split the operation
+    // into two v4f32 to produce legal types.
+    auto [SrcValLo, SrcValHi] = DAG.SplitVector(SrcVal, DL);
+    SDValue Lo = DAG.getNode(Opc, DL, MVT::v4i32, SrcValLo, Op.getOperand(1));
+    SDValue Hi = DAG.getNode(Opc, DL, MVT::v4i32, SrcValHi, Op.getOperand(1));
+    Lo = DAG.getNode(ISD::TRUNCATE, DL, MVT::v4i16, Lo);
+    Hi = DAG.getNode(ISD::TRUNCATE, DL, MVT::v4i16, Hi);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, Lo, Hi);
   }
+
   // Cases that we can emit directly.
-  if (SrcElementWidth == DstElementWidth && SrcElementWidth == SatWidth)
+  if (CanHandleNatively(SrcVT)) {
+    assert(isTypeLegal(SrcVT) && "Expected SrcVT to be a legal type");
     return DAG.getNode(Opc, DL, DstVT, SrcVal,
                        DAG.getValueType(DstVT.getScalarType()));
-
-  // Otherwise we emit a cvt that saturates to a higher BW, and saturate the
-  // result. This is only valid if the legal cvt is larger than the saturate
-  // width. For double, as we don't have MIN/MAX, it can be simpler to scalarize
-  // (at least until sqxtn is selected).
-  if (SrcElementWidth < SatWidth || SrcElementVT == MVT::f64)
+  } else if (Expand(SrcVT)) {
     return SDValue();
+  }
 
   assert((SrcElementWidth > DstElementWidth) ||
          (SrcElementWidth == DstElementWidth && SatWidth < DstElementWidth));
@@ -11773,6 +11796,26 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
 
     return DAG.getNode(AArch64ISD::BRCOND, DL, MVT::Other, Chain, Dest, CCVal,
                        Overflow);
+  }
+
+  // Fold CSET + BR_CC to a conditional branch (rather than keeping the CSET
+  // and emitting a TB[N]Z below).
+  {
+    using namespace llvm::SDPatternMatch;
+    SDValue Flags;
+    uint64_t InverseCC;
+    // `CSET <Wd>, <cond>` is an alias of `CSINC <Wd>, WZR, WZR, invert(<cond>)`
+    auto m_CSET = m_Node(AArch64ISD::CSINC, m_Zero(), m_Zero(),
+                         m_ConstInt(InverseCC), m_Value(Flags));
+    // Note: We look through `& 1` as the result of CSET is known to be 0 or 1.
+    if ((CC == ISD::SETEQ || CC == ISD::SETNE) && isNullConstant(RHS) &&
+        sd_match(LHS, m_AnyOf(m_CSET, m_And(m_CSET, m_One())))) {
+      AArch64CC::CondCode BranchCC = AArch64CC::CondCode(InverseCC);
+      if (CC == ISD::SETNE)
+        BranchCC = AArch64CC::getInvertedCondCode(BranchCC);
+      return DAG.getNode(AArch64ISD::BRCOND, DL, MVT::Other, Chain, Dest,
+                         getCondCode(DAG, BranchCC), Flags);
+    }
   }
 
   if (LHS.getValueType().isInteger()) {
@@ -33948,8 +33991,16 @@ AArch64TargetLowering::LowerFixedLengthFPExtendToSVE(SDValue Op,
 
   SDLoc DL(Op);
   SDValue Val = Op.getOperand(0);
-  SDValue Pg = getPredicateForVector(DAG, DL, VT);
   EVT SrcVT = Val.getValueType();
+
+  if (VT.getScalarType() == MVT::f64 && SrcVT.getScalarType() == MVT::bf16) {
+    return DAG.getNode(
+        ISD::FP_EXTEND, DL, VT,
+        DAG.getNode(ISD::FP_EXTEND, DL,
+                    VT.changeElementType(*DAG.getContext(), MVT::f32), Val));
+  }
+
+  SDValue Pg = getPredicateForVector(DAG, DL, VT);
   EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
   EVT ExtendVT = ContainerVT.changeVectorElementType(
       *DAG.getContext(), SrcVT.getVectorElementType());
