@@ -98,31 +98,29 @@ bool L0DeviceTy::isDeviceIPorNewer(uint32_t Version) const {
   return IPVersion.ipVersion >= Version;
 }
 
-/// Get default compute group ordinal. Returns Ordinal-NumQueues pair.
-std::pair<uint32_t, uint32_t> L0DeviceTy::findComputeOrdinal() {
-  std::pair<uint32_t, uint32_t> Ordinal{MaxOrdinal, 0};
+/// Find the default compute command queue group. Returns std::nullopt if the
+/// device exposes no compute queue group.
+std::optional<ComputeGroupInfoTy> L0DeviceTy::findCommandQueueGroup() {
   uint32_t Count = 0;
   const auto zeDevice = getZeDevice();
-  CALL_ZE_RET(Ordinal, zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
-              nullptr);
+  CALL_ZE_RET(std::nullopt, zeDeviceGetCommandQueueGroupProperties, zeDevice,
+              &Count, nullptr);
   ze_command_queue_group_properties_t Init{
       ZE_STRUCTURE_TYPE_COMMAND_QUEUE_GROUP_PROPERTIES, nullptr, 0, 0, 0};
   std::vector<ze_command_queue_group_properties_t> Properties(Count, Init);
-  CALL_ZE_RET(Ordinal, zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
-              Properties.data());
+  CALL_ZE_RET(std::nullopt, zeDeviceGetCommandQueueGroupProperties, zeDevice,
+              &Count, Properties.data());
   for (uint32_t I = 0; I < Count; I++) {
     // TODO: add a separate set of ordinals for compute queue groups which
     // support cooperative kernels.
     if (Properties[I].flags & ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) {
-      Ordinal.first = I;
-      Ordinal.second = Properties[I].numQueues;
-      break;
+      return ComputeGroupInfoTy{/*Ordinal=*/I,
+                                /*NumQueues=*/Properties[I].numQueues,
+                                Properties[I].maxMemoryFillPatternSize};
     }
   }
-  if (Ordinal.first == MaxOrdinal)
-    ODBG(OLDT_Device) << "Error: no command queues are found";
 
-  return Ordinal;
+  return std::nullopt;
 }
 
 /// Check if device supports cooperative kernels by checking if any command
@@ -202,7 +200,12 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
     uid += std::to_string(DeviceProperties.uuid.id[n]);
   DeviceUuid = std::move(uid);
 
-  ComputeOrdinal = findComputeOrdinal();
+  auto ComputeGroupInfoOpt = findCommandQueueGroup();
+  if (not ComputeGroupInfoOpt)
+    return Plugin::error(ErrorCode::UNSUPPORTED,
+                         "Device %d (%s) has no compute command queue group",
+                         DeviceId, getNameCStr());
+  ComputeGroupInfo = *ComputeGroupInfoOpt;
   QueueCache.setCommandMode(getPlugin().getOptions().CommandMode);
 
   SupportsCooperativeKernels = checkCooperativeKernelSupport();
