@@ -31,6 +31,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/JSON.h"
+#include <cmath>
 #include <limits>
 #include <optional>
 
@@ -103,6 +104,17 @@ public:
     if (Value != 0 && W.Value > MaxVal / Value)
       return unreachable();
     return NextUseDistance(Value * W.Value);
+  }
+
+  double logSpanFrom(const NextUseDistance &Min) const {
+    return logSpan(*this, Min);
+  }
+
+  static double logSpan(const NextUseDistance &Max,
+                        const NextUseDistance &Min) {
+    if (Max.isUnreachable() || Min.isUnreachable())
+      return 0.0;
+    return std::log(static_cast<double>(Max.Value - Min.Value) + 1.0);
   }
 
   //----------------------------------------------------------------------------

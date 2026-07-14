@@ -81,7 +81,7 @@ protected:
   // are all in the same group.
   std::vector<DomGroup> GroupsOfUses;
   int64_t RestoreCost = 0;
-  int64_t NextUseDistance = 0;
+  NextUseDistance Dist;
   int64_t NormalizedCost = 0;
   CodeGenPlan Plan;
   const SIRegisterInfo *TRI;
@@ -111,7 +111,8 @@ protected:
                           MachineFrameInfo *FrameInfo, LiveIntervals *LIS,
                           SlotIndexes *Indexes, MachineDominatorTree *DT,
                           const MachineLoopInfo *MLI)
-      : CandidateReg(CandidateReg), Mask(Mask), Plan(Plan), TRI(TRI), MRI(MRI),
+      : CandidateReg(CandidateReg), Mask(Mask),
+        Dist(NextUseDistance::unreachable()), Plan(Plan), TRI(TRI), MRI(MRI),
         TII(TII), FrameInfo(FrameInfo), LIS(LIS), Indexes(Indexes), DT(DT),
         MLI(MLI) {}
 
@@ -123,8 +124,8 @@ public:
   auto groups() { return make_range(GroupsOfUses.begin(), GroupsOfUses.end()); }
   void setRestoreCost(int64_t RC) { RestoreCost = RC; }
   int64_t getRestoreCost() const { return RestoreCost; }
-  void setNextUseDistance(int64_t NUD) { NextUseDistance = NUD; }
-  int64_t getNextUseDistance() const { return NextUseDistance; }
+  void setNextUseDistance(NextUseDistance NUD) { Dist = NUD; }
+  NextUseDistance getNextUseDistance() const { return Dist; }
   void setNormalizedCost(int64_t NC) { NormalizedCost = NC; }
   int64_t getNormalizedCost() const { return NormalizedCost; }
   void calculateRestoreCost();
@@ -601,10 +602,12 @@ AMDGPUEarlyRegisterSpilling::getCandidates(MachineInstr *CurMI,
     // 'RegCandidates'.
     auto NextUseDist = NUA->getShortestDistance(CandidateReg, *CurMI,
                                                 UsesForNextUseDistCalculation);
-    RegCandidates.push_back({CandidateReg, NextUseDist.getRawValue(), Mask});
-    LLVM_DEBUG(dbgs() << CandidateCnt << ": Candidate register = "
-                      << printReg(CandidateReg, TRI) << " with distance = "
-                      << NextUseDist.getRawValue() << "\n");
+    RegCandidates.push_back({CandidateReg, NextUseDist, Mask});
+    LLVM_DEBUG({
+      dbgs() << CandidateCnt
+             << ": Candidate register = " << printReg(CandidateReg, TRI)
+             << " with distance = " << NextUseDist.fmt() << "\n";
+    });
   }
 
   LLVM_DEBUG(dbgs() << "==========================================\n");
@@ -616,8 +619,8 @@ AMDGPUEarlyRegisterSpilling::getCandidates(MachineInstr *CurMI,
   // the number of uses, the uses inside a loop etc.
   llvm::sort(RegCandidates, [&](const RegisterSpillCandidate &C1,
                                 const RegisterSpillCandidate &C2) {
-    if (C1.NextUseDistance != C2.NextUseDistance)
-      return C1.NextUseDistance > C2.NextUseDistance;
+    if (C1.Dist != C2.Dist)
+      return C1.Dist > C2.Dist;
     unsigned NumOfUses1 = RegNumOfUses[C1.Reg];
     unsigned NumOfUses2 = RegNumOfUses[C2.Reg];
     if (NumOfUses1 == NumOfUses2)
@@ -1096,65 +1099,39 @@ static void normalizeCosts(
 
   int64_t MinRestoreCost = AllCandidates[0]->getRestoreCost();
   int64_t MaxRestoreCost = AllCandidates[0]->getRestoreCost();
-  int64_t MinNextUseDist = AllCandidates[0]->getNextUseDistance();
-  int64_t MaxNextUseDist = AllCandidates[0]->getNextUseDistance();
-  int64_t SumNextUseDist = 0;
-  int64_t SumRestoreCost = 0;
+  NextUseDistance MinNextUseDist = AllCandidates[0]->getNextUseDistance();
+  NextUseDistance MaxNextUseDist = AllCandidates[0]->getNextUseDistance();
 
   for (const auto &C : AllCandidates) {
     MinRestoreCost = std::min(MinRestoreCost, C->getRestoreCost());
     MaxRestoreCost = std::max(MaxRestoreCost, C->getRestoreCost());
-    MinNextUseDist = std::min(MinNextUseDist, C->getNextUseDistance());
-    MaxNextUseDist = std::max(MaxNextUseDist, C->getNextUseDistance());
-    SumNextUseDist += C->getNextUseDistance();
-    SumRestoreCost += C->getRestoreCost();
+    MinNextUseDist = llvm::min(MinNextUseDist, C->getNextUseDistance());
+    MaxNextUseDist = llvm::max(MaxNextUseDist, C->getNextUseDistance());
   }
-
-  // Calculate mean and standard deviation for outlier detection.
-  int64_t NumCandidates = AllCandidates.size();
-  int64_t MeanNextUseDist = SumNextUseDist / NumCandidates;
-  int64_t MeanRestoreCost = SumRestoreCost / NumCandidates;
-
-  int64_t SumSqDiffNextUseDist = 0;
-  int64_t SumSqDiffRestoreCost = 0;
-  for (const auto &C : AllCandidates) {
-    int64_t DiffNextUseDist = C->getNextUseDistance() - MeanNextUseDist;
-    SumSqDiffNextUseDist += DiffNextUseDist * DiffNextUseDist;
-    int64_t DiffRestoreCost = C->getRestoreCost() - MeanRestoreCost;
-    SumSqDiffRestoreCost += DiffRestoreCost * DiffRestoreCost;
-  }
-  int64_t StdDevNextUseDist = std::sqrt(SumSqDiffNextUseDist / NumCandidates);
-  int64_t StdDevRestoreCost = std::sqrt(SumSqDiffRestoreCost / NumCandidates);
 
   LLVM_DEBUG(dbgs() << "------------------------------------------------\n");
-  LLVM_DEBUG(dbgs() << "RestoreCost (min=" << MinRestoreCost << ", max="
-                    << MaxRestoreCost << ", mean=" << MeanRestoreCost
-                    << ", stddev=" << StdDevRestoreCost << ")\n");
-  LLVM_DEBUG(dbgs() << "NextUseDist (min=" << MinNextUseDist << ", max="
-                    << MaxNextUseDist << ", mean=" << MeanNextUseDist
-                    << ", stddev=" << StdDevNextUseDist << ")\n");
+  LLVM_DEBUG(dbgs() << "RestoreCost (min=" << MinRestoreCost
+                    << ", max=" << MaxRestoreCost << ")\n");
+  LLVM_DEBUG({
+    dbgs() << "NextUseDist (min=";
+    MinNextUseDist.print(dbgs());
+    dbgs() << ", max=";
+    MaxNextUseDist.print(dbgs());
+    dbgs() << ")\n";
+  });
 
   // Log-scale normalization.
   static constexpr int64_t Limit = 100;
-  double LogMaxNextUseDist = std::log(MaxNextUseDist - MinNextUseDist + 1);
+  double LogMaxNextUseDist = MaxNextUseDist.logSpanFrom(MinNextUseDist);
   double LogMaxRestoreCost = std::log(MaxRestoreCost - MinRestoreCost + 1);
 
   for (auto &C : AllCandidates) {
     // Log-scale normalization for NextUseDistance.
-    double LogNextUseDist =
-        std::log(C->getNextUseDistance() - MinNextUseDist + 1);
+    double LogNextUseDist = C->getNextUseDistance().logSpanFrom(MinNextUseDist);
     int64_t NormalizedNextUseDist =
         (LogMaxNextUseDist > 0)
             ? static_cast<int64_t>((LogNextUseDist * Limit) / LogMaxNextUseDist)
             : 0;
-
-    // // Outlier bonus for NextUseDistance (higher is better for spilling).
-    // bool IsNextUseDistOutlier =
-    //     C->getNextUseDistance() > MeanNextUseDist + 2 * StdDevNextUseDist;
-    // if (IsNextUseDistOutlier)
-    //   NormalizedNextUseDist += OutlierBonus;
-
-    C->setNextUseDistance(NormalizedNextUseDist);
 
     // Log-scale normalization for RestoreCost.
     double LogRestoreCost = std::log(C->getRestoreCost() - MinRestoreCost + 1);
@@ -1223,7 +1200,7 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
       InitialVectorOfCandidates.begin() + NumOfCandidates);
   for (const auto &Candidate : Candidates) {
     Register CandidateReg = Candidate.Reg;
-    int64_t NextUseDist = Candidate.NextUseDistance;
+    NextUseDistance NextUseDist = Candidate.Dist;
     LaneBitmask Mask = Candidate.Mask;
     // TODO: Check if this is needed.
     unsigned NumOfCoveredRegs = SIRegisterInfo::getNumCoveredRegs(Mask);

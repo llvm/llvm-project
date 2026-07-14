@@ -36,7 +36,7 @@ using SetVectorType = SmallSetVector<MachineInstr *, 32>;
 
 struct RegisterSpillCandidate {
   Register Reg;
-  int64_t NextUseDistance;
+  NextUseDistance Dist;
   LaneBitmask Mask;
 };
 
