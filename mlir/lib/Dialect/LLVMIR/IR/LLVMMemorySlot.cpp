@@ -257,8 +257,7 @@ static Value createExtractAndCast(OpBuilder &builder, Location loc,
          "expected that the compatibility was checked before");
 
   // Nothing has to be done if the types are already the same. This also
-  // avoids querying the bit size of types that may not have one, such as
-  // scalable vectors.
+  // avoids querying the bit size of scalable vector types below.
   if (srcType == targetType)
     return srcValue;
 
@@ -299,8 +298,7 @@ static Value createInsertAndCast(OpBuilder &builder, Location loc,
          "expected that the compatibility was checked before");
 
   // Nothing has to be done if the types are already the same. This also
-  // avoids querying the bit size of types that may not have one, such as
-  // scalable vectors.
+  // avoids querying the bit size of scalable vector types below.
   if (srcValue.getType() == reachingDef.getType())
     return srcValue;
 
