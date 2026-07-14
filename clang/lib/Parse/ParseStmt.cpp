@@ -2329,7 +2329,6 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   // the other parts.
   getCurScope()->EnterLoopBody(PrecedingLabel);
 
-  // attribute-specifier without attribute (`[[]]`) isn't in AST.
   bool BodyStartsWithSquare = Tok.is(tok::l_square);
   SourceLocation BodyBeginLoc = Tok.getLocation();
 
@@ -2383,6 +2382,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
       return StmtError();
     }
 
+    // attribute-specifier without attribute (`[[]]`) isn't in AST.
     if (!isa<CompoundStmt>(Body.get()) || BodyStartsWithSquare)
       Diag(BodyBeginLoc, diag::ext_expansion_stmt_missing_braces);
 
