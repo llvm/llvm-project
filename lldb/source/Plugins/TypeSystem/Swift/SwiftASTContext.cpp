@@ -10121,7 +10121,7 @@ llvm::Error SwiftASTContext::GetCompileUnitImportsImpl(
       // imported as "CxxStdlib", which should also be imported.
       if (module.path.size() &&
           llvm::StringSwitch<bool>(module.path.front().GetStringRef())
-              .Cases("SwiftShims", "Builtin", "std", true)
+              .Cases({"SwiftShims", "Builtin", "std"}, true)
               .Default(false))
         continue;
 
