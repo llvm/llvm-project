@@ -12,22 +12,12 @@ define <4 x half> @interleave2_v4f16(<2 x half> %vec0, <2 x half> %vec1) {
 }
 
 define <8 x half> @interleave2_v8f16(<4 x half> %vec0, <4 x half> %vec1) {
-; CHECK-SD-LABEL: interleave2_v8f16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    adrp x8, .LCPI1_0
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
-; CHECK-SD-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: interleave2_v8f16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    zip1 v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: interleave2_v8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    zip1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
   %retval = call <8 x half> @llvm.vector.interleave2.v8f16(<4 x half> %vec0, <4 x half> %vec1)
   ret <8 x half> %retval
 }
@@ -44,21 +34,12 @@ define <16 x half> @interleave2_v16f16(<8 x half> %vec0, <8 x half> %vec1) {
 }
 
 define <4 x float> @interleave2_v4f32(<2 x float> %vec0, <2 x float> %vec1) {
-; CHECK-SD-LABEL: interleave2_v4f32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    rev64 v1.4s, v0.4s
-; CHECK-SD-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: interleave2_v4f32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    zip1 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: interleave2_v4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    zip1 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
   %retval = call <4 x float> @llvm.vector.interleave2.v4f32(<2 x float> %vec0, <2 x float> %vec1)
   ret <4 x float> %retval
 }
@@ -149,9 +130,10 @@ define <4 x i16> @interleave2_same_const_splat_v4i16() {
 define <4 x i16> @interleave2_diff_const_splat_v4i16() {
 ; CHECK-SD-LABEL: interleave2_diff_const_splat_v4i16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov x8, #1125899907104768 // =0x4000000040000
-; CHECK-SD-NEXT:    orr x8, x8, #0x300000003
-; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    movi v0.2s, #4
+; CHECK-SD-NEXT:    movi v1.2s, #3
+; CHECK-SD-NEXT:    zip1 v0.4s, v1.4s, v0.4s
+; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: interleave2_diff_const_splat_v4i16:
@@ -184,12 +166,10 @@ define <4 x i16> @interleave2_same_nonconst_splat_v4i16(i16 %a) {
 define <4 x i16> @interleave2_diff_nonconst_splat_v4i16(i16 %a, i16 %b) {
 ; CHECK-SD-LABEL: interleave2_diff_nonconst_splat_v4i16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    mov v0.h[1], w0
-; CHECK-SD-NEXT:    mov v0.h[2], w1
-; CHECK-SD-NEXT:    mov v0.h[3], w1
-; CHECK-SD-NEXT:    rev32 v1.4h, v0.4h
-; CHECK-SD-NEXT:    uzp1 v0.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    dup v0.2s, w0
+; CHECK-SD-NEXT:    dup v1.2s, w1
+; CHECK-SD-NEXT:    zip1 v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: interleave2_diff_nonconst_splat_v4i16:

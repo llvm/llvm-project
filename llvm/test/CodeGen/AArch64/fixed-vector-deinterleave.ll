@@ -3,19 +3,12 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel -global-isel-abort=0 %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 define {<2 x half>, <2 x half>} @vector_deinterleave_v2f16_v4f16(<4 x half> %vec) {
-; CHECK-SD-LABEL: vector_deinterleave_v2f16_v4f16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    uzp1 v2.4h, v0.4h, v0.4h
-; CHECK-SD-NEXT:    uzp2 v1.4h, v0.4h, v0.4h
-; CHECK-SD-NEXT:    fmov d0, d2
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: vector_deinterleave_v2f16_v4f16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    uzp1 v2.4h, v0.4h, v0.4h
-; CHECK-GI-NEXT:    uzp2 v1.4h, v0.4h, v0.4h
-; CHECK-GI-NEXT:    fmov d0, d2
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: vector_deinterleave_v2f16_v4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 v2.4h, v0.4h, v0.4h
+; CHECK-NEXT:    uzp2 v1.4h, v0.4h, v0.4h
+; CHECK-NEXT:    fmov d0, d2
+; CHECK-NEXT:    ret
   %retval = call {<2 x half>, <2 x half>} @llvm.vector.deinterleave2.v4f16(<4 x half> %vec)
   ret {<2 x half>, <2 x half>}   %retval
 }
@@ -46,9 +39,9 @@ define {<8 x half>, <8 x half>} @vector_deinterleave_v8f16_v16f16(<16 x half> %v
 define {<2 x float>, <2 x float>} @vector_deinterleave_v2f32_v4f32(<4 x float> %vec) {
 ; CHECK-SD-LABEL: vector_deinterleave_v2f32_v4f32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    uzp1 v2.4s, v0.4s, v0.4s
-; CHECK-SD-NEXT:    uzp2 v1.4s, v0.4s, v0.4s
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
+; CHECK-SD-NEXT:    uzp1 v2.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    uzp2 v1.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    fmov d0, d2
 ; CHECK-SD-NEXT:    ret
 ;
@@ -75,12 +68,19 @@ ret  {<4 x float>, <4 x float>}   %retval
 }
 
 define {<2 x double>, <2 x double>} @vector_deinterleave_v2f64_v4f64(<4 x double> %vec) {
-; CHECK-LABEL: vector_deinterleave_v2f64_v4f64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 v2.2d, v0.2d, v1.2d
-; CHECK-NEXT:    zip2 v1.2d, v0.2d, v1.2d
-; CHECK-NEXT:    mov v0.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: vector_deinterleave_v2f64_v4f64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    uzp1 v2.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    uzp2 v1.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vector_deinterleave_v2f64_v4f64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    zip1 v2.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    zip2 v1.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    ret
   %retval = call {<2 x double>, <2 x double>} @llvm.vector.deinterleave2.v4f64(<4 x double> %vec)
   ret {<2 x double>, <2 x double>}   %retval
 }
@@ -121,12 +121,19 @@ define {<4 x i32>, <4 x i32>} @vector_deinterleave_v4i32_v8i32(<8 x i32> %vec) {
 }
 
 define {<2 x i64>, <2 x i64>} @vector_deinterleave_v2i64_v4i64(<4 x i64> %vec) {
-; CHECK-LABEL: vector_deinterleave_v2i64_v4i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 v2.2d, v0.2d, v1.2d
-; CHECK-NEXT:    zip2 v1.2d, v0.2d, v1.2d
-; CHECK-NEXT:    mov v0.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: vector_deinterleave_v2i64_v4i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    uzp1 v2.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    uzp2 v1.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vector_deinterleave_v2i64_v4i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    zip1 v2.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    zip2 v1.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    ret
   %retval = call {<2 x i64>, <2 x i64>} @llvm.vector.deinterleave2.v4i64(<4 x i64> %vec)
   ret {<2 x i64>, <2 x i64>}   %retval
 }
