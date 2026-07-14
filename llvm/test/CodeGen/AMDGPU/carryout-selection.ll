@@ -3855,8 +3855,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1250-NEXT:    s_cselect_b32 s16, s15, s14
 ; GFX1250-NEXT:    s_add_nc_u64 s[14:15], s[10:11], 2
 ; GFX1250-NEXT:    s_cmp_lg_u32 s16, 0
-; GFX1250-NEXT:    s_cselect_b32 s12, s14, s12
-; GFX1250-NEXT:    s_cselect_b32 s13, s15, s13
+; GFX1250-NEXT:    s_cselect_b64 s[12:13], s[14:15], s[12:13]
 ; GFX1250-NEXT:    s_cmp_lg_u32 s8, 0
 ; GFX1250-NEXT:    s_sub_co_ci_u32 s3, s3, s9
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -3868,8 +3867,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1250-NEXT:    s_cselect_b32 s3, s4, s8
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_cmp_lg_u32 s3, 0
-; GFX1250-NEXT:    s_cselect_b32 s9, s13, s11
-; GFX1250-NEXT:    s_cselect_b32 s8, s12, s10
+; GFX1250-NEXT:    s_cselect_b64 s[8:9], s[12:13], s[10:11]
 ; GFX1250-NEXT:    s_branch .LBB16_3
 ; GFX1250-NEXT:  .LBB16_2:
 ; GFX1250-NEXT:    s_mov_b32 s5, -1
@@ -4011,8 +4009,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX13-NEXT:    s_cselect_b32 s16, s15, s14
 ; GFX13-NEXT:    s_add_nc_u64 s[14:15], s[10:11], 2
 ; GFX13-NEXT:    s_cmp_lg_u32 s16, 0
-; GFX13-NEXT:    s_cselect_b32 s12, s14, s12
-; GFX13-NEXT:    s_cselect_b32 s13, s15, s13
+; GFX13-NEXT:    s_cselect_b64 s[12:13], s[14:15], s[12:13]
 ; GFX13-NEXT:    s_cmp_lg_u32 s8, 0
 ; GFX13-NEXT:    s_sub_co_ci_u32 s3, s3, s9
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -4024,8 +4021,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX13-NEXT:    s_cselect_b32 s3, s6, s8
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_cmp_lg_u32 s3, 0
-; GFX13-NEXT:    s_cselect_b32 s9, s13, s11
-; GFX13-NEXT:    s_cselect_b32 s8, s12, s10
+; GFX13-NEXT:    s_cselect_b64 s[8:9], s[12:13], s[10:11]
 ; GFX13-NEXT:    s_branch .LBB16_3
 ; GFX13-NEXT:  .LBB16_2:
 ; GFX13-NEXT:    s_mov_b32 s7, -1
@@ -4369,4 +4365,3 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
-

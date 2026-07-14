@@ -65,10 +65,8 @@ define amdgpu_kernel void @select_and_v4(ptr addrspace(1) %p, i32 %x, <4 x i32> 
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_cmp_gt_i32 s8, 10
-; GFX9-NEXT:    s_cselect_b32 s3, s3, 0
-; GFX9-NEXT:    s_cselect_b32 s2, s2, 0
-; GFX9-NEXT:    s_cselect_b32 s1, s1, 0
-; GFX9-NEXT:    s_cselect_b32 s0, s0, 0
+; GFX9-NEXT:    s_cselect_b64 s[2:3], s[2:3], 0
+; GFX9-NEXT:    s_cselect_b64 s[0:1], s[0:1], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s2
@@ -84,10 +82,8 @@ define amdgpu_kernel void @select_and_v4(ptr addrspace(1) %p, i32 %x, <4 x i32> 
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_cmp_gt_i32 s8, 10
-; GFX942-NEXT:    s_cselect_b32 s3, s3, 0
-; GFX942-NEXT:    s_cselect_b32 s2, s2, 0
-; GFX942-NEXT:    s_cselect_b32 s1, s1, 0
-; GFX942-NEXT:    s_cselect_b32 s0, s0, 0
+; GFX942-NEXT:    s_cselect_b64 s[2:3], s[2:3], 0
+; GFX942-NEXT:    s_cselect_b64 s[0:1], s[0:1], 0
 ; GFX942-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX942-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX942-NEXT:    v_mov_b32_e32 v4, s2
@@ -164,10 +160,8 @@ define amdgpu_kernel void @select_or_v4(ptr addrspace(1) %p, i32 %x, <4 x i32> %
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_cmp_lt_i32 s8, 11
-; GFX9-NEXT:    s_cselect_b32 s3, s3, -1
-; GFX9-NEXT:    s_cselect_b32 s2, s2, -1
-; GFX9-NEXT:    s_cselect_b32 s1, s1, -1
-; GFX9-NEXT:    s_cselect_b32 s0, s0, -1
+; GFX9-NEXT:    s_cselect_b64 s[2:3], s[2:3], -1
+; GFX9-NEXT:    s_cselect_b64 s[0:1], s[0:1], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s2
@@ -183,10 +177,8 @@ define amdgpu_kernel void @select_or_v4(ptr addrspace(1) %p, i32 %x, <4 x i32> %
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_cmp_lt_i32 s8, 11
-; GFX942-NEXT:    s_cselect_b32 s3, s3, -1
-; GFX942-NEXT:    s_cselect_b32 s2, s2, -1
-; GFX942-NEXT:    s_cselect_b32 s1, s1, -1
-; GFX942-NEXT:    s_cselect_b32 s0, s0, -1
+; GFX942-NEXT:    s_cselect_b64 s[2:3], s[2:3], -1
+; GFX942-NEXT:    s_cselect_b64 s[0:1], s[0:1], -1
 ; GFX942-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX942-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX942-NEXT:    v_mov_b32_e32 v4, s2

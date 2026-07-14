@@ -204,8 +204,7 @@ define amdgpu_kernel void @v_select_v32i16(ptr addrspace(1) %out, ptr addrspace(
 ; vector select with SGPR inputs.
 
 ; GCN-LABEL: {{^}}s_select_v2i32:
-; GCN: s_cselect_b32
-; GCN: s_cselect_b32
+; GCN: s_cselect_b64
 ; GCN: buffer_store_dwordx2
 define amdgpu_kernel void @s_select_v2i32(ptr addrspace(1) %out, <2 x i32> %a, <2 x i32> %b, i32 %c) #0 {
   %cmp = icmp eq i32 %c, 0
@@ -263,8 +262,7 @@ define amdgpu_kernel void @select_v8i32(ptr addrspace(1) %out, <8 x i32> %a, <8 
 
 ; GCN-LABEL: {{^}}s_select_v2f32:
 ; GCN-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 0{{$}}
-; GCN-DAG: s_cselect_b32
-; GCN-DAG: s_cselect_b32
+; GCN-DAG: s_cselect_b64
 ; GCN: buffer_store_dwordx2
 define amdgpu_kernel void @s_select_v2f32(ptr addrspace(1) %out, <2 x float> %a, <2 x float> %b, i32 %c) #0 {
   %cmp = icmp eq i32 %c, 0
@@ -329,8 +327,11 @@ bb:
 ; GCN: s_cselect_b32
 ; GCN: s_cselect_b32
 ; GCN: s_cselect_b32
-; GCN: s_cselect_b32
-; GCN: s_cselect_b32
+; SI: s_cselect_b32
+; SI: s_cselect_b32
+; VI: s_cselect_b64
+; GFX9: s_cselect_b32
+; GFX9: s_cselect_b32
 
 ; GCN: buffer_store_dwordx
 define amdgpu_kernel void @s_select_v5f32(ptr addrspace(1) %out, <5 x float> %a, <5 x float> %b, i32 %c) #0 {

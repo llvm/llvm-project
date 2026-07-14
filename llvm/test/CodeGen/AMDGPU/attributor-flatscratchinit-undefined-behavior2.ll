@@ -109,8 +109,7 @@ define amdgpu_kernel void @with_private_to_flat_addrspacecast_cc_kernel(ptr addr
 ; GFX8-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_cmp_lg_u32 s0, -1
-; GFX8-NEXT:    s_cselect_b32 s1, s1, 0
-; GFX8-NEXT:    s_cselect_b32 s0, s0, 0
+; GFX8-NEXT:    s_cselect_b64 s[0:1], s[0:1], 0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    flat_store_dword v[0:1], v2
@@ -124,8 +123,7 @@ define amdgpu_kernel void @with_private_to_flat_addrspacecast_cc_kernel(ptr addr
 ; GFX8-ARCH-FLAT-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX8-ARCH-FLAT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-ARCH-FLAT-NEXT:    s_cmp_lg_u32 s0, -1
-; GFX8-ARCH-FLAT-NEXT:    s_cselect_b32 s1, s1, 0
-; GFX8-ARCH-FLAT-NEXT:    s_cselect_b32 s0, s0, 0
+; GFX8-ARCH-FLAT-NEXT:    s_cselect_b64 s[0:1], s[0:1], 0
 ; GFX8-ARCH-FLAT-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-ARCH-FLAT-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-ARCH-FLAT-NEXT:    flat_store_dword v[0:1], v2
@@ -139,8 +137,7 @@ define amdgpu_kernel void @with_private_to_flat_addrspacecast_cc_kernel(ptr addr
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_cmp_lg_u32 s0, -1
-; GFX9-NEXT:    s_cselect_b32 s1, s1, 0
-; GFX9-NEXT:    s_cselect_b32 s0, s0, 0
+; GFX9-NEXT:    s_cselect_b64 s[0:1], s[0:1], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    flat_store_dword v[0:1], v2
@@ -154,8 +151,7 @@ define amdgpu_kernel void @with_private_to_flat_addrspacecast_cc_kernel(ptr addr
 ; GFX9-ARCH-FLAT-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-ARCH-FLAT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-ARCH-FLAT-NEXT:    s_cmp_lg_u32 s0, -1
-; GFX9-ARCH-FLAT-NEXT:    s_cselect_b32 s1, s1, 0
-; GFX9-ARCH-FLAT-NEXT:    s_cselect_b32 s0, s0, 0
+; GFX9-ARCH-FLAT-NEXT:    s_cselect_b64 s[0:1], s[0:1], 0
 ; GFX9-ARCH-FLAT-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-ARCH-FLAT-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-ARCH-FLAT-NEXT:    flat_store_dword v[0:1], v2
@@ -169,8 +165,7 @@ define amdgpu_kernel void @with_private_to_flat_addrspacecast_cc_kernel(ptr addr
 ; GFX942-ARCH-FLAT-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-ARCH-FLAT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-ARCH-FLAT-NEXT:    s_cmp_lg_u32 s0, -1
-; GFX942-ARCH-FLAT-NEXT:    s_cselect_b32 s1, s1, 0
-; GFX942-ARCH-FLAT-NEXT:    s_cselect_b32 s0, s0, 0
+; GFX942-ARCH-FLAT-NEXT:    s_cselect_b64 s[0:1], s[0:1], 0
 ; GFX942-ARCH-FLAT-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX942-ARCH-FLAT-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX942-ARCH-FLAT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
@@ -184,8 +179,7 @@ define amdgpu_kernel void @with_private_to_flat_addrspacecast_cc_kernel(ptr addr
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_cmp_lg_u32 s0, -1
-; GFX10-NEXT:    s_cselect_b32 s0, s0, 0
-; GFX10-NEXT:    s_cselect_b32 s1, s1, 0
+; GFX10-NEXT:    s_cselect_b64 s[0:1], s[0:1], 0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX10-NEXT:    flat_store_dword v[0:1], v2

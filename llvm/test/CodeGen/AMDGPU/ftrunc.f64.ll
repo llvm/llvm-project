@@ -32,8 +32,7 @@ define amdgpu_kernel void @v_ftrunc_f64(ptr addrspace(1) %out, ptr addrspace(1) 
 ; SI-DAG: s_cselect_b32
 ; SI-DAG: s_cselect_b32
 ; SI-DAG: cmp_lt_i32
-; SI-DAG: s_cselect_b32
-; SI-DAG: s_cselect_b32
+; SI-DAG: s_cselect_b64
 ; SI: s_endpgm
 define amdgpu_kernel void @ftrunc_f64(ptr addrspace(1) %out, double %x) {
   %y = call double @llvm.trunc.f64(double %x) nounwind readnone
