@@ -225,7 +225,7 @@ bool TargetLowering::findOptimalMemOpLowering(
     // Use the largest integer type whose alignment constraints are satisfied.
     VT = MVT::LAST_INTEGER_VALUETYPE;
     if (Op.isFixedDstAlign()) {
-      bool LoadsFromSrc = Op.isMemcpy() && !Op.isMemcpyStrSrc();
+      bool LoadsFromSrc = Op.isMemcpyOrMemmove() && !Op.isMemcpyStrSrc();
       while (VT != MVT::i8) {
         unsigned VTSize = VT.getSizeInBits() / 8;
         bool DstOk =
@@ -289,7 +289,7 @@ bool TargetLowering::findOptimalMemOpLowering(
       // If the new VT cannot cover all of the remaining bits, then consider
       // issuing a (or a pair of) unaligned and overlapping load / store.
       unsigned Fast;
-      if (NumMemOps && Op.allowOverlap() && NewVTSize < Size &&
+      if (NumMemOps && !Op.isVolatile() && NewVTSize < Size &&
           allowsMisalignedMemoryAccesses(
               VT, DstAS, Op.isFixedDstAlign() ? Op.getDstAlign() : Align(1),
               MachineMemOperand::MONone, &Fast) &&
