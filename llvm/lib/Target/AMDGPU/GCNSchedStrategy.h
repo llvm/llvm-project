@@ -15,6 +15,8 @@
 
 #include "GCNRegPressure.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -547,13 +549,33 @@ private:
 
   /// Returns true if any reaching def of src2 (\p Src2ReachingDefs) has a use
   /// that requires the def to stay in VGPR form: any use that is not a COPY and
-  /// not a non-excluded MFMA candidate (in \p RewriteSet but not in \p
-  /// ExcludedMFMAs). Excluded MFMAs are not being rewritten, so their src2
+  /// not a rewritable MFMA candidate (in \p RewriteSet, which is already
+  /// post-exclusion). Excluded MFMAs are not being rewritten, so their src2
   /// cannot be reclassified to AGPR.
   bool
   hasUseRequiringVGPR(ArrayRef<SlotIndex> Src2ReachingDefs,
-                      const SmallSetVector<MachineInstr *, 16> &RewriteSet,
-                      const SmallPtrSetImpl<MachineInstr *> &ExcludedMFMAs);
+                      const SmallSetVector<MachineInstr *, 16> &RewriteSet);
+
+  /// The set of copy insertion points required to rewrite a single MFMA
+  /// candidate, shared by initHeuristics (cost estimate) and rewrite (actual
+  /// insertion) so both agree on exactly which copies are needed.
+  struct MFMACopyPlan {
+    /// Non-AGPR-form reaching defs of src2 that need a bridge COPY (Case 1).
+    SmallSetVector<MachineInstr *, 8> Src2DefsNeedingCopy;
+    /// Non-group reaching uses of the dst that need a copy (Case 2).
+    SmallSetVector<MachineOperand *, 8> DstUsesNeedingCopy;
+    /// Non-MAI reaching defs of those dst uses that need a copy (Case 3).
+    SmallSetVector<MachineInstr *, 8> DstUseDefsNeedingCopy;
+  };
+
+  /// Compute the copy plan for MFMA candidate \p MI. \p GroupSet is the
+  /// post-exclusion rewrite group and \p Src2Regs the candidate src2 registers
+  /// (both used to classify AGPR-form reaching defs); \p Src2NeedsVGPR forces
+  /// every src2 reaching def to be bridged.
+  MFMACopyPlan
+  analyzeCopyPoints(MachineInstr *MI,
+                    const SmallSetVector<MachineInstr *, 16> &GroupSet,
+                    const DenseSet<Register> &Src2Regs, bool Src2NeedsVGPR);
 
 public:
   bool initGCNSchedStage() override;
