@@ -131,6 +131,10 @@ Potentially Breaking Changes
                                      <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>`
   ================================== ========================================================================
 
+- Removed the :program:`clang-doc` deprecated Markdown generator. ``--format=md``
+  now uses the new Mustache-backed MD generator. It is possible that there are some
+  regressions in MD output.
+
 Improvements to clangd
 ----------------------
 
@@ -201,6 +205,9 @@ Improvements to clang-tidy
 
 - Improved :program:`clang-tidy` ``-store-check-profile`` by generating valid
   JSON when the source file path contains characters that require JSON escaping.
+
+- Improved :program:`clang-tidy` by preserving literal backslash characters in
+  POSIX source paths.
 
 - Ensured that :program:`clang-tidy` and the clang compiler uses the same logic
   for the suppression of compiler diagnostics in system headers and expansions
@@ -534,9 +541,19 @@ Changes in existing checks
   detail.
 
 - Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
-  <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
-  by fixing a false positive on implicitly generated functions such as
-  inherited constructors.
+  <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check:
+
+  - Fixed a false positive on implicitly generated functions such as
+    inherited constructors.
+
+  - Added `AllowImplicitMove` option to not warn when an rvalue reference
+    parameter is returned without an explicit ``std::move``.
+
+- Improved :doc:`cppcoreguidelines-special-member-functions
+  <clang-tidy/checks/cppcoreguidelines/special-member-functions>` check by
+  fixing a false positive with the `AllowImplicitlyDeletedCopyOrMove` option
+  for classes whose copy operations are implicitly deleted by a non-copyable
+  base class.
 
 - Improved :doc:`cppcoreguidelines-use-enum-class
   <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by adding the
@@ -563,6 +580,10 @@ Changes in existing checks
 
   - Fixed false positive where a pointer used with placement new was
     incorrectly diagnosed as allowing the pointee to be made ``const``.
+
+  - Enabled the check for variables declared with ``auto`` (configurable
+    via the `AnalyzeAutoVariables` option) and lambdas (configurable
+    via `AnalyzeLambdas` option).
 
   - Fixed false positive where calling a non-const member function on a
     pointer was incorrectly treated as mutating the pointer, when it only
@@ -819,6 +840,9 @@ Changes in existing checks
   - Fixed a crash in dependent base lookup when
     `AggressiveDependentMemberLookup` option is enabled.
 
+  - Fixed a false positive from naming style lookup for declarations inside macro
+    arguments.
+
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check:
 
@@ -878,6 +902,8 @@ Changes in existing checks
   - Fixed a bug where clients that apply fix-its without :program:`clang-tidy`'s
     cleanup could produce invalid code by joining adjacent tokens.
 
+  - Added support for parentheses around subscript operators (``(E1[E2])`` -> ``E1[E2]``).
+
 - Improved :doc:`readability-redundant-preprocessor
   <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a
   false positive for nested ``#if`` directives using different builtin
@@ -896,6 +922,11 @@ Changes in existing checks
 - Improved :doc:`readability-suspicious-call-argument
   <clang-tidy/checks/readability/suspicious-call-argument>` check by avoiding a
   crash from invalid ``Abbreviations`` option.
+
+- Improved :doc:`readability-trivial-switch
+  <clang-tidy/checks/readability/trivial-switch>` check by adding an
+  `IgnoreMacros` option. When enabled, the check will ignore switch
+  statements originating from macros.
 
 - Improved :doc:`readability-use-anyofallof
   <clang-tidy/checks/readability/use-anyofallof>` check by emitting a diagnostic

@@ -111,3 +111,19 @@ __device__ void test_readfirstlane(int* out, int a) {
 __device__ void test_dispatch_ptr(__attribute__((address_space(4))) void ** out) {
   *out = (__attribute__((address_space(4))) void *)__builtin_amdgcn_dispatch_ptr();
 }
+
+// CIR-LABEL: @_Z12test_rcp_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.rcp" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z12test_rcp_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.rcp.f32(float %{{.*}})
+__device__ void test_rcp_f32(float* out, float a) {
+  *out = __builtin_amdgcn_rcpf(a);
+}
+
+// CIR-LABEL: @_Z12test_rcp_f64Pdd
+// CIR: cir.call_llvm_intrinsic "amdgcn.rcp" {{.*}} : (!cir.double) -> !cir.double
+// LLVM: define{{.*}} void @_Z12test_rcp_f64Pdd
+// LLVM: call{{.*}} double @llvm.amdgcn.rcp.f64(double %{{.*}})
+__device__ void test_rcp_f64(double* out, double a) {
+  *out = __builtin_amdgcn_rcp(a);
+}

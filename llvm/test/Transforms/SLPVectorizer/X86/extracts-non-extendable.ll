@@ -5,7 +5,7 @@ define void @test(i64 %v) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i64 [[V:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> <i64 0, i64 poison>, i64 [[V]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> <i64 0, i64 poison>, i64 [[V]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i64> zeroinitializer, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 1, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i64> [[TMP2]], <8 x i64> <i64 poison, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0>, <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 4, i32 13, i32 14, i32 15>
@@ -17,7 +17,7 @@ define void @test(i64 %v) {
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[TMP8]], i1 false, i1 false
 ; CHECK-NEXT:    br i1 [[OP_RDX1]], label %[[BB_I107_PREHEADER:.*]], label %[[BB_I27_I_PREHEADER:.*]]
 ; CHECK:       [[BB_I107_PREHEADER]]:
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <2 x i64> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[DOTSROA_1278_10_EXTRACT_SHIFT83_I1622_1:%.*]] = xor i64 0, [[TMP21]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = xor <2 x i64> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = or <2 x i64> [[TMP22]], zeroinitializer
