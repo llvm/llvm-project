@@ -181,7 +181,8 @@ public:
 
   // AST related queries
 
-  uint32_t GetPointerByteSize() override { return 4; }
+  // FIXME: This is temporary for now
+  uint32_t GetPointerByteSize() override { return 8; }
 
   CompilerType GetPointerDiffType(bool is_signed) override {
     return CompilerType();
@@ -302,10 +303,7 @@ public:
   llvm::Expected<uint32_t>
   GetNumChildren(lldb::opaque_compiler_type_t type,
                  bool omit_empty_base_classes,
-                 const ExecutionContext *exe_ctx) override {
-    return 0;
-  }
-
+                 const ExecutionContext *exe_ctx) override;
   lldb::BasicType
   GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) override {
     return lldb::eBasicTypeInt;

@@ -47,8 +47,8 @@ public:
 
 private:
   int m_kind;
-  ConstString m_type_name;
   uint64_t m_bitsize;
+  ConstString m_type_name;
 };
 
 class FortranFunction : public FortranType {
@@ -92,9 +92,9 @@ public:
   }
 
 private:
+  Category m_category{Category::Explicit};
   int64_t m_bound;
   bool m_is_bound_known = false;
-  Category m_category{Category::Explicit};
 };
 
 class ArrayShape {
@@ -198,33 +198,35 @@ static bool DumpComplex(Stream &s, const lldb_private::DataExtractor &data,
   }
 }
 
-ConstString
-CreateArrayTypeName(const CompilerType &element_type,
-                    const llvm::SmallVectorImpl<std::optional<uint64_t>>
-                        &elements_per_dimension,
-                    const llvm::SmallVectorImpl<int64_t> &lower_bounds,
-                    bool is_allocatable, bool is_star) {
+ConstString CreateArrayTypeName(const CompilerType &element_type,
+                                const llvm::ArrayRef<ArrayShape> shapes,
+                                bool is_allocatable, bool is_star) {
 
   std::string name_buffer;
   llvm::raw_string_ostream name_stream(name_buffer);
 
   name_stream << element_type.GetTypeName().AsCString(nullptr) << "(";
-  size_t rank = elements_per_dimension.size();
+  size_t rank = shapes.size();
 
   for (size_t idx = 0; idx < rank; ++idx) {
     if (idx > 0)
       name_stream << ", ";
 
-    if (!elements_per_dimension[idx]) {
-      if (is_star && idx == rank - 1) {
-        name_stream << lower_bounds[idx] << ":*";
-      } else {
-        name_stream << ":";
+    const ArrayBound &lb = shapes[idx].GetLowerBound();
+    const ArrayBound &ub = shapes[idx].GetUpperBound();
+
+    if (ub.IsStar()) {
+      // Assuming you want standard Fortran syntax (e.g., "1:*")
+      name_stream << lb.GetBound() << ":*";
+    } else if (ub.IsColon()) {
+      // Unknown bound elements
+      name_stream << ":";
+    } else if (ub.IsExplicit()) {
+      // Explicit bounds
+      if (lb.GetBound() != 1) {
+        name_stream << lb.GetBound() << ":";
       }
-    } else {
-      int64_t upper_bound =
-          lower_bounds[idx] + *elements_per_dimension[idx] - 1;
-      name_stream << lower_bounds[idx] << ":" << upper_bound;
+      name_stream << ub.GetBound();
     }
   }
 
@@ -420,8 +422,7 @@ CompilerType TypeSystemFortran::CreateArrayType(
     array_shapes.emplace_back(lb, ub, byte_stride);
   }
   ConstString array_type_name =
-      CreateArrayTypeName(element_type, elements_per_dimension, lower_bounds,
-                          is_allocatable, is_star);
+      CreateArrayTypeName(element_type, array_shapes, is_allocatable, is_star);
 
   FortranArray *array_type = new FortranArray(
       element_type, array_shapes, array_type_name, total_array_size,
@@ -441,6 +442,7 @@ ConstString TypeSystemFortran::GetTypeName(opaque_compiler_type_t type,
   case FortranType::KIND_LOGICAL:
   case FortranType::KIND_REAL:
   case FortranType::KIND_COMPLEX:
+  case FortranType::KIND_ARRAY:
     return fortran_type->GetName();
   default:
     return ConstString("Unsupported");
@@ -561,6 +563,33 @@ Format TypeSystemFortran::GetFormat(opaque_compiler_type_t type) {
   }
 }
 
+Expected<uint32_t>
+TypeSystemFortran::GetNumChildren(opaque_compiler_type_t type,
+                                  bool omit_empty_base_classes,
+                                  const ExecutionContext *exe_ctx) {
+  if (!type)
+    return createStringError(
+        inconvertibleErrorCode(),
+        "Couldn't get number of children, bad Fortran type.");
+  FortranType *super_type = static_cast<FortranType *>(type);
+
+  switch (super_type->GetKind()) {
+  case FortranType::KIND_ARRAY: {
+    FortranArray *fortran_array = static_cast<FortranArray *>(super_type);
+
+    if (!fortran_array)
+      return createStringError(
+          inconvertibleErrorCode(),
+          "Couldn't get number of children, bad Fortran type.");
+
+    // Fetch the number of elements
+    return fortran_array->GetDimensions().front().GetNumberOfElements();
+  }
+  default:
+    return 0;
+  }
+}
+
 Expected<CompilerType> TypeSystemFortran::GetChildCompilerTypeAtIndex(
     opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
     bool transparent_pointers, bool omit_empty_base_classes,
@@ -584,6 +613,16 @@ Expected<CompilerType> TypeSystemFortran::GetChildCompilerTypeAtIndex(
     return CompilerType();
 
   ArrayRef<ArrayShape> old_dimensions = fortran_type->GetDimensions();
+  int64_t ub = old_dimensions.front().GetUpperBound().GetBound();
+  int64_t lb = old_dimensions.front().GetLowerBound().GetBound();
+  if ((idx + 1) < lb || (idx + 1) > ub)
+    return createStringError(
+        inconvertibleErrorCode(),
+        llvm::formatv(
+            "Failed to craft intermediate Fortran array type: physical index "
+            "{0} is out of bounds (array only has {1} elements)",
+            idx, fortran_type->GetTotalElements()));
+
   if (old_dimensions.size() > 1) {
 
     SmallVector<ArrayShape, 2> new_dimensions(old_dimensions.begin() + 1,
@@ -606,9 +645,9 @@ Expected<CompilerType> TypeSystemFortran::GetChildCompilerTypeAtIndex(
                                   old_first_dimension.GetNumberOfElements();
     // Fortran is 1-base indexed, and the offset of element array(1) is 0
     if (old_dimensions.front().GetByteStride() != 0)
-      child_byte_offset = (idx - 1) * old_dimensions.front().GetByteStride();
+      child_byte_offset = idx * old_dimensions.front().GetByteStride();
     else
-      child_byte_offset = (idx - 1) * fortran_type->GetElementByteSize();
+      child_byte_offset = idx * fortran_type->GetElementByteSize();
 
     uint64_t last_dim_stride = new_dimensions.back().GetByteStride();
 
@@ -619,16 +658,23 @@ Expected<CompilerType> TypeSystemFortran::GetChildCompilerTypeAtIndex(
       child_byte_size = new_total_elements * fortran_type->GetElementByteSize();
     }
 
+    child_name = llvm::formatv("[{0}]", idx);
     // TODO: Change this to calculate new array name and not reuse old one, same
     // for total array size.
-    FortranArray *array_type = new FortranArray(
-        fortran_type->GetElementType(), new_dimensions, fortran_type->GetName(),
-        child_byte_size, is_allocatable, fortran_type->IsSizeKnown(),
-        new_total_elements);
+    ConstString type_name =
+        CreateArrayTypeName(fortran_type->GetElementType(), new_dimensions,
+                            is_allocatable, is_star);
+    FortranArray *array_type =
+        new FortranArray(fortran_type->GetElementType(), new_dimensions,
+                         type_name, child_byte_size, is_allocatable,
+                         fortran_type->IsSizeKnown(), new_total_elements);
 
     return CompilerType(weak_from_this(), (void *)array_type);
   } else {
-    child_byte_offset = (idx - 1) * old_dimensions.front().GetByteStride();
+    if (old_dimensions.front().GetByteStride() != 0)
+      child_byte_offset = idx * old_dimensions.front().GetByteStride();
+    else
+      child_byte_offset = idx * fortran_type->GetElementByteSize();
     child_byte_size = fortran_type->GetElementByteSize();
     return fortran_type->GetElementType();
   }
