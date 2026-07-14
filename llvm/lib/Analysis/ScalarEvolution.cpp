@@ -2818,18 +2818,19 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
     // constant, actually simplifying the expression.
     const SCEVAddExpr *Add;
     if (isa<SCEVConstant>(A) && match(B, m_scev_ZExt(m_scev_Add(Add)))) {
-      const auto *CInner = dyn_cast<SCEVConstant>(Add->getOperand(0));
-      if (CInner && CInner->getAPInt().isNegative() &&
+      const auto *InnerSC = dyn_cast<SCEVConstant>(Add->getOperand(0));
+      if (InnerSC && InnerSC->getAPInt().isNegative() &&
           // NUW on `(-C) + (C + X) = X` proves that `C + X` did not wrap
           // below zero, so `zext(C + X) == sext(C) + zext(X)`.
-          hasFlags(StrengthenNoWrapFlags(
-                       this, scAddExpr, {getConstant(-CInner->getAPInt()), Add},
-                       SCEV::FlagAnyWrap),
-                   SCEV::FlagNUW)) {
-        SmallVector<SCEVUse, 4> XOps(drop_begin(Add->operands()));
-        const SCEV *X = getAddExpr(XOps);
-        return getAddExpr(A, getSignExtendExpr(CInner, B->getType()),
-                          getZeroExtendExpr(X, B->getType()));
+          hasFlags(
+              StrengthenNoWrapFlags(this, scAddExpr,
+                                    {getConstant(-InnerSC->getAPInt()), Add},
+                                    SCEV::FlagAnyWrap),
+              SCEV::FlagNUW)) {
+        SmallVector<SCEVUse, 4> Operands(drop_begin(Add->operands()));
+        const SCEV *XAdd = getAddExpr(Operands);
+        return getAddExpr(A, getSignExtendExpr(InnerSC, B->getType()),
+                          getZeroExtendExpr(XAdd, B->getType()));
       }
     }
   }
