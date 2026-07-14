@@ -7629,6 +7629,8 @@ static bool HandleOperatorNewCall(EvalInfo &Info, const CallExpr *E,
   QualType AllocType = Info.Ctx.getConstantArrayType(
       ElemType, Size, nullptr, ArraySizeModifier::Normal, 0);
   APValue *Val = Info.createHeapAlloc(Caller.Call, AllocType, Result);
+  if (!Val)
+    return false;
   *Val = APValue(APValue::UninitArray(), 0, Size.getZExtValue());
   Result.addArray(Info, E, cast<ConstantArrayType>(AllocType));
   return true;
