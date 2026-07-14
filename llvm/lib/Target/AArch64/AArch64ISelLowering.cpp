@@ -141,6 +141,13 @@ static cl::opt<bool> EnableExtToTBL("aarch64-enable-ext-to-tbl", cl::Hidden,
                                     cl::desc("Combine ext and trunc to TBL"),
                                     cl::init(true));
 
+static cl::opt<bool> EnableSveMultiVectorLowering(
+    "aarch64-enable-sve-multivector-lowering", cl::Hidden,
+    cl::desc("Enable lowering of oversized SVE loads and stores that are two"
+             "or four times the width of a legeal SVE type to multi-vector "
+             "operations."),
+    cl::init(false));
+
 // All of the XOR, OR and CMP use ALU ports, and data dependency will become the
 // bottleneck after this transform on high end CPU. So this max leaf node
 // limitation is guard cmp+ccmp will be profitable.
@@ -7891,8 +7898,9 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
   }
 
   if (VT.isVector()) {
-    if (SDValue Store = tryLowerMultiVectorStore(StoreNode, DAG))
-      return Store;
+    if (EnableSveMultiVectorLowering)
+      if (SDValue Store = tryLowerMultiVectorStore(StoreNode, DAG))
+        return Store;
 
     if (useSVEForFixedLengthVectorVT(
             VT,
@@ -32234,8 +32242,9 @@ void AArch64TargetLowering::ReplaceNodeResults(
     }
 
     if (auto *Load = dyn_cast<LoadSDNode>(N))
-      if (tryLowerMultiVectorLoad(Load, Results, DAG))
-        return;
+      if (EnableSveMultiVectorLowering)
+        if (tryLowerMultiVectorLoad(Load, Results, DAG))
+          return;
 
     if ((!LoadNode->isVolatile() && !LoadNode->isAtomic()) ||
         LoadNode->getMemoryVT() != MVT::i128) {
