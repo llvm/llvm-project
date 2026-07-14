@@ -14,7 +14,6 @@
 #include "flang/Parser/char-block.h"
 #include "flang/Support/Fortran.h"
 #include <algorithm>
-#include <iosfwd>
 #include <map>
 #include <optional>
 #include <string>

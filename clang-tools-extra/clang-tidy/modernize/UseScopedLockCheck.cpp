@@ -27,17 +27,37 @@ static bool isLockGuardDecl(const NamedDecl *Decl) {
          Decl->getName() == "lock_guard" && Decl->isInStdNamespace();
 }
 
-static bool isLockGuard(const QualType &Type) {
+static bool isScopedLockDecl(const NamedDecl *Decl) {
+  return Decl->getDeclName().isIdentifier() &&
+         Decl->getName() == "scoped_lock" && Decl->isInStdNamespace();
+}
+
+static const NamedDecl *getLockClassDecl(const QualType &Type) {
   if (const auto *Record = Type->getAsCanonical<RecordType>())
-    if (const RecordDecl *Decl = Record->getDecl())
-      return isLockGuardDecl(Decl);
+    return Record->getDecl();
 
   if (const auto *TemplateSpecType = Type->getAs<TemplateSpecializationType>())
-    if (const TemplateDecl *Decl =
-            TemplateSpecType->getTemplateName().getAsTemplateDecl())
-      return isLockGuardDecl(Decl);
+    return TemplateSpecType->getTemplateName().getAsTemplateDecl();
 
+  return nullptr;
+}
+
+static bool isLockGuard(const QualType &Type) {
+  if (const NamedDecl *LockDecl = getLockClassDecl(Type))
+    return isLockGuardDecl(LockDecl);
   return false;
+}
+
+static bool isScopedLock(const QualType &Type) {
+  if (const NamedDecl *LockDecl = getLockClassDecl(Type))
+    return isScopedLockDecl(LockDecl);
+  return false;
+}
+
+static StringRef getLockClassName(const QualType &Type) {
+  const NamedDecl *LockDecl = getLockClassDecl(Type);
+  assert(LockDecl);
+  return LockDecl->getName();
 }
 
 static SmallVector<const VarDecl *> getLockGuardsFromDecl(const DeclStmt *DS) {
@@ -47,7 +67,7 @@ static SmallVector<const VarDecl *> getLockGuardsFromDecl(const DeclStmt *DS) {
     if (const auto *VD = dyn_cast<VarDecl>(Decl)) {
       const QualType Type =
           VD->getType().getCanonicalType().getUnqualifiedType();
-      if (isLockGuard(Type))
+      if (isLockGuard(Type) || isScopedLock(Type))
         LockGuards.push_back(VD);
     }
   }
@@ -123,19 +143,25 @@ void UseScopedLockCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
   const auto LockGuardClassDecl =
       namedDecl(hasName("lock_guard"), isInStdNamespace());
+  const auto ScopedLockClassDecl =
+      namedDecl(hasName("scoped_lock"), isInStdNamespace());
+  const auto LockClassDecl = anyOf(LockGuardClassDecl, ScopedLockClassDecl);
 
-  const auto LockGuardType =
-      qualType(anyOf(hasUnqualifiedDesugaredType(
-                         recordType(hasDeclaration(LockGuardClassDecl))),
-                     hasUnqualifiedDesugaredType(templateSpecializationType(
-                         hasDeclaration(LockGuardClassDecl)))));
+  const auto LockGuardType = qualType(hasUnqualifiedDesugaredType(
+      mapAnyOf(recordType, templateSpecializationType)
+          .with(hasDeclaration(LockGuardClassDecl))));
 
-  const auto LockVarDecl = varDecl(hasType(LockGuardType));
+  const auto LockType = qualType(hasUnqualifiedDesugaredType(
+      mapAnyOf(recordType, templateSpecializationType)
+          .with(hasDeclaration(LockClassDecl))));
+
+  const auto LockGuardVarDecl = varDecl(hasType(LockGuardType));
+  const auto LockVarDecl = varDecl(hasType(LockType));
 
   if (WarnOnSingleLocks) {
     Finder->addMatcher(
         compoundStmt(
-            has(declStmt(has(LockVarDecl)).bind("lock-decl-single")),
+            has(declStmt(has(LockGuardVarDecl)).bind("lock-decl-single")),
             unless(has(declStmt(unless(equalsBoundNode("lock-decl-single")),
                                 has(LockVarDecl))))),
         this);
@@ -251,16 +277,24 @@ void UseScopedLockCheck::diagOnMultipleLocks(
     const ast_matchers::MatchFinder::MatchResult &Result) {
   for (const SmallVector<const VarDecl *> &Group : LockGroups) {
     if (Group.size() == 1) {
-      if (WarnOnSingleLocks)
+      if (WarnOnSingleLocks &&
+          isLockGuard(
+              Group[0]->getType().getCanonicalType().getUnqualifiedType()))
         diagOnSingleLock(Group[0], Result);
-    } else {
-      diag(Group[0]->getBeginLoc(),
-           "use single 'std::scoped_lock' instead of multiple "
-           "'std::lock_guard'");
+      continue;
+    }
 
-      for (const VarDecl *Lock : llvm::drop_begin(Group))
-        diag(Lock->getLocation(), "additional 'std::lock_guard' declared here",
-             DiagnosticIDs::Note);
+    diag(Group[0]->getBeginLoc(),
+         "use single 'std::scoped_lock' instead of multiple locks");
+
+    for (const VarDecl *Lock : llvm::drop_begin(Group)) {
+      const QualType Type =
+          Lock->getType().getCanonicalType().getUnqualifiedType();
+      diag(Lock->getLocation(),
+           (llvm::Twine("additional 'std::") + getLockClassName(Type) +
+            "' declared here")
+               .str(),
+           DiagnosticIDs::Note);
     }
   }
 }

@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -35,7 +36,7 @@ enum GPUKind : uint32_t {
   GK_NONE = 0,
 
 #define R600_GPU(NAME, ENUM, FEATURES) ENUM,
-#define AMDGCN_GPU(NAME, ENUM, ISAVERSION, FEATURES) ENUM,
+#define AMDGCN_GPU(NAME, ENUM, SUBARCH, ISAVERSION, FEATURES) ENUM,
 #include "AMDGPUTargetParser.def"
 
   GK_AMDGCN_GENERIC_FIRST = GK_GFX9_GENERIC,
@@ -47,6 +48,12 @@ struct IsaVersion {
   unsigned Major;
   unsigned Minor;
   unsigned Stepping;
+
+  bool operator==(const IsaVersion &Other) const {
+    return Major == Other.Major && Minor == Other.Minor &&
+           Stepping == Other.Stepping;
+  }
+  bool operator!=(const IsaVersion &Other) const { return !(*this == Other); }
 };
 
 // This isn't comprehensive for now, just things that are needed from the
@@ -86,19 +93,59 @@ enum FeatureError : uint32_t {
 };
 
 LLVM_ABI StringRef getArchFamilyNameAMDGCN(GPUKind AK);
+LLVM_ABI Triple::SubArchType getSubArch(GPUKind AK);
+LLVM_ABI Triple::SubArchType getMajorSubArch(Triple::SubArchType SubArch);
+
+/// Return true if subarch \p A is compatible with subarch \p B, i.e. they are
+/// equal or one is the major-family subarch of the other (e.g. AMDGPUSubArch9
+/// is compatible with AMDGPUSubArch900). NoSubArch is compatible with anything.
+LLVM_ABI bool isSubArchCompatible(const Triple &A, const Triple &B);
+LLVM_ABI bool isSubArchCompatible(Triple::SubArchType A, Triple::SubArchType B);
+
+/// Return true if the GPU \p AK is usable with the triple subarch \p SubArch.
+/// A NoSubArch triple (legacy "amdgcn") accepts any GPU. Otherwise the GPU's
+/// subarch must equal \p SubArch, or \p SubArch must be the major-family
+/// subarch of the GPU (e.g. the amdgpu9 triple accepts gfx900).
+LLVM_ABI bool isCPUValidForSubArch(Triple::SubArchType SubArch, GPUKind AK);
+
+/// Convenience overload of isCPUValidForSubArch taking a GPU name \p CPU, which
+/// is parsed via parseArchAMDGCN. An unrecognized name is never valid.
+LLVM_ABI bool isCPUValidForSubArch(Triple::SubArchType SubArch, StringRef CPU);
+
+/// Returns the effective triple appropriate to use when linking \p B into \p A
+/// by merging the subarches in case of inexact match.
+///
+/// In cases where isSubArchCompatible would return / false, returns \p B. This
+/// assumes that the non-arch triple components are the same
+LLVM_ABI std::string mergeSubArch(const Triple &A, const Triple &B);
 
 LLVM_ABI StringRef getArchNameAMDGCN(GPUKind AK);
 LLVM_ABI StringRef getArchNameR600(GPUKind AK);
+
+/// Returns the canonical GPU name for an AMDGPU subarch, e.g.
+/// AMDGPUSubArch1030 -> "gfx1030", AMDGPUSubArch9 -> "gfx9-generic",
+/// AMDGPUSubArch6 -> "gfx600". Returns "" for NoSubArch or a non-AMDGPU
+/// subarch. The major-only subarches map to their generic/lowest
+/// representative, matching the default subtarget for an unspecified -mcpu.
+LLVM_ABI StringRef getArchNameFromSubArch(Triple::SubArchType SubArch);
 LLVM_ABI StringRef getCanonicalArchName(const Triple &T, StringRef Arch);
 LLVM_ABI GPUKind parseArchAMDGCN(StringRef CPU);
 LLVM_ABI GPUKind parseArchR600(StringRef CPU);
+LLVM_ABI GPUKind getGPUKindFromSubArch(Triple::SubArchType SubArch);
 LLVM_ABI unsigned getArchAttrAMDGCN(GPUKind AK);
+LLVM_ABI unsigned getArchAttrAMDGCN(Triple::SubArchType SubArch);
 LLVM_ABI unsigned getArchAttrR600(GPUKind AK);
 
-LLVM_ABI void fillValidArchListAMDGCN(SmallVectorImpl<StringRef> &Values);
+/// Append the valid AMDGCN GPU names to \p Values. If \p SubArch is not
+/// NoSubArch, only GPUs compatible with that subarch (see isCPUValidForSubArch)
+/// are appended.
+LLVM_ABI void
+fillValidArchListAMDGCN(SmallVectorImpl<StringRef> &Values,
+                        Triple::SubArchType SubArch = Triple::NoSubArch);
 LLVM_ABI void fillValidArchListR600(SmallVectorImpl<StringRef> &Values);
 
 LLVM_ABI IsaVersion getIsaVersion(StringRef GPU);
+LLVM_ABI IsaVersion getIsaVersion(Triple::SubArchType SubArch);
 
 /// Fills Features map with default values for given target GPU.
 /// \p Features contains overriding target features and this function returns

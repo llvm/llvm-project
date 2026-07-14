@@ -60,3 +60,16 @@
 // RUN: diff %S/Inputs/rt-multi-arch-static-library-nonempty.json %t/rt-multi-arch-static-library-nonempty-enc.json
 // RUN: clang-ssaf-format --type auto --encoding %S/Inputs/rt-multi-arch-static-library-nonempty.json -o %t/rt-multi-arch-static-library-nonempty-enc-explicit.json
 // RUN: diff %S/Inputs/rt-multi-arch-static-library-nonempty.json %t/rt-multi-arch-static-library-nonempty-enc-explicit.json
+
+// MultiArchSharedLibrary, like its sibling, appears only in the
+// ArtifactEncoding variant; round-trip both empty and non-empty fixtures.
+
+// RUN: clang-ssaf-format --encoding %S/Inputs/rt-multi-arch-shared-library-empty.json -o %t/rt-multi-arch-shared-library-empty-enc.json
+// RUN: diff %S/Inputs/rt-multi-arch-shared-library-empty.json %t/rt-multi-arch-shared-library-empty-enc.json
+// RUN: clang-ssaf-format --type auto --encoding %S/Inputs/rt-multi-arch-shared-library-empty.json -o %t/rt-multi-arch-shared-library-empty-enc-explicit.json
+// RUN: diff %S/Inputs/rt-multi-arch-shared-library-empty.json %t/rt-multi-arch-shared-library-empty-enc-explicit.json
+
+// RUN: clang-ssaf-format --encoding %S/Inputs/rt-multi-arch-shared-library-nonempty.json -o %t/rt-multi-arch-shared-library-nonempty-enc.json
+// RUN: diff %S/Inputs/rt-multi-arch-shared-library-nonempty.json %t/rt-multi-arch-shared-library-nonempty-enc.json
+// RUN: clang-ssaf-format --type auto --encoding %S/Inputs/rt-multi-arch-shared-library-nonempty.json -o %t/rt-multi-arch-shared-library-nonempty-enc-explicit.json
+// RUN: diff %S/Inputs/rt-multi-arch-shared-library-nonempty.json %t/rt-multi-arch-shared-library-nonempty-enc-explicit.json

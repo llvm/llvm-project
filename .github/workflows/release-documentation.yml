@@ -76,7 +76,7 @@ jobs:
 
       man-page-release-version: ${{ steps.vars.outputs.man-page-release-version }}
       man-page-tarball-name: ${{ steps.vars.outputs.man-page-tarball-name }}
-      man-page-upload: ${{${{ steps.vars.outputs.man-page-upload }}
+      man-page-upload: ${{ steps.vars.outputs.man-page-upload }}
       man-page-attestation-name: ${{ steps.vars.outputs.man-page-attestation-name }}
     env:
       upload: ${{ inputs.upload && !contains(inputs.release-version, 'rc') }}

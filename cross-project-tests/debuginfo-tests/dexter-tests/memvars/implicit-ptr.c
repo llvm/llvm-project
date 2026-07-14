@@ -4,8 +4,7 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 // RUN: %clang -std=gnu11 -O3 -glldb %s -o %t
-// RUN: %dexter -w --use-script %dexter_lldb_args --binary %t -- %s \
-// RUN:   | FileCheck %s
+// RUN: %dexter -w %dexter_lldb_args --binary %t -- %s | FileCheck %s
 
 //// Check that 'param' in 'fun' can be read throughout, and that 'pa' and 'pb'
 //// can be dereferenced in the debugger even if we can't provide the pointer
