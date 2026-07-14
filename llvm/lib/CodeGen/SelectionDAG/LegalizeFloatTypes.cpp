@@ -161,7 +161,7 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::ATOMIC_LOAD: R = SoftenFloatRes_ATOMIC_LOAD(N); break;
     case ISD::ATOMIC_SWAP: R = BitcastToInt_ATOMIC_SWAP(N); break;
     case ISD::SELECT:      R = SoftenFloatRes_SELECT(N); break;
-    case ISD::CT_SELECT:    R = SoftenFloatRes_CT_SELECT(N); break;
+    case ISD::CT_SELECT:   R = SoftenFloatRes_CT_SELECT(N); break;
     case ISD::SELECT_CC:   R = SoftenFloatRes_SELECT_CC(N); break;
     case ISD::FREEZE:      R = SoftenFloatRes_FREEZE(N); break;
     case ISD::STRICT_SINT_TO_FP:
@@ -971,7 +971,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_CT_SELECT(SDNode *N) {
   SDValue LHS = GetSoftenedFloat(N->getOperand(1));
   SDValue RHS = GetSoftenedFloat(N->getOperand(2));
   return DAG.getCTSelect(SDLoc(N), LHS.getValueType(), N->getOperand(0), LHS,
-                         RHS, N->getFlags());
+                         RHS);
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_SELECT_CC(SDNode *N) {
@@ -1537,7 +1537,7 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::POISON:
   case ISD::UNDEF:        SplitRes_UNDEF(N, Lo, Hi); break;
   case ISD::SELECT:       SplitRes_Select(N, Lo, Hi); break;
-  case ISD::CT_SELECT:     SplitRes_CT_SELECT(N, Lo, Hi); break;
+  case ISD::CT_SELECT:    SplitRes_CT_SELECT(N, Lo, Hi); break;
   case ISD::SELECT_CC:    SplitRes_SELECT_CC(N, Lo, Hi); break;
 
   case ISD::MERGE_VALUES:       ExpandRes_MERGE_VALUES(N, ResNo, Lo, Hi); break;
@@ -2866,7 +2866,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_CT_SELECT(SDNode *N) {
   SDValue Op1 = GetSoftPromotedHalf(N->getOperand(1));
   SDValue Op2 = GetSoftPromotedHalf(N->getOperand(2));
   return DAG.getCTSelect(SDLoc(N), Op1.getValueType(), N->getOperand(0), Op1,
-                         Op2, N->getFlags());
+                         Op2);
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_SELECT_CC(SDNode *N) {
