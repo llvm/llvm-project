@@ -10,6 +10,8 @@
 
 // <algorithm>
 
+#include <__type_traits/desugars_to.h>
+
 #include <algorithm>
 
 // check that __less<> desugars to __totally_ordered_less_tag for integral types regardless of their cv-ref
