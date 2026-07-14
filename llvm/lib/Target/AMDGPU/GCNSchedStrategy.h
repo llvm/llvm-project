@@ -498,9 +498,15 @@ private:
   /// union, over all candidates sharing Src2Reg, of the non-MAI reaching-def
   /// blocks of their src2 — this is what rewrite() actually inserts copies
   /// after, so a single candidate's own reaching defs are not enough.
+  /// Check 3: if \p RedefPartialBlocks (non-AGPR-form partial subreg
+  /// reaching-def blocks of Src2Reg) holds >=2 mutually non-dominating blocks
+  /// with no single block dominating all uses, redirecting uses to %MappedReg
+  /// splits the original Src2Reg live interval into disconnected components.
   bool hasSrc2BridgeConflict(
       ArrayRef<SlotIndex> DefIdxs, Register Src2Reg,
-      const SmallPtrSetImpl<const MachineBasicBlock *> &BridgeBlocks) const;
+      const SmallPtrSetImpl<const MachineBasicBlock *> &BridgeBlocks,
+      const SmallPtrSetImpl<const MachineBasicBlock *> &RedefPartialBlocks)
+      const;
 
   /// Returns true if reclassifying \p DstReg to AGPR would require bridge
   /// copies beyond rewrite()'s capability (full-register copies only).
