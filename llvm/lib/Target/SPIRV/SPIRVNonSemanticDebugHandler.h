@@ -289,18 +289,15 @@ private:
   ///
   /// \returns The result id register on success. Returns \c std::nullopt and
   /// emits nothing if a non-null \p GV type was not emitted in \c
-  /// DebugTypeRegs,
-  /// \p GV has a static data member declaration that was not emitted in
-  /// \c DebugTypeRegs, or \c resolveGlobalVariableParent returns no id for the
-  /// \c Parent operand.
+  /// DebugTypeRegs, or \p GV has a static data member declaration that was not
+  /// emitted in \c DebugTypeRegs.
   std::optional<MCRegister> emitDebugGlobalVariable(
       const DIGlobalVariable *GV, const GlobalVariableDebugInfo &Info,
       MCRegister VoidTypeReg, MCRegister I32TypeReg, MCRegister ExtInstSetReg,
       SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Resolve the \c Parent operand for \c DebugGlobalVariable.
-  std::optional<MCRegister>
-  resolveGlobalVariableParent(const DIGlobalVariable *GV) const;
+  MCRegister resolveGlobalVariableParent(const DIGlobalVariable *GV) const;
 
   /// Emit \c DebugExpression for \p Expr. Unimplemented: defined as a no-op
   /// (\returns \c std::nullopt, emits nothing) so \c emitDebugGlobalVariable

@@ -594,16 +594,21 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::mapDISignatureTypeToReg(
   return lookupOptReg(DebugTypeRegs, Ty);
 }
 
-std::optional<MCRegister>
-SPIRVNonSemanticDebugHandler::resolveGlobalVariableParent(
-    const DIGlobalVariable *GV) const {
+MCRegister SPIRVNonSemanticDebugHandler::resolveGlobalVariableParent(
+    const DIGlobalVariable *) const {
   // TODO: When this backend emits debug instructions for namespace, subprogram,
   // and module scopes, return GV->getScope()'s debug id.
 
+  // !CompileUnits.empty() was already checked before staring the emission of
+  // NSDI instructions.
+  assert(!CompileUnits.empty() &&
+         "resolveGlobalVariableParent requires non-empty CompileUnits");
+  std::optional<MCRegister> ParentRegOpt =
+      lookupOptReg(CUToCompilationUnitDbgReg, CompileUnits[0].TheCU);
+  assert(ParentRegOpt && "DebugCompilationUnit must be emitted before "
+                         "resolveGlobalVariableParent");
   // Fallback: first module compile unit (SPIRV-LLVM-Translator default).
-  if (CompileUnits.empty())
-    return std::nullopt;
-  return lookupOptReg(CUToCompilationUnitDbgReg, CompileUnits[0].TheCU);
+  return *ParentRegOpt;
 }
 
 // Unimplemented no-op; see emitDebugExpression declaration.
@@ -618,9 +623,7 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugGlobalVariable(
     SPIRV::ModuleAnalysisInfo &MAI) {
   assert(GV && "GV must not be null in emitDebugGlobalVariable");
 
-  auto ParentRegOpt = resolveGlobalVariableParent(GV);
-  if (!ParentRegOpt)
-    return std::nullopt;
+  MCRegister ParentReg = resolveGlobalVariableParent(GV);
 
   // TyReg: DebugInfoNone when GV has no DI type (as done in
   // SPIRV-LLVM-Translator). Declarations (isDefinition: false) can have null
@@ -671,7 +674,7 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugGlobalVariable(
   MCRegister FlagsReg = emitOpConstantI32(transDebugFlags(GV), I32TypeReg, MAI);
 
   SmallVector<MCRegister, 10> Ops = {NameReg,    TyReg,       SrcReg,
-                                     LineReg,    ColReg,      *ParentRegOpt,
+                                     LineReg,    ColReg,      ParentReg,
                                      LinkageReg, VariableReg, FlagsReg};
 
   if (StaticMemberRegOpt)
