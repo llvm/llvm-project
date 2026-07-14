@@ -307,7 +307,7 @@ API to output colored diagnostics. This option is only used on Windows and
 defaults to off.
 :::
 
-:::{option} -fdiagnostics-format=clang/msvc/vi
+:::{option} -fdiagnostics-format=clang/msvc/vi/sarif
 
 Changes diagnostic output format to better match IDEs and command line tools.
 
@@ -332,6 +332,27 @@ effect on formatting a simple conversion diagnostic, follow:
   ```
   t.c +3:11: warning: conversion specifies type 'char *' but the argument has type 'int'
   ```
+
+- **sarif**: Emit diagnostics as a [SARIF](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html) JSON
+  document. This is useful when diagnostics are consumed by tools, including AI
+  agents. SARIF diagnostics are written to standard error.
+  `-fno-caret-diagnostics` suppresses the final diagnostic summary so that
+  standard error contains a standalone JSON document. Suppress the existing
+  SARIF-stability warning too when capturing a standalone JSON document:
+
+  ```console
+  clang -fdiagnostics-format=sarif -Wno-sarif-format-unstable -fno-caret-diagnostics t.c 2> diagnostics.sarif
+  ```
+
+  The SARIF diagnostic format is currently unstable.
+:::
+
+:::{option} -fdiagnostics-absolute-paths
+
+Print absolute paths in diagnostics.
+
+This option is useful when a diagnostic consumer does not share Clang's current
+working directory. It resolves symbolic links before printing paths.
 :::
 
 (opt_fdiagnostics-show-option)=
@@ -881,6 +902,22 @@ information can be included in the remarks (see
 
 These are options that report execution time and consumed memory of different
 compilations steps.
+
+:::{option} -ftime-trace[=<path>]
+
+Write a Chrome tracing-format JSON time trace for the compilation.
+Without a path, Clang derives the JSON filename from the compilation output.
+A path names the JSON file or a directory that will contain it.
+
+{option}`-ftime-trace-granularity` sets the minimum recorded duration in
+microseconds (500 by default).
+{option}`-ftime-trace-verbose` records additional event details, including
+source filenames, and can increase the trace size by two to three times.
+
+```console
+$ clang -c foo.c -ftime-trace=compile-trace.json -o foo.o
+```
+:::
 
 :::{option} -fproc-stat-report=
 
