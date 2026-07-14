@@ -3162,10 +3162,17 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
                         ConstructQueue::const_iterator item) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  // Clauses for unrolling not yet implemnted
   ClauseProcessor cp(converter, semaCtx, item->clauses);
-  cp.processTODO<clause::Partial, clause::Full>(
-      loc, llvm::omp::Directive::OMPD_unroll);
+
+  // The `full` clause is not yet implemented.
+  cp.processTODO<clause::Full>(loc, llvm::omp::Directive::OMPD_unroll);
+
+  // Process the `partial` clause. If present, it may carry a constant unroll
+  // factor.
+  std::optional<int64_t> partialFactor;
+  bool hasPartial = cp.processPartial(partialFactor);
+  if (hasPartial && !partialFactor.has_value())
+    TODO(loc, "PARTIAL clause on UNROLL without a constant factor");
 
   // Emit the associated loop
   llvm::SmallVector<mlir::omp::CanonicalLoopOp, 1> canonLoops;
@@ -3177,9 +3184,16 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
   for (auto &&canonLoop : canonLoops)
     applyees.push_back(canonLoop.getCli());
 
-  // Apply unrolling to it
   auto cli = llvm::getSingleElement(canonLoops).getCli();
-  mlir::omp::UnrollHeuristicOp::create(firOpBuilder, loc, cli);
+
+  if (partialFactor.has_value()) {
+    // Partially unroll the loop by the given constant factor.
+    mlir::omp::UnrollPartialOp::create(firOpBuilder, loc, cli,
+                                       static_cast<uint64_t>(*partialFactor));
+  } else {
+    // Apply heuristic unrolling to it.
+    mlir::omp::UnrollHeuristicOp::create(firOpBuilder, loc, cli);
+  }
 }
 
 static mlir::omp::MaskedOp
@@ -4778,8 +4792,8 @@ static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OmpDeclareVariantDirective &declareVariantDirective) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OmpDeclareVariantDirective");
+  // No lowering for the declarative directive itself; the recorded variants are
+  // resolved at call sites (see resolveDeclareVariantCallee in CallInterface).
 }
 
 static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
