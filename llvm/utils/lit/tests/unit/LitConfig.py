@@ -32,7 +32,7 @@ class TestWriteMessage(unittest.TestCase):
         """note() must not crash when the caller's frame has no source file.
 
         inspect.getsourcefile() returns None when the calling frame's source is
-        not on disk and not in linecache (e.g. lit packaged into a zip/par).
+        not on disk and not in linecache (e.g. lit packaged into a zip/archive).
         _write_message() then used to do os.path.abspath(None), raising a
         TypeError and turning an informational note into a fatal error. Simulate
         that frame by exec'ing a note() call compiled with a filename that does
