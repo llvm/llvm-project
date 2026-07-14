@@ -320,15 +320,20 @@ public:
       return rewriter.notifyMatchFailure(op, "bias must be a static constant");
 
     auto biasVals = llvm::to_vector(biasAttr.getValues<Attribute>());
-    if (static_cast<int64_t>(biasVals.size()) != p.outputChannels)
-      return rewriter.notifyMatchFailure(op, "bias size mismatch with OC");
+    // Handle both scalar bias (shape [1]) and per-channel bias (shape [OC])
+    if (!(biasVals.size() == 1 ||
+          static_cast<int64_t>(biasVals.size()) == p.outputChannels))
+      return rewriter.notifyMatchFailure(
+          op, "bias must be scalar [1] or per-channel [OC]");
 
     SmallVector<Attribute> tiledBias(newOC);
     for (int64_t s0 = 0; s0 < p.stride[0]; ++s0)
       for (int64_t s1 = 0; s1 < p.stride[1]; ++s1)
-        for (int64_t oc = 0; oc < p.outputChannels; ++oc)
+        for (int64_t oc = 0; oc < p.outputChannels; ++oc) {
+          int64_t biasIdx = (biasVals.size() == 1) ? 0 : oc;
           tiledBias[s0 * p.stride[1] * p.outputChannels +
-                    s1 * p.outputChannels + oc] = biasVals[oc];
+                    s1 * p.outputChannels + oc] = biasVals[biasIdx];
+        }
 
     auto tiledBiasTy = RankedTensorType::get({newOC}, p.biasETy);
     Value tiledBiasConst =
@@ -357,10 +362,14 @@ public:
 
       auto multVals = llvm::to_vector(multAttr.getValues<Attribute>());
       auto shiftVals = llvm::to_vector(shiftAttr.getValues<Attribute>());
-      if (static_cast<int64_t>(multVals.size()) != p.outputChannels ||
-          static_cast<int64_t>(shiftVals.size()) != p.outputChannels)
+      // Allow both scalar and per-channel multiplier/shift
+      if (!((multVals.size() == 1 ||
+             static_cast<int64_t>(multVals.size()) == p.outputChannels) &&
+            (shiftVals.size() == 1 ||
+             static_cast<int64_t>(shiftVals.size()) == p.outputChannels)))
         return rewriter.notifyMatchFailure(
-            rescaleOp, "rescale constant size mismatch with OC");
+            rescaleOp,
+            "rescale multiplier/shift must be scalar [1] or per-channel [OC]");
 
       SmallVector<Attribute> tiledMult(newOC);
       SmallVector<Attribute> tiledShift(newOC);
@@ -369,8 +378,10 @@ public:
           for (int64_t oc = 0; oc < p.outputChannels; ++oc) {
             int64_t ix = s0 * p.stride[1] * p.outputChannels +
                          s1 * p.outputChannels + oc;
-            tiledMult[ix] = multVals[oc];
-            tiledShift[ix] = shiftVals[oc];
+            int64_t multIdx = (multVals.size() == 1) ? 0 : oc;
+            int64_t shiftIdx = (shiftVals.size() == 1) ? 0 : oc;
+            tiledMult[ix] = multVals[multIdx];
+            tiledShift[ix] = shiftVals[shiftIdx];
           }
 
       auto multETy = cast<ShapedType>(multiplier.getType()).getElementType();
