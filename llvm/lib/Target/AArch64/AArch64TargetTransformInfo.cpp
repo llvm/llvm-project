@@ -5460,13 +5460,19 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
       }
 
       // llvm.vector.deinterleaveN is lowered as a binary tree of deinterleave2
-      // operations. A binary tree producing Factor leaf vectors has
-      // (Factor -1) inner deinterleave2 nodes. Each deinterleave2 on a pair of
-      // SVE registers emits one uzp1 + one uzp2.
-      // Total shuffle cost: (Factor - 1) deinterleave2 operations, each
-      // processing LT.first legal vector parts,with one uzp shuffle per part.
-      auto LT = getTypeLegalizationCost(VecTy);
-      return MemCost + (Factor - 1) * LT.first;
+      // operations. The tree has Log2(Factor) levels, with Factor UZP/ZIP
+      // operations at each level, giving a total shuffle cost of
+      // Factor * Log2(Factor).
+
+      // For stores, account for an additional legalization cost when
+      // repacking the legalized subvectors into the narrow interleaved
+      // vector.
+      auto LegalizationCost = getTypeLegalizationCost(SubVecTy).first;
+
+      if (Opcode == Instruction::Store)
+        LegalizationCost *= 2;
+
+      return MemCost + (Factor * LegalizationCost) + (Factor * Log2_64(Factor));
     }
   }
 
