@@ -8374,6 +8374,17 @@ NamedDecl *Sema::ActOnVariableDeclarator(
         << Name << computeDeclContext(D.getCXXScopeSpec(), true)
         << D.getCXXScopeSpec().getRange();
       NewVD->setInvalidDecl();
+
+      // if this is a member specialization, we don't have any primary template
+      // to be instantiated from. We set ourselves to a 'fake' clone of this so
+      // that anything that attempts to refer to this invalid declaration can
+      // act as if there IS a primary instantiation.
+      if (NewTemplate && IsMemberSpecialization) {
+        VarTemplateDecl *FakeInstantiatedFrom = VarTemplateDecl::Create(
+            Context, DC, D.getIdentifierLoc(), Name, TemplateParams, NewVD);
+        FakeInstantiatedFrom->setInvalidDecl();
+        NewTemplate->setInstantiatedFromMemberTemplate(FakeInstantiatedFrom);
+      }
     }
 
     if (!IsPlaceholderVariable)
@@ -8409,12 +8420,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
   if (IsMemberSpecialization) {
     if (NewTemplate && NewVD->getPreviousDecl()) {
-      // In valid code, this should always hold, but in the case where a
-      // previous declaration was invalid/didn't have an instantiated-from
-      // field, this will not have been set, so skip setting
-      // MemberSpecialization if we don't have an instantiated-from.
-      if (NewTemplate->getInstantiatedFromMemberTemplate())
-        NewTemplate->setMemberSpecialization();
+      NewTemplate->setMemberSpecialization();
     } else if (IsPartialSpecialization) {
       cast<VarTemplatePartialSpecializationDecl>(NewVD)
           ->setMemberSpecialization();
