@@ -331,18 +331,35 @@ private:
     return InstrToId.find(MI)->second;
   }
 
+  std::pair<InstrIdTy, InstrIdTy>
+  getInstrPairId(const MachineInstr *FromMI, const MachineInstr *ToMI) const {
+    auto It1 = InstrToId.find(FromMI);
+    auto It2 = InstrToId.find(ToMI);
+    if ((It1 != InstrToId.end()) && (It2 != InstrToId.end()))
+      return std::make_pair(It1->second, It2->second);
+
+    // Renumber the MBB.
+    // TODO: Renumber from MI onwards.
+    auto &MutableInstrToId = const_cast<InstrToIdMap &>(InstrToId);
+    calcInstrIds(ToMI->getParent(), MutableInstrToId);
+    return std::make_pair(InstrToId.find(FromMI)->second,
+                          InstrToId.find(ToMI)->second);
+  }
+
   // Length of the segment from MI (inclusive) to the first instruction of the
   // basic block.
   InstrIdTy getHeadLen(const MachineInstr *MI) const {
     const MachineBasicBlock *MBB = MI->getParent();
-    return getInstrId(MI) + getInstrId(&MBB->instr_front()) + 1;
+    auto [MIId, MBBFrontId] = getInstrPairId(MI, &MBB->instr_front());
+    return MIId + MBBFrontId + 1;
   }
 
   // Length of the segment from MI (exclusive) to the last instruction of the
   // basic block.
   InstrIdTy getTailLen(const MachineInstr *MI) const {
     const MachineBasicBlock *MBB = MI->getParent();
-    return getInstrId(&MBB->instr_back()) - getInstrId(MI);
+    auto [MBBBackId, MIId] = getInstrPairId(&MBB->instr_back(), MI);
+    return MBBBackId - MIId;
   }
 
   // Length of the segment from 'From' to 'To' (exclusive). Both instructions
@@ -350,7 +367,8 @@ private:
   InstrIdTy getDistance(const MachineInstr *From,
                         const MachineInstr *To) const {
     assert(From->getParent() == To->getParent());
-    return getInstrId(To) - getInstrId(From);
+    auto [FromId, ToId] = getInstrPairId(From, To);
+    return ToId - FromId;
   }
 
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -997,7 +1015,8 @@ private:
   bool instrsAreInOrder(const MachineInstr *A, const MachineInstr *B) const {
     assert(A->getParent() == B->getParent() &&
            "instructions must be in the same basic block!");
-    if (A == B || getInstrId(A) < getInstrId(B))
+    auto [AId, BId] = getInstrPairId(A, B);
+    if (A == B || AId < BId)
       return true;
     if (!A->isPHI())
       return false;

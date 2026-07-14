@@ -155,7 +155,7 @@ body:             |
 
   NextUseDistance DistNewMul1 =
       NUA.getShortestDistance(NewReg1, *NewMul1, Mul1Uses);
-  EXPECT_EQ(DistNewMul1.getRawValue(), 0);
+  EXPECT_EQ(DistNewMul1.getRawValue(), 2);
 
   NextUseDistance DistNewMul2 =
       NUA.getShortestDistance(NewReg2, *NewMul2, Mul2Uses);
