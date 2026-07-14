@@ -6,7 +6,7 @@
 emitc.class @foo {
   emitc.field @fieldName0 : !emitc.array<1xf32>  {emitc.field_ref = ["another_feature"]}
   emitc.field @fieldName1 : !emitc.array<1xf32>  {emitc.field_ref = ["some_feature"]}
-  emitc.func @"operator()"() {
+  emitc.func @bar() {
     return
   }
 }
@@ -21,7 +21,7 @@ emitc.class @foo {
 // CHECK-NEXT:      %[[VAL0:.*]] = member_call_opaque %[[MAP0]] "at"({{.*}}) : !emitc.opaque<"const std::map<std::string, char*>">, (!emitc.opaque<"std::string">) -> !emitc.ptr<!emitc.opaque<"char">>
 // CHECK-NEXT:      return %[[VAL0]] : !emitc.ptr<!emitc.opaque<"char">>
 // CHECK-NEXT:    }
-// CHECK-NEXT:    emitc.func @"operator()"() {
+// CHECK-NEXT:    emitc.func @bar() {
 // CHECK-NEXT:      return
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }
@@ -34,7 +34,7 @@ emitc.class @foo {
 emitc.class @fooExcluded {
   emitc.field @fieldName0 : !emitc.array<1xf32>  {emitc.field_ref = ["another_feature"]}
   emitc.field @fieldName1 : !emitc.array<1xf32>  {emitc.other_field = ["some_feature"]}
-  emitc.func @"operator()"() {
+  emitc.func @bar() {
     %0 = get_field @fieldName0 : !emitc.array<1xf32>
     return
   }
@@ -50,7 +50,7 @@ emitc.class @fooExcluded {
 // CHECK-NEXT:      %[[VAL1:.*]] = member_call_opaque %[[MAP1]] "at"({{.*}}) : !emitc.opaque<"const std::map<std::string, char*>">, (!emitc.opaque<"std::string">) -> !emitc.ptr<!emitc.opaque<"char">>
 // CHECK-NEXT:      return %[[VAL1]] : !emitc.ptr<!emitc.opaque<"char">>
 // CHECK-NEXT:    }
-// CHECK-NEXT:    emitc.func @"operator()"() {
+// CHECK-NEXT:    emitc.func @bar() {
 // CHECK-NEXT:      %{{.*}} = get_field @fieldName0 : !emitc.array<1xf32>
 // CHECK-NEXT:      return
 // CHECK-NEXT:    }
@@ -62,7 +62,7 @@ emitc.class @fooExcluded {
 
 emitc.class @fooNoAttrs {
   emitc.field @fieldName0 : !emitc.array<1xf32>
-  emitc.func @"operator()"() {
+  emitc.func @bar() {
     return
   }
 }
@@ -70,7 +70,7 @@ emitc.class @fooNoAttrs {
 // CHECK-NOT:     emitc.include
 // CHECK-LABEL: emitc.class @fooNoAttrs {
 // CHECK-NEXT:    emitc.field @fieldName0 : !emitc.array<1xf32>
-// CHECK-NEXT:    emitc.func @"operator()"() {
+// CHECK-NEXT:    emitc.func @bar() {
 // CHECK-NEXT:      return
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }
@@ -80,14 +80,14 @@ emitc.class @fooNoAttrs {
 /// Test that the pass leaves IR unchanged if the ClassOp doesn't have any fields (match failure)
 
 emitc.class @fooNoFields {
-  emitc.func @"operator()"() {
+  emitc.func @bar() {
     return
   }
 }
 
 // CHECK-NOT:     emitc.include
 // CHECK-LABEL: emitc.class @fooNoFields {
-// CHECK-NEXT:    emitc.func @"operator()"() {
+// CHECK-NEXT:    emitc.func @bar() {
 // CHECK-NEXT:      return
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }
@@ -119,7 +119,7 @@ emitc.class @fooNoOperator {
 
 emitc.class @fooNonStringAttr {
   emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = [1]}
-  emitc.func @"operator()"() {
+  emitc.func @bar() {
     return
   }
 }
@@ -127,7 +127,7 @@ emitc.class @fooNonStringAttr {
 // CHECK-NOT:     emitc.include
 // CHECK-LABEL: emitc.class @fooNonStringAttr {
 // CHECK-NEXT:    emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = [1]}
-// CHECK-NEXT:    emitc.func @"operator()"() {
+// CHECK-NEXT:    emitc.func @bar() {
 // CHECK-NEXT:      return
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }

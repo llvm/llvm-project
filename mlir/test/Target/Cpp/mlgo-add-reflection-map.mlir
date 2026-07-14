@@ -5,7 +5,7 @@
 emitc.class @foo {
   emitc.field @fieldName0 : !emitc.array<1xf32>  {emitc.field_ref = ["another_feature"]}
   emitc.field @fieldName1 : !emitc.array<1xf32>  {emitc.field_ref = ["some_feature"]}
-  emitc.func @"operator()"() {
+  emitc.func @bar() {
     %0 = get_field @fieldName0 : !emitc.array<1xf32>
     return
   }
@@ -23,7 +23,7 @@ emitc.class @foo {
 // CHECK-NEXT:      char* [[VAR:v[0-9]+]] = reflectionMap.at([[ARG]]);
 // CHECK-NEXT:      return [[VAR]];
 // CHECK-NEXT:    }
-// CHECK-NEXT:    void operator()() {
+// CHECK-NEXT:    void bar() {
 // CHECK-NEXT:      return;
 // CHECK-NEXT:    }
 // CHECK-NEXT:  };
@@ -35,7 +35,7 @@ emitc.class @foo {
 emitc.class @fooExcluded {
   emitc.field @fieldName0 : !emitc.array<1xf32>  {emitc.field_ref = ["another_feature"]}
   emitc.field @fieldName1 : !emitc.array<1xf32>  {emitc.other_field = ["some_feature"]}
-  emitc.func @"operator()"() {
+  emitc.func @bar() {
     %0 = get_field @fieldName0 : !emitc.array<1xf32>
     return
   }
@@ -52,7 +52,7 @@ emitc.class @fooExcluded {
 // CHECK-NEXT:      char* [[VAL_2:v[0-9]+]] = reflectionMap.at([[VAL_1]]);
 // CHECK-NEXT:      return [[VAL_2]];
 // CHECK-NEXT:    }
-// CHECK-NEXT:    void operator()() {
+// CHECK-NEXT:    void bar() {
 // CHECK-NEXT:      return;
 // CHECK-NEXT:    }
 // CHECK-NEXT:  };
@@ -63,7 +63,7 @@ emitc.class @fooExcluded {
 
 emitc.class @fooNoAttrs {
   emitc.field @fieldName0 : !emitc.array<1xf32>
-  emitc.func @"operator()"() {
+  emitc.func @bar() {
     return
   }
 }
@@ -73,7 +73,7 @@ emitc.class @fooNoAttrs {
 // CHECK:       class fooNoAttrs {
 // CHECK-NEXT:   public:
 // CHECK-NEXT:    float fieldName0[1];
-// CHECK-NEXT:    void operator()() {
+// CHECK-NEXT:    void bar() {
 // CHECK-NEXT:      return;
 // CHECK-NEXT:    }
 // CHECK-NEXT:  };
