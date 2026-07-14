@@ -557,8 +557,16 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::UINT_TO_FP, MVT::i32, Legal);
 
     // SPE supports signaling compare of f32/f64.
-    setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Legal);
-    setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Legal);
+    // But it doesn't comply IEEE-754 rules for comparing
+    // special values like NaNs, Infs.
+    setOperationAction(ISD::SETCC, MVT::f32, Custom);
+    setOperationAction(ISD::SETCC, MVT::f64, Custom);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Custom);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Custom);
+    setOperationAction(ISD::STRICT_FSETCC, MVT::f32, Custom);
+    setOperationAction(ISD::STRICT_FSETCC, MVT::f64, Custom);
+    setOperationAction(ISD::BR_CC, MVT::f32, Custom);
+    setOperationAction(ISD::BR_CC, MVT::f64, Custom);
   } else {
     // PowerPC turns FP_TO_SINT into FCTIWZ and some load/stores.
     setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i32, Custom);
@@ -598,6 +606,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // Custom handling for PowerPC ucmp instruction
   setOperationAction(ISD::UCMP, MVT::i32, Custom);
   setOperationAction(ISD::UCMP, MVT::i64, isPPC64 ? Custom : Expand);
+  setOperationAction(ISD::ABDU, MVT::i32, Custom);
+  setOperationAction(ISD::ABDU, MVT::i64, isPPC64 ? Custom : Expand);
 
   // NOTE: EH_SJLJ_SETJMP/_LONGJMP supported here is NOT intended to support
   // SjLj exception handling but a light-weight setjmp/longjmp replacement to
@@ -3600,6 +3610,7 @@ SDValue PPCTargetLowering::LowerGlobalAddress(SDValue Op,
 
 SDValue PPCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   bool IsStrict = Op->isStrictFPOpcode();
+  const SDNodeFlags Flags = Op.getNode()->getFlags();
   ISD::CondCode CC =
       cast<CondCodeSDNode>(Op.getOperand(IsStrict ? 3 : 2))->get();
   SDValue LHS = Op.getOperand(IsStrict ? 1 : 0);
@@ -3608,8 +3619,10 @@ SDValue PPCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   EVT LHSVT = LHS.getValueType();
   SDLoc dl(Op);
 
-  // Soften the setcc with libcall if it is fp128.
-  if (LHSVT == MVT::f128) {
+  // Soften the setcc with libcall if it is fp128 or it is SPE and fp32/fp64.
+  if (LHSVT == MVT::f128 ||
+      (Subtarget.hasSPE() && (LHSVT == MVT::f32 || LHSVT == MVT::f64) &&
+       (!Flags.hasNoNaNs() || !Flags.hasNoInfs()))) {
     assert(!Subtarget.hasP9Vector() &&
            "SETCC for f128 is already legal under Power9!");
     softenSetCCOperands(DAG, LHSVT, LHS, RHS, CC, dl, LHS, RHS, Chain,
@@ -3620,6 +3633,8 @@ SDValue PPCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     if (IsStrict)
       return DAG.getMergeValues({LHS, Chain}, dl);
     return LHS;
+  } else if (LHSVT == MVT::f32 || LHSVT == MVT::f64) {
+    return Op;
   }
 
   assert(!IsStrict && "Don't know how to handle STRICT_FSETCC!");
@@ -3672,6 +3687,35 @@ SDValue PPCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getSetCC(dl, VT, Sub, DAG.getConstant(0, dl, LHSVT), CC);
   }
   return SDValue();
+}
+
+SDValue PPCTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
+  const SDNodeFlags Flags = Op->getFlags();
+  SDValue Chain = Op.getOperand(0);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  SDValue LHS = Op.getOperand(2);
+  SDValue RHS = Op.getOperand(3);
+  SDValue Dest = Op.getOperand(4);
+  EVT LHSVT = LHS.getValueType();
+  SDLoc dl(Op);
+
+  assert(Subtarget.hasSPE() && "LowerBR_CC used only for targets with SPE");
+
+  if ((LHSVT == MVT::f32 || LHSVT == MVT::f64) && Flags.hasNoNaNs() &&
+      Flags.hasNoInfs())
+    return Op;
+
+  softenSetCCOperands(DAG, LHSVT, LHS, RHS, CC, dl, LHS, RHS);
+
+  // If softenSetCCOperands returned a scalar, we need to compare the result
+  // against zero to select between true and false values.
+  if (!RHS) {
+    RHS = DAG.getConstant(0, dl, LHSVT);
+    CC = ISD::SETNE;
+  }
+
+  return DAG.getNode(ISD::BR_CC, dl, Op.getValueType(), Chain,
+                     DAG.getCondCode(CC), LHS, RHS, Dest);
 }
 
 SDValue PPCTargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
@@ -3780,7 +3824,7 @@ SDValue PPCTargetLowering::LowerVACOPY(SDValue Op, SelectionDAG &DAG) const {
   // 2*sizeof(char) + 2 Byte alignment + 2*sizeof(char*) = 12 Byte
   return DAG.getMemcpy(Op.getOperand(0), Op, Op.getOperand(1), Op.getOperand(2),
                        DAG.getConstant(12, SDLoc(Op), MVT::i32), Align(8),
-                       false, true, /*CI=*/nullptr, std::nullopt,
+                       Align(8), false, true, /*CI=*/nullptr, std::nullopt,
                        MachinePointerInfo(), MachinePointerInfo());
 }
 
@@ -5194,8 +5238,9 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
                                          SDValue Chain, ISD::ArgFlagsTy Flags,
                                          SelectionDAG &DAG, const SDLoc &dl) {
   SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), dl, MVT::i32);
+  Align Alignment = Flags.getNonZeroByValAlign();
   return DAG.getMemcpy(
-      Chain, dl, Dst, Src, SizeNode, Flags.getNonZeroByValAlign(), false, false,
+      Chain, dl, Dst, Src, SizeNode, Alignment, Alignment, false, false,
       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
 }
 
@@ -6451,7 +6496,7 @@ SDValue PPCTargetLowering::LowerCall_64SVR4(
         ArgOffset += PtrByteSize;
         continue;
       }
-      // Copy the object to parameter save area if it can not be entirely passed 
+      // Copy the object to parameter save area if it can not be entirely passed
       // by registers.
       // FIXME: we only need to copy the parts which need to be passed in
       // parameter save area. For the parts passed by registers, we don't need
@@ -7101,7 +7146,7 @@ static unsigned mapArgRegToOffsetAIX(unsigned Reg, const PPCFrameLowering *FL) {
 //
 //   Low Memory +--------------------------------------------+
 //   SP   +---> | Back chain                                 | ---+
-//        |     +--------------------------------------------+    |   
+//        |     +--------------------------------------------+    |
 //        |     | Saved Condition Register                   |    |
 //        |     +--------------------------------------------+    |
 //        |     | Saved Linkage Register                     |    |
@@ -8135,7 +8180,7 @@ SDValue PPCTargetLowering::LowerTRUNCATEVector(SDValue Op,
     return SDValue();
 
   SDValue N1 = Op.getOperand(0);
-  EVT SrcVT = N1.getValueType();  
+  EVT SrcVT = N1.getValueType();
   unsigned SrcSize = SrcVT.getSizeInBits();
   if (SrcSize > 256 || !isPowerOf2_32(SrcVT.getVectorNumElements()) ||
       !llvm::has_single_bit<uint32_t>(
@@ -12745,6 +12790,69 @@ SDValue PPCTargetLowering::LowerSADDO(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getMergeValues({Sum, OverflowTrunc}, dl);
 }
 
+/// Lower ABDU with negation pattern using branchless carry arithmetic.
+/// Recognizes: abdu(a, sub(0, x)) and transforms to:
+///   a - (0 - x) = a + x (mod 2^n)
+/// Uses SUBC to compute result without branches.
+SDValue PPCTargetLowering::LowerABDU(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  EVT OpVT = LHS.getValueType();
+  EVT VT = Op.getValueType();
+  bool IsNonNegative = DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS);
+
+  // If the subtract doesn't overflow then just use abs(sub()).
+  if (DAG.willNotOverflowSub(IsNonNegative, LHS, RHS))
+    return DAG.getNode(ISD::ABS, DL, VT,
+                       DAG.getNode(ISD::SUB, DL, VT, LHS, RHS));
+
+  if (DAG.willNotOverflowSub(IsNonNegative, RHS, LHS))
+    return DAG.getNode(ISD::ABS, DL, VT,
+                       DAG.getNode(ISD::SUB, DL, VT, RHS, LHS));
+
+  // General path: use SUBC (or ADDC when RHS is 0-X) to get
+  // subtract-with-flags, then CMOV to select a-b or b-a. ADDC/SUBC produce the
+  // flags we need.
+  unsigned Opcode = PPCISD::SUBC;
+
+  // Check if RHS is a negation (0 - X). If so, we can use ADDC instead of SUBC:
+  //   a - (0 - x) = a + x (mod 2^n)
+  // Same semantics as in LowerCMP; apply same safety checks.
+  if (RHS.getOpcode() == ISD::SUB) {
+    SDValue SubLHS = RHS.getOperand(0);
+    SDValue SubRHS = RHS.getOperand(1);
+
+    if (isNullConstant(SubLHS) && DAG.isKnownNeverZero(SubRHS)) {
+      Opcode = PPCISD::ADDC;
+      RHS = SubRHS;
+    }
+  }
+
+  // On PPC64, carry ops use the full 64-bit register. Operands are type-legal
+  // i32 here; widen only for the carry path (fast abs(sub) stays at VT).
+  if (Subtarget.isPPC64() && OpVT != MVT::i64) {
+    LHS = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, LHS);
+    RHS = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, RHS);
+    OpVT = MVT::i64;
+  }
+
+  // Calculate LHS - RHS and capture the carry (CA)
+  SDVTList VTs = DAG.getVTList(OpVT, MVT::i32);
+  SDValue Res = DAG.getNode(Opcode, DL, VTs, LHS, RHS);
+  SDValue CA0 = Res.getValue(1);
+
+  // t2 = A - B + CA0 using SUBE.
+  SDValue ZeroOrNeg1 = DAG.getNode(PPCISD::SUBE, DL, VTs, Res, Res, CA0);
+
+  SDValue Xor = DAG.getNode(ISD::XOR, DL, OpVT, Res, ZeroOrNeg1);
+
+  Res = DAG.getNode(ISD::SUB, DL, OpVT, Xor, ZeroOrNeg1);
+
+  Res = DAG.getNode(ISD::TRUNCATE, DL, VT, Res);
+  return Res;
+}
+
 // Lower unsigned 3-way compare producing -1/0/1.
 SDValue PPCTargetLowering::LowerUCMP(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -12756,7 +12864,7 @@ SDValue PPCTargetLowering::LowerUCMP(SDValue Op, SelectionDAG &DAG) const {
   // On PPC64, i32 carries are affected by the upper 32 bits of the registers.
   // We must zero-extend to i64 to ensure the carry reflects the 32-bit unsigned
   // comparison.
-  if (Subtarget.isPPC64() && OpVT == MVT::i32) {
+  if (Subtarget.isPPC64() && OpVT != MVT::i64) {
     A = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, A);
     B = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, B);
     OpVT = MVT::i64;
@@ -12801,6 +12909,7 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:
   case ISD::SETCC:              return LowerSETCC(Op, DAG);
+  case ISD::BR_CC:              return LowerBR_CC(Op, DAG);
   case ISD::INIT_TRAMPOLINE:    return LowerINIT_TRAMPOLINE(Op, DAG);
   case ISD::ADJUST_TRAMPOLINE:  return LowerADJUST_TRAMPOLINE(Op, DAG);
   case ISD::SSUBO:
@@ -12890,6 +12999,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerADDSUBO_CARRY(Op, DAG);
   case ISD::UCMP:
     return LowerUCMP(Op, DAG);
+  case ISD::ABDU:
+    return LowerABDU(Op, DAG);
   case ISD::STRICT_LRINT:
   case ISD::STRICT_LLRINT:
   case ISD::STRICT_LROUND:
@@ -13021,8 +13132,8 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
 //  Other Lowering Code
 //===----------------------------------------------------------------------===//
 
-static Instruction *callIntrinsic(IRBuilderBase &Builder, Intrinsic::ID Id) {
-  return Builder.CreateIntrinsic(Id, {});
+static CallInst *callIntrinsic(IRBuilderBase &Builder, Intrinsic::ID Id) {
+  return Builder.CreateIntrinsicWithoutFolding(Id, {});
 }
 
 Value *PPCTargetLowering::emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy,
@@ -13115,8 +13226,8 @@ Instruction *PPCTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
     // http://www.rdrop.com/users/paulmck/scalability/paper/N2745r.2011.03.04a.html
     // and http://www.cl.cam.ac.uk/~pes20/cppppc/ for justification.
     if (isa<LoadInst>(Inst))
-      return Builder.CreateIntrinsic(Intrinsic::ppc_cfence, {Inst->getType()},
-                                     {Inst});
+      return Builder.CreateIntrinsicWithoutFolding(Intrinsic::ppc_cfence,
+                                                   {Inst->getType()}, {Inst});
     // FIXME: Can use isync for rmw operation.
     return callIntrinsic(Builder, Intrinsic::ppc_lwsync);
   }
@@ -16053,7 +16164,7 @@ SDValue PPCTargetLowering::combineSignExtendSetCC(SDNode *N,
     return SDValue();
 
   EVT VT = N->getValueType(0);
-  if (VT != MVT::i32 && VT != MVT::i64)
+  if (VT != MVT::i32 && (VT != MVT::i64 || !Subtarget.isPPC64()))
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
@@ -16073,17 +16184,14 @@ SDValue PPCTargetLowering::combineSignExtendSetCC(SDNode *N,
   SDValue X = isNullConstant(LHS) ? RHS : LHS;
   EVT XVT = X.getValueType(); // The type of x in the setcc x, 0, eq.
 
-  if ((XVT == MVT::i64 || VT == MVT::i64) && !Subtarget.isPPC64())
+  // The type that ADDC/SUBE operate on. Reject larger types and zero-extend
+  // smaller ones.
+  MVT OpVT = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
+  if (XVT.bitsGT(OpVT))
     return SDValue();
 
-  // On PPC64, i32 carry operations use the full 64-bit XER register,
-  // so we must use i64 operations to avoid incorrect results.
-  // Use i64 operations and truncate the result if needed.
-  if (XVT != MVT::i64 && Subtarget.isPPC64())
-    // Zero-extend if input type is not 64bits.
-    X = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, X);
-
-  EVT OpVT = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
+  if (XVT.bitsLT(OpVT))
+    X = DAG.getNode(ISD::ZERO_EXTEND, dl, OpVT, X);
 
   // Generate: SUBFE(ADDC(X, -1)).
   SDValue MinusOne = DAG.getAllOnesConstant(dl, OpVT);
@@ -17474,6 +17582,28 @@ static SDValue DAGCombineAddc(SDNode *N,
   return SDValue();
 }
 
+static SDValue DAGCombineSube(SDNode *N,
+                              llvm::PPCTargetLowering::DAGCombinerInfo &DCI) {
+  if (N->getOpcode() == PPCISD::SUBE) {
+    SDValue LHS = N->getOperand(0);
+    SDValue RHS = N->getOperand(1);
+    SDValue Carry = N->getOperand(2);
+
+    // SUBE(ADDC(ADDE(0, 0, C), -1), same, C) -> ADDC(ADDE(0, 0, C), -1)
+    if (LHS == RHS && LHS.getOpcode() == PPCISD::ADDC) {
+      SDValue AddcLHS = LHS.getOperand(0);
+      SDValue AddcRHS = LHS.getOperand(1);
+      if (AddcLHS.getOpcode() == PPCISD::ADDE &&
+          isNullConstant(AddcLHS.getOperand(0)) &&
+          isNullConstant(AddcLHS.getOperand(1)) && isAllOnesConstant(AddcRHS) &&
+          Carry == AddcLHS.getOperand(2)) {
+        return LHS;
+      }
+    }
+  }
+  return SDValue();
+}
+
 /// Optimize the bitfloor(X) pattern for PowerPC.
 /// Transforms: select_cc X, 0, 0, (srl MinSignedValue, (ctlz X)), seteq
 /// Into: srl MinSignedValue, (ctlz X)
@@ -18514,6 +18644,8 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     return DAGCombineBuildVector(N, DCI);
   case PPCISD::ADDC:
     return DAGCombineAddc(N, DCI);
+  case PPCISD::SUBE:
+    return DAGCombineSube(N, DCI);
 
   case ISD::BITCAST:
     return DAGCombineBitcast(N, DCI);

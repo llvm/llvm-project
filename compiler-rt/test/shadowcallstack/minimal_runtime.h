@@ -19,6 +19,8 @@ static void __shadowcallstack_init() {
 
 #if defined(__aarch64__)
   __asm__ __volatile__("mov x18, %0" ::"r"(stack));
+#elif defined(__hexagon__)
+  __asm__ __volatile__("r19 = %0" ::"r"(stack));
 #else
 #error Unsupported platform
 #endif

@@ -11,10 +11,7 @@
 #include <gtest/gtest.h>
 
 struct olMemFillTest : OffloadQueueTest {
-  void SetUp() override {
-    RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
-    SKIP_KNOWN_FAILURE(LevelZero{"unsupported feature"});
-  }
+  void SetUp() override { RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp()); }
 
   template <typename PatternTy, PatternTy PatternVal, size_t Size,
             bool Block = false>
@@ -155,6 +152,7 @@ TEST_P(olMemFillTest, SuccessLargeByteAligned) {
 }
 
 TEST_P(olMemFillTest, SuccessLargeByteAlignedEnqueue) {
+  SKIP_KNOWN_FAILURE(LevelZero{"unsupported feature"});
   constexpr size_t Size = 17 * 64;
   void *Alloc;
   ManuallyTriggeredTask Manual;

@@ -27,6 +27,7 @@
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -146,11 +147,13 @@
 #include "llvm/Transforms/Utils/ExtraPassManager.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
+#include "llvm/Transforms/Utils/LowerCommentStringPass.h"
 #include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/Transforms/Utils/MoveAutoInit.h"
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
 #include "llvm/Transforms/Utils/RelLookupTableConverter.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
+#include "llvm/Transforms/Utils/TriggerCrashPass.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
@@ -196,6 +199,10 @@ static cl::opt<bool> EnablePostPGOLoopRotation(
     "enable-post-pgo-loop-rotation", cl::init(true), cl::Hidden,
     cl::desc("Run the loop rotation transformation after PGO instrumentation"));
 
+static cl::opt<bool>
+    TriggerCrash("opt-pipeline-trigger-crash", cl::init(false), cl::Hidden,
+                 cl::desc("Trigger crash in optimization pipeline"));
+
 static cl::opt<bool> EnableGlobalAnalyses(
     "enable-global-analyses", cl::init(true), cl::Hidden,
     cl::desc("Enable inter-procedural analyses"));
@@ -230,7 +237,7 @@ static cl::opt<bool>
 static cl::opt<bool>
     EnableDFAJumpThreading("enable-dfa-jump-thread",
                            cl::desc("Enable DFA jump threading"),
-                           cl::init(false), cl::Hidden);
+                           cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableHotColdSplit("hot-cold-split",
@@ -1749,6 +1756,10 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
           InlineContext{ThinOrFullLTOPhase::None, InlinePass::CGSCCInliner}));
     }
   }
+
+  // Attach !implicit.ref metadata from all functions to copyright strings.
+  MPM.addPass(LowerCommentStringPass());
+
   return MPM;
 }
 
@@ -1775,6 +1786,9 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 
   // Force any function attributes we want the rest of the pipeline to observe.
   MPM.addPass(ForceFunctionAttrsPass());
+
+  if (TriggerCrash)
+    MPM.addPass(createModuleToFunctionPassAdaptor(TriggerCrashFunctionPass()));
 
   if (PGOOpt && PGOOpt->DebugInfoForProfiling)
     MPM.addPass(createModuleToFunctionPassAdaptor(AddDiscriminatorsPass()));
@@ -1804,7 +1818,7 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 
 ModulePassManager
 PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
-                                        bool EmitSummary) {
+                                        bool EmitSummary, bool Verify) {
   ModulePassManager MPM;
 
   instructionCountersPass(MPM, /* IsPreOptimization */ true);
@@ -1813,6 +1827,13 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
     MPM.addPass(buildThinLTOPreLinkDefaultPipeline(Level));
   else
     MPM.addPass(buildLTOPreLinkDefaultPipeline(Level));
+  // AssignGUIDPass attaches !guid metadata (MD_unique_id) to global objects,
+  // triggering the bitcode writer to emit a METADATA_KIND_BLOCK. Standard LTO
+  // bitcode emission runs VerifierPass by default, which registers metadata
+  // kind IDs in LLVMContext. Running VerifierPass here before EmbedBitcodePass
+  // to get the same behavior.
+  if (Verify)
+    MPM.addPass(VerifierPass());
   MPM.addPass(EmbedBitcodePass(ThinLTO, EmitSummary));
 
   // Perform any cleanups to the IR that aren't suitable for per TU compilation,
@@ -1914,6 +1935,9 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
 
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
+
+  // Attach !implicit.ref metadata from all functions to copyright strings.
+  MPM.addPass(LowerCommentStringPass());
 
   addRequiredLTOPreLinkPasses(MPM);
 
@@ -2208,6 +2232,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   CGPM.addPass(ArgumentPromotionPass());
   CGPM.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
   CGPM.addPass(CoroAnnotationElidePass());
+  invokeCGSCCOptimizerLateEPCallbacks(CGPM, Level);
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
 
   FunctionPassManager FPM;
@@ -2494,6 +2519,9 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
 
   if (EnableInstrumentor)
     MPM.addPass(InstrumentorPass(FS));
+
+  // Attach !implicit.ref metadata from all functions to copyright strings.
+  MPM.addPass(LowerCommentStringPass());
 
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);

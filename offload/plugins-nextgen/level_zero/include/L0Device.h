@@ -22,6 +22,7 @@
 #include "L0Program.h"
 #include "L0Queue.h"
 #include "PluginInterface.h"
+#include <limits>
 
 namespace llvm::omp::target::plugin {
 
@@ -104,8 +105,8 @@ class L0DeviceTy final : public GenericDeviceTy {
   std::string zeId;
 
   /// Command queue group ordinals for each device.
-  static constexpr uint32_t MaxOrdinal =
-      std::numeric_limits<decltype(MaxOrdinal)>::max();
+  static constexpr uint32_t MaxOrdinal = std::numeric_limits<uint32_t>::max();
+
   std::pair<uint32_t, uint32_t> ComputeOrdinal{MaxOrdinal, 0};
 
   /// Command queue index for each device.
@@ -361,7 +362,7 @@ public:
     auto CmdListOrErr = createImmCmdList(InOrder);
     if (!CmdListOrErr)
       return CmdListOrErr.takeError();
-    return new L0CmdListManagerTy(*CmdListOrErr);
+    return new L0CmdListManagerTy(*CmdListOrErr, l0Context);
   }
 
   Error releaseCmdListManager(L0CmdListManagerTy *CmndListMngr) {
@@ -419,14 +420,23 @@ public:
     return l0Context.getDriverAPIVersion();
   }
 
-  /// Return an event from the driver associated to this device.
+  /// Get a low-level L0 event from the driver associated to this device.
   Expected<ze_event_handle_t> getEvent() {
     return l0Context.getEventPool().getEvent();
   }
+  /// Get a high-level L0EventTy object from the driver associated to this
+  /// device.
+  Expected<L0EventTy *> getEventObject() {
+    return l0Context.getEventPool().getEventObject();
+  }
 
-  /// Release event to the pool associated to this device.
+  /// Release a L0 event to the pool associated to this device.
   Error releaseEvent(ze_event_handle_t Event) {
-    return l0Context.getEventPool().releaseEvent(Event, *this);
+    return l0Context.getEventPool().releaseEvent(Event);
+  }
+  /// Release an L0EventTy object to the pool associated to this device.
+  Error releaseEventObject(L0EventTy *EventObj) {
+    return l0Context.getEventPool().releaseEventObject(EventObj);
   }
 
   StagingBufferTy &getStagingBuffer() { return l0Context.getStagingBuffer(); }
@@ -475,8 +485,8 @@ public:
   loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
                  int32_t ImageId) override;
   Error unloadBinaryImpl(DeviceImageTy *Image) override;
-  Expected<void *> allocate(size_t Size, void *HstPtr,
-                            TargetAllocTy Kind) override;
+  Expected<void *> allocate(size_t Size, void *HstPtr, TargetAllocTy Kind,
+                            size_t Alignment) override;
   Error free(void *TgtPtr, TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) override;
 
   /// This plugin does nothing to lock buffers. Do not return an error, just
@@ -497,6 +507,9 @@ public:
   Error dataFillImpl(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
                      int64_t Size,
                      AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+  Error dataPrefetchImpl(size_t Count, const void **Mems, const size_t *Sizes,
+                         bool ToHost,
+                         AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Error synchronizeImpl(__tgt_async_info &AsyncInfo,
                         bool ReleaseQueue) override;
   Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
@@ -513,49 +526,19 @@ public:
   hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override;
 
   Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
-                            AsyncInfoWrapperTy &AsyncInfo) override {
-    return Plugin::error(ErrorCode::UNIMPLEMENTED,
-                         "enqueueHostCallImpl not implemented yet");
-  }
+                            AsyncInfoWrapperTy &AsyncInfo) override;
 
-  // Event routines are used to ensure ordering between dataTransfers. Instead
-  // of adding extra events in the queues, we make sure they're ordered by
-  // using the events from the data submission APIs so we don't need to support
-  // these routines.
-  // They still need to report succes to indicate the event are handled
-  // somewhere waitEvent and syncEvent should remain unimplemented.
   Expected<bool> isEventCompleteImpl(void *EventPtr,
-                                     AsyncInfoWrapperTy &) override {
-    return true;
-  }
-
-  Error createEventImpl(void **EventPtrStorage, bool EnableProfiling) override {
-    return Plugin::success();
-  }
-  Error destroyEventImpl(void *EventPtr, bool EnableProfiling) override {
-    return Plugin::success();
-  }
+                                     AsyncInfoWrapperTy &) override;
+  Error createEventImpl(void **EventPtrStorage, bool EnableProfiling) override;
+  Error destroyEventImpl(void *EventPtr, bool EnableProfiling) override;
   Error recordEventImpl(void *EventPtr, AsyncInfoWrapperTy &AsyncInfoWrapper,
-                        bool EnableProfiling) override {
-    return Plugin::success();
-  }
-
+                        bool EnableProfiling) override;
   Error waitEventImpl(void *EventPtr,
-                      AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-    return Plugin::error(error::ErrorCode::UNKNOWN, "%s not implemented yet\n",
-                         __func__);
-  }
-
-  Error syncEventImpl(void *EventPtr) override {
-    return Plugin::error(error::ErrorCode::UNKNOWN, "%s not implemented yet\n",
-                         __func__);
-  }
-
+                      AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+  Error syncEventImpl(void *EventPtr) override;
   Expected<float> getEventElapsedTimeImpl(void *StartEventPtr,
-                                          void *EndEventPtr) override {
-    return Plugin::error(error::ErrorCode::UNKNOWN, "%s not implemented yet\n",
-                         __func__);
-  }
+                                          void *EndEventPtr) override;
 
   Expected<InfoTreeNode> obtainInfoImpl() override;
   uint64_t getClockFrequency() const override { return getClockRate(); }

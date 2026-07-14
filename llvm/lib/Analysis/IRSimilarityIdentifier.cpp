@@ -359,11 +359,6 @@ unsigned IRInstructionMapper::mapToLegalUnsigned(
   assert(LegalInstrNumber < IllegalInstrNumber &&
          "Instruction mapping overflow!");
 
-  assert(LegalInstrNumber != DenseMapInfo<unsigned>::getEmptyKey() &&
-         "Tried to assign DenseMap tombstone or empty key to instruction.");
-  assert(LegalInstrNumber != DenseMapInfo<unsigned>::getTombstoneKey() &&
-         "Tried to assign DenseMap tombstone or empty key to instruction.");
-
   return INumber;
 }
 
@@ -409,12 +404,6 @@ unsigned IRInstructionMapper::mapToIllegalUnsigned(
 
   assert(LegalInstrNumber < IllegalInstrNumber &&
          "Instruction mapping overflow!");
-
-  assert(IllegalInstrNumber != DenseMapInfo<unsigned>::getEmptyKey() &&
-         "IllegalInstrNumber cannot be DenseMap tombstone or empty key!");
-
-  assert(IllegalInstrNumber != DenseMapInfo<unsigned>::getTombstoneKey() &&
-         "IllegalInstrNumber cannot be DenseMap tombstone or empty key!");
 
   return INumber;
 }

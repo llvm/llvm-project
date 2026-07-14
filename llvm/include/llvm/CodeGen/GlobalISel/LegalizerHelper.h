@@ -149,6 +149,13 @@ public:
                                unsigned ExtOpcode);
 
   /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
+  /// Use by extending the operand's type to \p WideTy using the G_FPEXT for the
+  /// extension instruction, and replacing the vreg of the operand in place.
+  /// Flags are copied from MI to the new extend.
+  LLVM_ABI void widenScalarSrcUsingFPExt(MachineInstr &MI, LLT WideTy,
+                                         unsigned OpIdx);
+
+  /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
   /// Use by truncating the operand's type to \p NarrowTy using G_TRUNC, and
   /// replacing the vreg of the operand in place.
   LLVM_ABI void narrowScalarSrc(MachineInstr &MI, LLT NarrowTy, unsigned OpIdx);
@@ -158,6 +165,13 @@ public:
   /// with the \p TruncOpcode, and replacing the vreg of the operand in place.
   LLVM_ABI void widenScalarDst(MachineInstr &MI, LLT WideTy, unsigned OpIdx = 0,
                                unsigned TruncOpcode = TargetOpcode::G_TRUNC);
+
+  /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
+  /// Def by extending the operand's type to \p WideTy and truncating it back
+  /// with G_FPTRUNC, and replacing the vreg of the operand in place. Flags are
+  /// copied from MI to the new trunc.
+  LLVM_ABI void widenScalarDstUsingFPTrunc(MachineInstr &MI, LLT WideTy,
+                                           unsigned OpIdx = 0);
 
   // Legalize a single operand \p OpIdx of the machine instruction \p MI as a
   // Def by truncating the operand's type to \p NarrowTy, replacing in place and
@@ -305,16 +319,13 @@ private:
   // Memcpy family legalization helpers.
   LegalizeResult lowerMemset(MachineInstr &MI, Register Dst, Register Val,
                              uint64_t KnownLen, Align Alignment,
-                             bool IsVolatile);
-  LegalizeResult lowerMemcpyInline(MachineInstr &MI, Register Dst, Register Src,
-                                   uint64_t KnownLen, Align DstAlign,
-                                   Align SrcAlign, bool IsVolatile);
+                             bool DstAlignCanChange, ArrayRef<LLT> MemOps);
   LegalizeResult lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
-                             uint64_t KnownLen, uint64_t Limit, Align DstAlign,
-                             Align SrcAlign, bool IsVolatile);
+                             uint64_t KnownLen, Align Alignment,
+                             bool DstAlignCanChange, ArrayRef<LLT> MemOps);
   LegalizeResult lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
-                              uint64_t KnownLen, Align DstAlign, Align SrcAlign,
-                              bool IsVolatile);
+                              uint64_t KnownLen, Align Alignment,
+                              bool DstAlignCanChange, ArrayRef<LLT> MemOps);
 
   // Implements floating-point environment read/write via library function call.
   LegalizeResult createGetStateLibcall(MachineInstr &MI,
@@ -573,7 +584,11 @@ public:
   LLVM_ABI LegalizeResult lowerAbsDiffToMinMax(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFAbs(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerVectorReduction(MachineInstr &MI);
-  LLVM_ABI LegalizeResult lowerMemcpyInline(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerMemCpyFamily(MachineInstr &MI, Register Dst,
+                                            Register Src, uint64_t KnownLen,
+                                            Align Alignment,
+                                            bool DstAlignCanChange,
+                                            ArrayRef<LLT> MemOps);
   LLVM_ABI LegalizeResult lowerMemCpyFamily(MachineInstr &MI,
                                             unsigned MaxLen = 0);
   LLVM_ABI LegalizeResult lowerVAArg(MachineInstr &MI);

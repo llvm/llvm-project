@@ -388,6 +388,40 @@ pointer, but not any provenance of the allocation:
   }];
 }
 
+def WarnUnusedDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``warn_unused`` attribute can be placed on the declaration of a structure or union type.
+When the ``-Wunused-variable`` diagnostic is enabled, local variables of types which have a non-trivial constructor or destructor are considered "used" by virtue of the constructor or destructor invocations involved.
+Those constructor or destructor invocations are not considered a use if the type is declared with the ``warn_unused`` attribute.
+The variable is considered used if it is named outside of its declaration.
+
+This attribute is available in both C and C++ language modes but is primarily useful in C++ for classes which have a non-trivial constructor or destructor but act as a value type rather than an RAII type.
+
+.. code-block:: c++
+
+  struct [[gnu::warn_unused]] S {
+    S();
+    ~S();
+  };
+
+  struct T {
+    T();
+    ~T();
+   };
+
+   int func() {
+     S s1; // -Wunused-variable warning
+     S s2; // No -Wunused-variable warning because of the member access expression below
+     S s3; // No -Wunused-variable warning because of the sizeof operand below
+     T t;  // No -Wunused-variable warning
+
+     s2.~S();
+     return sizeof(s3);
+   }
+  }];
+}
+
 def MaybeUndefDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
@@ -3008,8 +3042,35 @@ def BTFTypeTagDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
 Clang supports the ``__attribute__((btf_type_tag("ARGUMENT")))`` attribute for
-all targets. It only has effect when ``-g`` is specified on the command line and
-is currently silently ignored when not applied to a pointer type (note: this
+all targets. It only has effect when ``-g`` is specified on the command line.
+
+The attribute can be applied to a pointer type, in which case the tag is
+associated with the pointee type, e.g.:
+
+.. code-block:: c
+
+  int __attribute__((btf_type_tag("tag"))) *p;
+
+It can also be applied to the underlying type of a typedef, in which case the
+tag follows the typedef down to its base type, e.g.:
+
+.. code-block:: c
+
+  typedef struct foo __attribute__((btf_type_tag("tag"))) foo_t;
+
+The following is the corresponding btf:
+
+.. code-block::
+
+  ...
+  [2] TYPE_TAG 'tag' type_id=4
+  [3] TYPEDEF 'foo_t' type_id=2
+  [4] STRUCT 'foo' size=4 vlen=1
+      'c' type_id=5 bits_offset=0
+  [5] INT 'int' size=4 bits_offset=0 nr_bits=32 encoding=SIGNED
+  ...
+
+The attribute is currently silently ignored in any other position (note: this
 scenario may be diagnosed in the future).
 
 The ``ARGUMENT`` string will be preserved in IR and emitted to DWARF for the
@@ -4640,10 +4701,13 @@ have their lifetimes extended.
 
 def LifetimeCaptureByDocs : Documentation {
   let Category = DocCatFunction;
+  let Heading = "lifetime_capture_by, lifetime_capture_by_this, lifetime_capture_by_global, lifetime_capture_by_unknown";
   let Content = [{
-Similar to `lifetimebound`_, the ``lifetime_capture_by(X)`` attribute on a
-function parameter or implicit object parameter indicates that the capturing
-entity ``X`` may refer to the object referred by that parameter.
+Similar to `lifetimebound`_, the ``lifetime_capture_by`` attribute family on a
+function parameter or implicit object parameter indicates that a capturing
+entity may refer to the object referred to by that parameter. The capturing
+entity can be named in ``lifetime_capture_by(X)`` or selected by one of the
+standalone special forms listed below.
 
 Below is a list of types of the parameters and what they're considered to refer to:
 
@@ -4675,7 +4739,7 @@ temporary object.
     addToSet(local, s); // Ok.
   }
 
-The capturing entity ``X`` can be one of the following:
+The capturing entity can be one of the following:
 
 - Another (named) function parameter.
 
@@ -4685,28 +4749,30 @@ The capturing entity ``X`` can be one of the following:
       s.insert(a);
     }
 
-- ``this`` (in case of member functions).
+- ``this`` (in case of member functions), written as
+  ``lifetime_capture_by_this``.
 
   .. code-block:: c++
 
     class S {
-      void addToSet(std::string_view a [[clang::lifetime_capture_by(this)]]) {
+      void addToSet(std::string_view a [[clang::lifetime_capture_by_this]]) {
         s.insert(a);
       }
       std::set<std::string_view> s;
     };
 
-  Note: When applied to a constructor parameter, `[[clang::lifetime_capture_by(this)]]` is just an alias of `[[clang::lifetimebound]]`.
+  Note: When applied to a constructor parameter, `[[clang::lifetime_capture_by_this]]` is just an alias of `[[clang::lifetimebound]]`.
 
-- `global`, `unknown`.
+- ``global`` and ``unknown``, written as ``lifetime_capture_by_global`` and
+  ``lifetime_capture_by_unknown`` respectively.
 
   .. code-block:: c++
 
     std::set<std::string_view> s;
-    void addToSet(std::string_view a [[clang::lifetime_capture_by(global)]]) {
+    void addToSet(std::string_view a [[clang::lifetime_capture_by_global]]) {
       s.insert(a);
     }
-    void addSomewhere(std::string_view a [[clang::lifetime_capture_by(unknown)]]);
+    void addSomewhere(std::string_view a [[clang::lifetime_capture_by_unknown]]);
 
 The attribute can be applied to the implicit ``this`` parameter of a member
 function by writing the attribute after the function type:
@@ -4719,7 +4785,7 @@ function by writing the attribute after the function type:
     }
   };
 
-The attribute supports specifying more than one capturing entities:
+The parameter-list form supports specifying more than one capturing entity:
 
 .. code-block:: c++
 
@@ -4729,6 +4795,13 @@ The attribute supports specifying more than one capturing entities:
     s1.insert(a);
     s2.insert(a);
   }
+
+Distinct ``lifetime_capture_by`` forms can also be combined on the same
+declaration, but each form can appear at most once. For example,
+``[[clang::lifetime_capture_by(s), clang::lifetime_capture_by_this]]`` is
+allowed, but two ``[[clang::lifetime_capture_by(...)]]`` attributes or two
+``[[clang::lifetime_capture_by_this]]`` attributes on the same declaration are
+rejected.
 
 Limitation: The capturing entity ``X`` is not used by the analysis and is
 used for documentation purposes only. This is because the analysis is
@@ -5153,6 +5226,8 @@ As ``global_device`` and ``global_host`` are a subset of
 ``global_device`` and ``global_host`` address spaces to
 ``__global/opencl_global`` address spaces (following ISO/IEC TR 18037 5.1.3
 "Address space nesting and rules for pointers").
+
+These attributes are deprecated and may be removed in a future version of Clang.
   }];
 }
 
@@ -7585,7 +7660,7 @@ already being compiled with GNU inline semantics as the implied default. It is
 unspecified which macro is defined in a C++ compilation.
 
 GNU inline semantics are the default behavior with ``-std=gnu89``,
-``-std=c89``, ``-std=c94``, or ``-fgnu89-inline``.
+``-std=c89``, ``-fgnu89-inline``, or ``-std=iso9899:199409``.
   }];
 }
 
@@ -9111,6 +9186,33 @@ point."
 }];
 }
 
+def AnnotateDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The `annotate` attribute is used to add annotations to declarations or statements,
+typically for use by static analysis tools that are not integrated into the
+core Clang compiler (e.g., Clang-Tidy checks or out-of-tree Clang-based tools).
+It is a counterpart to the `annotate_type` attribute, which serves the same
+purpose, but for types.
+
+The attribute takes a mandatory string literal argument specifying the
+annotation category and an arbitrary number of optional arguments that provide
+additional information specific to the annotation category. The optional
+arguments must be constant expressions of arbitrary type.
+
+For example:
+
+.. code-block:: c++
+
+  [[clang::annotate("category1", "foo", 1)]] void func(int val [[clang::annotate("category2")]]) {
+    [[clang::annotate("category3")]] if (val) {
+
+    }
+  }
+
+  }];
+}
+
 def AnnotateTypeDocs : Documentation {
   let Category = DocCatType;
   let Heading = "annotate_type";
@@ -9314,8 +9416,8 @@ def HLSLMatrixLayoutDocs : Documentation {
   let Category = DocCatVariable;
   let Heading = "row_major, column_major";
   let Content = [{
-The ``row_major`` and ``column_major`` keywords specify the memory layout 
-of an HLSL matrix type. 
+The ``row_major`` and ``column_major`` keywords specify the memory layout
+of an HLSL matrix type.
 
 * ``row_major``: Matrices are stored in memory row-by-row.
 * ``column_major``: Matrices are stored in memory column-by-column (default).
@@ -9705,9 +9807,10 @@ Heap Allocation Elision more aggressively.
 When a coroutine function returns such a type, a direct call expression therein
 that returns a prvalue of a type attributed ``[[clang::coro_await_elidable]]``
 is said to be under a safe elide context if one of the following is true:
+
 - it is the immediate right-hand side operand to a co_await expression.
 - it is an argument to a ``[[clang::coro_await_elidable_argument]]`` parameter
-or parameter pack of another direct call expression under a safe elide context.
+  or parameter pack of another direct call expression under a safe elide context.
 
 Do note that the safe elide context applies only to the call expression itself,
 and the context does not transitively include any of its subexpressions unless
@@ -10013,7 +10116,53 @@ excepting that the aspects may be in any order.
 
 The following aspects are currently supported:
 
-- ``float``: The call has a floating point argument
+- ``fixed``: The call has a C ISO 18037 fixed-point argument.
+- ``float``: The call has a floating-point argument.
+  }];
+}
+
+def OverflowBehaviorDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``overflow_behavior`` attribute provides fine-grained, type-level control
+over how arithmetic operations on an integer type behave on overflow. It may be
+applied to a ``typedef``, to a variable or data member, or to an integer type
+directly, and accepts one of two behaviors as its argument:
+
+* ``wrap``: arithmetic on the attributed type wraps on overflow, using two's
+  complement semantics. This is equivalent to ``-fwrapv`` but scoped to the
+  attributed type, and works for both signed and unsigned types. UBSan's
+  ``signed-integer-overflow``, ``unsigned-integer-overflow``,
+  ``implicit-signed-integer-truncation``, and
+  ``implicit-unsigned-integer-truncation`` checks are suppressed for the type.
+
+* ``trap``: arithmetic on the attributed type is checked for overflow, enabling
+  overflow checks for the type even when ``-fwrapv`` is in effect globally.
+
+.. code-block:: c++
+
+  typedef unsigned int __attribute__((overflow_behavior(trap))) non_wrapping_uint;
+
+  non_wrapping_uint add_one(non_wrapping_uint a) {
+    return a + 1; // Overflow is checked for this operation.
+  }
+
+  int mul_alot(int n) {
+    int __attribute__((overflow_behavior(wrap))) a = n;
+    return a * 1337; // Overflow is not checked and is well-defined.
+  }
+
+The keyword spellings ``__ob_wrap`` and ``__ob_trap`` are equivalent to
+``overflow_behavior(wrap)`` and ``overflow_behavior(trap)`` respectively.
+
+The attribute wholly overrides global flags (``-ftrapv``, ``-fwrapv``,
+sanitizers, and Sanitizer Special Case Lists) for the attributed type. It can
+only be applied to integer types.
+
+This feature is experimental and must be enabled with the ``-cc1`` option
+``-fexperimental-overflow-behavior-types``. For full details on promotion and
+conversion rules, pointer semantics, diagnostics, and interaction with
+sanitizers, see :doc:`OverflowBehaviorTypes`.
   }];
 }
 
@@ -10053,5 +10202,67 @@ exception and what cleanup actions to perform. It effectively colors the
 language-agnostic unwinding mechanism with language-specific semantics, enabling
 different languages to coexist on the same call stack while each interpreting
 exceptions according to their own rules.
+  }];
+}
+
+def SentinelDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``sentinel`` attribute can be applied to variadic functions and pointers to
+variadic functions, to diagnose each function call that does not pass a
+sentinel value (a null pointer constant) as the last argument to the function
+call. The attribute accepts two optional arguments: the first argument is the
+position of the expected sentinel value, starting from the last parameter. The
+second argument describes whether the last fixed parameter is treated as a
+valid sentinel value when set to '1'.
+All arguments described above default to '0' when elided.
+The attribute is also supported with blocks and in Objective-C.
+
+.. code-block:: c
+
+  void foo(const char*, ...) __attribute__((sentinel));
+  void bar(int, ...) __attribute__((sentinel(1)));
+  void baz(const char*, const char*, ...) __attribute__((sentinel(0, 1)));
+
+  void example() {
+    foo("Example", (void*)0);
+    foo("Another", "example", NULL);
+    foo("Missing", "sentinel"); // Not OK
+
+    bar(1, 2, NULL, 3);         // OK: sentinel value at the 2nd to last position
+    bar(1, 2, 3, nullptr, 4);   // OK: `nullptr` is valid in C23
+    bar(1, 2, 3, 4, NULL);      // Not OK
+
+    baz("Test", "with", "multiple", "args", NULL);
+    baz("One", NULL);           // OK: last fixed parameter is a valid sentinel
+
+    void (*ptr) (int arg, ...) __attribute__ ((__sentinel__));
+    ptr(1, 2, 3, NULL);
+  }
+
+.. code-block:: c++
+
+  struct Ty {
+      int value;
+
+      template<typename T>
+      auto&& foo(T&& val, ...) __attribute__((sentinel(1))) {
+          return std::forward<T>(val);
+      }
+
+      template<class Self>
+      auto&& bar(this Self&& self, ...) __attribute__((sentinel(1))) {
+          return std::forward<Self>(self).value;
+      }
+  };
+
+  void example2() {
+      auto sty = Ty{};
+      sty.foo(1, nullptr, 3);
+      sty.bar(1, nullptr, 3);
+
+      auto lmbd = [](int a, ...) __attribute__((sentinel)) {};
+      lmbd(1, 2, nullptr);
+  }
   }];
 }

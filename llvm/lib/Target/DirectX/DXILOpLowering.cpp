@@ -177,7 +177,7 @@ public:
   /// piecemeal way - we can add the casts in to avoid updating all of the uses
   /// or defs, and by the end all of the casts will be redundant.
   Value *createTmpHandleCast(Value *V, Type *Ty) {
-    CallInst *Cast = OpBuilder.getIRB().CreateIntrinsic(
+    CallInst *Cast = OpBuilder.getIRB().CreateIntrinsicWithoutFolding(
         Intrinsic::dx_resource_casthandle, {Ty, V->getType()}, {V});
     CleanupCasts.push_back(Cast);
     return Cast;
@@ -655,11 +655,14 @@ public:
     });
   }
 
-  [[nodiscard]] bool lowerSampleBias(Function &F, bool HasClamp) {
+  /// Common helper for lowering sample operations (SampleBias, SampleGrad,
+  /// etc.) that share the same pattern: extract handle/sampler, unpack
+  /// coordinates and offsets, build the DXIL arg list, and replace uses.
+  [[nodiscard]] bool lowerSampleOp(
+      Function &F, OpCode Op, unsigned CoordsIdx, unsigned OffsetsIdx,
+      llvm::function_ref<void(IRBuilder<> &, CallInst *,
+                              SmallVectorImpl<Value *> &)> EmitExtraArgs) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
-    Type *Int32Ty = IRB.getInt32Ty();
-    Type *FloatTy = IRB.getFloatTy();
-
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
@@ -667,27 +670,27 @@ public:
           createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
       Value *Sampler =
           createTmpHandleCast(CI->getArgOperand(1), OpBuilder.getHandleType());
-      Value *Coords = CI->getArgOperand(2);
-      Value *Bias = CI->getArgOperand(3);
-      Value *Offsets = CI->getArgOperand(4);
-      Value *Clamp = HasClamp ? CI->getArgOperand(5) : UndefValue::get(FloatTy);
+      Value *Coords = CI->getArgOperand(CoordsIdx);
+      Value *Offsets = CI->getArgOperand(OffsetsIdx);
 
       Type *OldTy = CI->getType();
       Type *NewRetTy = OpBuilder.getResRetType(OldTy->getScalarType());
 
-      Value *UndefF = UndefValue::get(FloatTy);
-      Value *UndefI = UndefValue::get(Int32Ty);
-      // Args: Handle, Sampler, Coord0..3, Offset0..2, Bias, Clamp
-      std::array<Value *, 11> Args{Handle, Sampler, UndefF, UndefF,
-                                   UndefF, UndefF,  UndefI, UndefI,
-                                   UndefI, Bias,    Clamp};
+      Value *UndefF = UndefValue::get(IRB.getFloatTy());
+      Value *UndefI = UndefValue::get(IRB.getInt32Ty());
+      // Common prefix: Handle, Sampler, Coord0..3, Offset0..2
+      SmallVector<Value *, 17> Args{Handle, Sampler, UndefF, UndefF, UndefF,
+                                    UndefF, UndefI,  UndefI, UndefI};
 
       // Copy coordinates and offsets into Args.
       extractElementsIntoArgs(IRB, Args, 2, Coords, 4);
       extractNonZeroOffsets(IRB, Args, 6, Offsets, 3);
 
-      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
-          OpCode::SampleBias, Args, CI->getName(), NewRetTy);
+      // Emit op-specific trailing arguments (e.g. Bias+Clamp, DDX+DDY+Clamp).
+      EmitExtraArgs(IRB, CI, Args);
+
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(Op, Args, CI->getName(), NewRetTy);
       if (Error E = OpCall.takeError())
         return E;
       if (Error E = replaceResRetUses(CI, *OpCall, /*HasCheckBit=*/false))
@@ -695,6 +698,60 @@ public:
 
       return Error::success();
     });
+  }
+
+  [[nodiscard]] bool lowerSample(Function &F, bool HasClamp) {
+    return lowerSampleOp(F, OpCode::Sample, /*CoordsIdx=*/2, /*OffsetsIdx=*/3,
+                         [HasClamp](IRBuilder<> &IRB, CallInst *CI,
+                                    SmallVectorImpl<Value *> &Args) {
+                           // Clamp
+                           Args.push_back(
+                               HasClamp ? CI->getArgOperand(4)
+                                        : UndefValue::get(IRB.getFloatTy()));
+                         });
+  }
+
+  [[nodiscard]] bool lowerSampleBias(Function &F, bool HasClamp) {
+    return lowerSampleOp(
+        F, OpCode::SampleBias, /*CoordsIdx=*/2, /*OffsetsIdx=*/4,
+        [HasClamp](IRBuilder<> &IRB, CallInst *CI,
+                   SmallVectorImpl<Value *> &Args) {
+          // Bias is operand 3.
+          Args.push_back(CI->getArgOperand(3));
+          // Clamp
+          Args.push_back(HasClamp ? CI->getArgOperand(5)
+                                  : UndefValue::get(IRB.getFloatTy()));
+        });
+  }
+
+  [[nodiscard]] bool lowerSampleLevel(Function &F) {
+    return lowerSampleOp(
+        F, OpCode::SampleLevel, /*CoordsIdx=*/2, /*OffsetsIdx=*/4,
+        [](IRBuilder<> &, CallInst *CI, SmallVectorImpl<Value *> &Args) {
+          // LOD is operand 3.
+          Args.push_back(CI->getArgOperand(3));
+        });
+  }
+
+  [[nodiscard]] bool lowerSampleGrad(Function &F, bool HasClamp) {
+    return lowerSampleOp(
+        F, OpCode::SampleGrad, /*CoordsIdx=*/2, /*OffsetsIdx=*/5,
+        [HasClamp](IRBuilder<> &IRB, CallInst *CI,
+                   SmallVectorImpl<Value *> &Args) {
+          Value *DDX = CI->getArgOperand(3);
+          Value *DDY = CI->getArgOperand(4);
+          Value *UndefF = UndefValue::get(IRB.getFloatTy());
+          // DDX0..2
+          size_t DDXStart = Args.size();
+          Args.append(3, UndefF);
+          extractElementsIntoArgs(IRB, Args, DDXStart, DDX, 3);
+          // DDY0..2
+          size_t DDYStart = Args.size();
+          Args.append(3, UndefF);
+          extractElementsIntoArgs(IRB, Args, DDYStart, DDY, 3);
+          // Clamp
+          Args.push_back(HasClamp ? CI->getArgOperand(6) : UndefF);
+        });
   }
 
   [[nodiscard]] bool lowerRawBufferLoad(Function &F) {
@@ -1100,6 +1157,7 @@ public:
       case Intrinsic::dx_resource_handlefrombinding:
         HasErrors |= lowerHandleFromBinding(F);
         break;
+      case Intrinsic::dx_resource_getbasepointer:
       case Intrinsic::dx_resource_getpointer:
         HasErrors |= lowerGetPointer(F);
         break;
@@ -1114,11 +1172,26 @@ public:
       case Intrinsic::dx_resource_load_level:
         HasErrors |= lowerTextureLoad(F);
         break;
+      case Intrinsic::dx_resource_sample:
+        HasErrors |= lowerSample(F, /*HasClamp=*/false);
+        break;
+      case Intrinsic::dx_resource_sample_clamp:
+        HasErrors |= lowerSample(F, /*HasClamp=*/true);
+        break;
       case Intrinsic::dx_resource_samplebias:
         HasErrors |= lowerSampleBias(F, /*HasClamp=*/false);
         break;
       case Intrinsic::dx_resource_samplebias_clamp:
         HasErrors |= lowerSampleBias(F, /*HasClamp=*/true);
+        break;
+      case Intrinsic::dx_resource_samplelevel:
+        HasErrors |= lowerSampleLevel(F);
+        break;
+      case Intrinsic::dx_resource_samplegrad:
+        HasErrors |= lowerSampleGrad(F, /*HasClamp=*/false);
+        break;
+      case Intrinsic::dx_resource_samplegrad_clamp:
+        HasErrors |= lowerSampleGrad(F, /*HasClamp=*/true);
         break;
       case Intrinsic::dx_resource_store_typedbuffer:
         HasErrors |= lowerBufferStore(F, /*IsRaw=*/false);

@@ -163,6 +163,19 @@ extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 static cl::opt<unsigned> ShouldLowerDbgDeclare("instcombine-lower-dbg-declare",
                                                cl::Hidden, cl::init(true));
 
+InstCombiner::IRBuilderInstCombineInserter::~IRBuilderInstCombineInserter() =
+    default;
+
+void InstCombiner::IRBuilderInstCombineInserter::InsertHelper(
+    Instruction *I, const Twine &Name, BasicBlock::iterator InsertPt) const {
+  IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
+  IC.Worklist.add(I);
+  if (auto *Assume = dyn_cast<AssumeInst>(I))
+    IC.AC.registerAssumption(Assume);
+  if (IC.AnnotationMetadataSource)
+    I->copyMetadata(*IC.AnnotationMetadataSource, LLVMContext::MD_annotation);
+}
+
 std::optional<Instruction *>
 InstCombiner::targetInstCombineIntrinsic(IntrinsicInst &II) {
   // Handle target specific intrinsics
@@ -1820,7 +1833,17 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
     NewTV = foldOperationIntoSelectOperand(Op, SI, TV, *this);
   if (!NewFV)
     NewFV = foldOperationIntoSelectOperand(Op, SI, FV, *this);
-  return SelectInst::Create(SI->getCondition(), NewTV, NewFV, "", nullptr, SI);
+
+  SelectInst *NewSel = SelectInst::Create(SI->getCondition(), NewTV, NewFV);
+
+  // Preserve metadata that remains valid for the transformed select.
+  NewSel->copyMetadata(*SI,
+                       {LLVMContext::MD_prof, LLVMContext::MD_unpredictable});
+
+  // Preserve source location information.
+  NewSel->setDebugLoc(SI->getDebugLoc());
+
+  return NewSel;
 }
 
 static Value *simplifyInstructionWithPHI(Instruction &I, PHINode *PN,
@@ -2322,7 +2345,9 @@ static bool shouldMergeGEPs(GEPOperator &GEP, GEPOperator &Src) {
 }
 
 /// Find a constant NewC that has property:
-///   shuffle(NewC, ShMask) = C
+///   shuffle(NewC, poison, ShMask) = C
+/// for lanes that select NewC. Lanes that select the poison operand are not
+/// constrained.
 /// Returns nullptr if such a constant does not exist e.g. ShMask=<0,0> C=<1,2>
 ///
 /// A 1-to-1 mapping is not required. Example:
@@ -2347,8 +2372,11 @@ Constant *InstCombinerImpl::unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
   for (unsigned I = 0; I < NumElts; ++I) {
     Constant *CElt = C->getAggregateElement(I);
     if (ShMask[I] >= 0) {
-      assert(ShMask[I] < (int)NumElts && "Not expecting narrowing shuffle");
-      Constant *NewCElt = NewVecC[ShMask[I]];
+      int MaskElt = ShMask[I];
+      if (MaskElt >= (int)NewCNumElts)
+        continue;
+
+      Constant *NewCElt = NewVecC[MaskElt];
       // Bail out if:
       // 1. The constant vector contains a constant expression.
       // 2. The shuffle needs an element of the constant vector that can't
@@ -2358,7 +2386,7 @@ Constant *InstCombinerImpl::unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
       if (!CElt || (!isa<PoisonValue>(NewCElt) && NewCElt != CElt) ||
           I >= NewCNumElts)
         return nullptr;
-      NewVecC[ShMask[I]] = CElt;
+      NewVecC[MaskElt] = CElt;
     }
   }
   return ConstantVector::get(NewVecC);
@@ -3568,10 +3596,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           }
 
           if (NewC.has_value()) {
-            Value *NewOp = Builder.CreateBinOp(
+            Value *NewOp = Builder.CreateExactBinOp(
                 static_cast<Instruction::BinaryOps>(ExactIns->getOpcode()), V,
-                ConstantInt::get(V->getType(), *NewC));
-            cast<BinaryOperator>(NewOp)->setIsExact();
+                ConstantInt::get(V->getType(), *NewC), /*IsExact=*/true);
             return GetElementPtrInst::Create(Builder.getInt8Ty(),
                                              GEP.getPointerOperand(), NewOp,
                                              GEP.getNoWrapFlags());
@@ -3590,10 +3617,12 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     APInt BasePtrOffset(IdxWidth, 0);
     Value *UnderlyingPtrOp =
         PtrOp->stripAndAccumulateInBoundsConstantOffsets(DL, BasePtrOffset);
-    bool CanBeNull, CanBeFreed;
+    bool CanBeNull;
     uint64_t DerefBytes = UnderlyingPtrOp->getPointerDereferenceableBytes(
-        DL, CanBeNull, CanBeFreed);
-    if (!CanBeNull && !CanBeFreed && DerefBytes != 0) {
+        DL, CanBeNull, /*CanBeFreed=*/nullptr);
+    // We can ignore CanBeFreed here, because inbounds is explicitly allowed to
+    // refer to a deallocated object.
+    if (!CanBeNull && DerefBytes != 0) {
       if (GEP.accumulateConstantOffset(DL, BasePtrOffset) &&
           BasePtrOffset.isNonNegative()) {
         APInt AllocSize(IdxWidth, DerefBytes);
@@ -5370,11 +5399,12 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
   });
 
   for (auto *U : Users) {
-    for (auto &AssumeVH : AC.assumptionsFor(U)) {
-      if (!AssumeVH)
-        continue;
-      AC.updateAffectedValues(cast<AssumeInst>(AssumeVH));
-    }
+    // Re-queue U and its users: freezing U's operand can expose a fold on a
+    // user of U (e.g. a freeze of U can now be pushed through it) that would
+    // otherwise only fire on a later iteration, tripping the fixpoint verifier.
+    auto *UI = cast<Instruction>(U);
+    Worklist.pushUsersToWorkList(*UI);
+    Worklist.push(UI);
   }
 
   return Changed;
@@ -5486,15 +5516,10 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
     auto *VTy = dyn_cast<FixedVectorType>(Ty);
     if (!VTy)
       return nullptr;
-    unsigned NumElts = VTy->getNumElements();
-    Constant *BestValue = Constant::getNullValue(VTy->getScalarType());
-    for (unsigned i = 0; i != NumElts; ++i) {
-      Constant *EltC = C->getAggregateElement(i);
-      if (EltC && !match(EltC, m_Undef())) {
-        BestValue = EltC;
-        break;
-      }
-    }
+    Constant *BestValue;
+    if (!match(C, m_ContainsMatchingVectorElement(m_CombineAnd(
+                      m_Unless(m_Undef()), m_Constant(BestValue)))))
+      BestValue = Constant::getNullValue(VTy->getScalarType());
     return Constant::replaceUndefsWith(C, BestValue);
   };
 
@@ -5604,7 +5629,7 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
     for (BasicBlock::iterator Scan = std::next(I->getIterator()),
                               E = I->getParent()->end();
          Scan != E; ++Scan)
-      if (Scan->mayWriteToMemory())
+      if (Scan->mayWriteToMemory() && !isa<AssumeInst>(Scan))
         return false;
   }
 
@@ -5894,8 +5919,9 @@ bool InstCombinerImpl::run() {
 
     // Now that we have an instruction, try combining it to simplify it.
     Builder.SetInsertPoint(I);
-    Builder.CollectMetadataToCopy(
-        I, {LLVMContext::MD_dbg, LLVMContext::MD_annotation});
+    Builder.SetCurrentDebugLocation(I->getDebugLoc());
+    // Used by our IRBuilder inserter to copy annotation metadata.
+    AnnotationMetadataSource = I;
 
 #ifndef NDEBUG
     std::string OrigI;
@@ -5936,6 +5962,10 @@ bool InstCombinerImpl::run() {
         }
 
         Result->insertInto(InstParent, InsertPos);
+
+        // Register newly created assumptions.
+        if (auto *Assume = dyn_cast<AssumeInst>(Result))
+          AC.registerAssumption(Assume);
 
         // Push the new instruction and any users onto the worklist.
         Worklist.pushUsersToWorkList(*Result);
@@ -6179,16 +6209,6 @@ static bool combineInstructionsOverFunction(
   bool VerifyFixpoint = Opts.VerifyFixpoint &&
                         !F.hasFnAttribute("instcombine-no-verify-fixpoint");
 
-  /// Builder - This is an IRBuilder that automatically inserts new
-  /// instructions into the worklist when they are created.
-  IRBuilder<TargetFolder, IRBuilderCallbackInserter> Builder(
-      F.getContext(), TargetFolder(DL),
-      IRBuilderCallbackInserter([&Worklist, &AC](Instruction *I) {
-        Worklist.add(I);
-        if (auto *Assume = dyn_cast<AssumeInst>(I))
-          AC.registerAssumption(Assume);
-      }));
-
   ReversePostOrderTraversal<BasicBlock *> RPOT(&F.front());
 
   // Lower dbg.declare intrinsics otherwise their value may be clobbered
@@ -6212,8 +6232,8 @@ static bool combineInstructionsOverFunction(
     LLVM_DEBUG(dbgs() << "\n\nINSTCOMBINE ITERATION #" << Iteration << " on "
                       << F.getName() << "\n");
 
-    InstCombinerImpl IC(Worklist, Builder, F, AA, AC, TLI, TTI, DT, ORE, BFI,
-                        BPI, PSI, DL, RPOT);
+    InstCombinerImpl IC(Worklist, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI, PSI,
+                        DL, RPOT);
     IC.MaxArraySizeForCombine = MaxArraySize;
     bool MadeChangeInThisIteration = IC.prepareWorklist(F);
     MadeChangeInThisIteration |= IC.run();

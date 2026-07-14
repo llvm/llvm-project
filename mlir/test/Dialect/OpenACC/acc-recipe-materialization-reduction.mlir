@@ -13,6 +13,10 @@ acc.reduction.recipe @reduction_add_memref_f64 : memref<f64> reduction_operator 
   %2 = arith.addf %0, %1 fastmath<contract> : f64
   memref.store %2, %arg0[] : memref<f64>
   acc.yield %arg0 : memref<f64>
+} destroy {
+^bb0(%arg0: memref<f64>, %arg1: memref<f64>):
+  memref.dealloc %arg1 : memref<f64>
+  acc.terminator
 }
 
 // Verify that the reduction init and combine recipes attached to compute
@@ -24,14 +28,16 @@ acc.reduction.recipe @reduction_add_memref_f64 : memref<f64> reduction_operator 
 // CHECK-NEXT:  [[ALLOCA:%.*]] = memref.alloca() : memref<f64>
 // CHECK-NEXT:  memref.store [[ZERO]], [[ALLOCA]][]
 // CHECK-NEXT:  acc.yield {{.*}}
-// CHECK:       } {{.*}}acc.var_name = #acc.var_name<"tmp">
+// CHECK:       } {{.*}}acc.par_dims = #acc<par_dims[block_x]>, acc.var_name = #acc.var_name<"tmp">
 // CHECK:       memref.load [[PRIVATE]][]
 // CHECK:       memref.store {{.*}}, [[PRIVATE]][]
-// CHECK:       acc.reduction_combine_region [[PRIVATE]] into [[REDUCVAR:%.*]] :
+// CHECK:       acc.reduction_combine_region [[PRIVATE]] into [[REDUCVAR:%.*]] : memref<f64> {
 // CHECK:       [[LOADVAR:%.*]] = memref.load [[REDUCVAR]][]
 // CHECK-NEXT:  [[LOADPRIV:%.*]] = memref.load [[PRIVATE]][]
 // CHECK-NEXT:  [[COMBINE:%.*]] = arith.addf [[LOADVAR]], [[LOADPRIV]]
 // CHECK-NEXT:  memref.store [[COMBINE]], [[REDUCVAR]][]
+// CHECK-NEXT:  } {acc.par_dims = #acc<par_dims[block_x]>}
+// CHECK-NEXT:  memref.dealloc [[PRIVATE]] : memref<f64>
 // CHECK:       acc.yield
 
 func.func @par_reduction_clause_(%arg0: memref<f64>) {

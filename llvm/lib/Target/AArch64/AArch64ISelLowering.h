@@ -175,6 +175,9 @@ public:
   MachineBasicBlock *EmitLoweredCatchRet(MachineInstr &MI,
                                            MachineBasicBlock *BB) const;
 
+  MachineBasicBlock *EmitLoweredSetFpmr(MachineInstr &MI,
+                                        MachineBasicBlock *MBB) const;
+
   MachineBasicBlock *EmitDynamicProbedAlloc(MachineInstr &MI,
                                             MachineBasicBlock *MBB) const;
 
@@ -343,6 +346,8 @@ public:
   bool shouldOptimizeMulOverflowWithZeroHighBits(LLVMContext &Context,
                                                  EVT VT) const override;
 
+  Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                AtomicOrdering Ord) const override;
   Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy, Value *Addr,
                         AtomicOrdering Ord) const override;
   Value *emitStoreConditional(IRBuilderBase &Builder, Value *Val, Value *Addr,
@@ -373,6 +378,9 @@ public:
   }
 
   bool useLoadStackGuardNode(const Module &M) const override;
+  bool useStackGuardMixFP() const override;
+  SDValue emitStackGuardMixFP(SelectionDAG &DAG, SDValue Val,
+                              const SDLoc &DL) const override;
   TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(MVT VT) const override;
 
@@ -440,6 +448,11 @@ public:
   ShiftLegalizationStrategy
   preferredShiftLegalizationStrategy(SelectionDAG &DAG, SDNode *N,
                                      unsigned ExpansionFactor) const override;
+
+  CondMergingParams
+  getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *Lhs,
+                                const Value *Rhs,
+                                const Function *F) const override;
 
   bool shouldTransformSignedTruncationCheck(EVT XVT,
                                             unsigned KeptBits) const override {
@@ -545,7 +558,7 @@ public:
     return 128;
   }
 
-  bool isAllActivePredicate(SelectionDAG &DAG, SDValue N) const;
+  bool isAllActivePredicate(const SelectionDAG &DAG, SDValue N) const;
   EVT getPromotedVTForPredicate(EVT VT) const;
 
   EVT getAsmOperandValueType(const DataLayout &DL, Type *Ty,
@@ -595,6 +608,11 @@ public:
   /// In AArch64, true if FEAT_CPA is present. Allows pointer arithmetic
   /// semantics to be preserved for instruction selection.
   bool shouldPreservePtrArith(const Function &F, EVT PtrVT) const override;
+
+  // Match a register name (e.g. "x5", "d5", "sp") to its register number, with
+  // no validity filtering. This is the single entry point for the generated
+  // register-name matcher, shared with getRegisterByName.
+  Register matchRegisterName(StringRef RegName) const;
 
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
@@ -841,6 +859,7 @@ private:
   Register getRegisterByName(const char* RegName, LLT VT,
                              const MachineFunction &MF) const override;
 
+private:
   /// Examine constraint string and operand type and determine a weight value.
   /// The operand object must already have been set up with the operand type.
   ConstraintWeight
@@ -900,7 +919,7 @@ private:
                                        SmallVectorImpl<SDValue> &Results,
                                        SelectionDAG &DAG) const;
 
-  bool shouldNormalizeToSelectSequence(LLVMContext &, EVT) const override;
+  bool shouldNormalizeToSelectSequence(LLVMContext &, EVT, EVT) const override;
 
   void finalizeLowering(MachineFunction &MF) const override;
 

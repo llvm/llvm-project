@@ -120,52 +120,6 @@ In any case, if we want the normal detach behavior we will just send:
 D
 ```
 
-## jAcceleratorPluginInitialize
-
-This packet requests initialization data from all accelerator plugins
-installed in lldb-server. Accelerator plugins allow lldb-server to support
-debugging of hardware accelerators (e.g. GPUs, FPGAs) alongside the native
-host process.
-
-This packet requires the `accelerator-plugins+` feature from `qSupported`.
-It should be sent early in the session, after `qSupported` but before
-launching or attaching to an inferior process. If the hardware accelerator
-is not present, launching or attaching to the accelerator debug session
-will fail.
-
-```
-LLDB SENDS:    jAcceleratorPluginInitialize
-STUB REPLIES:  [<accelerator_action>,...]
-```
-
-Each `accelerator_action` is a JSON object with the following required fields:
-
-| Key            | Type    | Description |
-|----------------|---------|-------------|
-| `plugin_name`  | string  | Unique name identifying the accelerator plugin (e.g. `"mock"`, `"amdgpu"`). Each installed plugin has a globally unique name. |
-| `session_name` | string  | Human-readable label for the accelerator target, stored on the Target object to distinguish it from the CPU target (e.g. `"AMD GPU Session"`). May be empty. |
-| `identifier`   | integer | Identifier for this action, unique within the scope of its `plugin_name`. To refer to a specific action, use the combination of `plugin_name` and `identifier`. |
-
-There can be multiple accelerator plugins installed, each with a globally
-unique `plugin_name`. The response is a JSON array with one entry per
-installed plugin.
-
-Example:
-```
-LLDB SENDS:    jAcceleratorPluginInitialize
-STUB REPLIES:  [{"plugin_name":"amdgpu","session_name":"AMD GPU Session","identifier":0}]
-```
-
-If no accelerator plugins are installed, the server does not advertise the
-`accelerator-plugins+` feature and this packet should not be sent.
-
-In future patches, each `accelerator_action` will include additional fields
-such as breakpoints to set in the native process, connection info for
-secondary debug sessions, and synchronization options.
-
-**Priority To Implement:** Low. Only needed for hardware accelerator
-debugging support.
-
 ## jGetDyldProcessState
 
 This packet fetches the process launch state, as reported by libdyld on
@@ -1181,6 +1135,39 @@ These packets must be sent  _prior_ to sending a "A" packet.
 a target after making a connection to a GDB server that isn't already connected to
 an inferior process.
 
+## QSetSTDIOWindowSize:cols=\<N\>;rows=\<N\>
+
+Set the terminal window size for the inferior's stdio pseudo-terminal prior to
+sending a launch args (`A`) packet.
+
+When launching a program whose stdio is connected to a pseudo-terminal (PTY),
+this packet specifies the initial terminal dimensions:
+```
+QSetSTDIOWindowSize:cols=<N>;rows=<N>
+```
+Both `cols` and `rows` must be unsigned 16-bit integers. They must either both
+be non-zero, or both be zero. Any other combination (e.g. `cols=80;rows=0`) is
+treated as a malformed packet. This packet must be sent _prior_ to the launch
+args (`A`) packet; sending it after the inferior has been launched has no
+effect.
+
+On the server side, the dimensions are stored and applied to the PTY at launch
+time. On POSIX this is done via `TIOCSWINSZ`; on Windows via `ConPTY` resize.
+If both dimensions are zero, the server uses pipes instead of a PTY on all platforms.
+
+The response is either:
+* `OK`: dimensions accepted; they will be applied to the PTY when the
+  inferior is launched.
+* `ENN`: malformed packet.
+* Empty/`+`: packet not supported; the client silently ignores this.
+
+**Priority To Implement:** Low. Only needed when the inferior's stdio is
+connected to a PTY distinct from the terminal hosting lldb (for example, with
+`lldb-dap`, or when the debuggee is launched in its own terminal) and the
+client wants that PTY to reflect the correct window size  (e.g. for proper
+line-wrapping or full-screen TUI apps). This setting does not affect the terminal
+hosting the lldb CLI itself.
+
 ## QSetWorkingDir:\<ascii-hex-path\>
 
 Set the working directory prior to sending an "A" packet.
@@ -1305,7 +1292,7 @@ already has a thread selected (see the `Hg` packet from the standard
 GDB remote protocol documentation) yet the remote GDB server actually
 has another thread selected.
 
-## qAttachOrWaitSupported
+## qVAttachOrWaitSupported
 
 This is a binary "is it supported" query. Return OK if you support
 `vAttachOrWait`.
@@ -1358,7 +1345,7 @@ some key value pairs. The key value pairs in the command are:
   be listed for all users, not just the user that the
   platform is running as
 * `triple` - `string` -
-  An ASCII triple string (`x86_64`, `x86_64-apple-macosx`, `armv7-apple-ios`)
+  An ASCII triple string (for example `x86_64`, `x86_64-apple-macosx`, `armv7-apple-ios`)
 * `args` - `string` -
   A string value containing the process arguments separated by the character `-`,
   where each argument is hex-encoded. It includes `argv[0]`.
@@ -1370,13 +1357,19 @@ documentation.
 
 Sample packet/response:
 ```
-send packet: $qfProcessInfo#00
-read packet: $pid:60001;ppid:59948;uid:7746;gid:11;euid:7746;egid:11;name:6c6c6462;triple:x86_64-apple-macosx;#00
-send packet: $qsProcessInfo#00
-read packet: $pid:59992;ppid:192;uid:7746;gid:11;euid:7746;egid:11;name:6d64776f726b6572;triple:x86_64-apple-macosx;#00
+send packet: $qfProcessInfo:name_match:contains;name:656d616373;all_users:0;#21
+read packet: $pid:4086;ppid:2681;uid:1000;gid:1000;euid:1000;egid:1000;name:2f7573722f62696e2f656d6163732d67746b;args:656d616373-2d2d6461656d6f6e;triple:7838365f36342d2d6c696e75782d676e75;#07
+send packet: $qsProcessInfo#4f
+read packet: $pid:146456;ppid:1;uid:1000;gid:1000;euid:1000;egid:1000;name:2f7573722f62696e2f656d6163732d67746b;args:2f7573722f62696e2f656d616373;triple:7838365f36342d2d6c696e75782d676e75;#e2
 send packet: $qsProcessInfo#00
 read packet: $E04#00
+send packet: $qfProcessInfo:name_match:contains;name:616263;all_users:0;triple:arm64-unknown-linux-gnu;#da
+read packet: $E03#a8
 ```
+
+Note that triples in this packet are normal strings, but triples
+received in response are hex encoded strings.  This difference was
+unintentional but cannot be changed at this point.
 
 **Priority To Implement:** Required
 
@@ -1442,20 +1435,21 @@ read packet: $cputype:16777223;cpusubtype:3;ostype:darwin;vendor:apple;endian:li
 ```
 
 Key value pairs are one of:
+* `arch`: a string for the architecture, not needed if "triple" is specified
 * `cputype`: is a number that is the mach-o CPU type that is being debugged (base 10)
 * `cpusubtype`: is a number that is the mach-o CPU subtype type that is being debugged (base 10)
-* `triple`: a string for the target triple (x86_64-apple-macosx) that can be used to specify arch + vendor + os in one entry
+* `triple`: an ASCII hex encoded string for the target triple (for example, hex encoding of `x86_64-apple-macosx`) that can be used to specify arch + vendor + os in one entry
 * `vendor`: a string for the vendor (apple), not needed if "triple" is specified
 * `ostype`: a string for the OS being debugged (macosx, linux, freebsd, ios, watchos), not needed if "triple" is specified
 * `endian`: is one of "little", "big", or "pdp"
 * `ptrsize`: an unsigned number that represents how big pointers are in bytes on the debug target
-* `hostname`: the hostname of the host that is running the GDB server if available
-* `os_build`: a string for the OS build for the remote host as a string value
-* `os_kernel`: a string describing the kernel version
+* `hostname`: optional, a hex encoded string of the hostname of the host that is running the GDB server
+* `os_build`: a hex encoded string for the OS build for the remote host as a string value
+* `os_kernel`: a hex encoded string describing the kernel version
 * `os_version`: a version string that represents the current OS version (10.8.2)
 * `watchpoint_exceptions_received`: one of "before" or "after" to specify if a watchpoint is triggered before or after the pc when it stops
 * `default_packet_timeout`: an unsigned number that specifies the default timeout in seconds
-* `distribution_id`: optional. For linux, specifies distribution id (e.g. ubuntu, fedora, etc.)
+* `distribution_id`: optional hex encoded string. For linux, specifies distribution id (e.g. ubuntu, fedora, etc.)
 * `osmajor`: optional, specifies the major version number of the OS (e.g. for macOS 10.12.2, it would be 10)
 * `osminor`: optional, specifies the minor version number of the OS (e.g. for macOS 10.12.2, it would be 12)
 * `ospatch`: optional, specifies the patch level number of the OS (e.g. for macOS 10.12.2, it would be 2)
@@ -1748,7 +1742,7 @@ The key value pairs in the response are:
 * `euid` - `integer` - A string value containing the decimal effective user ID
 * `egid` - `integer` - A string value containing the decimal effective group ID
 * `name` - `ascii-hex` - An ASCII hex string that contains the name of the process
-* `triple` - `string` - A target triple (`x86_64-apple-macosx`, `armv7-apple-ios`)
+* `triple` - `ascii-hex` - An ASCII hex string that contains the target triple (for example, `x86_64-apple-macosx`, `armv7-apple-ios`)
 
 Sample packet/response:
 ```
@@ -2745,3 +2739,129 @@ omitting them will work fine; these numbers are always base 16.
 
 The length of the payload is not provided.  A reliable, 8-bit clean,
 transport layer is assumed.
+
+## Accelerator Packets
+
+The packets below support debugging hardware accelerators (e.g. GPUs,
+FPGAs) alongside the native host process via accelerator plugins installed
+in lldb-server.
+
+An accelerator plugin drives the client by returning a list of
+`AcceleratorActions` (currently just breakpoints to set in the native
+process). The client can receive `AcceleratorActions` at two points:
+
+1. Once, in response to the `jAcceleratorPluginInitialize` packet sent when
+   the native process is launched or attached.
+2. In response to a `jAcceleratorPluginBreakpointHit` packet, when a
+   breakpoint the plugin previously requested is hit. The hit response may
+   carry a further set of `AcceleratorActions`.
+
+Each set of `AcceleratorActions` is tagged with a `plugin_name` and an
+`identifier` that is unique within that plugin, so the client can ignore a
+set it has already processed if the same actions are delivered again.
+
+### jAcceleratorPluginInitialize
+
+This packet requests initialization data from all accelerator plugins
+installed in lldb-server. Accelerator plugins allow lldb-server to support
+debugging of hardware accelerators (e.g. GPUs, FPGAs) alongside the native
+host process.
+
+This packet requires the `accelerator-plugins+` feature from `qSupported`.
+It should be sent early in the session, after `qSupported` but before
+launching or attaching to an inferior process. If the hardware accelerator
+is not present, launching or attaching to the accelerator debug session
+will fail.
+
+```
+LLDB SENDS:    jAcceleratorPluginInitialize
+STUB REPLIES:  [<accelerator_action>,...]
+```
+
+Each `accelerator_action` is a JSON object with the following required fields:
+
+| Key            | Type    | Description |
+|----------------|---------|-------------|
+| `plugin_name`  | string  | Unique name identifying the accelerator plugin (e.g. `"mock"`, `"amdgpu"`). Each installed plugin has a globally unique name. |
+| `session_name` | string  | Human-readable label for the accelerator target, stored on the Target object to distinguish it from the CPU target (e.g. `"AMD GPU Session"`). May be empty. |
+| `identifier`   | integer | Identifier for this action, unique within the scope of its `plugin_name`. To refer to a specific action, use the combination of `plugin_name` and `identifier`. |
+
+There can be multiple accelerator plugins installed, each with a globally
+unique `plugin_name`. The response is a JSON array with one entry per
+installed plugin.
+
+Example:
+```
+LLDB SENDS:    jAcceleratorPluginInitialize
+STUB REPLIES:  [{"plugin_name":"amdgpu","session_name":"AMD GPU Session","identifier":0}]
+```
+
+If no accelerator plugins are installed, the server does not advertise the
+`accelerator-plugins+` feature and this packet should not be sent.
+
+Each `accelerator_action` may include a `breakpoints` array requesting
+breakpoints to be set in the native process. The client sets each of these
+as an internal breakpoint and sends a `jAcceleratorPluginBreakpointHit`
+packet when one is hit. Each breakpoint object has the following fields:
+
+| Key            | Type    | Description |
+|----------------|---------|-------------|
+| `identifier`   | integer | Identifier for this breakpoint, unique within the plugin. It is echoed back in the `jAcceleratorPluginBreakpointHit` packet so the plugin knows which breakpoint was hit. |
+| `by_name`      | object  | Set the breakpoint by function name. Contains `function_name` (string) and an optional `shlib` (string) to scope the breakpoint to a single shared library. |
+| `by_address`   | object  | Set the breakpoint by load address. Contains `load_address` (integer). |
+| `symbol_names` | array   | Symbol names whose load addresses the client should resolve and deliver in the `jAcceleratorPluginBreakpointHit` packet when this breakpoint is hit. May be empty. |
+
+Exactly one of `by_name` or `by_address` must be provided for each
+breakpoint.
+
+An `accelerator_action` may also include a `connect_info` object asking the
+client to create a new target and connect to a separate GDB server that
+serves the accelerator's state (for example a GPU debug stub). It has the
+following fields:
+
+| Key             | Type   | Description |
+|-----------------|--------|-------------|
+| `connect_url`   | string | Connection URL to connect to, as used by `process connect <url>`. |
+| `platform_name` | string | Name of the platform to select when creating the accelerator target. The platform must be able to handle `triple` and is used to connect to the accelerator's GDB server. |
+| `triple`        | string | Target triple for the accelerator target, used to ensure the architecture is compatible with `platform_name`. |
+| `exe_path`      | string | Optional path to the executable to use when creating the accelerator target. If omitted, an empty target is created. |
+| `synchronous`   | bool   | If true, connect synchronously: the client blocks until the accelerator process is connected and stopped before continuing. If false, the connection is made asynchronously. |
+
+**Priority To Implement:** Required for hardware accelerator debugging
+support. Not needed for non-hardware-accelerator debugging.
+
+### jAcceleratorPluginBreakpointHit
+
+Sent by the client when a breakpoint requested by an accelerator plugin
+is hit in the native process. This packet requires the
+`accelerator-plugins+` feature from `qSupported`.
+
+```
+LLDB SENDS:    jAcceleratorPluginBreakpointHit:<json>
+STUB REPLIES:  <json_response>
+```
+
+The request JSON has the following fields:
+
+| Key             | Type   | Description |
+|-----------------|--------|-------------|
+| `plugin_name`   | string | Name of the plugin that requested the breakpoint. |
+| `breakpoint`    | object | The `AcceleratorBreakpointInfo` that was hit, including its `identifier`. |
+| `symbol_values` | array  | Array of `{"name": "<name>", "value": <addr>}`, one entry for each name in the breakpoint's `symbol_names`. `value` is the resolved load address, or `null` if the client could not find the symbol or convert it to a load address. |
+
+The response JSON has the following fields:
+
+| Key                  | Type | Description |
+|----------------------|------|-------------|
+| `disable_bp`         | bool   | If true, the client should disable this breakpoint. |
+| `auto_resume_native` | bool   | If true, the native process should automatically resume after handling the hit. |
+| `actions`            | object | Optional `AcceleratorActions` for the client to perform. |
+
+Example:
+```
+LLDB SENDS:    jAcceleratorPluginBreakpointHit:{"plugin_name":"mock","breakpoint":{"identifier":1,"symbol_names":[]},"symbol_values":[]}
+STUB REPLIES:  {"disable_bp":true,"auto_resume_native":false,"actions":{"plugin_name":"mock","session_name":"","identifier":2,"breakpoints":[{"identifier":2,"by_name":{"function_name":"exit"},"symbol_names":[]}]}}
+```
+
+**Priority To Implement:** Required for hardware accelerator debugging
+support. Not needed for non-hardware-accelerator debugging.

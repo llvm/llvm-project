@@ -1,0 +1,51 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//mlir:tblgen.bzl", "gentbl_cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+exports_files(["RuntimeFunctions.inc"])
+
+cc_library(
+    name = "TransformsHeaders",
+    hdrs = glob([
+        "*.h",
+        "CUDA/*.h",
+    ]) + ["RuntimeFunctions.inc"],
+    strip_include_prefix = "/flang/include",
+    deps = [
+        ":FIROptTransformsPassIncGen",
+        "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
+        "//flang/include/flang/Optimizer/Dialect/CUF:CUFHeaders",
+        "//flang/include/flang/Optimizer/Dialect/MIF:MIFHeaders",
+        "//mlir:IR",
+        "//mlir:LLVMCommonConversion",
+        "//mlir:LLVMDialect",
+        "//mlir:Pass",
+        "//mlir:Transforms",
+    ],
+)
+
+gentbl_cc_library(
+    name = "FIROptTransformsPassIncGen",
+    strip_include_prefix = "/flang/include",
+    tbl_outs = {
+        "Passes.h.inc": [
+            "-gen-pass-decls",
+            "-name=OptTransform",
+        ],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "Passes.td",
+    deps = ["//mlir:PassBaseTdFiles"],
+)

@@ -50,6 +50,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
@@ -584,7 +585,7 @@ struct FwdRegParamInfo {
 };
 
 /// Register worklist for finding call site values.
-using FwdRegWorklist = MapVector<uint64_t, SmallVector<FwdRegParamInfo, 2>>;
+using FwdRegWorklist = MapVector<Register, SmallVector<FwdRegParamInfo, 2>>;
 /// Container for the set of register units known to be clobbered on the path
 /// to a call site.
 using ClobberedRegUnitSet = SmallSet<MCRegUnit, 16>;
@@ -1521,6 +1522,8 @@ void DwarfDebug::endModule() {
     DenseSet<DIGlobalVariable *> Processed;
     for (auto *GVE : CUNode->getGlobalVariables()) {
       DIGlobalVariable *GV = GVE->getVariable();
+      assert(!isa_and_nonnull<DILocalScope>(GV->getScope()) &&
+             "Unexpected function-local entity in 'globals' CU field.");
       if (Processed.insert(GV).second)
         CU->getOrCreateGlobalVariableDIE(GV, sortGlobalExprs(GVMap[GV]));
     }
@@ -1533,14 +1536,20 @@ void DwarfDebug::endModule() {
     }
 
     // Emit function-local entities.
-    for (const auto *D : CU->getDeferredLocalDecls()) {
-      if (auto *IE = dyn_cast<DIImportedEntity>(D))
-        CU->getOrCreateImportedEntityDIE(IE);
-      else if (auto *Ty = dyn_cast<DIType>(D))
-        CU->getOrCreateTypeDIE(Ty);
-      else
-        llvm_unreachable("Unexpected local retained node!");
-    }
+    const auto Unexpected = [](const Metadata *N) {
+      llvm_unreachable("Unexpected local retained node!");
+    };
+    for (const auto *D : CU->getDeferredLocalDecls())
+      DISubprogram::visitRetainedNode<void>(
+          D, Unexpected, Unexpected,
+          [CU](const auto *IE) { CU->getOrCreateImportedEntityDIE(IE); },
+          [CU](const auto *Ty) { CU->getOrCreateTypeDIE(Ty); },
+          [&](const auto *GVE) {
+            DIGlobalVariable *GV = GVE->getVariable();
+            if (Processed.insert(GV).second)
+              CU->getOrCreateGlobalVariableDIE(GV, sortGlobalExprs(GVMap[GV]));
+          },
+          Unexpected);
 
     // Emit base types.
     CU->createBaseTypeDIEs();
@@ -2087,16 +2096,17 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
   }
 
   // Collect info for retained nodes.
-  for (const DINode *DN : SP->getRetainedNodes()) {
-    const auto *LS = getRetainedNodeScope(DN);
-    if (isa<DILocalVariable>(DN) || isa<DILabel>(DN)) {
+  for (const MDNode *N : SP->getRetainedNodes()) {
+    const auto *LS = getRetainedNodeScope(N);
+    if (isa<DILocalVariable>(N) || isa<DILabel>(N)) {
+      auto *DN = cast<DINode>(N);
       if (!Processed.insert(InlinedEntity(DN, nullptr)).second)
         continue;
       LexicalScope *LexS = LScopes.findLexicalScope(LS);
       if (LexS)
         createConcreteEntity(TheCU, *LexS, DN, nullptr);
     } else {
-      LocalDeclsPerLS[LS].insert(DN);
+      LocalDeclsPerLS[LS].insert(N);
     }
   }
 }
@@ -2896,12 +2906,13 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
 #endif
   for (LexicalScope *AScope : LScopes.getAbstractScopesList()) {
     const auto *SP = cast<DISubprogram>(AScope->getScopeNode());
-    for (const DINode *DN : SP->getRetainedNodes()) {
-      const auto *LS = getRetainedNodeScope(DN);
+    for (const MDNode *N : SP->getRetainedNodes()) {
+      const auto *LS = getRetainedNodeScope(N);
       // Ensure LexicalScope is created for the scope of this node.
       auto *LexS = LScopes.getOrCreateAbstractScope(LS);
       assert(LexS && "Expected the LexicalScope to be created.");
-      if (isa<DILocalVariable>(DN) || isa<DILabel>(DN)) {
+      if (isa<DILocalVariable>(N) || isa<DILabel>(N)) {
+        auto *DN = cast<DINode>(N);
         // Collect info for variables/labels that were optimized out.
         if (!Processed.insert(InlinedEntity(DN, nullptr)).second ||
             TheCU.getExistingAbstractEntity(DN))
@@ -2909,7 +2920,7 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
         TheCU.createAbstractEntity(DN, LexS);
       } else {
         // Remember the node if this is a local declarations.
-        LocalDeclsPerLS[LS].insert(DN);
+        LocalDeclsPerLS[LS].insert(N);
       }
       assert(
           LScopes.getAbstractScopesList().size() == NumAbstractSubprograms &&
@@ -3251,10 +3262,40 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
                             &AP](const DbgValueLocEntry &Entry,
                                  DIExpressionCursor &Cursor) -> bool {
     if (Entry.isInt()) {
-      if (BT && (BT->getEncoding() == dwarf::DW_ATE_boolean))
+      if (BT && (BT->getEncoding() == dwarf::DW_ATE_boolean)) {
         DwarfExpr.addBooleanConstant(Entry.getInt());
-      else if (BT && (BT->getEncoding() == dwarf::DW_ATE_signed ||
-                      BT->getEncoding() == dwarf::DW_ATE_signed_char))
+        return true;
+      }
+
+      bool IsSigned = BT && (BT->getEncoding() == dwarf::DW_ATE_signed ||
+                             BT->getEncoding() == dwarf::DW_ATE_signed_char);
+      if (BT && AP.getDwarfVersion() >= 4 &&
+          !AP.getDwarfDebug()->tuneForSCE() && !Cursor) {
+        // DW_OP_const* pushes a generic, address-sized value. For a wider
+        // source integer value that cannot fit in the generic type, use
+        // DW_OP_implicit_value to preserve the source bytes instead. Keep this
+        // limited to complete constant values: SCE tuning already avoids
+        // DW_OP_implicit_value for compatibility, and expressions with
+        // remaining operations may need a scalar stack value rather than an
+        // implicit value block.
+        unsigned GenericBitSize = AP.MAI.getCodePointerSize() * 8;
+        uint64_t TypeBitSize = BT->getSizeInBits();
+        bool IsByteSized = TypeBitSize % 8 == 0;
+        bool IsOutOfRange =
+            IsSigned ? !isIntN(GenericBitSize, Entry.getInt())
+                     : !isUIntN(GenericBitSize,
+                                static_cast<uint64_t>(Entry.getInt()));
+        if (TypeBitSize > GenericBitSize && IsByteSized && IsOutOfRange) {
+          DwarfExpr.addImplicitValue(
+              APInt(static_cast<unsigned>(TypeBitSize),
+                    static_cast<uint64_t>(Entry.getInt()), IsSigned,
+                    /*implicitTrunc=*/true),
+              AP);
+          return true;
+        }
+      }
+
+      if (IsSigned)
         DwarfExpr.addSignedConstant(Entry.getInt());
       else
         DwarfExpr.addUnsignedConstant(Entry.getInt());

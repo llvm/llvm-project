@@ -83,20 +83,12 @@ struct DenseMapInfo<
   using ClassDefId =
       clang::tidy::cppcoreguidelines::SpecialMemberFunctionsCheck::ClassDefId;
 
-  static ClassDefId getEmptyKey() {
-    return {DenseMapInfo<clang::SourceLocation>::getEmptyKey(), "EMPTY"};
-  }
-
   static unsigned getHashValue(const ClassDefId &Val) {
-    assert(Val != getEmptyKey() && "Cannot hash the empty key!");
-
     const std::hash<ClassDefId::second_type> SecondHash;
     return Val.first.getHashValue() + SecondHash(Val.second);
   }
 
   static bool isEqual(const ClassDefId &LHS, const ClassDefId &RHS) {
-    if (RHS == getEmptyKey())
-      return LHS == getEmptyKey();
     return LHS == RHS;
   }
 };

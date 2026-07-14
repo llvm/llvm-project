@@ -32,6 +32,7 @@ from __future__ import annotations
 
 # System modules
 import abc
+import errno
 from functools import wraps
 import gc
 import io
@@ -46,7 +47,7 @@ import sys
 import time
 import datetime
 import traceback
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 
 # Third-party modules
 import unittest
@@ -258,6 +259,46 @@ def which(program):
     return None
 
 
+def _truncate_for_log(text: str, max_characters: int = 32 * 1024) -> str:
+    """
+    Returns ``text`` unchanged if it fits in ``max_characters``, otherwise
+    returns a truncated copy with a trailing note describing how many
+    characters were dropped.
+    """
+    if len(text) <= max_characters:
+        return text
+    dropped = len(text) - max_characters
+    return (
+        f"{text[:max_characters]}\n"
+        f"... (output truncated: {dropped} of {len(text)} characters omitted)"
+    )
+
+
+def dump_value_obj(val: lldb.SBValue, max_children: int = 10000) -> str:
+    """
+    Returns a string representation of an SBValue suitable for use in
+    diagnostic messages. If the value has more than ``max_children``
+    direct or indirect children, a short placeholder is returned instead
+    of ``str(val)`` to avoid bloating the test log size.
+    """
+    to_visit = [val]
+    total = 0
+    while to_visit:
+        current = to_visit.pop()
+        n = current.GetNumChildren()
+        if n == 0:
+            continue
+        total += n
+        if total > max_children:
+            return (
+                f"<SBValue '{val.GetName()}' with more than {max_children} "
+                f"direct/indirect children (dump skipped)>"
+            )
+        for i in range(n):
+            to_visit.append(current.GetChildAtIndex(i))
+    return str(val)
+
+
 class ValueCheck:
     def __init__(
         self,
@@ -292,7 +333,7 @@ class ValueCheck:
         self.children = children
         self.dereference = dereference
 
-    def check_value(self, test_base, val, error_msg=None):
+    def check_value(self, test_base, val, error_msg=""):
         """
         Checks that the given value matches the currently set properties
         of this ValueCheck. If a match failed, the given TestBase will
@@ -302,7 +343,7 @@ class ValueCheck:
         """
 
         this_error_msg = error_msg if error_msg else ""
-        this_error_msg += "\nChecking SBValue: " + str(val)
+        this_error_msg += "\nChecking SBValue: " + dump_value_obj(val)
 
         test_base.assertSuccess(val.GetError())
 
@@ -335,7 +376,7 @@ class ValueCheck:
         if self.dereference is not None:
             self.dereference.check_value(test_base, val.Dereference(), error_msg)
 
-    def check_value_children(self, test_base, val, error_msg=None):
+    def check_value_children(self, test_base, val, error_msg=""):
         """
         Checks that the children of a SBValue match a certain structure and
         have certain properties.
@@ -345,7 +386,7 @@ class ValueCheck:
         """
 
         this_error_msg = error_msg if error_msg else ""
-        this_error_msg += "\nChecking SBValue: " + str(val)
+        this_error_msg += "\nChecking SBValue: " + dump_value_obj(val)
 
         test_base.assertEqual(len(self.children), val.GetNumChildren(), this_error_msg)
 
@@ -791,7 +832,21 @@ class Base(unittest.TestCase):
                 "MAX_PATH limit): {}".format(bdir)
             )
         if os.path.isdir(bdir) and not self.SHARED_BUILD_TESTCASE:
-            shutil.rmtree(bdir)
+            # Tolerate files vanishing mid-walk. Clang's implicit module
+            # build leaves behind `*.pcm.lock` lockfiles whose lifetime is
+            # tied to the holding process; a concurrent or just-exited
+            # clang can unlink one between rmtree's scandir and unlink,
+            # raising ENOENT. The dir is going away anyway, so treat
+            # already-gone entries as success.
+            def _ignore_enoent(func, path, exc_info):
+                if (
+                    isinstance(exc_info[1], OSError)
+                    and exc_info[1].errno == errno.ENOENT
+                ):
+                    return
+                raise exc_info[1]
+
+            shutil.rmtree(bdir, onerror=_ignore_enoent)
         lldbutil.mkdir_p(bdir)
 
     def getBuildArtifact(self, name="a.out"):
@@ -1187,6 +1242,18 @@ class Base(unittest.TestCase):
             if self.dicts:
                 for dict in reversed(self.dicts):
                     self.cleanup(dictionary=dict)
+
+        # Kill any process a target is still holding on to.
+        for i in range(self.dbg.GetNumTargets()):
+            process = self.dbg.GetTargetAtIndex(i).GetProcess()
+            # Only kill processes that are still alive.
+            if process.IsValid() and process.is_alive:
+                process.Kill()
+                self.assertEqual(
+                    process.GetState(),
+                    lldb.eStateExited,
+                    "Failed to kill process during teardown",
+                )
 
         # Remove subprocesses created by the test.
         self.cleanupSubprocesses()
@@ -1602,6 +1669,38 @@ class Base(unittest.TestCase):
 
         self.runBuildCommand(command)
 
+    def build_and_run(
+        self,
+        build_dictionary: dict[str, str] | None = None,
+        file_name: str = "",
+        comment: str = "// break here",
+    ) -> Tuple[lldb.SBTarget, lldb.SBProcess, lldb.SBThread, lldb.SBBreakpoint]:
+        """
+        Builds the target binary, launches it and runs to the breakpoint
+        location specified by the '// break here' comment.
+
+        Returns the target/process/thread/breakpoint returned from
+        lldbutil.run_to_name_breakpoint
+        """
+        self.build(dictionary=build_dictionary)
+
+        if file_name:
+            main_candidates = [file_name]
+        else:
+            main_candidates = ["main.c", "main.cpp", "main.m", "main.mm"]
+
+        for candidate in main_candidates:
+            if os.path.exists(candidate):
+                return lldbutil.run_to_source_breakpoint(
+                    self, comment, lldb.SBFileSpec(candidate, False)
+                )
+
+        self.fail(
+            f"Could not find any main file in {self.mydir}."
+            + "Searched: "
+            + ", ".join(main_candidates)
+        )
+
     def runBuildCommand(self, command):
         self.trace(shlex.join(command))
         try:
@@ -1652,7 +1751,8 @@ class Base(unittest.TestCase):
                 "EXE": exe_name,
                 "CFLAGS_EXTRAS": "%s %s %s" % (stdflag, stdlibflag, defines),
                 "FRAMEWORK_INCLUDES": "-F%s" % self.framework_dir,
-                "LD_EXTRAS": "%s -Wl,-rpath,%s" % (self.lib_lldb, self.framework_dir),
+                "LD_EXTRAS": "%s -Wl,-rpath,%s -Wl,-rpath,%s"
+                % (self.lib_lldb, self.framework_dir, lib_dir),
             }
         elif sys.platform.startswith("win"):
             d = {
@@ -1964,6 +2064,8 @@ def _expand_test_variants(attrname, methods, variant, xfail_fns, skip_fns):
             expanded[method_name] = method
             continue
         for value_name in variant.get_enabled_values():
+            if _is_excluded_variant_combination(method, variant.name, value_name):
+                continue
             new_name = method_name + "_" + value_name
 
             @decorators.add_test_categories([value_name])
@@ -1991,6 +2093,30 @@ def _expand_test_variants(attrname, methods, variant, xfail_fns, skip_fns):
 
 
 _test_variants = []
+
+
+# Variant value combinations that should never be generated. Each entry maps
+# `variant_name -> value`; a method copy is dropped when its already-set
+# variant attributes plus the new value being added match every key in the
+# entry. Add entries here for crosses that don't exercise anything new and
+# would only inflate the matrix on remote test runs.
+_excluded_variant_combinations = [
+    # Example (uncomment + adapt when registering a real cross to drop):
+    # {"swift_module_importer": "noclang", "swift_embedded": "swiftembed"},
+]
+
+
+def _is_excluded_variant_combination(method, variant_name, value_name):
+    """Return True if assigning *variant_name=value_name* to *method* would
+    produce a combination listed in `_excluded_variant_combinations`."""
+    for combo in _excluded_variant_combinations:
+        if combo.get(variant_name) != value_name:
+            continue
+        if all(
+            getattr(method, k, None) == v for k, v in combo.items() if k != variant_name
+        ):
+            return True
+    return False
 
 
 class LLDBTestCaseFactory(type):
@@ -2777,7 +2903,7 @@ FileCheck output:
         ]
         if exe:
             # Newline before output to make large strings more readable
-            log_lines.append("Got output:\n{}".format(output))
+            log_lines.append(f"Got output:\n{_truncate_for_log(output)}")
 
         # Assume that we start matched if we want a match
         # Meaning if you have no conditions, matching or
@@ -2897,7 +3023,7 @@ FileCheck output:
             summary=result_summary,
             children=result_children,
         )
-        value_check.check_value(self, eval_result, str(eval_result))
+        value_check.check_value(self, eval_result)
         return eval_result
 
     def expect_var_path(
@@ -2924,7 +3050,7 @@ FileCheck output:
         value_check = ValueCheck(
             type=type, value=value, summary=summary, children=children
         )
-        value_check.check_value(self, eval_result, str(eval_result))
+        value_check.check_value(self, eval_result)
         return eval_result
 
     """Assert that an lldb.SBError is in the "success" state."""

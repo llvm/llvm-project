@@ -517,12 +517,6 @@ namespace llvm {
 /// DenseMapInfo implementation.
 /// \{
 template <> struct DenseMapInfo<lldb_private::SymbolContext> {
-  static inline lldb_private::SymbolContext getEmptyKey() {
-    lldb_private::SymbolContext sc;
-    sc.function = DenseMapInfo<lldb_private::Function *>::getEmptyKey();
-    return sc;
-  }
-
   static unsigned getHashValue(const lldb_private::SymbolContext &sc) {
     // Hash all fields EXCEPT symbol, since
     // CompareConsideringPossiblyNullSymbol ignores it.
@@ -541,13 +535,6 @@ template <> struct DenseMapInfo<lldb_private::SymbolContext> {
 
   static bool isEqual(const lldb_private::SymbolContext &lhs,
                       const lldb_private::SymbolContext &rhs) {
-    // Check for empty keys first, since these are invalid pointers we
-    // don't want to accidentally dereference them in
-    // CompareConsideringPossiblyNullSymbol.
-    if (lhs.function == DenseMapInfo<lldb_private::Function *>::getEmptyKey() ||
-        rhs.function == DenseMapInfo<lldb_private::Function *>::getEmptyKey())
-      return lhs.function == rhs.function;
-
     return lldb_private::SymbolContext::CompareConsideringPossiblyNullSymbol(
         lhs, rhs);
   }

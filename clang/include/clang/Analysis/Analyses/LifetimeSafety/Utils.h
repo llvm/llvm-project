@@ -36,9 +36,10 @@ template <typename Tag> struct ID {
 
 /// Computes the union of two ImmutableSets.
 template <typename T>
-static llvm::ImmutableSet<T> join(llvm::ImmutableSet<T> A,
-                                  llvm::ImmutableSet<T> B,
-                                  typename llvm::ImmutableSet<T>::Factory &F) {
+llvm::ImmutableSet<T> join(llvm::ImmutableSet<T> A, llvm::ImmutableSet<T> B,
+                           typename llvm::ImmutableSet<T>::Factory &F) {
+  if (A.getRootWithoutRetain() == B.getRootWithoutRetain())
+    return A;
   if (A.getHeight() < B.getHeight())
     std::swap(A, B);
   for (const T &E : B)
@@ -67,10 +68,12 @@ enum class JoinKind {
 // efficient merge could be implemented using a Patricia Trie or HAMT
 // instead of the current AVL-tree-based ImmutableMap.
 template <typename K, typename V, typename Joiner>
-static llvm::ImmutableMap<K, V>
-join(const llvm::ImmutableMap<K, V> &A, const llvm::ImmutableMap<K, V> &B,
-     typename llvm::ImmutableMap<K, V>::Factory &F, Joiner JoinValues,
-     JoinKind Kind) {
+llvm::ImmutableMap<K, V> join(const llvm::ImmutableMap<K, V> &A,
+                              const llvm::ImmutableMap<K, V> &B,
+                              typename llvm::ImmutableMap<K, V>::Factory &F,
+                              Joiner JoinValues, JoinKind Kind) {
+  if (A.getRootWithoutRetain() == B.getRootWithoutRetain())
+    return A;
   if (A.getHeight() < B.getHeight())
     return join(B, A, F, JoinValues, Kind);
 
@@ -98,10 +101,6 @@ namespace llvm {
 template <typename Tag>
 struct DenseMapInfo<clang::lifetimes::internal::utils::ID<Tag>> {
   using ID = clang::lifetimes::internal::utils::ID<Tag>;
-
-  static inline ID getEmptyKey() {
-    return {DenseMapInfo<uint32_t>::getEmptyKey()};
-  }
 
   static unsigned getHashValue(const ID &Val) {
     return DenseMapInfo<uint32_t>::getHashValue(Val.Value);

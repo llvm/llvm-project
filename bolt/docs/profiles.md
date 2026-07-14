@@ -62,8 +62,8 @@ without going through `perf.data`.
 ```
 E <event>
 S <start> <count>
-[TR] <branch> <ft_start> <ft_end> <count>
-B <start> <end> <count> <mispred_count>
+[TR] <branch> <ft_start> <ft_end> <count> [<mispred_count>]
+B <start> <end> <count> [<mispred_count>]
 [Ff] <start> <end> <count>
 r <start> <end> <count>
 ```

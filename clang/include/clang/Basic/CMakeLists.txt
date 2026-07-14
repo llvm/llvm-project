@@ -52,40 +52,40 @@ clang_tablegen(DiagnosticAllCompatIDs.inc
   TARGET ClangDiagnosticAllCompatIDs)
 
 clang_tablegen(AttrList.inc -gen-clang-attr-list
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
   TARGET ClangAttrList)
 
 clang_tablegen(AttrParsedAttrList.inc -gen-clang-attr-parsed-attr-list
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
   TARGET ClangAttrParsedAttrList)
 
 clang_tablegen(AttrSubMatchRulesList.inc -gen-clang-attr-subject-match-rule-list
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
   TARGET ClangAttrSubjectMatchRuleList)
 
 clang_tablegen(RegularKeywordAttrInfo.inc -gen-clang-regular-keyword-attr-info
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
   TARGET ClangRegularKeywordAttrInfo
   )
 
 clang_tablegen(AttrHasAttributeImpl.inc -gen-clang-attr-has-attribute-impl
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
   TARGET ClangAttrHasAttributeImpl
   )
 
 clang_tablegen(CXX11AttributeInfo.inc -gen-cxx11-attribute-info
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
   TARGET CXX11AttributeInfo
   )
 
   clang_tablegen(AttributeSpellingList.inc -gen-attribute-spelling-list
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
   TARGET AttributeSpellingList
   )
@@ -145,6 +145,10 @@ clang_tablegen(BuiltinsX86.inc -gen-clang-builtins
 clang_tablegen(BuiltinsX86_64.inc -gen-clang-builtins
   SOURCE BuiltinsX86_64.td
   TARGET ClangBuiltinsX86_64)
+
+clang_tablegen(BuiltinsZOS.inc -gen-clang-builtins
+  SOURCE BuiltinsZOS.td
+  TARGET ClangBuiltinsZOS)
 
 clang_tablegen(BuiltinTemplates.inc -gen-clang-builtin-templates
   SOURCE BuiltinTemplates.td

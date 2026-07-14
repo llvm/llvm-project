@@ -119,6 +119,38 @@ define void @s_getreg(ptr addrspace(1) inreg %out) {
   ret void
 }
 
+; CHECK-LABEL: for function 's_quadmask_i32':
+; CHECK: DIVERGENT: i32 %mask
+; CHECK-NOT: DIVERGENT
+define i32 @s_quadmask_i32(i32 %mask) {
+  %result = call i32 @llvm.amdgcn.s.quadmask.i32(i32 %mask)
+  ret i32 %result
+}
+
+; CHECK-LABEL: for function 's_quadmask_i64':
+; CHECK: DIVERGENT: i64 %mask
+; CHECK-NOT: DIVERGENT
+define i64 @s_quadmask_i64(i64 %mask) {
+  %result = call i64 @llvm.amdgcn.s.quadmask.i64(i64 %mask)
+  ret i64 %result
+}
+
+; CHECK-LABEL: for function 's_wqm_i32':
+; CHECK: DIVERGENT: i32 %mask
+; CHECK-NOT: DIVERGENT
+define i32 @s_wqm_i32(i32 %mask) {
+  %result = call i32 @llvm.amdgcn.s.wqm.i32(i32 %mask)
+  ret i32 %result
+}
+
+; CHECK-LABEL: for function 's_wqm_i64':
+; CHECK: DIVERGENT: i64 %mask
+; CHECK-NOT: DIVERGENT
+define i64 @s_wqm_i64(i64 %mask) {
+  %result = call i64 @llvm.amdgcn.s.wqm.i64(i64 %mask)
+  ret i64 %result
+}
+
 ; CHECK-LABEL: for function 's_get_barrier_state':
 ; CHECK: DIVERGENT: i32 %bar
 ; CHECK-NOT: DIVERGENT

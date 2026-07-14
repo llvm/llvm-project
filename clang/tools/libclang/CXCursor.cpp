@@ -295,6 +295,8 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
 
   case Stmt::CoroutineBodyStmtClass:
   case Stmt::CoreturnStmtClass:
+  case Stmt::CXXExpansionStmtPatternClass:
+  case Stmt::CXXExpansionStmtInstantiationClass:
     K = CXCursor_UnexposedStmt;
     break;
 
@@ -345,6 +347,7 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::EmbedExprClass:
   case Stmt::HLSLOutArgExprClass:
   case Stmt::OpenACCAsteriskSizeExprClass:
+  case Stmt::CXXExpansionSelectExprClass:
     K = CXCursor_UnexposedExpr;
     break;
 
@@ -1622,9 +1625,6 @@ static inline CXCursorSet_Impl *unpackCXCursorSet(CXCursorSet set) {
 namespace llvm {
 template <> struct DenseMapInfo<CXCursor> {
 public:
-  static inline CXCursor getEmptyKey() {
-    return MakeCXCursorInvalid(CXCursor_InvalidFile);
-  }
   static inline unsigned getHashValue(const CXCursor &cursor) {
     return llvm::DenseMapInfo<std::pair<const void *, const void *>>::
         getHashValue(std::make_pair(cursor.data[0], cursor.data[1]));

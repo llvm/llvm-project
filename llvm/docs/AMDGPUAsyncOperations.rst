@@ -10,101 +10,59 @@
 Introduction
 ============
 
-Asynchronous operations are memory transfers (usually between the global memory
-and LDS) that are completed independently at an unspecified scope. A thread that
-requests one or more asynchronous transfers can use *asyncmarks* to track
-their completion. The thread waits for each asyncmark to be *completed*, which
-indicates that requests initiated in *program-order* before this asyncmark have also
-completed.
+Asynchronous operations are operations whose completion is not tracked
+internally by the compiler. A thread that initiates one or more async operations can use
+*asyncmarks* to track their completion.
 
-Operations
+- Most :ref:`DMA operations<amdgpu-dma-operations>` are asynchronous.
+
+Asyncmarks
 ==========
 
-Memory Accesses
----------------
-
-The following instructions request asynchronous transfer of data between global
-memory and LDS memory.
-
-.. note::
-
-   These listings are *merely representative*. The actual function signatures
-   and supported architectures are documented in the :ref:`amdgpu-usage-guide`.
-
-**GFX9 Async Instructions (LDS DMA)**
-
-.. code-block:: llvm
-
-  void @llvm.amdgcn.load.async.to.lds(ptr %src, ptr %dst)
-  void @llvm.amdgcn.global.load.async.lds(ptr %src, ptr %dst)
-  void @llvm.amdgcn.raw.buffer.load.async.lds(ptr %src, ptr %dst)
-  void @llvm.amdgcn.raw.ptr.buffer.load.async.lds(ptr %src, ptr %dst)
-  void @llvm.amdgcn.struct.buffer.load.async.lds(ptr %src, ptr %dst)
-  void @llvm.amdgcn.struct.ptr.buffer.load.async.lds(ptr %src, ptr %dst)
-
-**GFX12 Async Instructions**
-
-.. code-block:: llvm
-
-  void @llvm.amdgcn.global.load.async.to.lds.type(ptr %dst, ptr %src)
-  void @llvm.amdgcn.global.store.async.from.lds.type(ptr %dst, ptr %src)
-  void @llvm.amdgcn.cluster.load.async.to.lds.type(ptr %dst, ptr %src)
-
-Asyncmark Operations
----------------------
-
-An *asyncmark* in the abstract machine tracks all the async operations that
-are *program-ordered* before that asyncmark. An asyncmark M is said to be *completed*
-only when all async operations *program-ordered* before M are reported by the
-implementation as having finished, and it is said to be *outstanding* otherwise.
-
-Thus we have the following sufficient condition:
-
-  An async operation X is *completed* at a program point P if there exists an
-  asyncmark M such that X is *program-ordered* before M, M is *program-ordered* before
-  P, and M is completed. X is said to be *outstanding* at P otherwise.
-
-The abstract machine maintains a sequence of asyncmarks during the
-execution of a function body, which excludes any asyncmarks produced by calls to
-other functions encountered in the currently executing function.
+An *asyncmark* created by a thread can be used to track async operations
+initiated by that thread. The abstract machine maintains a sequence of
+asyncmarks during the execution of a function body, which excludes any
+asyncmarks produced by calls to other functions encountered in the currently
+executing function. The state of this sequence at each program point in the
+function is called the *current sequence*.
 
 ``@llvm.amdgcn.asyncmark()``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+----------------------------
 
-When executed, inserts an asyncmark in the sequence associated with the
-currently executing function body.
+Produces an asyncmark and appends it to the current sequence.
 
 ``@llvm.amdgcn.wait.asyncmark(i16 %N)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------------------
 
-Waits until there are at most N outstanding asyncmarks in the sequence associated
-with the currently executing function body.
+Ensures that the length of the current sequence is at most ``N`` by removing
+asyncmarks from the start of the sequence if it is more than ``N``.
 
-Memory Consistency Model
-========================
+.. _amdgpu-asyncmark-memory-model:
 
-Each asynchronous operation consists of a non-atomic read on the source and a
-non-atomic write on the destination. Async "LDS DMA" intrinsics result in async
-accesses that guarantee visibility relative to other memory operations as
-follows:
+Memory Model
+============
 
-  An asynchronous operation `A` program ordered before an overlapping memory
-  operation `X` happens-before `X` only if `A` is completed before `X`.
+An ``asyncmark()`` operation ``X`` that produces an asyncmark ``M`` is
+*completed-at* a ``wait.asyncmark()`` operation ``Y`` in the same function body
+if:
 
-  A memory operation `X` program ordered before an overlapping asynchronous
-  operation `A` happens-before `A`.
+- ``X`` is *program-ordered* before ``Y``, and
+- ``M`` is not in the current sequence at any operation ``Z`` that immediately
+  follows ``Y`` in *program-order*.
 
-.. note::
+Each dynamic instance ``I`` of an async *instruction* initiates a corresponding
+async *operation* ``A`` such that ``I`` *happens-before* ``A``. Then ``A``
+*happens-before* a ``wait.asyncmark()`` operation ``Y`` if there exists an
+``asyncmark()`` operation ``X`` such that:
 
-   The *only if* in the above wording implies that unlike the default LLVM
-   memory model, certain program order edges are not automatically included in
-   ``happens-before``.
+- ``I`` is *program-ordered* before ``X``, and
+- ``X`` is *completed-at* ``Y``.
 
 Examples
 ========
 
-Uneven blocks of async transfers
---------------------------------
+Uneven blocks of async operations
+---------------------------------
 
 .. code-block:: c++
 
@@ -170,7 +128,7 @@ Ordinary function call
 
 .. code-block:: c++
 
-   extern void bar(); // may or may not make async calls
+   extern void bar(); // may or may not initiate async operations
 
    void foo(global int *g, local int *l) {
        // first block
@@ -185,8 +143,11 @@ Ordinary function call
        // third block
        asyncmark();
 
-       wait.asyncmark(1); // wait for the second block
-       wait.asyncmark(0); // will wait for third block, including bar()
+       // wait for the second block
+       wait.asyncmark(1);
+
+       // wait for the third block, including bar()
+       wait.asyncmark(0);
    }
 
 Implementation notes
@@ -194,17 +155,8 @@ Implementation notes
 
 [This section is informational.]
 
-Optimization
-------------
-
-The implementation may eliminate asyncmark/wait intrinsics in the following cases:
-
-1. An ``asyncmark`` operation which is not included in the wait count of a later
-   wait operation in the current function. In particular, an ``asyncmark`` which
-   is not post-dominated by any ``wait.asyncmark``.
-2. A ``wait.asyncmark`` whose wait count is more than the outstanding async
-   asyncmarks at that point. In particular, a ``wait.asyncmark`` that is not
-   dominated by any ``asyncmark``.
+Function Calls
+--------------
 
 In general, at a function call, if the caller uses sufficient waits to track
 its own async operations, the actions performed by the callee cannot affect
@@ -213,30 +165,100 @@ correctness. But inlining such a call may result in redundant waits.
 .. code-block:: c++
 
    void foo() {
-     asyncmark(); // A
+     ...
+     asyncmark();       // X
+     ...                // no wait.asyncmark()
    }
 
    void bar() {
-     asyncmark(); // B
-     asyncmark(); // C
+     asyncmark();       // B
+     asyncmark();       // C
      foo();
-     wait.asyncmark(1);
+     wait.asyncmark(1); // D
    }
 
-Before inlining, the ``wait.asyncmark`` waits for asyncmark B to be completed.
+Before inlining, it is unspecified whether ``X`` is *completed-at* ``D``, while
+``C`` is **not** *completed-at* ``D``. The programmer can only rely on ``B``
+being *completed-at* ``D``.
+
+.. code-block:: c++
+
+   void bar() {
+     asyncmark();       // B
+     asyncmark();       // C
+     ...
+     asyncmark();       // X
+     ...                // no wait.asyncmark()
+     wait.asyncmark(1); // D
+   }
+
+After inlining, ``C`` is also *completed-at* ``D`` and ``X`` is **not**
+*completed-at* ``D``.
+
+Conversely, a ``wait.asyncmark`` call inside a callee cannot be used to track
+asyncmarks from the caller, since this ``wait.asyncmark`` can only
+observe the current sequence of the callee.
 
 .. code-block:: c++
 
    void foo() {
+     ...                // no asyncmark()
+     wait.asyncmark(0); // Y
+     ...
    }
 
    void bar() {
-     asyncmark(); // B
-     asyncmark(); // C
-     asyncmark(); // A from call to foo()
-     wait.asyncmark(1);
+     asyncmark();       // B
+     asyncmark();       // C
+     foo();
+     wait.asyncmark(1); // D
    }
 
-After inlining, the ``wait.asyncmark`` now waits for asyncmark C to complete, which is
-longer than necessary. Ideally, the optimizer should have eliminated asyncmark A in
-the body of foo() itself.
+In the above example, it is unspecified whether ``B`` and ``C`` in ``bar()`` are
+*completed-at* ``Y``, because they are not included in the sequence that can be
+examined at ``Y``.
+
+.. code-block:: c++
+
+   void bar() {
+     asyncmark();       // B
+     asyncmark();       // C
+     ...                // no asyncmark()
+     wait.asyncmark(0); // Y
+     ...
+     wait.asyncmark(1); // D
+   }
+
+After inlining, both ``B`` and ``C`` are *completed-at* ``Y``.
+
+Optimization
+------------
+
+The implementation may eliminate asyncmark/wait intrinsics in the following
+cases. These are just examples and not meant to be an exhaustive list.
+
+1. An ``asyncmark`` operation which remains in the current sequence along every
+   path that reaches the function exit.
+
+   .. code-block:: c++
+
+      void foo() {
+        ...
+        asyncmark();       // X
+        ...                // no wait.asyncmark()
+      }
+
+   Here, ``X`` can be eliminated.
+
+2. A ``wait.asyncmark`` which sees an empty sequence of asyncmarks along every
+   path that reaches it.
+
+   .. code-block:: c++
+
+      void foo() {
+        ...                // no asyncmark()
+        wait.asyncmark(0); // Y
+        ...
+      }
+
+    Here, ``Y`` can be eliminated.

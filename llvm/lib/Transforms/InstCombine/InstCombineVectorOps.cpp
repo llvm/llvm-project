@@ -798,6 +798,15 @@ static bool replaceExtractElements(InsertElementInst *InsElt,
   else
     IC.InsertNewInstWith(WideVec, ExtElt->getParent()->getFirstInsertionPt());
 
+  // WideVec is an extension of ExtVecOp to produce a more useful value for
+  // ExtractElement instructions. If ExtVecOp is an instruction, adopt its
+  // DebugLoc; if it is not, then this is materializing a constant value, so set
+  // a CompilerGenerated location.
+  if (ExtVecOpInst)
+    WideVec->setDebugLoc(ExtVecOpInst->getDebugLoc());
+  else
+    WideVec->setDebugLoc(DebugLoc::getCompilerGenerated());
+
   // Replace extracts from the original narrow vector with extracts from the new
   // wide vector.
   for (User *U : ExtVecOp->users()) {
@@ -2290,8 +2299,9 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf,
   // This makes the transformation incorrect since the original program would
   // have preserved the exact NaN bit-pattern.
   // Avoid the folding if X can have NaN elements.
-  if (Shuf.getType()->getElementType()->isFloatingPointTy() &&
-      !isKnownNeverNaN(X, SQ))
+  bool IsFloatingPointTy =
+      Shuf.getType()->getElementType()->isFloatingPointTy();
+  if (IsFloatingPointTy && !isKnownNeverNaN(X, SQ))
     return nullptr;
 
   // Shuffle identity constants into the lanes that return the original value.
@@ -2310,8 +2320,14 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf,
 
   // shuf (bop X, C), X, M --> bop X, C'
   // shuf X, (bop X, C), M --> bop X, C'
-  Instruction *NewBO = BinaryOperator::Create(BOpcode, X, NewC);
+  BinaryOperator *NewBO = BinaryOperator::Create(BOpcode, X, NewC);
   NewBO->copyIRFlags(BO);
+
+  // Drop noinf FMF if X can be Inf. If X can have Inf elements and noinf FMF is
+  // set, the transformation may generate poison where the original program
+  // would preserve the Inf value.
+  if (IsFloatingPointTy && NewBO->hasNoInfs() && !isKnownNeverInfinity(X, SQ))
+    NewBO->setHasNoInfs(false);
 
   // An undef shuffle mask element may propagate as an undef constant element in
   // the new binop. That would produce poison where the original code might not.
@@ -3332,11 +3348,12 @@ InstCombinerImpl::foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt) {
   Value *DIV;
 
   using namespace PatternMatch;
-  Value *SVI = nullptr, *DI = nullptr;
-  if (!match(&RootZExt,
-             m_ZExt(m_CombineOr(
-                 m_ExtractValue(m_Value(DI, m_Deinterleave2(m_Value(DIV)))),
-                 m_Value(SVI, m_Shuffle(m_Value(), m_Value()))))))
+  Instruction *SVI = nullptr, *DI = nullptr;
+  if (!match(
+          &RootZExt,
+          m_ZExt(m_CombineOr(
+              m_ExtractValue(m_Instruction(DI, m_Deinterleave2(m_Value(DIV)))),
+              m_Instruction(SVI, m_Shuffle(m_Value(), m_Value()))))))
     return nullptr;
 
   auto isDeinterleaveShuffle =
@@ -3363,7 +3380,7 @@ InstCombinerImpl::foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt) {
   // the value they're de-interleaving.
   if (SVI) {
     // We will find other shufflevectors later.
-    DIV = isDeinterleaveShuffle(cast<Instruction>(SVI)).first;
+    DIV = isDeinterleaveShuffle(SVI).first;
     if (!DIV)
       return nullptr;
   } else {
@@ -3396,6 +3413,11 @@ InstCombinerImpl::foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt) {
       if (V != DIV)
         continue;
       assert(Index < 2);
+      // Find the earliest field extraction instruction.
+      if (FieldI->getParent() != SVI->getParent())
+        continue;
+      if (FieldI != SVI && FieldI->comesBefore(SVI))
+        SVI = FieldI;
       Fields.push_back({FieldI, Index});
     }
   } else {
@@ -3424,6 +3446,9 @@ InstCombinerImpl::foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt) {
       FieldReplacements.push_back({ZExt, FieldIdx});
     }
   }
+
+  // This will insert replacement instructions before all the fields users.
+  Builder.SetInsertPoint(DI ? DI : SVI);
 
   // Double the element size but half the vector length.
   auto *BitcastedTy = VectorType::getExtendedElementVectorType(InputVecTy);

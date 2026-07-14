@@ -72,6 +72,14 @@ extern llvm::cl::OptionCategory BinaryAnalysisCategory;
 
 extern llvm::cl::opt<unsigned> AlignText;
 extern llvm::cl::opt<unsigned> AlignFunctions;
+extern llvm::cl::opt<bool> AlignBlocks;
+extern llvm::cl::opt<unsigned> AlignBlocksMinSize;
+extern llvm::cl::opt<unsigned> AlignBlocksThreshold;
+extern llvm::cl::opt<unsigned> AlignFunctionsMaxBytes;
+extern llvm::cl::opt<unsigned> BlockAlignment;
+extern llvm::cl::opt<bool> PreserveBlocksAlignment;
+extern llvm::cl::opt<bool> UseCompactAligner;
+extern llvm::cl::opt<bool> X86AlignBranchBoundaryHotOnly;
 extern llvm::cl::opt<bool> AggregateOnly;
 extern llvm::cl::opt<bool> ArmSPE;
 extern llvm::cl::opt<unsigned> BucketsPerLine;
@@ -101,7 +109,7 @@ extern llvm::cl::opt<bool> UpdateBranchProtection;
 extern llvm::cl::opt<SplitFunctionsStrategy> SplitStrategy;
 
 // The format to use with -o in aggregation mode (perf2bolt)
-enum ProfileFormatKind { PF_Fdata, PF_YAML, PF_PreAgg };
+enum ProfileFormatKind { PF_Fdata, PF_YAML, PF_PreAgg, PF_PerfScript };
 
 extern llvm::cl::opt<ProfileFormatKind> ProfileFormat;
 extern llvm::cl::opt<bool> ShowDensity;

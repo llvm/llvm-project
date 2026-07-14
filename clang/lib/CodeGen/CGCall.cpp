@@ -832,6 +832,32 @@ void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI);
 } // namespace CodeGen
 } // namespace clang
 
+#ifndef NDEBUG
+static const char *abiKindToString(ABIArgInfo::Kind K) {
+  switch (K) {
+  case ABIArgInfo::Direct:
+    return "Direct";
+  case ABIArgInfo::Extend:
+    return "Extend";
+  case ABIArgInfo::Indirect:
+    return "Indirect";
+  case ABIArgInfo::IndirectAliased:
+    return "IndirectAliased";
+  case ABIArgInfo::Ignore:
+    return "Ignore";
+  case ABIArgInfo::Expand:
+    return "Expand";
+  case ABIArgInfo::CoerceAndExpand:
+    return "CoerceAndExpand";
+  case ABIArgInfo::TargetSpecific:
+    return "TargetSpecific";
+  case ABIArgInfo::InAlloca:
+    return "InAlloca";
+  }
+  llvm_unreachable("Unknown kind");
+}
+#endif
+
 void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
   SmallVector<const llvm::abi::Type *> MappedArgTypes;
   MappedArgTypes.reserve(FI.arg_size());
@@ -849,12 +875,100 @@ void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
 
   getLLVMABITargetInfo(AbiMapper->getTypeBuilder()).computeInfo(*AbiFI);
 
-  FI.getReturnInfo() =
-      convertABIArgInfo(AbiFI->getReturnInfo(), FI.getReturnType());
+#ifndef NDEBUG
+  // With assertions enabled, also compute info using Clang ABI logic,
+  // so we can ensure the results are consistent.
+  getABIInfo().computeInfo(FI);
 
+  auto ConvertABIArgInfo = [&](ABIArgInfo &Target,
+                               const llvm::abi::ArgInfo &AbiInfo, QualType Type,
+                               int ArgNo) {
+    auto Check = [&](bool Cond, llvm::function_ref<void()> MessageFn) {
+      if (Cond)
+        return;
+      if (ArgNo == -1)
+        llvm::dbgs() << "For return value of type ";
+      else
+        llvm::dbgs() << "For argument " << ArgNo << " of type ";
+      llvm::dbgs() << Type << ": ";
+      MessageFn();
+      llvm::dbgs() << "\n";
+      abort();
+    };
+    auto CheckSimple = [&](auto TargetVal, auto ResVal, StringRef What) {
+      Check(TargetVal == ResVal, [&]() {
+        llvm::dbgs() << What << " mismatch (expected: " << TargetVal
+                     << ", given: " << ResVal << ")";
+      });
+    };
+
+    ABIArgInfo Res = convertABIArgInfo(AbiInfo, Type);
+    Check(Target.getKind() == Res.getKind(), [&]() {
+      llvm::dbgs() << "Kind mismatch (expected: "
+                   << abiKindToString(Target.getKind())
+                   << ", given: " << abiKindToString(Res.getKind()) << ")";
+    });
+
+    if (Res.canHaveCoerceToType()) {
+      // Normalize nullptr types.
+      llvm::Type *TargetType = Target.getCoerceToType();
+      llvm::Type *ResType = Res.getCoerceToType();
+      if (!TargetType)
+        TargetType = getTypes().ConvertType(Type);
+      if (!ResType)
+        ResType = getTypes().ConvertType(Type);
+
+      Check(TargetType == ResType, [&]() {
+        llvm::dbgs() << "CoerceToType mismatch (expected: " << *TargetType
+                     << ", given: " << *ResType << ")";
+      });
+    }
+
+    switch (Res.getKind()) {
+    case ABIArgInfo::Extend:
+      CheckSimple(Target.isSignExt(), Res.isSignExt(), "SignExt");
+      CheckSimple(Target.isZeroExt(), Res.isZeroExt(), "ZeroExt");
+      [[fallthrough]];
+    case ABIArgInfo::Direct:
+      CheckSimple(Target.getDirectAlign(), Res.getDirectAlign(), "DirectAlign");
+      CheckSimple(Target.getDirectOffset(), Res.getDirectOffset(),
+                  "DirectOffset");
+      break;
+    case ABIArgInfo::Indirect:
+      CheckSimple(Target.getIndirectByVal(), Res.getIndirectByVal(),
+                  "IndirectByVal");
+      [[fallthrough]];
+    case ABIArgInfo::IndirectAliased:
+      CheckSimple(Target.getIndirectAddrSpace(), Res.getIndirectAddrSpace(),
+                  "IndirectAddrSpace");
+      CheckSimple(Target.getIndirectRealign(), Res.getIndirectRealign(),
+                  "IndirectRealign");
+      Check(Target.getIndirectAlign() == Res.getIndirectAlign(), [&]() {
+        llvm::dbgs() << "IndirectAlign mismatch (expected: "
+                     << Target.getIndirectAlign().getQuantity()
+                     << ", given: " << Res.getIndirectAlign().getQuantity()
+                     << ")";
+      });
+      break;
+    default:
+      break;
+    }
+
+    Target = Res;
+  };
+#else
+  auto ConvertABIArgInfo =
+      [&](ABIArgInfo &Target, const llvm::abi::ArgInfo &AbiInfo, QualType Type,
+          int ArgNo) { Target = convertABIArgInfo(AbiInfo, Type); };
+#endif
+
+  ConvertABIArgInfo(FI.getReturnInfo(), AbiFI->getReturnInfo(),
+                    FI.getReturnType(), -1);
+
+  int ArgNo = 0;
   for (auto [CGArg, AbiArg] :
        llvm::zip_equal(FI.arguments(), AbiFI->arguments()))
-    CGArg.info = convertABIArgInfo(AbiArg.Info, CGArg.type);
+    ConvertABIArgInfo(CGArg.info, AbiArg.Info, CGArg.type, ArgNo++);
 }
 
 ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
@@ -874,11 +988,16 @@ ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
       CoercedType = AbiReverseMapper->convertType(AbiInfo.getCoerceToType());
     if (!CoercedType)
       CoercedType = getTypes().ConvertType(Type);
+    // A transparent union is passed as its first field, so the extend keys off
+    // that field's integral type, matching the classifier's
+    // useFirstFieldIfTransparentUnion.  Passing the union type to
+    // ABIArgInfo::getSignExtend would trip its integral-type assert.
+    QualType ExtendType = useFirstFieldIfTransparentUnion(Type);
     if (AbiInfo.isSignExt())
-      return ABIArgInfo::getSignExtend(Type, CoercedType);
+      return ABIArgInfo::getSignExtend(ExtendType, CoercedType);
     if (AbiInfo.isZeroExt())
-      return ABIArgInfo::getZeroExtend(Type, CoercedType);
-    return ABIArgInfo::getExtend(Type, CoercedType);
+      return ABIArgInfo::getZeroExtend(ExtendType, CoercedType);
+    return ABIArgInfo::getExtend(ExtendType, CoercedType);
   }
   case llvm::abi::ArgInfo::Indirect: {
     CharUnits Alignment =
@@ -942,7 +1061,7 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
     computeSPIRKernelABIInfo(CGM, *FI);
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
-  } else if (CGM.shouldUseLLVMABILowering()) {
+  } else if (CGM.shouldUseLLVMABILowering(CC)) {
     CGM.computeABIInfoUsingLib(*FI);
   } else {
     CGM.getABIInfo().computeInfo(*FI);
@@ -2922,20 +3041,18 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     llvm::AttrBuilder &Attrs = ArgAttrs[IRArgs.first];
 
     QualType ThisTy = FI.arg_begin()->type.getTypePtr()->getPointeeType();
+    int64_t ThisSz = getMinimumObjectSize(ThisTy).getQuantity();
 
     if (!CodeGenOpts.NullPointerIsValid &&
         getTypes().getTargetAddressSpace(FI.arg_begin()->type) == 0) {
       Attrs.addAttribute(llvm::Attribute::NonNull);
-      Attrs.addDereferenceableAttr(getMinimumObjectSize(ThisTy).getQuantity());
+      Attrs.addDereferenceableAttr(ThisSz);
     } else {
       // FIXME dereferenceable should be correct here, regardless of
       // NullPointerIsValid. However, dereferenceable currently does not always
       // respect NullPointerIsValid and may imply nonnull and break the program.
       // See https://reviews.llvm.org/D66618 for discussions.
-      Attrs.addDereferenceableOrNullAttr(
-          getMinimumObjectSize(
-              FI.arg_begin()->type.castAs<PointerType>()->getPointeeType())
-              .getQuantity());
+      Attrs.addDereferenceableOrNullAttr(ThisSz);
     }
 
     llvm::Align Alignment =
@@ -3059,15 +3176,13 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       // but not if clang decides it must emit a packed struct, or the
       // user specifies increased alignment requirements.)
       //
-      // This is different from indirect *not* byval, where the object
-      // exists already, and the align attribute is purely
-      // informative.
+      // This is different from indirect *not* byval, where an aligned copy is
+      // already created by the caller, and the align attribute is purely
+      // informative. However, this can still be useful information for
+      // optimizations, such as giving us one necessary condition for checking
+      // if a load to this pointer can be speculatively executed.
       assert(!Align.isZero());
-
-      // For now, only add this when we have a byval argument.
-      // TODO: be less lazy about updating test cases.
-      if (AI.getIndirectByVal())
-        Attrs.addAlignmentAttr(Align.getQuantity());
+      Attrs.addAlignmentAttr(Align.getQuantity());
 
       // byval disables readnone and readonly.
       AddPotentialArgAccess();
@@ -3373,7 +3488,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
         // may be aliased, copy it to ensure that the parameter variable is
         // mutable and has a unique adress, as C requires.
         if (ArgI.getIndirectRealign() || ArgI.isIndirectAliased()) {
-          RawAddress AlignedTemp = CreateMemTemp(Ty, "coerce");
+          RawAddress AlignedTemp = CreateMemTempWithoutCast(Ty, "coerce");
 
           // Copy from the incoming argument pointer to the temporary with the
           // appropriate alignment.
@@ -3503,8 +3618,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
             ParameterABI::SwiftErrorResult) {
           QualType pointeeTy = Ty->getPointeeType();
           assert(pointeeTy->isPointerType());
-          RawAddress temp =
-              CreateMemTemp(pointeeTy, getPointerAlign(), "swifterror.temp");
+          RawAddress temp = CreateMemTempWithoutCast(
+              pointeeTy, getPointerAlign(), "swifterror.temp");
           Address arg = makeNaturalAddressForPointer(
               V, pointeeTy, getContext().getTypeAlignInChars(pointeeTy));
           llvm::Value *incomingErrorValue = Builder.CreateLoad(arg);
@@ -3556,8 +3671,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
 
       llvm::StructType *STy =
           dyn_cast<llvm::StructType>(ArgI.getCoerceToType());
-      Address Alloca =
-          CreateMemTemp(Ty, getContext().getDeclAlign(Arg), Arg->getName());
+      Address Alloca = CreateMemTempWithoutCast(
+          Ty, getContext().getDeclAlign(Arg), Arg->getName());
 
       // Pointer to store into.
       Address Ptr = emitAddressAtOffset(*this, Alloca, ArgI);
@@ -3646,7 +3761,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
 
     case ABIArgInfo::CoerceAndExpand: {
       // Reconstruct into a temporary.
-      Address alloca = CreateMemTemp(Ty, getContext().getDeclAlign(Arg));
+      Address alloca =
+          CreateMemTempWithoutCast(Ty, getContext().getDeclAlign(Arg));
       ArgVals.push_back(ParamValue::forIndirect(alloca));
 
       auto coercionType = ArgI.getCoerceAndExpandType();
@@ -3687,7 +3803,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
       // If this structure was expanded into multiple arguments then
       // we need to create a temporary and reconstruct it from the
       // arguments.
-      Address Alloca = CreateMemTemp(Ty, getContext().getDeclAlign(Arg));
+      Address Alloca =
+          CreateMemTempWithoutCast(Ty, getContext().getDeclAlign(Arg));
       LValue LV = MakeAddrLValue(Alloca, Ty);
       ArgVals.push_back(ParamValue::forIndirect(Alloca));
 
@@ -3704,8 +3821,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
     case ABIArgInfo::TargetSpecific: {
       auto *AI = Fn->getArg(FirstIRArg);
       AI->setName(Arg->getName() + ".target_coerce");
-      Address Alloca =
-          CreateMemTemp(Ty, getContext().getDeclAlign(Arg), Arg->getName());
+      Address Alloca = CreateMemTempWithoutCast(
+          Ty, getContext().getDeclAlign(Arg), Arg->getName());
       Address Ptr = emitAddressAtOffset(*this, Alloca, ArgI);
       CGM.getABIInfo().createCoercedStore(AI, Ptr, ArgI, false, *this);
       if (CodeGenFunction::hasScalarEvaluationKind(Ty)) {
@@ -3724,7 +3841,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
       assert(NumIRArgs == 0);
       // Initialize the local variable appropriately.
       if (!hasScalarEvaluationKind(Ty)) {
-        ArgVals.push_back(ParamValue::forIndirect(CreateMemTemp(Ty)));
+        ArgVals.push_back(
+            ParamValue::forIndirect(CreateMemTempWithoutCast(Ty)));
       } else {
         llvm::Value *U = llvm::UndefValue::get(ConvertType(Arg->getType()));
         ArgVals.push_back(ParamValue::forDirect(U));
@@ -5031,7 +5149,7 @@ struct DestroyUnpassedArg final : EHScopeStack::Cleanup {
 RValue CallArg::getRValue(CodeGenFunction &CGF) const {
   if (!HasLV)
     return RV;
-  LValue Copy = CGF.MakeAddrLValue(CGF.CreateMemTemp(Ty), Ty);
+  LValue Copy = CGF.MakeAddrLValue(CGF.CreateMemTempWithoutCast(Ty), Ty);
   CGF.EmitAggregateCopy(Copy, LV, Ty, AggValueSlot::DoesNotOverlap,
                         LV.isVolatile());
   IsUsed = true;
@@ -5127,13 +5245,17 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     return;
   }
 
-  if (HasAggregateEvalKind && isa<ImplicitCastExpr>(E) &&
-      cast<CastExpr>(E)->getCastKind() == CK_LValueToRValue &&
-      !type->isArrayParameterType() && !type.isNonTrivialToPrimitiveCopy()) {
-    LValue L = EmitLValue(cast<CastExpr>(E)->getSubExpr());
-    assert(L.isSimple());
-    args.addUncopiedAggregate(L, type);
-    return;
+  if (HasAggregateEvalKind) {
+    auto *ICE = dyn_cast<ImplicitCastExpr>(E);
+    if (ICE && ICE->getCastKind() == CK_LValueToRValue &&
+        ICE->getSubExpr()->getType().getAddressSpace() !=
+            LangAS::hlsl_constant &&
+        !type->isArrayParameterType() && !type.isNonTrivialToPrimitiveCopy()) {
+      LValue L = EmitLValue(cast<CastExpr>(E)->getSubExpr());
+      assert(L.isSimple());
+      args.addUncopiedAggregate(L, type);
+      return;
+    }
   }
 
   args.add(EmitAnyExprToTemp(E), type);
@@ -5610,7 +5732,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           // For indirect things such as overaligned structs, replace the
           // placeholder with a regular aggregate temporary alloca. Store the
           // address of this alloca into the struct.
-          Addr = CreateMemTemp(info_it->type, "inalloca.indirect.tmp");
+          Addr =
+              CreateMemTempWithoutCast(info_it->type, "inalloca.indirect.tmp");
           Address ArgSlot = Builder.CreateStructGEP(
               ArgMemory, ArgInfo.getInAllocaFieldIndex());
           Builder.CreateStore(Addr.getPointer(), ArgSlot);
@@ -5755,8 +5878,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           swiftErrorArg = makeNaturalAddressForPointer(
               V, pointeeTy, getContext().getTypeAlignInChars(pointeeTy));
 
-          swiftErrorTemp =
-              CreateMemTemp(pointeeTy, getPointerAlign(), "swifterror.temp");
+          swiftErrorTemp = CreateMemTempWithoutCast(
+              pointeeTy, getPointerAlign(), "swifterror.temp");
           V = swiftErrorTemp.getPointer();
           cast<llvm::AllocaInst>(V)->setSwiftError(true);
 
@@ -5791,7 +5914,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       // FIXME: Avoid the conversion through memory if possible.
       Address Src = Address::invalid();
       if (!I->isAggregate()) {
-        Src = CreateMemTemp(I->Ty, "coerce");
+        Src = CreateMemTempWithoutCast(I->Ty, "coerce");
         I->copyInto(*this, Src);
       } else {
         Src = I->hasLValue() ? I->getKnownLValue().getAddress()
@@ -5948,7 +6071,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     case ABIArgInfo::TargetSpecific: {
       Address Src = Address::invalid();
       if (!I->isAggregate()) {
-        Src = CreateMemTemp(I->Ty, "target_coerce");
+        Src = CreateMemTempWithoutCast(I->Ty, "target_coerce");
         I->copyInto(*this, Src);
       } else {
         Src = I->hasLValue() ? I->getKnownLValue().getAddress()
@@ -6484,7 +6607,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             getContext().getTypeInfoDataSizeInChars(RetTy).Width.getQuantity();
 
         if (!DestPtr.isValid()) {
-          DestPtr = CreateMemTemp(RetTy, "coerce");
+          DestPtr = CreateMemTempWithoutCast(RetTy, "coerce");
           DestIsVolatile = false;
           DestSize = getContext().getTypeSizeInChars(RetTy).getQuantity();
         }
@@ -6509,7 +6632,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         Address StorePtr = emitAddressAtOffset(*this, DestPtr, RetAI);
         bool DestIsVolatile = ReturnValue.isVolatile();
         if (!DestPtr.isValid()) {
-          DestPtr = CreateMemTemp(RetTy, "target_coerce");
+          DestPtr = CreateMemTempWithoutCast(RetTy, "target_coerce");
           DestIsVolatile = false;
         }
         CGM.getABIInfo().createCoercedStore(CI, StorePtr, RetAI, DestIsVolatile,
@@ -6580,13 +6703,17 @@ CGCallee CGCallee::prepareConcreteCallee(CodeGenFunction &CGF) const {
 
 RValue CodeGenFunction::EmitVAArg(VAArgExpr *VE, Address &VAListAddr,
                                   AggValueSlot Slot) {
-  VAListAddr = VE->isMicrosoftABI() ? EmitMSVAListRef(VE->getSubExpr())
-                                    : EmitVAListRef(VE->getSubExpr());
+  VAListAddr = VE->isMicrosoftABI()
+                   ? EmitMSVAListRef(VE->getSubExpr())
+                   : (VE->isZOSABI() ? EmitZOSVAListRef(VE->getSubExpr())
+                                     : EmitVAListRef(VE->getSubExpr()));
   QualType Ty = VE->getType();
   if (Ty->isVariablyModifiedType())
     EmitVariablyModifiedType(Ty);
   if (VE->isMicrosoftABI())
     return CGM.getABIInfo().EmitMSVAArg(*this, VAListAddr, Ty, Slot);
+  if (VE->isZOSABI())
+    return CGM.getABIInfo().EmitZOSVAArg(*this, VAListAddr, Ty, Slot);
   return CGM.getABIInfo().EmitVAArg(*this, VAListAddr, Ty, Slot);
 }
 

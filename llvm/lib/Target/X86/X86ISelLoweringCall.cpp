@@ -670,6 +670,43 @@ bool X86TargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
     const Type *RetTy) const {
+  // Mingw64 GCC returns f128 via sret, and LLVM matches it for compatibility.
+  // This logic exists for libcalls, a frontend should explicitly use sret
+  // rather than rely on the sret demotion here.
+  //
+  // Using sret is a reasonable implementation of the Windows x64 calling
+  // convention:
+  //
+  // https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170#return-values
+  //
+  // > Otherwise, the caller must allocate memory for the return value and pass
+  // > a pointer to it as the first argument.
+  //
+  // Although it is not the only reasonable interpretation:
+  //
+  // > Nonscalar types including floats, doubles, and vector types such as
+  // > __m128, __m128i, __m128d are returned in XMM0.
+  //
+  // For now, we prefer compatibility with GCC. If official guidelines are ever
+  // published, this can be revisited.
+  //
+  // Return false, which will perform sret demotion.
+  auto IsWin64F128StackCC = [this](CallingConv::ID CC) -> bool {
+    switch (CC) {
+    case CallingConv::Win64:
+      return true;
+    case CallingConv::C:
+      return Subtarget.isOSWindowsOrUEFI();
+    default:
+      return false;
+    }
+  };
+
+  if (IsWin64F128StackCC(CallConv) &&
+      llvm::any_of(
+          Outs, [](const ISD::OutputArg &Out) { return Out.VT == MVT::f128; }))
+    return false;
+
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC_X86);
@@ -1239,11 +1276,11 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
                                          SDValue Chain, ISD::ArgFlagsTy Flags,
                                          SelectionDAG &DAG, const SDLoc &dl) {
   SDValue SizeNode = DAG.getIntPtrConstant(Flags.getByValSize(), dl);
-
-  return DAG.getMemcpy(
-      Chain, dl, Dst, Src, SizeNode, Flags.getNonZeroByValAlign(),
-      /*isVolatile*/ false, /*AlwaysInline=*/true,
-      /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
+  Align Alignment = Flags.getNonZeroByValAlign();
+  return DAG.getMemcpy(Chain, dl, Dst, Src, SizeNode, Alignment, Alignment,
+                       /*isVolatile*/ false, /*AlwaysInline=*/true,
+                       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
+                       MachinePointerInfo());
 }
 
 /// Return true if the calling convention is one that we can guarantee TCO for.
@@ -2112,23 +2149,21 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     CCInfo.AnalyzeArgumentsSecondPass(Outs, CC_X86);
   }
 
-  bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
-  bool IsSibcall = false;
+  // We cannot guarantee TCO for mismatched calling conventions.
   if (isTailCall && ShouldGuaranteeTCO) {
-    // If we need to guarantee TCO for a non-musttail call, we just need to make
-    // sure the conventions match. If a tail call uses one of the supported TCO
-    // conventions and the caller and callee match, we can tail call any
-    // function prototype.
     CallingConv::ID CallerCC = MF.getFunction().getCallingConv();
     isTailCall = (CallConv == CallerCC);
-    IsSibcall = IsMustTail;
-  } else if (isTailCall) {
-    // Check if this tail call is a "sibling" call, which is loosely defined to
-    // be a tail call that doesn't require heroics like moving the return
-    // address or swapping byval arguments. We treat some musttail calls as
-    // sibling calls to avoid unnecessary argument copies.
+  }
+
+  // Check if this tail call is a "sibling" call, which is loosely defined to
+  // be a tail call that doesn't require heroics like moving the return
+  // address or swapping byval arguments. We treat some musttail calls as
+  // sibling calls to avoid unnecessary argument copies.
+  bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
+  bool IsSibcall = false;
+  if (isTailCall) {
     IsSibcall = isEligibleForSiblingCallOpt(CLI, CCInfo, ArgLocs);
-    isTailCall = IsSibcall || IsMustTail;
+    isTailCall = IsSibcall || IsMustTail || ShouldGuaranteeTCO;
   }
 
   if (isTailCall)
@@ -2394,12 +2429,13 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   if (Subtarget.isPICStyleGOT()) {
     // ELF / PIC requires GOT in the EBX register before function calls via PLT
-    // GOT pointer (except regcall).
+    // GOT pointer.
     if (!isTailCall) {
-      // Indirect call with RegCall calling convertion may use up all the
-      // general registers, so it is not suitable to bind EBX reister for
-      // GOT address, just let register allocator handle it.
-      if (CallConv != CallingConv::X86_RegCall)
+      // Only PLT calls (GlobalAddress or ExternalSymbol) require the GOT in
+      // EBX. Indirect calls through a register or an absolute address do not
+      // go through the PLT and do not need EBX to hold the GOT base.
+      if ((Callee->getOpcode() == ISD::GlobalAddress ||
+           Callee->getOpcode() == ISD::ExternalSymbol))
         RegsToPass.push_back(std::make_pair(
           Register(X86::EBX), DAG.getNode(X86ISD::GlobalBaseReg, SDLoc(),
                                           getPointerTy(DAG.getDataLayout()))));
@@ -2969,6 +3005,11 @@ bool X86TargetLowering::isEligibleForSiblingCallOpt(
   bool IsCalleeWin64 = Subtarget.isCallingConvWin64(CalleeCC);
   bool IsCallerWin64 = Subtarget.isCallingConvWin64(CallerCC);
   if (IsCalleeWin64 != IsCallerWin64)
+    return false;
+
+  // Do not optimize vararg calls with 6 arguments for LFI since LFI reserves
+  // %r11, meaning there will not be enough registers available.
+  if (Subtarget.isLFI() && ArgLocs.size() > 5)
     return false;
 
   // If we are using a GOT, don't generate sibling calls to non-local,

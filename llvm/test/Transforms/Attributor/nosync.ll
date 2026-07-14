@@ -105,7 +105,7 @@ define i32 @load_acquire(ptr nocapture readonly %arg) norecurse nounwind uwtable
 define void @load_release(ptr nocapture %arg) norecurse nounwind uwtable {
 ; CHECK: Function Attrs: norecurse nounwind memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@load_release
-; CHECK-SAME: (ptr noundef writeonly align 4 captures(none) [[ARG:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: (ptr nofree noundef writeonly align 4 captures(none) [[ARG:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    store atomic volatile i32 10, ptr [[ARG]] release, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -118,7 +118,7 @@ define void @load_release(ptr nocapture %arg) norecurse nounwind uwtable {
 define void @load_volatile_release(ptr nocapture %arg) norecurse nounwind uwtable {
 ; CHECK: Function Attrs: norecurse nounwind memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@load_volatile_release
-; CHECK-SAME: (ptr noundef writeonly align 4 captures(none) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: (ptr nofree noundef writeonly align 4 captures(none) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    store atomic volatile i32 10, ptr [[ARG]] release, align 4
 ; CHECK-NEXT:    ret void
 ;

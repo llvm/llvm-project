@@ -109,6 +109,9 @@ TODO for added SYCL classes
 * ``queue``:
 
   * to implement USM methods
+
+    * ``memcpy``: enable the host-to-host case (blocked by liboffload limitations)
+
   * to implement synchronization methods
   * to implement submit & copy with accessors (low priority)
   * get_info & properties
@@ -126,7 +129,8 @@ TODO for added SYCL classes
   * handle sub devices once they are implemented (blocked by liboffload support)
 
 * ``event``: get_wait_list, get_info, get_profiling_info, wait_and_throw & default ctor are not implemented
-* ``range``, ``id`` - to add operators
+* ``range``, ``id`` - __SYCL_DISABLE_ID_TO_INT_CONV__ and __SYCL_ASSUME_ID_RANGE optimizations are not implemented
 * general opens:
 
-  * define a way to report errors from object dtors.
+  * define a way to report errors from object dtors
+  * unittests: add functions to reset libsycl internal state completely (static variables)

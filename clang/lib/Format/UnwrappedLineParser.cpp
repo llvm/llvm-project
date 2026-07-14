@@ -1350,40 +1350,60 @@ static bool isC78ParameterDecl(const FormatToken *Tok, const FormatToken *Next,
   return Tok->Previous && Tok->Previous->isOneOf(tok::l_paren, tok::comma);
 }
 
-bool UnwrappedLineParser::parseModuleImport() {
-  assert(FormatTok->is(Keywords.kw_import) && "'import' expected");
+bool UnwrappedLineParser::parseModuleDecl() {
+  assert(IsCpp);
+  assert(FormatTok->is(Keywords.kw_module));
 
-  if (auto Token = Tokens->peekNextToken(/*SkipComment=*/true);
-      !Token->Tok.getIdentifierInfo() &&
-      Token->isNoneOf(tok::colon, tok::less, tok::string_literal)) {
+  if (Style.Language == FormatStyle::LK_C ||
+      Style.Standard < FormatStyle::LS_Cpp20) {
     return false;
   }
 
   nextToken();
-  while (!eof()) {
-    if (FormatTok->is(tok::colon)) {
+  if (FormatTok->isNot(tok::identifier))
+    return false;
+
+  for (nextToken(); FormatTok->isNoneOf(tok::semi, tok::eof); nextToken())
+    if (FormatTok->is(tok::colon))
       FormatTok->setFinalizedType(TT_ModulePartitionColon);
-    }
-    // Handle import <foo/bar.h> as we would an include statement.
-    else if (FormatTok->is(tok::less)) {
-      nextToken();
-      while (FormatTok->isNoneOf(tok::semi, tok::greater) && !eof()) {
-        // Mark tokens up to the trailing line comments as implicit string
-        // literals.
-        if (FormatTok->isNot(tok::comment) &&
-            !FormatTok->TokenText.starts_with("//")) {
-          FormatTok->setFinalizedType(TT_ImplicitStringLiteral);
-        }
-        nextToken();
-      }
-    }
-    if (FormatTok->is(tok::semi)) {
-      nextToken();
-      break;
-    }
-    nextToken();
+
+  nextToken();
+  Line->IsModuleOrImportDecl = true;
+  addUnwrappedLine();
+  return true;
+}
+
+bool UnwrappedLineParser::parseImportDecl() {
+  assert(IsCpp);
+  assert(FormatTok->is(Keywords.kw_import) && "'import' expected");
+
+  if (Style.Language == FormatStyle::LK_C ||
+      Style.Standard < FormatStyle::LS_Cpp20) {
+    return false;
   }
 
+  nextToken();
+  if (FormatTok->is(tok::colon)) {
+    FormatTok->setFinalizedType(TT_ModulePartitionColon);
+    nextToken();
+  }
+  if (FormatTok->isNoneOf(tok::identifier, tok::less, tok::string_literal))
+    return false;
+
+  for (; FormatTok->isNoneOf(tok::semi, tok::eof); nextToken()) {
+    // Handle import <foo/bar.h> as we would an include statement.
+    if (FormatTok->is(tok::less)) {
+      for (nextToken(); FormatTok->isNoneOf(tok::greater, tok::semi, tok::eof);
+           nextToken()) {
+        // Mark tokens as implicit string literals, so that import <A/Foo> will
+        // neither be broken nor have a space added.
+        FormatTok->setFinalizedType(TT_ImplicitStringLiteral);
+      }
+    }
+  }
+
+  nextToken();
+  Line->IsModuleOrImportDecl = true;
   addUnwrappedLine();
   return true;
 }
@@ -1487,23 +1507,54 @@ void UnwrappedLineParser::parseStructuralElement(
     return;
   }
   switch (FormatTok->Tok.getKind()) {
-  case tok::kw_asm:
+  case tok::kw_asm: {
+    // Track whether to skip formatting inline asm by finalizing the tokens
+    // in the block. Formatting is skipped inside of braces by default.
+    // A style option could be added to also skip formatting inside parens.
+    bool DoNotFormat = false;
+    tok::TokenKind OpenType;
+    tok::TokenKind CloseType;
     nextToken();
+    while (FormatTok &&
+           FormatTok->isOneOf(tok::kw_volatile, tok::kw_inline, tok::kw_goto)) {
+      nextToken();
+    }
+    if (!FormatTok)
+      break;
     if (FormatTok->is(tok::l_brace)) {
       FormatTok->setFinalizedType(TT_InlineASMBrace);
+      OpenType = tok::l_brace;
+      CloseType = tok::r_brace;
+      DoNotFormat = true;
+    } else if (FormatTok->is(tok::l_paren)) {
+      OpenType = tok::l_paren;
+      CloseType = tok::r_paren;
+      FormatTok->setFinalizedType(TT_InlineASMParen);
+    } else {
+      break;
+    }
+    if (DoNotFormat) {
+      FormatToken *OpenTok = FormatTok;
+      int NestLevel = 0;
       nextToken();
       while (FormatTok && !eof()) {
-        if (FormatTok->is(tok::r_brace)) {
-          FormatTok->setFinalizedType(TT_InlineASMBrace);
-          nextToken();
-          addUnwrappedLine();
-          break;
+        if (FormatTok->is(OpenType)) {
+          ++NestLevel;
+        } else if (FormatTok->is(CloseType)) {
+          --NestLevel;
+          if (NestLevel < 1) {
+            FormatTok->setFinalizedType(OpenTok->getType());
+            nextToken();
+            addUnwrappedLine();
+            break;
+          }
         }
         FormatTok->Finalized = true;
         nextToken();
       }
     }
     break;
+  }
   case tok::kw_namespace:
     parseNamespace();
     return;
@@ -1625,14 +1676,6 @@ void UnwrappedLineParser::parseStructuralElement(
     }
     break;
   case tok::kw_export:
-    if (Style.isJavaScript()) {
-      parseJavaScriptEs6ImportExport();
-      return;
-    }
-    if (Style.isVerilog()) {
-      parseVerilogExtern();
-      return;
-    }
     if (IsCpp) {
       nextToken();
       if (FormatTok->is(tok::kw_namespace)) {
@@ -1643,8 +1686,19 @@ void UnwrappedLineParser::parseStructuralElement(
         parseCppExportBlock();
         return;
       }
-      if (FormatTok->is(Keywords.kw_import) && parseModuleImport())
+      if (FormatTok->is(Keywords.kw_module) && parseModuleDecl())
         return;
+      if (FormatTok->is(Keywords.kw_import) && parseImportDecl())
+        return;
+      break;
+    }
+    if (Style.isJavaScript()) {
+      parseJavaScriptEs6ImportExport();
+      return;
+    }
+    if (Style.isVerilog()) {
+      parseVerilogExtern();
+      return;
     }
     break;
   case tok::kw_inline:
@@ -1665,6 +1719,8 @@ void UnwrappedLineParser::parseStructuralElement(
       return;
     }
     if (FormatTok->is(Keywords.kw_import)) {
+      if (IsCpp && parseImportDecl())
+        return;
       if (Style.isJavaScript()) {
         parseJavaScriptEs6ImportExport();
         return;
@@ -1685,25 +1741,27 @@ void UnwrappedLineParser::parseStructuralElement(
         parseVerilogExtern();
         return;
       }
-      if (IsCpp && parseModuleImport())
-        return;
     }
-    if (IsCpp && FormatTok->isOneOf(Keywords.kw_signals, Keywords.kw_qsignals,
-                                    Keywords.kw_slots, Keywords.kw_qslots)) {
-      nextToken();
-      if (FormatTok->is(tok::colon)) {
+    if (IsCpp) {
+      if (FormatTok->is(Keywords.kw_module) && parseModuleDecl())
+        return;
+      if (FormatTok->isOneOf(Keywords.kw_signals, Keywords.kw_qsignals,
+                             Keywords.kw_slots, Keywords.kw_qslots)) {
         nextToken();
-        addUnwrappedLine();
+        if (FormatTok->is(tok::colon)) {
+          nextToken();
+          addUnwrappedLine();
+          return;
+        }
+      }
+      if (FormatTok->is(TT_StatementMacro)) {
+        parseStatementMacro();
         return;
       }
-    }
-    if (IsCpp && FormatTok->is(TT_StatementMacro)) {
-      parseStatementMacro();
-      return;
-    }
-    if (IsCpp && FormatTok->is(TT_NamespaceMacro)) {
-      parseNamespace();
-      return;
+      if (FormatTok->is(TT_NamespaceMacro)) {
+        parseNamespace();
+        return;
+      }
     }
     // In Verilog labels can be any expression, so we don't do them here.
     // JS doesn't have macros, and within classes colons indicate fields, not
@@ -1715,7 +1773,7 @@ void UnwrappedLineParser::parseStructuralElement(
       if (!Line->InMacroBody || CurrentLines->size() > 1)
         Line->Tokens.begin()->Tok->MustBreakBefore = true;
       FormatTok->setFinalizedType(TT_GotoLabelColon);
-      parseLabel(Style.IndentGotoLabels);
+      parseLabel(/*IsGotoLabel=*/true);
       if (HasLabel)
         *HasLabel = true;
       return;
@@ -3373,28 +3431,24 @@ void UnwrappedLineParser::parseDoWhile() {
   parseStructuralElement();
 }
 
-void UnwrappedLineParser::parseLabel(
-    FormatStyle::IndentGotoLabelStyle IndentGotoLabels) {
-  const bool IsGotoLabel = FormatTok->is(TT_GotoLabelColon);
+void UnwrappedLineParser::parseLabel(bool IsGotoLabel) {
   nextToken();
-  unsigned OldLineLevel = Line->Level;
 
-  switch (IndentGotoLabels) {
-  case FormatStyle::IGLS_NoIndent:
-    Line->Level = 0;
-    break;
-  case FormatStyle::IGLS_OuterIndent:
-    if (Line->Level > 1 || (!Line->InPPDirective && Line->Level > 0))
-      --Line->Level;
-    break;
-  case FormatStyle::IGLS_HalfIndent:
-  case FormatStyle::IGLS_InnerIndent:
-    break;
+  const auto IndentGotoLabel = Style.IndentGotoLabels;
+  const auto OldLineLevel = Line->Level;
+  auto &Level = Line->Level;
+
+  if (IsGotoLabel && IndentGotoLabel == FormatStyle::IGLS_NoIndent)
+    Level = 0;
+
+  if (!IsGotoLabel || IndentGotoLabel == FormatStyle::IGLS_OuterIndent) {
+    if (OldLineLevel > 1 || (!Line->InPPDirective && OldLineLevel > 0))
+      --Level;
   }
 
   if (!IsGotoLabel && !Style.IndentCaseBlocks &&
       CommentsBeforeNextToken.empty() && FormatTok->is(tok::l_brace)) {
-    CompoundStatementIndenter Indenter(this, Line->Level,
+    CompoundStatementIndenter Indenter(this, Level,
                                        Style.BraceWrapping.AfterCaseLabel,
                                        Style.BraceWrapping.IndentBraces);
     parseBlock();
@@ -3404,7 +3458,7 @@ void UnwrappedLineParser::parseLabel(
         addUnwrappedLine();
         if (!Style.IndentCaseBlocks &&
             Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths) {
-          ++Line->Level;
+          ++Level;
         }
       }
       parseStructuralElement();
@@ -3415,7 +3469,9 @@ void UnwrappedLineParser::parseLabel(
       nextToken();
     addUnwrappedLine();
   }
-  Line->Level = OldLineLevel;
+
+  Level = OldLineLevel;
+
   if (FormatTok->isNot(tok::l_brace)) {
     parseStructuralElement();
     addUnwrappedLine();
@@ -4263,7 +4319,8 @@ void UnwrappedLineParser::parseObjCUntilAtEnd() {
       addUnwrappedLine();
     } else if (FormatTok->isOneOf(tok::minus, tok::plus)) {
       nextToken();
-      parseObjCMethod();
+      if (FormatTok->isOneOf(tok::l_paren, tok::identifier))
+        parseObjCMethod();
     } else {
       parseStructuralElement();
     }
@@ -4689,6 +4746,7 @@ void UnwrappedLineParser::addUnwrappedLine(LineLevel AdjustLevel) {
   Line->FirstStartColumn = 0;
   Line->IsContinuation = false;
   Line->SeenDecltypeAuto = false;
+  Line->IsModuleOrImportDecl = false;
 
   if (ClosesWhitesmithsBlock && AdjustLevel == LineLevel::Remove)
     --Line->Level;
