@@ -24,11 +24,7 @@ int main(int argc, char** argv) {
     return std::search_n(first, last, n, value);
   };
   auto std_search_n_pred = [](auto first, auto last, auto n, auto const& value) {
-    return std::search_n(first, last, n, value, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x == y;
-    });
+    return std::search_n(first, last, n, value, [](auto x, auto y) { return x == y; });
   };
 
   // Benchmark {std,ranges}::search_n where the needle almost matches a lot.

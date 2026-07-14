@@ -92,6 +92,44 @@ spirv.func @fmin(%arg0: f32, %arg1: vector<3xf16>) "None" {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.GL.FClamp
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @fclamp
+spirv.func @fclamp(%arg0: f32, %arg1: f32, %arg2: f32) "None" {
+  // CHECK: %[[MAX:.*]] = llvm.intr.maxnum(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  // CHECK: llvm.intr.minnum(%[[MAX]], %{{.*}}) : (f32, f32) -> f32
+  %0 = spirv.GL.FClamp %arg0, %arg1, %arg2 : f32
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.NMax
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @nmax
+spirv.func @nmax(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: llvm.intr.maxnum(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  %0 = spirv.GL.NMax %arg0, %arg0 : f32
+  // CHECK: llvm.intr.maxnum(%{{.*}}, %{{.*}}) : (vector<3xf16>, vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.NMax %arg1, %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.NMin
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @nmin
+spirv.func @nmin(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: llvm.intr.minnum(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  %0 = spirv.GL.NMin %arg0, %arg0 : f32
+  // CHECK: llvm.intr.minnum(%{{.*}}, %{{.*}}) : (vector<3xf16>, vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.NMin %arg1, %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.GL.Log
 //===----------------------------------------------------------------------===//
 
@@ -205,6 +243,30 @@ spirv.func @umin(%arg0: i16, %arg1: vector<3xi32>) "None" {
   %0 = spirv.GL.UMin %arg0, %arg0 : i16
   // CHECK: llvm.intr.umin(%{{.*}}, %{{.*}}) : (vector<3xi32>, vector<3xi32>) -> vector<3xi32>
   %1 = spirv.GL.UMin %arg1, %arg1 : vector<3xi32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.SClamp
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @sclamp
+spirv.func @sclamp(%arg0: i16, %arg1: i16, %arg2: i16) "None" {
+  // CHECK: %[[MAX:.*]] = llvm.intr.smax(%{{.*}}, %{{.*}}) : (i16, i16) -> i16
+  // CHECK: llvm.intr.smin(%[[MAX]], %{{.*}}) : (i16, i16) -> i16
+  %0 = spirv.GL.SClamp %arg0, %arg1, %arg2 : i16
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.UClamp
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @uclamp
+spirv.func @uclamp(%arg0: i32, %arg1: i32, %arg2: i32) "None" {
+  // CHECK: %[[MAX:.*]] = llvm.intr.umax(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  // CHECK: llvm.intr.umin(%[[MAX]], %{{.*}}) : (i32, i32) -> i32
+  %0 = spirv.GL.UClamp %arg0, %arg1, %arg2 : i32
   spirv.Return
 }
 

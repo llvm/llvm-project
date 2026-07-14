@@ -1258,7 +1258,12 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_pmerge_u16x4:
   case RISCV::BI__builtin_riscv_pmerge_i16x4:
   case RISCV::BI__builtin_riscv_pmerge_u32x2:
-  case RISCV::BI__builtin_riscv_pmerge_i32x2: {
+  case RISCV::BI__builtin_riscv_pmerge_i32x2:
+  // Packed Saturating Absolute Value
+  case RISCV::BI__builtin_riscv_psabs_i8x4:
+  case RISCV::BI__builtin_riscv_psabs_i16x2:
+  case RISCV::BI__builtin_riscv_psabs_i8x8:
+  case RISCV::BI__builtin_riscv_psabs_i16x4: {
     switch (BuiltinID) {
     default:
       llvm_unreachable("unexpected builtin ID");
@@ -1344,6 +1349,12 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     case RISCV::BI__builtin_riscv_pmerge_i32x2:
       ID = Intrinsic::riscv_pmerge;
       break;
+    case RISCV::BI__builtin_riscv_psabs_i8x4:
+    case RISCV::BI__builtin_riscv_psabs_i16x2:
+    case RISCV::BI__builtin_riscv_psabs_i8x8:
+    case RISCV::BI__builtin_riscv_psabs_i16x4:
+      ID = Intrinsic::riscv_psabs;
+      break;
     }
 
     IntrinsicTypes = {ResultType};
@@ -1389,6 +1400,34 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     }
 
     IntrinsicTypes = {ResultType, Ops[0]->getType()};
+    break;
+  }
+
+  // Packed Absolute Difference Sum
+  case RISCV::BI__builtin_riscv_pabdsumu_u8x4_u32:
+  case RISCV::BI__builtin_riscv_pabdsumu_u8x8_u32:
+  case RISCV::BI__builtin_riscv_pabdsumu_u8x8_u64:
+  case RISCV::BI__builtin_riscv_pabdsumau_u8x4_u32:
+  case RISCV::BI__builtin_riscv_pabdsumau_u8x8_u32:
+  case RISCV::BI__builtin_riscv_pabdsumau_u8x8_u64: {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_pabdsumu_u8x4_u32:
+    case RISCV::BI__builtin_riscv_pabdsumu_u8x8_u32:
+    case RISCV::BI__builtin_riscv_pabdsumu_u8x8_u64:
+      ID = Intrinsic::riscv_pabdsumu;
+      break;
+    case RISCV::BI__builtin_riscv_pabdsumau_u8x4_u32:
+    case RISCV::BI__builtin_riscv_pabdsumau_u8x8_u32:
+    case RISCV::BI__builtin_riscv_pabdsumau_u8x8_u64:
+      ID = Intrinsic::riscv_pabdsumau;
+      break;
+    }
+
+    // The two vector sources are the last two arguments; the accumulate form
+    // has an extra accumulator argument first.
+    IntrinsicTypes = {ResultType, Ops.back()->getType()};
     break;
   }
 

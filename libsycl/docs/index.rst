@@ -109,6 +109,9 @@ TODO for added SYCL classes
 * ``queue``:
 
   * to implement USM methods
+
+    * ``memcpy``: enable the host-to-host case (blocked by liboffload limitations)
+
   * to implement synchronization methods
   * to implement submit & copy with accessors (low priority)
   * get_info & properties
