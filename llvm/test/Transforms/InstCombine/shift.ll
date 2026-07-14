@@ -2020,8 +2020,8 @@ define i18 @lshr_sdiv_neg(i18 %x) {
 
 define i8 @ashr_sdiv_not_full_shift(i8 %x) {
 ; CHECK-LABEL: @ashr_sdiv_not_full_shift(
-; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[X:%.*]], 42
-; CHECK-NEXT:    [[R:%.*]] = ashr i8 [[D]], 6
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[X:%.*]], -41
+; CHECK-NEXT:    [[R:%.*]] = sext i1 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %d = sdiv i8 %x, 42

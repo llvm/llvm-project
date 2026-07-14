@@ -3,6 +3,8 @@
 
 ; ((ashr X, 31) | 1 ) * X --> abs(X)
 ; X * ((ashr X, 31) | 1 ) --> abs(X)
+; ((ashr X, 30) | 1 ) * X --> abs(X)
+; X * ((ashr X, 30) | 1 ) --> abs(X)
 
 define i32 @ashr_or_mul_to_abs(i32 %X) {
 ; CHECK-LABEL: @ashr_or_mul_to_abs(
@@ -39,6 +41,16 @@ define i32 @ashr_or_mul_to_abs3(i32 %PX) {
   ret i32 %i2
 }
 
+define i32 @ashr_or_mul_to_abs4(i32 %X) {
+; CHECK-LABEL: @ashr_or_mul_to_abs4(
+; CHECK-NEXT:    [[I2:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    ret i32 [[I2]]
+;
+  %i = ashr i32 %X, 30
+  %i1 = or i32 %i, 1
+  %i2 = mul nsw i32 %i1, %X
+  ret i32 %i2
+}
 
 define <4 x i32> @ashr_or_mul_to_abs_vec(<4 x i32> %X) {
 ; CHECK-LABEL: @ashr_or_mul_to_abs_vec(
@@ -77,12 +89,12 @@ define <4 x i32> @ashr_or_mul_to_abs_vec3_poison(<4 x i32> %X) {
 
 define i32 @ashr_or_mul_to_abs_neg(i32 %X) {
 ; CHECK-LABEL: @ashr_or_mul_to_abs_neg(
-; CHECK-NEXT:    [[I:%.*]] = ashr i32 [[X:%.*]], 30
+; CHECK-NEXT:    [[I:%.*]] = ashr i32 [[X:%.*]], 29
 ; CHECK-NEXT:    [[I1:%.*]] = or i32 [[I]], 1
 ; CHECK-NEXT:    [[I2:%.*]] = mul nsw i32 [[I1]], [[X]]
 ; CHECK-NEXT:    ret i32 [[I2]]
 ;
-  %i = ashr i32 %X, 30
+  %i = ashr i32 %X, 29
   %i1 = or i32 %i, 1
   %i2 = mul nsw i32 %i1, %X
   ret i32 %i2

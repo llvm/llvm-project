@@ -992,9 +992,7 @@ define <2 x i32> @abs_unary_shuffle_ops(<2 x i32> %x) {
 
 define i32 @test_abs_branchless_ashr30(i32 %0) {
 ; CHECK-LABEL: @test_abs_branchless_ashr30(
-; CHECK-NEXT:    [[TMP4:%.*]] = ashr i32 [[TMP0:%.*]], 30
-; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP3]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.abs.i32(i32 [[TMP0:%.*]], i1 false)
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %2 = ashr i32 %0, 30
