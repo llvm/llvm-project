@@ -656,9 +656,9 @@ Error Instrumentation::runOnFunctions(BinaryContext &BC) {
   if (HasInstrumentFuncsFilter) {
     std::ifstream FuncsFile(opts::InstrumentFuncsFileNR, std::ios::in);
     if (!FuncsFile)
-      return createFatalBOLTError(
-          Twine("instrument-funcs-file-no-regex \"") +
-          Twine(opts::InstrumentFuncsFileNR) + Twine("\" can't be opened."));
+      return createFatalBOLTError(Twine("instrument-funcs-file-no-regex \"") +
+                                  Twine(opts::InstrumentFuncsFileNR) +
+                                  Twine("\" can't be opened."));
     std::string FuncName;
     while (std::getline(FuncsFile, FuncName))
       if (!FuncName.empty())
