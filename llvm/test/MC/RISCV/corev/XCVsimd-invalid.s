@@ -12,7 +12,7 @@ cv.add.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.add.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.add.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -34,7 +34,7 @@ cv.add.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.add.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.add.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -56,7 +56,7 @@ cv.add.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.add.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.add.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -78,7 +78,7 @@ cv.add.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.add.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.add.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -144,7 +144,7 @@ cv.sub.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sub.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sub.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -166,7 +166,7 @@ cv.sub.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sub.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sub.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -188,7 +188,7 @@ cv.sub.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sub.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sub.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -210,7 +210,7 @@ cv.sub.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sub.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sub.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -276,7 +276,7 @@ cv.avg.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.avg.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.avg.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -298,7 +298,7 @@ cv.avg.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.avg.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.avg.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -320,7 +320,7 @@ cv.avg.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.avg.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.avg.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -342,7 +342,7 @@ cv.avg.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.avg.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.avg.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -408,7 +408,7 @@ cv.avgu.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.avgu.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.avgu.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -430,7 +430,7 @@ cv.avgu.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.avgu.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.avgu.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -452,7 +452,7 @@ cv.avgu.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.avgu.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.avgu.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -474,7 +474,7 @@ cv.avgu.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.avgu.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.avgu.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -546,7 +546,7 @@ cv.min.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.min.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.min.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -568,7 +568,7 @@ cv.min.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.min.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.min.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -590,7 +590,7 @@ cv.min.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.min.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.min.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -612,7 +612,7 @@ cv.min.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.min.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.min.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -678,7 +678,7 @@ cv.minu.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.minu.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.minu.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -700,7 +700,7 @@ cv.minu.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.minu.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.minu.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -722,7 +722,7 @@ cv.minu.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.minu.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.minu.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -744,7 +744,7 @@ cv.minu.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.minu.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.minu.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -816,7 +816,7 @@ cv.max.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.max.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.max.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -838,7 +838,7 @@ cv.max.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.max.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.max.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -860,7 +860,7 @@ cv.max.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.max.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.max.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -882,7 +882,7 @@ cv.max.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.max.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.max.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -948,7 +948,7 @@ cv.maxu.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.maxu.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.maxu.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -970,7 +970,7 @@ cv.maxu.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.maxu.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.maxu.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -992,7 +992,7 @@ cv.maxu.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.maxu.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.maxu.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1014,7 +1014,7 @@ cv.maxu.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.maxu.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.maxu.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1086,7 +1086,7 @@ cv.srl.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.srl.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.srl.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1108,7 +1108,7 @@ cv.srl.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.srl.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.srl.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1130,7 +1130,7 @@ cv.srl.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.srl.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.srl.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1152,7 +1152,7 @@ cv.srl.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.srl.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.srl.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1224,7 +1224,7 @@ cv.sra.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sra.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sra.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1246,7 +1246,7 @@ cv.sra.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sra.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sra.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1268,7 +1268,7 @@ cv.sra.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sra.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sra.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1290,7 +1290,7 @@ cv.sra.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sra.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sra.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1362,7 +1362,7 @@ cv.sll.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sll.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sll.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1384,7 +1384,7 @@ cv.sll.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sll.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sll.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1406,7 +1406,7 @@ cv.sll.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sll.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sll.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1428,7 +1428,7 @@ cv.sll.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sll.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sll.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1500,7 +1500,7 @@ cv.or.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.or.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.or.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1522,7 +1522,7 @@ cv.or.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.or.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.or.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1544,7 +1544,7 @@ cv.or.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.or.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.or.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1566,7 +1566,7 @@ cv.or.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.or.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.or.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1632,7 +1632,7 @@ cv.xor.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.xor.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.xor.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1654,7 +1654,7 @@ cv.xor.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.xor.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.xor.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1676,7 +1676,7 @@ cv.xor.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.xor.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.xor.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1698,7 +1698,7 @@ cv.xor.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.xor.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.xor.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1764,7 +1764,7 @@ cv.and.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.and.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.and.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1786,7 +1786,7 @@ cv.and.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.and.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.and.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1808,7 +1808,7 @@ cv.and.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.and.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.and.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1830,7 +1830,7 @@ cv.and.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.and.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.and.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1896,16 +1896,16 @@ cv.abs.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.abs.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.abs.h t0, t1, t2
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.abs.h t0, t1, 0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.abs.h t0, t1, 0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 //===----------------------------------------------------------------------===//
 // cv.abs.b
@@ -1918,16 +1918,16 @@ cv.abs.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.abs.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.abs.b t0, t1, t2
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.abs.b t0, t1, 0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.abs.b t0, t1, 0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 //===----------------------------------------------------------------------===//
 // cv.dotup.h
@@ -1940,7 +1940,7 @@ cv.dotup.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.dotup.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.dotup.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1962,7 +1962,7 @@ cv.dotup.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.dotup.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.dotup.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -1984,7 +1984,7 @@ cv.dotup.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.dotup.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.dotup.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2006,7 +2006,7 @@ cv.dotup.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.dotup.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.dotup.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2078,7 +2078,7 @@ cv.dotusp.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.dotusp.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.dotusp.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2100,7 +2100,7 @@ cv.dotusp.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.dotusp.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.dotusp.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2122,7 +2122,7 @@ cv.dotusp.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.dotusp.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.dotusp.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2144,7 +2144,7 @@ cv.dotusp.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.dotusp.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.dotusp.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2210,7 +2210,7 @@ cv.dotsp.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.dotsp.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.dotsp.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2232,7 +2232,7 @@ cv.dotsp.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.dotsp.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.dotsp.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2254,7 +2254,7 @@ cv.dotsp.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.dotsp.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.dotsp.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2276,7 +2276,7 @@ cv.dotsp.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.dotsp.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.dotsp.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2342,7 +2342,7 @@ cv.sdotup.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sdotup.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sdotup.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2364,7 +2364,7 @@ cv.sdotup.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sdotup.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sdotup.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2386,7 +2386,7 @@ cv.sdotup.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sdotup.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sdotup.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2408,7 +2408,7 @@ cv.sdotup.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sdotup.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sdotup.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2480,7 +2480,7 @@ cv.sdotusp.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sdotusp.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sdotusp.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2502,7 +2502,7 @@ cv.sdotusp.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sdotusp.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sdotusp.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2524,7 +2524,7 @@ cv.sdotusp.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sdotusp.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sdotusp.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2546,7 +2546,7 @@ cv.sdotusp.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sdotusp.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sdotusp.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2612,7 +2612,7 @@ cv.sdotsp.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sdotsp.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sdotsp.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2634,7 +2634,7 @@ cv.sdotsp.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sdotsp.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sdotsp.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2656,7 +2656,7 @@ cv.sdotsp.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sdotsp.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sdotsp.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2678,7 +2678,7 @@ cv.sdotsp.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sdotsp.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sdotsp.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2894,7 +2894,7 @@ cv.shuffle.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.shuffle.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.shuffle.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -2916,7 +2916,7 @@ cv.shuffle.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.shuffle.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.shuffle.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3063,7 +3063,7 @@ cv.shuffle2.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.shuffle2.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.shuffle2.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3085,7 +3085,7 @@ cv.shuffle2.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.shuffle2.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.shuffle2.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3107,7 +3107,7 @@ cv.pack t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.pack t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.pack t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3129,7 +3129,7 @@ cv.pack.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.pack.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.pack.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3151,7 +3151,7 @@ cv.packhi.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.packhi.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.packhi.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3173,7 +3173,7 @@ cv.packlo.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.packlo.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.packlo.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3195,7 +3195,7 @@ cv.cmpeq.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpeq.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpeq.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3217,7 +3217,7 @@ cv.cmpeq.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpeq.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpeq.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3239,7 +3239,7 @@ cv.cmpeq.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpeq.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpeq.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3261,7 +3261,7 @@ cv.cmpeq.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpeq.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpeq.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3327,7 +3327,7 @@ cv.cmpne.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpne.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpne.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3349,7 +3349,7 @@ cv.cmpne.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpne.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpne.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3371,7 +3371,7 @@ cv.cmpne.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpne.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpne.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3393,7 +3393,7 @@ cv.cmpne.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpne.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpne.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3459,7 +3459,7 @@ cv.cmpgt.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpgt.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpgt.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3481,7 +3481,7 @@ cv.cmpgt.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpgt.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpgt.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3503,7 +3503,7 @@ cv.cmpgt.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpgt.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpgt.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3525,7 +3525,7 @@ cv.cmpgt.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpgt.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpgt.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3591,7 +3591,7 @@ cv.cmpge.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpge.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpge.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3613,7 +3613,7 @@ cv.cmpge.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpge.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpge.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3635,7 +3635,7 @@ cv.cmpge.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpge.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpge.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3657,7 +3657,7 @@ cv.cmpge.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpge.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpge.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3723,7 +3723,7 @@ cv.cmplt.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmplt.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmplt.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3745,7 +3745,7 @@ cv.cmplt.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmplt.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmplt.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3767,7 +3767,7 @@ cv.cmplt.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmplt.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmplt.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3789,7 +3789,7 @@ cv.cmplt.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmplt.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmplt.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3855,7 +3855,7 @@ cv.cmple.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmple.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmple.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3877,7 +3877,7 @@ cv.cmple.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmple.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmple.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3899,7 +3899,7 @@ cv.cmple.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmple.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmple.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3921,7 +3921,7 @@ cv.cmple.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmple.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmple.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -3987,7 +3987,7 @@ cv.cmpgtu.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpgtu.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpgtu.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4009,7 +4009,7 @@ cv.cmpgtu.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpgtu.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpgtu.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4031,7 +4031,7 @@ cv.cmpgtu.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpgtu.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpgtu.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4053,7 +4053,7 @@ cv.cmpgtu.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpgtu.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpgtu.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4125,7 +4125,7 @@ cv.cmpgeu.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpgeu.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpgeu.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4147,7 +4147,7 @@ cv.cmpgeu.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpgeu.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpgeu.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4169,7 +4169,7 @@ cv.cmpgeu.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpgeu.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpgeu.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4191,7 +4191,7 @@ cv.cmpgeu.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpgeu.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpgeu.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4263,7 +4263,7 @@ cv.cmpltu.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpltu.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpltu.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4285,7 +4285,7 @@ cv.cmpltu.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpltu.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpltu.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4307,7 +4307,7 @@ cv.cmpltu.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpltu.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpltu.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4329,7 +4329,7 @@ cv.cmpltu.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpltu.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpltu.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4401,7 +4401,7 @@ cv.cmpleu.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpleu.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpleu.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4423,7 +4423,7 @@ cv.cmpleu.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpleu.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpleu.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4445,7 +4445,7 @@ cv.cmpleu.sc.h t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpleu.sc.h t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpleu.sc.h t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4467,7 +4467,7 @@ cv.cmpleu.sc.b t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cmpleu.sc.b t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cmpleu.sc.b t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4539,7 +4539,7 @@ cv.cplxmul.r t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cplxmul.r t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cplxmul.r t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4561,7 +4561,7 @@ cv.cplxmul.i t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cplxmul.i t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cplxmul.i t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4583,7 +4583,7 @@ cv.cplxmul.r.div2 t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cplxmul.r.div2 t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cplxmul.r.div2 t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4605,7 +4605,7 @@ cv.cplxmul.i.div2 t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cplxmul.i.div2 t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cplxmul.i.div2 t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4627,7 +4627,7 @@ cv.cplxmul.r.div4 t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cplxmul.r.div4 t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cplxmul.r.div4 t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4649,7 +4649,7 @@ cv.cplxmul.i.div4 t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cplxmul.i.div4 t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cplxmul.i.div4 t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4671,7 +4671,7 @@ cv.cplxmul.r.div8 t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cplxmul.r.div8 t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cplxmul.r.div8 t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4693,7 +4693,7 @@ cv.cplxmul.i.div8 t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cplxmul.i.div8 t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cplxmul.i.div8 t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4715,16 +4715,16 @@ cv.cplxconj t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cplxconj t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cplxconj t0, t1, t2
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cplxconj t0, t1, 0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cplxconj t0, t1, 0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 //===----------------------------------------------------------------------===//
 // cv.subrotmj
@@ -4737,7 +4737,7 @@ cv.subrotmj t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.subrotmj t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.subrotmj t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4759,7 +4759,7 @@ cv.subrotmj.div2 t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.subrotmj.div2 t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.subrotmj.div2 t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4781,7 +4781,7 @@ cv.subrotmj.div4 t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.subrotmj.div4 t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.subrotmj.div4 t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4803,7 +4803,7 @@ cv.subrotmj.div8 t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.subrotmj.div8 t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.subrotmj.div8 t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4825,7 +4825,7 @@ cv.add.div2 t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.add.div2 t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.add.div2 t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4847,7 +4847,7 @@ cv.add.div4 t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.add.div4 t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.add.div4 t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4869,7 +4869,7 @@ cv.add.div8 t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.add.div8 t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.add.div8 t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4891,7 +4891,7 @@ cv.sub.div2 t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sub.div2 t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sub.div2 t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4913,7 +4913,7 @@ cv.sub.div4 t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sub.div4 t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sub.div4 t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction
@@ -4935,7 +4935,7 @@ cv.sub.div8 t0, 0, t2
 # CHECK-ERROR: invalid operand for instruction
 
 cv.sub.div8 t0, t1, t2, t3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.sub.div8 t0, t1, 0
 # CHECK-ERROR: invalid operand for instruction

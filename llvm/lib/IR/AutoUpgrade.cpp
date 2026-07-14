@@ -1308,6 +1308,36 @@ static bool convertIntrinsicValidType(StringRef Name,
   return false;
 }
 
+static bool upgradeIntrinsicDeclWithDefaultArgs(Function *F, Function *&NewFn) {
+  Intrinsic::ID IID = Intrinsic::lookupIntrinsicID(F->getName());
+  if (IID == Intrinsic::not_intrinsic)
+    return false;
+
+  auto [FirstDefault, Defaults] = Intrinsic::getAllDefaultArgValues(IID);
+  if (Defaults.empty())
+    return false;
+
+  // Overloaded intrinsics are out of scope for the default-arg feature
+  // and will be supported in a follow-up.
+  if (Intrinsic::isOverloaded(IID))
+    return false;
+
+  // Get the canonical full declaration for this intrinsic.
+  Function *FullDecl = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+
+  // If the existing declaration already has all args, nothing to upgrade
+  if (F->arg_size() >= FullDecl->arg_size())
+    return false;
+
+  // Defaults are a contiguous trailing block, so checking the first missing
+  // argument is enough.
+  if (F->arg_size() < FirstDefault)
+    return false;
+
+  NewFn = FullDecl;
+  return true;
+}
+
 static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                                       bool CanUpgradeDebugIntrinsicsToRecords) {
   assert(F && "Illegal to upgrade a non-existent Function.");
@@ -1552,21 +1582,34 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       return true;
     }
     break;
-  case 'l':
-    if ((Name.starts_with("lifetime.start") ||
-         Name.starts_with("lifetime.end")) &&
-        F->arg_size() == 2) {
-      Intrinsic::ID IID = Name.starts_with("lifetime.start")
-                              ? Intrinsic::lifetime_start
-                              : Intrinsic::lifetime_end;
-      rename(F);
-      // Old 2 argument form of these intrinsics have [Size, Ptr] as arguments.
-      // Use the Ptr argument to create new declaration.
-      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
-                                                F->getArg(1)->getType());
-      return true;
+  case 'l': {
+    bool IsLifetimeStart = Name.consume_front("lifetime.start");
+    bool IsLifetimeEnd = !IsLifetimeStart && Name.consume_front("lifetime.end");
+    if (IsLifetimeStart || IsLifetimeEnd) {
+      if (F->arg_size() == 2) {
+        Intrinsic::ID IID = IsLifetimeStart ? Intrinsic::lifetime_start
+                                            : Intrinsic::lifetime_end;
+        rename(F);
+        // Old 2 argument form of these intrinsics have [Size, Ptr] as
+        // arguments. Use the Ptr argument to create new declaration.
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                  F->getArg(1)->getType());
+        return true;
+      } else if (F->arg_size() == 1 && Name == ".i64") {
+        // Matches @llvm.lifetime.{start/end}.i64 which used to be created by
+        // Autoupgrade prior to
+        // https://github.com/llvm/llvm-project/pull/204601. This is an invalid
+        // intrinsic with no expected calls. To allow auto-upgrade process to
+        // delete such invalid intrinsic declaration, set NewFn = nullptr
+        // and return true here. If there are actual calls to this intrinsic
+        // (which is not expected), they will be deleted in
+        // UpgradeIntrinsicCall.
+        NewFn = nullptr;
+        return true;
+      }
     }
     break;
+  }
   case 'm': {
     // Updating the memory intrinsics (memcpy/memmove/memset) that have an
     // alignment parameter to embedding the alignment as an attribute of
@@ -1943,6 +1986,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
   //  to both detect an intrinsic which needs upgrading, and to provide the
   //  upgraded form of the intrinsic. We should perhaps have two separate
   //  functions for this.
+  if (upgradeIntrinsicDeclWithDefaultArgs(F, NewFn))
+    return true;
+
   return false;
 }
 
@@ -5073,6 +5119,59 @@ static Value *upgradeConvertIntrinsicCall(StringRef Name, CallBase *CI,
   return nullptr;
 }
 
+static bool upgradeIntrinsicCallWithDefaultArgs(CallBase *CI, Function *NewFn,
+                                                IRBuilder<> &Builder) {
+  Intrinsic::ID IID = NewFn->getIntrinsicID();
+
+  auto [FirstDefault, Defaults] = Intrinsic::getAllDefaultArgValues(IID);
+  if (Defaults.empty())
+    return false;
+
+  unsigned OldArgCount = CI->arg_size();
+  unsigned NewArgCount = NewFn->arg_size();
+
+  // If the caller already supplied all arguments (or more), nothing to do.
+  // This mirrors C++ semantics: an explicitly-passed value is never overridden.
+  if (OldArgCount >= NewArgCount)
+    return false;
+
+  // Start with the existing arguments from the old call.
+  SmallVector<Value *, 8> NewArgs(CI->args());
+
+  // Defaults are a contiguous trailing block, so checking the first missing
+  // argument is enough.
+  if (OldArgCount < FirstDefault)
+    return false;
+
+  // Fill in each missing trailing argument from the table.
+  FunctionType *NewFT = NewFn->getFunctionType();
+  for (unsigned Idx = OldArgCount; Idx < NewArgCount; ++Idx) {
+    assert(Idx >= FirstDefault && Idx - FirstDefault < Defaults.size() &&
+           "missing argument outside the default range");
+    Type *ParamTy = NewFT->getParamType(Idx);
+
+    // Only integer types are supported (i1, i8, i16, i32, i64).
+    if (!ParamTy->isIntegerTy())
+      return false;
+    NewArgs.push_back(ConstantInt::get(ParamTy, Defaults[Idx - FirstDefault]));
+  }
+
+  // Preserve operand bundles by creating the call with them.
+  SmallVector<OperandBundleDef, 1> OpBundles;
+  CI->getOperandBundlesAsDefs(OpBundles);
+  CallInst *NewCall = Builder.CreateCall(NewFn, NewArgs, OpBundles);
+
+  NewCall->takeName(CI);
+  NewCall->setCallingConv(CI->getCallingConv());
+  NewCall->copyMetadata(*CI);
+  if (auto *OldCI = dyn_cast<CallInst>(CI))
+    NewCall->setTailCallKind(OldCI->getTailCallKind());
+
+  CI->replaceAllUsesWith(NewCall);
+  CI->eraseFromParent();
+  return true;
+}
+
 /// Upgrade a call to an old intrinsic. All argument and return casting must be
 /// provided to seamlessly integrate with existing context.
 void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
@@ -5125,6 +5224,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = upgradeVectorSplice(CI, Builder);
     } else if (Name.consume_front("convert.")) {
       Rep = upgradeConvertIntrinsicCall(Name, CI, F, Builder);
+    } else if (Name == "lifetime.start.i64" || Name == "lifetime.end.i64") {
+      // Delete calls to invalid @llvm.lifetime.{start,end}.i64 intrinsics.
+      Rep = nullptr;
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }
@@ -5178,6 +5280,11 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   CallInst *NewCall = nullptr;
   switch (NewFn->getIntrinsicID()) {
   default: {
+    // Last resort: try the data-driven default-arg upgrade.
+    // Handles any intrinsic annotated with ImmArg<..., DefaultValue<...>>
+    // in its .td definition, without needing a dedicated case.
+    if (upgradeIntrinsicCallWithDefaultArgs(CI, NewFn, Builder))
+      return;
     DefaultCase();
     return;
   }
@@ -5932,6 +6039,14 @@ Constant *llvm::UpgradeBitCastExpr(unsigned Opc, Constant *C, Type *DestTy) {
   return nullptr;
 }
 
+static std::optional<StringRef> getModuleFlagNameSafely(const MDNode &Flag) {
+  if (Flag.getNumOperands() < 3)
+    return std::nullopt;
+  if (MDString *Name = dyn_cast_or_null<MDString>(Flag.getOperand(1)))
+    return Name->getString();
+  return std::nullopt;
+}
+
 /// Check the debug info version number, if it is out-dated, drop the debug
 /// info. Return true if module is modified.
 bool llvm::UpgradeDebugInfo(Module &M) {
@@ -5945,10 +6060,8 @@ bool llvm::UpgradeDebugInfo(Module &M) {
   unsigned Version = 0;
   if (NamedMDNode *ModFlags = M.getModuleFlagsMetadata()) {
     auto OpIt = find_if(ModFlags->operands(), [](const MDNode *Flag) {
-      if (Flag->getNumOperands() < 3)
-        return false;
-      if (MDString *K = dyn_cast_or_null<MDString>(Flag->getOperand(1)))
-        return K->getString() == "Debug Info Version";
+      if (auto Name = getModuleFlagNameSafely(*Flag))
+        return *Name == "Debug Info Version";
       return false;
     });
     if (OpIt != ModFlags->op_end()) {
@@ -6265,12 +6378,123 @@ void llvm::UpgradeARCRuntime(Module &M) {
     UpgradeToIntrinsic(I.first, I.second);
 }
 
+// Upgrade the way signing of pointers to init/fini functions is described.
+//
+// Originally, the `@llvm.global_(ctors|dtors)` arrays contained `ptrauth`
+// constants, if signing was requested. After the upgrade, these arrays contain
+// plain function pointers and the desired signing schema is described via a
+// pair of module flags.
+//
+// Note that the upgrade is only performed if all elements of *both* arrays
+// agree on a common signing schema.
+static bool upgradePtrauthInitFiniArrays(Module &M) {
+  // As we cannot always decide whether the particular module should have
+  // ptrauth-init-fini flags, we have to treat absent flags as having zero
+  // values for compatibility reasons. Thus, upgradePtrauthInitFiniArrays
+  // returns as soon as it spots any non-signed init/fini pointer: either we
+  // should request non-signed pointers (safe to omit both flags) or there is
+  // no common schema (and thus we do not modify anything).
+  //
+  // UseAddressDisc's value either represents "not decided yet" state (nullopt)
+  // or whether we should request address diversity in addition to the basic
+  // constant diversity. There is no value representing "decided not to sign"
+  // for the reasons explained above.
+  std::optional<bool> UseAddressDisc;
+
+  // Do not attempt upgrading if the new module flags already exist.
+  if (const NamedMDNode *ModFlags = M.getModuleFlagsMetadata()) {
+    for (const MDNode *Flag : ModFlags->operands()) {
+      std::optional<StringRef> Name = getModuleFlagNameSafely(*Flag);
+      if (Name && (*Name == "ptrauth-init-fini" ||
+                   *Name == "ptrauth-init-fini-address-discrimination"))
+        return false;
+    }
+  }
+
+  auto UpgradeSinglePointer = [&UseAddressDisc](Constant *CV) -> Constant * {
+    constexpr unsigned ExpectedConstDisc = 0xD9D4;
+    constexpr unsigned ExpectedAddressMarker = 1;
+
+    auto *CPA = dyn_cast<ConstantPtrAuth>(CV);
+    if (!CPA || !CPA->getDiscriminator()->equalsInt(ExpectedConstDisc))
+      return nullptr; // Nothing to upgrade or unknown pattern found.
+
+    bool HasAddressDisc;
+    if (!CPA->hasAddressDiscriminator())
+      HasAddressDisc = false;
+    else if (CPA->hasSpecialAddressDiscriminator(ExpectedAddressMarker))
+      HasAddressDisc = true;
+    else
+      return nullptr; // Unknown pattern.
+
+    if (UseAddressDisc && *UseAddressDisc != HasAddressDisc)
+      return nullptr; // Disagreement with the decided mode.
+
+    UseAddressDisc = HasAddressDisc;
+    return CPA->getPointer();
+  };
+
+  // Do not apply any changes until we know the upgrade is non-ambiguous.
+  using PendingUpgrade = std::pair<GlobalVariable *, Constant *>;
+  SmallVector<PendingUpgrade, 2> GlobalArraysToUpgrade;
+
+  for (const char *Name : {"llvm.global_ctors", "llvm.global_dtors"}) {
+    auto *GV = dyn_cast_if_present<GlobalVariable>(M.getNamedValue(Name));
+    if (!GV || !GV->hasInitializer())
+      continue; // Skip, but it is okay to upgrade the other variable.
+
+    auto *OldStructorsArray = dyn_cast<ConstantArray>(GV->getInitializer());
+    if (!OldStructorsArray || OldStructorsArray->getNumOperands() == 0)
+      return false;
+
+    std::vector<Constant *> NewStructors;
+    NewStructors.reserve(OldStructorsArray->getNumOperands());
+
+    for (Use &U : OldStructorsArray->operands()) {
+      ConstantStruct *Structor = dyn_cast<ConstantStruct>(U.get());
+      if (!Structor || Structor->getNumOperands() != 3)
+        return false;
+
+      Constant *Prio = Structor->getOperand(0);
+      Constant *Func = Structor->getOperand(1);
+      Constant *Arg = Structor->getOperand(2);
+
+      Func = UpgradeSinglePointer(Func);
+      if (!Func)
+        return false;
+
+      NewStructors.push_back(
+          ConstantStruct::get(Structor->getType(), {Prio, Func, Arg}));
+    }
+
+    Constant *NewInit =
+        ConstantArray::get(OldStructorsArray->getType(), NewStructors);
+    GlobalArraysToUpgrade.emplace_back(GV, NewInit);
+  }
+
+  if (GlobalArraysToUpgrade.empty())
+    return false;
+  assert(UseAddressDisc.has_value());
+
+  for (auto [GV, NewInit] : GlobalArraysToUpgrade)
+    GV->setInitializer(NewInit);
+
+  M.addModuleFlag(Module::Error, "ptrauth-init-fini", 1);
+  M.addModuleFlag(Module::Error, "ptrauth-init-fini-address-discrimination",
+                  *UseAddressDisc);
+
+  return true;
+}
+
 bool llvm::UpgradeModuleFlags(Module &M) {
+  bool Changed = false;
+  Changed |= upgradePtrauthInitFiniArrays(M);
+
   NamedMDNode *ModFlags = M.getModuleFlagsMetadata();
   if (!ModFlags)
-    return false;
+    return Changed;
 
-  bool HasObjCFlag = false, HasClassProperties = false, Changed = false;
+  bool HasObjCFlag = false, HasClassProperties = false;
   bool HasSwiftVersionFlag = false;
   uint8_t SwiftMajorVersion, SwiftMinorVersion;
   uint32_t SwiftABIVersion;

@@ -3196,9 +3196,30 @@ func.func @omp_target_spmd() {
 
 // -----
 
-func.func @omp_target_no_loop() {
+func.func @omp_target_no_loop1(%n : i32) {
+  // expected-error @below {{op spmd_no_loop kernel must contain a nested 'omp.teams' operation}}
+  omp.target kernel_type(spmd_no_loop) host_eval(%n -> %arg0 : i32) {
+    omp.parallel {
+      omp.wsloop {
+        omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+          omp.yield
+        }
+      }
+      omp.terminator
+    } {omp.combined}
+    omp.terminator
+  } {omp.combined}
+  return
+}
+
+// -----
+
+func.func @omp_target_no_loop2() {
   // expected-error @below {{op SPMD kernel must capture an 'omp.loop_nest' operation}}
   omp.target kernel_type(spmd_no_loop) {
+    omp.teams {
+      omp.terminator
+    }
     omp.terminator
   }
   return
@@ -4789,5 +4810,21 @@ func.func @free_shared_mem_invalid_alignment1(%n: i32, %ptr : !llvm.ptr) -> () {
 func.func @free_shared_mem_invalid_alignment2(%n: i32, %ptr : !llvm.ptr) -> () {
   // expected-error @below {{ALIGN value : 3 must be power of 2}}
   omp.free_shared_mem [%n x i64 : (i32) align(3)] %ptr : !llvm.ptr
+  return
+}
+
+// -----
+// unroll_factor = 0 is not a strictly positive integer.
+func.func @omp_unroll_partial_factor_zero(%cli : !omp.cli) -> () {
+  // expected-error @below {{op attribute 'unroll_factor' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive}}
+  omp.unroll_partial(%cli) {unroll_factor = 0 : i64}
+  return
+}
+
+// -----
+// unroll_factor = -1 is not a strictly positive integer.
+func.func @omp_unroll_partial_factor_negative(%cli : !omp.cli) -> () {
+  // expected-error @below {{op attribute 'unroll_factor' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive}}
+  omp.unroll_partial(%cli) {unroll_factor = -1 : i64}
   return
 }

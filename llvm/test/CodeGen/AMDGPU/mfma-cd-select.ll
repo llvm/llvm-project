@@ -628,14 +628,14 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_call(ptr addrspace(1) %arg) 
 ; GFX908-NEXT:    s_add_u32 s4, s4, foo@gotpcrel32@lo+4
 ; GFX908-NEXT:    s_addc_u32 s5, s5, foo@gotpcrel32@hi+12
 ; GFX908-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
-; GFX908-NEXT:    s_mov_b32 s14, s10
-; GFX908-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX908-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX908-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GFX908-NEXT:    s_mov_b32 s14, s10
+; GFX908-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GFX908-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX908-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX908-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX908-NEXT:    s_mov_b64 s[0:1], s[36:37]
-; GFX908-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX908-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX908-NEXT:    s_mov_b32 s32, 0
 ; GFX908-NEXT:    v_mov_b32_e32 v40, 0
@@ -899,10 +899,10 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_call_multi_bb(ptr addrspace(
 ; GFX908-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
 ; GFX908-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX908-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GFX908-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX908-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX908-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX908-NEXT:    s_mov_b64 s[0:1], s[52:53]
-; GFX908-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX908-NEXT:    s_mov_b64 s[2:3], s[54:55]
 ; GFX908-NEXT:    ; implicit-def: $sgpr15
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)

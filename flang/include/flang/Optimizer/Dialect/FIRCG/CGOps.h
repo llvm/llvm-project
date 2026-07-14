@@ -13,7 +13,6 @@
 #ifndef OPTIMIZER_DIALECT_FIRCG_CGOPS_H
 #define OPTIMIZER_DIALECT_FIRCG_CGOPS_H
 
-#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 

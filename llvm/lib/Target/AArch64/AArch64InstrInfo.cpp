@@ -2525,13 +2525,28 @@ bool AArch64InstrInfo::removeCmpToZeroOrOne(
 
 bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   if (MI.getOpcode() != TargetOpcode::LOAD_STACK_GUARD &&
-      MI.getOpcode() != AArch64::CATCHRET)
+      MI.getOpcode() != AArch64::CATCHRET &&
+      MI.getOpcode() != AArch64::STACK_GUARD_UNMIX)
     return false;
 
   MachineBasicBlock &MBB = *MI.getParent();
   auto &Subtarget = MBB.getParent()->getSubtarget<AArch64Subtarget>();
   auto TRI = Subtarget.getRegisterInfo();
   DebugLoc DL = MI.getDebugLoc();
+
+  if (MI.getOpcode() == AArch64::STACK_GUARD_UNMIX) {
+    // Expand STACK_GUARD_UNMIX to: sub Rd, fp, Rs
+    // This computes FP - stored_mixed_value to unmix the cookie
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(1).getReg();
+
+    BuildMI(MBB, MI, DL, get(AArch64::SUBXrr), DstReg)
+        .addReg(AArch64::FP)
+        .addReg(SrcReg);
+
+    MBB.erase(MI);
+    return true;
+  }
 
   if (MI.getOpcode() == AArch64::CATCHRET) {
     // Skip to the first instruction before the epilog.
@@ -2648,9 +2663,6 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           .addMemOperand(*MI.memoperands_begin());
     }
   } else if (TM.getCodeModel() == CodeModel::Large) {
-    if (GuardWidth == 4)
-      report_fatal_error("Large code model with 4-byte stack protector not yet "
-                         "supported");
     BuildMI(MBB, MI, DL, get(AArch64::MOVZXi), Reg)
         .addGlobalAddress(GV, 0, AArch64II::MO_G0 | MO_NC)
         .addImm(0);
@@ -2666,10 +2678,20 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addReg(Reg, RegState::Kill)
         .addGlobalAddress(GV, 0, AArch64II::MO_G3)
         .addImm(48);
-    BuildMI(MBB, MI, DL, get(AArch64::LDRXui), Reg)
-        .addReg(Reg, RegState::Kill)
-        .addImm(0)
-        .addMemOperand(*MI.memoperands_begin());
+    if (GuardWidth == 4) {
+      unsigned Reg32 = TRI->getSubReg(Reg, AArch64::sub_32);
+      BuildMI(MBB, MI, DL, get(AArch64::LDRWui))
+          .addDef(Reg32, RegState::Dead)
+          .addUse(Reg, RegState::Kill)
+          .addImm(0)
+          .addMemOperand(*MI.memoperands_begin())
+          .addDef(Reg, RegState::Implicit);
+    } else {
+      BuildMI(MBB, MI, DL, get(AArch64::LDRXui), Reg)
+          .addReg(Reg, RegState::Kill)
+          .addImm(0)
+          .addMemOperand(*MI.memoperands_begin());
+    }
   } else {
     BuildMI(MBB, MI, DL, get(AArch64::ADRP), Reg)
         .addGlobalAddress(GV, 0, OpFlags | AArch64II::MO_PAGE);
@@ -2689,6 +2711,14 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           .addMemOperand(*MI.memoperands_begin());
     }
   }
+  // To match MSVC. Unlike x86_64 which uses xor instruction to mix the cookie,
+  // we use sub instruction to mix the cookie on aarch64.
+  // The mixing happens here in expandPostRAPseudo (after RA) to ensure we use
+  // the final frame pointer value.
+  if (Subtarget.getTargetTriple().isOSMSVCRT())
+    BuildMI(MBB, MI, DL, get(AArch64::SUBXrr), Reg)
+        .addReg(AArch64::FP)
+        .addReg(Reg, RegState::Kill);
 
   MBB.erase(MI);
 
@@ -12108,6 +12138,18 @@ bool AArch64InstrInfo::verifyInstruction(const MachineInstr &MI,
           (AArch64_AM::getShiftValue(MO.getImm()) != 8 &&
            AArch64_AM::getShiftValue(MO.getImm()) != 16)) {
         ErrInfo = "OPERAND_SHIFT_MSL should be msl shift of 8 or 16";
+        return false;
+      }
+      break;
+    case AArch64::OPERAND_IMM_UINT5:
+      if (!MO.isImm() || !isUInt<5>(MO.getImm())) {
+        ErrInfo = "OPERAND_IMM_UINT5 should be in the range 0 to 31";
+        return false;
+      }
+      break;
+    case AArch64::OPERAND_IMM_UINT8:
+      if (!MO.isImm() || !isUInt<8>(MO.getImm())) {
+        ErrInfo = "OPERAND_IMM_UINT8 should be in the range 0 to 255";
         return false;
       }
       break;

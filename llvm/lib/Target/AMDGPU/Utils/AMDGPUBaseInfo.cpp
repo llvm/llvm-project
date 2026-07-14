@@ -2692,7 +2692,8 @@ int32_t getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR,
 }
 
 bool isSGPR(MCRegister Reg, const MCRegisterInfo *TRI) {
-  const MCRegisterClass SGPRClass = TRI->getRegClass(AMDGPU::SReg_32RegClassID);
+  const MCRegisterClass &SGPRClass =
+      TRI->getRegClass(AMDGPU::SReg_32RegClassID);
   const MCRegister FirstSubReg = TRI->getSubReg(Reg, AMDGPU::sub0);
   return SGPRClass.contains(FirstSubReg != 0 ? FirstSubReg : Reg) ||
          Reg == AMDGPU::SCC;
@@ -3673,10 +3674,11 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
 }
 
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
-  uint64_t TSFlags = MII.get(Opcode).TSFlags;
+  const MCInstrDesc &Desc = MII.get(Opcode);
+  uint64_t TSFlags = Desc.TSFlags;
 
   if (TSFlags & SIInstrFlags::SMRD)
-    return !getSMEMIsBuffer(Opcode);
+    return Desc.mayLoad() && !Desc.mayStore() && !getSMEMIsBuffer(Opcode);
   if (!(TSFlags & SIInstrFlags::FLAT))
     return false;
 
