@@ -846,7 +846,12 @@ class Base(unittest.TestCase):
                     return
                 raise exc_info[1]
 
-            shutil.rmtree(bdir, onerror=_ignore_enoent)
+            # Delete via the \\?\ extended length path prefix so rmtree can
+            # remove build artifacts whose full path exceeds MAX_PATH (260).
+            rmtree_target = bdir
+            if sys.platform == "win32":
+                rmtree_target = "\\\\?\\" + bdir
+            shutil.rmtree(rmtree_target, onerror=_ignore_enoent)
         lldbutil.mkdir_p(bdir)
 
     def getBuildArtifact(self, name="a.out"):
