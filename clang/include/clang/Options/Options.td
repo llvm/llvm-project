@@ -1033,7 +1033,7 @@ def _ssaf_transformation_report_file :
   Visibility<[ClangOption, CC1Option]>,
   HelpText<
     "Output file for the transformation report produced by the source "
-    "transformation. The output is a SARIF 2.1.0 JSON document.">,
+    "transformation. The output is a SARIF JSON document.">,
   MarshallingInfoString<SSAFOpts<"TransformationReportFile">>;
 def Xarch__
     : JoinedAndSeparate<["-"], "Xarch_">,

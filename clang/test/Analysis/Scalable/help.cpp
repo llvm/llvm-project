@@ -20,7 +20,7 @@
 // HELP-NEXT:  --ssaf-src-edit-file=<path>
 // HELP-NEXT:    Output file for the source edits produced by the source transformation. The output is a YAML document compatible with 'clang-apply-replacements'.
 // HELP-NEXT:  --ssaf-transformation-report-file=<path>
-// HELP-NEXT:    Output file for the transformation report produced by the source transformation. The output is a SARIF 2.1.0 JSON document.
+// HELP-NEXT:    Output file for the transformation report produced by the source transformation. The output is a SARIF JSON document.
 // HELP-NEXT:  --ssaf-tu-summary-file=<path>.<format>
 // HELP-NEXT:    The output file for the extracted summaries. The extension selects which file format to use.
 
