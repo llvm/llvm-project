@@ -81,7 +81,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr1
