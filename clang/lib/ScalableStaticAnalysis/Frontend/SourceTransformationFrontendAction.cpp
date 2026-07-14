@@ -89,8 +89,9 @@ static std::optional<StringRef> bareExtension(StringRef Path) {
   return Ext;
 }
 
-/// Companion flags required by `--ssaf-source-transformation=`. Values must
-/// match the `%select` branch order in `warn_ssaf_source_transformation_requires`.
+/// Companion options required by `--ssaf-source-transformation=`. Values must
+/// match the `%select` branch order in
+/// `warn_ssaf_source_transformation_requires`.
 enum SourceTransformationCompanion {
   STCompanion_WPAFile,           // --ssaf-global-scope-analysis-result=
   STCompanion_EditFile,          // --ssaf-src-edit-file=
@@ -98,19 +99,19 @@ enum SourceTransformationCompanion {
   STCompanion_CompilationUnitId, // --ssaf-compilation-unit-id=
 };
 
-/// Options that depend on `--ssaf-source-transformation=` being set. Values must
-/// match the `%select` branch order in
+/// Options that depend on `--ssaf-source-transformation=` being set. Values
+/// must match the `%select` branch order in
 /// `warn_ssaf_option_ignored_without_source_transformation`.
 enum SourceTransformationDependent {
   STDependent_EditFile,   // --ssaf-src-edit-file=
   STDependent_ReportFile, // --ssaf-transformation-report-file=
 };
 
-/// Returns `true` if any orphan-flag warning was reported. Every missing
-/// companion flag fires its own diagnostic in a single pass so the user
+/// Returns `true` if any orphan-option warning was reported. Every missing
+/// companion option fires its own diagnostic in a single pass so the user
 /// sees the full list of CLI mistakes at once.
-static bool reportOrphanFlagMisuse(DiagnosticsEngine &Diags,
-                                   const SSAFOptions &Opts) {
+static bool reportOrphanOptionMisuse(DiagnosticsEngine &Diags,
+                                     const SSAFOptions &Opts) {
   bool Reported = false;
 
   if (!Opts.SourceTransformation.empty()) {
@@ -155,7 +156,7 @@ SourceTransformationRunner::create(CompilerInstance &CI, StringRef InFile) {
   const SSAFOptions &Opts = CI.getSSAFOpts();
   DiagnosticsEngine &Diags = CI.getDiagnostics();
 
-  if (reportOrphanFlagMisuse(Diags, Opts))
+  if (reportOrphanOptionMisuse(Diags, Opts))
     return nullptr;
   if (Opts.SourceTransformation.empty())
     return nullptr;

@@ -1,6 +1,6 @@
 // CLI errors for the source-edit-generation pipeline. Every misuse of the
 // four `--ssaf-{source-transformation,global-scope-analysis-result,
-// src-edit-file,transformation-report-file}=` flags emits a default-error
+// src-edit-file,transformation-report-file}=` options emits a default-error
 // diagnostic under `-Wscalable-static-analysis-framework`. The runner
 // produces no edit/report files and the rest of the compile pipeline is
 // untouched.
@@ -24,7 +24,7 @@
 // RUN: not test -e %t/report.sarif
 
 // =============================================================================
-// 2. Orphan companion flags: --ssaf-source-transformation= alone.
+// 2. Orphan companion options: --ssaf-source-transformation= alone.
 // =============================================================================
 
 // RUN: rm -rf %t && mkdir -p %t
@@ -35,7 +35,7 @@
 // ORPHAN-COMPANIONS-DAG: error: option '--ssaf-source-transformation=' requires '--ssaf-compilation-unit-id=' to be set [-Wscalable-static-analysis-framework]
 
 // =============================================================================
-// 3. Reverse orphans: edit/report file set without transformation flag.
+// 3. Reverse orphans: edit/report file set without transformation option.
 // =============================================================================
 
 // RUN: rm -rf %t && mkdir -p %t

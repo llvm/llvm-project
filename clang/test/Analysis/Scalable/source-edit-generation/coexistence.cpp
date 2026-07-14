@@ -1,5 +1,5 @@
 // Stage-1 (TU-summary extraction) and stage-2 (source-edit generation) can
-// both be active in a single clang invocation. Their flags do not interact
+// both be active in a single clang invocation. Their options do not interact
 // at the data layer — the source transformation reads its WPASuite from
 // disk, not from the in-flight extractor. The two pipelines stack as
 // independent ASTConsumers; both produce their per-TU output files.

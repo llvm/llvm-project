@@ -5,7 +5,7 @@
 // edit or report file is written.
 
 // DEFINE: %{filecheck} = FileCheck %s --match-full-lines --check-prefix
-// DEFINE: %{flags} = --ssaf-source-transformation=does-not-exist \
+// DEFINE: %{options} = --ssaf-source-transformation=does-not-exist \
 // DEFINE:   --ssaf-global-scope-analysis-result=%S/Inputs/empty-suite.json \
 // DEFINE:   --ssaf-src-edit-file=%t/edits.yaml \
 // DEFINE:   --ssaf-transformation-report-file=%t/report.sarif \
@@ -16,7 +16,7 @@
 // =============================================================================
 
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: %clang -c %s -o %t/test.o -Wno-error=scalable-static-analysis-framework %{flags} 2>&1 | %{filecheck}=WARNING
+// RUN: %clang -c %s -o %t/test.o -Wno-error=scalable-static-analysis-framework %{options} 2>&1 | %{filecheck}=WARNING
 // WARNING: warning: no source transformation registered with name: does-not-exist [-Wscalable-static-analysis-framework]
 // RUN: test -e %t/test.o
 // RUN: not test -e %t/edits.yaml
@@ -27,7 +27,7 @@
 // =============================================================================
 
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: %clang -c %s -o %t/test.o -Wno-scalable-static-analysis-framework %{flags} 2>&1 | count 0
+// RUN: %clang -c %s -o %t/test.o -Wno-scalable-static-analysis-framework %{options} 2>&1 | count 0
 // RUN: test -e %t/test.o
 // RUN: not test -e %t/edits.yaml
 // RUN: not test -e %t/report.sarif

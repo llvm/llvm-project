@@ -12,11 +12,11 @@ and emits two per-translation-unit artifacts:
 - a *transformation-report file* (``--ssaf-transformation-report-file=``)
   containing diagnostic-style findings.
 
-Driver flags
-============
+Driver options
+================
 
-Four flags control the pipeline; they are all both ``--ssaf-…`` driver
-flags and ``cc1`` flags. The compilation-unit identifier is shared
+Four options control the pipeline; they are all both ``--ssaf-…`` driver
+options and ``cc1`` options. The compilation-unit identifier is shared
 with the summary extraction step. A given compilation unit needs to
 receive the same identifier for both summary extraction and source
 edit generation.
@@ -24,7 +24,7 @@ edit generation.
 .. list-table::
    :header-rows: 1
 
-   * - Flag
+   * - Option
      - Purpose
    * - ``--ssaf-source-transformation=<name>``
      - Name of the transformation to run.
