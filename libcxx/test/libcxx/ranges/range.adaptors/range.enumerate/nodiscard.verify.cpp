@@ -25,7 +25,8 @@ static_assert(!std::same_as<std::ranges::iterator_t<View>, std::ranges::iterator
 static_assert(!std::same_as<std::ranges::sentinel_t<View>, std::ranges::sentinel_t<const View>>);
 
 void test() {
-  auto v = View{} | std::views::enumerate;
+  View range;
+  auto v = std::ranges::enumerate_view ev{range};
 
   // [range.enumerate.view]
 
