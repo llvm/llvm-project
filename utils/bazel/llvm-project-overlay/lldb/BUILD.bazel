@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//lib:selects.bzl", "selects")
-load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@build_bazel_apple_support//rules:apple_genrule.bzl", "apple_genrule")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_import", "cc_library", "objc_library")
@@ -69,15 +69,17 @@ selects.config_setting_group(
         "@platforms//os:linux",
     ],
 )
-
-bool_flag(
-    name = "enable_system_lzma",
-    build_setting_default = False,
+string_flag(
+    name = "lzma",
+    build_setting_default = "disable",
+    values = [
+        "disable",
+        "system",
+    ],
 )
-
 config_setting(
     name = "system_lzma_enabled",
-    flag_values = {":enable_system_lzma": "true"},
+    flag_values = {":lzma": "system"},
 )
 
 _VERSION_SUBSTITUTIONS = {
