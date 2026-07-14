@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_BPF_BPF_H
 
 #include "MCTargetDesc/BPFMCTargetDesc.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/Instructions.h"
@@ -40,7 +41,15 @@ public:
 };
 
 FunctionPass *createBPFISelDag(BPFTargetMachine &TM);
-FunctionPass *createBPFMISimplifyPatchablePass();
+
+class BPFMISimplifyPatchablePass
+    : public OptionalPassInfoMixin<BPFMISimplifyPatchablePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createBPFMISimplifyPatchableLegacyPass();
 FunctionPass *createBPFMIPeepholePass();
 FunctionPass *createBPFMIPreEmitPeepholePass();
 FunctionPass *createBPFMIPreEmitCheckingPass();
@@ -55,7 +64,7 @@ void initializeBPFDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeBPFMIPeepholePass(PassRegistry &);
 void initializeBPFMIPreEmitCheckingPass(PassRegistry &);
 void initializeBPFMIPreEmitPeepholePass(PassRegistry &);
-void initializeBPFMISimplifyPatchablePass(PassRegistry &);
+void initializeBPFMISimplifyPatchableLegacyPass(PassRegistry &);
 
 class BPFAbstractMemberAccessPass
     : public RequiredPassInfoMixin<BPFAbstractMemberAccessPass> {

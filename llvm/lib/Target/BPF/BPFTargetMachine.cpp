@@ -55,7 +55,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
   initializeBPFMIPeepholePass(PR);
   initializeBPFMIPreEmitPeepholePass(PR);
   initializeBPFDAGToDAGISelLegacyPass(PR);
-  initializeBPFMISimplifyPatchablePass(PR);
+  initializeBPFMISimplifyPatchableLegacyPass(PR);
   initializeBPFMIPreEmitCheckingPass(PR);
 }
 
@@ -134,7 +134,7 @@ bool BPFPassConfig::addInstSelector() {
 }
 
 void BPFPassConfig::addMachineSSAOptimization() {
-  addPass(createBPFMISimplifyPatchablePass());
+  addPass(createBPFMISimplifyPatchableLegacyPass());
 
   // The default implementation must be called first as we want eBPF
   // Peephole ran at last.

@@ -56,8 +56,7 @@ Error BPFCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
 
 void BPFCodeGenPassBuilder::addMachineSSAOptimization(
     PassManagerWrapper &PMW) const {
-  // TODO(boomanaiden154): Add BPFMISimplifyPatchablePass when it has been
-  // ported.
+  addMachineFunctionPass(BPFMISimplifyPatchablePass(), PMW);
 
   Base::addMachineSSAOptimization(PMW);
 

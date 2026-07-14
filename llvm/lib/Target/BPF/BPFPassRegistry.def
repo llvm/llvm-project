@@ -41,4 +41,5 @@ FUNCTION_PASS_WITH_PARAMS(
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 MACHINE_FUNCTION_PASS("bpf-isel", BPFISelDAGToDAGPass(*this))
+MACHINE_FUNCTION_PASS("bpf-mi-simplify-patchable", BPFMISimplifyPatchablePass())
 #undef MACHINE_FUNCTION_PASS
