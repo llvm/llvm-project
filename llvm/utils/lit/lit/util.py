@@ -158,8 +158,13 @@ def whichTools(tools, paths):
     return None
 
 
-def printHistogram(items, title="Items"):
+def printHistogram(items, slowest_limit, title="Items"):
     items.sort(key=lambda item: item[1])
+    total = len(items)
+    if slowest_limit == "all":
+        slowest_count = total
+    else:
+        slowest_count = min(slowest_limit, total)
 
     maxValue = max([v for _, v in items])
 
@@ -180,11 +185,11 @@ def printHistogram(items, title="Items"):
 
     barW = 40
     hr = "-" * (barW + 34)
-    print("Slowest %s:" % title)
+    print("Slowest %s (%d of %d):" % (title, slowest_count, total))
     print(hr)
-    for name, value in reversed(items[-20:]):
+    for name, value in reversed(items[-slowest_count:]):
         print("%.2fs: %s" % (value, name))
-    print("\n%s Times:" % title)
+    print("\nTest Times (%d):" % total)
     print(hr)
     pDigits = int(math.ceil(math.log(maxValue, 10)))
     pfDigits = max(0, 3 - pDigits)
