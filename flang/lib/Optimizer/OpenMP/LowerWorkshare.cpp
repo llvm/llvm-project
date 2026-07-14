@@ -19,6 +19,7 @@
 #include <flang/Optimizer/Analysis/AliasAnalysis.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
 #include <flang/Optimizer/Builder/Runtime/Assign.h>
+#include <flang/Optimizer/Builder/Todo.h>
 #include <flang/Optimizer/Dialect/FIROps.h>
 #include <flang/Optimizer/Dialect/FIRType.h>
 #include <flang/Optimizer/HLFIR/HLFIROps.h>
@@ -408,21 +409,20 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
     if (auto reloaded = rootMapping.lookupOrNull(v))
       return nullptr;
     Type ty = v.getType();
-    // fir.alloca cannot wrap fir.ref, so for reference-typed values
-    // (e.g. results of dynamic fir.alloca ops) use fir.ptr as the
-    // intermediary pointer type for the broadcast alloca.
-    Type allocTy = ty;
-    if (auto rt = mlir::dyn_cast<fir::ReferenceType>(ty))
-      allocTy = fir::PointerType::get(rt.getEleTy());
-    Value alloc = fir::AllocaOp::create(allocaBuilder, loc, allocTy);
+    // Broadcasting a reference-typed value would need a !fir.ref<!fir.ref<...>>
+    // slot, which FIR forbids. Rather than work around this with a
+    // !fir.ref<!fir.ptr<...>> slot, bail out: no Fortran lowering produces a
+    // reference-typed value here (ops yielding a !fir.ref are pure and are
+    // parallelized directly). Test ty directly; constructing the slot type for
+    // a reference ty would itself trip fir::ReferenceType::verify.
+    if (mlir::isa<fir::ReferenceType>(ty))
+      TODO(loc,
+           "unsupported value in OpenMP workshare region: a reference used "
+           "across the region cannot be made available to all threads");
+    Value alloc = fir::AllocaOp::create(allocaBuilder, loc, ty);
     Value singleVal = singleMapping.lookup(v);
-    if (allocTy != ty)
-      singleVal =
-          fir::ConvertOp::create(singleBuilder, loc, allocTy, singleVal);
     fir::StoreOp::create(singleBuilder, loc, singleVal, alloc);
-    Value reloaded = fir::LoadOp::create(parallelBuilder, loc, allocTy, alloc);
-    if (allocTy != ty)
-      reloaded = fir::ConvertOp::create(parallelBuilder, loc, ty, reloaded);
+    Value reloaded = fir::LoadOp::create(parallelBuilder, loc, ty, alloc);
     rootMapping.map(v, reloaded);
     return alloc;
   };
