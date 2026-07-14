@@ -15578,8 +15578,30 @@ TEST_F(FormatTest, MergeShortFunctionBody) {
   Style.BraceWrapping.AfterFunction = true;
 
   verifyFormat("int foo()\n"
+               "{\n"
+               "  return 1;\n"
+               "}",
+               Style);
+
+  Style.AllowShortFunctionsOnASingleLine.Wrapped = true;
+  verifyFormat("int foo()\n"
                "{ return 1; }",
                Style);
+
+  Style.AllowShortFunctionsOnASingleLine.Other = true;
+  verifyFormat("int foo() { return 1; }", Style);
+  verifyFormat("int foo()\n"
+               "{\n"
+               "}",
+               Style);
+
+  Style.BraceWrapping.SplitEmptyFunction = false;
+  verifyFormat("int foo()\n"
+               "{}",
+               Style);
+
+  Style.AllowShortFunctionsOnASingleLine.Empty = true;
+  verifyFormat("int foo() {}", Style);
 }
 
 TEST_F(FormatTest, KeepShortFunctionAfterPPElse) {

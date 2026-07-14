@@ -235,6 +235,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(AllowShortFunctionsOnASingleLine, Empty);
   CHECK_PARSE_NESTED_BOOL(AllowShortFunctionsOnASingleLine, Inline);
   CHECK_PARSE_NESTED_BOOL(AllowShortFunctionsOnASingleLine, Other);
+  CHECK_PARSE_NESTED_BOOL(AllowShortFunctionsOnASingleLine, Wrapped);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterCaseLabel);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterClass);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterEnum);
