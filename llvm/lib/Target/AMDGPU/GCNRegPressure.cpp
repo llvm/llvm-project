@@ -512,7 +512,8 @@ GCNRPTracker::LiveRegSet llvm::getLiveRegs(SlotIndex SI,
     // Check for a live interval before querying the register kind: getRegKind
     // reads the register class, which is unset for classless vregs (e.g. unused
     // GlobalISel InstructionSelect leftovers). Such vregs have no interval, so
-    // testing hasInterval first skips them without touching their (absent) class.
+    // testing hasInterval first skips them without touching their (absent)
+    // class.
     if (!LIS.hasInterval(Reg))
       continue;
     if (RegKind != GCNRegPressure::TOTAL_KINDS &&
