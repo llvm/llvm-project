@@ -343,15 +343,22 @@ define void @memset_p0_sz1055_align_4_varsetval(ptr addrspace(0) align 4 %dst, i
 ; GFX942-NEXT:  ; %bb.2: ; %static-memset-post-expansion
 ; GFX942-NEXT:    s_mov_b32 s0, 0x4040404
 ; GFX942-NEXT:    v_perm_b32 v4, v2, v2, s0
-; GFX942-NEXT:    v_lshlrev_b16_e32 v3, 8, v2
 ; GFX942-NEXT:    v_mov_b32_e32 v5, v4
 ; GFX942-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX942-NEXT:    v_mov_b32_e32 v7, v4
-; GFX942-NEXT:    v_or_b32_sdwa v3, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX942-NEXT:    s_mov_b64 s[0:1], 0x41e
 ; GFX942-NEXT:    flat_store_dwordx4 v[0:1], v[4:7] offset:1024
-; GFX942-NEXT:    flat_store_dwordx3 v[0:1], v[4:6] offset:1040
-; GFX942-NEXT:    flat_store_short v[0:1], v3 offset:1052
-; GFX942-NEXT:    flat_store_byte v[0:1], v2 offset:1054
+; GFX942-NEXT:    v_lshlrev_b16_e32 v3, 8, v2
+; GFX942-NEXT:    v_or_b32_sdwa v8, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX942-NEXT:    v_lshl_add_u64 v[6:7], v[0:1], 0, s[0:1]
+; GFX942-NEXT:    s_mov_b64 s[0:1], 0x41c
+; GFX942-NEXT:    flat_store_byte v[6:7], v2
+; GFX942-NEXT:    v_lshl_add_u64 v[2:3], v[0:1], 0, s[0:1]
+; GFX942-NEXT:    s_mov_b64 s[0:1], 0x418
+; GFX942-NEXT:    flat_store_short v[2:3], v8
+; GFX942-NEXT:    v_lshl_add_u64 v[2:3], v[0:1], 0, s[0:1]
+; GFX942-NEXT:    flat_store_dword v[2:3], v4
+; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[4:5] offset:1040
 ; GFX942-NEXT:    v_accvgpr_read_b32 v61, a13 ; Reload Reuse
 ; GFX942-NEXT:    v_accvgpr_read_b32 v60, a12 ; Reload Reuse
 ; GFX942-NEXT:    v_accvgpr_read_b32 v59, a11 ; Reload Reuse
@@ -557,13 +564,14 @@ define void @memset_p1_sz1055_align_4_varsetval(ptr addrspace(1) align 4 %dst, i
 ; GFX942-NEXT:    v_perm_b32 v4, v2, v2, s0
 ; GFX942-NEXT:    v_lshlrev_b16_e32 v3, 8, v2
 ; GFX942-NEXT:    v_mov_b32_e32 v5, v4
+; GFX942-NEXT:    v_or_b32_sdwa v3, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX942-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX942-NEXT:    v_mov_b32_e32 v7, v4
-; GFX942-NEXT:    v_or_b32_sdwa v3, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX942-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off offset:1024
-; GFX942-NEXT:    global_store_dwordx3 v[0:1], v[4:6], off offset:1040
-; GFX942-NEXT:    global_store_short v[0:1], v3, off offset:1052
 ; GFX942-NEXT:    global_store_byte v[0:1], v2, off offset:1054
+; GFX942-NEXT:    global_store_short v[0:1], v3, off offset:1052
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], v[4:5]
+; GFX942-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off offset:1024
+; GFX942-NEXT:    global_store_dwordx3 v[0:1], v[2:4], off offset:1040
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -733,8 +741,8 @@ define void @memset_p3_sz1055_align_4_varsetval(ptr addrspace(3) align 4 %dst, i
 ; GFX942-NEXT:    ds_write_b32 v0, v4 offset:1048
 ; GFX942-NEXT:    v_lshlrev_b16_e32 v2, 8, v1
 ; GFX942-NEXT:    v_or_b32_sdwa v2, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX942-NEXT:    ds_write_b16 v0, v2 offset:1052
 ; GFX942-NEXT:    ds_write_b8 v0, v1 offset:1054
+; GFX942-NEXT:    ds_write_b16 v0, v2 offset:1052
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -898,12 +906,14 @@ define void @memset_p5_sz1055_align_4_varsetval(ptr addrspace(5) align 4 %dst, i
 ; GFX942-NEXT:    v_mov_b32_e32 v4, v2
 ; GFX942-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX942-NEXT:    scratch_store_dwordx4 v0, v[2:5], off offset:1024
-; GFX942-NEXT:    scratch_store_dwordx2 v0, v[2:3], off offset:1040
-; GFX942-NEXT:    scratch_store_dword v0, v2, off offset:1048
-; GFX942-NEXT:    v_lshlrev_b16_e32 v2, 8, v1
-; GFX942-NEXT:    v_or_b32_sdwa v2, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX942-NEXT:    scratch_store_short v0, v2, off offset:1052
+; GFX942-NEXT:    s_nop 1
+; GFX942-NEXT:    v_lshlrev_b16_e32 v3, 8, v1
+; GFX942-NEXT:    v_or_b32_sdwa v4, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX942-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX942-NEXT:    scratch_store_byte v0, v1, off offset:1054
+; GFX942-NEXT:    scratch_store_short v0, v4, off offset:1052
+; GFX942-NEXT:    scratch_store_dword v0, v2, off offset:1048
+; GFX942-NEXT:    scratch_store_dwordx2 v0, v[2:3], off offset:1040
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 entry:

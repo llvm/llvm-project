@@ -10,9 +10,9 @@ define amdgpu_kernel void @fence_barrier_latency_test(ptr addrspace(1) %global_p
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    s_clause 0x2
-; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x40 nv
 ; CHECK-NEXT:    s_load_b96 s[16:18], s[4:5], 0x0 nv
 ; CHECK-NEXT:    s_load_b256 s[8:15], s[4:5], 0x20 nv
+; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x40 nv
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_dual_mov_b32 v32, 0 :: v_dual_mov_b32 v28, s18
 ; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[8:15]

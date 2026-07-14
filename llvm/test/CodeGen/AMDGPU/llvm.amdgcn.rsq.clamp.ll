@@ -10,10 +10,9 @@ declare double @llvm.amdgcn.rsq.clamp.f64(double) #1
 define amdgpu_kernel void @rsq_clamp_f32(ptr addrspace(1) %out, float %src) #0 {
 ; SI-LABEL: rsq_clamp_f32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dword s2, s[4:5], 0xb
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    v_rsq_clamp_f32_e32 v0, s2
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -21,15 +20,13 @@ define amdgpu_kernel void @rsq_clamp_f32(ptr addrspace(1) %out, float %src) #0 {
 ;
 ; VI-LABEL: rsq_clamp_f32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s0, s[4:5], 0x2c
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_rsq_f32_e32 v0, s0
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; VI-NEXT:    v_min_f32_e32 v0, 0x7f7fffff, v0
-; VI-NEXT:    v_max_f32_e32 v2, 0xff7fffff, v0
-; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_rsq_f32_e32 v2, s2
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_min_f32_e32 v2, 0x7f7fffff, v2
+; VI-NEXT:    v_max_f32_e32 v2, 0xff7fffff, v2
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;

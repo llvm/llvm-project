@@ -212,8 +212,8 @@ define amdgpu_kernel void @s_test_canonicalize_var_f32(ptr addrspace(1) %out, fl
 ; GFX678-GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX678-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX678-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX678-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX678-GISEL-NEXT:    v_mul_f32_e64 v2, 1.0, s2
+; GFX678-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX678-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX678-GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; GFX678-GISEL-NEXT:    s_endpgm
