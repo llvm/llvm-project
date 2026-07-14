@@ -491,11 +491,8 @@ elif platform.system() == "AIX":
 # objects only. In order to not affect most test cases, which expect to support
 # 32-bit and 64-bit objects by default, set the environment variable
 # "OBJECT_MODE" to "any" by default on AIX OS.
-
-# Tools that support OBJECT_MODE default to 32-bit on AIX. Set
-# OBJECT_MODE=any to handle both 32-bit and 64-bit objects.
 if "system-aix" in config.available_features:
-   config.environment["OBJECT_MODE"] = "any"
+    config.environment["OBJECT_MODE"] = "any"
 
 # It is not realistically possible to account for all options that could
 # possibly be present in system and user configuration files, so disable
