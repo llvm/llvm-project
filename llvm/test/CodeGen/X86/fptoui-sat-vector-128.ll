@@ -12,10 +12,9 @@ define <4 x i1> @test_unsigned_v4i1_v4f32(<4 x float> %f) nounwind {
 ; SSE-LABEL: test_unsigned_v4i1_v4f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    xorps %xmm1, %xmm1
-; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    maxps %xmm1, %xmm2
-; SSE-NEXT:    minps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE-NEXT:    cvttps2dq %xmm2, %xmm1
+; SSE-NEXT:    maxps %xmm0, %xmm1
+; SSE-NEXT:    minps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    cvttps2dq %xmm1, %xmm1
 ; SSE-NEXT:    cmpunordps %xmm0, %xmm0
 ; SSE-NEXT:    andnps %xmm1, %xmm0
 ; SSE-NEXT:    retq
@@ -66,10 +65,9 @@ define <4 x i1> @test_freeze_unsigned_v4i1_v4f32(<4 x float> %f) nounwind {
 ; SSE-LABEL: test_freeze_unsigned_v4i1_v4f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    xorps %xmm1, %xmm1
-; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    maxps %xmm1, %xmm2
-; SSE-NEXT:    minps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE-NEXT:    cvttps2dq %xmm2, %xmm1
+; SSE-NEXT:    maxps %xmm0, %xmm1
+; SSE-NEXT:    minps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    cvttps2dq %xmm1, %xmm1
 ; SSE-NEXT:    cmpunordps %xmm0, %xmm0
 ; SSE-NEXT:    andnps %xmm1, %xmm0
 ; SSE-NEXT:    retq
@@ -318,17 +316,16 @@ define <4 x i32> @test_unsigned_v4i32_v4f32(<4 x float> %f) nounwind {
 ; SSE2-LABEL: test_unsigned_v4i32_v4f32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    xorps %xmm1, %xmm1
-; SSE2-NEXT:    movaps %xmm0, %xmm2
-; SSE2-NEXT:    maxps %xmm1, %xmm2
-; SSE2-NEXT:    cvttps2dq %xmm2, %xmm1
+; SSE2-NEXT:    maxps %xmm0, %xmm1
+; SSE2-NEXT:    cvttps2dq %xmm1, %xmm2
 ; SSE2-NEXT:    movaps {{.*#+}} xmm3 = [4.2949673E+9,4.2949673E+9,4.2949673E+9,4.2949673E+9]
-; SSE2-NEXT:    cmpleps %xmm2, %xmm3
-; SSE2-NEXT:    orps %xmm1, %xmm3
-; SSE2-NEXT:    psrad $31, %xmm1
-; SSE2-NEXT:    subps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE2-NEXT:    cvttps2dq %xmm2, %xmm2
-; SSE2-NEXT:    pand %xmm1, %xmm2
+; SSE2-NEXT:    cmpleps %xmm1, %xmm3
 ; SSE2-NEXT:    orps %xmm2, %xmm3
+; SSE2-NEXT:    psrad $31, %xmm2
+; SSE2-NEXT:    subps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    orps %xmm1, %xmm3
 ; SSE2-NEXT:    cmpunordps %xmm0, %xmm0
 ; SSE2-NEXT:    andnps %xmm3, %xmm0
 ; SSE2-NEXT:    retq
@@ -336,18 +333,17 @@ define <4 x i32> @test_unsigned_v4i32_v4f32(<4 x float> %f) nounwind {
 ; SSE42-LABEL: test_unsigned_v4i32_v4f32:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    xorps %xmm1, %xmm1
-; SSE42-NEXT:    movaps %xmm0, %xmm2
-; SSE42-NEXT:    maxps %xmm1, %xmm2
-; SSE42-NEXT:    cvttps2dq %xmm2, %xmm1
-; SSE42-NEXT:    movdqa %xmm1, %xmm3
+; SSE42-NEXT:    maxps %xmm0, %xmm1
+; SSE42-NEXT:    cvttps2dq %xmm1, %xmm2
+; SSE42-NEXT:    movdqa %xmm2, %xmm3
 ; SSE42-NEXT:    movaps {{.*#+}} xmm4 = [4.2949673E+9,4.2949673E+9,4.2949673E+9,4.2949673E+9]
-; SSE42-NEXT:    cmpleps %xmm2, %xmm4
-; SSE42-NEXT:    subps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE42-NEXT:    cmpleps %xmm1, %xmm4
+; SSE42-NEXT:    subps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE42-NEXT:    psrad $31, %xmm3
-; SSE42-NEXT:    cvttps2dq %xmm2, %xmm2
-; SSE42-NEXT:    pand %xmm3, %xmm2
-; SSE42-NEXT:    por %xmm1, %xmm2
-; SSE42-NEXT:    orps %xmm2, %xmm4
+; SSE42-NEXT:    cvttps2dq %xmm1, %xmm1
+; SSE42-NEXT:    pand %xmm3, %xmm1
+; SSE42-NEXT:    por %xmm2, %xmm1
+; SSE42-NEXT:    orps %xmm1, %xmm4
 ; SSE42-NEXT:    cmpunordps %xmm0, %xmm0
 ; SSE42-NEXT:    andnps %xmm4, %xmm0
 ; SSE42-NEXT:    retq

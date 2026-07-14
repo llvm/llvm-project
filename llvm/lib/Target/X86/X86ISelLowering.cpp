@@ -22480,7 +22480,7 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
         return DAG.getSelect(dl, DstVT, IsNaN, Zero, Fixed);
       } else {
         SDValue ZeroFP = DAG.getConstantFP(0.0, dl, SrcVT);
-        SDValue Clamped = DAG.getNode(X86ISD::FMAX, dl, SrcVT, Src, ZeroFP);
+        SDValue Clamped = DAG.getNode(X86ISD::FMAXC, dl, SrcVT, Src, ZeroFP);
         APFloat OvfBoundFlt(SrcVT.getScalarType().getFltSemantics());
         OvfBoundFlt.convertFromAPInt(APInt::getOneBitSet(33, 32),
                                      /*IsSigned=*/false, APFloat::rmTowardZero);
@@ -22534,19 +22534,19 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
     SDValue MaxC = DAG.getConstantFP(MaxFloat, dl, SrcVT);
     SDValue MinC = DAG.getConstantFP(MinFloat, dl, SrcVT);
 
-    // Clamp from below. X86ISD::FMAX returns the second operand when either
+    // Clamp from below. X86ISD::FMAXC returns the second operand when either
     // input is NaN, so NaN maps to MinC here.
-    SDValue ClampedBottom = DAG.getNode(X86ISD::FMAX, dl, SrcVT, Src, MinC);
+    SDValue ClampedBottom = DAG.getNode(X86ISD::FMAXC, dl, SrcVT, Src, MinC);
     // Clamp from above. NaN (now MinC) is already in range and passes through.
     SDValue ClampedTop =
-        DAG.getNode(X86ISD::FMIN, dl, SrcVT, ClampedBottom, MaxC);
+        DAG.getNode(X86ISD::FMINC, dl, SrcVT, ClampedBottom, MaxC);
 
     // For smaller widths, the max unsigned value fits in a signed 32-bit int.
     // Use X86ISD::CVTTP2SI instead of FP_TO_UINT to avoid expensive
     // legalization and guarantee the out-of-range behavior.
     SDValue Result = DAG.getNode(X86ISD::CVTTP2SI, dl, DstVT, ClampedTop);
 
-    // For saturation, FMAX and FMIN might pass NaN through (since they return
+    // For saturation, FMAXC and FMINC might pass NaN through (since they return
     // the second operand if either is NaN).
     // Fix up NaN by selecting 0 explicitly.
     SDValue Zero = DAG.getConstant(0, dl, DstVT);
