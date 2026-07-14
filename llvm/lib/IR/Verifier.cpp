@@ -3889,6 +3889,11 @@ void Verifier::visitCallBase(CallBase &Call) {
   Check(!Attrs.hasFnAttr(Attribute::DenormalFPEnv),
         "denormal_fpenv attribute may not apply to call sites", Call);
 
+  Check(!Attrs.hasFnAttr(Attribute::StrictFP) ||
+            Call.getFunction()->isStrictFP(),
+        "strictfp attribute must propagate from the call site to the caller",
+        Call);
+
   // Verify call attributes.
   verifyFunctionAttrs(FTy, Attrs, &Call, IsIntrinsic, Call.isInlineAsm());
 
