@@ -196,9 +196,7 @@ public:
     return isMemcpyOrMemmove() && !DstAlignCanChange;
   }
   bool isZeroMemset() const { return Kind == MemOpKind::MemsetWithZero; }
-  bool isMemcpyStrSrc() const {
-    return Kind == MemOpKind::MemcpyStrSrc;
-  }
+  bool isMemcpyStrSrc() const { return Kind == MemOpKind::MemcpyStrSrc; }
   Align getSrcAlign() const {
     assert(isMemcpyOrMemmove() && "Must be a memcpy or memmove");
     return SrcAlign;
