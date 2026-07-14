@@ -1876,7 +1876,7 @@ def EmitC_ClassOp
 
   let extraClassDeclaration = [{
     // Returns the body block containing class members and methods.
-    Block &getBlock();
+    Block &getBlock() { return getBody().front(); }
   }];
 
   let assemblyFormat =

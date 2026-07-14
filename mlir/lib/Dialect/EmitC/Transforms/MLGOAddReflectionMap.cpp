@@ -151,13 +151,12 @@ public:
     }
     reflectionMapContents += " }";
 
-    if (FuncOp executeFunc = classOp.lookupSymbol<FuncOp>("operator()"))
-      rewriter.setInsertionPoint(executeFunc);
-    else {
-      return rewriter.notifyMatchFailure(
-          classOp, "ClassOp must contain a function named 'operator()' "
-                   "to add reflection map");
-    }
+    auto funcs = classOp.getBlock().getOps<FuncOp>();
+    auto it = funcs.begin();
+    if (it != funcs.end())
+      rewriter.setInsertionPoint(*it);
+    else
+      rewriter.setInsertionPointToEnd(&classOp.getBlock());
 
     // To generate the following C++ code
     // const std::map<std::string, char*> reflectionMap = {
