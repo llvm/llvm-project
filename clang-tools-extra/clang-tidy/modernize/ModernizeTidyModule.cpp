@@ -44,6 +44,7 @@
 #include "UseNoexceptCheck.h"
 #include "UseNullptrCheck.h"
 #include "UseOverrideCheck.h"
+#include "UsePlaceholderBindingCheck.h"
 #include "UseRangesCheck.h"
 #include "UseScopedLockCheck.h"
 #include "UseStartsEndsWithCheck.h"
@@ -92,6 +93,8 @@ public:
         "modernize-use-designated-initializers");
     CheckFactories.registerCheck<UseIntegerSignComparisonCheck>(
         "modernize-use-integer-sign-comparison");
+    CheckFactories.registerCheck<UsePlaceholderBindingCheck>(
+        "modernize-use-placeholder-binding");
     CheckFactories.registerCheck<UseRangesCheck>("modernize-use-ranges");
     CheckFactories.registerCheck<UseScopedLockCheck>(
         "modernize-use-scoped-lock");

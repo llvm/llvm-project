@@ -44,6 +44,7 @@ add_clang_library(clangTidyModernizeModule STATIC
   UseNoexceptCheck.cpp
   UseNullptrCheck.cpp
   UseOverrideCheck.cpp
+  UsePlaceholderBindingCheck.cpp
   UseRangesCheck.cpp
   UseScopedLockCheck.cpp
   UseStartsEndsWithCheck.cpp

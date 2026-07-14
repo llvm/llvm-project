@@ -275,6 +275,14 @@ New checks
 
   Finds cyclical initialization of static variables.
 
+- New :doc:`modernize-use-placeholder-binding
+  <clang-tidy/checks/modernize/use-placeholder-binding>` check.
+
+  Finds structured bindings where one of the bindings is only used to
+  suppress an "unused variable" warning via a ``(void)name;`` statement,
+  and suggests replacing that binding with a C++26 placeholder (``_``)
+  instead, removing the now unnecessary suppression statement.
+
 - New :doc:`modernize-use-std-bit
   <clang-tidy/checks/modernize/use-std-bit>` check.
 
