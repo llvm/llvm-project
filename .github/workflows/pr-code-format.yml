@@ -11,7 +11,8 @@ on:
 jobs:
   code_formatter:
     if: >-
-      !(
+      !contains(github.event.pull_request.head.ref, 'upstream_merge')
+      && !(
         contains(github.event.pull_request.labels.*.name, 'ci:skip') &&
         (
           contains(github.event.pull_request.title, 'Update LLVM_MAIN_REVISION') ||

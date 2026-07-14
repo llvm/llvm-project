@@ -14,6 +14,8 @@ on:
 
 jobs:
   code_linter:
+    if: >-
+      !contains(github.event.pull_request.head.ref, 'upstream_merge')
     runs-on: ubuntu-24.04
     defaults:
       run:
