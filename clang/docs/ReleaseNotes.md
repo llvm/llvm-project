@@ -1230,6 +1230,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed a false-positive in the `unix.BlockInCriticalSection` checker that reported double locking when using `std::lock_guard`/`std::unique_lock`/`std::scoped_lock`. (#GH208729)
 - Fixed a false-negative in the `unix.Malloc` checker due to a typo in the expected arguments of `if_nameindex`. It will now properly match its single expected argument. (#GH207726)
 - Fixed a crash in the Z3-solver-based (unsupported) constraint manager involving unary/binary operators. (#GH205037)
+- Fixed a crash where GNU statement expression syntax (`({ ... })`) caused arguments to disappear from parameter list. (#GH205718)
 
 #### Improvements
 
