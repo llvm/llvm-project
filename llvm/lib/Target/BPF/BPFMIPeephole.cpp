@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
 #include <set>
@@ -341,19 +342,16 @@ private:
   bool insertMissingCallerSavedSpills();
   bool removeMayGotoZero();
   bool addExitAfterUnreachable();
-  bool expandStackArgPseudos();
 
 public:
 
   // Main entry point for this pass.
   bool runOnMachineFunction(MachineFunction &MF) override {
-    initialize(MF);
-
-    bool Changed = expandStackArgPseudos();
     if (skipFunction(MF.getFunction()))
-      return Changed;
+      return false;
 
-    Changed |= eliminateRedundantMov();
+    initialize(MF);
+    bool Changed = eliminateRedundantMov();
     if (SupportGotol)
       Changed |= adjustBranch();
     Changed |= insertMissingCallerSavedSpills();
@@ -771,10 +769,22 @@ bool BPFMIPreEmitPeephole::addExitAfterUnreachable() {
   return true;
 }
 
-bool BPFMIPreEmitPeephole::expandStackArgPseudos() {
-  bool Changed = false;
+} // namespace
 
-  for (MachineBasicBlock &MBB : *MF) {
+INITIALIZE_PASS(BPFMIPreEmitPeephole, "bpf-mi-pemit-peephole",
+                "BPF PreEmit Peephole Optimization", false, false)
+
+char BPFMIPreEmitPeephole::ID = 0;
+FunctionPass *llvm::createBPFMIPreEmitPeepholePass() {
+  return new BPFMIPreEmitPeephole();
+}
+
+namespace {
+
+bool expandStackArgPseudos(MachineFunction &MF) {
+  bool Changed = false;
+  const BPFInstrInfo *TII = MF.getSubtarget<BPFSubtarget>().getInstrInfo();
+  for (MachineBasicBlock &MBB : MF) {
     for (auto It = MBB.begin(), End = MBB.end(); It != End;) {
       MachineInstr &MI = *It++;
       DebugLoc DL = MI.getDebugLoc();
@@ -829,13 +839,23 @@ bool BPFMIPreEmitPeephole::expandStackArgPseudos() {
   return Changed;
 }
 
-} // end default namespace
+class BPFMIExpandStackArgPseudos : public MachineFunctionPass {
+public:
+  static char ID;
+  BPFMIExpandStackArgPseudos() : MachineFunctionPass(ID) {}
+  bool runOnMachineFunction(MachineFunction &MF) override;
+};
 
-INITIALIZE_PASS(BPFMIPreEmitPeephole, "bpf-mi-pemit-peephole",
-                "BPF PreEmit Peephole Optimization", false, false)
+} // namespace
 
-char BPFMIPreEmitPeephole::ID = 0;
-FunctionPass* llvm::createBPFMIPreEmitPeepholePass()
-{
-  return new BPFMIPreEmitPeephole();
+INITIALIZE_PASS(BPFMIExpandStackArgPseudos, "bpf-mi-expand-stack-arg-pseudos",
+                "BPF Stack argument psuedo expansion", false, false)
+
+char BPFMIExpandStackArgPseudos::ID = 0;
+FunctionPass *llvm::createBPFMIExpandStackArgPseudosPass() {
+  return new BPFMIExpandStackArgPseudos();
+}
+
+bool BPFMIExpandStackArgPseudos::runOnMachineFunction(MachineFunction &MF) {
+  return expandStackArgPseudos(MF);
 }
