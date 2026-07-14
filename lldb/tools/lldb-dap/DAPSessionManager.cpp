@@ -33,7 +33,7 @@ ManagedEventThread::~ManagedEventThread() {
 }
 
 DAPSessionManager &DAPSessionManager::GetInstance() {
-  // NOTE: Intentionally leaked. Detached client threads may still notify
+  // NOTE: Intentional leak. Detached client threads may still notify
   // m_sessions_condition at exit, so it has to outlive them.
   static auto *instance = new DAPSessionManager();
   return *instance;
