@@ -2985,9 +2985,9 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   VPValue *TC = Plan.getTripCount();
   VPValue *VF = &Plan.getVF();
 
-  auto *EntryIncrement = Builder.createOverflowingOp(
-      VPInstruction::CanonicalIVIncrementForPart, {StartV, VF}, {false, false},
-      DL, "index.part.next");
+  auto *EntryIncrement =
+      Builder.createOverflowingOp(VPInstruction::CanonicalIVIncrementForPart,
+                                  {StartV, VF}, {}, DL, "index.part.next");
 
   // Create the active lane mask instruction in the VPlan preheader.
   VPValue *ALMMultiplier =
@@ -3009,7 +3009,7 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   Builder.setInsertPoint(OriginalTerminator);
   auto *InLoopIncrement = Builder.createOverflowingOp(
       VPInstruction::CanonicalIVIncrementForPart,
-      {CanonicalIVIncrement, &Plan.getVF()}, {false, false}, DL);
+      {CanonicalIVIncrement, &Plan.getVF()}, {}, DL);
   auto *ALM = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
                                    {InLoopIncrement, TC, ALMMultiplier}, DL,
                                    "active.lane.mask.next");
@@ -5451,7 +5451,7 @@ void VPlanTransforms::materializeConstantVectorTripCount(
   // Skip cases for which the trip count may be non-trivial to materialize.
   // I.e., when a scalar tail is absent - due to tail folding, or when a scalar
   // tail is required.
-  if (!Plan.hasScalarTail() ||
+  if (Plan.hasTailFolded() || !Plan.hasScalarTail() ||
       Plan.getMiddleBlock()->getSingleSuccessor() ==
           Plan.getScalarPreheader() ||
       !isa<VPIRValue>(TC))

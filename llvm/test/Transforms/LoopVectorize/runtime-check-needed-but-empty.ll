@@ -77,11 +77,11 @@ define void @diff_memcheck_known_false_for_vf_4(ptr %B, ptr %A, ptr %end) {
 ; CHECK-LABEL: define void @diff_memcheck_known_false_for_vf_4(
 ; CHECK-SAME: ptr [[B:%.*]], ptr [[A:%.*]], ptr [[END:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
 ; CHECK-NEXT:    [[A_INT:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[B_CAST:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[PTR_SUB:%.*]] = sub i64 [[A_INT]], [[B_CAST]]
 ; CHECK-NEXT:    [[ADD_PTR11:%.*]] = getelementptr i8, ptr [[B]], i64 [[PTR_SUB]]
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[A_INT]], [[END1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
