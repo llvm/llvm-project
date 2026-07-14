@@ -450,10 +450,10 @@ def warn_ssaf_read_wpa_suite_failed :
   Warning<"failed to read whole-program analysis result from '%0': %1">,
   InGroup<ScalableStaticAnalysis>, DefaultError;
 
-def warn_ssaf_flag_requires_source_transformation :
+def warn_ssaf_option_ignored_without_source_transformation :
   Warning<"option '%select{--ssaf-src-edit-file=|"
-          "--ssaf-transformation-report-file=}0' requires "
-          "'--ssaf-source-transformation=' to be set">,
+          "--ssaf-transformation-report-file=}0' is ignored without "
+          "'--ssaf-source-transformation='">,
   InGroup<ScalableStaticAnalysis>, DefaultError;
 
 def warn_ssaf_write_src_edit_failed :

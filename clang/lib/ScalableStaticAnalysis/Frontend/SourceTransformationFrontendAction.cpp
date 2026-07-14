@@ -98,9 +98,9 @@ enum SourceTransformationCompanion {
   STCompanion_CompilationUnitId, // --ssaf-compilation-unit-id=
 };
 
-/// Flags that depend on `--ssaf-source-transformation=` being set. Values must
+/// Options that depend on `--ssaf-source-transformation=` being set. Values must
 /// match the `%select` branch order in
-/// `warn_ssaf_flag_requires_source_transformation`.
+/// `warn_ssaf_option_ignored_without_source_transformation`.
 enum SourceTransformationDependent {
   STDependent_EditFile,   // --ssaf-src-edit-file=
   STDependent_ReportFile, // --ssaf-transformation-report-file=
@@ -136,12 +136,12 @@ static bool reportOrphanFlagMisuse(DiagnosticsEngine &Diags,
     }
   } else {
     if (!Opts.SrcEditFile.empty()) {
-      Diags.Report(diag::warn_ssaf_flag_requires_source_transformation)
+      Diags.Report(diag::warn_ssaf_option_ignored_without_source_transformation)
           << STDependent_EditFile;
       Reported = true;
     }
     if (!Opts.TransformationReportFile.empty()) {
-      Diags.Report(diag::warn_ssaf_flag_requires_source_transformation)
+      Diags.Report(diag::warn_ssaf_option_ignored_without_source_transformation)
           << STDependent_ReportFile;
       Reported = true;
     }

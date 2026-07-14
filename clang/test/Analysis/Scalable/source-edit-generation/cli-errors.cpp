@@ -40,12 +40,12 @@
 
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: not %clang -c %s -o %t/test.o --ssaf-src-edit-file=%t/e.yaml 2>&1 | %{filecheck}=ORPHAN-EDIT
-// ORPHAN-EDIT: error: option '--ssaf-src-edit-file=' requires '--ssaf-source-transformation=' to be set [-Wscalable-static-analysis-framework]
+// ORPHAN-EDIT: error: option '--ssaf-src-edit-file=' is ignored without '--ssaf-source-transformation=' [-Wscalable-static-analysis-framework]
 // RUN: not test -e %t/e.yaml
 
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: not %clang -c %s -o %t/test.o --ssaf-transformation-report-file=%t/r.sarif 2>&1 | %{filecheck}=ORPHAN-REPORT
-// ORPHAN-REPORT: error: option '--ssaf-transformation-report-file=' requires '--ssaf-source-transformation=' to be set [-Wscalable-static-analysis-framework]
+// ORPHAN-REPORT: error: option '--ssaf-transformation-report-file=' is ignored without '--ssaf-source-transformation=' [-Wscalable-static-analysis-framework]
 // RUN: not test -e %t/r.sarif
 
 void foo() {}
