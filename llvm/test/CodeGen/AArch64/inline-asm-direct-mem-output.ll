@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=aarch64-unknown-linux-gnu < %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-unknown-linux-gnu -global-isel < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-unknown-linux-gnu -global-isel=0 < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-unknown-linux-gnu -global-isel=1 < %s | FileCheck %s
 
 define i64 @direct_rm_output() {
 ; CHECK-LABEL: direct_rm_output:

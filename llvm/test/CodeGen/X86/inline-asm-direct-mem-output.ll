@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -global-isel=0 < %s | FileCheck %s
 
 define i64 @direct_rm_output() {
 ; CHECK-LABEL: direct_rm_output:
