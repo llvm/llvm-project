@@ -687,19 +687,25 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
   T = Triple("amdgcn-mesa-mesa3d");
-  EXPECT_EQ(Triple::amdgcn, T.getArch());
+  EXPECT_EQ(Triple::amdgpu, T.getArch());
+  EXPECT_EQ(Triple::Mesa, T.getVendor());
+  EXPECT_EQ(Triple::Mesa3D, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("amdgpu-mesa-mesa3d");
+  EXPECT_EQ(Triple::amdgpu, T.getArch());
   EXPECT_EQ(Triple::Mesa, T.getVendor());
   EXPECT_EQ(Triple::Mesa3D, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
   T = Triple("amdgcn-amd-amdhsa");
-  EXPECT_EQ(Triple::amdgcn, T.getArch());
+  EXPECT_EQ(Triple::amdgpu, T.getArch());
   EXPECT_EQ(Triple::AMD, T.getVendor());
   EXPECT_EQ(Triple::AMDHSA, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
   T = Triple("amdgcn-amd-amdpal");
-  EXPECT_EQ(Triple::amdgcn, T.getArch());
+  EXPECT_EQ(Triple::amdgpu, T.getArch());
   EXPECT_EQ(Triple::AMD, T.getVendor());
   EXPECT_EQ(Triple::AMDPAL, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
@@ -1479,35 +1485,35 @@ TEST(TripleTest, ParsedIDs) {
 
 TEST(TripleTest, EnumConstructor) {
   {
-    Triple T(Triple::amdgcn, Triple::NoSubArch, Triple::AMD, Triple::AMDHSA);
-    EXPECT_EQ(T.getArch(), Triple::amdgcn);
+    Triple T(Triple::amdgpu, Triple::NoSubArch, Triple::AMD, Triple::AMDHSA);
+    EXPECT_EQ(T.getArch(), Triple::amdgpu);
     EXPECT_EQ(T.getVendor(), Triple::AMD);
     EXPECT_EQ(T.getOS(), Triple::AMDHSA);
     EXPECT_EQ(T.getEnvironment(), Triple::UnknownEnvironment);
     EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
-    EXPECT_EQ(T.str(), "amdgcn-amd-amdhsa");
+    EXPECT_EQ(T.str(), "amdgpu-amd-amdhsa");
   }
 
   {
-    Triple T(Triple::amdgcn, Triple::NoSubArch, Triple::AMD, Triple::AMDHSA,
+    Triple T(Triple::amdgpu, Triple::NoSubArch, Triple::AMD, Triple::AMDHSA,
              Triple::LLVM, Triple::ELF);
-    EXPECT_EQ(T.getArch(), Triple::amdgcn);
+    EXPECT_EQ(T.getArch(), Triple::amdgpu);
     EXPECT_EQ(T.getVendor(), Triple::AMD);
     EXPECT_EQ(T.getOS(), Triple::AMDHSA);
     EXPECT_EQ(T.getEnvironment(), Triple::LLVM);
     EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
-    EXPECT_EQ(T.str(), "amdgcn-amd-amdhsa-llvm-elf");
+    EXPECT_EQ(T.str(), "amdgpu-amd-amdhsa-llvm-elf");
   }
 
   {
-    Triple T(Triple::amdgcn, Triple::NoSubArch, Triple::AMD, Triple::AMDHSA,
+    Triple T(Triple::amdgpu, Triple::NoSubArch, Triple::AMD, Triple::AMDHSA,
              Triple::LLVM);
-    EXPECT_EQ(T.getArch(), Triple::amdgcn);
+    EXPECT_EQ(T.getArch(), Triple::amdgpu);
     EXPECT_EQ(T.getVendor(), Triple::AMD);
     EXPECT_EQ(T.getOS(), Triple::AMDHSA);
     EXPECT_EQ(T.getEnvironment(), Triple::LLVM);
     EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
-    EXPECT_EQ(T.str(), "amdgcn-amd-amdhsa-llvm");
+    EXPECT_EQ(T.str(), "amdgpu-amd-amdhsa-llvm");
   }
 
   {
@@ -1993,6 +1999,18 @@ TEST(TripleTest, BitWidthChecks) {
   EXPECT_EQ(T.getArchPointerBitWidth(), 32U);
 
   T.setArch(Triple::amdil64);
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(T.getArchPointerBitWidth(), 64U);
+
+  T.setArch(Triple::amdgpu);
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(T.getArchPointerBitWidth(), 64U);
+
+  T.setArch(Triple::amdgpu);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_TRUE(T.isArch64Bit());
@@ -2972,6 +2990,10 @@ TEST(TripleTest, FileFormat) {
   EXPECT_EQ(Triple::SPIRV, Triple("spirv32-unknown-unknown").getObjectFormat());
   EXPECT_EQ(Triple::SPIRV, Triple("spirv64-unknown-unknown").getObjectFormat());
 
+  EXPECT_EQ(Triple::ELF, Triple("amdgcn-unknown-unknown").getObjectFormat());
+  EXPECT_EQ(Triple::ELF, Triple("amdgpu-unknown-unknown").getObjectFormat());
+  EXPECT_EQ(Triple::ELF, Triple("amdgpu-amd-amdhsa").getObjectFormat());
+
   EXPECT_EQ(Triple::ELF,
             Triple("loongarch32-unknown-unknown").getObjectFormat());
   EXPECT_EQ(Triple::ELF, Triple("loongarch64-unknown-linux").getObjectFormat());
@@ -3013,6 +3035,7 @@ TEST(TripleTest, FileFormat) {
   EXPECT_EQ("spirv", Triple::getObjectFormatTypeName(T.getObjectFormat()));
 
   EXPECT_EQ(Triple::ELF, Triple("amdgcn-apple-macosx").getObjectFormat());
+  EXPECT_EQ(Triple::ELF, Triple("amdgpu-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::ELF, Triple("r600-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::SPIRV, Triple("spirv-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::SPIRV, Triple("spirv32-apple-macosx").getObjectFormat());
@@ -3054,6 +3077,8 @@ TEST(TripleTest, DefaultExceptionHandling) {
 
   EXPECT_EQ(ExceptionHandling::None,
             Triple("amdgcn--").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("amdgpu--").getDefaultExceptionHandling());
   EXPECT_EQ(ExceptionHandling::None,
             Triple("nvptx64--").getDefaultExceptionHandling());
   EXPECT_EQ(ExceptionHandling::None,
@@ -3505,6 +3530,107 @@ TEST(TripleTest, isCompatibleWith) {
       {"i686-w64-windows-gnu", "i386-w64-windows-gnu", true},
       {"x86_64-w64-windows-gnu", "x86_64-pc-windows-gnu", true},
       {"armv7-w64-windows-gnu", "thumbv7-pc-windows-gnu", true},
+      {"amdgpu9-amd-amdhsa", "amdgpu-amd-amdhsa", true},
+      {"amdgpu9-amd-amdhsa-llvm", "amdgpu-amd-amdhsa", false},
+      {"amdgpu6-amd-amdhsa-llvm", "amdgpu9-amd-amdhsa", false},
+      {"amdgpu9-amd-amdhsa-coff", "amdgpu9-amd-amdhsa", false},
+      {"amdgpu-unknown-amdhsa-coff", "amdgpu-amd-amdhsa", false},
+      {"amdgpu9-amd-amdhsa-llvm", "amdgpu9-amd-amdhsa", false},
+
+      {"amdgpu6-amd-amdhsa", "amdgpu6.00-amd-amdhsa", true},
+      {"amdgpu6-amd-amdhsa", "amdgpu6.01-amd-amdhsa", true},
+      {"amdgpu6-amd-amdhsa", "amdgpu6.02-amd-amdhsa", true},
+      {"amdgpu6-amd-amdhsa", "amdgpu7-amd-amdhsa", false},
+      {"amdgpu6-amd-amdhsa", "amdgpu8-amd-amdhsa", false},
+      {"amdgpu6-amd-amdhsa", "amdgpu9-amd-amdhsa", false},
+      {"amdgpu6-amd-amdhsa", "amdgpu9.4-amd-amdhsa", false},
+      {"amdgpu6-amd-amdhsa", "amdgpu10.1-amd-amdhsa", false},
+      {"amdgpu6-amd-amdhsa", "amdgpu7.00-amd-amdhsa", false},
+      {"amdgpu6-amd-amdhsa", "amdgpu700-amd-amdhsa", false},
+
+      {"amdgpu7-amd-amdhsa", "amdgpu7.00-amd-amdhsa", true},
+      {"amdgpu7-amd-amdhsa", "amdgpu7.01-amd-amdhsa", true},
+      {"amdgpu7-amd-amdhsa", "amdgpu7.02-amd-amdhsa", true},
+      {"amdgpu7-amd-amdhsa", "amdgpu7.03-amd-amdhsa", true},
+      {"amdgpu7-amd-amdhsa", "amdgpu7.04-amd-amdhsa", true},
+      {"amdgpu7-amd-amdhsa", "amdgpu7.05-amd-amdhsa", true},
+      {"amdgpu7-amd-amdhsa", "amdgpu8-amd-amdhsa", false},
+
+      {"amdgpu8-amd-amdhsa", "amdgpu8.01-amd-amdhsa", true},
+      {"amdgpu8-amd-amdhsa", "amdgpu8.02-amd-amdhsa", true},
+      {"amdgpu8-amd-amdhsa", "amdgpu8.03-amd-amdhsa", true},
+      {"amdgpu8-amd-amdhsa", "amdgpu8.10-amd-amdhsa", false},
+
+      {"amdgpu9-amd-amdhsa", "amdgpu9.00-amd-amdhsa", true},
+      {"amdgpu9-amd-amdhsa", "amdgpu9.02-amd-amdhsa", true},
+      {"amdgpu9-amd-amdhsa", "amdgpu9.04-amd-amdhsa", true},
+      {"amdgpu9-amd-amdhsa", "amdgpu9.06-amd-amdhsa", true},
+      {"amdgpu9-amd-amdhsa", "amdgpu9.08-amd-amdhsa", false},
+      {"amdgpu9-amd-amdhsa", "amdgpu9.09-amd-amdhsa", true},
+      {"amdgpu9-amd-amdhsa", "amdgpu9.0a-amd-amdhsa", false},
+      {"amdgpu9-amd-amdhsa", "amdgpu9.0c-amd-amdhsa", true},
+      {"amdgpu9.08-amd-amdhsa", "amdgpu9.08-amd-amdhsa", true},
+      {"amdgpu9.0a-amd-amdhsa", "amdgpu9.0a-amd-amdhsa", true},
+      {"amdgpu9-amd-amdhsa", "amdgpu9.4-amd-amdhsa", false},
+      {"amdgpu9-amd-amdhsa", "amdgpu9.42-amd-amdhsa", false},
+      {"amdgpu9-amd-amdhsa", "amdgpu9.50-amd-amdhsa", false},
+      {"amdgpu9.00-amd-amdhsa", "amdgpu9.50-amd-amdhsa", false},
+      {"amdgpu9.50-amd-amdhsa", "amdgpu9.00-amd-amdhsa", false},
+      {"amdgpu9.00-amd-amdhsa", "amdgpu9.08-amd-amdhsa", false},
+      {"amdgpu9.08-amd-amdhsa", "amdgpu9.00-amd-amdhsa", false},
+      {"amdgpu9.00-amd-amdhsa", "amdgpu9.06-amd-amdhsa", false},
+      {"amdgpu9.06-amd-amdhsa", "amdgpu9.00-amd-amdhsa", false},
+      {"amdgpu10.1-amd-amdhsa", "amdgpu10.10-amd-amdhsa", true},
+      {"amdgpu10.1-amd-amdhsa", "amdgpu10.11-amd-amdhsa", true},
+      {"amdgpu10.1-amd-amdhsa", "amdgpu10.12-amd-amdhsa", true},
+      {"amdgpu10.1-amd-amdhsa", "amdgpu10.13-amd-amdhsa", true},
+
+      {"amdgpu10.3-amd-amdhsa", "amdgpu10.1-amd-amdhsa", false},
+      {"amdgpu10.3-amd-amdhsa", "amdgpu10.10-amd-amdhsa", false},
+      {"amdgpu10.3-amd-amdhsa", "amdgpu10.30-amd-amdhsa", true},
+      {"amdgpu10.3-amd-amdhsa", "amdgpu10.31-amd-amdhsa", true},
+      {"amdgpu10.3-amd-amdhsa", "amdgpu10.32-amd-amdhsa", true},
+      {"amdgpu10.3-amd-amdhsa", "amdgpu10.33-amd-amdhsa", true},
+      {"amdgpu10.3-amd-amdhsa", "amdgpu10.34-amd-amdhsa", true},
+      {"amdgpu10.3-amd-amdhsa", "amdgpu10.35-amd-amdhsa", true},
+      {"amdgpu10.3-amd-amdhsa", "amdgpu10.36-amd-amdhsa", true},
+
+      {"amdgpu11-amd-amdhsa", "amdgpu10.1-amd-amdhsa", false},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.00-amd-amdhsa", true},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.01-amd-amdhsa", true},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.02-amd-amdhsa", true},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.03-amd-amdhsa", true},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.50-amd-amdhsa", true},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.51-amd-amdhsa", true},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.52-amd-amdhsa", true},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.53-amd-amdhsa", true},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.54-amd-amdhsa", true},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.7-amd-amdhsa", false},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.70-amd-amdhsa", false},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.71-amd-amdhsa", false},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.72-amd-amdhsa", false},
+
+      {"amdgpu11.7-amd-amdhsa", "amdgpu11-amd-amdhsa", false},
+      {"amdgpu11.7-amd-amdhsa", "amdgpu11.70-amd-amdhsa", true},
+      {"amdgpu11.7-amd-amdhsa", "amdgpu11.71-amd-amdhsa", true},
+      {"amdgpu11.7-amd-amdhsa", "amdgpu11.72-amd-amdhsa", true},
+
+      {"amdgpu12-amd-amdhsa", "amdgpu12.00-amd-amdhsa", true},
+      {"amdgpu12-amd-amdhsa", "amdgpu12.01-amd-amdhsa", true},
+      {"amdgpu12-amd-amdhsa", "amdgpu12.5-amd-amdhsa", false},
+      {"amdgpu12-amd-amdhsa", "amdgpu12.50-amd-amdhsa", false},
+      {"amdgpu12-amd-amdhsa", "amdgpu12.51-amd-amdhsa", false},
+
+      {"amdgpu12.5-amd-amdhsa", "amdgpu12.50-amd-amdhsa", true},
+      {"amdgpu12.5-amd-amdhsa", "amdgpu12.51-amd-amdhsa", true},
+
+      {"amdgpu13-amd-amdhsa", "amdgpu13.10-amd-amdhsa", true},
+
+      // A vendor mismatch is incompatible even when the subarch is otherwise
+      // compatible.
+      {"amdgpu9-amd-amdhsa", "amdgpu9.00-unknown-amdhsa", false},
+      {"amdgpu9.00-amd-amdhsa", "amdgpu9.00-unknown-amdhsa", false},
+      {"amdgpu12.5-amd-amdhsa", "amdgpu12.50-unknown-amdhsa", false},
   };
 
   auto DoTest = [](const char *A, const char *B,
@@ -3521,6 +3647,68 @@ TEST(TripleTest, isCompatibleWith) {
     // Test that the comparison is commutative.
     EXPECT_TRUE(DoTest(C.B, C.A, C.Result));
   }
+}
+
+TEST(TripleTest, Merge) {
+  // Baseline: merging identical triples returns that triple.
+  EXPECT_EQ("x86_64-unknown-linux-gnu",
+            Triple(Triple::normalize("x86_64-unknown-linux-gnu"))
+                .merge(Triple(Triple::normalize("x86_64-unknown-linux-gnu"))));
+
+  // General rule (no Apple/AMDGPU special case): the merge takes the other
+  // triple.
+  EXPECT_EQ("i386-unknown-linux-gnu",
+            Triple(Triple::normalize("x86_64-unknown-linux-gnu"))
+                .merge(Triple(Triple::normalize("i386-unknown-linux-gnu"))));
+  EXPECT_EQ("x86_64-unknown-linux-gnu",
+            Triple(Triple::normalize("i386-unknown-linux-gnu"))
+                .merge(Triple(Triple::normalize("x86_64-unknown-linux-gnu"))));
+
+  // AMDGPU with a matching OS/vendor merges the subarchitectures: merging a
+  // major-family subarch with a specific one in that family yields the
+  // specific subarch, regardless of order.
+  EXPECT_EQ("amdgpu9.00-amd-amdhsa",
+            Triple(Triple::normalize("amdgpu9-amd-amdhsa"))
+                .merge(Triple(Triple::normalize("amdgpu9.00-amd-amdhsa"))));
+  EXPECT_EQ("amdgpu9.00-amd-amdhsa",
+            Triple(Triple::normalize("amdgpu9.00-amd-amdhsa"))
+                .merge(Triple(Triple::normalize("amdgpu9-amd-amdhsa"))));
+
+  // An AMDGPU triple without a subarch merges to the other AMDGPU triple's
+  // subarch.
+  EXPECT_EQ("amdgpu9-amd-amdhsa",
+            Triple(Triple::normalize("amdgpu-amd-amdhsa"))
+                .merge(Triple(Triple::normalize("amdgpu9-amd-amdhsa"))));
+  EXPECT_EQ("amdgpu9-amd-amdhsa",
+            Triple(Triple::normalize("amdgpu9-amd-amdhsa"))
+                .merge(Triple(Triple::normalize("amdgpu-amd-amdhsa"))));
+
+  // Identical AMDGPU triples merge to themselves.
+  EXPECT_EQ("amdgpu9.00-amd-amdhsa",
+            Triple(Triple::normalize("amdgpu9.00-amd-amdhsa"))
+                .merge(Triple(Triple::normalize("amdgpu9.00-amd-amdhsa"))));
+
+  // The AMDGPU subarch merge only kicks in when the receiver is AMDGPU and the
+  // OS and vendor match; otherwise the general rule applies and the other
+  // triple wins.
+  EXPECT_EQ("x86_64-unknown-linux-gnu",
+            Triple(Triple::normalize("amdgpu9-amd-amdhsa"))
+                .merge(Triple(Triple::normalize("x86_64-unknown-linux-gnu"))));
+  EXPECT_EQ("amdgpu9-amd-amdhsa",
+            Triple(Triple::normalize("x86_64-unknown-linux-gnu"))
+                .merge(Triple(Triple::normalize("amdgpu9-amd-amdhsa"))));
+
+  // The subarch merge does not fire when only the receiver is amdgcn but the
+  // other triple is a different.
+  EXPECT_EQ("r600-amd-amdhsa",
+            Triple(Triple::normalize("amdgpu9-amd-amdhsa"))
+                .merge(Triple(Triple::normalize("r600-amd-amdhsa"))));
+  EXPECT_EQ("x86_64-amd-amdhsa",
+            Triple(Triple::normalize("amdgpu9-amd-amdhsa"))
+                .merge(Triple(Triple::normalize("x86_64-amd-amdhsa"))));
+  EXPECT_EQ("amdgpu9-amd-amdhsa",
+            Triple(Triple::normalize("x86_64-amd-amdhsa"))
+                .merge(Triple(Triple::normalize("amdgpu9-amd-amdhsa"))));
 }
 
 TEST(DataLayoutTest, UEFI) {

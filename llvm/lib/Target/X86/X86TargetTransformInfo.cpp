@@ -422,6 +422,24 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
 
+  static const CostKindTblEntry AVX512DQUniformConstCostTable[] = {
+    { ISD::SDIV, MVT::v4i64, { 9 } }, // vpmullq-based MULHS sequence
+    { ISD::SREM, MVT::v4i64, { 17 } }, // vpmullq-based MULHS+mul+sub sequence
+    { ISD::SDIV, MVT::v8i64, { 9 } }, // vpmullq-based MULHS sequence
+    { ISD::SREM, MVT::v8i64, { 17 } }, // vpmullq-based MULHS+mul+sub sequence
+    // The remainder's multiply-back is a single vpmullq with DQ, just like the
+    // pmulld the vXi32 entries above rely on. Without DQ it is another
+    // vpmuludq schoolbook, so the AVX512/AVX2 tables charge more.
+    { ISD::UREM, MVT::v4i64, { 17 } }, // MULHU + vpmullq + sub sequence
+    { ISD::UREM, MVT::v8i64, { 17 } }, // MULHU + vpmullq + sub sequence
+  };
+
+  if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasDQI())
+    if (const auto *Entry =
+            CostTableLookup(AVX512DQUniformConstCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
   static const CostKindTblEntry AVX512UniformConstCostTable[] = {
     { ISD::SHL,  MVT::v64i8,  {  2, 12,  5,  6 } }, // psllw + pand.
     { ISD::SRL,  MVT::v64i8,  {  2, 12,  5,  6 } }, // psrlw + pand.
@@ -450,6 +468,9 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SREM, MVT::v16i32, {  8 } }, // pmuludq+mul+sub sequence
     { ISD::UDIV, MVT::v16i32, {  5 } }, // pmuludq sequence
     { ISD::UREM, MVT::v16i32, {  7 } }, // pmuludq+mul+sub sequence
+
+    { ISD::UDIV, MVT::v8i64,  { 9 } }, // pmuludq-based MULHU sequence
+    { ISD::UREM, MVT::v8i64,  { 21 } }, // pmuludq-based MULHU+mul+sub sequence
   };
 
   if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasAVX512())
@@ -491,6 +512,9 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SREM, MVT::v8i32, {  8 } }, // pmuludq+mul+sub sequence
     { ISD::UDIV, MVT::v8i32, {  5 } }, // pmuludq sequence
     { ISD::UREM, MVT::v8i32, {  7 } }, // pmuludq+mul+sub sequence
+
+    { ISD::UDIV, MVT::v4i64, { 9 } }, // pmuludq-based MULHU sequence
+    { ISD::UREM, MVT::v4i64, { 21 } }, // pmuludq-based MULHU+mul+sub sequence
   };
 
   if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasAVX2())
@@ -591,6 +615,23 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
 
+  static const CostKindTblEntry AVX512DQConstCostTable[] = {
+    { ISD::SDIV, MVT::v4i64, { 9 } }, // vpmullq-based MULHS sequence
+    { ISD::SREM, MVT::v4i64, { 21 } }, // vpmullq-based MULHS+mul+sub sequence
+    { ISD::SDIV, MVT::v8i64, { 9 } }, // vpmullq-based MULHS sequence
+    { ISD::SREM, MVT::v8i64, { 21 } }, // vpmullq-based MULHS+mul+sub sequence
+    // The remainder's multiply-back is a single vpmullq with DQ, whereas the
+    // AVX512/AVX2 tables have to charge for another vpmuludq schoolbook.
+    { ISD::UREM, MVT::v4i64, { 24 } }, // MULHU + vpmullq + sub sequence
+    { ISD::UREM, MVT::v8i64, { 24 } }, // MULHU + vpmullq + sub sequence
+  };
+
+  if (Op2Info.isConstant() && ST->hasDQI())
+    if (const auto *Entry =
+            CostTableLookup(AVX512DQConstCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
   static const CostKindTblEntry AVX512ConstCostTable[] = {
     { ISD::SDIV, MVT::v64i8,  { 28 } }, // 4*ext+4*pmulhw sequence
     { ISD::SREM, MVT::v64i8,  { 32 } }, // 4*ext+4*pmulhw+mul+sub sequence
@@ -606,6 +647,9 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SREM, MVT::v16i32, { 17 } }, // vpmuldq+mul+sub sequence
     { ISD::UDIV, MVT::v16i32, { 15 } }, // vpmuludq sequence
     { ISD::UREM, MVT::v16i32, { 17 } }, // vpmuludq+mul+sub sequence
+
+    { ISD::UDIV, MVT::v8i64,  { 9 } }, // vpmuludq-based MULHU sequence
+    { ISD::UREM, MVT::v8i64,  { 28 } }, // vpmuludq-based MULHU+mul+sub sequence
   };
 
   if (Op2Info.isConstant() && ST->hasAVX512())
@@ -629,6 +673,9 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SREM, MVT::v8i32,  { 19 } }, // vpmuldq+mul+sub sequence
     { ISD::UDIV, MVT::v8i32,  { 15 } }, // vpmuludq sequence
     { ISD::UREM, MVT::v8i32,  { 19 } }, // vpmuludq+mul+sub sequence
+
+    { ISD::UDIV, MVT::v4i64,  { 9 } }, // vpmuludq-based MULHU sequence
+    { ISD::UREM, MVT::v4i64,  { 28 } }, // vpmuludq-based MULHU+mul+sub sequence
   };
 
   if (Op2Info.isConstant() && ST->hasAVX2())
@@ -6851,6 +6898,7 @@ bool X86TTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   switch (II->getIntrinsicID()) {
   default:
     return true;
+  case Intrinsic::vector_reduce_mul:
   case Intrinsic::vector_reduce_smax:
   case Intrinsic::vector_reduce_smin:
   case Intrinsic::vector_reduce_umax:

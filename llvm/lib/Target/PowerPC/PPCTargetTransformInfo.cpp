@@ -153,12 +153,12 @@ PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
             Value *Op0ToUse = (DL.isLittleEndian()) ? Op1 : Op0;
             Value *Op1ToUse = (DL.isLittleEndian()) ? Op0 : Op1;
             ExtractedElts[Idx] = IC.Builder.CreateExtractElement(
-                Idx < 16 ? Op0ToUse : Op1ToUse, IC.Builder.getInt32(Idx & 15));
+                Idx < 16 ? Op0ToUse : Op1ToUse, Idx & 15);
           }
 
           // Insert this value into the result vector.
-          Result = IC.Builder.CreateInsertElement(Result, ExtractedElts[Idx],
-                                                  IC.Builder.getInt32(I));
+          Result =
+              IC.Builder.CreateInsertElement(Result, ExtractedElts[Idx], I);
         }
         return CastInst::Create(Instruction::BitCast, Result, II.getType());
       }
@@ -921,20 +921,6 @@ PPCTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
 
   return InstructionCost::getInvalid();
-}
-
-bool PPCTTIImpl::areInlineCompatible(const Function *Caller,
-                                     const Function *Callee) const {
-  const TargetMachine &TM = getTLI()->getTargetMachine();
-
-  const FeatureBitset &CallerBits =
-      TM.getSubtargetImpl(*Caller)->getFeatureBits();
-  const FeatureBitset &CalleeBits =
-      TM.getSubtargetImpl(*Callee)->getFeatureBits();
-
-  // Check that targets features are exactly the same. We can revisit to see if
-  // we can improve this.
-  return CallerBits == CalleeBits;
 }
 
 bool PPCTTIImpl::areTypesABICompatible(const Function *Caller,
