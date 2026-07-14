@@ -346,6 +346,10 @@ def create_parser():
         "-d",
         "Suspend the process after launch to wait indefinitely for a debugger to attach",
     )
+    X(
+        "--attach-xcode",
+        "Suspend the process after launch, and instruct Xcode to attach to it",
+    )
     X("-t", "Turn on tracing of lldb command and other detailed test executions")
     group.add_argument(
         "-u",

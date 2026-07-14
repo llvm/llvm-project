@@ -698,6 +698,9 @@ On non-Windows platforms, you can use the `-d` option to `dotest.py` which
 will cause the script to print out the pid of the test and wait for a while
 until a debugger is attached. Then run `lldb -p <pid>` to attach.
 
+Xcode users may instead use the `--attach-xcode` option, which automatically
+attaches the IDE to the test process.
+
 To instead debug a test's python source, edit the test and insert `import pdb; pdb.set_trace()` or `breakpoint()` (Python 3 only) at the point you want to start debugging. The `breakpoint()` command can be used for any LLDB Python script, not just for API tests.
 
 In addition to pdb's debugging facilities, lldb commands can be executed with the
