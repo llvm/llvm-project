@@ -10619,8 +10619,7 @@ void DeclarationVisitor::SetImplicitCUDADataAttr(Symbol &symbol) {
   if (cudaEnabled && (cudaManaged || cudaUnified)) {
     const Scope &owner{symbol.owner()};
     const bool unifiedAllowed{!IsCUDADeviceContext(&owner) &&
-        (owner.IsDerivedType() ||
-            owner.kind() == Scope::Kind::MainProgram ||
+        (owner.IsDerivedType() || owner.kind() == Scope::Kind::MainProgram ||
             owner.kind() == Scope::Kind::Subprogram)};
     object->set_cudaDataAttr(cudaUnified && unifiedAllowed
             ? common::CUDADataAttr::Unified
