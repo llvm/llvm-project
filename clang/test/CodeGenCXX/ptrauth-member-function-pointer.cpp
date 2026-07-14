@@ -21,6 +21,8 @@
 // CHECK: @__const._Z13testArrayInitv.p1 = private unnamed_addr constant [1 x { i64, i64 }] [{ i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN5Base08virtual1Ev_vfpthunk_, i32 0, i64 35591) to i64), i64 0 }], align 8
 // CHECK: @__const._Z13testArrayInitv.c0 = private unnamed_addr constant %struct.Class0 { { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN5Base011nonvirtual0Ev, i32 0, i64 35591) to i64), i64 0 } }, align 8
 // CHECK: @__const._Z13testArrayInitv.c1 = private unnamed_addr constant %struct.Class0 { { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN5Base08virtual1Ev_vfpthunk_, i32 0, i64 35591) to i64), i64 0 } }, align 8
+// CHECK: @[[INITLIST0:[.A-Za-z0-9_$]+]] = private unnamed_addr constant [1 x { i64, i64 }] [{ i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN5Base011nonvirtual0Ev, i32 0, i64 [[TYPEDISC1]]) to i64), i64 0 }], align 8
+// CHECK: @[[INITLIST1:[.A-Za-z0-9_$]+]] = private unnamed_addr constant [1 x { i64, i64 }] [{ i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN5Base08virtual1Ev_vfpthunk_, i32 0, i64 [[TYPEDISC1]]) to i64), i64 0 }], align 8
 
 // CHECK: @_ZN22testNoexceptConversion6mfptr1E = global { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN22testNoexceptConversion1S19nonvirtual_noexceptEv, i32 0, i64 [[TYPEDISC3:.*]]) to i64), i64 0 },
 // CHECK: @_ZN22testNoexceptConversion6mfptr2E = global { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN22testNoexceptConversion1S16virtual_noexceptEv_vfpthunk_, i32 0, i64 [[TYPEDISC3]]) to i64), i64 0 },
@@ -427,8 +429,8 @@ MethodTy0 gmethod2 = reinterpret_cast<MethodTy0>(&Derived0::virtual1);
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %p1, ptr align 8 @__const._Z13testArrayInitv.p1, i64 16, i1 false)
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %c0, ptr align 8 @__const._Z13testArrayInitv.c0, i64 16, i1 false)
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %c1, ptr align 8 @__const._Z13testArrayInitv.c1, i64 16, i1 false)
-// CHECK: store { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN5Base011nonvirtual0Ev, i32 0, i64 [[TYPEDISC1]]) to i64), i64 0 }, ptr %{{.*}} align 8
-// CHECK: store { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN5Base08virtual1Ev_vfpthunk_, i32 0, i64 [[TYPEDISC1]]) to i64), i64 0 }, ptr %{{.*}}, align 8
+// CHECK: store ptr @[[INITLIST0]], ptr %{{.*}}, align 8
+// CHECK: store ptr @[[INITLIST1]], ptr %{{.*}}, align 8
 
 void initList(std::initializer_list<MethodTy1>);
 

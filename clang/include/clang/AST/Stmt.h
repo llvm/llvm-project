@@ -831,6 +831,19 @@ protected:
     SourceLocation Loc;
   };
 
+  class MaterializeTemporaryExprBitfields {
+    friend class ASTStmtReader;
+    friend class MaterializeTemporaryExpr;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    /// Whether the materialized temporary is the backing array of a
+    /// std::initializer_list.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsBackingArrayForInitializerList : 1;
+  };
+
   class CXXThisExprBitfields {
     friend class CXXThisExpr;
 
@@ -1381,6 +1394,7 @@ protected:
     CXXRewrittenBinaryOperatorBitfields CXXRewrittenBinaryOperatorBits;
     CXXBoolLiteralExprBitfields CXXBoolLiteralExprBits;
     CXXNullPtrLiteralExprBitfields CXXNullPtrLiteralExprBits;
+    MaterializeTemporaryExprBitfields MaterializeTemporaryExprBits;
     CXXThisExprBitfields CXXThisExprBits;
     CXXThrowExprBitfields CXXThrowExprBits;
     CXXDefaultArgExprBitfields CXXDefaultArgExprBits;

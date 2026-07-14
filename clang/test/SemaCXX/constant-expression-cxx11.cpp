@@ -1939,6 +1939,33 @@ namespace InitializerList {
   static_assert(*std::initializer_list<int>{1, 2, 3}.begin() == 1, "");
   static_assert(std::initializer_list<int>{1, 2, 3}.begin()[2] == 3, "");
 
+  constexpr bool init_list_overlaps_string() {
+    return std::initializer_list<char>{'h', 'e', 'l', 'l', 'o', '\0'}.begin()
+           != "hello"; // expected-warning {{result of comparison against a string literal is unspecified}} \
+                        // expected-note {{comparison of addresses of potentially non-unique objects has unspecified value}}
+  }
+  static_assert(init_list_overlaps_string(), ""); // expected-error {{not an integral constant expression}} \
+                                                  // expected-note {{in call to}}
+
+  constexpr bool init_list_differs_from_string() {
+    return std::initializer_list<char>{'h', 'e', 'l', 'p', '\0'}.begin()
+           != "hello"; // expected-warning {{result of comparison against a string literal is unspecified}}
+  }
+  static_assert(init_list_differs_from_string(), "");
+
+  constexpr bool f(std::initializer_list<int> il1, std::initializer_list<double> il2) {
+    return (const void*)il1.begin() == (const void*)il2.begin();
+  }
+
+  static_assert(f({1,2}, {4.2439915824e-314}) == false, "");
+
+  static_assert(f({}, {}), ""); // TODO: presumably this must give an error, since an empty list can go literally anywhere in memory, but clang accept this.
+
+  int i = 42;
+  constexpr bool g(std::initializer_list<int> il, int *p) { return il.begin() == p; }
+  static_assert(g({42}, &i) == false, "");  // OK, right?
+  constexpr bool value1 = g({}, &i);  // TODO: error, right? because the empty list could go right before `i` in memory? But clang accept this.
+
   namespace DR2126 {
     constexpr std::initializer_list<float> il = {1.0, 2.0, 3.0};
     static_assert(il.begin()[1] == 2.0, "");

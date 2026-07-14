@@ -2841,55 +2841,213 @@ bool DiagTypeid(InterpState &S, CodePtr OpPC) {
   return false;
 }
 
-bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
-                                             const Pointer &RHS) {
-  if (!LHS.pointsToStringLiteral() || !RHS.pointsToStringLiteral())
+/// Whether Ptr designates an object that is the backing array of a
+/// std::initializer_list.
+static bool isInitializerListBackingArray(const Pointer &Ptr) {
+  if (Ptr.isZero() || !Ptr.isBlockPointer() || Ptr.block()->isDynamic())
     return false;
 
-  unsigned LHSOffset = LHS.isOnePastEnd() ? LHS.getNumElems() : LHS.getIndex();
-  unsigned RHSOffset = RHS.isOnePastEnd() ? RHS.getNumElems() : RHS.getIndex();
-  const auto *LHSLit = cast<StringLiteral>(LHS.getDeclDesc()->asExpr());
-  const auto *RHSLit = cast<StringLiteral>(RHS.getDeclDesc()->asExpr());
+  const auto *MTE =
+      dyn_cast_or_null<MaterializeTemporaryExpr>(Ptr.getDeclDesc()->asExpr());
+  return MTE && MTE->isBackingArrayForInitializerList();
+}
 
-  StringRef LHSStr(LHSLit->getBytes());
-  unsigned LHSLength = LHSStr.size();
-  StringRef RHSStr(RHSLit->getBytes());
-  unsigned RHSLength = RHSStr.size();
+/// Returns the enclosing array block for a pointer into an array subobject.
+static std::optional<Pointer> getContainingArray(const Pointer &Ptr) {
+  if (Ptr.isZero() || !Ptr.isBlockPointer())
+    return std::nullopt;
 
-  int32_t IndexDiff = RHSOffset - LHSOffset;
-  if (IndexDiff < 0) {
-    if (static_cast<int32_t>(LHSLength) < -IndexDiff)
-      return false;
-    LHSStr = LHSStr.drop_front(-IndexDiff);
+  PtrView P = Ptr.view();
+  while (!P.isRoot()) {
+    if (P.isArrayElement()) {
+      PtrView Expanded = P.expand();
+      return Pointer(Expanded.getArray());
+    }
+    P = P.getBase();
+  }
+
+  return std::nullopt;
+}
+
+/// Returns true for array objects whose addresses are potentially non-unique
+/// and whose contents are represented by interpreter storage/APValue.
+static bool isPotentiallyNonUniqueArray(const Pointer &Array) {
+  if (isInitializerListBackingArray(Array))
+    return true;
+  if (const auto *VD = Array.getDeclDesc()->asValueDecl())
+    return isa<TemplateParamObjectDecl>(VD);
+  return false;
+}
+
+namespace {
+/// Bytecode evaluator adapter for PotentiallyNonUniqueObject. Pointer/PtrView
+/// traversal and APValue-path interpretation remain local to this evaluator.
+class ByteCodePotentiallyNonUniqueObject final
+    : public ::PotentiallyNonUniqueObject {
+public:
+  static std::optional<ByteCodePotentiallyNonUniqueObject>
+  create(InterpState &S, const Pointer &Ptr);
+
+private:
+  ByteCodePotentiallyNonUniqueObject(InterpState &S, Kind TheKind,
+                                     Pointer Array,
+                                     const ConstantArrayType *ArrayType,
+                                     ArraySubobjectLocation Loc)
+      : PotentiallyNonUniqueObject(S.getASTContext(), TheKind, ArrayType, Loc,
+                                   Array.getNumElems()),
+        S(S), Array(std::move(Array)) {}
+
+  ByteCodePotentiallyNonUniqueObject(InterpState &S, const Expr *StringBase,
+                                     CharUnits RawOffset, Pointer Array,
+                                     const ConstantArrayType *ArrayType,
+                                     ArraySubobjectLocation Loc)
+      : PotentiallyNonUniqueObject(S.getASTContext()), S(S),
+        Array(std::move(Array)) {
+    bool Recognized = setRecognizedStringObject(
+        StringBase, ArrayType, Loc, this->Array.getNumElems(), RawOffset);
+    assert(Recognized && "expected a string literal object");
+    (void)Recognized;
+  }
+
+  bool getArrayElement(uint64_t Index, APValue &Result) const override;
+
+  InterpState &S;
+  Pointer Array;
+};
+} // namespace
+
+std::optional<ByteCodePotentiallyNonUniqueObject>
+ByteCodePotentiallyNonUniqueObject::create(InterpState &S, const Pointer &Ptr) {
+  const ASTContext &Ctx = S.getASTContext();
+  if (Ptr.isZero() || !Ptr.isBlockPointer())
+    return std::nullopt;
+
+  const Expr *StringBase = Ptr.getDeclDesc()->asExpr();
+  if (!Ptr.block()->isDynamic() &&
+      isa_and_nonnull<StringLiteral, PredefinedExpr>(StringBase)) {
+    Pointer Array = Ptr.getDeclPtr();
+    const auto *ArrayType =
+        Ctx.getAsConstantArrayType(Array.getFieldDesc()->getType());
+    APValue PtrValue = Ptr.toAPValue(Ctx);
+    if (!ArrayType || !PtrValue.isLValue())
+      return std::nullopt;
+
+    std::optional<ArraySubobjectLocation> Loc;
+    if (PtrValue.hasLValuePath() && !PtrValue.getLValuePath().empty()) {
+      ArrayRef<APValue::LValuePathEntry> Path = PtrValue.getLValuePath();
+      Loc = computeArraySubobjectLocation(
+          Ctx, ArrayType, Path.front().getAsArrayIndex(),
+          PtrValue.getLValueOffset(), Path.size() == 1);
+    } else {
+      Loc = computeArraySubobjectLocationFromOffset(Ctx, ArrayType,
+                                                    PtrValue.getLValueOffset());
+    }
+    if (!Loc)
+      return std::nullopt;
+    return ByteCodePotentiallyNonUniqueObject(
+        S, StringBase, PtrValue.getLValueOffset(), std::move(Array), ArrayType,
+        *Loc);
+  }
+
+  Pointer Array;
+  if (Ptr.isArrayRoot() && isPotentiallyNonUniqueArray(Ptr)) {
+    Array = Ptr;
+  } else if (std::optional<Pointer> ContainingArray = getContainingArray(Ptr);
+             ContainingArray && isPotentiallyNonUniqueArray(*ContainingArray)) {
+    Array = std::move(*ContainingArray);
   } else {
-    if (static_cast<int32_t>(RHSLength) < IndexDiff)
-      return false;
-    RHSStr = RHSStr.drop_front(IndexDiff);
+    Pointer DeclArray = Ptr.getDeclPtr();
+    if (!Ctx.getAsConstantArrayType(DeclArray.getFieldDesc()->getType()) ||
+        !isPotentiallyNonUniqueArray(DeclArray))
+      return std::nullopt;
+    Array = std::move(DeclArray);
   }
 
-  unsigned ShorterCharWidth;
-  StringRef Shorter;
-  StringRef Longer;
-  if (LHSLength < RHSLength) {
-    ShorterCharWidth = LHS.getFieldDesc()->getElemDataSize();
-    Shorter = LHSStr;
-    Longer = RHSStr;
-  } else {
-    ShorterCharWidth = RHS.getFieldDesc()->getElemDataSize();
-    Shorter = RHSStr;
-    Longer = LHSStr;
+  const auto *ArrayType =
+      Ctx.getAsConstantArrayType(Array.getFieldDesc()->getType());
+  if (!ArrayType)
+    return std::nullopt;
+
+  ArraySubobjectLocation Loc{0, CharUnits::Zero()};
+  if (Ptr != Array) {
+    APValue PtrValue = Ptr.toAPValue(Ctx);
+    APValue ArrayValue = Array.toAPValue(Ctx);
+    if (!PtrValue.isLValue() || !PtrValue.hasLValuePath() ||
+        !ArrayValue.isLValue() || !ArrayValue.hasLValuePath())
+      return std::nullopt;
+    ArrayRef<APValue::LValuePathEntry> Path = PtrValue.getLValuePath();
+    ArrayRef<APValue::LValuePathEntry> ArrayPath = ArrayValue.getLValuePath();
+    if (Path.size() <= ArrayPath.size())
+      return std::nullopt;
+    for (unsigned I = 0, N = ArrayPath.size(); I != N; ++I)
+      if (Path[I] != ArrayPath[I])
+        return std::nullopt;
+    Path = Path.drop_front(ArrayPath.size());
+
+    std::optional<ArraySubobjectLocation> ComputedLoc =
+        computeArraySubobjectLocation(
+            Ctx, ArrayType, Path.front().getAsArrayIndex(),
+            PtrValue.getLValueOffset() - ArrayValue.getLValueOffset(),
+            Path.size() == 1);
+    if (!ComputedLoc)
+      return std::nullopt;
+    Loc = *ComputedLoc;
   }
 
-  // The null terminator isn't included in the string data, so check for it
-  // manually. If the longer string doesn't have a null terminator where the
-  // shorter string ends, they aren't potentially overlapping.
-  for (unsigned NullByte : llvm::seq(ShorterCharWidth)) {
-    if (Shorter.size() + NullByte >= Longer.size())
-      break;
-    if (Longer[Shorter.size() + NullByte])
-      return false;
+  Kind TheKind = isInitializerListBackingArray(Array)
+                     ? Kind::InitializerList
+                     : Kind::TemplateParamObject;
+  return ByteCodePotentiallyNonUniqueObject(S, TheKind, std::move(Array),
+                                            ArrayType, Loc);
+}
+
+bool ByteCodePotentiallyNonUniqueObject::getArrayElement(
+    uint64_t Index, APValue &Result) const {
+  std::optional<APValue> Value = Array.atIndex(Index).narrow().toRValue(
+      S.getContext(), arrayType()->getElementType());
+  if (!Value)
+    return false;
+  Result = std::move(*Value);
+  return true;
+}
+
+PotentiallyNonUniqueObject::OverlapResult
+arePotentiallyOverlappingNonUniqueObjects(InterpState &S, const Pointer &LHS,
+                                          const Pointer &RHS) {
+  using OverlapResult = PotentiallyNonUniqueObject::OverlapResult;
+  const ASTContext &Ctx = S.getASTContext();
+
+  if (!LHS.isZero() && !RHS.isZero() && LHS.isBlockPointer() &&
+      RHS.isBlockPointer() && !LHS.block()->isDynamic() &&
+      !RHS.block()->isDynamic()) {
+    const Expr *LHSBase = LHS.getDeclDesc()->asExpr();
+    const Expr *RHSBase = RHS.getDeclDesc()->asExpr();
+    if (isa_and_nonnull<StringLiteral, PredefinedExpr, ObjCEncodeExpr>(
+            LHSBase) &&
+        isa_and_nonnull<StringLiteral, PredefinedExpr, ObjCEncodeExpr>(
+            RHSBase)) {
+      APValue LHSValue = LHS.toAPValue(Ctx);
+      APValue RHSValue = RHS.toAPValue(Ctx);
+      if (LHSValue.isLValue() && RHSValue.isLValue() &&
+          PotentiallyNonUniqueObject::isPotentiallyOverlappingStrings(
+              Ctx, LHSBase, LHSValue.getLValueOffset(), RHSBase,
+              RHSValue.getLValueOffset())
+              .value_or(false))
+        return OverlapResult::StringLiteral;
+    }
   }
-  return Shorter == Longer.take_front(Shorter.size());
+
+  std::optional<ByteCodePotentiallyNonUniqueObject> LHSObject =
+      ByteCodePotentiallyNonUniqueObject::create(S, LHS);
+  std::optional<ByteCodePotentiallyNonUniqueObject> RHSObject =
+      ByteCodePotentiallyNonUniqueObject::create(S, RHS);
+  if (!LHSObject || !RHSObject)
+    return OverlapResult::None;
+  if (!LHSObject->isPotentiallyOverlappingWith(*RHSObject))
+    return OverlapResult::None;
+  return LHSObject->isStringLiteral() && RHSObject->isStringLiteral()
+             ? OverlapResult::StringLiteral
+             : OverlapResult::NonUniqueObject;
 }
 
 static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr,
