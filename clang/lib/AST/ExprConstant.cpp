@@ -10463,8 +10463,8 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
   return ExprEvaluatorBaseTy::VisitCastExpr(E);
 }
 
-static CharUnits GetAlignOfType(const ASTContext &Ctx, QualType T,
-                                UnaryExprOrTypeTrait ExprKind) {
+CharUnits GetAlignOfType(const ASTContext &Ctx, QualType T,
+                         UnaryExprOrTypeTrait ExprKind) {
   // C++ [expr.alignof]p3:
   //     When alignof is applied to a reference type, the result is the
   //     alignment of the referenced type.
@@ -10559,12 +10559,15 @@ CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,
   return GetAlignOfType(Ctx, E->getType(), ExprKind);
 }
 
-static CharUnits getBaseAlignment(EvalInfo &Info, const LValue &Value) {
-  if (const auto *VD = Value.Base.dyn_cast<const ValueDecl *>())
-    return Info.Ctx.getDeclAlign(VD);
-  if (const auto *E = Value.Base.dyn_cast<const Expr *>())
-    return GetAlignOfExpr(Info.Ctx, E, UETT_AlignOf);
-  return GetAlignOfType(Info.Ctx, Value.Base.getTypeInfoType(), UETT_AlignOf);
+CharUnits GetBaseAlignment(const ASTContext &Ctx,
+                           const APValue::LValueBase &Base) {
+  if (const auto *VD = Base.dyn_cast<const ValueDecl *>())
+    return Ctx.getDeclAlign(VD);
+  if (const auto *E = Base.dyn_cast<const Expr *>())
+    return GetAlignOfExpr(Ctx, E, UETT_AlignOf);
+  if (Base.is<TypeInfoLValue>())
+    return GetAlignOfType(Ctx, Base.getTypeInfoType(), UETT_AlignOf);
+  return GetAlignOfType(Ctx, Base.getDynamicAllocType(), UETT_AlignOf);
 }
 
 /// Evaluate the value of the alignment argument to __builtin_align_{up,down},
@@ -10656,7 +10659,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     // If there is a base object, then it must have the correct alignment.
     if (OffsetResult.Base) {
-      CharUnits BaseAlignment = getBaseAlignment(Info, OffsetResult);
+      CharUnits BaseAlignment = GetBaseAlignment(Info.Ctx, OffsetResult.Base);
 
       if (BaseAlignment < Align) {
         Result.Designator.setInvalid();
@@ -10690,7 +10693,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!getAlignmentArgument(E->getArg(1), E->getArg(0)->getType(), Info,
                               Alignment))
       return false;
-    CharUnits BaseAlignment = getBaseAlignment(Info, Result);
+    CharUnits BaseAlignment = GetBaseAlignment(Info.Ctx, Result.Base);
     CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(Result.Offset);
     // For align_up/align_down, we can return the same value if the alignment
     // is known to be greater or equal to the requested value.
@@ -16949,7 +16952,7 @@ static bool EvaluateStdcLoad8(EvalInfo &Info, const CallExpr *E, bool IsBE,
 
   if (IsAligned) {
     CharUnits RequiredAlign = Info.Ctx.getTypeAlignInChars(E->getType());
-    CharUnits BaseAlignment = getBaseAlignment(Info, Ptr);
+    CharUnits BaseAlignment = GetBaseAlignment(Info.Ctx, Ptr.Base);
     CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(Ptr.Offset);
     if (PtrAlign < RequiredAlign) {
       Info.FFDiag(E, diag::note_constexpr_load8_unaligned)
@@ -17131,7 +17134,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       // If we evaluated a pointer, check the minimum known alignment.
       LValue Ptr;
       Ptr.setFrom(Info.Ctx, Src);
-      CharUnits BaseAlignment = getBaseAlignment(Info, Ptr);
+      CharUnits BaseAlignment = GetBaseAlignment(Info.Ctx, Ptr.Base);
       CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(Ptr.Offset);
       // We can return true if the known alignment at the computed offset is
       // greater than the requested alignment.
