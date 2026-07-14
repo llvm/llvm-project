@@ -517,6 +517,8 @@ features cannot lower the translation-unit ABI level;
 
 - Added parsing and semantic support for `dims` modifier in `num_teams` and
   `thread_limit` clauses for OpenMP 6.1 or later.
+- Map-type-modifying modifiers applied to a list item with a user-defined mapper
+  are now propagated onto the maps the mapper expands to.
 
 ### SYCL Support
 

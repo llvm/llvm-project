@@ -54,8 +54,6 @@ int main() {
   print_status(&s2.s1p->y, "y");         // CHECK: y is not present
   print_status(&s2.z, "z");              // CHECK: z is not present
   print_status(&s2.s1p->dummy, "dummy"); // CHECK: dummy is not present
-  print_status(&s2.s1p->p, "p");         // CHECK: p is present
-  // FIXME: the DELETE modifier is not propagated to mapper entries yet.
-  //                                        EXPECTED: p is not present
-  print_status(&s2.s1p->p[0], "p[0]"); // CHECK: p[0] is not present
+  print_status(&s2.s1p->p, "p");         // CHECK: p is not present
+  print_status(&s2.s1p->p[0], "p[0]");   // CHECK: p[0] is not present
 }

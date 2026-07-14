@@ -10583,8 +10583,44 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     CurMapType->addIncoming(FromMapType, FromBB);
     CurMapType->addIncoming(MemberMapType, ToElseBB);
 
-    Value *OffloadingArgs[] = {MapperHandle, CurBaseArg, CurBeginArg,
-                               CurSizeArg,   CurMapType, CurNameArg};
+    // Propagate map-type-modifying bits from the outer map clause to each map
+    // inserted by the mapper.
+    //
+    // OpenMP 6.0:281:34: The effect of the mapper modifier is to remove the
+    // list item from the map clause and to apply the clauses specified in the
+    // declared mapper to the construct on which the map clause appears...
+    // If any modifier with the map-type-modifying property appears in the map
+    // clause then the effect is as if that modifier appears in each map clause
+    // specified in the declared mapper.
+    //
+    // Map-type-modifying bits: ALWAYS, DELETE, CLOSE, PRESENT.
+    // TODO: PRESENT is not propagated here yet. Doing so requires
+    // distinguishing pointee entries from the struct's own storage; it is
+    // handled in a follow-on.
+    Value *ImportedModifierBits = Builder.CreateAnd(
+        MapType,
+        Builder.getInt64(
+            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+                OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS |
+                OpenMPOffloadMappingFlags::OMP_MAP_DELETE |
+                OpenMPOffloadMappingFlags::OMP_MAP_CLOSE)));
+    Value *CurMapTypeWithModifiers = Builder.CreateOr(
+        CurMapType, ImportedModifierBits, "omp.maptype.with.modifiers");
+
+    // ATTACH entries must not receive map-type-modifying bits: ATTACH|ALWAYS is
+    // reserved for the attach(always) map-type modifier, and other modifier
+    // bits (DELETE, CLOSE) have no meaning for an ATTACH entry.
+    auto RawType =
+        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+            Info->Types[I]);
+    constexpr uint64_t AttachBit =
+        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+            OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
+    Value *FinalMapType =
+        (RawType & AttachBit) ? CurMapType : CurMapTypeWithModifiers;
+
+    Value *OffloadingArgs[] = {MapperHandle, CurBaseArg,   CurBeginArg,
+                               CurSizeArg,   FinalMapType, CurNameArg};
 
     auto ChildMapperFn = CustomMapperCB(I);
     if (!ChildMapperFn)
