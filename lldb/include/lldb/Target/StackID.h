@@ -50,10 +50,10 @@ public:
 
   void Dump(Stream *s);
 
-  /// Returns true if `lhs` corresponds to a frame younger (i.e. higher on the
-  /// call stack) than `rhs`, and false otherwise (including when the frames are
-  /// not comparable).
-  static bool IsYounger(const StackID &lhs, const StackID &rhs);
+  /// Returns true if this StackID corresponds to a frame younger (i.e. higher
+  /// on the call stack) than `other`, and false otherwise (including when the
+  /// frames are not comparable).
+  bool IsYoungerThan(const StackID &other) const;
 
 protected:
   friend class StackFrame;
