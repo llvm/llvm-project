@@ -102,6 +102,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Bug Fixes in This Version
 
+- Fixed a constraint comparison bug in partial ordering. (#GH182671)
+
 #### Bug Fixes to Compiler Builtins
 
 #### Bug Fixes to Attribute Support
