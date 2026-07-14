@@ -17,7 +17,7 @@
 ; OBJDUMP-NEXT: 0010 00000000 00000000 00000000 00000000
 ; OBJDUMP-NEXT: 0020 00000000 00000000 00000000 00000000
 ; OBJDUMP-NEXT: 0030 01000000 00000000 00000000 00000000
-; OBJDUMP-NEXT: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx1010:xnack-"
+; OBJDUMP-NEXT: .amdgcn_target "amdgpu-amd-amdhsa-unknown-gfx1010:xnack-"
 ; OBJDUMP-EMPTY:
 
 ; OBJDUMP-LABEL: Disassembly of section .text:

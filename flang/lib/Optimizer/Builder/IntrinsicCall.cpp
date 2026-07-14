@@ -21,7 +21,9 @@
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/MIFCommon.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
+#include "flang/Optimizer/Builder/OpenACCIntrinsicCall.h"
 #include "flang/Optimizer/Builder/PPCIntrinsicCall.h"
 #include "flang/Optimizer/Builder/Runtime/Allocatable.h"
 #include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
@@ -881,22 +883,12 @@ static constexpr IntrinsicHandler handlers[]{
        {"kind", asValue}}},
      /*isElemental=*/true},
 };
+static_assert(fir::isSorted(handlers) && "map must be sorted");
 
-template <std::size_t N>
-static constexpr bool isSorted(const IntrinsicHandler (&array)[N]) {
-  // Replace by std::sorted when C++20 is default (will be constexpr).
-  const IntrinsicHandler *lastSeen{nullptr};
-  bool isSorted{true};
-  for (const auto &x : array) {
-    if (lastSeen)
-      isSorted &= std::string_view{lastSeen->name} < std::string_view{x.name};
-    lastSeen = &x;
-  }
-  return isSorted;
-}
-static_assert(isSorted(handlers) && "map must be sorted");
-
-static const IntrinsicHandler *findIntrinsicHandler(llvm::StringRef name) {
+static const IntrinsicHandler *findIntrinsicHandler(llvm::StringRef name,
+                                                    bool isBindcCall = false) {
+  if (isBindcCall)
+    return nullptr;
   auto compare = [](const IntrinsicHandler &handler, llvm::StringRef name) {
     return name.compare(handler.name) > 0;
   };
@@ -1931,20 +1923,29 @@ lookupRuntimeGenerator(llvm::StringRef name, bool isPPCTarget) {
 std::optional<IntrinsicHandlerEntry>
 lookupIntrinsicHandler(fir::FirOpBuilder &builder,
                        llvm::StringRef intrinsicName,
-                       std::optional<mlir::Type> resultType) {
+                       std::optional<mlir::Type> resultType, bool isBindcCall) {
   llvm::StringRef name = genericName(intrinsicName);
-  if (const IntrinsicHandler *handler = findIntrinsicHandler(name))
+  if (const IntrinsicHandler *handler = findIntrinsicHandler(name, isBindcCall))
     return std::make_optional<IntrinsicHandlerEntry>(handler);
   bool isPPCTarget = fir::getTargetTriple(builder.getModule()).isPPC();
   // If targeting PowerPC, check PPC intrinsic handlers.
   if (isPPCTarget)
-    if (const IntrinsicHandler *ppcHandler = findPPCIntrinsicHandler(name))
+    if (const IntrinsicHandler *ppcHandler =
+            findPPCIntrinsicHandler(name, isBindcCall))
       return std::make_optional<IntrinsicHandlerEntry>(ppcHandler);
   // TODO: Look for CUDA intrinsic handlers only if CUDA is enabled.
-  if (const IntrinsicHandler *cudaHandler = findCUDAIntrinsicHandler(name))
+  if (const IntrinsicHandler *cudaHandler =
+          findCUDAIntrinsicHandler(name, isBindcCall))
     return std::make_optional<IntrinsicHandlerEntry>(cudaHandler);
+  // TODO: Look for OpenACC intrinsic handlers only if OpenACC is enabled.
+  if (const IntrinsicHandler *openaccHandler =
+          findOpenACCIntrinsicHandler(name, isBindcCall))
+    return std::make_optional<IntrinsicHandlerEntry>(openaccHandler);
   // Subroutines should have a handler.
   if (!resultType)
+    return std::nullopt;
+  // BIND(C) intrinsic module procedures must not fall back to runtime lookup.
+  if (isBindcCall)
     return std::nullopt;
   // Try the runtime if no special handler was defined for the
   // intrinsic being called. Maths runtime only has numerical elemental.
@@ -3602,13 +3603,19 @@ mlir::Value IntrinsicLibrary::genCospi(mlir::Type resultType,
 
 // COSHAPE
 fir::ExtendedValue
-IntrinsicLibrary::genCoshape(mlir::Type,
+IntrinsicLibrary::genCoshape(mlir::Type resultType,
                              llvm::ArrayRef<fir::ExtendedValue> args) {
   checkCoarrayEnabled(loc, options);
   assert(args.size() == 2);
 
-  return mif::CoshapeOp::create(builder, loc,
-                                /*coarray*/ fir::getBase(args[0]));
+  // Use the declared Fortran element type (e.g. i32 for default integer kind)
+  // rather than hardcoding i64. MIFCoshapeOpConversion converts the i64 values
+  // written by the prif_coshape runtime to the declared type.
+  mlir::Type eleTy = hlfir::getFortranElementType(resultType);
+  mlir::Type coshapeResultTy = fir::BoxType::get(
+      fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, eleTy));
+  return mif::CoshapeOp::create(builder, loc, coshapeResultTy,
+                                fir::getBase(args[0]));
 }
 
 // COUNT
@@ -6326,9 +6333,8 @@ IntrinsicLibrary::genImageIndex(mlir::Type resultType,
     if (fir::isa_integer(fir::unwrapRefType(team.getType())))
       team = fir::LoadOp::create(builder, loc, team);
   }
-  return mif::ImageIndexOp::create(builder, loc,
-                                   /*coarray*/ fir::getBase(args[0]),
-                                   /*sub*/ fir::getBase(args[1]), team);
+  return mif::genImageIndex(builder, loc, fir::getBase(args[0]),
+                            fir::getBase(args[1]), team);
 }
 
 // INDEX
@@ -8349,9 +8355,12 @@ IntrinsicLibrary::genThisImage(mlir::Type resultType,
   mlir::Value team = fir::getBase(args[args.size() - 1]);
 
   if (!coarrayIsAbsent && dimIsAbsent) {
-    mlir::Value res =
-        mif::ThisImageOp::create(builder, loc, fir::getBase(args[0]), team);
-    return res;
+    mlir::Type eleTy = hlfir::getFortranElementType(resultType);
+    mlir::Type thisImageResultTy = fir::BoxType::get(
+        fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, eleTy));
+    return mif::ThisImageOp::create(builder, loc, thisImageResultTy,
+                                    fir::getBase(args[0]),
+                                    /*dim=*/mlir::Value{}, team);
   }
   mlir::Value res;
   if (!dimIsAbsent) {
@@ -9381,6 +9390,10 @@ getIntrinsicArgumentLowering(llvm::StringRef specificName) {
   if (const IntrinsicHandler *cudaHandler = findCUDAIntrinsicHandler(name))
     if (!cudaHandler->argLoweringRules.hasDefaultRules())
       return &cudaHandler->argLoweringRules;
+  if (const IntrinsicHandler *openaccHandler =
+          findOpenACCIntrinsicHandler(name))
+    if (!openaccHandler->argLoweringRules.hasDefaultRules())
+      return &openaccHandler->argLoweringRules;
   return nullptr;
 }
 

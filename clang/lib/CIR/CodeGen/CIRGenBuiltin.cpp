@@ -562,9 +562,8 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_ceilf16:
   case Builtin::BI__builtin_ceill:
   case Builtin::BI__builtin_ceilf128:
-    return emitUnaryMaybeConstrainedFPBuiltin<cir::CeilOp>(cgf, *e);
   case Builtin::BI__builtin_elementwise_ceil:
-    return RValue::getIgnored();
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::CeilOp>(cgf, *e);
   case Builtin::BIcopysign:
   case Builtin::BIcopysignf:
   case Builtin::BIcopysignl:
@@ -2816,7 +2815,7 @@ emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
     // These are actually NYI, but that will be reported by emitBuiltinExpr.
     // At this point, we don't even know that the builtin is target-specific.
     return std::nullopt;
-  case llvm::Triple::amdgcn:
+  case llvm::Triple::amdgpu:
     return cgf->emitAMDGPUBuiltinExpr(builtinID, e);
   case llvm::Triple::systemz:
     return std::nullopt;

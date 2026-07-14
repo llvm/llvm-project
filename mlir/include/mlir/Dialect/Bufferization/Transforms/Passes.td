@@ -197,13 +197,11 @@ def StaticMemoryPlannerAnalysisPass
     - Unique same-block `memref.dealloc`.
     - Allocations in nested blocks are ignored for now.
 
-    Eligible allocations are packed into a single arena. Currently, we use a
-    trivial sequential allocation strategy with alignment padding. But the
-    interface will also allow any packing algorithm to be plugged in as long as
-    it respects the interface. The arena is an i8 byte buffer
-    (`memref<Nxi8>`) that can hold allocations of different element types.
-    Each original allocation is replaced with a `memref.view` operation that
-    creates a typed view into the arena at the computed offset.
+    Eligible allocations are packed into a single arena using a configurable
+    planning algorithm (see the `algorithm` option). The arena is an i8 byte
+    buffer (`memref<Nxi8>`) that can hold allocations of different element
+    types. Each original allocation is replaced with a `memref.view` operation
+    that creates a typed view into the arena at the computed offset.
 
     Ineligible allocations are skipped and retain their original
     alloc/dealloc operations. Skip reasons are reported via op remarks.
@@ -234,11 +232,24 @@ def StaticMemoryPlannerAnalysisPass
     ```
   }];
 
-  let options = [Option<
-      "arenaMode", "arena-mode", "std::string",
+  let options = [
+    Option<"arenaMode", "arena-mode", "std::string",
       /*default=*/"\"allocate\"",
       "Arena allocation mode: 'allocate' creates arena via AllocOp, "
-      "'arg' extracts arena from function arguments">];
+      "'arg' extracts arena from function arguments">,
+    Option<"algorithm", "algorithm",
+      "::mlir::bufferization::MemoryPlannerAlgorithm",
+      /*default=*/"::mlir::bufferization::MemoryPlannerAlgorithm::Trivial",
+      "Memory planning algorithm to use.",
+      [{::llvm::cl::values(
+        clEnumValN(::mlir::bufferization::MemoryPlannerAlgorithm::Trivial,
+                   "trivial",
+                   "Sequential packing without lifetime overlap"),
+        clEnumValN(::mlir::bufferization::MemoryPlannerAlgorithm::BestFit,
+                   "best-fit",
+                   "Best-fit packing with lifetime-aware gap reuse")
+      )}]>,
+  ];
 
   let statistics =
       [Statistic<"numEligible", "num-eligible",

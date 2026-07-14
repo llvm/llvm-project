@@ -8,43 +8,53 @@ This page describes some of these scripting extensions:
 ## Operating System Thread Plugins
 
 ```{eval-rst}
-.. automodapi:: lldb.plugins.operating_system
-    :no-heading:
+.. automodule:: lldb.plugins.operating_system
+
+.. automodsumm:: lldb.plugins.operating_system
+    :classes-only:
+    :toctree: python_api
     :skip: ScriptedThread
-    :no-inheritance-diagram:
 ```
 
 ## Scripted Frame Provider Plugins
 
 ```{eval-rst}
-.. automodapi:: lldb.plugins.scripted_frame_provider
-    :no-heading:
+.. automodule:: lldb.plugins.scripted_frame_provider
+
+.. automodsumm:: lldb.plugins.scripted_frame_provider
+    :classes-only:
+    :toctree: python_api
     :skip: ABCMeta
-    :no-inheritance-diagram:
 ```
 
 ## Scripted Process Plugins
 
 ```{eval-rst}
-.. automodapi:: lldb.plugins.scripted_process
-    :no-heading:
+.. automodule:: lldb.plugins.scripted_process
+
+.. automodsumm:: lldb.plugins.scripted_process
+    :classes-only:
+    :toctree: python_api
     :skip: ABCMeta
-    :no-inheritance-diagram:
 ```
 
 ## Scripted Platform Plugins
 
 ```{eval-rst}
-.. automodapi:: lldb.plugins.scripted_platform
-    :no-heading:
+.. automodule:: lldb.plugins.scripted_platform
+
+.. automodsumm:: lldb.plugins.scripted_platform
+    :classes-only:
+    :toctree: python_api
     :skip: ABCMeta
-    :no-inheritance-diagram:
 ```
 
 ## Scripted Thread Plan Plugins
 
 ```{eval-rst}
-.. automodapi:: lldb.plugins.scripted_thread_plan
-    :no-heading:
-    :no-inheritance-diagram:
+.. automodule:: lldb.plugins.scripted_thread_plan
+
+.. automodsumm:: lldb.plugins.scripted_thread_plan
+    :classes-only:
+    :toctree: python_api
 ```

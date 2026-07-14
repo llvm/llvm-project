@@ -558,7 +558,8 @@ struct GenELF64PluginTy final : public GenericPluginTy {
 };
 
 template <typename... ArgsTy>
-static Error Plugin::check(int32_t Code, const char *ErrMsg, ArgsTy... Args) {
+[[maybe_unused]] static Error Plugin::check(int32_t Code, const char *ErrMsg,
+                                            ArgsTy... Args) {
   if (Code == 0)
     return Plugin::success();
 

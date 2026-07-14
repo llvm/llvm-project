@@ -288,7 +288,7 @@ protected:
   std::optional<StringExtractorGDBRemote> m_last_stop_packet;
   std::recursive_mutex m_last_stop_packet_mutex;
 
-  GDBRemoteDynamicRegisterInfoSP m_register_info_sp;
+  lldb::DynamicRegisterInfoSP m_register_info_sp;
   Broadcaster m_async_broadcaster;
   lldb::ListenerSP m_async_listener_sp;
   HostThread m_async_thread;
@@ -322,6 +322,9 @@ protected:
   lldb::CommandObjectSP m_command_sp;
   int64_t m_breakpoint_pc_offset;
   lldb::tid_t m_initial_tid; // The initial thread ID, given by stub on attach
+  lldb::tid_t m_last_stop_primary_tid =
+      LLDB_INVALID_THREAD_ID; // Thread ID from the most recent
+                              // T-packet's "thread:<tid>" key.
   bool m_use_g_packet_for_reading;
 
   bool m_allow_flash_writes;

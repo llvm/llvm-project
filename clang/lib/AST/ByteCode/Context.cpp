@@ -680,7 +680,8 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
     bool IsConst = PD->getType().isConstQualified();
     bool IsVolatile = PD->getType().isVolatileQualified();
 
-    if (!getASTContext().hasSameType(PD->getType(),
+    if (PD->isInvalidDecl() ||
+        !getASTContext().hasSameType(PD->getType(),
                                      FuncProto->getParamType(ParamIndex)))
       return nullptr;
 
