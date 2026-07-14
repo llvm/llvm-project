@@ -55,9 +55,9 @@ static bool isScopedLock(const QualType &Type) {
 }
 
 static StringRef getLockClassName(const QualType &Type) {
-  if (const NamedDecl *LockDecl = getLockClassDecl(Type))
-    return LockDecl->getName();
-  return "";
+  const NamedDecl *LockDecl = getLockClassDecl(Type);
+  assert(LockDecl);
+  return LockDecl->getName();
 }
 
 static SmallVector<const VarDecl *> getLockGuardsFromDecl(const DeclStmt *DS) {
@@ -147,16 +147,13 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
       namedDecl(hasName("scoped_lock"), isInStdNamespace());
   const auto LockClassDecl = anyOf(LockGuardClassDecl, ScopedLockClassDecl);
 
-  const auto LockGuardType =
-      qualType(anyOf(hasUnqualifiedDesugaredType(
-                         recordType(hasDeclaration(LockGuardClassDecl))),
-                     hasUnqualifiedDesugaredType(templateSpecializationType(
-                         hasDeclaration(LockGuardClassDecl)))));
+  const auto LockGuardType = qualType(hasUnqualifiedDesugaredType(
+      mapAnyOf(recordType, templateSpecializationType)
+          .with(hasDeclaration(LockGuardClassDecl))));
 
-  const auto LockType = qualType(anyOf(
-      hasUnqualifiedDesugaredType(recordType(hasDeclaration(LockClassDecl))),
-      hasUnqualifiedDesugaredType(
-          templateSpecializationType(hasDeclaration(LockClassDecl)))));
+  const auto LockType = qualType(hasUnqualifiedDesugaredType(
+      mapAnyOf(recordType, templateSpecializationType)
+          .with(hasDeclaration(LockClassDecl))));
 
   const auto LockGuardVarDecl = varDecl(hasType(LockGuardType));
   const auto LockVarDecl = varDecl(hasType(LockType));
