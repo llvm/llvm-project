@@ -6099,6 +6099,7 @@ cc_library(
         ":NVVMDialect",
         ":Pass",
         ":SCFTransforms",
+        ":VectorDialect",
         "//llvm:Support",
     ],
 )
