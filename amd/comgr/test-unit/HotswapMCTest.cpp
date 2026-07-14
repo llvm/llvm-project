@@ -956,9 +956,6 @@ TEST(KernelEntryTrampoline, SecondPassAddsNoDuplicateStubSymbol) {
   std::optional<uint64_t> PoolVAddr = View1->trampolinePoolVAddr();
   ASSERT_TRUE(PoolVAddr.has_value());
 
-  std::optional<uint64_t> PoolVAddr = View1->trampolinePoolVAddr();
-  ASSERT_TRUE(PoolVAddr.has_value());
-
   std::unique_ptr<llvm::WritableMemoryBuffer> Grown =
       View1->growWithTrampolines(Growth1, S.SNopBytes);
   ASSERT_NE(Grown, nullptr);
