@@ -65,7 +65,7 @@ Knowing their handles help us keep track of who’s who across platforms, coordi
      - Validas
      - slotosch
      - oscarslotosch_66740
-     - \-
+     - slotosch
    * - Petter Berntsson
      - Arm Limited
      - petbernt
