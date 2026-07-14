@@ -196,7 +196,7 @@ VPScalarIVStepsRecipe *createScalarIVSteps(
     VPlan &Plan, InductionDescriptor::InductionKind Kind,
     Instruction::BinaryOps InductionOpcode, FPMathOperator *FPBinOp,
     Instruction *TruncI, VPIRValue *StartV, VPValue *Step, DebugLoc DL,
-    VPBuilder &Builder, const VPIRFlags::WrapFlagsTy &Flags = {});
+    VPBuilder &Builder, const VPIRFlags::BinOpGEPFlagsTy &Flags = {});
 
 /// Scalarize a VPWidenPointerInductionRecipe by replacing it with a PtrAdd
 /// (IndStart, ScalarIVSteps (0, Step)). This is used when the recipe only

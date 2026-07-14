@@ -397,6 +397,11 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
            "Cannot change IsInLoop");
     getFMFsRef() = getFastMathFlagsOrNone() & Other.getFastMathFlagsOrNone();
     break;
+  case OperationType::BinOpGEP:
+    BinOpGEPFlags.WrapFlags.HasNUW &= Other.BinOpGEPFlags.WrapFlags.HasNUW;
+    BinOpGEPFlags.WrapFlags.HasNSW &= Other.BinOpGEPFlags.WrapFlags.HasNSW;
+    BinOpGEPFlags.RawGEPFlags &= Other.BinOpGEPFlags.RawGEPFlags;
+    break;
   case OperationType::Other:
     break;
   }
@@ -2609,6 +2614,12 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
     return Opcode == Instruction::FCmp || Opcode == Instruction::ICmp;
   case OperationType::ReductionOp:
     return Opcode == VPInstruction::ComputeReductionResult;
+  case OperationType::BinOpGEP:
+    return Opcode == Instruction::GetElementPtr ||
+           Opcode == VPInstruction::PtrAdd ||
+           Opcode == VPInstruction::WidePtrAdd || Opcode == Instruction::Add ||
+           Opcode == Instruction::Sub || Opcode == Instruction::Mul ||
+           Opcode == Instruction::Shl;
   case OperationType::Other:
     return true;
   }
@@ -2737,21 +2748,19 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
     if (ExactFlags.IsExact)
       O << " exact";
     break;
-  case OperationType::OverflowingBinOp:
-    if (WrapFlags.HasNUW)
-      O << " nuw";
-    if (WrapFlags.HasNSW)
-      O << " nsw";
-    break;
-  case OperationType::Trunc:
-    if (TruncFlags.HasNUW)
-      O << " nuw";
-    if (TruncFlags.HasNSW)
-      O << " nsw";
-    break;
   case OperationType::FPMathOp:
     getFastMathFlagsOrNone().print(O);
     break;
+  case OperationType::OverflowingBinOp:
+  case OperationType::Trunc:
+  case OperationType::BinOpGEP:
+    if (hasNoUnsignedWrap())
+      O << " nuw";
+    if (hasNoSignedWrap())
+      O << " nsw";
+    if (OpType != OperationType::BinOpGEP)
+      break;
+    [[fallthrough]];
   case OperationType::GEPOp: {
     GEPNoWrapFlags Flags = getGEPNoWrapFlags();
     if (Flags.isInBounds())

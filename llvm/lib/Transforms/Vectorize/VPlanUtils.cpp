@@ -604,7 +604,7 @@ VPScalarIVStepsRecipe *vputils::createScalarIVSteps(
     VPlan &Plan, InductionDescriptor::InductionKind Kind,
     Instruction::BinaryOps InductionOpcode, FPMathOperator *FPBinOp,
     Instruction *TruncI, VPIRValue *StartV, VPValue *Step, DebugLoc DL,
-    VPBuilder &Builder, const VPIRFlags::WrapFlagsTy &Flags) {
+    VPBuilder &Builder, const VPIRFlags::BinOpGEPFlagsTy &Flags) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
   VPValue *CanonicalIV = LoopRegion->getCanonicalIV();

@@ -5789,37 +5789,35 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
         Ctx.invalidateWideningDecision(&MemR->getIngredient(), VF);
 
       // Get VF as i32 for the vector length operand.
+      VPBuilder PHBuilder(Plan.getVectorPreheader());
       if (!I32VF) {
-        VPBuilder Builder(Plan.getVectorPreheader());
-        I32VF = Builder.createScalarZExtOrTrunc(
+        I32VF = PHBuilder.createScalarZExtOrTrunc(
             &Plan.getVF(), Type::getInt32Ty(Plan.getContext()),
             DebugLoc::getUnknown());
       }
 
-      VPBuilder Builder(&R);
       // Create the base pointer of strided access.
-      // TODO: reuse VPDerivedIVRecipe for base pointer computation when it
-      // supports a general VPValue as the start value.
       VPValue *StartVPV =
-          VPSCEVExpander(Builder, *PSE.getSE(), R.getDebugLoc()).expand(Start);
+          VPSCEVExpander(PHBuilder, *PSE.getSE(), R.getDebugLoc())
+              .expand(Start);
+      VPBuilder Builder(&R);
       VPValue *StrideInBytes = Plan.getOrAddLiveIn(Step->getValue());
       Type *IndexTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
       assert(IndexTy == StrideInBytes->getScalarType() &&
              "Stride type from SCEV must match the index type");
-      VPValue *CanIV = Builder.createScalarZExtOrTrunc(
-          VectorLoop->getCanonicalIV(), IndexTy, DebugLoc::getUnknown());
-      auto *AddRecPtr = cast<SCEVAddRecExpr>(PtrSCEV);
-      auto *Offset = Builder.createOverflowingOp(
-          Instruction::Mul, {CanIV, StrideInBytes},
-          {AddRecPtr->hasNoUnsignedWrap(), /*HasNSW=*/false});
-      GEPNoWrapFlags NWFlags = AddRecPtr->hasNoUnsignedWrap()
-                                   ? GEPNoWrapFlags::noUnsignedWrap()
-                                   : GEPNoWrapFlags::none();
-      VPValue *BasePtr = Builder.createNoWrapPtrAdd(StartVPV, Offset, NWFlags);
+      // The no-wrap flags and GEP no-wrap flags should be derived from the nuw
+      // on the AddRecPtr.
+      bool AddRecNUW = cast<SCEVAddRecExpr>(PtrSCEV)->hasNoUnsignedWrap();
+      VPIRFlags::WrapFlagsTy WrapFlags = {AddRecNUW, false};
+      GEPNoWrapFlags GEPFlags =
+          AddRecNUW ? GEPNoWrapFlags::noUnsignedWrap() : GEPNoWrapFlags::none();
+      VPDerivedIVRecipe *BasePtr = Builder.createDerivedIV(
+          InductionDescriptor::IK_PtrInduction, nullptr, StartVPV,
+          VectorLoop->getCanonicalIV(), StrideInBytes, {WrapFlags, GEPFlags});
 
       // Create a new vector pointer for strided access.
       VPValue *NewPtr = Builder.createVectorPointer(
-          BasePtr, Type::getInt8Ty(Plan.getContext()), StrideInBytes, NWFlags,
+          BasePtr, Type::getInt8Ty(Plan.getContext()), StrideInBytes, GEPFlags,
           R.getDebugLoc());
 
       VPValue *Mask = MemR->getMask();

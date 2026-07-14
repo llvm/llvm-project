@@ -704,6 +704,7 @@ class VPIRFlags {
   enum class OperationType : unsigned char {
     Cmp,
     FCmp,
+    BinOpGEP,
     OverflowingBinOp,
     Trunc,
     DisjointOp,
@@ -739,6 +740,18 @@ public:
   struct NonNegFlagsTy {
     char NonNeg : 1;
     NonNegFlagsTy(bool IsNonNeg) : NonNeg(IsNonNeg) {}
+  };
+
+  /// Holds both the no-wrap flags and GEP no-wrap flags for computations
+  /// involving BinOps and a GEPs.
+  struct BinOpGEPFlagsTy {
+    WrapFlagsTy WrapFlags;
+    uint8_t RawGEPFlags;
+    BinOpGEPFlagsTy() = default;
+    BinOpGEPFlagsTy(WrapFlagsTy WrapFlags)
+        : WrapFlags(WrapFlags), RawGEPFlags(0) {}
+    BinOpGEPFlagsTy(WrapFlagsTy WrapFlags, GEPNoWrapFlags GEPFlags)
+        : WrapFlags(WrapFlags), RawGEPFlags(GEPFlags.getRaw()) {}
   };
 
 private:
@@ -791,6 +804,7 @@ private:
     NonNegFlagsTy NonNegFlags;
     FastMathFlagsTy FMFs;
     FCmpFlagsTy FCmpFlags;
+    BinOpGEPFlagsTy BinOpGEPFlags;
     ReductionFlagsTy ReductionFlags;
     uint8_t AllFlags[2];
   };
@@ -846,6 +860,12 @@ public:
     Bitfield::set<CmpInst::PredicateField>(FCmpFlags.CmpPredStorage, Pred);
     assert(getPredicate() == Pred && "predicate truncated");
     FCmpFlags.FMFs = FMFs;
+  }
+
+  VPIRFlags(BinOpGEPFlagsTy Flags)
+      : OpType(OperationType::BinOpGEP), AllFlags() {
+    BinOpGEPFlags.WrapFlags = Flags.WrapFlags;
+    BinOpGEPFlags.RawGEPFlags = Flags.RawGEPFlags;
   }
 
   VPIRFlags(WrapFlagsTy WrapFlags)
@@ -928,6 +948,11 @@ public:
     case OperationType::NonNegOp:
       NonNegFlags.NonNeg = false;
       break;
+    case OperationType::BinOpGEP:
+      BinOpGEPFlags.WrapFlags.HasNUW = false;
+      BinOpGEPFlags.WrapFlags.HasNSW = false;
+      BinOpGEPFlags.RawGEPFlags = 0;
+      break;
     case OperationType::Cmp:
     case OperationType::Other:
       break;
@@ -971,7 +996,8 @@ public:
       I.setNonNeg(NonNegFlags.NonNeg);
       break;
     case OperationType::ReductionOp:
-      llvm_unreachable("reduction ops should not use applyFlags");
+    case OperationType::BinOpGEP:
+      llvm_unreachable("Reduction and BinOpGEP ops should not use applyFlags");
     case OperationType::Cmp:
     case OperationType::Other:
       break;
@@ -997,7 +1023,14 @@ public:
   }
 
   GEPNoWrapFlags getGEPNoWrapFlags() const {
-    return GEPNoWrapFlags::fromRaw(GEPFlagsStorage);
+    switch (OpType) {
+    case OperationType::GEPOp:
+      return GEPNoWrapFlags::fromRaw(GEPFlagsStorage);
+    case OperationType::BinOpGEP:
+      return GEPNoWrapFlags::fromRaw(BinOpGEPFlags.RawGEPFlags);
+    default:
+      llvm_unreachable("Recipe doesn't have GEP no-wrap flags");
+    }
   }
 
   /// Returns true if the recipe has a comparison predicate.
@@ -1023,6 +1056,8 @@ public:
     switch (OpType) {
     case OperationType::OverflowingBinOp:
       return WrapFlags.HasNUW;
+    case OperationType::BinOpGEP:
+      return BinOpGEPFlags.WrapFlags.HasNUW;
     case OperationType::Trunc:
       return TruncFlags.HasNUW;
     default:
@@ -1034,6 +1069,8 @@ public:
     switch (OpType) {
     case OperationType::OverflowingBinOp:
       return WrapFlags.HasNSW;
+    case OperationType::BinOpGEP:
+      return BinOpGEPFlags.WrapFlags.HasNSW;
     case OperationType::Trunc:
       return TruncFlags.HasNSW;
     default:
@@ -1045,6 +1082,7 @@ public:
     switch (OpType) {
     case OperationType::OverflowingBinOp:
     case OperationType::Trunc:
+    case OperationType::BinOpGEP:
       return {hasNoUnsignedWrap(), hasNoSignedWrap()};
     default:
       return {};
@@ -4202,7 +4240,7 @@ public:
   VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind,
                     const FPMathOperator *FPBinOp, VPValue *Start,
                     VPValue *Current, VPValue *Step,
-                    const VPIRFlags::WrapFlagsTy &Flags = {})
+                    const VPIRFlags::BinOpGEPFlagsTy &Flags = {})
       : VPRecipeWithIRFlags(VPRecipeBase::VPDerivedIVSC, {Start, Current, Step},
                             Start->getScalarType(), Flags),
         Kind(Kind), FPBinOp(FPBinOp) {}
@@ -4211,7 +4249,8 @@ public:
 
   VPDerivedIVRecipe *clone() override {
     return new VPDerivedIVRecipe(Kind, FPBinOp, getStartValue(), getOperand(1),
-                                 getStepValue(), getNoWrapFlags());
+                                 getStepValue(),
+                                 {getNoWrapFlags(), getGEPNoWrapFlags()});
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPDerivedIVSC)

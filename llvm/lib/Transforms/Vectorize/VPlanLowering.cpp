@@ -61,7 +61,8 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
         Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
         nullptr, Plan.getZero(CanIVTy), Plan.getConstantInt(CanIVTy, 1),
         WideCanIV->getDebugLoc(), Builder,
-        {static_cast<bool>(WideCanIV->getNoWrapFlags().HasNUW), false}));
+        VPIRFlags::WrapFlagsTy(
+            static_cast<bool>(WideCanIV->getNoWrapFlags().HasNUW), false)));
     WideCanIV->eraseFromParent();
     return;
   }
@@ -415,6 +416,7 @@ static void expandVPDerivedIV(VPDerivedIVRecipe *R) {
               : Builder.createScalarCast(Instruction::SIToFP, Index, StepTy,
                                          DebugLoc::getCompilerGenerated());
   VPIRFlags::WrapFlagsTy Flags = R->getNoWrapFlags();
+  GEPNoWrapFlags GEPFlags = R->getGEPNoWrapFlags();
   switch (R->getInductionKind()) {
   case InductionDescriptor::IK_IntInduction: {
     assert(Index->getScalarType() == Start->getScalarType() &&
@@ -425,9 +427,10 @@ static void expandVPDerivedIV(VPDerivedIVRecipe *R) {
         DebugLoc::getUnknown(), "", Flags));
   }
   case InductionDescriptor::IK_PtrInduction:
-    return R->replaceAllUsesWith(Builder.createPtrAdd(
+    return R->replaceAllUsesWith(Builder.createNoWrapPtrAdd(
         Start,
-        Builder.createOverflowingOp(Instruction::Mul, {Index, Step}, Flags)));
+        Builder.createOverflowingOp(Instruction::Mul, {Index, Step}, Flags),
+        GEPFlags));
   case InductionDescriptor::IK_FpInduction: {
     assert(StepTy->isFloatingPointTy() && "Expected FP Step value");
     const FPMathOperator *FPBinOp = R->getFPBinOp();

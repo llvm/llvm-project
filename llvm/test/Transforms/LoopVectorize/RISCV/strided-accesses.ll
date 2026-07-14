@@ -252,8 +252,7 @@ define void @single_constant_stride_ptr_iv(ptr %p) {
 ; CHECK-UF2-NEXT:    [[TMP15:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC2]], 0
 ; CHECK-UF2-NEXT:    [[TMP16:%.*]] = add <vscale x 4 x i32> [[TMP13]], splat (i32 1)
 ; CHECK-UF2-NEXT:    [[TMP17:%.*]] = add <vscale x 4 x i32> [[TMP15]], splat (i32 1)
-; CHECK-UF2-NEXT:    [[TMP23:%.*]] = shl nuw i64 [[INDEX]], 3
-; CHECK-UF2-NEXT:    [[TMP18:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[TMP23]]
+; CHECK-UF2-NEXT:    [[TMP18:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[TMP9]]
 ; CHECK-UF2-NEXT:    [[TMP24:%.*]] = mul i64 [[TMP3]], 8
 ; CHECK-UF2-NEXT:    [[TMP20:%.*]] = getelementptr nuw i8, ptr [[TMP18]], i64 [[TMP24]]
 ; CHECK-UF2-NEXT:    call void @llvm.experimental.vp.strided.store.nxv4i32.p0.i64(<vscale x 4 x i32> [[TMP16]], ptr align 4 [[TMP18]], i64 8, <vscale x 4 x i1> splat (i1 true), i32 [[TMP21]])
