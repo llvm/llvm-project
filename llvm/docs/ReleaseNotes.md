@@ -479,6 +479,8 @@ Makes programs 10x faster by doing Special New Thing.
 * Python 3.11 or later is now recommended for building LLDB 23 on Windows. From LLDB 24, Python 3.11 or later will be required.
 * Messages from `OutputDebugString[A|W]` are now shown inline when using LLDB
   from the command-line and in the output window when using lldb-dap.
+* lldb-server.exe is now the default plugin, replacing and deprecating the
+  "in-process" plugin.
 
 
 ### Changes to BOLT
