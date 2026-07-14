@@ -453,6 +453,16 @@ DWARF:
               Form:            DW_FORM_data1
             - Attribute:       DW_AT_byte_size
               Form:            DW_FORM_data1
+        - Code:            0x00000004
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_bit_size
+              Form:            DW_FORM_data1
   debug_info:
     - Version:         4
       AddrSize:        8
@@ -506,6 +516,12 @@ DWARF:
           Values:
             - Value:           0x0000000000000007 # DW_ATE_unsigned
             - Value:           0x0000000000000004
+        # 0x00000023:
+        - AbbrCode:        0x00000004
+          Values:
+            - Value:           0x0000000000000005 # DW_ATE_signed
+            - Value:           0x0000000000000004
+            - Value:           0x000000000000001f
         - AbbrCode:        0x00000000
 
 )";
@@ -516,6 +532,7 @@ DWARF:
   uint8_t offs_uchar = 0x00000017;
   uint8_t offs_schar = 0x0000001a;
   uint8_t offs_enum = 0x00000020;
+  uint8_t offs_sint31_t = 0x00000023;
 
   DWARFExpressionTester t(yamldata, /*cu_index=*/1);
   ASSERT_TRUE((bool)t.GetDwarfUnit());
@@ -568,6 +585,18 @@ DWARF:
   EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const4s, 'A', 'B', 'C', 'D', DW_OP_convert,
                                offs_schar, DW_OP_stack_value}),
                        ExpectScalar(8, 'A', is_signed));
+
+  // Prefer DW_AT_bit_size over DW_AT_byte_size when both are present.
+  EXPECT_THAT_EXPECTED(
+      t.Eval({DW_OP_const4u, 0x00, 0x00, 0x00, 0x40, DW_OP_convert,
+              offs_sint31_t, DW_OP_stack_value}),
+      ExpectScalar(31, 0x40000000, is_signed));
+
+  // Truncate the high bit when the value crosses the 31-bit boundary.
+  EXPECT_THAT_EXPECTED(
+      t.Eval({DW_OP_const4u, 0x00, 0x00, 0x00, 0xc0, DW_OP_convert,
+              offs_sint31_t, DW_OP_stack_value}),
+      ExpectScalar(31, 0x40000000, is_signed));
 
   //
   // Errors.
