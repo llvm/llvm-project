@@ -82,8 +82,6 @@ public:
 
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
-  bool useFP16ConversionIntrinsics() const override { return false; }
-
   bool isCLZForZeroUndef() const override { return false; }
 
   bool

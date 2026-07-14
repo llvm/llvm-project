@@ -73,12 +73,18 @@ set(LIBC_GPU_TARGET_ARCHITECTURE "${gpu_test_architecture}")
 set(LIBC_GPU_CODE_OBJECT_VERSION "6" CACHE STRING "AMDGPU Code object ABI to use")
 
 if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-  # FIXME: This is a hack required to keep the CUDA package from trying to find
-  #        pthreads. We only link the CUDA driver, so this is unneeded.
-  add_library(CUDA::cudart_static_deps IMPORTED INTERFACE)
-
-  find_package(CUDAToolkit QUIET)
-  if(CUDAToolkit_FOUND)
-    get_filename_component(LIBC_CUDA_ROOT "${CUDAToolkit_BIN_DIR}" DIRECTORY ABSOLUTE)
+  # Respect the standard CUDAToolkit_ROOT override if the user provided one,
+  # otherwise ask the compiler which CUDA installation it detected.
+  if(CUDAToolkit_ROOT)
+    set(LIBC_CUDA_ROOT "${CUDAToolkit_ROOT}")
+  else()
+    execute_process(
+      COMMAND ${CMAKE_CXX_COMPILER} -v --print-resource-dir
+      OUTPUT_QUIET ERROR_VARIABLE cuda_search_output)
+    string(REGEX MATCH "Found CUDA installation: ([^,]+), version"
+      cuda_search_match "${cuda_search_output}")
+    if(CMAKE_MATCH_1)
+      set(LIBC_CUDA_ROOT "${CMAKE_MATCH_1}")
+    endif()
   endif()
 endif()
