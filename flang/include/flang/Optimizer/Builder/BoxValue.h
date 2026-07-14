@@ -279,6 +279,8 @@ public:
   bool isUnlimitedPolymorphic() const {
     return fir::isUnlimitedPolymorphicType(getBoxTy());
   }
+
+  unsigned corank() const { return fir::getBoxCorank(getBoxTy()); }
 };
 
 /// An entity described by a fir.box value that cannot be read into

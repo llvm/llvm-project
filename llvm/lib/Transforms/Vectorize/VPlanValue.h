@@ -49,7 +49,7 @@ class VPSingleDefRecipe;
 /// coming from the input IR, symbolic values and values defined by recipes.
 class LLVM_ABI_FOR_TEST VPValue {
   friend struct VPIRValue;
-  friend struct VPSymbolicValue;
+  friend class VPSymbolicValue;
   friend class VPRecipeValue;
   friend class VPRegionValue;
 
@@ -92,7 +92,7 @@ public:
   VPValue &operator=(const VPValue &) = delete;
 
   virtual ~VPValue() {
-    assert(Users.empty() && "trying to delete a VPValue with remaining users");
+    assert(user_empty() && "trying to delete a VPValue with remaining users");
   }
 
   /// \return an ID for the concrete type of this object.
@@ -113,7 +113,7 @@ public:
   void assertNotMaterialized() const;
 
   unsigned getNumUsers() const {
-    if (Users.empty())
+    if (user_empty())
       return 0;
     assertNotMaterialized();
     return Users.size();
@@ -158,10 +158,11 @@ public:
   const_user_range users() const {
     return const_user_range(user_begin(), user_end());
   }
+  bool user_empty() const { return Users.empty(); } // NOLINT
 
   /// Returns true if the value has more than one unique user.
   bool hasMoreThanOneUniqueUser() const {
-    if (getNumUsers() == 0)
+    if (user_empty())
       return false;
 
     // Check if all users match the first user.
@@ -211,24 +212,54 @@ public:
   }
 };
 
-/// VPValues defined by a VPRegionBlock, like the canonical IV.
-class VPRegionValue : public VPValue {
-  VPRegionBlock *DefiningRegion;
+/// A symbolic live-in VPValue, used for values like vector trip count, VF, and
+/// VFxUF.
+class VPSymbolicValue : public VPValue {
+  /// The scalar type of this symbolic value.
   Type *Ty;
+
+  /// Track whether this value has been materialized (replaced). After
+  /// materialization, accessing users should trigger an assertion.
+  bool Materialized = false;
+
+protected:
+  VPSymbolicValue(unsigned char SC, Type *Ty) : VPValue(SC, nullptr), Ty(Ty) {}
+
+public:
+  VPSymbolicValue(Type *Ty) : VPSymbolicValue(VPVSymbolicSC, Ty) {}
+
+  /// Returns the scalar type of this symbolic value.
+  Type *getType() const { return Ty; }
+
+  /// Returns true if this value has been materialized.
+  bool isMaterialized() const { return Materialized; }
+
+  /// Mark this value as materialized.
+  void markMaterialized() {
+    assert(!Materialized && "VPSymbolicValue already materialized");
+    Materialized = true;
+  }
+
+  static bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPVSymbolicSC ||
+           V->getVPValueID() == VPRegionValueSC;
+  }
+};
+
+/// VPValues defined by a VPRegionBlock, like the canonical IV.
+class VPRegionValue : public VPSymbolicValue {
+  VPRegionBlock *DefiningRegion;
   DebugLoc DL;
 
 public:
   VPRegionValue(Type *Ty, DebugLoc DL, VPRegionBlock *Region)
-      : VPValue(VPValue::VPRegionValueSC), DefiningRegion(Region), Ty(Ty),
+      : VPSymbolicValue(VPValue::VPRegionValueSC, Ty), DefiningRegion(Region),
         DL(DL) {}
 
   ~VPRegionValue() override = default;
 
   /// Returns the region that defines this value.
   VPRegionBlock *getDefiningRegion() const { return DefiningRegion; }
-
-  /// Returns the type of the VPRegionValue.
-  Type *getType() const { return Ty; }
 
   /// Returns the debug location of the VPRegionValue.
   DebugLoc getDebugLoc() const { return DL; }
@@ -259,13 +290,27 @@ struct VPIRValue : public VPValue {
   }
 };
 
-/// An overlay on VPIRValue for VPValues that wrap a ConstantInt. Provides
-/// convenient accessors for the underlying constant.
-struct VPConstantInt : public VPIRValue {
-  VPConstantInt(ConstantInt *CI) : VPIRValue(CI) {}
+/// An overlay on VPIRValue for VPValues that wrap a Constant. May be an
+/// integer, floating-point, or a vector constant.
+struct VPConstant : public VPIRValue {
+  VPConstant(Constant *C) : VPIRValue(C) {}
 
   static bool classof(const VPValue *V) {
-    return isa<VPIRValue>(V) && isa<ConstantInt>(V->getUnderlyingValue());
+    auto *IRV = dyn_cast<VPIRValue>(V);
+    return IRV && isa<Constant>(IRV->getValue());
+  }
+
+  const Constant *getConstant() const { return cast<Constant>(getValue()); }
+};
+
+/// An overlay on VPConstant for VPValues that wrap a ConstantInt. Provides
+/// convenient accessors for the underlying APInt.
+struct VPConstantInt : public VPConstant {
+  VPConstantInt(ConstantInt *CI) : VPConstant(CI) {}
+
+  static bool classof(const VPValue *V) {
+    auto *VPC = dyn_cast<VPConstant>(V);
+    return VPC && isa<ConstantInt>(VPC->getConstant());
   }
 
   bool isOne() const { return getAPInt().isOne(); }
@@ -279,36 +324,6 @@ struct VPConstantInt : public VPIRValue {
   unsigned getBitWidth() const { return getAPInt().getBitWidth(); }
 
   uint64_t getZExtValue() const { return getAPInt().getZExtValue(); }
-};
-
-/// A symbolic live-in VPValue, used for values like vector trip count, VF, and
-/// VFxUF.
-struct VPSymbolicValue : public VPValue {
-  VPSymbolicValue(Type *Ty) : VPValue(VPVSymbolicSC, nullptr), Ty(Ty) {}
-
-  static bool classof(const VPValue *V) {
-    return V->getVPValueID() == VPVSymbolicSC;
-  }
-
-  /// Returns the scalar type of this symbolic value.
-  Type *getType() const { return Ty; }
-
-  /// Returns true if this symbolic value has been materialized.
-  bool isMaterialized() const { return Materialized; }
-
-  /// Mark this symbolic value as materialized.
-  void markMaterialized() {
-    assert(!Materialized && "VPSymbolicValue already materialized");
-    Materialized = true;
-  }
-
-private:
-  /// The scalar type of this symbolic value.
-  Type *Ty;
-
-  /// Track whether this symbolic value has been materialized (replaced).
-  /// After materialization, accessing users should trigger an assertion.
-  bool Materialized = false;
 };
 
 /// Abstract base class for VPValues defined by a VPRecipeBase.
@@ -381,9 +396,11 @@ public:
 
 /// This class augments VPValue with operands which provide the inverse def-use
 /// edges from VPValue's users to their defs.
-class VPUser {
+class LLVM_ABI_FOR_TEST VPUser {
   /// Grant access to removeOperand for VPPhiAccessors, the only supported user.
   friend class VPPhiAccessors;
+  /// Grant access to addOperand for VPWidenMemoryRecipe.
+  friend class VPWidenMemoryRecipe;
 
   SmallVector<VPValue *, 2> Operands;
 
@@ -405,6 +422,11 @@ protected:
       addOperand(Operand);
   }
 
+  void addOperand(VPValue *Operand) {
+    Operands.push_back(Operand);
+    Operand->addUser(*this);
+  }
+
 public:
   VPUser() = delete;
   VPUser(const VPUser &) = delete;
@@ -412,11 +434,6 @@ public:
   virtual ~VPUser() {
     for (VPValue *Op : operands())
       Op->removeUser(*this);
-  }
-
-  void addOperand(VPValue *Operand) {
-    Operands.push_back(Operand);
-    Operand->addUser(*this);
   }
 
   unsigned getNumOperands() const { return Operands.size(); }
@@ -521,7 +538,7 @@ public:
     for (VPRecipeValue *D : to_vector(DefinedValues)) {
       assert(D->isDefinedBy(this) &&
              "all defined VPValues should point to the containing VPDef");
-      assert(D->getNumUsers() == 0 &&
+      assert(D->user_empty() &&
              "all defined VPValues should have no more users");
       delete D;
     }

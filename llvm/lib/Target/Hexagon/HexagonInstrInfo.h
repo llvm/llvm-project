@@ -52,6 +52,9 @@ public:
 
   const HexagonRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
+  bool isMIBefore(const MachineInstr *A, const MachineInstr *B) const;
+  bool hasQFPInstrs(const MachineFunction &MF) const;
+
   /// TargetInstrInfo overrides.
 
   /// If the specified machine instruction is a direct

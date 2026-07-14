@@ -150,22 +150,19 @@ class MemIntrinsicCostAttributes {
   Align Alignment;
 
 public:
-  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
-                                      const Value *Ptr, bool VariableMask,
-                                      Align Alignment,
-                                      const Instruction *I = nullptr)
+  MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy, const Value *Ptr,
+                             bool VariableMask, Align Alignment,
+                             const Instruction *I = nullptr)
       : I(I), Ptr(Ptr), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
         Alignment(Alignment) {}
 
-  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
-                                      Align Alignment,
-                                      unsigned AddressSpace = 0)
+  MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy, Align Alignment,
+                             unsigned AddressSpace = 0)
       : DataTy(DataTy), IID(Id), AddressSpace(AddressSpace),
         Alignment(Alignment) {}
 
-  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
-                                      bool VariableMask, Align Alignment,
-                                      const Instruction *I = nullptr)
+  MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy, bool VariableMask,
+                             Align Alignment, const Instruction *I = nullptr)
       : I(I), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
         Alignment(Alignment) {}
 
@@ -1028,6 +1025,10 @@ public:
   /// containing this constant value for the target.
   LLVM_ABI bool shouldBuildLookupTablesForConstant(Constant *C) const;
 
+  /// Return the minimum bit width to use for integer switch lookup table
+  /// elements on this target.
+  LLVM_ABI unsigned getMinimumLookupTableEntryBitWidth() const;
+
   /// Return true if lookup tables should be turned into relative lookup tables.
   LLVM_ABI bool shouldBuildRelLookupTables() const;
 
@@ -1071,7 +1072,8 @@ public:
   };
 
   /// Calculates a VectorInstrContext from \p I.
-  static VectorInstrContext getVectorInstrContextHint(const Instruction *I);
+  LLVM_ABI static VectorInstrContext
+  getVectorInstrContextHint(const Instruction *I);
 
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
@@ -1496,8 +1498,11 @@ public:
 
   /// \return The maximum interleave factor that any transform should try to
   /// perform for this target. This number depends on the level of parallelism
-  /// and the number of execution units in the CPU.
-  LLVM_ABI unsigned getMaxInterleaveFactor(ElementCount VF) const;
+  /// and the number of execution units in the CPU. HasUnorderedReductions
+  /// specifies whether (unordered) reductions are present in the loop being
+  /// vectorized.
+  LLVM_ABI unsigned getMaxInterleaveFactor(ElementCount VF,
+                                           bool HasUnorderedReductions) const;
 
   /// Collect properties of V used in cost analysis, e.g. OP_PowerOf2.
   LLVM_ABI static OperandValueInfo getOperandInfo(const Value *V);

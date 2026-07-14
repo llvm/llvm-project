@@ -1105,9 +1105,43 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
   if (CopyMI) {
     SlotIndex CopyIdx = LIS.InsertMachineInstrInMaps(*CopyMI).getRegSlot();
     if (!MRI.isSSA()) {
-      LiveInterval &LI = LIS.getInterval(CopyMI->getOperand(0).getReg());
+      Register CopyDstReg = CopyMI->getOperand(0).getReg();
+      LiveInterval &LI = LIS.getInterval(CopyDstReg);
+
+      // The addSegment below extends CopyDstReg's LiveInterval with a new
+      // segment for the copy. If CopyDstReg is already assigned in the
+      // LiveRegMatrix, we must unassign before the modification and reassign
+      // after, so the matrix stays consistent with the updated interval.
+      // This can happen when the fold target creates a copy
+      // to preserve a source operand, defining a vreg that was already
+      // allocated to a physreg.
+      bool NeedMatrixReassign =
+          Matrix && CopyDstReg.isVirtual() && VRM.hasPhys(CopyDstReg);
+      MCRegister PhysReg;
+      if (NeedMatrixReassign) {
+        PhysReg = VRM.getPhys(CopyDstReg);
+        Matrix->unassign(LI);
+      }
+
       VNInfo *VNI = LI.getNextValue(CopyIdx, LIS.getVNInfoAllocator());
       LI.addSegment(LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), VNI));
+
+      if (NeedMatrixReassign)
+        Matrix->assign(LI, PhysReg);
+
+      Register OrigReg = VRM.getOriginal(CopyDstReg);
+      if (OrigReg != CopyDstReg) {
+        // Extend the original LI to cover the same range so that the
+        // sub-interval invariant holds: the original must be live wherever
+        // any of its children are live.  Without this, reMaterializeFor()
+        // can query OrigLI at an early-clobber slot that falls inside
+        // [CopyIdx, FoldIdx) and get a null VNI, triggering an assertion.
+        assert(LIS.hasInterval(OrigReg) && "OrigReg should have live interval");
+        LiveInterval &OrigLI = LIS.getInterval(OrigReg);
+        if (VNInfo *OrigVNI = OrigLI.getVNInfoAt(FoldIdx.getRegSlot()))
+          OrigLI.addSegment(
+              LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), OrigVNI));
+      }
     }
   }
   // Update the call info.

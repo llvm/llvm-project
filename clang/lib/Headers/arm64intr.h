@@ -15,6 +15,16 @@
 #ifndef __ARM64INTR_H
 #define __ARM64INTR_H
 
+/* Encode an AArch64 system register for use with
+   _ReadStatusReg/_WriteStatusReg. op0 must be 2 or 3; only the low bit is
+   stored. */
+#define ARM64_SYSREG(op0, op1, CRn, CRm, op2)                                  \
+  ((((op0) & 0x1) << 14) | (((op1) & 0x7) << 11) | (((CRn) & 0xF) << 7) |      \
+   (((CRm) & 0xF) << 3) | ((op2) & 0x7))
+
+#define ARM64_FPCR ARM64_SYSREG(3, 3, 4, 4, 0)
+#define ARM64_FPSR ARM64_SYSREG(3, 3, 4, 4, 1)
+
 typedef enum
 {
   _ARM64_BARRIER_SY    = 0xF,

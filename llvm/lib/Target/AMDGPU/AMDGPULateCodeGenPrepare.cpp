@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
@@ -114,10 +115,10 @@ public:
     const auto *TLI = ST.getTargetLowering();
 
     Type *EltTy = VTy->getElementType();
-    // If the element size is not less than the convert to scalar size, then we
-    // can't do any bit packing
+    // If the element size is not is not a multiple scalar size, then we can't
+    // do any bit packing
     if (!EltTy->isIntegerTy() ||
-        EltTy->getScalarSizeInBits() > ConvertToScalar->getScalarSizeInBits())
+        ConvertToScalar->getScalarSizeInBits() % EltTy->getScalarSizeInBits())
       return false;
 
     // Only coerce illegal types
@@ -536,8 +537,7 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
       Offset - Adjust);
 
   LoadInst *NewLd = IRB.CreateAlignedLoad(IRB.getInt32Ty(), NewPtr, Align(4));
-  NewLd->copyMetadata(LI);
-  NewLd->setMetadata(LLVMContext::MD_range, nullptr);
+  AMDGPU::copyMetadataForWidenedLoad(*NewLd, LI);
 
   unsigned ShAmt = Adjust * 8;
   Value *NewVal = IRB.CreateBitCast(

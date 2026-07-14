@@ -608,6 +608,30 @@ func.func @addui_extended_vector1d(%arg0: vector<3xi16>, %arg1: vector<3xi16>) -
 
 // -----
 
+// CHECK-LABEL: @subui_extended_scalar
+// CHECK-SAME:    ([[ARG0:%.+]]: i32, [[ARG1:%.+]]: i32) -> (i32, i1)
+func.func @subui_extended_scalar(%arg0: i32, %arg1: i32) -> (i32, i1) {
+  // CHECK-NEXT: [[RES:%.+]] = "llvm.intr.usub.with.overflow"([[ARG0]], [[ARG1]]) : (i32, i32) -> !llvm.struct<(i32, i1)>
+  // CHECK-NEXT: [[DIFF:%.+]] = llvm.extractvalue [[RES]][0] : !llvm.struct<(i32, i1)>
+  // CHECK-NEXT: [[BORROW:%.+]] = llvm.extractvalue [[RES]][1] : !llvm.struct<(i32, i1)>
+  %diff, %borrow = arith.subui_extended %arg0, %arg1 : i32, i1
+  // CHECK-NEXT: return [[DIFF]], [[BORROW]] : i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subui_extended_vector1d
+// CHECK-SAME:    ([[ARG0:%.+]]: vector<3xi16>, [[ARG1:%.+]]: vector<3xi16>) -> (vector<3xi16>, vector<3xi1>)
+func.func @subui_extended_vector1d(%arg0: vector<3xi16>, %arg1: vector<3xi16>) -> (vector<3xi16>, vector<3xi1>) {
+  // CHECK-NEXT: [[RES:%.+]] = "llvm.intr.usub.with.overflow"([[ARG0]], [[ARG1]]) : (vector<3xi16>, vector<3xi16>) -> !llvm.struct<(vector<3xi16>, vector<3xi1>)>
+  // CHECK-NEXT: [[DIFF:%.+]] = llvm.extractvalue [[RES]][0] : !llvm.struct<(vector<3xi16>, vector<3xi1>)>
+  // CHECK-NEXT: [[BORROW:%.+]] = llvm.extractvalue [[RES]][1] : !llvm.struct<(vector<3xi16>, vector<3xi1>)>
+  %diff, %borrow = arith.subui_extended %arg0, %arg1 : vector<3xi16>, vector<3xi1>
+  // CHECK-NEXT: return [[DIFF]], [[BORROW]] : vector<3xi16>, vector<3xi1>
+  return %diff, %borrow : vector<3xi16>, vector<3xi1>
+}
+
+// -----
+
 // CHECK-LABEL: @mulsi_extended_scalar
 // CHECK-SAME:    ([[ARG0:%.+]]: i32, [[ARG1:%.+]]: i32) -> (i32, i32)
 func.func @mulsi_extended_scalar(%arg0: i32, %arg1: i32) -> (i32, i32) {

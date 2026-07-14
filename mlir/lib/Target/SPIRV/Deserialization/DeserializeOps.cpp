@@ -417,9 +417,6 @@ spirv::Deserializer::processDebugInfoExtInst(ArrayRef<uint32_t> operands,
                      "<id>, result <id>, set <id> and instruction opcode");
   }
 
-  StringRef &extensionSetName = extendedInstSets[operands[2]];
-  assert(extensionSetName == extDebugInfo);
-
   Type resultType = getType(operands[0]);
   if (!resultType || !isVoidType(resultType))
     return emitError(unknownLoc,

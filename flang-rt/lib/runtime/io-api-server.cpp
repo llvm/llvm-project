@@ -305,6 +305,11 @@ extern "C" void register_rpc_callback_stub(RPCCallbackTy) {
 #pragma comment(linker, \
     "/alternatename:__tgt_register_rpc_callback=" \
     "register_rpc_callback_stub")
+#if defined(_M_ARM64EC)
+#pragma comment(linker, \
+    "/alternatename:#__tgt_register_rpc_callback=" \
+    "#register_rpc_callback_stub")
+#endif
 #endif
 
 // Used for I/O from the offloading device runtime.
@@ -323,20 +328,19 @@ static std::uint32_t HandleRPCOpcodes(void *raw, std::uint32_t numLanes) {
 }
 
 #if defined(__ELF__)
-extern "C" void __tgt_register_rpc_callback(RPCCallbackTy)
-    __attribute__((weak));
+extern "C" [[gnu::weak]] void __tgt_register_rpc_callback(RPCCallbackTy);
 #elif defined(__APPLE__)
-extern "C" void __tgt_register_rpc_callback(RPCCallbackTy)
-    __attribute__((weak_import));
+extern "C" [[gnu::weak]]
+void __tgt_register_rpc_callback(RPCCallbackTy) {}
 #else
 extern "C" void __tgt_register_rpc_callback(RPCCallbackTy);
 #endif
 
 void RegisterRPCHandlers() {
-#if defined(__ELF__) || defined(__APPLE__)
+#if defined(__ELF__)
   if (__tgt_register_rpc_callback)
     __tgt_register_rpc_callback(HandleRPCOpcodes);
-#elif defined(_MSC_VER)
+#elif defined(__APPLE__) || defined(_MSC_VER)
   __tgt_register_rpc_callback(HandleRPCOpcodes);
 #endif
 }

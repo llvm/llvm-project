@@ -23,10 +23,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-wait-sgpr-hazards"
 
-static cl::opt<bool> GlobalEnableSGPRHazardWaits(
-    "amdgpu-sgpr-hazard-wait", cl::init(true), cl::Hidden,
-    cl::desc("Enable required s_wait_alu on SGPR hazards"));
-
 static cl::opt<bool> GlobalCullSGPRHazardsOnFunctionBoundary(
     "amdgpu-sgpr-hazard-boundary-cull", cl::init(false), cl::Hidden,
     cl::desc("Cull hazards on function boundaries"));
@@ -51,7 +47,6 @@ public:
   const MachineRegisterInfo *MRI;
   unsigned DsNopCount;
 
-  bool EnableSGPRHazardWaits;
   bool CullSGPRHazardsOnFunctionBoundary;
   bool CullSGPRHazardsAtMemWait;
   unsigned CullSGPRHazardsMemWaitThreshold;
@@ -278,7 +273,7 @@ public:
       }
 
       // Process only VALUs and SALUs
-      bool IsVALU = SIInstrInfo::isVALU(*MI);
+      bool IsVALU = SIInstrInfo::isVALU(*MI, /*AllowLDSDMA=*/true);
       bool IsSALU = SIInstrInfo::isSALU(*MI);
       if (!IsVALU && !IsSALU)
         continue;
@@ -448,14 +443,10 @@ public:
       return false;
 
     // Parse settings
-    EnableSGPRHazardWaits = GlobalEnableSGPRHazardWaits;
     CullSGPRHazardsOnFunctionBoundary = GlobalCullSGPRHazardsOnFunctionBoundary;
     CullSGPRHazardsAtMemWait = GlobalCullSGPRHazardsAtMemWait;
     CullSGPRHazardsMemWaitThreshold = GlobalCullSGPRHazardsMemWaitThreshold;
 
-    if (!GlobalEnableSGPRHazardWaits.getNumOccurrences())
-      EnableSGPRHazardWaits = MF.getFunction().getFnAttributeAsParsedInteger(
-          "amdgpu-sgpr-hazard-wait", EnableSGPRHazardWaits);
     if (!GlobalCullSGPRHazardsOnFunctionBoundary.getNumOccurrences())
       CullSGPRHazardsOnFunctionBoundary =
           MF.getFunction().hasFnAttribute("amdgpu-sgpr-hazard-boundary-cull");
@@ -467,10 +458,6 @@ public:
           MF.getFunction().getFnAttributeAsParsedInteger(
               "amdgpu-sgpr-hazard-mem-wait-cull-threshold",
               CullSGPRHazardsMemWaitThreshold);
-
-    // Bail if disabled
-    if (!EnableSGPRHazardWaits)
-      return false;
 
     TII = ST->getInstrInfo();
     TRI = ST->getRegisterInfo();

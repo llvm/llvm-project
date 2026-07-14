@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-- < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00-- < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.02-- -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
 
 ; How the replacement of i64 stores with v2i32 stores resulted in
 ; breaking other users of the bitcast if they already existed
