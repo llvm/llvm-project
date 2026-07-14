@@ -903,6 +903,7 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
     else if (getMCSubtargetInfo().checkFeatures("+wavefrontsize32"))
       MRI.reset(llvm::createGCNMCRegisterInfo(AMDGPUDwarfFlavour::Wave32));
   }
+  LLT::setUseExtended(true);
 }
 
 bool AMDGPUTargetMachine::EnableFunctionCalls = false;
@@ -1075,8 +1076,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         // Add promote kernel arguments pass to the opt pipeline right before
         // infer address spaces which is needed to do actual address space
         // rewriting.
-        if (Level.getSpeedupLevel() > OptimizationLevel::O1.getSpeedupLevel() &&
-            EnablePromoteKernelArguments)
+        if (Level > OptimizationLevel::O1 && EnablePromoteKernelArguments)
           FPM.addPass(AMDGPUPromoteKernelArgumentsPass());
 
         // Add infer address spaces pass to the opt pipeline after inlining
