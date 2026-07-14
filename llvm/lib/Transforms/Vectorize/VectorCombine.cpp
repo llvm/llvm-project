@@ -6246,9 +6246,39 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
     return OutputRange;
   };
 
+  // Compute the new number of elements, aligning to vector register
+  // boundaries for fixed-width vectors to avoid non-power-of-2 remainders
+  // that legalize poorly.
+  auto GetAlignedNumElements = [&](unsigned MaxIdx,
+                                   FixedVectorType *LoadTy) -> unsigned {
+    unsigned RawNumElements = MaxIdx + 1u;
+    // Preserve the default behavior for scalable-vector targets.
+    if (TTI.supportsScalableVectors())
+      return RawNumElements;
+
+    Type *ElemTy = LoadTy->getElementType();
+    // Skip alignment for illegal element types.
+    if (!TTI.isTypeLegal(ElemTy))
+      return RawNumElements;
+
+    unsigned ElemBits = ElemTy->getPrimitiveSizeInBits();
+    if (ElemBits == 0)
+      return RawNumElements;
+
+    unsigned RegBits =
+        TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
+    unsigned ElemsPerReg = RegBits / ElemBits;
+    if (ElemsPerReg == 0)
+      return RawNumElements;
+
+    // Round up to the next full register boundary.
+    return alignTo(RawNumElements, ElemsPerReg);
+  };
+
   // Get the range of vector elements used by shufflevector instructions.
   if (std::optional<IndexRange> Indices = GetIndexRangeInShuffles()) {
-    unsigned const NewNumElements = Indices->second + 1u;
+    unsigned const NewNumElements =
+        GetAlignedNumElements(Indices->second, OldLoadTy);
 
     // If the range of vector elements is smaller than the full load, attempt
     // to create a smaller load.
