@@ -1107,6 +1107,15 @@ static llvm::Error Evaluate_DW_OP_piece(EvalContext &eval_ctx,
   if (piece_byte_size == 0)
     return llvm::Error::success();
 
+  // A single piece of a variable's location can never legitimately be
+  // this large.
+  constexpr uint64_t kMaxDWARFPieceByteSize = 1024 * 1024 * 1024; // 1GB
+  if (piece_byte_size > kMaxDWARFPieceByteSize)
+    return llvm::createStringError("DW_OP_piece(%" PRIu64
+                                   ") is larger than the maximum allowed "
+                                   "size of %" PRIu64 " bytes",
+                                   piece_byte_size, kMaxDWARFPieceByteSize);
+
   Value curr_piece;
 
   if (eval_ctx.stack.empty()) {

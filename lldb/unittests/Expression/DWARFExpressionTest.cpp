@@ -670,6 +670,17 @@ TEST(DWARFExpression, DW_OP_piece) {
       ExpectHostAddress(expected_host_buffer));
 }
 
+TEST(DWARFExpression, DW_OP_piece_oversized) {
+  // A DW_OP_piece whose declared byte size is absurdly large (e.g. from
+  // corrupt or malicious DWARF) must be rejected with an error instead of
+  // attempting to allocate an unbounded host-side buffer, which can abort
+  // the whole debugger.
+
+  // ULEB128 encoding of 0x40000001, one byte past the 1GB piece-size limit.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_piece, 0x81, 0x80, 0x80, 0x80, 0x04}),
+                       llvm::Failed());
+}
+
 TEST(DWARFExpression, DW_OP_implicit_value) {
   unsigned char bytes = 4;
 
