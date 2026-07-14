@@ -554,8 +554,8 @@ TEST(VerifierTest, AtomicCmpXchgVector) {
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
   EXPECT_TRUE(StringRef(Error).starts_with(
-      "cmpxchg operand must have integer, floating point, pointer, or fixed "
-      "vector of one of these types"))
+      "cmpxchg operand must have an integer type, floating-point type,"
+      "pointer type, or a fixed vector of any of these types!"))
       << Error;
 }
 
