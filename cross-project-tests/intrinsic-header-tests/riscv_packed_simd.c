@@ -2371,58 +2371,42 @@ uint16x4_t test_pzip_u16x4(uint16x2_t a, uint16x2_t b) {
 // CHECK-LABEL: test_punzipe_i8x4:
 // RV32:        pncvt.b
 // RV64:        pncvt.wb
-int8x4_t test_punzipe_i8x4(int8x8_t a) {
-  return __riscv_punzipe_i8x4(a);
-}
+int8x4_t test_punzipe_i8x4(int8x8_t a) { return __riscv_punzipe_i8x4(a); }
 
 // CHECK-LABEL: test_punzipo_i8x4:
 // RV32:        pncvth.b
 // RV64:        pncvth.wb
-int8x4_t test_punzipo_i8x4(int8x8_t a) {
-  return __riscv_punzipo_i8x4(a);
-}
+int8x4_t test_punzipo_i8x4(int8x8_t a) { return __riscv_punzipo_i8x4(a); }
 
 // CHECK-LABEL: test_punzipe_u8x4:
 // RV32:        pncvt.b
 // RV64:        pncvt.wb
-uint8x4_t test_punzipe_u8x4(uint8x8_t a) {
-  return __riscv_punzipe_u8x4(a);
-}
+uint8x4_t test_punzipe_u8x4(uint8x8_t a) { return __riscv_punzipe_u8x4(a); }
 
 // CHECK-LABEL: test_punzipo_u8x4:
 // RV32:        pncvth.b
 // RV64:        pncvth.wb
-uint8x4_t test_punzipo_u8x4(uint8x8_t a) {
-  return __riscv_punzipo_u8x4(a);
-}
+uint8x4_t test_punzipo_u8x4(uint8x8_t a) { return __riscv_punzipo_u8x4(a); }
 
 // CHECK-LABEL: test_punzipe_i16x2:
 // RV32:        pncvt.h
 // RV64:        pncvt.wh
-int16x2_t test_punzipe_i16x2(int16x4_t a) {
-  return __riscv_punzipe_i16x2(a);
-}
+int16x2_t test_punzipe_i16x2(int16x4_t a) { return __riscv_punzipe_i16x2(a); }
 
 // CHECK-LABEL: test_punzipo_i16x2:
 // RV32:        pncvth.h
 // RV64:        pncvth.wh
-int16x2_t test_punzipo_i16x2(int16x4_t a) {
-  return __riscv_punzipo_i16x2(a);
-}
+int16x2_t test_punzipo_i16x2(int16x4_t a) { return __riscv_punzipo_i16x2(a); }
 
 // CHECK-LABEL: test_punzipe_u16x2:
 // RV32:        pncvt.h
 // RV64:        pncvt.wh
-uint16x2_t test_punzipe_u16x2(uint16x4_t a) {
-  return __riscv_punzipe_u16x2(a);
-}
+uint16x2_t test_punzipe_u16x2(uint16x4_t a) { return __riscv_punzipe_u16x2(a); }
 
 // CHECK-LABEL: test_punzipo_u16x2:
 // RV32:        pncvth.h
 // RV64:        pncvth.wh
-uint16x2_t test_punzipo_u16x2(uint16x4_t a) {
-  return __riscv_punzipo_u16x2(a);
-}
+uint16x2_t test_punzipo_u16x2(uint16x4_t a) { return __riscv_punzipo_u16x2(a); }
 
 // CHECK-LABEL: test_prev_i8x4:
 // CHECK:       rev8
