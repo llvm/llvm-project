@@ -77,6 +77,7 @@
 ; GCN-O0-SDAG-NEXT:   function
 ; GCN-O0-SDAG-NEXT:     machine-function
 ; GCN-O0-SDAG-NEXT:       reg-usage-propagation
+; GCN-O0-SDAG-NEXT:       amdgpu-assign-idx-to-m0
 ; GCN-O0-SDAG-NEXT:       phi-node-elimination
 ; GCN-O0-SDAG-NEXT:       si-lower-control-flow
 ; GCN-O0-SDAG-NEXT:       two-address-instruction
@@ -183,6 +184,7 @@
 ; GCN-O0-GISEL-NEXT:   function
 ; GCN-O0-GISEL-NEXT:     machine-function
 ; GCN-O0-GISEL-NEXT:       reg-usage-propagation
+; GCN-O0-GISEL-NEXT:       amdgpu-assign-idx-to-m0
 ; GCN-O0-GISEL-NEXT:       phi-node-elimination
 ; GCN-O0-GISEL-NEXT:       si-lower-control-flow
 ; GCN-O0-GISEL-NEXT:       two-address-instruction
@@ -330,6 +332,7 @@
 ; GCN-O2-SDAG-NEXT:   function
 ; GCN-O2-SDAG-NEXT:     machine-function
 ; GCN-O2-SDAG-NEXT:       reg-usage-propagation
+; GCN-O2-SDAG-NEXT:       amdgpu-assign-idx-to-m0
 ; GCN-O2-SDAG-NEXT:       amdgpu-prepare-agpr-alloc
 ; GCN-O2-SDAG-NEXT:       detect-dead-lanes
 ; GCN-O2-SDAG-NEXT:       dead-mi-elimination
@@ -524,6 +527,7 @@
 ; GCN-O2-GISEL-NEXT:   function
 ; GCN-O2-GISEL-NEXT:     machine-function
 ; GCN-O2-GISEL-NEXT:       reg-usage-propagation
+; GCN-O2-GISEL-NEXT:       amdgpu-assign-idx-to-m0
 ; GCN-O2-GISEL-NEXT:       amdgpu-prepare-agpr-alloc
 ; GCN-O2-GISEL-NEXT:       detect-dead-lanes
 ; GCN-O2-GISEL-NEXT:       dead-mi-elimination
@@ -711,6 +715,7 @@
 ; GCN-O3-SDAG-NEXT:   function
 ; GCN-O3-SDAG-NEXT:     machine-function
 ; GCN-O3-SDAG-NEXT:       reg-usage-propagation
+; GCN-O3-SDAG-NEXT:       amdgpu-assign-idx-to-m0
 ; GCN-O3-SDAG-NEXT:       amdgpu-prepare-agpr-alloc
 ; GCN-O3-SDAG-NEXT:       detect-dead-lanes
 ; GCN-O3-SDAG-NEXT:       dead-mi-elimination
@@ -905,6 +910,7 @@
 ; GCN-O3-GISEL-NEXT:   function
 ; GCN-O3-GISEL-NEXT:     machine-function
 ; GCN-O3-GISEL-NEXT:       reg-usage-propagation
+; GCN-O3-GISEL-NEXT:       amdgpu-assign-idx-to-m0
 ; GCN-O3-GISEL-NEXT:       amdgpu-prepare-agpr-alloc
 ; GCN-O3-GISEL-NEXT:       detect-dead-lanes
 ; GCN-O3-GISEL-NEXT:       dead-mi-elimination
