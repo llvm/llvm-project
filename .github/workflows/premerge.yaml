@@ -297,5 +297,6 @@ jobs:
                 -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
           ninja -C build ${CHECK_TARGETS}
-
-          sccache --show-stats
+      - name: Stop sccache
+        if: always()
+        run: sccache --stop-server
