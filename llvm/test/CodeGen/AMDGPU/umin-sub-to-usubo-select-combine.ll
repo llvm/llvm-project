@@ -209,8 +209,8 @@ define amdgpu_ps i64 @s_underflow_compare_fold_i64(i64 inreg %a, i64 inreg %b) #
 ; GFX9-LABEL: s_underflow_compare_fold_i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_sub_u32 s2, s0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    s_subb_u32 s3, s1, s3
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    v_cmp_lt_u64_e32 vcc, s[2:3], v[0:1]
 ; GFX9-NEXT:    s_and_b64 s[4:5], vcc, exec

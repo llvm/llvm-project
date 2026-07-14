@@ -23,10 +23,8 @@ for.body:
   %c.042 = phi i16 [ 0, %for.body.lr.ph ], [ %c.0., %for.body ]
   %arrayidx = getelementptr inbounds i16, ptr %1, i64 %indvars.iv
   %4 = load i16, ptr %arrayidx, align 2, !tbaa !7
-  %cmp2 = icmp sgt i16 %c.042, %4
-  %c.0. = select i1 %cmp2, i16 %c.042, i16 %4
-  %cmp13 = icmp slt i16 %d.043, %4
-  %.sink28 = select i1 %cmp13, i16 %d.043, i16 %4
+  %c.0. = call i16 @llvm.smax(i16 %c.042, i16 %4)
+  %.sink28 = call i16 @llvm.smin(i16 %d.043, i16 %4)
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %cmp = icmp slt i64 %indvars.iv.next, %3
   br i1 %cmp, label %for.body, label %for.end

@@ -10,13 +10,14 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
-#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
+#include "mlir/Dialect/XeGPU/uArch/uArchCommon.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -152,7 +153,8 @@ struct SgToLaneLoadNd : public OpConversionPattern<xegpu::LoadNdOp> {
     if (op.getTensorDescType().getLayout() != layout)
       return rewriter.notifyMatchFailure(
           op, "conflicting layout attributes on tensor descriptor and anchor");
-    auto uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+    const auto *uArch =
+        xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
     if (!uArch)
       return rewriter.notifyMatchFailure(
           op, "xegpu::LoadNdOp require target attribute attached to "
@@ -259,7 +261,8 @@ struct SgToLaneDpas : public OpConversionPattern<xegpu::DpasOp> {
               "lane layout");
 
     // Validate bit widths match uArch packed format requirements
-    const uArch *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+    const auto *uArch =
+        xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
     if (uArch) {
       const auto *uArchInstruction =
           dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(
@@ -355,6 +358,11 @@ struct SgToLaneElementWise : public ConversionPattern {
 
 /// Distributes a subgroup-level arith ConstantOp to lane-level arith
 /// ConstantOp.
+///
+/// Splat constants are rebuilt with the lane-local vector type. Non-splat
+/// constants are distributed by extracting each lane_data-sized block from
+/// the full constant and inserting it at the correct position in the
+/// distributed vector using insert_strided_slice.
 struct SgToLaneArithConstant : public OpConversionPattern<arith::ConstantOp> {
   using OpConversionPattern<arith::ConstantOp>::OpConversionPattern;
 
@@ -365,11 +373,11 @@ struct SgToLaneArithConstant : public OpConversionPattern<arith::ConstantOp> {
     if (!resultType)
       return failure();
 
-    // Only handle dense vector constants
-    auto dense = dyn_cast<SplatElementsAttr>(op.getValue());
-    if (!dense)
+    // Only handle dense vector constants.
+    auto denseAttr = dyn_cast<DenseElementsAttr>(op.getValue());
+    if (!denseAttr)
       return rewriter.notifyMatchFailure(
-          op, "only dense splat vector constants are supported");
+          op, "only dense vector constants are supported");
 
     xegpu::DistributeLayoutAttr layout =
         xegpu::getTemporaryLayout(llvm::cast<OpResult>(op.getResult()));
@@ -385,12 +393,83 @@ struct SgToLaneArithConstant : public OpConversionPattern<arith::ConstantOp> {
           op, "unable to compute lane vector type from the layout");
 
     VectorType newResultType = laneShapeOrFailure.value();
-    auto sclarValue = dense.getSplatValue<Attribute>();
-    auto newDenseAttr = DenseElementsAttr::get(newResultType, sclarValue);
+    Location loc = op.getLoc();
 
-    auto newOp = arith::ConstantOp::create(rewriter, op.getLoc(), newResultType,
-                                           newDenseAttr);
-    rewriter.replaceOp(op, newOp.getResult());
+    // Splat constants: every lane gets the same value, so just rebuild the
+    // splat with the distributed type.
+    if (denseAttr.isSplat()) {
+      auto scalarValue = denseAttr.getSplatValue<Attribute>();
+      auto newDenseAttr = DenseElementsAttr::get(newResultType, scalarValue);
+      auto newOp =
+          arith::ConstantOp::create(rewriter, loc, newResultType, newDenseAttr);
+      rewriter.replaceOp(op, newOp.getResult());
+      return success();
+    }
+
+    // Non-splat constants: each lane extracts the elements it owns from the
+    // full constant using the distributed coordinates from the layout.
+    auto fullConst =
+        arith::ConstantOp::create(rewriter, loc, resultType, denseAttr);
+
+    Value laneId = gpu::LaneIdOp::create(rewriter, loc, rewriter.getIndexType(),
+                                         /*upperBound=*/mlir::IntegerAttr());
+    auto maybeCoordsVec = layout.computeDistributedCoords(
+        rewriter, loc, laneId, resultType.getShape());
+    if (failed(maybeCoordsVec))
+      return rewriter.notifyMatchFailure(
+          op, "failed to compute distributed coordinates from layout");
+
+    SmallVector<SmallVector<Value>> coordsVec = maybeCoordsVec.value();
+    SmallVector<int64_t> laneData = layout.getEffectiveLaneDataAsInt();
+    ArrayRef<int64_t> distShape = newResultType.getShape();
+    int64_t rank = newResultType.getRank();
+
+    // Each lane owns one lane_data-sized block per distribution unit.
+    // computeDistributedCoords returns those block starts in row-major order
+    // over the block grid (distShape / laneData).
+    SmallVector<int64_t> blockGridShape(rank);
+    for (int64_t d = 0; d < rank; d++)
+      blockGridShape[d] = distShape[d] / laneData[d];
+    SmallVector<int64_t> blockGridStrides = computeStrides(blockGridShape);
+
+    auto blockType = VectorType::get(laneData, newResultType.getElementType());
+    SmallVector<int64_t> unitTile(rank, 1);
+    SmallVector<int64_t> strides(rank, 1);
+
+    Value result = arith::ConstantOp::create(
+        rewriter, loc, newResultType, rewriter.getZeroAttr(newResultType));
+
+    for (auto [blockIdx, blockStart] : llvm::enumerate(coordsVec)) {
+      // Gather the block's elements from the full constant. The block start is
+      // lane-dynamic, so extract element-by-element (row-major over lane_data)
+      // instead.
+      SmallVector<Value> blockElems;
+      for (SmallVector<int64_t> off :
+           StaticTileOffsetRange(laneData, unitTile)) {
+        SmallVector<OpFoldResult> pos(rank);
+        for (int64_t d = 0; d < rank; d++)
+          pos[d] = getAsOpFoldResult(arith::AddIOp::create(
+              rewriter, loc, blockStart[d],
+              arith::ConstantIndexOp::create(rewriter, loc, off[d])));
+        blockElems.push_back(vector::ExtractOp::create(
+            rewriter, loc, fullConst.getResult(), pos));
+      }
+
+      // Rebuild the block keeping its lane_data shape, then place it with
+      // insert_strided_slice so the block keeps its orientation in the
+      // distributed vector (e.g. a [2, 1] block stays a vertical 2x1 slice).
+      Value block =
+          vector::FromElementsOp::create(rewriter, loc, blockType, blockElems);
+      SmallVector<int64_t> blockGridPos =
+          delinearize(blockIdx, blockGridStrides);
+      SmallVector<int64_t> offsets(rank);
+      for (int64_t d = 0; d < rank; d++)
+        offsets[d] = blockGridPos[d] * laneData[d];
+      result = vector::InsertStridedSliceOp::create(rewriter, loc, block,
+                                                    result, offsets, strides);
+    }
+
+    rewriter.replaceOp(op, result);
     return success();
   }
 };
@@ -503,7 +582,7 @@ struct SgToLaneLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
     auto newOp = xegpu::LoadGatherOp::create(
         rewriter, op.getLoc(), distResultTy1D, distSource, distOffsets,
         distMask, op.getChunkSizeAttr(), op.getL1HintAttr(), op.getL2HintAttr(),
-        op.getL3HintAttr(), /*layout=*/nullptr);
+        op.getL3HintAttr(), /*layout=*/nullptr, /*contiguity=*/nullptr);
 
     Value result = newOp->getResult(0);
     if (distResultTy1D != distResultTy)
@@ -543,7 +622,8 @@ struct SgToLaneVectorReduction
 
     // Get the subgroup size from the layout.
     int64_t sgSize = layout.getEffectiveLaneLayoutAsInt()[0];
-    const uArch *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+    const auto *uArch =
+        xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
     if (!uArch)
       return rewriter.notifyMatchFailure(
           op, "xegpu::ReductionOp require target attribute attached to "
@@ -1034,7 +1114,8 @@ struct SgToLaneStoreScatter
     xegpu::StoreScatterOp::create(rewriter, op.getLoc(), distValue, distDest,
                                   distOffsets, distMask, op.getChunkSizeAttr(),
                                   op.getL1HintAttr(), op.getL2HintAttr(),
-                                  op.getL3HintAttr(), /*layout=*/nullptr);
+                                  op.getL3HintAttr(), /*layout=*/nullptr,
+                                  /*contiguity=*/nullptr);
     rewriter.eraseOp(op);
     return success();
   }
@@ -1214,7 +1295,8 @@ struct SgToLaneVectorExtractStridedSlice
         return rewriter.notifyMatchFailure(
             op, "only single dimension distribution is supported");
       int64_t distDim = distributedDims[0];
-      const uArch *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+      const auto *uArch =
+          xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
       if (!uArch)
         return rewriter.notifyMatchFailure(
             op, "target attribute required to determine subgroup size");
@@ -1418,7 +1500,8 @@ struct SgToLaneVectorInsertStridedSlice
             op, "only single dimension distribution is supported");
       int64_t destDistDim = destDistributedDims[0];
 
-      const uArch *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+      const auto *uArch =
+          xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
       if (!uArch)
         return rewriter.notifyMatchFailure(
             op, "target attribute required to determine subgroup size");
@@ -1681,7 +1764,8 @@ struct SgToLaneDpasMx : public OpConversionPattern<xegpu::DpasMxOp> {
   LogicalResult
   matchAndRewrite(xegpu::DpasMxOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    const uArch *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+    const auto *uArch =
+        xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
     if (!uArch)
       return failure();
     if (!uArch->isSupportedInstruction(
@@ -1814,98 +1898,37 @@ void XeGPUSgToLaneDistributePass::runOnOperation() {
   // Perform a structural type conversion to convert structural ops to have WI
   // types. This will insert UnrealizedConversionCastOps to make the IR
   // valid.
-  auto materializeCast = [&](mlir::OpBuilder &builder, mlir::Type type,
-                             mlir::ValueRange inputs,
-                             mlir::Location loc) -> mlir::Value {
-    UnrealizedConversionCastOp castOp =
-        UnrealizedConversionCastOp::create(builder, loc, type, inputs);
-    return castOp.getResult(0);
-  };
   {
     ConversionTarget target(getContext());
     TypeConverter typeConverter;
     RewritePatternSet patterns(&getContext());
+    // Source (N:1) and target (1:1) materializations using
+    // UnrealizedConversionCastOp.
+    auto materializeCast = [](OpBuilder &builder, Type type, ValueRange inputs,
+                              Location loc) -> Value {
+      return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
+          .getResult(0);
+    };
     typeConverter.addSourceMaterialization(materializeCast);
     typeConverter.addTargetMaterialization(materializeCast);
-    xegpu::populateXeGPUSgToLaneDistributeTypeConversions(typeConverter);
+    xegpu::populateXeGPUSgToLaneDistributeTypeConversions(typeConverter, root);
     scf::populateSCFStructuralTypeConversionsAndLegality(typeConverter,
                                                          patterns, target);
     xegpu::populateXeGPUSgToLaneDistributeTypeConversionAndLegality(
-        typeConverter, patterns, target);
+        typeConverter, patterns, target, root);
     target.addLegalOp<UnrealizedConversionCastOp>();
     (void)applyPartialConversion(root, target, std::move(patterns));
   }
-  // Structural type conversion can generate some redundant
-  // UnrealizedConversionCastOps to materialize the SG type from type converted
-  // lane type. These are redundant at this point and can be eliminated by
-  // inserting shape casts instead.
-  // Example:
-  // %1 = UnrealizedConversionCastOp %0 : vector<16x1xf32> to vector<16x16xf32>
-  // %2 = UnrealizedConversionCastOp %1 : vector<16x16xf32> to vector<16xf32>
-  // This can be replaced with:
-  // %2 = vector.shape_cast %0 : vector<16x1xf32> to vector<16xf32>
-  OpBuilder builder(root);
-  root->walk([&](UnrealizedConversionCastOp op) {
-    // If this op existed before, nothing to do.
-    if (existingCasts.contains(op))
-      return;
-    // number of inputs and outputs must be 1.
-    if (op.getNumOperands() != 1 || op.getNumResults() != 1)
-      return;
-    // Both input and output types must be vector types.
-    auto singleInput = op.getInputs()[0];
-    auto inputTy = dyn_cast<VectorType>(singleInput.getType());
-    auto outputTy = dyn_cast<VectorType>(op.getResult(0).getType());
-    if (!inputTy || !outputTy)
-      return;
-
-    // Check if the defining op of the input is also an
-    // UnrealizedConversionCastOp and it has a single user (which is this
-    // op).
-    auto definingOp = singleInput.getDefiningOp<UnrealizedConversionCastOp>();
-    if (!definingOp || !definingOp->hasOneUse())
-      return;
-    auto inputOfDefiningOp = definingOp.getInputs()[0];
-    // If the input of the defining op and output type are both vector types
-    // have same number of elements, insert a shape cast.
-    auto inputOfDefiningOpTy =
-        dyn_cast<VectorType>(inputOfDefiningOp.getType());
-    if (inputOfDefiningOpTy &&
-        inputOfDefiningOpTy.getNumElements() == outputTy.getNumElements()) {
-      builder.setInsertionPoint(op);
-      auto shapeCast = vector::ShapeCastOp::create(builder, op.getLoc(),
-                                                   outputTy, inputOfDefiningOp);
-      op.replaceAllUsesWith(ValueRange{shapeCast.getResult()});
-      return;
-    }
-  });
-  // At this point, we will have some dead UnrealizedConversionCastOps. Just
-  // erase them.
-  bool changed = true;
-  while (changed) {
-    changed = false;
-    root->walk([&](UnrealizedConversionCastOp op) {
-      // Skip existing casts.
-      if (existingCasts.contains(op))
-        return;
-      if (op.use_empty()) {
-        op.erase();
-        changed = true;
-      }
-    });
-  }
-
+  // Fold cancelling cast chains and erase dead casts.
+  xegpu::cleanupUnrealizedConversionCasts(root, existingCasts);
   xegpu::removeTemporaryLayoutAttrs(getOperation());
 }
 
 void xegpu::populateXeGPUSgToLaneDistributeTypeConversions(
-    TypeConverter &typeConverter) {
-  // Any type other than TensorDescType and VectorType are legal as is.
-  typeConverter.addConversion([](Type type) -> std::optional<Type> {
-    if (!isa<TensorDescType, VectorType>(type))
-      return type;
-    return std::nullopt;
-  });
+    TypeConverter &typeConverter, Operation *topLevelOp) {
+  // Pass through any type by default; more specific conversions registered
+  // below override this for TensorDescType and (distributing) VectorType.
+  typeConverter.addConversion([](Type type) -> Type { return type; });
   // For TensorDescType, drop the layout attribute if any.
   typeConverter.addConversion([](TensorDescType type) -> Type {
     if (type.getLayoutAttr()) {
@@ -1913,29 +1936,28 @@ void xegpu::populateXeGPUSgToLaneDistributeTypeConversions(
     }
     return type;
   });
-  // For VectorType, check if there is a distribute layout attribute on the
-  // value. If so, convert to the distributed vector type based on the layout.
-  typeConverter.addConversion([](Value v) -> std::optional<Type> {
-    auto type = v.getType();
-    // If value is not vector type, nothing to do.
-    if (!isa<VectorType>(type))
-      return std::nullopt;
-    auto layout = xegpu::getDistributeLayoutAttr(v);
-    if (!layout || !layout.isForSubgroup())
-      return type;
-    // Vector type is distributed based on lane layout.
-    auto newTyOrFailure =
-        getDistVecTypeBasedOnLaneLayout(layout, cast<VectorType>(type));
-    if (failed(newTyOrFailure))
-      return type;
-    return *newTyOrFailure;
-  });
+  // For VectorType, distribute based on the lane layout (1:1 shape-changing
+  // conversion). Uses xegpu::addVectorTypeConversion with a pre-computed
+  // map for SCF loop block args (see precomputeLoopBlockArgTypes for the
+  // rationale).
+  auto getSubShapeAndCount = [](VectorType vecTy,
+                                xegpu::DistributeLayoutAttr layout)
+      -> std::pair<SmallVector<int64_t>, int> {
+    auto distTyOrFailure = getDistVecTypeBasedOnLaneLayout(layout, vecTy);
+    if (failed(distTyOrFailure))
+      return {{}, 0};
+    return {SmallVector<int64_t>(distTyOrFailure->getShape()), 1};
+  };
+  auto loopArgTypes =
+      xegpu::precomputeLoopBlockArgTypes(topLevelOp, getSubShapeAndCount);
+  xegpu::addVectorTypeConversion(typeConverter, getSubShapeAndCount,
+                                 std::move(loopArgTypes));
 }
 
 void xegpu::populateXeGPUSgToLaneDistributeTypeConversionAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
-    ConversionTarget &target) {
-  populateXeGPUSgToLaneDistributeTypeConversions(typeConverter);
+    ConversionTarget &target, Operation *topLevelOp) {
+  populateXeGPUSgToLaneDistributeTypeConversions(typeConverter, topLevelOp);
   // CreateNdDescOp is legal only if its result type has no layout attribute.
   target.addDynamicallyLegalOp<xegpu::CreateNdDescOp>(
       [&](xegpu::CreateNdDescOp op) { return !op.getType().getLayoutAttr(); });

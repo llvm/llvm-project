@@ -121,11 +121,8 @@ func.func @return_two(%arg0: i32, %arg1: i32) -> (i32, i32) {
 // CHECK-LABEL:   emitc.func @caller(
 // CHECK-SAME:      %[[ARG0:.*]]: i32) -> i32 {
 // CHECK-NEXT:      %[[VAL_0:.*]] = call @return_two(%[[ARG0]], %[[ARG0]]) : (i32, i32) -> !emitc.opaque<"struct return_i32_i32">
-// CHECK-NEXT:      %[[VAL_1:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<!emitc.opaque<"struct return_i32_i32">>
-// CHECK-NEXT:      assign %[[VAL_0]] : !emitc.opaque<"struct return_i32_i32"> to %[[VAL_1]] : <!emitc.opaque<"struct return_i32_i32">>
-// CHECK-NEXT:      %[[VAL_2:.*]] = "emitc.member"(%[[VAL_1]]) <{member = "field1"}> : (!emitc.lvalue<!emitc.opaque<"struct return_i32_i32">>) -> !emitc.lvalue<i32>
-// CHECK-NEXT:      %[[VAL_3:.*]] = load %[[VAL_2]] : <i32>
-// CHECK-NEXT:      return %[[VAL_3]] : i32
+// CHECK-NEXT:      %[[VAL_1:.*]] = "emitc.member"(%[[VAL_0]]) <{member = "field1"}> : (!emitc.opaque<"struct return_i32_i32">) -> i32
+// CHECK-NEXT:      return %[[VAL_1]] : i32
 // CHECK-NEXT:    }
 func.func @return_two(%arg0: i32, %arg1: i32) -> (i32, i32) {
   return %arg0, %arg1 : i32, i32
@@ -168,4 +165,18 @@ func.func @first(%arg0: i32) -> (i32, i32) {
 }
 func.func @second(%arg0: i32) -> (i32, i32) {
   return %arg0, %arg0 : i32, i32
+}
+
+// -----
+
+// CHECK-LABEL: emitc.func private @memref_callee(!emitc.array<4x8xf32>)
+func.func private @memref_callee(%buff : memref<4x8xf32>)
+
+// CHECK-LABEL: emitc.func @memref_call(
+// CHECK-SAME:                          %[[ARG0:.*]]: !emitc.array<4x8xf32>)
+// CHECK-NEXT: call @memref_callee(%[[ARG0]]) : (!emitc.array<4x8xf32>) -> ()
+// CHECK-NEXT: return
+func.func @memref_call(%buff : memref<4x8xf32>) {
+  func.call @memref_callee(%buff) : (memref<4x8xf32>) -> ()
+  return
 }

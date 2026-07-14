@@ -219,6 +219,8 @@ def HasLSUI          : Predicate<"Subtarget->hasLSUI()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSUI), "lsui">;
 def HasOCCMO         : Predicate<"Subtarget->hasOCCMO()">,
                                  AssemblerPredicateWithAll<(all_of FeatureOCCMO), "occmo">;
+def HasHINTE         : Predicate<"Subtarget->hasHINTE()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureHINTE), "hinte">;
 def HasLSCP          : Predicate<"Subtarget->hasLSCP()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSCP), "lscp">;
 def HasSVE2p2        : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()">,
@@ -227,9 +229,9 @@ def HasSVE_B16MM     : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasS
                                  AssemblerPredicateWithAll<(all_of FeatureSVE_B16MM), "sve-b16mm">;
 def HasF16MM         : Predicate<"Subtarget->hasF16MM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureF16MM), "f16mm">;
-def HasSVE2p3        : Predicate<"Subtarget->hasSVE2p3()">,
+def HasSVE2p3        : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2p3()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2p3), "sve2p3">;
-def HasSME2p3        : Predicate<"Subtarget->hasSME2p3()">,
+def HasSME2p3        : Predicate<"Subtarget->isStreaming() && Subtarget->hasSME2p3()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2p3), "sme2p3">;
 def HasF16F32DOT     : Predicate<"Subtarget->hasF16F32DOT()">,
                                  AssemblerPredicateWithAll<(all_of FeatureF16F32DOT), "f16f32dot">;
@@ -1552,13 +1554,16 @@ let hasSideEffects = 1, isCodeGenOnly = 1, isTerminator = 1, isBarrier = 1 in {
 //===----------------------------------------------------------------------===//
 
 def HINT : HintI<"hint">;
-def : InstAlias<"yield",(HINT 0b001)>;
-def : InstAlias<"wfe",  (HINT 0b010)>;
-def : InstAlias<"wfi",  (HINT 0b011)>;
-def : InstAlias<"sev",  (HINT 0b100)>;
-def : InstAlias<"sevl", (HINT 0b101)>;
-def : InstAlias<"dgh",  (HINT 0b110)>;
-def : InstAlias<"esb",  (HINT 0b10000)>, Requires<[HasRAS]>;
+let Predicates = [HasHINTE] in
+def HINTE : HintE<"hinte">;
+
+def : InstAlias<"yield",(HINT 1)>;
+def : InstAlias<"wfe",  (HINT 2)>;
+def : InstAlias<"wfi",  (HINT 3)>;
+def : InstAlias<"sev",  (HINT 4)>;
+def : InstAlias<"sevl", (HINT 5)>;
+def : InstAlias<"dgh",  (HINT 6)>;
+def : InstAlias<"esb",  (HINT 16)>, Requires<[HasRAS]>;
 def : InstAlias<"csdb", (HINT 20)>;
 
 let CRm = 0b0000, hasSideEffects = 0 in
@@ -1566,20 +1571,30 @@ def NOP : SystemNoOperands<0b000, "hint\t#0">;
 
 def : InstAlias<"nop", (NOP)>;
 
-def STSHH: STSHHI;
+def : InstAlias<"stshh keep", (HINT 48), 1>;
+def : InstAlias<"stshh strm", (HINT 49), 1>;
+def : InstAlias<"shuh", (HINT 50), 1>;
+def : InstAlias<"shuh ph", (HINT 51), 1>;
+def : InstAlias<"stcph", (HINT 52), 1>;
 
 // In order to be able to write readable assembly, LLVM should accept assembly
 // inputs that use Branch Target Identification mnemonics, even with BTI disabled.
 // However, in order to be compatible with other assemblers (e.g. GAS), LLVM
 // should not emit these mnemonics unless BTI is enabled.
 def : InstAlias<"bti",  (HINT 32), 0>;
-def : InstAlias<"bti $op", (HINT btihint_op:$op), 0>;
+def : InstAlias<"bti r",  (HINT 32), 0>;
+def : InstAlias<"bti c",  (HINT 34), 0>;
+def : InstAlias<"bti j",  (HINT 36), 0>;
+def : InstAlias<"bti jc", (HINT 38), 0>;
 def : InstAlias<"bti r", (HINT 32)>, Requires<[HasBTIE]>;
 def : InstAlias<"bti",  (HINT 32)>, Requires<[HasBTI]>;
-def : InstAlias<"bti $op", (HINT btihint_op:$op)>, Requires<[HasBTI]>;
+def : InstAlias<"bti c",  (HINT 34)>, Requires<[HasBTI]>;
+def : InstAlias<"bti j",  (HINT 36)>, Requires<[HasBTI]>;
+def : InstAlias<"bti jc", (HINT 38)>, Requires<[HasBTI]>;
 
 // v8.2a Statistical Profiling extension
-def : InstAlias<"psb $op",  (HINT psbhint_op:$op)>, Requires<[HasSPE]>;
+def : InstAlias<"psb csync", (HINT 17), 1>, Requires<[HasSPE]>;
+def : InstAlias<"tsb csync", (HINT 18), 1>, Requires<[HasTRACEV8_4]>;
 
 // As far as LLVM is concerned this writes to the system's exclusive monitors.
 let mayLoad = 1, mayStore = 1 in
@@ -1597,12 +1612,6 @@ def DSB   : CRmSystemI<barrier_op, 0b100, "dsb",
 def ISB   : CRmSystemI<barrier_op, 0b110, "isb",
                        [(int_aarch64_isb (i32 imm32_0_15:$CRm))]>;
 
-def TSB   : CRmSystemI<barrier_op, 0b010, "tsb", []> {
-  let CRm        = 0b0010;
-  let Inst{12}   = 0;
-  let Predicates = [HasTRACEV8_4];
-}
-
 def DSBnXS  : CRmSystemI<barrier_nxs_op, 0b001, "dsb"> {
   let CRm{1-0}   = 0b11;
   let Inst{9-8}  = 0b10;
@@ -1613,16 +1622,6 @@ let Predicates = [HasWFxT] in {
 def WFET : RegInputSystemI<0b0000, 0b000, "wfet">;
 def WFIT : RegInputSystemI<0b0000, 0b001, "wfit">;
 }
-
-// Branch Record Buffer two-word mnemonic instructions
-class BRBEI<bits<3> op2, string keyword>
-    : SimpleSystemI<0, (ins), "brb", keyword>, Sched<[WriteSys]> {
-  let Inst{31-8} = 0b110101010000100101110010;
-  let Inst{7-5} = op2;
-  let Predicates = [HasBRBE];
-}
-def BRB_IALL: BRBEI<0b100, "\tiall">;
-def BRB_INJ:  BRBEI<0b101, "\tinj">;
 
 }
 
@@ -2277,6 +2276,27 @@ let Predicates = [HasPAuth] in {
     let Uses = [X16];
   }
 
+  // AUT a pointer using a PC-blended discriminator and re-PAC with different
+  // keys/data. This directly manipulates x16/x17, which are the only registers
+  // certain OSs guarantee are safe to use for sensitive operations.
+  // Additionally, it uses fixed implicit registers x15/x16/x17 for the AUT as
+  // AUTI[AB]171615 is the only instruction that can do the three-input-operand
+  // AUT, unlike the other PAuth-related pseudos (AUTx16x17, AUTPAC) where
+  // the register operands are structurally necessary.
+  def AUTPCPAC
+      : Pseudo<(outs),
+               (ins i32imm:$AUTKey,
+                    i32imm:$PACKey, i64imm:$PACDisc, GPR64noip:$PACAddrDisc),
+               []>, Sched<[WriteI, ReadI]> {
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let Size = 48;
+    let Defs = [X17,X15,X16,NZCV];
+    let Uses = [X15,X16,X17];
+  }
+
   // Similiar to AUTPAC, except a 32bit value is loaded at Addend offset from
   // pointer and this value is added to the pointer before signing. This
   // directly manipulates x16/x17, which are the only registers the OS
@@ -2539,10 +2559,9 @@ def MSR_FPSR : Pseudo<(outs), (ins GPR64:$val),
                PseudoInstExpansion<(MSR 0xda21, GPR64:$val)>,
                Sched<[WriteSys]>;
 
-let Defs = [FPMR] in
+let Uses = [FPMR], Defs = [FPMR, NZCV], usesCustomInserter = 1 in
 def MSR_FPMR : Pseudo<(outs), (ins GPR64:$val),
                       [(int_aarch64_set_fpmr i64:$val)]>,
-               PseudoInstExpansion<(MSR 0xda22, GPR64:$val)>,
                Sched<[WriteSys]>;
 
 // Generic system instructions
@@ -2552,6 +2571,14 @@ def SYSLxt : SystemLXtI<1, "sysl">;
 def : InstAlias<"sys $op1, $Cn, $Cm, $op2",
                 (SYSxt timm32_0_7:$op1, sys_cr_op:$Cn,
                  sys_cr_op:$Cm, timm32_0_7:$op2, XZR)>;
+def : InstAlias<"apas $Xt",
+                (SYSxt 6, 7, 0, 0, GPR64:$Xt), 2>;
+def : InstAlias<"brb\tiall",
+                (SYSxt 1, 7, 2, 4, XZR), 2>, Requires<[HasBRBE]>;
+def : InstAlias<"brb\tinj",
+                (SYSxt 1, 7, 2, 5, XZR), 2>, Requires<[HasBRBE]>;
+def : InstAlias<"trcit $Rt",
+                (SYSxt 3, 7, 2, 7, GPR64:$Rt), 2>, Requires<[HasITE]>;
 
 
 //===----------------------------------------------------------------------===//
@@ -2760,6 +2787,12 @@ def copyFromSP: PatLeaf<(i64 GPR64:$src), [{
   return N->getOpcode() == ISD::CopyFromReg &&
          cast<RegisterSDNode>(N->getOperand(1))->getReg() == AArch64::SP;
 }]>;
+
+// Pseudo instruction for stack guard cookie unmixing (epilogue).
+// This will be expanded post-RA to use FP directly, avoiding an extra mov.
+// Pattern matching for this will be done via custom C++ code during instruction selection.
+def STACK_GUARD_UNMIX : Pseudo<(outs GPR64:$dst), (ins GPR64:$stored_val), []>,
+                        Sched<[]>;
 
 // Use SUBS instead of SUB to enable CSE between SUBS and SUB.
 def : Pat<(sub GPR32sp:$Rn, addsub_shifted_imm32:$imm),
@@ -3080,9 +3113,6 @@ let Predicates = [HasLSUI] in {
   defm : STOPregisterLSUI<"sttclr","LDTCLR">; // STTCLRx
   defm : STOPregisterLSUI<"sttset","LDTSET">; // STTSETx
 }
-
-// v9.6-a FEAT_RME_GPC3
-def APAS : APASI;
 
 // v8.1 atomic LD<OP>(register). Performs load and then ST<OP>(register)
 defm LDADD   : LDOPregister<0b000, "add", 0, 0, "">;
@@ -5833,11 +5863,6 @@ defm FCMLT  : SIMDFPCmpTwoVector<0, 1, 0b01110, "fcmlt", AArch64fcmltz>;
 defm FCVTAS : SIMDTwoVectorFPToInt<0,0,0b11100, "fcvtas",int_aarch64_neon_fcvtas>;
 defm FCVTAU : SIMDTwoVectorFPToInt<1,0,0b11100, "fcvtau",int_aarch64_neon_fcvtau>;
 defm FCVTL  : SIMDFPWidenTwoVector<0, 0, 0b10111, "fcvtl">;
-def : Pat<(v4f32 (int_aarch64_neon_vcvthf2fp (v4i16 V64:$Rn))),
-          (FCVTLv4i16 V64:$Rn)>;
-def : Pat<(v4f32 (int_aarch64_neon_vcvthf2fp (extract_subvector (v8i16 V128:$Rn),
-                                                                (i64 4)))),
-          (FCVTLv8i16 V128:$Rn)>;
 def : Pat<(v2f64 (any_fpextend (v2f32 V64:$Rn))),
           (FCVTLv2i32 V64:$Rn)>;
 def : Pat<(v2f64 (any_fpextend (v2f32 (extract_high_v4f32 (v4f32 V128:$Rn))))),
@@ -5851,11 +5876,6 @@ defm FCVTMU : SIMDTwoVectorFPToInt<1,0,0b11011, "fcvtmu",int_aarch64_neon_fcvtmu
 defm FCVTNS : SIMDTwoVectorFPToInt<0,0,0b11010, "fcvtns",int_aarch64_neon_fcvtns>;
 defm FCVTNU : SIMDTwoVectorFPToInt<1,0,0b11010, "fcvtnu",int_aarch64_neon_fcvtnu>;
 defm FCVTN  : SIMDFPNarrowTwoVector<0, 0, 0b10110, "fcvtn">;
-def : Pat<(v4i16 (int_aarch64_neon_vcvtfp2hf (v4f32 V128:$Rn))),
-          (FCVTNv4i16 V128:$Rn)>;
-def : Pat<(concat_vectors V64:$Rd,
-                          (v4i16 (int_aarch64_neon_vcvtfp2hf (v4f32 V128:$Rn)))),
-          (FCVTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub), V128:$Rn)>;
 def : Pat<(v2f32 (any_fpround (v2f64 V128:$Rn))),
           (FCVTNv2i32 V128:$Rn)>;
 def : Pat<(v4f16 (any_fpround (v4f32 V128:$Rn))),
@@ -11523,7 +11543,7 @@ defm UMIN : ComparisonOp<1, 1, "umin", umin>, Requires<[HasCSSC]>;
 def RPRFM:
     I<(outs), (ins rprfop:$Rt, GPR64:$Rm, GPR64sp:$Rn),
       "rprfm", "\t$Rt, $Rm, [$Rn]", "", []>,
-    Sched<[]> {
+    Sched<[WriteLD]> {
   bits<6> Rt;
   bits<5> Rn;
   bits<5> Rm;
@@ -11946,13 +11966,6 @@ let Predicates = [HasF16F32MM] in
 
 let Uses = [FPMR, FPCR] in
   defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla", int_aarch64_neon_fmmla>;
-
-//===----------------------------------------------------------------------===//
-// Contention Management Hints (FEAT_CMH)
-//===----------------------------------------------------------------------===//
-
-defm SHUH  : SHUH<"shuh">;       // Shared Update Hint instruction
-def STCPH  : STCPHInst<"stcph">; // Store Concurrent Priority Hint instruction
 
 //===----------------------------------------------------------------------===//
 // Permission Overlays Extension 2 (FEAT_S1POE2)

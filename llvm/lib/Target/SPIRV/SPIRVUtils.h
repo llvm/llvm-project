@@ -14,6 +14,9 @@
 #define LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/Dominators.h"
@@ -23,8 +26,6 @@
 #include <queue>
 #include <set>
 #include <string>
-#include <unordered_map>
-#include <unordered_set>
 
 #include "SPIRVTypeInst.h"
 
@@ -72,20 +73,20 @@ class PartialOrderingVisitor {
   DomTreeBuilder::BBDomTree DT;
   LoopInfo LI;
 
-  std::unordered_set<BasicBlock *> Queued = {};
-  std::queue<BasicBlock *> ToVisit = {};
+  SmallPtrSet<BasicBlock *, 0> Queued;
+  std::queue<BasicBlock *> ToVisit;
 
   struct OrderInfo {
     size_t Rank;
     size_t TraversalIndex;
   };
 
-  using BlockToOrderInfoMap = std::unordered_map<BasicBlock *, OrderInfo>;
+  using BlockToOrderInfoMap = DenseMap<BasicBlock *, OrderInfo>;
   BlockToOrderInfoMap BlockToOrder;
-  std::vector<BasicBlock *> Order = {};
+  std::vector<BasicBlock *> Order;
 
   // Get all basic-blocks reachable from Start.
-  std::unordered_set<BasicBlock *> getReachableFrom(BasicBlock *Start);
+  SmallPtrSet<BasicBlock *, 0> getReachableFrom(BasicBlock *Start);
 
   // Internal function used to determine the partial ordering.
   // Visits |BB| with the current rank being |Rank|.
@@ -174,10 +175,8 @@ StringRef getOriginalAsmConstraints(const CallBase &CB);
 // Add the given string as a series of integer operand, inserting null
 // terminators and padding to make sure the operands all have 32-bit
 // little-endian words.
-void addStringImm(const StringRef &Str, MCInst &Inst);
-void addStringImm(const StringRef &Str, MachineInstrBuilder &MIB);
-void addStringImm(const StringRef &Str, IRBuilder<> &B,
-                  std::vector<Value *> &Args);
+void addStringImm(StringRef Str, MCInst &Inst);
+void addStringImm(StringRef Str, MachineInstrBuilder &MIB);
 
 // Read the series of integer operands back as a null-terminated string using
 // the reverse of the logic in addStringImm.
@@ -191,31 +190,22 @@ std::string getStringValueFromReg(Register Reg, MachineRegisterInfo &MRI);
 void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB);
 
 // Add an OpName instruction for the given target register.
-void buildOpName(Register Target, const StringRef &Name,
-                 MachineIRBuilder &MIRBuilder);
-void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
+void buildOpName(Register Target, StringRef Name, MachineIRBuilder &MIRBuilder);
+void buildOpName(Register Target, StringRef Name, MachineInstr &I,
                  const SPIRVInstrInfo &TII);
 
 // Add an OpDecorate instruction for the given Reg.
 void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                      SPIRV::Decoration::Decoration Dec,
-                     const std::vector<uint32_t> &DecArgs,
-                     StringRef StrImm = "");
+                     ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
 void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
                      SPIRV::Decoration::Decoration Dec,
-                     const std::vector<uint32_t> &DecArgs,
-                     StringRef StrImm = "");
+                     ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
 
 // Add an OpDecorate instruction for the given Reg.
 void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                            SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           const std::vector<uint32_t> &DecArgs,
-                           StringRef StrImm = "");
-void buildOpMemberDecorate(Register Reg, MachineInstr &I,
-                           const SPIRVInstrInfo &TII,
-                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           const std::vector<uint32_t> &DecArgs,
-                           StringRef StrImm = "");
+                           ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
 
 // Add an OpDecorate instruction by "spirv.Decorations" metadata node.
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
@@ -312,6 +302,10 @@ bool isSpvIntrinsic(const Value *Arg);
 
 // Get type of i-th operand of the metadata node.
 Type *getMDOperandAsType(const MDNode *N, unsigned I);
+
+// Get the i-th operand of the metadata node as a ConstantInt, or nullptr if it
+// is out of range or not a ConstantInt.
+ConstantInt *getMDOperandAsConstInt(const MDNode *N, unsigned I);
 
 // If OpenCL or SPIR-V builtin function name is recognized, return a demangled
 // name, otherwise return an empty string.
@@ -543,8 +537,6 @@ MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
 #define SPIRV_BACKEND_SERVICE_FUN_NAME "__spirv_backend_service_fun"
 #define SPIRV_WAS_AVAILABLE_EXTERNALLY_ATTR "spv.was-available-externally"
 
-bool getVacantFunctionName(Module &M, std::string &Name);
-
 void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
                      MachineIRBuilder &MIRBuilder,
                      SPIRV::AccessQualifier::AccessQualifier AccessQual,
@@ -567,7 +559,7 @@ bool isNestedPointer(const Type *Ty);
 enum FPDecorationId { NONE, RTE, RTZ, RTP, RTN, SAT };
 
 inline FPDecorationId demangledPostfixToDecorationId(const std::string &S) {
-  static std::unordered_map<std::string, FPDecorationId> Mapping = {
+  static const StringMap<FPDecorationId> Mapping = {
       {"rte", FPDecorationId::RTE},
       {"rtz", FPDecorationId::RTZ},
       {"rtp", FPDecorationId::RTP},
