@@ -93,8 +93,8 @@ void test() {
 
   // [range.enumerate.overview]
 
-  std::vector<int> range{1, 2, 3};
+  std::vector<int> vec{1, 2, 3};
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::enumerate(range);
+  std::views::enumerate(vec);
 }
