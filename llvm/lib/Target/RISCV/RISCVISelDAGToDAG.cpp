@@ -3106,24 +3106,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::EXTRACT_SUBVECTOR:
   case RISCVISD::TUPLE_EXTRACT: {
+    if (Subtarget->hasStdExtP())
+      break;
+
     SDValue V = Node->getOperand(0);
     auto Idx = Node->getConstantOperandVal(1);
     MVT InVT = V.getSimpleValueType();
-
-    // Handle P-extension extract_subvector for v2i16 from v4i16 and v4i8 from
-    // v8i8
-    if (Subtarget->hasStdExtP() && !Subtarget->is64Bit() &&
-        ((InVT == MVT::v4i16 && VT == MVT::v2i16) ||
-         (InVT == MVT::v8i8 && VT == MVT::v4i8))) {
-      unsigned NumElts = VT.getVectorNumElements();
-      if (Idx != 0 && Idx != NumElts)
-        break;
-
-      unsigned SubRegIdx = Idx == 0 ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
-      SDValue Extract = CurDAG->getTargetExtractSubreg(SubRegIdx, DL, VT, V);
-      ReplaceNode(Node, Extract.getNode());
-      return;
-    }
 
     SDLoc DL(V);
 

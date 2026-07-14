@@ -401,6 +401,9 @@ Makes programs 10x faster by doing Special New Thing.
 * Fixed `llvm-ar` to correctly handle the `N` count modifier on Windows for archive members whose names differ only
   in case (e.g. `FOO.OBJ` and `foo.obj`). Previously, `-N 2` would fail with "not found" even when two matching members existed.
 * `llvm-readobj` and `llvm-readelf` now support the `--call-graph-section` option to dump the contents of the experimental [call graph section](CallGraphSection.md).
+* Added support for hybrid ARM64X object files to `llvm-ar` and `llvm-lib`. When these files are added to
+  an archive, they are automatically split into separate native and EC members. Because the resulting members
+  are no longer hybrid object files, consumers of these archives do not need to support the hybrid format themselves.
 
 ### Changes to LLDB
 
@@ -480,6 +483,8 @@ Makes programs 10x faster by doing Special New Thing.
 * Python 3.11 or later is now recommended for building LLDB 23 on Windows. From LLDB 24, Python 3.11 or later will be required.
 * Messages from `OutputDebugString[A|W]` are now shown inline when using LLDB
   from the command-line and in the output window when using lldb-dap.
+* LLDB now uses `lldb-server.exe` to launch and manage the program being debugged,
+  instead of running it within LLDB's own process. To revert to the previous behavior, set the environment variable `LLDB_USE_LLDB_SERVER=0`.
 
 
 ### Changes to BOLT

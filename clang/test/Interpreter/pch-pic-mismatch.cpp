@@ -9,8 +9,11 @@
 // RUN: mkdir -p %t
 // RUN: split-file %s %t
 //
-// RUN: %clang -fno-pic -Xclang -fincremental-extensions -target %host-jit-triple \
-// RUN:     -Xclang -emit-pch -x c++-header -o %t/include.pch %t/include.hpp
+// Darwin forces PIC (MachO::isPICDefaultForced) and ignores -fno-pic. To support
+// this patch, we call cc1 directly as it defaults to PIC level 0 everywhere.
+//
+// RUN: %clang_cc1 -triple %host-jit-triple -fincremental-extensions \
+// RUN:     -emit-pch -x c++-header -o %t/include.pch %t/include.hpp
 //
 // RUN: cat %t/main.cpp \
 // RUN:     | not clang-repl -Xcc -include-pch -Xcc %t/include.pch 2>&1 \
