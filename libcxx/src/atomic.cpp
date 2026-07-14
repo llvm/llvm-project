@@ -425,7 +425,7 @@ static constexpr hash<void const*> __contention_hasher;
 // cache line, we would end up in a "false-sharing" situation. However, in practice, it would require
 // both native and non-native atomics to be used concurrently, and to fall in the same bucket, which
 // is expected to be unlikely.
-struct alignas(std::hardware_constructive_interference_size) /*  aim to avoid false sharing */ __contention_state {
+struct alignas(std::hardware_destructive_interference_size) /* aim to avoid false sharing */ __contention_state {
   __cxx_atomic_contention_t __waiter_count_native;
   __cxx_atomic_contention_t __waiter_count_global;
   __cxx_atomic_contention_t __platform_state;

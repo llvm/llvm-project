@@ -78,6 +78,8 @@ macros:
     macro_header: limits-macros.h
   - macro_name: _POSIX_PATH_MAX
     macro_header: limits-macros.h
+  - macro_name: NAME_MAX
+    macro_header: limits-macros.h
   - macro_name: PATH_MAX
     macro_header: limits-macros.h
   - macro_name: _POSIX_THREAD_DESTRUCTOR_ITERATIONS

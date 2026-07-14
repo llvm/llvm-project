@@ -608,10 +608,6 @@ TEST_F(SampleProfTest, SampleProfileFuncOffsetTableInMemory) {
   EXPECT_EQ(Table.lookup(0x11112222ULL), 100);
   EXPECT_EQ(Table.lookup(0x33334444ULL), 200);
   EXPECT_EQ(Table.lookup(0x55556666ULL), std::nullopt);
-
-  // Test clear
-  Table.clear();
-  EXPECT_EQ(Table.lookup(0x11112222ULL), std::nullopt);
 }
 
 TEST_F(SampleProfTest, SampleProfileFuncOffsetTableOnDisk) {
@@ -651,10 +647,6 @@ TEST_F(SampleProfTest, SampleProfileFuncOffsetTableOnDisk) {
 
   // Test non-existent key
   EXPECT_EQ(Table.lookup(0x9999999999999999ULL), std::nullopt);
-
-  // Test clear
-  Table.clear();
-  EXPECT_EQ(Table.lookup(0x1111111122222222ULL), std::nullopt);
 }
 
 // Verify that requesting format version 103 results in a version 103 profile.

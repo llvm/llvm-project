@@ -19,8 +19,8 @@
 #include "ScriptedHookPythonInterface.h"
 #include "ScriptedPlatformPythonInterface.h"
 #include "ScriptedProcessPythonInterface.h"
-#include "ScriptedStopHookPythonInterface.h"
 #include "ScriptedThreadPlanPythonInterface.h"
+#include "ScriptedThreadPythonInterface.h"
 
 namespace lldb_private {
 class ScriptInterpreterPythonInterfaces : public PluginInterface {

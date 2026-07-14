@@ -9,6 +9,10 @@
 #ifndef _LIBCPP___PSTL_BACKENDS_LIBDISPATCH_H
 #define _LIBCPP___PSTL_BACKENDS_LIBDISPATCH_H
 
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
 #include <__algorithm/inplace_merge.h>
 #include <__algorithm/lower_bound.h>
 #include <__algorithm/max.h>

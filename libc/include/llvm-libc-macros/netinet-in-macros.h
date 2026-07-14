@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_MACROS_NETINET_IN_MACROS_H
 #define LLVM_LIBC_MACROS_NETINET_IN_MACROS_H
 
+#include "../__llvm-libc-common.h"
 #include "../llvm-libc-types/in_addr_t.h"
-#include "__llvm-libc-common.h"
 
 #define IPPROTO_IP 0
 #define IPPROTO_ICMP 1

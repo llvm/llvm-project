@@ -44,10 +44,10 @@ define ptr @low_trip_count_via_profile_info_with_iv_live_out(ptr align 16 %start
 ; CHECK-LABEL: define ptr @low_trip_count_via_profile_info_with_iv_live_out(
 ; CHECK-SAME: ptr align 16 [[START:%.*]], ptr align 16 [[END:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[START]] to i64
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[END1]], [[TMP7]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP8]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP1]], 63
@@ -98,10 +98,10 @@ define void @low_trip_count_via_profile_info(ptr align 16 %start, ptr align 16 %
 ; CHECK-LABEL: define void @low_trip_count_via_profile_info(
 ; CHECK-SAME: ptr align 16 [[START:%.*]], ptr align 16 [[END:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[START]] to i64
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[END1]], [[TMP6]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP7]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP1]], 63

@@ -27892,6 +27892,15 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
       if (!LegalOperations || TLI.isOperationLegal(ISD::SPLAT_VECTOR, NVT))
         return DAG.getSplatVector(NVT, DL, V.getOperand(0));
 
+  // ty1 extract_vector(ty2 get_active_lane_mask(X, Y), 0) --> ty1
+  // get_active_lane_mask(X, Y)
+  if (ExtIdx == 0 && V.getOpcode() == ISD::GET_ACTIVE_LANE_MASK &&
+      V.hasOneUse() &&
+      (!LegalOperations ||
+       TLI.isOperationLegal(ISD::GET_ACTIVE_LANE_MASK, NVT)))
+    return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, NVT, V.getOperand(0),
+                       V.getOperand(1));
+
   // extract_subvector(insert_subvector(x,y,c1),c2)
   //  --> extract_subvector(y,c2-c1)
   // iff we're just extracting from the inserted subvector.

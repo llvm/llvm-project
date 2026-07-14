@@ -183,7 +183,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
 void AMDGPUTargetInfo::fillValidCPUList(
     SmallVectorImpl<StringRef> &Values) const {
   if (getTriple().isAMDGCN())
-    llvm::AMDGPU::fillValidArchListAMDGCN(Values);
+    llvm::AMDGPU::fillValidArchListAMDGCN(Values, getTriple().getSubArch());
   else
     llvm::AMDGPU::fillValidArchListR600(Values);
 }

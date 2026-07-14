@@ -646,19 +646,16 @@ $jMultiBreakpoint:{"breakpoint_requests" : ["request"[,"request"]*]}
 ```
 
 Where each `request` is one of:
-
-```
-* z0,addr,kind
-* z1,addr,kind
-* z2,addr,kind
-* z3,addr,kind
-* z4,addr,kind
-* Z0,addr,kind[;cond_list…][;cmds:persist,cmd_list…]
-* Z1,addr,kind[;cond_list…][;cmds:persist,cmd_list…]
-* Z2,addr,kind
-* Z3,addr,kind
-* Z4,addr,kind
-```
+* `z0,addr,kind`
+* `z1,addr,kind`
+* `z2,addr,kind`
+* `z3,addr,kind`
+* `z4,addr,kind`
+* `Z0,addr,kind[;cond_list…][;cmds:persist,cmd_list…]`
+* `Z1,addr,kind[;cond_list…][;cmds:persist,cmd_list…]`
+* `Z2,addr,kind`
+* `Z3,addr,kind`
+* `Z4,addr,kind`
 
 Each field has the same meaning as the corresponding packet in the GDB Remote
 Protocol.
@@ -825,7 +822,7 @@ This is a performance optimization, which speeds up debugging by avoiding
 multiple round-trips for retrieving thread information. The information from this
 packet can be retrieved using a combination of `qThreadStopInfo` and `m` packets.
 
-### MultiMemRead
+## MultiMemRead
 
 Read memory from multiple memory ranges.
 

@@ -5,8 +5,8 @@ Test lldb-dap launch request.
 import os
 import re
 
-from lldbsuite.test.tools.lldb_dap.dap_types import InitializedEvent, LaunchArgs
-from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import InitializedEvent, LaunchArgs
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
 class TestDAP_launch_failing_launch_commands(DAPTestCaseBase):

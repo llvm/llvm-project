@@ -60,6 +60,7 @@ ORC_RT_C_EXTERN_C_BEGIN
  */
 typedef enum {
   orc_rt_log_Category_General,
+  orc_rt_log_Category_ControllerAccess,
 
   /*
    * Count is the number of defined categories; it is not itself a valid
@@ -129,6 +130,38 @@ int orc_rt_log_formatCheck(const char *Fmt, ...) ORC_RT_C_FORMAT_PRINTF(1, 2);
 #define ORC_RT_LOG(Level, Category, ...)                                       \
   ((void)sizeof("" __VA_ARGS__, 0),                                            \
    ORC_RT_LOG_##Level(orc_rt_log_Category_##Category, __VA_ARGS__))
+
+/**
+ * \def ORC_RT_LOG_PUB_S
+ * Conversion specifier for publishing a runtime (non-literal) C string.
+ *
+ * Use this in place of a plain "%s" whenever you are logging a runtime string
+ * that should be readable in the log output: on os_log a "%s" argument defaults
+ * to private and is redacted in the system log, so ORC_RT_LOG_PUB_S is what
+ * actually publishes the bytes. Publishing is a privacy decision -- keep a
+ * plain "%s" (which stays private) for anything a sandboxed or privacy-
+ * sensitive deployment should not disclose, or do not log it at all. The printf
+ * backend has no public/private distinction and always prints the string
+ * regardless.
+ *
+ * ORC_RT_LOG requires Fmt to be a string literal, but the specifier for a
+ * runtime string differs by backend, so it cannot be written inline. This
+ * macro expands to a string literal that the surrounding format is expected to
+ * concatenate by literal adjacency, e.g.
+ *
+ *   ORC_RT_LOG(Info, General, "resolved " ORC_RT_LOG_PUB_S, SymbolName);
+ *
+ * keeping Fmt a single literal on every backend.
+ *
+ * ORC_RT_LOG_PUB_S expands to plain "%s" for backends other than os_log:
+ * neither libc's vprintf nor the printf-style format checkers understand
+ * os_log's "%{public}s" syntax.
+ */
+#if ORC_RT_LOG_BACKEND == ORC_RT_LOG_BACKEND_OS_LOG
+#define ORC_RT_LOG_PUB_S "%{public}s"
+#else
+#define ORC_RT_LOG_PUB_S "%s"
+#endif
 
 #if ORC_RT_LOG_BACKEND == ORC_RT_LOG_BACKEND_NONE
 

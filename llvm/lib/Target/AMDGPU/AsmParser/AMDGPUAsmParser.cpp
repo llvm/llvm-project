@@ -1405,6 +1405,13 @@ class AMDGPUAsmParser : public MCTargetAsmParser {
 
   std::optional<AMDGPU::InfoSectionData> InfoData;
 
+  /// Whether the leading .amdgcn_target directive has been emitted to the
+  /// output streamer yet. The emission is deferred until the first piece of
+  /// content (instruction or kernel descriptor) so that any leading
+  /// .amdgcn_target/.amd_amdgpu_isa directive in the source has had a chance to
+  /// update the target ID first.
+  bool TargetDirectiveEmitted = false;
+
 private:
   void createConstantSymbol(StringRef Id, int64_t Val);
 
@@ -1952,6 +1959,10 @@ private:
 
 public:
   void onBeginOfFile() override;
+  /// Emit the deferred leading .amdgcn_target directive if it has not been
+  /// emitted yet. Called before emitting the first instruction or kernel
+  /// descriptor.
+  void emitTargetDirective();
   bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) override;
 
   ParseStatus parseCustomOperand(OperandVector &Operands, unsigned MCK);
@@ -5920,6 +5931,7 @@ bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     if (!validateInstruction(Inst, IDLoc, Operands)) {
       return true;
     }
+    emitTargetDirective();
     Out.emitInstruction(Inst, getSTI());
     return false;
   }
@@ -6003,13 +6015,49 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGCNTarget() {
   const std::optional<AMDGPU::TargetID> &CurrentTargetID =
       getTargetStreamer().getTargetID();
 
-  if (*CurrentTargetID != ParsedTargetID) {
+  Triple DirectiveTriple(ParsedTargetID.getTargetTripleString());
+  const Triple &STITriple = getSTI().getTargetTriple();
+  if (!DirectiveTriple.isCompatibleWith(STITriple)) {
     return getParser().Error(
-        TargetStart, Twine(".amdgcn_target directive's target id ") +
-                         Twine(ParsedTargetID.toString()) +
-                         Twine(" does not match the specified target id ") +
+        TargetStart, ".amdgcn_target " + Twine(ParsedTargetID.toString()) +
+                         " is incompatible with " +
                          Twine(CurrentTargetID->toString()));
   }
+
+  // Error if the ISA version doesn't match
+  StringRef DirectiveProcessor =
+      AMDGPU::getArchNameAMDGCN(ParsedTargetID.getGPUKind());
+  AMDGPU::IsaVersion DirectiveISA = AMDGPU::getIsaVersion(DirectiveProcessor);
+  AMDGPU::IsaVersion CurrentISA = AMDGPU::getIsaVersion(getSTI().getCPU());
+  if (DirectiveISA != CurrentISA) {
+    return getParser().Error(TargetStart,
+                             ".amdgcn_target directive processor " +
+                                 Twine(DirectiveProcessor) +
+                                 " does not match the specified processor " +
+                                 Twine(getSTI().getCPU()));
+  }
+
+  // Warn if sramecc or xnack mismatch. These do not change the encoding.
+  if (AMDGPU::IsaInfo::targetIDSettingsConflict(
+          ParsedTargetID.getXnackSetting(),
+          CurrentTargetID->getXnackSetting())) {
+    Warning(TargetStart,
+            ".amdgcn_target directive has conflicting xnack settings");
+  }
+  if (AMDGPU::IsaInfo::targetIDSettingsConflict(
+          ParsedTargetID.getSramEccSetting(),
+          CurrentTargetID->getSramEccSetting())) {
+    Warning(TargetStart,
+            ".amdgcn_target directive has conflicting sramecc settings");
+  }
+
+  // Update the target streamer's TargetID with settings from the directive.
+  // We don't update the MCSubtargetInfo because we've already validated
+  // that the directive matches the command-line CPU.
+  getTargetStreamer().getTargetID()->setXnackSetting(
+      ParsedTargetID.getXnackSetting());
+  getTargetStreamer().getTargetID()->setSramEccSetting(
+      ParsedTargetID.getSramEccSetting());
 
   return false;
 }
@@ -6601,6 +6649,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
     }
   }
 
+  emitTargetDirective();
   getTargetStreamer().EmitAmdhsaKernelDescriptor(getSTI(), KernelName, KD,
                                                  NextFreeVGPR, NextFreeSGPR,
                                                  ReserveVCC, ReserveFlatScr);
@@ -6613,6 +6662,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSACodeObjectVersion() {
     return true;
 
   getTargetStreamer().EmitDirectiveAMDHSACodeObjectVersion(Version);
+  emitTargetDirective();
   return false;
 }
 
@@ -6728,12 +6778,26 @@ bool AMDGPUAsmParser::ParseDirectiveISAVersion() {
   const std::optional<AMDGPU::TargetID> &CurrentTargetID =
       getTargetStreamer().getTargetID();
 
-  if (*CurrentTargetID != ParsedTargetID) {
+  Triple DirectiveTriple(ParsedTargetID.getTargetTripleString());
+  const Triple &STITriple = getSTI().getTargetTriple();
+  if (!DirectiveTriple.isCompatibleWith(STITriple)) {
     return Error(getParser().getTok().getLoc(),
-                 Twine(".amd_amdgpu_isa directive's target id ") +
-                     Twine(ParsedTargetID.toString()) +
-                     Twine(" does not match the specified target id ") +
+                 ".amd_amdgpu_isa " + Twine(ParsedTargetID.toString()) +
+                     " is incompatible with " +
                      Twine(CurrentTargetID->toString()));
+  }
+
+  // Error if the ISA version doesn't match
+  StringRef DirectiveProcessor =
+      AMDGPU::getArchNameAMDGCN(ParsedTargetID.getGPUKind());
+  AMDGPU::IsaVersion DirectiveISA = AMDGPU::getIsaVersion(DirectiveProcessor);
+  AMDGPU::IsaVersion CurrentISA = AMDGPU::getIsaVersion(getSTI().getCPU());
+  if (DirectiveISA != CurrentISA) {
+    return Error(getParser().getTok().getLoc(),
+                 ".amd_amdgpu_isa directive processor " +
+                     Twine(DirectiveProcessor) +
+                     " does not match the specified processor " +
+                     Twine(getSTI().getCPU()));
   }
 
   getTargetStreamer().EmitISAVersion();
@@ -7004,6 +7068,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUInfo() {
 }
 
 void AMDGPUAsmParser::onEndOfFile() {
+  emitTargetDirective();
   if (InfoData)
     getTargetStreamer().emitAMDGPUInfo(*InfoData);
 }
@@ -9447,13 +9512,22 @@ bool AMDGPUAsmParser::convertDppBoundCtrl(int64_t &BoundCtrl) {
 }
 
 void AMDGPUAsmParser::onBeginOfFile() {
-  if (!getParser().getStreamer().getTargetStreamer() ||
-      getSTI().getTargetTriple().getArch() == Triple::r600)
+  if (!getParser().getStreamer().getTargetStreamer())
     return;
 
   if (!getTargetStreamer().getTargetID())
     getTargetStreamer().initializeTargetID(getSTI(),
                                            getSTI().getFeatureString());
+}
+
+void AMDGPUAsmParser::emitTargetDirective() {
+  if (TargetDirectiveEmitted)
+    return;
+  TargetDirectiveEmitted = true;
+
+  if (!getParser().getStreamer().getTargetStreamer() ||
+      getSTI().getTargetTriple().getArch() == Triple::r600)
+    return;
 
   if (isHsaAbi(getSTI()))
     getTargetStreamer().EmitDirectiveAMDGCNTarget();

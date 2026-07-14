@@ -99,8 +99,8 @@ define i64 @pointer_induction_only(ptr %start, ptr %end) {
 ; CHECK-LABEL: define i64 @pointer_induction_only(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[END1]], [[START2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
@@ -435,16 +435,16 @@ define i32 @load_from_pointer_induction(ptr %start, ptr %end) {
 ; CHECK-LABEL: define i32 @load_from_pointer_induction(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[END1]], i64 [[START2]])
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[UMAX]], 1
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.umax.i64(i64 [[END1]], i64 [[START2]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP20:%.*]] = add i64 [[TMP1]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP20]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 4
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP20]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP20]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[START]], i64 [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -479,7 +479,7 @@ define i32 @load_from_pointer_induction(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = or i32 [[TMP9]], [[TMP8]]
 ; CHECK-NEXT:    [[BIN_RDX9:%.*]] = or i32 [[TMP16]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX10:%.*]] = or i32 [[TMP17]], [[BIN_RDX9]]
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP1]], [[N_VEC]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP20]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[ENTRY]] ]

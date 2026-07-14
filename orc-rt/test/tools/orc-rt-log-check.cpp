@@ -108,7 +108,16 @@ int main(int argc, char *argv[]) {
     // Emit one record whose payload carries the caller-supplied id, so a
     // delivery test can match exactly its own record and not a stale one. The
     // id is an integer (a %d scalar), which os_log shows unredacted.
-    ORC_RT_LOG(Error, General, "delivery marker uid=%d", UID);
+    //
+    // The record also carries a runtime string logged via ORC_RT_LOG_PUB_S. On
+    // the os_log backend a dynamic string argument is redacted to <private>
+    // unless the public annotation is applied, so a delivery test can confirm
+    // the annotation publishes the string by matching its contents rather than
+    // <private>.
+    const char *PublicPayload = "public-payload";
+    ORC_RT_LOG(Error, General,
+               "delivery marker uid=%d payload=" ORC_RT_LOG_PUB_S, UID,
+               PublicPayload);
     return 0;
   }
 

@@ -7,10 +7,10 @@ define i32 @red_extended_add_incomplete_chain(ptr %start, ptr %end, i32 %offset)
 ; CHECK-LABEL: define i32 @red_extended_add_incomplete_chain(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[START]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[END1]], [[TMP8]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP9]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

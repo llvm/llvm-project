@@ -21,8 +21,24 @@
 #include <cstddef>
 #include <cstdint>
 #include <future>
+#include <string>
+#include <vector>
 
 inline void noErrors(orc_rt::Error Err) { orc_rt::cantFail(std::move(Err)); }
+
+/// ReportError callback for tests that records the message of every reported
+/// error, in the order reported.
+class AccumulateErrors {
+public:
+  AccumulateErrors(std::vector<std::string> &ErrMsgs) : ErrMsgs(ErrMsgs) {}
+
+  void operator()(orc_rt::Error Err) {
+    ErrMsgs.push_back(orc_rt::toString(std::move(Err)));
+  }
+
+private:
+  std::vector<std::string> &ErrMsgs;
+};
 
 inline orc_rt::ExecutorProcessInfo mockExecutorProcessInfo() noexcept {
   return orc_rt::ExecutorProcessInfo("arm64-apple-darwin", 16384);

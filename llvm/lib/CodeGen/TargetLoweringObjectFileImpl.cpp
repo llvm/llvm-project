@@ -151,6 +151,8 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
                         : dwarf::DW_EH_PE_absptr;
     break;
   case Triple::x86_64:
+    if (TgtM.Options.MCOptions.LargeEHEncoding)
+      CM = CodeModel::Large;
     if (isPositionIndependent()) {
       PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
         ((CM == CodeModel::Small || CM == CodeModel::Medium)

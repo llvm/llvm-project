@@ -1776,9 +1776,10 @@ Instruction *InstCombinerImpl::visitUDiv(BinaryOperator &I) {
   }
 
   // Op0 / C where C is large (negative) --> zext (Op0 >= C)
-  // TODO: Could use isKnownNegative() to handle non-constant values.
+  // This also handles non-constant values where the sign bit is known to be
+  // set.
   Type *Ty = I.getType();
-  if (match(Op1, m_Negative())) {
+  if (isKnownNegative(Op1, SQ.getWithInstruction(&I))) {
     Value *Cmp = Builder.CreateICmpUGE(Op0, Op1);
     return CastInst::CreateZExtOrBitCast(Cmp, Ty);
   }

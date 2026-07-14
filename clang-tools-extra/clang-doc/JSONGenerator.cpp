@@ -1023,7 +1023,7 @@ Error JSONGenerator::generateDocumentation(StringRef RootDir,
     Info->DocumentationFileName = internString(FileName);
   }
 
-  if (CDCtx.Format == OutputFormatTy::md_mustache) {
+  if (CDCtx.Format == OutputFormatTy::md) {
     Markdown = true;
     if (auto Err = serializeAllFiles(CDCtx, RootDir))
       return Err;

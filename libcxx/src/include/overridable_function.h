@@ -21,17 +21,12 @@
 // whether an overridable function (typically a weak symbol) like `operator new`
 // has been overridden by a user or not.
 //
-// This is a low-level utility which does not work on all platforms, since it needs
-// to make assumptions about the object file format in use. Furthermore, it requires
-// the "base definition" of the function (the one we want to check whether it has been
-// overridden) to be defined using the OVERRIDABLE_FUNCTION macro.
-//
-// This currently works with Mach-O files (used on Darwin) and with ELF files (used on Linux
-// and others). On platforms where we know how to implement this detection, the macro
-// _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION is defined to 1, and it is defined to 0 on
-// other platforms. The OVERRIDABLE_FUNCTION macro is defined to perform a normal
-// function definition on unsupported platforms so that it can be used to define functions
-// regardless of whether detection is actually supported.
+// This is a low-level utility which does not work on all platforms, since it needs to
+// make assumptions about the object file format in use. This currently works with Mach-O
+// files (used on Darwin) and with ELF files (used on Linux and others). On platforms
+// where we know how to implement this detection, the macro
+// _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION  is defined to 1, and it is defined to 0 on
+// other platforms.
 //
 // How does this work?
 // -------------------
@@ -54,7 +49,6 @@
 #if defined(_LIBCPP_OBJECT_FORMAT_MACHO) || (defined(_LIBCPP_OBJECT_FORMAT_ELF) && !defined(__NVPTX__))
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
-#  define OVERRIDABLE_FUNCTION [[gnu::weak]]
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -62,7 +56,7 @@ namespace {
 
 // This is used to prevent TBAA from optimizing away the function pointer comparison.
 template <typename T>
-[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI T* __libcpp_launder(T* __ptr) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI T* __launder_function_pointer(T* __ptr) noexcept {
   __asm__ volatile("" : "+r"(__ptr));
   return __ptr;
 }
@@ -96,7 +90,7 @@ _LIBCPP_HIDE_FROM_ABI inline bool __is_function_overridden() noexcept {
   // the _Func symbol. The compiler thinks __impl_ref<...>::__impl_ is defined elsewhere
   // at link time and will be an undefined symbol. It doesn't know that the __asm__ tells
   // the assembler to define it as a local symbol.
-  return __libcpp_launder(_Func) != __impl_ref<_Func>::__impl_;
+  return __launder_function_pointer(_Func) != __impl_ref<_Func>::__impl_;
 }
 
 _LIBCPP_END_NAMESPACE_STD
@@ -104,7 +98,6 @@ _LIBCPP_END_NAMESPACE_STD
 #else
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 0
-#  define OVERRIDABLE_FUNCTION [[gnu::weak]]
 
 #endif
 

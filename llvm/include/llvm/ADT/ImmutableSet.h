@@ -38,22 +38,58 @@ namespace llvm {
 // Immutable AVL-Tree Definition.
 //===----------------------------------------------------------------------===//
 
-template <typename ImutInfo> class ImutAVLFactory;
+template <typename ImutInfo, bool Canonicalize = true> class ImutAVLFactory;
 template <typename ImutInfo> class ImutIntervalAVLFactory;
-template <typename ImutInfo> class ImutAVLTreeInOrderIterator;
+template <typename ImutInfo, bool Canonicalize = true>
+class ImutAVLTreeInOrderIterator;
 
-template <typename ImutInfo >
-class ImutAVLTree {
+namespace ImutAVLDetail {
+/// The intrusive doubly-linked chain of same-digest trees in the factory's
+/// canonicalization cache. Held as an (empty) base so that, when
+/// canonicalization is disabled, the empty base optimization removes it
+/// entirely. Kept separate from the cached digest below so that the two
+/// pointers pack without the tail padding that grouping a trailing 32-bit field
+/// with them would introduce.
+template <typename Tree, bool Canonicalize> struct CanonicalLinks {
+  Tree *Prev = nullptr;
+  Tree *Next = nullptr;
+};
+template <typename Tree> struct CanonicalLinks<Tree, false> {};
+
+/// The cached structural digest, used only for canonicalization. Stored as an
+/// LLVM_NO_UNIQUE_ADDRESS member so it occupies no space when disabled and
+/// packs alongside the adjacent 32-bit fields when enabled.
+template <bool Canonicalize> struct CanonicalDigest {
+  uint32_t Digest = 0;
+};
+template <> struct CanonicalDigest<false> {};
+
+/// The factory-side canonicalization cache: digest -> tree chain.
+/// Empty when canonicalization is disabled.
+template <typename Tree, bool Canonicalize> struct CanonicalCache {
+  DenseMap<unsigned, Tree *> Cache;
+};
+template <typename Tree> struct CanonicalCache<Tree, false> {};
+} // namespace ImutAVLDetail
+
+template <typename ImutInfo, bool Canonicalize = true>
+class ImutAVLTree
+    : private ImutAVLDetail::CanonicalLinks<ImutAVLTree<ImutInfo, Canonicalize>,
+                                            Canonicalize> {
 public:
   using key_type_ref = typename ImutInfo::key_type_ref;
   using value_type = typename ImutInfo::value_type;
   using value_type_ref = typename ImutInfo::value_type_ref;
-  using Factory = ImutAVLFactory<ImutInfo>;
-  using iterator = ImutAVLTreeInOrderIterator<ImutInfo>;
+  using Factory = ImutAVLFactory<ImutInfo, Canonicalize>;
+  using iterator = ImutAVLTreeInOrderIterator<ImutInfo, Canonicalize>;
 
-  friend class ImutAVLFactory<ImutInfo>;
+  friend class ImutAVLFactory<ImutInfo, Canonicalize>;
   friend class ImutIntervalAVLFactory<ImutInfo>;
 
+private:
+  using CanonLinks = ImutAVLDetail::CanonicalLinks<ImutAVLTree, Canonicalize>;
+
+public:
   //===----------------------------------------------------===//
   // Public Interface.
   //===----------------------------------------------------===//
@@ -205,11 +241,11 @@ public:
   //===----------------------------------------------------===//
 
 private:
-  Factory *factory;
+  // Field order places the traversal-hot fields (left, right, value) first so
+  // that in a node that straddles a cache line they land in the earlier line;
+  // the cold factory back-pointer (only touched on create/destroy) goes last.
   ImutAVLTree *left;
   ImutAVLTree *right;
-  ImutAVLTree *prev = nullptr;
-  ImutAVLTree *next = nullptr;
 
   unsigned height : 28;
   LLVM_PREFERRED_TYPE(bool)
@@ -220,8 +256,9 @@ private:
   unsigned IsCanonicalized : 1;
 
   value_type value;
-  uint32_t digest = 0;
   uint32_t refCount = 0;
+  LLVM_NO_UNIQUE_ADDRESS ImutAVLDetail::CanonicalDigest<Canonicalize> digest;
+  Factory *factory;
 
   //===----------------------------------------------------===//
   // Internal methods (node manipulation; used by Factory).
@@ -229,11 +266,10 @@ private:
 
 private:
   /// Internal constructor that is only called by ImutAVLFactory.
-  ImutAVLTree(Factory *f, ImutAVLTree* l, ImutAVLTree* r, value_type_ref v,
+  ImutAVLTree(Factory *f, ImutAVLTree *l, ImutAVLTree *r, value_type_ref v,
               unsigned height)
-    : factory(f), left(l), right(r), height(height), IsMutable(true),
-      IsDigestCached(false), IsCanonicalized(false), value(v)
-  {
+      : left(l), right(r), height(height), IsMutable(true),
+        IsDigestCached(false), IsCanonicalized(false), value(v), factory(f) {
     if (left) left->retain();
     if (right) right->retain();
   }
@@ -302,10 +338,10 @@ private:
     // Check the lowest bit to determine if digest has actually been
     // pre-computed.
     if (hasCachedDigest())
-      return digest;
+      return digest.Digest;
 
     uint32_t X = computeDigest(getLeft(), getRight(), getValue());
-    digest = X;
+    digest.Digest = X;
     markedCachedDigest();
     return X;
   }
@@ -323,19 +359,21 @@ public:
       destroy();
   }
 
-  void destroy() {
+  LLVM_ATTRIBUTE_NOINLINE void destroy() {
     if (left)
       left->release();
     if (right)
       right->release();
-    if (IsCanonicalized) {
-      if (next)
-        next->prev = prev;
+    if constexpr (Canonicalize) {
+      if (IsCanonicalized) {
+        if (this->Next)
+          this->Next->Prev = this->Prev;
 
-      if (prev)
-        prev->next = next;
-      else
-        factory->Cache[factory->maskCacheIndex(computeDigest())] = next;
+        if (this->Prev)
+          this->Prev->Next = this->Next;
+        else
+          factory->Cache[factory->maskCacheIndex(computeDigest())] = this->Next;
+      }
     }
 
     // We need to clear the mutability bit in case we are
@@ -345,26 +383,30 @@ public:
   }
 };
 
-template <typename ImutInfo>
-struct IntrusiveRefCntPtrInfo<ImutAVLTree<ImutInfo>> {
-  static void retain(ImutAVLTree<ImutInfo> *Tree) { Tree->retain(); }
-  static void release(ImutAVLTree<ImutInfo> *Tree) { Tree->release(); }
+template <typename ImutInfo, bool Canonicalize>
+struct IntrusiveRefCntPtrInfo<ImutAVLTree<ImutInfo, Canonicalize>> {
+  static void retain(ImutAVLTree<ImutInfo, Canonicalize> *Tree) {
+    Tree->retain();
+  }
+  static void release(ImutAVLTree<ImutInfo, Canonicalize> *Tree) {
+    Tree->release();
+  }
 };
 
 //===----------------------------------------------------------------------===//
 // Immutable AVL-Tree Factory class.
 //===----------------------------------------------------------------------===//
 
-template <typename ImutInfo >
-class ImutAVLFactory {
-  friend class ImutAVLTree<ImutInfo>;
+template <typename ImutInfo, bool Canonicalize>
+class ImutAVLFactory
+    : private ImutAVLDetail::CanonicalCache<ImutAVLTree<ImutInfo, Canonicalize>,
+                                            Canonicalize> {
+  friend class ImutAVLTree<ImutInfo, Canonicalize>;
 
-  using TreeTy = ImutAVLTree<ImutInfo>;
+  using TreeTy = ImutAVLTree<ImutInfo, Canonicalize>;
   using value_type_ref = typename TreeTy::value_type_ref;
   using key_type_ref = typename TreeTy::key_type_ref;
-  using CacheTy = DenseMap<unsigned, TreeTy*>;
 
-  CacheTy Cache;
   uintptr_t Allocator;
   std::vector<TreeTy*> createdNodes;
   std::vector<TreeTy*> freeNodes;
@@ -604,6 +646,8 @@ protected:
 
 public:
   TreeTy *getCanonicalTree(TreeTy *TNew) {
+    static_assert(Canonicalize,
+                  "getCanonicalTree requires a canonicalizing factory");
     if (!TNew)
       return nullptr;
 
@@ -613,9 +657,9 @@ public:
     // Search the hashtable for another tree with the same digest, and
     // if find a collision compare those trees by their contents.
     unsigned digest = TNew->computeDigest();
-    TreeTy *&entry = Cache[maskCacheIndex(digest)];
+    TreeTy *&entry = this->Cache[maskCacheIndex(digest)];
     if (entry) {
-      for (TreeTy *T = entry ; T != nullptr; T = T->next) {
+      for (TreeTy *T = entry; T != nullptr; T = T->Next) {
         // Compare the contents of 'T' with 'TNew'. isEqual skips subtrees that
         // are shared by pointer, so for structurally-shared persistent trees
         // (the common case, e.g. one derived from the other) this is linear in
@@ -627,8 +671,8 @@ public:
           TNew->destroy();
         return T;
       }
-      entry->prev = TNew;
-      TNew->next = entry;
+      entry->Prev = TNew;
+      TNew->Next = entry;
     }
 
     entry = TNew;
@@ -655,15 +699,16 @@ public:
 /// persistent and structurally shared: a single node may appear as the child of
 /// different parents across different tree versions. The ancestor stack is
 /// therefore the per-traversal parent chain.
-template <typename ImutInfo> class ImutAVLTreeInOrderIterator {
+template <typename ImutInfo, bool Canonicalize>
+class ImutAVLTreeInOrderIterator {
 public:
   using iterator_category = std::bidirectional_iterator_tag;
-  using value_type = ImutAVLTree<ImutInfo>;
+  using value_type = ImutAVLTree<ImutInfo, Canonicalize>;
   using difference_type = std::ptrdiff_t;
   using pointer = value_type *;
   using reference = value_type &;
 
-  using TreeTy = ImutAVLTree<ImutInfo>;
+  using TreeTy = ImutAVLTree<ImutInfo, Canonicalize>;
 
 private:
   // Path[0] is the root and Path.back() is the current node. An empty path is
@@ -900,12 +945,13 @@ template <typename T> struct ImutContainerInfo<T *> : ImutProfileInfo<T *> {
 // Immutable Set
 //===----------------------------------------------------------------------===//
 
-template <typename ValT, typename ValInfo = ImutContainerInfo<ValT>>
+template <typename ValT, typename ValInfo = ImutContainerInfo<ValT>,
+          bool Canonicalize = true>
 class ImmutableSet {
 public:
   using value_type = typename ValInfo::value_type;
   using value_type_ref = typename ValInfo::value_type_ref;
-  using TreeTy = ImutAVLTree<ValInfo>;
+  using TreeTy = ImutAVLTree<ValInfo, Canonicalize>;
 
 private:
   IntrusiveRefCntPtr<TreeTy> Root;
@@ -919,14 +965,11 @@ public:
 
   class Factory {
     typename TreeTy::Factory F;
-    const bool Canonicalize;
 
   public:
-    Factory(bool canonicalize = true)
-      : Canonicalize(canonicalize) {}
+    Factory() = default;
 
-    Factory(BumpPtrAllocator& Alloc, bool canonicalize = true)
-      : F(Alloc), Canonicalize(canonicalize) {}
+    Factory(BumpPtrAllocator &Alloc) : F(Alloc) {}
 
     Factory(const Factory& RHS) = delete;
     void operator=(const Factory& RHS) = delete;
@@ -945,7 +988,10 @@ public:
     /// factory object that created the set is destroyed.
     [[nodiscard]] ImmutableSet add(ImmutableSet Old, value_type_ref V) {
       TreeTy *NewT = F.add(Old.Root.get(), V);
-      return ImmutableSet(Canonicalize ? F.getCanonicalTree(NewT) : NewT);
+      if constexpr (Canonicalize)
+        return ImmutableSet(F.getCanonicalTree(NewT));
+      else
+        return ImmutableSet(NewT);
     }
 
     /// Creates a new immutable set that contains all of the values
@@ -957,7 +1003,10 @@ public:
     /// factory object that created the set is destroyed.
     [[nodiscard]] ImmutableSet remove(ImmutableSet Old, value_type_ref V) {
       TreeTy *NewT = F.remove(Old.Root.get(), V);
-      return ImmutableSet(Canonicalize ? F.getCanonicalTree(NewT) : NewT);
+      if constexpr (Canonicalize)
+        return ImmutableSet(F.getCanonicalTree(NewT));
+      else
+        return ImmutableSet(NewT);
     }
 
     BumpPtrAllocator& getAllocator() { return F.getAllocator(); }
@@ -974,13 +1023,24 @@ public:
     return Root ? Root->contains(V) : false;
   }
 
+  /// Compares two sets for equality. For a canonicalizing factory, sets with
+  /// equal contents share the same tree, so this is an O(1) pointer comparison
+  /// (like ImmutableList); only sets created by the same factory may be
+  /// compared. Otherwise it is a structural comparison.
   bool operator==(const ImmutableSet &RHS) const {
-    return Root && RHS.Root ? Root->isEqual(*RHS.Root.get()) : Root == RHS.Root;
+    if constexpr (Canonicalize)
+      return Root == RHS.Root;
+    else
+      return Root && RHS.Root ? Root->isEqual(*RHS.Root.get())
+                              : Root == RHS.Root;
   }
 
   bool operator!=(const ImmutableSet &RHS) const {
-    return Root && RHS.Root ? Root->isNotEqual(*RHS.Root.get())
-                            : Root != RHS.Root;
+    if constexpr (Canonicalize)
+      return Root != RHS.Root;
+    else
+      return Root && RHS.Root ? Root->isNotEqual(*RHS.Root.get())
+                              : Root != RHS.Root;
   }
 
   TreeTy *getRoot() {
@@ -1026,12 +1086,13 @@ public:
 };
 
 // NOTE: This may some day replace the current ImmutableSet.
-template <typename ValT, typename ValInfo = ImutContainerInfo<ValT>>
+template <typename ValT, typename ValInfo = ImutContainerInfo<ValT>,
+          bool Canonicalize = true>
 class ImmutableSetRef {
 public:
   using value_type = typename ValInfo::value_type;
   using value_type_ref = typename ValInfo::value_type_ref;
-  using TreeTy = ImutAVLTree<ValInfo>;
+  using TreeTy = ImutAVLTree<ValInfo, Canonicalize>;
   using FactoryTy = typename TreeTy::Factory;
 
 private:
@@ -1062,9 +1123,12 @@ public:
     return Root ? Root->contains(V) : false;
   }
 
-  ImmutableSet<ValT> asImmutableSet(bool canonicalize = true) const {
-    return ImmutableSet<ValT>(
-        canonicalize ? Factory->getCanonicalTree(Root.get()) : Root.get());
+  ImmutableSet<ValT, ValInfo, Canonicalize> asImmutableSet() const {
+    using SetTy = ImmutableSet<ValT, ValInfo, Canonicalize>;
+    if constexpr (Canonicalize)
+      return SetTy(Factory->getCanonicalTree(Root.get()));
+    else
+      return SetTy(Root.get());
   }
 
   TreeTy *getRootWithoutRetain() const { return Root.get(); }

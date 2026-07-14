@@ -325,10 +325,10 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; CHECK-LABEL: define void @tail_folded_store_avx512(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[END2:%.*]] = ptrtoint ptr [[END]] to i32
 ; CHECK-NEXT:    [[START1:%.*]] = ptrtoint ptr [[START]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START1]], -72
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[END2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[END]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i32 [[START1]], [[TMP4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP8]], -72
 ; CHECK-NEXT:    [[TMP2:%.*]] = udiv i32 [[TMP1]], 72
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i32 [[TMP2]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
@@ -360,10 +360,10 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; AUTOVF-LABEL: define void @tail_folded_store_avx512(
 ; AUTOVF-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR3:[0-9]+]] {
 ; AUTOVF-NEXT:  [[ENTRY:.*:]]
-; AUTOVF-NEXT:    [[END2:%.*]] = ptrtoint ptr [[END]] to i32
 ; AUTOVF-NEXT:    [[START1:%.*]] = ptrtoint ptr [[START]] to i32
-; AUTOVF-NEXT:    [[TMP0:%.*]] = add i32 [[START1]], -72
-; AUTOVF-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[END2]]
+; AUTOVF-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[END]] to i32
+; AUTOVF-NEXT:    [[TMP8:%.*]] = sub i32 [[START1]], [[TMP4]]
+; AUTOVF-NEXT:    [[TMP1:%.*]] = add i32 [[TMP8]], -72
 ; AUTOVF-NEXT:    [[TMP2:%.*]] = udiv i32 [[TMP1]], 72
 ; AUTOVF-NEXT:    [[TMP3:%.*]] = add nuw nsw i32 [[TMP2]], 1
 ; AUTOVF-NEXT:    br label %[[VECTOR_PH:.*]]

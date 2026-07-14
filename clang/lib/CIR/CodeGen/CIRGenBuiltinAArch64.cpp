@@ -354,8 +354,17 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
     break;
   }
 
-  llvm::StringRef llvmIntrName = getLLVMIntrNameNoPrefix(
-      static_cast<llvm::Intrinsic::ID>(info.LLVMIntrinsic));
+  unsigned intr = info.LLVMIntrinsic;
+
+  // Use fptosi.sat/fptoui.sat unless under strict FP.
+  assert(!cir::MissingFeatures::emitConstrainedFPCall());
+  if (intr == Intrinsic::aarch64_neon_fcvtzs)
+    intr = Intrinsic::fptosi_sat;
+  else if (intr == Intrinsic::aarch64_neon_fcvtzu)
+    intr = Intrinsic::fptoui_sat;
+
+  llvm::StringRef llvmIntrName =
+      getLLVMIntrNameNoPrefix(static_cast<llvm::Intrinsic::ID>(intr));
   mlir::Location loc = cgf.getLoc(expr->getExprLoc());
 
   // The switch stmt is intended to help catch NYI cases and will be removed
@@ -393,6 +402,10 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   case NEON::BI__builtin_neon_vpminqd_f64:
   case NEON::BI__builtin_neon_vpminnms_f32:
   case NEON::BI__builtin_neon_vpminnmqd_f64:
+  case NEON::BI__builtin_neon_vcvtd_s32_f64:
+  case NEON::BI__builtin_neon_vcvtd_s64_f64:
+  case NEON::BI__builtin_neon_vcvtd_u64_f64:
+  case NEON::BI__builtin_neon_vcvtd_u32_f64:
   case NEON::BI__builtin_neon_vcvts_n_f32_s32:
   case NEON::BI__builtin_neon_vcvts_n_f32_u32:
   case NEON::BI__builtin_neon_vcvts_n_s32_f32:
@@ -456,6 +469,7 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   case NEON::BI__builtin_neon_vpmaxqd_f64:
   case NEON::BI__builtin_neon_vpmaxnms_f32:
   case NEON::BI__builtin_neon_vpmaxnmqd_f64:
+  case NEON::BI__builtin_neon_vmulxh_f16:
     break;
   }
 

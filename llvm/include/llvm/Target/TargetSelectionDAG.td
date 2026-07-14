@@ -1911,6 +1911,12 @@ def any_fmaximum   : PatFrags<(ops node:$lhs, node:$rhs),
 def any_fminimum   : PatFrags<(ops node:$lhs, node:$rhs),
                               [(strict_fminimum node:$lhs, node:$rhs),
                                (fminimum node:$lhs, node:$rhs)]>;
+def any_pseudo_fmax : PatFrags<(ops node:$lhs, node:$rhs),
+                              [(strict_pseudo_fmax node:$lhs, node:$rhs),
+                               (pseudo_fmax node:$lhs, node:$rhs)]>;
+def any_pseudo_fmin : PatFrags<(ops node:$lhs, node:$rhs),
+                              [(strict_pseudo_fmin node:$lhs, node:$rhs),
+                               (pseudo_fmin node:$lhs, node:$rhs)]>;
 def any_fpround    : PatFrags<(ops node:$src),
                               [(strict_fpround node:$src),
                                (fpround node:$src)]>;

@@ -1790,7 +1790,7 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     llvm::Type *Tys[2] = { Ty, InputTy };
     return EmitNeonCall(CGM.getIntrinsic(LLVMIntrinsic, Tys), Ops, "vmmla");
   }
-  case NEON::BI__builtin_neon_vmmlaq_f16_f16:
+  case NEON::BI__builtin_neon_vmmlaq_f16:
   case NEON::BI__builtin_neon_vmmlaq_f32_f16: {
     auto *InputTy =
         llvm::FixedVectorType::get(HalfTy, Ty->getPrimitiveSizeInBits() / 16);

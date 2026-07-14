@@ -22,9 +22,9 @@ unittest("ClangScalableAnalysisTests") {
   sources = [
     "ASTEntityMappingTest.cpp",
     "Analyses/CallGraph/CallGraphExtractorTest.cpp",
-    "Analyses/OperatorNewDelete/OperatorNewDeletePointersExtractorTest.cpp",
     "Analyses/PointerFlow/PointerFlowTest.cpp",
     "Analyses/PointerFlow/PointerFlowWPATest.cpp",
+    "Analyses/TypeConstrainedPointers/TypeConstrainedPointersExtractorTest.cpp",
     "Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.cpp",
     "Analyses/UnsafeBufferUsage/UnsafeBufferUsageWPATest.cpp",
     "BuildNamespaceTest.cpp",

@@ -4254,6 +4254,13 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
     }
 
     LastField = nullptr;
+
+    // The value of an atomic object is represented like a value of the
+    // underlying type, so look through the _Atomic wrapper.
+    if (const AtomicType *AT = ObjType->getAs<AtomicType>())
+      ObjType = Info.Ctx.getQualifiedType(AT->getValueType(),
+                                          ObjType.getQualifiers());
+
     if (ObjType->isArrayType()) {
       // Next subobject is an array element.
       const ArrayType *AT = Info.Ctx.getAsArrayType(ObjType);

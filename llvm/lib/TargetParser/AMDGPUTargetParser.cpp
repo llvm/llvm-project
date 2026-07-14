@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
@@ -916,28 +917,6 @@ getTargetIDSettingFromFeatureString(StringRef FeatureString) {
   llvm_unreachable("Malformed feature string");
 }
 
-// Derive the architecture from the processor name in \p TargetIDStr. "generic"
-// and the empty processor name act as a wildcard.
-static GPUKind getGPUKindFromTargetID(const Triple &TT, StringRef TargetIDStr) {
-  StringRef CPUName = TargetIDStr.split(':').first;
-  return (CPUName.empty() || CPUName == "generic")
-             ? getGPUKindFromSubArch(TT.getSubArch())
-             : parseArchAMDGCN(CPUName);
-}
-
-TargetID::TargetID(const Triple &TT, StringRef TargetIDStr)
-    : TargetID(getGPUKindFromTargetID(TT, TargetIDStr), TT,
-               TargetIDSetting::Unsupported, TargetIDSetting::Unsupported) {
-  // Default xnack/sramecc to the "Any" wildcard when the architecture supports
-  // them, then apply any explicit feature overrides from the target-id string.
-  unsigned ArchAttr = getArchAttrAMDGCN(Arch);
-  if (ArchAttr & FEATURE_XNACK)
-    XnackSetting = TargetIDSetting::Any;
-  if (ArchAttr & FEATURE_SRAMECC)
-    SramEccSetting = TargetIDSetting::Any;
-  setTargetIDFromTargetIDStream(TargetIDStr);
-}
-
 void TargetID::setTargetIDFromTargetIDStream(StringRef TargetID) {
   SmallVector<StringRef, 3> TargetIDSplit;
   TargetID.split(TargetIDSplit, ':');
@@ -963,10 +942,40 @@ TargetID::parseTargetIDString(StringRef TargetIDDirective) {
   if (!TT.isAMDGCN())
     return std::nullopt;
 
-  // The processor+features field must be present, even if empty (the ISA can
-  // be encoded in the triple's subarch, e.g.
-  // "amdgpu12.50-amd-amdhsa-unknown-").
-  return TargetID(TT, Parts[4]);
+  SmallVector<StringRef, 3> FeatureSplit;
+  Parts[4].split(FeatureSplit, ':');
+  if (FeatureSplit.empty())
+    return std::nullopt;
+
+  StringRef CPUName = FeatureSplit[0];
+
+  // Prefer the explicitly named processor so the parsed target id reflects it
+  // (e.g. for validation against the triple subarch). The processor field may
+  // be empty when the ISA is already encoded in the triple's subarch
+  // (e.g. "amdgpu12.50-amd-amdhsa-unknown-"), in which case derive the arch
+  // from the subarch.
+  GPUKind Arch = CPUName.empty() ? getGPUKindFromSubArch(TT.getSubArch())
+                                 : parseArchAMDGCN(CPUName);
+
+  unsigned ArchAttr = getArchAttrAMDGCN(Arch);
+
+  // Determine xnack/sramecc support based on the architecture attributes.
+  TargetIDSetting XnackSetting = (ArchAttr & FEATURE_XNACK)
+                                     ? TargetIDSetting::Any
+                                     : TargetIDSetting::Unsupported;
+  TargetIDSetting SramEccSetting = (ArchAttr & FEATURE_SRAMECC)
+                                       ? TargetIDSetting::Any
+                                       : TargetIDSetting::Unsupported;
+
+  for (StringRef FeatureString :
+       ArrayRef<StringRef>(FeatureSplit).drop_front(1)) {
+    if (FeatureString.starts_with("xnack"))
+      XnackSetting = getTargetIDSettingFromFeatureString(FeatureString);
+    else if (FeatureString.starts_with("sramecc"))
+      SramEccSetting = getTargetIDSettingFromFeatureString(FeatureString);
+  }
+
+  return TargetID(Arch, TT, XnackSetting, SramEccSetting);
 }
 
 void TargetID::print(raw_ostream &StreamRep) const {
@@ -998,27 +1007,4 @@ bool TargetID::operator==(const TargetID &Other) const {
   return Arch == Other.Arch && XnackSetting == Other.XnackSetting &&
          SramEccSetting == Other.SramEccSetting && IsAMDHSA == Other.IsAMDHSA &&
          TargetTripleString == Other.TargetTripleString;
-}
-
-static bool areFeatureSettingsCompatible(TargetIDSetting A, TargetIDSetting B) {
-  return A == TargetIDSetting::Any || B == TargetIDSetting::Any || A == B;
-}
-
-bool TargetID::isCompatibleWith(const TargetID &Other) const {
-  // The triples must be compatible.
-  if (!Triple(getTargetTripleString())
-           .isCompatibleWith(Triple(Other.getTargetTripleString())))
-    return false;
-
-  // The processors must be compatible. A generic/major-family image (its
-  // subarch is the major-family subarch, or the GPU is unknown) acts as a
-  // wildcard that merges into a specific image group.
-  Triple::SubArchType SubA = getSubArch(Arch);
-  Triple::SubArchType SubB = getSubArch(Other.Arch);
-  if (!isSubArchCompatible(SubA, SubB))
-    return false;
-
-  // The xnack/sramecc settings must not conflict.
-  return areFeatureSettingsCompatible(XnackSetting, Other.XnackSetting) &&
-         areFeatureSettingsCompatible(SramEccSetting, Other.SramEccSetting);
 }

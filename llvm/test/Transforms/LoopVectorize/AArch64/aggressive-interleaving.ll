@@ -17,16 +17,16 @@ define void @test_interleave_reduction(ptr %arg, ptr %arg1) {
 ; A320:       [[OUTER]]:
 ; A320-NEXT:    [[TPM26:%.*]] = add i64 0, 1
 ; A320-NEXT:    [[TPM10:%.*]] = alloca i32, align 8
-; A320-NEXT:    [[TPM102:%.*]] = ptrtoint ptr [[TPM10]] to i64
 ; A320-NEXT:    [[TPM27:%.*]] = getelementptr inbounds i32, ptr [[TPM10]], i64 [[TPM26]]
 ; A320-NEXT:    [[TPM28:%.*]] = getelementptr inbounds ptr, ptr [[TPM15]], i64 0
 ; A320-NEXT:    [[TPM29:%.*]] = load ptr, ptr [[TPM28]], align 8
-; A320-NEXT:    [[TPM291:%.*]] = ptrtoint ptr [[TPM29]] to i64
 ; A320-NEXT:    [[TPM17:%.*]] = alloca double, align 8
 ; A320-NEXT:    [[TPM32:%.*]] = getelementptr inbounds double, ptr [[TPM17]], i64 [[TPM26]]
-; A320-NEXT:    [[TMP0:%.*]] = add i64 [[TPM291]], -8
+; A320-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[TPM29]] to i64
+; A320-NEXT:    [[TPM102:%.*]] = ptrtoint ptr [[TPM10]] to i64
 ; A320-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[TPM102]]
-; A320-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
+; A320-NEXT:    [[TMP6:%.*]] = add i64 [[TMP1]], -8
+; A320-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP6]], 2
 ; A320-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; A320-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
 ; A320-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]

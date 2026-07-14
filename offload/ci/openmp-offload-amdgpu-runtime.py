@@ -36,8 +36,8 @@ with worker.run(
                 "-DLLVM_TARGETS_TO_BUILD=X86;AMDGPU",
                 "-DCMAKE_C_COMPILER_LAUNCHER=ccache",
                 "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache",
-                "-DRUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES=compiler-rt;openmp",
-                "-DLLVM_RUNTIME_TARGETS=default;amdgcn-amd-amdhsa",
+                "-DRUNTIMES_amdgpu-amd-amdhsa_LLVM_ENABLE_RUNTIMES=compiler-rt;openmp",
+                "-DLLVM_RUNTIME_TARGETS=default;amdgpu-amd-amdhsa",
                 "-DLLVM_ENABLE_PROJECTS=clang;lld;llvm",
                 "-DLLVM_ENABLE_RUNTIMES=offload;compiler-rt;openmp",
             ]

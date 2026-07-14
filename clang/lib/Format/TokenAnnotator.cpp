@@ -87,8 +87,9 @@ static bool isKeywordWithCondition(const FormatToken &Tok) {
 static bool isCppAttribute(bool IsCpp, const FormatToken &Tok) {
   if (!IsCpp || !Tok.startsSequence(tok::l_square, tok::l_square))
     return false;
-  // The first square bracket is part of an ObjC array literal
-  if (Tok.Previous && Tok.Previous->is(tok::at))
+  // The first square bracket belongs to an ObjC array literal or malformed
+  // nested-bracket input.
+  if (Tok.Previous && Tok.Previous->isOneOf(tok::at, tok::l_square))
     return false;
   const FormatToken *AttrTok = Tok.Next->Next;
   if (!AttrTok)

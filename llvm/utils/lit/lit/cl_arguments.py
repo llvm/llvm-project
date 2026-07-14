@@ -55,6 +55,10 @@ class TestOutputAction(argparse.Action):
             setattr(namespace, "test_output", value)
 
 
+_TIME_TESTS_OPT = "--time-tests"
+_TIME_TESTS_SLOWEST_DEFAULT = 20
+_TIME_TESTS_PREFIX = f"{_TIME_TESTS_OPT}="
+
 class AliasAction(argparse.Action):
     def __init__(self, option_strings, dest, nargs=None, **kwargs):
         self.expansion = kwargs.pop("alias", None)
@@ -382,9 +386,12 @@ def parse_args():
         action="store_true",
     )
     execution_test_time_group.add_argument(
-        "--time-tests",
-        help="Track elapsed wall time for each test printed in a histogram",
+        _TIME_TESTS_OPT,
+        help="Track elapsed wall time for each test and print a histogram; "
+        "optionally limit the slowest-test list with =N or report all with =all "
+        f"(default slowest count: {_TIME_TESTS_SLOWEST_DEFAULT})",
         action="store_true",
+        default=None,
     )
 
     selection_group = parser.add_argument_group("Test Selection")
@@ -515,8 +522,21 @@ def parse_args():
 
     # LIT is special: environment variables override command line arguments.
     env_args = shlex.split(os.environ.get("LIT_OPTS", ""))
-    args = sys.argv[1:] + env_args
+    try:
+        # --time-tests is preprocessed here: bare --time-tests defaults to 20,
+        # and --time-tests=N / --time-tests=all set the slowest-test limit.
+        # Values must use = (e.g. --time-tests=all), since `lit --time-tests all`
+        # could mean "show all slow tests" or "run the test directory all".
+        args, time_tests = _extract_time_tests_args(sys.argv[1:] + env_args)
+    except argparse.ArgumentTypeError as exc:
+        parser.error(str(exc))
     opts = parser.parse_args(args)
+    opts.time_tests = time_tests
+
+    if opts.time_tests is not None and opts.skip_test_time_recording:
+        parser.error(
+            f"argument --skip-test-time-recording: not allowed with argument {_TIME_TESTS_OPT}"
+        )
 
     # Validate command line options
     if opts.incremental:
@@ -553,6 +573,28 @@ def parse_args():
 
 def _positive_int(arg):
     return _int(arg, "positive", lambda i: i > 0)
+
+
+def _time_tests_count(arg):
+    if arg.lower() == "all":
+        return "all"
+    return _positive_int(arg)
+
+
+def _extract_time_tests_args(args):
+    processed = []
+    time_tests = None
+    for arg in args:
+        if arg == _TIME_TESTS_OPT:
+            time_tests = _TIME_TESTS_SLOWEST_DEFAULT
+        elif arg.startswith(_TIME_TESTS_PREFIX):
+            value = arg[len(_TIME_TESTS_PREFIX) :]
+            if not value:
+                raise _error(f"argument {_TIME_TESTS_OPT} requires a value after '='")
+            time_tests = _time_tests_count(value)
+        else:
+            processed.append(arg)
+    return processed, time_tests
 
 
 def _non_negative_int(arg):

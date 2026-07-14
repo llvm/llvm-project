@@ -1079,3 +1079,314 @@ exit:
   %cmp.not = icmp eq i64 %sub, 0
   ret i1 %cmp.not
 }
+
+; The loop counts up from 0 with the header exit test on the post-increment
+; (iv.next == 100). The unsigned exit fact iv.next u<= 100 is derived, so
+; `iv.next u> 100` in the dedicated exit folds to false.
+define i1 @postinc_header_eq_unsigned_exit_fact(i1 %c) {
+; CHECK-LABEL: define i1 @postinc_header_eq_unsigned_exit_fact(
+; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 100
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[BODY:.*]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_BODY:.*]], label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER]]
+; CHECK:       [[EXIT_BODY]]:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %iv.next = add i64 %iv, 1
+  %done = icmp eq i64 %iv.next, 100
+  br i1 %done, label %exit, label %body
+
+body:
+  br i1 %c, label %exit_body, label %latch
+
+latch:
+  br label %loop.header
+
+exit_body:
+  %chk = icmp ugt i64 %iv.next, 100
+  ret i1 %chk
+
+exit:
+  ret i1 false
+}
+
+; Same as above but with a NE header test. The unsigned facts are still derived
+; and the body `iv u< 100` folds to true.
+define i1 @postinc_header_ne_unsigned_body_fact(i1 %c) {
+; CHECK-LABEL: define i1 @postinc_header_ne_unsigned_body_fact(
+; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp ne i64 [[IV_NEXT]], 100
+; CHECK-NEXT:    br i1 [[DONE]], label %[[BODY:.*]], label %[[EXIT:.*]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_BODY:.*]], label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER]]
+; CHECK:       [[EXIT_BODY]]:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %iv.next = add i64 %iv, 1
+  %done = icmp ne i64 %iv.next, 100
+  br i1 %done, label %body, label %exit
+
+body:
+  %chk = icmp ult i64 %iv, 100
+  br i1 %c, label %exit_body, label %latch
+
+latch:
+  br label %loop.header
+
+exit_body:
+  ret i1 %chk
+
+exit:
+  ret i1 false
+}
+
+; The compared post-increment `iv + 2` does not match the induction step of 1.
+define i1 @postinc_incstep_ne_step_not_folded(i1 %c) {
+; CHECK-LABEL: define i1 @postinc_incstep_ne_step_not_folded(
+; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[IV_PLUS2:%.*]] = add i64 [[IV]], 2
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_PLUS2]], 100
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[BODY:.*]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[CHK:%.*]] = icmp ult i64 [[IV_PLUS2]], 100
+; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_BODY:.*]], label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    br label %[[LOOP_HEADER]]
+; CHECK:       [[EXIT_BODY]]:
+; CHECK-NEXT:    ret i1 [[CHK]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %iv.plus2 = add i64 %iv, 2
+  %done = icmp eq i64 %iv.plus2, 100
+  br i1 %done, label %exit, label %body
+
+body:
+  %chk = icmp ult i64 %iv.plus2, 100
+  br i1 %c, label %exit_body, label %latch
+
+latch:
+  %iv.next = add i64 %iv, 1
+  br label %loop.header
+
+exit_body:
+  ret i1 %chk
+
+exit:
+  ret i1 false
+}
+
+; Post-increment with negative step.
+define i1 @postinc_negative_step_not_folded(i1 %c) {
+; CHECK-LABEL: define i1 @postinc_negative_step_not_folded(
+; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 100, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[BODY:.*]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[CHK:%.*]] = icmp ugt i64 [[IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_BODY:.*]], label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER]]
+; CHECK:       [[EXIT_BODY]]:
+; CHECK-NEXT:    ret i1 [[CHK]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 100, %entry ], [ %iv.next, %latch ]
+  %iv.next = add i64 %iv, -1
+  %done = icmp eq i64 %iv.next, 0
+  br i1 %done, label %exit, label %body
+
+body:
+  %chk = icmp ugt i64 %iv.next, 0
+  br i1 %c, label %exit_body, label %latch
+
+latch:
+  br label %loop.header
+
+exit_body:
+  ret i1 %chk
+
+exit:
+  ret i1 false
+}
+
+; Induction start value is not constant.
+define i1 @postinc_non_constant_start_not_folded(i64 %start, i1 %c) {
+; CHECK-LABEL: define i1 @postinc_non_constant_start_not_folded(
+; CHECK-SAME: i64 [[START:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 100
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[BODY:.*]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_BODY:.*]], label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER]]
+; CHECK:       [[EXIT_BODY]]:
+; CHECK-NEXT:    [[CHK:%.*]] = icmp ule i64 [[IV_NEXT]], 100
+; CHECK-NEXT:    ret i1 [[CHK]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %latch ]
+  %iv.next = add i64 %iv, 1
+  %done = icmp eq i64 %iv.next, 100
+  br i1 %done, label %exit, label %body
+
+body:
+  br i1 %c, label %exit_body, label %latch
+
+latch:
+  br label %loop.header
+
+exit_body:
+  %chk = icmp ule i64 %iv.next, 100
+  ret i1 %chk
+
+exit:
+  ret i1 false
+}
+
+; Adjusted lower bound `StartValue + StepOffset` overflows unsigned.
+define i1 @postinc_start_plus_step_overflow_not_folded(i1 %c) {
+; CHECK-LABEL: define i1 @postinc_start_plus_step_overflow_not_folded(
+; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ -1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 100
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[BODY:.*]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_BODY:.*]], label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER]]
+; CHECK:       [[EXIT_BODY]]:
+; CHECK-NEXT:    [[CHK:%.*]] = icmp ule i64 [[IV_NEXT]], 100
+; CHECK-NEXT:    ret i1 [[CHK]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ -1, %entry ], [ %iv.next, %latch ]
+  %iv.next = add i64 %iv, 1
+  %done = icmp eq i64 %iv.next, 100
+  br i1 %done, label %exit, label %body
+
+body:
+  br i1 %c, label %exit_body, label %latch
+
+latch:
+  br label %loop.header
+
+exit_body:
+  %chk = icmp ule i64 %iv.next, 100
+  ret i1 %chk
+
+exit:
+  ret i1 false
+}
+
+; Post-increment condition with signed predicates in body.
+define i1 @postinc_negative_start_signed_body_not_folded(i1 %c) {
+; CHECK-LABEL: define i1 @postinc_negative_start_signed_body_not_folded(
+; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ -10, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 10
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[BODY:.*]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[CHK:%.*]] = icmp slt i64 [[IV]], 10
+; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_BODY:.*]], label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER]]
+; CHECK:       [[EXIT_BODY]]:
+; CHECK-NEXT:    ret i1 [[CHK]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ -10, %entry ], [ %iv.next, %latch ]
+  %iv.next = add i64 %iv, 1
+  %done = icmp eq i64 %iv.next, 10
+  br i1 %done, label %exit, label %body
+
+body:
+  %chk = icmp slt i64 %iv, 10
+  br i1 %c, label %exit_body, label %latch
+
+latch:
+  br label %loop.header
+
+exit_body:
+  ret i1 %chk
+
+exit:
+  ret i1 false
+}

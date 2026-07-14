@@ -163,6 +163,13 @@ enum {
   TRAP_NUM_SGPRS = 16
 };
 
+/// Returns true if \p Lhs and \p Rhs are incompatible (both specific but
+/// different).
+inline bool targetIDSettingsConflict(TargetIDSetting Lhs, TargetIDSetting Rhs) {
+  return Lhs != TargetIDSetting::Any && Rhs != TargetIDSetting::Any &&
+         Lhs != Rhs;
+}
+
 /// \returns Instruction cache line size in bytes for given subtarget \p STI.
 unsigned getInstCacheLineSize(const MCSubtargetInfo &STI);
 

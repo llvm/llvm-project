@@ -1863,21 +1863,21 @@ def relaxed_fmax : SDNode<"WebAssemblyISD::RELAXED_FMAX", SDTFPBinOp>;
 def relaxed_pmin :
   PatFrag<(ops node:$lhs, node:$rhs), (pmin $lhs, $rhs), [{
   return (N->getFlags().hasNoNaNs() ||
-          (CurDAG->isKnownNeverNaN(N->getOperand(1)) &&
-           CurDAG->isKnownNeverNaN(N->getOperand(2)))) &&
+          (CurDAG->isKnownNeverNaN(N->getOperand(0)) &&
+           CurDAG->isKnownNeverNaN(N->getOperand(1)))) &&
          (N->getFlags().hasNoSignedZeros() ||
-          CurDAG->isKnownNeverLogicalZero(N->getOperand(1)) ||
-          CurDAG->isKnownNeverLogicalZero(N->getOperand(2)));
+          CurDAG->isKnownNeverLogicalZero(N->getOperand(0)) ||
+          CurDAG->isKnownNeverLogicalZero(N->getOperand(1)));
 }]>;
 
 def relaxed_pmax :
   PatFrag<(ops node:$lhs, node:$rhs), (pmax $lhs, $rhs), [{
   return (N->getFlags().hasNoNaNs() ||
-          ((CurDAG->isKnownNeverNaN(N->getOperand(1))) &&
-           CurDAG->isKnownNeverNaN(N->getOperand(2)))) &&
+          ((CurDAG->isKnownNeverNaN(N->getOperand(0))) &&
+           CurDAG->isKnownNeverNaN(N->getOperand(1)))) &&
          (N->getFlags().hasNoSignedZeros() ||
-          CurDAG->isKnownNeverLogicalZero(N->getOperand(1)) ||
-          CurDAG->isKnownNeverLogicalZero(N->getOperand(2)));
+          CurDAG->isKnownNeverLogicalZero(N->getOperand(0)) ||
+          CurDAG->isKnownNeverLogicalZero(N->getOperand(1)));
 }]>;
 
 let Predicates = [HasRelaxedSIMD] in {

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
-// expected-no-diagnostics
+
 namespace A {
 template <typename T>
 concept C = true;
@@ -30,6 +30,23 @@ requires (A<T> || B<T>)
 constexpr int f() { return 1; }
 
 static_assert(f<int>() == 0);
+}
+
+namespace GH182671 {
+
+template<int N> concept Positive = N > 0;
+template<int N> requires Positive<N> struct A {};
+// expected-note@-1 {{'A' declared here}}
+template<template<int N> requires Positive<N> typename T> struct Wrapper {};
+using X = Wrapper<A>;
+
+template<template<int N> requires Positive<N + 1> typename T> struct Wrapper2 {};
+// expected-note@-1 {{'T' declared here}}
+
+// FIXME: The diagnostics are not great
+using Y = Wrapper2<A>;
+// expected-error@-1 {{template template argument 'A' is more constrained than template template parameter 'T'}}
+
 }
 
 namespace GH122581 {

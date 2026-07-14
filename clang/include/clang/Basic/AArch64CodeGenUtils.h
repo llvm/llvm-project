@@ -263,7 +263,7 @@ const inline ARMNeonVectorIntrinsicInfo AArch64SIMDIntrinsicMap [] = {
   NEONMAP1(vld1q_x2_v, aarch64_neon_ld1x2, 0),
   NEONMAP1(vld1q_x3_v, aarch64_neon_ld1x3, 0),
   NEONMAP1(vld1q_x4_v, aarch64_neon_ld1x4, 0),
-  NEONMAP1(vmmlaq_f16_f16, aarch64_neon_fmmla, 0),
+  NEONMAP1(vmmlaq_f16, aarch64_neon_fmmla, 0),
   NEONMAP1(vmmlaq_f32_f16, aarch64_neon_fmmla, 0),
   NEONMAP1(vmmlaq_s32, aarch64_neon_smmla, 0),
   NEONMAP1(vmmlaq_u32, aarch64_neon_ummla, 0),

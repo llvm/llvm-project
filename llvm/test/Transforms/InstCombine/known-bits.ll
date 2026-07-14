@@ -2445,3 +2445,25 @@ define <vscale x 4 x i32> @scalable_add_to_disjoint_or(i8 %x, <vscale x 4 x i32>
 declare void @dummy()
 declare void @use(i1)
 declare void @sink(i8)
+
+define i1 @udiv_by_even_divisor_ult_128(i8 %x, i8 %y) {
+; CHECK-LABEL: @udiv_by_even_divisor_ult_128(
+; CHECK-NEXT:    ret i1 true
+;
+  %d = and i8 %y, -2
+  %q = udiv i8 %x, %d
+  %r = icmp ult i8 %q, 128
+  ret i1 %r
+}
+
+define i1 @udiv_high_known_ones_ugt_63(i8 %x, i8 %y) {
+; CHECK-LABEL: @udiv_high_known_ones_ugt_63(
+; CHECK-NEXT:    ret i1 true
+;
+  %n = or i8 %x, -64
+  %d0 = and i8 %y, 1
+  %d = or i8 %d0, 2
+  %q = udiv i8 %n, %d
+  %r = icmp ugt i8 %q, 63
+  ret i1 %r
+}

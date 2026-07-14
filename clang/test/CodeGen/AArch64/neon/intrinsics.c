@@ -4590,6 +4590,50 @@ uint64x2_t test_vcvtq_u64_f64(float64x2_t a) {
   return vcvtq_u64_f64(a);
 }
 
+// LLVM-LABEL: @test_vcvtd_s32_f64
+// CIR-LABEL: @vcvtd_s32_f64
+int32_t test_vcvtd_s32_f64(float64_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptosi.sat
+
+// LLVM-SAME: double {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTD_S32_F64_I:%.*]] = call i32 @llvm.fptosi.sat.i32.f64(double [[A]])
+// LLVM-NEXT:    ret i32 [[VCVTD_S32_F64_I]]
+  return (int32_t)vcvtd_s32_f64(a);
+}
+
+// LLVM-LABEL: @test_vcvtd_s64_f64
+// CIR-LABEL: @vcvtd_s64_f64
+int64_t test_vcvtd_s64_f64(float64_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptosi.sat
+
+// LLVM-SAME: double {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTD_S64_F64_I:%.*]] = call i64 @llvm.fptosi.sat.i64.f64(double [[A]])
+// LLVM-NEXT:    ret i64 [[VCVTD_S64_F64_I]]
+  return (int64_t)vcvtd_s64_f64(a);
+}
+
+// LLVM-LABEL: @test_vcvtd_u32_f64
+// CIR-LABEL: @vcvtd_u32_f64
+uint32_t test_vcvtd_u32_f64(float64_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptoui.sat
+
+// LLVM-SAME: double {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTD_U32_F64_I:%.*]] = call i32 @llvm.fptoui.sat.i32.f64(double [[A]])
+// LLVM-NEXT:    ret i32 [[VCVTD_U32_F64_I]]
+  return (uint32_t)vcvtd_u32_f64(a);
+}
+
+// LLVM-LABEL: @test_vcvtd_u64_f64
+// CIR-LABEL: @vcvtd_u64_f64
+uint64_t test_vcvtd_u64_f64(float64_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptoui.sat
+
+// LLVM-SAME: double {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTD_U64_F64_I:%.*]] = call i64 @llvm.fptoui.sat.i64.f64(double [[A]])
+// LLVM-NEXT:    ret i64 [[VCVTD_U64_F64_I]]
+  return (uint64_t)vcvtd_u64_f64(a);
+}
+
 //===------------------------------------------------------===//
 // 2.1.3.2.3 Vector shift right and accumulate
 // https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#vector-shift-right-and-accumulate

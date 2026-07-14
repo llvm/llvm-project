@@ -1953,14 +1953,17 @@ define <4 x i16> @test_psll_hs(<4 x i16> %a, i16 %shamt) {
   ret <4 x i16> %res
 }
 
+; We can't remove the andi, the hardware instruction always reads 5 bits.
 define <4 x i16> @test_psll_hs_mask(<4 x i16> %a, i16 %shamt) {
 ; RV32-LABEL: test_psll_hs_mask:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    andi a2, a2, 15
 ; RV32-NEXT:    psll.dhs a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_psll_hs_mask:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    andi a1, a1, 15
 ; RV64-NEXT:    psll.hs a0, a0, a1
 ; RV64-NEXT:    ret
   %masked = and i16 %shamt, 15
@@ -1986,14 +1989,17 @@ define <8 x i8> @test_psll_bs(<8 x i8> %a, i8 %shamt) {
   ret <8 x i8> %res
 }
 
+; We can't remove the andi, the hardware instruction always reads 5 bits.
 define <8 x i8> @test_psll_bs_mask(<8 x i8> %a, i8 %shamt) {
 ; RV32-LABEL: test_psll_bs_mask:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    andi a2, a2, 7
 ; RV32-NEXT:    psll.dbs a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_psll_bs_mask:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    andi a1, a1, 7
 ; RV64-NEXT:    psll.bs a0, a0, a1
 ; RV64-NEXT:    ret
   %masked = and i8 %shamt, 7
@@ -2073,14 +2079,17 @@ define <4 x i16> @test_psrl_hs(<4 x i16> %a, i16 %shamt) {
   ret <4 x i16> %res
 }
 
+; We can't remove the andi, the hardware instruction always reads 5 bits.
 define <4 x i16> @test_psrl_hs_mask(<4 x i16> %a, i16 %shamt) {
 ; RV32-LABEL: test_psrl_hs_mask:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    andi a2, a2, 15
 ; RV32-NEXT:    psrl.dhs a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_psrl_hs_mask:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    andi a1, a1, 15
 ; RV64-NEXT:    psrl.hs a0, a0, a1
 ; RV64-NEXT:    ret
   %masked = and i16 %shamt, 15
@@ -2106,14 +2115,17 @@ define <8 x i8> @test_psrl_bs(<8 x i8> %a, i8 %shamt) {
   ret <8 x i8> %res
 }
 
+; We can't remove the andi, the hardware instruction always reads 5 bits.
 define <8 x i8> @test_psrl_bs_mask(<8 x i8> %a, i8 %shamt) {
 ; RV32-LABEL: test_psrl_bs_mask:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    andi a2, a2, 7
 ; RV32-NEXT:    psrl.dbs a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_psrl_bs_mask:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    andi a1, a1, 7
 ; RV64-NEXT:    psrl.bs a0, a0, a1
 ; RV64-NEXT:    ret
   %masked = and i8 %shamt, 7
@@ -2173,14 +2185,17 @@ define <4 x i16> @test_psra_hs(<4 x i16> %a, i16 %shamt) {
   ret <4 x i16> %res
 }
 
+; We can't remove the andi, the hardware instruction always reads 5 bits.
 define <4 x i16> @test_psra_hs_mask(<4 x i16> %a, i16 %shamt) {
 ; RV32-LABEL: test_psra_hs_mask:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    andi a2, a2, 15
 ; RV32-NEXT:    psra.dhs a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_psra_hs_mask:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    andi a1, a1, 15
 ; RV64-NEXT:    psra.hs a0, a0, a1
 ; RV64-NEXT:    ret
   %masked = and i16 %shamt, 15
@@ -2206,14 +2221,17 @@ define <8 x i8> @test_psra_bs(<8 x i8> %a, i8 %shamt) {
   ret <8 x i8> %res
 }
 
+; We can't remove the andi, the hardware instruction always reads 5 bits.
 define <8 x i8> @test_psra_bs_mask(<8 x i8> %a, i8 %shamt) {
 ; RV32-LABEL: test_psra_bs_mask:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    andi a2, a2, 7
 ; RV32-NEXT:    psra.dbs a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_psra_bs_mask:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    andi a1, a1, 7
 ; RV64-NEXT:    psra.bs a0, a0, a1
 ; RV64-NEXT:    ret
   %masked = and i8 %shamt, 7
@@ -4954,14 +4972,17 @@ define <4 x i8> @test_pnsrl_bs(<4 x i16> %a, i16 %shamt) {
   ret <4 x i8> %trunc
 }
 
+; We can't remove the andi, the hardware instruction always reads 5 bits.
 define <4 x i8> @test_pnsrl_bs_mask(<4 x i16> %a, i16 %shamt) {
 ; RV32-LABEL: test_pnsrl_bs_mask:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    andi a2, a2, 15
 ; RV32-NEXT:    pnsrl.bs a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pnsrl_bs_mask:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    andi a1, a1, 15
 ; RV64-NEXT:    psrl.hs a0, a0, a1
 ; RV64-NEXT:    srli a1, a0, 48
 ; RV64-NEXT:    srli a2, a0, 32
@@ -5040,14 +5061,17 @@ define <4 x i8> @test_pnsra_bs(<4 x i16> %a, i16 %shamt) {
   ret <4 x i8> %trunc
 }
 
+; We can't remove the andi, the hardware instruction always reads 5 bits.
 define <4 x i8> @test_pnsra_bs_mask(<4 x i16> %a, i16 %shamt) {
 ; RV32-LABEL: test_pnsra_bs_mask:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    andi a2, a2, 15
 ; RV32-NEXT:    pnsra.bs a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pnsra_bs_mask:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    andi a1, a1, 15
 ; RV64-NEXT:    psra.hs a0, a0, a1
 ; RV64-NEXT:    srli a1, a0, 48
 ; RV64-NEXT:    srli a2, a0, 32

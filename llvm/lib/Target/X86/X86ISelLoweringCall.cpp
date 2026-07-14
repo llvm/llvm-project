@@ -321,7 +321,8 @@ EVT X86TargetLowering::getOptimalMemOpType(
       if (Subtarget.hasSSE1() && (Subtarget.is64Bit() || Subtarget.hasX87()) &&
           (Subtarget.getPreferVectorWidth() >= 128))
         return MVT::v4f32;
-    } else if (((Op.isMemcpy() && !Op.isMemcpyStrSrc()) || Op.isZeroMemset()) &&
+    } else if (((Op.isMemcpyOrMemmove() && !Op.isMemcpyStrSrc()) ||
+                Op.isZeroMemset()) &&
                Op.size() >= 8 && !Subtarget.is64Bit() && Subtarget.hasSSE2()) {
       // Do not use f64 to lower memcpy if source is string constant. It's
       // better to use i32 to avoid the loads.

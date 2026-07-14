@@ -22,6 +22,7 @@
 #include "BPF.h"
 #include "BPFCORE.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -29,6 +30,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
@@ -40,34 +42,25 @@ using namespace llvm;
 
 namespace {
 
-class BPFCheckAndAdjustIR final : public ModulePass {
+class BPFCheckAndAdjustIRLegacy final : public ModulePass {
   bool runOnModule(Module &F) override;
 
 public:
   static char ID;
-  BPFCheckAndAdjustIR() : ModulePass(ID) {}
+  BPFCheckAndAdjustIRLegacy() : ModulePass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-private:
-  void checkIR(Module &M);
-  bool adjustIR(Module &M);
-  bool removePassThroughBuiltin(Module &M);
-  bool removeCompareBuiltin(Module &M);
-  bool sinkMinMax(Module &M);
-  bool removeGEPBuiltins(Module &M);
-  bool insertASpaceCasts(Module &M);
 };
 } // End anonymous namespace
 
-char BPFCheckAndAdjustIR::ID = 0;
-INITIALIZE_PASS(BPFCheckAndAdjustIR, DEBUG_TYPE, "BPF Check And Adjust IR",
-                false, false)
+char BPFCheckAndAdjustIRLegacy::ID = 0;
+INITIALIZE_PASS(BPFCheckAndAdjustIRLegacy, DEBUG_TYPE,
+                "BPF Check And Adjust IR", false, false)
 
-ModulePass *llvm::createBPFCheckAndAdjustIR() {
-  return new BPFCheckAndAdjustIR();
+ModulePass *llvm::createBPFCheckAndAdjustIRLegacyPass() {
+  return new BPFCheckAndAdjustIRLegacy();
 }
 
-void BPFCheckAndAdjustIR::checkIR(Module &M) {
+static void checkIR(Module &M) {
   // Ensure relocation global won't appear in PHI node
   // This may happen if the compiler generated the following code:
   //   B1:
@@ -100,7 +93,7 @@ void BPFCheckAndAdjustIR::checkIR(Module &M) {
       }
 }
 
-bool BPFCheckAndAdjustIR::removePassThroughBuiltin(Module &M) {
+static bool removePassThroughBuiltin(Module &M) {
   // Remove __builtin_bpf_passthrough()'s which are used to prevent
   // certain IR optimizations. Now major IR optimizations are done,
   // remove them.
@@ -130,7 +123,7 @@ bool BPFCheckAndAdjustIR::removePassThroughBuiltin(Module &M) {
   return Changed;
 }
 
-bool BPFCheckAndAdjustIR::removeCompareBuiltin(Module &M) {
+static bool removeCompareBuiltin(Module &M) {
   // Remove __builtin_bpf_compare()'s which are used to prevent
   // certain IR optimizations. Now major IR optimizations are done,
   // remove them.
@@ -340,14 +333,15 @@ static bool sinkMinMaxInBB(BasicBlock &BB,
 //
 // See also:
 //   https://lore.kernel.org/bpf/20230406164505.1046801-1-yhs@fb.com/
-bool BPFCheckAndAdjustIR::sinkMinMax(Module &M) {
+static bool sinkMinMax(Module &M,
+                       function_ref<LoopInfo &(Function &)> GetLoopInfo) {
   bool Changed = false;
 
   for (Function &F : M) {
     if (F.isDeclaration())
       continue;
 
-    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+    LoopInfo &LI = GetLoopInfo(F);
     for (Loop *L : LI)
       for (BasicBlock *BB : L->blocks()) {
         // Filter out instructions coming from the same loop
@@ -362,7 +356,7 @@ bool BPFCheckAndAdjustIR::sinkMinMax(Module &M) {
   return Changed;
 }
 
-void BPFCheckAndAdjustIR::getAnalysisUsage(AnalysisUsage &AU) const {
+void BPFCheckAndAdjustIRLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LoopInfoWrapperPass>();
 }
 
@@ -410,7 +404,7 @@ static bool removeGEPBuiltinsInFunc(Function &F) {
 // - llvm.bpf.getelementptr.and.load
 // - llvm.bpf.getelementptr.and.store
 // As (load (getelementptr ...)) or (store (getelementptr ...)).
-bool BPFCheckAndAdjustIR::removeGEPBuiltins(Module &M) {
+static bool removeGEPBuiltins(Module &M) {
   bool Changed = false;
   for (auto &F : M)
     Changed = removeGEPBuiltinsInFunc(F) || Changed;
@@ -575,7 +569,7 @@ static Instruction *aspaceMemMove(DenseMap<Value *, Value *> &Cache,
 //
 // - assign section with name .addr_space.N for globals defined in
 //   non-zero address space N
-bool BPFCheckAndAdjustIR::insertASpaceCasts(Module &M) {
+static bool insertASpaceCasts(Module &M) {
   bool Changed = false;
   for (Function &F : M) {
     DenseMap<Value *, Value *> CastsCache;
@@ -653,16 +647,31 @@ bool BPFCheckAndAdjustIR::insertASpaceCasts(Module &M) {
   return Changed;
 }
 
-bool BPFCheckAndAdjustIR::adjustIR(Module &M) {
+static bool adjustIR(Module &M,
+                     function_ref<LoopInfo &(Function &)> GetLoopInfo) {
   bool Changed = removePassThroughBuiltin(M);
   Changed = removeCompareBuiltin(M) || Changed;
-  Changed = sinkMinMax(M) || Changed;
+  Changed = sinkMinMax(M, GetLoopInfo) || Changed;
   Changed = removeGEPBuiltins(M) || Changed;
   Changed = insertASpaceCasts(M) || Changed;
   return Changed;
 }
 
-bool BPFCheckAndAdjustIR::runOnModule(Module &M) {
+bool BPFCheckAndAdjustIRLegacy::runOnModule(Module &M) {
   checkIR(M);
-  return adjustIR(M);
+  return adjustIR(M, [&](Function &F) -> LoopInfo & {
+    return getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+  });
+}
+
+PreservedAnalyses BPFCheckAndAdjustIRPass::run(Module &M,
+                                               ModuleAnalysisManager &MAM) {
+  checkIR(M);
+  bool Changed = adjustIR(M, [&](Function &F) -> LoopInfo & {
+    return MAM.getResult<FunctionAnalysisManagerModuleProxy>(M)
+        .getManager()
+        .getResult<LoopAnalysis>(F);
+  });
+  return Changed ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
+                 : PreservedAnalyses::all();
 }

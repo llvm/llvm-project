@@ -581,7 +581,7 @@ public:
 class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   LLVMContext &Context;
   Module *TheModule = nullptr;
-  Triple BitcodeTargetTriple;
+  std::optional<Triple> TargetTriple;
   // Next offset to start scanning for lazy parsing of function bodies.
   uint64_t NextUnreadBit = 0;
   // Last function offset found in the VST.
@@ -708,8 +708,7 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
 
 public:
   BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
-                StringRef ProducerIdentification, LLVMContext &Context,
-                Triple BitcodeTargetTriple);
+                StringRef ProducerIdentification, LLVMContext &Context);
 
   Error materializeForwardReferencedFunctions();
 
@@ -893,6 +892,20 @@ private:
     return readConstantRange(Record, OpNum, BitWidth);
   }
 
+  /// Cache target triple for for upgrading AArch64 memory effects.
+  const Triple &getTargetTriple() {
+    if (!TargetTriple) {
+      BitstreamCursor TripleStream(Stream.getBitcodeBytes());
+      if (Expected<std::string> TripleStr = readTriple(TripleStream))
+        TargetTriple.emplace(std::move(*TripleStr));
+      else {
+        consumeError(TripleStr.takeError());
+        TargetTriple.emplace();
+      }
+    }
+    return *TargetTriple;
+  }
+
   /// Upgrades old-style typeless byval/sret/inalloca attributes by adding the
   /// corresponding argument's pointee type. Also upgrades intrinsics that now
   /// require an elementtype attribute.
@@ -1074,9 +1087,8 @@ std::error_code llvm::errorToErrorCodeAndEmitErrors(LLVMContext &Ctx,
 
 BitcodeReader::BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
                              StringRef ProducerIdentification,
-                             LLVMContext &Context, Triple TTriple)
+                             LLVMContext &Context)
     : BitcodeReaderBase(std::move(Stream), Strtab), Context(Context),
-      BitcodeTargetTriple(TTriple),
       ValueList(this->Stream.SizeInBytes(),
                 [this](unsigned ValID, BasicBlock *InsertBB) {
                   return materializeValue(ValID, InsertBB);
@@ -2483,9 +2495,9 @@ Error BitcodeReader::parseAttributeGroupBlock() {
                         MemoryEffects::argMemOnly(ArgMem) |
                         MemoryEffects::errnoMemOnly(OtherMem) |
                         MemoryEffects::otherMemOnly(OtherMem);
-              // Old versions dont have target memory location.
-              // It was represented as Inaccessible memory for AArch64.
-              if (BitcodeTargetTriple.isAArch64())
+              // Old bitcode encoded AArch64 state as inaccessible memory.
+              // Upgrade those effects to target-specific memory locations.
+              if (getTargetTriple().isAArch64())
                 ME = ME.getWithModRef(IRMemLocation::TargetMem0,
                                       InaccessibleMem) |
                      ME.getWithModRef(IRMemLocation::TargetMem1,
@@ -2496,9 +2508,9 @@ Error BitcodeReader::parseAttributeGroupBlock() {
               // on newer versions.
               auto ME = MemoryEffects::createFromIntValue(
                   EncodedME & 0x00FFFFFFFFFFFFFFULL);
-              // Only from Version=2 onwards target memory location exist.
-              // It was represented as Inaccessible memory for AArch64.
-              if (Version == 1 && BitcodeTargetTriple.isAArch64())
+              // Upgrade to target-specific memory locations introduced in
+              // version 2.
+              if (Version == 1 && getTargetTriple().isAArch64())
                 ME = ME.getWithModRef(
                          IRMemLocation::TargetMem0,
                          ME.getModRef(IRMemLocation::InaccessibleMem)) |
@@ -8779,20 +8791,10 @@ BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
       return std::move(E);
   }
 
-  // Cache target triple early for target-memory attribute upgrading.
-  // Suppress target parser diagnostics during this early parse,
-  // because attribute parsing runs before target parsing.
-  Triple BitcodeTargetTriple;
-  BitstreamCursor TripleStream(Buffer);
-  if (Expected<std::string> TripleStr = readTriple(TripleStream))
-    BitcodeTargetTriple = Triple(*TripleStr);
-  else
-    consumeError(TripleStr.takeError());
-
   if (Error JumpFailed = Stream.JumpToBit(ModuleBit))
     return std::move(JumpFailed);
   auto *R = new BitcodeReader(std::move(Stream), Strtab, ProducerIdentification,
-                              Context, BitcodeTargetTriple);
+                              Context);
 
   std::unique_ptr<Module> M =
       std::make_unique<Module>(ModuleIdentifier, Context);

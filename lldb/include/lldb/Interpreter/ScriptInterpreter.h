@@ -558,10 +558,6 @@ public:
     return {};
   }
 
-  virtual lldb::ScriptedStopHookInterfaceSP CreateScriptedStopHookInterface() {
-    return {};
-  }
-
   virtual lldb::ScriptedHookInterfaceSP CreateScriptedHookInterface() {
     return {};
   }

@@ -29735,9 +29735,17 @@ public:
             [](ArrayRef<Value *> RedV) {
               return RedV.size() < 2 || !allConstant(RedV) || !isSplat(RedV);
             })) {
-      for (ReductionOpsType &RdxOps : ReductionOps)
-        for (Value *RdxOp : RdxOps)
-          V.analyzedReductionRoot(cast<Instruction>(RdxOp));
+      // For ordered reductions the leaves are pulled in via the fallback in
+      // matchAssociativeReduction and may still be valid reduction roots on
+      // their own; only the root is a dead end. For unordered reductions keep
+      // marking every reduction op as analyzed.
+      if (RK == ReductionOrdering::Ordered) {
+        V.analyzedReductionRoot(cast<Instruction>(ReductionRoot));
+      } else {
+        for (ReductionOpsType &RdxOps : ReductionOps)
+          for (Value *RdxOp : RdxOps)
+            V.analyzedReductionRoot(cast<Instruction>(RdxOp));
+      }
       return nullptr;
     }
 

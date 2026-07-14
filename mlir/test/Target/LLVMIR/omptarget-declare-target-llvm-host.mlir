@@ -133,6 +133,25 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_targe
     llvm.return %0 : i32
   }
 
+  // CHECK-DAG: @_QFEinternal_enter = dso_local global i32 7
+  // CHECK-DAG: @.offloading.entry_name{{.*}} = internal unnamed_addr constant [19 x i8] c"_QFEinternal_enter\00"
+  // CHECK-DAG: @.offloading.entry._QFEinternal_enter = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 0, ptr @_QFEinternal_enter, ptr @.offloading.entry_name{{.*}}, i64 4, i64 0, ptr null }, section "llvm_offload_entries"
+  // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QFEinternal_enter", i32 {{.*}}, i32 {{.*}}}
+  llvm.mlir.global internal @_QFEinternal_enter() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} : i32 {
+    %0 = llvm.mlir.constant(7 : i32) : i32
+    llvm.return %0 : i32
+  }
+
+  // CHECK-DAG: @_QFEhidden_enter = hidden global i32 8
+  // CHECK-DAG: @.offloading.entry_name{{.*}} = internal unnamed_addr constant [32 x i8] c"_QFEhidden_enter_decl_tgt_entry\00"
+  // CHECK-DAG: @.offloading.entry._QFEhidden_enter_decl_tgt_entry = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 0, ptr @_QFEhidden_enter_decl_tgt_entry, ptr @.offloading.entry_name{{.*}}, i64 4, i64 0, ptr null }, section "llvm_offload_entries"
+  // CHECK-DAG: @_QFEhidden_enter_decl_tgt_entry = weak alias i32, ptr @_QFEhidden_enter
+  // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QFEhidden_enter_decl_tgt_entry", i32 {{.*}}, i32 {{.*}}}
+  llvm.mlir.global external hidden @_QFEhidden_enter() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} : i32 {
+    %0 = llvm.mlir.constant(8 : i32) : i32
+    llvm.return %0 : i32
+  }
+
   // CHECK-DAG: @_QMtest_0Ept1 = global { ptr, i64, i32, i8, i8, i8, i8 } { ptr null, i64 4, i32 20180515, i8 0, i8 9, i8 1, i8 0 }
   // CHECK-DAG: @_QMtest_0Ept1_decl_tgt_ref_ptr = weak global ptr @_QMtest_0Ept1
   // CHECK-DAG: @.offloading.entry_name{{.*}} = internal unnamed_addr constant [31 x i8] c"_QMtest_0Ept1_decl_tgt_ref_ptr\00"

@@ -152,7 +152,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     // Support minimum and maximum, which otherwise default to expand.
     setOperationAction(ISD::FMINIMUM, T, Legal);
     setOperationAction(ISD::FMAXIMUM, T, Legal);
-    if (MVT(T).isVector()) {
+    if (Subtarget->hasSIMD128() && MVT(T).isVector()) {
       setOperationAction(ISD::PSEUDO_FMIN, T, Legal);
       setOperationAction(ISD::PSEUDO_FMAX, T, Legal);
     }

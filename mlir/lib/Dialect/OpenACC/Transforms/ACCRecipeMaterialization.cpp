@@ -383,25 +383,29 @@ LogicalResult ACCRecipeMaterialization::materialize(
     cloneRegionIntoAccRegion(&combinerRegion, &combineRegionOp.getRegion(),
                              /*hasResult=*/false);
 
-    auto ctx = b.getContext();
+    auto *ctx = b.getContext();
 
     // For reductions that come from parallel constructs, explicitly set the
     // GPU parallel dimensions attribute to blockXDim since they will always be
     // gang private. GPU parallel dimensions cannot be determined for acc.loop
     // at this point.
     if constexpr (std::is_same_v<AccOpTy, acc::ParallelOp>) {
-      auto parDimsAttr = acc::GPUParallelDimsAttr::get(
-          ctx, {policy.gangDim(ctx, acc::ParLevel::gang_dim1)});
+      acc::GPUParallelDimsAttr parDimsAttr;
+      if (accOp.isEffectivelySerial()) {
+        // If acc.serial has been lowered to a parallel op that is effectively
+        // sequential
+        parDimsAttr = acc::getSeqParDimsAttr(ctx, policy);
+      } else {
+        parDimsAttr = acc::getGangDim1ParDimsAttr(ctx, policy);
+      }
       acc::setParDimsAttr(reductionOp, parDimsAttr);
       acc::setParDimsAttr(combineRegionOp, parDimsAttr);
     }
 
     // Set sequential parallel dimensions attribute for loops in the recipe.
-    auto seqParDimsAttr =
-        acc::GPUParallelDimsAttr::get(ctx, {policy.seqDim(ctx)});
     auto setSeqParDimsForRecipeLoops = [&](Region *r) {
       r->walk([&](LoopLikeOpInterface loopLike) {
-        acc::setParDimsAttr(loopLike, seqParDimsAttr);
+        acc::setParDimsAttr(loopLike, acc::getSeqParDimsAttr(ctx, policy));
       });
     };
     setSeqParDimsForRecipeLoops(&reductionOp.getRegion());

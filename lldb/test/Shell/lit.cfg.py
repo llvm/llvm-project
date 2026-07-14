@@ -181,8 +181,9 @@ if config.have_dia_sdk:
     config.available_features.add("diasdk")
 
 if platform.system() == "Windows":
-    if getattr(config, "lldb_use_lldb_server", False):
-        config.environment["LLDB_USE_LLDB_SERVER"] = "1"
+    config.environment["LLDB_USE_LLDB_SERVER"] = (
+        "1" if getattr(config, "lldb_use_lldb_server", False) else "0"
+    )
     # Use anonymous pipes instead of ConPTY for all tests. ConPTY injects VT
     # escape sequences into the output stream, which breaks tests that check
     # for specific stdout/stderr content.

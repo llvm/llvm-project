@@ -121,7 +121,8 @@ struct Symbol {
 /// This data structure contains rarely used symbol fields and is optionally
 /// referenced by a Symbol.
 struct Uncommon {
-  Word CommonSize, CommonAlign;
+  support::ulittle64_t CommonSize;
+  Word CommonAlign;
 
   /// COFF-specific: the name of the symbol that a weak external resolves to
   /// if not defined.
@@ -137,7 +138,7 @@ struct Header {
   /// when the format changes, but it does not need to be incremented if a
   /// change to LLVM would cause it to create a different symbol table.
   Word Version;
-  enum { kCurrentVersion = 3 };
+  enum { kCurrentVersion = 4 };
 
   /// The producer's version string (LLVM_VERSION_STRING " " LLVM_REVISION).
   /// Consumers should rebuild the symbol table from IR if the producer's
@@ -177,7 +178,8 @@ struct Symbol {
   uint32_t Flags;
 
   // Copied from storage::Uncommon.
-  uint32_t CommonSize, CommonAlign;
+  uint64_t CommonSize;
+  uint32_t CommonAlign;
   StringRef COFFWeakExternFallbackName;
   StringRef SectionName;
 

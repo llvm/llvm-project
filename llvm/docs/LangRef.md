@@ -13392,7 +13392,8 @@ values indicating the condition, and two values of the same {ref}`first class <t
 
 If the condition is an i1 and it evaluates to 1, the instruction returns
 the first value argument; otherwise, it returns the second value
-argument.
+argument. If the condition evaluates to `poison`, the instruction returns `poison`.
+If it evaluates to `undef`, the result is an `undef` representing the union of two value arguments (i.e., each use of this value can pick either value argument).
 
 If the condition is a vector of i1, then the value arguments must be
 vectors of the same size, and the selection is done element by element.

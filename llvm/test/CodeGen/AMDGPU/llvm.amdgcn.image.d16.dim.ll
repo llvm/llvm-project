@@ -1,10 +1,10 @@
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga | FileCheck -check-prefixes=GCN,UNPACKED,GFX89 %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx810 | FileCheck -check-prefixes=GCN,GFX81,GFX89 %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx900 | FileCheck -check-prefixes=GCN,PACKED,GFX89 %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 | FileCheck -check-prefixes=GCN,GFX10 %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 | FileCheck -check-prefixes=GCN,GFX10 %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 | FileCheck -check-prefixes=GCN,GFX12PLUS %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1310 | FileCheck -check-prefixes=GCN,GFX12PLUS %s
+; RUN: llc < %s -mtriple=amdgpu8.02 | FileCheck -check-prefixes=GCN,UNPACKED,GFX89 %s
+; RUN: llc < %s -mtriple=amdgpu8.10 | FileCheck -check-prefixes=GCN,GFX81,GFX89 %s
+; RUN: llc < %s -mtriple=amdgpu9.00 | FileCheck -check-prefixes=GCN,PACKED,GFX89 %s
+; RUN: llc < %s -mtriple=amdgpu10.10 | FileCheck -check-prefixes=GCN,GFX10 %s
+; RUN: llc < %s -mtriple=amdgpu11.00 | FileCheck -check-prefixes=GCN,GFX10 %s
+; RUN: llc < %s -mtriple=amdgpu12.00 | FileCheck -check-prefixes=GCN,GFX12PLUS %s
+; RUN: llc < %s -mtriple=amdgpu13.10 | FileCheck -check-prefixes=GCN,GFX12PLUS %s
 
 ; GCN-LABEL: {{^}}image_load_f16:
 ; GFX89: image_load v0, v[0:1], s[0:7] dmask:0x1 unorm d16{{$}}

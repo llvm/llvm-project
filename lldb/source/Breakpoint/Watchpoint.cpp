@@ -350,7 +350,7 @@ void Watchpoint::DumpWithLevel(Stream *s,
          description_level <= lldb::eDescriptionLevelVerbose);
 
   s->Printf("Watchpoint %u: addr = 0x%8.8" PRIx64
-            " size = %u state = %s type = %s%s%s",
+            ", size = %u, state = %s, type = %s%s%s",
             GetID(), GetLoadAddress(), m_byte_size,
             IsEnabled() ? "enabled" : "disabled", m_watch_read ? "r" : "",
             m_watch_write ? "w" : "", m_watch_modify ? "m" : "");

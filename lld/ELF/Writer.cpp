@@ -382,6 +382,12 @@ template <class ELFT> void Writer<ELFT>::run() {
   }
 }
 
+static bool retainKeepsInSymtab(Ctx &ctx, const Symbol &sym) {
+  if (sym.hasFlag(USED) && ctx.arg.copyRelocs)
+    return true;
+  return ctx.arg.retainSymbols->contains(sym.getName());
+}
+
 static bool shouldKeepInSymtab(Ctx &ctx, const Defined &sym) {
   if (sym.isSection())
     return false;
@@ -414,6 +420,10 @@ static bool shouldKeepInSymtab(Ctx &ctx, const Defined &sym) {
       (ctx.arg.discard == DiscardPolicy::Locals ||
        (sym.section && (sym.section->flags & SHF_MERGE))))
     return false;
+  // If --retain-symbols-file= is specified, keep in .symtab only listed symbols
+  // plus those referenced by emitted relocations.
+  if (LLVM_UNLIKELY(ctx.arg.retainSymbols))
+    return retainKeepsInSymtab(ctx, sym);
   return true;
 }
 
@@ -1941,7 +1951,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
         continue;
       if (!ctx.arg.relocatable)
         sym->binding = sym->computeBinding(ctx);
-      if (ctx.in.symTab)
+      if (ctx.in.symTab &&
+          (!ctx.arg.retainSymbols || retainKeepsInSymtab(ctx, *sym)))
         ctx.in.symTab->addSymbol(sym);
 
       // computeBinding might localize a symbol that was considered exported

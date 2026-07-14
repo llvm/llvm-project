@@ -19,7 +19,7 @@
 
 //--- amdhsa-generic-subarch-cpu.s
 // FIXME: This should be accepted and passed through as-is
-// AMDHSA-GENERIC-SUBARCH: error: .amdgcn_target directive's target id amdgpu12.5-amd-amdhsa-unknown-gfx1251 does not match the specified target id amdgpu12.5-amd-amdhsa-unknown-gfx12-5-generic
+// AMDHSA-GENERIC-SUBARCH: error: .amdgcn_target directive processor gfx1251 does not match the specified processor gfx12-5-generic
 .amdgcn_target "amdgpu12.5-amd-amdhsa-unknown-gfx1251"
 
 //--- amdpal.s
@@ -28,7 +28,7 @@
 
 //--- amdpal-generic-subarch-cpu.s
 // FIXME: This should be accepted and passed through as-is
-// AMDPAL-GENERIC-SUBARCH: error: .amd_amdgpu_isa directive's target id amdgpu12.5-amd-amdpal-unknown-gfx1251 does not match the specified target id amdgpu12.5-amd-amdpal-unknown-gfx12-5-generic
+// AMDPAL-GENERIC-SUBARCH: error: .amd_amdgpu_isa directive processor gfx1251 does not match the specified processor gfx12-5-generic
 .amd_amdgpu_isa "amdgpu12.5-amd-amdpal-unknown-gfx1251"
 
 //--- cpu.s

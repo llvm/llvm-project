@@ -117,6 +117,8 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
     "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_platform.py"
     "${LLDB_SOURCE_DIR}/examples/python/templates/operating_system.py"
     "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_thread_plan.py"
+    "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_breakpoint.py"
+    "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_hook.py"
     )
 
   if(APPLE)

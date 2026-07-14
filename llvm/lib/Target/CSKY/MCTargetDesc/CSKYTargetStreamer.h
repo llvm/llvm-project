@@ -12,6 +12,7 @@
 #include "MCTargetDesc/CSKYMCAsmInfo.h"
 #include "llvm/MC/ConstantPools.h"
 #include "llvm/MC/MCStreamer.h"
+#include <map>
 
 namespace llvm {
 
