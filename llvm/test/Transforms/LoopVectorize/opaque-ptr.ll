@@ -8,24 +8,24 @@ define void @test_ptr_iv_no_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end) 
 ; CHECK-NEXT:    [[P1_END6:%.*]] = ptrtoint ptr [[P1_END:%.*]] to i64
 ; CHECK-NEXT:    [[P1_START4:%.*]] = ptrtoint ptr [[P1_START]] to i64
 ; CHECK-NEXT:    [[P1_END3:%.*]] = ptrtoint ptr [[P1_END]] to i64
-; CHECK-NEXT:    [[P1_START2:%.*]] = ptrtoint ptr [[P1_START]] to i64
 ; CHECK-NEXT:    [[P1_END1:%.*]] = ptrtoint ptr [[P1_END]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[P1_END6]], -4
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[P1_START7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[P1_START]] to i64
+; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[P1_END1]], [[TMP8]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP14]], -4
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[P1_END1]] to i2
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[P1_START2]] to i2
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[P1_END3]] to i2
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[P1_START4]] to i2
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i2 [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i2 [[TMP6]] to i64
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[TMP7]], 0
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[P1_END3]], -4
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[P1_START4]]
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[P1_END6]], -4
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP15]], [[P1_START7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = lshr i64 [[TMP9]], 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP10]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP11]], 4
@@ -99,17 +99,17 @@ define void @test_ptr_iv_with_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1_START5:%.*]] = ptrtoint ptr [[P1_START:%.*]] to i64
 ; CHECK-NEXT:    [[P1_END4:%.*]] = ptrtoint ptr [[P1_END:%.*]] to i64
-; CHECK-NEXT:    [[P1_START2:%.*]] = ptrtoint ptr [[P1_START]] to i64
 ; CHECK-NEXT:    [[P1_END1:%.*]] = ptrtoint ptr [[P1_END]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[P1_END4]], -4
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[P1_START5]]
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P1_START]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[P1_END1]], [[TMP4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP10]], -4
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[P1_END1]], -4
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], [[P1_START2]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[P1_END4]], -4
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP11]], [[P1_START5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP6]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], 4
@@ -183,8 +183,8 @@ define void @store_pointer_induction(ptr %start, ptr %end) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START:%.*]] to i64
 ; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END:%.*]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[START2]], [[END1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP9]], -8
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
@@ -193,11 +193,11 @@ define void @store_pointer_induction(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[END]], i64 [[TMP4]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[END]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <2 x i64> <i64 0, i64 8>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x ptr> [[TMP5]], i64 0
 ; CHECK-NEXT:    store <2 x ptr> [[TMP5]], ptr [[TMP6]], align 4
@@ -209,13 +209,13 @@ define void @store_pointer_induction(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ [[END]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    store ptr [[IV]], ptr [[IV]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr inbounds ptr, ptr [[IV]], i32 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq ptr [[IV_NEXT]], [[END]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq ptr [[IV_NEXT]], [[START]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

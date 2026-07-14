@@ -1807,8 +1807,8 @@ lookupConvOp(const TableEntry (&table)[N], Type srcElemType, Type dstElemType) {
 
 /// Extract a single element from a vector.
 static Value extractElement(ImplicitLocOpBuilder &b, Value srcVec, int idx) {
-  auto vecTy = cast<VectorType>(srcVec.getType());
-  assert(idx >= 0 && idx < vecTy.getNumElements() &&
+  assert(idx >= 0 &&
+         idx < cast<VectorType>(srcVec.getType()).getNumElements() &&
          "extractElement: index out of bounds");
   IntegerType i64Ty = b.getI64Type();
   return b.create<LLVM::ExtractElementOp>(
