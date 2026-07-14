@@ -113,12 +113,9 @@ public:
   ///            let quotient = absolute / b in
   ///                negative ? -quotient - 1 : quotient
   ///
-  /// Note: this lowering does not use arith.floordivsi because the lowering of
-  /// that to arith.divsi (see populateCeilFloorDivExpandOpsPatterns) generates
-  /// not one but two arith.divsi. That could be changed to one divsi, but one
-  /// way or another, going through arith.floordivsi will result in more complex
-  /// IR because arith.floordivsi is more general than affine floordiv in that
-  /// it supports negative RHS.
+  /// Note: this lowering does not use arith.floordivsi because that operation
+  /// is more general than affine floordiv: it also supports negative RHS. The
+  /// dedicated positive-divisor lowering therefore produces simpler IR.
   Value visitFloorDivExpr(AffineBinaryOpExpr expr) {
     if (auto rhsConst = dyn_cast<AffineConstantExpr>(expr.getRHS())) {
       if (rhsConst.getValue() <= 0) {
