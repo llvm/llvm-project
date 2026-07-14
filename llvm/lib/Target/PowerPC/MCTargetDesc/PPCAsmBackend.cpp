@@ -26,8 +26,7 @@
 using namespace llvm;
 
 static uint64_t adjustFixupValue(MCContext &Ctx, const MCFixup &Fixup,
-                                 unsigned Kind, uint64_t Value,
-                                 const MCFragment &F, const MCValue &Target) {
+                                 unsigned Kind, uint64_t Value) {
   auto checkBrFixup = [&](unsigned Bits) {
     int64_t SVal = int64_t(Value);
     if ((Value & 3) != 0) {
@@ -38,24 +37,6 @@ static uint64_t adjustFixupValue(MCContext &Ctx, const MCFixup &Fixup,
 
     // Low two bits are not encoded.
     if (!isIntN(Bits + 2, Value)) {
-      // Do not emit an error when the target of the branch is in a
-      // different section then the branch instruction. The linker may insert
-      // a trampoline or rearrange sections to avoid the overflow.
-      const MCSection *FragSection = F.getParent();
-      const MCSymbol *TargetSym = Target.getAddSym();
-
-      if (TargetSym) {
-        // Branch to an externally defined symbol.
-        if (!TargetSym->isDefined()) {
-          return;
-        }
-
-        const MCSection *TargetSection = TargetSym->getFragment()->getParent();
-        // Branch across sections.
-        if (TargetSection != FragSection)
-          return;
-      }
-
       Ctx.reportError(Fixup.getLoc(), "branch target out of range (" +
                                           Twine(SVal) + " not between " +
                                           Twine(minIntN(Bits) * 4) + " and " +
@@ -250,7 +231,7 @@ void PPCAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   MCFixupKind Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
-  Value = adjustFixupValue(getContext(), Fixup, Kind, Value, F, TargetVal);
+  Value = adjustFixupValue(getContext(), Fixup, Kind, Value);
   if (!Value)
     return; // Doesn't change encoding.
 
