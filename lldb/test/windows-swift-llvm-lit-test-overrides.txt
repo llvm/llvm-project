@@ -132,32 +132,15 @@ skip lldb-api :: tools/lldb-dap/output/TestDAP_output.py
 
 ### Untriaged ###
 
-skip lldb-api :: commands/statistics/basic/TestStats.py
-skip lldb-api :: lang/BoundsSafety/array_of_ptrs/TestArrayOfBoundsSafetyPointers.py
-skip lldb-api :: lang/BoundsSafety/out_of_bounds_pointer/TestOutOfBoundsPointer.py
 skip lldb-shell :: Commands/command-expr-diagnostics.test
 skip lldb-unit :: Host/./HostTests.exe
 skip lldb-api :: commands/platform/connect/TestPlatformConnect.py
 
-# https://github.com/llvm/llvm-project/issues/62983
-skip lldb-api :: functionalities/var_path/TestVarPath.py
-
 # https://github.com/swiftlang/llvm-project/issues/9073
 skip lldb-api :: lang/c/trampoline_stepping/TestTrampolineStepping.py
-
-# https://github.com/swiftlang/llvm-project/issues/9072
-skip lldb-api :: lang/cpp/bitfields/TestCppBitfields.py
-
-skip lldb-shell :: Swift/astcontext_error.test
-skip lldb-shell :: Swift/cond-breakpoint.test
-
-skip lldb-api :: functionalities/data-formatter/data-formatter-cpp/TestDataFormatterCpp.py
-skip lldb-api :: lang/cpp/frame-var-depth-and-elem-count/TestFrameVarDepthAndElemCount.py
-skip lldb-api :: functionalities/inferior-crashing/recursive-inferior/TestRecursiveInferiorStep.py
 
 # Untriaged: new in stable/21.x
 skip lldb-api :: commands/frame/var-dil/basics/QualifiedId/TestFrameVarDILQualifiedId.py
 skip lldb-api :: functionalities/dead-strip/TestDeadStrip.py
 skip lldb-api :: functionalities/memory/holes/TestMemoryHoles.py
 skip lldb-api :: lang/cpp/forward/TestCPPForwardDeclaration.py
-skip lldb-api :: functionalities/thread/state/TestThreadStates.py
