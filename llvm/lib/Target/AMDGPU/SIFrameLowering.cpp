@@ -61,9 +61,8 @@ static void encodeDwarfRegisterLocation(int DwarfReg, raw_ostream &OS) {
   }
 }
 
-static MCCFIInstruction
-createScaledCFAInPrivateWave(const GCNSubtarget &ST,
-                             MCRegister DwarfStackPtrReg) {
+static MCCFIInstruction createScaledCFAInPrivateWave(const GCNSubtarget &ST,
+                                                     int64_t DwarfStackPtrReg) {
   assert(ST.hasFlatScratchEnabled());
 
   // When flat scratch is enabled, the stack pointer is an address in the
@@ -108,7 +107,7 @@ void SIFrameLowering::emitDefCFA(MachineBasicBlock &MBB,
   // shouldn't be testing CFI anyway.
   if (StackPtrReg == AMDGPU::SP_REG)
     return;
-  MCRegister DwarfStackPtrReg = TRI->getDwarfRegNum(StackPtrReg, false);
+  int64_t DwarfStackPtrReg = TRI->getDwarfRegNum(StackPtrReg, false);
   MCCFIInstruction CFIInst =
       ST.hasFlatScratchEnabled()
           ? createScaledCFAInPrivateWave(ST, DwarfStackPtrReg)

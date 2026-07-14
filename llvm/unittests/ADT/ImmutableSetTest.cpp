@@ -16,6 +16,11 @@
 
 using namespace llvm;
 
+// Non-canonicalizing set, used by tests that specifically exercise the
+// structural (isEqual) / iterator paths on distinct, non-deduplicated trees.
+template <typename T>
+using NCSet = ImmutableSet<T, ImutContainerInfo<T>, /*Canonicalize=*/false>;
+
 namespace {
 class ImmutableSetTest : public testing::Test {
 protected:
@@ -170,34 +175,34 @@ TEST_F(ImmutableSetTest, IterLongSetTest) {
 }
 
 TEST_F(ImmutableSetTest, AddIfNotFoundTest) {
-  ImmutableSet<long>::Factory f(/*canonicalize=*/false);
-  ImmutableSet<long> S = f.getEmptySet();
+  NCSet<long>::Factory f;
+  NCSet<long> S = f.getEmptySet();
   S = f.add(S, 1);
   S = f.add(S, 2);
   S = f.add(S, 3);
 
-  ImmutableSet<long> T1 = f.add(S, 1);
-  ImmutableSet<long> T2 = f.add(S, 2);
-  ImmutableSet<long> T3 = f.add(S, 3);
+  NCSet<long> T1 = f.add(S, 1);
+  NCSet<long> T2 = f.add(S, 2);
+  NCSet<long> T3 = f.add(S, 3);
   EXPECT_EQ(S.getRoot(), T1.getRoot());
   EXPECT_EQ(S.getRoot(), T2.getRoot());
   EXPECT_EQ(S.getRoot(), T3.getRoot());
 
-  ImmutableSet<long> U = f.add(S, 4);
+  NCSet<long> U = f.add(S, 4);
   EXPECT_NE(S.getRoot(), U.getRoot());
 }
 
 TEST_F(ImmutableSetTest, RemoveIfNotFoundTest) {
-  ImmutableSet<long>::Factory f(/*canonicalize=*/false);
-  ImmutableSet<long> S = f.getEmptySet();
+  NCSet<long>::Factory f;
+  NCSet<long> S = f.getEmptySet();
   S = f.add(S, 1);
   S = f.add(S, 2);
   S = f.add(S, 3);
 
-  ImmutableSet<long> T = f.remove(S, 4);
+  NCSet<long> T = f.remove(S, 4);
   EXPECT_EQ(S.getRoot(), T.getRoot());
 
-  ImmutableSet<long> U = f.remove(S, 3);
+  NCSet<long> U = f.remove(S, 3);
   EXPECT_NE(S.getRoot(), U.getRoot());
 }
 
@@ -212,14 +217,14 @@ TEST_F(ImmutableSetTest, RemoveIfNotFoundTest) {
 
 namespace {
 using Info = ImutContainerInfo<int>;
-using Tree = ImutAVLTree<Info>;
+using Tree = ImutAVLTree<Info, /*Canonicalize=*/false>;
 using TreeIter = Tree::iterator; // ImutAVLTreeInOrderIterator
 
 // Build an ImmutableSet from the given values (in the given insertion order),
 // optionally removing some afterwards, so trees of varied shape are produced.
-ImmutableSet<int> buildSet(ImmutableSet<int>::Factory &F, ArrayRef<int> ToAdd,
-                           ArrayRef<int> ToRemove = {}) {
-  ImmutableSet<int> S = F.getEmptySet();
+NCSet<int> buildSet(NCSet<int>::Factory &F, ArrayRef<int> ToAdd,
+                    ArrayRef<int> ToRemove = {}) {
+  NCSet<int> S = F.getEmptySet();
   for (int V : ToAdd)
     S = F.add(S, V);
   for (int V : ToRemove)
@@ -229,8 +234,8 @@ ImmutableSet<int> buildSet(ImmutableSet<int>::Factory &F, ArrayRef<int> ToAdd,
 
 // A representative collection of trees: degenerate, hand-picked small shapes,
 // a large balanced one, and many pseudo-random insert/remove mixes.
-std::vector<ImmutableSet<int>> makeTestSets(ImmutableSet<int>::Factory &F) {
-  std::vector<ImmutableSet<int>> Sets;
+std::vector<NCSet<int>> makeTestSets(NCSet<int>::Factory &F) {
+  std::vector<NCSet<int>> Sets;
   Sets.push_back(F.getEmptySet());
   Sets.push_back(buildSet(F, {42}));
   Sets.push_back(buildSet(F, {1, 2, 3}));
@@ -256,14 +261,14 @@ std::vector<ImmutableSet<int>> makeTestSets(ImmutableSet<int>::Factory &F) {
 // Forward iteration must visit keys in ascending order, exactly matching an
 // independent std::set holding the same elements.
 TEST_F(ImmutableSetTest, IteratorInOrderMatchesStdSet) {
-  ImmutableSet<int>::Factory F(/*canonicalize=*/false);
-  for (const ImmutableSet<int> &S : makeTestSets(F)) {
+  NCSet<int>::Factory F;
+  for (const NCSet<int> &S : makeTestSets(F)) {
     std::set<int> Oracle;
-    for (ImmutableSet<int>::iterator I = S.begin(), E = S.end(); I != E; ++I)
+    for (NCSet<int>::iterator I = S.begin(), E = S.end(); I != E; ++I)
       Oracle.insert(*I);
 
     std::vector<int> Forward;
-    for (ImmutableSet<int>::iterator I = S.begin(), E = S.end(); I != E; ++I)
+    for (NCSet<int>::iterator I = S.begin(), E = S.end(); I != E; ++I)
       Forward.push_back(*I);
 
     EXPECT_TRUE(std::is_sorted(Forward.begin(), Forward.end()));
@@ -277,8 +282,8 @@ TEST_F(ImmutableSetTest, IteratorInOrderMatchesStdSet) {
 // Walking backwards with operator-- from the last element must reproduce the
 // reverse of the forward traversal.
 TEST_F(ImmutableSetTest, IteratorReverseMatchesForward) {
-  ImmutableSet<int>::Factory F(/*canonicalize=*/false);
-  for (const ImmutableSet<int> &S : makeTestSets(F)) {
+  NCSet<int>::Factory F;
+  for (const NCSet<int> &S : makeTestSets(F)) {
     const Tree *Root = S.getRootWithoutRetain();
 
     std::vector<const Tree *> Forward;
@@ -308,8 +313,8 @@ TEST_F(ImmutableSetTest, IteratorReverseMatchesForward) {
 // contiguous run, the destination index is computable independently from the
 // node's right-subtree size.
 TEST_F(ImmutableSetTest, IteratorSkipSubTree) {
-  ImmutableSet<int>::Factory F(/*canonicalize=*/false);
-  for (const ImmutableSet<int> &S : makeTestSets(F)) {
+  NCSet<int>::Factory F;
+  for (const NCSet<int> &S : makeTestSets(F)) {
     const Tree *Root = S.getRootWithoutRetain();
 
     std::vector<const Tree *> Order;
@@ -339,10 +344,10 @@ TEST_F(ImmutableSetTest, IteratorSkipSubTree) {
 // comparison of the in-order sequences. This exercises ++ and skipSubTree on
 // the shared-subtree fast path inside ImutAVLTree::isEqual.
 TEST_F(ImmutableSetTest, StructuralEqualityMatchesContents) {
-  ImmutableSet<int>::Factory F(/*canonicalize=*/false);
-  std::vector<ImmutableSet<int>> Sets = makeTestSets(F);
-  for (const ImmutableSet<int> &A : Sets) {
-    for (const ImmutableSet<int> &B : Sets) {
+  NCSet<int>::Factory F;
+  std::vector<NCSet<int>> Sets = makeTestSets(F);
+  for (const NCSet<int> &A : Sets) {
+    for (const NCSet<int> &B : Sets) {
       std::vector<int> VA(A.begin(), A.end());
       std::vector<int> VB(B.begin(), B.end());
       EXPECT_EQ(VA == VB, A == B);
@@ -353,8 +358,8 @@ TEST_F(ImmutableSetTest, StructuralEqualityMatchesContents) {
 // Two independent iterators compare equal iff they sit on the same node, and
 // equal-to-end iff both are at end. Exercises the node-identity operator==.
 TEST_F(ImmutableSetTest, IteratorEquality) {
-  ImmutableSet<int>::Factory F(/*canonicalize=*/false);
-  for (const ImmutableSet<int> &S : makeTestSets(F)) {
+  NCSet<int>::Factory F;
+  for (const NCSet<int> &S : makeTestSets(F)) {
     const Tree *Root = S.getRootWithoutRetain();
     size_t N = std::distance(TreeIter(Root), TreeIter());
 

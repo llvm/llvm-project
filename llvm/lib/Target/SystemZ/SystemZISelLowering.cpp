@@ -725,6 +725,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::STRICT_FMINNUM, VT, Legal);
       setOperationAction(ISD::STRICT_FMAXIMUM, VT, Legal);
       setOperationAction(ISD::STRICT_FMINIMUM, VT, Legal);
+      setOperationAction(ISD::STRICT_PSEUDO_FMAX, VT, Legal);
+      setOperationAction(ISD::STRICT_PSEUDO_FMIN, VT, Legal);
     }
   }
 

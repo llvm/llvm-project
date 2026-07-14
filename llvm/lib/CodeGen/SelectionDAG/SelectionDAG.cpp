@@ -5225,6 +5225,12 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       return VTBits;
     break;
   }
+  case ISD::GET_ACTIVE_LANE_MASK:
+    // Semantically similar to icmp ult.
+    if (TLI->getBooleanContents(VT.isVector(), /*isFloat=*/false) ==
+        TargetLowering::ZeroOrNegativeOneBooleanContent)
+      return VTBits;
+    break;
   case ISD::ROTL:
   case ISD::ROTR:
     Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
