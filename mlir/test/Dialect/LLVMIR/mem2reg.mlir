@@ -1035,6 +1035,38 @@ llvm.func @scalable_llvm_vector() -> i16 {
 
 // -----
 
+// Storing into a scalable vector slot with a type matching the slot's
+// element type must not query the type's bit size, as this is not possible
+// for scalable vectors. See #209065.
+
+// CHECK-LABEL: @scalable_vector_matching_store
+llvm.func @scalable_vector_matching_store(%arg: vector<[4]xi1>) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x vector<[4]xi1> : (i32) -> !llvm.ptr
+  // CHECK-NOT: llvm.store
+  llvm.store %arg, %1 : vector<[4]xi1>, !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+// Loading back a scalable vector value that was stored with a matching type
+// must also avoid querying the type's bit size. See #209065.
+
+// CHECK-LABEL: @scalable_vector_matching_store_load
+llvm.func @scalable_vector_matching_store_load(%arg: vector<[4]xi1>) -> vector<[4]xi1> {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x vector<[4]xi1> : (i32) -> !llvm.ptr
+  llvm.store %arg, %1 : vector<[4]xi1>, !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> vector<[4]xi1>
+  // CHECK: llvm.return %[[ARG:.*]] : vector<[4]xi1>
+  llvm.return %2 : vector<[4]xi1>
+}
+
+// -----
+
 // CHECK-LABEL: @smaller_store_forwarding
 // CHECK-SAME: %[[ARG:.+]]: i16
 llvm.func @smaller_store_forwarding(%arg : i16) {
