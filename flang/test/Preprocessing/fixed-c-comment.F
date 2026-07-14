@@ -3,7 +3,8 @@
 ! RUN: not %flang_fc1 -pedantic -Werror -fdebug-dump-parse-tree-no-sema \
 ! RUN:        -DTEST_ERRORS=1 %s 2>&1 | FileCheck %s --check-prefix=ERROR
 
-      integer :: i
+      implicit none
+      integer :: i, foobar
 
 ! CHECK-NOT: C comment
 ! CHECK: i = 1
@@ -61,13 +62,21 @@ C comment */
       i = 9
 * */ 88
 
+! When compiling, the line below should become: foobar = 123
+      foo/* c */ bar = 123
+
 ! CHECK: print
 ! CHECK-NOT: C comment
 	print *, "TAB"
 	/* C comment after tab */
 
-! ERROR: error: Character in fixed-form label field must be a digit
 #if TEST_ERRORS
+! ERROR: error: Character in fixed-form label field must be a digit
+      i = 90
+/*
+*/+1
+
+! ERROR: error: Character in fixed-form label field must be a digit
 /* Not-terminated C comment
 #endif
       end

@@ -456,21 +456,23 @@ void Prescanner::LabelField(TokenSequence &token) {
   if (spaces < 6 && IsCComment(p)) {
     at_ += spaces;
     column_ += spaces;
-    if (features_.ShouldWarn(LanguageFeature::ClassicCComments)) {
-      Say(LanguageFeature::ClassicCComments, GetCurrentProvenance(),
-          "nonstandard usage: C-style comment"_port_en_US);
-    }
     SkipCComments();
-    // Fix `column_`, which may be incorrect after multi-line comments.
-    p = at_ - 1;
-    while (p > start && *p != '\n') {
-      --p;
+    if (at_ > start + spaces) {
+      if (features_.ShouldWarn(LanguageFeature::ClassicCComments)) {
+        Say(LanguageFeature::ClassicCComments, GetCurrentProvenance(),
+            "nonstandard usage: C-style comment"_port_en_US);
+      }
+      // Fix `column_`, which may be incorrect after multi-line comments.
+      p = at_ - 1;
+      while (p > start && *p != '\n') {
+        --p;
+      }
+      if (*p == '\n') {
+        column_ = at_ - p;
+      }
+      colOffset = column_ - 1;
+      start = at_;
     }
-    if (*p == '\n') {
-      column_ = at_ - p;
-    }
-    colOffset = column_ - 1;
-    start = at_;
   }
 
   for (; *at_ != '\n' && column_ <= 6; ++at_) {
@@ -812,6 +814,9 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     // outside a character literal.
     WarnCComment(at_);
     SkipCComments();
+    if (compilingFixedForm) {
+      SkipSpaces();
+    }
   }
   if (!compilingFixedForm && IsSpaceOrTab(at_)) {
     // Compress free-form white space into a single space character.
@@ -1479,8 +1484,9 @@ const char *Prescanner::FixedFormContinuationLine(bool atNewline) {
       i <= n && nextLine_[i] == ' '; ++i) {
     ++trailingSpaces;
   }
-  bool cCommentAndSpaces{
-      afterCComment && afterCComment - nextLine_ + trailingSpaces == 5};
+  bool cCommentAndSpaces{afterCComment &&
+      afterCComment - nextLine_ + trailingSpaces == 5 &&
+      std::memchr(nextLine_, '\n', n + 1) == nullptr};
   bool canBeNonDirectiveContinuation{
       ((col1 == ' ' ||
            ((col1 == 'D' || col1 == 'd') &&
