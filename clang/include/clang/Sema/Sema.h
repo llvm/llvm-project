@@ -2921,11 +2921,17 @@ public:
   };
   static BoundsAttrFlags getBoundsAttrFlags(AttributeCommonInfo::Kind K);
 
-  /// Validates that a pointer's pointee type is compatible with __counted_by.
-  /// If the pointee is incomplete/function/sizeless/FAM and CountInBytes is
-  /// false, emits a diagnostic and recovers by setting CountInBytes = true.
-  void DiagnoseCountedByPointeeType(QualType PointerTy, SourceLocation AttrLoc,
-                                    bool &CountInBytes, bool OrNull);
+  /// Validates that a type is eligible for a bounds-safety attribute
+  /// (counted_by/sized_by/ended_by). Checks type eligibility (must be pointer
+  /// or array) and pointee/element type validity.
+  /// Does NOT require a Decl — only the QualType and attribute metadata.
+  /// Callable from: ActOnLateParsedTypeAttr (placeholder insertion),
+  /// HandleCountedByAttrOnType, applyPtrCountedByEndedByAttr, and
+  /// CheckCountedByAttrOnFieldDecl.
+  /// \returns true if the type is valid, false on error.
+  bool ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
+                                   SourceRange AttrRange,
+                                   BoundsAttrFlags &Flags);
 
   /* TO_UPSTREAM(BoundsSafety) OFF*/
 
