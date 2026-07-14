@@ -2467,7 +2467,7 @@ bool TargetLowering::SimplifyDemandedBits(
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
 
-    unsigned DemandedBitsLZ = OriginalDemandedBits.countl_zero();
+    unsigned DemandedBitsLZ = DemandedBits.countl_zero();
     APInt LoMask = APInt::getLowBitsSet(BitWidth, BitWidth - DemandedBitsLZ);
 
     // If the demanded bits has leading zeroes, we don't demand those from the
@@ -3285,6 +3285,29 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   unsigned EltSizeInBits = VT.getScalarSizeInBits();
   bool IsLE = TLO.DAG.getDataLayout().isLittleEndian();
 
+  auto TryShrinkBinOp = [&](SDValue Op0, SDValue Op1) {
+    unsigned ShrunkSize = getPreferredShrunkVectorSizeInBits(Op, DemandedElts);
+    if (!ShrunkSize)
+      return false;
+
+    assert(ShrunkSize % EltSizeInBits == 0 &&
+           "Shrunk size not a multiple of element size");
+    assert(ShrunkSize < VT.getSizeInBits() &&
+           "Shrunk size must be < original vector size");
+    assert(ShrunkSize >= EltSizeInBits * DemandedElts.getActiveBits() &&
+           "Shrunk size must be >= demanded size");
+
+    EVT ShrunkVT = VT.changeVectorElementCount(
+        *TLO.DAG.getContext(),
+        ElementCount::getFixed(ShrunkSize / EltSizeInBits));
+    Op0 = TLO.DAG.getExtractSubvector(DL, ShrunkVT, Op0, 0);
+    Op1 = TLO.DAG.getExtractSubvector(DL, ShrunkVT, Op1, 0);
+    SDValue NewOp =
+        TLO.DAG.getNode(Opcode, DL, ShrunkVT, Op0, Op1, Op->getFlags());
+    return TLO.CombineTo(
+        Op, TLO.DAG.getInsertSubvector(DL, TLO.DAG.getUNDEF(VT), NewOp, 0));
+  };
+
   // Helper for demanding the specified elements and all the bits of both binary
   // operands.
   auto SimplifyDemandedVectorEltsBinOp = [&](SDValue Op0, SDValue Op1) {
@@ -3298,6 +3321,10 @@ bool TargetLowering::SimplifyDemandedVectorElts(
                           NewOp1 ? NewOp1 : Op1, Op->getFlags());
       return TLO.CombineTo(Op, NewOp);
     }
+
+    if (TryShrinkBinOp(Op0, Op1))
+      return true;
+
     return false;
   };
 
@@ -3804,7 +3831,9 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   case ISD::FSUB:
   case ISD::FMUL:
   case ISD::FDIV:
-  case ISD::FREM: {
+  case ISD::FREM:
+  case ISD::PSEUDO_FMIN:
+  case ISD::PSEUDO_FMAX: {
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
 
@@ -3981,10 +4010,32 @@ void TargetLowering::computeKnownFPClassForTargetInstr(
   Known.resetAll();
 }
 
-void TargetLowering::computeKnownBitsForFrameIndex(
-  const int FrameIdx, KnownBits &Known, const MachineFunction &MF) const {
+void TargetLowering::computeKnownBitsForStackObjectPointer(
+    KnownBits &Known, const MachineFunction &, Align Alignment) const {
   // The low bits are known zero if the pointer is aligned.
-  Known.Zero.setLowBits(Log2(MF.getFrameInfo().getObjectAlign(FrameIdx)));
+  Known.Zero.setLowBits(Log2(Alignment));
+}
+
+SDValue TargetLowering::annotateStackObjectPointer(SDValue Ptr,
+                                                   SelectionDAG &DAG,
+                                                   const SDLoc &DL,
+                                                   Align Alignment) const {
+  // Materialize leading-zero stack object pointer facts as AssertZext.
+  // Alignment-derived low zero bits are not represented on the returned DAG
+  // value here.
+  EVT PtrVT = Ptr.getValueType();
+
+  unsigned RegSize = PtrVT.getScalarSizeInBits();
+  KnownBits Known(RegSize);
+  computeKnownBitsForStackObjectPointer(Known, DAG.getMachineFunction(),
+                                        Alignment);
+
+  unsigned NumZeroBits = Known.countMinLeadingZeros();
+  if (!NumZeroBits)
+    return Ptr;
+
+  EVT FromVT = EVT::getIntegerVT(*DAG.getContext(), RegSize - NumZeroBits);
+  return DAG.getNode(ISD::AssertZext, DL, PtrVT, Ptr, DAG.getValueType(FromVT));
 }
 
 Align TargetLowering::computeKnownAlignForTargetInstr(
@@ -6921,6 +6972,12 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
       isOperationLegalOrCustom(ISD::UMUL_LOHI, WideSVT, IsAfterLegalization);
   const bool AllowWiden = (HasWideMULHU || HasWideUMUL_LOHI);
 
+  // For even divisors with a 33-bit magic number, the widened high-multiply
+  // path is only worthwhile over the even-divisor rewrite on targets that
+  // zero-extend i32 to i64 for free (e.g. x86-64 and AArch64). Elsewhere (e.g.
+  // RISC-V) keep the even-divisor rewrite, which avoids the explicit extension.
+  const bool AllowEvenToWiden = AllowWiden && isZExtFree(VT, WideSVT);
+
   bool UseNPQ = false, UsePreShift = false, UsePostShift = false;
   bool UseWiden = false;
   SmallVector<SDValue, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
@@ -6943,7 +7000,7 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
       UnsignedDivisionByConstantInfo magics =
           UnsignedDivisionByConstantInfo::get(
               Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()),
-              /*AllowEvenDivisorOptimization=*/true,
+              /*AllowEvenDivisorOptimization=*/!AllowEvenToWiden,
               /*AllowWidenOptimization=*/AllowWiden);
 
       if (magics.Widen) {
@@ -12650,7 +12707,7 @@ void TargetLowering::forceExpandMultiply(SelectionDAG &DAG, const SDLoc &dl,
   // Hacker's Delight (itself derived from Knuth's Algorithm M from section
   // 4.3.1). If Signed is set, we can use arithmetic right shifts to propagate
   // sign bits while calculating the Hi half.
-  unsigned Bits = VT.getSizeInBits();
+  unsigned Bits = VT.getScalarSizeInBits();
   unsigned HalfBits = Bits / 2;
   SDValue Mask = DAG.getConstant(APInt::getLowBitsSet(Bits, HalfBits), dl, VT);
   SDValue LL = DAG.getNode(ISD::AND, dl, VT, LHS, Mask);

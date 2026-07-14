@@ -19,7 +19,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-bolt check-clang check-clang-tools check-cross-project check-flang check-lld check-lldb check-llvm check-mlir check-polly",
+            "check-bolt check-clang check-clang-python check-clang-tools check-cross-project check-flang check-lld check-lldb check-llvm check-mlir check-polly",
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
@@ -44,7 +44,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-clang check-clang-tools check-lld check-llvm check-mlir check-polly",
+            "check-clang check-clang-python check-clang-tools check-lld check-llvm check-mlir check-polly",
         )
         self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(
@@ -66,7 +66,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-clang check-clang-tools check-lld check-llvm check-mlir",
+            "check-clang check-clang-python check-clang-tools check-lld check-llvm check-mlir",
         )
         self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(
@@ -88,7 +88,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-clang check-clang-tools check-cross-project check-lldb",
+            "check-clang check-clang-python check-clang-tools check-cross-project check-lldb",
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
@@ -117,7 +117,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-clang check-clang-tools",
+            "check-clang check-clang-python check-clang-tools",
         )
         self.assertEqual(env_variables["runtimes_to_build"], "compiler-rt")
         self.assertEqual(
@@ -166,7 +166,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-clang check-clang-cir check-clang-tools check-cross-project check-lldb",
+            "check-clang check-clang-python check-clang-cir check-clang-tools check-cross-project check-lldb",
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
@@ -307,7 +307,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-bolt check-clang check-clang-cir check-clang-tools check-flang check-lld check-lldb check-llvm check-mlir check-polly",
+            "check-bolt check-clang check-clang-python check-clang-cir check-clang-tools check-flang check-lld check-lldb check-llvm check-mlir check-polly",
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
@@ -332,7 +332,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-clang check-clang-cir check-clang-tools check-lld check-llvm check-mlir check-polly",
+            "check-clang check-clang-python check-clang-cir check-clang-tools check-lld check-llvm check-mlir check-polly",
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
@@ -381,7 +381,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-bolt check-clang check-clang-cir check-clang-tools check-flang check-lld check-lldb check-llvm check-mlir check-polly",
+            "check-bolt check-clang check-clang-python check-clang-cir check-clang-tools check-flang check-lld check-lldb check-llvm check-mlir check-polly",
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
@@ -416,7 +416,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-bolt check-clang check-clang-cir check-clang-tools check-flang check-lld check-lldb check-llvm check-mlir check-polly",
+            "check-bolt check-clang check-clang-python check-clang-cir check-clang-tools check-flang check-lld check-lldb check-llvm check-mlir check-polly",
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
@@ -441,7 +441,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-bolt check-clang check-clang-tools check-cross-project check-flang check-lit check-lld check-lldb check-llvm check-mlir check-polly",
+            "check-bolt check-clang check-clang-python check-clang-tools check-cross-project check-flang check-lit check-lld check-lldb check-llvm check-mlir check-polly",
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
@@ -485,7 +485,8 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(env_variables["projects_to_build"], "clang;lld;llvm")
         self.assertEqual(
-            env_variables["project_check_targets"], "check-clang check-llvm"
+            env_variables["project_check_targets"],
+            "check-clang check-clang-python check-llvm",
         )
         self.assertEqual(
             env_variables["runtimes_to_build"], "libc;libcxx;libcxxabi;libunwind"

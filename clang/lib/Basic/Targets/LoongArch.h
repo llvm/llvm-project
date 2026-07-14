@@ -107,8 +107,6 @@ public:
 
   bool hasBFloat16Type() const override { return true; }
 
-  bool useFP16ConversionIntrinsics() const override { return false; }
-
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override;
 
