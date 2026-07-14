@@ -4586,11 +4586,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
     for (phases::ID Phase : PL) {
 
-#if FIXME
-      // We are done if this step is past what the user requested.
-      if (Phase > FinalPhase)
-        break;
-#endif
       // Add any offload action the host action depends on.
       if (!UseNewOffloadingDriver)
         Current = OffloadBuilder->addDeviceDependencesToHostAction(
