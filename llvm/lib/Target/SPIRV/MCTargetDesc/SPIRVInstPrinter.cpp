@@ -121,27 +121,16 @@ unsigned SPIRVInstPrinter::printMemoryOperand(const MCInst *MI, unsigned OpNo,
   const uint64_t Mask = MI->getOperand(OpNo).getImm();
   printSymbolicOperand<OperandCategory::MemoryOperandOperand>(MI, OpNo, O);
   unsigned NextOp = OpNo + 1;
-  if (Mask & SPIRV::MemoryOperand::Aligned) {
-    O << ' ';
-    printOperand(MI, NextOp, O);
-    ++NextOp;
-  }
-  if (Mask & SPIRV::MemoryOperand::MakePointerAvailableKHR) {
-    O << ' ';
-    printOperand(MI, NextOp, O);
-    ++NextOp;
-  }
-  if (Mask & SPIRV::MemoryOperand::MakePointerVisibleKHR) {
-    O << ' ';
-    printOperand(MI, NextOp, O);
-    ++NextOp;
-  }
-  if (Mask & SPIRV::MemoryOperand::AliasScopeINTELMask) {
-    O << ' ';
-    printOperand(MI, NextOp, O);
-    ++NextOp;
-  }
-  if (Mask & SPIRV::MemoryOperand::NoAliasINTELMask) {
+  static constexpr uint64_t ParameterizedMasks[] = {
+      SPIRV::MemoryOperand::Aligned,
+      SPIRV::MemoryOperand::MakePointerAvailableKHR,
+      SPIRV::MemoryOperand::MakePointerVisibleKHR,
+      SPIRV::MemoryOperand::AliasScopeINTELMask,
+      SPIRV::MemoryOperand::NoAliasINTELMask,
+  };
+  for (uint64_t ParamMask : ParameterizedMasks) {
+    if (!(Mask & ParamMask))
+      continue;
     O << ' ';
     printOperand(MI, NextOp, O);
     ++NextOp;
