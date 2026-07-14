@@ -6214,6 +6214,30 @@ static inline SDValue getPTrue(SelectionDAG &DAG, SDLoc DL, EVT VT,
                      DAG.getTargetConstant(Pattern, DL, MVT::i32));
 }
 
+static inline SDValue getPTrueAsCounter(SelectionDAG &DAG, SDLoc DL, EVT VT) {
+  Intrinsic::ID IID;
+
+  switch (VT.getScalarSizeInBits()) {
+  default:
+    llvm_unreachable("unsupported predicate element size");
+  case 8:
+    IID = Intrinsic::aarch64_sve_ptrue_c8;
+    break;
+  case 16:
+    IID = Intrinsic::aarch64_sve_ptrue_c16;
+    break;
+  case 32:
+    IID = Intrinsic::aarch64_sve_ptrue_c32;
+    break;
+  case 64:
+    IID = Intrinsic::aarch64_sve_ptrue_c64;
+    break;
+  }
+
+  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::aarch64svcount,
+                     DAG.getConstant(IID, DL, MVT::i64));
+}
+
 static SDValue optimizeIncrementingWhile(SDNode *N, SelectionDAG &DAG,
                                          bool IsSigned, bool IsEqual) {
   unsigned Op0 = N->getOpcode() == ISD::INTRINSIC_WO_CHAIN ? 1 : 0;
@@ -7747,65 +7771,33 @@ struct SVEMultiVectorInfo {
   unsigned NumVecs;
   Intrinsic::ID LoadIntID;
   Intrinsic::ID StoreIntID;
-  Intrinsic::ID PTrueIntID;
 };
 
-static std::optional<SVEMultiVectorInfo> getSVEMultiVectorInfo(MVT VT) {
+static SVEMultiVectorInfo getSVEMultiVectorInfo(MVT VT) {
   SVEMultiVectorInfo Info;
 
-  switch (VT.SimpleTy) {
-  default:
-    return std::nullopt;
+  TypeSize Size = VT.getSizeInBits();
 
-  case MVT::nxv32i8:
-  case MVT::nxv16i16:
-  case MVT::nxv8i32:
-  case MVT::nxv4i64:
-  case MVT::nxv16f16:
-  case MVT::nxv8f32:
-  case MVT::nxv4f64:
-  case MVT::nxv16bf16:
+  assert((Size == TypeSize::getScalable(2 * 128) ||
+          Size == TypeSize::getScalable(4 * 128)) &&
+         "invalid SVE multi-vector size");
+
+  Info.RegVT = getPackedSVEVectorVT(VT.getVectorElementType()).getSimpleVT();
+
+  if (Size == TypeSize::getScalable(2 * 128)) {
     Info.LoadIntID = Intrinsic::aarch64_sve_ld1_pn_x2;
     Info.StoreIntID = Intrinsic::aarch64_sve_st1_pn_x2;
     Info.NumVecs = 2;
-    Info.RegVT = VT.getHalfNumVectorElementsVT();
-    break;
-  case MVT::nxv64i8:
-  case MVT::nxv32i16:
-  case MVT::nxv16i32:
-  case MVT::nxv8i64:
-  case MVT::nxv32f16:
-  case MVT::nxv16f32:
-  case MVT::nxv8f64:
-  case MVT::nxv32bf16:
+  } else {
     Info.LoadIntID = Intrinsic::aarch64_sve_ld1_pn_x4;
     Info.StoreIntID = Intrinsic::aarch64_sve_st1_pn_x4;
     Info.NumVecs = 4;
-    Info.RegVT = VT.getHalfNumVectorElementsVT().getHalfNumVectorElementsVT();
-    break;
-  }
-
-  switch (VT.getScalarSizeInBits()) {
-  default:
-    llvm_unreachable("covered by previous switch");
-  case 8:
-    Info.PTrueIntID = Intrinsic::aarch64_sve_ptrue_c8;
-    break;
-  case 16:
-    Info.PTrueIntID = Intrinsic::aarch64_sve_ptrue_c16;
-    break;
-  case 32:
-    Info.PTrueIntID = Intrinsic::aarch64_sve_ptrue_c32;
-    break;
-  case 64:
-    Info.PTrueIntID = Intrinsic::aarch64_sve_ptrue_c64;
-    break;
   }
 
   return Info;
 }
 
-static bool isValidSVEMultiVectorOp(const LSBaseSDNode *LSNode, EVT VT) {
+static bool isSimpleScalableLoadOrStore(const LSBaseSDNode *LSNode, EVT VT) {
   return LSNode->isSimple() && LSNode->isUnindexed() &&
          LSNode->getOffset().isUndef() && VT.isScalableVector() &&
          VT.isSimple() && VT == LSNode->getMemoryVT();
@@ -7818,30 +7810,25 @@ static SDValue tryLowerMultiVectorStore(StoreSDNode *StoreNode,
   SDValue Value = StoreNode->getValue();
   EVT VT = Value.getValueType();
 
-  if (!isValidSVEMultiVectorOp(StoreNode, VT))
+  if (!isSimpleScalableLoadOrStore(StoreNode, VT))
     return SDValue();
 
   if (Value->isUndef())
     return StoreNode->getChain();
 
   MVT StoreVT = VT.getSimpleVT();
-  std::optional<SVEMultiVectorInfo> MultiVecInfo =
-      getSVEMultiVectorInfo(StoreVT);
-  if (!MultiVecInfo)
-    return SDValue();
+  SVEMultiVectorInfo MultiVecInfo = getSVEMultiVectorInfo(StoreVT);
 
   SDLoc DL(StoreNode);
-  SDValue PNg =
-      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::aarch64svcount,
-                  DAG.getConstant(MultiVecInfo->PTrueIntID, DL, MVT::i64));
+  SDValue PNg = getPTrueAsCounter(DAG, DL, VT);
 
   SmallVector<SDValue, 8> Ops;
   Ops.push_back(StoreNode->getChain());
-  Ops.push_back(DAG.getConstant(MultiVecInfo->StoreIntID, DL, MVT::i64));
+  Ops.push_back(DAG.getConstant(MultiVecInfo.StoreIntID, DL, MVT::i64));
 
-  unsigned RegElts = MultiVecInfo->RegVT.getVectorMinNumElements();
-  for (unsigned i = 0; i != MultiVecInfo->NumVecs; ++i)
-    Ops.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MultiVecInfo->RegVT,
+  unsigned RegElts = MultiVecInfo.RegVT.getVectorMinNumElements();
+  for (unsigned i = 0; i != MultiVecInfo.NumVecs; ++i)
+    Ops.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MultiVecInfo.RegVT,
                               Value,
                               DAG.getVectorIdxConstant(i * RegElts, DL)));
 
@@ -7858,34 +7845,29 @@ static bool tryLowerMultiVectorLoad(LoadSDNode *LoadNode,
                                     SelectionDAG &DAG) {
   EVT VT = LoadNode->getValueType(0);
 
-  if (!isValidSVEMultiVectorOp(LoadNode, VT))
+  if (!isSimpleScalableLoadOrStore(LoadNode, VT))
     return false;
 
   MVT LoadVT = VT.getSimpleVT();
-  std::optional<SVEMultiVectorInfo> MultiVecInfo =
-      getSVEMultiVectorInfo(LoadVT);
-  if (!MultiVecInfo)
-    return false;
+  SVEMultiVectorInfo MultiVecInfo = getSVEMultiVectorInfo(LoadVT);
 
   SDLoc DL(LoadNode);
-  SDValue PNg =
-      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::aarch64svcount,
-                  DAG.getConstant(MultiVecInfo->PTrueIntID, DL, MVT::i64));
+  SDValue PNg = getPTrueAsCounter(DAG, DL, VT);
 
-  SmallVector<EVT, 5> ResultVTs(MultiVecInfo->NumVecs, MultiVecInfo->RegVT);
+  SmallVector<EVT, 5> ResultVTs(MultiVecInfo.NumVecs, MultiVecInfo.RegVT);
   ResultVTs.push_back(MVT::Other);
 
   SDValue NewLoad =
       DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, ResultVTs,
                   {LoadNode->getChain(),
-                   DAG.getConstant(MultiVecInfo->LoadIntID, DL, MVT::i64), PNg,
+                   DAG.getConstant(MultiVecInfo.LoadIntID, DL, MVT::i64), PNg,
                    LoadNode->getBasePtr()});
 
   SmallVector<SDValue, 4> ResultOps;
-  for (unsigned I = 0; I != MultiVecInfo->NumVecs; ++I)
+  for (unsigned I = 0; I != MultiVecInfo.NumVecs; ++I)
     ResultOps.push_back(NewLoad.getValue(I));
   Results.push_back(DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ResultOps));
-  Results.push_back(NewLoad.getValue(MultiVecInfo->NumVecs) /* Chain */);
+  Results.push_back(NewLoad.getValue(MultiVecInfo.NumVecs) /* Chain */);
   return true;
 }
 
