@@ -296,6 +296,33 @@ bool MipsSEDAGToDAGISel::selectAddrFrameIndexOffset(
 
       Offset = CurDAG->getTargetConstant(CN->getZExtValue(), SDLoc(Addr),
                                          ValTy);
+      if (Base.getOpcode() == ISD::ADD &&
+          (Subtarget->hasMips1() && !Subtarget->hasMips2())) {
+        // Instead of:
+        //  lui $2, %hi($CPI1_0)
+        //  addiu $2, $2, %lo($CPI1_0)
+        //  lwc1 $f0, 4($2)
+        // Generate:
+        //  lui $2, %hi($CPI1_0)
+        //  lwc1 $f0, %lo($CPI1_0+4)($2)
+        if (Base.getOperand(1).getOpcode() == MipsISD::Lo ||
+            Base.getOperand(1).getOpcode() == MipsISD::GPRel) {
+          SDValue Opnd0 = Base.getOperand(1).getOperand(0);
+          if (isa<ConstantPoolSDNode>(Opnd0) ||
+              isa<GlobalAddressSDNode>(Opnd0) || isa<JumpTableSDNode>(Opnd0)) {
+            Base = Base.getOperand(0);
+            if (GlobalAddressSDNode *GA =
+                    dyn_cast<GlobalAddressSDNode>(Opnd0)) {
+              const GlobalValue *GV = GA->getGlobal();
+              int64_t GAOffset = GA->getOffset();
+              Offset = CurDAG->getTargetGlobalAddress(
+                  GV, SDLoc(Addr), MVT::i32, GAOffset + CN->getZExtValue(),
+                  MipsII::MO_ABS_LO);
+              return true;
+            }
+          }
+        }
+      }
       return true;
     }
   }
