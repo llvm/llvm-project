@@ -1315,8 +1315,18 @@ std::unique_ptr<WritableMemoryBuffer> addKernelEntryTrampolineSymbols(
   std::memcpy(&Shoff, O + offsetof(Ehdr, e_shoff), sizeof(Shoff));
   std::memcpy(&Shentsize, O + offsetof(Ehdr, e_shentsize), sizeof(Shentsize));
   std::memcpy(&Shnum, O + offsetof(Ehdr, e_shnum), sizeof(Shnum));
+
+  uint64_t Phoff;
+  uint16_t Phentsize, Phnum;
+  std::memcpy(&Phoff, O + offsetof(Ehdr, e_phoff), sizeof(Phoff));
+  std::memcpy(&Phentsize, O + offsetof(Ehdr, e_phentsize), sizeof(Phentsize));
+  std::memcpy(&Phnum, O + offsetof(Ehdr, e_phnum), sizeof(Phnum));
+
   uint64_t NewShoff = Shift(Shoff);
   std::memcpy(O + offsetof(Ehdr, e_shoff), &NewShoff, sizeof(NewShoff));
+  uint64_t NewPhoff = Shift(Phoff);
+  std::memcpy(O + offsetof(Ehdr, e_phoff), &NewPhoff, sizeof(NewPhoff));
+
   if (Shentsize < sizeof(Shdr))
     return nullptr;
 
@@ -1335,6 +1345,20 @@ std::unique_ptr<WritableMemoryBuffer> addKernelEntryTrampolineSymbols(
       std::memcpy(&ShSize, Sh + offsetof(Shdr, sh_size), sizeof(ShSize));
       ShSize += (I == SymIdx) ? SymDelta : StrDelta;
       std::memcpy(Sh + offsetof(Shdr, sh_size), &ShSize, sizeof(ShSize));
+    }
+  }
+
+  if (Phentsize >= sizeof(Phdr)) {
+    for (uint16_t I = 0; I < Phnum; ++I) {
+      uint64_t P = NewPhoff + static_cast<uint64_t>(I) * Phentsize;
+      if (P + sizeof(Phdr) > NewSize)
+        break;
+      uint8_t *Ph = O + P;
+      uint64_t POffset;
+      std::memcpy(&POffset, Ph + offsetof(Phdr, p_offset), sizeof(POffset));
+      uint64_t NewPOffset = Shift(POffset);
+      std::memcpy(Ph + offsetof(Phdr, p_offset), &NewPOffset,
+                  sizeof(NewPOffset));
     }
   }
 
