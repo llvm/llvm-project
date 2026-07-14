@@ -828,7 +828,11 @@ def MathToAPFloatConversionPass
     calls (APFloatWrappers.cpp). APFloat is a software implementation of
     floating-point mathmetic operations.
   }];
-  let dependentDialects = ["math::MathDialect", "func::FuncDialect"];
+  let dependentDialects = [
+    "math::MathDialect",
+    "func::FuncDialect",
+    "vector::VectorDialect"
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1102,7 +1106,8 @@ def ConvertNVGPUToNVVMPass : Pass<"convert-nvgpu-to-nvvm"> {
     "arith::ArithDialect",
     "LLVM::LLVMDialect",
     "memref::MemRefDialect",
-    "NVVM::NVVMDialect"
+    "NVVM::NVVMDialect",
+    "vector::VectorDialect"
   ];
 }
 

@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen %s | FileCheck %s
-// XFAIL: vg_leak
 
 // CHECK: WorldHelloCC
 // CHECK-NOT: WorldHelloCC

@@ -128,7 +128,7 @@ end subroutine
 ! CHECK:           %[[C0_2:.*]] = arith.constant 0 : index
 ! CHECK:           %[[CMPI:.*]] = arith.cmpi sgt, %[[C20]], %[[C0_2]] : index
 ! CHECK:           %[[ALLOC_SZ:.*]] = arith.select %[[CMPI]], %[[C20]], %[[C0_2]] : index
-! CHECK:           %[[FROM_ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %[[ALLOC_SZ]] {fir.must_be_heap = true, uniq_name = "_QFtest_optional_as_addrEfrom.alloc"}
+! CHECK:           %[[FROM_ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %[[ALLOC_SZ]] {alignment = 64 : i64, fir.must_be_heap = true, uniq_name = "_QFtest_optional_as_addrEfrom.alloc"}
 ! CHECK:           %[[FROM_SHAPE:.*]] = fir.shape %[[ALLOC_SZ]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[FROM_BOX:.*]] = fir.embox %[[FROM_ALLOC]](%[[FROM_SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:           fir.store %[[FROM_BOX]] to %[[FROM_VAR]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>

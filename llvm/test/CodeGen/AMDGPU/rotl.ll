@@ -137,9 +137,9 @@ define amdgpu_kernel void @rotl_v2i32(ptr addrspace(1) %in, <2 x i32> %x, <2 x i
 ; GFX8-NEXT:    s_and_b32 s3, s6, 31
 ; GFX8-NEXT:    s_mov_b32 s1, s0
 ; GFX8-NEXT:    s_lshr_b64 s[0:1], s[0:1], s3
-; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s2
+; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX8-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX8-NEXT:    s_endpgm
@@ -272,11 +272,11 @@ define amdgpu_kernel void @rotl_v4i32(ptr addrspace(1) %in, <4 x i32> %x, <4 x i
 ; GFX8-NEXT:    s_and_b32 s3, s12, 31
 ; GFX8-NEXT:    s_mov_b32 s9, s8
 ; GFX8-NEXT:    s_lshr_b64 s[8:9], s[8:9], s3
-; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s8
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s2
+; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX8-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GFX8-NEXT:    s_endpgm
@@ -361,34 +361,31 @@ define void @test_rotl_i16(ptr addrspace(1) nocapture readonly %sourceA, ptr add
 ; R600-NEXT:    TEX 0 @8
 ; R600-NEXT:    ALU 0, @13, KC0[CB0:0-32], KC1[]
 ; R600-NEXT:    TEX 0 @10
-; R600-NEXT:    ALU 21, @14, KC0[CB0:0-32], KC1[]
+; R600-NEXT:    ALU 18, @14, KC0[CB0:0-32], KC1[]
 ; R600-NEXT:    MEM_RAT MSKOR T0.XW, T1.X
 ; R600-NEXT:    CF_END
 ; R600-NEXT:    PAD
 ; R600-NEXT:    Fetch clause starting at 8:
-; R600-NEXT:     VTX_READ_16 T0.X, T0.X, 48, #1
+; R600-NEXT:     VTX_READ_16 T0.X, T0.X, 32, #1
 ; R600-NEXT:    Fetch clause starting at 10:
-; R600-NEXT:     VTX_READ_16 T1.X, T1.X, 32, #1
+; R600-NEXT:     VTX_READ_16 T1.X, T1.X, 48, #1
 ; R600-NEXT:    ALU clause starting at 12:
-; R600-NEXT:     MOV * T0.X, KC0[2].Z,
+; R600-NEXT:     MOV * T0.X, KC0[2].Y,
 ; R600-NEXT:    ALU clause starting at 13:
-; R600-NEXT:     MOV * T1.X, KC0[2].Y,
+; R600-NEXT:     MOV * T1.X, KC0[2].Z,
 ; R600-NEXT:    ALU clause starting at 14:
-; R600-NEXT:     SUB_INT T0.W, 0.0, T0.X,
-; R600-NEXT:     AND_INT * T1.W, T0.X, literal.x,
-; R600-NEXT:    15(2.101948e-44), 0(0.000000e+00)
-; R600-NEXT:     AND_INT * T0.W, PV.W, literal.x,
-; R600-NEXT:    15(2.101948e-44), 0(0.000000e+00)
-; R600-NEXT:     LSHR T0.Z, T1.X, PV.W,
-; R600-NEXT:     LSHL T0.W, T1.X, T1.W,
-; R600-NEXT:     ADD_INT * T1.W, KC0[2].W, literal.x,
-; R600-NEXT:    8(1.121039e-44), 0(0.000000e+00)
+; R600-NEXT:     LSHL * T0.W, T0.X, literal.x,
+; R600-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; R600-NEXT:     OR_INT T0.Z, PV.W, T0.X,
+; R600-NEXT:     AND_INT T0.W, T1.X, literal.x,
+; R600-NEXT:     ADD_INT * T1.W, KC0[2].W, literal.y,
+; R600-NEXT:    15(2.101948e-44), 8(1.121039e-44)
 ; R600-NEXT:     AND_INT T2.W, PS, literal.x,
-; R600-NEXT:     OR_INT * T0.W, PV.W, PV.Z,
+; R600-NEXT:     LSHL * T0.W, PV.Z, PV.W,
 ; R600-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; R600-NEXT:     AND_INT T0.W, PS, literal.x,
+; R600-NEXT:     LSHR T0.W, PS, literal.x,
 ; R600-NEXT:     LSHL * T2.W, PV.W, literal.y,
-; R600-NEXT:    65535(9.183409e-41), 3(4.203895e-45)
+; R600-NEXT:    16(2.242078e-44), 3(4.203895e-45)
 ; R600-NEXT:     LSHL T0.X, PV.W, PS,
 ; R600-NEXT:     LSHL * T0.W, literal.x, PS,
 ; R600-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
@@ -404,16 +401,15 @@ define void @test_rotl_i16(ptr addrspace(1) nocapture readonly %sourceA, ptr add
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
-; SI-NEXT:    buffer_load_ushort v2, v[2:3], s[4:7], 0 addr64 offset:48
 ; SI-NEXT:    buffer_load_ushort v0, v[0:1], s[4:7], 0 addr64 offset:32
+; SI-NEXT:    buffer_load_ushort v1, v[2:3], s[4:7], 0 addr64 offset:48
 ; SI-NEXT:    s_waitcnt vmcnt(1)
-; SI-NEXT:    v_and_b32_e32 v1, 15, v2
-; SI-NEXT:    v_sub_i32_e32 v2, vcc, 0, v2
-; SI-NEXT:    v_and_b32_e32 v2, 15, v2
+; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v0
+; SI-NEXT:    v_or_b32_e32 v0, v2, v0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_lshlrev_b32_e32 v1, v1, v0
-; SI-NEXT:    v_lshrrev_b32_e32 v0, v2, v0
-; SI-NEXT:    v_or_b32_e32 v0, v1, v0
+; SI-NEXT:    v_and_b32_e32 v1, 15, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v0, v1, v0
+; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; SI-NEXT:    buffer_store_short v0, v[4:5], s[4:7], 0 addr64 offset:8
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]

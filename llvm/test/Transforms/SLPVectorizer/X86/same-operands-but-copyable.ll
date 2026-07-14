@@ -8,7 +8,7 @@ define void @test(ptr %0, ptr %1, float %.sroa.3232.0.copyload) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 12
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x float> [[TMP3]], <float 0.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP3]], float [[DOTSROA_3232_0_COPYLOAD]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP3]], float [[DOTSROA_3232_0_COPYLOAD]], i64 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x float> [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = fmul <2 x float> [[TMP8]], zeroinitializer
 ; CHECK-NEXT:    [[TMP13:%.*]] = fmul <2 x float> [[TMP12]], zeroinitializer

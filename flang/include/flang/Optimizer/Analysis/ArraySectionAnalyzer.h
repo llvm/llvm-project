@@ -65,6 +65,7 @@ public:
   static bool isDesignatingArrayInOrder(hlfir::DesignateOp designate,
                                         hlfir::ElementalOpInterface elemental);
 
+private:
   struct SectionDesc {
     // An array section is described by <lb, ub, stride> tuple.
     // If the designator's subscript is not a triple, then
@@ -102,7 +103,6 @@ public:
   static std::pair<mlir::Value, mlir::Value>
   getOrderedBounds(const SectionDesc &desc);
 
-private:
   // Given two array sections <lb1, ub1, stride1> and
   // <lb2, ub2, stride2>, return true only if the sections
   // are known to be disjoint.

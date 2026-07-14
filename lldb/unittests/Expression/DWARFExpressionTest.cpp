@@ -445,6 +445,14 @@ DWARF:
               Form:            DW_FORM_data1
             - Attribute:       DW_AT_byte_size
               Form:            DW_FORM_data1
+        - Code:            0x00000003
+          Tag:             DW_TAG_enumeration_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
   debug_info:
     - Version:         4
       AddrSize:        8
@@ -493,15 +501,21 @@ DWARF:
           Values:
             - Value:           0x000000000000000b # DW_ATE_numeric_string
             - Value:           0x0000000000000001
+        # 0x00000020:
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x0000000000000007 # DW_ATE_unsigned
+            - Value:           0x0000000000000004
         - AbbrCode:        0x00000000
 
 )";
-  // Compile unit relative offsets to each DW_TAG_base_type
+  // Compile unit relative offsets to type DIEs.
   uint8_t offs_uint32_t = 0x0000000e;
   uint8_t offs_uint64_t = 0x00000011;
   uint8_t offs_sint64_t = 0x00000014;
   uint8_t offs_uchar = 0x00000017;
   uint8_t offs_schar = 0x0000001a;
+  uint8_t offs_enum = 0x00000020;
 
   DWARFExpressionTester t(yamldata, /*cu_index=*/1);
   ASSERT_TRUE((bool)t.GetDwarfUnit());
@@ -574,10 +588,49 @@ DWARF:
   EXPECT_THAT_ERROR(
       t.Eval({DW_OP_const1s, 'X', DW_OP_convert, 0x1d}).takeError(),
       llvm::Failed());
+
+  // Not a DW_TAG_base_type.
+  EXPECT_THAT_ERROR(
+      t.Eval({DW_OP_const1s, 'X', DW_OP_convert, offs_enum}).takeError(),
+      llvm::FailedWithMessage(
+          "DW_OP_convert type DIE is not a DW_TAG_base_type"));
+
+  // A non-zero DIE offset with no DWARF unit.
+  EXPECT_THAT_ERROR(
+      Evaluate({DW_OP_const1s, 'X', DW_OP_convert, 0x01}, nullptr, nullptr)
+          .takeError(),
+      llvm::FailedWithMessage(
+          "DW_OP_convert with a DIE offset requires a DWARF unit"));
+
+  // DW_OP_convert with an empty stack.
+  EXPECT_THAT_ERROR(
+      Evaluate({DW_OP_convert, 0x00}, nullptr, nullptr).takeError(),
+      llvm::FailedWithMessage("DW_OP_convert needs at least 1 stack entries "
+                              "(stack has 0 entries)"));
 }
 
 TEST(DWARFExpression, DW_OP_stack_value) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_stack_value}), llvm::Failed());
+}
+
+TEST(DWARFExpression, IsImplicit) {
+  auto is_implicit = [](llvm::ArrayRef<uint8_t> expr) {
+    DataExtractor extractor(expr.data(), expr.size(), lldb::eByteOrderLittle,
+                            /*addr_size=*/4);
+    return DWARFExpression(extractor).IsImplicit(/*dwarf_cu=*/nullptr);
+  };
+
+  // Implicit and composite locations have no writable storage.
+  EXPECT_TRUE(is_implicit({DW_OP_lit1, DW_OP_stack_value}));
+  EXPECT_TRUE(is_implicit({DW_OP_implicit_value, 0x01, 0x11}));
+  EXPECT_TRUE(is_implicit({DW_OP_reg0, DW_OP_piece, 0x02}));
+  EXPECT_TRUE(is_implicit({DW_OP_reg0, DW_OP_bit_piece, 0x04, 0x00}));
+
+  // Memory and register locations are writable.
+  EXPECT_FALSE(is_implicit({DW_OP_addr, 0x10, 0x20, 0x30, 0x40}));
+  EXPECT_FALSE(is_implicit({DW_OP_reg0}));
+  EXPECT_FALSE(is_implicit({DW_OP_breg0, 0x00}));
+  EXPECT_FALSE(is_implicit({DW_OP_fbreg, 0x00}));
 }
 
 // This test shows that the dwarf version is used by the expression evaluation.
@@ -1195,10 +1248,11 @@ TEST_F(DWARFExpressionMockProcessTest, WASM_DW_OP_addr) {
   ASSERT_TRUE(CreateTestContext(&test_ctx, "wasm32-unknown-unknown-wasm"));
 
   ExecutionContext exe_ctx(test_ctx.target_sp, false);
-  // DW_OP_addr takes a single operand of address size width:
+  // DW_OP_addr takes a single operand of address size width. It denotes a
+  // location in the module's address space, i.e. a file address.
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_addr, 0x40, 0x0, 0x0, 0x0}, {}, {}, &exe_ctx),
-      ExpectLoadAddress(0x40));
+      ExpectFileAddress(0x40));
 }
 
 TEST_F(DWARFExpressionMockProcessTest, WASM_DW_OP_addr_index) {
@@ -1271,11 +1325,11 @@ DWARF:
   DWARFExpression expr(extractor);
 
   llvm::Expected<Value> result = evaluate(expr);
-  EXPECT_THAT_EXPECTED(result, ExpectLoadAddress(0x5678u));
+  EXPECT_THAT_EXPECTED(result, ExpectFileAddress(0x5678u));
 
   ASSERT_TRUE(expr.Update_DW_OP_addr(dwarf_cu, 0xdeadbeef));
   result = evaluate(expr);
-  EXPECT_THAT_EXPECTED(result, ExpectLoadAddress(0xdeadbeefu));
+  EXPECT_THAT_EXPECTED(result, ExpectFileAddress(0xdeadbeefu));
 }
 
 class CustomSymbolFileDWARF : public SymbolFileDWARF {

@@ -81,13 +81,15 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
       }
       const Symbol &symbol{GetAssociationRoot(resolved)};
       if (symbol.attrs().test(Attr::ASYNCHRONOUS)) {
-        messages.Say(
-            "ASYNCHRONOUS argument '%s' requires an explicit interface"_err_en_US,
+        messages.Warn(/*inModuleFile=*/false, context.languageFeatures(),
+            common::UsageWarning::ImplicitInterfaceActual,
+            "ASYNCHRONOUS actual argument '%s' should be passed via an explicit interface"_warn_en_US,
             expr->AsFortran());
       }
       if (symbol.attrs().test(Attr::VOLATILE)) {
-        messages.Say(
-            "VOLATILE argument '%s' requires an explicit interface"_err_en_US,
+        messages.Warn(/*inModuleFile=*/false, context.languageFeatures(),
+            common::UsageWarning::ImplicitInterfaceActual,
+            "VOLATILE actual argument '%s' should be passed via an explicit interface"_warn_en_US,
             expr->AsFortran());
       }
       if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
@@ -1186,7 +1188,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     if (!skipCudaDataAttrCheck &&
         !common::AreCompatibleCUDADataAttrs(dummyDataAttr, actualDataAttr,
             dummy.ignoreTKR, /*allowUnifiedMatchingRule=*/true,
-            isHostDeviceProc, &context.languageFeatures())) {
+            isHostDeviceProc, &context.languageFeatures(), actualIsVariable)) {
       auto toStr{[](std::optional<common::CUDADataAttr> x) {
         return x ? "ATTRIBUTES("s +
                 parser::ToUpperCaseLetters(common::EnumToString(*x)) + ")"s

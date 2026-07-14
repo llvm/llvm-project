@@ -1269,14 +1269,16 @@ public:
 
   /// Returns true for local variable declarations other than parameters.
   /// Note that this includes static variables inside of functions. It also
-  /// includes variables inside blocks.
+  /// includes variables inside blocks and expansion statements.
   ///
   ///   void foo() { int x; static int y; extern int z; }
   bool isLocalVarDecl() const {
     if (getKind() != Decl::Var && getKind() != Decl::Decomposition)
       return false;
     if (const DeclContext *DC = getLexicalDeclContext())
-      return DC->getRedeclContext()->isFunctionOrMethod();
+      return DC->getEnclosingNonExpansionStatementContext()
+          ->getRedeclContext()
+          ->isFunctionOrMethod();
     return false;
   }
 
@@ -2061,13 +2063,17 @@ public:
 
   };
 
-  /// Stashed information about a defaulted/deleted function body.
+  /// Stashed information about a defaulted/deleted function body, including
+  /// the active FP pragma overrides (FPOptionsOverride) from the declaration
+  /// site. These overrides are required to correctly synthesize the function
+  /// body.
   class DefaultedOrDeletedFunctionInfo final
       : llvm::TrailingObjects<DefaultedOrDeletedFunctionInfo, DeclAccessPair,
                               StringLiteral *> {
     friend TrailingObjects;
     unsigned NumLookups;
     bool HasDeletedMessage;
+    FPOptionsOverride FPFeatures;
 
     size_t numTrailingObjects(OverloadToken<DeclAccessPair>) const {
       return NumLookups;
@@ -2076,7 +2082,10 @@ public:
   public:
     static DefaultedOrDeletedFunctionInfo *
     Create(ASTContext &Context, ArrayRef<DeclAccessPair> Lookups,
+           FPOptionsOverride FPFeatures,
            StringLiteral *DeletedMessage = nullptr);
+
+    FPOptionsOverride getFPFeatures() const { return FPFeatures; }
 
     /// Get the unqualified lookup results that should be used in this
     /// defaulted function definition.
@@ -2611,6 +2620,7 @@ public:
 
   /// Determines whether this function is one of the replaceable
   /// global allocation functions:
+  /// \code
   ///    void *operator new(size_t);
   ///    void *operator new(size_t, const std::nothrow_t &) noexcept;
   ///    void *operator new[](size_t);
@@ -2621,6 +2631,7 @@ public:
   ///    void operator delete[](void *) noexcept;
   ///    void operator delete[](void *, std::size_t) noexcept;    [C++1y]
   ///    void operator delete[](void *, const std::nothrow_t &) noexcept;
+  /// \endcode
   /// These functions have special behavior under C++1y [expr.new]:
   ///    An implementation is allowed to omit a call to a replaceable global
   ///    allocation function. [...]
@@ -2644,6 +2655,7 @@ public:
   /// or is a function that may be treated as such during constant evaluation.
   /// This adds support for potentially templated type aware global allocation
   /// functions of the form:
+  /// \code
   ///    void *operator new(type-identity, std::size_t, std::align_val_t)
   ///    void *operator new(type-identity, std::size_t, std::align_val_t,
   ///                       const std::nothrow_t &) noexcept;
@@ -2658,6 +2670,7 @@ public:
   ///                         std::align_val_t) noexcept;
   ///    void operator delete[](type-identity, void*, std::size_t,
   ///                         std::align_val_t, const std::nothrow_t&) noexcept;
+  /// \endcode
   /// Where `type-identity` is a specialization of std::type_identity. If the
   /// declaration is a templated function, it may not include a parameter pack
   /// in the argument list, the type-identity parameter is required to be

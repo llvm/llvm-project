@@ -2419,6 +2419,7 @@ cc_library(
         "//lldb:Headers",
         "//lldb:Target",
         "//lldb:TargetHeaders",
+        "//lldb:Utility",
     ],
 )
 

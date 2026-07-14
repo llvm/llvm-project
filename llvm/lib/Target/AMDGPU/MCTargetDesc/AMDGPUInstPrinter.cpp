@@ -274,7 +274,7 @@ void AMDGPUInstPrinter::printDim(const MCInst *MI, unsigned OpNo,
 
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfoByEncoding(Dim);
   if (DimInfo)
-    O << DimInfo->AsmSuffix;
+    O << AMDGPU::getMIMGDimInfoStr(DimInfo->AsmSuffix);
   else
     O << Dim;
 }

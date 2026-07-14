@@ -110,6 +110,13 @@ struct __is_partitioned;
 // operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __find_first_of;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Predicate>
+// optional<_ForwardIterator1>
+// operator()(_Policy&&, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
+//                       _ForwardIterator2 __first2, _ForwardIterator2 __last2, _Predicate __pred) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __for_each;
 // template <class _Policy, class _ForwardIterator, class _Function>
 // optional<__empty>
@@ -158,6 +165,13 @@ struct __generate_n;
 // template <class _Policy, class _ForwardIterator, class _Size, class _Generator>
 // optional<__empty>
 // operator()(_Policy&&, _ForwardIterator __first, _Size __n, _Generator __gen) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __reverse_copy;
+// template <class _Policy, class _BidirectionalIterator, class _ForwardIterator>
+// optional<_ForwardIterator>
+// operator()(_Policy&&, _BidirectionalIterator __first, _BidirectionalIterator __last,
+//                       _ForwardIterator __result) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
 struct __merge;

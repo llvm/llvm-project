@@ -126,8 +126,8 @@ static hsa_status_t iterate(IterFuncTy Func, IterFuncArgTy FuncArg,
 /// use this function directly but the specialized ones below instead.
 template <typename Elem1Ty, typename Elem2Ty, typename IterFuncTy,
           typename IterFuncArgTy, typename CallbackTy>
-static hsa_status_t iterate(IterFuncTy Func, IterFuncArgTy FuncArg,
-                            CallbackTy Cb) {
+[[maybe_unused]] static hsa_status_t
+iterate(IterFuncTy Func, IterFuncArgTy FuncArg, CallbackTy Cb) {
   auto L = [](Elem1Ty Elem1, Elem2Ty Elem2, void *Data) -> hsa_status_t {
     CallbackTy *Unwrapped = static_cast<CallbackTy *>(Data);
     return (*Unwrapped)(Elem1, Elem2);
@@ -4031,7 +4031,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     return new AMDGPUGlobalHandlerTy();
   }
 
-  Triple::ArchType getTripleArch() const override { return Triple::amdgcn; }
+  Triple::ArchType getTripleArch() const override { return Triple::amdgpu; }
 
   const char *getName() const override { return GETNAME(TARGET_NAME); }
 
@@ -4468,6 +4468,10 @@ Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
 void AMDGPUQueueTy::callbackError(hsa_status_t Status, hsa_queue_t *Source,
                                   void *Data) {
   auto &AMDGPUDevice = *reinterpret_cast<AMDGPUDeviceTy *>(Data);
+
+  // Drain any pending RPC work the device pushed before its queue died.
+  if (RPCServerTy *RPCServer = AMDGPUDevice.getRPCServer())
+    RPCServer->flushDevice(AMDGPUDevice);
 
   if (Status == HSA_STATUS_ERROR_EXCEPTION) {
     auto KernelTraceInfoRecord =

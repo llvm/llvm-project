@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -mcpu=verde < %s | FileCheck -check-prefixes=GCN,MOVREL %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,MOVREL %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GPRIDX %s
+; RUN: llc -mtriple=amdgpu6.01 < %s | FileCheck -check-prefixes=GCN,MOVREL %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -check-prefixes=GCN,MOVREL %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,GPRIDX %s
 
 ; GCN-LABEL: {{^}}main:
 

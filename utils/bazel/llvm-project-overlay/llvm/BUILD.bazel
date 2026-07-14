@@ -655,16 +655,20 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
+        ":CodeGen",
+        ":Core",
         ":DebugInfo",
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
         ":DebugInfoDWARFLowLevel",
         ":DebugInfoPDB",
         ":Demangle",
+        ":IRReader",
         ":MC",
         ":MCDisassembler",
         ":Object",
         ":Support",
+        ":TransformUtils",
     ],
 )
 
@@ -3702,18 +3706,24 @@ gentbl_cc_library(
     name = "amdgpu_isel_target_gen",
     strip_include_prefix = "lib/Target/AMDGPU",
     tbl_outs = {
-        "lib/Target/AMDGPU/AMDGPUGenGlobalISel.inc": ["-gen-global-isel"],
+        "lib/Target/AMDGPU/AMDGPUGenGlobalISel.inc": [
+            "-gen-global-isel",
+            "-gisel-extended-llt",
+        ],
         "lib/Target/AMDGPU/AMDGPUGenPreLegalizeGICombiner.inc": [
             "-gen-global-isel-combiner",
             "-combiners=AMDGPUPreLegalizerCombiner",
+            "-gisel-extended-llt",
         ],
         "lib/Target/AMDGPU/AMDGPUGenPostLegalizeGICombiner.inc": [
             "-gen-global-isel-combiner",
             "-combiners=AMDGPUPostLegalizerCombiner",
+            "-gisel-extended-llt",
         ],
         "lib/Target/AMDGPU/AMDGPUGenRegBankGICombiner.inc": [
             "-gen-global-isel-combiner",
             "-combiners=AMDGPURegBankCombiner",
+            "-gisel-extended-llt",
         ],
     },
     tblgen = ":llvm-tblgen",
