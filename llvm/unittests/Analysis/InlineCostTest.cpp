@@ -53,6 +53,28 @@ std::optional<InlineCostFeatures> getInliningCostFeaturesForCall(CallBase &CB) {
   return getInliningCostFeatures(CB, TIR, GetAssumptionCache);
 }
 
+std::optional<int> getInliningCostEstimateForCall(CallBase &CB) {
+  ModuleAnalysisManager MAM;
+  FunctionAnalysisManager FAM;
+  FAM.registerPass([&] { return TargetIRAnalysis(); });
+  FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
+  FAM.registerPass([&] { return AssumptionAnalysis(); });
+  MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
+
+  MAM.registerPass([&] { return PassInstrumentationAnalysis(); });
+  FAM.registerPass([&] { return PassInstrumentationAnalysis(); });
+
+  ModulePassManager MPM;
+  MPM.run(*CB.getModule(), MAM);
+
+  auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
+    return FAM.getResult<AssumptionAnalysis>(F);
+  };
+  auto &TIR = FAM.getResult<TargetIRAnalysis>(*CB.getFunction());
+
+  return getInliningCostEstimate(CB, TIR, GetAssumptionCache);
+}
+
 // Tests that we can retrieve the CostFeatures without an error
 TEST(InlineCostTest, CostFeatures) {
   const auto *const IR = R"IR(
@@ -82,6 +104,27 @@ define i32 @g(i32) {
 
   // Check that the optional is not empty
   ASSERT_TRUE(Features);
+}
+
+TEST(InlineCostTest, IndirectCallHasNoCost) {
+  const auto *const IR = R"IR(
+define i32 @caller(ptr %callee) {
+  %result = call i32 %callee()
+  ret i32 %result
+}
+)IR";
+
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(IR, Err, C);
+  ASSERT_TRUE(M);
+
+  CallBase *CB = getCallInFunction(M->getFunction("caller"));
+  ASSERT_TRUE(CB);
+  ASSERT_FALSE(CB->getCalledFunction());
+
+  EXPECT_FALSE(getInliningCostEstimateForCall(*CB));
+  EXPECT_FALSE(getInliningCostFeaturesForCall(*CB));
 }
 
 // Tests the calculated SROA cost

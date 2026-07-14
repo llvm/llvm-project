@@ -3159,7 +3159,11 @@ std::optional<int> llvm::getInliningCostEstimate(
                                /*ComputeFullInlineCost*/ true,
                                /*EnableDeferral*/ true};
 
-  InlineCostCallAnalyzer CA(*Call.getCalledFunction(), Call, Params, CalleeTTI,
+  Function *Callee = Call.getCalledFunction();
+  if (!Callee)
+    return std::nullopt;
+
+  InlineCostCallAnalyzer CA(*Callee, Call, Params, CalleeTTI,
                             GetAssumptionCache, GetBFI, GetTLI, PSI, ORE, true,
                             /*IgnoreThreshold*/ true);
   auto R = CA.analyze();
@@ -3174,8 +3178,12 @@ std::optional<InlineCostFeatures> llvm::getInliningCostFeatures(
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE) {
+  Function *Callee = Call.getCalledFunction();
+  if (!Callee)
+    return std::nullopt;
+
   InlineCostFeaturesAnalyzer CFA(CalleeTTI, GetAssumptionCache, GetBFI, GetTLI,
-                                 PSI, ORE, *Call.getCalledFunction(), Call);
+                                 PSI, ORE, *Callee, Call);
   auto R = CFA.analyze();
   if (!R.isSuccess())
     return std::nullopt;
