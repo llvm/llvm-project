@@ -2070,11 +2070,17 @@ def int_coro_subfn_addr : DefaultAttrsIntrinsic<
 
 ///===---------------------- Constant Time Intrinsics ----------------------===//
 //
-// Intrinsic to support constant time select
+// Intrinsic to support constant-time select. The selected value is pure, but
+// the intrinsic is intentionally modeled like llvm.sideeffect: it only touches
+// inaccessible memory so it remains an opaque barrier to generic transforms.
+// This prevents passes from deleting it when unused, speculating it, or
+// rewriting it into an ordinary select, while avoiding claims about writes to
+// accessible program memory. The constant-time lowering contract is described
+// in LangRef.
 def int_ct_select
     : DefaultAttrsIntrinsic<[llvm_any_ty],
                             [llvm_i1_ty, LLVMMatchType<0>, LLVMMatchType<0>],
-                            [IntrWriteMem, IntrWillReturn, NoUndef<RetIndex>]>;
+                            [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>;
 
 
 ////===-------------------------- Other Intrinsics --------------------------===//

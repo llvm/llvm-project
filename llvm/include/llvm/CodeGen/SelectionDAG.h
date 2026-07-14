@@ -1389,11 +1389,16 @@ public:
     return getNode(Opcode, DL, VT, Cond, LHS, RHS, Flags);
   }
 
+  /// Helper function to build CT_SELECT nodes. Unlike select, ct.select only
+  /// accepts a scalar condition, shared by all lanes of vector operands, and
+  /// carries no SDNodeFlags (see the ISD::CT_SELECT documentation).
   SDValue getCTSelect(const SDLoc &DL, EVT VT, SDValue Cond, SDValue LHS,
-                      SDValue RHS, SDNodeFlags Flags = SDNodeFlags()) {
+                      SDValue RHS) {
     assert(LHS.getValueType() == VT && RHS.getValueType() == VT &&
            "Cannot use select on differing types");
-    return getNode(ISD::CT_SELECT, DL, VT, Cond, LHS, RHS, Flags);
+    assert(!Cond.getValueType().isVector() &&
+           "ct.select condition must be a scalar");
+    return getNode(ISD::CT_SELECT, DL, VT, Cond, LHS, RHS);
   }
 
   /// Helper function to make it easier to build SelectCC's if you just have an

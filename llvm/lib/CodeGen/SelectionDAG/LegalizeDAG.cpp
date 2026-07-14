@@ -4386,19 +4386,17 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       unsigned StorageBytes = DL.getTypeStoreSize(VTTy);
       assert(StorageBytes > 0 && "FP type with zero storage size");
 
-      // Pick the largest legal scalar integer chunk that divides StorageBytes
-      // evenly. i8 is the universal fallback (legal on every target).
-      MVT ChunkVT = MVT::i8;
-      for (MVT MV : {MVT::i64, MVT::i32, MVT::i16}) {
-        unsigned MVBytes = MV.getSizeInBits() / 8;
-        if (TLI.isTypeLegal(MV) && MVBytes <= StorageBytes &&
-            StorageBytes % MVBytes == 0) {
-          ChunkVT = MV;
+      // Blend at the widest legal scalar integer width. Chunks narrower than
+      // that (e.g. the 2-byte tail of x86_fp80) are zero-extended on load and
+      // truncated on store, so every value in the DAG has a legal type.
+      MVT BlendVT;
+      for (MVT MV : {MVT::i64, MVT::i32, MVT::i16, MVT::i8})
+        if (TLI.isTypeLegal(MV)) {
+          BlendVT = MV;
           break;
         }
-      }
-      unsigned ChunkBytes = ChunkVT.getSizeInBits() / 8;
-      unsigned NumChunks = StorageBytes / ChunkBytes;
+      assert(BlendVT.isValid() && "no legal scalar integer type");
+      unsigned BlendBytes = BlendVT.getSizeInBits() / 8;
 
       MachineFunction &MF = DAG.getMachineFunction();
       SDValue StackT = DAG.CreateStackTemporary(VT);
@@ -4415,30 +4413,45 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       Chain = DAG.getStore(Chain, dl, Tmp2, StackT, PIT);
       Chain = DAG.getStore(Chain, dl, Tmp3, StackF, PIF);
 
-      for (unsigned i = 0; i < NumChunks; ++i) {
-        TypeSize Off = TypeSize::getFixed(i * ChunkBytes);
+      // Walk the storage in power-of-2 chunks, widest first, so every access
+      // stays naturally aligned within the max-aligned stack temporaries.
+      unsigned Offset = 0;
+      while (Offset < StorageBytes) {
+        unsigned ChunkBytes =
+            std::min(BlendBytes, llvm::bit_floor(StorageBytes - Offset));
+        MVT MemVT = MVT::getIntegerVT(ChunkBytes * 8);
+        TypeSize Off = TypeSize::getFixed(Offset);
         SDValue TPtr = DAG.getMemBasePlusOffset(StackT, Off, dl);
         SDValue FPtr = DAG.getMemBasePlusOffset(StackF, Off, dl);
         SDValue RPtr = DAG.getMemBasePlusOffset(StackR, Off, dl);
 
-        SDValue Ti = DAG.getLoad(ChunkVT, dl, Chain, TPtr,
-                                 PIT.getWithOffset(i * ChunkBytes));
-        Chain = Ti.getValue(1);
-        SDValue Fi = DAG.getLoad(ChunkVT, dl, Chain, FPtr,
-                                 PIF.getWithOffset(i * ChunkBytes));
+        SDValue Ti, Fi;
+        if (MemVT == BlendVT) {
+          Ti = DAG.getLoad(BlendVT, dl, Chain, TPtr, PIT.getWithOffset(Offset));
+          Chain = Ti.getValue(1);
+          Fi = DAG.getLoad(BlendVT, dl, Chain, FPtr, PIF.getWithOffset(Offset));
+        } else {
+          Ti = DAG.getExtLoad(ISD::ZEXTLOAD, dl, BlendVT, Chain, TPtr,
+                              PIT.getWithOffset(Offset), MemVT);
+          Chain = Ti.getValue(1);
+          Fi = DAG.getExtLoad(ISD::ZEXTLOAD, dl, BlendVT, Chain, FPtr,
+                              PIF.getWithOffset(Offset), MemVT);
+        }
         Chain = Fi.getValue(1);
 
-        // Blend this chunk via CT_SELECT on a legal integer type. The
+        // Blend this chunk via CT_SELECT on the legal integer type. The
         // recursive node will be Expand'd by the scalar-int branch below.
-        SDValue Ri =
-            DAG.getCTSelect(dl, ChunkVT, Tmp1, Ti, Fi, Node->getFlags());
+        SDValue Ri = DAG.getCTSelect(dl, BlendVT, Tmp1, Ti, Fi);
 
-        Chain = DAG.getStore(Chain, dl, Ri, RPtr,
-                             PIR.getWithOffset(i * ChunkBytes));
+        if (MemVT == BlendVT)
+          Chain = DAG.getStore(Chain, dl, Ri, RPtr, PIR.getWithOffset(Offset));
+        else
+          Chain = DAG.getTruncStore(Chain, dl, Ri, RPtr,
+                                    PIR.getWithOffset(Offset), MemVT);
+        Offset += ChunkBytes;
       }
 
       Tmp1 = DAG.getLoad(VT, dl, Chain, StackR, PIR);
-      Tmp1->setFlags(Node->getFlags());
       Results.push_back(Tmp1);
       break;
     }
@@ -4502,7 +4515,6 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if (WorkingVT != VT)
       Tmp1 = DAG.getBitcast(VT, Tmp1);
 
-    Tmp1->setFlags(Node->getFlags());
     Results.push_back(Tmp1);
     break;
   }
@@ -5850,8 +5862,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Tmp2 = DAG.getNode(ExtOp, dl, NVT, Node->getOperand(1));
     Tmp3 = DAG.getNode(ExtOp, dl, NVT, Node->getOperand(2));
     // Perform the larger operation, then round down.
-    Tmp1 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1, Tmp2, Tmp3);
-    Tmp1->setFlags(Node->getFlags());
+    Tmp1 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1, Tmp2, Tmp3,
+                       Node->getFlags());
     if (TruncOp != ISD::FP_ROUND)
       Tmp1 = DAG.getNode(TruncOp, dl, Node->getValueType(0), Tmp1);
     else

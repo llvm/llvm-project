@@ -6905,11 +6905,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Cond = getValue(I.getArgOperand(0));
     SDValue A = getValue(I.getArgOperand(1));
     SDValue B = getValue(I.getArgOperand(2));
-    assert(A.getValueType() == B.getValueType() &&
-           "Operands are of different types");
-    assert(!Cond.getValueType().isVector() && "Vector condition not supported");
-    setValue(&I, DAG.getNode(ISD::CT_SELECT, getCurSDLoc(), A.getValueType(),
-                             Cond, A, B));
+    setValue(&I, DAG.getCTSelect(getCurSDLoc(), A.getValueType(), Cond, A, B));
     return;
   }
   case Intrinsic::call_preallocated_setup: {
