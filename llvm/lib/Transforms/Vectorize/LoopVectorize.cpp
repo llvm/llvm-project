@@ -412,6 +412,12 @@ static cl::opt<bool> EnableEarlyExitVectorization(
     cl::desc(
         "Enable vectorization of early exit loops with uncountable exits."));
 
+static cl::opt<bool> EnableVectorizeLoadsAsBound(
+    "enable-vectorize-loads-as-bound", cl::init(false), cl::Hidden,
+    cl::desc("Enable vectorization of loops whose trip count is uncountable "
+             "only because their upper bound is a load with a loop-invariant "
+             "address (example: for (i = 0; i < *Len; ++i))."));
+
 static cl::opt<bool> EnableEarlyExitVectorizationWithSideEffects(
     "enable-early-exit-vectorization-with-side-effects", cl::init(false),
     cl::Hidden,
@@ -1630,16 +1636,29 @@ public:
     BasicBlock *LoopHeader = L->getHeader();
     BasicBlock *Preheader = L->getLoopPreheader();
 
+    SmallVector<const SCEVPredicate *, 4> SCEVPredsVec;
+    if (const auto *U = dyn_cast<SCEVUnionPredicate>(&UnionPred)) {
+      for (const SCEVPredicate *P : U->getPredicates()) {
+        if (!isa<SCEVTripCountInvariantPredicate>(P)) {
+          SCEVPredsVec.push_back(P);
+        }
+      }
+    }
+    else if (!isa<SCEVTripCountInvariantPredicate>(&UnionPred)) {
+      SCEVPredsVec.push_back(&UnionPred);
+    }
+    SCEVUnionPredicate FilteredPred(SCEVPredsVec, *PSE.getSE());
+
     // Use SplitBlock to create blocks for SCEV & memory runtime checks to
     // ensure the blocks are properly added to LoopInfo & DominatorTree. Those
     // may be used by SCEVExpander. The blocks will be un-linked from their
     // predecessors and removed from LI & DT at the end of the function.
-    if (!UnionPred.isAlwaysTrue()) {
+    if (!FilteredPred.isAlwaysTrue()) {
       SCEVCheckBlock = SplitBlock(Preheader, Preheader->getTerminator(), DT, LI,
                                   nullptr, "vector.scevcheck");
 
       SCEVCheckCond = SCEVExp.expandCodeForPredicate(
-          &UnionPred, SCEVCheckBlock->getTerminator());
+          &FilteredPred, SCEVCheckBlock->getTerminator());
       if (isa<Constant>(SCEVCheckCond)) {
         // Clean up directly after expanding the predicate to a constant, to
         // avoid further expansions re-using anything left over from SCEVExp.
@@ -7859,6 +7878,66 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, Loop *L,
       Phi.eraseFromParent();
 }
 
+bool EnableLoadBoundVectorization(Loop *L, PredicatedScalarEvolution &PSE,
+                                  ScalarEvolution *SE, DominatorTree *DT,
+                                  AssumptionCache *AC) {
+  if (!L->isInnermost() || !L->isLoopSimplifyForm() ||
+    L->getNumBackEdges() != 1 || !L->getUniqueExitBlock()) {
+    return false;
+  }
+
+  if (!isa<SCEVCouldNotCompute>(SE->getBackedgeTakenCount(L))) {
+    return false;
+  }
+
+  SmallVector<Instruction *, 16> HoistedDeps;
+  SmallVector<LoadInst *, 4> BoundLoads;
+  if (!collectInvariantLoadsBoundChain(L, SE, DT, AC, HoistedDeps, BoundLoads)) {
+    return false;
+  }
+
+  BasicBlock *Preheader = L->getLoopPreheader();
+  Instruction *InsertPt = Preheader->getTerminator();
+
+  DenseMap<Value *, Value *> CloneMap;
+  for (Instruction *I : HoistedDeps) {
+    Instruction *Clone = I->clone();
+    Clone->setName(I->getName() + ".bound.pre");
+    for (Use &U : Clone->operands()) {
+      if (auto *OpI = dyn_cast<Instruction>(U.get())) {
+        if (L->contains(OpI)) {
+          U.set(CloneMap[OpI]);
+        }
+      }
+    }
+    Clone->insertBefore(InsertPt->getIterator());
+    CloneMap[I] = Clone;
+  }
+
+  bool Added = false;
+  for (LoadInst *LI : BoundLoads) {
+    auto It = CloneMap.find(LI);
+    if (It == CloneMap.end()) {
+      continue;
+    }
+    const SCEV *LoadSCEV = SE->getSCEV(LI);
+    const SCEV *InvSCEV = SE->getSCEV(It->second);
+    if (!isa<SCEVUnknown>(LoadSCEV)) {
+      continue;
+    }
+    PSE.addTripCountInvariantPredicate(LoadSCEV, InvSCEV);
+    Added = true;
+  }
+  if (!Added) {
+    return false;
+  }
+
+  LLVM_DEBUG(dbgs() << "LV: Assuming in-loop bound load(s) invariant to make '"
+                    << L->getHeader()->getName()
+                    << "' countable (discharged by memory alias check).\n");
+  return true;
+}
+
 bool LoopVectorizePass::processLoop(Loop *L) {
   assert((EnableVPlanNativePath || L->isInnermost()) &&
          "VPlan-native path is not enabled. Only process inner loops.");
@@ -7897,6 +7976,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   }
 
   PredicatedScalarEvolution PSE(*SE, *L);
+
+  if (EnableVectorizeLoadsAsBound && L->isInnermost()) {
+    EnableLoadBoundVectorization(L, PSE, SE, DT, AC);
+  }
 
   // Query this against the original loop and save it here because the profile
   // of the original loop header may change as the transformation happens.
