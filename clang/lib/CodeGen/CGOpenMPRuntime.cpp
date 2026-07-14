@@ -6712,8 +6712,8 @@ static void getNumThreads(CodeGenFunction &CGF, const CapturedStmt *CS,
       if (NTExpr->isIntegerConstantExpr(CGF.getContext()))
         if (auto Constant = NTExpr->getIntegerConstantExpr(CGF.getContext()))
           UpperBound =
-              UpperBound
-                  ? Constant->getZExtValue()
+              (UpperBound <= 0)
+                  ? static_cast<int32_t>(Constant->getZExtValue())
                   : std::min(UpperBound,
                              static_cast<int32_t>(Constant->getZExtValue()));
       // If we haven't found a upper bound, remember we saw a thread limiting
@@ -6757,12 +6757,13 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
   const Expr **NTPtr = UpperBoundOnly ? nullptr : &NT;
 
   auto CheckForConstExpr = [&](const Expr *E, const Expr **EPtr) {
-    if (E->isIntegerConstantExpr(CGF.getContext())) {
+    if (E->isIntegerConstantExpr(CGF.getContext()))
       if (auto Constant = E->getIntegerConstantExpr(CGF.getContext()))
-        UpperBound = UpperBound ? Constant->getZExtValue()
-                                : std::min(UpperBound,
-                                           int32_t(Constant->getZExtValue()));
-    }
+        UpperBound =
+            (UpperBound <= 0)
+                ? static_cast<int32_t>(Constant->getZExtValue())
+                : std::min(UpperBound,
+                           static_cast<int32_t>(Constant->getZExtValue()));
     // If we haven't found a upper bound, remember we saw a thread limiting
     // clause.
     if (UpperBound == -1)
