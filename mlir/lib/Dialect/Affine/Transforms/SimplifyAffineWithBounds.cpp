@@ -301,13 +301,122 @@ struct SimplifyAffineLoopBoundMap final : OpRewritePattern<AffineForOp> {
     return success();
   }
 };
+
+/// Computes a constant lower/upper bound for \p map applied to \p operands
+/// using ValueBoundsConstraintSet
+static FailureOr<int64_t> computeConstantBound(AffineMap map,
+                                               ValueRange operands,
+                                               presburger::BoundType type) {
+  ValueBoundsConstraintSet::Variable var(map, operands);
+  ValueBoundsOptions options;
+  options.closedUB = true;
+  return ValueBoundsConstraintSet::computeConstantBound(type, var, nullptr,
+                                                        options);
+}
+
+/// Evaluates the AffineMap \p map with the given \p operands by computing both
+/// its lower bound (LB) and upper bound (UB). If both bounds converge to the
+/// same value, returns that unique constant, otherwise, returns std::nullopt.
+std::optional<int64_t> getConstantBound(AffineMap map, ValueRange operands) {
+  std::optional<int64_t> result = std::nullopt;
+
+  // Compute the constant lower bound (LB) for the map-operand combination.
+  FailureOr<int64_t> min =
+      computeConstantBound(map, operands, presburger::BoundType::LB);
+  if (failed(min))
+    return std::nullopt;
+
+  // Compute the constant upper bound (UB) for the same map and operands.
+  FailureOr<int64_t> max =
+      computeConstantBound(map, operands, presburger::BoundType::UB);
+  if (failed(max))
+    return std::nullopt;
+
+  // The value is a fixed constant only if LB and UB converge perfectly.
+  if (min.value() != max.value())
+    return std::nullopt;
+
+  // Return the confirmed single constant value.
+  if (!result)
+    result = min.value();
+  return result;
+}
+
+/// A pattern that simplifies lower and upper bounds of `affine.for` loops
+/// into constant expressions leveraging `ValueBoundsConstraintSet`.
+struct SimplifyAffineLoopWithConstant final : OpRewritePattern<AffineForOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(AffineForOp forOp,
+                                PatternRewriter &rewriter) const override {
+
+    // Helper lambda to simplify a single bound map (either lower or upper)
+    auto simplifyBound = [&](AffineMap map,
+                             ValueRange operands) -> std::optional<AffineMap> {
+      bool changed = false;
+      SmallVector<AffineExpr> results;
+
+      for (size_t i = 0, e = map.getNumResults(); i < e; ++i) {
+        AffineExpr expr = map.getResult(i);
+
+        // 1. Fast path: If it is already a constant expression, keep it as-is
+        if (llvm::isa<AffineConstantExpr>(expr)) {
+          results.push_back(expr);
+          continue;
+        }
+
+        // 2. Slow path: Invoke value bounds analysis to resolve implicit
+        // constants
+        AffineMap subMap = map.getSubMap(i);
+        if (auto bound = getConstantBound(subMap, operands)) {
+          results.push_back(rewriter.getAffineConstantExpr(*bound));
+          changed = true;
+        } else {
+          results.push_back(expr);
+        }
+      }
+
+      if (!changed)
+        return std::nullopt;
+
+      return AffineMap::get(map.getNumDims(), map.getNumSymbols(), results,
+                            rewriter.getContext());
+    };
+
+    bool lbChanged = false;
+    bool ubChanged = false;
+
+    // 1. Try to simplify the lower bound map
+    if (auto newLbMap = simplifyBound(forOp.getLowerBoundMap(),
+                                      forOp.getLowerBoundOperands())) {
+      rewriter.modifyOpInPlace(forOp, [&]() {
+        forOp.setLowerBound(forOp.getLowerBoundOperands(), *newLbMap);
+      });
+      lbChanged = true;
+    }
+
+    // 2. Try to simplify the upper bound map
+    if (auto newUbMap = simplifyBound(forOp.getUpperBoundMap(),
+                                      forOp.getUpperBoundOperands())) {
+      rewriter.modifyOpInPlace(forOp, [&]() {
+        forOp.setUpperBound(forOp.getUpperBoundOperands(), *newUbMap);
+      });
+      ubChanged = true;
+    }
+
+    // Return success if either the lower or upper bound was successfully
+    // simplified
+    return success(lbChanged || ubChanged);
+  }
+};
+
 } // namespace
 
 void affine::populateSimplifyAffineWithBoundsPatterns(
     RewritePatternSet &patterns) {
-  patterns
-      .add<SimplifyDelinearizeOfLinearizeDisjoint, SimplifyAffineLoopBoundMap>(
-          patterns.getContext());
+  patterns.add<SimplifyDelinearizeOfLinearizeDisjoint,
+               SimplifyAffineLoopBoundMap, SimplifyAffineLoopWithConstant>(
+      patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//

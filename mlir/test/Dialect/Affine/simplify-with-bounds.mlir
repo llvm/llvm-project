@@ -193,3 +193,30 @@ func.func @simplify_loop_bound() -> index{
 //     CHECK:   %[[SUM:.*]] = arith.addi %[[ARG]], %[[C1]] : index
 //     CHECK:   affine.yield %[[SUM]] : index
 //     CHECK:  }
+
+// -----
+
+// CHECK: #[[$MAP:.+]] = affine_map<()[s0] -> (s0, 2)>
+
+// CHECK-LABEL: func @simplify_loop_bound_with_constant
+func.func @simplify_loop_bound_with_constant() -> index {
+  %c0 = arith.constant 0 :index
+  %c1 = arith.constant 1 : index
+  %bound = test.value_with_bounds { min = 1 : index, max = 2 : index}
+  %bound1 = test.value_with_bounds { min = 2 : index, max = 2 : index}
+  %bound2 = test.value_with_bounds { min = 3 : index, max = 3 : index}
+  %bound3 = test.value_with_bounds { min = 4 : index, max = 4 : index}
+  %res = affine.for %iv = max affine_map<(d0, d1) -> (d0, d1, d1)>(%bound, %bound1) to min affine_map<(d0, d1) -> (d0, d1, d1)>(%bound2, %bound3) step 2 iter_args(%arg = %c0) -> index {
+      %sum = arith.addi %arg, %c1 : index
+      affine.yield %sum : index
+  }
+  return %res : index
+}
+
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: %[[BOUND0:.*]] = test.value_with_bounds {max = 2 : index, min = 1 : index}
+// CHECK: affine.for %[[VAL_0:.*]] = max #[[$MAP]]()[%[[BOUND0]]] to 3 step 2 iter_args(%[[VAL_1:.*]] = %[[C0]]) -> (index) {
+// CHECK:   %[[ADDI_0:.*]] = arith.addi %[[VAL_1]], %[[C1]] : index
+// CHECK:   affine.yield %[[ADDI_0]] : index
+// CHECK: }
