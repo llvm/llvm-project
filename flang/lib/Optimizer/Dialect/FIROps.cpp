@@ -444,7 +444,7 @@ void fir::AllocMemOp::build(mlir::OpBuilder &builder,
                             llvm::ArrayRef<mlir::NamedAttribute> attributes) {
   auto nameAttr = builder.getStringAttr(uniqName);
   build(builder, result, wrapAllocMemResultType(inType), inType, nameAttr, {},
-        typeparams, shape);
+        typeparams, shape, /*alignment=*/{});
   result.addAttributes(attributes);
 }
 
@@ -456,7 +456,7 @@ void fir::AllocMemOp::build(mlir::OpBuilder &builder,
   auto nameAttr = builder.getStringAttr(uniqName);
   auto bindcAttr = builder.getStringAttr(bindcName);
   build(builder, result, wrapAllocMemResultType(inType), inType, nameAttr,
-        bindcAttr, typeparams, shape);
+        bindcAttr, typeparams, shape, /*alignment=*/{});
   result.addAttributes(attributes);
 }
 
@@ -465,7 +465,7 @@ void fir::AllocMemOp::build(mlir::OpBuilder &builder,
                             mlir::ValueRange typeparams, mlir::ValueRange shape,
                             llvm::ArrayRef<mlir::NamedAttribute> attributes) {
   build(builder, result, wrapAllocMemResultType(inType), inType, {}, {},
-        typeparams, shape);
+        typeparams, shape, /*alignment=*/{});
   result.addAttributes(attributes);
 }
 
@@ -489,6 +489,10 @@ llvm::LogicalResult fir::AllocMemOp::verify() {
     return emitOpError("must be a !fir.heap type");
   if (fir::isa_unknown_size_box(fir::dyn_cast_ptrEleTy(outType)))
     return emitOpError("cannot allocate !fir.box of unknown rank or type");
+  if (std::optional<std::int64_t> alignment = getAlignment()) {
+    if (*alignment <= 0 || (*alignment & (*alignment - 1)) != 0)
+      return emitOpError("alignment must be a positive power of two");
+  }
   return mlir::success();
 }
 
