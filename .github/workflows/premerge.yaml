@@ -279,6 +279,7 @@ jobs:
           SCCACHE_REGION: us-west-2
           PROJECTS: ${{ needs.premerge-compute-macos-self-hosted.outputs.macos-projects }}
           CHECK_TARGETS: ${{ needs.premerge-compute-macos-self-hosted.outputs.macos-check-targets }}
+          CLANG_TOOLCHAIN_PROGRAM_TIMEOUT: 120
         run: |
           export SCCACHE_IDLE_TIMEOUT=0
           mkdir -p artifacts
