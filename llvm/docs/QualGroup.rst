@@ -246,7 +246,7 @@ contributions and feedback.
 Meeting Materials
 =================
 
-Meeting agendas, minutes, and supportig materials are published to ensure transparency and continuity.
+Meeting agendas, minutes, and supporting materials are published to ensure transparency and continuity.
 
 Upcoming and past meeting agendas, and meeting minutes are published in a dedicated thread
 on the LLVM Discourse forum: `Meeting Agendas and Minutes <https://discourse.llvm.org/t/llvm-qualification-wg-sync-ups-meeting-minutes/87148>`_ 
