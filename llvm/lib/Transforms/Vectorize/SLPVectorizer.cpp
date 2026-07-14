@@ -9572,6 +9572,17 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
           reorderReuses(Gather->ReuseShuffleIndices, Mask);
           continue;
         }
+        // A ScatterVectorize (masked gather) node is scheduled, and the
+        // scheduler reads its operand list at the same lane where the scalar
+        // load sits, so Scalars and the operand list must stay aligned.
+        // Record the reorder in ReorderIndices (applied by the final shuffle)
+        // instead of physically permuting the scalars, matching how a scatter
+        // node with a non-empty order is reordered above.
+        if (Gather->State == TreeEntry::ScatterVectorize) {
+          reorderOrder(Gather->ReorderIndices, Mask);
+          Visited.insert(Gather);
+          continue;
+        }
         reorderScalars(Gather->Scalars, Mask);
         Visited.insert(Gather);
       }
