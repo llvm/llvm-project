@@ -623,13 +623,11 @@ static void reportIllegalCopy(const SIInstrInfo *TII, MachineBasicBlock &MBB,
 /// Handle copying from SGPR to AGPR, or from AGPR to AGPR on GFX908. It is not
 /// possible to have a direct copy in these cases on GFX908, so an intermediate
 /// VGPR copy is required.
-static void indirectCopyToAGPR(const SIInstrInfo &TII,
-                               MachineBasicBlock &MBB,
+static void indirectCopyToAGPR(const SIInstrInfo &TII, MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI,
                                const DebugLoc &DL, MCRegister DestReg,
                                MCRegister SrcReg, bool KillSrc,
                                RegScavenger &RS, bool RegsOverlap,
-                               Register ImpDefSuperReg = Register(),
                                Register ImpUseSuperReg = Register()) {
   assert((TII.getSubtarget().hasMAIInsts() &&
           !TII.getSubtarget().hasGFX90AInsts()) &&
@@ -678,10 +676,9 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
       }
 
       MachineInstrBuilder Builder =
-        BuildMI(MBB, MI, DL, TII.get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), DestReg)
-        .add(DefOp);
-      if (ImpDefSuperReg)
-        Builder.addReg(ImpDefSuperReg, RegState::Define | RegState::Implicit);
+          BuildMI(MBB, MI, DL, TII.get(AMDGPU::V_ACCVGPR_WRITE_B32_e64),
+                  DestReg)
+              .add(DefOp);
 
       if (ImpUseSuperReg) {
         Builder.addReg(ImpUseSuperReg,
@@ -735,12 +732,8 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
                       getKillRegState(KillSrc) | RegState::Implicit);
   }
 
-  MachineInstrBuilder DefBuilder
-    = BuildMI(MBB, MI, DL, TII.get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), DestReg)
-    .addReg(Tmp, RegState::Kill);
-
-  if (ImpDefSuperReg)
-    DefBuilder.addReg(ImpDefSuperReg, RegState::Define | RegState::Implicit);
+  BuildMI(MBB, MI, DL, TII.get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), DestReg)
+      .addReg(Tmp, RegState::Kill);
 }
 
 static void expandSGPRCopy(const SIInstrInfo &TII, MachineBasicBlock &MBB,
@@ -787,9 +780,6 @@ static void expandSGPRCopy(const SIInstrInfo &TII, MachineBasicBlock &MBB,
   assert(FirstMI && LastMI);
   if (!Forward)
     std::swap(FirstMI, LastMI);
-
-  FirstMI->addOperand(
-      MachineOperand::CreateReg(DestReg, true /*IsDef*/, true /*IsImp*/));
 
   if (KillSrc)
     LastMI->addRegisterKilled(SrcReg, &RI);
@@ -1103,34 +1093,27 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Register SrcSubReg = RI.getSubReg(SrcReg, SubIdx);
     assert(DestSubReg && SrcSubReg && "Failed to find subregs!");
 
-    bool IsFirstSubreg = Idx == 0;
     bool UseKill = CanKillSuperReg && Idx == SubIndices.size() - 1;
 
     if (Opcode == AMDGPU::INSTRUCTION_LIST_END) {
-      Register ImpDefSuper = IsFirstSubreg ? Register(DestReg) : Register();
       Register ImpUseSuper = SrcReg;
       indirectCopyToAGPR(*this, MBB, MI, DL, DestSubReg, SrcSubReg, UseKill,
-                         *RS, Overlap, ImpDefSuper, ImpUseSuper);
+                         *RS, Overlap, ImpUseSuper);
     } else if (Opcode == AMDGPU::V_PK_MOV_B32) {
-      MachineInstrBuilder MIB =
-          BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), DestSubReg)
-              .addImm(SISrcMods::OP_SEL_1)
-              .addReg(SrcSubReg)
-              .addImm(SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1)
-              .addReg(SrcSubReg)
-              .addImm(0) // op_sel_lo
-              .addImm(0) // op_sel_hi
-              .addImm(0) // neg_lo
-              .addImm(0) // neg_hi
-              .addImm(0) // clamp
-              .addReg(SrcReg, getKillRegState(UseKill) | RegState::Implicit);
-      if (IsFirstSubreg)
-        MIB.addReg(DestReg, RegState::Define | RegState::Implicit);
+      BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), DestSubReg)
+          .addImm(SISrcMods::OP_SEL_1)
+          .addReg(SrcSubReg)
+          .addImm(SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1)
+          .addReg(SrcSubReg)
+          .addImm(0) // op_sel_lo
+          .addImm(0) // op_sel_hi
+          .addImm(0) // neg_lo
+          .addImm(0) // neg_hi
+          .addImm(0) // clamp
+          .addReg(SrcReg, getKillRegState(UseKill) | RegState::Implicit);
     } else {
       MachineInstrBuilder Builder =
           BuildMI(MBB, MI, DL, get(Opcode), DestSubReg).addReg(SrcSubReg);
-      if (IsFirstSubreg)
-        Builder.addReg(DestReg, RegState::Define | RegState::Implicit);
 
       Builder.addReg(SrcReg, getKillRegState(UseKill) | RegState::Implicit);
     }
@@ -4320,7 +4303,7 @@ SIInstrInfo::convertToThreeAddressImpl(MachineInstr &MI,
       // If we have an SGPR input, we will violate the constant bus restriction.
       (ST.getConstantBusLimit(Opc) > 1 || !Src0->isReg() ||
        !RI.isSGPRReg(MBB.getParent()->getRegInfo(), Src0->getReg()))) {
-    MachineInstr *DefMI;
+    MachineInstr *DefMI = nullptr;
 
     int64_t Imm;
     if (!Src0Literal && getFoldableImm(Src2, Imm, &DefMI)) {
@@ -4506,7 +4489,8 @@ bool SIInstrInfo::mayAccessVMEMThroughFlat(const MachineInstr &MI) const {
   return false;
 }
 
-bool SIInstrInfo::mayAccessLDSThroughFlat(const MachineInstr &MI) const {
+bool SIInstrInfo::mayAccessLDSThroughFlat(const MachineInstr &MI,
+                                          bool TgSplit) const {
   assert(isFLAT(MI));
 
   // Flat instruction such as SCRATCH and GLOBAL do not use the lgkm counter.
@@ -4514,7 +4498,7 @@ bool SIInstrInfo::mayAccessLDSThroughFlat(const MachineInstr &MI) const {
     return false;
 
   // If in tgsplit mode then there can be no use of LDS.
-  if (ST.isTgSplitEnabled())
+  if (TgSplit)
     return false;
 
   // If there are no memory operands then conservatively assume the flat
@@ -10305,7 +10289,7 @@ bool SIInstrInfo::isBufferSMRD(const MachineInstr &MI) const {
 // offsets within the given alignment can be added to the resulting ImmOffset.
 bool SIInstrInfo::splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset,
                                    uint32_t &ImmOffset, Align Alignment) const {
-  const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(ST);
+  const uint64_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(ST);
   const uint32_t MaxImm = alignDown(MaxOffset, Alignment.value());
   uint32_t Overflow = 0;
 
