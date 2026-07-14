@@ -13,7 +13,6 @@
 
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -367,24 +366,6 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
 
   // Okay, this isn't a constant.
   return SectionKind::getData();
-}
-
-StringRef TargetLoweringObjectFile::getCustomSectionName(const GlobalObject *GO,
-                                                         SectionKind Kind) {
-  const GlobalVariable *GV = dyn_cast<GlobalVariable>(GO);
-  if (GV && GV->hasImplicitSection()) {
-    auto Attrs = GV->getAttributes();
-    if (Attrs.hasAttribute("bss-section") && Kind.isBSS())
-      return Attrs.getAttribute("bss-section").getValueAsString();
-    else if (Attrs.hasAttribute("rodata-section") && Kind.isReadOnly())
-      return Attrs.getAttribute("rodata-section").getValueAsString();
-    else if (Attrs.hasAttribute("relro-section") && Kind.isReadOnlyWithRel())
-      return Attrs.getAttribute("relro-section").getValueAsString();
-    else if (Attrs.hasAttribute("data-section") && Kind.isData())
-      return Attrs.getAttribute("data-section").getValueAsString();
-  }
-
-  return GO->getSection();
 }
 
 /// This method computes the appropriate section to emit the specified global

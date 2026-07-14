@@ -24,6 +24,7 @@ def OlympusModel : SchedMachineModel {
   let CompleteModel         =   1;
 
   list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
+                                                    SVE2p1Unsupported.F,
                                                     [HasSVE2p1, HasSVEB16B16,
                                                      HasCPA, HasCSSC,
                                                      HasMatMulFP64, HasMOPS, HasMOPS_GO]);
@@ -2385,7 +2386,7 @@ def : InstRW<[OlympusWrite_2c_1V], (instregex "^ADR_LSL_ZZZ_[SD]_[0123]",
 // AND (vectors, predicated)
 def : InstRW<[OlympusWrite_2c_1V], (instregex "^AND_ZP[mZ]Z_[BHSD]")>;
 // AND (immediate)
-def : InstRW<[OlympusWrite_2c_1V], (instregex "^AND_ZI")>;
+def : InstRW<[OlympusWrite_2c_1V], (instrs AND_ZI, AND_ZI_PSEUDO)>;
 // AND (vectors, unpredicated)
 def : InstRW<[OlympusWrite_2c_1V], (instrs AND_ZZZ)>;
 // ASR (immediate, predicated)
@@ -2435,7 +2436,7 @@ def : InstRW<[OlympusWrite_2c_1V], (instrs DUPM_ZI)>;
 // EOR (vectors, predicated)
 def : InstRW<[OlympusWrite_2c_1V], (instregex "^EOR_ZP[mZ]Z_[BHSD]")>;
 // EOR (immediate)
-def : InstRW<[OlympusWrite_2c_1V], (instregex "^EOR_ZI")>;
+def : InstRW<[OlympusWrite_2c_1V], (instrs EOR_ZI, EOR_ZI_PSEUDO)>;
 // EOR (vectors, unpredicated)
 def : InstRW<[OlympusWrite_2c_1V], (instrs EOR_ZZZ)>;
 // EORBT
@@ -2494,7 +2495,7 @@ def : InstRW<[OlympusWrite_2c_1V], (instregex "^NOT_ZPmZ_[BHSD]")>;
 // ORR (vectors, predicated)
 def : InstRW<[OlympusWrite_2c_1V], (instregex "^ORR_ZP[mZ]Z_[BHSD]")>;
 // ORR (immediate)
-def : InstRW<[OlympusWrite_2c_1V], (instregex "^ORR_ZI")>;
+def : InstRW<[OlympusWrite_2c_1V], (instrs ORR_ZI, ORR_ZI_PSEUDO)>;
 // ORR (vectors, unpredicated)
 def : InstRW<[OlympusWrite_2c_1V], (instrs ORR_ZZZ)>;
 // PMUL
@@ -2860,7 +2861,7 @@ def : InstRW<[OlympusWrite_5c_1V0123_2], (instrs SQRDMULH_ZZZ_D)>;
 // UMULH (unpredicated)
 def : InstRW<[OlympusWrite_5c_1V0123_2], (instrs UMULH_ZZZ_D)>;
 // MUL (immediate)
-def : InstRW<[OlympusWrite_5c_1V0123_2], (instregex "^MUL_ZI_D")>;
+def : InstRW<[OlympusWrite_5c_1V0123_2], (instrs MUL_ZI_D, MUL_ZI_D_PSEUDO)>;
 // SQDMULH (indexed)
 def : InstRW<[OlympusWrite_5c_1V0123_2], (instrs SQDMULH_ZZZI_D)>;
 // SQRDMULH (indexed)

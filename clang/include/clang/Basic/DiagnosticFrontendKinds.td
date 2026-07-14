@@ -366,6 +366,7 @@ def warn_alias_type_mismatch : Warning<
   "alias and aliasee have different types %0 and %1">,
   InGroup<DiagGroup<"attribute-alias">>;
 
+def err_fe_text_encoding_config : Error<"failed to set fexec-charset to '%0'">;
 def warn_atomic_op_misaligned : Warning<
   "misaligned atomic operation may incur "
   "significant performance penalty"

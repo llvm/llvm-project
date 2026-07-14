@@ -161,7 +161,8 @@ protected:
   template <typename ContributorDecl = NamedDecl,
             typename =
                 std::enable_if_t<std::is_base_of_v<NamedDecl, ContributorDecl>>>
-  bool setUpTest(StringRef Code) {
+  bool setUpTest(StringRef Code, const SSAFOptions &Opts = {}) {
+    this->Opts = Opts; // Override the options.
     AST = tooling::buildASTFromCodeWithArgs(
         Code, {"-Wno-unused-value", "-Wno-int-to-pointer-cast"});
 
@@ -1440,4 +1441,181 @@ TEST_F(PointerFlowTest, ReturnRefPtr) {
   EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"foo", 1U, true}, {"f", 1U, true}}}));
 }
 
+TEST_F(PointerFlowTest, RefBindVarInitFileScope) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    int *gp;
+    int *& gr = gp;
+  )cpp"));
+
+  auto *Sum = getEntitySummary<VarDecl>("gr");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"gr", 1U}, {"gp", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, RefBindCallArgMultiple) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void h(int *& a, int *& b);
+    void f(int *p, int *q) { h(p, q); }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("f");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {
+                                          {{"a", 1U}, {"p", 1U}},
+                                          {{"b", 1U}, {"q", 1U}},
+                                      }));
+}
+
+TEST_F(PointerFlowTest, RefBindCallArgDefaulted) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    int *global_default;
+    void h(int *& x = global_default);
+    void f() { h(); }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("f");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"x", 1U}, {"global_default", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, RefBindMemberInit) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    struct S { int *& m; S(int *& p) : m(p) {} };
+  )cpp"));
+
+  auto *Sum = getEntitySummary<CXXConstructorDecl>("S");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"m", 1U}, {"p", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, RefBindReturnStmt) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    int *& f(int *& p) { return p; }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("f");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"f", 1U, true}, {"p", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, RefBindMultiLevel) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    int **gpp;
+    int **& r = gpp;
+  )cpp"));
+
+  auto *Sum = getEntitySummary<VarDecl>("r");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"r", 1U}, {"gpp", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, RefBindTernaryInit) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void f(bool cond, int *p, int *q) {
+      int *& r = (cond ? p : q);
+      (void)r;
+    }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("f");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {
+                                          {{"r", 1U}, {"p", 1U}},
+                                          {{"r", 1U}, {"q", 1U}},
+                                      }));
+}
+
+TEST_F(PointerFlowTest, RefBindNonPointerReferenceIgnored) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void f() { int x = 0; int &r = x; (void)r; }
+  )cpp"));
+
+  EXPECT_EQ(getEntitySummary("f"), nullptr);
+}
+
+TEST_F(PointerFlowTest, RefBindArraySubscriptInInitializer) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void f(int *arr[], int i) { int *& r = arr[i]; (void)r; }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("f");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"r", 1U}, {"arr", 2U}}}));
+}
+
+TEST_F(PointerFlowTest, RefBindExplicitCastInInitializer) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void f(int *p) { int *& r = (int *&)p; (void)r; }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("f");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"r", 1U}, {"p", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, RefBindFunctionCallInitializer) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    int *& g();
+    void f() { int *& r = g(); (void)r; }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("f");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"r", 1U}, {"g", 1U, true}}}));
+}
+
+//////////////////////////////////////////////////////////////
+//          Local-entity inclusion option tests             //
+//////////////////////////////////////////////////////////////
+
+TEST_F(PointerFlowTest, LocalPointerSkippedByDefault) {
+  StringRef Code = R"cpp(
+    void foo(int *param) {
+      int *local_ptr = param;
+      local_ptr = param;
+    }
+  )cpp";
+
+  ASSERT_TRUE(setUpTest(Code));
+
+  // Without IncludeLocalEntities, the local pointer is not registered as a
+  // contributor and therefore has no entity summary of its own.
+  EXPECT_FALSE(getEntitySummary<VarDecl>("local_ptr"));
+  // The enclosing function still has its summary describing the assignment
+  // edge from `local_ptr` to `param` (via the initializer).
+  EXPECT_TRUE(getEntitySummary("foo"));
+}
+
+TEST_F(PointerFlowTest, LocalPointerReportedWhenIncluded) {
+  SSAFOptions Opts;
+  Opts.IncludeLocalEntities = true;
+  StringRef Code = R"cpp(
+    void foo(int *param) {
+      int *local_ptr = param;
+      local_ptr = param;
+    }
+  )cpp";
+
+  ASSERT_TRUE(setUpTest(Code, Opts));
+
+  // With the option enabled, the local pointer becomes a contributor and gets
+  // its own entity summary describing the same edge that was previously only
+  // observable through `foo`.
+  const auto *LocalSum = getEntitySummary<VarDecl>("local_ptr");
+  ASSERT_TRUE(LocalSum);
+  EXPECT_EQ(*LocalSum,
+            makeEdges(__LINE__, {{{"local_ptr", 1U}, {"param", 1U}}}));
+
+  EXPECT_TRUE(getEntitySummary("foo"));
+}
 } // namespace

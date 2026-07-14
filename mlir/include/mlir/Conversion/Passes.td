@@ -828,7 +828,11 @@ def MathToAPFloatConversionPass
     calls (APFloatWrappers.cpp). APFloat is a software implementation of
     floating-point mathmetic operations.
   }];
-  let dependentDialects = ["math::MathDialect", "func::FuncDialect"];
+  let dependentDialects = [
+    "math::MathDialect",
+    "func::FuncDialect",
+    "vector::VectorDialect"
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1102,7 +1106,8 @@ def ConvertNVGPUToNVVMPass : Pass<"convert-nvgpu-to-nvvm"> {
     "arith::ArithDialect",
     "LLVM::LLVMDialect",
     "memref::MemRefDialect",
-    "NVVM::NVVMDialect"
+    "NVVM::NVVMDialect",
+    "vector::VectorDialect"
   ];
 }
 
@@ -1721,6 +1726,19 @@ def ConvertVectorToAMX : Pass<"convert-vector-to-amx"> {
   let dependentDialects = [
     "affine::AffineDialect", "x86::X86Dialect", "arith::ArithDialect",
     "memref::MemRefDialect", "scf::SCFDialect", "vector::VectorDialect"
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// RaiseWasmMLIR
+//===----------------------------------------------------------------------===//
+
+def RaiseWasmMLIR : Pass<"raise-wasm-mlir"> {
+  let summary = "Convert Wasm dialect to a group of dialect as a bridge to LLVM MLIR conversion";
+  let dependentDialects = [
+    "func::FuncDialect", "arith::ArithDialect", "cf::ControlFlowDialect",
+    "memref::MemRefDialect", "vector::VectorDialect", "wasmssa::WasmSSADialect",
+    "math::MathDialect"
   ];
 }
 
