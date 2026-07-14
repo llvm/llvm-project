@@ -397,7 +397,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
   return Changed;
 }
 
-/// Returns the reciprocal entry probability encoded in \p BW , or 1 if \p BW is
+/// Returns the reciprocal entry probability encoded in \p BW, or 1 if \p BW is
 /// null.
 static uint64_t getReciprocalFromBranchWeights(MDNode *BW) {
   uint64_t Total;
@@ -556,8 +556,8 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
       PredRecipe->isSingleScalar(), nullptr /*Mask*/, *PredRecipe, *PredRecipe,
       PredRecipe->getDebugLoc());
   auto *Pred =
-      Plan.createVPBasicBlock(Twine(RegionName) + ".if", RecipeWithoutMask);
-  Pred->setBranchWeights(PredRecipe->getParent()->getBranchWeights());
+      Plan.createVPBasicBlock(Twine(RegionName) + ".if", RecipeWithoutMask,
+                              PredRecipe->getParent()->getBranchWeights());
   auto *Exiting = Plan.createVPBasicBlock(Twine(RegionName) + ".continue");
   VPRegionBlock *Region =
       Plan.createReplicateRegion(Entry, Exiting, RegionName);

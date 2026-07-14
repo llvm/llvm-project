@@ -5652,10 +5652,9 @@ VPCostContext::getPredBlockCostDivisor(const VPBasicBlock *VPBB) const {
   if (CostKind == TTI::TCK_CodeSize)
     return 1;
   uint64_t TotalWeight;
-  if (MDNode *BW = VPBB->getBranchWeights()) {
-    if (BW && extractProfTotalWeight(BW, TotalWeight))
-      return TotalWeight;
-  }
+  if (MDNode *BW = VPBB->getBranchWeights();
+      BW && extractProfTotalWeight(BW, TotalWeight))
+    return TotalWeight;
   return 1;
 }
 

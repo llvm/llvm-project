@@ -543,8 +543,8 @@ void VPBasicBlock::execute(VPTransformState *State) {
 }
 
 VPBasicBlock *VPBasicBlock::clone() {
-  auto *NewBlock = getPlan()->createVPBasicBlock(getName());
-  NewBlock->setBranchWeights(getBranchWeights());
+  auto *NewBlock =
+      getPlan()->createVPBasicBlock(getName(), nullptr, getBranchWeights());
   for (VPRecipeBase &R : *this)
     NewBlock->appendRecipe(R.clone());
   return NewBlock;
@@ -569,8 +569,8 @@ VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
          "can only split at a position in the same block");
 
   // Create new empty block after the block to split.
-  auto *SplitBlock = getPlan()->createVPBasicBlock(getName() + ".split");
-  SplitBlock->setBranchWeights(getBranchWeights());
+  auto *SplitBlock = getPlan()->createVPBasicBlock(getName() + ".split",
+                                                   nullptr, getBranchWeights());
   VPBlockUtils::insertBlockAfter(SplitBlock, this);
 
   // If this is the exiting block, make the split the new exiting block.

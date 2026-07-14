@@ -53,6 +53,10 @@ class PlainCFGBuilder {
   // Loop versioning for alias metadata.
   LoopVersioning *LVer;
 
+  // Maps an original IR block to the estimated branch_weights recorded on its
+  // VPBasicBlock at creation, or null if not provided.
+  function_ref<MDNode *(const BasicBlock *)> GetBranchWeights;
+
   // Vectorization plan that we are working on.
   std::unique_ptr<VPlan> Plan;
 
@@ -81,15 +85,13 @@ class PlainCFGBuilder {
   void createVPInstructionsForVPBB(VPBasicBlock *VPBB, BasicBlock *BB);
 
 public:
-  PlainCFGBuilder(Loop *Lp, LoopInfo *LI, LoopVersioning *LVer, Type *IdxTy)
-      : TheLoop(Lp), LI(LI), LVer(LVer),
+  PlainCFGBuilder(Loop *Lp, LoopInfo *LI, LoopVersioning *LVer, Type *IdxTy,
+                  function_ref<MDNode *(const BasicBlock *)> GetBranchWeights)
+      : TheLoop(Lp), LI(LI), LVer(LVer), GetBranchWeights(GetBranchWeights),
         Plan(std::make_unique<VPlan>(Lp, IdxTy)) {}
 
-  /// Build plain CFG for TheLoop and connect it to Plan's entry. \p
-  /// GetBranchWeights, if set, maps an original IR block to the branch_weights
-  /// recorded on its VPBasicBlock.
-  std::unique_ptr<VPlan>
-  buildPlainCFG(function_ref<MDNode *(const BasicBlock *)> GetBranchWeights);
+  /// Build plain CFG for TheLoop and connect it to Plan's entry.
+  std::unique_ptr<VPlan> buildPlainCFG();
 };
 } // anonymous namespace
 
@@ -136,7 +138,9 @@ VPBasicBlock *PlainCFGBuilder::getOrCreateVPBB(BasicBlock *BB) {
   // Create new VPBB.
   StringRef Name = BB->getName();
   LLVM_DEBUG(dbgs() << "Creating VPBasicBlock for " << Name << "\n");
-  VPBasicBlock *VPBB = Plan->createVPBasicBlock(Name);
+  VPBasicBlock *VPBB = Plan->createVPBasicBlock(
+      Name, /*Recipe=*/nullptr,
+      GetBranchWeights ? GetBranchWeights(BB) : nullptr);
   BB2VPBB[BB] = VPBB;
   return VPBB;
 }
@@ -292,8 +296,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
 }
 
 // Main interface to build the plain CFG.
-std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG(
-    function_ref<MDNode *(const BasicBlock *)> GetBranchWeights) {
+std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG() {
   VPIRBasicBlock *Entry = cast<VPIRBasicBlock>(Plan->getEntry());
   BB2VPBB[Entry->getIRBasicBlock()] = Entry;
   for (VPIRBasicBlock *ExitVPBB : Plan->getExitBlocks())
@@ -328,9 +331,6 @@ std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG(
 
     // Create VPInstructions for BB.
     createVPInstructionsForVPBB(VPBB, BB);
-
-    if (GetBranchWeights)
-      VPBB->setBranchWeights(GetBranchWeights(BB));
 
     // Set VPBB successors. We create empty VPBBs for successors if they don't
     // exist already. Recipes will be created when the successor is visited
@@ -626,8 +626,8 @@ std::unique_ptr<VPlan> VPlanTransforms::buildVPlan0(
     Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
     PredicatedScalarEvolution &PSE, LoopVersioning *LVer,
     function_ref<MDNode *(const BasicBlock *)> GetBranchWeights) {
-  PlainCFGBuilder Builder(TheLoop, &LI, LVer, InductionTy);
-  std::unique_ptr<VPlan> VPlan0 = Builder.buildPlainCFG(GetBranchWeights);
+  PlainCFGBuilder Builder(TheLoop, &LI, LVer, InductionTy, GetBranchWeights);
+  std::unique_ptr<VPlan> VPlan0 = Builder.buildPlainCFG();
   addInitialSkeleton(*VPlan0, InductionTy, PSE, TheLoop);
   simplifyLiveInsWithSCEV(*VPlan0, PSE);
 

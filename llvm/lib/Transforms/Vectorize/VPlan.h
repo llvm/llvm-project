@@ -4359,8 +4359,9 @@ class LLVM_ABI_FOR_TEST VPBasicBlock : public VPBlockBase {
   friend class VPlan;
 
   /// Use VPlan::createVPBasicBlock to create VPBasicBlocks.
-  VPBasicBlock(const Twine &Name = "", VPRecipeBase *Recipe = nullptr)
-      : VPBlockBase(VPBasicBlockSC, Name.str()) {
+  VPBasicBlock(const Twine &Name = "", VPRecipeBase *Recipe = nullptr,
+               MDNode *BranchWeights = nullptr)
+      : VPBlockBase(VPBasicBlockSC, Name.str()), BranchWeights(BranchWeights) {
     if (Recipe)
       appendRecipe(Recipe);
   }
@@ -5126,11 +5127,12 @@ public:
   LLVM_ABI_FOR_TEST VPlan *duplicate();
 
   /// Create a new VPBasicBlock with \p Name and containing \p Recipe if
-  /// present. The returned block is owned by the VPlan and deleted once the
-  /// VPlan is destroyed.
+  /// present, with estimated \p BranchWeights if provided. The returned block
+  /// is owned by the VPlan and deleted once the VPlan is destroyed.
   VPBasicBlock *createVPBasicBlock(const Twine &Name,
-                                   VPRecipeBase *Recipe = nullptr) {
-    auto *VPB = new VPBasicBlock(Name, Recipe);
+                                   VPRecipeBase *Recipe = nullptr,
+                                   MDNode *BranchWeights = nullptr) {
+    auto *VPB = new VPBasicBlock(Name, Recipe, BranchWeights);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }
