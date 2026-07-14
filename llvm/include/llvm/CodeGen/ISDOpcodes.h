@@ -809,7 +809,9 @@ enum NodeType {
   /// if COND (an i1) is true, else FALSEVAL; the value operands and result
   /// share one type. Unlike SELECT, it must lower to code whose timing is
   /// independent of COND -- no data-dependent branches, both arms always
-  /// evaluated -- and combines must preserve that. Node for llvm.ct.select.*.
+  /// evaluated -- and combines must preserve that. Carries no SDNodeFlags;
+  /// FMF-driven select combines (e.g. select -> fminnum) must not be applied.
+  /// Node for llvm.ct.select.*.
   CT_SELECT,
 
   /// Select with a vector condition (op #0) and two vector operands (ops #1
