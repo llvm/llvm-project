@@ -329,6 +329,14 @@ LFI is compatible with Arm Pointer Authentication Code (PAC) instructions,
 which are used to sign and authenticate ``x30`` to protect against control-flow
 hijacking.
 
+The typical use is ``-mbranch-protection=pac-ret``, which signs only the return
+address in ``x30`` using the hint-space ``paciasp`` and ``autiasp``
+instructions. The combined authenticate-and-branch and authenticate-and-return
+instructions covered below require Armv8.3-a and are not produced by
+``-mbranch-protection``. They can appear in hand-written assembly or from
+environments that sign all code pointers, so the rewriter still sandboxes them
+rather than passing them through unmodified.
+
 To gain the security benefit of PAC under LFI, the hardware must implement
 ``FEAT_FPAC``, so that authentication failures fault immediately. Without
 ``FEAT_FPAC``, a failed authentication produces a poisoned pointer, which LFI

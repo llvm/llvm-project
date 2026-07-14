@@ -189,7 +189,7 @@ static bool isExceptionReturn(unsigned Opcode) {
          Opcode == AArch64::ERETAB;
 }
 
-static bool authenticatesLR(const MCInst &Inst) {
+static bool pacWritesLR(const MCInst &Inst) {
   switch (Inst.getOpcode()) {
   case AArch64::AUTIASP:
   case AArch64::AUTIBSP:
@@ -541,39 +541,33 @@ void AArch64MCLFIRewriter::rewriteAuthenticatedBranchOrCall(
     const MCSubtargetInfo &STI) {
   MCRegister TargetReg = Inst.getOperand(0).getReg();
 
-  // Authenticate the target in place. The zero-modifier variants
-  // (braaz/brabz/blraaz/blrabz) have no modifier operand.
+  // Select the authentication opcode for the target register.
   MCInst Auth;
   switch (Inst.getOpcode()) {
   case AArch64::BRAA:
   case AArch64::BLRAA:
     Auth.setOpcode(AArch64::AUTIA);
-    Auth.addOperand(MCOperand::createReg(TargetReg)); // dst
-    Auth.addOperand(MCOperand::createReg(TargetReg)); // src (tied to dst)
-    Auth.addOperand(Inst.getOperand(1));              // modifier
     break;
   case AArch64::BRAB:
   case AArch64::BLRAB:
     Auth.setOpcode(AArch64::AUTIB);
-    Auth.addOperand(MCOperand::createReg(TargetReg)); // dst
-    Auth.addOperand(MCOperand::createReg(TargetReg)); // src (tied to dst)
-    Auth.addOperand(Inst.getOperand(1));              // modifier
     break;
   case AArch64::BRAAZ:
   case AArch64::BLRAAZ:
     Auth.setOpcode(AArch64::AUTIZA);
-    Auth.addOperand(MCOperand::createReg(TargetReg)); // dst
-    Auth.addOperand(MCOperand::createReg(TargetReg)); // src (tied to dst)
     break;
   case AArch64::BRABZ:
   case AArch64::BLRABZ:
     Auth.setOpcode(AArch64::AUTIZB);
-    Auth.addOperand(MCOperand::createReg(TargetReg)); // dst
-    Auth.addOperand(MCOperand::createReg(TargetReg)); // src (tied to dst)
     break;
   default:
     llvm_unreachable("unexpected authenticated branch/call opcode");
   }
+
+  Auth.addOperand(MCOperand::createReg(TargetReg)); // dst
+  Auth.addOperand(MCOperand::createReg(TargetReg)); // src (tied to dst)
+  if (Auth.getOpcode() == AArch64::AUTIA || Auth.getOpcode() == AArch64::AUTIB)
+    Auth.addOperand(Inst.getOperand(1)); // modifier
   emitInst(Auth, Out, STI);
 
   // Guard the authenticated target and branch/call through x28.
@@ -978,9 +972,8 @@ void AArch64MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
     return rewriteSPModification(Inst, Out, STI);
 
   // Link register modification. This covers explicit writes to x30 as well as
-  // PAC instructions that authenticate LR in place (autiasp, ...), which
-  // define LR implicitly.
-  if (explicitlyModifiesRegister(Inst, AArch64::LR) || authenticatesLR(Inst))
+  // PAC instructions that write LR in place, which define LR implicitly.
+  if (explicitlyModifiesRegister(Inst, AArch64::LR) || pacWritesLR(Inst))
     return rewriteLRModification(Inst, Out, STI);
 
   // Memory access.
