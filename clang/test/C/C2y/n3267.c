@@ -1,5 +1,20 @@
 // RUN: %clang_cc1 -std=c2y -verify %s
 
+/* WG14 N3267: Clang 24
+ * 'if' declarations, v2
+ *
+ * Allows declarations in the controlling clause of an if or switch
+ * statement, similar to C++. The selection statement can take one of three
+ * forms: a controlling expression, a declaration (using the full C
+ * declaration grammar) followed by a controlling expression, or a simple
+ * declaration of a single object with a mandatory initializer whose value is
+ * the controlling expression. Identifiers declared in the selection header
+ * are in scope for the entire statement, including the else clause.
+ *
+ * Note: attribute declarations using GNU attribute syntax are not yet
+ * supported as the first clause; see FIXME(#198244) below.
+ */
+
 bool test_if() {
   if (true) {}
   if (bool x = true; x) {}
