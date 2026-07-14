@@ -46,6 +46,7 @@
 #include "SIDefines.h"
 #include "SIInstrInfo.h"
 #include "llvm/ADT/bit.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -432,23 +433,68 @@ AMDGPULowerVGPREncoding::handleCoissue(MachineBasicBlock::instr_iterator I) {
   return I;
 }
 
-bool AMDGPULowerVGPREncoding::needNopBeforeSetVGPRMSB(
-    MachineBasicBlock::instr_iterator I) {
-  while (I != MBB->begin()) {
-    I = std::prev(I);
-    if (I->getOpcode() == AMDGPU::S_SETREG_IMM32_B32) {
-      MachineOperand *SIMM16Op =
-          TII->getNamedOperand(*I, AMDGPU::OpName::simm16);
-      auto [HwRegId, Offset, Size] =
-          AMDGPU::Hwreg::HwregEncoding::decode(SIMM16Op->getImm());
-      if (HwRegId == AMDGPU::Hwreg::ID_MODE)
-        return true;
-    }
-    if (!I->isMetaInstruction())
+/// Returns whether \p MI is a S_SETREG_IMM32_B32(MODE).
+static bool isSetregMode(const MachineInstr &MI, const SIInstrInfo &TII) {
+  if (MI.getOpcode() != AMDGPU::S_SETREG_IMM32_B32)
+    return false;
+
+  const MachineOperand *SIMM16Op =
+      TII.getNamedOperand(MI, AMDGPU::OpName::simm16);
+  auto [HwRegId, _Offset, _Size] =
+      AMDGPU::Hwreg::HwregEncoding::decode(SIMM16Op->getImm());
+  return HwRegId == AMDGPU::Hwreg::ID_MODE;
+}
+
+/// Backtracks \p I in \p MBB until we hit a non-meta instruction and returns
+/// whether that instruction is a S_SETREG_IMM32_B32(MODE). Returns false when
+/// there are no non-meta instruction in [MBB.instr_begin(), It).
+static bool previousInstrIsSetRegMode(MachineBasicBlock::instr_iterator &It,
+                                      const MachineBasicBlock &MBB,
+                                      const SIInstrInfo &TII) {
+  while (It != MBB.begin()) {
+    It = std::prev(It);
+    if (isSetregMode(*It, TII))
+      return true;
+    if (!It->isMetaInstruction())
       return false;
   }
-  // FIXME: Return true if the previous MBB falls through and ends with
-  // S_SETREG_IMM32_B32.
+  return false;
+}
+
+bool AMDGPULowerVGPREncoding::needNopBeforeSetVGPRMSB(
+    MachineBasicBlock::instr_iterator I) {
+  if (previousInstrIsSetRegMode(I, *MBB, *TII))
+    return true;
+  if (I != MBB->begin())
+    return false;
+
+  // Look for a potential fallthrough predecessor block. When it ends with a
+  // S_SETREG_IMM32_B32(MODE) we need to insert a S_NOP too.
+  MachineBasicBlock *CurrentMBB = MBB;
+  bool HasEmptyFallThroughPred;
+  do {
+    HasEmptyFallThroughPred = false;
+    for (MachineBasicBlock *PredMBB : CurrentMBB->predecessors()) {
+      // We assume that an explicit jump to the current block from the block
+      // that would otherwise have naturally fell through to it will remain in
+      // the final assembly.
+      if (PredMBB->getFallThrough(/*JumpToFallThrough=*/false) != CurrentMBB)
+        continue;
+
+      MachineBasicBlock::instr_iterator LastMI = PredMBB->instr_end();
+      if (previousInstrIsSetRegMode(LastMI, *PredMBB, *TII))
+        return true;
+      if (LastMI != PredMBB->begin())
+        return false;
+
+      // The predecessor is empty, recursively look for its own potential
+      // fallthrough predecessor.
+      CurrentMBB = PredMBB;
+      HasEmptyFallThroughPred = true;
+      break;
+    }
+  } while (HasEmptyFallThroughPred);
+
   return false;
 }
 
