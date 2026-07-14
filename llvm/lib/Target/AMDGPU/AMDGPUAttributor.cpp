@@ -1305,6 +1305,14 @@ struct AAAMDGPUMinAGPRAlloc
 
   void initialize(Attributor &A) override {
     Function *F = getAssociatedFunction();
+    auto [MinNumAGPR, MaxNumAGPR] =
+        AMDGPU::getIntegerPairAttribute(*F, "amdgpu-agpr-alloc", {~0u, ~0u},
+                                        /*OnlyFirstRequired=*/true);
+    if (MinNumAGPR == 0) {
+      indicateOptimisticFixpoint();
+      return;
+    }
+
     if (hasSanitizerAttributes(*F))
       indicatePessimisticFixpoint();
   }
