@@ -1154,7 +1154,7 @@ enum PredefinedTypeIDs {
 // \brief HLSL intangible types with auto numeration
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/HLSLIntangibleTypes.def"
-// \brief SPIRV types with auto numeration
+// \brief SPIR-V types with auto numeration
 #define SPIRV_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/SPIRVTypes.def"
 

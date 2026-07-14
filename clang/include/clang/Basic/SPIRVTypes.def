@@ -23,6 +23,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// This type corresponds to the OpTypeEvent type specified in version 1.6 of the
+// SPIR-V specification.
 SPIRV_TYPE("__spirv_event_t", SPIRVEvent, SPIRVEventTy)
 
 #undef SPIRV_TYPE
