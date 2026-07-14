@@ -123,7 +123,7 @@ ParseMemoryRegionInfoFromProcMapsLine(llvm::StringRef maps_line,
     else if (llvm::StringRef(name) == "[heap]")
       region.SetIsStackMemory(eLazyBoolNo);
     else
-     region.SetIsStackMemory(eLazyBoolDontKnow);
+      region.SetIsStackMemory(eLazyBoolDontKnow);
   }
 
   return region;
