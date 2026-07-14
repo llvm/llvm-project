@@ -121,7 +121,7 @@ func.func private @matmul(%A: tensor<7x16xf32>, %B: tensor<16x13xf32>, %C: tenso
 // @pack_lhs
 //
 // Implements packing for the A matrix (LHS) in matrix multiplication. The
-// inner tile size is "scalable": 8 * vscale.
+// inner tile size for dim M is "scalable": 8 * vscale.
 //===----------------------------------------------------------------------===//
 func.func private @pack_lhs(%A: tensor<7x16xf32>) -> tensor<1x16x?x1xf32> {
   %pad = arith.constant 0.0 : f32
