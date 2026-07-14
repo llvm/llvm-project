@@ -45,7 +45,8 @@ using MapTy = llvm::ImmutableMap<KeyT, ValT, llvm::ImutKeyValueInfo<KeyT, ValT>,
                                  /*Canonicalize=*/false>;
 
 /// Computes the union of two ImmutableSets.
-template <typename SetT> SetT join(SetT A, SetT B, typename SetT::Factory &F) {
+template <typename T>
+SetTy<T> join(SetTy<T> A, SetTy<T> B, typename SetTy<T>::Factory &F) {
   if (A.getRootWithoutRetain() == B.getRootWithoutRetain())
     return A;
   if (A.getHeight() < B.getHeight())
@@ -75,9 +76,10 @@ enum class JoinKind {
 // TODO(opt): This key-wise join is a performance bottleneck. A more
 // efficient merge could be implemented using a Patricia Trie or HAMT
 // instead of the current AVL-tree-based ImmutableMap.
-template <typename MapT, typename Joiner>
-MapT join(const MapT &A, const MapT &B, typename MapT::Factory &F,
-          Joiner JoinValues, JoinKind Kind) {
+template <typename KeyT, typename ValT, typename Joiner>
+MapTy<KeyT, ValT> join(const MapTy<KeyT, ValT> &A, const MapTy<KeyT, ValT> &B,
+                       typename MapTy<KeyT, ValT>::Factory &F,
+                       Joiner JoinValues, JoinKind Kind) {
   if (A.getRootWithoutRetain() == B.getRootWithoutRetain())
     return A;
   if (A.getHeight() < B.getHeight())
@@ -85,7 +87,7 @@ MapT join(const MapT &A, const MapT &B, typename MapT::Factory &F,
 
   // For each element in B, join it with the corresponding element in A
   // (or with an empty value if it doesn't exist in A).
-  MapT Res = A;
+  MapTy<KeyT, ValT> Res = A;
   for (const auto &[Key, ValB] : B)
     Res = F.add(Res, Key, JoinValues(A.lookup(Key), &ValB));
   if (Kind == JoinKind::Symmetric) {
