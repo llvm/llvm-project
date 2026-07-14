@@ -2439,7 +2439,7 @@ bool MayVariantBeSelected(
     matchKind = MatchKind::Any;
   }
   // Match-none takes precedence over match-any when both are present, matching
-  // LLVM's variant matcher.
+  // isVariantApplicableInContextHelper.
   if (required.test(unsigned(TP::implementation_extension_match_none))) {
     matchKind = MatchKind::None;
   }
