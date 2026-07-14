@@ -39,8 +39,9 @@ public:
   const SSAFOptions &Opts;
 
   ContributorFinder(ASTContext &Ctx, const SSAFOptions &Opts,
-                     bool ExtractFromSystemHeaders)
-      : Opts(Opts), Ctx(Ctx), ExtractFromSystemHeaders(ExtractFromSystemHeaders) {
+                    bool ExtractFromSystemHeaders)
+      : Opts(Opts), Ctx(Ctx),
+        ExtractFromSystemHeaders(ExtractFromSystemHeaders) {
     ShouldVisitTemplateInstantiations = true;
     ShouldVisitImplicitCode = false;
   }
