@@ -1263,11 +1263,24 @@ void MachineCopyPropagation::backwardCopyPropagateBlock(
   Tracker.clear();
 }
 
+/// StructReloadPair defines a pair of Machine Instructions where the Spill is
+/// the Instruction spilling the physical register, and the associated reload
+/// for that physical register. Take the following example
+/// r2 = COPY x5 // Spill
+/// ....
+/// r5 = COPY r2 // Reload
 struct SpillReloadPair {
   MachineInstr *Spill = nullptr;
   MachineInstr *Reload = nullptr;
 };
 
+/// Defines a Spill Reload Chain that is present in a MachineBasicBlock. This
+/// will describe one single chain, and consist of the relevant
+/// SpillReloadPair's within the chain. A Spill Chain will, in Machine
+/// Instructions look as such: r0 = COPY r1 r1 = COPY r2 r2 = COPY r3 r3 = COPY
+/// r4 <def-use r4> r4 = COPY r3 r3 = COPY r2 r2 = COPY r1 r1 = COPY r0 The
+/// Chain will continue until a Scratch Register is not used, and the register
+/// used at Chain[i] is being spilled/reloaded at Chain [i+1]
 struct SpillReloadChain {
   SmallVector<SpillReloadPair> Pairs;
 
@@ -1275,6 +1288,7 @@ struct SpillReloadChain {
     append(Spill, Reload);
   }
 
+  /// Is MI Spilled or Reloaded within the Chain?
   bool contains(const MachineInstr *MI) {
     return any_of(Pairs, [MI](const SpillReloadPair &Pair) {
       return Pair.Spill == MI || Pair.Reload == MI;
@@ -1344,13 +1358,12 @@ class SpillageCopyEliminator {
            FoldableCurrentCopy->Destination->getReg();
   }
 
-  std::optional<SpillReloadChain *>
-  findChainContainingReload(const MachineInstr *MI) {
+  SpillReloadChain *findChainContainingReload(const MachineInstr *MI) {
     for (SpillReloadChain &Chain : Chains) {
       if (Chain.containsReload(MI))
         return &Chain;
     }
-    return std::nullopt;
+    return nullptr;
   }
 
   bool isInAnyChain(MachineInstr *MI) {
@@ -1486,17 +1499,16 @@ class SpillageCopyEliminator {
     //   L5: r3 = COPY r2
     // Look for a valid COPY before L5 which uses r3.
     MachineInstr *MaybePrevReload = Tracker.findLastSeenUseInCopy(Dst, TRI);
-    std::optional<SpillReloadChain *> Chain =
-        findChainContainingReload(MaybePrevReload);
-    if (!Chain.has_value() ||
+    SpillReloadChain *Chain = findChainContainingReload(MaybePrevReload);
+    if (!Chain ||
         (MaybePrevReload && !isChainedCopy(*MaybePrevReload, *Reload)))
       return nullptr;
 
     assert(MaybePrevReload &&
            "Found a valid leader through nullptr should not happend");
-    assert(Chain.value()->Pairs.size() > 0 &&
+    assert(Chain->Pairs.size() > 0 &&
            "Existing chain's length should be larger than zero");
-    return Chain.value();
+    return Chain;
   }
 
   void addSpillReloadPairToChain(MachineInstr *Reload, MachineInstr *Spill,
@@ -1623,6 +1635,8 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
     if (isCopyInstr(MI, *TII, UseCopyInstr) && ++CopyCount > 6)
       break;
   }
+  // If the MachineBasicBlock contains less than 6 copies, there cannot be a
+  // Spill/Reload chain present that could be optimized.
   if (CopyCount < 6)
     return;
 
