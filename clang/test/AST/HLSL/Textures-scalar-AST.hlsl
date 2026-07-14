@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2D -DARRAYED=0 -o - %s | FileCheck %s --check-prefixes=CHECK -DTEXTURE=Texture2D -DCOORD_DIM=2 -DLOCATION_DIM=3
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2DArray -DARRAYED=1 -o - %s | FileCheck %s --check-prefixes=CHECK,ARRAY -DTEXTURE=Texture2DArray -DCOORD_DIM=3 -DLOCATION_DIM=4
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2D -DCOORD_TYPE=float2 -DLOD_LOCATION=loc -o - %s | FileCheck %s --check-prefixes=CHECK -DTEXTURE=Texture2D -DCOORD_DIM=2 -DLOCATION_DIM=3
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 -DLOD_LOCATION=loc.xy -o - %s | FileCheck %s --check-prefixes=CHECK,ARRAY -DTEXTURE=Texture2DArray -DCOORD_DIM=3 -DLOCATION_DIM=4
 
 // CHECK: CXXRecordDecl {{.*}} SamplerState definition
 // CHECK: FinalAttr {{.*}} Implicit final
@@ -902,14 +902,6 @@
 TEXTURE<float> t;
 SamplerState s;
 SamplerComparisonState scs;
-
-#if ARRAYED
-#define COORD_TYPE float3
-#define LOD_LOCATION loc.xy
-#else
-#define COORD_TYPE float2
-#define LOD_LOCATION loc
-#endif
 
 void main(COORD_TYPE loc, float cmp) {
   t.Sample(s, loc);
