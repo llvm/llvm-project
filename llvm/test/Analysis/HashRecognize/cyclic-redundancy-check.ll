@@ -737,33 +737,8 @@ exit:                                              ; preds = %loop
   ret i16 %crc.next
 }
 
-; Negative tests
-
-define i16 @not.crc.non.const.tc(i16 %crc.init, i32 %loop.limit) {
-; CHECK-LABEL: 'not.crc.non.const.tc'
-; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Unable to find a small constant trip count
-;
-entry:
-  br label %loop
-
-loop:                                              ; preds = %loop, %entry
-  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-  %crc = phi i16 [ %crc.init, %entry ], [ %crc.next, %loop ]
-  %crc.shl = shl i16 %crc, 1
-  %crc.xor = xor i16 %crc.shl, 4129
-  %check.sb = icmp sge i16 %crc, 0
-  %crc.next = select i1 %check.sb, i16 %crc.shl, i16 %crc.xor
-  %iv.next = add nuw nsw i32 %iv, 1
-  %exit.cond = icmp samesign ult i32 %iv, %loop.limit
-  br i1 %exit.cond, label %loop, label %exit
-
-exit:                                              ; preds = %loop
-  ret i16 %crc.next
-}
-
-define i16 @not.crc.non.canonical.not.multiple.8(i16 %crc.init) {
-; CHECK-LABEL: 'not.crc.non.canonical.not.multiple.8'
+define i16 @crc16.be.tc4.crc.init.arg(i16 %crc.init) {
+; CHECK-LABEL: 'crc16.be.tc4.crc.init.arg'
 ; CHECK-NEXT:  Found big-endian CRC-16 loop with trip count 4
 ; CHECK-NEXT:    Initial CRC: i16 %crc.init
 ; CHECK-NEXT:    Generating polynomial: 4129
@@ -801,6 +776,31 @@ loop:                                              ; preds = %loop, %entry
   %iv.next = add nuw nsw i32 %iv, 1
   %exit.cond = icmp samesign eq i32 %iv, 3
   br i1 %exit.cond, label %exit, label %loop
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
+; Negative tests
+
+define i16 @not.crc.non.const.tc(i16 %crc.init, i32 %loop.limit) {
+; CHECK-LABEL: 'not.crc.non.const.tc'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Unable to find a small constant trip count
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %crc.init, %entry ], [ %crc.next, %loop ]
+  %crc.shl = shl i16 %crc, 1
+  %crc.xor = xor i16 %crc.shl, 4129
+  %check.sb = icmp sge i16 %crc, 0
+  %crc.next = select i1 %check.sb, i16 %crc.shl, i16 %crc.xor
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exit.cond = icmp samesign ult i32 %iv, %loop.limit
+  br i1 %exit.cond, label %loop, label %exit
 
 exit:                                              ; preds = %loop
   ret i16 %crc.next
