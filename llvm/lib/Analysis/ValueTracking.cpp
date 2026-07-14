@@ -8971,11 +8971,10 @@ llvm::getFlippedStrictnessPredicateAndConstant(CmpPredicate Pred, Constant *C) {
     if (!Pred.hasSameSign())
       return true;
 
-    // Preserve samesign only if adjusting the constant does not change its
-    // sign bit, and therefore does not change the poison domain.
-    const APInt &Value = C->getValue();
-    APInt Adjusted = WillIncrement ? Value + 1 : Value - 1;
-    return Value.isNegative() == Adjusted.isNegative();
+    // Crossing the corresponding boundary in the other ordering changes the
+    // sign bit, and therefore changes the poison domain.
+    return WillIncrement ? !C->isMaxValue(!IsSigned)
+                         : !C->isMinValue(!IsSigned);
   };
 
   Constant *SafeReplacementConstant = nullptr;
