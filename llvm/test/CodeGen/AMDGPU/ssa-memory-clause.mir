@@ -1,0 +1,281 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=+xnack -run-pass=ssa-si-form-memory-clauses -verify-machineinstrs -simplify-mir -o - %s | FileCheck -check-prefix=XNACK %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=-xnack -run-pass=ssa-si-form-memory-clauses -verify-machineinstrs -simplify-mir -o - %s | FileCheck -check-prefix=NOXNACK %s
+
+# Verify basic behavior of the SSA-form memory clause pass. This pass is
+# similar to SIFormMemoryClauses, but runs before PHI elimination.
+
+# XNACK-LABEL: name: vector_clause
+# XNACK:      %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
+# XNACK-NEXT: %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 16, 0, implicit $exec
+# XNACK-NEXT: %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 32, 0, implicit $exec
+# XNACK-NEXT: %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 48, 0, implicit $exec
+# XNACK-NEXT: KILL killed %0
+# XNACK-NEXT: %5:vreg_64 = IMPLICIT_DEF
+
+# NOXNACK-LABEL: name: vector_clause
+# NOXNACK-NOT: KILL
+
+---
+name: vector_clause
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
+    %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 16, 0, implicit $exec
+    %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 32, 0, implicit $exec
+    %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 48, 0, implicit $exec
+    %5:vreg_64 = IMPLICIT_DEF
+    GLOBAL_STORE_DWORDX4 %5, %1, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %5, %2, 16, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %5, %3, 32, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %5, %4, 48, 0, implicit $exec
+...
+
+# Pointer is live beyond the end of the clause (used by the stores), so no
+# KILL is needed.
+#
+# XNACK-LABEL: name: vector_clause_no_kill
+# XNACK:      %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
+# XNACK-NEXT: %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 16, 0, implicit $exec
+# XNACK-NEXT: %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 32, 0, implicit $exec
+# XNACK-NEXT: %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 48, 0, implicit $exec
+# XNACK-NEXT: GLOBAL_STORE_DWORDX4 %0
+
+---
+name: vector_clause_no_kill
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
+    %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 16, 0, implicit $exec
+    %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 32, 0, implicit $exec
+    %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 48, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %1, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2, 16, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %3, 32, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %4, 48, 0, implicit $exec
+...
+
+# SMEM (scalar) clause: KILL inserted after the last load.
+#
+# XNACK-LABEL: name: scalar_clause
+# XNACK:      %1:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 0, 0
+# XNACK-NEXT: %2:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 4, 0
+# XNACK-NEXT: %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 8, 0
+# XNACK-NEXT: KILL killed %0
+# XNACK-NEXT: S_ENDPGM
+
+---
+name: scalar_clause
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr4_sgpr5
+    %0:sreg_64 = COPY $sgpr4_sgpr5
+    %1:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 0, 0
+    %2:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 4, 0
+    %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 8, 0
+    S_ENDPGM 0, implicit %1, implicit %2, implicit %3
+...
+
+# A single load does not form a clause.
+#
+# XNACK-LABEL: name: single_load_no_clause
+# XNACK:      %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
+# XNACK-NOT:  KILL
+
+---
+name: single_load_no_clause
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %1, 0, 0, implicit $exec
+...
+
+# Subreg pointer: both sub-lane pairs die inside the clause (no post-clause use
+# of %0). LiveVars however only sets isKill() on the last whole-register use
+# (sub2_sub3 on the second load). We emit a whole-register KILL killed %0,
+# covering all lanes.
+#
+# XNACK-LABEL: name: subreg_ptr_killed_in_clause
+# XNACK:      %1:vreg_64 = GLOBAL_LOAD_DWORDX2 %0.sub0_sub1, 0, 0, implicit $exec
+# XNACK-NEXT: %2:vreg_64 = GLOBAL_LOAD_DWORDX2 %0.sub2_sub3, 16, 0, implicit $exec
+# XNACK-NEXT: KILL killed %0
+# XNACK-NEXT: %3:vreg_64 = IMPLICIT_DEF
+#
+# NOXNACK-LABEL: name: subreg_ptr_killed_in_clause
+# NOXNACK-NOT: KILL
+
+---
+name: subreg_ptr_killed_in_clause
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:vreg_128 = IMPLICIT_DEF
+    %1:vreg_64 = GLOBAL_LOAD_DWORDX2 %0.sub0_sub1, 0, 0, implicit $exec
+    %2:vreg_64 = GLOBAL_LOAD_DWORDX2 %0.sub2_sub3, 16, 0, implicit $exec
+    %3:vreg_64 = IMPLICIT_DEF
+    GLOBAL_STORE_DWORDX2 %3, %1, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 %3, %2, 16, 0, implicit $exec
+...
+
+# Subreg pointer: sub0_sub1 is used after the clause (as store address), so
+# those lanes are live-out of the clause. Only sub2_sub3 dies inside the clause.
+# No KILL is needed because %0.sub2_sub3 does not have the killed flag given that
+# %0.sub0_sub1 (and thus %0) is still live after the last load.
+#
+# XNACK-LABEL: name: subreg_ptr_partial_live_after
+# XNACK:      %1:vreg_64 = GLOBAL_LOAD_DWORDX2 %0.sub0_sub1, 0, 0, implicit $exec
+# XNACK-NEXT: %2:vreg_64 = GLOBAL_LOAD_DWORDX2 %0.sub2_sub3, 16, 0, implicit $exec
+# XNACK-NOT:  KILL
+#
+# NOXNACK-LABEL: name: subreg_ptr_partial_live_after
+# NOXNACK-NOT: KILL
+
+---
+name: subreg_ptr_partial_live_after
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:vreg_128 = IMPLICIT_DEF
+    %1:vreg_64 = GLOBAL_LOAD_DWORDX2 %0.sub0_sub1, 0, 0, implicit $exec
+    %2:vreg_64 = GLOBAL_LOAD_DWORDX2 %0.sub2_sub3, 16, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 %0.sub0_sub1, %1, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 %0.sub0_sub1, %2, 16, 0, implicit $exec
+...
+
+
+# SSA-specific: pointer register defined by a PHI is used as the clause
+# address. Here the PHI register %2 is used after the clause. So no KILL
+# is inserted.
+#
+# XNACK-LABEL: name: phi_pointer
+# XNACK:      %2:vreg_64 = PHI %0, %bb.0, %1, %bb.1
+# XNACK-NEXT: %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %2, 0, 0, implicit $exec
+# XNACK-NEXT: %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %2, 16, 0, implicit $exec
+# XNACK-NOT:  KILL %2
+
+---
+name: phi_pointer
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vreg_64 = IMPLICIT_DEF
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2
+
+  bb.2:
+    %2:vreg_64 = PHI %0, %bb.0, %1, %bb.1
+    %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %2, 0, 0, implicit $exec
+    %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %2, 16, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %2, %3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %2, %4, 16, 0, implicit $exec
+...
+
+# SSA-specific: pointer defined in a predecessor block, clause in successor.
+# The live range of the pointer must be extended past the last load in bb.1.
+#
+# XNACK-LABEL: name: pointer_from_predecessor
+# XNACK-LABEL: bb.1:
+# XNACK-NEXT:  %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
+# XNACK-NEXT:  %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 16, 0, implicit $exec
+# XNACK-NEXT:  %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 32, 0, implicit $exec
+# XNACK-NEXT:  KILL killed %0
+
+---
+name: pointer_from_predecessor
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1
+    %0:vreg_64 = IMPLICIT_DEF
+
+  bb.1:
+    %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
+    %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 16, 0, implicit $exec
+    %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 32, 0, implicit $exec
+    %4:vreg_64 = IMPLICIT_DEF
+    GLOBAL_STORE_DWORDX4 %4, %1, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %4, %2, 16, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %4, %3, 32, 0, implicit $exec
+...
+
+# SSA-specific: verify the pass preserves SSA form (isSSA remains true).
+# We reuse the vector_clause input and grep the full MIR header fields.
+#
+# XNACK-LABEL: name: ssa_properties_preserved
+# XNACK:       isSSA:           true
+
+---
+name: ssa_properties_preserved
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
+    %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 16, 0, implicit $exec
+    %3:vreg_64 = IMPLICIT_DEF
+    GLOBAL_STORE_DWORDX4 %3, %1, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %3, %2, 16, 0, implicit $exec
+...
+
+# Clause length is capped at 15 instructions. 16 loads from %0 exceed the
+# limit so the clause stops at 15 and a KILL is inserted. The remaining load
+# from %0 and the two loads from %1 form a second clause.
+#
+# XNACK-LABEL: name: overflow_counter
+# XNACK:      dead %2:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, implicit $exec
+# XNACK-NEXT: dead %3:vgpr_32 = GLOBAL_LOAD_DWORD %0, 4, 0, implicit $exec
+# XNACK-NEXT: dead %4:vgpr_32 = GLOBAL_LOAD_DWORD %0, 8, 0, implicit $exec
+# XNACK-NEXT: dead %5:vgpr_32 = GLOBAL_LOAD_DWORD %0, 12, 0, implicit $exec
+# XNACK-NEXT: dead %6:vgpr_32 = GLOBAL_LOAD_DWORD %0, 16, 0, implicit $exec
+# XNACK-NEXT: dead %7:vgpr_32 = GLOBAL_LOAD_DWORD %0, 20, 0, implicit $exec
+# XNACK-NEXT: dead %8:vgpr_32 = GLOBAL_LOAD_DWORD %0, 24, 0, implicit $exec
+# XNACK-NEXT: dead %9:vgpr_32 = GLOBAL_LOAD_DWORD %0, 28, 0, implicit $exec
+# XNACK-NEXT: dead %10:vgpr_32 = GLOBAL_LOAD_DWORD %0, 32, 0, implicit $exec
+# XNACK-NEXT: dead %11:vgpr_32 = GLOBAL_LOAD_DWORD %0, 36, 0, implicit $exec
+# XNACK-NEXT: dead %12:vgpr_32 = GLOBAL_LOAD_DWORD %0, 40, 0, implicit $exec
+# XNACK-NEXT: dead %13:vgpr_32 = GLOBAL_LOAD_DWORD %0, 44, 0, implicit $exec
+# XNACK-NEXT: dead %14:vgpr_32 = GLOBAL_LOAD_DWORD %0, 48, 0, implicit $exec
+# XNACK-NEXT: dead %15:vgpr_32 = GLOBAL_LOAD_DWORD %0, 52, 0, implicit $exec
+# XNACK-NEXT: dead %16:vgpr_32 = GLOBAL_LOAD_DWORD %0, 56, 0, implicit $exec
+# XNACK-NEXT: KILL killed %0
+# XNACK-NEXT: dead %17:vgpr_32 = GLOBAL_LOAD_DWORD %1, 60, 0, implicit $exec
+# XNACK-NEXT: dead %18:vgpr_32 = GLOBAL_LOAD_DWORD %1, 64, 0, implicit $exec
+# XNACK-NEXT: KILL killed %1
+
+---
+name: overflow_counter
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vreg_64 = IMPLICIT_DEF
+    dead %2:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, implicit $exec
+    dead %3:vgpr_32 = GLOBAL_LOAD_DWORD %0, 4, 0, implicit $exec
+    dead %4:vgpr_32 = GLOBAL_LOAD_DWORD %0, 8, 0, implicit $exec
+    dead %5:vgpr_32 = GLOBAL_LOAD_DWORD %0, 12, 0, implicit $exec
+    dead %6:vgpr_32 = GLOBAL_LOAD_DWORD %0, 16, 0, implicit $exec
+    dead %7:vgpr_32 = GLOBAL_LOAD_DWORD %0, 20, 0, implicit $exec
+    dead %8:vgpr_32 = GLOBAL_LOAD_DWORD %0, 24, 0, implicit $exec
+    dead %9:vgpr_32 = GLOBAL_LOAD_DWORD %0, 28, 0, implicit $exec
+    dead %10:vgpr_32 = GLOBAL_LOAD_DWORD %0, 32, 0, implicit $exec
+    dead %11:vgpr_32 = GLOBAL_LOAD_DWORD %0, 36, 0, implicit $exec
+    dead %12:vgpr_32 = GLOBAL_LOAD_DWORD %0, 40, 0, implicit $exec
+    dead %13:vgpr_32 = GLOBAL_LOAD_DWORD %0, 44, 0, implicit $exec
+    dead %14:vgpr_32 = GLOBAL_LOAD_DWORD %0, 48, 0, implicit $exec
+    dead %15:vgpr_32 = GLOBAL_LOAD_DWORD %0, 52, 0, implicit $exec
+    dead %16:vgpr_32 = GLOBAL_LOAD_DWORD %0, 56, 0, implicit $exec
+    dead %17:vgpr_32 = GLOBAL_LOAD_DWORD %1, 60, 0, implicit $exec
+    dead %18:vgpr_32 = GLOBAL_LOAD_DWORD %1, 64, 0, implicit $exec
+...
+

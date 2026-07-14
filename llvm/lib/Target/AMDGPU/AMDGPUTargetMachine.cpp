@@ -54,7 +54,6 @@
 #include "SIFixVGPRCopies.h"
 #include "SIFoldOperands.h"
 #include "SIFormMemoryClauses.h"
-#include "SSASIFormMemoryClauses.h"
 #include "SILoadStoreOptimizer.h"
 #include "SILowerControlFlow.h"
 #include "SILowerSGPRSpills.h"
@@ -69,6 +68,7 @@
 #include "SIPreAllocateWWMRegs.h"
 #include "SIShrinkInstructions.h"
 #include "SIWholeQuadMode.h"
+#include "SSASIFormMemoryClauses.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
@@ -1527,7 +1527,6 @@ AMDGPUPassConfig::AMDGPUPassConfig(TargetMachine &TM, PassManagerBase &PM)
   // Garbage collection is not supported.
   disablePass(&GCLoweringID);
   disablePass(&ShadowStackGCLoweringID);
-
 }
 
 void AMDGPUPassConfig::addEarlyCSEOrGVNPass() {
@@ -1873,7 +1872,8 @@ void GCNPassConfig::addOptimizedRegAlloc() {
 
   // This is not an essential optimization and it has a noticeable impact on
   // compilation time, so we only enable it from O2.
-  if (TM->getOptLevel() > CodeGenOptLevel::Less && !EnableSSASIFormMemoryClauses)
+  if (TM->getOptLevel() > CodeGenOptLevel::Less &&
+      !EnableSSASIFormMemoryClauses)
     insertPass(&MachineSchedulerID, &SIFormMemoryClausesID);
 
   // Run the SSA form of the memory clause pass before PHI elimination.
