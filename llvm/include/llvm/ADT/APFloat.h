@@ -263,6 +263,7 @@ public:
 
   LLVM_ABI static const llvm::fltSemantics &EnumToSemantics(Semantics S);
   LLVM_ABI static Semantics SemanticsToEnum(const llvm::fltSemantics &Sem);
+  LLVM_ABI static const char *SemanticsName(const llvm::fltSemantics &Sem);
 
 private:
   LLVM_ABI static const fltSemantics semIEEEhalf;

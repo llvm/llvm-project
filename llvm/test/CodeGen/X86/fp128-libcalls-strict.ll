@@ -537,7 +537,7 @@ define fp128 @fma(fp128 %x, fp128 %y, fp128 %z) nounwind strictfp {
 ; ANDROID-LABEL: fma:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq fmal@PLT
+; ANDROID-NEXT:    callq fmaf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -609,7 +609,7 @@ define fp128 @fma(fp128 %x, fp128 %y, fp128 %z) nounwind strictfp {
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r9
-; WIN-NEXT:    callq fmal
+; WIN-NEXT:    callq fmaf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -653,7 +653,7 @@ define fp128 @fma(fp128 %x, fp128 %y, fp128 %z) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _fmal
+; WIN-X86-NEXT:    calll _fmaf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -678,7 +678,7 @@ define fp128 @frem(fp128 %x, fp128 %y) nounwind strictfp {
 ; ANDROID-LABEL: frem:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq fmodl@PLT
+; ANDROID-NEXT:    callq fmodf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -739,7 +739,7 @@ define fp128 @frem(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
-; WIN-NEXT:    callq fmodl
+; WIN-NEXT:    callq fmodf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -775,7 +775,7 @@ define fp128 @frem(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _fmodl
+; WIN-X86-NEXT:    calll _fmodf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -800,7 +800,7 @@ define fp128 @ceil(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: ceil:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq ceill@PLT
+; ANDROID-NEXT:    callq ceilf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -846,7 +846,7 @@ define fp128 @ceil(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq ceill
+; WIN-NEXT:    callq ceilf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -873,7 +873,7 @@ define fp128 @ceil(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _ceill
+; WIN-X86-NEXT:    calll _ceilf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -897,7 +897,7 @@ define fp128 @acos(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: acos:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq acosl@PLT
+; ANDROID-NEXT:    callq acosf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -943,7 +943,7 @@ define fp128 @acos(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq acosl
+; WIN-NEXT:    callq acosf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -970,7 +970,7 @@ define fp128 @acos(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _acosl
+; WIN-X86-NEXT:    calll _acosf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -994,7 +994,7 @@ define fp128 @cos(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: cos:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq cosl@PLT
+; ANDROID-NEXT:    callq cosf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -1040,7 +1040,7 @@ define fp128 @cos(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq cosl
+; WIN-NEXT:    callq cosf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -1067,7 +1067,7 @@ define fp128 @cos(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _cosl
+; WIN-X86-NEXT:    calll _cosf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -1091,7 +1091,7 @@ define fp128 @cosh(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: cosh:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq coshl@PLT
+; ANDROID-NEXT:    callq coshf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -1137,7 +1137,7 @@ define fp128 @cosh(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq coshl
+; WIN-NEXT:    callq coshf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -1164,7 +1164,7 @@ define fp128 @cosh(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _coshl
+; WIN-X86-NEXT:    calll _coshf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -1188,7 +1188,7 @@ define fp128 @exp(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: exp:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq expl@PLT
+; ANDROID-NEXT:    callq expf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -1234,7 +1234,7 @@ define fp128 @exp(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq expl
+; WIN-NEXT:    callq expf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -1261,7 +1261,7 @@ define fp128 @exp(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _expl
+; WIN-X86-NEXT:    calll _expf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -1285,7 +1285,7 @@ define fp128 @exp2(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: exp2:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq exp2l@PLT
+; ANDROID-NEXT:    callq exp2f128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -1331,7 +1331,7 @@ define fp128 @exp2(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq exp2l
+; WIN-NEXT:    callq exp2f128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -1358,7 +1358,7 @@ define fp128 @exp2(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _exp2l
+; WIN-X86-NEXT:    calll _exp2f128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -1382,7 +1382,7 @@ define fp128 @floor(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: floor:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq floorl@PLT
+; ANDROID-NEXT:    callq floorf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -1428,7 +1428,7 @@ define fp128 @floor(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq floorl
+; WIN-NEXT:    callq floorf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -1455,7 +1455,7 @@ define fp128 @floor(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _floorl
+; WIN-X86-NEXT:    calll _floorf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -1479,7 +1479,7 @@ define fp128 @log(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: log:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq logl@PLT
+; ANDROID-NEXT:    callq logf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -1525,7 +1525,7 @@ define fp128 @log(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq logl
+; WIN-NEXT:    callq logf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -1552,7 +1552,7 @@ define fp128 @log(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _logl
+; WIN-X86-NEXT:    calll _logf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -1576,7 +1576,7 @@ define fp128 @log10(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: log10:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq log10l@PLT
+; ANDROID-NEXT:    callq log10f128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -1622,7 +1622,7 @@ define fp128 @log10(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq log10l
+; WIN-NEXT:    callq log10f128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -1649,7 +1649,7 @@ define fp128 @log10(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _log10l
+; WIN-X86-NEXT:    calll _log10f128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -1673,7 +1673,7 @@ define fp128 @log2(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: log2:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq log2l@PLT
+; ANDROID-NEXT:    callq log2f128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -1719,7 +1719,7 @@ define fp128 @log2(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq log2l
+; WIN-NEXT:    callq log2f128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -1746,7 +1746,7 @@ define fp128 @log2(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _log2l
+; WIN-X86-NEXT:    calll _log2f128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -1770,7 +1770,7 @@ define fp128 @maxnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; ANDROID-LABEL: maxnum:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq fmaxl@PLT
+; ANDROID-NEXT:    callq fmaxf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -1831,7 +1831,7 @@ define fp128 @maxnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
-; WIN-NEXT:    callq fmaxl
+; WIN-NEXT:    callq fmaxf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -1867,7 +1867,7 @@ define fp128 @maxnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _fmaxl
+; WIN-X86-NEXT:    calll _fmaxf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -1892,7 +1892,7 @@ define fp128 @minnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; ANDROID-LABEL: minnum:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq fminl@PLT
+; ANDROID-NEXT:    callq fminf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -1953,7 +1953,7 @@ define fp128 @minnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
-; WIN-NEXT:    callq fminl
+; WIN-NEXT:    callq fminf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -1989,7 +1989,7 @@ define fp128 @minnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _fminl
+; WIN-X86-NEXT:    calll _fminf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -2014,7 +2014,7 @@ define fp128 @nearbyint(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: nearbyint:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq nearbyintl@PLT
+; ANDROID-NEXT:    callq nearbyintf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -2060,7 +2060,7 @@ define fp128 @nearbyint(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq nearbyintl
+; WIN-NEXT:    callq nearbyintf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -2087,7 +2087,7 @@ define fp128 @nearbyint(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _nearbyintl
+; WIN-X86-NEXT:    calll _nearbyintf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -2111,7 +2111,7 @@ define fp128 @pow(fp128 %x, fp128 %y) nounwind strictfp {
 ; ANDROID-LABEL: pow:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq powl@PLT
+; ANDROID-NEXT:    callq powf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -2172,7 +2172,7 @@ define fp128 @pow(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
-; WIN-NEXT:    callq powl
+; WIN-NEXT:    callq powf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -2208,7 +2208,7 @@ define fp128 @pow(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _powl
+; WIN-X86-NEXT:    calll _powf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -2345,7 +2345,7 @@ define fp128 @rint(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: rint:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq rintl@PLT
+; ANDROID-NEXT:    callq rintf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -2391,7 +2391,7 @@ define fp128 @rint(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq rintl
+; WIN-NEXT:    callq rintf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -2418,7 +2418,7 @@ define fp128 @rint(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _rintl
+; WIN-X86-NEXT:    calll _rintf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -2442,7 +2442,7 @@ define fp128 @round(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: round:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq roundl@PLT
+; ANDROID-NEXT:    callq roundf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -2488,7 +2488,7 @@ define fp128 @round(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq roundl
+; WIN-NEXT:    callq roundf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -2515,7 +2515,7 @@ define fp128 @round(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _roundl
+; WIN-X86-NEXT:    calll _roundf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -2539,7 +2539,7 @@ define fp128 @roundeven(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: roundeven:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq roundevenl@PLT
+; ANDROID-NEXT:    callq roundevenf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -2585,7 +2585,7 @@ define fp128 @roundeven(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq roundevenl
+; WIN-NEXT:    callq roundevenf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -2612,7 +2612,7 @@ define fp128 @roundeven(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _roundevenl
+; WIN-X86-NEXT:    calll _roundevenf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -2636,7 +2636,7 @@ define fp128 @asin(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: asin:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq asinl@PLT
+; ANDROID-NEXT:    callq asinf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -2682,7 +2682,7 @@ define fp128 @asin(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq asinl
+; WIN-NEXT:    callq asinf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -2709,7 +2709,7 @@ define fp128 @asin(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _asinl
+; WIN-X86-NEXT:    calll _asinf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -2733,7 +2733,7 @@ define fp128 @sin(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: sin:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq sinl@PLT
+; ANDROID-NEXT:    callq sinf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -2779,7 +2779,7 @@ define fp128 @sin(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq sinl
+; WIN-NEXT:    callq sinf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -2806,7 +2806,7 @@ define fp128 @sin(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _sinl
+; WIN-X86-NEXT:    calll _sinf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -2830,7 +2830,7 @@ define fp128 @sinh(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: sinh:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq sinhl@PLT
+; ANDROID-NEXT:    callq sinhf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -2876,7 +2876,7 @@ define fp128 @sinh(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq sinhl
+; WIN-NEXT:    callq sinhf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -2903,7 +2903,7 @@ define fp128 @sinh(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _sinhl
+; WIN-X86-NEXT:    calll _sinhf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -2927,7 +2927,7 @@ define fp128 @sqrt(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: sqrt:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq sqrtl@PLT
+; ANDROID-NEXT:    callq sqrtf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -2973,7 +2973,7 @@ define fp128 @sqrt(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq sqrtl
+; WIN-NEXT:    callq sqrtf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -3000,7 +3000,7 @@ define fp128 @sqrt(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _sqrtl
+; WIN-X86-NEXT:    calll _sqrtf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -3024,7 +3024,7 @@ define fp128 @atan(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: atan:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq atanl@PLT
+; ANDROID-NEXT:    callq atanf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -3070,7 +3070,7 @@ define fp128 @atan(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq atanl
+; WIN-NEXT:    callq atanf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -3097,7 +3097,7 @@ define fp128 @atan(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _atanl
+; WIN-X86-NEXT:    calll _atanf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -3121,7 +3121,7 @@ define fp128 @atan2(fp128 %x, fp128 %y) nounwind strictfp {
 ; ANDROID-LABEL: atan2:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq atan2l@PLT
+; ANDROID-NEXT:    callq atan2f128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -3182,7 +3182,7 @@ define fp128 @atan2(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
-; WIN-NEXT:    callq atan2l
+; WIN-NEXT:    callq atan2f128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -3218,7 +3218,7 @@ define fp128 @atan2(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _atan2l
+; WIN-X86-NEXT:    calll _atan2f128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -3243,7 +3243,7 @@ define fp128 @tan(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: tan:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq tanl@PLT
+; ANDROID-NEXT:    callq tanf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -3289,7 +3289,7 @@ define fp128 @tan(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq tanl
+; WIN-NEXT:    callq tanf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -3316,7 +3316,7 @@ define fp128 @tan(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _tanl
+; WIN-X86-NEXT:    calll _tanf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -3340,7 +3340,7 @@ define fp128 @tanh(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: tanh:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq tanhl@PLT
+; ANDROID-NEXT:    callq tanhf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -3386,7 +3386,7 @@ define fp128 @tanh(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq tanhl
+; WIN-NEXT:    callq tanhf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -3413,7 +3413,7 @@ define fp128 @tanh(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _tanhl
+; WIN-X86-NEXT:    calll _tanhf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -3437,7 +3437,7 @@ define fp128 @trunc(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: trunc:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq truncl@PLT
+; ANDROID-NEXT:    callq truncf128@PLT
 ; ANDROID-NEXT:    popq %rax
 ; ANDROID-NEXT:    retq
 ;
@@ -3483,7 +3483,7 @@ define fp128 @trunc(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq truncl
+; WIN-NEXT:    callq truncf128
 ; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN-NEXT:    movaps %xmm0, (%rsi)
 ; WIN-NEXT:    movq %rsi, %rax
@@ -3510,7 +3510,7 @@ define fp128 @trunc(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll _truncl
+; WIN-X86-NEXT:    calll _truncf128
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -3534,7 +3534,7 @@ define i32 @lrint(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: lrint:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq lrintl@PLT
+; ANDROID-NEXT:    callq lrintf128@PLT
 ; ANDROID-NEXT:    popq %rcx
 ; ANDROID-NEXT:    retq
 ;
@@ -3562,7 +3562,7 @@ define i32 @lrint(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq lrintl
+; WIN-NEXT:    callq lrintf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -3576,7 +3576,7 @@ define i32 @lrint(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl 8(%ebp)
-; WIN-X86-NEXT:    calll _lrintl
+; WIN-X86-NEXT:    calll _lrintf128
 ; WIN-X86-NEXT:    addl $16, %esp
 ; WIN-X86-NEXT:    movl %ebp, %esp
 ; WIN-X86-NEXT:    popl %ebp
@@ -3590,7 +3590,7 @@ define i64 @llrint(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: llrint:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq llrintl@PLT
+; ANDROID-NEXT:    callq llrintf128@PLT
 ; ANDROID-NEXT:    popq %rcx
 ; ANDROID-NEXT:    retq
 ;
@@ -3618,7 +3618,7 @@ define i64 @llrint(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq llrintl
+; WIN-NEXT:    callq llrintf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -3632,7 +3632,7 @@ define i64 @llrint(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl 8(%ebp)
-; WIN-X86-NEXT:    calll _llrintl
+; WIN-X86-NEXT:    calll _llrintf128
 ; WIN-X86-NEXT:    addl $16, %esp
 ; WIN-X86-NEXT:    movl %ebp, %esp
 ; WIN-X86-NEXT:    popl %ebp
@@ -3646,7 +3646,7 @@ define i32 @lround(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: lround:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq lroundl@PLT
+; ANDROID-NEXT:    callq lroundf128@PLT
 ; ANDROID-NEXT:    popq %rcx
 ; ANDROID-NEXT:    retq
 ;
@@ -3674,7 +3674,7 @@ define i32 @lround(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq lroundl
+; WIN-NEXT:    callq lroundf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -3688,7 +3688,7 @@ define i32 @lround(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl 8(%ebp)
-; WIN-X86-NEXT:    calll _lroundl
+; WIN-X86-NEXT:    calll _lroundf128
 ; WIN-X86-NEXT:    addl $16, %esp
 ; WIN-X86-NEXT:    movl %ebp, %esp
 ; WIN-X86-NEXT:    popl %ebp
@@ -3702,7 +3702,7 @@ define i64 @llround(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: llround:
 ; ANDROID:       # %bb.0: # %entry
 ; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq llroundl@PLT
+; ANDROID-NEXT:    callq llroundf128@PLT
 ; ANDROID-NEXT:    popq %rcx
 ; ANDROID-NEXT:    retq
 ;
@@ -3730,7 +3730,7 @@ define i64 @llround(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq llroundl
+; WIN-NEXT:    callq llroundf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -3744,7 +3744,7 @@ define i64 @llround(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl 8(%ebp)
-; WIN-X86-NEXT:    calll _llroundl
+; WIN-X86-NEXT:    calll _llroundf128
 ; WIN-X86-NEXT:    addl $16, %esp
 ; WIN-X86-NEXT:    movl %ebp, %esp
 ; WIN-X86-NEXT:    popl %ebp

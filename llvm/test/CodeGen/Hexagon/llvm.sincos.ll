@@ -1108,11 +1108,11 @@ define { fp128, fp128 } @test_sincos_f128(fp128 %a) #0 {
 ; BASE-NEXT:     memd(r29+#40) = r19:18
 ; BASE-NEXT:    } // 8-byte Folded Spill
 ; BASE-NEXT:    {
-; BASE-NEXT:     call sinl
+; BASE-NEXT:     call sinf128
 ; BASE-NEXT:     r19:18 = combine(r3,r2)
 ; BASE-NEXT:    }
 ; BASE-NEXT:    {
-; BASE-NEXT:     call cosl
+; BASE-NEXT:     call cosf128
 ; BASE-NEXT:     r0 = add(r29,#16)
 ; BASE-NEXT:     r3:2 = combine(r19,r18)
 ; BASE-NEXT:     r5:4 = combine(r17,r16)
@@ -1156,7 +1156,7 @@ define { fp128, fp128 } @test_sincos_f128(fp128 %a) #0 {
 ; GNU-NEXT:     memw(r29+#4) = r7.new
 ; GNU-NEXT:    }
 ; GNU-NEXT:    {
-; GNU-NEXT:     call sincosl
+; GNU-NEXT:     call sincosf128
 ; GNU-NEXT:     memw(r29+#0) = r6
 ; GNU-NEXT:    }
 ; GNU-NEXT:    {
@@ -1194,11 +1194,11 @@ define { fp128, fp128 } @test_sincos_f128(fp128 %a) #0 {
 ; MUSL-NEXT:     memd(r29+#40) = r19:18
 ; MUSL-NEXT:    } // 8-byte Folded Spill
 ; MUSL-NEXT:    {
-; MUSL-NEXT:     call sinl
+; MUSL-NEXT:     call sinf128
 ; MUSL-NEXT:     r19:18 = combine(r3,r2)
 ; MUSL-NEXT:    }
 ; MUSL-NEXT:    {
-; MUSL-NEXT:     call cosl
+; MUSL-NEXT:     call cosf128
 ; MUSL-NEXT:     r0 = add(r29,#16)
 ; MUSL-NEXT:     r3:2 = combine(r19,r18)
 ; MUSL-NEXT:     r5:4 = combine(r17,r16)
@@ -1251,24 +1251,24 @@ define { <2 x fp128>, <2 x fp128> } @test_sincos_v2f128(<2 x fp128> %a) #0 {
 ; BASE-NEXT:     memd(r29+#64) = r25:24
 ; BASE-NEXT:    } // 8-byte Folded Spill
 ; BASE-NEXT:    {
-; BASE-NEXT:     call sinl
+; BASE-NEXT:     call sinf128
 ; BASE-NEXT:     r23:22 = memd(r29+#112)
 ; BASE-NEXT:     r25:24 = memd(r29+#120)
 ; BASE-NEXT:    }
 ; BASE-NEXT:    {
-; BASE-NEXT:     call sinl
+; BASE-NEXT:     call sinf128
 ; BASE-NEXT:     r0 = add(r29,#0)
 ; BASE-NEXT:     r3:2 = combine(r23,r22)
 ; BASE-NEXT:     r5:4 = combine(r25,r24)
 ; BASE-NEXT:    }
 ; BASE-NEXT:    {
-; BASE-NEXT:     call cosl
+; BASE-NEXT:     call cosf128
 ; BASE-NEXT:     r0 = add(r29,#48)
 ; BASE-NEXT:     r3:2 = combine(r19,r18)
 ; BASE-NEXT:     r5:4 = combine(r17,r16)
 ; BASE-NEXT:    }
 ; BASE-NEXT:    {
-; BASE-NEXT:     call cosl
+; BASE-NEXT:     call cosf128
 ; BASE-NEXT:     r0 = add(r29,#16)
 ; BASE-NEXT:     r3:2 = combine(r23,r22)
 ; BASE-NEXT:     r5:4 = combine(r25,r24)
@@ -1338,7 +1338,7 @@ define { <2 x fp128>, <2 x fp128> } @test_sincos_v2f128(<2 x fp128> %a) #0 {
 ; GNU-NEXT:     memw(r17+#0) = r6.new
 ; GNU-NEXT:    }
 ; GNU-NEXT:    {
-; GNU-NEXT:     call sincosl
+; GNU-NEXT:     call sincosf128
 ; GNU-NEXT:     r21:20 = memd(r29+#144)
 ; GNU-NEXT:     memw(r17+#4) = r1
 ; GNU-NEXT:    }
@@ -1349,7 +1349,7 @@ define { <2 x fp128>, <2 x fp128> } @test_sincos_v2f128(<2 x fp128> %a) #0 {
 ; GNU-NEXT:     memw(r17+#4) = r0.new
 ; GNU-NEXT:    }
 ; GNU-NEXT:    {
-; GNU-NEXT:     call sincosl
+; GNU-NEXT:     call sincosf128
 ; GNU-NEXT:     r0 = add(r29,#40)
 ; GNU-NEXT:     r1 = add(r29,#8)
 ; GNU-NEXT:     memw(r17+#0) = r1.new
@@ -1414,24 +1414,24 @@ define { <2 x fp128>, <2 x fp128> } @test_sincos_v2f128(<2 x fp128> %a) #0 {
 ; MUSL-NEXT:     memd(r29+#64) = r25:24
 ; MUSL-NEXT:    } // 8-byte Folded Spill
 ; MUSL-NEXT:    {
-; MUSL-NEXT:     call sinl
+; MUSL-NEXT:     call sinf128
 ; MUSL-NEXT:     r23:22 = memd(r29+#112)
 ; MUSL-NEXT:     r25:24 = memd(r29+#120)
 ; MUSL-NEXT:    }
 ; MUSL-NEXT:    {
-; MUSL-NEXT:     call sinl
+; MUSL-NEXT:     call sinf128
 ; MUSL-NEXT:     r0 = add(r29,#0)
 ; MUSL-NEXT:     r3:2 = combine(r23,r22)
 ; MUSL-NEXT:     r5:4 = combine(r25,r24)
 ; MUSL-NEXT:    }
 ; MUSL-NEXT:    {
-; MUSL-NEXT:     call cosl
+; MUSL-NEXT:     call cosf128
 ; MUSL-NEXT:     r0 = add(r29,#48)
 ; MUSL-NEXT:     r3:2 = combine(r19,r18)
 ; MUSL-NEXT:     r5:4 = combine(r17,r16)
 ; MUSL-NEXT:    }
 ; MUSL-NEXT:    {
-; MUSL-NEXT:     call cosl
+; MUSL-NEXT:     call cosf128
 ; MUSL-NEXT:     r0 = add(r29,#16)
 ; MUSL-NEXT:     r3:2 = combine(r23,r22)
 ; MUSL-NEXT:     r5:4 = combine(r25,r24)

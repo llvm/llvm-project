@@ -38,7 +38,7 @@ entry:
 declare float @ldexpf(float, i32) memory(none)
 
 define fp128 @testExpl(fp128 %val, i32 %a) {
-; LINUX:    bl ldexpl
+; LINUX:    bl ldexpf128
 ; WINDOWS:    b.w ldexpl
 entry:
   %call = tail call fp128 @ldexpl(fp128 %val, i32 %a)
