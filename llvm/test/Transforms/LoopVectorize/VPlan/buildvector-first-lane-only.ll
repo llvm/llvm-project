@@ -17,22 +17,18 @@ define i16 @last_active_lane_live_out(i32 %x) {
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
+; CHECK-NEXT:    EMIT vp<%active.lane.mask> = active lane mask ir<0>, ir<2>, ir<1>
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS ir<0>, ir<1>, ir<4>, ir<1>
-; CHECK-NEXT:    vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS ir<0>, ir<1>, ir<4>, ir<2>
-; CHECK-NEXT:    vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS ir<0>, ir<1>, ir<4>, ir<3>
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = buildvector ir<0>, vp<[[VP6]]>, vp<[[VP7]]>, vp<[[VP8]]>
-; CHECK-NEXT:    EMIT vp<%active.lane.mask> = active lane mask vp<[[VP9]]>, ir<2>, ir<1>
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = not vp<%active.lane.mask>
-; CHECK-NEXT:    EMIT vp<%first.inactive.lane> = first-active-lane vp<[[VP10]]>
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = not vp<%active.lane.mask>
+; CHECK-NEXT:    EMIT vp<%first.inactive.lane> = first-active-lane vp<[[VP6]]>
 ; CHECK-NEXT:    EMIT vp<%last.active.lane> = sub vp<%first.inactive.lane>, ir<1>
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extractelement vp<[[VP5]]>, vp<%last.active.lane>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = extractelement vp<[[VP5]]>, vp<%last.active.lane>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %t.lcssa = phi i16 [ %t, %loop ] (extra operand: vp<[[VP11]]> from middle.block)
+; CHECK-NEXT:    IR   %t.lcssa = phi i16 [ %t, %loop ] (extra operand: vp<[[VP7]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
 ;

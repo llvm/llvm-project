@@ -3126,21 +3126,38 @@ void AssemblyWriter::printModule(const Module *M) {
   if (!M->getTargetTriple().empty())
     Out << "target triple = \"" << M->getTargetTriple().str() << "\"\n";
 
-  if (!M->getModuleInlineAsm().empty()) {
+  if (M->hasModuleInlineAsm()) {
     Out << '\n';
 
-    // Split the string into lines, to make it easier to read the .ll file.
-    StringRef Asm = M->getModuleInlineAsm();
-    do {
-      StringRef Front;
-      std::tie(Front, Asm) = Asm.split('\n');
+    for (const Module::GlobalAsmFragment &Frag : M->getModuleInlineAsm()) {
+      Out << "module asm";
+      SmallVector<std::pair<StringRef, StringRef>> Props =
+          Frag.Props.getAsStrings();
+      if (!Props.empty()) {
+        ListSeparator LS;
+        Out << "(";
+        for (auto [Key, Value] : Props) {
+          Out << LS;
+          Out << Key << ": \"";
+          printEscapedString(Value, Out);
+          Out << "\"";
+        }
+        Out << ")";
+      }
+      Out << "\n";
+      // Split the string into lines, to make it easier to read the .ll file.
+      StringRef Asm = Frag.Asm;
+      do {
+        StringRef Front;
+        std::tie(Front, Asm) = Asm.split('\n');
 
-      // We found a newline, print the portion of the asm string from the
-      // last newline up to this newline.
-      Out << "module asm \"";
-      printEscapedString(Front, Out);
-      Out << "\"\n";
-    } while (!Asm.empty());
+        // We found a newline, print the portion of the asm string from the
+        // last newline up to this newline.
+        Out << "    \"";
+        printEscapedString(Front, Out);
+        Out << "\"\n";
+      } while (!Asm.empty());
+    }
   }
 
   printTypeIdentities();
@@ -4355,9 +4372,15 @@ void AssemblyWriter::printInstructionLine(const Instruction &I) {
 /// intrinsic indicating base and derived pointer names.
 void AssemblyWriter::printGCRelocateComment(const GCRelocateInst &Relocate) {
   Out << " ; (";
-  writeOperand(Relocate.getBasePtr(), false);
+  if (Value *BasePtr = Relocate.getBasePtr())
+    writeOperand(BasePtr, false);
+  else
+    Out << "invalid";
   Out << ", ";
-  writeOperand(Relocate.getDerivedPtr(), false);
+  if (Value *DerivedPtr = Relocate.getDerivedPtr())
+    writeOperand(DerivedPtr, false);
+  else
+    Out << "invalid";
   Out << ")";
 }
 
@@ -4627,7 +4650,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     Function *CalledFunc = CI->getCalledFunction();
     auto PrintArgComment = [&](unsigned ArgNo) {
       const auto *ConstArg = dyn_cast<Constant>(CI->getArgOperand(ArgNo));
-      if (!ConstArg)
+      if (!ConstArg || !CalledFunc)
         return;
       std::string ArgComment;
       raw_string_ostream ArgCommentStream(ArgComment);

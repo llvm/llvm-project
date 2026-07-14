@@ -8,7 +8,6 @@
 
 #include "check-case.h"
 #include "flang/Common/idioms.h"
-#include "flang/Common/reference.h"
 #include "flang/Common/template.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"

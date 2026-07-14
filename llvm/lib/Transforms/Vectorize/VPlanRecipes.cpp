@@ -625,7 +625,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
 
   switch (Opcode) {
   case VPInstruction::StepVector:
-  case VPInstruction::VScale:
   case VPInstruction::IncomingAliasMask:
     return 0;
   case Instruction::Alloca:
@@ -671,9 +670,13 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::GetElementPtr:
   case Instruction::PHI:
   case Instruction::Switch:
+  case Instruction::AtomicRMW:
+  case Instruction::AtomicCmpXchg:
+  case Instruction::Fence:
   case VPInstruction::AnyOf:
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
+  case VPInstruction::Intrinsic:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::FirstActiveLane:
@@ -1510,7 +1513,7 @@ bool VPInstruction::isSingleScalar() const {
   case Instruction::PHI:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ResumeForEpilogue:
-  case VPInstruction::VScale:
+  case VPInstruction::Intrinsic:
     return true;
   default:
     return Instruction::isCast(getOpcode());
@@ -1636,9 +1639,14 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::StepVector:
   case VPInstruction::ReductionStartVector:
   case VPInstruction::Reverse:
-  case VPInstruction::VScale:
   case VPInstruction::Unpack:
     return false;
+  case VPInstruction::Intrinsic: {
+    LLVMContext &Ctx = getScalarType()->getContext();
+    AttributeSet Attrs =
+        Intrinsic::getFnAttributes(Ctx, vputils::getIntrinsicID(this));
+    return !Attrs.getMemoryEffects().doesNotAccessMemory();
+  }
   case Instruction::Call:
     return !getCalledFunction(ArrayRef<VPValue *>(op_begin(), op_end()))
                 ->doesNotAccessMemory();
@@ -1678,6 +1686,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::Broadcast:
+  case VPInstruction::Intrinsic:
   case VPInstruction::ReductionStartVector:
   case VPInstruction::ResumeForEpilogue:
     return true;
@@ -1864,9 +1873,14 @@ void VPInstructionWithType::execute(VPTransformState &State) {
     State.set(this, StepVector);
     break;
   }
-  case VPInstruction::VScale: {
-    Value *VScale = State.Builder.CreateVScale(ResultTy);
-    State.set(this, VScale, true);
+  case VPInstruction::Intrinsic: {
+    SmallVector<Value *, 2> Args;
+    for (VPValue *Op : drop_end(operands()))
+      Args.push_back(State.get(Op, /*IsSingleScalar=*/true));
+    Value *Call =
+        State.Builder.CreateIntrinsic(ResultTy, vputils::getIntrinsicID(this),
+                                      Args, /*FMFSource=*/nullptr, getName());
+    State.set(this, Call, true);
     break;
   }
 
@@ -1885,12 +1899,6 @@ InstructionCost VPInstructionWithType::computeCost(ElementCount VF,
                                       Ctx);
 
   switch (getOpcode()) {
-  case VPInstruction::VScale: {
-    Type *Ty = this->getScalarType();
-    ArrayRef<Type *> Tys;
-    IntrinsicCostAttributes Attrs(Intrinsic::vscale, Ty, Tys);
-    return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
-  }
   case VPInstruction::StepVector:
     // TODO: This isn't quite right since even if the step-vector is hoisted
     // out of the loop it has a non-zero cost in the middle block, etc.
@@ -1898,6 +1906,14 @@ InstructionCost VPInstructionWithType::computeCost(ElementCount VF,
     // licm transform we can add the cost here so that it doesn't incorrectly
     // affect the choice of VF.
     return 0;
+  case VPInstruction::Intrinsic: {
+    Type *Ty = getScalarType();
+    SmallVector<Type *, 2> ArgTys;
+    for (const VPValue *Op : drop_end(operands()))
+      ArgTys.push_back(Op->getScalarType());
+    IntrinsicCostAttributes Attrs(vputils::getIntrinsicID(this), Ty, ArgTys);
+    return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
+  }
   default:
     // Although VPInstructionWithType is also used for
     // VPInstruction::WideIVStep it isn't currently possible to expose cases
@@ -1923,9 +1939,15 @@ void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
   case VPInstruction::StepVector:
     O << "step-vector " << *ResultTy;
     break;
-  case VPInstruction::VScale:
-    O << "vscale " << *ResultTy;
+  case VPInstruction::Intrinsic: {
+    O << "call " << *ResultTy << " @"
+      << Intrinsic::getBaseName(vputils::getIntrinsicID(this)) << "(";
+    interleaveComma(drop_end(operands()), O, [&O, &SlotTracker](VPValue *Op) {
+      Op->printAsOperand(O, SlotTracker);
+    });
+    O << ")";
     break;
+  }
   case Instruction::Load:
     O << "load ";
     printOperands(O, SlotTracker);
@@ -2053,14 +2075,13 @@ void VPPhiAccessors::setIncomingValueForBlock(const VPBasicBlock *VPBB,
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPPhiAccessors::printPhiOperands(raw_ostream &O,
                                       VPSlotTracker &SlotTracker) const {
-  interleaveComma(enumerate(getAsRecipe()->operands()), O,
-                  [this, &O, &SlotTracker](auto Op) {
-                    O << "[ ";
-                    Op.value()->printAsOperand(O, SlotTracker);
-                    O << ", ";
-                    getIncomingBlock(Op.index())->printAsOperand(O);
-                    O << " ]";
-                  });
+  interleaveComma(incoming_values_and_blocks(), O, [&O, &SlotTracker](auto Op) {
+    O << "[ ";
+    std::get<0>(Op)->printAsOperand(O, SlotTracker);
+    O << ", ";
+    std::get<1>(Op)->printAsOperand(O);
+    O << " ]";
+  });
 }
 #endif
 
@@ -2308,8 +2329,7 @@ InstructionCost VPWidenIntrinsicRecipe::computeCallCost(
 
 InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
                                                     VPCostContext &Ctx) const {
-  SmallVector<const VPValue *> ArgOps(operands());
-  return computeCallCost(VectorIntrinsicID, ArgOps, *this, VF, Ctx);
+  return computeCallCost(VectorIntrinsicID, operands(), *this, VF, Ctx);
 }
 
 StringRef VPWidenIntrinsicRecipe::getIntrinsicName() const {
@@ -2339,10 +2359,7 @@ void VPWidenIntrinsicRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << "call";
   printFlags(O);
   O << getIntrinsicName() << "(";
-
-  interleaveComma(operands(), O, [&O, &SlotTracker](VPValue *Op) {
-    Op->printAsOperand(O, SlotTracker);
-  });
+  printOperands(O, SlotTracker);
   O << ")";
 }
 #endif
@@ -2951,9 +2968,8 @@ InstructionCost VPDerivedIVRecipe::computeCost(ElementCount VF,
     bool NeedsMul = true, NeedsAdd = true, NeedsShl = false;
 
     // If the start value is zero the add gets folded away.
-    if (auto *VPV = dyn_cast<VPIRValue>(getStartValue()))
-      if (auto *StartC = dyn_cast<ConstantInt>(VPV->getValue()))
-        NeedsAdd = !StartC->isZero();
+    if (auto *StartC = dyn_cast<VPConstantInt>(getStartValue()))
+      NeedsAdd = !StartC->isZero();
 
     // For some values of step the arithmetic changes:
     //  1. A step of 1 requires no operation.
@@ -2961,22 +2977,20 @@ InstructionCost VPDerivedIVRecipe::computeCost(ElementCount VF,
     //  3. A power-of-2 step will use a shl, instead of a mul.
     Type *StepTy = getStepValue()->getScalarType();
     InstructionCost Cost(0);
-    if (auto *VPV = dyn_cast<VPIRValue>(getStepValue())) {
-      if (auto *StepC = dyn_cast<ConstantInt>(VPV->getValue())) {
-        if (StepC->isOne())
-          NeedsMul = false;
-        else if (StepC->isMinusOne()) {
-          // This will most likely end up as a negate in simplifyRecipe, and
-          // the negate will be combined with the add to make a sub.
-          // NOTE: This is perhaps an invalid assumption that the cost of an
-          // 'add' is the same as a 'sub'.
-          NeedsMul = false;
-          NeedsAdd = true;
-        } else if (StepC->getValue().isPowerOf2()) {
-          // This will most likely end up as a shift-left in simplifyRecipe
-          NeedsMul = false;
-          NeedsShl = true;
-        }
+    if (auto *StepC = dyn_cast<VPConstantInt>(getStepValue())) {
+      if (StepC->isOne())
+        NeedsMul = false;
+      else if (StepC->getAPInt().isAllOnes()) {
+        // This will most likely end up as a negate in simplifyRecipe, and
+        // the negate will be combined with the add to make a sub.
+        // NOTE: This is perhaps an invalid assumption that the cost of an
+        // 'add' is the same as a 'sub'.
+        NeedsMul = false;
+        NeedsAdd = true;
+      } else if (StepC->getAPInt().isPowerOf2()) {
+        // This will most likely end up as a shift-left in simplifyRecipe
+        NeedsMul = false;
+        NeedsShl = true;
       }
     }
 
@@ -3804,9 +3818,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     auto *CalledFn =
         cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
     Type *ResultTy = this->getScalarType();
-    SmallVector<const VPValue *> ArgOps(drop_end(operands()));
-    return computeCallCost(CalledFn, ResultTy, ArgOps, isSingleScalar(), VF,
-                           Ctx);
+    return computeCallCost(CalledFn, ResultTy, drop_end(operands()),
+                           isSingleScalar(), VF, Ctx);
   }
   case Instruction::Add:
   case Instruction::Sub:
@@ -4013,10 +4026,9 @@ void VPReplicateRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     O << "call";
     printFlags(O);
     O << "@" << CB->getCalledFunction()->getName() << "(";
-    interleaveComma(make_range(op_begin(), op_begin() + (getNumOperands() - 1)),
-                    O, [&O, &SlotTracker](VPValue *Op) {
-                      Op->printAsOperand(O, SlotTracker);
-                    });
+    interleaveComma(drop_end(operands()), O, [&O, &SlotTracker](VPValue *Op) {
+      Op->printAsOperand(O, SlotTracker);
+    });
     O << ")";
   } else {
     O << Instruction::getOpcodeName(getUnderlyingInstr()->getOpcode());
@@ -4088,18 +4100,6 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     // TODO: Using the original IR may not be accurate.
     // Currently, ARM will use the underlying IR to calculate gather/scatter
     // instruction cost.
-    [[maybe_unused]] auto IsReverseMask = [this, R]() {
-      VPValue *Mask = getMask();
-      if (!Mask)
-        return false;
-
-      if (isa<VPWidenLoadEVLRecipe, VPWidenStoreEVLRecipe>(R))
-        return match(Mask, m_Intrinsic<Intrinsic::experimental_vp_reverse>());
-
-      return match(Mask, m_Reverse(m_VPValue()));
-    };
-    assert(!IsReverseMask() &&
-           "Inconsecutive memory access should not have reverse order");
     Type *PtrTy = getAddr()->getScalarType();
     const Value *Ptr = getAddr()->getUnderlyingValue();
 
