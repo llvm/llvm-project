@@ -215,7 +215,6 @@ body:             |
   bb.0:
     liveins: $x0
 
-
     ; CHECK-LABEL: name: ASubSMinOneUse
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
