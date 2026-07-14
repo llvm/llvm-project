@@ -1041,6 +1041,10 @@ public:
     }
   }
 
+  WrapFlagsTy getNoWrapFlags() const {
+    return {hasNoUnsignedWrap(), hasNoSignedWrap()};
+  }
+
   bool isDisjoint() const {
     assert(OpType == OperationType::DisjointOp &&
            "recipe cannot have a disjoing flag");
@@ -4104,7 +4108,7 @@ public:
 
   VPWidenCanonicalIVRecipe *clone() override {
     auto *WideCanIV =
-        new VPWidenCanonicalIVRecipe(getCanonicalIV(), getNoWrapFlagsOrNone());
+        new VPWidenCanonicalIVRecipe(getCanonicalIV(), getNoWrapFlags());
     if (VPValue *Step = getStepValue())
       WideCanIV->addPerPartStep(Step);
     return WideCanIV;

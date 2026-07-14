@@ -785,7 +785,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
   VPValue *StepV = Plan.getConstantInt(CanIVTy, 1);
   auto *NewWideIV = new VPWidenIntOrFpInductionRecipe(
       /*IV=*/nullptr, Plan.getZero(CanIVTy), StepV, &Plan.getVF(), ID,
-      WideCanIV->getNoWrapFlagsOrNone(), WideCanIV->getDebugLoc());
+      WideCanIV->getNoWrapFlags(), WideCanIV->getDebugLoc());
   NewWideIV->insertBefore(&*Header->getFirstNonPhi());
   WideCanIV->replaceAllUsesWith(NewWideIV);
   WideCanIV->eraseFromParent();
@@ -3536,7 +3536,7 @@ void VPlanTransforms::addExplicitVectorLength(
 
   auto *NextIter = Builder.createAdd(
       OpVPEVL, CurrentIteration, CanonicalIVIncrement->getDebugLoc(),
-      "current.iteration.next", CanonicalIVIncrement->getNoWrapFlagsOrNone());
+      "current.iteration.next", CanonicalIVIncrement->getNoWrapFlags());
   CurrentIteration->addBackedgeValue(NextIter);
 
   VPValue *NextAVL =
@@ -4278,7 +4278,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
             Step, Builder.createNaryOp(VPInstruction::StepVector, {}, CanIVTy));
         VPValue *CanVecIV =
             Builder.createAdd(CanIV, Step, WideCanIV->getDebugLoc(), "vec.iv",
-                              WideCanIV->getNoWrapFlagsOrNone());
+                              WideCanIV->getNoWrapFlags());
         WideCanIV->replaceAllUsesWith(CanVecIV);
         WideCanIV->eraseFromParent();
         continue;
@@ -4355,7 +4355,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>())) {
         auto *VPI = cast<VPInstruction>(&R);
         VPValue *Add = Builder.createOverflowingOp(
-            Instruction::Add, VPI->operands(), VPI->getNoWrapFlagsOrNone(),
+            Instruction::Add, VPI->operands(), VPI->getNoWrapFlags(),
             VPI->getDebugLoc());
         VPI->replaceAllUsesWith(Add);
         VPI->eraseFromParent();
