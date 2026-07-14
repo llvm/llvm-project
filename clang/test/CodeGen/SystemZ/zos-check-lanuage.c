@@ -1,3 +1,5 @@
+// REQUIRES: systemz-registered-target
+//
 // This chunk is based on Clang :: Frontend/ast-main.c,
 // but targeted for z/OS.  (Ensure we have no fatal error.)
 // We also duplicate for C++.
