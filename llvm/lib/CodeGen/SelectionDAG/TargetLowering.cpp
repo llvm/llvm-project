@@ -6276,21 +6276,30 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
 /// over another, for the purpose of sorting them. Immediates are almost always
 /// preferrable (when they can be emitted). A higher return value means a
 /// stronger preference for one constraint type relative to another.
+///
+/// A direct output is made available as the asm's return value and consumes no
+/// call argument, so there is no address for the asm to write through. Memory
+/// and address constraints can therefore never be honored for one, and are
+/// ranked below registers so that any other alternative is preferred (e.g. "r"
+/// in "=rm"). If such a constraint is the only one on offer (e.g. "=m"), it is
+/// still selected, and lowering diagnoses it.
+///
 /// FIXME: We should prefer registers over memory but doing so may lead to
 /// unrecoverable register exhaustion later.
 /// https://github.com/llvm/llvm-project/issues/20571
-static unsigned getConstraintPiority(TargetLowering::ConstraintType CT) {
+static unsigned getConstraintPiority(TargetLowering::ConstraintType CT,
+                                     bool IsDirectOutput) {
   switch (CT) {
   case TargetLowering::C_Immediate:
   case TargetLowering::C_Other:
-    return 4;
+    return 5;
   case TargetLowering::C_Memory:
   case TargetLowering::C_Address:
-    return 3;
+    return IsDirectOutput ? 1 : 4;
   case TargetLowering::C_RegisterClass:
-    return 2;
+    return 3;
   case TargetLowering::C_Register:
-    return 1;
+    return 2;
   case TargetLowering::C_Unknown:
     return 0;
   }
@@ -6416,23 +6425,12 @@ TargetLowering::ConstraintGroup TargetLowering::getConstraintPreferences(
     Ret.emplace_back(Code, CType);
   }
 
-  // A direct output becomes the result of the asm rather than being written
-  // through an address supplied by the caller, so it has to live in a
-  // register. Prefer the other alternatives, if any (e.g. "r" in "=rm").
-  // If memory is the only option (e.g. "=m"), keep it so that lowering can
-  // diagnose the constraint; memory outputs must be spelled indirectly
-  // (e.g. "=*m").
-  if (OpInfo.Type == InlineAsm::isOutput && !OpInfo.isIndirect) {
-    auto IsMemOrAddr = [](const ConstraintPair &P) {
-      return P.second == TargetLowering::C_Memory ||
-             P.second == TargetLowering::C_Address;
-    };
-    if (!llvm::all_of(Ret, IsMemOrAddr))
-      llvm::erase_if(Ret, IsMemOrAddr);
-  }
+  const bool IsDirectOutput =
+      OpInfo.Type == InlineAsm::isOutput && !OpInfo.isIndirect;
 
-  llvm::stable_sort(Ret, [](ConstraintPair a, ConstraintPair b) {
-    return getConstraintPiority(a.second) > getConstraintPiority(b.second);
+  llvm::stable_sort(Ret, [IsDirectOutput](ConstraintPair a, ConstraintPair b) {
+    return getConstraintPiority(a.second, IsDirectOutput) >
+           getConstraintPiority(b.second, IsDirectOutput);
   });
 
   return Ret;
