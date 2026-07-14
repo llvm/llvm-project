@@ -144,7 +144,7 @@ func.func private @pack_lhs(%A: tensor<7x16xf32>) -> tensor<1x16x?x1xf32> {
 // @pack_rhs
 //
 // Implements packing for the B matrix (RHS) in matrix multiplication. The
-// inner tile size is "scalable": 8 * vscale.
+// inner tile size for dim N is "scalable": 8 * vscale.
 //===----------------------------------------------------------------------===//
 func.func private @pack_rhs(%B: tensor<16x13xf32>) ->  tensor<?x16x?x1xf32> {
   %pad = arith.constant 0.0 : f32
