@@ -1972,6 +1972,15 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
       const uint64_t piece_byte_size = opcodes.GetULEB128(&offset);
 
+      // A single piece of a variable's location can never legitimately be
+      // this large. 
+      constexpr uint64_t kMaxDWARFPieceByteSize = 1024 * 1024 * 1024; // 1GB
+      if (piece_byte_size > kMaxDWARFPieceByteSize)
+        return llvm::createStringError(
+            "DW_OP_piece(%" PRIu64 ") is larger than the maximum allowed "
+            "size of %" PRIu64 " bytes",
+            piece_byte_size, kMaxDWARFPieceByteSize);
+
       if (piece_byte_size > 0) {
         Value curr_piece;
 
