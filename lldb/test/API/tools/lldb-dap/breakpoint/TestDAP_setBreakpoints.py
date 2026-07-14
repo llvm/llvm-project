@@ -12,14 +12,14 @@ from lldbsuite.test.decorators import (
     skipIfWindows,
 )
 from lldbsuite.test.lldbtest import line_number
-from lldbsuite.test.tools.lldb_dap.dap_types import (
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import (
     DAPTestGetTargetBreakpointsArgs,
     LaunchArgs,
     SetBreakpointsArgs,
     Source,
     SourceBreakpoint,
 )
-from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
 
 
 @skipIfWasm  # inferior built without exception support
