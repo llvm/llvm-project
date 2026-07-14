@@ -28,7 +28,6 @@
 //                                                     ForwardIterator2 last2);
 
 #include <algorithm>
-#include <array>
 #include <cassert>
 #include <functional>
 #include <iterator>
@@ -93,82 +92,98 @@ struct Test {
   void operator()(ExecutionPolicy&& policy) {
     {
       // empty ranges
-      std::array<int, 1> lhs = {0};
-      std::array<int, 1> rhs = {0};
-      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.begin()), Iter2(rhs.begin())) ==
-             std::make_pair(Iter1(lhs.begin()), Iter2(rhs.begin())));
-      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.begin()), Iter2(rhs.begin()), Iter2(rhs.begin())) ==
-             std::make_pair(Iter1(lhs.begin()), Iter2(rhs.begin())));
+      int lhs[1] = {0};
+      int rhs[1] = {0};
+      assert(std::mismatch(policy, Iter1(std::begin(lhs)), Iter1(std::begin(lhs)), Iter2(std::begin(rhs))) ==
+             std::make_pair(Iter1(std::begin(lhs)), Iter2(std::begin(rhs))));
+      assert(
+          std::mismatch(
+              policy, Iter1(std::begin(lhs)), Iter1(std::begin(lhs)), Iter2(std::begin(rhs)), Iter2(std::begin(rhs))) ==
+          std::make_pair(Iter1(std::begin(lhs)), Iter2(std::begin(rhs))));
     }
     {
       // single element only
-      std::array<int, 1> lhs = {0};
-      std::array<int, 1> rhs = {0};
-      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin())) ==
-             std::make_pair(Iter1(lhs.end()), Iter2(rhs.end())));
-      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin()), Iter2(rhs.end())) ==
-             std::make_pair(Iter1(lhs.end()), Iter2(rhs.end())));
+      int lhs[1] = {0};
+      int rhs[1] = {0};
+      assert(std::mismatch(policy, Iter1(std::begin(lhs)), Iter1(std::end(lhs)), Iter2(std::begin(rhs))) ==
+             std::make_pair(Iter1(std::end(lhs)), Iter2(std::end(rhs))));
+      assert(std::mismatch(
+                 policy, Iter1(std::begin(lhs)), Iter1(std::end(lhs)), Iter2(std::begin(rhs)), Iter2(std::end(rhs))) ==
+             std::make_pair(Iter1(std::end(lhs)), Iter2(std::end(rhs))));
     }
     { // same range without mismatch
-      std::array<int, 8> lhs = {0, 1, 2, 3, 0, 1, 2, 3};
-      std::array<int, 8> rhs = {0, 1, 2, 3, 0, 1, 2, 3};
-      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin())) ==
-             std::make_pair(Iter1(lhs.end()), Iter2(rhs.end())));
-      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin()), Iter2(rhs.end())) ==
-             std::make_pair(Iter1(lhs.end()), Iter2(rhs.end())));
+      int lhs[8] = {0, 1, 2, 3, 0, 1, 2, 3};
+      int rhs[8] = {0, 1, 2, 3, 0, 1, 2, 3};
+      assert(std::mismatch(policy, Iter1(std::begin(lhs)), Iter1(std::end(lhs)), Iter2(std::begin(rhs))) ==
+             std::make_pair(Iter1(std::end(lhs)), Iter2(std::end(rhs))));
+      assert(std::mismatch(
+                 policy, Iter1(std::begin(lhs)), Iter1(std::end(lhs)), Iter2(std::begin(rhs)), Iter2(std::end(rhs))) ==
+             std::make_pair(Iter1(std::end(lhs)), Iter2(std::end(rhs))));
     }
     { // same range with mismatch
-      std::array<int, 8> lhs = {0, 1, 2, 2, 0, 1, 2, 3};
-      std::array<int, 8> rhs = {0, 1, 2, 3, 0, 1, 2, 3};
-      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin())) ==
-             std::make_pair(Iter1(lhs.begin() + 3), Iter2(rhs.begin() + 3)));
-      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin()), Iter2(rhs.end())) ==
-             std::make_pair(Iter1(lhs.begin() + 3), Iter2(rhs.begin() + 3)));
+      int lhs[8] = {0, 1, 2, 2, 0, 1, 2, 3};
+      int rhs[8] = {0, 1, 2, 3, 0, 1, 2, 3};
+      assert(std::mismatch(policy, Iter1(std::begin(lhs)), Iter1(std::end(lhs)), Iter2(std::begin(rhs))) ==
+             std::make_pair(Iter1(std::begin(lhs) + 3), Iter2(std::begin(rhs) + 3)));
+      assert(std::mismatch(
+                 policy, Iter1(std::begin(lhs)), Iter1(std::end(lhs)), Iter2(std::begin(rhs)), Iter2(std::end(rhs))) ==
+             std::make_pair(Iter1(std::begin(lhs) + 3), Iter2(std::begin(rhs) + 3)));
     }
     { // second range is smaller
-      std::array<int, 8> lhs = {0, 1, 2, 2, 0, 1, 2, 3};
-      std::array<int, 2> rhs = {0, 1};
-      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin()), Iter2(rhs.end())) ==
-             std::make_pair(Iter1(lhs.begin() + 2), Iter2(rhs.begin() + 2)));
+      int lhs[8] = {0, 1, 2, 2, 0, 1, 2, 3};
+      int rhs[2] = {0, 1};
+      assert(std::mismatch(
+                 policy, Iter1(std::begin(lhs)), Iter1(std::end(lhs)), Iter2(std::begin(rhs)), Iter2(std::end(rhs))) ==
+             std::make_pair(Iter1(std::begin(lhs) + 2), Iter2(std::begin(rhs) + 2)));
     }
     { // first range is smaller
-      std::array<int, 2> lhs = {0, 1};
-      std::array<int, 8> rhs = {0, 1, 2, 2, 0, 1, 2, 3};
-      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin()), Iter2(rhs.end())) ==
-             std::make_pair(Iter1(lhs.begin() + 2), Iter2(rhs.begin() + 2)));
+      int lhs[2] = {0, 1};
+      int rhs[8] = {0, 1, 2, 2, 0, 1, 2, 3};
+      assert(std::mismatch(
+                 policy, Iter1(std::begin(lhs)), Iter1(std::end(lhs)), Iter2(std::begin(rhs)), Iter2(std::end(rhs))) ==
+             std::make_pair(Iter1(std::begin(lhs) + 2), Iter2(std::begin(rhs) + 2)));
     }
     { // same size, mismatching at various positions
-      std::array<int, 1073> lhs;
-      std::array<int, 1073> rhs;
+      int lhs[1073];
+      int rhs[1073];
       std::iota(std::begin(lhs), std::end(lhs), 0);
-      rhs = lhs;
-      runway_sample(lhs.size(), [&](size_t i) {
+      std::copy(std::begin(lhs), std::end(lhs), std::begin(rhs));
+      runway_sample(std::size(lhs), [&](size_t i) {
         lhs[i] = -1;
-        assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin())) ==
-               std::make_pair(Iter1(lhs.begin() + i), Iter2(rhs.begin() + i)));
-        assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin()), Iter2(rhs.end())) ==
-               std::make_pair(Iter1(lhs.begin() + i), Iter2(rhs.begin() + i)));
+        assert(std::mismatch(policy, Iter1(std::begin(lhs)), Iter1(std::end(lhs)), Iter2(std::begin(rhs))) ==
+               std::make_pair(Iter1(std::begin(lhs) + i), Iter2(std::begin(rhs) + i)));
+        assert(
+            std::mismatch(
+                policy, Iter1(std::begin(lhs)), Iter1(std::end(lhs)), Iter2(std::begin(rhs)), Iter2(std::end(rhs))) ==
+            std::make_pair(Iter1(std::begin(lhs) + i), Iter2(std::begin(rhs) + i)));
         lhs[i] = i;
       });
-      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin())) ==
-             std::make_pair(Iter1(lhs.end()), Iter2(rhs.end())));
-      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin()), Iter2(rhs.end())) ==
-             std::make_pair(Iter1(lhs.end()), Iter2(rhs.end())));
+      assert(std::mismatch(policy, Iter1(std::begin(lhs)), Iter1(std::end(lhs)), Iter2(std::begin(rhs))) ==
+             std::make_pair(Iter1(std::end(lhs)), Iter2(std::end(rhs))));
+      assert(std::mismatch(
+                 policy, Iter1(std::begin(lhs)), Iter1(std::end(lhs)), Iter2(std::begin(rhs)), Iter2(std::end(rhs))) ==
+             std::make_pair(Iter1(std::end(lhs)), Iter2(std::end(rhs))));
     }
     { // same values, different lengths
-      std::array<int, 739> lhs;
-      std::array<int, 739> rhs;
-      lhs.fill(42);
-      rhs.fill(42);
-      runway_sample(lhs.size(), [&](size_t i) {
+      int lhs[739];
+      int rhs[739];
+      std::fill(std::begin(lhs), std::end(lhs), 42);
+      std::fill(std::begin(rhs), std::end(rhs), 42);
+      runway_sample(std::size(lhs), [&](size_t i) {
         // lhs is shorter
-        assert(
-            std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.begin() + i), Iter2(rhs.begin()), Iter2(rhs.end())) ==
-            std::make_pair(Iter1(lhs.begin() + i), Iter2(rhs.begin() + i)));
+        assert(std::mismatch(
+                   policy,
+                   Iter1(std::begin(lhs)),
+                   Iter1(std::begin(lhs) + i),
+                   Iter2(std::begin(rhs)),
+                   Iter2(std::end(rhs))) == std::make_pair(Iter1(std::begin(lhs) + i), Iter2(std::begin(rhs) + i)));
         // rhs is shorter
-        assert(
-            std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin()), Iter2(rhs.begin() + i)) ==
-            std::make_pair(Iter1(lhs.begin() + i), Iter2(rhs.begin() + i)));
+        assert(std::mismatch(policy,
+                             Iter1(std::begin(lhs)),
+                             Iter1(std::end(lhs)),
+                             Iter2(std::begin(rhs)),
+                             Iter2(std::begin(rhs) + i)) ==
+               std::make_pair(Iter1(std::begin(lhs) + i), Iter2(std::begin(rhs) + i)));
       });
     }
   }
@@ -179,20 +194,22 @@ struct TestXY {
   template <class ExecutionPolicy>
   void operator()(ExecutionPolicy&& policy) {
     { // same ranges
-      std::array<X, 3> lhs = {X(1), X(5), X(7)};
-      std::array<Y, 3> rhs = {Y(1), Y(5), Y(7)};
-      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin())) ==
-             std::make_pair(Iter1(lhs.end()), Iter2(rhs.end())));
-      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin()), Iter2(rhs.end())) ==
-             std::make_pair(Iter1(lhs.end()), Iter2(rhs.end())));
+      X lhs[3] = {X(1), X(5), X(7)};
+      Y rhs[3] = {Y(1), Y(5), Y(7)};
+      assert(std::mismatch(policy, Iter1(std::begin(lhs)), Iter1(std::end(lhs)), Iter2(std::begin(rhs))) ==
+             std::make_pair(Iter1(std::end(lhs)), Iter2(std::end(rhs))));
+      assert(std::mismatch(
+                 policy, Iter1(std::begin(lhs)), Iter1(std::end(lhs)), Iter2(std::begin(rhs)), Iter2(std::end(rhs))) ==
+             std::make_pair(Iter1(std::end(lhs)), Iter2(std::end(rhs))));
     }
     { // one element mismatch
-      std::array<X, 3> lhs = {X(1), X(5), X(7)};
-      std::array<Y, 3> rhs = {Y(1), Y(5), Y(8)};
-      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin())) ==
-             std::make_pair(Iter1(lhs.begin() + 2), Iter2(rhs.begin() + 2)));
-      assert(std::mismatch(policy, Iter1(lhs.begin()), Iter1(lhs.end()), Iter2(rhs.begin()), Iter2(rhs.end())) ==
-             std::make_pair(Iter1(lhs.begin() + 2), Iter2(rhs.begin() + 2)));
+      X lhs[3] = {X(1), X(5), X(7)};
+      Y rhs[3] = {Y(1), Y(5), Y(8)};
+      assert(std::mismatch(policy, Iter1(std::begin(lhs)), Iter1(std::end(lhs)), Iter2(std::begin(rhs))) ==
+             std::make_pair(Iter1(std::begin(lhs) + 2), Iter2(std::begin(rhs) + 2)));
+      assert(std::mismatch(
+                 policy, Iter1(std::begin(lhs)), Iter1(std::end(lhs)), Iter2(std::begin(rhs)), Iter2(std::end(rhs))) ==
+             std::make_pair(Iter1(std::begin(lhs) + 2), Iter2(std::begin(rhs) + 2)));
     }
   }
 };
