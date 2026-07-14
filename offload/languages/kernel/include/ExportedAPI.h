@@ -13,25 +13,29 @@
 #include "Types.h"
 
 extern "C" {
-  ol_device_handle_t olKGetDefaultDevice();
+ol_device_handle_t olKGetDefaultDevice();
 
-  ol_device_handle_t olKGetHostDevice();
+ol_device_handle_t olKGetHostDevice();
 
-  int olKGetDeviceCount();
+int olKGetDeviceCount();
 
-  ol_device_handle_t olKGetDevice(int *DeviceNo);
+ol_device_handle_t olKGetDevice(int *DeviceNo);
 
-  ol_device_handle_t olKSetDefaultDevice(int DeviceNo);
+ol_device_handle_t olKSetDefaultDevice(int DeviceNo);
 
-  ol_queue_handle_t olKGetDefaultQueue();
+ol_queue_handle_t olKGetDefaultQueue();
 
-  CallConfigurationTy *olKGetCallConfiguration();
+CallConfigurationTy *olKGetCallConfiguration();
 
-  void olKRegisterKernel(const void *ID, ol_symbol_handle_t Kernel);
+void olKRegisterKernel(const void *ID, ol_symbol_handle_t Kernel);
 
-  ol_symbol_handle_t olKGetKernel(const void *ID);
+void olKUnregisterKernel(const void *ID);
 
-  void olKRegisterProgram(const void *ID, ol_program_handle_t Program);
+ol_symbol_handle_t olKGetKernel(const void *ID);
 
-  ol_program_handle_t olKGetProgram(const void *ID);
+void olKRegisterProgram(const void *ID, ol_program_handle_t Program);
+
+ol_program_handle_t olKUnregisterProgram(const void *ID);
+
+ol_program_handle_t olKGetProgram(const void *ID);
 }

@@ -12,6 +12,7 @@
 #include "Types.h"
 
 #include "OffloadAPI.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <atomic>
@@ -43,9 +44,15 @@ static ThreadStatesTy *ThreadStatesPtr = nullptr;
 
 static void deleteThreadState() {
   std::lock_guard<std::mutex> LG(ThreadStatesLock);
-  if (ThreadStatesPtr)
-    for (auto *TS : *ThreadStatesPtr)
-      delete (TS);
+  ThreadStatesTy *ThreadStates = ThreadStatesPtr;
+  ThreadStatesPtr = nullptr;
+  if (!ThreadStates)
+    return;
+
+  for (auto *TS : *ThreadStates)
+    delete (TS);
+  delete ThreadStates;
+  ThreadState = nullptr;
 }
 
 static void deleteState() {
@@ -54,15 +61,21 @@ static void deleteState() {
   delete (ST);
 }
 
+static void destroyQueue(ol_queue_handle_t &Queue) {
+  if (!Queue)
+    return;
+
+  olSyncQueue(Queue);
+  olDestroyQueue(Queue);
+  Queue = nullptr;
+}
+
 ThreadStateTy::ThreadStateTy() {
   if (PerThreadQueue) [[unlikely]]
     createDefaultQueue(getDefaultDevice());
   atexit(deleteThreadState);
 }
-ThreadStateTy::~ThreadStateTy() {
-  if (DefaultQueue)
-    olSyncQueue(DefaultQueue);
-}
+ThreadStateTy::~ThreadStateTy() { destroyQueue(DefaultQueue); }
 
 ThreadStateTy &ThreadStateTy::get() {
   auto *TS = ThreadState;
@@ -93,14 +106,13 @@ ol_device_handle_t ThreadStateTy::getDefaultDevice() {
   return DD;
 }
 
-
 ol_queue_handle_t ThreadStateTy::getDefaultQueue() {
   if (!PerThreadQueue) [[likely]]
     return StateTy::get().DefaultQueue;
   return ThreadStateTy::get().DefaultQueue;
 }
 
-CallConfigurationTy& ThreadStateTy::getCallConfiguration() {
+CallConfigurationTy &ThreadStateTy::getCallConfiguration() {
   return ThreadStateTy::get().CC;
 }
 
@@ -128,6 +140,8 @@ StateTy &StateTy::get() {
   }
   return *ST;
 }
+
+StateTy *StateTy::tryGet() { return StatePtr.load(); }
 
 static bool addDevices(ol_device_handle_t Device, void *Payload) {
   StateTy &State = *reinterpret_cast<StateTy *>(Payload);
@@ -165,6 +179,20 @@ StateTy::StateTy() {
 }
 
 StateTy::~StateTy() {
-  if (DefaultQueue)
-    olSyncQueue(DefaultQueue);
+  deleteThreadState();
+  destroyQueue(DefaultQueue);
+  destroyRegisteredPrograms();
+  olShutDown();
+}
+
+void StateTy::destroyRegisteredPrograms() {
+  SmallPtrSet<ol_program_handle_t, 8> Programs;
+  for (auto &It : BinaryRegisterMap)
+    Programs.insert(It.second);
+
+  KernelMap.clear();
+  BinaryRegisterMap.clear();
+
+  for (ol_program_handle_t Program : Programs)
+    olDestroyProgram(Program);
 }

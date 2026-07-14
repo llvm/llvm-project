@@ -49,6 +49,7 @@ struct StateTy {
   friend struct ThreadStateTy;
 
   static StateTy &get();
+  static StateTy *tryGet();
 
   static ol_device_handle_t getHostDevice() { return get().HostDevice; }
 
@@ -64,6 +65,8 @@ struct StateTy {
     KernelMap[KernelID] = Kernel;
   }
 
+  void removeKernel(KernelIDTy KernelID) { KernelMap.erase(KernelID); }
+
   ol_symbol_handle_t getKernel(KernelIDTy KernelID) {
     return KernelMap[KernelID];
   }
@@ -72,10 +75,21 @@ struct StateTy {
     BinaryRegisterMap[Binary] = Program;
   }
 
+  ol_program_handle_t removeProgram(const void *Binary) {
+    auto It = BinaryRegisterMap.find(Binary);
+    if (It == BinaryRegisterMap.end())
+      return nullptr;
+    ol_program_handle_t Program = It->second;
+    BinaryRegisterMap.erase(It);
+    return Program;
+  }
+
   ol_program_handle_t getProgram(const void *Binary) {
     assert(BinaryRegisterMap.count(Binary));
     return BinaryRegisterMap[Binary];
   }
+
+  void destroyRegisteredPrograms();
 
 private:
   DenseMap<const void *, ol_program_handle_t> BinaryRegisterMap;

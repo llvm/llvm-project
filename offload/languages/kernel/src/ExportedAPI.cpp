@@ -39,12 +39,12 @@ int olKGetDeviceCount() {
   return DeviceCount;
 }
 
-ol_device_handle_t olKGetDevice(int* DeviceNo) {
+ol_device_handle_t olKGetDevice(int *DeviceNo) {
   ol_device_handle_t DefaultDevice = ThreadStateTy::getDefaultDevice();
   int DeviceCount = StateTy::get().getDevices().size();
   ArrayRef<ol_device_handle_t> Devices = StateTy::get().getDevices();
-  for (int i = 0; i < DeviceCount; i++){
-    if (Devices[i] == DefaultDevice){
+  for (int i = 0; i < DeviceCount; i++) {
+    if (Devices[i] == DefaultDevice) {
       *DeviceNo = i;
       return Devices[i];
     }
@@ -66,12 +66,17 @@ ol_queue_handle_t olKGetDefaultQueue() {
   return DefaultQueue;
 }
 
-CallConfigurationTy* olKGetCallConfiguration() {
+CallConfigurationTy *olKGetCallConfiguration() {
   return &ThreadStateTy::getCallConfiguration();
 }
 
 void olKRegisterKernel(const void *ID, ol_symbol_handle_t Kernel) {
   StateTy::get().addKernel(ID, Kernel);
+}
+
+void olKUnregisterKernel(const void *ID) {
+  if (StateTy *State = StateTy::tryGet())
+    State->removeKernel(ID);
 }
 
 ol_symbol_handle_t olKGetKernel(const void *ID) {
@@ -80,6 +85,12 @@ ol_symbol_handle_t olKGetKernel(const void *ID) {
 
 void olKRegisterProgram(const void *ID, ol_program_handle_t Program) {
   StateTy::get().addProgram(ID, Program);
+}
+
+ol_program_handle_t olKUnregisterProgram(const void *ID) {
+  if (StateTy *State = StateTy::tryGet())
+    return State->removeProgram(ID);
+  return nullptr;
 }
 
 ol_program_handle_t olKGetProgram(const void *ID) {

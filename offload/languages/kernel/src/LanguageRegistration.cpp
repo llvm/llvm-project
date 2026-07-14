@@ -233,7 +233,10 @@ const char *__llvmRegisterFatBinary(const char *Binary) {
   return Binary;
 }
 
-void __llvmUnregisterFatBinary(void *Handle) {}
+void __llvmUnregisterFatBinary(void *Handle) {
+  if (ol_program_handle_t Program = olKUnregisterProgram(Handle))
+    olDestroyProgram(Program);
+}
 
 void __llvmRegisterVar(void **, char *, char *, const char *, int, int, int,
                        int) {
@@ -300,13 +303,26 @@ void __tgt_register_lib(__tgt_bin_desc *Desc) {
          Entry != DeviceImage.EntriesEnd; ++Entry) {
       if (!Entry->Size && !Entry->Flags)
         __llvmRegisterFunction((const char *)DeviceImage.ImageStart,
-                               (const char*)Entry->Address, Entry->SymbolName,
+                               (const char *)Entry->Address, Entry->SymbolName,
                                Entry->SymbolName, 0, nullptr, nullptr, nullptr,
                                nullptr, nullptr);
     }
   }
 }
 
-void __tgt_unregister_lib(__tgt_bin_desc *Desc) {}
+void __tgt_unregister_lib(__tgt_bin_desc *Desc) {
+  for (int32_t I = 0, E = Desc->NumDeviceImages; I < E; ++I) {
+    __tgt_device_image &DeviceImage = Desc->DeviceImages[I];
+    for (auto *Entry = DeviceImage.EntriesBegin;
+         Entry != DeviceImage.EntriesEnd; ++Entry) {
+      if (!Entry->Size && !Entry->Flags)
+        olKUnregisterKernel((const char *)Entry->Address);
+    }
+
+    if (ol_program_handle_t Program =
+            olKUnregisterProgram(DeviceImage.ImageStart))
+      olDestroyProgram(Program);
+  }
+}
 }
 ///}
