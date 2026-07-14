@@ -9,7 +9,7 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class ReportDanglingPtrDeref : public Checker<check::Location> {
+class DanglingPtrDeref : public Checker<check::Location> {
 public:
   void checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
                      CheckerContext &C) const;
@@ -18,11 +18,11 @@ public:
   const BugType BugMsg{this, "ReportDanglingPtrDeref", "LifetimeBound"};
 };
 
-class ReportDanglingPtrDerefBRVisitor : public BugReporterVisitor {
+class DanglingPtrDerefBRVisitor : public BugReporterVisitor {
   const MemRegion *SourceRegion;
 
 public:
-  explicit ReportDanglingPtrDerefBRVisitor(const MemRegion *Source)
+  explicit DanglingPtrDerefBRVisitor(const MemRegion *Source)
       : SourceRegion(Source) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
@@ -36,8 +36,8 @@ public:
 
 } // namespace
 
-void ReportDanglingPtrDeref::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
-                                           CheckerContext &C) const {
+void DanglingPtrDeref::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
+                                     CheckerContext &C) const {
   ProgramStateRef State = C.getState();
 
   if (const MemRegion *LocRegion = Loc.getAsRegion()) {
@@ -48,22 +48,22 @@ void ReportDanglingPtrDeref::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
   }
 }
 
-void ReportDanglingPtrDeref::reportUseAfterScope(const MemRegion *Region,
-                                                 ExplodedNode *N,
-                                                 CheckerContext &C) const {
+void DanglingPtrDeref::reportUseAfterScope(const MemRegion *Region,
+                                           ExplodedNode *N,
+                                           CheckerContext &C) const {
   auto BR = std::make_unique<PathSensitiveBugReport>(
       BugMsg,
       (llvm::Twine("Use of '") + Region->getString() +
        "' after its lifetime ended."),
       N);
-  BR->addVisitor<ReportDanglingPtrDerefBRVisitor>(Region);
+  BR->addVisitor<DanglingPtrDerefBRVisitor>(Region);
   C.emitReport(std::move(BR));
 }
 
 PathDiagnosticPieceRef
-ReportDanglingPtrDerefBRVisitor::VisitNode(const ExplodedNode *N,
-                                           BugReporterContext &BRC,
-                                           PathSensitiveBugReport &BR) {
+DanglingPtrDerefBRVisitor::VisitNode(const ExplodedNode *N,
+                                     BugReporterContext &BRC,
+                                     PathSensitiveBugReport &BR) {
   using lifetime_modeling::isDeallocated;
   const ExplodedNode *Pred = N->getFirstPred();
   if (!Pred)
@@ -86,10 +86,10 @@ ReportDanglingPtrDerefBRVisitor::VisitNode(const ExplodedNode *N,
       true);
 }
 
-void ento::registerReportDanglingPtrDeref(CheckerManager &Mgr) {
-  Mgr.registerChecker<ReportDanglingPtrDeref>();
+void ento::registerDanglingPtrDeref(CheckerManager &Mgr) {
+  Mgr.registerChecker<DanglingPtrDeref>();
 }
 
-bool ento::shouldRegisterReportDanglingPtrDeref(const CheckerManager &Mgr) {
+bool ento::shouldRegisterDanglingPtrDeref(const CheckerManager &Mgr) {
   return true;
 }

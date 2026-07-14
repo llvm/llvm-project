@@ -806,7 +806,7 @@ def UseAfterLifetimeEnd : Checker<"UseAfterLifetimeEnd">,
   Dependencies<[LifetimeModeling]>,
   Documentation<NotDocumented>;
 
-def ReportDanglingPtrDeref : Checker<"ReportDanglingPtrDeref">,
+def DanglingPtrDeref : Checker<"DanglingPtrDeref">,
   HelpText<"Check for dereferences of a dangling pointer">,
   Dependencies<[LifetimeModeling]>,
   Documentation<NotDocumented>;
