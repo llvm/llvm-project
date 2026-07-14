@@ -21,11 +21,7 @@
 int main(int argc, char** argv) {
   auto std_equal_range = [](auto first, auto last, auto const& value) { return std::equal_range(first, last, value); };
   auto std_equal_range_pred = [](auto first, auto last, auto const& value) {
-    return std::equal_range(first, last, value, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x < y;
-    });
+    return std::equal_range(first, last, value, [](auto x, auto y) { return x < y; });
   };
 
   // The range we find is a single element.

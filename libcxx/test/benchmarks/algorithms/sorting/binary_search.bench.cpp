@@ -23,11 +23,7 @@ int main(int argc, char** argv) {
     return std::binary_search(first, last, value);
   };
   auto std_binary_search_pred = [](auto first, auto last, auto const& value) {
-    return std::binary_search(first, last, value, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x < y;
-    });
+    return std::binary_search(first, last, value, [](auto x, auto y) { return x < y; });
   };
 
   // Benchmark binary_search looking up a random key that is present in the sequence.

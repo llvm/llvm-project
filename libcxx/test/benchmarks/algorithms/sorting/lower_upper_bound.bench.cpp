@@ -21,19 +21,11 @@
 int main(int argc, char** argv) {
   auto std_lower_bound = [](auto first, auto last, auto const& value) { return std::lower_bound(first, last, value); };
   auto std_lower_bound_pred = [](auto first, auto last, auto const& value) {
-    return std::lower_bound(first, last, value, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x < y;
-    });
+    return std::lower_bound(first, last, value, [](auto x, auto y) { return x < y; });
   };
   auto std_upper_bound = [](auto first, auto last, auto const& value) { return std::upper_bound(first, last, value); };
   auto std_upper_bound_pred = [](auto first, auto last, auto const& value) {
-    return std::upper_bound(first, last, value, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x < y;
-    });
+    return std::upper_bound(first, last, value, [](auto x, auto y) { return x < y; });
   };
 
   // Benchmark {lower_bound,upper_bound} on a sorted sequence, looking up a random element that
