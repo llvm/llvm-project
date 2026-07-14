@@ -50,7 +50,7 @@ static_assert(!sfinae_test_mismatch<std::execution::parallel_policy, int*, int*,
 static_assert(sfinae_test_mismatch<int, int*, int*, int*, int*, bool (*)(int, int)>);
 static_assert(!sfinae_test_mismatch<std::execution::parallel_policy, int*, int*, int*, int*, bool (*)(int, int)>);
 
-// TODO: switch with a shared implemented once it's merged into main
+// TODO: switch to the shared implementation once it's merged into main
 template <class Callable>
 void runway_sample(size_t size, Callable callable) {
   constexpr size_t affix = 16;
