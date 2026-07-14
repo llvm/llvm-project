@@ -162,7 +162,11 @@ public:
   /// that are actually instantiated. Values of this enumeration are kept in the
   /// SubclassID field of the VPBlockBase objects. They are used for concrete
   /// type identification.
-  using VPBlockTy = enum { VPRegionBlockSC, VPBasicBlockSC, VPIRBasicBlockSC };
+  using VPBlockTy = enum : unsigned char {
+    VPRegionBlockSC,
+    VPBasicBlockSC,
+    VPIRBasicBlockSC
+  };
 
   using VPBlocksTy = SmallVectorImpl<VPBlockBase *>;
 
@@ -408,7 +412,7 @@ public:
   /// that is actually instantiated. Values of this enumeration are kept in the
   /// SubclassID field of the VPRecipeBase objects. They are used for concrete
   /// type identification.
-  using VPRecipeTy = enum {
+  using VPRecipeTy = enum : unsigned char {
     VPBranchOnMaskSC,
     VPDerivedIVSC,
     VPExpandSCEVSC,
