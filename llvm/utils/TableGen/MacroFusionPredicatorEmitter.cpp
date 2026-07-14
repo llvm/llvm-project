@@ -13,11 +13,22 @@
 // predicators for checking if input instructions can be fused. These
 // predicators can used in `MacroFusion` DAG mutation.
 //
-// The generated header file contains two parts: one for predicator
-// declarations and one for predicator implementations. The user can get them
-// by defining macro `GET_<TargetName>_MACRO_FUSION_PRED_DECL` or
-// `GET_<TargetName>_MACRO_FUSION_PRED_IMPL` and then including the generated
+// The generated header file contains three parts: one for predicator
+// declarations, one for predicator implementations, and one for the
+// definitions of the `Statistic`s that count how often each fusion is matched.
+// The user can get them by defining macro
+// `GET_<TargetName>_MACRO_FUSION_PRED_DECL`,
+// `GET_<TargetName>_MACRO_FUSION_PRED_IMPL` or
+// `GET_<TargetName>_MACRO_FUSION_STATISTICS` and then including the generated
 // header file.
+//
+// The statistics are opt-in: the predicator implementations only increment the
+// counters when `ENABLE_STATISTIC` is defined, and the
+// `GET_<TargetName>_MACRO_FUSION_STATISTICS` section both defines
+// `ENABLE_STATISTIC` and emits the `Statistic` definitions. So a target that
+// wants the statistics should include the `..._STATISTICS` section *before* the
+// `..._PRED_IMPL` section. Per-fusion, the statistics can be disabled by
+// setting `GenerateStatistic = 0` on the `Fusion` definition.
 //
 // The generated predicator will be like:
 //
@@ -60,6 +71,8 @@ class MacroFusionPredicatorEmitter {
                            PredicateExpander &PE, raw_ostream &OS);
   void emitMacroFusionImpl(ArrayRef<const Record *> Fusions,
                            PredicateExpander &PE, raw_ostream &OS);
+  void emitMacroFusionStatistics(ArrayRef<const Record *> Fusions,
+                                 raw_ostream &OS);
   void emitPredicates(ArrayRef<const Record *> FirstPredicate,
                       bool IsCommutable, PredicateExpander &PE,
                       raw_ostream &OS);
@@ -99,6 +112,7 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
     std::vector<const Record *> Predicates =
         Fusion->getValueAsListOfDefs("Predicates");
     bool IsCommutable = Fusion->getValueAsBit("IsCommutable");
+    bool GenerateStatistic = Fusion->getValueAsBit("GenerateStatistic");
 
     OS << "bool is" << Fusion->getName() << "(\n";
     OS.indent(4) << "const TargetInstrInfo &TII,\n";
@@ -110,8 +124,45 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
 
     emitPredicates(Predicates, IsCommutable, PE, OS);
 
+    // Bump the statistics that count how often this fusion is matched. The
+    // pre-RA and post-RA schedulers both run MacroFusion, so we distinguish
+    // them (using the `NoVRegs` property) to avoid conflating the two.
+    if (GenerateStatistic) {
+      OS << "#ifdef ENABLE_STATISTIC\n";
+      OS.indent(2) << "if (SecondMI.getMF()->getProperties().hasNoVRegs())\n";
+      OS.indent(4) << "++Num" << Fusion->getName() << "PostRA;\n";
+      OS.indent(2) << "else\n";
+      OS.indent(4) << "++Num" << Fusion->getName() << "PreRA;\n";
+      OS << "#endif // ENABLE_STATISTIC\n";
+    }
+
     OS.indent(2) << "return true;\n";
     OS << "}\n";
+  }
+}
+
+void MacroFusionPredicatorEmitter::emitMacroFusionStatistics(
+    ArrayRef<const Record *> Fusions, raw_ostream &OS) {
+  IfDefEmitter IfDef(
+      OS, ("GET_" + Target.getName() + "_MACRO_FUSION_STATISTICS").str());
+
+  // Requesting the statistics implies collecting them, so make sure the
+  // increments emitted in the predicators (guarded by `ENABLE_STATISTIC`) are
+  // compiled in when this section is included.
+  OS << "#ifndef ENABLE_STATISTIC\n";
+  OS << "#define ENABLE_STATISTIC\n";
+  OS << "#endif\n";
+
+  NamespaceEmitter LlvmNS(OS, "llvm");
+
+  for (const Record *Fusion : Fusions) {
+    if (!Fusion->getValueAsBit("GenerateStatistic"))
+      continue;
+
+    OS << "STATISTIC(Num" << Fusion->getName() << "PreRA, \"Times "
+       << Fusion->getName() << " Triggered (pre-ra)\");\n";
+    OS << "STATISTIC(Num" << Fusion->getName() << "PostRA, \"Times "
+       << Fusion->getName() << " Triggered (post-ra)\");\n";
   }
 }
 
@@ -305,6 +356,8 @@ void MacroFusionPredicatorEmitter::run(raw_ostream &OS) {
   emitMacroFusionDecl(Fusions, PE, OS);
   OS << "\n";
   emitMacroFusionImpl(Fusions, PE, OS);
+  OS << "\n";
+  emitMacroFusionStatistics(Fusions, OS);
 }
 
 static TableGen::Emitter::OptClass<MacroFusionPredicatorEmitter>

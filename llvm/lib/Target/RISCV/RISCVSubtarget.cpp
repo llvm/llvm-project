@@ -18,6 +18,7 @@
 #include "RISCVFrameLowering.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "RISCVTargetMachine.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -30,8 +31,20 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "RISCVGenSubtargetInfo.inc"
 
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "riscv-macro-fusion"
+
+// The statistics section defines `ENABLE_STATISTIC` and the `Statistic`
+// counters, so it must be included before the predicator implementations that
+// reference them.
+#define GET_RISCV_MACRO_FUSION_STATISTICS
+#include "RISCVGenMacroFusion.inc"
+
 #define GET_RISCV_MACRO_FUSION_PRED_IMPL
 #include "RISCVGenMacroFusion.inc"
+
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "riscv-subtarget"
 
 namespace llvm::RISCVTuneInfoTable {
 

@@ -107,6 +107,12 @@ class Fusion<string name, string fieldName, string desc, list<FusionPredicate> p
   : SubtargetFeature<"fusion-" # name, fieldName, "true", desc> {
   list<FusionPredicate> Predicates = predicates;
   bit IsCommutable = 0;
+
+  // When true, the MacroFusionPredicatorEmitter generates `Statistic`s that
+  // count how often this fusion is matched (see the
+  // `GET_<TargetName>_MACRO_FUSION_STATISTICS` section of the generated file).
+  // Set this to 0 to opt out, for fusions whose statistics are not interesting.
+  bit GenerateStatistic = 1;
 }
 
 // The generated predicator will be like:
