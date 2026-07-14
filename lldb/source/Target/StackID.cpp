@@ -69,7 +69,7 @@ bool lldb_private::operator!=(const StackID &lhs, const StackID &rhs) {
   return !(lhs == rhs);
 }
 
-bool lldb_private::operator<(const StackID &lhs, const StackID &rhs) {
+bool StackID::IsYounger(const StackID &lhs, const StackID &rhs) {
   const lldb::addr_t lhs_cfa = lhs.GetCallFrameAddressWithoutMetadata();
   const lldb::addr_t rhs_cfa = rhs.GetCallFrameAddressWithoutMetadata();
 

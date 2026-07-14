@@ -173,7 +173,7 @@ void ThreadPlanStepUntil::AnalyzeStop() {
         bool done;
         StackID cur_frame_zero_id;
 
-        done = (m_stack_id < cur_frame_zero_id);
+        done = (StackID::IsYounger(m_stack_id, cur_frame_zero_id));
 
         if (done) {
           m_stepped_out = true;
@@ -199,7 +199,7 @@ void ThreadPlanStepUntil::AnalyzeStop() {
 
             if (frame_zero_id == m_stack_id)
               done = true;
-            else if (frame_zero_id < m_stack_id)
+            else if (StackID::IsYounger(frame_zero_id, m_stack_id))
               done = false;
             else {
               StackFrameSP older_frame_sp = thread.GetStackFrameAtIndex(1);
