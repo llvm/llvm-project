@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// UNSUPPORTED: osx-broken-scalbn-rounding
 
 #define SINGLE_PRECISION
 #include <fenv.h>

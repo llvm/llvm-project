@@ -11429,7 +11429,7 @@ of `idx` exceeds the runtime length of the vector, the result is a
 ##### Example:
 
 ```text
-<result> = extractelement <4 x i32> %vec, i32 0    ; yields i32
+<result> = extractelement <4 x i32> %vec, i64 0    ; yields i32
 ```
 
 (i_insertelement)=
@@ -11469,7 +11469,7 @@ is a {ref}`poison value <poisonvalues>`.
 ##### Example:
 
 ```text
-<result> = insertelement <4 x i32> %vec, i32 1, i32 0    ; yields <4 x i32>
+<result> = insertelement <4 x i32> %vec, i32 1, i64 0    ; yields <4 x i32>
 ```
 
 (i_shufflevector)=
@@ -13392,7 +13392,8 @@ values indicating the condition, and two values of the same {ref}`first class <t
 
 If the condition is an i1 and it evaluates to 1, the instruction returns
 the first value argument; otherwise, it returns the second value
-argument.
+argument. If the condition evaluates to `poison`, the instruction returns `poison`.
+If it evaluates to `undef`, the result is an `undef` representing the union of two value arguments (i.e., each use of this value can pick either value argument).
 
 If the condition is a vector of i1, then the value arguments must be
 vectors of the same size, and the selection is done element by element.
@@ -13458,12 +13459,12 @@ without storing it into memory and loading it with a different type.
 
 ; example with vectors
 %v = <2 x i32> <i32 undef, i32 poison>
-%a = extractelement <2 x i32> %v, i32 0    ; undef
-%b = extractelement <2 x i32> %v, i32 1    ; poison
+%a = extractelement <2 x i32> %v, i64 0    ; undef
+%b = extractelement <2 x i32> %v, i64 1    ; poison
 %add = add i32 %a, %a                      ; undef
 
 %v.fr = freeze <2 x i32> %v                ; element-wise freeze
-%d = extractelement <2 x i32> %v.fr, i32 0 ; not undef
+%d = extractelement <2 x i32> %v.fr, i64 0 ; not undef
 %add.f = add i32 %d, %d                    ; even number
 
 %l = load b32, ptr %p                      ; may be uninitialized
@@ -21334,6 +21335,11 @@ type and first argument.
   - FP6 formats: `"Float6E3M2FN"`, `"Float6E2M3FN"`
   - FP4 formats: `"Float4E2M1FN"`
 
+  The bit width of the integer return type must equal the bit width of the
+  selected format, for example `i8` for an FP8 format, `i6` for an FP6 format,
+  and `i4` for an FP4 format. For vector operands this applies to the integer
+  element type.
+
 `rounding mode`
 :   A metadata string specifying the rounding mode. The permitted strings match those
   accepted by `llvm.fptrunc.round` (for example,
@@ -21362,7 +21368,8 @@ saturation behavior. The conversion is performed in two steps: first, the value 
 rounded according to the specified rounding mode to fit the target format's precision;
 then, if the rounded result exceeds the target format's representable range, saturation
 is applied according to the `saturation` parameter. The result is returned as an
-integer (e.g., `i8` for FP8, `i6` for FP6) containing the encoded arbitrary FP bits.
+integer whose bit width equals the format's bit width (`i8` for FP8, `i6` for FP6,
+`i4` for FP4) containing the encoded arbitrary FP bits.
 
 **Handling of special values:**
 
@@ -21412,7 +21419,10 @@ overloaded on both its return type and first argument.
 ##### Arguments:
 
 `value`
-:   An integer value containing the arbitrary FP bits (e.g., `i8` for FP8, `i6` for FP6).
+:   An integer value containing the arbitrary FP bits. Its bit width must equal the
+  bit width of the format selected by `interpretation`, for example `i8` for an FP8
+  format, `i6` for an FP6 format, and `i4` for an FP4 format. For vector operands
+  this applies to the integer element type.
 
 `interpretation`
 :   A metadata string describing the source arbitrary FP format. Supported format names include:
@@ -21715,7 +21725,7 @@ is taken from the third argument.
 
 ;;; Expansion.
 ;; Lanes at and above %pivot are taken from %on_false
-%atfirst = insertelement <4 x i32> poison, i32 %pivot, i32 0
+%atfirst = insertelement <4 x i32> poison, i32 %pivot, i64 0
 %splat = shufflevector <4 x i32> %atfirst, <4 x i32> poison, <4 x i32> zeroinitializer
 %pivotmask = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> %splat
 %mergemask = and <4 x i1> %cond, <4 x i1> %pivotmask
@@ -26006,20 +26016,20 @@ The semantics of this operation are equivalent to a sequence of conditional scal
 %res = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 %ptrs, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x double> poison)
 
 ;; The gather with all-true mask is equivalent to the following instruction sequence
-%ptr0 = extractelement <4 x ptr> %ptrs, i32 0
-%ptr1 = extractelement <4 x ptr> %ptrs, i32 1
-%ptr2 = extractelement <4 x ptr> %ptrs, i32 2
-%ptr3 = extractelement <4 x ptr> %ptrs, i32 3
+%ptr0 = extractelement <4 x ptr> %ptrs, i64 0
+%ptr1 = extractelement <4 x ptr> %ptrs, i64 1
+%ptr2 = extractelement <4 x ptr> %ptrs, i64 2
+%ptr3 = extractelement <4 x ptr> %ptrs, i64 3
 
 %val0 = load double, ptr %ptr0, align 8
 %val1 = load double, ptr %ptr1, align 8
 %val2 = load double, ptr %ptr2, align 8
 %val3 = load double, ptr %ptr3, align 8
 
-%vec0    = insertelement <4 x double> poison, %val0, 0
-%vec01   = insertelement <4 x double> %vec0, %val1, 1
-%vec012  = insertelement <4 x double> %vec01, %val2, 2
-%vec0123 = insertelement <4 x double> %vec012, %val3, 3
+%vec0    = insertelement <4 x double> poison, %val0, i64 0
+%vec01   = insertelement <4 x double> %vec0, %val1, i64 1
+%vec012  = insertelement <4 x double> %vec01, %val2, i64 2
+%vec0123 = insertelement <4 x double> %vec012, %val3, i64 3
 ```
 
 (int_mscatter)=
@@ -26054,14 +26064,14 @@ The '`llvm.masked.scatter`' intrinsics is designed for writing selected vector e
 call @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %value, <8 x ptr> align 4 %ptrs,  <8 x i1>  <true, true, .. true>)
 
 ;; It is equivalent to a list of scalar stores
-%val0 = extractelement <8 x i32> %value, i32 0
-%val1 = extractelement <8 x i32> %value, i32 1
+%val0 = extractelement <8 x i32> %value, i64 0
+%val1 = extractelement <8 x i32> %value, i64 1
 ..
-%val7 = extractelement <8 x i32> %value, i32 7
-%ptr0 = extractelement <8 x ptr> %ptrs, i32 0
-%ptr1 = extractelement <8 x ptr> %ptrs, i32 1
+%val7 = extractelement <8 x i32> %value, i64 7
+%ptr0 = extractelement <8 x ptr> %ptrs, i64 0
+%ptr1 = extractelement <8 x ptr> %ptrs, i64 1
 ..
-%ptr7 = extractelement <8 x ptr> %ptrs, i32 7
+%ptr7 = extractelement <8 x ptr> %ptrs, i64 7
 ;; Note: the order of the following stores is important when they overlap:
 store i32 %val0, ptr %ptr0, align 4
 store i32 %val1, ptr %ptr1, align 4

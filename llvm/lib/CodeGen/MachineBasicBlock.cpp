@@ -1850,7 +1850,6 @@ void MachineBasicBlock::removePHIsIncomingValuesForPredecessor(
     Phi.removePHIIncomingValueFor(PredMBB);
 }
 
-constexpr MBBSectionID
-    MBBSectionID::ColdSectionID(MBBSectionID::SectionType::Cold);
-constexpr MBBSectionID
+const MBBSectionID MBBSectionID::ColdSectionID(MBBSectionID::SectionType::Cold);
+const MBBSectionID
     MBBSectionID::ExceptionSectionID(MBBSectionID::SectionType::Exception);

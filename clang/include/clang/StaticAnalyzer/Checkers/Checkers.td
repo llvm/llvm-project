@@ -795,9 +795,20 @@ def SmartPtrChecker: Checker<"SmartPtr">,
   Dependencies<[SmartPtrModeling]>,
   Documentation<HasDocumentation>;
 
+def LifetimeModeling : Checker<"LifetimeModeling">,
+  HelpText<"Model lifetime annotations for other checkers">,
+  Documentation<NotDocumented>,
+  Hidden;
+
 def UseAfterLifetimeEnd : Checker<"UseAfterLifetimeEnd">,
   HelpText<"Check for uses of references or pointers that "
            "outlive their bound object">,
+  Dependencies<[LifetimeModeling]>,
+  Documentation<NotDocumented>;
+
+def DanglingPtrDeref : Checker<"DanglingPtrDeref">,
+  HelpText<"Check for dereferences of a dangling pointer">,
+  Dependencies<[LifetimeModeling]>,
   Documentation<NotDocumented>;
 
 } // end: "alpha.cplusplus"
@@ -1588,10 +1599,9 @@ def CheckerDocumentationChecker : Checker<"CheckerDocumentation">,
   HelpText<"Defines an empty checker callback for all possible handlers.">,
   Documentation<NotDocumented>;
 
-def DebugUseAfterLifetimeEnd : Checker<"DebugUseAfterLifetimeEnd">,
-  HelpText<"Prints the bindings recorded by the UseAfterLifetimeEnd checker. "
-           "Use with clang_analyzer_dumpLifetimeOriginsOf().">,
-  WeakDependencies<[UseAfterLifetimeEnd]>,
+def DebugLifetimeModeling : Checker<"DebugLifetimeModeling">,
+  HelpText<"Dump the set of regions the bound variable originates from">,
+  Dependencies<[LifetimeModeling]>,
   Documentation<NotDocumented>;
 
 } // end "debug"
@@ -1771,6 +1781,10 @@ def UnretainedCallArgsChecker : Checker<"UnretainedCallArgsChecker">,
 
 def UncountedLocalVarsChecker : Checker<"UncountedLocalVarsChecker">,
   HelpText<"Check uncounted local variables.">,
+  Documentation<HasDocumentation>;
+
+def UncheckedLambdaCapturesChecker : Checker<"UncheckedLambdaCapturesChecker">,
+  HelpText<"Check unchecked lambda captures.">,
   Documentation<HasDocumentation>;
 
 def UncheckedLocalVarsChecker : Checker<"UncheckedLocalVarsChecker">,
