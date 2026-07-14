@@ -156,16 +156,15 @@ void MCWasmStreamer::emitIdent(StringRef IdentString) {
 
 void MCWasmStreamer::emitULEB128Value(const MCExpr *Value) {
   int64_t IntValue;
-  if (Value->evaluateAsAbsolute(IntValue, getAssembler())) {
-    emitULEB128IntValue(IntValue);
-    return;
-  }
-  if (Value->getKind() != MCExpr::SymbolRef) {
-    // e.g. binary expression -> handover to superclass impl
+  if ((Value->getKind() != MCExpr::SymbolRef &&
+       Value->getKind() != MCExpr::Target) ||
+      Value->evaluateAsAbsolute(IntValue, getAssembler())) {
+    // e.g. binary expression or absolute value -> handover to superclass impl
     return MCObjectStreamer::emitULEB128Value(Value);
   }
-  assert(Value->getKind() == MCExpr::SymbolRef &&
-         "Non-absolute leb values can only be symbol refs");
+  assert((Value->getKind() == MCExpr::SymbolRef ||
+          Value->getKind() == MCExpr::Target) &&
+         "Non-absolute leb values can only be symbol refs or target exprs");
 
   // append leb symbol ref to current fragment and generate fixup
   // for uleb128 i32 (a wasm symbol ref)
