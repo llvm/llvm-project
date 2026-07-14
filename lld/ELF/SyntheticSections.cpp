@@ -602,10 +602,6 @@ MipsGotSection::MipsGotSection(Ctx &ctx)
     : SyntheticSection(ctx, ".got", SHT_PROGBITS,
                        SHF_ALLOC | SHF_WRITE | SHF_MIPS_GPREL, 16) {}
 
-void MipsGotSection::addConstant(const Relocation &r) {
-  relocations.push_back(r);
-}
-
 void MipsGotSection::addEntry(InputFile &file, Symbol &sym, int64_t addend,
                               RelExpr expr) {
   FileGot &g = getGot(file);
@@ -901,33 +897,35 @@ void MipsGotSection::build() {
     }
     for (std::pair<Symbol *, size_t> &p : got.dynTlsSymbols) {
       Symbol *s = p.first;
-      uint64_t offset = p.second * ctx.arg.wordsize;
+      uint64_t off = p.second * ctx.arg.wordsize;
       if (s == nullptr) {
         if (ctx.arg.shared)
-          ctx.in.relaDyn->addReloc(
-              {ctx.target->tlsModuleIndexRel, this, offset});
+          ctx.in.relaDyn->addReloc({ctx.target->tlsModuleIndexRel, this, off});
         else
           addConstant(
-              {R_ADDEND, ctx.target->symbolicRel, offset, 1, ctx.dummySym});
+              {R_ADDEND, ctx.target->symbolicRel, off, 1, ctx.dummySym});
       } else {
         // When building a shared library we still need a dynamic relocation
         // for the module index. Therefore only checking for
         // S->isPreemptible is not sufficient (this happens e.g. for
         // thread-locals that have been marked as local through a linker script)
-        if (!s->isPreemptible && !ctx.arg.shared)
-          // Write one to the GOT slot.
-          addConstant({R_ADDEND, ctx.target->symbolicRel, offset, 1, s});
-        else
-          ctx.in.relaDyn->addSymbolReloc(ctx.target->tlsModuleIndexRel, *this,
-                                         offset, *s);
-        offset += ctx.arg.wordsize;
         // However, we can skip writing the TLS offset reloc for non-preemptible
         // symbols since it is known even in shared libraries
-        if (s->isPreemptible)
+        uint64_t offsetOff = off + ctx.arg.wordsize;
+        if (s->isPreemptible) {
+          ctx.in.relaDyn->addSymbolReloc(ctx.target->tlsModuleIndexRel, *this,
+                                         off, *s);
           ctx.in.relaDyn->addSymbolReloc(ctx.target->tlsOffsetRel, *this,
-                                         offset, *s);
-        else
-          addConstant({R_ABS, ctx.target->tlsOffsetRel, offset, 0, s});
+                                         offsetOff, *s);
+        } else {
+          if (ctx.arg.shared)
+            ctx.in.relaDyn->addReloc(
+                {ctx.target->tlsModuleIndexRel, this, off});
+          else
+            // Write one to the GOT slot.
+            addConstant({R_ADDEND, ctx.target->symbolicRel, off, 1, s});
+          addConstant({R_ABS, ctx.target->tlsOffsetRel, offsetOff, 0, s});
+        }
       }
     }
 

@@ -1619,6 +1619,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
   // Figure out which token this is.
   IdentifierInfo *II = Tok.getIdentifierInfo();
   assert(II && "Can't be a macro without id info!");
+  SourceLocation MacroNameLoc = Tok.getLocation();
 
   // If this is an _Pragma or Microsoft __pragma directive, expand it,
   // invoke the pragma handler, then lex the token after it.
@@ -2096,7 +2097,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
   } else {
     llvm_unreachable("Unknown identifier!");
   }
-  CreateString(OS.str(), Tok, Tok.getLocation(), Tok.getLocation());
+  CreateString(OS.str(), Tok, MacroNameLoc, Tok.getLocation());
   Tok.setFlagValue(Token::StartOfLine, IsAtStartOfLine);
   Tok.setFlagValue(Token::LeadingSpace, HasLeadingSpace);
   Tok.clearFlag(Token::NeedsCleaning);

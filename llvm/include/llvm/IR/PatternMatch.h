@@ -44,6 +44,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/PatternMatchHelpers.h"
 #include <cstdint>
+#include <utility>
 
 using namespace llvm::PatternMatchHelpers;
 
@@ -877,6 +878,9 @@ inline match_bind<const WithOverflowInst>
 m_WithOverflowInst(const WithOverflowInst *&I) {
   return I;
 }
+
+/// Match a PHI node, capturing it if we match.
+inline match_bind<PHINode> m_Phi(PHINode *&PN) { return PN; }
 
 /// Match an UndefValue, capturing the value if we match.
 inline match_bind<UndefValue> m_UndefValue(UndefValue *&U) { return U; }
@@ -2044,6 +2048,22 @@ inline OneOps_match<OpTy, Instruction::Load> m_Load(const OpTy &Op) {
   return OneOps_match<OpTy, Instruction::Load>(Op);
 }
 
+/// Matches a simple (non-volatile, non-atomic) LoadInst.
+template <typename OpTy> struct LoadSimple_match {
+  OneOps_match<OpTy, Instruction::Load> Base;
+
+  LoadSimple_match(const OpTy &Op) : Base(Op) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    return Base.match(V) && cast<LoadInst>(V)->isSimple();
+  }
+};
+
+template <typename OpTy>
+inline LoadSimple_match<OpTy> m_LoadSimple(const OpTy &Op) {
+  return LoadSimple_match<OpTy>(Op);
+}
+
 /// Matches StoreInst.
 template <typename ValueOpTy, typename PointerOpTy>
 inline TwoOps_match<ValueOpTy, PointerOpTy, Instruction::Store>
@@ -2752,50 +2772,19 @@ template <Intrinsic::ID... IntrIDs> struct IntrinsicIDs_match {
   }
 };
 
-/// Intrinsic matches are combinations of ID matchers, and argument
-/// matchers. Higher arity matcher are defined recursively in terms of and-ing
-/// them with lower arity matchers. Here's some convenient typedefs for up to
-/// several arguments, and more can be added as needed
-template <typename T0 = void, typename T1 = void, typename T2 = void,
-          typename T3 = void, typename T4 = void, typename T5 = void,
-          typename T6 = void, typename T7 = void, typename T8 = void,
-          typename T9 = void, typename T10 = void>
-struct m_Intrinsic_Ty;
-template <typename T0> struct m_Intrinsic_Ty<T0> {
-  using Ty = match_combine_and<IntrinsicID_match, Argument_match<T0>>;
-};
-template <typename T0, typename T1> struct m_Intrinsic_Ty<T0, T1> {
-  using Ty =
-      match_combine_and<typename m_Intrinsic_Ty<T0>::Ty, Argument_match<T1>>;
-};
-template <typename T0, typename T1, typename T2>
-struct m_Intrinsic_Ty<T0, T1, T2> {
-  using Ty = match_combine_and<typename m_Intrinsic_Ty<T0, T1>::Ty,
-                               Argument_match<T2>>;
-};
-template <typename T0, typename T1, typename T2, typename T3>
-struct m_Intrinsic_Ty<T0, T1, T2, T3> {
-  using Ty = match_combine_and<typename m_Intrinsic_Ty<T0, T1, T2>::Ty,
-                               Argument_match<T3>>;
-};
-
-template <typename T0, typename T1, typename T2, typename T3, typename T4>
-struct m_Intrinsic_Ty<T0, T1, T2, T3, T4> {
-  using Ty = match_combine_and<typename m_Intrinsic_Ty<T0, T1, T2, T3>::Ty,
-                               Argument_match<T4>>;
-};
-
-template <typename T0, typename T1, typename T2, typename T3, typename T4,
-          typename T5>
-struct m_Intrinsic_Ty<T0, T1, T2, T3, T4, T5> {
-  using Ty = match_combine_and<typename m_Intrinsic_Ty<T0, T1, T2, T3, T4>::Ty,
-                               Argument_match<T5>>;
+struct IntrinsicMatchImpl {
+  template <Intrinsic::ID IntrID, typename... Ts, size_t... Is>
+  static auto impl(std::index_sequence<Is...>, const Ts &...Ops) {
+    return m_CombineAnd(IntrinsicID_match(IntrID), m_Argument<Is>(Ops)...);
+  }
 };
 
 /// Match intrinsic calls like this:
 /// m_Intrinsic<Intrinsic::fabs>(m_Value(X))
-template <Intrinsic::ID IntrID> inline IntrinsicID_match m_Intrinsic() {
-  return IntrinsicID_match(IntrID);
+template <Intrinsic::ID IntrID, typename... Ts>
+inline auto m_Intrinsic(const Ts &...Ops) {
+  return IntrinsicMatchImpl::impl<IntrID>(
+      std::make_index_sequence<sizeof...(Ts)>{}, Ops...);
 }
 
 /// Match intrinsic calls with any of the given IDs like this:
@@ -2809,101 +2798,51 @@ inline IntrinsicIDs_match<IntrIDs...> m_AnyIntrinsic() {
 
 /// Matches MaskedLoad Intrinsic.
 template <typename Opnd0, typename Opnd1, typename Opnd2>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2>::Ty
-m_MaskedLoad(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
+inline auto m_MaskedLoad(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
   return m_Intrinsic<Intrinsic::masked_load>(Op0, Op1, Op2);
 }
 
 /// Matches MaskedStore Intrinsic.
 template <typename Opnd0, typename Opnd1, typename Opnd2>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2>::Ty
-m_MaskedStore(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
+inline auto m_MaskedStore(const Opnd0 &Op0, const Opnd1 &Op1,
+                          const Opnd2 &Op2) {
   return m_Intrinsic<Intrinsic::masked_store>(Op0, Op1, Op2);
 }
 
 /// Matches MaskedGather Intrinsic.
 template <typename Opnd0, typename Opnd1, typename Opnd2>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2>::Ty
-m_MaskedGather(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
+inline auto m_MaskedGather(const Opnd0 &Op0, const Opnd1 &Op1,
+                           const Opnd2 &Op2) {
   return m_Intrinsic<Intrinsic::masked_gather>(Op0, Op1, Op2);
 }
 
-template <Intrinsic::ID IntrID, typename T0>
-inline typename m_Intrinsic_Ty<T0>::Ty m_Intrinsic(const T0 &Op0) {
-  return m_CombineAnd(m_Intrinsic<IntrID>(), m_Argument<0>(Op0));
-}
-
-template <Intrinsic::ID IntrID, typename T0, typename T1>
-inline typename m_Intrinsic_Ty<T0, T1>::Ty m_Intrinsic(const T0 &Op0,
-                                                       const T1 &Op1) {
-  return m_CombineAnd(m_Intrinsic<IntrID>(Op0), m_Argument<1>(Op1));
-}
-
-template <Intrinsic::ID IntrID, typename T0, typename T1, typename T2>
-inline typename m_Intrinsic_Ty<T0, T1, T2>::Ty
-m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2) {
-  return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1), m_Argument<2>(Op2));
-}
-
-template <Intrinsic::ID IntrID, typename T0, typename T1, typename T2,
-          typename T3>
-inline typename m_Intrinsic_Ty<T0, T1, T2, T3>::Ty
-m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3) {
-  return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2), m_Argument<3>(Op3));
-}
-
-template <Intrinsic::ID IntrID, typename T0, typename T1, typename T2,
-          typename T3, typename T4>
-inline typename m_Intrinsic_Ty<T0, T1, T2, T3, T4>::Ty
-m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3,
-            const T4 &Op4) {
-  return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2, Op3),
-                      m_Argument<4>(Op4));
-}
-
-template <Intrinsic::ID IntrID, typename T0, typename T1, typename T2,
-          typename T3, typename T4, typename T5>
-inline typename m_Intrinsic_Ty<T0, T1, T2, T3, T4, T5>::Ty
-m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3,
-            const T4 &Op4, const T5 &Op5) {
-  return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2, Op3, Op4),
-                      m_Argument<5>(Op5));
-}
-
 // Helper intrinsic matching specializations.
-template <typename Opnd0>
-inline typename m_Intrinsic_Ty<Opnd0>::Ty m_BitReverse(const Opnd0 &Op0) {
+template <typename Opnd0> inline auto m_BitReverse(const Opnd0 &Op0) {
   return m_Intrinsic<Intrinsic::bitreverse>(Op0);
 }
 
-template <typename Opnd0>
-inline typename m_Intrinsic_Ty<Opnd0>::Ty m_BSwap(const Opnd0 &Op0) {
+template <typename Opnd0> inline auto m_BSwap(const Opnd0 &Op0) {
   return m_Intrinsic<Intrinsic::bswap>(Op0);
 }
-template <typename Opnd0>
-inline typename m_Intrinsic_Ty<Opnd0>::Ty m_Ctpop(const Opnd0 &Op0) {
+template <typename Opnd0> inline auto m_Ctpop(const Opnd0 &Op0) {
   return m_Intrinsic<Intrinsic::ctpop>(Op0);
 }
 
-template <typename Opnd0>
-inline typename m_Intrinsic_Ty<Opnd0>::Ty m_FAbs(const Opnd0 &Op0) {
+template <typename Opnd0> inline auto m_FAbs(const Opnd0 &Op0) {
   return m_Intrinsic<Intrinsic::fabs>(Op0);
 }
 
-template <typename Opnd0>
-inline typename m_Intrinsic_Ty<Opnd0>::Ty m_FCanonicalize(const Opnd0 &Op0) {
+template <typename Opnd0> inline auto m_FCanonicalize(const Opnd0 &Op0) {
   return m_Intrinsic<Intrinsic::canonicalize>(Op0);
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_Ctlz(const Opnd0 &Op0,
-                                                        const Opnd1 &Op1) {
+inline auto m_Ctlz(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::ctlz>(Op0, Op1);
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_Cttz(const Opnd0 &Op0,
-                                                        const Opnd1 &Op1) {
+inline auto m_Cttz(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::cttz>(Op0, Op1);
 }
 
@@ -2934,86 +2873,71 @@ inline auto m_MaxOrMin(const Opnd0 &Op0, const Opnd1 &Op1) {
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMinNum(const Opnd0 &Op0,
-                                                           const Opnd1 &Op1) {
+inline auto m_FMinNum(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::minnum>(Op0, Op1);
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMinimum(const Opnd0 &Op0,
-                                                            const Opnd1 &Op1) {
+inline auto m_FMinimum(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::minimum>(Op0, Op1);
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty
-m_FMinimumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+inline auto m_FMinimumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::minimumnum>(Op0, Op1);
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMaxNum(const Opnd0 &Op0,
-                                                           const Opnd1 &Op1) {
+inline auto m_FMaxNum(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::maxnum>(Op0, Op1);
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMaximum(const Opnd0 &Op0,
-                                                            const Opnd1 &Op1) {
+inline auto m_FMaximum(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::maximum>(Op0, Op1);
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty
-m_FMaximumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+inline auto m_FMaximumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::maximumnum>(Op0, Op1);
 }
 
 template <typename Opnd0, typename Opnd1>
-inline match_combine_or<typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty,
-                        typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty>
-m_FMaxNum_or_FMaximumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+inline auto m_FMaxNum_or_FMaximumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_CombineOr(m_FMaxNum(Op0, Op1), m_FMaximumNum(Op0, Op1));
 }
 
 template <typename Opnd0, typename Opnd1>
-inline match_combine_or<typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty,
-                        typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty>
-m_FMinNum_or_FMinimumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+inline auto m_FMinNum_or_FMinimumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_CombineOr(m_FMinNum(Op0, Op1), m_FMinimumNum(Op0, Op1));
 }
 
 template <typename Opnd0, typename Opnd1, typename Opnd2>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2>::Ty
-m_FShl(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
+inline auto m_FShl(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
   return m_Intrinsic<Intrinsic::fshl>(Op0, Op1, Op2);
 }
 
 template <typename Opnd0, typename Opnd1, typename Opnd2>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2>::Ty
-m_FShr(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
+inline auto m_FShr(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
   return m_Intrinsic<Intrinsic::fshr>(Op0, Op1, Op2);
 }
 
-template <typename Opnd0>
-inline typename m_Intrinsic_Ty<Opnd0>::Ty m_Sqrt(const Opnd0 &Op0) {
+template <typename Opnd0> inline auto m_Sqrt(const Opnd0 &Op0) {
   return m_Intrinsic<Intrinsic::sqrt>(Op0);
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_CopySign(const Opnd0 &Op0,
-                                                            const Opnd1 &Op1) {
+inline auto m_CopySign(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::copysign>(Op0, Op1);
 }
 
-template <typename Opnd0>
-inline typename m_Intrinsic_Ty<Opnd0>::Ty m_VecReverse(const Opnd0 &Op0) {
+template <typename Opnd0> inline auto m_VecReverse(const Opnd0 &Op0) {
   return m_Intrinsic<Intrinsic::vector_reverse>(Op0);
 }
 
 template <typename Opnd0, typename Opnd1, typename Opnd2>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2>::Ty
-m_VectorInsert(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
+inline auto m_VectorInsert(const Opnd0 &Op0, const Opnd1 &Op1,
+                           const Opnd2 &Op2) {
   return m_Intrinsic<Intrinsic::vector_insert>(Op0, Op1, Op2);
 }
 
@@ -3256,16 +3180,14 @@ inline InsertValue_match<Ind, Val_t, Elt_t> m_InsertValue(const Val_t &Val,
 }
 
 /// Matches a call to `llvm.vscale()`.
-inline IntrinsicID_match m_VScale() { return m_Intrinsic<Intrinsic::vscale>(); }
+inline auto m_VScale() { return m_Intrinsic<Intrinsic::vscale>(); }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty
-m_Interleave2(const Opnd0 &Op0, const Opnd1 &Op1) {
+inline auto m_Interleave2(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::vector_interleave2>(Op0, Op1);
 }
 
-template <typename Opnd>
-inline typename m_Intrinsic_Ty<Opnd>::Ty m_Deinterleave2(const Opnd &Op) {
+template <typename Opnd> inline auto m_Deinterleave2(const Opnd &Op) {
   return m_Intrinsic<Intrinsic::vector_deinterleave2>(Op);
 }
 

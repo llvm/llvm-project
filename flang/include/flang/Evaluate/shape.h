@@ -15,10 +15,8 @@
 #include "expression.h"
 #include "traverse.h"
 #include "variable.h"
-#include "flang/Common/indirection.h"
 #include "flang/Evaluate/type.h"
 #include <optional>
-#include <variant>
 
 namespace Fortran::parser {
 class ContextualMessages;

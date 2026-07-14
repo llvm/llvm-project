@@ -52,6 +52,16 @@ struct Policy {
     bool can_run_frame_recognizers = true;
   };
 
+  /// Why a private-state policy is being pushed. Distinguishes a PST's
+  /// ordinary private-state processing from a PST created to service
+  /// RunThreadPlan expression evaluation, which must not run frame
+  /// providers or recognizers (see StackFrameList::SelectMostRelevantFrame
+  /// and Thread::GetStackFrameList).
+  enum class PrivateStatePurpose {
+    Default,
+    RunningExpression,
+  };
+
   View view = View::Public;
   Capabilities capabilities;
 
@@ -62,7 +72,8 @@ struct Policy {
   /// apply their named change on top.
   /// @{
   static Policy CreatePublicState();
-  static Policy CreatePrivateState();
+  static Policy CreatePrivateState(
+      PrivateStatePurpose purpose = PrivateStatePurpose::Default);
   static Policy CreatePublicStateRunningExpression();
   /// @}
 
@@ -84,10 +95,7 @@ struct Policy {
 /// thread's stack when the task starts.
 class PolicyStack {
 public:
-  static PolicyStack &Get() {
-    static thread_local PolicyStack s_stack;
-    return s_stack;
-  }
+  static PolicyStack &Get();
 
   Policy Current() const;
 
@@ -120,8 +128,10 @@ public:
   /// which already inherit from Current(). So the pushed policy preserves
   /// existing stack state instead of resetting unrelated fields.
 
-  [[nodiscard]] Guard PushPrivateState() {
-    Push(Policy::CreatePrivateState());
+  [[nodiscard]] Guard
+  PushPrivateState(Policy::PrivateStatePurpose purpose =
+                       Policy::PrivateStatePurpose::Default) {
+    Push(Policy::CreatePrivateState(purpose));
     return Guard();
   }
 
