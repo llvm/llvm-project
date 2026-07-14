@@ -76,6 +76,9 @@ ELF Improvements
   ``.debug_info``), fixing DWARF corruption in the output.
   (`#209035 <https://github.com/llvm/llvm-project/pull/209035>`_)
   (`#209042 <https://github.com/llvm/llvm-project/pull/209042>`_)
+* ``--retain-symbols-file`` now filters ``.symtab`` instead of ``.dynsym``,
+  matching GNU ld.
+  (`#209063 <https://github.com/llvm/llvm-project/pull/209063>`_)
 * ``INCLUDE`` in linker scripts now fully parses its own content instead of
   sharing a lexer buffer stack with the includer, fixing spurious acceptance
   of malformed scripts.
@@ -143,12 +146,20 @@ Breaking changes
 COFF Improvements
 -----------------
 
+* Added support for ``.obj.arm64ec`` sections to allow embedding ARM64EC object
+  files inside ARM64 object files.
+
 MinGW Improvements
 ------------------
 
 * Added ``--push-state`` and ``--pop-state``, offering the same semantics as
   when used with the ELF linker: The state of ``--Bstatic``/``--Bdynamic`` and
   ``--whole-archive`` are pushed onto a stack and popped from it.
+
+* Added the ``--native-def`` option to specify the native module-definition
+  file for ARM64X targets. If a module-definition file is passed without this
+  option, it is used for both native and EC views. ``--native-def=`` can be
+  used to prevent the native view from using the default file.
 
 MachO Improvements
 ------------------

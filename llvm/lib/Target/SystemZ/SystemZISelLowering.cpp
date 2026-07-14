@@ -698,9 +698,11 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FMAXNUM, Type, Legal);
       setOperationAction(ISD::FMAXIMUM, Type, Legal);
       setOperationAction(ISD::FMAXIMUMNUM, Type, Legal);
+      setOperationAction(ISD::PSEUDO_FMAX, Type, Legal);
       setOperationAction(ISD::FMINNUM, Type, Legal);
       setOperationAction(ISD::FMINIMUM, Type, Legal);
       setOperationAction(ISD::FMINIMUMNUM, Type, Legal);
+      setOperationAction(ISD::PSEUDO_FMIN, Type, Legal);
     }
 
     // Handle constrained floating-point operations.
