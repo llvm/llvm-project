@@ -50,6 +50,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUArgumentUsageInfo.cpp
   AMDGPUAsanInstrumentation.cpp
   AMDGPUAsmPrinter.cpp
+  AMDGPUAssignIdxToM0.cpp
   AMDGPUAtomicOptimizer.cpp
   AMDGPUAttributor.cpp
   AMDGPUBarrierLatency.cpp
@@ -86,6 +87,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPULowerExecSync.cpp
   AMDGPUSwLowerLDS.cpp
   AMDGPUMachineFunctionInfo.cpp
+  AMDGPUMachineInstrs.cpp
   AMDGPUMachineModuleInfo.cpp
   AMDGPUMacroFusion.cpp
   AMDGPUMCInstLower.cpp
