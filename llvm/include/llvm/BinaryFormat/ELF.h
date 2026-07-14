@@ -1812,12 +1812,13 @@ enum {
 };
 
 // GNU note types.
-enum {
+enum : unsigned {
   NT_GNU_ABI_TAG = 1,
   NT_GNU_HWCAP = 2,
   NT_GNU_BUILD_ID = 3,
   NT_GNU_GOLD_VERSION = 4,
   NT_GNU_PROPERTY_TYPE_0 = 5,
+  NT_FDO_DLOPEN_METADATA = 0x407c0c0a,
   FDO_PACKAGING_METADATA = 0xcafe1a7e,
 };
 
