@@ -212,11 +212,8 @@ FunctionToMachineFunctionPassAdaptor
 createFunctionToMachineFunctionPassAdaptor(MachineFunctionPassT &&Pass) {
   using PassModelT = detail::PassModel<MachineFunction, MachineFunctionPassT,
                                        MachineFunctionAnalysisManager>;
-  // Do not use make_unique, it causes too many template instantiations,
-  // causing terrible compile times.
   return FunctionToMachineFunctionPassAdaptor(
-      FunctionToMachineFunctionPassAdaptor::PassConceptT::unique_ptr(
-          new PassModelT(std::forward<MachineFunctionPassT>(Pass))));
+      PassModelT::create(std::move(Pass)));
 }
 
 template <>

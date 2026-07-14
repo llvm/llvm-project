@@ -134,11 +134,15 @@ private:
     getPass(Self).printPipeline(OS, MapClassName2PassName);
   }
 
-public:
-  explicit PassModel(PassT Pass)
+  explicit PassModel(PassT &&Pass)
       : PassConceptT(PassT::name(), PassT::isRequired(), destroyImpl, runImpl,
                      printPipelineImpl),
         Pass(std::move(Pass)) {}
+
+public:
+  static typename PassConceptT::unique_ptr create(PassT &&Pass) {
+    return typename PassConceptT::unique_ptr(new PassModel(std::move(Pass)));
+  }
 };
 
 /// Abstract concept of an analysis result.

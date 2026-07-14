@@ -358,11 +358,7 @@ createModuleToPostOrderCGSCCPassAdaptor(CGSCCPassT &&Pass) {
   using PassModelT =
       detail::PassModel<LazyCallGraph::SCC, CGSCCPassT, CGSCCAnalysisManager,
                         LazyCallGraph &, CGSCCUpdateResult &>;
-  // Do not use make_unique, it causes too many template instantiations,
-  // causing terrible compile times.
-  return ModuleToPostOrderCGSCCPassAdaptor(
-      ModuleToPostOrderCGSCCPassAdaptor::PassConceptT::unique_ptr(
-          new PassModelT(std::forward<CGSCCPassT>(Pass))));
+  return ModuleToPostOrderCGSCCPassAdaptor(PassModelT::create(std::move(Pass)));
 }
 
 /// A proxy from a \c FunctionAnalysisManager to an \c SCC.
@@ -504,12 +500,8 @@ createCGSCCToFunctionPassAdaptor(FunctionPassT &&Pass,
                                  bool NoRerun = false) {
   using PassModelT =
       detail::PassModel<Function, FunctionPassT, FunctionAnalysisManager>;
-  // Do not use make_unique, it causes too many template instantiations,
-  // causing terrible compile times.
-  return CGSCCToFunctionPassAdaptor(
-      CGSCCToFunctionPassAdaptor::PassConceptT::unique_ptr(
-          new PassModelT(std::forward<FunctionPassT>(Pass))),
-      EagerlyInvalidate, NoRerun);
+  return CGSCCToFunctionPassAdaptor(PassModelT::create(std::move(Pass)),
+                                    EagerlyInvalidate, NoRerun);
 }
 
 // A marker to determine if function passes should be run on a function within a
@@ -577,12 +569,8 @@ DevirtSCCRepeatedPass createDevirtSCCRepeatedPass(CGSCCPassT &&Pass,
   using PassModelT =
       detail::PassModel<LazyCallGraph::SCC, CGSCCPassT, CGSCCAnalysisManager,
                         LazyCallGraph &, CGSCCUpdateResult &>;
-  // Do not use make_unique, it causes too many template instantiations,
-  // causing terrible compile times.
-  return DevirtSCCRepeatedPass(
-      DevirtSCCRepeatedPass::PassConceptT::unique_ptr(
-          new PassModelT(std::forward<CGSCCPassT>(Pass))),
-      MaxIterations);
+  return DevirtSCCRepeatedPass(PassModelT::create(std::move(Pass)),
+                               MaxIterations);
 }
 
 // Clear out the debug logging macro.

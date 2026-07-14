@@ -220,10 +220,7 @@ public:
   addPass(PassT &&Pass) {
     using PassModelT =
         detail::PassModel<IRUnitT, PassT, AnalysisManagerT, ExtraArgTs...>;
-    // Do not use make_unique or emplace_back, they cause too many template
-    // instantiations, causing terrible compile times.
-    Passes.push_back(typename PassConceptT::unique_ptr(
-        new PassModelT(std::forward<PassT>(Pass))));
+    Passes.push_back(PassModelT::create(std::move(Pass)));
   }
 
   /// When adding a pass manager pass that has the same type as this pass
@@ -898,12 +895,8 @@ createModuleToFunctionPassAdaptor(FunctionPassT &&Pass,
                                   bool EagerlyInvalidate = false) {
   using PassModelT =
       detail::PassModel<Function, FunctionPassT, FunctionAnalysisManager>;
-  // Do not use make_unique, it causes too many template instantiations,
-  // causing terrible compile times.
-  return ModuleToFunctionPassAdaptor(
-      ModuleToFunctionPassAdaptor::PassConceptT::unique_ptr(
-          new PassModelT(std::forward<FunctionPassT>(Pass))),
-      EagerlyInvalidate);
+  return ModuleToFunctionPassAdaptor(PassModelT::create(std::move(Pass)),
+                                     EagerlyInvalidate);
 }
 
 /// A utility pass template to force an analysis result to be available.
