@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <climits>
 #include <optional>
+#include <string>
 #include <vector>
 
 namespace llvm {
@@ -22,6 +23,12 @@ class raw_ostream;
 
 namespace clang {
 namespace api_notes {
+
+std::string
+formatAPINotesParameterSelector(llvm::ArrayRef<llvm::StringRef> Parameters);
+std::string
+formatAPINotesParameterSelector(llvm::ArrayRef<std::string> Parameters);
+
 enum class RetainCountConventionKind {
   None,
   CFReturnsRetained,

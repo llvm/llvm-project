@@ -171,7 +171,7 @@ public:
                   llvm::ArrayRef<std::string> Parameters);
 
   /// Collect exact parameter selectors stored for the given C++ method.
-  void collectCXXMethodParameterSelectors(
+  bool collectCXXMethodParameterSelectors(
       ContextID CtxID, llvm::StringRef Name,
       llvm::SmallVectorImpl<llvm::SmallVector<std::string, 4>> &Selectors);
 
@@ -202,7 +202,7 @@ public:
                        std::optional<Context> Ctx = std::nullopt);
 
   /// Collect exact parameter selectors stored for the given global function.
-  void collectGlobalFunctionParameterSelectors(
+  bool collectGlobalFunctionParameterSelectors(
       llvm::StringRef Name,
       llvm::SmallVectorImpl<llvm::SmallVector<std::string, 4>> &Selectors,
       std::optional<Context> Ctx = std::nullopt);

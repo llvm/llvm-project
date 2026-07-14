@@ -7,10 +7,35 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/APINotes/Types.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/raw_ostream.h"
+
+namespace {
+template <typename ParameterT>
+std::string
+formatAPINotesParameterSelectorImpl(llvm::ArrayRef<ParameterT> Parameters) {
+  std::string Result;
+  llvm::raw_string_ostream OS(Result);
+  OS << "[";
+  llvm::interleaveComma(Parameters, OS);
+  OS << "]";
+  return Result;
+}
+} // namespace
 
 namespace clang {
 namespace api_notes {
+
+std::string
+formatAPINotesParameterSelector(llvm::ArrayRef<llvm::StringRef> Parameters) {
+  return formatAPINotesParameterSelectorImpl(Parameters);
+}
+
+std::string
+formatAPINotesParameterSelector(llvm::ArrayRef<std::string> Parameters) {
+  return formatAPINotesParameterSelectorImpl(Parameters);
+}
+
 LLVM_DUMP_METHOD void CommonEntityInfo::dump(llvm::raw_ostream &OS) const {
   if (Unavailable)
     OS << "[Unavailable] (" << UnavailableMsg << ")" << ' ';

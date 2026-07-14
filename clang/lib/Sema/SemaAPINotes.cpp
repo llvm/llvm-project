@@ -1124,20 +1124,7 @@ makeParameterSelectorSet(ArrayRef<SmallVector<std::string, 4>> Selectors) {
   return Set;
 }
 
-static std::string
-formatParameterSelectorForDiagnostic(ArrayRef<std::string> Parameters) {
-  std::string Result = "[";
-  for (unsigned I = 0, E = Parameters.size(); I != E; ++I) {
-    if (I)
-      Result += ", ";
-    Result += Parameters[I];
-  }
-  Result += "]";
-  return Result;
-}
-
-static void collectOverloadParameterSelectors(const Sema &S,
-                                              const FunctionDecl *FD,
+static void collectOverloadParameterSelectors(const Sema &S, FunctionDecl *FD,
                                               APINotesParameterSelectorSet &Set,
                                               bool &IsRepresentative) {
   IsRepresentative = false;
@@ -1153,16 +1140,8 @@ static void collectOverloadParameterSelectors(const Sema &S,
     if (auto Candidates = getAPINotesParameterSelectorCandidates(S, Candidate))
       Set.add(*Candidates);
   };
-
-  for (NamedDecl *ND : FD->getDeclContext()->lookup(FD->getDeclName())) {
-    if (auto *Candidate = dyn_cast<FunctionDecl>(ND))
-      AddCandidate(Candidate);
-  }
-
-  if (FoundRepresentative)
-    return;
-
-  for (Decl *D : FD->getDeclContext()->decls()) {
+  
+  for (Decl *D : FD->getDeclContext()->noload_decls()) {
     auto *ND = dyn_cast<NamedDecl>(D);
     if (!ND || ND->getDeclName() != FD->getDeclName())
       continue;
@@ -1189,7 +1168,8 @@ static void diagnoseUnmatchedParameterSelectors(
     S.Diag(Loc, diag::warn_apinotes_message)
         << (llvm::Twine("API notes entry for '") + Name +
             "' has unmatched Where.Parameters " +
-            formatParameterSelectorForDiagnostic(APINotesSelector.Parameters))
+            api_notes::formatAPINotesParameterSelector(
+                APINotesSelector.Parameters))
                .str();
   }
 }
@@ -1274,13 +1254,14 @@ void Sema::ProcessAPINotes(Decl *D) {
 
           if (DiagnoseUnmatchedSelectors && !DeclarationSelectors.empty()) {
             SmallVector<SmallVector<std::string, 4>, 4> RawAPINotesSelectors;
-            Reader->collectGlobalFunctionParameterSelectors(
-                FD->getName(), RawAPINotesSelectors, APINotesContext);
-            APINotesParameterSelectorSet APINotesSelectors =
-                makeParameterSelectorSet(RawAPINotesSelectors);
-            diagnoseUnmatchedParameterSelectors(
-                *this, FD->getLocation(), FD->getName(), APINotesSelectors,
-                DeclarationSelectors);
+            if (Reader->collectGlobalFunctionParameterSelectors(
+                    FD->getName(), RawAPINotesSelectors, APINotesContext)) {
+              APINotesParameterSelectorSet APINotesSelectors =
+                  makeParameterSelectorSet(RawAPINotesSelectors);
+              diagnoseUnmatchedParameterSelectors(
+                  *this, FD->getLocation(), FD->getName(), APINotesSelectors,
+                  DeclarationSelectors);
+            }
           }
         }
       }
@@ -1495,13 +1476,14 @@ void Sema::ProcessAPINotes(Decl *D) {
                                               DiagnoseUnmatchedSelectors);
             if (DiagnoseUnmatchedSelectors && !DeclarationSelectors.empty()) {
               SmallVector<SmallVector<std::string, 4>, 4> RawAPINotesSelectors;
-              Reader->collectCXXMethodParameterSelectors(
-                  Context->id, MethodName, RawAPINotesSelectors);
-              APINotesParameterSelectorSet APINotesSelectors =
-                  makeParameterSelectorSet(RawAPINotesSelectors);
-              diagnoseUnmatchedParameterSelectors(
-                  *this, CXXMethod->getLocation(), MethodName,
-                  APINotesSelectors, DeclarationSelectors);
+              if (Reader->collectCXXMethodParameterSelectors(
+                      Context->id, MethodName, RawAPINotesSelectors)) {
+                APINotesParameterSelectorSet APINotesSelectors =
+                    makeParameterSelectorSet(RawAPINotesSelectors);
+                diagnoseUnmatchedParameterSelectors(
+                    *this, CXXMethod->getLocation(), MethodName,
+                    APINotesSelectors, DeclarationSelectors);
+              }
             }
           }
         }

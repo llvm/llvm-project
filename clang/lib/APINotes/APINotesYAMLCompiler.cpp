@@ -794,40 +794,15 @@ struct KnownFunctionSelector {
   llvm::ArrayRef<llvm::StringRef> Parameters;
 };
 
-static bool equalParameterSelectors(llvm::ArrayRef<llvm::StringRef> LHS,
-                                    llvm::ArrayRef<llvm::StringRef> RHS) {
-  if (LHS.size() != RHS.size())
-    return false;
-
-  for (unsigned I = 0, E = LHS.size(); I != E; ++I)
-    if (LHS[I] != RHS[I])
-      return false;
-
-  return true;
-}
-
 static bool
 hasFunctionSelector(llvm::ArrayRef<KnownFunctionSelector> KnownSelectors,
                     llvm::StringRef Name,
                     llvm::ArrayRef<llvm::StringRef> Parameters) {
   for (const KnownFunctionSelector &Known : KnownSelectors)
-    if (Known.Name == Name &&
-        equalParameterSelectors(Known.Parameters, Parameters))
+    if (Known.Name == Name && Known.Parameters == Parameters)
       return true;
 
   return false;
-}
-
-static std::string
-formatWhereParameters(llvm::ArrayRef<llvm::StringRef> Parameters) {
-  std::string Result = "[";
-  for (unsigned I = 0, E = Parameters.size(); I != E; ++I) {
-    if (I)
-      Result += ", ";
-    Result += Parameters[I];
-  }
-  Result += "]";
-  return Result;
 }
 
 class YAMLConverter {
@@ -1215,7 +1190,7 @@ public:
                                 *WhereParameters.second)) {
           emitError(llvm::Twine("duplicate definition of C++ method '") +
                     CXXMethod.Name + "' with Where.Parameters " +
-                    formatWhereParameters(*WhereParameters.second));
+                    formatAPINotesParameterSelector(*WhereParameters.second));
           continue;
         }
         KnownMethodSelectors.push_back(
@@ -1309,7 +1284,7 @@ public:
                                 *WhereParameters.second)) {
           emitError(llvm::Twine("duplicate definition of global function '") +
                     Function.Name + "' with Where.Parameters " +
-                    formatWhereParameters(*WhereParameters.second));
+                    formatAPINotesParameterSelector(*WhereParameters.second));
           continue;
         }
         KnownFunctionSelectors.push_back(
