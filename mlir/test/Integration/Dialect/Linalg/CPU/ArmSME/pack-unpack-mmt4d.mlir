@@ -199,7 +199,7 @@ func.func private @pack_acc(%C: tensor<7x13xf32>) -> tensor<?x?x?x?xf32> {
 // @unpack_acc
 //
 // Implements unpacking for the C matrix (accumulator) in matrix
-// multiplication. The inner tile size is "scalable": 8 * vscale
+// multiplication. The inner tile sizes are "scalable": 8 * vscale, 8 * vscale
 //===----------------------------------------------------------------------===//
 func.func private @unpack_acc(%C_packed: tensor<?x?x?x?xf32>) -> tensor<7x13xf32> {
   %vs = vector.vscale
