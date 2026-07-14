@@ -40,7 +40,6 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedHookInterface.h"
-#include "lldb/Interpreter/Interfaces/ScriptedStopHookInterface.h"
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
 #include "lldb/Interpreter/OptionValueEnumeration.h"
 #include "lldb/Interpreter/OptionValues.h"
@@ -2659,8 +2658,10 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
           }
         }
 
-        if (replaced_modules.empty())
-          m_images.Append(module_sp, notify);
+        if (replaced_modules.empty()) {
+          if (!m_images.AppendIfNeeded(module_sp, notify) && notify)
+            NotifyModuleAdded(m_images, module_sp);
+        }
 
         for (ModuleSP &old_module_sp : replaced_modules) {
           auto old_module_wp = old_module_sp->weak_from_this();
@@ -4325,7 +4326,7 @@ Status Target::StopHookScripted::SetScriptCallback(
     return error;
   }
 
-  m_interface_sp = script_interp->CreateScriptedStopHookInterface();
+  m_interface_sp = script_interp->CreateScriptedHookInterface();
   if (!m_interface_sp) {
     error = Status::FromErrorStringWithFormat(
         "ScriptedStopHook::%s () - ERROR: %s", __FUNCTION__,

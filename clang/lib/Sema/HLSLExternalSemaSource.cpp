@@ -281,6 +281,22 @@ static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
       .addGatherCmpMethods(Dim, IsArray);
 }
 
+/// Set up RWTexture type: UAV texture with only operator[] (uint2, read/write),
+/// Load and GetDimensions (no sample/gather/mips/LOD).
+static BuiltinTypeDeclBuilder setupRWTextureType(CXXRecordDecl *Decl, Sema &S,
+                                                 bool IsArray,
+                                                 ResourceDimension Dim) {
+  return BuiltinTypeDeclBuilder(S, Decl)
+      .addTextureHandle(ResourceClass::UAV, /*IsROV=*/false, IsArray, Dim)
+      .addTextureLoadMethods(Dim, IsArray)
+      .addArraySubscriptOperators(Dim, IsArray)
+      .addGetDimensionsMethods(Dim)
+      .addDefaultHandleConstructor()
+      .addCopyConstructor()
+      .addCopyAssignmentOperator()
+      .addStaticInitializationFunctions(false);
+}
+
 // Add a partial specialization for a template. The `TextureTemplate` is
 // `Texture<element_type>`, and it will be specialized for vectors:
 // `Texture<vector<element_type, element_count>>`.
@@ -317,6 +333,12 @@ addVectorTexturePartialSpecialization(Sema &S, NamespaceDecl *HLSLNamespace,
           ElaboratedTypeKeyword::Class, TemplateName(TextureTemplate),
           {TemplateArgument(VectorType)}, {}));
 
+  auto *PartialSpec = ClassTemplatePartialSpecializationDecl::Create(
+      AST, TagDecl::TagKind::Class, HLSLNamespace, SourceLocation(),
+      SourceLocation(), TemplateParams, TextureTemplate,
+      {TemplateArgument(VectorType)},
+      CanQualType::CreateUnsafe(CanonInjectedTST), nullptr);
+
   // Set the template arguments as written.
   TemplateArgument Arg(VectorType);
   TemplateArgumentLoc ArgLoc =
@@ -324,13 +346,8 @@ addVectorTexturePartialSpecialization(Sema &S, NamespaceDecl *HLSLNamespace,
   TemplateArgumentListInfo ArgsInfo =
       TemplateArgumentListInfo(SourceLocation(), SourceLocation());
   ArgsInfo.addArgument(ArgLoc);
-
-  auto *PartialSpec = ClassTemplatePartialSpecializationDecl::Create(
-      AST, TagDecl::TagKind::Class, HLSLNamespace, SourceLocation(),
-      SourceLocation(), TemplateParams,
-      ASTTemplateArgumentListInfo::Create(AST, ArgsInfo), TextureTemplate,
-      {TemplateArgument(VectorType)},
-      CanQualType::CreateUnsafe(CanonInjectedTST), nullptr);
+  PartialSpec->setTemplateArgsAsWritten(
+      ASTTemplateArgumentListInfo::Create(AST, ArgsInfo));
 
   PartialSpec->setImplicit(true);
   PartialSpec->setLexicalDeclContext(HLSLNamespace);
@@ -687,6 +704,25 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(PartialSpec, [this](CXXRecordDecl *Decl) {
     setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
                      /*IsArray=*/false, ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWTexture2D")
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/false,
+                       ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  auto *PartialSpecRW = addVectorTexturePartialSpecialization(
+      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
+  onCompletion(PartialSpecRW, [this](CXXRecordDecl *Decl) {
+    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/false,
+                       ResourceDimension::Dim2D)
         .completeDefinition();
   });
 

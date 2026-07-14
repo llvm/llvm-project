@@ -29,6 +29,18 @@ using namespace llvm::object;
 static TimerGroup OffloadBundlerTimerGroup("Offload Bundler Timer Group",
                                            "Timer group for offload bundler");
 
+// Returns the on-disk size recorded in the compressed offload bundle header at
+// the start of \p Blob, or std::nullopt if the header carries no size field.
+static std::optional<size_t> getCompressedBundleSize(StringRef Blob) {
+  Expected<CompressedOffloadBundle::CompressedBundleHeader> HeaderOrErr =
+      CompressedOffloadBundle::CompressedBundleHeader::tryParse(Blob);
+  if (!HeaderOrErr) {
+    consumeError(HeaderOrErr.takeError());
+    return std::nullopt;
+  }
+  return HeaderOrErr->FileSize;
+}
+
 // Extract an Offload bundle (usually a Offload Bundle) from a fat_bin
 // section.
 Error extractOffloadBundle(MemoryBufferRef Contents, uint64_t SectionOffset,
@@ -50,15 +62,26 @@ Error extractOffloadBundle(MemoryBufferRef Contents, uint64_t SectionOffset,
     if (identify_magic((*Buffer).getBuffer()) ==
         file_magic::offload_bundle_compressed) {
       Magic = "CCOB";
-      // Decompress this bundle first.
-      NextbundleStart = (*Buffer).getBuffer().find(Magic, Magic.size());
-      if (NextbundleStart == StringRef::npos)
+      // Locate this bundle's end and the next bundle from the header size.
+      size_t CurBundleEnd;
+      if (std::optional<size_t> Size =
+              getCompressedBundleSize((*Buffer).getBuffer())) {
+        CurBundleEnd = *Size;
+        NextbundleStart = (*Buffer).getBuffer().find(Magic, *Size);
+      } else {
+        // Legacy bundle without a recorded size: fall back to magic scanning.
+        NextbundleStart = (*Buffer).getBuffer().find(Magic, Magic.size());
+        CurBundleEnd = NextbundleStart;
+      }
+      if (NextbundleStart == StringRef::npos) {
         NextbundleStart = (*Buffer).getBuffer().size();
+        if (CurBundleEnd == StringRef::npos)
+          CurBundleEnd = (*Buffer).getBuffer().size();
+      }
 
       ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
           MemoryBuffer::getMemBuffer(
-              (*Buffer).getBuffer().take_front(NextbundleStart), FileName,
-              false);
+              (*Buffer).getBuffer().take_front(CurBundleEnd), FileName, false);
       if (std::error_code EC = CodeOrErr.getError())
         return createFileError(FileName, EC);
 

@@ -6703,13 +6703,17 @@ CGCallee CGCallee::prepareConcreteCallee(CodeGenFunction &CGF) const {
 
 RValue CodeGenFunction::EmitVAArg(VAArgExpr *VE, Address &VAListAddr,
                                   AggValueSlot Slot) {
-  VAListAddr = VE->isMicrosoftABI() ? EmitMSVAListRef(VE->getSubExpr())
-                                    : EmitVAListRef(VE->getSubExpr());
+  VAListAddr = VE->isMicrosoftABI()
+                   ? EmitMSVAListRef(VE->getSubExpr())
+                   : (VE->isZOSABI() ? EmitZOSVAListRef(VE->getSubExpr())
+                                     : EmitVAListRef(VE->getSubExpr()));
   QualType Ty = VE->getType();
   if (Ty->isVariablyModifiedType())
     EmitVariablyModifiedType(Ty);
   if (VE->isMicrosoftABI())
     return CGM.getABIInfo().EmitMSVAArg(*this, VAListAddr, Ty, Slot);
+  if (VE->isZOSABI())
+    return CGM.getABIInfo().EmitZOSVAArg(*this, VAListAddr, Ty, Slot);
   return CGM.getABIInfo().EmitVAArg(*this, VAListAddr, Ty, Slot);
 }
 
