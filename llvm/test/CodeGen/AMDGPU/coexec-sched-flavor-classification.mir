@@ -1,5 +1,5 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec -debug-only=machine-scheduler %s -filetype=null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu12.50 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec -debug-only=machine-scheduler %s -filetype=null 2>&1 | FileCheck %s
 
 # CHECK: HWUI Resource Pressure:
 # CHECK-DAG: VMEM: {{[0-9]+}} cycles, 10 instrs

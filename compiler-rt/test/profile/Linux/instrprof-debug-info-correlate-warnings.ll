@@ -21,7 +21,8 @@ void no_name() {}
 void no_cfg() {}
 void no_counter() {}
 void no_profc() {}
-void no_func() {}
+__attribute__((always_inline)) void no_func() {}
+void use_func() { no_func(); }
 
 // NOTE: After generating the IR below, manually remove the follwing pieces
 // 1. Remove "@removed" function and "@__profc_removed" global
@@ -55,6 +56,8 @@ $__profc_no_profc = comdat nodeduplicate
 
 $__profc_no_func = comdat nodeduplicate
 
+$__profc_use_func = comdat nodeduplicate
+
 $__llvm_profile_filename = comdat any
 
 @__llvm_profile_raw_version = hidden constant i64 648518346341351434, comdat
@@ -65,119 +68,153 @@ $__llvm_profile_filename = comdat any
 @__profn_no_counter = private constant [10 x i8] c"no_counter"
 @__profn_no_profc = private constant [8 x i8] c"no_profc"
 @__profn_no_func = private constant [7 x i8] c"no_func"
+@__profn_use_func = private constant [8 x i8] c"use_func"
 @__profc_main = private global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", comdat, align 8, !dbg !0
-@__profc_no_name = private global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", comdat, align 8, !dbg !19
-@__profc_no_cfg = private global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", comdat, align 8, !dbg !24
-@__profc_no_counter = private global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", comdat, align 8, !dbg !29
-@__profc_no_func = private global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", comdat, align 8, !dbg !39
+@__profc_no_name = private global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", comdat, align 8, !dbg !22
+@__profc_no_cfg = private global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", comdat, align 8, !dbg !28
+@__profc_no_counter = private global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", comdat, align 8, !dbg !34
+@__profc_no_func = private global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", comdat, align 8, !dbg !46
+@__profc_use_func = private global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", comdat, align 8, !dbg !52
 @llvm.compiler.used = appending global [5 x ptr] [ptr @__profc_main, ptr @__profc_no_name, ptr @__profc_no_cfg, ptr @__profc_no_counter, ptr @__profc_no_func], section "llvm.metadata"
 @__llvm_profile_filename = hidden constant [20 x i8] c"default_%m.proflite\00", comdat
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local i32 @main() #0 !dbg !2 {
-  %1 = alloca i32, align 4
-  %2 = load i64, ptr @__profc_main, align 8
-  %3 = add i64 %2, 1
-  store i64 %3, ptr @__profc_main, align 8
-  store i32 0, ptr %1, align 4
-  ret i32 0, !dbg !53
+entry:
+  %retval = alloca i32, align 4
+  %pgocount = load i64, ptr @__profc_main, align 8
+  %0 = add i64 %pgocount, 1
+  store i64 %0, ptr @__profc_main, align 8
+  store i32 0, ptr %retval, align 4
+  ret i32 0, !dbg !64
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @no_name() #0 !dbg !21 {
-  %1 = load i64, ptr @__profc_no_name, align 8, !dbg !55
-  %2 = add i64 %1, 1, !dbg !55
-  store i64 %2, ptr @__profc_no_name, align 8, !dbg !55
-  ret void, !dbg !55
+define dso_local void @no_name() #0 !dbg !24 {
+entry:
+  %pgocount = load i64, ptr @__profc_no_name, align 8, !dbg !66
+  %0 = add i64 %pgocount, 1, !dbg !66
+  store i64 %0, ptr @__profc_no_name, align 8, !dbg !66
+  ret void, !dbg !66
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @no_cfg() #0 !dbg !26 {
-  %1 = load i64, ptr @__profc_no_cfg, align 8, !dbg !56
-  %2 = add i64 %1, 1, !dbg !56
-  store i64 %2, ptr @__profc_no_cfg, align 8, !dbg !56
-  ret void, !dbg !56
+define dso_local void @no_cfg() #0 !dbg !30 {
+entry:
+  %pgocount = load i64, ptr @__profc_no_cfg, align 8, !dbg !67
+  %0 = add i64 %pgocount, 1, !dbg !67
+  store i64 %0, ptr @__profc_no_cfg, align 8, !dbg !67
+  ret void, !dbg !67
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @no_counter() #0 !dbg !31 {
-  %1 = load i64, ptr @__profc_no_counter, align 8, !dbg !57
-  %2 = add i64 %1, 1, !dbg !57
-  store i64 %2, ptr @__profc_no_counter, align 8, !dbg !57
-  ret void, !dbg !57
+define dso_local void @no_counter() #0 !dbg !36 {
+entry:
+  %pgocount = load i64, ptr @__profc_no_counter, align 8, !dbg !68
+  %0 = add i64 %pgocount, 1, !dbg !68
+  store i64 %0, ptr @__profc_no_counter, align 8, !dbg !68
+  ret void, !dbg !68
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @no_profc() #0 !dbg !36 {
-  ret void, !dbg !58
+define dso_local void @no_profc() #0 !dbg !42 {
+entry:
+  ret void, !dbg !69
+}
+
+; Function Attrs: noinline nounwind optnone uwtable
+define dso_local void @use_func() #0 !dbg !54 {
+entry:
+  %pgocount = load i64, ptr @__profc_use_func, align 8, !dbg !71
+  %0 = add i64 %pgocount, 1, !dbg !71
+  store i64 %0, ptr @__profc_use_func, align 8, !dbg !71
+  %pgocount.i = load i64, ptr @__profc_no_func, align 8, !dbg !72
+  %1 = add i64 %pgocount.i, 1, !dbg !72
+  store i64 %1, ptr @__profc_no_func, align 8, !dbg !72
+  ret void, !dbg !74
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.instrprof.increment(ptr, i64, i32, i32) #1
+declare void @llvm.instrprof.increment(ptr, i64, i32, i32) #2
 
 attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-attributes #1 = { nounwind }
+attributes #1 = { alwaysinline nounwind uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+attributes #2 = { nounwind }
 
 !llvm.dbg.cu = !{!7}
-!llvm.module.flags = !{!46, !47, !48, !49, !50, !51, !52}
+!llvm.module.flags = !{!58, !59, !60, !61, !62, !63}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
-!1 = distinct !DIGlobalVariable(name: "__profc_main", scope: !2, file: !3, type: !14, isLocal: true, isDefinition: true, annotations: !44)
-!2 = distinct !DISubprogram(name: "main", scope: !3, file: !3, line: 1, type: !4, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !7)
-!3 = !DIFile(filename: "a.c", directory: "/proc/self/cwd", checksumkind: CSK_MD5, checksum: "22eee0eada6e6964fca794aa5a0966d0")
+!1 = distinct !DIGlobalVariable(name: "__profc_main", scope: !2, file: !3, type: !9, isLocal: true, isDefinition: true, annotations: !10)
+!2 = distinct !DISubprogram(name: "main", scope: !3, file: !3, line: 1, type: !4, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !7, retainedNodes: !8)
+!3 = !DIFile(filename: "a.c", directory: "/proc/self/cwd", checksumkind: CSK_MD5, checksum: "7bab6089d746f793d8c0c8d39f3a691c")
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6}
 !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!7 = distinct !DICompileUnit(language: DW_LANG_C11, file: !3, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: !8, splitDebugInlining: false, nameTableKind: None)
-!8 = !{!0, !9, !19, !24, !29, !34, !39}
-!9 = !DIGlobalVariableExpression(var: !10, expr: !DIExpression())
-!10 = distinct !DIGlobalVariable(name: "__profc_removed", scope: !11, file: !3, type: !14, isLocal: true, isDefinition: true, annotations: !15)
-!11 = distinct !DISubprogram(name: "removed", scope: !3, file: !3, line: 3, type: !12, scopeLine: 3, spFlags: DISPFlagDefinition, unit: !7)
-!12 = !DISubroutineType(types: !13)
-!13 = !{null}
-!14 = !DIBasicType(tag: DW_TAG_unspecified_type, name: "Profile Data Type")
-!15 = !{!16, !17, !18}
-!16 = !{!"Function Name", !"removed"}
-!17 = !{!"CFG Hash", i64 742261418966908927}
-!18 = !{!"Num Counters", i32 1}
-!19 = !DIGlobalVariableExpression(var: !20, expr: !DIExpression())
-!20 = distinct !DIGlobalVariable(name: "__profc_no_name", scope: !21, file: !3, type: !14, isLocal: true, isDefinition: true, annotations: !22)
-!21 = distinct !DISubprogram(name: "no_name", scope: !3, file: !3, line: 4, type: !12, scopeLine: 4, spFlags: DISPFlagDefinition, unit: !7)
-!22 = !{!17, !18}
-!23 = !{!"Function Name", !"no_name"}
-!24 = !DIGlobalVariableExpression(var: !25, expr: !DIExpression())
-!25 = distinct !DIGlobalVariable(name: "__profc_no_cfg", scope: !26, file: !3, type: !14, isLocal: true, isDefinition: true, annotations: !27)
-!26 = distinct !DISubprogram(name: "no_cfg", scope: !3, file: !3, line: 5, type: !12, scopeLine: 5, spFlags: DISPFlagDefinition, unit: !7)
-!27 = !{!28, !18}
-!28 = !{!"Function Name", !"no_cfg"}
-!29 = !DIGlobalVariableExpression(var: !30, expr: !DIExpression())
-!30 = distinct !DIGlobalVariable(name: "__profc_no_counter", scope: !31, file: !3, type: !14, isLocal: true, isDefinition: true, annotations: !32)
-!31 = distinct !DISubprogram(name: "no_counter", scope: !3, file: !3, line: 6, type: !12, scopeLine: 6, spFlags: DISPFlagDefinition, unit: !7)
-!32 = !{!33, !17}
-!33 = !{!"Function Name", !"no_counter"}
+!7 = distinct !DICompileUnit(language: DW_LANG_C11, file: !3, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+!8 = !{!0}
+!9 = !DIBasicType(tag: DW_TAG_unspecified_type, name: "Profile Data Type")
+!10 = !{!11, !12, !13}
+!11 = !{!"Function Name", !"main"}
+!12 = !{!"CFG Hash", i64 742261418966908927}
+!13 = !{!"Num Counters", i32 1}
+!14 = !DIGlobalVariableExpression(var: !15, expr: !DIExpression())
+!15 = distinct !DIGlobalVariable(name: "__profc_removed", scope: !16, file: !3, type: !9, isLocal: true, isDefinition: true, annotations: !20)
+!16 = distinct !DISubprogram(name: "removed", scope: !3, file: !3, line: 3, type: !17, scopeLine: 3, spFlags: DISPFlagDefinition, unit: !7, retainedNodes: !19)
+!17 = !DISubroutineType(types: !18)
+!18 = !{null}
+!19 = !{!14}
+!20 = !{!21, !12, !13}
+!21 = !{!"Function Name", !"removed"}
+!22 = !DIGlobalVariableExpression(var: !23, expr: !DIExpression())
+!23 = distinct !DIGlobalVariable(name: "__profc_no_name", scope: !24, file: !3, type: !9, isLocal: true, isDefinition: true, annotations: !26)
+!24 = distinct !DISubprogram(name: "no_name", scope: !3, file: !3, line: 4, type: !17, scopeLine: 4, spFlags: DISPFlagDefinition, unit: !7, retainedNodes: !25)
+!25 = !{!22}
+!26 = !{!12, !13}
+!28 = !DIGlobalVariableExpression(var: !29, expr: !DIExpression())
+!29 = distinct !DIGlobalVariable(name: "__profc_no_cfg", scope: !30, file: !3, type: !9, isLocal: true, isDefinition: true, annotations: !32)
+!30 = distinct !DISubprogram(name: "no_cfg", scope: !3, file: !3, line: 5, type: !17, scopeLine: 5, spFlags: DISPFlagDefinition, unit: !7, retainedNodes: !31)
+!31 = !{!28}
+!32 = !{!33, !13}
+!33 = !{!"Function Name", !"no_cfg"}
 !34 = !DIGlobalVariableExpression(var: !35, expr: !DIExpression())
-!35 = distinct !DIGlobalVariable(name: "__profc_no_profc", scope: !36, file: !3, type: !14, isLocal: true, isDefinition: true, annotations: !37)
-!36 = distinct !DISubprogram(name: "no_profc", scope: !3, file: !3, line: 7, type: !12, scopeLine: 7, spFlags: DISPFlagDefinition, unit: !7)
-!37 = !{!38, !17, !18}
-!38 = !{!"Function Name", !"no_profc"}
-!39 = !DIGlobalVariableExpression(var: !40, expr: !DIExpression())
-!40 = distinct !DIGlobalVariable(name: "__profc_no_func", scope: !41, file: !3, type: !14, isLocal: true, isDefinition: true, annotations: !42)
-!41 = distinct !DISubprogram(name: "no_func", scope: !3, file: !3, line: 8, type: !12, scopeLine: 8, spFlags: DISPFlagDefinition, unit: !7)
-!42 = !{!43, !17, !18}
-!43 = !{!"Function Name", !"no_func"}
-!44 = !{!45, !17, !18}
-!45 = !{!"Function Name", !"main"}
-!46 = !{i32 7, !"Dwarf Version", i32 5}
-!47 = !{i32 2, !"Debug Info Version", i32 3}
-!48 = !{i32 1, !"wchar_size", i32 4}
-!49 = !{i32 8, !"PIC Level", i32 2}
-!50 = !{i32 7, !"PIE Level", i32 2}
-!51 = !{i32 7, !"uwtable", i32 2}
-!52 = !{i32 7, !"frame-pointer", i32 2}
-!53 = !DILocation(line: 1, column: 14, scope: !2)
-!54 = !DILocation(line: 3, column: 17, scope: !11)
-!55 = !DILocation(line: 4, column: 17, scope: !21)
-!56 = !DILocation(line: 5, column: 16, scope: !26)
-!57 = !DILocation(line: 6, column: 20, scope: !31)
-!58 = !DILocation(line: 7, column: 18, scope: !36)
-!59 = !DILocation(line: 8, column: 17, scope: !41)
+!35 = distinct !DIGlobalVariable(name: "__profc_no_counter", scope: !36, file: !3, type: !9, isLocal: true, isDefinition: true, annotations: !38)
+!36 = distinct !DISubprogram(name: "no_counter", scope: !3, file: !3, line: 6, type: !17, scopeLine: 6, spFlags: DISPFlagDefinition, unit: !7, retainedNodes: !37)
+!37 = !{!34}
+!38 = !{!39, !12}
+!39 = !{!"Function Name", !"no_counter"}
+!40 = !DIGlobalVariableExpression(var: !41, expr: !DIExpression())
+!41 = distinct !DIGlobalVariable(name: "__profc_no_profc", scope: !42, file: !3, type: !9, isLocal: true, isDefinition: true, annotations: !44)
+!42 = distinct !DISubprogram(name: "no_profc", scope: !3, file: !3, line: 7, type: !17, scopeLine: 7, spFlags: DISPFlagDefinition, unit: !7, retainedNodes: !43)
+!43 = !{!40}
+!44 = !{!45, !12, !13}
+!45 = !{!"Function Name", !"no_profc"}
+!46 = !DIGlobalVariableExpression(var: !47, expr: !DIExpression())
+!47 = distinct !DIGlobalVariable(name: "__profc_no_func", scope: !48, file: !3, type: !9, isLocal: true, isDefinition: true, annotations: !50)
+!48 = distinct !DISubprogram(name: "no_func", scope: !3, file: !3, line: 8, type: !17, scopeLine: 8, spFlags: DISPFlagDefinition, unit: !7, retainedNodes: !49)
+!49 = !{!46}
+!50 = !{!51, !12, !13}
+!51 = !{!"Function Name", !"no_func"}
+!52 = !DIGlobalVariableExpression(var: !53, expr: !DIExpression())
+!53 = distinct !DIGlobalVariable(name: "__profc_use_func", scope: !54, file: !3, type: !9, isLocal: true, isDefinition: true, annotations: !56)
+!54 = distinct !DISubprogram(name: "use_func", scope: !3, file: !3, line: 9, type: !17, scopeLine: 9, spFlags: DISPFlagDefinition, unit: !7, retainedNodes: !55)
+!55 = !{!52}
+!56 = !{!57, !12, !13}
+!57 = !{!"Function Name", !"use_func"}
+!58 = !{i32 7, !"Dwarf Version", i32 5}
+!59 = !{i32 2, !"Debug Info Version", i32 3}
+!60 = !{i32 8, !"PIC Level", i32 2}
+!61 = !{i32 7, !"PIE Level", i32 2}
+!62 = !{i32 7, !"uwtable", i32 2}
+!63 = !{i32 7, !"frame-pointer", i32 2}
+!64 = !DILocation(line: 1, column: 14, scope: !2)
+!65 = !DILocation(line: 3, column: 17, scope: !16)
+!66 = !DILocation(line: 4, column: 17, scope: !24)
+!67 = !DILocation(line: 5, column: 16, scope: !30)
+!68 = !DILocation(line: 6, column: 20, scope: !36)
+!69 = !DILocation(line: 7, column: 18, scope: !42)
+!70 = !DILocation(line: 8, column: 48, scope: !48)
+!71 = !DILocation(line: 9, column: 19, scope: !54)
+!72 = !DILocation(line: 8, column: 48, scope: !48, inlinedAt: !73)
+!73 = distinct !DILocation(line: 9, column: 19, scope: !54)
+!74 = !DILocation(line: 9, column: 30, scope: !54)
