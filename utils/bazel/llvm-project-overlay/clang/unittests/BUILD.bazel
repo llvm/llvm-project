@@ -802,6 +802,7 @@ cc_test(
         "//clang:scalable_static_analysis_analyses",
         "//clang:scalable_static_analysis_core",
         "//clang:scalable_static_analysis_frontend",
+        "//clang:scalable_static_analysis_source_transformation",
         "//clang:support",
         "//clang:tooling",
         "//llvm:Support",

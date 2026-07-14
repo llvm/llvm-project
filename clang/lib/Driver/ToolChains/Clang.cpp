@@ -2168,6 +2168,10 @@ void Clang::AddSystemZTargetArgs(const ArgList &Args,
     CmdArgs.push_back("-mfloat-abi");
     CmdArgs.push_back("soft");
   }
+
+  if (Triple.isOSzOS())
+    Args.AddLastArg(CmdArgs, options::OPT_mzos_ppa1_name,
+                    options::OPT_mno_zos_ppa1_name);
 }
 
 void Clang::AddX86TargetArgs(const ArgList &Args,
@@ -7693,6 +7697,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                              // TODO add c++23, c++26, c++29 when MSVC supports
                              // it.
                              .Case("c++23preview", "-std=c++23")
+                             .Case("c++26preview", "-std=c++26")
                              .Case("c++latest", "-std=c++2d")
                              .Default("");
       if (IsSYCL) {
@@ -7783,9 +7788,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
        Std->containsValue("c++23") || Std->containsValue("gnu++23") ||
        Std->containsValue("c++23preview") || Std->containsValue("c++2c") ||
        Std->containsValue("gnu++2c") || Std->containsValue("c++26") ||
-       Std->containsValue("gnu++26") || Std->containsValue("c++2d") ||
-       Std->containsValue("gnu++2d") || Std->containsValue("c++latest") ||
-       Std->containsValue("gnu++latest"));
+       Std->containsValue("gnu++26") || Std->containsValue("c++26preview") ||
+       Std->containsValue("c++2d") || Std->containsValue("gnu++2d") ||
+       Std->containsValue("c++latest") || Std->containsValue("gnu++latest"));
   bool HaveModules =
       RenderModulesOptions(C, D, Args, Input, Output, HaveCxx20, CmdArgs);
 
@@ -8072,6 +8077,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT__ssaf_extract_summaries);
   Args.AddLastArg(CmdArgs, options::OPT__ssaf_tu_summary_file);
   Args.AddLastArg(CmdArgs, options::OPT__ssaf_compilation_unit_id);
+  Args.AddLastArg(CmdArgs, options::OPT__ssaf_include_local_entities);
 
   // Handle serialized diagnostics.
   if (Arg *A = Args.getLastArg(options::OPT__serialize_diags)) {
@@ -10046,20 +10052,16 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
 
   addOffloadCompressArgs(Args, CmdArgs);
 
-  if (Arg *A = Args.getLastArg(options::OPT_offload_jobs_EQ)) {
-    StringRef Val = A->getValue();
-
-    if (Val.equals_insensitive("jobserver"))
+  OffloadJobsOpt OffloadJobs = parseOffloadJobs(Args);
+  if (OffloadJobs.A) {
+    if (OffloadJobs.K == OffloadJobsOpt::Kind::Jobserver) {
       CmdArgs.push_back(Args.MakeArgString("--wrapper-jobs=jobserver"));
-    else {
-      int NumThreads;
-      if (Val.getAsInteger(10, NumThreads) || NumThreads <= 0) {
-        C.getDriver().Diag(diag::err_drv_invalid_int_value)
-            << A->getAsString(Args) << Val;
-      } else {
-        CmdArgs.push_back(
-            Args.MakeArgString("--wrapper-jobs=" + Twine(NumThreads)));
-      }
+    } else if (OffloadJobs.K == OffloadJobsOpt::Kind::Fixed) {
+      CmdArgs.push_back(Args.MakeArgString("--wrapper-jobs=" +
+                                           Twine(OffloadJobs.NumThreads)));
+    } else if (!OffloadJobs.A->isClaimed()) {
+      C.getDriver().Diag(diag::err_drv_invalid_int_value)
+          << OffloadJobs.A->getAsString(Args) << OffloadJobs.Value;
     }
   }
 
