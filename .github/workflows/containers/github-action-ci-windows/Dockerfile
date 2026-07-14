@@ -48,7 +48,7 @@ RUN choco install -y ninja --version 1.13.1 && \
     choco install -y python3 --version 3.12.3 && \
     choco install -y make --version 4.4.1
 
-# Install libxml2 using vcpkg.
+# libxml2 is not available on choco. Install it using vcpkg.
 RUN git clone --depth 1 --branch 2026.06.24 https://github.com/microsoft/vcpkg.git C:\vcpkg && \
     C:\vcpkg\bootstrap-vcpkg.bat -disableMetrics && \
     C:\vcpkg\vcpkg.exe install libxml2:x64-windows && \
