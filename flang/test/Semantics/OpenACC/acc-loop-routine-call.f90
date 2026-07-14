@@ -34,18 +34,55 @@ contains
     !$acc routine gang(dim:3)
   end subroutine r_gang_dim3
 
+  integer function f_seq(x)
+    integer, intent(in) :: x
+    !$acc routine seq
+    f_seq = x
+  end function f_seq
+
+  integer function f_vector(x)
+    integer, intent(in) :: x
+    !$acc routine vector
+    f_vector = x
+  end function f_vector
+
+  integer function f_worker(x)
+    integer, intent(in) :: x
+    !$acc routine worker
+    f_worker = x
+  end function f_worker
+
+  integer function f_gang(x)
+    integer, intent(in) :: x
+    !$acc routine gang
+    f_gang = x
+  end function f_gang
+
+  integer function f_gang_dim3(x)
+    integer, intent(in) :: x
+    !$acc routine gang(dim:3)
+    f_gang_dim3 = x
+  end function f_gang_dim3
+
 end module acc_loop_routine_call_m
 
 program acc_loop_routine_call
   use acc_loop_routine_call_m
   implicit none
   integer, parameter :: n = 8
-  integer :: i
+  integer :: i, j
 
   !$acc parallel
   !$acc loop vector
   do i = 1, n
     call r_seq()
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !$acc loop vector
+  do i = 1, n
+    j = f_seq(i)
   end do
   !$acc end parallel
 
@@ -82,6 +119,30 @@ program acc_loop_routine_call
   !$acc end parallel
 
   !$acc parallel
+  !ERROR: Calling VECTOR routine inside VECTOR loop is not allowed
+  !$acc loop vector
+  do i = 1, n
+    j = f_vector(i)
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !ERROR: Calling WORKER routine inside VECTOR loop is not allowed
+  !$acc loop vector
+  do i = 1, n
+    j = f_worker(i)
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !ERROR: Calling GANG routine inside VECTOR loop is not allowed
+  !$acc loop vector
+  do i = 1, n
+    j = f_gang(i)
+  end do
+  !$acc end parallel
+
+  !$acc parallel
   !ERROR: Calling GANG(3) routine inside VECTOR loop is not allowed
   !$acc loop vector
   do i = 1, n
@@ -100,6 +161,13 @@ program acc_loop_routine_call
   !$acc loop worker
   do i = 1, n
     call r_vector()
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !$acc loop worker
+  do i = 1, n
+    j = f_vector(i)
   end do
   !$acc end parallel
 
@@ -144,6 +212,22 @@ program acc_loop_routine_call
   !$acc end parallel
 
   !$acc parallel
+  !ERROR: Calling WORKER routine inside WORKER loop is not allowed
+  !$acc loop worker
+  do i = 1, n
+    j = f_worker(i)
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !ERROR: Calling GANG routine inside WORKER loop is not allowed
+  !$acc loop worker
+  do i = 1, n
+    j = f_gang(i)
+  end do
+  !$acc end parallel
+
+  !$acc parallel
   !$acc loop gang(dim:2)
   do i = 1, n
     call r_seq()
@@ -180,6 +264,14 @@ program acc_loop_routine_call
   !$acc loop gang(dim:2)
   do i = 1, n
     call r_gang_dim3()
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !ERROR: Calling GANG(3) routine inside GANG(2) loop is not allowed
+  !$acc loop gang(dim:2)
+  do i = 1, n
+    j = f_gang_dim3(i)
   end do
   !$acc end parallel
 
