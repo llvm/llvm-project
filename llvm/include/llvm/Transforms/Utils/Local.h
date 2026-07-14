@@ -28,6 +28,7 @@ class DataLayout;
 class Value;
 class WeakTrackingVH;
 class WeakVH;
+template <typename PtrType> class SmallPtrSetImpl;
 template <typename T> class SmallVectorImpl;
 class AAResults;
 class AllocaInst;
@@ -129,10 +130,10 @@ LLVM_ABI bool RecursivelyDeleteTriviallyDeadInstructionsPermissive(
 /// by a trivially dead instruction, delete it. If that makes any of its
 /// operands trivially dead, delete them too, recursively. Return true if a
 /// change was made.
-LLVM_ABI bool
-RecursivelyDeleteDeadPHINode(PHINode *PN,
-                             const TargetLibraryInfo *TLI = nullptr,
-                             MemorySSAUpdater *MSSAU = nullptr);
+LLVM_ABI bool RecursivelyDeleteDeadPHINode(
+    PHINode *PN, const TargetLibraryInfo *TLI = nullptr,
+    MemorySSAUpdater *MSSAU = nullptr,
+    SmallPtrSetImpl<PHINode *> *KnownNonDeadPHIs = nullptr);
 
 /// Scan the specified basic block and try to simplify any instructions in it
 /// and recursively delete dead instructions.

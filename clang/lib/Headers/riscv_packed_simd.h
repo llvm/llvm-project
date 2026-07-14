@@ -115,6 +115,25 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return (ty)builtin(__rs1, __rs2, __rd);                                    \
   }
 
+#define __packed_psabs(name, ty, builtin)                                      \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {           \
+    return builtin(__rs1);                                                     \
+  }
+
+#define __packed_widen_convert(name, rty, ty)                                  \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return __builtin_convertvector(__rs1, rty);                                \
+  }
+#define __packed_widen_high2(name, rty, ty)                                    \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return (rty)__builtin_shufflevector((ty){0}, __rs1, 0, 2, 1, 3);           \
+  }
+#define __packed_widen_high4(name, rty, ty)                                    \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return (rty)__builtin_shufflevector((ty){0}, __rs1, 0, 4, 1, 5, 2, 6, 3,   \
+                                        7);                                    \
+  }
+
 /* Packed Reverse: reverse the order of the elements. Lowered to a single
  * rev8/rev16/ppairoe.* by the backend's packed reverse-shuffle handling. */
 #define __packed_reverse2(name, ty)                                            \
@@ -128,6 +147,45 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
 #define __packed_reverse8(name, ty)                                            \
   static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {           \
     return __builtin_shufflevector(__rs1, __rs1, 7, 6, 5, 4, 3, 2, 1, 0);      \
+  }
+
+#define __packed_zip2(name, rty, ty)                                           \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,            \
+                                                          ty __rs2) {          \
+    return __builtin_shufflevector(__rs1, __rs2, 0, 2, 1, 3);                  \
+  }
+#define __packed_zip4(name, rty, ty)                                           \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,            \
+                                                          ty __rs2) {          \
+    return __builtin_shufflevector(__rs1, __rs2, 0, 4, 1, 5, 2, 6, 3, 7);      \
+  }
+#define __packed_unzipe2(name, rty, ty)                                        \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return __builtin_shufflevector(__rs1, __rs1, 0, 2);                        \
+  }
+#define __packed_unzipe4(name, rty, ty)                                        \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return __builtin_shufflevector(__rs1, __rs1, 0, 2, 4, 6);                  \
+  }
+#define __packed_unzipo2(name, rty, ty)                                        \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return __builtin_shufflevector(__rs1, __rs1, 1, 3);                        \
+  }
+#define __packed_unzipo4(name, rty, ty)                                        \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return __builtin_shufflevector(__rs1, __rs1, 1, 3, 5, 7);                  \
+  }
+
+#define __packed_abdsum(name, rty, ty, builtin)                                \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,            \
+                                                          ty __rs2) {          \
+    return builtin(__rs1, __rs2);                                              \
+  }
+
+#define __packed_abdsum_acc(name, rty, ty, builtin)                            \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(rty __rd, ty __rs1,  \
+                                                          ty __rs2) {          \
+    return builtin(__rd, __rs1, __rs2);                                        \
   }
 
 // clang-format off: macro call sites have no trailing semicolons, which
@@ -411,6 +469,16 @@ __packed_unary_op(pnot_u16x4, uint16x4_t, ~)
 __packed_unary_op(pnot_i32x2, int32x2_t, ~)
 __packed_unary_op(pnot_u32x2, uint32x2_t, ~)
 
+/* Packed Widening Convert */
+__packed_widen_convert(pwcvt_i16x4, int16x4_t, int8x4_t)
+__packed_widen_convert(pwcvt_i32x2, int32x2_t, int16x2_t)
+__packed_widen_convert(pwcvtu_u16x4, uint16x4_t, uint8x4_t)
+__packed_widen_convert(pwcvtu_u32x2, uint32x2_t, uint16x2_t)
+__packed_widen_high4(pwcvth_i16x4, int16x4_t, int8x4_t)
+__packed_widen_high4(pwcvth_u16x4, uint16x4_t, uint8x4_t)
+__packed_widen_high2(pwcvth_i32x2, int32x2_t, int16x2_t)
+__packed_widen_high2(pwcvth_u32x2, uint32x2_t, uint16x2_t)
+
 /* Packed Reverse (32-bit) */
 __packed_reverse4(prev_i8x4, int8x4_t)
 __packed_reverse4(prev_u8x4, uint8x4_t)
@@ -424,6 +492,22 @@ __packed_reverse4(prev_i16x4, int16x4_t)
 __packed_reverse4(prev_u16x4, uint16x4_t)
 __packed_reverse2(prev_i32x2, int32x2_t)
 __packed_reverse2(prev_u32x2, uint32x2_t)
+
+/* Packed Zip */
+__packed_zip4(pzip_i8x8, int8x8_t, int8x4_t)
+__packed_zip4(pzip_u8x8, uint8x8_t, uint8x4_t)
+__packed_zip2(pzip_i16x4, int16x4_t, int16x2_t)
+__packed_zip2(pzip_u16x4, uint16x4_t, uint16x2_t)
+
+/* Packed Unzip */
+__packed_unzipe4(punzipe_i8x4, int8x4_t, int8x8_t)
+__packed_unzipo4(punzipo_i8x4, int8x4_t, int8x8_t)
+__packed_unzipe4(punzipe_u8x4, uint8x4_t, uint8x8_t)
+__packed_unzipo4(punzipo_u8x4, uint8x4_t, uint8x8_t)
+__packed_unzipe2(punzipe_i16x2, int16x2_t, int16x4_t)
+__packed_unzipo2(punzipo_i16x2, int16x2_t, int16x4_t)
+__packed_unzipe2(punzipe_u16x2, uint16x2_t, uint16x4_t)
+__packed_unzipo2(punzipo_u16x2, uint16x2_t, uint16x4_t)
 
 /* Packed Averaging Addition and Subtraction (32-bit) */
 __packed_binary_builtin(paadd_i8x4, int8x4_t, __builtin_riscv_paadd_i8x4)
@@ -497,6 +581,24 @@ __packed_merge_builtin(pmerge_i16x4, int16x4_t, uint16x4_t, __builtin_riscv_pmer
 __packed_merge_builtin(pmerge_u32x2, uint32x2_t, uint32x2_t, __builtin_riscv_pmerge_u32x2)
 __packed_merge_builtin(pmerge_i32x2, int32x2_t, uint32x2_t, __builtin_riscv_pmerge_i32x2)
 
+/* Packed Absolute Difference Sum (32-bit) */
+__packed_abdsum(pabdsumu_u8x4_u32, uint32_t, uint8x4_t, __builtin_riscv_pabdsumu_u8x4_u32)
+__packed_abdsum_acc(pabdsumau_u8x4_u32, uint32_t, uint8x4_t, __builtin_riscv_pabdsumau_u8x4_u32)
+
+/* Packed Absolute Difference Sum (64-bit) */
+__packed_abdsum(pabdsumu_u8x8_u32, uint32_t, uint8x8_t, __builtin_riscv_pabdsumu_u8x8_u32)
+__packed_abdsum(pabdsumu_u8x8_u64, uint64_t, uint8x8_t, __builtin_riscv_pabdsumu_u8x8_u64)
+__packed_abdsum_acc(pabdsumau_u8x8_u32, uint32_t, uint8x8_t, __builtin_riscv_pabdsumau_u8x8_u32)
+__packed_abdsum_acc(pabdsumau_u8x8_u64, uint64_t, uint8x8_t, __builtin_riscv_pabdsumau_u8x8_u64)
+
+/* Packed Saturating Absolute Value (32-bit) */
+__packed_psabs(psabs_i8x4, int8x4_t, __builtin_riscv_psabs_i8x4)
+__packed_psabs(psabs_i16x2, int16x2_t, __builtin_riscv_psabs_i16x2)
+
+/* Packed Saturating Absolute Value (64-bit) */
+__packed_psabs(psabs_i8x8, int8x8_t, __builtin_riscv_psabs_i8x8)
+__packed_psabs(psabs_i16x4, int16x4_t, __builtin_riscv_psabs_i16x4)
+
 // clang-format on
 
 #undef __packed_splat2
@@ -518,9 +620,21 @@ __packed_merge_builtin(pmerge_i32x2, int32x2_t, uint32x2_t, __builtin_riscv_pmer
 #undef __packed_binary_builtin_cast
 #undef __packed_reduction
 #undef __packed_merge_builtin
+#undef __packed_psabs
+#undef __packed_widen_convert
+#undef __packed_widen_high2
+#undef __packed_widen_high4
 #undef __packed_reverse2
 #undef __packed_reverse4
 #undef __packed_reverse8
+#undef __packed_zip2
+#undef __packed_zip4
+#undef __packed_unzipe2
+#undef __packed_unzipe4
+#undef __packed_unzipo2
+#undef __packed_unzipo4
+#undef __packed_abdsum
+#undef __packed_abdsum_acc
 #undef __DEFAULT_FN_ATTRS
 
 #if defined(__cplusplus)

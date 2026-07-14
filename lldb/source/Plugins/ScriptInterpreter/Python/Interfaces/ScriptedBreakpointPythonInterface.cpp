@@ -143,7 +143,8 @@ void ScriptedBreakpointPythonInterface::Initialize() {
       GetPluginNameStatic(),
       llvm::StringRef("Create a breakpoint that chooses locations based on "
                       "user-created callbacks"),
-      CreateInstance, eScriptLanguagePython, {ci_usages, api_usages});
+      CreateInstance, eScriptedExtensionScriptedBreakpointResolver,
+      eScriptLanguagePython, {ci_usages, api_usages});
 }
 
 void ScriptedBreakpointPythonInterface::Terminate() {

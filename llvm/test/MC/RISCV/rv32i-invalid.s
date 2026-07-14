@@ -154,7 +154,7 @@ auipc a0, %pcrel_lo(foo) # CHECK: :[[@LINE]]:11: error: operand must be a symbol
 add a0, a0, tp, zero # CHECK: :[[@LINE]]:17: error: expected '%' relocation specifier
 add a0, a0, tp, %hi(foo)
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:17: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:17: note: unexpected extra operand for instruction
 # CHECK: :[[@LINE-3]]:17: note: operand must be a symbol with %tprel_add specifier
 
 add a0, tp, a0, %tprel_add(foo) # CHECK: :[[@LINE]]:13: error: the second input operand must be tp/x4 when using %tprel_add specifier
@@ -184,10 +184,10 @@ xori sp, 22, 220 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
 sub t0, t2, 1 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
 
 # Too many operands
-sltiu s2, s3, 0x50, 0x60 # CHECK: :[[@LINE]]:21: error: invalid operand for instruction
+sltiu s2, s3, 0x50, 0x60 # CHECK: :[[@LINE]]:21: error: unexpected extra operand for instruction
 
 # Memory operand not formatted correctly
-lw a4, a5, 111 # CHECK: :[[@LINE]]:12: error: invalid operand for instruction
+lw a4, a5, 111 # CHECK: :[[@LINE]]:12: error: unexpected extra operand for instruction
 
 # Too few operands
 ori a0, a1 # CHECK: :[[@LINE]]:11: error: too few operands for instruction
@@ -212,4 +212,4 @@ bset a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following
 addi a2, ft0, 24 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
 
 # fence.tso accepts no operands
-fence.tso rw, rw # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+fence.tso rw, rw # CHECK: :[[@LINE]]:11: error: unexpected extra operand for instruction

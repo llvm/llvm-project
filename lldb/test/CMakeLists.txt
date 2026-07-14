@@ -272,7 +272,16 @@ if (LLDB_ENABLE_ARM64E_DEBUGSERVER OR LLDB_USE_SYSTEM_DEBUGSERVER)
 endif()
 
 set(LLDB_TEST_SHELL_DISABLE_REMOTE OFF CACHE BOOL "Disable remote Shell tests execution")
-set(LLDB_TEST_USE_LLDB_SERVER OFF CACHE BOOL "If ON, run the test suites against the lldb-server backend on Windows")
+
+# On Windows, drive the tests through the lldb-server backend by default when
+# libxml2 is available (it is required to parse the gdb-remote target XML).
+# Without libxml2, fall back to the in-process Windows process plugin. This
+# mirrors the runtime default selected in ProcessWindows.cpp.
+set(LLDB_TEST_USE_LLDB_SERVER_DEFAULT OFF)
+if(WIN32 AND LLDB_ENABLE_LIBXML2)
+  set(LLDB_TEST_USE_LLDB_SERVER_DEFAULT ON)
+endif()
+set(LLDB_TEST_USE_LLDB_SERVER ${LLDB_TEST_USE_LLDB_SERVER_DEFAULT} CACHE BOOL "If ON, run the test suites against the lldb-server backend on Windows")
 
 # These values are not canonicalized within LLVM.
 llvm_canonicalize_cmake_booleans(
