@@ -1826,34 +1826,9 @@ std::error_code readlink(const Twine &path, SmallVectorImpl<char> &dest) {
 } // end namespace fs
 
 namespace path {
-static bool getKnownFolderPath(KNOWNFOLDERID folderId,
-                               SmallVectorImpl<char> &result) {
-  wchar_t *path = nullptr;
-  if (::SHGetKnownFolderPath(folderId, KF_FLAG_CREATE, nullptr, &path) != S_OK)
-    return false;
-
-  bool ok = !UTF16ToUTF8(path, ::wcslen(path), result);
-  ::CoTaskMemFree(path);
-  if (ok)
-    llvm::sys::path::make_preferred(result);
-  return ok;
-}
-
-bool home_directory(SmallVectorImpl<char> &result) {
-  return getKnownFolderPath(FOLDERID_Profile, result);
-}
-
-bool user_config_directory(SmallVectorImpl<char> &result) {
-  // Either local or roaming appdata may be suitable in some cases, depending
-  // on the data. Local is more conservative, Roaming may not always be correct.
-  return getKnownFolderPath(FOLDERID_LocalAppData, result);
-}
-
-bool cache_directory(SmallVectorImpl<char> &result) {
-  return getKnownFolderPath(FOLDERID_LocalAppData, result);
-}
-
-static bool getTempDirEnvVar(const wchar_t *Var, SmallVectorImpl<char> &Res) {
+// Read the UTF-16 environment variable Var and store its value as UTF-8 in Res.
+// Returns false if the variable is unset or the conversion fails.
+static bool getPathFromEnvVar(const wchar_t *Var, SmallVectorImpl<char> &Res) {
   SmallVector<wchar_t, 1024> Buf;
   size_t Size = 1024;
   do {
@@ -1869,10 +1844,54 @@ static bool getTempDirEnvVar(const wchar_t *Var, SmallVectorImpl<char> &Res) {
   return !windows::UTF16ToUTF8(Buf.data(), Size, Res);
 }
 
+// Resolve a known folder to a path. folderId is the Win32 KNOWNFOLDERID and
+// fallbackEnvVar is the environment variable that normally points at the same
+// location. When LLVM_WINDOWS_AVOID_SHELL32_APIS is set, only the
+// environment-variable fallback is compiled in, so no shell32 import (e.g.
+// SHGetKnownFolderPath) ends up in the binary, keeping LLVM usable inside
+// app-container / Windows Driver binaries whose API surface is validated (e.g.
+// by ApiValidator).
+static bool getKnownFolderPath(KNOWNFOLDERID folderId,
+                               const wchar_t *fallbackEnvVar,
+                               SmallVectorImpl<char> &result) {
+#if LLVM_WINDOWS_AVOID_SHELL32_APIS
+  (void)folderId;
+  if (!getPathFromEnvVar(fallbackEnvVar, result))
+    return false;
+  llvm::sys::path::make_preferred(result);
+  return true;
+#else
+  (void)fallbackEnvVar;
+  wchar_t *path = nullptr;
+  if (::SHGetKnownFolderPath(folderId, KF_FLAG_CREATE, nullptr, &path) != S_OK)
+    return false;
+
+  bool ok = !UTF16ToUTF8(path, ::wcslen(path), result);
+  ::CoTaskMemFree(path);
+  if (ok)
+    llvm::sys::path::make_preferred(result);
+  return ok;
+#endif
+}
+
+bool home_directory(SmallVectorImpl<char> &result) {
+  return getKnownFolderPath(FOLDERID_Profile, L"USERPROFILE", result);
+}
+
+bool user_config_directory(SmallVectorImpl<char> &result) {
+  // Either local or roaming appdata may be suitable in some cases, depending
+  // on the data. Local is more conservative, Roaming may not always be correct.
+  return getKnownFolderPath(FOLDERID_LocalAppData, L"LOCALAPPDATA", result);
+}
+
+bool cache_directory(SmallVectorImpl<char> &result) {
+  return getKnownFolderPath(FOLDERID_LocalAppData, L"LOCALAPPDATA", result);
+}
+
 static bool getTempDirEnvVar(SmallVectorImpl<char> &Res) {
   const wchar_t *EnvironmentVariables[] = {L"TMP", L"TEMP", L"USERPROFILE"};
   for (auto *Env : EnvironmentVariables) {
-    if (getTempDirEnvVar(Env, Res))
+    if (getPathFromEnvVar(Env, Res))
       return true;
   }
   return false;

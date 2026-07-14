@@ -23,6 +23,11 @@
    backslashes. */
 #cmakedefine01 LLVM_WINDOWS_PREFER_FORWARD_SLASH
 
+/* Define to 1 to avoid Windows shell32 APIs (e.g. SHGetKnownFolderPath) that
+   are outside the app-container / Windows Driver API partition, falling back to
+   environment variables instead. */
+#cmakedefine01 LLVM_WINDOWS_AVOID_SHELL32_APIS
+
 /* Define to 1 if you have the `backtrace' function. */
 #cmakedefine HAVE_BACKTRACE ${HAVE_BACKTRACE}
 
