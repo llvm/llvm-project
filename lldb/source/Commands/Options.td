@@ -1582,6 +1582,9 @@ let Command = "scripting extension list" in {
         Desc<"Specify the scripting "
              " language. If none is specified the default scripting language "
              "is used.">;
+  def scripting_extension_list_json
+      : Option<"json", "j">,
+        Desc<"Output the scripted extension list in json format.">;
 }
 
 let Command = "source info" in {

@@ -3612,9 +3612,10 @@ public:
   llvm::SmallPtrSet<const TypedefNameDecl *, 4>
       UnusedLocalTypedefNameCandidates;
 
-  /// Return UnusedLocalTypedefNameCandidates in a deterministic order.
-  SmallVector<const TypedefNameDecl *, 4>
-  getSortedUnusedLocalTypedefNameCandidates() const;
+  /// Store UnusedLocalTypedefNameCandidates in \p Sorted in a deterministic
+  /// order.
+  void getSortedUnusedLocalTypedefNameCandidates(
+      SmallVectorImpl<const TypedefNameDecl *> &Sorted) const;
 
   typedef LazyVector<const DeclaratorDecl *, ExternalSemaSource,
                      &ExternalSemaSource::ReadUnusedFileScopedDecls, 2, 2>
