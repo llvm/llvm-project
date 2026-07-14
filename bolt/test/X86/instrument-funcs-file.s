@@ -1,9 +1,11 @@
-# Test --instrument-funcs-file, alone and combined with --instrument-hot-only.
+# Test --instrument-funcs-file-no-regex, alone and combined with
+# --instrument-hot-only.
 #
 # The binary defines three functions (foo, bar, baz). We attach a profile that
-# only marks foo as hot. With --instrument-funcs-file listing foo and bar, only
-# those two are instrumented. Adding --instrument-hot-only further restricts
-# instrumentation to foo (the only function that is both listed and hot).
+# only marks foo as hot. With --instrument-funcs-file-no-regex listing foo and
+# bar, only those two are instrumented. Adding --instrument-hot-only further
+# restricts instrumentation to foo (the only function that is both listed and
+# hot).
 
 # REQUIRES: system-linux,bolt-runtime,target=x86_64-{{.*}}
 
@@ -14,29 +16,31 @@
 # RUN: echo "foo" > %t.funcs
 # RUN: echo "bar" >> %t.funcs
 
-# Test A: only --instrument-funcs-file. Both foo and bar get instrumented.
-# RUN: llvm-bolt --instrument --instrument-funcs-file=%t.funcs \
+# Test A: only --instrument-funcs-file-no-regex. Both foo and bar get
+# instrumented.
+# RUN: llvm-bolt --instrument --instrument-funcs-file-no-regex=%t.funcs \
 # RUN:     -o %t.a.out %t.exe 2>&1 | FileCheck %s --check-prefix=CHECK-A
 
-# Test B: --instrument-funcs-file combined with --instrument-hot-only. Profile
-# marks only foo as hot, so bar is filtered out by --instrument-hot-only.
-# RUN: llvm-bolt --instrument --instrument-funcs-file=%t.funcs \
+# Test B: --instrument-funcs-file-no-regex combined with --instrument-hot-only.
+# Profile marks only foo as hot, so bar is filtered out by
+# --instrument-hot-only.
+# RUN: llvm-bolt --instrument --instrument-funcs-file-no-regex=%t.funcs \
 # RUN:     --instrument-hot-only --data %t.fdata \
 # RUN:     -o %t.b.out %t.exe 2>&1 | FileCheck %s --check-prefix=CHECK-B
 
 # Test C: empty file means "no functions match", so nothing is instrumented.
 # RUN: rm -f %t.empty && touch %t.empty
-# RUN: llvm-bolt --instrument --instrument-funcs-file=%t.empty \
+# RUN: llvm-bolt --instrument --instrument-funcs-file-no-regex=%t.empty \
 # RUN:     -o %t.c.out %t.exe 2>&1 | FileCheck %s --check-prefix=CHECK-C
 
 # Test D: missing file produces a fatal error.
-# RUN: not llvm-bolt --instrument --instrument-funcs-file=%t.missing \
+# RUN: not llvm-bolt --instrument --instrument-funcs-file-no-regex=%t.missing \
 # RUN:     -o %t.d.out %t.exe 2>&1 | FileCheck %s --check-prefix=CHECK-D
 
 # CHECK-A: BOLT-INSTRUMENTER: Number of function descriptors: 2
 # CHECK-B: BOLT-INSTRUMENTER: Number of function descriptors: 1
 # CHECK-C: BOLT-INSTRUMENTER: Number of function descriptors: 0
-# CHECK-D: instrument-funcs-file {{.*}}.missing{{.*}} can't be opened
+# CHECK-D: instrument-funcs-file-no-regex {{.*}}.missing{{.*}} can't be opened
 
     .text
     .globl _start

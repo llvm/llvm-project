@@ -79,11 +79,9 @@ cl::opt<bool> InstrumentationWaitForks(
              "(use with instrumentation-sleep-time option)"),
     cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
 
-cl::opt<std::string> InstrumentFuncsFile(
-    "instrument-funcs-file",
-    cl::desc("file with list of function names (one per line) to instrument; "
-             "only functions whose name exactly matches a line in this file "
-             "will be instrumented"),
+cl::opt<std::string> InstrumentFuncsFileNR(
+    "instrument-funcs-file-no-regex",
+    cl::desc("file with list of functions to instrument (non-regex)"),
     cl::Optional, cl::cat(BoltInstrCategory));
 
 cl::opt<bool>
@@ -653,14 +651,14 @@ Error Instrumentation::runOnFunctions(BinaryContext &BC) {
 
   createAuxiliaryFunctions(BC);
 
-  const bool HasInstrumentFuncsFilter = !opts::InstrumentFuncsFile.empty();
+  const bool HasInstrumentFuncsFilter = !opts::InstrumentFuncsFileNR.empty();
   StringSet<> InstrumentFuncsSet;
   if (HasInstrumentFuncsFilter) {
-    std::ifstream FuncsFile(opts::InstrumentFuncsFile, std::ios::in);
+    std::ifstream FuncsFile(opts::InstrumentFuncsFileNR, std::ios::in);
     if (!FuncsFile)
-      return createFatalBOLTError(Twine("instrument-funcs-file \"") +
-                                  Twine(opts::InstrumentFuncsFile) +
-                                  Twine("\" can't be opened."));
+      return createFatalBOLTError(
+          Twine("instrument-funcs-file-no-regex \"") +
+          Twine(opts::InstrumentFuncsFileNR) + Twine("\" can't be opened."));
     std::string FuncName;
     while (std::getline(FuncsFile, FuncName))
       if (!FuncName.empty())

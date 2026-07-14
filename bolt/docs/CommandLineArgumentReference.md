@@ -244,6 +244,13 @@
 
   Run retpoline insertion pass
 
+- `--instrument-funcs-file-no-regex`
+
+  File with list of functions to instrument (non-regex). If local function is
+  specified with original mangled name, i.e., no suffix of `/n` or `/file/n`
+  is added, BOLT will instrument all the local functions whose original mangled
+  names match the specified name.
+
 - `--keep-aranges`
 
   Keep or generate .debug_aranges section if .gdb_index is written
