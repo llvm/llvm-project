@@ -400,8 +400,9 @@ public:
   /// Determines whether lanes \p Mask of register \p Reg habe the same value at
   /// all \p Uses as at \p RefSlot. This implies that it is also available at
   /// all \p Uses according to its current live interval.
-  bool isRegIdenticalAtUses(Register Reg, LaneBitmask Mask, SlotIndex RefSlot,
-                            ArrayRef<SlotIndex> Uses) const;
+  LLVM_ABI bool isRegIdenticalAtUses(Register Reg, LaneBitmask Mask,
+                                     SlotIndex RefSlot,
+                                     ArrayRef<SlotIndex> Uses) const;
 
   /// Finds the closest rematerialization of register \p RegIdx in region \p
   /// Region that exists before slot \p Before. If no such rematerialization
