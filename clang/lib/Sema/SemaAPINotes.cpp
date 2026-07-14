@@ -1140,7 +1140,7 @@ static void collectOverloadParameterSelectors(const Sema &S, FunctionDecl *FD,
     if (auto Candidates = getAPINotesParameterSelectorCandidates(S, Candidate))
       Set.add(*Candidates);
   };
-  
+
   for (Decl *D : FD->getDeclContext()->noload_decls()) {
     auto *ND = dyn_cast<NamedDecl>(D);
     if (!ND || ND->getDeclName() != FD->getDeclName())
