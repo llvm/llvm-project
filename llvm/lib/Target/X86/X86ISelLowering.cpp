@@ -2375,16 +2375,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     if (Subtarget.hasBMM()) {
+      setOperationAction(ISD::BITREVERSE, MVT::i8, Custom);
+      setOperationAction(ISD::BITREVERSE, MVT::i16, Custom);
+      setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
+      setOperationAction(ISD::BITREVERSE, MVT::i64, Custom);
+
       for (auto VT : {MVT::v16i8, MVT::v32i8, MVT::v64i8})
         setOperationAction(ISD::BITREVERSE, VT, Legal);
     }
-  }
-
-  if (!Subtarget.useSoftFloat() && Subtarget.hasBMM()) {
-    setOperationAction(ISD::BITREVERSE, MVT::i8, Custom);
-    setOperationAction(ISD::BITREVERSE, MVT::i16, Custom);
-    setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
-    setOperationAction(ISD::BITREVERSE, MVT::i64, Custom);
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasFP16()) {
