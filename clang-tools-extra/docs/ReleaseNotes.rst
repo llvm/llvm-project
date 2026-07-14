@@ -702,6 +702,12 @@ Changes in existing checks
     ``std::remove_if``, ``std::partition``, ``std::stable_partition``, and
     ``std::rotate`` calls with their ``std::ranges`` counterparts.
 
+- Improved :doc:`modernize-use-scoped-lock
+  <clang-tidy/checks/modernize/use-scoped-lock>` check by fixing a false
+  negative where multiple ``std::scoped_lock`` declarations, or a mix of
+  ``std::scoped_lock`` and ``std::lock_guard`` declarations, in the same scope
+  were not flagged.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check:
 
