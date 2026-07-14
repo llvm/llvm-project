@@ -10,6 +10,15 @@ func.func @alloca() {
 
 // -----
 
+func.func @alloca_rank0() {
+  // CHECK: %[[LVALUE:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<f32>
+  // CHECK: %[[PTR:.*]] = emitc.address_of %[[LVALUE]] : !emitc.lvalue<f32>
+  %0 = memref.alloca() : memref<f32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: memref_store
 // CHECK-SAME:  %[[buff:.*]]: memref<4x8xf32>, %[[v:.*]]: f32, %[[i:.*]]: index, %[[j:.*]]: index
 func.func @memref_store(%buff : memref<4x8xf32>, %v : f32, %i: index, %j: index) {

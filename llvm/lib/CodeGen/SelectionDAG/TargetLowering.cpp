@@ -224,7 +224,7 @@ bool TargetLowering::findOptimalMemOpLowering(
     // Use the largest integer type whose alignment constraints are satisfied.
     VT = MVT::LAST_INTEGER_VALUETYPE;
     if (Op.isFixedDstAlign()) {
-      bool LoadsFromSrc = Op.isMemcpy() && !Op.isMemcpyStrSrc();
+      bool LoadsFromSrc = Op.isMemcpyOrMemmove() && !Op.isMemcpyStrSrc();
       while (VT != MVT::i8) {
         unsigned VTSize = VT.getSizeInBits() / 8;
         bool DstOk =
@@ -288,7 +288,7 @@ bool TargetLowering::findOptimalMemOpLowering(
       // If the new VT cannot cover all of the remaining bits, then consider
       // issuing a (or a pair of) unaligned and overlapping load / store.
       unsigned Fast;
-      if (NumMemOps && Op.allowOverlap() && NewVTSize < Size &&
+      if (NumMemOps && !Op.isVolatile() && NewVTSize < Size &&
           allowsMisalignedMemoryAccesses(
               VT, DstAS, Op.isFixedDstAlign() ? Op.getDstAlign() : Align(1),
               MachineMemOperand::MONone, &Fast) &&
@@ -6972,6 +6972,12 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
       isOperationLegalOrCustom(ISD::UMUL_LOHI, WideSVT, IsAfterLegalization);
   const bool AllowWiden = (HasWideMULHU || HasWideUMUL_LOHI);
 
+  // For even divisors with a 33-bit magic number, the widened high-multiply
+  // path is only worthwhile over the even-divisor rewrite on targets that
+  // zero-extend i32 to i64 for free (e.g. x86-64 and AArch64). Elsewhere (e.g.
+  // RISC-V) keep the even-divisor rewrite, which avoids the explicit extension.
+  const bool AllowEvenToWiden = AllowWiden && isZExtFree(VT, WideSVT);
+
   bool UseNPQ = false, UsePreShift = false, UsePostShift = false;
   bool UseWiden = false;
   SmallVector<SDValue, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
@@ -6994,7 +7000,7 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
       UnsignedDivisionByConstantInfo magics =
           UnsignedDivisionByConstantInfo::get(
               Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()),
-              /*AllowEvenDivisorOptimization=*/true,
+              /*AllowEvenDivisorOptimization=*/!AllowEvenToWiden,
               /*AllowWidenOptimization=*/AllowWiden);
 
       if (magics.Widen) {

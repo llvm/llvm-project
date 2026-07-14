@@ -9,6 +9,6 @@
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx802"
 // OSABI-HSA: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx802"
-// OSABI-HSA-ERR: :[[@LINE-2]]:16: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa-unknown-gfx802 does not match the specified target id amdgcn-amd-amdhsa-unknown-gfx803
-// OSABI-PAL-ERR: :[[@LINE-3]]:16: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa-unknown-gfx802 does not match the specified target id amdgcn-amd-amdpal-unknown-gfx802
-// OSABI-UNK-ERR: :[[@LINE-4]]:16: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa-unknown-gfx802 does not match the specified target id amdgcn-amd-unknown-unknown-gfx802
+// OSABI-HSA-ERR: :[[@LINE-2]]:16: error: .amdgcn_target directive processor gfx802 does not match the specified processor gfx803
+// OSABI-PAL-ERR: :[[@LINE-3]]:16: error: .amdgcn_target amdgcn-amd-amdhsa-unknown-gfx802 is incompatible with amdgcn-amd-amdpal-unknown-gfx802
+// OSABI-UNK-ERR: :[[@LINE-4]]:16: error: .amdgcn_target amdgcn-amd-amdhsa-unknown-gfx802 is incompatible with amdgcn-amd-unknown-unknown-gfx802

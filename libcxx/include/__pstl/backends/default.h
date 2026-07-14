@@ -23,6 +23,7 @@
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
+#include <__iterator/reverse_iterator.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/dispatch.h>
 #include <__type_traits/desugars_to.h>
@@ -96,6 +97,7 @@ namespace __pstl {
 // - move
 // - copy
 // - copy_n
+// - reverse_copy
 // - rotate_copy
 //
 
@@ -554,6 +556,22 @@ struct __rotate_copy<__default_backend_tag, _ExecutionPolicy> {
     if (__result_mid == nullopt)
       return nullopt;
     return _Copy()(__policy, std::move(__first), std::move(__middle), *std::move(__result_mid));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __reverse_copy<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _BidirectionalIterator, class _ForwardIterator>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  operator()(_Policy&& __policy,
+             _BidirectionalIterator __first,
+             _BidirectionalIterator __last,
+             _ForwardIterator __result) const noexcept {
+    using _Copy = __dispatch<__copy, __current_configuration, _ExecutionPolicy>;
+    return _Copy()(__policy,
+                   std::reverse_iterator<_BidirectionalIterator>(std::move(__last)),
+                   std::reverse_iterator<_BidirectionalIterator>(std::move(__first)),
+                   std::move(__result));
   }
 };
 

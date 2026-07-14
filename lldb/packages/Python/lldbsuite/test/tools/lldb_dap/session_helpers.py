@@ -1578,7 +1578,9 @@ class DAPTestSession(Session):
             count=count,
             format=format,
         )
-        response = self.send_request(args).result()
+        response = self.send_request(args).result(
+            f"failed to get variables for reference: {variablesReference}"
+        )
         return response.body.variables
 
     def thread_context_from(self, thread_ref: int | StoppedEvent) -> ThreadContext:
