@@ -511,6 +511,12 @@ Changes in existing checks
   check by adding the `IgnoreMacros` option. When enabled, non-const global
   variables defined in macros are ignored.
 
+- Improved :doc:`cppcoreguidelines-avoid-reference-coroutine-parameters
+  <clang-tidy/checks/cppcoreguidelines/avoid-reference-coroutine-parameters>`
+  check by adding the `AllowedReturnTypes` option. Coroutines whose return type
+  matches one of the listed regular expressions are not flagged, allowing task
+  types that make reference parameters safe by construction to be exempted.
+
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by ensuring that
   member pointers are correctly flagged as uninitialized.
