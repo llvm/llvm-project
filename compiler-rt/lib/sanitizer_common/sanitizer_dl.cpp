@@ -23,7 +23,7 @@ namespace __sanitizer {
 extern const char *SanitizerToolName;
 
 const char *DladdrSelfFName(void) {
-#if SANITIZER_GLIBC
+#if SANITIZER_GLIBC && !SANITIZER_GO
   Dl_info info;
   int ret = dladdr((void *)&SanitizerToolName, &info);
   if (ret) {
@@ -35,7 +35,7 @@ const char *DladdrSelfFName(void) {
 }
 
 char* DladdrElfHeaderBase(void* ld, char* addr) {
-#if SANITIZER_GLIBC
+#if SANITIZER_GLIBC && !SANITIZER_GO
   Dl_info info;
   if (dladdr(ld, &info) && info.dli_fbase)
     addr = (char*)info.dli_fbase;
