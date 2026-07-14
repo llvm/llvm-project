@@ -1748,6 +1748,19 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
       A->getType()->isIntOrIntVectorTy(1))
     return replaceInstUsesWith(I, Constant::getNullValue(I.getType()));
 
+  // (A ^ (A ashr (BitWidth - 1))) + (A lshr (BitWidth - 1)) --> (A < 0) ? -A : A.
+  // This is a variation of the shifty abs.
+  const APInt *ShAmt1, *ShAmt2;
+  if (match(&I, m_c_Add(m_OneUse(m_c_Xor(m_Value(A), m_AShr(m_Deferred(A),
+                                                            m_APInt(ShAmt1)))),
+                        m_LShr(m_Deferred(A), m_APInt(ShAmt2)))) &&
+      *ShAmt1 == Ty->getScalarSizeInBits() - 1 &&
+      *ShAmt2 == Ty->getScalarSizeInBits() - 1) {
+    Value *IsNeg = Builder.CreateIsNeg(A);
+    Value *NegA = Builder.CreateNeg(A, "", I.hasNoSignedWrap());
+    return SelectInst::Create(IsNeg, NegA, A);
+  }
+
   // sext(A < B) + zext(A > B) => ucmp/scmp(A, B)
   CmpPredicate LTPred, GTPred;
   if (match(&I,
