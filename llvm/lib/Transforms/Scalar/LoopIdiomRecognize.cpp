@@ -1586,7 +1586,8 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   // Sarwate table-lookup optimization. Hence, until we're able to emit
   // target-specific instructions for Hexagon, subsuming HexagonLoopIdiom,
   // disable the optimization for Hexagon.
-  Triple TT(CurLoop->getHeader()->getModule()->getTargetTriple());
+  Module &M = *CurLoop->getHeader()->getModule();
+  Triple TT(M.getTargetTriple());
   if (TT.getArch() == Triple::hexagon)
     return false;
 
