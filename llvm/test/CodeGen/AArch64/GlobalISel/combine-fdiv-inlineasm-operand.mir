@@ -2,26 +2,23 @@
 # RUN: llc -o - -mtriple=aarch64 -run-pass=aarch64-prelegalizer-combiner %s | FileCheck %s
 
 ---
-name:            fdiv_inlineasm_numerator
-alignment:       4
-legalized:       false
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
+name:            fdiv_inlineasm_as_numerator
 body:             |
-  bb.0:
-    ; Regression test for isConstantOrConstantSplatVectorFP.
-    ; When G_FDIV's numerator is defined by INLINEASM, the combiner must not
-    ; crash by assuming operand 0 of the defining instruction is a register.
-    ; CHECK-LABEL: name: fdiv_inlineasm_numerator
-    ; CHECK: %y:_(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: INLINEASM &"fmov $0, #1.0", sideeffect attdialect, regdef:FPR32, def %x(s32)
-    ; CHECK-NEXT: %div:_(s32) = arcp G_FDIV %x, %y
-    ; CHECK-NEXT: $s0 = COPY %div(s32)
-    ; CHECK-NEXT: RET_ReallyLR implicit $s0
-    %y:_(s32) = G_FCONSTANT float 2.0
-    INLINEASM &"fmov $0, #1.0", sideeffect attdialect, regdef:FPR32, def %x:fpr32(s32)
-    %div:_(s32) = arcp G_FDIV %x:fpr32(s32), %y:_(s32)
-    $s0 = COPY %div(s32)
-    RET_ReallyLR implicit $s0
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: fdiv_inlineasm_as_numerator
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: INLINEASM &"fmov $0, #1.0", sideeffect attdialect, regdef:FPR32, def %1(f32)
+    ; CHECK-NEXT: [[FDIV:%[0-9]+]]:_(f32) = arcp G_FDIV %1, [[C]]
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: G_STORE [[FDIV]](f32), [[COPY]](p0) :: (store (f32))
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:_(f32) = G_FCONSTANT float 2.0
+    INLINEASM &"fmov $0, #1.0", sideeffect attdialect, regdef:FPR32, def %1:fpr32(f32)
+    %2:_(f32) = arcp G_FDIV %1:fpr32(f32), %0:_(f32)
+    %3:_(p0) = COPY $x0
+    G_STORE %2(f32), %3(p0) :: (store (f32))
+    RET_ReallyLR
 ...
