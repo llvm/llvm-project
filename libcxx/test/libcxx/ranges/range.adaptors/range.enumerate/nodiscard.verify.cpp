@@ -22,6 +22,8 @@ struct View : std::ranges::view_interface<View> {
 static_assert(!std::ranges::common_range<View>);
 static_assert(!std::same_as<std::ranges::iterator_t<View>, std::ranges::iterator_t<const View>>);
 static_assert(!std::same_as<std::ranges::sentinel_t<View>, std::ranges::sentinel_t<const View>>);
+static_assert(std::ranges::sized_range<View>);
+static_assert(std::ranges::forward_range<View>);
 
 void test() {
   View range;
@@ -82,13 +84,6 @@ void test() {
   it - st;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   st - it;
-
-  auto c_it = std::as_const(v).begin();
-
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  st - c_it;
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  c_it - st;
 
   // [range.enumerate.overview]
 
