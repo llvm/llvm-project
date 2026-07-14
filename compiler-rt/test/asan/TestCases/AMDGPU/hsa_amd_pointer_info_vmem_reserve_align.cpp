@@ -6,7 +6,7 @@
 // user-visible base and size, not the internal HSA backing mapping. A fixed
 // +page offset is wrong when alignment is larger than the page size.
 //
-// REQUIRES: sanitizer-amdgpu, linux, stable-runtime, rocm
+// REQUIRES: sanitizer-amdgpu, linux, stable-runtime, rocm, hsa-vmem
 // UNSUPPORTED: android
 
 #include "hsa_amd_test_helpers.h"
