@@ -135,6 +135,9 @@ Potentially Breaking Changes
   now uses the new Mustache-backed MD generator. It is possible that there are some
   regressions in MD output.
 
+- Removed the :program:`clang-doc` YAML generator. Prefer the JSON generator to
+  get documentation information in a reusable format.
+
 Improvements to clangd
 ----------------------
 
@@ -600,8 +603,13 @@ Changes in existing checks
   virtual inheritance causes concrete bases to be counted more than once.
 
 - Improved :doc:`misc-redundant-expression
-  <clang-tidy/checks/misc/redundant-expression>` check by fixing a crash when
-  evaluating bitwise comparisons against integer constants wider than 64 bits.
+  <clang-tidy/checks/misc/redundant-expression>` check:
+
+  - Fixed a crash when evaluating bitwise comparisons against integer constants
+    wider than 64 bits.
+
+  - Avoided false positives when comparing expressions that are structurally
+    identical but use different type aliases.
 
 - Improved :doc:`misc-throw-by-value-catch-by-reference
   <clang-tidy/checks/misc/throw-by-value-catch-by-reference>` check:
@@ -693,6 +701,12 @@ Changes in existing checks
   - Preserved used iterator results when replacing ``std::remove``,
     ``std::remove_if``, ``std::partition``, ``std::stable_partition``, and
     ``std::rotate`` calls with their ``std::ranges`` counterparts.
+
+- Improved :doc:`modernize-use-scoped-lock
+  <clang-tidy/checks/modernize/use-scoped-lock>` check by fixing a false
+  negative where multiple ``std::scoped_lock`` declarations, or a mix of
+  ``std::scoped_lock`` and ``std::lock_guard`` declarations, in the same scope
+  were not flagged.
 
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check:
