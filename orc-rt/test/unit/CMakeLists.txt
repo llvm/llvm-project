@@ -17,6 +17,7 @@ add_orc_rt_unittest(CoreTests
   BootstrapInfoTest.cpp
   CallSPSCITest.cpp
   CallableTraitsHelperTest.cpp
+  CompilerTest.cpp
   SimpleSymbolTableTest.cpp
   EndianTest.cpp
   ErrorCAPITest.cpp
