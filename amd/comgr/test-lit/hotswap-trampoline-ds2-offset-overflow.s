@@ -32,18 +32,16 @@
 // COM: 16-bit limit, and the "leaving original instruction in place"
 // COM: closer) so a regression in the message format or the limit
 // COM: constant fails here, not in some downstream-symptoms test. The
-// COM: generic "ds_2addr expansion failed" line is the patchDs2Addr-level
-// COM: error that follows naturally from the overflow guard returning
-// COM: an empty expansion; pin it too so a refactor that reroutes the
-// COM: error path is caught. RESULT: SUCCESS comes last because the
-// COM: rewrite as a whole succeeds (the in-range kernel is patched).
+// COM: helper's specific message is the only diagnostic; patchDs2Addr does
+// COM: not mislabel this intentional safe decline with a second generic
+// COM: failure. RESULT: SUCCESS comes last because the rewrite as a whole
+// COM: succeeds (the in-range kernel is patched).
 // LOG:      hotswap: error: ds_load_2addr_stride64_b64 scaled offsets exceed
 // LOG-SAME: the single-address DS 16-bit field
 // LOG-SAME: off0=raw 128 * scale 512 = 65536
 // LOG-SAME: off1=raw 255 * scale 512 = 130560
 // LOG-SAME: max 65535
 // LOG-SAME: leaving original instruction in place
-// LOG:      hotswap: error: ds_2addr expansion failed for: ds_load_2addr_stride64_b64
 // LOG:      RESULT: SUCCESS
 
 // RUN: %llvm-objdump -d %t.out.elf | %FileCheck --check-prefix=DISASM %s

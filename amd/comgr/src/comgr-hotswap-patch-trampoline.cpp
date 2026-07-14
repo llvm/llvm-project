@@ -233,75 +233,147 @@ extractDsOperands(const MCInst &Inst, StringRef FromMnem, const LLVMState &LS) {
 
 // Split a compound destination register into two formatted destination strings.
 // b32: VReg_64 -> ("v0", "v1"); b64: VReg_128 -> ("v[0:1]", "v[2:3]")
-std::pair<std::string, std::string>
+std::optional<std::pair<std::string, std::string>>
 splitDstPair(MCRegister CompoundReg, bool IsB64, const MCRegisterInfo &MRI) {
   SmallVector<MCRegister, 4> Subs = getDirectSubRegs(CompoundReg, MRI);
   if (IsB64) {
-    if (Subs.size() < 4)
-      return {};
-    return {fmtRegPair(MRI, Subs[0], Subs[1]),
-            fmtRegPair(MRI, Subs[2], Subs[3])};
+    if (Subs.size() < 4) {
+      log() << "hotswap: error: DS b64 destination " << MRI.getName(CompoundReg)
+            << " has " << Subs.size()
+            << " direct subregisters; expected at least 4\n";
+      return std::nullopt;
+    }
+    return std::pair<std::string, std::string>{
+        fmtRegPair(MRI, Subs[0], Subs[1]), fmtRegPair(MRI, Subs[2], Subs[3])};
   }
-  if (Subs.size() < 2)
-    return {};
-  return {toAsmRegName(MRI, Subs[0]), toAsmRegName(MRI, Subs[1])};
+  if (Subs.size() < 2) {
+    log() << "hotswap: error: DS b32 destination " << MRI.getName(CompoundReg)
+          << " has " << Subs.size()
+          << " direct subregisters; expected at least 2\n";
+    return std::nullopt;
+  }
+  return std::pair<std::string, std::string>{toAsmRegName(MRI, Subs[0]),
+                                             toAsmRegName(MRI, Subs[1])};
 }
 
 // Expand a DS 2-address load into two single-address loads (dst, addr).
-std::vector<std::string> expandDs2AddrLoad(const DsOperands &Ops,
-                                           StringRef ToMnem) {
-  if (Ops.Regs.size() < 2)
-    return {};
-  std::pair<std::string, std::string> Dst =
+std::optional<std::vector<std::string>> expandDs2AddrLoad(const DsOperands &Ops,
+                                                          StringRef ToMnem) {
+  if (Ops.Regs.size() < 2) {
+    log() << "hotswap: error: " << ToMnem << " expansion found "
+          << Ops.Regs.size() << " register operands; expected at least 2\n";
+    return std::nullopt;
+  }
+  std::optional<std::pair<std::string, std::string>> Dst =
       splitDstPair(Ops.Regs[0], Ops.IsB64, *Ops.MRI);
-  if (Dst.first.empty())
-    return {};
+  if (!Dst)
+    return std::nullopt;
   std::string Addr = toAsmRegName(*Ops.MRI, Ops.Regs[1]);
-  return {
-      ToMnem.str() + " " + Dst.first + ", " + Addr + fmtOffset(Ops.Off0),
-      ToMnem.str() + " " + Dst.second + ", " + Addr + fmtOffset(Ops.Off1),
-  };
+  std::string First =
+      ToMnem.str() + " " + Dst->first + ", " + Addr + fmtOffset(Ops.Off0);
+  std::string Second =
+      ToMnem.str() + " " + Dst->second + ", " + Addr + fmtOffset(Ops.Off1);
+
+  // A compound DS load reads its address once before writing either half of
+  // the destination. After splitting, the first single-address load must not
+  // overwrite the address needed by the second. If the address overlaps the
+  // first destination half, issue the independent second half first and put
+  // the self-overlapping load last. (If it overlaps the second half, the
+  // natural order is already safe.)
+  SmallVector<MCRegister, 4> DstSubs = getDirectSubRegs(Ops.Regs[0], *Ops.MRI);
+  const unsigned FirstHalfWidth = Ops.IsB64 ? 2 : 1;
+  bool AddrOverlapsFirst =
+      DstSubs.size() >= FirstHalfWidth &&
+      llvm::any_of(ArrayRef(DstSubs).take_front(FirstHalfWidth),
+                   [&](MCRegister Reg) {
+                     return Ops.MRI->regsOverlap(Reg, Ops.Regs[1]);
+                   });
+  if (AddrOverlapsFirst)
+    return std::vector<std::string>{std::move(Second), std::move(First)};
+  return std::vector<std::string>{std::move(First), std::move(Second)};
 }
 
 // Expand a DS 2-address store into two single-address stores (addr, data).
-std::vector<std::string> expandDs2AddrStore(const DsOperands &Ops,
-                                            StringRef ToMnem) {
-  if (Ops.Regs.size() < 3)
-    return {};
+std::optional<std::vector<std::string>>
+expandDs2AddrStore(const DsOperands &Ops, StringRef ToMnem) {
+  if (Ops.Regs.size() < 3) {
+    log() << "hotswap: error: " << ToMnem << " expansion found "
+          << Ops.Regs.size() << " register operands; expected at least 3\n";
+    return std::nullopt;
+  }
   const MCRegisterInfo &MRI = *Ops.MRI;
   std::string Addr = toAsmRegName(MRI, Ops.Regs[0]);
   std::string Data0 = Ops.IsB64 ? fmtRegOperand(MRI, Ops.Regs[1])
                                 : toAsmRegName(MRI, Ops.Regs[1]);
   std::string Data1 = Ops.IsB64 ? fmtRegOperand(MRI, Ops.Regs[2])
                                 : toAsmRegName(MRI, Ops.Regs[2]);
-  return {
+  return std::vector<std::string>{
       ToMnem.str() + " " + Addr + ", " + Data0 + fmtOffset(Ops.Off0),
       ToMnem.str() + " " + Addr + ", " + Data1 + fmtOffset(Ops.Off1),
   };
 }
 
+bool registerSliceOverlaps(ArrayRef<MCRegister> Registers, unsigned Begin,
+                           unsigned Count, MCRegister Reg,
+                           const MCRegisterInfo &MRI) {
+  return llvm::any_of(Registers.slice(Begin, Count), [&](MCRegister DstReg) {
+    return MRI.regsOverlap(DstReg, Reg);
+  });
+}
+
 // Expand a DS 2-address exchange into two single-address exchanges
 // (dst, addr, data).
-std::vector<std::string> expandDs2AddrXchg(const DsOperands &Ops,
-                                           StringRef ToMnem) {
-  if (Ops.Regs.size() < 4)
-    return {};
+std::optional<std::vector<std::string>> expandDs2AddrXchg(const DsOperands &Ops,
+                                                          StringRef ToMnem) {
+  if (Ops.Regs.size() < 4) {
+    log() << "hotswap: error: " << ToMnem << " expansion found "
+          << Ops.Regs.size() << " register operands; expected at least 4\n";
+    return std::nullopt;
+  }
   const MCRegisterInfo &MRI = *Ops.MRI;
-  std::pair<std::string, std::string> Dst =
+  std::optional<std::pair<std::string, std::string>> Dst =
       splitDstPair(Ops.Regs[0], Ops.IsB64, MRI);
-  if (Dst.first.empty())
-    return {};
+  if (!Dst)
+    return std::nullopt;
   std::string Addr = toAsmRegName(MRI, Ops.Regs[1]);
   std::string Data0 = Ops.IsB64 ? fmtRegOperand(MRI, Ops.Regs[2])
                                 : toAsmRegName(MRI, Ops.Regs[2]);
   std::string Data1 = Ops.IsB64 ? fmtRegOperand(MRI, Ops.Regs[3])
                                 : toAsmRegName(MRI, Ops.Regs[3]);
-  return {
-      ToMnem.str() + " " + Dst.first + ", " + Addr + ", " + Data0 +
-          fmtOffset(Ops.Off0),
-      ToMnem.str() + " " + Dst.second + ", " + Addr + ", " + Data1 +
-          fmtOffset(Ops.Off1),
-  };
+  std::string First = ToMnem.str() + " " + Dst->first + ", " + Addr + ", " +
+                      Data0 + fmtOffset(Ops.Off0);
+  std::string Second = ToMnem.str() + " " + Dst->second + ", " + Addr + ", " +
+                       Data1 + fmtOffset(Ops.Off1);
+
+  SmallVector<MCRegister, 4> DstSubs = getDirectSubRegs(Ops.Regs[0], MRI);
+  const unsigned HalfWidth = Ops.IsB64 ? 2 : 1;
+  if (DstSubs.size() < 2 * HalfWidth) {
+    log() << "hotswap: error: " << ToMnem << " destination "
+          << MRI.getName(Ops.Regs[0]) << " has " << DstSubs.size()
+          << " direct subregisters; expected at least " << 2 * HalfWidth
+          << "\n";
+    return std::nullopt;
+  }
+
+  // Op0 writes the first destination half and op1 still needs addr + data1;
+  // op1 writes the second half and op0 still needs addr + data0. Pick the safe
+  // order when only one direction has a dependency. If both directions do,
+  // neither ordering preserves the compound instruction's read-before-write
+  // semantics without a scratch VGPR, so decline the rewrite.
+  const bool FirstClobbersSecond =
+      registerSliceOverlaps(DstSubs, 0, HalfWidth, Ops.Regs[1], MRI) ||
+      registerSliceOverlaps(DstSubs, 0, HalfWidth, Ops.Regs[3], MRI);
+  const bool SecondClobbersFirst =
+      registerSliceOverlaps(DstSubs, HalfWidth, HalfWidth, Ops.Regs[1], MRI) ||
+      registerSliceOverlaps(DstSubs, HalfWidth, HalfWidth, Ops.Regs[2], MRI);
+  if (FirstClobbersSecond && SecondClobbersFirst) {
+    log() << "hotswap: ds_storexchg_2addr has cyclic destination/source "
+             "overlap; leaving original instruction in place\n";
+    return std::nullopt;
+  }
+  if (FirstClobbersSecond)
+    return std::vector<std::string>{std::move(Second), std::move(First)};
+  return std::vector<std::string>{std::move(First), std::move(Second)};
 }
 
 // -- expandDs2Addr ----------------------------------------------------------
@@ -309,11 +381,13 @@ std::vector<std::string> expandDs2AddrXchg(const DsOperands &Ops,
 // Top-level expansion: extracts operands from the decoded MCInst, computes
 // scaled offsets, then dispatches to the appropriate layout-specific helper.
 
-std::vector<std::string> expandDs2Addr(const MCInst &Inst, StringRef FromMnem,
-                                       StringRef ToMnem, const LLVMState &LS) {
+std::optional<std::vector<std::string>> expandDs2AddrImpl(const MCInst &Inst,
+                                                          StringRef FromMnem,
+                                                          StringRef ToMnem,
+                                                          const LLVMState &LS) {
   std::optional<DsOperands> Ops = extractDsOperands(Inst, FromMnem, LS);
   if (!Ops)
-    return {};
+    return std::nullopt;
 
   // Use the trailing underscore so the three prefixes are disjoint
   // ("ds_load_", "ds_store_", "ds_storexchg_"); without it "ds_store" is a
@@ -326,7 +400,7 @@ std::vector<std::string> expandDs2Addr(const MCInst &Inst, StringRef FromMnem,
     return expandDs2AddrStore(*Ops, ToMnem);
 
   log() << "hotswap: error: unrecognized DS mnemonic: " << FromMnem << "\n";
-  return {};
+  return std::nullopt;
 }
 
 // -- patchDs2Addr -----------------------------------------------------------
@@ -343,16 +417,13 @@ bool patchDs2Addr(PatchContext &Ctx, size_t Idx) {
   StringRef ToMnem = getDs2AddrReplacement(DI.Mnemonic);
   if (ToMnem.empty())
     return false;
-  std::vector<std::string> Expanded =
-      expandDs2Addr(DI.Inst, DI.Mnemonic, ToMnem, Ctx.LS);
-  if (Expanded.empty()) {
-    log() << "hotswap: error: ds_2addr expansion failed for: " << DI.Mnemonic
-          << "\n";
+  std::optional<std::vector<std::string>> Expanded =
+      expandDs2AddrImpl(DI.Inst, DI.Mnemonic, ToMnem, Ctx.LS);
+  if (!Expanded)
     return false;
-  }
 
   std::string Combined;
-  for (const std::string &Line : Expanded)
+  for (const std::string &Line : *Expanded)
     Combined += Line + "\n";
   // Drain the DS counter right after the split pair so both halves are
   // guaranteed complete before any downstream consumer. The original code
@@ -1288,6 +1359,13 @@ bool patchDsAddtid(PatchContext &Ctx, size_t Idx) {
 }
 
 } // anonymous namespace
+
+std::optional<std::vector<std::string>> expandDs2Addr(const MCInst &Inst,
+                                                      StringRef FromMnem,
+                                                      StringRef ToMnem,
+                                                      const LLVMState &LS) {
+  return expandDs2AddrImpl(Inst, FromMnem, ToMnem, LS);
+}
 
 // -- applyTrampolinePatches -------------------------------------------------
 //

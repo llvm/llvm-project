@@ -607,6 +607,44 @@ TEST(BuildTrampoline, EmptyOnBadAsm) {
   EXPECT_TRUE(T.Bytes.empty());
 }
 
+// -- DS two-address expansion ------------------------------------------------
+
+TEST(ExpandDs2Addr, PreservesAddressNeededBySecondLoad) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  llvm::SmallVector<uint8_t> Bytes = assembleSingleInst(
+      "ds_load_2addr_b64 v[12:15], v12 offset0:0 offset1:1", S);
+  ASSERT_FALSE(Bytes.empty());
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 1u);
+
+  std::optional<std::vector<std::string>> Expanded =
+      expandDs2Addr(Decoded[0].Inst, Decoded[0].Mnemonic, "ds_load_b64", S);
+  ASSERT_TRUE(Expanded);
+  ASSERT_EQ(Expanded->size(), 2u);
+  EXPECT_EQ((*Expanded)[0], "ds_load_b64 v[14:15], v12 offset:8");
+  EXPECT_EQ((*Expanded)[1], "ds_load_b64 v[12:13], v12");
+}
+
+TEST(ExpandDs2Addr, RejectsCyclicExchangeDependency) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  llvm::SmallVector<uint8_t> Bytes = assembleSingleInst(
+      "ds_storexchg_2addr_rtn_b64 v[20:23], v24, v[22:23], v[20:21] "
+      "offset0:0 offset1:1",
+      S);
+  ASSERT_FALSE(Bytes.empty());
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 1u);
+
+  EXPECT_FALSE(expandDs2Addr(Decoded[0].Inst, Decoded[0].Mnemonic,
+                             "ds_storexchg_rtn_b64", S));
+}
+
 // -- buildKernelEntryTrampoline -----------------------------------------------
 
 TEST(BuildKernelEntryTrampoline, BuildsRecognizedPcRelativeStub) {
