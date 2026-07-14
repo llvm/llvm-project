@@ -1672,7 +1672,7 @@ define double @f9() {
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:F1>
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:AT>
 ; MIPS1-PSX-NEXT:    # <MCOperand Expr:%lo(f+4)>>
-; MIPS1-PSX-NEXT:    jr	$ra # <MCInst [[#MCINST2]] JR
+; MIPS1-PSX-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS1-PSX-NEXT:    nop # <MCInst #[[#MCINST13]] SLL
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:ZERO>
