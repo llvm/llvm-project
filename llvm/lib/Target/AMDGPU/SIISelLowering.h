@@ -122,6 +122,9 @@ private:
 
   SDValue widenLoad(LoadSDNode *Ld, DAGCombinerInfo &DCI) const;
   SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;
+  // Lower a load/store of the VGPR ("as memory") address space (13) to a
+  // REG_LOAD/REG_STORE target node indexed by the pointer's dword offset.
+  SDValue LowerLoadStoreVGPR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFastUnsafeFDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFastUnsafeFDIV64(SDValue Op, SelectionDAG &DAG) const;

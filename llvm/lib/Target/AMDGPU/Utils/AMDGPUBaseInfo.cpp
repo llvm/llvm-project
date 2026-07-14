@@ -478,8 +478,19 @@ struct FP4FP8DstByteSelInfo {
 #define GET_getMFMA_F8F6F4_WithSize_IMPL
 #define GET_isMFMA_F8F6F4Table_IMPL
 #define GET_isCvtScaleF32_F32F16ToF8F4Table_IMPL
+#define GET_VLdStIdxOpcodeInfoTable_DECL
+#define GET_VLdStIdxOpcodeInfoTable_IMPL
 
 #include "AMDGPUGenSearchableTables.inc"
+
+const VLdStIdxOpcodeInfo *getVLdStIdxOpcodeInfoByOpcode(unsigned Opc) {
+  return getVLdStIdxOpcodeInfoByOpcodeImpl(Opc);
+}
+
+const VLdStIdxOpcodeInfo *getVLdStIdxOpcodeInfoByKey(uint16_t BitWidth,
+                                                     bool IsStore) {
+  return getVLdStIdxOpcodeInfoByKeyImpl(BitWidth, IsStore);
+}
 
 int getMTBUFBaseOpcode(unsigned Opc) {
   const MTBUFInfo *Info = getMTBUFInfoFromOpcode(Opc);

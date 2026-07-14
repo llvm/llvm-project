@@ -487,6 +487,19 @@ struct MIMGInfo {
 LLVM_READONLY
 const MIMGInfo *getMIMGInfo(unsigned Opc);
 
+struct VLdStIdxOpcodeInfo {
+  unsigned Opcode;
+  uint16_t BitWidth;
+  bool IsStore;
+};
+
+LLVM_READONLY
+const VLdStIdxOpcodeInfo *getVLdStIdxOpcodeInfoByOpcode(unsigned Opc);
+
+LLVM_READONLY
+const VLdStIdxOpcodeInfo *getVLdStIdxOpcodeInfoByKey(uint16_t BitWidth,
+                                                     bool IsStore);
+
 LLVM_READONLY
 int getMTBUFBaseOpcode(unsigned Opc);
 

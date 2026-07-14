@@ -91,6 +91,7 @@ private:
   bool selectCOPY_VCC_SCC(MachineInstr &I) const;
   bool selectReadAnyLane(MachineInstr &I) const;
   bool selectPHI(MachineInstr &I) const;
+  bool selectRegLoadStore(MachineInstr &I) const;
   bool selectG_TRUNC(MachineInstr &I) const;
   bool selectG_SZA_EXT(MachineInstr &I) const;
   bool selectG_FPEXT(MachineInstr &I) const;

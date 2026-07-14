@@ -42,9 +42,11 @@
 
 #include "AMDGPULowerVGPREncoding.h"
 #include "AMDGPU.h"
+#include "AMDGPUMachineInstrs.h"
 #include "GCNSubtarget.h"
 #include "SIDefines.h"
 #include "SIInstrInfo.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/Support/Debug.h"
@@ -132,6 +134,7 @@ public:
   bool run(MachineFunction &MF);
 
 private:
+  const GCNSubtarget *ST;
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
 
@@ -176,6 +179,13 @@ private:
 
   /// Handle single \p MI. \return true if changed.
   bool runOnMachineInstr(MachineInstr &MI);
+
+  /// Lower a VGPR "as memory" (address space 13) indexed load/store pseudo
+  /// (V_LOAD_IDX_B<N> / V_STORE_IDX_B<N>) into a sequence of M0-relative moves
+  /// (v_movrels_b32 for loads, v_movreld_b32 for stores) over the wave's vector
+  /// registers. M0 must already hold the dword index (see AMDGPUAssignIdxToM0).
+  /// This replaces the pseudo, which is erased.
+  void lowerLoadStoreIdx(MachineInstr &MI);
 
   /// Compute the mode for a single \p MI given \p Ops operands
   /// bit mapping. Optionally takes second array \p Ops2 for VOPD.
@@ -379,6 +389,63 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
   return false;
 }
 
+void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
+  auto &LdSt = cast<AMDGPUMI::VLoadStoreIdxInst>(MI);
+  MachineBasicBlock &BB = *MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+  const bool IsStore = LdSt.mayStore();
+
+  // $data is operand 0 of both the load (def) and store (use) pseudos; M0
+  // already holds the dword index (see AMDGPUAssignIdxToM0).
+  Register Data = LdSt.getDataOp().getReg();
+  unsigned Offset = LdSt.getOffsetOp().getImm();
+  unsigned NumDwords = LdSt.getBitWidth() / 32;
+
+  // A statically out-of-range dword offset would fold into a base VGPR outside
+  // the addressable register file - an out-of-bounds access of the VGPR
+  // "as memory" (address space 13) region. When the whole file is addressable
+  // the index is allowed to wrap; otherwise it must stay in range.
+#ifndef NDEBUG
+  unsigned NumAddressableVGPRs = ST->getAddressableNumVGPRs(
+      MI.getMF()->getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize());
+  bool AllowOffsetWrap =
+      NumAddressableVGPRs == AMDGPU::IsaInfo::getTotalNumVGPRs(*ST);
+  assert((AllowOffsetWrap || Offset + NumDwords <= NumAddressableVGPRs) &&
+         "out of bounds VGPR 'as memory' (address space 13) access");
+#endif
+
+  unsigned Opcode =
+      IsStore ? AMDGPU::V_MOVRELD_B32_e32 : AMDGPU::V_MOVRELS_B32_e32;
+
+  // The dword index is (M0 + $offset). Fold $offset into the base register so
+  // each dword i reads/writes VGPR($offset + i) relative to M0.
+  for (unsigned i = 0; i < NumDwords; ++i) {
+    Register Base = AMDGPU::VGPR0 + Offset + i;
+    Register Sub = Data;
+    if (NumDwords != 1)
+      Sub = TRI->getSubReg(Data, TRI->getSubRegFromChannel(i));
+
+    MachineInstr *Mov;
+    if (IsStore)
+      Mov = BuildMI(BB, MI, DL, TII->get(Opcode))
+                .addReg(Base, RegState::Undef)
+                .addReg(Sub)
+                .getInstr();
+    else
+      Mov = BuildMI(BB, MI, DL, TII->get(Opcode), Sub)
+                .addReg(Base, RegState::Undef)
+                .getInstr();
+
+    // On subtargets with more than 256 addressable VGPRs the referenced
+    // register may need high address bits; reuse the S_SET_VGPR_MSB machinery
+    // to encode them. This is a no-op on movrel-only (<=256 VGPR) subtargets.
+    if (ST->has1024AddressableVGPRs())
+      runOnMachineInstr(*Mov);
+  }
+
+  MI.eraseFromParent();
+}
+
 MachineBasicBlock::instr_iterator
 AMDGPULowerVGPREncoding::handleClause(MachineBasicBlock::instr_iterator I) {
   if (!ClauseRemaining)
@@ -570,12 +637,14 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
 }
 
 bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  if (!ST.has1024AddressableVGPRs())
-    return false;
+  ST = &MF.getSubtarget<GCNSubtarget>();
+  TII = ST->getInstrInfo();
+  TRI = ST->getRegisterInfo();
 
-  TII = ST.getInstrInfo();
-  TRI = ST.getRegisterInfo();
+  // The S_SET_VGPR_MSB encoding is only required on subtargets with more than
+  // 256 addressable VGPRs (gfx1250). On movrel-only subtargets the pass still
+  // runs, but only to lower the VGPR "as memory" indexed load/store pseudos.
+  const bool LowerVGPRMSBs = ST->has1024AddressableVGPRs();
 
   LLVM_DEBUG(dbgs() << "*** AMDGPULowerVGPREncoding on " << MF.getName()
                     << " ***\n");
@@ -592,6 +661,19 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
                       << ":\n");
 
     for (auto &MI : llvm::make_early_inc_range(MBB.instrs())) {
+      // Lower VGPR "as memory" indexed load/store pseudos on any subtarget that
+      // reaches this pass (movrel-only or gfx1250). This replaces the pseudo.
+      if (isa<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
+        lowerLoadStoreIdx(MI);
+        Changed = true;
+        continue;
+      }
+
+      // The remaining work only inserts VGPR MSB encoding, which is unnecessary
+      // on movrel-only subtargets.
+      if (!LowerVGPRMSBs)
+        continue;
+
       if (MI.isMetaInstruction())
         continue;
 
@@ -624,7 +706,7 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
       }
 
       if (MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 &&
-          ST.hasSetregVGPRMSBFixup()) {
+          ST->hasSetregVGPRMSBFixup()) {
         Changed |= handleSetregMode(MI);
         continue;
       }
@@ -648,8 +730,10 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
     }
 
     // Reset the mode if we are falling through.
-    LLVM_DEBUG(dbgs() << "  end of BB, resetting mode\n");
-    resetMode(MBB.instr_end());
+    if (LowerVGPRMSBs) {
+      LLVM_DEBUG(dbgs() << "  end of BB, resetting mode\n");
+      resetMode(MBB.instr_end());
+    }
   }
 
   return Changed;
