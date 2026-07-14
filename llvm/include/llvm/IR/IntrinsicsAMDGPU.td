@@ -3903,24 +3903,24 @@ def int_amdgcn_cooperative_atomic_store_8x16B : AMDGPUCooperativeAtomicStore<llv
 // convergence control tokens. The corresponding MIR pseudos are marked as
 // having side effects, which is sufficient to prevent optimizations without
 // having to mark them as convergent.
-def int_amdgcn_if : Intrinsic<[llvm_i1_ty, llvm_anyint_ty],
+def int_amdgcn_if : Intrinsic<[llvm_i1_ty, llvm_i1_ty],
   [llvm_i1_ty], [IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
-def int_amdgcn_else : Intrinsic<[llvm_i1_ty, llvm_anyint_ty],
-  [llvm_anyint_ty], [IntrWillReturn, IntrNoCallback, IntrNoFree]
+def int_amdgcn_else : Intrinsic<[llvm_i1_ty, llvm_i1_ty],
+  [llvm_i1_ty], [IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
-def int_amdgcn_if_break : Intrinsic<[llvm_anyint_ty],
-  [llvm_i1_ty, LLVMMatchType<0>],
+def int_amdgcn_if_break : Intrinsic<[llvm_i1_ty],
+  [llvm_i1_ty, llvm_i1_ty],
   [IntrNoMem, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
 def int_amdgcn_loop : Intrinsic<[llvm_i1_ty],
-  [llvm_anyint_ty], [IntrWillReturn, IntrNoCallback, IntrNoFree]
+  [llvm_i1_ty], [IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
-def int_amdgcn_end_cf : Intrinsic<[], [llvm_anyint_ty],
+def int_amdgcn_end_cf : Intrinsic<[], [llvm_i1_ty],
   [IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // Represent unreachable in a divergent region.

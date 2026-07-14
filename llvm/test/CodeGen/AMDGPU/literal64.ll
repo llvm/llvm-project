@@ -130,30 +130,63 @@ define void @v_mov_b64_double(ptr addrspace(1) %ptr) {
 ; GFX1250-NEXT:    global_atomic_add_f64 v[0:1], v[2:3], off scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; GFX13-LABEL: v_mov_b64_double:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_load_b64 v[4:5], v[0:1], off
-; GFX13-NEXT:    s_mov_b32 s0, 0
-; GFX13-NEXT:  .LBB6_1: ; %atomicrmw.start
-; GFX13-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_add_f64_e32 v[2:3], 0x4063233333333333, v[4:5]
-; GFX13-NEXT:    global_atomic_cmpswap_b64 v[2:3], v[0:1], v[2:5], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[2:3], v[4:5]
-; GFX13-NEXT:    v_dual_mov_b32 v5, v3 :: v_dual_mov_b32 v4, v2
-; GFX13-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX13-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
-; GFX13-NEXT:    s_cbranch_execnz .LBB6_1
-; GFX13-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GFX13-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
+; GFX13-SDAG-LABEL: v_mov_b64_double:
+; GFX13-SDAG:       ; %bb.0:
+; GFX13-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-NEXT:    global_load_b64 v[4:5], v[0:1], off
+; GFX13-SDAG-NEXT:    s_mov_b32 s0, 0
+; GFX13-SDAG-NEXT:  .LBB6_1: ; %atomicrmw.start
+; GFX13-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX13-SDAG-NEXT:    v_add_f64_e32 v[2:3], 0x4063233333333333, v[4:5]
+; GFX13-SDAG-NEXT:    global_atomic_cmpswap_b64 v[2:3], v[0:1], v[2:5], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX13-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[2:3], v[4:5]
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v5, v3 :: v_dual_mov_b32 v4, v2
+; GFX13-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX13-SDAG-NEXT:    s_cbranch_execnz .LBB6_1
+; GFX13-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX13-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX13-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-GISEL-LABEL: v_mov_b64_double:
+; GFX13-GISEL:       ; %bb.0:
+; GFX13-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX13-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX13-GISEL-NEXT:    global_load_b64 v[4:5], v[0:1], off
+; GFX13-GISEL-NEXT:    s_mov_b32 s0, 0
+; GFX13-GISEL-NEXT:    ; implicit-def: $sgpr1
+; GFX13-GISEL-NEXT:    ; implicit-def: $sgpr2
+; GFX13-GISEL-NEXT:  .LBB6_1: ; %atomicrmw.start
+; GFX13-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX13-GISEL-NEXT:    v_add_f64_e32 v[2:3], 0x4063233333333333, v[4:5]
+; GFX13-GISEL-NEXT:    global_atomic_cmpswap_b64 v[2:3], v[0:1], v[2:5], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX13-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[2:3], v[4:5]
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v5, v3 :: v_dual_mov_b32 v4, v2
+; GFX13-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
+; GFX13-GISEL-NEXT:    s_and_not1_b32 s2, s2, exec_lo
+; GFX13-GISEL-NEXT:    s_and_b32 s3, exec_lo, s0
+; GFX13-GISEL-NEXT:    s_and_not1_b32 s1, s1, exec_lo
+; GFX13-GISEL-NEXT:    s_or_b32 s2, s2, s3
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX13-GISEL-NEXT:    s_and_b32 s3, exec_lo, s2
+; GFX13-GISEL-NEXT:    s_or_b32 s1, s1, s3
+; GFX13-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX13-GISEL-NEXT:    s_cbranch_execnz .LBB6_1
+; GFX13-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX13-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; GFX13-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %result = atomicrmw fadd ptr addrspace(1) %ptr, double 153.1 monotonic
   ret void
 }

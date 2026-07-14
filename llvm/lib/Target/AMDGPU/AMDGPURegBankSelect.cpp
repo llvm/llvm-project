@@ -110,8 +110,13 @@ public:
   }
 
   const RegisterBank *getRegBankToAssign(Register Reg) {
+    // An "intrinsic lane mask" is an s1 value that lives in a wave-width lane
+    // mask register. Assign it to the Vcc (lane mask) bank rather than a scalar
+    // sgpr boolean so that it selects to a wave mask register class.
+    if (ILMA.isLaneMask(Reg) && MRI.getType(Reg) == LLT::scalar(1))
+      return VccRB;
     if (!isTemporalDivergenceCopy(Reg) &&
-        (MUI.isUniformAtDef(Reg) || ILMA.isS32S64LaneMask(Reg)))
+        (MUI.isUniformAtDef(Reg) || ILMA.isLaneMask(Reg)))
       return SgprRB;
     if (MRI.getType(Reg) == LLT::scalar(1))
       return VccRB;

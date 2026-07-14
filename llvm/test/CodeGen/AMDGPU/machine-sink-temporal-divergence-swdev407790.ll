@@ -121,8 +121,8 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_25
 ; CHECK-NEXT:  ; %bb.1: ; %.preheader5
 ; CHECK-NEXT:    v_mul_lo_u32 v44, v41, 14
-; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:    s_mov_b32 s5, 0
+; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v45, 0x3c04, v44
 ; CHECK-NEXT:  .LBB0_2: ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, s5, v45

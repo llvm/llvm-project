@@ -47,7 +47,7 @@ define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
   ; CHECK-NEXT:   [[AMDGPU_WHOLE_WAVE_FUNC_SETUP:%[0-9]+]]:_(i1) = G_AMDGPU_WHOLE_WAVE_FUNC_SETUP
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY]](i32), [[COPY1]]
-  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(i1), [[INT1:%[0-9]+]]:_(i32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), [[ICMP]](i1)
+  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(i1), [[INT1:%[0-9]+]]:_(i1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), [[ICMP]](i1)
   ; CHECK-NEXT:   G_BRCOND [[INT]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.3
   ; CHECK-NEXT: {{  $}}
@@ -58,7 +58,7 @@ define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.if.end:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i32) = G_PHI [[COPY1]](i32), %bb.1, [[ADD]](i32), %bb.2
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT1]](i32)
+  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT1]](i1)
   ; CHECK-NEXT:   [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[AMDGPU_WHOLE_WAVE_FUNC_SETUP]](i1), [[COPY]], [[PHI]]
   ; CHECK-NEXT:   $vgpr0 = COPY [[SELECT]](i32)
   ; CHECK-NEXT:   G_AMDGPU_WHOLE_WAVE_FUNC_RETURN [[AMDGPU_WHOLE_WAVE_FUNC_SETUP]](i1), implicit $vgpr0

@@ -208,7 +208,7 @@ bool DivergenceLoweringHelper::lowerTemporalDivergence() {
 
   for (auto [Reg, UseInst, _] : MUI->getTemporalDivergenceList()) {
     if (MRI->getType(Reg) == LLT::scalar(1) || MUI->isDivergentAtDef(Reg) ||
-        ILMA.isS32S64LaneMask(Reg))
+        ILMA.isLaneMask(Reg))
       continue;
 
     Register CachedTDCopy = TDCache.lookup(Reg);

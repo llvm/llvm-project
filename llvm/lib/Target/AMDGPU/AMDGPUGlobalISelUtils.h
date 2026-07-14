@@ -31,19 +31,17 @@ getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
                           GISelValueTracking *ValueTracking = nullptr,
                           bool CheckNUW = false);
 
-// Currently finds S32/S64 lane masks that can be declared as divergent by
-// uniformity analysis (all are phis at the moment).
-// These are defined as i32/i64 in some IR intrinsics (not as i1).
-// Tablegen forces(via telling that lane mask IR intrinsics are uniform) most of
-// S32/S64 lane masks to be uniform, as this results in them ending up with sgpr
-// reg class after instruction-select, don't search for all of them.
+// Finds lane masks produced/consumed by the control flow intrinsics. These are
+// i1 values that live in wave-width lane mask registers (SReg_1). They are used
+// to assign such values to the Vcc (lane mask) register bank so that they
+// select to a wave mask register class.
 class IntrinsicLaneMaskAnalyzer {
-  SmallDenseSet<Register, 8> S32S64LaneMask;
+  SmallDenseSet<Register, 8> LaneMask;
   MachineRegisterInfo &MRI;
 
 public:
   IntrinsicLaneMaskAnalyzer(MachineFunction &MF);
-  bool isS32S64LaneMask(Register Reg) const;
+  bool isLaneMask(Register Reg) const;
 
 private:
   void initLaneMaskIntrinsics(MachineFunction &MF);

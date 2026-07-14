@@ -873,7 +873,7 @@ body: |
   ; OLD_RBS-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; OLD_RBS-NEXT:   [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[C]](s32)
   ; OLD_RBS-NEXT:   [[ICMP:%[0-9]+]]:sreg_32_xm0_xexec(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY3]]
-  ; OLD_RBS-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[ICMP]](s1), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; OLD_RBS-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s1) = SI_IF [[ICMP]](s1), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
   ; OLD_RBS-NEXT:   G_BR %bb.1
   ; OLD_RBS-NEXT: {{  $}}
   ; OLD_RBS-NEXT: bb.1:
@@ -883,9 +883,10 @@ body: |
   ; OLD_RBS-NEXT: {{  $}}
   ; OLD_RBS-NEXT: bb.2:
   ; OLD_RBS-NEXT:   [[PHI:%[0-9]+]]:sgpr(s32) = G_PHI [[C]](s32), %bb.0, [[C1]](s32), %bb.1
-  ; OLD_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[SI_IF]](s32)
-  ; OLD_RBS-NEXT:   [[COPY4:%[0-9]+]]:vgpr(i32) = COPY [[PHI]](s32)
-  ; OLD_RBS-NEXT:   G_STORE [[COPY4]](i32), [[MV]](p1) :: (store (s32), addrspace 1)
+  ; OLD_RBS-NEXT:   [[COPY4:%[0-9]+]]:sgpr(i1) = COPY [[SI_IF]](s1)
+  ; OLD_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[COPY4]](i1)
+  ; OLD_RBS-NEXT:   [[COPY5:%[0-9]+]]:vgpr(i32) = COPY [[PHI]](s32)
+  ; OLD_RBS-NEXT:   G_STORE [[COPY5]](i32), [[MV]](p1) :: (store (s32), addrspace 1)
   ; OLD_RBS-NEXT:   S_ENDPGM 0
   ;
   ; NEW_RBS-LABEL: name: divergent_phi_with_uniform_inputs
@@ -901,7 +902,7 @@ body: |
   ; NEW_RBS-NEXT:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; NEW_RBS-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY3]]
   ; NEW_RBS-NEXT:   [[COPY4:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[ICMP]](s1)
-  ; NEW_RBS-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[COPY4]](s1), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; NEW_RBS-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s1) = SI_IF [[COPY4]](s1), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
   ; NEW_RBS-NEXT:   G_BR %bb.1
   ; NEW_RBS-NEXT: {{  $}}
   ; NEW_RBS-NEXT: bb.1:
@@ -911,8 +912,8 @@ body: |
   ; NEW_RBS-NEXT: {{  $}}
   ; NEW_RBS-NEXT: bb.2:
   ; NEW_RBS-NEXT:   [[PHI:%[0-9]+]]:vgpr(s32) = G_PHI [[C]](s32), %bb.0, [[C1]](s32), %bb.1
-  ; NEW_RBS-NEXT:   [[COPY5:%[0-9]+]]:sgpr(s32) = COPY [[SI_IF]](s32)
-  ; NEW_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[COPY5]](s32)
+  ; NEW_RBS-NEXT:   [[COPY5:%[0-9]+]]:vcc(s1) = COPY [[SI_IF]](s1)
+  ; NEW_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[COPY5]](s1)
   ; NEW_RBS-NEXT:   G_STORE [[PHI]](s32), [[MV]](p1) :: (store (s32), addrspace 1)
   ; NEW_RBS-NEXT:   S_ENDPGM 0
   bb.0:
@@ -925,7 +926,7 @@ body: |
     %3:_(p1) = G_MERGE_VALUES %1(s32), %2(s32)
     %4:_(s32) = G_CONSTANT i32 0
     %5:sreg_32_xm0_xexec(s1) = G_ICMP intpred(eq), %0(s32), %4
-    %6:sreg_32_xm0_xexec(s32) = SI_IF %5(s1), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+    %6:sreg_32_xm0_xexec(s1) = SI_IF %5(s1), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
     G_BR %bb.1
 
   bb.1:
@@ -935,7 +936,7 @@ body: |
 
   bb.2:
     %8:_(s32) = G_PHI %4(s32), %bb.0, %7(s32), %bb.1
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %6(s32)
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %6(s1)
     G_STORE %8(s32), %3(p1) :: (store (s32), addrspace 1)
     S_ENDPGM 0
 ...
@@ -956,26 +957,41 @@ body: |
   ; OLD_RBS-NEXT:   [[MV:%[0-9]+]]:vgpr(p1) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
   ; OLD_RBS-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -1
   ; OLD_RBS-NEXT:   [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+  ; OLD_RBS-NEXT:   [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[C1]](s32)
+  ; OLD_RBS-NEXT:   [[DEF:%[0-9]+]]:sreg_32(s1) = IMPLICIT_DEF
+  ; OLD_RBS-NEXT:   [[COPY3:%[0-9]+]]:sreg_32(s1) = COPY [[TRUNC]](s1)
   ; OLD_RBS-NEXT: {{  $}}
   ; OLD_RBS-NEXT: bb.1:
   ; OLD_RBS-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
   ; OLD_RBS-NEXT: {{  $}}
-  ; OLD_RBS-NEXT:   [[PHI:%[0-9]+]]:sgpr(s32) = G_PHI %7(s32), %bb.1, [[C1]](s32), %bb.0
-  ; OLD_RBS-NEXT:   [[PHI1:%[0-9]+]]:vgpr(s32) = G_PHI [[C]](s32), %bb.0, %9(s32), %bb.1
+  ; OLD_RBS-NEXT:   [[PHI:%[0-9]+]]:sreg_32(s1) = PHI [[COPY3]](s1), %bb.0, %9(s1), %bb.1
+  ; OLD_RBS-NEXT:   [[PHI1:%[0-9]+]]:sreg_32(s1) = PHI [[DEF]](s1), %bb.0, %11(s1), %bb.1
+  ; OLD_RBS-NEXT:   [[PHI2:%[0-9]+]]:vgpr(s32) = G_PHI [[C]](s32), %bb.0, %13(s32), %bb.1
+  ; OLD_RBS-NEXT:   [[COPY4:%[0-9]+]]:sreg_32(s1) = COPY [[PHI]](s1)
+  ; OLD_RBS-NEXT:   [[COPY5:%[0-9]+]]:sreg_32(s1) = COPY [[PHI1]](s1)
   ; OLD_RBS-NEXT:   [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-  ; OLD_RBS-NEXT:   [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[C2]](s32)
-  ; OLD_RBS-NEXT:   [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[PHI1]], [[COPY3]]
+  ; OLD_RBS-NEXT:   [[COPY6:%[0-9]+]]:vgpr(i32) = COPY [[C2]](s32)
+  ; OLD_RBS-NEXT:   [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[PHI2]], [[COPY6]]
+  ; OLD_RBS-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[ADD]](s32), implicit $exec_lo
   ; OLD_RBS-NEXT:   [[UITOFP:%[0-9]+]]:vgpr(s32) = G_UITOFP [[ADD]](s32)
   ; OLD_RBS-NEXT:   [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(ogt), [[UITOFP]](s32), [[COPY]]
-  ; OLD_RBS-NEXT:   [[INT:%[0-9]+]]:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[FCMP]](s1), [[PHI]](s32)
-  ; OLD_RBS-NEXT:   SI_LOOP [[INT]](s32), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; OLD_RBS-NEXT:   [[COPY8:%[0-9]+]]:sgpr(i1) = COPY [[COPY4]](s1)
+  ; OLD_RBS-NEXT:   [[INT:%[0-9]+]]:sgpr(i1) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[FCMP]](s1), [[COPY8]](i1)
+  ; OLD_RBS-NEXT:   [[COPY9:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[INT]](i1)
+  ; OLD_RBS-NEXT:   [[COPY10:%[0-9]+]]:sreg_32(s1) = COPY [[COPY9]](s1)
+  ; OLD_RBS-NEXT:   [[S_ANDN2_B32_:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY5]](s1), $exec_lo, implicit-def $scc
+  ; OLD_RBS-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY10]](s1), implicit-def $scc
+  ; OLD_RBS-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_]](s1), [[S_AND_B32_]](s1), implicit-def $scc
+  ; OLD_RBS-NEXT:   [[COPY11:%[0-9]+]]:sreg_32(s1) = COPY [[COPY9]](s1)
+  ; OLD_RBS-NEXT:   SI_LOOP [[COPY9]](s1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; OLD_RBS-NEXT:   G_BR %bb.2
   ; OLD_RBS-NEXT: {{  $}}
   ; OLD_RBS-NEXT: bb.2:
-  ; OLD_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](s32)
+  ; OLD_RBS-NEXT:   [[COPY12:%[0-9]+]]:sgpr(i1) = COPY [[S_OR_B32_]](s1)
+  ; OLD_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[COPY12]](i1)
   ; OLD_RBS-NEXT:   [[C3:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 10
-  ; OLD_RBS-NEXT:   [[COPY4:%[0-9]+]]:vgpr(i32) = COPY [[C3]](s32)
-  ; OLD_RBS-NEXT:   [[MUL:%[0-9]+]]:vgpr(s32) = G_MUL [[ADD]], [[COPY4]]
+  ; OLD_RBS-NEXT:   [[COPY13:%[0-9]+]]:vgpr(i32) = COPY [[C3]](s32)
+  ; OLD_RBS-NEXT:   [[MUL:%[0-9]+]]:vgpr(s32) = G_MUL [[COPY7]], [[COPY13]]
   ; OLD_RBS-NEXT:   G_STORE [[MUL]](s32), [[MV]](p1) :: (store (s32), addrspace 1)
   ; OLD_RBS-NEXT:   S_ENDPGM 0
   ;
@@ -989,29 +1005,42 @@ body: |
   ; NEW_RBS-NEXT:   [[COPY2:%[0-9]+]]:vgpr(s32) = COPY $vgpr2
   ; NEW_RBS-NEXT:   [[MV:%[0-9]+]]:vgpr(p1) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
   ; NEW_RBS-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -1
-  ; NEW_RBS-NEXT:   [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+  ; NEW_RBS-NEXT:   [[DEF:%[0-9]+]]:sreg_32(s1) = IMPLICIT_DEF
+  ; NEW_RBS-NEXT:   [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
+  ; NEW_RBS-NEXT:   [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+  ; NEW_RBS-NEXT:   [[AMDGPU_COPY_VCC_SCC:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[C2]](s32)
   ; NEW_RBS-NEXT: {{  $}}
   ; NEW_RBS-NEXT: bb.1:
   ; NEW_RBS-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
   ; NEW_RBS-NEXT: {{  $}}
-  ; NEW_RBS-NEXT:   [[PHI:%[0-9]+]]:sgpr(s32) = G_PHI %15(s32), %bb.1, [[C1]](s32), %bb.0
-  ; NEW_RBS-NEXT:   [[PHI1:%[0-9]+]]:sgpr(s32) = G_PHI [[C]](s32), %bb.0, %9(s32), %bb.1
-  ; NEW_RBS-NEXT:   [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-  ; NEW_RBS-NEXT:   [[ADD:%[0-9]+]]:sgpr(s32) = G_ADD [[PHI1]], [[C2]]
-  ; NEW_RBS-NEXT:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[ADD]](s32)
-  ; NEW_RBS-NEXT:   [[UITOFP:%[0-9]+]]:vgpr(s32) = G_UITOFP [[COPY3]](s32)
+  ; NEW_RBS-NEXT:   [[PHI:%[0-9]+]]:sreg_32(s1) = PHI [[AMDGPU_COPY_VCC_SCC]](s1), %bb.0, %9(s1), %bb.1
+  ; NEW_RBS-NEXT:   [[PHI1:%[0-9]+]]:sreg_32(s1) = PHI [[DEF]](s1), %bb.0, %11(s1), %bb.1
+  ; NEW_RBS-NEXT:   [[PHI2:%[0-9]+]]:sgpr(s32) = G_PHI [[C]](s32), %bb.0, %13(s32), %bb.1
+  ; NEW_RBS-NEXT:   [[COPY3:%[0-9]+]]:sreg_32(s1) = COPY [[PHI]](s1)
+  ; NEW_RBS-NEXT:   [[COPY4:%[0-9]+]]:sreg_32(s1) = COPY [[PHI1]](s1)
+  ; NEW_RBS-NEXT:   [[C3:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
+  ; NEW_RBS-NEXT:   [[ADD:%[0-9]+]]:sgpr(s32) = G_ADD [[PHI2]], [[C3]]
+  ; NEW_RBS-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[ADD]](s32), implicit $exec_lo
+  ; NEW_RBS-NEXT:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[ADD]](s32)
+  ; NEW_RBS-NEXT:   [[UITOFP:%[0-9]+]]:vgpr(s32) = G_UITOFP [[COPY6]](s32)
   ; NEW_RBS-NEXT:   [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(ogt), [[UITOFP]](s32), [[COPY]]
-  ; NEW_RBS-NEXT:   [[INT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[FCMP]](s1), [[PHI]](s32)
-  ; NEW_RBS-NEXT:   [[COPY4:%[0-9]+]]:sreg_32_xm0_xexec(s32) = COPY [[INT]](s32)
-  ; NEW_RBS-NEXT:   SI_LOOP [[COPY4]](s32), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; NEW_RBS-NEXT:   [[COPY7:%[0-9]+]]:vcc(s1) = COPY [[COPY3]](s1)
+  ; NEW_RBS-NEXT:   [[INT:%[0-9]+]]:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[FCMP]](s1), [[COPY7]](s1)
+  ; NEW_RBS-NEXT:   [[COPY8:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[INT]](s1)
+  ; NEW_RBS-NEXT:   [[COPY9:%[0-9]+]]:sreg_32(s1) = COPY [[COPY8]](s1)
+  ; NEW_RBS-NEXT:   [[S_ANDN2_B32_:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY4]](s1), $exec_lo, implicit-def $scc
+  ; NEW_RBS-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY9]](s1), implicit-def $scc
+  ; NEW_RBS-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_]](s1), [[S_AND_B32_]](s1), implicit-def $scc
+  ; NEW_RBS-NEXT:   [[COPY10:%[0-9]+]]:sreg_32(s1) = COPY [[COPY8]](s1)
+  ; NEW_RBS-NEXT:   SI_LOOP [[COPY8]](s1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; NEW_RBS-NEXT:   G_BR %bb.2
   ; NEW_RBS-NEXT: {{  $}}
   ; NEW_RBS-NEXT: bb.2:
-  ; NEW_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](s32)
-  ; NEW_RBS-NEXT:   [[C3:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 10
-  ; NEW_RBS-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[ADD]](s32)
-  ; NEW_RBS-NEXT:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[C3]](s32)
-  ; NEW_RBS-NEXT:   [[MUL:%[0-9]+]]:vgpr(s32) = G_MUL [[COPY5]], [[COPY6]]
+  ; NEW_RBS-NEXT:   [[COPY11:%[0-9]+]]:vcc(s1) = COPY [[S_OR_B32_]](s1)
+  ; NEW_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[COPY11]](s1)
+  ; NEW_RBS-NEXT:   [[C4:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 10
+  ; NEW_RBS-NEXT:   [[COPY12:%[0-9]+]]:vgpr(s32) = COPY [[C4]](s32)
+  ; NEW_RBS-NEXT:   [[MUL:%[0-9]+]]:vgpr(s32) = G_MUL [[COPY5]], [[COPY12]]
   ; NEW_RBS-NEXT:   G_STORE [[MUL]](s32), [[MV]](p1) :: (store (s32), addrspace 1)
   ; NEW_RBS-NEXT:   S_ENDPGM 0
   bb.0:
@@ -1023,25 +1052,36 @@ body: |
     %2:_(s32) = COPY $vgpr2
     %3:_(p1) = G_MERGE_VALUES %1(s32), %2(s32)
     %4:_(s32) = G_CONSTANT i32 -1
-    %5:_(s32) = G_CONSTANT i32 0
+    %5:_(s1) = G_CONSTANT i1 false
+    %17:sreg_32(s1) = IMPLICIT_DEF
+    %23:sreg_32(s1) = COPY %5(s1)
 
   bb.1:
     successors: %bb.2(0x04000000), %bb.1(0x7c000000)
 
-    %6:_(s32) = G_PHI %7(s32), %bb.1, %5(s32), %bb.0
+    %25:sreg_32(s1) = PHI %23(s1), %bb.0, %24(s1), %bb.1
+    %18:sreg_32(s1) = PHI %17(s1), %bb.0, %16(s1), %bb.1
     %8:_(s32) = G_PHI %4(s32), %bb.0, %9(s32), %bb.1
+    %6:sreg_32(s1) = COPY %25(s1)
+    %19:sreg_32(s1) = COPY %18(s1)
     %10:_(s32) = G_CONSTANT i32 1
     %9:_(s32) = G_ADD %8, %10
+    %15:_(s32) = COPY %9(s32), implicit $exec_lo
     %11:_(s32) = G_UITOFP %9(s32)
     %12:_(s1) = G_FCMP floatpred(ogt), %11(s32), %0
-    %7:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), %12(s1), %6(s32)
-    SI_LOOP %7(s32), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+    %7:sreg_32_xm0_xexec(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), %12(s1), %6(s1)
+    %20:sreg_32(s1) = COPY %7(s1)
+    %21:sreg_32(s1) = S_ANDN2_B32 %19(s1), $exec_lo, implicit-def $scc
+    %22:sreg_32(s1) = S_AND_B32 $exec_lo, %20(s1), implicit-def $scc
+    %16:sreg_32(s1) = S_OR_B32 %21(s1), %22(s1), implicit-def $scc
+    %24:sreg_32(s1) = COPY %7(s1)
+    SI_LOOP %7(s1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
     G_BR %bb.2
 
   bb.2:
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %7(s32)
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %16(s1)
     %13:_(s32) = G_CONSTANT i32 10
-    %14:_(s32) = G_MUL %9, %13
+    %14:_(s32) = G_MUL %15, %13
     G_STORE %14(s32), %3(p1) :: (store (s32), addrspace 1)
     S_ENDPGM 0
 ...
@@ -1067,103 +1107,126 @@ body: |
   ; OLD_RBS-NEXT:   [[MV2:%[0-9]+]]:vgpr(p1) = G_MERGE_VALUES [[COPY4]](s32), [[COPY5]](s32)
   ; OLD_RBS-NEXT:   [[DEF:%[0-9]+]]:sgpr(s32) = G_IMPLICIT_DEF
   ; OLD_RBS-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+  ; OLD_RBS-NEXT:   [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+  ; OLD_RBS-NEXT:   [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[C1]](s32)
   ; OLD_RBS-NEXT:   [[DEF1:%[0-9]+]]:sreg_32(s1) = IMPLICIT_DEF
+  ; OLD_RBS-NEXT:   [[DEF2:%[0-9]+]]:sreg_32(s1) = IMPLICIT_DEF
+  ; OLD_RBS-NEXT:   [[COPY6:%[0-9]+]]:sreg_32(s1) = COPY [[TRUNC]](s1)
   ; OLD_RBS-NEXT: {{  $}}
   ; OLD_RBS-NEXT: bb.1:
   ; OLD_RBS-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; OLD_RBS-NEXT: {{  $}}
-  ; OLD_RBS-NEXT:   [[PHI:%[0-9]+]]:sreg_32(s1) = PHI [[DEF1]](s1), %bb.0, %13(s1), %bb.3
-  ; OLD_RBS-NEXT:   [[PHI1:%[0-9]+]]:sgpr(s32) = G_PHI %15(s32), %bb.3, [[C]](s32), %bb.0
-  ; OLD_RBS-NEXT:   [[PHI2:%[0-9]+]]:vgpr(s32) = G_PHI [[C]](s32), %bb.0, %17(s32), %bb.3
-  ; OLD_RBS-NEXT:   [[COPY6:%[0-9]+]]:sreg_32(s1) = COPY [[PHI]](s1)
-  ; OLD_RBS-NEXT:   [[COPY7:%[0-9]+]]:vgpr(i32) = COPY [[PHI2]](s32)
-  ; OLD_RBS-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 31
-  ; OLD_RBS-NEXT:   [[ASHR:%[0-9]+]]:vgpr(i32) = G_ASHR [[COPY7]], [[C1]](s32)
-  ; OLD_RBS-NEXT:   [[MV3:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY7]](i32), [[ASHR]](i32)
-  ; OLD_RBS-NEXT:   [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2
-  ; OLD_RBS-NEXT:   [[COPY8:%[0-9]+]]:vgpr(i32) = COPY [[C2]](s32)
-  ; OLD_RBS-NEXT:   [[SHL:%[0-9]+]]:vgpr(s64) = G_SHL [[MV3]], [[COPY8]](i32)
+  ; OLD_RBS-NEXT:   [[PHI:%[0-9]+]]:sreg_32(s1) = PHI [[COPY6]](s1), %bb.0, %16(s1), %bb.3
+  ; OLD_RBS-NEXT:   [[PHI1:%[0-9]+]]:sreg_32(s1) = PHI [[DEF2]](s1), %bb.0, %18(s1), %bb.3
+  ; OLD_RBS-NEXT:   [[PHI2:%[0-9]+]]:sreg_32(s1) = PHI [[DEF1]](s1), %bb.0, %20(s1), %bb.3
+  ; OLD_RBS-NEXT:   [[PHI3:%[0-9]+]]:vgpr(s32) = G_PHI [[C]](s32), %bb.0, %22(s32), %bb.3
+  ; OLD_RBS-NEXT:   [[COPY7:%[0-9]+]]:sreg_32(s1) = COPY [[PHI]](s1)
+  ; OLD_RBS-NEXT:   [[COPY8:%[0-9]+]]:sreg_32(s1) = COPY [[PHI1]](s1)
+  ; OLD_RBS-NEXT:   [[COPY9:%[0-9]+]]:sreg_32(s1) = COPY [[PHI2]](s1)
+  ; OLD_RBS-NEXT:   [[COPY10:%[0-9]+]]:vgpr(i32) = COPY [[PHI3]](s32)
+  ; OLD_RBS-NEXT:   [[C2:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 31
+  ; OLD_RBS-NEXT:   [[ASHR:%[0-9]+]]:vgpr(i32) = G_ASHR [[COPY10]], [[C2]](s32)
+  ; OLD_RBS-NEXT:   [[MV3:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY10]](i32), [[ASHR]](i32)
+  ; OLD_RBS-NEXT:   [[C3:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2
+  ; OLD_RBS-NEXT:   [[COPY11:%[0-9]+]]:vgpr(i32) = COPY [[C3]](s32)
+  ; OLD_RBS-NEXT:   [[SHL:%[0-9]+]]:vgpr(s64) = G_SHL [[MV3]], [[COPY11]](i32)
   ; OLD_RBS-NEXT:   [[PTR_ADD:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[MV1]], [[SHL]](s64)
   ; OLD_RBS-NEXT:   [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[PTR_ADD]](p1) :: (load (s32), addrspace 1)
-  ; OLD_RBS-NEXT:   [[C3:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; OLD_RBS-NEXT:   [[COPY9:%[0-9]+]]:vgpr(i32) = COPY [[C3]](s32)
-  ; OLD_RBS-NEXT:   [[ICMP:%[0-9]+]]:sreg_32_xm0_xexec(s1) = G_ICMP intpred(ne), [[LOAD]](s32), [[COPY9]]
-  ; OLD_RBS-NEXT:   [[C4:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-  ; OLD_RBS-NEXT:   [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[C4]](s32)
-  ; OLD_RBS-NEXT:   [[COPY10:%[0-9]+]]:sreg_32(s1) = COPY [[TRUNC]](s1)
-  ; OLD_RBS-NEXT:   [[S_ANDN2_B32_:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY6]](s1), $exec_lo, implicit-def $scc
-  ; OLD_RBS-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY10]](s1), implicit-def $scc
+  ; OLD_RBS-NEXT:   [[C4:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+  ; OLD_RBS-NEXT:   [[COPY12:%[0-9]+]]:vgpr(i32) = COPY [[C4]](s32)
+  ; OLD_RBS-NEXT:   [[ICMP:%[0-9]+]]:sreg_32_xm0_xexec(s1) = G_ICMP intpred(ne), [[LOAD]](s32), [[COPY12]]
+  ; OLD_RBS-NEXT:   [[C5:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
+  ; OLD_RBS-NEXT:   [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[C5]](s32)
+  ; OLD_RBS-NEXT:   [[COPY13:%[0-9]+]]:sreg_32(s1) = COPY [[TRUNC1]](s1)
+  ; OLD_RBS-NEXT:   [[S_ANDN2_B32_:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY9]](s1), $exec_lo, implicit-def $scc
+  ; OLD_RBS-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY13]](s1), implicit-def $scc
   ; OLD_RBS-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_]](s1), [[S_AND_B32_]](s1), implicit-def $scc
-  ; OLD_RBS-NEXT:   [[COPY11:%[0-9]+]]:sreg_32(s1) = COPY [[S_OR_B32_]](s1)
-  ; OLD_RBS-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[ICMP]](s1), %bb.3, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; OLD_RBS-NEXT:   [[COPY14:%[0-9]+]]:sreg_32(s1) = COPY [[S_OR_B32_]](s1)
+  ; OLD_RBS-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s1) = SI_IF [[ICMP]](s1), %bb.3, implicit-def $exec, implicit-def $scc, implicit $exec
   ; OLD_RBS-NEXT:   G_BR %bb.2
   ; OLD_RBS-NEXT: {{  $}}
   ; OLD_RBS-NEXT: bb.2:
   ; OLD_RBS-NEXT:   successors: %bb.4(0x40000000), %bb.5(0x40000000)
   ; OLD_RBS-NEXT: {{  $}}
-  ; OLD_RBS-NEXT:   [[C5:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2
-  ; OLD_RBS-NEXT:   [[COPY12:%[0-9]+]]:vgpr(i32) = COPY [[C5]](s32)
-  ; OLD_RBS-NEXT:   [[SHL1:%[0-9]+]]:vgpr(s64) = G_SHL [[MV3]], [[COPY12]](i32)
+  ; OLD_RBS-NEXT:   [[C6:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2
+  ; OLD_RBS-NEXT:   [[COPY15:%[0-9]+]]:vgpr(i32) = COPY [[C6]](s32)
+  ; OLD_RBS-NEXT:   [[SHL1:%[0-9]+]]:vgpr(s64) = G_SHL [[MV3]], [[COPY15]](i32)
   ; OLD_RBS-NEXT:   [[PTR_ADD1:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[MV2]], [[SHL1]](s64)
   ; OLD_RBS-NEXT:   [[LOAD1:%[0-9]+]]:vgpr(s32) = G_LOAD [[PTR_ADD1]](p1) :: (load (s32), addrspace 1)
-  ; OLD_RBS-NEXT:   [[C6:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; OLD_RBS-NEXT:   [[COPY13:%[0-9]+]]:vgpr(i32) = COPY [[C6]](s32)
-  ; OLD_RBS-NEXT:   [[ICMP1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = G_ICMP intpred(ne), [[LOAD1]](s32), [[COPY13]]
-  ; OLD_RBS-NEXT:   [[C7:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-  ; OLD_RBS-NEXT:   [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[C7]](s32)
-  ; OLD_RBS-NEXT:   [[COPY14:%[0-9]+]]:sreg_32(s1) = COPY [[TRUNC1]](s1)
-  ; OLD_RBS-NEXT:   [[COPY15:%[0-9]+]]:sreg_32(s1) = COPY [[COPY14]](s1)
-  ; OLD_RBS-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[ICMP1]](s1), %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; OLD_RBS-NEXT:   [[C7:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+  ; OLD_RBS-NEXT:   [[COPY16:%[0-9]+]]:vgpr(i32) = COPY [[C7]](s32)
+  ; OLD_RBS-NEXT:   [[ICMP1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = G_ICMP intpred(ne), [[LOAD1]](s32), [[COPY16]]
+  ; OLD_RBS-NEXT:   [[C8:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
+  ; OLD_RBS-NEXT:   [[TRUNC2:%[0-9]+]]:sgpr(s1) = G_TRUNC [[C8]](s32)
+  ; OLD_RBS-NEXT:   [[COPY17:%[0-9]+]]:sreg_32(s1) = COPY [[TRUNC2]](s1)
+  ; OLD_RBS-NEXT:   [[COPY18:%[0-9]+]]:sreg_32(s1) = COPY [[COPY17]](s1)
+  ; OLD_RBS-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = SI_IF [[ICMP1]](s1), %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
   ; OLD_RBS-NEXT:   G_BR %bb.4
   ; OLD_RBS-NEXT: {{  $}}
   ; OLD_RBS-NEXT: bb.3:
   ; OLD_RBS-NEXT:   successors: %bb.6(0x04000000), %bb.1(0x7c000000)
   ; OLD_RBS-NEXT: {{  $}}
-  ; OLD_RBS-NEXT:   [[PHI3:%[0-9]+]]:sreg_32(s1) = PHI [[S_OR_B32_]](s1), %bb.1, %43(s1), %bb.5
-  ; OLD_RBS-NEXT:   [[PHI4:%[0-9]+]]:vgpr(s32) = G_PHI %44(s32), %bb.5, [[DEF]](s32), %bb.1
-  ; OLD_RBS-NEXT:   [[COPY16:%[0-9]+]]:sreg_32(s1) = COPY [[PHI3]](s1)
-  ; OLD_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[SI_IF]](s32)
-  ; OLD_RBS-NEXT:   [[INT:%[0-9]+]]:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[COPY16]](s1), [[PHI1]](s32)
-  ; OLD_RBS-NEXT:   SI_LOOP [[INT]](s32), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; OLD_RBS-NEXT:   [[PHI4:%[0-9]+]]:sreg_32(s1) = PHI [[PHI]](s1), %bb.1, %51(s1), %bb.5
+  ; OLD_RBS-NEXT:   [[PHI5:%[0-9]+]]:sreg_32(s1) = PHI [[S_OR_B32_]](s1), %bb.1, %52(s1), %bb.5
+  ; OLD_RBS-NEXT:   [[PHI6:%[0-9]+]]:vgpr(s32) = G_PHI %53(s32), %bb.5, [[DEF]](s32), %bb.1
+  ; OLD_RBS-NEXT:   [[COPY19:%[0-9]+]]:sreg_32(s1) = COPY [[PHI4]](s1)
+  ; OLD_RBS-NEXT:   [[COPY20:%[0-9]+]]:sreg_32(s1) = COPY [[PHI5]](s1)
+  ; OLD_RBS-NEXT:   [[COPY21:%[0-9]+]]:sgpr(i1) = COPY [[SI_IF]](s1)
+  ; OLD_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[COPY21]](i1)
+  ; OLD_RBS-NEXT:   [[COPY22:%[0-9]+]]:sgpr(i1) = COPY [[COPY7]](s1)
+  ; OLD_RBS-NEXT:   [[INT:%[0-9]+]]:sgpr(i1) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[COPY20]](s1), [[COPY22]](i1)
+  ; OLD_RBS-NEXT:   [[COPY23:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[INT]](i1)
+  ; OLD_RBS-NEXT:   [[COPY24:%[0-9]+]]:sreg_32(s1) = COPY [[COPY23]](s1)
+  ; OLD_RBS-NEXT:   [[COPY25:%[0-9]+]]:sreg_32(s1) = COPY [[COPY23]](s1)
+  ; OLD_RBS-NEXT:   [[S_ANDN2_B32_1:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY8]](s1), $exec_lo, implicit-def $scc
+  ; OLD_RBS-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY25]](s1), implicit-def $scc
+  ; OLD_RBS-NEXT:   [[S_OR_B32_1:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_1]](s1), [[S_AND_B32_1]](s1), implicit-def $scc
+  ; OLD_RBS-NEXT:   [[S_ANDN2_B32_2:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY19]](s1), $exec_lo, implicit-def $scc
+  ; OLD_RBS-NEXT:   [[S_AND_B32_2:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY24]](s1), implicit-def $scc
+  ; OLD_RBS-NEXT:   [[S_OR_B32_2:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_2]](s1), [[S_AND_B32_2]](s1), implicit-def $scc
+  ; OLD_RBS-NEXT:   SI_LOOP [[COPY23]](s1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; OLD_RBS-NEXT:   G_BR %bb.6
   ; OLD_RBS-NEXT: {{  $}}
   ; OLD_RBS-NEXT: bb.4:
   ; OLD_RBS-NEXT:   successors: %bb.5(0x80000000)
   ; OLD_RBS-NEXT: {{  $}}
-  ; OLD_RBS-NEXT:   [[C8:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2
-  ; OLD_RBS-NEXT:   [[COPY17:%[0-9]+]]:vgpr(i32) = COPY [[C8]](s32)
-  ; OLD_RBS-NEXT:   [[SHL2:%[0-9]+]]:vgpr(s64) = G_SHL [[MV3]], [[COPY17]](i32)
+  ; OLD_RBS-NEXT:   [[C9:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2
+  ; OLD_RBS-NEXT:   [[COPY26:%[0-9]+]]:vgpr(i32) = COPY [[C9]](s32)
+  ; OLD_RBS-NEXT:   [[SHL2:%[0-9]+]]:vgpr(s64) = G_SHL [[MV3]], [[COPY26]](i32)
   ; OLD_RBS-NEXT:   [[PTR_ADD2:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[MV]], [[SHL2]](s64)
   ; OLD_RBS-NEXT:   [[LOAD2:%[0-9]+]]:vgpr(s32) = G_LOAD [[PTR_ADD2]](p1) :: (load (s32), addrspace 1)
-  ; OLD_RBS-NEXT:   [[C9:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-  ; OLD_RBS-NEXT:   [[COPY18:%[0-9]+]]:vgpr(i32) = COPY [[C9]](s32)
-  ; OLD_RBS-NEXT:   [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[LOAD2]], [[COPY18]]
+  ; OLD_RBS-NEXT:   [[C10:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
+  ; OLD_RBS-NEXT:   [[COPY27:%[0-9]+]]:vgpr(i32) = COPY [[C10]](s32)
+  ; OLD_RBS-NEXT:   [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[LOAD2]], [[COPY27]]
   ; OLD_RBS-NEXT:   G_STORE [[ADD]](s32), [[PTR_ADD2]](p1) :: (store (s32), addrspace 1)
-  ; OLD_RBS-NEXT:   [[COPY19:%[0-9]+]]:vgpr(i32) = COPY [[C9]](s32)
-  ; OLD_RBS-NEXT:   [[ADD1:%[0-9]+]]:vgpr(s32) = G_ADD [[PHI2]], [[COPY19]]
-  ; OLD_RBS-NEXT:   [[C10:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 100
-  ; OLD_RBS-NEXT:   [[COPY20:%[0-9]+]]:vgpr(i32) = COPY [[C10]](s32)
-  ; OLD_RBS-NEXT:   [[ICMP2:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ult), [[PHI2]](s32), [[COPY20]]
-  ; OLD_RBS-NEXT:   [[COPY21:%[0-9]+]]:sreg_32(s1) = COPY [[ICMP2]](s1)
-  ; OLD_RBS-NEXT:   [[S_ANDN2_B32_1:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY15]](s1), $exec_lo, implicit-def $scc
-  ; OLD_RBS-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY21]](s1), implicit-def $scc
-  ; OLD_RBS-NEXT:   [[S_OR_B32_1:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_1]](s1), [[S_AND_B32_1]](s1), implicit-def $scc
+  ; OLD_RBS-NEXT:   [[COPY28:%[0-9]+]]:vgpr(i32) = COPY [[C10]](s32)
+  ; OLD_RBS-NEXT:   [[ADD1:%[0-9]+]]:vgpr(s32) = G_ADD [[PHI3]], [[COPY28]]
+  ; OLD_RBS-NEXT:   [[C11:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 100
+  ; OLD_RBS-NEXT:   [[COPY29:%[0-9]+]]:vgpr(i32) = COPY [[C11]](s32)
+  ; OLD_RBS-NEXT:   [[ICMP2:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ult), [[PHI3]](s32), [[COPY29]]
+  ; OLD_RBS-NEXT:   [[COPY30:%[0-9]+]]:sreg_32(s1) = COPY [[ICMP2]](s1)
+  ; OLD_RBS-NEXT:   [[S_ANDN2_B32_3:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY18]](s1), $exec_lo, implicit-def $scc
+  ; OLD_RBS-NEXT:   [[S_AND_B32_3:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY30]](s1), implicit-def $scc
+  ; OLD_RBS-NEXT:   [[S_OR_B32_3:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_3]](s1), [[S_AND_B32_3]](s1), implicit-def $scc
   ; OLD_RBS-NEXT: {{  $}}
   ; OLD_RBS-NEXT: bb.5:
   ; OLD_RBS-NEXT:   successors: %bb.3(0x80000000)
   ; OLD_RBS-NEXT: {{  $}}
-  ; OLD_RBS-NEXT:   [[PHI5:%[0-9]+]]:sreg_32(s1) = PHI [[COPY14]](s1), %bb.2, [[S_OR_B32_1]](s1), %bb.4
-  ; OLD_RBS-NEXT:   [[PHI6:%[0-9]+]]:vgpr(s32) = G_PHI [[ADD1]](s32), %bb.4, [[DEF]](s32), %bb.2
-  ; OLD_RBS-NEXT:   [[COPY22:%[0-9]+]]:sreg_32(s1) = COPY [[PHI5]](s1)
-  ; OLD_RBS-NEXT:   [[COPY23:%[0-9]+]]:sreg_32(s1) = COPY [[COPY22]](s1)
-  ; OLD_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[SI_IF1]](s32)
-  ; OLD_RBS-NEXT:   [[S_ANDN2_B32_2:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY11]](s1), $exec_lo, implicit-def $scc
-  ; OLD_RBS-NEXT:   [[S_AND_B32_2:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY23]](s1), implicit-def $scc
-  ; OLD_RBS-NEXT:   [[S_OR_B32_2:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_2]](s1), [[S_AND_B32_2]](s1), implicit-def $scc
+  ; OLD_RBS-NEXT:   [[PHI7:%[0-9]+]]:sreg_32(s1) = PHI [[COPY17]](s1), %bb.2, [[S_OR_B32_3]](s1), %bb.4
+  ; OLD_RBS-NEXT:   [[PHI8:%[0-9]+]]:vgpr(s32) = G_PHI [[ADD1]](s32), %bb.4, [[DEF]](s32), %bb.2
+  ; OLD_RBS-NEXT:   [[COPY31:%[0-9]+]]:sreg_32(s1) = COPY [[PHI7]](s1)
+  ; OLD_RBS-NEXT:   [[COPY32:%[0-9]+]]:sreg_32(s1) = COPY [[COPY31]](s1)
+  ; OLD_RBS-NEXT:   [[COPY33:%[0-9]+]]:sgpr(i1) = COPY [[SI_IF1]](s1)
+  ; OLD_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[COPY33]](i1)
+  ; OLD_RBS-NEXT:   [[S_ANDN2_B32_4:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY14]](s1), $exec_lo, implicit-def $scc
+  ; OLD_RBS-NEXT:   [[S_AND_B32_4:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY32]](s1), implicit-def $scc
+  ; OLD_RBS-NEXT:   [[S_OR_B32_4:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_4]](s1), [[S_AND_B32_4]](s1), implicit-def $scc
+  ; OLD_RBS-NEXT:   [[DEF3:%[0-9]+]]:sreg_32(s1) = IMPLICIT_DEF
   ; OLD_RBS-NEXT:   G_BR %bb.3
   ; OLD_RBS-NEXT: {{  $}}
   ; OLD_RBS-NEXT: bb.6:
-  ; OLD_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](s32)
+  ; OLD_RBS-NEXT:   [[COPY34:%[0-9]+]]:sgpr(i1) = COPY [[S_OR_B32_1]](s1)
+  ; OLD_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[COPY34]](i1)
   ; OLD_RBS-NEXT:   S_ENDPGM 0
   ;
   ; NEW_RBS-LABEL: name: loop_with_2breaks
@@ -1183,104 +1246,123 @@ body: |
   ; NEW_RBS-NEXT:   [[DEF:%[0-9]+]]:sgpr(s32) = G_IMPLICIT_DEF
   ; NEW_RBS-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; NEW_RBS-NEXT:   [[DEF1:%[0-9]+]]:sreg_32(s1) = IMPLICIT_DEF
+  ; NEW_RBS-NEXT:   [[DEF2:%[0-9]+]]:sreg_32(s1) = IMPLICIT_DEF
+  ; NEW_RBS-NEXT:   [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
+  ; NEW_RBS-NEXT:   [[AMDGPU_COPY_VCC_SCC:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[C]](s32)
   ; NEW_RBS-NEXT: {{  $}}
   ; NEW_RBS-NEXT: bb.1:
   ; NEW_RBS-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; NEW_RBS-NEXT: {{  $}}
-  ; NEW_RBS-NEXT:   [[PHI:%[0-9]+]]:sreg_32(s1) = PHI [[DEF1]](s1), %bb.0, %13(s1), %bb.3
-  ; NEW_RBS-NEXT:   [[PHI1:%[0-9]+]]:sgpr(s32) = G_PHI %67(s32), %bb.3, [[C]](s32), %bb.0
-  ; NEW_RBS-NEXT:   [[PHI2:%[0-9]+]]:sgpr(s32) = G_PHI [[C]](s32), %bb.0, %17(s32), %bb.3
+  ; NEW_RBS-NEXT:   [[PHI:%[0-9]+]]:sreg_32(s1) = PHI [[AMDGPU_COPY_VCC_SCC]](s1), %bb.0, %16(s1), %bb.3
+  ; NEW_RBS-NEXT:   [[PHI1:%[0-9]+]]:sreg_32(s1) = PHI [[DEF2]](s1), %bb.0, %18(s1), %bb.3
+  ; NEW_RBS-NEXT:   [[PHI2:%[0-9]+]]:sreg_32(s1) = PHI [[DEF1]](s1), %bb.0, %20(s1), %bb.3
+  ; NEW_RBS-NEXT:   [[PHI3:%[0-9]+]]:sgpr(s32) = G_PHI [[C]](s32), %bb.0, %22(s32), %bb.3
   ; NEW_RBS-NEXT:   [[COPY6:%[0-9]+]]:sreg_32(s1) = COPY [[PHI]](s1)
-  ; NEW_RBS-NEXT:   [[C1:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 31
-  ; NEW_RBS-NEXT:   [[ASHR:%[0-9]+]]:sgpr(s32) = G_ASHR [[PHI2]], [[C1]](i32)
-  ; NEW_RBS-NEXT:   [[MV3:%[0-9]+]]:sgpr(s64) = G_MERGE_VALUES [[PHI2]](s32), [[ASHR]](s32)
-  ; NEW_RBS-NEXT:   [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2
-  ; NEW_RBS-NEXT:   [[SHL:%[0-9]+]]:sgpr(s64) = G_SHL [[MV3]], [[C2]](s32)
-  ; NEW_RBS-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s64) = COPY [[SHL]](s64)
-  ; NEW_RBS-NEXT:   [[PTR_ADD:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[MV1]], [[COPY7]](s64)
+  ; NEW_RBS-NEXT:   [[COPY7:%[0-9]+]]:sreg_32(s1) = COPY [[PHI1]](s1)
+  ; NEW_RBS-NEXT:   [[COPY8:%[0-9]+]]:sreg_32(s1) = COPY [[PHI2]](s1)
+  ; NEW_RBS-NEXT:   [[C2:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 31
+  ; NEW_RBS-NEXT:   [[ASHR:%[0-9]+]]:sgpr(s32) = G_ASHR [[PHI3]], [[C2]](i32)
+  ; NEW_RBS-NEXT:   [[MV3:%[0-9]+]]:sgpr(s64) = G_MERGE_VALUES [[PHI3]](s32), [[ASHR]](s32)
+  ; NEW_RBS-NEXT:   [[C3:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2
+  ; NEW_RBS-NEXT:   [[SHL:%[0-9]+]]:sgpr(s64) = G_SHL [[MV3]], [[C3]](s32)
+  ; NEW_RBS-NEXT:   [[COPY9:%[0-9]+]]:vgpr(s64) = COPY [[SHL]](s64)
+  ; NEW_RBS-NEXT:   [[PTR_ADD:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[MV1]], [[COPY9]](s64)
   ; NEW_RBS-NEXT:   [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[PTR_ADD]](p1) :: (load (s32), addrspace 1)
-  ; NEW_RBS-NEXT:   [[C3:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; NEW_RBS-NEXT:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY [[C3]](s32)
-  ; NEW_RBS-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[LOAD]](s32), [[COPY8]]
-  ; NEW_RBS-NEXT:   [[COPY9:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[ICMP]](s1)
-  ; NEW_RBS-NEXT:   [[C4:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-  ; NEW_RBS-NEXT:   [[AMDGPU_COPY_VCC_SCC:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[C4]](s32)
-  ; NEW_RBS-NEXT:   [[S_ANDN2_B32_:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY6]](s1), $exec_lo, implicit-def $scc
-  ; NEW_RBS-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[AMDGPU_COPY_VCC_SCC]](s1), implicit-def $scc
+  ; NEW_RBS-NEXT:   [[C4:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+  ; NEW_RBS-NEXT:   [[COPY10:%[0-9]+]]:vgpr(s32) = COPY [[C4]](s32)
+  ; NEW_RBS-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[LOAD]](s32), [[COPY10]]
+  ; NEW_RBS-NEXT:   [[COPY11:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[ICMP]](s1)
+  ; NEW_RBS-NEXT:   [[C5:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
+  ; NEW_RBS-NEXT:   [[AMDGPU_COPY_VCC_SCC1:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[C5]](s32)
+  ; NEW_RBS-NEXT:   [[S_ANDN2_B32_:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY8]](s1), $exec_lo, implicit-def $scc
+  ; NEW_RBS-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[AMDGPU_COPY_VCC_SCC1]](s1), implicit-def $scc
   ; NEW_RBS-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_]](s1), [[S_AND_B32_]](s1), implicit-def $scc
-  ; NEW_RBS-NEXT:   [[COPY10:%[0-9]+]]:sreg_32(s1) = COPY [[S_OR_B32_]](s1)
-  ; NEW_RBS-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[COPY9]](s1), %bb.3, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; NEW_RBS-NEXT:   [[COPY12:%[0-9]+]]:sreg_32(s1) = COPY [[S_OR_B32_]](s1)
+  ; NEW_RBS-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s1) = SI_IF [[COPY11]](s1), %bb.3, implicit-def $exec, implicit-def $scc, implicit $exec
   ; NEW_RBS-NEXT:   G_BR %bb.2
   ; NEW_RBS-NEXT: {{  $}}
   ; NEW_RBS-NEXT: bb.2:
   ; NEW_RBS-NEXT:   successors: %bb.4(0x40000000), %bb.5(0x40000000)
   ; NEW_RBS-NEXT: {{  $}}
-  ; NEW_RBS-NEXT:   [[C5:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2
-  ; NEW_RBS-NEXT:   [[SHL1:%[0-9]+]]:sgpr(s64) = G_SHL [[MV3]], [[C5]](s32)
-  ; NEW_RBS-NEXT:   [[COPY11:%[0-9]+]]:vgpr(s64) = COPY [[SHL1]](s64)
-  ; NEW_RBS-NEXT:   [[PTR_ADD1:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[MV2]], [[COPY11]](s64)
+  ; NEW_RBS-NEXT:   [[C6:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2
+  ; NEW_RBS-NEXT:   [[SHL1:%[0-9]+]]:sgpr(s64) = G_SHL [[MV3]], [[C6]](s32)
+  ; NEW_RBS-NEXT:   [[COPY13:%[0-9]+]]:vgpr(s64) = COPY [[SHL1]](s64)
+  ; NEW_RBS-NEXT:   [[PTR_ADD1:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[MV2]], [[COPY13]](s64)
   ; NEW_RBS-NEXT:   [[LOAD1:%[0-9]+]]:vgpr(s32) = G_LOAD [[PTR_ADD1]](p1) :: (load (s32), addrspace 1)
-  ; NEW_RBS-NEXT:   [[C6:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; NEW_RBS-NEXT:   [[COPY12:%[0-9]+]]:vgpr(s32) = COPY [[C6]](s32)
-  ; NEW_RBS-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[LOAD1]](s32), [[COPY12]]
-  ; NEW_RBS-NEXT:   [[COPY13:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[ICMP1]](s1)
-  ; NEW_RBS-NEXT:   [[C7:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-  ; NEW_RBS-NEXT:   [[AMDGPU_COPY_VCC_SCC1:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[C7]](s32)
-  ; NEW_RBS-NEXT:   [[COPY14:%[0-9]+]]:sreg_32(s1) = COPY [[AMDGPU_COPY_VCC_SCC1]](s1)
-  ; NEW_RBS-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[COPY13]](s1), %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; NEW_RBS-NEXT:   [[C7:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+  ; NEW_RBS-NEXT:   [[COPY14:%[0-9]+]]:vgpr(s32) = COPY [[C7]](s32)
+  ; NEW_RBS-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[LOAD1]](s32), [[COPY14]]
+  ; NEW_RBS-NEXT:   [[COPY15:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[ICMP1]](s1)
+  ; NEW_RBS-NEXT:   [[C8:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
+  ; NEW_RBS-NEXT:   [[AMDGPU_COPY_VCC_SCC2:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[C8]](s32)
+  ; NEW_RBS-NEXT:   [[COPY16:%[0-9]+]]:sreg_32(s1) = COPY [[AMDGPU_COPY_VCC_SCC2]](s1)
+  ; NEW_RBS-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = SI_IF [[COPY15]](s1), %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
   ; NEW_RBS-NEXT:   G_BR %bb.4
   ; NEW_RBS-NEXT: {{  $}}
   ; NEW_RBS-NEXT: bb.3:
   ; NEW_RBS-NEXT:   successors: %bb.6(0x04000000), %bb.1(0x7c000000)
   ; NEW_RBS-NEXT: {{  $}}
-  ; NEW_RBS-NEXT:   [[PHI3:%[0-9]+]]:sreg_32(s1) = PHI [[S_OR_B32_]](s1), %bb.1, %43(s1), %bb.5
-  ; NEW_RBS-NEXT:   [[PHI4:%[0-9]+]]:sgpr(s32) = G_PHI %44(s32), %bb.5, [[DEF]](s32), %bb.1
-  ; NEW_RBS-NEXT:   [[COPY15:%[0-9]+]]:sreg_32(s1) = COPY [[PHI3]](s1)
-  ; NEW_RBS-NEXT:   [[COPY16:%[0-9]+]]:sgpr(s32) = COPY [[SI_IF]](s32)
-  ; NEW_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[COPY16]](s32)
-  ; NEW_RBS-NEXT:   [[COPY17:%[0-9]+]]:vcc(s1) = COPY [[COPY15]](s1)
-  ; NEW_RBS-NEXT:   [[INT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[COPY17]](s1), [[PHI1]](s32)
-  ; NEW_RBS-NEXT:   [[COPY18:%[0-9]+]]:sreg_32_xm0_xexec(s32) = COPY [[INT]](s32)
-  ; NEW_RBS-NEXT:   SI_LOOP [[COPY18]](s32), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; NEW_RBS-NEXT:   [[PHI4:%[0-9]+]]:sreg_32(s1) = PHI [[PHI]](s1), %bb.1, %51(s1), %bb.5
+  ; NEW_RBS-NEXT:   [[PHI5:%[0-9]+]]:sreg_32(s1) = PHI [[S_OR_B32_]](s1), %bb.1, %52(s1), %bb.5
+  ; NEW_RBS-NEXT:   [[PHI6:%[0-9]+]]:sgpr(s32) = G_PHI %53(s32), %bb.5, [[DEF]](s32), %bb.1
+  ; NEW_RBS-NEXT:   [[COPY17:%[0-9]+]]:sreg_32(s1) = COPY [[PHI4]](s1)
+  ; NEW_RBS-NEXT:   [[COPY18:%[0-9]+]]:sreg_32(s1) = COPY [[PHI5]](s1)
+  ; NEW_RBS-NEXT:   [[COPY19:%[0-9]+]]:vcc(s1) = COPY [[SI_IF]](s1)
+  ; NEW_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[COPY19]](s1)
+  ; NEW_RBS-NEXT:   [[COPY20:%[0-9]+]]:vcc(s1) = COPY [[COPY18]](s1)
+  ; NEW_RBS-NEXT:   [[COPY21:%[0-9]+]]:vcc(s1) = COPY [[COPY6]](s1)
+  ; NEW_RBS-NEXT:   [[INT:%[0-9]+]]:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[COPY20]](s1), [[COPY21]](s1)
+  ; NEW_RBS-NEXT:   [[COPY22:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[INT]](s1)
+  ; NEW_RBS-NEXT:   [[COPY23:%[0-9]+]]:sreg_32(s1) = COPY [[COPY22]](s1)
+  ; NEW_RBS-NEXT:   [[COPY24:%[0-9]+]]:sreg_32(s1) = COPY [[COPY22]](s1)
+  ; NEW_RBS-NEXT:   [[S_ANDN2_B32_1:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY7]](s1), $exec_lo, implicit-def $scc
+  ; NEW_RBS-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY24]](s1), implicit-def $scc
+  ; NEW_RBS-NEXT:   [[S_OR_B32_1:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_1]](s1), [[S_AND_B32_1]](s1), implicit-def $scc
+  ; NEW_RBS-NEXT:   [[S_ANDN2_B32_2:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY17]](s1), $exec_lo, implicit-def $scc
+  ; NEW_RBS-NEXT:   [[S_AND_B32_2:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY23]](s1), implicit-def $scc
+  ; NEW_RBS-NEXT:   [[S_OR_B32_2:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_2]](s1), [[S_AND_B32_2]](s1), implicit-def $scc
+  ; NEW_RBS-NEXT:   SI_LOOP [[COPY22]](s1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; NEW_RBS-NEXT:   G_BR %bb.6
   ; NEW_RBS-NEXT: {{  $}}
   ; NEW_RBS-NEXT: bb.4:
   ; NEW_RBS-NEXT:   successors: %bb.5(0x80000000)
   ; NEW_RBS-NEXT: {{  $}}
-  ; NEW_RBS-NEXT:   [[C8:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2
-  ; NEW_RBS-NEXT:   [[SHL2:%[0-9]+]]:sgpr(s64) = G_SHL [[MV3]], [[C8]](s32)
-  ; NEW_RBS-NEXT:   [[COPY19:%[0-9]+]]:vgpr(s64) = COPY [[SHL2]](s64)
-  ; NEW_RBS-NEXT:   [[PTR_ADD2:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[MV]], [[COPY19]](s64)
+  ; NEW_RBS-NEXT:   [[C9:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2
+  ; NEW_RBS-NEXT:   [[SHL2:%[0-9]+]]:sgpr(s64) = G_SHL [[MV3]], [[C9]](s32)
+  ; NEW_RBS-NEXT:   [[COPY25:%[0-9]+]]:vgpr(s64) = COPY [[SHL2]](s64)
+  ; NEW_RBS-NEXT:   [[PTR_ADD2:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[MV]], [[COPY25]](s64)
   ; NEW_RBS-NEXT:   [[LOAD2:%[0-9]+]]:vgpr(s32) = G_LOAD [[PTR_ADD2]](p1) :: (load (s32), addrspace 1)
-  ; NEW_RBS-NEXT:   [[C9:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-  ; NEW_RBS-NEXT:   [[COPY20:%[0-9]+]]:vgpr(s32) = COPY [[C9]](s32)
-  ; NEW_RBS-NEXT:   [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[LOAD2]], [[COPY20]]
+  ; NEW_RBS-NEXT:   [[C10:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
+  ; NEW_RBS-NEXT:   [[COPY26:%[0-9]+]]:vgpr(s32) = COPY [[C10]](s32)
+  ; NEW_RBS-NEXT:   [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[LOAD2]], [[COPY26]]
   ; NEW_RBS-NEXT:   G_STORE [[ADD]](s32), [[PTR_ADD2]](p1) :: (store (s32), addrspace 1)
-  ; NEW_RBS-NEXT:   [[ADD1:%[0-9]+]]:sgpr(s32) = G_ADD [[PHI2]], [[C9]]
-  ; NEW_RBS-NEXT:   [[C10:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 100
-  ; NEW_RBS-NEXT:   [[ICMP2:%[0-9]+]]:sgpr(i32) = G_ICMP intpred(ult), [[PHI2]](s32), [[C10]]
-  ; NEW_RBS-NEXT:   [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[ICMP2]], [[C9]]
-  ; NEW_RBS-NEXT:   [[AMDGPU_COPY_VCC_SCC2:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[AND]](s32)
-  ; NEW_RBS-NEXT:   [[S_ANDN2_B32_1:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY14]](s1), $exec_lo, implicit-def $scc
-  ; NEW_RBS-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[AMDGPU_COPY_VCC_SCC2]](s1), implicit-def $scc
-  ; NEW_RBS-NEXT:   [[S_OR_B32_1:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_1]](s1), [[S_AND_B32_1]](s1), implicit-def $scc
+  ; NEW_RBS-NEXT:   [[ADD1:%[0-9]+]]:sgpr(s32) = G_ADD [[PHI3]], [[C10]]
+  ; NEW_RBS-NEXT:   [[C11:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 100
+  ; NEW_RBS-NEXT:   [[ICMP2:%[0-9]+]]:sgpr(i32) = G_ICMP intpred(ult), [[PHI3]](s32), [[C11]]
+  ; NEW_RBS-NEXT:   [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[ICMP2]], [[C10]]
+  ; NEW_RBS-NEXT:   [[AMDGPU_COPY_VCC_SCC3:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[AND]](s32)
+  ; NEW_RBS-NEXT:   [[S_ANDN2_B32_3:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY16]](s1), $exec_lo, implicit-def $scc
+  ; NEW_RBS-NEXT:   [[S_AND_B32_3:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[AMDGPU_COPY_VCC_SCC3]](s1), implicit-def $scc
+  ; NEW_RBS-NEXT:   [[S_OR_B32_3:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_3]](s1), [[S_AND_B32_3]](s1), implicit-def $scc
   ; NEW_RBS-NEXT: {{  $}}
   ; NEW_RBS-NEXT: bb.5:
   ; NEW_RBS-NEXT:   successors: %bb.3(0x80000000)
   ; NEW_RBS-NEXT: {{  $}}
-  ; NEW_RBS-NEXT:   [[PHI5:%[0-9]+]]:sreg_32(s1) = PHI [[AMDGPU_COPY_VCC_SCC1]](s1), %bb.2, [[S_OR_B32_1]](s1), %bb.4
-  ; NEW_RBS-NEXT:   [[PHI6:%[0-9]+]]:sgpr(s32) = G_PHI [[ADD1]](s32), %bb.4, [[DEF]](s32), %bb.2
-  ; NEW_RBS-NEXT:   [[COPY21:%[0-9]+]]:sreg_32(s1) = COPY [[PHI5]](s1)
-  ; NEW_RBS-NEXT:   [[COPY22:%[0-9]+]]:sreg_32(s1) = COPY [[COPY21]](s1)
-  ; NEW_RBS-NEXT:   [[COPY23:%[0-9]+]]:sgpr(s32) = COPY [[SI_IF1]](s32)
-  ; NEW_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[COPY23]](s32)
-  ; NEW_RBS-NEXT:   [[S_ANDN2_B32_2:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY10]](s1), $exec_lo, implicit-def $scc
-  ; NEW_RBS-NEXT:   [[S_AND_B32_2:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY22]](s1), implicit-def $scc
-  ; NEW_RBS-NEXT:   [[S_OR_B32_2:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_2]](s1), [[S_AND_B32_2]](s1), implicit-def $scc
+  ; NEW_RBS-NEXT:   [[PHI7:%[0-9]+]]:sreg_32(s1) = PHI [[AMDGPU_COPY_VCC_SCC2]](s1), %bb.2, [[S_OR_B32_3]](s1), %bb.4
+  ; NEW_RBS-NEXT:   [[PHI8:%[0-9]+]]:sgpr(s32) = G_PHI [[ADD1]](s32), %bb.4, [[DEF]](s32), %bb.2
+  ; NEW_RBS-NEXT:   [[COPY27:%[0-9]+]]:sreg_32(s1) = COPY [[PHI7]](s1)
+  ; NEW_RBS-NEXT:   [[COPY28:%[0-9]+]]:sreg_32(s1) = COPY [[COPY27]](s1)
+  ; NEW_RBS-NEXT:   [[COPY29:%[0-9]+]]:vcc(s1) = COPY [[SI_IF1]](s1)
+  ; NEW_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[COPY29]](s1)
+  ; NEW_RBS-NEXT:   [[S_ANDN2_B32_4:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY12]](s1), $exec_lo, implicit-def $scc
+  ; NEW_RBS-NEXT:   [[S_AND_B32_4:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY28]](s1), implicit-def $scc
+  ; NEW_RBS-NEXT:   [[S_OR_B32_4:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_4]](s1), [[S_AND_B32_4]](s1), implicit-def $scc
+  ; NEW_RBS-NEXT:   [[DEF3:%[0-9]+]]:sreg_32(s1) = IMPLICIT_DEF
   ; NEW_RBS-NEXT:   G_BR %bb.3
   ; NEW_RBS-NEXT: {{  $}}
   ; NEW_RBS-NEXT: bb.6:
-  ; NEW_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](s32)
+  ; NEW_RBS-NEXT:   [[COPY30:%[0-9]+]]:vcc(s1) = COPY [[S_OR_B32_1]](s1)
+  ; NEW_RBS-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[COPY30]](s1)
   ; NEW_RBS-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1(0x80000000)
@@ -1297,89 +1379,106 @@ body: |
     %8:_(p1) = G_MERGE_VALUES %6(s32), %7(s32)
     %9:_(s32) = G_IMPLICIT_DEF
     %10:_(s32) = G_CONSTANT i32 0
-    %11:sreg_32(s1) = IMPLICIT_DEF
+    %11:_(s1) = G_CONSTANT i1 false
+    %12:sreg_32(s1) = IMPLICIT_DEF
+    %66:sreg_32(s1) = IMPLICIT_DEF
+    %73:sreg_32(s1) = COPY %11(s1)
 
   bb.1:
     successors: %bb.2(0x40000000), %bb.3(0x40000000)
 
-    %12:sreg_32(s1) = PHI %11(s1), %bb.0, %13(s1), %bb.3
-    %14:_(s32) = G_PHI %15(s32), %bb.3, %10(s32), %bb.0
-    %16:_(s32) = G_PHI %10(s32), %bb.0, %17(s32), %bb.3
-    %18:sreg_32(s1) = COPY %12(s1)
-    %19:_(s64) = G_SEXT %16(s32)
-    %20:_(s32) = G_CONSTANT i32 2
-    %21:_(s64) = G_SHL %19, %20(s32)
-    %22:_(p1) = G_PTR_ADD %5, %21(s64)
-    %23:_(s32) = G_LOAD %22(p1) :: (load (s32), addrspace 1)
-    %24:_(s32) = G_CONSTANT i32 0
-    %25:sreg_32_xm0_xexec(s1) = G_ICMP intpred(ne), %23(s32), %24
-    %26:_(s1) = G_CONSTANT i1 true
-    %27:sreg_32(s1) = COPY %26(s1)
-    %28:sreg_32(s1) = S_ANDN2_B32 %18(s1), $exec_lo, implicit-def $scc
-    %29:sreg_32(s1) = S_AND_B32 $exec_lo, %27(s1), implicit-def $scc
-    %30:sreg_32(s1) = S_OR_B32 %28(s1), %29(s1), implicit-def $scc
-    %31:sreg_32(s1) = COPY %30(s1)
-    %32:sreg_32_xm0_xexec(s32) = SI_IF %25(s1), %bb.3, implicit-def $exec, implicit-def $scc, implicit $exec
+    %76:sreg_32(s1) = PHI %73(s1), %bb.0, %74(s1), %bb.3
+    %67:sreg_32(s1) = PHI %66(s1), %bb.0, %65(s1), %bb.3
+    %13:sreg_32(s1) = PHI %12(s1), %bb.0, %14(s1), %bb.3
+    %17:_(s32) = G_PHI %10(s32), %bb.0, %18(s32), %bb.3
+    %15:sreg_32(s1) = COPY %76(s1)
+    %68:sreg_32(s1) = COPY %67(s1)
+    %19:sreg_32(s1) = COPY %13(s1)
+    %20:_(s64) = G_SEXT %17(s32)
+    %21:_(s32) = G_CONSTANT i32 2
+    %22:_(s64) = G_SHL %20, %21(s32)
+    %23:_(p1) = G_PTR_ADD %5, %22(s64)
+    %24:_(s32) = G_LOAD %23(p1) :: (load (s32), addrspace 1)
+    %25:_(s32) = G_CONSTANT i32 0
+    %26:sreg_32_xm0_xexec(s1) = G_ICMP intpred(ne), %24(s32), %25
+    %27:_(s1) = G_CONSTANT i1 true
+    %28:sreg_32(s1) = COPY %27(s1)
+    %29:sreg_32(s1) = S_ANDN2_B32 %19(s1), $exec_lo, implicit-def $scc
+    %30:sreg_32(s1) = S_AND_B32 $exec_lo, %28(s1), implicit-def $scc
+    %31:sreg_32(s1) = S_OR_B32 %29(s1), %30(s1), implicit-def $scc
+    %32:sreg_32(s1) = COPY %31(s1)
+    %33:sreg_32_xm0_xexec(s1) = SI_IF %26(s1), %bb.3, implicit-def $exec, implicit-def $scc, implicit $exec
     G_BR %bb.2
 
   bb.2:
     successors: %bb.4(0x40000000), %bb.5(0x40000000)
 
-    %33:_(s32) = G_CONSTANT i32 2
-    %34:_(s64) = G_SHL %19, %33(s32)
-    %35:_(p1) = G_PTR_ADD %8, %34(s64)
-    %36:_(s32) = G_LOAD %35(p1) :: (load (s32), addrspace 1)
-    %37:_(s32) = G_CONSTANT i32 0
-    %38:sreg_32_xm0_xexec(s1) = G_ICMP intpred(ne), %36(s32), %37
-    %39:_(s1) = G_CONSTANT i1 true
-    %40:sreg_32(s1) = COPY %39(s1)
+    %34:_(s32) = G_CONSTANT i32 2
+    %35:_(s64) = G_SHL %20, %34(s32)
+    %36:_(p1) = G_PTR_ADD %8, %35(s64)
+    %37:_(s32) = G_LOAD %36(p1) :: (load (s32), addrspace 1)
+    %38:_(s32) = G_CONSTANT i32 0
+    %39:sreg_32_xm0_xexec(s1) = G_ICMP intpred(ne), %37(s32), %38
+    %40:_(s1) = G_CONSTANT i1 true
     %41:sreg_32(s1) = COPY %40(s1)
-    %42:sreg_32_xm0_xexec(s32) = SI_IF %38(s1), %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
+    %42:sreg_32(s1) = COPY %41(s1)
+    %43:sreg_32_xm0_xexec(s1) = SI_IF %39(s1), %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
     G_BR %bb.4
 
   bb.3:
     successors: %bb.6(0x04000000), %bb.1(0x7c000000)
 
-    %13:sreg_32(s1) = PHI %30(s1), %bb.1, %43(s1), %bb.5
-    %17:_(s32) = G_PHI %44(s32), %bb.5, %9(s32), %bb.1
-    %45:sreg_32(s1) = COPY %13(s1)
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %32(s32)
-    %15:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), %45(s1), %14(s32)
-    SI_LOOP %15(s32), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+    %75:sreg_32(s1) = PHI %76(s1), %bb.1, %72(s1), %bb.5
+    %14:sreg_32(s1) = PHI %31(s1), %bb.1, %44(s1), %bb.5
+    %18:_(s32) = G_PHI %45(s32), %bb.5, %9(s32), %bb.1
+    %77:sreg_32(s1) = COPY %75(s1)
+    %46:sreg_32(s1) = COPY %14(s1)
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %33(s1)
+    %16:sreg_32_xm0_xexec(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), %46(s1), %15(s1)
+    %78:sreg_32(s1) = COPY %16(s1)
+    %69:sreg_32(s1) = COPY %16(s1)
+    %70:sreg_32(s1) = S_ANDN2_B32 %68(s1), $exec_lo, implicit-def $scc
+    %71:sreg_32(s1) = S_AND_B32 $exec_lo, %69(s1), implicit-def $scc
+    %65:sreg_32(s1) = S_OR_B32 %70(s1), %71(s1), implicit-def $scc
+    %79:sreg_32(s1) = S_ANDN2_B32 %77(s1), $exec_lo, implicit-def $scc
+    %80:sreg_32(s1) = S_AND_B32 $exec_lo, %78(s1), implicit-def $scc
+    %74:sreg_32(s1) = S_OR_B32 %79(s1), %80(s1), implicit-def $scc
+    SI_LOOP %16(s1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
     G_BR %bb.6
 
   bb.4:
     successors: %bb.5(0x80000000)
 
-    %46:_(s32) = G_CONSTANT i32 2
-    %47:_(s64) = G_SHL %19, %46(s32)
-    %48:_(p1) = G_PTR_ADD %2, %47(s64)
-    %49:_(s32) = G_LOAD %48(p1) :: (load (s32), addrspace 1)
-    %50:_(s32) = G_CONSTANT i32 1
-    %51:_(s32) = G_ADD %49, %50
-    G_STORE %51(s32), %48(p1) :: (store (s32), addrspace 1)
-    %52:_(s32) = G_ADD %16, %50
-    %53:_(s32) = G_CONSTANT i32 100
-    %54:_(s1) = G_ICMP intpred(ult), %16(s32), %53
-    %55:sreg_32(s1) = COPY %54(s1)
-    %56:sreg_32(s1) = S_ANDN2_B32 %41(s1), $exec_lo, implicit-def $scc
-    %57:sreg_32(s1) = S_AND_B32 $exec_lo, %55(s1), implicit-def $scc
-    %58:sreg_32(s1) = S_OR_B32 %56(s1), %57(s1), implicit-def $scc
+    %47:_(s32) = G_CONSTANT i32 2
+    %48:_(s64) = G_SHL %20, %47(s32)
+    %49:_(p1) = G_PTR_ADD %2, %48(s64)
+    %50:_(s32) = G_LOAD %49(p1) :: (load (s32), addrspace 1)
+    %51:_(s32) = G_CONSTANT i32 1
+    %52:_(s32) = G_ADD %50, %51
+    G_STORE %52(s32), %49(p1) :: (store (s32), addrspace 1)
+    %53:_(s32) = G_ADD %17, %51
+    %54:_(s32) = G_CONSTANT i32 100
+    %55:_(s1) = G_ICMP intpred(ult), %17(s32), %54
+    %56:sreg_32(s1) = COPY %55(s1)
+    %57:sreg_32(s1) = S_ANDN2_B32 %42(s1), $exec_lo, implicit-def $scc
+    %58:sreg_32(s1) = S_AND_B32 $exec_lo, %56(s1), implicit-def $scc
+    %59:sreg_32(s1) = S_OR_B32 %57(s1), %58(s1), implicit-def $scc
 
   bb.5:
     successors: %bb.3(0x80000000)
 
-    %59:sreg_32(s1) = PHI %40(s1), %bb.2, %58(s1), %bb.4
-    %44:_(s32) = G_PHI %52(s32), %bb.4, %9(s32), %bb.2
-    %60:sreg_32(s1) = COPY %59(s1)
+    %60:sreg_32(s1) = PHI %41(s1), %bb.2, %59(s1), %bb.4
+    %45:_(s32) = G_PHI %53(s32), %bb.4, %9(s32), %bb.2
     %61:sreg_32(s1) = COPY %60(s1)
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %42(s32)
-    %62:sreg_32(s1) = S_ANDN2_B32 %31(s1), $exec_lo, implicit-def $scc
-    %63:sreg_32(s1) = S_AND_B32 $exec_lo, %61(s1), implicit-def $scc
-    %43:sreg_32(s1) = S_OR_B32 %62(s1), %63(s1), implicit-def $scc
+    %62:sreg_32(s1) = COPY %61(s1)
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %43(s1)
+    %63:sreg_32(s1) = S_ANDN2_B32 %32(s1), $exec_lo, implicit-def $scc
+    %64:sreg_32(s1) = S_AND_B32 $exec_lo, %62(s1), implicit-def $scc
+    %44:sreg_32(s1) = S_OR_B32 %63(s1), %64(s1), implicit-def $scc
+    %72:sreg_32(s1) = IMPLICIT_DEF
     G_BR %bb.3
 
   bb.6:
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %15(s32)
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %65(s1)
     S_ENDPGM 0
 ...

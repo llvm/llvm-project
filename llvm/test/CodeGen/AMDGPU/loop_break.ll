@@ -12,7 +12,7 @@ define amdgpu_kernel void @break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    [[MY_TMP:%.*]] = sub i32 [[ID]], [[ARG]]
 ; OPT-NEXT:    br label %[[BB1:.*]]
 ; OPT:       [[BB1]]:
-; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ [[TMP2:%.*]], %[[FLOW:.*]] ], [ 0, %[[BB]] ]
+; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i1 [ [[TMP2:%.*]], %[[FLOW:.*]] ], [ false, %[[BB]] ]
 ; OPT-NEXT:    [[LSR_IV:%.*]] = phi i32 [ undef, %[[BB]] ], [ [[TMP0:%.*]], %[[FLOW]] ]
 ; OPT-NEXT:    [[TMP0]] = add i32 [[LSR_IV]], 1
 ; OPT-NEXT:    [[CMP0:%.*]] = icmp slt i32 [[TMP0]], 0
@@ -23,11 +23,11 @@ define amdgpu_kernel void @break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    br label %[[FLOW]]
 ; OPT:       [[FLOW]]:
 ; OPT-NEXT:    [[TMP1:%.*]] = phi i1 [ [[CMP1]], %[[BB4]] ], [ true, %[[BB1]] ]
-; OPT-NEXT:    [[TMP2]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP1]], i64 [[PHI_BROKEN]])
-; OPT-NEXT:    [[TMP3:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP2]])
+; OPT-NEXT:    [[TMP2]] = call i1 @llvm.amdgcn.if.break(i1 [[TMP1]], i1 [[PHI_BROKEN]])
+; OPT-NEXT:    [[TMP3:%.*]] = call i1 @llvm.amdgcn.loop(i1 [[TMP2]])
 ; OPT-NEXT:    br i1 [[TMP3]], label %[[BB9:.*]], label %[[BB1]]
 ; OPT:       [[BB9]]:
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP2]])
+; OPT-NEXT:    call void @llvm.amdgcn.end.cf(i1 [[TMP2]])
 ; OPT-NEXT:    ret void
 ;
 ; GCN-LABEL: break_loop:
@@ -90,7 +90,7 @@ define amdgpu_kernel void @undef_phi_cond_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    [[MY_TMP:%.*]] = sub i32 [[ID]], [[ARG]]
 ; OPT-NEXT:    br label %[[BB1:.*]]
 ; OPT:       [[BB1]]:
-; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ [[TMP0:%.*]], %[[FLOW:.*]] ], [ 0, %[[BB]] ]
+; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i1 [ [[TMP0:%.*]], %[[FLOW:.*]] ], [ false, %[[BB]] ]
 ; OPT-NEXT:    [[LSR_IV:%.*]] = phi i32 [ undef, %[[BB]] ], [ [[MY_TMP2:%.*]], %[[FLOW]] ]
 ; OPT-NEXT:    [[LSR_IV_NEXT:%.*]] = add i32 [[LSR_IV]], 1
 ; OPT-NEXT:    [[CMP0:%.*]] = icmp slt i32 [[LSR_IV_NEXT]], 0
@@ -102,11 +102,11 @@ define amdgpu_kernel void @undef_phi_cond_break_loop(i32 %arg) #0 {
 ; OPT:       [[FLOW]]:
 ; OPT-NEXT:    [[MY_TMP2]] = phi i32 [ [[LSR_IV_NEXT]], %[[BB4]] ], [ undef, %[[BB1]] ]
 ; OPT-NEXT:    [[MY_TMP3:%.*]] = phi i1 [ [[CMP1]], %[[BB4]] ], [ undef, %[[BB1]] ]
-; OPT-NEXT:    [[TMP0]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[MY_TMP3]], i64 [[PHI_BROKEN]])
-; OPT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP0]])
+; OPT-NEXT:    [[TMP0]] = call i1 @llvm.amdgcn.if.break(i1 [[MY_TMP3]], i1 [[PHI_BROKEN]])
+; OPT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.loop(i1 [[TMP0]])
 ; OPT-NEXT:    br i1 [[TMP1]], label %[[BB9:.*]], label %[[BB1]]
 ; OPT:       [[BB9]]:
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP0]])
+; OPT-NEXT:    call void @llvm.amdgcn.end.cf(i1 [[TMP0]])
 ; OPT-NEXT:    store volatile i32 7, ptr addrspace(3) poison, align 4
 ; OPT-NEXT:    ret void
 ;
@@ -179,7 +179,7 @@ define amdgpu_kernel void @constexpr_phi_cond_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    [[MY_TMP:%.*]] = sub i32 [[ID]], [[ARG]]
 ; OPT-NEXT:    br label %[[BB1:.*]]
 ; OPT:       [[BB1]]:
-; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ [[TMP0:%.*]], %[[FLOW:.*]] ], [ 0, %[[BB]] ]
+; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i1 [ [[TMP0:%.*]], %[[FLOW:.*]] ], [ false, %[[BB]] ]
 ; OPT-NEXT:    [[LSR_IV:%.*]] = phi i32 [ undef, %[[BB]] ], [ [[MY_TMP2:%.*]], %[[FLOW]] ]
 ; OPT-NEXT:    [[LSR_IV_NEXT:%.*]] = add i32 [[LSR_IV]], 1
 ; OPT-NEXT:    [[CMP0:%.*]] = icmp slt i32 [[LSR_IV_NEXT]], 0
@@ -192,11 +192,11 @@ define amdgpu_kernel void @constexpr_phi_cond_break_loop(i32 %arg) #0 {
 ; OPT:       [[FLOW]]:
 ; OPT-NEXT:    [[MY_TMP2]] = phi i32 [ [[LSR_IV_NEXT]], %[[BB4]] ], [ undef, %[[BB1]] ]
 ; OPT-NEXT:    [[MY_TMP3:%.*]] = phi i1 [ [[CMP1]], %[[BB4]] ], [ [[CMP2]], %[[BB1]] ]
-; OPT-NEXT:    [[TMP0]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[MY_TMP3]], i64 [[PHI_BROKEN]])
-; OPT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP0]])
+; OPT-NEXT:    [[TMP0]] = call i1 @llvm.amdgcn.if.break(i1 [[MY_TMP3]], i1 [[PHI_BROKEN]])
+; OPT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.loop(i1 [[TMP0]])
 ; OPT-NEXT:    br i1 [[TMP1]], label %[[BB9:.*]], label %[[BB1]]
 ; OPT:       [[BB9]]:
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP0]])
+; OPT-NEXT:    call void @llvm.amdgcn.end.cf(i1 [[TMP0]])
 ; OPT-NEXT:    store volatile i32 7, ptr addrspace(3) poison, align 4
 ; OPT-NEXT:    ret void
 ;
@@ -271,7 +271,7 @@ define amdgpu_kernel void @true_phi_cond_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    [[MY_TMP:%.*]] = sub i32 [[ID]], [[ARG]]
 ; OPT-NEXT:    br label %[[BB1:.*]]
 ; OPT:       [[BB1]]:
-; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ [[TMP0:%.*]], %[[FLOW:.*]] ], [ 0, %[[BB]] ]
+; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i1 [ [[TMP0:%.*]], %[[FLOW:.*]] ], [ false, %[[BB]] ]
 ; OPT-NEXT:    [[LSR_IV:%.*]] = phi i32 [ undef, %[[BB]] ], [ [[MY_TMP2:%.*]], %[[FLOW]] ]
 ; OPT-NEXT:    [[LSR_IV_NEXT:%.*]] = add i32 [[LSR_IV]], 1
 ; OPT-NEXT:    [[CMP0:%.*]] = icmp slt i32 [[LSR_IV_NEXT]], 0
@@ -283,11 +283,11 @@ define amdgpu_kernel void @true_phi_cond_break_loop(i32 %arg) #0 {
 ; OPT:       [[FLOW]]:
 ; OPT-NEXT:    [[MY_TMP2]] = phi i32 [ [[LSR_IV_NEXT]], %[[BB4]] ], [ undef, %[[BB1]] ]
 ; OPT-NEXT:    [[MY_TMP3:%.*]] = phi i1 [ [[CMP1]], %[[BB4]] ], [ true, %[[BB1]] ]
-; OPT-NEXT:    [[TMP0]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[MY_TMP3]], i64 [[PHI_BROKEN]])
-; OPT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP0]])
+; OPT-NEXT:    [[TMP0]] = call i1 @llvm.amdgcn.if.break(i1 [[MY_TMP3]], i1 [[PHI_BROKEN]])
+; OPT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.loop(i1 [[TMP0]])
 ; OPT-NEXT:    br i1 [[TMP1]], label %[[BB9:.*]], label %[[BB1]]
 ; OPT:       [[BB9]]:
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP0]])
+; OPT-NEXT:    call void @llvm.amdgcn.end.cf(i1 [[TMP0]])
 ; OPT-NEXT:    store volatile i32 7, ptr addrspace(3) poison, align 4
 ; OPT-NEXT:    ret void
 ;
@@ -361,7 +361,7 @@ define amdgpu_kernel void @false_phi_cond_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    [[MY_TMP:%.*]] = sub i32 [[ID]], [[ARG]]
 ; OPT-NEXT:    br label %[[BB1:.*]]
 ; OPT:       [[BB1]]:
-; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ [[TMP0:%.*]], %[[FLOW:.*]] ], [ 0, %[[BB]] ]
+; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i1 [ [[TMP0:%.*]], %[[FLOW:.*]] ], [ false, %[[BB]] ]
 ; OPT-NEXT:    [[LSR_IV:%.*]] = phi i32 [ undef, %[[BB]] ], [ [[MY_TMP2:%.*]], %[[FLOW]] ]
 ; OPT-NEXT:    [[LSR_IV_NEXT:%.*]] = add i32 [[LSR_IV]], 1
 ; OPT-NEXT:    [[CMP0:%.*]] = icmp slt i32 [[LSR_IV_NEXT]], 0
@@ -373,11 +373,11 @@ define amdgpu_kernel void @false_phi_cond_break_loop(i32 %arg) #0 {
 ; OPT:       [[FLOW]]:
 ; OPT-NEXT:    [[MY_TMP2]] = phi i32 [ [[LSR_IV_NEXT]], %[[BB4]] ], [ undef, %[[BB1]] ]
 ; OPT-NEXT:    [[MY_TMP3:%.*]] = phi i1 [ [[CMP1]], %[[BB4]] ], [ false, %[[BB1]] ]
-; OPT-NEXT:    [[TMP0]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[MY_TMP3]], i64 [[PHI_BROKEN]])
-; OPT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP0]])
+; OPT-NEXT:    [[TMP0]] = call i1 @llvm.amdgcn.if.break(i1 [[MY_TMP3]], i1 [[PHI_BROKEN]])
+; OPT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.loop(i1 [[TMP0]])
 ; OPT-NEXT:    br i1 [[TMP1]], label %[[BB9:.*]], label %[[BB1]]
 ; OPT:       [[BB9]]:
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP0]])
+; OPT-NEXT:    call void @llvm.amdgcn.end.cf(i1 [[TMP0]])
 ; OPT-NEXT:    store volatile i32 7, ptr addrspace(3) poison, align 4
 ; OPT-NEXT:    ret void
 ;
@@ -454,7 +454,7 @@ define amdgpu_kernel void @invert_true_phi_cond_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    [[MY_TMP:%.*]] = sub i32 [[ID]], [[ARG]]
 ; OPT-NEXT:    br label %[[BB1:.*]]
 ; OPT:       [[BB1]]:
-; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ [[TMP0:%.*]], %[[FLOW:.*]] ], [ 0, %[[BB]] ]
+; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i1 [ [[TMP0:%.*]], %[[FLOW:.*]] ], [ false, %[[BB]] ]
 ; OPT-NEXT:    [[LSR_IV:%.*]] = phi i32 [ undef, %[[BB]] ], [ [[MY_TMP2:%.*]], %[[FLOW]] ]
 ; OPT-NEXT:    [[LSR_IV_NEXT:%.*]] = add i32 [[LSR_IV]], 1
 ; OPT-NEXT:    [[CMP0:%.*]] = icmp slt i32 [[LSR_IV_NEXT]], 0
@@ -467,11 +467,11 @@ define amdgpu_kernel void @invert_true_phi_cond_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    [[MY_TMP2]] = phi i32 [ [[LSR_IV_NEXT]], %[[BB4]] ], [ undef, %[[BB1]] ]
 ; OPT-NEXT:    [[MY_TMP3:%.*]] = phi i1 [ [[CMP1]], %[[BB4]] ], [ true, %[[BB1]] ]
 ; OPT-NEXT:    [[MY_TMP3_INV:%.*]] = xor i1 [[MY_TMP3]], true
-; OPT-NEXT:    [[TMP0]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[MY_TMP3_INV]], i64 [[PHI_BROKEN]])
-; OPT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP0]])
+; OPT-NEXT:    [[TMP0]] = call i1 @llvm.amdgcn.if.break(i1 [[MY_TMP3_INV]], i1 [[PHI_BROKEN]])
+; OPT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.loop(i1 [[TMP0]])
 ; OPT-NEXT:    br i1 [[TMP1]], label %[[BB9:.*]], label %[[BB1]]
 ; OPT:       [[BB9]]:
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP0]])
+; OPT-NEXT:    call void @llvm.amdgcn.end.cf(i1 [[TMP0]])
 ; OPT-NEXT:    store volatile i32 7, ptr addrspace(3) poison, align 4
 ; OPT-NEXT:    ret void
 ;

@@ -45,13 +45,10 @@ private:
 
   Type *Boolean;
   Type *Void;
-  Type *IntMask;
-  Type *ReturnStruct;
 
   ConstantInt *BoolTrue;
   ConstantInt *BoolFalse;
   PoisonValue *BoolPoison;
-  Constant *IntMaskZero;
 
   Function *If = nullptr;
   Function *Else = nullptr;
@@ -115,14 +112,10 @@ void SIAnnotateControlFlow::initialize(const GCNSubtarget &ST) {
 
   Void = Type::getVoidTy(Context);
   Boolean = Type::getInt1Ty(Context);
-  IntMask = ST.isWave32() ? Type::getInt32Ty(Context)
-                           : Type::getInt64Ty(Context);
-  ReturnStruct = StructType::get(Boolean, IntMask);
 
   BoolTrue = ConstantInt::getTrue(Context);
   BoolFalse = ConstantInt::getFalse(Context);
   BoolPoison = PoisonValue::get(Boolean);
-  IntMaskZero = ConstantInt::get(IntMask, 0);
 }
 
 /// Is the branch condition uniform or did the StructurizeCFG pass
@@ -188,7 +181,7 @@ bool SIAnnotateControlFlow::openIf(CondBrInst *Term) {
     return false;
 
   IRBuilder<> IRB(Term);
-  Value *IfCall = IRB.CreateCall(getDecl(If, Intrinsic::amdgcn_if, IntMask),
+  Value *IfCall = IRB.CreateCall(getDecl(If, Intrinsic::amdgcn_if, {}),
                                  {Term->getCondition()});
   Value *Cond = IRB.CreateExtractValue(IfCall, {0});
   Value *Mask = IRB.CreateExtractValue(IfCall, {1});
@@ -204,8 +197,8 @@ bool SIAnnotateControlFlow::insertElse(CondBrInst *Term) {
   }
 
   IRBuilder<> IRB(Term);
-  Value *ElseCall = IRB.CreateCall(
-      getDecl(Else, Intrinsic::amdgcn_else, {IntMask, IntMask}), {popSaved()});
+  Value *ElseCall =
+      IRB.CreateCall(getDecl(Else, Intrinsic::amdgcn_else, {}), {popSaved()});
   Value *Cond = IRB.CreateExtractValue(ElseCall, {0});
   Value *Mask = IRB.CreateExtractValue(ElseCall, {1});
   Term->setCondition(Cond);
@@ -220,7 +213,7 @@ Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken,
 
   auto CreateBreak = [this, Cond, Broken](Instruction *I) -> CallInst * {
     return IRBuilder<>(I).CreateCall(
-        getDecl(IfBreak, Intrinsic::amdgcn_if_break, IntMask), {Cond, Broken});
+        getDecl(IfBreak, Intrinsic::amdgcn_if_break, {}), {Cond, Broken});
   };
 
   if (Instruction *Inst = dyn_cast<Instruction>(Cond)) {
@@ -267,7 +260,7 @@ bool SIAnnotateControlFlow::handleLoop(CondBrInst *Term) {
     return false;
 
   BasicBlock *Target = Term->getSuccessor(1);
-  PHINode *Broken = PHINode::Create(IntMask, 0, "phi.broken");
+  PHINode *Broken = PHINode::Create(Boolean, 0, "phi.broken");
   Broken->insertBefore(Target->begin());
 
   Value *Cond = Term->getCondition();
@@ -275,7 +268,7 @@ bool SIAnnotateControlFlow::handleLoop(CondBrInst *Term) {
   Value *Arg = handleLoopCondition(Cond, Broken, L, Term);
 
   for (BasicBlock *Pred : predecessors(Target)) {
-    Value *PHIValue = IntMaskZero;
+    Value *PHIValue = BoolFalse;
     if (Pred == BB) // Remember the value of the previous iteration.
       PHIValue = Arg;
     // If the backedge from Pred to Target could be executed before the exit
@@ -287,7 +280,7 @@ bool SIAnnotateControlFlow::handleLoop(CondBrInst *Term) {
   }
 
   CallInst *LoopCall = IRBuilder<>(Term).CreateCall(
-      getDecl(Loop, Intrinsic::amdgcn_loop, IntMask), {Arg});
+      getDecl(Loop, Intrinsic::amdgcn_loop, {}), {Arg});
   Term->setCondition(LoopCall);
 
   push(Term->getSuccessor(0), Arg);
@@ -332,7 +325,7 @@ bool SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
     // condition, for now just avoid copying these DebugLocs so that stepping
     // out of the then/else block in a debugger doesn't step to the condition.
     IRB.SetCurrentDebugLocation(DebugLoc());
-    IRB.CreateCall(getDecl(EndCf, Intrinsic::amdgcn_end_cf, IntMask), {Exec});
+    IRB.CreateCall(getDecl(EndCf, Intrinsic::amdgcn_end_cf, {}), {Exec});
   }
 
   return true;

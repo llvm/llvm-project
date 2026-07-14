@@ -23,27 +23,27 @@ define float @test_atomicrmw_fsub(ptr addrspace(3) %addr) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float 1.000000e+00
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i1) = G_CONSTANT i1 false
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(f32) = G_LOAD [[COPY]](p3) :: (load (f32) from %ir.addr, addrspace 3)
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.atomicrmw.start:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i64) = G_PHI %19(i64), %bb.2, [[C1]](i64), %bb.1
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i1) = G_PHI %19(i1), %bb.2, [[C1]](i1), %bb.1
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(f32) = G_PHI [[LOAD]](f32), %bb.1, %18(f32), %bb.2
   ; CHECK-NEXT:   [[FSUB:%[0-9]+]]:_(f32) = G_FSUB [[PHI1]], [[C]]
   ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[FSUB]](f32)
   ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[PHI1]](f32)
   ; CHECK-NEXT:   [[ATOMIC_CMPXCHG_WITH_SUCCESS:%[0-9]+]]:_(i32), [[ATOMIC_CMPXCHG_WITH_SUCCESS1:%[0-9]+]]:_(i1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS [[COPY]](p3), [[BITCAST1]], [[BITCAST]] :: (load store seq_cst seq_cst (i32) on %ir.addr, addrspace 3)
   ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST [[ATOMIC_CMPXCHG_WITH_SUCCESS]](i32)
-  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(i64) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[ATOMIC_CMPXCHG_WITH_SUCCESS1]](i1), [[PHI]](i64)
-  ; CHECK-NEXT:   [[INT1:%[0-9]+]]:_(i1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), [[INT]](i64)
+  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(i1) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[ATOMIC_CMPXCHG_WITH_SUCCESS1]](i1), [[PHI]](i1)
+  ; CHECK-NEXT:   [[INT1:%[0-9]+]]:_(i1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), [[INT]](i1)
   ; CHECK-NEXT:   G_BRCOND [[INT1]](i1), %bb.3
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.atomicrmw.end:
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](i64)
+  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](i1)
   ; CHECK-NEXT:   $vgpr0 = COPY [[BITCAST2]](f32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %oldval = atomicrmw fsub ptr addrspace(3) %addr, float 1.0 seq_cst
@@ -74,27 +74,27 @@ define <2 x half> @test_atomicrmw_fsub_vector(ptr addrspace(3) %addr) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half 1.000000e+00
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f16>) = G_BUILD_VECTOR [[C]](f16), [[C]](f16)
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i1) = G_CONSTANT i1 false
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x f16>) = G_LOAD [[COPY]](p3) :: (load (<2 x f16>) from %ir.addr, addrspace 3)
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.atomicrmw.start:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i64) = G_PHI %20(i64), %bb.2, [[C1]](i64), %bb.1
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i1) = G_PHI %20(i1), %bb.2, [[C1]](i1), %bb.1
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(<2 x f16>) = G_PHI [[LOAD]](<2 x f16>), %bb.1, %19(<2 x f16>), %bb.2
   ; CHECK-NEXT:   [[FSUB:%[0-9]+]]:_(<2 x f16>) = G_FSUB [[PHI1]], [[BUILD_VECTOR]]
   ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[FSUB]](<2 x f16>)
   ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[PHI1]](<2 x f16>)
   ; CHECK-NEXT:   [[ATOMIC_CMPXCHG_WITH_SUCCESS:%[0-9]+]]:_(i32), [[ATOMIC_CMPXCHG_WITH_SUCCESS1:%[0-9]+]]:_(i1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS [[COPY]](p3), [[BITCAST1]], [[BITCAST]] :: (load store seq_cst seq_cst (i32) on %ir.addr, addrspace 3)
   ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x f16>) = G_BITCAST [[ATOMIC_CMPXCHG_WITH_SUCCESS]](i32)
-  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(i64) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[ATOMIC_CMPXCHG_WITH_SUCCESS1]](i1), [[PHI]](i64)
-  ; CHECK-NEXT:   [[INT1:%[0-9]+]]:_(i1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), [[INT]](i64)
+  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(i1) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[ATOMIC_CMPXCHG_WITH_SUCCESS1]](i1), [[PHI]](i1)
+  ; CHECK-NEXT:   [[INT1:%[0-9]+]]:_(i1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), [[INT]](i1)
   ; CHECK-NEXT:   G_BRCOND [[INT1]](i1), %bb.3
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.atomicrmw.end:
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](i64)
+  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](i1)
   ; CHECK-NEXT:   $vgpr0 = COPY [[BITCAST2]](<2 x f16>)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %oldval = atomicrmw fsub ptr addrspace(3) %addr, <2 x half> <half 1.0, half 1.0> seq_cst
@@ -110,27 +110,27 @@ define <2 x half> @test_atomicrmw_fmin_vector(ptr addrspace(3) %addr) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half 1.000000e+00
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f16>) = G_BUILD_VECTOR [[C]](f16), [[C]](f16)
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i1) = G_CONSTANT i1 false
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x f16>) = G_LOAD [[COPY]](p3) :: (load (<2 x f16>) from %ir.addr, addrspace 3)
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.atomicrmw.start:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i64) = G_PHI %20(i64), %bb.2, [[C1]](i64), %bb.1
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i1) = G_PHI %20(i1), %bb.2, [[C1]](i1), %bb.1
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(<2 x f16>) = G_PHI [[LOAD]](<2 x f16>), %bb.1, %19(<2 x f16>), %bb.2
   ; CHECK-NEXT:   [[FMINNUM:%[0-9]+]]:_(<2 x f16>) = G_FMINNUM [[PHI1]], [[BUILD_VECTOR]]
   ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[FMINNUM]](<2 x f16>)
   ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[PHI1]](<2 x f16>)
   ; CHECK-NEXT:   [[ATOMIC_CMPXCHG_WITH_SUCCESS:%[0-9]+]]:_(i32), [[ATOMIC_CMPXCHG_WITH_SUCCESS1:%[0-9]+]]:_(i1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS [[COPY]](p3), [[BITCAST1]], [[BITCAST]] :: (load store seq_cst seq_cst (i32) on %ir.addr, addrspace 3)
   ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x f16>) = G_BITCAST [[ATOMIC_CMPXCHG_WITH_SUCCESS]](i32)
-  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(i64) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[ATOMIC_CMPXCHG_WITH_SUCCESS1]](i1), [[PHI]](i64)
-  ; CHECK-NEXT:   [[INT1:%[0-9]+]]:_(i1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), [[INT]](i64)
+  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(i1) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[ATOMIC_CMPXCHG_WITH_SUCCESS1]](i1), [[PHI]](i1)
+  ; CHECK-NEXT:   [[INT1:%[0-9]+]]:_(i1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), [[INT]](i1)
   ; CHECK-NEXT:   G_BRCOND [[INT1]](i1), %bb.3
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.atomicrmw.end:
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](i64)
+  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](i1)
   ; CHECK-NEXT:   $vgpr0 = COPY [[BITCAST2]](<2 x f16>)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %oldval = atomicrmw fmin ptr addrspace(3) %addr, <2 x half> <half 1.0, half 1.0> seq_cst
@@ -146,27 +146,27 @@ define <2 x half> @test_atomicrmw_fmax_vector(ptr addrspace(3) %addr) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half 1.000000e+00
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f16>) = G_BUILD_VECTOR [[C]](f16), [[C]](f16)
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i1) = G_CONSTANT i1 false
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x f16>) = G_LOAD [[COPY]](p3) :: (load (<2 x f16>) from %ir.addr, addrspace 3)
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.atomicrmw.start:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i64) = G_PHI %20(i64), %bb.2, [[C1]](i64), %bb.1
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i1) = G_PHI %20(i1), %bb.2, [[C1]](i1), %bb.1
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(<2 x f16>) = G_PHI [[LOAD]](<2 x f16>), %bb.1, %19(<2 x f16>), %bb.2
   ; CHECK-NEXT:   [[FMAXNUM:%[0-9]+]]:_(<2 x f16>) = G_FMAXNUM [[PHI1]], [[BUILD_VECTOR]]
   ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[FMAXNUM]](<2 x f16>)
   ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[PHI1]](<2 x f16>)
   ; CHECK-NEXT:   [[ATOMIC_CMPXCHG_WITH_SUCCESS:%[0-9]+]]:_(i32), [[ATOMIC_CMPXCHG_WITH_SUCCESS1:%[0-9]+]]:_(i1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS [[COPY]](p3), [[BITCAST1]], [[BITCAST]] :: (load store seq_cst seq_cst (i32) on %ir.addr, addrspace 3)
   ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x f16>) = G_BITCAST [[ATOMIC_CMPXCHG_WITH_SUCCESS]](i32)
-  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(i64) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[ATOMIC_CMPXCHG_WITH_SUCCESS1]](i1), [[PHI]](i64)
-  ; CHECK-NEXT:   [[INT1:%[0-9]+]]:_(i1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), [[INT]](i64)
+  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(i1) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[ATOMIC_CMPXCHG_WITH_SUCCESS1]](i1), [[PHI]](i1)
+  ; CHECK-NEXT:   [[INT1:%[0-9]+]]:_(i1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), [[INT]](i1)
   ; CHECK-NEXT:   G_BRCOND [[INT1]](i1), %bb.3
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.atomicrmw.end:
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](i64)
+  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](i1)
   ; CHECK-NEXT:   $vgpr0 = COPY [[BITCAST2]](<2 x f16>)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %oldval = atomicrmw fmax ptr addrspace(3) %addr, <2 x half> <half 1.0, half 1.0> seq_cst

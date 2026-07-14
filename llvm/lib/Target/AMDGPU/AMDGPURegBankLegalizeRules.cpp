@@ -1875,14 +1875,13 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS1, _, S64}, {{UniInVcc}, {IntrId, Vgpr64, Vgpr32}}})
       .Any({{DivS1, _, S64}, {{Vcc}, {IntrId, Vgpr64, Vgpr32}}});
 
-  // This is "intrinsic lane mask" it was set to i32/i64 in llvm-ir.
-  addRulesForIOpcs({amdgcn_end_cf})
-      .Any({{_, UniS32}, {{}, {IntrId, Sgpr32}}})
-      .Any({{_, UniS64}, {{}, {IntrId, Sgpr64}}});
+  // The "intrinsic lane mask" is a divergent i1 value living in a wave-width
+  // lane mask register (the Vcc bank / SReg_1). Modeling it as a divergent i1
+  // lets the existing divergent-i1-phi lowering thread the "phi.broken" mask
+  // through loops as a lane mask.
+  addRulesForIOpcs({amdgcn_end_cf}).Any({{_, S1}, {{}, {IntrId, Vcc}}});
 
-  addRulesForIOpcs({amdgcn_if_break}, Standard)
-      .Uni(S64, {{Sgpr64}, {IntrId, Vcc, Sgpr64}})
-      .Uni(S32, {{Sgpr32}, {IntrId, Vcc, Sgpr32}});
+  addRulesForIOpcs({amdgcn_if_break}).Any({{S1}, {{Vcc}, {IntrId, Vcc, Vcc}}});
 
   addRulesForIOpcs({amdgcn_exp})
       .Any({{_, _, _, S32, S32, S32, S32},

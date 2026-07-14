@@ -83,8 +83,8 @@ IntrinsicLaneMaskAnalyzer::IntrinsicLaneMaskAnalyzer(MachineFunction &MF)
   initLaneMaskIntrinsics(MF);
 }
 
-bool IntrinsicLaneMaskAnalyzer::isS32S64LaneMask(Register Reg) const {
-  return S32S64LaneMask.contains(Reg);
+bool IntrinsicLaneMaskAnalyzer::isLaneMask(Register Reg) const {
+  return LaneMask.contains(Reg);
 }
 
 void IntrinsicLaneMaskAnalyzer::initLaneMaskIntrinsics(MachineFunction &MF) {
@@ -92,13 +92,13 @@ void IntrinsicLaneMaskAnalyzer::initLaneMaskIntrinsics(MachineFunction &MF) {
     for (auto &MI : MBB) {
       GIntrinsic *GI = dyn_cast<GIntrinsic>(&MI);
       if (GI && GI->is(Intrinsic::amdgcn_if_break)) {
-        S32S64LaneMask.insert(MI.getOperand(3).getReg());
-        S32S64LaneMask.insert(MI.getOperand(0).getReg());
+        LaneMask.insert(MI.getOperand(3).getReg());
+        LaneMask.insert(MI.getOperand(0).getReg());
       }
 
       if (MI.getOpcode() == AMDGPU::SI_IF ||
           MI.getOpcode() == AMDGPU::SI_ELSE) {
-        S32S64LaneMask.insert(MI.getOperand(0).getReg());
+        LaneMask.insert(MI.getOperand(0).getReg());
       }
     }
   }

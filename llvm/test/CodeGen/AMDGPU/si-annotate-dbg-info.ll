@@ -6,14 +6,14 @@ define amdgpu_ps i32 @if_else(i32 %0) !dbg !5 {
 ; OPT-SAME: i32 [[TMP0:%.*]]) !dbg [[DBG5:![0-9]+]] {
 ; OPT-NEXT:    [[C:%.*]] = icmp ne i32 [[TMP0]], 0, !dbg [[DBG13:![0-9]+]]
 ; OPT-NEXT:      #dbg_value(i1 [[C]], [[META9:![0-9]+]], !DIExpression(), [[DBG13]])
-; OPT-NEXT:    [[TMP2:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[C]]), !dbg [[DBG14:![0-9]+]]
-; OPT-NEXT:    [[TMP3:%.*]] = extractvalue { i1, i64 } [[TMP2]], 0, !dbg [[DBG14]]
-; OPT-NEXT:    [[TMP4:%.*]] = extractvalue { i1, i64 } [[TMP2]], 1, !dbg [[DBG14]]
+; OPT-NEXT:    [[TMP2:%.*]] = call { i1, i1 } @llvm.amdgcn.if(i1 [[C]]), !dbg [[DBG14:![0-9]+]]
+; OPT-NEXT:    [[TMP3:%.*]] = extractvalue { i1, i1 } [[TMP2]], 0, !dbg [[DBG14]]
+; OPT-NEXT:    [[TMP4:%.*]] = extractvalue { i1, i1 } [[TMP2]], 1, !dbg [[DBG14]]
 ; OPT-NEXT:    br i1 [[TMP3]], label [[FALSE:%.*]], label [[FLOW:%.*]], !dbg [[DBG14]]
 ; OPT:       Flow:
-; OPT-NEXT:    [[TMP5:%.*]] = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 [[TMP4]])
-; OPT-NEXT:    [[TMP6:%.*]] = extractvalue { i1, i64 } [[TMP5]], 0
-; OPT-NEXT:    [[TMP8:%.*]] = extractvalue { i1, i64 } [[TMP5]], 1
+; OPT-NEXT:    [[TMP5:%.*]] = call { i1, i1 } @llvm.amdgcn.else(i1 [[TMP4]])
+; OPT-NEXT:    [[TMP6:%.*]] = extractvalue { i1, i1 } [[TMP5]], 0
+; OPT-NEXT:    [[TMP7:%.*]] = extractvalue { i1, i1 } [[TMP5]], 1
 ; OPT-NEXT:    br i1 [[TMP6]], label [[TRUE:%.*]], label [[EXIT:%.*]]
 ; OPT:       true:
 ; OPT-NEXT:    br label [[EXIT]], !dbg [[DBG15:![0-9]+]]
@@ -21,7 +21,7 @@ define amdgpu_ps i32 @if_else(i32 %0) !dbg !5 {
 ; OPT-NEXT:    br label [[FLOW]], !dbg [[DBG16:![0-9]+]]
 ; OPT:       exit:
 ; OPT-NEXT:    [[RET:%.*]] = phi i32 [ 33, [[FLOW]] ], [ 42, [[TRUE]] ], !dbg [[DBG17:![0-9]+]]
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP8]])
+; OPT-NEXT:    call void @llvm.amdgcn.end.cf(i1 [[TMP7]])
 ; OPT-NEXT:      #dbg_value(i32 [[RET]], [[META11:![0-9]+]], !DIExpression(), [[DBG17]])
 ; OPT-NEXT:    ret i32 [[RET]], !dbg [[DBG18:![0-9]+]]
 ;
@@ -47,14 +47,14 @@ define amdgpu_ps void @loop_if_break(i32 %n) !dbg !19 {
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    br label [[LOOP:%.*]], !dbg [[DBG24:![0-9]+]]
 ; OPT:       loop:
-; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ [[TMP5:%.*]], [[FLOW:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i1 [ [[TMP5:%.*]], [[FLOW:%.*]] ], [ false, [[ENTRY:%.*]] ]
 ; OPT-NEXT:    [[I:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ [[TMP3:%.*]], [[FLOW]] ], !dbg [[DBG25:![0-9]+]]
 ; OPT-NEXT:      #dbg_value(i32 [[I]], [[META21:![0-9]+]], !DIExpression(), [[DBG25]])
 ; OPT-NEXT:    [[C:%.*]] = icmp ugt i32 [[I]], 0, !dbg [[DBG26:![0-9]+]]
 ; OPT-NEXT:      #dbg_value(i1 [[C]], [[META22:![0-9]+]], !DIExpression(), [[DBG26]])
-; OPT-NEXT:    [[TMP0:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[C]]), !dbg [[DBG27:![0-9]+]]
-; OPT-NEXT:    [[TMP1:%.*]] = extractvalue { i1, i64 } [[TMP0]], 0, !dbg [[DBG27]]
-; OPT-NEXT:    [[TMP2:%.*]] = extractvalue { i1, i64 } [[TMP0]], 1, !dbg [[DBG27]]
+; OPT-NEXT:    [[TMP0:%.*]] = call { i1, i1 } @llvm.amdgcn.if(i1 [[C]]), !dbg [[DBG27:![0-9]+]]
+; OPT-NEXT:    [[TMP1:%.*]] = extractvalue { i1, i1 } [[TMP0]], 0, !dbg [[DBG27]]
+; OPT-NEXT:    [[TMP2:%.*]] = extractvalue { i1, i1 } [[TMP0]], 1, !dbg [[DBG27]]
 ; OPT-NEXT:    br i1 [[TMP1]], label [[LOOP_BODY:%.*]], label [[FLOW]], !dbg [[DBG27]]
 ; OPT:       loop_body:
 ; OPT-NEXT:    [[I_NEXT:%.*]] = sub i32 [[I]], 1, !dbg [[DBG28:![0-9]+]]
@@ -63,12 +63,12 @@ define amdgpu_ps void @loop_if_break(i32 %n) !dbg !19 {
 ; OPT:       Flow:
 ; OPT-NEXT:    [[TMP3]] = phi i32 [ [[I_NEXT]], [[LOOP_BODY]] ], [ poison, [[LOOP]] ]
 ; OPT-NEXT:    [[TMP4:%.*]] = phi i1 [ false, [[LOOP_BODY]] ], [ true, [[LOOP]] ]
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP2]])
-; OPT-NEXT:    [[TMP5]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP4]], i64 [[PHI_BROKEN]])
-; OPT-NEXT:    [[TMP6:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP5]])
+; OPT-NEXT:    call void @llvm.amdgcn.end.cf(i1 [[TMP2]])
+; OPT-NEXT:    [[TMP5]] = call i1 @llvm.amdgcn.if.break(i1 [[TMP4]], i1 [[PHI_BROKEN]])
+; OPT-NEXT:    [[TMP6:%.*]] = call i1 @llvm.amdgcn.loop(i1 [[TMP5]])
 ; OPT-NEXT:    br i1 [[TMP6]], label [[EXIT:%.*]], label [[LOOP]]
 ; OPT:       exit:
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP5]])
+; OPT-NEXT:    call void @llvm.amdgcn.end.cf(i1 [[TMP5]])
 ; OPT-NEXT:    ret void, !dbg [[DBG30:![0-9]+]]
 ;
 entry:

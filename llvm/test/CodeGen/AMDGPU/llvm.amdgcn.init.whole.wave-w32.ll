@@ -348,25 +348,31 @@ define amdgpu_cs_chain void @control_flow(<3 x i32> inreg %sgpr, ptr inreg %call
 ; GISEL12-NEXT:  ; %bb.1: ; %shader.preheader
 ; GISEL12-NEXT:    v_add_nc_u32_e32 v1, -1, v12
 ; GISEL12-NEXT:    s_mov_b32 s4, 0
+; GISEL12-NEXT:    ; implicit-def: $sgpr8
 ; GISEL12-NEXT:  .LBB3_2: ; %shader
 ; GISEL12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL12-NEXT:    v_mov_b32_e32 v2, v1
 ; GISEL12-NEXT:    v_add_nc_u32_e32 v1, 1, v2
-; GISEL12-NEXT:    s_or_saveexec_b32 s8, -1
+; GISEL12-NEXT:    s_or_saveexec_b32 s9, -1
 ; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GISEL12-NEXT:    v_cndmask_b32_e64 v0, 0x47, v1, s8
-; GISEL12-NEXT:    v_cmp_ne_u32_e64 s9, 0, v0
-; GISEL12-NEXT:    s_mov_b32 exec_lo, s8
+; GISEL12-NEXT:    v_cndmask_b32_e64 v0, 0x47, v1, s9
+; GISEL12-NEXT:    v_cmp_ne_u32_e64 s10, 0, v0
+; GISEL12-NEXT:    s_mov_b32 exec_lo, s9
 ; GISEL12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v13, v1
-; GISEL12-NEXT:    v_mov_b32_e32 v11, s9
+; GISEL12-NEXT:    v_mov_b32_e32 v11, s10
 ; GISEL12-NEXT:    s_or_b32 s4, vcc_lo, s4
+; GISEL12-NEXT:    s_and_not1_b32 s8, s8, exec_lo
 ; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GISEL12-NEXT:    s_and_b32 s9, exec_lo, s4
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GISEL12-NEXT:    s_or_b32 s8, s8, s9
 ; GISEL12-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GISEL12-NEXT:    s_cbranch_execnz .LBB3_2
 ; GISEL12-NEXT:  ; %bb.3: ; %tail.loopexit
-; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s4
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s8
 ; GISEL12-NEXT:    v_add_nc_u32_e32 v10, 43, v2
 ; GISEL12-NEXT:  .LBB3_4: ; %Flow1
 ; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -463,21 +469,26 @@ define amdgpu_cs_chain void @control_flow(<3 x i32> inreg %sgpr, ptr inreg %call
 ; GISEL10-NEXT:  ; %bb.1: ; %shader.preheader
 ; GISEL10-NEXT:    v_add_nc_u32_e32 v1, -1, v12
 ; GISEL10-NEXT:    s_mov_b32 s4, 0
+; GISEL10-NEXT:    ; implicit-def: $sgpr8
+; GISEL10-NEXT:    .p2align 6
 ; GISEL10-NEXT:  .LBB3_2: ; %shader
 ; GISEL10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL10-NEXT:    v_mov_b32_e32 v2, v1
 ; GISEL10-NEXT:    v_add_nc_u32_e32 v1, 1, v2
-; GISEL10-NEXT:    s_or_saveexec_b32 s8, -1
-; GISEL10-NEXT:    v_cndmask_b32_e64 v0, 0x47, v1, s8
-; GISEL10-NEXT:    v_cmp_ne_u32_e64 s9, 0, v0
-; GISEL10-NEXT:    s_mov_b32 exec_lo, s8
+; GISEL10-NEXT:    s_or_saveexec_b32 s9, -1
+; GISEL10-NEXT:    v_cndmask_b32_e64 v0, 0x47, v1, s9
+; GISEL10-NEXT:    v_cmp_ne_u32_e64 s10, 0, v0
+; GISEL10-NEXT:    s_mov_b32 exec_lo, s9
 ; GISEL10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v13, v1
-; GISEL10-NEXT:    v_mov_b32_e32 v11, s9
+; GISEL10-NEXT:    v_mov_b32_e32 v11, s10
 ; GISEL10-NEXT:    s_or_b32 s4, vcc_lo, s4
+; GISEL10-NEXT:    s_andn2_b32 s8, s8, exec_lo
+; GISEL10-NEXT:    s_and_b32 s9, exec_lo, s4
+; GISEL10-NEXT:    s_or_b32 s8, s8, s9
 ; GISEL10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s4
 ; GISEL10-NEXT:    s_cbranch_execnz .LBB3_2
 ; GISEL10-NEXT:  ; %bb.3: ; %tail.loopexit
-; GISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
+; GISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s8
 ; GISEL10-NEXT:    v_add_nc_u32_e32 v10, 43, v2
 ; GISEL10-NEXT:  .LBB3_4: ; %Flow1
 ; GISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s3

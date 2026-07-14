@@ -20648,8 +20648,8 @@ static bool hasCFUser(const Value *V, SmallPtrSet<const Value *, 16> &Visited,
   // FIXME: We assume we never cast the mask results of a control flow
   // intrinsic.
   // Early exit if the type won't be consistent as a compile time hack.
-  IntegerType *IT = dyn_cast<IntegerType>(V->getType());
-  if (!IT || IT->getBitWidth() != WaveSize)
+  // The mask results of the control flow intrinsics are i1 lane masks.
+  if (!V->getType()->isIntegerTy(1))
     return false;
 
   if (!isa<Instruction>(V))

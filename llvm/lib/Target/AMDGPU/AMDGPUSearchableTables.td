@@ -376,6 +376,10 @@ def : SourceOfDivergence<int_amdgcn_ds_read_tr16_b64>;
 def : SourceOfDivergence<int_amdgcn_if>;
 def : SourceOfDivergence<int_amdgcn_else>;
 def : SourceOfDivergence<int_amdgcn_loop>;
+// The "intrinsic lane mask" result is an i1 value that lives in a wave-width
+// lane mask register (SReg_1), i.e. a divergent i1 from the analysis's point of
+// view. This lets the forwarding phis be treated as lane masks.
+def : SourceOfDivergence<int_amdgcn_if_break>;
 def : SourceOfDivergence<int_amdgcn_inverse_ballot>;
 
 foreach intr = AMDGPUImageDimAtomicIntrinsics in
@@ -401,7 +405,6 @@ def : AlwaysUniform<int_amdgcn_readlane>;
 def : AlwaysUniform<int_amdgcn_icmp>;
 def : AlwaysUniform<int_amdgcn_fcmp>;
 def : AlwaysUniform<int_amdgcn_ballot>;
-def : AlwaysUniform<int_amdgcn_if_break>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_x>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_y>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_z>;

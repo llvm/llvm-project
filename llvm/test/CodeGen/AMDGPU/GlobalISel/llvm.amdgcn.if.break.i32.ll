@@ -10,10 +10,11 @@ define amdgpu_kernel void @test_wave32(i32 %arg0, [8 x i32], i32 %saved) {
 ; GFX10-NEXT:    s_load_dword s1, s[8:9], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX10-NEXT:    v_cmp_gt_u32_e32 vcc_lo, s1, v0
 ; GFX10-NEXT:    s_cselect_b32 s0, exec_lo, 0
 ; GFX10-NEXT:    s_and_b32 s0, exec_lo, s0
-; GFX10-NEXT:    s_or_b32 s0, s0, s1
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-NEXT:    s_or_b32 s0, s0, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX10-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_endpgm
@@ -23,20 +24,26 @@ define amdgpu_kernel void @test_wave32(i32 %arg0, [8 x i32], i32 %saved) {
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX11-NEXT:    s_load_b32 s1, s[4:5], 0x24
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX11-NEXT:    v_cmp_gt_u32_e32 vcc_lo, s1, v0
 ; GFX11-NEXT:    s_cselect_b32 s0, exec_lo, 0
 ; GFX11-NEXT:    s_and_b32 s0, exec_lo, s0
-; GFX11-NEXT:    s_or_b32 s0, s0, s1
-; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-NEXT:    s_or_b32 s0, s0, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_endpgm
 entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %mask = icmp ult i32 %tid, %saved
   %cond = icmp eq i32 %arg0, 0
-  %break = call i32 @llvm.amdgcn.if.break.i32(i1 %cond, i32 %saved)
-  store volatile i32 %break, ptr addrspace(1) poison
+  %break = call i1 @llvm.amdgcn.if.break(i1 %cond, i1 %mask)
+  %break.ext = zext i1 %break to i32
+  store volatile i32 %break.ext, ptr addrspace(1) poison
   ret void
 }
 
-declare i32 @llvm.amdgcn.if.break.i32(i1, i32)
+declare i32 @llvm.amdgcn.workitem.id.x()
+declare i1 @llvm.amdgcn.if.break(i1, i1)

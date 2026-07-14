@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn--amdhsa -mcpu=gfx1010 < %s | FileCheck -check-prefix=GFX10 %s
 ; RUN: llc -global-isel -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefix=GFX11 %s
 
-define amdgpu_kernel void @test_wave32(i32 %arg0, [8 x i32], i32 %saved) {
+define amdgpu_kernel void @test_wave32(i32 %arg0, [8 x i32], i1 %saved) {
 ; GFX10-LABEL: test_wave32:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_load_dword s0, s[8:9], 0x0
@@ -16,6 +16,8 @@ define amdgpu_kernel void @test_wave32(i32 %arg0, [8 x i32], i32 %saved) {
 ; GFX10-NEXT:  .LBB0_2: ; %bb
 ; GFX10-NEXT:    s_load_dword s0, s[8:9], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX10-NEXT:    s_cselect_b32 s0, exec_lo, 0
 ; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
@@ -36,6 +38,8 @@ define amdgpu_kernel void @test_wave32(i32 %arg0, [8 x i32], i32 %saved) {
 ; GFX11-NEXT:  .LBB0_2: ; %bb
 ; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX11-NEXT:    s_cselect_b32 s0, exec_lo, 0
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off dlc
@@ -50,9 +54,9 @@ mid:
   br label %bb
 
 bb:
-  call void @llvm.amdgcn.end.cf.i32(i32 %saved)
+  call void @llvm.amdgcn.end.cf(i1 %saved)
   store volatile i32 0, ptr addrspace(1) poison
   ret void
 }
 
-declare void @llvm.amdgcn.end.cf.i32(i32 %val)
+declare void @llvm.amdgcn.end.cf(i1 %val)

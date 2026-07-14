@@ -4,7 +4,7 @@
 
 
 ; OPT-LABEL: @annotate_unreachable(
-; OPT: call { i1, i64 } @llvm.amdgcn.if.i64(
+; OPT: call { i1, i1 } @llvm.amdgcn.if(
 ; OPT-NOT: call void @llvm.amdgcn.end.cf
 
 

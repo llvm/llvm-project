@@ -411,29 +411,33 @@ define void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrspace(3) %lds, p
 ; GISEL-NEXT:    global_load_dword v[0:1], off lds
 ; GISEL-NEXT:    ; asyncmark
 ; GISEL-NEXT:    global_load_dword v[0:1], off lds
-; GISEL-NEXT:    s_mov_b32 s7, 0
-; GISEL-NEXT:    s_mov_b32 s6, 2
+; GISEL-NEXT:    s_mov_b32 s9, 0
+; GISEL-NEXT:    s_mov_b32 s8, 2
 ; GISEL-NEXT:    s_mov_b64 s[4:5], 0
-; GISEL-NEXT:    v_mov_b32_e32 v5, s7
+; GISEL-NEXT:    v_mov_b32_e32 v5, s9
 ; GISEL-NEXT:    ; asyncmark
+; GISEL-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; GISEL-NEXT:  .LBB4_1: ; %loop_body
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GISEL-NEXT:    v_readfirstlane_b32 s7, v2
-; GISEL-NEXT:    s_mov_b32 m0, s7
-; GISEL-NEXT:    s_add_i32 s6, s6, 1
+; GISEL-NEXT:    v_readfirstlane_b32 s9, v2
+; GISEL-NEXT:    s_mov_b32 m0, s9
+; GISEL-NEXT:    s_add_i32 s8, s8, 1
 ; GISEL-NEXT:    global_load_dword v[0:1], off lds
 ; GISEL-NEXT:    ; asyncmark
 ; GISEL-NEXT:    ; wait_asyncmark(2)
 ; GISEL-NEXT:    s_waitcnt vmcnt(2)
 ; GISEL-NEXT:    ds_read_b32 v6, v2
-; GISEL-NEXT:    v_cmp_ge_i32_e32 vcc, s6, v7
+; GISEL-NEXT:    v_cmp_ge_i32_e32 vcc, s8, v7
 ; GISEL-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GISEL-NEXT:    s_andn2_b64 s[6:7], s[6:7], exec
+; GISEL-NEXT:    s_and_b64 s[10:11], exec, s[4:5]
+; GISEL-NEXT:    s_or_b64 s[6:7], s[6:7], s[10:11]
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    v_add_u32_e32 v5, v5, v6
 ; GISEL-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GISEL-NEXT:    s_cbranch_execnz .LBB4_1
 ; GISEL-NEXT:  ; %bb.2: ; %epilog
-; GISEL-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GISEL-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GISEL-NEXT:    ; wait_asyncmark(1)
 ; GISEL-NEXT:    s_waitcnt vmcnt(1)
 ; GISEL-NEXT:    ds_read_b32 v0, v2
@@ -557,43 +561,47 @@ define void @test_pipelined_loop_with_global(ptr addrspace(1) %foo, ptr addrspac
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_readfirstlane_b32 s4, v2
 ; GISEL-NEXT:    s_mov_b32 m0, s4
-; GISEL-NEXT:    global_load_dword v10, v[0:1], off
-; GISEL-NEXT:    global_load_dword v14, v[3:4], off
-; GISEL-NEXT:    s_mov_b32 s6, 2
+; GISEL-NEXT:    global_load_dword v13, v[0:1], off
+; GISEL-NEXT:    global_load_dword v15, v[3:4], off
+; GISEL-NEXT:    s_mov_b32 s8, 2
 ; GISEL-NEXT:    global_load_dword v[0:1], off lds
 ; GISEL-NEXT:    ; asyncmark
 ; GISEL-NEXT:    global_load_dword v8, v[0:1], off
 ; GISEL-NEXT:    global_load_dword v9, v[3:4], off
 ; GISEL-NEXT:    s_mov_b64 s[4:5], 0
 ; GISEL-NEXT:    global_load_dword v[0:1], off lds
+; GISEL-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; GISEL-NEXT:    ; asyncmark
 ; GISEL-NEXT:    s_waitcnt vmcnt(2)
-; GISEL-NEXT:    v_mov_b32_e32 v13, v8
+; GISEL-NEXT:    v_mov_b32_e32 v12, v8
 ; GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GISEL-NEXT:    v_mov_b32_e32 v15, v9
+; GISEL-NEXT:    v_mov_b32_e32 v14, v9
 ; GISEL-NEXT:  .LBB5_1: ; %loop_body
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GISEL-NEXT:    v_readfirstlane_b32 s7, v2
+; GISEL-NEXT:    v_readfirstlane_b32 s9, v2
 ; GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GISEL-NEXT:    v_mov_b32_e32 v12, v15
-; GISEL-NEXT:    v_mov_b32_e32 v11, v13
-; GISEL-NEXT:    global_load_dword v13, v[0:1], off
-; GISEL-NEXT:    global_load_dword v15, v[3:4], off
-; GISEL-NEXT:    s_mov_b32 m0, s7
-; GISEL-NEXT:    s_add_i32 s6, s6, 1
+; GISEL-NEXT:    v_mov_b32_e32 v11, v14
+; GISEL-NEXT:    v_mov_b32_e32 v10, v12
+; GISEL-NEXT:    global_load_dword v12, v[0:1], off
+; GISEL-NEXT:    global_load_dword v14, v[3:4], off
+; GISEL-NEXT:    s_mov_b32 m0, s9
+; GISEL-NEXT:    s_add_i32 s8, s8, 1
 ; GISEL-NEXT:    global_load_dword v[0:1], off lds
-; GISEL-NEXT:    v_cmp_ge_i32_e32 vcc, s6, v7
-; GISEL-NEXT:    v_mov_b32_e32 v16, v14
-; GISEL-NEXT:    v_mov_b32_e32 v17, v10
-; GISEL-NEXT:    v_mov_b32_e32 v10, v8
-; GISEL-NEXT:    v_mov_b32_e32 v14, v9
+; GISEL-NEXT:    v_cmp_ge_i32_e32 vcc, s8, v7
 ; GISEL-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GISEL-NEXT:    s_andn2_b64 s[6:7], s[6:7], exec
+; GISEL-NEXT:    s_and_b64 s[10:11], exec, s[4:5]
+; GISEL-NEXT:    v_mov_b32_e32 v16, v15
+; GISEL-NEXT:    v_mov_b32_e32 v17, v13
+; GISEL-NEXT:    v_mov_b32_e32 v13, v8
+; GISEL-NEXT:    v_mov_b32_e32 v15, v9
+; GISEL-NEXT:    s_or_b64 s[6:7], s[6:7], s[10:11]
 ; GISEL-NEXT:    ; asyncmark
 ; GISEL-NEXT:    ; wait_asyncmark(2)
 ; GISEL-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GISEL-NEXT:    s_cbranch_execnz .LBB5_1
 ; GISEL-NEXT:  ; %bb.2: ; %epilog
-; GISEL-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GISEL-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GISEL-NEXT:    ds_read_b32 v0, v2
 ; GISEL-NEXT:    ; wait_asyncmark(1)
 ; GISEL-NEXT:    s_waitcnt vmcnt(3)
@@ -603,10 +611,10 @@ define void @test_pipelined_loop_with_global(ptr addrspace(1) %foo, ptr addrspac
 ; GISEL-NEXT:    ds_read_b32 v2, v2
 ; GISEL-NEXT:    v_add_u32_e32 v3, v17, v16
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(2)
-; GISEL-NEXT:    v_add3_u32 v0, v3, v0, v12
+; GISEL-NEXT:    v_add3_u32 v0, v3, v0, v11
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(1)
-; GISEL-NEXT:    v_add3_u32 v0, v11, v0, v1
-; GISEL-NEXT:    v_add_u32_e32 v1, v13, v15
+; GISEL-NEXT:    v_add3_u32 v0, v10, v0, v1
+; GISEL-NEXT:    v_add_u32_e32 v1, v12, v14
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    v_add3_u32 v0, v1, v2, v0
 ; GISEL-NEXT:    global_store_dword v[5:6], v0, off
