@@ -33,7 +33,14 @@ page](https://llvm.org/releases/).
 
 ## Non-comprehensive list of changes in this release
 
+- Added support for compressed DWARF debug sections. Flang now supports
+  compressing DWARF debug info in ELF object files using zlib or zstd,
+  reducing debug information size in compiled binaries.
+
 ## New Compiler Flags
+
+- Added `-gz` and `-gz=<format>` flags to enable compression of DWARF debug
+  sections. Supported formats are `zlib`, `zstd`, and `none`.
 
 ## Windows Support
 

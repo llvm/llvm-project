@@ -15,6 +15,7 @@
 #include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
 #include "llvm/Frontend/Debug/Options.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Path.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
@@ -199,6 +200,10 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
       CmdArgs.push_back(SplitDWARFOut);
     }
   }
+
+  // Handle compressed debug sections (-gz).
+  renderDebugInfoCompressionArgs(Args, CmdArgs, D, TC);
+
   addDebugInfoForProfilingArgs(D, TC, Args, CmdArgs);
 }
 
