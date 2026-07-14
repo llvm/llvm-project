@@ -76,6 +76,9 @@ ELF Improvements
   ``.debug_info``), fixing DWARF corruption in the output.
   (`#209035 <https://github.com/llvm/llvm-project/pull/209035>`_)
   (`#209042 <https://github.com/llvm/llvm-project/pull/209042>`_)
+* ``--retain-symbols-file`` now filters ``.symtab`` instead of ``.dynsym``,
+  matching GNU ld.
+  (`#209063 <https://github.com/llvm/llvm-project/pull/209063>`_)
 * ``INCLUDE`` in linker scripts now fully parses its own content instead of
   sharing a lexer buffer stack with the includer, fixing spurious acceptance
   of malformed scripts.
