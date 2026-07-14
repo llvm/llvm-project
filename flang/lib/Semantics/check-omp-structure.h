@@ -19,6 +19,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/semantics.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 
 using OmpClauseSet =
@@ -458,6 +459,11 @@ private:
   int directiveNest_[LastType + 1] = {0};
 
   std::set<std::pair<const Symbol *, const Symbol *>> declareVariantPairs_;
+  std::map<const Symbol *,
+      std::pair<llvm::SmallVector<llvm::omp::Directive, 4>, parser::CharBlock>>
+      declareVariantConstructSets_;
+  // Tracks the procedures that appear as a base in DECLARE VARIANT.
+  std::set<const Symbol *> declareVariantBases_;
 
   int allocateDirectiveLevel_{0};
   parser::CharBlock visitedAtomicSource_;

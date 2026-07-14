@@ -878,6 +878,33 @@ static bool CheckVariantAccessibility(SemanticsContext &context,
   return false;
 }
 
+// Collect the construct selector set of `sel` into `constructs` as an ordered
+// list of leaf construct directives. Combined and composite constructs are
+// decomposed into their leaves (e.g. `target teams` -> target, teams), so two
+// match selectors have the same construct selector set iff the collected lists
+// are equal. An absent construct selector yields an empty list.
+static void CollectConstructSelectorSet(
+    const parser::traits::OmpContextSelectorSpecification &sel,
+    llvm::SmallVectorImpl<llvm::omp::Directive> &constructs) {
+  using SetName = parser::OmpTraitSetSelectorName;
+  using TraitName = parser::OmpTraitSelectorName;
+  for (const parser::OmpTraitSetSelector &traitSet : sel.v) {
+    if (std::get<SetName>(traitSet.t).v != SetName::Value::Construct) {
+      continue;
+    }
+    for (const parser::OmpTraitSelector &trait :
+        std::get<std::list<parser::OmpTraitSelector>>(traitSet.t)) {
+      const auto &traitName{std::get<TraitName>(trait.t)};
+      if (const auto *dir{std::get_if<llvm::omp::Directive>(&traitName.u)}) {
+        for (llvm::omp::Directive leaf :
+            llvm::omp::getLeafConstructsOrSelf(*dir)) {
+          constructs.push_back(leaf);
+        }
+      }
+    }
+  }
+}
+
 void OmpStructureChecker::CheckOmpDeclareVariantDirective(
     const parser::OmpDeclareVariantDirective &x) {
   const parser::OmpDirectiveSpecification &spec{x.v};
@@ -965,23 +992,64 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
     if (base == variant) {
       context_.Say(arg.source,
           "The variant procedure must differ from the base procedure"_err_en_US);
-    } else if (!declareVariantPairs_.emplace(base, variant).second) {
-      context_.Say(arg.source,
-          "Variant '%s' was already specified for '%s' in another DECLARE VARIANT directive"_err_en_US,
-          variant->name(), base->name());
-    } else if (CheckVariantAccessibility(
-                   context_, *base, *variant, arg.source)) {
-      if (!hasArgModifiers) {
-        // adjust_args/append_args perform the "transformation for its OpenMP
-        // context", so the variant interface intentionally differs from the
-        // base; skip the same-interface check until they are supported.
-        CheckDeclareVariantInterface(context_, *base, *variant, arg.source);
+    } else {
+      // OpenMP 5.2 [7.5] / 6.0 [9.6]: a procedure determined to be a function
+      // variant may not be a base function in another DECLARE VARIANT
+      // directive, and vice versa. A variant is recorded as a key in
+      // declareVariantConstructSets_ below, so that map serves as the set of
+      // procedures that appear as a variant.
+      if (declareVariantConstructSets_.find(base) !=
+          declareVariantConstructSets_.end()) {
+        context_.Say(arg.source,
+            "The base procedure '%s' is also specified as a variant procedure in another DECLARE VARIANT directive"_err_en_US,
+            base->name());
       }
-      // Record the variant on its base procedure.
-      if (base->has<SubprogramDetails>()) {
-        auto &details{const_cast<Symbol &>(*base).get<SubprogramDetails>()};
-        details.addOmpDeclareVariant(
-            OmpDeclareVariantEntry{*variant, matchSelector});
+      if (declareVariantBases_.find(variant) != declareVariantBases_.end()) {
+        context_.Say(arg.source,
+            "The variant procedure '%s' is also specified as a base procedure in another DECLARE VARIANT directive"_err_en_US,
+            variant->name());
+      }
+      declareVariantBases_.insert(base);
+
+      if (!declareVariantPairs_.emplace(base, variant).second) {
+        context_.Say(arg.source,
+            "Variant '%s' was already specified for '%s' in another DECLARE VARIANT directive"_err_en_US,
+            variant->name(), base->name());
+      } else {
+        // OpenMP 5.2 [7.5] / 6.0 [9.6]: if a procedure is determined to be a
+        // function variant through more than one DECLARE VARIANT directive, the
+        // construct selector set of their context selectors must be the same.
+        llvm::SmallVector<llvm::omp::Directive, 4> constructs;
+        CollectConstructSelectorSet(*matchSelector, constructs);
+        auto it{declareVariantConstructSets_.find(variant)};
+        if (it == declareVariantConstructSets_.end()) {
+          declareVariantConstructSets_.emplace(
+              variant, std::make_pair(std::move(constructs), arg.source));
+        } else if (it->second.first != constructs) {
+          context_
+              .Say(arg.source,
+                  "Variant procedure '%s' must have the same 'construct' selector set in all DECLARE VARIANT directives"_err_en_US,
+                  variant->name())
+              .Attach(it->second.second,
+                  "Previous DECLARE VARIANT directive for '%s'"_en_US,
+                  variant->name());
+        }
+
+        if (CheckVariantAccessibility(context_, *base, *variant, arg.source)) {
+          if (!hasArgModifiers) {
+            // adjust_args/append_args perform the "transformation for its
+            // OpenMP context", so the variant interface intentionally differs
+            // from the base; skip the same-interface check until they are
+            // supported.
+            CheckDeclareVariantInterface(context_, *base, *variant, arg.source);
+          }
+          // Record the variant on its base procedure.
+          if (base->has<SubprogramDetails>()) {
+            auto &details{const_cast<Symbol &>(*base).get<SubprogramDetails>()};
+            details.addOmpDeclareVariant(
+                OmpDeclareVariantEntry{*variant, matchSelector});
+          }
+        }
       }
     }
   }
