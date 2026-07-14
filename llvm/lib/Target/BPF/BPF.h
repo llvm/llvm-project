@@ -26,7 +26,13 @@ class PassRegistry;
 
 #define BPF_TRAP "__bpf_trap"
 
-ModulePass *createBPFCheckAndAdjustIR();
+class BPFCheckAndAdjustIRPass
+    : public RequiredPassInfoMixin<BPFCheckAndAdjustIRPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+ModulePass *createBPFCheckAndAdjustIRLegacyPass();
 
 class BPFISelDAGToDAGPass : public SelectionDAGISelPass {
 public:
@@ -44,7 +50,7 @@ InstructionSelector *createBPFInstructionSelector(const BPFTargetMachine &,
                                                   const BPFRegisterBankInfo &);
 
 void initializeBPFAsmPrinterPass(PassRegistry &);
-void initializeBPFCheckAndAdjustIRPass(PassRegistry&);
+void initializeBPFCheckAndAdjustIRLegacyPass(PassRegistry &);
 void initializeBPFDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeBPFMIPeepholePass(PassRegistry &);
 void initializeBPFMIPreEmitCheckingPass(PassRegistry &);
