@@ -13,11 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/Rematerializer.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -730,8 +729,8 @@ void Rematerializer::extendInterval(LiveInterval &LI, LaneBitmask Mask,
   if (!LI.hasSubRanges()) {
     if (!LI.liveAt(UseIdx))
       LLVM_DEBUG(dbgs() << "Extending interval of register "
-                        << llvm::printReg(LI.reg(), &TRI, 0, &MRI) << " to "
-                        << UseIdx << '\n');
+                        << printReg(LI.reg(), &TRI, 0, &MRI) << " to " << UseIdx
+                        << '\n');
     LIS.extendToIndices(LI, UseIdx);
     return;
   }
@@ -741,8 +740,8 @@ void Rematerializer::extendInterval(LiveInterval &LI, LaneBitmask Mask,
     if ((SR.LaneMask & Mask).any() && !SR.liveAt(UseIdx)) {
       SubRangeExtended = true;
       LLVM_DEBUG(dbgs() << "Extending subrange " << SR << " of register "
-                        << llvm::printReg(LI.reg(), &TRI, 0, &MRI) << " to "
-                        << UseIdx << '\n');
+                        << printReg(LI.reg(), &TRI, 0, &MRI) << " to " << UseIdx
+                        << '\n');
       LIS.extendToIndices(SR, UseIdx);
     }
   }
