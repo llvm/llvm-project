@@ -50,7 +50,14 @@ public:
 };
 
 FunctionPass *createBPFMISimplifyPatchableLegacyPass();
-FunctionPass *createBPFMIPeepholePass();
+
+class BPFMIPeepholePass : public OptionalPassInfoMixin<BPFMIPeepholePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createBPFMIPeepholeLegacyPass();
 FunctionPass *createBPFMIPreEmitPeepholePass();
 FunctionPass *createBPFMIPreEmitCheckingPass();
 
@@ -61,7 +68,7 @@ InstructionSelector *createBPFInstructionSelector(const BPFTargetMachine &,
 void initializeBPFAsmPrinterPass(PassRegistry &);
 void initializeBPFCheckAndAdjustIRLegacyPass(PassRegistry &);
 void initializeBPFDAGToDAGISelLegacyPass(PassRegistry &);
-void initializeBPFMIPeepholePass(PassRegistry &);
+void initializeBPFMIPeepholeLegacyPass(PassRegistry &);
 void initializeBPFMIPreEmitCheckingPass(PassRegistry &);
 void initializeBPFMIPreEmitPeepholePass(PassRegistry &);
 void initializeBPFMISimplifyPatchableLegacyPass(PassRegistry &);

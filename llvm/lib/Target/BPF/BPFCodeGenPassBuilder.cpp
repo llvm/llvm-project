@@ -62,9 +62,8 @@ void BPFCodeGenPassBuilder::addMachineSSAOptimization(
 
   const BPFSubtarget *Subtarget = TM.getSubtargetImpl();
   if (!DisableMIPeephole) {
-    if (Subtarget->getHasAlu32()) {
-      // TODO(boomanaiden154): Add BPFMIPeepholePass when it has been ported.
-    }
+    if (Subtarget->getHasAlu32())
+      addMachineFunctionPass(BPFMIPeepholePass(), PMW);
   }
 }
 

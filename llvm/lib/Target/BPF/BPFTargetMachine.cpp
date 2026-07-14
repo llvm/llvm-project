@@ -52,7 +52,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
   initializeGlobalISel(PR);
   initializeBPFAsmPrinterPass(PR);
   initializeBPFCheckAndAdjustIRLegacyPass(PR);
-  initializeBPFMIPeepholePass(PR);
+  initializeBPFMIPeepholeLegacyPass(PR);
   initializeBPFMIPreEmitPeepholePass(PR);
   initializeBPFDAGToDAGISelLegacyPass(PR);
   initializeBPFMISimplifyPatchableLegacyPass(PR);
@@ -143,7 +143,7 @@ void BPFPassConfig::addMachineSSAOptimization() {
   const BPFSubtarget *Subtarget = getBPFTargetMachine().getSubtargetImpl();
   if (!DisableMIPeephole) {
     if (Subtarget->getHasAlu32())
-      addPass(createBPFMIPeepholePass());
+      addPass(createBPFMIPeepholeLegacyPass());
   }
 }
 
