@@ -2121,19 +2121,10 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
   if (IsAligned) {
     CharUnits RequiredAlign =
         S.getASTContext().getTypeAlignInChars(Call->getType());
-    CharUnits BaseAlignment;
-    if (const auto *VD = Ptr.getDeclDesc()->asValueDecl())
-      BaseAlignment = S.getASTContext().getDeclAlign(VD);
-    else if (const auto *E = Ptr.getDeclDesc()->asExpr())
-      BaseAlignment = GetAlignOfExpr(S.getASTContext(), E, UETT_AlignOf);
-    else {
-      S.FFDiag(S.Current->getSource(OpPC),
-               diag::note_constexpr_alignment_compute)
-          << RequiredAlign.getQuantity();
-      return false;
-    }
-    CharUnits PtrOffset = Ptr.toAPValue(S.getASTContext()).getLValueOffset();
-    CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(PtrOffset);
+    APValue AV = Ptr.toAPValue(S.getASTContext());
+    CharUnits BaseAlignment =
+        GetBaseAlignment(S.getASTContext(), AV.getLValueBase());
+    CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(AV.getLValueOffset());
     if (PtrAlign < RequiredAlign) {
       S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_load8_unaligned)
           << S.getASTContext().BuiltinInfo.getQuotedName(
