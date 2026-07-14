@@ -30,7 +30,7 @@ public:
 
   LLVM_ABI static bool runOnModule(Module &M, ModuleAnalysisManager &AM);
   LLVM_ABI static DenseMap<Function *, Function *>
-  runOnFunctions(ArrayRef<Function *> F, ModuleAnalysisManager &AM);
+  runOnFunctions(ArrayRef<Function *> Funcs, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

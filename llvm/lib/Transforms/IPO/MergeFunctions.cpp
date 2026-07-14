@@ -92,6 +92,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -211,7 +212,7 @@ public:
       : FnTree(FunctionNodeCmp(&GlobalNumbers)), FAM(FAM) {}
 
   template <typename FuncContainer> bool run(FuncContainer &Functions);
-  DenseMap<Function *, Function *> runOnFunctions(ArrayRef<Function *> F);
+  DenseMap<Function *, Function *> runOnFunctions(ArrayRef<Function *> Funcs);
 
   SmallPtrSet<GlobalValue *, 4> &getUsed();
 
@@ -269,8 +270,6 @@ private:
   /// be converted into a thunk. In either case, it should never be visited
   /// again.
   void mergeTwoFunctions(Function *F, Function *G);
-
-  const BlockFrequencyInfo *getBFI(Function &F);
 
   void mergeInstrProfMetadataInto(Function *Dst, Function *Src);
 
@@ -349,18 +348,15 @@ bool MergeFunctionsPass::runOnModule(Module &M, ModuleAnalysisManager &AM) {
 }
 
 DenseMap<Function *, Function *>
-MergeFunctionsPass::runOnFunctions(ArrayRef<Function *> F,
+MergeFunctionsPass::runOnFunctions(ArrayRef<Function *> Funcs,
                                    ModuleAnalysisManager &AM) {
-  if (F.empty())
+  if (Funcs.empty())
     return DenseMap<Function *, Function *>();
 
-  Module &M = *F.front()->getParent();
-  assert(
-      llvm::all_of(F, [&M](Function *Fn) { return Fn->getParent() == &M; }) &&
-      "all functions must belong to the same module");
+  Module &M = *Funcs.front()->getParent();
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   MergeFunctions MF(FAM);
-  return MF.runOnFunctions(F);
+  return MF.runOnFunctions(Funcs);
 }
 
 #ifndef NDEBUG
@@ -524,8 +520,8 @@ template <typename FuncContainer> bool MergeFunctions::run(FuncContainer &M) {
 }
 
 DenseMap<Function *, Function *>
-MergeFunctions::runOnFunctions(ArrayRef<Function *> F) {
-  [[maybe_unused]] bool MergeResult = this->run(F);
+MergeFunctions::runOnFunctions(ArrayRef<Function *> Funcs) {
+  [[maybe_unused]] bool MergeResult = this->run(Funcs);
   assert(MergeResult == !DelToNewMap.empty());
   return this->DelToNewMap;
 }
@@ -926,21 +922,15 @@ static bool isODR(const Function *F) {
   return F->hasWeakODRLinkage() || F->hasLinkOnceODRLinkage();
 }
 
-static uint64_t getBlockCountForMerging(const BlockFrequencyInfo *BFI,
-                                        const BasicBlock *BB,
-                                        std::optional<uint64_t> EC) {
-  if (BFI) {
-    if (auto Count = BFI->getBlockProfileCount(BB, /*AllowSynthetic=*/true))
-      return *Count;
-    // BFI present but no count for this block, fall through to EC.
-  }
-  if (EC)
-    return *EC;
+static uint64_t getBlockCountForMerging(const BlockFrequencyInfo &BFI,
+                                        const BasicBlock *BB) {
+  if (auto Count = BFI.getBlockProfileCount(BB, /*AllowSynthetic=*/true))
+    return *Count;
   return 1;
 }
 
-// The branch/value profile weights are relative within a function. Before
-// merge we need to normalize weights to absolute counts.
+// The branch weights are relative within a function. Before merging we
+// normalize these to absolute counts.
 // (weight * BlockCount / TotalWeight)
 static uint64_t scaleToBlockCount(uint64_t Weight, uint64_t TotalWeight,
                                   uint64_t BlockCount) {
@@ -956,22 +946,18 @@ static uint64_t scaleToBlockCount(uint64_t Weight, uint64_t TotalWeight,
 }
 
 // Combine the scaled branch_weights of corresponding instructions of F and G.
-static void
-mergeBranchWeightsOnInstructions(Instruction *DstI, const Instruction *SrcI,
-                                 const BlockFrequencyInfo *DstBFI,
-                                 const BlockFrequencyInfo *SrcBFI,
-                                 std::optional<uint64_t> DstEntryCount,
-                                 std::optional<uint64_t> SrcEntryCount) {
+static void mergeBranchWeightsOnInstructions(Instruction *DstI,
+                                             const Instruction *SrcI,
+                                             const BlockFrequencyInfo &DstBFI,
+                                             const BlockFrequencyInfo &SrcBFI) {
   SmallVector<uint32_t, 8> DstWeights, SrcWeights;
   bool HasDst = extractBranchWeights(*DstI, DstWeights);
   bool HasSrc = extractBranchWeights(*SrcI, SrcWeights);
   if (!HasDst && !HasSrc)
     return;
 
-  uint64_t DstBlockCount =
-      getBlockCountForMerging(DstBFI, DstI->getParent(), DstEntryCount);
-  uint64_t SrcBlockCount =
-      getBlockCountForMerging(SrcBFI, SrcI->getParent(), SrcEntryCount);
+  uint64_t DstBlockCount = getBlockCountForMerging(DstBFI, DstI->getParent());
+  uint64_t SrcBlockCount = getBlockCountForMerging(SrcBFI, SrcI->getParent());
 
   uint64_t DstTotal = 0, SrcTotal = 0;
   if (HasDst)
@@ -979,17 +965,17 @@ mergeBranchWeightsOnInstructions(Instruction *DstI, const Instruction *SrcI,
   if (HasSrc)
     extractProfTotalWeight(*SrcI, SrcTotal);
 
-  size_t NumWeights = std::max(HasDst ? DstWeights.size() : size_t{0},
-                               HasSrc ? SrcWeights.size() : size_t{0});
+  assert((!HasDst || !HasSrc || DstWeights.size() == SrcWeights.size()) &&
+         "equivalent branch/select instructions must have matching weight "
+         "arity");
+  size_t NumWeights = HasDst ? DstWeights.size() : SrcWeights.size();
   SmallVector<uint64_t, 8> MergedWeights;
   MergedWeights.reserve(NumWeights);
   for (size_t I = 0; I < NumWeights; ++I) {
-    uint64_t DstW = (HasDst && I < DstWeights.size()) ? DstWeights[I] : 0;
-    uint64_t SrcW = (HasSrc && I < SrcWeights.size()) ? SrcWeights[I] : 0;
-    uint64_t DstAbs =
-        HasDst ? scaleToBlockCount(DstW, DstTotal, DstBlockCount) : 0;
-    uint64_t SrcAbs =
-        HasSrc ? scaleToBlockCount(SrcW, SrcTotal, SrcBlockCount) : 0;
+    uint64_t DstW = HasDst ? DstWeights[I] : 0;
+    uint64_t SrcW = HasSrc ? SrcWeights[I] : 0;
+    uint64_t DstAbs = scaleToBlockCount(DstW, DstTotal, DstBlockCount);
+    uint64_t SrcAbs = scaleToBlockCount(SrcW, SrcTotal, SrcBlockCount);
     MergedWeights.push_back(SaturatingAdd(DstAbs, SrcAbs));
   }
 
@@ -998,28 +984,22 @@ mergeBranchWeightsOnInstructions(Instruction *DstI, const Instruction *SrcI,
   setFittedBranchWeights(*DstI, MergedWeights, IsExpected);
 }
 
-// Accumulate scaled value profile counts of Instruction I into Merged.
-static void addScaledValueProfile(const Instruction &I, InstrProfValueKind Kind,
-                                  uint64_t BlockCount,
-                                  DenseMap<uint64_t, uint64_t> &Merged) {
+// Accumulate value profile counts of Instruction I into Merged. Value profile
+// counts are absolute, not relative branch-style weights.
+static void addValueProfile(const Instruction &I, InstrProfValueKind Kind,
+                            DenseMap<uint64_t, uint64_t> &Merged) {
   uint64_t Total = 0;
   SmallVector<InstrProfValueData, 4> VDs =
       getValueProfDataFromInst(I, Kind, /*MaxNumValueData=*/UINT32_MAX, Total);
-  if (VDs.empty() || Total == 0)
+  if (VDs.empty())
     return;
-  for (const InstrProfValueData &VD : VDs) {
-    uint64_t Abs = scaleToBlockCount(VD.Count, Total, BlockCount);
-    Merged[VD.Value] = SaturatingAdd(Merged[VD.Value], Abs);
-  }
+  for (const InstrProfValueData &VD : VDs)
+    Merged[VD.Value] = SaturatingAdd(Merged[VD.Value], VD.Count);
 }
 
-// Merge (union) scaled value profiles of Dst and Src.
-static void
-mergeValueProfileOnInstructions(Instruction *DstI, const Instruction *SrcI,
-                                const BlockFrequencyInfo *DstBFI,
-                                const BlockFrequencyInfo *SrcBFI,
-                                std::optional<uint64_t> DstEntryCount,
-                                std::optional<uint64_t> SrcEntryCount) {
+// Merge (union) value profiles of Dst and Src.
+static void mergeValueProfileOnInstructions(Instruction *DstI,
+                                            const Instruction *SrcI) {
   MDNode *DstProf = DstI->getMetadata(LLVMContext::MD_prof);
   MDNode *SrcProf = SrcI->getMetadata(LLVMContext::MD_prof);
   bool HasDst = DstProf && isValueProfileMD(DstProf);
@@ -1049,14 +1029,10 @@ mergeValueProfileOnInstructions(Instruction *DstI, const Instruction *SrcI,
       static_cast<InstrProfValueKind>(KindCI->getZExtValue());
 
   DenseMap<uint64_t, uint64_t> Merged;
-  uint64_t DstBlockCount =
-      getBlockCountForMerging(DstBFI, DstI->getParent(), DstEntryCount);
-  uint64_t SrcBlockCount =
-      getBlockCountForMerging(SrcBFI, SrcI->getParent(), SrcEntryCount);
   if (HasDst)
-    addScaledValueProfile(*DstI, Kind, DstBlockCount, Merged);
+    addValueProfile(*DstI, Kind, Merged);
   if (HasSrc)
-    addScaledValueProfile(*SrcI, Kind, SrcBlockCount, Merged);
+    addValueProfile(*SrcI, Kind, Merged);
 
   if (Merged.empty())
     return;
@@ -1075,41 +1051,37 @@ mergeValueProfileOnInstructions(Instruction *DstI, const Instruction *SrcI,
                     VDs.size());
 }
 
-const BlockFrequencyInfo *MergeFunctions::getBFI(Function &F) {
-  return &FAM.getResult<BlockFrequencyAnalysis>(F);
-}
-
 /// Merge \p Src's instruction-level branch weights and value profile
 /// metadata into the corresponding instructions of \p Dst. \p Dst is the
 /// surviving function; \p Src will be erased or rewritten after this call.
 /// Both functions must be structurally identical.
 void MergeFunctions::mergeInstrProfMetadataInto(Function *Dst, Function *Src) {
-  std::optional<uint64_t> DstEntryCount = Dst->getEntryCount();
-  std::optional<uint64_t> SrcEntryCount = Src->getEntryCount();
-  const BlockFrequencyInfo *DstBFI = getBFI(*Dst);
-  const BlockFrequencyInfo *SrcBFI = getBFI(*Src);
+  const BlockFrequencyInfo &DstBFI =
+      FAM.getResult<BlockFrequencyAnalysis>(*Dst);
+  const BlockFrequencyInfo &SrcBFI =
+      FAM.getResult<BlockFrequencyAnalysis>(*Src);
 
   // FunctionComparator guarantees identical CFG topology and instruction
-  // ordering, allowing us to walk both functions in lockstep.
-  for (auto [DstBB, SrcBB] : llvm::zip_equal(*Dst, *Src)) {
-    for (auto [DstI, SrcI] : llvm::zip_equal(DstBB, SrcBB)) {
+  // ordering. Walk the CFGs in RPO rather than function block-list order, as
+  // equivalent functions need not store their basic blocks in the same order.
+  ReversePostOrderTraversal<Function *> DstRPOT(Dst);
+  ReversePostOrderTraversal<Function *> SrcRPOT(Src);
+  for (auto [DstBB, SrcBB] : llvm::zip_equal(DstRPOT, SrcRPOT)) {
+    for (auto [DstI, SrcI] : llvm::zip_equal(*DstBB, *SrcBB)) {
       MDNode *DstProf = DstI.getMetadata(LLVMContext::MD_prof);
       MDNode *SrcProf = SrcI.getMetadata(LLVMContext::MD_prof);
       if ((DstProf && isValueProfileMD(DstProf)) ||
           (SrcProf && isValueProfileMD(SrcProf)))
-        mergeValueProfileOnInstructions(&DstI, &SrcI, DstBFI, SrcBFI,
-                                        DstEntryCount, SrcEntryCount);
+        mergeValueProfileOnInstructions(&DstI, &SrcI);
 
       // Handle branch weights on SelectInsts here. Terminators are handled
       // separately below, outside the instruction loop.
       if (isa<SelectInst>(DstI))
-        mergeBranchWeightsOnInstructions(&DstI, &SrcI, DstBFI, SrcBFI,
-                                         DstEntryCount, SrcEntryCount);
+        mergeBranchWeightsOnInstructions(&DstI, &SrcI, DstBFI, SrcBFI);
     }
-    Instruction *DstTerm = DstBB.getTerminator();
-    const Instruction *SrcTerm = SrcBB.getTerminator();
-    mergeBranchWeightsOnInstructions(DstTerm, SrcTerm, DstBFI, SrcBFI,
-                                     DstEntryCount, SrcEntryCount);
+    Instruction *DstTerm = DstBB->getTerminator();
+    const Instruction *SrcTerm = SrcBB->getTerminator();
+    mergeBranchWeightsOnInstructions(DstTerm, SrcTerm, DstBFI, SrcBFI);
   }
 
   PreservedAnalyses PA = PreservedAnalyses::all();

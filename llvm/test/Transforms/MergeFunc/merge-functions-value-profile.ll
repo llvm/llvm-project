@@ -9,10 +9,9 @@
 ; MergeFunctions can walk the two functions in parallel and safely merge
 ; instruction-level metadata.
 ;
-; To produce the merged profile, the pass first scales each function's
-; VP counts based on its entry count to obtain absolute execution counts.
-; It then combines the profiles, adding together counts for targets that
-; appear in both functions and preserving targets that appear in only one.
+; Value profile counts are already absolute. The pass combines profiles by
+; adding counts for targets that appear in both functions and preserving
+; targets that appear in only one.
 
 ; --------------------------------------------------------------------------
 ; Both functions provide value profile metadata for the indirect call.
