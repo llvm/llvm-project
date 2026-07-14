@@ -24,6 +24,9 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 
+#include <type_traits>
+#include <utility>
+
 namespace fir::factory {
 
 /// Information gathered to generate bounds operation and data entry/exit
@@ -344,9 +347,9 @@ genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
           loc, cumulativeExtent, extent);
     }
 
-    mlir::Value bound = createBoundsOp<BoundsOp>(
-        builder, loc, boundTy, lb, ub, extent, sourceExtent, stride, false,
-        baseLb);
+    mlir::Value bound =
+        createBoundsOp<BoundsOp>(builder, loc, boundTy, lb, ub, extent,
+                                 sourceExtent, stride, false, baseLb);
     bounds.push_back(bound);
   }
   return bounds;

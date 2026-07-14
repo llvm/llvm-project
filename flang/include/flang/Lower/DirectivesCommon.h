@@ -330,6 +330,11 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
           }
           if (!ubound)
             ubound = lbound;
+        } else if constexpr (!fir::factory::HasSourceExtent<BoundsOp>::value) {
+          if (!ubound)
+            ubound =
+                mlir::arith::SubIOp::create(builder, loc, sourceExtent, one);
+          extent = sourceExtent;
         } else if (!lower && !upper) {
           ubound = mlir::arith::SubIOp::create(builder, loc, sourceExtent, one);
           extent = sourceExtent;

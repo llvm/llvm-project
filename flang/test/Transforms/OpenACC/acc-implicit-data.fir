@@ -311,7 +311,7 @@ func.func @_QParray(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "aa"}, 
 // CHECK: %[[ADDI:.*]] = arith.addi %[[SUBI]], %c1{{.*}} : index
 // CHECK: %[[CMPI:.*]] = arith.cmpi sgt, %[[ADDI]], %c0{{.*}} : index
 // CHECK: %[[SELECT:.*]] = arith.select %[[CMPI]], %[[ADDI]], %c0{{.*}} : index
-// CHECK: %[[BOUNDS:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%[[SELECT]] : index) stride(%c1{{.*}} : index) startIdx(%[[C10]] : index)
+// CHECK: %[[BOUNDS:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%[[SELECT]] : index) sourceExtent(%[[SELECT]] : index) stride(%c1{{.*}} : index) startIdx(%[[C10]] : index)
 // CHECK: acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xf32>> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "aa"}
 
 // -----
