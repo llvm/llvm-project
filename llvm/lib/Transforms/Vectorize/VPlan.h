@@ -258,12 +258,6 @@ public:
     return getEnclosingBlockWithSuccessors()->getSuccessors();
   }
 
-  /// \return the hierarchical successor of this VPBlockBase if it has a single
-  /// hierarchical successor. Otherwise return a null pointer.
-  VPBlockBase *getSingleHierarchicalSuccessor() {
-    return getEnclosingBlockWithSuccessors()->getSingleSuccessor();
-  }
-
   /// \return the predecessors either attached directly to this VPBlockBase or,
   /// if this VPBlockBase is the entry block of a VPRegionBlock and has no
   /// predecessors of its own, search recursively for the first enclosing
@@ -1003,9 +997,6 @@ public:
   }
 
   LLVM_ABI_FOR_TEST FastMathFlags getFastMathFlagsOrNone() const;
-
-  /// Returns true if the recipe has non-negative flag.
-  bool hasNonNegFlag() const { return OpType == OperationType::NonNegOp; }
 
   bool isNonNeg() const {
     assert(OpType == OperationType::NonNegOp &&
@@ -2653,9 +2644,6 @@ public:
                      "expandVPWidenIntOrFpInductionRecipe");
   }
 
-  /// Returns the start value of the induction.
-  VPIRValue *getStartValue() const { return cast<VPIRValue>(getOperand(0)); }
-
   /// If the recipe has been unrolled, return the VPValue for the induction
   /// increment, otherwise return null.
   VPValue *getSplatVFValue() const {
@@ -3647,14 +3635,6 @@ public:
     return new VPExpressionRecipe(ExpressionType, NewExpressiondRecipes);
   }
 
-  /// Return the VPValue to use to infer the result type of the recipe.
-  VPValue *getOperandOfResultType() const {
-    unsigned OpIdx =
-        cast<VPReductionRecipe>(ExpressionRecipes.back())->isConditional() ? 2
-                                                                           : 1;
-    return getOperand(getNumOperands() - OpIdx);
-  }
-
   /// Insert the recipes of the expression back into the VPlan, directly before
   /// the current recipe. Leaves the expression recipe empty, which must be
   /// removed before codegen.
@@ -4181,8 +4161,8 @@ class VPDerivedIVRecipe : public VPSingleDefRecipe {
 
 public:
   VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind,
-                    const FPMathOperator *FPBinOp, VPIRValue *Start,
-                    VPValue *IV, VPValue *Step)
+                    const FPMathOperator *FPBinOp, VPValue *Start, VPValue *IV,
+                    VPValue *Step)
       : VPSingleDefRecipe(VPRecipeBase::VPDerivedIVSC, {Start, IV, Step},
                           Start->getScalarType(), nullptr),
         Kind(Kind), FPBinOp(FPBinOp) {}
@@ -4204,7 +4184,7 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-  VPIRValue *getStartValue() const { return cast<VPIRValue>(getOperand(0)); }
+  VPValue *getStartValue() const { return getOperand(0); }
   VPValue *getIndex() const { return getOperand(1); }
   VPValue *getStepValue() const { return getOperand(2); }
   const FPMathOperator *getFPBinOp() const { return FPBinOp; }
@@ -4894,6 +4874,12 @@ public:
   /// loop region contains a nested loop region.
   LLVM_ABI_FOR_TEST bool isOuterLoop() const;
 
+  /// Returns true if the vector loop region is tail-folded.
+  bool hasTailFolded() const {
+    const VPRegionBlock *LoopRegion = getVectorLoopRegion();
+    return LoopRegion && LoopRegion->getHeaderMask();
+  }
+
   /// Returns the 'middle' block of the plan, that is the block that selects
   /// whether to execute the scalar tail loop or the exit block from the loop
   /// latch. If there is an early exit from the vector loop, the middle block
@@ -5171,15 +5157,25 @@ public:
   /// and deleted once the VPlan is destroyed.
   LLVM_ABI_FOR_TEST VPIRBasicBlock *createVPIRBasicBlock(BasicBlock *IRBB);
 
-  /// Returns true if the VPlan is based on a loop with an early exit. That is
-  /// the case if the VPlan has either more than one exit block or a single exit
-  /// block with multiple predecessors (one for the exit via the latch and one
-  /// via the other early exit).
+  /// Returns true if the VPlan is based on a loop with an early exit.
   bool hasEarlyExit() const {
-    return count_if(ExitBlocks,
-                    [](VPIRBasicBlock *EB) { return EB->hasPredecessors(); }) >
-               1 ||
-           (ExitBlocks.size() == 1 && ExitBlocks[0]->getNumPredecessors() > 1);
+    unsigned NumExitPredecessors =
+        sum_of(map_range(ExitBlocks, [](VPIRBasicBlock *EB) {
+          return EB->getNumPredecessors();
+        }));
+
+    // If the scalar preheader executes unconditionally, there's no branch from
+    // middle block to any exit. If there is any edge to an exit block
+    // remaining, it must be an early exit.
+    VPBasicBlock *ScalarPH = getScalarPreheader();
+    VPBlockBase *ScalarPHPred =
+        ScalarPH ? ScalarPH->getSinglePredecessor() : nullptr;
+    if (ScalarPHPred && ScalarPHPred->getNumSuccessors() == 1)
+      return NumExitPredecessors >= 1;
+
+    // Otherwise there must be at least 2 edges to exit blocks (from the middle
+    // block and the early exiting edge).
+    return NumExitPredecessors > 1;
   }
 
   /// Returns true if the scalar tail may execute after the vector loop, i.e.

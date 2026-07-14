@@ -35,8 +35,8 @@ struct ProfileSummaryEntry {
   const uint64_t MinCount;  ///< The minimum count for this percentile.
   const uint64_t NumCounts; ///< Number of counts >= the minimum count.
 
-  constexpr ProfileSummaryEntry(uint32_t TheCutoff, uint64_t TheMinCount,
-                                uint64_t TheNumCounts)
+  ProfileSummaryEntry(uint32_t TheCutoff, uint64_t TheMinCount,
+                      uint64_t TheNumCounts)
       : Cutoff(TheCutoff), MinCount(TheMinCount), NumCounts(TheNumCounts) {}
 };
 

@@ -31,6 +31,9 @@ static void addPadding(BinaryStreamWriter &Writer) {
   }
 }
 
+static SegmentInjection InjectFieldList(TypeLeafKind::LF_FIELDLIST);
+static SegmentInjection InjectMethodOverloadList(TypeLeafKind::LF_METHODLIST);
+
 static constexpr uint32_t ContinuationLength = sizeof(ContinuationRecord);
 static constexpr uint32_t MaxSegmentLength =
     MaxRecordLength - ContinuationLength;
@@ -55,9 +58,13 @@ void ContinuationRecordBuilder::begin(ContinuationRecordKind RecordKind) {
   assert(SegmentWriter.getOffset() == 0);
   assert(SegmentWriter.getLength() == 0);
 
-  SegmentInjection FLI(getTypeLeafKind(RecordKind));
-  const uint8_t *FLIB = reinterpret_cast<const uint8_t *>(&FLI);
-  InjectedSegmentBytes.assign(FLIB, FLIB + sizeof(SegmentInjection));
+  const SegmentInjection *FLI =
+      (RecordKind == ContinuationRecordKind::FieldList)
+          ? &InjectFieldList
+          : &InjectMethodOverloadList;
+  const uint8_t *FLIB = reinterpret_cast<const uint8_t *>(FLI);
+  InjectedSegmentBytes =
+      ArrayRef<uint8_t>(FLIB, FLIB + sizeof(SegmentInjection));
 
   // Seed the first record with an appropriate record prefix.
   RecordPrefix Prefix(getTypeLeafKind(RecordKind));
