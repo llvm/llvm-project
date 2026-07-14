@@ -8380,8 +8380,12 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       // that anything that attempts to refer to this invalid declaration can
       // act as if there IS a primary instantiation.
       if (NewTemplate && IsMemberSpecialization) {
+        VarDecl *FakeVD =
+            VarDecl::Create(Context, DC, D.getBeginLoc(), D.getIdentifierLoc(),
+                            II, R, TInfo, SC);
+        FakeVD->setInvalidDecl();
         VarTemplateDecl *FakeInstantiatedFrom = VarTemplateDecl::Create(
-            Context, DC, D.getIdentifierLoc(), Name, TemplateParams, NewVD);
+            Context, DC, D.getIdentifierLoc(), Name, TemplateParams, FakeVD);
         FakeInstantiatedFrom->setInvalidDecl();
         NewTemplate->setInstantiatedFromMemberTemplate(FakeInstantiatedFrom);
       }
