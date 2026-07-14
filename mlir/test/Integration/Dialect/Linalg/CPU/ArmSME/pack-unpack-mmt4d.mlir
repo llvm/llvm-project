@@ -32,7 +32,7 @@
 ///   * The matrix-multiplication dimensions that are scalable: M and N.
 ///
 /// 2. The lowering of linalg.mmt4d leverages scalable vectorisation.
-///   * The matrix-multiplication dimension that's scalable: M, N (to match data
+///   * The matrix-multiplication dimensions that are scalable: M, N (to match data
 ///     tiling configuration).
 ///
 /// 3. Neither `linalg.pack` nor `linalg.unpack` are vectorised ATM.
