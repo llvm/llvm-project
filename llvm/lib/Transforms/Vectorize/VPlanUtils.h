@@ -21,6 +21,41 @@ class PredicatedScalarEvolution;
 } // namespace llvm
 
 namespace llvm {
+/// A class keeping track of widening information of various recipes.
+/// A recipe necessarily produces a single scalar value if only the SingleScalar
+/// bit is set, a wide value if only the Wide bit is set, and scalar values for
+/// all VF lanes only the GenPerAllLanes bit is set. The SingleScalar bit can be
+/// set on Wide or GenPerAllLanes recipes, which indicates that the recipe could
+/// be narrowed to single-scalar if legal and profitable. For instructions not
+/// producing values, like an assume or store, the bits talk about the
+/// appropriate operands. Finally, there is a class of instructions that
+/// necessarily take vector operands and produce a scalar result, like
+/// (Insert|Extract)Element, or necessarily take a scalar values and produce a
+/// vector, like Build(Struct)Vector, or could be interepreted as either a wide
+/// or narrow recipe like Broadcasts and non-constant live-ins: these are marked
+/// with the Agnostic bit.
+class VPWideningInfo {
+  unsigned char Info : 4;
+
+public:
+  using VPWideningTy = enum {
+    SingleScalar = 1 << 0,
+    Wide = 1 << 1,
+    GenPerAllLanes = 1 << 2,
+    Agnostic = 1 << 3
+  };
+
+  VPWideningInfo(unsigned char Info) : Info(Info) {}
+  operator unsigned char() const { return Info; }
+  bool producesSingleScalarResult() const {
+    return Info == SingleScalar || Info == (SingleScalar | Agnostic);
+  }
+  bool couldProduceSingleScalarResult() const { return Info & SingleScalar; }
+  bool hasSingleScalarOperands() const {
+    return !(Info & (Agnostic | Wide)) || Info == (Wide | Agnostic);
+  }
+  bool isVectorToScalar() const { return Info == (SingleScalar | Agnostic); }
+};
 
 namespace vputils {
 /// Returns true if only the first lane of \p Def is used.
@@ -60,6 +95,9 @@ bool isSingleScalar(const VPValue *VPV);
 /// or its operands are known to be uniform across all VFs and UFs (e.g.
 /// VPDerivedIV or the canonical IV).
 bool isUniformAcrossVFsAndUFs(const VPValue *V);
+
+/// Get the WideningInfo for \p R.
+VPWideningInfo getWideningInfo(const VPRecipeBase &R);
 
 /// Return true if \p V is elementwise, i.e. none of the lanes are permuted.
 bool isElementwise(const VPValue *V);

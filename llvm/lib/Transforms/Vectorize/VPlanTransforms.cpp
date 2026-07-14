@@ -2042,14 +2042,11 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       // Predicate to check if a user of Op introduces extra broadcasts.
       auto IntroducesBCastOf = [](const VPValue *Op) {
         return [Op](const VPUser *U) {
-          if (auto *VPI = dyn_cast<VPInstruction>(U)) {
-            if (is_contained({VPInstruction::ExtractLastLane,
-                              VPInstruction::ExtractLastPart,
-                              VPInstruction::ExtractPenultimateElement},
-                             VPI->getOpcode()))
-              return false;
-          }
-          return !U->usesScalars(Op);
+          auto *R = cast<VPRecipeBase>(U);
+          // ExtractLastPart is an unfortunate special-case.
+          return !match(R, m_ExtractLastPart(m_VPValue())) &&
+                 !vputils::getWideningInfo(*R).isVectorToScalar() &&
+                 !U->usesScalars(Op);
         };
       };
 

@@ -56,6 +56,12 @@ static cl::opt<bool> VPlanPrintMetadata(
     cl::desc("Controls the printing of recipe metadata when debugging."));
 #endif
 
+bool VPUser::usesScalars(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  VPWideningInfo WideInfo = vputils::getWideningInfo(*cast<VPRecipeBase>(this));
+  return WideInfo.hasSingleScalarOperands() || usesFirstLaneOnly(Op);
+}
+
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPRecipeID()) {
   case VPExpressionSC:
