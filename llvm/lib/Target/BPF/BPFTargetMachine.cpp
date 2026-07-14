@@ -54,7 +54,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
   initializeBPFCheckAndAdjustIRLegacyPass(PR);
   initializeBPFMIPeepholeLegacyPass(PR);
   initializeBPFMIExpandStackArgPseudosLegacyPass(PR);
-  initializeBPFMIPreEmitPeepholePass(PR);
+  initializeBPFMIPreEmitPeepholeLegacyPass(PR);
   initializeBPFDAGToDAGISelLegacyPass(PR);
   initializeBPFMISimplifyPatchableLegacyPass(PR);
   initializeBPFMIPreEmitCheckingPass(PR);
@@ -152,7 +152,7 @@ void BPFPassConfig::addPreEmitPass() {
   addPass(createBPFMIPreEmitCheckingPass());
   if (!DisableMIPeephole) {
     addPass(createBPFMIExpandStackArgPseudosLegacyPass());
-    addPass(createBPFMIPreEmitPeepholePass());
+    addPass(createBPFMIPreEmitPeepholeLegacyPass());
   }
 }
 

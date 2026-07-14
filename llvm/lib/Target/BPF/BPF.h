@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_BPF_BPF_H
 
 #include "MCTargetDesc/BPFMCTargetDesc.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Analysis.h"
@@ -67,7 +68,15 @@ public:
 };
 
 FunctionPass *createBPFMIExpandStackArgPseudosLegacyPass();
-FunctionPass *createBPFMIPreEmitPeepholePass();
+
+class BPFMIPreEmitPeepholePass
+    : public OptionalPassInfoMixin<BPFMIPreEmitPeepholePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createBPFMIPreEmitPeepholeLegacyPass();
 FunctionPass *createBPFMIPreEmitCheckingPass();
 
 InstructionSelector *createBPFInstructionSelector(const BPFTargetMachine &,
@@ -80,7 +89,7 @@ void initializeBPFDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeBPFMIPeepholeLegacyPass(PassRegistry &);
 void initializeBPFMIPreEmitCheckingPass(PassRegistry &);
 void initializeBPFMIExpandStackArgPseudosLegacyPass(PassRegistry &);
-void initializeBPFMIPreEmitPeepholePass(PassRegistry &);
+void initializeBPFMIPreEmitPeepholeLegacyPass(PassRegistry &);
 void initializeBPFMISimplifyPatchableLegacyPass(PassRegistry &);
 
 class BPFAbstractMemberAccessPass

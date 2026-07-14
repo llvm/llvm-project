@@ -322,15 +322,11 @@ STATISTIC(RedundantMovElemNum, "Number of redundant moves eliminated");
 
 namespace {
 
-struct BPFMIPreEmitPeephole : public MachineFunctionPass {
-
-  static char ID;
+struct BPFMIPreEmitPeepholeImpl {
   MachineFunction *MF;
   const TargetRegisterInfo *TRI;
   const BPFInstrInfo *TII;
   bool SupportGotol;
-
-  BPFMIPreEmitPeephole() : MachineFunctionPass(ID) {}
 
 private:
   // Initialize class variables.
@@ -346,10 +342,7 @@ private:
 public:
 
   // Main entry point for this pass.
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    if (skipFunction(MF.getFunction()))
-      return false;
-
+  bool runOnMachineFunction(MachineFunction &MF) {
     initialize(MF);
     bool Changed = eliminateRedundantMov();
     if (SupportGotol)
@@ -361,8 +354,15 @@ public:
   }
 };
 
+class BPFMIPreEmitPeepholeLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  BPFMIPreEmitPeepholeLegacy() : MachineFunctionPass(ID) {}
+  bool runOnMachineFunction(MachineFunction &MF) override;
+};
+
 // Initialize class variables.
-void BPFMIPreEmitPeephole::initialize(MachineFunction &MFParm) {
+void BPFMIPreEmitPeepholeImpl::initialize(MachineFunction &MFParm) {
   MF = &MFParm;
   TII = MF->getSubtarget<BPFSubtarget>().getInstrInfo();
   TRI = MF->getSubtarget<BPFSubtarget>().getRegisterInfo();
@@ -370,7 +370,7 @@ void BPFMIPreEmitPeephole::initialize(MachineFunction &MFParm) {
   LLVM_DEBUG(dbgs() << "*** BPF PreEmit peephole pass ***\n\n");
 }
 
-bool BPFMIPreEmitPeephole::eliminateRedundantMov() {
+bool BPFMIPreEmitPeepholeImpl::eliminateRedundantMov() {
   MachineInstr* ToErase = nullptr;
   bool Eliminated = false;
 
@@ -411,7 +411,7 @@ bool BPFMIPreEmitPeephole::eliminateRedundantMov() {
   return Eliminated;
 }
 
-bool BPFMIPreEmitPeephole::in16BitRange(int Num) {
+bool BPFMIPreEmitPeepholeImpl::in16BitRange(int Num) {
   // Well, the cut-off is not precisely at 16bit range since
   // new codes are added during the transformation. So let us
   // a little bit conservative.
@@ -430,7 +430,7 @@ bool BPFMIPreEmitPeephole::in16BitRange(int Num) {
 // will estimate the branch target offset and do JMP -> JMPL and
 // JEQ -> JEQ + JMPL conversion if the estimated branch target offset
 // is beyond 16bit.
-bool BPFMIPreEmitPeephole::adjustBranch() {
+bool BPFMIPreEmitPeepholeImpl::adjustBranch() {
   bool Changed = false;
   int CurrNumInsns = 0;
   DenseMap<MachineBasicBlock *, int> SoFarNumInsns;
@@ -666,7 +666,7 @@ static int64_t computeMinFixedObjOffset(MachineFrameInfo &MFI,
   return MinFixedObjOffset;
 }
 
-bool BPFMIPreEmitPeephole::insertMissingCallerSavedSpills() {
+bool BPFMIPreEmitPeepholeImpl::insertMissingCallerSavedSpills() {
   MachineFrameInfo &MFI = MF->getFrameInfo();
   SmallVector<BPFFastCall, 8> Calls;
   LivePhysRegs LiveRegs;
@@ -702,7 +702,7 @@ bool BPFMIPreEmitPeephole::insertMissingCallerSavedSpills() {
   return Changed;
 }
 
-bool BPFMIPreEmitPeephole::removeMayGotoZero() {
+bool BPFMIPreEmitPeepholeImpl::removeMayGotoZero() {
   bool Changed = false;
   MachineBasicBlock *Prev_MBB, *Curr_MBB = nullptr;
 
@@ -758,7 +758,7 @@ bool BPFMIPreEmitPeephole::removeMayGotoZero() {
 // If the last insn in a funciton is 'JAL &bpf_unreachable', let us add an
 // 'exit' insn after that insn. This will ensure no fallthrough at the last
 // insn, making kernel verification easier.
-bool BPFMIPreEmitPeephole::addExitAfterUnreachable() {
+bool BPFMIPreEmitPeepholeImpl::addExitAfterUnreachable() {
   MachineBasicBlock &MBB = MF->back();
   MachineInstr &MI = MBB.back();
   if (MI.getOpcode() != BPF::JAL || !MI.getOperand(0).isGlobal() ||
@@ -771,12 +771,29 @@ bool BPFMIPreEmitPeephole::addExitAfterUnreachable() {
 
 } // namespace
 
-INITIALIZE_PASS(BPFMIPreEmitPeephole, "bpf-mi-pemit-peephole",
+INITIALIZE_PASS(BPFMIPreEmitPeepholeLegacy, "bpf-mi-pre-emit-peephole",
                 "BPF PreEmit Peephole Optimization", false, false)
 
-char BPFMIPreEmitPeephole::ID = 0;
-FunctionPass *llvm::createBPFMIPreEmitPeepholePass() {
-  return new BPFMIPreEmitPeephole();
+char BPFMIPreEmitPeepholeLegacy::ID = 0;
+FunctionPass *llvm::createBPFMIPreEmitPeepholeLegacyPass() {
+  return new BPFMIPreEmitPeepholeLegacy();
+}
+
+bool BPFMIPreEmitPeepholeLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  BPFMIPreEmitPeepholeImpl Impl;
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+BPFMIPreEmitPeepholePass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  BPFMIPreEmitPeepholeImpl Impl;
+  return Impl.runOnMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }
 
 namespace {
