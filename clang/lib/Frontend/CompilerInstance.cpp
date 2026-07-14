@@ -925,15 +925,19 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
 // Initialization Utilities
 
 bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input){
-  return InitializeSourceManager(Input, getDiagnostics(), getFileManager(),
-                                 getSourceManager());
+  // Only get InputEncoding from LangOpts if we have a preprocessor, because
+  // LangOpts is only initialized when preprocessing is enabled.
+  StringRef InputEncodingName =
+      hasPreprocessor() ? llvm::StringRef(getLangOpts().InputEncoding)
+                        : llvm::StringRef();
+  return InitializeSourceManager(Input, InputEncodingName, getDiagnostics(),
+                                 getFileManager(), getSourceManager());
 }
 
 // static
-bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
-                                               DiagnosticsEngine &Diags,
-                                               FileManager &FileMgr,
-                                               SourceManager &SourceMgr) {
+bool CompilerInstance::InitializeSourceManager(
+    const FrontendInputFile &Input, llvm::StringRef InputEncodingName,
+    DiagnosticsEngine &Diags, FileManager &FileMgr, SourceManager &SourceMgr) {
   SrcMgr::CharacteristicKind Kind =
       Input.getKind().getFormat() == InputKind::ModuleMap
           ? Input.isSystem() ? SrcMgr::C_System_ModuleMap
@@ -962,8 +966,8 @@ bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
     return false;
   }
 
-  SourceMgr.setMainFileID(
-      SourceMgr.createFileID(*FileOrErr, SourceLocation(), Kind));
+  SourceMgr.setMainFileID(SourceMgr.createFileID(*FileOrErr, SourceLocation(),
+                                                 Kind, InputEncodingName));
 
   assert(SourceMgr.getMainFileID().isValid() &&
          "Couldn't establish MainFileID!");
