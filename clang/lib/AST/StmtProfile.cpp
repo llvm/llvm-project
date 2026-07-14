@@ -332,7 +332,7 @@ void StmtProfiler::VisitGCCAsmStmt(const GCCAsmStmt *S) {
   VisitStmt(S);
   ID.AddBoolean(S->isVolatile());
   ID.AddBoolean(S->isSimple());
-  VisitExpr(S->getAsmStringExpr());
+  Visit(S->getAsmStringExpr());
   ID.AddInteger(S->getNumOutputs());
   for (unsigned I = 0, N = S->getNumOutputs(); I != N; ++I) {
     ID.AddString(S->getOutputName(I));
@@ -345,7 +345,7 @@ void StmtProfiler::VisitGCCAsmStmt(const GCCAsmStmt *S) {
   }
   ID.AddInteger(S->getNumClobbers());
   for (unsigned I = 0, N = S->getNumClobbers(); I != N; ++I)
-    VisitExpr(S->getClobberExpr(I));
+    Visit(S->getClobberExpr(I));
   ID.AddInteger(S->getNumLabels());
   for (auto *L : S->labels())
     VisitDecl(L->getLabel());
@@ -367,6 +367,17 @@ void StmtProfiler::VisitCXXTryStmt(const CXXTryStmt *S) {
 
 void StmtProfiler::VisitCXXForRangeStmt(const CXXForRangeStmt *S) {
   VisitStmt(S);
+}
+
+void StmtProfiler::VisitCXXExpansionStmtPattern(
+    const CXXExpansionStmtPattern *S) {
+  VisitStmt(S);
+}
+
+void StmtProfiler::VisitCXXExpansionStmtInstantiation(
+    const CXXExpansionStmtInstantiation *S) {
+  VisitStmt(S);
+  ID.AddBoolean(S->shouldApplyLifetimeExtensionToPreamble());
 }
 
 void StmtProfiler::VisitMSDependentExistsStmt(const MSDependentExistsStmt *S) {
@@ -912,6 +923,9 @@ void OMPClauseProfiler::VisitOMPAllocateClause(const OMPAllocateClause *C) {
   VisitOMPClauseList(C);
 }
 void OMPClauseProfiler::VisitOMPNumTeamsClause(const OMPNumTeamsClause *C) {
+  Profiler->VisitInteger(C->getModifier());
+  if (const Expr *Modifier = C->getModifierExpr())
+    Profiler->VisitStmt(Modifier);
   VisitOMPClauseList(C);
   VisitOMPClauseWithPreInit(C);
 }
@@ -2470,6 +2484,11 @@ void StmtProfiler::VisitSourceLocExpr(const SourceLocExpr *E) {
 }
 
 void StmtProfiler::VisitEmbedExpr(const EmbedExpr *E) { VisitExpr(E); }
+
+void StmtProfiler::VisitCXXExpansionSelectExpr(
+    const CXXExpansionSelectExpr *E) {
+  VisitExpr(E);
+}
 
 void StmtProfiler::VisitRecoveryExpr(const RecoveryExpr *E) { VisitExpr(E); }
 

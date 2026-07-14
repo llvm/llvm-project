@@ -72,7 +72,7 @@ void foo() {
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(16) [[X_TRAITS]], ptr noundef nonnull align 16 dereferenceable(16) @__const.foo.x_traits, i64 16, i1 false)
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X_ALLOC]]) #[[ATTR4]]
 // CHECK-NEXT:    [[CALL:%.*]] = call i64 @omp_init_allocator(i64 noundef 0, i32 noundef 1, ptr noundef nonnull [[X_TRAITS]]) #[[ATTR4]]
-// CHECK-NEXT:    store i64 [[CALL]], ptr [[X_ALLOC]], align 8, !tbaa [[LONG_TBAA6:![0-9]+]]
+// CHECK-NEXT:    store i64 [[CALL]], ptr [[X_ALLOC]], align 8, !tbaa [[LONG_TBAA7:![0-9]+]]
 // CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull @[[GLOB2:[0-9]+]], i32 1, ptr nonnull @foo.omp_outlined, ptr nonnull [[X_ALLOC]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X_ALLOC]]) #[[ATTR4]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X_TRAITS]]) #[[ATTR4]]
@@ -87,23 +87,23 @@ void foo() {
 // CHECK-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[DOTOMP_LB]]) #[[ATTR4]]
-// CHECK-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4, !tbaa [[INT_TBAA2:![0-9]+]]
+// CHECK-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4, !tbaa [[INT_TBAA9:![0-9]+]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[DOTOMP_UB]]) #[[ATTR4]]
-// CHECK-NEXT:    store i32 1023, ptr [[DOTOMP_UB]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    store i32 1023, ptr [[DOTOMP_UB]], align 4, !tbaa [[INT_TBAA9]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[DOTOMP_STRIDE]]) #[[ATTR4]]
-// CHECK-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4, !tbaa [[INT_TBAA9]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[DOTOMP_IS_LAST]]) #[[ATTR4]]
-// CHECK-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[X_ALLOC]], align 8, !tbaa [[LONG_TBAA6]]
+// CHECK-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4, !tbaa [[INT_TBAA9]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4, !tbaa [[INT_TBAA9]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[X_ALLOC]], align 8, !tbaa [[LONG_TBAA7]]
 // CHECK-NEXT:    [[CONV:%.*]] = inttoptr i64 [[TMP1]] to ptr
 // CHECK-NEXT:    [[DOTX__VOID_ADDR:%.*]] = tail call ptr @__kmpc_alloc(i32 [[TMP0]], i64 8, ptr [[CONV]])
 // CHECK-NEXT:    call void @__kmpc_for_static_init_4(ptr nonnull @[[GLOB1:[0-9]+]], i32 [[TMP0]], i32 34, ptr nonnull [[DOTOMP_IS_LAST]], ptr nonnull [[DOTOMP_LB]], ptr nonnull [[DOTOMP_UB]], ptr nonnull [[DOTOMP_STRIDE]], i32 1, i32 1)
-// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4, !tbaa [[INT_TBAA9]]
 // CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP2]], i32 1023)
-// CHECK-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4, !tbaa [[INT_TBAA9]]
 // CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr nonnull @[[GLOB1]], i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[X_ALLOC]], align 8, !tbaa [[LONG_TBAA6]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[X_ALLOC]], align 8, !tbaa [[LONG_TBAA7]]
 // CHECK-NEXT:    [[CONV5:%.*]] = inttoptr i64 [[TMP3]] to ptr
 // CHECK-NEXT:    call void @__kmpc_free(i32 [[TMP0]], ptr [[DOTX__VOID_ADDR]], ptr [[CONV5]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[DOTOMP_IS_LAST]]) #[[ATTR4]]
@@ -113,10 +113,10 @@ void foo() {
 // CHECK-NEXT:    ret void
 //
 //.
-// CHECK: [[INT_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
-// CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
-// CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
-// CHECK: [[LONG_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
-// CHECK: [[META7]] = !{!"long", [[META4]], i64 0}
+// CHECK: [[META4:![0-9]+]] = !{!"int", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
+// CHECK: [[META6]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[LONG_TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
+// CHECK: [[META8]] = !{!"long", [[META5]], i64 0}
+// CHECK: [[INT_TBAA9]] = !{[[META4]], [[META4]], i64 0}
 //.

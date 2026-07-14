@@ -359,8 +359,9 @@ struct LoweringPreparePass
     cir::PointerType voidPtrTy = builder.getVoidPtrTy();
     cir::PointerType voidFnPtrTy = builder.getVoidFnPtrTy({voidPtrTy});
     cir::PointerType handlePtrTy = builder.getPointerTo(handle.getSymType());
+    IntType intTy = builder.getSIntNTy(32);
     auto fnAtExitType =
-        builder.getVoidFnTy({voidFnPtrTy, voidPtrTy, handlePtrTy});
+        cir::FuncType::get({voidFnPtrTy, voidPtrTy, handlePtrTy}, intTy);
 
     llvm::StringLiteral nameAtExit = "__cxa_atexit";
     if (tls)

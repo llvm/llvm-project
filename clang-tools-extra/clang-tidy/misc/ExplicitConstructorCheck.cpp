@@ -8,6 +8,7 @@
 
 #include "ExplicitConstructorCheck.h"
 #include "../utils/LexerUtils.h"
+#include "../utils/TypeTraits.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -29,27 +30,6 @@ void ExplicitConstructorCheck::registerMatchers(MatchFinder *Finder) {
 
           .bind("conversion"),
       this);
-}
-
-static bool declIsStdInitializerList(const NamedDecl *D) {
-  // First use the fast getName() method to avoid unnecessary calls to the
-  // slow getQualifiedNameAsString().
-  return D->getName() == "initializer_list" &&
-         D->getQualifiedNameAsString() == "std::initializer_list";
-}
-
-static bool isStdInitializerList(QualType Type) {
-  Type = Type.getCanonicalType();
-  if (const auto *TS = Type->getAs<TemplateSpecializationType>()) {
-    if (const TemplateDecl *TD = TS->getTemplateName().getAsTemplateDecl())
-      return declIsStdInitializerList(TD);
-  }
-  if (const auto *RT = Type->getAs<RecordType>()) {
-    if (const auto *Specialization =
-            dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl()))
-      return declIsStdInitializerList(Specialization->getSpecializedTemplate());
-  }
-  return false;
 }
 
 void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
@@ -79,7 +59,7 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
 
   const ExplicitSpecifier ExplicitSpec = Ctor->getExplicitSpecifier();
 
-  const bool TakesInitializerList = isStdInitializerList(
+  const bool TakesInitializerList = utils::type_traits::isStdInitializerList(
       Ctor->getParamDecl(0)->getType().getNonReferenceType());
   if (ExplicitSpec.isExplicit() &&
       (Ctor->isCopyOrMoveConstructor() || TakesInitializerList)) {

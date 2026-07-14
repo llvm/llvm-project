@@ -20,9 +20,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // [concept.equalitycomparable]
 
@@ -50,8 +50,8 @@ concept equality_comparable_with =
     __weakly_equality_comparable_with<_Tp, _Up>;
 // clang-format on
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___CONCEPTS_EQUALITY_COMPARABLE_H

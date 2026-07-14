@@ -6,12 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "RelocScan.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
+using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
 using namespace lld;
@@ -25,6 +27,12 @@ public:
                      const uint8_t *loc) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
+  template <class ELFT, class RelTy>
+  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                       unsigned shard);
+  void scanSection(InputSectionBase &sec, unsigned shard) override {
+    elf::scanSection1<SPARCV9, ELF64BE>(*this, sec, shard);
+  }
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
 };
@@ -44,6 +52,8 @@ SPARCV9::SPARCV9(Ctx &ctx) : TargetInfo(ctx) {
   defaultImageBase = 0x100000;
 }
 
+// Only needed to support relocations used by relocateNonAlloc and
+// preprocessRelocs.
 RelExpr SPARCV9::getRelExpr(RelType type, const Symbol &s,
                             const uint8_t *loc) const {
   switch (type) {
@@ -51,35 +61,88 @@ RelExpr SPARCV9::getRelExpr(RelType type, const Symbol &s,
   case R_SPARC_UA32:
   case R_SPARC_64:
   case R_SPARC_UA64:
-  case R_SPARC_H44:
-  case R_SPARC_M44:
-  case R_SPARC_L44:
-  case R_SPARC_HH22:
-  case R_SPARC_HM10:
-  case R_SPARC_LM22:
-  case R_SPARC_HI22:
-  case R_SPARC_LO10:
     return R_ABS;
-  case R_SPARC_PC10:
-  case R_SPARC_PC22:
   case R_SPARC_DISP32:
-  case R_SPARC_WDISP30:
     return R_PC;
-  case R_SPARC_GOT10:
-    return R_GOT_OFF;
-  case R_SPARC_GOT22:
-    return R_GOT_OFF;
-  case R_SPARC_WPLT30:
-    return R_PLT_PC;
   case R_SPARC_NONE:
     return R_NONE;
-  case R_SPARC_TLS_LE_HIX22:
-  case R_SPARC_TLS_LE_LOX10:
-    return R_TPREL;
   default:
     Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
     return R_NONE;
+  }
+}
+
+template <class ELFT, class RelTy>
+void SPARCV9::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                              unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
+  sec.relocations.reserve(rels.size());
+  for (auto it = rels.begin(); it != rels.end(); ++it) {
+    const RelTy &rel = *it;
+    uint32_t symIdx = rel.getSymbol(false);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    uint64_t offset = rel.r_offset;
+    RelType type = rel.getType(false);
+    if (sym.isUndefined() && symIdx != 0 &&
+        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
+      continue;
+    int64_t addend = rs.getAddend<ELFT>(rel, type);
+    RelExpr expr;
+    switch (type) {
+    case R_SPARC_NONE:
+      continue;
+
+    // Absolute relocations:
+    case R_SPARC_32:
+    case R_SPARC_UA32:
+    case R_SPARC_64:
+    case R_SPARC_UA64:
+    case R_SPARC_H44:
+    case R_SPARC_M44:
+    case R_SPARC_L44:
+    case R_SPARC_HH22:
+    case R_SPARC_HM10:
+    case R_SPARC_LM22:
+    case R_SPARC_HI22:
+    case R_SPARC_LO10:
+      expr = R_ABS;
+      break;
+
+    // PLT-generating relocations:
+    case R_SPARC_WPLT30:
+      rs.processR_PLT_PC(type, offset, addend, sym);
+      continue;
+
+    // PC-relative relocations:
+    case R_SPARC_PC10:
+    case R_SPARC_PC22:
+    case R_SPARC_DISP32:
+    case R_SPARC_WDISP30:
+      rs.processR_PC(type, offset, addend, sym);
+      continue;
+
+    // GOT relocations:
+    case R_SPARC_GOT10:
+    case R_SPARC_GOT22:
+      expr = R_GOT_OFF;
+      break;
+
+    // TLS LE relocations:
+    case R_SPARC_TLS_LE_HIX22:
+    case R_SPARC_TLS_LE_LOX10:
+      if (rs.checkTlsLe(offset, sym, type))
+        continue;
+      expr = R_TPREL;
+      break;
+
+    default:
+      Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
+               << "unknown relocation (" << type.v << ") against symbol "
+               << &sym;
+      continue;
+    }
+    rs.process(expr, type, offset, sym, addend);
   }
 }
 

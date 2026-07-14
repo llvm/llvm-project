@@ -38,7 +38,6 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "flang/Parser/characters.h"
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
@@ -50,8 +49,8 @@
 #include "flang/Utils/OpenMP.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Support/StateStack.h"
-#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -71,11 +70,24 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
                            const ConstructQueue &queue,
                            ConstructQueue::const_iterator item);
 
-static void processHostEvalClauses(lower::AbstractConverter &converter,
-                                   semantics::SemanticsContext &semaCtx,
-                                   lower::StatementContext &stmtCtx,
-                                   lower::pft::Evaluation &eval,
-                                   mlir::Location loc);
+/// Return the directive that is immediately nested inside of the given
+/// \c parent evaluation, if it is its only non-end-statement nested evaluation
+/// and it represents an OpenMP construct.
+static lower::pft::Evaluation *
+extractOnlyOmpNestedEval(lower::pft::Evaluation &parent) {
+  if (!parent.hasNestedEvaluations())
+    return nullptr;
+
+  auto &nested = parent.getFirstNestedEvaluation();
+  if (!nested.isA<parser::OpenMPConstruct>())
+    return nullptr;
+
+  for (auto &sibling : parent.getNestedEvaluations())
+    if (&sibling != &nested && !sibling.isEndStmt())
+      return nullptr;
+
+  return &nested;
+}
 
 static llvm::SmallVector<Object>
 makeObjects(llvm::ArrayRef<const semantics::Symbol *> syms) {
@@ -167,12 +179,7 @@ namespace {
 /// information to later lowering stages.
 class HostEvalInfo {
 public:
-  // Allow this function access to private members in order to initialize them.
-  friend void ::processHostEvalClauses(lower::AbstractConverter &,
-                                       semantics::SemanticsContext &,
-                                       lower::StatementContext &,
-                                       lower::pft::Evaluation &,
-                                       mlir::Location);
+  friend class HostEvalVisitor;
 
   /// Fill \c vars with values stored in \c ops.
   ///
@@ -290,6 +297,418 @@ private:
   llvm::SmallVector<const semantics::Symbol *> iv;
   bool loopNestApplied = false, parallelApplied = false;
 };
+
+/// A base class to help iterate over OpenMP constructs based on an expected
+/// sequence.
+///
+/// The main entry point visit() will call visitDirective() for the OpenMP
+/// directive associated to the initial given evaluation based on whether it is
+/// part of the initial set of directives of interest. A nested OpenMP
+/// evaluation might optionally be also visited by the pattern recursively if it
+/// meets all of the following conditions:
+///   - It is the only nested evaluation, apart from an optional END statement
+///     associated to the same directive.
+///   - The OpenMP directive is part of the directive set returned by the
+///     `visitDirective` call for the parent.
+///
+/// Subclasses define the expected pattern by implementing the initialize() and
+/// visitDirective() methods, and users are expected to use visit() to trigger
+/// the complete pattern visit.
+class DirectivePatternVisitor {
+public:
+  DirectivePatternVisitor(semantics::SemanticsContext &semaCtx)
+      : semaCtx{semaCtx} {}
+  virtual ~DirectivePatternVisitor() = default;
+
+  /// Run the pattern from the given evaluation.
+  void visit(lower::pft::Evaluation &eval) {
+    directivesOfInterest = initialize();
+    visitEval(eval);
+  }
+
+protected:
+  /// Initializes the visitor and returns the set of initial directives of
+  /// interest to be matched the beginning of the pattern.
+  virtual OmpDirectiveSet initialize() = 0;
+
+  /// Visits a single directive and, based on it, returns the set of other
+  /// directives of interest that would be part of the pattern if nested inside.
+  virtual OmpDirectiveSet visitDirective(lower::pft::Evaluation &eval,
+                                         llvm::omp::Directive dir) = 0;
+
+  /// Obtain the list of clauses of the given OpenMP block or loop construct
+  /// evaluation. If it's not an OpenMP construct, no modifications are made to
+  /// the \c clauses output argument.
+  void extractClauses(lower::pft::Evaluation &eval, List<Clause> &clauses) {
+    const auto *ompEval{eval.getIf<parser::OpenMPConstruct>()};
+    if (!ompEval)
+      return;
+
+    const parser::OmpClauseList *beginClauseList{nullptr};
+    const parser::OmpClauseList *endClauseList{nullptr};
+    common::visit(
+        [&](const auto &construct) {
+          using Type = llvm::remove_cvref_t<decltype(construct)>;
+          if constexpr (std::is_same_v<Type, parser::OmpBlockConstruct> ||
+                        std::is_same_v<Type, parser::OpenMPLoopConstruct>) {
+            beginClauseList = &construct.BeginDir().Clauses();
+            if (auto &endSpec{construct.EndDir()})
+              endClauseList = &endSpec->Clauses();
+          }
+        },
+        ompEval->u);
+
+    assert(beginClauseList && "expected begin directive");
+    clauses.append(makeClauses(*beginClauseList, semaCtx));
+
+    if (endClauseList)
+      clauses.append(makeClauses(*endClauseList, semaCtx));
+  }
+
+private:
+  /// Decide whether an evaluation must be visited as part of the pattern.
+  ///
+  /// This is the case whenever it's an OpenMP construct and the associated
+  /// directive is part of the current set of directives of interest.
+  bool shouldVisitEval(lower::pft::Evaluation &eval) const {
+    const auto *ompEval{eval.getIf<parser::OpenMPConstruct>()};
+    if (!ompEval)
+      return false;
+
+    return directivesOfInterest.test(
+        parser::omp::GetOmpDirectiveName(*ompEval).v);
+  }
+
+  /// Visits an evaluation and, potentially, recursively visits a single
+  /// nested evaluation.
+  ///
+  /// For a nested evaluation to be recursively visited, it must be an OpenMP
+  /// construct, have no sibling evaluations and match one of the
+  /// next-directives of interest set returned by a call to visitDirective()
+  /// on the parent evaluation.
+  void visitEval(lower::pft::Evaluation &eval) {
+    if (!shouldVisitEval(eval))
+      return;
+
+    const auto &ompEval{eval.get<parser::OpenMPConstruct>()};
+    OmpDirectiveSet visitNested{
+        visitDirective(eval, parser::omp::GetOmpDirectiveName(ompEval).v)};
+
+    if (visitNested.empty())
+      return;
+
+    if (lower::pft::Evaluation *nestedEval = extractOnlyOmpNestedEval(eval)) {
+      OmpDirectiveSet prevDirs{directivesOfInterest};
+      directivesOfInterest = visitNested;
+      visitEval(*nestedEval);
+      directivesOfInterest = prevDirs;
+    }
+  }
+
+protected:
+  semantics::SemanticsContext &semaCtx;
+
+private:
+  OmpDirectiveSet directivesOfInterest;
+};
+
+/// Helper pattern to navigate target SPMD.
+class TargetSPMDVisitor : public DirectivePatternVisitor {
+public:
+  using DirectivePatternVisitor::DirectivePatternVisitor;
+  virtual ~TargetSPMDVisitor() = default;
+
+protected:
+  virtual OmpDirectiveSet initialize() override {
+    teamsVisited = false;
+    return llvm::omp::allTargetSet;
+  }
+
+  virtual OmpDirectiveSet visitDirective(lower::pft::Evaluation &eval,
+                                         llvm::omp::Directive dir) override {
+    using namespace llvm::omp;
+
+    // The default implementation does nothing, except it returns the allowed
+    // single nested directives for an SPMD kernel. If called by subclasses, it
+    // helps navigate SPMD patterns.
+    //
+    // Patterns considered SPMD:
+    //   - target teams distribute parallel do [simd]
+    //   - target teams loop
+    //   - target parallel do [simd]
+    //   - target parallel loop
+    switch (dir) {
+    case OMPD_target:
+      return topTeamsSet | topParallelSet;
+    case OMPD_target_teams:
+      // The 'bare' kernel type prevents the SPMD pattern from matching.
+      if (hasOmpxBareClause(eval))
+        return {};
+      [[fallthrough]];
+    case OMPD_teams:
+      teamsVisited = true;
+      return topDistributeSet | topLoopSet;
+    case OMPD_target_parallel:
+    case OMPD_parallel:
+      return topLoopSet | topDoSet;
+    default:
+      return {};
+    }
+  }
+
+  bool hasOmpxBareClause(lower::pft::Evaluation &eval) {
+    List<lower::omp::Clause> clauses;
+    extractClauses(eval, clauses);
+
+    return llvm::find_if(clauses, [](const Clause &clause) {
+             return std::holds_alternative<clause::OmpxBare>(clause.u);
+           }) != clauses.end();
+  }
+
+protected:
+  /// Whether a `teams` construct has been visited by visitDirective().
+  bool teamsVisited;
+};
+
+/// Populates the given HostEvalInfo structure after processing clauses for
+/// the given \p eval OpenMP target construct, or nested constructs, if these
+/// must be evaluated outside of the target region per the spec.
+///
+/// In particular, this will ensure that in <tt>target teams</tt> and equivalent
+/// nested constructs, the \c thread_limit, \c num_teams and \c num_threads
+/// clauses will be evaluated in the host. Additionally, loop bounds and steps
+/// will also be evaluated in the host if a <tt>target teams distribute</tt> or
+/// target SPMD construct is detected (i.e. <tt>target teams distribute parallel
+/// do [simd]</tt>, <tt>target parallel do [simd]</tt> or equivalent nesting).
+///
+/// The resulting updated HostEvalInfo structure is intended to be used to
+/// populate the \c host_eval operands of the associated \c omp.target
+/// operation, and also to be checked and used by later lowering steps to
+/// populate the corresponding operands of the \c omp.teams, \c omp.parallel or
+/// \c omp.loop_nest operations.
+class HostEvalVisitor : public TargetSPMDVisitor {
+public:
+  HostEvalVisitor(lower::AbstractConverter &converter,
+                  semantics::SemanticsContext &semaCtx,
+                  lower::StatementContext &stmtCtx, mlir::Location loc,
+                  HostEvalInfo &hostEvalInfo)
+      : TargetSPMDVisitor{semaCtx}, converter{converter}, stmtCtx{stmtCtx},
+        loc{loc}, hostEvalInfo{hostEvalInfo} {}
+  virtual ~HostEvalVisitor() = default;
+
+protected:
+  virtual OmpDirectiveSet visitDirective(lower::pft::Evaluation &eval,
+                                         llvm::omp::Directive dir) override {
+    using namespace llvm::omp;
+
+    List<lower::omp::Clause> clauses;
+    extractClauses(eval, clauses);
+    ClauseProcessor cp{converter, semaCtx, clauses};
+
+    // Currently, we deal differently with e.g. `target parallel workshare` to
+    // `target parallel` with a single nested `workshare`. The first case would
+    // result in no clauses being evaluated in the host, as there's not a case
+    // for it in the below switch statement. The second case would evaluate
+    // `num_threads` clauses in the host, because `target parallel` could be
+    // followed by a `do` construct, which would make this an SPMD target
+    // region.
+    //
+    // TODO: We don't probably want to have such divergent behavior when dealing
+    // with combined directives. We need to revisit this logic without listing
+    // every possible combined directive containing a clause we'd otherwise
+    // evaluate in the host if the directive was split into its leafs.
+    switch (dir) {
+    case OMPD_teams_distribute_parallel_do:
+    case OMPD_teams_distribute_parallel_do_simd:
+      cp.processThreadLimit(stmtCtx, hostEvalInfo.ops);
+      [[fallthrough]];
+    case OMPD_target_teams_distribute_parallel_do:
+    case OMPD_target_teams_distribute_parallel_do_simd:
+      cp.processNumTeams(stmtCtx, hostEvalInfo.ops);
+      [[fallthrough]];
+    case OMPD_distribute_parallel_do:
+    case OMPD_distribute_parallel_do_simd:
+    case OMPD_target_parallel_do:
+    case OMPD_target_parallel_do_simd:
+    case OMPD_target_parallel_loop:
+    case OMPD_parallel_do:
+    case OMPD_parallel_do_simd:
+    case OMPD_parallel_loop:
+      cp.processNumThreads(stmtCtx, hostEvalInfo.ops);
+      [[fallthrough]];
+    case OMPD_distribute:
+    case OMPD_distribute_simd:
+    case OMPD_do:
+    case OMPD_do_simd:
+      cp.processCollapse(loc, eval, hostEvalInfo.ops, hostEvalInfo.ops,
+                         hostEvalInfo.iv);
+      return {};
+
+    case OMPD_teams:
+      cp.processThreadLimit(stmtCtx, hostEvalInfo.ops);
+      [[fallthrough]];
+    case OMPD_target_teams:
+      cp.processNumTeams(stmtCtx, hostEvalInfo.ops);
+      break;
+
+    case OMPD_teams_distribute:
+    case OMPD_teams_distribute_simd:
+      cp.processThreadLimit(stmtCtx, hostEvalInfo.ops);
+      [[fallthrough]];
+    case OMPD_target_teams_distribute:
+    case OMPD_target_teams_distribute_simd:
+      cp.processCollapse(loc, eval, hostEvalInfo.ops, hostEvalInfo.ops,
+                         hostEvalInfo.iv);
+      cp.processNumTeams(stmtCtx, hostEvalInfo.ops);
+      return {};
+
+    case OMPD_teams_loop:
+      cp.processThreadLimit(stmtCtx, hostEvalInfo.ops);
+      [[fallthrough]];
+    case OMPD_target_teams_loop:
+      cp.processNumTeams(stmtCtx, hostEvalInfo.ops);
+      [[fallthrough]];
+    case OMPD_loop:
+      cp.processCollapse(loc, eval, hostEvalInfo.ops, hostEvalInfo.ops,
+                         hostEvalInfo.iv);
+      return {};
+
+    case OMPD_teams_workdistribute:
+      cp.processThreadLimit(stmtCtx, hostEvalInfo.ops);
+      [[fallthrough]];
+    case OMPD_target_teams_workdistribute:
+      cp.processNumTeams(stmtCtx, hostEvalInfo.ops);
+      break;
+
+    case OMPD_target_parallel:
+    case OMPD_parallel:
+      cp.processNumThreads(stmtCtx, hostEvalInfo.ops);
+      break;
+
+    case OMPD_target:
+      break;
+
+    default:
+      return {};
+    }
+
+    // Visit nested directives as per the SPMD pattern.
+    return TargetSPMDVisitor::visitDirective(eval, dir);
+  }
+
+private:
+  lower::AbstractConverter &converter;
+  lower::StatementContext &stmtCtx;
+  mlir::Location loc;
+  HostEvalInfo &hostEvalInfo;
+};
+
+/// Checks target regions and, based on the directives and clauses encountered,
+/// determines its associated kernel type.
+class KernelTypeVisitor : protected TargetSPMDVisitor {
+public:
+  KernelTypeVisitor(semantics::SemanticsContext &semaCtx,
+                    mlir::ModuleOp moduleOp)
+      : TargetSPMDVisitor{semaCtx}, moduleOp{moduleOp} {}
+  virtual ~KernelTypeVisitor() = default;
+
+  /// Executes the pattern and returns the kernel type of the given target
+  /// region, or \c mlir::omp::TargetExecMode::generic by default for non-target
+  /// evaluations.
+  mlir::omp::TargetExecMode getKernelType(lower::pft::Evaluation &eval) {
+    execMode = mlir::omp::TargetExecMode::generic;
+    visit(eval);
+    return execMode;
+  }
+
+protected:
+  virtual OmpDirectiveSet visitDirective(lower::pft::Evaluation &eval,
+                                         llvm::omp::Directive dir) override {
+    using namespace llvm::omp;
+
+    // We know this to be the case because any changes to the exec mode are made
+    // only when we know for sure what it is, so pattern matching is always
+    // stopped at these points.
+    assert(execMode == mlir::omp::TargetExecMode::generic &&
+           "unexpected non-default exec mode during pattern match");
+
+    switch (dir) {
+    case OMPD_target:
+    case OMPD_target_parallel:
+    case OMPD_parallel:
+    case OMPD_teams:
+      break;
+    case OMPD_target_teams:
+      if (hasOmpxBareClause(eval)) {
+        execMode = mlir::omp::TargetExecMode::bare;
+        return {};
+      }
+      break;
+    case OMPD_target_teams_distribute_parallel_do:
+    case OMPD_target_teams_distribute_parallel_do_simd:
+    case OMPD_target_teams_loop:
+    case OMPD_teams_distribute_parallel_do:
+    case OMPD_teams_distribute_parallel_do_simd:
+    case OMPD_teams_loop:
+    case OMPD_distribute_parallel_do:
+    case OMPD_distribute_parallel_do_simd:
+      execMode = canPromoteSPMDToNoLoop(eval)
+                     ? mlir::omp::TargetExecMode::spmd_no_loop
+                     : mlir::omp::TargetExecMode::spmd;
+      return {};
+    case OMPD_target_parallel_do:
+    case OMPD_target_parallel_do_simd:
+    case OMPD_target_parallel_loop:
+    case OMPD_parallel_do:
+    case OMPD_parallel_do_simd:
+    case OMPD_parallel_loop:
+    case OMPD_do:
+    case OMPD_do_simd:
+      // SPMD kernels without a `teams` construct cannot be promoted to no-loop
+      // mode.
+      execMode = mlir::omp::TargetExecMode::spmd;
+      return {};
+    case OMPD_loop:
+      // Prevent `target parallel loop` or equivalent nests to be promoted to
+      // no-loop mode.
+      execMode = teamsVisited && canPromoteSPMDToNoLoop(eval)
+                     ? mlir::omp::TargetExecMode::spmd_no_loop
+                     : mlir::omp::TargetExecMode::spmd;
+      return {};
+    default:
+      return {};
+    }
+
+    // Visit nested directives as per the SPMD pattern.
+    return TargetSPMDVisitor::visitDirective(eval, dir);
+  }
+
+private:
+  bool canPromoteSPMDToNoLoop(lower::pft::Evaluation &eval) {
+    List<lower::omp::Clause> clauses;
+    extractClauses(eval, clauses);
+
+    // First make sure the proper module attributes are present in order to
+    // perform this optimization.
+    auto ompFlags{
+        llvm::cast<mlir::omp::OffloadModuleInterface>(*moduleOp).getFlags()};
+    if (!ompFlags || !ompFlags.getAssumeTeamsOversubscription() ||
+        !ompFlags.getAssumeThreadsOversubscription())
+      return false;
+
+    // The num_teams clause can break no-loop assumptions, and reductions are
+    // slower in no-loop mode.
+    return llvm::find_if(clauses, [](const Clause &clause) {
+             return std::holds_alternative<clause::NumTeams>(clause.u) ||
+                    std::holds_alternative<clause::Reduction>(clause.u);
+           }) == clauses.end();
+  }
+
+private:
+  mlir::ModuleOp moduleOp;
+  mlir::omp::TargetExecMode execMode;
+};
+
 } // namespace
 
 /// Stack of \see HostEvalInfo to represent the current nest of \c omp.target
@@ -415,18 +834,31 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
                              llvm::ArrayRef<mlir::Value> vars,
                              llvm::ArrayRef<mlir::BlockArgument> args) {
     llvm::SmallVector<const semantics::Symbol *> processedSyms;
+    llvm::SmallVector<const Object *> processedObjects;
     for (const Object &object : objects) {
       const semantics::Symbol *sym = object.sym();
       if (const auto *commonDet =
               sym->detailsIf<semantics::CommonBlockDetails>()) {
-        llvm::transform(commonDet->objects(), std::back_inserter(processedSyms),
-                        [&](const auto &mem) { return &*mem; });
+        for (auto &mem : commonDet->objects()) {
+          processedSyms.push_back(&*mem);
+          processedObjects.push_back(&object);
+        }
       } else {
         processedSyms.push_back(sym);
+        processedObjects.push_back(&object);
       }
     }
 
-    for (auto [sym, var, arg] : llvm::zip_equal(processedSyms, vars, args))
+    assert(processedSyms.size() == processedObjects.size());
+    for (auto [sym, var, arg, object] :
+         llvm::zip_equal(processedSyms, vars, args, processedObjects)) {
+      bool skipBind =
+          ReductionProcessor::isExpressionLoweredAsReductionObject(object) ||
+          (object && sym->Rank() > 0 &&
+           !fir::unwrapUntilSeqType(arg.getType()));
+      if (skipBind)
+        continue;
+
       converter.bindSymbol(
           *sym,
           hlfir::translateToExtendedValue(
@@ -434,6 +866,7 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
               /*contiguousHint=*/
               evaluate::IsSimplyContiguous(*sym, converter.getFoldingContext()))
               .first);
+    }
   };
 
   // Process in clause name alphabetical order to match block arguments order.
@@ -475,187 +908,6 @@ extractMappedBaseValues(llvm::ArrayRef<mlir::Value> vars,
 
     return varPtr;
   });
-}
-
-/// Populate the global \see hostEvalInfo after processing clauses for the given
-/// \p eval OpenMP target construct, or nested constructs, if these must be
-/// evaluated outside of the target region per the spec.
-///
-/// In particular, this will ensure that in 'target teams' and equivalent nested
-/// constructs, the \c thread_limit and \c num_teams clauses will be evaluated
-/// in the host. Additionally, loop bounds, steps and the \c num_threads clause
-/// will also be evaluated in the host if a target SPMD construct is detected
-/// (i.e. 'target teams distribute parallel do [simd]' or equivalent nesting).
-///
-/// The result, stored as a global, is intended to be used to populate the \c
-/// host_eval operands of the associated \c omp.target operation, and also to be
-/// checked and used by later lowering steps to populate the corresponding
-/// operands of the \c omp.teams, \c omp.parallel or \c omp.loop_nest
-/// operations.
-static void processHostEvalClauses(lower::AbstractConverter &converter,
-                                   semantics::SemanticsContext &semaCtx,
-                                   lower::StatementContext &stmtCtx,
-                                   lower::pft::Evaluation &eval,
-                                   mlir::Location loc) {
-  // Obtain the list of clauses of the given OpenMP block or loop construct
-  // evaluation. Other evaluations passed to this lambda keep `clauses`
-  // unchanged.
-  auto extractClauses = [&semaCtx](lower::pft::Evaluation &eval,
-                                   List<Clause> &clauses) {
-    const auto *ompEval = eval.getIf<parser::OpenMPConstruct>();
-    if (!ompEval)
-      return;
-
-    const parser::OmpClauseList *beginClauseList = nullptr;
-    const parser::OmpClauseList *endClauseList = nullptr;
-    common::visit(
-        [&](const auto &construct) {
-          using Type = llvm::remove_cvref_t<decltype(construct)>;
-          if constexpr (std::is_same_v<Type, parser::OmpBlockConstruct> ||
-                        std::is_same_v<Type, parser::OpenMPLoopConstruct>) {
-            beginClauseList = &construct.BeginDir().Clauses();
-            if (auto &endSpec = construct.EndDir())
-              endClauseList = &endSpec->Clauses();
-          }
-        },
-        ompEval->u);
-
-    assert(beginClauseList && "expected begin directive");
-    clauses.append(makeClauses(*beginClauseList, semaCtx));
-
-    if (endClauseList)
-      clauses.append(makeClauses(*endClauseList, semaCtx));
-  };
-
-  // Return the directive that is immediately nested inside of the given
-  // `parent` evaluation, if it is its only non-end-statement nested evaluation
-  // and it represents an OpenMP construct.
-  auto extractOnlyOmpNestedDir = [](lower::pft::Evaluation &parent)
-      -> std::optional<llvm::omp::Directive> {
-    if (!parent.hasNestedEvaluations())
-      return std::nullopt;
-
-    llvm::omp::Directive dir;
-    auto &nested = parent.getFirstNestedEvaluation();
-    if (const auto *ompEval = nested.getIf<parser::OpenMPConstruct>())
-      dir = parser::omp::GetOmpDirectiveName(*ompEval).v;
-    else
-      return std::nullopt;
-
-    for (auto &sibling : parent.getNestedEvaluations())
-      if (&sibling != &nested && !sibling.isEndStmt())
-        return std::nullopt;
-
-    return dir;
-  };
-
-  // Process the given evaluation assuming it's part of a 'target' construct or
-  // captured by one, and store results in the global `hostEvalInfo`.
-  std::function<void(lower::pft::Evaluation &, const List<Clause> &)>
-      processEval;
-  processEval = [&](lower::pft::Evaluation &eval, const List<Clause> &clauses) {
-    using namespace llvm::omp;
-    ClauseProcessor cp(converter, semaCtx, clauses);
-
-    // Call `processEval` recursively with the immediately nested evaluation and
-    // its corresponding clauses if there is a single nested evaluation
-    // representing an OpenMP directive that passes the given test.
-    auto processSingleNestedIf = [&](llvm::function_ref<bool(Directive)> test) {
-      std::optional<Directive> nestedDir = extractOnlyOmpNestedDir(eval);
-      if (!nestedDir || !test(*nestedDir))
-        return;
-
-      lower::pft::Evaluation &nestedEval = eval.getFirstNestedEvaluation();
-      List<lower::omp::Clause> nestedClauses;
-      extractClauses(nestedEval, nestedClauses);
-      processEval(nestedEval, nestedClauses);
-    };
-
-    const auto *ompEval = eval.getIf<parser::OpenMPConstruct>();
-    if (!ompEval)
-      return;
-
-    HostEvalInfo *hostInfo = getHostEvalInfoStackTop(converter);
-    assert(hostInfo && "expected HOST_EVAL info structure");
-
-    switch (parser::omp::GetOmpDirectiveName(*ompEval).v) {
-    case OMPD_teams_distribute_parallel_do:
-    case OMPD_teams_distribute_parallel_do_simd:
-      cp.processThreadLimit(stmtCtx, hostInfo->ops);
-      [[fallthrough]];
-    case OMPD_target_teams_distribute_parallel_do:
-    case OMPD_target_teams_distribute_parallel_do_simd:
-      cp.processNumTeams(stmtCtx, hostInfo->ops);
-      [[fallthrough]];
-    case OMPD_distribute_parallel_do:
-    case OMPD_distribute_parallel_do_simd:
-      cp.processNumThreads(stmtCtx, hostInfo->ops);
-      [[fallthrough]];
-    case OMPD_distribute:
-    case OMPD_distribute_simd:
-      cp.processCollapse(loc, eval, hostInfo->ops, hostInfo->ops, hostInfo->iv);
-      break;
-
-    case OMPD_teams:
-      cp.processThreadLimit(stmtCtx, hostInfo->ops);
-      [[fallthrough]];
-    case OMPD_target_teams:
-      cp.processNumTeams(stmtCtx, hostInfo->ops);
-      processSingleNestedIf([](Directive nestedDir) {
-        return topDistributeSet.test(nestedDir) || topLoopSet.test(nestedDir);
-      });
-      break;
-
-    case OMPD_teams_distribute:
-    case OMPD_teams_distribute_simd:
-      cp.processThreadLimit(stmtCtx, hostInfo->ops);
-      [[fallthrough]];
-    case OMPD_target_teams_distribute:
-    case OMPD_target_teams_distribute_simd:
-      cp.processCollapse(loc, eval, hostInfo->ops, hostInfo->ops, hostInfo->iv);
-      cp.processNumTeams(stmtCtx, hostInfo->ops);
-      break;
-
-    case OMPD_teams_loop:
-      cp.processThreadLimit(stmtCtx, hostInfo->ops);
-      [[fallthrough]];
-    case OMPD_target_teams_loop:
-      cp.processNumTeams(stmtCtx, hostInfo->ops);
-      [[fallthrough]];
-    case OMPD_loop:
-      cp.processCollapse(loc, eval, hostInfo->ops, hostInfo->ops, hostInfo->iv);
-      break;
-
-    case OMPD_teams_workdistribute:
-      cp.processThreadLimit(stmtCtx, hostInfo->ops);
-      [[fallthrough]];
-    case OMPD_target_teams_workdistribute:
-      cp.processNumTeams(stmtCtx, hostInfo->ops);
-      break;
-
-    // Standalone 'target' case.
-    case OMPD_target: {
-      processSingleNestedIf(
-          [](Directive nestedDir) { return topTeamsSet.test(nestedDir); });
-      break;
-    }
-    default:
-      break;
-    }
-  };
-
-  const auto *ompEval = eval.getIf<parser::OpenMPConstruct>();
-  assert(ompEval &&
-         llvm::omp::allTargetSet.test(
-             parser::omp::GetOmpDirectiveName(*ompEval).v) &&
-         "expected TARGET construct evaluation");
-  (void)ompEval;
-
-  // Use the whole list of clauses passed to the construct here, rather than the
-  // ones only applied to omp.target.
-  List<lower::omp::Clause> clauses;
-  extractClauses(eval, clauses);
-  processEval(eval, clauses);
 }
 
 static lower::pft::Evaluation *
@@ -1091,13 +1343,44 @@ genLoopVars(mlir::Operation *op, lower::AbstractConverter &converter,
   // next one would result in 'hlfir.declare' operations being introduced inside
   // of a wrapper, which is illegal.
   mlir::IRMapping mapper;
+  llvm::SmallVector<std::pair<Object, mlir::Value>> mappedReductionObjects;
+  auto mapEquivalentReductionObjects =
+      [&](const ObjectEntryBlockArgsEntry &entry) {
+        for (auto [object, var] : llvm::zip(entry.objects, entry.vars)) {
+          for (auto [mappedObject, mappedValue] :
+               llvm::reverse(mappedReductionObjects)) {
+            if (object.id() == mappedObject.id()) {
+              mapper.map(var, mappedValue);
+              break;
+            }
+          }
+        }
+      };
+  auto rememberReductionObjects =
+      [&](const ObjectEntryBlockArgsEntry &entry,
+          llvm::ArrayRef<mlir::BlockArgument> args) {
+        for (auto [object, arg] : llvm::zip(entry.objects, args))
+          mappedReductionObjects.emplace_back(object, arg);
+      };
+
   for (auto [argGeneratingOp, blockArgs] : wrapperArgs) {
+    mapEquivalentReductionObjects(blockArgs.inReduction);
+    mapEquivalentReductionObjects(blockArgs.reduction);
+    mapEquivalentReductionObjects(blockArgs.taskReduction);
+
     for (mlir::OpOperand &operand : argGeneratingOp->getOpOperands())
       operand.set(mapper.lookupOrDefault(operand.get()));
 
     for (const auto [arg, var] : llvm::zip_equal(
              argGeneratingOp->getRegion(0).getArguments(), blockArgs.getVars()))
       mapper.map(var, arg);
+
+    rememberReductionObjects(blockArgs.inReduction,
+                             argGeneratingOp.getInReductionBlockArgs());
+    rememberReductionObjects(blockArgs.reduction,
+                             argGeneratingOp.getReductionBlockArgs());
+    rememberReductionObjects(blockArgs.taskReduction,
+                             argGeneratingOp.getTaskReductionBlockArgs());
   }
 
   // Bind the entry block arguments of parent wrappers to the corresponding
@@ -1370,6 +1653,186 @@ struct OpWithBodyGenInfo {
   bool privatize = true;
 };
 
+static mlir::Value getReductionOverrideValue(fir::FirOpBuilder &builder,
+                                             mlir::Location loc,
+                                             const Object *object,
+                                             mlir::BlockArgument arg) {
+  if (hlfir::isFortranEntityWithAttributes(arg))
+    return arg;
+
+  fir::FortranVariableFlagsAttr attributes;
+  llvm::SmallVector<mlir::Value> typeParams;
+  auto declareOp = hlfir::DeclareOp::create(
+      builder, loc, arg, "omp.reduction.element", nullptr, typeParams, nullptr,
+      nullptr, 0, attributes);
+  return declareOp.getBase();
+}
+
+static void
+addReductionObjectOverrides(fir::FirOpBuilder &builder, mlir::Location loc,
+                            lower::ExprToValueMap &overrides,
+                            const ObjectEntryBlockArgsEntry &entry,
+                            llvm::ArrayRef<mlir::BlockArgument> blockArgs) {
+  if (entry.objects.empty())
+    return;
+
+  for (auto pair : llvm::zip_equal(entry.objects, blockArgs)) {
+    const Object &object = std::get<0>(pair);
+    const mlir::BlockArgument &arg = std::get<1>(pair);
+    if (!ReductionProcessor::isExpressionLoweredAsReductionObject(&object))
+      continue;
+    const SomeExpr *expr = &object.ref().value();
+
+    // Evict any outer-scope entry for the same array element so the
+    // innermost scope always wins regardless of DenseMap iteration order.
+    llvm::SmallVector<const SomeExpr *> toEvict;
+    for (auto [key, value] : overrides) {
+      if (Fortran::lower::isEqual(key, expr)) {
+        toEvict.push_back(key);
+      }
+    }
+    for (const SomeExpr *key : toEvict) {
+      overrides.erase(key);
+    }
+
+    overrides[expr] = getReductionOverrideValue(builder, loc, &object, arg);
+  }
+}
+
+static const semantics::Symbol *getArrayElementSymbol(const SomeExpr &expr) {
+  std::optional<Fortran::evaluate::DataRef> dataRef =
+      Fortran::evaluate::ExtractDataRef(expr);
+  if (!dataRef)
+    return nullptr;
+
+  if (const auto *arrayRef =
+          std::get_if<Fortran::evaluate::ArrayRef>(&dataRef->u))
+    return &arrayRef->GetLastSymbol();
+
+  return nullptr;
+}
+
+static void
+addSymbolAliases(llvm::SmallVectorImpl<const semantics::Symbol *> &aliases,
+                 const semantics::Symbol *symbol) {
+  aliases.push_back(symbol);
+  aliases.push_back(&symbol->GetUltimate());
+  if (const auto *hostAssoc =
+          symbol->detailsIf<semantics::HostAssocDetails>()) {
+    aliases.push_back(&hostAssoc->symbol());
+    aliases.push_back(&hostAssoc->symbol().GetUltimate());
+  }
+}
+
+struct ArrayElementReductionUseCollector {
+  explicit ArrayElementReductionUseCollector(
+      const llvm::DenseMap<const semantics::Symbol *, const semantics::Symbol *>
+          &aliasToReductionSymbol,
+      llvm::DenseMap<const semantics::Symbol *,
+                     llvm::SmallVector<const SomeExpr *>>
+          &reductionElementExprs)
+      : aliasToReductionSymbol(aliasToReductionSymbol),
+        reductionElementExprs(reductionElementExprs) {}
+
+  const llvm::DenseMap<const semantics::Symbol *, const semantics::Symbol *>
+      &aliasToReductionSymbol;
+  llvm::DenseMap<const semantics::Symbol *, llvm::SmallVector<const SomeExpr *>>
+      &reductionElementExprs;
+  llvm::SmallPtrSet<const semantics::Symbol *, 16> seen;
+  llvm::SmallPtrSet<const semantics::Symbol *, 16> uncovered;
+
+  void classifyReductionElementUses(const SomeExpr &expr) {
+    llvm::SmallPtrSet<const semantics::Symbol *, 4> exprCandidates;
+    auto getReductionSymbol = [this](const semantics::Symbol &symbol) {
+      auto it = aliasToReductionSymbol.find(&symbol);
+      return it == aliasToReductionSymbol.end() ? nullptr : it->second;
+    };
+    for (const semantics::Symbol &symbol :
+         Fortran::evaluate::CollectSymbols(expr))
+      if (const semantics::Symbol *reductionSymbol = getReductionSymbol(symbol))
+        exprCandidates.insert(reductionSymbol);
+    if (exprCandidates.empty())
+      return;
+
+    auto isCoveredReductionUse =
+        [this](const semantics::Symbol *reductionSymbol, const SomeExpr &expr) {
+          auto it = reductionElementExprs.find(reductionSymbol);
+          return it != reductionElementExprs.end() &&
+                 llvm::any_of(it->second, [&](const SomeExpr *reductionExpr) {
+                   return Fortran::lower::isEqual(&expr, reductionExpr);
+                 });
+        };
+    llvm::SmallPtrSet<const semantics::Symbol *, 4> seenInExpr;
+    for (const SomeExpr &designator :
+         semantics::omp::GetTopLevelDesignators(expr)) {
+      const semantics::Symbol *symbol = getArrayElementSymbol(designator);
+      const semantics::Symbol *reductionSymbol =
+          symbol ? getReductionSymbol(*symbol) : nullptr;
+      if (!reductionSymbol)
+        continue;
+
+      if (isCoveredReductionUse(reductionSymbol, designator)) {
+        seen.insert(reductionSymbol);
+        seenInExpr.insert(reductionSymbol);
+      } else {
+        uncovered.insert(reductionSymbol);
+      }
+    }
+
+    for (const semantics::Symbol *symbol : exprCandidates)
+      if (!seenInExpr.contains(symbol))
+        uncovered.insert(symbol);
+  }
+
+  template <typename T>
+  bool Pre(const T &node) {
+    if constexpr (parser::HasTypedExpr<T>::value) {
+      if (const SomeExpr *expr = semantics::GetExpr(nullptr, node)) {
+        classifyReductionElementUses(*expr);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool Pre(const parser::Name &name) { return false; }
+
+  template <typename T>
+  void Post(const T &) {}
+};
+
+static llvm::SmallVector<const semantics::Symbol *>
+getSymbolsCoveredByReductionElements(lower::pft::Evaluation &eval,
+                                     llvm::ArrayRef<Object> reductionObjects) {
+  llvm::DenseMap<const semantics::Symbol *, const semantics::Symbol *>
+      aliasToReductionSymbol;
+  llvm::DenseMap<const semantics::Symbol *, llvm::SmallVector<const SomeExpr *>>
+      reductionElementExprs;
+  for (const Object &object : reductionObjects) {
+    if (!ReductionProcessor::isExpressionLoweredAsReductionObject(&object))
+      continue;
+    llvm::SmallVector<const semantics::Symbol *> aliases;
+    addSymbolAliases(aliases, object.sym());
+    for (const semantics::Symbol *alias : aliases)
+      aliasToReductionSymbol[alias] = object.sym();
+    reductionElementExprs[object.sym()].push_back(&*object.ref());
+  }
+
+  if (reductionElementExprs.empty())
+    return {};
+
+  ArrayElementReductionUseCollector collector(aliasToReductionSymbol,
+                                              reductionElementExprs);
+  eval.visit([&](const auto &node) { parser::Walk(node, collector); });
+
+  llvm::SmallVector<const semantics::Symbol *> suppressList;
+  for (auto &[symbol, exprs] : reductionElementExprs)
+    if (collector.seen.contains(symbol) &&
+        !collector.uncovered.contains(symbol))
+      suppressList.push_back(symbol);
+  return suppressList;
+}
+
 /// Create the body (block) for an OpenMP Operation.
 ///
 /// \param [in]   op  - the operation the body belongs to.
@@ -1454,6 +1917,27 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
     groupprivatizeVars(info.converter, info.eval);
 
   if (!info.genSkeletonOnly) {
+    lower::ExprToValueMap local;
+    if (auto *old = info.converter.getExprOverrides())
+      local.insert(old->begin(), old->end());
+    if (info.blockArgs) {
+      if (auto ompBlockArgOp =
+              mlir::dyn_cast<mlir::omp::BlockArgOpenMPOpInterface>(op)) {
+        addReductionObjectOverrides(firOpBuilder, info.loc, local,
+                                    info.blockArgs->inReduction,
+                                    ompBlockArgOp.getInReductionBlockArgs());
+        addReductionObjectOverrides(firOpBuilder, info.loc, local,
+                                    info.blockArgs->reduction,
+                                    ompBlockArgOp.getReductionBlockArgs());
+        addReductionObjectOverrides(firOpBuilder, info.loc, local,
+                                    info.blockArgs->taskReduction,
+                                    ompBlockArgOp.getTaskReductionBlockArgs());
+      }
+    }
+
+    auto *old = info.converter.getExprOverrides();
+    info.converter.overrideExprValues(local.empty() ? old : &local);
+
     if (ConstructQueue::const_iterator next = std::next(item);
         next != queue.end()) {
       genOMPDispatch(info.converter, info.symTable, info.semaCtx, info.eval,
@@ -1469,6 +1953,8 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
       genNestedEvaluations(info.converter, info.eval);
       temp->erase();
     }
+
+    info.converter.overrideExprValues(old);
   }
 
   // Get or create a unique exiting block from the given region, or
@@ -1985,13 +2471,12 @@ genTargetClauses(lower::AbstractConverter &converter,
                  semantics::SemanticsContext &semaCtx, lower::SymMap &symTable,
                  lower::StatementContext &stmtCtx, lower::pft::Evaluation &eval,
                  const List<Clause> &clauses, mlir::Location loc,
-                 mlir::omp::TargetOperands &clauseOps,
+                 mlir::omp::TargetExtOperands &clauseOps,
                  DefaultMapsTy &defaultMaps,
                  llvm::SmallVectorImpl<Object> &hasDeviceAddrObjects,
                  llvm::SmallVectorImpl<Object> &isDevicePtrObjects,
                  llvm::SmallVectorImpl<Object> &mapObjects) {
   ClauseProcessor cp(converter, semaCtx, clauses);
-  cp.processBare(clauseOps);
   cp.processDefaultMap(stmtCtx, defaultMaps);
   cp.processDepend(symTable, stmtCtx, clauseOps);
   cp.processDevice(stmtCtx, clauseOps);
@@ -1999,7 +2484,8 @@ genTargetClauses(lower::AbstractConverter &converter,
   cp.processHasDeviceAddr(stmtCtx, clauseOps, hasDeviceAddrObjects);
   if (HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter)) {
     // Only process host_eval if compiling for the host device.
-    processHostEvalClauses(converter, semaCtx, stmtCtx, eval, loc);
+    HostEvalVisitor visitor(converter, semaCtx, stmtCtx, loc, *hostEvalInfo);
+    visitor.visit(eval);
     hostEvalInfo->collectValues(clauseOps.hostEvalVars);
   }
   cp.processIf(llvm::omp::Directive::OMPD_target, clauseOps);
@@ -2010,6 +2496,11 @@ genTargetClauses(lower::AbstractConverter &converter,
   cp.processThreadLimit(stmtCtx, clauseOps);
   cp.processTODO<clause::Allocate, clause::InReduction, clause::UsesAllocators>(
       loc, llvm::omp::Directive::OMPD_target);
+
+  // `target private(..)` is only supported in delayed privatization mode.
+  if (!enableDelayedPrivatization)
+    cp.processTODO<clause::Firstprivate, clause::Private>(
+        loc, llvm::omp::Directive::OMPD_target);
 }
 
 static void genTargetDataClauses(
@@ -2285,21 +2776,40 @@ genLoopNestOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                                        const ObjectEntryBlockArgs &>>
                   wrapperArgs,
               llvm::omp::Directive directive, DataSharingProcessor &dsp) {
+  const lower::ExprToValueMap *oldOverrides = converter.getExprOverrides();
+  lower::ExprToValueMap loopNestOverrides;
   auto ivCallback = [&](mlir::Operation *op) {
     genLoopVars(op, converter, loc, iv, wrapperArgs);
+    if (oldOverrides)
+      loopNestOverrides.insert(oldOverrides->begin(), oldOverrides->end());
+    for (auto [argGeneratingOp, blockArgs] : wrapperArgs) {
+      addReductionObjectOverrides(converter.getFirOpBuilder(), loc,
+                                  loopNestOverrides, blockArgs.inReduction,
+                                  argGeneratingOp.getInReductionBlockArgs());
+      addReductionObjectOverrides(converter.getFirOpBuilder(), loc,
+                                  loopNestOverrides, blockArgs.reduction,
+                                  argGeneratingOp.getReductionBlockArgs());
+      addReductionObjectOverrides(converter.getFirOpBuilder(), loc,
+                                  loopNestOverrides, blockArgs.taskReduction,
+                                  argGeneratingOp.getTaskReductionBlockArgs());
+    }
+    converter.overrideExprValues(
+        loopNestOverrides.empty() ? oldOverrides : &loopNestOverrides);
     return llvm::SmallVector<const semantics::Symbol *>(iv);
   };
 
   uint64_t nestValue = getCollapseValue(item->clauses);
   nestValue = nestValue < iv.size() ? iv.size() : nestValue;
   auto *nestedEval = getCollapsedLoopEval(eval, nestValue);
-  return genOpWithBody<mlir::omp::LoopNestOp>(
+  auto loopNestOp = genOpWithBody<mlir::omp::LoopNestOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, *nestedEval,
                         directive)
           .setClauses(&item->clauses)
           .setDataSharingProcessor(&dsp)
           .setGenRegionEntryCb(ivCallback),
       queue, item, clauseOps);
+  converter.overrideExprValues(oldOverrides);
+  return loopNestOp;
 }
 
 static mlir::omp::LoopOp
@@ -2652,10 +3162,17 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
                         ConstructQueue::const_iterator item) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  // Clauses for unrolling not yet implemnted
   ClauseProcessor cp(converter, semaCtx, item->clauses);
-  cp.processTODO<clause::Partial, clause::Full>(
-      loc, llvm::omp::Directive::OMPD_unroll);
+
+  // The `full` clause is not yet implemented.
+  cp.processTODO<clause::Full>(loc, llvm::omp::Directive::OMPD_unroll);
+
+  // Process the `partial` clause. If present, it may carry a constant unroll
+  // factor.
+  std::optional<int64_t> partialFactor;
+  bool hasPartial = cp.processPartial(partialFactor);
+  if (hasPartial && !partialFactor.has_value())
+    TODO(loc, "PARTIAL clause on UNROLL without a constant factor");
 
   // Emit the associated loop
   llvm::SmallVector<mlir::omp::CanonicalLoopOp, 1> canonLoops;
@@ -2667,9 +3184,16 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
   for (auto &&canonLoop : canonLoops)
     applyees.push_back(canonLoop.getCli());
 
-  // Apply unrolling to it
   auto cli = llvm::getSingleElement(canonLoops).getCli();
-  mlir::omp::UnrollHeuristicOp::create(firOpBuilder, loc, cli);
+
+  if (partialFactor.has_value()) {
+    // Partially unroll the loop by the given constant factor.
+    mlir::omp::UnrollPartialOp::create(firOpBuilder, loc, cli,
+                                       static_cast<uint64_t>(*partialFactor));
+  } else {
+    // Apply heuristic unrolling to it.
+    mlir::omp::UnrollHeuristicOp::create(firOpBuilder, loc, cli);
+  }
 }
 
 static mlir::omp::MaskedOp
@@ -3043,13 +3567,17 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   if (!isTargetDevice)
     converter.getStateStack().stackPush<HostEvalInfoStackFrame>();
 
-  mlir::omp::TargetOperands clauseOps;
+  mlir::omp::TargetExtOperands clauseOps;
   DefaultMapsTy defaultMaps;
   llvm::SmallVector<Object> mapObjects, hasDeviceAddrObjects,
       isDevicePtrObjects;
   genTargetClauses(converter, semaCtx, symTable, stmtCtx, eval, item->clauses,
                    loc, clauseOps, defaultMaps, hasDeviceAddrObjects,
                    isDevicePtrObjects, mapObjects);
+
+  KernelTypeVisitor visitor(semaCtx, converter.getModuleOp());
+  clauseOps.kernelType = mlir::omp::TargetExecModeAttr::get(
+      &converter.getMLIRContext(), visitor.getKernelType(eval));
 
   if (!isDevicePtrObjects.empty()) {
     // is_device_ptr maps get duplicated so the clause and synthesized
@@ -3328,9 +3856,14 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             .setClauses(&item->clauses),
         queue, item, clauseOps);
 
+  llvm::SmallVector<const semantics::Symbol *>
+      symbolsCoveredByReductionElements =
+          getSymbolsCoveredByReductionElements(eval, inReductionObjects);
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            lower::omp::isLastItemInQueue(item, queue),
-                           /*useDelayedPrivatization=*/true, symTable);
+                           /*useDelayedPrivatization=*/true, symTable,
+                           /*isTargetPrivatization=*/false,
+                           symbolsCoveredByReductionElements);
   dsp.processStep1(&clauseOps);
 
   ObjectEntryBlockArgs taskArgs;
@@ -3593,9 +4126,17 @@ static mlir::omp::TaskloopContextOp genStandaloneTaskloop(
 
   genTaskloopClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
                      taskloopClauseOps, reductionObjects, inReductionObjects);
+  llvm::SmallVector<Object> allReductionObjects;
+  llvm::append_range(allReductionObjects, reductionObjects);
+  llvm::append_range(allReductionObjects, inReductionObjects);
+  llvm::SmallVector<const semantics::Symbol *>
+      symbolsCoveredByReductionElements =
+          getSymbolsCoveredByReductionElements(eval, allReductionObjects);
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           enableDelayedPrivatization, symTable);
+                           enableDelayedPrivatization, symTable,
+                           /*isTargetPrivatization=*/false,
+                           symbolsCoveredByReductionElements);
   dsp.processStep1(&taskloopClauseOps);
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
@@ -4086,7 +4627,7 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     // Lowered in the enclosing genSectionsOp.
     break;
   case llvm::omp::Directive::OMPD_sections:
-    genSectionsOp(converter, symTable, semaCtx, eval, loc, queue, item);
+    newOp = genSectionsOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_simd:
     newOp =
@@ -4173,6 +4714,44 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
   finalizeStmtCtx();
   if (loopLeaf)
     symTable.popScope();
+
+  // Add the omp.combined attribute to eligible ops, including non-innermost
+  // leafs of a combined construct and immediately nested block-associated
+  // combinable constructs. SECTIONS, WORKSHARE and WORKDISTRIBUTE are skipped
+  // due to only being able to appear as an innermost combined construct.
+  if (!loopLeaf &&
+      llvm::isa_and_present<mlir::omp::ComposableOpInterface>(newOp) &&
+      !llvm::isa<mlir::omp::SectionsOp, mlir::omp::WorkshareOp,
+                 mlir::omp::WorkdistributeOp>(newOp)) {
+    bool isCombined = false;
+    if (std::next(item) != queue.end()) {
+      // Non-innermost leafs of a combined construct must always hold the
+      // attribute.
+      isCombined = true;
+    } else if (lower::pft::Evaluation *nestedEval =
+                   extractOnlyOmpNestedEval(eval)) {
+      // Combinable constructs that are immediately nested with no other
+      // statements or directives preventing them from being combined need the
+      // attribute as well. Disallow block constructs that can only be outermost
+      // leafs and loop transformation constructs.
+      OmpDirectiveSet combinableDirs =
+          (llvm::omp::blockConstructSet &
+           ~OmpDirectiveSet{llvm::omp::Directive::OMPD_ordered,
+                            llvm::omp::Directive::OMPD_scope,
+                            llvm::omp::Directive::OMPD_taskgroup}) |
+          (llvm::omp::loopConstructSet & ~llvm::omp::loopTransformationSet);
+      const auto &ompEval = nestedEval->get<parser::OpenMPConstruct>();
+      llvm::omp::Directive nestedDir =
+          parser::omp::GetOmpDirectiveName(ompEval).v;
+      llvm::omp::Directive firstLeafDir =
+          llvm::omp::getLeafConstructsOrSelf(nestedDir).front();
+
+      if (combinableDirs.test(firstLeafDir))
+        isCombined = true;
+    }
+    if (isCombined)
+      llvm::cast<mlir::omp::ComposableOpInterface>(newOp).setCombined(true);
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -4213,8 +4792,8 @@ static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OmpDeclareVariantDirective &declareVariantDirective) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OmpDeclareVariantDirective");
+  // No lowering for the declarative directive itself; the recorded variants are
+  // resolved at call sites (see resolveDeclareVariantCallee in CallInterface).
 }
 
 static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
@@ -4514,13 +5093,36 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                       },
                       [&](const clause::DefinedOperator::DefinedOpName &opName)
                           -> std::string {
-                        return opName.v.sym()->name().ToString();
+                        // Directive side of the user-defined operator reduction
+                        // naming contract (the clause side is in
+                        // ReductionProcessor::processReductionArguments).
+                        // opName.v.sym() is the reduction symbol
+                        // "op<spelling>". Only single-declaration, single-type
+                        // reductions are supported; otherwise emit a clean
+                        // TODO.
+                        const semantics::Symbol &redSym =
+                            opName.v.sym()->GetUltimate();
+                        const auto *userDetails =
+                            redSym.detailsIf<semantics::UserReductionDetails>();
+                        if (!userDetails || typeNameList.v.size() != 1 ||
+                            userDetails->GetDeclList().size() != 1 ||
+                            userDetails->GetTypeList().size() != 1)
+                          TODO(converter.getCurrentLocation(),
+                               "OpenMP user-defined operator declare reduction "
+                               "with multiple declarations or multiple types");
+                        return ReductionProcessor::getScopedUserReductionName(
+                            converter, redSym);
                       },
                   },
                   defOp.u);
             },
             [&](const clause::ProcedureDesignator &pd) -> std::string {
-              return pd.v.sym()->name().ToString();
+              // Qualify the name with the scope in which the user-defined
+              // reduction is declared so that reductions with the same name
+              // in different scopes produce distinct omp.declare_reduction ops.
+              const semantics::Symbol *sym = pd.v.sym();
+              std::string name = sym->name().ToString();
+              return converter.mangleName(name, sym->GetUltimate().owner());
             },
         },
         redOp.u);
@@ -4763,18 +5365,18 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
 namespace {
 struct MetadirectiveCandidate {
-  MetadirectiveCandidate(
-      const parser::OmpDirectiveSpecification *spec,
-      llvm::omp::VariantMatchInfo vmi, bool isExplicit,
-      std::optional<DynamicUserCondition> dynamicCond = std::nullopt,
-      bool conditionShouldBeTrue = true)
+  MetadirectiveCandidate(const parser::OmpDirectiveSpecification *spec,
+                         llvm::omp::VariantMatchInfo vmi, bool isExplicit,
+                         std::optional<semantics::omp::DynamicUserCondition>
+                             dynamicCond = std::nullopt,
+                         bool conditionShouldBeTrue = true)
       : spec(spec), vmi(vmi), isExplicit(isExplicit), dynamicCond(dynamicCond),
         conditionShouldBeTrue(conditionShouldBeTrue) {}
 
   const parser::OmpDirectiveSpecification *spec = nullptr;
   llvm::omp::VariantMatchInfo vmi;
   bool isExplicit = false;
-  std::optional<DynamicUserCondition> dynamicCond;
+  std::optional<semantics::omp::DynamicUserCondition> dynamicCond;
   bool conditionShouldBeTrue = true;
 };
 } // namespace
@@ -4789,7 +5391,8 @@ static void genMetadirective(lower::AbstractConverter &converter,
   llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits;
   collectEnclosingConstructTraits(builder.getInsertionBlock()->getParentOp(),
                                   constructTraits);
-  FlangOMPContext ompCtx(builder.getModule(), constructTraits);
+  semantics::omp::OmpVariantMatchContext ompCtx =
+      makeVariantMatchContext(builder.getModule(), constructTraits);
 
   llvm::SmallVector<MetadirectiveCandidate, 4> candidates;
   // A null directive specification represents either the implicit `nothing`
@@ -4832,9 +5435,25 @@ static void genMetadirective(lower::AbstractConverter &converter,
       const auto &ctxSel = getContextSelector(*whenClause);
       auto [spec, isExplicit] = getDirectiveVariant(*whenClause);
 
+      // METADIRECTIVE cannot yet honour some selector features that are
+      // otherwise accepted; reject them before building the match info.
+      switch (semantics::omp::FindUnsupportedSelectorFeature(ctxSel, semaCtx)) {
+      case semantics::omp::UnsupportedSelectorFeature::TargetDevice:
+        TODO(converter.genLocation(clause.source),
+             "target_device selector in METADIRECTIVE");
+        break;
+      case semantics::omp::UnsupportedSelectorFeature::
+          ClauseOrExtensionProperty:
+        TODO(converter.genLocation(clause.source),
+             "clause or extension trait matching in METADIRECTIVE");
+        break;
+      case semantics::omp::UnsupportedSelectorFeature::None:
+        break;
+      }
+
       llvm::omp::VariantMatchInfo rawVMI;
-      std::optional<DynamicUserCondition> dynamicCond = makeVariantMatchInfo(
-          rawVMI, ctxSel, semaCtx, converter.genLocation(clause.source));
+      std::optional<semantics::omp::DynamicUserCondition> dynamicCond =
+          semantics::omp::MakeVariantMatchInfo(rawVMI, ctxSel, semaCtx);
 
       if (dynamicCond) {
         constexpr llvm::omp::TraitProperty dynamicConditionTrait =
@@ -4970,7 +5589,8 @@ static void genMetadirective(lower::AbstractConverter &converter,
   auto selectBestCandidate =
       [](llvm::ArrayRef<unsigned> candidateIndices,
          llvm::ArrayRef<MetadirectiveCandidate> candidates,
-         const FlangOMPContext &ompCtx) -> std::optional<unsigned> {
+         const semantics::omp::OmpVariantMatchContext &ompCtx)
+      -> std::optional<unsigned> {
     if (candidateIndices.empty())
       return std::nullopt;
     if (candidateIndices.size() == 1)
