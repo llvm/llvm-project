@@ -8,10 +8,10 @@
 
 //--- amdhsa-llvm.s
 // AMDHSA-LLVM: .amdgcn_target "amdgcn-amd-amdhsa-llvm-gfx802"
-// AMDHSA-ERR: {{.*}}:16: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa-llvm-gfx802 does not match the specified target id amdgcn-amd-amdhsa-unknown-gfx802
+// AMDHSA-ERR: error: .amdgcn_target amdgcn-amd-amdhsa-llvm-gfx802 is incompatible with amdgcn-amd-amdhsa-unknown-gfx802
 .amdgcn_target "amdgcn-amd-amdhsa-llvm-gfx802"
 
 //--- amdpal-llvm.s
 // AMDPAL-LLVM: .amd_amdgpu_isa "amdgcn-amd-amdpal-llvm-gfx802"
-// AMDPAL-ERR: {{.*}}:17: error: .amd_amdgpu_isa directive's target id amdgcn-amd-amdpal-llvm-gfx802 does not match the specified target id amdgcn-amd-amdpal-unknown-gfx802
+// AMDPAL-ERR: error: .amd_amdgpu_isa amdgcn-amd-amdpal-llvm-gfx802 is incompatible with amdgcn-amd-amdpal-unknown-gfx802
 .amd_amdgpu_isa "amdgcn-amd-amdpal-llvm-gfx802"

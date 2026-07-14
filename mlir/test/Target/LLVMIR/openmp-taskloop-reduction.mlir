@@ -35,7 +35,7 @@ llvm.func @taskloop_reduction_single(%x : !llvm.ptr, %lb : i32, %ub : i32, %step
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -120,7 +120,7 @@ llvm.func @taskloop_reduction_multi(%x : !llvm.ptr, %y : !llvm.ptr, %lb : i32, %
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -186,7 +186,7 @@ llvm.func @taskloop_inreduction(%x : !llvm.ptr, %lb : i32, %ub : i32, %step : i3
         }
       }
       omp.terminator
-    }
+    } {omp.combined}
     omp.terminator
   }
   llvm.return
@@ -244,7 +244,7 @@ llvm.func @taskloop_nogroup_inreduction(%x : !llvm.ptr, %lb : i32, %ub : i32, %s
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -301,7 +301,7 @@ llvm.func @taskloop_reduction_as1(%x : !llvm.ptr<1>, %lb : i32, %ub : i32, %step
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -355,7 +355,7 @@ llvm.func @taskloop_inreduction_as1(%x : !llvm.ptr<1>, %lb : i32, %ub : i32, %st
         }
       }
       omp.terminator
-    }
+    } {omp.combined}
     omp.terminator
   }
   llvm.return

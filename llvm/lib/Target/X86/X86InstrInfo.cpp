@@ -42,6 +42,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
 #include <atomic>
@@ -3479,6 +3480,17 @@ unsigned X86::getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand,
     return HasMemoryOperand ? GET_ND_IF_ENABLED(X86::CMOV64rm)
                             : GET_ND_IF_ENABLED(X86::CMOV64rr);
   }
+}
+
+unsigned X86::getMOVriOpcode(bool Use64BitReg, int64_t Imm) {
+  if (!Use64BitReg)
+    return X86::MOV32ri;
+
+  if (isUInt<32>(Imm))
+    return X86::MOV32ri64;
+  if (isInt<32>(Imm))
+    return X86::MOV64ri32;
+  return X86::MOV64ri;
 }
 
 /// Get the VPCMP immediate for the given condition.
@@ -7628,10 +7640,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
         return NewMI;
 
       Register NewSrc = MI.getOperand(0).getReg();
-      if (MRI.isSSA()) {
-        const TargetRegisterClass &RC = *MF.getRegInfo().getRegClass(SrcReg);
-        NewSrc = MRI.createVirtualRegister(&RC);
-      }
+      if (MRI.isSSA())
+        NewSrc = MRI.createVirtualRegister(getRegClass(NewMI->getDesc(), 1));
 
       CopyMI = BuildMI(*NewMI->getParent(), *NewMI, MI.getDebugLoc(),
                        get(TargetOpcode::COPY))
@@ -10388,7 +10398,7 @@ X86InstrInfo::describeLoadedValue(const MachineInstr &MI, Register Reg) const {
     if (Reg == MI.getOperand(0).getReg())
       Expr = DIExpression::appendExt(Expr, 32, 64, true);
     else
-      assert(X86MCRegisterClasses[X86::GR32RegClassID].contains(Reg) &&
+      assert(getX86MCRegisterClass(X86::GR32RegClassID).contains(Reg) &&
              "Unhandled sub-register case for MOVSX64rr32");
 
     return ParamLoadedValue(MI.getOperand(1), Expr);

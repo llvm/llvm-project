@@ -12,6 +12,7 @@
 #include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/CAPI/IR.h"
+#include "mlir/CAPI/IRMapping.h"
 #include "mlir/CAPI/Support.h"
 #include "mlir/CAPI/Utils.h"
 #include "mlir/IR/Attributes.h"
@@ -1408,4 +1409,88 @@ void mlirSymbolTableWalkSymbolTables(MlirOperation from, bool allSymUsesVisible,
                                   callback(wrap(foundOpCpp), isVisible,
                                            userData);
                                 });
+}
+
+//===----------------------------------------------------------------------===//
+// IRMapping API
+//===----------------------------------------------------------------------===//
+
+MlirIRMapping mlirIRMappingCreate(void) { return wrap(new IRMapping()); }
+
+void mlirIRMappingDestroy(MlirIRMapping mapping) { delete unwrap(mapping); }
+
+void mlirIRMappingMapValue(MlirIRMapping mapping, MlirValue from,
+                           MlirValue to) {
+  unwrap(mapping)->map(unwrap(from), unwrap(to));
+}
+
+void mlirIRMappingMapBlock(MlirIRMapping mapping, MlirBlock from,
+                           MlirBlock to) {
+  unwrap(mapping)->map(unwrap(from), unwrap(to));
+}
+
+void mlirIRMappingMapOperation(MlirIRMapping mapping, MlirOperation from,
+                               MlirOperation to) {
+  unwrap(mapping)->map(unwrap(from), unwrap(to));
+}
+
+void mlirIRMappingClear(MlirIRMapping mapping) { unwrap(mapping)->clear(); }
+
+MlirValue mlirIRMappingLookupOrDefaultValue(MlirIRMapping mapping,
+                                            MlirValue from) {
+  return wrap(unwrap(mapping)->lookupOrDefault(unwrap(from)));
+}
+
+MlirValue mlirIRMappingLookupOrNullValue(MlirIRMapping mapping,
+                                         MlirValue from) {
+  return wrap(unwrap(mapping)->lookupOrNull(unwrap(from)));
+}
+
+MlirBlock mlirIRMappingLookupOrDefaultBlock(MlirIRMapping mapping,
+                                            MlirBlock from) {
+  return wrap(unwrap(mapping)->lookupOrDefault(unwrap(from)));
+}
+
+MlirBlock mlirIRMappingLookupOrNullBlock(MlirIRMapping mapping,
+                                         MlirBlock from) {
+  return wrap(unwrap(mapping)->lookupOrNull(unwrap(from)));
+}
+
+MlirOperation mlirIRMappingLookupOrDefaultOperation(MlirIRMapping mapping,
+                                                    MlirOperation from) {
+  return wrap(unwrap(mapping)->lookupOrDefault(unwrap(from)));
+}
+
+MlirOperation mlirIRMappingLookupOrNullOperation(MlirIRMapping mapping,
+                                                 MlirOperation from) {
+  return wrap(unwrap(mapping)->lookupOrNull(unwrap(from)));
+}
+
+bool mlirIRMappingContainsValue(MlirIRMapping mapping, MlirValue value) {
+  return unwrap(mapping)->contains(unwrap(value));
+}
+
+bool mlirIRMappingContainsBlock(MlirIRMapping mapping, MlirBlock block) {
+  return unwrap(mapping)->contains(unwrap(block));
+}
+
+bool mlirIRMappingContainsOperation(MlirIRMapping mapping, MlirOperation op) {
+  return unwrap(mapping)->contains(unwrap(op));
+}
+
+void mlirIRMappingEraseValue(MlirIRMapping mapping, MlirValue value) {
+  unwrap(mapping)->erase(unwrap(value));
+}
+
+void mlirIRMappingEraseBlock(MlirIRMapping mapping, MlirBlock block) {
+  unwrap(mapping)->erase(unwrap(block));
+}
+
+void mlirIRMappingEraseOperation(MlirIRMapping mapping, MlirOperation op) {
+  unwrap(mapping)->erase(unwrap(op));
+}
+
+MlirOperation mlirOperationCloneWithMapping(MlirOperation op,
+                                            MlirIRMapping mapping) {
+  return wrap(unwrap(op)->clone(*unwrap(mapping)));
 }

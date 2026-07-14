@@ -4,8 +4,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -amdgpu-scalarize-global-loads=false -amdgpu-use-amdgpu-trackers=1 -verify-misched < %s | FileCheck --check-prefixes=TONGA-GCNTRACKERS %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-misched < %s | FileCheck --check-prefixes=GFX908 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -amdgpu-use-amdgpu-trackers=1 -verify-misched < %s | FileCheck --check-prefixes=GFX908-GCNTRACKERS %s
-; RUN: llc -mtriple=amdgcn -verify-misched < %s | FileCheck --check-prefixes=GENERIC %s
-; RUN: llc -mtriple=amdgcn -amdgpu-use-amdgpu-trackers=1 -verify-misched < %s | FileCheck --check-prefixes=GENERIC-GCNTRACKERS %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -verify-misched < %s | FileCheck --check-prefixes=GENERIC %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -amdgpu-use-amdgpu-trackers=1 -verify-misched < %s | FileCheck --check-prefixes=GENERIC-GCNTRACKERS %s
 
 ; GCN Trackers are sensitive to minor changes in RP, and will avoid scheduling certain instructions, which, if scheduled,
 ; allow scheduling of other instructions which reduce RP
@@ -58,7 +58,7 @@ define amdgpu_kernel void @global_extload_v16f16_to_v16f64(ptr addrspace(1) %out
 }
 
 ; CHECK-LABEL: {{^}}constant_zextload_v64i16_to_v64i32:
-; GENERIC:    NumSgprs: 71
+; GENERIC:    NumSgprs: 69
 ; GENERIC-GCNTRACKERS:    NumSgprs: 45
 ; GENERIC:    NumVgprs: 20
 ; GENERIC-GCNTRACKERS:    NumVgprs: 20

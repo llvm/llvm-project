@@ -1722,7 +1722,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffen(SDNode *Parent,
         AMDGPU::getNullPointerValue(AMDGPUAS::PRIVATE_ADDRESS);
     // Don't fold null pointer.
     if (Imm != NullPtr) {
-      const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(*Subtarget);
+      const int64_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(*Subtarget);
       SDValue HighBits =
           CurDAG->getTargetConstant(Imm & ~MaxOffset, DL, MVT::i32);
       MachineSDNode *MovHighBits = CurDAG->getMachineNode(
@@ -3620,13 +3620,8 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
     Src = Src.getOperand(0);
   }
 
-  // 64-bit VOP3P instructions do not have OPSEL or ABS. Bail on v2f64 or v2i64.
-  // TODO: Select NEG_LO and NEG_HI modifiers from BUILD_VECTOR.
-  if (Src.getValueSizeInBits() == 128) {
-    Mods |= SISrcMods::OP_SEL_1; // Just the default, OPSEL unsupported.
-    SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
-    return true;
-  }
+  // 64-bit VOP3P instructions do not have OPSEL or ABS.
+  bool HasOpSel = Src.getValueSizeInBits() != 128;
 
   if (Src.getOpcode() == ISD::BUILD_VECTOR && Src.getNumOperands() == 2 &&
       (!IsDOT || !Subtarget->hasDOTOpSelHazard())) {
@@ -3645,11 +3640,13 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
       Mods ^= SISrcMods::NEG_HI;
     }
 
-    if (isExtractHiElt(Lo, Lo))
-      Mods |= SISrcMods::OP_SEL_0;
+    if (HasOpSel) {
+      if (isExtractHiElt(Lo, Lo))
+        Mods |= SISrcMods::OP_SEL_0;
 
-    if (isExtractHiElt(Hi, Hi))
-      Mods |= SISrcMods::OP_SEL_1;
+      if (isExtractHiElt(Hi, Hi))
+        Mods |= SISrcMods::OP_SEL_1;
+    }
 
     unsigned VecSize = Src.getValueSizeInBits();
     Lo = stripExtractLoElt(Lo);
@@ -3679,18 +3676,29 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
       } else if (VecSize == 32) {
         Src = createVOP3PSrc32FromLo16(Lo, Src, CurDAG, Subtarget);
       } else {
-        assert(Lo.getValueSizeInBits() == 32 && VecSize == 64);
+        assert((Lo.getValueSizeInBits() == 32 && VecSize == 64) ||
+               (Lo.getValueSizeInBits() == 64 && VecSize == 128));
 
         SDLoc SL(In);
         SDValue Undef = SDValue(
           CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, SL,
                                  Lo.getValueType()), 0);
-        auto RC = Lo->isDivergent() ? AMDGPU::VReg_64RegClassID
-                                    : AMDGPU::SReg_64RegClassID;
+        const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+        // <2 x 64> instructions do not have OPSEL and also replicate low 64
+        // bits of a scalar input into high 64 bits. Use VGPRs in this case.
+        // TODO: This fact can be exploited but we need to set proper OPSEL for
+        // codegen folding purposes. It will not affect a final instruction.
+        auto RC = (Lo->isDivergent() || !HasOpSel)
+                      ? TRI->getVGPRClassForBitWidth(VecSize)
+                      : TRI->getSGPRClassForBitWidth(VecSize);
+        unsigned NumRegs = Lo.getValueSizeInBits() == 32 ? 1 : 2;
         const SDValue Ops[] = {
-          CurDAG->getTargetConstant(RC, SL, MVT::i32),
-          Lo, CurDAG->getTargetConstant(AMDGPU::sub0, SL, MVT::i32),
-          Undef, CurDAG->getTargetConstant(AMDGPU::sub1, SL, MVT::i32) };
+            CurDAG->getTargetConstant(RC->getID(), SL, MVT::i32), Lo,
+            CurDAG->getTargetConstant(TRI->getSubRegFromChannel(0, NumRegs), SL,
+                                      MVT::i32),
+            HasOpSel ? Undef : Hi,
+            CurDAG->getTargetConstant(
+                TRI->getSubRegFromChannel(NumRegs, NumRegs), SL, MVT::i32)};
 
         Src = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, SL,
                                              Src.getValueType(), Ops), 0);
@@ -3715,6 +3723,9 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
 
     // TODO: We should repeat the build_vector source check above for the
     // vector_shuffle for negates and casts of individual elements.
+
+    assert(Src.getValueSizeInBits() != 128 &&
+           "<2 x 64> VECTOR_SHUFFLE should not be legal.");
 
     auto *SVN = cast<ShuffleVectorSDNode>(Src);
     ArrayRef<int> Mask = SVN->getMask();

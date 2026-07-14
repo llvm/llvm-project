@@ -235,9 +235,14 @@ public:
         }
         break;
       case State::AuxArgsEnded:
-        if (C == EndToken || C == PassDelimToken) {
+        if (C == EndToken) {
           AddPass(PassName, StringRef(), AuxArg);
-          CurrentState = State::ScanArgs;
+          CurrentState = State::ScanName;
+        } else if (C == PassDelimToken) {
+          AddPass(PassName, StringRef(), AuxArg);
+          PassBeginIdx = Idx + 1;
+          AuxArg = StringRef();
+          CurrentState = State::ScanName;
         } else if (C == BeginArgsToken) {
           ++NestedArgs;
           ArgsBeginIdx = Idx + 1;

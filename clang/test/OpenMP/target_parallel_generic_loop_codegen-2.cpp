@@ -592,16 +592,18 @@ int nested(int a){
 // TCHECK-TARGET-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // TCHECK-TARGET-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // TCHECK-TARGET-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// TCHECK-TARGET-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// TCHECK-TARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 8
-// TCHECK-TARGET-NEXT:    store i32 [[TMP2]], ptr [[A]], align 4
-// TCHECK-TARGET-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// TCHECK-TARGET-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK-TARGET-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK-TARGET-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// TCHECK-TARGET-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 8
+// TCHECK-TARGET-NEXT:    store i32 [[TMP3]], ptr [[A]], align 4
+// TCHECK-TARGET-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK-TARGET-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK-TARGET-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP4]], align 8
 // TCHECK-TARGET-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
-// TCHECK-TARGET-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A]], align 4
-// TCHECK-TARGET-NEXT:    store i32 [[TMP3]], ptr [[A_CASTED]], align 4
-// TCHECK-TARGET-NEXT:    [[TMP4:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// TCHECK-TARGET-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2:[0-9]+]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l42.omp_outlined, i64 [[TMP4]])
+// TCHECK-TARGET-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
+// TCHECK-TARGET-NEXT:    store i32 [[TMP5]], ptr [[A_CASTED]], align 4
+// TCHECK-TARGET-NEXT:    [[TMP6:%.*]] = load i64, ptr [[A_CASTED]], align 8
+// TCHECK-TARGET-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2:[0-9]+]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l42.omp_outlined, i64 [[TMP6]])
 // TCHECK-TARGET-NEXT:    ret void
 //
 //
@@ -679,16 +681,18 @@ int nested(int a){
 // TCHECK-TARGET-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // TCHECK-TARGET-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // TCHECK-TARGET-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// TCHECK-TARGET-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// TCHECK-TARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 8
-// TCHECK-TARGET-NEXT:    store i32 [[TMP2]], ptr [[A]], align 4
-// TCHECK-TARGET-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// TCHECK-TARGET-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK-TARGET-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK-TARGET-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// TCHECK-TARGET-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 8
+// TCHECK-TARGET-NEXT:    store i32 [[TMP3]], ptr [[A]], align 4
+// TCHECK-TARGET-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK-TARGET-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK-TARGET-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP4]], align 8
 // TCHECK-TARGET-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
-// TCHECK-TARGET-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A]], align 4
-// TCHECK-TARGET-NEXT:    store i32 [[TMP3]], ptr [[A_CASTED]], align 4
-// TCHECK-TARGET-NEXT:    [[TMP4:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// TCHECK-TARGET-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l49.omp_outlined, i64 [[TMP4]])
+// TCHECK-TARGET-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
+// TCHECK-TARGET-NEXT:    store i32 [[TMP5]], ptr [[A_CASTED]], align 4
+// TCHECK-TARGET-NEXT:    [[TMP6:%.*]] = load i64, ptr [[A_CASTED]], align 8
+// TCHECK-TARGET-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l49.omp_outlined, i64 [[TMP6]])
 // TCHECK-TARGET-NEXT:    ret void
 //
 //
@@ -766,16 +770,18 @@ int nested(int a){
 // TCHECK-TARGET-X86-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
 // TCHECK-TARGET-X86-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // TCHECK-TARGET-X86-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// TCHECK-TARGET-X86-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// TCHECK-TARGET-X86-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
-// TCHECK-TARGET-X86-NEXT:    store i32 [[TMP2]], ptr [[A]], align 4
-// TCHECK-TARGET-X86-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
-// TCHECK-TARGET-X86-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK-TARGET-X86-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK-TARGET-X86-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
+// TCHECK-TARGET-X86-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
+// TCHECK-TARGET-X86-NEXT:    store i32 [[TMP3]], ptr [[A]], align 4
+// TCHECK-TARGET-X86-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK-TARGET-X86-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK-TARGET-X86-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP4]], align 4
 // TCHECK-TARGET-X86-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
-// TCHECK-TARGET-X86-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A]], align 4
-// TCHECK-TARGET-X86-NEXT:    store i32 [[TMP3]], ptr [[A_CASTED]], align 4
-// TCHECK-TARGET-X86-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// TCHECK-TARGET-X86-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2:[0-9]+]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l42.omp_outlined, i32 [[TMP4]])
+// TCHECK-TARGET-X86-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
+// TCHECK-TARGET-X86-NEXT:    store i32 [[TMP5]], ptr [[A_CASTED]], align 4
+// TCHECK-TARGET-X86-NEXT:    [[TMP6:%.*]] = load i32, ptr [[A_CASTED]], align 4
+// TCHECK-TARGET-X86-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2:[0-9]+]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l42.omp_outlined, i32 [[TMP6]])
 // TCHECK-TARGET-X86-NEXT:    ret void
 //
 //
@@ -853,16 +859,18 @@ int nested(int a){
 // TCHECK-TARGET-X86-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
 // TCHECK-TARGET-X86-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // TCHECK-TARGET-X86-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// TCHECK-TARGET-X86-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// TCHECK-TARGET-X86-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
-// TCHECK-TARGET-X86-NEXT:    store i32 [[TMP2]], ptr [[A]], align 4
-// TCHECK-TARGET-X86-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
-// TCHECK-TARGET-X86-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK-TARGET-X86-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK-TARGET-X86-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
+// TCHECK-TARGET-X86-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
+// TCHECK-TARGET-X86-NEXT:    store i32 [[TMP3]], ptr [[A]], align 4
+// TCHECK-TARGET-X86-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK-TARGET-X86-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK-TARGET-X86-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP4]], align 4
 // TCHECK-TARGET-X86-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
-// TCHECK-TARGET-X86-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A]], align 4
-// TCHECK-TARGET-X86-NEXT:    store i32 [[TMP3]], ptr [[A_CASTED]], align 4
-// TCHECK-TARGET-X86-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// TCHECK-TARGET-X86-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l49.omp_outlined, i32 [[TMP4]])
+// TCHECK-TARGET-X86-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
+// TCHECK-TARGET-X86-NEXT:    store i32 [[TMP5]], ptr [[A_CASTED]], align 4
+// TCHECK-TARGET-X86-NEXT:    [[TMP6:%.*]] = load i32, ptr [[A_CASTED]], align 4
+// TCHECK-TARGET-X86-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l49.omp_outlined, i32 [[TMP6]])
 // TCHECK-TARGET-X86-NEXT:    ret void
 //
 //

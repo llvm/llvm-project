@@ -43,6 +43,10 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
              N->dump(&DAG));
   SDValue R = SDValue();
 
+  // See if the target wants to custom expand this node.
+  if (CustomLowerNode(N, N->getValueType(ResNo), true))
+    return;
+
   switch (N->getOpcode()) {
   default:
 #ifndef NDEBUG
@@ -859,6 +863,10 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   LLVM_DEBUG(dbgs() << "Scalarize node operand " << OpNo << ": ";
              N->dump(&DAG));
   SDValue Res = SDValue();
+
+  // See if the target wants to custom scalarize this node.
+  if (CustomLowerNode(N, N->getOperand(OpNo).getValueType(), false))
+    return false;
 
   switch (N->getOpcode()) {
   default:
@@ -3650,7 +3658,14 @@ void DAGTypeLegalizer::SplitVecRes_VP_SPLICE(SDNode *N, SDValue &Lo,
       PtrInfo, MachineMemOperand::MOLoad, LocationSize::beforeOrAfterPointer(),
       Alignment);
 
-  SDValue StackPtr2 = TLI.getVectorElementPointer(DAG, StackPtr, VT, EVL1);
+  SDValue EltByteSize =
+      DAG.getTypeSize(DL, PtrVT, VT.getVectorElementType().getStoreSize());
+  SDValue EVL1Ptr = DAG.getZExtOrTrunc(EVL1, DL, PtrVT);
+  SDValue EVL1Bytes = DAG.getNode(ISD::MUL, DL, PtrVT, EVL1Ptr, EltByteSize);
+  // Clip EVL1Bytes to make sure we stay within the stack object.
+  SDValue VTBytes = DAG.getTypeSize(DL, PtrVT, VT.getStoreSize());
+  EVL1Bytes = DAG.getNode(ISD::UMIN, DL, PtrVT, EVL1Bytes, VTBytes);
+  SDValue StackPtr2 = DAG.getMemBasePlusOffset(StackPtr, EVL1Bytes, DL);
   SDValue PoisonPtr = DAG.getPOISON(PtrVT);
 
   SDValue TrueMask = DAG.getBoolConstant(true, DL, Mask.getValueType(), VT);
@@ -7482,19 +7497,16 @@ void DAGTypeLegalizer::WidenVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
   // We cannot just use the widened operands directly: since they might be
   // individually widened, using them directly will result in de-interleaving
   // the "padded" lanes that sit in the middle of the vector. Instead, we should
-  // not just concat but also "re-pack" these operands before extracting new
+  // not concat the widened operands but the original ones to effectively
+  // generate a "packed" concated and widened vector, before extracting new
   // operand vectors with the widened type.
   EVT PackedWidenVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
                                        WidenEC.multiplyCoefficientBy(Factor));
-  SDValue PackedWidenVec = DAG.getUNDEF(PackedWidenVT);
-  for (unsigned Idx = 0U; Idx < Factor; ++Idx) {
-    const SDValue Op = N->getOperand(Idx);
-    // Note that we insert these widened operands with offsets derived from
-    // the original vector length.
-    PackedWidenVec = DAG.getInsertSubvector(
-        DL, PackedWidenVec, GetWidenedVector(Op),
-        OrigEC.multiplyCoefficientBy(Idx).getKnownMinValue());
-  }
+  EVT ConcatVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
+                                  OrigEC.multiplyCoefficientBy(Factor));
+  SDValue ConcatOp = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, N->ops());
+  SDValue PackedWidenVec = DAG.getInsertSubvector(
+      DL, DAG.getUNDEF(PackedWidenVT), ConcatOp, /*Idx=*/0U);
 
   // Extract the new widened operand vectors.
   SmallVector<SDValue, 8> NewOps(Factor, SDValue());
@@ -7733,6 +7745,10 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VP_REDUCE_FMAXIMUM:
   case ISD::VP_REDUCE_FMINIMUM:
     Res = WidenVecOp_VP_REDUCE(N);
+    break;
+  case ISD::CTTZ_ELTS:
+  case ISD::CTTZ_ELTS_ZERO_POISON:
+    Res = WidenVecOp_CttzElements(N);
     break;
   case ISD::VP_CTTZ_ELTS:
   case ISD::VP_CTTZ_ELTS_ZERO_POISON:
@@ -8714,6 +8730,26 @@ SDValue DAGTypeLegalizer::WidenVecOp_VSELECT(SDNode *N) {
   SDValue Select = DAG.getNode(N->getOpcode(), DL, LeftIn.getValueType(), Cond,
                                LeftIn, RightIn);
   return DAG.getExtractSubvector(DL, VT, Select, 0);
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_CttzElements(SDNode *N) {
+  SDLoc DL(N);
+  SDValue Source = N->getOperand(0);
+  EVT WideVT =
+      TLI.getTypeToTransformTo(*DAG.getContext(), Source.getValueType());
+
+  SDValue WideSource;
+  if (N->getOpcode() == ISD::CTTZ_ELTS_ZERO_POISON) {
+    WideSource = GetWidenedVector(Source);
+  } else {
+    // Pad the widened portion with all-ones so the extra lanes appear as
+    // active (non-zero) elements and do not contribute trailing zeros.
+    SDValue AllOnes = DAG.getAllOnesConstant(DL, WideVT);
+    WideSource = DAG.getInsertSubvector(DL, AllOnes, Source, 0);
+  }
+
+  return DAG.getNode(N->getOpcode(), DL, N->getValueType(0), WideSource,
+                     N->getFlags());
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_VP_CttzElements(SDNode *N) {
