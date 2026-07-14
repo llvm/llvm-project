@@ -957,8 +957,92 @@ struct UnrollStoreMatrixOp : public UnrollPattern<xegpu::StoreMatrixOp> {
 /// after inst_data stripped. If it does, it will unroll the vector into
 /// multiple smaller vectors according to the target shape, and create multiple
 /// ConvertLayoutOp with the unrolled vectors and the stripped layouts.
+///
+/// When the input and target layouts have different inst_data, the source is
+/// extracted at the input inst_data granularity and the result is inserted at
+/// the target inst_data granularity, enabling slice cancellation during
+/// canonicalization.
 struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
   using UnrollPattern<xegpu::ConvertLayoutOp>::UnrollPattern;
+
+  /// Extracts source in `inTile` slices, regroups into `convTile`-sized
+  /// ConvertLayoutOps, and inserts the result in `outTile` slices.
+  /// Returns failure if the tiles do not evenly divide.
+  LogicalResult
+  rewriteWithRegrouping(xegpu::ConvertLayoutOp op, VectorType valueTy,
+                        ArrayRef<int64_t> convTile, ArrayRef<int64_t> inTile,
+                        ArrayRef<int64_t> outTile,
+                        xegpu::DistributeLayoutAttr inputLayout,
+                        xegpu::DistributeLayoutAttr targetLayout, Location loc,
+                        PatternRewriter &rewriter) const {
+    ArrayRef<int64_t> vecShape = valueTy.getShape();
+    if (!computeShapeRatio(vecShape, convTile) ||
+        !computeShapeRatio(convTile, inTile) ||
+        !computeShapeRatio(convTile, outTile))
+      return failure();
+
+    Type elemTy = valueTy.getElementType();
+    int64_t rank = valueTy.getRank();
+    VectorType convTy = VectorType::get(convTile, elemTy);
+    SmallVector<int64_t> strides(rank, 1);
+
+    Value source = op.getSource();
+    auto zeroOf = [&](VectorType ty) -> Value {
+      return arith::ConstantOp::create(
+          rewriter, loc, ty,
+          DenseElementsAttr::get(ty, rewriter.getZeroAttr(elemTy)));
+    };
+    auto addOffsets = [](ArrayRef<int64_t> a,
+                         ArrayRef<int64_t> b) -> SmallVector<int64_t> {
+      SmallVector<int64_t> res(a);
+      for (auto [r, v] : llvm::zip_equal(res, b))
+        r += v;
+      return res;
+    };
+
+    Value result = zeroOf(valueTy);
+    for (SmallVector<int64_t> convOff :
+         StaticTileOffsetRange(vecShape, convTile)) {
+      // Build the convert tile from inTile-sized slices of the source.
+      Value conv;
+      if (convTile == inTile) {
+        conv = vector::ExtractStridedSliceOp::create(
+            rewriter, loc, source, convOff, convTile, strides);
+      } else {
+        conv = zeroOf(convTy);
+        for (SmallVector<int64_t> inLocal :
+             StaticTileOffsetRange(convTile, inTile)) {
+          Value piece = vector::ExtractStridedSliceOp::create(
+              rewriter, loc, source, addOffsets(convOff, inLocal), inTile,
+              strides);
+          conv = vector::InsertStridedSliceOp::create(rewriter, loc, piece,
+                                                      conv, inLocal, strides);
+        }
+      }
+
+      conv = xegpu::ConvertLayoutOp::create(rewriter, loc, convTy, conv,
+                                            inputLayout, targetLayout);
+
+      // Write the converted tile into the result as outTile-sized slices.
+      if (convTile == outTile) {
+        result = vector::InsertStridedSliceOp::create(rewriter, loc, conv,
+                                                      result, convOff, strides);
+      } else {
+        for (SmallVector<int64_t> outLocal :
+             StaticTileOffsetRange(convTile, outTile)) {
+          Value piece = vector::ExtractStridedSliceOp::create(
+              rewriter, loc, conv, outLocal, outTile, strides);
+          result = vector::InsertStridedSliceOp::create(
+              rewriter, loc, piece, result, addOffsets(convOff, outLocal),
+              strides);
+        }
+      }
+    }
+
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+
   LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
@@ -974,8 +1058,10 @@ struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
       return success();
     }
 
-    if (inputLayout.getEffectiveInstDataAsInt().empty() ||
-        targetLayout.getEffectiveInstDataAsInt().empty())
+    // Capture inst_data granularities before stripping them.
+    SmallVector<int64_t> inTile = inputLayout.getEffectiveInstDataAsInt();
+    SmallVector<int64_t> outTile = targetLayout.getEffectiveInstDataAsInt();
+    if (inTile.empty() || outTile.empty())
       return rewriter.notifyMatchFailure(op, "Not a target ConvertLayoutOp.");
 
     inputLayout = inputLayout.dropInstData();
@@ -988,20 +1074,30 @@ struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
     if (!targetShape || targetShape->size() != (size_t)valueTy.getRank())
       return failure();
 
-    Value newSource = op.getSource();
-    SmallVector<Value> newOps;
-    if (inputLayout && targetLayout && !inputLayout.isEqualTo(targetLayout)) {
-      SmallVector<Type> convertedValTypes =
-          getUnrolledTypes(valueTy, *targetShape);
-      SmallVector<Value> convertedValues =
-          pack(op.getOperand(), convertedValTypes, *targetShape, loc, rewriter);
-      for (auto [v, t] : llvm::zip(convertedValues, convertedValTypes)) {
-        auto newOp = xegpu::ConvertLayoutOp::create(rewriter, loc, t, v,
-                                                    inputLayout, targetLayout);
-        newOps.push_back(newOp);
-      }
-      newSource = unpack(newOps, op.getType(), *targetShape, loc, rewriter);
+    // Nothing to convert if layouts match after stripping inst_data.
+    if (!inputLayout || !targetLayout || inputLayout.isEqualTo(targetLayout)) {
+      rewriter.replaceOp(op, op.getSource());
+      return success();
     }
+
+    // Try regrouping: extract at inTile, convert, insert at outTile.
+    if (succeeded(rewriteWithRegrouping(op, valueTy, *targetShape, inTile,
+                                        outTile, inputLayout, targetLayout, loc,
+                                        rewriter)))
+      return success();
+
+    // Fallback: pack/unpack at the convert tile granularity.
+    SmallVector<Type> convertedValTypes =
+        getUnrolledTypes(valueTy, *targetShape);
+    SmallVector<Value> convertedValues =
+        pack(op.getOperand(), convertedValTypes, *targetShape, loc, rewriter);
+    SmallVector<Value> newOps;
+    for (auto [v, t] : llvm::zip(convertedValues, convertedValTypes)) {
+      auto newOp = xegpu::ConvertLayoutOp::create(rewriter, loc, t, v,
+                                                  inputLayout, targetLayout);
+      newOps.push_back(newOp);
+    }
+    Value newSource = unpack(newOps, op.getType(), *targetShape, loc, rewriter);
 
     rewriter.replaceOp(op, newSource);
     return success();
