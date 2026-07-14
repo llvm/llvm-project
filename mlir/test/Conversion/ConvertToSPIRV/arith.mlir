@@ -37,11 +37,13 @@ func.func @int32_scalar_srem(%lhs: i32, %rhs: i32) {
 // CHECK-LABEL: @scalar_ceildivui
 // CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
 func.func @scalar_ceildivui(%lhs: i32, %rhs: i32) -> i32 {
-  // CHECK:     %[[ISZERO:.+]] = spirv.IEqual %[[LHS]], %{{.+}} : i32
-  // CHECK:     %[[MINUSONE:.+]] = spirv.ISub %[[LHS]], %{{.+}} : i32
-  // CHECK:     %[[Q:.+]] = spirv.UDiv %[[MINUSONE]], %[[RHS]] : i32
-  // CHECK:     %[[PLUSONE:.+]] = spirv.IAdd %[[Q]], %{{.+}} : i32
-  // CHECK:     %[[R:.+]] = spirv.Select %[[ISZERO]], %{{.+}}, %[[PLUSONE]] : i1, i32
+  // CHECK:     %[[Q:.+]] = spirv.UDiv %[[LHS]], %[[RHS]] : i32
+  // CHECK:     %[[PRODUCT:.+]] = spirv.IMul %[[Q]], %[[RHS]] : i32
+  // CHECK:     %[[INEXACT:.+]] = spirv.INotEqual %[[PRODUCT]], %[[LHS]] : i32
+  // CHECK:     %[[ZERO:.+]] = spirv.Constant 0 : i32
+  // CHECK:     %[[ONE:.+]] = spirv.Constant 1 : i32
+  // CHECK:     %[[ADJUSTMENT:.+]] = spirv.Select %[[INEXACT]], %[[ONE]], %[[ZERO]] : i1, i32
+  // CHECK:     %[[R:.+]] = spirv.IAdd %[[Q]], %[[ADJUSTMENT]] : i32
   // CHECK:     spirv.ReturnValue %[[R]]
   %0 = arith.ceildivui %lhs, %rhs : i32
   return %0 : i32
@@ -51,14 +53,16 @@ func.func @scalar_ceildivui(%lhs: i32, %rhs: i32) -> i32 {
 // CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
 func.func @scalar_ceildivsi(%lhs: i32, %rhs: i32) -> i32 {
   // CHECK:     %[[Q:.+]] = spirv.SDiv %[[LHS]], %[[RHS]] : i32
-  // CHECK:     %[[PROD:.+]] = spirv.IMul %[[Q]], %[[RHS]] : i32
-  // CHECK:     %[[NE:.+]] = spirv.INotEqual %[[LHS]], %[[PROD]] : i32
-  // CHECK:     %[[LNEG:.+]] = spirv.SLessThan %[[LHS]], %{{.+}} : i32
-  // CHECK:     %[[RNEG:.+]] = spirv.SLessThan %[[RHS]], %{{.+}} : i32
-  // CHECK:     %[[SAMESIGN:.+]] = spirv.LogicalEqual %[[LNEG]], %[[RNEG]] : i1
-  // CHECK:     %[[COND:.+]] = spirv.LogicalAnd %[[NE]], %[[SAMESIGN]] : i1
-  // CHECK:     %[[QP1:.+]] = spirv.IAdd %[[Q]], %{{.+}} : i32
-  // CHECK:     %[[R:.+]] = spirv.Select %[[COND]], %[[QP1]], %[[Q]] : i1, i32
+  // CHECK:     %[[PRODUCT:.+]] = spirv.IMul %[[Q]], %[[RHS]] : i32
+  // CHECK:     %[[INEXACT:.+]] = spirv.INotEqual %[[PRODUCT]], %[[LHS]] : i32
+  // CHECK:     %[[SIGNED_LT:.+]] = spirv.SLessThan %[[LHS]], %[[RHS]] : i32
+  // CHECK:     %[[UNSIGNED_LT:.+]] = spirv.ULessThan %[[LHS]], %[[RHS]] : i32
+  // CHECK:     %[[SAME_SIGN:.+]] = spirv.LogicalEqual %[[SIGNED_LT]], %[[UNSIGNED_LT]] : i1
+  // CHECK:     %[[ROUND:.+]] = spirv.LogicalAnd %[[INEXACT]], %[[SAME_SIGN]] : i1
+  // CHECK:     %[[ZERO:.+]] = spirv.Constant 0 : i32
+  // CHECK:     %[[ONE:.+]] = spirv.Constant 1 : i32
+  // CHECK:     %[[ADJUSTMENT:.+]] = spirv.Select %[[ROUND]], %[[ONE]], %[[ZERO]] : i1, i32
+  // CHECK:     %[[R:.+]] = spirv.IAdd %[[Q]], %[[ADJUSTMENT]] : i32
   // CHECK:     spirv.ReturnValue %[[R]]
   %0 = arith.ceildivsi %lhs, %rhs : i32
   return %0 : i32
@@ -68,14 +72,16 @@ func.func @scalar_ceildivsi(%lhs: i32, %rhs: i32) -> i32 {
 // CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
 func.func @scalar_floordivsi(%lhs: i32, %rhs: i32) -> i32 {
   // CHECK:     %[[Q:.+]] = spirv.SDiv %[[LHS]], %[[RHS]] : i32
-  // CHECK:     %[[PROD:.+]] = spirv.IMul %[[Q]], %[[RHS]] : i32
-  // CHECK:     %[[NE:.+]] = spirv.INotEqual %[[LHS]], %[[PROD]] : i32
-  // CHECK:     %[[LNEG:.+]] = spirv.SLessThan %[[LHS]], %{{.+}} : i32
-  // CHECK:     %[[RNEG:.+]] = spirv.SLessThan %[[RHS]], %{{.+}} : i32
-  // CHECK:     %[[DIFFSIGN:.+]] = spirv.LogicalNotEqual %[[LNEG]], %[[RNEG]] : i1
-  // CHECK:     %[[COND:.+]] = spirv.LogicalAnd %[[NE]], %[[DIFFSIGN]] : i1
-  // CHECK:     %[[QM1:.+]] = spirv.IAdd %[[Q]], %{{.+}} : i32
-  // CHECK:     %[[R:.+]] = spirv.Select %[[COND]], %[[QM1]], %[[Q]] : i1, i32
+  // CHECK:     %[[PRODUCT:.+]] = spirv.IMul %[[Q]], %[[RHS]] : i32
+  // CHECK:     %[[INEXACT:.+]] = spirv.INotEqual %[[PRODUCT]], %[[LHS]] : i32
+  // CHECK:     %[[SIGNED_LT:.+]] = spirv.SLessThan %[[LHS]], %[[RHS]] : i32
+  // CHECK:     %[[UNSIGNED_LT:.+]] = spirv.ULessThan %[[LHS]], %[[RHS]] : i32
+  // CHECK:     %[[OPPOSITE_SIGN:.+]] = spirv.LogicalNotEqual %[[SIGNED_LT]], %[[UNSIGNED_LT]] : i1
+  // CHECK:     %[[ROUND:.+]] = spirv.LogicalAnd %[[INEXACT]], %[[OPPOSITE_SIGN]] : i1
+  // CHECK:     %[[ZERO:.+]] = spirv.Constant 0 : i32
+  // CHECK:     %[[ONE:.+]] = spirv.Constant 1 : i32
+  // CHECK:     %[[ADJUSTMENT:.+]] = spirv.Select %[[ROUND]], %[[ONE]], %[[ZERO]] : i1, i32
+  // CHECK:     %[[R:.+]] = spirv.ISub %[[Q]], %[[ADJUSTMENT]] : i32
   // CHECK:     spirv.ReturnValue %[[R]]
   %0 = arith.floordivsi %lhs, %rhs : i32
   return %0 : i32
@@ -84,7 +90,8 @@ func.func @scalar_floordivsi(%lhs: i32, %rhs: i32) -> i32 {
 // CHECK-LABEL: @vector_ceildivsi
 func.func @vector_ceildivsi(%lhs: vector<4xi32>, %rhs: vector<4xi32>) -> vector<4xi32> {
   // CHECK: spirv.SDiv %{{.*}}, %{{.*}} : vector<4xi32>
-  // CHECK: spirv.Select %{{.*}}, %{{.*}}, %{{.*}} : vector<4xi1>, vector<4xi32>
+  // CHECK: %[[ADJUSTMENT:.+]] = spirv.Select %{{.*}}, %{{.*}}, %{{.*}} : vector<4xi1>, vector<4xi32>
+  // CHECK: spirv.IAdd %{{.*}}, %[[ADJUSTMENT]] : vector<4xi32>
   %0 = arith.ceildivsi %lhs, %rhs : vector<4xi32>
   return %0 : vector<4xi32>
 }

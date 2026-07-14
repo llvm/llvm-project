@@ -764,17 +764,15 @@ func.func @select_complex(%arg0 : i1, %arg1 : complex<f32>, %arg2 : complex<f32>
 // CHECK-LABEL: @ceildivsi
 // CHECK-SAME: %[[ARG0:.*]]: i64, %[[ARG1:.*]]: i64) -> i64
 func.func @ceildivsi(%arg0 : i64, %arg1 : i64) -> i64 {
-  // CHECK: %[[ZERO:.+]] = llvm.mlir.constant(0 : i64) : i64
-  // CHECK: %[[ONE:.+]] = llvm.mlir.constant(1 : i64) : i64
-  // CHECK: %[[DIV:.+]] = llvm.sdiv %[[ARG0]], %[[ARG1]] : i64
-  // CHECK: %[[MUL:.+]] = llvm.mul %[[DIV]], %[[ARG1]] : i64
-  // CHECK: %[[NEXACT:.+]] = llvm.icmp "ne" %[[ARG0]], %[[MUL]] : i64
-  // CHECK: %[[NNEG:.+]] = llvm.icmp "slt" %[[ARG0]], %[[ZERO]] : i64
-  // CHECK: %[[MNEG:.+]] = llvm.icmp "slt" %[[ARG1]], %[[ZERO]] : i64
-  // CHECK: %[[SAMESIGN:.+]] = llvm.icmp "eq" %[[NNEG]], %[[MNEG]] : i1
-  // CHECK: %[[SHOULDROUND:.+]] = llvm.and %[[NEXACT]], %[[SAMESIGN]] : i1
-  // CHECK: %[[CEIL:.+]] = llvm.add %[[DIV]], %[[ONE]] : i64
-  // CHECK: %[[RES:.+]] = llvm.select %[[SHOULDROUND]], %[[CEIL]], %[[DIV]] : i1, i64
+  // CHECK: %[[Q:.+]] = llvm.sdiv %[[ARG0]], %[[ARG1]] : i64
+  // CHECK: %[[PRODUCT:.+]] = llvm.mul %[[Q]], %[[ARG1]] : i64
+  // CHECK: %[[INEXACT:.+]] = llvm.icmp "ne" %[[PRODUCT]], %[[ARG0]] : i64
+  // CHECK: %[[SIGNED_LT:.+]] = llvm.icmp "slt" %[[ARG0]], %[[ARG1]] : i64
+  // CHECK: %[[UNSIGNED_LT:.+]] = llvm.icmp "ult" %[[ARG0]], %[[ARG1]] : i64
+  // CHECK: %[[SAME_SIGN:.+]] = llvm.icmp "eq" %[[SIGNED_LT]], %[[UNSIGNED_LT]] : i1
+  // CHECK: %[[ROUND:.+]] = llvm.and %[[INEXACT]], %[[SAME_SIGN]] : i1
+  // CHECK: %[[ADJUSTMENT:.+]] = llvm.zext %[[ROUND]] : i1 to i64
+  // CHECK: %[[RES:.+]] = llvm.add %[[Q]], %[[ADJUSTMENT]] : i64
   %0 = arith.ceildivsi %arg0, %arg1 : i64
   return %0: i64
 }
@@ -782,13 +780,11 @@ func.func @ceildivsi(%arg0 : i64, %arg1 : i64) -> i64 {
 // CHECK-LABEL: @ceildivui
 // CHECK-SAME: %[[ARG0:.*]]: i32) -> i32
 func.func @ceildivui(%arg0 : i32) -> i32 {
-// CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK: %[[CMP0:.*]] = llvm.icmp "eq" %[[ARG0]], %[[CST0]] : i32
-// CHECK: %[[CST1:.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK: %[[SUB0:.*]] = llvm.sub %[[ARG0]], %[[CST1]] : i32
-// CHECK: %[[DIV0:.*]] = llvm.udiv %[[SUB0]], %[[ARG0]] : i32
-// CHECK: %[[ADD0:.*]] = llvm.add %[[DIV0]], %[[CST1]] : i32
-// CHECK: %[[SEL0:.*]] = llvm.select %[[CMP0]], %[[CST0]], %[[ADD0]] : i1, i32
+// CHECK: %[[Q:.*]] = llvm.udiv %[[ARG0]], %[[ARG0]] : i32
+// CHECK: %[[PRODUCT:.*]] = llvm.mul %[[Q]], %[[ARG0]] : i32
+// CHECK: %[[INEXACT:.*]] = llvm.icmp "ne" %[[PRODUCT]], %[[ARG0]] : i32
+// CHECK: %[[ADJUSTMENT:.*]] = llvm.zext %[[INEXACT]] : i1 to i32
+// CHECK: %[[RES:.*]] = llvm.add %[[Q]], %[[ADJUSTMENT]] : i32
   %0 = arith.ceildivui %arg0, %arg0 : i32
   return %0: i32
 }
@@ -798,17 +794,15 @@ func.func @ceildivui(%arg0 : i32) -> i32 {
 // CHECK-LABEL: @floordivsi
 // CHECK-SAME: %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32) -> i32
 func.func @floordivsi(%arg0 : i32, %arg1 : i32) -> i32 {
-  // CHECK: %[[SDIV:.*]] = llvm.sdiv %[[ARG0]], %[[ARG1]] : i32
-  // CHECK: %[[MUL0:.*]] = llvm.mul %[[SDIV]], %[[ARG1]] : i32
-  // CHECK: %[[CMP0:.*]] = llvm.icmp "ne" %[[ARG0]], %[[MUL0]] : i32
-  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i32) : i32
-  // CHECK: %[[CMP1:.*]] = llvm.icmp "slt" %[[ARG0]], %[[CST0]] : i32
-  // CHECK: %[[CMP2:.*]] = llvm.icmp "slt" %[[ARG1]], %[[CST0]] : i32
-  // CHECK: %[[CMP3:.*]] = llvm.icmp "ne" %[[CMP1]], %[[CMP2]] : i1
-  // CHECK: %[[AND:.*]] = llvm.and %[[CMP0]], %[[CMP3]] : i1
-  // CHECK: %[[CST1:.*]] = llvm.mlir.constant(-1 : i32) : i32
-  // CHECK: %[[ADD:.*]] = llvm.add %[[SDIV]], %[[CST1]] : i32
-  // CHECK: %[[SEL:.*]] = llvm.select %[[AND]], %[[ADD]], %[[SDIV]] : i1, i32
+  // CHECK: %[[Q:.*]] = llvm.sdiv %[[ARG0]], %[[ARG1]] : i32
+  // CHECK: %[[PRODUCT:.*]] = llvm.mul %[[Q]], %[[ARG1]] : i32
+  // CHECK: %[[INEXACT:.*]] = llvm.icmp "ne" %[[PRODUCT]], %[[ARG0]] : i32
+  // CHECK: %[[SIGNED_LT:.*]] = llvm.icmp "slt" %[[ARG0]], %[[ARG1]] : i32
+  // CHECK: %[[UNSIGNED_LT:.*]] = llvm.icmp "ult" %[[ARG0]], %[[ARG1]] : i32
+  // CHECK: %[[OPPOSITE_SIGN:.*]] = llvm.icmp "ne" %[[SIGNED_LT]], %[[UNSIGNED_LT]] : i1
+  // CHECK: %[[ROUND:.*]] = llvm.and %[[INEXACT]], %[[OPPOSITE_SIGN]] : i1
+  // CHECK: %[[ADJUSTMENT:.*]] = llvm.zext %[[ROUND]] : i1 to i32
+  // CHECK: %[[RES:.*]] = llvm.sub %[[Q]], %[[ADJUSTMENT]] : i32
   %0 = arith.floordivsi %arg0, %arg1 : i32
   return %0 : i32
 }
