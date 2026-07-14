@@ -59,6 +59,30 @@ def mkdir_p(path):
         raise OSError(errno.ENOTDIR, "%s is not a directory" % path)
 
 
+def get_extended_windows_path(path):
+    r"""Return ``path`` in the Windows extended-length ``\\?\`` form so it can be
+    handed to the Win32 API (and therefore to ``os``/``shutil``) even when it is
+    longer than MAX_PATH (260 characters). On non-Windows platforms ``path`` is
+    returned unchanged.
+
+    The ``\\?\`` prefix disables all path normalization normally performed by
+    Win32, so the path must be fully qualified, use backslash separators and
+    contain no ``.``/``..`` components. ``os.path.abspath`` guarantees all three.
+    """
+    if sys.platform != "win32":
+        return path
+    if path.startswith("\\\\?\\"):
+        return path
+    assert os.path.isabs(path), (
+        "cannot form a \\\\?\\ extended-length path from relative path: %s" % path
+    )
+    abs_path = os.path.abspath(path)
+    # UNC shares (\\server\share) use the \\?\UNC\ spelling.
+    if abs_path.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + abs_path[2:]
+    return "\\\\?\\" + abs_path
+
+
 # ============================
 # Dealing with SDK and triples
 # ============================

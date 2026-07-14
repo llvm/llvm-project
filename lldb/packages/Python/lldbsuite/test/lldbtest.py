@@ -824,13 +824,6 @@ class Base(unittest.TestCase):
         """Create the test-specific working directory, optionally deleting any
         previous contents."""
         bdir = self.getBuildDir()
-        if sys.platform == "win32" and len(bdir) > 256:
-            import warnings
-
-            warnings.warn(
-                "Test build directory path exceeds 256 characters (Windows "
-                "MAX_PATH limit): {}".format(bdir)
-            )
         if os.path.isdir(bdir) and not self.SHARED_BUILD_TESTCASE:
             # Tolerate files vanishing mid-walk. Clang's implicit module
             # build leaves behind `*.pcm.lock` lockfiles whose lifetime is
@@ -846,25 +839,16 @@ class Base(unittest.TestCase):
                     return
                 raise exc_info[1]
 
-            # Delete via the \\?\ extended length path prefix so rmtree can
-            # remove build artifacts whose full path exceeds MAX_PATH (260).
-            rmtree_target = bdir
-            if sys.platform == "win32":
-                rmtree_target = "\\\\?\\" + bdir
-            shutil.rmtree(rmtree_target, onerror=_ignore_enoent)
+            # Delete via the \\?\ extended-length path form so rmtree can remove
+            # build artifacts whose full path exceeds MAX_PATH (260) on Windows.
+            shutil.rmtree(
+                lldbutil.get_extended_windows_path(bdir), onerror=_ignore_enoent
+            )
         lldbutil.mkdir_p(bdir)
 
     def getBuildArtifact(self, name="a.out"):
         """Return absolute path to an artifact in the test's build directory."""
-        artifact_path = os.path.join(self.getBuildDir(), name)
-        if sys.platform == "win32" and len(artifact_path) > 256:
-            import warnings
-
-            warnings.warn(
-                "Test artifact path exceeds 256 characters (Windows "
-                "MAX_PATH limit): {}".format(artifact_path)
-            )
-        return artifact_path
+        return os.path.join(self.getBuildDir(), name)
 
     def getSourcePath(self, name):
         """Return absolute path to a file in the test's source directory."""
