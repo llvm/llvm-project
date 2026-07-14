@@ -1,7 +1,7 @@
 // COM: Test the true trampoline fallback path for tensor_load_to_lds
-// COM: when no NOP sled is available. Both live and dead descriptor variants
-// COM: append the persistent s_pack_hh + tensor_load normalization via
-// COM: growWithTrampolines.
+// COM: when no NOP sled is available. Two variants:
+// COM:   dead SGPR - s_pack_hh + tensor_load appended via growWithTrampolines
+// COM:   live SGPR - save/pack/tensor/restore appended via growWithTrampolines
 // COM: Both force emitReplacementCode to use emitToTrampoline.
 
 // RUN: %clang -target amdgcn-amd-amdhsa -mcpu=gfx1250 -nostdlib %s -o %t.elf
@@ -43,10 +43,12 @@
 // DISASM-NEXT: tensor_load_to_lds
 // DISASM-NEXT: s_branch
 
-// COM: Live-SGPR trampoline body (for kernel 2): the same persistent mask and
-// COM: tensor sequence followed by branch-back.
+// COM: Live-SGPR trampoline body (for kernel 2): save + pack + tensor + restore
+// COM: followed by branch-back.
+// DISASM-NEXT: s_mov_b32 [[SCRATCH:s[0-9]+]], s4
 // DISASM-NEXT: s_pack_hh_b32_b16 s4, 0, s4
 // DISASM-NEXT: tensor_load_to_lds
+// DISASM-NEXT: s_mov_b32 s4, [[SCRATCH]]
 // DISASM-NEXT: s_branch
 
 // COM: Idempotency
@@ -91,3 +93,30 @@ test_tensor_trampoline_live:
   .amdhsa_next_free_vgpr 1
   .amdhsa_next_free_sgpr 12
 .end_amdhsa_kernel
+
+.amdgpu_metadata
+  amdhsa.version:
+    - 3
+    - 0
+  amdhsa.kernels:
+    - .name: test_tensor_trampoline
+      .symbol: test_tensor_trampoline.kd
+      .sgpr_count: 12
+      .vgpr_count: 1
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 64
+      .max_flat_workgroup_size: 256
+    - .name: test_tensor_trampoline_live
+      .symbol: test_tensor_trampoline_live.kd
+      .sgpr_count: 12
+      .vgpr_count: 1
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 64
+      .max_flat_workgroup_size: 256
+.end_amdgpu_metadata

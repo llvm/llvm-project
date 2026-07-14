@@ -8,9 +8,9 @@
 // COM:   raw 128 * 512 = 65536  -- one past the limit
 // COM:   raw 255 * 512 = 130560 -- worst case
 // COM:
-// COM: When that happens the patch is not representable, so the trampoline
-// COM: must leave the original (broken-on-A0) instruction in place rather
-// COM: than emit a silently-truncated single-address replacement.
+// COM: When that happens the patch is not representable. Returning the
+// COM: original broken-on-A0 instruction would be unsafe, so the rewrite must
+// COM: fail rather than emit a silently truncated replacement.
 // COM:
 // COM: Coverage:
 // COM:   test_ds_load_b64_overflow : raw 128/255 -> scaled 65536/130560
@@ -26,25 +26,22 @@
 // RUN: env AMD_COMGR_EMIT_VERBOSE_LOGS=1 \
 // RUN:   hotswap-rewrite %t.elf \
 // RUN:   amdgcn-amd-amdhsa--gfx1250 amdgcn-amd-amdhsa--gfx1250 \
-// RUN:   --output %t.out.elf 2>&1 \
+// RUN:   --expect-status ERROR 2>&1 \
 // RUN:   | %FileCheck --check-prefix=LOG %s
 // COM: Pin the message shape (mnemonic, both raw + scaled values, the
-// COM: 16-bit limit, and the "leaving original instruction in place"
-// COM: closer) so a regression in the message format or the limit
-// COM: constant fails here, not in some downstream-symptoms test. The
-// COM: helper's specific message is the only diagnostic; patchDs2Addr does
-// COM: not mislabel this intentional safe decline with a second generic
-// COM: failure. RESULT: SUCCESS comes last because the rewrite as a whole
-// COM: succeeds (the in-range kernel is patched).
+// COM: 16-bit limit, and the required-rewrite failure closer) so a regression
+// COM: in the message format or the limit constant fails here, not in some
+// COM: downstream-symptoms test. The helper's specific message is the only
+// COM: diagnostic; patchDs2Addr does not add a second generic failure.
+// COM: RESULT: ERROR comes last because leaving the required A0 rewrite
+// COM: unapplied would be unsafe.
 // LOG:      hotswap: error: ds_load_2addr_stride64_b64 scaled offsets exceed
 // LOG-SAME: the single-address DS 16-bit field
 // LOG-SAME: off0=raw 128 * scale 512 = 65536
 // LOG-SAME: off1=raw 255 * scale 512 = 130560
 // LOG-SAME: max 65535
-// LOG-SAME: leaving original instruction in place
-// LOG:      RESULT: SUCCESS
-
-// RUN: %llvm-objdump -d %t.out.elf | %FileCheck --check-prefix=DISASM %s
+// LOG-SAME: required A0 rewrite cannot continue
+// LOG:      RESULT: ERROR
 
 // ---- Kernel 1: out-of-range -- patch must NOT fire --------------------------
 // COM: Both per-operand indices scale past 0xFFFF (off0:128 -> 65536,
@@ -132,12 +129,8 @@ test_ds_load_b64_inrange:
 // COM: the in-range kernel the body now uses plain ds_load_b64, which
 // COM: the dispatcher does not recognise, so it is also untouched. Net:
 // COM: byte-identical output between passes.
-// RUN: env AMD_COMGR_EMIT_VERBOSE_LOGS=1 \
-// RUN:   hotswap-rewrite %t.out.elf \
-// RUN:   amdgcn-amd-amdhsa--gfx1250 amdgcn-amd-amdhsa--gfx1250 \
-// RUN:   --check-idempotent \
-// RUN:   | %FileCheck --check-prefix=IDEM %s
-// IDEM: IDEMPOTENT: YES
+// COM: No output is produced after a required-patch failure, so idempotency is
+// COM: intentionally not checked for the rejected object.
 
 .rodata
 .p2align 8

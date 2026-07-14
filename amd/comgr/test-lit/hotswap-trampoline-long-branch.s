@@ -6,6 +6,8 @@
 // COM: hotswap-trampoline-ds-long-branch.s covers that behavior.
 // COM: A large .rept filler (~160 KB, non-NOP so it forms no usable sled)
 // COM: pushes the pool past s_branch's reach to force the far case.
+// COM: The function intentionally has st_size == 0, matching Tensile objects
+// COM: that omit .size and exercising zero-size function-range recovery.
 
 // RUN: %clang -target amdgcn-amd-amdhsa -mcpu=gfx1250 -nostdlib %s -o %t.elf
 
@@ -49,7 +51,7 @@
 // RUN:   amdgcn-amd-amdhsa--gfx1250 amdgcn-amd-amdhsa--gfx1250 \
 // RUN:   --expect-status ERROR 2>&1 \
 // RUN:   | %FileCheck --check-prefix=NO-PAIR %s
-// NO-PAIR: hotswap: error: safe far return: kernel test_far has no aligned SGPR pair below s106
+// NO-PAIR: hotswap: error: safe far return: no aligned block of 2 safe SGPRs fits below s106
 // NO-PAIR: RESULT: ERROR
 
 // COM: gfx10+ cannot represent an increased SGPR count in the kernel
@@ -83,7 +85,7 @@ test_far:
     s_mov_b32 s0, s1
   .endr
 .Ltest_far_end:
-.size test_far, .Ltest_far_end-test_far
+// Deliberately no .size.
 
 .rodata
 .p2align 8

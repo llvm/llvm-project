@@ -11,8 +11,6 @@
 ///
 ///   - cluster_load             -> global_load    (opcode swap via MCInst +
 ///                                                 MCCodeEmitter)
-///   - s_clause                 -> s_nop          (byte-level overwrite via
-///                                                 applyByteReplace)
 ///   - s_barrier_signal_isfirst -> s_barrier_signal
 ///                                                (opcode swap; same operand
 ///                                                 layout, drops SCC write)
@@ -140,17 +138,6 @@ static uint32_t applyInPlacePatchesImpl(PatchContext &Ctx, size_t Idx) {
               << " at 0x" << utohexstr(DI.Offset) << "\n";
         return 1;
       }
-    }
-  }
-
-  if (Mnemonic == "s_clause") {
-    RewriteRule Rule;
-    Rule.ReplaceBytes.assign(Ctx.LS.SNopBytes.begin(), Ctx.LS.SNopBytes.end());
-    if (applyByteReplace(Rule, DI.Offset, DI.Size, Ctx.Text, Ctx.TextSize,
-                         Ctx.LS)) {
-      log() << "hotswap: inplace: s_clause -> s_nop at 0x"
-            << utohexstr(DI.Offset) << "\n";
-      return 1;
     }
   }
 

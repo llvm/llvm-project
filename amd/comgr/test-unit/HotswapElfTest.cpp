@@ -640,6 +640,28 @@ TEST(ElfView, UpdateKernelDescriptorSgprCountUpdatesMetadataAndDescriptor) {
   EXPECT_GE(readReservedSgprs(Obj.Bytes, Obj.KernelDescriptorOffset), 10u);
 }
 
+TEST(ElfView, UpdateGfx1250RevisionMetadataRetagsKernelInPlace) {
+  comgr_test::KernelDescriptorElfOptions Opts;
+  Opts.MetadataSgprCount = 8;
+  Opts.MetadataGfx1250Revision = "B0";
+  comgr_test::KernelDescriptorElf Obj =
+      comgr_test::makeKernelDescriptorElf(makeText(), Opts);
+
+  llvm::StringRef Before(reinterpret_cast<const char *>(Obj.Bytes.data()),
+                         Obj.Bytes.size());
+  EXPECT_NE(Before.find("B0"), llvm::StringRef::npos);
+
+  llvm::Expected<ElfView> ViewOrErr =
+      ElfView::create(Obj.Bytes.data(), Obj.Bytes.size());
+  ASSERT_TRUE((bool)ViewOrErr) << llvm::toString(ViewOrErr.takeError());
+  ASSERT_TRUE(ViewOrErr->updateGfx1250RevisionMetadata("A0"));
+
+  llvm::StringRef After(reinterpret_cast<const char *>(Obj.Bytes.data()),
+                        Obj.Bytes.size());
+  EXPECT_EQ(After.find("B0"), llvm::StringRef::npos);
+  EXPECT_NE(After.find("A0"), llvm::StringRef::npos);
+}
+
 TEST(ElfView, UpdateKernelDescriptorSgprCountCanUpdateMetadataOnly) {
   comgr_test::KernelDescriptorElfOptions Opts;
   Opts.KernelName = "entry_kernel";

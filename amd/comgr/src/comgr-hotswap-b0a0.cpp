@@ -446,6 +446,44 @@ encodeSccNeutralLongBranch(const LLVMState &LS, uint64_t FromOffset,
   return Bytes;
 }
 
+static std::optional<unsigned> numberedSgprIndex(const MCRegisterInfo &MRI,
+                                                 MCRegister Reg) {
+  // TODO(https://github.com/ROCm/llvm-project/issues/3350): Replace this
+  // register-name fallback with a public AMDGPU MC hardware-index helper.
+  if (!Reg.isValid())
+    return std::nullopt;
+  StringRef Name(MRI.getName(Reg));
+  if (!Name.consume_front("SGPR") || Name.empty() || Name.contains('_'))
+    return std::nullopt;
+  unsigned Index = 0;
+  if (Name.getAsInteger(10, Index))
+    return std::nullopt;
+  return Index;
+}
+
+static bool updateNumberedSgprHighWatermark(const MCRegisterInfo &MRI,
+                                            MCRegister Reg, unsigned MaxSgprs,
+                                            unsigned &HighWatermark,
+                                            StringRef Context) {
+  SmallVector<MCRegister, 8> Candidates;
+  Candidates.push_back(Reg);
+  for (MCPhysReg Sub : MRI.subregs(Reg))
+    Candidates.push_back(MCRegister(Sub));
+
+  for (MCRegister Candidate : Candidates) {
+    std::optional<unsigned> Index = numberedSgprIndex(MRI, Candidate);
+    if (!Index)
+      continue;
+    if (*Index >= MaxSgprs) {
+      log() << "hotswap: error: " << Context << ": numbered SGPR s" << *Index
+            << " exceeds the addressable limit s" << (MaxSgprs - 1) << "\n";
+      return false;
+    }
+    HighWatermark = std::max(HighWatermark, *Index + 1);
+  }
+  return true;
+}
+
 static bool isVccRegister(const LLVMState &LS, MCRegister Reg) {
   return Reg.isValid() && StringRef(LS.MRI->getName(Reg)).starts_with("VCC");
 }
@@ -466,94 +504,176 @@ static bool instructionUsesVcc(const LLVMState &LS,
   return false;
 }
 
-static std::optional<SmallVector<uint8_t>>
-buildSafeFarReturn(PatchContext &Ctx, uint64_t InstOffset, uint32_t InstSize,
-                   uint64_t BackStart) {
-  std::string KernelName =
-      Ctx.Elf.findKernelAtAddress(InstOffset + Ctx.Elf.textAddr());
-  if (KernelName.empty()) {
-    log() << "hotswap: error: safe far return: no kernel owns site 0x"
-          << utohexstr(InstOffset) << "\n";
+std::optional<SafeSgprScratchBlock>
+findSafeSgprScratchBlock(const PatchContext &Ctx, uint64_t TextOffset,
+                         unsigned Count, unsigned Alignment,
+                         StringRef Context) {
+  if (Count == 0 || Alignment == 0 || (Alignment & (Alignment - 1)) != 0) {
+    log() << "hotswap: error: " << Context
+          << ": invalid global SGPR block request (count=" << Count
+          << ", alignment=" << Alignment << ")\n";
     return std::nullopt;
   }
 
-  std::optional<unsigned> TotalSgprCount =
-      Ctx.Elf.getKernelSgprCount(KernelName);
-  if (!TotalSgprCount) {
-    log() << "hotswap: error: safe far return: invalid SGPR count for kernel "
-          << KernelName << "\n";
-    return std::nullopt;
-  }
-
-  // llvm/lib/Target/AMDGPU/Utils/AMDGPUBaseInfo.cpp::getNumExtraSGPRs adds two
-  // implicit SGPRs when VCC is used. They are not part of the numbered s0-s105
-  // register space. Inspect the owning function so scratch allocation starts
-  // above numbered SGPRs rather than above the metadata total. If VCC is only
-  // used by a callee, retaining the total as the allocation base is
-  // conservative; the call flag below keeps two implicit slots in the updated
-  // metadata.
-  bool UsesVcc = false;
-  bool HasCall = false;
   std::optional<ElfView::FunctionTextRange> FunctionRange =
-      Ctx.Elf.findFunctionTextRangeAtOffset(InstOffset);
-  if (!FunctionRange) {
-    log() << "hotswap: error: safe far return: no function owns site 0x"
-          << utohexstr(InstOffset) << "\n";
-    return std::nullopt;
+      Ctx.Elf.findFunctionTextRangeAtOffset(TextOffset);
+  std::string Owner =
+      Ctx.Elf.findKernelAtAddress(TextOffset + Ctx.Elf.textAddr());
+  bool ScanWholeObject = Owner.empty() || !FunctionRange;
+  if (!ScanWholeObject) {
+    for (const InternalDecodedInst &DI : Ctx.Decoded) {
+      if (DI.Offset < FunctionRange->Begin || DI.Offset >= FunctionRange->End)
+        continue;
+      if (Ctx.LS.MIA && Ctx.LS.MIA->isCall(DI.Inst)) {
+        ScanWholeObject = true;
+        break;
+      }
+    }
   }
 
+  bool UsesVcc = false;
+  unsigned HighWatermark = 0;
   for (const InternalDecodedInst &DI : Ctx.Decoded) {
-    if (DI.Offset < FunctionRange->Begin || DI.Offset >= FunctionRange->End)
+    if (!ScanWholeObject &&
+        (DI.Offset < FunctionRange->Begin || DI.Offset >= FunctionRange->End))
       continue;
     UsesVcc |= instructionUsesVcc(Ctx.LS, DI);
-    HasCall |= Ctx.LS.MIA && Ctx.LS.MIA->isCall(DI.Inst);
+    for (const MCOperand &Op : DI.Inst) {
+      if (!Op.isReg() || !Op.getReg())
+        continue;
+      if (!updateNumberedSgprHighWatermark(*Ctx.LS.MRI, MCRegister(Op.getReg()),
+                                           Ctx.Config.MaxSgprs, HighWatermark,
+                                           Context))
+        return std::nullopt;
+    }
+
+    const MCInstrDesc &Desc = Ctx.LS.MCII->get(DI.Inst.getOpcode());
+    for (MCPhysReg Reg : Desc.implicit_uses())
+      if (!updateNumberedSgprHighWatermark(*Ctx.LS.MRI, MCRegister(Reg),
+                                           Ctx.Config.MaxSgprs, HighWatermark,
+                                           Context))
+        return std::nullopt;
+    for (MCPhysReg Reg : Desc.implicit_defs())
+      if (!updateNumberedSgprHighWatermark(*Ctx.LS.MRI, MCRegister(Reg),
+                                           Ctx.Config.MaxSgprs, HighWatermark,
+                                           Context))
+        return std::nullopt;
   }
 
   constexpr unsigned VccSgprs = 2;
-  if (UsesVcc && *TotalSgprCount < VccSgprs) {
-    log() << "hotswap: error: safe far return: VCC-using kernel " << KernelName
-          << " has invalid SGPR count " << *TotalSgprCount << "\n";
-    return std::nullopt;
-  }
-  unsigned NumberedSgprCount = *TotalSgprCount - (UsesVcc ? VccSgprs : 0);
-  if (NumberedSgprCount > Ctx.Config.MaxSgprs) {
-    log() << "hotswap: error: safe far return: numbered SGPR count for kernel "
-          << KernelName << " exceeds " << Ctx.Config.MaxSgprs << "\n";
-    return std::nullopt;
+  if (!Owner.empty()) {
+    std::optional<unsigned> Declared = Ctx.Elf.getKernelSgprCount(Owner);
+    if (!Declared) {
+      log() << "hotswap: error: " << Context
+            << ": failed to read SGPR count for kernel " << Owner << "\n";
+      return std::nullopt;
+    }
+    if (UsesVcc && *Declared < VccSgprs) {
+      log() << "hotswap: error: " << Context << ": VCC-using kernel " << Owner
+            << " has invalid SGPR count " << *Declared << "\n";
+      return std::nullopt;
+    }
+    unsigned DeclaredNumbered = *Declared - (UsesVcc ? VccSgprs : 0);
+    HighWatermark = std::max(HighWatermark, DeclaredNumbered);
+  } else {
+    // A device function can be reached from kernels with different declared
+    // register footprints. Without a complete call graph, keep the block above
+    // every declaration and charge every kernel in the commit step.
+    for (const KernelDescriptorInfo &KD : Ctx.Elf.kernelDescriptors()) {
+      std::optional<unsigned> Declared =
+          Ctx.Elf.getKernelSgprCount(KD.KernelName);
+      if (!Declared) {
+        log() << "hotswap: error: " << Context
+              << ": failed to read SGPR count for kernel " << KD.KernelName
+              << "\n";
+        return std::nullopt;
+      }
+      HighWatermark = std::max(HighWatermark, *Declared);
+    }
   }
 
-  // s_get_pc_i64/s_set_pc_i64 require an aligned pair. Allocate it above the
-  // kernel's declared registers so no live program register is repurposed.
-  // s_add_nc_u64 adjusts the captured PC without reading or writing SCC.
-  unsigned ScratchPair = (NumberedSgprCount + 1) & ~1u;
-  if (ScratchPair + 1 >= Ctx.Config.MaxSgprs) {
-    log() << "hotswap: error: safe far return: kernel " << KernelName
-          << " has no aligned SGPR pair below s" << Ctx.Config.MaxSgprs << "\n";
+  if (HighWatermark > std::numeric_limits<unsigned>::max() - (Alignment - 1)) {
+    log() << "hotswap: error: " << Context
+          << ": SGPR alignment calculation overflows unsigned\n";
     return std::nullopt;
   }
+  unsigned Base = (HighWatermark + Alignment - 1) & ~(Alignment - 1);
+  if (Base > Ctx.Config.MaxSgprs || Count > Ctx.Config.MaxSgprs - Base) {
+    log() << "hotswap: error: " << Context << ": no aligned block of " << Count
+          << " safe SGPRs fits below s" << Ctx.Config.MaxSgprs << "\n";
+    return std::nullopt;
+  }
+  return SafeSgprScratchBlock{Base, Count};
+}
+
+bool commitSafeSgprScratchBlock(PatchContext &Ctx, uint64_t TextOffset,
+                                const SafeSgprScratchBlock &Block,
+                                StringRef Context) {
+  std::vector<KernelDescriptorInfo> Descriptors = Ctx.Elf.kernelDescriptors();
+  if (Descriptors.empty()) {
+    log() << "hotswap: error: " << Context
+          << ": code object has no kernel descriptors to charge for scratch "
+             "SGPRs\n";
+    return false;
+  }
+
+  std::string Owner =
+      Ctx.Elf.findKernelAtAddress(TextOffset + Ctx.Elf.textAddr());
+  bool ChargedOwner = false;
+
+  // llvm/lib/Target/AMDGPU/Utils/AMDGPUBaseInfo.cpp::getNumExtraSGPRs returns
+  // two non-numbered VCC SGPRs on GFX1250. Always include them in the metadata
+  // requirement. This may conservatively overstate a kernel that does not use
+  // VCC, but never mistakes VCC for numbered s0-s105 registers.
+  constexpr unsigned VccSgprs = 2;
+  unsigned RequiredSgprs = Block.Base + Block.Count + VccSgprs;
+  for (const KernelDescriptorInfo &KD : Descriptors) {
+    if (!Owner.empty() && KD.KernelName != Owner)
+      continue;
+    ChargedOwner = true;
+
+    std::optional<unsigned> Current = Ctx.Elf.getKernelSgprCount(KD.KernelName);
+    if (!Current) {
+      log() << "hotswap: error: " << Context
+            << ": failed to read SGPR count for kernel " << KD.KernelName
+            << "\n";
+      return false;
+    }
+    if (*Current >= RequiredSgprs)
+      continue;
+    KernelPatchStats &Stats = Ctx.KernelStats[KD.KernelName];
+    Stats.ExtraSgprs = std::max(Stats.ExtraSgprs, RequiredSgprs - *Current);
+  }
+
+  if (!ChargedOwner) {
+    log() << "hotswap: error: " << Context << ": kernel '" << Owner
+          << "' has no descriptor\n";
+    return false;
+  }
+  return true;
+}
+
+static std::optional<SmallVector<uint8_t>>
+buildSafeFarReturn(PatchContext &Ctx, uint64_t InstOffset, uint32_t InstSize,
+                   uint64_t BackStart) {
+  std::optional<SafeSgprScratchBlock> Scratch = findSafeSgprScratchBlock(
+      Ctx, InstOffset, /*Count=*/2, /*Alignment=*/2, "safe far return");
+  if (!Scratch)
+    return std::nullopt;
 
   std::optional<uint64_t> ReturnTo =
       checkedAddUint64(InstOffset, InstSize, "safe far return target offset");
   if (!ReturnTo)
     return std::nullopt;
   std::optional<SmallVector<uint8_t>> Bytes =
-      encodeSccNeutralLongBranch(Ctx.LS, BackStart, *ReturnTo, ScratchPair);
+      encodeSccNeutralLongBranch(Ctx.LS, BackStart, *ReturnTo, Scratch->Base);
   if (!Bytes)
     return std::nullopt;
-
-  unsigned RequiredNumberedSgprs = ScratchPair + 2;
-  unsigned PreservedImplicitSgprs = (UsesVcc || HasCall) ? VccSgprs : 0;
-  unsigned RequiredSgprs = RequiredNumberedSgprs + PreservedImplicitSgprs;
-  if (RequiredSgprs < *TotalSgprCount) {
-    log() << "hotswap: error: safe far return: SGPR accounting underflow for "
-          << KernelName << "\n";
+  if (!commitSafeSgprScratchBlock(Ctx, InstOffset, *Scratch, "safe far return"))
     return std::nullopt;
-  }
-  KernelPatchStats &Stats = Ctx.KernelStats[KernelName];
-  Stats.ExtraSgprs =
-      std::max(Stats.ExtraSgprs, RequiredSgprs - *TotalSgprCount);
-  const std::string Pair = "s[" + std::to_string(ScratchPair) + ":" +
-                           std::to_string(ScratchPair + 1) + "]";
+
+  const std::string Pair = "s[" + std::to_string(Scratch->Base) + ":" +
+                           std::to_string(Scratch->Base + 1) + "]";
   log() << "hotswap: safe far return at 0x" << utohexstr(InstOffset) << " via "
         << Pair << "\n";
   return std::move(*Bytes);
@@ -1029,6 +1149,13 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
   } else {
     log() << "hotswap: instruction patches disabled for this rewrite\n";
   }
+
+  // gfx1250 revision is recorded per kernel in the AMDGPU metadata note.
+  // Running a B0 object on A0 requires retagging that metadata even when no
+  // machine instruction needed rewriting. Native A0 code generation preserves
+  // s_clause and emits the same instructions as B0 for valid clauses.
+  if (Options.RunB0A0Patches && !Elf.updateGfx1250RevisionMetadata("A0"))
+    return AMD_COMGR_STATUS_ERROR;
 
   std::unique_ptr<WritableMemoryBuffer> Result;
   std::vector<Trampoline> Growth = Deferred;

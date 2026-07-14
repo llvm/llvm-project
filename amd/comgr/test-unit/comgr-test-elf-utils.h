@@ -63,6 +63,7 @@ struct KernelDescriptorElfOptions {
   uint32_t ComputePgmRsrc3 = 0;
   std::optional<std::string> MetadataKernelName;
   std::optional<unsigned> MetadataSgprCount;
+  std::optional<std::string> MetadataGfx1250Revision;
   bool MetadataOmitSgprCount = false;
   bool MetadataSgprCountAsString = false;
 };
@@ -92,6 +93,9 @@ makeAmdgpuMetadataBlob(const KernelDescriptorElfOptions &Options) {
       Kernel[".sgpr_count"] =
           static_cast<uint64_t>(Options.MetadataSgprCount.value_or(0));
   }
+  if (Options.MetadataGfx1250Revision)
+    Kernel[".gfx1250_revision"] =
+        Doc.getNode(*Options.MetadataGfx1250Revision, /*Copy=*/true);
   Kernels.push_back(Kernel);
   Root["amdhsa.kernels"] = Kernels;
 
@@ -157,9 +161,9 @@ makeKernelDescriptorElf(llvm::ArrayRef<uint8_t> Text,
   StrTab += ".kd";
   StrTab.push_back('\0');
 
-  const bool HasMetadataNote = Options.MetadataSgprCount ||
-                               Options.MetadataOmitSgprCount ||
-                               Options.MetadataSgprCountAsString;
+  const bool HasMetadataNote =
+      Options.MetadataSgprCount || Options.MetadataGfx1250Revision ||
+      Options.MetadataOmitSgprCount || Options.MetadataSgprCountAsString;
   std::vector<uint8_t> MetadataNote;
   if (HasMetadataNote) {
     std::string MetadataBlob = makeAmdgpuMetadataBlob(Options);

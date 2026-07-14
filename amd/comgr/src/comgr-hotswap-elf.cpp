@@ -15,6 +15,7 @@
 
 #include "comgr-hotswap-internal.h"
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/MsgPackDocument.h"
@@ -118,17 +119,22 @@ readSgprCountMetadataNode(const msgpack::DocNode &SgprNode,
   return readUnsignedMetadataNode(SgprNode, KernelName, ".sgpr_count", Context);
 }
 
-static MetadataSgprUpdateStatus
-updateKernelMetadataSgprCount(uint8_t *Elf, const ELFFileT &File,
-                              StringRef KernelName, unsigned RequiredSgprs) {
+using MetadataNoteMutator = function_ref<std::optional<bool>(
+    msgpack::Document &, msgpack::MapDocNode &)>;
+
+/// Parse each AMDGPU metadata note, invoke \p Mutator on its root map, and
+/// write changed notes back in place after checking that their encoded size and
+/// destination remain valid. Returns false after logging a specific failure.
+static bool rewriteMetadataNotes(uint8_t *Elf, const ELFFileT &File,
+                                 StringRef Context, MetadataNoteMutator Mutator,
+                                 bool &SawMetadataNote) {
   Expected<ELFT::PhdrRange> PhdrsOrErr = File.program_headers();
   if (!PhdrsOrErr) {
-    log() << "hotswap: error: updateKernelMetadataSgprCount: failed to read "
-          << "program headers: " << toString(PhdrsOrErr.takeError()) << "\n";
-    return MetadataSgprUpdateStatus::Error;
+    log() << "hotswap: error: " << Context << ": failed to read program "
+          << "headers: " << toString(PhdrsOrErr.takeError()) << "\n";
+    return false;
   }
 
-  bool SawMetadataNote = false;
   for (const ELFT::Phdr &Phdr : *PhdrsOrErr) {
     if (Phdr.p_type != ELF::PT_NOTE)
       continue;
@@ -142,93 +148,116 @@ updateKernelMetadataSgprCount(uint8_t *Elf, const ELFFileT &File,
 
       ArrayRef<uint8_t> Desc = Note.getDesc(4);
       if (Desc.empty()) {
-        log() << "hotswap: error: updateKernelMetadataSgprCount: AMDGPU "
-              << "metadata note has an empty descriptor.\n";
-        return MetadataSgprUpdateStatus::Error;
+        log() << "hotswap: error: " << Context
+              << ": AMDGPU metadata note has an empty descriptor.\n";
+        return false;
       }
 
       StringRef Blob(reinterpret_cast<const char *>(Desc.data()), Desc.size());
       msgpack::Document Doc;
       if (!Doc.readFromBlob(Blob, false)) {
-        log() << "hotswap: error: updateKernelMetadataSgprCount: failed to "
-              << "parse AMDGPU metadata note.\n";
-        return MetadataSgprUpdateStatus::Error;
+        log() << "hotswap: error: " << Context
+              << ": failed to parse AMDGPU metadata note.\n";
+        return false;
       }
 
       msgpack::DocNode Root = Doc.getRoot();
       if (!Root.isMap()) {
-        log() << "hotswap: error: updateKernelMetadataSgprCount: AMDGPU "
-              << "metadata root is not a map.\n";
-        return MetadataSgprUpdateStatus::Error;
+        log() << "hotswap: error: " << Context
+              << ": AMDGPU metadata root is not a map.\n";
+        return false;
       }
 
-      msgpack::MapDocNode &RootMap = Root.getMap();
-      msgpack::DocNode::MapTy::iterator KernelsIt =
-          RootMap.find("amdhsa.kernels");
-      if (KernelsIt == RootMap.end() || !KernelsIt->second.isArray())
+      std::optional<bool> Changed = Mutator(Doc, Root.getMap());
+      if (!Changed)
+        return false;
+      if (!*Changed)
         continue;
 
-      msgpack::ArrayDocNode &KernelArray = KernelsIt->second.getArray();
-      for (msgpack::DocNode &KNode : KernelArray) {
-        if (!KNode.isMap())
-          continue;
-
-        msgpack::MapDocNode &KMap = KNode.getMap();
-        msgpack::DocNode::MapTy::iterator NameIt = KMap.find(".name");
-        if (NameIt == KMap.end() || !NameIt->second.isString() ||
-            NameIt->second.getString() != KernelName)
-          continue;
-
-        msgpack::DocNode::MapTy::iterator SgprIt = KMap.find(".sgpr_count");
-        if (SgprIt == KMap.end()) {
-          log() << "hotswap: error: updateKernelMetadataSgprCount: metadata "
-                << "for kernel '" << KernelName << "' has no .sgpr_count.\n";
-          return MetadataSgprUpdateStatus::Error;
-        }
-
-        std::optional<unsigned> CurrentSgprs = readSgprCountMetadataNode(
-            SgprIt->second, KernelName, "updateKernelMetadataSgprCount");
-        if (!CurrentSgprs)
-          return MetadataSgprUpdateStatus::Error;
-        if (RequiredSgprs <= *CurrentSgprs)
-          return MetadataSgprUpdateStatus::Found;
-
-        SgprIt->second = static_cast<uint64_t>(RequiredSgprs);
-        std::string NewBlob;
-        Doc.writeToBlob(NewBlob);
-        if (NewBlob.size() != Blob.size()) {
-          log() << "hotswap: error: updateKernelMetadataSgprCount: updating "
-                << ".sgpr_count for '" << KernelName << "' changes metadata "
-                << "note size from " << Blob.size() << " to " << NewBlob.size()
-                << " bytes; in-place rewrite cannot preserve ELF layout.\n";
-          return MetadataSgprUpdateStatus::Error;
-        }
-
-        const uint8_t *DescBegin = Desc.data();
-        if (DescBegin < File.base() || DescBegin >= File.end()) {
-          log() << "hotswap: error: updateKernelMetadataSgprCount: metadata "
-                << "descriptor pointer is outside the ELF buffer.\n";
-          return MetadataSgprUpdateStatus::Error;
-        }
-        size_t DescOffset = DescBegin - File.base();
-        if (Desc.size() > File.getBufSize() ||
-            DescOffset > File.getBufSize() - Desc.size()) {
-          log() << "hotswap: error: updateKernelMetadataSgprCount: metadata "
-                << "descriptor extends past the ELF buffer.\n";
-          return MetadataSgprUpdateStatus::Error;
-        }
-
-        std::memcpy(Elf + DescOffset, NewBlob.data(), NewBlob.size());
-        return MetadataSgprUpdateStatus::Found;
+      std::string NewBlob;
+      Doc.writeToBlob(NewBlob);
+      if (NewBlob.size() != Blob.size()) {
+        log() << "hotswap: error: " << Context
+              << ": updating AMDGPU metadata changes note size from "
+              << Blob.size() << " to " << NewBlob.size()
+              << " bytes; in-place rewrite cannot preserve ELF layout.\n";
+        return false;
       }
+
+      const uint8_t *DescBegin = Desc.data();
+      if (DescBegin < File.base() || DescBegin >= File.end()) {
+        log() << "hotswap: error: " << Context
+              << ": metadata descriptor pointer is outside the ELF buffer.\n";
+        return false;
+      }
+      size_t DescOffset = DescBegin - File.base();
+      if (Desc.size() > File.getBufSize() ||
+          DescOffset > File.getBufSize() - Desc.size()) {
+        log() << "hotswap: error: " << Context
+              << ": metadata descriptor extends past the ELF buffer.\n";
+        return false;
+      }
+      std::memcpy(Elf + DescOffset, NewBlob.data(), NewBlob.size());
     }
 
     if (Err) {
-      log() << "hotswap: error: updateKernelMetadataSgprCount: failed to "
-            << "iterate AMDGPU notes: " << toString(std::move(Err)) << "\n";
-      return MetadataSgprUpdateStatus::Error;
+      log() << "hotswap: error: " << Context
+            << ": failed to iterate AMDGPU notes: " << toString(std::move(Err))
+            << "\n";
+      return false;
     }
   }
+  return true;
+}
+
+static MetadataSgprUpdateStatus
+updateKernelMetadataSgprCount(uint8_t *Elf, const ELFFileT &File,
+                              StringRef KernelName, unsigned RequiredSgprs) {
+  bool SawMetadataNote = false;
+  bool Found = false;
+  bool Rewritten = rewriteMetadataNotes(
+      Elf, File, "updateKernelMetadataSgprCount",
+      [&](msgpack::Document &,
+          msgpack::MapDocNode &RootMap) -> std::optional<bool> {
+        msgpack::DocNode::MapTy::iterator KernelsIt =
+            RootMap.find("amdhsa.kernels");
+        if (KernelsIt == RootMap.end() || !KernelsIt->second.isArray())
+          return false;
+
+        for (msgpack::DocNode &KNode : KernelsIt->second.getArray()) {
+          if (!KNode.isMap())
+            continue;
+          msgpack::MapDocNode &KMap = KNode.getMap();
+          msgpack::DocNode::MapTy::iterator NameIt = KMap.find(".name");
+          if (NameIt == KMap.end() || !NameIt->second.isString() ||
+              NameIt->second.getString() != KernelName)
+            continue;
+
+          Found = true;
+          msgpack::DocNode::MapTy::iterator SgprIt = KMap.find(".sgpr_count");
+          if (SgprIt == KMap.end()) {
+            log() << "hotswap: error: updateKernelMetadataSgprCount: metadata "
+                  << "for kernel '" << KernelName << "' has no .sgpr_count.\n";
+            return std::nullopt;
+          }
+
+          std::optional<unsigned> CurrentSgprs = readSgprCountMetadataNode(
+              SgprIt->second, KernelName, "updateKernelMetadataSgprCount");
+          if (!CurrentSgprs)
+            return std::nullopt;
+          if (RequiredSgprs <= *CurrentSgprs)
+            return false;
+
+          SgprIt->second = static_cast<uint64_t>(RequiredSgprs);
+          return true;
+        }
+        return false;
+      },
+      SawMetadataNote);
+  if (!Rewritten)
+    return MetadataSgprUpdateStatus::Error;
+  if (Found)
+    return MetadataSgprUpdateStatus::Found;
 
   if (SawMetadataNote) {
     log() << "hotswap: error: updateKernelMetadataSgprCount: AMDGPU metadata "
@@ -236,6 +265,41 @@ updateKernelMetadataSgprCount(uint8_t *Elf, const ELFFileT &File,
     return MetadataSgprUpdateStatus::Error;
   }
   return MetadataSgprUpdateStatus::NotFound;
+}
+
+bool ElfView::updateGfx1250RevisionMetadata(StringRef Revision) {
+  bool SawMetadataNote = false;
+  return rewriteMetadataNotes(
+      data(), File, "updateGfx1250RevisionMetadata",
+      [&](msgpack::Document &Doc,
+          msgpack::MapDocNode &RootMap) -> std::optional<bool> {
+        msgpack::DocNode::MapTy::iterator KernelsIt =
+            RootMap.find("amdhsa.kernels");
+        if (KernelsIt == RootMap.end() || !KernelsIt->second.isArray())
+          return false;
+
+        bool Changed = false;
+        for (msgpack::DocNode &KNode : KernelsIt->second.getArray()) {
+          if (!KNode.isMap())
+            continue;
+          msgpack::MapDocNode &KMap = KNode.getMap();
+          msgpack::DocNode::MapTy::iterator RevisionIt =
+              KMap.find(".gfx1250_revision");
+          if (RevisionIt == KMap.end())
+            continue;
+          if (!RevisionIt->second.isString()) {
+            log() << "hotswap: error: updateGfx1250RevisionMetadata: "
+                  << ".gfx1250_revision is not a string.\n";
+            return std::nullopt;
+          }
+          if (RevisionIt->second.getString() == Revision)
+            continue;
+          RevisionIt->second = Doc.getNode(Revision, /*Copy=*/true);
+          Changed = true;
+        }
+        return Changed;
+      },
+      SawMetadataNote);
 }
 
 // -- applyByteReplace ---------------------------------------------------------
@@ -461,34 +525,18 @@ std::string ElfView::findKernelAtAddress(uint64_t TextAddress) const {
 
 std::optional<ElfView::FunctionTextRange>
 ElfView::findFunctionTextRangeAtOffset(uint64_t TextOffset) const {
-  for (const ELFT::Shdr &SymShdr : Sections) {
-    if (SymShdr.sh_type != ELF::SHT_SYMTAB &&
-        SymShdr.sh_type != ELF::SHT_DYNSYM)
+  std::optional<FunctionTextRange> Best;
+  for (const FunctionTextRange &Range : functionTextRanges()) {
+    if (Range.Begin < textAddr() || Range.End < textAddr())
       continue;
-
-    Expected<ELFT::SymRange> SymsOrErr = File.symbols(&SymShdr);
-    if (!SymsOrErr) {
-      consumeError(SymsOrErr.takeError());
+    uint64_t Begin = Range.Begin - textAddr();
+    uint64_t End = Range.End - textAddr();
+    if (TextOffset < Begin || TextOffset >= End)
       continue;
-    }
-
-    for (const ELFT::Sym &Sym : *SymsOrErr) {
-      if (Sym.getType() != ELF::STT_FUNC && Sym.getType() != ELF::STT_GNU_IFUNC)
-        continue;
-      if (Sym.st_shndx != TextSectionIndex || Sym.st_size == 0)
-        continue;
-      if (Sym.st_value < textAddr())
-        continue;
-
-      uint64_t Start = Sym.st_value - textAddr();
-      if (Sym.st_size > std::numeric_limits<uint64_t>::max() - Start)
-        continue;
-      uint64_t End = Start + Sym.st_size;
-      if (TextOffset >= Start && TextOffset < End)
-        return ElfView::FunctionTextRange{Start, End};
-    }
+    if (!Best || Begin > Best->Begin)
+      Best = FunctionTextRange{Begin, End};
   }
-  return std::nullopt;
+  return Best;
 }
 
 // -- ElfView::findKernelDescriptor --------------------------------------------
@@ -1190,8 +1238,7 @@ std::unique_ptr<WritableMemoryBuffer> addKernelEntryTrampolineSymbols(
   SmallVector<uint8_t> StrBlob, SymBlob;
   for (const KernelEntryTrampolineFixup &F : Fixups) {
     std::string Name = F.KernelName + ".stub";
-    uint32_t NameOff =
-        static_cast<uint32_t>(StrShdr.sh_size + StrBlob.size());
+    uint32_t NameOff = static_cast<uint32_t>(StrShdr.sh_size + StrBlob.size());
     StrBlob.append(Name.begin(), Name.end());
     StrBlob.push_back(0);
 
