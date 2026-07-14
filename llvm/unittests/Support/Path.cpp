@@ -513,6 +513,20 @@ TEST(Support, HomeDirectoryWithNoEnv) {
   EXPECT_EQ(PwDir, HomeDir);
 }
 
+TEST(Support, HomeDirectoryWithEmptyEnv) {
+  WithEnv Env("HOME", "");
+
+  // Don't run the test if we have nothing to compare against.
+  struct passwd *pw = getpwuid(getuid());
+  if (!pw || !pw->pw_dir)
+    GTEST_SKIP();
+  std::string PwDir = pw->pw_dir;
+
+  SmallString<128> HomeDir;
+  EXPECT_TRUE(path::home_directory(HomeDir));
+  EXPECT_EQ(PwDir, HomeDir);
+}
+
 TEST(Support, ConfigDirectoryWithEnv) {
   WithEnv Env("XDG_CONFIG_HOME", "/xdg/config");
 
