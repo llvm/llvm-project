@@ -85,9 +85,9 @@ INTERCEPTOR(void, free_aligned_sized, void* ptr, uptr alignment, uptr size) {
 
 #  if SANITIZER_AIX
 // __linux_vec_malloc, __linux_vec_calloc, and __linux_realloc are XL compiler
-// internal symbols emitted instead of the standard vec_malloc/vec_calloc/realloc
-// names. Intercept them so that ASan tracks allocations made through the XL
-// runtime.
+// internal symbols emitted instead of the standard
+// vec_malloc/vec_calloc/realloc names. Intercept them so that ASan tracks
+// allocations made through the XL runtime.
 INTERCEPTOR(void*, __linux_vec_malloc, uptr size) {
   if (DlsymAlloc::Use())
     return DlsymAlloc::Allocate(size, 16);
