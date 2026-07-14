@@ -2006,9 +2006,10 @@ void SymbolTableBaseSection::finalizeContents() {
 // The ELF spec requires local symbols to precede globals. We additionally group
 // the locals by file, each led by its first STT_FILE.
 //
-// symbols[firstGlobalIdx, sttFileIdx) can be converted local: move them after
-// the per-file groups, behind the synthetic STT_FILE sttFileSym. Locals added
-// later (e.g. thunks) fall outside that range and stay in their file's group.
+// symbols[firstGlobalIdx, synthSttFileIdx) can be converted local: move them
+// after the per-file groups, behind the synthetic STT_FILE synthSttFileSym.
+// Locals added later (e.g. thunks) fall outside that range and stay in their
+// file's group.
 void SymbolTableBaseSection::sortSymTabSymbols() {
   MapVector<InputFile *, SmallVector<SymbolTableEntry, 0>> arr;
   SmallVector<SymbolTableEntry, 0> localized, globals;
@@ -2017,9 +2018,9 @@ void SymbolTableBaseSection::sortSymTabSymbols() {
     const SymbolTableEntry &s = symbols[i];
     if (!s.sym->isLocal())
       globals.push_back(s);
-    else if (sttFileSym && i >= firstGlobalIdx && i < sttFileIdx)
+    else if (synthSttFileSym && i >= firstGlobalIdx && i < synthSttFileIdx)
       localized.push_back(s);
-    else if (s.sym != sttFileSym)
+    else if (s.sym != synthSttFileSym)
       arr[s.sym->file].push_back(s);
     else
       fileEntry = s;
@@ -2029,7 +2030,7 @@ void SymbolTableBaseSection::sortSymTabSymbols() {
   for (auto &p : arr)
     for (SymbolTableEntry &entry : p.second)
       *i++ = entry;
-  if (sttFileSym) {
+  if (synthSttFileSym) {
     *i++ = fileEntry;
     i = std::copy(localized.begin(), localized.end(), i);
   }
@@ -2049,10 +2050,11 @@ void SymbolTableBaseSection::maybeAddSttFile() {
   if (llvm::any_of(
           syms.drop_front(firstGlobalIdx),
           [](const SymbolTableEntry &s) { return s.sym->isLocal(); })) {
-    sttFileIdx = symbols.size();
-    sttFileSym = makeDefined(ctx, ctx.internalFile, "", STB_LOCAL, STV_DEFAULT,
-                             STT_FILE, /*value=*/0, /*size=*/0, nullptr);
-    addSymbol(sttFileSym);
+    synthSttFileIdx = symbols.size();
+    synthSttFileSym =
+        makeDefined(ctx, ctx.internalFile, "", STB_LOCAL, STV_DEFAULT, STT_FILE,
+                    /*value=*/0, /*size=*/0, nullptr);
+    addSymbol(synthSttFileSym);
   }
 }
 

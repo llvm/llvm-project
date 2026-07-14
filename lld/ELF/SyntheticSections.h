@@ -673,13 +673,13 @@ protected:
 
   // Synthetic STT_FILE with an empty name, added by maybeAddSttFile and placed
   // by sortSymTabSymbols before all symbols demoted to STB_LOCAL.
-  Defined *sttFileSym = nullptr;
+  Defined *synthSttFileSym = nullptr;
 
-  // symbols[firstGlobalIdx, sttFileIdx) were originally non-local and may be
-  // converted to local. sttFileIdx is where sttFileSym lands. Locals added
-  // later (thunks via addSyntheticLocal) fall outside and stay grouped with
-  // their file.
-  size_t firstGlobalIdx = 0, sttFileIdx = 0;
+  // symbols[firstGlobalIdx, synthSttFileIdx) were originally non-local and may
+  // be converted to local. synthSttFileIdx is where synthSttFileSym lands.
+  // Locals added later (thunks via addSyntheticLocal) fall outside and stay
+  // grouped with their file.
+  size_t firstGlobalIdx = 0, synthSttFileIdx = 0;
 
   StringTableSection &strTabSec;
 
