@@ -2743,7 +2743,7 @@ const Init *CondOpInit::resolveReferences(Resolver &R) const {
     if (auto *NewCondVal = dyn_cast_or_null<IntInit>(
             NewCond->convertInitializerTo(IntRecTy::get(getRecordKeeper())))) {
       if (NewCondVal->getValue()) {
-        Changed = 1;
+        Changed = true;
         // Don't push the rest of the conds and values.
         break;
       }
