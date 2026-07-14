@@ -35,6 +35,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/Compiler.h"
 #include <type_traits>
 
 // preserve_none causes problems when asan is enabled on both AArch64 and other
@@ -131,7 +132,7 @@ bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index);
 bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
                   bool TargetIsUCharOrByte);
 bool CheckBCPResult(InterpState &S, const Pointer &Ptr);
-bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
+bool checkDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 bool CheckFunctionDecl(InterpState &S, CodePtr OpPC, const FunctionDecl *FD);
 bool CheckBitCast(InterpState &S, CodePtr OpPC, const Type *TargetType,
                   bool SrcIsVoidPtr);
@@ -146,28 +147,40 @@ bool isConstexprUnknown(const Pointer &P);
 bool isConstexprUnknown(const Block *B);
 bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestType,
                  bool IsReferenceCast);
+bool CastFloatingIntegralAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth,
+                            uint32_t FPOI);
+bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth,
+                             uint32_t FPOI);
 
 enum class ShiftDir { Left, Right };
+
+enum class ShiftFailure {
+  NegativeCount,
+  TooLarge,
+  NegativeLeftOperand,
+  DiscardsBits,
+};
+
+LLVM_ATTRIBUTE_NOINLINE bool diagnoseShiftFailure(InterpState &S, CodePtr OpPC,
+                                                  ShiftFailure Failure,
+                                                  const APSInt *Value = nullptr,
+                                                  unsigned Bits = 0);
 
 /// Checks if the shift operation is legal.
 template <ShiftDir Dir, typename LT, typename RT>
 bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
                 unsigned Bits) {
   if (RHS.isNegative()) {
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS.toAPSInt();
-    if (!S.noteUndefinedBehavior())
+    const APSInt Value = RHS.toAPSInt();
+    if (!diagnoseShiftFailure(S, OpPC, ShiftFailure::NegativeCount, &Value))
       return false;
   }
 
   // C++11 [expr.shift]p1: Shift width must be less than the bit width of
   // the shifted type.
   if (Bits > 1 && RHS >= Bits) {
-    const Expr *E = S.Current->getExpr(OpPC);
-    const APSInt Val = RHS.toAPSInt();
-    QualType Ty = E->getType();
-    S.CCEDiag(E, diag::note_constexpr_large_shift) << Val << Ty << Bits;
-    if (!S.noteUndefinedBehavior())
+    const APSInt Value = RHS.toAPSInt();
+    if (!diagnoseShiftFailure(S, OpPC, ShiftFailure::TooLarge, &Value, Bits))
       return false;
   }
 
@@ -176,15 +189,13 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
       // C++11 [expr.shift]p2: A signed left shift must have a non-negative
       // operand, and must not overflow the corresponding unsigned type.
       if (LHS.isNegative()) {
-        const Expr *E = S.Current->getExpr(OpPC);
-        S.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
-        if (!S.noteUndefinedBehavior())
+        const APSInt Value = LHS.toAPSInt();
+        if (!diagnoseShiftFailure(S, OpPC, ShiftFailure::NegativeLeftOperand,
+                                  &Value))
           return false;
       } else if (LHS.toUnsigned().countLeadingZeros() <
                  static_cast<unsigned>(RHS)) {
-        const Expr *E = S.Current->getExpr(OpPC);
-        S.CCEDiag(E, diag::note_constexpr_lshift_discards);
-        if (!S.noteUndefinedBehavior())
+        if (!diagnoseShiftFailure(S, OpPC, ShiftFailure::DiscardsBits))
           return false;
       }
     }
@@ -1616,7 +1627,7 @@ bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
 }
 
 bool EndLifetime(InterpState &S, CodePtr OpPC);
-bool EndLifetimePop(InterpState &S, CodePtr OpPC);
+bool PseudoDtor(InterpState &S, CodePtr OpPC);
 bool StartThisLifetime(InterpState &S);
 bool StartThisLifetime1(InterpState &S);
 bool MarkDestroyed(InterpState &S, CodePtr OpPC);
@@ -2947,50 +2958,6 @@ bool CastFloatingIntegral(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
   }
 }
 
-static inline bool CastFloatingIntegralAP(InterpState &S, CodePtr OpPC,
-                                          uint32_t BitWidth, uint32_t FPOI) {
-  const Floating &F = S.Stk.pop<Floating>();
-
-  APSInt Result(BitWidth, /*IsUnsigned=*/true);
-  auto Status = F.convertToInteger(Result);
-
-  // Float-to-Integral overflow check.
-  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite() &&
-      !handleOverflow(S, OpPC, F.getAPFloat()))
-    return false;
-
-  FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
-
-  auto ResultAP = S.allocAP<IntegralAP<false>>(BitWidth);
-  ResultAP.copy(Result);
-
-  S.Stk.push<IntegralAP<false>>(ResultAP);
-
-  return CheckFloatResult(S, OpPC, F, Status, FPO);
-}
-
-static inline bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC,
-                                           uint32_t BitWidth, uint32_t FPOI) {
-  const Floating &F = S.Stk.pop<Floating>();
-
-  APSInt Result(BitWidth, /*IsUnsigned=*/false);
-  auto Status = F.convertToInteger(Result);
-
-  // Float-to-Integral overflow check.
-  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite() &&
-      !handleOverflow(S, OpPC, F.getAPFloat()))
-    return false;
-
-  FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
-
-  auto ResultAP = S.allocAP<IntegralAP<true>>(BitWidth);
-  ResultAP.copy(Result);
-
-  S.Stk.push<IntegralAP<true>>(ResultAP);
-
-  return CheckFloatResult(S, OpPC, F, Status, FPO);
-}
-
 bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
                                 const Pointer &Ptr, unsigned BitWidth);
 bool CheckIntegralAddressCast(InterpState &S, CodePtr OpPC, unsigned BitWidth);
@@ -4103,7 +4070,7 @@ bool DiagTypeid(InterpState &S, CodePtr OpPC);
 
 inline bool CheckDestruction(InterpState &S, CodePtr OpPC) {
   const auto &Ptr = S.Stk.peek<Pointer>();
-  return CheckDestructor(S, OpPC, Ptr);
+  return checkDestructor(S, OpPC, Ptr);
 }
 
 //===----------------------------------------------------------------------===//
