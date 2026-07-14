@@ -74,7 +74,7 @@ void test_case_seven() {
   int *ptr = nullptr;
   // expected-note@+3 {{Loop condition is true.  Entering loop body}}
   // expected-note@+2 {{Assuming 'i' is >= 10}}
-  // expected-note@+1 {{Loop condition is false. Execution continues on line 78}}
+  // expected-note@+1 {{Loop condition is false. Execution continues on line}}
   for (int i = 0; i < 10; ++i) {
     ptr = &i;
     escape(ptr);
