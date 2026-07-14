@@ -544,12 +544,12 @@ bool AMDGPUEarlyRegisterSpilling::isLegalCandidate(Register CandidateReg) {
          !IsRestore;
 }
 
-SmallVector<std::tuple<Register, int64_t, LaneBitmask>>
+SmallVector<RegisterSpillCandidate>
 AMDGPUEarlyRegisterSpilling::getCandidates(MachineInstr *CurMI,
                                            GCNDownwardRPTracker &RPTracker) {
   MachineBasicBlock *CurMBB = CurMI->getParent();
   MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
-  SmallVector<std::tuple<Register, int64_t, LaneBitmask>> RegCandidates;
+  SmallVector<RegisterSpillCandidate> RegCandidates;
   DenseMap<Register, unsigned> RegNumOfUses;
   MachineLoop *OutermostLoopOfCurLoop = nullptr;
   if (CurLoop)
@@ -601,8 +601,7 @@ AMDGPUEarlyRegisterSpilling::getCandidates(MachineInstr *CurMI,
     // 'RegCandidates'.
     auto NextUseDist = NUA->getShortestDistance(CandidateReg, *CurMI,
                                                 UsesForNextUseDistCalculation);
-    RegCandidates.push_back(
-        std::make_tuple(CandidateReg, NextUseDist.getRawValue(), Mask));
+    RegCandidates.push_back({CandidateReg, NextUseDist.getRawValue(), Mask});
     LLVM_DEBUG(dbgs() << CandidateCnt << ": Candidate register = "
                       << printReg(CandidateReg, TRI) << " with distance = "
                       << NextUseDist.getRawValue() << "\n");
@@ -615,22 +614,19 @@ AMDGPUEarlyRegisterSpilling::getCandidates(MachineInstr *CurMI,
   // Return the registers with the longest next-use distance.
   // TODO: Parametrize the next-use distance in order to take into consideration
   // the number of uses, the uses inside a loop etc.
-  llvm::sort(RegCandidates, [&](auto &Tuple1, auto &Tuple2) {
-    int64_t NUA1 = std::get<1>(Tuple1);
-    int64_t NUA2 = std::get<1>(Tuple2);
-    if (NUA1 != NUA2)
-      return NUA1 > NUA2;
-    Register Reg1 = std::get<0>(Tuple1);
-    Register Reg2 = std::get<0>(Tuple2);
-    unsigned NumOfUses1 = RegNumOfUses[Reg1];
-    unsigned NumOfUses2 = RegNumOfUses[Reg2];
+  llvm::sort(RegCandidates, [&](const RegisterSpillCandidate &C1,
+                                const RegisterSpillCandidate &C2) {
+    if (C1.NextUseDistance != C2.NextUseDistance)
+      return C1.NextUseDistance > C2.NextUseDistance;
+    unsigned NumOfUses1 = RegNumOfUses[C1.Reg];
+    unsigned NumOfUses2 = RegNumOfUses[C2.Reg];
     if (NumOfUses1 == NumOfUses2)
-      return Reg1 < Reg2;
+      return C1.Reg < C2.Reg;
 
     return NumOfUses1 < NumOfUses2;
   });
 
-  SmallVector<std::tuple<Register, int64_t, LaneBitmask>> FinalCandidates;
+  SmallVector<RegisterSpillCandidate> FinalCandidates;
   FinalCandidates.reserve(RegCandidates.size());
   for (const auto &Candidate : RegCandidates)
     FinalCandidates.push_back(Candidate);
@@ -1217,15 +1213,18 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
   // the Head of the group to the use(s) in the high register pressure area.
   //
   SmallVector<std::unique_ptr<SpillOrRestoreCandidate>> FinalCandidates;
-  SmallVector<std::tuple<Register, int64_t, LaneBitmask>>
-      InitialVectorOfCandidates = getCandidates(CurMI, RPTracker);
+  SmallVector<RegisterSpillCandidate> InitialVectorOfCandidates =
+      getCandidates(CurMI, RPTracker);
   static constexpr unsigned LiveRegsWindow = 50;
   unsigned NumOfCandidates = std::min(
       (unsigned)InitialVectorOfCandidates.size(), NumOfSpills + LiveRegsWindow);
-  ArrayRef<std::tuple<Register, int64_t, LaneBitmask>> Candidates(
+  ArrayRef<RegisterSpillCandidate> Candidates(
       InitialVectorOfCandidates.begin(),
       InitialVectorOfCandidates.begin() + NumOfCandidates);
-  for (const auto &[CandidateReg, NextUseDist, Mask] : Candidates) {
+  for (const auto &Candidate : Candidates) {
+    Register CandidateReg = Candidate.Reg;
+    int64_t NextUseDist = Candidate.NextUseDistance;
+    LaneBitmask Mask = Candidate.Mask;
     // TODO: Check if this is needed.
     unsigned NumOfCoveredRegs = SIRegisterInfo::getNumCoveredRegs(Mask);
     unsigned NumOfSubregisters = TRI->getRegSizeInBits(CandidateReg, *MRI) / 32;

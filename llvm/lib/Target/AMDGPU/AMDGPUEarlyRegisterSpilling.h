@@ -34,6 +34,12 @@ using namespace llvm;
 
 using SetVectorType = SmallSetVector<MachineInstr *, 32>;
 
+struct RegisterSpillCandidate {
+  Register Reg;
+  int64_t NextUseDistance;
+  LaneBitmask Mask;
+};
+
 /// Helper data structure for grouping together uses where the head of the group
 /// dominates all the other uses in the group.
 class DomGroup {
@@ -125,8 +131,7 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
 
   /// Return the registers with the longest next-use distance that we need to
   /// spill. \p CurMI is the high-register-pressure point.
-  /// Returns a tuple of (Register, NextUseDistance, LaneBitmask).
-  SmallVector<std::tuple<Register, int64_t, LaneBitmask>>
+  SmallVector<RegisterSpillCandidate>
   getCandidates(MachineInstr *CurMI, GCNDownwardRPTracker &RPTracker);
 
   /// Return where we have to spill \p RegToSpill. It can be one of:
