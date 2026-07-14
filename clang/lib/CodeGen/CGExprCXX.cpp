@@ -2108,8 +2108,18 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
   //     operator delete are both irrelevant to the trigger.
   if (E->isGlobalDelete() && CGM.getTarget().getCXXABI().isMicrosoft()) {
     const CXXRecordDecl *RD = E->getDestroyedType()->getAsCXXRecordDecl();
-    if (RD && RD->hasDefinition() && !RD->hasTrivialDestructor())
+    if (RD && RD->hasDefinition() && !RD->hasTrivialDestructor()) {
       CGM.noteDirectGlobalDelete();
+      // Ensure a __global_delete wrapper (and thus a strong forwarding body)
+      // is emitted in THIS TU for the resolved global ::operator delete, even
+      // when no vector deleting destructor here references it. Without this, a
+      // TU that only does ::delete (with the deleting destructor defined in
+      // another TU) would emit no forwarder, leaving the wrapper bound to the
+      // trapping empty fallback and crashing at runtime.
+      if (const FunctionDecl *OD = E->getOperatorDelete();
+          OD && !isa<CXXMethodDecl>(OD))
+        CGM.getOrCreateMSVCGlobalDeleteWrapper(OD);
+    }
   }
 
   // Null check the pointer.
