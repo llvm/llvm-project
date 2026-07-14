@@ -199,56 +199,6 @@ jobs:
           path: |
             comments-Windows-AMD64
 
-  premerge-check-macos:
-    name: MacOS Premerge Checks
-    runs-on: macos-14
-    if: >-
-      github.repository_owner == 'llvm' &&
-      (startswith(github.ref_name, 'release/') ||
-       startswith(github.base_ref, 'release/')) &&
-      (github.event_name != 'pull_request' || github.event.action != 'closed')
-    steps:
-      - name: Checkout LLVM
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-          fetch-depth: 2
-      - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@33522472633dbd32578e909b315f5ee43ba878ce # v1.2.22
-        with:
-          max-size: "2000M"
-      - name: Install Ninja
-        run: |
-          brew install ninja
-      - name: Build and Test
-        run: |
-          source <(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py)
-
-          if [[ "${projects_to_build}" == "" ]]; then
-            echo "No projects to build"
-            exit 0
-          fi
-
-          echo "Building projects: ${projects_to_build}"
-          echo "Running project checks targets: ${project_check_targets}"
-
-          # -DLLVM_DISABLE_ASSEMBLY_FILES=ON is for
-          # https://github.com/llvm/llvm-project/issues/81967
-          # Disable sharding in lit so that the LIT_XFAIL environment var works.
-          cmake -G Ninja \
-                -B build \
-                -S llvm \
-                -DLLVM_ENABLE_PROJECTS="${projects_to_build}" \
-                -DLLVM_DISABLE_ASSEMBLY_FILES=ON \
-                -DCMAKE_BUILD_TYPE=Release \
-                -DLLDB_INCLUDE_TESTS=OFF \
-                -DLLVM_ENABLE_ASSERTIONS=ON \
-                -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-                -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-
-          # The libcxx tests fail, so we are skipping the runtime targets.
-          ninja -C build ${project_check_targets}
-
   premerge-compute-macos-self-hosted:
     name: Compute macOS Projects
     if: >-
