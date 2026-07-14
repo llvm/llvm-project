@@ -12,11 +12,7 @@ from lldbsuite.test.decorators import (
 )
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase, DAPTestSession
-from lldbsuite.test.tools.lldb_dap.dap_types import (
-    LaunchArgs,
-    StoppedEvent,
-    ThreadsArgs,
-)
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs, StoppedEvent, ThreadsArgs
 
 
 @skipIfWindows  # This is flakey on Windows: llvm.org/pr24668, llvm.org/pr38373

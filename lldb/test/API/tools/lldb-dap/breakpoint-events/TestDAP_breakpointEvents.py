@@ -10,14 +10,14 @@ from lldbsuite.test.decorators import (
     skipIfWindows,
 )
 from lldbsuite.test.lldbtest import line_number
-from lldbsuite.test.tools.lldb_dap.dap_types import (
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import (
     Breakpoint,
     BreakpointEvent,
     BreakpointReason,
     Event,
     LaunchArgs,
 )
-from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
 
 
 @skipIfTargetDoesNotSupportSharedLibraries()

@@ -9,8 +9,8 @@ from lldbsuite.test.decorators import (
     skipIfWindows,
 )
 from lldbsuite.test.lldbtest import line_number
-from lldbsuite.test.tools.lldb_dap.dap_types import LaunchArgs
-from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 
 
 @skipIfTargetDoesNotSupportSharedLibraries()
