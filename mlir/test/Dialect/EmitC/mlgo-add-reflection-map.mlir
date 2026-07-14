@@ -7,7 +7,6 @@ emitc.class @foo {
   emitc.field @fieldName0 : !emitc.array<1xf32>  {emitc.field_ref = ["another_feature"]}
   emitc.field @fieldName1 : !emitc.array<1xf32>  {emitc.field_ref = ["some_feature"]}
   emitc.func @"operator()"() {
-    %0 = get_field @fieldName0 : !emitc.array<1xf32>
     return
   }
 }
@@ -23,7 +22,6 @@ emitc.class @foo {
 // CHECK-NEXT:      return %[[VAL0]] : !emitc.ptr<!emitc.opaque<"char">>
 // CHECK-NEXT:    }
 // CHECK-NEXT:    emitc.func @"operator()"() {
-// CHECK-NEXT:      %{{.*}} = get_field @fieldName0 : !emitc.array<1xf32>
 // CHECK-NEXT:      return
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }
