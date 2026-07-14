@@ -1007,6 +1007,15 @@ LogicalResult MmaOp::verify() {
       expectedResult.push_back(f16x2x2StructTy);
       expectedResult.push_back(f32x4StructTy);
       break;
+    case MMATypes::e4m3:
+    case MMATypes::e5m2:
+      // FP8 (m16n8k16 / m16n8k32) packs 4 values per 32-bit register, same
+      // as s8/u8, but the accumulator is f16 or f32 (not integer).
+      kFactor = 16;
+      multiplicandFragType = i32Ty;
+      expectedResult.push_back(f16x2x2StructTy);
+      expectedResult.push_back(f32x4StructTy);
+      break;
     case MMATypes::s4:
     case MMATypes::u4:
       kFactor = 32;
