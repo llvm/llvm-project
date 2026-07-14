@@ -255,6 +255,9 @@ template <typename... T> constexpr bool isMUBUF(const T &...O) {
 template <typename... T> constexpr bool isMTBUF(const T &...O) {
   return getTSFlags(O...) & MTBUF;
 }
+template <typename... T> constexpr bool isBuffer(const T &...O) {
+  return getTSFlags(O...) & (MUBUF | MTBUF);
+}
 template <typename... T> constexpr bool isSMRD(const T &...O) {
   return getTSFlags(O...) & SMRD;
 }

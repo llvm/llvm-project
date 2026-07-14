@@ -17,6 +17,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/ScopeExit.h"
 #include <optional>
 
 #define DEBUG_TYPE "clang-tidy"
@@ -118,6 +119,8 @@ static const NamedDecl *getFailureForNamedDecl(const NamedDecl *ND) {
   return ND;
 }
 
+using RecursionProtectionSet = llvm::SmallPtrSet<const CXXRecordDecl *, 4>;
+
 /// Returns a decl matching the \p DeclName in \p Parent or one of its base
 /// classes. If \p AggressiveTemplateLookup is `true` then it will check
 /// template dependent base classes as well.
@@ -125,9 +128,17 @@ static const NamedDecl *getFailureForNamedDecl(const NamedDecl *ND) {
 /// flag indicating the multiple resolutions.
 static NameLookup findDeclInBases(const CXXRecordDecl &Parent,
                                   StringRef DeclName,
-                                  bool AggressiveTemplateLookup) {
+                                  bool AggressiveTemplateLookup,
+                                  RecursionProtectionSet &Visited) {
   if (!Parent.hasDefinition())
     return NameLookup(nullptr);
+
+  const auto *Definition = Parent.getDefinition();
+  if (!Visited.insert(Definition).second)
+    return NameLookup(nullptr);
+  auto RemoveFromVisited =
+      llvm::scope_exit([&Visited, Definition] { Visited.erase(Definition); });
+
   if (const NamedDecl *InClassRef = findDecl(Parent, DeclName))
     return NameLookup(InClassRef);
   const NamedDecl *Found = nullptr;
@@ -144,8 +155,8 @@ static NameLookup findDeclInBases(const CXXRecordDecl &Parent,
     }
     if (!Record)
       continue;
-    if (auto Search =
-            findDeclInBases(*Record, DeclName, AggressiveTemplateLookup)) {
+    if (auto Search = findDeclInBases(*Record, DeclName,
+                                      AggressiveTemplateLookup, Visited)) {
       if (*Search) {
         if (Found)
           return NameLookup(
@@ -301,8 +312,9 @@ public:
       return true;
     const StringRef DependentName = DeclName.getAsIdentifierInfo()->getName();
 
+    RecursionProtectionSet Visited;
     if (const NameLookup Resolved = findDeclInBases(
-            *Base, DependentName, AggressiveDependentMemberLookup)) {
+            *Base, DependentName, AggressiveDependentMemberLookup, Visited)) {
       if (*Resolved)
         Check->addUsage(*Resolved,
                         DepMemberRef->getMemberNameInfo().getSourceRange(), SM);

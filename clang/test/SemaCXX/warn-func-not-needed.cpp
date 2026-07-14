@@ -10,7 +10,7 @@ void foo() {
 }
 
 namespace test1_template {
-template <typename T> static void f() {}
+template <typename T> static void f() {} // expected-warning {{unused function template}}
 template <> void f<int>() {} // expected-warning {{function 'f<int>' is not needed and will not be emitted}}
 template <typename T>
 void foo() {

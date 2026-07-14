@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -asm-verbose < %s | FileCheck -check-prefix=SI %s
-; RUN: llc -mtriple=amdgcn-unknown-amdhsa -asm-verbose -mattr=-flat-for-global < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -asm-verbose < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx700 -asm-verbose -mattr=-flat-for-global < %s | FileCheck -check-prefix=SI %s
 
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
 declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #0

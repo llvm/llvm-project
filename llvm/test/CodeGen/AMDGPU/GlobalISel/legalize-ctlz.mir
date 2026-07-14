@@ -179,8 +179,8 @@ body: |
     ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C1]]
     ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C1]]
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND2]], [[C]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND1]], [[SHL]]
-    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[AND1]], [[SHL]]
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s16>) = G_CTLZ %0
@@ -233,7 +233,7 @@ body: |
     ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C1]]
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 31
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C2]](s64)
-    ; CHECK-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UMIN]], [[UV]]
+    ; CHECK-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(i1) = G_USUBO [[UMIN]], [[UV]]
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[USUBO]](s32)
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1

@@ -74,6 +74,11 @@ class IntrWrite<list<IntrinsicMemoryLocation> idx> : IntrinsicProperty {
    list<IntrinsicMemoryLocation> MemLoc=idx;
 }
 
+// Constrain intrinsic to not write any memory location.
+defvar IntrReadOnly = IntrWrite<[]>;
+// Constrain intrinsic to not read any memory location.
+defvar IntrWriteOnly = IntrRead<[]>;
+
 // Commutative - This intrinsic is commutative: X op Y == Y op X.
 def Commutative : IntrinsicProperty;
 
@@ -131,9 +136,23 @@ class Returned<ArgIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
-// ImmArg - The specified argument must be an immediate.
-class ImmArg<ArgIndex idx> : IntrinsicProperty {
+// DefaultValue - A value carrier paired with ImmArg to declare a default for
+// a missing trailing argument. AutoUpgrade fills the default when an old
+// .bc / .ll file is loaded.
+class DefaultValue<int val> {
+  int Value = val;
+}
+
+// Sentinel — used as the default for ImmArg's optional DefaultValue parameter.
+def NoDefault : DefaultValue<0> {
+  let Value = ?;
+}
+
+// ImmArg - The specified argument must be an immediate. The optional
+// second template parameter specifies a default value for AutoUpgrade.
+class ImmArg<ArgIndex idx, DefaultValue val = NoDefault> : IntrinsicProperty {
   int ArgNo = idx.Value;
+  DefaultValue Default = val;
 }
 
 // ReadOnly - The specified argument pointer is not written to through the
@@ -572,17 +591,25 @@ def llvm_any_vector_float_ty : LLVMAnyType<iAny,
 def llvm_any_scalar_float_ty : LLVMAnyType<iAny,
                                      AnyKindVectorConstraint.Scalar,
                                      AnyKindElementConstraint.Float>;
+
+// Pointer overload types.
+// Note: CodeGenIntrinsics.cpp seems to check this class to check pointers.
+class LLVMAnyPointerType : LLVMAnyType<pAny,
+                                       AnyKindVectorConstraint.Scalar,
+                                       AnyKindElementConstraint.Pointer>;
+
+// Any scalar pointer type.
+def llvm_anyptr_ty     : LLVMAnyPointerType;      // ptr addrspace(N)
+
+// Any vector of pointers.
+def llvm_any_vector_ptr_ty : LLVMAnyType<pAny,
+                                       AnyKindVectorConstraint.Vector,
+                                       AnyKindElementConstraint.Pointer>;
+
 // Other overloaded types.
 def llvm_anyvector_ty  : LLVMAnyType<vAny,
                                      AnyKindVectorConstraint.Vector,
                                      AnyKindElementConstraint.None>;
-
-// Note: CodeGenIntrinsics.cpp seems to check this class to check pointers.
-class LLVMAnyPointerType : LLVMAnyType<pAny,
-                                       AnyKindVectorConstraint.None,
-                                       AnyKindElementConstraint.Pointer>;
-
-def llvm_anyptr_ty     : LLVMAnyPointerType;      // ptr addrspace(N)
 
 def llvm_i1_ty         : LLVMType<i1>;
 def llvm_i8_ty         : LLVMType<i8>;
@@ -758,6 +785,11 @@ class TypeInfoGen<list<LLVMType> RetTypes, list<LLVMType> ParamTypes> {
 //  * ParamTypes is a list containing the parameter types expected for the
 //    intrinsic.
 //  * Properties can be set to describe the behavior of the intrinsic.
+//  * TargetFeatures is a target feature expression required by the intrinsic.
+//    The empty string means no target features are required. The expression
+//    uses feature names from the target's subtarget feature table. Comma means
+//    AND, | means OR, comma has higher precedence than |, and parentheses group
+//    expressions.
 //
 class Intrinsic<list<LLVMType> ret_types,
                 list<LLVMType> param_types = [],
@@ -767,6 +799,7 @@ class Intrinsic<list<LLVMType> ret_types,
                 bit disable_default_attributes = true> : SDPatternOperator {
   string LLVMName = name;
   string TargetPrefix = "";   // Set to a prefix for target-specific intrinsics.
+  string TargetFeatures = ""; // Target features required by this intrinsic.
   list<LLVMType> RetTypes = ret_types;
   list<LLVMType> ParamTypes = param_types;
   list<IntrinsicProperty> IntrProperties = intr_properties;
@@ -798,6 +831,15 @@ class ClangBuiltin<string name> {
 
 class MSBuiltin<string name> {
   string MSBuiltinName = name;
+}
+
+/// RequiresTargetFeatures - If this intrinsic requires target features,
+/// this specifies the required feature expression using feature names from the
+/// target's subtarget feature table. The expression grammar matches Clang
+/// builtins: comma means AND, | means OR, comma has higher precedence than |,
+/// and parentheses group expressions.
+class RequiresTargetFeatures<string features> {
+  string TargetFeatures = features;
 }
 
 /// Utility class for intrinsics that
@@ -1003,8 +1045,10 @@ def int_prefetch
                 [llvm_anyptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
                 [IntrInaccessibleMemOrArgMemOnly,
                  ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
-                 ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>,
-                 ImmArg<ArgIndex<3>>]>;
+                 ImmArg<ArgIndex<1>>, Range<ArgIndex<1>, 0, 2>,
+                 ImmArg<ArgIndex<2>>, Range<ArgIndex<2>, 0, 4>,
+                 ImmArg<ArgIndex<3>>, Range<ArgIndex<3>, 0, 2>
+                ]>;
 def int_pcmarker      : DefaultAttrsIntrinsic<[], [llvm_i32_ty]>;
 
 def int_readcyclecounter : DefaultAttrsIntrinsic<[llvm_i64_ty]>;
@@ -1319,7 +1363,9 @@ def int_is_fpclass
     : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                             [llvm_anyfloat_ty, llvm_i32_ty],
                             [IntrNoMem, IntrSpeculatable,
-                             IntrNoCreateUndefOrPoison, ImmArg<ArgIndex<1>>]>;
+                             IntrNoCreateUndefOrPoison, ImmArg<ArgIndex<1>>,
+                             ArgInfo<ArgIndex<1>,
+                                     [ImmArgPrinter<"printFPClassMask">]>]>;
 
 //===--------------- Constrained Floating Point Intrinsics ----------------===//
 //
@@ -1891,7 +1937,7 @@ def int_experimental_gc_relocate : DefaultAttrsIntrinsic<
     [IntrNoMem, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
 def int_experimental_gc_get_pointer_base : DefaultAttrsIntrinsic<
-    [llvm_anyptr_ty], [llvm_anyptr_ty],
+    [llvm_anyptr_ty], [LLVMMatchType<0>],
     [IntrNoMem, ReadNone<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
 
 def int_experimental_gc_get_pointer_offset : DefaultAttrsIntrinsic<
@@ -2420,58 +2466,58 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
                              [ LLVMMatchType<0>,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_lrint : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_lrint : DefaultAttrsIntrinsic<[ llvm_any_vector_int_ty ],
+                             [ llvm_any_vector_float_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_llrint : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_llrint : DefaultAttrsIntrinsic<[ llvm_any_vector_int_ty ],
+                             [ llvm_any_vector_float_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
 
   // Casts
-  def int_vp_trunc : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_trunc : DefaultAttrsIntrinsic<[ llvm_any_vector_int_ty ],
+                             [ llvm_any_vector_int_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_zext : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_zext : DefaultAttrsIntrinsic<[ llvm_any_vector_int_ty ],
+                             [ llvm_any_vector_int_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_sext : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_sext : DefaultAttrsIntrinsic<[ llvm_any_vector_int_ty ],
+                             [ llvm_any_vector_int_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_fptrunc : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_fptrunc : DefaultAttrsIntrinsic<[ llvm_any_vector_float_ty ],
+                             [ llvm_any_vector_float_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_fpext : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_fpext : DefaultAttrsIntrinsic<[ llvm_any_vector_float_ty ],
+                             [ llvm_any_vector_float_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_fptoui : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_fptoui : DefaultAttrsIntrinsic<[ llvm_any_vector_int_ty ],
+                             [ llvm_any_vector_float_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_fptosi : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_fptosi : DefaultAttrsIntrinsic<[ llvm_any_vector_int_ty ],
+                             [ llvm_any_vector_float_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_uitofp : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_uitofp : DefaultAttrsIntrinsic<[ llvm_any_vector_float_ty ],
+                             [ llvm_any_vector_int_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_sitofp : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_sitofp : DefaultAttrsIntrinsic<[ llvm_any_vector_float_ty ],
+                             [ llvm_any_vector_int_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_ptrtoint : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_ptrtoint : DefaultAttrsIntrinsic<[ llvm_any_vector_int_ty ],
+                             [ llvm_any_vector_ptr_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_inttoptr : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_inttoptr : DefaultAttrsIntrinsic<[ llvm_any_vector_ptr_ty ],
+                             [ llvm_any_vector_int_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
   // Shuffles
@@ -3083,6 +3129,18 @@ def int_ptrauth_resign : Intrinsic<[llvm_i64_ty],
                                     llvm_i32_ty, llvm_i64_ty],
                                    [IntrNoMem, ImmArg<ArgIndex<1>>,
                                     ImmArg<ArgIndex<3>>]>;
+
+// Authenticate a signed pointer using a PC-based signature and resign it.
+// The second (key) and third (discriminator) arguments specify the signing
+// schema used for authenticating.
+// The fourth argument specifies the PC value used for authenticating.
+// The fifth and sixth arguments specify the schema used for resigning.
+// The signature must be valid.
+def int_ptrauth_auth_with_pc_and_resign : Intrinsic<[llvm_i64_ty],
+                                                    [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty,
+                                                     llvm_i64_ty, llvm_i32_ty, llvm_i64_ty],
+                                                    [IntrNoMem, ImmArg<ArgIndex<1>>,
+                                                     ImmArg<ArgIndex<4>>]>;
 
 // Authenticate a signed pointer, load 32bit value at offset from pointer, add
 // both, and sign it. The second (key) and third (discriminator) arguments

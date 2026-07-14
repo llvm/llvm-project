@@ -360,8 +360,9 @@ add_libc_test(
     libc-stdlib-tests
   SRCS
     qsort_r_test.cpp
+  HDRS
+    QsortReentrantTest.h
   DEPENDS
-    libc.hdr.types.size_t
     libc.src.stdlib.qsort_r
 )
 
@@ -374,6 +375,23 @@ add_libc_test(
   DEPENDS
     libc.src.stdlib.rand
     libc.src.stdlib.srand
+)
+
+add_libc_test(
+  realpath_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    realpath_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.limits_macros
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.string
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.path
+    libc.src.stdlib.realpath
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(

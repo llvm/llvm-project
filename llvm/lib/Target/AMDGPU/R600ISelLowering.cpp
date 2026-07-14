@@ -26,6 +26,7 @@
 
 using namespace llvm;
 
+#define GET_CALLING_CONV_IMPL
 #include "R600GenCallingConv.inc"
 
 R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
@@ -786,7 +787,7 @@ bool R600TargetLowering::isZero(SDValue Op) const {
 
 bool R600TargetLowering::isHWTrueValue(SDValue Op) const {
   if (ConstantFPSDNode * CFP = dyn_cast<ConstantFPSDNode>(Op)) {
-    return CFP->isExactlyValue(1.0);
+    return CFP->isOne();
   }
   return isAllOnesConstant(Op);
 }
@@ -1581,7 +1582,7 @@ static SDValue CompactSwizzlableVector(
       if (C->isZero()) {
         RemapSwizzle[i] = 4; // SEL_0
         NewBldVec[i] = DAG.getUNDEF(MVT::f32);
-      } else if (C->isExactlyValue(1.0)) {
+      } else if (C->isOne()) {
         RemapSwizzle[i] = 5; // SEL_1
         NewBldVec[i] = DAG.getUNDEF(MVT::f32);
       }
