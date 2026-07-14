@@ -447,13 +447,14 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   // function specialization is fixed.
   bool setNoAlias = forceNoAlias;
   bool setNoCapture = config.OptLevel.isOptimizingForSpeed();
+  bool setReadOnly = config.OptLevel.isOptimizingForSpeed();
 
   pm.addPass(fir::createFunctionAttr(
       {framePointerKind, config.InstrumentFunctionEntry,
        config.InstrumentFunctionExit, config.NoInfsFPMath, config.NoNaNsFPMath,
        config.ApproxFuncFPMath, config.NoSignedZerosFPMath, config.UnsafeFPMath,
        config.Reciprocals, config.PreferVectorWidth, config.UseSampleProfile,
-       /*tuneCPU=*/"", setNoCapture, setNoAlias}));
+       /*tuneCPU=*/"", setNoCapture, setNoAlias, setReadOnly}));
 
   if (config.EnableOpenMP) {
     pm.addNestedPass<mlir::func::FuncOp>(
