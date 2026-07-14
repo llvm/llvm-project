@@ -493,8 +493,6 @@ if(LLVM_LIBC_FULL_BUILD)
 
   add_libc_test(
     _Exit_test
-    # The EXPECT_EXITS test is only availible for unit tests.
-    UNIT_TEST_ONLY
     SUITE
       libc-stdlib-tests
     SRCS
@@ -506,8 +504,6 @@ if(LLVM_LIBC_FULL_BUILD)
 
   add_libc_test(
     exit_test
-    # The EXPECT_EXITS test is only availible for unit tests.
-    UNIT_TEST_ONLY
     SUITE
       libc-stdlib-tests
     SRCS
@@ -519,7 +515,7 @@ if(LLVM_LIBC_FULL_BUILD)
 
   add_libc_test(
     atexit_test
-    # The EXPECT_EXITS test is only availible for unit tests.
+    # TODO: Fix this test in hermetic mode.
     UNIT_TEST_ONLY
     SUITE
       libc-stdlib-tests
@@ -534,8 +530,6 @@ if(LLVM_LIBC_FULL_BUILD)
 
   add_libc_test(
     at_quick_exit_test
-    # The EXPECT_EXITS test is only availible for unit tests.
-    UNIT_TEST_ONLY
     SUITE
       libc-stdlib-tests
     SRCS
@@ -549,8 +543,6 @@ if(LLVM_LIBC_FULL_BUILD)
 
   add_libc_test(
     abort_test
-    # The EXPECT_DEATH test is only availible for unit tests.
-    UNIT_TEST_ONLY
     SUITE
       libc-stdlib-tests
     SRCS
@@ -564,8 +556,6 @@ if(LLVM_LIBC_FULL_BUILD)
 
   add_libc_test(
     quick_exit_test
-    # The EXPECT_EXITS test is only availible for unit tests.
-    UNIT_TEST_ONLY
     SUITE
       libc-stdlib-tests
     SRCS
