@@ -801,8 +801,7 @@ public:
   /// Record the func_info tag for a function, either a C++ special member
   /// form (constructor, destructor, assignment) or a known standard library
   /// entity that passes can recognize without the AST.
-  void setFuncInfoAttr(cir::FuncOp funcOp,
-                       const clang::FunctionDecl *funcDecl);
+  void setFuncInfoAttr(cir::FuncOp funcOp, const clang::FunctionDecl *funcDecl);
 
   cir::FuncOp createRuntimeFunction(cir::FuncType ty, llvm::StringRef name,
                                     mlir::NamedAttrList extraAttrs = {},
