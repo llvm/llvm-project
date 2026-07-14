@@ -982,6 +982,14 @@ def _ssaf_compilation_unit_id :
     "produced SSAF TU summary. Required when '--ssaf-tu-summary-file=' is "
     "set.">,
   MarshallingInfoString<SSAFOpts<"CompilationUnitId">>;
+def _ssaf_include_local_entities :
+  Flag<["--"], "ssaf-include-local-entities">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Include block-scope (function-local) declarations in extracted SSAF "
+    "summaries. By default they are omitted.">,
+  MarshallingInfoFlag<SSAFOpts<"IncludeLocalEntities">>;
 def Xarch__
     : JoinedAndSeparate<["-"], "Xarch_">,
       Flags<[NoXarchOption]>,
@@ -1664,9 +1672,9 @@ def : Flag<["-"], "static-libasan">, Alias<static_libsan>;
 def fasm : Flag<["-"], "fasm">, Group<f_Group>;
 
 defm assume_unique_vtables : BoolFOption<"assume-unique-vtables",
-  CodeGenOpts<"AssumeUniqueVTables">, DefaultTrue,
-  PosFlag<SetTrue>,
-  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+  CodeGenOpts<"DisableExactDynamicCast">, DefaultFalse,
+  PosFlag<SetFalse>,
+  NegFlag<SetTrue, [], [ClangOption, CC1Option],
           "Disable optimizations based on vtable pointer identity">,
   BothFlags<[], [ClangOption, CLOption]>>;
 
@@ -3083,10 +3091,10 @@ defm rewrite_includes : BoolFOption<"rewrite-includes",
 defm directives_only : OptInCC1FFlag<"directives-only", "">;
 
 defm delete_null_pointer_checks : BoolFOption<"delete-null-pointer-checks",
-  CodeGenOpts<"NullPointerIsValid">, DefaultFalse,
+  CodeGenOpts<"NullPointerIsValid">, Default<"LangOpts->Kernel">,
   NegFlag<SetTrue, [], [ClangOption, CC1Option],
           "Do not treat usage of null pointers as undefined behavior">,
-  PosFlag<SetFalse, [], [ClangOption], "Treat usage of null pointers as undefined behavior (default)">,
+  PosFlag<SetFalse, [], [ClangOption, CC1Option], "Treat usage of null pointers as undefined behavior (default)">,
   BothFlags<[], [ClangOption, CLOption]>>,
   DocBrief<[{When enabled, treat null pointer dereference, creation of a reference to null,
 or passing a null pointer to a function parameter annotated with the "nonnull"
@@ -6093,6 +6101,12 @@ defm backchain : BoolMOption<"backchain",
   PosFlag<SetTrue, [], [ClangOption], "Link stack frames through backchain on System Z">,
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
 
+defm zos_ppa1_name : BoolMOption<"zos-ppa1-name",
+  CodeGenOpts<"ZOSPPA1Name">, DefaultTrue,
+  PosFlag<SetTrue, [], [], "Emit the function name in PPA1 on z/OS">,
+  NegFlag<SetFalse, [], [], "Do not emit the function name in PPA1 on z/OS">,
+  BothFlags<[TargetSpecific], [ClangOption, CC1Option]>>;
+
 def mno_warn_nonportable_cfstrings : Flag<["-"], "mno-warn-nonportable-cfstrings">, Group<m_Group>;
 def mno_omit_leaf_frame_pointer : Flag<["-"], "mno-omit-leaf-frame-pointer">, Group<m_Group>;
 def momit_leaf_frame_pointer : Flag<["-"], "momit-leaf-frame-pointer">, Group<m_Group>,
@@ -7217,6 +7231,8 @@ def mavx512bf16 : Flag<["-"], "mavx512bf16">, Group<m_x86_Features_Group>;
 def mno_avx512bf16 : Flag<["-"], "mno-avx512bf16">, Group<m_x86_Features_Group>;
 def mavx512bitalg : Flag<["-"], "mavx512bitalg">, Group<m_x86_Features_Group>;
 def mno_avx512bitalg : Flag<["-"], "mno-avx512bitalg">, Group<m_x86_Features_Group>;
+def mavx512bmm : Flag<["-"], "mavx512bmm">, Group<m_x86_Features_Group>;
+def mno_avx512bmm : Flag<["-"], "mno-avx512bmm">, Group<m_x86_Features_Group>;
 def mavx512bw : Flag<["-"], "mavx512bw">, Group<m_x86_Features_Group>;
 def mno_avx512bw : Flag<["-"], "mno-avx512bw">, Group<m_x86_Features_Group>;
 def mavx512cd : Flag<["-"], "mavx512cd">, Group<m_x86_Features_Group>;

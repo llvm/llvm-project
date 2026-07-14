@@ -460,6 +460,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::HLSLRootSignature:
   case Decl::OpenACCDeclare:
   case Decl::OpenACCRoutine:
+  case Decl::CXXExpansionStmt:
     return false;
 
   // These indirectly derive from Redeclarable<T> but are not actually
