@@ -697,10 +697,9 @@ void commitScratchSgpr(PatchContext &Ctx, const SgprScratchAlloc &Alloc) {
 // -- patchTensorLoadToLdsA0 -------------------------------------------------
 //
 // Prepend s_pack_hh_b32_b16 to clear multicast routing bits in the group
-// descriptor's base SGPR. If the SGPR is live after the tensor_load, bracket
-// the sequence with s_mov_b32 through a scratch SGPR to save/restore it. (An
-// earlier version used a VGPR lane, but occupancy-1 kernels have no free VGPR
-// so the patch declined; a scratch SGPR is always available.)
+// descriptor's base SGPR. The A0 routing bits must remain clear for every
+// subsequent use of the descriptor, so normalize it persistently instead of
+// restoring the invalid B0 value after each tensor load.
 
 bool patchTensorLoadToLdsA0(PatchContext &Ctx, size_t Idx) {
   InternalDecodedInst &DI = Ctx.Decoded[Idx];
@@ -716,8 +715,6 @@ bool patchTensorLoadToLdsA0(PatchContext &Ctx, size_t Idx) {
   if (isAlreadyTensorMaskPatched(Ctx, Idx, BaseMCReg))
     return false;
 
-  SmallVector<unsigned, 8> DescriptorSgprs =
-      getDescriptorSgprIndices(DI.Inst, MRI);
   std::string BaseSreg = toAsmRegName(MRI, BaseMCReg);
 
   std::string PackAsm = "s_pack_hh_b32_b16 " + BaseSreg + ", 0, " + BaseSreg;
@@ -728,55 +725,18 @@ bool patchTensorLoadToLdsA0(PatchContext &Ctx, size_t Idx) {
     return failRequiredPatch(Ctx);
   }
 
-  bool SgprLive = isSgprLiveAfter(Ctx, Idx, BaseMCReg);
-
   const uint8_t *OrigInst = Ctx.Text + DI.Offset;
+  SmallVector<uint8_t> Replacement;
+  Replacement.append(PackBytes.begin(), PackBytes.end());
+  Replacement.append(OrigInst, OrigInst + DI.Size);
 
-  if (SgprLive) {
-    std::optional<SgprScratchAlloc> ScratchSgpr =
-        tryAllocScratchSgpr(Ctx, Idx, DescriptorSgprs);
-    if (!ScratchSgpr) {
-      log() << "hotswap: error: tensor_load_to_lds: no scratch SGPR "
-               "available\n";
-      return failRequiredPatch(Ctx);
-    }
+  if (!emitReplacementCode(Ctx, DI.Offset, DI.Size, Replacement,
+                           /*AllowSafeFarReturn=*/true))
+    return failRequiredPatch(Ctx);
 
-    std::string S = "s" + std::to_string(ScratchSgpr->Sgpr);
-    std::string SaveAsm = "s_mov_b32 " + S + ", " + BaseSreg;
-    std::string RestoreAsm = "s_mov_b32 " + BaseSreg + ", " + S;
-    SmallVector<uint8_t> Save = assembleSingleInst(SaveAsm, Ctx.LS);
-    SmallVector<uint8_t> Restore = assembleSingleInst(RestoreAsm, Ctx.LS);
-    if (Save.empty() || Restore.empty()) {
-      log() << "hotswap: tensor_load_to_lds: save/restore assembly failed\n";
-      return failRequiredPatch(Ctx);
-    }
-
-    SmallVector<uint8_t> Replacement;
-    Replacement.append(Save.begin(), Save.end());
-    Replacement.append(PackBytes.begin(), PackBytes.end());
-    Replacement.append(OrigInst, OrigInst + DI.Size);
-    Replacement.append(Restore.begin(), Restore.end());
-
-    if (!emitReplacementCode(Ctx, DI.Offset, DI.Size, Replacement))
-      return failRequiredPatch(Ctx);
-
-    // SGPRs above .sgpr_count need no KD bump on GFX10+; commit only after
-    // the patch is emitted, to keep per-kernel stats accurate.
-    commitScratchSgpr(Ctx, *ScratchSgpr);
-
-    log() << "hotswap: tensor_load_to_lds: " << BaseSreg
-          << " live, save/restore via " << S << "\n";
-  } else {
-    SmallVector<uint8_t> Replacement;
-    Replacement.append(PackBytes.begin(), PackBytes.end());
-    Replacement.append(OrigInst, OrigInst + DI.Size);
-
-    if (!emitReplacementCode(Ctx, DI.Offset, DI.Size, Replacement))
-      return failRequiredPatch(Ctx);
-
-    log() << "hotswap: tensor_load_to_lds: " << BaseSreg
-          << " dead, no save/restore needed\n";
-  }
+  log() << "hotswap: tensor_load_to_lds: persistently cleared multicast bits "
+           "in "
+        << BaseSreg << "\n";
 
   Ctx.RequiredPatchApplied = true;
   DI.Mnemonic = "<replaced>";

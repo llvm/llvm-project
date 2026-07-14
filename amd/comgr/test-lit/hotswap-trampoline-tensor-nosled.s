@@ -1,8 +1,7 @@
 // COM: Test the true trampoline fallback path for tensor_load_to_lds
-// COM: when no NOP sled is available. Two variants:
-// COM:   dead SGPR — s_pack_hh + tensor_load appended via growWithTrampolines
-// COM:   live SGPR — save/pack/tensor/restore (4-instruction sequence)
-// COM:              appended via growWithTrampolines, the largest replacement
+// COM: when no NOP sled is available. Both live and dead descriptor variants
+// COM: append the persistent s_pack_hh + tensor_load normalization via
+// COM: growWithTrampolines.
 // COM: Both force emitReplacementCode to use emitToTrampoline.
 
 // RUN: %clang -target amdgcn-amd-amdhsa -mcpu=gfx1250 -nostdlib %s -o %t.elf
@@ -44,13 +43,10 @@
 // DISASM-NEXT: tensor_load_to_lds
 // DISASM-NEXT: s_branch
 
-// COM: Live-SGPR trampoline body (for kernel 2): also placed in the
-// COM: appended trampoline region. save + pack + tensor + restore +
-// COM: branch-back.
-// DISASM-NEXT: s_mov_b32 [[SCRATCH:s[0-9]+]], s4
+// COM: Live-SGPR trampoline body (for kernel 2): the same persistent mask and
+// COM: tensor sequence followed by branch-back.
 // DISASM-NEXT: s_pack_hh_b32_b16 s4, 0, s4
 // DISASM-NEXT: tensor_load_to_lds
-// DISASM-NEXT: s_mov_b32 s4, [[SCRATCH]]
 // DISASM-NEXT: s_branch
 
 // COM: Idempotency
@@ -71,7 +67,7 @@ test_tensor_trampoline:
 .Ltest_tensor_trampoline_end:
 .size test_tensor_trampoline, .Ltest_tensor_trampoline_end-test_tensor_trampoline
 
-// ---- Kernel 2: live SGPR, no NOP sled (trampoline + save/restore) ----------
+// ---- Kernel 2: live SGPR, no NOP sled (persistent mask trampoline) --------
 
 .globl test_tensor_trampoline_live
 .p2align 8

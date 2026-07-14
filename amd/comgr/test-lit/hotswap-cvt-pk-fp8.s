@@ -19,7 +19,7 @@
 // RUN:   --dump %t.out.elf --check-idempotent 2>&1 \
 // RUN:   | %FileCheck --check-prefix=API %s
 // API: hotswap: liveness: kernel test_cvt_pk_fp8_literal:
-// API-SAME: sgprs_before=8, sgprs_after=16
+// API-SAME: sgprs_before=2, sgprs_after=6
 // API: REWRITE: SUCCESS
 // API: IDEMPOTENT: YES
 
@@ -322,3 +322,80 @@ test_cvt_pk_fp8_inline_constants:
   .amdhsa_next_free_vgpr 25
   .amdhsa_next_free_sgpr 2
 .end_amdhsa_kernel
+
+.amdgpu_metadata
+  amdhsa.version:
+    - 3
+    - 0
+  amdhsa.kernels:
+    - .name: test_cvt_pk_fp8_low
+      .symbol: test_cvt_pk_fp8_low.kd
+      .sgpr_count: 2
+      .vgpr_count: 3
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 64
+      .max_flat_workgroup_size: 256
+    - .name: test_cvt_pk_fp8_high
+      .symbol: test_cvt_pk_fp8_high.kd
+      .sgpr_count: 2
+      .vgpr_count: 8
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 64
+      .max_flat_workgroup_size: 256
+    - .name: test_cvt_pk_fp8_noclamp
+      .symbol: test_cvt_pk_fp8_noclamp.kd
+      .sgpr_count: 2
+      .vgpr_count: 13
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 64
+      .max_flat_workgroup_size: 256
+    - .name: test_cvt_pk_fp8_literal
+      .symbol: test_cvt_pk_fp8_literal.kd
+      .sgpr_count: 2
+      .vgpr_count: 5
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 64
+      .max_flat_workgroup_size: 256
+    - .name: test_cvt_pk_fp8_literal_src0
+      .symbol: test_cvt_pk_fp8_literal_src0.kd
+      .sgpr_count: 2
+      .vgpr_count: 18
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 64
+      .max_flat_workgroup_size: 256
+    - .name: test_cvt_pk_fp8_literal_src1
+      .symbol: test_cvt_pk_fp8_literal_src1.kd
+      .sgpr_count: 2
+      .vgpr_count: 22
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 64
+      .max_flat_workgroup_size: 256
+    - .name: test_cvt_pk_fp8_inline_constants
+      .symbol: test_cvt_pk_fp8_inline_constants.kd
+      .sgpr_count: 2
+      .vgpr_count: 25
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 64
+      .max_flat_workgroup_size: 256
+.end_amdgpu_metadata

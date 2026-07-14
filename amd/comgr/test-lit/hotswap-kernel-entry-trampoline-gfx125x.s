@@ -24,10 +24,10 @@
 // DISASM: s_endpgm
 // DISASM: global_wb
 // DISASM-NEXT: v_nop
-// DISASM-NEXT: s_get_pc_i64 s[8:9]
-// DISASM-NEXT: s_add_co_u32 s8
-// DISASM-NEXT: s_add_co_ci_u32 s9
-// DISASM-NEXT: s_set_pc_i64 s[8:9]
+// DISASM-NEXT: s_get_pc_i64 s[2:3]
+// DISASM-NEXT: s_add_co_u32 s2
+// DISASM-NEXT: s_add_co_ci_u32 s3
+// DISASM-NEXT: s_set_pc_i64 s[2:3]
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx1251"
 .text
@@ -47,3 +47,20 @@ entry_tramp_family_kernel:
   .amdhsa_next_free_sgpr 1
   .amdhsa_inst_pref_size 7
 .end_amdhsa_kernel
+
+.amdgpu_metadata
+  amdhsa.version:
+    - 3
+    - 0
+  amdhsa.kernels:
+    - .name: entry_tramp_family_kernel
+      .symbol: entry_tramp_family_kernel.kd
+      .sgpr_count: 1
+      .vgpr_count: 1
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 64
+      .max_flat_workgroup_size: 256
+.end_amdgpu_metadata

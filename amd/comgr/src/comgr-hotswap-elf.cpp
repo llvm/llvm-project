@@ -636,52 +636,64 @@ bool ElfView::updateKernelDescriptorEntryOffset(StringRef KernelName,
 }
 
 bool ElfView::updateKernelDescriptorSgprCount(StringRef KernelName,
-                                              unsigned RequiredSgprs) {
+                                              unsigned RequiredSgprs,
+                                              bool UpdateDescriptor) {
   namespace hsa = amdhsa;
   if (RequiredSgprs == 0)
     return true;
 
-  uint8_t *Kd = findKernelDescriptor(KernelName);
-  if (!Kd) {
-    log() << "hotswap: error: updateKernelDescriptorSgprCount: kernel "
-          << "descriptor symbol '" << KernelName << ".kd' not found.\n";
-    return false;
-  }
-
+  uint8_t *Kd = nullptr;
   uint32_t Rsrc1 = 0;
-  std::memcpy(&Rsrc1,
-              Kd + offsetof(hsa::kernel_descriptor_t, compute_pgm_rsrc1),
-              sizeof(Rsrc1));
-
-  uint32_t CurrentGranulated = AMDHSA_BITS_GET(
-      Rsrc1, hsa::COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT);
-  uint64_t CurrentSgprs =
-      (static_cast<uint64_t>(CurrentGranulated) + 1) * SgprEncodingGranule;
-
   std::optional<uint32_t> RequiredGranulated;
-  if (RequiredSgprs > CurrentSgprs) {
-    uint64_t RequiredGranulated64 =
-        (static_cast<uint64_t>(RequiredSgprs) + SgprEncodingGranule - 1) /
-            SgprEncodingGranule -
-        1;
-    uint32_t MaxGranulated = static_cast<uint32_t>(
-        hsa::COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT >>
-        hsa::COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT_SHIFT);
-    if (RequiredGranulated64 > MaxGranulated) {
-      log() << "hotswap: error: updateKernelDescriptorSgprCount: kernel '"
-            << KernelName << "' needs " << RequiredSgprs
-            << " SGPRs, which exceeds the descriptor encoding limit.\n";
+  if (UpdateDescriptor) {
+    Kd = findKernelDescriptor(KernelName);
+    if (!Kd) {
+      log() << "hotswap: error: updateKernelDescriptorSgprCount: kernel "
+            << "descriptor symbol '" << KernelName << ".kd' not found.\n";
       return false;
     }
-    RequiredGranulated = static_cast<uint32_t>(RequiredGranulated64);
+
+    std::memcpy(&Rsrc1,
+                Kd + offsetof(hsa::kernel_descriptor_t, compute_pgm_rsrc1),
+                sizeof(Rsrc1));
+
+    uint32_t CurrentGranulated = AMDHSA_BITS_GET(
+        Rsrc1, hsa::COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT);
+    uint64_t CurrentSgprs =
+        (static_cast<uint64_t>(CurrentGranulated) + 1) * SgprEncodingGranule;
+
+    if (RequiredSgprs > CurrentSgprs) {
+      uint64_t RequiredGranulated64 =
+          (static_cast<uint64_t>(RequiredSgprs) + SgprEncodingGranule - 1) /
+              SgprEncodingGranule -
+          1;
+      uint32_t MaxGranulated = static_cast<uint32_t>(
+          hsa::COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT >>
+          hsa::COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT_SHIFT);
+      if (RequiredGranulated64 > MaxGranulated) {
+        log() << "hotswap: error: updateKernelDescriptorSgprCount: kernel '"
+              << KernelName << "' needs " << RequiredSgprs
+              << " SGPRs, which exceeds the descriptor encoding limit.\n";
+        return false;
+      }
+      RequiredGranulated = static_cast<uint32_t>(RequiredGranulated64);
+    }
   }
 
   MetadataSgprUpdateStatus MetadataStatus =
       updateKernelMetadataSgprCount(data(), File, KernelName, RequiredSgprs);
   if (MetadataStatus == MetadataSgprUpdateStatus::Error)
     return false;
-  // NotFound is allowed for minimal code objects without AMDGPU metadata; in
-  // that case the descriptor field remains the only SGPR count to update.
+  if (!UpdateDescriptor &&
+      MetadataStatus == MetadataSgprUpdateStatus::NotFound) {
+    log() << "hotswap: error: updateKernelDescriptorSgprCount: kernel '"
+          << KernelName << "' requires " << RequiredSgprs
+          << " SGPRs, but gfx10+ code objects must carry .sgpr_count metadata "
+             "because the descriptor SGPR-count field is reserved.\n";
+    return false;
+  }
+  // On pre-gfx10 targets, NotFound is allowed for minimal code objects without
+  // AMDGPU metadata because the descriptor remains the canonical count.
 
   if (!RequiredGranulated)
     return true;

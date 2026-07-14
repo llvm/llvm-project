@@ -129,3 +129,40 @@ test_multi_fp8_overlap:
   .amdhsa_next_free_vgpr 2
   .amdhsa_next_free_sgpr 2
 .end_amdhsa_kernel
+
+.amdgpu_metadata
+  amdhsa.version:
+    - 3
+    - 0
+  amdhsa.kernels:
+    - .name: test_multi_fp8_same
+      .symbol: test_multi_fp8_same.kd
+      .sgpr_count: 2
+      .vgpr_count: 7
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 64
+      .max_flat_workgroup_size: 256
+    - .name: test_multi_fp8_mixed
+      .symbol: test_multi_fp8_mixed.kd
+      .sgpr_count: 2
+      .vgpr_count: 10
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 64
+      .max_flat_workgroup_size: 256
+    - .name: test_multi_fp8_overlap
+      .symbol: test_multi_fp8_overlap.kd
+      .sgpr_count: 2
+      .vgpr_count: 2
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 64
+      .max_flat_workgroup_size: 256
+.end_amdgpu_metadata

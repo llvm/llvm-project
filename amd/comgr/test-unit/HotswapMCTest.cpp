@@ -242,6 +242,72 @@ TEST(EncodeLongBranch, ReachesBeyondSBranchRange) {
   EXPECT_EQ(From + Out.size() + longBranchLiteral(Out), To);
 }
 
+// -- encodeSccNeutralLongBranch ----------------------------------------------
+
+static uint64_t
+decodeSccNeutralLongBranchTarget(uint64_t From,
+                                 llvm::ArrayRef<InternalDecodedInst> Decoded) {
+  const uint64_t PcBase = From + Decoded[0].Size;
+  const uint64_t Delta =
+      static_cast<uint64_t>(Decoded[1].Inst.getOperand(2).getImm());
+  return PcBase + Delta;
+}
+
+TEST(EncodeSccNeutralLongBranch, BackwardLandsOnTargetWithoutDefiningScc) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  constexpr uint64_t From = 0x81000;
+  constexpr uint64_t To = 0x1008;
+  std::optional<llvm::SmallVector<uint8_t>> Out =
+      encodeSccNeutralLongBranch(S, From, To, /*SgprBase=*/12);
+  ASSERT_TRUE(Out);
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Out->data(), Out->size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 3u);
+  EXPECT_EQ(Decoded[0].Mnemonic, "s_get_pc_i64");
+  EXPECT_EQ(Decoded[1].Mnemonic, "s_add_nc_u64");
+  EXPECT_EQ(Decoded[2].Mnemonic, "s_set_pc_i64");
+  EXPECT_EQ(decodeSccNeutralLongBranchTarget(From, Decoded), To);
+
+  const llvm::MCRegister Pair = Decoded[0].Inst.getOperand(0).getReg();
+  EXPECT_EQ(Decoded[1].Inst.getOperand(0).getReg(), Pair);
+  EXPECT_EQ(Decoded[1].Inst.getOperand(1).getReg(), Pair);
+  EXPECT_EQ(Decoded[2].Inst.getOperand(0).getReg(), Pair);
+  for (const InternalDecodedInst &DI : Decoded) {
+    const llvm::MCInstrDesc &Desc = S.MCII->get(DI.Inst.getOpcode());
+    for (llvm::MCPhysReg Reg : Desc.implicit_defs())
+      EXPECT_NE(llvm::StringRef(S.MRI->getName(Reg)), "SCC");
+  }
+}
+
+TEST(EncodeSccNeutralLongBranch, ForwardLandsOnTarget) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  constexpr uint64_t From = 0x1000;
+  constexpr uint64_t To = 0x81000;
+  std::optional<llvm::SmallVector<uint8_t>> Out =
+      encodeSccNeutralLongBranch(S, From, To, /*SgprBase=*/12);
+  ASSERT_TRUE(Out);
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Out->data(), Out->size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 3u);
+  EXPECT_EQ(decodeSccNeutralLongBranchTarget(From, Decoded), To);
+}
+
+TEST(EncodeSccNeutralLongBranch, RejectsUnalignedPairAndPcOverflow) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  EXPECT_FALSE(encodeSccNeutralLongBranch(S, 0x1000, 0x2000,
+                                          /*SgprBase=*/13));
+  EXPECT_FALSE(encodeSccNeutralLongBranch(
+      S, std::numeric_limits<uint64_t>::max() - 1, 0, /*SgprBase=*/12));
+}
+
 TEST(FindNearestSled, RejectsOverflowingHeadroom) {
   std::vector<NopSled> Sleds = {{0, 64, 60, 0, 64},
                                 {100, 128, 100, 100, 128}};
@@ -708,6 +774,7 @@ TEST(KernelEntryTrampoline, ClampsInstPrefSizeAndAvoidsPrefetchGuard) {
   AMDHSA_BITS_SET(Rsrc3, hsa::COMPUTE_PGM_RSRC3_GFX125_TCP_SPLIT, 5);
   comgr_test::KernelDescriptorElfOptions Opts;
   Opts.ComputePgmRsrc3 = Rsrc3;
+  Opts.MetadataSgprCount = 8;
   comgr_test::KernelDescriptorElf Obj =
       comgr_test::makeKernelDescriptorElf(Text, Opts);
   llvm::Expected<ElfView> ViewOrErr =
@@ -716,6 +783,10 @@ TEST(KernelEntryTrampoline, ClampsInstPrefSizeAndAvoidsPrefetchGuard) {
 
   uint8_t *Kd = ViewOrErr->findKernelDescriptor("kernel");
   ASSERT_NE(Kd, nullptr);
+  uint32_t Rsrc1Before = 0;
+  std::memcpy(&Rsrc1Before,
+              Kd + offsetof(hsa::kernel_descriptor_t, compute_pgm_rsrc1),
+              sizeof(Rsrc1Before));
 
   std::vector<Trampoline> Growth;
   std::vector<KernelEntryTrampolineFixup> Fixups;
@@ -780,12 +851,8 @@ TEST(KernelEntryTrampoline, ClampsInstPrefSizeAndAvoidsPrefetchGuard) {
   std::memcpy(&OutRsrc1,
               OutKd + offsetof(hsa::kernel_descriptor_t, compute_pgm_rsrc1),
               sizeof(OutRsrc1));
-  unsigned ReservedSgprs =
-      (AMDHSA_BITS_GET(OutRsrc1,
-                       hsa::COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT) +
-       1) *
-      8;
-  EXPECT_GE(ReservedSgprs, Fixups[0].RequiredSgprs);
+  EXPECT_EQ(OutRsrc1, Rsrc1Before);
+  EXPECT_EQ(OutView->getKernelSgprCount("kernel"), Fixups[0].RequiredSgprs);
 
   std::vector<KernelDescriptorInfo> KDs = OutView->kernelDescriptors();
   ASSERT_EQ(KDs.size(), 1u);
@@ -866,7 +933,10 @@ TEST(KernelEntryTrampoline, SecondPassAddsNoDuplicateStubSymbol) {
   llvm::SmallVector<uint8_t> Text = assembleSingleInst("s_endpgm", S);
   ASSERT_EQ(Text.size(), MinInstSize);
 
-  comgr_test::KernelDescriptorElf Obj = comgr_test::makeKernelDescriptorElf(Text);
+  comgr_test::KernelDescriptorElfOptions Opts;
+  Opts.MetadataSgprCount = 8;
+  comgr_test::KernelDescriptorElf Obj =
+      comgr_test::makeKernelDescriptorElf(Text, Opts);
 
   // -- First pass: append one stub, grow .text, rewrite the descriptor, and
   //    attach the stub symbol. --
@@ -883,6 +953,8 @@ TEST(KernelEntryTrampoline, SecondPassAddsNoDuplicateStubSymbol) {
       *View1, S, /*MaxSgprs=*/106, Growth1, Fixups1);
   ASSERT_TRUE(Count1.has_value());
   ASSERT_EQ(*Count1, 1u);
+  std::optional<uint64_t> PoolVAddr = View1->trampolinePoolVAddr();
+  ASSERT_TRUE(PoolVAddr.has_value());
 
   std::optional<uint64_t> PoolVAddr = View1->trampolinePoolVAddr();
   ASSERT_TRUE(PoolVAddr.has_value());

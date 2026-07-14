@@ -103,6 +103,9 @@ struct Trampoline {
   // (reaches anywhere, no scratch reg, no SCC). Set when the appended pool is
   // beyond s_branch's +-128 KB reach; widens the reserved branch-back slot.
   bool Long = false;
+  // The branch-back is already present at the end of Bytes. Used by required
+  // far patches whose backward edge cannot use s_add_pc_i64 on gfx1250 A0.
+  bool PreEncodedBack = false;
 };
 
 // Kernel-entry stubs are appended as normal .text growth. Keep each entry on
@@ -285,9 +288,12 @@ public:
   bool updateKernelDescriptorEntryOffset(llvm::StringRef KernelName,
                                          int64_t NewEntryOffset);
 
-  /// Ensure the kernel descriptor reserves at least \p RequiredSgprs SGPRs.
+  /// Ensure kernel metadata reserves at least \p RequiredSgprs SGPRs. When
+  /// \p UpdateDescriptor is true, also update the pre-gfx10 kernel descriptor
+  /// field; it is reserved and must remain unchanged on gfx10+.
   bool updateKernelDescriptorSgprCount(llvm::StringRef KernelName,
-                                       unsigned RequiredSgprs);
+                                       unsigned RequiredSgprs,
+                                       bool UpdateDescriptor = true);
 
   /// Read COMPUTE_PGM_RSRC3.INST_PREF_SIZE for \p KernelName.
   std::optional<uint32_t>
@@ -717,7 +723,8 @@ struct PatchContext {
                                  llvm::ArrayRef<uint8_t> Replacement);
 [[nodiscard]] bool emitToTrampoline(PatchContext &Ctx, uint64_t InstOffset,
                                     uint32_t InstSize,
-                                    llvm::ArrayRef<uint8_t> Replacement);
+                                    llvm::ArrayRef<uint8_t> Replacement,
+                                    bool AllowSafeFarReturn = false);
 
 // Encode an s_add_pc_i64 PC-relative long branch from \p FromOffset to
 // \p TargetOffset (.text byte offsets). Exposed for unit testing the offset
@@ -725,9 +732,19 @@ struct PatchContext {
 llvm::SmallVector<uint8_t> encodeLongBranch(const LLVMState &LS,
                                             uint64_t FromOffset,
                                             uint64_t TargetOffset);
+
+// Encode an SCC-neutral PC-relative long branch through an aligned SGPR pair.
+// s_get_pc_i64 captures the next instruction's PC, s_add_nc_u64 applies the
+// two's-complement delta without reading or writing SCC, and s_set_pc_i64
+// transfers control. Exposed for unit testing the offset math and register
+// constraints. Returns std::nullopt after logging the specific failure.
+std::optional<llvm::SmallVector<uint8_t>>
+encodeSccNeutralLongBranch(const LLVMState &LS, uint64_t FromOffset,
+                           uint64_t TargetOffset, unsigned SgprBase);
 [[nodiscard]] bool emitReplacementCode(PatchContext &Ctx, uint64_t InstOffset,
                                        uint32_t InstSize,
-                                       llvm::ArrayRef<uint8_t> Replacement);
+                                       llvm::ArrayRef<uint8_t> Replacement,
+                                       bool AllowSafeFarReturn = false);
 
 // -- Patch dispatch vtable ----------------------------------------------------
 //
