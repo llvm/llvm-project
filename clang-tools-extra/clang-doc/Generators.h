@@ -140,7 +140,6 @@ struct MustacheGenerator : public Generator {
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the generators.
-extern volatile int YAMLGeneratorAnchorSource;
 extern volatile int MDGeneratorAnchorSource;
 extern volatile int HTMLGeneratorAnchorSource;
 extern volatile int JSONGeneratorAnchorSource;

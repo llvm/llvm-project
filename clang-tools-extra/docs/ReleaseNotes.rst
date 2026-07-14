@@ -135,6 +135,9 @@ Potentially Breaking Changes
   now uses the new Mustache-backed MD generator. It is possible that there are some
   regressions in MD output.
 
+- Removed the :program:`clang-doc` YAML generator. Prefer the JSON generator to
+  get documentation information in a reusable format.
+
 Improvements to clangd
 ----------------------
 
