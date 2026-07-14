@@ -52,6 +52,7 @@
 #include "clang/Lex/ScratchBuffer.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -79,7 +80,7 @@ using namespace clang;
 /// Minimum distance between two check points, in tokens.
 static constexpr unsigned CheckPointStepSize = 1024;
 
-LLVM_INSTANTIATE_REGISTRY(PragmaHandlerRegistry)
+LLVM_INSTANTIATE_REGISTRY_EX(CLANG_ABI_EXPORT, PragmaHandlerRegistry)
 
 ExternalPreprocessorSource::~ExternalPreprocessorSource() = default;
 
@@ -100,6 +101,10 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
       TUKind(TUKind), SkipMainFilePreamble(0, true),
       CurSubmoduleState(&NullSubmoduleState) {
   OwnsHeaderSearch = OwnsHeaders;
+
+  // Only record check points if we might highlight diagnostic snippets.
+  RecordCheckPoints = getDiagnostics().getDiagnosticOptions().getShowColors() !=
+                      ShowColorsKind::Off;
 
   // Default to discarding comments.
   KeepComments = false;
@@ -417,14 +422,16 @@ StringRef Preprocessor::getLastMacroWithSpelling(
 }
 
 void Preprocessor::recomputeCurLexerKind() {
-  if (CurLexer)
+  if (InCachingLexMode())
+    CurLexerCallback = CLK_CachingLexer;
+  else if (CurLexer)
     CurLexerCallback = CurLexer->isDependencyDirectivesLexer()
                            ? CLK_DependencyDirectivesLexer
                            : CLK_Lexer;
   else if (CurTokenLexer)
     CurLexerCallback = CLK_TokenLexer;
   else
-    CurLexerCallback = CLK_CachingLexer;
+    CurLexerCallback = CLK_Lexer;
 }
 
 bool Preprocessor::SetCodeCompletionPoint(FileEntryRef File,
@@ -1011,7 +1018,8 @@ void Preprocessor::Lex(Token &Result) {
     }
   }
 
-  if (CurLexer && ++CheckPointCounter == CheckPointStepSize) {
+  if (RecordCheckPoints && CurLexer &&
+      ++CheckPointCounter == CheckPointStepSize) {
     CheckPoints[CurLexer->getFileID()].push_back(CurLexer->BufferPtr);
     CheckPointCounter = 0;
   }
@@ -1744,16 +1752,11 @@ void Preprocessor::removePPCallbacks() {
 const char *Preprocessor::getCheckPoint(FileID FID, const char *Start) const {
   if (auto It = CheckPoints.find(FID); It != CheckPoints.end()) {
     const SmallVector<const char *> &FileCheckPoints = It->second;
-    const char *Last = nullptr;
-    // FIXME: Do better than a linear search.
-    for (const char *P : FileCheckPoints) {
-      if (P > Start)
-        break;
-      Last = P;
-    }
-    return Last;
+    auto P = llvm::upper_bound(FileCheckPoints, Start);
+    if (P == FileCheckPoints.begin())
+      return nullptr;
+    return *std::prev(P);
   }
-
   return nullptr;
 }
 

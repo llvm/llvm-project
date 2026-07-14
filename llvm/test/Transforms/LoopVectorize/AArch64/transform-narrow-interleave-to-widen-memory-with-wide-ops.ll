@@ -763,15 +763,15 @@ define void @test_2xi32(ptr noalias %data, ptr noalias %factor) {
 ; VF2-NEXT:    [[TMP22:%.*]] = shufflevector <6 x i32> [[WIDE_VEC1]], <6 x i32> poison, <2 x i32> <i32 1, i32 4>
 ; VF2-NEXT:    [[TMP14:%.*]] = mul <2 x i32> [[TMP7]], [[TMP13]]
 ; VF2-NEXT:    [[TMP15:%.*]] = extractelement <2 x i32> [[TMP14]], i64 0
-; VF2-NEXT:    [[TMP16:%.*]] = extractelement <2 x i32> [[TMP14]], i64 1
 ; VF2-NEXT:    store i32 [[TMP15]], ptr [[TMP8]], align 8
+; VF2-NEXT:    [[TMP16:%.*]] = extractelement <2 x i32> [[TMP14]], i64 1
 ; VF2-NEXT:    store i32 [[TMP16]], ptr [[TMP9]], align 8
 ; VF2-NEXT:    [[TMP17:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[INDEX]], i32 1
 ; VF2-NEXT:    [[TMP18:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[TMP1]], i32 1
 ; VF2-NEXT:    [[TMP23:%.*]] = mul <2 x i32> [[TMP7]], [[TMP22]]
 ; VF2-NEXT:    [[TMP24:%.*]] = extractelement <2 x i32> [[TMP23]], i64 0
-; VF2-NEXT:    [[TMP25:%.*]] = extractelement <2 x i32> [[TMP23]], i64 1
 ; VF2-NEXT:    store i32 [[TMP24]], ptr [[TMP17]], align 8
+; VF2-NEXT:    [[TMP25:%.*]] = extractelement <2 x i32> [[TMP23]], i64 1
 ; VF2-NEXT:    store i32 [[TMP25]], ptr [[TMP18]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], 98
@@ -803,12 +803,12 @@ define void @test_2xi32(ptr noalias %data, ptr noalias %factor) {
 ; VF4-NEXT:    [[TMP44:%.*]] = shufflevector <12 x i32> [[WIDE_VEC1]], <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
 ; VF4-NEXT:    [[TMP28:%.*]] = mul <4 x i32> [[TMP15]], [[TMP27]]
 ; VF4-NEXT:    [[TMP29:%.*]] = extractelement <4 x i32> [[TMP28]], i64 0
-; VF4-NEXT:    [[TMP30:%.*]] = extractelement <4 x i32> [[TMP28]], i64 1
-; VF4-NEXT:    [[TMP31:%.*]] = extractelement <4 x i32> [[TMP28]], i64 2
-; VF4-NEXT:    [[TMP32:%.*]] = extractelement <4 x i32> [[TMP28]], i64 3
 ; VF4-NEXT:    store i32 [[TMP29]], ptr [[TMP16]], align 8
+; VF4-NEXT:    [[TMP30:%.*]] = extractelement <4 x i32> [[TMP28]], i64 1
 ; VF4-NEXT:    store i32 [[TMP30]], ptr [[TMP17]], align 8
+; VF4-NEXT:    [[TMP31:%.*]] = extractelement <4 x i32> [[TMP28]], i64 2
 ; VF4-NEXT:    store i32 [[TMP31]], ptr [[TMP18]], align 8
+; VF4-NEXT:    [[TMP32:%.*]] = extractelement <4 x i32> [[TMP28]], i64 3
 ; VF4-NEXT:    store i32 [[TMP32]], ptr [[TMP19]], align 8
 ; VF4-NEXT:    [[TMP33:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[INDEX]], i32 1
 ; VF4-NEXT:    [[TMP34:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[TMP1]], i32 1
@@ -816,12 +816,12 @@ define void @test_2xi32(ptr noalias %data, ptr noalias %factor) {
 ; VF4-NEXT:    [[TMP36:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[TMP3]], i32 1
 ; VF4-NEXT:    [[TMP45:%.*]] = mul <4 x i32> [[TMP15]], [[TMP44]]
 ; VF4-NEXT:    [[TMP46:%.*]] = extractelement <4 x i32> [[TMP45]], i64 0
-; VF4-NEXT:    [[TMP47:%.*]] = extractelement <4 x i32> [[TMP45]], i64 1
-; VF4-NEXT:    [[TMP48:%.*]] = extractelement <4 x i32> [[TMP45]], i64 2
-; VF4-NEXT:    [[TMP49:%.*]] = extractelement <4 x i32> [[TMP45]], i64 3
 ; VF4-NEXT:    store i32 [[TMP46]], ptr [[TMP33]], align 8
+; VF4-NEXT:    [[TMP47:%.*]] = extractelement <4 x i32> [[TMP45]], i64 1
 ; VF4-NEXT:    store i32 [[TMP47]], ptr [[TMP34]], align 8
+; VF4-NEXT:    [[TMP48:%.*]] = extractelement <4 x i32> [[TMP45]], i64 2
 ; VF4-NEXT:    store i32 [[TMP48]], ptr [[TMP35]], align 8
+; VF4-NEXT:    [[TMP49:%.*]] = extractelement <4 x i32> [[TMP45]], i64 3
 ; VF4-NEXT:    store i32 [[TMP49]], ptr [[TMP36]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
@@ -1579,6 +1579,78 @@ loop:
   %c.1 = fcmp ogt double %l.1, 0.000000e+00
   %s.1 = select i1 %c.1, double 0.000000e+00, double %l.1
   store double %s.1, ptr %data.1, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Narrowing an interleave group must keep only flags present on all members.
+define void @narrowed_fneg_intersects_fmf(ptr noalias %data) {
+; VF2-LABEL: define void @narrowed_fneg_intersects_fmf(
+; VF2-SAME: ptr noalias [[DATA:%.*]]) {
+; VF2-NEXT:  [[ENTRY:.*:]]
+; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF2:       [[VECTOR_PH]]:
+; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF2:       [[VECTOR_BODY]]:
+; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF2-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
+; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[DATA]], i64 [[TMP0]]
+; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
+; VF2-NEXT:    [[TMP2:%.*]] = fneg ninf <2 x double> [[WIDE_LOAD]]
+; VF2-NEXT:    store <2 x double> [[TMP2]], ptr [[TMP1]], align 8
+; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
+; VF2-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; VF2-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
+; VF2:       [[MIDDLE_BLOCK]]:
+; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2:       [[EXIT]]:
+; VF2-NEXT:    ret void
+;
+; VF4-LABEL: define void @narrowed_fneg_intersects_fmf(
+; VF4-SAME: ptr noalias [[DATA:%.*]]) {
+; VF4-NEXT:  [[ENTRY:.*:]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF4:       [[VECTOR_PH]]:
+; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF4:       [[VECTOR_BODY]]:
+; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF4-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
+; VF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[DATA]], i64 [[TMP0]]
+; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x double>, ptr [[TMP1]], align 8
+; VF4-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x double> [[WIDE_VEC]], <8 x double> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; VF4-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x double> [[WIDE_VEC]], <8 x double> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; VF4-NEXT:    [[TMP2:%.*]] = fneg reassoc ninf <4 x double> [[STRIDED_VEC]]
+; VF4-NEXT:    [[TMP3:%.*]] = fneg ninf <4 x double> [[STRIDED_VEC1]]
+; VF4-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x double> [[TMP4]], <8 x double> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; VF4-NEXT:    store <8 x double> [[INTERLEAVED_VEC]], ptr [[TMP1]], align 8
+; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; VF4-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; VF4-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
+; VF4:       [[MIDDLE_BLOCK]]:
+; VF4-NEXT:    br label %[[EXIT:.*]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %1 = shl nsw i64 %iv, 1
+  %data.0 = getelementptr inbounds double, ptr %data, i64 %1
+  %l.0 = load double, ptr %data.0, align 8
+  %neg.0 = fneg reassoc ninf double %l.0
+  store double %neg.0, ptr %data.0, align 8
+  %3 = or disjoint i64 %1, 1
+  %data.1 = getelementptr inbounds double, ptr %data, i64 %3
+  %l.1 = load double, ptr %data.1, align 8
+  %neg.1 = fneg ninf double %l.1
+  store double %neg.1, ptr %data.1, align 8
   %iv.next = add nuw nsw i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 100
   br i1 %ec, label %exit, label %loop

@@ -1978,6 +1978,16 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
               DAG.getConstant(0, getCurSDLoc(), MVT::getIntegerVT(8))));
     }
 
+    if (VT == MVT::externref || VT == MVT::funcref) {
+      assert(C->isNullValue() && "Can only zero this target type!");
+      // The zero value of a WebAssembly reference type is the null reference,
+      // materialized with ref.null.
+      Intrinsic::ID IID = VT == MVT::externref ? Intrinsic::wasm_ref_null_extern
+                                               : Intrinsic::wasm_ref_null_func;
+      return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, getCurSDLoc(), VT,
+                         DAG.getTargetConstant(IID, getCurSDLoc(), MVT::i32));
+    }
+
     VectorType *VecTy = cast<VectorType>(V->getType());
 
     // Now that we know the number and type of the elements, get that number of
@@ -2219,16 +2229,18 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
     MVT PtrValueVT = TLI.getPointerTy(DL, DL.getAllocaAddrSpace());
     SDValue RetPtr =
         DAG.getCopyFromReg(Chain, getCurSDLoc(), DemoteReg, PtrValueVT);
+    Type *RetTy = I.getOperand(0)->getType();
+    Align BaseAlign = DL.getPrefTypeAlign(RetTy);
+    RetPtr =
+        TLI.annotateStackObjectPointer(RetPtr, DAG, getCurSDLoc(), BaseAlign);
     SDValue RetOp = getValue(I.getOperand(0));
 
     SmallVector<EVT, 4> ValueVTs, MemVTs;
     SmallVector<uint64_t, 4> Offsets;
-    ComputeValueVTs(TLI, DL, I.getOperand(0)->getType(), ValueVTs, &MemVTs,
-                    &Offsets, 0);
+    ComputeValueVTs(TLI, DL, RetTy, ValueVTs, &MemVTs, &Offsets, 0);
     unsigned NumValues = ValueVTs.size();
 
     SmallVector<SDValue, 4> Chains(NumValues);
-    Align BaseAlign = DL.getPrefTypeAlign(I.getOperand(0)->getType());
     for (unsigned i = 0; i != NumValues; ++i) {
       // An aggregate return value cannot wrap around the address space, so
       // offsets to its parts don't wrap either.
@@ -2857,7 +2869,7 @@ void SelectionDAGBuilder::visitCondBr(const CondBrInst &I) {
         !shouldKeepJumpConditionsTogether(
             FuncInfo, I, Opcode, BOp0, BOp1,
             DAG.getTargetLoweringInfo().getJumpConditionMergingParams(
-                Opcode, BOp0, BOp1))) {
+                Opcode, BOp0, BOp1, FuncInfo.Fn))) {
       FindMergedConditions(BOp, Succ0MBB, Succ1MBB, BrMBB, BrMBB, Opcode,
                            getEdgeProbability(BrMBB, Succ0MBB),
                            getEdgeProbability(BrMBB, Succ1MBB),
@@ -3124,8 +3136,12 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
       MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI), Align,
       MachineMemOperand::MOVolatile);
 
-  if (TLI.useStackGuardXorFP())
-    GuardVal = TLI.emitStackGuardXorFP(DAG, GuardVal, dl);
+  // If cookie mixing is enabled, unmix the stored GuardVal to get back the
+  // original cookie for comparison. The prologue stored (FP - Cookie) or
+  // (FP XOR Cookie), so we apply the same operation again to unmix:
+  // FP - (FP - Cookie) = Cookie, or (FP XOR Cookie) XOR FP = Cookie.
+  if (TLI.useStackGuardMixFP())
+    GuardVal = TLI.emitStackGuardMixFP(DAG, GuardVal, dl);
 
   // If we're using function-based instrumentation, call the guard check
   // function
@@ -3159,12 +3175,12 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
     return;
   }
 
-  // If useLoadStackGuardNode returns true, generate LOAD_STACK_GUARD.
-  // Otherwise, emit a volatile load to retrieve the stack guard value.
+  // Load the fresh guard value for comparison.
+  // For targets that mix the cookie in LOAD_STACK_GUARD expansion, we need to
+  // load directly without using LOAD_STACK_GUARD to avoid unwanted mixing.
   SDValue Chain = DAG.getEntryNode();
-  if (TLI.useLoadStackGuardNode(M)) {
-    Guard = getLoadStackGuard(DAG, dl, Chain);
-  } else {
+  if (TLI.useStackGuardMixFP()) {
+    // Mixing targets: load cookie directly to avoid mixing in LOAD_STACK_GUARD
     if (const Value *IRGuard = TLI.getSDagStackGuard(M, DAG.getLibcalls())) {
       SDValue GuardPtr = getValue(IRGuard);
       Guard = DAG.getLoad(PtrMemTy, dl, Chain, GuardPtr,
@@ -3175,7 +3191,26 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
       Ctx.diagnose(DiagnosticInfoGeneric("unable to lower stackguard"));
       Guard = DAG.getPOISON(PtrMemTy);
     }
+  } else {
+    // Non-mixing targets: use LOAD_STACK_GUARD or direct load as usual
+    if (TLI.useLoadStackGuardNode(M)) {
+      Guard = getLoadStackGuard(DAG, dl, Chain);
+    } else {
+      if (const Value *IRGuard = TLI.getSDagStackGuard(M, DAG.getLibcalls())) {
+        SDValue GuardPtr = getValue(IRGuard);
+        Guard = DAG.getLoad(PtrMemTy, dl, Chain, GuardPtr,
+                            MachinePointerInfo(IRGuard, 0), Align,
+                            MachineMemOperand::MOVolatile);
+      } else {
+        LLVMContext &Ctx = *DAG.getContext();
+        Ctx.diagnose(DiagnosticInfoGeneric("unable to lower stackguard"));
+        Guard = DAG.getPOISON(PtrMemTy);
+      }
+    }
   }
+
+  // Now both Guard (fresh cookie) and GuardVal (unmixed from stored value)
+  // contain unmixed cookie values that can be compared directly.
 
   // Perform the comparison via a getsetcc.
   SDValue Cmp = DAG.getSetCC(
@@ -3233,8 +3268,8 @@ void SelectionDAGBuilder::visitSPDescriptorFailure(
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI), Align,
         MachineMemOperand::MOVolatile);
 
-    if (TLI.useStackGuardXorFP())
-      GuardVal = TLI.emitStackGuardXorFP(DAG, GuardVal, dl);
+    if (TLI.useStackGuardMixFP())
+      GuardVal = TLI.emitStackGuardMixFP(DAG, GuardVal, dl);
 
     // The target provides a guard check function to validate the guard value.
     // Generate a call to that function with the content of the guard slot as
@@ -5517,6 +5552,31 @@ SDValue SelectionDAGBuilder::handleTargetIntrinsicRet(const CallBase &I,
 void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
                                                unsigned Intrinsic) {
   auto [HasChain, OnlyLoad] = getTargetIntrinsicCallProperties(I);
+  Intrinsic::ID IntrinsicID = static_cast<Intrinsic::ID>(Intrinsic);
+
+  if (!DAG.getMachineFunction().getSubtarget().isIntrinsicSupported(
+          Intrinsic)) {
+    SDLoc DL = getCurSDLoc();
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupportedTargetIntrinsic(
+        *I.getFunction(), IntrinsicID, DL.getDebugLoc()));
+
+    // The intrinsic is not available on this subtarget. Preserve the chain for
+    // side-effecting intrinsics and lower any result to poison so that
+    // compilation can continue and collect further diagnostics.
+    if (HasChain && !OnlyLoad)
+      DAG.setRoot(getRoot());
+
+    if (!I.getType()->isVoidTy()) {
+      SmallVector<EVT, 4> ValueVTs;
+      ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
+                      I.getType(), ValueVTs);
+      SmallVector<SDValue, 4> Results;
+      for (EVT VT : ValueVTs)
+        Results.push_back(DAG.getPOISON(VT));
+      setValue(&I, DAG.getMergeValues(Results, DL));
+    }
+    return;
+  }
 
   // Infos is set by getTgtMemIntrinsic.
   SmallVector<TargetLowering::IntrinsicInfo> Infos;
@@ -7615,8 +7675,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                         MachinePointerInfo(Global, 0), Align,
                         MachineMemOperand::MOVolatile);
     }
-    if (TLI.useStackGuardXorFP())
-      Res = TLI.emitStackGuardXorFP(DAG, Res, sdl);
+    // Mix the cookie with FP if enabled. Skip if using LOAD_STACK_GUARD
+    // with post-RA mixing (AArch64 MSVCRT), as the mixing will be done during
+    // post-RA expansion of LOAD_STACK_GUARD.
+    if (TLI.useStackGuardMixFP() && !TLI.useLoadStackGuardNode(M))
+      Res = TLI.emitStackGuardMixFP(DAG, Res, sdl);
     DAG.setRoot(Chain);
     setValue(&I, Res);
     return;

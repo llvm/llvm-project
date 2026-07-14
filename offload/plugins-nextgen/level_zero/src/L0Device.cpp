@@ -334,8 +334,8 @@ Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
 }
 
 Expected<void *> L0DeviceTy::allocate(size_t Size, void *HstPtr,
-                                      TargetAllocTy Kind) {
-  return dataAlloc(Size, /*Align=*/0, Kind,
+                                      TargetAllocTy Kind, size_t Alignment) {
+  return dataAlloc(Size, Alignment, Kind,
                    /*Offset=*/0, /*UserAlloc=*/HstPtr == nullptr,
                    /*DevMalloc=*/false);
 }
@@ -685,6 +685,27 @@ Error L0DeviceTy::dataFillImpl(void *TgtPtr, const void *PatternPtr,
                         AsyncInfoWrapper);
 }
 
+Error L0DeviceTy::dataPrefetchImpl(size_t Count, const void **Mems,
+                                   const size_t *Sizes, bool ToHost,
+                                   AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  if (Count == 0)
+    return Plugin::success();
+
+  // Level Zero only supports prefetching memory to the device. A prefetch
+  // request targeting the host is treated as a no-op.
+  if (ToHost)
+    return Plugin::success();
+
+  __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
+  auto QueueOrErr = getOrCreateQueue(AsyncInfo);
+  if (!QueueOrErr)
+    return QueueOrErr.takeError();
+  for (size_t I = 0; I < Count; I++)
+    if (auto Err = (*QueueOrErr)->memoryPrefetch(Mems[I], Sizes[I]))
+      return Err;
+  return Plugin::success();
+}
+
 Expected<void *> L0DeviceTy::dataAlloc(size_t Size, size_t Align, int32_t Kind,
                                        intptr_t Offset, bool UserAlloc,
                                        bool DevMalloc, uint32_t MemAdvice,
@@ -888,8 +909,9 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
   llvm::sort(Funcs,
              [](const auto &X, const auto &Y) { return X.second < Y.second; });
 
-  auto BufferOrErr = allocate(Funcs.size() * sizeof(void *),
-                              /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE);
+  auto BufferOrErr =
+      allocate(Funcs.size() * sizeof(void *),
+               /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE, /*Alignment=*/0);
   if (!BufferOrErr)
     return HandleErr(BufferOrErr.takeError());
 

@@ -1486,9 +1486,19 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
 
     // Add the step value register, if it needs one.
     // TODO: The non-affine case isn't precisely modeled here.
-    if (!AR->isAffine() || !isa<SCEVConstant>(AR->getOperand(1))) {
-      if (!Regs.count(AR->getOperand(1))) {
-        RateRegister(F, AR->getOperand(1), Regs, LU, HardwareLoopProfitable);
+    const SCEV *StepReg = AR->getOperand(1);
+    if (!AR->isAffine() || !isa<SCEVConstant>(StepReg)) {
+      // If the step amount is a constant multiplied by vscale then it can form
+      // the immediate value of an add and doesn't use a register, so long as
+      // the immediate value is legal.
+      auto IsVScaleStep = [](const SCEV *Reg, const TargetTransformInfo *TTI) {
+        const APInt *X;
+        if (!match(Reg, m_scev_Mul(m_scev_APInt(X), m_SCEVVScale())))
+          return false;
+        return TTI->isLegalAddScalableImmediate(X->getLimitedValue());
+      };
+      if (!Regs.count(StepReg) && !IsVScaleStep(StepReg, TTI)) {
+        RateRegister(F, StepReg, Regs, LU, HardwareLoopProfitable);
         if (isLoser())
           return;
       }
@@ -5238,7 +5248,10 @@ void LSRInstance::NarrowSearchSpaceByMergingUsesOutsideLoop() {
 
   for (size_t LUIdx = 0, NumUses = Uses.size(); LUIdx != NumUses; ++LUIdx) {
     LSRUse &LU = Uses[LUIdx];
-    if (!LU.AllFixupsOutsideLoop || LU.Formulae.empty())
+    // Don't merge ICmpZero uses outside the loop, as ICmpZero needs to be
+    // handled specially when expanding.
+    if (!LU.AllFixupsOutsideLoop || LU.Formulae.empty() ||
+        LU.Kind == LSRUse::ICmpZero)
       continue;
 
     LLVM_DEBUG(dbgs() << "  Trying to eliminate use "; LU.print(dbgs());
@@ -5830,10 +5843,6 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
 
   // This is the type that the user actually needs.
   Type *OpTy = LF.OperandValToReplace->getType();
-  // For ICmpZero with pointer-typed operands, keep the comparison in the
-  // integer domain to avoid generating inttoptr casts.
-  if (LU.Kind == LSRUse::ICmpZero && OpTy->isPointerTy())
-    OpTy = SE.getEffectiveSCEVType(OpTy);
   // This will be the type that we'll initially expand to.
   Type *Ty = F.getType();
   if (!Ty)
@@ -5844,6 +5853,14 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
     Ty = OpTy;
   // This is the type to do integer arithmetic in.
   Type *IntTy = SE.getEffectiveSCEVType(Ty);
+  // For ICmpZero with pointer-typed operands, keep the comparison in the
+  // integer domain to avoid generating inttoptr casts. Use IntTy (the
+  // formula's arithmetic width) so that both icmp operands match even when
+  // the IV is wider than the pointer.
+  if (LU.Kind == LSRUse::ICmpZero && OpTy->isPointerTy()) {
+    OpTy = IntTy;
+    Ty = IntTy;
+  }
 
   // Build up a list of operands to add together to form the full base.
   SmallVector<SCEVUse, 8> Ops;

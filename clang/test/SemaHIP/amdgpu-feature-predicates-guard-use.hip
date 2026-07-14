@@ -10,7 +10,7 @@ __device__ void g();
 __device__ void f(int x, bool b) {
     long v15_16;
     __asm volatile("v_lshlrev_b64 v[15:16], 0, %0" : "={v[15:16]}"(v15_16) : "v"(x)); // expected-warning {{the 'v_lshlrev_b64 v[15:16], 0, $0' ASM sequence might be invalid for some AMDGPU targets}}
-    // expected-note@-1 {{enclose the 'v_lshlrev_b64 v[15:16], 0, $0' ASM sequence in a scope controlled by a __builtin_amdgcn_is_processor check to silence this warning}}
+    // expected-note@-1 {{enclose the 'v_lshlrev_b64 v[15:16], 0, $0' ASM sequence in a scope controlled by a __builtin_amdgcn_processor_is check to silence this warning}}
 
     if (__builtin_amdgcn_processor_is("gfx90a")) {
         long v15_16;
@@ -20,7 +20,7 @@ __device__ void f(int x, bool b) {
     if (!__builtin_amdgcn_processor_is("gfx90a")) {
         long v15_16;
         __asm volatile("v_lshlrev_b64 v[15:16], 0, %0" : "={v[15:16]}"(v15_16) : "v"(x)); // expected-warning {{the 'v_lshlrev_b64 v[15:16], 0, $0' ASM sequence might be invalid for some AMDGPU targets}}
-        // expected-note@-1 {{enclose the 'v_lshlrev_b64 v[15:16], 0, $0' ASM sequence in a scope controlled by a __builtin_amdgcn_is_processor check to silence this warning}}
+        // expected-note@-1 {{enclose the 'v_lshlrev_b64 v[15:16], 0, $0' ASM sequence in a scope controlled by a __builtin_amdgcn_processor_is check to silence this warning}}
     }
 
     __builtin_amdgcn_is_invocable(__builtin_amdgcn_s_sleep_var) ? __builtin_amdgcn_s_sleep_var(x) : __builtin_trap();

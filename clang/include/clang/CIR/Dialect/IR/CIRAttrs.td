@@ -475,6 +475,13 @@ def CIR_ConstRecordAttr : CIR_ValueLikeAttr<"ConstRecord", "const_record"> {
     an `mlir::ArrayAttr` instance where each element is a typed attribute
     (`mlir::TypedAttribute`).
 
+    These must be initialized with a set of types that exactly match the type of
+    the attribute, with one exception: flexible array members.  If the last
+    member of the struct type is a zero-length array, the `ConstRecordAttr` is
+    allowed to hold an unbounded number of elements. This is necessary to
+    support global and static storage duration variables that use the flexible
+    array member functionality.
+
     Example:
     ```
     cir.global external @rgb2 = #cir.const_record<{0 : i8,
@@ -1285,11 +1292,16 @@ def CIR_CXXAssignAttr : CIR_Attr<"CXXAssign", "cxx_assign"> {
   }];
 }
 
-def CIR_CXXSpecialMemberAttr : AnyAttrOf<[
+//===----------------------------------------------------------------------===//
+// FuncInfoAttr
+//===----------------------------------------------------------------------===//
+
+// The attributes accepted in the optional func_info slot on cir.func.
+def CIR_FuncInfoAttr : AnyAttrOf<[
   CIR_CXXCtorAttr,
   CIR_CXXDtorAttr,
   CIR_CXXAssignAttr
-]>;
+], "function information attribute">;
 
 //===----------------------------------------------------------------------===//
 // BitfieldInfoAttr
@@ -1469,25 +1481,32 @@ def CIR_UnwindAttr : CIR_UnitAttr<"Unwind", "unwind"> {
 // CIR_BlockAddrInfoAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_BlockAddrInfoAttr : CIR_Attr<"BlockAddrInfo", "block_addr_info"> {
-  let summary = "Block Addres attribute";
+def CIR_BlockAddrInfoAttr
+    : CIR_ValueLikeAttr<"BlockAddrInfo", "block_addr_info"> {
+  let summary = "Block address attribute";
   let description = [{
     This attribute is used to represent the address of a basic block
     within a function. It combines the symbol reference to a function
     with the name of a label inside that function.
   }];
-  let parameters = (ins "mlir::FlatSymbolRefAttr":$func,
-                        "mlir::StringAttr":$label);
+  let parameters = (ins
+      AttributeSelfTypeParameter<
+          "", "cir::PointerType",
+          "cir::PointerType::get(cir::VoidType::get($_ctxt))">:$type,
+      "mlir::FlatSymbolRefAttr":$func,
+      "mlir::StringAttr":$label);
 
   let assemblyFormat = "`<` $func `,` $label `>`";
   let builders = [
     AttrBuilder<(ins "llvm::StringRef":$func_name,
-                     "llvm::StringRef":$label_name
-                     ), [{
-      return $_get($_ctxt, mlir::FlatSymbolRefAttr::get($_ctxt, func_name),
+                     "llvm::StringRef":$label_name), [{
+      return $_get($_ctxt,
+                   cir::PointerType::get(cir::VoidType::get($_ctxt)),
+                   mlir::FlatSymbolRefAttr::get($_ctxt, func_name),
                    mlir::StringAttr::get($_ctxt, label_name));
     }]>
   ];
+
   let canHaveIllegalCXXABIType = 0;
 }
 

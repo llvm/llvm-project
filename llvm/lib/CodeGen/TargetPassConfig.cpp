@@ -820,7 +820,7 @@ void TargetPassConfig::addStripDebugPass() {
 }
 
 void TargetPassConfig::addCheckDebugPass() {
-  PM->add(createCheckDebugMachineModulePass());
+  PM->add(createCheckDebugMachineModuleLegacyPass());
 }
 
 void TargetPassConfig::addMachinePrePasses(bool AllowDebugify) {
@@ -1288,8 +1288,8 @@ void TargetPassConfig::addMachinePasses() {
     // The static data splitter pass is a machine function pass. and
     // static data annotator pass is a module-wide pass. See the file comment
     // in StaticDataAnnotator.cpp for the motivation.
-    addPass(createStaticDataSplitterPass());
-    addPass(createStaticDataAnnotatorPass());
+    addPass(createStaticDataSplitterLegacyPass());
+    addPass(createStaticDataAnnotatorLegacyPass());
   }
   // We run the BasicBlockSections pass if either we need BB sections or BB
   // address map (or both).

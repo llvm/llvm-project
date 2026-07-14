@@ -89,6 +89,9 @@ public:
     GlobalData.Options.Threads = NumThreads;
   }
 
+  /// Use the specified thread pool to link the object files.
+  void setThreadPool(ThreadPoolInterface *Pool) override { ThreadPool = Pool; }
+
   /// Add kind of accelerator tables to be generated.
   void addAccelTableKind(AccelTableKind Kind) override {
     assert(!llvm::is_contained(GlobalData.getOptions().AccelTables, Kind));
@@ -431,6 +434,9 @@ protected:
 
   /// Hanler for output sections.
   SectionHandlerTy SectionHandler = nullptr;
+
+  /// Thread pool that links the object files, or null to use a private pool.
+  ThreadPoolInterface *ThreadPool = nullptr;
   /// @}
 };
 

@@ -1,6 +1,6 @@
 // This module contains headers related to the configuration of the library. These headers
 // are free of any dependency on the rest of libc++.
-module std_config [system] {
+module std_config {
   @LIBCXX_CONFIG_SITE_MODULE_ENTRY@ // generated via CMake
   textual header "__config"
   textual header "__configuration/abi.h"
@@ -13,11 +13,12 @@ module std_config [system] {
   textual header "__configuration/language.h"
   textual header "__configuration/namespace.h"
   textual header "__configuration/platform.h"
+  textual header "__configuration/pstl.h"
   textual header "__configuration/utility.h"
   textual header "version"
 }
 
-module std_core [system] {
+module std_core {
   module cstddef {
     module byte         { header "__cstddef/byte.h" }
     module max_align_t  {
@@ -379,7 +380,7 @@ module std_core [system] {
   }
 } // module std_core
 
-module std [system] {
+module std {
   module algorithm {
     module adjacent_find                          { header "__algorithm/adjacent_find.h" }
     module all_of                                 { header "__algorithm/all_of.h" }
@@ -947,7 +948,10 @@ module std [system] {
       header "__charconv/to_chars_integral.h"
       export std.charconv.to_chars_result
     }
-    module to_chars_result            { header "__charconv/to_chars_result.h" }
+    module to_chars_result            {
+      header "__charconv/to_chars_result.h"
+      export std.system_error.errc
+    }
     module traits                     { header "__charconv/traits.h" }
 
     header "charconv"
@@ -1624,7 +1628,7 @@ module std [system] {
   }
 
   // TODO: Understand why this needs to live in its own module
-  module locale_base [system] {
+  module locale_base {
     header "__locale"
     export *
   }
@@ -1700,6 +1704,9 @@ module std [system] {
       header "__memory/uninitialized_algorithms.h"
       export std.memory.destroy
       export std.utility.pair
+    }
+    module uninitialized_multidimensional_algorithms {
+      header "__memory/uninitialized_multidimensional_algorithms.h"
     }
     module unique_ptr {
       header "__memory/unique_ptr.h"
@@ -2125,6 +2132,11 @@ module std [system] {
     export *
   }
 
+  module text_encoding {
+    header "text_encoding"
+    export *
+  }
+
   module thread {
     module formatter              { header "__thread/formatter.h" }
     module id                     { header "__thread/id.h" }
@@ -2252,6 +2264,7 @@ module std [system] {
 
       export std.format.formatter
     }
+    module layout                { header "__vector/layout.h" }
     module pmr                   {
       header "__vector/pmr.h"
 
@@ -2445,57 +2458,57 @@ module std [system] {
 // These modules need to be their own top-level modules because they depend on the system-provided
 // headers (via include_next), which are then free to include other C headers provided by libc++.
 // If we group these headers in a single module, we would end up with circular dependencies.
-module std_complex_h [system] {
+module std_complex_h {
   header "complex.h"
   export *
 }
-module std_errno_h [system] {
+module std_errno_h {
   header "errno.h"
   export *
 }
-module std_math_h [system] {
+module std_math_h {
   header "math.h"
   export *
 }
-module std_stdatomic_h [system] {
+module std_stdatomic_h {
   header "stdatomic.h"
   export *
 }
-module std_stddef_h [system] {
+module std_stddef_h {
   // <stddef.h> supports being included multiple times with different pre-defined macros
   textual header "stddef.h"
 }
-module std_stdio_h [system] {
+module std_stdio_h {
   // <stdio.h> supports being included multiple times with different pre-defined macros
   textual header "stdio.h"
 }
-module std_stdlib_h [system] {
+module std_stdlib_h {
   // <stdlib.h> supports being included multiple times with different pre-defined macros
   textual header "stdlib.h"
 }
-module std_string_h [system] {
+module std_string_h {
   header "string.h"
   export *
 }
-module std_tgmath_h [system] {
+module std_tgmath_h {
   header "tgmath.h"
   export *
 }
-module std_uchar_h [system] {
+module std_uchar_h {
   header "uchar.h"
   export *
 }
-module std_wchar_h [system] {
+module std_wchar_h {
   // <wchar.h> supports being included multiple times with different pre-defined macros
   textual header "wchar.h"
 }
-module std_wctype_h [system] {
+module std_wctype_h {
   header "wctype.h"
   export *
 }
 
 // This header is used by other C compatibility headers so it needs to be in its own module.
-module std_private_mbstate_t [system] {
+module std_private_mbstate_t {
   header "__mbstate_t.h"
   export *
 }
