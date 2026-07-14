@@ -1014,39 +1014,20 @@ static char getSymbolNMTypeChar(COFFImportFile &Obj) {
   return '?';
 }
 
-static char getSymbolNMTypeChar(GOFFObjectFile &Obj, basic_symbol_iterator I) {
-  symbol_iterator SymI(I);
-  Expected<section_iterator> SecIOrErr = SymI->getSection();
-  if (!SecIOrErr) {
-    consumeError(SecIOrErr.takeError());
-    return '?';
-  }
-
+static char getSymbolNMTypeChar(GOFFObjectFile &, basic_symbol_iterator I) {
   GOFFSymbolRef Ref(*I);
-  Expected<uint32_t> Flags = Ref.getSymbolGOFFFlags();
   Expected<SymbolRef::Type> Type = Ref.getSymbolGOFFType();
-
-  if (!Type || !Flags) {
+  if (!Type) {
+    consumeError(Type.takeError());
     return '?';
   }
-
   switch (*Type) {
-  case SymbolRef::ST_Unknown:
-    return 'U';
-  case SymbolRef::ST_Data: {
-    if (*Flags & SymbolRef::SF_Global)
-      return 'D';
+  case SymbolRef::ST_Data:
     return 'd';
-  }
-  case SymbolRef::ST_Debug:
-    return 'g';
-  case SymbolRef::ST_Function: {
-    if (*Flags & SymbolRef::SF_Global)
-      return 'T';
+  case SymbolRef::ST_Function:
     return 't';
-  }
   default:
-    return 'o';
+    return '?';
   }
 }
 
@@ -1210,9 +1191,9 @@ static char getNMSectionTagAndName(SymbolicFile &Obj, basic_symbol_iterator I,
     Ret = getSymbolNMTypeChar(*ELF, I);
     if (ELFSymbolRef(*I).getBinding() == ELF::STB_GNU_UNIQUE)
       return Ret;
-  } else if (GOFFObjectFile *GOFF = dyn_cast<GOFFObjectFile>(&Obj))
+  } else if (GOFFObjectFile *GOFF = dyn_cast<GOFFObjectFile>(&Obj)) {
     Ret = getSymbolNMTypeChar(*GOFF, I);
-  else
+  } else
     llvm_unreachable("unknown binary format");
 
   if (!(Symflags & object::SymbolRef::SF_Global))
@@ -1891,9 +1872,8 @@ static bool getSymbolNamesFromObject(SymbolicFile &Obj,
       S.Address = 0;
       if (isa<ELFObjectFileBase>(&Obj))
         S.Size = ELFSymbolRef(Sym).getSize();
-      else if (isa<GOFFObjectFile>(&Obj)) {
+      else if (isa<GOFFObjectFile>(&Obj))
         S.Size = GOFFSymbolRef(Sym).getSize();
-      }
 
       if (const XCOFFObjectFile *XCOFFObj =
               dyn_cast<const XCOFFObjectFile>(&Obj))
