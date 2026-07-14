@@ -68,9 +68,9 @@ body: |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:vgpr(s32) = G_CTPOP [[UV]](s32)
-    ; CHECK-NEXT: [[CTPOP1:%[0-9]+]]:vgpr(s32) = G_CTPOP [[UV1]](s32)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(i32), [[UV1:%[0-9]+]]:vgpr(i32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:vgpr(i32) = G_CTPOP [[UV]](i32)
+    ; CHECK-NEXT: [[CTPOP1:%[0-9]+]]:vgpr(i32) = G_CTPOP [[UV1]](i32)
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = nuw nsw G_ADD [[CTPOP]], [[CTPOP1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[ADD]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1

@@ -1302,6 +1302,7 @@ void EmitAssemblyHelper::RunCodegenPipelineNewPM(
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
   CGPassBuilderOption Opt = getCGPassBuilderOption();
+  Opt.DisableVerify = !CodeGenOpts.VerifyModule;
   MachineModuleInfo MMI(TM.get());
   PassInstrumentationCallbacks PIC;
   PipelineTuningOptions PTOptions;

@@ -115,8 +115,10 @@ public:
 
   // If the implementation chooses not to implement a certain visit method, fall
   // back on VisitExpr or whatever else is the superclass.
+  // Note: In debug builds, avoid ALWAYS_INLINE to prevent stack overflow with
+  // deeply nested expressions (e.g., 2000+ logical operators).
 #define STMT(CLASS, PARENT)                                                    \
-  LLVM_ATTRIBUTE_ALWAYS_INLINE                                                 \
+  LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG                                    \
   RetTy Visit##CLASS(PTR(CLASS) S, ParamTys... P) { DISPATCH(PARENT, PARENT); }
 #include "clang/AST/StmtNodes.inc"
 
