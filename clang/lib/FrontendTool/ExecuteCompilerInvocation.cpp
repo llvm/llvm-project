@@ -215,6 +215,11 @@ CreateFrontendAction(CompilerInstance &CI) {
     Act = std::make_unique<ssaf::TUSummaryExtractorFrontendAction>(
         std::move(Act));
   }
+  // Enter the source-transformation action when the transformation flag is set,
+  // and also when only an output flag (--ssaf-src-edit-file= /
+  // --ssaf-transformation-report-file=) is set — the action's
+  // reportOrphanFlagMisuse then diagnoses that as a reverse orphan rather than
+  // silently ignoring the flag.
   if (!CI.getSSAFOpts().SourceTransformation.empty() ||
       !CI.getSSAFOpts().SrcEditFile.empty() ||
       !CI.getSSAFOpts().TransformationReportFile.empty()) {
