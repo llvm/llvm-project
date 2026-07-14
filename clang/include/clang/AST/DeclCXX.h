@@ -4268,16 +4268,18 @@ public:
 class DecompositionDecl final
     : public VarDecl,
       private llvm::TrailingObjects<DecompositionDecl, BindingDecl *> {
+  /// The closing bracket (before the initializer is expected).
+  SourceLocation RSquareLoc;
   /// The number of BindingDecl*s following this object.
   unsigned NumBindings;
 
   DecompositionDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
-                    SourceLocation LSquareLoc, QualType T,
-                    TypeSourceInfo *TInfo, StorageClass SC,
+                    SourceLocation LSquareLoc, SourceLocation RSquareLoc,
+                    QualType T, TypeSourceInfo *TInfo, StorageClass SC,
                     ArrayRef<BindingDecl *> Bindings)
       : VarDecl(Decomposition, C, DC, StartLoc, LSquareLoc, nullptr, T, TInfo,
                 SC),
-        NumBindings(Bindings.size()) {
+        RSquareLoc(RSquareLoc), NumBindings(Bindings.size()) {
     llvm::uninitialized_copy(Bindings, getTrailingObjects());
     for (auto *B : Bindings) {
       B->setDecomposedDecl(this);
@@ -4298,8 +4300,8 @@ public:
   static DecompositionDecl *Create(ASTContext &C, DeclContext *DC,
                                    SourceLocation StartLoc,
                                    SourceLocation LSquareLoc,
-                                   QualType T, TypeSourceInfo *TInfo,
-                                   StorageClass S,
+                                   SourceLocation RSquareLoc, QualType T,
+                                   TypeSourceInfo *TInfo, StorageClass S,
                                    ArrayRef<BindingDecl *> Bindings);
   static DecompositionDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                                unsigned NumBindings);
@@ -4328,6 +4330,9 @@ public:
                                             std::move(PackBindings),
                                             std::move(Bindings));
   }
+
+  /// The closing bracket (before the initializer is expected).
+  SourceLocation getRSquareLoc() const { return RSquareLoc; }
 
   void printName(raw_ostream &OS, const PrintingPolicy &Policy) const override;
 

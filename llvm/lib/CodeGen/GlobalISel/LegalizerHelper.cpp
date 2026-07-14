@@ -2167,6 +2167,14 @@ void LegalizerHelper::widenScalarSrc(MachineInstr &MI, LLT WideTy,
   MO.setReg(ExtB.getReg(0));
 }
 
+void LegalizerHelper::widenScalarSrcUsingFPExt(MachineInstr &MI, LLT WideTy,
+                                               unsigned OpIdx) {
+  MachineOperand &MO = MI.getOperand(OpIdx);
+  auto ExtB = MIRBuilder.buildInstr(TargetOpcode::G_FPEXT, {WideTy}, {MO},
+                                    MI.getFlags());
+  MO.setReg(ExtB.getReg(0));
+}
+
 void LegalizerHelper::narrowScalarSrc(MachineInstr &MI, LLT NarrowTy,
                                       unsigned OpIdx) {
   MachineOperand &MO = MI.getOperand(OpIdx);
@@ -2180,6 +2188,15 @@ void LegalizerHelper::widenScalarDst(MachineInstr &MI, LLT WideTy,
   Register DstExt = MRI.createGenericVirtualRegister(WideTy);
   MIRBuilder.setInsertPt(MIRBuilder.getMBB(), ++MIRBuilder.getInsertPt());
   MIRBuilder.buildInstr(TruncOpcode, {MO}, {DstExt});
+  MO.setReg(DstExt);
+}
+
+void LegalizerHelper::widenScalarDstUsingFPTrunc(MachineInstr &MI, LLT WideTy,
+                                                 unsigned OpIdx) {
+  MachineOperand &MO = MI.getOperand(OpIdx);
+  Register DstExt = MRI.createGenericVirtualRegister(WideTy);
+  MIRBuilder.setInsertPt(MIRBuilder.getMBB(), ++MIRBuilder.getInsertPt());
+  MIRBuilder.buildInstr(TargetOpcode::G_FPTRUNC, {MO}, {DstExt}, MI.getFlags());
   MO.setReg(DstExt);
 }
 
@@ -3110,7 +3127,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
       return UnableToLegalize;
 
     Observer.changingInstr(MI);
-    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_FPEXT);
+    widenScalarSrcUsingFPExt(MI, WideTy, 1);
     Observer.changedInstr(MI);
     return Legalized;
   case TargetOpcode::G_FPTOSI:
@@ -3123,7 +3140,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     if (TypeIdx == 0)
       widenScalarDst(MI, WideTy);
     else
-      widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_FPEXT);
+      widenScalarSrcUsingFPExt(MI, WideTy, 1);
 
     Observer.changedInstr(MI);
     return Legalized;
@@ -3131,7 +3148,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changingInstr(MI);
 
     if (TypeIdx == 0)
-      widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
+      widenScalarDstUsingFPTrunc(MI, WideTy, 0);
     else
       widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_SEXT);
 
@@ -3141,7 +3158,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changingInstr(MI);
 
     if (TypeIdx == 0)
-      widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
+      widenScalarDstUsingFPTrunc(MI, WideTy, 0);
     else
       widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ZEXT);
 
@@ -3184,7 +3201,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
       }
       MIRBuilder.buildTrunc(OldDst, NewDst);
     } else
-      widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_FPEXT);
+      widenScalarSrcUsingFPExt(MI, WideTy, 1);
 
     Observer.changedInstr(MI);
     return Legalized;
@@ -3279,8 +3296,8 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     if (TypeIdx == 0)
       widenScalarDst(MI, WideTy);
     else {
-      widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_FPEXT);
-      widenScalarSrc(MI, WideTy, 3, TargetOpcode::G_FPEXT);
+      widenScalarSrcUsingFPExt(MI, WideTy, 2);
+      widenScalarSrcUsingFPExt(MI, WideTy, 3);
     }
     Observer.changedInstr(MI);
     return Legalized;
@@ -3433,18 +3450,18 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changingInstr(MI);
 
     for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I)
-      widenScalarSrc(MI, WideTy, I, TargetOpcode::G_FPEXT);
+      widenScalarSrcUsingFPExt(MI, WideTy, I);
 
-    widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
+    widenScalarDstUsingFPTrunc(MI, WideTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
   case TargetOpcode::G_FMODF: {
     Observer.changingInstr(MI);
-    widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_FPEXT);
+    widenScalarSrcUsingFPExt(MI, WideTy, 2);
 
-    widenScalarDst(MI, WideTy, 1, TargetOpcode::G_FPTRUNC);
+    widenScalarDstUsingFPTrunc(MI, WideTy, 1);
     MIRBuilder.setInsertPt(MIRBuilder.getMBB(), --MIRBuilder.getInsertPt());
-    widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
+    widenScalarDstUsingFPTrunc(MI, WideTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
   }
@@ -3456,8 +3473,8 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
         return UnableToLegalize;
 
       Observer.changingInstr(MI);
-      widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_FPEXT);
-      widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
+      widenScalarSrcUsingFPExt(MI, WideTy, 1);
+      widenScalarDstUsingFPTrunc(MI, WideTy, 0);
       Observer.changedInstr(MI);
       return Legalized;
     }
@@ -3477,8 +3494,8 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changingInstr(MI);
 
     if (TypeIdx == 0) {
-      widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_FPEXT);
-      widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
+      widenScalarSrcUsingFPExt(MI, WideTy, 2);
+      widenScalarDstUsingFPTrunc(MI, WideTy, 0);
     } else {
       widenScalarDst(MI, WideTy, 1);
     }
@@ -3493,7 +3510,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     if (TypeIdx == 0)
       widenScalarDst(MI, WideTy);
     else
-      widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_FPEXT);
+      widenScalarSrcUsingFPExt(MI, WideTy, 1);
 
     Observer.changedInstr(MI);
     return Legalized;
@@ -3570,8 +3587,8 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Register VecReg = MI.getOperand(1).getReg();
     LLT VecTy = MRI.getType(VecReg);
     LLT WideVecTy = VecTy.changeElementType(WideTy);
-    widenScalarSrc(MI, WideVecTy, 1, TargetOpcode::G_FPEXT);
-    widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
+    widenScalarSrcUsingFPExt(MI, WideVecTy, 1);
+    widenScalarDstUsingFPTrunc(MI, WideTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
   }
@@ -8885,8 +8902,6 @@ LegalizerHelper::lowerFPTRUNC_F32_TO_BF16(MachineInstr &MI) {
   LLT I16Ty = SrcTy.changeElementType(LLT::integer(16));
   LLT I32Ty = SrcTy.changeElementType(LLT::integer(32));
 
-  auto IsNaN = MIRBuilder.buildFCmp(CmpInst::FCMP_UNO, I1Ty, SrcReg,
-                                    MIRBuilder.buildFConstant(SrcTy, 0));
   auto SrcI = MIRBuilder.buildBitcast(I32Ty, SrcReg);
 
   // Conversions should set NaN's quiet bit. This also prevents NaNs from
@@ -8904,11 +8919,15 @@ LegalizerHelper::lowerFPTRUNC_F32_TO_BF16(MachineInstr &MI) {
 
   // Don't round if we had a NaN, we don't want to turn 0x7fffffff into
   // 0x80000000.
-  auto Sel = MIRBuilder.buildSelect(I32Ty, IsNaN, NaN, Add);
+  if (!MI.getFlag(MachineInstr::FmNoNans)) {
+    auto IsNaN = MIRBuilder.buildFCmp(CmpInst::FCMP_UNO, I1Ty, SrcReg,
+                                      MIRBuilder.buildFConstant(SrcTy, 0));
+    Add = MIRBuilder.buildSelect(I32Ty, IsNaN, NaN, Add);
+  }
 
   // Now that we have rounded, shift the bits into position.
   auto Srl =
-      MIRBuilder.buildLShr(I32Ty, Sel, MIRBuilder.buildConstant(I32Ty, 16));
+      MIRBuilder.buildLShr(I32Ty, Add, MIRBuilder.buildConstant(I32Ty, 16));
   auto Trunc = MIRBuilder.buildTrunc(I16Ty, Srl);
   MIRBuilder.buildBitcast(DstReg, Trunc);
   MI.eraseFromParent();
