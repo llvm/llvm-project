@@ -34,13 +34,4 @@ const char *DladdrSelfFName(void) {
   return nullptr;
 }
 
-char* DladdrElfHeaderBase(void* ld, char* addr) {
-#if SANITIZER_GLIBC
-  Dl_info info;
-  if (dladdr(ld, &info) && info.dli_fbase)
-    addr = (char*)info.dli_fbase;
-#endif  // SANITIZER_GLIBC
-  return addr;
-}
-
 }  // namespace __sanitizer
