@@ -3459,11 +3459,9 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
 
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
 
-    // Mark C++ special member functions (Constructor, Destructor etc.)
-    setCXXSpecialMemberAttr(func, funcDecl);
-
-    // Tag functions that match a known standard library entity.
-    setFuncIdentityAttr(func, funcDecl);
+    // Record the func_info tag, a C++ special member form or a known standard
+    // library entity.
+    setFuncInfoAttr(func, funcDecl);
 
     if (!cgf)
       theModule.push_back(func);
@@ -3507,8 +3505,8 @@ static cir::AssignKind getAssignKindFromDecl(const CXXMethodDecl *method) {
   llvm_unreachable("not a copy or move assignment operator");
 }
 
-void CIRGenModule::setCXXSpecialMemberAttr(
-    cir::FuncOp funcOp, const clang::FunctionDecl *funcDecl) {
+void CIRGenModule::setFuncInfoAttr(cir::FuncOp funcOp,
+                                   const clang::FunctionDecl *funcDecl) {
   if (!funcDecl)
     return;
 
@@ -3539,16 +3537,13 @@ void CIRGenModule::setCXXSpecialMemberAttr(
     funcOp.setFuncInfoAttr(cxxAssign);
     return;
   }
-}
 
-void CIRGenModule::setFuncIdentityAttr(cir::FuncOp funcOp,
-                                       const clang::FunctionDecl *funcDecl) {
-  // A known entity is named by a plain identifier in std. For a member the
+  // Otherwise tag a function that matches a known standard library entity. A
+  // known entity is named by a plain identifier in std. For a member the
   // record decides std membership. Inline namespaces, like the versioning
   // namespace of libc++, count as part of std.
-  if (!funcDecl || !funcDecl->getIdentifier())
+  if (!funcDecl->getIdentifier())
     return;
-  const auto *method = dyn_cast<CXXMethodDecl>(funcDecl);
   bool inStdNamespace = method ? method->getParent()->isInStdNamespace()
                                : funcDecl->isInStdNamespace();
   if (!inStdNamespace)

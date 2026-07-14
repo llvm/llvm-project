@@ -21,7 +21,7 @@ int *find(int *first, int *last, int value);
 int *std_call(int *first, int *last) { return std::find(first, last, 42); }
 // The free std find carries its tag, with inline namespaces looked
 // through.
-// CHECK-DAG: cir.func{{.*}} @_ZNSt3__14find{{.*}} func_info<#cir.func_identity<std_find>>
+// CHECK: cir.func{{.*}} @_ZNSt3__14find{{.*}} func_info<#cir.func_identity<"std::find">>
 
 struct S {
   void operator()();

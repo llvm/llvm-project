@@ -1300,9 +1300,13 @@ def CIR_CXXAssignAttr : CIR_Attr<"CXXAssign", "cxx_assign"> {
 // pairs with one raised operation in CIRStdOps.td.
 def CIR_KnownFuncKind : CIR_I32EnumAttr<"KnownFuncKind",
     "known standard library entity", [
-  I32EnumAttrCase<"StdFind", 1, "std_find">,
+  I32EnumAttrCase<"StdFind", 1, "std::find">,
 ]> {
   let genSpecializedAttr = 0;
+  // A name like std::find is not a bare identifier, so print it as a quoted
+  // string. The enum parser already reads a quoted string back.
+  let parameterPrinter =
+      "$_printer.printKeywordOrString(" # symbolToStringFnName # "($_self))";
 }
 
 def CIR_FuncIdentityAttr : CIR_Attr<"FuncIdentity", "func_identity"> {
@@ -1312,7 +1316,7 @@ def CIR_FuncIdentityAttr : CIR_Attr<"FuncIdentity", "func_identity"> {
     transformations can recognize calls to well known library functions
     without decoding mangled symbol names.
 
-    The tag names the whole entity. For `std_find` that is the free
+    The tag names the whole entity. For `std::find` that is the free
     function named `find` in the `std` namespace, so a member function, a
     static member, or an operator can never carry the tag. Inline
     namespaces, such as the versioning namespace of libc++, count as part
@@ -1321,7 +1325,7 @@ def CIR_FuncIdentityAttr : CIR_Attr<"FuncIdentity", "func_identity"> {
 
     Example:
     ```
-    #cir.func_identity<std_find>
+    #cir.func_identity<"std::find">
     ```
   }];
 

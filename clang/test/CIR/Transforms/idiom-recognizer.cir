@@ -7,13 +7,15 @@
 
 module {
 
-cir.func private @_ZSt4findIPiiET_S1_S1_RKT0_(!cir.ptr<!s32i>, !cir.ptr<!s32i>, !cir.ptr<!s32i>) -> !cir.ptr<!s32i> func_info<#cir.func_identity<std_find>>
+cir.func private @_ZSt4findIPiiET_S1_S1_RKT0_(!cir.ptr<!s32i>, !cir.ptr<!s32i>, !cir.ptr<!s32i>) -> !cir.ptr<!s32i> func_info<#cir.func_identity<"std::find">>
 
 cir.func @caller(%a: !cir.ptr<!s32i>, %b: !cir.ptr<!s32i>, %v: !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {
   %r = cir.call @_ZSt4findIPiiET_S1_S1_RKT0_(%a, %b, %v) : (!cir.ptr<!s32i>, !cir.ptr<!s32i>, !cir.ptr<!s32i>) -> !cir.ptr<!s32i>
   cir.return %r : !cir.ptr<!s32i>
 }
-// CHECK: cir.std.find(%{{.*}}, %{{.*}}, %{{.*}}, @_ZSt4findIPiiET_S1_S1_RKT0_)
+// The operands are threaded into the raised op in order, first to last.
+// CHECK: cir.func @caller(%[[A:.*]]: !cir.ptr<!s32i>, %[[B:.*]]: !cir.ptr<!s32i>, %[[V:.*]]: !cir.ptr<!s32i>)
+// CHECK: cir.std.find(%[[A]] :{{.*}}, %[[B]] :{{.*}}, %[[V]] :{{.*}}, @_ZSt4findIPiiET_S1_S1_RKT0_)
 
 // A musttail call must stay a call.
 cir.func @musttail_caller(%a: !cir.ptr<!s32i>, %b: !cir.ptr<!s32i>, %v: !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {

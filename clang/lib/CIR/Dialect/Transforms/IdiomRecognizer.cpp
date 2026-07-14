@@ -30,11 +30,15 @@ namespace mlir {
 
 namespace {
 
-// The raised operation requires matching operand types. The searched value
-// arrives by reference and must share the iterator type.
-template <typename TargetOp> bool operandTypesMatch(CallOp call);
+// A call matches when its shape fits the raised operation, the operand and
+// result counts first and then the operand types. The searched value arrives
+// by reference and must share the iterator type.
+template <typename TargetOp> bool signatureMatches(CallOp call);
 
-template <> bool operandTypesMatch<StdFindOp>(CallOp call) {
+template <> bool signatureMatches<StdFindOp>(CallOp call) {
+  if (call.getNumOperands() != StdFindOp::getNumArgs() ||
+      call->getNumResults() != 1)
+    return false;
   mlir::Type iterTy = call.getOperand(0).getType();
   return iterTy == call.getOperand(1).getType() &&
          iterTy == call.getOperand(2).getType() &&
@@ -56,10 +60,8 @@ public:
   static bool raise(CallOp call, mlir::MLIRContext &context,
                     mlir::SymbolTableCollection &symbolTables) {
     // A musttail call must stay a call, so it is never raised.
-    constexpr unsigned numArgs = TargetOp::getNumArgs();
-    if (!call.getCallee() || call.getNumOperands() != numArgs ||
-        call->getNumResults() != 1 || call.getMusttail() ||
-        !operandTypesMatch<TargetOp>(call))
+    if (!call.getCallee() || call.getMusttail() ||
+        !signatureMatches<TargetOp>(call))
       return false;
 
     // Only a free std function with the right name carries the tag, so
@@ -75,6 +77,7 @@ public:
 
     cir::CIRBaseBuilderTy builder(context);
     builder.setInsertionPointAfter(call.getOperation());
+    constexpr unsigned numArgs = TargetOp::getNumArgs();
     TargetOp op = buildCall(builder, call, std::make_index_sequence<numArgs>());
     // The raised operation keeps every call attribute except the callee,
     // which it carries as original_fn, so lowering back loses nothing.
