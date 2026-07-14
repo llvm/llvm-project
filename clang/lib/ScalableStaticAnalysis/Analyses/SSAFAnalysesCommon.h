@@ -119,7 +119,7 @@ void extractAndAddSummaries(TUSummaryExtractor &Extractor,
   llvm::DenseMap<const NamedDecl *, std::vector<const NamedDecl *>>
       Contributors;
   findContributors(Ctx, Extractor.getOptions(), Contributors,
-                    Extractor.getOptions().ExtractFromSystemHeaders);
+                   Extractor.getOptions().ExtractFromSystemHeaders);
   for (const auto &[Cano, Decls] : Contributors) {
     assert(!Decls.empty() &&
            "'findContributors' guarantees that 'Decls' are non-empty");
