@@ -131,6 +131,13 @@ Potentially Breaking Changes
                                      <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>`
   ================================== ========================================================================
 
+- Removed the :program:`clang-doc` deprecated Markdown generator. ``--format=md``
+  now uses the new Mustache-backed MD generator. It is possible that there are some
+  regressions in MD output.
+
+- Removed the :program:`clang-doc` YAML generator. Prefer the JSON generator to
+  get documentation information in a reusable format.
+
 Improvements to clangd
 ----------------------
 
@@ -577,6 +584,10 @@ Changes in existing checks
   - Fixed false positive where a pointer used with placement new was
     incorrectly diagnosed as allowing the pointee to be made ``const``.
 
+  - Enabled the check for variables declared with ``auto`` (configurable
+    via the `AnalyzeAutoVariables` option) and lambdas (configurable
+    via `AnalyzeLambdas` option).
+
   - Fixed false positive where calling a non-const member function on a
     pointer was incorrectly treated as mutating the pointer, when it only
     mutates the pointee.
@@ -592,8 +603,13 @@ Changes in existing checks
   virtual inheritance causes concrete bases to be counted more than once.
 
 - Improved :doc:`misc-redundant-expression
-  <clang-tidy/checks/misc/redundant-expression>` check by fixing a crash when
-  evaluating bitwise comparisons against integer constants wider than 64 bits.
+  <clang-tidy/checks/misc/redundant-expression>` check:
+
+  - Fixed a crash when evaluating bitwise comparisons against integer constants
+    wider than 64 bits.
+
+  - Avoided false positives when comparing expressions that are structurally
+    identical but use different type aliases.
 
 - Improved :doc:`misc-throw-by-value-catch-by-reference
   <clang-tidy/checks/misc/throw-by-value-catch-by-reference>` check:
@@ -685,6 +701,12 @@ Changes in existing checks
   - Preserved used iterator results when replacing ``std::remove``,
     ``std::remove_if``, ``std::partition``, ``std::stable_partition``, and
     ``std::rotate`` calls with their ``std::ranges`` counterparts.
+
+- Improved :doc:`modernize-use-scoped-lock
+  <clang-tidy/checks/modernize/use-scoped-lock>` check by fixing a false
+  negative where multiple ``std::scoped_lock`` declarations, or a mix of
+  ``std::scoped_lock`` and ``std::lock_guard`` declarations, in the same scope
+  were not flagged.
 
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check:
@@ -832,6 +854,9 @@ Changes in existing checks
   - Fixed a crash in dependent base lookup when
     `AggressiveDependentMemberLookup` option is enabled.
 
+  - Fixed a false positive from naming style lookup for declarations inside macro
+    arguments.
+
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check:
 
@@ -891,6 +916,8 @@ Changes in existing checks
   - Fixed a bug where clients that apply fix-its without :program:`clang-tidy`'s
     cleanup could produce invalid code by joining adjacent tokens.
 
+  - Added support for parentheses around subscript operators (``(E1[E2])`` -> ``E1[E2]``).
+
 - Improved :doc:`readability-redundant-preprocessor
   <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a
   false positive for nested ``#if`` directives using different builtin
@@ -909,6 +936,11 @@ Changes in existing checks
 - Improved :doc:`readability-suspicious-call-argument
   <clang-tidy/checks/readability/suspicious-call-argument>` check by avoiding a
   crash from invalid ``Abbreviations`` option.
+
+- Improved :doc:`readability-trivial-switch
+  <clang-tidy/checks/readability/trivial-switch>` check by adding an
+  `IgnoreMacros` option. When enabled, the check will ignore switch
+  statements originating from macros.
 
 - Improved :doc:`readability-use-anyofallof
   <clang-tidy/checks/readability/use-anyofallof>` check by emitting a diagnostic
