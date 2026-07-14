@@ -260,12 +260,8 @@ CowCompilerInvocation::getMutPreprocessorOutputOpts() {
 
 using ArgumentConsumer = CompilerInvocation::ArgumentConsumer;
 
-#define OPTTABLE_STR_TABLE_CODE
-#include "clang/Options/Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
 static llvm::StringRef lookupStrInTable(unsigned Offset) {
-  return OptionStrTable[Offset];
+  return getDriverOptTable().getStrTable()[Offset];
 }
 
 #define SIMPLE_ENUM_VALUE_TABLE
@@ -1486,12 +1482,6 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
         PointerAuthSchema(Key::ASIA, true, Discrimination::Decl);
     Opts.CXXMemberFunctionPointers =
         PointerAuthSchema(Key::ASIA, false, Discrimination::Type);
-
-    if (LangOpts.PointerAuthInitFini) {
-      Opts.InitFiniPointers = PointerAuthSchema(
-          Key::ASIA, LangOpts.PointerAuthInitFiniAddressDiscrimination,
-          Discrimination::Constant, InitFiniPointerConstantDiscriminator);
-    }
 
     Opts.BlockInvocationFunctionPointers =
         PointerAuthSchema(Key::ASIA, true, Discrimination::None);

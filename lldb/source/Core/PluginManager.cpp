@@ -13,6 +13,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
@@ -2058,12 +2059,14 @@ struct ScriptedInterfaceInstance
     : public PluginInstance<ScriptedInterfaceCreateInstance> {
   ScriptedInterfaceInstance(llvm::StringRef name, llvm::StringRef description,
                             ScriptedInterfaceCreateInstance create_callback,
+                            lldb::ScriptedExtension extension,
                             lldb::ScriptLanguage language,
                             ScriptedInterfaceUsages usages)
       : PluginInstance<ScriptedInterfaceCreateInstance>(name, description,
                                                         create_callback),
-        language(language), usages(usages) {}
+        extension(extension), language(language), usages(usages) {}
 
+  lldb::ScriptedExtension extension;
   lldb::ScriptLanguage language;
   ScriptedInterfaceUsages usages;
 };
@@ -2078,9 +2081,10 @@ static ScriptedInterfaceInstances &GetScriptedInterfaceInstances() {
 bool PluginManager::RegisterPlugin(
     llvm::StringRef name, llvm::StringRef description,
     ScriptedInterfaceCreateInstance create_callback,
-    lldb::ScriptLanguage language, ScriptedInterfaceUsages usages) {
+    lldb::ScriptedExtension extension, lldb::ScriptLanguage language,
+    ScriptedInterfaceUsages usages) {
   return GetScriptedInterfaceInstances().RegisterPlugin(
-      name, description, create_callback, language, usages);
+      name, description, create_callback, extension, language, usages);
 }
 
 bool PluginManager::UnregisterPlugin(
@@ -2101,6 +2105,13 @@ PluginManager::GetScriptedInterfaceDescriptionAtIndex(uint32_t index) {
   return GetScriptedInterfaceInstances().GetDescriptionAtIndex(index);
 }
 
+lldb::ScriptedExtension
+PluginManager::GetScriptedInterfaceExtensionAtIndex(uint32_t index) {
+  if (auto instance = GetScriptedInterfaceInstances().GetInstanceAtIndex(index))
+    return instance->extension;
+  return ScriptedExtension::eScriptedExtensionInvalid;
+}
+
 lldb::ScriptLanguage
 PluginManager::GetScriptedInterfaceLanguageAtIndex(uint32_t idx) {
   if (auto instance = GetScriptedInterfaceInstances().GetInstanceAtIndex(idx))
@@ -2113,6 +2124,19 @@ PluginManager::GetScriptedInterfaceUsagesAtIndex(uint32_t idx) {
   if (auto instance = GetScriptedInterfaceInstances().GetInstanceAtIndex(idx))
     return instance->usages;
   return {};
+}
+
+void PluginManager::AutoCompleteScriptedExtension(llvm::StringRef name,
+                                                  CompletionRequest &request) {
+  for (size_t idx = 0; idx < GetNumScriptedInterfaces(); idx++) {
+    if (auto instance =
+            GetScriptedInterfaceInstances().GetInstanceAtIndex(idx)) {
+      llvm::StringLiteral extension_name =
+          ScriptInterpreter::ExtensionToString(instance->extension);
+      if (extension_name.starts_with(name))
+        request.AddCompletion(extension_name);
+    }
+  }
 }
 
 #pragma mark REPL

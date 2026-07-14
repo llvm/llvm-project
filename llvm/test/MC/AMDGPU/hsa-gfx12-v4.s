@@ -49,10 +49,10 @@
 .text
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx1200"
-// ASM: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx1200"
 
 .amdhsa_code_object_version 4
 // ASM: .amdhsa_code_object_version 4
+// ASM: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx1200"
 
 .p2align 8
 .type minimal,@function
