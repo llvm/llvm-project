@@ -2393,18 +2393,13 @@ static bool isReachingDefAGPRForm(
 
 bool RewriteMFMAFormStage::hasUseRequiringVGPR(
     ArrayRef<SlotIndex> Src2ReachingDefs,
-    const SmallSetVector<MachineInstr *, 16> &RewriteSet,
-    const SmallPtrSetImpl<MachineInstr *> &ExcludedMFMAs) {
+    const SmallSetVector<MachineInstr *, 16> &RewriteSet) {
   for (SlotIndex RDIdx : Src2ReachingDefs) {
     const MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
-    // If RD is a non-excluded MFMA candidate, its dst will be reclassified to
-    // AGPR and Case 2 will insert vreg bridge copies for all non-MAI uses of
-    // its dst. Those uses therefore do not impose a VGPR constraint on src2.
-    // The !ExcludedMFMAs.count(RD) guard is defensive:
-    // propagateExclusionForward ensures that if an excluded MFMA's dst is used
-    // as src2, the consumer MFMA is also excluded and hasUseRequiringVGPR is
-    // never called for it.
-    if (TII->isMAI(*RD) && RewriteSet.contains(RD) && !ExcludedMFMAs.count(RD))
+    // A rewritable candidate's dst becomes AGPR and Case 2 bridges its non-MAI
+    // uses, so it imposes no VGPR constraint on src2. Excluded MFMAs are no
+    // longer in RewriteSet.
+    if (TII->isMAI(*RD) && RewriteSet.contains(RD))
       continue;
     SmallVector<MachineOperand *, 8> ReachingUses;
     findReachingUses(RD, DAG.LIS, ReachingUses);
@@ -2412,8 +2407,7 @@ bool RewriteMFMAFormStage::hasUseRequiringVGPR(
       const MachineInstr *UseMI = UseMO->getParent();
       if (UseMI->isCopy())
         continue;
-      if (TII->isMAI(*UseMI) && RewriteSet.contains(UseMI) &&
-          !ExcludedMFMAs.count(UseMI))
+      if (TII->isMAI(*UseMI) && RewriteSet.contains(UseMI))
         continue;
       return true;
     }
@@ -2764,39 +2758,91 @@ SmallPtrSet<MachineInstr *, 16> RewriteMFMAFormStage::computeExclusionSet(
   return ExcludedMFMAs;
 }
 
+RewriteMFMAFormStage::MFMACopyPlan RewriteMFMAFormStage::analyzeCopyPoints(
+    MachineInstr *MI, const SmallSetVector<MachineInstr *, 16> &GroupSet,
+    const DenseSet<Register> &Src2Regs, bool Src2NeedsVGPR) {
+  MFMACopyPlan Plan;
+
+  // Case 1: the reaching defs of the src2 operand that need a bridge copy.
+  // If src2 stays VGPR, every reaching def needs a copy; otherwise reaching
+  // defs already in AGPR form (group members, av-movs, group copies) don't.
+  MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
+  if (Src2->isReg()) {
+    SmallVector<SlotIndex, 8> Src2ReachingDefs;
+    findReachingDefs(*Src2, DAG.LIS, Src2ReachingDefs);
+    for (SlotIndex RDIdx : Src2ReachingDefs) {
+      MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
+      if (!Src2NeedsVGPR && isReachingDefAGPRForm(RD, GroupSet, Src2Regs, *TII))
+        continue;
+      Plan.Src2DefsNeedingCopy.insert(RD);
+    }
+  }
+
+  // Case 2 and Case 3: the reaching uses of the dst, and the non-MAI reaching
+  // defs of those reaching uses.  Group members read the AGPR result directly
+  // and need no copy.
+  SmallVector<MachineOperand *, 8> DstReachingUses;
+  findReachingUses(MI, DAG.LIS, DstReachingUses);
+  for (MachineOperand *RUOp : DstReachingUses) {
+    MachineInstr *UserMI = RUOp->getParent();
+    if (TII->isMAI(*UserMI) && GroupSet.contains(UserMI))
+      continue;
+
+    Plan.DstUsesNeedingCopy.insert(RUOp);
+
+    // Non-rewritten MAI: its defs aren't being reclassified.
+    if (TII->isMAI(*UserMI))
+      continue;
+
+    SmallVector<SlotIndex, 8> DstUsesReachingDefs;
+    findReachingDefs(*RUOp, DAG.LIS, DstUsesReachingDefs);
+    for (SlotIndex RDIndex : DstUsesReachingDefs) {
+      MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
+      if (TII->isMAI(*RD))
+        continue;
+      Plan.DstUseDefsNeedingCopy.insert(RD);
+    }
+  }
+
+  return Plan;
+}
+
 bool RewriteMFMAFormStage::initHeuristics(
     std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands,
     DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
     SmallPtrSetImpl<MachineInstr *> &CopyForDef) {
   bool Changed = false;
 
-  // Pass 1: collect candidate group.
-  // RewriteSet/CandSrc2Regs are needed by isReachingDefAGPRForm and
-  // hasUseRequiringVGPR; collect them before any setDesc/setRegClass changes.
+  // Pass 1: collect the candidate group (pre-exclusion) before any setDesc/
+  // setRegClass changes; computeExclusionSet needs the complete group.
   SmallSetVector<MachineInstr *, 16> RewriteSet;
-  DenseSet<Register> CandSrc2Regs;
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : MBB) {
-      if (!isRewriteCandidate(&MI))
-        continue;
-      RewriteSet.insert(&MI);
-      MachineOperand *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
-      if (Src2 && Src2->isReg())
-        CandSrc2Regs.insert(Src2->getReg());
-    }
-  }
+  for (MachineBasicBlock &MBB : MF)
+    for (MachineInstr &MI : MBB)
+      if (isRewriteCandidate(&MI))
+        RewriteSet.insert(&MI);
 
-  // Phase 1: identify candidates that cannot be safely rewritten.
+  // Remove unsafe candidates so RewriteSet becomes the post-exclusion group --
+  // both the Pass 2 worklist and the "will be AGPR-form" set queried
+  // downstream.
   SmallPtrSet<MachineInstr *, 16> ExcludedMFMAs =
       computeExclusionSet(RewriteSet);
+  for (MachineInstr *Excluded : ExcludedMFMAs) {
+    LLVM_DEBUG(dbgs() << "[initHeuristics] skip excluded MFMA: " << *Excluded);
+    RewriteSet.remove(Excluded);
+  }
 
-  // Pass 2: compute heuristics for non-excluded candidates.
+  // src2 regs of the post-exclusion group only: an excluded candidate's src2
+  // stays VGPR, so isReachingDefAGPRForm must not treat a COPY from it as
+  // AGPR-form.
+  DenseSet<Register> CandSrc2Regs;
   for (MachineInstr *MI : RewriteSet) {
-    if (ExcludedMFMAs.count(MI)) {
-      LLVM_DEBUG(dbgs() << "[initHeuristics] skip excluded MFMA: " << *MI);
-      continue;
-    }
+    MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
+    if (Src2 && Src2->isReg())
+      CandSrc2Regs.insert(Src2->getReg());
+  }
 
+  // Pass 2: compute heuristics for the remaining (rewritable) candidates.
+  for (MachineInstr *MI : RewriteSet) {
     int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode());
     assert(ReplacementOp != -1);
 
@@ -2804,21 +2850,22 @@ bool RewriteMFMAFormStage::initHeuristics(
     MI->setDesc(TII->get(ReplacementOp));
 
     MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
+
+    // Cache whether src2 must stay VGPR, then get the copy plan reused by
+    // rewrite().
+    bool Src2NeedsVGPR = false;
     if (Src2->isReg()) {
       SmallVector<SlotIndex, 8> Src2ReachingDefs;
       findReachingDefs(*Src2, DAG.LIS, Src2ReachingDefs);
+      Src2NeedsVGPR = hasUseRequiringVGPR(Src2ReachingDefs, RewriteSet);
+    }
+    Src2NeedsVGPRCache[MI] = Src2NeedsVGPR;
 
-      // If src2 has a use that must remain VGPR, it cannot be reclassified to
-      // AGPR.
-      bool Src2NeedsVGPR =
-          hasUseRequiringVGPR(Src2ReachingDefs, RewriteSet, ExcludedMFMAs);
-      Src2NeedsVGPRCache[MI] = Src2NeedsVGPR;
+    MFMACopyPlan Plan =
+        analyzeCopyPoints(MI, RewriteSet, CandSrc2Regs, Src2NeedsVGPR);
 
-      for (SlotIndex RDIdx : Src2ReachingDefs) {
-        MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
-        if (!Src2NeedsVGPR &&
-            isReachingDefAGPRForm(RD, RewriteSet, CandSrc2Regs, *TII))
-          continue;
+    if (Src2->isReg()) {
+      for (MachineInstr *RD : Plan.Src2DefsNeedingCopy) {
         // If this reaching def writes into the src2 register itself (possibly
         // a partial subreg write), the def will be reclassified together with
         // src2 and does not need a bridge copy.
@@ -2831,39 +2878,13 @@ bool RewriteMFMAFormStage::initHeuristics(
     }
 
     MachineOperand &Dst = MI->getOperand(0);
-    SmallVector<MachineOperand *, 8> DstReachingUses;
 
-    findReachingUses(MI, DAG.LIS, DstReachingUses);
-
-    for (MachineOperand *RUOp : DstReachingUses) {
-      MachineInstr *UserMI = RUOp->getParent();
-      // Group members read the AGPR result directly.
-      if (TII->isMAI(*UserMI) && RewriteSet.contains(UserMI))
-        continue;
-
-      // For any user of the result of the MFMA which is not an MFMA, we
-      // insert a copy. For a given register, we will only insert one copy
-      // per user block.
-      CopyForUse[UserMI->getParent()].insert(RUOp->getReg());
-
-      if (TII->isMAI(*UserMI))
-        continue;
-
-      SmallVector<SlotIndex, 8> DstUsesReachingDefs;
-      findReachingDefs(*RUOp, DAG.LIS, DstUsesReachingDefs);
-
-      for (SlotIndex RDIndex : DstUsesReachingDefs) {
-        MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
-        if (TII->isMAI(*RD))
-          continue;
-
-        // For any definition of the user of the MFMA which is not an MFMA,
-        // we insert a copy. We do this to transform all the reaching defs
-        // of this use to AGPR. By doing this, we can insert a copy from
-        // AGPR to VGPR at the user rather than after the MFMA.
-        CopyForDef.insert(RD);
-      }
-    }
+    // Case 2: one copy per (user block, register).  Case 3: one copy per
+    // non-MAI reaching def of the dst uses.
+    for (MachineOperand *RUOp : Plan.DstUsesNeedingCopy)
+      CopyForUse[RUOp->getParent()->getParent()].insert(RUOp->getReg());
+    for (MachineInstr *RD : Plan.DstUseDefsNeedingCopy)
+      CopyForDef.insert(RD);
 
     // Do the rewrite to allow for updated RP calculation.
     const TargetRegisterClass *VDefRC = DAG.MRI.getRegClass(Dst.getReg());
@@ -3069,6 +3090,14 @@ bool RewriteMFMAFormStage::rewrite(
       continue;
     MI->setDesc(TII->get(ReplacementOp));
 
+    bool Src2NeedsVGPR = Src2NeedsVGPRCache.lookup(MI);
+    // Recompute the plan instead of caching initHeuristics' result: it holds
+    // bare MI/operand pointers, so recomputing against the current MIR reflects
+    // the copies and setReg()s done for earlier candidates that may share a dst
+    // vreg (e.g. non-tied accumulation chains).
+    MFMACopyPlan Plan =
+        analyzeCopyPoints(MI, RewriteCandsSet, RewriteSrc2Regs, Src2NeedsVGPR);
+
     // Case 1: insert copies for the reaching defs of the Src2Reg.
     MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
     if (Src2->isReg()) {
@@ -3077,22 +3106,8 @@ bool RewriteMFMAFormStage::rewrite(
         return false;
 
       Register MappedReg = Src2->getReg();
-      SmallVector<SlotIndex, 8> Src2ReachingDefs;
-      findReachingDefs(*Src2, DAG.LIS, Src2ReachingDefs);
-      SmallSetVector<MachineInstr *, 8> Src2DefsReplace;
-
-      // If src2 has a use that must remain VGPR, it cannot be reclassified to
-      // AGPR.
-      bool Src2NeedsVGPR = Src2NeedsVGPRCache.lookup(MI);
-
-      for (SlotIndex RDIndex : Src2ReachingDefs) {
-        MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
-        if (!Src2NeedsVGPR &&
-            isReachingDefAGPRForm(RD, RewriteCandsSet, RewriteSrc2Regs, *TII))
-          continue;
-
-        Src2DefsReplace.insert(RD);
-      }
+      const SmallSetVector<MachineInstr *, 8> &Src2DefsReplace =
+          Plan.Src2DefsNeedingCopy;
 
       if (!Src2DefsReplace.empty()) {
         auto RI = RedefMap.find(Src2Reg);
@@ -3149,41 +3164,10 @@ bool RewriteMFMAFormStage::rewrite(
       return false;
 
     Register MappedReg = DstReg;
-    SmallVector<MachineOperand *, 8> DstReachingUses;
-
-    SmallVector<MachineOperand *, 8> DstReachingUseCopies;
-    SmallVector<MachineInstr *, 8> DstUseDefsReplace;
-
-    findReachingUses(MI, DAG.LIS, DstReachingUses);
-
-    for (MachineOperand *RUOp : DstReachingUses) {
-      MachineInstr *UserMI = RUOp->getParent();
-      // Group members read the AGPR result directly.
-      if (TII->isMAI(*UserMI) && RewriteCandsSet.contains(UserMI))
-        continue;
-
-      // If there is a non mai reaching use, then we need a copy.
-      if (find(DstReachingUseCopies, RUOp) == DstReachingUseCopies.end())
-        DstReachingUseCopies.push_back(RUOp);
-
-      // Non-rewritten MAI: its defs aren't being reclassified.
-      if (TII->isMAI(*UserMI))
-        continue;
-
-      SmallVector<SlotIndex, 8> DstUsesReachingDefs;
-      findReachingDefs(*RUOp, DAG.LIS, DstUsesReachingDefs);
-
-      for (SlotIndex RDIndex : DstUsesReachingDefs) {
-        MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
-        if (TII->isMAI(*RD))
-          continue;
-
-        // If there is a non mai reaching def of this reaching use, then we will
-        // need a copy.
-        if (find(DstUseDefsReplace, RD) == DstUseDefsReplace.end())
-          DstUseDefsReplace.push_back(RD);
-      }
-    }
+    const SmallSetVector<MachineOperand *, 8> &DstReachingUseCopies =
+        Plan.DstUsesNeedingCopy;
+    const SmallSetVector<MachineInstr *, 8> &DstUseDefsReplace =
+        Plan.DstUseDefsNeedingCopy;
 
     if (!DstUseDefsReplace.empty()) {
       auto RI = RedefMap.find(DstReg);
