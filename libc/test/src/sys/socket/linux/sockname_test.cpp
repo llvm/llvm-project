@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/sys_socket_macros.h"
+#include "hdr/types/sa_family_t.h"
+#include "hdr/types/socklen_t.h"
 #include "hdr/types/struct_sockaddr_un.h"
 #include "src/__support/CPP/scope.h"
 #include "src/stdio/remove.h"

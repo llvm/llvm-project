@@ -625,7 +625,6 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP, G_UBSANTRAP}).alwaysLegal();
   getActionDefinitionsBuilder(G_INVOKE_REGION_START).alwaysLegal();
 
-  getLegacyLegalizerInfo().computeTables();
   verify(*STI.getInstrInfo());
 }
 

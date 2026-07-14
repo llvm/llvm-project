@@ -163,6 +163,13 @@ enum {
   TRAP_NUM_SGPRS = 16
 };
 
+/// Returns true if \p Lhs and \p Rhs are incompatible (both specific but
+/// different).
+inline bool targetIDSettingsConflict(TargetIDSetting Lhs, TargetIDSetting Rhs) {
+  return Lhs != TargetIDSetting::Any && Rhs != TargetIDSetting::Any &&
+         Lhs != Rhs;
+}
+
 /// \returns Instruction cache line size in bytes for given subtarget \p STI.
 unsigned getInstCacheLineSize(const MCSubtargetInfo &STI);
 
@@ -1033,6 +1040,13 @@ SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
 /// Similar to the function above, but returns std::nullopt if any error occurs.
 std::optional<SmallVector<unsigned>>
 getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size);
+
+/// \returns The maximum number of workgroups for the function.
+SmallVector<unsigned> getMaxNumWorkGroups(const Function &F);
+
+inline bool isTgSplitEnabled(const Function &F) {
+  return F.hasFnAttribute("amdgpu-tg-split");
+}
 
 /// Checks if \p Val is inside \p MD, a !range-like metadata.
 bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val);

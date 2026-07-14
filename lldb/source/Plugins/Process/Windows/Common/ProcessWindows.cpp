@@ -20,6 +20,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostNativeProcessBase.h"
@@ -97,11 +98,14 @@ ProcessSP ProcessWindows::CreateInstance(lldb::TargetSP target_sp,
 }
 
 static bool ShouldUseLLDBServer() {
-  llvm::StringRef use_lldb_server = ::getenv("LLDB_USE_LLDB_SERVER");
-  return use_lldb_server.equals_insensitive("on") ||
-         use_lldb_server.equals_insensitive("yes") ||
-         use_lldb_server.equals_insensitive("1") ||
-         use_lldb_server.equals_insensitive("true");
+  if (const char *env = ::getenv("LLDB_USE_LLDB_SERVER")) {
+    llvm::StringRef use_lldb_server(env);
+    return use_lldb_server.equals_insensitive("on") ||
+           use_lldb_server.equals_insensitive("yes") ||
+           use_lldb_server.equals_insensitive("1") ||
+           use_lldb_server.equals_insensitive("true");
+  }
+  return LLDB_ENABLE_LIBXML2;
 }
 
 void ProcessWindows::Initialize() {
@@ -793,15 +797,19 @@ void ProcessWindows::OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) {
     m_session_data->m_exited_threads.insert(thread_id);
 }
 
-void ProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
-                               lldb::addr_t module_addr) {
+DllEventAction ProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
+                                         lldb::addr_t module_addr,
+                                         lldb::tid_t thread_id) {
   if (auto dyld = GetDynamicLoader())
     dyld->OnLoadModule(nullptr, module_spec, module_addr);
+  return DllEventAction::ContinueDebugLoop;
 }
 
-void ProcessWindows::OnUnloadDll(lldb::addr_t module_addr) {
+DllEventAction ProcessWindows::OnUnloadDll(lldb::addr_t module_addr,
+                                           lldb::tid_t thread_id) {
   if (auto dyld = GetDynamicLoader())
     dyld->OnUnloadModule(module_addr);
+  return DllEventAction::ContinueDebugLoop;
 }
 
 void ProcessWindows::OnDebugString(lldb::addr_t debug_string_addr,

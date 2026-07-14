@@ -512,7 +512,14 @@ def DynamicMemoryModeling: Checker<"DynamicMemoryModeling">,
                   "NoStoreFuncVisitor.",
                   "true",
                   Released,
-                  Hide>
+                  Hide>,
+    CmdLineOption<Boolean,
+                  "ModelAllocationFailure",
+                  "At allocation functions, add extra execution branches for "
+                  "failed memory allocation (function returns null value when "
+                  "size is non-null) if applicable.",
+                  "false",
+                  Released>
   ]>,
   Dependencies<[CStringModeling]>,
   Documentation<NotDocumented>,
@@ -789,13 +796,18 @@ def SmartPtrChecker: Checker<"SmartPtr">,
   Documentation<HasDocumentation>;
 
 def LifetimeModeling : Checker<"LifetimeModeling">,
-  HelpText<"Model [[clang::lifetimebound]] annotations for lifetime analysis">,
+  HelpText<"Model lifetime annotations for other checkers">,
   Documentation<NotDocumented>,
   Hidden;
 
 def UseAfterLifetimeEnd : Checker<"UseAfterLifetimeEnd">,
   HelpText<"Check for uses of references or pointers that "
            "outlive their bound object">,
+  Dependencies<[LifetimeModeling]>,
+  Documentation<NotDocumented>;
+
+def DanglingPtrDeref : Checker<"DanglingPtrDeref">,
+  HelpText<"Check for dereferences of a dangling pointer">,
   Dependencies<[LifetimeModeling]>,
   Documentation<NotDocumented>;
 
@@ -1588,8 +1600,7 @@ def CheckerDocumentationChecker : Checker<"CheckerDocumentation">,
   Documentation<NotDocumented>;
 
 def DebugLifetimeModeling : Checker<"DebugLifetimeModeling">,
-  HelpText<"Prints the bindings recorded by the LifetimeModeling checker. "
-           "Use with clang_analyzer_dumpLifetimeOriginsOf().">,
+  HelpText<"Dump the set of regions the bound variable originates from">,
   Dependencies<[LifetimeModeling]>,
   Documentation<NotDocumented>;
 
@@ -1770,6 +1781,10 @@ def UnretainedCallArgsChecker : Checker<"UnretainedCallArgsChecker">,
 
 def UncountedLocalVarsChecker : Checker<"UncountedLocalVarsChecker">,
   HelpText<"Check uncounted local variables.">,
+  Documentation<HasDocumentation>;
+
+def UncheckedLambdaCapturesChecker : Checker<"UncheckedLambdaCapturesChecker">,
+  HelpText<"Check unchecked lambda captures.">,
   Documentation<HasDocumentation>;
 
 def UncheckedLocalVarsChecker : Checker<"UncheckedLocalVarsChecker">,

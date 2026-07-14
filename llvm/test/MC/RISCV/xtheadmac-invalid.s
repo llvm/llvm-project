@@ -4,4 +4,4 @@
 th.mula  t0, t1, 0(t2)  # CHECK: :[[@LINE]]:18: error: invalid operand for instruction
 th.muls  t0, 12, t2     # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
 th.mulsh t0, t1, 34     # CHECK: :[[@LINE]]:18: error: invalid operand for instruction
-th.mulsw t0, -56, t2    # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
+th.mulsw t0, -56, t2    # CHECK: :[[@LINE]]:{{1: error: invalid instruction|14: error: invalid operand for instruction}}

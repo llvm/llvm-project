@@ -54,7 +54,7 @@ be passed down to downstream AOT compilation tools like 'ocloc' and 'opencl-aot'
     --whole-archive               Include all archive members in the link
     --no-whole-archive            Only include archive members that resolve undefined symbols (default)
     -u <symbol>                   Force undefined symbol during linking
-    --module-split-mode=<mode>    Module split mode: 'source' (default), 'kernel', or 'none'
+    --module-split-mode=<mode>    Module split mode: 'translation_unit' (default), 'kernel', or 'link_unit'
     --ocloc-options=<value>       Options passed to ocloc for Intel GPU AOT compilation
     --opencl-aot-options=<value>  Options passed to opencl-aot for Intel CPU AOT compilation
     -o <path>                     Path to file to write output
