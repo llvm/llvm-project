@@ -339,16 +339,14 @@ void MarkLive<ELFT, TrackWhyLive>::markSymbol(Symbol *sym, StringRef reason) {
       enqueue(isec, d->value, sym, {std::nullopt, reason});
 }
 
-// If -r or --emit-relocs, ensure referenced symbols are preserved in .symtab.
-// --discard-* drops only locals; --retain-symbols-file also drops globals, so
-// mark those too.
+// If -r or --emit-relocs, mark symbols referenced by relocations as used so
+// .symtab retains them and the relocations keep valid symbol indices. Callers
+// invoke this only when .symtab filtering is active (--discard-* or
+// --retain-symbols-file); otherwise .symtab keeps every symbol anyway.
 template <class ELFT>
-static void markUsedSymbols(Ctx &ctx, InputSectionBase &sec) {
-  bool retain = ctx.arg.retainSymbols.has_value();
+static void markUsedSymbols(InputSectionBase &sec) {
   auto mark = [&](const auto &rel) {
-    Symbol &sym = sec.file->getRelocTargetSym(rel);
-    if (sym.isLocal() || retain)
-      sym.setFlags(USED);
+    sec.file->getRelocTargetSym(rel).setFlags(USED);
   };
   const RelsOrRelas<ELFT> rels = sec.template relsOrRelas<ELFT>();
   for (const typename ELFT::Rel &rel : rels.rels)
@@ -430,7 +428,7 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
         for (InputSection *isec : sec->dependentSections)
           isec->markLive();
         if (markUsed)
-          markUsedSymbols<ELFT>(ctx, *sec);
+          markUsedSymbols<ELFT>(*sec);
       }
     }
 
@@ -611,10 +609,10 @@ template <class ELFT> void elf::markLive(Ctx &ctx) {
     // See markUsedSymbols.
     if (ctx.arg.copyRelocs &&
         (ctx.arg.discard != DiscardPolicy::None || ctx.arg.retainSymbols))
-      parallelForEach(ctx.objectFiles, [&ctx](ELFFileBase *file) {
+      parallelForEach(ctx.objectFiles, [](ELFFileBase *file) {
         for (InputSectionBase *sec : file->getSections())
           if (sec)
-            markUsedSymbols<ELFT>(ctx, *sec);
+            markUsedSymbols<ELFT>(*sec);
       });
     return;
   }
