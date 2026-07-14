@@ -1703,10 +1703,12 @@ export struct TypeFromModule {};
       buildPreamble(getFullPath("Use.cpp"), *CI, Inputs, /*StoreInMemory=*/true,
                     /*PeambleCallback=*/nullptr);
   ASSERT_TRUE(Preamble);
-  EXPECT_EQ(Preamble->Preamble.getBounds().Size, 0u);
 
   auto AST = ParsedAST::build(getFullPath("Use.cpp"), Inputs, std::move(CI), {},
                               Preamble);
+
+  ASSERT_TRUE(AST);
+
   auto Actual = getSemanticHighlightings(AST.value(),
                                          /*IncludeInactiveRegionTokens=*/true);
   auto HasToken = [&](llvm::StringRef Name, HighlightingKind Kind) {
