@@ -1006,6 +1006,13 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - The `amdgpu_num_sgpr` and `amdgpu_num_vgpr` function attributes are now
   deprecated. Using them produces a `-Wdeprecated-declarations` warning. Use
   `amdgpu_waves_per_eu` instead.
+- These builtins have been deprecated in favor of `__builtin_amdgcn_ballot_w32`
+  or `__builtin_amdgcn_ballot_w64`:
+  - `__builtin_amdgcn_uicmp`
+  - `__builtin_amdgcn_uicmpl`
+  - `__builtin_amdgcn_sicmpl`
+  - `__builtin_amdgcn_fcmp`
+  - `__builtin_amdgcn_fcmpf`
 
 #### NVPTX Support
 
