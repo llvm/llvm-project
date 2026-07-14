@@ -74,16 +74,6 @@ class EmitC_IncDecOp<string mnemonic, string summaryStr>
                        "::llvm::cast<emitc::LValueType>($_self).getValueType()">
       ]> {
   let summary = summaryStr;
-  let description = [{
-    This operation models a C/C++ increment or decrement operator on an lvalue.
-
-    Example:
-
-    ```mlir
-    %0 = emitc.pre_increment %arg0 : !emitc.lvalue<i32>
-    ```
-  }];
-
   let arguments = (ins
     Res<EmitC_LValueType, "",
         [MemRead<DefaultResource, 0, FullEffect>,
@@ -1293,16 +1283,56 @@ def EmitC_ConditionalOp : EmitC_Op<"conditional",
 }
 
 def EmitC_PreIncrementOp
-    : EmitC_IncDecOp<"pre_increment", "Pre-increment operation">;
+    : EmitC_IncDecOp<"pre_increment", "Pre-increment operation"> {
+  let description = [{
+    This operation models the C/C++ pre-increment operator on an lvalue.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.pre_increment %arg0 : !emitc.lvalue<i32>
+    ```
+  }];
+}
 
 def EmitC_PostIncrementOp
-    : EmitC_IncDecOp<"post_increment", "Post-increment operation">;
+    : EmitC_IncDecOp<"post_increment", "Post-increment operation"> {
+  let description = [{
+    This operation models the C/C++ post-increment operator on an lvalue.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.post_increment %arg0 : !emitc.lvalue<i32>
+    ```
+  }];
+}
 
 def EmitC_PreDecrementOp
-    : EmitC_IncDecOp<"pre_decrement", "Pre-decrement operation">;
+    : EmitC_IncDecOp<"pre_decrement", "Pre-decrement operation"> {
+  let description = [{
+    This operation models the C/C++ pre-decrement operator on an lvalue.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.pre_decrement %arg0 : !emitc.lvalue<i32>
+    ```
+  }];
+}
 
 def EmitC_PostDecrementOp
-    : EmitC_IncDecOp<"post_decrement", "Post-decrement operation">;
+    : EmitC_IncDecOp<"post_decrement", "Post-decrement operation"> {
+  let description = [{
+    This operation models the C/C++ post-decrement operator on an lvalue.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.post_decrement %arg0 : !emitc.lvalue<i32>
+    ```
+  }];
+}
 
 def EmitC_UnaryMinusOp : EmitC_UnaryOp<"unary_minus", []> {
   let summary = "Unary minus operation";
