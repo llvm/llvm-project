@@ -117,13 +117,14 @@ static mlir::Value computeGlobalSize(fir::FirOpBuilder &builder,
     size = dl.getTypeSizeInBits(structTy) / 8;
   }
   if (!size) {
-    if (auto s = fir::getTypeSizeAndAlignment(loc, globalOp.getType(), dl,
-                                              kindMap))
+    if (auto s =
+            fir::getTypeSizeAndAlignment(loc, globalOp.getType(), dl, kindMap))
       size = s->first;
   }
   if (!size) {
     // A global embedding descriptor (allocatable/pointer) components has no
-    // structural size; size it via its LLVM type, which inlines the descriptors.
+    // structural size; size it via its LLVM type, which inlines the
+    // descriptors.
     mlir::Type llvmTy = typeConverter.convertType(globalOp.getType());
     if (llvmTy && mlir::isa<mlir::DataLayoutTypeInterface>(llvmTy))
       size = dl.getTypeSizeInBits(llvmTy) / 8;
@@ -149,13 +150,14 @@ static uint64_t getGlobalSizeInBytes(mlir::Location loc,
     size = dl.getTypeSizeInBits(structTy) / 8;
   }
   if (!size) {
-    if (auto s = fir::getTypeSizeAndAlignment(loc, globalOp.getType(), dl,
-                                              kindMap))
+    if (auto s =
+            fir::getTypeSizeAndAlignment(loc, globalOp.getType(), dl, kindMap))
       size = s->first;
   }
   if (!size) {
     // A global embedding descriptor (allocatable/pointer) components has no
-    // structural size; size it via its LLVM type, which inlines the descriptors.
+    // structural size; size it via its LLVM type, which inlines the
+    // descriptors.
     mlir::Type llvmTy = typeConverter.convertType(globalOp.getType());
     if (llvmTy && mlir::isa<mlir::DataLayoutTypeInterface>(llvmTy))
       size = dl.getTypeSizeInBits(llvmTy) / 8;
