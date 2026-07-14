@@ -63,7 +63,6 @@ define i1 @scalarize_ptr_induction(ptr %start, ptr %end, ptr noalias %dst, i1 %c
 ; CHECK-LABEL: define i1 @scalarize_ptr_induction(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]], ptr noalias [[DST:%.*]], i1 [[C:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[START]], i64 4
 ; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[START]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[END1]], [[TMP4]]
