@@ -171,7 +171,7 @@ func.func private @pack_rhs(%B: tensor<16x13xf32>) ->  tensor<?x16x?x1xf32> {
 // @pack_acc
 //
 // Implements packing for the C matrix (accumulator) in matrix multiplication.
-// The inner tile size is "scalable": 8 * vscale
+// The inner tile sizes are "scalable": 8 * vscale, 8 * vscale
 //===----------------------------------------------------------------------===//
 func.func private @pack_acc(%C: tensor<7x13xf32>) -> tensor<?x?x?x?xf32> {
   %pad = arith.constant 0.0 : f32
