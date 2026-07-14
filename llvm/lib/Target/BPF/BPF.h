@@ -58,7 +58,15 @@ public:
 };
 
 FunctionPass *createBPFMIPeepholeLegacyPass();
-FunctionPass *createBPFMIExpandStackArgPseudosPass();
+
+class BPFMIExpandStackArgPseudosPass
+    : public RequiredPassInfoMixin<BPFMIExpandStackArgPseudosPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createBPFMIExpandStackArgPseudosLegacyPass();
 FunctionPass *createBPFMIPreEmitPeepholePass();
 FunctionPass *createBPFMIPreEmitCheckingPass();
 
@@ -71,7 +79,7 @@ void initializeBPFCheckAndAdjustIRLegacyPass(PassRegistry &);
 void initializeBPFDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeBPFMIPeepholeLegacyPass(PassRegistry &);
 void initializeBPFMIPreEmitCheckingPass(PassRegistry &);
-void initializeBPFMIExpandStackArgPseudosPass(PassRegistry &);
+void initializeBPFMIExpandStackArgPseudosLegacyPass(PassRegistry &);
 void initializeBPFMIPreEmitPeepholePass(PassRegistry &);
 void initializeBPFMISimplifyPatchableLegacyPass(PassRegistry &);
 

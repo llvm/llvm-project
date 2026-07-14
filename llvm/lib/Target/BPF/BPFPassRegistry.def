@@ -40,6 +40,7 @@ FUNCTION_PASS_WITH_PARAMS(
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("bpf-mi-expand-stack-arg-pseudos", BPFMIExpandStackArgPseudosPass())
 MACHINE_FUNCTION_PASS("bpf-isel", BPFISelDAGToDAGPass(*this))
 MACHINE_FUNCTION_PASS("bpf-mi-peephole", BPFMIPeepholePass())
 MACHINE_FUNCTION_PASS("bpf-mi-simplify-patchable", BPFMISimplifyPatchablePass())

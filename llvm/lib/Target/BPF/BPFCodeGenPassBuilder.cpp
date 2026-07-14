@@ -70,6 +70,7 @@ void BPFCodeGenPassBuilder::addMachineSSAOptimization(
 void BPFCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
   // TODO(boomanaiden154): Add BPFMIPreEmitCheckingPass when it has been ported.
   if (!DisableMIPeephole) {
+    addMachineFunctionPass(BPFMIExpandStackArgPseudosPass(), PMW);
     // TODO(boomanaiden154): Add BPFMIPreEmitPeepholePass when it has been
     // ported.
   }

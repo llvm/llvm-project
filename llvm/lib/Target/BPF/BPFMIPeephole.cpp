@@ -839,23 +839,33 @@ bool expandStackArgPseudos(MachineFunction &MF) {
   return Changed;
 }
 
-class BPFMIExpandStackArgPseudos : public MachineFunctionPass {
+class BPFMIExpandStackArgPseudosLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  BPFMIExpandStackArgPseudos() : MachineFunctionPass(ID) {}
+  BPFMIExpandStackArgPseudosLegacy() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
 } // namespace
 
-INITIALIZE_PASS(BPFMIExpandStackArgPseudos, "bpf-mi-expand-stack-arg-pseudos",
+INITIALIZE_PASS(BPFMIExpandStackArgPseudosLegacy,
+                "bpf-mi-expand-stack-arg-pseudos",
                 "BPF Stack argument psuedo expansion", false, false)
 
-char BPFMIExpandStackArgPseudos::ID = 0;
-FunctionPass *llvm::createBPFMIExpandStackArgPseudosPass() {
-  return new BPFMIExpandStackArgPseudos();
+char BPFMIExpandStackArgPseudosLegacy::ID = 0;
+FunctionPass *llvm::createBPFMIExpandStackArgPseudosLegacyPass() {
+  return new BPFMIExpandStackArgPseudosLegacy();
 }
 
-bool BPFMIExpandStackArgPseudos::runOnMachineFunction(MachineFunction &MF) {
+bool BPFMIExpandStackArgPseudosLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
   return expandStackArgPseudos(MF);
+}
+
+PreservedAnalyses
+BPFMIExpandStackArgPseudosPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &MFAM) {
+  return expandStackArgPseudos(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                         .preserveSet<CFGAnalyses>()
+                                   : PreservedAnalyses::all();
 }
