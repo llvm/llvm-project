@@ -69,9 +69,9 @@ define i1 @scalarize_ptr_induction(ptr %start, ptr %end, ptr noalias %dst, i1 %c
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = udiv i64 [[TMP1]], 12
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
-; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[START]], i64 4
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[START]], i64 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[DST]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 2 x ptr> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[END]], i64 0
