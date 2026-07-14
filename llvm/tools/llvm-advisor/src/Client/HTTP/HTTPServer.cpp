@@ -1293,7 +1293,7 @@ static HTTPResult handleGetCompareFunctionDetail(CoreClient &Client,
                                                  StringRef FuncName) {
   std::lock_guard<std::mutex> Lock(HeavyQueryMutex);
 
-  struct Remark { std::string Pass, Name; int64_t Type, Line, Hotness; };
+  struct Remark { std::string Pass, Name, File; int64_t Type, Line, Hotness; };
 
   auto collectRemarks = [&](StringRef SnapID) {
     std::vector<Remark> Out;
@@ -1319,10 +1319,12 @@ static HTTPResult handleGetCompareFunctionDetail(CoreClient &Client,
         const json::Array *TypeCol = Cols->getArray("type");
         const json::Array *LineCol = Cols->getArray("line");
         const json::Array *HotnessCol = Cols->getArray("hotness");
+        const json::Array *FileCol = Cols->getArray("file");
         const json::Array *PassStrs = Strs->getArray("pass");
         const json::Array *NameStrs = Strs->getArray("name");
+        const json::Array *FileStrs = Strs->getArray("file");
         if (!FuncCol || !FuncStrs || !PassCol || !NameCol || !TypeCol ||
-            !LineCol || !HotnessCol || !PassStrs || !NameStrs) continue;
+            !LineCol || !HotnessCol || !FileCol || !PassStrs || !NameStrs || !FileStrs) continue;
         size_t N = FuncCol->size();
         for (size_t I = 0; I < N; ++I) {
           int64_t FI = (*FuncCol)[I].getAsInteger().value_or(-1);
@@ -1335,6 +1337,9 @@ static HTTPResult handleGetCompareFunctionDetail(CoreClient &Client,
               ? (*PassStrs)[PI].getAsString().value_or("").str() : "";
           R.Name = NI >= 0 && NI < (int64_t)NameStrs->size()
               ? (*NameStrs)[NI].getAsString().value_or("").str() : "";
+          int64_t FILE_I = (*FileCol)[I].getAsInteger().value_or(-1);
+          R.File = FILE_I >= 0 && FILE_I < (int64_t)FileStrs->size()
+              ? (*FileStrs)[FILE_I].getAsString().value_or("").str() : "";
           R.Type = (*TypeCol)[I].getAsInteger().value_or(-1);
           R.Line = (*LineCol)[I].getAsInteger().value_or(-1);
           R.Hotness = (*HotnessCol)[I].getAsInteger().value_or(-1);
@@ -1353,32 +1358,23 @@ static HTTPResult handleGetCompareFunctionDetail(CoreClient &Client,
   auto makeKey = [](const Remark &R) { return R.Pass + "\0" + R.Name + "\0" + std::to_string(R.Type); };
 
   StringMap<int64_t> BeforeCounts, AfterCounts;
+  StringMap<std::string> AfterFile; // first file seen for each key
+  StringMap<int64_t> AfterLine;      // first line seen for each key
   for (auto &R : BeforeRems) BeforeCounts[makeKey(R)]++;
-  for (auto &R : AfterRems) AfterCounts[makeKey(R)]++;
+  for (auto &R : AfterRems) {
+    std::string Key = makeKey(R);
+    AfterCounts[Key]++;
+    if (!AfterFile.count(Key)) {
+      AfterFile[Key] = R.File;
+      AfterLine[Key] = R.Line;
+    }
+  }
 
   json::Array Added, Removed;
   StringSet<> AllKeys;
   for (auto &KV : AfterCounts) AllKeys.insert(KV.first());
   for (auto &KV : BeforeCounts) AllKeys.insert(KV.first());
 
-  for (auto &K : AllKeys) {
-    int64_t B = BeforeCounts.lookup(K.getKey());
-    int64_t A = AfterCounts.lookup(K.getKey());
-    if (A > B) {
-      // Parse key back
-      StringRef S = K.getKey();
-      auto [PassName, Rest] = S.split('\0');
-      auto [Name, TypeStr] = Rest.split('\0');
-      int64_t Type = 0; TypeStr.getAsInteger(10, Type);
-      for (int64_t I = 0; I < A - B; ++I)
-        Added.push_back(json::Object{{"pass", PassName}, {"name", Name}, {"type", Type}, {"count", A - B}});
-      // Only push once
-      break;
-    }
-  }
-  // Rebuild properly
-  Added.clear();
-  Removed.clear();
   for (auto &K : AllKeys) {
     int64_t B = BeforeCounts.lookup(K.getKey());
     int64_t A = AfterCounts.lookup(K.getKey());
@@ -1391,6 +1387,8 @@ static HTTPResult handleGetCompareFunctionDetail(CoreClient &Client,
     Entry["pass"] = Pass; Entry["name"] = Name; Entry["type"] = Type;
     Entry["before_count"] = B; Entry["after_count"] = A;
     Entry["delta"] = A - B;
+    Entry["file"] = AfterFile.lookup(K.getKey());
+    Entry["line"] = AfterLine.lookup(K.getKey());
     if (A > B) Added.push_back(std::move(Entry));
     else Removed.push_back(std::move(Entry));
   }

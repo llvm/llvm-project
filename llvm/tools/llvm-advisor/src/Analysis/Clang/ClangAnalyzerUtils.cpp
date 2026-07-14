@@ -402,7 +402,7 @@ llvm::advisor::emitOptRemarks(const CapabilityContext &Context,
     return createStringError(EC, "failed to create temp object file");
 
   SmallVector<std::string, 8> ExtraArgs = {
-      "-c", "-o", ObjPath.str().str(), "-fsave-optimization-record=bitstream",
+      "-c", "-o", ObjPath.str().str(), "-fsave-optimization-record=yaml",
       ("-foptimization-record-file=" + OutPath).str()};
   Expected<std::string> Result =
       runCompilerInvocation(Context, ExtraArgs, OutPath);

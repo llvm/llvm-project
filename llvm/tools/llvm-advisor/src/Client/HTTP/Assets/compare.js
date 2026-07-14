@@ -315,15 +315,28 @@ const CompareView = {
     const TYPE_NAMES = { 1: 'passed', 2: 'missed', 3: 'analysis', 6: 'failure' };
     const TYPE_COLORS = { 1: 'var(--green)', 2: 'var(--orange)', 3: 'var(--teal)', 6: 'var(--red)' };
 
-    const makeEntries = (items, sign, color) => items.map(r =>
-      h('div', { style: { display: 'flex', gap: '8px', padding: '2px 0', alignItems: 'baseline' } },
+    const makeEntries = (items, sign, color) => items.map(r => {
+      const hasLoc = r.file && r.line > 0;
+      const explorerLink = hasLoc
+        ? h('a', {
+            class: 'text-muted',
+            style: { fontSize: '10px', cursor: 'pointer', textDecoration: 'underline' },
+            onClick: (e) => {
+              e.stopPropagation();
+              State.set('currentSnapshot', State.get('snapshots').find(s => s.id === this._candidateId) || null);
+              Router.navigate(`/explorer?path=${encodeURIComponent(r.file)}&line=${r.line}`);
+            }
+          }, `${r.file.split('/').pop()}:${r.line}`)
+        : null;
+      return h('div', { style: { display: 'flex', gap: '8px', padding: '2px 0', alignItems: 'baseline' } },
         h('span', { style: { color, fontWeight: '600', minWidth: '16px' } }, sign),
         h('span', { style: { color: TYPE_COLORS[r.type] || 'var(--fg3)', minWidth: '60px' } }, TYPE_NAMES[r.type] || '?'),
         h('span', { style: { fontWeight: '500' } }, r.name || ''),
         h('span', { class: 'text-muted' }, r.pass || ''),
         h('span', { style: { color: color, fontSize: '10px' } }, `×${Math.abs(r.delta || r.after_count - r.before_count)}`),
-      )
-    );
+        explorerLink,
+      );
+    });
 
     if (removed.length) {
       cell.appendChild(h('div', { style: { marginBottom: '4px', fontWeight: '600', color: 'var(--red)' } }, 'Removed (resolved):'));

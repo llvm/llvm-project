@@ -1357,7 +1357,13 @@ const CodeExplorerView = {
   async render() {
     const container = h('div', {});
     container.appendChild(h('h2', { style: { margin: '0 0 12px' } }, 'Code Explorer'));
-    this._snap = State.get('currentSnapshot');
+    const params = State.get('routeParams') || {};
+    if (params.snapshot_id) {
+      const snaps = State.get('snapshots') || [];
+      this._snap = snaps.find(s => s.id === params.snapshot_id) || null;
+    } else {
+      this._snap = State.get('currentSnapshot');
+    }
     if (!this._snap) {
       container.appendChild(UI.emptyCard('No snapshot selected', 'Select a snapshot from the sidebar to explore source files.'));
       Shell.renderMain(container);
@@ -1431,7 +1437,6 @@ const CodeExplorerView = {
     wrap.appendChild(sidebar); wrap.appendChild(mainCol);
     container.appendChild(wrap);
 
-    const params = State.get('routeParams') || {};
     const initialPath = params.path || (files.length > 0 ? files[0].path : null);
     this._scrollToLine = params.line ? parseInt(params.line, 10) : 0;
 
