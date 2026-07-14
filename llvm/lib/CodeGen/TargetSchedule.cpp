@@ -171,7 +171,7 @@ unsigned TargetSchedModel::computeOperandLatency(
   const MachineInstr *UseMI, unsigned UseOperIdx) const {
 
   const unsigned InstrLatency = computeInstrLatency(DefMI);
-  const unsigned DefaultDefLatency = TII->defaultDefLatency(SchedModel, *DefMI);
+  const unsigned DefaultDefLatency = TII->defaultDefLatency(*STI, SchedModel, *DefMI);
 
   if (!hasInstrSchedModel() && !hasInstrItineraries())
     return DefaultDefLatency;
@@ -263,7 +263,7 @@ TargetSchedModel::computeInstrLatency(const MachineInstr *MI,
     if (SCDesc->isValid())
       return computeInstrLatency(*SCDesc);
   }
-  return TII->defaultDefLatency(SchedModel, *MI);
+  return TII->defaultDefLatency(*STI, SchedModel, *MI);
 }
 
 unsigned TargetSchedModel::
