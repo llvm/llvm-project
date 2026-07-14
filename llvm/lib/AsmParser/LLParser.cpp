@@ -9105,8 +9105,8 @@ int LLParser::parseCmpXchg(Instruction *&Inst, PerFunctionState &PFS) {
       !Cmp->getType()->isFPOrFPVectorTy() &&
       !Cmp->getType()->isPtrOrPtrVectorTy())
     return error(CmpLoc,
-                 "cmpxchg operand must be an integer, floating point, "
-                 "pointer, or fixed vector of one of these types");
+                 "cmpxchg operand must be an integer type, floating-point type,"
+                 "pointer type, or fixed vector of any of these types");
 
   const Align DefaultAlignment(
       PFS.getFunction().getDataLayout().getTypeStoreSize(

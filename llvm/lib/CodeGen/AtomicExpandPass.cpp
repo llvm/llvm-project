@@ -1420,7 +1420,7 @@ Value *AtomicExpandImpl::insertRMWLLSCLoop(
 }
 
 /// Convert an atomic cmpxchg of a non-integer type to an integer cmpxchg of
-/// the equivalent bitwidth. We used to not support pointer, floating-point, or
+/// the equivalent bitwidth. We used to not support pointer, floating-point, and
 /// vector cmpxchg in the IR. As a migration step, convert back to what used to
 /// be the standard representation so that we can update backends one by one.
 AtomicCmpXchgInst *
