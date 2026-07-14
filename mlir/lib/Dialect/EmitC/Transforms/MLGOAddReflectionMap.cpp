@@ -29,6 +29,15 @@ namespace {
 constexpr const char *mapLibraryHeader = "map";
 constexpr const char *stringLibraryHeader = "string";
 
+struct PatternMatchListener : public RewriterBase::Listener {
+  bool patternApplied = false;
+
+  void notifyOperationInserted(Operation *op,
+                               OpBuilder::InsertPoint previous) override {
+    patternApplied = true;
+  }
+};
+
 IncludeOp addHeader(OpBuilder &builder, ModuleOp module, StringRef headerName) {
   StringAttr includeAttr = builder.getStringAttr(headerName);
   return IncludeOp::create(builder, module.getLoc(), includeAttr,
@@ -45,7 +54,12 @@ class MLGOAddReflectionMapPass
     populateMLGOAddReflectionMapPatterns(patterns, fieldAttrName,
                                          excludedFieldAttrs);
 
-    walkAndApplyPatterns(moduleOp, std::move(patterns));
+    PatternMatchListener listener;
+    walkAndApplyPatterns(moduleOp, std::move(patterns), &listener);
+
+    if (!listener.patternApplied)
+      return;
+
     bool hasMapHdr = false;
     bool hasStringHdr = false;
     for (auto &op : *moduleOp.getBody()) {

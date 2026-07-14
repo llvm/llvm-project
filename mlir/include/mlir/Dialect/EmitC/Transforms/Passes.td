@@ -78,7 +78,7 @@ def MLGOAddReflectionMapPass : Pass<"mlgo-add-reflection-map", "ModuleOp"> {
     ```mlir
     emitc.class @MyClass {
       emitc.field @field0 : !emitc.array<1xf32> {emitc.field_ref = ["feature0"]}
-      emitc.func @operator()() { ... }
+      emitc.func @execute() { ... }
     }
 
     Becomes:
@@ -90,7 +90,7 @@ def MLGOAddReflectionMapPass : Pass<"mlgo-add-reflection-map", "ModuleOp"> {
       emitc.func @getBufferForName(%name: string) -> char* {
         return reflectionMap.at(%name)
       }
-      emitc.func @operator()() { ... }
+      emitc.func @execute() { ... }
     }
     ```
   }];

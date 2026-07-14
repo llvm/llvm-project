@@ -60,7 +60,7 @@ emitc.class @actionClassExcluded {
 
 // -----
 
-/// Test that the pass leaves IR unchanged if fields don't have any attributes
+/// Test that the pass leaves IR unchanged if fields don't have any attributes (match failure)
 
 emitc.class @actionClassNoAttrs {
   emitc.field @fieldName0 : !emitc.array<1xf32>
@@ -69,6 +69,7 @@ emitc.class @actionClassNoAttrs {
   }
 }
 
+// CHECK-NOT:     emitc.include
 // CHECK-LABEL: emitc.class @actionClassNoAttrs {
 // CHECK-NEXT:    emitc.field @fieldName0 : !emitc.array<1xf32>
 // CHECK-NEXT:    emitc.func @"operator()"() {
@@ -78,7 +79,7 @@ emitc.class @actionClassNoAttrs {
 
 // -----
 
-/// Test that the pass leaves IR unchanged if the ClassOp doesn't have any fields
+/// Test that the pass leaves IR unchanged if the ClassOp doesn't have any fields (match failure)
 
 emitc.class @actionClassNoFields {
   emitc.func @"operator()"() {
@@ -86,6 +87,7 @@ emitc.class @actionClassNoFields {
   }
 }
 
+// CHECK-NOT:     emitc.include
 // CHECK-LABEL: emitc.class @actionClassNoFields {
 // CHECK-NEXT:    emitc.func @"operator()"() {
 // CHECK-NEXT:      return
@@ -101,6 +103,7 @@ emitc.class @actionClassNoOperator {
   emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
 }
 
+// CHECK-NOT:     emitc.include
 // CHECK-LABEL: emitc.class @actionClassNoOperator {
 // CHECK-NEXT:    emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
 // CHECK-NEXT:  }
@@ -117,6 +120,7 @@ emitc.class @actionClassNonStringAttr {
   }
 }
 
+// CHECK-NOT:     emitc.include
 // CHECK-LABEL: emitc.class @actionClassNonStringAttr {
 // CHECK-NEXT:    emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = [1]}
 // CHECK-NEXT:    emitc.func @"operator()"() {
