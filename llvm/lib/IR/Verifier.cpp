@@ -749,6 +749,19 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
       Check(ETy->isPointerTy(), "wrong type for intrinsic global variable",
             &GV);
     }
+
+    auto *Init = GV.hasInitializer()
+                     ? dyn_cast<ConstantArray>(GV.getInitializer())
+                     : nullptr;
+    if (Init) {
+      for (const Use &U : Init->operands()) {
+        auto *Structor = dyn_cast<ConstantStruct>(U);
+        if (!Structor || Structor->getNumOperands() != 3)
+          continue;
+        Check(!isa<ConstantPtrAuth>(Structor->getOperand(1)),
+              "signing of ctors/dtors should be requested via module flags");
+      }
+    }
   }
 
   if (GV.hasName() && (GV.getName() == "llvm.used" ||
@@ -1822,26 +1835,52 @@ void Verifier::visitModuleFlags() {
   // Scan each flag, and track the flags and requirements.
   DenseMap<const MDString*, const MDNode*> SeenIDs;
   SmallVector<const MDNode*, 16> Requirements;
-  uint64_t PAuthABIPlatform = -1;
-  uint64_t PAuthABIVersion = -1;
+
+  // Either both aarch64-elf-pauthabi-* flags should be set or none at all.
+  std::optional<uint64_t> PAuthABIPlatform;
+  std::optional<uint64_t> PAuthABIVersion;
+  // Signing of init/fini pointers: address diversity implies basic signing.
+  uint64_t HasPtrauthInitFini = 0;
+  uint64_t HasPtrauthInitFiniAddr = 0;
+
   for (const MDNode *MDN : Flags->operands()) {
     visitModuleFlag(MDN, SeenIDs, Requirements);
     if (MDN->getNumOperands() != 3)
       continue;
+
     if (const auto *FlagName = dyn_cast_or_null<MDString>(MDN->getOperand(1))) {
-      if (FlagName->getString() == "aarch64-elf-pauthabi-platform") {
-        if (const auto *PAP =
+      auto GetFlagNamed = [&](StringRef Name) -> std::optional<uint64_t> {
+        if (FlagName->getString() != Name)
+          return std::nullopt;
+        if (const auto *FlagValue =
                 mdconst::dyn_extract_or_null<ConstantInt>(MDN->getOperand(2)))
-          PAuthABIPlatform = PAP->getZExtValue();
-      } else if (FlagName->getString() == "aarch64-elf-pauthabi-version") {
-        if (const auto *PAV =
-                mdconst::dyn_extract_or_null<ConstantInt>(MDN->getOperand(2)))
-          PAuthABIVersion = PAV->getZExtValue();
-      }
+          return FlagValue->getZExtValue();
+
+        CheckFailed(Name + ": module flag expects integer value");
+        return std::nullopt;
+      };
+
+      if (auto Value = GetFlagNamed("aarch64-elf-pauthabi-platform"))
+        PAuthABIPlatform = *Value;
+      else if (auto Value = GetFlagNamed("aarch64-elf-pauthabi-version"))
+        PAuthABIVersion = *Value;
+      else if (auto Value = GetFlagNamed("ptrauth-init-fini"))
+        HasPtrauthInitFini = *Value;
+      else if (auto Value =
+                   GetFlagNamed("ptrauth-init-fini-address-discrimination"))
+        HasPtrauthInitFiniAddr = *Value;
     }
   }
 
-  if ((PAuthABIPlatform == uint64_t(-1)) != (PAuthABIVersion == uint64_t(-1)))
+  Check(llvm::is_contained({0u, 1u}, HasPtrauthInitFini),
+        "ptrauth-init-fini must be 0 or 1");
+  Check(llvm::is_contained({0u, 1u}, HasPtrauthInitFiniAddr),
+        "ptrauth-init-fini-address-discrimination must be 0 or 1, if set");
+  if (HasPtrauthInitFiniAddr)
+    Check(HasPtrauthInitFini, "ptrauth-init-fini-address-discrimination module "
+                              "flag requires ptrauth-init-fini");
+
+  if (PAuthABIPlatform.has_value() != PAuthABIVersion.has_value())
     CheckFailed("either both or no 'aarch64-elf-pauthabi-platform' and "
                 "'aarch64-elf-pauthabi-version' module flags must be present");
 
@@ -5868,6 +5907,17 @@ void Verifier::visitInstruction(Instruction &I) {
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_mem_cache_hint))
     visitMemCacheHintMetadata(I, MD);
 
+  if (MDNode *MD = I.getMetadata("amdgpu.expected.active.lanes")) {
+    Check(MD->getNumOperands() == 1,
+          "!amdgpu.expected.active.lanes must have exactly one operand", &I,
+          MD);
+    ConstantInt *CI =
+        mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(0));
+    Check(CI && CI->getType()->isIntegerTy(32),
+          "!amdgpu.expected.active.lanes operand must be an i32 constant", &I,
+          MD);
+  }
+
   if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
     CheckDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);
     visitMDNode(*N, AreDebugLocsAllowed::Yes);
@@ -5942,8 +5992,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
               "bits",
               Call);
         Check(OBU.Inputs.size() < 3 ||
-                  GetTypeAt(2)->isIntegerTy() &&
-                      GetTypeAt(2)->getIntegerBitWidth() <= 64,
+                  (GetTypeAt(2)->isIntegerTy() &&
+                   GetTypeAt(2)->getIntegerBitWidth() <= 64),
               "third argument should be an integer with a maximum width of 64 "
               "bits if present",
               Call);
@@ -6100,6 +6150,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(APFloatBase::isValidArbitraryFPFormat(Interp),
           "unsupported interpretation metadata string", Call);
 
+    // The integer type width must equal the arbitrary FP format width.
+    if (unsigned FormatBits =
+            APFloatBase::getArbitraryFPFormatSizeInBits(Interp))
+      Check(IntTy->getScalarSizeInBits() == FormatBits,
+            "integer type bit width must equal the arbitrary FP format width",
+            Call);
+
     // Check rounding mode metadata (argoperand 2).
     auto *RoundingMAV = dyn_cast<MetadataAsValue>(Call.getArgOperand(2));
     Check(RoundingMAV, "missing rounding mode metadata operand", Call);
@@ -6142,6 +6199,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     // Valid interpretation strings: mini-float format names.
     Check(APFloatBase::isValidArbitraryFPFormat(Interp),
           "unsupported interpretation metadata string", Call);
+
+    // The integer type width must equal the arbitrary FP format width.
+    if (unsigned FormatBits =
+            APFloatBase::getArbitraryFPFormatSizeInBits(Interp))
+      Check(IntTy->getScalarSizeInBits() == FormatBits,
+            "integer type bit width must equal the arbitrary FP format width",
+            Call);
     break;
   }
 #define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:

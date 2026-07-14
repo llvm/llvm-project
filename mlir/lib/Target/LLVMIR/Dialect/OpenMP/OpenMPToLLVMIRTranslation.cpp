@@ -5188,6 +5188,30 @@ applyUnrollHeuristic(omp::UnrollHeuristicOp op, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// Apply a `#pragma omp unroll partial` / `!$omp unroll partial`
+/// transformation using the OpenMPIRBuilder.
+static LogicalResult
+applyUnrollPartial(omp::UnrollPartialOp op, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+
+  Value applyee = op.getApplyee();
+  assert(applyee && "Loop to apply unrolling on required");
+
+  llvm::CanonicalLoopInfo *consBuilderCLI =
+      moduleTranslation.lookupOMPLoop(applyee);
+  llvm::OpenMPIRBuilder::LocationDescription loc(builder);
+
+  // No generatee is supported yet, so the unrolled loop's CanonicalLoopInfo is
+  // not requested and unrolling is deferred to LLVM's LoopUnroll pass.
+  int32_t factor = static_cast<int32_t>(op.getUnrollFactor());
+  ompBuilder->unrollLoopPartial(loc.DL, consBuilderCLI, factor,
+                                /*UnrolledCLI=*/nullptr);
+
+  moduleTranslation.invalidateOmpLoop(applyee);
+  return success();
+}
+
 /// Apply a `#pragma omp tile` / `!$omp tile` transformation using the
 /// OpenMPIRBuilder.
 static LogicalResult applyTile(omp::TileOp op, llvm::IRBuilderBase &builder,
@@ -9687,6 +9711,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
             // contained region including their transformations must occur at
             // the omp.canonical_loop.
             return applyUnrollHeuristic(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::UnrollPartialOp op) {
+            return applyUnrollPartial(op, builder, moduleTranslation);
           })
           .Case([&](omp::TileOp op) {
             return applyTile(op, builder, moduleTranslation);
