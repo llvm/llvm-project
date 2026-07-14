@@ -35,7 +35,6 @@ public:
 
   class LivenessValues {
   public:
-
     SetTy<const Expr *> liveExprs;
     SetTy<const VarDecl *> liveDecls;
     SetTy<const BindingDecl *> liveBindings;

@@ -223,7 +223,7 @@ using TreeIter = Tree::iterator; // ImutAVLTreeInOrderIterator
 // Build an ImmutableSet from the given values (in the given insertion order),
 // optionally removing some afterwards, so trees of varied shape are produced.
 NCSet<int> buildSet(NCSet<int>::Factory &F, ArrayRef<int> ToAdd,
-                           ArrayRef<int> ToRemove = {}) {
+                    ArrayRef<int> ToRemove = {}) {
   NCSet<int> S = F.getEmptySet();
   for (int V : ToAdd)
     S = F.add(S, V);

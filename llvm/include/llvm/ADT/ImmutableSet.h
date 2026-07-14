@@ -45,10 +45,11 @@ class ImutAVLTreeInOrderIterator;
 
 namespace ImutAVLDetail {
 /// The intrusive doubly-linked chain of same-digest trees in the factory's
-/// canonicalization cache. Held as an (empty) base so that, when canonicalization
-/// is disabled, the empty base optimization removes it entirely. Kept separate
-/// from the cached digest below so that the two pointers pack without the tail
-/// padding that grouping a trailing 32-bit field with them would introduce.
+/// canonicalization cache. Held as an (empty) base so that, when
+/// canonicalization is disabled, the empty base optimization removes it
+/// entirely. Kept separate from the cached digest below so that the two
+/// pointers pack without the tail padding that grouping a trailing 32-bit field
+/// with them would introduce.
 template <typename Tree, bool Canonicalize> struct CanonicalLinks {
   Tree *Prev = nullptr;
   Tree *Next = nullptr;
@@ -56,8 +57,8 @@ template <typename Tree, bool Canonicalize> struct CanonicalLinks {
 template <typename Tree> struct CanonicalLinks<Tree, false> {};
 
 /// The cached structural digest, used only for canonicalization. Stored as an
-/// LLVM_NO_UNIQUE_ADDRESS member so it occupies no space when disabled and packs
-/// alongside the adjacent 32-bit fields when enabled.
+/// LLVM_NO_UNIQUE_ADDRESS member so it occupies no space when disabled and
+/// packs alongside the adjacent 32-bit fields when enabled.
 template <bool Canonicalize> struct CanonicalDigest {
   uint32_t Digest = 0;
 };
@@ -265,11 +266,10 @@ private:
 
 private:
   /// Internal constructor that is only called by ImutAVLFactory.
-  ImutAVLTree(Factory *f, ImutAVLTree* l, ImutAVLTree* r, value_type_ref v,
+  ImutAVLTree(Factory *f, ImutAVLTree *l, ImutAVLTree *r, value_type_ref v,
               unsigned height)
-    : left(l), right(r), height(height), IsMutable(true),
-      IsDigestCached(false), IsCanonicalized(false), value(v), factory(f)
-  {
+      : left(l), right(r), height(height), IsMutable(true),
+        IsDigestCached(false), IsCanonicalized(false), value(v), factory(f) {
     if (left) left->retain();
     if (right) right->retain();
   }
@@ -399,8 +399,8 @@ struct IntrusiveRefCntPtrInfo<ImutAVLTree<ImutInfo, Canonicalize>> {
 
 template <typename ImutInfo, bool Canonicalize>
 class ImutAVLFactory
-    : private ImutAVLDetail::CanonicalCache<
-          ImutAVLTree<ImutInfo, Canonicalize>, Canonicalize> {
+    : private ImutAVLDetail::CanonicalCache<ImutAVLTree<ImutInfo, Canonicalize>,
+                                            Canonicalize> {
   friend class ImutAVLTree<ImutInfo, Canonicalize>;
 
   using TreeTy = ImutAVLTree<ImutInfo, Canonicalize>;
@@ -659,7 +659,7 @@ public:
     unsigned digest = TNew->computeDigest();
     TreeTy *&entry = this->Cache[maskCacheIndex(digest)];
     if (entry) {
-      for (TreeTy *T = entry ; T != nullptr; T = T->Next) {
+      for (TreeTy *T = entry; T != nullptr; T = T->Next) {
         // Compare the contents of 'T' with 'TNew'. isEqual skips subtrees that
         // are shared by pointer, so for structurally-shared persistent trees
         // (the common case, e.g. one derived from the other) this is linear in
@@ -969,8 +969,7 @@ public:
   public:
     Factory() = default;
 
-    Factory(BumpPtrAllocator& Alloc)
-      : F(Alloc) {}
+    Factory(BumpPtrAllocator &Alloc) : F(Alloc) {}
 
     Factory(const Factory& RHS) = delete;
     void operator=(const Factory& RHS) = delete;

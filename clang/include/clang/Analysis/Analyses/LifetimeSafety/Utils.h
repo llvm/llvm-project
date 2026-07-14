@@ -45,8 +45,7 @@ using MapTy = llvm::ImmutableMap<KeyT, ValT, llvm::ImutKeyValueInfo<KeyT, ValT>,
                                  /*Canonicalize=*/false>;
 
 /// Computes the union of two ImmutableSets.
-template <typename SetT>
-SetT join(SetT A, SetT B, typename SetT::Factory &F) {
+template <typename SetT> SetT join(SetT A, SetT B, typename SetT::Factory &F) {
   if (A.getRootWithoutRetain() == B.getRootWithoutRetain())
     return A;
   if (A.getHeight() < B.getHeight())

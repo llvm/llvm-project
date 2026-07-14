@@ -108,18 +108,20 @@ LiveVariables::LivenessValues
 LiveVariablesImpl::merge(LiveVariables::LivenessValues valsA,
                          LiveVariables::LivenessValues valsB) {
 
-  SetRefTy<const Expr *> SSetRefA(
-      valsA.liveExprs.getRootWithoutRetain(), ESetFact.getTreeFactory()),
+  SetRefTy<const Expr *> SSetRefA(valsA.liveExprs.getRootWithoutRetain(),
+                                  ESetFact.getTreeFactory()),
       SSetRefB(valsB.liveExprs.getRootWithoutRetain(),
                ESetFact.getTreeFactory());
 
-  SetRefTy<const VarDecl *>
-    DSetRefA(valsA.liveDecls.getRootWithoutRetain(), DSetFact.getTreeFactory()),
-    DSetRefB(valsB.liveDecls.getRootWithoutRetain(), DSetFact.getTreeFactory());
+  SetRefTy<const VarDecl *> DSetRefA(valsA.liveDecls.getRootWithoutRetain(),
+                                     DSetFact.getTreeFactory()),
+      DSetRefB(valsB.liveDecls.getRootWithoutRetain(),
+               DSetFact.getTreeFactory());
 
-  SetRefTy<const BindingDecl *>
-    BSetRefA(valsA.liveBindings.getRootWithoutRetain(), BSetFact.getTreeFactory()),
-    BSetRefB(valsB.liveBindings.getRootWithoutRetain(), BSetFact.getTreeFactory());
+  SetRefTy<const BindingDecl *> BSetRefA(
+      valsA.liveBindings.getRootWithoutRetain(), BSetFact.getTreeFactory()),
+      BSetRefB(valsB.liveBindings.getRootWithoutRetain(),
+               BSetFact.getTreeFactory());
 
   SSetRefA = mergeSets(SSetRefA, SSetRefB);
   DSetRefA = mergeSets(DSetRefA, DSetRefB);
@@ -224,9 +226,10 @@ static void AddLiveExpr(LiveVariables::SetTy<const Expr *> &Set,
 /// "(a < b) || (c && d && ((e || f) != (g && h)))"
 /// the following expressions will be added as live:
 /// "a < b", "c", "d", "((e || f) != (g && h))"
-static void AddAllConditionalTerms(LiveVariables::SetTy<const Expr *> &Set,
-                                   LiveVariables::SetTy<const Expr *>::Factory &F,
-                                   const Expr *Cond) {
+static void
+AddAllConditionalTerms(LiveVariables::SetTy<const Expr *> &Set,
+                       LiveVariables::SetTy<const Expr *>::Factory &F,
+                       const Expr *Cond) {
   AddLiveExpr(Set, F, Cond);
   if (auto const *BO = dyn_cast<BinaryOperator>(Cond->IgnoreParens());
       BO && BO->isLogicalOp()) {
