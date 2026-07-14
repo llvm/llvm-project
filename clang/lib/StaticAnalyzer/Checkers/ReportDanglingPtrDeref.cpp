@@ -22,7 +22,7 @@ class ReportDanglingPtrDerefBRVisitor : public BugReporterVisitor {
   const MemRegion *SourceRegion;
 
 public:
-  ReportDanglingPtrDerefBRVisitor(const MemRegion *Source)
+  explicit ReportDanglingPtrDerefBRVisitor(const MemRegion *Source)
       : SourceRegion(Source) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
