@@ -12,7 +12,6 @@
 
 #include <ranges>
 #include <utility>
-#include <vector>
 
 struct View : std::ranges::view_interface<View> {
   int* begin();
@@ -26,7 +25,7 @@ static_assert(!std::same_as<std::ranges::sentinel_t<View>, std::ranges::sentinel
 
 void test() {
   View range;
-  auto v = std::ranges::enumerate_view ev{range};
+  std::ranges::enumerate_view v{range};
 
   // [range.enumerate.view]
 
@@ -93,8 +92,6 @@ void test() {
 
   // [range.enumerate.overview]
 
-  std::vector<int> vec{1, 2, 3};
-
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::enumerate(vec);
+  std::views::enumerate(range);
 }
