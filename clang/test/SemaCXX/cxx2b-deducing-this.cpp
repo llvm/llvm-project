@@ -1178,7 +1178,7 @@ struct S {
   };
 };
 
-// Test that out-of-line member defination of dependent nested class works
+// Test that out-of-line member definition of dependent nested class works
 template<class T>
 void S<T>::Nested::f(this auto) {}
 }

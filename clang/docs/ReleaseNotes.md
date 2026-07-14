@@ -814,7 +814,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   would only use the first one). A new warning that diagnoses such declarations has been added to `-Wignored-attributes`.
   (#GH191829)
 - Fixed a crash in the constant evaluator when an ill-formed array new-expression whose bound could not be determined (e.g. `new int[]()`) was used in a constant expression. (#GH200139)
-- Fixed a rejected-valid case that used explicit object parameters in the context of dependent nested classes. (#GH136472)
+- Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
 - Clang now defines the GCC-compatible predefined macros `__WCHAR_MIN__`, `__WINT_MIN__`, and `__SIG_ATOMIC_MIN__`. (#GH199678)
 - Fix a crash in addUnsizedArray due assert not verifying we have a Base before doing checks on it. (#GH44212)
 
