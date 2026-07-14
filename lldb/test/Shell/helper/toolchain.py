@@ -49,10 +49,10 @@ def get_lldb_args(config, suffix=""):
 
 
 class ShTestLldb(ShTest):
-    def __init__(
-        self, extra_substitutions=[], preamble_commands=[]
-    ):
-        super().__init__(extra_substitutions=extra_substitutions, premable_commands=preamble_commands)
+    def __init__(self, extra_substitutions=[], preamble_commands=[]):
+        super().__init__(
+            extra_substitutions=extra_substitutions, premable_commands=preamble_commands
+        )
 
     def execute(self, test, litConfig):
         exec_path = test.getExecPath()
