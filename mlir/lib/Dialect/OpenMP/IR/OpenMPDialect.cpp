@@ -2664,9 +2664,18 @@ LogicalResult TargetOp::verifyRegions() {
   if (numNestedTeams > 1)
     return emitError("target containing multiple 'omp.teams' nested ops");
 
-  if (getKernelType() == TargetExecMode::bare && numNestedTeams == 0)
-    return emitOpError()
-           << "bare kernel must contain a nested 'omp.teams' operation";
+  if (numNestedTeams == 0) {
+    switch (getKernelType()) {
+    case TargetExecMode::bare:
+      return emitOpError()
+             << "bare kernel must contain a nested 'omp.teams' operation";
+    case TargetExecMode::spmd_no_loop:
+      return emitOpError() << "spmd_no_loop kernel must contain a nested "
+                              "'omp.teams' operation";
+    default:
+      break;
+    }
+  }
 
   Operation *capturedOp =
       cast<ComposableOpInterface>(getOperation()).findCapturedOp();
@@ -4218,6 +4227,56 @@ UnrollHeuristicOp ::getApplyeesODSOperandIndexAndLength() {
 
 std::pair<unsigned, unsigned>
 UnrollHeuristicOp::getGenerateesODSOperandIndexAndLength() {
+  return {0, 0};
+}
+
+//===----------------------------------------------------------------------===//
+// UnrollPartialOp
+//===----------------------------------------------------------------------===//
+
+void UnrollPartialOp::build(::mlir::OpBuilder &odsBuilder,
+                            ::mlir::OperationState &odsState, ::mlir::Value cli,
+                            uint64_t unrollFactor) {
+  odsState.addOperands(cli);
+  Properties &props = odsState.getOrAddProperties<Properties>();
+  props.unroll_factor = odsBuilder.getI64IntegerAttr(unrollFactor);
+}
+
+void UnrollPartialOp::print(OpAsmPrinter &p) {
+  p << '(' << getApplyee() << ')';
+
+  p.printOptionalAttrDict((*this)->getAttrs());
+}
+
+mlir::ParseResult UnrollPartialOp::parse(::mlir::OpAsmParser &parser,
+                                         ::mlir::OperationState &result) {
+  auto cliType = CanonicalLoopInfoType::get(parser.getContext());
+
+  if (parser.parseLParen())
+    return failure();
+
+  OpAsmParser::UnresolvedOperand applyee;
+  if (parser.parseOperand(applyee) ||
+      parser.resolveOperand(applyee, cliType, result.operands))
+    return failure();
+
+  if (parser.parseRParen())
+    return failure();
+
+  // The unroll factor is carried by the `unroll_factor` attribute.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return mlir::success();
+}
+
+std::pair<unsigned, unsigned>
+UnrollPartialOp::getApplyeesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_applyee);
+}
+
+std::pair<unsigned, unsigned>
+UnrollPartialOp::getGenerateesODSOperandIndexAndLength() {
   return {0, 0};
 }
 
