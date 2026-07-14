@@ -34,7 +34,7 @@ template <class _AlgPolicy,
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __in_out_result<_InIter, _OutIter>
 __copy_n(_InIter __first, typename _IterOps<_AlgPolicy>::template __difference_type<_InIter> __n, _OutIter __result) {
   if (__n <= 0)
-    return __in_out_result<_InIter, _OutIter>{std::move(__first), std::move(__result)};
+    return {std::move(__first), std::move(__result)};
   return std::__copy(__first, __first + __n, std::move(__result));
 }
 
