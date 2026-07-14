@@ -27,8 +27,8 @@ size_t size_impl(const Head& head, const Tail&... tail) {
 }
 
 // Join a pack of std::strings using a delimiter
-// TODO: use absl::StrJoin
-void join_impl(std::string&, char) {}
+// TODO(dominic): use absl::StrJoin
+void join_impl(std::string& /*unused*/, char /*unused*/) {}
 
 template <typename Head, typename... Tail>
 void join_impl(std::string& s, const char delimiter, const Head& head,

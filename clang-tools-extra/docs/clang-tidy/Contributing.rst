@@ -131,8 +131,8 @@ So you have an idea of a useful check for :program:`clang-tidy`.
 First, if you're not familiar with LLVM development, read through the `Getting
 Started with the LLVM System`_ document for instructions on setting up your
 workflow and the `LLVM Coding Standards`_ document to familiarize yourself
-with the coding style used in the project. For code reviews, we currently
-use `LLVM Github`_, though historically we used Phabricator.
+with the coding style used in the project. Code reviews for clang-tidy
+contributions are done through `LLVM Github`_.
 
 .. _Getting Started with the LLVM System: https://llvm.org/docs/GettingStarted.html
 .. _LLVM Coding Standards: https://llvm.org/docs/CodingStandards.html
@@ -415,7 +415,11 @@ Some suggestions to ensure your check is robust:
 - Define macros that contain code matched by your check.
 - Define template classes that contain code matched by your check.
 - Define template specializations that contain code matched by your check.
-- Test your check under both Windows and Linux environments.
+- Test your check under both Windows and Linux environments. For example, when
+  a fix-it inserts new lines, use the source file's existing newline style
+  instead of hard-coding ``\n``. You can use
+  ``SourceManager::getBufferData(FileID).detectEOL()`` to get the newline style
+  for a file.
 - Watch out for high false-positive rates. Ideally, a check would have no
   false positives, but given that matching against an AST is not control-
   or data flow- sensitive, a number of false positives are expected. The

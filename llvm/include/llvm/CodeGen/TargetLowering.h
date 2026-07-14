@@ -93,7 +93,8 @@ class Module;
 class ProfileSummaryInfo;
 class TargetLibraryInfo;
 class TargetMachine;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 class TargetTransformInfo;
 class Value;
@@ -466,10 +467,10 @@ public:
     return MachineMemOperand::MONone;
   }
 
-  MachineMemOperand::Flags
-  getLoadMemOperandFlags(const LoadInst &LI, const DataLayout &DL,
-                         AssumptionCache *AC = nullptr,
-                         const TargetLibraryInfo *LibInfo = nullptr) const;
+  MachineMemOperand::Flags getLoadMemOperandFlags(
+      const LoadInst &LI, const DataLayout &DL, AssumptionCache *AC = nullptr,
+      const TargetLibraryInfo *LibInfo = nullptr,
+      CodeGenOptLevel OptLevel = CodeGenOptLevel::Default) const;
   MachineMemOperand::Flags getStoreMemOperandFlags(const StoreInst &SI,
                                                    const DataLayout &DL) const;
   MachineMemOperand::Flags getAtomicMemOperandFlags(const Instruction &AI,
@@ -527,7 +528,8 @@ public:
   /// can be used to store the results of comparisons for use by selects
   /// and conditional branches. With multiple condition registers, the code
   /// generator will not aggressively sink comparisons into the blocks of their
-  /// users.
+  /// users. \p VT is the type of the condition value, e.g. the type of the
+  /// result of a comparison.
   virtual bool hasMultipleConditionRegisters(EVT VT) const { return false; }
 
   /// Return true if the target has BitExtract instructions.
@@ -657,9 +659,10 @@ public:
   // Arg0: The binary op joining the two conditions (and/or).
   // Arg1: The first condition (cond1)
   // Arg2: The second condition (cond2)
+  // Arg3: The containing function.
   virtual CondMergingParams
   getJumpConditionMergingParams(Instruction::BinaryOps, const Value *,
-                                const Value *) const {
+                                const Value *, const Function *) const {
     // -1 will always result in splitting.
     return {-1, -1, -1};
   }
@@ -996,8 +999,9 @@ public:
   /// Return the ValueType for comparison libcalls. Comparison libcalls include
   /// floating point comparison calls, and Ordered/Unordered check calls on
   /// floating point numbers.
-  virtual
-  MVT::SimpleValueType getCmpLibcallReturnType() const;
+  virtual MVT::SimpleValueType getCmpLibcallReturnType() const {
+    return MVT::i32; // return the default value
+  }
 
   /// For targets without i1 registers, this gives the nature of the high-bits
   /// of boolean values held in types wider than i1.
@@ -2137,7 +2141,7 @@ public:
   }
 
   virtual bool needsFixedCatchObjects() const {
-    report_fatal_error("Funclet EH is not implemented for this target");
+    reportFatalUsageError("Funclet EH is not implemented for this target");
   }
 
   /// Return the minimum stack alignment of an argument.
@@ -2181,11 +2185,11 @@ public:
   virtual Value *getSDagStackGuard(const Module &M,
                                    const LibcallLoweringInfo &Libcalls) const;
 
-  /// If this function returns true, stack protection checks should XOR the
+  /// If this function returns true, stack protection checks should mix the
   /// frame pointer (or whichever pointer is used to address locals) into the
   /// stack guard value before checking it. getIRStackGuard must return nullptr
   /// if this returns true.
-  virtual bool useStackGuardXorFP() const { return false; }
+  virtual bool useStackGuardMixFP() const { return false; }
 
   /// If the target has a standard stack protection check function that
   /// performs validation and error handling, returns the function. Otherwise,
@@ -2298,6 +2302,14 @@ public:
   virtual AtomicOrdering
   atomicOperationOrderAfterFenceSplit(const Instruction *I) const {
     return AtomicOrdering::Monotonic;
+  }
+
+  // Whether to issue an atomic load for the initial word value before the
+  // atomicrmw/cmpxchg emulation loop.
+  // TODO: For correctness, an atomic load should be issued for all targets.
+  // Remove this API once this is achieved
+  virtual bool shouldIssueAtomicLoadForAtomicEmulationLoop(void) const {
+    return true;
   }
 
   /// Perform a load-linked operation on Addr, returning a "Value *" with the
@@ -2478,8 +2490,11 @@ public:
   /// AtomicRMW, if at all. Default is to never expand.
   virtual AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
-    return RMW->isFloatingPointOperation() ?
-      AtomicExpansionKind::CmpXChg : AtomicExpansionKind::None;
+    if (RMW->isFloatingPointOperation())
+      return AtomicExpansionKind::CmpXChg;
+    if (RMW->getType()->isVectorTy())
+      return AtomicExpansionKind::CmpXChg;
+    return AtomicExpansionKind::None;
   }
 
   /// Returns how the given atomic atomicrmw should be cast by the IR-level
@@ -2541,8 +2556,10 @@ public:
   /// select(N0|N1, X, Y) => select(N0, select(N1, X, Y, Y)) if it is likely
   /// that it saves us from materializing N0 and N1 in an integer register.
   /// Targets that are able to perform and/or on flags should return false here.
-  virtual bool shouldNormalizeToSelectSequence(LLVMContext &Context,
-                                               EVT VT) const {
+  /// \p VT is the type of the select (and X and Y). \p CCVT is the type of its
+  /// condition (N0 and N1).
+  virtual bool shouldNormalizeToSelectSequence(LLVMContext &Context, EVT VT,
+                                               EVT CCVT) const {
     // If a target has multiple condition registers, then it likely has logical
     // operations on those registers.
     if (hasMultipleConditionRegisters(VT))
@@ -3115,6 +3132,8 @@ public:
     case ISD::FSUB:
     case ISD::FDIV:
     case ISD::FREM:
+    case ISD::PSEUDO_FMIN:
+    case ISD::PSEUDO_FMAX:
       return true;
     default:
       return false;
@@ -3333,8 +3352,11 @@ public:
   /// \p Load is the accompanying load instruction.  Can be either a plain load
   /// instruction or a vp.load intrinsic.
   /// \p DI represents the deinterleaveN intrinsic.
+  /// \p GapMask is a mask with zeros for components / fields that may not be
+  /// accessed.
   virtual bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
-                                                IntrinsicInst *DI) const {
+                                                IntrinsicInst *DI,
+                                                const APInt &GapMask) const {
     return false;
   }
 
@@ -4369,6 +4391,19 @@ public:
     return true;
   }
 
+  /// If only low elements of a vector are demanded, shrink the operation to the
+  /// returned size in bits by converting
+  /// (op x) to insert_subvector (op (extract_subvector x)).
+  ///
+  /// The returned size must be a multiple of the element size, greater than or
+  /// equal to the demanded part of the vector and less than the original
+  /// vector size. Return 0 to disable shrinking.
+  virtual unsigned
+  getPreferredShrunkVectorSizeInBits(SDValue Op,
+                                     const APInt &DemandedElts) const {
+    return 0;
+  }
+
   /// Determine which of the bits specified in Mask are known to be either zero
   /// or one and return them in the KnownZero/KnownOne bitsets. The DemandedElts
   /// argument allows us to only collect the known bits that are shared by the
@@ -4405,12 +4440,11 @@ public:
                                                 const MachineRegisterInfo &MRI,
                                                 unsigned Depth = 0) const;
 
-  /// Determine which of the bits of FrameIndex \p FIOp are known to be 0.
-  /// Default implementation computes low bits based on alignment
-  /// information. This should preserve known bits passed into it.
-  virtual void computeKnownBitsForFrameIndex(int FIOp,
-                                             KnownBits &Known,
-                                             const MachineFunction &MF) const;
+  /// Determine known bits of a pointer to a known valid stack object.
+  /// The default implementation computes low bits based on alignment.
+  virtual void computeKnownBitsForStackObjectPointer(KnownBits &Known,
+                                                     const MachineFunction &MF,
+                                                     Align Alignment) const;
 
   /// This method can be implemented by targets that want to expose additional
   /// information about sign bits to the DAG Combiner. The DemandedElts
@@ -4458,19 +4492,18 @@ public:
       SelectionDAG &DAG, unsigned Depth) const;
 
   /// Return true if this function can prove that \p Op is never poison
-  /// and, if \p PoisonOnly is false, does not have undef bits. The DemandedElts
-  /// argument limits the check to the requested vector elements.
+  /// and, \p Kind can be used to track poison and/or undef bits. The
+  /// DemandedElts argument limits the check to the requested vector elements.
   virtual bool isGuaranteedNotToBeUndefOrPoisonForTargetNode(
       SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-      bool PoisonOnly, unsigned Depth) const;
+      UndefPoisonKind Kind, unsigned Depth) const;
 
   /// Return true if Op can create undef or poison from non-undef & non-poison
   /// operands. The DemandedElts argument limits the check to the requested
   /// vector elements.
-  virtual bool
-  canCreateUndefOrPoisonForTargetNode(SDValue Op, const APInt &DemandedElts,
-                                      const SelectionDAG &DAG, bool PoisonOnly,
-                                      bool ConsiderFlags, unsigned Depth) const;
+  virtual bool canCreateUndefOrPoisonForTargetNode(
+      SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+      UndefPoisonKind Kind, bool ConsiderFlags, unsigned Depth) const;
 
   /// Tries to build a legal vector shuffle using the provided parameters
   /// or equivalent variations. The Mask argument maybe be modified as the
@@ -5103,6 +5136,10 @@ public:
     return true;
   }
 
+  /// Annotate a stack object pointer with known-bits assertions.
+  SDValue annotateStackObjectPointer(SDValue Ptr, SelectionDAG &DAG,
+                                     const SDLoc &DL, Align Alignment) const;
+
   /// This hook must be implemented to lower outgoing return values, described
   /// by the Outs array, into the specified DAG. The implementation should
   /// return the resulting token chain value.
@@ -5136,7 +5173,7 @@ public:
   /// so the default action is to bail.
   virtual Register getRegisterByName(const char* RegName, LLT Ty,
                                      const MachineFunction &MF) const {
-    report_fatal_error("Named registers not implemented for this target");
+    reportFatalUsageError("Named registers not implemented for this target");
   }
 
   /// Return the type that should be used to zero or sign extend a
@@ -5529,10 +5566,12 @@ public:
                  SDValue LL = SDValue(), SDValue LH = SDValue(),
                  SDValue RL = SDValue(), SDValue RH = SDValue()) const;
 
-  /// Attempt to expand an n-bit div/rem/divrem by constant using a n/2-bit
-  /// urem by constant and other arithmetic ops. The n/2-bit urem by constant
-  /// will be expanded by DAGCombiner. This is not possible for all constant
-  /// divisors.
+  /// Attempt to expand an n-bit div/rem/divrem by constant using an n/2-bit
+  /// algorithm. First, attempt to expand the division using a n/2-bit urem by
+  /// constant and other arithmetic ops. The n/2-bit urem by constant will be
+  /// expanded by DAGCombiner. As this is not possible for all constant
+  /// divisors, this method falls back to an implementation of the magic
+  /// algorithm using n/2-bit operations.
   /// \param N Node to expand
   /// \param Result A vector that will be filled with the lo and high parts of
   ///        the results. For *DIVREM, this will be the quotient parts followed
@@ -5558,6 +5597,16 @@ public:
   /// \param N Node to expand
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandCLMUL(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand parallel bit extract (compress).
+  /// \param N Node to expand
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandPEXT(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand parallel bit deposit (expand).
+  /// \param N Node to expand
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandPDEP(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand rotations.
   /// \param N Node to expand
@@ -5637,6 +5686,17 @@ public:
   /// \returns The expansion result
   SDValue expandFCANONICALIZE(SDNode *Node, SelectionDAG &DAG) const;
 
+  /// Expand CONVERT_TO_ARBITRARY_FP using bit manipulation.
+  /// \param Node Node to expand.
+  /// \returns The expansion result, or SDValue() if fails.
+  SDValue expandCONVERT_TO_ARBITRARY_FP(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expand CONVERT_FROM_ARBITRARY_FP using bit manipulation.
+  /// \param Node Node to expand.
+  /// \returns The expansion result, or SDValue() if fails.
+  SDValue expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
+                                          SelectionDAG &DAG) const;
+
   /// Expand CTPOP nodes. Expands vector/scalar CTPOP nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// \param N Node to expand
@@ -5647,13 +5707,13 @@ public:
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTPOP(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand CTLZ/CTLZ_ZERO_UNDEF nodes. Expands vector/scalar CTLZ nodes,
+  /// Expand CTLZ/CTLZ_ZERO_POISON nodes. Expands vector/scalar CTLZ nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandCTLZ(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand VP_CTLZ/VP_CTLZ_ZERO_UNDEF nodes.
+  /// Expand VP_CTLZ/VP_CTLZ_ZERO_POISON nodes.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTLZ(SDNode *N, SelectionDAG &DAG) const;
@@ -5670,18 +5730,18 @@ public:
   SDValue CTTZTableLookup(SDNode *N, SelectionDAG &DAG, const SDLoc &DL, EVT VT,
                           SDValue Op, unsigned NumBitsPerElt) const;
 
-  /// Expand CTTZ/CTTZ_ZERO_UNDEF nodes. Expands vector/scalar CTTZ nodes,
+  /// Expand CTTZ/CTTZ_ZERO_POISON nodes. Expands vector/scalar CTTZ nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandCTTZ(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand VP_CTTZ/VP_CTTZ_ZERO_UNDEF nodes.
+  /// Expand VP_CTTZ/VP_CTTZ_ZERO_POISON nodes.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTTZ(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand VP_CTTZ_ELTS/VP_CTTZ_ELTS_ZERO_UNDEF nodes.
+  /// Expand VP_CTTZ_ELTS/VP_CTTZ_ELTS_ZERO_POISON nodes.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTTZElements(SDNode *N, SelectionDAG &DAG) const;
@@ -5690,6 +5750,11 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVectorFindLastActive(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand LOOP_DEPENDENCE_MASK nodes
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandLoopDependenceMask(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand ABS nodes. Expands vector/scalar ABS nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
@@ -5946,7 +6011,7 @@ public:
   /// LOAD_STACK_GUARD node when it is lowering Intrinsic::stackprotector.
   virtual bool useLoadStackGuardNode(const Module &M) const { return false; }
 
-  virtual SDValue emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
+  virtual SDValue emitStackGuardMixFP(SelectionDAG &DAG, SDValue Val,
                                       const SDLoc &DL) const {
     llvm_unreachable("not implemented for this target");
   }
@@ -6025,6 +6090,15 @@ private:
   SDValue buildSREMEqFold(EVT SETCCVT, SDValue REMNode, SDValue CompTargetNode,
                           ISD::CondCode Cond, DAGCombinerInfo &DCI,
                           const SDLoc &DL) const;
+
+  bool expandUDIVREMByConstantViaUREMDecomposition(
+      SDNode *N, APInt Divisor, SmallVectorImpl<SDValue> &Result, EVT HiLoVT,
+      SelectionDAG &DAG, SDValue LL, SDValue LH) const;
+
+  bool expandUDIVREMByConstantViaUMulHiMagic(SDNode *N, const APInt &Divisor,
+                                             SmallVectorImpl<SDValue> &Result,
+                                             EVT HiLoVT, SelectionDAG &DAG,
+                                             SDValue LL, SDValue LH) const;
 };
 
 /// Given an LLVM IR type and return type attributes, compute the return value

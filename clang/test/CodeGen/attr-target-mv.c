@@ -334,10 +334,10 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: call void @foo_decls
 
 // ITANIUM: define{{.*}} void @bar4()
-// ITANIUM: call void @foo_multi.ifunc(i32 noundef 1, double noundef 5.{{[0+e]*}})
+// ITANIUM: call void @foo_multi.ifunc(i32 noundef 1, double noundef 5.000000e+00{{[0+e]*}})
 
 // WINDOWS: define dso_local void @bar4()
-// WINDOWS: call void @foo_multi.resolver(i32 noundef 1, double noundef 5.{{[0+e]*}})
+// WINDOWS: call void @foo_multi.resolver(i32 noundef 1, double noundef 5.000000e+00{{[0+e]*}})
 
 // ITANIUM: define weak_odr ptr @foo_multi.resolver() #[[ATTR_RESOLVER]] 
 // LINUX-SAME: comdat

@@ -558,7 +558,7 @@ public:
     return {};
   }
 
-  virtual lldb::ScriptedStopHookInterfaceSP CreateScriptedStopHookInterface() {
+  virtual lldb::ScriptedHookInterfaceSP CreateScriptedHookInterface() {
     return {};
   }
 
@@ -656,6 +656,8 @@ public:
 
   lldb::ValueObjectSP
   GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const;
+
+  lldb::TargetSP GetOpaqueTypeFromSBTarget(const lldb::SBTarget &target) const;
 
 protected:
   Debugger &m_debugger;

@@ -25,8 +25,8 @@ void throw_data_member_ptr() {
 
 // LLVM-DAG: @_ZTSM1Ai = linkonce_odr global [5 x i8] c"M1Ai\00", comdat
 // LLVM-DAG: @_ZTS1A = linkonce_odr global [3 x i8] c"1A\00", comdat
-// LLVM-DAG: @_ZTI1A = constant { ptr, ptr } { ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 16), ptr @_ZTS1A }
-// LLVM-DAG: @_ZTIM1Ai = constant { ptr, ptr, i32, ptr, ptr } { ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv129__pointer_to_member_type_infoE, i64 16), ptr @_ZTSM1Ai, i32 0, ptr @_ZTIi, ptr @_ZTI1A }
+// LLVM-DAG: @_ZTI1A = linkonce_odr constant { ptr, ptr } { ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 16), ptr @_ZTS1A }, comdat
+// LLVM-DAG: @_ZTIM1Ai = linkonce_odr constant { ptr, ptr, i32, ptr, ptr } { ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv129__pointer_to_member_type_infoE, i64 16), ptr @_ZTSM1Ai, i32 0, ptr @_ZTIi, ptr @_ZTI1A }, comdat
 // LLVM-DAG: call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIM1Ai, ptr null)
 
 // OGCG-DAG: @_ZTSM1Ai = linkonce_odr constant [5 x i8] c"M1Ai\00", comdat
@@ -47,8 +47,8 @@ void throw_member_fn_ptr() {
 
 // LLVM-DAG: @_ZTSM1AFvvE = linkonce_odr global [8 x i8] c"M1AFvvE\00", comdat
 // LLVM-DAG: @_ZTSFvvE = linkonce_odr global [5 x i8] c"FvvE\00", comdat
-// LLVM-DAG: @_ZTIFvvE = constant { ptr, ptr } { ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv120__function_type_infoE, i64 16), ptr @_ZTSFvvE }
-// LLVM-DAG: @_ZTIM1AFvvE = constant { ptr, ptr, i32, ptr, ptr } { ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv129__pointer_to_member_type_infoE, i64 16), ptr @_ZTSM1AFvvE, i32 0, ptr @_ZTIFvvE, ptr @_ZTI1A }
+// LLVM-DAG: @_ZTIFvvE = linkonce_odr constant { ptr, ptr } { ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv120__function_type_infoE, i64 16), ptr @_ZTSFvvE }, comdat
+// LLVM-DAG: @_ZTIM1AFvvE = linkonce_odr constant { ptr, ptr, i32, ptr, ptr } { ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv129__pointer_to_member_type_infoE, i64 16), ptr @_ZTSM1AFvvE, i32 0, ptr @_ZTIFvvE, ptr @_ZTI1A }, comdat
 // LLVM-DAG: call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIM1AFvvE, ptr null)
 
 // OGCG-DAG: @_ZTSM1AFvvE = linkonce_odr constant [8 x i8] c"M1AFvvE\00", comdat

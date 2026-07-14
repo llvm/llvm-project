@@ -7,16 +7,16 @@
 
 namespace {
   _Float16 f1n;
-// CHECK-DAG: @_ZN12_GLOBAL__N_13f1nE = internal global half 0xH0000, align 2
+// CHECK-DAG: @_ZN12_GLOBAL__N_13f1nE = internal global half 0.000000e+00, align 2
 
   _Float16 f2n = 33.f16;
-// CHECK-DAG: @_ZN12_GLOBAL__N_13f2nE = internal global half 0xH5020, align 2
+// CHECK-DAG: @_ZN12_GLOBAL__N_13f2nE = internal global half 3.300000e+01, align 2
 
   _Float16 arr1n[10];
 // CHECK-AARCH64-DAG: @_ZN12_GLOBAL__N_15arr1nE = internal global [10 x half] zeroinitializer, align 2
 
   _Float16 arr2n[] = { 1.2, 3.0, 3.e4 };
-// CHECK-DAG: @_ZN12_GLOBAL__N_15arr2nE = internal global [3 x half] [half 0xH3CCD, half 0xH4200, half 0xH7753], align 2
+// CHECK-DAG: @_ZN12_GLOBAL__N_15arr2nE = internal global [3 x half] [half 1.200200e+00, half 3.000000e+00, half 3.000000e+04], align 2
 
   const volatile _Float16 func1n(const _Float16 &arg) {
     return arg + f2n + arr1n[4] - arr2n[1];
@@ -27,16 +27,16 @@ namespace {
 /* File */
 
 _Float16 f1f;
-// CHECK-AARCH64-DAG: @f1f = dso_local global half 0xH0000, align 2
+// CHECK-AARCH64-DAG: @f1f = dso_local global half 0.000000e+00, align 2
 
 _Float16 f2f = 32.4;
-// CHECK-DAG: @f2f = dso_local global half 0xH500D, align 2
+// CHECK-DAG: @f2f = dso_local global half 3.240630e+01, align 2
 
 _Float16 arr1f[10];
 // CHECK-AARCH64-DAG: @arr1f = dso_local global [10 x half] zeroinitializer, align 2
 
 _Float16 arr2f[] = { -1.2, -3.0, -3.e4 };
-// CHECK-DAG: @arr2f = dso_local global [3 x half] [half 0xHBCCD, half 0xHC200, half 0xHF753], align 2
+// CHECK-DAG: @arr2f = dso_local global [3 x half] [half -1.200200e+00, half -3.000000e+00, half -3.000000e+04], align 2
 
 _Float16 func1f(_Float16 arg);
 
@@ -89,36 +89,36 @@ extern int printf (const char *__restrict __format, ...);
 
 int main(void) {
   _Float16 f1l = 1e3f16;
-// CHECK-DAG: store half 0xH63D0, ptr %{{.*}}, align 2
+// CHECK-DAG: store half 1.000000e+03, ptr %{{.*}}, align 2
 
   _Float16 f2l = -0.f16;
-// CHECK-DAG: store half 0xH8000, ptr %{{.*}}, align 2
+// CHECK-DAG: store half -0.000000e+00, ptr %{{.*}}, align 2
 
   _Float16 f3l = 1.000976562;
-// CHECK-DAG: store half 0xH3C01, ptr %{{.*}}, align 2
+// CHECK-DAG: store half 1.000980e+00, ptr %{{.*}}, align 2
 
   C1 c1(f1l);
 // CHECK-DAG:  [[F1L:%[a-z0-9]+]] = load half, ptr %{{.*}}, align 2
 // CHECK-DAG:  call void @_ZN2C1C2EDF16_(ptr {{[^,]*}} %{{.*}}, half noundef %{{.*}})
 
   S1<_Float16> s1 = { 132.f16 };
-// CHECK-DAG: @__const.main.s1 = private unnamed_addr constant %struct.S1 { half 0xH5820 }, align 2
+// CHECK-DAG: @__const.main.s1 = private unnamed_addr constant %struct.S1 { half 1.320000e+02 }, align 2
 // CHECK-DAG: call void @llvm.memcpy.p0.p0.i64(ptr align 2 %{{.*}}, ptr align 2 @__const.main.s1, i64 2, i1 false)
 
   _Float16 f4l = func1n(f1l)  + func1f(f2l) + c1.func1c(f3l) + c1.func2c(f1l) +
     func1t(f1l) + s1.mem2 - f1n + f2n;
 
   auto f5l = -1.f16, *f6l = &f2l, f7l = func1t(f3l);
-// CHECK-DAG:  store half 0xHBC00, ptr %{{.*}}, align 2
+// CHECK-DAG:  store half -1.000000e+00, ptr %{{.*}}, align 2
 // CHECK-DAG:  store ptr %{{.*}}, ptr %{{.*}}, align 8
 
   _Float16 f8l = f4l++;
 // CHECK-DAG:  %{{.*}} = load half, ptr %{{.*}}, align 2
-// CHECK-DAG:  [[INC:%[a-z0-9]+]] = fadd half {{.*}}, 0xH3C00
+// CHECK-DAG:  [[INC:%[a-z0-9]+]] = fadd half {{.*}}, 1.000000e+00
 // CHECK-DAG:  store half [[INC]], ptr %{{.*}}, align 2
 
   _Float16 arr1l[] = { -1.f16, -0.f16, -11.f16 };
-// CHECK-DAG: @__const.main.arr1l = private unnamed_addr constant [3 x half] [half 0xHBC00, half 0xH8000, half 0xHC980], align 2
+// CHECK-DAG: @__const.main.arr1l = private unnamed_addr constant [3 x half] [half -1.000000e+00, half -0.000000e+00, half -1.100000e+01], align 2
 
   float cvtf = f2n;
 //CHECK-DAG: [[H2F:%[a-z0-9]+]] = fpext half {{%[0-9]+}} to float
@@ -134,9 +134,9 @@ int main(void) {
 //CHECK-AARCh64-DAG: store fp128 [[H2LD]], ptr %{{.*}}, align 16
 
   _Float16 f2h = 42.0f;
-//CHECK-DAG: store half 0xH5140, ptr %{{.*}}, align 2
+//CHECK-DAG: store half 4.200000e+01, ptr %{{.*}}, align 2
   _Float16 d2h = 42.0;
-//CHECK-DAG: store half 0xH5140, ptr %{{.*}}, align 2
+//CHECK-DAG: store half 4.200000e+01, ptr %{{.*}}, align 2
   _Float16 ld2h = 42.0l;
-//CHECK-DAG:store half 0xH5140, ptr %{{.*}}, align 2
+//CHECK-DAG:store half 4.200000e+01, ptr %{{.*}}, align 2
 }

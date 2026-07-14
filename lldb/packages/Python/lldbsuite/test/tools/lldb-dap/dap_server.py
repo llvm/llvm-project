@@ -506,7 +506,11 @@ class DebugCommunication(object):
         if request["command"] == "runInTerminal" and arguments is not None:
             assert self.spawn_helper is not None, "Not configured to spawn subprocesses"
             [exe, *args] = arguments["args"]
-            env = [f"{k}={v}" for k, v in arguments.get("env", {}).items()]
+            # Per DAP spec, "env" contains additions/overrides to the
+            # default environment, not a full replacement. Merge with
+            # os.environ so the spawned process inherits PATH etc.
+            env_dict = os.environ | arguments.get("env", {})
+            env = [f"{k}={v}" for k, v in env_dict.items()]
             self.reverse_process = self.spawn_helper(
                 exe, args, env, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )

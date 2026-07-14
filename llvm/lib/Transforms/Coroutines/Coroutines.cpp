@@ -182,8 +182,7 @@ static CoroSaveInst *createCoroSave(CoroBeginInst *CoroBegin,
 // Collect "interesting" coroutine intrinsics.
 void coro::Shape::analyze(Function &F,
                           SmallVectorImpl<CoroFrameInst *> &CoroFrames,
-                          SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves,
-                          CoroPromiseInst *&CoroPromise) {
+                          SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves) {
   clear();
 
   bool HasFinalSuspend = false;
@@ -279,11 +278,6 @@ void coro::Shape::analyze(Function &F,
         break;
       case Intrinsic::coro_is_in_ramp:
         CoroIsInRampInsts.push_back(cast<CoroIsInRampInst>(II));
-        break;
-      case Intrinsic::coro_promise:
-        assert(CoroPromise == nullptr &&
-               "CoroEarly must ensure coro.promise unique");
-        CoroPromise = cast<CoroPromiseInst>(II);
         break;
       }
     }
@@ -476,7 +470,7 @@ void coro::AnyRetconABI::init() {
 
 void coro::Shape::cleanCoroutine(
     SmallVectorImpl<CoroFrameInst *> &CoroFrames,
-    SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves, CoroPromiseInst *PI) {
+    SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves) {
   // The coro.frame intrinsic is always lowered to the result of coro.begin.
   for (CoroFrameInst *CF : CoroFrames) {
     CF->replaceAllUsesWith(CoroBegin);
@@ -488,13 +482,6 @@ void coro::Shape::cleanCoroutine(
   for (CoroSaveInst *CoroSave : UnusedCoroSaves)
     CoroSave->eraseFromParent();
   UnusedCoroSaves.clear();
-
-  if (PI) {
-    PI->replaceAllUsesWith(PI->isFromPromise()
-                               ? cast<Value>(CoroBegin)
-                               : cast<Value>(getPromiseAlloca()));
-    PI->eraseFromParent();
-  }
 }
 
 static void propagateCallAttrsFromCallee(CallInst *Call, Function *Callee) {
@@ -568,7 +555,7 @@ void coro::Shape::emitDealloc(IRBuilder<> &Builder, Value *Ptr,
 /// Check that the given value is a well-formed prototype for the
 /// llvm.coro.id.retcon.* intrinsics.
 static void checkWFRetconPrototype(const AnyCoroIdRetconInst *I, Value *V) {
-  auto F = dyn_cast<Function>(V->stripPointerCasts());
+  auto F = dyn_cast<Function>(V->stripPointerCastsAndAliases());
   if (!F)
     fail(I, "llvm.coro.id.retcon.* prototype not a Function", V);
 
@@ -604,7 +591,7 @@ static void checkWFRetconPrototype(const AnyCoroIdRetconInst *I, Value *V) {
 
 /// Check that the given value is a well-formed allocator.
 static void checkWFAlloc(const Instruction *I, Value *V) {
-  auto F = dyn_cast<Function>(V->stripPointerCasts());
+  auto F = dyn_cast<Function>(V->stripPointerCastsAndAliases());
   if (!F)
     fail(I, "llvm.coro.* allocator not a Function", V);
 
@@ -619,7 +606,7 @@ static void checkWFAlloc(const Instruction *I, Value *V) {
 
 /// Check that the given value is a well-formed deallocator.
 static void checkWFDealloc(const Instruction *I, Value *V) {
-  auto F = dyn_cast<Function>(V->stripPointerCasts());
+  auto F = dyn_cast<Function>(V->stripPointerCastsAndAliases());
   if (!F)
     fail(I, "llvm.coro.* deallocator not a Function", V);
 
@@ -650,7 +637,8 @@ void AnyCoroIdRetconInst::checkWellFormed() const {
 }
 
 static void checkAsyncFuncPointer(const Instruction *I, Value *V) {
-  auto *AsyncFuncPtrAddr = dyn_cast<GlobalVariable>(V->stripPointerCasts());
+  auto *AsyncFuncPtrAddr =
+      dyn_cast<GlobalVariable>(V->stripPointerCastsAndAliases());
   if (!AsyncFuncPtrAddr)
     fail(I, "llvm.coro.id.async async function pointer not a global", V);
 }

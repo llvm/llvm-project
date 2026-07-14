@@ -11,7 +11,7 @@
 // CHECK-SPIRV: define hidden spir_func void @
 void test_GroupMemoryBarrier() {
 // CHECK-DXIL: call void @llvm.[[TARGET]].group.memory.barrier()
-// CHECK-SPIRV: call spir_func void @llvm.[[TARGET]].group.memory.barrier()
+// CHECK-SPIRV: call void @llvm.[[TARGET]].group.memory.barrier()
   GroupMemoryBarrier();
 }
 

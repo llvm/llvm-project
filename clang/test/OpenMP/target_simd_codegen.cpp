@@ -481,11 +481,11 @@ int bar(int n){
 // CHECK-32:       [[B_CVAL:%.+]] = load i[[SZ]], ptr [[B_ADDR]],
 
 // OMP45:       [[IF:%.+]] = icmp sgt i32 {{[^,]+}}, 60
-// OMP51:          [[TOBOOL:%.+]] = trunc i8 %{{.+}} to i1
+// OMP51:          [[TOBOOL:%.+]] = icmp ne i8 %{{.+}}, 0
 // OMP51:          [[FROMBOOL:%.+]] = zext i1 [[TOBOOL]] to i8
 // OMP51:          store i8 [[FROMBOOL]], ptr [[CAP:%.+]],
 // OMP51:          [[SIMD_COND:%.+]] = load i[[SZ]], ptr [[CAP]],
-// OMP51:          [[IF:%.+]] = trunc i8 %{{.+}} to i1
+// OMP51:          [[IF:%.+]] = icmp ne i8 %{{.+}}, 0
 // CHECK:       br i1 [[IF]], label %[[TRY:[^,]+]], label %[[FAIL:[^,]+]]
 // CHECK:       [[TRY]]
 // We capture 2 VLA sizes in this target region
@@ -672,7 +672,7 @@ int bar(int n){
 // CHECK-DAG:   [[VAL_VLA2:%.+]] = load i[[SZ]], ptr [[LOCAL_VLA2]],
 // CHECK-DAG:   [[REF_C:%.+]] = load ptr, ptr [[LOCAL_C]],
 // OMP51-DAG:   [[SIMD_COND:%.+]] = load i8, ptr [[LOCAL_SIMD_COND_CASTED]],
-// OMP51-DAG:   trunc i8 [[SIMD_COND]] to i1
+// OMP51-DAG:   icmp ne i8 [[SIMD_COND]], 0
 // OMP45-NOT:   !nontemporal
 // OMP51:       store double {{.*}}!nontemporal
 // OMP51:       load double, {{.*}}!nontemporal

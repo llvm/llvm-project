@@ -20,7 +20,6 @@
 #include "flang/Evaluate/constant.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
-#include "flang/Evaluate/formatting.h"
 #include "flang/Evaluate/intrinsics-library.h"
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/shape.h"
@@ -33,7 +32,6 @@
 #include "flang/Semantics/tools.h"
 #include <algorithm>
 #include <cmath>
-#include <complex>
 #include <cstdio>
 #include <optional>
 #include <type_traits>
@@ -2018,6 +2016,25 @@ Expr<T> FoldOperation(FoldingContext &context, Add<T> &&x) {
       }
       return Expr<T>{Constant<T>{sum.value}};
     }
+  } else if constexpr (T::category == TypeCategory::Integer ||
+      T::category == TypeCategory::Unsigned) {
+    if (auto c{GetScalarConstantValue<T>(x.right())}) {
+      if (c->IsZero() && x.left().Rank() == 0) {
+        if (IsVariable(x.left())) {
+          return FoldOperation(context, Parentheses<T>{std::move(x.left())});
+        } else {
+          return std::move(x.left());
+        }
+      }
+    } else if (auto c{GetScalarConstantValue<T>(x.left())}) {
+      if (c->IsZero() && x.right().Rank() == 0) {
+        if (IsVariable(x.right())) {
+          return FoldOperation(context, Parentheses<T>{std::move(x.right())});
+        } else {
+          return std::move(x.right());
+        }
+      }
+    }
   }
   return Expr<T>{std::move(x)};
 }
@@ -2046,6 +2063,17 @@ Expr<T> FoldOperation(FoldingContext &context, Subtract<T> &&x) {
         difference.value = difference.value.FlushSubnormalToZero();
       }
       return Expr<T>{Constant<T>{difference.value}};
+    }
+  } else if constexpr (T::category == TypeCategory::Integer ||
+      T::category == TypeCategory::Unsigned) {
+    if (auto c{GetScalarConstantValue<T>(x.right())}) {
+      if (c->IsZero() && x.left().Rank() == 0) {
+        if (IsVariable(x.left())) {
+          return FoldOperation(context, Parentheses<T>{std::move(x.left())});
+        } else {
+          return std::move(x.left());
+        }
+      }
     }
   }
   return Expr<T>{std::move(x)};

@@ -2,7 +2,7 @@
 
 // Check that we do not generate callee_type metadata for indirect calls
 // to functions with internal linkage (e.g., types in anonymous namespaces),
-// as their type metadata identifiers are distinct MDNodes instead of 
+// as their callgraph metadata identifiers are distinct MDNodes instead of 
 // generalized strings, which would fail the LLVM Verifier.
 
 namespace {

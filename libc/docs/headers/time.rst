@@ -2,8 +2,6 @@
 time.h
 ======
 
-.. include:: ../check.rst
-
 ---------------
 Source location
 ---------------

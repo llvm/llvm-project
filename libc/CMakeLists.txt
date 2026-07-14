@@ -1,4 +1,12 @@
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
+
 set(LLVM_SUBPROJECT_TITLE "libc")
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -140,6 +148,8 @@ option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc"
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 option(LLVM_LIBC_ALL_HEADERS "Outputs all functions in header files, regardless of whether they are enabled on this target" OFF)
+option(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS
+  "Enable entrypoints with known-incomplete implementations (off by default)" OFF)
 
 option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
 
@@ -271,6 +281,8 @@ endif()
 
 if(LIBC_TARGET_OS_IS_GPU)
   include(prepare_libc_gpu_build)
+  set(LIBC_ENABLE_UNITTESTS OFF)
+elseif(LIBC_TARGET_OS_IS_BAREMETAL)
   set(LIBC_ENABLE_UNITTESTS OFF)
 endif()
 
@@ -410,7 +422,7 @@ add_subdirectory(hdr)
 add_subdirectory(src)
 add_subdirectory(utils)
 
-if(LLVM_LIBC_FULL_BUILD)
+if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
   # The startup system can potentially depend on the library components so add
   # it after the library implementation directories.
   add_subdirectory(startup)

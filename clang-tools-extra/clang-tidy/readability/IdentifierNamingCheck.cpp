@@ -1303,6 +1303,13 @@ StyleKind IdentifierNamingCheck::findStyleKind(
       return SK_Function;
   }
 
+  // Ignore template wrapper decls. Their underlying decls are checked with the
+  // right naming kind, checking the wrappers too can fall back to DefaultCase
+  // and emit diagnostic for the same identifier.
+  if (isa<FunctionTemplateDecl, ClassTemplateDecl, VarTemplateDecl,
+          TypeAliasTemplateDecl>(D))
+    return SK_Invalid;
+
   if (isa<TemplateTypeParmDecl>(D)) {
     if (NamingStyles[SK_TypeTemplateParameter])
       return SK_TypeTemplateParameter;
@@ -1388,7 +1395,8 @@ IdentifierNamingCheck::getDeclFailureInfo(const NamedDecl *Decl,
     return std::nullopt;
 
   const SourceLocation Loc = Decl->getLocation();
-  const FileStyle &FileStyle = getStyleForFile(SM.getFilename(Loc));
+  const SourceLocation SpellingLoc = SM.getSpellingLoc(Loc);
+  const FileStyle &FileStyle = getStyleForFile(SM.getFilename(SpellingLoc));
   if (!FileStyle.isActive())
     return std::nullopt;
 

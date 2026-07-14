@@ -593,9 +593,17 @@ void NarrowingConversionsCheck::handleImplicitCast(
   case CK_IntegralToFloating:
     handleIntegralToFloating(Context, SourceLoc, Lhs, Rhs);
     return;
-  case CK_IntegralCast:
+  case CK_IntegralCast: {
+    const BuiltinType *ToType = getBuiltinType(Lhs);
+    const BuiltinType *FromType = getBuiltinType(Rhs);
+    if (ToType && FromType && FromType->getKind() == BuiltinType::Bool &&
+        ToType->isSignedInteger()) {
+      handleBooleanToSignedIntegral(Context, SourceLoc, Lhs, Rhs);
+      return;
+    }
     handleIntegralCast(Context, SourceLoc, Lhs, Rhs);
     return;
+  }
   case CK_FloatingToBoolean:
     handleFloatingToBoolean(Context, SourceLoc, Lhs, Rhs);
     return;

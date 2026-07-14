@@ -11,12 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/EntityLinker.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/TUSummaryEncoding.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/BuildNamespace.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Support/ErrorBuilder.h"
-#include "clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h" // IWYU pragma: keep
-#include "clang/ScalableStaticAnalysisFramework/Tool/Utils.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/EntityLinker.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/TUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysis/Core/Model/BuildNamespace.h"
+#include "clang/ScalableStaticAnalysis/Core/Support/ErrorBuilder.h"
+#include "clang/ScalableStaticAnalysis/SSAFForceLinker.h" // IWYU pragma: keep
+#include "clang/ScalableStaticAnalysis/Tool/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
@@ -122,8 +122,11 @@ LinkerInput validate(llvm::TimerGroup &TG) {
 void link(const LinkerInput &LI, llvm::TimerGroup &TG) {
   info(2, "Constructing linker.");
 
-  EntityLinker EL(NestedBuildNamespace(
-      BuildNamespace(BuildNamespaceKind::LinkUnit, LI.LinkUnitName)));
+  // TODO: The linker currently uses a hardcoded target triple. Architecture
+  // tracking in the linker will be handled properly in a separate PR.
+  EntityLinker EL(llvm::Triple("arm64-apple-macosx"),
+                  NestedBuildNamespace(BuildNamespace(
+                      BuildNamespaceKind::LinkUnit, LI.LinkUnitName)));
 
   llvm::Timer TRead("read", "Read Summaries", TG);
   llvm::Timer TLink("link", "Link Summaries", TG);
@@ -169,7 +172,7 @@ void link(const LinkerInput &LI, llvm::TimerGroup &TG) {
 
     llvm::TimeRegion _(Time ? &TWrite : nullptr);
 
-    auto Output = std::move(EL).getOutput();
+    auto Output = std::move(EL).takeOutput();
     if (auto Err = LI.OutputFile.Format->writeLUSummaryEncoding(
             Output, LI.OutputFile.Path)) {
       fail(std::move(Err));

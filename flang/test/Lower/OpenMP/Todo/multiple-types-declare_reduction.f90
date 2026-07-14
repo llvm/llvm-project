@@ -29,7 +29,7 @@ program main
 end program main
 
 ! Verify declare reduction is created for integer
-! CHECK-LABEL: omp.declare_reduction @myred : i32
+! CHECK-LABEL: omp.declare_reduction @_QQFmyred : i32
 ! CHECK: init {
 ! CHECK: arith.constant 0 : i32
 ! CHECK: omp.yield
@@ -42,10 +42,10 @@ end program main
 ! Verify reduction is used in first parallel loop (integer)
 ! CHECK: omp.parallel
 ! CHECK: omp.wsloop
-! CHECK-SAME: reduction(@myred
+! CHECK-SAME: reduction(@_QQFmyred
 
 ! Verify reduction is used in second parallel loop (real)
 ! CHECK: omp.parallel
 ! CHECK: omp.wsloop
-! CHECK-SAME: reduction(@myred
+! CHECK-SAME: reduction(@_QQFmyred
 ! CHECK: arith.addf

@@ -264,7 +264,7 @@ omp.private {type = firstprivate} @_QFequivalenceEx_firstprivate_ptr_f32 : f32 c
 // Test that we initialize the firstprivate variable.
 // CHECK:   store float %[[HOST_VAL]], ptr %[[PRIV_ALLOC]], align 4
 // Test that we inlined the body of the parallel region.
-// CHECK:   store float 0x{{.*}}, ptr %[[PRIV_ALLOC]], align 4
+// CHECK:   store float 3.140000e+00, ptr %[[PRIV_ALLOC]], align 4
 
 // -----
 

@@ -546,8 +546,11 @@ struct input_iterator {
     (*State)++;
     return *this;
   }
+  bool operator==(const input_iterator &Other) const {
+    return *State == *Other.State;
+  }
   bool operator!=(const input_iterator &Other) const {
-    return *State != *Other.State;
+    return !(*this == Other);
   }
 };
 
@@ -1233,6 +1236,12 @@ TEST(SmallVectorTest, ToVector) {
     EXPECT_THAT(IntVector, testing::ElementsAre(1, 2, 3));
     IntVector = to_vector<3>(V);
     EXPECT_THAT(IntVector, testing::ElementsAre(1, 2, 3));
+  }
+  {
+    SmallVector<bool> V = {true, false, true};
+    ArrayRef<bool> ref = V;
+    auto copy = to_vector(ref);
+    EXPECT_THAT(copy, testing::ElementsAre(true, false, true));
   }
 }
 

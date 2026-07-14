@@ -894,14 +894,14 @@ define <vscale x 8 x i64> @vmul_xx_nxv8i64(i64 %a, i64 %b) nounwind {
 ; RV32M-LABEL: vmul_xx_nxv8i64:
 ; RV32M:       # %bb.0:
 ; RV32M-NEXT:    addi sp, sp, -16
-; RV32M-NEXT:    mul a4, a0, a2
 ; RV32M-NEXT:    mul a3, a0, a3
-; RV32M-NEXT:    mulhu a0, a0, a2
+; RV32M-NEXT:    mulhu a4, a0, a2
+; RV32M-NEXT:    mul a0, a0, a2
 ; RV32M-NEXT:    mul a1, a1, a2
-; RV32M-NEXT:    add a0, a0, a3
-; RV32M-NEXT:    add a0, a0, a1
-; RV32M-NEXT:    sw a4, 8(sp)
-; RV32M-NEXT:    sw a0, 12(sp)
+; RV32M-NEXT:    add a3, a4, a3
+; RV32M-NEXT:    add a1, a3, a1
+; RV32M-NEXT:    sw a0, 8(sp)
+; RV32M-NEXT:    sw a1, 12(sp)
 ; RV32M-NEXT:    addi a0, sp, 8
 ; RV32M-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV32M-NEXT:    vlse64.v v8, (a0), zero

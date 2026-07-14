@@ -100,7 +100,7 @@ Container::~Container() { delete contents; }
 
 // LLVM: define dso_local void @_ZN9ContainerD2Ev
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %{{.*}}
-// LLVM:   %[[CONTENTS_PTR_ADDR:.*]] = getelementptr %struct.Container, ptr %[[THIS]], i32 0, i32 0
+// LLVM:   %[[CONTENTS_PTR_ADDR:.*]] = getelementptr inbounds nuw %struct.Container, ptr %[[THIS]], i32 0, i32 0
 // LLVM:   %[[CONTENTS_PTR:.*]] = load ptr, ptr %[[CONTENTS_PTR_ADDR]]
 // LLVM:   %[[NOT_NULL:.*]] = icmp ne ptr %[[CONTENTS_PTR]], null
 // LLVM:   br i1 %[[NOT_NULL]], label %[[DELETE_NOTNULL:.*]], label %[[DELETE_END:.*]]
@@ -142,7 +142,7 @@ void destroy(StructWithVirtualDestructor *x) {
 }
 
 // CIR: cir.func {{.*}} @_Z7destroyP27StructWithVirtualDestructor(%[[X_ARG:.*]]: !cir.ptr<!rec_StructWithVirtualDestructor> {{.*}})
-// CIR:   %[[X_ADDR:.*]] = cir.alloca !cir.ptr<!rec_StructWithVirtualDestructor>
+// CIR:   %[[X_ADDR:.*]] = cir.alloca {{.*}} : !cir.ptr<!cir.ptr<!rec_StructWithVirtualDestructor>>
 // CIR:   cir.store %[[X_ARG]], %[[X_ADDR]]
 // CIR:   %[[X:.*]] = cir.load{{.*}} %[[X_ADDR]]
 // CIR:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_StructWithVirtualDestructor>

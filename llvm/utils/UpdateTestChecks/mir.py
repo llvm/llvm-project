@@ -21,7 +21,7 @@ VREG_RE = re.compile(r"(%[0-9]+)(?:\.[a-z0-9_]+)?(?::[a-z0-9_]+)?(?:\([<>a-z0-9 
 MI_FLAGS_STR = (
     r"(frame-setup |frame-destroy |nnan |ninf |nsz |arcp |contract |afn "
     r"|reassoc |nuw |nsw |exact |nofpexcept |nomerge |unpredictable "
-    r"|noconvergent |nneg |disjoint |nusw |samesign |inbounds )*"
+    r"|noconvergent |nneg |disjoint |nusw |samesign |inbounds |lr-split )*"
 )
 VREG_DEF_FLAGS_STR = r"(?:dead |undef )*"
 
@@ -52,7 +52,7 @@ MIR_FUNC_RE = re.compile(
 
 
 def build_function_info_dictionary(
-    test, raw_tool_output, triple, prefixes, func_dict, verbose
+    test, raw_tool_output, triple, prefixes, func_dict, verbose, filters=None
 ):
     for m in MIR_FUNC_RE.finditer(raw_tool_output):
         func = m.group("func")
@@ -84,10 +84,11 @@ def build_function_info_dictionary(
                 )
             mangled.append(func_line)
         body = "".join(mangled)
+        filtered_body = common.do_filter(body, filters)
 
         for prefix in prefixes:
             info = common.function_body(
-                body, fixedStack, None, None, None, None, ginfo=None
+                filtered_body, fixedStack, None, None, None, None, ginfo=None
             )
             if func in func_dict[prefix]:
                 if (

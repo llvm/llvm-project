@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefixes=GCN,GFX10 %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefixes=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefixes=GCN,GFX11 %s
 
 # GCN-LABEL: name: hazard_smem_war
 # GCN:        S_LOAD_DWORD_IMM
@@ -97,8 +97,9 @@ body: |
 
 # GCN-LABEL: name: hazard_smem_war_only_vmcnt_0
 # GCN:        S_LOAD_DWORD_IMM
-# GCN-NEXT:   S_WAITCNT 3952{{$}}
+# GFX10-NEXT: S_WAITCNT .Vmcnt_0_Lgkmcnt_15
 # GFX10-NEXT: $sgpr_null = S_MOV_B32 0
+# GFX11-NEXT: S_WAITCNT .Vmcnt_3_Expcnt_0_Lgkmcnt_55
 # GCN-NEXT:   V_CMP_EQ_F32
 ---
 name: hazard_smem_war_only_vmcnt_0
@@ -113,8 +114,9 @@ body: |
 
 # GCN-LABEL: name: hazard_smem_war_only_expcnt_0
 # GCN:        S_LOAD_DWORD_IMM
-# GCN-NEXT:   S_WAITCNT 53007{{$}}
+# GFX10-NEXT: S_WAITCNT .Expcnt_0_Lgkmcnt_15
 # GFX10-NEXT: $sgpr_null = S_MOV_B32 0
+# GFX11-NEXT: S_WAITCNT .Vmcnt_51_Lgkmcnt_48
 # GCN-NEXT:   V_CMP_EQ_F32
 ---
 name: hazard_smem_war_only_expcnt_0
@@ -128,8 +130,9 @@ body: |
 ...
 
 # GCN-LABEL: name: hazard_smem_war_only_lgkmcnt_0
-# GCN:      S_LOAD_DWORD_IMM
-# GCN-NEXT: S_WAITCNT 49279{{$}}
+# GCN:       S_LOAD_DWORD_IMM
+# GFX10-NEXT: S_WAITCNT .Lgkmcnt_0
+# GFX11-NEXT: S_WAITCNT .Vmcnt_48_Lgkmcnt_7
 # GCN-NEXT: V_CMP_EQ_F32
 ---
 name: hazard_smem_war_only_lgkmcnt_0

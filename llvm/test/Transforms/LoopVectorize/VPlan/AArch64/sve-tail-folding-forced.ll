@@ -23,8 +23,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; VPLANS-NEXT: Successor(s): vector loop
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: <x1> vector loop: {
+; VPLANS-NEXT:   vp<[[INDV:%[0-9]+]]> = CANONICAL-IV
+; VPLANS-EMPTY:
 ; VPLANS-NEXT:   vector.body:
-; VPLANS-NEXT:     EMIT vp<[[INDV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; VPLANS-NEXT:     ACTIVE-LANE-MASK-PHI vp<[[LANEMASK_PHI:%[0-9]+]]> = phi vp<[[LANEMASK_ENTRY]]>, vp<[[LANEMASK_LOOP:%.+]]>
 ; VPLANS-NEXT:     vp<[[STEP:%[0-9]+]]>    = SCALAR-STEPS vp<[[INDV]]>, ir<1>, vp<[[VF]]>
 ; VPLANS-NEXT:     CLONE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEP]]>
@@ -57,7 +58,7 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr align 4 [[TMP11]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], [[TMP6]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_NEXT2]], i64 [[UMAX]])
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = xor i1 [[TMP15]], true
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:

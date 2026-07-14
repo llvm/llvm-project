@@ -1,7 +1,11 @@
 // UNSUPPORTED: system-windows
-// General tests that ld invocations on Linux targets sane. Note that we use
-// sysroot to make these tests independent of the host system.
-//
+/// Tests for Linux toolchain discovery and start/end-file selection in
+/// gnutools::Linker::ConstructJob: crt*.o selection, -L search paths, multilib,
+/// -m elf_* per triple, --hash-style per target, -lgcc chains, and per-triple
+/// --dynamic-linker. Every RUN uses a sysroot tree so results are host-
+/// independent. Pure driver->linker argument forwarding without sysroot
+/// dependencies lives in linux-ld-args.c.
+
 // RUN: %clang -### -Werror %s -no-pie 2>&1 \
 // RUN:     --target=i386-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -1698,6 +1702,18 @@
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=aarch64_be-pc-linux-musl \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-AARCH64_BE %s
+// RUN: %clang -### %s --target=riscv32-pc-linux-musl -march=rv32im -mabi=ilp32 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV32-SF %s
+// RUN: %clang -### %s --target=riscv32-pc-linux-musl -march=rv32imf -mabi=ilp32f 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV32-SP %s
+// RUN: %clang -### %s --target=riscv32-pc-linux-musl -march=rv32imfd -mabi=ilp32d 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV32 %s
+// RUN: %clang -### %s --target=riscv64-pc-linux-musl -march=rv64im -mabi=lp64 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV64-SF %s
+// RUN: %clang -### %s --target=riscv64-pc-linux-musl -march=rv64imf -mabi=lp64f 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV64-SP %s
+// RUN: %clang -### %s --target=riscv64-pc-linux-musl -march=rv64imfd -mabi=lp64d 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV64 %s
 // CHECK-MUSL-X86:        "-dynamic-linker" "/lib/ld-musl-i386.so.1"
 // CHECK-MUSL-X86_64:     "-dynamic-linker" "/lib/ld-musl-x86_64.so.1"
 // CHECK-MUSL-MIPS:       "-dynamic-linker" "/lib/ld-musl-mips.so.1"
@@ -1713,6 +1729,12 @@
 // CHECK-MUSL-ARMEBHF:    "-dynamic-linker" "/lib/ld-musl-armebhf.so.1"
 // CHECK-MUSL-AARCH64:    "-dynamic-linker" "/lib/ld-musl-aarch64.so.1"
 // CHECK-MUSL-AARCH64_BE: "-dynamic-linker" "/lib/ld-musl-aarch64_be.so.1"
+// CHECK-MUSL-RISCV32-SF: "-dynamic-linker" "/lib/ld-musl-riscv32-sf.so.1"
+// CHECK-MUSL-RISCV32-SP: "-dynamic-linker" "/lib/ld-musl-riscv32-sp.so.1"
+// CHECK-MUSL-RISCV32:    "-dynamic-linker" "/lib/ld-musl-riscv32.so.1"
+// CHECK-MUSL-RISCV64-SF: "-dynamic-linker" "/lib/ld-musl-riscv64-sf.so.1"
+// CHECK-MUSL-RISCV64-SP: "-dynamic-linker" "/lib/ld-musl-riscv64-sp.so.1"
+// CHECK-MUSL-RISCV64:    "-dynamic-linker" "/lib/ld-musl-riscv64.so.1"
 
 // Check whether multilib gcc install works fine on Gentoo with gcc-config
 // RUN: %clang -### %s -Werror -no-pie 2>&1 \
@@ -1820,7 +1842,3 @@
 // CHECK-OE-AARCH64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 // CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0{{/|\\\\}}crtend.o"
 // CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0/../../../lib64{{/|\\\\}}crtn.o"
-
-/// -nopie is OpenBSD-specific.
-// RUN: not %clang -### --target=x86_64-unknown-linux-gnu %s -nopie 2>&1 | FileCheck %s --check-prefix=CHECK-NOPIE
-// CHECK-NOPIE: error: unsupported option '-nopie' for target 'x86_64-unknown-linux-gnu'

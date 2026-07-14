@@ -104,7 +104,9 @@ template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
     return V;
   } else if constexpr (sizeof(T) == 2) {
     uint16_t UV = V;
-#if defined(_MSC_VER) && !defined(_DEBUG)
+#if __has_builtin(__builtin_bswap16)
+    return __builtin_bswap16(UV);
+#elif defined(_MSC_VER) && !defined(_DEBUG)
     // The DLL version of the runtime lacks these functions (bug!?), but in a
     // release build they're replaced with BSWAP instructions anyway.
     return _byteswap_ushort(UV);

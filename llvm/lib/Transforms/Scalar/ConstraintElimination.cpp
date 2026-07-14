@@ -462,6 +462,11 @@ static Decomposition decomposeGEP(GEPOperator &GEP,
   if (!BasePtr || NW == GEPNoWrapFlags::none())
     return &GEP;
 
+  // For a nuw-only GEP (nuw without nusw/inbounds), the offset must be
+  // interpreted as unsigned.
+  if (!NW.hasNoUnsignedSignedWrap() && ConstantOffset.isNegative())
+    return &GEP;
+
   Decomposition Result(ConstantOffset.getSExtValue(), DecompEntry(1, BasePtr));
   for (auto [Index, Scale] : VariableOffsets) {
     auto IdxResult = decompose(Index, Preconditions, IsSigned, DL);
@@ -936,21 +941,14 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (!L || L->getHeader() != &BB)
     return;
 
-  Value *A;
+  PHINode *PN;
   Value *B;
   CmpPredicate Pred;
 
   if (!match(BB.getTerminator(),
-             m_Br(m_ICmp(Pred, m_Value(A), m_Value(B)), m_Value(), m_Value())))
+             m_Br(m_c_ICmp(Pred, m_Phi(PN), m_Value(B)), m_Value(), m_Value())))
     return;
-  PHINode *PN = dyn_cast<PHINode>(A);
-  if (!PN) {
-    Pred = CmpInst::getSwappedPredicate(Pred);
-    std::swap(A, B);
-    PN = dyn_cast<PHINode>(A);
-  }
-
-  if (!PN || PN->getParent() != &BB || PN->getNumIncomingValues() != 2 ||
+  if (PN->getParent() != &BB || PN->getNumIncomingValues() != 2 ||
       !SE.isSCEVable(PN->getType()))
     return;
 
@@ -965,9 +963,12 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB) || InLoopSucc == &BB)
     return;
 
-  auto *AR = dyn_cast_or_null<SCEVAddRecExpr>(SE.getSCEV(PN));
   BasicBlock *LoopPred = L->getLoopPredecessor();
-  if (!AR || AR->getLoop() != L || !LoopPred)
+  if (!LoopPred || !L->isLoopInvariant(B))
+    return;
+
+  auto *AR = dyn_cast_or_null<SCEVAddRecExpr>(SE.getSCEV(PN));
+  if (!AR || AR->getLoop() != L)
     return;
 
   const SCEV *StartSCEV = AR->getStart();
@@ -999,10 +1000,6 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (auto *C = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE)))
     StepOffset = C->getAPInt();
   else
-    return;
-
-  // Make sure the bound B is loop-invariant.
-  if (!L->isLoopInvariant(B))
     return;
 
   // Handle negative steps.
@@ -1077,7 +1074,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
     // Bail out on non-dedicated exits.
     if (DT.dominates(&BB, EB)) {
       WorkList.emplace_back(FactOrCheck::getConditionFact(
-          DT.getNode(EB), CmpInst::ICMP_ULE, A, B, Precond));
+          DT.getNode(EB), CmpInst::ICMP_ULE, PN, B, Precond));
     }
   }
 }
@@ -1129,6 +1126,8 @@ void State::addInfoFor(BasicBlock &BB) {
   addInfoForInductions(BB);
   auto &DL = BB.getDataLayout();
 
+  Value *A, *B;
+  CmpPredicate Pred;
   // True as long as the current instruction is guaranteed to execute.
   bool GuaranteedToExecute = true;
   // Queue conditions and assumes.
@@ -1152,8 +1151,6 @@ void State::addInfoFor(BasicBlock &BB) {
       if (!AccessSize.isFixed())
         return;
       if (GuaranteedToExecute) {
-        CmpPredicate Pred;
-        Value *A, *B;
         if (getConstraintFromMemoryAccess(*GEP, AccessSize.getFixedValue(),
                                           Pred, A, B, DL, TLI)) {
           // The memory access is guaranteed to execute when BB is entered,
@@ -1180,9 +1177,7 @@ void State::addInfoFor(BasicBlock &BB) {
     Intrinsic::ID ID = II ? II->getIntrinsicID() : Intrinsic::not_intrinsic;
     switch (ID) {
     case Intrinsic::assume: {
-      Value *A, *B;
-      CmpPredicate Pred;
-      if (!match(I.getOperand(0), m_ICmp(Pred, m_Value(A), m_Value(B))))
+      if (!match(I.getOperand(0), m_ICmpLike(Pred, m_Value(A), m_Value(B))))
         break;
       if (GuaranteedToExecute) {
         // The assume is guaranteed to execute when BB is entered, hence Cond
@@ -1278,11 +1273,10 @@ void State::addInfoFor(BasicBlock &BB) {
       QueueValue(Op0);
       while (!CondWorkList.empty()) {
         Value *Cur = CondWorkList.pop_back_val();
-        if (auto *Cmp = dyn_cast<ICmpInst>(Cur)) {
+        if (match(Cur, m_ICmpLike(Pred, m_Value(A), m_Value(B)))) {
           WorkList.emplace_back(FactOrCheck::getConditionFact(
               DT.getNode(Successor),
-              IsOr ? Cmp->getInverseCmpPredicate() : Cmp->getCmpPredicate(),
-              Cmp->getOperand(0), Cmp->getOperand(1)));
+              IsOr ? CmpPredicate::getInverse(Pred) : Pred, A, B));
           continue;
         }
         if (IsOr && match(Cur, m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
@@ -1300,17 +1294,14 @@ void State::addInfoFor(BasicBlock &BB) {
     return;
   }
 
-  auto *CmpI = dyn_cast<ICmpInst>(Br->getCondition());
-  if (!CmpI)
+  if (!match(Br->getCondition(), m_ICmpLike(Pred, m_Value(A), m_Value(B))))
     return;
   if (canAddSuccessor(BB, Br->getSuccessor(0)))
     WorkList.emplace_back(FactOrCheck::getConditionFact(
-        DT.getNode(Br->getSuccessor(0)), CmpI->getCmpPredicate(),
-        CmpI->getOperand(0), CmpI->getOperand(1)));
+        DT.getNode(Br->getSuccessor(0)), Pred, A, B));
   if (canAddSuccessor(BB, Br->getSuccessor(1)))
     WorkList.emplace_back(FactOrCheck::getConditionFact(
-        DT.getNode(Br->getSuccessor(1)), CmpI->getInverseCmpPredicate(),
-        CmpI->getOperand(0), CmpI->getOperand(1)));
+        DT.getNode(Br->getSuccessor(1)), CmpPredicate::getInverse(Pred), A, B));
 }
 
 #ifndef NDEBUG
@@ -2060,10 +2051,11 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         continue;
       }
     } else {
-      bool Matched = match(CB.Inst, m_Intrinsic<Intrinsic::assume>(
-                                        m_ICmp(Pred, m_Value(A), m_Value(B))));
+      bool Matched = match(CB.Inst, m_Intrinsic<Intrinsic::assume>(m_ICmpLike(
+                                        Pred, m_Value(A), m_Value(B))));
       (void)Matched;
-      assert(Matched && "Must have an assume intrinsic with a icmp operand");
+      assert(Matched &&
+             "Must have an assume intrinsic with a icmp like operand");
     }
     AddFact(Pred, A, B);
   }

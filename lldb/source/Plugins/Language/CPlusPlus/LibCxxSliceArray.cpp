@@ -110,9 +110,9 @@ lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEnd::GetChildAtIndex(
   offset = offset + m_start->GetValueAsUnsigned(0);
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromAddress(name.GetString(), offset,
-                                      m_backend.GetExecutionContextRef(),
-                                      m_element_type);
+  return CreateChildValueObjectFromAddress(name.GetString(), offset,
+                                           m_backend.GetExecutionContextRef(),
+                                           m_element_type);
 }
 
 lldb::ChildCacheState

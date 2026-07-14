@@ -100,6 +100,13 @@ def LLVM_AbsOp : LLVM_OneResultIntrOp<"abs", [], [0], [Pure],
                    I1Attr:$is_int_min_poison);
 }
 
+// Do not use LLVM_UnaryIntrOpF here: arithmetic.fence operates on floating
+// types, but the fence itself should not carry fastmath flags.
+def LLVM_ArithmeticFenceOp
+    : LLVM_UnaryIntrOpBase<"arithmetic.fence", LLVM_AnyFloat> {
+  let arguments = commonArgs;
+}
+
 def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure],
   /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
   /*immArgPositions=*/[1], /*immArgAttrNames=*/["bit"]> {
@@ -698,7 +705,7 @@ def LLVM_ThreadlocalAddressOp : LLVM_OneResultIntrOp<"threadlocal.address", [],
 // Coroutine intrinsics.
 //
 
-def LLVM_CoroIdOp : LLVM_IntrOp<"coro.id", [], [], [], 1> {
+def LLVM_CoroIdOp : LLVM_IntrOp<"coro.id", [], [], [TokenProducerTrait], 1> {
   let arguments = (ins I32:$align,
                        LLVM_AnyPointer:$promise,
                        LLVM_AnyPointer:$coroaddr,
@@ -707,8 +714,9 @@ def LLVM_CoroIdOp : LLVM_IntrOp<"coro.id", [], [], [], 1> {
     " attr-dict `:` functional-type(operands, results)";
 }
 
-def LLVM_CoroBeginOp : LLVM_IntrOp<"coro.begin", [], [], [], 1> {
-  let arguments = (ins LLVM_TokenType:$token,
+def LLVM_CoroBeginOp
+    : LLVM_IntrOp<"coro.begin", [], [], [], 1> {
+  let arguments = (ins Token:$token,
                        LLVM_AnyPointer:$mem);
   let assemblyFormat = "$token `,` $mem attr-dict `:` functional-type(operands, results)";
 }
@@ -721,26 +729,30 @@ def LLVM_CoroAlignOp : LLVM_IntrOp<"coro.align", [0], [], [], 1> {
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 
-def LLVM_CoroSaveOp : LLVM_IntrOp<"coro.save", [], [], [], 1> {
+def LLVM_CoroSaveOp
+    : LLVM_IntrOp<"coro.save", [], [], [TokenProducerTrait], 1> {
   let arguments = (ins LLVM_AnyPointer:$handle);
   let assemblyFormat = "$handle attr-dict `:` functional-type(operands, results)";
 }
 
-def LLVM_CoroSuspendOp : LLVM_IntrOp<"coro.suspend", [], [], [], 1> {
-  let arguments = (ins LLVM_TokenType:$save,
+def LLVM_CoroSuspendOp
+    : LLVM_IntrOp<"coro.suspend", [], [], [], 1> {
+  let arguments = (ins Token:$save,
                        I1:$final);
   let assemblyFormat = "$save `,` $final attr-dict `:` type($res)";
 }
 
-def LLVM_CoroEndOp : LLVM_IntrOp<"coro.end", [], [], [], 1> {
+def LLVM_CoroEndOp
+    : LLVM_IntrOp<"coro.end", [], [], [], 1> {
   let arguments = (ins LLVM_AnyPointer:$handle,
                        I1:$unwind,
-                       LLVM_TokenType:$retvals);
+                       Token:$retvals);
   let assemblyFormat = "$handle `,` $unwind `,` $retvals attr-dict `:` functional-type(operands, results)";
 }
 
-def LLVM_CoroFreeOp : LLVM_IntrOp<"coro.free", [], [], [], 1> {
-  let arguments = (ins LLVM_TokenType:$id,
+def LLVM_CoroFreeOp
+    : LLVM_IntrOp<"coro.free", [], [], [], 1> {
+  let arguments = (ins Token:$id,
                        LLVM_AnyPointer:$handle);
   let assemblyFormat = "$id `,` $handle attr-dict `:` functional-type(operands, results)";
 }
@@ -1119,22 +1131,25 @@ def LLVM_MaskedLoadOp : LLVM_OneResultIntrOp<"masked.load"> {
 /// Create a call to Masked Store intrinsic.
 def LLVM_MaskedStoreOp : LLVM_ZeroResultIntrOp<"masked.store"> {
   let arguments = (ins LLVM_AnyVector:$value, LLVM_AnyPointer:$data,
-                   LLVM_VectorOf<I1>:$mask, I32Attr:$alignment);
+                   LLVM_VectorOf<I1>:$mask, I32Attr:$alignment,
+                   UnitAttr:$nontemporal);
   let builders = [LLVM_VoidResultTypeOpBuilder, LLVM_ZeroResultOpBuilder];
   let assemblyFormat = "$value `,` $data `,` $mask attr-dict `:` "
     "type($value) `,` type($mask) `into` qualified(type($data))";
 
   string llvmBuilder = [{
-    builder.CreateMaskedStore(
+    auto *inst = builder.CreateMaskedStore(
       $value, $data, llvm::Align($alignment), $mask);
-  }];
+  }] #setNonTemporalMetadataCode;
   string mlirBuilder = [{
     auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
     llvm::Align alignment = intrinInst->getParamAlign(1).valueOrOne();
+    bool nontemporal = intrinInst->hasMetadata(llvm::LLVMContext::MD_nontemporal);
     $_op = LLVM::MaskedStoreOp::create($_builder, $_location,
-      $value, $data, $mask, $_builder.getI32IntegerAttr(alignment.value()));
+      $value, $data, $mask, $_builder.getI32IntegerAttr(alignment.value()),
+      nontemporal ? $_builder.getUnitAttr() : nullptr);
   }];
-  list<int> llvmArgIndices = [0, 1, 2, -1];
+  list<int> llvmArgIndices = [0, 1, 2, -1, -1];
 }
 
 /// Create a call to Masked Gather intrinsic.
@@ -1190,7 +1205,7 @@ def LLVM_masked_scatter : LLVM_ZeroResultIntrOp<"masked.scatter"> {
 
 /// Create a call to Masked Expand Load intrinsic.
 def LLVM_masked_expandload
-  : LLVM_OneResultIntrOp<"masked.expandload", [0], [],
+  : LLVM_OneResultIntrOp<"masked.expandload", [0], [0],
   /*traits=*/[], /*requiresFastMath=*/0, /*requiresArgAndResultAttrs=*/1,
   /*immArgPositions=*/[], /*immArgAttrNames=*/[]> {
   dag args = (ins LLVM_AnyPointer:$ptr,
@@ -1206,7 +1221,7 @@ def LLVM_masked_expandload
 
 /// Create a call to Masked Compress Store intrinsic.
 def LLVM_masked_compressstore
-    : LLVM_ZeroResultIntrOp<"masked.compressstore", [0],
+    : LLVM_ZeroResultIntrOp<"masked.compressstore", [0, 1],
   /*traits=*/[], /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
   /*requiresArgAndResultAttrs=*/1, /*requiresOpBundles=*/0,
   /*immArgPositions=*/[], /*immArgAttrNames=*/[]> {

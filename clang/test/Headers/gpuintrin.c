@@ -440,7 +440,7 @@ __gpu_kernel void foo() {
 // AMDGPU-NEXT:    store i8 [[STOREDV]], ptr [[__X_ADDR_ASCAST]], align 1
 // AMDGPU-NEXT:    [[TMP0:%.*]] = load i64, ptr [[__LANE_MASK_ADDR_ASCAST]], align 8
 // AMDGPU-NEXT:    [[TMP1:%.*]] = load i8, ptr [[__X_ADDR_ASCAST]], align 1
-// AMDGPU-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP1]] to i1
+// AMDGPU-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP1]], 0
 // AMDGPU-NEXT:    [[TMP2:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[LOADEDV]])
 // AMDGPU-NEXT:    [[AND:%.*]] = and i64 [[TMP0]], [[TMP2]]
 // AMDGPU-NEXT:    ret i64 [[AND]]
@@ -975,7 +975,7 @@ __gpu_kernel void foo() {
 // NVPTX-NEXT:    store i32 [[CONV]], ptr [[__MASK]], align 4
 // NVPTX-NEXT:    [[TMP1:%.*]] = load i32, ptr [[__MASK]], align 4
 // NVPTX-NEXT:    [[TMP2:%.*]] = load i8, ptr [[__X_ADDR]], align 1
-// NVPTX-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP2]] to i1
+// NVPTX-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP2]], 0
 // NVPTX-NEXT:    [[TMP3:%.*]] = call i32 @llvm.nvvm.vote.ballot.sync(i32 [[TMP1]], i1 [[LOADEDV]])
 // NVPTX-NEXT:    [[CONV1:%.*]] = zext i32 [[TMP3]] to i64
 // NVPTX-NEXT:    ret i64 [[CONV1]]
@@ -1024,7 +1024,7 @@ __gpu_kernel void foo() {
 // NVPTX-NEXT:    [[STOREDV:%.*]] = zext i1 [[TOBOOL]] to i8
 // NVPTX-NEXT:    store i8 [[STOREDV]], ptr [[__BITMASK]], align 1
 // NVPTX-NEXT:    [[TMP3:%.*]] = load i8, ptr [[__BITMASK]], align 1
-// NVPTX-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP3]] to i1
+// NVPTX-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP3]], 0
 // NVPTX-NEXT:    [[CONV1:%.*]] = zext i1 [[LOADEDV]] to i32
 // NVPTX-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[CONV1]]
 // NVPTX-NEXT:    [[TMP4:%.*]] = load i32, ptr [[__MASK]], align 4
@@ -1513,7 +1513,7 @@ __gpu_kernel void foo() {
 // SPIRV-NEXT:    [[STOREDV:%.*]] = zext i1 [[__X]] to i8
 // SPIRV-NEXT:    store i8 [[STOREDV]], ptr [[__X_ADDR]], align 1
 // SPIRV-NEXT:    [[TMP0:%.*]] = load i8, ptr [[__X_ADDR]], align 1
-// SPIRV-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// SPIRV-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // SPIRV-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.spv.subgroup.ballot(i1 [[LOADEDV]])
 // SPIRV-NEXT:    store <4 x i32> [[TMP1]], ptr [[__MASK]], align 16
 // SPIRV-NEXT:    [[TMP2:%.*]] = load i64, ptr [[__LANE_MASK_ADDR]], align 8

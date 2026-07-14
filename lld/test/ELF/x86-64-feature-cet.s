@@ -102,6 +102,9 @@
 # NOPLT:     .note.gnu.property
 # NOPLT-NOT: .plt
 
+# RUN: not ld.lld %t1.o -z retpolineplt -z force-ibt -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR-IBT-RETPOLINE
+# ERR-IBT-RETPOLINE: error: -z force-ibt may not be used with -z retpolineplt
+
 .section ".note.gnu.property", "a"
 .long 4
 .long 0x10

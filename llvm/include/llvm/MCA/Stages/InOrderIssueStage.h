@@ -46,12 +46,12 @@ struct StallInfo {
   InstRef &getInstruction() { return IR; }
 
   bool isValid() const { return (bool)IR; }
-  void clear();
-  void update(const InstRef &Inst, unsigned Cycles, StallKind SK);
-  void cycleEnd();
+  LLVM_ABI void clear();
+  LLVM_ABI void update(const InstRef &Inst, unsigned Cycles, StallKind SK);
+  LLVM_ABI void cycleEnd();
 };
 
-class InOrderIssueStage final : public Stage {
+class LLVM_ABI InOrderIssueStage final : public Stage {
   const MCSubtargetInfo &STI;
   RegisterFile &PRF;
   ResourceManager RM;
