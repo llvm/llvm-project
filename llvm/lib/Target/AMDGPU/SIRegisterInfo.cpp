@@ -4339,3 +4339,25 @@ SIRegisterInfo::getVRegFlagsOfReg(Register Reg,
     RegFlags.push_back("WWM_REG");
   return RegFlags;
 }
+
+bool SIRegisterInfo::shouldCoalesce(
+    MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
+    const TargetRegisterClass *DstRC, unsigned DstSubReg,
+    const TargetRegisterClass *NewRC, LiveIntervals &LIS) const {
+  assert(MI->isCopy() && "Only expecting COPY instructions");
+
+  // Do not coalesce if src is a constant while size of LI subrange sum is
+  // more than 200. Let RA decide if need to rematerialize
+  MachineFunction *MF = MI->getParent()->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  MachineInstr *Def = MRI.getUniqueVRegDef(MI->getOperand(1).getReg());
+
+  LiveInterval &LISrc = LIS.getInterval(MI->getOperand(0).getReg());
+  LiveInterval &LIDst = LIS.getInterval(MI->getOperand(1).getReg());
+  if (Def && Def->isMoveImmediate() &&
+		  (LISrc.valnos.size() + LIDst.valnos.size() > 200))
+    return false;
+
+  return TargetRegisterInfo::shouldCoalesce(MI, SrcRC, SubReg, DstRC, DstSubReg,
+                                            NewRC, LIS);
+}
