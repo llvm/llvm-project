@@ -74,7 +74,7 @@ class TestDAP_stackTrace(DAPTestCaseBase):
         session = self.build_and_create_session()
         source_file = self.getSourcePath("main.c")
         self.recourse_source = _RecurseSource(
-            path=os.path.realpath(source_file),
+            path=source_file,
             end_line=line_number(source_file, "recurse end"),
             call_line=line_number(source_file, "recurse call"),
             invocation_line=line_number(source_file, "recurse invocation"),
