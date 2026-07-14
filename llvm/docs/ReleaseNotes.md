@@ -106,6 +106,12 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to LLDB
 
+#### Windows
+
+* LLDB no longer depends on the Python private API on Windows. Users are now free to
+  use any Python version they want, as long as it is 3.8 or later and LLDB can find it
+  (i.e. it is on their `PATH`).
+
 ### Changes to BOLT
 
 ### Changes to Sanitizers
