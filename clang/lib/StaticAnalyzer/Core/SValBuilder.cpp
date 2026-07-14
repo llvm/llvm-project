@@ -459,6 +459,13 @@ SVal SValBuilder::evalMinus(NonLoc X) {
   switch (X.getKind()) {
   case nonloc::ConcreteIntKind:
     return makeIntVal(-X.castAs<nonloc::ConcreteInt>().getValue());
+  case nonloc::ConcreteFloatKind: {
+    // Negation only flips the sign bit and is well-defined for all
+    // floating-point values regardless of semantics, so model it.
+    llvm::APFloat Value = *X.castAs<nonloc::ConcreteFloat>().getValue();
+    Value.changeSign();
+    return makeFloatVal(Value);
+  }
   case nonloc::SymbolValKind:
     return makeNonLoc(X.castAs<nonloc::SymbolVal>().getSymbol(), UO_Minus,
                       X.getType(Context));

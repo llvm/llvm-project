@@ -145,6 +145,19 @@ void testComparisons(void) {
 }
 
 //===----------------------------------------------------------------------===//
+// Unary negation is always exact (a sign-bit flip).
+//===----------------------------------------------------------------------===//
+
+void testNegation(void) {
+  float f = 1.5f;
+  double d = 2.5;
+  clang_analyzer_dump_float(-f);       // common-warning{{-1.5 IEEEsingle}}
+  clang_analyzer_dump_double(-d);      // common-warning{{-2.5 IEEEdouble}}
+  clang_analyzer_dump_float(-(-f));    // common-warning{{1.5 IEEEsingle}}
+  clang_analyzer_eval(-f < 0.0f);      // common-warning{{TRUE}}
+}
+
+//===----------------------------------------------------------------------===//
 // Division by zero detection with concrete floats.
 //===----------------------------------------------------------------------===//
 
