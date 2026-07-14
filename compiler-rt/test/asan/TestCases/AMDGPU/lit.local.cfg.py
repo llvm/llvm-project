@@ -93,6 +93,16 @@ else:
             config.unsupported = True
         else:
             config.available_features.add("rocm")
+            # VMEM API availability is a runtime KFD/kernel property and cannot
+            # be detected at test-discovery time. Let the environment declare it
+            # (HSA_VMEM_SUPPORTED=1) so VMEM tests gate on `REQUIRES: hsa-vmem`.
+            if os.environ.get("HSA_VMEM_SUPPORTED", "").strip().lower() in (
+                "1",
+                "true",
+                "yes",
+                "on",
+            ):
+                config.available_features.add("hsa-vmem")
             # Linux ASan defaults to leak detection; disable for ROCm/HSA tests.
             _asan = config.environment.get("ASAN_OPTIONS", "")
             if _asan:
