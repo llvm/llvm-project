@@ -20,9 +20,6 @@ class SessionInfoSynthetic:
             )
         )
 
-        # TODO: BUG in my PR - this crashes
-        # print(self.foos.GetTypeSyntheticImplementation())
-
         self.bars = self.valobj.GetChildMemberWithName("bars")
         self.bars.SetTypeSynthetic(
             lldb.SBTypeSynthetic.CreateWithClassName(

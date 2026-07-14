@@ -409,11 +409,13 @@ lldb::SBScriptObject SBValue::GetTypeSyntheticImplementation() {
 
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
+  if (!value_sp)
+    return lldb::SBScriptObject(nullptr, eScriptLanguageDefault);
 
   auto frontend = value_sp->GetSyntheticChildrenFrontEnd();
-  if (!frontend) {
+  if (!frontend)
     return lldb::SBScriptObject(nullptr, eScriptLanguageDefault);
-  }
+
   return lldb::SBScriptObject(frontend->GetImplementation(),
                               eScriptLanguageDefault);
 }
