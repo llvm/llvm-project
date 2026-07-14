@@ -146,12 +146,9 @@ Error DWARFLinkerImpl::link() {
       DWARFDie UnitDie = OrigCU->getUnitDIE();
 
       if (!Language) {
-        if (std::optional<DWARFFormValue> Val =
-                UnitDie.find(dwarf::DW_AT_language)) {
-          uint16_t LangVal = dwarf::toUnsigned(Val, 0);
-          if (isODRLanguage(LangVal))
-            Language = LangVal;
-        }
+        if (std::optional<uint64_t> LangVal = UnitDie.getLanguage())
+          if (isODRLanguage(*LangVal))
+            Language = static_cast<uint16_t>(*LangVal);
       }
     }
   }

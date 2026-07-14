@@ -234,8 +234,13 @@ public:
   /// Return true if there are no nodes using value ResNo of Node.
   inline bool use_empty() const;
 
-  /// Return true if there is exactly one node using value ResNo of Node.
+  /// Return true if there is exactly one node using value ResNo of Node, in
+  /// exactly one operand.
   inline bool hasOneUse() const;
+
+  /// Return true if there is exactly one node using value ResNo of Node, in
+  /// potentially multiple operands.
+  inline bool hasOneUser() const;
 };
 
 template <> struct DenseMapInfo<SDValue> {
@@ -1316,6 +1321,13 @@ inline bool SDValue::use_empty() const {
 
 inline bool SDValue::hasOneUse() const {
   return Node->hasNUsesOfValue(1, ResNo);
+}
+
+inline bool SDValue::hasOneUser() const {
+  auto Uses = make_filter_range(Node->uses(),
+                                [this](SDUse &U) { return U.get() == *this; });
+  auto Users = map_range(Uses, [](SDUse &U) { return U.getUser(); });
+  return all_equal(Users);
 }
 
 inline const DebugLoc &SDValue::getDebugLoc() const {
