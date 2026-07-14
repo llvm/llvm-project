@@ -241,6 +241,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   section 6.11.d states that "Variable length arrays and structures with
   flexible (or unsized) arrays are not supported."
 
+- The `__opencl_c_int64` feature macro is no longer unconditionally defined:
+  it tracks a default-enabled feature option, so `-cl-ext=-all` (or
+  `-cl-ext=-__opencl_c_int64`) now disables it. When neither it nor
+  `cles_khr_int64` is supported, 64-bit integer types are diagnosed as errors.
+
 {#what-s-new-in-clang-release}
 ## What's New in Clang {{env.config.release}}?
 
@@ -993,6 +998,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 ### OpenCL Specific Changes
 
 - Added support for OpenCL C 3.1 language version (`-cl-std=CL3.1`).
+- 64-bit integer types now require the `cles_khr_int64` extension or the
+  `__opencl_c_int64` feature (both enabled by default), following the same
+  approach as `double` with `cl_khr_fp64`.
 
 ### Target Specific Changes
 

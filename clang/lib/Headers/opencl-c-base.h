@@ -44,10 +44,12 @@ typedef unsigned short ushort;
  */
 typedef unsigned int uint;
 
+#if defined(__opencl_c_int64) || defined(cles_khr_int64)
 /**
  * An unsigned 64-bit integer.
  */
 typedef unsigned long ulong;
+#endif // defined(__opencl_c_int64) || defined(cles_khr_int64)
 
 /**
  * The unsigned integer type of the result of the sizeof operator. This
@@ -110,6 +112,7 @@ typedef uint uint3 __attribute__((ext_vector_type(3)));
 typedef uint uint4 __attribute__((ext_vector_type(4)));
 typedef uint uint8 __attribute__((ext_vector_type(8)));
 typedef uint uint16 __attribute__((ext_vector_type(16)));
+#if defined(__opencl_c_int64) || defined(cles_khr_int64)
 typedef long long2 __attribute__((ext_vector_type(2)));
 typedef long long3 __attribute__((ext_vector_type(3)));
 typedef long long4 __attribute__((ext_vector_type(4)));
@@ -120,6 +123,7 @@ typedef ulong ulong3 __attribute__((ext_vector_type(3)));
 typedef ulong ulong4 __attribute__((ext_vector_type(4)));
 typedef ulong ulong8 __attribute__((ext_vector_type(8)));
 typedef ulong ulong16 __attribute__((ext_vector_type(16)));
+#endif // defined(__opencl_c_int64) || defined(cles_khr_int64)
 typedef float float2 __attribute__((ext_vector_type(2)));
 typedef float float3 __attribute__((ext_vector_type(3)));
 typedef float float4 __attribute__((ext_vector_type(4)));

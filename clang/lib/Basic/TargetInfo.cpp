@@ -665,6 +665,11 @@ void TargetInfo::setDependentOpenCLOpts() {
     setFeatureEnabled(Opts, "__opencl_c_ext_fp64_global_atomic_min_max", false);
     setFeatureEnabled(Opts, "__opencl_c_ext_fp64_local_atomic_min_max", false);
   }
+
+  // cles_khr_int64 (OpenCL C 1.x embedded profile) means the device has
+  // 64-bit integers, so it implies the __opencl_c_int64 feature.
+  if (hasFeatureEnabled(Opts, "cles_khr_int64"))
+    setFeatureEnabled(Opts, "__opencl_c_int64", true);
 }
 
 LangAS TargetInfo::getOpenCLTypeAddrSpace(OpenCLTypeKind TK) const {

@@ -4250,6 +4250,17 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
 
       if (ResultVal.getBitWidth() != Width)
         ResultVal = ResultVal.trunc(Width);
+
+      // OpenCL C v3.0 s6.2.1: 64-bit integer types are optional. A literal
+      // can produce one without any 'long' declaration, so check here too.
+      if (getLangOpts().OpenCL && Width == 64 &&
+          !getOpenCLOptions().isSupported("cles_khr_int64", getLangOpts()) &&
+          !getOpenCLOptions().isSupported("__opencl_c_int64", getLangOpts()))
+        Diag(Tok.getLocation(), diag::err_opencl_requires_extension)
+            << 0 << Ty
+            << (getLangOpts().getOpenCLCompatibleVersion() >= 300
+                    ? "__opencl_c_int64"
+                    : "cles_khr_int64");
     }
     Res = IntegerLiteral::Create(Context, ResultVal, Ty, Tok.getLocation());
   }

@@ -154,6 +154,7 @@ OPENCL_EXTENSION(cl_intel_device_side_avc_motion_estimation, true, 100)
 // OpenCL C 3.0 features (6.2.1. Features)
 OPENCL_OPTIONALCOREFEATURE(__opencl_c_3d_image_writes, false, 300, OCL_C_30)
 OPENCL_OPTIONALCOREFEATURE(__opencl_c_fp64, false, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_int64, false, 100, OCL_C_30)
 OPENCL_OPTIONALCOREFEATURE(__opencl_c_subgroups, false, 300, OCL_C_30)
 
 #undef OPENCL_OPTIONALCOREFEATURE

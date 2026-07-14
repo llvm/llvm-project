@@ -789,9 +789,6 @@ void InitializeOpenCLFeatureTestMacros(const TargetInfo &TI,
 #define OPENCL_GENERIC_EXTENSION(Ext, ...)                                     \
   defineOpenCLExtMacro(#Ext, __VA_ARGS__);
 #include "clang/Basic/OpenCLExtensions.def"
-
-  // Assume compiling for FULL profile
-  Builder.defineMacro("__opencl_c_int64");
 }
 
 llvm::SmallString<32> ConstructFixedPointLiteral(llvm::APFixedPoint Val,

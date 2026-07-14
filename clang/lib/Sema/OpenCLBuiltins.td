@@ -78,6 +78,7 @@ class concatExtension<FunctionExtension Base, string NewExts> {
 def NoTypeExt   : TypeExtension<"">;
 def Fp16TypeExt : TypeExtension<"cl_khr_fp16">;
 def Fp64TypeExt : TypeExtension<"cl_khr_fp64">;
+def Int64TypeExt : TypeExtension<"__opencl_c_int64">;
 def Atomic64TypeExt : TypeExtension<"cl_khr_int64_base_atomics cl_khr_int64_extended_atomics">;
 def AtomicFp64TypeExt : TypeExtension<"cl_khr_int64_base_atomics cl_khr_int64_extended_atomics cl_khr_fp64">;
 
@@ -351,8 +352,11 @@ def Short     : Type<"short",     QualType<"Context.ShortTy">>;
 def UShort    : Type<"ushort",    QualType<"Context.UnsignedShortTy">>;
 def Int       : Type<"int",       QualType<"Context.IntTy">>;
 def UInt      : Type<"uint",      QualType<"Context.UnsignedIntTy">>;
-def Long      : Type<"long",      QualType<"Context.LongTy">>;
-def ULong     : Type<"ulong",     QualType<"Context.UnsignedLongTy">>;
+// 64-bit integer types, optional in the embedded profile (__opencl_c_int64).
+let Extension = Int64TypeExt in {
+  def Long      : Type<"long",      QualType<"Context.LongTy">>;
+  def ULong     : Type<"ulong",     QualType<"Context.UnsignedLongTy">>;
+}
 def Float     : Type<"float",     QualType<"Context.FloatTy">>;
 let Extension = Fp64TypeExt in {
   def Double    : Type<"double",    QualType<"Context.DoubleTy">>;

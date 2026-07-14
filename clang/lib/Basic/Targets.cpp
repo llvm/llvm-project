@@ -909,6 +909,10 @@ TargetInfo *TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
     return nullptr;
 
   Target->setSupportedOpenCLOpts();
+  // 64-bit integers are optional in the OpenCL C embedded profile. Assume
+  // the full profile unless the target or the command line says otherwise.
+  Target->getTargetOpts().OpenCLFeaturesMap.try_emplace("__opencl_c_int64",
+                                                        true);
   Target->setCommandLineOpenCLOpts();
   Target->setDependentOpenCLOpts();
   Target->setMaxAtomicWidth();

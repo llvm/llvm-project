@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 %s -triple amdgcn-unknown-unknown -cl-ext=-all,+cl_amd_media_ops,+cl_amd_media_ops2 -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -finclude-default-header
-// RUN: %clang_cc1 %s -triple amdgcn-unknown-unknown -cl-ext=-all,+cl_amd_media_ops,+cl_amd_media_ops2 -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -finclude-default-header -fdeclare-opencl-builtins
+// RUN: %clang_cc1 %s -triple amdgcn-unknown-unknown -cl-ext=-all,+__opencl_c_int64,+cl_amd_media_ops,+cl_amd_media_ops2 -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -finclude-default-header
+// RUN: %clang_cc1 %s -triple amdgcn-unknown-unknown -cl-ext=-all,+__opencl_c_int64,+cl_amd_media_ops,+cl_amd_media_ops2 -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -finclude-default-header -fdeclare-opencl-builtins
 // expected-no-diagnostics
-// RUN: %clang_cc1 %s -triple amdgcn-unknown-unknown -cl-ext=-all,+cl_amd_media_ops2 -verify=ops  -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -finclude-default-header
-// RUN: %clang_cc1 %s -triple amdgcn-unknown-unknown -cl-ext=-all,+cl_amd_media_ops  -verify=ops2 -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -finclude-default-header
-// RUN: %clang_cc1 %s -triple amdgcn-unknown-unknown -cl-ext=-all,+cl_amd_media_ops2 -verify=ops  -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -finclude-default-header -fdeclare-opencl-builtins
-// RUN: %clang_cc1 %s -triple amdgcn-unknown-unknown -cl-ext=-all,+cl_amd_media_ops  -verify=ops2 -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -finclude-default-header -fdeclare-opencl-builtins
+// RUN: %clang_cc1 %s -triple amdgcn-unknown-unknown -cl-ext=-all,+__opencl_c_int64,+cl_amd_media_ops2 -verify=ops  -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -finclude-default-header
+// RUN: %clang_cc1 %s -triple amdgcn-unknown-unknown -cl-ext=-all,+__opencl_c_int64,+cl_amd_media_ops  -verify=ops2 -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -finclude-default-header
+// RUN: %clang_cc1 %s -triple amdgcn-unknown-unknown -cl-ext=-all,+__opencl_c_int64,+cl_amd_media_ops2 -verify=ops  -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -finclude-default-header -fdeclare-opencl-builtins
+// RUN: %clang_cc1 %s -triple amdgcn-unknown-unknown -cl-ext=-all,+__opencl_c_int64,+cl_amd_media_ops  -verify=ops2 -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -finclude-default-header -fdeclare-opencl-builtins
 
 #define TEST_1ARG_BUILTIN_WITH_TYPE(builtin, ret, type) \
     ret test_ ## builtin ## _ ## ret ## _## type (type a) { \
