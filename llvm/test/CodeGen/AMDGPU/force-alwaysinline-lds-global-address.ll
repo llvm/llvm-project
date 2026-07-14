@@ -1,5 +1,5 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-always-inline -amdgpu-enable-lower-module-lds=false %s | FileCheck --check-prefix=ALL %s
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -amdgpu-stress-function-calls -passes=amdgpu-always-inline -amdgpu-enable-lower-module-lds=false %s | FileCheck --check-prefix=ALL %s
+; RUN: opt -S -mtriple=amdgpu-amd-amdhsa -passes=amdgpu-always-inline -amdgpu-enable-lower-module-lds=false %s | FileCheck --check-prefix=ALL %s
+; RUN: opt -S -mtriple=amdgpu-amd-amdhsa -amdgpu-stress-function-calls -passes=amdgpu-always-inline -amdgpu-enable-lower-module-lds=false %s | FileCheck --check-prefix=ALL %s
 
 @lds0 = addrspace(3) global i32 poison, align 4
 @lds1 = addrspace(3) global [512 x i32] poison, align 4

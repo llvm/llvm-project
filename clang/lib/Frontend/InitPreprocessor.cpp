@@ -186,6 +186,14 @@ static void DefineTypeSize(const Twine &MacroName, TargetInfo::IntType Ty,
                  TI.isTypeSigned(Ty), Builder);
 }
 
+static void DefineTypeMin(const Twine &Prefix, TargetInfo::IntType Ty,
+                          const TargetInfo &TI, MacroBuilder &Builder) {
+  Builder.defineMacro(Prefix + "_MIN__",
+                      TI.isTypeSigned(Ty)
+                          ? Twine("(-") + Prefix + "_MAX__ - 1)"
+                          : Twine("0") + TI.getTypeConstantSuffix(Ty));
+}
+
 static void DefineFmt(const LangOptions &LangOpts, const Twine &Prefix,
                       TargetInfo::IntType Ty, const TargetInfo &TI,
                       MacroBuilder &Builder) {
@@ -604,6 +612,8 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     }
     if (LangOpts.CUDAIsDevice) {
       Builder.defineMacro("__HIP_DEVICE_COMPILE__");
+      if (TI.getTriple().getEnvironment() == llvm::Triple::LLVM)
+        Builder.defineMacro("__HIP_LLVM__");
       if (!TI.hasHIPImageSupport()) {
         Builder.defineMacro("__HIP_NO_IMAGE_SUPPORT__", "1");
         // Deprecated.
@@ -1127,7 +1137,9 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   DefineTypeSize("__LONG_MAX__", TargetInfo::SignedLong, TI, Builder);
   DefineTypeSize("__LONG_LONG_MAX__", TargetInfo::SignedLongLong, TI, Builder);
   DefineTypeSizeAndWidth("__WCHAR", TI.getWCharType(), TI, Builder);
+  DefineTypeMin("__WCHAR", TI.getWCharType(), TI, Builder);
   DefineTypeSizeAndWidth("__WINT", TI.getWIntType(), TI, Builder);
+  DefineTypeMin("__WINT", TI.getWIntType(), TI, Builder);
   DefineTypeSizeAndWidth("__INTMAX", TI.getIntMaxType(), TI, Builder);
   DefineTypeSizeAndWidth("__SIZE", TI.getSizeType(), TI, Builder);
 
@@ -1180,6 +1192,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   DefineType("__WCHAR_TYPE__", TI.getWCharType(), Builder);
   DefineType("__WINT_TYPE__", TI.getWIntType(), Builder);
   DefineTypeSizeAndWidth("__SIG_ATOMIC", TI.getSigAtomicType(), TI, Builder);
+  DefineTypeMin("__SIG_ATOMIC", TI.getSigAtomicType(), TI, Builder);
   if (LangOpts.C23)
     DefineType("__CHAR8_TYPE__", TI.UnsignedChar, Builder);
   DefineType("__CHAR16_TYPE__", TI.getChar16Type(), Builder);

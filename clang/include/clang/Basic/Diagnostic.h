@@ -1877,7 +1877,8 @@ void ProcessWarningOptions(DiagnosticsEngine &Diags,
                            const DiagnosticOptions &Opts,
                            llvm::vfs::FileSystem &VFS, bool ReportDiags = true);
 void EscapeStringForDiagnostic(StringRef Str, SmallVectorImpl<char> &OutStr);
-llvm::SmallString<16> DisplayCodePointForDiagnostic(llvm::UTF32 CodePoint);
+SmallString<16> EscapeSingleCodepointForDiagnostic(StringRef Str);
+SmallString<16> EscapeSingleCodepointForDiagnostic(llvm::UTF32 CP);
 } // namespace clang
 
 #endif // LLVM_CLANG_BASIC_DIAGNOSTIC_H

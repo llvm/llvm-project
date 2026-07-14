@@ -15,6 +15,14 @@
 
 using namespace lldb_private;
 
+// Declared out-of-line so every shared library resolves to the same
+// instance: a function-local static in an inline function is not
+// shared across shared library boundaries under hidden visibility.
+PolicyStack &PolicyStack::Get() {
+  static thread_local PolicyStack s_stack;
+  return s_stack;
+}
+
 Policy PolicyStack::Current() const {
   Policy p = m_stack.back();
   if (Log *log = GetLog(LLDBLog::Process)) {
@@ -31,11 +39,17 @@ Policy PolicyStack::Current() const {
 // (tests, dump comparisons); it never reads the current stack.
 Policy Policy::CreatePublicState() { return {}; }
 
-Policy Policy::CreatePrivateState() {
+Policy Policy::CreatePrivateState(PrivateStatePurpose purpose) {
   Policy p = PolicyStack::Get().Current();
   p.view = View::Private;
-  p.capabilities.can_load_frame_providers = false;
-  p.capabilities.can_run_frame_recognizers = false;
+  switch (purpose) {
+  case PrivateStatePurpose::Default:
+    break;
+  case PrivateStatePurpose::RunningExpression:
+    p.capabilities.can_load_frame_providers = false;
+    p.capabilities.can_run_frame_recognizers = false;
+    break;
+  }
   return p;
 }
 

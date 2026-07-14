@@ -22,9 +22,9 @@ define amdgpu_kernel void @saddo_i64_zext(ptr addrspace(1) %out, i64 %a, i64 %b)
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_add_u32 s0, s2, s8
-; SI-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_addc_u32 s1, s3, s9
+; SI-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-NEXT:    v_mov_b32_e32 v1, s3
 ; SI-NEXT:    v_cmp_lt_i64_e32 vcc, s[0:1], v[0:1]
 ; SI-NEXT:    s_cmp_lt_i32 s9, 0
@@ -46,8 +46,8 @@ define amdgpu_kernel void @saddo_i64_zext(ptr addrspace(1) %out, i64 %a, i64 %b)
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    s_add_u32 s0, s2, s4
-; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
 ; VI-NEXT:    s_addc_u32 s1, s3, s5
 ; VI-NEXT:    v_cmp_lt_i64_e32 vcc, s[0:1], v[2:3]
@@ -123,11 +123,11 @@ define amdgpu_kernel void @saddo_i64_zext(ptr addrspace(1) %out, i64 %a, i64 %b)
 ; GFX11-NEXT:    s_xor_b32 s2, s3, s2
 ; GFX11-NEXT:    s_and_b32 s2, s2, exec_lo
 ; GFX11-NEXT:    s_cselect_b64 s[2:3], 1, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_add_u32 s2, s6, s2
 ; GFX11-NEXT:    s_addc_u32 s3, s7, s3
-; GFX11-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s3
+; GFX11-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
   %sadd = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %a, i64 %b) nounwind
@@ -375,17 +375,17 @@ define amdgpu_kernel void @s_saddo_i64(ptr addrspace(1) %out, ptr addrspace(1) %
 ; SI-NEXT:    s_mov_b32 s10, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_add_u32 s12, s4, s6
-; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    s_addc_u32 s13, s5, s7
+; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    v_mov_b32_e32 v1, s5
 ; SI-NEXT:    v_cmp_lt_i64_e32 vcc, s[12:13], v[0:1]
 ; SI-NEXT:    s_cmp_lt_i32 s7, 0
 ; SI-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], vcc
-; SI-NEXT:    v_mov_b32_e32 v0, s12
 ; SI-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; SI-NEXT:    s_mov_b32 s8, s0
 ; SI-NEXT:    s_mov_b32 s9, s1
+; SI-NEXT:    v_mov_b32_e32 v0, s12
 ; SI-NEXT:    v_mov_b32_e32 v1, s13
 ; SI-NEXT:    s_cselect_b32 s4, 1, 0
 ; SI-NEXT:    s_mov_b32 s0, s2
@@ -404,9 +404,9 @@ define amdgpu_kernel void @s_saddo_i64(ptr addrspace(1) %out, ptr addrspace(1) %
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    s_add_u32 s0, s4, s6
-; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    s_addc_u32 s1, s5, s7
+; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    v_mov_b32_e32 v5, s5
 ; VI-NEXT:    v_cmp_lt_i64_e32 vcc, s[0:1], v[4:5]
 ; VI-NEXT:    s_cmp_lt_i32 s7, 0
@@ -474,13 +474,12 @@ define amdgpu_kernel void @s_saddo_i64(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX11-NEXT:    s_cmp_lt_i32 s7, 0
 ; GFX11-NEXT:    v_cmp_lt_i64_e64 s4, s[8:9], s[4:5]
 ; GFX11-NEXT:    s_cselect_b32 s5, -1, 0
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s9
 ; GFX11-NEXT:    s_xor_b32 s4, s5, s4
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX11-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s8 :: v_dual_mov_b32 v3, s4
-; GFX11-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    global_store_b8 v2, v3, s[2:3]

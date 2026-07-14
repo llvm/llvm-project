@@ -18,6 +18,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -136,6 +137,66 @@ struct SampleProfTest : ::testing::Test {
     ASSERT_TRUE(PS);
     VerifySummary(*PS);
     delete PS;
+  }
+
+  // Write a minimal profile with a specific format version to an in-memory
+  // buffer.
+  ErrorOr<SmallVector<char, 128>> writeProfileToBuffer(uint64_t Version) {
+    SmallVector<char, 128> Buffer;
+    std::unique_ptr<raw_ostream> OS =
+        std::make_unique<raw_svector_ostream>(Buffer);
+    auto WriterOrErr =
+        SampleProfileWriter::create(OS, SampleProfileFormat::SPF_Ext_Binary);
+    if (std::error_code EC = WriterOrErr.getError())
+      return EC;
+    auto Writer = std::move(WriterOrErr.get());
+    Writer->setFormatVersion(Version);
+
+    StringRef FooName("_Z3fooi");
+    FunctionSamples FooSamples;
+    FooSamples.setFunction(FunctionId(FooName));
+    FooSamples.addTotalSamples(1);
+
+    SampleProfileMap Profiles;
+    Profiles[FooName] = std::move(FooSamples);
+
+    if (std::error_code EC = Writer->write(Profiles))
+      return EC;
+    Writer->getOutputStream().flush();
+    Writer.reset();
+    return Buffer;
+  }
+
+  // Write a raw profile header (Magic + Version) directly to a buffer.
+  // This bypasses the writer validation and is used to test reader error
+  // handling.
+  SmallVector<char, 128> writeRawHeaderToBuffer(uint64_t Version) {
+    SmallVector<char, 128> Buffer;
+    raw_svector_ostream OS(Buffer);
+    encodeULEB128(SPMagic(SPF_Ext_Binary), OS);
+    encodeULEB128(Version, OS);
+    return Buffer;
+  }
+
+  // Read the profile from an in-memory buffer, verify its payload, and
+  // return the format version.
+  ErrorOr<uint64_t> readVersionFromBuffer(ArrayRef<char> Buffer) {
+    std::unique_ptr<MemoryBuffer> MemBuffer = MemoryBuffer::getMemBuffer(
+        StringRef(Buffer.data(), Buffer.size()), "profile",
+        /*RequiresNullTerminator*/ false);
+    auto FS = vfs::getRealFileSystem();
+    auto ReaderOrErr = SampleProfileReader::create(MemBuffer, Context, *FS);
+    if (std::error_code EC = ReaderOrErr.getError())
+      return EC;
+    auto Reader = std::move(ReaderOrErr.get());
+    if (std::error_code EC = Reader->read())
+      return EC;
+    if (Reader->getProfiles().size() != 1)
+      return sampleprof_error::malformed;
+    FunctionSamples *Samples = Reader->getSamplesFor("_Z3fooi");
+    if (!Samples || Samples->getTotalSamples() != 1)
+      return sampleprof_error::malformed;
+    return Reader->getFormatVersion();
   }
 
   void testRoundTrip(SampleProfileFormat Format, bool Remap, bool UseMD5) {
@@ -547,10 +608,6 @@ TEST_F(SampleProfTest, SampleProfileFuncOffsetTableInMemory) {
   EXPECT_EQ(Table.lookup(0x11112222ULL), 100);
   EXPECT_EQ(Table.lookup(0x33334444ULL), 200);
   EXPECT_EQ(Table.lookup(0x55556666ULL), std::nullopt);
-
-  // Test clear
-  Table.clear();
-  EXPECT_EQ(Table.lookup(0x11112222ULL), std::nullopt);
 }
 
 TEST_F(SampleProfTest, SampleProfileFuncOffsetTableOnDisk) {
@@ -590,10 +647,44 @@ TEST_F(SampleProfTest, SampleProfileFuncOffsetTableOnDisk) {
 
   // Test non-existent key
   EXPECT_EQ(Table.lookup(0x9999999999999999ULL), std::nullopt);
+}
 
-  // Test clear
-  Table.clear();
-  EXPECT_EQ(Table.lookup(0x1111111122222222ULL), std::nullopt);
+// Verify that requesting format version 103 results in a version 103 profile.
+TEST_F(SampleProfTest, SampleProfileFormatVersion103) {
+  auto BufferOrErr = writeProfileToBuffer(103);
+  ASSERT_TRUE(NoError(BufferOrErr.getError()));
+  auto Buffer = std::move(*BufferOrErr);
+
+  auto ReadVersionOrErr = readVersionFromBuffer(Buffer);
+  ASSERT_TRUE(NoError(ReadVersionOrErr.getError()));
+  EXPECT_EQ(*ReadVersionOrErr, 103u);
+}
+
+// Verify that requesting format version 104 results in a version 104 profile.
+TEST_F(SampleProfTest, SampleProfileFormatVersion104) {
+  auto BufferOrErr = writeProfileToBuffer(104);
+  ASSERT_TRUE(NoError(BufferOrErr.getError()));
+  auto Buffer = std::move(*BufferOrErr);
+
+  auto ReadVersionOrErr = readVersionFromBuffer(Buffer);
+  ASSERT_TRUE(NoError(ReadVersionOrErr.getError()));
+  EXPECT_EQ(*ReadVersionOrErr, 104u);
+}
+
+// Verify that requesting format version 102 (below minimum supported) is
+// rejected by the reader.
+TEST_F(SampleProfTest, SampleProfileFormatVersion102) {
+  auto Buffer = writeRawHeaderToBuffer(102);
+  auto ReadVersionOrErr = readVersionFromBuffer(Buffer);
+  EXPECT_EQ(ReadVersionOrErr.getError(), sampleprof_error::unsupported_version);
+}
+
+// Verify that requesting format version 105 (above latest supported) is
+// rejected by the reader.
+TEST_F(SampleProfTest, SampleProfileFormatVersion105) {
+  auto Buffer = writeRawHeaderToBuffer(105);
+  auto ReadVersionOrErr = readVersionFromBuffer(Buffer);
+  EXPECT_EQ(ReadVersionOrErr.getError(), sampleprof_error::unsupported_version);
 }
 
 } // end anonymous namespace

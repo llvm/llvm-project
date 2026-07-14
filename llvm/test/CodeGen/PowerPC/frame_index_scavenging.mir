@@ -1,16 +1,16 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 \
-# RUN:     -start-before=prologepilog -debug-only=reginfo --filetype=null \
+# RUN:     -start-before=prolog-epilog -debug-only=reginfo --filetype=null \
 # RUN:     -verify-machineinstrs %s 2>&1 >/dev/null | FileCheck %s --check-prefix=P8
 # RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 \
-# RUN:     -start-before=prologepilog -debug-only=reginfo --filetype=null \
+# RUN:     -start-before=prolog-epilog -debug-only=reginfo --filetype=null \
 # RUN:     -verify-machineinstrs %s 2>&1 >/dev/null | FileCheck %s --check-prefix=P9
 # RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 \
-# RUN:     -start-before=prologepilog -debug-only=reginfo \
+# RUN:     -start-before=prolog-epilog -debug-only=reginfo \
 # RUN:     --filetype=null -ppc-enable-pe-vector-spills \
 # RUN:     -verify-machineinstrs %s 2>&1 >/dev/null | FileCheck %s --check-prefix=P9-REGSPILL
 # RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr10 \
-# RUN:     -start-before=prologepilog -debug-only=reginfo --filetype=null \
+# RUN:     -start-before=prolog-epilog -debug-only=reginfo --filetype=null \
 # RUN:     -verify-machineinstrs %s 2>&1 >/dev/null | FileCheck %s -check-prefix=P10
 
 ---
