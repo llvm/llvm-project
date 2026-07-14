@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/sys_socket_macros.h"
+#include "hdr/types/sa_family_t.h"
 #include "hdr/types/struct_sockaddr_storage.h"
 #include "hdr/types/struct_sockaddr_un.h"
-#include "include/llvm-libc-types/sa_family_t.h"
 
 // POSIX requires (and many applications make use of this) the ability to cast
 // one sockaddr pointer to another. This verifies that the compiler does not

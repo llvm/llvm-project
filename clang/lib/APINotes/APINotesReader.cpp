@@ -857,14 +857,16 @@ public:
                                       llvm::SmallVectorImpl<uint64_t> &Scratch);
   std::optional<FunctionTableKey> getFunctionKey(uint32_t ParentContextID,
                                                  llvm::StringRef Name);
+  template <typename ParameterT>
   std::optional<FunctionTableKey>
   getFunctionKey(uint32_t ParentContextID, llvm::StringRef Name,
-                 llvm::ArrayRef<llvm::StringRef> Parameters);
+                 llvm::ArrayRef<ParameterT> Parameters);
   std::optional<FunctionTableKey>
   getFunctionKey(std::optional<Context> ParentContext, llvm::StringRef Name);
+  template <typename ParameterT>
   std::optional<FunctionTableKey>
   getFunctionKey(std::optional<Context> ParentContext, llvm::StringRef Name,
-                 llvm::ArrayRef<llvm::StringRef> Parameters);
+                 llvm::ArrayRef<ParameterT> Parameters);
 
   llvm::Error readGlobalFunctionBlock(llvm::BitstreamCursor &Cursor,
                                       llvm::SmallVectorImpl<uint64_t> &Scratch);
@@ -899,9 +901,10 @@ APINotesReader::Implementation::getFunctionKey(uint32_t ParentContextID,
   });
 }
 
+template <typename ParameterT>
 std::optional<FunctionTableKey> APINotesReader::Implementation::getFunctionKey(
     uint32_t ParentContextID, llvm::StringRef Name,
-    llvm::ArrayRef<llvm::StringRef> Parameters) {
+    llvm::ArrayRef<ParameterT> Parameters) {
   return getFunctionKeyImpl(
       ParentContextID, Name, Parameters,
       [this](llvm::StringRef S) { return getIdentifier(S); });
@@ -914,9 +917,10 @@ std::optional<FunctionTableKey> APINotesReader::Implementation::getFunctionKey(
   return getFunctionKey(ParentContextID, Name);
 }
 
+template <typename ParameterT>
 std::optional<FunctionTableKey> APINotesReader::Implementation::getFunctionKey(
     std::optional<Context> ParentContext, llvm::StringRef Name,
-    llvm::ArrayRef<llvm::StringRef> Parameters) {
+    llvm::ArrayRef<ParameterT> Parameters) {
   uint32_t ParentContextID =
       ParentContext ? ParentContext->id.Value : static_cast<uint32_t>(-1);
   return getFunctionKey(ParentContextID, Name, Parameters);
@@ -2342,7 +2346,7 @@ auto APINotesReader::lookupCXXMethod(ContextID CtxID, llvm::StringRef Name)
 }
 
 auto APINotesReader::lookupCXXMethod(ContextID CtxID, llvm::StringRef Name,
-                                     llvm::ArrayRef<llvm::StringRef> Parameters)
+                                     llvm::ArrayRef<std::string> Parameters)
     -> VersionedInfo<CXXMethodInfo> {
   return lookupCXXMethodImpl(CtxID, Name, Parameters);
 }
@@ -2364,9 +2368,9 @@ auto APINotesReader::lookupCXXMethodImpl(ContextID CtxID, llvm::StringRef Name)
   return {Implementation->SwiftVersion, *Known};
 }
 
-auto APINotesReader::lookupCXXMethodImpl(
-    ContextID CtxID, llvm::StringRef Name,
-    llvm::ArrayRef<llvm::StringRef> Parameters)
+template <typename ParameterT>
+auto APINotesReader::lookupCXXMethodImpl(ContextID CtxID, llvm::StringRef Name,
+                                         llvm::ArrayRef<ParameterT> Parameters)
     -> VersionedInfo<CXXMethodInfo> {
   if (!Implementation->CXXMethodTable)
     return std::nullopt;
@@ -2409,7 +2413,7 @@ auto APINotesReader::lookupGlobalFunction(llvm::StringRef Name,
 }
 
 auto APINotesReader::lookupGlobalFunction(
-    llvm::StringRef Name, llvm::ArrayRef<llvm::StringRef> Parameters,
+    llvm::StringRef Name, llvm::ArrayRef<std::string> Parameters,
     std::optional<Context> Ctx) -> VersionedInfo<GlobalFunctionInfo> {
   return lookupGlobalFunctionImpl(Name, Parameters, Ctx);
 }
@@ -2432,8 +2436,9 @@ auto APINotesReader::lookupGlobalFunctionImpl(llvm::StringRef Name,
   return {Implementation->SwiftVersion, *Known};
 }
 
+template <typename ParameterT>
 auto APINotesReader::lookupGlobalFunctionImpl(
-    llvm::StringRef Name, llvm::ArrayRef<llvm::StringRef> Parameters,
+    llvm::StringRef Name, llvm::ArrayRef<ParameterT> Parameters,
     std::optional<Context> Ctx) -> VersionedInfo<GlobalFunctionInfo> {
   if (!Implementation->GlobalFunctionTable)
     return std::nullopt;

@@ -104,6 +104,14 @@ define void @fabs_test(float %0, <8 x float> %1) {
   %4 = call <8 x float> @llvm.fabs.v8f32(<8 x float> %1)
   ret void
 }
+; CHECK-LABEL:  llvm.func @arithmetic_fence_test
+define void @arithmetic_fence_test(float %0, <8 x float> %1) {
+  ; CHECK: llvm.intr.arithmetic.fence(%{{.*}}) : (f32) -> f32
+  %3 = call float @llvm.arithmetic.fence.f32(float %0)
+  ; CHECK: llvm.intr.arithmetic.fence(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  %4 = call <8 x float> @llvm.arithmetic.fence.v8f32(<8 x float> %1)
+  ret void
+}
 ; CHECK-LABEL:  llvm.func @sqrt_test
 define void @sqrt_test(float %0, <8 x float> %1) {
   ; CHECK: llvm.intr.sqrt(%{{.*}}) : (f32) -> f32

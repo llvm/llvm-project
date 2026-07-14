@@ -724,7 +724,7 @@ struct InsertSliceOpInterface
         getBuffer(rewriter, insertSliceOp.getSource(), options, state);
     if (failed(srcMemref))
       return failure();
-    if (failed(options.createMemCpy(rewriter, loc, *srcMemref, subView)))
+    if (failed(options.memCpyFn(rewriter, loc, *srcMemref, subView)))
       return failure();
 
     replaceOpWithBufferizedValues(rewriter, op, *dstMemref);
@@ -1002,8 +1002,8 @@ struct ParallelInsertSliceOpInterface
         parallelInsertSliceOp.getMixedStrides());
 
     // This memcpy will fold away if everything bufferizes in-place.
-    if (failed(options.createMemCpy(rewriter, parallelInsertSliceOp.getLoc(),
-                                    *srcBuffer, subview)))
+    if (failed(options.memCpyFn(rewriter, parallelInsertSliceOp.getLoc(),
+                                *srcBuffer, subview)))
       return failure();
 
     // In case the source was allocated in the same block, make sure that the
@@ -1175,7 +1175,7 @@ struct ConcatOpInterface
           rewriter, loc, subviewMemRefType, dstBuffer, offsets, sizes, strides);
 
       // Copy the source buffer into the destination subview.
-      if (failed(options.createMemCpy(rewriter, loc, *srcBuffer, subview)))
+      if (failed(options.memCpyFn(rewriter, loc, *srcBuffer, subview)))
         return failure();
 
       concatDimOffset = sum(concatDimOffset, concatDimSize);
