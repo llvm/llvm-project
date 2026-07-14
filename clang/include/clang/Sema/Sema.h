@@ -3609,7 +3609,8 @@ public:
       ExtnameUndeclaredIdentifiers;
 
   /// Set containing all typedefs that are likely unused.
-  llvm::SmallPtrSet<const TypedefNameDecl *, 4> UnusedLocalTypedefNameCandidates;
+  llvm::SmallPtrSet<const TypedefNameDecl *, 4>
+      UnusedLocalTypedefNameCandidates;
 
   /// Return UnusedLocalTypedefNameCandidates in a deterministic order.
   SmallVector<const TypedefNameDecl *, 4>

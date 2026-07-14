@@ -1199,10 +1199,11 @@ Sema::getSortedUnusedLocalTypedefNameCandidates() const {
   SmallVector<const TypedefNameDecl *, 4> Sorted(
       UnusedLocalTypedefNameCandidates.begin(),
       UnusedLocalTypedefNameCandidates.end());
-  llvm::sort(Sorted, [](const TypedefNameDecl *LHS, const TypedefNameDecl *RHS) {
-    return LHS->getLocation().getRawEncoding() <
-           RHS->getLocation().getRawEncoding();
-  });
+  llvm::sort(Sorted,
+             [](const TypedefNameDecl *LHS, const TypedefNameDecl *RHS) {
+               return LHS->getLocation().getRawEncoding() <
+                      RHS->getLocation().getRawEncoding();
+             });
   return Sorted;
 }
 
