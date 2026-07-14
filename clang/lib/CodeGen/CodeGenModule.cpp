@@ -7781,9 +7781,8 @@ CodeGenModule::EmitStaticInitListBackingArray(llvm::Constant *Init,
   if (!Init->needsRelocation() && Size > 0 && Size <= 32 &&
       MergeableSize >= 4 && MergeableSize != Size) {
     uint64_t PaddingSize = MergeableSize - Size;
-    auto *PaddingTy =
-        llvm::ArrayType::get(llvm::Type::getInt8Ty(getLLVMContext()),
-                             PaddingSize);
+    auto *PaddingTy = llvm::ArrayType::get(
+        llvm::Type::getInt8Ty(getLLVMContext()), PaddingSize);
     auto *PaddedTy = llvm::StructType::get(
         getLLVMContext(), {Init->getType(), PaddingTy}, /*isPacked=*/true);
     StoredInit = llvm::ConstantStruct::get(
