@@ -1736,9 +1736,7 @@ def _runShTest(test, litConfig, script, tmpBase) -> lit.Test.Result:
                 scriptCopy[i] = command
 
         try:
-            res = executeScriptInternal(
-                test, litConfig, tmpBase, scriptCopy, execdir
-            )
+            res = executeScriptInternal(test, litConfig, tmpBase, scriptCopy, execdir)
         except ScriptFatal as e:
             out = f"# " + "\n# ".join(str(e).splitlines()) + "\n"
             return out, "", 1, None, Test.UNRESOLVED, None
@@ -1796,9 +1794,8 @@ def _runShTest(test, litConfig, script, tmpBase) -> lit.Test.Result:
         test_updater_outputs=test_updates,
     )
 
-def executeShTest(
-    test, litConfig, extra_substitutions=[], preamble_commands=[]
-):
+
+def executeShTest(test, litConfig, extra_substitutions=[], preamble_commands=[]):
     if test.config.unsupported:
         return lit.Test.Result(Test.UNSUPPORTED, "Test is unsupported")
 
