@@ -246,7 +246,7 @@ function(llvm_ExternalProject_Add name source_dir)
       # Use fakeflang to not require having all of flang built for the configure step.
       list(APPEND compiler_args -DCMAKE_Fortran_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/fakeflang${CMAKE_EXECUTABLE_SUFFIX})
       if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.2)
-        set(maybe_configure_environment_modification "FLANG_BOOTSTRAP_PROBE=set:1")
+        set(maybe_configure_environment_modification CONFIGURE_ENVIRONMENT_MODIFICATION "FLANG_BOOTSTRAP_PROBE=set:1")
       endif()
     endif()
     if(lld IN_LIST TOOLCHAIN_TOOLS)
