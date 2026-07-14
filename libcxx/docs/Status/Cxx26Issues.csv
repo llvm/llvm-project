@@ -101,7 +101,7 @@
 "`LWG4140 <https://wg21.link/LWG4140>`__","Useless default constructors for bit reference types","2024-11 (Wrocław)","|Complete|","","`#118356 <https://github.com/llvm/llvm-project/issues/118356>`__",""
 "`LWG4141 <https://wg21.link/LWG4141>`__","Improve prohibitions on ""additional storage""","2024-11 (Wrocław)","","","`#118357 <https://github.com/llvm/llvm-project/issues/118357>`__",""
 "`LWG4142 <https://wg21.link/LWG4142>`__","``format_parse_context::check_dynamic_spec`` should require at least one type","2024-11 (Wrocław)","","","`#118358 <https://github.com/llvm/llvm-project/issues/118358>`__",""
-"`LWG4144 <https://wg21.link/LWG4144>`__","Disallow ``unique_ptr<T&, D>``","2024-11 (Wrocław)","","","`#118359 <https://github.com/llvm/llvm-project/issues/118359>`__",""
+"`LWG4144 <https://wg21.link/LWG4144>`__","Disallow ``unique_ptr<T&, D>``","2024-11 (Wrocław)","|Complete|","23","`#118359 <https://github.com/llvm/llvm-project/issues/118359>`__",""
 "`LWG4147 <https://wg21.link/LWG4147>`__","Precondition on ``inplace_vector::emplace``","2024-11 (Wrocław)","","","`#118361 <https://github.com/llvm/llvm-project/issues/118361>`__",""
 "`LWG4148 <https://wg21.link/LWG4148>`__","``unique_ptr::operator*`` should not allow dangling references","2024-11 (Wrocław)","","","`#118362 <https://github.com/llvm/llvm-project/issues/118362>`__",""
 "`LWG4153 <https://wg21.link/LWG4153>`__","Fix extra ""-1"" for ``philox_engine::max()``","2024-11 (Wrocław)","","","`#118363 <https://github.com/llvm/llvm-project/issues/118363>`__",""

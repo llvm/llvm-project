@@ -1558,7 +1558,7 @@ namespace {
         return;
       }
       if (checkSubobject(Info, E, CSK_ArrayToPointer)) {
-        assert(getType(Base).getNonReferenceType()->isPointerType() ||
+        assert(!Base || getType(Base).getNonReferenceType()->isPointerType() ||
                getType(Base).getNonReferenceType()->isArrayType());
         Designator.FirstEntryIsAnUnsizedArray = true;
         Designator.addUnsizedArrayUnchecked(ElemTy);
@@ -4254,6 +4254,13 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
     }
 
     LastField = nullptr;
+
+    // The value of an atomic object is represented like a value of the
+    // underlying type, so look through the _Atomic wrapper.
+    if (const AtomicType *AT = ObjType->getAs<AtomicType>())
+      ObjType = Info.Ctx.getQualifiedType(AT->getValueType(),
+                                          ObjType.getQualifiers());
+
     if (ObjType->isArrayType()) {
       // Next subobject is an array element.
       const ArrayType *AT = Info.Ctx.getAsArrayType(ObjType);
@@ -5969,6 +5976,12 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
       const VarDecl *VD = dyn_cast_or_null<VarDecl>(D);
       if (VD && !CheckLocalVariableDeclaration(Info, VD))
         return ESR_Failed;
+
+      if (const auto *ESD = dyn_cast<CXXExpansionStmtDecl>(D)) {
+        assert(ESD->getInstantiations() && "not expanded?");
+        return EvaluateStmt(Result, Info, ESD->getInstantiations(), Case);
+      }
+
       // Each declaration initialization is its own full-expression.
       FullExpressionRAII Scope(Info);
       if (!EvaluateDecl(Info, D, /*EvaluateConditionDecl=*/true) &&
@@ -6239,6 +6252,40 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
     }
 
     return Scope.destroy() ? ESR_Succeeded : ESR_Failed;
+  }
+
+  case Stmt::CXXExpansionStmtInstantiationClass: {
+    BlockScopeRAII Scope(Info);
+    const auto *Expansion = cast<CXXExpansionStmtInstantiation>(S);
+    for (const Stmt *PreambleStmt : Expansion->getPreambleStmts()) {
+      EvalStmtResult ESR = EvaluateStmt(Result, Info, PreambleStmt);
+      if (ESR != ESR_Succeeded) {
+        if (ESR != ESR_Failed && !Scope.destroy())
+          return ESR_Failed;
+        return ESR;
+      }
+    }
+
+    // No need to push an extra scope for these since they're already
+    // CompoundStmts.
+    EvalStmtResult ESR = ESR_Succeeded;
+    for (const Stmt *Instantiation : Expansion->getInstantiations()) {
+      ESR = EvaluateStmt(Result, Info, Instantiation);
+      if (ESR == ESR_Failed ||
+          ShouldPropagateBreakContinue(Info, Expansion, &Scope, ESR))
+        return ESR;
+      if (ESR != ESR_Continue) {
+        // Succeeded here actually means we encountered a 'break'.
+        assert(ESR == ESR_Succeeded || ESR == ESR_Returned);
+        break;
+      }
+    }
+
+    // Map Continue back to Succeeded if we fell off the end of the loop.
+    if (ESR == ESR_Continue)
+      ESR = ESR_Succeeded;
+
+    return Scope.destroy() ? ESR : ESR_Failed;
   }
 
   case Stmt::SwitchStmtClass:
@@ -22150,6 +22197,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::SYCLUniqueStableNameExprClass:
   case Expr::CXXParenListInitExprClass:
   case Expr::HLSLOutArgExprClass:
+  case Expr::CXXExpansionSelectExprClass:
     return ICEDiag(IK_NotICE, E->getBeginLoc());
 
   case Expr::MemberExprClass: {

@@ -258,12 +258,6 @@ public:
     return getEnclosingBlockWithSuccessors()->getSuccessors();
   }
 
-  /// \return the hierarchical successor of this VPBlockBase if it has a single
-  /// hierarchical successor. Otherwise return a null pointer.
-  VPBlockBase *getSingleHierarchicalSuccessor() {
-    return getEnclosingBlockWithSuccessors()->getSingleSuccessor();
-  }
-
   /// \return the predecessors either attached directly to this VPBlockBase or,
   /// if this VPBlockBase is the entry block of a VPRegionBlock and has no
   /// predecessors of its own, search recursively for the first enclosing
@@ -1003,9 +997,6 @@ public:
   }
 
   LLVM_ABI_FOR_TEST FastMathFlags getFastMathFlagsOrNone() const;
-
-  /// Returns true if the recipe has non-negative flag.
-  bool hasNonNegFlag() const { return OpType == OperationType::NonNegOp; }
 
   bool isNonNeg() const {
     assert(OpType == OperationType::NonNegOp &&
@@ -2653,9 +2644,6 @@ public:
                      "expandVPWidenIntOrFpInductionRecipe");
   }
 
-  /// Returns the start value of the induction.
-  VPIRValue *getStartValue() const { return cast<VPIRValue>(getOperand(0)); }
-
   /// If the recipe has been unrolled, return the VPValue for the induction
   /// increment, otherwise return null.
   VPValue *getSplatVFValue() const {
@@ -3645,14 +3633,6 @@ public:
         New->replaceUsesOfWith(Placeholder, OutsideOp);
     }
     return new VPExpressionRecipe(ExpressionType, NewExpressiondRecipes);
-  }
-
-  /// Return the VPValue to use to infer the result type of the recipe.
-  VPValue *getOperandOfResultType() const {
-    unsigned OpIdx =
-        cast<VPReductionRecipe>(ExpressionRecipes.back())->isConditional() ? 2
-                                                                           : 1;
-    return getOperand(getNumOperands() - OpIdx);
   }
 
   /// Insert the recipes of the expression back into the VPlan, directly before

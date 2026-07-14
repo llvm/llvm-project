@@ -587,9 +587,31 @@ public:
   }
 
   void OnClosed() override {
+    // The disconnect handler may destroy this Binder -- e.g. the server
+    // removes the disconnected client, which owns the transport and, with it,
+    // this handler.  Move the handler out and release the lock before invoking
+    // it, so we neither run the teardown while holding m_mutex nor destroy a
+    // still-locked mutex.
+    Callback<void()> disconnect_handler;
+    {
+      std::scoped_lock<std::recursive_mutex> guard(m_mutex);
+      disconnect_handler = std::move(m_disconnect_handler);
+    }
+    if (disconnect_handler)
+      disconnect_handler();
+  }
+
+  /// Fails every in-flight outgoing request, invoking its reply with an error.
+  /// Call when the connection is going away, so pending replies are satisfied
+  /// rather than destroyed unanswered.
+  void FailPendingRequests(llvm::StringRef reason) {
     std::scoped_lock<std::recursive_mutex> guard(m_mutex);
-    if (m_disconnect_handler)
-      m_disconnect_handler();
+    std::map<Id, Callback<void(const Resp &)>> pending;
+    std::swap(pending, m_pending_responses);
+    for (auto &entry : pending) {
+      Req req = Proto::Make(entry.first, /*method=*/"", std::nullopt);
+      entry.second(Proto::Make(req, llvm::createStringError(reason)));
+    }
   }
 
 private:

@@ -941,21 +941,14 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (!L || L->getHeader() != &BB)
     return;
 
-  Value *A;
+  PHINode *PN;
   Value *B;
   CmpPredicate Pred;
 
   if (!match(BB.getTerminator(),
-             m_Br(m_ICmp(Pred, m_Value(A), m_Value(B)), m_Value(), m_Value())))
+             m_Br(m_c_ICmp(Pred, m_Phi(PN), m_Value(B)), m_Value(), m_Value())))
     return;
-  PHINode *PN = dyn_cast<PHINode>(A);
-  if (!PN) {
-    Pred = CmpInst::getSwappedPredicate(Pred);
-    std::swap(A, B);
-    PN = dyn_cast<PHINode>(A);
-  }
-
-  if (!PN || PN->getParent() != &BB || PN->getNumIncomingValues() != 2 ||
+  if (PN->getParent() != &BB || PN->getNumIncomingValues() != 2 ||
       !SE.isSCEVable(PN->getType()))
     return;
 
@@ -970,9 +963,12 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB) || InLoopSucc == &BB)
     return;
 
-  auto *AR = dyn_cast_or_null<SCEVAddRecExpr>(SE.getSCEV(PN));
   BasicBlock *LoopPred = L->getLoopPredecessor();
-  if (!AR || AR->getLoop() != L || !LoopPred)
+  if (!LoopPred || !L->isLoopInvariant(B))
+    return;
+
+  auto *AR = dyn_cast_or_null<SCEVAddRecExpr>(SE.getSCEV(PN));
+  if (!AR || AR->getLoop() != L)
     return;
 
   const SCEV *StartSCEV = AR->getStart();
@@ -1004,10 +1000,6 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (auto *C = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE)))
     StepOffset = C->getAPInt();
   else
-    return;
-
-  // Make sure the bound B is loop-invariant.
-  if (!L->isLoopInvariant(B))
     return;
 
   // Handle negative steps.
@@ -1082,7 +1074,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
     // Bail out on non-dedicated exits.
     if (DT.dominates(&BB, EB)) {
       WorkList.emplace_back(FactOrCheck::getConditionFact(
-          DT.getNode(EB), CmpInst::ICMP_ULE, A, B, Precond));
+          DT.getNode(EB), CmpInst::ICMP_ULE, PN, B, Precond));
     }
   }
 }
