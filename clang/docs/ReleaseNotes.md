@@ -778,6 +778,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed a preprocessor crash in `__has_cpp_attribute` on incomplete scoped attributes. (#GH178098)
 - Fixes an assertion failure when evaluating `__underlying_type` on enum redeclarations. (#GH177943)
 - Fixed an assertion failure caused by nested macro expansion during header-name lexing (`__has_embed(__has_include)`). (#GH178635)
+- Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Clang now outputs relative paths of embeds for dependency output. (#GH161950)
 - Fix the result type of a binary operation where both operands are 'void' l-values. (#GH111300)
 - Fixed an assertion failure when evaluating `_Countof` on invalid `void`-typed operands. (#GH180893)
