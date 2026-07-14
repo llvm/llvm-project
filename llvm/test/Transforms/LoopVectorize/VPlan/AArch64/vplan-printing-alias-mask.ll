@@ -26,6 +26,7 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; FINAL-EMPTY:
 ; FINAL-NEXT:  vector.ph:
 ; FINAL-NEXT:    EMIT vp<%active.lane.mask.entry> = active lane mask ir<0>, ir<%n>, ir<1>
+; FINAL-NEXT:    EMIT vp<%extract.entry.alm.part> = extract-subvector-for-part vp<%active.lane.mask.entry>, ir<0>
 ; FINAL-NEXT:  Successor(s): vector.body
 ; FINAL-EMPTY:
 ; FINAL-NEXT:  vector.body:

@@ -1114,13 +1114,11 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Result;
   }
   case VPInstruction::ExtractSubvectorForPart: {
+    Value *Src = State.get(getOperand(0));
     Type *DstTy = VectorType::get(getScalarType(), State.VF);
     unsigned Part = cast<VPConstantInt>(getOperand(1))->getZExtValue();
 
-    // Return Src if it's an ActiveLaneMask with a multiplier of 1.
-    Value *Src = State.get(getOperand(0));
-    if (Part == 0 && match(getOperand(0),
-                           m_ActiveLaneMask(m_VPValue(), m_VPValue(), m_One())))
+    if (Src->getType() == DstTy)
       return Src;
 
     // If the VF is scalar & this is an extract of an active lane mask,
@@ -1131,7 +1129,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
               m_ActiveLaneMask(m_VPValue(Start), m_VPValue(TC), m_VPValue()))) {
       Value *StartV = State.get(Start);
       if (Part > 0)
-        StartV = Builder.CreateAdd(State.get(Start), State.get(getOperand(1)));
+        StartV = Builder.CreateAdd(StartV, State.get(getOperand(1)));
       return Builder.CreateCmp(CmpInst::Predicate::ICMP_ULT, StartV,
                                State.get(TC));
     }

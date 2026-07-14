@@ -332,6 +332,12 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       Copy->setOperand(1, getValueForPart(Op, Part));
       continue;
     }
+    if (match(&R, m_VPInstruction<VPInstruction::ExtractSubvectorForPart>(
+                      m_VPValue(Op), m_VPValue()))) {
+      Copy->setOperand(0, Op);
+      Copy->setOperand(1, Plan.getConstantInt(64, Part));
+      continue;
+    }
     if (isa<VPVectorPointerRecipe, VPWidenCanonicalIVRecipe>(R)) {
       VPBuilder Builder(&R);
       const DataLayout &DL = Plan.getDataLayout();
@@ -482,18 +488,6 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
         ALM->setOperand(2, Plan.getConstantInt(64, UF));
         continue;
       }
-    }
-
-    if (match(&R, m_ExtractSubvectorForPart(m_VPValue(Op0), m_VPValue(Op1)))) {
-      VPRecipeBase *InsertPt = &R;
-      for (unsigned Part = 1; Part != UF; ++Part) {
-        auto *Ext = new VPInstruction(VPInstruction::ExtractSubvectorForPart,
-                                      {Op0, Plan.getConstantInt(64, Part)});
-        Ext->insertAfter(InsertPt);
-        addRecipeForPart(&R, Ext, Part);
-        InsertPt = Ext;
-      }
-      continue;
     }
 
     auto *SingleDef = dyn_cast<VPSingleDefRecipe>(&R);

@@ -1235,9 +1235,9 @@ class LLVM_ABI_FOR_TEST VPInstruction : public VPRecipeWithIRFlags,
 public:
   /// VPlan opcodes, extending LLVM IR with idiomatics instructions.
   enum {
-    FirstOrderRecurrenceSplice = Instruction::OtherOpsEnd +
-        1, // Combines the incoming and previous
-           // values of a first-order recurrence.
+    FirstOrderRecurrenceSplice =
+        Instruction::OtherOpsEnd + 1, // Combines the incoming and previous
+                                      // values of a first-order recurrence.
     Not,
     // Creates a mask where each lane is active (true) whilst the current
     // counter (first operand + index) is less than the second operand. i.e.
