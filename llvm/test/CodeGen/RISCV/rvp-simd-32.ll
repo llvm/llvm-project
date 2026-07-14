@@ -2701,6 +2701,24 @@ define <2 x i16> @test_pzext_b_v2i16(<2 x i16> %a) {
   ret <2 x i16> %res
 }
 
+define <2 x i16> @test_riscv_psext_b_v2i16(<2 x i16> %a) {
+; CHECK-LABEL: test_riscv_psext_b_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psext.h.b a0, a0
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psext.b.v2i16(<2 x i16> %a)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_riscv_pzext_b_v2i16(<2 x i16> %a) {
+; CHECK-LABEL: test_riscv_pzext_b_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pzext.h.b a0, a0
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pzext.b.v2i16(<2 x i16> %a)
+  ret <2 x i16> %res
+}
+
 ; Packed absolute difference sum
 define i32 @test_pabdsumu_u8x4_u32(<4 x i8> %a, <4 x i8> %b) {
 ; RV32-LABEL: test_pabdsumu_u8x4_u32:

@@ -5966,6 +5966,76 @@ define <2 x i32> @test_pzext_h_v2i32(<2 x i32> %a) {
   ret <2 x i32> %res
 }
 
+define <4 x i16> @test_riscv_psext_b_v4i16(<4 x i16> %a) {
+; RV32-LABEL: test_riscv_psext_b_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    psext.dh.b a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_riscv_psext_b_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psext.h.b a0, a0
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.psext.b.v4i16(<4 x i16> %a)
+  ret <4 x i16> %res
+}
+
+define <2 x i32> @test_riscv_psext_b_v2i32(<2 x i32> %a) {
+; RV32-LABEL: test_riscv_psext_b_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    psext.dw.b a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_riscv_psext_b_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psext.w.b a0, a0
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.psext.b.v2i32(<2 x i32> %a)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_riscv_psext_h_v2i32(<2 x i32> %a) {
+; RV32-LABEL: test_riscv_psext_h_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    psext.dw.h a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_riscv_psext_h_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psext.w.h a0, a0
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.psext.h.v2i32(<2 x i32> %a)
+  ret <2 x i32> %res
+}
+
+define <4 x i16> @test_riscv_pzext_b_v4i16(<4 x i16> %a) {
+; RV32-LABEL: test_riscv_pzext_b_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pzext.dh.b a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_riscv_pzext_b_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pzext.h.b a0, a0
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.pzext.b.v4i16(<4 x i16> %a)
+  ret <4 x i16> %res
+}
+
+define <2 x i32> @test_riscv_pzext_h_v2i32(<2 x i32> %a) {
+; RV32-LABEL: test_riscv_pzext_h_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pzext.dw.h a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_riscv_pzext_h_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pzext.w.h a0, a0
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pzext.h.v2i32(<2 x i32> %a)
+  ret <2 x i32> %res
+}
+
 ; Packed absolute difference sum
 define i32 @test_pabdsumu_u8x8_u32(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-LABEL: test_pabdsumu_u8x8_u32:
