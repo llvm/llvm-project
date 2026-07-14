@@ -5,46 +5,13 @@
 
 # RUN: rm -f %t.xml
 # RUN: not %{lit} -v %{inputs}/shtest-format --xunit-xml-output %t.xml > %t.out
-# RUN: FileCheck -DERROR_MSG=%errc_ENOENT < %t.out %s \
-# RUN:   %if system-aix %{ --check-prefix=AIX,CHECK %} \
-# RUN:   %else  %{ --check-prefix=NON-AIX,CHECK %}
+# RUN: cp %t.xml /tmp/test
+# RUN: FileCheck -DERROR_MSG=%errc_ENOENT < %t.out %s
 # RUN: FileCheck --check-prefix=XUNIT < %t.xml %s
 
 # END.
 
 # CHECK: -- Testing:
-
-# CHECK: FAIL: shtest-format :: external_shell/fail.txt
-# CHECK-NEXT: *** TEST 'shtest-format :: external_shell/fail.txt' FAILED ***
-# CHECK: Command Output (stdout):
-# CHECK-NEXT: --
-# CHECK-NEXT: line 1: failed test output on stdout
-# CHECK-NEXT: line 2: failed test output on stdout
-# CHECK: Command Output (stderr):
-# CHECK-NEXT: --
-# CHECK-NOT: --
-## AIX needs the regex because alternative versions of cat generate different
-## formats of error message. %errc_ENOENT can't be used here because [[...]]
-## inside {{...}} is not supported.
-# AIX: cat{{(_64)?(\.exe)?}}: {{(cannot open does-not-exist|.*does-not-exist.*: No such file or directory)}}
-# NON-AIX: cat{{(_64)?(\.exe)?}}: {{.*does-not-exist.*}}: [[ERROR_MSG]]
-# CHECK: --
-
-# CHECK: FAIL: shtest-format :: external_shell/fail_with_bad_encoding.txt
-# CHECK-NEXT: *** TEST 'shtest-format :: external_shell/fail_with_bad_encoding.txt' FAILED ***
-# CHECK: Command Output (stdout):
-# CHECK-NEXT: --
-# CHECK-NEXT: a line with bad encoding:
-# CHECK: --
-
-# CHECK: FAIL: shtest-format :: external_shell/fail_with_control_chars.txt
-# CHECK-NEXT: *** TEST 'shtest-format :: external_shell/fail_with_control_chars.txt' FAILED ***
-# CHECK: Command Output (stdout):
-# CHECK-NEXT: --
-# CHECK-NEXT: a line with {{.*}}control characters{{.*}}.
-# CHECK: --
-
-# CHECK: PASS: shtest-format :: external_shell/pass.txt
 
 #       CHECK: FAIL: shtest-format :: fail.txt
 #  CHECK-NEXT: *** TEST 'shtest-format :: fail.txt' FAILED ***
@@ -67,6 +34,17 @@
 # CHECK-EMPTY:
 #  CHECK-NEXT: --
 
+# CHECK: FAIL: shtest-format :: fail_with_bad_encoding.txt
+# CHECK-NEXT: *** TEST 'shtest-format :: fail_with_bad_encoding.txt' FAILED ***
+# CHECK: .---command stdout------------
+# CHECK-NEXT: a line with bad encoding:
+# CHECK: --
+
+# CHECK: FAIL: shtest-format :: fail_with_control_chars.txt
+# CHECK-NEXT: *** TEST 'shtest-format :: fail_with_control_chars.txt' FAILED ***
+# CHECK: .---command stdout------------
+# CHECK-NEXT: a line with {{.*}}control characters{{.*}}.
+# CHECK: --
 
 # CHECK: UNRESOLVED: shtest-format :: no-test-line.txt
 # CHECK: PASS: shtest-format :: pass.txt
@@ -96,56 +74,45 @@
 # CHECK-EMPTY:
 #  CHECK-NEXT: --
 
-# CHECK: Failed Tests (4)
-# CHECK: shtest-format :: external_shell/fail.txt
-# CHECK: shtest-format :: external_shell/fail_with_bad_encoding.txt
-# CHECK: shtest-format :: external_shell/fail_with_control_chars.txt
+# CHECK: Failed Tests (3)
 # CHECK: shtest-format :: fail.txt
+# CHECK: shtest-format :: fail_with_bad_encoding.txt
+# CHECK: shtest-format :: fail_with_control_chars.txt
 
 # CHECK: Unexpectedly Passed Tests (1)
 # CHECK: shtest-format :: xpass.txt
 
 # CHECK: Testing Time:
 # CHECK: Unsupported        : 3
-# CHECK: Passed             : 7
+# CHECK: Passed             : 6
 # CHECK: Expectedly Failed  : 4
 # CHECK: Unresolved         : 3
-# CHECK: Failed             : 4
+# CHECK: Failed             : 3
 # CHECK: Unexpectedly Passed: 1
 
 
 # XUNIT: <?xml version="1.0" encoding="UTF-8"?>
 # XUNIT-NEXT: <testsuites time="{{[0-9.]+}}">
-# XUNIT-NEXT: <testsuite name="shtest-format" tests="22" failures="8" skipped="3" time="{{[0-9.]+}}">
-
-# XUNIT: <testcase classname="shtest-format.external_shell" name="fail.txt" time="{{[0-9]+\.[0-9]+}}">
-# XUNIT-NEXT: <failure{{[ ]*}}>
-# XUNIT: </failure>
-# XUNIT-NEXT: </testcase>
-
-
-# XUNIT: <testcase classname="shtest-format.external_shell" name="fail_with_bad_encoding.txt" time="{{[0-9]+\.[0-9]+}}">
-# XUNIT-NEXT: <failure{{[ ]*}}>
-# XUNIT: </failure>
-# XUNIT-NEXT: </testcase>
-
-#       XUNIT: <testcase classname="shtest-format.external_shell" name="fail_with_control_chars.txt" time="{{[0-9]+\.[0-9]+}}">
-#  XUNIT-NEXT: <failure><![CDATA[Exit Code: 1
-# XUNIT-EMPTY:
-#  XUNIT-NEXT: Command Output (stdout):
-#  XUNIT-NEXT: --
-#  XUNIT-NEXT: a line with [2;30;41mcontrol characters[0m.
-# XUNIT-EMPTY:
-#  XUNIT-NEXT: --
-#       XUNIT: ]]></failure>
-#  XUNIT-NEXT: </testcase>
-
-# XUNIT: <testcase classname="shtest-format.external_shell" name="pass.txt" time="{{[0-9]+\.[0-9]+}}"/>
+# XUNIT-NEXT: <testsuite name="shtest-format" tests="20" failures="7" skipped="3" time="{{[0-9.]+}}">
 
 # XUNIT: <testcase classname="shtest-format.shtest-format" name="fail.txt" time="{{[0-9]+\.[0-9]+}}">
 # XUNIT-NEXT: <failure{{[ ]*}}>
 # XUNIT: </failure>
 # XUNIT-NEXT: </testcase>
+
+# XUNIT: <testcase classname="shtest-format.shtest-format" name="fail_with_bad_encoding.txt" time="{{[0-9]+\.[0-9]+}}">
+# XUNIT-NEXT: <failure{{[ ]*}}>
+# XUNIT: </failure>
+# XUNIT-NEXT: </testcase>
+
+#       XUNIT: <testcase classname="shtest-format.shtest-format" name="fail_with_control_chars.txt" time="{{[0-9]+\.[0-9]+}}">
+#  XUNIT-NEXT: <failure><![CDATA[Exit Code: 1
+# XUNIT-EMPTY:
+#       XUNIT: .---command stdout------------
+#  XUNIT-NEXT: a line with [2;30;41mcontrol characters[0m.
+#  XUNIT-NEXT: --
+#       XUNIT: ]]></failure>
+#  XUNIT-NEXT: </testcase>
 
 # XUNIT: <testcase classname="shtest-format.shtest-format" name="no-test-line.txt" time="{{[0-9]+\.[0-9]+}}">
 # XUNIT-NEXT: <failure{{[ ]*}}>
