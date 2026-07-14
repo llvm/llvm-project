@@ -7483,27 +7483,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   return V;
 }
 
-static std::optional<APInt> getIntegerIdentity(unsigned Opcode,
-                                               unsigned BitWidth) {
-  switch (Opcode) {
-  default:
-    return std::nullopt;
-  case ISD::ADD:
-  case ISD::OR:
-  case ISD::XOR:
-  case ISD::UMAX:
-    return APInt::getZero(BitWidth);
-  case ISD::MUL:
-    return APInt(BitWidth, 1);
-  case ISD::AND:
-  case ISD::UMIN:
-    return APInt::getAllOnes(BitWidth);
-  case ISD::SMAX:
-    return APInt::getSignedMinValue(BitWidth);
-  case ISD::SMIN:
-    return APInt::getSignedMaxValue(BitWidth);
-  }
-}
+static APInt getIntegerIdentity(unsigned Opcode, unsigned BitWidth);
 
 static std::optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
                                       const APInt &C2) {
@@ -7836,9 +7816,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
       unsigned EltBits = N1.getValueType().getScalarSizeInBits();
       EVT EltVT = N1.getValueType().getScalarType();
       unsigned BaseOpcode = ISD::getVecReduceBaseOpcode(Opcode);
-      std::optional<APInt> Identity = getIntegerIdentity(BaseOpcode, EltBits);
-      assert(Identity && "Unexpected vector reduction opcode");
-      APInt Acc = *Identity;
+      APInt Acc = getIntegerIdentity(BaseOpcode, EltBits);
       for (SDValue Elt : N1->op_values()) {
         if (Elt.getOpcode() == ISD::POISON)
           return getPOISON(VT);
@@ -15092,6 +15070,27 @@ SDValue SelectionDAG::getTokenFactor(const SDLoc &DL,
   return getNode(ISD::TokenFactor, DL, MVT::Other, Vals);
 }
 
+static APInt getIntegerIdentity(unsigned Opcode, unsigned BitWidth) {
+  switch (Opcode) {
+  default:
+    llvm_unreachable("Unexpected integer identity opcode");
+  case ISD::ADD:
+  case ISD::OR:
+  case ISD::XOR:
+  case ISD::UMAX:
+    return APInt::getZero(BitWidth);
+  case ISD::MUL:
+    return APInt(BitWidth, 1);
+  case ISD::AND:
+  case ISD::UMIN:
+    return APInt::getAllOnes(BitWidth);
+  case ISD::SMAX:
+    return APInt::getSignedMinValue(BitWidth);
+  case ISD::SMIN:
+    return APInt::getSignedMaxValue(BitWidth);
+  }
+}
+
 SDValue SelectionDAG::getIdentityElement(unsigned Opcode, const SDLoc &DL,
                                          EVT VT, SDNodeFlags Flags) {
   switch (Opcode) {
@@ -15103,19 +15102,11 @@ SDValue SelectionDAG::getIdentityElement(unsigned Opcode, const SDLoc &DL,
   case ISD::UMAX:
   case ISD::MUL:
   case ISD::AND:
-  case ISD::UMIN: {
-    std::optional<APInt> Identity =
-        getIntegerIdentity(Opcode, VT.getScalarSizeInBits());
-    assert(Identity && "Unexpected integer identity opcode");
-    return getConstant(*Identity, DL, VT);
-  }
+  case ISD::UMIN:
   case ISD::SMAX:
-  case ISD::SMIN: {
-    std::optional<APInt> Identity =
-        getIntegerIdentity(Opcode, VT.getSizeInBits());
-    assert(Identity && "Unexpected integer identity opcode");
-    return getConstant(*Identity, DL, VT);
-  }
+  case ISD::SMIN:
+    return getConstant(getIntegerIdentity(Opcode, VT.getScalarSizeInBits()), DL,
+                       VT);
   case ISD::FADD:
     // If flags allow, prefer positive zero since it's generally cheaper
     // to materialize on most targets.
