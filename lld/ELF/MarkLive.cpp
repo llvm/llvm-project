@@ -343,8 +343,7 @@ void MarkLive<ELFT, TrackWhyLive>::markSymbol(Symbol *sym, StringRef reason) {
 // .symtab retains them and the relocations keep valid symbol indices. Callers
 // invoke this only when .symtab filtering is active (--discard-* or
 // --retain-symbols-file); otherwise .symtab keeps every symbol anyway.
-template <class ELFT>
-static void markUsedSymbols(InputSectionBase &sec) {
+template <class ELFT> static void markUsedSymbols(InputSectionBase &sec) {
   auto mark = [&](const auto &rel) {
     sec.file->getRelocTargetSym(rel).setFlags(USED);
   };

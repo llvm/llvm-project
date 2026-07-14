@@ -76,6 +76,9 @@ ELF Improvements
   ``.debug_info``), fixing DWARF corruption in the output.
   (`#209035 <https://github.com/llvm/llvm-project/pull/209035>`_)
   (`#209042 <https://github.com/llvm/llvm-project/pull/209042>`_)
+* ``--retain-symbols-file`` now filters ``.symtab`` instead of ``.dynsym``,
+  matching GNU ld.
+  (`#209063 <https://github.com/llvm/llvm-project/pull/209063>`_)
 * ``INCLUDE`` in linker scripts now fully parses its own content instead of
   sharing a lexer buffer stack with the includer, fixing spurious acceptance
   of malformed scripts.
@@ -87,8 +90,6 @@ ELF Improvements
 * Thunks are no longer reused across an ``OVERLAY`` boundary unless the
   target output section is guaranteed to be resident at the same time.
   (`#200415 <https://github.com/llvm/llvm-project/pull/200415>`_)
-* ``--retain-symbols-file`` now filters ``.symtab`` instead of ``.dynsym``,
-  matching GNU ld.
 * When a ``SECTIONS`` command interleaves relro and non-relro sections, lld now
   emits one ``PT_GNU_RELRO`` segment per contiguous run of relro sections
   instead of reporting a ``not contiguous with other relro sections`` error.
