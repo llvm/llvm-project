@@ -343,25 +343,23 @@ void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleT *Cycle) {
   if (Number >= BlockMap.size())
     BlockMap.resize(GraphTraits<FunctionT *>::getMaxNumber(Block->getParent()));
 
-  // Insert Block at Pos (end of Cycle's slice) and shift every later cycle's
-  // range right, keyed on IdxBegin so a nested cycle sharing end == Pos is
-  // left alone; Cycle and its ancestors then grow to contain it, below.
-  // FIXME: appended at the slice end, not the traversal-order middle.
+  // Insert Block at the end of Cycle's slice and shift every later cycle's
+  // range right. contain it below. The forest is an Euler tour, so a subtree
+  // ending at or before Pos is entirely earlier and is skipped.
   unsigned Pos = Cycle->IdxEnd;
   BlockLayout.insert(BlockLayout.begin() + Pos, Block);
-  for (CycleT *TLC : toplevel_cycles())
-    for (auto It = df_begin(TLC), E = df_end(TLC); It != E;) {
-      CycleT *C = *It;
-      if (C->IdxEnd <= Pos) {
-        It.skipChildren();
-        continue;
-      }
-      if (C->IdxBegin >= Pos) {
-        ++C->IdxBegin;
-        ++C->IdxEnd;
-      }
-      ++It;
+  SmallVector<CycleT *, 8> Worklist(toplevel_cycles());
+  while (!Worklist.empty()) {
+    CycleT *C = Worklist.pop_back_val();
+    if (C->IdxEnd <= Pos)
+      continue;
+    if (C->IdxBegin >= Pos) {
+      ++C->IdxBegin;
+      ++C->IdxEnd;
     }
+    for (auto &Child : C->Children)
+      Worklist.push_back(Child.get());
+  }
   addToBlockMap(Block, Cycle);
   // Cycle and its ancestors gain the new block: extend each one's slice and
   // invalidate its exit-block cache in a single walk up the tree.
