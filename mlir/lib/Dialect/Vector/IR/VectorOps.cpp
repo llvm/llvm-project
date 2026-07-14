@@ -6759,13 +6759,37 @@ LogicalResult ShapeCastOp::verify() {
   return success();
 }
 
+/// Check whether this ShapeCastOp is effectively a BroadcastOp.
+///
+/// The only case in which this method can return `true` is when the underlying
+/// op merely adds leading unit dimensions, e.g.:
+///   %res = vector.shape_cast %src : vector<8x4xi32> to vector<1x8x4xi32>
+///
 bool ShapeCastOp::isBroadcastLike() {
   auto srcType = getSourceVectorType();
   auto resType = getResultVectorType();
 
+  // Is srcType broadcastable to resType?
   std::pair<VectorDim, VectorDim> mismatchingDims;
-  return isBroadcastableTo(srcType, resType, &mismatchingDims) ==
-         BroadcastableToResult::Success;
+  if (isBroadcastableTo(srcType, resType, &mismatchingDims) !=
+      BroadcastableToResult::Success)
+    return false;
+
+  // Do ranks mismatch?
+  //
+  // The only case where ranks match and this ShapeCastOp is also a broadcast,
+  // is when it's effectively a NOp, but that's an uninteresting edge case.
+  size_t rankDiff = resType.getRank() - srcType.getRank();
+  if (rankDiff == 0)
+    return false;
+
+  // Are all newly added leading dims unit?
+  if (!llvm::all_of(resType.getShape().take_front(rankDiff),
+                    [](int64_t dim) { return dim == 1; }))
+    return false;
+
+  // Do all trailing dims match?
+  return resType.getShape().take_back(srcType.getRank()) == srcType.getShape();
 }
 
 /// Return true if `transpose` does not permute a pair of non-unit dims.

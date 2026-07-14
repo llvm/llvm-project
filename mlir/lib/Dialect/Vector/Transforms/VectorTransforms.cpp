@@ -283,7 +283,8 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
   for (Value *operand : {&lhs, &rhs}) {
     AffineMap &map = maps[index++];
 
-    // Make sure that the source
+    // Accept operands defined by vector.broadcast and broadcast-like
+    // vector.shape_cast.
     auto sc = operand->getDefiningOp<vector::ShapeCastOp>();
     auto broadcast = operand->getDefiningOp<vector::BroadcastOp>();
     if (!broadcast && !sc)
@@ -294,10 +295,11 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
           contractOp, "Operand defined via vector.shape_cast that has "
                       "non-broadcast semantics");
 
-    VectorType srcType = (sc) ? sc.getSourceVectorType()
-                              : dyn_cast<VectorType>(broadcast.getSourceType());
+    // Get the source and the result types.
+    VectorType srcType = sc ? sc.getSourceVectorType()
+                            : dyn_cast<VectorType>(broadcast.getSourceType());
     VectorType resType =
-        (sc) ? sc.getResultVectorType() : broadcast.getResultVectorType();
+        sc ? sc.getResultVectorType() : broadcast.getResultVectorType();
 
     // contractionOp can only take vector as operands.
     // auto srcType = dyn_cast<VectorType>(broadcast.getSourceVectorType());
