@@ -412,6 +412,7 @@ filegroup(
     name = "builtins_unfiltered_armv7_srcs",
     srcs = [
         ":builtins_arm_arch_srcs",
+        ":builtins_arm_implicit_it_srcs",
         ":builtins_arm_vfp_srcs",
         ":builtins_bf16_srcs",
         ":builtins_generic_srcs",
@@ -427,6 +428,7 @@ filegroup(
     name = "builtins_unfiltered_aarch32_srcs",
     srcs = [
         ":builtins_arm_arch_srcs",
+        ":builtins_arm_implicit_it_srcs",
         ":builtins_arm_vfp_srcs",
         ":builtins_bf16_srcs",
         ":builtins_generic_srcs",
@@ -477,7 +479,10 @@ make_filtered_builtins_srcs_groups(
 
 filegroup(
     name = "builtins_riscv_arch_srcs",
-    srcs = glob(
+    srcs = [
+        "lib/builtins/cpu_model/riscv.c",
+        "lib/builtins/cpu_model/riscv.h",
+    ] + glob(
         [
             "lib/builtins/riscv/*.S",
             "lib/builtins/riscv/*.c",
