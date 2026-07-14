@@ -5,7 +5,7 @@
         {
           "entity_id": 0,
           "entity_summary": {
-            "OperatorNewDeletePointersAnalysisResult": [
+            "TypeConstrainedPointersAnalysisResult": [
               {
                 "@": 1
               },
@@ -16,7 +16,7 @@
           }
         }
       ],
-      "summary_name": "OperatorNewDeletePointers"
+      "summary_name": "TypeConstrainedPointers"
     }
   ],
   "id_table": [

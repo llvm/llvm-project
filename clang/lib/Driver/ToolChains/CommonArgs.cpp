@@ -723,15 +723,7 @@ static std::string getAMDGPUTargetGPU(const llvm::Triple &T,
     A = Args.getLastArg(options::OPT_offload_arch_EQ);
   if (A) {
     auto GPUName = getProcessorFromTargetID(T, A->getValue());
-    return llvm::StringSwitch<std::string>(GPUName)
-        .Cases({"rv630", "rv635"}, "r600")
-        .Cases({"rv610", "rv620", "rs780"}, "rs880")
-        .Case("rv740", "rv770")
-        .Case("palm", "cedar")
-        .Cases({"sumo", "sumo2"}, "sumo")
-        .Case("hemlock", "cypress")
-        .Case("aruba", "cayman")
-        .Default(GPUName.str());
+    return std::string(GPUName);
   }
   return "";
 }
@@ -857,7 +849,7 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
 
   case llvm::Triple::amdgpu:
   case llvm::Triple::r600:
-    return getAMDGPUTargetGPU(T, Args);
+    return std::string(getAMDGPUTargetGPU(T, Args));
 
   case llvm::Triple::wasm32:
   case llvm::Triple::wasm64:
