@@ -15,6 +15,7 @@
 #define LLVM_CLANG_LIB_AST_EXPRCONSTSHARED_H
 
 #include "ByteCode/State.h"
+#include "clang/AST/APValue.h"
 #include "clang/Basic/BuiltinTraits.h"
 #include <cstdint>
 #include <optional>
@@ -83,6 +84,10 @@ void HandleComplexComplexDiv(llvm::APFloat A, llvm::APFloat B, llvm::APFloat C,
 
 CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,
                          UnaryExprOrTypeTrait ExprKind);
+CharUnits GetAlignOfType(const ASTContext &Ctx, QualType T,
+                         UnaryExprOrTypeTrait ExprKind);
+CharUnits GetBaseAlignment(const ASTContext &Ctx,
+                           const APValue::LValueBase &Base);
 
 /// Convert a builtin ID to the canonical x86 builtin ID the constant evaluators
 /// dispatch on in their x86 target-specific cases.
