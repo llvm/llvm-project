@@ -7814,7 +7814,6 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
          Opcode == ISD::VECREDUCE_UMIN) &&
         ISD::isBuildVectorOfConstantSDNodes(N1.getNode())) {
       unsigned EltBits = N1.getValueType().getScalarSizeInBits();
-      EVT EltVT = N1.getValueType().getScalarType();
       unsigned BaseOpcode = ISD::getVecReduceBaseOpcode(Opcode);
       APInt Acc = getIntegerIdentity(BaseOpcode, EltBits);
       for (SDValue Elt : N1->op_values()) {
@@ -7827,6 +7826,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
         assert(Folded && "Unexpected vector reduction opcode");
         Acc = *Folded;
       }
+      EVT EltVT = N1.getValueType().getScalarType();
       return getAnyExtOrTrunc(getConstant(Acc, DL, EltVT), DL, VT);
     }
   }
