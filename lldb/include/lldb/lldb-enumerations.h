@@ -255,6 +255,21 @@ enum ScriptLanguage {
   eScriptLanguageDefault = eScriptLanguagePython
 };
 
+/// Scripting extension types.
+enum ScriptedExtension {
+  eScriptedExtensionInvalid = 0,
+  eScriptedExtensionOperatingSystem,
+  eScriptedExtensionScriptedPlatform,
+  eScriptedExtensionScriptedProcess,
+  eScriptedExtensionScriptedBreakpointResolver,
+  eScriptedExtensionScriptedThreadPlan,
+  eScriptedExtensionScriptedFrameProvider,
+  eScriptedExtensionScriptedHook,
+  eScriptedExtensionScriptedThread,
+  eScriptedExtensionScriptedFrame,
+  kLastScriptedExtension = eScriptedExtensionScriptedFrame
+};
+
 /// Register numbering types.
 // See RegisterContext::ConvertRegisterKindToRegisterNumber to convert any of
 // these to the lldb internal register numbering scheme (eRegisterKindLLDB).

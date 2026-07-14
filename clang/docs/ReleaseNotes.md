@@ -312,6 +312,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   the corresponding decimal floating-point types, `_Decimal32`, `_Decimal64`, and `_Decimal128`. (#GH116962)
 - Fixed a bug with deducing qualified inferred types with `auto`. `auto` can now
   be combined with `restrict` or `_Atomic` to form a properly-qualified type. (#GH207466)
+- Fixed a bug where an enumerator following a `_BitInt`-typed enumerator kept
+  the bit-precise type and wrapped around on overflow instead of taking a
+  suitably sized standard integer type. (#GH208163)
 
 
 ### Objective-C Language Changes
@@ -473,6 +476,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   "1". The previous functionality remains unchanged.
 - The `-fms-kernel` flag will now implicitly add `-fno-delete-null-pointer-checks`.
   Still `-fdelete-null-pointer-checks` can be used to override this behavior.
+- Extended the `-marm64x` flag to support compiling to object files. When used
+  in this mode, separate compilation jobs are run for ARM64 and ARM64EC object
+  files, which are then merged into a single file using a new `.obj.arm64ec`
+  section. Consumers must support this extension. Currently, this requires
+  LLD for linking or `llvm-ar`/`llvm-lib` for archiving.
 
 ### Removed Compiler Flags
 
@@ -815,6 +823,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed crash when checking for overflow for unary operator that can't overflow (#GH170072)
 - Clang no longer handles a `" q-char-sequence "` header name as a string literal (#GH132643).
 - Under `-fdollars-in-identifiers`, the `$` can now appear in user-defined-literals. (#GH173985)
+- Clang now detects invalid unicode characters in identifiers formed by token concatenation. (#GH101342)
 - Fixed an assertion where we improperly handled implicit conversions to integral types from an atomic-type with a conversion function. (#GH201770)
 - Fixed assertion failures involving code completion with delayed default arguments and exception specifications. (#GH200879)
 - Fixed a regression where calling a function that takes a class-type parameter by value inside `decltype` of a concept could be incorrectly rejected when used as a non-type template argument. (#GH175831)
@@ -823,6 +832,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   would only use the first one). A new warning that diagnoses such declarations has been added to `-Wignored-attributes`.
   (#GH191829)
 - Fixed a crash in the constant evaluator when an ill-formed array new-expression whose bound could not be determined (e.g. `new int[]()`) was used in a constant expression. (#GH200139)
+- Fixed a case where function effect analysis (`nonblocking` etc.) did not visit a destructor invoked from a `delete` expression. (#GH184460)
 - Clang now defines the GCC-compatible predefined macros `__WCHAR_MIN__`, `__WINT_MIN__`, and `__SIG_ATOMIC_MIN__`. (#GH199678)
 - Fix a crash in addUnsizedArray due assert not verifying we have a Base before doing checks on it. (#GH44212)
 
@@ -922,12 +932,14 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   initializers used during aggregate initialization. (#GH196469)
 - Fixed a crash in constant evaluation using placement new on an array which was later initialized. (#GH196450)
 - Fixed an issue where Clang incorrectly accepted invalid unqualified uses of local nested class names outside their declaring scope. (#GH184622)
+- Fixed a crash when instantiating a class template whose member variable partial specialization has an invalid primary template. (#GH195988)
 - Fixed a crash when parsing invalid friend declaration with storage-class specifier. (#GH186569)
 - Fixed a missing vtable for `dynamic_cast<FinalClass *>(this)` in a function template. (#GH198511)
 - Fixed an assertion failure during init-list checking of an array whose element type is an incomplete class. (#GH140685)
 - Fixed a crash when using a pack indexing type (e.g. ``Ts...[0]``) imported from another module. (#GH204479)
 - Fixed an ODR-merging error in modules, where class-scope `using enum` declarations were not recognized as matching across module
   boundaries.  (#GH207066)
+- Fixed a crash when constant evaluation accessed a base class or member of an object wrapped in `_Atomic`. (#GH203328)
 
 #### Bug Fixes to AST Handling
 
@@ -1218,6 +1230,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed a false-positive in the `unix.BlockInCriticalSection` checker that reported double locking when using `std::lock_guard`/`std::unique_lock`/`std::scoped_lock`. (#GH208729)
 - Fixed a false-negative in the `unix.Malloc` checker due to a typo in the expected arguments of `if_nameindex`. It will now properly match its single expected argument. (#GH207726)
 - Fixed a crash in the Z3-solver-based (unsupported) constraint manager involving unary/binary operators. (#GH205037)
+- Fixed a crash where GNU statement expression syntax (`({ ... })`) caused arguments to disappear from parameter list. (#GH205718)
 
 #### Improvements
 
