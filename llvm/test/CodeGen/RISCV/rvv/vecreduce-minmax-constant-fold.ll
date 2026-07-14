@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=riscv64 -mattr=+v -global-isel=0 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=riscv64 -mattr=+v < %s | FileCheck %s
 
 define i64 @test_const_smax() {
 ; CHECK-LABEL: test_const_smax:
