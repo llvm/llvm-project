@@ -36,12 +36,15 @@ struct CountingInputIterator {
   using pointer           = const int*;
   using reference         = const int&;
 
-  const int* base_;
+  const int* ptr_;
   int* increments_;
 
-  TEST_CONSTEXPR_CXX14 reference operator*() const { return *base_; }
+  TEST_CONSTEXPR_CXX14 CountingInputIterator(const int* ptr, int* increment_counter)
+      : ptr_(ptr), increments_(increment_counter) {}
+
+  TEST_CONSTEXPR_CXX14 reference operator*() const { return *ptr_; }
   TEST_CONSTEXPR_CXX14 CountingInputIterator& operator++() {
-    ++base_;
+    ++ptr_;
     ++*increments_;
     return *this;
   }
@@ -165,7 +168,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     { // n == 0 is a no-op
       int out[3]     = {-1, -2, -3};
       int increments = 0;
-      int* r         = std::copy_n(CountingInputIterator{in, &increments}, 0, out);
+      int* r         = std::copy_n(CountingInputIterator(in, &increments), 0, out);
       assert(r == out);
       assert(increments == 0);
       assert(out[0] == -1 && out[1] == -2 && out[2] == -3);
@@ -173,7 +176,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     { // n > 0 advances the iterator exactly n - 1 times
       int out[3]     = {0, 0, 0};
       int increments = 0;
-      int* r         = std::copy_n(CountingInputIterator{in, &increments}, 3, out);
+      int* r         = std::copy_n(CountingInputIterator(in, &increments), 3, out);
       assert(r == out + 3);
       assert(increments == 2);
       assert(out[0] == 1 && out[1] == 2 && out[2] == 3);
